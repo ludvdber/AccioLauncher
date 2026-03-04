@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install PyQt6 --quiet)",
+      "Bash(timeout 5 python main.py)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(python -c \"from src.core.game_manager import GameManager, GameState; print\\(''OK -'', [s.value for s in GameState]\\)\")",
+      "Bash(python -c \"from src.core.downloader import Downloader; print\\(''OK''\\)\")",
+      "Bash(timeout 6 python main.py)",
+      "Bash(python -c \":*)"
+    ]
+  }
+}
