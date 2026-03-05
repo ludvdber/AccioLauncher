@@ -315,8 +315,8 @@ class MainWindow(QMainWindow):
         """Met en pause TOUS les timers et animations pour consommation CPU ~0."""
         if hasattr(self, "_particles"):
             self._particles.pause()
-        if hasattr(self, "_detail") and hasattr(self._detail, "_bg"):
-            self._detail._bg.pause()
+        if hasattr(self, "_detail"):
+            self._detail.pause()
         if hasattr(self, "_carousel"):
             self._carousel.pause()
         log.debug("Tous les effets sont en pause")
@@ -325,8 +325,8 @@ class MainWindow(QMainWindow):
         """Reprend tous les timers et animations."""
         if hasattr(self, "_particles"):
             self._particles.resume()
-        if hasattr(self, "_detail") and hasattr(self._detail, "_bg"):
-            self._detail._bg.resume()
+        if hasattr(self, "_detail"):
+            self._detail.resume()
         if hasattr(self, "_carousel"):
             self._carousel.resume()
         log.debug("Tous les effets sont repris")

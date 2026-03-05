@@ -59,8 +59,10 @@ class GameDetailView(QWidget):
 
         self._video_player = None
         self._video_sink = None
+        self._audio_output = None
         self._video_muted = False
 
+        self._target_version: GameVersion | None = None
         self._desc_expanded = False
         self._full_desc = ""
         self._pending_game: GameData | None = None
@@ -443,8 +445,8 @@ class GameDetailView(QWidget):
             self._video_player.setSource(QUrl.fromLocalFile(str(video_path)))
             self._video_player.play()
             self._video_muted = self.manager.config.mute_videos
-            vol = 0.0 if self._video_muted else self._volume_slider.value() / 100.0
-            self._audio_output.setVolume(vol)
+            self._audio_output.setVolume(self._volume_slider.value() / 100.0)
+            self._audio_output.setMuted(self._video_muted)
             self._btn_mute.setText("\U0001f507" if self._video_muted else "\U0001f50a")
             self._audio_bar.show()
             self._audio_bar.raise_()
@@ -459,34 +461,43 @@ class GameDetailView(QWidget):
                 self._bg.set_video_frame(image)
 
     def _on_media_status(self, status) -> None:
-        try:
-            from PyQt6.QtMultimedia import QMediaPlayer
-            if status == QMediaPlayer.MediaStatus.EndOfMedia:
-                self._stop_video()
-        except ImportError:
-            pass
+        from PyQt6.QtMultimedia import QMediaPlayer
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self._stop_video()
 
     def _stop_video(self) -> None:
         if self._video_player:
             self._video_player.stop()
+            self._video_player.setSource(QUrl())
         self._bg.clear_video()
         self._audio_bar.hide()
 
     def _toggle_mute(self) -> None:
-        if not hasattr(self, "_audio_output"):
+        if self._audio_output is None:
             return
         self._video_muted = not self._video_muted
-        vol = 0.0 if self._video_muted else self._volume_slider.value() / 100.0
-        self._audio_output.setVolume(vol)
+        self._audio_output.setMuted(self._video_muted)
         self._btn_mute.setText("\U0001f507" if self._video_muted else "\U0001f50a")
 
     def _on_volume_changed(self, value: int) -> None:
-        if not hasattr(self, "_audio_output"):
+        if self._audio_output is None:
             return
         if self._video_muted:
             self._video_muted = False
+            self._audio_output.setMuted(False)
             self._btn_mute.setText("\U0001f50a")
         self._audio_output.setVolume(value / 100.0)
+
+    # ──────────────────── Pause / Resume (API publique) ────────────────────
+
+    def pause(self) -> None:
+        """Met en pause tous les effets visuels et la vidéo."""
+        self._stop_video()
+        self._bg.pause()
+
+    def resume(self) -> None:
+        """Reprend les effets visuels (la vidéo ne reprend pas)."""
+        self._bg.resume()
 
     # ──────────────────── Actions ────────────────────
 
@@ -835,7 +846,7 @@ class GameDetailView(QWidget):
             )
             return
         self.manager.set_game_state(self.game.id, GameState.INSTALLED)
-        target_ver = getattr(self, "_target_version", None)
+        target_ver = self._target_version
         self.manager.save_installed_version(self.game.id, target_ver.version if target_ver else None)
         self._refresh_action()
         self.state_changed.emit()
@@ -859,6 +870,7 @@ class GameDetailView(QWidget):
     def _on_play(self) -> None:
         if self.game is None:
             return
+        self._stop_video()
         try:
             proc = self.manager.launch_game(self.game.id)
         except OSError as exc:
