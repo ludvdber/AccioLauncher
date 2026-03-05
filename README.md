@@ -19,9 +19,7 @@
 ---
 
 <div align="center">
-  <img src="docs/screenshot.png" width="800" alt="Accio Launcher — Aperçu">
-  <br><br>
-  <sub><i>Interface du launcher — carrousel, particules magiques et effets de parallaxe</i></sub>
+  <img src="docs/social_preview.png" width="800" alt="Accio Launcher — Aperçu">
 </div>
 
 ---
@@ -33,7 +31,7 @@
 | 🎮 **6 jeux Harry Potter PC** | De l'École des Sorciers (2001) au Prince de Sang-Mêlé (2009) |
 | ⬇️ **Téléchargement en un clic** | Téléchargement, extraction 7z et installation automatiques |
 | 🎨 **UI immersive style AAA** | Particules magiques, parallaxe, transitions cinématiques, glow doré |
-| 📺 **Fonds vidéo** | Vidéos de présentation en arrière-plan avec boucle automatique |
+| 📺 **Trailers vidéo** | Vidéos de présentation en arrière-plan avec contrôle du volume |
 | 🔄 **Versioning et changelog** | Suivi des versions avec historique détaillé des changements |
 | 📥 **System tray intelligent** | Se minimise pendant le jeu, se restaure automatiquement |
 | ⚙️ **Paramètres intégrés** | Dossier d'installation, gestion de l'espace disque, préférences |
@@ -92,22 +90,18 @@ build.bat
 ## 📸 Captures d'écran
 
 <div align="center">
+  <img src="docs/screenshot.png" width="800" alt="Accio Launcher — Vue principale">
+  <br>
+  <sub><i>Vue principale — carrousel, particules magiques et effets de parallaxe</i></sub>
+  <br><br>
   <table>
     <tr>
-      <td><img src="docs/screen_detail.png" width="400" alt="Vue détaillée"></td>
-      <td><img src="docs/screen_carousel.png" width="400" alt="Carrousel"></td>
+      <td><img src="docs/screen_installed.png" width="400" alt="Jeu installé avec vidéo"></td>
+      <td><img src="docs/screen_changelog.png" width="400" alt="Versions et changelog"></td>
     </tr>
     <tr>
-      <td align="center"><sub>Vue détaillée avec parallaxe</sub></td>
-      <td align="center"><sub>Carrousel avec reflets et étoiles</sub></td>
-    </tr>
-    <tr>
-      <td><img src="docs/screen_download.png" width="400" alt="Téléchargement"></td>
-      <td><img src="docs/screen_changelog.png" width="400" alt="Changelog"></td>
-    </tr>
-    <tr>
-      <td align="center"><sub>Téléchargement en cours</sub></td>
-      <td align="center"><sub>Historique des versions</sub></td>
+      <td align="center"><sub>Jeu installé — vidéo en fond et contrôle audio</sub></td>
+      <td align="center"><sub>Gestion des versions et changelog</sub></td>
     </tr>
   </table>
 </div>
@@ -150,14 +144,13 @@ Les contributions sont les bienvenues !
 
 ## ⚖️ Avertissement légal
 
-> Ce projet est un **launcher communautaire non-officiel** créé par des fans.
-> Les jeux Harry Potter sont la propriété de **Warner Bros. Games** et **Electronic Arts**.
-> Harry Potter est une marque déposée de **Warner Bros. Entertainment Inc.**
->
-> Accio Launcher **ne contient aucun fichier de jeu** — il facilite uniquement
-> l'installation et le lancement de jeux considérés comme abandonware.
->
-> Ce projet n'est ni affilié, ni approuvé par Warner Bros., EA ou J.K. Rowling.
+Accio Launcher est un outil de gestion et de lancement de jeux. **Aucun fichier de jeu n'est inclus dans le launcher.** 
+
+L'utilisation de ce logiciel implique que vous possédez une copie légale des jeux que vous installez via le launcher. Il est de votre entière responsabilité de vous assurer que vous disposez des droits nécessaires pour utiliser ces jeux dans votre juridiction.
+
+Les jeux Harry Potter sont la propriété intellectuelle de Warner Bros. Entertainment Inc. et Electronic Arts Inc. Ce projet n'est ni affilié, ni approuvé, ni sponsorisé par ces entreprises.
+
+Le développeur d'Accio Launcher ne peut être tenu responsable de l'utilisation qui est faite de ce logiciel par ses utilisateurs. Ce projet est fourni "tel quel", sans garantie d'aucune sorte.
 
 ---
 
