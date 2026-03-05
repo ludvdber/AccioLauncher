@@ -1,7 +1,9 @@
+import gc
 import logging
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 from pathlib import Path
 
@@ -54,6 +56,8 @@ class Installer(QThread):
         archive_path: Path,
         destination: Path,
         registry_entries: list[str] | None = None,
+        config_files: list[tuple[str, str]] | None = None,
+        game_dir: str | None = None,
         delete_archive: bool = False,
         parent=None,
     ) -> None:
@@ -61,6 +65,8 @@ class Installer(QThread):
         self.archive_path = archive_path
         self.destination = destination
         self.registry_entries = registry_entries or []
+        self.config_files = config_files or []  # [(source_rel, dest_with_tilde), ...]
+        self.game_dir = game_dir  # ex: "HP3" — racine du jeu dans l'archive
         self.delete_archive = delete_archive
         self._cancelled = False
         self._extracted_dirs: list[Path] = []  # dossiers créés pendant l'extraction
@@ -104,13 +110,10 @@ class Installer(QThread):
                 return
 
             self._apply_registry()
+            self._apply_config_files()
 
             if self.delete_archive:
-                try:
-                    self.archive_path.unlink(missing_ok=True)
-                    log.info("Archive supprimée : %s", self.archive_path)
-                except PermissionError:
-                    log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", self.archive_path)
+                self._delete_archive()
 
             log.info("Installation terminée : %s", self.destination)
             self.finished.emit(str(self.destination))
@@ -133,8 +136,6 @@ class Installer(QThread):
             self._extract_7z_py7zr()
         except py7zr.exceptions.UnsupportedCompressionMethodError as exc:
             log.warning("py7zr ne supporte pas cette archive (%s), fallback sur 7z.exe", exc)
-            # Forcer la libération du handle fichier laissé par py7zr
-            import gc
             gc.collect()
             self._extract_7z_subprocess()
 
@@ -270,6 +271,55 @@ class Installer(QThread):
                 log.warning("Permission refusée pour écrire dans le registre : %s", entry)
             except OSError as exc:
                 log.warning("Impossible d'écrire dans le registre : %s — %s", entry, exc)
+
+    def _delete_archive(self) -> None:
+        """Supprime l'archive avec retry (py7zr peut garder un handle ouvert)."""
+        for attempt in range(3):
+            try:
+                gc.collect()
+                self.archive_path.unlink(missing_ok=True)
+                log.info("Archive supprimée : %s", self.archive_path)
+                return
+            except PermissionError:
+                if attempt < 2:
+                    time.sleep(1)
+        log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", self.archive_path)
+
+    def _apply_config_files(self) -> None:
+        """Copie les fichiers de configuration vers le dossier Mes Documents.
+
+        Chaque fichier existant est backupé en .bak avant remplacement.
+        Les erreurs ne bloquent pas l'installation.
+        """
+        if not self.config_files:
+            return
+
+        for source_rel, dest_tilde in self.config_files:
+            try:
+                # Résoudre le source par rapport au dossier du jeu
+                base = self.destination / self.game_dir if self.game_dir else self.destination
+                src = (base / source_rel).resolve()
+                # Vérifier que le source ne sort pas du dossier d'installation
+                if not src.is_relative_to(self.destination.resolve()):
+                    log.warning("Config source hors du dossier d'installation : %s", source_rel)
+                    continue
+                if not src.exists():
+                    log.warning("Fichier de config source introuvable : %s", src)
+                    continue
+
+                dest = Path(dest_tilde.replace("~", str(Path.home())))
+                dest.parent.mkdir(parents=True, exist_ok=True)
+
+                # Backup si le fichier existe déjà
+                if dest.exists():
+                    bak = dest.with_suffix(dest.suffix + ".bak")
+                    shutil.copy2(dest, bak)
+                    log.info("Backup de la config existante : %s → %s", dest, bak)
+
+                shutil.copy2(src, dest)
+                log.info("Config copiée : %s → %s", src, dest)
+            except OSError as exc:
+                log.warning("Impossible de copier le fichier de config %s : %s", source_rel, exc)
 
     def _cleanup(self) -> None:
         """Nettoie UNIQUEMENT les dossiers créés pendant l'extraction.

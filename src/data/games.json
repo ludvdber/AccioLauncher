@@ -1,5 +1,5 @@
 {
-    "catalog_version": "2025.03.05",
+    "catalog_version": "0.1",
     "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
     "games": [
         {
@@ -28,7 +28,8 @@
                 }
             ],
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": []
             }
         },
         {
@@ -57,7 +58,8 @@
                 }
             ],
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": []
             }
         },
         {
@@ -86,7 +88,17 @@
                 }
             ],
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": [
+                    {
+                        "source": "config/hppoa.ini",
+                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/hppoa.ini"
+                    },
+                    {
+                        "source": "config/User.ini",
+                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/User.ini"
+                    }
+                ]
             }
         },
         {
@@ -115,7 +127,8 @@
                 }
             ],
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": []
             }
         },
         {
@@ -148,7 +161,8 @@
                 }
             ],
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": []
             }
         },
         {
@@ -181,7 +195,8 @@
                 }
             ],
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": []
             }
         }
     ]

@@ -187,6 +187,16 @@ class GameDetailView(QWidget):
         self._action_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         info_layout.addWidget(self._action_container)
 
+        # Ligne de mise à jour (sous les boutons d'action)
+        self._update_row = QWidget()
+        self._update_row.setStyleSheet("background: transparent;")
+        self._update_row.hide()
+        self._update_row_layout = QHBoxLayout(self._update_row)
+        self._update_row_layout.setContentsMargins(0, 0, 0, 0)
+        self._update_row_layout.setSpacing(8)
+        self._update_row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        info_layout.addWidget(self._update_row)
+
         info_layout.addStretch()
 
         self._btn_mute = QPushButton("\U0001f507", self)
@@ -445,6 +455,12 @@ class GameDetailView(QWidget):
             if (w := item.widget()) is not None:
                 w.deleteLater()
         self._action_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
+        # Nettoyer la ligne de mise à jour
+        while self._update_row_layout.count():
+            item = self._update_row_layout.takeAt(0)
+            if (w := item.widget()) is not None:
+                w.deleteLater()
+        self._update_row.hide()
 
         if self.game is None:
             return
@@ -557,15 +573,9 @@ class GameDetailView(QWidget):
             )
             update_link.mousePressEvent = lambda e: self._on_update_clicked(e) if e.button() == Qt.MouseButton.LeftButton else None
 
-            row = QWidget()
-            row.setStyleSheet("background: transparent;")
-            row_layout = QHBoxLayout(row)
-            row_layout.setContentsMargins(0, 6, 0, 0)
-            row_layout.setSpacing(8)
-            row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            row_layout.addWidget(update_label)
-            row_layout.addWidget(update_link)
-            self._action_layout.addWidget(row)
+            self._update_row_layout.addWidget(update_label)
+            self._update_row_layout.addWidget(update_link)
+            self._update_row.show()
 
     # ──────────────────── Téléchargement ────────────────────
 
@@ -739,9 +749,17 @@ class GameDetailView(QWidget):
         self._refresh_action()
 
         dest = self.manager.config.install_path
+        config_files = [
+            (cf.source, cf.destination)
+            for cf in self.game.post_install.config_files
+        ]
+        # Dossier racine du jeu dans l'archive (ex: "HP3" depuis "HP3/system/hppoa.exe")
+        game_dir = Path(self.game.executable).parts[0] if self.game.executable else None
         self._installer = Installer(
             archive_path, dest,
             registry_entries=list(self.game.post_install.registry),
+            config_files=config_files,
+            game_dir=game_dir,
             delete_archive=delete_archive, parent=self,
         )
         self._installer.progress.connect(self._on_install_progress)
@@ -817,9 +835,16 @@ class GameDetailView(QWidget):
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
+            has_config = bool(self.game.post_install.config_files)
             self.manager.uninstall_game(self.game.id)
             self._refresh_action()
             self.state_changed.emit()
+            if has_config:
+                QMessageBox.information(
+                    self, "Sauvegardes conservées",
+                    "Les sauvegardes et la configuration dans Mes Documents "
+                    "ont été conservées.",
+                )
             self.status_message.emit(f"{self.game.name} d\u00e9sinstall\u00e9.")
 
     # ──────────────────── Menu contextuel ────────────────────

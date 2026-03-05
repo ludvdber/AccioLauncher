@@ -11,9 +11,21 @@ RegistryEntries = list[str]
 
 
 @dataclass(frozen=True, slots=True)
+class ConfigFile:
+    """Fichier de configuration à copier après installation."""
+    source: str       # relatif au dossier du jeu (ex: "config/hppoa.ini")
+    destination: str   # chemin avec ~ (ex: "~/Documents/MonJeu/hppoa.ini")
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ConfigFile":
+        return cls(source=data["source"], destination=data["destination"])
+
+
+@dataclass(frozen=True, slots=True)
 class PostInstall:
     """Données de post-installation d'un jeu."""
     registry: RegistryEntries = field(default_factory=list)
+    config_files: tuple[ConfigFile, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +106,10 @@ class GameData:
             recommended_version=data.get("recommended_version", "1.0"),
             versions=versions,
             tags=tuple(data.get("tags", [])),
-            post_install=PostInstall(registry=pi.get("registry", [])),
+            post_install=PostInstall(
+                registry=pi.get("registry", []),
+                config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
+            ),
         )
 
 
@@ -120,11 +135,27 @@ def _parse_catalog(raw: dict | list) -> Catalog:
 
 
 def load_catalog(path: Path | None = None) -> Catalog:
-    """Charge le catalogue depuis games.json. Retourne un Catalog."""
+    """Charge le catalogue le plus récent (embarqué ou cache local)."""
+    from src.core.updater import _compare_versions, _LOCAL_CATALOG_PATH
+
     src = path or GAMES_JSON_PATH
     try:
         raw = json.loads(src.read_text(encoding="utf-8"))
-        return _parse_catalog(raw)
+        catalog = _parse_catalog(raw)
     except (json.JSONDecodeError, OSError, ValueError) as e:
         log.error("Impossible de charger le catalogue de jeux : %s", e)
-        return Catalog(catalog_version="0", catalog_url="", games=())
+        catalog = Catalog(catalog_version="0", catalog_url="", games=())
+
+    # Charger le cache local s'il est plus récent
+    if path is None:
+        try:
+            if _LOCAL_CATALOG_PATH.exists():
+                raw_cache = json.loads(_LOCAL_CATALOG_PATH.read_text(encoding="utf-8"))
+                cached = _parse_catalog(raw_cache)
+                if cached.games and _compare_versions(cached.catalog_version, catalog.catalog_version) > 0:
+                    log.info("Cache local plus récent : v%s > v%s", cached.catalog_version, catalog.catalog_version)
+                    return cached
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+            log.warning("Cache catalogue invalide, ignoré : %s", e)
+
+    return catalog
