@@ -1,31 +1,18 @@
+"""Vue détaillée d'un jeu — zone centrale avec fond, infos et actions."""
+
 import logging
-import math
 import shutil
-import time
-from collections import deque
 from pathlib import Path
 
 from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve, QUrl, pyqtSignal,
-    QPointF, QRectF, QTimer, pyqtProperty, QSize,
+    Qt, QPropertyAnimation, QEasingCurve, QUrl, pyqtSignal, QPointF,
 )
-from PyQt6.QtGui import (
-    QAction,
-    QColor,
-    QFont,
-    QLinearGradient,
-    QPainter,
-    QPainterPath,
-    QPen,
-    QPixmap,
-    QRadialGradient,
-)
+from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import (
     QFileDialog,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
-    QLayout,
     QMenu,
     QMessageBox,
     QProgressBar,
@@ -35,8 +22,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.ui.background_widget import BackgroundWidget
+from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.glow_button import GlowButton
+from src.ui.speed_tracker import SpeedTracker, format_size, format_bytes, format_speed, format_eta
 
 from src.core.downloader import Downloader
 from src.core.game_data import GameData
@@ -47,367 +37,9 @@ log = logging.getLogger(__name__)
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
-SPEED_WINDOW = 5.0
-UI_UPDATE_INTERVAL = 0.5
+# Nombre de caractères affichés avant troncature
+_DESC_TRUNCATE = 160
 
-
-def _format_size(size_mb: int) -> str:
-    if size_mb >= 1000:
-        return f"{size_mb / 1000:.1f} Go"
-    return f"{size_mb} Mo"
-
-
-def _format_bytes(b: int) -> str:
-    mb = b / (1024 * 1024)
-    if mb >= 1000:
-        return f"{mb / 1000:.1f} Go"
-    return f"{mb:.0f} Mo"
-
-
-def _format_speed(bytes_per_sec: float) -> str:
-    mb = bytes_per_sec / (1024 * 1024)
-    if mb >= 1.0:
-        return f"{mb:.1f} Mo/s"
-    kb = bytes_per_sec / 1024
-    return f"{kb:.0f} Ko/s"
-
-
-def _format_eta(seconds: float) -> str:
-    if seconds < 0 or seconds > 86400:
-        return ""
-    if seconds < 60:
-        return f"~{int(seconds)}s restantes"
-    minutes = seconds / 60
-    if minutes < 60:
-        return f"~{int(minutes)} min restantes"
-    hours = minutes / 60
-    return f"~{hours:.1f}h restantes"
-
-
-# ──────────────────────────────────────────────────────────────
-# FlowLayout — wrapping layout for tags
-# ──────────────────────────────────────────────────────────────
-
-class FlowLayout(QLayout):
-    """Simple flow layout that wraps items to the next line."""
-
-    def __init__(self, parent=None, spacing=8):
-        super().__init__(parent)
-        self._items = []
-        self._spacing = spacing
-
-    def addItem(self, item):
-        self._items.append(item)
-
-    def count(self):
-        return len(self._items)
-
-    def itemAt(self, index):
-        if 0 <= index < len(self._items):
-            return self._items[index]
-        return None
-
-    def takeAt(self, index):
-        if 0 <= index < len(self._items):
-            return self._items.pop(index)
-        return None
-
-    def hasHeightForWidth(self):
-        return True
-
-    def heightForWidth(self, width):
-        return self._do_layout(QRectF(0, 0, width, 0), test_only=True)
-
-    def setGeometry(self, rect):
-        super().setGeometry(rect)
-        self._do_layout(QRectF(rect), test_only=False)
-
-    def sizeHint(self):
-        return self.minimumSize()
-
-    def minimumSize(self):
-        size = QSize(0, 0)
-        for item in self._items:
-            size = size.expandedTo(item.minimumSize())
-        return size
-
-    def _do_layout(self, rect, test_only=False):
-        x = rect.x()
-        y = rect.y()
-        line_height = 0
-        for item in self._items:
-            w = item.sizeHint().width()
-            h = item.sizeHint().height()
-            if x + w > rect.right() and line_height > 0:
-                x = rect.x()
-                y += line_height + self._spacing
-                line_height = 0
-            if not test_only:
-                from PyQt6.QtCore import QRect as QR
-                item.setGeometry(QR(int(x), int(y), int(w), int(h)))
-            x += w + self._spacing
-            line_height = max(line_height, h)
-        return int(y + line_height - rect.y())
-
-
-# ──────────────────────────────────────────────────────────────
-# Widget de fond — zoom cinématique continu + parallaxe
-# ──────────────────────────────────────────────────────────────
-
-class BackgroundWidget(QWidget):
-    """Image de fond avec zoom lent continu, parallaxe souris,
-    vignette renforcée, overlay et dégradé bas 75%."""
-
-    PARALLAX_MAX_X = 20  # pixels max de décalage horizontal
-    PARALLAX_MAX_Y = 12  # pixels max de décalage vertical
-    MAX_SCALE = 1.18
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._pixmap: QPixmap | None = None
-        self._prepared: QPixmap | None = None
-        self._prepared_for: tuple[int, int] = (0, 0)
-        self._opacity = 1.0
-
-        # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16s)
-        self._zoom = 1.0
-        self._zoom_anim = QPropertyAnimation(self, b"zoom_factor")
-        self._zoom_anim.setDuration(8000)
-        self._zoom_anim.setEasingCurve(QEasingCurve.Type.InOutSine)
-
-        # Parallaxe souris — lerp doux
-        self._parallax_tx = 0.0
-        self._parallax_ty = 0.0
-        self._parallax_cx = 0.0
-        self._parallax_cy = 0.0
-        self._parallax_timer = QTimer(self)
-        self._parallax_timer.setInterval(16)  # ~60 FPS
-        self._parallax_timer.timeout.connect(self._update_parallax)
-        self._parallax_timer.start()
-
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        log.debug("[FX] BackgroundWidget — zoom 16s, parallaxe ±20/±12, gradient 75%%")
-
-    # ── Propriétés Qt animables ──
-
-    def _get_bg_opacity(self) -> float:
-        return self._opacity
-
-    def _set_bg_opacity(self, value: float) -> None:
-        self._opacity = value
-        self.update()
-
-    bg_opacity = pyqtProperty(float, _get_bg_opacity, _set_bg_opacity)
-
-    def _get_zoom(self) -> float:
-        return self._zoom
-
-    def _set_zoom(self, value: float) -> None:
-        self._zoom = value
-        self.update()
-
-    zoom_factor = pyqtProperty(float, _get_zoom, _set_zoom)
-
-    def start_zoom_loop(self) -> None:
-        self._zoom = 1.0
-        self._zoom_forward = True
-        self._run_zoom_leg()
-
-    def _run_zoom_leg(self) -> None:
-        self._zoom_anim.stop()
-        if self._zoom_forward:
-            self._zoom_anim.setStartValue(1.0)
-            self._zoom_anim.setEndValue(1.05)
-        else:
-            self._zoom_anim.setStartValue(1.05)
-            self._zoom_anim.setEndValue(1.0)
-        self._zoom_forward = not self._zoom_forward
-        try:
-            self._zoom_anim.finished.disconnect()
-        except TypeError:
-            pass
-        self._zoom_anim.finished.connect(self._run_zoom_leg)
-        self._zoom_anim.start()
-
-    def set_parallax_target(self, mouse_x: float, mouse_y: float,
-                            win_w: float, win_h: float) -> None:
-        """Set parallax from mouse position and window size."""
-        if win_w <= 0 or win_h <= 0:
-            return
-        center_x = win_w / 2
-        center_y = win_h / 2
-        self._parallax_tx = -(mouse_x - center_x) / win_w * self.PARALLAX_MAX_X
-        self._parallax_ty = -(mouse_y - center_y) / win_h * self.PARALLAX_MAX_Y
-
-    def _update_parallax(self) -> None:
-        dx = self._parallax_tx - self._parallax_cx
-        dy = self._parallax_ty - self._parallax_cy
-        if abs(dx) < 0.05 and abs(dy) < 0.05:
-            return
-        self._parallax_cx += dx * 0.05
-        self._parallax_cy += dy * 0.05
-        self.update()
-
-    def set_image(self, path: Path | None) -> None:
-        if path and path.exists():
-            self._pixmap = QPixmap(str(path))
-        else:
-            self._pixmap = None
-        self._prepared = None
-        self._prepared_for = (0, 0)
-        self.update()
-
-    def _ensure_prepared(self) -> None:
-        if self._pixmap is None or self._pixmap.isNull():
-            self._prepared = None
-            return
-        w, h = self.width(), self.height()
-        if w <= 0 or h <= 0:
-            return
-        if self._prepared and self._prepared_for == (w, h):
-            return
-        # Image à 108% pour la marge parallaxe
-        tw = int(w * self.MAX_SCALE)
-        th = int(h * self.MAX_SCALE)
-        self._prepared = self._pixmap.scaled(
-            tw, th,
-            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        self._prepared_for = (w, h)
-
-    def paintEvent(self, event) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        rect = self.rect()
-        w, h = rect.width(), rect.height()
-
-        p.fillRect(rect, QColor("#060611"))
-        p.setOpacity(self._opacity)
-
-        self._ensure_prepared()
-        if self._prepared and w > 0 and h > 0:
-            pw, ph = float(self._prepared.width()), float(self._prepared.height())
-            widget_ar = w / h
-            prep_ar = pw / ph
-
-            if widget_ar > prep_ar:
-                base_w = pw
-                base_h = pw / widget_ar
-            else:
-                base_h = ph
-                base_w = ph * widget_ar
-
-            ez = 1.08 * self._zoom
-            crop_w = base_w / ez
-            crop_h = base_h / ez
-
-            scale_x = crop_w / w
-            scale_y = crop_h / h
-            cx = pw * 0.5 + self._parallax_cx * scale_x
-            cy = ph * 0.5 + self._parallax_cy * scale_y
-
-            src_rect = QRectF(cx - crop_w * 0.5, cy - crop_h * 0.5, crop_w, crop_h)
-            p.drawPixmap(QRectF(0, 0, w, h), self._prepared, src_rect)
-
-        # Overlay brightness
-        p.fillRect(rect, QColor(0, 0, 0, 77))
-
-        # ── Permanent elements (opacity 1.0) ──
-        p.setOpacity(1.0)
-
-        # Subtle dark blue overlay
-        p.fillRect(rect, QColor(6, 6, 17, 30))
-
-        # Top gradient (title bar area)
-        grad_top = QLinearGradient(0, 0, 0, h * 0.08)
-        grad_top.setColorAt(0, QColor(6, 6, 17, 160))
-        grad_top.setColorAt(1, QColor(6, 6, 17, 0))
-        p.fillRect(rect, grad_top)
-
-        # Bottom gradient — 75% height, very strong
-        grad = QLinearGradient(0, h * 0.25, 0, h)
-        grad.setColorAt(0.0, QColor(6, 6, 17, 0))
-        grad.setColorAt(0.35, QColor(6, 6, 17, 38))    # ~15%
-        grad.setColorAt(0.55, QColor(6, 6, 17, 128))   # ~50%
-        grad.setColorAt(0.75, QColor(6, 6, 17, 217))   # ~85%
-        grad.setColorAt(1.0, QColor(6, 6, 17, 247))    # ~97%
-        p.fillRect(rect, grad)
-
-        # Radial vignette
-        vcx, vcy = w / 2, h / 2
-        vradius = max(w, h) * 0.7
-        vignette = QRadialGradient(vcx, vcy, vradius)
-        vignette.setColorAt(0, QColor(0, 0, 0, 0))
-        vignette.setColorAt(0.3, QColor(0, 0, 0, 0))
-        vignette.setColorAt(0.7, QColor(0, 0, 0, 130))
-        vignette.setColorAt(1.0, QColor(0, 0, 0, 230))
-        p.fillRect(rect, vignette)
-
-        # ── Voile gauche — simple dégradé horizontal, pas de blur ──
-        veil_grad = QLinearGradient(0, 0, w, 0)
-        veil_grad.setColorAt(0.0, QColor(6, 6, 17, 200))
-        veil_grad.setColorAt(0.25, QColor(6, 6, 17, 150))
-        veil_grad.setColorAt(0.40, QColor(6, 6, 17, 80))
-        veil_grad.setColorAt(0.55, QColor(6, 6, 17, 20))
-        veil_grad.setColorAt(0.72, QColor(6, 6, 17, 0))
-        p.fillRect(rect, veil_grad)
-
-        p.end()
-
-
-# ──────────────────────────────────────────────────────────────
-# Tracker de vitesse de téléchargement
-# ──────────────────────────────────────────────────────────────
-
-class SpeedTracker:
-    """Calcule la vitesse moyenne glissante et le temps restant."""
-
-    def __init__(self, window: float = SPEED_WINDOW) -> None:
-        self._window = window
-        self._samples: deque[tuple[float, int]] = deque()
-        self._last_ui_update = 0.0
-
-    def reset(self) -> None:
-        self._samples.clear()
-        self._last_ui_update = 0.0
-
-    def update(self, downloaded: int) -> None:
-        now = time.monotonic()
-        self._samples.append((now, downloaded))
-        cutoff = now - self._window
-        while self._samples and self._samples[0][0] < cutoff:
-            self._samples.popleft()
-
-    def should_update_ui(self) -> bool:
-        now = time.monotonic()
-        if now - self._last_ui_update >= UI_UPDATE_INTERVAL:
-            self._last_ui_update = now
-            return True
-        return False
-
-    @property
-    def speed(self) -> float:
-        if len(self._samples) < 2:
-            return 0.0
-        oldest_t, oldest_b = self._samples[0]
-        newest_t, newest_b = self._samples[-1]
-        dt = newest_t - oldest_t
-        if dt <= 0:
-            return 0.0
-        return (newest_b - oldest_b) / dt
-
-    def eta(self, downloaded: int, total: int) -> float:
-        s = self.speed
-        if s <= 0 or total <= downloaded:
-            return -1.0
-        return (total - downloaded) / s
-
-
-# ──────────────────────────────────────────────────────────────
-# Vue détaillée d'un jeu (zone centrale complète)
-# ──────────────────────────────────────────────────────────────
 
 class GameDetailView(QWidget):
     """Zone centrale : fond + voile gauche + infos + boutons d'action."""
@@ -427,15 +59,20 @@ class GameDetailView(QWidget):
         self._video_widget = None
         self._video_muted = True
 
+        self._desc_expanded = False
+        self._full_desc = ""
+
         self._build_ui()
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
 
+    # ──────────────────── Construction UI ────────────────────
+
     def _build_ui(self) -> None:
         self._bg = BackgroundWidget(self)
 
-        # ── Info labels positioned over the left veil gradient ──
+        # ── Info labels over the left veil gradient ──
         self._info_container = QWidget(self)
         self._info_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self._info_container.setStyleSheet("background: transparent;")
@@ -443,20 +80,18 @@ class GameDetailView(QWidget):
         info_layout.setContentsMargins(50, 0, 30, 0)
         info_layout.setSpacing(0)
 
-        # Title — Cinzel Decorative 40px, max 550px wide
+        # Title
         self._title = QLabel()
         self._title.setObjectName("gameTitle")
         self._title.setFont(cinzel_decorative(36))
         self._title.setWordWrap(True)
         self._title.setMaximumWidth(600)
-        self._title.setStyleSheet(
-            "QLabel { color: #eaeaea; background: transparent; }"
-        )
+        self._title.setStyleSheet("QLabel { color: #eaeaea; background: transparent; }")
         info_layout.addWidget(self._title)
 
         info_layout.addSpacing(8)
 
-        # Metadata — Cinzel 14px
+        # Metadata
         self._meta = QLabel()
         self._meta.setObjectName("gameMeta")
         self._meta.setFont(cinzel(14))
@@ -466,7 +101,7 @@ class GameDetailView(QWidget):
 
         info_layout.addSpacing(14)
 
-        # Gold separator — 60px wide, 30% opacity
+        # Gold separator
         sep = QWidget()
         sep.setFixedHeight(1)
         sep.setFixedWidth(60)
@@ -475,23 +110,33 @@ class GameDetailView(QWidget):
 
         info_layout.addSpacing(14)
 
-        # Description — 15px, max 3 lines, 75% opacity
+        # Description
         self._desc = QLabel()
         self._desc.setObjectName("gameDescription")
         self._desc.setFont(body_font(15))
         self._desc.setWordWrap(True)
         self._desc.setMaximumWidth(520)
-        # Limit to ~3 lines: font size 15 * 1.5 line-height * 3 lines ≈ 68px
-        self._desc.setMaximumHeight(68)
         self._desc.setStyleSheet(
             "QLabel { color: rgba(176, 176, 200, 0.75); background: transparent;"
             " line-height: 1.5; }"
         )
         info_layout.addWidget(self._desc)
 
+        # "Lire la suite..." / "Réduire" toggle
+        self._btn_expand = QLabel()
+        self._btn_expand.setFont(body_font(13))
+        self._btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_expand.setStyleSheet(
+            "QLabel { color: #d4a017; background: transparent; padding-top: 4px; }"
+            "QLabel:hover { color: #e8c547; }"
+        )
+        self._btn_expand.setVisible(False)
+        self._btn_expand.mousePressEvent = lambda _: self._toggle_desc()
+        info_layout.addWidget(self._btn_expand)
+
         info_layout.addSpacing(10)
 
-        # Tags — flow layout (no clipping!)
+        # Tags
         self._tags_container = QWidget()
         self._tags_container.setStyleSheet("background: transparent;")
         self._tags_container.setMaximumHeight(80)
@@ -512,7 +157,6 @@ class GameDetailView(QWidget):
         self._action_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         info_layout.addWidget(self._action_container)
 
-        # Absorb remaining vertical space — keeps everything packed at the top
         info_layout.addStretch()
 
         self._btn_mute = QPushButton("\U0001f507", self)
@@ -521,22 +165,44 @@ class GameDetailView(QWidget):
         self._btn_mute.clicked.connect(self._toggle_mute)
         self._btn_mute.hide()
 
-        # Fade animation — background
+        # Fade — background
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity")
         self._fade_anim.setDuration(300)
         self._fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
-        # Fade animation — info text overlay
+        # Fade — info text
         self._info_opacity = QGraphicsOpacityEffect(self._info_container)
         self._info_opacity.setOpacity(1.0)
         self._info_container.setGraphicsEffect(self._info_opacity)
         self._info_fade = QPropertyAnimation(self._info_opacity, b"opacity")
         self._info_fade.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        log.debug("[FX] GameDetailView — left veil, fade 400ms, zoom, parallaxe")
+    # ──────────────────── Description expand/collapse ────────────────────
+
+    def _set_desc_text(self, text: str) -> None:
+        """Store full text and show truncated or full based on state."""
+        self._full_desc = text
+        self._desc_expanded = False
+        if len(text) > _DESC_TRUNCATE:
+            self._desc.setText(text[:_DESC_TRUNCATE].rstrip() + "…")
+            self._btn_expand.setText("Lire la suite…")
+            self._btn_expand.setVisible(True)
+        else:
+            self._desc.setText(text)
+            self._btn_expand.setVisible(False)
+
+    def _toggle_desc(self) -> None:
+        self._desc_expanded = not self._desc_expanded
+        if self._desc_expanded:
+            self._desc.setText(self._full_desc)
+            self._btn_expand.setText("Réduire")
+        else:
+            self._desc.setText(self._full_desc[:_DESC_TRUNCATE].rstrip() + "…")
+            self._btn_expand.setText("Lire la suite…")
+
+    # ──────────────────── Positionnement ────────────────────
 
     def _position_info(self) -> None:
-        """Position the info container over the left veil gradient."""
         w, h = self.width(), self.height()
         info_w = min(650, int(w * 0.50))
         info_top = int(h * 0.22)
@@ -551,6 +217,8 @@ class GameDetailView(QWidget):
             self._video_widget.setGeometry(self.rect())
         self._btn_mute.move(self.width() - 40, 12)
 
+    # ──────────────────── Changement de jeu ────────────────────
+
     def set_game(self, game: GameData) -> None:
         if self.game and self.game.id == game.id:
             self._refresh_action()
@@ -558,7 +226,7 @@ class GameDetailView(QWidget):
 
         self._stop_video()
 
-        # Fade out info text
+        # Fade out info
         self._info_fade.stop()
         self._info_opacity.setOpacity(0.0)
 
@@ -580,22 +248,21 @@ class GameDetailView(QWidget):
             pass
 
         self.game = game
-
         self._title.setText(game.name)
 
-        # Metadata with golden ◆
+        # Metadata
         gold = "#d4a017"
         sep = f'<span style="color:{gold}; margin: 0 6px;"> \u25c6 </span>'
-        meta_html = (
+        self._meta.setText(
             f'<span style="text-transform:uppercase; letter-spacing:2px;">'
-            f'{game.year}{sep}{game.developer}{sep}{_format_size(game.archive_size_mb)}'
+            f'{game.year}{sep}{game.developer}{sep}{format_size(game.archive_size_mb)}'
             f'</span>'
         )
-        self._meta.setText(meta_html)
 
-        self._desc.setText(game.description)
+        # Description (truncated + expand)
+        self._set_desc_text(game.description)
 
-        # Tags — flow layout, complete text
+        # Tags
         while self._tags_layout.count():
             item = self._tags_layout.takeAt(0)
             if (w := item.widget()) is not None:
@@ -614,7 +281,6 @@ class GameDetailView(QWidget):
                 "}"
             )
             self._tags_layout.addWidget(badge)
-        # Force layout recalculation
         self._tags_container.updateGeometry()
 
         # Background
@@ -626,14 +292,14 @@ class GameDetailView(QWidget):
 
         self._refresh_action()
 
-        # Fade-in (400ms) + zoom loop
+        # Fade-in background (400ms) + zoom loop
         self._fade_anim.setStartValue(0.0)
         self._fade_anim.setEndValue(1.0)
         self._fade_anim.setDuration(400)
         self._fade_anim.start()
         self._bg.start_zoom_loop()
 
-        # Fade in info text (slightly delayed, 500ms)
+        # Fade-in info (500ms)
         self._info_container.show()
         self._position_info()
         self._info_fade.stop()
@@ -645,7 +311,6 @@ class GameDetailView(QWidget):
     # ──────────────────── Parallaxe ────────────────────
 
     def handle_mouse_move(self, pos: QPointF) -> None:
-        """Appelé par MainWindow avec la position souris."""
         w, h = self.width(), self.height()
         if w == 0 or h == 0:
             return
@@ -723,8 +388,6 @@ class GameDetailView(QWidget):
             item = self._action_layout.takeAt(0)
             if (w := item.widget()) is not None:
                 w.deleteLater()
-
-        # Reset layout direction (downloading sets TopToBottom)
         self._action_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
 
         if self.game is None:
@@ -741,7 +404,7 @@ class GameDetailView(QWidget):
                 self._build_installed()
 
     def _build_not_installed(self) -> None:
-        size = _format_size(self.game.archive_size_mb)
+        size = format_size(self.game.archive_size_mb)
         btn = GlowButton(
             f"T\u00c9L\u00c9CHARGER  \u2014  {size}",
             glow_color="#d4a017",
@@ -833,8 +496,8 @@ class GameDetailView(QWidget):
                 self,
                 "Espace disque insuffisant",
                 f"Espace disque insuffisant.\n"
-                f"Il faut environ {_format_size(needed_mb)} d'espace libre.\n"
-                f"Actuellement {_format_size(int(free_mb))} disponibles sur le lecteur.",
+                f"Il faut environ {format_size(needed_mb)} d'espace libre.\n"
+                f"Actuellement {format_size(int(free_mb))} disponibles sur le lecteur.",
             )
             return False
         return True
@@ -863,11 +526,11 @@ class GameDetailView(QWidget):
             return
 
         pct = downloaded * 100 // total
-        dl_str = _format_bytes(downloaded)
-        total_str = _format_bytes(total)
-        speed_str = _format_speed(self._speed_tracker.speed)
+        dl_str = format_bytes(downloaded)
+        total_str = format_bytes(total)
+        speed_str = format_speed(self._speed_tracker.speed)
         eta = self._speed_tracker.eta(downloaded, total)
-        eta_str = _format_eta(eta)
+        eta_str = format_eta(eta)
 
         parts = [f"T\u00e9l\u00e9chargement : {pct}%", f"{dl_str} / {total_str}", speed_str]
         if eta_str:
