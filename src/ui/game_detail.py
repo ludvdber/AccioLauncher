@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 
 from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve, QUrl, pyqtSignal, QPointF,
+    Qt, QPropertyAnimation, QEasingCurve, QUrl, QTimer, pyqtSignal, QPointF,
 )
 from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import (
@@ -180,7 +180,6 @@ class GameDetailView(QWidget):
         # Action buttons
         self._action_container = QWidget()
         self._action_container.setStyleSheet("background: transparent;")
-        self._action_container.setMaximumHeight(60)
         self._action_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self._action_layout = QHBoxLayout(self._action_container)
         self._action_layout.setContentsMargins(0, 0, 0, 0)
@@ -482,14 +481,14 @@ class GameDetailView(QWidget):
         self._action_layout.addWidget(self._progress_bar)
 
         row = QWidget()
+        row.setStyleSheet("background: transparent;")
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(12)
 
         self._download_label = QLabel("T\u00e9l\u00e9chargement : 0%")
         self._download_label.setObjectName("downloadLabel")
-        self._download_label.setMinimumWidth(500)
-        row_layout.addWidget(self._download_label)
+        row_layout.addWidget(self._download_label, stretch=1)
 
         btn_cancel = QPushButton("Annuler")
         btn_cancel.setObjectName("btnCancel")
@@ -613,10 +612,11 @@ class GameDetailView(QWidget):
         self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"Erreur : {message}")
-        QMessageBox.warning(
+        # Afficher le popup après que deleteLater() ait nettoyé les widgets
+        QTimer.singleShot(0, lambda: QMessageBox.warning(
             self, "\u00c9chec du t\u00e9l\u00e9chargement",
             "Le t\u00e9l\u00e9chargement a \u00e9chou\u00e9.\nV\u00e9rifiez votre connexion internet et r\u00e9essayez.",
-        )
+        ))
 
     def _on_cancel_download(self) -> None:
         if self._downloader is not None:

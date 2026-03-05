@@ -16,7 +16,12 @@ env/
 
 # PyInstaller
 dist/
+build/accio_launcher/
 *.manifest
+
+# Fichiers générés
+assets/accio_launcher.ico
+docs/social_preview.png
 
 # IDE / Editors
 .vscode/
