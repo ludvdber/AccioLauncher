@@ -28,6 +28,7 @@ class GameData:
     download_url: str
     executable: str
     cover_image: str
+    tags: tuple[str, ...] = ()
     post_install: PostInstall = field(default_factory=PostInstall)
 
     @classmethod
@@ -45,6 +46,7 @@ class GameData:
             download_url=data["download_url"],
             executable=data["executable"],
             cover_image=data["cover_image"],
+            tags=tuple(data.get("tags", [])),
             post_install=PostInstall(registry=pi.get("registry", [])),
         )
 

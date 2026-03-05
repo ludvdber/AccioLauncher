@@ -8,7 +8,22 @@
       "Bash(python -c \"from src.core.game_manager import GameManager, GameState; print\\(''OK -'', [s.value for s in GameState]\\)\")",
       "Bash(python -c \"from src.core.downloader import Downloader; print\\(''OK''\\)\")",
       "Bash(timeout 6 python main.py)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(timeout 8 python main.py)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(python -c \"from src.ui.glow_button import GlowButton; print\\(''OK''\\)\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python -c \"from src.core.game_data import load_catalog; games = load_catalog\\(\\); print\\(f''{len\\(games\\)} games loaded''\\); [print\\(f''  {g.id}: tags={g.tags}''\\) for g in games]\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''src/ui/game_detail.py'', doraise=True\\); py_compile.compile\\(''src/ui/carousel.py'', doraise=True\\); py_compile.compile\\(''src/ui/particles.py'', doraise=True\\); py_compile.compile\\(''src/ui/styles.py'', doraise=True\\); print\\(''All files compile OK''\\)\")",
+      "Bash(python -c \"from src.ui.game_detail import GameDetailView, BackgroundWidget, GlassPanel; print\\(''game_detail OK''\\)\")",
+      "Bash(python -c \"from src.ui.carousel import Carousel; print\\(''carousel OK''\\)\")",
+      "Bash(python -c \"from src.ui.main_window import MainWindow; print\\(''main_window OK''\\)\")",
+      "Bash(python -c \"import main; print\\(''All OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''src/ui/game_detail.py'', doraise=True\\); py_compile.compile\\(''src/ui/particles.py'', doraise=True\\); py_compile.compile\\(''src/ui/carousel.py'', doraise=True\\); py_compile.compile\\(''src/ui/lumos.py'', doraise=True\\); py_compile.compile\\(''src/ui/main_window.py'', doraise=True\\); print\\(''All files compile OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''src/ui/main_window.py'', doraise=True\\); py_compile.compile\\(''src/ui/game_detail.py'', doraise=True\\); py_compile.compile\\(''src/ui/title_bar.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"from src.ui.main_window import MainWindow; print\\(''Import OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''src/ui/game_detail.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''src/ui/game_detail.py'', doraise=True\\); py_compile.compile\\(''src/ui/styles.py'', doraise=True\\); print\\(''OK''\\)\")"
     ]
   }
 }

@@ -52,12 +52,12 @@ class GameManager:
         ]
 
     def get_game_path(self, game_id: str) -> Path | None:
-        """Retourne le chemin vers le dossier du jeu installé."""
+        """Retourne le chemin racine du jeu (premier dossier du chemin de l'exécutable)."""
         game = self._index.get(game_id)
         if game is None:
             return None
-        # Dossier parent de l'exécutable = dossier du jeu
-        return self.config.install_path / Path(game.executable).parent
+        # Premier composant du chemin = dossier racine du jeu (ex: "HP3" pour "HP3/system/hppoa.exe")
+        return self.config.install_path / Path(game.executable).parts[0]
 
     def is_installed(self, game_id: str) -> bool:
         """Vérifie si le dossier ET l'exécutable existent."""
@@ -96,11 +96,15 @@ class GameManager:
         game_path = self.get_game_path(game_id)
         game = self._index.get(game_id)
         if game is None or game_path is None or not game_path.exists():
-            log.warning("Rien à désinstaller pour %s", game_id)
+            log.warning("Rien à désinstaller pour %s (chemin: %s)", game_id, game_path)
             return False
 
-        log.info("Désinstallation de %s (%s)", game.name, game_path)
-        shutil.rmtree(game_path)
+        log.info("Désinstallation de %s — suppression de : %s", game.name, game_path)
+        try:
+            shutil.rmtree(game_path)
+        except OSError as exc:
+            log.error("Échec de la suppression de %s : %s", game_path, exc)
+            return False
         self._states[game_id] = GameState.NOT_INSTALLED
-        log.info("Désinstallation terminée : %s", game_id)
+        log.info("Désinstallation terminée : %s (%s supprimé)", game_id, game_path)
         return True

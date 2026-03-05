@@ -3,13 +3,14 @@
         "id": "hp1",
         "name": "Harry Potter à l'École des Sorciers",
         "year": 2001,
-        "description": "Vivez votre première année à Poudlard et découvrez le monde des sorciers aux côtés de Harry.",
+        "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
         "developer": "KnowWonder",
         "archive_name": "hp1.7z",
         "archive_size_mb": 1200,
         "download_url": "https://github.com/accio-launcher/games/releases/download/hp1/hp1.7z",
         "executable": "HP1/Harry Potter.exe",
         "cover_image": "hp1_cover.jpg",
+        "tags": ["Aventure", "Action", "Plateforme", "Énigmes"],
         "post_install": {
             "registry": []
         }
@@ -18,13 +19,14 @@
         "id": "hp2",
         "name": "Harry Potter et la Chambre des Secrets",
         "year": 2002,
-        "description": "Retournez à Poudlard pour une deuxième année pleine de mystères et de dangers.",
+        "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
         "developer": "KnowWonder",
         "archive_name": "hp2.7z",
         "archive_size_mb": 2500,
         "download_url": "https://github.com/accio-launcher/games/releases/download/hp2/hp2.7z",
         "executable": "HP2/Game.exe",
         "cover_image": "hp2_cover.jpg",
+        "tags": ["Aventure", "Action", "Exploration", "Énigmes"],
         "post_install": {
             "registry": []
         }
@@ -33,13 +35,14 @@
         "id": "hp3",
         "name": "Harry Potter et le Prisonnier d'Azkaban",
         "year": 2004,
-        "description": "Contrôlez Harry, Ron et Hermione dans cette aventure où un dangereux prisonnier s'est échappé.",
+        "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
         "developer": "KnowWonder",
         "archive_name": "hp3.7z",
         "archive_size_mb": 2800,
         "download_url": "https://github.com/accio-launcher/games/releases/download/hp3/hp3.7z",
         "executable": "HP3/system/hppoa.exe",
         "cover_image": "hp3_cover.jpg",
+        "tags": ["Aventure", "Action", "Plateforme", "Multi-personnages"],
         "post_install": {
             "registry": []
         }
@@ -48,13 +51,14 @@
         "id": "hp4",
         "name": "Harry Potter et la Coupe de Feu",
         "year": 2005,
-        "description": "Participez au Tournoi des Trois Sorciers et affrontez des épreuves redoutables.",
+        "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
         "developer": "EA UK",
         "archive_name": "hp4.7z",
         "archive_size_mb": 3500,
         "download_url": "https://github.com/accio-launcher/games/releases/download/hp4/hp4.7z",
         "executable": "HP4/HP4.exe",
         "cover_image": "hp4_cover.jpg",
+        "tags": ["Action", "Coopératif", "Combat", "Aventure"],
         "post_install": {
             "registry": []
         }
@@ -63,13 +67,14 @@
         "id": "hp5",
         "name": "Harry Potter et l'Ordre du Phénix",
         "year": 2007,
-        "description": "Explorez librement Poudlard et recrutez les membres de l'Armée de Dumbledore.",
+        "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
         "developer": "EA UK",
         "archive_name": "hp5.7z",
         "archive_size_mb": 4200,
         "download_url": "https://github.com/accio-launcher/games/releases/download/hp5/hp5.7z",
         "executable": "HP5/hp5.exe",
         "cover_image": "hp5_cover.jpg",
+        "tags": ["Monde ouvert", "Aventure", "Duel", "Exploration"],
         "post_install": {
             "registry": []
         }
@@ -78,13 +83,14 @@
         "id": "hp6",
         "name": "Harry Potter et le Prince de Sang-Mêlé",
         "year": 2009,
-        "description": "Sixième année à Poudlard. Préparez des potions avec le Prince de Sang-Mêlé et découvrez les secrets de Voldemort.",
+        "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
         "developer": "EA UK",
         "archive_name": "hp6.7z",
         "archive_size_mb": 4500,
         "download_url": "https://github.com/accio-launcher/games/releases/download/hp6/hp6.7z",
         "executable": "HP6/hp6.exe",
         "cover_image": "hp6_cover.jpg",
+        "tags": ["Monde ouvert", "Duel", "Potions", "Quidditch"],
         "post_install": {
             "registry": []
         }

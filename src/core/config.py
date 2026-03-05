@@ -21,6 +21,10 @@ class Config:
     install_path: Path = field(default_factory=lambda: DEFAULT_INSTALL_PATH)
     cache_path: Path = field(default_factory=lambda: DEFAULT_CACHE_PATH)
     langue: str = "fr"
+    delete_archives: bool = True
+    resume_downloads: bool = True
+    autoplay_videos: bool = True
+    mute_videos: bool = True
 
     @classmethod
     def exists(cls) -> bool:
@@ -36,6 +40,10 @@ class Config:
                 install_path=Path(data.get("install_path", str(DEFAULT_INSTALL_PATH))),
                 cache_path=Path(data.get("cache_path", str(DEFAULT_CACHE_PATH))),
                 langue=data.get("langue", "fr"),
+                delete_archives=data.get("delete_archives", True),
+                resume_downloads=data.get("resume_downloads", True),
+                autoplay_videos=data.get("autoplay_videos", True),
+                mute_videos=data.get("mute_videos", True),
             )
         return cls()
 
@@ -48,6 +56,10 @@ class Config:
                     "install_path": str(self.install_path),
                     "cache_path": str(self.cache_path),
                     "langue": self.langue,
+                    "delete_archives": self.delete_archives,
+                    "resume_downloads": self.resume_downloads,
+                    "autoplay_videos": self.autoplay_videos,
+                    "mute_videos": self.mute_videos,
                 },
                 indent=4,
                 ensure_ascii=False,

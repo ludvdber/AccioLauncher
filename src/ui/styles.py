@@ -1,21 +1,19 @@
-# Palette Poudlard / Carte du Maraudeur
-COLOR_BG_PRIMARY = "#1a1a2e"
-COLOR_BG_CARD = "#16213e"
+# Palette Poudlard — Launcher AAA
+COLOR_BG_PRIMARY = "#060611"
+COLOR_BG_CARD = "#0f1528"
+COLOR_BG_CAROUSEL = "rgba(6, 6, 17, 0.92)"
 COLOR_ACCENT_GOLD = "#d4a017"
-COLOR_ACCENT_GOLD_LIGHT = "#e6b422"
+COLOR_ACCENT_GOLD_LIGHT = "#f0d060"
+COLOR_ACCENT_GOLD_DARK = "#9a7209"
 COLOR_ACCENT_RED = "#c0392b"
-COLOR_ACCENT_GREEN = "#27ae60"
-COLOR_TEXT = "#e0e0e0"
-COLOR_TEXT_SECONDARY = "#a0a0a0"
-COLOR_BORDER = "#2c3e6b"
+COLOR_ACCENT_GREEN = "#2ecc71"
+COLOR_ACCENT_GREEN_DARK = "#1a9c54"
+COLOR_TEXT = "#eaeaea"
+COLOR_TEXT_SECONDARY = "#8a8aaa"
+COLOR_BORDER = "#1a2744"
 
 MAIN_STYLE = f"""
 QMainWindow {{
-    background-color: {COLOR_BG_PRIMARY};
-}}
-
-QScrollArea {{
-    border: none;
     background-color: {COLOR_BG_PRIMARY};
 }}
 
@@ -23,56 +21,23 @@ QWidget#centralContainer {{
     background-color: {COLOR_BG_PRIMARY};
 }}
 
-QLabel {{
-    color: {COLOR_TEXT};
-}}
-
-QLabel#headerTitle {{
-    font-size: 28px;
-    font-weight: bold;
-    color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #c8a415, stop:0.5 #f0d060, stop:1 #c8a415);
-}}
-
-QLabel#headerSubtitle {{
-    font-size: 14px;
-    color: {COLOR_TEXT_SECONDARY};
-}}
-
-/* ---------- Séparateur header ---------- */
-
-QFrame#headerSeparator {{
-    background-color: {COLOR_BORDER};
-    max-height: 1px;
-    margin-left: 40px;
-    margin-right: 40px;
-}}
-
-/* ---------- Barre de statut ---------- */
-
-QStatusBar {{
-    background-color: {COLOR_BG_CARD};
-    color: {COLOR_TEXT_SECONDARY};
-    font-size: 12px;
-    border-top: 1px solid {COLOR_BORDER};
-}}
-
 /* ---------- Barre de menu ---------- */
 
 QMenuBar {{
-    background-color: {COLOR_BG_CARD};
-    color: {COLOR_TEXT};
-    border-bottom: 1px solid {COLOR_BORDER};
+    background-color: transparent;
+    color: {COLOR_TEXT_SECONDARY};
+    border: none;
     padding: 2px;
 }}
 
 QMenuBar::item {{
     padding: 4px 12px;
     border-radius: 4px;
+    background: transparent;
 }}
 
 QMenuBar::item:selected {{
-    background-color: {COLOR_BORDER};
+    background-color: rgba(255, 255, 255, 0.08);
 }}
 
 QMenu {{
@@ -97,121 +62,103 @@ QMenu::separator {{
     margin: 4px 8px;
 }}
 
-/* ---------- Cartes de jeu ---------- */
+/* ---------- Barre de statut ---------- */
 
-QFrame#gameCard {{
-    background-color: {COLOR_BG_CARD};
-    border: 1px solid {COLOR_BORDER};
-    border-radius: 12px;
-}}
-
-QFrame#gameCard:hover {{
-    border: 1px solid {COLOR_ACCENT_GOLD};
-}}
-
-QLabel#cardTitle {{
-    font-size: 16px;
-    font-weight: bold;
-    color: {COLOR_TEXT};
-}}
-
-QLabel#cardMeta {{
+QStatusBar {{
+    background-color: {COLOR_BG_PRIMARY};
+    color: {COLOR_TEXT_SECONDARY};
     font-size: 12px;
-    color: {COLOR_TEXT_SECONDARY};
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
 }}
 
-QLabel#cardDescription {{
-    font-size: 12px;
-    color: {COLOR_TEXT_SECONDARY};
-}}
+/* ---------- Zone carrousel ---------- */
 
-QLabel#cardSize {{
-    font-size: 12px;
-    color: {COLOR_TEXT_SECONDARY};
-}}
-
-QLabel#placeholderText {{
-    font-size: 18px;
-    font-weight: bold;
-    color: {COLOR_ACCENT_GOLD};
-}}
-
-QLabel#downloadLabel {{
-    font-size: 11px;
-    color: {COLOR_TEXT_SECONDARY};
-}}
-
-/* ---------- Boutons ---------- */
-
-QPushButton#btnDownload {{
-    background-color: {COLOR_ACCENT_GOLD};
-    color: #000000;
-    font-weight: bold;
-    font-size: 14px;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-}}
-
-QPushButton#btnDownload:hover {{
-    background-color: {COLOR_ACCENT_GOLD_LIGHT};
-}}
-
-QPushButton#btnPlay {{
-    background-color: {COLOR_ACCENT_GREEN};
-    color: #ffffff;
-    font-weight: bold;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 16px;
-}}
-
-QPushButton#btnPlay:hover {{
-    background-color: #2ecc71;
-}}
-
-QPushButton#btnUninstall {{
+QWidget#carouselBar {{
     background: transparent;
-    color: {COLOR_ACCENT_RED};
-    font-size: 11px;
     border: none;
-    padding: 4px;
 }}
 
-QPushButton#btnUninstall:hover {{
-    color: #e74c3c;
-    text-decoration: underline;
-}}
+/* ---------- Boutons d'action (zone centrale) ---------- */
+
+/* btnDownload, btnPlay, btnUninstall sont peints par GlowButton.paintEvent */
 
 QPushButton#btnCancel {{
     background-color: {COLOR_ACCENT_RED};
     color: #ffffff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     border: none;
     border-radius: 6px;
-    padding: 6px 12px;
+    padding: 8px 16px;
 }}
 
 QPushButton#btnCancel:hover {{
     background-color: #e74c3c;
 }}
 
+QPushButton#btnMute {{
+    background: rgba(0, 0, 0, 0.5);
+    color: {COLOR_TEXT};
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    padding: 4px;
+    min-width: 28px;
+    min-height: 28px;
+}}
+
+QPushButton#btnMute:hover {{
+    background: rgba(0, 0, 0, 0.7);
+}}
+
 /* ---------- Barre de progression ---------- */
 
 QProgressBar {{
     border: 1px solid {COLOR_BORDER};
-    border-radius: 6px;
-    background-color: {COLOR_BG_PRIMARY};
+    border-radius: 8px;
+    background-color: rgba(6, 6, 17, 0.6);
     text-align: center;
     color: {COLOR_TEXT};
-    font-size: 11px;
-    height: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    min-height: 30px;
+    max-width: 400px;
 }}
 
 QProgressBar::chunk {{
-    background-color: {COLOR_ACCENT_GOLD};
-    border-radius: 5px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 {COLOR_ACCENT_GOLD_DARK}, stop:1 {COLOR_ACCENT_GOLD_LIGHT});
+    border-radius: 7px;
+}}
+
+/* ---------- Labels zone détail ---------- */
+
+QLabel#gameTitle {{
+    font-size: 36px;
+    font-weight: 900;
+    color: {COLOR_TEXT};
+    letter-spacing: 1px;
+}}
+
+QLabel#gameMeta {{
+    font-size: 14px;
+    color: {COLOR_TEXT_SECONDARY};
+    letter-spacing: 1px;
+}}
+
+QLabel#gameDescription {{
+    font-size: 15px;
+    color: rgba(176, 176, 200, 0.75);
+    line-height: 1.5;
+}}
+
+QLabel#downloadLabel {{
+    font-size: 12px;
+    color: {COLOR_TEXT_SECONDARY};
+}}
+
+QLabel#sizeLabel {{
+    font-size: 14px;
+    color: {COLOR_TEXT_SECONDARY};
 }}
 """
