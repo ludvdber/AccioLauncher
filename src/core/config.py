@@ -24,7 +24,7 @@ DEFAULT_INSTALL_PATH = Path.home() / "Games" / "AccioLauncher"
 DEFAULT_CACHE_PATH = DEFAULT_INSTALL_PATH / ".cache"
 CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "0.1.0"
 
 
 @dataclass(slots=True)
