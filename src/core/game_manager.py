@@ -83,6 +83,10 @@ class GameManager:
         # Premier composant du chemin = dossier racine du jeu (ex: "HP3" pour "HP3/system/hppoa.exe")
         return self.config.install_path / Path(game.executable).parts[0]
 
+    def get_state(self, game_id: str) -> GameState:
+        """Retourne l'état d'un jeu."""
+        return self._states.get(game_id, GameState.NOT_INSTALLED)
+
     def is_installed(self, game_id: str) -> bool:
         """Vérifie si le dossier ET l'exécutable existent."""
         return self._states.get(game_id) == GameState.INSTALLED

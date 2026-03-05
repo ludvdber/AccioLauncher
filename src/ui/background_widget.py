@@ -85,7 +85,7 @@ class BackgroundWidget(QWidget):
             self._zoom_anim.setEndValue(1.0)
         self._zoom_forward = not self._zoom_forward
         try:
-            self._zoom_anim.finished.disconnect()
+            self._zoom_anim.finished.disconnect(self._run_zoom_leg)
         except TypeError:
             pass
         self._zoom_anim.finished.connect(self._run_zoom_leg)
@@ -111,6 +111,13 @@ class BackgroundWidget(QWidget):
         self._parallax_cx += dx * 0.05
         self._parallax_cy += dy * 0.05
         self.update()
+
+    def pause(self) -> None:
+        self._parallax_timer.stop()
+        self._zoom_anim.pause()
+
+    def resume(self) -> None:
+        self._zoom_anim.resume()
 
     def invalidate_cache(self) -> None:
         """Force le recalcul du pixmap préparé au prochain paintEvent."""

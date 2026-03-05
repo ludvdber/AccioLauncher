@@ -23,7 +23,7 @@ def _validate_url(url: str) -> None:
     """Vérifie que l'URL utilise un protocole autorisé."""
     parsed = urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
-        raise ValueError(f"Protocole non autorisé : {parsed.scheme!r} (attendu http ou https)")
+        raise ValueError(f"Protocole non autorisé : {parsed.scheme!r} (attendu https)")
     if not parsed.hostname:
         raise ValueError(f"URL invalide (pas de hostname) : {url!r}")
 

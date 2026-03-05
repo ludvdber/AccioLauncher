@@ -4,7 +4,7 @@ import sys
 import traceback
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
 from src.core.config import DEFAULT_INSTALL_PATH

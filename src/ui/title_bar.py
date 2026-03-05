@@ -70,7 +70,16 @@ class TitleBar(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
+            if self._window.isMaximized():
+                # Restore first, reposition window so cursor stays on the title bar
+                cursor_x = event.globalPosition().x()
+                self._window.showNormal()
+                geo = self._window.frameGeometry()
+                new_x = int(cursor_x - geo.width() * 0.5)
+                self._window.move(new_x, 0)
+                self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
+            else:
+                self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self._drag_pos and event.buttons() & Qt.MouseButton.LeftButton:

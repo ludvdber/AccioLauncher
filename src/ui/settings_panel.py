@@ -258,6 +258,11 @@ class SettingsDialog(QDialog):
         self.config.mute_videos = self._chk_mute.isChecked()
         self._save()
 
+    def closeEvent(self, event) -> None:
+        if self._scan_worker.isRunning():
+            self._scan_worker.wait(2000)
+        super().closeEvent(event)
+
     def _save(self) -> None:
         self.config.save()
         self.config_changed.emit()

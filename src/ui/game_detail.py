@@ -125,7 +125,7 @@ class GameDetailView(QWidget):
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
             "QLabel:hover { color: #e8c547; text-decoration: underline; }"
         )
-        self._btn_changelog.mouseReleaseEvent = self._on_changelog_clicked
+        self._btn_changelog.mousePressEvent = lambda e: self._on_changelog_clicked(e) if e.button() == Qt.MouseButton.LeftButton else None
         version_layout.addWidget(self._btn_changelog)
 
         info_layout.addWidget(version_row)
@@ -162,7 +162,7 @@ class GameDetailView(QWidget):
             "QLabel:hover { color: #e8c547; }"
         )
         self._btn_expand.setVisible(False)
-        self._btn_expand.mouseReleaseEvent = self._on_expand_clicked
+        self._btn_expand.mousePressEvent = lambda e: self._on_expand_clicked(e) if e.button() == Qt.MouseButton.LeftButton else None
         info_layout.addWidget(self._btn_expand)
 
         info_layout.addSpacing(10)
@@ -432,10 +432,7 @@ class GameDetailView(QWidget):
     def _current_state(self) -> GameState:
         if self.game is None:
             return GameState.NOT_INSTALLED
-        for entry in self.manager.get_games():
-            if entry["game"].id == self.game.id:
-                return entry["state"]
-        return GameState.NOT_INSTALLED
+        return self.manager.get_state(self.game.id)
 
     def _refresh_action(self) -> None:
         while self._action_layout.count():
@@ -472,7 +469,7 @@ class GameDetailView(QWidget):
         self._action_layout.addWidget(btn)
 
     def _build_downloading(self) -> None:
-        self._action_layout.setDirection(QHBoxLayout.Direction.TopToBottom)
+        self._action_layout.setDirection(QVBoxLayout.Direction.TopToBottom)
 
         self._progress_bar = QProgressBar()
         self._progress_bar.setRange(0, 100)
@@ -499,7 +496,7 @@ class GameDetailView(QWidget):
         self._action_layout.addWidget(row)
 
     def _build_installing(self) -> None:
-        self._action_layout.setDirection(QHBoxLayout.Direction.TopToBottom)
+        self._action_layout.setDirection(QVBoxLayout.Direction.TopToBottom)
         self._install_bar = QProgressBar()
         self._install_bar.setRange(0, 100)
         self._install_bar.setValue(0)
@@ -624,7 +621,8 @@ class GameDetailView(QWidget):
             self._downloader.finished.disconnect(self._on_download_finished)
             self._downloader.error.disconnect(self._on_download_error)
             self._downloader.cancel()
-            self._downloader.wait(3000)
+            if not self._downloader.wait(3000):
+                log.warning("Le thread de téléchargement n'a pas répondu dans les 3s")
             self._downloader = None
         if self.game is None:
             return
@@ -695,7 +693,14 @@ class GameDetailView(QWidget):
     # ──────────────────── Jouer / Désinstaller ────────────────────
 
     def _on_play(self) -> None:
-        proc = self.manager.launch_game(self.game.id)
+        if self.game is None:
+            return
+        try:
+            proc = self.manager.launch_game(self.game.id)
+        except OSError as exc:
+            log.error("Impossible de lancer %s : %s", self.game.name, exc)
+            self.status_message.emit("Impossible de lancer le jeu.")
+            return
         if proc is not None:
             self.status_message.emit(f"Lancement de {self.game.name}\u2026")
             self.game_launched.emit(proc, self.game.name)
@@ -703,6 +708,8 @@ class GameDetailView(QWidget):
             self.status_message.emit("Impossible de lancer le jeu.")
 
     def _on_uninstall(self) -> None:
+        if self.game is None:
+            return
         reply = QMessageBox.question(
             self, "Confirmer la d\u00e9sinstallation",
             f"Voulez-vous vraiment d\u00e9sinstaller {self.game.name} ?",

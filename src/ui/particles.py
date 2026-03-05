@@ -135,5 +135,16 @@ class ParticleOverlay(QWidget):
 
         p.end()
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    def showEvent(self, event) -> None:
+        self._timer.start()
+        super().showEvent(event)
+
+    def hideEvent(self, event) -> None:
+        self._timer.stop()
+        super().hideEvent(event)
+
+    def pause(self) -> None:
+        self._timer.stop()
+
+    def resume(self) -> None:
+        self._timer.start()

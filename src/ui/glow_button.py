@@ -68,7 +68,7 @@ class GlowButton(QPushButton):
     def _animate(self) -> None:
         if not self.isVisible():
             return
-        self._glow_phase += 0.025
+        self._glow_phase = (self._glow_phase + 0.025) % math.tau
         t = (math.sin(self._glow_phase) + 1) / 2
 
         if self._hovered:
@@ -180,6 +180,14 @@ class GlowButton(QPushButton):
             p.fillRect(rect, QColor(r, g, b, 20))
         else:
             p.fillRect(rect, QColor(255, 255, 255, 6))
+
+    def showEvent(self, event) -> None:
+        self._timer.start()
+        super().showEvent(event)
+
+    def hideEvent(self, event) -> None:
+        self._timer.stop()
+        super().hideEvent(event)
 
     def enterEvent(self, event: QEnterEvent) -> None:
         self._hovered = True

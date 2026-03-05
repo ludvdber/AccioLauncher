@@ -213,37 +213,22 @@ class MainWindow(QMainWindow):
 
     def pause_all_effects(self) -> None:
         """Met en pause TOUS les timers et animations pour consommation CPU ~0."""
-        # Particules
         if hasattr(self, "_particles"):
-            self._particles._timer.stop()
-
-        # Background : parallaxe + zoom
+            self._particles.pause()
         if hasattr(self, "_detail") and hasattr(self._detail, "_bg"):
-            bg = self._detail._bg
-            bg._parallax_timer.stop()
-            bg._zoom_anim.pause()
-
-        # Carousel : étoiles
+            self._detail._bg.pause()
         if hasattr(self, "_carousel"):
-            self._carousel._star_timer.stop()
-
+            self._carousel.pause()
         log.debug("Tous les effets sont en pause")
 
     def resume_all_effects(self) -> None:
         """Reprend tous les timers et animations."""
-        # Particules
         if hasattr(self, "_particles"):
-            self._particles._timer.start()
-
-        # Background : zoom (parallaxe démarre à la demande via set_parallax_target)
+            self._particles.resume()
         if hasattr(self, "_detail") and hasattr(self._detail, "_bg"):
-            bg = self._detail._bg
-            bg._zoom_anim.resume()
-
-        # Carousel : étoiles
+            self._detail._bg.resume()
         if hasattr(self, "_carousel"):
-            self._carousel._star_timer.start()
-
+            self._carousel.resume()
         log.debug("Tous les effets sont repris")
 
     # ──────────────────── Surveillance du processus de jeu ────────────────────
@@ -291,6 +276,7 @@ class MainWindow(QMainWindow):
 
     def _on_settings(self) -> None:
         dlg = SettingsDialog(self.config, self.manager, self)
+        dlg.config_changed.connect(self._on_state_changed)
         dlg.exec()
 
     # ──────────────────── Événements ────────────────────

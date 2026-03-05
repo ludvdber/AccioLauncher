@@ -3,7 +3,7 @@
 import logging
 import math
 import random
-from pathlib import Path
+import re
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,6 @@ _ARABIC_TO_ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI",
 
 def _game_roman(game_id: str) -> str:
     """Extrait le chiffre romain depuis l'id du jeu (ex: 'hp3' → 'III')."""
-    import re
     m = re.search(r"(\d+)$", game_id)
     if m:
         n = int(m.group(1))
@@ -62,6 +61,7 @@ class CarouselItem(QWidget):
 
         self._reflection_cache: QPixmap | None = None
         self._reflection_cache_size: tuple[int, int] = (0, 0)
+        self._cached_installed: bool = False
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -245,7 +245,7 @@ class CarouselItem(QWidget):
             p.fillRect(x_off, ref_y, w, ref_h, fade)
 
         # Green dot if installed
-        if self.manager.is_installed(self.game.id):
+        if self._cached_installed:
             p.setOpacity(1.0)
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QColor("#2ecc71"))
@@ -311,6 +311,7 @@ class Carousel(QWidget):
         if self._items:
             self._items[0].selected = True
             self._update_depths()
+            self.refresh_indicators()
 
         log.debug(
             "[FX] Carousel — %d items, %d stars",
@@ -381,11 +382,20 @@ class Carousel(QWidget):
         self.game_selected.emit(index)
 
     def select_next(self) -> None:
-        self.select((self._current_index + 1) % len(self._items))
+        if self._items:
+            self.select((self._current_index + 1) % len(self._items))
 
     def select_prev(self) -> None:
-        self.select((self._current_index - 1) % len(self._items))
+        if self._items:
+            self.select((self._current_index - 1) % len(self._items))
+
+    def pause(self) -> None:
+        self._star_timer.stop()
+
+    def resume(self) -> None:
+        self._star_timer.start()
 
     def refresh_indicators(self) -> None:
         for item in self._items:
+            item._cached_installed = item.manager.is_installed(item.game.id)
             item.update()
