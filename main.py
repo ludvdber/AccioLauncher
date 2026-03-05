@@ -4,10 +4,10 @@ import sys
 import traceback
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPixmap, QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
-from src.core.config import DEFAULT_INSTALL_PATH
+from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH
 
 LOG_DIR = DEFAULT_INSTALL_PATH
 LOG_FILE = LOG_DIR / "accio_launcher.log"
@@ -51,13 +51,21 @@ def _create_splash() -> QSplashScreen:
 
     p = QPainter(pix)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
-    # centré en haut
-    p.setPen(QColor("#d4a017"))
-    p.setFont(QFont("Segoe UI Emoji", 36))
-    p.drawText(QRect(0, 25, W, 50), Qt.AlignmentFlag.AlignCenter, "\u26a1")
+    # Logo centré en haut
+    logo_path = str(ASSETS_DIR / "accio_launcher.png")
+    logo = QPixmap(logo_path)
+    if not logo.isNull():
+        logo_size = 64
+        logo_scaled = logo.scaled(logo_size, logo_size,
+                                  Qt.AspectRatioMode.KeepAspectRatio,
+                                  Qt.TransformationMode.SmoothTransformation)
+        logo_x = (W - logo_scaled.width()) // 2
+        p.drawPixmap(logo_x, 15, logo_scaled)
 
     # "Accio Launcher" en Cinzel Decorative
+    p.setPen(QColor("#d4a017"))
     p.setFont(cinzel_decorative(36))
     p.drawText(QRect(0, 85, W, 50), Qt.AlignmentFlag.AlignCenter, "Accio Launcher")
 

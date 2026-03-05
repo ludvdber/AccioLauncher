@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
-from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent, QPixmap, QPainter, QFont
+from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.config import Config, DEFAULT_INSTALL_PATH
+from src.core.config import ASSETS_DIR, Config, DEFAULT_INSTALL_PATH
 from src.core.game_manager import GameManager
 from src.ui.carousel import Carousel
 from src.ui.fonts import load_fonts
@@ -30,30 +30,13 @@ log = logging.getLogger(__name__)
 
 _PROCESS_POLL_MS = 2000  # Vérification toutes les 2 secondes
 
-
-def _make_icon() -> QIcon:
-    pix = QPixmap(64, 64)
-    pix.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pix)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setFont(QFont("Segoe UI Emoji", 40))
-    painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "\u26a1")
-    painter.end()
-    return QIcon(pix)
+_ICON_PATH = ASSETS_DIR / "accio_launcher.png"
 
 
-def _make_tray_icon() -> QIcon:
-    """Icône dorée pour le system tray."""
-    pix = QPixmap(32, 32)
-    pix.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pix)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    from PyQt6.QtGui import QColor
-    painter.setPen(QColor("#d4a017"))
-    painter.setFont(QFont("Segoe UI Emoji", 22))
-    painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "\u26a1")
-    painter.end()
-    return QIcon(pix)
+def _load_app_icon() -> QIcon:
+    """Charge l'icône de l'application depuis le fichier PNG."""
+    icon_path = str(_ICON_PATH)
+    return QIcon(icon_path)
 
 
 class MainWindow(QMainWindow):
@@ -63,7 +46,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Accio Launcher")
         self.resize(1200, 800)
-        self.setWindowIcon(_make_icon())
+        self.setWindowIcon(_load_app_icon())
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
@@ -162,7 +145,7 @@ class MainWindow(QMainWindow):
 
     def _build_tray(self) -> None:
         self._tray = QSystemTrayIcon(self)
-        self._tray.setIcon(_make_tray_icon())
+        self._tray.setIcon(_load_app_icon())
         self._tray.setToolTip("Accio Launcher")
 
         tray_menu = QMenu()
