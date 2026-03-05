@@ -1,0 +1,4 @@
+# Dependencies de developpement / packaging
+-r requirements.txt
+pyinstaller>=6.0
+Pillow>=10.0

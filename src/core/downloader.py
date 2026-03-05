@@ -1,6 +1,7 @@
 import logging
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -10,6 +11,21 @@ log = logging.getLogger(__name__)
 MAX_RETRIES = 3
 BACKOFF_BASE = 1  # secondes
 CHUNK_SIZE = 256 * 1024  # 256 Ko
+
+# Protocoles autorisés pour les téléchargements
+_ALLOWED_SCHEMES = {"https"}
+
+# Timeouts réseau (connect, read, write, pool)
+_TIMEOUT = httpx.Timeout(connect=15.0, read=120.0, write=30.0, pool=10.0)
+
+
+def _validate_url(url: str) -> None:
+    """Vérifie que l'URL utilise un protocole autorisé."""
+    parsed = urlparse(url)
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        raise ValueError(f"Protocole non autorisé : {parsed.scheme!r} (attendu http ou https)")
+    if not parsed.hostname:
+        raise ValueError(f"URL invalide (pas de hostname) : {url!r}")
 
 
 class Downloader(QThread):
@@ -32,6 +48,12 @@ class Downloader(QThread):
 
     def run(self) -> None:
         """Boucle principale du thread — télécharge avec retry + reprise."""
+        try:
+            _validate_url(self.url)
+        except ValueError as exc:
+            self.error.emit(str(exc))
+            return
+
         part_path = self.destination.with_suffix(self.destination.suffix + ".part")
         part_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -68,12 +90,17 @@ class Downloader(QThread):
             headers["Range"] = f"bytes={downloaded}-"
             log.info("Reprise du téléchargement à %d octets", downloaded)
 
-        with httpx.Client(follow_redirects=True, timeout=30) as client:
+        with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
             with client.stream("GET", self.url, headers=headers) as response:
                 response.raise_for_status()
 
                 # Taille totale (gère 200 et 206 Partial Content)
-                content_length = int(response.headers.get("content-length", 0))
+                raw_length = response.headers.get("content-length", "")
+                try:
+                    content_length = int(raw_length)
+                except (ValueError, TypeError):
+                    content_length = 0
+
                 if response.status_code == 206:
                     total = downloaded + content_length
                 else:

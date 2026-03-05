@@ -4,7 +4,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -19,6 +19,28 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
+
+
+class _DiskScanWorker(QThread):
+    """Calcule la taille des jeux installés en arrière-plan."""
+    result = pyqtSignal(int, int)  # (count, total_bytes)
+
+    def __init__(self, game_paths: list[Path], parent=None) -> None:
+        super().__init__(parent)
+        self._game_paths = game_paths
+
+    def run(self) -> None:
+        count = len(self._game_paths)
+        total_bytes = 0
+        for game_path in self._game_paths:
+            if game_path.exists():
+                try:
+                    total_bytes += sum(
+                        f.stat().st_size for f in game_path.rglob("*") if f.is_file()
+                    )
+                except OSError:
+                    pass
+        self.result.emit(count, total_bytes)
 
 
 def _format_size_bytes(b: int) -> str:
@@ -142,13 +164,22 @@ class SettingsDialog(QDialog):
         self._free_label.setObjectName("subtitle")
         layout.addWidget(self._free_label)
 
-        # ── Jeux installés
-        installed_count, installed_size = self._compute_installed_stats()
-        self._installed_label = QLabel(
-            f"{installed_count} jeu(x) installé(s) — {_format_size_bytes(installed_size)} utilisés"
-        )
+        # ── Jeux installés (calcul asynchrone)
+        self._installed_label = QLabel("Calcul de l'espace utilisé…")
         self._installed_label.setObjectName("subtitle")
         layout.addWidget(self._installed_label)
+
+        # Snapshot des chemins sur le thread principal (thread-safe)
+        game_paths = [
+            self.manager.get_game_path(entry["game"].id)
+            for entry in self.manager.get_games()
+            if entry["state"] == GameState.INSTALLED
+        ]
+        game_paths = [p for p in game_paths if p is not None]
+
+        self._scan_worker = _DiskScanWorker(game_paths, parent=self)
+        self._scan_worker.result.connect(self._on_scan_done)
+        self._scan_worker.start()
 
         # ── Téléchargement
         layout.addWidget(self._section("Téléchargement"))
@@ -202,28 +233,12 @@ class SettingsDialog(QDialog):
         lbl.setObjectName("sectionTitle")
         return lbl
 
-    def _compute_installed_stats(self) -> tuple[int, int]:
-        """Retourne (nombre de jeux installés, taille totale en octets)."""
-        count = 0
-        total_bytes = 0
-        for entry in self.manager.get_games():
-            if entry["state"] == GameState.INSTALLED:
-                count += 1
-                game_path = self.manager.get_game_path(entry["game"].id)
-                if game_path and game_path.exists():
-                    try:
-                        game_size = sum(
-                            f.stat().st_size for f in game_path.rglob("*") if f.is_file()
-                        )
-                        total_bytes += game_size
-                        log.info(
-                            "Taille de %s (%s) : %s",
-                            entry["game"].name, game_path, _format_size_bytes(game_size),
-                        )
-                    except OSError as exc:
-                        log.warning("Impossible de scanner %s : %s", game_path, exc)
+    def _on_scan_done(self, count: int, total_bytes: int) -> None:
+        """Callback quand le scan disque en arrière-plan est terminé."""
+        self._installed_label.setText(
+            f"{count} jeu(x) installé(s) — {_format_size_bytes(total_bytes)} utilisés"
+        )
         log.info("Total installé : %d jeu(x), %s", count, _format_size_bytes(total_bytes))
-        return count, total_bytes
 
     def _on_change_path(self) -> None:
         chosen = QFileDialog.getExistingDirectory(

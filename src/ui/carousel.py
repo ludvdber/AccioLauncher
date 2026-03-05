@@ -13,15 +13,25 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
+from src.core.config import ASSETS_DIR
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.ui.fonts import cinzel
-
-ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 THUMB_W = 90
 THUMB_H = 125
 
-_ROMAN = {"hp1": "I", "hp2": "II", "hp3": "III", "hp4": "IV", "hp5": "V", "hp6": "VI"}
+_ARABIC_TO_ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI",
+                     7: "VII", 8: "VIII", 9: "IX", 10: "X"}
+
+
+def _game_roman(game_id: str) -> str:
+    """Extrait le chiffre romain depuis l'id du jeu (ex: 'hp3' → 'III')."""
+    import re
+    m = re.search(r"(\d+)$", game_id)
+    if m:
+        n = int(m.group(1))
+        return _ARABIC_TO_ROMAN.get(n, str(n))
+    return game_id.upper()
 CAROUSEL_HEIGHT = 160
 REFLECTION_RATIO = 0.20
 REFLECTION_OPACITY = 0.06
@@ -49,6 +59,9 @@ class CarouselItem(QWidget):
         self._pixmap: QPixmap | None = None
         self._anim_scale = float(SCALE_FAR)
         self._anim_opacity = float(OPACITY_FAR)
+
+        self._reflection_cache: QPixmap | None = None
+        self._reflection_cache_size: tuple[int, int] = (0, 0)
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -185,7 +198,7 @@ class CarouselItem(QWidget):
             p.setFont(QFont("Segoe UI Emoji", 20))
             p.drawText(QRect(x_off, y_off - 10, w, h), Qt.AlignmentFlag.AlignCenter, "\u26a1")
 
-            roman = _ROMAN.get(self.game.id, self.game.id.upper())
+            roman = _game_roman(self.game.id)
             p.setPen(QColor(212, 160, 23, 140))
             p.setFont(cinzel(12, bold=True))
             p.drawText(QRect(x_off, y_off + 22, w, h), Qt.AlignmentFlag.AlignCenter, roman)
@@ -206,14 +219,17 @@ class CarouselItem(QWidget):
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRoundedRect(x_off + 1, y_off + 1, w - 2, h - 2, radius, radius)
 
-        # Reflection
+        # Reflection (cached)
         if self._pixmap:
             ref_h = int(h * REFLECTION_RATIO)
             ref_y = y_off + h + 4
-            flipped = self._pixmap.scaled(
-                w, h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            ).transformed(QTransform().scale(1, -1))
+            if self._reflection_cache is None or self._reflection_cache_size != (w, h):
+                self._reflection_cache = self._pixmap.scaled(
+                    w, h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                    Qt.TransformationMode.SmoothTransformation,
+                ).transformed(QTransform().scale(1, -1))
+                self._reflection_cache_size = (w, h)
+            flipped = self._reflection_cache
 
             p.setOpacity(eff_opacity * REFLECTION_OPACITY)
             ref_clip = QPainterPath()
@@ -234,6 +250,20 @@ class CarouselItem(QWidget):
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QColor("#2ecc71"))
             p.drawEllipse(x_off + w - 14, y_off + h - 14, 10, 10)
+
+            # Version badge
+            ver_text = f"v{self.game.version}"
+            p.setFont(QFont("Segoe UI", 9))
+            fm = p.fontMetrics()
+            tw = fm.horizontalAdvance(ver_text)
+            th = fm.height()
+            pad_x, pad_y = 4, 2
+            bx = x_off + 3
+            by = y_off + h - th - pad_y * 2 - 3
+            p.setBrush(QColor(0, 0, 0, 153))
+            p.drawRoundedRect(QRectF(bx, by, tw + pad_x * 2, th + pad_y * 2), 3, 3)
+            p.setPen(QColor(220, 220, 240, 200))
+            p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th), Qt.AlignmentFlag.AlignCenter, ver_text)
 
         p.end()
 

@@ -1,0 +1,25 @@
+[project]
+name = "accio-launcher"
+version = "1.0.0"
+description = "Launcher pour les jeux Harry Potter sur PC"
+requires-python = ">=3.10"
+dependencies = [
+    "PyQt6>=6.10",
+    "PyQt6-Multimedia>=6.10",
+    "httpx>=0.28",
+    "py7zr>=1.1",
+    "Pillow>=12",
+]
+
+[project.scripts]
+accio-launcher = "main:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["src*"]

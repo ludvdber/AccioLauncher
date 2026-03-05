@@ -1,6 +1,6 @@
 """FlowLayout — layout qui wrap les items à la ligne suivante."""
 
-from PyQt6.QtCore import QRectF, QSize
+from PyQt6.QtCore import QRect, QRectF, QSize
 from PyQt6.QtWidgets import QLayout
 
 
@@ -59,8 +59,7 @@ class FlowLayout(QLayout):
                 y += line_height + self._spacing
                 line_height = 0
             if not test_only:
-                from PyQt6.QtCore import QRect as QR
-                item.setGeometry(QR(int(x), int(y), int(w), int(h)))
+                item.setGeometry(QRect(int(x), int(y), int(w), int(h)))
             x += w + self._spacing
             line_height = max(line_height, h)
         return int(y + line_height - rect.y())

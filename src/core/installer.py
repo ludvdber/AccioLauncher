@@ -9,6 +9,15 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 log = logging.getLogger(__name__)
 
+# Préfixes de registre autorisés (whitelist)
+_ALLOWED_REGISTRY_PREFIXES = ("Software\\",)
+
+
+def _check_path_traversal(destination: Path, member_name: str) -> bool:
+    """Vérifie qu'un fichier extrait ne sort pas du dossier de destination (Zip Slip)."""
+    target = (destination / member_name).resolve()
+    return target.is_relative_to(destination.resolve())
+
 
 class Installer(QThread):
     """Extrait une archive et installe un jeu en arrière-plan."""
@@ -70,26 +79,41 @@ class Installer(QThread):
             self._cleanup()
             self.error.emit(f"Erreur d'installation : {exc}")
 
+    def _validate_7z_paths(self, file_list: list) -> None:
+        """Vérifie que toutes les entrées d'une archive 7z sont sûres."""
+        for f_info in file_list:
+            name = f_info.filename
+            if not _check_path_traversal(self.destination, name):
+                raise ValueError(f"Path traversal détecté dans l'archive 7z : {name}")
+
     def _extract_7z(self) -> None:
-        """Extrait une archive .7z avec progression."""
+        """Extrait une archive .7z avec progression réelle basée sur la taille."""
         with py7zr.SevenZipFile(self.archive_path, mode="r") as archive:
-            all_files = archive.getnames()
-            total = len(all_files)
-            if total == 0:
+            all_files = archive.list()
+
+            # Sécurité : vérifier tous les chemins AVANT extraction
+            self._validate_7z_paths(all_files)
+
+            total_size = sum(getattr(f, "uncompressed", 0) or 0 for f in all_files)
+
+            if total_size == 0:
+                archive.extractall(path=self.destination)
+                self.progress.emit(100)
                 return
 
-            # py7zr ne supporte pas l'extraction fichier par fichier facilement,
-            # on extrait tout et on émet la progression par batch
             archive.extractall(path=self.destination)
 
-            # Émettre la progression linéairement pendant la vérification
-            for i, _ in enumerate(all_files, 1):
+            # Progression post-extraction
+            extracted_size = 0
+            for f_info in all_files:
                 if self._cancelled:
                     return
-                self.progress.emit(i * 100 // total)
+                extracted_size += getattr(f_info, "uncompressed", 0) or 0
+                pct = min(100, int(extracted_size * 100 / total_size))
+                self.progress.emit(pct)
 
     def _extract_zip(self) -> None:
-        """Extrait une archive .zip avec progression."""
+        """Extrait une archive .zip avec progression et protection Zip Slip."""
         with zipfile.ZipFile(self.archive_path, "r") as zf:
             members = zf.infolist()
             total = len(members)
@@ -99,33 +123,67 @@ class Installer(QThread):
             for i, member in enumerate(members, 1):
                 if self._cancelled:
                     return
+                # Protection Zip Slip
+                if not _check_path_traversal(self.destination, member.filename):
+                    log.warning("Zip Slip détecté, entrée ignorée : %s", member.filename)
+                    continue
                 zf.extract(member, self.destination)
                 self.progress.emit(i * 100 // total)
 
     def _apply_registry(self) -> None:
-        """Applique les entrées de registre post-installation (Windows uniquement)."""
+        """Applique les entrées de registre post-installation (Windows uniquement).
+
+        Utilise HKCU (current user) au lieu de HKLM pour éviter les problèmes
+        de droits administrateur. Seules les clés sous Software\\ sont autorisées.
+        """
         if not self.registry_entries or sys.platform != "win32":
             return
 
         import winreg
 
+        _HIVE_MAP = {
+            "HKCU": winreg.HKEY_CURRENT_USER,
+            "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
+            "HKLM": winreg.HKEY_LOCAL_MACHINE,
+            "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
+        }
+
         for entry in self.registry_entries:
             try:
-                # Format attendu : "HKLM\\Software\\Key=Value"
-                key_path, _, value = entry.partition("=")
-                hive_name, _, sub_key = key_path.partition("\\")
-                hive = getattr(winreg, hive_name, None)
-                if hive is None:
-                    log.warning("Ruche de registre inconnue : %s", hive_name)
+                key_path, sep, value = entry.partition("=")
+                if not sep:
+                    log.warning("Format de registre invalide (pas de '=') : %s", entry)
                     continue
+                hive_name, _, sub_key = key_path.partition("\\")
+                hive = _HIVE_MAP.get(hive_name.upper())
+                if hive is None:
+                    log.warning("Ruche de registre non supportée : %s", hive_name)
+                    continue
+
+                # Whitelist : seules les clés sous Software\ sont autorisées
+                if not any(sub_key.startswith(prefix) for prefix in _ALLOWED_REGISTRY_PREFIXES):
+                    log.warning("Clé de registre hors whitelist ignorée : %s", sub_key)
+                    continue
+
+                # Toujours utiliser HKCU (droits utilisateur)
+                if hive == winreg.HKEY_LOCAL_MACHINE:
+                    log.info("HKLM demandé, redirection vers HKCU : %s", entry)
+                    hive = winreg.HKEY_CURRENT_USER
+
                 with winreg.CreateKey(hive, sub_key) as key:
                     winreg.SetValueEx(key, "", 0, winreg.REG_SZ, value)
                 log.info("Registre mis à jour : %s", entry)
-            except OSError:
-                log.warning("Impossible d'écrire dans le registre : %s", entry)
+            except PermissionError:
+                log.warning("Permission refusée pour écrire dans le registre : %s", entry)
+            except OSError as exc:
+                log.warning("Impossible d'écrire dans le registre : %s — %s", entry, exc)
 
     def _cleanup(self) -> None:
         """Nettoie les fichiers partiellement extraits."""
-        if self.destination.exists():
-            shutil.rmtree(self.destination, ignore_errors=True)
+        if not self.destination.exists():
+            return
+        try:
+            shutil.rmtree(self.destination)
             log.info("Fichiers partiels nettoyés : %s", self.destination)
+        except OSError as exc:
+            log.error("Échec du nettoyage de %s : %s", self.destination, exc)

@@ -1,18 +1,22 @@
 import logging
+import logging.handlers
 import sys
+import traceback
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QApplication, QSplashScreen
+from PyQt6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
 from src.core.config import DEFAULT_INSTALL_PATH
 
 LOG_DIR = DEFAULT_INSTALL_PATH
 LOG_FILE = LOG_DIR / "accio_launcher.log"
+LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 Mo
+LOG_BACKUP_COUNT = 3
 
 
 def _setup_logging() -> None:
-    """Configure le logging : DEBUG dans le fichier, INFO dans la console."""
+    """Configure le logging : DEBUG dans le fichier (rotation), INFO dans la console."""
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
     root = logging.getLogger()
@@ -25,7 +29,10 @@ def _setup_logging() -> None:
     console.setFormatter(fmt)
     root.addHandler(console)
 
-    file_handler = logging.FileHandler(str(LOG_FILE), encoding="utf-8")
+    file_handler = logging.handlers.RotatingFileHandler(
+        str(LOG_FILE), encoding="utf-8",
+        maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT,
+    )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(fmt)
     root.addHandler(file_handler)
@@ -45,7 +52,7 @@ def _create_splash() -> QSplashScreen:
     p = QPainter(pix)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-    # ⚡ centré en haut
+    # centré en haut
     p.setPen(QColor("#d4a017"))
     p.setFont(QFont("Segoe UI Emoji", 36))
     p.drawText(QRect(0, 25, W, 50), Qt.AlignmentFlag.AlignCenter, "\u26a1")
@@ -78,20 +85,42 @@ def _create_splash() -> QSplashScreen:
 
 
 def main():
-    _setup_logging()
+    try:
+        _setup_logging()
+    except OSError as exc:
+        print(f"Impossible d'initialiser le logging : {exc}", file=sys.stderr)
 
-    app = QApplication(sys.argv)
+    log = logging.getLogger(__name__)
 
-    splash = _create_splash()
-    splash.show()
-    app.processEvents()
+    try:
+        app = QApplication(sys.argv)
 
-    from src.ui.main_window import MainWindow
+        splash = _create_splash()
+        splash.show()
+        app.processEvents()
 
-    window = MainWindow()
-    window.show()
-    splash.finish(window)
-    sys.exit(app.exec())
+        from src.ui.main_window import MainWindow
+
+        window = MainWindow()
+        window.show()
+        splash.finish(window)
+        sys.exit(app.exec())
+
+    except Exception as exc:
+        log.critical("Erreur fatale au démarrage : %s", exc, exc_info=True)
+        # Tenter d'afficher une boîte de dialogue si QApplication existe
+        try:
+            app_instance = QApplication.instance()
+            if app_instance:
+                QMessageBox.critical(
+                    None, "Erreur fatale",
+                    f"Accio Launcher n'a pas pu démarrer.\n\n{exc}",
+                )
+        except Exception:
+            pass
+        print(f"Erreur fatale : {exc}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

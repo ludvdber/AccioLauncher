@@ -28,14 +28,14 @@ from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.glow_button import GlowButton
 from src.ui.speed_tracker import SpeedTracker, format_size, format_bytes, format_speed, format_eta
 
+from src.core.config import ASSETS_DIR
 from src.core.downloader import Downloader
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.installer import Installer
+from src.ui.changelog_dialog import ChangelogDialog
 
 log = logging.getLogger(__name__)
-
-ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
 # Nombre de caractères affichés avant troncature
 _DESC_TRUNCATE = 160
@@ -46,6 +46,7 @@ class GameDetailView(QWidget):
 
     status_message = pyqtSignal(str)
     state_changed = pyqtSignal()
+    game_launched = pyqtSignal(object, str)  # (subprocess.Popen, game_name)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -61,6 +62,7 @@ class GameDetailView(QWidget):
 
         self._desc_expanded = False
         self._full_desc = ""
+        self._pending_game: GameData | None = None
 
         self._build_ui()
 
@@ -99,7 +101,36 @@ class GameDetailView(QWidget):
         self._meta.setStyleSheet("QLabel { color: #8a8aaa; background: transparent; }")
         info_layout.addWidget(self._meta)
 
-        info_layout.addSpacing(14)
+        info_layout.addSpacing(6)
+
+        # Version + Changelog link
+        version_row = QWidget()
+        version_row.setStyleSheet("background: transparent;")
+        version_layout = QHBoxLayout(version_row)
+        version_layout.setContentsMargins(0, 0, 0, 0)
+        version_layout.setSpacing(10)
+        version_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        self._version_label = QLabel()
+        self._version_label.setFont(body_font(12))
+        self._version_label.setStyleSheet(
+            "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
+        )
+        version_layout.addWidget(self._version_label)
+
+        self._btn_changelog = QLabel("Changelog")
+        self._btn_changelog.setFont(body_font(12))
+        self._btn_changelog.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_changelog.setStyleSheet(
+            "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
+            "QLabel:hover { color: #e8c547; text-decoration: underline; }"
+        )
+        self._btn_changelog.mouseReleaseEvent = self._on_changelog_clicked
+        version_layout.addWidget(self._btn_changelog)
+
+        info_layout.addWidget(version_row)
+
+        info_layout.addSpacing(10)
 
         # Gold separator
         sep = QWidget()
@@ -131,7 +162,7 @@ class GameDetailView(QWidget):
             "QLabel:hover { color: #e8c547; }"
         )
         self._btn_expand.setVisible(False)
-        self._btn_expand.mousePressEvent = lambda _: self._toggle_desc()
+        self._btn_expand.mouseReleaseEvent = self._on_expand_clicked
         info_layout.addWidget(self._btn_expand)
 
         info_layout.addSpacing(10)
@@ -191,6 +222,16 @@ class GameDetailView(QWidget):
             self._desc.setText(text)
             self._btn_expand.setVisible(False)
 
+    def _on_expand_clicked(self, _event) -> None:
+        """Slot pour le clic sur le label expand."""
+        self._toggle_desc()
+
+    def _on_changelog_clicked(self, _event) -> None:
+        """Ouvre le dialog d'historique des versions."""
+        if self.game is not None:
+            dlg = ChangelogDialog(self.game, self)
+            dlg.exec()
+
     def _toggle_desc(self) -> None:
         self._desc_expanded = not self._desc_expanded
         if self._desc_expanded:
@@ -211,7 +252,7 @@ class GameDetailView(QWidget):
 
     def resizeEvent(self, event) -> None:
         self._bg.setGeometry(self.rect())
-        self._bg._prepared = None
+        self._bg.invalidate_cache()
         self._position_info()
         if self._video_widget:
             self._video_widget.setGeometry(self.rect())
@@ -231,22 +272,28 @@ class GameDetailView(QWidget):
         self._info_opacity.setOpacity(0.0)
 
         # Fade out background
+        self._pending_game = game
         self._fade_anim.stop()
         self._fade_anim.setStartValue(1.0)
         self._fade_anim.setEndValue(0.0)
         try:
-            self._fade_anim.finished.disconnect()
+            self._fade_anim.finished.disconnect(self._on_fadeout_done)
         except TypeError:
             pass
-        self._fade_anim.finished.connect(lambda g=game: self._apply_game(g))
+        self._fade_anim.finished.connect(self._on_fadeout_done)
         self._fade_anim.start()
 
-    def _apply_game(self, game: GameData) -> None:
+    def _on_fadeout_done(self) -> None:
+        """Slot appelé quand le fade-out du fond est terminé."""
         try:
-            self._fade_anim.finished.disconnect()
+            self._fade_anim.finished.disconnect(self._on_fadeout_done)
         except TypeError:
             pass
+        if self._pending_game is not None:
+            self._apply_game(self._pending_game)
+            self._pending_game = None
 
+    def _apply_game(self, game: GameData) -> None:
         self.game = game
         self._title.setText(game.name)
 
@@ -258,6 +305,9 @@ class GameDetailView(QWidget):
             f'{game.year}{sep}{game.developer}{sep}{format_size(game.archive_size_mb)}'
             f'</span>'
         )
+
+        # Version
+        self._version_label.setText(f"Version {game.version}")
 
         # Description (truncated + expand)
         self._set_desc_text(game.description)
@@ -293,6 +343,11 @@ class GameDetailView(QWidget):
         self._refresh_action()
 
         # Fade-in background (400ms) + zoom loop
+        # S'assurer que _on_fadeout_done n'est pas connecté pendant le fade-in
+        try:
+            self._fade_anim.finished.disconnect(self._on_fadeout_done)
+        except TypeError:
+            pass
         self._fade_anim.setStartValue(0.0)
         self._fade_anim.setEndValue(1.0)
         self._fade_anim.setDuration(400)
@@ -331,9 +386,9 @@ class GameDetailView(QWidget):
                 self._video_widget = QVideoWidget(self)
                 self._video_widget.setGeometry(self.rect())
                 self._video_widget.stackUnder(self._bg)
-                self._audio_output = QAudioOutput()
+                self._audio_output = QAudioOutput(self)
                 self._audio_output.setVolume(0.0)
-                self._video_player = QMediaPlayer()
+                self._video_player = QMediaPlayer(self)
                 self._video_player.setVideoOutput(self._video_widget)
                 self._video_player.setAudioOutput(self._audio_output)
                 self._video_player.mediaStatusChanged.connect(self._on_media_status)
@@ -484,6 +539,8 @@ class GameDetailView(QWidget):
     # ──────────────────── Téléchargement ────────────────────
 
     def _check_disk_space(self) -> bool:
+        if self.game is None:
+            return False
         needed_mb = self.game.archive_size_mb * 2
         try:
             usage = shutil.disk_usage(self.manager.config.install_path)
@@ -503,7 +560,7 @@ class GameDetailView(QWidget):
         return True
 
     def _on_download(self) -> None:
-        if not self._check_disk_space():
+        if self.game is None or not self._check_disk_space():
             return
 
         self.manager.set_game_state(self.game.id, GameState.DOWNLOADING)
@@ -543,11 +600,15 @@ class GameDetailView(QWidget):
 
     def _on_download_finished(self, archive_path_str: str) -> None:
         self._downloader = None
+        if self.game is None:
+            return
         self.status_message.emit(f"Installation de {self.game.name}\u2026")
         self._start_install(Path(archive_path_str), delete_archive=self.manager.config.delete_archives)
 
     def _on_download_error(self, message: str) -> None:
         self._downloader = None
+        if self.game is None:
+            return
         self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
         self._refresh_action()
         self.state_changed.emit()
@@ -559,8 +620,14 @@ class GameDetailView(QWidget):
 
     def _on_cancel_download(self) -> None:
         if self._downloader is not None:
+            self._downloader.progress.disconnect(self._on_download_progress)
+            self._downloader.finished.disconnect(self._on_download_finished)
+            self._downloader.error.disconnect(self._on_download_error)
             self._downloader.cancel()
+            self._downloader.wait(3000)
             self._downloader = None
+        if self.game is None:
+            return
         self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
         self._refresh_action()
         self.state_changed.emit()
@@ -569,6 +636,8 @@ class GameDetailView(QWidget):
     # ──────────────────── Installation ────────────────────
 
     def _start_install(self, archive_path: Path, *, delete_archive: bool = True) -> None:
+        if self.game is None:
+            return
         self.manager.set_game_state(self.game.id, GameState.INSTALLING)
         self._refresh_action()
 
@@ -589,6 +658,8 @@ class GameDetailView(QWidget):
 
     def _on_install_finished(self, _path: str) -> None:
         self._installer = None
+        if self.game is None:
+            return
         exe_path = self.manager.config.install_path / self.game.executable
         if not exe_path.exists():
             log.warning("Ex\u00e9cutable introuvable apr\u00e8s extraction : %s", exe_path)
@@ -603,12 +674,15 @@ class GameDetailView(QWidget):
             )
             return
         self.manager.set_game_state(self.game.id, GameState.INSTALLED)
+        self.manager.save_installed_version(self.game.id)
         self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"{self.game.name} install\u00e9 avec succ\u00e8s !")
 
     def _on_install_error(self, message: str) -> None:
         self._installer = None
+        if self.game is None:
+            return
         self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
         self._refresh_action()
         self.state_changed.emit()
@@ -621,8 +695,10 @@ class GameDetailView(QWidget):
     # ──────────────────── Jouer / Désinstaller ────────────────────
 
     def _on_play(self) -> None:
-        if self.manager.launch_game(self.game.id):
+        proc = self.manager.launch_game(self.game.id)
+        if proc is not None:
             self.status_message.emit(f"Lancement de {self.game.name}\u2026")
+            self.game_launched.emit(proc, self.game.name)
         else:
             self.status_message.emit("Impossible de lancer le jeu.")
 

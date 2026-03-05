@@ -1,13 +1,14 @@
 """Chargement des polices Cinzel / Cinzel Decorative et helpers typographiques."""
 
 import logging
-from pathlib import Path
 
 from PyQt6.QtGui import QFont, QFontDatabase
 
+from src.core.config import ASSETS_DIR
+
 log = logging.getLogger(__name__)
 
-FONTS_DIR = Path(__file__).parent.parent.parent / "assets" / "fonts"
+FONTS_DIR = ASSETS_DIR / "fonts"
 
 _cinzel_family: str | None = None
 _cinzel_deco_family: str | None = None
@@ -66,12 +67,3 @@ def cinzel_decorative(size: int, weight: QFont.Weight = QFont.Weight.Black) -> Q
 def body_font(size: int = 14) -> QFont:
     """Police de corps pour descriptions."""
     return QFont("Georgia", size)
-
-
-# Rétrocompatibilité
-def load_harry_font() -> None:
-    load_fonts()
-
-
-def harry_font(size: int, bold: bool = False) -> QFont:
-    return cinzel_decorative(size)

@@ -32,6 +32,7 @@ class BackgroundWidget(QWidget):
 
         # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16s)
         self._zoom = 1.0
+        self._zoom_forward = True
         self._zoom_anim = QPropertyAnimation(self, b"zoom_factor")
         self._zoom_anim.setDuration(8000)
         self._zoom_anim.setEasingCurve(QEasingCurve.Type.InOutSine)
@@ -44,7 +45,7 @@ class BackgroundWidget(QWidget):
         self._parallax_timer = QTimer(self)
         self._parallax_timer.setInterval(16)  # ~60 FPS
         self._parallax_timer.timeout.connect(self._update_parallax)
-        self._parallax_timer.start()
+        # Le timer démarre à la demande (set_parallax_target)
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         log.debug("[FX] BackgroundWidget — zoom 16s, parallaxe ±20/±12, gradient 75%%")
@@ -98,15 +99,23 @@ class BackgroundWidget(QWidget):
         center_y = win_h / 2
         self._parallax_tx = -(mouse_x - center_x) / win_w * self.PARALLAX_MAX_X
         self._parallax_ty = -(mouse_y - center_y) / win_h * self.PARALLAX_MAX_Y
+        if not self._parallax_timer.isActive():
+            self._parallax_timer.start()
 
     def _update_parallax(self) -> None:
         dx = self._parallax_tx - self._parallax_cx
         dy = self._parallax_ty - self._parallax_cy
         if abs(dx) < 0.05 and abs(dy) < 0.05:
+            self._parallax_timer.stop()
             return
         self._parallax_cx += dx * 0.05
         self._parallax_cy += dy * 0.05
         self.update()
+
+    def invalidate_cache(self) -> None:
+        """Force le recalcul du pixmap préparé au prochain paintEvent."""
+        self._prepared = None
+        self._prepared_for = (0, 0)
 
     def set_image(self, path: Path | None) -> None:
         if path and path.exists():

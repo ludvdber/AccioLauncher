@@ -66,6 +66,8 @@ class GlowButton(QPushButton):
         log.debug("[FX] GlowButton '%s' — style=%s, glow=%s", text, style, glow_color)
 
     def _animate(self) -> None:
+        if not self.isVisible():
+            return
         self._glow_phase += 0.025
         t = (math.sin(self._glow_phase) + 1) / 2
 

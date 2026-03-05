@@ -1,21 +1,22 @@
-import os
+import logging
 import subprocess
-import sys
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QEvent, QPointF
-from PyQt6.QtGui import QIcon, QKeyEvent, QMouseEvent, QPixmap, QPainter, QFont
+from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
+from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent, QPixmap, QPainter, QFont
 from PyQt6.QtWidgets import (
     QFileDialog,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPushButton,
     QStatusBar,
+    QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
 )
 
-from src.core.config import APP_VERSION, Config, DEFAULT_INSTALL_PATH
+from src.core.config import Config, DEFAULT_INSTALL_PATH
 from src.core.game_manager import GameManager
 from src.ui.carousel import Carousel
 from src.ui.fonts import load_fonts
@@ -25,6 +26,10 @@ from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.title_bar import TitleBar
 
+log = logging.getLogger(__name__)
+
+_PROCESS_POLL_MS = 2000  # Vérification toutes les 2 secondes
+
 
 def _make_icon() -> QIcon:
     pix = QPixmap(64, 64)
@@ -32,6 +37,20 @@ def _make_icon() -> QIcon:
     painter = QPainter(pix)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setFont(QFont("Segoe UI Emoji", 40))
+    painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "\u26a1")
+    painter.end()
+    return QIcon(pix)
+
+
+def _make_tray_icon() -> QIcon:
+    """Icône dorée pour le system tray."""
+    pix = QPixmap(32, 32)
+    pix.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pix)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    from PyQt6.QtGui import QColor
+    painter.setPen(QColor("#d4a017"))
+    painter.setFont(QFont("Segoe UI Emoji", 22))
     painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "\u26a1")
     painter.end()
     return QIcon(pix)
@@ -56,7 +75,14 @@ class MainWindow(QMainWindow):
 
         self.config = self._first_launch_or_load()
         self.manager = GameManager(self.config)
+
+        # État du processus de jeu surveillé
+        self._game_process: subprocess.Popen | None = None
+        self._game_name: str = ""
+
         self._build_ui()
+        self._build_tray()
+        self._build_process_monitor()
 
     @staticmethod
     def _first_launch_or_load() -> Config:
@@ -77,6 +103,8 @@ class MainWindow(QMainWindow):
         config.save()
         return config
 
+    # ──────────────────── Construction UI ────────────────────
+
     def _build_ui(self) -> None:
         central = QWidget()
         central.setObjectName("centralContainer")
@@ -96,6 +124,7 @@ class MainWindow(QMainWindow):
         self._detail.setMouseTracking(True)
         self._detail.status_message.connect(self._show_status)
         self._detail.state_changed.connect(self._on_state_changed)
+        self._detail.game_launched.connect(self._on_game_launched)
         root_layout.addWidget(self._detail, stretch=1)
 
         self._carousel = Carousel(games, self.manager, self)
@@ -129,6 +158,126 @@ class MainWindow(QMainWindow):
         if games:
             self._detail.set_game(games[0])
 
+    # ──────────────────── System Tray ────────────────────
+
+    def _build_tray(self) -> None:
+        self._tray = QSystemTrayIcon(self)
+        self._tray.setIcon(_make_tray_icon())
+        self._tray.setToolTip("Accio Launcher")
+
+        tray_menu = QMenu()
+        act_restore = QAction("Restaurer Accio Launcher", self)
+        act_restore.triggered.connect(self._restore_from_tray)
+        tray_menu.addAction(act_restore)
+
+        tray_menu.addSeparator()
+
+        act_quit = QAction("Quitter", self)
+        act_quit.triggered.connect(self._quit_app)
+        tray_menu.addAction(act_quit)
+
+        self._tray.setContextMenu(tray_menu)
+        self._tray.activated.connect(self._on_tray_activated)
+
+    def _build_process_monitor(self) -> None:
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(_PROCESS_POLL_MS)
+        self._poll_timer.timeout.connect(self._poll_game_process)
+
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self._restore_from_tray()
+
+    def _minimize_to_tray(self) -> None:
+        """Cache la fenêtre dans le system tray et pause tous les effets."""
+        self.hide()
+        self._tray.show()
+        self.pause_all_effects()
+        log.info("Launcher minimisé dans le tray — en jeu : %s", self._game_name)
+
+    def _restore_from_tray(self) -> None:
+        """Restaure la fenêtre et reprend les effets."""
+        self.showNormal()
+        self.activateWindow()
+        self._tray.hide()
+        self.resume_all_effects()
+        log.info("Launcher restauré depuis le tray")
+
+    def _quit_app(self) -> None:
+        """Quitte proprement l'application."""
+        self._tray.hide()
+        from PyQt6.QtWidgets import QApplication
+        QApplication.quit()
+
+    # ──────────────────── Pause / Resume effets ────────────────────
+
+    def pause_all_effects(self) -> None:
+        """Met en pause TOUS les timers et animations pour consommation CPU ~0."""
+        # Particules
+        if hasattr(self, "_particles"):
+            self._particles._timer.stop()
+
+        # Background : parallaxe + zoom
+        if hasattr(self, "_detail") and hasattr(self._detail, "_bg"):
+            bg = self._detail._bg
+            bg._parallax_timer.stop()
+            bg._zoom_anim.pause()
+
+        # Carousel : étoiles
+        if hasattr(self, "_carousel"):
+            self._carousel._star_timer.stop()
+
+        log.debug("Tous les effets sont en pause")
+
+    def resume_all_effects(self) -> None:
+        """Reprend tous les timers et animations."""
+        # Particules
+        if hasattr(self, "_particles"):
+            self._particles._timer.start()
+
+        # Background : zoom (parallaxe démarre à la demande via set_parallax_target)
+        if hasattr(self, "_detail") and hasattr(self._detail, "_bg"):
+            bg = self._detail._bg
+            bg._zoom_anim.resume()
+
+        # Carousel : étoiles
+        if hasattr(self, "_carousel"):
+            self._carousel._star_timer.start()
+
+        log.debug("Tous les effets sont repris")
+
+    # ──────────────────── Surveillance du processus de jeu ────────────────────
+
+    def _on_game_launched(self, process: subprocess.Popen, game_name: str) -> None:
+        """Appelé quand un jeu est lancé — minimise et surveille."""
+        self._game_process = process
+        self._game_name = game_name
+        self._tray.setToolTip(f"Accio Launcher \u2014 En jeu : {game_name}")
+        self._minimize_to_tray()
+        self._poll_timer.start()
+
+    def _poll_game_process(self) -> None:
+        """Vérifie si le jeu tourne encore (toutes les 2s)."""
+        if self._game_process is None:
+            self._poll_timer.stop()
+            return
+
+        ret = self._game_process.poll()
+        if ret is not None:
+            # Le jeu s'est fermé
+            game_name = self._game_name
+            self._game_process = None
+            self._game_name = ""
+            self._poll_timer.stop()
+            self._tray.setToolTip("Accio Launcher")
+
+            log.info("Jeu terminé : %s (code retour %s)", game_name, ret)
+
+            self._restore_from_tray()
+            self._status_bar.showMessage(f"Retour de {game_name} \u2014 Bon jeu !")
+
+    # ──────────────────── Slots UI ────────────────────
+
     def _show_status(self, msg: str) -> None:
         self._status_bar.showMessage(msg)
 
@@ -143,6 +292,8 @@ class MainWindow(QMainWindow):
     def _on_settings(self) -> None:
         dlg = SettingsDialog(self.config, self.manager, self)
         dlg.exec()
+
+    # ──────────────────── Événements ────────────────────
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

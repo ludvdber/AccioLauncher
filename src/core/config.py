@@ -1,14 +1,27 @@
 import json
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Type aliases (Python 3.12+)
-type PathLike = str | Path
+PathLike = str | Path
 
-# Chemins par défaut
+# --- Mode frozen (PyInstaller) ---
+IS_FROZEN = getattr(sys, "frozen", False)
+
+if IS_FROZEN:
+    # PyInstaller extrait les données dans sys._MEIPASS
+    _BUNDLE_DIR = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+else:
+    # Mode développement : racine du projet
+    _BUNDLE_DIR = Path(__file__).parent.parent
+
+# --- Chemins des ressources embarquées ---
+GAMES_JSON_PATH = _BUNDLE_DIR / "data" / "games.json"
+ASSETS_DIR = _BUNDLE_DIR.parent / "assets" if not IS_FROZEN else _BUNDLE_DIR / "assets"
+
+# --- Chemins utilisateur (toujours dans ~/Games/AccioLauncher) ---
 DEFAULT_INSTALL_PATH = Path.home() / "Games" / "AccioLauncher"
 DEFAULT_CACHE_PATH = DEFAULT_INSTALL_PATH / ".cache"
-GAMES_JSON_PATH = Path(__file__).parent.parent / "data" / "games.json"
 CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 APP_VERSION = "1.0.0"
@@ -25,6 +38,7 @@ class Config:
     resume_downloads: bool = True
     autoplay_videos: bool = True
     mute_videos: bool = True
+    installed_versions: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -35,7 +49,10 @@ class Config:
     def load(cls) -> "Config":
         """Charge la configuration depuis le fichier JSON."""
         if CONFIG_FILE_PATH.exists():
-            data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
+            try:
+                data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return cls()
             return cls(
                 install_path=Path(data.get("install_path", str(DEFAULT_INSTALL_PATH))),
                 cache_path=Path(data.get("cache_path", str(DEFAULT_CACHE_PATH))),
@@ -44,6 +61,7 @@ class Config:
                 resume_downloads=data.get("resume_downloads", True),
                 autoplay_videos=data.get("autoplay_videos", True),
                 mute_videos=data.get("mute_videos", True),
+                installed_versions=data.get("installed_versions", {}),
             )
         return cls()
 
@@ -60,6 +78,7 @@ class Config:
                     "resume_downloads": self.resume_downloads,
                     "autoplay_videos": self.autoplay_videos,
                     "mute_videos": self.mute_videos,
+                    "installed_versions": self.installed_versions,
                 },
                 indent=4,
                 ensure_ascii=False,
