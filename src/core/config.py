@@ -38,6 +38,8 @@ class Config:
     resume_downloads: bool = True
     autoplay_videos: bool = True
     mute_videos: bool = True
+    check_updates: bool = True
+    dismissed_launcher_version: str = ""
     installed_versions: dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -61,6 +63,8 @@ class Config:
                 resume_downloads=data.get("resume_downloads", True),
                 autoplay_videos=data.get("autoplay_videos", True),
                 mute_videos=data.get("mute_videos", True),
+                check_updates=data.get("check_updates", True),
+                dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
                 installed_versions=data.get("installed_versions", {}),
             )
         return cls()
@@ -78,6 +82,8 @@ class Config:
                     "resume_downloads": self.resume_downloads,
                     "autoplay_videos": self.autoplay_videos,
                     "mute_videos": self.mute_videos,
+                    "check_updates": self.check_updates,
+                    "dismissed_launcher_version": self.dismissed_launcher_version,
                     "installed_versions": self.installed_versions,
                 },
                 indent=4,

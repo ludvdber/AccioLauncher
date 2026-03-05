@@ -30,10 +30,10 @@ from src.ui.speed_tracker import SpeedTracker, format_size, format_bytes, format
 
 from src.core.config import ASSETS_DIR
 from src.core.downloader import Downloader
-from src.core.game_data import GameData
+from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
 from src.core.installer import Installer
-from src.ui.changelog_dialog import ChangelogDialog
+from src.ui.versions_dialog import VersionsDialog
 
 log = logging.getLogger(__name__)
 
@@ -118,15 +118,15 @@ class GameDetailView(QWidget):
         )
         version_layout.addWidget(self._version_label)
 
-        self._btn_changelog = QLabel("Changelog")
-        self._btn_changelog.setFont(body_font(12))
-        self._btn_changelog.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_changelog.setStyleSheet(
+        self._btn_versions = QLabel("Versions et changelog")
+        self._btn_versions.setFont(body_font(12))
+        self._btn_versions.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_versions.setStyleSheet(
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
             "QLabel:hover { color: #e8c547; text-decoration: underline; }"
         )
-        self._btn_changelog.mousePressEvent = lambda e: self._on_changelog_clicked(e) if e.button() == Qt.MouseButton.LeftButton else None
-        version_layout.addWidget(self._btn_changelog)
+        self._btn_versions.mousePressEvent = lambda e: self._on_versions_clicked(e) if e.button() == Qt.MouseButton.LeftButton else None
+        version_layout.addWidget(self._btn_versions)
 
         info_layout.addWidget(version_row)
 
@@ -225,10 +225,11 @@ class GameDetailView(QWidget):
         """Slot pour le clic sur le label expand."""
         self._toggle_desc()
 
-    def _on_changelog_clicked(self, _event) -> None:
-        """Ouvre le dialog d'historique des versions."""
+    def _on_versions_clicked(self, _event) -> None:
+        """Ouvre le dialog de gestion des versions."""
         if self.game is not None:
-            dlg = ChangelogDialog(self.game, self)
+            dlg = VersionsDialog(self.game, self.manager, self)
+            dlg.install_version.connect(self._on_install_specific_version)
             dlg.exec()
 
     def _toggle_desc(self) -> None:
@@ -299,14 +300,18 @@ class GameDetailView(QWidget):
         # Metadata
         gold = "#d4a017"
         sep = f'<span style="color:{gold}; margin: 0 6px;"> \u25c6 </span>'
+        dl = game.current_download
+        size_str = format_size(dl.size_mb) if dl else "?"
         self._meta.setText(
             f'<span style="text-transform:uppercase; letter-spacing:2px;">'
-            f'{game.year}{sep}{game.developer}{sep}{format_size(game.archive_size_mb)}'
+            f'{game.year}{sep}{game.developer}{sep}{size_str}'
             f'</span>'
         )
 
         # Version
-        self._version_label.setText(f"Version {game.version}")
+        installed_ver = self.manager.installed_version(game.id)
+        display_ver = installed_ver or game.recommended_version
+        self._version_label.setText(f"Version {display_ver}")
 
         # Description (truncated + expand)
         self._set_desc_text(game.description)
@@ -455,7 +460,8 @@ class GameDetailView(QWidget):
                 self._build_installed()
 
     def _build_not_installed(self) -> None:
-        size = format_size(self.game.archive_size_mb)
+        dl = self.game.current_download
+        size = format_size(dl.size_mb) if dl else "?"
         btn = GlowButton(
             f"T\u00c9L\u00c9CHARGER  \u2014  {size}",
             glow_color="#d4a017",
@@ -532,12 +538,44 @@ class GameDetailView(QWidget):
         btn_uninstall.clicked.connect(self._on_uninstall)
         self._action_layout.addWidget(btn_uninstall)
 
+        # Lien mise à jour si disponible
+        if self.manager.has_update(self.game.id):
+            installed_ver = self.manager.installed_version(self.game.id) or "?"
+            recommended = self.game.recommended_version
+            update_label = QLabel(
+                f"Mise à jour disponible : v{installed_ver} → v{recommended}"
+            )
+            update_label.setFont(body_font(12))
+            update_label.setStyleSheet("color: #d4a017; background: transparent;")
+
+            update_link = QLabel("Mettre à jour")
+            update_link.setFont(body_font(12))
+            update_link.setCursor(Qt.CursorShape.PointingHandCursor)
+            update_link.setStyleSheet(
+                "QLabel { color: #d4a017; background: transparent; text-decoration: underline; }"
+                "QLabel:hover { color: #e8c547; }"
+            )
+            update_link.mousePressEvent = lambda e: self._on_update_clicked(e) if e.button() == Qt.MouseButton.LeftButton else None
+
+            row = QWidget()
+            row.setStyleSheet("background: transparent;")
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 6, 0, 0)
+            row_layout.setSpacing(8)
+            row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            row_layout.addWidget(update_label)
+            row_layout.addWidget(update_link)
+            self._action_layout.addWidget(row)
+
     # ──────────────────── Téléchargement ────────────────────
 
-    def _check_disk_space(self) -> bool:
+    def _check_disk_space(self, version: GameVersion | None = None) -> bool:
         if self.game is None:
             return False
-        needed_mb = self.game.archive_size_mb * 2
+        ver = version or self.game.current_download
+        if ver is None:
+            return True
+        needed_mb = ver.size_mb * 2
         try:
             usage = shutil.disk_usage(self.manager.config.install_path)
             free_mb = usage.free // (1024 * 1024)
@@ -555,20 +593,33 @@ class GameDetailView(QWidget):
             return False
         return True
 
-    def _on_download(self) -> None:
-        if self.game is None or not self._check_disk_space():
+    def _on_download(self, version: GameVersion | None = None) -> None:
+        if self.game is None:
+            return
+        ver = version or self.game.current_download
+        if ver is None:
+            self.status_message.emit("Aucune version disponible.")
+            return
+        if not self._check_disk_space(ver):
             return
 
+        self._target_version = ver
         self.manager.set_game_state(self.game.id, GameState.DOWNLOADING)
         self._refresh_action()
         self._speed_tracker.reset()
-        self.status_message.emit(f"T\u00e9l\u00e9chargement de {self.game.name}\u2026")
+        self.status_message.emit(f"T\u00e9l\u00e9chargement de {self.game.name} v{ver.version}\u2026")
 
-        dest = self.manager.config.cache_path / self.game.archive_name
-        self._downloader = Downloader(self.game.download_url, dest, parent=self)
+        archive_name = f"{self.game.id}_v{ver.version}.7z"
+        dest = self.manager.config.cache_path / archive_name
+        self._downloader = Downloader(
+            url=ver.download_url, destination=dest,
+            parts=ver.download_parts, parent=self,
+        )
         self._downloader.progress.connect(self._on_download_progress)
         self._downloader.finished.connect(self._on_download_finished)
         self._downloader.error.connect(self._on_download_error)
+        if ver.download_parts:
+            self._downloader.part_info.connect(self._on_part_info)
         self._downloader.start()
 
     def _on_download_progress(self, downloaded: int, total: int) -> None:
@@ -629,7 +680,55 @@ class GameDetailView(QWidget):
         self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
         self._refresh_action()
         self.state_changed.emit()
-        self.status_message.emit("T\u00e9l\u00e9chargement annul\u00e9.")
+        self.status_message.emit("Téléchargement annulé.")
+
+    def _on_part_info(self, current: int, total: int) -> None:
+        """Met à jour l'affichage du numéro de part (multi-parts)."""
+        if hasattr(self, "_download_label"):
+            text = self._download_label.text()
+            # Ajouter/remplacer l'info de part
+            if "partie" in text:
+                text = text[:text.index("partie")].rstrip(" — ")
+            self._download_label.setText(f"{text} — partie {current}/{total}")
+
+    def _on_update_clicked(self, _event) -> None:
+        """Clic sur le lien 'Mettre à jour'."""
+        if self.game is None:
+            return
+        ver = self.game.get_version(self.game.recommended_version)
+        if ver is None:
+            return
+
+        # Construire le changelog des versions manquées
+        installed = self.manager.installed_version(self.game.id) or "?"
+        changes_text = "\n".join(f"• {c}" for c in ver.changes)
+        reply = QMessageBox.question(
+            self, "Mise à jour disponible",
+            f"Mettre à jour de v{installed} vers v{ver.version} ?\n\n"
+            f"Changements :\n{changes_text}\n\n"
+            f"La version actuelle sera supprimée avant l'installation.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self._do_version_switch(ver)
+
+    def _on_install_specific_version(self, game_id: str, version: str) -> None:
+        """Slot appelé par VersionsDialog pour installer une version spécifique."""
+        if self.game is None or self.game.id != game_id:
+            return
+        ver = self.game.get_version(version)
+        if ver is None:
+            return
+        self._do_version_switch(ver)
+
+    def _do_version_switch(self, ver: GameVersion) -> None:
+        """Supprime la version actuelle si installée, puis télécharge la nouvelle."""
+        if self.game is None:
+            return
+        if self.manager.is_installed(self.game.id):
+            self.manager.uninstall_game(self.game.id)
+        self._on_download(ver)
 
     # ──────────────────── Installation ────────────────────
 
@@ -672,7 +771,8 @@ class GameDetailView(QWidget):
             )
             return
         self.manager.set_game_state(self.game.id, GameState.INSTALLED)
-        self.manager.save_installed_version(self.game.id)
+        target_ver = getattr(self, "_target_version", None)
+        self.manager.save_installed_version(self.game.id, target_ver.version if target_ver else None)
         self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"{self.game.name} install\u00e9 avec succ\u00e8s !")
@@ -725,12 +825,20 @@ class GameDetailView(QWidget):
     # ──────────────────── Menu contextuel ────────────────────
 
     def _show_context_menu(self, pos) -> None:
-        if self.game is None or self._current_state() != GameState.NOT_INSTALLED:
+        if self.game is None:
             return
         menu = QMenu(self)
-        act_local = QAction("Installer depuis un fichier local\u2026", self)
-        act_local.triggered.connect(self._on_install_local)
-        menu.addAction(act_local)
+
+        # Toujours proposer "Gérer les versions"
+        act_versions = QAction("Gérer les versions", self)
+        act_versions.triggered.connect(lambda: self._on_versions_clicked(None))
+        menu.addAction(act_versions)
+
+        if self._current_state() == GameState.NOT_INSTALLED:
+            act_local = QAction("Installer depuis un fichier local\u2026", self)
+            act_local.triggered.connect(self._on_install_local)
+            menu.addAction(act_local)
+
         menu.exec(self.mapToGlobal(pos))
 
     def _on_install_local(self) -> None:

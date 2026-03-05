@@ -62,6 +62,8 @@ class CarouselItem(QWidget):
         self._reflection_cache: QPixmap | None = None
         self._reflection_cache_size: tuple[int, int] = (0, 0)
         self._cached_installed: bool = False
+        self._cached_has_update: bool = False
+        self._cached_version: str = ""
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -252,18 +254,32 @@ class CarouselItem(QWidget):
             p.drawEllipse(x_off + w - 14, y_off + h - 14, 10, 10)
 
             # Version badge
-            ver_text = f"v{self.game.version}"
-            p.setFont(QFont("Segoe UI", 9))
-            fm = p.fontMetrics()
-            tw = fm.horizontalAdvance(ver_text)
-            th = fm.height()
-            pad_x, pad_y = 4, 2
-            bx = x_off + 3
-            by = y_off + h - th - pad_y * 2 - 3
-            p.setBrush(QColor(0, 0, 0, 153))
-            p.drawRoundedRect(QRectF(bx, by, tw + pad_x * 2, th + pad_y * 2), 3, 3)
-            p.setPen(QColor(220, 220, 240, 200))
-            p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th), Qt.AlignmentFlag.AlignCenter, ver_text)
+            ver_text = f"v{self._cached_version}" if self._cached_version else ""
+            if ver_text:
+                p.setFont(QFont("Segoe UI", 9))
+                fm = p.fontMetrics()
+                tw = fm.horizontalAdvance(ver_text)
+                th = fm.height()
+                pad_x, pad_y = 4, 2
+                bx = x_off + 3
+                by = y_off + h - th - pad_y * 2 - 3
+                p.setBrush(QColor(0, 0, 0, 153))
+                p.drawRoundedRect(QRectF(bx, by, tw + pad_x * 2, th + pad_y * 2), 3, 3)
+                p.setPen(QColor(220, 220, 240, 200))
+                p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th), Qt.AlignmentFlag.AlignCenter, ver_text)
+
+        # Update badge (↑ doré en haut à droite)
+        if self._cached_has_update:
+            p.setOpacity(1.0)
+            badge_size = 18
+            bx = x_off + w - badge_size - 2
+            by = y_off + 2
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(212, 160, 23, 220))
+            p.drawRoundedRect(QRectF(bx, by, badge_size, badge_size), 4, 4)
+            p.setPen(QColor(255, 255, 255, 240))
+            p.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            p.drawText(QRectF(bx, by, badge_size, badge_size), Qt.AlignmentFlag.AlignCenter, "↑")
 
         p.end()
 
@@ -398,4 +414,6 @@ class Carousel(QWidget):
     def refresh_indicators(self) -> None:
         for item in self._items:
             item._cached_installed = item.manager.is_installed(item.game.id)
+            item._cached_has_update = item.manager.has_update(item.game.id)
+            item._cached_version = item.manager.installed_version(item.game.id) or ""
             item.update()

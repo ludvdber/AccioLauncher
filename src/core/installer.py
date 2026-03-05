@@ -1,5 +1,6 @@
 import logging
 import shutil
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -17,6 +18,28 @@ def _check_path_traversal(destination: Path, member_name: str) -> bool:
     """Vérifie qu'un fichier extrait ne sort pas du dossier de destination (Zip Slip)."""
     target = (destination / member_name).resolve()
     return target.is_relative_to(destination.resolve())
+
+
+def _find_7z_exe() -> str | None:
+    """Cherche 7z.exe sur le système (fallback quand py7zr ne supporte pas le format)."""
+    candidates = [
+        Path(r"C:\Program Files\7-Zip\7z.exe"),
+        Path(r"C:\Program Files (x86)\7-Zip\7z.exe"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return str(p)
+    # Tenter le PATH
+    try:
+        result = subprocess.run(
+            ["7z"], capture_output=True, timeout=5,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        )
+        if result.returncode is not None:
+            return "7z"
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
 
 
 class Installer(QThread):
@@ -40,6 +63,7 @@ class Installer(QThread):
         self.registry_entries = registry_entries or []
         self.delete_archive = delete_archive
         self._cancelled = False
+        self._extracted_dirs: list[Path] = []  # dossiers créés pendant l'extraction
 
     def cancel(self) -> None:
         """Demande l'arrêt de l'extraction."""
@@ -48,9 +72,18 @@ class Installer(QThread):
 
     def run(self) -> None:
         """Boucle principale : extraction → post-install → nettoyage."""
+        log.debug("Installation démarrée : archive=%s, destination=%s",
+                  self.archive_path, self.destination)
         try:
             self.destination.mkdir(parents=True, exist_ok=True)
+
+            # Snapshot des dossiers existants avant extraction
+            existing_dirs = set(p.name for p in self.destination.iterdir() if p.is_dir())
+
             suffix = self.archive_path.suffix.lower()
+            # Gérer aussi .001 (split archives)
+            if suffix == ".001":
+                suffix = Path(self.archive_path.stem).suffix.lower()
 
             match suffix:
                 case ".7z":
@@ -61,6 +94,11 @@ class Installer(QThread):
                     self.error.emit(f"Format d'archive non supporté : {suffix}")
                     return
 
+            # Identifier les nouveaux dossiers créés
+            new_dirs = set(p.name for p in self.destination.iterdir() if p.is_dir()) - existing_dirs
+            self._extracted_dirs = [self.destination / d for d in new_dirs]
+            log.debug("Nouveaux dossiers extraits : %s", [str(d) for d in self._extracted_dirs])
+
             if self._cancelled:
                 self._cleanup()
                 return
@@ -68,15 +106,18 @@ class Installer(QThread):
             self._apply_registry()
 
             if self.delete_archive:
-                self.archive_path.unlink(missing_ok=True)
-                log.info("Archive supprimée : %s", self.archive_path)
+                try:
+                    self.archive_path.unlink(missing_ok=True)
+                    log.info("Archive supprimée : %s", self.archive_path)
+                except PermissionError:
+                    log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", self.archive_path)
 
             log.info("Installation terminée : %s", self.destination)
             self.finished.emit(str(self.destination))
 
         except Exception as exc:
             log.exception("Erreur pendant l'installation")
-            self._cleanup()
+            # NE PAS cleanup en cas d'erreur d'extraction — laisser les fichiers pour debug
             self.error.emit(f"Erreur d'installation : {exc}")
 
     def _validate_7z_paths(self, file_list: list) -> None:
@@ -87,14 +128,24 @@ class Installer(QThread):
                 raise ValueError(f"Path traversal détecté dans l'archive 7z : {name}")
 
     def _extract_7z(self) -> None:
-        """Extrait une archive .7z avec progression réelle basée sur la taille."""
+        """Extrait une archive .7z — py7zr d'abord, fallback sur 7z.exe si non supporté."""
+        try:
+            self._extract_7z_py7zr()
+        except py7zr.exceptions.UnsupportedCompressionMethodError as exc:
+            log.warning("py7zr ne supporte pas cette archive (%s), fallback sur 7z.exe", exc)
+            # Forcer la libération du handle fichier laissé par py7zr
+            import gc
+            gc.collect()
+            self._extract_7z_subprocess()
+
+    def _extract_7z_py7zr(self) -> None:
+        """Extraction via py7zr (rapide, mais ne supporte pas BCJ2)."""
         with py7zr.SevenZipFile(self.archive_path, mode="r") as archive:
             all_files = archive.list()
-
-            # Sécurité : vérifier tous les chemins AVANT extraction
             self._validate_7z_paths(all_files)
 
             total_size = sum(getattr(f, "uncompressed", 0) or 0 for f in all_files)
+            log.debug("Extraction py7zr : %d fichiers, %d octets", len(all_files), total_size)
 
             if total_size == 0:
                 archive.extractall(path=self.destination)
@@ -103,7 +154,6 @@ class Installer(QThread):
 
             archive.extractall(path=self.destination)
 
-            # Progression post-extraction
             extracted_size = 0
             for f_info in all_files:
                 if self._cancelled:
@@ -111,6 +161,49 @@ class Installer(QThread):
                 extracted_size += getattr(f_info, "uncompressed", 0) or 0
                 pct = min(100, int(extracted_size * 100 / total_size))
                 self.progress.emit(pct)
+
+    def _extract_7z_subprocess(self) -> None:
+        """Extraction via 7z.exe (fallback pour BCJ2 et autres filtres non supportés)."""
+        exe = _find_7z_exe()
+        if exe is None:
+            raise RuntimeError(
+                "Cette archive nécessite 7-Zip pour être extraite (filtre BCJ2).\n"
+                "Installez 7-Zip depuis https://7-zip.org puis réessayez."
+            )
+
+        log.info("Extraction via 7z.exe : %s → %s", self.archive_path, self.destination)
+        cmd = [exe, "x", str(self.archive_path), f"-o{self.destination}", "-y", "-bsp1"]
+        kwargs: dict = {}
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, **kwargs,
+        )
+
+        last_pct = 0
+        for line in proc.stdout:
+            if self._cancelled:
+                proc.kill()
+                return
+            line = line.strip()
+            # 7z affiche des lignes comme "42%" pendant l'extraction
+            if line.endswith("%") or "%" in line:
+                try:
+                    pct_str = line.split("%")[0].strip().split()[-1]
+                    pct = int(pct_str)
+                    if pct != last_pct:
+                        self.progress.emit(pct)
+                        last_pct = pct
+                except (ValueError, IndexError):
+                    pass
+
+        ret = proc.wait()
+        if ret != 0:
+            raise RuntimeError(f"7z.exe a échoué (code {ret})")
+        self.progress.emit(100)
+        log.info("Extraction 7z.exe terminée")
 
     def _extract_zip(self) -> None:
         """Extrait une archive .zip avec progression et protection Zip Slip."""
@@ -179,11 +272,23 @@ class Installer(QThread):
                 log.warning("Impossible d'écrire dans le registre : %s — %s", entry, exc)
 
     def _cleanup(self) -> None:
-        """Nettoie les fichiers partiellement extraits."""
-        if not self.destination.exists():
+        """Nettoie UNIQUEMENT les dossiers créés pendant l'extraction.
+
+        PROTECTION : ne supprime JAMAIS self.destination (le dossier d'installation racine).
+        Seuls les sous-dossiers identifiés comme nouveaux sont supprimés.
+        """
+        if not self._extracted_dirs:
+            log.debug("Rien à nettoyer (aucun dossier extrait)")
             return
-        try:
-            shutil.rmtree(self.destination)
-            log.info("Fichiers partiels nettoyés : %s", self.destination)
-        except OSError as exc:
-            log.error("Échec du nettoyage de %s : %s", self.destination, exc)
+        for d in self._extracted_dirs:
+            if not d.exists():
+                continue
+            # PROTECTION CRITIQUE : refuser de supprimer le dossier racine
+            if d.resolve() == self.destination.resolve():
+                log.critical("REFUS de supprimer le dossier d'installation racine : %s", d)
+                continue
+            try:
+                shutil.rmtree(d)
+                log.info("Fichiers partiels nettoyés : %s", d)
+            except OSError as exc:
+                log.error("Échec du nettoyage de %s : %s", d, exc)

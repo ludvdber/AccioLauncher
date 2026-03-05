@@ -6,6 +6,8 @@ from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent
 from PyQt6.QtWidgets import (
     QFileDialog,
+    QHBoxLayout,
+    QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -18,6 +20,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import ASSETS_DIR, Config, DEFAULT_INSTALL_PATH
 from src.core.game_manager import GameManager
+from src.core.updater import UpdateChecker
 from src.ui.carousel import Carousel
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
@@ -63,9 +66,12 @@ class MainWindow(QMainWindow):
         self._game_process: subprocess.Popen | None = None
         self._game_name: str = ""
 
+        self._update_checker: UpdateChecker | None = None
+
         self._build_ui()
         self._build_tray()
         self._build_process_monitor()
+        self._start_update_check()
 
     @staticmethod
     def _first_launch_or_load() -> Config:
@@ -100,6 +106,11 @@ class MainWindow(QMainWindow):
 
         self._title_bar = TitleBar(self)
         root_layout.addWidget(self._title_bar)
+
+        # Notification bar (cachée par défaut)
+        self._notif_bar = self._build_notif_bar()
+        root_layout.addWidget(self._notif_bar)
+        self._notif_bar.hide()
 
         games = [entry["game"] for entry in self.manager.get_games()]
 
@@ -166,6 +177,112 @@ class MainWindow(QMainWindow):
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(_PROCESS_POLL_MS)
         self._poll_timer.timeout.connect(self._poll_game_process)
+
+    def _build_notif_bar(self) -> QWidget:
+        """Construit la barre de notification dorée pour les updates launcher."""
+        bar = QWidget()
+        bar.setFixedHeight(35)
+        bar.setStyleSheet(
+            "QWidget { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "stop:0 rgba(212,160,23,0.15), stop:0.5 rgba(212,160,23,0.25),"
+            "stop:1 rgba(212,160,23,0.15)); }"
+        )
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(16, 0, 8, 0)
+        layout.setSpacing(10)
+
+        self._notif_label = QLabel()
+        self._notif_label.setStyleSheet("color: #d4a017; font-size: 12px; background: transparent;")
+        layout.addWidget(self._notif_label, stretch=1)
+
+        self._notif_btn = QPushButton("Télécharger")
+        self._notif_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._notif_btn.setStyleSheet(
+            "QPushButton { background: rgba(212,160,23,0.2); color: #d4a017;"
+            " border: 1px solid rgba(212,160,23,0.4); border-radius: 4px;"
+            " padding: 2px 10px; font-size: 11px; }"
+            "QPushButton:hover { background: rgba(212,160,23,0.35); color: #e8c547; }"
+        )
+        layout.addWidget(self._notif_btn)
+
+        btn_close = QPushButton("✕")
+        btn_close.setFixedSize(24, 24)
+        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_close.setStyleSheet(
+            "QPushButton { background: transparent; color: #d4a017; border: none; font-size: 14px; }"
+            "QPushButton:hover { color: #e8c547; }"
+        )
+        btn_close.clicked.connect(self._dismiss_notif)
+        layout.addWidget(btn_close)
+
+        return bar
+
+    # ──────────────────── Update checker ────────────────────
+
+    def _start_update_check(self) -> None:
+        """Lance la vérification des mises à jour en arrière-plan."""
+        if not self.config.check_updates:
+            return
+        catalog = self.manager.catalog
+        self._update_checker = UpdateChecker(
+            catalog_url=catalog.catalog_url,
+            current_catalog_version=catalog.catalog_version,
+            installed_versions=self.config.installed_versions,
+            parent=self,
+        )
+        self._update_checker.catalog_updated.connect(self._on_catalog_updated)
+        self._update_checker.launcher_update.connect(self._on_launcher_update)
+        self._update_checker.update_counts.connect(self._on_update_counts)
+        self._update_checker.start()
+
+    def _on_catalog_updated(self, catalog) -> None:
+        """Le catalogue distant est plus récent — recharger."""
+        self.manager.reload_catalog(catalog)
+        # Rafraîchir l'UI
+        games = [entry["game"] for entry in self.manager.get_games()]
+        self._carousel.refresh_indicators()
+        # Mettre à jour la vue détaillée si le jeu courant a changé
+        if self._detail.game:
+            updated = self.manager.get_game_by_id(self._detail.game.id)
+            if updated:
+                self._detail.game = updated
+                self._detail._refresh_action()
+        log.info("UI rafraîchie après mise à jour du catalogue")
+
+    def _on_launcher_update(self, version: str, url: str) -> None:
+        """Nouvelle version du launcher disponible."""
+        if self.config.dismissed_launcher_version == version:
+            return
+        self._launcher_update_version = version
+        self._launcher_update_url = url
+        self._notif_label.setText(f"Accio Launcher v{version} est disponible !")
+        self._notif_btn.clicked.connect(lambda: self._open_url(url))
+        self._notif_bar.show()
+        # Auto-hide après 30 secondes
+        QTimer.singleShot(30_000, self._auto_hide_notif)
+
+    def _on_update_counts(self, count: int) -> None:
+        """Affiche le nombre de mises à jour disponibles dans la status bar."""
+        self._status_bar.showMessage(
+            f"{count} mise(s) à jour disponible(s)" if count > 0 else "Prêt"
+        )
+
+    def _dismiss_notif(self) -> None:
+        """Ferme la notification et sauvegarde la version ignorée."""
+        self._notif_bar.hide()
+        if hasattr(self, "_launcher_update_version"):
+            self.config.dismissed_launcher_version = self._launcher_update_version
+            self.config.save()
+
+    def _auto_hide_notif(self) -> None:
+        if self._notif_bar.isVisible():
+            self._notif_bar.hide()
+
+    @staticmethod
+    def _open_url(url: str) -> None:
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        QDesktopServices.openUrl(QUrl(url))
 
     def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:

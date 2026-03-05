@@ -1,4 +1,5 @@
 import logging
+import shutil
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -12,10 +13,7 @@ MAX_RETRIES = 3
 BACKOFF_BASE = 1  # secondes
 CHUNK_SIZE = 256 * 1024  # 256 Ko
 
-# Protocoles autorisés pour les téléchargements
 _ALLOWED_SCHEMES = {"https"}
-
-# Timeouts réseau (connect, read, write, pool)
 _TIMEOUT = httpx.Timeout(connect=15.0, read=120.0, write=30.0, pool=10.0)
 
 
@@ -29,25 +27,45 @@ def _validate_url(url: str) -> None:
 
 
 class Downloader(QThread):
-    """Télécharge une archive en arrière-plan via QThread."""
+    """Télécharge une archive (simple ou multi-parts) en arrière-plan."""
 
     progress = pyqtSignal(int, int)   # (octets_téléchargés, octets_total)
     finished = pyqtSignal(str)        # chemin du fichier téléchargé
     error = pyqtSignal(str)           # message d'erreur
+    part_info = pyqtSignal(int, int)  # (part_courante, total_parts) — multi-parts uniquement
 
-    def __init__(self, url: str, destination: Path, parent=None) -> None:
+    def __init__(
+        self,
+        url: str | None,
+        destination: Path,
+        parts: list[str] | None = None,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.url = url
         self.destination = destination
+        self.parts = parts
         self._cancelled = False
 
     def cancel(self) -> None:
-        """Stoppe proprement le téléchargement."""
         self._cancelled = True
         log.info("Annulation du téléchargement demandée")
 
     def run(self) -> None:
-        """Boucle principale du thread — télécharge avec retry + reprise."""
+        try:
+            if self.parts:
+                self._run_multipart()
+            elif self.url:
+                self._run_single()
+            else:
+                self.error.emit("Aucune URL de téléchargement.")
+        except Exception as exc:
+            log.exception("Erreur inattendue dans le downloader")
+            self.error.emit(f"Erreur : {exc}")
+
+    # ─── Téléchargement simple (fichier unique) ───
+
+    def _run_single(self) -> None:
         try:
             _validate_url(self.url)
         except ValueError as exc:
@@ -60,29 +78,114 @@ class Downloader(QThread):
         for attempt in range(1, MAX_RETRIES + 1):
             if self._cancelled:
                 return
-
             try:
-                self._download_stream(part_path)
+                self._download_stream(self.url, part_path, global_offset=0, global_total=0)
                 if self._cancelled:
                     return
-                # Téléchargement complet → renommer .part → fichier final
                 part_path.replace(self.destination)
                 log.info("Téléchargement terminé : %s", self.destination)
                 self.finished.emit(str(self.destination))
                 return
-
             except (httpx.HTTPError, OSError) as exc:
-                log.warning(
-                    "Tentative %d/%d échouée : %s", attempt, MAX_RETRIES, exc
-                )
+                log.warning("Tentative %d/%d échouée : %s", attempt, MAX_RETRIES, exc)
                 if attempt < MAX_RETRIES:
                     wait = BACKOFF_BASE * (2 ** (attempt - 1))
-                    log.info("Nouvelle tentative dans %ds…", wait)
                     time.sleep(wait)
 
         self.error.emit("Échec du téléchargement après plusieurs tentatives.")
 
-    def _download_stream(self, part_path: Path) -> None:
+    # ─── Téléchargement multi-parts ───
+
+    def _run_multipart(self) -> None:
+        for url in self.parts:
+            try:
+                _validate_url(url)
+            except ValueError as exc:
+                self.error.emit(str(exc))
+                return
+
+        total_parts = len(self.parts)
+        part_paths: list[Path] = []
+        cache_dir = self.destination.parent
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Étape 1 : télécharger chaque part
+        for i, url in enumerate(self.parts):
+            if self._cancelled:
+                return
+
+            part_name = url.rsplit("/", 1)[-1]
+            part_dest = cache_dir / part_name
+            part_paths.append(part_dest)
+            part_tmp = part_dest.with_suffix(part_dest.suffix + ".part")
+
+            self.part_info.emit(i + 1, total_parts)
+
+            for attempt in range(1, MAX_RETRIES + 1):
+                if self._cancelled:
+                    return
+                # Si la part est déjà téléchargée complètement, skip
+                if part_dest.exists():
+                    log.info("Part déjà présente : %s", part_dest)
+                    break
+                try:
+                    self._download_stream(
+                        url, part_tmp,
+                        global_offset=i, global_total=total_parts,
+                    )
+                    if self._cancelled:
+                        return
+                    part_tmp.replace(part_dest)
+                    log.info("Part %d/%d terminée : %s", i + 1, total_parts, part_dest)
+                    break
+                except (httpx.HTTPError, OSError) as exc:
+                    log.warning("Part %d tentative %d/%d échouée : %s", i + 1, attempt, MAX_RETRIES, exc)
+                    if attempt < MAX_RETRIES:
+                        wait = BACKOFF_BASE * (2 ** (attempt - 1))
+                        time.sleep(wait)
+            else:
+                self.error.emit(f"Échec du téléchargement de la partie {i + 1}/{total_parts}.")
+                return
+
+        if self._cancelled:
+            return
+
+        # Étape 2 : tester si py7zr peut lire directement le .001
+        first_part = part_paths[0]
+        if first_part.suffix == ".001":
+            try:
+                import py7zr
+                with py7zr.SevenZipFile(first_part, mode="r") as _:
+                    pass
+                log.info("py7zr supporte les archives split — pas de concaténation nécessaire")
+                self.finished.emit(str(first_part))
+                return
+            except Exception:
+                log.info("py7zr ne supporte pas le split — concaténation des parts")
+
+        # Étape 3 : concaténer les parts
+        log.info("Concaténation de %d parts vers %s", len(part_paths), self.destination)
+        try:
+            with open(self.destination, "wb") as out:
+                for pp in part_paths:
+                    with open(pp, "rb") as inp:
+                        shutil.copyfileobj(inp, out)
+            # Supprimer les parts individuelles
+            for pp in part_paths:
+                pp.unlink(missing_ok=True)
+        except OSError as exc:
+            self.error.emit(f"Erreur lors de la concaténation : {exc}")
+            return
+
+        log.info("Téléchargement multi-parts terminé : %s", self.destination)
+        self.finished.emit(str(self.destination))
+
+    # ─── Streaming avec reprise ───
+
+    def _download_stream(
+        self, url: str, part_path: Path,
+        global_offset: int = 0, global_total: int = 0,
+    ) -> None:
         """Télécharge en streaming avec reprise via HTTP Range."""
         downloaded = part_path.stat().st_size if part_path.exists() else 0
         headers: dict[str, str] = {}
@@ -91,10 +194,9 @@ class Downloader(QThread):
             log.info("Reprise du téléchargement à %d octets", downloaded)
 
         with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
-            with client.stream("GET", self.url, headers=headers) as response:
+            with client.stream("GET", url, headers=headers) as response:
                 response.raise_for_status()
 
-                # Taille totale (gère 200 et 206 Partial Content)
                 raw_length = response.headers.get("content-length", "")
                 try:
                     content_length = int(raw_length)
@@ -105,7 +207,6 @@ class Downloader(QThread):
                     total = downloaded + content_length
                 else:
                     total = content_length
-                    # Le serveur ne supporte pas Range → repartir de zéro
                     downloaded = 0
 
                 mode = "ab" if response.status_code == 206 else "wb"

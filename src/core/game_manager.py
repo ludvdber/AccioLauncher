@@ -6,7 +6,7 @@ from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 
 from src.core.config import Config
-from src.core.game_data import GameData, load_catalog
+from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 
 log = logging.getLogger(__name__)
 
@@ -28,24 +28,43 @@ def _is_safe_relative(path_str: str) -> bool:
         p.relative_to(".")
     except ValueError:
         return False
-    # Refuse toute composante ".."
     return ".." not in p.parts
 
 
 class GameManager:
     """Gère le catalogue de jeux et leur état (installé, non installé, etc.)."""
 
-    __slots__ = ("config", "_games", "_index", "_states")
+    __slots__ = ("config", "_catalog", "_games", "_index", "_states")
 
     def __init__(self, config: Config) -> None:
         self.config = config
-        self._games = load_catalog()
+        self._catalog = load_catalog()
+        self._games = self._catalog.games
         self._index: dict[str, GameData] = {g.id: g for g in self._games}
-        # État initial détecté depuis le disque
         self._states: dict[str, GameState] = {
             g.id: self._detect_state(g) for g in self._games
         }
-        log.info("Catalogue chargé : %d jeux", len(self._games))
+        log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
+
+    @property
+    def catalog(self) -> Catalog:
+        return self._catalog
+
+    def reload_catalog(self, catalog: Catalog) -> None:
+        """Recharge le catalogue (ex: après un update distant). Préserve les états."""
+        old_states = dict(self._states)
+        self._catalog = catalog
+        self._games = catalog.games
+        self._index = {g.id: g for g in self._games}
+        self._states = {}
+        for g in self._games:
+            if g.id in old_states:
+                self._states[g.id] = old_states[g.id]
+            else:
+                self._states[g.id] = self._detect_state(g)
+                if self._states[g.id] == GameState.NOT_INSTALLED:
+                    log.info("Nouveau jeu disponible : %s", g.name)
+        log.info("Catalogue rechargé : %d jeux (v%s)", len(self._games), catalog.catalog_version)
 
     def _detect_state(self, game: GameData) -> GameState:
         """Détecte l'état d'un jeu en vérifiant le disque."""
@@ -63,7 +82,6 @@ class GameManager:
         return GameState.NOT_INSTALLED
 
     def get_game_by_id(self, game_id: str) -> GameData | None:
-        """Retourne un jeu par son identifiant en O(1)."""
         return self._index.get(game_id)
 
     def get_games(self) -> list[dict]:
@@ -74,25 +92,35 @@ class GameManager:
         ]
 
     def get_game_path(self, game_id: str) -> Path | None:
-        """Retourne le chemin racine du jeu (premier dossier du chemin de l'exécutable)."""
+        """Retourne le chemin racine du jeu."""
         game = self._index.get(game_id)
         if game is None:
             return None
         if not _is_safe_relative(game.executable):
             return None
-        # Premier composant du chemin = dossier racine du jeu (ex: "HP3" pour "HP3/system/hppoa.exe")
         return self.config.install_path / Path(game.executable).parts[0]
 
     def get_state(self, game_id: str) -> GameState:
-        """Retourne l'état d'un jeu."""
         return self._states.get(game_id, GameState.NOT_INSTALLED)
 
     def is_installed(self, game_id: str) -> bool:
-        """Vérifie si le dossier ET l'exécutable existent."""
         return self._states.get(game_id) == GameState.INSTALLED
 
+    def installed_version(self, game_id: str) -> str | None:
+        """Retourne la version installée d'un jeu, ou None."""
+        return self.config.installed_versions.get(game_id)
+
+    def has_update(self, game_id: str) -> bool:
+        """Vérifie si une mise à jour est disponible pour un jeu installé."""
+        if not self.is_installed(game_id):
+            return False
+        game = self._index.get(game_id)
+        if game is None:
+            return False
+        installed = self.installed_version(game_id)
+        return installed is not None and installed != game.recommended_version
+
     def set_game_state(self, game_id: str, state: GameState) -> None:
-        """Met à jour l'état d'un jeu (utilisé par le downloader/installer)."""
         if game_id not in self._index:
             log.warning("Jeu inconnu : %s", game_id)
             return
@@ -100,47 +128,41 @@ class GameManager:
         log.info("État de %s → %s", game_id, state)
 
     def launch_game(self, game_id: str) -> subprocess.Popen | None:
-        """Lance le .exe du jeu en processus détaché. Retourne le Popen ou None."""
+        """Lance le .exe du jeu en processus détaché."""
         game = self._index.get(game_id)
         if game is None:
             log.warning("Impossible de lancer un jeu inconnu : %s", game_id)
             return None
-
         if not _is_safe_relative(game.executable):
             log.warning("Chemin executable non sûr : %s", game.executable)
             return None
-
         exe_path = self.config.install_path / game.executable
-        # Vérifie que le chemin résolu reste bien sous install_path
         try:
             exe_path.resolve().relative_to(self.config.install_path.resolve())
         except ValueError:
             log.warning("Path traversal détecté : %s", exe_path)
             return None
-
         if not exe_path.exists():
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
-        popen_kwargs: dict = {
-            "cwd": str(exe_path.parent),
-        }
+        popen_kwargs: dict = {"cwd": str(exe_path.parent)}
         if platform.system() == "Windows":
             popen_kwargs["creationflags"] = (
                 subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
             )
         else:
             popen_kwargs["start_new_session"] = True
-
         return subprocess.Popen([str(exe_path)], **popen_kwargs)
 
-    def save_installed_version(self, game_id: str) -> None:
+    def save_installed_version(self, game_id: str, version: str | None = None) -> None:
         """Sauvegarde la version du jeu installé dans la config."""
         game = self._index.get(game_id)
         if game is None:
             return
-        self.config.installed_versions[game_id] = game.version
+        ver = version or game.recommended_version
+        self.config.installed_versions[game_id] = ver
         self.config.save()
 
     def uninstall_game(self, game_id: str) -> bool:
@@ -150,8 +172,6 @@ class GameManager:
         if game is None or game_path is None or not game_path.exists():
             log.warning("Rien à désinstaller pour %s (chemin: %s)", game_id, game_path)
             return False
-
-        # Vérifie que game_path est bien sous install_path
         try:
             game_path.resolve().relative_to(self.config.install_path.resolve())
         except ValueError:

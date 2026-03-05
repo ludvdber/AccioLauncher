@@ -194,6 +194,11 @@ class SettingsDialog(QDialog):
         self._chk_resume.toggled.connect(self._on_setting_changed)
         layout.addWidget(self._chk_resume)
 
+        self._chk_updates = QCheckBox("Vérifier les mises à jour au démarrage")
+        self._chk_updates.setChecked(self.config.check_updates)
+        self._chk_updates.toggled.connect(self._on_setting_changed)
+        layout.addWidget(self._chk_updates)
+
         # ── Affichage
         layout.addWidget(self._section("Affichage"))
 
@@ -210,13 +215,13 @@ class SettingsDialog(QDialog):
         # ── À propos
         layout.addWidget(self._section("À propos"))
 
-        about_text = QLabel(
+        self._about_text = QLabel(
             f"Accio Launcher v{APP_VERSION}\n"
             "Launcher pour les jeux Harry Potter sur PC."
         )
-        about_text.setObjectName("subtitle")
-        about_text.setWordWrap(True)
-        layout.addWidget(about_text)
+        self._about_text.setObjectName("subtitle")
+        self._about_text.setWordWrap(True)
+        layout.addWidget(self._about_text)
 
         layout.addStretch()
 
@@ -254,6 +259,7 @@ class SettingsDialog(QDialog):
     def _on_setting_changed(self) -> None:
         self.config.delete_archives = self._chk_delete.isChecked()
         self.config.resume_downloads = self._chk_resume.isChecked()
+        self.config.check_updates = self._chk_updates.isChecked()
         self.config.autoplay_videos = self._chk_autoplay.isChecked()
         self.config.mute_videos = self._chk_mute.isChecked()
         self._save()
