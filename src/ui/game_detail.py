@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSizePolicy,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -57,8 +58,8 @@ class GameDetailView(QWidget):
         self._speed_tracker = SpeedTracker()
 
         self._video_player = None
-        self._video_widget = None
-        self._video_muted = True
+        self._video_sink = None
+        self._video_muted = False
 
         self._desc_expanded = False
         self._full_desc = ""
@@ -199,11 +200,46 @@ class GameDetailView(QWidget):
 
         info_layout.addStretch()
 
-        self._btn_mute = QPushButton("\U0001f507", self)
-        self._btn_mute.setObjectName("btnMute")
-        self._btn_mute.setFixedSize(28, 28)
+        # ── Contrôle audio (mute + slider volume) ──
+        self._audio_bar = QWidget(self)
+        self._audio_bar.setStyleSheet(
+            "QWidget { background: rgba(0,0,0,0.55); border-radius: 14px; }"
+        )
+        self._audio_bar.setFixedSize(160, 32)
+        self._audio_bar.hide()
+        ab_layout = QHBoxLayout(self._audio_bar)
+        ab_layout.setContentsMargins(8, 0, 8, 0)
+        ab_layout.setSpacing(6)
+
+        self._btn_mute = QPushButton("\U0001f50a")
+        self._btn_mute.setFixedSize(26, 26)
+        self._btn_mute.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_mute.setStyleSheet(
+            "QPushButton { background: transparent; color: #eaeaea; border: none;"
+            " font-size: 15px; }"
+            "QPushButton:hover { color: #d4a017; }"
+        )
         self._btn_mute.clicked.connect(self._toggle_mute)
-        self._btn_mute.hide()
+        ab_layout.addWidget(self._btn_mute)
+
+        self._volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self._volume_slider.setRange(0, 100)
+        self._volume_slider.setValue(50)
+        self._volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._volume_slider.setStyleSheet(
+            "QSlider::groove:horizontal {"
+            "  background: rgba(255,255,255,0.12); height: 4px; border-radius: 2px;"
+            "}"
+            "QSlider::handle:horizontal {"
+            "  background: #d4a017; width: 12px; height: 12px; margin: -4px 0;"
+            "  border-radius: 6px;"
+            "}"
+            "QSlider::sub-page:horizontal {"
+            "  background: rgba(212,160,23,0.5); border-radius: 2px;"
+            "}"
+        )
+        self._volume_slider.valueChanged.connect(self._on_volume_changed)
+        ab_layout.addWidget(self._volume_slider)
 
         # Fade — background
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity")
@@ -264,9 +300,8 @@ class GameDetailView(QWidget):
         self._bg.setGeometry(self.rect())
         self._bg.invalidate_cache()
         self._position_info()
-        if self._video_widget:
-            self._video_widget.setGeometry(self.rect())
-        self._btn_mute.move(self.width() - 40, 12)
+        self._audio_bar.move(self.width() - 174, self.height() - 46)
+        self._audio_bar.raise_()
 
     # ──────────────────── Changement de jeu ────────────────────
 
@@ -390,57 +425,68 @@ class GameDetailView(QWidget):
     def _try_play_video(self, game_id: str) -> None:
         video_path = ASSETS_DIR / "videos" / f"{game_id}_video.mp4"
         if not video_path.exists():
-            self._btn_mute.hide()
+            self._audio_bar.hide()
             return
         try:
-            from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-            from PyQt6.QtMultimediaWidgets import QVideoWidget
+            from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
 
-            if self._video_widget is None:
-                self._video_widget = QVideoWidget(self)
-                self._video_widget.setGeometry(self.rect())
-                self._video_widget.stackUnder(self._bg)
+            if self._video_sink is None:
+                self._video_sink = QVideoSink(self)
+                self._video_sink.videoFrameChanged.connect(self._on_video_frame)
                 self._audio_output = QAudioOutput(self)
-                self._audio_output.setVolume(0.0)
+                self._audio_output.setVolume(0.5)
                 self._video_player = QMediaPlayer(self)
-                self._video_player.setVideoOutput(self._video_widget)
+                self._video_player.setVideoOutput(self._video_sink)
                 self._video_player.setAudioOutput(self._audio_output)
                 self._video_player.mediaStatusChanged.connect(self._on_media_status)
 
-            self._video_widget.setGeometry(self.rect())
-            self._video_widget.show()
             self._video_player.setSource(QUrl.fromLocalFile(str(video_path)))
             self._video_player.play()
             self._video_muted = self.manager.config.mute_videos
-            self._audio_output.setVolume(0.0 if self._video_muted else 0.5)
+            vol = 0.0 if self._video_muted else self._volume_slider.value() / 100.0
+            self._audio_output.setVolume(vol)
             self._btn_mute.setText("\U0001f507" if self._video_muted else "\U0001f50a")
-            self._btn_mute.show()
-            self._btn_mute.raise_()
+            self._audio_bar.show()
+            self._audio_bar.raise_()
         except ImportError:
             log.debug("PyQt6-Multimedia non disponible")
+
+    def _on_video_frame(self, frame) -> None:
+        """Reçoit chaque frame vidéo et l'envoie au BackgroundWidget."""
+        if frame.isValid():
+            image = frame.toImage()
+            if not image.isNull():
+                self._bg.set_video_frame(image)
 
     def _on_media_status(self, status) -> None:
         try:
             from PyQt6.QtMultimedia import QMediaPlayer
             if status == QMediaPlayer.MediaStatus.EndOfMedia:
-                self._video_player.setPosition(0)
-                self._video_player.play()
+                self._stop_video()
         except ImportError:
             pass
 
     def _stop_video(self) -> None:
         if self._video_player:
             self._video_player.stop()
-        if self._video_widget:
-            self._video_widget.hide()
-        self._btn_mute.hide()
+        self._bg.clear_video()
+        self._audio_bar.hide()
 
     def _toggle_mute(self) -> None:
         if not hasattr(self, "_audio_output"):
             return
         self._video_muted = not self._video_muted
-        self._audio_output.setVolume(0.0 if self._video_muted else 0.5)
+        vol = 0.0 if self._video_muted else self._volume_slider.value() / 100.0
+        self._audio_output.setVolume(vol)
         self._btn_mute.setText("\U0001f507" if self._video_muted else "\U0001f50a")
+
+    def _on_volume_changed(self, value: int) -> None:
+        if not hasattr(self, "_audio_output"):
+            return
+        if self._video_muted:
+            self._video_muted = False
+            self._btn_mute.setText("\U0001f50a")
+        self._audio_output.setVolume(value / 100.0)
 
     # ──────────────────── Actions ────────────────────
 

@@ -37,7 +37,7 @@ class Config:
     delete_archives: bool = True
     resume_downloads: bool = True
     autoplay_videos: bool = True
-    mute_videos: bool = True
+    mute_videos: bool = False
     check_updates: bool = True
     dismissed_launcher_version: str = ""
     installed_versions: dict[str, str] = field(default_factory=dict)

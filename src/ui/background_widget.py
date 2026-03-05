@@ -8,7 +8,7 @@ from PyQt6.QtCore import (
     QRectF, QTimer, pyqtProperty,
 )
 from PyQt6.QtGui import (
-    QColor, QLinearGradient, QPainter, QPixmap, QRadialGradient,
+    QColor, QImage, QLinearGradient, QPainter, QPixmap, QRadialGradient,
 )
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 
 class BackgroundWidget(QWidget):
     """Image de fond avec zoom lent continu, parallaxe souris,
-    vignette renforcée, overlay et dégradé bas 75%."""
+    vignette renforcée, overlay et dégradé bas 75%.
+    Peut aussi afficher des frames vidéo via QVideoSink."""
 
     PARALLAX_MAX_X = 20
     PARALLAX_MAX_Y = 12
@@ -29,6 +30,7 @@ class BackgroundWidget(QWidget):
         self._prepared: QPixmap | None = None
         self._prepared_for: tuple[int, int] = (0, 0)
         self._opacity = 1.0
+        self._video_frame: QImage | None = None
 
         # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16s)
         self._zoom = 1.0
@@ -124,6 +126,16 @@ class BackgroundWidget(QWidget):
         self._prepared = None
         self._prepared_for = (0, 0)
 
+    def set_video_frame(self, image: QImage | None) -> None:
+        """Reçoit une frame vidéo à peindre à la place de l'image statique."""
+        self._video_frame = image
+        self.update()
+
+    def clear_video(self) -> None:
+        """Arrête d'afficher la vidéo, retour à l'image statique."""
+        self._video_frame = None
+        self.update()
+
     def set_image(self, path: Path | None) -> None:
         if path and path.exists():
             self._pixmap = QPixmap(str(path))
@@ -161,33 +173,49 @@ class BackgroundWidget(QWidget):
         p.fillRect(rect, QColor("#060611"))
         p.setOpacity(self._opacity)
 
-        self._ensure_prepared()
-        if self._prepared and w > 0 and h > 0:
-            pw, ph = float(self._prepared.width()), float(self._prepared.height())
-            widget_ar = w / h
-            prep_ar = pw / ph
+        if self._video_frame is not None and w > 0 and h > 0:
+            # Peindre la frame vidéo en cover (aspect ratio)
+            vw, vh = self._video_frame.width(), self._video_frame.height()
+            if vw > 0 and vh > 0:
+                widget_ar = w / h
+                video_ar = vw / vh
+                if widget_ar > video_ar:
+                    draw_w = w
+                    draw_h = w / video_ar
+                else:
+                    draw_h = h
+                    draw_w = h * video_ar
+                dx = (w - draw_w) / 2
+                dy = (h - draw_h) / 2
+                p.drawImage(QRectF(dx, dy, draw_w, draw_h), self._video_frame)
+        else:
+            self._ensure_prepared()
+            if self._prepared and w > 0 and h > 0:
+                pw, ph = float(self._prepared.width()), float(self._prepared.height())
+                widget_ar = w / h
+                prep_ar = pw / ph
 
-            if widget_ar > prep_ar:
-                base_w = pw
-                base_h = pw / widget_ar
-            else:
-                base_h = ph
-                base_w = ph * widget_ar
+                if widget_ar > prep_ar:
+                    base_w = pw
+                    base_h = pw / widget_ar
+                else:
+                    base_h = ph
+                    base_w = ph * widget_ar
 
-            ez = 1.08 * self._zoom
-            crop_w = base_w / ez
-            crop_h = base_h / ez
+                ez = 1.08 * self._zoom
+                crop_w = base_w / ez
+                crop_h = base_h / ez
 
-            scale_x = crop_w / w
-            scale_y = crop_h / h
-            cx = pw * 0.5 + self._parallax_cx * scale_x
-            cy = ph * 0.5 + self._parallax_cy * scale_y
+                scale_x = crop_w / w
+                scale_y = crop_h / h
+                cx = pw * 0.5 + self._parallax_cx * scale_x
+                cy = ph * 0.5 + self._parallax_cy * scale_y
 
-            src_rect = QRectF(cx - crop_w * 0.5, cy - crop_h * 0.5, crop_w, crop_h)
-            p.drawPixmap(QRectF(0, 0, w, h), self._prepared, src_rect)
+                src_rect = QRectF(cx - crop_w * 0.5, cy - crop_h * 0.5, crop_w, crop_h)
+                p.drawPixmap(QRectF(0, 0, w, h), self._prepared, src_rect)
 
-        # Overlay brightness
-        p.fillRect(rect, QColor(0, 0, 0, 77))
+            # Overlay brightness (seulement sur l'image statique)
+            p.fillRect(rect, QColor(0, 0, 0, 77))
 
         # ── Permanent elements (opacity 1.0) ──
         p.setOpacity(1.0)
