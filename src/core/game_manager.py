@@ -143,12 +143,6 @@ class GameManager:
         self.config.installed_versions[game_id] = game.version
         self.config.save()
 
-    def check_for_updates(self, game_id: str) -> bool:
-        """Compare la version installée avec la version dans games.json.
-        Retourne True si une mise à jour est disponible.
-        TODO: comparer avec la version sauvegardée localement."""
-        return False
-
     def uninstall_game(self, game_id: str) -> bool:
         """Supprime le dossier du jeu. Retourne True si succès."""
         game_path = self.get_game_path(game_id)

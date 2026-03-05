@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
-from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent, QPixmap
+from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent
 from PyQt6.QtWidgets import (
     QFileDialog,
     QMainWindow,
