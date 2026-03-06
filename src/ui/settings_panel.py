@@ -4,10 +4,9 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve, QRectF
+from PyQt6.QtGui import QFont, QPainter, QColor, QBrush
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -19,6 +18,87 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
+
+
+class ToggleSwitch(QWidget):
+    """Interrupteur animé ON/OFF."""
+
+    toggled = pyqtSignal(bool)
+
+    _TRACK_W = 40
+    _TRACK_H = 22
+    _KNOB_R = 8   # rayon du cercle
+
+    def __init__(self, checked: bool = False, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._checked = checked
+        self._knob_x = float(self._TRACK_W - 12 if checked else 12)
+        self.setFixedSize(self._TRACK_W, self._TRACK_H)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        self._anim = QPropertyAnimation(self, b"knob_x")
+        self._anim.setDuration(150)
+        self._anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+    # -- Propriété animable --
+    def _get_knob_x(self) -> float:
+        return self._knob_x
+
+    def _set_knob_x(self, val: float) -> None:
+        self._knob_x = val
+        self.update()
+
+    knob_x = pyqtProperty(float, _get_knob_x, _set_knob_x)
+
+    def isChecked(self) -> bool:
+        return self._checked
+
+    def setChecked(self, val: bool) -> None:
+        if val == self._checked:
+            return
+        self._checked = val
+        self._animate()
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._checked = not self._checked
+            self._animate()
+            self.toggled.emit(self._checked)
+
+    def _animate(self) -> None:
+        self._anim.stop()
+        self._anim.setStartValue(self._knob_x)
+        self._anim.setEndValue(float(self._TRACK_W - 12 if self._checked else 12))
+        self._anim.start()
+
+    def paintEvent(self, event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # Piste
+        track_color = QColor("#d4a017") if self._checked else QColor("#2c3e6b")
+        p.setBrush(QBrush(track_color))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(QRectF(0, 0, self._TRACK_W, self._TRACK_H), 11, 11)
+        # Cercle
+        p.setBrush(QBrush(QColor("#ffffff")))
+        p.drawEllipse(QRectF(self._knob_x - self._KNOB_R, (self._TRACK_H - 2 * self._KNOB_R) / 2,
+                              2 * self._KNOB_R, 2 * self._KNOB_R))
+        p.end()
+
+
+def _toggle_row(label_text: str, checked: bool) -> tuple[QWidget, ToggleSwitch]:
+    """Crée une ligne [toggle] [label] et renvoie le widget-ligne + le toggle."""
+    row = QWidget()
+    row.setStyleSheet("background: transparent;")
+    lay = QHBoxLayout(row)
+    lay.setContentsMargins(0, 4, 0, 4)
+    lay.setSpacing(12)
+    toggle = ToggleSwitch(checked)
+    lay.addWidget(toggle)
+    lbl = QLabel(label_text)
+    lbl.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
+    lay.addWidget(lbl, stretch=1)
+    return row, toggle
 
 
 class _DiskScanWorker(QThread):
@@ -91,22 +171,6 @@ class SettingsDialog(QDialog):
         QLabel#subtitle {
             font-size: 12px;
             color: #b0b0b0;
-        }
-        QCheckBox {
-            color: #ffffff;
-            font-size: 13px;
-            spacing: 8px;
-        }
-        QCheckBox::indicator {
-            width: 18px;
-            height: 18px;
-            border: 2px solid #2c3e6b;
-            border-radius: 4px;
-            background-color: #16213e;
-        }
-        QCheckBox::indicator:checked {
-            background-color: #d4a017;
-            border-color: #d4a017;
         }
         QPushButton#btnPath {
             background-color: #16213e;
@@ -184,33 +248,28 @@ class SettingsDialog(QDialog):
         # ── Téléchargement
         layout.addWidget(self._section("Téléchargement"))
 
-        self._chk_delete = QCheckBox("Supprimer les archives après installation")
-        self._chk_delete.setChecked(self.config.delete_archives)
-        self._chk_delete.toggled.connect(self._on_setting_changed)
-        layout.addWidget(self._chk_delete)
+        row, self._tgl_delete = _toggle_row("Supprimer les archives après installation", self.config.delete_archives)
+        self._tgl_delete.toggled.connect(self._on_setting_changed)
+        layout.addWidget(row)
 
-        self._chk_resume = QCheckBox("Reprendre les téléchargements interrompus")
-        self._chk_resume.setChecked(self.config.resume_downloads)
-        self._chk_resume.toggled.connect(self._on_setting_changed)
-        layout.addWidget(self._chk_resume)
+        row, self._tgl_resume = _toggle_row("Reprendre les téléchargements interrompus", self.config.resume_downloads)
+        self._tgl_resume.toggled.connect(self._on_setting_changed)
+        layout.addWidget(row)
 
-        self._chk_updates = QCheckBox("Vérifier les mises à jour au démarrage")
-        self._chk_updates.setChecked(self.config.check_updates)
-        self._chk_updates.toggled.connect(self._on_setting_changed)
-        layout.addWidget(self._chk_updates)
+        row, self._tgl_updates = _toggle_row("Vérifier les mises à jour au démarrage", self.config.check_updates)
+        self._tgl_updates.toggled.connect(self._on_setting_changed)
+        layout.addWidget(row)
 
         # ── Affichage
         layout.addWidget(self._section("Affichage"))
 
-        self._chk_autoplay = QCheckBox("Lecture automatique des vidéos")
-        self._chk_autoplay.setChecked(self.config.autoplay_videos)
-        self._chk_autoplay.toggled.connect(self._on_setting_changed)
-        layout.addWidget(self._chk_autoplay)
+        row, self._tgl_autoplay = _toggle_row("Lecture automatique des vidéos", self.config.autoplay_videos)
+        self._tgl_autoplay.toggled.connect(self._on_setting_changed)
+        layout.addWidget(row)
 
-        self._chk_mute = QCheckBox("Couper le son des vidéos")
-        self._chk_mute.setChecked(self.config.mute_videos)
-        self._chk_mute.toggled.connect(self._on_setting_changed)
-        layout.addWidget(self._chk_mute)
+        row, self._tgl_mute = _toggle_row("Couper le son des vidéos", self.config.mute_videos)
+        self._tgl_mute.toggled.connect(self._on_setting_changed)
+        layout.addWidget(row)
 
         # ── À propos
         layout.addWidget(self._section("À propos"))
@@ -257,11 +316,11 @@ class SettingsDialog(QDialog):
             self._save()
 
     def _on_setting_changed(self) -> None:
-        self.config.delete_archives = self._chk_delete.isChecked()
-        self.config.resume_downloads = self._chk_resume.isChecked()
-        self.config.check_updates = self._chk_updates.isChecked()
-        self.config.autoplay_videos = self._chk_autoplay.isChecked()
-        self.config.mute_videos = self._chk_mute.isChecked()
+        self.config.delete_archives = self._tgl_delete.isChecked()
+        self.config.resume_downloads = self._tgl_resume.isChecked()
+        self.config.check_updates = self._tgl_updates.isChecked()
+        self.config.autoplay_videos = self._tgl_autoplay.isChecked()
+        self.config.mute_videos = self._tgl_mute.isChecked()
         self._save()
 
     def closeEvent(self, event) -> None:

@@ -62,7 +62,7 @@ class Config:
                 delete_archives=data.get("delete_archives", True),
                 resume_downloads=data.get("resume_downloads", True),
                 autoplay_videos=data.get("autoplay_videos", True),
-                mute_videos=data.get("mute_videos", True),
+                mute_videos=data.get("mute_videos", False),
                 check_updates=data.get("check_updates", True),
                 dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
                 installed_versions=data.get("installed_versions", {}),

@@ -65,7 +65,6 @@ class GameDetailView(QWidget):
         self._target_version: GameVersion | None = None
         self._desc_expanded = False
         self._full_desc = ""
-        self._pending_game: GameData | None = None
 
         self._build_ui()
 
@@ -226,7 +225,7 @@ class GameDetailView(QWidget):
 
         self._volume_slider = QSlider(Qt.Orientation.Horizontal)
         self._volume_slider.setRange(0, 100)
-        self._volume_slider.setValue(50)
+        self._volume_slider.setValue(25)
         self._volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
         self._volume_slider.setStyleSheet(
             "QSlider::groove:horizontal {"
@@ -313,32 +312,14 @@ class GameDetailView(QWidget):
             return
 
         self._stop_video()
-
-        # Fade out info
-        self._info_fade.stop()
-        self._info_opacity.setOpacity(0.0)
-
-        # Fade out background
-        self._pending_game = game
         self._fade_anim.stop()
-        self._fade_anim.setStartValue(1.0)
-        self._fade_anim.setEndValue(0.0)
-        try:
-            self._fade_anim.finished.disconnect(self._on_fadeout_done)
-        except TypeError:
-            pass
-        self._fade_anim.finished.connect(self._on_fadeout_done)
-        self._fade_anim.start()
+        self._info_fade.stop()
 
-    def _on_fadeout_done(self) -> None:
-        """Slot appelé quand le fade-out du fond est terminé."""
-        try:
-            self._fade_anim.finished.disconnect(self._on_fadeout_done)
-        except TypeError:
-            pass
-        if self._pending_game is not None:
-            self._apply_game(self._pending_game)
-            self._pending_game = None
+        # Pas de fade-out : on coupe net et on fade-in le nouveau jeu.
+        # Élimine le ghosting lors de clics rapides dans le carrousel.
+        self._bg._set_bg_opacity(0.0)
+        self._info_opacity.setOpacity(0.0)
+        self._apply_game(game)
 
     def _apply_game(self, game: GameData) -> None:
         self.game = game
@@ -393,15 +374,11 @@ class GameDetailView(QWidget):
 
         self._refresh_action()
 
-        # Fade-in background (400ms) + zoom loop
-        # S'assurer que _on_fadeout_done n'est pas connecté pendant le fade-in
-        try:
-            self._fade_anim.finished.disconnect(self._on_fadeout_done)
-        except TypeError:
-            pass
-        self._fade_anim.setStartValue(0.0)
+        # Fade-in background + zoom loop
+        current = self._bg.bg_opacity
+        self._fade_anim.setStartValue(current)
         self._fade_anim.setEndValue(1.0)
-        self._fade_anim.setDuration(400)
+        self._fade_anim.setDuration(max(int(400 * (1.0 - current)), 80))
         self._fade_anim.start()
         self._bg.start_zoom_loop()
 
@@ -436,7 +413,7 @@ class GameDetailView(QWidget):
                 self._video_sink = QVideoSink(self)
                 self._video_sink.videoFrameChanged.connect(self._on_video_frame)
                 self._audio_output = QAudioOutput(self)
-                self._audio_output.setVolume(0.5)
+                self._audio_output.setVolume(0.25)
                 self._video_player = QMediaPlayer(self)
                 self._video_player.setVideoOutput(self._video_sink)
                 self._video_player.setAudioOutput(self._audio_output)
