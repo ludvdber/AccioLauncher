@@ -896,6 +896,7 @@ class GameDetailView(QWidget):
                 "L'archive est peut-\u00eatre corrompue.",
             )
             return
+        self.manager._apply_pre_launch_patches(game)
         self.manager.set_game_state(game.id, GameState.INSTALLED)
         target_ver = self._target_version
         self._target_version = None

@@ -147,6 +147,9 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
+        # Pré-lancement : supprimer/créer fichiers, appliquer patches INI
+        self._delete_pre_launch_files(game)
+        self._create_pre_launch_files(game)
         self._apply_pre_launch_patches(game)
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
@@ -159,29 +162,77 @@ class GameManager:
             popen_kwargs["start_new_session"] = True
         return subprocess.Popen([str(exe_path)], **popen_kwargs)
 
-    @staticmethod
-    def _resolve_documents_path(raw: str) -> Path:
-        """Résout %DOCUMENTS% vers le dossier Mes Documents de l'utilisateur."""
-        docs = Path(os.path.expandvars("%USERPROFILE%")) / "Documents"
-        return Path(raw.replace("%DOCUMENTS%", str(docs)))
+    def _delete_pre_launch_files(self, game: GameData) -> None:
+        """Supprime les fichiers listés dans pre_launch.delete_files (ex: Detected.ini)."""
+        if game.pre_launch is None or not game.pre_launch.delete_files:
+            return
+        docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
+        for raw in game.pre_launch.delete_files:
+            resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
+            p = Path(resolved)
+            # Protection path traversal
+            try:
+                p.resolve().relative_to(docs_dir)
+            except ValueError:
+                try:
+                    p.resolve().relative_to(self.config.install_path.resolve())
+                except ValueError:
+                    log.warning("Chemin delete_files hors zones autorisées : %s", p)
+                    continue
+            if p.exists():
+                try:
+                    p.unlink()
+                    log.debug("Fichier pré-lancement supprimé : %s", p)
+                except OSError as exc:
+                    log.warning("Impossible de supprimer %s : %s", p, exc)
+
+    def _create_pre_launch_files(self, game: GameData) -> None:
+        """Crée les fichiers vides listés dans pre_launch.create_files (ex: Running.ini)."""
+        if game.pre_launch is None or not game.pre_launch.create_files:
+            return
+        docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
+        for raw in game.pre_launch.create_files:
+            resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
+            p = Path(resolved)
+            try:
+                p.resolve().relative_to(docs_dir)
+            except ValueError:
+                try:
+                    p.resolve().relative_to(self.config.install_path.resolve())
+                except ValueError:
+                    log.warning("Chemin create_files hors zones autorisées : %s", p)
+                    continue
+            try:
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.touch()
+                log.debug("Fichier pré-lancement créé : %s", p)
+            except OSError as exc:
+                log.warning("Impossible de créer %s : %s", p, exc)
 
     def _apply_pre_launch_patches(self, game: GameData) -> None:
         """Applique les patches INI avant le lancement du jeu (ligne par ligne, sans configparser.write)."""
         if game.pre_launch is None or not game.pre_launch.ini_patches:
             return
         docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for patch in game.pre_launch.ini_patches:
-            ini_path = self._resolve_documents_path(patch.file)
-            # Protection path traversal : le fichier doit rester sous Documents
+            raw_file = patch.file.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
+            ini_path = Path(raw_file)
+            # Protection path traversal : le fichier doit rester sous Documents ou install_dir
             try:
                 ini_path.resolve().relative_to(docs_dir)
             except ValueError:
-                log.warning("Chemin INI hors de Documents, refusé : %s", ini_path)
-                continue
+                try:
+                    ini_path.resolve().relative_to(self.config.install_path.resolve())
+                except ValueError:
+                    log.warning("Chemin INI hors des zones autorisées, refusé : %s", ini_path)
+                    continue
             if not ini_path.exists():
                 log.warning("Fichier INI introuvable, skip : %s", ini_path)
                 continue
-            value = patch.value.replace("%DOCUMENTS%", str(docs_dir))
+            value = patch.value.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
             try:
                 lines = ini_path.read_text(encoding="utf-8").splitlines(keepends=True)
                 current_section: str | None = None

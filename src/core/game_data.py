@@ -39,6 +39,8 @@ class IniPatch:
 class PreLaunch:
     """Données de pré-lancement d'un jeu."""
     ini_patches: tuple[IniPatch, ...] = ()
+    delete_files: tuple[str, ...] = ()
+    create_files: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +122,8 @@ class GameData:
         if pl:
             pre_launch = PreLaunch(
                 ini_patches=tuple(IniPatch.from_dict(p) for p in pl.get("ini_patches", [])),
+                delete_files=tuple(pl.get("delete_files", [])),
+                create_files=tuple(pl.get("create_files", [])),
             )
         return cls(
             id=data["id"],
