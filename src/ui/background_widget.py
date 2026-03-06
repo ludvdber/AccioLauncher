@@ -75,6 +75,7 @@ class BackgroundWidget(QWidget):
     def start_zoom_loop(self) -> None:
         self._zoom = 1.0
         self._zoom_forward = True
+        self._zoom_anim.finished.connect(self._run_zoom_leg)
         self._run_zoom_leg()
 
     def _run_zoom_leg(self) -> None:
@@ -86,11 +87,6 @@ class BackgroundWidget(QWidget):
             self._zoom_anim.setStartValue(1.05)
             self._zoom_anim.setEndValue(1.0)
         self._zoom_forward = not self._zoom_forward
-        try:
-            self._zoom_anim.finished.disconnect(self._run_zoom_leg)
-        except TypeError:
-            pass
-        self._zoom_anim.finished.connect(self._run_zoom_leg)
         self._zoom_anim.start()
 
     def set_parallax_target(self, mouse_x: float, mouse_y: float,

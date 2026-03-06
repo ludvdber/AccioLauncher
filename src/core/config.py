@@ -1,5 +1,7 @@
 import json
+import os
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -70,24 +72,36 @@ class Config:
         return cls()
 
     def save(self) -> None:
-        """Sauvegarde la configuration dans le fichier JSON."""
+        """Sauvegarde la configuration dans le fichier JSON (écriture atomique)."""
         CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        CONFIG_FILE_PATH.write_text(
-            json.dumps(
-                {
-                    "install_path": str(self.install_path),
-                    "cache_path": str(self.cache_path),
-                    "langue": self.langue,
-                    "delete_archives": self.delete_archives,
-                    "resume_downloads": self.resume_downloads,
-                    "autoplay_videos": self.autoplay_videos,
-                    "mute_videos": self.mute_videos,
-                    "check_updates": self.check_updates,
-                    "dismissed_launcher_version": self.dismissed_launcher_version,
-                    "installed_versions": self.installed_versions,
-                },
-                indent=4,
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
+        data = json.dumps(
+            {
+                "install_path": str(self.install_path),
+                "cache_path": str(self.cache_path),
+                "langue": self.langue,
+                "delete_archives": self.delete_archives,
+                "resume_downloads": self.resume_downloads,
+                "autoplay_videos": self.autoplay_videos,
+                "mute_videos": self.mute_videos,
+                "check_updates": self.check_updates,
+                "dismissed_launcher_version": self.dismissed_launcher_version,
+                "installed_versions": self.installed_versions,
+            },
+            indent=4,
+            ensure_ascii=False,
         )
+        # Écriture atomique : tmp + rename pour éviter la corruption
+        fd, tmp_path = tempfile.mkstemp(
+            dir=CONFIG_FILE_PATH.parent, suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(data)
+            os.replace(tmp_path, CONFIG_FILE_PATH)
+        except OSError:
+            # Nettoyage si le replace échoue
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise

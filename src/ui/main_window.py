@@ -67,6 +67,8 @@ class MainWindow(QMainWindow):
         self._game_name: str = ""
 
         self._update_checker: UpdateChecker | None = None
+        self._launcher_update_version: str = ""
+        self._launcher_update_url: str = ""
 
         self._build_ui()
         self._build_tray()
@@ -203,6 +205,7 @@ class MainWindow(QMainWindow):
             " padding: 2px 10px; font-size: 11px; }"
             "QPushButton:hover { background: rgba(212,160,23,0.35); color: #e8c547; }"
         )
+        self._notif_btn.clicked.connect(self._on_notif_download)
         layout.addWidget(self._notif_btn)
 
         btn_close = QPushButton("✕")
@@ -245,8 +248,7 @@ class MainWindow(QMainWindow):
         if self._detail.game:
             updated = self.manager.get_game_by_id(self._detail.game.id)
             if updated:
-                self._detail.game = updated
-                self._detail._refresh_action()
+                self._detail.update_game_data(updated)
         log.info("UI rafraîchie après mise à jour du catalogue")
 
     def _on_launcher_update(self, version: str, url: str) -> None:
@@ -256,9 +258,7 @@ class MainWindow(QMainWindow):
         self._launcher_update_version = version
         self._launcher_update_url = url
         self._notif_label.setText(f"Accio Launcher v{version} est disponible !")
-        self._notif_btn.clicked.connect(lambda: self._open_url(url))
         self._notif_bar.show()
-        # Auto-hide après 30 secondes
         QTimer.singleShot(30_000, self._auto_hide_notif)
 
     def _on_update_counts(self, count: int) -> None:
@@ -267,10 +267,14 @@ class MainWindow(QMainWindow):
             f"{count} mise(s) à jour disponible(s)" if count > 0 else "Prêt"
         )
 
+    def _on_notif_download(self) -> None:
+        if self._launcher_update_url:
+            self._open_url(self._launcher_update_url)
+
     def _dismiss_notif(self) -> None:
         """Ferme la notification et sauvegarde la version ignorée."""
         self._notif_bar.hide()
-        if hasattr(self, "_launcher_update_version"):
+        if self._launcher_update_version:
             self.config.dismissed_launcher_version = self._launcher_update_version
             self.config.save()
 
@@ -313,22 +317,16 @@ class MainWindow(QMainWindow):
 
     def pause_all_effects(self) -> None:
         """Met en pause TOUS les timers et animations pour consommation CPU ~0."""
-        if hasattr(self, "_particles"):
-            self._particles.pause()
-        if hasattr(self, "_detail"):
-            self._detail.pause()
-        if hasattr(self, "_carousel"):
-            self._carousel.pause()
+        self._particles.pause()
+        self._detail.pause()
+        self._carousel.pause()
         log.debug("Tous les effets sont en pause")
 
     def resume_all_effects(self) -> None:
         """Reprend tous les timers et animations."""
-        if hasattr(self, "_particles"):
-            self._particles.resume()
-        if hasattr(self, "_detail"):
-            self._detail.resume()
-        if hasattr(self, "_carousel"):
-            self._carousel.resume()
+        self._particles.resume()
+        self._detail.resume()
+        self._carousel.resume()
         log.debug("Tous les effets sont repris")
 
     # ──────────────────── Surveillance du processus de jeu ────────────────────
@@ -383,30 +381,42 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        if hasattr(self, "_btn_settings"):
-            self._btn_settings.move(self.width() - 52, 42)
-            self._btn_settings.raise_()
-        if hasattr(self, "_particles"):
-            self._particles.setGeometry(self.centralWidget().geometry())
-            self._particles.raise_()
+        self._btn_settings.move(self.width() - 52, 42)
+        self._btn_settings.raise_()
+        self._particles.setGeometry(self.centralWidget().geometry())
+        self._particles.raise_()
 
     def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.Type.MouseMove:
             try:
                 global_pos = event.globalPosition()
                 local = self.mapFromGlobal(global_pos.toPoint())
-                pos = QPointF(local.x(), local.y())
-                if hasattr(self, "_detail"):
-                    self._detail.handle_mouse_move(pos)
+                self._detail.handle_mouse_move(QPointF(local.x(), local.y()))
             except (AttributeError, RuntimeError):
                 pass
         return super().eventFilter(obj, event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         pos = event.position()
-        if hasattr(self, "_detail"):
-            self._detail.handle_mouse_move(QPointF(pos.x(), pos.y()))
+        self._detail.handle_mouse_move(QPointF(pos.x(), pos.y()))
         super().mouseMoveEvent(event)
+
+    def closeEvent(self, event) -> None:
+        """Attend la fin des threads avant de fermer."""
+        from PyQt6.QtWidgets import QApplication
+        QApplication.instance().removeEventFilter(self)
+
+        if self._update_checker is not None and self._update_checker.isRunning():
+            self._update_checker.wait(3000)
+        # Arrêter un éventuel téléchargement/installation en cours
+        if self._detail._downloader is not None:
+            self._detail._downloader.cancel()
+            self._detail._downloader.wait(3000)
+        if self._detail._installer is not None:
+            self._detail._installer.cancel()
+            self._detail._installer.wait(3000)
+        self._tray.hide()
+        super().closeEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         match event.key():

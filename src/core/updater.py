@@ -9,6 +9,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from src.core.config import APP_VERSION, DEFAULT_INSTALL_PATH
 from src.core.game_data import Catalog, _parse_catalog
+from src.core.version_utils import compare_versions
 
 log = logging.getLogger(__name__)
 
@@ -17,20 +18,8 @@ _LAUNCHER_API = "https://api.github.com/repos/ludvdber/AccioLauncher/releases/la
 _LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 
 
-def _compare_versions(a: str, b: str) -> int:
-    """Compare deux versions sémantiques. Retourne >0 si a > b, <0 si a < b, 0 si égales."""
-    def _parts(v: str) -> list[int]:
-        return [int(x) for x in v.lstrip("v").split(".") if x.isdigit()]
-    pa, pb = _parts(a), _parts(b)
-    # Pad to same length
-    while len(pa) < len(pb):
-        pa.append(0)
-    while len(pb) < len(pa):
-        pb.append(0)
-    for x, y in zip(pa, pb):
-        if x != y:
-            return x - y
-    return 0
+# Alias rétrocompat pour les imports existants
+_compare_versions = compare_versions
 
 
 class UpdateChecker(QThread):

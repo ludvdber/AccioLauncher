@@ -3,6 +3,7 @@ import logging
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import zipfile
 from pathlib import Path
@@ -33,12 +34,12 @@ def _find_7z_exe() -> str | None:
             return str(p)
     # Tenter le PATH
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["7z"], capture_output=True, timeout=5,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
-        if result.returncode is not None:
-            return "7z"
+        # Si aucune exception, 7z est trouvé dans le PATH
+        return "7z"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     return None
@@ -68,12 +69,16 @@ class Installer(QThread):
         self.config_files = config_files or []  # [(source_rel, dest_with_tilde), ...]
         self.game_dir = game_dir  # ex: "HP3" — racine du jeu dans l'archive
         self.delete_archive = delete_archive
-        self._cancelled = False
+        self._cancel_event = threading.Event()
         self._extracted_dirs: list[Path] = []  # dossiers créés pendant l'extraction
+
+    @property
+    def _cancelled(self) -> bool:
+        return self._cancel_event.is_set()
 
     def cancel(self) -> None:
         """Demande l'arrêt de l'extraction."""
-        self._cancelled = True
+        self._cancel_event.set()
         log.info("Annulation de l'installation demandée")
 
     def run(self) -> None:
@@ -145,23 +150,14 @@ class Installer(QThread):
             all_files = archive.list()
             self._validate_7z_paths(all_files)
 
-            total_size = sum(getattr(f, "uncompressed", 0) or 0 for f in all_files)
-            log.debug("Extraction py7zr : %d fichiers, %d octets", len(all_files), total_size)
+            total = len(all_files)
+            log.debug("Extraction py7zr : %d fichiers", total)
 
-            if total_size == 0:
-                archive.extractall(path=self.destination)
-                self.progress.emit(100)
-                return
-
+            # py7zr ne supporte pas de callback de progression.
+            # On extrait tout d'un coup — la barre passera de 0 à 100.
+            self.progress.emit(0)
             archive.extractall(path=self.destination)
-
-            extracted_size = 0
-            for f_info in all_files:
-                if self._cancelled:
-                    return
-                extracted_size += getattr(f_info, "uncompressed", 0) or 0
-                pct = min(100, int(extracted_size * 100 / total_size))
-                self.progress.emit(pct)
+            self.progress.emit(100)
 
     def _extract_7z_subprocess(self) -> None:
         """Extraction via 7z.exe (fallback pour BCJ2 et autres filtres non supportés)."""

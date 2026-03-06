@@ -197,8 +197,8 @@ class VersionsDialog(QDialog):
 
             if self._installed_version is not None:
                 # Jeu installé mais version différente
-                from src.core.updater import _compare_versions
-                if _compare_versions(ver.version, self._installed_version) > 0:
+                from src.core.version_utils import compare_versions
+                if compare_versions(ver.version, self._installed_version) > 0:
                     btn_text = f"Mettre à jour vers v{ver.version}"
                 else:
                     btn_text = f"Revenir à v{ver.version}"

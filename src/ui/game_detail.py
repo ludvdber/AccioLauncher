@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSlider,
     QVBoxLayout,
@@ -63,8 +64,14 @@ class GameDetailView(QWidget):
         self._video_muted = False
 
         self._target_version: GameVersion | None = None
+        self._active_game: GameData | None = None  # jeu en cours de téléchargement/installation
         self._desc_expanded = False
         self._full_desc = ""
+
+        # Widgets créés dynamiquement par _build_downloading / _build_installing
+        self._progress_bar: QProgressBar | None = None
+        self._download_label: QLabel | None = None
+        self._install_bar: QProgressBar | None = None
 
         self._build_ui()
 
@@ -77,12 +84,28 @@ class GameDetailView(QWidget):
         self._bg = BackgroundWidget(self)
 
         # ── Info labels over the left veil gradient ──
-        self._info_container = QWidget(self)
+        self._info_container = QScrollArea(self)
+        self._info_container.setWidgetResizable(True)
+        self._info_container.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._info_container.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._info_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self._info_container.setStyleSheet("background: transparent;")
-        info_layout = QVBoxLayout(self._info_container)
+        self._info_container.setStyleSheet(
+            "QScrollArea { background: transparent; border: none; }"
+            "QScrollBar:vertical {"
+            "  background: transparent; width: 4px; border: none;"
+            "}"
+            "QScrollBar::handle:vertical {"
+            "  background: rgba(212,160,23,0.3); border-radius: 2px; min-height: 20px;"
+            "}"
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+            "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
+        )
+        _info_widget = QWidget()
+        _info_widget.setStyleSheet("background: transparent;")
+        info_layout = QVBoxLayout(_info_widget)
         info_layout.setContentsMargins(50, 0, 30, 0)
         info_layout.setSpacing(0)
+        self._info_container.setWidget(_info_widget)
 
         # Title
         self._title = QLabel()
@@ -306,6 +329,11 @@ class GameDetailView(QWidget):
 
     # ──────────────────── Changement de jeu ────────────────────
 
+    def update_game_data(self, game: GameData) -> None:
+        """Met à jour les données du jeu courant (après un reload catalogue)."""
+        self.game = game
+        self._refresh_action()
+
     def set_game(self, game: GameData) -> None:
         if self.game and self.game.id == game.id:
             self._refresh_action()
@@ -345,10 +373,7 @@ class GameDetailView(QWidget):
         self._set_desc_text(game.description)
 
         # Tags
-        while self._tags_layout.count():
-            item = self._tags_layout.takeAt(0)
-            if (w := item.widget()) is not None:
-                w.deleteLater()
+        self._clear_layout(self._tags_layout)
         for tag in game.tags:
             badge = QLabel(tag.upper())
             badge.setFont(cinzel(10, bold=True))
@@ -483,17 +508,22 @@ class GameDetailView(QWidget):
             return GameState.NOT_INSTALLED
         return self.manager.get_state(self.game.id)
 
+    @staticmethod
+    def _clear_layout(layout) -> None:
+        """Retire et détruit tous les widgets d'un layout immédiatement."""
+        while layout.count():
+            item = layout.takeAt(0)
+            if (w := item.widget()) is not None:
+                w.hide()
+                w.deleteLater()
+
     def _refresh_action(self) -> None:
-        while self._action_layout.count():
-            item = self._action_layout.takeAt(0)
-            if (w := item.widget()) is not None:
-                w.deleteLater()
+        self._clear_layout(self._action_layout)
+        self._progress_bar = None
+        self._download_label = None
+        self._install_bar = None
         self._action_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
-        # Nettoyer la ligne de mise à jour
-        while self._update_row_layout.count():
-            item = self._update_row_layout.takeAt(0)
-            if (w := item.widget()) is not None:
-                w.deleteLater()
+        self._clear_layout(self._update_row_layout)
         self._update_row.hide()
 
         if self.game is None:
@@ -648,6 +678,7 @@ class GameDetailView(QWidget):
             return
 
         self._target_version = ver
+        self._active_game = self.game
         self.manager.set_game_state(self.game.id, GameState.DOWNLOADING)
         self._refresh_action()
         self._speed_tracker.reset()
@@ -684,24 +715,28 @@ class GameDetailView(QWidget):
         if eta_str:
             parts.append(eta_str)
 
-        if hasattr(self, "_progress_bar"):
+        if self._progress_bar is not None:
             self._progress_bar.setValue(pct)
-        if hasattr(self, "_download_label"):
+        if self._download_label is not None:
             self._download_label.setText(" \u2014 ".join(parts))
 
     def _on_download_finished(self, archive_path_str: str) -> None:
         self._downloader = None
-        if self.game is None:
+        game = self._active_game
+        if game is None:
             return
-        self.status_message.emit(f"Installation de {self.game.name}\u2026")
-        self._start_install(Path(archive_path_str), delete_archive=self.manager.config.delete_archives)
+        self.status_message.emit(f"Installation de {game.name}\u2026")
+        self._start_install(game, Path(archive_path_str), delete_archive=self.manager.config.delete_archives)
 
     def _on_download_error(self, message: str) -> None:
         self._downloader = None
-        if self.game is None:
+        game = self._active_game
+        self._active_game = None
+        if game is None:
             return
-        self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
-        self._refresh_action()
+        self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+        if self.game and self.game.id == game.id:
+            self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"Erreur : {message}")
         # Afficher le popup après que deleteLater() ait nettoyé les widgets
@@ -711,7 +746,9 @@ class GameDetailView(QWidget):
         ))
 
     def _on_cancel_download(self) -> None:
+        dest: Path | None = None
         if self._downloader is not None:
+            dest = self._downloader.destination
             self._downloader.progress.disconnect(self._on_download_progress)
             self._downloader.finished.disconnect(self._on_download_finished)
             self._downloader.error.disconnect(self._on_download_error)
@@ -719,16 +756,23 @@ class GameDetailView(QWidget):
             if not self._downloader.wait(3000):
                 log.warning("Le thread de téléchargement n'a pas répondu dans les 3s")
             self._downloader = None
-        if self.game is None:
+        # Nettoyer le fichier .part résiduel
+        if dest is not None:
+            part_path = dest.with_suffix(dest.suffix + ".part")
+            part_path.unlink(missing_ok=True)
+        game = self._active_game
+        self._active_game = None
+        if game is None:
             return
-        self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
-        self._refresh_action()
+        self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+        if self.game and self.game.id == game.id:
+            self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit("Téléchargement annulé.")
 
     def _on_part_info(self, current: int, total: int) -> None:
         """Met à jour l'affichage du numéro de part (multi-parts)."""
-        if hasattr(self, "_download_label"):
+        if self._download_label is not None:
             text = self._download_label.text()
             # Ajouter/remplacer l'info de part
             if "partie" in text:
@@ -776,22 +820,22 @@ class GameDetailView(QWidget):
 
     # ──────────────────── Installation ────────────────────
 
-    def _start_install(self, archive_path: Path, *, delete_archive: bool = True) -> None:
-        if self.game is None:
-            return
-        self.manager.set_game_state(self.game.id, GameState.INSTALLING)
-        self._refresh_action()
+    def _start_install(self, game: GameData, archive_path: Path, *, delete_archive: bool = True) -> None:
+        self._active_game = game
+        self.manager.set_game_state(game.id, GameState.INSTALLING)
+        if self.game and self.game.id == game.id:
+            self._refresh_action()
 
         dest = self.manager.config.install_path
         config_files = [
             (cf.source, cf.destination)
-            for cf in self.game.post_install.config_files
+            for cf in game.post_install.config_files
         ]
         # Dossier racine du jeu dans l'archive (ex: "HP3" depuis "HP3/system/hppoa.exe")
-        game_dir = Path(self.game.executable).parts[0] if self.game.executable else None
+        game_dir = Path(game.executable).parts[0] if game.executable else None
         self._installer = Installer(
             archive_path, dest,
-            registry_entries=list(self.game.post_install.registry),
+            registry_entries=list(game.post_install.registry),
             config_files=config_files,
             game_dir=game_dir,
             delete_archive=delete_archive, parent=self,
@@ -802,45 +846,53 @@ class GameDetailView(QWidget):
         self._installer.start()
 
     def _on_install_progress(self, pct: int) -> None:
-        if hasattr(self, "_install_bar"):
+        if self._install_bar is not None:
             self._install_bar.setValue(pct)
 
     def _on_install_finished(self, _path: str) -> None:
         self._installer = None
-        if self.game is None:
+        game = self._active_game
+        self._active_game = None
+        if game is None:
             return
-        exe_path = self.manager.config.install_path / self.game.executable
+        is_current = self.game and self.game.id == game.id
+        exe_path = self.manager.config.install_path / game.executable
         if not exe_path.exists():
             log.warning("Ex\u00e9cutable introuvable apr\u00e8s extraction : %s", exe_path)
-            self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
-            self._refresh_action()
+            self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+            if is_current:
+                self._refresh_action()
             self.state_changed.emit()
             self.status_message.emit("Installation incompl\u00e8te.")
-            QMessageBox.warning(
+            QTimer.singleShot(0, lambda: QMessageBox.warning(
                 self, "Installation incompl\u00e8te",
                 "L'installation semble incompl\u00e8te : l'ex\u00e9cutable du jeu est introuvable.\n"
                 "L'archive est peut-\u00eatre corrompue.",
-            )
+            ))
             return
-        self.manager.set_game_state(self.game.id, GameState.INSTALLED)
+        self.manager.set_game_state(game.id, GameState.INSTALLED)
         target_ver = self._target_version
-        self.manager.save_installed_version(self.game.id, target_ver.version if target_ver else None)
-        self._refresh_action()
+        self.manager.save_installed_version(game.id, target_ver.version if target_ver else None)
+        if is_current:
+            self._refresh_action()
         self.state_changed.emit()
-        self.status_message.emit(f"{self.game.name} install\u00e9 avec succ\u00e8s !")
+        self.status_message.emit(f"{game.name} install\u00e9 avec succ\u00e8s !")
 
     def _on_install_error(self, message: str) -> None:
         self._installer = None
-        if self.game is None:
+        game = self._active_game
+        self._active_game = None
+        if game is None:
             return
-        self.manager.set_game_state(self.game.id, GameState.NOT_INSTALLED)
-        self._refresh_action()
+        self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+        if self.game and self.game.id == game.id:
+            self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"Erreur d'installation : {message}")
-        QMessageBox.warning(
+        QTimer.singleShot(0, lambda: QMessageBox.warning(
             self, "\u00c9chec de l'installation",
             "L'installation a \u00e9chou\u00e9.\nL'archive est peut-\u00eatre corrompue. R\u00e9essayez le t\u00e9l\u00e9chargement.",
-        )
+        ))
 
     # ──────────────────── Jouer / Désinstaller ────────────────────
 

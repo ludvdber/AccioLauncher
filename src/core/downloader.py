@@ -1,5 +1,6 @@
 import logging
 import shutil
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -45,10 +46,14 @@ class Downloader(QThread):
         self.url = url
         self.destination = destination
         self.parts = parts
-        self._cancelled = False
+        self._cancel_event = threading.Event()
+
+    @property
+    def _cancelled(self) -> bool:
+        return self._cancel_event.is_set()
 
     def cancel(self) -> None:
-        self._cancelled = True
+        self._cancel_event.set()
         log.info("Annulation du téléchargement demandée")
 
     def run(self) -> None:
@@ -193,27 +198,49 @@ class Downloader(QThread):
             headers["Range"] = f"bytes={downloaded}-"
             log.info("Reprise du téléchargement à %d octets", downloaded)
 
+        self._download_stream_inner(url, part_path, downloaded, headers,
+                                     global_offset, global_total)
+
+    def _download_stream_inner(
+        self, url: str, part_path: Path, downloaded: int,
+        headers: dict[str, str],
+        global_offset: int, global_total: int,
+    ) -> None:
+        retry_416 = False
         with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
             with client.stream("GET", url, headers=headers) as response:
-                response.raise_for_status()
-
-                raw_length = response.headers.get("content-length", "")
                 try:
-                    content_length = int(raw_length)
-                except (ValueError, TypeError):
-                    content_length = 0
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 416 and downloaded > 0:
+                        log.warning("HTTP 416 : fichier .part corrompu, suppression et reprise")
+                        part_path.unlink(missing_ok=True)
+                        retry_416 = True
+                    else:
+                        raise
 
-                if response.status_code == 206:
-                    total = downloaded + content_length
-                else:
-                    total = content_length
-                    downloaded = 0
+                if not retry_416:
+                    raw_length = response.headers.get("content-length", "")
+                    try:
+                        content_length = int(raw_length)
+                    except (ValueError, TypeError):
+                        content_length = 0
 
-                mode = "ab" if response.status_code == 206 else "wb"
-                with open(part_path, mode) as f:
-                    for chunk in response.iter_bytes(CHUNK_SIZE):
-                        if self._cancelled:
-                            return
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        self.progress.emit(downloaded, total)
+                    if response.status_code == 206:
+                        total = downloaded + content_length
+                    else:
+                        total = content_length
+                        downloaded = 0
+
+                    mode = "ab" if response.status_code == 206 else "wb"
+                    with open(part_path, mode) as f:
+                        for chunk in response.iter_bytes(CHUNK_SIZE):
+                            if self._cancelled:
+                                return
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            self.progress.emit(downloaded, total)
+
+        if retry_416:
+            self._download_stream_inner(url, part_path, 0, {},
+                                        global_offset, global_total)
