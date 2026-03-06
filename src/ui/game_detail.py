@@ -752,6 +752,7 @@ class GameDetailView(QWidget):
         self._downloader = None
         game = self._active_game
         self._active_game = None
+        self._target_version = None
         if game is None:
             return
         self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
@@ -776,8 +777,6 @@ class GameDetailView(QWidget):
             except TypeError:
                 pass
             self._downloader.cancel()
-            if not self._downloader.wait(3000):
-                log.warning("Le thread de téléchargement n'a pas répondu dans les 3s")
             self._downloader = None
         # Nettoyer le fichier .part résiduel
         if dest is not None:
@@ -785,6 +784,7 @@ class GameDetailView(QWidget):
             part_path.unlink(missing_ok=True)
         game = self._active_game
         self._active_game = None
+        self._target_version = None
         if game is None:
             return
         self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
@@ -898,6 +898,7 @@ class GameDetailView(QWidget):
             return
         self.manager.set_game_state(game.id, GameState.INSTALLED)
         target_ver = self._target_version
+        self._target_version = None
         self.manager.save_installed_version(game.id, target_ver.version if target_ver else None)
         if is_current:
             self._refresh_action()
@@ -908,6 +909,7 @@ class GameDetailView(QWidget):
         self._installer = None
         game = self._active_game
         self._active_game = None
+        self._target_version = None
         if game is None:
             return
         self.manager.set_game_state(game.id, GameState.NOT_INSTALLED)
@@ -990,6 +992,7 @@ class GameDetailView(QWidget):
         )
         if not path:
             return
+        self._target_version = self.game.current_download
         self.status_message.emit(f"Installation de {self.game.name} depuis un fichier local\u2026")
         self._start_install(self.game, Path(path), delete_archive=False)
 

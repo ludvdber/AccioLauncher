@@ -1,4 +1,3 @@
-import configparser
 import logging
 import os
 import platform
@@ -167,7 +166,7 @@ class GameManager:
         return Path(raw.replace("%DOCUMENTS%", str(docs)))
 
     def _apply_pre_launch_patches(self, game: GameData) -> None:
-        """Applique les patches INI avant le lancement du jeu."""
+        """Applique les patches INI avant le lancement du jeu (ligne par ligne, sans configparser.write)."""
         if game.pre_launch is None or not game.pre_launch.ini_patches:
             return
         docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
@@ -182,18 +181,37 @@ class GameManager:
             if not ini_path.exists():
                 log.warning("Fichier INI introuvable, skip : %s", ini_path)
                 continue
+            value = patch.value.replace("%DOCUMENTS%", str(docs_dir))
             try:
-                cfg = configparser.RawConfigParser()
-                cfg.optionxform = str  # préserver la casse des clés
-                cfg.read(ini_path, encoding="utf-8")
-                if not cfg.has_section(patch.section):
-                    cfg.add_section(patch.section)
-                cfg.set(patch.section, patch.key, patch.value)
-                with open(ini_path, "w", encoding="utf-8") as f:
-                    cfg.write(f)
+                lines = ini_path.read_text(encoding="utf-8").splitlines(keepends=True)
+                current_section: str | None = None
+                found = False
+                for i, line in enumerate(lines):
+                    stripped = line.strip()
+                    if stripped.startswith("[") and stripped.endswith("]"):
+                        current_section = stripped[1:-1]
+                        continue
+                    if current_section == patch.section:
+                        # Matcher key= ou key = (insensible aux espaces autour du =)
+                        eq_pos = stripped.find("=")
+                        if eq_pos > 0 and stripped[:eq_pos].rstrip() == patch.key:
+                            lines[i] = f"{patch.key}={value}\n"
+                            found = True
+                            break
+                if not found:
+                    # Ajouter la section si elle n'existe pas, puis la clé
+                    section_exists = any(
+                        l.strip() == f"[{patch.section}]" for l in lines
+                    )
+                    if not section_exists:
+                        if lines and not lines[-1].endswith("\n"):
+                            lines.append("\n")
+                        lines.append(f"[{patch.section}]\n")
+                    lines.append(f"{patch.key}={value}\n")
+                ini_path.write_text("".join(lines), encoding="utf-8")
                 log.info("Patch INI appliqué : [%s] %s=%s dans %s",
-                         patch.section, patch.key, patch.value, ini_path)
-            except (OSError, configparser.Error) as exc:
+                         patch.section, patch.key, value, ini_path)
+            except OSError as exc:
                 log.warning("Impossible de patcher %s : %s", ini_path, exc)
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
