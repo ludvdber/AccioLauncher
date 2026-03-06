@@ -1,4 +1,6 @@
+import configparser
 import logging
+import os
 import platform
 import shutil
 import subprocess
@@ -146,6 +148,8 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
+        self._apply_pre_launch_patches(game)
+
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}
         if platform.system() == "Windows":
@@ -155,6 +159,35 @@ class GameManager:
         else:
             popen_kwargs["start_new_session"] = True
         return subprocess.Popen([str(exe_path)], **popen_kwargs)
+
+    @staticmethod
+    def _resolve_documents_path(raw: str) -> Path:
+        """Résout %DOCUMENTS% vers le dossier Mes Documents de l'utilisateur."""
+        docs = Path(os.path.expandvars("%USERPROFILE%")) / "Documents"
+        return Path(raw.replace("%DOCUMENTS%", str(docs)))
+
+    def _apply_pre_launch_patches(self, game: GameData) -> None:
+        """Applique les patches INI avant le lancement du jeu."""
+        if game.pre_launch is None or not game.pre_launch.ini_patches:
+            return
+        for patch in game.pre_launch.ini_patches:
+            ini_path = self._resolve_documents_path(patch.file)
+            if not ini_path.exists():
+                log.warning("Fichier INI introuvable, skip : %s", ini_path)
+                continue
+            try:
+                cfg = configparser.RawConfigParser()
+                cfg.optionxform = str  # préserver la casse des clés
+                cfg.read(ini_path, encoding="utf-8")
+                if not cfg.has_section(patch.section):
+                    cfg.add_section(patch.section)
+                cfg.set(patch.section, patch.key, patch.value)
+                with open(ini_path, "w", encoding="utf-8") as f:
+                    cfg.write(f)
+                log.info("Patch INI appliqué : [%s] %s=%s dans %s",
+                         patch.section, patch.key, patch.value, ini_path)
+            except OSError as exc:
+                log.warning("Impossible de patcher %s : %s", ini_path, exc)
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
         """Sauvegarde la version du jeu installé dans la config."""

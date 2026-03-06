@@ -22,6 +22,26 @@ class ConfigFile:
 
 
 @dataclass(frozen=True, slots=True)
+class IniPatch:
+    """Patch INI à appliquer avant le lancement du jeu."""
+    file: str       # chemin avec %DOCUMENTS% comme variable
+    section: str    # ex: "FirstRun"
+    key: str        # ex: "Reconfig"
+    value: str      # ex: "0"
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "IniPatch":
+        return cls(file=data["file"], section=data["section"],
+                   key=data["key"], value=data["value"])
+
+
+@dataclass(frozen=True, slots=True)
+class PreLaunch:
+    """Données de pré-lancement d'un jeu."""
+    ini_patches: tuple[IniPatch, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class PostInstall:
     """Données de post-installation d'un jeu."""
     registry: RegistryEntries = field(default_factory=list)
@@ -66,6 +86,7 @@ class GameData:
     versions: tuple[GameVersion, ...] = ()
     tags: tuple[str, ...] = ()
     post_install: PostInstall = field(default_factory=PostInstall)
+    pre_launch: PreLaunch | None = None
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -91,9 +112,15 @@ class GameData:
         if missing:
             raise ValueError(f"Champs manquants dans games.json : {missing}")
         pi = data.get("post_install", {})
+        pl = data.get("pre_launch")
         versions = tuple(
             GameVersion.from_dict(v) for v in data.get("versions", [])
         )
+        pre_launch: PreLaunch | None = None
+        if pl:
+            pre_launch = PreLaunch(
+                ini_patches=tuple(IniPatch.from_dict(p) for p in pl.get("ini_patches", [])),
+            )
         return cls(
             id=data["id"],
             name=data["name"],
@@ -110,6 +137,7 @@ class GameData:
                 registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
             ),
+            pre_launch=pre_launch,
         )
 
 
