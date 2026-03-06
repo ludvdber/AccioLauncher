@@ -324,6 +324,7 @@ class SettingsDialog(QDialog):
         self._save()
 
     def closeEvent(self, event) -> None:
+        self._scan_worker.blockSignals(True)
         try:
             self._scan_worker.result.disconnect(self._on_scan_done)
         except TypeError:

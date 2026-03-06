@@ -144,6 +144,14 @@ class Installer(QThread):
             if not _check_path_traversal(self.destination, name):
                 raise ValueError(f"Path traversal détecté dans l'archive 7z : {name}")
 
+    def _verify_extracted_paths(self) -> None:
+        """Vérifie post-extraction que tous les fichiers sont dans le dossier destination."""
+        dest_resolved = self.destination.resolve()
+        for item in self.destination.rglob("*"):
+            if not item.resolve().is_relative_to(dest_resolved):
+                log.critical("Path traversal détecté post-extraction : %s", item)
+                raise ValueError(f"Path traversal détecté après extraction : {item}")
+
     def _extract_7z(self) -> None:
         """Extrait une archive .7z — py7zr d'abord, fallback sur 7z.exe si non supporté."""
         try:
@@ -210,6 +218,8 @@ class Installer(QThread):
             if ret != 0:
                 raise RuntimeError(f"7z.exe a échoué (code {ret})")
             self.progress.emit(100)
+            # Vérification post-extraction contre path traversal (Zip Slip)
+            self._verify_extracted_paths()
             log.info("Extraction 7z.exe terminée")
         except subprocess.TimeoutExpired:
             log.error("7z.exe n'a pas terminé dans le délai imparti, kill du processus")
@@ -325,6 +335,10 @@ class Installer(QThread):
                     continue
 
                 dest = Path(dest_tilde.replace("~", str(Path.home())))
+                # Protection : la destination doit rester sous le home directory
+                if not dest.resolve().is_relative_to(Path.home().resolve()):
+                    log.warning("Config destination hors du home directory : %s", dest_tilde)
+                    continue
                 dest.parent.mkdir(parents=True, exist_ok=True)
 
                 # Backup si le fichier existe déjà

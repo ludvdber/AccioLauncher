@@ -688,6 +688,8 @@ class GameDetailView(QWidget):
     def _on_download(self, version: GameVersion | None = None) -> None:
         if self.game is None:
             return
+        if self._downloader is not None or self._installer is not None:
+            return
         ver = version or self.game.current_download
         if ver is None:
             self.status_message.emit("Aucune version disponible.")
@@ -835,6 +837,9 @@ class GameDetailView(QWidget):
         """Supprime la version actuelle si installée, puis télécharge la nouvelle."""
         if self.game is None:
             return
+        if self._downloader is not None or self._installer is not None:
+            self.status_message.emit("Un téléchargement ou installation est déjà en cours.")
+            return
         if self.manager.is_installed(self.game.id):
             self.manager.uninstall_game(self.game.id)
         self._on_download(ver)
@@ -976,6 +981,9 @@ class GameDetailView(QWidget):
 
     def _on_install_local(self) -> None:
         if self.game is None:
+            return
+        if self._downloader is not None or self._installer is not None:
+            self.status_message.emit("Un téléchargement ou installation est déjà en cours.")
             return
         path, _ = QFileDialog.getOpenFileName(
             self, "S\u00e9lectionner une archive de jeu", "", "Archives (*.7z *.zip)",

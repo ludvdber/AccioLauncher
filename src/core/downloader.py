@@ -47,6 +47,7 @@ class Downloader(QThread):
         self.destination = destination
         self.parts = parts
         self._cancel_event = threading.Event()
+        self._last_emit = 0.0
 
     @property
     def _cancelled(self) -> bool:
@@ -200,42 +201,50 @@ class Downloader(QThread):
             headers["Range"] = f"bytes={downloaded}-"
             log.info("Reprise du téléchargement à %d octets", downloaded)
 
+        needs_retry = False
         with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
             with client.stream("GET", url, headers=headers) as response:
                 try:
                     response.raise_for_status()
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code == 416 and downloaded > 0:
-                        # .part corrompu — supprimer et recommencer sans Range
                         log.warning("HTTP 416 : fichier .part corrompu, suppression et reprise")
                         part_path.unlink(missing_ok=True)
+                        needs_retry = True
                     else:
                         raise
-                    return  # sortir du context manager, puis retry ci-dessous
 
-                raw_length = response.headers.get("content-length", "")
-                try:
-                    content_length = int(raw_length)
-                except (ValueError, TypeError):
-                    content_length = 0
+                if not needs_retry:
+                    raw_length = response.headers.get("content-length", "")
+                    try:
+                        content_length = int(raw_length)
+                    except (ValueError, TypeError):
+                        content_length = 0
 
-                if response.status_code == 206:
-                    total = downloaded + content_length
-                else:
-                    total = content_length
-                    downloaded = 0
+                    if response.status_code == 206:
+                        total = downloaded + content_length
+                    else:
+                        total = content_length
+                        downloaded = 0
 
-                mode = "ab" if response.status_code == 206 else "wb"
-                with open(part_path, mode) as f:
-                    for chunk in response.iter_bytes(CHUNK_SIZE):
-                        if self._cancelled:
-                            return
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        self.progress.emit(downloaded, total)
-                return  # succès — pas de retry
+                    mode = "ab" if response.status_code == 206 else "wb"
+                    with open(part_path, mode) as f:
+                        for chunk in response.iter_bytes(CHUNK_SIZE):
+                            if self._cancelled:
+                                return
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            now = time.monotonic()
+                            if now - self._last_emit >= 0.1:
+                                self.progress.emit(downloaded, total)
+                                self._last_emit = now
+                    self.progress.emit(downloaded, total)  # final
+                    return  # succès
 
-        # Retry une seule fois après HTTP 416 (sans Range, downloaded=0)
+        if not needs_retry:
+            return
+
+        # Retry une seule fois après HTTP 416 (sans Range)
         with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
             with client.stream("GET", url) as response:
                 response.raise_for_status()
@@ -251,4 +260,8 @@ class Downloader(QThread):
                             return
                         f.write(chunk)
                         downloaded += len(chunk)
-                        self.progress.emit(downloaded, total)
+                        now = time.monotonic()
+                        if now - self._last_emit >= 0.1:
+                            self.progress.emit(downloaded, total)
+                            self._last_emit = now
+                self.progress.emit(downloaded, total)  # final

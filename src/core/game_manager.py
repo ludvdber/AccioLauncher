@@ -170,8 +170,15 @@ class GameManager:
         """Applique les patches INI avant le lancement du jeu."""
         if game.pre_launch is None or not game.pre_launch.ini_patches:
             return
+        docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
         for patch in game.pre_launch.ini_patches:
             ini_path = self._resolve_documents_path(patch.file)
+            # Protection path traversal : le fichier doit rester sous Documents
+            try:
+                ini_path.resolve().relative_to(docs_dir)
+            except ValueError:
+                log.warning("Chemin INI hors de Documents, refusé : %s", ini_path)
+                continue
             if not ini_path.exists():
                 log.warning("Fichier INI introuvable, skip : %s", ini_path)
                 continue
@@ -186,7 +193,7 @@ class GameManager:
                     cfg.write(f)
                 log.info("Patch INI appliqué : [%s] %s=%s dans %s",
                          patch.section, patch.key, patch.value, ini_path)
-            except OSError as exc:
+            except (OSError, configparser.Error) as exc:
                 log.warning("Impossible de patcher %s : %s", ini_path, exc)
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
