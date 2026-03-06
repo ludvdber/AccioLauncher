@@ -108,6 +108,12 @@ def main():
         app.processEvents()
 
         from src.ui.main_window import MainWindow
+        from src.core.config import Config
+
+        # Vérifier si c'est le premier lancement AVANT de créer MainWindow
+        # pour cacher le splash qui bloquerait les dialogues de bienvenue.
+        if not Config.exists():
+            splash.close()
 
         window = MainWindow()
         window.show()
