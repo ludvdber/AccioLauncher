@@ -1,0 +1,241 @@
+{
+    "catalog_version": "0.7",
+    "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
+    "games": [
+        {
+          "id": "hp1",
+          "name": "Harry Potter à l'École des Sorciers",
+          "year": 2001,
+          "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
+          "developer": "KnowWonder",
+          "executable": "HP1/System/HP.exe",
+          "cover_image": "hp1_cover.jpg",
+          "tags": ["Aventure", "Action", "Plateforme", "Énigmes"],
+          "latest_version": "1.0",
+          "recommended_version": "1.0",
+          "versions": [
+            {
+              "version": "1.0",
+              "date": "2026-03-06",
+              "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.0/hp1.7z",
+              "download_parts": null,
+              "size_mb": 430,
+              "changes": [
+                "Renderer Kentie D3D11 intégré (antialiasing 4x, anisotropie 16x, bump mapping, SSAO, HDR, SSR)",
+                "Widescreen 16:9 (1920x1080) avec FOV 106°",
+                "Mode borderless windowed (alt-tab sans crash)",
+                "Cap 100 FPS (limite UE1 recommandée)",
+                "Interface mise à l'échelle pour les résolutions modernes",
+                "Voix et textes FR + EN inclus",
+                "Nettoyage des fichiers inutiles (DRM, installeurs, manuel PDF)"
+              ]
+            }
+          ],
+          "pre_launch": {
+            "create_files": [
+              "%DOCUMENTS%\\Harry Potter\\Running.ini"
+            ],
+            "ini_patches": [
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "FirstRun", "key": "Reconfig", "value": "0"},
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Engine.Engine", "key": "GameRenderDevice", "value": "D3D11Drv.D3D11RenderDevice"},
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "Borderless", "value": "True"},
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "FastAltTab", "value": "True"},
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "SavePath", "value": "%DOCUMENTS%\\Harry Potter\\Save"},
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "CachePath", "value": "%DOCUMENTS%\\Harry Potter\\Cache"}
+            ]
+          },
+          "post_install": {
+            "registry": [],
+            "config_files": [
+              {
+                "source": "config/HP.ini",
+                "destination": "~/Documents/Harry Potter/HP.ini"
+              },
+              {
+                "source": "config/User.ini",
+                "destination": "~/Documents/Harry Potter/User.ini"
+              }
+            ]
+          }
+        },
+        {
+            "id": "hp2",
+            "name": "Harry Potter et la Chambre des Secrets",
+            "year": 2002,
+            "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
+            "developer": "KnowWonder",
+            "executable": "HP2/Game.exe",
+            "cover_image": "hp2_cover.jpg",
+            "tags": ["Aventure", "Action", "Exploration", "Énigmes"],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2025-03-05",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.0/hp2.7z",
+                    "download_parts": null,
+                    "size_mb": 2500,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8 intégré",
+                        "Configuration par défaut optimisée"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": []
+            }
+        },
+        {
+            "id": "hp3",
+            "name": "Harry Potter et le Prisonnier d'Azkaban",
+            "year": 2004,
+            "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
+            "developer": "KnowWonder",
+            "executable": "HP3/system/hppoa.exe",
+            "cover_image": "hp3_cover.jpg",
+            "tags": ["Aventure", "Action", "Plateforme", "Multi-personnages"],
+            "latest_version": "1.1",
+            "recommended_version": "1.1",
+            "versions": [
+                {
+                    "version": "1.1",
+                    "date": "2025-03-06",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.1/hp3.7z",
+                    "download_parts": null,
+                    "size_mb": 775,
+                    "changes": [
+                        "DGVoodoo 2.8.1 → 2.86.5",
+                        "Anti-aliasing 4x, filtrage anisotrope 8x",
+                        "Widescreen 16:9 (1920x1080) avec FOV ajusté",
+                        "Cap 60 FPS intégré via DGVoodoo",
+                        "VSync activé, upscaling Lanczos-2",
+                        "Nettoyage des fichiers inutiles (~15 Mo)",
+                        "Vidéos d'intro adaptées au widescreen"
+                    ]
+                },
+                {
+                    "version": "1.0",
+                    "date": "2025-03-05",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.0/hp3.7z",
+                    "download_parts": null,
+                    "size_mb": 790,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8.1 intégré",
+                        "Configuration par défaut optimisée"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": [],
+                "config_files": [
+                    {
+                        "source": "config/hppoa.ini",
+                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/hppoa.ini"
+                    },
+                    {
+                        "source": "config/User.ini",
+                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/User.ini"
+                    }
+                ]
+            }
+        },
+        {
+            "id": "hp4",
+            "name": "Harry Potter et la Coupe de Feu",
+            "year": 2005,
+            "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
+            "developer": "EA UK",
+            "executable": "HP4/HP4.exe",
+            "cover_image": "hp4_cover.jpg",
+            "tags": ["Action", "Coopératif", "Combat", "Aventure"],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2025-03-05",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.0/hp4.7z",
+                    "download_parts": null,
+                    "size_mb": 3500,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8 intégré",
+                        "Configuration par défaut optimisée"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": []
+            }
+        },
+        {
+            "id": "hp5",
+            "name": "Harry Potter et l'Ordre du Phénix",
+            "year": 2007,
+            "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
+            "developer": "EA UK",
+            "executable": "HP5/hp5.exe",
+            "cover_image": "hp5_cover.jpg",
+            "tags": ["Monde ouvert", "Aventure", "Duel", "Exploration"],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2025-03-05",
+                    "download_url": null,
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.002",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.003"
+                    ],
+                    "size_mb": 4200,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8 intégré",
+                        "Configuration par défaut optimisée"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": []
+            }
+        },
+        {
+            "id": "hp6",
+            "name": "Harry Potter et le Prince de Sang-Mêlé",
+            "year": 2009,
+            "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
+            "developer": "EA UK",
+            "executable": "HP6/hp6.exe",
+            "cover_image": "hp6_cover.jpg",
+            "tags": ["Monde ouvert", "Duel", "Potions", "Quidditch"],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2025-03-05",
+                    "download_url": null,
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.002",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.003"
+                    ],
+                    "size_mb": 4500,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8 intégré",
+                        "Configuration par défaut optimisée"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": []
+            }
+        }
+    ]
+}
