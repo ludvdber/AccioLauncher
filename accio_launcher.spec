@@ -14,6 +14,7 @@ a = Analysis(
     datas=[
         (os.path.join(ROOT, "src", "data", "games.json"), os.path.join("data")),
         (os.path.join(ROOT, "assets"), "assets"),
+        (os.path.join(ROOT, "assets", "7z"), os.path.join("assets", "7z")),
     ],
     hiddenimports=[],
     hookspath=[],

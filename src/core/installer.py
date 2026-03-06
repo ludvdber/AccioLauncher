@@ -24,7 +24,17 @@ def _check_path_traversal(destination: Path, member_name: str) -> bool:
 
 
 def _find_7z_exe() -> str | None:
-    """Cherche 7z.exe sur le système (fallback quand py7zr ne supporte pas le format)."""
+    """Cherche 7z.exe : d'abord bundlé avec l'app, puis sur le système."""
+    # 1. Bundlé dans assets/7z/ (PyInstaller ou dev)
+    if getattr(sys, "frozen", False):
+        base = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    else:
+        base = Path(__file__).resolve().parent.parent.parent
+    bundled = base / "assets" / "7z" / "7z.exe"
+    if bundled.exists():
+        return str(bundled)
+
+    # 2. Installation système
     candidates = [
         Path(r"C:\Program Files\7-Zip\7z.exe"),
         Path(r"C:\Program Files (x86)\7-Zip\7z.exe"),
@@ -32,13 +42,12 @@ def _find_7z_exe() -> str | None:
     for p in candidates:
         if p.exists():
             return str(p)
-    # Tenter le PATH
+    # 3. PATH
     try:
         subprocess.run(
             ["7z"], capture_output=True, timeout=5,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
-        # Si aucune exception, 7z est trouvé dans le PATH
         return "7z"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
@@ -164,8 +173,8 @@ class Installer(QThread):
         exe = _find_7z_exe()
         if exe is None:
             raise RuntimeError(
-                "Cette archive nécessite 7-Zip pour être extraite (filtre BCJ2).\n"
-                "Installez 7-Zip depuis https://7-zip.org puis réessayez."
+                "7z.exe introuvable — l'extraction de cette archive a échoué.\n"
+                "Réinstallez Accio Launcher ou installez 7-Zip depuis https://7-zip.org."
             )
 
         log.info("Extraction via 7z.exe : %s → %s", self.archive_path, self.destination)
