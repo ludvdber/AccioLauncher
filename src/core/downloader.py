@@ -149,6 +149,8 @@ class Downloader(QThread):
                         wait = BACKOFF_BASE * (2 ** (attempt - 1))
                         time.sleep(wait)
             else:
+                # Nettoyer le fichier .part temporaire de la part échouée
+                part_tmp.unlink(missing_ok=True)
                 self.error.emit(f"Échec du téléchargement de la partie {i + 1}/{total_parts}.")
                 return
 
@@ -198,49 +200,55 @@ class Downloader(QThread):
             headers["Range"] = f"bytes={downloaded}-"
             log.info("Reprise du téléchargement à %d octets", downloaded)
 
-        self._download_stream_inner(url, part_path, downloaded, headers,
-                                     global_offset, global_total)
-
-    def _download_stream_inner(
-        self, url: str, part_path: Path, downloaded: int,
-        headers: dict[str, str],
-        global_offset: int, global_total: int,
-    ) -> None:
-        retry_416 = False
         with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
             with client.stream("GET", url, headers=headers) as response:
                 try:
                     response.raise_for_status()
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code == 416 and downloaded > 0:
+                        # .part corrompu — supprimer et recommencer sans Range
                         log.warning("HTTP 416 : fichier .part corrompu, suppression et reprise")
                         part_path.unlink(missing_ok=True)
-                        retry_416 = True
                     else:
                         raise
+                    return  # sortir du context manager, puis retry ci-dessous
 
-                if not retry_416:
-                    raw_length = response.headers.get("content-length", "")
-                    try:
-                        content_length = int(raw_length)
-                    except (ValueError, TypeError):
-                        content_length = 0
+                raw_length = response.headers.get("content-length", "")
+                try:
+                    content_length = int(raw_length)
+                except (ValueError, TypeError):
+                    content_length = 0
 
-                    if response.status_code == 206:
-                        total = downloaded + content_length
-                    else:
-                        total = content_length
-                        downloaded = 0
+                if response.status_code == 206:
+                    total = downloaded + content_length
+                else:
+                    total = content_length
+                    downloaded = 0
 
-                    mode = "ab" if response.status_code == 206 else "wb"
-                    with open(part_path, mode) as f:
-                        for chunk in response.iter_bytes(CHUNK_SIZE):
-                            if self._cancelled:
-                                return
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            self.progress.emit(downloaded, total)
+                mode = "ab" if response.status_code == 206 else "wb"
+                with open(part_path, mode) as f:
+                    for chunk in response.iter_bytes(CHUNK_SIZE):
+                        if self._cancelled:
+                            return
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        self.progress.emit(downloaded, total)
+                return  # succès — pas de retry
 
-        if retry_416:
-            self._download_stream_inner(url, part_path, 0, {},
-                                        global_offset, global_total)
+        # Retry une seule fois après HTTP 416 (sans Range, downloaded=0)
+        with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
+            with client.stream("GET", url) as response:
+                response.raise_for_status()
+                raw_length = response.headers.get("content-length", "")
+                try:
+                    total = int(raw_length)
+                except (ValueError, TypeError):
+                    total = 0
+                with open(part_path, "wb") as f:
+                    downloaded = 0
+                    for chunk in response.iter_bytes(CHUNK_SIZE):
+                        if self._cancelled:
+                            return
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        self.progress.emit(downloaded, total)

@@ -75,6 +75,11 @@ class BackgroundWidget(QWidget):
     def start_zoom_loop(self) -> None:
         self._zoom = 1.0
         self._zoom_forward = True
+        # Déconnecter d'abord pour éviter l'accumulation de connexions
+        try:
+            self._zoom_anim.finished.disconnect(self._run_zoom_leg)
+        except TypeError:
+            pass
         self._zoom_anim.finished.connect(self._run_zoom_leg)
         self._run_zoom_leg()
 
@@ -116,6 +121,11 @@ class BackgroundWidget(QWidget):
 
     def resume(self) -> None:
         self._zoom_anim.resume()
+        # Reprendre le lerp parallaxe si la cible n'est pas atteinte
+        dx = self._parallax_tx - self._parallax_cx
+        dy = self._parallax_ty - self._parallax_cy
+        if abs(dx) >= 0.05 or abs(dy) >= 0.05:
+            self._parallax_timer.start()
 
     def invalidate_cache(self) -> None:
         """Force le recalcul du pixmap préparé au prochain paintEvent."""

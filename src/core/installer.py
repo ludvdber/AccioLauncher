@@ -179,28 +179,40 @@ class Installer(QThread):
             text=True, **kwargs,
         )
 
-        last_pct = 0
-        for line in proc.stdout:
-            if self._cancelled:
-                proc.kill()
-                return
-            line = line.strip()
-            # 7z affiche des lignes comme "42%" pendant l'extraction
-            if line.endswith("%") or "%" in line:
-                try:
-                    pct_str = line.split("%")[0].strip().split()[-1]
-                    pct = int(pct_str)
-                    if pct != last_pct:
-                        self.progress.emit(pct)
-                        last_pct = pct
-                except (ValueError, IndexError):
-                    pass
+        try:
+            last_pct = 0
+            for line in proc.stdout:
+                if self._cancelled:
+                    proc.kill()
+                    return
+                line = line.strip()
+                # 7z affiche des lignes comme "42%" pendant l'extraction
+                if line.endswith("%") or "%" in line:
+                    try:
+                        pct_str = line.split("%")[0].strip().split()[-1]
+                        pct = int(pct_str)
+                        if pct != last_pct:
+                            self.progress.emit(pct)
+                            last_pct = pct
+                    except (ValueError, IndexError):
+                        pass
 
-        ret = proc.wait()
-        if ret != 0:
-            raise RuntimeError(f"7z.exe a échoué (code {ret})")
-        self.progress.emit(100)
-        log.info("Extraction 7z.exe terminée")
+            ret = proc.wait(timeout=300)  # 5 min max pour le cleanup final
+            if ret != 0:
+                raise RuntimeError(f"7z.exe a échoué (code {ret})")
+            self.progress.emit(100)
+            log.info("Extraction 7z.exe terminée")
+        except subprocess.TimeoutExpired:
+            log.error("7z.exe n'a pas terminé dans le délai imparti, kill du processus")
+            proc.kill()
+            proc.wait(timeout=10)
+            raise RuntimeError("7z.exe a dépassé le temps d'extraction maximum (5 min)")
+        finally:
+            if proc.stdout:
+                proc.stdout.close()
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=10)
 
     def _extract_zip(self) -> None:
         """Extrait une archive .zip avec progression et protection Zip Slip."""

@@ -137,7 +137,7 @@ def _parse_catalog(raw: dict | list) -> Catalog:
 def load_catalog(path: Path | None = None) -> Catalog:
     """Charge le catalogue le plus récent (embarqué ou cache local)."""
     from src.core.version_utils import compare_versions
-    from src.core.updater import _LOCAL_CATALOG_PATH
+    from src.core.config import LOCAL_CATALOG_PATH as _LOCAL_CATALOG_PATH
 
     src = path or GAMES_JSON_PATH
     try:

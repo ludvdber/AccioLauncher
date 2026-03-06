@@ -468,9 +468,17 @@ class GameDetailView(QWidget):
             self._stop_video()
 
     def _stop_video(self) -> None:
-        if self._video_player:
+        if self._video_player is not None:
             self._video_player.stop()
             self._video_player.setSource(QUrl())
+            self._video_player.mediaStatusChanged.disconnect(self._on_media_status)
+            self._video_sink.videoFrameChanged.disconnect(self._on_video_frame)
+            self._video_player.deleteLater()
+            self._video_sink.deleteLater()
+            self._audio_output.deleteLater()
+            self._video_player = None
+            self._video_sink = None
+            self._audio_output = None
         self._bg.clear_video()
         self._audio_bar.hide()
 
@@ -500,6 +508,16 @@ class GameDetailView(QWidget):
     def resume(self) -> None:
         """Reprend les effets visuels (la vidéo ne reprend pas)."""
         self._bg.resume()
+
+    def _deferred_warning(self, title: str, message: str) -> None:
+        """Affiche un QMessageBox.warning via QTimer.singleShot(0) de façon sûre."""
+        def _show() -> None:
+            try:
+                self.isVisible()  # test si le C++ object est encore vivant
+            except RuntimeError:
+                return
+            QMessageBox.warning(self, title, message)
+        QTimer.singleShot(0, _show)
 
     # ──────────────────── Actions ────────────────────
 
@@ -739,11 +757,10 @@ class GameDetailView(QWidget):
             self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"Erreur : {message}")
-        # Afficher le popup après que deleteLater() ait nettoyé les widgets
-        QTimer.singleShot(0, lambda: QMessageBox.warning(
-            self, "\u00c9chec du t\u00e9l\u00e9chargement",
+        self._deferred_warning(
+            "\u00c9chec du t\u00e9l\u00e9chargement",
             "Le t\u00e9l\u00e9chargement a \u00e9chou\u00e9.\nV\u00e9rifiez votre connexion internet et r\u00e9essayez.",
-        ))
+        )
 
     def _on_cancel_download(self) -> None:
         dest: Path | None = None
@@ -752,6 +769,10 @@ class GameDetailView(QWidget):
             self._downloader.progress.disconnect(self._on_download_progress)
             self._downloader.finished.disconnect(self._on_download_finished)
             self._downloader.error.disconnect(self._on_download_error)
+            try:
+                self._downloader.part_info.disconnect(self._on_part_info)
+            except TypeError:
+                pass
             self._downloader.cancel()
             if not self._downloader.wait(3000):
                 log.warning("Le thread de téléchargement n'a pas répondu dans les 3s")
@@ -864,11 +885,11 @@ class GameDetailView(QWidget):
                 self._refresh_action()
             self.state_changed.emit()
             self.status_message.emit("Installation incompl\u00e8te.")
-            QTimer.singleShot(0, lambda: QMessageBox.warning(
-                self, "Installation incompl\u00e8te",
+            self._deferred_warning(
+                "Installation incompl\u00e8te",
                 "L'installation semble incompl\u00e8te : l'ex\u00e9cutable du jeu est introuvable.\n"
                 "L'archive est peut-\u00eatre corrompue.",
-            ))
+            )
             return
         self.manager.set_game_state(game.id, GameState.INSTALLED)
         target_ver = self._target_version
@@ -889,10 +910,10 @@ class GameDetailView(QWidget):
             self._refresh_action()
         self.state_changed.emit()
         self.status_message.emit(f"Erreur d'installation : {message}")
-        QTimer.singleShot(0, lambda: QMessageBox.warning(
-            self, "\u00c9chec de l'installation",
+        self._deferred_warning(
+            "\u00c9chec de l'installation",
             "L'installation a \u00e9chou\u00e9.\nL'archive est peut-\u00eatre corrompue. R\u00e9essayez le t\u00e9l\u00e9chargement.",
-        ))
+        )
 
     # ──────────────────── Jouer / Désinstaller ────────────────────
 
@@ -954,13 +975,15 @@ class GameDetailView(QWidget):
         menu.exec(self.mapToGlobal(pos))
 
     def _on_install_local(self) -> None:
+        if self.game is None:
+            return
         path, _ = QFileDialog.getOpenFileName(
             self, "S\u00e9lectionner une archive de jeu", "", "Archives (*.7z *.zip)",
         )
         if not path:
             return
         self.status_message.emit(f"Installation de {self.game.name} depuis un fichier local\u2026")
-        self._start_install(Path(path), delete_archive=False)
+        self._start_install(self.game, Path(path), delete_archive=False)
 
     # ──────────────────── Action principale ────────────────────
 

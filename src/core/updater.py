@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from src.core.config import APP_VERSION, DEFAULT_INSTALL_PATH
+from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
 from src.core.game_data import Catalog, _parse_catalog
 from src.core.version_utils import compare_versions
 
@@ -15,11 +15,7 @@ log = logging.getLogger(__name__)
 
 _TIMEOUT = httpx.Timeout(connect=5.0, read=5.0, write=5.0, pool=5.0)
 _LAUNCHER_API = "https://api.github.com/repos/ludvdber/AccioLauncher/releases/latest"
-_LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
-
-
-# Alias rétrocompat pour les imports existants
-_compare_versions = compare_versions
+_LOCAL_CATALOG_PATH = LOCAL_CATALOG_PATH
 
 
 class UpdateChecker(QThread):
@@ -55,7 +51,7 @@ class UpdateChecker(QThread):
                 log.warning("Catalogue distant vide, ignoré")
                 return
 
-            if _compare_versions(catalog.catalog_version, self._current_version) > 0:
+            if compare_versions(catalog.catalog_version, self._current_version) > 0:
                 # Sauvegarder localement
                 try:
                     _LOCAL_CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -98,7 +94,7 @@ class UpdateChecker(QThread):
             if not tag:
                 return
 
-            if _compare_versions(tag, APP_VERSION) > 0:
+            if compare_versions(tag, APP_VERSION) > 0:
                 html_url = data.get("html_url", "https://github.com/ludvdber/AccioLauncher/releases/latest")
                 log.info("Nouvelle version du launcher disponible : %s (actuelle: %s)", tag, APP_VERSION)
                 self.launcher_update.emit(tag.lstrip("v"), html_url)
