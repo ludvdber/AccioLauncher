@@ -38,7 +38,7 @@ class UpdateChecker(QThread):
 
     def _check_catalog(self) -> None:
         """Télécharge et valide le catalogue distant."""
-        if not self._catalog_url:
+        if not self._catalog_url or not self._catalog_url.startswith("https://"):
             return
         try:
             with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:

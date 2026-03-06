@@ -166,7 +166,8 @@ class VersionsDialog(QDialog):
 
         # Liste des changements
         for change in ver.changes:
-            change_label = QLabel(f'<span style="color:#d4a017;">•</span>  {change}')
+            safe = change.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            change_label = QLabel(f'<span style="color:#d4a017;">•</span>  {safe}')
             change_label.setFont(body_font(13))
             change_label.setStyleSheet("color: #b0b0c8; background: transparent; padding-left: 4px;")
             change_label.setWordWrap(True)

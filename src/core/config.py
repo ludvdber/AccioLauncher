@@ -28,7 +28,7 @@ CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.4.1"
 
 
 @dataclass(slots=True)
@@ -57,7 +57,9 @@ class Config:
         if CONFIG_FILE_PATH.exists():
             try:
                 data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError) as exc:
+                import logging
+                logging.getLogger(__name__).warning("Config corrompue, valeurs par défaut : %s", exc)
                 return cls()
             return cls(
                 install_path=Path(data.get("install_path", str(DEFAULT_INSTALL_PATH))),
