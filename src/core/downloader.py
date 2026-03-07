@@ -120,7 +120,7 @@ class Downloader(QThread):
             if self._cancelled:
                 return
 
-            part_name = url.rsplit("/", 1)[-1]
+            part_name = Path(url.rsplit("/", 1)[-1]).name
             part_dest = cache_dir / part_name
             part_paths.append(part_dest)
             part_tmp = part_dest.with_suffix(part_dest.suffix + ".part")
