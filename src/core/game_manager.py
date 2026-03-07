@@ -1,12 +1,11 @@
 import logging
-import os
 import platform
 import shutil
 import subprocess
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 
-from src.core.config import Config
+from src.core.config import Config, get_documents_dir
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 
 log = logging.getLogger(__name__)
@@ -166,7 +165,7 @@ class GameManager:
         """Supprime les fichiers listés dans pre_launch.delete_files (ex: Detected.ini)."""
         if game.pre_launch is None or not game.pre_launch.delete_files:
             return
-        docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+        docs_dir = get_documents_dir()
         install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for raw in game.pre_launch.delete_files:
             resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
@@ -191,7 +190,7 @@ class GameManager:
         """Crée les fichiers vides listés dans pre_launch.create_files (ex: Running.ini)."""
         if game.pre_launch is None or not game.pre_launch.create_files:
             return
-        docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+        docs_dir = get_documents_dir()
         install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for raw in game.pre_launch.create_files:
             resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
@@ -215,7 +214,7 @@ class GameManager:
         """Applique les patches INI avant le lancement du jeu (ligne par ligne, sans configparser.write)."""
         if game.pre_launch is None or not game.pre_launch.ini_patches:
             return
-        docs_dir = (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+        docs_dir = get_documents_dir()
         install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for patch in game.pre_launch.ini_patches:
             raw_file = patch.file.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)

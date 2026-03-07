@@ -1,3 +1,5 @@
+import ctypes
+import ctypes.wintypes
 import json
 import os
 import sys
@@ -6,6 +8,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 PathLike = str | Path
+
+
+def get_documents_dir() -> Path:
+    """Retourne le vrai dossier Documents via l'API Windows (gère OneDrive, dossiers redirigés).
+
+    Fallback sur %USERPROFILE%/Documents si l'API échoue ou hors Windows.
+    """
+    if sys.platform == "win32":
+        try:
+            CSIDL_PERSONAL = 5
+            buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+            ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_PERSONAL, None, 0, buf)
+            if buf.value:
+                return Path(buf.value).resolve()
+        except (OSError, ValueError):
+            pass
+    return (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+
 
 # --- Mode frozen (PyInstaller) ---
 IS_FROZEN = getattr(sys, "frozen", False)
@@ -28,7 +48,7 @@ CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 
-APP_VERSION = "0.4.1"
+APP_VERSION = "0.4.3"
 
 
 @dataclass(slots=True)

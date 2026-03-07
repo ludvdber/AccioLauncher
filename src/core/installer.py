@@ -11,6 +11,8 @@ from pathlib import Path
 import py7zr
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from src.core.config import get_documents_dir
+
 log = logging.getLogger(__name__)
 
 # Préfixes de registre autorisés (whitelist)
@@ -334,9 +336,13 @@ class Installer(QThread):
                     log.warning("Fichier de config source introuvable : %s", src)
                     continue
 
-                dest = Path(dest_tilde.replace("~", str(Path.home())))
-                # Protection : la destination doit rester sous le home directory
-                if not dest.resolve().is_relative_to(Path.home().resolve()):
+                # Remplacer ~/Documents par le vrai chemin Documents (OneDrive, etc.)
+                docs_dir = get_documents_dir()
+                dest_str = dest_tilde.replace("~/Documents", str(docs_dir)).replace("~", str(Path.home()))
+                dest = Path(dest_str)
+                # Protection : la destination doit rester sous le home ou Documents
+                if not (dest.resolve().is_relative_to(Path.home().resolve())
+                        or dest.resolve().is_relative_to(docs_dir)):
                     log.warning("Config destination hors du home directory : %s", dest_tilde)
                     continue
                 dest.parent.mkdir(parents=True, exist_ok=True)
