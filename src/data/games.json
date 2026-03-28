@@ -37,7 +37,7 @@
             ],
             "ini_patches": [
               {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "FirstRun", "key": "Reconfig", "value": "0"},
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Engine.Engine", "key": "GameRenderDevice", "value": "D3D11Drv.D3D11RenderDevice"},
+              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Engine.Engine", "key": "GameRenderDevice", "value": "D3D11Drv.D3D11RenderDevice", "fallback": "D3DDrv.D3DRenderDevice"},
               {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "Borderless", "value": "True"},
               {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "FastAltTab", "value": "True"},
               {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "SavePath", "value": "%DOCUMENTS%\\Harry Potter\\Save"},

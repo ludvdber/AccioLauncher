@@ -33,7 +33,7 @@ from src.ui.speed_tracker import SpeedTracker, format_size, format_bytes, format
 from src.core.config import ASSETS_DIR
 from src.core.downloader import Downloader
 from src.core.game_data import GameData, GameVersion
-from src.core.game_manager import GameManager, GameState
+from src.core.game_manager import GameManager, GameState, check_vcredist_x86
 from src.core.installer import Installer
 from src.ui.versions_dialog import VersionsDialog
 
@@ -927,6 +927,20 @@ class GameDetailView(QWidget):
 
     def _on_play(self) -> None:
         if self.game is None:
+            return
+        if not check_vcredist_x86():
+            reply = QMessageBox.warning(
+                self,
+                "Visual C++ manquant",
+                "Le Visual C++ Redistributable x86 (2015-2022) n'est pas installé.\n"
+                "Il est nécessaire pour lancer les jeux.\n\n"
+                "Voulez-vous ouvrir la page de téléchargement ?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                from PyQt6.QtGui import QDesktopServices
+                QDesktopServices.openUrl(QUrl("https://aka.ms/vs/17/release/vc_redist.x86.exe"))
             return
         self._stop_video()
         try:

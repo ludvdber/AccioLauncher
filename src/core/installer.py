@@ -125,6 +125,7 @@ class Installer(QThread):
                 self._cleanup()
                 return
 
+            self._unblock_files()
             self._apply_registry()
             self._apply_config_files()
 
@@ -252,6 +253,30 @@ class Installer(QThread):
                     continue
                 zf.extract(member, self.destination)
                 self.progress.emit(i * 100 // total)
+
+    def _unblock_files(self) -> None:
+        """Supprime le flag Zone.Identifier (mark-of-the-web) des fichiers extraits.
+
+        Windows bloque parfois les DLL extraites d'archives téléchargées.
+        On retire le flux NTFS alternatif :Zone.Identifier pour débloquer.
+        """
+        if sys.platform != "win32":
+            return
+        import os
+        count = 0
+        for d in self._extracted_dirs:
+            if not d.exists():
+                continue
+            for f in d.rglob("*"):
+                if not f.is_file():
+                    continue
+                try:
+                    os.remove(str(f) + ":Zone.Identifier")
+                    count += 1
+                except OSError:
+                    pass
+        if count > 0:
+            log.info("%d fichier(s) débloqué(s) (Zone.Identifier supprimé)", count)
 
     def _apply_registry(self) -> None:
         """Applique les entrées de registre post-installation (Windows uniquement).

@@ -28,11 +28,13 @@ class IniPatch:
     section: str    # ex: "FirstRun"
     key: str        # ex: "Reconfig"
     value: str      # ex: "0"
+    fallback: str | None = None  # valeur de repli si la valeur principale échoue
 
     @classmethod
     def from_dict(cls, data: dict) -> "IniPatch":
         return cls(file=data["file"], section=data["section"],
-                   key=data["key"], value=data["value"])
+                   key=data["key"], value=data["value"],
+                   fallback=data.get("fallback"))
 
 
 @dataclass(frozen=True, slots=True)

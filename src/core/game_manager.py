@@ -2,6 +2,7 @@ import logging
 import platform
 import shutil
 import subprocess
+import sys
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 
@@ -9,6 +10,61 @@ from src.core.config import Config, get_documents_dir
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 
 log = logging.getLogger(__name__)
+
+
+def check_vcredist_x86() -> bool:
+    """Vérifie si le Visual C++ Redistributable x86 (2015-2022) est installé."""
+    if sys.platform != "win32":
+        return True
+    import winreg
+    for sub_key in (
+        r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86",
+        r"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86",
+    ):
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_key) as key:
+                val, _ = winreg.QueryValueEx(key, "Installed")
+                if val == 1:
+                    return True
+        except OSError:
+            continue
+    return False
+
+
+def check_d3d11_feature_level() -> bool:
+    """Vérifie si le GPU supporte DirectX 11 (feature level 11_0).
+
+    Crée un device D3D11 temporaire pour tester le support matériel.
+    Retourne False si le GPU ne supporte pas DX11 ou en cas d'erreur.
+    """
+    if sys.platform != "win32":
+        return False
+    try:
+        import ctypes
+        d3d11 = ctypes.WinDLL("d3d11")
+        device = ctypes.c_void_p()
+        feature_level = ctypes.c_uint()
+        context = ctypes.c_void_p()
+        # D3D_DRIVER_TYPE_HARDWARE=1, D3D11_SDK_VERSION=7
+        hr = d3d11.D3D11CreateDevice(
+            None, 1, None, 0, None, 0, 7,
+            ctypes.byref(device), ctypes.byref(feature_level), ctypes.byref(context),
+        )
+        if hr < 0:
+            return False
+        supported = feature_level.value >= 0xb000  # D3D_FEATURE_LEVEL_11_0
+        # Libérer les objets COM (IUnknown::Release = vtable index 2)
+        for obj in (context, device):
+            if obj.value:
+                vtable = ctypes.cast(
+                    ctypes.cast(obj, ctypes.POINTER(ctypes.c_void_p))[0],
+                    ctypes.POINTER(ctypes.c_void_p),
+                )
+                release = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(vtable[2])
+                release(obj)
+        return supported
+    except Exception:
+        return False
 
 
 class GameState(StrEnum):
@@ -146,7 +202,8 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
-        # Pré-lancement : supprimer/créer fichiers, appliquer patches INI
+        # Pré-lancement : débloquer DLL, supprimer/créer fichiers, appliquer patches INI
+        self._unblock_game_dlls(exe_path.parent)
         self._delete_pre_launch_files(game)
         self._create_pre_launch_files(game)
         self._apply_pre_launch_patches(game)
@@ -160,6 +217,22 @@ class GameManager:
         else:
             popen_kwargs["start_new_session"] = True
         return subprocess.Popen([str(exe_path)], **popen_kwargs)
+
+    @staticmethod
+    def _unblock_game_dlls(system_dir: Path) -> None:
+        """Supprime le flag Zone.Identifier des DLL du jeu (Windows bloque les DLL téléchargées)."""
+        if sys.platform != "win32":
+            return
+        import os
+        count = 0
+        for dll in system_dir.glob("*.dll"):
+            try:
+                os.remove(str(dll) + ":Zone.Identifier")
+                count += 1
+            except OSError:
+                pass
+        if count > 0:
+            log.info("%d DLL débloquée(s) dans %s", count, system_dir)
 
     def _delete_pre_launch_files(self, game: GameData) -> None:
         """Supprime les fichiers listés dans pre_launch.delete_files (ex: Detected.ini)."""
@@ -231,7 +304,13 @@ class GameManager:
             if not ini_path.exists():
                 log.warning("Fichier INI introuvable, skip : %s", ini_path)
                 continue
-            value = patch.value.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
+            # Fallback renderer : si la valeur utilise D3D11Drv et le GPU ne supporte pas DX11
+            effective_value = patch.value
+            if patch.fallback and "D3D11Drv" in patch.value and not check_d3d11_feature_level():
+                log.warning("GPU ne supporte pas DX11 feature level 11_0, fallback : %s → %s",
+                            patch.value, patch.fallback)
+                effective_value = patch.fallback
+            value = effective_value.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
             try:
                 lines = ini_path.read_text(encoding="utf-8").splitlines(keepends=True)
                 current_section: str | None = None
