@@ -65,6 +65,8 @@ class MainWindow(QMainWindow):
         # État du processus de jeu surveillé
         self._game_process: subprocess.Popen | None = None
         self._game_name: str = ""
+        self._game_exe_name: str = ""  # nom de l'exe pour détecter un redémarrage
+        self._exe_grace_until: float = 0.0  # timestamp jusqu'auquel on attend le redémarrage
 
         self._update_checker: UpdateChecker | None = None
         self._launcher_update_version: str = ""
@@ -335,29 +337,70 @@ class MainWindow(QMainWindow):
         """Appelé quand un jeu est lancé — minimise et surveille."""
         self._game_process = process
         self._game_name = game_name
+        # Extraire le nom de l'exe pour détecter un redémarrage du processus
+        try:
+            self._game_exe_name = Path(process.args[0]).name.lower()
+        except (IndexError, TypeError):
+            self._game_exe_name = ""
         self._tray.setToolTip(f"Accio Launcher \u2014 En jeu : {game_name}")
         self._minimize_to_tray()
         self._poll_timer.start()
 
+    @staticmethod
+    def _is_exe_still_running(exe_name: str) -> bool:
+        """Vérifie si un processus avec ce nom d'exe tourne encore."""
+        if not exe_name:
+            return False
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            return exe_name.lower() in result.stdout.lower()
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
     def _poll_game_process(self) -> None:
-        """Vérifie si le jeu tourne encore (toutes les 2s)."""
-        if self._game_process is None:
-            self._poll_timer.stop()
+        """Vérifie si le jeu tourne encore (toutes les 2s).
+
+        Deux modes de surveillance :
+        1. Par Popen.poll() — tant que le processus initial tourne
+        2. Par nom d'exe (tasklist) — si le jeu a redémarré son processus
+           (ex: UE1 redémarre quand on charge une partie depuis le wizard)
+        """
+        import time
+
+        if self._game_process is not None:
+            ret = self._game_process.poll()
+            if ret is None:
+                return  # processus initial tourne encore
+            # Le processus initial s'est fermé — accorder 10s de grâce
+            # pour laisser le jeu redémarrer (UE1 wizard → jeu)
+            log.info("Process initial terminé (code %s), grâce de 10s…", ret)
+            self._game_process = None
+            self._exe_grace_until = time.monotonic() + 10.0
+            return  # ne pas vérifier tout de suite
+
+        # Mode surveillance par nom d'exe
+        if self._game_exe_name and self._is_exe_still_running(self._game_exe_name):
+            return  # le jeu tourne encore (process redémarré)
+
+        # Pendant la période de grâce, ne pas restaurer même si l'exe est introuvable
+        if time.monotonic() < self._exe_grace_until:
             return
 
-        ret = self._game_process.poll()
-        if ret is not None:
-            # Le jeu s'est fermé
-            game_name = self._game_name
-            self._game_process = None
-            self._game_name = ""
-            self._poll_timer.stop()
-            self._tray.setToolTip("Accio Launcher")
+        # Le jeu est vraiment fermé
+        game_name = self._game_name
+        self._game_name = ""
+        self._game_exe_name = ""
+        self._poll_timer.stop()
+        self._tray.setToolTip("Accio Launcher")
 
-            log.info("Jeu terminé : %s (code retour %s)", game_name, ret)
+        log.info("Jeu terminé : %s", game_name)
 
-            self._restore_from_tray()
-            self._status_bar.showMessage(f"Retour de {game_name} \u2014 Bon jeu !")
+        self._restore_from_tray()
+        self._status_bar.showMessage(f"Retour de {game_name} \u2014 Bon jeu !")
 
     # ──────────────────── Slots UI ────────────────────
 
@@ -375,7 +418,46 @@ class MainWindow(QMainWindow):
     def _on_settings(self) -> None:
         dlg = SettingsDialog(self.config, self.manager, self)
         dlg.config_changed.connect(self._on_state_changed)
+        dlg.force_catalog_refresh.connect(lambda: self._force_update_check(dlg, catalog_only=True))
+        dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
         dlg.exec()
+
+    def _force_update_check(self, dlg: SettingsDialog, *, catalog_only: bool) -> None:
+        """Lance une vérification forcée (catalogue et/ou launcher)."""
+        catalog = self.manager.catalog
+        checker = UpdateChecker(
+            catalog_url=catalog.catalog_url,
+            current_catalog_version="0",  # version "0" → force le fetch
+            installed_versions=self.config.installed_versions,
+            parent=self,
+        )
+        state = {"catalog_updated": False}
+
+        def on_catalog(new_catalog):
+            state["catalog_updated"] = True
+            self._on_catalog_updated(new_catalog)
+            dlg.update_catalog_version(new_catalog.catalog_version)
+
+        def on_launcher(version, url):
+            self._launcher_update_version = version
+            self._launcher_update_url = url
+            self._notif_label.setText(f"Accio Launcher v{version} est disponible !")
+            self._notif_bar.show()
+            dlg.show_update_status(f"Launcher v{version} disponible !")
+
+        def on_finished():
+            if not state["catalog_updated"]:
+                dlg.show_update_status("Catalogue déjà à jour")
+            if catalog_only:
+                return
+            if not self._launcher_update_url:
+                dlg.show_update_status("Tout est à jour")
+
+        checker.catalog_updated.connect(on_catalog)
+        if not catalog_only:
+            checker.launcher_update.connect(on_launcher)
+        checker.finished.connect(on_finished)
+        checker.start()
 
     # ──────────────────── Événements ────────────────────
 

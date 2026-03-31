@@ -64,7 +64,7 @@
             "year": 2002,
             "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
             "developer": "KnowWonder",
-            "executable": "HP2/Game.exe",
+            "executable": "HP2/system/Game.exe",
             "cover_image": "hp2_cover.jpg",
             "tags": ["Aventure", "Action", "Exploration", "Énigmes"],
             "latest_version": "1.0",

@@ -367,7 +367,12 @@ class GameManager:
 
         log.info("Désinstallation de %s — suppression de : %s", game.name, game_path)
         try:
-            shutil.rmtree(game_path)
+            def _force_remove_readonly(_func, path, _exc_info):
+                """Retire le flag read-only et réessaie la suppression."""
+                import stat
+                Path(path).chmod(stat.S_IWRITE)
+                _func(path)
+            shutil.rmtree(game_path, onexc=_force_remove_readonly)
         except OSError as exc:
             log.error("Échec de la suppression de %s : %s", game_path, exc)
             return False

@@ -48,7 +48,7 @@ CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 
-APP_VERSION = "0.4.5"
+APP_VERSION = "0.4.6"
 
 
 @dataclass(slots=True)

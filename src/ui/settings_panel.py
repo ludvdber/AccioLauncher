@@ -143,6 +143,8 @@ class SettingsDialog(QDialog):
     """Panneau de paramètres Accio Launcher."""
 
     config_changed = pyqtSignal()
+    force_catalog_refresh = pyqtSignal()   # demande un fetch forcé du catalogue
+    force_launcher_check = pyqtSignal()    # demande une vérif forcée du launcher
 
     def __init__(self, config: Config, manager: GameManager, parent=None) -> None:
         super().__init__(parent)
@@ -217,6 +219,12 @@ class SettingsDialog(QDialog):
         self._path_label.setWordWrap(True)
         path_row.addWidget(self._path_label, stretch=1)
 
+        btn_open = QPushButton("Ouvrir")
+        btn_open.setObjectName("btnPath")
+        btn_open.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_open.clicked.connect(self._on_open_install_folder)
+        path_row.addWidget(btn_open)
+
         btn_change = QPushButton("Changer…")
         btn_change.setObjectName("btnPath")
         btn_change.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -271,16 +279,61 @@ class SettingsDialog(QDialog):
         self._tgl_mute.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
+        # ── Mises à jour
+        layout.addWidget(self._section("Mises à jour"))
+
+        # Versions actuelles
+        cat_ver = self.manager.catalog.catalog_version
+        self._versions_label = QLabel(
+            f"Launcher v{APP_VERSION}  ·  Catalogue v{cat_ver}"
+        )
+        self._versions_label.setObjectName("subtitle")
+        layout.addWidget(self._versions_label)
+
+        # Boutons d'action
+        update_row = QHBoxLayout()
+        update_row.setSpacing(10)
+
+        btn_catalog = QPushButton("Actualiser le catalogue")
+        btn_catalog.setObjectName("btnPath")
+        btn_catalog.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_catalog.clicked.connect(self._on_refresh_catalog)
+        update_row.addWidget(btn_catalog)
+
+        btn_launcher = QPushButton("Vérifier les mises à jour")
+        btn_launcher.setObjectName("btnPath")
+        btn_launcher.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_launcher.clicked.connect(self._on_check_launcher)
+        update_row.addWidget(btn_launcher)
+
+        update_row.addStretch()
+        layout.addLayout(update_row)
+
+        self._update_status = QLabel("")
+        self._update_status.setObjectName("subtitle")
+        self._update_status.setWordWrap(True)
+        self._update_status.hide()
+        layout.addWidget(self._update_status)
+
         # ── À propos
         layout.addWidget(self._section("À propos"))
 
-        self._about_text = QLabel(
-            f"Accio Launcher v{APP_VERSION}\n"
-            "Launcher pour les jeux Harry Potter sur PC."
-        )
-        self._about_text.setObjectName("subtitle")
-        self._about_text.setWordWrap(True)
-        layout.addWidget(self._about_text)
+        about_text = QLabel("Launcher pour les jeux Harry Potter sur PC.")
+        about_text.setObjectName("subtitle")
+        about_text.setWordWrap(True)
+        layout.addWidget(about_text)
+
+        about_row = QHBoxLayout()
+        about_row.setSpacing(10)
+
+        btn_discord = QPushButton("Rejoindre le Discord")
+        btn_discord.setObjectName("btnPath")
+        btn_discord.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_discord.clicked.connect(self._on_discord)
+        about_row.addWidget(btn_discord)
+
+        about_row.addStretch()
+        layout.addLayout(about_row)
 
         layout.addStretch()
 
@@ -332,6 +385,45 @@ class SettingsDialog(QDialog):
         if self._scan_worker.isRunning():
             self._scan_worker.wait(2000)
         super().closeEvent(event)
+
+    def _on_open_install_folder(self) -> None:
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.config.install_path)))
+
+    @staticmethod
+    def _on_discord() -> None:
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        QDesktopServices.openUrl(QUrl("https://discord.gg/TNwDQd7KGe"))
+
+    def _on_refresh_catalog(self) -> None:
+        self._update_status.setText("Actualisation du catalogue…")
+        self._update_status.setStyleSheet("color: #d4a017;")
+        self._update_status.show()
+        self.force_catalog_refresh.emit()
+
+    def _on_check_launcher(self) -> None:
+        self._update_status.setText("Vérification des mises à jour…")
+        self._update_status.setStyleSheet("color: #d4a017;")
+        self._update_status.show()
+        self.force_launcher_check.emit()
+
+    def update_catalog_version(self, version: str) -> None:
+        """Met à jour l'affichage de la version du catalogue après un refresh."""
+        self._versions_label.setText(
+            f"Launcher v{APP_VERSION}  ·  Catalogue v{version}"
+        )
+        self._update_status.setText(f"Catalogue mis à jour en v{version}")
+        self._update_status.setStyleSheet("color: #2ecc71;")
+        self._update_status.show()
+
+    def show_update_status(self, message: str, success: bool = True) -> None:
+        """Affiche un message de statut dans la section mises à jour."""
+        color = "#2ecc71" if success else "#8a8aaa"
+        self._update_status.setText(message)
+        self._update_status.setStyleSheet(f"color: {color};")
+        self._update_status.show()
 
     def _save(self) -> None:
         self.config.save()
