@@ -4,8 +4,8 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve, QRectF
-from PyQt6.QtGui import QFont, QPainter, QColor, QBrush
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -18,87 +18,8 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
-
-
-class ToggleSwitch(QWidget):
-    """Interrupteur animé ON/OFF."""
-
-    toggled = pyqtSignal(bool)
-
-    _TRACK_W = 40
-    _TRACK_H = 22
-    _KNOB_R = 8   # rayon du cercle
-
-    def __init__(self, checked: bool = False, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._checked = checked
-        self._knob_x = float(self._TRACK_W - 12 if checked else 12)
-        self.setFixedSize(self._TRACK_W, self._TRACK_H)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        self._anim = QPropertyAnimation(self, b"knob_x")
-        self._anim.setDuration(150)
-        self._anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
-    # -- Propriété animable --
-    def _get_knob_x(self) -> float:
-        return self._knob_x
-
-    def _set_knob_x(self, val: float) -> None:
-        self._knob_x = val
-        self.update()
-
-    knob_x = pyqtProperty(float, _get_knob_x, _set_knob_x)
-
-    def isChecked(self) -> bool:
-        return self._checked
-
-    def setChecked(self, val: bool) -> None:
-        if val == self._checked:
-            return
-        self._checked = val
-        self._animate()
-
-    def mousePressEvent(self, event) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._checked = not self._checked
-            self._animate()
-            self.toggled.emit(self._checked)
-
-    def _animate(self) -> None:
-        self._anim.stop()
-        self._anim.setStartValue(self._knob_x)
-        self._anim.setEndValue(float(self._TRACK_W - 12 if self._checked else 12))
-        self._anim.start()
-
-    def paintEvent(self, event) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Piste
-        track_color = QColor("#d4a017") if self._checked else QColor("#2c3e6b")
-        p.setBrush(QBrush(track_color))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawRoundedRect(QRectF(0, 0, self._TRACK_W, self._TRACK_H), 11, 11)
-        # Cercle
-        p.setBrush(QBrush(QColor("#ffffff")))
-        p.drawEllipse(QRectF(self._knob_x - self._KNOB_R, (self._TRACK_H - 2 * self._KNOB_R) / 2,
-                              2 * self._KNOB_R, 2 * self._KNOB_R))
-        p.end()
-
-
-def _toggle_row(label_text: str, checked: bool) -> tuple[QWidget, ToggleSwitch]:
-    """Crée une ligne [toggle] [label] et renvoie le widget-ligne + le toggle."""
-    row = QWidget()
-    row.setStyleSheet("background: transparent;")
-    lay = QHBoxLayout(row)
-    lay.setContentsMargins(0, 4, 0, 4)
-    lay.setSpacing(12)
-    toggle = ToggleSwitch(checked)
-    lay.addWidget(toggle)
-    lbl = QLabel(label_text)
-    lbl.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
-    lay.addWidget(lbl, stretch=1)
-    return row, toggle
+from src.core.formatting import format_bytes
+from src.ui.toggle_switch import toggle_row
 
 
 class _DiskScanWorker(QThread):
@@ -123,18 +44,10 @@ class _DiskScanWorker(QThread):
         self.result.emit(count, total_bytes)
 
 
-def _format_size_bytes(b: int) -> str:
-    """Formate des octets en Mo ou Go."""
-    mb = b / (1024 * 1024)
-    if mb >= 1000:
-        return f"{mb / 1000:.1f} Go"
-    return f"{mb:.0f} Mo"
-
-
 def _disk_free(path: Path) -> str:
     try:
         usage = shutil.disk_usage(path)
-        return _format_size_bytes(usage.free)
+        return format_bytes(usage.free)
     except OSError:
         return "?"
 
@@ -243,9 +156,9 @@ class SettingsDialog(QDialog):
 
         # Snapshot des chemins sur le thread principal (thread-safe)
         game_paths = [
-            self.manager.get_game_path(entry["game"].id)
+            self.manager.get_game_path(entry.game.id)
             for entry in self.manager.get_games()
-            if entry["state"] == GameState.INSTALLED
+            if entry.state == GameState.INSTALLED
         ]
         game_paths = [p for p in game_paths if p is not None]
 
@@ -256,26 +169,26 @@ class SettingsDialog(QDialog):
         # ── Téléchargement
         layout.addWidget(self._section("Téléchargement"))
 
-        row, self._tgl_delete = _toggle_row("Supprimer les archives après installation", self.config.delete_archives)
+        row, self._tgl_delete = toggle_row("Supprimer les archives après installation", self.config.delete_archives)
         self._tgl_delete.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
-        row, self._tgl_resume = _toggle_row("Reprendre les téléchargements interrompus", self.config.resume_downloads)
+        row, self._tgl_resume = toggle_row("Reprendre les téléchargements interrompus", self.config.resume_downloads)
         self._tgl_resume.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
-        row, self._tgl_updates = _toggle_row("Vérifier les mises à jour au démarrage", self.config.check_updates)
+        row, self._tgl_updates = toggle_row("Vérifier les mises à jour au démarrage", self.config.check_updates)
         self._tgl_updates.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
         # ── Affichage
         layout.addWidget(self._section("Affichage"))
 
-        row, self._tgl_autoplay = _toggle_row("Lecture automatique des vidéos", self.config.autoplay_videos)
+        row, self._tgl_autoplay = toggle_row("Lecture automatique des vidéos", self.config.autoplay_videos)
         self._tgl_autoplay.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
-        row, self._tgl_mute = _toggle_row("Couper le son des vidéos", self.config.mute_videos)
+        row, self._tgl_mute = toggle_row("Couper le son des vidéos", self.config.mute_videos)
         self._tgl_mute.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
@@ -353,9 +266,9 @@ class SettingsDialog(QDialog):
     def _on_scan_done(self, count: int, total_bytes: int) -> None:
         """Callback quand le scan disque en arrière-plan est terminé."""
         self._installed_label.setText(
-            f"{count} jeu(x) installé(s) — {_format_size_bytes(total_bytes)} utilisés"
+            f"{count} jeu(x) installé(s) — {format_bytes(total_bytes)} utilisés"
         )
-        log.info("Total installé : %d jeu(x), %s", count, _format_size_bytes(total_bytes))
+        log.info("Total installé : %d jeu(x), %s", count, format_bytes(total_bytes))
 
     def _on_change_path(self) -> None:
         chosen = QFileDialog.getExistingDirectory(

@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager
 from src.ui.fonts import cinzel, body_font
-from src.ui.speed_tracker import format_size
+from src.core.formatting import format_size
 
 
 class VersionsDialog(QDialog):

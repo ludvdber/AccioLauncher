@@ -1,70 +1,19 @@
 import logging
+import os
 import platform
 import shutil
+import stat
 import subprocess
 import sys
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
+from typing import NamedTuple
 
 from src.core.config import Config, get_documents_dir
-from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
+from src.core.game_data import Catalog, GameData, load_catalog
+from src.core.system_checks import check_d3d11_feature_level, check_vcredist_x86
 
 log = logging.getLogger(__name__)
-
-
-def check_vcredist_x86() -> bool:
-    """Vérifie si le Visual C++ Redistributable x86 (2015-2022) est installé."""
-    if sys.platform != "win32":
-        return True
-    import winreg
-    for sub_key in (
-        r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86",
-        r"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86",
-    ):
-        try:
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_key) as key:
-                val, _ = winreg.QueryValueEx(key, "Installed")
-                if val == 1:
-                    return True
-        except OSError:
-            continue
-    return False
-
-
-def check_d3d11_feature_level() -> bool:
-    """Vérifie si le GPU supporte DirectX 11 (feature level 11_0).
-
-    Crée un device D3D11 temporaire pour tester le support matériel.
-    Retourne False si le GPU ne supporte pas DX11 ou en cas d'erreur.
-    """
-    if sys.platform != "win32":
-        return False
-    try:
-        import ctypes
-        d3d11 = ctypes.WinDLL("d3d11")
-        device = ctypes.c_void_p()
-        feature_level = ctypes.c_uint()
-        context = ctypes.c_void_p()
-        # D3D_DRIVER_TYPE_HARDWARE=1, D3D11_SDK_VERSION=7
-        hr = d3d11.D3D11CreateDevice(
-            None, 1, None, 0, None, 0, 7,
-            ctypes.byref(device), ctypes.byref(feature_level), ctypes.byref(context),
-        )
-        if hr < 0:
-            return False
-        supported = feature_level.value >= 0xb000  # D3D_FEATURE_LEVEL_11_0
-        # Libérer les objets COM (IUnknown::Release = vtable index 2)
-        for obj in (context, device):
-            if obj.value:
-                vtable = ctypes.cast(
-                    ctypes.cast(obj, ctypes.POINTER(ctypes.c_void_p))[0],
-                    ctypes.POINTER(ctypes.c_void_p),
-                )
-                release = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(vtable[2])
-                release(obj)
-        return supported
-    except Exception:
-        return False
 
 
 class GameState(StrEnum):
@@ -75,9 +24,19 @@ class GameState(StrEnum):
     INSTALLED = auto()
 
 
+class GameEntry(NamedTuple):
+    """Jeu enrichi avec son état — retourné par GameManager.get_games()."""
+    game: GameData
+    state: GameState
+
+
 def _is_safe_relative(path_str: str) -> bool:
     """Vérifie qu'un chemin relatif ne sort pas de sa racine (anti path-traversal)."""
-    p = PurePosixPath(path_str.replace("\\", "/"))
+    normalized = path_str.replace("\\", "/")
+    # Détecter les chemins Windows absolus (C:/, D:/, etc.)
+    if len(normalized) >= 2 and normalized[1] == ":":
+        return False
+    p = PurePosixPath(normalized)
     if p.is_absolute():
         return False
     try:
@@ -140,10 +99,10 @@ class GameManager:
     def get_game_by_id(self, game_id: str) -> GameData | None:
         return self._index.get(game_id)
 
-    def get_games(self) -> list[dict]:
+    def get_games(self) -> list[GameEntry]:
         """Retourne la liste des jeux enrichis avec leur état."""
         return [
-            {"game": game, "state": self._states[game.id]}
+            GameEntry(game=game, state=self._states[game.id])
             for game in self._games
         ]
 
@@ -202,11 +161,15 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
+        # Vérifier les prérequis système
+        if not check_vcredist_x86():
+            raise RuntimeError("vcredist_x86_missing")
+
         # Pré-lancement : débloquer DLL, supprimer/créer fichiers, appliquer patches INI
         self._unblock_game_dlls(exe_path.parent)
         self._delete_pre_launch_files(game)
         self._create_pre_launch_files(game)
-        self._apply_pre_launch_patches(game)
+        self.apply_pre_launch_patches(game)
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}
@@ -223,7 +186,6 @@ class GameManager:
         """Supprime le flag Zone.Identifier des DLL du jeu (Windows bloque les DLL téléchargées)."""
         if sys.platform != "win32":
             return
-        import os
         count = 0
         for dll in system_dir.glob("*.dll"):
             try:
@@ -234,24 +196,35 @@ class GameManager:
         if count > 0:
             log.info("%d DLL débloquée(s) dans %s", count, system_dir)
 
+    def _resolve_safe_path(self, raw: str, game: GameData) -> Path | None:
+        """Résout un chemin pré-lancement avec substitution de variables et vérification path traversal.
+
+        Retourne None si le chemin est hors des zones autorisées (Documents ou install_path).
+        """
+        docs_dir = get_documents_dir()
+        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
+        resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
+        p = Path(resolved)
+        try:
+            p.resolve().relative_to(docs_dir)
+            return p
+        except ValueError:
+            pass
+        try:
+            p.resolve().relative_to(self.config.install_path.resolve())
+            return p
+        except ValueError:
+            log.warning("Chemin hors zones autorisées, refusé : %s", p)
+            return None
+
     def _delete_pre_launch_files(self, game: GameData) -> None:
         """Supprime les fichiers listés dans pre_launch.delete_files (ex: Detected.ini)."""
         if game.pre_launch is None or not game.pre_launch.delete_files:
             return
-        docs_dir = get_documents_dir()
-        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for raw in game.pre_launch.delete_files:
-            resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
-            p = Path(resolved)
-            # Protection path traversal
-            try:
-                p.resolve().relative_to(docs_dir)
-            except ValueError:
-                try:
-                    p.resolve().relative_to(self.config.install_path.resolve())
-                except ValueError:
-                    log.warning("Chemin delete_files hors zones autorisées : %s", p)
-                    continue
+            p = self._resolve_safe_path(raw, game)
+            if p is None:
+                continue
             if p.exists():
                 try:
                     p.unlink()
@@ -263,19 +236,10 @@ class GameManager:
         """Crée les fichiers vides listés dans pre_launch.create_files (ex: Running.ini)."""
         if game.pre_launch is None or not game.pre_launch.create_files:
             return
-        docs_dir = get_documents_dir()
-        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for raw in game.pre_launch.create_files:
-            resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
-            p = Path(resolved)
-            try:
-                p.resolve().relative_to(docs_dir)
-            except ValueError:
-                try:
-                    p.resolve().relative_to(self.config.install_path.resolve())
-                except ValueError:
-                    log.warning("Chemin create_files hors zones autorisées : %s", p)
-                    continue
+            p = self._resolve_safe_path(raw, game)
+            if p is None:
+                continue
             try:
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.touch()
@@ -283,24 +247,14 @@ class GameManager:
             except OSError as exc:
                 log.warning("Impossible de créer %s : %s", p, exc)
 
-    def _apply_pre_launch_patches(self, game: GameData) -> None:
+    def apply_pre_launch_patches(self, game: GameData) -> None:
         """Applique les patches INI avant le lancement du jeu (ligne par ligne, sans configparser.write)."""
         if game.pre_launch is None or not game.pre_launch.ini_patches:
             return
-        docs_dir = get_documents_dir()
-        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
         for patch in game.pre_launch.ini_patches:
-            raw_file = patch.file.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
-            ini_path = Path(raw_file)
-            # Protection path traversal : le fichier doit rester sous Documents ou install_dir
-            try:
-                ini_path.resolve().relative_to(docs_dir)
-            except ValueError:
-                try:
-                    ini_path.resolve().relative_to(self.config.install_path.resolve())
-                except ValueError:
-                    log.warning("Chemin INI hors des zones autorisées, refusé : %s", ini_path)
-                    continue
+            ini_path = self._resolve_safe_path(patch.file, game)
+            if ini_path is None:
+                continue
             if not ini_path.exists():
                 log.warning("Fichier INI introuvable, skip : %s", ini_path)
                 continue
@@ -310,6 +264,8 @@ class GameManager:
                 log.warning("GPU ne supporte pas DX11 feature level 11_0, fallback : %s → %s",
                             patch.value, patch.fallback)
                 effective_value = patch.fallback
+            docs_dir = get_documents_dir()
+            install_dir = str(self.config.install_path / Path(game.executable).parts[0])
             value = effective_value.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
             try:
                 lines = ini_path.read_text(encoding="utf-8").splitlines(keepends=True)
@@ -369,7 +325,6 @@ class GameManager:
         try:
             def _force_remove_readonly(_func, path, _exc_info):
                 """Retire le flag read-only et réessaie la suppression."""
-                import stat
                 Path(path).chmod(stat.S_IWRITE)
                 _func(path)
             shutil.rmtree(game_path, onexc=_force_remove_readonly)

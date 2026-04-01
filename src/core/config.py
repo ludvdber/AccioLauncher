@@ -7,9 +7,6 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-PathLike = str | Path
-
-
 def get_documents_dir() -> Path:
     """Retourne le vrai dossier Documents via l'API Windows (gère OneDrive, dossiers redirigés).
 
@@ -48,7 +45,7 @@ CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 
-APP_VERSION = "0.4.6"
+APP_VERSION = "0.5.0"
 
 
 @dataclass(slots=True)

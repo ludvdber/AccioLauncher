@@ -1,5 +1,7 @@
 import logging
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
@@ -116,7 +118,7 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._notif_bar)
         self._notif_bar.hide()
 
-        games = [entry["game"] for entry in self.manager.get_games()]
+        games = [entry.game for entry in self.manager.get_games()]
 
         self._detail = GameDetailView(self.manager, self)
         self._detail.setMouseTracking(True)
@@ -244,7 +246,7 @@ class MainWindow(QMainWindow):
         """Le catalogue distant est plus récent — recharger."""
         self.manager.reload_catalog(catalog)
         # Rafraîchir l'UI
-        games = [entry["game"] for entry in self.manager.get_games()]
+        games = [entry.game for entry in self.manager.get_games()]
         self._carousel.refresh_indicators()
         # Mettre à jour la vue détaillée si le jeu courant a changé
         if self._detail.game:
@@ -348,8 +350,8 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _is_exe_still_running(exe_name: str) -> bool:
-        """Vérifie si un processus avec ce nom d'exe tourne encore."""
-        if not exe_name:
+        """Vérifie si un processus avec ce nom d'exe tourne encore (Windows uniquement)."""
+        if not exe_name or sys.platform != "win32":
             return False
         try:
             result = subprocess.run(
@@ -369,8 +371,6 @@ class MainWindow(QMainWindow):
         2. Par nom d'exe (tasklist) — si le jeu a redémarré son processus
            (ex: UE1 redémarre quand on charge une partie depuis le wizard)
         """
-        import time
-
         if self._game_process is not None:
             ret = self._game_process.poll()
             if ret is None:
@@ -408,7 +408,7 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage(msg)
 
     def _on_carousel_select(self, index: int) -> None:
-        games = [entry["game"] for entry in self.manager.get_games()]
+        games = [entry.game for entry in self.manager.get_games()]
         if 0 <= index < len(games):
             self._detail.set_game(games[index])
 
@@ -490,13 +490,7 @@ class MainWindow(QMainWindow):
 
         if self._update_checker is not None and self._update_checker.isRunning():
             self._update_checker.wait(3000)
-        # Arrêter un éventuel téléchargement/installation en cours
-        if self._detail._downloader is not None:
-            self._detail._downloader.cancel()
-            self._detail._downloader.wait(3000)
-        if self._detail._installer is not None:
-            self._detail._installer.cancel()
-            self._detail._installer.wait(3000)
+        self._detail.cancel_operations()
         self._tray.hide()
         super().closeEvent(event)
 
