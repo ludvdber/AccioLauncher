@@ -1,62 +1,66 @@
 {
-    "catalog_version": "0.7",
+    "catalog_version": "0.11",
     "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
     "games": [
         {
-          "id": "hp1",
-          "name": "Harry Potter à l'École des Sorciers",
-          "year": 2001,
-          "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
-          "developer": "KnowWonder",
-          "executable": "HP1/System/HP.exe",
-          "cover_image": "hp1_cover.jpg",
-          "tags": ["Aventure", "Action", "Plateforme", "Énigmes"],
-          "latest_version": "1.0",
-          "recommended_version": "1.0",
-          "versions": [
-            {
-              "version": "1.0",
-              "date": "2026-03-06",
-              "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.0/hp1.7z",
-              "download_parts": null,
-              "size_mb": 430,
-              "changes": [
-                "Renderer Kentie D3D11 intégré (antialiasing 4x, anisotropie 16x, bump mapping, SSAO, HDR, SSR)",
-                "Widescreen 16:9 (1920x1080) avec FOV 106°",
-                "Mode borderless windowed (alt-tab sans crash)",
-                "Cap 100 FPS (limite UE1 recommandée)",
-                "Interface mise à l'échelle pour les résolutions modernes",
-                "Voix et textes FR + EN inclus",
-                "Nettoyage des fichiers inutiles (DRM, installeurs, manuel PDF)"
-              ]
-            }
-          ],
-          "pre_launch": {
-            "create_files": [
-              "%DOCUMENTS%\\Harry Potter\\Running.ini"
+            "id": "hp1",
+            "name": "Harry Potter à l'École des Sorciers",
+            "year": 2001,
+            "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
+            "developer": "KnowWonder",
+            "executable": "HP1/System/HP.exe",
+            "cover_image": "hp1_cover.jpg",
+            "tags": ["Aventure", "Action", "Plateforme", "Énigmes"],
+            "latest_version": "1.1",
+            "recommended_version": "1.1",
+            "versions": [
+                {
+                    "version": "1.1",
+                    "date": "2026-03-08",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.1/hp1.7z",
+                    "download_parts": null,
+                    "size_mb": 431,
+                    "changes": [
+                        "Des images dans le menu des sauvegardes"
+                    ]
+                },
+                {
+                    "version": "1.0",
+                    "date": "2026-03-06",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.0/hp1.7z",
+                    "download_parts": null,
+                    "size_mb": 430,
+                    "changes": [
+                        "Renderer Kentie D3D11 intégré (antialiasing 4x, anisotropie 16x, bump mapping, SSAO, HDR, SSR)",
+                        "Widescreen 16:9 (1920x1080) avec FOV 106°",
+                        "Mode borderless windowed (alt-tab sans crash)",
+                        "Cap 100 FPS (limite UE1 recommandée)",
+                        "Interface mise à l'échelle pour les résolutions modernes",
+                        "Voix et textes FR + EN inclus",
+                        "Nettoyage des fichiers inutiles (DRM, installeurs, manuel PDF)"
+                    ]
+                }
             ],
-            "ini_patches": [
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "FirstRun", "key": "Reconfig", "value": "0"},
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Engine.Engine", "key": "GameRenderDevice", "value": "D3D11Drv.D3D11RenderDevice", "fallback": "D3DDrv.D3DRenderDevice"},
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "Borderless", "value": "True"},
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "FastAltTab", "value": "True"},
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "SavePath", "value": "%DOCUMENTS%\\Harry Potter\\Save"},
-              {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "CachePath", "value": "%DOCUMENTS%\\Harry Potter\\Cache"}
-            ]
-          },
-          "post_install": {
-            "registry": [],
-            "config_files": [
-              {
-                "source": "config/HP.ini",
-                "destination": "~/Documents/Harry Potter/HP.ini"
-              },
-              {
-                "source": "config/User.ini",
-                "destination": "~/Documents/Harry Potter/User.ini"
-              }
-            ]
-          }
+            "pre_launch": {
+                "create_files": [
+                    "%DOCUMENTS%\\Harry Potter\\Running.ini"
+                ],
+                "ini_patches": [
+                    {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "FirstRun", "key": "Reconfig", "value": "0"},
+                    {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Engine.Engine", "key": "GameRenderDevice", "value": "D3D11Drv.D3D11RenderDevice", "fallback": "D3DDrv.D3DRenderDevice"},
+                    {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "Borderless", "value": "True"},
+                    {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "FastAltTab", "value": "True"},
+                    {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "SavePath", "value": "%DOCUMENTS%\\Harry Potter\\Save"},
+                    {"file": "%DOCUMENTS%\\Harry Potter\\HP.ini", "section": "Core.System", "key": "CachePath", "value": "%DOCUMENTS%\\Harry Potter\\Cache"}
+                ]
+            },
+            "post_install": {
+                "registry": [],
+                "config_files": [
+                    {"source": "config/HP.ini", "destination": "~/Documents/Harry Potter/HP.ini"},
+                    {"source": "config/User.ini", "destination": "~/Documents/Harry Potter/User.ini"}
+                ]
+            }
         },
         {
             "id": "hp2",
@@ -72,19 +76,41 @@
             "versions": [
                 {
                     "version": "1.0",
-                    "date": "2025-03-05",
+                    "date": "2026-03-28",
                     "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.0/hp2.7z",
                     "download_parts": null,
-                    "size_mb": 2500,
+                    "size_mb": 250,
                     "changes": [
-                        "Version originale du jeu",
-                        "DGVoodoo 2.8 intégré",
-                        "Configuration par défaut optimisée"
+                        "Renderer D3D11 1.6.2 intégré (antialiasing 8x, anisotropie 16x, bump mapping, SSAO, SSR)",
+                        "Widescreen 16:9 (1920x1080) avec FOV 106°",
+                        "Mode borderless windowed (alt-tab sans crash)",
+                        "Cap 100 FPS (stabilité du gameplay)",
+                        "Interface mise à l'échelle pour les résolutions modernes",
+                        "Voix et textes FR inclus",
+                        "Nettoyage des fichiers inutiles (DRM, installeurs)"
                     ]
                 }
             ],
+            "pre_launch": {
+                "create_files": [
+                    "%DOCUMENTS%\\Harry Potter II\\Running.ini"
+                ],
+                "ini_patches": [
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "FirstRun", "key": "Reconfig", "value": "0"},
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "Engine.Engine", "key": "GameRenderDevice", "value": "D3D11Drv.D3D11RenderDevice", "fallback": "D3DDrv.D3DRenderDevice"},
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "Borderless", "value": "True"},
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "FastAltTab", "value": "True"},
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "D3D11Drv.D3D11RenderDevice", "key": "SupportMETextEnabled", "value": "False"},
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "Core.System", "key": "SavePath", "value": "%DOCUMENTS%\\Harry Potter II\\Save\\Slot1"},
+                    {"file": "%DOCUMENTS%\\Harry Potter II\\Game.ini", "section": "UWindow.UWindowRootWindow", "key": "GUIScale", "value": "2.25"}
+                ]
+            },
             "post_install": {
-                "registry": []
+                "registry": [],
+                "config_files": [
+                    {"source": "config/Game.ini", "destination": "~/Documents/Harry Potter II/Game.ini"},
+                    {"source": "config/User.ini", "destination": "~/Documents/Harry Potter II/User.ini"}
+                ]
             }
         },
         {
@@ -131,14 +157,8 @@
             "post_install": {
                 "registry": [],
                 "config_files": [
-                    {
-                        "source": "config/hppoa.ini",
-                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/hppoa.ini"
-                    },
-                    {
-                        "source": "config/User.ini",
-                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/User.ini"
-                    }
+                    {"source": "config/hppoa.ini", "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/hppoa.ini"},
+                    {"source": "config/User.ini", "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/User.ini"}
                 ]
             }
         },
@@ -230,6 +250,60 @@
                         "Version originale du jeu",
                         "DGVoodoo 2.8 intégré",
                         "Configuration par défaut optimisée"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": []
+            }
+        },
+        {
+            "id": "hp7a",
+            "name": "Harry Potter et les Reliques de la Mort — Partie 1",
+            "year": 2010,
+            "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
+            "developer": "EA Bright Light",
+            "executable": "HP7A/hp7a.exe",
+            "cover_image": "hp7a_cover.jpg",
+            "tags": ["Action", "TPS", "Infiltration", "Combat"],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-04-06",
+                    "download_url": null,
+                    "download_parts": null,
+                    "size_mb": 5000,
+                    "changes": [
+                        "Version originale du jeu"
+                    ]
+                }
+            ],
+            "post_install": {
+                "registry": []
+            }
+        },
+        {
+            "id": "hp7b",
+            "name": "Harry Potter et les Reliques de la Mort — Partie 2",
+            "year": 2011,
+            "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
+            "developer": "EA Bright Light",
+            "executable": "HP7B/hp7b.exe",
+            "cover_image": "hp7b_cover.jpg",
+            "tags": ["Action", "TPS", "Combat", "Bataille"],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-04-06",
+                    "download_url": null,
+                    "download_parts": null,
+                    "size_mb": 5500,
+                    "changes": [
+                        "Version originale du jeu"
                     ]
                 }
             ],
