@@ -36,3 +36,27 @@ def format_eta(seconds: float) -> str:
         return f"~{int(minutes)} min restantes"
     hours = minutes / 60
     return f"~{hours:.1f}h restantes"
+
+
+def format_progress_line(downloaded: int, total: int, speed: float,
+                         eta_seconds: float, *, with_label: bool = False) -> str:
+    """Compose la ligne de statut d'un téléchargement (factorisé entre les widgets).
+
+    `with_label=True` préfixe par 'Téléchargement : ' (zone détail),
+    `False` donne uniquement le pourcentage (barre persistante).
+    """
+    if total <= 0:
+        return ""
+    pct = downloaded * 100 // total
+    head = f"Téléchargement : {pct}%" if with_label else f"{pct}%"
+    parts = [head, f"{format_bytes(downloaded)} / {format_bytes(total)}", format_speed(speed)]
+    eta = format_eta(eta_seconds)
+    if eta:
+        parts.append(eta)
+    return " — ".join(parts)
+
+
+def append_part_info(line: str, current: int, total: int) -> str:
+    """Ajoute (ou remplace) le suffixe ' — partie X/Y' à une ligne de statut."""
+    base = line.split(" — partie ")[0]
+    return f"{base} — partie {current}/{total}"

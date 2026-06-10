@@ -96,6 +96,14 @@ QPushButton#btnCancel:hover {{
     background-color: #e74c3c;
 }}
 
+/* ---------- Focus clavier visible (A11Y) ---------- */
+
+QPushButton:focus, QLabel:focus, QSlider:focus,
+QProgressBar:focus, QLineEdit:focus, QComboBox:focus {{
+    outline: 2px solid {COLOR_ACCENT_GOLD};
+    outline-offset: 1px;
+}}
+
 QPushButton#btnMute {{
     background: rgba(0, 0, 0, 0.5);
     color: {COLOR_TEXT};

@@ -1,39 +1,37 @@
 import logging
 import subprocess
-import sys
-import time
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
-from PyQt6.QtGui import QAction, QIcon, QKeyEvent, QMouseEvent
+from PyQt6.QtGui import QIcon, QKeyEvent
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QMenu,
     QMessageBox,
     QPushButton,
     QStatusBar,
-    QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
 )
 
 from src.core.config import ASSETS_DIR, Config, DEFAULT_INSTALL_PATH
-from src.core.game_manager import GameManager
+from src.core.game_manager import GameManager, GameState
 from src.core.updater import UpdateChecker
 from src.ui.carousel import Carousel
+from src.ui.download_bar import DownloadBar
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
 from src.ui.particles import ParticleOverlay
+from src.ui.process_monitor import ProcessMonitor
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.title_bar import TitleBar
+from src.ui.tray_manager import TrayManager
+from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
-
-_PROCESS_POLL_MS = 2000  # Vérification toutes les 2 secondes
 
 _ICON_PATH = ASSETS_DIR / "accio_launcher.png"
 
@@ -64,13 +62,8 @@ class MainWindow(QMainWindow):
         self.config = self._first_launch_or_load()
         self.manager = GameManager(self.config)
 
-        # État du processus de jeu surveillé
-        self._game_process: subprocess.Popen | None = None
-        self._game_name: str = ""
-        self._game_exe_name: str = ""  # nom de l'exe pour détecter un redémarrage
-        self._exe_grace_until: float = 0.0  # timestamp jusqu'auquel on attend le redémarrage
-
         self._update_checker: UpdateChecker | None = None
+        self._extra_checkers: list[UpdateChecker] = []
         self._launcher_update_version: str = ""
         self._launcher_update_url: str = ""
 
@@ -90,13 +83,48 @@ class MainWindow(QMainWindow):
             "Bienvenue dans Accio Launcher !\n\n"
             "Veuillez choisir le dossier o\u00f9 les jeux seront install\u00e9s.",
         )
-        chosen = QFileDialog.getExistingDirectory(
-            None, "Dossier d'installation des jeux", str(DEFAULT_INSTALL_PATH),
-        )
-        install_path = Path(chosen) if chosen else DEFAULT_INSTALL_PATH
+        install_path = MainWindow._prompt_writable_dir()
         config = Config(install_path=install_path, cache_path=install_path / ".cache")
         config.save()
         return config
+
+    @staticmethod
+    def _prompt_writable_dir() -> Path:
+        """Demande un dossier au user, retry tant qu'il n'est pas inscriptible.
+
+        Le user peut annuler \u00e0 tout moment \u2192 on tombe sur DEFAULT_INSTALL_PATH (cr\u00e9able).
+        """
+        while True:
+            chosen = QFileDialog.getExistingDirectory(
+                None, "Dossier d'installation des jeux", str(DEFAULT_INSTALL_PATH),
+            )
+            candidate = Path(chosen) if chosen else DEFAULT_INSTALL_PATH
+            if MainWindow._is_writable(candidate):
+                return candidate
+            reply = QMessageBox.warning(
+                None, "Dossier non inscriptible",
+                f"Impossible d'\u00e9crire dans :\n{candidate}\n\n"
+                "Choisissez un autre dossier ou annulez pour utiliser :\n"
+                f"{DEFAULT_INSTALL_PATH}",
+                QMessageBox.StandardButton.Retry | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Retry,
+            )
+            if reply != QMessageBox.StandardButton.Retry:
+                # Fallback DEFAULT_INSTALL_PATH (toujours cr\u00e9able sous le home).
+                DEFAULT_INSTALL_PATH.mkdir(parents=True, exist_ok=True)
+                return DEFAULT_INSTALL_PATH
+
+    @staticmethod
+    def _is_writable(path: Path) -> bool:
+        """Cr\u00e9e le dossier si n\u00e9cessaire et v\u00e9rifie qu'on peut y \u00e9crire."""
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            probe = path / ".accio_write_test"
+            probe.write_bytes(b"")
+            probe.unlink()
+            return True
+        except OSError:
+            return False
 
     # ──────────────────── Construction UI ────────────────────
 
@@ -126,6 +154,11 @@ class MainWindow(QMainWindow):
         self._detail.state_changed.connect(self._on_state_changed)
         self._detail.game_launched.connect(self._on_game_launched)
         root_layout.addWidget(self._detail, stretch=1)
+
+        # Barre de téléchargement persistante (visible pendant download/install)
+        self._download_bar = DownloadBar(self)
+        root_layout.addWidget(self._download_bar)
+        self._wire_download_bar()
 
         self._carousel = Carousel(games, self.manager, self)
         self._carousel.game_selected.connect(self._on_carousel_select)
@@ -161,28 +194,33 @@ class MainWindow(QMainWindow):
     # ──────────────────── System Tray ────────────────────
 
     def _build_tray(self) -> None:
-        self._tray = QSystemTrayIcon(self)
-        self._tray.setIcon(_load_app_icon())
-        self._tray.setToolTip("Accio Launcher")
+        self._tray = TrayManager(_load_app_icon(), self)
+        self._tray.restore_requested.connect(self._restore_from_tray)
+        self._tray.quit_requested.connect(self._quit_app)
 
-        tray_menu = QMenu()
-        act_restore = QAction("Restaurer Accio Launcher", self)
-        act_restore.triggered.connect(self._restore_from_tray)
-        tray_menu.addAction(act_restore)
+    def _wire_download_bar(self) -> None:
+        """Connecte la barre de téléchargement aux signaux du GameOperations."""
+        ops = self._detail.ops
+        ops.download_progress.connect(self._download_bar.update_download_progress)
+        ops.install_progress.connect(self._download_bar.update_install_progress)
+        ops.part_info.connect(self._download_bar.update_part_info)
+        ops.state_changed.connect(self._on_ops_state_changed)
+        self._download_bar.cancel_clicked.connect(ops.cancel_download)
 
-        tray_menu.addSeparator()
-
-        act_quit = QAction("Quitter", self)
-        act_quit.triggered.connect(self._quit_app)
-        tray_menu.addAction(act_quit)
-
-        self._tray.setContextMenu(tray_menu)
-        self._tray.activated.connect(self._on_tray_activated)
+    def _on_ops_state_changed(self) -> None:
+        """Affiche/cache la barre de téléchargement selon l'état des opérations."""
+        ops = self._detail.ops
+        if ops.is_busy and ops.active_game is not None:
+            game = ops.active_game
+            state = self.manager.get_state(game.id)
+            if state in (GameState.DOWNLOADING, GameState.INSTALLING):
+                self._download_bar.show_for_game(game, state)
+                return
+        self._download_bar.hide_bar()
 
     def _build_process_monitor(self) -> None:
-        self._poll_timer = QTimer(self)
-        self._poll_timer.setInterval(_PROCESS_POLL_MS)
-        self._poll_timer.timeout.connect(self._poll_game_process)
+        self._monitor = ProcessMonitor(self)
+        self._monitor.game_exited.connect(self._on_game_exited)
 
     def _build_notif_bar(self) -> QWidget:
         """Construit la barre de notification dorée pour les updates launcher."""
@@ -230,6 +268,9 @@ class MainWindow(QMainWindow):
         """Lance la vérification des mises à jour en arrière-plan."""
         if not self.config.check_updates:
             return
+        if self._update_checker is not None and self._update_checker.isRunning():
+            self._update_checker.requestInterruption()
+            self._update_checker.wait(1000)
         catalog = self.manager.catalog
         self._update_checker = UpdateChecker(
             catalog_url=catalog.catalog_url,
@@ -245,14 +286,15 @@ class MainWindow(QMainWindow):
     def _on_catalog_updated(self, catalog) -> None:
         """Le catalogue distant est plus récent — recharger."""
         self.manager.reload_catalog(catalog)
-        # Rafraîchir l'UI
         games = [entry.game for entry in self.manager.get_games()]
-        self._carousel.refresh_indicators()
-        # Mettre à jour la vue détaillée si le jeu courant a changé
-        if self._detail.game:
-            updated = self.manager.get_game_by_id(self._detail.game.id)
-            if updated:
-                self._detail.update_game_data(updated)
+        self._carousel.set_games(games)
+        # Vue détaillée : conserver le jeu si encore présent, sinon premier jeu
+        current_id = self._detail.game.id if self._detail.game else None
+        updated = self.manager.get_game_by_id(current_id) if current_id else None
+        if updated is not None:
+            self._detail.set_game(updated)
+        elif games:
+            self._detail.set_game(games[0])
         log.info("UI rafraîchie après mise à jour du catalogue")
 
     def _on_launcher_update(self, version: str, url: str) -> None:
@@ -267,13 +309,15 @@ class MainWindow(QMainWindow):
 
     def _on_update_counts(self, count: int) -> None:
         """Affiche le nombre de mises à jour disponibles dans la status bar."""
+        if self._detail.ops.is_busy:
+            return  # ne pas écraser le statut d'un téléchargement en cours
         self._status_bar.showMessage(
             f"{count} mise(s) à jour disponible(s)" if count > 0 else "Prêt"
         )
 
     def _on_notif_download(self) -> None:
         if self._launcher_update_url:
-            self._open_url(self._launcher_update_url)
+            open_url(self._launcher_update_url)
 
     def _dismiss_notif(self) -> None:
         """Ferme la notification et sauvegarde la version ignorée."""
@@ -286,22 +330,12 @@ class MainWindow(QMainWindow):
         if self._notif_bar.isVisible():
             self._notif_bar.hide()
 
-    @staticmethod
-    def _open_url(url: str) -> None:
-        from PyQt6.QtGui import QDesktopServices
-        from PyQt6.QtCore import QUrl
-        QDesktopServices.openUrl(QUrl(url))
-
-    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            self._restore_from_tray()
-
     def _minimize_to_tray(self) -> None:
         """Cache la fenêtre dans le system tray et pause tous les effets."""
         self.hide()
         self._tray.show()
         self.pause_all_effects()
-        log.info("Launcher minimisé dans le tray — en jeu : %s", self._game_name)
+        log.info("Launcher minimisé dans le tray — en jeu : %s", self._monitor.game_name)
 
     def _restore_from_tray(self) -> None:
         """Restaure la fenêtre et reprend les effets."""
@@ -337,70 +371,15 @@ class MainWindow(QMainWindow):
 
     def _on_game_launched(self, process: subprocess.Popen, game_name: str) -> None:
         """Appelé quand un jeu est lancé — minimise et surveille."""
-        self._game_process = process
-        self._game_name = game_name
-        # Extraire le nom de l'exe pour détecter un redémarrage du processus
-        try:
-            self._game_exe_name = Path(process.args[0]).name.lower()
-        except (IndexError, TypeError):
-            self._game_exe_name = ""
-        self._tray.setToolTip(f"Accio Launcher \u2014 En jeu : {game_name}")
+        self._tray.set_tooltip(f"Accio Launcher — En jeu : {game_name}")
         self._minimize_to_tray()
-        self._poll_timer.start()
+        self._monitor.start(process, game_name)
 
-    @staticmethod
-    def _is_exe_still_running(exe_name: str) -> bool:
-        """Vérifie si un processus avec ce nom d'exe tourne encore (Windows uniquement)."""
-        if not exe_name or sys.platform != "win32":
-            return False
-        try:
-            result = subprocess.run(
-                ["tasklist", "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
-                capture_output=True, text=True, timeout=5,
-                creationflags=subprocess.CREATE_NO_WINDOW,
-            )
-            return exe_name.lower() in result.stdout.lower()
-        except (OSError, subprocess.TimeoutExpired):
-            return False
-
-    def _poll_game_process(self) -> None:
-        """Vérifie si le jeu tourne encore (toutes les 2s).
-
-        Deux modes de surveillance :
-        1. Par Popen.poll() — tant que le processus initial tourne
-        2. Par nom d'exe (tasklist) — si le jeu a redémarré son processus
-           (ex: UE1 redémarre quand on charge une partie depuis le wizard)
-        """
-        if self._game_process is not None:
-            ret = self._game_process.poll()
-            if ret is None:
-                return  # processus initial tourne encore
-            # Le processus initial s'est fermé — accorder 10s de grâce
-            # pour laisser le jeu redémarrer (UE1 wizard → jeu)
-            log.info("Process initial terminé (code %s), grâce de 10s…", ret)
-            self._game_process = None
-            self._exe_grace_until = time.monotonic() + 10.0
-            return  # ne pas vérifier tout de suite
-
-        # Mode surveillance par nom d'exe
-        if self._game_exe_name and self._is_exe_still_running(self._game_exe_name):
-            return  # le jeu tourne encore (process redémarré)
-
-        # Pendant la période de grâce, ne pas restaurer même si l'exe est introuvable
-        if time.monotonic() < self._exe_grace_until:
-            return
-
-        # Le jeu est vraiment fermé
-        game_name = self._game_name
-        self._game_name = ""
-        self._game_exe_name = ""
-        self._poll_timer.stop()
-        self._tray.setToolTip("Accio Launcher")
-
-        log.info("Jeu terminé : %s", game_name)
-
+    def _on_game_exited(self, game_name: str) -> None:
+        """Le ProcessMonitor a détecté la fin du jeu (avec grâce de redémarrage)."""
+        self._tray.set_tooltip("Accio Launcher")
         self._restore_from_tray()
-        self._status_bar.showMessage(f"Retour de {game_name} \u2014 Bon jeu !")
+        self._status_bar.showMessage(f"Retour de {game_name} — Bon jeu !")
 
     # ──────────────────── Slots UI ────────────────────
 
@@ -415,15 +394,29 @@ class MainWindow(QMainWindow):
     def _on_state_changed(self) -> None:
         self._carousel.refresh_indicators()
 
+    def _on_config_changed(self) -> None:
+        """Config modifiée (ex: dossier d'installation) — re-détecter les états.
+
+        Sans re-détection, un jeu installé dans l'ancien dossier resterait
+        affiché INSTALLED et « JOUER » échouerait silencieusement.
+        """
+        self.manager.refresh_states()
+        self._detail.refresh_actions()
+        self._carousel.refresh_indicators()
+
     def _on_settings(self) -> None:
         dlg = SettingsDialog(self.config, self.manager, self)
-        dlg.config_changed.connect(self._on_state_changed)
+        dlg.config_changed.connect(self._on_config_changed)
         dlg.force_catalog_refresh.connect(lambda: self._force_update_check(dlg, catalog_only=True))
         dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
         dlg.exec()
 
     def _force_update_check(self, dlg: SettingsDialog, *, catalog_only: bool) -> None:
-        """Lance une vérification forcée (catalogue et/ou launcher)."""
+        """Lance une vérification forcée (catalogue et/ou launcher).
+
+        Protégé contre dlg détruit avant la fin du checker : chaque slot vérifie
+        que le dialog est encore vivant via _dlg_alive.
+        """
         catalog = self.manager.catalog
         checker = UpdateChecker(
             catalog_url=catalog.catalog_url,
@@ -431,29 +424,46 @@ class MainWindow(QMainWindow):
             installed_versions=self.config.installed_versions,
             parent=self,
         )
-        state = {"catalog_updated": False}
+        self._extra_checkers.append(checker)
+        state = {"catalog_updated": False, "dlg_alive": True}
+
+        def _dlg_alive() -> bool:
+            if not state["dlg_alive"]:
+                return False
+            try:
+                dlg.isVisible()
+                return True
+            except RuntimeError:
+                state["dlg_alive"] = False
+                return False
+
+        dlg.destroyed.connect(lambda *_: state.update(dlg_alive=False))
 
         def on_catalog(new_catalog):
             state["catalog_updated"] = True
             self._on_catalog_updated(new_catalog)
-            dlg.update_catalog_version(new_catalog.catalog_version)
+            if _dlg_alive():
+                dlg.update_catalog_version(new_catalog.catalog_version)
 
         def on_launcher(version, url):
             self._launcher_update_version = version
             self._launcher_update_url = url
             self._notif_label.setText(f"Accio Launcher v{version} est disponible !")
             self._notif_bar.show()
-            dlg.show_update_status(f"Launcher v{version} disponible !")
+            if _dlg_alive():
+                dlg.show_update_status(f"Launcher v{version} disponible !")
 
         def on_finished():
-            if not state["catalog_updated"]:
-                dlg.show_update_status("Catalogue déjà à jour")
-            if catalog_only:
-                return
-            if not self._launcher_update_url:
-                dlg.show_update_status("Tout est à jour")
+            if _dlg_alive():
+                if not state["catalog_updated"]:
+                    dlg.show_update_status("Catalogue déjà à jour")
+                elif not catalog_only and not self._launcher_update_url:
+                    dlg.show_update_status("Tout est à jour")
+            if checker in self._extra_checkers:
+                self._extra_checkers.remove(checker)
 
         checker.catalog_updated.connect(on_catalog)
+        checker.update_counts.connect(self._on_update_counts)
         if not catalog_only:
             checker.launcher_update.connect(on_launcher)
         checker.finished.connect(on_finished)
@@ -469,19 +479,16 @@ class MainWindow(QMainWindow):
         self._particles.raise_()
 
     def eventFilter(self, obj, event) -> bool:
+        # Couvre les MouseMove sur tous les widgets enfants (l'override mouseMoveEvent
+        # ne firerait que sur la surface bare de MainWindow → redondant et incomplet).
         if event.type() == QEvent.Type.MouseMove:
             try:
                 global_pos = event.globalPosition()
                 local = self.mapFromGlobal(global_pos.toPoint())
                 self._detail.handle_mouse_move(QPointF(local.x(), local.y()))
-            except (AttributeError, RuntimeError):
-                pass
+            except (AttributeError, RuntimeError) as exc:
+                log.debug("eventFilter mouseMove failed: %s", exc)
         return super().eventFilter(obj, event)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        pos = event.position()
-        self._detail.handle_mouse_move(QPointF(pos.x(), pos.y()))
-        super().mouseMoveEvent(event)
 
     def closeEvent(self, event) -> None:
         """Attend la fin des threads avant de fermer."""
@@ -490,6 +497,10 @@ class MainWindow(QMainWindow):
 
         if self._update_checker is not None and self._update_checker.isRunning():
             self._update_checker.wait(3000)
+        for checker in list(self._extra_checkers):
+            if checker.isRunning():
+                checker.wait(3000)
+        self._extra_checkers.clear()
         self._detail.cancel_operations()
         self._tray.hide()
         super().closeEvent(event)

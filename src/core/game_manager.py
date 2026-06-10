@@ -1,17 +1,23 @@
+"""Gestionnaire de catalogue + état des jeux + lancement de processus."""
+
 import logging
-import os
 import platform
 import shutil
 import stat
 import subprocess
-import sys
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
 
-from src.core.config import Config, get_documents_dir
+from src.core.config import Config
 from src.core.game_data import Catalog, GameData, load_catalog
-from src.core.system_checks import check_d3d11_feature_level, check_vcredist_x86
+from src.core.pre_launch import (
+    apply_ini_patches,
+    create_pre_launch_files,
+    delete_pre_launch_files,
+    unblock_game_dlls,
+)
+from src.core.system_checks import check_vcredist_x86
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +39,6 @@ class GameEntry(NamedTuple):
 def _is_safe_relative(path_str: str) -> bool:
     """Vérifie qu'un chemin relatif ne sort pas de sa racine (anti path-traversal)."""
     normalized = path_str.replace("\\", "/")
-    # Détecter les chemins Windows absolus (C:/, D:/, etc.)
     if len(normalized) >= 2 and normalized[1] == ":":
         return False
     p = PurePosixPath(normalized)
@@ -80,6 +85,19 @@ class GameManager:
                 if self._states[g.id] == GameState.NOT_INSTALLED:
                     log.info("Nouveau jeu disponible : %s", g.name)
         log.info("Catalogue rechargé : %d jeux (v%s)", len(self._games), catalog.catalog_version)
+
+    def refresh_states(self) -> None:
+        """Re-détecte l'état de tous les jeux sur le disque.
+
+        Nécessaire après un changement d'install_path : les états en mémoire
+        pointent sinon vers l'ancien dossier. Préserve les états transitoires
+        (téléchargement/installation en cours) pour ne pas casser une opération.
+        """
+        for g in self._games:
+            if self._states.get(g.id) in (GameState.DOWNLOADING, GameState.INSTALLING):
+                continue
+            self._states[g.id] = self._detect_state(g)
+        log.info("États re-détectés (%d jeux)", len(self._games))
 
     def _detect_state(self, game: GameData) -> GameState:
         """Détecte l'état d'un jeu en vérifiant le disque."""
@@ -161,15 +179,14 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
-        # Vérifier les prérequis système
         if not check_vcredist_x86():
             raise RuntimeError("vcredist_x86_missing")
 
-        # Pré-lancement : débloquer DLL, supprimer/créer fichiers, appliquer patches INI
-        self._unblock_game_dlls(exe_path.parent)
-        self._delete_pre_launch_files(game)
-        self._create_pre_launch_files(game)
-        self.apply_pre_launch_patches(game)
+        # Pré-lancement (cf. src/core/pre_launch.py)
+        unblock_game_dlls(exe_path.parent)
+        delete_pre_launch_files(game, self.config)
+        create_pre_launch_files(game, self.config)
+        apply_ini_patches(game, self.config)
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}
@@ -181,123 +198,9 @@ class GameManager:
             popen_kwargs["start_new_session"] = True
         return subprocess.Popen([str(exe_path)], **popen_kwargs)
 
-    @staticmethod
-    def _unblock_game_dlls(system_dir: Path) -> None:
-        """Supprime le flag Zone.Identifier des DLL du jeu (Windows bloque les DLL téléchargées)."""
-        if sys.platform != "win32":
-            return
-        count = 0
-        for dll in system_dir.glob("*.dll"):
-            try:
-                os.remove(str(dll) + ":Zone.Identifier")
-                count += 1
-            except OSError:
-                pass
-        if count > 0:
-            log.info("%d DLL débloquée(s) dans %s", count, system_dir)
-
-    def _resolve_safe_path(self, raw: str, game: GameData) -> Path | None:
-        """Résout un chemin pré-lancement avec substitution de variables et vérification path traversal.
-
-        Retourne None si le chemin est hors des zones autorisées (Documents ou install_path).
-        """
-        docs_dir = get_documents_dir()
-        install_dir = str(self.config.install_path / Path(game.executable).parts[0])
-        resolved = raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
-        p = Path(resolved)
-        try:
-            p.resolve().relative_to(docs_dir)
-            return p
-        except ValueError:
-            pass
-        try:
-            p.resolve().relative_to(self.config.install_path.resolve())
-            return p
-        except ValueError:
-            log.warning("Chemin hors zones autorisées, refusé : %s", p)
-            return None
-
-    def _delete_pre_launch_files(self, game: GameData) -> None:
-        """Supprime les fichiers listés dans pre_launch.delete_files (ex: Detected.ini)."""
-        if game.pre_launch is None or not game.pre_launch.delete_files:
-            return
-        for raw in game.pre_launch.delete_files:
-            p = self._resolve_safe_path(raw, game)
-            if p is None:
-                continue
-            if p.exists():
-                try:
-                    p.unlink()
-                    log.debug("Fichier pré-lancement supprimé : %s", p)
-                except OSError as exc:
-                    log.warning("Impossible de supprimer %s : %s", p, exc)
-
-    def _create_pre_launch_files(self, game: GameData) -> None:
-        """Crée les fichiers vides listés dans pre_launch.create_files (ex: Running.ini)."""
-        if game.pre_launch is None or not game.pre_launch.create_files:
-            return
-        for raw in game.pre_launch.create_files:
-            p = self._resolve_safe_path(raw, game)
-            if p is None:
-                continue
-            try:
-                p.parent.mkdir(parents=True, exist_ok=True)
-                p.touch()
-                log.debug("Fichier pré-lancement créé : %s", p)
-            except OSError as exc:
-                log.warning("Impossible de créer %s : %s", p, exc)
-
     def apply_pre_launch_patches(self, game: GameData) -> None:
-        """Applique les patches INI avant le lancement du jeu (ligne par ligne, sans configparser.write)."""
-        if game.pre_launch is None or not game.pre_launch.ini_patches:
-            return
-        for patch in game.pre_launch.ini_patches:
-            ini_path = self._resolve_safe_path(patch.file, game)
-            if ini_path is None:
-                continue
-            if not ini_path.exists():
-                log.warning("Fichier INI introuvable, skip : %s", ini_path)
-                continue
-            # Fallback renderer : si la valeur utilise D3D11Drv et le GPU ne supporte pas DX11
-            effective_value = patch.value
-            if patch.fallback and "D3D11Drv" in patch.value and not check_d3d11_feature_level():
-                log.warning("GPU ne supporte pas DX11 feature level 11_0, fallback : %s → %s",
-                            patch.value, patch.fallback)
-                effective_value = patch.fallback
-            docs_dir = get_documents_dir()
-            install_dir = str(self.config.install_path / Path(game.executable).parts[0])
-            value = effective_value.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
-            try:
-                lines = ini_path.read_text(encoding="utf-8").splitlines(keepends=True)
-                current_section: str | None = None
-                found = False
-                for i, line in enumerate(lines):
-                    stripped = line.strip()
-                    if stripped.startswith("[") and stripped.endswith("]"):
-                        current_section = stripped[1:-1]
-                        continue
-                    if current_section == patch.section:
-                        # Matcher key= ou key = (insensible aux espaces autour du =)
-                        eq_pos = stripped.find("=")
-                        if eq_pos > 0 and stripped[:eq_pos].rstrip() == patch.key:
-                            lines[i] = f"{patch.key}={value}\n"
-                            found = True
-                            break
-                if not found:
-                    # Ajouter la section si elle n'existe pas, puis la clé
-                    section_exists = any(
-                        l.strip() == f"[{patch.section}]" for l in lines
-                    )
-                    if not section_exists:
-                        if lines and not lines[-1].endswith("\n"):
-                            lines.append("\n")
-                        lines.append(f"[{patch.section}]\n")
-                    lines.append(f"{patch.key}={value}\n")
-                ini_path.write_text("".join(lines), encoding="utf-8")
-                log.info("Patch INI appliqué : [%s] %s=%s dans %s",
-                         patch.section, patch.key, value, ini_path)
-            except OSError as exc:
-                log.warning("Impossible de patcher %s : %s", ini_path, exc)
+        """Façade rétro-compat — délègue à pre_launch.apply_ini_patches."""
+        apply_ini_patches(game, self.config)
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
         """Sauvegarde la version du jeu installé dans la config."""

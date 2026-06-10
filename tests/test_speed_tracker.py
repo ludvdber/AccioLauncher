@@ -1,6 +1,9 @@
 """Tests pour src/core/formatting.py et src/ui/speed_tracker.py"""
 
-from src.core.formatting import format_size, format_bytes, format_speed, format_eta
+from src.core.formatting import (
+    format_size, format_bytes, format_speed, format_eta,
+    format_progress_line, append_part_info,
+)
 from src.ui.speed_tracker import SpeedTracker
 
 
@@ -63,6 +66,47 @@ class TestFormatEta:
 
     def test_too_large(self):
         assert format_eta(100000) == ""
+
+
+class TestFormatProgressLine:
+    def test_returns_empty_for_zero_total(self):
+        assert format_progress_line(0, 0, 0.0, -1.0) == ""
+
+    def test_negative_total(self):
+        assert format_progress_line(100, -1, 1024.0, 5.0) == ""
+
+    def test_with_label(self):
+        result = format_progress_line(50_000_000, 100_000_000, 5_000_000.0, 10.0,
+                                       with_label=True)
+        assert result.startswith("Téléchargement : 50%")
+        assert "Mo/s" in result
+        assert "10s" in result
+
+    def test_without_label(self):
+        result = format_progress_line(50, 100, 0.0, -1.0)
+        assert result.startswith("50%")
+        assert "Téléchargement" not in result
+
+    def test_no_eta_when_negative(self):
+        result = format_progress_line(50, 100, 1024.0, -1.0)
+        assert "restantes" not in result
+
+
+class TestAppendPartInfo:
+    def test_appends_when_absent(self):
+        result = append_part_info("50% — 50 Mo / 100 Mo", 1, 3)
+        assert result.endswith("partie 1/3")
+        assert "50%" in result
+
+    def test_replaces_existing(self):
+        line = "50% — 50 Mo / 100 Mo — partie 1/3"
+        result = append_part_info(line, 2, 3)
+        assert result.count("partie") == 1
+        assert "partie 2/3" in result
+
+    def test_empty_line(self):
+        result = append_part_info("", 1, 5)
+        assert result == " — partie 1/5"
 
 
 class TestSpeedTracker:

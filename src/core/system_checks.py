@@ -1,8 +1,10 @@
 """Vérifications système — VC++ Redistributable, DirectX 11, etc."""
 
+import functools
 import sys
 
 
+@functools.cache
 def check_vcredist_x86() -> bool:
     """Vérifie si le Visual C++ Redistributable x86 (2015-2022) est installé."""
     if sys.platform != "win32":
@@ -22,11 +24,13 @@ def check_vcredist_x86() -> bool:
     return False
 
 
+@functools.cache
 def check_d3d11_feature_level() -> bool:
     """Vérifie si le GPU supporte DirectX 11 (feature level 11_0).
 
     Crée un device D3D11 temporaire pour tester le support matériel.
     Retourne False si le GPU ne supporte pas DX11 ou en cas d'erreur.
+    Le résultat est mis en cache (invariant pour la session).
     """
     if sys.platform != "win32":
         return False

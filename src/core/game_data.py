@@ -115,6 +115,13 @@ class GameData:
         missing = [k for k in required if k not in data]
         if missing:
             raise ValueError(f"Champs manquants dans games.json : {missing}")
+
+        # Validation anti path-traversal de l'executable au parsing (défense en profondeur)
+        executable = data["executable"]
+        normalized = executable.replace("\\", "/")
+        if (len(normalized) >= 2 and normalized[1] == ":") or normalized.startswith("/") \
+                or ".." in normalized.split("/"):
+            raise ValueError(f"executable non sûr : {executable!r}")
         pi = data.get("post_install", {})
         pl = data.get("pre_launch")
         versions = tuple(

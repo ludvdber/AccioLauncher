@@ -4,7 +4,7 @@ import sys
 import traceback
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSplashScreen
 
 from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH
@@ -89,6 +89,7 @@ def _create_splash() -> QSplashScreen:
 
     splash = QSplashScreen(pix)
     splash.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+    splash.setWindowIcon(QIcon(str(ASSETS_DIR / "accio_launcher.png")))
     return splash
 
 

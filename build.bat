@@ -1,20 +1,21 @@
 @echo off
 setlocal
 
-:: Force Python 3.13 via le launcher py (PyQt6 ne supporte pas 3.14)
+:: Préfère 3.13, fallback 3.12 (PyQt6 ne supporte pas encore 3.14).
 set PY=py -3.13
-
-echo === Accio Launcher — Build ===
-echo.
-
 %PY% --version >nul 2>&1
 if errorlevel 1 (
-    echo ERREUR : Python 3.13 introuvable.
-    echo Installe-le depuis https://python.org/downloads/
-    pause
-    exit /b 1
+    set PY=py -3.12
+    %PY% --version >nul 2>&1
+    if errorlevel 1 (
+        echo ERREUR : ni Python 3.13 ni 3.12 trouvés.
+        echo Installe-le depuis https://python.org/downloads/
+        pause
+        exit /b 1
+    )
 )
 
+echo === Accio Launcher — Build ===
 %PY% --version
 echo.
 

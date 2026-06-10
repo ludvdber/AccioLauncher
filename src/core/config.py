@@ -45,7 +45,7 @@ CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 
-APP_VERSION = "0.5.1"
+APP_VERSION = "0.5.2"
 
 
 @dataclass(slots=True)
@@ -56,7 +56,6 @@ class Config:
     cache_path: Path = field(default_factory=lambda: DEFAULT_CACHE_PATH)
     langue: str = "fr"
     delete_archives: bool = True
-    resume_downloads: bool = True
     autoplay_videos: bool = True
     mute_videos: bool = False
     check_updates: bool = True
@@ -83,7 +82,6 @@ class Config:
                 cache_path=Path(data.get("cache_path", str(DEFAULT_CACHE_PATH))),
                 langue=data.get("langue", "fr"),
                 delete_archives=data.get("delete_archives", True),
-                resume_downloads=data.get("resume_downloads", True),
                 autoplay_videos=data.get("autoplay_videos", True),
                 mute_videos=data.get("mute_videos", False),
                 check_updates=data.get("check_updates", True),
@@ -101,7 +99,6 @@ class Config:
                 "cache_path": str(self.cache_path),
                 "langue": self.langue,
                 "delete_archives": self.delete_archives,
-                "resume_downloads": self.resume_downloads,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
                 "check_updates": self.check_updates,

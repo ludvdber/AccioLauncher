@@ -2,9 +2,7 @@ import logging
 import shutil
 from pathlib import Path
 
-log = logging.getLogger(__name__)
-
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QDialog,
@@ -19,29 +17,11 @@ from PyQt6.QtWidgets import (
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
 from src.core.formatting import format_bytes
+from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.toggle_switch import toggle_row
+from src.ui.utils import open_local_path, open_url
 
-
-class _DiskScanWorker(QThread):
-    """Calcule la taille des jeux installés en arrière-plan."""
-    result = pyqtSignal(int, int)  # (count, total_bytes)
-
-    def __init__(self, game_paths: list[Path], parent=None) -> None:
-        super().__init__(parent)
-        self._game_paths = game_paths
-
-    def run(self) -> None:
-        count = len(self._game_paths)
-        total_bytes = 0
-        for game_path in self._game_paths:
-            if game_path.exists():
-                try:
-                    total_bytes += sum(
-                        f.stat().st_size for f in game_path.rglob("*") if f.is_file()
-                    )
-                except OSError:
-                    pass
-        self.result.emit(count, total_bytes)
+log = logging.getLogger(__name__)
 
 
 def _disk_free(path: Path) -> str:
@@ -162,7 +142,7 @@ class SettingsDialog(QDialog):
         ]
         game_paths = [p for p in game_paths if p is not None]
 
-        self._scan_worker = _DiskScanWorker(game_paths, parent=self)
+        self._scan_worker = DiskScanWorker(game_paths, parent=self)
         self._scan_worker.result.connect(self._on_scan_done)
         self._scan_worker.start()
 
@@ -171,10 +151,6 @@ class SettingsDialog(QDialog):
 
         row, self._tgl_delete = toggle_row("Supprimer les archives après installation", self.config.delete_archives)
         self._tgl_delete.toggled.connect(self._on_setting_changed)
-        layout.addWidget(row)
-
-        row, self._tgl_resume = toggle_row("Reprendre les téléchargements interrompus", self.config.resume_downloads)
-        self._tgl_resume.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
         row, self._tgl_updates = toggle_row("Vérifier les mises à jour au démarrage", self.config.check_updates)
@@ -239,6 +215,12 @@ class SettingsDialog(QDialog):
         about_row = QHBoxLayout()
         about_row.setSpacing(10)
 
+        btn_website = QPushButton("Site web")
+        btn_website.setObjectName("btnPath")
+        btn_website.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_website.clicked.connect(self._on_website)
+        about_row.addWidget(btn_website)
+
         btn_discord = QPushButton("Rejoindre le Discord")
         btn_discord.setObjectName("btnPath")
         btn_discord.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -283,7 +265,6 @@ class SettingsDialog(QDialog):
 
     def _on_setting_changed(self) -> None:
         self.config.delete_archives = self._tgl_delete.isChecked()
-        self.config.resume_downloads = self._tgl_resume.isChecked()
         self.config.check_updates = self._tgl_updates.isChecked()
         self.config.autoplay_videos = self._tgl_autoplay.isChecked()
         self.config.mute_videos = self._tgl_mute.isChecked()
@@ -296,19 +277,23 @@ class SettingsDialog(QDialog):
         except TypeError:
             pass
         if self._scan_worker.isRunning():
-            self._scan_worker.wait(2000)
+            # Sans attente complète, le QThread serait détruit avec le dialog
+            # alors qu'il tourne encore → crash. L'interruption est vérifiée
+            # à chaque fichier scanné, le wait() est donc borné en pratique.
+            self._scan_worker.requestInterruption()
+            self._scan_worker.wait()
         super().closeEvent(event)
 
     def _on_open_install_folder(self) -> None:
-        from PyQt6.QtGui import QDesktopServices
-        from PyQt6.QtCore import QUrl
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.config.install_path)))
+        open_local_path(str(self.config.install_path))
+
+    @staticmethod
+    def _on_website() -> None:
+        open_url("https://acciolauncher.be/")
 
     @staticmethod
     def _on_discord() -> None:
-        from PyQt6.QtGui import QDesktopServices
-        from PyQt6.QtCore import QUrl
-        QDesktopServices.openUrl(QUrl("https://discord.gg/TNwDQd7KGe"))
+        open_url("https://discord.gg/TNwDQd7KGe")
 
     def _on_refresh_catalog(self) -> None:
         self._update_status.setText("Actualisation du catalogue…")

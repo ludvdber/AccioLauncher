@@ -14,14 +14,24 @@ from PyQt6.QtWidgets import (
 
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager
+from src.core.version_utils import compare_versions
 from src.ui.fonts import cinzel, body_font
 from src.core.formatting import format_size
+
+
+def _date_sort_key(date_str: str) -> tuple[int, ...]:
+    """Tuple parsable depuis une date 'YYYY-MM-DD' ; tolérant aux formats cassés."""
+    try:
+        return tuple(int(x) for x in date_str.split("-"))
+    except (ValueError, AttributeError):
+        return (0,)
 
 
 class VersionsDialog(QDialog):
     """Versions et changelog — permet upgrade et downgrade."""
 
-    install_version = pyqtSignal(str, str)  # (game_id, version)
+    # Émis pour demander un swap de version (uninstall current → install target).
+    switch_to_version = pyqtSignal(str, str)  # (game_id, version)
 
     def __init__(self, game: GameData, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -69,8 +79,8 @@ class VersionsDialog(QDialog):
         content_layout.setContentsMargins(0, 0, 8, 0)
         content_layout.setSpacing(16)
 
-        # Versions triées par date décroissante
-        versions = sorted(self.game.versions, key=lambda v: v.date, reverse=True)
+        # Versions triées par date décroissante (parsing safe vs format cassé)
+        versions = sorted(self.game.versions, key=lambda v: _date_sort_key(v.date), reverse=True)
         for ver in versions:
             content_layout.addWidget(self._build_version_card(ver))
 
@@ -197,8 +207,6 @@ class VersionsDialog(QDialog):
             btn_layout.addStretch()
 
             if self._installed_version is not None:
-                # Jeu installé mais version différente
-                from src.core.version_utils import compare_versions
                 if compare_versions(ver.version, self._installed_version) > 0:
                     btn_text = f"Mettre à jour vers v{ver.version}"
                 else:
@@ -238,5 +246,5 @@ class VersionsDialog(QDialog):
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self.install_version.emit(self.game.id, version)
+            self.switch_to_version.emit(self.game.id, version)
             self.accept()

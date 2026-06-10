@@ -9,6 +9,7 @@ import pytest
 from src.core.config import Config
 from src.core.game_data import GameData, GameVersion, PreLaunch, IniPatch, PostInstall, Catalog
 from src.core.game_manager import GameManager, GameState, _is_safe_relative
+from src.core.pre_launch import apply_ini_patches, create_pre_launch_files, unblock_game_dlls
 from src.core.system_checks import check_vcredist_x86, check_d3d11_feature_level
 
 
@@ -135,6 +136,25 @@ class TestGameManager:
         assert mgr.get_state("hp_test") == GameState.DOWNLOADING
         assert mgr.catalog.catalog_version == "2.0"
 
+    def test_refresh_states_detects_removed_game(self, tmp_path):
+        """Régression : après changement d'install_path, les états doivent être re-détectés."""
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True)
+        exe.write_text("fake")
+        mgr = _make_manager(tmp_path)
+        assert mgr.get_state("hp_test") == GameState.INSTALLED
+
+        mgr.config.install_path = tmp_path / "nouveau_dossier"
+        mgr.refresh_states()
+        assert mgr.get_state("hp_test") == GameState.NOT_INSTALLED
+
+    def test_refresh_states_preserves_transient(self, tmp_path):
+        """Un téléchargement en cours ne doit pas être écrasé par la re-détection."""
+        mgr = _make_manager(tmp_path)
+        mgr.set_game_state("hp_test", GameState.DOWNLOADING)
+        mgr.refresh_states()
+        assert mgr.get_state("hp_test") == GameState.DOWNLOADING
+
     def test_uninstall(self, tmp_path):
         game_dir = tmp_path / "HPTest" / "System"
         game_dir.mkdir(parents=True)
@@ -166,12 +186,15 @@ class TestGameManager:
         result = mgr.launch_game("hp_test")
         assert result is None
 
-    def test_launch_unsafe_path(self, tmp_path):
+    def test_unsafe_executable_rejected_at_parse(self):
+        """Validation early : path traversal refusé au parsing du catalog."""
         bad_dict = {**GAME_DICT, "executable": "../../../evil.exe"}
-        game = GameData.from_dict(bad_dict)
-        mgr = _make_manager(tmp_path, games=[game])
-        result = mgr.launch_game("hp_test")
-        assert result is None
+        with pytest.raises(ValueError, match="executable non"):
+            GameData.from_dict(bad_dict)
+        with pytest.raises(ValueError, match="executable non"):
+            GameData.from_dict({**GAME_DICT, "executable": "/etc/passwd"})
+        with pytest.raises(ValueError, match="executable non"):
+            GameData.from_dict({**GAME_DICT, "executable": "C:\\Windows\\evil.exe"})
 
 
 # ── Tests DLL unblock ──
@@ -183,7 +206,7 @@ class TestUnblockDlls:
         # Créer un faux Zone.Identifier (NTFS alternate data stream)
         # On ne peut pas facilement tester les ADS hors NTFS,
         # mais on vérifie que la méthode ne crashe pas
-        GameManager._unblock_game_dlls(tmp_path)
+        unblock_game_dlls(tmp_path)
         # Pas de crash = OK
 
 
@@ -200,8 +223,8 @@ class TestPreLaunch:
         game = GameData.from_dict(game_dict)
         mgr = _make_manager(tmp_path, games=[game])
         # Patch get_documents_dir to return tmp_path
-        with patch("src.core.game_manager.get_documents_dir", return_value=tmp_path):
-            mgr._create_pre_launch_files(game)
+        with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
+            create_pre_launch_files(game, mgr.config)
         assert (tmp_path / "TestDir" / "Running.ini").exists()
 
     def test_apply_ini_patches(self, tmp_path):
@@ -221,8 +244,8 @@ class TestPreLaunch:
         }
         game = GameData.from_dict(game_dict)
         mgr = _make_manager(tmp_path, games=[game])
-        with patch("src.core.game_manager.get_documents_dir", return_value=tmp_path):
-            mgr.apply_pre_launch_patches(game)
+        with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
+            apply_ini_patches(game, mgr.config)
 
         content = ini_file.read_text(encoding="utf-8")
         assert "GameRenderDevice=NewValue" in content
@@ -244,8 +267,8 @@ class TestPreLaunch:
         }
         game = GameData.from_dict(game_dict)
         mgr = _make_manager(tmp_path, games=[game])
-        with patch("src.core.game_manager.get_documents_dir", return_value=tmp_path):
-            mgr.apply_pre_launch_patches(game)
+        with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
+            apply_ini_patches(game, mgr.config)
 
         content = ini_file.read_text(encoding="utf-8")
         assert "NewKey=NewValue" in content
@@ -267,8 +290,8 @@ class TestPreLaunch:
         }
         game = GameData.from_dict(game_dict)
         mgr = _make_manager(tmp_path, games=[game])
-        with patch("src.core.game_manager.get_documents_dir", return_value=tmp_path):
-            mgr.apply_pre_launch_patches(game)
+        with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
+            apply_ini_patches(game, mgr.config)
 
         content = ini_file.read_text(encoding="utf-8")
         assert "[NewSection]" in content

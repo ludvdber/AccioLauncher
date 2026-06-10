@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 MAX_RETRIES = 3
 BACKOFF_BASE = 1  # secondes
 CHUNK_SIZE = 256 * 1024  # 256 Ko
+SIZE_OVERHEAD_FACTOR = 1.5  # tolérance vs size_mb du catalog avant abandon
 
 _ALLOWED_SCHEMES = {"https"}
 _TIMEOUT = httpx.Timeout(connect=15.0, read=120.0, write=30.0, pool=10.0)
@@ -31,21 +32,29 @@ class Downloader(QThread):
     """Télécharge une archive (simple ou multi-parts) en arrière-plan."""
 
     progress = pyqtSignal(int, int)   # (octets_téléchargés, octets_total)
-    finished = pyqtSignal(str)        # chemin du fichier téléchargé
-    error = pyqtSignal(str)           # message d'erreur
-    part_info = pyqtSignal(int, int)  # (part_courante, total_parts) — multi-parts uniquement
+    # NB : pas `finished` — ça masquerait le signal natif QThread.finished
+    # (utilisé par GameOperations pour le nettoyage différé des threads annulés).
+    download_finished = pyqtSignal(str)  # chemin du fichier téléchargé
+    error = pyqtSignal(str)              # message d'erreur
+    part_info = pyqtSignal(int, int)     # (part_courante, total_parts) — multi-parts uniquement
 
     def __init__(
         self,
         url: str | None,
         destination: Path,
         parts: list[str] | None = None,
+        expected_size_mb: int = 0,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self.url = url
         self.destination = destination
         self.parts = parts
+        # Cap = expected_size_mb * SIZE_OVERHEAD_FACTOR. 0 = pas de cap (rétro-compat).
+        self._max_total_bytes = (
+            int(expected_size_mb * SIZE_OVERHEAD_FACTOR * 1024 * 1024)
+            if expected_size_mb > 0 else 0
+        )
         self._cancel_event = threading.Event()
         self._last_emit = 0.0
 
@@ -90,7 +99,7 @@ class Downloader(QThread):
                     return
                 part_path.replace(self.destination)
                 log.info("Téléchargement terminé : %s", self.destination)
-                self.finished.emit(str(self.destination))
+                self.download_finished.emit(str(self.destination))
                 return
             except (httpx.HTTPError, OSError) as exc:
                 log.warning("Tentative %d/%d échouée : %s", attempt, MAX_RETRIES, exc)
@@ -166,9 +175,10 @@ class Downloader(QThread):
                 with py7zr.SevenZipFile(first_part, mode="r") as _:
                     pass
                 log.info("py7zr supporte les archives split — pas de concaténation nécessaire")
-                self.finished.emit(str(first_part))
+                self.download_finished.emit(str(first_part))
                 return
-            except Exception:
+            except (FileNotFoundError, OSError, py7zr.exceptions.UnsupportedCompressionMethodError):
+                # py7zr ne sait pas lire le split — fallback concaténation
                 log.info("py7zr ne supporte pas le split — concaténation des parts")
 
         # Étape 3 : concaténer les parts
@@ -186,7 +196,7 @@ class Downloader(QThread):
             return
 
         log.info("Téléchargement multi-parts terminé : %s", self.destination)
-        self.finished.emit(str(self.destination))
+        self.download_finished.emit(str(self.destination))
 
     # ─── Streaming avec reprise ───
 
@@ -227,6 +237,13 @@ class Downloader(QThread):
                         total = content_length
                         downloaded = 0
 
+                    # Cap : refuser si le serveur annonce > expected * 1.5
+                    if self._max_total_bytes and total > self._max_total_bytes:
+                        raise OSError(
+                            f"Taille annoncée ({total} octets) dépasse la limite "
+                            f"({self._max_total_bytes} octets)"
+                        )
+
                     mode = "ab" if response.status_code == 206 else "wb"
                     with open(part_path, mode) as f:
                         for chunk in response.iter_bytes(CHUNK_SIZE):
@@ -234,6 +251,12 @@ class Downloader(QThread):
                                 return
                             f.write(chunk)
                             downloaded += len(chunk)
+                            # Cap en cours de stream (Content-Length manquant ou menteur)
+                            if self._max_total_bytes and downloaded > self._max_total_bytes:
+                                raise OSError(
+                                    f"Téléchargement dépasse la limite ({downloaded} > "
+                                    f"{self._max_total_bytes} octets)"
+                                )
                             now = time.monotonic()
                             if now - self._last_emit >= 0.1:
                                 self.progress.emit(downloaded, total)

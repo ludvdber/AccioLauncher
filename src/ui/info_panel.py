@@ -9,6 +9,7 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
+from src.ui.utils import clear_layout
 from src.core.formatting import format_size
 
 
@@ -20,8 +21,9 @@ class InfoPanel(QScrollArea):
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._manager = manager
-        self._desc_expanded = False
-        self._full_desc = ""
+        # _desc_expanded et _full_desc sont initialisés par _set_desc_text au premier apply_game
+        self._desc_expanded: bool = False
+        self._full_desc: str = ""
 
         self._setup_scroll()
         self._layout = QVBoxLayout()
@@ -201,7 +203,6 @@ class InfoPanel(QScrollArea):
     # ──────────────────── Tags ────────────────────
 
     def _refresh_tags(self, game: GameData) -> None:
-        from src.ui.utils import clear_layout
         clear_layout(self._tags_layout)
         for tag in game.tags:
             badge = QLabel(tag.upper())

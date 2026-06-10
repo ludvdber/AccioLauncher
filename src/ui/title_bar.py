@@ -30,12 +30,14 @@ class TitleBar(QWidget):
         layout.addStretch()
 
         # Boutons minimalistes
-        for text, slot, hover_bg in (
-            ("\u2500", self._on_minimize, "rgba(255,255,255,0.08)"),
-            ("\u25a1", self._on_maximize, "rgba(255,255,255,0.08)"),
-            ("\u2715", self._on_close, "#c0392b"),
+        for text, slot, hover_bg, label in (
+            ("\u2500", self._on_minimize, "rgba(255,255,255,0.08)", "R\u00e9duire"),
+            ("\u25a1", self._on_maximize, "rgba(255,255,255,0.08)", "Agrandir"),
+            ("\u2715", self._on_close, "#c0392b", "Fermer"),
         ):
             btn = QPushButton(text)
+            btn.setAccessibleName(label)
+            btn.setToolTip(label)
             btn.setFixedSize(44, 38)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setStyleSheet(
@@ -72,10 +74,16 @@ class TitleBar(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             if self._window.isMaximized():
                 # Restore first, reposition window so cursor stays on the title bar
-                cursor_x = event.globalPosition().x()
+                from PyQt6.QtGui import QGuiApplication
+                global_pt = event.globalPosition().toPoint()
                 self._window.showNormal()
                 geo = self._window.frameGeometry()
-                new_x = int(cursor_x - geo.width() * 0.5)
+                new_x = int(global_pt.x() - geo.width() * 0.5)
+                # Borner aux limites de l'écran sous le curseur (multi-monitor safe)
+                screen = QGuiApplication.screenAt(global_pt)
+                if screen is not None:
+                    sg = screen.availableGeometry()
+                    new_x = max(sg.x(), min(new_x, sg.x() + sg.width() - geo.width()))
                 self._window.move(new_x, 0)
                 self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
             else:

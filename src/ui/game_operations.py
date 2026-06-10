@@ -45,6 +45,9 @@ class GameOperations(QObject):
         self._speed_tracker = SpeedTracker()
         self._target_version: GameVersion | None = None
         self._active_game: GameData | None = None
+        # Downloaders annulés dont le thread n'a pas fini dans le délai
+        # (read réseau bloquant) — gardés vivants jusqu'à leur fin réelle.
+        self._zombies: list[Downloader] = []
 
     @property
     def is_busy(self) -> bool:
@@ -83,10 +86,12 @@ class GameOperations(QObject):
         dest = self._manager.config.cache_path / archive_name
         self._downloader = Downloader(
             url=version.download_url, destination=dest,
-            parts=version.download_parts, parent=self,
+            parts=version.download_parts,
+            expected_size_mb=version.size_mb,
+            parent=self,
         )
         self._downloader.progress.connect(self._on_download_progress)
-        self._downloader.finished.connect(self._on_download_finished)
+        self._downloader.download_finished.connect(self._on_download_finished)
         self._downloader.error.connect(self._on_download_error)
         if version.download_parts:
             self._downloader.part_info.connect(self._on_part_info)
@@ -94,22 +99,31 @@ class GameOperations(QObject):
 
     def cancel_download(self) -> None:
         """Annule le téléchargement en cours."""
+        dl = self._downloader
+        self._downloader = None
         dest: Path | None = None
-        if self._downloader is not None:
-            dest = self._downloader.destination
-            self._downloader.progress.disconnect(self._on_download_progress)
-            self._downloader.finished.disconnect(self._on_download_finished)
-            self._downloader.error.disconnect(self._on_download_error)
-            try:
-                self._downloader.part_info.disconnect(self._on_part_info)
-            except TypeError:
-                pass
-            self._downloader.cancel()
-            self._downloader = None
+        if dl is not None:
+            dest = dl.destination
+            self._disconnect_downloader(dl)
+            dl.cancel()
+            # Attendre l'arrêt réel du thread : sans ça, un re-téléchargement
+            # immédiat rouvre le même .part pendant que l'ancien thread écrit
+            # encore → PermissionError (verrou de fichier Windows).
+            if dl.wait(3000):
+                dl.deleteLater()
+            else:
+                # Thread bloqué sur un read réseau (timeout jusqu'à 120 s) :
+                # nettoyage différé via le QThread.finished natif.
+                log.warning("Downloader encore actif après annulation — nettoyage différé")
+                self._zombies.append(dl)
+                dl.finished.connect(lambda: self._reap_zombie(dl))
         # Nettoyer le fichier .part résiduel
         if dest is not None:
             part_path = dest.with_suffix(dest.suffix + ".part")
-            part_path.unlink(missing_ok=True)
+            try:
+                part_path.unlink(missing_ok=True)
+            except OSError:
+                pass  # encore verrouillé par un thread zombie — repris au prochain download
         game = self._active_game
         self._active_game = None
         self._target_version = None
@@ -126,6 +140,37 @@ class GameOperations(QObject):
         if self._installer is not None:
             self._installer.cancel()
             self._installer.wait(3000)
+        for z in self._zombies:
+            z.wait(1000)
+        self._zombies.clear()
+
+    def _reap_zombie(self, dl: Downloader) -> None:
+        """Détruit un downloader annulé une fois son thread réellement terminé."""
+        if dl in self._zombies:
+            self._zombies.remove(dl)
+        dl.deleteLater()
+
+    def _disconnect_downloader(self, dl: Downloader) -> None:
+        """Disconnect symétrique des signaux du downloader."""
+        try:
+            dl.progress.disconnect(self._on_download_progress)
+            dl.download_finished.disconnect(self._on_download_finished)
+            dl.error.disconnect(self._on_download_error)
+        except TypeError:
+            pass
+        try:
+            dl.part_info.disconnect(self._on_part_info)
+        except TypeError:
+            pass
+
+    def _disconnect_installer(self, inst: Installer) -> None:
+        """Disconnect symétrique des signaux de l'installer."""
+        try:
+            inst.progress.disconnect(self._on_install_progress)
+            inst.install_finished.disconnect(self._on_install_finished)
+            inst.error.disconnect(self._on_install_error)
+        except TypeError:
+            pass
 
     # ──────────────────── Installation ────────────────────
 
@@ -149,7 +194,7 @@ class GameOperations(QObject):
             delete_archive=delete_archive, parent=self,
         )
         self._installer.progress.connect(self._on_install_progress)
-        self._installer.finished.connect(self._on_install_finished)
+        self._installer.install_finished.connect(self._on_install_finished)
         self._installer.error.connect(self._on_install_error)
         self._installer.start()
 
@@ -179,6 +224,8 @@ class GameOperations(QObject):
         )
 
     def _on_download_finished(self, archive_path_str: str) -> None:
+        if self._downloader is not None:
+            self._disconnect_downloader(self._downloader)
         self._downloader = None
         game = self._active_game
         if game is None:
@@ -188,6 +235,8 @@ class GameOperations(QObject):
                      delete_archive=self._manager.config.delete_archives)
 
     def _on_download_error(self, message: str) -> None:
+        if self._downloader is not None:
+            self._disconnect_downloader(self._downloader)
         self._downloader = None
         game = self._active_game
         self._active_game = None
@@ -210,6 +259,8 @@ class GameOperations(QObject):
         self.install_progress.emit(pct)
 
     def _on_install_finished(self, _path: str) -> None:
+        if self._installer is not None:
+            self._disconnect_installer(self._installer)
         self._installer = None
         game = self._active_game
         self._active_game = None
@@ -229,7 +280,8 @@ class GameOperations(QObject):
             )
             return
 
-        self._manager.apply_pre_launch_patches(game)
+        # NB : pas d'apply_pre_launch_patches ici — les .ini live dans Documents
+        # et n'existent souvent pas encore à ce stade. Ils seront patchés au lancement.
         self._manager.set_game_state(game.id, GameState.INSTALLED)
         target_ver = self._target_version
         self._target_version = None
@@ -239,6 +291,8 @@ class GameOperations(QObject):
         self.operation_finished.emit(game)
 
     def _on_install_error(self, message: str) -> None:
+        if self._installer is not None:
+            self._disconnect_installer(self._installer)
         self._installer = None
         game = self._active_game
         self._active_game = None

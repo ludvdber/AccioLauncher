@@ -27,12 +27,23 @@ class TestConfig:
         c = Config()
         assert c.langue == "fr"
         assert c.delete_archives is True
-        assert c.resume_downloads is True
         assert c.check_updates is True
         assert c.autoplay_videos is True
         assert c.mute_videos is False
         assert c.dismissed_launcher_version == ""
         assert c.installed_versions == {}
+
+    def test_load_ignores_obsolete_resume_downloads(self, tmp_path):
+        """Tolérant aux configs antérieures avec resume_downloads."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text(
+            '{"langue":"fr","resume_downloads":true,"delete_archives":false}',
+            encoding="utf-8",
+        )
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            c = Config.load()
+            assert c.delete_archives is False
+            assert not hasattr(c, "resume_downloads")
 
     def test_save_and_load(self, tmp_path):
         config_file = tmp_path / "config.json"

@@ -5,8 +5,6 @@ __pycache__/
 *.pyd
 *.egg-info/
 *.egg
-dist/
-build/output/
 *.spec.bak
 
 # Virtual environments
@@ -14,9 +12,10 @@ venv/
 .venv/
 env/
 
-# PyInstaller
+# Build / packaging
 dist/
 build/accio_launcher/
+build/output/
 *.manifest
 
 # Fichiers générés
@@ -43,9 +42,22 @@ Desktop.ini
 .env
 *.env.local
 
-# Logs
+# Logs (incl. accio_launcher.log + rotation)
 *.log
-
-# Accio Launcher runtime
 accio_launcher.log*
+
+# Caches outils
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Couverture de tests
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Documents privés / audits
 WEBSITE_BRIEF.md
+AUDIT_*.md
+.claudeignore

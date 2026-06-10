@@ -9,7 +9,8 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
-from src.core.formatting import format_size, format_bytes, format_speed, format_eta
+from src.core.formatting import format_size, format_progress_line, append_part_info
+from src.ui.utils import clear_layout
 
 
 class ActionPanel(QWidget):
@@ -94,15 +95,9 @@ class ActionPanel(QWidget):
         if self._progress_bar is not None:
             self._progress_bar.setValue(pct)
         if self._download_label is not None:
-            parts = [
-                f"Téléchargement : {pct}%",
-                f"{format_bytes(downloaded)} / {format_bytes(total)}",
-                format_speed(speed),
-            ]
-            eta_str = format_eta(eta_seconds)
-            if eta_str:
-                parts.append(eta_str)
-            self._download_label.setText(" \u2014 ".join(parts))
+            self._download_label.setText(
+                format_progress_line(downloaded, total, speed, eta_seconds, with_label=True)
+            )
 
     def update_install_progress(self, pct: int) -> None:
         if self._install_bar is not None:
@@ -110,10 +105,9 @@ class ActionPanel(QWidget):
 
     def update_part_info(self, current: int, total: int) -> None:
         if self._download_label is not None:
-            text = self._download_label.text()
-            if "partie" in text:
-                text = text[:text.index("partie")].rstrip(" — ")
-            self._download_label.setText(f"{text} — partie {current}/{total}")
+            self._download_label.setText(
+                append_part_info(self._download_label.text(), current, total)
+            )
 
     # ── Construction des états ──
 
@@ -122,6 +116,7 @@ class ActionPanel(QWidget):
         size = format_size(dl.size_mb) if dl else "?"
         btn = GlowButton(f"TÉLÉCHARGER  \u2014  {size}", glow_color="#d4a017", style="outline")
         btn.setObjectName("btnDownload")
+        btn.setAccessibleName(f"Télécharger {self._game.name}")
         btn.setFont(cinzel(13, bold=True))
         btn.setFixedSize(300, 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -164,6 +159,7 @@ class ActionPanel(QWidget):
         btn_play = GlowButton("JOUER", glow_color="#2ecc71", style="filled",
                               bg_stops=("#2ecc71", "#27ae60", "#1a9c54"), text_color="#ffffff")
         btn_play.setObjectName("btnPlay")
+        btn_play.setAccessibleName(f"Jouer à {self._game.name}")
         btn_play.setFont(cinzel(15, bold=True))
         btn_play.setFixedSize(200, 48)
         btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -172,6 +168,7 @@ class ActionPanel(QWidget):
 
         btn_uninstall = GlowButton("DÉSINSTALLER", glow_color="#8a8aaa", style="outline", text_color="#8a8aaa")
         btn_uninstall.setObjectName("btnUninstall")
+        btn_uninstall.setAccessibleName(f"Désinstaller {self._game.name}")
         btn_uninstall.setFont(cinzel(10, bold=True))
         btn_uninstall.setFixedSize(160, 36)
         btn_uninstall.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -198,5 +195,4 @@ class ActionPanel(QWidget):
 
     @staticmethod
     def _clear_layout(layout) -> None:
-        from src.ui.utils import clear_layout
         clear_layout(layout)
