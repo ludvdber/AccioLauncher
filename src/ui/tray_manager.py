@@ -4,6 +4,8 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon, QWidget
 
+from src.core.i18n import tr
+
 
 class TrayManager(QObject):
     """Gère l'icône system tray + menu contextuel.
@@ -21,11 +23,11 @@ class TrayManager(QObject):
         self._tray.setToolTip("Accio Launcher")
 
         menu = QMenu()
-        act_restore = QAction("Restaurer Accio Launcher", parent)
+        act_restore = QAction(tr("Restaurer Accio Launcher"), parent)
         act_restore.triggered.connect(self.restore_requested.emit)
         menu.addAction(act_restore)
         menu.addSeparator()
-        act_quit = QAction("Quitter", parent)
+        act_quit = QAction(tr("Quitter"), parent)
         act_quit.triggered.connect(self.quit_requested.emit)
         menu.addAction(act_quit)
 
@@ -44,3 +46,9 @@ class TrayManager(QObject):
 
     def set_tooltip(self, tooltip: str) -> None:
         self._tray.setToolTip(tooltip)
+
+    def show_notification(self, title: str, message: str, msecs: int = 5000) -> None:
+        """Notification système (visible uniquement si l'icône tray est affichée)."""
+        self._tray.showMessage(
+            title, message, QSystemTrayIcon.MessageIcon.Information, msecs,
+        )

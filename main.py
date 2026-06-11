@@ -101,8 +101,23 @@ def main():
 
     log = logging.getLogger(__name__)
 
+    # Identité applicative explicite : groupement taskbar, icône et
+    # notifications corrects (sinon Windows regroupe sous "python.exe" en dev).
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ASTeam.AccioLauncher")
+        except (AttributeError, OSError):
+            pass
+
     try:
         app = QApplication(sys.argv)
+
+        # Instance unique : un second lancement active la fenêtre existante et quitte.
+        from src.ui.single_instance import SingleInstance
+        guard = SingleInstance()
+        if not guard.try_acquire():
+            sys.exit(0)
 
         splash = _create_splash()
         splash.show()
@@ -117,6 +132,7 @@ def main():
             splash.close()
 
         window = MainWindow()
+        guard.activate_requested.connect(window.bring_to_front)
         window.show()
         splash.finish(window)
         sys.exit(app.exec())

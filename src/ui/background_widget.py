@@ -31,6 +31,10 @@ class BackgroundWidget(QWidget):
         self._prepared_for: tuple[int, int] = (0, 0)
         self._opacity = 1.0
         self._video_frame: QImage | None = None
+        # Overlays statiques (gradients + vignette + voile) pré-rendus — ils ne
+        # dépendent que de la taille ; les rebâtir à chaque frame coûtait cher.
+        self._overlay_cache: QPixmap | None = None
+        self._overlay_for: tuple[int, int] = (0, 0)
 
         # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16s)
         self._zoom = 1.0
@@ -128,9 +132,11 @@ class BackgroundWidget(QWidget):
             self._parallax_timer.start()
 
     def invalidate_cache(self) -> None:
-        """Force le recalcul du pixmap préparé au prochain paintEvent."""
+        """Force le recalcul du pixmap préparé et des overlays au prochain paintEvent."""
         self._prepared = None
         self._prepared_for = (0, 0)
+        self._overlay_cache = None
+        self._overlay_for = (0, 0)
 
     def set_video_frame(self, image: QImage | None) -> None:
         """Reçoit une frame vidéo à peindre à la place de l'image statique."""
@@ -223,8 +229,25 @@ class BackgroundWidget(QWidget):
             # Overlay brightness (seulement sur l'image statique)
             p.fillRect(rect, QColor(0, 0, 0, 77))
 
-        # ── Permanent elements (opacity 1.0) ──
+        # ── Permanent elements (opacity 1.0) — pré-rendus dans un pixmap ──
         p.setOpacity(1.0)
+        self._ensure_overlay(w, h)
+        if self._overlay_cache is not None:
+            p.drawPixmap(0, 0, self._overlay_cache)
+
+        p.end()
+
+    def _ensure_overlay(self, w: int, h: int) -> None:
+        """(Re)construit le pixmap des overlays statiques si la taille a changé."""
+        if w <= 0 or h <= 0:
+            return
+        if self._overlay_cache is not None and self._overlay_for == (w, h):
+            return
+
+        pix = QPixmap(w, h)
+        pix.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pix)
+        rect = pix.rect()
 
         # Subtle dark blue overlay
         p.fillRect(rect, QColor(6, 6, 17, 30))
@@ -254,7 +277,7 @@ class BackgroundWidget(QWidget):
         vignette.setColorAt(1.0, QColor(0, 0, 0, 230))
         p.fillRect(rect, vignette)
 
-        # ── Voile gauche — simple dégradé horizontal, pas de blur ──
+        # Voile gauche — simple dégradé horizontal, pas de blur
         veil_grad = QLinearGradient(0, 0, w, 0)
         veil_grad.setColorAt(0.0, QColor(6, 6, 17, 200))
         veil_grad.setColorAt(0.25, QColor(6, 6, 17, 150))
@@ -264,3 +287,5 @@ class BackgroundWidget(QWidget):
         p.fillRect(rect, veil_grad)
 
         p.end()
+        self._overlay_cache = pix
+        self._overlay_for = (w, h)

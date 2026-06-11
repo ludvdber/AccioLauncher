@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (
 
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
+from src.core.i18n import tr
+from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
 from src.core.formatting import format_size, format_progress_line, append_part_info
@@ -114,9 +116,9 @@ class ActionPanel(QWidget):
     def _build_not_installed(self) -> None:
         dl = self._game.current_download
         size = format_size(dl.size_mb) if dl else "?"
-        btn = GlowButton(f"TÉLÉCHARGER  \u2014  {size}", glow_color="#d4a017", style="outline")
+        btn = GlowButton(f"{tr('TÉLÉCHARGER')}  \u2014  {size}", glow_color="#d4a017", style="outline")
         btn.setObjectName("btnDownload")
-        btn.setAccessibleName(f"Télécharger {self._game.name}")
+        btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
         btn.setFont(cinzel(13, bold=True))
         btn.setFixedSize(300, 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -136,10 +138,10 @@ class ActionPanel(QWidget):
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(12)
-        self._download_label = QLabel("Téléchargement : 0%")
+        self._download_label = QLabel(f"{tr('Téléchargement :')} 0%")
         self._download_label.setObjectName("downloadLabel")
         row_layout.addWidget(self._download_label, stretch=1)
-        btn_cancel = QPushButton("Annuler")
+        btn_cancel = QPushButton(tr("Annuler"))
         btn_cancel.setObjectName("btnCancel")
         btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cancel.clicked.connect(self.cancel_clicked)
@@ -151,24 +153,24 @@ class ActionPanel(QWidget):
         self._install_bar = QProgressBar()
         self._install_bar.setRange(0, 100)
         self._install_bar.setValue(0)
-        self._install_bar.setFormat("Installation\u2026 %p%")
+        self._install_bar.setFormat(tr("Installation\u2026 %p%"))
         self._install_bar.setFixedWidth(400)
         self._action_layout.addWidget(self._install_bar)
 
     def _build_installed(self) -> None:
-        btn_play = GlowButton("JOUER", glow_color="#2ecc71", style="filled",
+        btn_play = GlowButton(tr("JOUER"), glow_color="#2ecc71", style="filled",
                               bg_stops=("#2ecc71", "#27ae60", "#1a9c54"), text_color="#ffffff")
         btn_play.setObjectName("btnPlay")
-        btn_play.setAccessibleName(f"Jouer à {self._game.name}")
+        btn_play.setAccessibleName(tr("Jouer à {}").format(self._game.name))
         btn_play.setFont(cinzel(15, bold=True))
         btn_play.setFixedSize(200, 48)
         btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_play.clicked.connect(self.play_clicked)
         self._action_layout.addWidget(btn_play)
 
-        btn_uninstall = GlowButton("DÉSINSTALLER", glow_color="#8a8aaa", style="outline", text_color="#8a8aaa")
+        btn_uninstall = GlowButton(tr("DÉSINSTALLER"), glow_color="#8a8aaa", style="outline", text_color="#8a8aaa")
         btn_uninstall.setObjectName("btnUninstall")
-        btn_uninstall.setAccessibleName(f"Désinstaller {self._game.name}")
+        btn_uninstall.setAccessibleName(tr("Désinstaller {}").format(self._game.name))
         btn_uninstall.setFont(cinzel(10, bold=True))
         btn_uninstall.setFixedSize(160, 36)
         btn_uninstall.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -178,17 +180,16 @@ class ActionPanel(QWidget):
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"
             recommended = self._game.recommended_version
-            lbl = QLabel(f"Mise à jour disponible : v{installed_ver} → v{recommended}")
+            lbl = QLabel(tr("Mise à jour disponible : v{} → v{}").format(installed_ver, recommended))
             lbl.setFont(body_font(12))
             lbl.setStyleSheet("color: #d4a017; background: transparent;")
-            link = QLabel("Mettre à jour")
+            link = ClickableLabel(tr("Mettre à jour"))
             link.setFont(body_font(12))
-            link.setCursor(Qt.CursorShape.PointingHandCursor)
             link.setStyleSheet(
                 "QLabel { color: #d4a017; background: transparent; text-decoration: underline; }"
                 "QLabel:hover { color: #e8c547; }"
             )
-            link.mousePressEvent = lambda e: self.update_clicked.emit() if e.button() == Qt.MouseButton.LeftButton else None
+            link.clicked.connect(self.update_clicked)
             self._update_row_layout.addWidget(lbl)
             self._update_row_layout.addWidget(link)
             self._update_row.show()

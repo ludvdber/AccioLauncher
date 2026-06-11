@@ -7,10 +7,12 @@ from PyQt6.QtWidgets import (
 
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
+from src.core.i18n import tr
+from src.ui.clickable_label import ClickableLabel
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.utils import clear_layout
-from src.core.formatting import format_size
+from src.core.formatting import format_playtime, format_relative_date, format_size
 
 
 class InfoPanel(QScrollArea):
@@ -73,6 +75,15 @@ class InfoPanel(QScrollArea):
 
         # Version + lien changelog
         lay.addWidget(self._build_version_row())
+
+        # Stats de jeu — cachée par défaut, visible uniquement si le jeu a déjà été lancé
+        self._stats_label = QLabel()
+        self._stats_label.setFont(body_font(12))
+        self._stats_label.setStyleSheet(
+            "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
+        )
+        self._stats_label.setVisible(False)
+        lay.addWidget(self._stats_label)
         lay.addSpacing(10)
 
         # Séparateur doré
@@ -95,16 +106,15 @@ class InfoPanel(QScrollArea):
         )
         lay.addWidget(self._desc)
 
-        # Expand/collapse
-        self._btn_expand = QLabel()
+        # Expand/collapse — ClickableLabel : focusable clavier (A11Y)
+        self._btn_expand = ClickableLabel()
         self._btn_expand.setFont(body_font(13))
-        self._btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_expand.setStyleSheet(
             "QLabel { color: #d4a017; background: transparent; padding-top: 4px; }"
             "QLabel:hover { color: #e8c547; }"
         )
         self._btn_expand.setVisible(False)
-        self._btn_expand.mousePressEvent = lambda e: self._toggle_desc() if e.button() == Qt.MouseButton.LeftButton else None
+        self._btn_expand.clicked.connect(self._toggle_desc)
         lay.addWidget(self._btn_expand)
         lay.addSpacing(10)
 
@@ -132,14 +142,13 @@ class InfoPanel(QScrollArea):
         )
         layout.addWidget(self._version_label)
 
-        btn = QLabel("Versions et changelog")
+        btn = ClickableLabel(tr("Versions et changelog"))
         btn.setFont(body_font(12))
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
             "QLabel:hover { color: #e8c547; text-decoration: underline; }"
         )
-        btn.mousePressEvent = lambda e: self.versions_clicked.emit() if e.button() == Qt.MouseButton.LeftButton else None
+        btn.clicked.connect(self.versions_clicked)
         layout.addWidget(btn)
         return row
 
@@ -163,7 +172,10 @@ class InfoPanel(QScrollArea):
 
         # Version
         installed = self._manager.installed_version(game.id)
-        self._version_label.setText(f"Version {installed or game.recommended_version}")
+        self._version_label.setText(tr("Version {}").format(installed or game.recommended_version))
+
+        # Stats de jeu — une seule ligne discrète, affichée uniquement si déjà joué
+        self._refresh_stats(game)
 
         # Description
         self._set_desc_text(game.description)
@@ -185,7 +197,7 @@ class InfoPanel(QScrollArea):
         self._desc_expanded = False
         if len(text) > self._DESC_TRUNCATE:
             self._desc.setText(text[:self._DESC_TRUNCATE].rstrip() + "…")
-            self._btn_expand.setText("Lire la suite…")
+            self._btn_expand.setText(tr("Lire la suite…"))
             self._btn_expand.setVisible(True)
         else:
             self._desc.setText(text)
@@ -195,10 +207,25 @@ class InfoPanel(QScrollArea):
         self._desc_expanded = not self._desc_expanded
         if self._desc_expanded:
             self._desc.setText(self._full_desc)
-            self._btn_expand.setText("Réduire")
+            self._btn_expand.setText(tr("Réduire le texte"))
         else:
             self._desc.setText(self._full_desc[:self._DESC_TRUNCATE].rstrip() + "…")
-            self._btn_expand.setText("Lire la suite…")
+            self._btn_expand.setText(tr("Lire la suite…"))
+
+    # ──────────────────── Stats de jeu ────────────────────
+
+    def _refresh_stats(self, game: GameData) -> None:
+        """Ligne « 14 h de jeu · Dernière session : hier » — cachée si jamais joué."""
+        seconds = self._manager.get_playtime(game.id)
+        if seconds <= 0:
+            self._stats_label.setVisible(False)
+            return
+        parts = [format_playtime(seconds)]
+        last = self._manager.last_played(game.id)
+        if last:
+            parts.append(tr("Dernière session : {}").format(format_relative_date(last)))
+        self._stats_label.setText("  ·  ".join(parts))
+        self._stats_label.setVisible(True)
 
     # ──────────────────── Tags ────────────────────
 

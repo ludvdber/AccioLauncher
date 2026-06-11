@@ -5,6 +5,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QComboBox,
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -17,6 +18,7 @@ from PyQt6.QtWidgets import (
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
 from src.core.formatting import format_bytes
+from src.core.i18n import tr
 from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.toggle_switch import toggle_row
 from src.ui.utils import open_local_path, open_url
@@ -43,7 +45,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.config = config
         self.manager = manager
-        self.setWindowTitle("Paramètres")
+        self.setWindowTitle(tr("Paramètres"))
         self.setMinimumWidth(480)
         self.setStyleSheet(self._style())
         self._build_ui()
@@ -78,6 +80,18 @@ class SettingsDialog(QDialog):
         QPushButton#btnPath:hover {
             border-color: #d4a017;
         }
+        QPushButton#btnKofi {
+            background-color: rgba(212, 160, 23, 0.12);
+            color: #e8c547;
+            border: 1px solid rgba(212, 160, 23, 0.45);
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        QPushButton#btnKofi:hover {
+            background-color: rgba(212, 160, 23, 0.25);
+            border-color: #d4a017;
+        }
         QPushButton#btnClose {
             background-color: #d4a017;
             color: #000000;
@@ -98,13 +112,13 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(24, 20, 24, 20)
 
         # ── Titre
-        title = QLabel("\u2699 Paramètres")
+        title = QLabel(tr("⚙ Paramètres"))
         title.setFont(QFont("Segoe UI", 22, QFont.Weight.Bold))
         title.setStyleSheet("color: #ffffff;")
         layout.addWidget(title)
 
         # ── Dossier d'installation
-        layout.addWidget(self._section("Dossier d'installation"))
+        layout.addWidget(self._section(tr("Dossier d'installation")))
 
         path_row = QHBoxLayout()
         self._path_label = QLabel(str(self.config.install_path))
@@ -112,25 +126,25 @@ class SettingsDialog(QDialog):
         self._path_label.setWordWrap(True)
         path_row.addWidget(self._path_label, stretch=1)
 
-        btn_open = QPushButton("Ouvrir")
+        btn_open = QPushButton(tr("Ouvrir"))
         btn_open.setObjectName("btnPath")
         btn_open.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_open.clicked.connect(self._on_open_install_folder)
         path_row.addWidget(btn_open)
 
-        btn_change = QPushButton("Changer…")
+        btn_change = QPushButton(tr("Changer…"))
         btn_change.setObjectName("btnPath")
         btn_change.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_change.clicked.connect(self._on_change_path)
         path_row.addWidget(btn_change)
         layout.addLayout(path_row)
 
-        self._free_label = QLabel(f"Espace libre : {_disk_free(self.config.install_path)}")
+        self._free_label = QLabel(tr("Espace libre : {}").format(_disk_free(self.config.install_path)))
         self._free_label.setObjectName("subtitle")
         layout.addWidget(self._free_label)
 
         # ── Jeux installés (calcul asynchrone)
-        self._installed_label = QLabel("Calcul de l'espace utilisé…")
+        self._installed_label = QLabel(tr("Calcul de l'espace utilisé…"))
         self._installed_label.setObjectName("subtitle")
         layout.addWidget(self._installed_label)
 
@@ -147,34 +161,63 @@ class SettingsDialog(QDialog):
         self._scan_worker.start()
 
         # ── Téléchargement
-        layout.addWidget(self._section("Téléchargement"))
+        layout.addWidget(self._section(tr("Téléchargement")))
 
-        row, self._tgl_delete = toggle_row("Supprimer les archives après installation", self.config.delete_archives)
+        row, self._tgl_delete = toggle_row(tr("Supprimer les archives après installation"), self.config.delete_archives)
         self._tgl_delete.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
-        row, self._tgl_updates = toggle_row("Vérifier les mises à jour au démarrage", self.config.check_updates)
+        row, self._tgl_updates = toggle_row(tr("Vérifier les mises à jour au démarrage"), self.config.check_updates)
         self._tgl_updates.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
         # ── Affichage
-        layout.addWidget(self._section("Affichage"))
+        layout.addWidget(self._section(tr("Affichage")))
 
-        row, self._tgl_autoplay = toggle_row("Lecture automatique des vidéos", self.config.autoplay_videos)
+        row, self._tgl_autoplay = toggle_row(tr("Lecture automatique des vidéos"), self.config.autoplay_videos)
         self._tgl_autoplay.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
-        row, self._tgl_mute = toggle_row("Couper le son des vidéos", self.config.mute_videos)
+        row, self._tgl_mute = toggle_row(tr("Couper le son des vidéos"), self.config.mute_videos)
         self._tgl_mute.toggled.connect(self._on_setting_changed)
         layout.addWidget(row)
 
+        # ── Intégrations
+        layout.addWidget(self._section(tr("Intégrations")))
+
+        row, self._tgl_discord = toggle_row(tr("Afficher le jeu en cours sur Discord"), self.config.discord_presence)
+        self._tgl_discord.toggled.connect(self._on_setting_changed)
+        layout.addWidget(row)
+
+        # ── Langue
+        layout.addWidget(self._section(tr("Langue")))
+
+        lang_row = QHBoxLayout()
+        self._lang_combo = QComboBox()
+        self._lang_combo.addItem("Français", "fr")
+        self._lang_combo.addItem("English", "en")
+        self._lang_combo.setCurrentIndex(1 if self.config.langue == "en" else 0)
+        self._lang_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._lang_combo.setStyleSheet(
+            "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
+            " border-radius: 6px; padding: 6px 12px; font-size: 13px; }"
+            "QComboBox QAbstractItemView { background: #16213e; color: #ffffff;"
+            " selection-background-color: #2c3e6b; }"
+        )
+        self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
+        lang_row.addWidget(self._lang_combo)
+        self._lang_hint = QLabel("")
+        self._lang_hint.setObjectName("subtitle")
+        lang_row.addWidget(self._lang_hint, stretch=1)
+        layout.addLayout(lang_row)
+
         # ── Mises à jour
-        layout.addWidget(self._section("Mises à jour"))
+        layout.addWidget(self._section(tr("Mises à jour")))
 
         # Versions actuelles
         cat_ver = self.manager.catalog.catalog_version
         self._versions_label = QLabel(
-            f"Launcher v{APP_VERSION}  ·  Catalogue v{cat_ver}"
+            tr("Launcher v{}  ·  Catalogue v{}").format(APP_VERSION, cat_ver)
         )
         self._versions_label.setObjectName("subtitle")
         layout.addWidget(self._versions_label)
@@ -183,13 +226,13 @@ class SettingsDialog(QDialog):
         update_row = QHBoxLayout()
         update_row.setSpacing(10)
 
-        btn_catalog = QPushButton("Actualiser le catalogue")
+        btn_catalog = QPushButton(tr("Actualiser le catalogue"))
         btn_catalog.setObjectName("btnPath")
         btn_catalog.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_catalog.clicked.connect(self._on_refresh_catalog)
         update_row.addWidget(btn_catalog)
 
-        btn_launcher = QPushButton("Vérifier les mises à jour")
+        btn_launcher = QPushButton(tr("Vérifier les mises à jour"))
         btn_launcher.setObjectName("btnPath")
         btn_launcher.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_launcher.clicked.connect(self._on_check_launcher)
@@ -205,9 +248,9 @@ class SettingsDialog(QDialog):
         layout.addWidget(self._update_status)
 
         # ── À propos
-        layout.addWidget(self._section("À propos"))
+        layout.addWidget(self._section(tr("À propos")))
 
-        about_text = QLabel("Launcher pour les jeux Harry Potter sur PC.")
+        about_text = QLabel(tr("Launcher pour les jeux Harry Potter sur PC."))
         about_text.setObjectName("subtitle")
         about_text.setWordWrap(True)
         layout.addWidget(about_text)
@@ -215,17 +258,24 @@ class SettingsDialog(QDialog):
         about_row = QHBoxLayout()
         about_row.setSpacing(10)
 
-        btn_website = QPushButton("Site web")
+        btn_website = QPushButton(tr("Site web"))
         btn_website.setObjectName("btnPath")
         btn_website.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_website.clicked.connect(self._on_website)
         about_row.addWidget(btn_website)
 
-        btn_discord = QPushButton("Rejoindre le Discord")
+        btn_discord = QPushButton(tr("Rejoindre le Discord"))
         btn_discord.setObjectName("btnPath")
         btn_discord.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_discord.clicked.connect(self._on_discord)
         about_row.addWidget(btn_discord)
+
+        btn_kofi = QPushButton(tr("❤ Soutenir sur Ko-fi"))
+        btn_kofi.setObjectName("btnKofi")
+        btn_kofi.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_kofi.setToolTip(tr("Le projet est gratuit — un café aide à payer l'hébergement !"))
+        btn_kofi.clicked.connect(self._on_kofi)
+        about_row.addWidget(btn_kofi)
 
         about_row.addStretch()
         layout.addLayout(about_row)
@@ -233,7 +283,7 @@ class SettingsDialog(QDialog):
         layout.addStretch()
 
         # ── Bouton fermer
-        btn_close = QPushButton("Fermer")
+        btn_close = QPushButton(tr("Fermer"))
         btn_close.setObjectName("btnClose")
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_close.clicked.connect(self.accept)
@@ -248,19 +298,19 @@ class SettingsDialog(QDialog):
     def _on_scan_done(self, count: int, total_bytes: int) -> None:
         """Callback quand le scan disque en arrière-plan est terminé."""
         self._installed_label.setText(
-            f"{count} jeu(x) installé(s) — {format_bytes(total_bytes)} utilisés"
+            tr("{} jeu(x) installé(s) — {} utilisés").format(count, format_bytes(total_bytes))
         )
         log.info("Total installé : %d jeu(x), %s", count, format_bytes(total_bytes))
 
     def _on_change_path(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
-            self, "Changer le dossier d'installation", str(self.config.install_path)
+            self, tr("Changer le dossier d'installation"), str(self.config.install_path)
         )
         if chosen:
             self.config.install_path = Path(chosen)
             self.config.cache_path = Path(chosen) / ".cache"
             self._path_label.setText(chosen)
-            self._free_label.setText(f"Espace libre : {_disk_free(Path(chosen))}")
+            self._free_label.setText(tr("Espace libre : {}").format(_disk_free(Path(chosen))))
             self._save()
 
     def _on_setting_changed(self) -> None:
@@ -268,6 +318,13 @@ class SettingsDialog(QDialog):
         self.config.check_updates = self._tgl_updates.isChecked()
         self.config.autoplay_videos = self._tgl_autoplay.isChecked()
         self.config.mute_videos = self._tgl_mute.isChecked()
+        self.config.discord_presence = self._tgl_discord.isChecked()
+        self._save()
+
+    def _on_language_changed(self) -> None:
+        """Change la langue (effective au prochain démarrage — chaînes posées à la construction)."""
+        self.config.langue = self._lang_combo.currentData()
+        self._lang_hint.setText(tr("Redémarrez le launcher pour appliquer la langue."))
         self._save()
 
     def closeEvent(self, event) -> None:
@@ -292,17 +349,21 @@ class SettingsDialog(QDialog):
         open_url("https://acciolauncher.be/")
 
     @staticmethod
+    def _on_kofi() -> None:
+        open_url("https://ko-fi.com/ludovic01")
+
+    @staticmethod
     def _on_discord() -> None:
         open_url("https://discord.gg/TNwDQd7KGe")
 
     def _on_refresh_catalog(self) -> None:
-        self._update_status.setText("Actualisation du catalogue…")
+        self._update_status.setText(tr("Actualisation du catalogue…"))
         self._update_status.setStyleSheet("color: #d4a017;")
         self._update_status.show()
         self.force_catalog_refresh.emit()
 
     def _on_check_launcher(self) -> None:
-        self._update_status.setText("Vérification des mises à jour…")
+        self._update_status.setText(tr("Vérification des mises à jour…"))
         self._update_status.setStyleSheet("color: #d4a017;")
         self._update_status.show()
         self.force_launcher_check.emit()
@@ -310,9 +371,9 @@ class SettingsDialog(QDialog):
     def update_catalog_version(self, version: str) -> None:
         """Met à jour l'affichage de la version du catalogue après un refresh."""
         self._versions_label.setText(
-            f"Launcher v{APP_VERSION}  ·  Catalogue v{version}"
+            tr("Launcher v{}  ·  Catalogue v{}").format(APP_VERSION, version)
         )
-        self._update_status.setText(f"Catalogue mis à jour en v{version}")
+        self._update_status.setText(tr("Catalogue mis à jour en v{}").format(version))
         self._update_status.setStyleSheet("color: #2ecc71;")
         self._update_status.show()
 

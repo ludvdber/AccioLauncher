@@ -2,7 +2,12 @@
 
 import pytest
 
-from src.core.downloader import Downloader, SIZE_OVERHEAD_FACTOR, _validate_url
+from src.core.downloader import (
+    Downloader, SIZE_OVERHEAD_FACTOR, _validate_url, file_sha256,
+)
+
+# SHA-256 de b"hello" (vecteur connu)
+_HELLO_SHA = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
 
 class TestValidateUrl:
@@ -62,3 +67,30 @@ class TestSignals:
         dl = Downloader(url="https://x.test/a.7z", destination=tmp_path / "a.7z")
         assert dl.finished.signal == "2finished()"  # natif QThread, sans argument
         assert dl.download_finished.signal == "2download_finished(QString)"
+
+
+class TestSha256:
+    def test_file_sha256_known_vector(self, tmp_path):
+        f = tmp_path / "hello.bin"
+        f.write_bytes(b"hello")
+        assert file_sha256(f) == _HELLO_SHA
+
+    def test_file_sha256_cancelled(self, tmp_path):
+        f = tmp_path / "hello.bin"
+        f.write_bytes(b"hello")
+        assert file_sha256(f, cancelled=lambda: True) == ""
+
+    def test_verify_skipped_without_expected_hash(self, tmp_path):
+        f = tmp_path / "a.bin"
+        f.write_bytes(b"data")
+        dl = Downloader(url="https://x.test/a.7z", destination=tmp_path / "a.7z")
+        assert dl._verify_sha256(f, None) is True
+        assert dl._verify_sha256(f, "") is True
+
+    def test_verify_match_and_mismatch(self, tmp_path):
+        f = tmp_path / "hello.bin"
+        f.write_bytes(b"hello")
+        dl = Downloader(url="https://x.test/a.7z", destination=tmp_path / "a.7z")
+        assert dl._verify_sha256(f, _HELLO_SHA) is True
+        assert dl._verify_sha256(f, _HELLO_SHA.upper()) is True  # insensible à la casse
+        assert dl._verify_sha256(f, "deadbeef" * 8) is False

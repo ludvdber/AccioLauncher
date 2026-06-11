@@ -115,7 +115,7 @@ build.bat
 | **Langage** | Python 3.12+ avec type hints modernes |
 | **Interface** | PyQt6 — widgets custom, QPainter, QPropertyAnimation |
 | **Téléchargement** | httpx — streaming HTTPS avec suivi de progression |
-| **Extraction** | py7zr — support archives 7z et zip |
+| **Extraction** | 7z.exe bundlé — archives 7z (multi-volumes incl.) et zip |
 | **Effets visuels** | Particules, parallaxe, glow, transitions — tout en QPainter natif |
 | **Architecture** | Séparation `core/` (logique métier) et `ui/` (interface) |
 | **Packaging** | PyInstaller — exécutable unique Windows |
@@ -177,6 +177,6 @@ A magical desktop launcher for Harry Potter PC games (2001–2009). Features one
 
 **Dev setup:** `git clone` → `pip install -r requirements.txt` → `python main.py`
 
-Built with Python 3.12+, PyQt6, httpx, and py7zr. Windows 10/11 only (Linux support planned).
+Built with Python 3.12+, PyQt6 and httpx (7z.exe bundled). Windows 10/11 only (Linux support planned).
 
 </details>

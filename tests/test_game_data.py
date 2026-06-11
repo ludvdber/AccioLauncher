@@ -76,6 +76,18 @@ class TestGameVersion:
         assert v.version == "1.0"
         assert v.size_mb == 0
         assert v.changes == ()
+        # Empreintes absentes → vérification désactivée (rétro-compat catalogue)
+        assert v.sha256 is None
+        assert v.sha256_parts == ()
+
+    def test_from_dict_sha256(self):
+        v = GameVersion.from_dict({
+            "version": "1.2",
+            "sha256": "a" * 64,
+            "sha256_parts": ["b" * 64, "c" * 64],
+        })
+        assert v.sha256 == "a" * 64
+        assert v.sha256_parts == ("b" * 64, "c" * 64)
 
 
 class TestIniPatch:

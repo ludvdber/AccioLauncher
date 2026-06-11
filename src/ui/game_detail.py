@@ -29,7 +29,7 @@ class GameDetailView(QWidget):
 
     status_message = pyqtSignal(str)
     state_changed = pyqtSignal()
-    game_launched = pyqtSignal(object, str)  # (subprocess.Popen, game_name)
+    game_launched = pyqtSignal(object, str, str)  # (subprocess.Popen, game_name, game_id)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -212,6 +212,13 @@ class GameDetailView(QWidget):
         self._bg.pause()
 
     def resume(self) -> None:
+        self._bg.resume()
+
+    def pause_effects(self) -> None:
+        """Pause les effets décoratifs SANS couper la vidéo (perte de focus fenêtre)."""
+        self._bg.pause()
+
+    def resume_effects(self) -> None:
         self._bg.resume()
 
     def cancel_operations(self) -> None:

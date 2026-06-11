@@ -53,6 +53,7 @@ class CarouselItem(QWidget):
         self._cached_installed: bool = False
         self._cached_has_update: bool = False
         self._cached_version: str = ""
+        self._cached_is_new: bool = False
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -85,6 +86,14 @@ class CarouselItem(QWidget):
         self.update()
 
     anim_opacity = pyqtProperty(float, _get_anim_opacity, _set_anim_opacity)
+
+    def refresh_state(self) -> None:
+        """Recharge les indicateurs (installé, update, version, nouveau) depuis le manager."""
+        self._cached_installed = self.manager.is_installed(self.game.id)
+        self._cached_has_update = self.manager.has_update(self.game.id)
+        self._cached_version = self.manager.installed_version(self.game.id) or ""
+        self._cached_is_new = self.manager.is_new(self.game.id)
+        self.update()
 
     def _load_cover(self) -> None:
         cover_path = ASSETS_DIR / "covers" / self.game.cover_image
@@ -262,5 +271,20 @@ class CarouselItem(QWidget):
             p.setPen(QColor(255, 255, 255, 240))
             p.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
             p.drawText(QRectF(bx, by, badge_size, badge_size), Qt.AlignmentFlag.AlignCenter, "↑")
+
+        if self._cached_is_new and not self._cached_installed:
+            # Ruban « NOUVEAU » en haut à gauche (jeu apparu via update du catalogue)
+            p.setOpacity(1.0)
+            p.setFont(QFont("Segoe UI", 7, QFont.Weight.Bold))
+            fm = p.fontMetrics()
+            text = "NOUVEAU"
+            tw = fm.horizontalAdvance(text)
+            bx, by = x_off + 3, y_off + 3
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(212, 160, 23, 235))
+            p.drawRoundedRect(QRectF(bx, by, tw + 10, fm.height() + 3), 3, 3)
+            p.setPen(QColor("#060611"))
+            p.drawText(QRectF(bx, by, tw + 10, fm.height() + 3),
+                       Qt.AlignmentFlag.AlignCenter, text)
 
         p.end()

@@ -5,6 +5,7 @@ import platform
 import shutil
 import stat
 import subprocess
+from datetime import date
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
@@ -54,7 +55,7 @@ def _is_safe_relative(path_str: str) -> bool:
 class GameManager:
     """Gère le catalogue de jeux et leur état (installé, non installé, etc.)."""
 
-    __slots__ = ("config", "_catalog", "_games", "_index", "_states")
+    __slots__ = ("config", "_catalog", "_games", "_index", "_states", "_new_game_ids")
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -64,6 +65,8 @@ class GameManager:
         self._states: dict[str, GameState] = {
             g.id: self._detect_state(g) for g in self._games
         }
+        # Jeux apparus via un reload de catalogue pendant la session (badge « NOUVEAU »)
+        self._new_game_ids: set[str] = set()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property
@@ -83,8 +86,17 @@ class GameManager:
             else:
                 self._states[g.id] = self._detect_state(g)
                 if self._states[g.id] == GameState.NOT_INSTALLED:
+                    self._new_game_ids.add(g.id)
                     log.info("Nouveau jeu disponible : %s", g.name)
         log.info("Catalogue rechargé : %d jeux (v%s)", len(self._games), catalog.catalog_version)
+
+    def is_new(self, game_id: str) -> bool:
+        """True si le jeu est apparu via un reload de catalogue et n'a pas encore été vu."""
+        return game_id in self._new_game_ids
+
+    def mark_seen(self, game_id: str) -> None:
+        """Retire le badge « NOUVEAU » d'un jeu (l'utilisateur l'a sélectionné)."""
+        self._new_game_ids.discard(game_id)
 
     def refresh_states(self) -> None:
         """Re-détecte l'état de tous les jeux sur le disque.
@@ -98,6 +110,16 @@ class GameManager:
                 continue
             self._states[g.id] = self._detect_state(g)
         log.info("États re-détectés (%d jeux)", len(self._games))
+
+    def redetect_state(self, game_id: str) -> None:
+        """Force la re-détection disque d'un seul jeu (après annulation/erreur d'opération).
+
+        Contrairement à un set NOT_INSTALLED aveugle, ceci préserve un jeu encore
+        installé quand un téléchargement de mise à jour/réparation échoue.
+        """
+        game = self._index.get(game_id)
+        if game is not None:
+            self._states[game_id] = self._detect_state(game)
 
     def _detect_state(self, game: GameData) -> GameState:
         """Détecte l'état d'un jeu en vérifiant le disque."""
@@ -201,6 +223,28 @@ class GameManager:
     def apply_pre_launch_patches(self, game: GameData) -> None:
         """Façade rétro-compat — délègue à pre_launch.apply_ini_patches."""
         apply_ini_patches(game, self.config)
+
+    # ──────────────────── Stats de jeu ────────────────────
+
+    def add_playtime(self, game_id: str, seconds: int) -> None:
+        """Cumule le temps d'une session et date la dernière partie (persisté en config)."""
+        if game_id not in self._index or seconds <= 0:
+            return
+        self.config.playtime_seconds[game_id] = (
+            self.config.playtime_seconds.get(game_id, 0) + int(seconds)
+        )
+        self.config.last_played[game_id] = date.today().isoformat()
+        self.config.save()
+        log.info("Temps de jeu de %s : +%d s (total %d s)",
+                 game_id, seconds, self.config.playtime_seconds[game_id])
+
+    def get_playtime(self, game_id: str) -> int:
+        """Temps de jeu cumulé en secondes (0 si jamais joué)."""
+        return self.config.playtime_seconds.get(game_id, 0)
+
+    def last_played(self, game_id: str) -> str | None:
+        """Date ISO de la dernière session, ou None."""
+        return self.config.last_played.get(game_id)
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
         """Sauvegarde la version du jeu installé dans la config."""

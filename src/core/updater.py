@@ -21,9 +21,9 @@ _LOCAL_CATALOG_PATH = LOCAL_CATALOG_PATH
 class UpdateChecker(QThread):
     """Vérifie les mises à jour du catalogue et du launcher en arrière-plan."""
 
-    catalog_updated = pyqtSignal(object)   # Catalog
-    launcher_update = pyqtSignal(str, str) # (version, url_release)
-    update_counts = pyqtSignal(int)        # nombre de jeux avec mise à jour dispo
+    catalog_updated = pyqtSignal(object)        # Catalog
+    launcher_update = pyqtSignal(str, str, str) # (version, url_release, url_asset_exe ou "")
+    update_counts = pyqtSignal(int)             # nombre de jeux avec mise à jour dispo
 
     def __init__(self, catalog_url: str, current_catalog_version: str,
                  installed_versions: dict[str, str], parent=None) -> None:
@@ -96,8 +96,18 @@ class UpdateChecker(QThread):
 
             if compare_versions(tag, APP_VERSION) > 0:
                 html_url = data.get("html_url", "https://github.com/ludvdber/AccioLauncher/releases/latest")
+                if not html_url.startswith("https://github.com/"):
+                    log.warning("URL de release suspecte ignorée : %s", html_url)
+                    html_url = "https://github.com/ludvdber/AccioLauncher/releases/latest"
+                # Asset .exe pour l'auto-update (vide si introuvable → fallback page release)
+                asset_url = ""
+                for asset in data.get("assets", []):
+                    url = asset.get("browser_download_url", "")
+                    if asset.get("name", "").lower().endswith(".exe") and url.startswith("https://"):
+                        asset_url = url
+                        break
                 log.info("Nouvelle version du launcher disponible : %s (actuelle: %s)", tag, APP_VERSION)
-                self.launcher_update.emit(tag.lstrip("v"), html_url)
+                self.launcher_update.emit(tag.lstrip("v"), html_url, asset_url)
             else:
                 log.info("Launcher à jour (v%s)", APP_VERSION)
 

@@ -61,6 +61,9 @@ class GameVersion:
     download_parts: list[str] | None
     size_mb: int
     changes: tuple[str, ...]
+    # Empreintes SHA-256 (hex) — optionnelles : la vérification est sautée si absentes.
+    sha256: str | None = None              # fichier final (téléchargement simple)
+    sha256_parts: tuple[str, ...] = ()     # une empreinte par part (multi-parts)
 
     @classmethod
     def from_dict(cls, data: dict) -> "GameVersion":
@@ -71,6 +74,8 @@ class GameVersion:
             download_parts=data.get("download_parts"),
             size_mb=int(data.get("size_mb", 0)),
             changes=tuple(data.get("changes", [])),
+            sha256=data.get("sha256"),
+            sha256_parts=tuple(data.get("sha256_parts", [])),
         )
 
 

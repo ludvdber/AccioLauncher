@@ -12,12 +12,14 @@ import random
 
 log = logging.getLogger(__name__)
 
-from PyQt6.QtCore import Qt, QTimer, QRectF
+from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import QColor, QPainter, QRadialGradient
 from PyQt6.QtWidgets import QWidget
 
+from src.ui.ticker import TICK_MS, Ticker
+
 PARTICLE_COUNT = 35
-FPS_INTERVAL = 33  # ~30 FPS
+FPS_INTERVAL = TICK_MS  # cadence du ticker partagé (~30 FPS)
 
 
 class _Particle:
@@ -64,13 +66,11 @@ class ParticleOverlay(QWidget):
 
         self._particles: list[_Particle] = []
         self._time = 0.0
+        self._ticking = False
 
-        self._timer = QTimer(self)
-        self._timer.setInterval(FPS_INTERVAL)
-        self._timer.timeout.connect(self._advance)
-        self._timer.start()
+        self.resume()
 
-        log.debug("[FX] ParticleOverlay — %d particules, 30 FPS, glow+oscillation", PARTICLE_COUNT)
+        log.debug("[FX] ParticleOverlay — %d particules, ticker partagé, glow+oscillation", PARTICLE_COUNT)
 
     def _ensure_particles(self) -> None:
         w, h = self.width(), self.height()
@@ -136,15 +136,19 @@ class ParticleOverlay(QWidget):
         p.end()
 
     def showEvent(self, event) -> None:
-        self._timer.start()
+        self.resume()
         super().showEvent(event)
 
     def hideEvent(self, event) -> None:
-        self._timer.stop()
+        self.pause()
         super().hideEvent(event)
 
     def pause(self) -> None:
-        self._timer.stop()
+        if self._ticking:
+            Ticker.instance().tick.disconnect(self._advance)
+            self._ticking = False
 
     def resume(self) -> None:
-        self._timer.start()
+        if not self._ticking:
+            Ticker.instance().tick.connect(self._advance)
+            self._ticking = True

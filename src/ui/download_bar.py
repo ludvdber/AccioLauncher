@@ -10,6 +10,7 @@ from src.core.config import ASSETS_DIR
 from src.core.formatting import append_part_info, format_progress_line
 from src.core.game_data import GameData
 from src.core.game_manager import GameState
+from src.core.i18n import tr
 from src.ui.fonts import body_font, cinzel
 
 
@@ -62,10 +63,10 @@ class DownloadBar(QWidget):
         )
         layout.addWidget(self._progress)
 
-        self._btn_cancel = QPushButton("Annuler")
+        self._btn_cancel = QPushButton(tr("Annuler"))
         self._btn_cancel.setObjectName("btnCancel")
-        self._btn_cancel.setAccessibleName("Annuler le téléchargement")
-        self._btn_cancel.setToolTip("Annuler")
+        self._btn_cancel.setAccessibleName(tr("Annuler le téléchargement"))
+        self._btn_cancel.setToolTip(tr("Annuler"))
         self._btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_cancel.clicked.connect(self.cancel_clicked.emit)
         layout.addWidget(self._btn_cancel)
@@ -97,10 +98,10 @@ class DownloadBar(QWidget):
 
     def _set_state(self, state: GameState) -> None:
         if state == GameState.DOWNLOADING:
-            self._status.setText("Téléchargement en cours…")
+            self._status.setText(tr("Téléchargement en cours…"))
             self._btn_cancel.show()
         elif state == GameState.INSTALLING:
-            self._status.setText("Installation en cours…")
+            self._status.setText(tr("Installation en cours…"))
             self._btn_cancel.hide()
 
     def update_download_progress(self, downloaded: int, total: int,
@@ -112,7 +113,7 @@ class DownloadBar(QWidget):
 
     def update_install_progress(self, pct: int) -> None:
         self._progress.setValue(pct)
-        self._status.setText(f"Installation… {pct}%")
+        self._status.setText(tr("Installation… {}%").format(pct))
         self._btn_cancel.hide()
 
     def update_part_info(self, current: int, total: int) -> None:

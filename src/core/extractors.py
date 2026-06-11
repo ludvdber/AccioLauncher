@@ -2,6 +2,11 @@
 
 Indépendant de Qt — l'orchestrateur (Installer) injecte les callbacks de progression
 et le check d'annulation.
+
+7z.exe (bundlé avec l'app) est l'unique extracteur 7z : progression fine,
+annulation immédiate (kill du process), support natif des archives
+multi-volumes (.7z.001) et de tous les filtres (BCJ2…). py7zr a été retiré
+le 2026-06-10 : il ne savait ni annuler, ni progresser, ni lire BCJ2.
 """
 
 import logging
@@ -10,8 +15,6 @@ import sys
 import zipfile
 from pathlib import Path
 from typing import Callable
-
-import py7zr
 
 log = logging.getLogger(__name__)
 
@@ -54,14 +57,6 @@ def find_7z_exe() -> str | None:
     return None
 
 
-def validate_7z_paths(file_list: list, destination: Path) -> None:
-    """Vérifie que toutes les entrées d'une archive 7z sont sûres avant extraction."""
-    for f_info in file_list:
-        name = f_info.filename
-        if not check_path_traversal(destination, name):
-            raise ValueError(f"Path traversal détecté dans l'archive 7z : {name}")
-
-
 def verify_extracted_paths(destination: Path) -> None:
     """Vérifie post-extraction que tous les fichiers sont sous destination."""
     dest_resolved = destination.resolve()
@@ -71,22 +66,11 @@ def verify_extracted_paths(destination: Path) -> None:
             raise ValueError(f"Path traversal détecté après extraction : {item}")
 
 
-def extract_7z_py7zr(archive: Path, destination: Path, progress: ProgressCb) -> None:
-    """Extraction via py7zr — rapide mais ne supporte pas BCJ2."""
-    with py7zr.SevenZipFile(archive, mode="r") as a:
-        all_files = a.list()
-        validate_7z_paths(all_files, destination)
-        log.debug("Extraction py7zr : %d fichiers", len(all_files))
-        progress(0)
-        a.extractall(path=destination)
-        progress(100)
-
-
 def extract_7z_subprocess(
     archive: Path, destination: Path,
     progress: ProgressCb, cancelled: CancelledCb,
 ) -> None:
-    """Extraction via 7z.exe (fallback BCJ2 et autres filtres non supportés par py7zr)."""
+    """Extraction via 7z.exe — progression parsée sur stdout (-bsp1), kill sur annulation."""
     exe = find_7z_exe()
     if exe is None:
         raise RuntimeError(
@@ -143,24 +127,8 @@ def extract_7z_subprocess(
 
 def extract_7z(archive: Path, destination: Path,
                progress: ProgressCb, cancelled: CancelledCb) -> None:
-    """Extrait via 7z.exe (bundlé) en priorité, py7zr en secours.
-
-    7z.exe fournit la progression fine ET l'annulation immédiate (kill du
-    process) ; py7zr ne supporte ni l'un ni l'autre pendant `extractall`
-    (et ignore certains filtres comme BCJ2) — il ne sert que si 7z.exe est
-    introuvable (env de dev sans l'asset bundlé ni 7-Zip installé).
-    """
-    if find_7z_exe() is not None:
-        extract_7z_subprocess(archive, destination, progress, cancelled)
-        return
-    log.warning("7z.exe introuvable — extraction py7zr (non annulable)")
-    try:
-        extract_7z_py7zr(archive, destination, progress)
-    except py7zr.exceptions.UnsupportedCompressionMethodError as exc:
-        raise RuntimeError(
-            "Cette archive nécessite 7z.exe, introuvable sur ce système.\n"
-            "Réinstallez Accio Launcher ou installez 7-Zip depuis https://7-zip.org."
-        ) from exc
+    """Extrait une archive .7z (ou multi-volumes .7z.001) via 7z.exe."""
+    extract_7z_subprocess(archive, destination, progress, cancelled)
 
 
 def extract_zip(archive: Path, destination: Path,

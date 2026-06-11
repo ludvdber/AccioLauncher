@@ -1,8 +1,9 @@
+import hashlib
 import logging
-import shutil
 import threading
 import time
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlparse
 
 import httpx
@@ -28,6 +29,20 @@ def _validate_url(url: str) -> None:
         raise ValueError(f"URL invalide (pas de hostname) : {url!r}")
 
 
+def file_sha256(path: Path, cancelled: Callable[[], bool] | None = None) -> str:
+    """Empreinte SHA-256 d'un fichier (lecture par blocs de 1 Mio).
+
+    Retourne "" si annulé en cours de calcul.
+    """
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(1024 * 1024):
+            if cancelled is not None and cancelled():
+                return ""
+            h.update(chunk)
+    return h.hexdigest()
+
+
 class Downloader(QThread):
     """Télécharge une archive (simple ou multi-parts) en arrière-plan."""
 
@@ -44,12 +59,16 @@ class Downloader(QThread):
         destination: Path,
         parts: list[str] | None = None,
         expected_size_mb: int = 0,
+        expected_sha256: str | None = None,
+        expected_sha256_parts: list[str] | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self.url = url
         self.destination = destination
         self.parts = parts
+        self.expected_sha256 = expected_sha256
+        self.expected_sha256_parts = expected_sha256_parts or []
         # Cap = expected_size_mb * SIZE_OVERHEAD_FACTOR. 0 = pas de cap (rétro-compat).
         self._max_total_bytes = (
             int(expected_size_mb * SIZE_OVERHEAD_FACTOR * 1024 * 1024)
@@ -57,6 +76,20 @@ class Downloader(QThread):
         )
         self._cancel_event = threading.Event()
         self._last_emit = 0.0
+
+    def _verify_sha256(self, path: Path, expected: str | None) -> bool:
+        """Vérifie l'empreinte d'un fichier. True si pas d'empreinte attendue ou si conforme."""
+        if not expected:
+            return True
+        log.info("Vérification SHA-256 de %s…", path.name)
+        actual = file_sha256(path, cancelled=lambda: self._cancelled)
+        if self._cancelled:
+            return False
+        if actual.lower() != expected.lower():
+            log.error("SHA-256 invalide pour %s : attendu %s, obtenu %s", path, expected, actual)
+            return False
+        log.info("SHA-256 conforme : %s", path.name)
+        return True
 
     @property
     def _cancelled(self) -> bool:
@@ -97,6 +130,12 @@ class Downloader(QThread):
                 self._download_stream(self.url, part_path, global_offset=0, global_total=0)
                 if self._cancelled:
                     return
+                if not self._verify_sha256(part_path, self.expected_sha256):
+                    if self._cancelled:
+                        return
+                    # Fichier corrompu : repartir de zéro (OSError → boucle de retry)
+                    part_path.unlink(missing_ok=True)
+                    raise OSError("empreinte SHA-256 invalide (fichier corrompu)")
                 part_path.replace(self.destination)
                 log.info("Téléchargement terminé : %s", self.destination)
                 self.download_finished.emit(str(self.destination))
@@ -136,13 +175,23 @@ class Downloader(QThread):
 
             self.part_info.emit(i + 1, total_parts)
 
+            expected_part_hash = (
+                self.expected_sha256_parts[i]
+                if i < len(self.expected_sha256_parts) else None
+            )
+
             for attempt in range(1, MAX_RETRIES + 1):
                 if self._cancelled:
                     return
-                # Si la part est déjà téléchargée complètement, skip
+                # Si la part est déjà téléchargée complètement (et conforme), skip
                 if part_dest.exists():
-                    log.info("Part déjà présente : %s", part_dest)
-                    break
+                    if self._verify_sha256(part_dest, expected_part_hash):
+                        log.info("Part déjà présente : %s", part_dest)
+                        break
+                    if self._cancelled:
+                        return
+                    log.warning("Part en cache corrompue, re-téléchargement : %s", part_dest)
+                    part_dest.unlink(missing_ok=True)
                 try:
                     self._download_stream(
                         url, part_tmp,
@@ -150,6 +199,11 @@ class Downloader(QThread):
                     )
                     if self._cancelled:
                         return
+                    if not self._verify_sha256(part_tmp, expected_part_hash):
+                        if self._cancelled:
+                            return
+                        part_tmp.unlink(missing_ok=True)
+                        raise OSError("empreinte SHA-256 invalide (part corrompue)")
                     part_tmp.replace(part_dest)
                     log.info("Part %d/%d terminée : %s", i + 1, total_parts, part_dest)
                     break
@@ -167,36 +221,15 @@ class Downloader(QThread):
         if self._cancelled:
             return
 
-        # Étape 2 : tester si py7zr peut lire directement le .001
+        # 7z.exe lit nativement les archives multi-volumes : on émet directement
+        # la première part (.001) — pas de concaténation (gain disque + temps).
+        # L'intégrité est couverte par les hash par part (sha256_parts).
+        if self.expected_sha256 and not self.expected_sha256_parts:
+            log.warning("sha256 global ignoré pour un téléchargement multi-parts — "
+                        "utiliser sha256_parts dans le catalogue")
         first_part = part_paths[0]
-        if first_part.suffix == ".001":
-            try:
-                import py7zr
-                with py7zr.SevenZipFile(first_part, mode="r") as _:
-                    pass
-                log.info("py7zr supporte les archives split — pas de concaténation nécessaire")
-                self.download_finished.emit(str(first_part))
-                return
-            except (FileNotFoundError, OSError, py7zr.exceptions.UnsupportedCompressionMethodError):
-                # py7zr ne sait pas lire le split — fallback concaténation
-                log.info("py7zr ne supporte pas le split — concaténation des parts")
-
-        # Étape 3 : concaténer les parts
-        log.info("Concaténation de %d parts vers %s", len(part_paths), self.destination)
-        try:
-            with open(self.destination, "wb") as out:
-                for pp in part_paths:
-                    with open(pp, "rb") as inp:
-                        shutil.copyfileobj(inp, out)
-            # Supprimer les parts individuelles
-            for pp in part_paths:
-                pp.unlink(missing_ok=True)
-        except OSError as exc:
-            self.error.emit(f"Erreur lors de la concaténation : {exc}")
-            return
-
-        log.info("Téléchargement multi-parts terminé : %s", self.destination)
-        self.download_finished.emit(str(self.destination))
+        log.info("Téléchargement multi-parts terminé : %s (%d parts)", first_part, total_parts)
+        self.download_finished.emit(str(first_part))
 
     # ─── Streaming avec reprise ───
 

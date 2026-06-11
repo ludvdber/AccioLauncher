@@ -4,13 +4,14 @@ import logging
 import math
 import random
 
-from PyQt6.QtCore import Qt, pyqtSignal, QRectF, QTimer
+from PyQt6.QtCore import Qt, pyqtSignal, QRectF
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.ui.carousel_item import CarouselItem
+from src.ui.ticker import Ticker
 
 log = logging.getLogger(__name__)
 
@@ -50,10 +51,10 @@ class Carousel(QWidget):
             phase = random.uniform(0, math.tau)
             self._stars.append((x, y, size, max_alpha, is_gold, phase))
 
-        self._star_timer = QTimer(self)
-        self._star_timer.setInterval(66)  # ~15 FPS
-        self._star_timer.timeout.connect(self._tick_stars)
-        self._star_timer.start()
+        # Ticker partagé à ~30 FPS, mais repaint des étoiles 1 tick sur 2 (~15 FPS)
+        self._star_flip = False
+        self._ticking = False
+        self.resume()
 
         self._items_layout = QHBoxLayout(self)
         self._items_layout.setContentsMargins(24, 8, 24, 4)
@@ -84,6 +85,9 @@ class Carousel(QWidget):
         log.debug("Carousel — %d items, %d stars", len(self._items), len(self._stars))
 
     def _tick_stars(self) -> None:
+        self._star_flip = not self._star_flip
+        if self._star_flip:
+            return  # 1 tick sur 2 → ~15 FPS visuel pour le scintillement
         self._star_phase += 0.04
         self.update()
 
@@ -140,6 +144,11 @@ class Carousel(QWidget):
         self._items[self._current_index].selected = False
         self._current_index = index
         self._items[index].selected = True
+        # L'utilisateur a vu le jeu → retirer le badge « NOUVEAU »
+        game_id = self._items[index].game.id
+        if self._manager.is_new(game_id):
+            self._manager.mark_seen(game_id)
+            self._items[index].refresh_state()
         self._update_depths()
         self.game_selected.emit(index)
 
@@ -152,14 +161,15 @@ class Carousel(QWidget):
             self.select((self._current_index - 1) % len(self._items))
 
     def pause(self) -> None:
-        self._star_timer.stop()
+        if self._ticking:
+            Ticker.instance().tick.disconnect(self._tick_stars)
+            self._ticking = False
 
     def resume(self) -> None:
-        self._star_timer.start()
+        if not self._ticking:
+            Ticker.instance().tick.connect(self._tick_stars)
+            self._ticking = True
 
     def refresh_indicators(self) -> None:
         for item in self._items:
-            item._cached_installed = item.manager.is_installed(item.game.id)
-            item._cached_has_update = item.manager.has_update(item.game.id)
-            item._cached_version = item.manager.installed_version(item.game.id) or ""
-            item.update()
+            item.refresh_state()

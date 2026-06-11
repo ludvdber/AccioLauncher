@@ -59,8 +59,12 @@ class Config:
     autoplay_videos: bool = True
     mute_videos: bool = False
     check_updates: bool = True
+    discord_presence: bool = True
     dismissed_launcher_version: str = ""
     installed_versions: dict[str, str] = field(default_factory=dict)
+    # Stats de jeu : cumul par jeu (secondes) et date de dernière session (ISO)
+    playtime_seconds: dict[str, int] = field(default_factory=dict)
+    last_played: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -85,8 +89,11 @@ class Config:
                 autoplay_videos=data.get("autoplay_videos", True),
                 mute_videos=data.get("mute_videos", False),
                 check_updates=data.get("check_updates", True),
+                discord_presence=data.get("discord_presence", True),
                 dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
                 installed_versions=data.get("installed_versions", {}),
+                playtime_seconds=data.get("playtime_seconds", {}),
+                last_played=data.get("last_played", {}),
             )
         return cls()
 
@@ -102,8 +109,11 @@ class Config:
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
                 "check_updates": self.check_updates,
+                "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "installed_versions": self.installed_versions,
+                "playtime_seconds": self.playtime_seconds,
+                "last_played": self.last_played,
             },
             indent=4,
             ensure_ascii=False,

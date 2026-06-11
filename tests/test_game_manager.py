@@ -155,6 +155,51 @@ class TestGameManager:
         mgr.refresh_states()
         assert mgr.get_state("hp_test") == GameState.DOWNLOADING
 
+    def test_redetect_state_single_game(self, tmp_path):
+        """redetect_state force la détection disque (utilisé après annulation/erreur).
+
+        Cas réel : mise à jour annulée — l'ancienne version est toujours là,
+        l'état doit revenir à INSTALLED, pas NOT_INSTALLED.
+        """
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True)
+        exe.write_text("fake")
+        mgr = _make_manager(tmp_path)
+        mgr.set_game_state("hp_test", GameState.DOWNLOADING)  # update en cours
+        mgr.redetect_state("hp_test")  # annulation → re-détection
+        assert mgr.get_state("hp_test") == GameState.INSTALLED
+
+    def test_playtime_tracking(self, tmp_path):
+        """add_playtime cumule, date la dernière session, ignore les jeux inconnus."""
+        mgr = _make_manager(tmp_path)
+        assert mgr.get_playtime("hp_test") == 0
+        assert mgr.last_played("hp_test") is None
+
+        mgr.add_playtime("hp_test", 120)
+        mgr.add_playtime("hp_test", 60)
+        assert mgr.get_playtime("hp_test") == 180
+        assert mgr.last_played("hp_test") is not None
+
+        mgr.add_playtime("inconnu", 60)
+        assert mgr.get_playtime("inconnu") == 0
+        mgr.add_playtime("hp_test", 0)  # durée nulle ignorée
+        assert mgr.get_playtime("hp_test") == 180
+
+    def test_new_game_badge_lifecycle(self, tmp_path):
+        """is_new/mark_seen : badge posé au reload du catalogue, retiré à la sélection."""
+        mgr = _make_manager(tmp_path)
+        assert mgr.is_new("hp_test") is False
+
+        new_game = GameData.from_dict({**GAME_DICT, "id": "hp_new", "name": "HP New"})
+        old_game = GameData.from_dict(GAME_DICT)
+        catalog = Catalog(catalog_version="2.0", catalog_url="", games=(old_game, new_game))
+        mgr.reload_catalog(catalog)
+
+        assert mgr.is_new("hp_new") is True
+        assert mgr.is_new("hp_test") is False  # déjà connu
+        mgr.mark_seen("hp_new")
+        assert mgr.is_new("hp_new") is False
+
     def test_uninstall(self, tmp_path):
         game_dir = tmp_path / "HPTest" / "System"
         game_dir.mkdir(parents=True)

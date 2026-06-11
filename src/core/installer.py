@@ -1,10 +1,8 @@
 """Orchestrateur QThread d'installation : extraction → post-install → cleanup."""
 
-import gc
 import logging
 import shutil
 import threading
-import time
 from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -101,17 +99,18 @@ class Installer(QThread):
             self.error.emit(f"Erreur d'installation : {exc}")
 
     def _delete_archive(self) -> None:
-        """Supprime l'archive avec retry (py7zr peut garder un handle ouvert)."""
-        for attempt in range(3):
+        """Supprime l'archive — toutes les parts pour une archive multi-volumes (.001)."""
+        targets = [self.archive_path]
+        if self.archive_path.suffix == ".001":
+            # « jeu.7z.001 » → supprimer jeu.7z.001, .002, … (toutes les parts du set)
+            stem = self.archive_path.name[: -len(".001")]
+            targets = sorted(self.archive_path.parent.glob(stem + ".[0-9][0-9][0-9]"))
+        for target in targets:
             try:
-                gc.collect()
-                self.archive_path.unlink(missing_ok=True)
-                log.info("Archive supprimée : %s", self.archive_path)
-                return
+                target.unlink(missing_ok=True)
+                log.info("Archive supprimée : %s", target)
             except PermissionError:
-                if attempt < 2:
-                    time.sleep(1)
-        log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", self.archive_path)
+                log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", target)
 
     def _cleanup(self) -> None:
         """Nettoie UNIQUEMENT les dossiers créés pendant l'extraction.

@@ -9,6 +9,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from src.core.downloader import Downloader
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
+from src.core.i18n import tr
 from src.core.installer import Installer
 from src.ui.speed_tracker import SpeedTracker
 
@@ -45,6 +46,9 @@ class GameOperations(QObject):
         self._speed_tracker = SpeedTracker()
         self._target_version: GameVersion | None = None
         self._active_game: GameData | None = None
+        # True si la version installée doit être désinstallée APRÈS le téléchargement
+        # (jamais avant : un échec réseau ne doit pas laisser l'utilisateur sans jeu).
+        self._uninstall_first = False
         # Downloaders annulés dont le thread n'a pas fini dans le délai
         # (read réseau bloquant) — gardés vivants jusqu'à leur fin réelle.
         self._zombies: list[Downloader] = []
@@ -69,18 +73,24 @@ class GameOperations(QObject):
             return None  # skip check
         return int(free_mb) if free_mb < needed_mb else None
 
-    def download(self, game: GameData, version: GameVersion) -> None:
-        """Lance le téléchargement d'une version de jeu."""
+    def download(self, game: GameData, version: GameVersion, *,
+                 uninstall_first: bool = False) -> None:
+        """Lance le téléchargement d'une version de jeu.
+
+        `uninstall_first=True` (switch de version) : la version installée n'est
+        supprimée qu'une fois le téléchargement terminé et vérifié.
+        """
         if self.is_busy:
-            self.status_message.emit("Un téléchargement ou installation est déjà en cours.")
+            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
             return
 
         self._target_version = version
         self._active_game = game
+        self._uninstall_first = uninstall_first
         self._manager.set_game_state(game.id, GameState.DOWNLOADING)
         self._speed_tracker.reset()
         self.state_changed.emit()
-        self.status_message.emit(f"Téléchargement de {game.name} v{version.version}\u2026")
+        self.status_message.emit(tr("Téléchargement de {} v{}…").format(game.name, version.version))
 
         archive_name = f"{game.id}_v{version.version}.7z"
         dest = self._manager.config.cache_path / archive_name
@@ -88,6 +98,8 @@ class GameOperations(QObject):
             url=version.download_url, destination=dest,
             parts=version.download_parts,
             expected_size_mb=version.size_mb,
+            expected_sha256=version.sha256,
+            expected_sha256_parts=list(version.sha256_parts),
             parent=self,
         )
         self._downloader.progress.connect(self._on_download_progress)
@@ -127,10 +139,13 @@ class GameOperations(QObject):
         game = self._active_game
         self._active_game = None
         self._target_version = None
+        self._uninstall_first = False
         if game is not None:
-            self._manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+            # Re-détecter plutôt que forcer NOT_INSTALLED : pour une mise à jour /
+            # réparation annulée, l'ancienne version est toujours installée.
+            self._manager.redetect_state(game.id)
         self.state_changed.emit()
-        self.status_message.emit("Téléchargement annulé.")
+        self.status_message.emit(tr("Téléchargement annulé."))
 
     def cancel_all(self) -> None:
         """Annule toute opération en cours (appelé à la fermeture)."""
@@ -201,13 +216,28 @@ class GameOperations(QObject):
     # ──────────────────── Version switch ────────────────────
 
     def switch_version(self, game: GameData, version: GameVersion) -> None:
-        """Désinstalle la version actuelle si installée, puis télécharge la nouvelle."""
+        """Télécharge la nouvelle version, PUIS désinstalle l'actuelle.
+
+        L'ordre est volontaire : un téléchargement échoué/annulé ne doit jamais
+        laisser l'utilisateur sans aucune version installée.
+        """
         if self.is_busy:
-            self.status_message.emit("Un téléchargement ou installation est déjà en cours.")
+            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
             return
-        if self._manager.is_installed(game.id):
-            self._manager.uninstall_game(game.id)
-        self.download(game, version)
+        self.download(game, version, uninstall_first=self._manager.is_installed(game.id))
+
+    def repair(self, game: GameData) -> None:
+        """Re-télécharge l'archive (vérifiée par SHA-256 si dispo) et réinstalle par-dessus."""
+        if self.is_busy:
+            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            return
+        installed = self._manager.installed_version(game.id)
+        ver = (game.get_version(installed) if installed else None) or game.current_download
+        if ver is None:
+            self.status_message.emit(tr("Aucune version disponible."))
+            return
+        self.status_message.emit(tr("Vérification de {}…").format(game.name))
+        self.download(game, ver)
 
     # ──────────────────── Callbacks téléchargement ────────────────────
 
@@ -230,7 +260,12 @@ class GameOperations(QObject):
         game = self._active_game
         if game is None:
             return
-        self.status_message.emit(f"Installation de {game.name}\u2026")
+        # Switch de version : l'ancienne installation n'est supprim\u00e9e que maintenant,
+        # le t\u00e9l\u00e9chargement de la nouvelle \u00e9tant termin\u00e9 et v\u00e9rifi\u00e9.
+        if self._uninstall_first:
+            self._uninstall_first = False
+            self._manager.uninstall_game(game.id)  # install() repasse l'\u00e9tat \u00e0 INSTALLING juste apr\u00e8s
+        self.status_message.emit(tr("Installation de {}…").format(game.name))
         self.install(game, Path(archive_path_str),
                      delete_archive=self._manager.config.delete_archives)
 
@@ -241,13 +276,16 @@ class GameOperations(QObject):
         game = self._active_game
         self._active_game = None
         self._target_version = None
+        self._uninstall_first = False
         if game is not None:
-            self._manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+            # Re-détecter : une mise à jour/réparation échouée laisse l'ancienne
+            # version installée (la désinstallation n'a lieu qu'après téléchargement).
+            self._manager.redetect_state(game.id)
         self.state_changed.emit()
-        self.status_message.emit(f"Erreur : {message}")
+        self.status_message.emit(tr("Erreur : {}").format(message))
         self.operation_error.emit(
-            "Échec du téléchargement",
-            "Le téléchargement a échoué.\nVérifiez votre connexion internet et réessayez.",
+            tr("Échec du téléchargement"),
+            tr("Le téléchargement a échoué.\nVérifiez votre connexion internet et réessayez."),
         )
 
     def _on_part_info(self, current: int, total: int) -> None:
@@ -272,11 +310,10 @@ class GameOperations(QObject):
             log.warning("Exécutable introuvable après extraction : %s", exe_path)
             self._manager.set_game_state(game.id, GameState.NOT_INSTALLED)
             self.state_changed.emit()
-            self.status_message.emit("Installation incomplète.")
+            self.status_message.emit(tr("Installation incomplète."))
             self.operation_error.emit(
-                "Installation incomplète",
-                "L'installation semble incomplète : l'exécutable du jeu est introuvable.\n"
-                "L'archive est peut-être corrompue.",
+                tr("Installation incomplète"),
+                tr("L'installation semble incomplète : l'exécutable du jeu est introuvable.\nL'archive est peut-être corrompue."),
             )
             return
 
@@ -287,7 +324,7 @@ class GameOperations(QObject):
         self._target_version = None
         self._manager.save_installed_version(game.id, target_ver.version if target_ver else None)
         self.state_changed.emit()
-        self.status_message.emit(f"{game.name} installé avec succès !")
+        self.status_message.emit(tr("{} installé avec succès !").format(game.name))
         self.operation_finished.emit(game)
 
     def _on_install_error(self, message: str) -> None:
@@ -297,11 +334,12 @@ class GameOperations(QObject):
         game = self._active_game
         self._active_game = None
         self._target_version = None
+        self._uninstall_first = False
         if game is not None:
-            self._manager.set_game_state(game.id, GameState.NOT_INSTALLED)
+            self._manager.redetect_state(game.id)
         self.state_changed.emit()
-        self.status_message.emit(f"Erreur d'installation : {message}")
+        self.status_message.emit(tr("Erreur d'installation : {}").format(message))
         self.operation_error.emit(
-            "Échec de l'installation",
-            "L'installation a échoué.\nL'archive est peut-être corrompue. Réessayez le téléchargement.",
+            tr("Échec de l'installation"),
+            tr("L'installation a échoué.\nL'archive est peut-être corrompue. Réessayez le téléchargement."),
         )

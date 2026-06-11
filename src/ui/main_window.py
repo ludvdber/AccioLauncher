@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import time
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
@@ -17,8 +18,13 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.config import ASSETS_DIR, Config, DEFAULT_INSTALL_PATH
+from src.core.discord_presence import DiscordPresence
+from src.core.downloader import Downloader
 from src.core.game_manager import GameManager, GameState
+from src.core.i18n import tr
+from src.core.self_update import apply_update_and_restart, can_self_update
 from src.core.updater import UpdateChecker
+from src.core.win_taskbar import TaskbarProgress
 from src.ui.carousel import Carousel
 from src.ui.download_bar import DownloadBar
 from src.ui.fonts import load_fonts
@@ -27,7 +33,9 @@ from src.ui.particles import ParticleOverlay
 from src.ui.process_monitor import ProcessMonitor
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
+from src.ui.ticker import Ticker
 from src.ui.title_bar import TitleBar
+from src.ui.toast import Toast
 from src.ui.tray_manager import TrayManager
 from src.ui.utils import open_url
 
@@ -45,10 +53,13 @@ def _load_app_icon() -> QIcon:
 class MainWindow(QMainWindow):
     """Fenêtre principale d'Accio Launcher — style launcher AAA."""
 
+    RESIZE_MARGIN = 6  # zone de saisie des bords pour redimensionner (px)
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Accio Launcher")
         self.resize(1200, 800)
+        self.setMinimumSize(980, 660)
         self.setWindowIcon(_load_app_icon())
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -56,16 +67,28 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(MAIN_STYLE)
 
         self.setMouseTracking(True)
+        self._edge_cursor_active = False  # override-cursor de resize posé ?
 
         load_fonts()
 
         self.config = self._first_launch_or_load()
+        # La langue doit être active AVANT la construction des widgets (chaînes tr()
+        # posées à la construction ; changement de langue = redémarrage).
+        from src.core.i18n import set_language
+        set_language(self.config.langue)
         self.manager = GameManager(self.config)
 
         self._update_checker: UpdateChecker | None = None
         self._extra_checkers: list[UpdateChecker] = []
         self._launcher_update_version: str = ""
         self._launcher_update_url: str = ""
+        self._launcher_update_asset: str = ""
+        self._launcher_dl: Downloader | None = None  # téléchargement auto-update en cours
+        self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
+        self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
+        # Session de jeu en cours (stats de temps de jeu)
+        self._session_game_id: str = ""
+        self._session_start: float = 0.0
 
         self._build_ui()
         self._build_tray()
@@ -166,11 +189,15 @@ class MainWindow(QMainWindow):
 
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
-        self._status_bar.showMessage("Pr\u00eat")
+        self._status_bar.showMessage(tr("Prêt"))
 
         # Overlay particules
         self._particles = ParticleOverlay(self)
         self._particles.raise_()
+
+        # Toast (notifications éphémères)
+        self._toast = Toast(self)
+        self._detail.ops.operation_finished.connect(self._notify_operation_finished)
 
         # Settings button
         self._btn_settings = QPushButton("\u2699", self)
@@ -206,6 +233,33 @@ class MainWindow(QMainWindow):
         ops.part_info.connect(self._download_bar.update_part_info)
         ops.state_changed.connect(self._on_ops_state_changed)
         self._download_bar.cancel_clicked.connect(ops.cancel_download)
+        # Progression sur l'icône de la barre des tâches Windows
+        ops.download_progress.connect(self._on_taskbar_download_progress)
+        ops.install_progress.connect(self._on_taskbar_install_progress)
+
+    def _get_taskbar(self) -> TaskbarProgress:
+        if self._taskbar is None:
+            self._taskbar = TaskbarProgress(int(self.winId()))
+        return self._taskbar
+
+    def _on_taskbar_download_progress(self, downloaded: int, total: int,
+                                      _speed: float, _eta: float) -> None:
+        self._get_taskbar().set_progress(downloaded, max(total, 1))
+
+    def _on_taskbar_install_progress(self, pct: int) -> None:
+        self._get_taskbar().set_progress(pct, 100)
+
+    def _notify_operation_finished(self, game) -> None:
+        """Fin d'installation : toast, et notification système si on n'est pas devant."""
+        self._toast.show_message(tr("{} installé avec succès ✓").format(game.name))
+        if self.isHidden():
+            # Minimisé dans le tray (souvent : en jeu) → vraie notification Windows
+            self._tray.show_notification(
+                tr("Téléchargement terminé"), tr("{} est prêt à jouer !").format(game.name)
+            )
+        elif not self.isActiveWindow():
+            from PyQt6.QtWidgets import QApplication
+            QApplication.alert(self)  # fait clignoter l'icône taskbar
 
     def _on_ops_state_changed(self) -> None:
         """Affiche/cache la barre de téléchargement selon l'état des opérations."""
@@ -217,6 +271,7 @@ class MainWindow(QMainWindow):
                 self._download_bar.show_for_game(game, state)
                 return
         self._download_bar.hide_bar()
+        self._get_taskbar().clear()
 
     def _build_process_monitor(self) -> None:
         self._monitor = ProcessMonitor(self)
@@ -239,7 +294,7 @@ class MainWindow(QMainWindow):
         self._notif_label.setStyleSheet("color: #d4a017; font-size: 12px; background: transparent;")
         layout.addWidget(self._notif_label, stretch=1)
 
-        self._notif_btn = QPushButton("Télécharger")
+        self._notif_btn = QPushButton(tr("Télécharger"))
         self._notif_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._notif_btn.setStyleSheet(
             "QPushButton { background: rgba(212,160,23,0.2); color: #d4a017;"
@@ -295,15 +350,18 @@ class MainWindow(QMainWindow):
             self._detail.set_game(updated)
         elif games:
             self._detail.set_game(games[0])
+        self._toast.show_message(tr("Catalogue mis à jour (v{})").format(catalog.catalog_version))
         log.info("UI rafraîchie après mise à jour du catalogue")
 
-    def _on_launcher_update(self, version: str, url: str) -> None:
+    def _on_launcher_update(self, version: str, url: str, asset_url: str = "") -> None:
         """Nouvelle version du launcher disponible."""
         if self.config.dismissed_launcher_version == version:
             return
         self._launcher_update_version = version
         self._launcher_update_url = url
-        self._notif_label.setText(f"Accio Launcher v{version} est disponible !")
+        self._launcher_update_asset = asset_url
+        self._notif_label.setText(tr("Accio Launcher v{} est disponible !").format(version))
+        self._notif_btn.setText(tr("Mettre à jour") if asset_url and can_self_update() else tr("Télécharger"))
         self._notif_bar.show()
         QTimer.singleShot(30_000, self._auto_hide_notif)
 
@@ -312,10 +370,52 @@ class MainWindow(QMainWindow):
         if self._detail.ops.is_busy:
             return  # ne pas écraser le statut d'un téléchargement en cours
         self._status_bar.showMessage(
-            f"{count} mise(s) à jour disponible(s)" if count > 0 else "Prêt"
+            tr("{} mise(s) à jour disponible(s)").format(count) if count > 0 else tr("Prêt")
         )
 
     def _on_notif_download(self) -> None:
+        """Auto-update en un clic si possible, sinon ouverture de la page release."""
+        if self._launcher_dl is not None:
+            return  # téléchargement déjà en cours
+        if not self._launcher_update_asset or not can_self_update():
+            if self._launcher_update_url:
+                open_url(self._launcher_update_url)
+            return
+        dest = self.config.cache_path / f"AccioLauncher_v{self._launcher_update_version}.exe"
+        dest.unlink(missing_ok=True)
+        self._notif_btn.setEnabled(False)
+        self._notif_label.setText(tr("Téléchargement de la mise à jour…"))
+        self._launcher_dl = Downloader(
+            url=self._launcher_update_asset, destination=dest, parent=self,
+        )
+        self._launcher_dl.progress.connect(self._on_launcher_dl_progress)
+        self._launcher_dl.download_finished.connect(self._on_launcher_dl_finished)
+        self._launcher_dl.error.connect(self._on_launcher_dl_error)
+        self._launcher_dl.start()
+
+    def _on_launcher_dl_progress(self, downloaded: int, total: int) -> None:
+        if total > 0:
+            self._notif_label.setText(
+                tr("Téléchargement de la mise à jour… {}%").format(downloaded * 100 // total)
+            )
+
+    def _on_launcher_dl_finished(self, path_str: str) -> None:
+        self._launcher_dl = None
+        self._notif_btn.setEnabled(True)
+        if apply_update_and_restart(Path(path_str)):
+            self._notif_label.setText(tr("Redémarrage…"))
+            log.info("Fermeture pour mise à jour vers v%s", self._launcher_update_version)
+            self.close()
+        else:
+            # Mode dev / échec du script : retomber sur la page release
+            if self._launcher_update_url:
+                open_url(self._launcher_update_url)
+
+    def _on_launcher_dl_error(self, message: str) -> None:
+        log.warning("Échec du téléchargement de la mise à jour : %s", message)
+        self._launcher_dl = None
+        self._notif_btn.setEnabled(True)
+        self._notif_label.setText(tr("Échec du téléchargement — ouverture de la page de release"))
         if self._launcher_update_url:
             open_url(self._launcher_update_url)
 
@@ -351,10 +451,22 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QApplication
         QApplication.quit()
 
+    def bring_to_front(self) -> None:
+        """Remet la fenêtre au premier plan (second lancement → instance unique)."""
+        if self.isHidden():
+            self._restore_from_tray()
+            return
+        if self.isMinimized():
+            self.showNormal()
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
     # ──────────────────── Pause / Resume effets ────────────────────
 
     def pause_all_effects(self) -> None:
         """Met en pause TOUS les timers et animations pour consommation CPU ~0."""
+        Ticker.instance().pause()
         self._particles.pause()
         self._detail.pause()
         self._carousel.pause()
@@ -362,24 +474,55 @@ class MainWindow(QMainWindow):
 
     def resume_all_effects(self) -> None:
         """Reprend tous les timers et animations."""
+        Ticker.instance().resume()
         self._particles.resume()
         self._detail.resume()
         self._carousel.resume()
         log.debug("Tous les effets sont repris")
 
+    def changeEvent(self, event) -> None:
+        """Fenêtre désactivée (derrière une autre) → pause des effets décoratifs.
+
+        La vidéo continue (l'utilisateur peut regarder un trailer en arrière-plan) ;
+        seuls particules, étoiles, glow et zoom s'arrêtent — CPU/GPU quasi nul.
+        """
+        if event.type() == QEvent.Type.ActivationChange:
+            if self.isActiveWindow():
+                Ticker.instance().resume()
+                self._detail.resume_effects()
+            elif self.isVisible():  # pas via le tray (géré par pause_all_effects)
+                Ticker.instance().pause()
+                self._detail.pause_effects()
+        super().changeEvent(event)
+
     # ──────────────────── Surveillance du processus de jeu ────────────────────
 
-    def _on_game_launched(self, process: subprocess.Popen, game_name: str) -> None:
-        """Appelé quand un jeu est lancé — minimise et surveille."""
-        self._tray.set_tooltip(f"Accio Launcher — En jeu : {game_name}")
+    def _on_game_launched(self, process: subprocess.Popen, game_name: str, game_id: str) -> None:
+        """Appelé quand un jeu est lancé — minimise, surveille, présence Discord, stats."""
+        self._session_game_id = game_id
+        self._session_start = time.monotonic()
+        self._tray.set_tooltip(tr("Accio Launcher — En jeu : {}").format(game_name))
         self._minimize_to_tray()
         self._monitor.start(process, game_name)
+        if self.config.discord_presence:
+            self._presence.set_playing(game_name)
 
     def _on_game_exited(self, game_name: str) -> None:
         """Le ProcessMonitor a détecté la fin du jeu (avec grâce de redémarrage)."""
+        # Stats : cumuler la session (les sessions < 10 s sont des faux lancements)
+        elapsed = time.monotonic() - self._session_start if self._session_start else 0.0
+        if self._session_game_id and elapsed >= 10:
+            self.manager.add_playtime(self._session_game_id, int(elapsed))
+        self._session_game_id = ""
+        self._session_start = 0.0
+
+        self._presence.clear()
         self._tray.set_tooltip("Accio Launcher")
         self._restore_from_tray()
-        self._status_bar.showMessage(f"Retour de {game_name} — Bon jeu !")
+        self._status_bar.showMessage(tr("Retour de {} — Bon jeu !").format(game_name))
+        # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh sans transition)
+        if self._detail.game is not None:
+            self._detail.set_game(self._detail.game)
 
     # ──────────────────── Slots UI ────────────────────
 
@@ -445,20 +588,18 @@ class MainWindow(QMainWindow):
             if _dlg_alive():
                 dlg.update_catalog_version(new_catalog.catalog_version)
 
-        def on_launcher(version, url):
-            self._launcher_update_version = version
-            self._launcher_update_url = url
-            self._notif_label.setText(f"Accio Launcher v{version} est disponible !")
-            self._notif_bar.show()
+        def on_launcher(version, url, asset_url=""):
+            self.config.dismissed_launcher_version = ""  # check forcé → toujours montrer
+            self._on_launcher_update(version, url, asset_url)
             if _dlg_alive():
-                dlg.show_update_status(f"Launcher v{version} disponible !")
+                dlg.show_update_status(tr("Launcher v{} disponible !").format(version))
 
         def on_finished():
             if _dlg_alive():
                 if not state["catalog_updated"]:
-                    dlg.show_update_status("Catalogue déjà à jour")
+                    dlg.show_update_status(tr("Catalogue déjà à jour"))
                 elif not catalog_only and not self._launcher_update_url:
-                    dlg.show_update_status("Tout est à jour")
+                    dlg.show_update_status(tr("Tout est à jour"))
             if checker in self._extra_checkers:
                 self._extra_checkers.remove(checker)
 
@@ -477,6 +618,46 @@ class MainWindow(QMainWindow):
         self._btn_settings.raise_()
         self._particles.setGeometry(self.centralWidget().geometry())
         self._particles.raise_()
+        self._toast.reposition()
+
+    # ──────────────────── Redimensionnement fenêtre frameless ────────────────────
+
+    def _edges_at(self, pos) -> Qt.Edge:
+        """Bords de la fenêtre sous `pos` (coordonnées locales), zone de 6 px."""
+        m = self.RESIZE_MARGIN
+        edges = Qt.Edge(0)
+        if pos.x() <= m:
+            edges |= Qt.Edge.LeftEdge
+        elif pos.x() >= self.width() - m:
+            edges |= Qt.Edge.RightEdge
+        if pos.y() <= m:
+            edges |= Qt.Edge.TopEdge
+        elif pos.y() >= self.height() - m:
+            edges |= Qt.Edge.BottomEdge
+        return edges
+
+    def _update_resize_cursor(self, edges: Qt.Edge) -> None:
+        """Affiche/retire le curseur de redimensionnement (override global)."""
+        from PyQt6.QtGui import QCursor, QGuiApplication
+        E = Qt.Edge
+        if (edges & E.LeftEdge and edges & E.TopEdge) or (edges & E.RightEdge and edges & E.BottomEdge):
+            shape = Qt.CursorShape.SizeFDiagCursor
+        elif (edges & E.RightEdge and edges & E.TopEdge) or (edges & E.LeftEdge and edges & E.BottomEdge):
+            shape = Qt.CursorShape.SizeBDiagCursor
+        elif edges & (E.LeftEdge | E.RightEdge):
+            shape = Qt.CursorShape.SizeHorCursor
+        elif edges & (E.TopEdge | E.BottomEdge):
+            shape = Qt.CursorShape.SizeVerCursor
+        else:
+            if self._edge_cursor_active:
+                QGuiApplication.restoreOverrideCursor()
+                self._edge_cursor_active = False
+            return
+        if self._edge_cursor_active:
+            QGuiApplication.changeOverrideCursor(QCursor(shape))
+        else:
+            QGuiApplication.setOverrideCursor(QCursor(shape))
+            self._edge_cursor_active = True
 
     def eventFilter(self, obj, event) -> bool:
         # Couvre les MouseMove sur tous les widgets enfants (l'override mouseMoveEvent
@@ -486,8 +667,30 @@ class MainWindow(QMainWindow):
                 global_pos = event.globalPosition()
                 local = self.mapFromGlobal(global_pos.toPoint())
                 self._detail.handle_mouse_move(QPointF(local.x(), local.y()))
+                # Curseur de resize sur les bords (fenêtre frameless)
+                if not self.isMaximized() and self.isActiveWindow():
+                    self._update_resize_cursor(self._edges_at(local))
             except (AttributeError, RuntimeError) as exc:
                 log.debug("eventFilter mouseMove failed: %s", exc)
+        elif event.type() == QEvent.Type.MouseButtonPress and not self.isMaximized():
+            # Saisie d'un bord → resize natif (uniquement pour NOS widgets)
+            try:
+                from PyQt6.QtWidgets import QWidget
+                if (event.button() == Qt.MouseButton.LeftButton
+                        and isinstance(obj, QWidget) and obj.window() is self):
+                    local = self.mapFromGlobal(event.globalPosition().toPoint())
+                    edges = self._edges_at(local)
+                    if edges and self.windowHandle() is not None:
+                        self.windowHandle().startSystemResize(edges)
+                        return True
+            except (AttributeError, RuntimeError) as exc:
+                log.debug("eventFilter resize failed: %s", exc)
+        elif event.type() == QEvent.Type.Leave:
+            # Souris sortie de la fenêtre → ne pas laisser un curseur de resize collé
+            if self._edge_cursor_active and not self.underMouse():
+                from PyQt6.QtGui import QGuiApplication
+                QGuiApplication.restoreOverrideCursor()
+                self._edge_cursor_active = False
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event) -> None:
@@ -501,6 +704,11 @@ class MainWindow(QMainWindow):
             if checker.isRunning():
                 checker.wait(3000)
         self._extra_checkers.clear()
+        if self._launcher_dl is not None:
+            self._launcher_dl.cancel()
+            self._launcher_dl.wait(3000)
+            self._launcher_dl = None
+        self._presence.shutdown()
         self._detail.cancel_operations()
         self._tray.hide()
         super().closeEvent(event)

@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.game_data import GameData, GameVersion
+from src.core.i18n import tr
 from src.core.game_manager import GameManager
 from src.core.version_utils import compare_versions
 from src.ui.fonts import cinzel, body_font
@@ -39,7 +40,7 @@ class VersionsDialog(QDialog):
         self.manager = manager
         self._installed_version = manager.installed_version(game.id)
 
-        self.setWindowTitle(f"Versions — {game.name}")
+        self.setWindowTitle(tr("Versions — {}").format(game.name))
         self.setFixedSize(550, 500)
         self.setStyleSheet(
             "QDialog { background: #0d0d1a; border: 1px solid rgba(212,160,23,0.3); }"
@@ -51,7 +52,7 @@ class VersionsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 16)
         layout.setSpacing(0)
 
-        title = QLabel(f"Versions — {self.game.name}")
+        title = QLabel(tr("Versions — {}").format(self.game.name))
         title.setFont(cinzel(14, bold=True))
         title.setStyleSheet("color: #d4a017; background: transparent;")
         title.setWordWrap(True)
@@ -90,7 +91,7 @@ class VersionsDialog(QDialog):
         layout.addSpacing(12)
 
         # Bouton Fermer
-        btn_close = QPushButton("Fermer")
+        btn_close = QPushButton(tr("Fermer"))
         btn_close.setFont(cinzel(11, bold=True))
         btn_close.setFixedSize(120, 34)
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -140,9 +141,9 @@ class VersionsDialog(QDialog):
 
         annotations = []
         if is_recommended:
-            annotations.append("recommandée")
+            annotations.append(tr("recommandée"))
         if is_installed:
-            annotations.append("installée")
+            annotations.append(tr("installée"))
 
         ver_text = f"{symbol} v{ver.version}"
         if annotations:
@@ -208,11 +209,11 @@ class VersionsDialog(QDialog):
 
             if self._installed_version is not None:
                 if compare_versions(ver.version, self._installed_version) > 0:
-                    btn_text = f"Mettre à jour vers v{ver.version}"
+                    btn_text = tr("Mettre à jour vers v{}").format(ver.version)
                 else:
-                    btn_text = f"Revenir à v{ver.version}"
+                    btn_text = tr("Revenir à v{}").format(ver.version)
             else:
-                btn_text = f"Installer v{ver.version}"
+                btn_text = tr("Installer v{}").format(ver.version)
 
             btn = QPushButton(btn_text)
             btn.setFont(body_font(11))
@@ -235,13 +236,13 @@ class VersionsDialog(QDialog):
         return card
 
     def _on_install_version(self, version: str) -> None:
-        action = "installer"
+        action = tr("installer")
         if self._installed_version is not None:
-            action = "supprimer la version actuelle et installer"
+            action = tr("supprimer la version actuelle et installer")
 
         reply = QMessageBox.question(
-            self, "Confirmer",
-            f"Ceci va {action} la version {version}.\nContinuer ?",
+            self, tr("Confirmer"),
+            tr("Ceci va {} la version {}.\nContinuer ?").format(action, version),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

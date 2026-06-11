@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
+from src.core.i18n import tr
 from src.ui.fonts import cinzel
 
 
@@ -31,9 +32,9 @@ class TitleBar(QWidget):
 
         # Boutons minimalistes
         for text, slot, hover_bg, label in (
-            ("\u2500", self._on_minimize, "rgba(255,255,255,0.08)", "R\u00e9duire"),
-            ("\u25a1", self._on_maximize, "rgba(255,255,255,0.08)", "Agrandir"),
-            ("\u2715", self._on_close, "#c0392b", "Fermer"),
+            ("\u2500", self._on_minimize, "rgba(255,255,255,0.08)", tr("Réduire")),
+            ("\u25a1", self._on_maximize, "rgba(255,255,255,0.08)", tr("Agrandir")),
+            ("\u2715", self._on_close, "#c0392b", tr("Fermer")),
         ):
             btn = QPushButton(text)
             btn.setAccessibleName(label)

@@ -10,11 +10,13 @@ Pas de QGraphicsEffect — tout est dans paintEvent.
 import logging
 import math
 
-from PyQt6.QtCore import Qt, QTimer, QRectF
+from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import (
     QColor, QEnterEvent, QLinearGradient, QPainter, QPainterPath, QPen,
 )
 from PyQt6.QtWidgets import QPushButton, QWidget
+
+from src.ui.ticker import Ticker
 
 log = logging.getLogger(__name__)
 
@@ -56,11 +58,7 @@ class GlowButton(QPushButton):
         self._shimmer_offset = -1.0
         self._hovered = False
         self._pressed = False
-
-        self._timer = QTimer(self)
-        self._timer.setInterval(33)
-        self._timer.timeout.connect(self._animate)
-        self._timer.start()
+        self._ticking = False  # abonnement au ticker partagé (show/hide)
 
         self.setStyleSheet("QPushButton { background: transparent; border: none; }")
         log.debug("[FX] GlowButton '%s' — style=%s, glow=%s", text, style, glow_color)
@@ -182,11 +180,15 @@ class GlowButton(QPushButton):
             p.fillRect(rect, QColor(255, 255, 255, 6))
 
     def showEvent(self, event) -> None:
-        self._timer.start()
+        if not self._ticking:
+            Ticker.instance().tick.connect(self._animate)
+            self._ticking = True
         super().showEvent(event)
 
     def hideEvent(self, event) -> None:
-        self._timer.stop()
+        if self._ticking:
+            Ticker.instance().tick.disconnect(self._animate)
+            self._ticking = False
         super().hideEvent(event)
 
     def enterEvent(self, event: QEnterEvent) -> None:

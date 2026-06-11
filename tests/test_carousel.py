@@ -18,6 +18,8 @@ class _FakeManager:
     def is_installed(self, _: str) -> bool: return False
     def has_update(self, _: str) -> bool: return False
     def installed_version(self, _: str) -> str | None: return None
+    def is_new(self, _: str) -> bool: return False
+    def mark_seen(self, _: str) -> None: pass
 
 
 def _make_game(game_id: str) -> GameData:
