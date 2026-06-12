@@ -5,12 +5,15 @@ from pathlib import Path
 
 from PyQt6.QtCore import (
     Qt, QPropertyAnimation, QEasingCurve,
-    QRectF, QTimer, pyqtProperty,
+    QRectF, pyqtProperty,
 )
 from PyQt6.QtGui import (
     QColor, QImage, QLinearGradient, QPainter, QPixmap, QRadialGradient,
 )
 from PyQt6.QtWidgets import QSizePolicy, QWidget
+
+from src.ui.ticker import Ticker
+from src.ui import theme
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +34,9 @@ class BackgroundWidget(QWidget):
         self._prepared_for: tuple[int, int] = (0, 0)
         self._opacity = 1.0
         self._video_frame: QImage | None = None
+        # Cross-fade entre jeux : snapshot de l'ancien rendu peint sous le
+        # nouveau fond pendant son fade-in (pas de coupe noire).
+        self._old_frame: QPixmap | None = None
         # Overlays statiques (gradients + vignette + voile) pré-rendus — ils ne
         # dépendent que de la taille ; les rebâtir à chaque frame coûtait cher.
         self._overlay_cache: QPixmap | None = None
@@ -43,15 +49,15 @@ class BackgroundWidget(QWidget):
         self._zoom_anim.setDuration(8000)
         self._zoom_anim.setEasingCurve(QEasingCurve.Type.InOutSine)
 
-        # Parallaxe souris — lerp doux
+        # Parallaxe souris — lerp doux cadencé par le Ticker partagé (~30 FPS),
+        # abonnement à la demande (set_parallax_target) et désabonnement une fois
+        # la cible atteinte. Les events souris (jusqu'à 1000 Hz) ne font que
+        # déplacer la cible, jamais repeindre.
         self._parallax_tx = 0.0
         self._parallax_ty = 0.0
         self._parallax_cx = 0.0
         self._parallax_cy = 0.0
-        self._parallax_timer = QTimer(self)
-        self._parallax_timer.setInterval(16)  # ~60 FPS
-        self._parallax_timer.timeout.connect(self._update_parallax)
-        # Le timer démarre à la demande (set_parallax_target)
+        self._parallax_ticking = False
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         log.debug("[FX] BackgroundWidget — zoom 16s, parallaxe ±20/±12, gradient 75%%")
@@ -63,6 +69,8 @@ class BackgroundWidget(QWidget):
 
     def _set_bg_opacity(self, value: float) -> None:
         self._opacity = value
+        if value >= 0.999 and self._old_frame is not None:
+            self._old_frame = None  # cross-fade terminé, libérer le snapshot
         self.update()
 
     bg_opacity = pyqtProperty(float, _get_bg_opacity, _set_bg_opacity)
@@ -106,30 +114,41 @@ class BackgroundWidget(QWidget):
         center_y = win_h / 2
         self._parallax_tx = -(mouse_x - center_x) / win_w * self.PARALLAX_MAX_X
         self._parallax_ty = -(mouse_y - center_y) / win_h * self.PARALLAX_MAX_Y
-        if not self._parallax_timer.isActive():
-            self._parallax_timer.start()
+        self._set_parallax_ticking(True)
+
+    def _set_parallax_ticking(self, on: bool) -> None:
+        if on and not self._parallax_ticking:
+            Ticker.instance().tick.connect(self._update_parallax)
+            self._parallax_ticking = True
+        elif not on and self._parallax_ticking:
+            Ticker.instance().tick.disconnect(self._update_parallax)
+            self._parallax_ticking = False
 
     def _update_parallax(self) -> None:
         dx = self._parallax_tx - self._parallax_cx
         dy = self._parallax_ty - self._parallax_cy
         if abs(dx) < 0.05 and abs(dy) < 0.05:
-            self._parallax_timer.stop()
+            self._set_parallax_ticking(False)
             return
-        self._parallax_cx += dx * 0.05
-        self._parallax_cy += dy * 0.05
+        # 0.10 par tick à 30 FPS ≈ l'ancien 0.05 par frame à 60 FPS (même inertie)
+        self._parallax_cx += dx * 0.10
+        self._parallax_cy += dy * 0.10
         self.update()
 
     def pause(self) -> None:
-        self._parallax_timer.stop()
-        self._zoom_anim.pause()
+        self._set_parallax_ticking(False)
+        # pause()/resume() sur une animation arrêtée émettent un warning Qt
+        if self._zoom_anim.state() == QPropertyAnimation.State.Running:
+            self._zoom_anim.pause()
 
     def resume(self) -> None:
-        self._zoom_anim.resume()
+        if self._zoom_anim.state() == QPropertyAnimation.State.Paused:
+            self._zoom_anim.resume()
         # Reprendre le lerp parallaxe si la cible n'est pas atteinte
         dx = self._parallax_tx - self._parallax_cx
         dy = self._parallax_ty - self._parallax_cy
         if abs(dx) >= 0.05 or abs(dy) >= 0.05:
-            self._parallax_timer.start()
+            self._set_parallax_ticking(True)
 
     def invalidate_cache(self) -> None:
         """Force le recalcul du pixmap préparé et des overlays au prochain paintEvent."""
@@ -137,6 +156,19 @@ class BackgroundWidget(QWidget):
         self._prepared_for = (0, 0)
         self._overlay_cache = None
         self._overlay_for = (0, 0)
+        self._old_frame = None  # un resize pendant un cross-fade invaliderait le snapshot
+
+    def begin_crossfade(self) -> None:
+        """Capture le rendu actuel (image OU frame vidéo) comme sous-couche.
+
+        À appeler AVANT de changer d'image : le nouveau fond fade par-dessus
+        (bg_opacity 0 → 1) au lieu d'apparaître sur fond noir.
+        """
+        if self.width() > 0 and self.height() > 0 and (
+                self._prepared is not None or self._video_frame is not None):
+            self._old_frame = self.grab()
+        else:
+            self._old_frame = None
 
     def set_video_frame(self, image: QImage | None) -> None:
         """Reçoit une frame vidéo à peindre à la place de l'image statique."""
@@ -183,6 +215,10 @@ class BackgroundWidget(QWidget):
         w, h = rect.width(), rect.height()
 
         p.fillRect(rect, QColor("#060611"))
+        if self._old_frame is not None:
+            # Sous-couche du cross-fade : l'ancien rendu reste visible tant que
+            # le nouveau fond n'est pas pleinement opaque.
+            p.drawPixmap(0, 0, self._old_frame)
         p.setOpacity(self._opacity)
 
         if self._video_frame is not None and w > 0 and h > 0:
@@ -250,21 +286,21 @@ class BackgroundWidget(QWidget):
         rect = pix.rect()
 
         # Subtle dark blue overlay
-        p.fillRect(rect, QColor(6, 6, 17, 30))
+        p.fillRect(rect, theme.bg_qcolor(30))
 
         # Top gradient (title bar area)
         grad_top = QLinearGradient(0, 0, 0, h * 0.08)
-        grad_top.setColorAt(0, QColor(6, 6, 17, 160))
-        grad_top.setColorAt(1, QColor(6, 6, 17, 0))
+        grad_top.setColorAt(0, theme.bg_qcolor(160))
+        grad_top.setColorAt(1, theme.bg_qcolor(0))
         p.fillRect(rect, grad_top)
 
         # Bottom gradient — 75% height, very strong
         grad = QLinearGradient(0, h * 0.25, 0, h)
-        grad.setColorAt(0.0, QColor(6, 6, 17, 0))
-        grad.setColorAt(0.35, QColor(6, 6, 17, 38))
-        grad.setColorAt(0.55, QColor(6, 6, 17, 128))
-        grad.setColorAt(0.75, QColor(6, 6, 17, 217))
-        grad.setColorAt(1.0, QColor(6, 6, 17, 247))
+        grad.setColorAt(0.0, theme.bg_qcolor(0))
+        grad.setColorAt(0.35, theme.bg_qcolor(38))
+        grad.setColorAt(0.55, theme.bg_qcolor(128))
+        grad.setColorAt(0.75, theme.bg_qcolor(217))
+        grad.setColorAt(1.0, theme.bg_qcolor(247))
         p.fillRect(rect, grad)
 
         # Radial vignette
@@ -279,11 +315,11 @@ class BackgroundWidget(QWidget):
 
         # Voile gauche — simple dégradé horizontal, pas de blur
         veil_grad = QLinearGradient(0, 0, w, 0)
-        veil_grad.setColorAt(0.0, QColor(6, 6, 17, 200))
-        veil_grad.setColorAt(0.25, QColor(6, 6, 17, 150))
-        veil_grad.setColorAt(0.40, QColor(6, 6, 17, 80))
-        veil_grad.setColorAt(0.55, QColor(6, 6, 17, 20))
-        veil_grad.setColorAt(0.72, QColor(6, 6, 17, 0))
+        veil_grad.setColorAt(0.0, theme.bg_qcolor(200))
+        veil_grad.setColorAt(0.25, theme.bg_qcolor(150))
+        veil_grad.setColorAt(0.40, theme.bg_qcolor(80))
+        veil_grad.setColorAt(0.55, theme.bg_qcolor(20))
+        veil_grad.setColorAt(0.72, theme.bg_qcolor(0))
         p.fillRect(rect, veil_grad)
 
         p.end()

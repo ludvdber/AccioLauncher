@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import urlparse
 
-import httpx
 from PyQt6.QtCore import QThread, pyqtSignal
 
 log = logging.getLogger(__name__)
+
+# httpx est importé paresseusement dans les méthodes du thread (~70 ms d'import
+# évités au démarrage du launcher — il ne sert qu'une fois un téléchargement lancé).
 
 MAX_RETRIES = 3
 BACKOFF_BASE = 1  # secondes
@@ -17,7 +19,7 @@ CHUNK_SIZE = 256 * 1024  # 256 Ko
 SIZE_OVERHEAD_FACTOR = 1.5  # tolérance vs size_mb du catalog avant abandon
 
 _ALLOWED_SCHEMES = {"https"}
-_TIMEOUT = httpx.Timeout(connect=15.0, read=120.0, write=30.0, pool=10.0)
+_TIMEOUT_KW = {"connect": 15.0, "read": 120.0, "write": 30.0, "pool": 10.0}
 
 
 def _validate_url(url: str) -> None:
@@ -52,6 +54,7 @@ class Downloader(QThread):
     download_finished = pyqtSignal(str)  # chemin du fichier téléchargé
     error = pyqtSignal(str)              # message d'erreur
     part_info = pyqtSignal(int, int)     # (part_courante, total_parts) — multi-parts uniquement
+    verifying = pyqtSignal()             # vérification SHA-256 d'un fichier complet en cours
 
     def __init__(
         self,
@@ -78,9 +81,14 @@ class Downloader(QThread):
         self._last_emit = 0.0
 
     def _verify_sha256(self, path: Path, expected: str | None) -> bool:
-        """Vérifie l'empreinte d'un fichier. True si pas d'empreinte attendue ou si conforme."""
+        """Vérifie l'empreinte d'un fichier complet (relecture intégrale).
+
+        Ne sert plus qu'aux parts déjà en cache — les téléchargements frais sont
+        hachés incrémentalement pendant le stream (aucune pause à 100 %).
+        """
         if not expected:
             return True
+        self.verifying.emit()
         log.info("Vérification SHA-256 de %s…", path.name)
         actual = file_sha256(path, cancelled=lambda: self._cancelled)
         if self._cancelled:
@@ -114,6 +122,8 @@ class Downloader(QThread):
     # ─── Téléchargement simple (fichier unique) ───
 
     def _run_single(self) -> None:
+        import httpx  # import différé (thread) — voir en-tête de module
+
         try:
             _validate_url(self.url)
         except ValueError as exc:
@@ -127,13 +137,16 @@ class Downloader(QThread):
             if self._cancelled:
                 return
             try:
-                self._download_stream(self.url, part_path, global_offset=0, global_total=0)
+                digest = self._download_stream(
+                    self.url, part_path, global_offset=0, global_total=0,
+                    compute_sha256=bool(self.expected_sha256),
+                )
                 if self._cancelled:
                     return
-                if not self._verify_sha256(part_path, self.expected_sha256):
-                    if self._cancelled:
-                        return
+                if self.expected_sha256 and (digest or "").lower() != self.expected_sha256.lower():
                     # Fichier corrompu : repartir de zéro (OSError → boucle de retry)
+                    log.error("SHA-256 invalide pour %s : attendu %s, obtenu %s",
+                              part_path, self.expected_sha256, digest)
                     part_path.unlink(missing_ok=True)
                     raise OSError("empreinte SHA-256 invalide (fichier corrompu)")
                 part_path.replace(self.destination)
@@ -151,6 +164,8 @@ class Downloader(QThread):
     # ─── Téléchargement multi-parts ───
 
     def _run_multipart(self) -> None:
+        import httpx  # import différé (thread) — voir en-tête de module
+
         for url in self.parts:
             try:
                 _validate_url(url)
@@ -193,15 +208,16 @@ class Downloader(QThread):
                     log.warning("Part en cache corrompue, re-téléchargement : %s", part_dest)
                     part_dest.unlink(missing_ok=True)
                 try:
-                    self._download_stream(
+                    digest = self._download_stream(
                         url, part_tmp,
                         global_offset=i, global_total=total_parts,
+                        compute_sha256=bool(expected_part_hash),
                     )
                     if self._cancelled:
                         return
-                    if not self._verify_sha256(part_tmp, expected_part_hash):
-                        if self._cancelled:
-                            return
+                    if expected_part_hash and (digest or "").lower() != expected_part_hash.lower():
+                        log.error("SHA-256 invalide pour %s : attendu %s, obtenu %s",
+                                  part_tmp, expected_part_hash, digest)
                         part_tmp.unlink(missing_ok=True)
                         raise OSError("empreinte SHA-256 invalide (part corrompue)")
                     part_tmp.replace(part_dest)
@@ -233,19 +249,54 @@ class Downloader(QThread):
 
     # ─── Streaming avec reprise ───
 
+    def _hash_existing(self, part_path: Path, size: int) -> "hashlib._Hash | None":
+        """Hache le préfixe déjà téléchargé avant une reprise (lecture disque rapide).
+
+        Retourne None si annulé en cours de lecture.
+        """
+        h = hashlib.sha256()
+        with open(part_path, "rb") as f:
+            remaining = size
+            while remaining > 0:
+                chunk = f.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    break
+                if self._cancelled:
+                    return None
+                h.update(chunk)
+                remaining -= len(chunk)
+        return h
+
     def _download_stream(
         self, url: str, part_path: Path,
         global_offset: int = 0, global_total: int = 0,
-    ) -> None:
-        """Télécharge en streaming avec reprise via HTTP Range."""
+        compute_sha256: bool = False,
+    ) -> str | None:
+        """Télécharge en streaming avec reprise via HTTP Range.
+
+        `compute_sha256=True` → hache les octets AU FIL du stream (préfixe repris
+        inclus) et retourne l'empreinte hex — plus de relecture intégrale (et donc
+        plus d'UI figée à 100 %) après le téléchargement. Retourne None si le
+        hash n'est pas demandé ou en cas d'annulation.
+        """
+        import httpx  # import différé (thread) — voir en-tête de module
+
+        timeout = httpx.Timeout(**_TIMEOUT_KW)
         downloaded = part_path.stat().st_size if part_path.exists() else 0
         headers: dict[str, str] = {}
+        hasher = None
         if downloaded > 0:
             headers["Range"] = f"bytes={downloaded}-"
             log.info("Reprise du téléchargement à %d octets", downloaded)
+            if compute_sha256:
+                hasher = self._hash_existing(part_path, downloaded)
+                if hasher is None:  # annulé pendant le hachage du préfixe
+                    return None
+        elif compute_sha256:
+            hasher = hashlib.sha256()
 
         needs_retry = False
-        with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
+        with httpx.Client(follow_redirects=True, timeout=timeout) as client:
             with client.stream("GET", url, headers=headers) as response:
                 try:
                     response.raise_for_status()
@@ -267,8 +318,11 @@ class Downloader(QThread):
                     if response.status_code == 206:
                         total = downloaded + content_length
                     else:
+                        # Le serveur a ignoré le Range → contenu complet, repartir de zéro
                         total = content_length
                         downloaded = 0
+                        if compute_sha256:
+                            hasher = hashlib.sha256()
 
                     # Cap : refuser si le serveur annonce > expected * 1.5
                     if self._max_total_bytes and total > self._max_total_bytes:
@@ -281,8 +335,10 @@ class Downloader(QThread):
                     with open(part_path, mode) as f:
                         for chunk in response.iter_bytes(CHUNK_SIZE):
                             if self._cancelled:
-                                return
+                                return None
                             f.write(chunk)
+                            if hasher is not None:
+                                hasher.update(chunk)
                             downloaded += len(chunk)
                             # Cap en cours de stream (Content-Length manquant ou menteur)
                             if self._max_total_bytes and downloaded > self._max_total_bytes:
@@ -295,13 +351,14 @@ class Downloader(QThread):
                                 self.progress.emit(downloaded, total)
                                 self._last_emit = now
                     self.progress.emit(downloaded, total)  # final
-                    return  # succès
+                    return hasher.hexdigest() if hasher is not None else None
 
         if not needs_retry:
-            return
+            return None
 
         # Retry une seule fois après HTTP 416 (sans Range)
-        with httpx.Client(follow_redirects=True, timeout=_TIMEOUT) as client:
+        hasher = hashlib.sha256() if compute_sha256 else None
+        with httpx.Client(follow_redirects=True, timeout=timeout) as client:
             with client.stream("GET", url) as response:
                 response.raise_for_status()
                 raw_length = response.headers.get("content-length", "")
@@ -313,11 +370,14 @@ class Downloader(QThread):
                     downloaded = 0
                     for chunk in response.iter_bytes(CHUNK_SIZE):
                         if self._cancelled:
-                            return
+                            return None
                         f.write(chunk)
+                        if hasher is not None:
+                            hasher.update(chunk)
                         downloaded += len(chunk)
                         now = time.monotonic()
                         if now - self._last_emit >= 0.1:
                             self.progress.emit(downloaded, total)
                             self._last_emit = now
                 self.progress.emit(downloaded, total)  # final
+        return hasher.hexdigest() if hasher is not None else None

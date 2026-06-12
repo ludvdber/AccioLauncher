@@ -22,3 +22,18 @@ def open_url(url: str) -> None:
 def open_local_path(path: str) -> None:
     """Ouvre un dossier local dans l'explorateur."""
     QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+
+def is_writable_dir(path) -> bool:
+    """Crée le dossier si nécessaire et vérifie qu'on peut y écrire."""
+    from pathlib import Path
+
+    path = Path(path)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".accio_write_test"
+        probe.write_bytes(b"")
+        probe.unlink()
+        return True
+    except OSError:
+        return False

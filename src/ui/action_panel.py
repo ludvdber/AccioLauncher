@@ -12,6 +12,7 @@ from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
 from src.core.formatting import format_size, format_progress_line, append_part_info
+from src.ui.theme import themed
 from src.ui.utils import clear_layout
 
 
@@ -116,7 +117,7 @@ class ActionPanel(QWidget):
     def _build_not_installed(self) -> None:
         dl = self._game.current_download
         size = format_size(dl.size_mb) if dl else "?"
-        btn = GlowButton(f"{tr('TÉLÉCHARGER')}  \u2014  {size}", glow_color="#d4a017", style="outline")
+        btn = GlowButton(f"{tr('TÉLÉCHARGER')}  \u2014  {size}", style="outline")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
         btn.setFont(cinzel(13, bold=True))
@@ -182,13 +183,13 @@ class ActionPanel(QWidget):
             recommended = self._game.recommended_version
             lbl = QLabel(tr("Mise à jour disponible : v{} → v{}").format(installed_ver, recommended))
             lbl.setFont(body_font(12))
-            lbl.setStyleSheet("color: #d4a017; background: transparent;")
+            lbl.setStyleSheet(themed("color: #d4a017; background: transparent;"))
             link = ClickableLabel(tr("Mettre à jour"))
             link.setFont(body_font(12))
-            link.setStyleSheet(
+            link.setStyleSheet(themed(
                 "QLabel { color: #d4a017; background: transparent; text-decoration: underline; }"
                 "QLabel:hover { color: #e8c547; }"
-            )
+            ))
             link.clicked.connect(self.update_clicked)
             self._update_row_layout.addWidget(lbl)
             self._update_row_layout.addWidget(link)

@@ -4,16 +4,16 @@ version = "0.5.2"
 description = "Launcher pour les jeux Harry Potter sur PC"
 requires-python = ">=3.10"
 dependencies = [
-    "PyQt6>=6.10",
+    "PyQt6>=6.11",
     "httpx>=0.28",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pyinstaller>=6.0",
+    "pyinstaller>=6.16",  # 6.16 = premier support Python 3.14
     "Pillow>=12",
-    "pytest>=8.0",
-    "pytest-qt>=4.4",
+    "pytest>=9.0",
+    "pytest-qt>=4.5",
 ]
 
 [project.scripts]

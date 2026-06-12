@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
 from src.core.i18n import tr
 from src.ui.fonts import cinzel
+from src.ui import theme
 
 
 class TitleBar(QWidget):
@@ -63,7 +64,7 @@ class TitleBar(QWidget):
 
     def paintEvent(self, event) -> None:
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(6, 6, 17, 217))  # rgba(6,6,17,0.85)
+        p.fillRect(self.rect(), theme.bg_qcolor(217))  # rgba(6,6,17,0.85)
         # Séparateur doré subtil
         p.setPen(QPen(QColor(212, 160, 23, 25), 1.0))
         p.drawLine(0, self.height() - 1, self.width(), self.height() - 1)

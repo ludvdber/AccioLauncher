@@ -4,10 +4,13 @@ Une seule instance par fenêtre, réutilisée : un nouveau message remplace
 l'ancien et relance le timer. Fade-in/out via QGraphicsOpacityEffect.
 """
 
+from typing import Callable
+
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QWidget
 
 from src.ui.fonts import body_font
+from src.ui.theme import themed
 
 _DEFAULT_DURATION_MS = 3500
 
@@ -19,12 +22,13 @@ class Toast(QLabel):
         super().__init__(parent)
         self.setFont(body_font(13))
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet(
+        self.setStyleSheet(themed(
             "QLabel { background: rgba(13, 13, 26, 0.94); color: #e8c547;"
             " border: 1px solid rgba(212, 160, 23, 0.45); border-radius: 8px;"
             " padding: 10px 22px; }"
-        )
+        ))
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self._on_click: Callable[[], None] | None = None
         self.hide()
 
         self._opacity = QGraphicsOpacityEffect(self)
@@ -39,8 +43,17 @@ class Toast(QLabel):
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self._fade_out)
 
-    def show_message(self, text: str, duration_ms: int = _DEFAULT_DURATION_MS) -> None:
-        """Affiche (ou remplace) le toast pendant `duration_ms`."""
+    def show_message(self, text: str, duration_ms: int = _DEFAULT_DURATION_MS,
+                     on_click: Callable[[], None] | None = None) -> None:
+        """Affiche (ou remplace) le toast pendant `duration_ms`.
+
+        `on_click` rend le toast cliquable (curseur main) ; sans callback il
+        reste transparent aux événements souris (overlay pur).
+        """
+        self._on_click = on_click
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, on_click is None)
+        self.setCursor(Qt.CursorShape.PointingHandCursor if on_click
+                       else Qt.CursorShape.ArrowCursor)
         self.setText(text)
         self.adjustSize()
         self.reposition()
@@ -72,3 +85,10 @@ class Toast(QLabel):
     def _on_anim_finished(self) -> None:
         if self._opacity.opacity() < 0.05:
             self.hide()
+
+    def mousePressEvent(self, event) -> None:
+        if self._on_click is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._on_click()
+            self._fade_out()
+        else:
+            super().mousePressEvent(event)

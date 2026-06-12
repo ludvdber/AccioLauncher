@@ -1,11 +1,9 @@
 """Tests pour src/core/config.py"""
 
-import json
 import sys
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 from src.core.config import Config, get_documents_dir, APP_VERSION
 
@@ -56,6 +54,31 @@ class TestConfig:
             loaded = Config.load()
             assert loaded.installed_versions == {"hp1": "1.0", "hp3": "1.1"}
             assert loaded.install_path == tmp_path / "games"
+
+    def test_roundtrip_champs_2026_06(self, tmp_path):
+        """Régression : chaque nouveau champ doit survivre à save() → load().
+
+        Un champ ajouté au dataclass mais oublié dans save() ou load() retombe
+        silencieusement sur sa valeur par défaut au redémarrage.
+        """
+        config_file = tmp_path / "config.json"
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            c = Config(install_path=tmp_path, cache_path=tmp_path / ".cache")
+            c.theme = "serpentard"
+            c.season = "noel"
+            c.kofi_milestone_thanked = True
+            c.discord_presence = False
+            c.playtime_seconds = {"hp1": 3600}
+            c.last_played = {"hp1": "2026-06-11"}
+            c.save()
+
+            loaded = Config.load()
+            assert loaded.theme == "serpentard"
+            assert loaded.season == "noel"
+            assert loaded.kofi_milestone_thanked is True
+            assert loaded.discord_presence is False
+            assert loaded.playtime_seconds == {"hp1": 3600}
+            assert loaded.last_played == {"hp1": "2026-06-11"}
 
     def test_load_corrupted(self, tmp_path):
         config_file = tmp_path / "config.json"

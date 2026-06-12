@@ -55,7 +55,8 @@ def _is_safe_relative(path_str: str) -> bool:
 class GameManager:
     """Gère le catalogue de jeux et leur état (installé, non installé, etc.)."""
 
-    __slots__ = ("config", "_catalog", "_games", "_index", "_states", "_new_game_ids")
+    __slots__ = ("config", "_catalog", "_games", "_index", "_states", "_new_game_ids",
+                 "_download_counts")
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -67,6 +68,9 @@ class GameManager:
         }
         # Jeux apparus via un reload de catalogue pendant la session (badge « NOUVEAU »)
         self._new_game_ids: set[str] = set()
+        # Compteurs de téléchargement GitHub (toutes versions cumulées), remplis
+        # en arrière-plan par l'UpdateChecker — vide tant que le fetch n'a pas abouti.
+        self._download_counts: dict[str, int] = {}
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property
@@ -245,6 +249,28 @@ class GameManager:
     def last_played(self, game_id: str) -> str | None:
         """Date ISO de la dernière session, ou None."""
         return self.config.last_played.get(game_id)
+
+    def set_download_counts(self, counts: dict[str, int]) -> None:
+        """Reçoit les compteurs ⬇ agrégés par l'UpdateChecker (thread principal)."""
+        self._download_counts = dict(counts)
+
+    def download_count(self, game_id: str) -> int:
+        """Téléchargements GitHub cumulés (0 si inconnu / fetch non abouti)."""
+        return self._download_counts.get(game_id, 0)
+
+    def last_played_game_id(self) -> str | None:
+        """Id du jeu joué le plus récemment (None si aucune session enregistrée).
+
+        Les dates ISO se comparent lexicographiquement ; les ids absents du
+        catalogue courant sont ignorés (jeu retiré).
+        """
+        dates = {
+            gid: day for gid, day in self.config.last_played.items()
+            if gid in self._index
+        }
+        if not dates:
+            return None
+        return max(dates.items(), key=lambda kv: kv[1])[0]
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
         """Sauvegarde la version du jeu installé dans la config."""

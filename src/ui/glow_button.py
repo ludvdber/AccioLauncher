@@ -16,24 +16,33 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QPushButton, QWidget
 
+from src.ui import theme
 from src.ui.ticker import Ticker
 
 log = logging.getLogger(__name__)
 
 
 class GlowButton(QPushButton):
-    """Bouton avec glow pulsant et shimmer — deux styles : filled / outline."""
+    """Bouton avec glow pulsant et shimmer — deux styles : filled / outline.
+
+    Sans `glow_color` / `bg_stops` explicites, l'accent du thème actif est
+    utilisé (thèmes maisons). Les couleurs passées explicitement (JOUER vert,
+    DÉSINSTALLER gris) ne sont pas thématisées.
+    """
 
     def __init__(
         self,
         text: str,
-        glow_color: str = "#d4a017",
+        glow_color: str | None = None,
         style: str = "filled",
         bg_stops: tuple[str, str, str] | None = None,
         text_color: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(text, parent)
+        palette = theme.current()
+        if glow_color is None:
+            glow_color = palette.accent
         self._style = style  # "filled" or "outline"
         self._glow_color = QColor(glow_color)
 
@@ -42,9 +51,9 @@ class GlowButton(QPushButton):
             self._bg_mid = QColor(bg_stops[1])
             self._bg_bot = QColor(bg_stops[2])
         else:
-            self._bg_top = QColor("#f0d060")
-            self._bg_mid = QColor("#d4a017")
-            self._bg_bot = QColor("#9a7209")
+            self._bg_top = QColor(palette.accent_light)
+            self._bg_mid = QColor(palette.accent)
+            self._bg_bot = QColor(palette.accent_dark)
 
         if text_color:
             self._text_color = QColor(text_color)

@@ -36,6 +36,31 @@ class TestDownloadBarLifecycle:
         bar.show_for_game(_GAME, GameState.INSTALLING)
         assert not bar._btn_cancel.isVisible() or bar._btn_cancel.isHidden()
 
+    def test_stepper_phases(self, qtbot):
+        """set_phase pilote le stepper ; « verify » passe la barre en indéterminé."""
+        bar = DownloadBar()
+        qtbot.addWidget(bar)
+        bar.show_for_game(_GAME, GameState.DOWNLOADING)
+        assert bar._phase_label.text().startswith("1/3")
+
+        bar.set_phase("verify")
+        assert bar._phase_label.text().startswith("2/3")
+        assert bar._progress.maximum() == 0  # indéterminé pendant le hash
+
+        # La progression qui reprend re-borne la barre (part suivante)
+        bar.update_download_progress(10, 100, 0.0, -1.0)
+        assert bar._progress.maximum() == 100
+
+        bar.set_phase("install")
+        assert bar._phase_label.text().startswith("3/3")
+
+        bar.set_phase("inconnu")  # ignoré sans crash
+        assert bar._phase_label.text().startswith("3/3")
+
+        bar.hide_bar()
+        assert bar._phase_label.text() == ""
+        assert bar._progress.maximum() == 100
+
     def test_hide_bar_resets_everything(self, qtbot):
         """Régression : hide_bar doit reset titre/status/progress sinon flash au prochain show."""
         bar = DownloadBar()

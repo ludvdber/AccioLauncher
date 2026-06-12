@@ -125,6 +125,9 @@ class GameDetailView(QWidget):
             self._info.apply_game(game)
             self._refresh()
             return
+        # Cross-fade : snapshot du rendu actuel (vidéo incluse) AVANT de couper
+        # la vidéo et de baisser l'opacité — le nouveau fond fade par-dessus.
+        self._bg.begin_crossfade()
         self._stop_video()
         self._fade_anim.stop()
         self._info_fade.stop()
@@ -228,6 +231,16 @@ class GameDetailView(QWidget):
         """Rafraîchit le panneau d'actions après un changement d'état externe
         (ex: re-détection des états suite à un changement d'install_path)."""
         self._refresh()
+
+    def apply_audio_config(self) -> None:
+        """Applique « Couper le son des vidéos » à la vidéo EN COURS (réglage live).
+
+        Sans ça, le toggle des Paramètres n'affectait que la prochaine vidéo —
+        l'utilisateur avait l'impression qu'il ne fonctionnait pas.
+        """
+        muted = self.manager.config.mute_videos
+        self._video.set_muted(muted)
+        self._audio_bar.set_muted_icon(muted)
 
     @property
     def ops(self) -> GameOperations:

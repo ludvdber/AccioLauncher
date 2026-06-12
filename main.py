@@ -37,6 +37,10 @@ def _setup_logging() -> None:
     file_handler.setFormatter(fmt)
     root.addHandler(file_handler)
 
+    # httpcore déverse tous les en-têtes HTTP en DEBUG — il remplirait à lui
+    # seul la rotation de 5 Mo ; httpx garde sa ligne INFO « HTTP Request: … ».
+    logging.getLogger("httpcore").setLevel(logging.INFO)
+
 
 def _create_splash() -> QSplashScreen:
     """Crée un splash screen avec le logo Accio Launcher."""
@@ -112,6 +116,11 @@ def main():
 
     try:
         app = QApplication(sys.argv)
+
+        # Rapport de crash en un clic : les exceptions non gérées dans les slots
+        # affichent un dialogue copiable au lieu de tuer le process en silence.
+        from src.ui.crash_dialog import install_excepthook
+        install_excepthook()
 
         # Instance unique : un second lancement active la fenêtre existante et quitte.
         from src.ui.single_instance import SingleInstance

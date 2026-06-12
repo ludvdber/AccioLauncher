@@ -169,4 +169,49 @@ QLabel#sizeLabel {{
     font-size: 14px;
     color: {COLOR_TEXT_SECONDARY};
 }}
+
+/* ---------- Dialogues thématisés (QMessageBox & co.) ----------
+   Les QMessageBox gris Windows cassaient l'immersion ; les dialogues parentés
+   à la fenêtre héritent de cette feuille. */
+
+QMessageBox, QInputDialog {{
+    background-color: #0d0d1a;
+}}
+
+QMessageBox QLabel, QInputDialog QLabel {{
+    color: {COLOR_TEXT};
+    font-size: 13px;
+    background: transparent;
+}}
+
+QMessageBox QPushButton, QInputDialog QPushButton {{
+    background-color: #16213e;
+    color: {COLOR_TEXT};
+    border: 1px solid #2c3e6b;
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-size: 13px;
+    min-width: 70px;
+}}
+
+QMessageBox QPushButton:hover, QInputDialog QPushButton:hover {{
+    border-color: {COLOR_ACCENT_GOLD};
+    color: {COLOR_ACCENT_GOLD_LIGHT};
+}}
+
+QMessageBox QPushButton:default {{
+    background-color: rgba(212, 160, 23, 0.18);
+    border-color: rgba(212, 160, 23, 0.55);
+    color: {COLOR_ACCENT_GOLD_LIGHT};
+    font-weight: bold;
+}}
+
+QToolTip {{
+    background-color: #0d0d1a;
+    color: {COLOR_TEXT};
+    border: 1px solid rgba(212, 160, 23, 0.45);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+}}
 """

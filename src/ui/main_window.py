@@ -6,18 +6,16 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QIcon, QKeyEvent
 from PyQt6.QtWidgets import (
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QStatusBar,
     QVBoxLayout,
     QWidget,
 )
 
-from src.core.config import ASSETS_DIR, Config, DEFAULT_INSTALL_PATH
+from src.core.config import ASSETS_DIR, Config
 from src.core.discord_presence import DiscordPresence
 from src.core.downloader import Downloader
 from src.core.game_manager import GameManager, GameState
@@ -31,8 +29,10 @@ from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
 from src.ui.particles import ParticleOverlay
 from src.ui.process_monitor import ProcessMonitor
+from src.ui.season import resolve as resolve_season
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
+from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
 from src.ui.title_bar import TitleBar
 from src.ui.toast import Toast
@@ -64,7 +64,6 @@ class MainWindow(QMainWindow):
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.setStyleSheet(MAIN_STYLE)
 
         self.setMouseTracking(True)
         self._edge_cursor_active = False  # override-cursor de resize posé ?
@@ -72,10 +71,12 @@ class MainWindow(QMainWindow):
         load_fonts()
 
         self.config = self._first_launch_or_load()
-        # La langue doit être active AVANT la construction des widgets (chaînes tr()
-        # posées à la construction ; changement de langue = redémarrage).
+        # Langue et thème doivent être actifs AVANT la construction des widgets
+        # (chaînes tr() et couleurs posées à la construction ; changement = redémarrage).
         from src.core.i18n import set_language
         set_language(self.config.langue)
+        set_theme(self.config.theme)
+        self.setStyleSheet(themed(MAIN_STYLE))
         self.manager = GameManager(self.config)
 
         self._update_checker: UpdateChecker | None = None
@@ -99,55 +100,10 @@ class MainWindow(QMainWindow):
     def _first_launch_or_load() -> Config:
         if Config.exists():
             return Config.load()
-
-        QMessageBox.information(
-            None,
-            "Bienvenue dans Accio Launcher !",
-            "Bienvenue dans Accio Launcher !\n\n"
-            "Veuillez choisir le dossier o\u00f9 les jeux seront install\u00e9s.",
-        )
-        install_path = MainWindow._prompt_writable_dir()
-        config = Config(install_path=install_path, cache_path=install_path / ".cache")
-        config.save()
-        return config
-
-    @staticmethod
-    def _prompt_writable_dir() -> Path:
-        """Demande un dossier au user, retry tant qu'il n'est pas inscriptible.
-
-        Le user peut annuler \u00e0 tout moment \u2192 on tombe sur DEFAULT_INSTALL_PATH (cr\u00e9able).
-        """
-        while True:
-            chosen = QFileDialog.getExistingDirectory(
-                None, "Dossier d'installation des jeux", str(DEFAULT_INSTALL_PATH),
-            )
-            candidate = Path(chosen) if chosen else DEFAULT_INSTALL_PATH
-            if MainWindow._is_writable(candidate):
-                return candidate
-            reply = QMessageBox.warning(
-                None, "Dossier non inscriptible",
-                f"Impossible d'\u00e9crire dans :\n{candidate}\n\n"
-                "Choisissez un autre dossier ou annulez pour utiliser :\n"
-                f"{DEFAULT_INSTALL_PATH}",
-                QMessageBox.StandardButton.Retry | QMessageBox.StandardButton.Cancel,
-                QMessageBox.StandardButton.Retry,
-            )
-            if reply != QMessageBox.StandardButton.Retry:
-                # Fallback DEFAULT_INSTALL_PATH (toujours cr\u00e9able sous le home).
-                DEFAULT_INSTALL_PATH.mkdir(parents=True, exist_ok=True)
-                return DEFAULT_INSTALL_PATH
-
-    @staticmethod
-    def _is_writable(path: Path) -> bool:
-        """Cr\u00e9e le dossier si n\u00e9cessaire et v\u00e9rifie qu'on peut y \u00e9crire."""
-        try:
-            path.mkdir(parents=True, exist_ok=True)
-            probe = path / ".accio_write_test"
-            probe.write_bytes(b"")
-            probe.unlink()
-            return True
-        except OSError:
-            return False
+        # Premier lancement : assistant 3 écrans (dossier, import en masse,
+        # langue/thème — appliqués dès la suite de la construction).
+        from src.ui.onboarding import run_onboarding
+        return run_onboarding()
 
     # ──────────────────── Construction UI ────────────────────
 
@@ -191,8 +147,9 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self._status_bar)
         self._status_bar.showMessage(tr("Prêt"))
 
-        # Overlay particules
+        # Overlay particules (+ saison décorative, changeable en direct dans Paramètres)
         self._particles = ParticleOverlay(self)
+        self._particles.apply_season(resolve_season(self.config.season))
         self._particles.raise_()
 
         # Toast (notifications éphémères)
@@ -200,14 +157,14 @@ class MainWindow(QMainWindow):
         self._detail.ops.operation_finished.connect(self._notify_operation_finished)
 
         # Settings button
-        self._btn_settings = QPushButton("\u2699", self)
+        self._btn_settings = QPushButton("⚙", self)
         self._btn_settings.setFixedSize(36, 36)
         self._btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_settings.setStyleSheet(
+        self._btn_settings.setStyleSheet(themed(
             "QPushButton { background: rgba(0,0,0,0.4); color: #8a8aaa; border: none;"
             " border-radius: 18px; font-size: 18px; }"
             "QPushButton:hover { color: #d4a017; background: rgba(0,0,0,0.6); }"
-        )
+        ))
         self._btn_settings.clicked.connect(self._on_settings)
         self._btn_settings.raise_()
 
@@ -216,7 +173,13 @@ class MainWindow(QMainWindow):
         QApplication.instance().installEventFilter(self)
 
         if games:
-            self._detail.set_game(games[0])
+            # Hero dynamique : ouvrir sur le dernier jeu joué plutôt que toujours HP1.
+            last_id = self.manager.last_played_game_id()
+            idx = next((i for i, g in enumerate(games) if g.id == last_id), 0)
+            if idx > 0:
+                self._carousel.select(idx)  # émet game_selected → set_game
+            else:
+                self._detail.set_game(games[0])
 
     # ──────────────────── System Tray ────────────────────
 
@@ -231,6 +194,7 @@ class MainWindow(QMainWindow):
         ops.download_progress.connect(self._download_bar.update_download_progress)
         ops.install_progress.connect(self._download_bar.update_install_progress)
         ops.part_info.connect(self._download_bar.update_part_info)
+        ops.phase_changed.connect(self._download_bar.set_phase)
         ops.state_changed.connect(self._on_ops_state_changed)
         self._download_bar.cancel_clicked.connect(ops.cancel_download)
         # Progression sur l'icône de la barre des tâches Windows
@@ -281,43 +245,53 @@ class MainWindow(QMainWindow):
         """Construit la barre de notification dorée pour les updates launcher."""
         bar = QWidget()
         bar.setFixedHeight(35)
-        bar.setStyleSheet(
+        bar.setStyleSheet(themed(
             "QWidget { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
             "stop:0 rgba(212,160,23,0.15), stop:0.5 rgba(212,160,23,0.25),"
             "stop:1 rgba(212,160,23,0.15)); }"
-        )
+        ))
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(16, 0, 8, 0)
         layout.setSpacing(10)
 
         self._notif_label = QLabel()
-        self._notif_label.setStyleSheet("color: #d4a017; font-size: 12px; background: transparent;")
+        self._notif_label.setStyleSheet(themed("color: #d4a017; font-size: 12px; background: transparent;"))
         layout.addWidget(self._notif_label, stretch=1)
 
         self._notif_btn = QPushButton(tr("Télécharger"))
         self._notif_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._notif_btn.setStyleSheet(
+        self._notif_btn.setStyleSheet(themed(
             "QPushButton { background: rgba(212,160,23,0.2); color: #d4a017;"
             " border: 1px solid rgba(212,160,23,0.4); border-radius: 4px;"
             " padding: 2px 10px; font-size: 11px; }"
             "QPushButton:hover { background: rgba(212,160,23,0.35); color: #e8c547; }"
-        )
+        ))
         self._notif_btn.clicked.connect(self._on_notif_download)
         layout.addWidget(self._notif_btn)
 
         btn_close = QPushButton("✕")
         btn_close.setFixedSize(24, 24)
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.setStyleSheet(
+        btn_close.setStyleSheet(themed(
             "QPushButton { background: transparent; color: #d4a017; border: none; font-size: 14px; }"
             "QPushButton:hover { color: #e8c547; }"
-        )
+        ))
         btn_close.clicked.connect(self._dismiss_notif)
         layout.addWidget(btn_close)
 
         return bar
 
     # ──────────────────── Update checker ────────────────────
+
+    def _games_asset_urls(self) -> dict[str, list[list[str]]]:
+        """Snapshot game_id → versions → URLs d'assets (compteur ⬇, thread-safe)."""
+        return {
+            entry.game.id: [
+                [v.download_url or ""] + list(v.download_parts or [])
+                for v in entry.game.versions
+            ]
+            for entry in self.manager.get_games()
+        }
 
     def _start_update_check(self) -> None:
         """Lance la vérification des mises à jour en arrière-plan."""
@@ -331,12 +305,20 @@ class MainWindow(QMainWindow):
             catalog_url=catalog.catalog_url,
             current_catalog_version=catalog.catalog_version,
             installed_versions=self.config.installed_versions,
+            games_asset_urls=self._games_asset_urls(),
             parent=self,
         )
         self._update_checker.catalog_updated.connect(self._on_catalog_updated)
         self._update_checker.launcher_update.connect(self._on_launcher_update)
         self._update_checker.update_counts.connect(self._on_update_counts)
+        self._update_checker.download_counts.connect(self._on_download_counts)
         self._update_checker.start()
+
+    def _on_download_counts(self, counts: dict) -> None:
+        """Compteurs ⬇ reçus — rafraîchir la fiche affichée (même id = pas de transition)."""
+        self.manager.set_download_counts(counts)
+        if self._detail.game is not None:
+            self._detail.set_game(self._detail.game)
 
     def _on_catalog_updated(self, catalog) -> None:
         """Le catalogue distant est plus récent — recharger."""
@@ -523,6 +505,25 @@ class MainWindow(QMainWindow):
         # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh sans transition)
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
+        self._maybe_thank_milestone()
+
+    def _maybe_thank_milestone(self) -> None:
+        """Un seul remerciement Ko-fi dans la vie du launcher, au cap des 10 h de jeu.
+
+        Moment de joie (retour de jeu), jamais de répétition, jamais de
+        culpabilisation — voir la stratégie « pas de nag » du projet.
+        """
+        if self.config.kofi_milestone_thanked:
+            return
+        if sum(self.config.playtime_seconds.values()) < 10 * 3600:
+            return
+        self.config.kofi_milestone_thanked = True
+        self.config.save()
+        self._toast.show_message(
+            tr("Déjà 10 h de magie retrouvée ✨ Si le launcher te plaît, un café fait plaisir — clique ici ❤"),
+            duration_ms=9000,
+            on_click=lambda: open_url("https://ko-fi.com/ludovic01"),
+        )
 
     # ──────────────────── Slots UI ────────────────────
 
@@ -545,6 +546,7 @@ class MainWindow(QMainWindow):
         """
         self.manager.refresh_states()
         self._detail.refresh_actions()
+        self._detail.apply_audio_config()  # mute/unmute la vidéo en cours (live)
         self._carousel.refresh_indicators()
 
     def _on_settings(self) -> None:
@@ -552,7 +554,19 @@ class MainWindow(QMainWindow):
         dlg.config_changed.connect(self._on_config_changed)
         dlg.force_catalog_refresh.connect(lambda: self._force_update_check(dlg, catalog_only=True))
         dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
+        dlg.season_changed.connect(self._particles.apply_season)
+        dlg.restart_requested.connect(lambda: self._restart_launcher(dlg))
         dlg.exec()
+
+    def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
+        """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre."""
+        from src.core.self_update import relaunch_after_exit
+        if relaunch_after_exit():
+            if dlg is not None:
+                dlg.accept()
+            self.close()
+        else:
+            self._show_status(tr("Relance automatique impossible — redémarrez manuellement."))
 
     def _force_update_check(self, dlg: SettingsDialog, *, catalog_only: bool) -> None:
         """Lance une vérification forcée (catalogue et/ou launcher).
@@ -565,6 +579,9 @@ class MainWindow(QMainWindow):
             catalog_url=catalog.catalog_url,
             current_catalog_version="0",  # version "0" → force le fetch
             installed_versions=self.config.installed_versions,
+            # Sans ça, un utilisateur ayant désactivé la vérif au démarrage
+            # n'obtiendrait jamais les compteurs ⬇ même en forçant la vérif.
+            games_asset_urls=self._games_asset_urls(),
             parent=self,
         )
         self._extra_checkers.append(checker)
@@ -605,6 +622,7 @@ class MainWindow(QMainWindow):
 
         checker.catalog_updated.connect(on_catalog)
         checker.update_counts.connect(self._on_update_counts)
+        checker.download_counts.connect(self._on_download_counts)
         if not catalog_only:
             checker.launcher_update.connect(on_launcher)
         checker.finished.connect(on_finished)
@@ -691,7 +709,34 @@ class MainWindow(QMainWindow):
                 from PyQt6.QtGui import QGuiApplication
                 QGuiApplication.restoreOverrideCursor()
                 self._edge_cursor_active = False
+        elif event.type() == QEvent.Type.KeyPress:
+            if self._handle_global_key(event):
+                return True
         return super().eventFilter(obj, event)
+
+    def _handle_global_key(self, event) -> bool:
+        """←/→ naviguent le carrousel même quand un bouton a le focus (A11Y).
+
+        Sans ce filtre, le premier clic sur un bouton lui donnait le focus et
+        les flèches devenaient muettes (Qt les consomme pour déplacer le focus).
+        Jamais actif quand un dialog modal est ouvert ni quand le focus est sur
+        un widget d'édition (slider de volume, combo, champ texte).
+        """
+        if event.key() not in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            return False
+        from PyQt6.QtWidgets import (
+            QAbstractSpinBox, QApplication, QComboBox, QLineEdit, QSlider,
+        )
+        if QApplication.activeModalWidget() is not None or not self.isActiveWindow():
+            return False
+        focus = QApplication.focusWidget()
+        if isinstance(focus, (QLineEdit, QComboBox, QSlider, QAbstractSpinBox)):
+            return False
+        if event.key() == Qt.Key.Key_Left:
+            self._carousel.select_prev()
+        else:
+            self._carousel.select_next()
+        return True
 
     def closeEvent(self, event) -> None:
         """Attend la fin des threads avant de fermer."""

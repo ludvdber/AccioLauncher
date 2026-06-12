@@ -11,7 +11,9 @@ from PyQt6.QtWidgets import QHBoxLayout, QWidget
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.ui.carousel_item import CarouselItem
+from src.ui.theme import accent_qcolor
 from src.ui.ticker import Ticker
+from src.ui import theme
 
 log = logging.getLogger(__name__)
 
@@ -99,10 +101,10 @@ class Carousel(QWidget):
         w, h = self.width(), self.height()
 
         grad = QLinearGradient(0, 0, 0, h)
-        grad.setColorAt(0, QColor(6, 6, 17, 0))
-        grad.setColorAt(0.15, QColor(6, 6, 17, 140))
-        grad.setColorAt(0.4, QColor(6, 6, 17, 200))
-        grad.setColorAt(1.0, QColor(6, 6, 17, 242))
+        grad.setColorAt(0, theme.bg_qcolor(0))
+        grad.setColorAt(0.15, theme.bg_qcolor(140))
+        grad.setColorAt(0.4, theme.bg_qcolor(200))
+        grad.setColorAt(1.0, theme.bg_qcolor(242))
         p.fillRect(self.rect(), grad)
 
         p.setPen(QPen(QColor(255, 255, 255, 15), 1.0))
@@ -113,7 +115,7 @@ class Carousel(QWidget):
             twinkle = 0.4 + 0.6 * (math.sin(self._star_phase + phase) * 0.5 + 0.5)
             alpha = int(max_a * twinkle)
             if is_gold:
-                p.setBrush(QColor(212, 160, 23, alpha))
+                p.setBrush(accent_qcolor(alpha))
             else:
                 p.setBrush(QColor(220, 220, 240, alpha))
             px = sx * w

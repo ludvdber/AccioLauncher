@@ -4,6 +4,8 @@ from PyQt6.QtCore import Qt, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasi
 from PyQt6.QtGui import QPainter, QColor, QBrush
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
+from src.ui.theme import accent_qcolor, current as current_theme
+
 
 class ToggleSwitch(QWidget):
     """Interrupteur animé ON/OFF."""
@@ -60,7 +62,8 @@ class ToggleSwitch(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         # Piste
-        track_color = QColor("#d4a017") if self._checked else QColor("#2c3e6b")
+        # Piste off = bordure forte du thème (bleu nuit en Poudlard, teinte maison sinon)
+        track_color = accent_qcolor() if self._checked else QColor(current_theme().border_strong)
         p.setBrush(QBrush(track_color))
         p.setPen(Qt.PenStyle.NoPen)
         p.drawRoundedRect(QRectF(0, 0, self._TRACK_W, self._TRACK_H), 11, 11)

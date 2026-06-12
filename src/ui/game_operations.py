@@ -37,6 +37,8 @@ class GameOperations(QObject):
     state_changed = pyqtSignal()
     # Message de statut
     status_message = pyqtSignal(str)
+    # Phase de l'opération en cours : "download" | "verify" | "install"
+    phase_changed = pyqtSignal(str)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -52,6 +54,12 @@ class GameOperations(QObject):
         # Downloaders annulés dont le thread n'a pas fini dans le délai
         # (read réseau bloquant) — gardés vivants jusqu'à leur fin réelle.
         self._zombies: list[Downloader] = []
+        self._phase = ""  # phase courante (dédupliquée avant émission)
+
+    def _set_phase(self, phase: str) -> None:
+        if phase != self._phase:
+            self._phase = phase
+            self.phase_changed.emit(phase)
 
     @property
     def is_busy(self) -> bool:
@@ -105,8 +113,10 @@ class GameOperations(QObject):
         self._downloader.progress.connect(self._on_download_progress)
         self._downloader.download_finished.connect(self._on_download_finished)
         self._downloader.error.connect(self._on_download_error)
+        self._downloader.verifying.connect(self._on_verifying)
         if version.download_parts:
             self._downloader.part_info.connect(self._on_part_info)
+        self._set_phase("download")
         self._downloader.start()
 
     def cancel_download(self) -> None:
@@ -140,6 +150,7 @@ class GameOperations(QObject):
         self._active_game = None
         self._target_version = None
         self._uninstall_first = False
+        self._phase = ""
         if game is not None:
             # Re-détecter plutôt que forcer NOT_INSTALLED : pour une mise à jour /
             # réparation annulée, l'ancienne version est toujours installée.
@@ -171,6 +182,7 @@ class GameOperations(QObject):
             dl.progress.disconnect(self._on_download_progress)
             dl.download_finished.disconnect(self._on_download_finished)
             dl.error.disconnect(self._on_download_error)
+            dl.verifying.disconnect(self._on_verifying)
         except TypeError:
             pass
         try:
@@ -211,6 +223,7 @@ class GameOperations(QObject):
         self._installer.progress.connect(self._on_install_progress)
         self._installer.install_finished.connect(self._on_install_finished)
         self._installer.error.connect(self._on_install_error)
+        self._set_phase("install")
         self._installer.start()
 
     # ──────────────────── Version switch ────────────────────
@@ -241,9 +254,16 @@ class GameOperations(QObject):
 
     # ──────────────────── Callbacks téléchargement ────────────────────
 
+    def _on_verifying(self) -> None:
+        """Le downloader vérifie l'empreinte d'un fichier complet (part en cache)."""
+        self._set_phase("verify")
+        self.status_message.emit(tr("Vérification de l'archive…"))
+
     def _on_download_progress(self, downloaded: int, total: int) -> None:
         if total <= 0:
             return
+        # Le stream a (re)pris → retour en phase téléchargement après une vérification
+        self._set_phase("download")
         self._speed_tracker.update(downloaded)
         if not self._speed_tracker.should_update_ui():
             return
@@ -260,11 +280,11 @@ class GameOperations(QObject):
         game = self._active_game
         if game is None:
             return
-        # Switch de version : l'ancienne installation n'est supprim\u00e9e que maintenant,
-        # le t\u00e9l\u00e9chargement de la nouvelle \u00e9tant termin\u00e9 et v\u00e9rifi\u00e9.
+        # Switch de version : l'ancienne installation n'est supprimée que maintenant,
+        # le téléchargement de la nouvelle étant terminé et vérifié.
         if self._uninstall_first:
             self._uninstall_first = False
-            self._manager.uninstall_game(game.id)  # install() repasse l'\u00e9tat \u00e0 INSTALLING juste apr\u00e8s
+            self._manager.uninstall_game(game.id)  # install() repasse l'état à INSTALLING juste après
         self.status_message.emit(tr("Installation de {}…").format(game.name))
         self.install(game, Path(archive_path_str),
                      delete_archive=self._manager.config.delete_archives)
@@ -277,6 +297,7 @@ class GameOperations(QObject):
         self._active_game = None
         self._target_version = None
         self._uninstall_first = False
+        self._phase = ""
         if game is not None:
             # Re-détecter : une mise à jour/réparation échouée laisse l'ancienne
             # version installée (la désinstallation n'a lieu qu'après téléchargement).
@@ -300,6 +321,7 @@ class GameOperations(QObject):
         if self._installer is not None:
             self._disconnect_installer(self._installer)
         self._installer = None
+        self._phase = ""
         game = self._active_game
         self._active_game = None
         if game is None:
@@ -331,6 +353,7 @@ class GameOperations(QObject):
         if self._installer is not None:
             self._disconnect_installer(self._installer)
         self._installer = None
+        self._phase = ""
         game = self._active_game
         self._active_game = None
         self._target_version = None

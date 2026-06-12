@@ -1,17 +1,21 @@
 @echo off
 setlocal
 
-:: Préfère 3.13, fallback 3.12 (PyQt6 ne supporte pas encore 3.14).
-set PY=py -3.13
+:: Préfère 3.14 (supporté depuis PyQt6 6.10.2 / PyInstaller 6.16), fallback 3.13 puis 3.12.
+set PY=py -3.14
 %PY% --version >nul 2>&1
 if errorlevel 1 (
-    set PY=py -3.12
+    set PY=py -3.13
     %PY% --version >nul 2>&1
     if errorlevel 1 (
-        echo ERREUR : ni Python 3.13 ni 3.12 trouvés.
-        echo Installe-le depuis https://python.org/downloads/
-        pause
-        exit /b 1
+        set PY=py -3.12
+        %PY% --version >nul 2>&1
+        if errorlevel 1 (
+            echo ERREUR : aucun Python 3.12+ trouvé.
+            echo Installe-le depuis https://python.org/downloads/
+            pause
+            exit /b 1
+        )
     )
 )
 

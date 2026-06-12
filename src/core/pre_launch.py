@@ -120,7 +120,7 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
                         break
             if not found:
                 section_exists = any(
-                    l.strip() == f"[{patch.section}]" for l in lines
+                    line.strip() == f"[{patch.section}]" for line in lines
                 )
                 if not section_exists:
                     if lines and not lines[-1].endswith("\n"):

@@ -14,6 +14,8 @@ from src.core.config import ASSETS_DIR
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.ui.fonts import cinzel
+from src.ui.theme import accent_qcolor
+from src.ui import theme
 
 THUMB_W = 90
 THUMB_H = 125
@@ -188,16 +190,16 @@ class CarouselItem(QWidget):
             grad.setColorAt(0, QColor("#1a1a3e"))
             grad.setColorAt(1, QColor("#060611"))
             p.setBrush(grad)
-            p.setPen(QPen(QColor(212, 160, 23, 60), 1.0))
+            p.setPen(QPen(accent_qcolor(60), 1.0))
             p.drawRoundedRect(x_off, y_off, w, h, radius, radius)
 
             p.setOpacity(1.0)
-            p.setPen(QColor(212, 160, 23, 180))
+            p.setPen(accent_qcolor(180))
             p.setFont(QFont("Segoe UI Emoji", 20))
             p.drawText(QRect(x_off, y_off - 10, w, h), Qt.AlignmentFlag.AlignCenter, "⚡")
 
             roman = _game_roman(self.game.id)
-            p.setPen(QColor(212, 160, 23, 140))
+            p.setPen(accent_qcolor(140))
             p.setFont(cinzel(12, bold=True))
             p.drawText(QRect(x_off, y_off + 22, w, h), Qt.AlignmentFlag.AlignCenter, roman)
             p.setOpacity(eff_opacity)
@@ -205,13 +207,13 @@ class CarouselItem(QWidget):
         if self._selected:
             p.setOpacity(1.0)
             for i in range(3):
-                glow = QColor(212, 160, 23, 25 - i * 7)
+                glow = accent_qcolor(25 - i * 7)
                 p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(glow)
                 off = (i + 1) * 3
                 p.drawRoundedRect(x_off - off, y_off - off, w + off * 2, h + off * 2, radius + off, radius + off)
 
-            pen = QPen(QColor("#d4a017"), 2.0)
+            pen = QPen(accent_qcolor(), 2.0)
             p.setPen(pen)
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRoundedRect(x_off + 1, y_off + 1, w - 2, h - 2, radius, radius)
@@ -236,8 +238,8 @@ class CarouselItem(QWidget):
 
             p.setOpacity(1.0)
             fade = QLinearGradient(0, ref_y, 0, ref_y + ref_h)
-            fade.setColorAt(0, QColor(6, 6, 17, 80))
-            fade.setColorAt(1, QColor(6, 6, 17, 255))
+            fade.setColorAt(0, theme.bg_qcolor(80))
+            fade.setColorAt(1, theme.bg_qcolor(255))
             p.fillRect(x_off, ref_y, w, ref_h, fade)
 
         if self._cached_installed:
@@ -266,7 +268,7 @@ class CarouselItem(QWidget):
             bx = x_off + w - badge_size - 2
             by = y_off + 2
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(212, 160, 23, 220))
+            p.setBrush(accent_qcolor(220))
             p.drawRoundedRect(QRectF(bx, by, badge_size, badge_size), 4, 4)
             p.setPen(QColor(255, 255, 255, 240))
             p.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
@@ -281,7 +283,7 @@ class CarouselItem(QWidget):
             tw = fm.horizontalAdvance(text)
             bx, by = x_off + 3, y_off + 3
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(212, 160, 23, 235))
+            p.setBrush(accent_qcolor(235))
             p.drawRoundedRect(QRectF(bx, by, tw + 10, fm.height() + 3), 3, 3)
             p.setPen(QColor("#060611"))
             p.drawText(QRectF(bx, by, tw + 10, fm.height() + 3),

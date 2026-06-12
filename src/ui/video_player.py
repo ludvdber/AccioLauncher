@@ -81,6 +81,12 @@ class VideoPlayer(QObject):
         self._audio.setMuted(self._muted)
         return self._muted
 
+    def set_muted(self, muted: bool) -> None:
+        """Force l'état mute (réglage « Couper le son » appliqué en direct)."""
+        self._muted = muted
+        if self._audio is not None:
+            self._audio.setMuted(muted)
+
     def set_volume(self, value_0_100: int) -> None:
         """Définit le volume (0-100). Unmute automatiquement si muté."""
         if self._audio is None:

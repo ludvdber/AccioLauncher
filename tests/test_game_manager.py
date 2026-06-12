@@ -1,13 +1,12 @@
 """Tests pour src/core/game_manager.py"""
 
 import sys
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
 from src.core.config import Config
-from src.core.game_data import GameData, GameVersion, PreLaunch, IniPatch, PostInstall, Catalog
+from src.core.game_data import GameData, Catalog
 from src.core.game_manager import GameManager, GameState, _is_safe_relative
 from src.core.pre_launch import apply_ini_patches, create_pre_launch_files, unblock_game_dlls
 from src.core.system_checks import check_vcredist_x86, check_d3d11_feature_level
@@ -184,6 +183,15 @@ class TestGameManager:
         assert mgr.get_playtime("inconnu") == 0
         mgr.add_playtime("hp_test", 0)  # durée nulle ignorée
         assert mgr.get_playtime("hp_test") == 180
+
+    def test_last_played_game_id(self, tmp_path):
+        """Hero dynamique : jeu joué le plus récemment, ids retirés du catalogue ignorés."""
+        mgr = _make_manager(tmp_path)
+        assert mgr.last_played_game_id() is None
+
+        mgr.config.last_played["hp_test"] = "2026-06-01"
+        mgr.config.last_played["disparu"] = "2026-06-10"  # plus dans le catalogue
+        assert mgr.last_played_game_id() == "hp_test"
 
     def test_new_game_badge_lifecycle(self, tmp_path):
         """is_new/mark_seen : badge posé au reload du catalogue, retiré à la sélection."""

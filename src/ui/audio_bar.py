@@ -3,6 +3,8 @@
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QSlider, QWidget
 
+from src.ui.theme import themed
+
 _MUTE_ON = "\U0001f507"
 _MUTE_OFF = "\U0001f50a"
 
@@ -31,10 +33,10 @@ class AudioBar(QWidget):
         self._btn_mute.setFixedSize(26, 26)
         self._btn_mute.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_mute.setAccessibleName("Couper le son de la vidéo")
-        self._btn_mute.setStyleSheet(
+        self._btn_mute.setStyleSheet(themed(
             "QPushButton { background: transparent; color: #eaeaea; border: none; font-size: 15px; }"
             "QPushButton:hover { color: #d4a017; }"
-        )
+        ))
         self._btn_mute.clicked.connect(self.mute_toggled.emit)
         layout.addWidget(self._btn_mute)
 
@@ -43,11 +45,11 @@ class AudioBar(QWidget):
         self._volume_slider.setValue(25)
         self._volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
         self._volume_slider.setAccessibleName("Volume de la vidéo")
-        self._volume_slider.setStyleSheet(
+        self._volume_slider.setStyleSheet(themed(
             "QSlider::groove:horizontal { background: rgba(255,255,255,0.12); height: 4px; border-radius: 2px; }"
             "QSlider::handle:horizontal { background: #d4a017; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; }"
             "QSlider::sub-page:horizontal { background: rgba(212,160,23,0.5); border-radius: 2px; }"
-        )
+        ))
         self._volume_slider.valueChanged.connect(self.volume_changed.emit)
         layout.addWidget(self._volume_slider)
 

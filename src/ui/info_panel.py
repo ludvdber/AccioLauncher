@@ -11,6 +11,7 @@ from src.core.i18n import tr
 from src.ui.clickable_label import ClickableLabel
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
+from src.ui.theme import current as current_theme, themed
 from src.ui.utils import clear_layout
 from src.core.formatting import format_playtime, format_relative_date, format_size
 
@@ -43,13 +44,13 @@ class InfoPanel(QScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet(
+        self.setStyleSheet(themed(
             "QScrollArea { background: transparent; border: none; }"
             "QScrollBar:vertical { background: transparent; width: 4px; border: none; }"
             "QScrollBar::handle:vertical { background: rgba(212,160,23,0.3); border-radius: 2px; min-height: 20px; }"
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
             "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
-        )
+        ))
 
     def _build_widgets(self) -> None:
         lay = self._layout
@@ -64,13 +65,34 @@ class InfoPanel(QScrollArea):
         lay.addWidget(self._title)
         lay.addSpacing(8)
 
-        # Metadata (année · développeur · taille)
+        # Metadata (année · développeur · taille) + pastille téléchargements
+        meta_row = QWidget()
+        meta_row.setStyleSheet("background: transparent;")
+        meta_lay = QHBoxLayout(meta_row)
+        meta_lay.setContentsMargins(0, 0, 0, 0)
+        meta_lay.setSpacing(14)
+        meta_lay.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
         self._meta = QLabel()
         self._meta.setObjectName("gameMeta")
         self._meta.setFont(cinzel(14))
         self._meta.setTextFormat(Qt.TextFormat.RichText)
         self._meta.setStyleSheet("QLabel { color: #8a8aaa; background: transparent; }")
-        lay.addWidget(self._meta)
+        meta_lay.addWidget(self._meta)
+
+        # Pastille « ◆ 1 234 téléchargements » — preuve sociale (GitHub, toutes
+        # versions cumulées). Losange U+25C6, le même que les séparateurs méta.
+        self._dl_badge = QLabel()
+        self._dl_badge.setFont(body_font(11))
+        self._dl_badge.setStyleSheet(themed(
+            "QLabel { background: rgba(212, 160, 23, 0.08); color: rgba(212, 160, 23, 0.90);"
+            " border: 1px solid rgba(212, 160, 23, 0.30); border-radius: 10px;"
+            " padding: 3px 12px; }"
+        ))
+        self._dl_badge.setVisible(False)
+        meta_lay.addWidget(self._dl_badge)
+
+        lay.addWidget(meta_row)
         lay.addSpacing(6)
 
         # Version + lien changelog
@@ -79,9 +101,9 @@ class InfoPanel(QScrollArea):
         # Stats de jeu — cachée par défaut, visible uniquement si le jeu a déjà été lancé
         self._stats_label = QLabel()
         self._stats_label.setFont(body_font(12))
-        self._stats_label.setStyleSheet(
+        self._stats_label.setStyleSheet(themed(
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
-        )
+        ))
         self._stats_label.setVisible(False)
         lay.addWidget(self._stats_label)
         lay.addSpacing(10)
@@ -90,7 +112,7 @@ class InfoPanel(QScrollArea):
         sep = QWidget()
         sep.setFixedHeight(1)
         sep.setFixedWidth(60)
-        sep.setStyleSheet("background: rgba(212, 160, 23, 0.30);")
+        sep.setStyleSheet(themed("background: rgba(212, 160, 23, 0.30);"))
         lay.addWidget(sep)
         lay.addSpacing(14)
 
@@ -109,10 +131,10 @@ class InfoPanel(QScrollArea):
         # Expand/collapse — ClickableLabel : focusable clavier (A11Y)
         self._btn_expand = ClickableLabel()
         self._btn_expand.setFont(body_font(13))
-        self._btn_expand.setStyleSheet(
+        self._btn_expand.setStyleSheet(themed(
             "QLabel { color: #d4a017; background: transparent; padding-top: 4px; }"
             "QLabel:hover { color: #e8c547; }"
-        )
+        ))
         self._btn_expand.setVisible(False)
         self._btn_expand.clicked.connect(self._toggle_desc)
         lay.addWidget(self._btn_expand)
@@ -137,17 +159,17 @@ class InfoPanel(QScrollArea):
 
         self._version_label = QLabel()
         self._version_label.setFont(body_font(12))
-        self._version_label.setStyleSheet(
+        self._version_label.setStyleSheet(themed(
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
-        )
+        ))
         layout.addWidget(self._version_label)
 
         btn = ClickableLabel(tr("Versions et changelog"))
         btn.setFont(body_font(12))
-        btn.setStyleSheet(
+        btn.setStyleSheet(themed(
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
             "QLabel:hover { color: #e8c547; text-decoration: underline; }"
-        )
+        ))
         btn.clicked.connect(self.versions_clicked)
         layout.addWidget(btn)
         return row
@@ -155,20 +177,35 @@ class InfoPanel(QScrollArea):
     # ──────────────────── API publique ────────────────────
 
     _DESC_TRUNCATE = 160
+    _DL_COUNT_MIN = 1  # seuil d'affichage de la pastille téléchargements (passer à ~100 plus tard)
 
     def apply_game(self, game: GameData) -> None:
         """Met à jour tous les labels avec les données du jeu."""
         self._title.setText(game.name)
 
         # Metadata
-        gold = "#d4a017"
-        sep = f'<span style="color:{gold}; margin: 0 6px;"> \u25c6 </span>'
+        gold = current_theme().accent
+        sep = f'<span style="color:{gold}; margin: 0 6px;"> ◆ </span>'
         dl = game.current_download
         size_str = format_size(dl.size_mb) if dl else "?"
         self._meta.setText(
             f'<span style="text-transform:uppercase; letter-spacing:2px;">'
             f'{game.year}{sep}{game.developer}{sep}{size_str}</span>'
         )
+
+        # Pastille téléchargements (GitHub, toutes versions cumulées) — cachée
+        # tant qu'inconnue ou sous le seuil. Monter le seuil (~100) pour cacher
+        # les petits débuts.
+        count = self._manager.download_count(game.id)
+        if count >= self._DL_COUNT_MIN:
+            pretty = f"{count:,}".replace(",", "\u202f")  # espace fine insécable FR
+            key = "{} téléchargement" if count == 1 else "{} téléchargements"
+            self._dl_badge.setText("◆ " + tr(key).format(pretty))
+            self._dl_badge.setToolTip(
+                tr("Téléchargements cumulés de toutes les versions (GitHub)"))
+            self._dl_badge.setVisible(True)
+        else:
+            self._dl_badge.setVisible(False)
 
         # Version
         installed = self._manager.installed_version(game.id)
@@ -234,10 +271,10 @@ class InfoPanel(QScrollArea):
         for tag in game.tags:
             badge = QLabel(tag.upper())
             badge.setFont(cinzel(10, bold=True))
-            badge.setStyleSheet(
+            badge.setStyleSheet(themed(
                 "QLabel { background: rgba(212, 160, 23, 0.05); color: #d4a017;"
                 " border: 1px solid rgba(212, 160, 23, 0.3); border-radius: 12px;"
                 " padding: 4px 14px; letter-spacing: 2px; }"
-            )
+            ))
             self._tags_layout.addWidget(badge)
         self._tags_container.updateGeometry()

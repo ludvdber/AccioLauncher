@@ -12,6 +12,10 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameState
 from src.core.i18n import tr
 from src.ui.fonts import body_font, cinzel
+from src.ui.theme import themed
+
+# Étapes affichées par le stepper (clé interne → libellé tr())
+_PHASES = ("download", "verify", "install")
 
 
 class DownloadBar(QWidget):
@@ -23,10 +27,10 @@ class DownloadBar(QWidget):
         super().__init__(parent)
         self.setObjectName("downloadBar")
         self.setFixedHeight(56)
-        self.setStyleSheet(
+        self.setStyleSheet(themed(
             "#downloadBar { background: rgba(10, 10, 20, 0.92); "
             "border-top: 1px solid rgba(212,160,23,0.3); }"
-        )
+        ))
         self.hide()
 
         layout = QHBoxLayout(self)
@@ -52,15 +56,21 @@ class DownloadBar(QWidget):
         text_box.addWidget(self._status)
         layout.addLayout(text_box, stretch=1)
 
+        # Stepper « 1/3 · Téléchargement » → « 2/3 · Vérification » → « 3/3 · Installation »
+        self._phase_label = QLabel("")
+        self._phase_label.setFont(body_font(10))
+        self._phase_label.setStyleSheet(themed("color: #d4a017; background: transparent;"))
+        layout.addWidget(self._phase_label)
+
         self._progress = QProgressBar()
         self._progress.setFixedWidth(220)
         self._progress.setRange(0, 100)
         self._progress.setValue(0)
         self._progress.setTextVisible(False)
-        self._progress.setStyleSheet(
+        self._progress.setStyleSheet(themed(
             "QProgressBar { background: rgba(255,255,255,0.08); border: none; border-radius: 3px; height: 8px; }"
             "QProgressBar::chunk { background: #d4a017; border-radius: 3px; }"
-        )
+        ))
         layout.addWidget(self._progress)
 
         self._btn_cancel = QPushButton(tr("Annuler"))
@@ -100,18 +110,42 @@ class DownloadBar(QWidget):
         if state == GameState.DOWNLOADING:
             self._status.setText(tr("Téléchargement en cours…"))
             self._btn_cancel.show()
+            self.set_phase("download")
         elif state == GameState.INSTALLING:
             self._status.setText(tr("Installation en cours…"))
             self._btn_cancel.hide()
+            self.set_phase("install")
+
+    def set_phase(self, phase: str) -> None:
+        """Met à jour le stepper. La vérification (hash) n'a pas de progression
+        chiffrée → barre indéterminée le temps qu'elle dure."""
+        if phase not in _PHASES:
+            return
+        labels = {
+            "download": tr("1/3 · Téléchargement"),
+            "verify": tr("2/3 · Vérification"),
+            "install": tr("3/3 · Installation"),
+        }
+        self._phase_label.setText(labels[phase])
+        if phase == "verify":
+            self._progress.setRange(0, 0)  # indéterminé pendant le hash
+            self._status.setText(tr("Vérification de l'archive…"))
+        elif self._progress.maximum() == 0:
+            self._progress.setRange(0, 100)
+            self._progress.setValue(0)
 
     def update_download_progress(self, downloaded: int, total: int,
                                   speed: float, eta_seconds: float) -> None:
         if total <= 0:
             return
+        if self._progress.maximum() == 0:  # sortie du mode indéterminé (vérification)
+            self._progress.setRange(0, 100)
         self._progress.setValue(downloaded * 100 // total)
         self._status.setText(format_progress_line(downloaded, total, speed, eta_seconds))
 
     def update_install_progress(self, pct: int) -> None:
+        if self._progress.maximum() == 0:
+            self._progress.setRange(0, 100)
         self._progress.setValue(pct)
         self._status.setText(tr("Installation… {}%").format(pct))
         self._btn_cancel.hide()
@@ -123,6 +157,8 @@ class DownloadBar(QWidget):
         self._game = None
         self._title.setText("")
         self._status.setText("")
+        self._phase_label.setText("")
+        self._progress.setRange(0, 100)
         self._progress.setValue(0)
         self._cover.clear()
         self.hide()

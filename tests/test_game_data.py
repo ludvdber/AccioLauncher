@@ -1,11 +1,10 @@
 """Tests pour src/core/game_data.py"""
 
-import json
 import pytest
 
 from src.core.game_data import (
-    GameData, GameVersion, Catalog, ConfigFile, IniPatch,
-    PreLaunch, PostInstall, _parse_catalog,
+    GameData, GameVersion, IniPatch,
+    _parse_catalog,
 )
 
 

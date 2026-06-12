@@ -68,6 +68,31 @@ class TestSignals:
         assert dl.finished.signal == "2finished()"  # natif QThread, sans argument
         assert dl.download_finished.signal == "2download_finished(QString)"
 
+    def test_verifying_signal_exists(self, tmp_path):
+        """Le signal `verifying` alimente le stepper (phase 2/3 · Vérification)."""
+        dl = Downloader(url="https://x.test/a.7z", destination=tmp_path / "a.7z")
+        assert dl.verifying.signal == "2verifying()"
+
+
+class TestLazyImports:
+    def test_httpx_pas_importe_au_top_level(self):
+        """Régression perf : httpx (~70 ms d'import) ne doit être importé que
+        dans les méthodes des threads, jamais au niveau module — sinon le
+        démarrage du launcher le paie."""
+        import ast
+        from pathlib import Path
+
+        import src.core.downloader as downloader
+        import src.core.updater as updater
+
+        for mod in (downloader, updater):
+            tree = ast.parse(Path(mod.__file__).read_text(encoding="utf-8"))
+            for node in tree.body:  # top-level uniquement
+                if isinstance(node, ast.Import):
+                    assert not any(a.name == "httpx" for a in node.names), mod.__name__
+                elif isinstance(node, ast.ImportFrom):
+                    assert node.module != "httpx", mod.__name__
+
 
 class TestSha256:
     def test_file_sha256_known_vector(self, tmp_path):

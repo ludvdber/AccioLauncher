@@ -55,12 +55,16 @@ class Config:
     install_path: Path = field(default_factory=lambda: DEFAULT_INSTALL_PATH)
     cache_path: Path = field(default_factory=lambda: DEFAULT_CACHE_PATH)
     langue: str = "fr"
+    theme: str = "poudlard"
+    season: str = "auto"  # particules saisonnières : auto | aucune | halloween | noel
     delete_archives: bool = True
     autoplay_videos: bool = True
     mute_videos: bool = False
     check_updates: bool = True
     discord_presence: bool = True
     dismissed_launcher_version: str = ""
+    # Un seul remerciement Ko-fi (cap des 10 h de jeu) dans la vie du launcher.
+    kofi_milestone_thanked: bool = False
     installed_versions: dict[str, str] = field(default_factory=dict)
     # Stats de jeu : cumul par jeu (secondes) et date de dernière session (ISO)
     playtime_seconds: dict[str, int] = field(default_factory=dict)
@@ -85,12 +89,15 @@ class Config:
                 install_path=Path(data.get("install_path", str(DEFAULT_INSTALL_PATH))),
                 cache_path=Path(data.get("cache_path", str(DEFAULT_CACHE_PATH))),
                 langue=data.get("langue", "fr"),
+                theme=data.get("theme", "poudlard"),
+                season=data.get("season", "auto"),
                 delete_archives=data.get("delete_archives", True),
                 autoplay_videos=data.get("autoplay_videos", True),
                 mute_videos=data.get("mute_videos", False),
                 check_updates=data.get("check_updates", True),
                 discord_presence=data.get("discord_presence", True),
                 dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
+                kofi_milestone_thanked=data.get("kofi_milestone_thanked", False),
                 installed_versions=data.get("installed_versions", {}),
                 playtime_seconds=data.get("playtime_seconds", {}),
                 last_played=data.get("last_played", {}),
@@ -105,12 +112,15 @@ class Config:
                 "install_path": str(self.install_path),
                 "cache_path": str(self.cache_path),
                 "langue": self.langue,
+                "theme": self.theme,
+                "season": self.season,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
                 "check_updates": self.check_updates,
                 "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
+                "kofi_milestone_thanked": self.kofi_milestone_thanked,
                 "installed_versions": self.installed_versions,
                 "playtime_seconds": self.playtime_seconds,
                 "last_played": self.last_played,

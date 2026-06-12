@@ -209,6 +209,56 @@ _EN: dict[str, str] = {
     "avant-hier": "two days ago",
     "il y a {} jours": "{} days ago",
 
+    # ── Stepper téléchargement → vérification → installation ──
+    "1/3 · Téléchargement": "1/3 · Download",
+    "2/3 · Vérification": "2/3 · Verify",
+    "3/3 · Installation": "3/3 · Install",
+    "Vérification de l'archive…": "Verifying archive…",
+
+    # ── Thèmes maisons ──
+    "Thème :": "Theme:",
+    "Thème": "Theme",
+    "Redémarrez le launcher pour appliquer le thème.": "Restart the launcher to apply the theme.",
+    "Redémarrer maintenant": "Restart now",
+    "Relance automatique impossible — redémarrez manuellement.":
+        "Automatic relaunch failed — please restart manually.",
+
+    # ── Panneau Paramètres (sidebar) ──
+    "Général": "General",
+    "Téléchargements": "Downloads",
+    "Vidéos": "Videos",
+    "Particules saisonnières": "Seasonal particles",
+    "Automatique (selon la date)": "Automatic (by date)",
+    "Aucune": "None",
+    "Noël ❄": "Christmas ❄",
+    "Appliqué immédiatement.": "Applied immediately.",
+
+    # ── Pastille téléchargements ──
+    "{} téléchargement": "{} download",
+    "{} téléchargements": "{} downloads",
+    "Téléchargements cumulés de toutes les versions (GitHub)":
+        "Cumulative downloads across all versions (GitHub)",
+    "Poudlard (or)": "Hogwarts (gold)",
+    "Gryffondor": "Gryffindor",
+    "Serpentard": "Slytherin",
+    "Serdaigle": "Ravenclaw",
+    "Poufsouffle": "Hufflepuff",
+
+    # ── Remerciement Ko-fi (cap 10 h, une seule fois) ──
+    "Déjà 10 h de magie retrouvée ✨ Si le launcher te plaît, un café fait plaisir — clique ici ❤":
+        "10 hours of magic already ✨ If you enjoy the launcher, a coffee always helps — click here ❤",
+
+    # ── Rapport de crash ──
+    "Accio Launcher — Erreur inattendue": "Accio Launcher — Unexpected error",
+    "Une erreur inattendue s'est produite. Tu peux copier le rapport "
+    "(à coller sur le Discord) ou ouvrir une issue GitHub pré-remplie.":
+        "An unexpected error occurred. You can copy the report "
+        "(to paste on Discord) or open a pre-filled GitHub issue.",
+    "Copier le rapport": "Copy report",
+    "Copié ✓": "Copied ✓",
+    "Ouvrir une issue GitHub": "Open a GitHub issue",
+    "Redémarrer le launcher": "Restart the launcher",
+
     # ── Divers ──
     "Launcher v{} disponible !": "Launcher v{} available!",
 }
