@@ -9,27 +9,27 @@ from src.core.i18n import tr
 
 
 def format_size(size_mb: int) -> str:
-    """Formate une taille en Mo/Go (entrée en mégaoctets)."""
+    """Formate une taille en Mo/Go (entrée en mégaoctets). Unités traduites (GB/MB)."""
     if size_mb >= 1000:
-        return f"{size_mb / 1000:.1f} Go"
-    return f"{size_mb} Mo"
+        return f"{size_mb / 1000:.1f} {tr('Go')}"
+    return f"{size_mb} {tr('Mo')}"
 
 
 def format_bytes(b: int) -> str:
-    """Formate une taille en Mo/Go (entrée en octets)."""
+    """Formate une taille en Mo/Go (entrée en octets). Unités traduites (GB/MB)."""
     mb = b / (1024 * 1024)
     if mb >= 1000:
-        return f"{mb / 1000:.1f} Go"
-    return f"{mb:.0f} Mo"
+        return f"{mb / 1000:.1f} {tr('Go')}"
+    return f"{mb:.0f} {tr('Mo')}"
 
 
 def format_speed(bytes_per_sec: float) -> str:
-    """Formate une vitesse en Ko/s ou Mo/s."""
+    """Formate une vitesse en Ko/s ou Mo/s. Unités traduites (KB/s, MB/s)."""
     mb = bytes_per_sec / (1024 * 1024)
     if mb >= 1.0:
-        return f"{mb:.1f} Mo/s"
+        return f"{mb:.1f} {tr('Mo/s')}"
     kb = bytes_per_sec / 1024
-    return f"{kb:.0f} Ko/s"
+    return f"{kb:.0f} {tr('Ko/s')}"
 
 
 def format_eta(seconds: float) -> str:

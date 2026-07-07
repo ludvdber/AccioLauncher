@@ -71,6 +71,7 @@ class GameManager:
         # Compteurs de téléchargement GitHub (toutes versions cumulées), remplis
         # en arrière-plan par l'UpdateChecker — vide tant que le fetch n'a pas abouti.
         self._download_counts: dict[str, int] = {}
+        self._backfill_missing_versions()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property
@@ -92,6 +93,7 @@ class GameManager:
                 if self._states[g.id] == GameState.NOT_INSTALLED:
                     self._new_game_ids.add(g.id)
                     log.info("Nouveau jeu disponible : %s", g.name)
+        self._backfill_missing_versions()
         log.info("Catalogue rechargé : %d jeux (v%s)", len(self._games), catalog.catalog_version)
 
     def is_new(self, game_id: str) -> bool:
@@ -113,7 +115,26 @@ class GameManager:
             if self._states.get(g.id) in (GameState.DOWNLOADING, GameState.INSTALLING):
                 continue
             self._states[g.id] = self._detect_state(g)
+        self._backfill_missing_versions()
         log.info("États re-détectés (%d jeux)", len(self._games))
+
+    def _backfill_missing_versions(self) -> None:
+        """Enregistre une version pour les jeux INSTALLÉS sans version connue.
+
+        Un jeu détecté sur le disque sans entrée dans `installed_versions`
+        (dossier déjà présent lors d'un changement d'install_path, config
+        réinitialisée…) ne recevrait JAMAIS de notification de mise à jour :
+        `has_update` exige une version connue. Convention optimiste identique
+        à l'import « J'ai déjà ce jeu » : version recommandée du moment —
+        « Vérifier / réparer » couvre le doute. Modif en mémoire seulement
+        (persistée au prochain save naturel de la config ; idempotent au boot).
+        """
+        for g in self._games:
+            if (self._states.get(g.id) == GameState.INSTALLED
+                    and g.id not in self.config.installed_versions):
+                self.config.installed_versions[g.id] = g.recommended_version
+                log.info("Version inconnue pour %s (installé) — considérée v%s",
+                         g.id, g.recommended_version)
 
     def redetect_state(self, game_id: str) -> None:
         """Force la re-détection disque d'un seul jeu (après annulation/erreur d'opération).

@@ -32,7 +32,7 @@ import uuid
 
 log = logging.getLogger(__name__)
 
-DISCORD_CLIENT_ID = ""  # TODO(Ludo) : coller l'Application ID Discord ici
+DISCORD_CLIENT_ID = "1524077874087330007"  # TODO(Ludo) : coller l'Application ID Discord ici
 WEBSITE_URL = "https://acciolauncher.be/"
 
 _OP_HANDSHAKE = 0
@@ -165,12 +165,23 @@ class DiscordPresence:
         ipc.write(struct.pack("<II", op, len(data)) + data)
 
     @staticmethod
-    def _read(ipc) -> tuple[int, dict]:
-        header = ipc.read(8)
-        if not header or len(header) < 8:
-            raise OSError("pipe Discord fermé")
-        op, length = struct.unpack("<II", header)
-        raw = ipc.read(length) if length else b"{}"
+    def _read_exact(ipc, n: int) -> bytes:
+        """Lit EXACTEMENT n octets. Un pipe/socket en buffering=0 peut servir le
+        message en plusieurs morceaux (surtout le READY de Discord, ~100+ octets) ;
+        `read(n)` renvoie alors moins que n — sans cette boucle, on prenait ça pour
+        un pipe fermé et on reconnectait en boucle (bug d'intermittence prouvé)."""
+        buf = bytearray()
+        while len(buf) < n:
+            chunk = ipc.read(n - len(buf))
+            if not chunk:
+                raise OSError("pipe Discord fermé")
+            buf += chunk
+        return bytes(buf)
+
+    @classmethod
+    def _read(cls, ipc) -> tuple[int, dict]:
+        op, length = struct.unpack("<II", cls._read_exact(ipc, 8))
+        raw = cls._read_exact(ipc, length) if length else b"{}"
         try:
             return op, json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):

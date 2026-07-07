@@ -31,6 +31,11 @@ def tr(text: str) -> str:
 
 
 _EN: dict[str, str] = {
+    # ── Unités de taille / vitesse (format_size / format_bytes / format_speed) ──
+    "Go": "GB",
+    "Mo": "MB",
+    "Ko/s": "KB/s",
+    "Mo/s": "MB/s",
     # ── Settings ──
     "Paramètres": "Settings",
     "⚙ Paramètres": "⚙ Settings",
@@ -103,6 +108,8 @@ _EN: dict[str, str] = {
     "Échec du téléchargement — ouverture de la page de release":
         "Download failed — opening the release page",
     "Catalogue mis à jour (v{})": "Catalog updated (v{})",
+    "Mise à jour disponible pour {}": "Update available for {}",
+    "{} jeux ont une mise à jour disponible": "{} games have an update available",
     "{} installé avec succès ✓": "{} installed successfully ✓",
     "Téléchargement terminé": "Download finished",
     "{} est prêt à jouer !": "{} is ready to play!",

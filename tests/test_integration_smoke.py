@@ -146,6 +146,42 @@ class TestDownloadCounts:
         assert "⬇" not in win._detail._info._meta.text()  # plus rien dans la ligne meta
 
 
+class TestGameUpdateNotification:
+    """Recompte LOCAL des mises à jour de jeux + toast cliquable (retour Ludo :
+    la status bar seule passait inaperçue)."""
+
+    def _force_installed(self, win, game_id, version):
+        from src.core.game_manager import GameState
+        win.config.installed_versions[game_id] = version
+        win.manager.set_game_state(game_id, GameState.INSTALLED)
+
+    def test_toast_single_update_names_the_game(self, make_window):
+        win = make_window()
+        self._force_installed(win, _IDS[0], "0.0.1")  # < recommandée → MàJ dispo
+        assert win._notify_game_updates() is True
+        assert not win._toast.isHidden()
+        assert _CATALOG.games[0].name in win._toast.text()
+
+    def test_toast_plural_counts_games(self, make_window):
+        win = make_window()
+        self._force_installed(win, _IDS[0], "0.0.1")
+        self._force_installed(win, _IDS[1], "0.0.1")
+        assert win._notify_game_updates() is True
+        assert "2 jeux" in win._toast.text()
+
+    def test_toast_click_selects_first_pending_game(self, make_window):
+        win = make_window()
+        self._force_installed(win, _IDS[1], "0.0.1")  # 2e jeu du carrousel
+        win._notify_game_updates()
+        win._toast._on_click()  # simule le clic sur le toast
+        assert win._carousel._current_index == 1
+
+    def test_no_updates_no_toast(self, make_window):
+        win = make_window()
+        assert win._notify_game_updates() is False
+        assert win._toast.isHidden()
+
+
 class TestSeasonLive:
     def test_apply_season_reseeds_particles(self, make_window):
         win = make_window()

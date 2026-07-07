@@ -176,6 +176,9 @@ class SettingsDialog(QDialog):
         self._nav = QListWidget()
         self._nav.setObjectName("navList")
         self._nav.setFixedWidth(170)
+        # Sans ça, un libellé large (« Téléchargements ») fait apparaître une
+        # scrollbar horizontale disgracieuse sous la nav (vu à l'audit).
+        self._nav.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._nav.setCursor(Qt.CursorShape.PointingHandCursor)
         for label in (tr("Général"), tr("Affichage"), tr("Téléchargements"),
                       tr("Intégrations"), tr("À propos")):

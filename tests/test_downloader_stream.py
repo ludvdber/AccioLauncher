@@ -19,7 +19,18 @@ PAYLOAD = b"abracadabra-accio-" * 1000  # ~18 Ko
 PAYLOAD_SHA = hashlib.sha256(PAYLOAD).hexdigest()
 
 
-def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True):
+class _URL:
+    """Mime httpx.URL : expose .scheme et str()."""
+    def __init__(self, s: str):
+        self._s = s
+        self.scheme = s.split(":", 1)[0]
+
+    def __str__(self):
+        return self._s
+
+
+def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
+                     final_url: str = "https://x.test/a.7z"):
     """Faux module httpx : Client → stream → réponse rejouant `full_payload`."""
     mod = types.ModuleType("httpx")
 
@@ -46,6 +57,7 @@ def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True):
                 self._body = full_payload
                 self.status_code = 200
             self.headers = {"content-length": str(len(self._body))}
+            self.url = _URL(final_url)  # httpx : URL finale après redirections
 
         def raise_for_status(self):
             pass
@@ -87,6 +99,40 @@ def fake_httpx(monkeypatch):
         monkeypatch.setitem(sys.modules, "httpx", mod)
         return mod
     return install
+
+
+class TestSecurityGuards:
+    """Régressions d'audit : cap de taille et rétrogradation https→http."""
+
+    def test_redirect_to_http_is_refused(self, tmp_path, fake_httpx, qtbot):
+        """Une réponse dont l'URL finale est http:// doit échouer (pas de fichier)."""
+        fake_httpx(final_url="http://evil.test/a.7z")
+        dest = tmp_path / "a.7z"
+        dl = Downloader(url="https://x.test/a.7z", destination=dest)
+        import src.core.downloader as dmod
+        old = dmod.BACKOFF_BASE
+        dmod.BACKOFF_BASE = 0
+        try:
+            with qtbot.waitSignal(dl.error, timeout=5000):
+                dl.run()
+        finally:
+            dmod.BACKOFF_BASE = old
+        assert not dest.exists()
+
+    def test_size_cap_enforced_on_stream(self, tmp_path, fake_httpx, qtbot):
+        """Un corps plus gros que expected*1.5 est refusé, même sans Content-Length fiable."""
+        fake_httpx(b"x" * (5 * 1024 * 1024))  # 5 Mo
+        dest = tmp_path / "big.7z"
+        dl = Downloader(url="https://x.test/big.7z", destination=dest, expected_size_mb=1)
+        import src.core.downloader as dmod
+        old = dmod.BACKOFF_BASE
+        dmod.BACKOFF_BASE = 0
+        try:
+            with qtbot.waitSignal(dl.error, timeout=5000):
+                dl.run()
+        finally:
+            dmod.BACKOFF_BASE = old
+        assert not dest.exists()
 
 
 class TestStreamIncrementalHash:

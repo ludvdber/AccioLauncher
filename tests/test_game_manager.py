@@ -113,6 +113,37 @@ class TestGameManager:
         mgr.save_installed_version("hp_test", "1.0")
         assert mgr.has_update("hp_test") is False
 
+    def test_backfill_installed_without_version(self, tmp_path):
+        """Régression d'audit : un jeu installé SANS version enregistrée (config
+        réinitialisée, dossier préexistant) ne recevait JAMAIS de notification
+        de mise à jour — has_update exige une version connue."""
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True)
+        exe.write_text("fake")
+        mgr = _make_manager(tmp_path)  # config vierge, jeu détecté sur disque
+        # Backfillée à la version recommandée (même convention que l'import)
+        assert mgr.installed_version("hp_test") == "1.0"
+
+        # …et au prochain bump du catalogue, la mise à jour est bien signalée
+        new_game = GameData.from_dict({**GAME_DICT, "recommended_version": "2.0"})
+        mgr.reload_catalog(Catalog(catalog_version="2.0", catalog_url="", games=(new_game,)))
+        assert mgr.has_update("hp_test") is True
+
+    def test_backfill_after_install_path_change(self, tmp_path):
+        """Changement d'install_path vers un dossier déjà peuplé : refresh_states
+        détecte le jeu ET lui enregistre une version."""
+        other = tmp_path / "ailleurs"
+        exe = other / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True)
+        exe.write_text("fake")
+        mgr = _make_manager(tmp_path)  # install_path initial : vide
+        assert mgr.installed_version("hp_test") is None
+
+        mgr.config.install_path = other
+        mgr.refresh_states()
+        assert mgr.get_state("hp_test") == GameState.INSTALLED
+        assert mgr.installed_version("hp_test") == "1.0"
+
     def test_set_game_state(self, tmp_path):
         mgr = _make_manager(tmp_path)
         mgr.set_game_state("hp_test", GameState.DOWNLOADING)

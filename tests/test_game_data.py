@@ -155,3 +155,23 @@ class TestParseCatalog:
     def test_empty(self):
         cat = _parse_catalog({"games": []})
         assert cat.games == ()
+
+    def test_invalid_game_is_skipped_not_crashing(self):
+        """Régression d'audit : un jeu mal typé dans un cache trafiqué est ignoré,
+        les jeux valides restent — pas de TypeError qui remonte au boot."""
+        raw = {"catalog_version": "9", "games": [
+            MINIMAL_GAME,
+            42,                                  # entier au lieu d'objet
+            {"id": "bad", "name": "B", "year": None, "description": "d",
+             "developer": "e", "executable": "b.exe", "cover_image": "c.png"},
+        ]}
+        cat = _parse_catalog(raw)
+        assert len(cat.games) == 1
+        assert cat.games[0].id == "hp_test"
+
+    def test_aberrant_root_raises_valueerror(self):
+        """Un JSON aberrant lève ValueError (rattrapée par load_catalog), jamais TypeError."""
+        with pytest.raises(ValueError):
+            _parse_catalog(99)
+        with pytest.raises(ValueError):
+            _parse_catalog({"games": 42})

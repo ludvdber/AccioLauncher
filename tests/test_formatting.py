@@ -2,12 +2,49 @@
 
 from datetime import date
 
+import pytest
+
 from src.core.formatting import (
     append_part_info,
+    format_bytes,
     format_playtime,
     format_progress_line,
     format_relative_date,
+    format_size,
+    format_speed,
 )
+from src.core.i18n import set_language
+
+
+class TestUnitsI18n:
+    """Régression : les unités de taille/vitesse doivent suivre la langue.
+
+    Bug d'audit : « 431 Mo » / « 132 Go » / « Ko/s » restaient français même en EN.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _restore_lang(self):
+        yield
+        set_language("fr")
+
+    def test_size_french(self):
+        set_language("fr")
+        assert format_size(431) == "431 Mo"
+        assert format_size(2500) == "2.5 Go"
+
+    def test_size_english(self):
+        set_language("en")
+        assert format_size(431) == "431 MB"
+        assert format_size(2500) == "2.5 GB"
+
+    def test_bytes_english(self):
+        set_language("en")
+        assert format_bytes(500 * 1024 * 1024) == "500 MB"
+
+    def test_speed_english(self):
+        set_language("en")
+        assert format_speed(5 * 1024 * 1024) == "5.0 MB/s"
+        assert format_speed(200 * 1024) == "200 KB/s"
 
 
 class TestFormatPlaytime:

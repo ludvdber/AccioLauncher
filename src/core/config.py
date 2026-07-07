@@ -48,6 +48,16 @@ LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 APP_VERSION = "0.5.2"
 
 
+def _as_str(value: object, default: str) -> str:
+    """Coerce une valeur JSON en str, sinon le défaut (config trafiquée à la main)."""
+    return value if isinstance(value, str) else default
+
+
+def _as_dict(value: object) -> dict:
+    """Coerce une valeur JSON en dict, sinon un dict vide (config trafiquée à la main)."""
+    return value if isinstance(value, dict) else {}
+
+
 @dataclass(slots=True)
 class Config:
     """Charge et sauvegarde les préférences utilisateur."""
@@ -81,27 +91,29 @@ class Config:
         if CONFIG_FILE_PATH.exists():
             try:
                 data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError) as exc:
+                if not isinstance(data, dict):
+                    raise ValueError(f"racine JSON de type {type(data).__name__}, attendu objet")
+                return cls(
+                    install_path=Path(_as_str(data.get("install_path"), str(DEFAULT_INSTALL_PATH))),
+                    cache_path=Path(_as_str(data.get("cache_path"), str(DEFAULT_CACHE_PATH))),
+                    langue=data.get("langue", "fr"),
+                    theme=data.get("theme", "poudlard"),
+                    season=data.get("season", "auto"),
+                    delete_archives=data.get("delete_archives", True),
+                    autoplay_videos=data.get("autoplay_videos", True),
+                    mute_videos=data.get("mute_videos", False),
+                    check_updates=data.get("check_updates", True),
+                    discord_presence=data.get("discord_presence", True),
+                    dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
+                    kofi_milestone_thanked=data.get("kofi_milestone_thanked", False),
+                    installed_versions=_as_dict(data.get("installed_versions")),
+                    playtime_seconds=_as_dict(data.get("playtime_seconds")),
+                    last_played=_as_dict(data.get("last_played")),
+                )
+            except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 import logging
                 logging.getLogger(__name__).warning("Config corrompue, valeurs par défaut : %s", exc)
                 return cls()
-            return cls(
-                install_path=Path(data.get("install_path", str(DEFAULT_INSTALL_PATH))),
-                cache_path=Path(data.get("cache_path", str(DEFAULT_CACHE_PATH))),
-                langue=data.get("langue", "fr"),
-                theme=data.get("theme", "poudlard"),
-                season=data.get("season", "auto"),
-                delete_archives=data.get("delete_archives", True),
-                autoplay_videos=data.get("autoplay_videos", True),
-                mute_videos=data.get("mute_videos", False),
-                check_updates=data.get("check_updates", True),
-                discord_presence=data.get("discord_presence", True),
-                dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
-                kofi_milestone_thanked=data.get("kofi_milestone_thanked", False),
-                installed_versions=data.get("installed_versions", {}),
-                playtime_seconds=data.get("playtime_seconds", {}),
-                last_played=data.get("last_played", {}),
-            )
         return cls()
 
     def save(self) -> None:

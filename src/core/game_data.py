@@ -168,16 +168,35 @@ class Catalog:
 
 
 def _parse_catalog(raw: dict | list) -> Catalog:
-    """Parse un JSON brut en Catalog. Accepte l'ancien format (liste) et le nouveau (dict)."""
+    """Parse un JSON brut en Catalog. Accepte l'ancien format (liste) et le nouveau (dict).
+
+    Tolère un JSON mal typé (cache trafiqué / tronqué) : un jeu invalide est
+    ignoré, un contenu aberrant lève ValueError (rattrapée par load_catalog qui
+    retombe sur le catalogue embarqué). Ne JAMAIS laisser un TypeError remonter.
+    """
     if isinstance(raw, list):
-        # Ancien format : liste directe de jeux
-        games = tuple(GameData.from_dict(entry) for entry in raw)
-        return Catalog(catalog_version="0", catalog_url="", games=games)
-    return Catalog(
-        catalog_version=raw.get("catalog_version", "0"),
-        catalog_url=raw.get("catalog_url", ""),
-        games=tuple(GameData.from_dict(g) for g in raw.get("games", [])),
-    )
+        entries = raw
+        version, url = "0", ""
+    elif isinstance(raw, dict):
+        entries = raw.get("games", [])
+        version = raw.get("catalog_version", "0")
+        url = raw.get("catalog_url", "")
+    else:
+        raise ValueError(f"catalogue de type {type(raw).__name__}, attendu objet ou liste")
+
+    if not isinstance(entries, list):
+        raise ValueError(f"'games' de type {type(entries).__name__}, attendu liste")
+
+    games = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            log.warning("Entrée de catalogue ignorée (type %s)", type(entry).__name__)
+            continue
+        try:
+            games.append(GameData.from_dict(entry))
+        except (ValueError, TypeError, AttributeError, KeyError) as exc:
+            log.warning("Jeu invalide ignoré dans le catalogue : %s", exc)
+    return Catalog(catalog_version=str(version), catalog_url=str(url), games=tuple(games))
 
 
 def load_catalog(path: Path | None = None) -> Catalog:
@@ -189,7 +208,7 @@ def load_catalog(path: Path | None = None) -> Catalog:
     try:
         raw = json.loads(src.read_text(encoding="utf-8"))
         catalog = _parse_catalog(raw)
-    except (json.JSONDecodeError, OSError, ValueError) as e:
+    except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as e:
         log.error("Impossible de charger le catalogue de jeux : %s", e)
         catalog = Catalog(catalog_version="0", catalog_url="", games=())
 
@@ -202,7 +221,7 @@ def load_catalog(path: Path | None = None) -> Catalog:
                 if cached.games and compare_versions(cached.catalog_version, catalog.catalog_version) > 0:
                     log.info("Cache local plus récent : v%s > v%s", cached.catalog_version, catalog.catalog_version)
                     return cached
-        except (json.JSONDecodeError, OSError, ValueError) as e:
+        except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as e:
             log.warning("Cache catalogue invalide, ignoré : %s", e)
 
     return catalog

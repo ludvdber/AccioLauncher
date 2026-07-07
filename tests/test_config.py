@@ -89,6 +89,26 @@ class TestConfig:
             assert c.langue == "fr"
             assert c.installed_versions == {}
 
+    def test_load_type_invalid_json_falls_back(self, tmp_path):
+        """Régression d'audit : un JSON valide mais mal typé (config éditée à la
+        main) ne doit JAMAIS crasher le boot — repli sur les défauts."""
+        import json
+        config_file = tmp_path / "config.json"
+        cases = [
+            {"install_path": 42},              # int au lieu de str -> Path(int) crashait
+            [1, 2, 3],                          # racine liste -> .get() crashait
+            {"installed_versions": "oops"},    # str au lieu de dict -> .get() crashait ensuite
+            {"playtime_seconds": [1, 2]},      # liste au lieu de dict
+        ]
+        for payload in cases:
+            config_file.write_text(json.dumps(payload), encoding="utf-8")
+            with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+                c = Config.load()
+                assert c.langue == "fr"
+                assert isinstance(c.install_path, Path)
+                assert isinstance(c.installed_versions, dict)
+                assert isinstance(c.playtime_seconds, dict)
+
     def test_load_missing(self, tmp_path):
         config_file = tmp_path / "nonexistent.json"
         with patch("src.core.config.CONFIG_FILE_PATH", config_file):

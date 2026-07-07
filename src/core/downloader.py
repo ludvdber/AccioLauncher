@@ -31,6 +31,17 @@ def _validate_url(url: str) -> None:
         raise ValueError(f"URL invalide (pas de hostname) : {url!r}")
 
 
+def _ensure_response_https(response) -> None:
+    """Rejette une réponse dont l'URL FINALE n'est pas https.
+
+    `follow_redirects=True` suit un 3xx https→http silencieusement (attaque de
+    rétrogradation) ; on ne valide qu'au départ, donc on re-vérifie l'arrivée.
+    """
+    scheme = getattr(getattr(response, "url", None), "scheme", "https")
+    if scheme not in _ALLOWED_SCHEMES:
+        raise OSError(f"Redirection vers un protocole non sûr : {scheme!r} (attendu https)")
+
+
 def file_sha256(path: Path, cancelled: Callable[[], bool] | None = None) -> str:
     """Empreinte SHA-256 d'un fichier (lecture par blocs de 1 Mio).
 
@@ -309,6 +320,7 @@ class Downloader(QThread):
                         raise
 
                 if not needs_retry:
+                    _ensure_response_https(response)
                     raw_length = response.headers.get("content-length", "")
                     try:
                         content_length = int(raw_length)
@@ -361,11 +373,19 @@ class Downloader(QThread):
         with httpx.Client(follow_redirects=True, timeout=timeout) as client:
             with client.stream("GET", url) as response:
                 response.raise_for_status()
+                _ensure_response_https(response)
                 raw_length = response.headers.get("content-length", "")
                 try:
                     total = int(raw_length)
                 except (ValueError, TypeError):
                     total = 0
+                # Même cap que le chemin nominal : un retry 416 ne doit pas être
+                # une porte dérobée pour un fichier surdimensionné.
+                if self._max_total_bytes and total > self._max_total_bytes:
+                    raise OSError(
+                        f"Taille annoncée ({total} octets) dépasse la limite "
+                        f"({self._max_total_bytes} octets)"
+                    )
                 with open(part_path, "wb") as f:
                     downloaded = 0
                     for chunk in response.iter_bytes(CHUNK_SIZE):
@@ -375,6 +395,11 @@ class Downloader(QThread):
                         if hasher is not None:
                             hasher.update(chunk)
                         downloaded += len(chunk)
+                        if self._max_total_bytes and downloaded > self._max_total_bytes:
+                            raise OSError(
+                                f"Téléchargement dépasse la limite ({downloaded} > "
+                                f"{self._max_total_bytes} octets)"
+                            )
                         now = time.monotonic()
                         if now - self._last_emit >= 0.1:
                             self.progress.emit(downloaded, total)

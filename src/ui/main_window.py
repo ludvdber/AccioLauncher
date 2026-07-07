@@ -181,6 +181,10 @@ class MainWindow(QMainWindow):
             else:
                 self._detail.set_game(games[0])
 
+        # Notification VISIBLE des mises à jour de jeux (recompte local, différé
+        # après le fade-in). La status bar seule passait inaperçue — retour Ludo.
+        QTimer.singleShot(2500, self._notify_game_updates)
+
     # ──────────────────── System Tray ────────────────────
 
     def _build_tray(self) -> None:
@@ -332,7 +336,10 @@ class MainWindow(QMainWindow):
             self._detail.set_game(updated)
         elif games:
             self._detail.set_game(games[0])
-        self._toast.show_message(tr("Catalogue mis à jour (v{})").format(catalog.catalog_version))
+        # Le toast « mise à jour de jeu dispo » (actionnable) prime sur le toast
+        # « catalogue mis à jour » (informatif) — un seul Toast à la fois.
+        if not self._notify_game_updates():
+            self._toast.show_message(tr("Catalogue mis à jour (v{})").format(catalog.catalog_version))
         log.info("UI rafraîchie après mise à jour du catalogue")
 
     def _on_launcher_update(self, version: str, url: str, asset_url: str = "") -> None:
@@ -354,6 +361,27 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage(
             tr("{} mise(s) à jour disponible(s)").format(count) if count > 0 else tr("Prêt")
         )
+
+    def _notify_game_updates(self) -> bool:
+        """Toast cliquable si des jeux installés ont une mise à jour. Recompte LOCAL :
+        contrairement au signal `update_counts` du checker (qui ne compte que si le
+        catalogue DISTANT est plus récent), ceci couvre aussi un catalogue embarqué
+        déjà à jour livré par une mise à jour du launcher. Retourne True si toast."""
+        games = [entry.game for entry in self.manager.get_games()]
+        pending = [(i, g) for i, g in enumerate(games) if self.manager.has_update(g.id)]
+        self._on_update_counts(len(pending))
+        if not pending:
+            return False
+        first_idx = pending[0][0]
+        if len(pending) == 1:
+            msg = tr("Mise à jour disponible pour {}").format(pending[0][1].name)
+        else:
+            msg = tr("{} jeux ont une mise à jour disponible").format(len(pending))
+        # Clic → sélectionner le premier jeu concerné (son lien « Mettre à jour »
+        # et le marqueur carrousel deviennent visibles immédiatement).
+        self._toast.show_message(msg, duration_ms=6000,
+                                 on_click=lambda: self._carousel.select(first_idx))
+        return True
 
     def _on_notif_download(self) -> None:
         """Auto-update en un clic si possible, sinon ouverture de la page release."""

@@ -20,10 +20,32 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Ces paquets ne sont tirés QUE par la CLI optionnelle de httpx (`httpx._main`
+    # → rich/pygments/click/PIL/numpy), jamais utilisée au runtime. Vérifié par
+    # grep : aucun import direct dans src/. ~40 Mo non compressés en moins.
+    # tkinter : jamais utilisé (app 100 % PyQt6).
+    excludes=[
+        "numpy", "PIL", "rich", "pygments", "markdown_it", "mdurl",
+        "click", "tkinter", "_tkinter",
+    ],
     cipher=block_cipher,
     noarchive=False,
 )
+
+
+def _keep(entry):
+    """Filtre des binaires/datas Qt inutiles (aucune fonctionnalité du launcher
+    ne les touche) : traductions Qt (dialogues natifs non utilisés), module PDF."""
+    name = entry[0].lower()
+    if name.startswith("pyqt6\\qt6\\translations"):
+        return False
+    if "qt6pdf" in name:
+        return False
+    return True
+
+
+a.binaries = [e for e in a.binaries if _keep(e)]
+a.datas = [e for e in a.datas if _keep(e)]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
