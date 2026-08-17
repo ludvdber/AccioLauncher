@@ -175,3 +175,57 @@ class TestParseCatalog:
             _parse_catalog(99)
         with pytest.raises(ValueError):
             _parse_catalog({"games": 42})
+
+
+class TestVersionAvailability:
+    """Un jeu peut figurer au catalogue avant que ses archives soient en ligne.
+
+    Sans ce contrôle, le bouton TÉLÉCHARGER restait actif, le téléchargeur
+    échouait sur « Aucune URL de téléchargement » et l'utilisateur recevait
+    « Vérifiez votre connexion internet » — accusation injuste : c'est le
+    catalogue qui est en avance sur les archives, pas le réseau.
+    """
+
+    @staticmethod
+    def _version(**kw) -> GameVersion:
+        base = {"version": "1.0", "date": "", "download_url": None,
+                "download_parts": None, "size_mb": 100, "changes": ()}
+        return GameVersion(**{**base, **kw})
+
+    def test_url_simple_disponible(self):
+        assert self._version(download_url="https://ex.com/a.7z").is_available is True
+
+    def test_multiparts_disponible(self):
+        v = self._version(download_parts=["https://ex.com/a.7z.001"])
+        assert v.is_available is True
+
+    def test_sans_source_indisponible(self):
+        assert self._version().is_available is False
+
+    def test_parts_vides_indisponible(self):
+        """Une liste vide n'est pas une source."""
+        assert self._version(download_parts=[]).is_available is False
+
+    def test_chaine_vide_indisponible(self):
+        assert self._version(download_url="").is_available is False
+
+    def test_jeu_telechargeable_si_une_version_lest(self):
+        game = GameData.from_dict({**FULL_GAME})
+        assert game.is_downloadable is True
+
+    def test_jeu_non_telechargeable_si_aucune_source(self):
+        """Cas réel du catalogue : hp7a / hp7b annoncés sans archive."""
+        data = {
+            **MINIMAL_GAME,
+            "recommended_version": "1.0",
+            "versions": [{"version": "1.0", "date": "2026-04-06",
+                          "download_url": None, "download_parts": None,
+                          "size_mb": 5000, "changes": ["Version originale"]}],
+        }
+        game = GameData.from_dict(data)
+        assert game.is_downloadable is False
+        assert game.current_download is not None, "la version existe, elle n'est juste pas publiée"
+        assert game.current_download.is_available is False
+
+    def test_jeu_sans_version_non_telechargeable(self):
+        assert GameData.from_dict(MINIMAL_GAME).is_downloadable is False

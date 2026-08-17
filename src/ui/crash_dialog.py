@@ -143,25 +143,61 @@ def _show_crash_dialog(report: str) -> None:
     dlg.exec()
 
 
+# Un seul dialogue de crash dans la vie du process (voir _hook).
+_dialog_shown = False
+# Vrai pendant l'exec() du dialogue : une exception levée par le dialogue
+# lui-même ne doit pas rouvrir un dialogue.
+_in_hook = False
+
+
+def reset_crash_state() -> None:
+    """Réarme le dialogue (tests uniquement — jamais appelé en production)."""
+    global _dialog_shown, _in_hook
+    _dialog_shown = False
+    _in_hook = False
+
+
 def install_excepthook() -> None:
     """Route les exceptions non gérées vers le log + le dialogue de rapport.
 
     PyQt6 appelle sys.excepthook pour les exceptions levées dans les slots puis
     abandonne le process — ce hook donne à l'utilisateur le temps de copier le
     rapport avant. KeyboardInterrupt garde le comportement standard.
+
+    Le dialogue n'est montré QU'UNE FOIS. Les exceptions les plus probables
+    viennent de slots rappelés en boucle (paintEvent, tick du Ticker à ~30 FPS,
+    progression de téléchargement) : sans ce garde, chaque répétition empilait
+    une modale de plus, jusqu'à ce que l'utilisateur doive tuer le process —
+    sans jamais pouvoir copier le rapport, ce qui est pourtant tout l'objet de
+    la fonctionnalité. Les exceptions suivantes restent journalisées.
     """
     def _hook(exc_type, exc_value, exc_tb) -> None:
+        global _dialog_shown, _in_hook
+
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_tb)
             return
         exc_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         log.critical("Exception non gérée :\n%s", exc_text)
+
+        if _in_hook:
+            # Exception levée PENDANT l'affichage du dialogue : log seul.
+            log.error("Exception pendant l'affichage du rapport de crash — dialogue non rouvert")
+            return
+        if _dialog_shown:
+            log.warning("Dialogue de crash déjà affiché — exception journalisée seulement")
+            return
+
+        _in_hook = True
         try:
             report = build_crash_report(exc_text, _read_log_tail())
             from PyQt6.QtWidgets import QApplication
             if QApplication.instance() is not None:
+                _dialog_shown = True
                 _show_crash_dialog(report)
         except Exception:  # le handler de crash ne doit jamais crasher
             log.exception("Échec de l'affichage du rapport de crash")
+        finally:
+            _in_hook = False
 
     sys.excepthook = _hook

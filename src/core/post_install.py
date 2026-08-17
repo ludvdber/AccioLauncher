@@ -14,6 +14,48 @@ log = logging.getLogger(__name__)
 # Slated for removal — voir audit 2026-04-29 §3 #1.
 _ALLOWED_REGISTRY_PREFIXES = ("Software\\",)
 
+# Extensions interdites en destination d'un config_file : aucun fichier de
+# configuration légitime n'en a besoin, et elles ouvrent toutes une voie
+# d'exécution (raccourci, script, DLL chargée par un jeu…).
+_FORBIDDEN_DEST_SUFFIXES = frozenset({
+    ".exe", ".com", ".scr", ".pif", ".msi", ".bat", ".cmd",
+    ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh",
+    ".lnk", ".url", ".dll", ".reg", ".hta",
+})
+
+
+def allowed_config_roots() -> list[Path]:
+    """Dossiers dans lesquels un `config_file` du catalogue peut écrire.
+
+    Volontairement PLUS étroit que le home : `~/AppData/Roaming/Microsoft/
+    Windows/Start Menu/Programs/Startup` est sous le home, et une entrée de
+    catalogue empoisonnée y déposerait un fichier exécuté à chaque ouverture de
+    session — qui survivrait à la désinstallation du jeu. Tous les jeux du
+    catalogue écrivent dans `~/Documents/<jeu>/` ; « Saved Games » est ajouté
+    parce que c'est l'autre emplacement standard des sauvegardes Windows.
+    """
+    return [get_documents_dir(), Path.home() / "Saved Games"]
+
+
+def config_dest_error(dest: Path, roots: list[Path]) -> str | None:
+    """Raison du refus d'une destination de config, ou None si elle est valide.
+
+    Fonction pure (testable sans disque ni catalogue).
+    """
+    if dest.suffix.lower() in _FORBIDDEN_DEST_SUFFIXES:
+        return f"extension exécutable refusée ({dest.suffix})"
+    try:
+        resolved = dest.resolve()
+    except OSError as exc:
+        return f"chemin invalide ({exc})"
+    for root in roots:
+        try:
+            resolved.relative_to(root.resolve())
+            return None
+        except (ValueError, OSError):
+            continue
+    return "hors des dossiers autorisés (Documents, Saved Games)"
+
 
 def unblock_extracted(extracted_dirs: list[Path]) -> int:
     """Supprime le flag NTFS Zone.Identifier des fichiers extraits."""
@@ -90,9 +132,9 @@ def apply_config_files(
             docs_dir = get_documents_dir()
             dest_str = dest_tilde.replace("~/Documents", str(docs_dir)).replace("~", str(Path.home()))
             dest = Path(dest_str)
-            if not (dest.resolve().is_relative_to(Path.home().resolve())
-                    or dest.resolve().is_relative_to(docs_dir)):
-                log.warning("Config destination hors du home directory : %s", dest_tilde)
+            reason = config_dest_error(dest, allowed_config_roots())
+            if reason is not None:
+                log.warning("Config destination refusée (%s) : %s", reason, dest_tilde)
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
 

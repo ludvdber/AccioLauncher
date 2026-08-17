@@ -16,6 +16,9 @@ env/
 dist/
 build/accio_launcher/
 build/output/
+# Ressource de version : régénérée depuis APP_VERSION à chaque build par
+# accio_launcher.spec — la suivre en git ne ferait que créer des divergences.
+build/version_info.txt
 *.manifest
 
 # Fichiers générés

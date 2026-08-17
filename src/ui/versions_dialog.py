@@ -200,8 +200,8 @@ class VersionsDialog(QDialog):
 
         card_layout.addWidget(size_row)
 
-        # Bouton installer (sauf si déjà installée)
-        if not is_installed:
+        # Bouton installer (sauf si déjà installée, ou si l'archive n'est pas publiée)
+        if not is_installed and ver.is_available:
             btn_row = QWidget()
             btn_row.setStyleSheet("background: transparent;")
             btn_layout = QHBoxLayout(btn_row)
@@ -233,6 +233,12 @@ class VersionsDialog(QDialog):
             btn_layout.addWidget(btn)
 
             card_layout.addWidget(btn_row)
+        elif not is_installed:
+            note = QLabel(tr("Pas encore en ligne"))
+            note.setFont(body_font(11))
+            note.setStyleSheet("color: #6a6a8a; background: transparent;")
+            note.setAlignment(Qt.AlignmentFlag.AlignRight)
+            card_layout.addWidget(note)
 
         return card
 

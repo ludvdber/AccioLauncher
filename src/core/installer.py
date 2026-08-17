@@ -17,6 +17,11 @@ class Installer(QThread):
     """Extrait une archive et installe un jeu en arrière-plan."""
 
     progress = pyqtSignal(int)         # pourcentage 0-100
+    # Extraction terminée, travail post-extraction en cours (déblocage NTFS,
+    # copie des configs, suppression de l'archive). Sans ce signal la barre
+    # restait à 100 % sans rien dire pendant des dizaines de secondes sur un
+    # jeu de plusieurs Go, et l'utilisateur concluait à un blocage.
+    finalizing = pyqtSignal()
     # NB : pas `finished` — ça masquerait le signal natif QThread.finished.
     install_finished = pyqtSignal(str)  # chemin du dossier d'installation
     error = pyqtSignal(str)             # message d'erreur
@@ -81,6 +86,7 @@ class Installer(QThread):
                 self._cleanup()
                 return
 
+            self.finalizing.emit()
             count = unblock_extracted(self._extracted_dirs)
             if count > 0:
                 log.info("%d fichier(s) débloqué(s) (Zone.Identifier supprimé)", count)

@@ -15,7 +15,9 @@ from src.ui.fonts import body_font, cinzel
 from src.ui.theme import themed
 
 # Étapes affichées par le stepper (clé interne → libellé tr())
-_PHASES = ("download", "verify", "install")
+_PHASES = ("download", "verify", "install", "finalize")
+# Phases sans progression chiffrée → barre indéterminée le temps qu'elles durent.
+_INDETERMINATE_PHASES = ("verify", "finalize")
 
 
 class DownloadBar(QWidget):
@@ -117,19 +119,27 @@ class DownloadBar(QWidget):
             self.set_phase("install")
 
     def set_phase(self, phase: str) -> None:
-        """Met à jour le stepper. La vérification (hash) n'a pas de progression
-        chiffrée → barre indéterminée le temps qu'elle dure."""
+        """Met à jour le stepper.
+
+        La vérification (hash) et la finalisation (déblocage NTFS, copie des
+        configs) n'ont pas de progression chiffrée → barre indéterminée, ce qui
+        vaut infiniment mieux qu'une barre bloquée à 100 % sans explication.
+        """
         if phase not in _PHASES:
             return
         labels = {
-            "download": tr("1/3 · Téléchargement"),
-            "verify": tr("2/3 · Vérification"),
-            "install": tr("3/3 · Installation"),
+            "download": tr("1/4 · Téléchargement"),
+            "verify": tr("2/4 · Vérification"),
+            "install": tr("3/4 · Installation"),
+            "finalize": tr("4/4 · Finalisation"),
         }
         self._phase_label.setText(labels[phase])
-        if phase == "verify":
-            self._progress.setRange(0, 0)  # indéterminé pendant le hash
-            self._status.setText(tr("Vérification de l'archive…"))
+        if phase in _INDETERMINATE_PHASES:
+            self._progress.setRange(0, 0)
+            self._status.setText(
+                tr("Vérification de l'archive…") if phase == "verify"
+                else tr("Finalisation de l'installation…")
+            )
         elif self._progress.maximum() == 0:
             self._progress.setRange(0, 100)
             self._progress.setValue(0)

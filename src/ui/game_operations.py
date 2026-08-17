@@ -91,6 +91,16 @@ class GameOperations(QObject):
         if self.is_busy:
             self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
             return
+        if not version.is_available:
+            # Point de passage unique de download / switch_version / repair :
+            # aucun chemin ne doit lancer un Downloader sans source, sous peine
+            # du message d'erreur générique qui accuse la connexion réseau.
+            log.warning("Version %s de %s sans source de téléchargement", version.version, game.id)
+            self.status_message.emit(
+                tr("{} n'est pas encore téléchargeable — les fichiers arrivent bientôt.")
+                .format(game.name)
+            )
+            return
 
         self._target_version = version
         self._active_game = game
@@ -194,6 +204,7 @@ class GameOperations(QObject):
         """Disconnect symétrique des signaux de l'installer."""
         try:
             inst.progress.disconnect(self._on_install_progress)
+            inst.finalizing.disconnect(self._on_finalizing)
             inst.install_finished.disconnect(self._on_install_finished)
             inst.error.disconnect(self._on_install_error)
         except TypeError:
@@ -221,6 +232,7 @@ class GameOperations(QObject):
             delete_archive=delete_archive, parent=self,
         )
         self._installer.progress.connect(self._on_install_progress)
+        self._installer.finalizing.connect(self._on_finalizing)
         self._installer.install_finished.connect(self._on_install_finished)
         self._installer.error.connect(self._on_install_error)
         self._set_phase("install")
@@ -316,6 +328,11 @@ class GameOperations(QObject):
 
     def _on_install_progress(self, pct: int) -> None:
         self.install_progress.emit(pct)
+
+    def _on_finalizing(self) -> None:
+        """Extraction finie, travail post-extraction en cours."""
+        self._set_phase("finalize")
+        self.status_message.emit(tr("Finalisation de l'installation…"))
 
     def _on_install_finished(self, _path: str) -> None:
         if self._installer is not None:

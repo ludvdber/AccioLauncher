@@ -1,0 +1,46 @@
+MIT License
+
+Copyright (c) 2026 ASTeam — https://acciolauncher.be/
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+CODE SOURCE : licence MIT (ci-dessus).
+
+Tu peux reprendre, modifier et redistribuer ce code, y compris commercialement,
+a la seule condition de conserver la mention de copyright ci-dessus : autrement
+dit, de dire que le travail de depart est celui d'ASTeam.
+
+BINAIRE DISTRIBUE (AccioLauncher.exe) : GNU GPL v3.
+
+Ce n'est pas un second choix, c'est une consequence : l'executable embarque
+PyQt6, publie sous GPL v3. Un binaire qui l'inclut est un travail derive et sa
+redistribution est donc soumise a la GPL v3, qui impose que le code source
+correspondant reste disponible - ce qu'il est, sur https://github.com/ludvdber/AccioLauncher.
+
+Les deux ne se contredisent pas : le code reste reutilisable sous MIT par qui
+le recupere depuis le depot, et seul l'executable assemble porte la GPL v3.
+
+Detail des composants tiers et de leurs licences : THIRD-PARTY-NOTICES.md.
+
+Accio Launcher n'est ni affilie ni approuve par Warner Bros., Electronic Arts
+ou J.K. Rowling. Harry Potter et les marques associees appartiennent a leurs
+detenteurs respectifs. Le launcher ne distribue aucun contenu de jeu sous
+copyright : il ne fait que telecharger des archives depuis des sources tierces.

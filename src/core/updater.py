@@ -76,8 +76,22 @@ class UpdateChecker(QThread):
         self._games_asset_urls = games_asset_urls or {}      # snapshot (compteur ⬇)
 
     def run(self) -> None:
+        """Trois étapes réseau séquentielles, interruptibles entre chacune.
+
+        `requestInterruption()` ne peut pas avorter une requête HTTP en cours
+        (httpx n'expose pas d'annulation), mais tester le drapeau entre les
+        étapes ramène le pire cas d'une trentaine de secondes (3 requêtes) à
+        une dizaine (1 requête en vol) — la fenêtre pendant laquelle une
+        fermeture de fenêtre peut détruire un thread encore actif.
+        """
         self._check_catalog()
+        if self.isInterruptionRequested():
+            log.info("Vérification des mises à jour interrompue (après catalogue)")
+            return
         self._check_launcher()
+        if self.isInterruptionRequested():
+            log.info("Vérification des mises à jour interrompue (après launcher)")
+            return
         self._check_download_counts()
 
     def _check_download_counts(self) -> None:

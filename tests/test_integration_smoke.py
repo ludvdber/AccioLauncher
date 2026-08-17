@@ -111,13 +111,25 @@ class TestPhaseWiring:
         win = make_window()
         ops = win._detail.ops
         ops._set_phase("download")
-        assert win._download_bar._phase_label.text().startswith("1/3")
+        assert win._download_bar._phase_label.text().startswith("1/4")
         ops._set_phase("verify")
-        assert win._download_bar._phase_label.text().startswith("2/3")
+        assert win._download_bar._phase_label.text().startswith("2/4")
         assert win._download_bar._progress.maximum() == 0  # indéterminé
         ops._set_phase("verify")  # dédupliqué : pas de double émission
         ops._set_phase("install")
-        assert win._download_bar._phase_label.text().startswith("3/3")
+        assert win._download_bar._phase_label.text().startswith("3/4")
+        ops._set_phase("finalize")
+        assert win._download_bar._phase_label.text().startswith("4/4")
+        assert win._download_bar._progress.maximum() == 0  # indéterminé aussi
+
+    def test_installer_finalizing_declenche_la_phase(self, make_window):
+        """Le signal Installer.finalizing doit remonter jusqu'au stepper."""
+        win = make_window()
+        ops = win._detail.ops
+        ops._set_phase("install")
+        ops._on_finalizing()
+        assert ops._phase == "finalize"
+        assert win._download_bar._phase_label.text().startswith("4/4")
 
 
 class TestDownloadCounts:
@@ -297,3 +309,65 @@ class TestOnboardingImport:
         assert (tmp_path / "launcher_games" / Path(*parts)).exists()  # déplacé
         assert config.installed_versions[game.id] == game.recommended_version
         assert not (src_root / parts[0]).exists()  # source vidée (rename)
+
+
+class TestJeuBientotDisponible:
+    """hp7a / hp7b figurent au catalogue sans archive publiée.
+
+    Le launcher doit le DIRE, pas lancer un téléchargement qui échoue avec un
+    message accusant la connexion internet de l'utilisateur.
+    """
+
+    @staticmethod
+    def _sans_source(catalog):
+        return next((g for g in catalog.games if not g.is_downloadable), None)
+
+    def test_le_catalogue_embarque_contient_bien_ce_cas(self):
+        """Sentinelle : si un jour tous les jeux ont une archive, ce test le dira."""
+        assert self._sans_source(_CATALOG) is not None, (
+            "plus aucun jeu sans source — adapter ou retirer ces tests")
+
+    @staticmethod
+    def _noms_du_layout(panel) -> list[str]:
+        """objectName des widgets réellement dans le layout d'actions.
+
+        On n'interroge PAS findChildren : clear_layout utilise deleteLater(),
+        donc les boutons de la fiche précédente restent enfants jusqu'au tour
+        de boucle suivant et fausseraient l'assertion.
+        """
+        layout = panel._action_layout
+        noms = []
+        for i in range(layout.count()):
+            w = layout.itemAt(i).widget()
+            if w is not None:
+                noms.append(w.objectName())
+        return noms
+
+    def test_bouton_remplace_par_bientot_disponible(self, make_window):
+        win = make_window()
+        game = self._sans_source(_CATALOG)
+        win._carousel.select(_IDS.index(game.id))
+        noms = self._noms_du_layout(win._detail._action_panel)
+        assert "btnComingSoon" in noms, f"attendu btnComingSoon, trouvé {noms}"
+        assert "btnDownload" not in noms, "le bouton Télécharger ne doit pas être proposé"
+
+    def test_download_refuse_par_lorchestrateur(self, make_window):
+        """Garde de dernier recours : même en appelant download() directement."""
+        win = make_window()
+        game = self._sans_source(_CATALOG)
+        ops = win._detail.ops
+        messages: list[str] = []
+        ops.status_message.connect(messages.append)
+        ops.download(game, game.current_download)
+        assert not ops.is_busy, "aucun Downloader ne doit démarrer sans source"
+        assert ops.active_game is None
+        assert messages and "bient" in messages[-1].lower()
+
+    def test_jeu_normal_reste_telechargeable(self, make_window):
+        """Contrôle négatif : le durcissement ne doit rien casser ailleurs."""
+        win = make_window()
+        game = next(g for g in _CATALOG.games if g.is_downloadable)
+        win._carousel.select(_IDS.index(game.id))
+        noms = self._noms_du_layout(win._detail._action_panel)
+        assert "btnDownload" in noms
+        assert "btnComingSoon" not in noms

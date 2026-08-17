@@ -65,6 +65,19 @@ class GameVersion:
     sha256: str | None = None              # fichier final (téléchargement simple)
     sha256_parts: tuple[str, ...] = ()     # une empreinte par part (multi-parts)
 
+    @property
+    def is_available(self) -> bool:
+        """True si cette version a réellement une archive à télécharger.
+
+        Une entrée de catalogue peut exister sans source publiée : un jeu
+        annoncé dont les archives ne sont pas encore en ligne. Sans ce
+        contrôle, le bouton « TÉLÉCHARGER » reste actif, le téléchargeur
+        échoue sur « Aucune URL de téléchargement », et l'utilisateur reçoit
+        « Vérifiez votre connexion internet » — le launcher accuse sa
+        connexion alors que c'est le catalogue qui est incomplet.
+        """
+        return bool(self.download_url or self.download_parts)
+
     @classmethod
     def from_dict(cls, data: dict) -> "GameVersion":
         return cls(
@@ -104,6 +117,15 @@ class GameData:
             if v.version == self.recommended_version:
                 return v
         return self.versions[-1] if self.versions else None
+
+    @property
+    def is_downloadable(self) -> bool:
+        """True si le jeu a au moins une version réellement téléchargeable.
+
+        Faux pour un jeu annoncé au catalogue dont aucune archive n'est encore
+        publiée : l'UI affiche « Bientôt disponible » à la place du bouton.
+        """
+        return any(v.is_available for v in self.versions)
 
     def get_version(self, version_str: str) -> GameVersion | None:
         """Retourne une version spécifique par son numéro."""

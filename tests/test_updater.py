@@ -1,6 +1,10 @@
-"""Tests pour src/core/updater.py — agrégation des compteurs de téléchargement (pur)."""
+"""Tests pour src/core/updater.py — agrégation des compteurs (pur) + interruption."""
 
-from src.core.updater import _releases_api_from_catalog_url, aggregate_download_counts
+from src.core.updater import (
+    UpdateChecker,
+    _releases_api_from_catalog_url,
+    aggregate_download_counts,
+)
 
 _U = "https://github.com/o/r/releases/download"
 
@@ -61,3 +65,48 @@ class TestReleasesApiFromCatalogUrl:
 
     def test_fallback_on_garbage(self):
         assert "api.github.com/repos/" in _releases_api_from_catalog_url("n'importe quoi")
+
+
+def _stub_checker(interrupt_after: str | None) -> tuple[UpdateChecker, list[str]]:
+    """UpdateChecker dont les 3 étapes réseau sont remplacées par des marqueurs.
+
+    `isInterruptionRequested` est surchargé côté instance : la vraie méthode Qt
+    ne fait rien tant que le thread n'est pas démarré, or on veut exercer `run()`
+    de façon synchrone et déterministe.
+    """
+    steps: list[str] = []
+    checker = UpdateChecker(catalog_url="", current_catalog_version="0", installed_versions={})
+    state = {"interrupted": False}
+
+    def _step(name: str):
+        def _run() -> None:
+            steps.append(name)
+            if name == interrupt_after:
+                state["interrupted"] = True
+        return _run
+
+    checker._check_catalog = _step("catalog")
+    checker._check_launcher = _step("launcher")
+    checker._check_download_counts = _step("counts")
+    checker.isInterruptionRequested = lambda: state["interrupted"]
+    return checker, steps
+
+
+class TestInterruption:
+    """Régression : sans ces contrôles, requestInterruption() était sans effet et
+    la fermeture de la fenêtre pouvait détruire un QThread encore en cours."""
+
+    def test_sans_interruption_les_trois_etapes_tournent(self):
+        checker, steps = _stub_checker(interrupt_after=None)
+        checker.run()
+        assert steps == ["catalog", "launcher", "counts"]
+
+    def test_interruption_apres_catalogue_arrete_la_suite(self):
+        checker, steps = _stub_checker(interrupt_after="catalog")
+        checker.run()
+        assert steps == ["catalog"]
+
+    def test_interruption_apres_launcher_arrete_les_compteurs(self):
+        checker, steps = _stub_checker(interrupt_after="launcher")
+        checker.run()
+        assert steps == ["catalog", "launcher"]

@@ -116,7 +116,10 @@ class ActionPanel(QWidget):
 
     def _build_not_installed(self) -> None:
         dl = self._game.current_download
-        size = format_size(dl.size_mb) if dl else "?"
+        if dl is None or not dl.is_available:
+            self._build_coming_soon()
+            return
+        size = format_size(dl.size_mb)
         btn = GlowButton(f"{tr('TÉLÉCHARGER')}  \u2014  {size}", style="outline")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
@@ -125,6 +128,30 @@ class ActionPanel(QWidget):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.download_clicked)
         self._action_layout.addWidget(btn)
+
+    def _build_coming_soon(self) -> None:
+        """Jeu au catalogue dont aucune archive n'est encore publiée.
+
+        Un bouton désactivé plutôt qu'un bouton actif qui échoue : le message
+        d'erreur générique accusait la connexion de l'utilisateur alors que le
+        launcher fonctionne très bien — c'est le catalogue qui est en avance
+        sur les archives.
+        """
+        btn = QPushButton(tr("BIENTÔT DISPONIBLE"))
+        btn.setObjectName("btnComingSoon")
+        btn.setEnabled(False)
+        btn.setFont(cinzel(13, bold=True))
+        btn.setFixedSize(300, 46)
+        btn.setStyleSheet(themed(
+            "QPushButton { background: rgba(255,255,255,0.04); color: #8a8aaa;"
+            " border: 1px solid #2c3e6b; border-radius: 6px; }"
+        ))
+        self._action_layout.addWidget(btn)
+
+        note = QLabel(tr("Les fichiers de ce jeu ne sont pas encore en ligne."))
+        note.setFont(body_font(12))
+        note.setStyleSheet("color: #8a8aaa; background: transparent;")
+        self._action_layout.addWidget(note)
 
     def _build_downloading(self) -> None:
         self._action_layout.setDirection(QVBoxLayout.Direction.TopToBottom)

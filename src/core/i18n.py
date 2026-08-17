@@ -217,10 +217,19 @@ _EN: dict[str, str] = {
     "il y a {} jours": "{} days ago",
 
     # ── Stepper téléchargement → vérification → installation ──
-    "1/3 · Téléchargement": "1/3 · Download",
-    "2/3 · Vérification": "2/3 · Verify",
-    "3/3 · Installation": "3/3 · Install",
+    "1/4 · Téléchargement": "1/4 · Download",
+    "2/4 · Vérification": "2/4 · Verify",
+    "3/4 · Installation": "3/4 · Install",
+    "4/4 · Finalisation": "4/4 · Finalizing",
     "Vérification de l'archive…": "Verifying archive…",
+    "Finalisation de l'installation…": "Finalizing installation…",
+    # ── Jeu annoncé au catalogue, archives pas encore publiées ──
+    "BIENTÔT DISPONIBLE": "COMING SOON",
+    "Les fichiers de ce jeu ne sont pas encore en ligne.":
+        "This game's files are not online yet.",
+    "Pas encore en ligne": "Not online yet",
+    "{} n'est pas encore téléchargeable — les fichiers arrivent bientôt.":
+        "{} is not downloadable yet — the files are coming soon.",
 
     # ── Thèmes maisons ──
     "Thème :": "Theme:",

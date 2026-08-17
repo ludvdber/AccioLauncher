@@ -56,6 +56,7 @@ class CarouselItem(QWidget):
         self._cached_has_update: bool = False
         self._cached_version: str = ""
         self._cached_is_new: bool = False
+        self._cached_coming_soon: bool = False
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -95,6 +96,9 @@ class CarouselItem(QWidget):
         self._cached_has_update = self.manager.has_update(self.game.id)
         self._cached_version = self.manager.installed_version(self.game.id) or ""
         self._cached_is_new = self.manager.is_new(self.game.id)
+        # Jeu annoncé dont aucune archive n'est publiée : signalé dans la
+        # vignette pour que l'utilisateur le sache AVANT de cliquer.
+        self._cached_coming_soon = not self.game.is_downloadable
         self.update()
 
     def _load_cover(self) -> None:
@@ -288,5 +292,24 @@ class CarouselItem(QWidget):
             p.setPen(QColor("#060611"))
             p.drawText(QRectF(bx, by, tw + 10, fm.height() + 3),
                        Qt.AlignmentFlag.AlignCenter, text)
+
+        if self._cached_coming_soon:
+            # Voile sombre + mention discrète : la vignette reste lisible et
+            # attractive (c'est un jeu à venir, pas une erreur), mais on ne
+            # laisse pas croire qu'elle est jouable.
+            p.setOpacity(1.0)
+            p.fillRect(x_off, y_off, w, h, theme.bg_qcolor(120))
+            p.setFont(QFont("Segoe UI", 7, QFont.Weight.Bold))
+            fm = p.fontMetrics()
+            text = "BIENTÔT"
+            tw = fm.horizontalAdvance(text)
+            bw, bh = tw + 10, fm.height() + 3
+            bx = x_off + (w - bw) // 2
+            by = y_off + (h - bh) // 2
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(theme.bg_qcolor(200))
+            p.drawRoundedRect(QRectF(bx, by, bw, bh), 3, 3)
+            p.setPen(QColor(200, 200, 220, 230))
+            p.drawText(QRectF(bx, by, bw, bh), Qt.AlignmentFlag.AlignCenter, text)
 
         p.end()

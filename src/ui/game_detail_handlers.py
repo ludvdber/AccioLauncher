@@ -45,6 +45,15 @@ def on_download(view: "GameDetailView", version: GameVersion | None = None) -> N
     if ver is None:
         view.status_message.emit(tr("Aucune version disponible."))
         return
+    if not ver.is_available:
+        # Garde de dernier recours : le bouton est déjà remplacé par « Bientôt
+        # disponible », mais la touche Entrée et le menu contextuel passent ici
+        # aussi. Sans ça, l'utilisateur recevait « Vérifiez votre connexion ».
+        view.status_message.emit(
+            tr("{} n'est pas encore téléchargeable — les fichiers arrivent bientôt.")
+            .format(view.game.name)
+        )
+        return
     free_mb = view._ops.check_disk_space(ver)
     if free_mb is not None:
         QMessageBox.warning(

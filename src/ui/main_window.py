@@ -43,6 +43,20 @@ log = logging.getLogger(__name__)
 
 _ICON_PATH = ASSETS_DIR / "accio_launcher.png"
 
+# Checkers encore actifs à la fermeture : déparentés de la MainWindow et gardés
+# vivants ici jusqu'à leur fin réelle. Sans ça, un QThread bloqué sur un read
+# réseau était détruit avec sa fenêtre parente → « QThread: Destroyed while
+# thread is still running » et abandon du process (le launcher « plante quand
+# on le ferme »). Même contrat que GameOperations._zombies.
+_orphaned_checkers: list[UpdateChecker] = []
+
+
+def _reap_checker(checker: UpdateChecker) -> None:
+    """Libère un checker orphelin une fois son thread réellement terminé."""
+    if checker in _orphaned_checkers:
+        _orphaned_checkers.remove(checker)
+    checker.deleteLater()
+
 
 def _load_app_icon() -> QIcon:
     """Charge l'icône de l'application depuis le fichier PNG."""
@@ -301,9 +315,11 @@ class MainWindow(QMainWindow):
         """Lance la vérification des mises à jour en arrière-plan."""
         if not self.config.check_updates:
             return
-        if self._update_checker is not None and self._update_checker.isRunning():
-            self._update_checker.requestInterruption()
-            self._update_checker.wait(1000)
+        if self._update_checker is not None:
+            # Même traitement qu'à la fermeture : jamais de thread remplacé
+            # pendant qu'il tourne encore (il resterait enfant de la fenêtre
+            # et mourrait avec elle).
+            self._shutdown_checker(self._update_checker)
         catalog = self.manager.catalog
         self._update_checker = UpdateChecker(
             catalog_url=catalog.catalog_url,
@@ -766,16 +782,34 @@ class MainWindow(QMainWindow):
             self._carousel.select_next()
         return True
 
+    @staticmethod
+    def _shutdown_checker(checker: UpdateChecker) -> None:
+        """Arrête un UpdateChecker sans jamais le détruire pendant qu'il tourne.
+
+        Demande l'interruption (honorée entre les étapes réseau de `run()`),
+        attend, et si le thread est encore bloqué sur une requête en vol, le
+        déparente pour qu'il survive à la destruction de la fenêtre — son
+        `finished` natif s'occupe du nettoyage.
+        """
+        if not checker.isRunning():
+            return
+        checker.requestInterruption()
+        if checker.wait(3000):
+            return
+        log.warning("UpdateChecker encore actif à la fermeture — nettoyage différé")
+        checker.setParent(None)
+        _orphaned_checkers.append(checker)
+        checker.finished.connect(lambda: _reap_checker(checker))
+
     def closeEvent(self, event) -> None:
         """Attend la fin des threads avant de fermer."""
         from PyQt6.QtWidgets import QApplication
         QApplication.instance().removeEventFilter(self)
 
-        if self._update_checker is not None and self._update_checker.isRunning():
-            self._update_checker.wait(3000)
+        if self._update_checker is not None:
+            self._shutdown_checker(self._update_checker)
         for checker in list(self._extra_checkers):
-            if checker.isRunning():
-                checker.wait(3000)
+            self._shutdown_checker(checker)
         self._extra_checkers.clear()
         if self._launcher_dl is not None:
             self._launcher_dl.cancel()

@@ -64,6 +64,29 @@
 3. Choisissez votre dossier d'installation
 4. Sélectionnez un jeu et cliquez sur **Télécharger** ⚡
 
+### 🛡️ « Windows a protégé votre ordinateur »
+
+C'est attendu, et ce n'est pas un virus.
+
+Accio Launcher est un projet libre et gratuit : il n'est pas signé par un
+certificat de signature de code, qui coûte plusieurs centaines d'euros par an.
+Windows SmartScreen affiche donc un avertissement pour tout exécutable qu'il ne
+connaît pas encore. L'avertissement disparaîtra de lui-même à mesure que le
+launcher sera téléchargé.
+
+**Pour lancer le launcher malgré l'avertissement :** cliquez sur
+**Informations complémentaires**, puis sur **Exécuter quand même**.
+
+**Pour vérifier vous-même que le fichier est authentique**, comparez son
+empreinte avec celle publiée sur la page de la release :
+
+```powershell
+Get-FileHash .\AccioLauncher.exe -Algorithm SHA256
+```
+
+Si l'empreinte ne correspond pas à celle annoncée, **ne lancez pas le fichier**
+et signalez-le sur le [Discord](https://discord.gg/TNwDQd7KGe).
+
 ### 🧙 Méthode développeur
 
 ```bash
@@ -140,6 +163,26 @@ Les contributions sont les bienvenues !
 - 🐛 **Bug ?** → Ouvrez une [Issue](https://github.com/ludvdber/AccioLauncher/issues)
 - 💡 **Idée ?** → Proposez une [Feature Request](https://github.com/ludvdber/AccioLauncher/issues/new)
 - 🔧 **Code ?** → Forkez, créez une branche, soumettez une PR
+
+---
+
+## 📜 Licence
+
+**Le code source est sous licence [MIT](LICENSE).** Reprenez-le, modifiez-le,
+réutilisez-le — y compris commercialement. La seule condition est de conserver
+la mention de copyright, c'est-à-dire de créditer ASTeam comme base du travail.
+
+**L'exécutable distribué est sous GNU GPL v3.** Ce n'est pas un second choix
+mais une conséquence : il embarque PyQt6, publié sous GPL v3, ce qui rend le
+binaire assemblé dérivé de celle-ci. Le code source correspondant reste
+disponible dans ce dépôt, ce qui satisfait l'obligation.
+
+Les deux ne se contredisent pas : qui récupère le code depuis le dépôt l'obtient
+sous MIT ; seul le binaire assemblé porte la GPL v3.
+
+Les composants tiers embarqués (7-Zip, Qt, httpx, polices Cinzel…) et leurs
+licences respectives sont détaillés dans
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ---
 

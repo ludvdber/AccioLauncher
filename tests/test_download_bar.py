@@ -37,14 +37,14 @@ class TestDownloadBarLifecycle:
         assert not bar._btn_cancel.isVisible() or bar._btn_cancel.isHidden()
 
     def test_stepper_phases(self, qtbot):
-        """set_phase pilote le stepper ; « verify » passe la barre en indéterminé."""
+        """set_phase pilote le stepper ; verify et finalize passent en indéterminé."""
         bar = DownloadBar()
         qtbot.addWidget(bar)
         bar.show_for_game(_GAME, GameState.DOWNLOADING)
-        assert bar._phase_label.text().startswith("1/3")
+        assert bar._phase_label.text().startswith("1/4")
 
         bar.set_phase("verify")
-        assert bar._phase_label.text().startswith("2/3")
+        assert bar._phase_label.text().startswith("2/4")
         assert bar._progress.maximum() == 0  # indéterminé pendant le hash
 
         # La progression qui reprend re-borne la barre (part suivante)
@@ -52,14 +52,32 @@ class TestDownloadBarLifecycle:
         assert bar._progress.maximum() == 100
 
         bar.set_phase("install")
-        assert bar._phase_label.text().startswith("3/3")
+        assert bar._phase_label.text().startswith("3/4")
 
         bar.set_phase("inconnu")  # ignoré sans crash
-        assert bar._phase_label.text().startswith("3/3")
+        assert bar._phase_label.text().startswith("3/4"), "phase inconnue = pas de changement"
 
         bar.hide_bar()
         assert bar._phase_label.text() == ""
         assert bar._progress.maximum() == 100
+
+    def test_phase_finalisation_indeterminee(self, qtbot):
+        """Après l'extraction, la barre ne doit PAS rester bloquée à 100 %.
+
+        Sur un jeu de plusieurs Go, le déblocage NTFS et la copie des configs
+        durent des dizaines de secondes : sans cette phase, l'utilisateur voyait
+        100 % figé et concluait à un plantage.
+        """
+        bar = DownloadBar()
+        qtbot.addWidget(bar)
+        bar.show_for_game(_GAME, GameState.INSTALLING)
+        bar.update_install_progress(100)
+        assert bar._progress.value() == 100
+
+        bar.set_phase("finalize")
+        assert bar._phase_label.text().startswith("4/4")
+        assert bar._progress.maximum() == 0, "barre indéterminée pendant la finalisation"
+        assert bar._status.text() != ""
 
     def test_hide_bar_resets_everything(self, qtbot):
         """Régression : hide_bar doit reset titre/status/progress sinon flash au prochain show."""
