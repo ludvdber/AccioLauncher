@@ -23,6 +23,10 @@ from src.core.game_manager import GameManager
 
 log = logging.getLogger(__name__)
 
+# Délai avant de lancer la bande-annonce : les premières secondes servent
+# à lire le titre, sur une image fixe.
+_VIDEO_START_DELAY_MS = 2000
+
 
 class GameDetailView(QWidget):
     """Zone centrale : fond + info panel + action panel + vidéo."""
@@ -38,6 +42,7 @@ class GameDetailView(QWidget):
 
         # Sous-systèmes
         self._video = VideoPlayer(self)
+        self._pending_video_id: str = ""  # jeu dont la vidéo est programmée
         self._ops = GameOperations(manager, self)
 
         self._build_ui(manager)
@@ -60,6 +65,7 @@ class GameDetailView(QWidget):
         self._audio_bar = AudioBar(self)
         self._audio_bar.mute_toggled.connect(self._on_mute_clicked)
         self._audio_bar.volume_changed.connect(self._on_volume_changed)
+        self._audio_bar.play_toggled.connect(self._on_play_clicked)
 
         # Animations fade
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity")
@@ -95,6 +101,7 @@ class GameDetailView(QWidget):
 
         # Info panel
         self._info.versions_clicked.connect(lambda: handlers.on_versions_clicked(self))
+        self._info.content_changed.connect(self._position_info)
 
         # Menu contextuel
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -104,9 +111,25 @@ class GameDetailView(QWidget):
 
     def _position_info(self) -> None:
         w, h = self.width(), self.height()
-        info_w = min(650, int(w * 0.50))
-        info_top = int(h * 0.22)
-        self._info.setGeometry(0, info_top, info_w, h - info_top - 20)
+        # Part de largeur donnée au panneau. Elle AUGMENTE quand la fenêtre
+        # rétrécit : à 50 % fixes, une fenêtre de 1100 px ne laissait que 466 px
+        # utiles au texte, le titre passait à trois lignes et la description
+        # sortait de l'écran — pendant que la moitié droite restait vide.
+        frac = 0.50 if w >= 1300 else 0.58 if w >= 1100 else 0.64
+        info_w = min(700, int(w * frac))
+        # Retrait vertical : généreux sur grand écran (le panneau respire), réduit
+        # quand la hauteur manque — 22 % de 427 px, c'est 94 px de vide au-dessus
+        # du titre pendant que la description sortait par le bas.
+        info_top = int(h * (0.22 if h >= 560 else 0.10))
+        dispo = h - info_top - 20
+        self._info.set_height_budget(dispo)
+        # Poser d'abord la largeur définitive : la hauteur nécessaire en dépend.
+        self._info.setGeometry(0, info_top, info_w, dispo)
+        # Puis rétrécir à ce que le contenu réclame — la zone d'action est
+        # épinglée en bas du panneau, donc un panneau trop haut creuse un vide
+        # entre la description et le bouton.
+        self._info.setGeometry(0, info_top, info_w,
+                               max(220, min(dispo, self._info.natural_height())))
 
     def resizeEvent(self, event) -> None:
         self._bg.setGeometry(self.rect())
@@ -124,6 +147,12 @@ class GameDetailView(QWidget):
             self.game = game
             self._info.apply_game(game)
             self._refresh()
+            # Le contenu a pu changer de hauteur — c'est le cas quand les
+            # compteurs de téléchargement arrivent quelques secondes après le
+            # démarrage et rallongent la ligne méta. Sans ce repositionnement,
+            # le panneau garde sa taille d'avant et rogne « Lire la suite ».
+            self._position_info()
+            QTimer.singleShot(0, self._position_info)
             return
         # Cross-fade : snapshot du rendu actuel (vidéo incluse) AVANT de couper
         # la vidéo et de baisser l'opacité — le nouveau fond fade par-dessus.
@@ -139,10 +168,11 @@ class GameDetailView(QWidget):
         self.game = game
         self._info.apply_game(game)
 
-        # Background
+        # Background — la jaquette d'abord, la bande-annonce ensuite (voir
+        # _schedule_video) : les premières secondes sont celles où on lit le
+        # titre et la description, et du mouvement derrière le texte y nuit.
         self._bg.set_image(ASSETS_DIR / "backgrounds" / f"{game.id}_bg.jpg")
-        if self.manager.config.autoplay_videos:
-            self._try_play_video(game.id)
+        self._schedule_video(game.id)
 
         self._refresh()
 
@@ -157,6 +187,11 @@ class GameDetailView(QWidget):
         # Fade-in info
         self._info.show()
         self._position_info()
+        # Deuxième passe au tour de boucle suivant : à la première, le panneau
+        # d'actions vient d'être reconstruit et la hauteur réclamée par le
+        # contenu n'est pas encore stabilisée — on gardait un panneau trop haut,
+        # donc un vide entre la description et le bouton.
+        QTimer.singleShot(0, self._position_info)
         self._info_fade.stop()
         self._info_fade.setStartValue(0.0)
         self._info_fade.setEndValue(1.0)
@@ -178,6 +213,23 @@ class GameDetailView(QWidget):
 
     # ──────────────────── Vidéo ────────────────────
 
+    def _schedule_video(self, game_id: str) -> None:
+        """Programme le démarrage de la bande-annonce après un court délai.
+
+        Trois bénéfices : la lecture du titre se fait sur une image fixe, le
+        temps de chargement de la vidéo devient invisible, et parcourir le
+        carrousel ne déclenche plus un lecteur par vignette survolée.
+        """
+        self._pending_video_id = game_id
+        if not self.manager.config.autoplay_videos:
+            return
+        QTimer.singleShot(_VIDEO_START_DELAY_MS, self._on_video_timer)
+
+    def _on_video_timer(self) -> None:
+        # Le jeu a pu changer pendant le délai : on ne lance que le bon.
+        if self.game is not None and self.game.id == self._pending_video_id:
+            self._try_play_video(self.game.id)
+
     def _try_play_video(self, game_id: str) -> None:
         video_path = ASSETS_DIR / "videos" / f"{game_id}_video.mp4"
         if not video_path.exists():
@@ -186,6 +238,7 @@ class GameDetailView(QWidget):
         muted = self.manager.config.mute_videos
         if self._video.play(str(video_path), muted=muted, volume=self._audio_bar.volume() / 100.0):
             self._audio_bar.set_muted_icon(muted)
+            self._audio_bar.set_paused_icon(False)
             self._audio_bar.show()
             self._audio_bar.raise_()
         else:
@@ -203,6 +256,13 @@ class GameDetailView(QWidget):
     def _on_mute_clicked(self) -> None:
         self._audio_bar.set_muted_icon(self._video.toggle_mute())
 
+    def _on_play_clicked(self) -> None:
+        if self._video.paused:
+            self._video.resume()
+        else:
+            self._video.pause()
+        self._audio_bar.set_paused_icon(self._video.paused)
+
     def _on_volume_changed(self, value: int) -> None:
         self._video.set_volume(value)
         if not self._video.muted:
@@ -218,7 +278,16 @@ class GameDetailView(QWidget):
         self._bg.resume()
 
     def pause_effects(self) -> None:
-        """Pause les effets décoratifs SANS couper la vidéo (perte de focus fenêtre)."""
+        """Perte de FOCUS : on suspend les effets décoratifs, pas la vidéo.
+
+        La fenêtre reste souvent visible quand elle perd le focus — second
+        écran, fenêtre côte à côte. Couper la bande-annonce dans ce cas se voit
+        et fait mauvais effet. Les trailers durent moins de deux minutes et
+        s'arrêtent d'eux-mêmes à la fin (`_on_video_ended` rend la main à
+        l'image de fond) ; c'est suffisant. La vidéo n'est réellement coupée que
+        lorsque la fenêtre n'est plus visible du tout — voir `pause()`, appelée
+        par la mise en tray.
+        """
         self._bg.pause()
 
     def resume_effects(self) -> None:

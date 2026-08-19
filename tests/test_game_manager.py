@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from src.core.config import Config
-from src.core.game_data import GameData, Catalog
+from src.core.game_data import GameData, GameVersion, Catalog
 from src.core.game_manager import GameManager, GameState, _is_safe_relative
 from src.core.pre_launch import apply_ini_patches, create_pre_launch_files, unblock_game_dlls
 from src.core.system_checks import check_vcredist_x86, check_d3d11_feature_level
@@ -392,3 +392,126 @@ class TestSystemChecks:
     def test_d3d11_non_windows(self):
         with patch.object(sys, "platform", "linux"):
             assert check_d3d11_feature_level() is False
+
+
+class TestExpectedHashes:
+    """Résolution des empreintes : catalogue d'abord, sinon celles de GitHub.
+
+    L'enjeu est qu'une empreinte OUBLIÉE dans games.json ne laisse pas la
+    vérification d'intégrité dormante — GitHub publie déjà la sienne.
+    """
+
+    A = "aa" * 32
+    B = "bb" * 32
+    C = "cc" * 32
+
+    @staticmethod
+    def _version(**kw):
+        data = {"version": "1.0", "date": "2026-01-01", "size_mb": 100,
+                "changes": [], "download_url": "https://x/game.7z"}
+        data.update(kw)
+        return GameVersion.from_dict(data)
+
+    def test_catalogue_prioritaire(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/game.7z": self.B})
+        sha, parts = m.expected_hashes(self._version(sha256=self.A))
+        assert sha == self.A and parts == []
+
+    def test_repli_sur_github(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/game.7z": self.B})
+        sha, parts = m.expected_hashes(self._version())
+        assert sha == self.B and parts == []
+
+    def test_aucune_source(self, tmp_path):
+        m = _make_manager(tmp_path)
+        sha, parts = m.expected_hashes(self._version())
+        assert sha is None and parts == []
+
+    def test_url_inconnue_de_github(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://autre/ailleurs.7z": self.B})
+        sha, parts = m.expected_hashes(self._version())
+        assert sha is None and parts == []
+
+    def test_desaccord_journalise_mais_catalogue_gagne(self, tmp_path, caplog):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/game.7z": self.B})
+        with caplog.at_level("WARNING"):
+            sha, _ = m.expected_hashes(self._version(sha256=self.A))
+        assert sha == self.A
+        assert any("diff" in r.message.lower() or "GitHub" in r.message
+                   for r in caplog.records)
+
+    # ── multi-parts ──
+
+    def test_parts_depuis_github(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/a.001": self.A, "https://x/a.002": self.B})
+        v = self._version(download_url=None,
+                          download_parts=["https://x/a.001", "https://x/a.002"])
+        sha, parts = m.expected_hashes(v)
+        assert sha is None and parts == [self.A, self.B]
+
+    def test_parts_catalogue_prioritaire(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/a.001": self.A, "https://x/a.002": self.B})
+        v = self._version(download_url=None,
+                          download_parts=["https://x/a.001", "https://x/a.002"],
+                          sha256_parts=[self.C, self.C])
+        sha, parts = m.expected_hashes(v)
+        assert sha is None and parts == [self.C, self.C]
+
+    def test_parts_partielles_rejetees(self, tmp_path):
+        """Une liste trouée décalerait les empreintes d'un cran et ferait
+        échouer une archive pourtant saine — tout ou rien."""
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/a.001": self.A})  # .002 manquant
+        v = self._version(download_url=None,
+                          download_parts=["https://x/a.001", "https://x/a.002"])
+        sha, parts = m.expected_hashes(v)
+        assert sha is None and parts == []
+
+    def test_parts_catalogue_incomplet_retombe_sur_github(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/a.001": self.A, "https://x/a.002": self.B})
+        v = self._version(download_url=None,
+                          download_parts=["https://x/a.001", "https://x/a.002"],
+                          sha256_parts=[self.C])  # une seule sur deux
+        sha, parts = m.expected_hashes(v)
+        assert parts == [self.A, self.B]
+
+    # ── casse des noms d'assets ──
+
+    def test_casse_differente_trouvee(self, tmp_path):
+        """Cas réel hp6 : le catalogue dit « hp6.7z.001 », l'asset « HP6.7z.001 ».
+
+        GitHub sert les deux formes mais n'en publie qu'une : sans recherche
+        insensible à la casse, ces versions perdraient leur vérification.
+        """
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/HP6.7z.001": self.A,
+                             "https://x/HP6.7z.002": self.B})
+        v = self._version(download_url=None,
+                          download_parts=["https://x/hp6.7z.001", "https://x/hp6.7z.002"])
+        sha, parts = m.expected_hashes(v)
+        assert parts == [self.A, self.B]
+
+    def test_casse_differente_simple(self, tmp_path):
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/GAME.7z": self.A})
+        sha, _ = m.expected_hashes(self._version(download_url="https://x/game.7z"))
+        assert sha == self.A
+
+    def test_ambiguite_de_casse_ignoree(self, tmp_path):
+        """Deux assets ne différant que par la casse, empreintes distinctes :
+        ne pas vérifier vaut mieux que vérifier contre la mauvaise."""
+        m = _make_manager(tmp_path)
+        m.set_asset_digests({"https://x/Game.7z": self.A, "https://x/game.7z": self.B})
+        # L'URL exacte reste servie…
+        sha, _ = m.expected_hashes(self._version(download_url="https://x/game.7z"))
+        assert sha == self.B
+        # …mais une variante de casse non listée n'est plus devinable.
+        sha, _ = m.expected_hashes(self._version(download_url="https://x/GAME.7z"))
+        assert sha is None

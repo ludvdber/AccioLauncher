@@ -1,22 +1,168 @@
-"""Internationalisation minimaliste FR ↔ EN — sans dépendance Qt.
+"""Internationalisation FR / EN / ES — sans dépendance Qt.
 
-Le français est la langue source : les chaînes du code SONT les clés.
-`tr("…")` renvoie la traduction anglaise si la langue active est "en",
-sinon la clé telle quelle. Une chaîne absente du dictionnaire reste donc
-en français — la couverture est incrémentale et ne casse jamais l'UI.
+Le français est la langue SOURCE : les chaînes du code SONT les clés.
+Les traductions vivent dans `src/data/i18n/<code>.json`, jamais dans ce module —
+un traducteur bénévole n'a donc aucune ligne de Python à toucher :
+
+    {"_meta": {"code": "es", "name": "Español", "translators": ["Nom"]},
+     "strings": {"clé française": "traducción", …}}
+
+Ajouter une langue = déposer un fichier. `available_languages()` le découvre
+seul et le sélecteur des Paramètres l'affiche sans le moindre changement de code.
+
+Repli en cascade : langue active → anglais → clé française. Une traduction
+partielle reste donc utilisable telle quelle, ce qui permet d'accepter une
+contribution à 60 % sans jamais afficher de trou.
+
+Un fichier déposé dans `~/Games/AccioLauncher/i18n/<code>.json` est fusionné
+par-dessus celui embarqué : un traducteur voit son travail dans le vrai
+launcher, sans attendre ni merge ni release.
 
 Les chaînes paramétrées utilisent des gabarits `{}` : `tr("Version {}").format(x)`.
 Changer de langue nécessite un redémarrage (les chaînes sont posées à la
 construction des widgets) — l'UI le précise.
 """
 
-_lang = "fr"
+import json
+import logging
+import os
+import sys
+from typing import NamedTuple
+
+from src.core.config import DEFAULT_LANGUAGE, I18N_DIR, USER_I18N_DIR
+
+log = logging.getLogger(__name__)
+
+# Langue dans laquelle le code est écrit : ses chaînes servent de clés.
+SOURCE_LANGUAGE = "fr"
+# `DEFAULT_LANGUAGE` (= "en") vient de config.py : c'est aussi la valeur par
+# défaut de `Config.langue`, et config.py ne peut pas importer ce module.
+
+
+class LanguageInfo(NamedTuple):
+    """Une langue proposable à l'utilisateur."""
+    code: str          # "fr", "en", "es"…
+    name: str          # nom dans la langue elle-même ("Español")
+    translators: tuple[str, ...]
+
+
+_SOURCE_INFO = LanguageInfo(SOURCE_LANGUAGE, "Français", ("ASTeam",))
+
+_lang = SOURCE_LANGUAGE
+# Cache des dictionnaires chargés : code → {clé française: traduction}
+_strings: dict[str, dict[str, str]] = {}
+# Cache de la découverte des fichiers (None tant que rien n'a été scanné)
+_catalogue: dict[str, LanguageInfo] | None = None
+
+
+def _read_pack(path) -> tuple[dict[str, str], dict]:
+    """Lit un fichier de langue. Retourne ({} , {}) si illisible ou aberrant.
+
+    Un fichier de traduction peut venir d'une contribution extérieure ou du
+    dossier utilisateur : il ne doit JAMAIS empêcher le launcher de démarrer.
+    """
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log.warning("Fichier de langue illisible (%s) : %s", path.name, exc)
+        return {}, {}
+    if not isinstance(raw, dict):
+        log.warning("Fichier de langue aberrant (%s) : racine non-objet", path.name)
+        return {}, {}
+    meta = raw.get("_meta")
+    strings = raw.get("strings")
+    if not isinstance(meta, dict):
+        meta = {}
+    if not isinstance(strings, dict):
+        log.warning("Fichier de langue sans bloc « strings » : %s", path.name)
+        return {}, meta
+    # On ne garde que les paires réellement exploitables — une valeur non-texte
+    # ferait planter le premier setText() qui la reçoit.
+    clean = {k: v for k, v in strings.items() if isinstance(k, str) and isinstance(v, str)}
+    if len(clean) != len(strings):
+        log.warning("%d entrée(s) ignorée(s) dans %s (valeur non-texte)",
+                    len(strings) - len(clean), path.name)
+    return clean, meta
+
+
+def _discover() -> dict[str, LanguageInfo]:
+    """Scanne les langues embarquées puis celles du dossier utilisateur."""
+    global _catalogue
+    if _catalogue is not None:
+        return _catalogue
+
+    found: dict[str, LanguageInfo] = {SOURCE_LANGUAGE: _SOURCE_INFO}
+    for directory in (I18N_DIR, USER_I18N_DIR):
+        try:
+            paths = sorted(directory.glob("*.json"))
+        except OSError:
+            continue
+        for path in paths:
+            code = path.stem.lower()
+            if code == SOURCE_LANGUAGE:
+                continue  # le français est la source, il n'a pas de fichier
+            strings, meta = _read_pack(path)
+            if not strings:
+                continue
+            previous = _strings.get(code, {})
+            # Le dossier utilisateur complète l'embarqué au lieu de l'écraser :
+            # une surcharge partielle reste utilisable.
+            _strings[code] = {**previous, **strings}
+            names = meta.get("translators")
+            translators = tuple(n for n in names if isinstance(n, str)) \
+                if isinstance(names, list) else ()
+            existing = found.get(code)
+            found[code] = LanguageInfo(
+                code=code,
+                name=str(meta.get("name") or (existing.name if existing else code.upper())),
+                translators=tuple(dict.fromkeys((existing.translators if existing else ())
+                                                + translators)),
+            )
+
+    _catalogue = found
+    return found
+
+
+def available_languages() -> tuple[LanguageInfo, ...]:
+    """Langues proposables : le français d'abord, puis les autres par code."""
+    found = _discover()
+    others = sorted((info for code, info in found.items() if code != SOURCE_LANGUAGE),
+                    key=lambda i: i.code)
+    return (found[SOURCE_LANGUAGE], *others)
+
+
+def is_supported(lang: str) -> bool:
+    return lang in _discover()
+
+
+def detect_system_language() -> str:
+    """Langue du système si elle est disponible, sinon `DEFAULT_LANGUAGE`.
+
+    Volontairement sans Qt (ce module est importé par du code métier pur) et
+    sans supposer Windows : le portage Linux passe par les variables d'env.
+    """
+    raw = ""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            # Identifiant primaire de langue : les 10 bits de poids faible.
+            primary = ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF
+            raw = {0x09: "en", 0x0A: "es", 0x0C: "fr"}.get(primary, "")
+        except (AttributeError, OSError) as exc:
+            log.debug("Langue système Windows indéterminable : %s", exc)
+    if not raw:
+        for var in ("LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"):
+            value = os.environ.get(var, "")
+            if value:
+                raw = value.split(".")[0].split("_")[0].split(":")[0].lower()
+                break
+    return raw if raw and is_supported(raw) else DEFAULT_LANGUAGE
 
 
 def set_language(lang: str) -> None:
-    """Langue active : "fr" (défaut) ou "en"."""
+    """Fixe la langue active. Une langue inconnue retombe sur la source."""
     global _lang
-    _lang = lang if lang in ("fr", "en") else "fr"
+    _lang = lang if is_supported(lang) else SOURCE_LANGUAGE
 
 
 def get_language() -> str:
@@ -24,257 +170,35 @@ def get_language() -> str:
 
 
 def tr(text: str) -> str:
-    """Traduit une chaîne source française vers la langue active."""
-    if _lang == "fr":
+    """Traduit une chaîne source française vers la langue active.
+
+    Repli en cascade : langue active → anglais → français (la clé). Un trou de
+    traduction dégrade donc vers une langue lisible, jamais vers du vide.
+    """
+    if _lang == SOURCE_LANGUAGE:
         return text
-    return _EN.get(text, text)
+    _discover()
+    hit = _strings.get(_lang, {}).get(text)
+    if hit is not None:
+        return hit
+    if _lang != DEFAULT_LANGUAGE:
+        hit = _strings.get(DEFAULT_LANGUAGE, {}).get(text)
+        if hit is not None:
+            return hit
+    return text
 
 
-_EN: dict[str, str] = {
-    # ── Unités de taille / vitesse (format_size / format_bytes / format_speed) ──
-    "Go": "GB",
-    "Mo": "MB",
-    "Ko/s": "KB/s",
-    "Mo/s": "MB/s",
-    # ── Settings ──
-    "Paramètres": "Settings",
-    "⚙ Paramètres": "⚙ Settings",
-    "Dossier d'installation": "Install folder",
-    "Ouvrir": "Open",
-    "Changer…": "Change…",
-    "Changer le dossier d'installation": "Change install folder",
-    "Espace libre : {}": "Free space: {}",
-    "Calcul de l'espace utilisé…": "Calculating used space…",
-    "{} jeu(x) installé(s) — {} utilisés": "{} game(s) installed — {} used",
-    "Téléchargement": "Downloads",
-    "Supprimer les archives après installation": "Delete archives after installation",
-    "Vérifier les mises à jour au démarrage": "Check for updates at startup",
-    "Affichage": "Display",
-    "Lecture automatique des vidéos": "Autoplay videos",
-    "Couper le son des vidéos": "Mute videos",
-    "Intégrations": "Integrations",
-    "Afficher le jeu en cours sur Discord": "Show current game on Discord",
-    "Langue": "Language",
-    "Redémarrez le launcher pour appliquer la langue.": "Restart the launcher to apply the language.",
-    "Mises à jour": "Updates",
-    "Launcher v{}  ·  Catalogue v{}": "Launcher v{}  ·  Catalog v{}",
-    "Actualiser le catalogue": "Refresh catalog",
-    "Vérifier les mises à jour": "Check for updates",
-    "Actualisation du catalogue…": "Refreshing catalog…",
-    "Vérification des mises à jour…": "Checking for updates…",
-    "Catalogue mis à jour en v{}": "Catalog updated to v{}",
-    "Catalogue déjà à jour": "Catalog already up to date",
-    "Tout est à jour": "Everything is up to date",
-    "À propos": "About",
-    "Launcher pour les jeux Harry Potter sur PC.": "Launcher for the Harry Potter PC games.",
-    "Site web": "Website",
-    "Rejoindre le Discord": "Join the Discord",
-    "❤ Soutenir sur Ko-fi": "❤ Support on Ko-fi",
-    "Le projet est gratuit — un café aide à payer l'hébergement !":
-        "The project is free — a coffee helps pay for hosting!",
-    "Fermer": "Close",
+def translator_credits() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """(nom de langue, traducteurs) pour l'écran « À propos ».
 
-    # ── Action panel / boutons ──
-    "TÉLÉCHARGER": "DOWNLOAD",
-    "Télécharger {}": "Download {}",
-    "JOUER": "PLAY",
-    "Jouer à {}": "Play {}",
-    "DÉSINSTALLER": "UNINSTALL",
-    "Désinstaller {}": "Uninstall {}",
-    "Annuler": "Cancel",
-    "Annuler le téléchargement": "Cancel download",
-    "Installation… %p%": "Installing… %p%",
-    "Mise à jour disponible : v{} → v{}": "Update available: v{} → v{}",
-    "Mettre à jour": "Update",
+    Le français est exclu : c'est la langue source, elle n'est pas traduite.
+    """
+    return tuple((info.name, info.translators) for info in available_languages()
+                 if info.code != SOURCE_LANGUAGE and info.translators)
 
-    # ── Download bar / progression ──
-    "Téléchargement en cours…": "Downloading…",
-    "Installation en cours…": "Installing…",
-    "Installation… {}%": "Installing… {}%",
-    "Téléchargement :": "Download:",
-    "~{}s restantes": "~{}s left",
-    "~{} min restantes": "~{} min left",
-    "~{}h restantes": "~{}h left",
-    " — partie {}/{}": " — part {}/{}",
 
-    # ── Main window / notifications ──
-    "Prêt": "Ready",
-    "{} mise(s) à jour disponible(s)": "{} update(s) available",
-    "Accio Launcher v{} est disponible !": "Accio Launcher v{} is available!",
-    "Télécharger": "Download",
-    "Téléchargement de la mise à jour…": "Downloading update…",
-    "Téléchargement de la mise à jour… {}%": "Downloading update… {}%",
-    "Redémarrage…": "Restarting…",
-    "Échec du téléchargement — ouverture de la page de release":
-        "Download failed — opening the release page",
-    "Catalogue mis à jour (v{})": "Catalog updated (v{})",
-    "Mise à jour disponible pour {}": "Update available for {}",
-    "{} jeux ont une mise à jour disponible": "{} games have an update available",
-    "{} installé avec succès ✓": "{} installed successfully ✓",
-    "Téléchargement terminé": "Download finished",
-    "{} est prêt à jouer !": "{} is ready to play!",
-    "Retour de {} — Bon jeu !": "Welcome back from {} — enjoy!",
-    "Accio Launcher — En jeu : {}": "Accio Launcher — In game: {}",
-    "Restaurer Accio Launcher": "Restore Accio Launcher",
-    "Quitter": "Quit",
-    "Réduire": "Minimize",
-    "Agrandir": "Maximize",
-
-    # ── Opérations ──
-    "Un téléchargement ou installation est déjà en cours.":
-        "A download or installation is already in progress.",
-    "Téléchargement de {} v{}…": "Downloading {} v{}…",
-    "Téléchargement annulé.": "Download cancelled.",
-    "Installation de {}…": "Installing {}…",
-    "{} installé avec succès !": "{} installed successfully!",
-    "Vérification de {}…": "Verifying {}…",
-    "Aucune version disponible.": "No version available.",
-    "Installation incomplète.": "Incomplete installation.",
-    "Installation incomplète": "Incomplete installation",
-    "L'installation semble incomplète : l'exécutable du jeu est introuvable.\nL'archive est peut-être corrompue.":
-        "The installation looks incomplete: the game executable is missing.\nThe archive may be corrupted.",
-    "Échec du téléchargement": "Download failed",
-    "Le téléchargement a échoué.\nVérifiez votre connexion internet et réessayez.":
-        "The download failed.\nCheck your internet connection and try again.",
-    "Échec de l'installation": "Installation failed",
-    "L'installation a échoué.\nL'archive est peut-être corrompue. Réessayez le téléchargement.":
-        "The installation failed.\nThe archive may be corrupted. Try downloading again.",
-    "Erreur d'installation : {}": "Installation error: {}",
-    "Erreur : {}": "Error: {}",
-
-    # ── Handlers (dialogues) ──
-    "Téléchargement déjà en cours": "Download already in progress",
-    "Un téléchargement est déjà en cours pour {}.\n\nVeuillez attendre la fin avant d'en lancer un autre.":
-        "A download is already in progress for {}.\n\nPlease wait for it to finish first.",
-    "Téléchargement déjà en cours pour ce jeu.": "A download is already in progress for this game.",
-    "Espace disque insuffisant": "Not enough disk space",
-    "Il faut environ {} d'espace libre.\nActuellement {} disponibles.":
-        "About {} of free space is required.\nCurrently {} available.",
-    "Visual C++ manquant": "Visual C++ missing",
-    "Le Visual C++ Redistributable x86 (2015-2022) n'est pas installé.\nIl est nécessaire pour lancer les jeux.\n\nVoulez-vous ouvrir la page de téléchargement ?":
-        "The Visual C++ Redistributable x86 (2015-2022) is not installed.\nIt is required to launch the games.\n\nOpen the download page?",
-    "Impossible de lancer le jeu.": "Unable to launch the game.",
-    "Lancement de {}…": "Launching {}…",
-    "Confirmer la désinstallation": "Confirm uninstall",
-    "Voulez-vous vraiment désinstaller {} ?": "Really uninstall {}?",
-    "Sauvegardes conservées": "Saves kept",
-    "Les sauvegardes et la configuration dans Mes Documents ont été conservées.":
-        "Your saves and configuration in My Documents were kept.",
-    "{} désinstallé.": "{} uninstalled.",
-    "Mise à jour disponible": "Update available",
-    "Mettre à jour de v{} vers v{} ?\n\nChangements :\n{}\n\nLa version actuelle sera remplacée une fois le téléchargement terminé.":
-        "Update from v{} to v{}?\n\nChanges:\n{}\n\nThe current version will be replaced once the download completes.",
-    "Gérer les versions": "Manage versions",
-    "Installer depuis un fichier local…": "Install from a local file…",
-    "Sélectionner une archive de jeu": "Select a game archive",
-    "Installation de {} depuis un fichier local…": "Installing {} from a local file…",
-    "J'ai déjà ce jeu — localiser l'installation…": "I already own this game — locate it…",
-    "Vérifier / réparer les fichiers": "Verify / repair files",
-    "L'archive de {} va être re-téléchargée (avec vérification d'intégrité quand elle est disponible) puis réinstallée par-dessus les fichiers existants.\n\nLes sauvegardes et la configuration ne sont pas touchées.\n\nContinuer ?":
-        "The archive for {} will be downloaded again (with integrity check when available) and reinstalled over the existing files.\n\nSaves and configuration are not affected.\n\nContinue?",
-    "Localiser l'installation de {}": "Locate the installation of {}",
-    "Import impossible": "Cannot import",
-    "Importer ce jeu": "Import this game",
-    "Le dossier va être déplacé :\n\n{}\n→ {}\n\nLe jeu sera marqué en version {} (version réelle inconnue — utilisez « Vérifier / réparer » en cas de doute).\n\nContinuer ?":
-        "The folder will be moved:\n\n{}\n→ {}\n\nThe game will be marked as version {} (actual version unknown — use “Verify / repair” if unsure).\n\nContinue?",
-    "Déplacement impossible :\n{}": "Could not move the folder:\n{}",
-    "{} importé avec succès !": "{} imported successfully!",
-    "Ce jeu ne supporte pas l'import d'une installation existante.":
-        "This game does not support importing an existing installation.",
-    "L'exécutable attendu est introuvable :\n{}\n\nChoisissez le dossier du jeu qui contient « {} ».":
-        "The expected executable was not found:\n{}\n\nPick the game folder that contains “{}”.",
-    "Un dossier existe déjà à l'emplacement cible :\n{}\n\nDésinstallez d'abord la copie existante.":
-        "A folder already exists at the target location:\n{}\n\nUninstall the existing copy first.",
-    "Le dossier est sur un autre disque que le dossier d'installation.\nDéplacez-le manuellement, ou changez le dossier d'installation dans les Paramètres.":
-        "The folder is on a different drive than the install folder.\nMove it manually, or change the install folder in Settings.",
-
-    # ── Versions dialog ──
-    "Versions — {}": "Versions — {}",
-    "recommandée": "recommended",
-    "installée": "installed",
-    "Mettre à jour vers v{}": "Update to v{}",
-    "Revenir à v{}": "Roll back to v{}",
-    "Installer v{}": "Install v{}",
-    "Confirmer": "Confirm",
-    "installer": "install",
-    "supprimer la version actuelle et installer": "replace the current version and install",
-    "Ceci va {} la version {}.\nContinuer ?": "This will {} version {}.\nContinue?",
-
-    # ── Info panel ──
-    "Lire la suite…": "Read more…",
-    "Réduire le texte": "Show less",
-    "Versions et changelog": "Versions & changelog",
-    "Version {}": "Version {}",
-
-    # ── Stats de jeu ──
-    "{} min de jeu": "{} min played",
-    "{} h de jeu": "{} h played",
-    "{} h {} min de jeu": "{} h {} min played",
-    "Dernière session : {}": "Last session: {}",
-    "aujourd'hui": "today",
-    "hier": "yesterday",
-    "avant-hier": "two days ago",
-    "il y a {} jours": "{} days ago",
-
-    # ── Stepper téléchargement → vérification → installation ──
-    "1/4 · Téléchargement": "1/4 · Download",
-    "2/4 · Vérification": "2/4 · Verify",
-    "3/4 · Installation": "3/4 · Install",
-    "4/4 · Finalisation": "4/4 · Finalizing",
-    "Vérification de l'archive…": "Verifying archive…",
-    "Finalisation de l'installation…": "Finalizing installation…",
-    # ── Jeu annoncé au catalogue, archives pas encore publiées ──
-    "BIENTÔT DISPONIBLE": "COMING SOON",
-    "Les fichiers de ce jeu ne sont pas encore en ligne.":
-        "This game's files are not online yet.",
-    "Pas encore en ligne": "Not online yet",
-    "{} n'est pas encore téléchargeable — les fichiers arrivent bientôt.":
-        "{} is not downloadable yet — the files are coming soon.",
-
-    # ── Thèmes maisons ──
-    "Thème :": "Theme:",
-    "Thème": "Theme",
-    "Redémarrez le launcher pour appliquer le thème.": "Restart the launcher to apply the theme.",
-    "Redémarrer maintenant": "Restart now",
-    "Relance automatique impossible — redémarrez manuellement.":
-        "Automatic relaunch failed — please restart manually.",
-
-    # ── Panneau Paramètres (sidebar) ──
-    "Général": "General",
-    "Téléchargements": "Downloads",
-    "Vidéos": "Videos",
-    "Particules saisonnières": "Seasonal particles",
-    "Automatique (selon la date)": "Automatic (by date)",
-    "Aucune": "None",
-    "Noël ❄": "Christmas ❄",
-    "Appliqué immédiatement.": "Applied immediately.",
-
-    # ── Pastille téléchargements ──
-    "{} téléchargement": "{} download",
-    "{} téléchargements": "{} downloads",
-    "Téléchargements cumulés de toutes les versions (GitHub)":
-        "Cumulative downloads across all versions (GitHub)",
-    "Poudlard (or)": "Hogwarts (gold)",
-    "Gryffondor": "Gryffindor",
-    "Serpentard": "Slytherin",
-    "Serdaigle": "Ravenclaw",
-    "Poufsouffle": "Hufflepuff",
-
-    # ── Remerciement Ko-fi (cap 10 h, une seule fois) ──
-    "Déjà 10 h de magie retrouvée ✨ Si le launcher te plaît, un café fait plaisir — clique ici ❤":
-        "10 hours of magic already ✨ If you enjoy the launcher, a coffee always helps — click here ❤",
-
-    # ── Rapport de crash ──
-    "Accio Launcher — Erreur inattendue": "Accio Launcher — Unexpected error",
-    "Une erreur inattendue s'est produite. Tu peux copier le rapport "
-    "(à coller sur le Discord) ou ouvrir une issue GitHub pré-remplie.":
-        "An unexpected error occurred. You can copy the report "
-        "(to paste on Discord) or open a pre-filled GitHub issue.",
-    "Copier le rapport": "Copy report",
-    "Copié ✓": "Copied ✓",
-    "Ouvrir une issue GitHub": "Open a GitHub issue",
-    "Redémarrer le launcher": "Restart the launcher",
-
-    # ── Divers ──
-    "Launcher v{} disponible !": "Launcher v{} available!",
-}
+def _reset_for_tests() -> None:
+    """Vide les caches de découverte (tests uniquement)."""
+    global _catalogue
+    _catalogue = None
+    _strings.clear()

@@ -11,7 +11,9 @@ from src.core.i18n import tr
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
-from src.core.formatting import format_size, format_progress_line, append_part_info
+from src.core.formatting import (
+    append_part_info, estimate_duration, format_progress_line, format_size,
+)
 from src.ui.theme import themed
 from src.ui.utils import clear_layout
 
@@ -120,7 +122,13 @@ class ActionPanel(QWidget):
             self._build_coming_soon()
             return
         size = format_size(dl.size_mb)
-        btn = GlowButton(f"{tr('TÉLÉCHARGER')}  \u2014  {size}", style="outline")
+        # Durée estimée à partir de la dernière vitesse réellement observée —
+        # vide au tout premier téléchargement, jamais devinée.
+        eta = estimate_duration(dl.size_mb, self._manager.config.last_download_speed)
+        libelle = f"{tr('TÉLÉCHARGER')}  —  {size}"
+        if eta:
+            libelle += f"  ·  ≈ {eta}"
+        btn = GlowButton(libelle, style="outline")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
         btn.setFont(cinzel(13, bold=True))
@@ -186,7 +194,12 @@ class ActionPanel(QWidget):
         self._action_layout.addWidget(self._install_bar)
 
     def _build_installed(self) -> None:
-        btn_play = GlowButton(tr("JOUER"), glow_color="#2ecc71", style="filled",
+        # « REPRENDRE » quand le jeu a déjà été lancé : le même clic, mais
+        # l'écran reconnaît un joueur qui revient au lieu de le traiter en
+        # nouveau venu à chaque ouverture.
+        deja_joue = self._manager.get_playtime(self._game.id) > 0
+        libelle = tr("REPRENDRE") if deja_joue else tr("JOUER")
+        btn_play = GlowButton(libelle, glow_color="#2ecc71", style="filled",
                               bg_stops=("#2ecc71", "#27ae60", "#1a9c54"), text_color="#ffffff")
         btn_play.setObjectName("btnPlay")
         btn_play.setAccessibleName(tr("Jouer à {}").format(self._game.name))

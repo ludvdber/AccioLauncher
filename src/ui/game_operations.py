@@ -112,12 +112,18 @@ class GameOperations(QObject):
 
         archive_name = f"{game.id}_v{version.version}.7z"
         dest = self._manager.config.cache_path / archive_name
+        # Empreintes : celles du catalogue si renseignées, sinon celles publiées
+        # par GitHub (récupérées sans requête dédiée). Vide → vérification sautée.
+        sha256, sha256_parts = self._manager.expected_hashes(version)
+        if not sha256 and not sha256_parts:
+            log.info("Aucune empreinte disponible pour %s v%s — vérification sautée",
+                     game.id, version.version)
         self._downloader = Downloader(
             url=version.download_url, destination=dest,
             parts=version.download_parts,
             expected_size_mb=version.size_mb,
-            expected_sha256=version.sha256,
-            expected_sha256_parts=list(version.sha256_parts),
+            expected_sha256=sha256,
+            expected_sha256_parts=sha256_parts,
             parent=self,
         )
         self._downloader.progress.connect(self._on_download_progress)
@@ -289,6 +295,12 @@ class GameOperations(QObject):
         if self._downloader is not None:
             self._disconnect_downloader(self._downloader)
         self._downloader = None
+        # Mémoriser la vitesse observée : elle sert à annoncer une durée AVANT
+        # le clic sur les téléchargements suivants (voir estimate_duration).
+        observed = self._speed_tracker.speed()
+        if observed > 0:
+            self._manager.config.last_download_speed = observed
+            self._manager.config.save()
         game = self._active_game
         if game is None:
             return

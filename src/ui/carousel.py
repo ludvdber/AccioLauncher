@@ -5,7 +5,7 @@ import math
 import random
 
 from PyQt6.QtCore import Qt, pyqtSignal, QRectF
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPen
+from PyQt6.QtGui import QColor, QLinearGradient, QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from src.core.game_data import GameData
@@ -18,6 +18,9 @@ from src.ui import theme
 log = logging.getLogger(__name__)
 
 CAROUSEL_HEIGHT = 160
+# Version compacte pour les fenêtres basses : 160 px, c'est un quart d'un
+# écran de 660 px de haut, pris à la fiche de jeu.
+CAROUSEL_HEIGHT_COMPACT = 124
 
 SCALE_SELECTED = 1.1
 SCALE_ADJACENT = 1.0
@@ -100,15 +103,17 @@ class Carousel(QWidget):
 
         w, h = self.width(), self.height()
 
+        # Fondu vers le bas, SANS trait de séparation. Un liseré blanc était
+        # dessiné sur le bord haut : posé juste là où le dégradé est encore
+        # transparent, il ressortait comme une couture nette dès que l'image de
+        # fond était claire à cette hauteur (château d'Azkaban, par exemple).
+        # Le dégradé sépare déjà les deux zones, en douceur.
         grad = QLinearGradient(0, 0, 0, h)
         grad.setColorAt(0, theme.bg_qcolor(0))
-        grad.setColorAt(0.15, theme.bg_qcolor(140))
-        grad.setColorAt(0.4, theme.bg_qcolor(200))
+        grad.setColorAt(0.30, theme.bg_qcolor(120))
+        grad.setColorAt(0.60, theme.bg_qcolor(205))
         grad.setColorAt(1.0, theme.bg_qcolor(242))
         p.fillRect(self.rect(), grad)
-
-        p.setPen(QPen(QColor(255, 255, 255, 15), 1.0))
-        p.drawLine(0, 0, w, 0)
 
         p.setPen(Qt.PenStyle.NoPen)
         for sx, sy, size, max_a, is_gold, phase in self._stars:
@@ -161,6 +166,12 @@ class Carousel(QWidget):
     def select_prev(self) -> None:
         if self._items:
             self.select((self._current_index - 1) % len(self._items))
+
+    def set_compact(self, compact: bool) -> None:
+        """Réduit la hauteur du carrousel quand la fenêtre manque de hauteur."""
+        cible = CAROUSEL_HEIGHT_COMPACT if compact else CAROUSEL_HEIGHT
+        if self.height() != cible:
+            self.setFixedHeight(cible)
 
     def pause(self) -> None:
         if self._ticking:

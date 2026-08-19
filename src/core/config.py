@@ -36,6 +36,12 @@ else:
 
 # --- Chemins des ressources embarquées ---
 GAMES_JSON_PATH = _BUNDLE_DIR / "data" / "games.json"
+I18N_DIR = _BUNDLE_DIR / "data" / "i18n"
+
+# Langue proposee quand rien n'est encore choisi. Volontairement l'anglais
+# et non le francais : le launcher vise un public international, et le
+# premier lancement demande de toute facon la langue (onboarding).
+DEFAULT_LANGUAGE = "en"
 ASSETS_DIR = _BUNDLE_DIR.parent / "assets" if not IS_FROZEN else _BUNDLE_DIR / "assets"
 
 # --- Chemins utilisateur (toujours dans ~/Games/AccioLauncher) ---
@@ -44,6 +50,10 @@ DEFAULT_CACHE_PATH = DEFAULT_INSTALL_PATH / ".cache"
 CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
 
 LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
+
+# Traductions fournies par l'utilisateur, appliquees par-dessus celles
+# embarquees : permet a un traducteur de tester son fichier sans release.
+USER_I18N_DIR = DEFAULT_INSTALL_PATH / "i18n"
 
 APP_VERSION = "0.5.2"
 
@@ -64,13 +74,18 @@ class Config:
 
     install_path: Path = field(default_factory=lambda: DEFAULT_INSTALL_PATH)
     cache_path: Path = field(default_factory=lambda: DEFAULT_CACHE_PATH)
-    langue: str = "fr"
+    langue: str = DEFAULT_LANGUAGE
     theme: str = "poudlard"
     season: str = "auto"  # particules saisonnières : auto | aucune | halloween | noel
     delete_archives: bool = True
     autoplay_videos: bool = True
-    mute_videos: bool = False
-    check_updates: bool = True
+    # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
+    # ouverture est une mauvaise surprise, et le son se rétablit d'un clic
+    # sur la barre audio qui accompagne la vidéo.
+    mute_videos: bool = True
+    # Dernière vitesse de téléchargement observée (octets/s), pour estimer
+    # une durée AVANT de cliquer : « 2,4 Go » ne décide personne, « ≈ 3 min » si.
+    last_download_speed: float = 0.0
     discord_presence: bool = True
     dismissed_launcher_version: str = ""
     # Un seul remerciement Ko-fi (cap des 10 h de jeu) dans la vie du launcher.
@@ -96,13 +111,13 @@ class Config:
                 return cls(
                     install_path=Path(_as_str(data.get("install_path"), str(DEFAULT_INSTALL_PATH))),
                     cache_path=Path(_as_str(data.get("cache_path"), str(DEFAULT_CACHE_PATH))),
-                    langue=data.get("langue", "fr"),
+                    langue=data.get("langue", DEFAULT_LANGUAGE),
                     theme=data.get("theme", "poudlard"),
                     season=data.get("season", "auto"),
                     delete_archives=data.get("delete_archives", True),
                     autoplay_videos=data.get("autoplay_videos", True),
-                    mute_videos=data.get("mute_videos", False),
-                    check_updates=data.get("check_updates", True),
+                    mute_videos=data.get("mute_videos", True),
+                    last_download_speed=float(data.get("last_download_speed", 0.0) or 0.0),
                     discord_presence=data.get("discord_presence", True),
                     dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
                     kofi_milestone_thanked=data.get("kofi_milestone_thanked", False),
@@ -129,7 +144,7 @@ class Config:
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
-                "check_updates": self.check_updates,
+                "last_download_speed": self.last_download_speed,
                 "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,

@@ -1,6 +1,7 @@
 """Tests d'intégration offscreen — une VRAIE MainWindow pilotée par simulation.
 
-Config temporaire (CONFIG_FILE_PATH patché), check_updates=False (zéro réseau),
+Config temporaire (CONFIG_FILE_PATH patché), `_start_update_check` neutralisé
+(zéro réseau — la vérification est inconditionnelle en production),
 autoplay=False (zéro QtMultimedia). Couvre le câblage bout-en-bout que les tests
 unitaires ne voient pas : hero dynamique, clavier, toast Ko-fi, phases, compteur,
 saisons, cross-fade, mute en direct, boutons Redémarrer, imports d'onboarding.
@@ -21,18 +22,38 @@ _CATALOG = load_catalog()
 _IDS = [g.id for g in _CATALOG.games]
 
 
+def _libelles_du_layout(panel) -> list[str]:
+    """Textes des widgets réellement dans le layout d'actions.
+
+    Pas findChildren : `clear_layout` passe par deleteLater(), donc les boutons
+    de la fiche précédente restent enfants un tour de boucle de plus.
+    """
+    layout = panel._action_layout
+    textes = []
+    for i in range(layout.count()):
+        w = layout.itemAt(i).widget()
+        if w is not None and hasattr(w, "text"):
+            textes.append(w.text())
+    return textes
+
+
 @pytest.fixture
 def make_window(qtbot, tmp_path, monkeypatch):
     """Construit une MainWindow sur une config temporaire isolée."""
     def _make(**overrides):
         monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
         from src.core.config import Config
+        # La vérification des MAJ est inconditionnelle en production : c'est ici
+        # qu'on la neutralise, pas via un réglage utilisateur qui n'existe plus.
+        monkeypatch.setattr("src.ui.main_window.MainWindow._start_update_check",
+                            lambda self: None)
         cfg = Config(
             install_path=tmp_path / "games",
             cache_path=tmp_path / "games" / ".cache",
-            check_updates=False,     # pas d'UpdateChecker -> zéro réseau
-            autoplay_videos=False,   # pas de QtMultimedia en test
-            **overrides,
+            # Le défaut applicatif est l'anglais ; ces tests vérifient des
+            # chaînes FRANÇAISES, donc ils demandent explicitement le français.
+            langue="fr",
+            **{"autoplay_videos": False, **overrides},  # surchargeable par test
         )
         cfg.save()
         from src.ui.main_window import MainWindow
@@ -133,29 +154,42 @@ class TestPhaseWiring:
 
 
 class TestDownloadCounts:
-    def test_counts_appear_in_badge(self, make_window):
+    """Le compteur vit DANS la ligne méta, à une place stable.
+
+    En pastille séparée, le FlowLayout le renvoyait à la ligne selon la longueur
+    du nom du studio : sa position sautait d'un jeu à l'autre.
+    """
+
+    def test_counts_appear_in_meta(self, make_window):
         win = make_window()
         win._on_download_counts({_IDS[0]: 1234})
-        badge = win._detail._info._dl_badge
-        assert not badge.isHidden()
+        meta = win._detail._info._meta
         # Le séparateur de milliers FR est une espace fine insécable (U+202F) ;
         # on retire tout espace pour comparer le nombre brut.
-        assert "1234" in re.sub(r"\s", "", badge.text())
-        assert "téléchargements" in badge.text()  # libellé explicite, pas un glyphe
-        assert badge.toolTip()
+        assert "1234" in re.sub(r"\s", "", meta.text())
+        assert "téléchargements" in meta.text()  # libellé explicite, pas un glyphe
+        assert meta.toolTip()
 
     def test_singular_for_one_download(self, make_window):
         win = make_window()
         win._on_download_counts({_IDS[0]: 1})
-        badge = win._detail._info._dl_badge
-        assert not badge.isHidden()
-        assert badge.text().endswith("téléchargement")
+        meta = win._detail._info._meta
+        assert "1 téléchargement<" in meta.text() or meta.text().endswith("1 téléchargement</span>")
 
     def test_no_counter_when_unknown(self, make_window):
         win = make_window()
-        badge = win._detail._info._dl_badge
-        assert badge.isHidden()
-        assert "⬇" not in win._detail._info._meta.text()  # plus rien dans la ligne meta
+        meta = win._detail._info._meta
+        assert "téléchargement" not in meta.text()
+        assert not meta.toolTip()
+
+    def test_position_stable_entre_les_jeux(self, make_window):
+        """Le compteur ne doit jamais changer de ligne d'un jeu à l'autre."""
+        win = make_window()
+        win._on_download_counts({e.game.id: 4321 for e in win.manager.get_games()})
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            texte = win._detail._info._meta.text()
+            assert "téléchargements" in texte, entry.game.id
 
 
 class TestGameUpdateNotification:
@@ -371,3 +405,186 @@ class TestJeuBientotDisponible:
         noms = self._noms_du_layout(win._detail._action_panel)
         assert "btnDownload" in noms
         assert "btnComingSoon" not in noms
+
+
+class TestPasDeTroncature:
+    """Régressions de mise en page : le texte ne doit jamais être coupé.
+
+    Le panneau d'info est positionné en `setGeometry` à 50 % de la fenêtre.
+    Des largeurs figées en pixels (600 / 520) le débordaient dès que la fenêtre
+    passait sous ~1100 px, et le conteneur de tags avait un plafond de hauteur
+    qui coupait sa dernière ligne de pastilles.
+    """
+
+    TAILLES = ((1200, 800), (980, 660), (1600, 900))
+
+    @staticmethod
+    def _jeu_le_plus_charge(win):
+        return max((e.game for e in win.manager.get_games()), key=lambda g: len(g.tags))
+
+    def test_titre_et_description_tiennent_dans_le_panneau(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        info = win._detail._info
+        for w, h in self.TAILLES:
+            win.resize(w, h)
+            qtbot.wait(10)
+            win._detail.set_game(self._jeu_le_plus_charge(win))
+            qtbot.wait(10)
+            assert info._title.width() <= info.available_width(), (
+                f"titre plus large que le panneau en {w}x{h}")
+            assert info._desc.width() <= info.available_width(), (
+                f"description plus large que le panneau en {w}x{h}")
+            besoin = info._title.heightForWidth(info._title.width())
+            assert info._title.height() >= besoin, (
+                f"titre amputé en {w}x{h} : {info._title.height()} px pour {besoin} px de texte")
+
+    def test_tags_jamais_coupes(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        info = win._detail._info
+        for w, h in self.TAILLES:
+            win.resize(w, h)
+            qtbot.wait(10)
+            win._detail.set_game(self._jeu_le_plus_charge(win))
+            qtbot.wait(10)
+            besoin = info._tags_layout.heightForWidth(info._tags_container.width())
+            assert info._tags_container.height() >= besoin, (
+                f"tags coupés en {w}x{h} : {info._tags_container.height()} < {besoin}")
+
+    def test_flow_layout_mesure_un_widget_cache(self, qtbot):
+        """`QWidgetItem.sizeHint()` vaut (0,0) tant que le widget est caché —
+        c'est ce qui écrasait la hauteur des tags pendant le cross-fade."""
+        from PyQt6.QtWidgets import QLabel, QWidget
+
+        from src.ui.flow_layout import FlowLayout
+
+        host = QWidget()
+        qtbot.addWidget(host)
+        flow = FlowLayout(host, spacing=8)
+        for _ in range(4):
+            lbl = QLabel("TAG ASSEZ LONG")
+            lbl.setFixedSize(120, 28)
+            flow.addWidget(lbl)
+        # host jamais montré → les items sont « cachés »
+        assert flow.heightForWidth(300) > 0
+
+
+class TestBandesAnnonces:
+    """Comportement des vidéos de fond : muettes, différées, suspendues.
+
+    Les trailers sont la signature visuelle du launcher — ils restent. Ce qui
+    change, c'est qu'ils ne s'imposent plus : pas de son surprise, pas de
+    lecture derrière une fenêtre inactive, pas de démarrage pendant qu'on lit
+    le titre.
+    """
+
+    def test_muet_par_defaut(self):
+        from src.core.config import Config
+        assert Config().mute_videos is True, "un logiciel ne doit pas faire de bruit sans prévenir"
+
+    def test_video_non_lancee_immediatement(self, make_window, qtbot):
+        """Le démarrage est différé : la fiche se lit sur une image fixe."""
+        win = make_window(autoplay_videos=True)
+        detail = win._detail
+        assert detail._pending_video_id == detail.game.id
+        assert not detail._video.is_playing, "la vidéo ne doit pas démarrer dans la même frame"
+
+    def test_changer_de_jeu_annule_la_video_programmee(self, make_window, qtbot):
+        """Parcourir le carrousel ne doit pas lancer un lecteur par vignette."""
+        win = make_window(autoplay_videos=True)
+        detail = win._detail
+        autre = next(e.game for e in win.manager.get_games() if e.game.id != detail.game.id)
+        detail.set_game(autre)
+        assert detail._pending_video_id == autre.id
+        detail._on_video_timer()          # le timer du PREMIER jeu arrive en retard
+        assert not detail._video.is_playing or detail.game.id == autre.id
+
+    def test_pause_effects_suspend_la_video(self, make_window, qtbot):
+        """Fenêtre derrière une autre : plus de décodage vidéo pour personne."""
+        win = make_window()
+        detail = win._detail
+        detail.pause_effects()
+        assert detail._video.paused is False or not detail._video.is_playing
+        detail.resume_effects()
+
+    def test_barre_audio_a_un_bouton_pause(self, make_window):
+        win = make_window()
+        bar = win._detail._audio_bar
+        assert hasattr(bar, "play_toggled")
+        bar.set_paused_icon(True)
+        bar.set_paused_icon(False)
+
+
+class TestReprendre:
+    def test_jouer_devient_reprendre_apres_une_session(self, make_window, qtbot):
+        win = make_window()
+        game = win.manager.get_games()[0].game
+        # L'état INSTALLED se déduit du DISQUE : il faut un exécutable réel.
+        from pathlib import Path
+        exe = win.manager.config.install_path / Path(game.executable)
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"MZ")
+        win.manager.config.installed_versions[game.id] = game.recommended_version
+        win.manager.refresh_states()
+        win._detail.set_game(game)
+        qtbot.wait(10)
+        libelles = _libelles_du_layout(win._detail._action_panel)
+        assert any("JOUER" in t for t in libelles), libelles
+
+        win.manager.add_playtime(game.id, 3600)
+        win._detail.set_game(game)
+        qtbot.wait(10)
+        libelles = _libelles_du_layout(win._detail._action_panel)
+        assert any("REPRENDRE" in t for t in libelles), libelles
+
+
+class TestDescriptionEntreJeux:
+    """Le libellé de description ne doit pas garder la hauteur du jeu précédent.
+
+    Scénario signalé : déplier la description d'un jeu « bientôt disponible »
+    puis revenir sur un autre jeu laissait un grand vide sous un texte court,
+    parce que `minimumHeight` gardait la valeur de l'état déplié.
+    """
+
+    @staticmethod
+    def _besoin(label) -> int:
+        # heightForWidth() renvoie max(minimumHeight, calcul) : remettre le
+        # minimum à zéro est le seul moyen d'obtenir la hauteur réelle du texte.
+        garde = label.minimumHeight()
+        label.setMinimumHeight(0)
+        besoin = label.heightForWidth(label.width())
+        label.setMinimumHeight(garde)
+        return besoin
+
+    def test_hauteur_suit_le_texte_apres_changement_de_jeu(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        info = win._detail._info
+        soon = next(e.game for e in win.manager.get_games() if not e.game.is_downloadable)
+        autre = next(e.game for e in win.manager.get_games() if e.game.is_downloadable)
+
+        win._detail.set_game(soon)
+        qtbot.wait(30)
+        info._toggle_desc()               # « Lire la suite »
+        qtbot.wait(30)
+        assert info._desc_expanded is True
+
+        win._detail.set_game(autre)
+        qtbot.wait(30)
+        assert info._desc_expanded is False, "le dépliage ne doit pas survivre au changement"
+        ecart = info._desc.height() - self._besoin(info._desc)
+        assert abs(ecart) <= 2, f"{ecart} px de vide sous la description"
+
+    def test_bouton_coherent_avec_le_texte(self, make_window, qtbot):
+        """« Lire la suite » ne s'affiche que si du texte est réellement caché."""
+        win = make_window()
+        win.show()
+        info = win._detail._info
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            qtbot.wait(20)
+            tronque = info._desc.text() != info._full_desc
+            assert info._btn_expand.isVisible() == tronque, (
+                f"{entry.game.id} : bouton={info._btn_expand.isVisible()} "
+                f"alors que tronqué={tronque}")

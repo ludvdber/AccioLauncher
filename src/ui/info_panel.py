@@ -2,7 +2,7 @@
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from src.core.game_data import GameData
@@ -15,11 +15,34 @@ from src.ui.theme import current as current_theme, themed
 from src.ui.utils import clear_layout
 from src.core.formatting import format_playtime, format_relative_date, format_size
 
+# Largeurs de CONFORT de lecture — jamais dépassées, mais toujours rabotées à la
+# place réellement disponible. Le panneau est positionné en setGeometry à 50 %
+# de la fenêtre (voir GameDetailView._position_info) : figer 600/520 px faisait
+# déborder titre et description dès que la fenêtre passait sous ~1100 px, et le
+# texte était coupé net au bord du panneau.
+_TITLE_MAX_W = 600
+_DESC_MAX_W = 520
+# Largeur de la barre de défilement stylée, à retrancher de la place utile.
+_SCROLLBAR_W = 6
+# Marge sur la hauteur calculée : sous-estimer de deux pixels suffit à faire
+# apparaître une barre de défilement pour rien, et ça se voit beaucoup.
+_HAUTEUR_SLACK = 8
 
-class InfoPanel(QScrollArea):
-    """Panneau scrollable affichant les infos du jeu sélectionné."""
+
+class InfoPanel(QWidget):
+    """Panneau d'infos du jeu : contenu défilant + zone d'action épinglée.
+
+    La zone d'action vit VOLONTAIREMENT hors du défilement. Quand elle était
+    dans le flux, le bouton principal passait sous la ligne de flottaison dès
+    que la fenêtre descendait vers 1100 px de large : l'action principale du
+    launcher devenait invisible, sans même une barre de défilement visible pour
+    le signaler.
+    """
 
     versions_clicked = pyqtSignal()
+    # Le contenu a changé de hauteur (dépliage de la description) : le panneau
+    # doit être repositionné, sinon il défile au lieu de grandir.
+    content_changed = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -27,8 +50,10 @@ class InfoPanel(QScrollArea):
         # _desc_expanded et _full_desc sont initialisés par _set_desc_text au premier apply_game
         self._desc_expanded: bool = False
         self._full_desc: str = ""
+        self._title_size: int = 36  # suivi par _apply_title_size
+        # Hauteur que le parent peut nous accorder (posée par GameDetailView).
+        self._height_budget: int = 10_000
 
-        self._setup_scroll()
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(50, 0, 30, 0)
         self._layout.setSpacing(0)
@@ -37,14 +62,73 @@ class InfoPanel(QScrollArea):
         container = QWidget()
         container.setStyleSheet("background: transparent;")
         container.setLayout(self._layout)
-        self.setWidget(container)
+
+        self._scroll = QScrollArea(self)
+        self._setup_scroll()
+        self._scroll.setWidget(container)
+
+        self._action_slot = QVBoxLayout()
+        self._action_slot.setContentsMargins(50, 6, 30, 0)
+        self._action_slot.setSpacing(0)
+
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self._scroll, stretch=1)
+        root.addLayout(self._action_slot)
+
+    def set_height_budget(self, pixels: int) -> None:
+        """Hauteur maximale que le parent peut accorder au panneau.
+
+        Sert à raccourcir la description quand la fenêtre est petite : mieux
+        vaut trois lignes et « Lire la suite » qu'une barre de défilement qui
+        rogne le texte. La valeur ne dépend que de la fenêtre, jamais de nos
+        propres ajustements — pas de boucle possible.
+        """
+        if pixels != self._height_budget:
+            self._height_budget = pixels
+            if not self._desc_expanded and self._full_desc:
+                self._apply_desc_truncation()
+
+    def _desc_budget(self) -> int:
+        """Nombre de caractères affichés avant « Lire la suite »."""
+        return self._DESC_TRUNCATE if self._height_budget >= 430 else 90
+
+    def _apply_desc_truncation(self) -> None:
+        limite = self._desc_budget()
+        if len(self._full_desc) > limite:
+            self._desc.setText(self._full_desc[:limite].rstrip() + "…")
+            self._btn_expand.setText(tr("Lire la suite…"))
+            self._btn_expand.setVisible(True)
+        else:
+            self._desc.setText(self._full_desc)
+            self._btn_expand.setVisible(False)
+
+    def natural_height(self) -> int:
+        """Hauteur nécessaire pour tout montrer sans défiler.
+
+        Sert à ne PAS étirer le panneau au-delà de son contenu : la zone
+        d'action étant épinglée en bas, un panneau plus haut que nécessaire
+        creusait un vide entre la description et le bouton.
+        """
+        if self._scroll.widget() is None:
+            return 0
+        # `layout.heightForWidth()` est la seule mesure fiable ici. Le `sizeHint`
+        # d'un QLabel en `wordWrap` est calculé à une largeur arbitraire et
+        # surestime (195 px annoncés pour un titre qui en occupe 97) ; la
+        # géométrie réelle, elle, est encore périmée quand on la lit juste après
+        # un changement de jeu, et la description se retrouvait hors panneau.
+        return (self._layout.heightForWidth(self.available_width())
+                + self._action_slot.sizeHint().height()
+                + _HAUTEUR_SLACK)
 
     def _setup_scroll(self) -> None:
-        self.setWidgetResizable(True)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet(themed(
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self._scroll.setStyleSheet(themed(
             "QScrollArea { background: transparent; border: none; }"
             "QScrollBar:vertical { background: transparent; width: 4px; border: none; }"
             "QScrollBar::handle:vertical { background: rgba(212,160,23,0.3); border-radius: 2px; min-height: 20px; }"
@@ -60,68 +144,62 @@ class InfoPanel(QScrollArea):
         self._title.setObjectName("gameTitle")
         self._title.setFont(cinzel_decorative(36))
         self._title.setWordWrap(True)
-        self._title.setMaximumWidth(600)
+        self._title.setMaximumWidth(_TITLE_MAX_W)  # raboté dans _apply_available_width
         self._title.setStyleSheet("QLabel { color: #eaeaea; background: transparent; }")
         lay.addWidget(self._title)
-        lay.addSpacing(8)
+        lay.addSpacing(10)
 
-        # Metadata (année · développeur · taille) + pastille téléchargements
-        meta_row = QWidget()
-        meta_row.setStyleSheet("background: transparent;")
-        meta_lay = QHBoxLayout(meta_row)
-        meta_lay.setContentsMargins(0, 0, 0, 0)
-        meta_lay.setSpacing(14)
-        meta_lay.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        # Tags — juste sous le titre : ensemble ils forment l'IDENTITÉ du jeu.
+        # Ils précèdent donc les métadonnées, qui répondent à « combien ça coûte »
+        # et non à « qu'est-ce que c'est ».
+        self._tags_container = QWidget()
+        self._tags_container.setStyleSheet("background: transparent;")
+        self._tags_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._tags_layout = FlowLayout(self._tags_container, spacing=8)
+        lay.addWidget(self._tags_container)
+        lay.addSpacing(10)
 
+        # Bande méta UNIQUE : année, studio, poids, version + changelog, et la
+        # pastille de téléchargements. Trois lignes dorées se suivaient avant,
+        # avec le même poids visuel — l'œil les lisait comme du bruit. Le flow
+        # les fait passer à la ligne au lieu de déborder du panneau (la pastille
+        # se faisait couper au bord à la taille minimale de la fenêtre).
+        # UN SEUL libellé, qui s'enchaîne et passe à la ligne comme une phrase.
+        # En FlowLayout de plusieurs widgets, le compteur de téléchargements
+        # sautait à la ligne ou non selon la longueur du nom du studio : sa
+        # position changeait d'un jeu à l'autre, ce qui est déroutant. Le
+        # changelog reste cliquable via un vrai lien (accessible au clavier).
         self._meta = QLabel()
         self._meta.setObjectName("gameMeta")
         self._meta.setFont(cinzel(14))
+        self._meta.setWordWrap(True)
         self._meta.setTextFormat(Qt.TextFormat.RichText)
+        self._meta.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        )
         self._meta.setStyleSheet("QLabel { color: #8a8aaa; background: transparent; }")
-        meta_lay.addWidget(self._meta)
+        self._meta.linkActivated.connect(lambda _: self.versions_clicked.emit())
+        lay.addWidget(self._meta)
+        lay.addSpacing(16)
 
-        # Pastille « ◆ 1 234 téléchargements » — preuve sociale (GitHub, toutes
-        # versions cumulées). Losange U+25C6, le même que les séparateurs méta.
-        self._dl_badge = QLabel()
-        self._dl_badge.setFont(body_font(11))
-        self._dl_badge.setStyleSheet(themed(
-            "QLabel { background: rgba(212, 160, 23, 0.08); color: rgba(212, 160, 23, 0.90);"
-            " border: 1px solid rgba(212, 160, 23, 0.30); border-radius: 10px;"
-            " padding: 3px 12px; }"
-        ))
-        self._dl_badge.setVisible(False)
-        meta_lay.addWidget(self._dl_badge)
-
-        lay.addWidget(meta_row)
-        lay.addSpacing(6)
-
-        # Version + lien changelog
-        lay.addWidget(self._build_version_row())
-
-        # Stats de jeu — cachée par défaut, visible uniquement si le jeu a déjà été lancé
+        # Stats de jeu — ÉPINGLÉES sous le bouton d'action (voir add_bottom_widget),
+        # parce qu'elles répondent à « est-ce que je reprends ? » et non à
+        # « qu'est-ce que ce jeu ? ». Créées ici, posées là-bas.
         self._stats_label = QLabel()
         self._stats_label.setFont(body_font(12))
         self._stats_label.setStyleSheet(themed(
             "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
         ))
+        self._stats_label.setWordWrap(True)
         self._stats_label.setVisible(False)
-        lay.addWidget(self._stats_label)
-        lay.addSpacing(10)
-
-        # Séparateur doré
-        sep = QWidget()
-        sep.setFixedHeight(1)
-        sep.setFixedWidth(60)
-        sep.setStyleSheet(themed("background: rgba(212, 160, 23, 0.30);"))
-        lay.addWidget(sep)
-        lay.addSpacing(14)
 
         # Description
         self._desc = QLabel()
         self._desc.setObjectName("gameDescription")
         self._desc.setFont(body_font(15))
         self._desc.setWordWrap(True)
-        self._desc.setMaximumWidth(520)
+        self._desc.setMaximumWidth(_DESC_MAX_W)  # raboté dans _apply_available_width
         self._desc.setStyleSheet(
             "QLabel { color: rgba(176, 176, 200, 0.75); background: transparent;"
             " line-height: 1.5; }"
@@ -138,41 +216,97 @@ class InfoPanel(QScrollArea):
         self._btn_expand.setVisible(False)
         self._btn_expand.clicked.connect(self._toggle_desc)
         lay.addWidget(self._btn_expand)
-        lay.addSpacing(10)
+        lay.addSpacing(12)
 
-        # Tags
-        self._tags_container = QWidget()
-        self._tags_container.setStyleSheet("background: transparent;")
-        self._tags_container.setMaximumHeight(80)
-        self._tags_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        self._tags_layout = FlowLayout(self._tags_container, spacing=8)
-        lay.addWidget(self._tags_container)
-        lay.addSpacing(20)
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_available_width()
 
-    def _build_version_row(self) -> QWidget:
-        row = QWidget()
-        row.setStyleSheet("background: transparent;")
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+    def available_width(self) -> int:
+        """Largeur réellement offerte au contenu, marges déduites.
 
-        self._version_label = QLabel()
-        self._version_label.setFont(body_font(12))
-        self._version_label.setStyleSheet(themed(
-            "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
-        ))
-        layout.addWidget(self._version_label)
+        On mesure sur la largeur du PANNEAU, jamais sur celle du viewport du
+        QScrollArea : pendant `resizeEvent`, l'enfant n'a pas encore été
+        redimensionné et renvoie sa largeur précédente. Au tout premier
+        affichage cette valeur est minuscule, le titre se retrouvait plafonné à
+        120 px pour de bon, et plus aucun redimensionnement ne venait le
+        corriger.
+        """
+        left, _, right, _ = self._layout.getContentsMargins()
+        return max(120, self.width() - left - right - _SCROLLBAR_W)
 
-        btn = ClickableLabel(tr("Versions et changelog"))
-        btn.setFont(body_font(12))
-        btn.setStyleSheet(themed(
-            "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
-            "QLabel:hover { color: #e8c547; text-decoration: underline; }"
-        ))
-        btn.clicked.connect(self.versions_clicked)
-        layout.addWidget(btn)
-        return row
+    def _apply_available_width(self) -> None:
+        """Rabote les largeurs sur la place réellement disponible.
+
+        Les QLabel en `wordWrap` ne descendent pas d'eux-mêmes sous leur
+        `minimumSizeHint`, donc un maximum figé en pixels finit par dépasser le
+        panneau et le texte est coupé au bord.
+        """
+        self._apply_margins()
+        avail = self.available_width()
+        self._apply_title_size(avail)
+        self._title.setMaximumWidth(min(_TITLE_MAX_W, avail))
+        self._desc.setMaximumWidth(min(_DESC_MAX_W, avail))
+        self._stats_label.setMaximumWidth(avail)
+        self._tags_container.setMaximumWidth(avail)
+        self._meta.setMaximumWidth(avail)
+        self._fit_height(self._title)
+        self._fit_height(self._desc)
+        self._fit_height(self._stats_label)
+        self._relayout_tags(avail)
+        self._fit_height(self._meta)
+
+    def _apply_margins(self) -> None:
+        """Marges resserrées sur panneau étroit — 80 px de marge sur 550 px de
+        panneau, c'est 15 % de la largeur perdue là où elle manque le plus."""
+        wide = self.width() >= 620
+        left, right = (50, 30) if wide else (32, 22)
+        if self._layout.contentsMargins().left() != left:
+            self._layout.setContentsMargins(left, 0, right, 0)
+            self._action_slot.setContentsMargins(left, 6, right, 0)
+
+    def _apply_title_size(self, avail: int) -> None:
+        """Taille de titre proportionnée à la colonne.
+
+        36 px dans une colonne de 466 px, c'est trois lignes de titre qui
+        poussent la description hors de l'écran. Le corps suit donc la largeur
+        réelle, ce qui garde le titre dominant sans qu'il dévore le panneau.
+        """
+        size = 36 if avail >= 520 else 30 if avail >= 440 else 26
+        if size != self._title_size:
+            self._title_size = size
+            self._title.setFont(cinzel_decorative(size))
+
+    @staticmethod
+    def _fit_height(label: QLabel) -> None:
+        """Donne au libellé la hauteur que son texte réclame à sa largeur.
+
+        Un QLabel en `wordWrap` placé dans un QVBoxLayout reçoit la hauteur de
+        son `sizeHint`, calculée à une largeur qui n'est pas la sienne : le
+        titre du jeu réclamait 146 px et n'en obtenait que 97, si bien qu'on
+        lisait « Harry Potter à l'École des » sans « Sorciers ».
+        """
+        width = label.maximumWidth()
+        if width <= 0 or not label.text():
+            return
+        # `QLabel.heightForWidth()` renvoie max(minimumHeight, hauteur calculée) :
+        # mesurer sans remettre le minimum à zéro fait cliqueter la valeur vers le
+        # haut à chaque redimensionnement, et le titre ne rétrécit plus jamais.
+        label.setMinimumHeight(0)
+        label.setMinimumHeight(label.heightForWidth(width))
+
+    def _relayout_tags(self, avail: int | None = None) -> None:
+        """Donne au conteneur de tags la hauteur exacte dont le flow a besoin."""
+        self._relayout_flow(self._tags_container, self._tags_layout, avail)
+
+    def _relayout_flow(self, container: QWidget, flow: FlowLayout,
+                       avail: int | None = None) -> None:
+        """Hauteur exacte d'un conteneur en FlowLayout, sinon sa dernière ligne
+        se fait couper — un plafond fixe ne survit pas au rétrécissement."""
+        if avail is None:
+            avail = self.available_width()
+        needed = flow.heightForWidth(avail) if flow.count() else 0
+        container.setFixedHeight(max(0, needed))
 
     # ──────────────────── API publique ────────────────────
 
@@ -188,28 +322,35 @@ class InfoPanel(QScrollArea):
         sep = f'<span style="color:{gold}; margin: 0 6px;"> ◆ </span>'
         dl = game.current_download
         size_str = format_size(dl.size_mb) if dl else "?"
-        self._meta.setText(
-            f'<span style="text-transform:uppercase; letter-spacing:2px;">'
-            f'{game.year}{sep}{game.developer}{sep}{size_str}</span>'
-        )
+        installed = self._manager.installed_version(game.id)
+        version = installed or game.recommended_version
+        lien = (f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
+                + tr("v{} · changelog").format(version) + '</a>')
+        morceaux = [str(game.year), game.developer, size_str, lien]
 
-        # Pastille téléchargements (GitHub, toutes versions cumulées) — cachée
-        # tant qu'inconnue ou sous le seuil. Monter le seuil (~100) pour cacher
-        # les petits débuts.
+        # Compteur de téléchargements (GitHub, toutes versions cumulées). Il vit
+        # DANS la ligne méta et non dans une pastille séparée : en pastille, le
+        # FlowLayout le renvoyait à la ligne ou non selon la longueur du nom du
+        # studio, et sa position sautait d'un jeu à l'autre. Caché tant
+        # qu'inconnu ou sous le seuil.
         count = self._manager.download_count(game.id)
         if count >= self._DL_COUNT_MIN:
             pretty = f"{count:,}".replace(",", "\u202f")  # espace fine insécable FR
             key = "{} téléchargement" if count == 1 else "{} téléchargements"
-            self._dl_badge.setText("◆ " + tr(key).format(pretty))
-            self._dl_badge.setToolTip(
+            # En doré comme avant : c'est de la preuve sociale, elle mérite de
+            # ressortir du reste de la ligne méta, qui est en gris sourdine.
+            morceaux.append(f'<span style="color:{gold};">'
+                            + tr(key).format(pretty) + '</span>')
+            self._meta.setToolTip(
                 tr("Téléchargements cumulés de toutes les versions (GitHub)"))
-            self._dl_badge.setVisible(True)
         else:
-            self._dl_badge.setVisible(False)
+            self._meta.setToolTip("")
 
-        # Version
-        installed = self._manager.installed_version(game.id)
-        self._version_label.setText(tr("Version {}").format(installed or game.recommended_version))
+        self._meta.setText(
+            '<span style="text-transform:uppercase; letter-spacing:2px;">'
+            + sep.join(morceaux) + '</span>'
+        )
+
 
         # Stats de jeu — une seule ligne discrète, affichée uniquement si déjà joué
         self._refresh_stats(game)
@@ -220,9 +361,20 @@ class InfoPanel(QScrollArea):
         # Tags
         self._refresh_tags(game)
 
+        # Les textes viennent tous de changer : remesurer les hauteurs. Sans ça,
+        # un libellé garde la hauteur réservée pour le jeu PRÉCÉDENT — après un
+        # « Lire la suite » suivi d'un changement de jeu, la description courte
+        # conservait les 161 px de la version dépliée et laissait un grand vide.
+        self._apply_available_width()
+
     def add_bottom_widget(self, widget: QWidget) -> None:
-        """Ajoute un widget en bas du panneau (avant le stretch)."""
-        self._layout.addWidget(widget)
+        """Épingle un widget sous la zone défilante — il reste toujours visible.
+
+        Les statistiques de jeu suivent immédiatement : elles commentent
+        l'action (« reprendre ? »), donc elles vivent avec elle.
+        """
+        self._action_slot.addWidget(widget)
+        self._action_slot.addWidget(self._stats_label)
 
     def add_stretch(self) -> None:
         self._layout.addStretch()
@@ -232,13 +384,7 @@ class InfoPanel(QScrollArea):
     def _set_desc_text(self, text: str) -> None:
         self._full_desc = text
         self._desc_expanded = False
-        if len(text) > self._DESC_TRUNCATE:
-            self._desc.setText(text[:self._DESC_TRUNCATE].rstrip() + "…")
-            self._btn_expand.setText(tr("Lire la suite…"))
-            self._btn_expand.setVisible(True)
-        else:
-            self._desc.setText(text)
-            self._btn_expand.setVisible(False)
+        self._apply_desc_truncation()
 
     def _toggle_desc(self) -> None:
         self._desc_expanded = not self._desc_expanded
@@ -246,8 +392,12 @@ class InfoPanel(QScrollArea):
             self._desc.setText(self._full_desc)
             self._btn_expand.setText(tr("Réduire le texte"))
         else:
-            self._desc.setText(self._full_desc[:self._DESC_TRUNCATE].rstrip() + "…")
-            self._btn_expand.setText(tr("Lire la suite…"))
+            self._apply_desc_truncation()
+        # Le texte a changé de hauteur : remesurer, puis demander au parent de
+        # repositionner le panneau. Sans ça, déplier fait apparaître une barre
+        # de défilement au lieu d'agrandir le panneau.
+        self._apply_available_width()
+        self.content_changed.emit()
 
     # ──────────────────── Stats de jeu ────────────────────
 
@@ -278,3 +428,6 @@ class InfoPanel(QScrollArea):
             ))
             self._tags_layout.addWidget(badge)
         self._tags_container.updateGeometry()
+        # Les tags viennent de changer : recalculer la hauteur du flow,
+        # sinon la dernière ligne de pastilles reste coupée.
+        self._relayout_tags()

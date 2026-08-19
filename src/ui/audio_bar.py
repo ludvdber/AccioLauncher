@@ -7,6 +7,11 @@ from src.ui.theme import themed
 
 _MUTE_ON = "\U0001f507"
 _MUTE_OFF = "\U0001f50a"
+# Formes géométriques et NON des emoji : U+23F8 et U+25B6 basculent en
+# présentation emoji sur Windows (gros glyphe bleu de Segoe UI Emoji) et
+# ignorent la couleur du thème. Celles-ci restent monochromes.
+_PAUSE = "\u25ae\u25ae"
+_PLAY = "\u25ba"
 
 
 class AudioBar(QWidget):
@@ -18,16 +23,29 @@ class AudioBar(QWidget):
 
     mute_toggled = pyqtSignal()
     volume_changed = pyqtSignal(int)
+    play_toggled = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setStyleSheet("QWidget { background: rgba(0,0,0,0.55); border-radius: 14px; }")
-        self.setFixedSize(160, 32)
+        self.setFixedSize(192, 32)
         self.hide()
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 0, 8, 0)
         layout.setSpacing(6)
+
+        # Pause de la bande-annonce : un contrôle explicite, à côté du son.
+        self._btn_play = QPushButton(_PAUSE)
+        self._btn_play.setFixedSize(26, 26)
+        self._btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_play.setAccessibleName("Mettre la bande-annonce en pause")
+        self._btn_play.setStyleSheet(themed(
+            "QPushButton { background: transparent; color: #eaeaea; border: none; font-size: 13px; }"
+            "QPushButton:hover { color: #d4a017; }"
+        ))
+        self._btn_play.clicked.connect(self.play_toggled.emit)
+        layout.addWidget(self._btn_play)
 
         self._btn_mute = QPushButton(_MUTE_OFF)
         self._btn_mute.setFixedSize(26, 26)
@@ -55,6 +73,9 @@ class AudioBar(QWidget):
 
     def set_muted_icon(self, muted: bool) -> None:
         self._btn_mute.setText(_MUTE_ON if muted else _MUTE_OFF)
+
+    def set_paused_icon(self, paused: bool) -> None:
+        self._btn_play.setText(_PLAY if paused else _PAUSE)
 
     def volume(self) -> int:
         return self._volume_slider.value()

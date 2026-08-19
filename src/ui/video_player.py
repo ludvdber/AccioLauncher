@@ -24,6 +24,7 @@ class VideoPlayer(QObject):
         self._sink = None
         self._audio = None
         self._muted = False
+        self._paused = False
 
     @property
     def is_playing(self) -> bool:
@@ -32,6 +33,21 @@ class VideoPlayer(QObject):
     @property
     def muted(self) -> bool:
         return self._muted
+
+    @property
+    def paused(self) -> bool:
+        return self._paused
+
+    def pause(self) -> None:
+        """Suspend la lecture SANS libérer la source (reprise instantanée)."""
+        if self._player is not None and not self._paused:
+            self._player.pause()
+            self._paused = True
+
+    def resume(self) -> None:
+        if self._player is not None and self._paused:
+            self._player.play()
+            self._paused = False
 
     def play(self, video_path: str, *, muted: bool = False, volume: float = 0.25) -> bool:
         """Lance la lecture d'une vidéo. Retourne False si Multimedia non disponible."""
@@ -57,6 +73,7 @@ class VideoPlayer(QObject):
 
         self._player.setSource(QUrl.fromLocalFile(video_path))
         self._player.play()
+        self._paused = False
         return True
 
     def stop(self) -> None:

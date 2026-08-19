@@ -1,9 +1,13 @@
 """Tests pour src/core/updater.py — agrégation des compteurs (pur) + interruption."""
 
+import sys
+import types
+
 from src.core.updater import (
     UpdateChecker,
     _releases_api_from_catalog_url,
     aggregate_download_counts,
+    extract_asset_digests,
 )
 
 _U = "https://github.com/o/r/releases/download"
@@ -110,3 +114,147 @@ class TestInterruption:
         checker, steps = _stub_checker(interrupt_after="launcher")
         checker.run()
         assert steps == ["catalog", "launcher"]
+
+
+class TestExtractAssetDigests:
+    """GitHub publie l'empreinte de chaque asset — on la récupère au lieu de la
+    recopier à la main dans games.json (oubli = vérification dormante)."""
+
+    HEX = "0b" * 32
+
+    def test_extraction_simple(self):
+        releases = [{"assets": [
+            {"browser_download_url": "https://x/a.7z", "digest": f"sha256:{self.HEX}"},
+        ]}]
+        assert extract_asset_digests(releases) == {"https://x/a.7z": self.HEX}
+
+    def test_plusieurs_releases_et_parts(self):
+        releases = [
+            {"assets": [{"browser_download_url": "https://x/a.001",
+                         "digest": "sha256:" + "ab" * 32}]},
+            {"assets": [{"browser_download_url": "https://x/a.002",
+                         "digest": "sha256:" + "cd" * 32}]},
+        ]
+        result = extract_asset_digests(releases)
+        assert result["https://x/a.001"] == "ab" * 32
+        assert result["https://x/a.002"] == "cd" * 32
+
+    def test_majuscules_normalisees(self):
+        releases = [{"assets": [{"browser_download_url": "https://x/a.7z",
+                                 "digest": "sha256:" + "AB" * 32}]}]
+        assert extract_asset_digests(releases) == {"https://x/a.7z": "ab" * 32}
+
+    def test_algorithme_inconnu_ignore(self):
+        releases = [{"assets": [{"browser_download_url": "https://x/a.7z",
+                                 "digest": "md5:" + "ab" * 8}]}]
+        assert extract_asset_digests(releases) == {}
+
+    def test_longueur_invalide_ignoree(self):
+        releases = [{"assets": [{"browser_download_url": "https://x/a.7z",
+                                 "digest": "sha256:abcd"}]}]
+        assert extract_asset_digests(releases) == {}
+
+    def test_non_hexadecimal_ignore(self):
+        releases = [{"assets": [{"browser_download_url": "https://x/a.7z",
+                                 "digest": "sha256:" + "zz" * 32}]}]
+        assert extract_asset_digests(releases) == {}
+
+    def test_asset_sans_digest(self):
+        releases = [{"assets": [{"browser_download_url": "https://x/a.7z"}]}]
+        assert extract_asset_digests(releases) == {}
+
+    def test_payload_aberrant_ne_leve_pas(self):
+        """Réponse d'API trafiquée / tronquée : jamais de TypeError au boot."""
+        assert extract_asset_digests([]) == {}
+        assert extract_asset_digests(["pas un dict"]) == {}
+        assert extract_asset_digests([{"assets": None}]) == {}
+        assert extract_asset_digests([{"assets": ["pas un dict"]}]) == {}
+        assert extract_asset_digests([{"assets": [{"browser_download_url": "https://x/a",
+                                                   "digest": 42}]}]) == {}
+
+
+class TestLauncherDigest:
+    """L'auto-update télécharge un .exe : il doit être vérifié.
+
+    L'empreinte vient de l'API GitHub (même release), ce qui évite de la coder
+    en dur à chaque version — sans elle, `apply_update_and_restart` remplaçait
+    l'exécutable par un fichier jamais contrôlé.
+    """
+
+    HEX = "b7" * 32
+
+    @staticmethod
+    def _fake_httpx(payload: dict, monkeypatch):
+        mod = types.ModuleType("httpx")
+
+        class HTTPError(Exception):
+            pass
+
+        class Timeout:
+            def __init__(self, *a, **kw):
+                pass
+
+        class _Resp:
+            status_code = 200
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return payload
+
+        class Client:
+            def __init__(self, *a, **kw):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def get(self, url, **kw):
+                return _Resp()
+
+        mod.HTTPError = HTTPError
+        mod.Timeout = Timeout
+        mod.Client = Client
+        monkeypatch.setitem(sys.modules, "httpx", mod)
+
+    def _run(self, payload, monkeypatch):
+        self._fake_httpx(payload, monkeypatch)
+        checker = UpdateChecker.__new__(UpdateChecker)
+        UpdateChecker.__init__(checker, "", "0.0.1", {})
+        recu = []
+        checker.launcher_update.connect(lambda *a: recu.append(a))
+        checker._check_launcher()
+        return recu
+
+    def test_empreinte_transmise(self, monkeypatch):
+        recu = self._run({
+            "tag_name": "v9.9.9",
+            "html_url": "https://github.com/ludvdber/AccioLauncher/releases/tag/v9.9.9",
+            "assets": [{"name": "AccioLauncher.exe",
+                        "browser_download_url": "https://github.com/x/AccioLauncher.exe",
+                        "digest": f"sha256:{self.HEX}"}],
+        }, monkeypatch)
+        assert len(recu) == 1
+        version, _url, asset, sha = recu[0]
+        assert version == "9.9.9"
+        assert asset == "https://github.com/x/AccioLauncher.exe"
+        assert sha == self.HEX
+
+    def test_sans_digest_reste_vide(self, monkeypatch):
+        """Pas d'empreinte publiée → on ne bloque pas la mise à jour."""
+        recu = self._run({
+            "tag_name": "v9.9.9",
+            "html_url": "https://github.com/ludvdber/AccioLauncher/releases/tag/v9.9.9",
+            "assets": [{"name": "AccioLauncher.exe",
+                        "browser_download_url": "https://github.com/x/AccioLauncher.exe"}],
+        }, monkeypatch)
+        assert recu and recu[0][3] == ""
+
+    def test_pas_de_maj_pas_de_signal(self, monkeypatch):
+        recu = self._run({"tag_name": "v0.0.0", "html_url": "https://github.com/x",
+                          "assets": []}, monkeypatch)
+        assert recu == []

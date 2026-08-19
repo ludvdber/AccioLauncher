@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
 from src.core.formatting import format_bytes
-from src.core.i18n import tr
+from src.core.i18n import available_languages, translator_credits, tr
 from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.season import resolve as resolve_season
 from src.ui.theme import THEMES, themed
@@ -291,9 +291,12 @@ class SettingsDialog(QDialog):
 
         lang_row = QHBoxLayout()
         self._lang_combo = self._combo()
-        self._lang_combo.addItem("Français", "fr")
-        self._lang_combo.addItem("English", "en")
-        self._lang_combo.setCurrentIndex(1 if self.config.langue == "en" else 0)
+        # Découverte : déposer un src/data/i18n/<code>.json suffit à ajouter une
+        # langue, sans toucher à ce fichier (voir src/core/i18n.available_languages).
+        for info in available_languages():
+            self._lang_combo.addItem(info.name, info.code)
+        current = self._lang_combo.findData(self.config.langue)
+        self._lang_combo.setCurrentIndex(max(0, current))
         self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
         lang_row.addWidget(self._lang_combo)
         lang_row.addStretch()
@@ -363,10 +366,6 @@ class SettingsDialog(QDialog):
         row_delete, self._tgl_delete = toggle_row(
             tr("Supprimer les archives après installation"), self.config.delete_archives)
         self._tgl_delete.toggled.connect(self._on_setting_changed)
-        row_updates, self._tgl_updates = toggle_row(
-            tr("Vérifier les mises à jour au démarrage"), self.config.check_updates)
-        self._tgl_updates.toggled.connect(self._on_setting_changed)
-
         cat_ver = self.manager.catalog.catalog_version
         self._versions_label = QLabel(
             tr("Launcher v{}  ·  Catalogue v{}").format(APP_VERSION, cat_ver))
@@ -392,7 +391,7 @@ class SettingsDialog(QDialog):
         self._update_status.hide()
 
         return self._page(
-            self._section(tr("Téléchargement")), row_delete, row_updates,
+            self._section(tr("Téléchargement")), row_delete,
             self._section(tr("Mises à jour")), self._versions_label,
             update_row, self._update_status,
         )
@@ -435,9 +434,29 @@ class SettingsDialog(QDialog):
         about_row.addWidget(btn_kofi)
         about_row.addStretch()
 
+        credits_line = QLabel(self._translator_credits_text())
+        credits_line.setObjectName("subtitle")
+        credits_line.setWordWrap(True)
+
         return self._page(
             self._section(tr("À propos")), about_text, version_line, about_row,
+            credits_line,
         )
+
+    @staticmethod
+    def _translator_credits_text() -> str:
+        """Remerciements aux traducteurs, une ligne par langue.
+
+        Alimenté par le bloc `_meta.translators` de chaque fichier de langue :
+        un contributeur s'ajoute dans la même PR que sa traduction, sans qu'on
+        ait à toucher au code.
+        """
+        credits = translator_credits()
+        if not credits:
+            return ""
+        lines = [tr("Traductions")]
+        lines += [f"{name} — {', '.join(people)}" for name, people in credits]
+        return "\n".join(lines)
 
     # ──────────────────── Slots ────────────────────
 
@@ -461,7 +480,6 @@ class SettingsDialog(QDialog):
 
     def _on_setting_changed(self) -> None:
         self.config.delete_archives = self._tgl_delete.isChecked()
-        self.config.check_updates = self._tgl_updates.isChecked()
         self.config.autoplay_videos = self._tgl_autoplay.isChecked()
         self.config.mute_videos = self._tgl_mute.isChecked()
         self.config.discord_presence = self._tgl_discord.isChecked()

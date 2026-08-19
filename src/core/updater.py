@@ -20,6 +20,42 @@ _GAMES_RELEASES_API = "https://api.github.com/repos/ludvdber/accio-launcher-game
 _LOCAL_CATALOG_PATH = LOCAL_CATALOG_PATH
 
 
+_SHA256_PREFIX = "sha256:"
+
+
+def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
+    """URL d'asset → empreinte SHA-256 (hex), depuis les releases GitHub.
+
+    GitHub calcule et publie lui-même l'empreinte de chaque asset (champ
+    `digest`, format « sha256:<hex> »). La récupérer ici évite de la recopier
+    à la main dans games.json à chaque release — une empreinte fausse ou
+    oubliée serait pire que pas d'empreinte du tout, puisqu'elle inspirerait
+    une confiance qu'elle ne mérite pas.
+
+    Aucune requête supplémentaire : la réponse est déjà téléchargée pour les
+    compteurs de téléchargement.
+
+    Les entrées non conformes (algorithme inconnu, longueur inattendue) sont
+    ignorées silencieusement — un asset sans empreinte exploitable doit
+    dégrader vers « pas de vérification », jamais vers un échec de download.
+    """
+    digests: dict[str, str] = {}
+    for rel in releases:
+        if not isinstance(rel, dict):
+            continue
+        for asset in rel.get("assets", []) or []:
+            if not isinstance(asset, dict):
+                continue
+            url = asset.get("browser_download_url", "")
+            raw = asset.get("digest") or ""
+            if not url or not isinstance(raw, str) or not raw.startswith(_SHA256_PREFIX):
+                continue
+            hexa = raw[len(_SHA256_PREFIX):].strip().lower()
+            if len(hexa) == 64 and all(c in "0123456789abcdef" for c in hexa):
+                digests[url] = hexa
+    return digests
+
+
 def aggregate_download_counts(
     releases: list[dict], games_asset_urls: dict[str, list[list[str]]],
 ) -> dict[str, int]:
@@ -61,9 +97,10 @@ class UpdateChecker(QThread):
     """Vérifie les mises à jour du catalogue et du launcher en arrière-plan."""
 
     catalog_updated = pyqtSignal(object)        # Catalog
-    launcher_update = pyqtSignal(str, str, str) # (version, url_release, url_asset_exe ou "")
+    launcher_update = pyqtSignal(str, str, str, str)  # (version, url_release, url_asset_exe, sha256 hex)
     update_counts = pyqtSignal(int)             # nombre de jeux avec mise à jour dispo
     download_counts = pyqtSignal(object)        # dict game_id → téléchargements GitHub cumulés
+    asset_digests = pyqtSignal(object)          # dict url_asset → sha256 hex (publié par GitHub)
 
     def __init__(self, catalog_url: str, current_catalog_version: str,
                  installed_versions: dict[str, str],
@@ -95,7 +132,10 @@ class UpdateChecker(QThread):
         self._check_download_counts()
 
     def _check_download_counts(self) -> None:
-        """Récupère les compteurs de téléchargement des releases du repo des jeux."""
+        """Lit les releases du repo des jeux : compteurs ⬇ ET empreintes SHA-256.
+
+        Une seule requête sert les deux usages — voir `extract_asset_digests`.
+        """
         import httpx  # import différé (thread) — voir en-tête de module
 
         if not self._games_asset_urls:
@@ -114,6 +154,12 @@ class UpdateChecker(QThread):
             if totals:
                 log.info("Compteurs de téléchargement : %s", totals)
                 self.download_counts.emit(totals)
+            # Même réponse, zéro requête de plus : les empreintes publiées par
+            # GitHub servent à vérifier l'intégrité des archives téléchargées.
+            digests = extract_asset_digests(releases)
+            if digests:
+                log.info("Empreintes SHA-256 récupérées pour %d asset(s)", len(digests))
+                self.asset_digests.emit(digests)
         except (httpx.HTTPError, json.JSONDecodeError, ValueError) as exc:
             log.warning("Impossible de récupérer les compteurs de téléchargement : %s", exc)
 
@@ -186,13 +232,20 @@ class UpdateChecker(QThread):
                     html_url = "https://github.com/ludvdber/AccioLauncher/releases/latest"
                 # Asset .exe pour l'auto-update (vide si introuvable → fallback page release)
                 asset_url = ""
+                asset_sha256 = ""
                 for asset in data.get("assets", []):
                     url = asset.get("browser_download_url", "")
                     if asset.get("name", "").lower().endswith(".exe") and url.startswith("https://"):
                         asset_url = url
+                        # GitHub publie l'empreinte de l'asset : elle évite d'avoir
+                        # à la recopier à la main dans le code à chaque release,
+                        # et sans elle l'auto-update installait un exe non vérifié.
+                        asset_sha256 = extract_asset_digests([data]).get(url, "")
                         break
                 log.info("Nouvelle version du launcher disponible : %s (actuelle: %s)", tag, APP_VERSION)
-                self.launcher_update.emit(tag.lstrip("v"), html_url, asset_url)
+                if asset_url and not asset_sha256:
+                    log.warning("Aucune empreinte publiée pour %s — mise à jour non vérifiée", asset_url)
+                self.launcher_update.emit(tag.lstrip("v"), html_url, asset_url, asset_sha256)
             else:
                 log.info("Launcher à jour (v%s)", APP_VERSION)
 

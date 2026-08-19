@@ -36,6 +36,7 @@
 | 🔄 **Versioning et changelog** | Suivi des versions avec historique détaillé des changements |
 | 📥 **System tray intelligent** | Se minimise pendant le jeu, se restaure automatiquement |
 | ⚙️ **Paramètres intégrés** | Dossier d'installation, gestion de l'espace disque, préférences |
+| 🌍 **Multilingue** | Français, anglais, espagnol — noms, descriptions et changelogs des jeux compris |
 | 🛡️ **Code audité** | HTTPS only, anti path-traversal, Zip Slip prevention, thread safety |
 
 ---
@@ -152,7 +153,7 @@ build.bat
 - [ ] **V2** — Configuration graphique intégrée (DGVoodoo, résolution, compatibilité)
 - [ ] **V3** — Patches et corrections de bugs spécifiques aux jeux
 - [ ] **V4** — Support Linux (Wine / Proton)
-- [ ] **V5** — Internationalisation FR / EN
+- [x] **V5** — Internationalisation FR / EN / ES ([contribuez une langue !](TRANSLATORS.md))
 
 ---
 
@@ -163,6 +164,25 @@ Les contributions sont les bienvenues !
 - 🐛 **Bug ?** → Ouvrez une [Issue](https://github.com/ludvdber/AccioLauncher/issues)
 - 💡 **Idée ?** → Proposez une [Feature Request](https://github.com/ludvdber/AccioLauncher/issues/new)
 - 🔧 **Code ?** → Forkez, créez une branche, soumettez une PR
+- 🌍 **Une langue ?** → Voir ci-dessous
+
+### 🌍 Traduire le launcher
+
+Le launcher parle **français, anglais et espagnol**. Toute autre langue est la
+bienvenue, et **il n'y a pas une ligne de Python à écrire** : les traductions
+sont de simples fichiers de données.
+
+En résumé : copiez [`src/data/i18n/en.json`](src/data/i18n/en.json) sous le code
+de votre langue (`de.json`, `pt.json`, `ja.json`…), traduisez les valeurs de
+droite en laissant les clés françaises intactes, puis déposez le fichier dans
+`%USERPROFILE%\Games\AccioLauncher\i18n\` pour **le voir en direct dans le
+launcher**, sans build ni release. Quand le résultat vous convient, ouvrez une PR.
+
+Une traduction incomplète est acceptée : ce qui manque retombe sur l'anglais,
+puis sur le français — jamais sur du vide.
+
+👉 **Le guide complet est dans [TRANSLATORS.md](TRANSLATORS.md)**, qui liste
+aussi les personnes ayant déjà contribué une langue. Merci à elles ❤
 
 ---
 

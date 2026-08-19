@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-from src.core.config import Config, get_documents_dir, APP_VERSION
+from src.core.config import APP_VERSION, Config, DEFAULT_LANGUAGE, get_documents_dir
 
 
 class TestGetDocumentsDir:
@@ -23,11 +23,12 @@ class TestGetDocumentsDir:
 class TestConfig:
     def test_defaults(self):
         c = Config()
-        assert c.langue == "fr"
+        assert c.langue == DEFAULT_LANGUAGE
         assert c.delete_archives is True
-        assert c.check_updates is True
         assert c.autoplay_videos is True
-        assert c.mute_videos is False
+        # Muet par défaut : un logiciel ne doit pas faire de bruit à sa
+        # première ouverture (le son se rétablit d'un clic).
+        assert c.mute_videos is True
         assert c.dismissed_launcher_version == ""
         assert c.installed_versions == {}
 
@@ -86,7 +87,7 @@ class TestConfig:
         with patch("src.core.config.CONFIG_FILE_PATH", config_file):
             c = Config.load()
             # Doit retourner les valeurs par défaut
-            assert c.langue == "fr"
+            assert c.langue == DEFAULT_LANGUAGE
             assert c.installed_versions == {}
 
     def test_load_type_invalid_json_falls_back(self, tmp_path):
@@ -104,7 +105,7 @@ class TestConfig:
             config_file.write_text(json.dumps(payload), encoding="utf-8")
             with patch("src.core.config.CONFIG_FILE_PATH", config_file):
                 c = Config.load()
-                assert c.langue == "fr"
+                assert c.langue == DEFAULT_LANGUAGE
                 assert isinstance(c.install_path, Path)
                 assert isinstance(c.installed_versions, dict)
                 assert isinstance(c.playtime_seconds, dict)
@@ -113,7 +114,7 @@ class TestConfig:
         config_file = tmp_path / "nonexistent.json"
         with patch("src.core.config.CONFIG_FILE_PATH", config_file):
             c = Config.load()
-            assert c.langue == "fr"
+            assert c.langue == DEFAULT_LANGUAGE
 
     def test_exists(self, tmp_path):
         config_file = tmp_path / "config.json"

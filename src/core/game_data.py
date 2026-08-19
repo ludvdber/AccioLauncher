@@ -4,10 +4,39 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from src.core.config import GAMES_JSON_PATH
+from src.core.i18n import SOURCE_LANGUAGE, get_language
 
 log = logging.getLogger(__name__)
 
 RegistryEntries = list[str]
+
+
+def _loc(data: dict, key: str, default):
+    """Valeur du champ `key` dans la langue active, sinon en français.
+
+    Les traductions du catalogue voyagent DANS le catalogue (bloc `i18n` par
+    jeu et par version) et non dans le dictionnaire du launcher : le catalogue
+    se met à jour à distance, indépendamment des releases, donc un jeu ajouté
+    doit pouvoir arriver déjà traduit sans qu'on republie l'exécutable.
+
+    La résolution se fait au parsing — `set_language()` tourne avant
+    `load_catalog()` — ce qui laisse `game.name` directement utilisable par
+    l'UI, sans champ « traduit » parallèle à oublier quelque part.
+
+    Le repli est par CHAMP : une traduction partielle (nom traduit, changelog
+    pas encore) reste utilisable telle quelle.
+    """
+    lang = get_language()
+    if lang != SOURCE_LANGUAGE:
+        block = data.get("i18n")
+        if isinstance(block, dict):
+            translated = block.get(lang)
+            if isinstance(translated, dict) and key in translated:
+                value = translated[key]
+                # Un bloc i18n trafiqué ne doit pas changer le TYPE du champ.
+                if isinstance(value, type(default)):
+                    return value
+    return data.get(key, default)
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,7 +115,7 @@ class GameVersion:
             download_url=data.get("download_url"),
             download_parts=data.get("download_parts"),
             size_mb=int(data.get("size_mb", 0)),
-            changes=tuple(data.get("changes", [])),
+            changes=tuple(_loc(data, "changes", [])),
             sha256=data.get("sha256"),
             sha256_parts=tuple(data.get("sha256_parts", [])),
         )
@@ -163,16 +192,16 @@ class GameData:
             )
         return cls(
             id=data["id"],
-            name=data["name"],
+            name=_loc(data, "name", ""),
             year=int(data["year"]),
-            description=data["description"],
+            description=_loc(data, "description", ""),
             developer=data["developer"],
             executable=data["executable"],
             cover_image=data["cover_image"],
             latest_version=data.get("latest_version", "1.0"),
             recommended_version=data.get("recommended_version", "1.0"),
             versions=versions,
-            tags=tuple(data.get("tags", [])),
+            tags=tuple(_loc(data, "tags", [])),
             post_install=PostInstall(
                 registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),

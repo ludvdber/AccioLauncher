@@ -11,7 +11,7 @@ from pathlib import Path, PurePosixPath
 from typing import NamedTuple
 
 from src.core.config import Config
-from src.core.game_data import Catalog, GameData, load_catalog
+from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 from src.core.pre_launch import (
     apply_ini_patches,
     create_pre_launch_files,
@@ -56,7 +56,7 @@ class GameManager:
     """Gère le catalogue de jeux et leur état (installé, non installé, etc.)."""
 
     __slots__ = ("config", "_catalog", "_games", "_index", "_states", "_new_game_ids",
-                 "_download_counts")
+                 "_download_counts", "_asset_digests", "_digests_lower")
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -71,6 +71,10 @@ class GameManager:
         # Compteurs de téléchargement GitHub (toutes versions cumulées), remplis
         # en arrière-plan par l'UpdateChecker — vide tant que le fetch n'a pas abouti.
         self._download_counts: dict[str, int] = {}
+        # URL d'asset → empreinte SHA-256 publiée par GitHub, remplies en
+        # arrière-plan par l'UpdateChecker (vide tant que le fetch n'a pas abouti).
+        self._asset_digests: dict[str, str] = {}
+        self._digests_lower: dict[str, str] = {}
         self._backfill_missing_versions()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
@@ -278,6 +282,73 @@ class GameManager:
     def download_count(self, game_id: str) -> int:
         """Téléchargements GitHub cumulés (0 si inconnu / fetch non abouti)."""
         return self._download_counts.get(game_id, 0)
+
+    def set_asset_digests(self, digests: dict[str, str]) -> None:
+        """Reçoit les empreintes publiées par GitHub (thread principal).
+
+        Construit au passage un index insensible à la casse : le catalogue peut
+        référencer « hp6.7z.001 » alors que l'asset s'appelle « HP6.7z.001 ».
+        GitHub sert les deux formes (vérifié : même taille, même contenu), mais
+        son API ne publie que la forme canonique — sans cet index, ces versions
+        perdraient leur vérification d'intégrité sans que rien ne le signale.
+        """
+        self._asset_digests = dict(digests)
+        lower: dict[str, str] = {}
+        ambigus: set[str] = set()
+        for url, digest in self._asset_digests.items():
+            cle = url.lower()
+            if cle in lower and lower[cle] != digest:
+                ambigus.add(cle)
+            lower[cle] = digest
+        for cle in ambigus:
+            # Deux assets ne différant que par la casse : impossible de trancher.
+            # Mieux vaut ne pas vérifier que vérifier contre la mauvaise empreinte.
+            log.warning("Empreintes ambiguës (casse) pour %s — ignorées", cle)
+            del lower[cle]
+        self._digests_lower = lower
+
+    def _digest_for(self, url: str | None) -> str:
+        """Empreinte publiée pour cette URL ("" si inconnue)."""
+        if not url:
+            return ""
+        return self._asset_digests.get(url) or self._digests_lower.get(url.lower(), "")
+
+    def expected_hashes(self, version: GameVersion) -> tuple[str | None, list[str]]:
+        """Empreintes à vérifier pour une version : (sha256 simple, sha256 des parts).
+
+        Deux sources possibles, dans cet ordre :
+
+        1. Le **catalogue** (`sha256` / `sha256_parts`) — attestation explicite,
+           seule option pour une archive hébergée ailleurs que sur GitHub.
+        2. Les **empreintes publiées par GitHub**, récupérées sans requête
+           supplémentaire par l'UpdateChecker. Elles évitent d'avoir à recopier
+           64 caractères à la main à chaque release, oubli qui laisserait la
+           vérification dormante.
+
+        Retourne (None, []) si aucune source n'est disponible : la vérification
+        est alors sautée, comme avant — jamais un échec de téléchargement.
+        """
+        if version.download_parts:
+            catalogue = list(version.sha256_parts)
+            if len(catalogue) == len(version.download_parts) and all(catalogue):
+                return None, catalogue
+            depuis_github = [self._digest_for(url) for url in version.download_parts]
+            # Tout ou rien : une liste trouée décalerait les empreintes d'un cran
+            # par rapport aux parts et ferait échouer une archive pourtant saine.
+            if all(depuis_github):
+                return None, depuis_github
+            return None, []
+
+        if version.sha256:
+            attendu = self._digest_for(version.download_url)
+            if attendu and attendu != version.sha256.lower():
+                log.warning(
+                    "Empreinte du catalogue (%s…) différente de celle publiée par "
+                    "GitHub (%s…) pour %s — le catalogue fait foi",
+                    version.sha256[:12], attendu[:12], version.download_url)
+            return version.sha256, []
+
+        return self._digest_for(version.download_url) or None, []
 
     def last_played_game_id(self) -> str | None:
         """Id du jeu joué le plus récemment (None si aucune session enregistrée).

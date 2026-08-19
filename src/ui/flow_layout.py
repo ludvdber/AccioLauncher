@@ -52,8 +52,17 @@ class FlowLayout(QLayout):
         y = rect.y()
         line_height = 0
         for item in self._items:
-            w = item.sizeHint().width()
-            h = item.sizeHint().height()
+            hint = item.sizeHint()
+            widget = item.widget()
+            if widget is not None and (hint.isEmpty() or hint.height() == 0):
+                # QWidgetItem.sizeHint() vaut (0, 0) tant que son widget est
+                # caché — c'est le cas des pastilles de tags pendant le
+                # cross-fade du panneau d'info. Le widget, lui, sait déjà
+                # quelle taille il veut : sans ce repli, heightForWidth()
+                # renvoyait 0 et le conteneur écrasait toutes ses lignes.
+                hint = widget.sizeHint()
+            w = hint.width()
+            h = hint.height()
             if x + w > rect.right() and line_height > 0:
                 x = rect.x()
                 y += line_height + self._spacing

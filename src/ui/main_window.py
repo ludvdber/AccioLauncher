@@ -6,6 +6,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QIcon, QKeyEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -72,8 +73,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Accio Launcher")
-        self.resize(1200, 800)
         self.setMinimumSize(980, 660)
+        self._apply_default_geometry()
         self.setWindowIcon(_load_app_icon())
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -98,6 +99,7 @@ class MainWindow(QMainWindow):
         self._launcher_update_version: str = ""
         self._launcher_update_url: str = ""
         self._launcher_update_asset: str = ""
+        self._launcher_update_sha256: str = ""
         self._launcher_dl: Downloader | None = None  # téléchargement auto-update en cours
         self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
         self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
@@ -183,7 +185,6 @@ class MainWindow(QMainWindow):
         self._btn_settings.raise_()
 
         # Event filter on QApplication for global mouse tracking
-        from PyQt6.QtWidgets import QApplication
         QApplication.instance().installEventFilter(self)
 
         if games:
@@ -311,10 +312,42 @@ class MainWindow(QMainWindow):
             for entry in self.manager.get_games()
         }
 
-    def _start_update_check(self) -> None:
-        """Lance la vérification des mises à jour en arrière-plan."""
-        if not self.config.check_updates:
+    def _apply_default_geometry(self) -> None:
+        """Taille d'ouverture proportionnée à l'écran, fenêtre centrée.
+
+        L'ancienne valeur fixe (1200x800) ne tenait pas sur un portable
+        1366x768, où il ne reste que ~728 px une fois la barre des tâches
+        déduite : la fenêtre débordait par le bas. À l'inverse elle paraissait
+        étriquée sur un grand écran. On prend donc une fraction de la zone
+        disponible, bornée des deux côtés.
+        """
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is None:  # sans écran (tests offscreen) : valeur historique
+            self.resize(1200, 800)
             return
+        avail = screen.availableGeometry()
+        # 62 % et non 72 % : le catalogue tient en huit jaquettes, soit ~900 px.
+        # Plus large, le carrousel flotte au milieu de deux grandes marges vides
+        # et le panneau d'info laisse une moitié droite déserte.
+        width = max(980, min(1320, int(avail.width() * 0.62)))
+        height = max(660, min(880, int(avail.height() * 0.76)))
+        # Jamais plus grand que l'écran, même si les bornes basses l'imposaient.
+        width = min(width, avail.width())
+        height = min(height, avail.height())
+        self.resize(width, height)
+        self.move(avail.x() + (avail.width() - width) // 2,
+                  avail.y() + (avail.height() - height) // 2)
+
+    def _start_update_check(self) -> None:
+        """Lance la vérification des mises à jour en arrière-plan.
+
+        Toujours lancée : sans réseau, ou si GitHub répond mal, chaque étape
+        échoue proprement et le launcher garde ce qu'il a déjà — le catalogue
+        embarqué ou le dernier téléchargé (`load_catalog` prend le plus récent
+        des deux). Il n'y a donc rien à gagner à ne pas essayer, et un réglage
+        « ne pas vérifier » ne faisait que priver l'utilisateur des empreintes
+        SHA-256 qui vérifient ses téléchargements.
+        """
         if self._update_checker is not None:
             # Même traitement qu'à la fermeture : jamais de thread remplacé
             # pendant qu'il tourne encore (il resterait enfant de la fenêtre
@@ -332,7 +365,16 @@ class MainWindow(QMainWindow):
         self._update_checker.launcher_update.connect(self._on_launcher_update)
         self._update_checker.update_counts.connect(self._on_update_counts)
         self._update_checker.download_counts.connect(self._on_download_counts)
+        self._update_checker.asset_digests.connect(self._on_asset_digests)
         self._update_checker.start()
+
+    def _on_asset_digests(self, digests: dict) -> None:
+        """Empreintes SHA-256 publiées par GitHub, pour vérifier les archives.
+
+        Reçues dans la même réponse que les compteurs ⬇ : aucune requête
+        supplémentaire. Voir `GameManager.expected_hashes`.
+        """
+        self.manager.set_asset_digests(digests)
 
     def _on_download_counts(self, counts: dict) -> None:
         """Compteurs ⬇ reçus — rafraîchir la fiche affichée (même id = pas de transition)."""
@@ -358,13 +400,15 @@ class MainWindow(QMainWindow):
             self._toast.show_message(tr("Catalogue mis à jour (v{})").format(catalog.catalog_version))
         log.info("UI rafraîchie après mise à jour du catalogue")
 
-    def _on_launcher_update(self, version: str, url: str, asset_url: str = "") -> None:
+    def _on_launcher_update(self, version: str, url: str, asset_url: str = "",
+                            asset_sha256: str = "") -> None:
         """Nouvelle version du launcher disponible."""
         if self.config.dismissed_launcher_version == version:
             return
         self._launcher_update_version = version
         self._launcher_update_url = url
         self._launcher_update_asset = asset_url
+        self._launcher_update_sha256 = asset_sha256
         self._notif_label.setText(tr("Accio Launcher v{} est disponible !").format(version))
         self._notif_btn.setText(tr("Mettre à jour") if asset_url and can_self_update() else tr("Télécharger"))
         self._notif_bar.show()
@@ -411,8 +455,13 @@ class MainWindow(QMainWindow):
         dest.unlink(missing_ok=True)
         self._notif_btn.setEnabled(False)
         self._notif_label.setText(tr("Téléchargement de la mise à jour…"))
+        # L'empreinte vient de l'API GitHub (cf. UpdateChecker._check_launcher).
+        # Vide → téléchargement non vérifié, comme avant : on ne bloque pas une
+        # mise à jour parce que GitHub n'a pas publié de digest.
         self._launcher_dl = Downloader(
-            url=self._launcher_update_asset, destination=dest, parent=self,
+            url=self._launcher_update_asset, destination=dest,
+            expected_sha256=self._launcher_update_sha256 or None,
+            parent=self,
         )
         self._launcher_dl.progress.connect(self._on_launcher_dl_progress)
         self._launcher_dl.download_finished.connect(self._on_launcher_dl_finished)
@@ -681,6 +730,9 @@ class MainWindow(QMainWindow):
         self._particles.setGeometry(self.centralWidget().geometry())
         self._particles.raise_()
         self._toast.reposition()
+        # Fenêtre basse : le carrousel se compacte pour rendre sa hauteur à la
+        # fiche de jeu, qui devait sinon défiler.
+        self._carousel.set_compact(self.height() < 780)
 
     # ──────────────────── Redimensionnement fenêtre frameless ────────────────────
 

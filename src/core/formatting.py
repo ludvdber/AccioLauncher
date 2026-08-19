@@ -73,6 +73,18 @@ def append_part_info(line: str, current: int, total: int) -> str:
 
 # ─── Stats de jeu ───
 
+def estimate_duration(size_mb: int, speed_bytes_s: float) -> str:
+    """Durée estimée d'un téléchargement, "" si la vitesse est inconnue.
+
+    On ne devine JAMAIS une vitesse par défaut : annoncer « ≈ 3 min » sur une
+    valeur inventée serait pire que de ne rien annoncer. Tant qu'aucun
+    téléchargement n'a eu lieu, le bouton n'affiche que le poids.
+    """
+    if size_mb <= 0 or speed_bytes_s <= 0:
+        return ""
+    return format_eta((size_mb * 1024 * 1024) / speed_bytes_s)
+
+
 def format_playtime(seconds: int) -> str:
     """Formate un temps de jeu cumulé : « 45 min de jeu », « 14 h de jeu »…
 
