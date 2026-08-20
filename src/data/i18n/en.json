@@ -226,6 +226,10 @@
     "Initialisation": "Initializing",
     "Chargement des ressources": "Loading resources",
     "Préparation de la bibliothèque": "Preparing your library",
-    "Ouverture de la fenêtre": "Opening the window"
+    "Ouverture de la fenêtre": "Opening the window",
+    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne sont pas touchés.": "The update is downloaded and installed automatically, then the launcher restarts. Your games and saves are left untouched.",
+    "La page de téléchargement va s'ouvrir dans votre navigateur.": "The download page will open in your browser.",
+    "Mettre à jour maintenant": "Update now",
+    "Plus tard": "Later"
   }
 }

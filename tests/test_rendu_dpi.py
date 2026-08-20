@@ -42,9 +42,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 import src.ui.main_window as mw
 mw.MainWindow._start_update_check = lambda self: None
-import src.ui.single_instance as si
-si.SingleInstance.try_acquire = lambda self: True
-
 app = QApplication(sys.argv[:1])
 w = mw.MainWindow()
 w.resize(1270, 844)

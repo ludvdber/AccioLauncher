@@ -226,6 +226,10 @@
     "Initialisation": "Inicializando",
     "Chargement des ressources": "Cargando recursos",
     "Préparation de la bibliothèque": "Preparando la biblioteca",
-    "Ouverture de la fenêtre": "Abriendo la ventana"
+    "Ouverture de la fenêtre": "Abriendo la ventana",
+    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne sont pas touchés.": "La actualización se descarga e instala automáticamente y el launcher se reinicia. Tus juegos y partidas guardadas no se ven afectados.",
+    "La page de téléchargement va s'ouvrir dans votre navigateur.": "La página de descarga se abrirá en tu navegador.",
+    "Mettre à jour maintenant": "Actualizar ahora",
+    "Plus tard": "Más tarde"
   }
 }

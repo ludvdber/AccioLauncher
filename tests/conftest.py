@@ -10,7 +10,18 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
-import pytest
+# Charger les modules d'extension Qt MAINTENANT, à la collecte, alors qu'il
+# n'existe encore aucun objet Qt ni QApplication.
+#
+# `QtNetwork` n'était importé que tardivement, à l'intérieur d'un test ou d'un
+# fixture. Créer un module d'extension C au milieu d'une session — donc pendant
+# que le ramasse-miettes peut passer sur des objets Qt vivants — a provoqué un
+# « Windows fatal exception: access violation » pendant un build, dans
+# `enum.py` au moment de la création du module. Le plantage est ALÉATOIRE :
+# il dépend du moment où le GC se déclenche, et il fait échouer un build au
+# hasard. Importer tôt supprime la fenêtre de tir.
+from PyQt6 import QtNetwork  # noqa: F401,E402
+import pytest  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

@@ -5,6 +5,23 @@ import logging
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject
 from PyQt6.QtWidgets import QWidget
 
+# Import AU CHARGEMENT DU MODULE, pas au premier trailer.
+#
+# Le try/except est là pour dégrader proprement si PyQt6-Multimedia manque —
+# ce comportement est conservé à l'identique, `play()` renvoie toujours False.
+# Ce qui change, c'est le MOMENT : créer un module d'extension Qt en pleine
+# session, alors que le ramasse-miettes peut passer sur des objets Qt vivants,
+# provoque un « access violation » aléatoire (constaté sur QtNetwork pendant un
+# build, voir tests/conftest.py). Ici la création se faisait au premier
+# démarrage de vidéo, donc chez l'utilisateur, fenêtre pleine.
+# Coût mesuré : +6 ms au démarrage, sur ~2 000. Rien à arbitrer.
+try:
+    from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoSink
+    MULTIMEDIA_DISPONIBLE = True
+except ImportError:                                   # pragma: no cover
+    QAudioOutput = QMediaPlayer = QVideoSink = None   # type: ignore[assignment]
+    MULTIMEDIA_DISPONIBLE = False
+
 log = logging.getLogger(__name__)
 
 
@@ -52,9 +69,7 @@ class VideoPlayer(QObject):
     def play(self, video_path: str, *, muted: bool = False, volume: float = 0.25) -> bool:
         """Lance la lecture d'une vidéo. Retourne False si Multimedia non disponible."""
         self.stop()
-        try:
-            from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
-        except ImportError:
+        if not MULTIMEDIA_DISPONIBLE:
             log.debug("PyQt6-Multimedia non disponible")
             return False
 
@@ -122,7 +137,6 @@ class VideoPlayer(QObject):
                 self.video_frame.emit(image)
 
     def _on_media_status(self, status) -> None:
-        from PyQt6.QtMultimedia import QMediaPlayer
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             self.stop()
             self.playback_ended.emit()

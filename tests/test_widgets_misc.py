@@ -7,6 +7,9 @@ pytest.importorskip("pytestqt")
 from PyQt6.QtCore import Qt  # noqa: E402
 
 from src.ui.clickable_label import ClickableLabel  # noqa: E402
+# Importé ICI et pas dans le test : voir tests/conftest.py — créer un module
+# d'extension Qt en pleine session est une source de plantage aléatoire.
+from src.ui.single_instance import SingleInstance  # noqa: E402
 from src.ui.ticker import Ticker  # noqa: E402
 from src.ui.toast import Toast  # noqa: E402
 
@@ -57,8 +60,6 @@ class TestToast:
 class TestSingleInstance:
     def test_second_instance_activates_first(self, qtbot):
         import uuid
-
-        from src.ui.single_instance import SingleInstance
 
         key = f"accio-test-{uuid.uuid4().hex}"
         first = SingleInstance(key)

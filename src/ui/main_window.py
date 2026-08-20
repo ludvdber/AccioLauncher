@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QStatusBar,
     QVBoxLayout,
@@ -20,6 +21,7 @@ from src.core.config import ASSETS_DIR, Config
 from src.core.discord_presence import DiscordPresence
 from src.core.downloader import Downloader
 from src.core.game_manager import GameManager, GameState
+from src.core.formatting import format_progress_line
 from src.core.i18n import tr
 from src.core.self_update import apply_update_and_restart, can_self_update
 from src.core.updater import UpdateChecker
@@ -31,6 +33,7 @@ from src.ui.game_detail import GameDetailView
 from src.ui.particles import ParticleOverlay
 from src.ui.process_monitor import ProcessMonitor
 from src.ui.season import resolve as resolve_season
+from src.ui.speed_tracker import SpeedTracker
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
@@ -117,6 +120,8 @@ class MainWindow(QMainWindow):
         self._launcher_update_asset: str = ""
         self._launcher_update_sha256: str = ""
         self._launcher_dl: Downloader | None = None  # téléchargement auto-update en cours
+        self._launcher_speed = SpeedTracker()        # vitesse + temps restant
+        self._launcher_update_asked = False          # dialogue posé une fois par session
         self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
         self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
         # Session de jeu en cours (stats de temps de jeu)
@@ -462,7 +467,49 @@ class MainWindow(QMainWindow):
         self._notif_label.setText(tr("Accio Launcher v{} est disponible !").format(version))
         self._notif_btn.setText(tr("Mettre à jour") if asset_url and can_self_update() else tr("Télécharger"))
         self._notif_bar.show()
-        QTimer.singleShot(30_000, self._auto_hide_notif)
+        # Le bandeau ne s'efface PLUS tout seul. Il disparaissait au bout de
+        # 30 s : le temps de le lire et d'aller cliquer, il n'était plus là, et
+        # rien ne rappelait qu'une mise à jour attendait. Il reste maintenant
+        # jusqu'à ce que l'utilisateur tranche — mettre à jour, ou fermer.
+        self._position_settings()
+        self._propose_launcher_update()
+
+    def _propose_launcher_update(self) -> None:
+        """Demande franchement s'il faut mettre à jour, une fois par session.
+
+        Un bandeau discret en haut de fenêtre se rate : c'est une bande de
+        35 px qu'on survole sans lire. Une mise à jour du launcher est une
+        vraie question — donc un vrai dialogue, conformément à la règle du
+        projet (les modaux sont pour les QUESTIONS, les toasts pour ce qui
+        n'attend rien).
+
+        Une seule fois par session : si l'utilisateur répond « Plus tard », le
+        bandeau reste comme rappel permanent et on ne le relance pas. La croix
+        du bandeau, elle, écarte la version pour de bon.
+        """
+        if self._launcher_update_asked or self._detail.ops.is_busy:
+            return
+        self._launcher_update_asked = True
+
+        boite = QMessageBox(self)
+        boite.setWindowTitle(tr("Mise à jour disponible"))
+        boite.setIcon(QMessageBox.Icon.NoIcon)
+        boite.setText(tr("Accio Launcher v{} est disponible !").format(
+            self._launcher_update_version))
+        auto = bool(self._launcher_update_asset) and can_self_update()
+        boite.setInformativeText(
+            tr("La mise à jour est téléchargée et installée automatiquement ; "
+               "le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne "
+               "sont pas touchés.")
+            if auto else
+            tr("La page de téléchargement va s'ouvrir dans votre navigateur."))
+        maintenant = boite.addButton(tr("Mettre à jour maintenant"),
+                                     QMessageBox.ButtonRole.AcceptRole)
+        boite.addButton(tr("Plus tard"), QMessageBox.ButtonRole.RejectRole)
+        boite.setDefaultButton(maintenant)
+        boite.exec()
+        if boite.clickedButton() is maintenant:
+            self._on_notif_download()
 
     def _on_update_counts(self, count: int) -> None:
         """Message ambiant de la status bar : mises à jour, hors ligne, ou « Prêt »."""
@@ -509,6 +556,7 @@ class MainWindow(QMainWindow):
         dest = self.config.cache_path / f"AccioLauncher_v{self._launcher_update_version}.exe"
         dest.unlink(missing_ok=True)
         self._notif_btn.setEnabled(False)
+        self._launcher_speed.reset()
         self._notif_label.setText(tr("Téléchargement de la mise à jour…"))
         # L'empreinte vient de l'API GitHub (cf. UpdateChecker._check_launcher).
         # Vide → téléchargement non vérifié, comme avant : on ne bloque pas une
@@ -524,10 +572,20 @@ class MainWindow(QMainWindow):
         self._launcher_dl.start()
 
     def _on_launcher_dl_progress(self, downloaded: int, total: int) -> None:
-        if total > 0:
-            self._notif_label.setText(
-                tr("Téléchargement de la mise à jour… {}%").format(downloaded * 100 // total)
-            )
+        """Pourcentage, volume, VITESSE et temps restant — même ligne que les jeux.
+
+        Un simple pourcentage ne dit pas si le téléchargement avance ou s'il est
+        bloqué. `format_progress_line` est la source unique de cette ligne dans
+        tout le projet ; la réécrire ici la ferait diverger.
+        """
+        if total <= 0:
+            return
+        self._launcher_speed.update(downloaded)
+        if not self._launcher_speed.should_update_ui() and downloaded < total:
+            return
+        ligne = format_progress_line(downloaded, total, self._launcher_speed.speed,
+                                     self._launcher_speed.eta(downloaded, total))
+        self._notif_label.setText(f"{tr('Téléchargement de la mise à jour…')} {ligne}")
 
     def _on_launcher_dl_finished(self, path_str: str) -> None:
         self._launcher_dl = None
@@ -552,13 +610,10 @@ class MainWindow(QMainWindow):
     def _dismiss_notif(self) -> None:
         """Ferme la notification et sauvegarde la version ignorée."""
         self._notif_bar.hide()
+        self._position_settings()
         if self._launcher_update_version:
             self.config.dismissed_launcher_version = self._launcher_update_version
             self.config.save()
-
-    def _auto_hide_notif(self) -> None:
-        if self._notif_bar.isVisible():
-            self._notif_bar.hide()
 
     def _minimize_to_tray(self) -> None:
         """Cache la fenêtre dans le system tray et pause tous les effets."""
@@ -782,10 +837,21 @@ class MainWindow(QMainWindow):
 
     # ──────────────────── Événements ────────────────────
 
+    def _position_settings(self) -> None:
+        """Pose le bouton ⚙ SOUS le bandeau de notification quand il est là.
+
+        Le bouton est un enfant direct de la fenêtre, posé en absolu à y = 42 ;
+        le bandeau, lui, vit dans le layout et occupe y = 38 → 73. Ils se
+        recouvraient exactement, et comme le ⚙ est remonté au premier plan, il
+        masquait la croix de fermeture du bandeau — invisible et incliquable.
+        """
+        decalage = self._notif_bar.height() if self._notif_bar.isVisible() else 0
+        self._btn_settings.move(self.width() - 52, 42 + decalage)
+        self._btn_settings.raise_()
+
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._btn_settings.move(self.width() - 52, 42)
-        self._btn_settings.raise_()
+        self._position_settings()
         self._particles.setGeometry(self.centralWidget().geometry())
         self._particles.raise_()
         self._toast.reposition()
