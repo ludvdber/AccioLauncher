@@ -340,8 +340,8 @@ class SettingsDialog(QDialog):
         for value, label in (
             ("auto", tr("Automatique (selon la date)")),
             ("aucune", tr("Aucune")),
-            ("halloween", tr("Halloween 🎃")),
-            ("noel", tr("Noël ❄")),
+            ("halloween", tr("Halloween")),
+            ("noel", tr("Noël")),
         ):
             self._season_combo.addItem(label, value)
         season_ids = ["auto", "aucune", "halloween", "noel"]

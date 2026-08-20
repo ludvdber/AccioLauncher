@@ -17,6 +17,7 @@ from src.core.formatting import format_size
 from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
 from src.core.game_manager import GameState
+from src.core.system_checks import VCREDIST_URL, needed_space_mb
 from src.ui.utils import open_url
 from src.ui.versions_dialog import VersionsDialog
 
@@ -25,8 +26,6 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-_VC_REDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
-
 
 def on_download(view: "GameDetailView", version: GameVersion | None = None) -> None:
     if view.game is None:
@@ -34,10 +33,11 @@ def on_download(view: "GameDetailView", version: GameVersion | None = None) -> N
     if view._ops.is_busy:
         active = view._ops.active_game
         if active and active.id != view.game.id:
-            QMessageBox.information(
-                view, tr("Téléchargement déjà en cours"),
-                tr("Un téléchargement est déjà en cours pour {}.\n\nVeuillez attendre la fin avant d'en lancer un autre.").format(active.name),
-            )
+            # Toast et non dialogue : il n'y a aucune décision à prendre, et la
+            # barre de téléchargement en bas montre déjà ce qui occupe le poste.
+            view.notify.emit(
+                tr("Téléchargement déjà en cours pour {} — un seul à la fois.")
+                .format(active.name))
         else:
             view.status_message.emit(tr("Téléchargement déjà en cours pour ce jeu."))
         return
@@ -54,13 +54,14 @@ def on_download(view: "GameDetailView", version: GameVersion | None = None) -> N
             .format(view.game.name)
         )
         return
+    # Re-vérification au clic : le bandeau d'avertissement du panneau d'actions
+    # a pu être calculé il y a plusieurs minutes, et de la place a pu être
+    # libérée entre-temps. C'est ce test-ci qui fait foi.
     free_mb = view._ops.check_disk_space(ver)
     if free_mb is not None:
-        QMessageBox.warning(
-            view, tr("Espace disque insuffisant"),
-            tr("Il faut environ {} d'espace libre.\nActuellement {} disponibles.").format(
-                format_size(ver.size_mb * 2), format_size(free_mb)),
-        )
+        view.notify.emit(
+            tr("Espace insuffisant : {} libres, il en faut environ {}.").format(
+                format_size(free_mb), format_size(needed_space_mb(ver.size_mb))))
         return
     view._ops.download(view.game, ver)
     view._refresh()
@@ -86,7 +87,7 @@ def on_play(view: "GameDetailView") -> None:
                 QMessageBox.StandardButton.Yes,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                open_url(_VC_REDIST_URL)
+                open_url(VCREDIST_URL)
         else:
             log.error("Erreur au lancement : %s", exc)
             view.status_message.emit(tr("Impossible de lancer le jeu."))
@@ -118,10 +119,8 @@ def on_uninstall(view: "GameDetailView") -> None:
     view._refresh()
     view.state_changed.emit()
     if has_config:
-        QMessageBox.information(
-            view, tr("Sauvegardes conservées"),
-            tr("Les sauvegardes et la configuration dans Mes Documents ont été conservées."),
-        )
+        view.notify.emit(
+            tr("Les sauvegardes et la configuration dans Mes Documents ont été conservées."))
     view.status_message.emit(tr("{} désinstallé.").format(view.game.name))
 
 

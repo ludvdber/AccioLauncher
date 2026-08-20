@@ -101,6 +101,7 @@ class UpdateChecker(QThread):
     update_counts = pyqtSignal(int)             # nombre de jeux avec mise à jour dispo
     download_counts = pyqtSignal(object)        # dict game_id → téléchargements GitHub cumulés
     asset_digests = pyqtSignal(object)          # dict url_asset → sha256 hex (publié par GitHub)
+    network_status = pyqtSignal(bool)           # False = aucun serveur joignable (hors ligne)
 
     def __init__(self, catalog_url: str, current_catalog_version: str,
                  installed_versions: dict[str, str],
@@ -111,6 +112,12 @@ class UpdateChecker(QThread):
         self._current_version = current_catalog_version
         self._installed_versions = dict(installed_versions)  # snapshot thread-safe
         self._games_asset_urls = games_asset_urls or {}      # snapshot (compteur ⬇)
+        # Diagnostic réseau. `_contact` passe à True dès qu'un serveur RÉPOND,
+        # même par une erreur HTTP : un 403 (rate limit) ou un 404 prouvent que
+        # la connexion fonctionne. Seules les erreurs de transport (DNS, connexion
+        # refusée, timeout) comptent comme « injoignable ».
+        self._contact = False
+        self._transport_errors = 0
 
     def run(self) -> None:
         """Trois étapes réseau séquentielles, interruptibles entre chacune.
@@ -121,6 +128,8 @@ class UpdateChecker(QThread):
         une dizaine (1 requête en vol) — la fenêtre pendant laquelle une
         fermeture de fenêtre peut détruire un thread encore actif.
         """
+        self._contact = False
+        self._transport_errors = 0
         self._check_catalog()
         if self.isInterruptionRequested():
             log.info("Vérification des mises à jour interrompue (après catalogue)")
@@ -130,6 +139,27 @@ class UpdateChecker(QThread):
             log.info("Vérification des mises à jour interrompue (après launcher)")
             return
         self._check_download_counts()
+        self.network_status.emit(self.is_online)
+
+    @property
+    def is_online(self) -> bool:
+        """False seulement si AUCUN serveur n'a répondu ET qu'au moins une
+        tentative a échoué au transport.
+
+        Deux garde-fous volontaires : sans tentative du tout (aucune URL à
+        vérifier), on ne déclare pas l'utilisateur hors ligne ; et une seule
+        réponse, fût-elle une erreur HTTP, suffit à prouver qu'il est en ligne.
+        Un faux « hors ligne » désactiverait le bouton de téléchargement d'un
+        utilisateur parfaitement connecté — c'est le seul échec inacceptable ici.
+        """
+        return self._contact or self._transport_errors == 0
+
+    def _note_transport_error(self, exc: Exception) -> None:
+        """Distingue « serveur injoignable » de « serveur qui répond mal »."""
+        import httpx  # import différé (thread) — voir en-tête de module
+
+        if isinstance(exc, httpx.TransportError):
+            self._transport_errors += 1
 
     def _check_download_counts(self) -> None:
         """Lit les releases du repo des jeux : compteurs ⬇ ET empreintes SHA-256.
@@ -143,6 +173,7 @@ class UpdateChecker(QThread):
         try:
             with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
                 resp = client.get(_releases_api_from_catalog_url(self._catalog_url))
+                self._contact = True
                 if resp.status_code == 403:
                     log.warning("GitHub API rate limit atteint (compteurs ⬇)")
                     return
@@ -161,6 +192,7 @@ class UpdateChecker(QThread):
                 log.info("Empreintes SHA-256 récupérées pour %d asset(s)", len(digests))
                 self.asset_digests.emit(digests)
         except (httpx.HTTPError, json.JSONDecodeError, ValueError) as exc:
+            self._note_transport_error(exc)
             log.warning("Impossible de récupérer les compteurs de téléchargement : %s", exc)
 
     def _check_catalog(self) -> None:
@@ -172,6 +204,7 @@ class UpdateChecker(QThread):
         try:
             with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
                 resp = client.get(self._catalog_url)
+                self._contact = True
                 resp.raise_for_status()
                 raw = resp.json()
 
@@ -206,6 +239,7 @@ class UpdateChecker(QThread):
                 log.info("Catalogue à jour (v%s)", self._current_version)
 
         except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError) as exc:
+            self._note_transport_error(exc)
             log.warning("Impossible de vérifier le catalogue distant : %s", exc)
 
     def _check_launcher(self) -> None:
@@ -215,6 +249,7 @@ class UpdateChecker(QThread):
         try:
             with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
                 resp = client.get(_LAUNCHER_API)
+                self._contact = True
                 if resp.status_code == 403:
                     log.warning("GitHub API rate limit atteint")
                     return
@@ -250,4 +285,5 @@ class UpdateChecker(QThread):
                 log.info("Launcher à jour (v%s)", APP_VERSION)
 
         except (httpx.HTTPError, json.JSONDecodeError, ValueError) as exc:
+            self._note_transport_error(exc)
             log.warning("Impossible de vérifier la version du launcher : %s", exc)

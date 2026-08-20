@@ -275,6 +275,19 @@ class GameManager:
         """Date ISO de la dernière session, ou None."""
         return self.config.last_played.get(game_id)
 
+    def free_space_mb(self) -> int | None:
+        """Mo libres sur le disque du dossier d'installation, None si illisible.
+
+        None signifie « je ne sais pas » et doit toujours désactiver la
+        vérification plutôt que la faire échouer : un disque non interrogeable
+        (chemin absent, lecteur réseau déconnecté) ne prouve pas qu'il manque
+        de la place.
+        """
+        try:
+            return int(shutil.disk_usage(self.config.install_path).free // (1024 * 1024))
+        except OSError:
+            return None
+
     def set_download_counts(self, counts: dict[str, int]) -> None:
         """Reçoit les compteurs ⬇ agrégés par l'UpdateChecker (thread principal)."""
         self._download_counts = dict(counts)

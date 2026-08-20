@@ -4,9 +4,9 @@
 
 ### Le launcher magique pour les jeux Harry Potter PC
 
-[![Version](https://img.shields.io/badge/version-1.0.0-d4a017?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
+[![Version](https://img.shields.io/badge/version-0.5.2-d4a017?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=0d0d1a)](https://python.org)
-[![PyQt6](https://img.shields.io/badge/PyQt6-6.10-41cd52?style=for-the-badge&labelColor=0d0d1a)](https://pypi.org/project/PyQt6/)
+[![PyQt6](https://img.shields.io/badge/PyQt6-6.11-41cd52?style=for-the-badge&labelColor=0d0d1a)](https://pypi.org/project/PyQt6/)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d4?style=for-the-badge&logo=windows11&logoColor=white&labelColor=0d0d1a)](https://microsoft.com)
 [![License](https://img.shields.io/badge/License-MIT-e74c3c?style=for-the-badge&labelColor=0d0d1a)](LICENSE)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ludvdber/AccioLauncher/tests.yml?branch=main&style=for-the-badge&label=tests&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/actions/workflows/tests.yml)
@@ -29,30 +29,39 @@
 
 | | |
 |---|---|
-| 🎮 **6 jeux Harry Potter PC** | De l'École des Sorciers (2001) au Prince de Sang-Mêlé (2009) |
-| ⬇️ **Téléchargement en un clic** | Téléchargement, extraction 7z et installation automatiques |
+| 🎮 **8 jeux au catalogue** | De l'École des Sorciers (2001) aux Reliques de la Mort (2011) — 6 jouables, 2 en préparation |
+| ⬇️ **Téléchargement en un clic** | Reprise après coupure, archives multi-volumes, extraction et installation automatiques |
+| 🔒 **Archives vérifiées** | Empreinte SHA-256 contrôlée pendant le téléchargement, sans attente supplémentaire |
 | 🎨 **UI immersive style AAA** | Particules magiques, parallaxe, transitions cinématiques, glow doré |
+| 🏰 **5 thèmes de maison** | Poudlard (or), Gryffondor, Serpentard, Serdaigle, Poufsouffle |
+| 🍂 **Ambiances saisonnières** | Braises d'Halloween en octobre, flocons de Noël en décembre |
 | 📺 **Trailers vidéo** | Vidéos de présentation en arrière-plan avec contrôle du volume |
-| 🔄 **Versioning et changelog** | Suivi des versions avec historique détaillé des changements |
-| 📥 **System tray intelligent** | Se minimise pendant le jeu, se restaure automatiquement |
-| ⚙️ **Paramètres intégrés** | Dossier d'installation, gestion de l'espace disque, préférences |
+| 🔄 **Versioning et changelog** | Historique détaillé, mise à jour et retour à une version antérieure |
+| 🔧 **Vérifier / réparer** | Réinstalle par-dessus une installation abîmée, sans tout recommencer |
+| 📥 **System tray intelligent** | Se minimise pendant le jeu, se restaure automatiquement à la sortie |
+| ⏱️ **Temps de jeu** | Suivi discret des sessions et de la dernière partie |
+| ♻️ **Mise à jour automatique** | Le launcher se met à jour lui-même, en un clic et sans réinstallation |
 | 🌍 **Multilingue** | Français, anglais, espagnol — noms, descriptions et changelogs des jeux compris |
-| 🛡️ **Code audité** | HTTPS only, anti path-traversal, Zip Slip prevention, thread safety |
+| 🛡️ **Code audité** | HTTPS strict, anti path-traversal, protection Zip Slip, thread safety |
 
 ---
 
 ## 🎮 Jeux supportés
 
-| # | Jeu | Année | Développeur | Taille |
-|:-:|-----|:-----:|:-----------:|:------:|
-| I | Harry Potter à l'École des Sorciers | 2001 | KnowWonder | ~1.2 Go |
-| II | Harry Potter et la Chambre des Secrets | 2002 | KnowWonder | ~2.5 Go |
-| III | Harry Potter et le Prisonnier d'Azkaban | 2004 | KnowWonder | ~2.8 Go |
-| IV | Harry Potter et la Coupe de Feu | 2005 | EA UK | ~3.5 Go |
-| V | Harry Potter et l'Ordre du Phénix | 2007 | EA UK | ~4.2 Go |
-| VI | Harry Potter et le Prince de Sang-Mêlé | 2009 | EA UK | ~4.5 Go |
+| # | Jeu | Année | Développeur | Archive | État |
+|:-:|-----|:-----:|:-----------:|:-------:|:----:|
+| I | Harry Potter à l'École des Sorciers | 2001 | KnowWonder | 431 Mo | ✅ Disponible |
+| II | Harry Potter et la Chambre des Secrets | 2002 | KnowWonder | 463 Mo | ✅ Disponible |
+| III | Harry Potter et le Prisonnier d'Azkaban | 2004 | KnowWonder | 775 Mo | ✅ Disponible |
+| IV | Harry Potter et la Coupe de Feu | 2005 | EA UK | 1,7 Go | ✅ Disponible |
+| V | Harry Potter et l'Ordre du Phénix | 2007 | EA UK | 4,6 Go | ✅ Disponible |
+| VI | Harry Potter et le Prince de Sang-Mêlé | 2009 | EA UK | 4,4 Go | ✅ Disponible |
+| VII | Harry Potter et les Reliques de la Mort — Partie 1 | 2010 | EA Bright Light | ~5 Go | 🔜 En préparation |
+| VIII | Harry Potter et les Reliques de la Mort — Partie 2 | 2011 | EA Bright Light | ~5,5 Go | 🔜 En préparation |
 
-> *Harry Potter et les Reliques de la Mort (Parties I & II) et Coupe du Monde de Quidditch arrivent dans une future mise à jour.*
+> **Archive** désigne la taille du téléchargement. Prévoyez le double d'espace libre
+> pendant l'installation : l'archive et les fichiers extraits cohabitent jusqu'au
+> nettoyage final. Le launcher vous prévient si la place manque, avant le clic.
 
 ---
 
@@ -62,7 +71,7 @@
 
 1. Téléchargez **AccioLauncher.exe** depuis les [Releases](https://github.com/ludvdber/AccioLauncher/releases)
 2. Lancez l'exécutable
-3. Choisissez votre dossier d'installation
+3. L'assistant vous demande votre langue, votre dossier d'installation, et détecte les jeux que vous possédez déjà
 4. Sélectionnez un jeu et cliquez sur **Télécharger** ⚡
 
 ### 🛡️ « Windows a protégé votre ordinateur »
@@ -97,7 +106,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> **Prérequis :** Python 3.12+, Windows 10/11
+> **Prérequis :** Python 3.12+, Windows 10/11.
+> Le plancher n'est pas décoratif : le code utilise `enum.StrEnum`, apparu en 3.11.
 
 <details>
 <summary><b>📦 Builder l'exécutable</b></summary>
@@ -107,6 +117,26 @@ pip install -r requirements-dev.txt
 build.bat
 # → dist/AccioLauncher.exe
 ```
+
+`build.bat` détecte Python 3.14, puis 3.13, puis 3.12, et enchaîne quatre étapes :
+génération de l'icône → lint → tests → PyInstaller. **Il s'arrête à la première
+qui échoue** : un exécutable publié avec une régression coûte bien plus cher que
+les vingt secondes de vérification.
+
+</details>
+
+<details>
+<summary><b>🧪 Lancer les tests et le lint</b></summary>
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest          # 430 tests, sans écran (offscreen)
+python -m ruff check .
+```
+
+Le jeu de règles ruff est **figé dans `pyproject.toml`**. Sans ça, « le projet est
+propre » dépendrait du défaut de la version de ruff installée — le passage de 0.15
+à 0.16 a fait apparaître 119 signalements sans qu'une seule ligne de code change.
 
 </details>
 
@@ -138,22 +168,34 @@ build.bat
 | Composant | Technologie |
 |-----------|------------|
 | **Langage** | Python 3.12+ avec type hints modernes |
-| **Interface** | PyQt6 — widgets custom, QPainter, QPropertyAnimation |
-| **Téléchargement** | httpx — streaming HTTPS avec suivi de progression |
+| **Interface** | PyQt6 6.11 — widgets custom, QPainter, QPropertyAnimation |
+| **Téléchargement** | httpx — streaming HTTPS avec reprise et suivi de progression |
 | **Extraction** | 7z.exe bundlé — archives 7z (multi-volumes incl.) et zip |
 | **Effets visuels** | Particules, parallaxe, glow, transitions — tout en QPainter natif |
 | **Architecture** | Séparation `core/` (logique métier) et `ui/` (interface) |
+| **Qualité** | ruff + 430 tests pytest, exécutés en CI à chaque push |
 | **Packaging** | PyInstaller — exécutable unique Windows |
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] **V1** — Launcher + carrousel + téléchargement + system tray + versioning
-- [ ] **V2** — Configuration graphique intégrée (DGVoodoo, résolution, compatibilité)
-- [ ] **V3** — Patches et corrections de bugs spécifiques aux jeux
-- [ ] **V4** — Support Linux (Wine / Proton)
-- [x] **V5** — Internationalisation FR / EN / ES ([contribuez une langue !](TRANSLATORS.md))
+Le numéro de version suit le catalogue : `0.0.x` correctif · `0.x.0` nouveau jeu ·
+`x.0.0` catalogue complet.
+
+- [x] **Socle** — carrousel, téléchargement repris, extraction, versioning, system tray
+- [x] **Confiance** — vérification SHA-256, réparation d'installation, rapport de crash en un clic, mise à jour automatique du launcher
+- [x] **Confort** — thèmes de maison, ambiances saisonnières, temps de jeu, assistant de premier lancement
+- [x] **Internationalisation** — FR / EN / ES, catalogue traduit compris ([contribuez une langue !](TRANSLATORS.md))
+- [ ] **0.6 → 0.7** — Reliques de la Mort, parties 1 et 2 : les deux derniers jeux
+- [ ] **1.0** — catalogue complet, les 8 jeux en ligne
+- [ ] **Après 1.0** — support Linux : launcher natif, puis lancement des jeux via Wine / Proton
+- [ ] **Ensuite** — configuration graphique intégrée (résolution, wrapper D3D, compatibilité)
+
+> Le support Linux vient **après** le dernier jeu, délibérément : finir le catalogue
+> profite à tout le monde tout de suite, alors qu'un portage à moitié fait ne profite
+> à personne. Le code est déjà écrit dans cette perspective — tout appel spécifique à
+> Windows est isolé derrière un test de plateforme avec un repli.
 
 ---
 
@@ -208,7 +250,7 @@ licences respectives sont détaillés dans
 
 ## ⚖️ Avertissement légal
 
-Accio Launcher est un outil de gestion et de lancement de jeux. **Aucun fichier de jeu n'est inclus dans le launcher.** 
+Accio Launcher est un outil de gestion et de lancement de jeux. **Aucun fichier de jeu n'est inclus dans le launcher.**
 
 L'utilisation de ce logiciel implique que vous possédez une copie légale des jeux que vous installez via le launcher. Il est de votre entière responsabilité de vous assurer que vous disposez des droits nécessaires pour utiliser ces jeux dans votre juridiction.
 
@@ -235,12 +277,26 @@ Fait avec 🪄 et beaucoup de ☕
 
 ### Accio Launcher
 
-A magical desktop launcher for Harry Potter PC games (2001–2009). Features one-click download & install, immersive AAA-style UI with particles, parallax and cinematic transitions, video backgrounds, version tracking with changelog, smart system tray minimization during gameplay, and security-audited code.
+A magical desktop launcher for the Harry Potter PC games (2001–2011). Eight games
+in the catalogue, six playable today. One-click download and install with resume
+and SHA-256 verification, an immersive AAA-style UI with particles, parallax and
+cinematic transitions, video backgrounds, five Hogwarts house themes, seasonal
+effects, version tracking with changelog and rollback, playtime stats, smart
+system tray minimisation during gameplay, one-click launcher self-update, and
+security-audited code.
 
-**Quick start:** Download `AccioLauncher.exe` from [Releases](https://github.com/ludvdber/AccioLauncher/releases), run it, pick your install folder, and you're ready to play.
+**Quick start:** download `AccioLauncher.exe` from
+[Releases](https://github.com/ludvdber/AccioLauncher/releases), run it, follow the
+first-run wizard (language, install folder, detection of games you already own),
+then pick a game and hit Download.
 
 **Dev setup:** `git clone` → `pip install -r requirements.txt` → `python main.py`
 
-Built with Python 3.12+, PyQt6 and httpx (7z.exe bundled). Windows 10/11 only (Linux support planned).
+Built with Python 3.12+, PyQt6 6.11 and httpx (7z.exe bundled). Windows 10/11 for
+now — **Linux support is planned once the final game ships**, and every
+Windows-specific call is already isolated behind a platform check with a fallback.
+
+**Translators welcome:** adding a language means dropping one JSON file in
+`src/data/i18n/` — no Python involved. See [TRANSLATORS.md](TRANSLATORS.md).
 
 </details>

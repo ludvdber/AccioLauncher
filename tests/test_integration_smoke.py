@@ -174,7 +174,28 @@ class TestDownloadCounts:
         win = make_window()
         win._on_download_counts({_IDS[0]: 1})
         meta = win._detail._info._meta
-        assert "1 téléchargement<" in meta.text() or meta.text().endswith("1 téléchargement</span>")
+        # Espace INSÉCABLE : « 16 » ne doit jamais rester seul en fin de ligne
+        # avec « téléchargements » renvoyé au-dessous (retour Ludo).
+        assert "1\u00a0téléchargement</span>" in meta.text()
+
+    def test_aucun_segment_ne_peut_se_couper(self, make_window):
+        """La ligne méta se replie au séparateur ◆, JAMAIS au milieu d'une info.
+
+        Le repli se produit sur les espaces ordinaires : il ne doit donc en
+        rester aucun dans le texte affiché, hors ceux qui entourent le ◆.
+        """
+        import re as _re
+        win = make_window()
+        win._on_download_counts({e.game.id: 4321 for e in win.manager.get_games()})
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            html = win._detail._info._meta.text()
+            # Retirer les balises (leurs attributs contiennent des espaces
+            # légitimes) puis les espaces autour du séparateur.
+            texte = _re.sub(r"<[^>]+>", "", html)
+            texte = texte.replace(" ◆ ", "◆")
+            assert " " not in texte, (
+                f"{entry.game.id} : espace sécable dans « {texte} »")
 
     def test_no_counter_when_unknown(self, make_window):
         win = make_window()
@@ -588,3 +609,397 @@ class TestDescriptionEntreJeux:
             assert info._btn_expand.isVisible() == tronque, (
                 f"{entry.game.id} : bouton={info._btn_expand.isVisible()} "
                 f"alors que tronqué={tronque}")
+
+
+class TestHorsLigneBoutEnBout:
+    """Le launcher était MUET hors ligne : rien ne bougeait, et « Télécharger »
+    échouait quelques secondes plus tard sur une erreur réseau générique."""
+
+    def test_message_ambiant_et_bouton_grise(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win._on_network_status(False)
+        qtbot.wait(20)
+        assert "Hors ligne" in win._status_bar.currentMessage()
+        assert "jouables" in win._status_bar.currentMessage(), (
+            "le message doit rassurer sur ce qui MARCHE encore")
+
+    def test_une_re_tentative_est_programmee(self, make_window):
+        """Sans elle, rebrancher son câble laisserait l'UI grisée jusqu'au
+        prochain démarrage — le launcher aurait l'air en panne."""
+        win = make_window()
+        win._on_network_status(False)
+        assert win._offline_retry.isActive()
+        win._on_network_status(True)
+        assert not win._offline_retry.isActive()
+
+    def test_la_re_tentative_est_re_armee_a_chaque_echec(self, make_window):
+        """Le garde « seulement si l'état a changé » ne doit pas manger le
+        ré-armement : sinon un seul essai serait fait, puis plus jamais rien."""
+        win = make_window()
+        win._on_network_status(False)
+        win._offline_retry.stop()
+        win._on_network_status(False)   # état inchangé, mais nouvel échec
+        assert win._offline_retry.isActive()
+
+    def test_retour_en_ligne_restaure_le_message(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win._on_network_status(False)
+        win._on_network_status(True)
+        qtbot.wait(20)
+        assert "Hors ligne" not in win._status_bar.currentMessage()
+
+    def test_la_fermeture_arrete_le_timer(self, make_window):
+        """Sinon il ressuscite un UpdateChecker pendant qu'on attend justement
+        la fin des threads (QThread détruit en cours d'exécution)."""
+        win = make_window()
+        win._on_network_status(False)
+        assert win._offline_retry.isActive()
+        win.close()
+        assert not win._offline_retry.isActive()
+
+    def test_l_etat_descend_jusqu_au_panneau_d_actions(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win._on_network_status(False)
+        qtbot.wait(20)
+        assert win._detail._action_panel._online is False
+
+
+class TestToastsAuLieuDeModaux:
+    """Ce qui n'appelle aucune décision ne doit plus bloquer sur un clic."""
+
+    def test_notify_alimente_le_toast(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win._detail.notify.emit("Sauvegardes conservées")
+        qtbot.wait(20)
+        assert win._toast.text() == "Sauvegardes conservées"
+        assert win._toast.isVisible()
+
+    def test_l_alerte_disque_ouvre_les_parametres(self, make_window, monkeypatch):
+        """Le lien « Changer de dossier » du bandeau doit mener quelque part."""
+        ouvert = []
+        monkeypatch.setattr("src.ui.main_window.MainWindow._on_settings",
+                            lambda self: ouvert.append(1))
+        win = make_window()
+        win._detail._action_panel.settings_requested.emit()
+        assert ouvert == [1]
+
+
+class TestBandeauSansScrollbar:
+    """« Pas de scroll si on a pas ouvert la suite d'une description » (Ludo).
+
+    Un bandeau d'avertissement de deux lignes faisait déborder le panneau de
+    20 px sur une fenêtre au minimum syndical et ramenait la barre. Le budget
+    de description a donc un troisième palier, et le bandeau n'affiche qu'un
+    seul message à la fois.
+    """
+
+    @staticmethod
+    def _disque(monkeypatch, free_mb):
+        from collections import namedtuple
+        usage = namedtuple("usage", "total used free")
+        monkeypatch.setattr("src.core.game_manager.shutil.disk_usage",
+                            lambda _p: usage(0, 0, free_mb * 1024 * 1024))
+
+    def _balaye(self, win, qtbot, taille):
+        """Toutes les fiches à une taille donnée → liste des débordements."""
+        win.resize(*taille)
+        qtbot.wait(30)
+        deborde = []
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            qtbot.wait(20)
+            trop = win._detail._info._scroll.verticalScrollBar().maximum()
+            if trop > 0:
+                deborde.append((entry.game.id, trop))
+        return deborde
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1100, 720), (1320, 880)])
+    def test_hors_ligne(self, make_window, qtbot, monkeypatch, taille):
+        self._disque(monkeypatch, 900_000)
+        win = make_window()
+        win.show()
+        win._on_network_status(False)
+        qtbot.wait(30)
+        assert self._balaye(win, qtbot, taille) == []
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1100, 720), (1320, 880)])
+    def test_disque_plein(self, make_window, qtbot, monkeypatch, taille):
+        self._disque(monkeypatch, 40)
+        win = make_window()
+        win.show()
+        assert self._balaye(win, qtbot, taille) == []
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1320, 880)])
+    def test_prerequis_manquant_sur_jeux_installes(self, make_window, qtbot,
+                                                   monkeypatch, taille):
+        from src.core.game_manager import GameState
+        self._disque(monkeypatch, 900_000)
+        monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: False)
+        win = make_window()
+        win.show()
+        for entry in win.manager.get_games():
+            win.manager.set_game_state(entry.game.id, GameState.INSTALLED)
+        assert self._balaye(win, qtbot, taille) == []
+
+    def test_le_bandeau_n_affiche_qu_un_message(self, make_window, qtbot, monkeypatch):
+        """Hors ligne ET disque plein : le hors-ligne prime, le disque attend
+        d'être actionnable (hors ligne, rien ne s'écrit sur le disque)."""
+        self._disque(monkeypatch, 40)
+        win = make_window()
+        win.show()
+        win._on_network_status(False)
+        qtbot.wait(30)
+        texte = win._detail._action_panel._alert.text()
+        assert "Hors ligne" in texte
+        assert "Espace insuffisant" not in texte
+
+
+class TestCoutureCarrousel:
+    """« Il y a une ligne de pixel bizarre juste au dessus de la liste de jeu ».
+
+    Le carrousel est un widget FRÈRE : il ne montre pas l'illustration, donc là
+    où son dégradé est transparent on voit le fond plat du conteneur. Le bas de
+    la fiche, lui, était assombri sous cette couleur par la vignette radiale
+    (rgb(3,3,8) contre rgb(6,6,17)) — un trait clair sur toute la largeur, de
+    valeur IDENTIQUE sur les 8 jeux, ce qui a permis de l'imputer au rendu et
+    non aux images.
+    """
+
+    def _ecart(self, win, qtbot):
+        """Somme |dRGB| max entre la dernière ligne de la fiche et la première
+        du carrousel, échantillonnée sur toute la largeur.
+
+        TOUTE la décoration animée est neutralisée avant de mesurer, parce
+        qu'elle traverse la frontière sans être ce qu'on teste :
+        - les particules, qui passent au-dessus des deux widgets ;
+        - les étoiles scintillantes du carrousel, tirées à des positions
+          ALÉATOIRES à la construction. Quand l'une tombe sur la première ligne
+          du carrousel, elle éclaircit 2 à 4 colonnes sur 1000 (pic mesuré :
+          95/765) et le test échoue pour la mauvaise raison.
+
+        Ne masquer que les particules laissait le test instable : 14 échecs sur
+        30 en reproduction directe. Le pixel du HAUT, lui, valait toujours
+        exactement bg_qcolor(255) — le raccord n'a jamais fauté, seule la
+        mesure était contaminée.
+        """
+        win._particles.hide()
+        win._carousel._stars.clear()   # décor aléatoire : fausserait la mesure
+        win._carousel.update()
+        qtbot.wait(40)
+        img = win.grab().toImage()
+        haut = win._carousel.mapTo(win, win._carousel.rect().topLeft()).y()
+        pire = 0
+        for x in range(4, win.width() - 4, 11):
+            a = img.pixelColor(x, haut - 1)
+            b = img.pixelColor(x, haut)
+            pire = max(pire, abs(a.red() - b.red()) + abs(a.green() - b.green())
+                       + abs(a.blue() - b.blue()))
+        return pire
+
+    def test_aucune_marche_sur_aucun_jeu(self, make_window, qtbot):
+        win = make_window()
+        win.resize(1320, 880)
+        win.show()
+        qtbot.wait(60)
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            ecart = self._ecart(win, qtbot)
+            assert ecart == 0, (
+                f"{entry.game.id} : marche de {ecart}/765 au-dessus du carrousel")
+
+    def test_tient_aussi_en_carrousel_compact(self, make_window, qtbot):
+        """Sous 780 px de haut le carrousel se compacte : le raccord suit."""
+        win = make_window()
+        win.resize(1000, 700)
+        win.show()
+        qtbot.wait(60)
+        assert self._ecart(win, qtbot) == 0
+
+
+class TestPasDeScrollDansLeCasNominal:
+    """Le garde-fou anti-scrollbar visait à côté.
+
+    `TestBandeauSansScrollbar` balaye bien les 8 fiches à 3 tailles, mais ses
+    trois scénarios activent TOUS un bandeau d'avertissement — or un bandeau
+    raccourcit la description (3ᵉ palier du budget). Le cas d'un utilisateur
+    ordinaire, sans avertissement, n'était jamais testé, et les états
+    transitoires non plus : c'est ce qui a laissé passer une barre de
+    défilement présente pendant TOUT le téléchargement, sur les 8 jeux et à
+    toutes les tailles.
+    """
+
+    @staticmethod
+    def _disque_large(monkeypatch):
+        from collections import namedtuple
+        usage = namedtuple("usage", "total used free")
+        monkeypatch.setattr("src.core.game_manager.shutil.disk_usage",
+                            lambda _p: usage(0, 0, 900_000 * 1024 * 1024))
+
+    @staticmethod
+    def _deborde(win, qtbot):
+        """Jeux dont le panneau d'infos défile, à la taille courante."""
+        trop = []
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            qtbot.wait(20)
+            reste = win._detail._info._scroll.verticalScrollBar().maximum()
+            if reste > 0:
+                trop.append((entry.game.id, reste))
+        return trop
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1100, 720), (1320, 880), (1500, 950)])
+    def test_aucun_avertissement(self, make_window, qtbot, monkeypatch, taille):
+        """Cas nominal : réseau OK, disque large, aucun bandeau."""
+        self._disque_large(monkeypatch)
+        win = make_window()
+        win.show()
+        win.resize(*taille)
+        qtbot.wait(40)
+        assert self._deborde(win, qtbot) == []
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1320, 880), (1500, 950)])
+    def test_pendant_le_telechargement(self, make_window, qtbot, monkeypatch, taille):
+        """Le chemin RÉEL : l'orchestrateur change l'état et émet state_changed.
+
+        Passer en téléchargement ajoute une barre de progression, un stepper et
+        une ligne de vitesse à la zone d'action — ~50 px. Sans repositionnement
+        du panneau, la fiche se met à défiler jusqu'à la fin de l'installation,
+        puis se répare toute seule : introuvable sur demande.
+        """
+        self._disque_large(monkeypatch)
+        win = make_window()
+        win.show()
+        win.resize(*taille)
+        qtbot.wait(40)
+        from src.core.game_manager import GameState
+        trop = []
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            qtbot.wait(20)
+            win.manager.set_game_state(entry.game.id, GameState.DOWNLOADING)
+            win._detail.ops.state_changed.emit()
+            qtbot.wait(30)
+            reste = win._detail._info._scroll.verticalScrollBar().maximum()
+            if reste > 0:
+                trop.append((entry.game.id, reste))
+            win.manager.set_game_state(entry.game.id, GameState.NOT_INSTALLED)
+            win._detail.ops.state_changed.emit()
+            qtbot.wait(10)
+        assert trop == []
+
+
+class TestNoteBientotDisponible:
+    """La note sous « BIENTÔT DISPONIBLE » ne doit pas être rognée.
+
+    Contrainte à la largeur du bouton (300 px) elle passait sur deux lignes et
+    n'en recevait qu'une : le bas de la seconde était tranché en français comme
+    en espagnol. Troisième occurrence du piège `wordWrap` dans ce projet — d'où
+    un test dédié plutôt qu'une relecture.
+    """
+
+    @staticmethod
+    def _note(win):
+        from PyQt6.QtWidgets import QLabel
+        # clear_layout passe par deleteLater() : le libellé de l'état précédent
+        # reste enfant un tour de boucle de plus et sort en premier.
+        for lab in win._detail._action_panel.findChildren(QLabel):
+            if lab.objectName() == "comingSoonNote" and lab.isVisible():
+                return lab
+        return None
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1200, 800), (1500, 950)])
+    def test_hauteur_suffisante(self, make_window, qtbot, taille):
+        win = make_window()
+        win.show()
+        win.resize(*taille)
+        qtbot.wait(40)
+        vus = 0
+        for entry in win.manager.get_games():
+            if entry.game.is_downloadable:
+                continue
+            win._detail.set_game(entry.game)
+            qtbot.wait(30)
+            note = self._note(win)
+            assert note is not None, f"{entry.game.id} : note introuvable"
+            vus += 1
+            besoin = note.heightForWidth(note.width())
+            assert besoin <= note.height(), (
+                f"{entry.game.id} à {taille} : la note réclame {besoin} px "
+                f"de haut et n'en reçoit que {note.height()}")
+        assert vus >= 1, "aucun jeu « bientôt disponible » dans le catalogue"
+
+
+class TestBadgesDuCarrousel:
+    """« NOUVEAU » et « BIENTÔT » sont peints au drawText, pas posés en setText.
+
+    Le contrôle de couverture i18n extrait les appels à `tr()` par AST : il ne
+    voit pas ce qui n'y passe pas. Ces deux libellés sont donc restés français
+    dans les trois langues, en permanence sur l'écran d'accueil pour les jeux
+    à venir. Le test vérifie qu'ils passent bien par `tr()` ET que la pastille
+    tient dans la vignette, quelle que soit la longueur de la traduction.
+    """
+
+    def test_les_deux_libelles_sont_traduits(self):
+        from src.core.i18n import available_languages, set_language
+        from src.core.i18n import tr as _tr
+        try:
+            for info in available_languages():
+                set_language(info.code)
+                for cle in ("NOUVEAU", "BIENTÔT"):
+                    assert _tr(cle), f"{info.code} : {cle!r} sans traduction"
+        finally:
+            set_language("fr")
+
+    def test_la_pastille_tient_dans_la_vignette(self):
+        """Même une traduction longue ne doit pas déborder les 90 px."""
+        from src.ui.carousel_item import THUMB_W, _BADGE_PADDING, _badge_texte
+        from PyQt6.QtGui import QFontMetrics
+        for texte in ("NOUVEAU", "NEW", "NUEVO", "BIENTÔT", "SOON", "PRONTO",
+                      "COMING SOON", "PRÓXIMAMENTE", "MUY PRONTO AQUÍ",
+                      "UNE TRADUCTION VOLONTAIREMENT TRÈS LONGUE"):
+            largeur_max = THUMB_W - 6
+            police, affiche = _badge_texte(texte, largeur_max)
+            pris = QFontMetrics(police).horizontalAdvance(affiche) + _BADGE_PADDING
+            assert pris <= largeur_max, (
+                f"{texte!r} : pastille de {pris} px pour {largeur_max} disponibles")
+
+
+class TestZoomSurLeTickerPartage:
+    """Le zoom du fond était la seule animation décorative hors du Ticker.
+
+    Porté par une QPropertyAnimation, il tournait à la cadence de l'horloge
+    d'animation de Qt (~60 Hz) et repeignait la fenêtre entière à chaque frame :
+    premier poste de peinture au repos, 88 ms/s à 1200×800. Sur le Ticker
+    partagé (30 Hz), le total tombe de 212 à 117 ms/s.
+    """
+
+    def test_le_zoom_sabonne_et_se_desabonne(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        qtbot.wait(60)
+        bg = win._detail._bg
+        assert bg._zoom_ticking, "le zoom devrait être abonné au Ticker"
+        bg.pause()
+        assert not bg._zoom_ticking, "pause() doit désabonner le zoom"
+        bg.resume()
+        assert bg._zoom_ticking, "resume() doit ré-abonner le zoom"
+
+    def test_aucun_timer_hors_ticker(self, make_window, qtbot):
+        """Aucune animation décorative ne doit avoir son horloge à elle."""
+        from PyQt6.QtCore import QAbstractAnimation
+        win = make_window()
+        win.show()
+        qtbot.wait(80)
+        bg = win._detail._bg
+        assert not hasattr(bg, "_zoom_anim"), (
+            "le zoom ne doit plus passer par une QPropertyAnimation")
+        # Le cycle reste borné : phase dans [0, 1], zoom entre 1.0 et 1.05.
+        for _ in range(400):
+            bg._advance_zoom()
+        assert 0.0 <= bg._zoom_phase < 1.0
+        assert 1.0 <= bg._zoom <= 1.05
+        assert QAbstractAnimation is not None  # import utilisé, garde-fou lisible

@@ -1,21 +1,32 @@
 """BackgroundWidget — image de fond avec zoom cinématique et parallaxe."""
 
 import logging
+import math
 from pathlib import Path
 
-from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve,
-    QRectF, pyqtProperty,
-)
+from PyQt6.QtCore import Qt, QRectF, pyqtProperty
 from PyQt6.QtGui import (
     QColor, QImage, QLinearGradient, QPainter, QPixmap, QRadialGradient,
 )
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
-from src.ui.ticker import Ticker
+from src.ui.ticker import TICK_MS, Ticker
 from src.ui import theme
 
 log = logging.getLogger(__name__)
+
+# Hauteur du raccord entre le bas de la fiche et le haut du carrousel.
+# Assez long pour que la transition soit invisible, assez court pour ne pas
+# manger l'illustration — à cette hauteur elle est de toute façon déjà noyée
+# par le dégradé bas.
+_RACCORD_PX = 90
+
+# Zoom cinématique : bornes et pas par tick du Ticker (~30 Hz), pour une jambe
+# de 8 s aller et 8 s retour — exactement l'ancien cycle de 16 s.
+_ZOOM_MIN = 1.0
+_ZOOM_MAX = 1.05
+_ZOOM_LEG_MS = 8000
+_ZOOM_STEP = TICK_MS / _ZOOM_LEG_MS
 
 
 class BackgroundWidget(QWidget):
@@ -42,12 +53,19 @@ class BackgroundWidget(QWidget):
         self._overlay_cache: QPixmap | None = None
         self._overlay_for: tuple[int, int] = (0, 0)
 
-        # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16s)
+        # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16 s), cadencé par
+        # le Ticker partagé. Il tournait avant sur une QPropertyAnimation, donc
+        # à la cadence de l'horloge d'animation de Qt (~60 Hz) alors que tout le
+        # reste de la décoration est à 30 Hz : c'était le premier poste de
+        # peinture au repos (88 ms/s à 1200×800, une fenêtre pleine repeinte à
+        # chaque frame). La progression se fait par PAS FIXE et non d'après
+        # l'horloge : quand le Ticker s'arrête (fenêtre inactive, tray), le zoom
+        # reprend exactement où il en était, sans saut ni comptabilité de temps.
         self._zoom = 1.0
         self._zoom_forward = True
-        self._zoom_anim = QPropertyAnimation(self, b"zoom_factor")
-        self._zoom_anim.setDuration(8000)
-        self._zoom_anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self._zoom_phase = 0.0
+        self._zoom_ticking = False
+        self._zoom_running = False
 
         # Parallaxe souris — lerp doux cadencé par le Ticker partagé (~30 FPS),
         # abonnement à la demande (set_parallax_target) et désabonnement une fois
@@ -85,26 +103,32 @@ class BackgroundWidget(QWidget):
     zoom_factor = pyqtProperty(float, _get_zoom, _set_zoom)
 
     def start_zoom_loop(self) -> None:
-        self._zoom = 1.0
+        self._zoom = _ZOOM_MIN
         self._zoom_forward = True
-        # Déconnecter d'abord pour éviter l'accumulation de connexions
-        try:
-            self._zoom_anim.finished.disconnect(self._run_zoom_leg)
-        except TypeError:
-            pass
-        self._zoom_anim.finished.connect(self._run_zoom_leg)
-        self._run_zoom_leg()
+        self._zoom_phase = 0.0
+        self._zoom_running = True
+        self._set_zoom_ticking(True)
 
-    def _run_zoom_leg(self) -> None:
-        self._zoom_anim.stop()
-        if self._zoom_forward:
-            self._zoom_anim.setStartValue(1.0)
-            self._zoom_anim.setEndValue(1.05)
-        else:
-            self._zoom_anim.setStartValue(1.05)
-            self._zoom_anim.setEndValue(1.0)
-        self._zoom_forward = not self._zoom_forward
-        self._zoom_anim.start()
+    def _set_zoom_ticking(self, on: bool) -> None:
+        if on and not self._zoom_ticking:
+            Ticker.instance().tick.connect(self._advance_zoom)
+            self._zoom_ticking = True
+        elif not on and self._zoom_ticking:
+            Ticker.instance().tick.disconnect(self._advance_zoom)
+            self._zoom_ticking = False
+
+    def _advance_zoom(self) -> None:
+        """Un pas de zoom, courbe InOutSine identique à l'ancienne animation."""
+        self._zoom_phase += _ZOOM_STEP
+        if self._zoom_phase >= 1.0:
+            self._zoom_phase = 0.0
+            self._zoom_forward = not self._zoom_forward
+        # InOutSine : 0.5 - 0.5*cos(pi*t), même profil que QEasingCurve.InOutSine.
+        eased = 0.5 - 0.5 * math.cos(math.pi * self._zoom_phase)
+        depart, arrivee = ((_ZOOM_MIN, _ZOOM_MAX) if self._zoom_forward
+                           else (_ZOOM_MAX, _ZOOM_MIN))
+        self._zoom = depart + (arrivee - depart) * eased
+        self.update()
 
     def set_parallax_target(self, mouse_x: float, mouse_y: float,
                             win_w: float, win_h: float) -> None:
@@ -137,13 +161,11 @@ class BackgroundWidget(QWidget):
 
     def pause(self) -> None:
         self._set_parallax_ticking(False)
-        # pause()/resume() sur une animation arrêtée émettent un warning Qt
-        if self._zoom_anim.state() == QPropertyAnimation.State.Running:
-            self._zoom_anim.pause()
+        self._set_zoom_ticking(False)
 
     def resume(self) -> None:
-        if self._zoom_anim.state() == QPropertyAnimation.State.Paused:
-            self._zoom_anim.resume()
+        if self._zoom_running:
+            self._set_zoom_ticking(True)
         # Reprendre le lerp parallaxe si la cible n'est pas atteinte
         dx = self._parallax_tx - self._parallax_cx
         dy = self._parallax_ty - self._parallax_cy
@@ -214,7 +236,9 @@ class BackgroundWidget(QWidget):
         rect = self.rect()
         w, h = rect.width(), rect.height()
 
-        p.fillRect(rect, QColor("#060611"))
+        # Fond de base — teinté par le thème. En dur, il restait bleu nuit sous
+        # les voiles verts de Serpentard partout où l'illustration ne couvre pas.
+        p.fillRect(rect, theme.bg_qcolor(255))
         if self._old_frame is not None:
             # Sous-couche du cross-fade : l'ancien rendu reste visible tant que
             # le nouveau fond n'est pas pleinement opaque.
@@ -321,6 +345,23 @@ class BackgroundWidget(QWidget):
         veil_grad.setColorAt(0.55, theme.bg_qcolor(20))
         veil_grad.setColorAt(0.72, theme.bg_qcolor(0))
         p.fillRect(rect, veil_grad)
+
+        # Raccord avec le carrousel — EN DERNIER, après la vignette.
+        # Le carrousel est un widget FRÈRE : il ne montre pas l'illustration,
+        # et là où son dégradé est encore transparent on voit le fond plat du
+        # conteneur. Or le dégradé bas s'arrêtait à alpha 247 et la vignette
+        # radiale rajoutait du noir par-dessus : la dernière ligne de la fiche
+        # valait rgb(3,3,8) contre rgb(6,6,17) pour la première du carrousel —
+        # un trait CLAIR sur toute la largeur, mesuré identique sur les 8 jeux.
+        # Terminer exactement sur `bg_qcolor(255)` supprime la marche. La
+        # vignette doit passer avant, sinon elle re-creuse le raccord.
+        raccord = QLinearGradient(0, h - _RACCORD_PX, 0, h)
+        raccord.setColorAt(0.0, theme.bg_qcolor(0))
+        # Saturation AVANT le bord : une rampe qui atteint 255 pile au dernier
+        # pixel s'y interpole à ~252, et il restait un niveau d'écart par canal.
+        raccord.setColorAt(0.92, theme.bg_qcolor(255))
+        raccord.setColorAt(1.0, theme.bg_qcolor(255))
+        p.fillRect(QRectF(0, h - _RACCORD_PX, w, _RACCORD_PX), raccord)
 
         p.end()
         self._overlay_cache = pix

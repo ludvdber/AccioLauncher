@@ -1,7 +1,6 @@
 """Contrôleur des opérations de jeu — téléchargement, installation, mise à jour."""
 
 import logging
-import shutil
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -11,6 +10,7 @@ from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.installer import Installer
+from src.core.system_checks import needed_space_mb
 from src.ui.speed_tracker import SpeedTracker
 
 log = logging.getLogger(__name__)
@@ -74,12 +74,10 @@ class GameOperations(QObject):
 
     def check_disk_space(self, version: GameVersion) -> int | None:
         """Vérifie l'espace disque. Retourne les Mo libres si insuffisant, None si OK."""
-        needed_mb = version.size_mb * 2
-        try:
-            free_mb = shutil.disk_usage(self._manager.config.install_path).free // (1024 * 1024)
-        except OSError:
-            return None  # skip check
-        return int(free_mb) if free_mb < needed_mb else None
+        free_mb = self._manager.free_space_mb()
+        if free_mb is None:
+            return None  # disque non interrogeable → pas de blocage
+        return free_mb if free_mb < needed_space_mb(version.size_mb) else None
 
     def download(self, game: GameData, version: GameVersion, *,
                  uninstall_first: bool = False) -> None:

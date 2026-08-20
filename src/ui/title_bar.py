@@ -1,7 +1,7 @@
 """Barre de titre custom pour fenêtre sans cadre."""
 
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
+from PyQt6.QtGui import QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
 from src.core.i18n import tr
@@ -23,8 +23,10 @@ class TitleBar(QWidget):
         layout.setContentsMargins(14, 0, 4, 0)
         layout.setSpacing(0)
 
-        # Titre — Cinzel Decorative, doré
-        self._title = QLabel("\u26a1 Accio Launcher")
+        # Titre — Cinzel Decorative, doré. Sans pictogramme : le ⚡ (U+26A1)
+        # est à présentation emoji par défaut, donc Windows le rendait en
+        # couleur à côté d'un titre or — en permanence, sur l'élément de marque.
+        self._title = QLabel("Accio Launcher")
         self._title.setFont(cinzel(13, bold=True))
         self._title.setStyleSheet("color: #d4a017; background: transparent;")
         layout.addWidget(self._title)
@@ -65,8 +67,9 @@ class TitleBar(QWidget):
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.fillRect(self.rect(), theme.bg_qcolor(217))  # rgba(6,6,17,0.85)
-        # Séparateur doré subtil
-        p.setPen(QPen(QColor(212, 160, 23, 25), 1.0))
+        # Séparateur à l'accent du thème (la ligne au-dessus le fait déjà pour
+        # le fond ; l'or était codé en dur trois lignes plus bas).
+        p.setPen(QPen(theme.accent_qcolor(25), 1.0))
         p.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
         p.end()
 

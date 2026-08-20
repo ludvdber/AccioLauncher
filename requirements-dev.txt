@@ -1,7 +1,9 @@
 # Dépendances de développement / packaging.
-# Pillow n'est utilisé que par build/create_icon.py et build/create_social_preview.py.
+# Miroir de [project.optional-dependencies] dev de pyproject.toml, qui reste la
+# source de vérité — ce fichier n'existe que pour l'ergonomie de `pip install -r`.
 -r requirements.txt
-pyinstaller>=6.16
-Pillow>=12
-pytest>=9.0
+pyinstaller>=6.22
+Pillow>=12.3          # build/create_icon.py + build/create_social_preview.py
+pytest>=9.1
 pytest-qt>=4.5
+ruff>=0.16

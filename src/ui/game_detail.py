@@ -32,7 +32,13 @@ class GameDetailView(QWidget):
     """Zone centrale : fond + info panel + action panel + vidéo."""
 
     status_message = pyqtSignal(str)
+    # Message ÉPHÉMÈRE et visible (toast), pour ce qui méritait un dialogue
+    # modal sans mériter d'interrompre : « déjà en cours », « sauvegardes
+    # conservées »… La status bar, elle, passe inaperçue ; un modal, lui, exige
+    # un clic pour dire quelque chose qui n'appelle aucune décision.
+    notify = pyqtSignal(str)
     state_changed = pyqtSignal()
+    settings_requested = pyqtSignal()   # depuis une alerte du panneau d'actions
     game_launched = pyqtSignal(object, str, str)  # (subprocess.Popen, game_name, game_id)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
@@ -43,6 +49,8 @@ class GameDetailView(QWidget):
         # Sous-systèmes
         self._video = VideoPlayer(self)
         self._pending_video_id: str = ""  # jeu dont la vidéo est programmée
+        # Géométrie en attente de rattrapage de hauteur (cf. _fit_info_height).
+        self._pending_fit: tuple[int, int, int] | None = None
         self._ops = GameOperations(manager, self)
 
         self._build_ui(manager)
@@ -98,6 +106,7 @@ class GameDetailView(QWidget):
         self._action_panel.play_clicked.connect(lambda: handlers.on_play(self))
         self._action_panel.uninstall_clicked.connect(lambda: handlers.on_uninstall(self))
         self._action_panel.update_clicked.connect(lambda: handlers.on_update_clicked(self))
+        self._action_panel.settings_requested.connect(self.settings_requested)
 
         # Info panel
         self._info.versions_clicked.connect(lambda: handlers.on_versions_clicked(self))
@@ -122,7 +131,11 @@ class GameDetailView(QWidget):
         # du titre pendant que la description sortait par le bas.
         info_top = int(h * (0.22 if h >= 560 else 0.10))
         dispo = h - info_top - 20
-        self._info.set_height_budget(dispo)
+        # Un bandeau d'avertissement mange la place du texte. Sans cette
+        # soustraction, la description garde sa longueur de fenêtre confortable
+        # et le panneau se remet à défiler dès qu'un avertissement s'affiche.
+        # Vaut 0 en temps normal : le cas nominal est inchangé.
+        self._info.set_height_budget(dispo - self._action_panel.alert_height())
         # Poser d'abord la largeur définitive : la hauteur nécessaire en dépend.
         self._info.setGeometry(0, info_top, info_w, dispo)
         # Puis rétrécir à ce que le contenu réclame — la zone d'action est
@@ -130,6 +143,44 @@ class GameDetailView(QWidget):
         # entre la description et le bouton.
         self._info.setGeometry(0, info_top, info_w,
                                max(220, min(dispo, self._info.natural_height())))
+        # Rattrapage DIFFÉRÉ : `natural_height()` sous-estime dans les cas
+        # limites (titre sur trois lignes, note « bientôt disponible » sur
+        # deux), et il est de toute façon calculé avant que la zone d'action
+        # n'ait sa taille définitive. Plutôt que de regonfler une marge fixe au
+        # jugé — ce qui ne ferait que déplacer le seuil — on repasse une fois la
+        # mise en page faite et on rallonge d'EXACTEMENT ce qui déborde.
+        self._pending_fit = (info_top, info_w, dispo)
+        QTimer.singleShot(0, self._fit_info_height)
+
+    def _fit_info_height(self) -> None:
+        """Rallonge le panneau de ce qui déborde encore, dans la place restante.
+
+        Idempotent : dès que tout tient, `overflow()` vaut 0 et l'appel ne fait
+        rien. C'est ce qui permet de le laisser s'exécuter autant de fois qu'il
+        est programmé, sans consommer de jeton — `_position_info` est appelé
+        plusieurs fois d'affilée lors d'un changement de jeu, et une passe qui
+        s'exécutait trop tôt (avant que la zone d'action ait sa taille finale)
+        aurait sinon désamorcé toutes les suivantes.
+
+        Ne rappelle JAMAIS `_position_info`, et ne fait que GRANDIR : aucune
+        oscillation possible.
+        """
+        if self._pending_fit is None:
+            return
+        info_top, info_w, dispo = self._pending_fit
+        trop = self._info.overflow()
+        if trop <= 0:
+            return
+        nouvelle = min(dispo, self._info.height() + trop)
+        if nouvelle != self._info.height():
+            self._info.setGeometry(0, info_top, info_w, nouvelle)
+            return
+        # Le panneau occupe déjà toute la place que la fenêtre lui laisse : la
+        # seule variable qui reste est la longueur de l'accroche. Mieux vaut
+        # deux lignes de moins suivies de « Lire la suite » qu'une barre de
+        # défilement qui cache le bouton principal.
+        if self._info.squeeze_description():
+            QTimer.singleShot(0, self._fit_info_height)
 
     def resizeEvent(self, event) -> None:
         self._bg.setGeometry(self.rect())
@@ -199,9 +250,23 @@ class GameDetailView(QWidget):
         self._info_fade.start()
 
     def _refresh(self) -> None:
-        """Rafraîchit le panneau d'actions."""
+        """Rafraîchit le panneau d'actions, puis REPOSITIONNE le panneau d'infos.
+
+        Changer d'état reconstruit entièrement la zone d'action : passer en
+        téléchargement y ajoute une barre de progression, un stepper et une
+        ligne de vitesse, soit ~50 px de plus. Sans le repositionnement, la
+        hauteur du panneau reste celle calculée pour l'ancien panneau d'actions
+        et la fiche se met à défiler pendant TOUTE la durée du téléchargement
+        (22 à 24 px de débordement, mesurés sur les 8 jeux à toutes les
+        tailles) — puis la barre disparaît toute seule à la fin, ce qui rend le
+        défaut irreproductible sur demande.
+
+        Même discipline que `set_online()` et `recheck_prerequisites()` : dès
+        que la zone d'action change de hauteur, la géométrie est à revoir.
+        """
         self._action_panel.set_game(self.game)
         self._action_panel.refresh()
+        self._position_info()
 
     # ──────────────────── Parallaxe ────────────────────
 
@@ -296,10 +361,26 @@ class GameDetailView(QWidget):
     def cancel_operations(self) -> None:
         self._ops.cancel_all()
 
+    def set_online(self, online: bool) -> None:
+        """Propage le diagnostic réseau jusqu'au panneau d'actions."""
+        self._action_panel.set_online(online)
+        self._position_info()   # le bandeau apparaît/disparaît → hauteur à revoir
+
+    def recheck_prerequisites(self) -> None:
+        """Re-teste les prérequis système (no-op si rien ne l'a demandé)."""
+        self._action_panel.recheck_prerequisites()
+        self._position_info()
+
     def refresh_actions(self) -> None:
         """Rafraîchit le panneau d'actions après un changement d'état externe
-        (ex: re-détection des états suite à un changement d'install_path)."""
+        (ex: re-détection des états suite à un changement d'install_path).
+
+        Repositionne aussi : changer de dossier d'installation fait apparaître
+        ou disparaître le bandeau d'espace disque, et la hauteur du panneau en
+        dépend.
+        """
         self._refresh()
+        self._position_info()
 
     def apply_audio_config(self) -> None:
         """Applique « Couper le son des vidéos » à la vidéo EN COURS (réglage live).

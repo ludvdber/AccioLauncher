@@ -42,7 +42,16 @@ from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
 
-_ICON_PATH = ASSETS_DIR / "accio_launcher.png"
+_ICON_PATH = ASSETS_DIR / "accio_launcher.ico"
+# Repli hors Windows : le .ico est un format Windows, et le portage Linux est
+# un objectif déclaré. Qt sait lire les deux, mais autant ne pas en dépendre.
+_ICON_FALLBACK = ASSETS_DIR / "accio_launcher.png"
+
+# Délai avant de re-tester le réseau quand plus rien ne répond. Assez court pour
+# qu'un câble rebranché se voie tout de suite, assez long pour ne pas marteler
+# l'API GitHub — et de toute façon sans coût quand on est réellement hors ligne
+# (les requêtes échouent au premier DNS).
+_OFFLINE_RETRY_MS = 45_000
 
 # Checkers encore actifs à la fermeture : déparentés de la MainWindow et gardés
 # vivants ici jusqu'à leur fin réelle. Sans ça, un QThread bloqué sur un read
@@ -60,9 +69,16 @@ def _reap_checker(checker: UpdateChecker) -> None:
 
 
 def _load_app_icon() -> QIcon:
-    """Charge l'icône de l'application depuis le fichier PNG."""
-    icon_path = str(_ICON_PATH)
-    return QIcon(icon_path)
+    """Icône de l'application — le .ico multi-résolution en priorité.
+
+    Il embarque les tailles 16 à 256 dessinées pour chacune : la barre des
+    tâches et la fenêtre y piochent la bonne au lieu de réduire un seul PNG,
+    ce qui rend les petites tailles nettement plus nettes. Repli sur le PNG si
+    le .ico manque (ou hors Windows).
+    """
+    if _ICON_PATH.exists():
+        return QIcon(str(_ICON_PATH))
+    return QIcon(str(_ICON_FALLBACK))
 
 
 class MainWindow(QMainWindow):
@@ -106,6 +122,12 @@ class MainWindow(QMainWindow):
         # Session de jeu en cours (stats de temps de jeu)
         self._session_game_id: str = ""
         self._session_start: float = 0.0
+        # État réseau — optimiste au départ : on n'affiche « hors ligne » que
+        # sur une preuve, jamais par défaut (cf. UpdateChecker.is_online).
+        self._online = True
+        self._offline_retry = QTimer(self)
+        self._offline_retry.setSingleShot(True)
+        self._offline_retry.timeout.connect(self._start_update_check)
 
         self._build_ui()
         self._build_tray()
@@ -171,6 +193,10 @@ class MainWindow(QMainWindow):
         # Toast (notifications éphémères)
         self._toast = Toast(self)
         self._detail.ops.operation_finished.connect(self._notify_operation_finished)
+        # Ce qui informait par dialogue modal passe par le toast : rien à
+        # décider, donc rien qui justifie d'arrêter l'utilisateur.
+        self._detail.notify.connect(self._toast.show_message)
+        self._detail.settings_requested.connect(self._on_settings)
 
         # Settings button
         self._btn_settings = QPushButton("⚙", self)
@@ -366,7 +392,31 @@ class MainWindow(QMainWindow):
         self._update_checker.update_counts.connect(self._on_update_counts)
         self._update_checker.download_counts.connect(self._on_download_counts)
         self._update_checker.asset_digests.connect(self._on_asset_digests)
+        self._update_checker.network_status.connect(self._on_network_status)
         self._update_checker.start()
+
+    def _on_network_status(self, online: bool) -> None:
+        """Aucun serveur joignable → le dire, et re-tester tout seul.
+
+        Sans re-tentative, rebrancher son câble laisserait « Télécharger »
+        grisé jusqu'au prochain démarrage : l'utilisateur croirait le launcher
+        en panne. Le timer est ré-armé à CHAQUE échec, pas seulement à la
+        transition, sinon un seul essai serait fait.
+        """
+        if online:
+            self._offline_retry.stop()
+        else:
+            self._offline_retry.start(_OFFLINE_RETRY_MS)
+        if online == self._online:
+            return
+        self._online = online
+        self._detail.set_online(online)
+        log.info("État réseau : %s", "en ligne" if online else "hors ligne")
+        # Recompte local plutôt que `_notify_game_updates` : on veut remettre le
+        # bon message ambiant, pas re-jouer un toast déjà vu.
+        pending = sum(1 for entry in self.manager.get_games()
+                      if self.manager.has_update(entry.game.id))
+        self._on_update_counts(pending)
 
     def _on_asset_digests(self, digests: dict) -> None:
         """Empreintes SHA-256 publiées par GitHub, pour vérifier les archives.
@@ -415,12 +465,17 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(30_000, self._auto_hide_notif)
 
     def _on_update_counts(self, count: int) -> None:
-        """Affiche le nombre de mises à jour disponibles dans la status bar."""
+        """Message ambiant de la status bar : mises à jour, hors ligne, ou « Prêt »."""
         if self._detail.ops.is_busy:
             return  # ne pas écraser le statut d'un téléchargement en cours
-        self._status_bar.showMessage(
-            tr("{} mise(s) à jour disponible(s)").format(count) if count > 0 else tr("Prêt")
-        )
+        if count > 0:
+            self._status_bar.showMessage(tr("{} mise(s) à jour disponible(s)").format(count))
+        elif not self._online:
+            # Dire ce qui change vraiment pour l'utilisateur : sa bibliothèque
+            # reste jouable, seuls les nouveaux téléchargements attendent.
+            self._status_bar.showMessage(tr("Hors ligne — les jeux installés restent jouables."))
+        else:
+            self._status_bar.showMessage(tr("Prêt"))
 
     def _notify_game_updates(self) -> bool:
         """Toast cliquable si des jeux installés ont une mise à jour. Recompte LOCAL :
@@ -565,6 +620,9 @@ class MainWindow(QMainWindow):
             if self.isActiveWindow():
                 Ticker.instance().resume()
                 self._detail.resume_effects()
+                # Retour d'une installation de prérequis lancée depuis le
+                # bandeau d'avertissement (no-op le reste du temps).
+                self._detail.recheck_prerequisites()
             elif self.isVisible():  # pas via le tray (géré par pause_all_effects)
                 Ticker.instance().pause()
                 self._detail.pause_effects()
@@ -613,7 +671,7 @@ class MainWindow(QMainWindow):
         self.config.kofi_milestone_thanked = True
         self.config.save()
         self._toast.show_message(
-            tr("Déjà 10 h de magie retrouvée ✨ Si le launcher te plaît, un café fait plaisir — clique ici ❤"),
+            tr("Déjà 10 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici."),
             duration_ms=9000,
             on_click=lambda: open_url("https://ko-fi.com/ludovic01"),
         )
@@ -716,6 +774,7 @@ class MainWindow(QMainWindow):
         checker.catalog_updated.connect(on_catalog)
         checker.update_counts.connect(self._on_update_counts)
         checker.download_counts.connect(self._on_download_counts)
+        checker.network_status.connect(self._on_network_status)
         if not catalog_only:
             checker.launcher_update.connect(on_launcher)
         checker.finished.connect(on_finished)
@@ -858,6 +917,9 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QApplication
         QApplication.instance().removeEventFilter(self)
 
+        # Avant tout : sinon le timer hors-ligne ressuscite un checker pendant
+        # qu'on attend justement la fin des threads.
+        self._offline_retry.stop()
         if self._update_checker is not None:
             self._shutdown_checker(self._update_checker)
         for checker in list(self._extra_checkers):

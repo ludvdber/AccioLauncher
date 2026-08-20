@@ -3,11 +3,9 @@ import logging.handlers
 import sys
 import traceback
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QApplication, QMessageBox, QSplashScreen
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
-from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH
+from src.core.config import DEFAULT_INSTALL_PATH, DEFAULT_LANGUAGE
 
 LOG_DIR = DEFAULT_INSTALL_PATH
 LOG_FILE = LOG_DIR / "accio_launcher.log"
@@ -42,59 +40,17 @@ def _setup_logging() -> None:
     logging.getLogger("httpcore").setLevel(logging.INFO)
 
 
-def _create_splash() -> QSplashScreen:
-    """Crée un splash screen avec le logo Accio Launcher."""
-    from PyQt6.QtCore import QRect
-    from src.ui.fonts import load_fonts, cinzel_decorative, cinzel
+def _create_splash():
+    """Écran de démarrage de marque (cf. src/ui/splash.py).
+
+    Les polices sont chargées ici parce que le splash est le tout premier
+    élément peint : sans elles, son libellé d'état partirait en repli système.
+    """
+    from src.ui.fonts import load_fonts
+    from src.ui.splash import AccioSplash
 
     load_fonts()
-
-    W, H = 480, 260
-    pix = QPixmap(W, H)
-    pix.fill(QColor("#060611"))
-
-    p = QPainter(pix)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-    # Logo centré en haut
-    logo_path = str(ASSETS_DIR / "accio_launcher.png")
-    logo = QPixmap(logo_path)
-    if not logo.isNull():
-        logo_size = 64
-        logo_scaled = logo.scaled(logo_size, logo_size,
-                                  Qt.AspectRatioMode.KeepAspectRatio,
-                                  Qt.TransformationMode.SmoothTransformation)
-        logo_x = (W - logo_scaled.width()) // 2
-        p.drawPixmap(logo_x, 15, logo_scaled)
-
-    # "Accio Launcher" en Cinzel Decorative
-    p.setPen(QColor("#d4a017"))
-    p.setFont(cinzel_decorative(36))
-    p.drawText(QRect(0, 85, W, 50), Qt.AlignmentFlag.AlignCenter, "Accio Launcher")
-
-    # Ligne décorative dorée
-    p.setPen(QPen(QColor(212, 160, 23, 80), 1.0))
-    y_line = 145
-    margin = 120
-    p.drawLine(margin, y_line, W - margin, y_line)
-
-    # Sous-titre
-    p.setPen(QColor("#8a8aaa"))
-    p.setFont(cinzel(11))
-    p.drawText(QRect(0, 155, W, 30), Qt.AlignmentFlag.AlignCenter, "CHARGEMENT\u2026")
-
-    # Bordure dorée fine
-    p.setPen(QPen(QColor(212, 160, 23, 40), 1.0))
-    p.setBrush(Qt.BrushStyle.NoBrush)
-    p.drawRect(0, 0, W - 1, H - 1)
-
-    p.end()
-
-    splash = QSplashScreen(pix)
-    splash.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-    splash.setWindowIcon(QIcon(str(ASSETS_DIR / "accio_launcher.png")))
-    return splash
+    return AccioSplash()
 
 
 def main():
@@ -117,6 +73,12 @@ def main():
     try:
         app = QApplication(sys.argv)
 
+        # La langue doit être active AVANT le premier texte affiché : le splash
+        # apparaît bien avant MainWindow, qui appelait jusqu'ici set_language.
+        from src.core.config import Config as _Config
+        from src.core.i18n import set_language, tr
+        set_language(_Config.load().langue if _Config.exists() else DEFAULT_LANGUAGE)
+
         # Rapport de crash en un clic : les exceptions non gérées dans les slots
         # affichent un dialogue copiable au lieu de tuer le process en silence.
         from src.ui.crash_dialog import install_excepthook
@@ -130,18 +92,27 @@ def main():
 
         splash = _create_splash()
         splash.show()
+        # Les états annoncés correspondent à de VRAIES étapes : rien n'est
+        # simulé, et la progression n'avance que quand quelque chose a
+        # réellement été fait.
+        splash.set_statut(tr("Initialisation"), 0.10)
         app.processEvents()
 
         from src.ui.main_window import MainWindow
         from src.core.config import Config
+
+        splash.set_statut(tr("Chargement des ressources"), 0.45)
+        app.processEvents()
 
         # Vérifier si c'est le premier lancement AVANT de créer MainWindow
         # pour cacher le splash qui bloquerait les dialogues de bienvenue.
         if not Config.exists():
             splash.close()
 
+        splash.set_statut(tr("Préparation de la bibliothèque"), 0.75)
         window = MainWindow()
         guard.activate_requested.connect(window.bring_to_front)
+        splash.set_statut(tr("Prêt"), 1.0)
         window.show()
         splash.finish(window)
         sys.exit(app.exec())

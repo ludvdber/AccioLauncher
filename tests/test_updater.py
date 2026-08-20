@@ -258,3 +258,119 @@ class TestLauncherDigest:
         recu = self._run({"tag_name": "v0.0.0", "html_url": "https://github.com/x",
                           "assets": []}, monkeypatch)
         assert recu == []
+
+
+class TestDiagnosticReseau:
+    """`network_status` : False UNIQUEMENT si plus rien ne répond.
+
+    Un faux « hors ligne » grise le bouton « Télécharger » d'un utilisateur
+    parfaitement connecté — c'est le seul échec inacceptable de cette
+    fonctionnalité, d'où les deux garde-fous testés ici.
+    """
+
+    @staticmethod
+    def _fake_httpx(monkeypatch, *, leve=None, status=200):
+        """Faux httpx : soit `Client.get` lève `leve`, soit il rend `status`."""
+        mod = types.ModuleType("httpx")
+
+        class HTTPError(Exception):
+            pass
+
+        class TransportError(HTTPError):   # hiérarchie réelle de httpx
+            pass
+
+        class ConnectError(TransportError):
+            pass
+
+        class Timeout:
+            def __init__(self, *a, **kw):
+                pass
+
+        class _Resp:
+            status_code = status
+
+            def raise_for_status(self):
+                if status >= 400:
+                    raise HTTPError("HTTP %d" % status)
+
+            def json(self):
+                return {}
+
+        class Client:
+            def __init__(self, *a, **kw):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def get(self, url):
+                if leve is not None:
+                    raise getattr(mod, leve)("boom")
+                return _Resp()
+
+        mod.HTTPError = HTTPError
+        mod.TransportError = TransportError
+        mod.ConnectError = ConnectError
+        mod.Timeout = Timeout
+        mod.Client = Client
+        monkeypatch.setitem(sys.modules, "httpx", mod)
+
+    @staticmethod
+    def _checker():
+        return UpdateChecker(
+            catalog_url="https://raw.githubusercontent.com/o/r/main/games.json",
+            current_catalog_version="0",
+            installed_versions={},
+            games_asset_urls={"hp1": [["https://x/hp1.7z"]]},
+        )
+
+    def _run(self, monkeypatch, **kw):
+        self._fake_httpx(monkeypatch, **kw)
+        checker = self._checker()
+        recu = []
+        checker.network_status.connect(recu.append)
+        checker.run()
+        return checker, recu
+
+    def test_optimiste_avant_toute_tentative(self):
+        """Rien ne prouve encore quoi que ce soit : on ne grise pas l'UI."""
+        assert self._checker().is_online is True
+
+    def test_hors_ligne_si_tout_echoue_au_transport(self, monkeypatch):
+        checker, recu = self._run(monkeypatch, leve="ConnectError")
+        assert recu == [False]
+        assert checker.is_online is False
+
+    def test_une_reponse_suffit_a_prouver_la_connexion(self, monkeypatch):
+        checker, recu = self._run(monkeypatch)
+        assert recu == [True]
+        assert checker.is_online is True
+
+    def test_erreur_http_n_est_pas_une_panne_de_reseau(self, monkeypatch):
+        """403 (rate limit GitHub) ou 404 : le serveur a RÉPONDU, donc en ligne."""
+        checker, recu = self._run(monkeypatch, status=403)
+        assert recu == [True]
+        assert checker._contact is True
+
+    def test_l_etat_est_remis_a_zero_a_chaque_run(self, monkeypatch):
+        """Sinon un `_contact` hérité du run précédent masquerait une coupure."""
+        checker, _ = self._run(monkeypatch)
+        assert checker.is_online is True
+        self._fake_httpx(monkeypatch, leve="ConnectError")
+        recu = []
+        checker.network_status.connect(recu.append)
+        checker.run()
+        assert recu == [False]
+
+    def test_interruption_n_emet_pas_de_verdict(self, monkeypatch):
+        """Une vérification écourtée n'a rien constaté : elle se tait."""
+        self._fake_httpx(monkeypatch, leve="ConnectError")
+        checker = self._checker()
+        checker.isInterruptionRequested = lambda: True
+        recu = []
+        checker.network_status.connect(recu.append)
+        checker.run()
+        assert recu == []

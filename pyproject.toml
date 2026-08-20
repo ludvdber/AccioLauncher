@@ -2,7 +2,10 @@
 name = "accio-launcher"
 version = "0.5.2"
 description = "Launcher pour les jeux Harry Potter sur PC"
-requires-python = ">=3.10"
+# 3.12 et non 3.10 : `enum.StrEnum` (src/core/game_manager.py) n'existe qu'à
+# partir de 3.11, et build.bat comme la CI ciblent 3.12+. Annoncer 3.10 laissait
+# pip installer le paquet sur un interpréteur où il plante dès l'import.
+requires-python = ">=3.12"
 dependencies = [
     "PyQt6>=6.11",
     "httpx>=0.28",
@@ -10,10 +13,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pyinstaller>=6.16",  # 6.16 = premier support Python 3.14
-    "Pillow>=12",
-    "pytest>=9.0",
+    "pyinstaller>=6.22",  # 6.16 = premier support Python 3.14
+    "Pillow>=12.3",       # build/create_icon.py + create_social_preview.py
+    "pytest>=9.1",
     "pytest-qt>=4.5",
+    "ruff>=0.16",         # utilisé depuis toujours, mais n'était pas déclaré
 ]
 
 [project.scripts]
@@ -28,3 +32,30 @@ py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+# ── Lint ─────────────────────────────────────────────────────────────────────
+# Le jeu de règles est FIGÉ ici, et c'est le point important : sans cette
+# section, « le projet est propre » dépendait du jeu de règles par défaut de la
+# version de ruff installée. Le passage de 0.15 à 0.16 a élargi ce défaut et
+# fait apparaître 119 signalements du jour au lendemain, sans qu'une seule ligne
+# de code ait changé — une CI ne doit pas pouvoir rougir toute seule.
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+extend-exclude = [".venv", "venv", "build/accio_launcher", "dist"]
+
+[tool.ruff.lint]
+# Ce que le code respecte AUJOURD'HUI, donc ce qui est exigible sans réécriture.
+#   E4/E7/E9 : erreurs pycodestyle réelles · F : pyflakes · W : espaces parasites
+select = ["E4", "E7", "E9", "F", "W"]
+# Adoptions candidates, volontairement laissées de côté à la veille d'un
+# déploiement : elles ne corrigent aucun bug et noieraient les vrais diffs.
+#   I    tri des imports (34 fichiers touchés)
+#   UP   modernisations de syntaxe (15)
+#   B    pièges bugbear (1) · SIM (5) · C4 (2) · RET (1)
+# À traiter en une passe dédiée, après la mise en ligne.
+
+[tool.ruff.lint.per-file-ignores]
+# Les tests widget importent APRÈS `pytest.importorskip("pytestqt")` : sans ça
+# la suite entière plante au lieu de se sauter proprement quand pytest-qt manque.
+"tests/*" = ["E402"]

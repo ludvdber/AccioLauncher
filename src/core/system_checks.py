@@ -3,6 +3,34 @@
 import functools
 import sys
 
+# Page officielle du redistribuable manquant. Elle vit ici, à côté du test qui
+# le détecte : le correctif et le diagnostic ne doivent pas pouvoir diverger.
+VCREDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
+
+
+def needed_space_mb(size_mb: int) -> int:
+    """Place à prévoir pour installer une archive de `size_mb` Mo.
+
+    Le double : l'archive téléchargée cohabite avec les fichiers extraits
+    jusqu'au nettoyage final. Fonction pure, partagée par la vérification au
+    clic et par l'avertissement affiché en amont — les deux doivent annoncer
+    le même chiffre, sinon le bandeau prévient d'un blocage qui n'arrive pas
+    (ou l'inverse).
+    """
+    return size_mb * 2
+
+
+def invalidate_vcredist_cache() -> None:
+    """Oublie le résultat mémorisé de `check_vcredist_x86`.
+
+    Le cache existe parce que le test est appelé à chaque lancement de jeu.
+    Mais depuis que l'absence du redistribuable est AFFICHÉE (bandeau sur la
+    fiche du jeu), un résultat figé mentirait : l'utilisateur installe le
+    paquet, revient dans le launcher, et l'avertissement serait toujours là.
+    Appelé au retour dans la fenêtre après un clic sur « Installer ».
+    """
+    check_vcredist_x86.cache_clear()
+
 
 @functools.cache
 def check_vcredist_x86() -> bool:

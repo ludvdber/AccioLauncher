@@ -11,6 +11,56 @@ log = logging.getLogger(__name__)
 RegistryEntries = list[str]
 
 
+# Noms de périphériques réservés par Windows : ouvrir « CON » ouvre la console,
+# pas un fichier — quel que soit le dossier et quelle que soit l'extension.
+_PERIPHERIQUES = frozenset(
+    ["con", "prn", "aux", "nul"]
+    + ["com%d" % i for i in range(1, 10)]
+    + ["lpt%d" % i for i in range(1, 10)]
+)
+
+
+def _tags_valides(tags) -> tuple:
+    """Tags du catalogue, réduits à une liste de chaînes.
+
+    Un dict passait sans broncher : Python itère alors ses CLÉS, qui se
+    retrouvaient affichées en pastilles sous la description. Ce qui n'est pas
+    une liste ne donne aucun tag, ce qui est le comportement attendu d'un champ
+    mal formé — mieux vaut pas de tag qu'un tag inventé.
+    """
+    if not isinstance(tags, (list, tuple)):
+        return ()
+    return tuple(t for t in tags if isinstance(t, str))
+
+
+def _est_peripherique(nom: str) -> bool:
+    """True si `nom` est un nom de périphérique Windows réservé."""
+    return nom.split(".")[0].strip().lower() in _PERIPHERIQUES
+
+
+def _https_ou_rien(url):
+    """Écarte au PARSING toute URL de téléchargement non-https.
+
+    Le téléchargeur refuse déjà tout sauf https (`_validate_url`, plus
+    `_ensure_response_https` sur l'URL d'arrivée après redirection) : la
+    sécurité ne dépend pas de cette fonction. Ce qu'elle apporte, c'est le
+    MOMENT du refus. Une coquille dans `games.json` — `http` au lieu de
+    `https` — ne se voyait qu'au clic de l'utilisateur, sous la forme d'un
+    message technique sur une version présentée comme téléchargeable. Écartée
+    ici, la version devient simplement « bientôt disponible », ce qui est vrai.
+
+    Accepte une chaîne ou une liste de parts ; retourne None / [] si tout est
+    écarté, ce que `is_available` interprète correctement.
+    """
+    if isinstance(url, str):
+        return url if url.startswith("https://") else None
+    if isinstance(url, (list, tuple)):
+        gardees = [u for u in url if isinstance(u, str) and u.startswith("https://")]
+        # Tout ou rien : une liste de parts trouée décalerait les empreintes.
+        return list(url) if len(gardees) == len(url) and gardees else None
+    return None
+
+
 def _loc(data: dict, key: str, default):
     """Valeur du champ `key` dans la langue active, sinon en français.
 
@@ -112,8 +162,8 @@ class GameVersion:
         return cls(
             version=data.get("version", "1.0"),
             date=data.get("date", ""),
-            download_url=data.get("download_url"),
-            download_parts=data.get("download_parts"),
+            download_url=_https_ou_rien(data.get("download_url")),
+            download_parts=_https_ou_rien(data.get("download_parts")),
             size_mb=int(data.get("size_mb", 0)),
             changes=tuple(_loc(data, "changes", [])),
             sha256=data.get("sha256"),
@@ -172,12 +222,34 @@ class GameData:
         if missing:
             raise ValueError(f"Champs manquants dans games.json : {missing}")
 
+        # La présence d'une clé ne dit rien de son contenu : `"name": null`
+        # passait le contrôle et donnait une fiche de jeu sans titre. Un jeu mal
+        # formé doit être IGNORÉ par `_parse_catalog`, pas affiché à moitié.
+        for champ in ("id", "name", "developer", "executable", "cover_image"):
+            valeur = data[champ]
+            if not isinstance(valeur, str) or not valeur.strip():
+                raise ValueError(
+                    f"Champ {champ!r} invalide dans games.json : {valeur!r} "
+                    "(chaîne non vide attendue)")
+
         # Validation anti path-traversal de l'executable au parsing (défense en profondeur)
         executable = data["executable"]
         normalized = executable.replace("\\", "/")
         if (len(normalized) >= 2 and normalized[1] == ":") or normalized.startswith("/") \
                 or ".." in normalized.split("/"):
             raise ValueError(f"executable non sûr : {executable!r}")
+        # Trois refus de plus, sans exploitation démontrée mais sans usage
+        # légitime non plus : un octet nul tronque le chemin au niveau de l'API
+        # Windows, un nom de périphérique réservé (CON, NUL, COM1…) ouvre un
+        # flux au lieu d'un fichier, et un chemin déraisonnablement long échoue
+        # de toute façon plus loin — autant le dire ici, où le message est clair.
+        if "\x00" in executable:
+            raise ValueError(f"executable non sûr (octet nul) : {executable!r}")
+        if len(executable) > 260:
+            raise ValueError(
+                f"executable trop long ({len(executable)} caractères) : {executable[:40]!r}…")
+        if any(_est_peripherique(part) for part in normalized.split("/")):
+            raise ValueError(f"executable non sûr (nom réservé) : {executable!r}")
         pi = data.get("post_install", {})
         pl = data.get("pre_launch")
         versions = tuple(
@@ -201,7 +273,7 @@ class GameData:
             latest_version=data.get("latest_version", "1.0"),
             recommended_version=data.get("recommended_version", "1.0"),
             versions=versions,
-            tags=tuple(_loc(data, "tags", [])),
+            tags=_tags_valides(_loc(data, "tags", [])),
             post_install=PostInstall(
                 registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),

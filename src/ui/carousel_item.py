@@ -6,13 +6,15 @@ from PyQt6.QtCore import (
     Qt, pyqtSignal, QRect, QRectF, QPropertyAnimation, QEasingCurve, pyqtProperty,
 )
 from PyQt6.QtGui import (
-    QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QTransform,
+    QColor, QFont, QFontMetrics, QImageReader, QLinearGradient, QPainter,
+    QPainterPath, QPen, QPixmap, QTransform,
 )
 from PyQt6.QtWidgets import QWidget
 
 from src.core.config import ASSETS_DIR
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
+from src.core.i18n import tr
 from src.ui.fonts import cinzel
 from src.ui.theme import accent_qcolor
 from src.ui import theme
@@ -21,6 +23,40 @@ THUMB_W = 90
 THUMB_H = 125
 REFLECTION_RATIO = 0.20
 REFLECTION_OPACITY = 0.06
+
+# Corps des pastilles « NOUVEAU » / « BIENTÔT », du plus lisible au plus petit.
+# La vignette ne fait que 90 px : « PRÓXIMAMENTE » réclame 98 px à 8 pt. Plutôt
+# que de parier sur la brièveté des traductions, on réduit le corps jusqu'à ce
+# que la pastille tienne — un badge un peu plus petit vaut mieux qu'un badge
+# coupé, et le traducteur n'a aucune contrainte à respecter.
+_BADGE_SIZES = (9, 8, 7, 6)
+_BADGE_PADDING = 10
+
+
+def _badge_font(text: str, max_w: int) -> QFont:
+    """Plus grand corps auquel la pastille de `text` tient dans `max_w`."""
+    for size in _BADGE_SIZES:
+        f = QFont("Segoe UI", size, QFont.Weight.Bold)
+        if QFontMetrics(f).horizontalAdvance(text) + _BADGE_PADDING <= max_w:
+            return f
+    return QFont("Segoe UI", _BADGE_SIZES[-1], QFont.Weight.Bold)
+
+
+def _badge_texte(text: str, max_w: int) -> tuple[QFont, str]:
+    """Police et texte d'une pastille garantis tenir dans `max_w`.
+
+    On réduit d'abord le corps ; si même le plus petit ne suffit pas — une
+    traduction franchement longue —, on abrège. Sans ce dernier recours la
+    pastille dépassait la vignette et se faisait couper par le bord du widget,
+    ce qui est pire qu'un mot abrégé.
+    """
+    police = _badge_font(text, max_w)
+    fm = QFontMetrics(police)
+    if fm.horizontalAdvance(text) + _BADGE_PADDING <= max_w:
+        return police, text
+    return police, fm.elidedText(text, Qt.TextElideMode.ElideRight,
+                                 max_w - _BADGE_PADDING)
+
 
 _ARABIC_TO_ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI",
                      7: "VII", 8: "VIII", 9: "IX", 10: "X"}
@@ -102,13 +138,30 @@ class CarouselItem(QWidget):
         self.update()
 
     def _load_cover(self) -> None:
+        """Charge la jaquette en demandant la réduction AU DÉCODEUR.
+
+        `QPixmap(chemin).scaled(...)` décodait le JPEG en pleine résolution
+        (600×900, et 1024×1024 pour trois jeux) avant de le réduire à 180×250 :
+        61 ms pour les huit vignettes, soit 40 % du constructeur de MainWindow.
+        `QImageReader.setScaledSize` laisse libjpeg sous-échantillonner pendant
+        le décodage — même cadrage, 29 ms au lieu de 85.
+        """
         cover_path = ASSETS_DIR / "covers" / self.game.cover_image
-        if cover_path.exists():
-            self._pixmap = QPixmap(str(cover_path)).scaled(
-                THUMB_W * 2, THUMB_H * 2,
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
+        if not cover_path.exists():
+            return
+        cible_w, cible_h = THUMB_W * 2, THUMB_H * 2
+        reader = QImageReader(str(cover_path))
+        source = reader.size()
+        if source.isValid() and source.width() > 0 and source.height() > 0:
+            # « KeepAspectRatioByExpanding » : le plus grand des deux rapports,
+            # pour couvrir la vignette sans bande vide.
+            facteur = max(cible_w / source.width(), cible_h / source.height())
+            if facteur < 1.0:
+                reader.setScaledSize(source * facteur)
+        image = reader.read()
+        if image.isNull():
+            return
+        self._pixmap = QPixmap.fromImage(image)
 
     def _update_size(self) -> None:
         w = int(THUMB_W * self._anim_scale)
@@ -190,22 +243,25 @@ class CarouselItem(QWidget):
             p.drawPixmap(x_off, y_off, w, h, self._pixmap)
             p.setClipping(False)
         else:
+            # Vignette de repli (jaquette absente) : dégradé teinté par le thème
+            # — un bleu nuit codé en dur restait bleu au milieu d'une interface
+            # verte chez Serpentard.
             grad = QLinearGradient(x_off, y_off, x_off, y_off + h)
-            grad.setColorAt(0, QColor("#1a1a3e"))
-            grad.setColorAt(1, QColor("#060611"))
+            grad.setColorAt(0, QColor(theme.current().bg_card))
+            grad.setColorAt(1, theme.bg_qcolor(255))
             p.setBrush(grad)
             p.setPen(QPen(accent_qcolor(60), 1.0))
             p.drawRoundedRect(x_off, y_off, w, h, radius, radius)
 
+            # Le chiffre romain SEUL, centré. Il portait au-dessus un ⚡ demandé
+            # en « Segoe UI Emoji » : U+26A1 est à présentation emoji par défaut,
+            # donc Windows le rendait en couleur, hors palette et insensible au
+            # `setPen` — le piège du bouton pause bleu, en plus discret.
             p.setOpacity(1.0)
-            p.setPen(accent_qcolor(180))
-            p.setFont(QFont("Segoe UI Emoji", 20))
-            p.drawText(QRect(x_off, y_off - 10, w, h), Qt.AlignmentFlag.AlignCenter, "⚡")
-
             roman = _game_roman(self.game.id)
-            p.setPen(accent_qcolor(140))
-            p.setFont(cinzel(12, bold=True))
-            p.drawText(QRect(x_off, y_off + 22, w, h), Qt.AlignmentFlag.AlignCenter, roman)
+            p.setPen(accent_qcolor(160))
+            p.setFont(cinzel(20, bold=True))
+            p.drawText(QRect(x_off, y_off, w, h), Qt.AlignmentFlag.AlignCenter, roman)
             p.setOpacity(eff_opacity)
 
         if self._selected:
@@ -281,16 +337,16 @@ class CarouselItem(QWidget):
         if self._cached_is_new and not self._cached_installed:
             # Ruban « NOUVEAU » en haut à gauche (jeu apparu via update du catalogue)
             p.setOpacity(1.0)
-            p.setFont(QFont("Segoe UI", 7, QFont.Weight.Bold))
+            police, text = _badge_texte(tr("NOUVEAU"), w - 6)
+            p.setFont(police)
             fm = p.fontMetrics()
-            text = "NOUVEAU"
             tw = fm.horizontalAdvance(text)
             bx, by = x_off + 3, y_off + 3
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(accent_qcolor(235))
-            p.drawRoundedRect(QRectF(bx, by, tw + 10, fm.height() + 3), 3, 3)
-            p.setPen(QColor("#060611"))
-            p.drawText(QRectF(bx, by, tw + 10, fm.height() + 3),
+            p.drawRoundedRect(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3), 3, 3)
+            p.setPen(theme.bg_qcolor(255))
+            p.drawText(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3),
                        Qt.AlignmentFlag.AlignCenter, text)
 
         if self._cached_coming_soon:
@@ -299,11 +355,11 @@ class CarouselItem(QWidget):
             # laisse pas croire qu'elle est jouable.
             p.setOpacity(1.0)
             p.fillRect(x_off, y_off, w, h, theme.bg_qcolor(120))
-            p.setFont(QFont("Segoe UI", 7, QFont.Weight.Bold))
+            police, text = _badge_texte(tr("BIENTÔT"), w - 6)
+            p.setFont(police)
             fm = p.fontMetrics()
-            text = "BIENTÔT"
             tw = fm.horizontalAdvance(text)
-            bw, bh = tw + 10, fm.height() + 3
+            bw, bh = tw + _BADGE_PADDING, fm.height() + 3
             bx = x_off + (w - bw) // 2
             by = y_off + (h - bh) // 2
             p.setPen(Qt.PenStyle.NoPen)

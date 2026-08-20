@@ -29,6 +29,19 @@ _SCROLLBAR_W = 6
 _HAUTEUR_SLACK = 8
 
 
+def _insecable(texte: str) -> str:
+    """Rend un segment de la ligne méta insécable.
+
+    La ligne méta passe à la ligne quand elle est trop longue, et c'est voulu.
+    Ce qui ne l'est pas, c'est qu'elle coupe À L'INTÉRIEUR d'un segment : on
+    lisait « ◆ 16 » en fin de ligne et « téléchargements » tout seul en dessous.
+    En remplaçant les espaces par des insécables, le seul endroit où le texte
+    peut se replier reste le séparateur ◆ — donc entre deux informations
+    entières, jamais au milieu d'une.
+    """
+    return texte.replace(" ", "\u00a0")
+
+
 class InfoPanel(QWidget):
     """Panneau d'infos du jeu : contenu défilant + zone d'action épinglée.
 
@@ -50,6 +63,9 @@ class InfoPanel(QWidget):
         # _desc_expanded et _full_desc sont initialisés par _set_desc_text au premier apply_game
         self._desc_expanded: bool = False
         self._full_desc: str = ""
+        # Crans de troncature supplémentaires demandés par le parent quand le
+        # panneau déborde alors qu'il ne peut plus grandir.
+        self._desc_squeeze: int = 0
         self._title_size: int = 36  # suivi par _apply_title_size
         # Hauteur que le parent peut nous accorder (posée par GameDetailView).
         self._height_budget: int = 10_000
@@ -88,12 +104,50 @@ class InfoPanel(QWidget):
         """
         if pixels != self._height_budget:
             self._height_budget = pixels
+            # Nouvelle taille de fenêtre : on repart du palier nominal, sinon un
+            # resserrement décidé pour une petite fenêtre survivrait à son
+            # agrandissement et l'accroche resterait courte pour rien.
+            self._desc_squeeze = 0
             if not self._desc_expanded and self._full_desc:
                 self._apply_desc_truncation()
 
     def _desc_budget(self) -> int:
-        """Nombre de caractères affichés avant « Lire la suite »."""
-        return self._DESC_TRUNCATE if self._height_budget >= 430 else 90
+        """Nombre de caractères affichés avant « Lire la suite ».
+
+        Trois paliers et non deux : sur une fenêtre au minimum syndical
+        (980×660), un bandeau d'avertissement de deux lignes suffisait à faire
+        déborder le panneau de 20 px, donc à ramener la barre de défilement.
+        Mieux vaut une accroche plus courte suivie de « Lire la suite » qu'un
+        texte complet qu'il faut faire défiler pour atteindre le bouton JOUER.
+
+        `_desc_squeeze` descend d'un cran de plus quand le panneau déborde
+        ENCORE alors qu'il occupe déjà toute la place disponible (cf.
+        `GameDetailView._fit_info_height`) : le seul cas où c'est arrivé est
+        l'espagnol sur les deux titres les plus longs du catalogue, à 980×660.
+        Un palier fixe plus bas aurait raccourci l'accroche de TOUS les jeux
+        pour régler le cas de deux.
+        """
+        if self._height_budget >= 430:
+            depart = 0
+        elif self._height_budget >= 380:
+            depart = 1
+        else:
+            depart = 2
+        index = min(depart + self._desc_squeeze, len(self._DESC_PALIERS) - 1)
+        return self._DESC_PALIERS[index]
+
+    def squeeze_description(self) -> bool:
+        """Descend d'un palier de troncature. False s'il n'y a plus de marge."""
+        if self._desc_expanded or not self._full_desc:
+            return False
+        avant = self._desc_budget()
+        self._desc_squeeze += 1
+        if self._desc_budget() == avant:
+            self._desc_squeeze -= 1
+            return False
+        self._apply_desc_truncation()
+        self._apply_available_width()
+        return True
 
     def _apply_desc_truncation(self) -> None:
         limite = self._desc_budget()
@@ -122,6 +176,28 @@ class InfoPanel(QWidget):
         return (self._layout.heightForWidth(self.available_width())
                 + self._action_slot.sizeHint().height()
                 + _HAUTEUR_SLACK)
+
+    def overflow(self) -> int:
+        """Pixels qui manquent au panneau pour tout montrer sans défiler.
+
+        `natural_height()` s'appuie sur `layout.heightForWidth()`, qui
+        sous-estime dans les cas limites — un titre qui passe sur trois lignes,
+        une note d'avertissement sur deux. La marge fixe `_HAUTEUR_SLACK`
+        absorbe l'ordinaire mais pas ces cas-là, et la retoucher au jugé ne
+        ferait que déplacer le seuil.
+
+        On lit donc ce qui déborde RÉELLEMENT, après la mise en page, pour que
+        l'appelant rallonge d'exactement ce qu'il faut. Zéro quand tout tient.
+        """
+        conteneur = self._scroll.widget()
+        if conteneur is None:
+            return 0
+        # La géométrie vient d'être posée : forcer l'activation du layout,
+        # sinon la plage de la barre de défilement est encore celle d'avant.
+        layout = conteneur.layout()
+        if layout is not None:
+            layout.activate()
+        return max(0, self._scroll.verticalScrollBar().maximum())
 
     def _setup_scroll(self) -> None:
         self._scroll.setWidgetResizable(True)
@@ -311,6 +387,8 @@ class InfoPanel(QWidget):
     # ──────────────────── API publique ────────────────────
 
     _DESC_TRUNCATE = 160
+    # Longueurs d'accroche, du plus généreux au plus serré.
+    _DESC_PALIERS = (160, 90, 55, 30)
     _DL_COUNT_MIN = 1  # seuil d'affichage de la pastille téléchargements (passer à ~100 plus tard)
 
     def apply_game(self, game: GameData) -> None:
@@ -325,8 +403,9 @@ class InfoPanel(QWidget):
         installed = self._manager.installed_version(game.id)
         version = installed or game.recommended_version
         lien = (f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
-                + tr("v{} · changelog").format(version) + '</a>')
-        morceaux = [str(game.year), game.developer, size_str, lien]
+                + _insecable(tr("v{} · changelog").format(version)) + '</a>')
+        morceaux = [str(game.year), _insecable(game.developer),
+                    _insecable(size_str), lien]
 
         # Compteur de téléchargements (GitHub, toutes versions cumulées). Il vit
         # DANS la ligne méta et non dans une pastille séparée : en pastille, le
@@ -340,7 +419,7 @@ class InfoPanel(QWidget):
             # En doré comme avant : c'est de la preuve sociale, elle mérite de
             # ressortir du reste de la ligne méta, qui est en gris sourdine.
             morceaux.append(f'<span style="color:{gold};">'
-                            + tr(key).format(pretty) + '</span>')
+                            + _insecable(tr(key).format(pretty)) + '</span>')
             self._meta.setToolTip(
                 tr("Téléchargements cumulés de toutes les versions (GitHub)"))
         else:
@@ -384,6 +463,8 @@ class InfoPanel(QWidget):
     def _set_desc_text(self, text: str) -> None:
         self._full_desc = text
         self._desc_expanded = False
+        # Nouveau jeu : le resserrement décidé pour le précédent ne le concerne pas.
+        self._desc_squeeze = 0
         self._apply_desc_truncation()
 
     def _toggle_desc(self) -> None:

@@ -21,7 +21,11 @@ def get_documents_dir() -> Path:
                 return Path(buf.value).resolve()
         except (OSError, ValueError):
             pass
-    return (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+    if sys.platform == "win32":
+        return (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
+    # Hors Windows, `expandvars` ne connaît pas %USERPROFILE% : la chaîne restait
+    # littérale et `resolve()` fabriquait « <dossier courant>/%USERPROFILE%/Documents ».
+    return (Path.home() / "Documents").resolve()
 
 
 # --- Mode frozen (PyInstaller) ---

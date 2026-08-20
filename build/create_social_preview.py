@@ -1,6 +1,5 @@
 """Genere docs/social_preview.png — image social preview GitHub 1280x640."""
 
-import math
 import random
 from pathlib import Path
 
@@ -78,15 +77,9 @@ def main() -> None:
     tx = (WIDTH - tw) // 2
     ty = (HEIGHT - th) // 2 - 40
 
-    # Eclair emoji avant le titre
-    lightning = "\u26a1 "
-    try:
-        # Dessiner le titre sans emoji (Cinzel n'a pas d'emoji)
-        full_title = lightning + title
-        # On dessine juste le titre en Cinzel
-        draw.text((tx, ty), title, font=title_font, fill=GOLD)
-    except Exception:
-        draw.text((tx, ty), title, font=title_font, fill=GOLD)
+    # Titre sans pictogramme : Cinzel n'a pas de glyphe d'emoji, et le repli
+    # de police de Windows les rend en couleur — hors charte.
+    draw.text((tx, ty), title, font=title_font, fill=GOLD)
 
     # Sous-titre
     subtitle = "Le launcher magique pour les jeux Harry Potter PC"
