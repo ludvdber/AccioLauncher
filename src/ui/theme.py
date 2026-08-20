@@ -53,7 +53,7 @@ class Palette:
 THEMES: dict[str, Palette] = {
     # Poudlard = les couleurs telles qu'écrites dans les sources (aucune substitution).
     "poudlard": Palette(
-        "poudlard", "Poudlard (or)", "#d4a017", "#f0d060", "#9a7209",
+        "poudlard", "Poudlard (or)", "#d6a72c", "#f0d060", "#9a7209",
         "#060611", "#0d0d1a", "#0f1528", "#16213e", "#1a2744", "#2c3e6b",
     ),
     "gryffondor": Palette(
@@ -88,10 +88,10 @@ def current() -> Palette:
 
 
 # Hexs or tels qu'écrits dans les feuilles de style et paintEvent du projet.
-_GOLD = "#d4a017"
+_GOLD = "#d6a72c"
 _GOLD_LIGHTS = ("#f0d060", "#e8c547", "#e6b422")
 _GOLD_DARK = "#9a7209"
-_GOLD_RGBS = ("212, 160, 23", "212,160,23")
+_GOLD_RGBS = ("214, 167, 44", "214,167,44")
 # Surfaces bleu nuit telles qu'écrites dans les sources → attribut de Palette.
 _SURFACES = ("bg", "bg_dialog", "bg_card", "bg_control", "border", "border_strong")
 _BG_RGBS = ("6, 6, 17", "6,6,17")  # forme rgba(...) du fond principal

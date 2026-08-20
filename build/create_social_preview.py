@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 WIDTH, HEIGHT = 1280, 640
 BG_TOP = (6, 6, 17)        # #060611
 BG_BOTTOM = (13, 13, 26)   # #0d0d1a
-GOLD = (212, 160, 23)      # #d4a017
+GOLD = (214, 167, 44)      # #d6a72c
 SUBTITLE_COLOR = (138, 138, 170)  # #8a8aaa
 
 FONTS_DIR = Path(__file__).parent.parent / "assets" / "fonts"

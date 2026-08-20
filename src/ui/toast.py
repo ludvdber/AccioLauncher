@@ -24,7 +24,7 @@ class Toast(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setStyleSheet(themed(
             "QLabel { background: rgba(13, 13, 26, 0.94); color: #e8c547;"
-            " border: 1px solid rgba(212, 160, 23, 0.45); border-radius: 8px;"
+            " border: 1px solid rgba(214, 167, 44, 0.45); border-radius: 8px;"
             " padding: 10px 22px; }"
         ))
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)

@@ -2,7 +2,7 @@
 COLOR_BG_PRIMARY = "#060611"
 COLOR_BG_CARD = "#0f1528"
 COLOR_BG_CAROUSEL = "rgba(6, 6, 17, 0.92)"
-COLOR_ACCENT_GOLD = "#d4a017"
+COLOR_ACCENT_GOLD = "#d6a72c"
 COLOR_ACCENT_GOLD_LIGHT = "#f0d060"
 COLOR_ACCENT_GOLD_DARK = "#9a7209"
 COLOR_ACCENT_RED = "#c0392b"
@@ -96,10 +96,16 @@ QPushButton#btnCancel:hover {{
     background-color: #e74c3c;
 }}
 
-/* ---------- Focus clavier visible (A11Y) ---------- */
+/* ---------- Focus clavier visible (A11Y) ----------
+   L'anneau ne s'affiche QUE si le focus vient du clavier : la propriété
+   `focusClavier` est posée par src/ui/focus_visible.py selon la raison du
+   focus. Sans elle, Qt cerclait le premier bouton de la chaîne dès l'ouverture
+   de la fenêtre (personne n'avait rien fait) et laissait l'anneau après un
+   simple clic. Ne pas retirer le sélecteur : c'est le seul repère au clavier. */
 
-QPushButton:focus, QLabel:focus, QSlider:focus,
-QProgressBar:focus, QLineEdit:focus, QComboBox:focus {{
+QPushButton[focusClavier="true"]:focus, QLabel[focusClavier="true"]:focus,
+QSlider[focusClavier="true"]:focus, QProgressBar[focusClavier="true"]:focus,
+QLineEdit[focusClavier="true"]:focus, QComboBox[focusClavier="true"]:focus {{
     outline: 2px solid {COLOR_ACCENT_GOLD};
     outline-offset: 1px;
 }}
@@ -200,8 +206,8 @@ QMessageBox QPushButton:hover, QInputDialog QPushButton:hover {{
 }}
 
 QMessageBox QPushButton:default {{
-    background-color: rgba(212, 160, 23, 0.18);
-    border-color: rgba(212, 160, 23, 0.55);
+    background-color: rgba(214, 167, 44, 0.18);
+    border-color: rgba(214, 167, 44, 0.55);
     color: {COLOR_ACCENT_GOLD_LIGHT};
     font-weight: bold;
 }}
@@ -209,7 +215,7 @@ QMessageBox QPushButton:default {{
 QToolTip {{
     background-color: #0d0d1a;
     color: {COLOR_TEXT};
-    border: 1px solid rgba(212, 160, 23, 0.45);
+    border: 1px solid rgba(214, 167, 44, 0.45);
     border-radius: 4px;
     padding: 4px 8px;
     font-size: 12px;

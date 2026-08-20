@@ -196,7 +196,7 @@ class GlowButton(QPushButton):
 
     def hideEvent(self, event) -> None:
         if self._ticking:
-            Ticker.instance().tick.disconnect(self._animate)
+            Ticker.detach(self._animate)
             self._ticking = False
         super().hideEvent(event)
 

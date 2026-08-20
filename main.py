@@ -79,6 +79,11 @@ def main():
         from src.core.i18n import set_language, tr
         set_language(_Config.load().langue if _Config.exists() else DEFAULT_LANGUAGE)
 
+        # L'anneau de focus doré ne doit apparaître qu'au clavier. Posé ici,
+        # le filtre couvre aussi l'assistant de premier lancement.
+        from src.ui.focus_visible import install as install_focus_clavier
+        install_focus_clavier(app)
+
         # Rapport de crash en un clic : les exceptions non gérées dans les slots
         # affichent un dialogue copiable au lieu de tuer le process en silence.
         from src.ui.crash_dialog import install_excepthook
@@ -112,8 +117,16 @@ def main():
         splash.set_statut(tr("Préparation de la bibliothèque"), 0.75)
         window = MainWindow()
         guard.activate_requested.connect(window.bring_to_front)
-        splash.set_statut(tr("Prêt"), 1.0)
+
+        # `window.show()` déclenche la première mise en page ET le premier rendu
+        # complet de l'interface : 304 ms mesurées, la deuxième étape la plus
+        # coûteuse du démarrage. Elle se déroulait sous le libellé « Prêt », qui
+        # promettait donc la fin alors qu'il restait un tiers de seconde. Elle a
+        # maintenant son propre libellé, et « Prêt » ne s'affiche qu'une fois la
+        # fenêtre réellement prête.
+        splash.set_statut(tr("Ouverture de la fenêtre"), 0.92)
         window.show()
+        splash.set_statut(tr("Prêt"), 1.0)
         splash.finish(window)
         sys.exit(app.exec())
 

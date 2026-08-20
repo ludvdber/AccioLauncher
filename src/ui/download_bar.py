@@ -31,7 +31,7 @@ class DownloadBar(QWidget):
         self.setFixedHeight(56)
         self.setStyleSheet(themed(
             "#downloadBar { background: rgba(10, 10, 20, 0.92); "
-            "border-top: 1px solid rgba(212,160,23,0.3); }"
+            "border-top: 1px solid rgba(214,167,44,0.3); }"
         ))
         self.hide()
 
@@ -61,7 +61,7 @@ class DownloadBar(QWidget):
         # Stepper « 1/3 · Téléchargement » → « 2/3 · Vérification » → « 3/3 · Installation »
         self._phase_label = QLabel("")
         self._phase_label.setFont(body_font(10))
-        self._phase_label.setStyleSheet(themed("color: #d4a017; background: transparent;"))
+        self._phase_label.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
         layout.addWidget(self._phase_label)
 
         self._progress = QProgressBar()
@@ -71,7 +71,7 @@ class DownloadBar(QWidget):
         self._progress.setTextVisible(False)
         self._progress.setStyleSheet(themed(
             "QProgressBar { background: rgba(255,255,255,0.08); border: none; border-radius: 3px; height: 8px; }"
-            "QProgressBar::chunk { background: #d4a017; border-radius: 3px; }"
+            "QProgressBar::chunk { background: #d6a72c; border-radius: 3px; }"
         ))
         layout.addWidget(self._progress)
 

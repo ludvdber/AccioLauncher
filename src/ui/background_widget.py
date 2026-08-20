@@ -20,6 +20,10 @@ log = logging.getLogger(__name__)
 # manger l'illustration — à cette hauteur elle est de toute façon déjà noyée
 # par le dégradé bas.
 _RACCORD_PX = 90
+# Débord opaque sous le bord bas, en pixels logiques. Deux suffisent : le
+# raccord est déjà saturé à bg_qcolor(255) bien avant, donc à 100 % ce débord
+# repeint du fond sur du fond. Il n'existe que pour les échelles fractionnaires.
+_DEBORD_PX = 2
 
 # Zoom cinématique : bornes et pas par tick du Ticker (~30 Hz), pour une jambe
 # de 8 s aller et 8 s retour — exactement l'ancien cycle de 16 s.
@@ -114,7 +118,7 @@ class BackgroundWidget(QWidget):
             Ticker.instance().tick.connect(self._advance_zoom)
             self._zoom_ticking = True
         elif not on and self._zoom_ticking:
-            Ticker.instance().tick.disconnect(self._advance_zoom)
+            Ticker.detach(self._advance_zoom)
             self._zoom_ticking = False
 
     def _advance_zoom(self) -> None:
@@ -145,7 +149,7 @@ class BackgroundWidget(QWidget):
             Ticker.instance().tick.connect(self._update_parallax)
             self._parallax_ticking = True
         elif not on and self._parallax_ticking:
-            Ticker.instance().tick.disconnect(self._update_parallax)
+            Ticker.detach(self._update_parallax)
             self._parallax_ticking = False
 
     def _update_parallax(self) -> None:
@@ -294,6 +298,20 @@ class BackgroundWidget(QWidget):
         self._ensure_overlay(w, h)
         if self._overlay_cache is not None:
             p.drawPixmap(0, 0, self._overlay_cache)
+
+        # Bord bas — atteindre le pixel PHYSIQUE, pas le pixel logique.
+        # Sur un écran à 125 %, le bas du widget tombe sur un demi-pixel
+        # (624 px logiques posés à 47,5). L'illustration, peinte en QRectF avec
+        # antialiasing, déborde alors d'une rangée physique ; l'overlay opaque,
+        # lui, est posé depuis un pixmap à coordonnées entières et ne déborde
+        # pas. Il restait donc UNE rangée d'illustration nue entre la fiche et
+        # le carrousel — mesurée rgb(6,22,45) contre rgb(6,6,17), et rouge vif
+        # avec une illustration rouge de test. Invisible à 100 %, permanente à
+        # 125 %. On peint volontairement AU-DELÀ du bord : Qt découpe au rect
+        # réel du widget, donc le débord couvre la rangée quelle que soit la
+        # façon dont l'échelle est arrondie.
+        p.fillRect(QRectF(0, h - _DEBORD_PX, w, _DEBORD_PX * 2),
+                   theme.bg_qcolor(255))
 
         p.end()
 

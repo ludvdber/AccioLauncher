@@ -28,7 +28,7 @@ class TitleBar(QWidget):
         # couleur à côté d'un titre or — en permanence, sur l'élément de marque.
         self._title = QLabel("Accio Launcher")
         self._title.setFont(cinzel(13, bold=True))
-        self._title.setStyleSheet("color: #d4a017; background: transparent;")
+        self._title.setStyleSheet("color: #d6a72c; background: transparent;")
         layout.addWidget(self._title)
 
         layout.addStretch()

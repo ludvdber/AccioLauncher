@@ -16,7 +16,7 @@ def _reset_theme():
 class TestSetTheme:
     def test_default_is_poudlard(self):
         assert current().id == "poudlard"
-        assert current().accent == "#d4a017"
+        assert current().accent == "#d6a72c"
 
     def test_known_theme(self):
         set_theme("gryffondor")
@@ -32,13 +32,13 @@ class TestSetTheme:
 
 class TestAccentRgb:
     def test_poudlard_gold(self):
-        assert THEMES["poudlard"].accent_rgb == (212, 160, 23)
+        assert THEMES["poudlard"].accent_rgb == (214, 167, 44)
 
 
 class TestThemed:
-    QSS = ("color: #d4a017; border: 1px solid #f0d060;"
-           " background: rgba(212, 160, 23, 0.3); top: #9a7209;"
-           " hover: #e8c547; packed: rgba(212,160,23,0.5);")
+    QSS = ("color: #d6a72c; border: 1px solid #f0d060;"
+           " background: rgba(214, 167, 44, 0.3); top: #9a7209;"
+           " hover: #e8c547; packed: rgba(214,167,44,0.5);")
 
     def test_poudlard_passthrough(self):
         assert themed(self.QSS) == self.QSS
@@ -48,7 +48,7 @@ class TestThemed:
         out = themed(self.QSS)
         p = THEMES["gryffondor"]
         r, g, b = p.accent_rgb
-        assert "#d4a017" not in out and "212, 160, 23" not in out and "212,160,23" not in out
+        assert "#d6a72c" not in out and "214, 167, 44" not in out and "214,167,44" not in out
         assert "#f0d060" not in out and "#e8c547" not in out and "#9a7209" not in out
         assert p.accent in out and p.accent_light in out and p.accent_dark in out
         assert f"{r}, {g}, {b}" in out

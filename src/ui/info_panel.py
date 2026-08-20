@@ -207,7 +207,7 @@ class InfoPanel(QWidget):
         self._scroll.setStyleSheet(themed(
             "QScrollArea { background: transparent; border: none; }"
             "QScrollBar:vertical { background: transparent; width: 4px; border: none; }"
-            "QScrollBar::handle:vertical { background: rgba(212,160,23,0.3); border-radius: 2px; min-height: 20px; }"
+            "QScrollBar::handle:vertical { background: rgba(214,167,44,0.3); border-radius: 2px; min-height: 20px; }"
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
             "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
         ))
@@ -265,7 +265,7 @@ class InfoPanel(QWidget):
         self._stats_label = QLabel()
         self._stats_label.setFont(body_font(12))
         self._stats_label.setStyleSheet(themed(
-            "QLabel { color: rgba(212, 160, 23, 0.70); background: transparent; }"
+            "QLabel { color: rgba(214, 167, 44, 0.70); background: transparent; }"
         ))
         self._stats_label.setWordWrap(True)
         self._stats_label.setVisible(False)
@@ -286,7 +286,7 @@ class InfoPanel(QWidget):
         self._btn_expand = ClickableLabel()
         self._btn_expand.setFont(body_font(13))
         self._btn_expand.setStyleSheet(themed(
-            "QLabel { color: #d4a017; background: transparent; padding-top: 4px; }"
+            "QLabel { color: #d6a72c; background: transparent; padding-top: 4px; }"
             "QLabel:hover { color: #e8c547; }"
         ))
         self._btn_expand.setVisible(False)
@@ -503,8 +503,8 @@ class InfoPanel(QWidget):
             badge = QLabel(tag.upper())
             badge.setFont(cinzel(10, bold=True))
             badge.setStyleSheet(themed(
-                "QLabel { background: rgba(212, 160, 23, 0.05); color: #d4a017;"
-                " border: 1px solid rgba(212, 160, 23, 0.3); border-radius: 12px;"
+                "QLabel { background: rgba(214, 167, 44, 0.05); color: #d6a72c;"
+                " border: 1px solid rgba(214, 167, 44, 0.3); border-radius: 12px;"
                 " padding: 4px 14px; letter-spacing: 2px; }"
             ))
             self._tags_layout.addWidget(badge)

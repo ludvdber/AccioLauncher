@@ -436,11 +436,11 @@ class ActionPanel(QWidget):
             recommended = self._game.recommended_version
             lbl = QLabel(tr("Mise à jour disponible : v{} → v{}").format(installed_ver, recommended))
             lbl.setFont(body_font(12))
-            lbl.setStyleSheet(themed("color: #d4a017; background: transparent;"))
+            lbl.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
             link = ClickableLabel(tr("Mettre à jour"))
             link.setFont(body_font(12))
             link.setStyleSheet(themed(
-                "QLabel { color: #d4a017; background: transparent; text-decoration: underline; }"
+                "QLabel { color: #d6a72c; background: transparent; text-decoration: underline; }"
                 "QLabel:hover { color: #e8c547; }"
             ))
             link.clicked.connect(self.update_clicked)

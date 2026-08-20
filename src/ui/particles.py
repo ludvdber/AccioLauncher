@@ -232,7 +232,7 @@ class ParticleOverlay(QWidget):
 
     def pause(self) -> None:
         if self._ticking:
-            Ticker.instance().tick.disconnect(self._advance)
+            Ticker.detach(self._advance)
             self._ticking = False
 
     def resume(self) -> None:

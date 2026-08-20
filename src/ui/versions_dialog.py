@@ -44,7 +44,7 @@ class VersionsDialog(QDialog):
         self.setWindowTitle(tr("Versions — {}").format(game.name))
         self.setFixedSize(550, 500)
         self.setStyleSheet(themed(
-            "QDialog { background: #0d0d1a; border: 1px solid rgba(212,160,23,0.3); }"
+            "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"
         ))
         self._build_ui()
 
@@ -55,7 +55,7 @@ class VersionsDialog(QDialog):
 
         title = QLabel(tr("Versions — {}").format(self.game.name))
         title.setFont(cinzel(14, bold=True))
-        title.setStyleSheet(themed("color: #d4a017; background: transparent;"))
+        title.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
         title.setWordWrap(True)
         layout.addWidget(title)
         layout.addSpacing(16)
@@ -69,7 +69,7 @@ class VersionsDialog(QDialog):
             "  background: rgba(255,255,255,0.03); width: 6px; border: none;"
             "}"
             "QScrollBar::handle:vertical {"
-            "  background: rgba(212,160,23,0.3); border-radius: 3px; min-height: 20px;"
+            "  background: rgba(214,167,44,0.3); border-radius: 3px; min-height: 20px;"
             "}"
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         ))
@@ -98,11 +98,11 @@ class VersionsDialog(QDialog):
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_close.setStyleSheet(themed(
             "QPushButton {"
-            "  background: rgba(212,160,23,0.1); color: #d4a017;"
-            "  border: 1px solid rgba(212,160,23,0.3); border-radius: 6px;"
+            "  background: rgba(214,167,44,0.1); color: #d6a72c;"
+            "  border: 1px solid rgba(214,167,44,0.3); border-radius: 6px;"
             "}"
             "QPushButton:hover {"
-            "  background: rgba(212,160,23,0.2); color: #e8c547;"
+            "  background: rgba(214,167,44,0.2); color: #e8c547;"
             "}"
         ))
         btn_close.clicked.connect(self.accept)
@@ -173,7 +173,7 @@ class VersionsDialog(QDialog):
         # Séparateur
         sep = QWidget()
         sep.setFixedHeight(1)
-        sep.setStyleSheet(themed("background: rgba(212,160,23,0.15);"))
+        sep.setStyleSheet(themed("background: rgba(214,167,44,0.15);"))
         card_layout.addWidget(sep)
 
         # Liste des changements
@@ -221,12 +221,12 @@ class VersionsDialog(QDialog):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setStyleSheet(themed(
                 "QPushButton {"
-                "  background: rgba(212,160,23,0.1); color: #d4a017;"
-                "  border: 1px solid rgba(212,160,23,0.3); border-radius: 4px;"
+                "  background: rgba(214,167,44,0.1); color: #d6a72c;"
+                "  border: 1px solid rgba(214,167,44,0.3); border-radius: 4px;"
                 "  padding: 4px 12px;"
                 "}"
                 "QPushButton:hover {"
-                "  background: rgba(212,160,23,0.2); color: #e8c547;"
+                "  background: rgba(214,167,44,0.2); color: #e8c547;"
                 "}"
             ))
             btn.clicked.connect(lambda checked, v=ver.version: self._on_install_version(v))

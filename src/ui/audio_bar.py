@@ -42,7 +42,7 @@ class AudioBar(QWidget):
         self._btn_play.setAccessibleName("Mettre la bande-annonce en pause")
         self._btn_play.setStyleSheet(themed(
             "QPushButton { background: transparent; color: #eaeaea; border: none; font-size: 13px; }"
-            "QPushButton:hover { color: #d4a017; }"
+            "QPushButton:hover { color: #d6a72c; }"
         ))
         self._btn_play.clicked.connect(self.play_toggled.emit)
         layout.addWidget(self._btn_play)
@@ -53,7 +53,7 @@ class AudioBar(QWidget):
         self._btn_mute.setAccessibleName("Couper le son de la vidéo")
         self._btn_mute.setStyleSheet(themed(
             "QPushButton { background: transparent; color: #eaeaea; border: none; font-size: 15px; }"
-            "QPushButton:hover { color: #d4a017; }"
+            "QPushButton:hover { color: #d6a72c; }"
         ))
         self._btn_mute.clicked.connect(self.mute_toggled.emit)
         layout.addWidget(self._btn_mute)
@@ -65,8 +65,8 @@ class AudioBar(QWidget):
         self._volume_slider.setAccessibleName("Volume de la vidéo")
         self._volume_slider.setStyleSheet(themed(
             "QSlider::groove:horizontal { background: rgba(255,255,255,0.12); height: 4px; border-radius: 2px; }"
-            "QSlider::handle:horizontal { background: #d4a017; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; }"
-            "QSlider::sub-page:horizontal { background: rgba(212,160,23,0.5); border-radius: 2px; }"
+            "QSlider::handle:horizontal { background: #d6a72c; width: 12px; height: 12px; margin: -4px 0; border-radius: 6px; }"
+            "QSlider::sub-page:horizontal { background: rgba(214,167,44,0.5); border-radius: 2px; }"
         ))
         self._volume_slider.valueChanged.connect(self.volume_changed.emit)
         layout.addWidget(self._volume_slider)

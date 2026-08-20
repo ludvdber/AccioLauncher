@@ -175,7 +175,7 @@ class Carousel(QWidget):
 
     def pause(self) -> None:
         if self._ticking:
-            Ticker.instance().tick.disconnect(self._tick_stars)
+            Ticker.detach(self._tick_stars)
             self._ticking = False
 
     def resume(self) -> None:

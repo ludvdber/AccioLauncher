@@ -84,7 +84,7 @@ class SettingsDialog(QDialog):
         QLabel#sectionTitle {
             font-size: 16px;
             font-weight: bold;
-            color: #d4a017;
+            color: #d6a72c;
             padding-top: 4px;
         }
         QLabel#subtitle {
@@ -108,7 +108,7 @@ class SettingsDialog(QDialog):
         }
         QListWidget#navList::item:selected {
             color: #e8c547;
-            background: rgba(212, 160, 23, 0.12);
+            background: rgba(214, 167, 44, 0.12);
         }
         QPushButton#btnPath {
             background-color: #16213e;
@@ -119,33 +119,33 @@ class SettingsDialog(QDialog):
             font-size: 13px;
         }
         QPushButton#btnPath:hover {
-            border-color: #d4a017;
+            border-color: #d6a72c;
         }
         QPushButton#btnRestart {
-            background-color: rgba(212, 160, 23, 0.15);
+            background-color: rgba(214, 167, 44, 0.15);
             color: #e8c547;
-            border: 1px solid rgba(212, 160, 23, 0.5);
+            border: 1px solid rgba(214, 167, 44, 0.5);
             border-radius: 6px;
             padding: 6px 14px;
             font-size: 12px;
         }
         QPushButton#btnRestart:hover {
-            background-color: rgba(212, 160, 23, 0.3);
+            background-color: rgba(214, 167, 44, 0.3);
         }
         QPushButton#btnKofi {
-            background-color: rgba(212, 160, 23, 0.12);
+            background-color: rgba(214, 167, 44, 0.12);
             color: #e8c547;
-            border: 1px solid rgba(212, 160, 23, 0.45);
+            border: 1px solid rgba(214, 167, 44, 0.45);
             border-radius: 6px;
             padding: 8px 16px;
             font-size: 13px;
         }
         QPushButton#btnKofi:hover {
-            background-color: rgba(212, 160, 23, 0.25);
-            border-color: #d4a017;
+            background-color: rgba(214, 167, 44, 0.25);
+            border-color: #d6a72c;
         }
         QPushButton#btnClose {
-            background-color: #d4a017;
+            background-color: #d6a72c;
             color: #000000;
             font-weight: bold;
             border: none;
@@ -548,13 +548,13 @@ class SettingsDialog(QDialog):
 
     def _on_refresh_catalog(self) -> None:
         self._update_status.setText(tr("Actualisation du catalogue…"))
-        self._update_status.setStyleSheet(themed("color: #d4a017;"))
+        self._update_status.setStyleSheet(themed("color: #d6a72c;"))
         self._update_status.show()
         self.force_catalog_refresh.emit()
 
     def _on_check_launcher(self) -> None:
         self._update_status.setText(tr("Vérification des mises à jour…"))
-        self._update_status.setStyleSheet(themed("color: #d4a017;"))
+        self._update_status.setStyleSheet(themed("color: #d6a72c;"))
         self._update_status.show()
         self.force_launcher_check.emit()
 

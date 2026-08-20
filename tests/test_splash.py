@@ -19,7 +19,7 @@ import src.ui.splash as sp  # noqa: E402
 
 # Les libellés réellement affichés par main.py pendant le démarrage.
 ETATS = ["Initialisation", "Chargement des ressources",
-         "Préparation de la bibliothèque", "Prêt"]
+         "Préparation de la bibliothèque", "Ouverture de la fenêtre", "Prêt"]
 
 
 class TestAssetsDeMarque:

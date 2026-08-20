@@ -205,7 +205,7 @@ class MainWindow(QMainWindow):
         self._btn_settings.setStyleSheet(themed(
             "QPushButton { background: rgba(0,0,0,0.4); color: #8a8aaa; border: none;"
             " border-radius: 18px; font-size: 18px; }"
-            "QPushButton:hover { color: #d4a017; background: rgba(0,0,0,0.6); }"
+            "QPushButton:hover { color: #d6a72c; background: rgba(0,0,0,0.6); }"
         ))
         self._btn_settings.clicked.connect(self._on_settings)
         self._btn_settings.raise_()
@@ -292,24 +292,24 @@ class MainWindow(QMainWindow):
         bar.setFixedHeight(35)
         bar.setStyleSheet(themed(
             "QWidget { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            "stop:0 rgba(212,160,23,0.15), stop:0.5 rgba(212,160,23,0.25),"
-            "stop:1 rgba(212,160,23,0.15)); }"
+            "stop:0 rgba(214,167,44,0.15), stop:0.5 rgba(214,167,44,0.25),"
+            "stop:1 rgba(214,167,44,0.15)); }"
         ))
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(16, 0, 8, 0)
         layout.setSpacing(10)
 
         self._notif_label = QLabel()
-        self._notif_label.setStyleSheet(themed("color: #d4a017; font-size: 12px; background: transparent;"))
+        self._notif_label.setStyleSheet(themed("color: #d6a72c; font-size: 12px; background: transparent;"))
         layout.addWidget(self._notif_label, stretch=1)
 
         self._notif_btn = QPushButton(tr("Télécharger"))
         self._notif_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._notif_btn.setStyleSheet(themed(
-            "QPushButton { background: rgba(212,160,23,0.2); color: #d4a017;"
-            " border: 1px solid rgba(212,160,23,0.4); border-radius: 4px;"
+            "QPushButton { background: rgba(214,167,44,0.2); color: #d6a72c;"
+            " border: 1px solid rgba(214,167,44,0.4); border-radius: 4px;"
             " padding: 2px 10px; font-size: 11px; }"
-            "QPushButton:hover { background: rgba(212,160,23,0.35); color: #e8c547; }"
+            "QPushButton:hover { background: rgba(214,167,44,0.35); color: #e8c547; }"
         ))
         self._notif_btn.clicked.connect(self._on_notif_download)
         layout.addWidget(self._notif_btn)
@@ -318,7 +318,7 @@ class MainWindow(QMainWindow):
         btn_close.setFixedSize(24, 24)
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_close.setStyleSheet(themed(
-            "QPushButton { background: transparent; color: #d4a017; border: none; font-size: 14px; }"
+            "QPushButton { background: transparent; color: #d6a72c; border: none; font-size: 14px; }"
             "QPushButton:hover { color: #e8c547; }"
         ))
         btn_close.clicked.connect(self._dismiss_notif)

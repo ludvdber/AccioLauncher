@@ -91,7 +91,7 @@ def _show_crash_dialog(report: str) -> None:
         " border-radius: 6px; font-family: Consolas, monospace; font-size: 11px; }"
         "QPushButton { background: #16213e; color: #eaeaea; border: 1px solid #2c3e6b;"
         " border-radius: 6px; padding: 8px 16px; font-size: 13px; }"
-        "QPushButton:hover { border-color: #d4a017; color: #e8c547; }"
+        "QPushButton:hover { border-color: #d6a72c; color: #e8c547; }"
     ))
     layout = QVBoxLayout(dlg)
 
