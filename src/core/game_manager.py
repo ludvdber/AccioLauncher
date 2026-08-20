@@ -1,10 +1,10 @@
 """Gestionnaire de catalogue + état des jeux + lancement de processus."""
 
 import logging
-import platform
 import shutil
 import stat
 import subprocess
+import sys
 from datetime import date
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
@@ -18,7 +18,8 @@ from src.core.pre_launch import (
     delete_pre_launch_files,
     unblock_game_dlls,
 )
-from src.core.system_checks import check_vcredist_x86
+from src.core.system_checks import prerequis_manquants
+from src.core.version_utils import update_disponible
 
 log = logging.getLogger(__name__)
 
@@ -195,14 +196,17 @@ class GameManager:
         return self.config.installed_versions.get(game_id)
 
     def has_update(self, game_id: str) -> bool:
-        """Vérifie si une mise à jour est disponible pour un jeu installé."""
+        """Vérifie si une mise à jour est disponible pour un jeu installé.
+
+        La règle elle-même vit dans `version_utils.update_disponible` : elle
+        était dupliquée ici et dans l'UpdateChecker, en comparaison de chaînes.
+        """
         if not self.is_installed(game_id):
             return False
         game = self._index.get(game_id)
         if game is None:
             return False
-        installed = self.installed_version(game_id)
-        return installed is not None and installed != game.recommended_version
+        return update_disponible(self.installed_version(game_id), game.recommended_version)
 
     def set_game_state(self, game_id: str, state: GameState) -> None:
         if game_id not in self._index:
@@ -230,8 +234,12 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
-        if not check_vcredist_x86():
-            raise RuntimeError("vcredist_x86_missing")
+        # Socle commun + ce que le catalogue déclare pour CE jeu (ex. HP7 et
+        # son Visual C++ 2005). L'identifiant manquant remonte dans le message
+        # d'erreur : c'est lui qui permet à l'UI d'ouvrir la bonne page.
+        manquants = prerequis_manquants(("vcredist_x86", *game.requires))
+        if manquants:
+            raise RuntimeError(f"prerequis_manquant:{manquants[0]}")
 
         # Pré-lancement (cf. src/core/pre_launch.py)
         unblock_game_dlls(exe_path.parent)
@@ -241,7 +249,10 @@ class GameManager:
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}
-        if platform.system() == "Windows":
+        # `sys.platform == "win32"` et non `platform.system()` : c'est la
+        # convention de tout le reste du projet (16 autres sites), et le
+        # portage Linux impose que le test soit repérable d'un seul motif.
+        if sys.platform == "win32":
             popen_kwargs["creationflags"] = (
                 subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
             )

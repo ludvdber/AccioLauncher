@@ -24,6 +24,10 @@ CancelledCb = Callable[[], bool]
 
 # Délai max pour lister le contenu d'une archive avant extraction.
 _LIST_TIMEOUT_S = 120
+# Délai de récupération du process 7z APRÈS la fin de son flux de sortie.
+# Ce n'est pas une limite de durée d'extraction : à ce point-là, 7z.exe a
+# déjà fini d'écrire.
+_REAP_TIMEOUT_S = 30
 
 
 def check_path_traversal(destination: Path, member_name: str) -> bool:
@@ -177,6 +181,14 @@ def extract_7z_subprocess(
 
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        # stdin fermé, pour la même raison que le `-p` de `list_7z_entries` :
+        # 7z.exe peut demander un mot de passe (archive à contenu chiffré) ou
+        # une confirmation que `-y` ne couvre pas. Avec un stdin hérité d'un
+        # terminal, il attendrait une saisie que personne ne peut lui donner —
+        # la boucle de lecture ci-dessous bloque sur une invite sans retour à
+        # la ligne, donc `cancelled()` n'est plus jamais testé. Vérifié : avec
+        # DEVNULL, 7z rend la main immédiatement (code 255) au lieu d'attendre.
+        stdin=subprocess.DEVNULL,
         text=True, **kwargs,
     )
 
@@ -197,17 +209,22 @@ def extract_7z_subprocess(
                 except (ValueError, IndexError):
                     pass
 
-        ret = proc.wait(timeout=300)
+        # NB : ce délai ne borne PAS la durée d'extraction — on n'arrive ici
+        # qu'une fois stdout épuisé, donc une fois 7z.exe terminé. Il ne couvre
+        # que le temps de reap du processus. C'est le bon comportement (un jeu
+        # de 8 Go doit pouvoir prendre le temps qu'il faut) ; c'est le message
+        # d'erreur qui prétendait le contraire.
+        ret = proc.wait(timeout=_REAP_TIMEOUT_S)
         if ret != 0:
             raise RuntimeError(f"7z.exe a échoué (code {ret})")
         progress(100)
         verify_extracted_paths(destination)
         log.info("Extraction 7z.exe terminée")
     except subprocess.TimeoutExpired:
-        log.error("7z.exe n'a pas terminé dans le délai imparti, kill du processus")
+        log.error("7z.exe ne rend pas la main après la fin de son flux, kill du processus")
         proc.kill()
         proc.wait(timeout=10)
-        raise RuntimeError("7z.exe a dépassé le temps d'extraction maximum (5 min)")
+        raise RuntimeError("7z.exe ne s'est pas terminé après la fin de l'extraction")
     finally:
         if proc.stdout:
             proc.stdout.close()

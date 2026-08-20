@@ -38,12 +38,24 @@ def _clean_pyinstaller_env() -> dict[str, str]:
     return env
 
 
-def _spawn_after_exit_bat(body: str, prefix: str) -> bool:
+def _spawn_after_exit_bat(body: str, prefix: str,
+                          variables: dict[str, str] | None = None) -> bool:
     """Lance un .bat détaché qui attend la mort du processus courant puis exécute `body`.
 
     Le délai (boucle tasklist + ping-sleep) garantit que le verrou d'instance
     unique est libéré avant toute relance. `ping` sert de sleep : `timeout /t`
     refuse de tourner sans console.
+
+    **`body` doit être en ASCII pur, et tout chemin doit passer par
+    `variables`**, référencé dans le corps sous la forme `%NOM%`. Raison : un
+    fichier de commandes est relu par cmd.exe dans la page de codes OEM (cp850
+    ici), qui ne sait pas écrire `Frédéric`, encore moins `Дмитрий` ou `ハリー`.
+    L'ancienne version écrivait le .bat en `ascii` avec `errors="replace"` :
+    `C:\\Users\\Frédéric\\` devenait `C:\\Users\\Fr?d?ric\\`, `move` et `start`
+    échouaient, et l'auto-update comme les deux boutons « Redémarrer »
+    s'arrêtaient sans un mot (mesuré le 2026-08-20, avec témoin sans accent).
+    Le bloc d'environnement, lui, est transmis en Unicode par CreateProcessW :
+    les trois écritures passent (vérifié à l'exécution).
     """
     pid = os.getpid()
     bat_content = (
@@ -61,7 +73,11 @@ def _spawn_after_exit_bat(body: str, prefix: str) -> bool:
         # newline="" : le contenu contient déjà des \r\n ; sans ça le mode texte
         # les transforme en \r\r\n et cmd ne sort JAMAIS de la boucle :wait
         # (bug historique de l'auto-update, reproduit par simulation le 2026-06-11).
-        with os.fdopen(fd, "w", encoding="ascii", errors="replace", newline="") as f:
+        # errors="strict" et non "replace" : le corps est censé être en ASCII
+        # pur. Un caractère hors ASCII est désormais une ERREUR franche (le
+        # script ne part pas, l'appelant retombe sur son plan B) plutôt qu'un
+        # « ? » silencieux qui produisait un chemin inexistant.
+        with os.fdopen(fd, "w", encoding="ascii", errors="strict", newline="") as f:
             f.write(bat_content)
         # NE PAS détacher complètement le process (pas de console du tout) :
         # le pipeline `tasklist | find` se bloque alors et la boucle :wait ne
@@ -79,8 +95,12 @@ def _spawn_after_exit_bat(body: str, prefix: str) -> bool:
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env=_clean_pyinstaller_env(),
+            env=_clean_pyinstaller_env() | (variables or {}),
         )
+    except UnicodeEncodeError as exc:
+        log.error("Corps de script non-ASCII (les chemins doivent passer par "
+                  "`variables`) : %s", exc)
+        return False
     except OSError as exc:
         log.error("Impossible de lancer le script détaché : %s", exc)
         return False
@@ -96,10 +116,13 @@ def apply_update_and_restart(new_exe: Path) -> bool:
     if not can_self_update():
         return False
     current = Path(sys.executable).resolve()
+    # Les deux chemins voyagent par l'environnement, pas dans le corps du .bat
+    # (cf. _spawn_after_exit_bat : un chemin accentué y était mutilé).
     ok = _spawn_after_exit_bat(
-        f'move /y "{new_exe}" "{current}" >nul\r\n'
-        f'start "" "{current}"\r\n',
+        'move /y "%ACCIO_NOUVEL_EXE%" "%ACCIO_EXE%" >nul\r\n'
+        'start "" "%ACCIO_EXE%"\r\n',
         prefix="accio_update_",
+        variables={"ACCIO_NOUVEL_EXE": str(new_exe), "ACCIO_EXE": str(current)},
     )
     if ok:
         log.info("Mise à jour programmée : %s → %s", new_exe, current)
@@ -115,16 +138,19 @@ def relaunch_after_exit() -> bool:
     """
     if sys.platform == "win32":
         exe = Path(sys.executable).resolve()
+        variables = {}
         if getattr(sys, "frozen", False):
-            body = f'start "" "{exe}"\r\n'
+            body = 'start "" "%ACCIO_EXE%"\r\n'
         else:
             # En dev, préférer pythonw.exe : pas de console parasite à la relance.
             pythonw = exe.with_name("pythonw.exe")
             if pythonw.exists():
                 exe = pythonw
             main_py = Path(__file__).resolve().parents[2] / "main.py"
-            body = f'start "" "{exe}" "{main_py}"\r\n'
-        ok = _spawn_after_exit_bat(body, prefix="accio_relaunch_")
+            body = 'start "" "%ACCIO_EXE%" "%ACCIO_MAIN%"\r\n'
+            variables["ACCIO_MAIN"] = str(main_py)
+        variables["ACCIO_EXE"] = str(exe)
+        ok = _spawn_after_exit_bat(body, prefix="accio_relaunch_", variables=variables)
         if ok:
             log.info("Relance du launcher programmée")
         return ok

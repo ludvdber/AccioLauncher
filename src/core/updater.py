@@ -8,7 +8,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
 from src.core.game_data import _parse_catalog
-from src.core.version_utils import compare_versions
+from src.core.version_utils import compare_versions, update_disponible
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +21,11 @@ _LOCAL_CATALOG_PATH = LOCAL_CATALOG_PATH
 
 
 _SHA256_PREFIX = "sha256:"
+
+# Plafond du catalogue distant. Le catalogue embarqué pèse ~30 Ko ; cette borne
+# laisse vingt fois plus de jeux et de langues, tout en empêchant une réponse
+# aberrante de saturer la mémoire puis le disque.
+_CATALOG_MAX_BYTES = 4 * 1024 * 1024
 
 
 def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
@@ -68,10 +73,22 @@ def aggregate_download_counts(
     """
     url_counts: dict[str, int] = {}
     for rel in releases:
-        for asset in rel.get("assets", []):
+        # Mêmes gardes que `extract_asset_digests` juste au-dessus : sans elles,
+        # une release nulle ou un asset non-objet levait `AttributeError`, qui
+        # n'est PAS dans le tuple `except` de l'appelant. L'exception sortait de
+        # `QThread.run()` et l'utilisateur recevait un rapport de plantage pour
+        # une réponse HTTP inattendue (portail captif, proxy, page d'erreur).
+        if not isinstance(rel, dict):
+            continue
+        for asset in rel.get("assets", []) or []:
+            if not isinstance(asset, dict):
+                continue
             url = asset.get("browser_download_url", "")
-            if url:
-                url_counts[url] = int(asset.get("download_count", 0) or 0)
+            if url and isinstance(url, str):
+                try:
+                    url_counts[url] = max(0, int(asset.get("download_count", 0) or 0))
+                except (TypeError, ValueError):
+                    url_counts[url] = 0
 
     totals: dict[str, int] = {}
     for game_id, versions in games_asset_urls.items():
@@ -191,7 +208,8 @@ class UpdateChecker(QThread):
             if digests:
                 log.info("Empreintes SHA-256 récupérées pour %d asset(s)", len(digests))
                 self.asset_digests.emit(digests)
-        except (httpx.HTTPError, json.JSONDecodeError, ValueError) as exc:
+        except (httpx.HTTPError, json.JSONDecodeError, ValueError,
+                AttributeError, TypeError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de récupérer les compteurs de téléchargement : %s", exc)
 
@@ -203,10 +221,26 @@ class UpdateChecker(QThread):
             return
         try:
             with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
-                resp = client.get(self._catalog_url)
-                self._contact = True
-                resp.raise_for_status()
-                raw = resp.json()
+                # En streaming, avec un plafond : le téléchargeur d'archives en
+                # a un (SIZE_OVERHEAD_FACTOR), la récupération du catalogue n'en
+                # avait aucun. `client.get()` charge en mémoire tout ce que le
+                # serveur envoie, puis on l'écrivait sur disque. Le catalogue
+                # réel pèse ~30 Ko ; 4 Mo laissent de la marge pour vingt fois
+                # plus de jeux et vingt langues.
+                with client.stream("GET", self._catalog_url) as resp:
+                    self._contact = True
+                    resp.raise_for_status()
+                    morceaux: list[bytes] = []
+                    recus = 0
+                    for bloc in resp.iter_bytes(64 * 1024):
+                        recus += len(bloc)
+                        if recus > _CATALOG_MAX_BYTES:
+                            raise ValueError(
+                                f"catalogue distant trop volumineux "
+                                f"(> {_CATALOG_MAX_BYTES} octets), ignoré")
+                        morceaux.append(bloc)
+                brut = b"".join(morceaux)
+            raw = json.loads(brut.decode("utf-8"))
 
             catalog = _parse_catalog(raw)
             if not catalog.games:
@@ -228,17 +262,20 @@ class UpdateChecker(QThread):
                 self.catalog_updated.emit(catalog)
 
                 # Compter les mises à jour disponibles
+                # Même règle que `GameManager.has_update` — elle vit dans
+                # version_utils pour ne pas pouvoir diverger d'un site à l'autre.
                 count = 0
                 for game in catalog.games:
-                    installed = self._installed_versions.get(game.id)
-                    if installed and installed != game.recommended_version:
+                    if update_disponible(self._installed_versions.get(game.id),
+                                         game.recommended_version):
                         count += 1
                 if count > 0:
                     self.update_counts.emit(count)
             else:
                 log.info("Catalogue à jour (v%s)", self._current_version)
 
-        except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError) as exc:
+        except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError,
+                AttributeError, TypeError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de vérifier le catalogue distant : %s", exc)
 
@@ -256,21 +293,36 @@ class UpdateChecker(QThread):
                 resp.raise_for_status()
                 data = resp.json()
 
+            # `resp.json()` peut rendre une liste (page d'erreur, proxy) : sans
+            # ce garde, `data.get` levait `AttributeError`, hors du tuple
+            # `except` ci-dessous, donc hors de `QThread.run()` — rapport de
+            # plantage affiché à l'utilisateur. Voir aussi la note dans
+            # `aggregate_download_counts`.
+            if not isinstance(data, dict):
+                log.warning("Réponse de release inattendue (%s), ignorée",
+                            type(data).__name__)
+                return
+
             tag = data.get("tag_name", "")
-            if not tag:
+            if not tag or not isinstance(tag, str):
                 return
 
             if compare_versions(tag, APP_VERSION) > 0:
                 html_url = data.get("html_url", "https://github.com/ludvdber/AccioLauncher/releases/latest")
-                if not html_url.startswith("https://github.com/"):
+                if not isinstance(html_url, str) or not html_url.startswith("https://github.com/"):
                     log.warning("URL de release suspecte ignorée : %s", html_url)
                     html_url = "https://github.com/ludvdber/AccioLauncher/releases/latest"
                 # Asset .exe pour l'auto-update (vide si introuvable → fallback page release)
                 asset_url = ""
                 asset_sha256 = ""
-                for asset in data.get("assets", []):
+                for asset in data.get("assets", []) or []:
+                    if not isinstance(asset, dict):
+                        continue
                     url = asset.get("browser_download_url", "")
-                    if asset.get("name", "").lower().endswith(".exe") and url.startswith("https://"):
+                    nom = asset.get("name", "")
+                    if not isinstance(url, str) or not isinstance(nom, str):
+                        continue
+                    if nom.lower().endswith(".exe") and url.startswith("https://"):
                         asset_url = url
                         # GitHub publie l'empreinte de l'asset : elle évite d'avoir
                         # à la recopier à la main dans le code à chaque release,
@@ -284,6 +336,7 @@ class UpdateChecker(QThread):
             else:
                 log.info("Launcher à jour (v%s)", APP_VERSION)
 
-        except (httpx.HTTPError, json.JSONDecodeError, ValueError) as exc:
+        except (httpx.HTTPError, json.JSONDecodeError, ValueError,
+                AttributeError, TypeError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de vérifier la version du launcher : %s", exc)

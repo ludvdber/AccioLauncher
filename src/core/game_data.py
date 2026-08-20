@@ -61,6 +61,39 @@ def _https_ou_rien(url):
     return None
 
 
+def _sha256_valide(value) -> str | None:
+    """Empreinte hexadécimale de 64 caractères, ou None.
+
+    Le catalogue est mis à jour à distance : une coquille (`"sha256": 12345`,
+    une empreinte tronquée) ne doit pas remonter jusqu'au comparateur. Elle y
+    provoquait un `AttributeError` sur `.lower()`, donc un rapport de plantage
+    pour une faute de frappe. Pas d'empreinte vaut mieux qu'une fausse.
+    """
+    if not isinstance(value, str):
+        return None
+    hexa = value.strip().lower()
+    if len(hexa) == 64 and all(c in "0123456789abcdef" for c in hexa):
+        return hexa
+    if value:
+        log.warning("Empreinte SHA-256 mal formée dans le catalogue, ignorée : %r", value)
+    return None
+
+
+def _taille_mo(value) -> int:
+    """Taille annoncée en Mo, jamais négative.
+
+    Une valeur négative avait deux effets fâcheux et silencieux : la
+    vérification d'espace disque passait toujours (`needed_space_mb` rendait un
+    nombre négatif), et le plafond du téléchargeur tombait à 0, c'est-à-dire
+    DÉSACTIVÉ. Un catalogue trafiqué n'a donc pas à pouvoir lever le plafond.
+    """
+    try:
+        taille = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, taille)
+
+
 def _loc(data: dict, key: str, default):
     """Valeur du champ `key` dans la langue active, sinon en français.
 
@@ -83,9 +116,18 @@ def _loc(data: dict, key: str, default):
             translated = block.get(lang)
             if isinstance(translated, dict) and key in translated:
                 value = translated[key]
-                # Un bloc i18n trafiqué ne doit pas changer le TYPE du champ.
+                # Un bloc i18n trafiqué ne doit pas changer le TYPE du champ…
                 if isinstance(value, type(default)):
-                    return value
+                    # …ni le VIDER. `from_dict` valide que le nom français est
+                    # une chaîne non vide, mais cette validation portait sur le
+                    # champ source : une traduction vide passait derrière et
+                    # donnait une fiche de jeu sans titre. Un champ traduit vide
+                    # se comporte désormais comme un champ absent, c'est-à-dire
+                    # qu'il retombe sur le français — le repli par CHAMP prévu.
+                    if isinstance(value, str) and not value.strip():
+                        log.warning("Traduction vide (%s/%s) — repli sur le français", lang, key)
+                    else:
+                        return value
     return data.get(key, default)
 
 
@@ -164,10 +206,13 @@ class GameVersion:
             date=data.get("date", ""),
             download_url=_https_ou_rien(data.get("download_url")),
             download_parts=_https_ou_rien(data.get("download_parts")),
-            size_mb=int(data.get("size_mb", 0)),
+            size_mb=_taille_mo(data.get("size_mb", 0)),
             changes=tuple(_loc(data, "changes", [])),
-            sha256=data.get("sha256"),
-            sha256_parts=tuple(data.get("sha256_parts", [])),
+            sha256=_sha256_valide(data.get("sha256")),
+            sha256_parts=tuple(
+                h for h in (_sha256_valide(x) for x in data.get("sha256_parts", []) or ())
+                if h is not None
+            ),
         )
 
 
@@ -188,6 +233,12 @@ class GameData:
     tags: tuple[str, ...] = ()
     post_install: PostInstall = field(default_factory=PostInstall)
     pre_launch: PreLaunch | None = None
+    # Runtimes exigés par le jeu, en plus du socle commun. Déclaré par le
+    # CATALOGUE (donc modifiable sans republier l'exécutable) et non codé en
+    # dur : HP7 réclame Visual C++ 2005, qui est un runtime distinct du
+    # 2015-2022 vérifié pour tous les jeux. Sans cette déclaration, HP7 se
+    # serait lancé puis refermé aussitôt, sans le moindre message.
+    requires: tuple[str, ...] = ()
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -274,6 +325,8 @@ class GameData:
             recommended_version=data.get("recommended_version", "1.0"),
             versions=versions,
             tags=_tags_valides(_loc(data, "tags", [])),
+            requires=tuple(r for r in data.get("requires", []) or ()
+                           if isinstance(r, str)),
             post_install=PostInstall(
                 registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),

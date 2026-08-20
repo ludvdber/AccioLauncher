@@ -30,6 +30,8 @@ IDENTIQUES_TOLEREES = {
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « changelog » est le même mot en français et en anglais.
     "v{} · changelog",
+    # Noms de produits Microsoft : ils ne se traduisent pas.
+    "Visual C++ x86", "Visual C++ 2005 x86", "Visual C++ 2008 x86",
 }
 
 LANG_FILES = sorted(Path(p) for p in glob.glob(str(I18N_DIR / "*.json")))

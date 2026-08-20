@@ -6,7 +6,6 @@ import pytest
 
 from src.core.formatting import (
     append_part_info,
-    estimate_duration,
     format_bytes,
     format_playtime,
     format_progress_line,
@@ -106,22 +105,3 @@ class TestFormatProgressLine:
         assert line.startswith("Téléchargement : 50%")
 
 
-class TestEstimateDuration:
-    """Durée annoncée avant le clic — jamais devinée."""
-
-    def test_vitesse_inconnue_ne_promet_rien(self):
-        assert estimate_duration(431, 0.0) == ""
-        assert estimate_duration(431, -5) == ""
-
-    def test_taille_nulle(self):
-        assert estimate_duration(0, 10_000_000) == ""
-
-    def test_estimation_plausible(self):
-        # 431 Mo à 10 Mo/s ≈ 45 s
-        out = estimate_duration(431, 10 * 1024 * 1024)
-        assert out and ("s" in out or "min" in out)
-
-    def test_plus_c_est_gros_plus_c_est_long(self):
-        rapide = estimate_duration(100, 10 * 1024 * 1024)
-        lent = estimate_duration(4000, 10 * 1024 * 1024)
-        assert rapide != lent

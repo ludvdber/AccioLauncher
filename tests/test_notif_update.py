@@ -123,7 +123,7 @@ class TestDialogue:
 
         fenetre._launcher_update_asked = False
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        fenetre._launcher_update_version = "9.9.9"
+        fenetre._updates.version = "9.9.9"
         fenetre._propose_launcher_update()
         assert len(appels) == 1, (
             "le dialogue se rouvrirait à chaque contrôle de mise à jour")
@@ -132,11 +132,13 @@ class TestDialogue:
 class TestVitesseAffichee:
     def test_la_ligne_montre_la_vitesse_et_le_volume(self, qtbot, fenetre):
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        fenetre._launcher_speed.reset()
-        fenetre._on_launcher_dl_progress(5_000_000, 40_000_000)
+        # La progression est calculée par le dispatcher et POSÉE dans le
+        # bandeau par un signal : on exerce la chaîne complète.
+        fenetre._updates._speed.reset()
+        fenetre._updates._on_progress(5_000_000, 40_000_000)
         time.sleep(0.05)
-        fenetre._on_launcher_dl_progress(40_000_000, 40_000_000)
-        texte = fenetre._notif_label.text()
+        fenetre._updates._on_progress(40_000_000, 40_000_000)
+        texte = fenetre._notif_bar.message()
         assert "%" in texte, texte
         assert "/s" in texte, f"pas de vitesse dans « {texte} »"
         assert "Mo" in texte or "MB" in texte, texte

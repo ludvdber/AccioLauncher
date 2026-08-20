@@ -1,0 +1,37 @@
+# Fins de ligne — pourquoi ce fichier existe
+#
+# `build.bat` s'est retrouvé en LF seuls dans l'arbre de travail, et `cmd.exe`
+# ne sait PAS lire un fichier de commandes en LF : il découpe les mots au
+# hasard. Le build échouait sur « 'evel' n'est pas reconnu » — c'était
+# `errorlevel` coupé en deux. Rien ne le signalait, parce que `git status` ne
+# voit aucune différence : avec `core.autocrlf=true`, un fichier LF se
+# normalise en lui-même et reste « non modifié ».
+#
+# Le réglage `core.autocrlf` est LOCAL à chaque poste : compter dessus, c'est
+# accepter qu'un clone chez quelqu'un d'autre reparte cassé. `.gitattributes`,
+# lui, voyage avec le dépôt.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Les scripts POSIX, à l'inverse : un shebang suivi de CRLF donne
+# « bad interpreter: /bin/sh^M ». Le portage Linux est un objectif déclaré.
+*.sh   text eol=lf
+
+# Fichiers texte du projet : normalisés en LF dans le dépôt, laissés au
+# réglage du poste à la sortie.
+*.py    text
+*.json  text
+*.md    text
+*.toml  text
+*.spec  text
+*.txt   text
+*.yml   text
+
+# Binaires : jamais touchés.
+*.ico  binary
+*.png  binary
+*.jpg  binary
+*.exe  binary
+*.7z   binary
+*.ttf  binary
+*.mp4  binary

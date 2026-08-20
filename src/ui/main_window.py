@@ -1,14 +1,11 @@
 import logging
 import subprocess
 import time
-from pathlib import Path
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QIcon, QKeyEvent
 from PyQt6.QtWidgets import (
     QApplication,
-    QHBoxLayout,
-    QLabel,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -19,21 +16,17 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import ASSETS_DIR, Config
 from src.core.discord_presence import DiscordPresence
-from src.core.downloader import Downloader
 from src.core.game_manager import GameManager, GameState
-from src.core.formatting import format_progress_line
 from src.core.i18n import tr
-from src.core.self_update import apply_update_and_restart, can_self_update
-from src.core.updater import UpdateChecker
 from src.core.win_taskbar import TaskbarProgress
 from src.ui.carousel import Carousel
 from src.ui.download_bar import DownloadBar
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
+from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
 from src.ui.process_monitor import ProcessMonitor
 from src.ui.season import resolve as resolve_season
-from src.ui.speed_tracker import SpeedTracker
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
@@ -41,6 +34,7 @@ from src.ui.ticker import Ticker
 from src.ui.title_bar import TitleBar
 from src.ui.toast import Toast
 from src.ui.tray_manager import TrayManager
+from src.ui.update_dispatcher import UpdateDispatcher
 from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
@@ -49,27 +43,6 @@ _ICON_PATH = ASSETS_DIR / "accio_launcher.ico"
 # Repli hors Windows : le .ico est un format Windows, et le portage Linux est
 # un objectif déclaré. Qt sait lire les deux, mais autant ne pas en dépendre.
 _ICON_FALLBACK = ASSETS_DIR / "accio_launcher.png"
-
-# Délai avant de re-tester le réseau quand plus rien ne répond. Assez court pour
-# qu'un câble rebranché se voie tout de suite, assez long pour ne pas marteler
-# l'API GitHub — et de toute façon sans coût quand on est réellement hors ligne
-# (les requêtes échouent au premier DNS).
-_OFFLINE_RETRY_MS = 45_000
-
-# Checkers encore actifs à la fermeture : déparentés de la MainWindow et gardés
-# vivants ici jusqu'à leur fin réelle. Sans ça, un QThread bloqué sur un read
-# réseau était détruit avec sa fenêtre parente → « QThread: Destroyed while
-# thread is still running » et abandon du process (le launcher « plante quand
-# on le ferme »). Même contrat que GameOperations._zombies.
-_orphaned_checkers: list[UpdateChecker] = []
-
-
-def _reap_checker(checker: UpdateChecker) -> None:
-    """Libère un checker orphelin une fois son thread réellement terminé."""
-    if checker in _orphaned_checkers:
-        _orphaned_checkers.remove(checker)
-    checker.deleteLater()
-
 
 def _load_app_icon() -> QIcon:
     """Icône de l'application — le .ico multi-résolution en priorité.
@@ -113,14 +86,10 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(themed(MAIN_STYLE))
         self.manager = GameManager(self.config)
 
-        self._update_checker: UpdateChecker | None = None
-        self._extra_checkers: list[UpdateChecker] = []
-        self._launcher_update_version: str = ""
-        self._launcher_update_url: str = ""
-        self._launcher_update_asset: str = ""
-        self._launcher_update_sha256: str = ""
-        self._launcher_dl: Downloader | None = None  # téléchargement auto-update en cours
-        self._launcher_speed = SpeedTracker()        # vitesse + temps restant
+        # Tout ce qui concerne les vérifications de mise à jour vit dans le
+        # dispatcher : threads, re-tentative hors ligne, téléchargement de l'exe.
+        # La fenêtre n'en garde que ce qui s'affiche.
+        self._updates = UpdateDispatcher(self.manager, self)
         self._launcher_update_asked = False          # dialogue posé une fois par session
         self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
         self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
@@ -130,13 +99,11 @@ class MainWindow(QMainWindow):
         # État réseau — optimiste au départ : on n'affiche « hors ligne » que
         # sur une preuve, jamais par défaut (cf. UpdateChecker.is_online).
         self._online = True
-        self._offline_retry = QTimer(self)
-        self._offline_retry.setSingleShot(True)
-        self._offline_retry.timeout.connect(self._start_update_check)
 
         self._build_ui()
         self._build_tray()
         self._build_process_monitor()
+        self._wire_updates()
         self._start_update_check()
 
     @staticmethod
@@ -163,10 +130,11 @@ class MainWindow(QMainWindow):
         self._title_bar = TitleBar(self)
         root_layout.addWidget(self._title_bar)
 
-        # Notification bar (cachée par défaut)
-        self._notif_bar = self._build_notif_bar()
+        # Bandeau de mise à jour du launcher (caché par défaut)
+        self._notif_bar = NotificationBar(self)
+        self._notif_bar.download_clicked.connect(self._on_notif_download)
+        self._notif_bar.dismissed.connect(self._dismiss_notif)
         root_layout.addWidget(self._notif_bar)
-        self._notif_bar.hide()
 
         games = [entry.game for entry in self.manager.get_games()]
 
@@ -272,7 +240,6 @@ class MainWindow(QMainWindow):
                 tr("Téléchargement terminé"), tr("{} est prêt à jouer !").format(game.name)
             )
         elif not self.isActiveWindow():
-            from PyQt6.QtWidgets import QApplication
             QApplication.alert(self)  # fait clignoter l'icône taskbar
 
     def _on_ops_state_changed(self) -> None:
@@ -291,57 +258,7 @@ class MainWindow(QMainWindow):
         self._monitor = ProcessMonitor(self)
         self._monitor.game_exited.connect(self._on_game_exited)
 
-    def _build_notif_bar(self) -> QWidget:
-        """Construit la barre de notification dorée pour les updates launcher."""
-        bar = QWidget()
-        bar.setFixedHeight(35)
-        bar.setStyleSheet(themed(
-            "QWidget { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            "stop:0 rgba(214,167,44,0.15), stop:0.5 rgba(214,167,44,0.25),"
-            "stop:1 rgba(214,167,44,0.15)); }"
-        ))
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(16, 0, 8, 0)
-        layout.setSpacing(10)
-
-        self._notif_label = QLabel()
-        self._notif_label.setStyleSheet(themed("color: #d6a72c; font-size: 12px; background: transparent;"))
-        layout.addWidget(self._notif_label, stretch=1)
-
-        self._notif_btn = QPushButton(tr("Télécharger"))
-        self._notif_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._notif_btn.setStyleSheet(themed(
-            "QPushButton { background: rgba(214,167,44,0.2); color: #d6a72c;"
-            " border: 1px solid rgba(214,167,44,0.4); border-radius: 4px;"
-            " padding: 2px 10px; font-size: 11px; }"
-            "QPushButton:hover { background: rgba(214,167,44,0.35); color: #e8c547; }"
-        ))
-        self._notif_btn.clicked.connect(self._on_notif_download)
-        layout.addWidget(self._notif_btn)
-
-        btn_close = QPushButton("✕")
-        btn_close.setFixedSize(24, 24)
-        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.setStyleSheet(themed(
-            "QPushButton { background: transparent; color: #d6a72c; border: none; font-size: 14px; }"
-            "QPushButton:hover { color: #e8c547; }"
-        ))
-        btn_close.clicked.connect(self._dismiss_notif)
-        layout.addWidget(btn_close)
-
-        return bar
-
     # ──────────────────── Update checker ────────────────────
-
-    def _games_asset_urls(self) -> dict[str, list[list[str]]]:
-        """Snapshot game_id → versions → URLs d'assets (compteur ⬇, thread-safe)."""
-        return {
-            entry.game.id: [
-                [v.download_url or ""] + list(v.download_parts or [])
-                for v in entry.game.versions
-            ]
-            for entry in self.manager.get_games()
-        }
 
     def _apply_default_geometry(self) -> None:
         """Taille d'ouverture proportionnée à l'écran, fenêtre centrée.
@@ -369,36 +286,25 @@ class MainWindow(QMainWindow):
         self.move(avail.x() + (avail.width() - width) // 2,
                   avail.y() + (avail.height() - height) // 2)
 
-    def _start_update_check(self) -> None:
-        """Lance la vérification des mises à jour en arrière-plan.
+    def _wire_updates(self) -> None:
+        """Branche le dispatcher sur ce qui s'affiche.
 
-        Toujours lancée : sans réseau, ou si GitHub répond mal, chaque étape
-        échoue proprement et le launcher garde ce qu'il a déjà — le catalogue
-        embarqué ou le dernier téléchargé (`load_catalog` prend le plus récent
-        des deux). Il n'y a donc rien à gagner à ne pas essayer, et un réglage
-        « ne pas vérifier » ne faisait que priver l'utilisateur des empreintes
-        SHA-256 qui vérifient ses téléchargements.
+        Tout ce que la fenêtre fait des mises à jour tient ici : le reste —
+        threads, re-tentative, téléchargement — est dans `UpdateDispatcher`.
         """
-        if self._update_checker is not None:
-            # Même traitement qu'à la fermeture : jamais de thread remplacé
-            # pendant qu'il tourne encore (il resterait enfant de la fenêtre
-            # et mourrait avec elle).
-            self._shutdown_checker(self._update_checker)
-        catalog = self.manager.catalog
-        self._update_checker = UpdateChecker(
-            catalog_url=catalog.catalog_url,
-            current_catalog_version=catalog.catalog_version,
-            installed_versions=self.config.installed_versions,
-            games_asset_urls=self._games_asset_urls(),
-            parent=self,
-        )
-        self._update_checker.catalog_updated.connect(self._on_catalog_updated)
-        self._update_checker.launcher_update.connect(self._on_launcher_update)
-        self._update_checker.update_counts.connect(self._on_update_counts)
-        self._update_checker.download_counts.connect(self._on_download_counts)
-        self._update_checker.asset_digests.connect(self._on_asset_digests)
-        self._update_checker.network_status.connect(self._on_network_status)
-        self._update_checker.start()
+        self._updates.catalog_updated.connect(self._on_catalog_updated)
+        self._updates.launcher_update.connect(self._on_launcher_update)
+        self._updates.update_counts.connect(self._on_update_counts)
+        self._updates.download_counts.connect(self._on_download_counts)
+        self._updates.network_status.connect(self._on_network_status)
+        self._updates.launcher_message.connect(self._notif_bar.set_message)
+        self._updates.launcher_busy.connect(self._notif_bar.set_busy)
+        self._updates.launcher_ready.connect(self.close)
+
+    def _start_update_check(self) -> None:
+        """Lance la vérification de fond. Neutralisée par les tests, d'où le
+        maintien de cette méthode : c'est le point d'entrée qu'ils remplacent."""
+        self._updates.start()
 
     def _on_network_status(self, online: bool) -> None:
         """Aucun serveur joignable → le dire, et re-tester tout seul.
@@ -408,10 +314,7 @@ class MainWindow(QMainWindow):
         en panne. Le timer est ré-armé à CHAQUE échec, pas seulement à la
         transition, sinon un seul essai serait fait.
         """
-        if online:
-            self._offline_retry.stop()
-        else:
-            self._offline_retry.start(_OFFLINE_RETRY_MS)
+        self._updates.schedule_retry(online)
         if online == self._online:
             return
         self._online = online
@@ -423,17 +326,9 @@ class MainWindow(QMainWindow):
                       if self.manager.has_update(entry.game.id))
         self._on_update_counts(pending)
 
-    def _on_asset_digests(self, digests: dict) -> None:
-        """Empreintes SHA-256 publiées par GitHub, pour vérifier les archives.
-
-        Reçues dans la même réponse que les compteurs ⬇ : aucune requête
-        supplémentaire. Voir `GameManager.expected_hashes`.
-        """
-        self.manager.set_asset_digests(digests)
-
     def _on_download_counts(self, counts: dict) -> None:
-        """Compteurs ⬇ reçus — rafraîchir la fiche affichée (même id = pas de transition)."""
-        self.manager.set_download_counts(counts)
+        """Compteurs ⬇ reçus — rafraîchir la fiche affichée (même id = pas de
+        transition). Le manager a déjà été servi par le dispatcher."""
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
 
@@ -460,17 +355,8 @@ class MainWindow(QMainWindow):
         """Nouvelle version du launcher disponible."""
         if self.config.dismissed_launcher_version == version:
             return
-        self._launcher_update_version = version
-        self._launcher_update_url = url
-        self._launcher_update_asset = asset_url
-        self._launcher_update_sha256 = asset_sha256
-        self._notif_label.setText(tr("Accio Launcher v{} est disponible !").format(version))
-        self._notif_btn.setText(tr("Mettre à jour") if asset_url and can_self_update() else tr("Télécharger"))
-        self._notif_bar.show()
-        # Le bandeau ne s'efface PLUS tout seul. Il disparaissait au bout de
-        # 30 s : le temps de le lire et d'aller cliquer, il n'était plus là, et
-        # rien ne rappelait qu'une mise à jour attendait. Il reste maintenant
-        # jusqu'à ce que l'utilisateur tranche — mettre à jour, ou fermer.
+        self._updates.remember(version, url, asset_url, asset_sha256)
+        self._notif_bar.announce(version, auto=self._updates.can_install_itself)
         self._position_settings()
         self._propose_launcher_update()
 
@@ -495,8 +381,8 @@ class MainWindow(QMainWindow):
         boite.setWindowTitle(tr("Mise à jour disponible"))
         boite.setIcon(QMessageBox.Icon.NoIcon)
         boite.setText(tr("Accio Launcher v{} est disponible !").format(
-            self._launcher_update_version))
-        auto = bool(self._launcher_update_asset) and can_self_update()
+            self._updates.version))
+        auto = self._updates.can_install_itself
         boite.setInformativeText(
             tr("La mise à jour est téléchargée et installée automatiquement ; "
                "le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne "
@@ -546,73 +432,18 @@ class MainWindow(QMainWindow):
         return True
 
     def _on_notif_download(self) -> None:
-        """Auto-update en un clic si possible, sinon ouverture de la page release."""
-        if self._launcher_dl is not None:
-            return  # téléchargement déjà en cours
-        if not self._launcher_update_asset or not can_self_update():
-            if self._launcher_update_url:
-                open_url(self._launcher_update_url)
-            return
-        dest = self.config.cache_path / f"AccioLauncher_v{self._launcher_update_version}.exe"
-        dest.unlink(missing_ok=True)
-        self._notif_btn.setEnabled(False)
-        self._launcher_speed.reset()
-        self._notif_label.setText(tr("Téléchargement de la mise à jour…"))
-        # L'empreinte vient de l'API GitHub (cf. UpdateChecker._check_launcher).
-        # Vide → téléchargement non vérifié, comme avant : on ne bloque pas une
-        # mise à jour parce que GitHub n'a pas publié de digest.
-        self._launcher_dl = Downloader(
-            url=self._launcher_update_asset, destination=dest,
-            expected_sha256=self._launcher_update_sha256 or None,
-            parent=self,
-        )
-        self._launcher_dl.progress.connect(self._on_launcher_dl_progress)
-        self._launcher_dl.download_finished.connect(self._on_launcher_dl_finished)
-        self._launcher_dl.error.connect(self._on_launcher_dl_error)
-        self._launcher_dl.start()
-
-    def _on_launcher_dl_progress(self, downloaded: int, total: int) -> None:
-        """Pourcentage, volume, VITESSE et temps restant — même ligne que les jeux.
-
-        Un simple pourcentage ne dit pas si le téléchargement avance ou s'il est
-        bloqué. `format_progress_line` est la source unique de cette ligne dans
-        tout le projet ; la réécrire ici la ferait diverger.
-        """
-        if total <= 0:
-            return
-        self._launcher_speed.update(downloaded)
-        if not self._launcher_speed.should_update_ui() and downloaded < total:
-            return
-        ligne = format_progress_line(downloaded, total, self._launcher_speed.speed,
-                                     self._launcher_speed.eta(downloaded, total))
-        self._notif_label.setText(f"{tr('Téléchargement de la mise à jour…')} {ligne}")
-
-    def _on_launcher_dl_finished(self, path_str: str) -> None:
-        self._launcher_dl = None
-        self._notif_btn.setEnabled(True)
-        if apply_update_and_restart(Path(path_str)):
-            self._notif_label.setText(tr("Redémarrage…"))
-            log.info("Fermeture pour mise à jour vers v%s", self._launcher_update_version)
-            self.close()
-        else:
-            # Mode dev / échec du script : retomber sur la page release
-            if self._launcher_update_url:
-                open_url(self._launcher_update_url)
-
-    def _on_launcher_dl_error(self, message: str) -> None:
-        log.warning("Échec du téléchargement de la mise à jour : %s", message)
-        self._launcher_dl = None
-        self._notif_btn.setEnabled(True)
-        self._notif_label.setText(tr("Échec du téléchargement — ouverture de la page de release"))
-        if self._launcher_update_url:
-            open_url(self._launcher_update_url)
+        """Clic sur le bandeau — le dispatcher décide entre auto-update et
+        ouverture de la page de release."""
+        self._updates.download()
 
     def _dismiss_notif(self) -> None:
-        """Ferme la notification et sauvegarde la version ignorée."""
+        """Écarte la version pour de bon — sans ça le bandeau reviendrait à
+        chaque vérification. Appelable directement, d'où le `hide()` : le
+        bandeau s'est déjà caché quand c'est sa croix qui a déclenché."""
         self._notif_bar.hide()
         self._position_settings()
-        if self._launcher_update_version:
-            self.config.dismissed_launcher_version = self._launcher_update_version
+        if self._updates.version:
+            self.config.dismissed_launcher_version = self._updates.version
             self.config.save()
 
     def _minimize_to_tray(self) -> None:
@@ -633,7 +464,6 @@ class MainWindow(QMainWindow):
     def _quit_app(self) -> None:
         """Quitte proprement l'application."""
         self._tray.hide()
-        from PyQt6.QtWidgets import QApplication
         QApplication.quit()
 
     def bring_to_front(self) -> None:
@@ -780,17 +610,7 @@ class MainWindow(QMainWindow):
         Protégé contre dlg détruit avant la fin du checker : chaque slot vérifie
         que le dialog est encore vivant via _dlg_alive.
         """
-        catalog = self.manager.catalog
-        checker = UpdateChecker(
-            catalog_url=catalog.catalog_url,
-            current_catalog_version="0",  # version "0" → force le fetch
-            installed_versions=self.config.installed_versions,
-            # Sans ça, un utilisateur ayant désactivé la vérif au démarrage
-            # n'obtiendrait jamais les compteurs ⬇ même en forçant la vérif.
-            games_asset_urls=self._games_asset_urls(),
-            parent=self,
-        )
-        self._extra_checkers.append(checker)
+        checker = self._updates.forced_checker()
         state = {"catalog_updated": False, "dlg_alive": True}
 
         def _dlg_alive() -> bool:
@@ -811,9 +631,15 @@ class MainWindow(QMainWindow):
             if _dlg_alive():
                 dlg.update_catalog_version(new_catalog.catalog_version)
 
-        def on_launcher(version, url, asset_url=""):
+        def on_launcher(version, url, asset_url="", asset_sha256=""):
+            # Le 4ᵉ argument est l'empreinte SHA-256 publiée par GitHub. Il
+            # manquait ici : PyQt tronque silencieusement les arguments qu'un
+            # slot ne déclare pas, donc « Vérifier les mises à jour » posait une
+            # empreinte VIDE et l'exe d'auto-update était installé sans être
+            # vérifié — alors que la vérification au démarrage, elle, le
+            # vérifiait. Voir tests/test_notif_update.py.
             self.config.dismissed_launcher_version = ""  # check forcé → toujours montrer
-            self._on_launcher_update(version, url, asset_url)
+            self._on_launcher_update(version, url, asset_url, asset_sha256)
             if _dlg_alive():
                 dlg.show_update_status(tr("Launcher v{} disponible !").format(version))
 
@@ -821,15 +647,12 @@ class MainWindow(QMainWindow):
             if _dlg_alive():
                 if not state["catalog_updated"]:
                     dlg.show_update_status(tr("Catalogue déjà à jour"))
-                elif not catalog_only and not self._launcher_update_url:
+                elif not catalog_only and not self._updates.url:
                     dlg.show_update_status(tr("Tout est à jour"))
-            if checker in self._extra_checkers:
-                self._extra_checkers.remove(checker)
 
+        # Compteurs, empreintes et état réseau sont déjà branchés par
+        # `forced_checker` : il ne reste ici que ce qui parle au dialogue.
         checker.catalog_updated.connect(on_catalog)
-        checker.update_counts.connect(self._on_update_counts)
-        checker.download_counts.connect(self._on_download_counts)
-        checker.network_status.connect(self._on_network_status)
         if not catalog_only:
             checker.launcher_update.connect(on_launcher)
         checker.finished.connect(on_finished)
@@ -959,53 +782,23 @@ class MainWindow(QMainWindow):
             self._carousel.select_next()
         return True
 
-    @staticmethod
-    def _shutdown_checker(checker: UpdateChecker) -> None:
-        """Arrête un UpdateChecker sans jamais le détruire pendant qu'il tourne.
-
-        Demande l'interruption (honorée entre les étapes réseau de `run()`),
-        attend, et si le thread est encore bloqué sur une requête en vol, le
-        déparente pour qu'il survive à la destruction de la fenêtre — son
-        `finished` natif s'occupe du nettoyage.
-        """
-        if not checker.isRunning():
-            return
-        checker.requestInterruption()
-        if checker.wait(3000):
-            return
-        log.warning("UpdateChecker encore actif à la fermeture — nettoyage différé")
-        checker.setParent(None)
-        _orphaned_checkers.append(checker)
-        checker.finished.connect(lambda: _reap_checker(checker))
-
     def closeEvent(self, event) -> None:
         """Attend la fin des threads avant de fermer."""
-        from PyQt6.QtWidgets import QApplication
         QApplication.instance().removeEventFilter(self)
 
-        # Avant tout : sinon le timer hors-ligne ressuscite un checker pendant
-        # qu'on attend justement la fin des threads.
-        self._offline_retry.stop()
-        if self._update_checker is not None:
-            self._shutdown_checker(self._update_checker)
-        for checker in list(self._extra_checkers):
-            self._shutdown_checker(checker)
-        self._extra_checkers.clear()
-        if self._launcher_dl is not None:
-            self._launcher_dl.cancel()
-            self._launcher_dl.wait(3000)
-            self._launcher_dl = None
+        # Timer, checkers et téléchargement de mise à jour, dans le bon ordre.
+        self._updates.shutdown()
         self._presence.shutdown()
         self._detail.cancel_operations()
         self._tray.hide()
         super().closeEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
+        # ←/→ ne sont PAS traitées ici : le filtre applicatif `_handle_global_key`
+        # les consomme avant, y compris quand un bouton a le focus (c'est tout
+        # son intérêt). Les dupliquer donnait deux règles pour un seul
+        # comportement, dont une inatteignable — et donc jamais vérifiée.
         match event.key():
-            case Qt.Key.Key_Left:
-                self._carousel.select_prev()
-            case Qt.Key.Key_Right:
-                self._carousel.select_next()
             case Qt.Key.Key_Return | Qt.Key.Key_Enter:
                 self._detail.trigger_primary_action()
             case _:

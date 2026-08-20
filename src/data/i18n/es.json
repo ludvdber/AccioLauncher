@@ -102,8 +102,6 @@
     "Erreur d'installation : {}": "Error de instalación: {}",
     "Erreur : {}": "Error: {}",
     "Téléchargement déjà en cours pour ce jeu.": "Ya hay una descarga en curso para este juego.",
-    "Visual C++ manquant": "Falta Visual C++",
-    "Le Visual C++ Redistributable x86 (2015-2022) n'est pas installé.\nIl est nécessaire pour lancer les jeux.\n\nVoulez-vous ouvrir la page de téléchargement ?": "Visual C++ Redistributable x86 (2015-2022) no está instalado.\nEs necesario para ejecutar los juegos.\n\n¿Quieres abrir la página de descarga?",
     "Impossible de lancer le jeu.": "No se ha podido iniciar el juego.",
     "Lancement de {}…": "Iniciando {}…",
     "Confirmer la désinstallation": "Confirmar la desinstalación",
@@ -218,7 +216,6 @@
     "Hors ligne — les jeux installés restent jouables.": "Sin conexión — tus juegos instalados siguen funcionando.",
     "Espace insuffisant : {} libres, il en faut environ {}.": "Espacio insuficiente: {} libres, hacen falta unos {}.",
     "Changer de dossier": "Cambiar de carpeta",
-    "Visual C++ x86 manquant — requis pour lancer ce jeu.": "Falta Visual C++ x86 — necesario para ejecutar este juego.",
     "Installer": "Instalar",
     "Téléchargement déjà en cours pour {} — un seul à la fois.": "Ya se está descargando {} — solo uno a la vez.",
     "NOUVEAU": "NUEVO",
@@ -230,6 +227,19 @@
     "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne sont pas touchés.": "La actualización se descarga e instala automáticamente y el launcher se reinicia. Tus juegos y partidas guardadas no se ven afectados.",
     "La page de téléchargement va s'ouvrir dans votre navigateur.": "La página de descarga se abrirá en tu navegador.",
     "Mettre à jour maintenant": "Actualizar ahora",
-    "Plus tard": "Más tarde"
+    "Plus tard": "Más tarde",
+    "Joue à {}": "Jugando a {}",
+    "Découvrir Accio Launcher": "Descubre Accio Launcher",
+    "Composant Windows manquant": "Falta un componente de Windows",
+    "{} n'est pas installé sur ce PC.\nCe jeu ne peut pas démarrer sans lui.\n\nVoulez-vous ouvrir la page de téléchargement ?": "{} no está instalado en este PC.\nEste juego no puede iniciarse sin él.\n\n¿Quieres abrir la página de descarga?",
+    "Le composant Visual C++ Redistributable x86 (2015-2022)": "El Visual C++ Redistributable x86 (2015-2022)",
+    "Le composant Visual C++ 2005 Redistributable x86": "El Visual C++ 2005 Redistributable x86",
+    "Un composant Windows requis": "Un componente de Windows necesario",
+    "{} manquant — requis pour lancer ce jeu.": "Falta {} — necesario para iniciar este juego.",
+    "Visual C++ x86": "Visual C++ x86",
+    "Visual C++ 2005 x86": "Visual C++ 2005 x86",
+    "Composant Windows": "Componente de Windows",
+    "Visual C++ 2008 x86": "Visual C++ 2008 x86",
+    "Le composant Visual C++ 2008 Redistributable x86": "El Visual C++ 2008 Redistributable x86"
   }
 }

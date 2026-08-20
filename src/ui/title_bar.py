@@ -1,12 +1,18 @@
 """Barre de titre custom pour fenêtre sans cadre."""
 
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QMouseEvent, QPainter, QPen
+from PyQt6.QtCore import Qt, QPoint, QRectF
+from PyQt6.QtGui import QMouseEvent, QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
 from src.core.i18n import tr
 from src.ui.fonts import cinzel
 from src.ui import theme
+
+# Débord opaque sous le bord bas, en pixels logiques — même remède que
+# `background_widget._DEBORD_PX` pour la couture du carrousel : Qt découpe
+# au rect réel, donc peindre au-delà garantit d'atteindre le bord physique
+# quelle que soit l'échelle d'affichage.
+_DEBORD_PX = 2.0
 
 
 class TitleBar(QWidget):
@@ -69,8 +75,19 @@ class TitleBar(QWidget):
         p.fillRect(self.rect(), theme.bg_qcolor(217))  # rgba(6,6,17,0.85)
         # Séparateur à l'accent du thème (la ligne au-dessus le fait déjà pour
         # le fond ; l'or était codé en dur trois lignes plus bas).
-        p.setPen(QPen(theme.accent_qcolor(25), 1.0))
-        p.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
+        #
+        # Peint en fillRect DÉBORDANT sous le bord, et non en drawLine à
+        # `height() - 1`. Cette coordonnée est LOGIQUE : à une échelle
+        # d'affichage fractionnaire, le bord bas du widget ne tombe pas sur un
+        # pixel physique entier (38 px logiques × 1,25 = 47,5), et le filet se
+        # posait une rangée physique au-dessus du vrai bord, laissant une bande
+        # de fond nu entre lui et la fiche de jeu. Mesuré : présent à 1,25 et
+        # 1,5 sur les 8 jeux et les 4 tailles, absent à 1,0. Même famille que
+        # la couture du carrousel (pitfall #32) ; Qt découpe le débord au rect
+        # réel du widget, donc la ligne atteint toujours le bord.
+        p.fillRect(QRectF(0.0, self.height() - 1.0,
+                          float(self.width()), 1.0 + _DEBORD_PX),
+                   theme.accent_qcolor(25))
         p.end()
 
     # ── Drag de la fenêtre ──

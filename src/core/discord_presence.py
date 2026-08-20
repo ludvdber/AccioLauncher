@@ -30,6 +30,8 @@ import threading
 import time
 import uuid
 
+from src.core.i18n import tr
+
 log = logging.getLogger(__name__)
 
 DISCORD_CLIENT_ID = "1524077874087330007"  # TODO(Ludo) : coller l'Application ID Discord ici
@@ -67,7 +69,7 @@ class DiscordPresence:
 
     def __init__(self, client_id: str = DISCORD_CLIENT_ID) -> None:
         self._client_id = client_id
-        self._queue: queue.Queue[tuple[str, str | None]] = queue.Queue()
+        self._queue: queue.Queue[tuple[str, dict | None]] = queue.Queue()
         self._thread: threading.Thread | None = None
 
     @property
@@ -77,8 +79,22 @@ class DiscordPresence:
     # ── API publique (thread-safe, jamais bloquante) ──
 
     def set_playing(self, game_name: str) -> None:
-        """Affiche « Joue à <game_name> » avec le bouton vers le site."""
-        self._post(("set", game_name))
+        """Affiche « Joue à <game_name> » avec le bouton vers le site.
+
+        L'activité est composée ICI, sur le thread appelant, et non dans le
+        worker : c'est la seule chaîne du launcher que des TIERS voient — elle
+        s'affiche sur le profil Discord de l'utilisateur, devant sa liste
+        d'amis. Elle était codée en français en dur, donc un joueur anglophone
+        ou hispanophone diffusait « Joue à … » à tout son entourage. Traduire
+        au point d'appel garde aussi `tr()` hors du thread réseau.
+        """
+        self._post(("set", {
+            "details": tr("Joue à {}").format(game_name),
+            "timestamps": {"start": int(time.time())},
+            "buttons": [
+                {"label": tr("Découvrir Accio Launcher"), "url": WEBSITE_URL},
+            ],
+        }))
 
     def clear(self) -> None:
         """Efface l'activité (le jeu est fermé)."""
@@ -89,7 +105,7 @@ class DiscordPresence:
         if self._thread is not None and self._thread.is_alive():
             self._queue.put(("quit", None))
 
-    def _post(self, cmd: tuple[str, str | None]) -> None:
+    def _post(self, cmd: tuple[str, dict | None]) -> None:
         if not self.is_configured:
             return
         if self._thread is None or not self._thread.is_alive():
@@ -141,16 +157,8 @@ class DiscordPresence:
         self._close(ipc)
         return None
 
-    def _send_activity(self, ipc, game_name: str | None) -> None:
-        activity = None
-        if game_name is not None:
-            activity = {
-                "details": f"Joue à {game_name}",
-                "timestamps": {"start": int(time.time())},
-                "buttons": [
-                    {"label": "Découvrir Accio Launcher", "url": WEBSITE_URL},
-                ],
-            }
+    def _send_activity(self, ipc, activity: dict | None) -> None:
+        """Envoie l'activité déjà composée (cf. set_playing), ou l'efface."""
         self._write(ipc, _OP_FRAME, {
             "cmd": "SET_ACTIVITY",
             "args": {"pid": os.getpid(), "activity": activity},

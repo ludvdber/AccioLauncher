@@ -44,7 +44,22 @@ class Installer(QThread):
         self.game_dir = game_dir
         self.delete_archive = delete_archive
         self._cancel_event = threading.Event()
+        # DEUX listes, et c'est le fond du sujet : elles répondaient à la même
+        # question (« quels dossiers l'extraction a-t-elle produits ? ») alors
+        # qu'elles servent deux buts opposés.
+        #
+        # `_extracted_dirs` = ce qu'il faut DÉBLOQUER (Zone.Identifier). Doit
+        # inclure le dossier du jeu même s'il existait déjà, sinon une
+        # réparation ou une mise à jour ne débloquait plus rien du tout
+        # (mesuré : 0 fichier sur 3), et UE1 repartait en « Can't find file
+        # for package » sur les DLL fraîchement extraites.
+        #
+        # `_created_dirs` = ce qu'il est permis de SUPPRIMER en cas
+        # d'annulation. Uniquement les dossiers qui n'existaient pas avant :
+        # nettoyer le dossier du jeu sur une réparation annulée détruirait
+        # l'installation que l'utilisateur avait déjà.
         self._extracted_dirs: list[Path] = []
+        self._created_dirs: list[Path] = []
 
     @property
     def _cancelled(self) -> bool:
@@ -78,9 +93,20 @@ class Installer(QThread):
                     self.error.emit(f"Format d'archive non supporté : {suffix}")
                     return
 
-            new_dirs = set(p.name for p in self.destination.iterdir() if p.is_dir()) - existing_dirs
-            self._extracted_dirs = [self.destination / d for d in new_dirs]
-            log.debug("Nouveaux dossiers extraits : %s", [str(d) for d in self._extracted_dirs])
+            apres = set(p.name for p in self.destination.iterdir() if p.is_dir())
+            new_dirs = apres - existing_dirs
+            self._created_dirs = [self.destination / d for d in new_dirs]
+            # Le dossier du jeu s'ajoute au déblocage même s'il préexistait :
+            # c'est le cas d'une réparation ou d'une mise à jour, où l'archive
+            # dépose des fichiers neufs — donc marqués par Windows — dans un
+            # dossier que la différence d'inventaire ne voit pas apparaître.
+            a_debloquer = set(new_dirs)
+            if self.game_dir and self.game_dir in apres:
+                a_debloquer.add(self.game_dir)
+            self._extracted_dirs = [self.destination / d for d in a_debloquer]
+            log.debug("Dossiers à débloquer : %s | créés par cette extraction : %s",
+                      [str(d) for d in self._extracted_dirs],
+                      [str(d) for d in self._created_dirs])
 
             if self._cancelled:
                 self._cleanup()
@@ -119,14 +145,17 @@ class Installer(QThread):
                 log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", target)
 
     def _cleanup(self) -> None:
-        """Nettoie UNIQUEMENT les dossiers créés pendant l'extraction.
+        """Nettoie UNIQUEMENT les dossiers CRÉÉS par cette extraction.
 
-        PROTECTION : ne supprime JAMAIS self.destination (le dossier d'installation racine).
+        Deux protections : on ne supprime jamais `self.destination` (le dossier
+        d'installation racine), et on ne touche jamais un dossier qui existait
+        avant — annuler une réparation ne doit pas emporter l'installation que
+        l'utilisateur avait déjà.
         """
-        if not self._extracted_dirs:
-            log.debug("Rien à nettoyer (aucun dossier extrait)")
+        if not self._created_dirs:
+            log.debug("Rien à nettoyer (aucun dossier créé par cette extraction)")
             return
-        for d in self._extracted_dirs:
+        for d in self._created_dirs:
             if not d.exists():
                 continue
             if d.resolve() == self.destination.resolve():

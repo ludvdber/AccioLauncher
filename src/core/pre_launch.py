@@ -5,6 +5,7 @@ Reçoit le `Config` et le `GameData` en paramètres — pas de couplage à GameM
 """
 
 import logging
+import sys
 from pathlib import Path
 
 from src.core.config import Config, get_documents_dir
@@ -13,6 +14,21 @@ from src.core.system_checks import check_d3d11_feature_level
 from src.core.win_utils import remove_zone_identifier
 
 log = logging.getLogger(__name__)
+
+# Encodage des .ini de jeu. Ces fichiers ne nous appartiennent pas : c'est le
+# MOTEUR qui les écrit, et UE1 écrit en ANSI (page de codes du système). Les
+# lire en UTF-8 strict levait `UnicodeDecodeError` dès que le chemin de
+# sauvegarde contenait un accent — c'est-à-dire pour tout utilisateur dont le
+# profil s'appelle « Frédéric ». Cette exception dérive de `ValueError`, pas
+# d'`OSError` : elle traversait le `except OSError` d'`apply_ini_patches`, puis
+# `launch_game`, puis `on_play` (qui ne rattrape que RuntimeError/OSError), et
+# ressortait en rapport de plantage au lieu d'un lancement de jeu.
+#
+# `surrogateescape` garantit l'aller-retour EXACT des octets qu'on ne touche
+# pas (vérifié, y compris sur des séquences non décodables) : on ne peut donc
+# pas abîmer une ligne qu'on se contente de recopier.
+_INI_ENCODING = "mbcs" if sys.platform == "win32" else "utf-8"
+_INI_ERRORS = "surrogateescape"
 
 
 def substitute_vars(raw: str, game: GameData, config: Config) -> str:
@@ -104,7 +120,8 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
             effective_value = patch.fallback
         value = substitute_vars(effective_value, game, config)
         try:
-            lines = ini_path.read_text(encoding="utf-8").splitlines(keepends=True)
+            lines = ini_path.read_text(
+                encoding=_INI_ENCODING, errors=_INI_ERRORS).splitlines(keepends=True)
             current_section: str | None = None
             found = False
             for i, line in enumerate(lines):
@@ -127,8 +144,15 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
                         lines.append("\n")
                     lines.append(f"[{patch.section}]\n")
                 lines.append(f"{patch.key}={value}\n")
-            ini_path.write_text("".join(lines), encoding="utf-8")
+            # Réécrit dans l'encodage du MOTEUR, pas dans le nôtre : en UTF-8,
+            # UE1 relisait « Frédéric » comme « FrÃ©dÃ©ric » et cherchait ses
+            # sauvegardes dans un dossier inexistant.
+            ini_path.write_text("".join(lines),
+                                encoding=_INI_ENCODING, errors=_INI_ERRORS)
             log.info("Patch INI appliqué : [%s] %s=%s dans %s",
                      patch.section, patch.key, value, ini_path)
-        except OSError as exc:
+        except (OSError, UnicodeError) as exc:
+            # UnicodeError couvre le cas résiduel d'un chemin impossible à
+            # écrire dans la page de codes ANSI — auquel cas le jeu ne saurait
+            # de toute façon pas le lire : on journalise et on lance quand même.
             log.warning("Impossible de patcher %s : %s", ini_path, exc)

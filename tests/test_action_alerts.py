@@ -18,7 +18,7 @@ from src.ui.action_panel import ActionPanel  # noqa: E402
 @pytest.fixture
 def panel(qtbot, tmp_path, monkeypatch):
     """ActionPanel sur un manager isolé, prérequis système réputés satisfaits."""
-    monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: True)
+    monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: True)
     cfg = Config(install_path=tmp_path / "games",
                  cache_path=tmp_path / "games" / ".cache", langue="fr")
     manager = GameManager(cfg)
@@ -165,15 +165,15 @@ class TestHorsLigne:
 class TestPrerequisVCredist:
     def test_bandeau_sur_un_jeu_installe(self, panel, monkeypatch):
         widget, manager = panel
-        monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: False)
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
         _prepare(panel, GameState.INSTALLED)
         assert "Visual C++" in widget._alert.text()
-        assert 'href="vcredist"' in widget._alert.text()
+        assert 'href="vcredist_x86"' in widget._alert.text()
 
     def test_pas_avant_installation(self, panel, monkeypatch):
         """Rien à lancer encore : l'avertissement viendrait trop tôt."""
         widget, manager = panel
-        monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: False)
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
         _disque(monkeypatch, 900_000)
         _prepare(panel, GameState.NOT_INSTALLED)
         assert widget._alert.isHidden()
@@ -184,14 +184,14 @@ class TestPrerequisVCredist:
         widget, manager = panel
         ouvert = []
         monkeypatch.setattr("src.ui.action_panel.open_url", ouvert.append)
-        monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: False)
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
         _prepare(panel, GameState.INSTALLED)
 
-        widget._on_alert_link("vcredist")
+        widget._on_alert_link("vcredist_x86")
         assert ouvert and "vc_redist" in ouvert[0]
         assert widget._awaiting_vcredist is True
 
-        monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: True)
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: True)
         widget.recheck_prerequisites()
         assert widget._awaiting_vcredist is False
         assert widget._alert.isHidden()

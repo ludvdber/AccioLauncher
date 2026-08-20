@@ -59,7 +59,7 @@ LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 # embarquees : permet a un traducteur de tester son fichier sans release.
 USER_I18N_DIR = DEFAULT_INSTALL_PATH / "i18n"
 
-APP_VERSION = "0.5.3"
+APP_VERSION = "0.5.4"
 
 
 def _as_str(value: object, default: str) -> str:
@@ -70,6 +70,39 @@ def _as_str(value: object, default: str) -> str:
 def _as_dict(value: object) -> dict:
     """Coerce une valeur JSON en dict, sinon un dict vide (config trafiquée à la main)."""
     return value if isinstance(value, dict) else {}
+
+
+def _as_bool(value: object, default: bool) -> bool:
+    """Coerce une valeur JSON en bool, sinon le défaut."""
+    return value if isinstance(value, bool) else default
+
+
+def _as_vitesse(value: object) -> float:
+    """Dernière vitesse observée, en octets/s. 0.0 si absurde ou mal typée.
+
+    Une vitesse négative ferait annoncer un temps de téléchargement négatif ;
+    une chaîne faisait lever `float()` — rattrapé, mais toute la config
+    retombait alors aux valeurs par défaut pour un seul champ décoratif.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0
+    return float(value) if value > 0 else 0.0
+
+
+def _as_map(value: object, type_valeur: type) -> dict:
+    """Dict dont on ne garde QUE les paires (str → type_valeur) exploitables.
+
+    `_as_dict` ne validait que le conteneur. Une VALEUR mal typée traversait
+    donc `Config.load()` et n'explosait que bien plus loin, sur un site qui ne
+    pouvait rien en faire : `last_played` mélangeant str et int faisait lever
+    `last_played_game_id()` — appelée au démarrage pour choisir le jeu affiché,
+    donc rapport de plantage à l'ouverture. Une config abîmée doit retomber sur
+    les valeurs par défaut, c'est ce que `load()` promet.
+    """
+    brut = _as_dict(value)
+    return {k: v for k, v in brut.items()
+            if isinstance(k, str) and isinstance(v, type_valeur)
+            and not isinstance(v, bool)}
 
 
 @dataclass(slots=True)
@@ -115,19 +148,25 @@ class Config:
                 return cls(
                     install_path=Path(_as_str(data.get("install_path"), str(DEFAULT_INSTALL_PATH))),
                     cache_path=Path(_as_str(data.get("cache_path"), str(DEFAULT_CACHE_PATH))),
-                    langue=data.get("langue", DEFAULT_LANGUAGE),
-                    theme=data.get("theme", "poudlard"),
-                    season=data.get("season", "auto"),
-                    delete_archives=data.get("delete_archives", True),
-                    autoplay_videos=data.get("autoplay_videos", True),
-                    mute_videos=data.get("mute_videos", True),
-                    last_download_speed=float(data.get("last_download_speed", 0.0) or 0.0),
-                    discord_presence=data.get("discord_presence", True),
-                    dismissed_launcher_version=data.get("dismissed_launcher_version", ""),
-                    kofi_milestone_thanked=data.get("kofi_milestone_thanked", False),
-                    installed_versions=_as_dict(data.get("installed_versions")),
-                    playtime_seconds=_as_dict(data.get("playtime_seconds")),
-                    last_played=_as_dict(data.get("last_played")),
+                    # Tous les champs texte passent par `_as_str` : il n'y avait
+                    # aucune raison que deux d'entre eux soient protégés et
+                    # trois non — `langue=42` traversait et arrivait tel quel
+                    # jusqu'au sélecteur de langue.
+                    langue=_as_str(data.get("langue"), DEFAULT_LANGUAGE),
+                    theme=_as_str(data.get("theme"), "poudlard"),
+                    season=_as_str(data.get("season"), "auto"),
+                    delete_archives=_as_bool(data.get("delete_archives"), True),
+                    autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
+                    mute_videos=_as_bool(data.get("mute_videos"), True),
+                    last_download_speed=_as_vitesse(data.get("last_download_speed")),
+                    discord_presence=_as_bool(data.get("discord_presence"), True),
+                    dismissed_launcher_version=_as_str(
+                        data.get("dismissed_launcher_version"), ""),
+                    kofi_milestone_thanked=_as_bool(
+                        data.get("kofi_milestone_thanked"), False),
+                    installed_versions=_as_map(data.get("installed_versions"), str),
+                    playtime_seconds=_as_map(data.get("playtime_seconds"), int),
+                    last_played=_as_map(data.get("last_played"), str),
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 import logging

@@ -760,7 +760,10 @@
             "Combate"
           ]
         }
-      }
+      },
+      "requires": [
+        "vcredist2005_x86"
+      ]
     },
     {
       "id": "hp7b",
@@ -826,7 +829,10 @@
             "Batalla"
           ]
         }
-      }
+      },
+      "requires": [
+        "vcredist2008_x86"
+      ]
     }
   ]
 }

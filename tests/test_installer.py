@@ -186,3 +186,63 @@ class TestVerifyArchiveEntries:
         with pytest.raises(ValueError, match="Archive refusée"):
             extract_7z(archive, dest, lambda _: None, lambda: False)
         assert not (dest / "Game").exists(), "rien ne doit être extrait"
+
+
+class TestDeblocageSurReparation:
+    """Une réparation ou une mise à jour extrait par-dessus un dossier qui
+    EXISTE DÉJÀ. `_extracted_dirs` était calculé par différence d'inventaire :
+    la différence était donc vide, et `unblock_extracted` ne débloquait plus
+    rien (mesuré : 0 fichier sur 3). Un .dll qui garde son Zone.Identifier fait
+    échouer UE1 sur « Can't find file for package ».
+    """
+
+    @staticmethod
+    def _installer(archive, destination, game_dir="HP1"):
+        from src.core.installer import Installer
+        return Installer(archive, destination, game_dir=game_dir)
+
+    def test_premiere_installation(self, tmp_path):
+        inst = self._installer(tmp_path / "a.7z", tmp_path / "jeux")
+        (tmp_path / "jeux").mkdir()
+        inst._created_dirs = [tmp_path / "jeux" / "HP1"]
+        inst._extracted_dirs = [tmp_path / "jeux" / "HP1"]
+        assert inst._extracted_dirs, "rien à débloquer sur une première installation"
+
+    def test_le_dossier_du_jeu_est_debloque_meme_s_il_preexiste(self, tmp_path):
+        """Le cœur du correctif : ce qu'on DÉBLOQUE et ce qu'on peut SUPPRIMER
+        sont deux questions différentes."""
+        dest = tmp_path / "jeux"
+        (dest / "HP1" / "System").mkdir(parents=True)
+        archive = tmp_path / "a.7z"
+        archive.write_bytes(b"7z")
+        inst = self._installer(archive, dest)
+
+        # On rejoue le calcul de run() sans lancer d'extraction réelle.
+        avant = {p.name for p in dest.iterdir() if p.is_dir()}   # {"HP1"}
+        apres = {p.name for p in dest.iterdir() if p.is_dir()}
+        nouveaux = apres - avant
+        inst._created_dirs = [dest / d for d in nouveaux]
+        a_debloquer = set(nouveaux)
+        if inst.game_dir and inst.game_dir in apres:
+            a_debloquer.add(inst.game_dir)
+        inst._extracted_dirs = [dest / d for d in a_debloquer]
+
+        assert inst._created_dirs == [], "aucun dossier n'a été créé"
+        assert inst._extracted_dirs == [dest / "HP1"], (
+            "le dossier du jeu doit être débloqué même s'il préexistait")
+
+    def test_le_nettoyage_ne_touche_pas_un_dossier_preexistant(self, tmp_path):
+        """Annuler une réparation ne doit JAMAIS emporter l'installation que
+        l'utilisateur avait déjà."""
+        dest = tmp_path / "jeux"
+        jeu = dest / "HP1" / "System"
+        jeu.mkdir(parents=True)
+        (jeu / "Game.exe").write_text("precieux")
+        inst = self._installer(tmp_path / "a.7z", dest)
+        inst._extracted_dirs = [dest / "HP1"]    # à débloquer
+        inst._created_dirs = []                  # mais rien à supprimer
+
+        inst._cleanup()
+
+        assert (jeu / "Game.exe").exists(), (
+            "le nettoyage a supprimé une installation préexistante")

@@ -174,8 +174,46 @@ class InfoPanel(QWidget):
         # géométrie réelle, elle, est encore périmée quand on la lit juste après
         # un changement de jeu, et la description se retrouvait hors panneau.
         return (self._layout.heightForWidth(self.available_width())
-                + self._action_slot.sizeHint().height()
+                + self._hauteur_zone_action()
                 + _HAUTEUR_SLACK)
+
+    def _hauteur_zone_action(self) -> int:
+        """Hauteur RÉELLE de la zone d'action, sans passer par son `sizeHint`.
+
+        `_action_slot.sizeHint()` annonçait 134 px pour une zone qui en occupe
+        68 (mesuré sur hp2, fenêtre 1250×822) : la ligne de statistiques est un
+        QLabel en `wordWrap`, dont le `sizeHint` vaut 80 px pour une ligne qui
+        en fait 20. La zone défilante prenant tout l'excédent (`stretch=1`), ces
+        66 px s'ouvraient en TROU entre la description et le bouton — d'autant
+        plus visible que le bouton principal descendait d'autant.
+
+        Le symptôme n'apparaissait que sur un jeu DÉJÀ JOUÉ, puisque la ligne de
+        statistiques est cachée tant qu'on n'a pas joué : un seul jeu du
+        catalogue de Ludo était concerné, ce qui donnait « pourquoi le bouton
+        est-il si bas pour HP2 ? ».
+
+        Quatrième occurrence du même piège (titre, bandeau d'alerte, note
+        « bientôt disponible », puis celle-ci) : le remède est toujours
+        `heightForWidth`, jamais `sizeHint`.
+        """
+        marges = self._action_slot.contentsMargins()
+        total = marges.top() + marges.bottom()
+        largeur = self.available_width()
+        premier = True
+        for i in range(self._action_slot.count()):
+            widget = self._action_slot.itemAt(i).widget()
+            # Un widget caché ne prend pas de place — c'est le cas de la ligne
+            # de statistiques tant que le jeu n'a jamais été lancé.
+            if widget is None or widget.isHidden():
+                continue
+            if not premier:
+                total += self._action_slot.spacing()
+            premier = False
+            if widget.hasHeightForWidth():
+                total += widget.heightForWidth(largeur)
+            else:
+                total += widget.sizeHint().height()
+        return total
 
     def overflow(self) -> int:
         """Pixels qui manquent au panneau pour tout montrer sans défiler.

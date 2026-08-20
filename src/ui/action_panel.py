@@ -1,6 +1,7 @@
 """Panneau d'actions dynamique — boutons et barres de progression selon l'état du jeu."""
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget,
 )
@@ -9,13 +10,13 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.system_checks import (
-    VCREDIST_URL, check_vcredist_x86, invalidate_vcredist_cache, needed_space_mb,
+    PREREQUIS, invalidate_vcredist_cache, needed_space_mb, prerequis_manquants,
 )
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
 from src.core.formatting import (
-    append_part_info, estimate_duration, format_progress_line, format_size,
+    append_part_info, format_progress_line, format_size,
 )
 from src.ui.theme import themed
 from src.ui.utils import clear_layout, open_url
@@ -30,6 +31,22 @@ _LINK = '<a href="{}" style="color:{}; text-decoration: underline;">{}</a>'
 # Une seule constante parce que la hauteur de la note se calcule à cette
 # largeur-là — deux valeurs qui divergent, et la note se fait rogner.
 _COMING_SOON_W = 300
+
+# Bornes du bouton d'action principal. Il s'élargit avec son libellé (la durée
+# estimée n'apparaît qu'après un premier téléchargement) mais reste imposant
+# quand le libellé est court, et ne dépasse jamais la moitié d'un panneau
+# d'info de 700 px.
+_BOUTON_MIN_W = 300
+_BOUTON_MAX_W = 460
+_MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
+
+# Noms COURTS des prérequis, pour le bandeau : il tient sur une ligne, le
+# dialogue de lancement peut se permettre la formulation longue.
+_NOMS_COURTS = {
+    "vcredist_x86": tr("Visual C++ x86"),
+    "vcredist2005_x86": tr("Visual C++ 2005 x86"),
+    "vcredist2008_x86": tr("Visual C++ 2008 x86"),
+}
 
 
 class ActionPanel(QWidget):
@@ -161,11 +178,18 @@ class ActionPanel(QWidget):
                     message = tr("Hors ligne — connexion requise pour télécharger.")
                 else:
                     message = self._disk_alert(dl.size_mb)
-        elif state == GameState.INSTALLED and not check_vcredist_x86():
-            message = (
-                tr("Visual C++ x86 manquant — requis pour lancer ce jeu.") + " "
-                + _LINK.format("vcredist", _WARN, tr("Installer"))
-            )
+        elif state == GameState.INSTALLED:
+            # Socle commun + ce que le catalogue déclare pour CE jeu. HP7 exige
+            # Visual C++ 2005, un runtime distinct du 2015-2022 : annoncer le
+            # mauvais aurait envoyé l'utilisateur installer un paquet qu'il a
+            # peut-être déjà, sans que le jeu démarre pour autant.
+            manquants = prerequis_manquants(("vcredist_x86", *self._game.requires))
+            if manquants:
+                message = (
+                    tr("{} manquant — requis pour lancer ce jeu.").format(
+                        _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
+                    + " " + _LINK.format(manquants[0], _WARN, tr("Installer"))
+                )
 
         if not message:
             self._alert.hide()
@@ -206,11 +230,13 @@ class ActionPanel(QWidget):
     def _on_alert_link(self, href: str) -> None:
         if href == "settings":
             self.settings_requested.emit()
-        elif href == "vcredist":
+        elif href in PREREQUIS:
             # L'utilisateur part installer le paquet : on note qu'il faudra
-            # re-tester à son retour (cf. recheck_prerequisites).
+            # re-tester à son retour (cf. recheck_prerequisites). Le lien porte
+            # l'IDENTIFIANT du prérequis manquant, donc on ouvre la bonne page
+            # même quand il y en a plusieurs possibles.
             self._awaiting_vcredist = True
-            open_url(VCREDIST_URL)
+            open_url(PREREQUIS[href][1])
 
     def _fit_alert_height(self) -> None:
         """Réserve la hauteur RÉELLE du bandeau (wordWrap ⇒ plusieurs lignes).
@@ -290,18 +316,23 @@ class ActionPanel(QWidget):
         if dl is None or not dl.is_available:
             self._build_coming_soon()
             return
-        size = format_size(dl.size_mb)
-        # Durée estimée à partir de la dernière vitesse réellement observée —
-        # vide au tout premier téléchargement, jamais devinée.
-        eta = estimate_duration(dl.size_mb, self._manager.config.last_download_speed)
-        libelle = f"{tr('TÉLÉCHARGER')}  —  {size}"
-        if eta:
-            libelle += f"  ·  ≈ {eta}"
+        # Le poids, et RIEN d'autre. Le bouton portait aussi une durée estimée
+        # (« ≈ 18 s ») : elle allongeait le libellé jusqu'à le faire déborder,
+        # et elle promettait un temps calculé sur la vitesse du DERNIER
+        # téléchargement — une valeur qui n'a aucune raison de valoir encore.
+        # Écartée à la demande de Ludo le 2026-08-20.
+        libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(dl.size_mb)}"
         btn = GlowButton(libelle, style="outline")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
         btn.setFont(cinzel(13, bold=True))
-        btn.setFixedSize(300, 46)
+        # Largeur SUIVIE SUR LE CONTENU, et non figée à 300 px. Le libellé
+        # gagne une durée estimée dès qu'un premier téléchargement a abouti, et
+        # il réclamait alors jusqu'à 403 px : le texte débordait des deux côtés
+        # du cadre, si bien qu'on lisait « CHARGER — 463 Mo · ≈ ~19s resta ».
+        # Mesuré sur les 6 jeux téléchargeables × 3 langues : débordement
+        # systématique, de +8 px (anglais) à +103 px (français).
+        btn.setFixedSize(self._largeur_bouton(libelle, cinzel(13, bold=True)), 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.download_clicked)
         if not self._online:
@@ -311,6 +342,19 @@ class ActionPanel(QWidget):
             btn.setEnabled(False)
             btn.setToolTip(tr("Hors ligne — connexion requise pour télécharger."))
         self._action_layout.addWidget(btn)
+
+    def _largeur_bouton(self, libelle: str, police) -> int:
+        """Largeur qu'il faut au bouton pour afficher `libelle` en entier.
+
+        Bornée des deux côtés : jamais moins que la largeur historique (le
+        bouton principal doit rester imposant même avec un libellé court),
+        jamais plus que la place réellement disponible dans le panneau — sans
+        quoi on remplacerait une troncature par un débordement.
+        """
+        besoin = QFontMetrics(police).horizontalAdvance(libelle) + _MARGE_BOUTON
+        dispo = self._action_container.width() or self.width()
+        plafond = max(_BOUTON_MIN_W, dispo) if dispo else _BOUTON_MAX_W
+        return max(_BOUTON_MIN_W, min(besoin, plafond, _BOUTON_MAX_W))
 
     def _build_coming_soon(self) -> None:
         """Jeu au catalogue dont aucune archive n'est encore publiée.

@@ -22,6 +22,11 @@ from src.ui.ticker import Ticker
 log = logging.getLogger(__name__)
 
 
+# Marge intérieure réservée au texte d'un GlowButton, en pixels logiques.
+# Elle évite que l'élision ne colle le libellé au bord arrondi.
+_MARGE_TEXTE = 20
+
+
 class GlowButton(QPushButton):
     """Bouton avec glow pulsant et shimmer — deux styles : filled / outline.
 
@@ -152,7 +157,19 @@ class GlowButton(QPushButton):
             tc = tc.lighter(130)
         p.setPen(tc)
         p.setFont(self.font())
-        p.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, self.text())
+        # Élision — filet de sécurité. `drawText` centré ne coupe RIEN : un
+        # libellé plus large que le bouton déborde des DEUX côtés, hors du
+        # cadre dessiné, et le début du mot disparaît. Constaté sur le bouton
+        # TÉLÉCHARGER, qui gagne une durée estimée dès qu'un premier
+        # téléchargement a abouti : « TÉLÉCHARGER — 463 Mo · ≈ 19 s » réclame
+        # jusqu'à 103 px de plus que les 300 px du bouton, sur les 6 jeux et
+        # les 3 langues. Les appelants dimensionnent le bouton à son contenu
+        # (cf. ActionPanel) ; ceci garantit qu'aucun GlowButton ne pourra plus
+        # jamais déborder en silence, quelle que soit la traduction.
+        texte = self.fontMetrics().elidedText(
+            self.text(), Qt.TextElideMode.ElideRight,
+            max(0, int(btn_rect.width()) - _MARGE_TEXTE))
+        p.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, texte)
 
         p.end()
 

@@ -17,7 +17,7 @@ from src.core.formatting import format_size
 from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
 from src.core.game_manager import GameState
-from src.core.system_checks import VCREDIST_URL, needed_space_mb
+from src.core.system_checks import PREREQUIS, VCREDIST_URL, needed_space_mb
 from src.ui.utils import open_url
 from src.ui.versions_dialog import VersionsDialog
 
@@ -25,6 +25,20 @@ if TYPE_CHECKING:
     from src.ui.game_detail import GameDetailView
 
 log = logging.getLogger(__name__)
+
+
+def nom_prerequis(identifiant: str) -> str:
+    """Nom lisible d'un prérequis, pour un message adressé à l'utilisateur.
+
+    Le catalogue manipule des identifiants (`vcredist2005_x86`) ; personne ne
+    doit lire ça dans une boîte de dialogue.
+    """
+    noms = {
+        "vcredist_x86": tr("Le composant Visual C++ Redistributable x86 (2015-2022)"),
+        "vcredist2005_x86": tr("Le composant Visual C++ 2005 Redistributable x86"),
+        "vcredist2008_x86": tr("Le composant Visual C++ 2008 Redistributable x86"),
+    }
+    return noms.get(identifiant, tr("Un composant Windows requis"))
 
 
 def on_download(view: "GameDetailView", version: GameVersion | None = None) -> None:
@@ -79,15 +93,18 @@ def on_play(view: "GameDetailView") -> None:
     try:
         proc = view.manager.launch_game(view.game.id)
     except RuntimeError as exc:
-        if "vcredist_x86_missing" in str(exc):
+        if str(exc).startswith("prerequis_manquant:"):
+            manquant = str(exc).split(":", 1)[1]
             reply = QMessageBox.warning(
-                view, tr("Visual C++ manquant"),
-                tr("Le Visual C++ Redistributable x86 (2015-2022) n'est pas installé.\nIl est nécessaire pour lancer les jeux.\n\nVoulez-vous ouvrir la page de téléchargement ?"),
+                view, tr("Composant Windows manquant"),
+                tr("{} n'est pas installé sur ce PC.\nCe jeu ne peut pas démarrer sans lui.\n\n"
+                   "Voulez-vous ouvrir la page de téléchargement ?").format(
+                       nom_prerequis(manquant)),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                open_url(VCREDIST_URL)
+                open_url(PREREQUIS.get(manquant, (None, VCREDIST_URL))[1])
         else:
             log.error("Erreur au lancement : %s", exc)
             view.status_message.emit(tr("Impossible de lancer le jeu."))

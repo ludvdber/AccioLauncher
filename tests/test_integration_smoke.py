@@ -162,7 +162,7 @@ class TestDownloadCounts:
 
     def test_counts_appear_in_meta(self, make_window):
         win = make_window()
-        win._on_download_counts({_IDS[0]: 1234})
+        win._updates._on_download_counts({_IDS[0]: 1234})
         meta = win._detail._info._meta
         # Le séparateur de milliers FR est une espace fine insécable (U+202F) ;
         # on retire tout espace pour comparer le nombre brut.
@@ -172,7 +172,7 @@ class TestDownloadCounts:
 
     def test_singular_for_one_download(self, make_window):
         win = make_window()
-        win._on_download_counts({_IDS[0]: 1})
+        win._updates._on_download_counts({_IDS[0]: 1})
         meta = win._detail._info._meta
         # Espace INSÉCABLE : « 16 » ne doit jamais rester seul en fin de ligne
         # avec « téléchargements » renvoyé au-dessous (retour Ludo).
@@ -186,7 +186,7 @@ class TestDownloadCounts:
         """
         import re as _re
         win = make_window()
-        win._on_download_counts({e.game.id: 4321 for e in win.manager.get_games()})
+        win._updates._on_download_counts({e.game.id: 4321 for e in win.manager.get_games()})
         for entry in win.manager.get_games():
             win._detail.set_game(entry.game)
             html = win._detail._info._meta.text()
@@ -206,7 +206,7 @@ class TestDownloadCounts:
     def test_position_stable_entre_les_jeux(self, make_window):
         """Le compteur ne doit jamais changer de ligne d'un jeu à l'autre."""
         win = make_window()
-        win._on_download_counts({e.game.id: 4321 for e in win.manager.get_games()})
+        win._updates._on_download_counts({e.game.id: 4321 for e in win.manager.get_games()})
         for entry in win.manager.get_games():
             win._detail.set_game(entry.game)
             texte = win._detail._info._meta.text()
@@ -629,18 +629,18 @@ class TestHorsLigneBoutEnBout:
         prochain démarrage — le launcher aurait l'air en panne."""
         win = make_window()
         win._on_network_status(False)
-        assert win._offline_retry.isActive()
+        assert win._updates._offline_retry.isActive()
         win._on_network_status(True)
-        assert not win._offline_retry.isActive()
+        assert not win._updates._offline_retry.isActive()
 
     def test_la_re_tentative_est_re_armee_a_chaque_echec(self, make_window):
         """Le garde « seulement si l'état a changé » ne doit pas manger le
         ré-armement : sinon un seul essai serait fait, puis plus jamais rien."""
         win = make_window()
         win._on_network_status(False)
-        win._offline_retry.stop()
+        win._updates._offline_retry.stop()
         win._on_network_status(False)   # état inchangé, mais nouvel échec
-        assert win._offline_retry.isActive()
+        assert win._updates._offline_retry.isActive()
 
     def test_retour_en_ligne_restaure_le_message(self, make_window, qtbot):
         win = make_window()
@@ -655,9 +655,9 @@ class TestHorsLigneBoutEnBout:
         la fin des threads (QThread détruit en cours d'exécution)."""
         win = make_window()
         win._on_network_status(False)
-        assert win._offline_retry.isActive()
+        assert win._updates._offline_retry.isActive()
         win.close()
-        assert not win._offline_retry.isActive()
+        assert not win._updates._offline_retry.isActive()
 
     def test_l_etat_descend_jusqu_au_panneau_d_actions(self, make_window, qtbot):
         win = make_window()
@@ -738,7 +738,7 @@ class TestBandeauSansScrollbar:
                                                    monkeypatch, taille):
         from src.core.game_manager import GameState
         self._disque(monkeypatch, 900_000)
-        monkeypatch.setattr("src.ui.action_panel.check_vcredist_x86", lambda: False)
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
         win = make_window()
         win.show()
         for entry in win.manager.get_games():

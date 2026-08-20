@@ -296,6 +296,18 @@ class TestDiagnosticReseau:
             def json(self):
                 return {}
 
+            # `_check_catalog` lit le catalogue en STREAMING (plafond de taille),
+            # comme le vrai client httpx : le double doit exposer la même API,
+            # sinon il teste une interface que la production n'utilise plus.
+            def iter_bytes(self, taille=None):
+                yield b"{}"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
         class Client:
             def __init__(self, *a, **kw):
                 pass
@@ -307,6 +319,11 @@ class TestDiagnosticReseau:
                 return False
 
             def get(self, url):
+                if leve is not None:
+                    raise getattr(mod, leve)("boom")
+                return _Resp()
+
+            def stream(self, methode, url, **kw):
                 if leve is not None:
                     raise getattr(mod, leve)("boom")
                 return _Resp()
