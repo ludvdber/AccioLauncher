@@ -22,8 +22,11 @@ build/version_info.txt
 *.manifest
 
 # Fichiers générés
-assets/accio_launcher.ico
 docs/social_preview.png
+# NOTE : assets/accio_launcher.ico n'est PLUS généré — c'est un asset DESSINÉ
+# (7 tailles ajustées une par une), que build/create_icon.py se contente de
+# vérifier. L'ignorer laissait un dépôt fraîchement cloné sans icône, donc un
+# build qui échoue dès l'étape 1/5.
 
 # IDE / Editors
 .vscode/
@@ -60,7 +63,6 @@ accio_launcher.log*
 coverage.xml
 htmlcov/
 
-# Documents privés / audits
-WEBSITE_BRIEF.md
-AUDIT_*.md
+# Documents privés / audits — rangés dans docs/archives/, hors dépôt
+docs/archives/
 .claudeignore

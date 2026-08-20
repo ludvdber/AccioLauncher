@@ -1,6 +1,6 @@
 [project]
 name = "accio-launcher"
-version = "0.5.2"
+version = "0.5.3"
 description = "Launcher pour les jeux Harry Potter sur PC"
 # 3.12 et non 3.10 : `enum.StrEnum` (src/core/game_manager.py) n'existe qu'à
 # partir de 3.11, et build.bat comme la CI ciblent 3.12+. Annoncer 3.10 laissait

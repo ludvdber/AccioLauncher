@@ -106,6 +106,22 @@ vendues seules et que la licence accompagne la distribution.
 
 ---
 
+## Gelasio — Eben Sorkin (Sorkin Type)
+
+Fichier : `assets/fonts/Gelasio-Variable.ttf`
+Licence : SIL Open Font License 1.1
+Texte complet : **[`assets/fonts/Gelasio-OFL.txt`](assets/fonts/Gelasio-OFL.txt)**
+(copie verbatim de la distribution officielle)
+Source : <https://fonts.google.com/specimen/Gelasio> · <https://github.com/SorkinType/Gelasio>
+
+Police de corps (descriptions, notes, toasts), utilisée sans modification.
+Gelasio est **métriquement compatible avec Georgia** : elle la remplace sans
+déplacer un seul retour à la ligne, tout en étant librement redistribuable — ce
+que Georgia, police Microsoft, n'est pas. C'est aussi ce qui rend l'interface
+identique sous Linux, où Georgia n'existe pas.
+
+---
+
 ## Contenu des jeux
 
 Accio Launcher **ne distribue aucun contenu de jeu**. Le launcher télécharge des

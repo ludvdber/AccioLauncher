@@ -184,7 +184,7 @@ class TestSurchargeUtilisateur:
 
     C'est ce qui permet à un contributeur de voir sa traduction dans le vrai
     launcher sans attendre une release. Si ce mécanisme casse, le guide de
-    TRANSLATORS.md ment.
+    docs/TRANSLATORS.md ment.
     """
 
     @pytest.fixture

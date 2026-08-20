@@ -4,11 +4,12 @@
 
 ### Le launcher magique pour les jeux Harry Potter PC
 
-[![Version](https://img.shields.io/badge/version-0.5.2-d4a017?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
+[![Version](https://img.shields.io/badge/version-0.5.3-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=0d0d1a)](https://python.org)
 [![PyQt6](https://img.shields.io/badge/PyQt6-6.11-41cd52?style=for-the-badge&labelColor=0d0d1a)](https://pypi.org/project/PyQt6/)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d4?style=for-the-badge&logo=windows11&logoColor=white&labelColor=0d0d1a)](https://microsoft.com)
-[![License](https://img.shields.io/badge/License-MIT-e74c3c?style=for-the-badge&labelColor=0d0d1a)](LICENSE)
+[![License](https://img.shields.io/badge/code-MIT-e74c3c?style=for-the-badge&labelColor=0d0d1a)](LICENSE)
+[![Binaire](https://img.shields.io/badge/binaire-GPL%20v3-e74c3c?style=for-the-badge&labelColor=0d0d1a)](docs/THIRD-PARTY-NOTICES.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ludvdber/AccioLauncher/tests.yml?branch=main&style=for-the-badge&label=tests&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/actions/workflows/tests.yml)
 
 *Je jure solennellement que mes intentions sont mauvaises.* 🗺️
@@ -186,7 +187,7 @@ Le numéro de version suit le catalogue : `0.0.x` correctif · `0.x.0` nouveau j
 - [x] **Socle** — carrousel, téléchargement repris, extraction, versioning, system tray
 - [x] **Confiance** — vérification SHA-256, réparation d'installation, rapport de crash en un clic, mise à jour automatique du launcher
 - [x] **Confort** — thèmes de maison, ambiances saisonnières, temps de jeu, assistant de premier lancement
-- [x] **Internationalisation** — FR / EN / ES, catalogue traduit compris ([contribuez une langue !](TRANSLATORS.md))
+- [x] **Internationalisation** — FR / EN / ES, catalogue traduit compris ([contribuez une langue !](docs/TRANSLATORS.md))
 - [ ] **0.6 → 0.7** — Reliques de la Mort, parties 1 et 2 : les deux derniers jeux
 - [ ] **1.0** — catalogue complet, les 8 jeux en ligne
 - [ ] **Après 1.0** — support Linux : launcher natif, puis lancement des jeux via Wine / Proton
@@ -223,7 +224,7 @@ launcher**, sans build ni release. Quand le résultat vous convient, ouvrez une 
 Une traduction incomplète est acceptée : ce qui manque retombe sur l'anglais,
 puis sur le français — jamais sur du vide.
 
-👉 **Le guide complet est dans [TRANSLATORS.md](TRANSLATORS.md)**, qui liste
+👉 **Le guide complet est dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md)**, qui liste
 aussi les personnes ayant déjà contribué une langue. Merci à elles ❤
 
 ---
@@ -244,7 +245,7 @@ sous MIT ; seul le binaire assemblé porte la GPL v3.
 
 Les composants tiers embarqués (7-Zip, Qt, httpx, polices Cinzel…) et leurs
 licences respectives sont détaillés dans
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+[docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
 
 ---
 
@@ -297,6 +298,6 @@ now — **Linux support is planned once the final game ships**, and every
 Windows-specific call is already isolated behind a platform check with a fallback.
 
 **Translators welcome:** adding a language means dropping one JSON file in
-`src/data/i18n/` — no Python involved. See [TRANSLATORS.md](TRANSLATORS.md).
+`src/data/i18n/` — no Python involved. See [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
 </details>
