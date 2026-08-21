@@ -36,8 +36,16 @@ docs/social_preview.png
 *~
 
 # Claude Code
-.claude/
-CLAUDE.md
+# `settings.local.json` est PAR POSTE (son nom le dit) : autorisations de
+# commandes accordées sur cette machine, sans intérêt pour un contributeur.
+.claude/settings.local.json
+# CLAUDE.md, lui, EST suivi. Il porte les instructions du projet et son propre
+# en-tête annonce « checked into the codebase » — or il était ignoré, si bien
+# que les règles arrachées à chaque audit (pièges Qt, encodages, nommage du
+# cache) ne quittaient jamais la machine où elles avaient été écrites. Un clone
+# frais repartait sans elles, donc reproduisait les mêmes défauts.
+# `.claudeignore` est suivi pour la même raison : il évite à quiconque ouvre ce
+# dépôt de faire lire 74 Mo de binaires à son assistant.
 
 # OS
 Thumbs.db
@@ -65,4 +73,10 @@ htmlcov/
 
 # Documents privés / audits — rangés dans docs/archives/, hors dépôt
 docs/archives/
-.claudeignore
+
+# Archives de jeu déposées à la main pour un essai. Le cache réel vit dans
+# ~/Games/AccioLauncher/.cache, mais une part de 2 Go oubliée à la racine
+# passerait inaperçue jusqu'au push.
+*.7z
+*.7z.[0-9][0-9][0-9]
+*.part

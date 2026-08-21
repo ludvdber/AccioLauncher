@@ -1,0 +1,83 @@
+# Environnements Python
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Caches outils
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Couverture de tests
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Sorties de build
+dist/
+build/accio_launcher/
+build/output/
+build/version_info.txt
+*.manifest
+*.spec.bak
+
+# Assets binaires — jamais utiles à lire
+assets/backgrounds/
+assets/covers/
+assets/videos/
+assets/fonts/
+assets/7z/
+assets/*.png
+assets/*.ico
+assets/*.jpg
+assets/*.jpeg
+docs/*.png
+docs/*.jpg
+
+# Archives de jeu — binaires, et lourdes (une part de HP5 pèse 2 Go)
+*.7z
+*.7z.[0-9][0-9][0-9]
+*.part
+
+# Logs runtime
+*.log
+accio_launcher.log*
+
+# Outils / IDE / OS
+.claude/
+.git/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Secrets
+.env
+*.env.local
+
+# Données locales utilisateur (hors repo en principe)
+.cache/
+catalog_cache.json
+config.json
+
+# Documents rangés hors du dépôt : conservés à dessein, mais périmés — les
+# relire ferait travailler sur un état du projet qui n'existe plus.
+docs/archives/
+
+# Documents générés à la demande, pas à relire en boucle. Les deux premiers ont
+# été déplacés dans docs/archives/ le 2026-08-20 ; les motifs restent, ils ne
+# coûtent rien et rattraperaient un fichier reposé à la racine.
+AUDIT_*.md
+WEBSITE_BRIEF.md
+CHANGELOG_*.md
