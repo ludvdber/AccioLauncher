@@ -30,7 +30,7 @@
 
 | | |
 |---|---|
-| 🎮 **8 jeux au catalogue** | De l'École des Sorciers (2001) aux Reliques de la Mort (2011) — 6 jouables, 2 en préparation |
+| 🎮 **Les 8 jeux de la saga** | De l'École des Sorciers (2001) aux Reliques de la Mort (2011) — catalogue complet, tous jouables |
 | ⬇️ **Téléchargement en un clic** | Reprise après coupure, archives multi-volumes, extraction et installation automatiques |
 | 🔒 **Archives vérifiées** | Empreinte SHA-256 contrôlée pendant le téléchargement, sans attente supplémentaire |
 | 🎨 **UI immersive style AAA** | Particules magiques, parallaxe, transitions cinématiques, glow doré |
@@ -57,16 +57,17 @@
 | IV | Harry Potter et la Coupe de Feu | 2005 | EA UK | 847 Mo | 1,7 Go | ✅ Disponible |
 | V | Harry Potter et l'Ordre du Phénix | 2007 | EA UK | 2,5 Go | 4,6 Go | ✅ Disponible |
 | VI | Harry Potter et le Prince de Sang-Mêlé | 2009 | EA UK | 2,1 Go | 4,4 Go | ✅ Disponible |
-| VII | Harry Potter et les Reliques de la Mort — Partie 1 | 2010 | EA Bright Light | — | ~5 Go | 🔜 En préparation |
-| VIII | Harry Potter et les Reliques de la Mort — Partie 2 | 2011 | EA Bright Light | — | ~5,5 Go | 🔜 En préparation |
+| VII | Harry Potter et les Reliques de la Mort — Partie 1 | 2010 | EA Bright Light | 4,4 Go | 4,4 Go | ✅ Disponible |
+| VIII | Harry Potter et les Reliques de la Mort — Partie 2 | 2011 | EA Bright Light | 7,5 Go | 7,5 Go | ✅ Disponible |
 
-> Les archives sont compressées : le téléchargement pèse environ la moitié de
-> l'espace occupé une fois le jeu installé. Prévoyez la somme des deux pendant
-> l'installation, l'archive n'étant supprimée qu'à la fin.
+> Pendant l'installation, l'archive et les fichiers extraits cohabitent jusqu'au
+> nettoyage final : prévoyez **la somme des deux colonnes**. Le launcher fait ce
+> calcul pour vous et vous prévient avant le clic si la place manque.
 
-> **Archive** désigne la taille du téléchargement. Prévoyez le double d'espace libre
-> pendant l'installation : l'archive et les fichiers extraits cohabitent jusqu'au
-> nettoyage final. Le launcher vous prévient si la place manque, avant le clic.
+> Le rapport entre les deux colonnes n'a rien de constant : les six premiers jeux
+> perdent près de la moitié à la compression, les deux Reliques de la Mort
+> quasiment rien. C'est pourquoi le tableau donne les deux chiffres plutôt qu'une
+> règle du pouce.
 
 ---
 
@@ -123,10 +124,14 @@ build.bat
 # → dist/AccioLauncher.exe
 ```
 
-`build.bat` détecte Python 3.14, puis 3.13, puis 3.12, et enchaîne quatre étapes :
-génération de l'icône → lint → tests → PyInstaller. **Il s'arrête à la première
-qui échoue** : un exécutable publié avec une régression coûte bien plus cher que
-les vingt secondes de vérification.
+`build.bat` détecte Python 3.14, puis 3.13, puis 3.12, et enchaîne cinq étapes :
+vérification de l'icône → lint → tests → audit de géométrie → PyInstaller.
+**Il s'arrête à la première qui échoue** : un exécutable publié avec une
+régression coûte bien plus cher que les vingt secondes de vérification.
+
+L'audit de géométrie rejoue l'interface avec les **vraies polices**, hors écran :
+la suite de tests tourne en `offscreen`, où Qt substitue une police 22 % plus
+large et fausse toute mesure d'empilement.
 
 </details>
 
@@ -135,7 +140,7 @@ les vingt secondes de vérification.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest          # 430 tests, sans écran (offscreen)
+python -m pytest          # 637 tests, sans écran (offscreen)
 python -m ruff check .
 ```
 
@@ -178,7 +183,7 @@ propre » dépendrait du défaut de la version de ruff installée — le passage
 | **Extraction** | 7z.exe bundlé — archives 7z (multi-volumes incl.) et zip |
 | **Effets visuels** | Particules, parallaxe, glow, transitions — tout en QPainter natif |
 | **Architecture** | Séparation `core/` (logique métier) et `ui/` (interface) |
-| **Qualité** | ruff + 430 tests pytest, exécutés en CI à chaque push |
+| **Qualité** | ruff + 637 tests pytest, exécutés en CI à chaque push |
 | **Packaging** | PyInstaller — exécutable unique Windows |
 
 ---
@@ -192,8 +197,8 @@ Le numéro de version suit le catalogue : `0.0.x` correctif · `0.x.0` nouveau j
 - [x] **Confiance** — vérification SHA-256, réparation d'installation, rapport de crash en un clic, mise à jour automatique du launcher
 - [x] **Confort** — thèmes de maison, ambiances saisonnières, temps de jeu, assistant de premier lancement
 - [x] **Internationalisation** — FR / EN / ES, catalogue traduit compris ([contribuez une langue !](docs/TRANSLATORS.md))
-- [ ] **0.6 → 0.7** — Reliques de la Mort, parties 1 et 2 : les deux derniers jeux
-- [ ] **1.0** — catalogue complet, les 8 jeux en ligne
+- [x] **Catalogue complet** — Reliques de la Mort, parties 1 et 2 : les huit jeux sont en ligne
+- [ ] **1.0** — la version qui acte le catalogue complet
 - [ ] **Après 1.0** — support Linux : launcher natif, puis lancement des jeux via Wine / Proton
 - [ ] **Ensuite** — configuration graphique intégrée (résolution, wrapper D3D, compatibilité)
 
@@ -282,8 +287,8 @@ Fait avec 🪄 et beaucoup de ☕
 
 ### Accio Launcher
 
-A magical desktop launcher for the Harry Potter PC games (2001–2011). Eight games
-in the catalogue, six playable today. One-click download and install with resume
+A magical desktop launcher for the Harry Potter PC games (2001–2011). All eight
+games in the catalogue, all playable. One-click download and install with resume
 and SHA-256 verification, an immersive AAA-style UI with particles, parallax and
 cinematic transitions, video backgrounds, five Hogwarts house themes, seasonal
 effects, version tracking with changelog and rollback, playtime stats, smart

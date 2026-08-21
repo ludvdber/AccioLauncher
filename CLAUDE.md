@@ -215,6 +215,19 @@ These are non-obvious behaviors hard-won through debugging — read before touch
 - **Nommer une constante `subprocess.CREATE_*` ailleurs qu'à l'import, sous garde** — elles n'existent que sous Windows, et l'`AttributeError` tombe AVANT `Popen` : la fonction devient intestable hors Windows, même en remplaçant `Popen`. Voir `self_update._DRAPEAUX_DETACHE`.
 - **Laisser `write_text` choisir les fins de ligne d'un fichier qui ne nous appartient pas** — il traduit en `os.linesep` : CRLF sous Windows par coïncidence de plateforme, LF ailleurs. Les `.ini` sont écrits par UE1, un programme Windows : ils sont en CRLF partout, y compris quand le launcher tournera sous Linux (le jeu tournera sous Wine). `_INI_NEWLINE` l'impose des deux côtés — sans quoi la promesse d'aller-retour exact à l'octet ne tenait que par chance.
 - **Calling `apply_pre_launch_patches` at install time** — Documents INI files don't exist yet then. Pre-launch only.
+- **Faire dépendre un test du CONTENU de `games.json`** — le catalogue se met à jour
+  **à distance**, sans republier le launcher : un test qui suppose ce qu'il contient
+  casse à chaque livraison de jeu, loin de la ligne de code qu'il surveille. Quatre
+  classes de `test_integration_smoke.py` cherchaient « le jeu sans archive » pour
+  exercer le chemin « Bientôt disponible » ; la publication de HP7a/HP7b (catalogue
+  0.18, 8 jeux sur 8 en ligne) les a mises au rouge d'un coup. Le comportement, lui,
+  reste vivant. Remède : la fixture `make_window_jeu_a_venir` **fabrique** le cas
+  (`dataclasses.replace` sur la dernière entrée, sources à `None`) au lieu de le
+  chercher, plus une garde qui échoue si la fixture cesse d'en produire un — sans
+  elle, les trois tests passeraient à vide en restant verts. À noter : l'ancienne
+  sentinelle (« plus aucun jeu sans source — adapter ou retirer ces tests ») a
+  parfaitement joué son rôle ; c'est le bon patron pour toute dépendance à une
+  donnée qui bouge.
 - **Double-firing `Carousel` items via `set_games` without re-emitting `game_selected`** — callers must explicitly call `_detail.set_game(...)` after a reload (see `_on_catalog_updated`).
 - **`finished = pyqtSignal(...)` on a QThread subclass** — shadows the native `QThread.finished`; name it `*_finished` (regression tests `test_finished_not_shadowed` guard this).
 - **Re-adding py7zr** — removed entirely 2026-06-10; 7z.exe bundlé is the only 7z extractor (cancel, progress, BCJ2, multi-volume). Don't reintroduce the dependency or the `.001` concatenation step in the downloader.

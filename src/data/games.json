@@ -1,838 +1,855 @@
 {
-  "catalog_version": "0.17",
-  "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
-  "games": [
-    {
-      "id": "hp1",
-      "name": "Harry Potter à l'École des Sorciers",
-      "year": 2001,
-      "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
-      "developer": "KnowWonder",
-      "executable": "HP1/System/HP.exe",
-      "cover_image": "hp1_cover.jpg",
-      "tags": [
-        "Aventure",
-        "Action",
-        "Plateforme",
-        "Énigmes"
-      ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
-      "versions": [
+    "catalog_version": "0.18",
+    "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
+    "games": [
         {
-          "version": "1.1",
-          "date": "2026-03-08",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.1/hp1.7z",
-          "download_parts": null,
-          "size_mb": 431,
-          "changes": [
-            "Des images dans le menu des sauvegardes"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Thumbnails in the save game menu"
-              ]
+            "id": "hp1",
+            "name": "Harry Potter à l'École des Sorciers",
+            "year": 2001,
+            "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
+            "developer": "KnowWonder",
+            "executable": "HP1/System/HP.exe",
+            "cover_image": "hp1_cover.jpg",
+            "tags": [
+                "Aventure",
+                "Action",
+                "Plateforme",
+                "Énigmes"
+            ],
+            "latest_version": "1.1",
+            "recommended_version": "1.1",
+            "versions": [
+                {
+                    "version": "1.1",
+                    "date": "2026-03-08",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.1/hp1.7z",
+                    "download_parts": null,
+                    "size_mb": 431,
+                    "changes": [
+                        "Des images dans le menu des sauvegardes"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Thumbnails in the save game menu"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Miniaturas en el menú de partidas guardadas"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "version": "1.0",
+                    "date": "2026-03-06",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.0/hp1.7z",
+                    "download_parts": null,
+                    "size_mb": 430,
+                    "changes": [
+                        "Renderer Kentie D3D11 intégré (antialiasing 4x, anisotropie 16x, bump mapping, SSAO, HDR, SSR)",
+                        "Widescreen 16:9 (1920x1080) avec FOV 106°",
+                        "Mode borderless windowed (alt-tab sans crash)",
+                        "Cap 100 FPS (limite UE1 recommandée)",
+                        "Interface mise à l'échelle pour les résolutions modernes",
+                        "Voix et textes FR + EN inclus",
+                        "Nettoyage des fichiers inutiles (DRM, installeurs, manuel PDF)"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Kentie D3D11 renderer bundled (4x anti-aliasing, 16x anisotropy, bump mapping, SSAO, HDR, SSR)",
+                                "16:9 widescreen (1920x1080) with 106° FOV",
+                                "Borderless windowed mode (crash-free alt-tab)",
+                                "100 FPS cap (recommended UE1 limit)",
+                                "UI scaled for modern resolutions",
+                                "French and English voices and text included",
+                                "Useless files removed (DRM, installers, PDF manual)"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Renderizador Kentie D3D11 integrado (antialiasing 4x, anisotropía 16x, bump mapping, SSAO, HDR, SSR)",
+                                "Panorámico 16:9 (1920x1080) con FOV de 106°",
+                                "Modo ventana sin bordes (alt-tab sin cierres)",
+                                "Límite de 100 FPS (máximo recomendado en UE1)",
+                                "Interfaz escalada para resoluciones modernas",
+                                "Voces y textos en francés e inglés incluidos",
+                                "Archivos innecesarios eliminados (DRM, instaladores, manual en PDF)"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "pre_launch": {
+                "create_files": [
+                    "%DOCUMENTS%\\Harry Potter\\Running.ini"
+                ],
+                "ini_patches": [
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                        "section": "FirstRun",
+                        "key": "Reconfig",
+                        "value": "0"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                        "section": "Engine.Engine",
+                        "key": "GameRenderDevice",
+                        "value": "D3D11Drv.D3D11RenderDevice",
+                        "fallback": "D3DDrv.D3DRenderDevice"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                        "section": "D3D11Drv.D3D11RenderDevice",
+                        "key": "Borderless",
+                        "value": "True"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                        "section": "D3D11Drv.D3D11RenderDevice",
+                        "key": "FastAltTab",
+                        "value": "True"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                        "section": "Core.System",
+                        "key": "SavePath",
+                        "value": "%DOCUMENTS%\\Harry Potter\\Save"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                        "section": "Core.System",
+                        "key": "CachePath",
+                        "value": "%DOCUMENTS%\\Harry Potter\\Cache"
+                    }
+                ]
             },
-            "es": {
-              "changes": [
-                "Miniaturas en el menú de partidas guardadas"
-              ]
+            "post_install": {
+                "registry": [],
+                "config_files": [
+                    {
+                        "source": "config/HP.ini",
+                        "destination": "~/Documents/Harry Potter/HP.ini"
+                    },
+                    {
+                        "source": "config/User.ini",
+                        "destination": "~/Documents/Harry Potter/User.ini"
+                    }
+                ]
+            },
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Philosopher's Stone",
+                    "description": "Step into Harry Potter's shoes and discover the magical world of Hogwarts for the very first time. Explore the castle corridors, learn spells, brew potions and uncover secret passages as you follow the story of the first book. Take part in frantic Quidditch matches and face magical creatures in this unforgettable adventure.",
+                    "tags": [
+                        "Adventure",
+                        "Action",
+                        "Platformer",
+                        "Puzzles"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y la piedra filosofal",
+                    "description": "Ponte en la piel de Harry Potter y descubre el mundo mágico de Hogwarts por primera vez. Explora los pasillos del castillo, aprende hechizos, prepara pociones y encuentra pasadizos secretos mientras sigues la trama del primer libro. Participa en frenéticos partidos de quidditch y enfréntate a criaturas mágicas en esta aventura inolvidable.",
+                    "tags": [
+                        "Aventura",
+                        "Acción",
+                        "Plataformas",
+                        "Puzles"
+                    ]
+                }
             }
-          }
         },
         {
-          "version": "1.0",
-          "date": "2026-03-06",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.0/hp1.7z",
-          "download_parts": null,
-          "size_mb": 430,
-          "changes": [
-            "Renderer Kentie D3D11 intégré (antialiasing 4x, anisotropie 16x, bump mapping, SSAO, HDR, SSR)",
-            "Widescreen 16:9 (1920x1080) avec FOV 106°",
-            "Mode borderless windowed (alt-tab sans crash)",
-            "Cap 100 FPS (limite UE1 recommandée)",
-            "Interface mise à l'échelle pour les résolutions modernes",
-            "Voix et textes FR + EN inclus",
-            "Nettoyage des fichiers inutiles (DRM, installeurs, manuel PDF)"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Kentie D3D11 renderer bundled (4x anti-aliasing, 16x anisotropy, bump mapping, SSAO, HDR, SSR)",
-                "16:9 widescreen (1920x1080) with 106° FOV",
-                "Borderless windowed mode (crash-free alt-tab)",
-                "100 FPS cap (recommended UE1 limit)",
-                "UI scaled for modern resolutions",
-                "French and English voices and text included",
-                "Useless files removed (DRM, installers, PDF manual)"
-              ]
+            "id": "hp2",
+            "name": "Harry Potter et la Chambre des Secrets",
+            "year": 2002,
+            "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
+            "developer": "KnowWonder",
+            "executable": "HP2/system/Game.exe",
+            "cover_image": "hp2_cover.jpg",
+            "tags": [
+                "Aventure",
+                "Action",
+                "Exploration",
+                "Énigmes"
+            ],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-03-28",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.0/hp2.7z",
+                    "download_parts": null,
+                    "size_mb": 463,
+                    "changes": [
+                        "Renderer D3D11 1.6.2 intégré (antialiasing 8x, anisotropie 16x, bump mapping, SSAO, SSR)",
+                        "Widescreen 16:9 (1920x1080) avec FOV 106°",
+                        "Mode borderless windowed (alt-tab sans crash)",
+                        "Cap 100 FPS (stabilité du gameplay)",
+                        "Interface mise à l'échelle pour les résolutions modernes",
+                        "Voix et textes FR inclus",
+                        "Nettoyage des fichiers inutiles (DRM, installeurs)"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "D3D11 renderer 1.6.2 bundled (8x anti-aliasing, 16x anisotropy, bump mapping, SSAO, SSR)",
+                                "16:9 widescreen (1920x1080) with 106° FOV",
+                                "Borderless windowed mode (crash-free alt-tab)",
+                                "100 FPS cap (gameplay stability)",
+                                "UI scaled for modern resolutions",
+                                "French voices and text included",
+                                "Useless files removed (DRM, installers)"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Renderizador D3D11 1.6.2 integrado (antialiasing 8x, anisotropía 16x, bump mapping, SSAO, SSR)",
+                                "Panorámico 16:9 (1920x1080) con FOV de 106°",
+                                "Modo ventana sin bordes (alt-tab sin cierres)",
+                                "Límite de 100 FPS (estabilidad del juego)",
+                                "Interfaz escalada para resoluciones modernas",
+                                "Voces y textos en francés incluidos",
+                                "Archivos innecesarios eliminados (DRM, instaladores)"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "pre_launch": {
+                "create_files": [
+                    "%DOCUMENTS%\\Harry Potter II\\Running.ini"
+                ],
+                "ini_patches": [
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "FirstRun",
+                        "key": "Reconfig",
+                        "value": "0"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "Engine.Engine",
+                        "key": "GameRenderDevice",
+                        "value": "D3D11Drv.D3D11RenderDevice",
+                        "fallback": "D3DDrv.D3DRenderDevice"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "D3D11Drv.D3D11RenderDevice",
+                        "key": "Borderless",
+                        "value": "True"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "D3D11Drv.D3D11RenderDevice",
+                        "key": "FastAltTab",
+                        "value": "True"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "D3D11Drv.D3D11RenderDevice",
+                        "key": "SupportMETextEnabled",
+                        "value": "False"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "Core.System",
+                        "key": "SavePath",
+                        "value": "%DOCUMENTS%\\Harry Potter II\\Save\\Slot1"
+                    },
+                    {
+                        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                        "section": "UWindow.UWindowRootWindow",
+                        "key": "GUIScale",
+                        "value": "2.25"
+                    }
+                ]
             },
-            "es": {
-              "changes": [
-                "Renderizador Kentie D3D11 integrado (antialiasing 4x, anisotropía 16x, bump mapping, SSAO, HDR, SSR)",
-                "Panorámico 16:9 (1920x1080) con FOV de 106°",
-                "Modo ventana sin bordes (alt-tab sin cierres)",
-                "Límite de 100 FPS (máximo recomendado en UE1)",
-                "Interfaz escalada para resoluciones modernas",
-                "Voces y textos en francés e inglés incluidos",
-                "Archivos innecesarios eliminados (DRM, instaladores, manual en PDF)"
-              ]
-            }
-          }
-        }
-      ],
-      "pre_launch": {
-        "create_files": [
-          "%DOCUMENTS%\\Harry Potter\\Running.ini"
-        ],
-        "ini_patches": [
-          {
-            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
-            "section": "FirstRun",
-            "key": "Reconfig",
-            "value": "0"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
-            "section": "Engine.Engine",
-            "key": "GameRenderDevice",
-            "value": "D3D11Drv.D3D11RenderDevice",
-            "fallback": "D3DDrv.D3DRenderDevice"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
-            "section": "D3D11Drv.D3D11RenderDevice",
-            "key": "Borderless",
-            "value": "True"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
-            "section": "D3D11Drv.D3D11RenderDevice",
-            "key": "FastAltTab",
-            "value": "True"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
-            "section": "Core.System",
-            "key": "SavePath",
-            "value": "%DOCUMENTS%\\Harry Potter\\Save"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
-            "section": "Core.System",
-            "key": "CachePath",
-            "value": "%DOCUMENTS%\\Harry Potter\\Cache"
-          }
-        ]
-      },
-      "post_install": {
-        "registry": [],
-        "config_files": [
-          {
-            "source": "config/HP.ini",
-            "destination": "~/Documents/Harry Potter/HP.ini"
-          },
-          {
-            "source": "config/User.ini",
-            "destination": "~/Documents/Harry Potter/User.ini"
-          }
-        ]
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Philosopher's Stone",
-          "description": "Step into Harry Potter's shoes and discover the magical world of Hogwarts for the very first time. Explore the castle corridors, learn spells, brew potions and uncover secret passages as you follow the story of the first book. Take part in frantic Quidditch matches and face magical creatures in this unforgettable adventure.",
-          "tags": [
-            "Adventure",
-            "Action",
-            "Platformer",
-            "Puzzles"
-          ]
-        },
-        "es": {
-          "name": "Harry Potter y la piedra filosofal",
-          "description": "Ponte en la piel de Harry Potter y descubre el mundo mágico de Hogwarts por primera vez. Explora los pasillos del castillo, aprende hechizos, prepara pociones y encuentra pasadizos secretos mientras sigues la trama del primer libro. Participa en frenéticos partidos de quidditch y enfréntate a criaturas mágicas en esta aventura inolvidable.",
-          "tags": [
-            "Aventura",
-            "Acción",
-            "Plataformas",
-            "Puzles"
-          ]
-        }
-      }
-    },
-    {
-      "id": "hp2",
-      "name": "Harry Potter et la Chambre des Secrets",
-      "year": 2002,
-      "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
-      "developer": "KnowWonder",
-      "executable": "HP2/system/Game.exe",
-      "cover_image": "hp2_cover.jpg",
-      "tags": [
-        "Aventure",
-        "Action",
-        "Exploration",
-        "Énigmes"
-      ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
-      "versions": [
-        {
-          "version": "1.0",
-          "date": "2026-03-28",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.0/hp2.7z",
-          "download_parts": null,
-          "size_mb": 463,
-          "changes": [
-            "Renderer D3D11 1.6.2 intégré (antialiasing 8x, anisotropie 16x, bump mapping, SSAO, SSR)",
-            "Widescreen 16:9 (1920x1080) avec FOV 106°",
-            "Mode borderless windowed (alt-tab sans crash)",
-            "Cap 100 FPS (stabilité du gameplay)",
-            "Interface mise à l'échelle pour les résolutions modernes",
-            "Voix et textes FR inclus",
-            "Nettoyage des fichiers inutiles (DRM, installeurs)"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "D3D11 renderer 1.6.2 bundled (8x anti-aliasing, 16x anisotropy, bump mapping, SSAO, SSR)",
-                "16:9 widescreen (1920x1080) with 106° FOV",
-                "Borderless windowed mode (crash-free alt-tab)",
-                "100 FPS cap (gameplay stability)",
-                "UI scaled for modern resolutions",
-                "French voices and text included",
-                "Useless files removed (DRM, installers)"
-              ]
+            "post_install": {
+                "registry": [],
+                "config_files": [
+                    {
+                        "source": "config/Game.ini",
+                        "destination": "~/Documents/Harry Potter II/Game.ini"
+                    },
+                    {
+                        "source": "config/User.ini",
+                        "destination": "~/Documents/Harry Potter II/User.ini"
+                    }
+                ]
             },
-            "es": {
-              "changes": [
-                "Renderizador D3D11 1.6.2 integrado (antialiasing 8x, anisotropía 16x, bump mapping, SSAO, SSR)",
-                "Panorámico 16:9 (1920x1080) con FOV de 106°",
-                "Modo ventana sin bordes (alt-tab sin cierres)",
-                "Límite de 100 FPS (estabilidad del juego)",
-                "Interfaz escalada para resoluciones modernas",
-                "Voces y textos en francés incluidos",
-                "Archivos innecesarios eliminados (DRM, instaladores)"
-              ]
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Chamber of Secrets",
+                    "description": "Dive back into the wizarding world with a Hogwarts more open and richer to explore than ever. Learn new spells such as Expelliarmus and Lumos to solve puzzles and defeat your enemies. Between Quidditch matches, sneaking around under the Invisibility Cloak and exploring the Forbidden Forest, every corner of the castle is packed with secrets to uncover.",
+                    "tags": [
+                        "Adventure",
+                        "Action",
+                        "Exploration",
+                        "Puzzles"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y la cámara secreta",
+                    "description": "Vuelve al mundo mágico con un Hogwarts más abierto y rico de explorar que nunca. Aprende nuevos hechizos como Expelliarmus y Lumos para resolver enigmas y derrotar a tus enemigos. Entre partidos de quidditch, infiltraciones bajo la capa invisible y expediciones al Bosque Prohibido, cada rincón del castillo esconde secretos por descubrir.",
+                    "tags": [
+                        "Aventura",
+                        "Acción",
+                        "Exploración",
+                        "Puzles"
+                    ]
+                }
             }
-          }
-        }
-      ],
-      "pre_launch": {
-        "create_files": [
-          "%DOCUMENTS%\\Harry Potter II\\Running.ini"
-        ],
-        "ini_patches": [
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "FirstRun",
-            "key": "Reconfig",
-            "value": "0"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "Engine.Engine",
-            "key": "GameRenderDevice",
-            "value": "D3D11Drv.D3D11RenderDevice",
-            "fallback": "D3DDrv.D3DRenderDevice"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "D3D11Drv.D3D11RenderDevice",
-            "key": "Borderless",
-            "value": "True"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "D3D11Drv.D3D11RenderDevice",
-            "key": "FastAltTab",
-            "value": "True"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "D3D11Drv.D3D11RenderDevice",
-            "key": "SupportMETextEnabled",
-            "value": "False"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "Core.System",
-            "key": "SavePath",
-            "value": "%DOCUMENTS%\\Harry Potter II\\Save\\Slot1"
-          },
-          {
-            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
-            "section": "UWindow.UWindowRootWindow",
-            "key": "GUIScale",
-            "value": "2.25"
-          }
-        ]
-      },
-      "post_install": {
-        "registry": [],
-        "config_files": [
-          {
-            "source": "config/Game.ini",
-            "destination": "~/Documents/Harry Potter II/Game.ini"
-          },
-          {
-            "source": "config/User.ini",
-            "destination": "~/Documents/Harry Potter II/User.ini"
-          }
-        ]
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Chamber of Secrets",
-          "description": "Dive back into the wizarding world with a Hogwarts more open and richer to explore than ever. Learn new spells such as Expelliarmus and Lumos to solve puzzles and defeat your enemies. Between Quidditch matches, sneaking around under the Invisibility Cloak and exploring the Forbidden Forest, every corner of the castle is packed with secrets to uncover.",
-          "tags": [
-            "Adventure",
-            "Action",
-            "Exploration",
-            "Puzzles"
-          ]
-        },
-        "es": {
-          "name": "Harry Potter y la cámara secreta",
-          "description": "Vuelve al mundo mágico con un Hogwarts más abierto y rico de explorar que nunca. Aprende nuevos hechizos como Expelliarmus y Lumos para resolver enigmas y derrotar a tus enemigos. Entre partidos de quidditch, infiltraciones bajo la capa invisible y expediciones al Bosque Prohibido, cada rincón del castillo esconde secretos por descubrir.",
-          "tags": [
-            "Aventura",
-            "Acción",
-            "Exploración",
-            "Puzles"
-          ]
-        }
-      }
-    },
-    {
-      "id": "hp3",
-      "name": "Harry Potter et le Prisonnier d'Azkaban",
-      "year": 2004,
-      "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
-      "developer": "KnowWonder",
-      "executable": "HP3/system/hppoa.exe",
-      "cover_image": "hp3_cover.jpg",
-      "tags": [
-        "Aventure",
-        "Action",
-        "Plateforme",
-        "Multi-personnages"
-      ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
-      "versions": [
-        {
-          "version": "1.1",
-          "date": "2025-03-06",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.1/hp3.7z",
-          "download_parts": null,
-          "size_mb": 775,
-          "changes": [
-            "DGVoodoo 2.8.1 → 2.86.5",
-            "Anti-aliasing 4x, filtrage anisotrope 8x",
-            "Widescreen 16:9 (1920x1080) avec FOV ajusté",
-            "Cap 60 FPS intégré via DGVoodoo",
-            "VSync activé, upscaling Lanczos-2",
-            "Nettoyage des fichiers inutiles (~15 Mo)",
-            "Vidéos d'intro adaptées au widescreen"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "DGVoodoo 2.8.1 → 2.86.5",
-                "4x anti-aliasing, 8x anisotropic filtering",
-                "16:9 widescreen (1920x1080) with adjusted FOV",
-                "Built-in 60 FPS cap via DGVoodoo",
-                "VSync enabled, Lanczos-2 upscaling",
-                "Useless files removed (~15 MB)",
-                "Intro videos adapted to widescreen"
-              ]
-            },
-            "es": {
-              "changes": [
-                "DGVoodoo 2.8.1 → 2.86.5",
-                "Antialiasing 4x, filtrado anisotrópico 8x",
-                "Panorámico 16:9 (1920x1080) con FOV ajustado",
-                "Límite de 60 FPS integrado mediante DGVoodoo",
-                "VSync activado, escalado Lanczos-2",
-                "Archivos innecesarios eliminados (~15 MB)",
-                "Vídeos de introducción adaptados a pantalla panorámica"
-              ]
-            }
-          }
         },
         {
-          "version": "1.0",
-          "date": "2026-03-05",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.0/hp3.7z",
-          "download_parts": null,
-          "size_mb": 790,
-          "changes": [
-            "Version originale du jeu",
-            "DGVoodoo 2.8.1 intégré",
-            "Configuration par défaut optimisée"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Original game release",
-                "DGVoodoo 2.8.1 bundled",
-                "Optimised default configuration"
-              ]
+            "id": "hp3",
+            "name": "Harry Potter et le Prisonnier d'Azkaban",
+            "year": 2004,
+            "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
+            "developer": "KnowWonder",
+            "executable": "HP3/system/hppoa.exe",
+            "cover_image": "hp3_cover.jpg",
+            "tags": [
+                "Aventure",
+                "Action",
+                "Plateforme",
+                "Multi-personnages"
+            ],
+            "latest_version": "1.1",
+            "recommended_version": "1.1",
+            "versions": [
+                {
+                    "version": "1.1",
+                    "date": "2025-03-06",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.1/hp3.7z",
+                    "download_parts": null,
+                    "size_mb": 775,
+                    "changes": [
+                        "DGVoodoo 2.8.1 → 2.86.5",
+                        "Anti-aliasing 4x, filtrage anisotrope 8x",
+                        "Widescreen 16:9 (1920x1080) avec FOV ajusté",
+                        "Cap 60 FPS intégré via DGVoodoo",
+                        "VSync activé, upscaling Lanczos-2",
+                        "Nettoyage des fichiers inutiles (~15 Mo)",
+                        "Vidéos d'intro adaptées au widescreen"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "DGVoodoo 2.8.1 → 2.86.5",
+                                "4x anti-aliasing, 8x anisotropic filtering",
+                                "16:9 widescreen (1920x1080) with adjusted FOV",
+                                "Built-in 60 FPS cap via DGVoodoo",
+                                "VSync enabled, Lanczos-2 upscaling",
+                                "Useless files removed (~15 MB)",
+                                "Intro videos adapted to widescreen"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "DGVoodoo 2.8.1 → 2.86.5",
+                                "Antialiasing 4x, filtrado anisotrópico 8x",
+                                "Panorámico 16:9 (1920x1080) con FOV ajustado",
+                                "Límite de 60 FPS integrado mediante DGVoodoo",
+                                "VSync activado, escalado Lanczos-2",
+                                "Archivos innecesarios eliminados (~15 MB)",
+                                "Vídeos de introducción adaptados a pantalla panorámica"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "version": "1.0",
+                    "date": "2026-03-05",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.0/hp3.7z",
+                    "download_parts": null,
+                    "size_mb": 790,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8.1 intégré",
+                        "Configuration par défaut optimisée"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Original game release",
+                                "DGVoodoo 2.8.1 bundled",
+                                "Optimised default configuration"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Versión original del juego",
+                                "DGVoodoo 2.8.1 integrado",
+                                "Configuración predeterminada optimizada"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "post_install": {
+                "registry": [],
+                "config_files": [
+                    {
+                        "source": "config/hppoa.ini",
+                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/hppoa.ini"
+                    },
+                    {
+                        "source": "config/User.ini",
+                        "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/User.ini"
+                    }
+                ]
             },
-            "es": {
-              "changes": [
-                "Versión original del juego",
-                "DGVoodoo 2.8.1 integrado",
-                "Configuración predeterminada optimizada"
-              ]
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Prisoner of Azkaban",
+                    "description": "For the first time, play not only as Harry but also as Ron and Hermione, each with their own abilities and spells. Roam Hogwarts and its grounds freely, solve puzzles by switching between the three characters and take to the skies on a Hippogriff. With its side quests and magical duels, this adventure offers a rich and varied experience.",
+                    "tags": [
+                        "Adventure",
+                        "Action",
+                        "Platformer",
+                        "Multi-character"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y el prisionero de Azkaban",
+                    "description": "Por primera vez no solo controlas a Harry, sino también a Ron y Hermione, cada uno con habilidades y hechizos propios. Recorre Hogwarts y sus alrededores con libertad, resuelve enigmas alternando entre los tres personajes y surca el cielo a lomos de un hipogrifo. Con sus misiones secundarias y sus combates mágicos, esta aventura ofrece una experiencia rica y variada.",
+                    "tags": [
+                        "Aventura",
+                        "Acción",
+                        "Plataformas",
+                        "Multipersonaje"
+                    ]
+                }
             }
-          }
-        }
-      ],
-      "post_install": {
-        "registry": [],
-        "config_files": [
-          {
-            "source": "config/hppoa.ini",
-            "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/hppoa.ini"
-          },
-          {
-            "source": "config/User.ini",
-            "destination": "~/Documents/Harry Potter et le prisonnier d'Azkaban/User.ini"
-          }
-        ]
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Prisoner of Azkaban",
-          "description": "For the first time, play not only as Harry but also as Ron and Hermione, each with their own abilities and spells. Roam Hogwarts and its grounds freely, solve puzzles by switching between the three characters and take to the skies on a Hippogriff. With its side quests and magical duels, this adventure offers a rich and varied experience.",
-          "tags": [
-            "Adventure",
-            "Action",
-            "Platformer",
-            "Multi-character"
-          ]
-        },
-        "es": {
-          "name": "Harry Potter y el prisionero de Azkaban",
-          "description": "Por primera vez no solo controlas a Harry, sino también a Ron y Hermione, cada uno con habilidades y hechizos propios. Recorre Hogwarts y sus alrededores con libertad, resuelve enigmas alternando entre los tres personajes y surca el cielo a lomos de un hipogrifo. Con sus misiones secundarias y sus combates mágicos, esta aventura ofrece una experiencia rica y variada.",
-          "tags": [
-            "Aventura",
-            "Acción",
-            "Plataformas",
-            "Multipersonaje"
-          ]
-        }
-      }
-    },
-    {
-      "id": "hp4",
-      "name": "Harry Potter et la Coupe de Feu",
-      "year": 2005,
-      "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
-      "developer": "EA UK",
-      "executable": "HP4/gof_f.exe",
-      "cover_image": "hp4_cover.jpg",
-      "tags": [
-        "Action",
-        "Coopératif",
-        "Combat",
-        "Aventure"
-      ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
-      "versions": [
-        {
-          "version": "1.0",
-          "date": "2026-04-08",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.0/hp4.7z",
-          "download_parts": null,
-          "size_mb": 1680,
-          "changes": [
-            "Wrapper D3D9 Chip-Biscuit intégré (widescreen 1920x1080, 100 FPS, 16:9)",
-            "Mode borderless windowed (alt-tab sans crash)",
-            "Fix crash sur Forêt Interdite, Lac, Labyrinthe et Voldemort",
-            "Voix et textes FR inclus",
-            "Nettoyage des fichiers inutiles (DRM, installeurs, support multilingue)"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Chip-Biscuit D3D9 wrapper bundled (1920x1080 widescreen, 100 FPS, 16:9)",
-                "Borderless windowed mode (crash-free alt-tab)",
-                "Fixed crashes in the Forbidden Forest, the Lake, the Maze and the Voldemort fight",
-                "French voices and text included",
-                "Useless files removed (DRM, installers, multi-language support)"
-              ]
-            },
-            "es": {
-              "changes": [
-                "Wrapper D3D9 Chip-Biscuit integrado (panorámico 1920x1080, 100 FPS, 16:9)",
-                "Modo ventana sin bordes (alt-tab sin cierres)",
-                "Corregidos los cierres en el Bosque Prohibido, el Lago, el Laberinto y el combate contra Voldemort",
-                "Voces y textos en francés incluidos",
-                "Archivos innecesarios eliminados (DRM, instaladores, soporte multiidioma)"
-              ]
-            }
-          }
-        }
-      ],
-      "post_install": {
-        "registry": []
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Goblet of Fire",
-          "description": "Take on the Triwizard Tournament as Harry, Ron or Hermione in this co-operative action adventure. Cast powerful spells, fight fearsome creatures and face the tournament's three deadly tasks all the way to the final confrontation with Lord Voldemort. Play co-operatively with up to two friends for the first time in the series.",
-          "tags": [
-            "Action",
-            "Co-op",
-            "Combat",
-            "Adventure"
-          ]
-        },
-        "es": {
-          "name": "Harry Potter y el cáliz de fuego",
-          "description": "Afronta las pruebas del Torneo de los Tres Magos encarnando a Harry, Ron o Hermione en esta aventura de acción cooperativa. Lanza hechizos poderosos, combate criaturas temibles y supera las tres pruebas mortales del torneo hasta el enfrentamiento final con lord Voldemort. Juega en cooperativo con hasta dos amigos por primera vez en la saga.",
-          "tags": [
-            "Acción",
-            "Cooperativo",
-            "Combate",
-            "Aventura"
-          ]
-        }
-      }
-    },
-    {
-      "id": "hp5",
-      "name": "Harry Potter et l'Ordre du Phénix",
-      "year": 2007,
-      "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
-      "developer": "EA UK",
-      "executable": "HP5/hp.exe",
-      "cover_image": "hp5_cover.jpg",
-      "tags": [
-        "Monde ouvert",
-        "Aventure",
-        "Duel",
-        "Exploration"
-      ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
-      "versions": [
-        {
-          "version": "1.1",
-          "date": "2026-07-07",
-          "download_url": null,
-          "download_parts": [
-            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.1/hp5.7z.001",
-            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.1/hp5.7z.002"
-          ],
-          "size_mb": 4600,
-          "changes": [
-            "MSAA jusqu'à 16× avec repli automatique, FXAA et netteté adaptative",
-            "SSAA optionnel (2×/3×/4×) et filtrage anisotrope forcé 16×",
-            "Occlusion ambiante (SSAO), bloom et god rays volumétriques",
-            "Étalonnage des couleurs : balance des blancs, contraste ciné, split-tone, vignette",
-            "Capture d'écran intégrée (F12) et prise en charge du DPI Windows (1440p natif)",
-            "Latence d'entrée réduite, Alt+Tab instantané, correctif du doublon fantôme"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "MSAA up to 16× with automatic fallback, FXAA and adaptive sharpening",
-                "Optional SSAA (2×/3×/4×) and forced 16× anisotropic filtering",
-                "Ambient occlusion (SSAO), bloom and volumetric god rays",
-                "Colour grading: white balance, cinematic contrast, split-tone, vignette",
-                "Built-in screenshot key (F12) and Windows DPI support (native 1440p)",
-                "Reduced input latency, instant Alt+Tab, ghost duplicate fixed"
-              ]
-            },
-            "es": {
-              "changes": [
-                "MSAA hasta 16× con repliegue automático, FXAA y nitidez adaptativa",
-                "SSAA opcional (2×/3×/4×) y filtrado anisotrópico forzado a 16×",
-                "Oclusión ambiental (SSAO), bloom y rayos volumétricos",
-                "Etalonaje de color: balance de blancos, contraste cinematográfico, split-tone, viñeta",
-                "Captura de pantalla integrada (F12) y compatibilidad con el DPI de Windows (1440p nativo)",
-                "Menor latencia de entrada, Alt+Tab instantáneo, corregido el duplicado fantasma"
-              ]
-            }
-          }
         },
         {
-          "version": "1.0",
-          "date": "2026-04-08",
-          "download_url": null,
-          "download_parts": [
-            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.001",
-            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.002"
-          ],
-          "size_mb": 4600,
-          "changes": [
-            "Version originale du jeu",
-            "DGVoodoo 2.8 intégré",
-            "Configuration par défaut optimisée"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Original game release",
-                "DGVoodoo 2.8 bundled",
-                "Optimised default configuration"
-              ]
+            "id": "hp4",
+            "name": "Harry Potter et la Coupe de Feu",
+            "year": 2005,
+            "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
+            "developer": "EA UK",
+            "executable": "HP4/gof_f.exe",
+            "cover_image": "hp4_cover.jpg",
+            "tags": [
+                "Action",
+                "Coopératif",
+                "Combat",
+                "Aventure"
+            ],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-04-08",
+                    "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.0/hp4.7z",
+                    "download_parts": null,
+                    "size_mb": 1680,
+                    "changes": [
+                        "Wrapper D3D9 Chip-Biscuit intégré (widescreen 1920x1080, 100 FPS, 16:9)",
+                        "Mode borderless windowed (alt-tab sans crash)",
+                        "Fix crash sur Forêt Interdite, Lac, Labyrinthe et Voldemort",
+                        "Voix et textes FR inclus",
+                        "Nettoyage des fichiers inutiles (DRM, installeurs, support multilingue)"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Chip-Biscuit D3D9 wrapper bundled (1920x1080 widescreen, 100 FPS, 16:9)",
+                                "Borderless windowed mode (crash-free alt-tab)",
+                                "Fixed crashes in the Forbidden Forest, the Lake, the Maze and the Voldemort fight",
+                                "French voices and text included",
+                                "Useless files removed (DRM, installers, multi-language support)"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Wrapper D3D9 Chip-Biscuit integrado (panorámico 1920x1080, 100 FPS, 16:9)",
+                                "Modo ventana sin bordes (alt-tab sin cierres)",
+                                "Corregidos los cierres en el Bosque Prohibido, el Lago, el Laberinto y el combate contra Voldemort",
+                                "Voces y textos en francés incluidos",
+                                "Archivos innecesarios eliminados (DRM, instaladores, soporte multiidioma)"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "post_install": {
+                "registry": []
             },
-            "es": {
-              "changes": [
-                "Versión original del juego",
-                "DGVoodoo 2.8 integrado",
-                "Configuración predeterminada optimizada"
-              ]
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Goblet of Fire",
+                    "description": "Take on the Triwizard Tournament as Harry, Ron or Hermione in this co-operative action adventure. Cast powerful spells, fight fearsome creatures and face the tournament's three deadly tasks all the way to the final confrontation with Lord Voldemort. Play co-operatively with up to two friends for the first time in the series.",
+                    "tags": [
+                        "Action",
+                        "Co-op",
+                        "Combat",
+                        "Adventure"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y el cáliz de fuego",
+                    "description": "Afronta las pruebas del Torneo de los Tres Magos encarnando a Harry, Ron o Hermione en esta aventura de acción cooperativa. Lanza hechizos poderosos, combate criaturas temibles y supera las tres pruebas mortales del torneo hasta el enfrentamiento final con lord Voldemort. Juega en cooperativo con hasta dos amigos por primera vez en la saga.",
+                    "tags": [
+                        "Acción",
+                        "Cooperativo",
+                        "Combate",
+                        "Aventura"
+                    ]
+                }
             }
-          }
-        }
-      ],
-      "post_install": {
-        "registry": []
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Order of the Phoenix",
-          "description": "Explore a complete and detailed recreation of Hogwarts as an open world, with no loading screens at all, in the most immersive adventure of the series. Recruit members for Dumbledore's Army, face Slytherins in wizard duels and interact with the whole castle through your spells. Discover every corner of the school while carrying out missions inspired by the book and the film.",
-          "tags": [
-            "Open world",
-            "Adventure",
-            "Duels",
-            "Exploration"
-          ]
         },
-        "es": {
-          "name": "Harry Potter y la Orden del Fénix",
-          "description": "Explora una recreación completa y detallada de Hogwarts en mundo abierto, sin una sola pantalla de carga, en la aventura más inmersiva de la saga. Recluta miembros para el Ejército de Dumbledore, enfréntate a los Slytherin en duelos de magos e interactúa con todo el castillo gracias a tus hechizos. Descubre cada rincón del colegio mientras cumples las misiones inspiradas en el libro y la película.",
-          "tags": [
-            "Mundo abierto",
-            "Aventura",
-            "Duelos",
-            "Exploración"
-          ]
-        }
-      }
-    },
-    {
-      "id": "hp6",
-      "name": "Harry Potter et le Prince de Sang-Mêlé",
-      "year": 2009,
-      "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
-      "developer": "EA UK",
-      "executable": "HP6/hp6.exe",
-      "cover_image": "hp6_cover.jpg",
-      "tags": [
-        "Monde ouvert",
-        "Duel",
-        "Potions",
-        "Quidditch"
-      ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
-      "versions": [
         {
-          "version": "1.0",
-          "date": "2026-08-17",
-          "download_url": null,
-          "download_parts": [
-            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.001",
-            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.002"
-          ],
-          "size_mb": 4414,
-          "changes": [
-            "Wrapper graphique D3D9 refondu (pipeline de post-traitement réglable)",
-            "Version originale du jeu",
-            "Configuration par défaut optimisée"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Rebuilt D3D9 graphics wrapper (tunable post-processing pipeline)",
-                "Original game release",
-                "Optimised default configuration"
-              ]
+            "id": "hp5",
+            "name": "Harry Potter et l'Ordre du Phénix",
+            "year": 2007,
+            "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
+            "developer": "EA UK",
+            "executable": "HP5/hp.exe",
+            "cover_image": "hp5_cover.jpg",
+            "tags": [
+                "Monde ouvert",
+                "Aventure",
+                "Duel",
+                "Exploration"
+            ],
+            "latest_version": "1.1",
+            "recommended_version": "1.1",
+            "versions": [
+                {
+                    "version": "1.1",
+                    "date": "2026-07-07",
+                    "download_url": null,
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.1/hp5.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.1/hp5.7z.002"
+                    ],
+                    "size_mb": 4600,
+                    "changes": [
+                        "MSAA jusqu'à 16× avec repli automatique, FXAA et netteté adaptative",
+                        "SSAA optionnel (2×/3×/4×) et filtrage anisotrope forcé 16×",
+                        "Occlusion ambiante (SSAO), bloom et god rays volumétriques",
+                        "Étalonnage des couleurs : balance des blancs, contraste ciné, split-tone, vignette",
+                        "Capture d'écran intégrée (F12) et prise en charge du DPI Windows (1440p natif)",
+                        "Latence d'entrée réduite, Alt+Tab instantané, correctif du doublon fantôme"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "MSAA up to 16× with automatic fallback, FXAA and adaptive sharpening",
+                                "Optional SSAA (2×/3×/4×) and forced 16× anisotropic filtering",
+                                "Ambient occlusion (SSAO), bloom and volumetric god rays",
+                                "Colour grading: white balance, cinematic contrast, split-tone, vignette",
+                                "Built-in screenshot key (F12) and Windows DPI support (native 1440p)",
+                                "Reduced input latency, instant Alt+Tab, ghost duplicate fixed"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "MSAA hasta 16× con repliegue automático, FXAA y nitidez adaptativa",
+                                "SSAA opcional (2×/3×/4×) y filtrado anisotrópico forzado a 16×",
+                                "Oclusión ambiental (SSAO), bloom y rayos volumétricos",
+                                "Etalonaje de color: balance de blancos, contraste cinematográfico, split-tone, viñeta",
+                                "Captura de pantalla integrada (F12) y compatibilidad con el DPI de Windows (1440p nativo)",
+                                "Menor latencia de entrada, Alt+Tab instantáneo, corregido el duplicado fantasma"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "version": "1.0",
+                    "date": "2026-04-08",
+                    "download_url": null,
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.0/hp5.7z.002"
+                    ],
+                    "size_mb": 4600,
+                    "changes": [
+                        "Version originale du jeu",
+                        "DGVoodoo 2.8 intégré",
+                        "Configuration par défaut optimisée"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Original game release",
+                                "DGVoodoo 2.8 bundled",
+                                "Optimised default configuration"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Versión original del juego",
+                                "DGVoodoo 2.8 integrado",
+                                "Configuración predeterminada optimizada"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "post_install": {
+                "registry": []
             },
-            "es": {
-              "changes": [
-                "Wrapper gráfico D3D9 rediseñado (pipeline de posprocesado ajustable)",
-                "Versión original del juego",
-                "Configuración predeterminada optimizada"
-              ]
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Order of the Phoenix",
+                    "description": "Explore a complete and detailed recreation of Hogwarts as an open world, with no loading screens at all, in the most immersive adventure of the series. Recruit members for Dumbledore's Army, face Slytherins in wizard duels and interact with the whole castle through your spells. Discover every corner of the school while carrying out missions inspired by the book and the film.",
+                    "tags": [
+                        "Open world",
+                        "Adventure",
+                        "Duels",
+                        "Exploration"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y la Orden del Fénix",
+                    "description": "Explora una recreación completa y detallada de Hogwarts en mundo abierto, sin una sola pantalla de carga, en la aventura más inmersiva de la saga. Recluta miembros para el Ejército de Dumbledore, enfréntate a los Slytherin en duelos de magos e interactúa con todo el castillo gracias a tus hechizos. Descubre cada rincón del colegio mientras cumples las misiones inspiradas en el libro y la película.",
+                    "tags": [
+                        "Mundo abierto",
+                        "Aventura",
+                        "Duelos",
+                        "Exploración"
+                    ]
+                }
             }
-          }
-        }
-      ],
-      "post_install": {
-        "registry": []
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Half-Blood Prince",
-          "description": "Walk the corridors of Hogwarts once more in this action adventure built around wizard duels, potion brewing and Quidditch. Face your opponents in intense magical fights, hone your skills as a potioneer and lead the Gryffindor team to victory. Explore the castle at different times of day and unravel the mystery surrounding the Half-Blood Prince.",
-          "tags": [
-            "Open world",
-            "Duels",
-            "Potions",
-            "Quidditch"
-          ]
         },
-        "es": {
-          "name": "Harry Potter y el misterio del príncipe",
-          "description": "Recorre una vez más los pasillos de Hogwarts en esta aventura de acción centrada en los duelos de magos, la preparación de pociones y el quidditch. Enfréntate a tus rivales en intensos combates mágicos, perfecciona tu talento con el caldero y lleva al equipo de Gryffindor a la victoria. Explora el castillo a distintas horas del día y desvela los misterios que rodean al Príncipe Mestizo.",
-          "tags": [
-            "Mundo abierto",
-            "Duelos",
-            "Pociones",
-            "Quidditch"
-          ]
-        }
-      }
-    },
-    {
-      "id": "hp7a",
-      "name": "Harry Potter et les Reliques de la Mort — Partie 1",
-      "year": 2010,
-      "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
-      "developer": "EA Bright Light",
-      "executable": "HP7A/hp7a.exe",
-      "cover_image": "hp7a_cover.jpg",
-      "tags": [
-        "Action",
-        "TPS",
-        "Infiltration",
-        "Combat"
-      ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
-      "versions": [
         {
-          "version": "1.0",
-          "date": "2026-04-06",
-          "download_url": null,
-          "download_parts": null,
-          "size_mb": 5000,
-          "changes": [
-            "Version originale du jeu"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Original game release"
-              ]
+            "id": "hp6",
+            "name": "Harry Potter et le Prince de Sang-Mêlé",
+            "year": 2009,
+            "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
+            "developer": "EA UK",
+            "executable": "HP6/hp6.exe",
+            "cover_image": "hp6_cover.jpg",
+            "tags": [
+                "Monde ouvert",
+                "Duel",
+                "Potions",
+                "Quidditch"
+            ],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-08-17",
+                    "download_url": null,
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.0/hp6.7z.002"
+                    ],
+                    "size_mb": 4414,
+                    "changes": [
+                        "Wrapper graphique D3D9 refondu (pipeline de post-traitement réglable)",
+                        "Version originale du jeu",
+                        "Configuration par défaut optimisée"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Rebuilt D3D9 graphics wrapper (tunable post-processing pipeline)",
+                                "Original game release",
+                                "Optimised default configuration"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Wrapper gráfico D3D9 rediseñado (pipeline de posprocesado ajustable)",
+                                "Versión original del juego",
+                                "Configuración predeterminada optimizada"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "post_install": {
+                "registry": []
             },
-            "es": {
-              "changes": [
-                "Versión original del juego"
-              ]
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Half-Blood Prince",
+                    "description": "Walk the corridors of Hogwarts once more in this action adventure built around wizard duels, potion brewing and Quidditch. Face your opponents in intense magical fights, hone your skills as a potioneer and lead the Gryffindor team to victory. Explore the castle at different times of day and unravel the mystery surrounding the Half-Blood Prince.",
+                    "tags": [
+                        "Open world",
+                        "Duels",
+                        "Potions",
+                        "Quidditch"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y el misterio del príncipe",
+                    "description": "Recorre una vez más los pasillos de Hogwarts en esta aventura de acción centrada en los duelos de magos, la preparación de pociones y el quidditch. Enfréntate a tus rivales en intensos combates mágicos, perfecciona tu talento con el caldero y lleva al equipo de Gryffindor a la victoria. Explora el castillo a distintas horas del día y desvela los misterios que rodean al Príncipe Mestizo.",
+                    "tags": [
+                        "Mundo abierto",
+                        "Duelos",
+                        "Pociones",
+                        "Quidditch"
+                    ]
+                }
             }
-          }
-        }
-      ],
-      "post_install": {
-        "registry": []
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Deathly Hallows — Part 1",
-          "description": "Step into the darkest chapter of the saga. Harry, Ron and Hermione have left Hogwarts to hunt down and destroy Voldemort's Horcruxes. Fight Snatchers and Death Eaters in intense third-person combat, infiltrate the Ministry of Magic and survive in hostile territory. With its action-driven gameplay and stealth missions, this game puts you at the heart of a war where every spell counts.",
-          "tags": [
-            "Action",
-            "Third-person",
-            "Stealth",
-            "Combat"
-          ]
         },
-        "es": {
-          "name": "Harry Potter y las reliquias de la Muerte — Parte 1",
-          "description": "Adéntrate en el capítulo más oscuro de la saga. Harry, Ron y Hermione han dejado Hogwarts para buscar y destruir los Horrocruxes de Voldemort. Combate contra carroñeros y mortífagos en intensos enfrentamientos en tercera persona, infíltrate en el Ministerio de Magia y sobrevive en territorio hostil. Con su jugabilidad orientada a la acción y sus misiones de sigilo, este juego te sitúa en el corazón de una guerra donde cada hechizo cuenta.",
-          "tags": [
-            "Acción",
-            "Tercera persona",
-            "Sigilo",
-            "Combate"
-          ]
-        }
-      },
-      "requires": [
-        "vcredist2005_x86"
-      ]
-    },
-    {
-      "id": "hp7b",
-      "name": "Harry Potter et les Reliques de la Mort — Partie 2",
-      "year": 2011,
-      "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
-      "developer": "EA Bright Light",
-      "executable": "HP7B/hp7b.exe",
-      "cover_image": "hp7b_cover.jpg",
-      "tags": [
-        "Action",
-        "TPS",
-        "Combat",
-        "Bataille"
-      ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
-      "versions": [
         {
-          "version": "1.0",
-          "date": "2026-04-06",
-          "download_url": null,
-          "download_parts": null,
-          "size_mb": 5500,
-          "changes": [
-            "Version originale du jeu"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "Original game release"
-              ]
+            "id": "hp7a",
+            "name": "Harry Potter et les Reliques de la Mort — Partie 1",
+            "year": 2010,
+            "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
+            "developer": "EA Bright Light",
+            "executable": "HP7/hp7.exe",
+            "cover_image": "hp7a_cover.jpg",
+            "tags": [
+                "Action",
+                "TPS",
+                "Infiltration",
+                "Combat"
+            ],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-08-26",
+                    "download_url": null,
+                    "download_parts": ["https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.001",
+                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.002",
+                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.003"],
+                    "size_mb": 4445,
+                    "changes": [
+                        "Wrapper graphique D3D9 refondu",
+                        "Version originale du jeu",
+                        "Configuration par défaut optimisée"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Rebuilt D3D9 graphics wrapper",
+                                "Original game release",
+                                "Optimised default configuration"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Wrapper gráfico D3D9 rediseñado",
+                                "Versión original del juego",
+                                "Configuración predeterminada optimizada"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "post_install": {
+                "registry": []
             },
-            "es": {
-              "changes": [
-                "Versión original del juego"
-              ]
-            }
-          }
-        }
-      ],
-      "post_install": {
-        "registry": []
-      },
-      "i18n": {
-        "en": {
-          "name": "Harry Potter and the Deathly Hallows — Part 2",
-          "description": "The final battle for Hogwarts. Play as Harry and his allies in an explosive action game centred on the Battle of Hogwarts. Chain offensive and defensive spells in spectacular clashes, defend the castle against Voldemort's forces and lead the last stand. With its cover-based combat, intense wand duels and cinematic set pieces, this epic conclusion closes the Harry Potter game saga.",
-          "tags": [
-            "Action",
-            "Third-person",
-            "Combat",
-            "Battle"
-          ]
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Deathly Hallows — Part 1",
+                    "description": "Step into the darkest chapter of the saga. Harry, Ron and Hermione have left Hogwarts to hunt down and destroy Voldemort's Horcruxes. Fight Snatchers and Death Eaters in intense third-person combat, infiltrate the Ministry of Magic and survive in hostile territory. With its action-driven gameplay and stealth missions, this game puts you at the heart of a war where every spell counts.",
+                    "tags": [
+                        "Action",
+                        "Third-person",
+                        "Stealth",
+                        "Combat"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y las reliquias de la Muerte — Parte 1",
+                    "description": "Adéntrate en el capítulo más oscuro de la saga. Harry, Ron y Hermione han dejado Hogwarts para buscar y destruir los Horrocruxes de Voldemort. Combate contra carroñeros y mortífagos en intensos enfrentamientos en tercera persona, infíltrate en el Ministerio de Magia y sobrevive en territorio hostil. Con su jugabilidad orientada a la acción y sus misiones de sigilo, este juego te sitúa en el corazón de una guerra donde cada hechizo cuenta.",
+                    "tags": [
+                        "Acción",
+                        "Tercera persona",
+                        "Sigilo",
+                        "Combate"
+                    ]
+                }
+            },
+            "requires": [
+                "vcredist2005_x86"
+            ]
         },
-        "es": {
-          "name": "Harry Potter y las reliquias de la Muerte — Parte 2",
-          "description": "La batalla final por Hogwarts. Encarna a Harry y a sus aliados en un explosivo juego de acción centrado en la Batalla de Hogwarts. Encadena hechizos ofensivos y defensivos en enfrentamientos espectaculares, protege el castillo de las fuerzas de Voldemort y lidera el combate final. Con sus coberturas, sus intensos duelos de varitas y sus momentos cinematográficos, esta conclusión épica pone el punto final a la saga de videojuegos de Harry Potter.",
-          "tags": [
-            "Acción",
-            "Tercera persona",
-            "Combate",
-            "Batalla"
-          ]
+        {
+            "id": "hp7b",
+            "name": "Harry Potter et les Reliques de la Mort — Partie 2",
+            "year": 2011,
+            "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
+            "developer": "EA Bright Light",
+            "executable": "HP8/hp8.exe",
+            "cover_image": "hp7b_cover.jpg",
+            "tags": [
+                "Action",
+                "TPS",
+                "Combat",
+                "Bataille"
+            ],
+            "latest_version": "1.0",
+            "recommended_version": "1.0",
+            "versions": [
+                {
+                    "version": "1.0",
+                    "date": "2026-08-26",
+                    "download_url": null,
+                    "download_parts": ["https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.001",
+                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.002",
+                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.003",
+                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.004"],
+                    "size_mb": 7520,
+                    "changes": [
+                        "Wrapper graphique D3D9 refondu",
+                        "Version originale du jeu",
+                        "Configuration par défaut optimisée"
+                    ],
+                    "i18n": {
+                        "en": {
+                            "changes": [
+                                "Rebuilt D3D9 graphics wrapper",
+                                "Original game release",
+                                "Optimised default configuration"
+                            ]
+                        },
+                        "es": {
+                            "changes": [
+                                "Wrapper gráfico D3D9 rediseñado",
+                                "Versión original del juego",
+                                "Configuración predeterminada optimizada"
+                            ]
+                        }
+                    }
+                }
+            ],
+            "post_install": {
+                "registry": []
+            },
+            "i18n": {
+                "en": {
+                    "name": "Harry Potter and the Deathly Hallows — Part 2",
+                    "description": "The final battle for Hogwarts. Play as Harry and his allies in an explosive action game centred on the Battle of Hogwarts. Chain offensive and defensive spells in spectacular clashes, defend the castle against Voldemort's forces and lead the last stand. With its cover-based combat, intense wand duels and cinematic set pieces, this epic conclusion closes the Harry Potter game saga.",
+                    "tags": [
+                        "Action",
+                        "Third-person",
+                        "Combat",
+                        "Battle"
+                    ]
+                },
+                "es": {
+                    "name": "Harry Potter y las reliquias de la Muerte — Parte 2",
+                    "description": "La batalla final por Hogwarts. Encarna a Harry y a sus aliados en un explosivo juego de acción centrado en la Batalla de Hogwarts. Encadena hechizos ofensivos y defensivos en enfrentamientos espectaculares, protege el castillo de las fuerzas de Voldemort y lidera el combate final. Con sus coberturas, sus intensos duelos de varitas y sus momentos cinematográficos, esta conclusión épica pone el punto final a la saga de videojuegos de Harry Potter.",
+                    "tags": [
+                        "Acción",
+                        "Tercera persona",
+                        "Combate",
+                        "Batalla"
+                    ]
+                }
+            },
+            "requires": [
+                "vcredist2008_x86"
+            ]
         }
-      },
-      "requires": [
-        "vcredist2008_x86"
-      ]
-    }
-  ]
+    ]
 }

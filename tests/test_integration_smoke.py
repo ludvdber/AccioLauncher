@@ -67,6 +67,44 @@ def make_window(qtbot, tmp_path, monkeypatch):
     set_theme("poudlard")
 
 
+@pytest.fixture
+def make_window_jeu_a_venir(make_window, monkeypatch):
+    """MainWindow dont le DERNIER jeu du catalogue est privé de ses sources.
+
+    Depuis la v0.18 du catalogue, les huit jeux sont en ligne : le cas « bientôt
+    disponible » n'a plus d'illustration réelle. Le comportement reste pourtant
+    du code vivant, et le prochain jeu annoncé le réactivera.
+
+    On fabrique donc le cas au lieu de le chercher. C'est aussi le bon découplage
+    sur le fond : `games.json` se met à jour **à distance**, sans republier le
+    launcher — un test qui suppose son contenu casse à chaque livraison de jeu,
+    loin de la ligne de code qu'il surveille.
+
+    Retourne `(fenêtre, jeu_sans_source)`.
+    """
+    def _make(**overrides):
+        import dataclasses
+
+        from src.core import game_manager
+        vrai_load = game_manager.load_catalog
+
+        def _catalogue_ampute(*a, **k):
+            cat = vrai_load(*a, **k)
+            jeux = list(cat.games)
+            sans_source = dataclasses.replace(
+                jeux[-1],
+                versions=tuple(dataclasses.replace(v, download_url=None,
+                                                   download_parts=None)
+                               for v in jeux[-1].versions))
+            jeux[-1] = sans_source
+            return dataclasses.replace(cat, games=tuple(jeux))
+
+        monkeypatch.setattr(game_manager, "load_catalog", _catalogue_ampute)
+        win = make_window(**overrides)
+        return win, win.manager.get_games()[-1].game
+    return _make
+
+
 class TestHeroDynamique:
     def test_opens_on_last_played_game(self, make_window):
         target = _IDS[2]
@@ -367,20 +405,26 @@ class TestOnboardingImport:
 
 
 class TestJeuBientotDisponible:
-    """hp7a / hp7b figurent au catalogue sans archive publiée.
+    """Un jeu annoncé au catalogue mais sans archive publiée.
 
     Le launcher doit le DIRE, pas lancer un téléchargement qui échoue avec un
     message accusant la connexion internet de l'utilisateur.
+
+    Le catalogue n'illustre plus ce cas depuis sa v0.18 (les huit jeux sont en
+    ligne) : la sentinelle qui vivait ici l'a signalé, et les tests ont été
+    rebranchés sur `make_window_jeu_a_venir`, qui fabrique le cas.
     """
 
-    @staticmethod
-    def _sans_source(catalog):
-        return next((g for g in catalog.games if not g.is_downloadable), None)
+    def test_la_fixture_produit_bien_un_jeu_sans_source(self, make_window_jeu_a_venir):
+        """Sans cette garde, les trois tests suivants passeraient à vide.
 
-    def test_le_catalogue_embarque_contient_bien_ce_cas(self):
-        """Sentinelle : si un jour tous les jeux ont une archive, ce test le dira."""
-        assert self._sans_source(_CATALOG) is not None, (
-            "plus aucun jeu sans source — adapter ou retirer ces tests")
+        Ils cherchent tous « le jeu non téléchargeable » : si la fixture cessait
+        d'en produire un, ils ne testeraient plus rien tout en restant verts.
+        """
+        _, jeu = make_window_jeu_a_venir()
+        assert jeu.is_downloadable is False
+        assert jeu.current_download is not None, (
+            "le jeu doit garder une version : c'est sa SOURCE qui manque, pas elle")
 
     @staticmethod
     def _noms_du_layout(panel) -> list[str]:
@@ -398,18 +442,16 @@ class TestJeuBientotDisponible:
                 noms.append(w.objectName())
         return noms
 
-    def test_bouton_remplace_par_bientot_disponible(self, make_window):
-        win = make_window()
-        game = self._sans_source(_CATALOG)
+    def test_bouton_remplace_par_bientot_disponible(self, make_window_jeu_a_venir):
+        win, game = make_window_jeu_a_venir()
         win._carousel.select(_IDS.index(game.id))
         noms = self._noms_du_layout(win._detail._action_panel)
         assert "btnComingSoon" in noms, f"attendu btnComingSoon, trouvé {noms}"
         assert "btnDownload" not in noms, "le bouton Télécharger ne doit pas être proposé"
 
-    def test_download_refuse_par_lorchestrateur(self, make_window):
+    def test_download_refuse_par_lorchestrateur(self, make_window_jeu_a_venir):
         """Garde de dernier recours : même en appelant download() directement."""
-        win = make_window()
-        game = self._sans_source(_CATALOG)
+        win, game = make_window_jeu_a_venir()
         ops = win._detail.ops
         messages: list[str] = []
         ops.status_message.connect(messages.append)
@@ -418,10 +460,10 @@ class TestJeuBientotDisponible:
         assert ops.active_game is None
         assert messages and "bient" in messages[-1].lower()
 
-    def test_jeu_normal_reste_telechargeable(self, make_window):
+    def test_jeu_normal_reste_telechargeable(self, make_window_jeu_a_venir):
         """Contrôle négatif : le durcissement ne doit rien casser ailleurs."""
-        win = make_window()
-        game = next(g for g in _CATALOG.games if g.is_downloadable)
+        win, _ = make_window_jeu_a_venir()
+        game = next(e.game for e in win.manager.get_games() if e.game.is_downloadable)
         win._carousel.select(_IDS.index(game.id))
         noms = self._noms_du_layout(win._detail._action_panel)
         assert "btnDownload" in noms
@@ -578,11 +620,11 @@ class TestDescriptionEntreJeux:
         label.setMinimumHeight(garde)
         return besoin
 
-    def test_hauteur_suit_le_texte_apres_changement_de_jeu(self, make_window, qtbot):
-        win = make_window()
+    def test_hauteur_suit_le_texte_apres_changement_de_jeu(self, make_window_jeu_a_venir,
+                                                          qtbot):
+        win, soon = make_window_jeu_a_venir()
         win.show()
         info = win._detail._info
-        soon = next(e.game for e in win.manager.get_games() if not e.game.is_downloadable)
         autre = next(e.game for e in win.manager.get_games() if e.game.is_downloadable)
 
         win._detail.set_game(soon)
@@ -912,8 +954,8 @@ class TestNoteBientotDisponible:
         return None
 
     @pytest.mark.parametrize("taille", [(980, 660), (1200, 800), (1500, 950)])
-    def test_hauteur_suffisante(self, make_window, qtbot, taille):
-        win = make_window()
+    def test_hauteur_suffisante(self, make_window_jeu_a_venir, qtbot, taille):
+        win, _ = make_window_jeu_a_venir()
         win.show()
         win.resize(*taille)
         qtbot.wait(40)
