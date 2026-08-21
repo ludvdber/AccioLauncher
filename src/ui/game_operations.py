@@ -11,9 +11,33 @@ from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.installer import Installer
 from src.core.system_checks import needed_space_mb
+from src.core.thread_utils import arreter_a_la_fermeture
 from src.ui.speed_tracker import SpeedTracker
 
 log = logging.getLogger(__name__)
+
+
+def _supprimer_residus(dest: Path) -> int:
+    """Efface les fichiers de travail d'un téléchargement abandonné. Retourne le nombre.
+
+    Tout ce qui commence par le nom de la destination SUIVI D'UN POINT lui
+    appartient : « .part » pour un fichier unique, « .001 » / « .002 » et leurs
+    « .part » pour un multi-volumes. L'archive complète elle-même (`dest`,
+    sans point ajouté) n'est pas visée : elle n'existe qu'après un
+    téléchargement réussi, et l'installateur a sa propre règle pour la retirer.
+    """
+    efface = 0
+    for residu in dest.parent.glob(dest.name + ".*"):
+        try:
+            residu.unlink()
+            efface += 1
+        except OSError:
+            # Encore verrouillé par un thread zombie sous Windows. Sans gravité :
+            # le prochain téléchargement de cette version le réécrira.
+            log.debug("Résidu encore verrouillé, laissé en place : %s", residu)
+    if efface:
+        log.info("%d fichier(s) de travail supprimé(s) pour %s", efface, dest.name)
+    return efface
 
 
 class GameOperations(QObject):
@@ -77,7 +101,9 @@ class GameOperations(QObject):
         free_mb = self._manager.free_space_mb()
         if free_mb is None:
             return None  # disque non interrogeable → pas de blocage
-        return free_mb if free_mb < needed_space_mb(version.size_mb) else None
+        besoin = needed_space_mb(version.size_mb,
+                                 self._manager.archive_size_mb(version))
+        return free_mb if free_mb < besoin else None
 
     def download(self, game: GameData, version: GameVersion, *,
                  uninstall_first: bool = False) -> None:
@@ -119,7 +145,10 @@ class GameOperations(QObject):
         self._downloader = Downloader(
             url=version.download_url, destination=dest,
             parts=version.download_parts,
-            expected_size_mb=version.size_mb,
+            # Poids RÉEL de l'archive quand GitHub l'a publié : le garde-fou
+            # du téléchargeur (×1,5) vise une archive, or `size_mb` est la
+            # taille installée — la tolérance valait donc ×3 dans les faits.
+            expected_size_mb=self._manager.archive_size_mb(version) or version.size_mb,
             expected_sha256=sha256,
             expected_sha256_parts=sha256_parts,
             parent=self,
@@ -153,13 +182,14 @@ class GameOperations(QObject):
                 log.warning("Downloader encore actif après annulation — nettoyage différé")
                 self._zombies.append(dl)
                 dl.finished.connect(lambda: self._reap_zombie(dl))
-        # Nettoyer le fichier .part résiduel
+        # Nettoyer TOUT ce que ce téléchargement avait semé : le « .part » d'un
+        # fichier unique, mais aussi les volumes d'un multi-parts et leur propre
+        # « .part ». L'ancien code ne supprimait que `dest.with_suffix(".part")`,
+        # un fichier qui n'existe JAMAIS dans le chemin multi-parts : annuler
+        # HP5 après la première part laissait 2 Go dans le cache, définitivement
+        # et sans que rien ne les montre.
         if dest is not None:
-            part_path = dest.with_suffix(dest.suffix + ".part")
-            try:
-                part_path.unlink(missing_ok=True)
-            except OSError:
-                pass  # encore verrouillé par un thread zombie — repris au prochain download
+            _supprimer_residus(dest)
         game = self._active_game
         self._active_game = None
         self._target_version = None
@@ -173,15 +203,25 @@ class GameOperations(QObject):
         self.status_message.emit(tr("Téléchargement annulé."))
 
     def cancel_all(self) -> None:
-        """Annule toute opération en cours (appelé à la fermeture)."""
+        """Annule toute opération en cours (appelé à la fermeture).
+
+        L'attente n'est PAS facultative et son résultat n'est PAS jetable : un
+        thread encore vivant est détruit avec cet objet, ce qui abandonne le
+        processus sans un mot. `arreter_a_la_fermeture` borne l'affaire — voir
+        `src.core.thread_utils` pour le pourquoi de `terminate()`.
+
+        Les zombies aussi : ils sont déparentés, donc c'est le vidage de la
+        liste qui lâche la dernière référence Python, et le thread mourrait
+        alors exactement de la même façon.
+        """
         if self._downloader is not None:
             self._downloader.cancel()
-            self._downloader.wait(3000)
+            arreter_a_la_fermeture(self._downloader, "Téléchargement")
         if self._installer is not None:
             self._installer.cancel()
-            self._installer.wait(3000)
+            arreter_a_la_fermeture(self._installer, "Installation")
         for z in self._zombies:
-            z.wait(1000)
+            arreter_a_la_fermeture(z, "Téléchargement annulé")
         self._zombies.clear()
 
     def _reap_zombie(self, dl: Downloader) -> None:

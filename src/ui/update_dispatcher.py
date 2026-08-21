@@ -33,6 +33,7 @@ from src.core.formatting import format_progress_line
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.self_update import apply_update_and_restart, can_self_update
+from src.core.thread_utils import arreter_a_la_fermeture
 from src.core.updater import UpdateChecker
 from src.ui.speed_tracker import SpeedTracker
 from src.ui.utils import open_url
@@ -65,6 +66,7 @@ class UpdateDispatcher(QObject):
     launcher_update = pyqtSignal(str, str, str, str)  # version, url, asset, sha256
     update_counts = pyqtSignal(int)               # nb de jeux à mettre à jour
     download_counts = pyqtSignal(dict)            # compteurs ⬇ de GitHub
+    asset_sizes = pyqtSignal(dict)                # tailles réelles des archives
     network_status = pyqtSignal(bool)
 
     # ── Téléchargement de l'exe de mise à jour ──
@@ -132,6 +134,7 @@ class UpdateDispatcher(QObject):
         self._checker.update_counts.connect(self.update_counts)
         self._checker.download_counts.connect(self._on_download_counts)
         self._checker.asset_digests.connect(self._on_asset_digests)
+        self._checker.asset_sizes.connect(self._on_asset_sizes)
         self._checker.network_status.connect(self.network_status)
         self._checker.start()
 
@@ -148,6 +151,7 @@ class UpdateDispatcher(QObject):
         checker.update_counts.connect(self.update_counts)
         checker.download_counts.connect(self._on_download_counts)
         checker.asset_digests.connect(self._on_asset_digests)
+        checker.asset_sizes.connect(self._on_asset_sizes)
         checker.network_status.connect(self.network_status)
         checker.finished.connect(lambda: self._forget(checker))
         return checker
@@ -166,6 +170,17 @@ class UpdateDispatcher(QObject):
         symptôme n'apparaît qu'au premier vrai câblage, jamais à l'import.
         """
         self._manager.set_asset_digests(digests)
+
+    def _on_asset_sizes(self, sizes: dict) -> None:
+        """Tailles réelles des archives, reçues dans la même réponse que le reste.
+
+        Le manager d'abord, la fenêtre ensuite : le bouton « TÉLÉCHARGER » porte
+        le poids et doit se refaire une fois le vrai chiffre connu. Même détour
+        obligatoire que pour les empreintes — `GameManager` n'est pas
+        référençable faiblement, une connexion directe lèverait `SystemError`.
+        """
+        self._manager.set_asset_sizes(sizes)
+        self.asset_sizes.emit(sizes)
 
     def _on_download_counts(self, counts: dict) -> None:
         """Le manager d'abord, la fenêtre ensuite : elle rafraîchit la fiche.
@@ -300,6 +315,11 @@ class UpdateDispatcher(QObject):
             self.shutdown_checker(checker)
         self._extra_checkers.clear()
         if self._download is not None:
+            # Le résultat de l'attente n'est PAS jetable : ce downloader est
+            # enfant du dispatcher, donc un thread encore vivant serait détruit
+            # avec la fenêtre — abandon du processus, sans message. Les checkers
+            # au-dessus s'en sortent par le déparentage parce qu'ils peuvent
+            # survivre à la fenêtre ; un téléchargement en cours, non.
             self._download.cancel()
-            self._download.wait(3000)
+            arreter_a_la_fermeture(self._download, "Mise à jour du launcher")
             self._download = None

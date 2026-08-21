@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 import threading
 import time
 from pathlib import Path
@@ -20,6 +21,22 @@ SIZE_OVERHEAD_FACTOR = 1.5  # tolérance vs size_mb du catalog avant abandon
 
 _ALLOWED_SCHEMES = {"https"}
 _TIMEOUT_KW = {"connect": 15.0, "read": 120.0, "write": 30.0, "pool": 10.0}
+
+# Suffixe de volume d'une archive multi-parts : « .001 », « .002 »…
+_MOTIF_VOLUME = re.compile(r"\.\d{3}")
+
+
+def _numero_volume(url: str, index: int) -> str:
+    """Suffixe de volume à donner à la part `index`, d'après son URL. Pure.
+
+    On reprend le numéro que porte l'asset (« .002 ») plutôt que de compter
+    nous-mêmes : c'est lui que 7z.exe lira, et un catalogue qui listerait ses
+    parts dans le désordre ne doit pas se retrouver renuméroté en silence. Le
+    repli sur le rang ne sert qu'aux URLs sans numéro exploitable, où il faut
+    bien produire QUELQUE chose de séquentiel.
+    """
+    suffixe = Path(url.rsplit("/", 1)[-1]).suffix
+    return suffixe if _MOTIF_VOLUME.fullmatch(suffixe) else f".{index + 1:03d}"
 
 
 def _validate_url(url: str) -> None:
@@ -174,6 +191,41 @@ class Downloader(QThread):
 
     # ─── Téléchargement multi-parts ───
 
+    def _migrer_part_heritee(self, url: str, part_dest: Path, index: int) -> None:
+        """Traite une part restée sous son ANCIEN nom, tiré de l'URL.
+
+        Jusqu'au 2026-08-21, une part était rangée sous le nom de son asset
+        (« hp5.7z.001 »), qui ne porte pas la version : les deux versions de HP5
+        publient des assets de même nom, si bien qu'une part de la v1.0 laissée
+        dans le cache était reprise telle quelle pour la v1.1 — et l'ancien jeu
+        s'installait sous le numéro du nouveau, sans un mot. Les parts portent
+        désormais le nom de la destination, qui porte la version.
+
+        Reste le fichier hérité. Sa provenance est justement ce qu'on ne sait
+        pas : le RÉUTILISER serait rejouer le défaut. Deux issues seulement —
+        on l'adopte si son empreinte prouve qu'il appartient bien à la version
+        demandée (et on épargne alors jusqu'à 2 Go de téléchargement), sinon on
+        le supprime, parce qu'un fichier dont personne ne peut dire à quoi il
+        correspond n'a rien à faire dans un cache.
+        """
+        heritee = part_dest.parent / Path(url.rsplit("/", 1)[-1]).name
+        if heritee == part_dest or part_dest.exists() or not heritee.exists():
+            return
+        attendu = (self.expected_sha256_parts[index]
+                   if index < len(self.expected_sha256_parts) else None)
+        if attendu and self._verify_sha256(heritee, attendu):
+            log.info("Part héritée adoptée (empreinte conforme) : %s → %s",
+                     heritee.name, part_dest.name)
+            heritee.replace(part_dest)
+            return
+        if self._cancelled:
+            return
+        log.info("Part héritée de provenance inconnue, supprimée : %s", heritee.name)
+        try:
+            heritee.unlink(missing_ok=True)
+        except OSError as exc:
+            log.warning("Impossible de supprimer %s : %s", heritee, exc)
+
     def _run_multipart(self) -> None:
         import httpx  # import différé (thread) — voir en-tête de module
 
@@ -194,8 +246,8 @@ class Downloader(QThread):
             if self._cancelled:
                 return
 
-            part_name = Path(url.rsplit("/", 1)[-1]).name
-            part_dest = cache_dir / part_name
+            part_dest = cache_dir / (self.destination.name + _numero_volume(url, i))
+            self._migrer_part_heritee(url, part_dest, i)
             part_paths.append(part_dest)
             part_tmp = part_dest.with_suffix(part_dest.suffix + ".part")
 

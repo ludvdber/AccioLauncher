@@ -61,6 +61,36 @@ def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
     return digests
 
 
+def extract_asset_sizes(releases: list[dict]) -> dict[str, int]:
+    """URL d'asset → taille RÉELLE en octets, depuis les releases GitHub. Pure.
+
+    Le catalogue déclare un `size_mb` qui s'est révélé être la taille du jeu
+    UNE FOIS INSTALLÉ, pas celle de l'archive : mesuré le 2026-08-21, il vaut de
+    1,77 à 2,30 fois le téléchargement réel (HP3 annonçait « 775 Mo » pour
+    337 Mo). Le bouton promettait donc presque le double de ce que la barre de
+    progression comptait ensuite — l'interface se contredisait d'un écran à
+    l'autre.
+
+    Plutôt que de demander qu'on recopie la bonne valeur à la main dans
+    `games.json` — un chiffre saisi à la main se périme au premier réenrobage —
+    on prend celui que GitHub publie, dans la MÊME réponse que les compteurs et
+    les empreintes : aucune requête supplémentaire. Absent (API injoignable,
+    archive hébergée ailleurs) → l'appelant retombe sur `size_mb`, comme avant.
+    """
+    tailles: dict[str, int] = {}
+    for rel in releases:
+        if not isinstance(rel, dict):
+            continue
+        for asset in rel.get("assets", []) or []:
+            if not isinstance(asset, dict):
+                continue
+            url = asset.get("browser_download_url", "")
+            taille = asset.get("size")
+            if url and isinstance(taille, int) and not isinstance(taille, bool) and taille > 0:
+                tailles[url] = taille
+    return tailles
+
+
 def aggregate_download_counts(
     releases: list[dict], games_asset_urls: dict[str, list[list[str]]],
 ) -> dict[str, int]:
@@ -118,6 +148,7 @@ class UpdateChecker(QThread):
     update_counts = pyqtSignal(int)             # nombre de jeux avec mise à jour dispo
     download_counts = pyqtSignal(object)        # dict game_id → téléchargements GitHub cumulés
     asset_digests = pyqtSignal(object)          # dict url_asset → sha256 hex (publié par GitHub)
+    asset_sizes = pyqtSignal(object)            # dict url_asset → taille réelle en octets
     network_status = pyqtSignal(bool)           # False = aucun serveur joignable (hors ligne)
 
     def __init__(self, catalog_url: str, current_catalog_version: str,
@@ -208,6 +239,13 @@ class UpdateChecker(QThread):
             if digests:
                 log.info("Empreintes SHA-256 récupérées pour %d asset(s)", len(digests))
                 self.asset_digests.emit(digests)
+            # Toujours la même réponse : la taille réelle des archives, que le
+            # catalogue ne sait pas donner (son `size_mb` est la taille une fois
+            # installé). Voir `extract_asset_sizes`.
+            tailles = extract_asset_sizes(releases)
+            if tailles:
+                log.info("Tailles réelles récupérées pour %d asset(s)", len(tailles))
+                self.asset_sizes.emit(tailles)
         except (httpx.HTTPError, json.JSONDecodeError, ValueError,
                 AttributeError, TypeError) as exc:
             self._note_transport_error(exc)

@@ -4,7 +4,7 @@
 
 ### Le launcher magique pour les jeux Harry Potter PC
 
-[![Version](https://img.shields.io/badge/version-0.5.4-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
+[![Version](https://img.shields.io/badge/version-0.5.5-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=0d0d1a)](https://python.org)
 [![PyQt6](https://img.shields.io/badge/PyQt6-6.11-41cd52?style=for-the-badge&labelColor=0d0d1a)](https://pypi.org/project/PyQt6/)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d4?style=for-the-badge&logo=windows11&logoColor=white&labelColor=0d0d1a)](https://microsoft.com)
@@ -49,16 +49,20 @@
 
 ## 🎮 Jeux supportés
 
-| # | Jeu | Année | Développeur | Archive | État |
-|:-:|-----|:-----:|:-----------:|:-------:|:----:|
-| I | Harry Potter à l'École des Sorciers | 2001 | KnowWonder | 431 Mo | ✅ Disponible |
-| II | Harry Potter et la Chambre des Secrets | 2002 | KnowWonder | 463 Mo | ✅ Disponible |
-| III | Harry Potter et le Prisonnier d'Azkaban | 2004 | KnowWonder | 775 Mo | ✅ Disponible |
-| IV | Harry Potter et la Coupe de Feu | 2005 | EA UK | 1,7 Go | ✅ Disponible |
-| V | Harry Potter et l'Ordre du Phénix | 2007 | EA UK | 4,6 Go | ✅ Disponible |
-| VI | Harry Potter et le Prince de Sang-Mêlé | 2009 | EA UK | 4,4 Go | ✅ Disponible |
-| VII | Harry Potter et les Reliques de la Mort — Partie 1 | 2010 | EA Bright Light | ~5 Go | 🔜 En préparation |
-| VIII | Harry Potter et les Reliques de la Mort — Partie 2 | 2011 | EA Bright Light | ~5,5 Go | 🔜 En préparation |
+| # | Jeu | Année | Développeur | Téléchargement | Installé | État |
+|:-:|-----|:-----:|:-----------:|:--------------:|:--------:|:----:|
+| I | Harry Potter à l'École des Sorciers | 2001 | KnowWonder | 243 Mo | 431 Mo | ✅ Disponible |
+| II | Harry Potter et la Chambre des Secrets | 2002 | KnowWonder | 247 Mo | 463 Mo | ✅ Disponible |
+| III | Harry Potter et le Prisonnier d'Azkaban | 2004 | KnowWonder | 337 Mo | 775 Mo | ✅ Disponible |
+| IV | Harry Potter et la Coupe de Feu | 2005 | EA UK | 847 Mo | 1,7 Go | ✅ Disponible |
+| V | Harry Potter et l'Ordre du Phénix | 2007 | EA UK | 2,5 Go | 4,6 Go | ✅ Disponible |
+| VI | Harry Potter et le Prince de Sang-Mêlé | 2009 | EA UK | 2,1 Go | 4,4 Go | ✅ Disponible |
+| VII | Harry Potter et les Reliques de la Mort — Partie 1 | 2010 | EA Bright Light | — | ~5 Go | 🔜 En préparation |
+| VIII | Harry Potter et les Reliques de la Mort — Partie 2 | 2011 | EA Bright Light | — | ~5,5 Go | 🔜 En préparation |
+
+> Les archives sont compressées : le téléchargement pèse environ la moitié de
+> l'espace occupé une fois le jeu installé. Prévoyez la somme des deux pendant
+> l'installation, l'archive n'étant supprimée qu'à la fin.
 
 > **Archive** désigne la taille du téléchargement. Prévoyez le double d'espace libre
 > pendant l'installation : l'archive et les fichiers extraits cohabitent jusqu'au

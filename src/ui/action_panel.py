@@ -177,7 +177,7 @@ class ActionPanel(QWidget):
                 if not self._online:
                     message = tr("Hors ligne — connexion requise pour télécharger.")
                 else:
-                    message = self._disk_alert(dl.size_mb)
+                    message = self._disk_alert(dl)
         elif state == GameState.INSTALLED:
             # Socle commun + ce que le catalogue déclare pour CE jeu. HP7 exige
             # Visual C++ 2005, un runtime distinct du 2015-2022 : annoncer le
@@ -204,10 +204,18 @@ class ActionPanel(QWidget):
         self._alert.show()
         self._fit_alert_height()
 
-    def _disk_alert(self, size_mb: int) -> str:
-        """Avertissement d'espace disque, vide si la place suffit ou est inconnue."""
+    def _disk_alert(self, version) -> str:
+        """Avertissement d'espace disque, vide si la place suffit ou est inconnue.
+
+        Prend la VERSION et non un nombre de Mo : le besoin réel est la somme de
+        l'archive et du jeu installé, et seule la version permet de retrouver le
+        poids réel de l'archive. Ce chiffre doit rester identique à celui de
+        `GameOperations.check_disk_space`, sinon le bandeau prévient d'un
+        blocage qui n'arrive pas.
+        """
         free_mb = self._manager.free_space_mb()
-        needed = needed_space_mb(size_mb)
+        needed = needed_space_mb(version.size_mb,
+                                 self._manager.archive_size_mb(version))
         if free_mb is None or free_mb >= needed:
             return ""
         return (
@@ -321,7 +329,15 @@ class ActionPanel(QWidget):
         # et elle promettait un temps calculé sur la vitesse du DERNIER
         # téléchargement — une valeur qui n'a aucune raison de valoir encore.
         # Écartée à la demande de Ludo le 2026-08-20.
-        libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(dl.size_mb)}"
+        # Le poids RÉEL de l'archive quand GitHub l'a publié, et non le
+        # `size_mb` du catalogue : celui-ci est la taille du jeu une fois
+        # INSTALLÉ, soit de 1,77 à 2,30 fois le téléchargement (mesuré sur les
+        # six jeux en ligne). Le bouton promettait « 4,4 Go » là où la barre de
+        # progression comptait ensuite jusqu'à 2,1 Go — l'interface se
+        # contredisait d'un écran à l'autre. Repli sur le catalogue tant que
+        # l'API n'a pas répondu.
+        poids = self._manager.archive_size_mb(dl) or dl.size_mb
+        libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(poids)}"
         btn = GlowButton(libelle, style="outline")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))

@@ -57,7 +57,8 @@ class GameManager:
     """Gère le catalogue de jeux et leur état (installé, non installé, etc.)."""
 
     __slots__ = ("config", "_catalog", "_games", "_index", "_states", "_new_game_ids",
-                 "_download_counts", "_asset_digests", "_digests_lower")
+                 "_download_counts", "_asset_digests", "_digests_lower",
+                 "_asset_sizes", "_sizes_lower")
 
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -76,6 +77,11 @@ class GameManager:
         # arrière-plan par l'UpdateChecker (vide tant que le fetch n'a pas abouti).
         self._asset_digests: dict[str, str] = {}
         self._digests_lower: dict[str, str] = {}
+        # URL d'asset → taille réelle en octets, même provenance et même réserve :
+        # vide tant que l'API n'a pas répondu, auquel cas on retombe sur le
+        # `size_mb` du catalogue.
+        self._asset_sizes: dict[str, int] = {}
+        self._sizes_lower: dict[str, int] = {}
         self._backfill_missing_versions()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
@@ -330,6 +336,52 @@ class GameManager:
             log.warning("Empreintes ambiguës (casse) pour %s — ignorées", cle)
             del lower[cle]
         self._digests_lower = lower
+
+    def set_asset_sizes(self, sizes: dict[str, int]) -> None:
+        """Reçoit les tailles réelles publiées par GitHub (thread principal).
+
+        Même index insensible à la casse que les empreintes, et pour la même
+        raison : le catalogue écrit « hp5.7z.001 » là où l'asset s'appelle
+        « HP5.7z.001 ». Une ambiguïté de casse est ignorée plutôt que devinée —
+        une taille fausse ferait promettre au bouton un poids qui n'est pas le
+        bon, ce qui est exactement le défaut qu'on répare.
+        """
+        self._asset_sizes = dict(sizes)
+        lower: dict[str, int] = {}
+        ambigus: set[str] = set()
+        for url, taille in self._asset_sizes.items():
+            cle = url.lower()
+            if cle in lower and lower[cle] != taille:
+                ambigus.add(cle)
+            lower[cle] = taille
+        for cle in ambigus:
+            log.warning("Tailles ambiguës (casse) pour %s — ignorées", cle)
+            lower.pop(cle, None)
+        self._sizes_lower = lower
+
+    def _size_for(self, url: str | None) -> int:
+        """Taille publiée pour cette URL, en octets (0 si inconnue)."""
+        if not url:
+            return 0
+        return self._asset_sizes.get(url) or self._sizes_lower.get(url.lower(), 0)
+
+    def archive_size_mb(self, version: GameVersion) -> int:
+        """Poids RÉEL du téléchargement, en Mo — 0 si GitHub ne l'a pas dit.
+
+        À ne pas confondre avec `version.size_mb`, qui est la taille du jeu une
+        fois INSTALLÉ (mesuré : de 1,77 à 2,30 fois le téléchargement réel). Le
+        bouton, le garde-fou de taille du téléchargeur et le calcul d'espace
+        disque veulent ce chiffre-ci ; l'espace disque veut les deux.
+
+        Multi-parts : **tout ou rien**. Une somme partielle annoncerait un poids
+        plus petit que la réalité, ce qui est pire que de ne rien annoncer — le
+        garde-fou du téléchargeur couperait alors un téléchargement sain.
+        """
+        if version.download_parts:
+            tailles = [self._size_for(url) for url in version.download_parts]
+            return round(sum(tailles) / 1024 / 1024) if all(tailles) else 0
+        octets = self._size_for(version.download_url)
+        return round(octets / 1024 / 1024) if octets else 0
 
     def _digest_for(self, url: str | None) -> str:
         """Empreinte publiée pour cette URL ("" si inconnue)."""

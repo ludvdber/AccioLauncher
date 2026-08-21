@@ -75,7 +75,9 @@ def on_download(view: "GameDetailView", version: GameVersion | None = None) -> N
     if free_mb is not None:
         view.notify.emit(
             tr("Espace insuffisant : {} libres, il en faut environ {}.").format(
-                format_size(free_mb), format_size(needed_space_mb(ver.size_mb))))
+                format_size(free_mb),
+                format_size(needed_space_mb(
+                    ver.size_mb, view.manager.archive_size_mb(ver)))))
         return
     view._ops.download(view.game, ver)
     view._refresh()

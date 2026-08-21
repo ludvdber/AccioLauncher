@@ -24,16 +24,38 @@ VCREDIST_2008_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26
 _CRT_JETON = "1fc8b3b9a1e18e3b"
 
 
-def needed_space_mb(size_mb: int) -> int:
-    """Place à prévoir pour installer une archive de `size_mb` Mo.
+# Coussin sur le besoin calculé : le catalogue déclare une taille installée qui
+# dérive de la réalité, et le système de fichiers a ses propres frais.
+_MARGE = 1.05
 
-    Le double : l'archive téléchargée cohabite avec les fichiers extraits
-    jusqu'au nettoyage final. Fonction pure, partagée par la vérification au
-    clic et par l'avertissement affiché en amont — les deux doivent annoncer
-    le même chiffre, sinon le bandeau prévient d'un blocage qui n'arrive pas
-    (ou l'inverse).
+
+def needed_space_mb(size_mb: int, archive_mb: int = 0) -> int:
+    """Place à prévoir pour installer un jeu, en Mo. Pure.
+
+    `size_mb` est ce que déclare le catalogue, c'est-à-dire la taille du jeu une
+    fois INSTALLÉ ; `archive_mb` le poids réel du téléchargement, que GitHub
+    publie et que `GameManager.archive_size_mb` va chercher. Le pic
+    d'occupation est leur SOMME : l'archive cohabite avec les fichiers extraits
+    jusqu'au nettoyage final.
+
+    Sans `archive_mb` (API injoignable, archive hébergée ailleurs) on garde le
+    double, seule approximation possible quand on ne connaît qu'un des deux
+    chiffres. Elle était généreuse : mesuré le 2026-08-21, elle réclamait
+    2 001 Mo de trop pour HP5 — de quoi annoncer un blocage qui n'arrive pas.
+
+    La somme, elle, serait trop juste sans `_MARGE` : `size_mb` est une valeur
+    DÉCLARÉE, qui dérive de la réalité (HP5 annonce 4 600 Mo pour 4 709 mesurés
+    sur disque, soit +2,4 %). Sans marge, l'exigence passait 109 Mo SOUS le pic
+    réel — et une vérification d'espace qui se trompe dans ce sens-là laisse
+    l'extraction échouer, ce qui est bien pire que de demander un peu trop.
+
+    Fonction unique, partagée par la vérification au clic et par
+    l'avertissement affiché en amont : deux chiffres différents feraient
+    prévenir d'un blocage qui n'arrive pas (ou l'inverse).
     """
-    return size_mb * 2
+    if archive_mb <= 0:
+        return size_mb * 2
+    return int((size_mb + archive_mb) * _MARGE)
 
 
 def crt_x86_present(winsxs: Path, version: str) -> bool:

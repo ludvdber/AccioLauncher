@@ -296,6 +296,7 @@ class MainWindow(QMainWindow):
         self._updates.launcher_update.connect(self._on_launcher_update)
         self._updates.update_counts.connect(self._on_update_counts)
         self._updates.download_counts.connect(self._on_download_counts)
+        self._updates.asset_sizes.connect(self._on_asset_sizes)
         self._updates.network_status.connect(self._on_network_status)
         self._updates.launcher_message.connect(self._notif_bar.set_message)
         self._updates.launcher_busy.connect(self._notif_bar.set_busy)
@@ -329,6 +330,16 @@ class MainWindow(QMainWindow):
     def _on_download_counts(self, counts: dict) -> None:
         """Compteurs ⬇ reçus — rafraîchir la fiche affichée (même id = pas de
         transition). Le manager a déjà été servi par le dispatcher."""
+        if self._detail.game is not None:
+            self._detail.set_game(self._detail.game)
+
+    def _on_asset_sizes(self, sizes: dict) -> None:
+        """Tailles réelles reçues — le bouton « TÉLÉCHARGER » porte le poids.
+
+        Tant que l'API n'a pas répondu, il affiche celui du catalogue (la taille
+        installée). Sans ce rafraîchissement il le garderait toute la session,
+        alors que le bon chiffre est arrivé entre-temps.
+        """
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
 
