@@ -31,8 +31,15 @@ _REAP_TIMEOUT_S = 30
 
 
 def check_path_traversal(destination: Path, member_name: str) -> bool:
-    """Vérifie qu'un fichier extrait ne sort pas du dossier de destination (Zip Slip)."""
-    target = (destination / member_name).resolve()
+    r"""Vérifie qu'un fichier extrait ne sort pas du dossier de destination (Zip Slip).
+
+    Les « \ » sont normalisés d'abord, comme le fait déjà `is_unsafe_entry`.
+    Nos archives sont fabriquées sous Windows et leurs entrées portent donc des
+    antislashs — or sous POSIX ce n'est PAS un séparateur : « ..\..\evil.dll »
+    y passait pour un nom de fichier ordinaire, et la vérification le déclarait
+    sûr. Le garde-fou anti-Zip-Slip était donc inopérant hors Windows.
+    """
+    target = (destination / member_name.replace("\\", "/")).resolve()
     return target.is_relative_to(destination.resolve())
 
 

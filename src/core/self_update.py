@@ -38,6 +38,20 @@ def _clean_pyinstaller_env() -> dict[str, str]:
     return env
 
 
+# Drapeaux de création du process détaché, résolus À L'IMPORT et sous garde.
+# `subprocess.CREATE_NEW_PROCESS_GROUP` et `CREATE_NO_WINDOW` n'existent QUE
+# sous Windows : les nommer dans l'appel faisait lever `AttributeError` sur
+# Linux avant même que `Popen` ne soit atteint — y compris dans un test qui
+# remplace `Popen`. Le portage Linux étant un objectif déclaré, ce module doit
+# rester appelable partout ; hors Windows il échouera plus loin, proprement,
+# sur l'absence de `cmd` (OSError, déjà rattrapée).
+if sys.platform == "win32":
+    _DRAPEAUX_DETACHE = (subprocess.CREATE_NEW_PROCESS_GROUP
+                         | subprocess.CREATE_NO_WINDOW)
+else:
+    _DRAPEAUX_DETACHE = 0
+
+
 def _spawn_after_exit_bat(body: str, prefix: str,
                           variables: dict[str, str] | None = None) -> bool:
     """Lance un .bat détaché qui attend la mort du processus courant puis exécute `body`.
@@ -88,10 +102,7 @@ def _spawn_after_exit_bat(body: str, prefix: str,
         # transmettre l'état du bootloader PyInstaller au processus relancé.
         subprocess.Popen(
             ["cmd", "/c", bat_path],
-            creationflags=(
-                subprocess.CREATE_NEW_PROCESS_GROUP
-                | subprocess.CREATE_NO_WINDOW
-            ),
+            creationflags=_DRAPEAUX_DETACHE,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

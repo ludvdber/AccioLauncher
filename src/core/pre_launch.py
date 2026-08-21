@@ -30,9 +30,33 @@ log = logging.getLogger(__name__)
 _INI_ENCODING = "mbcs" if sys.platform == "win32" else "utf-8"
 _INI_ERRORS = "surrogateescape"
 
+# Fins de ligne des .ini de jeu. Elles aussi appartiennent au moteur : UE1 est
+# un programme Windows, ses fichiers sont en CRLF, et ils le resteront même
+# quand le launcher tournera sous Linux (le jeu, lui, tournera sous Wine et
+# relira ses propres fins de ligne). Or `write_text` traduit le saut de ligne
+# en `os.linesep` : correct sous Windows par coïncidence de plateforme, il
+# réécrivait TOUT le fichier en LF sous Linux — y compris les lignes qu'on se
+# contente de recopier, ce que la promesse d'aller-retour exact ci-dessus
+# interdit. On impose donc CRLF des deux côtés. Même leçon que le .bat de
+# `self_update` (pyqt-pitfalls #18).
+_INI_NEWLINE = "\r\n"
+
 
 def substitute_vars(raw: str, game: GameData, config: Config) -> str:
-    """Remplace %DOCUMENTS% et %INSTALL_DIR% par leurs vraies valeurs."""
+    r"""Remplace %DOCUMENTS% et %INSTALL_DIR% par leurs vraies valeurs.
+
+    Le catalogue écrit ses chemins à la Windows (« %DOCUMENTS%\Harry Potter\
+    HP.ini ») et se met à jour à distance : on ne peut pas en changer la
+    convention. Sous POSIX, « \ » n'étant pas un séparateur, le tout devenait
+    UN SEUL nom de fichier et `resolve_safe_path` le refusait comme hors zone —
+    donc aucun patch INI ne s'appliquait.
+
+    La normalisation porte sur le GABARIT, jamais sur le résultat : les valeurs
+    substituées sont de vrais chemins natifs, et sous Windows leurs antislashs
+    doivent rester tels quels.
+    """
+    if sys.platform != "win32":
+        raw = raw.replace("\\", "/")
     docs_dir = get_documents_dir()
     install_dir = str(config.install_path / Path(game.executable).parts[0])
     return raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
@@ -120,8 +144,11 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
             effective_value = patch.fallback
         value = substitute_vars(effective_value, game, config)
         try:
-            lines = ini_path.read_text(
-                encoding=_INI_ENCODING, errors=_INI_ERRORS).splitlines(keepends=True)
+            with ini_path.open("r", encoding=_INI_ENCODING,
+                               errors=_INI_ERRORS) as f:
+                # Lecture en « newline universel » : toutes les fins de
+                # ligne sont normalisées, ce que suppose le patch ci-dessous.
+                lines = f.read().splitlines(keepends=True)
             current_section: str | None = None
             found = False
             for i, line in enumerate(lines):
@@ -147,8 +174,9 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
             # Réécrit dans l'encodage du MOTEUR, pas dans le nôtre : en UTF-8,
             # UE1 relisait « Frédéric » comme « FrÃ©dÃ©ric » et cherchait ses
             # sauvegardes dans un dossier inexistant.
-            ini_path.write_text("".join(lines),
-                                encoding=_INI_ENCODING, errors=_INI_ERRORS)
+            with ini_path.open("w", encoding=_INI_ENCODING, errors=_INI_ERRORS,
+                               newline=_INI_NEWLINE) as f:
+                f.write("".join(lines))
             log.info("Patch INI appliqué : [%s] %s=%s dans %s",
                      patch.section, patch.key, value, ini_path)
         except (OSError, UnicodeError) as exc:
