@@ -17,6 +17,7 @@ from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
 from src.ui.video_player import VideoPlayer
 
+from src.core import trailers
 from src.core.config import ASSETS_DIR
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
@@ -351,8 +352,10 @@ class GameDetailView(QWidget):
             self._try_play_video(self.game.id)
 
     def _try_play_video(self, game_id: str) -> None:
-        video_path = ASSETS_DIR / "videos" / f"{game_id}_video.mp4"
-        if not video_path.exists():
+        # Les bandes-annonces ne sont plus embarquées : elles vivent dans
+        # ~/Games/AccioLauncher/trailers, à la version que le catalogue attend.
+        video_path = trailers.chemin_a_jouer(game_id, self.manager.trailers())
+        if video_path is None:
             self._audio_bar.hide()
             return
         muted = self.manager.config.mute_videos
@@ -425,6 +428,17 @@ class GameDetailView(QWidget):
         """Re-teste les prérequis système (no-op si rien ne l'a demandé)."""
         self._action_panel.recheck_prerequisites()
         self._position_info()
+
+    def refresh_video(self) -> None:
+        """Retente la bande-annonce du jeu affiché — les fichiers viennent d'arriver.
+
+        Sans ça, quelqu'un qui vient de télécharger les bandes-annonces
+        garderait un fond fixe jusqu'à ce qu'il change de jeu, et croirait le
+        téléchargement inutile. Ne coupe jamais une vidéo en cours.
+        """
+        if self.game is None or self._video.is_playing:
+            return
+        self._schedule_video(self.game.id)
 
     def refresh_actions(self) -> None:
         """Rafraîchit le panneau d'actions après un changement d'état externe

@@ -74,6 +74,18 @@ htmlcov/
 # Documents privés / audits — rangés dans docs/archives/, hors dépôt
 docs/archives/
 
+# Bandes-annonces. Depuis la 1.0 elles ne sont NI embarquées dans l'exe
+# (exclues par _keep() dans accio_launcher.spec) NI versionnées ici : elles se
+# publient en pièces jointes de release et se déclarent dans le bloc `trailers`
+# du catalogue. Les suivre en git serait le pire des deux mondes — git garde
+# chaque version pour toujours, donc améliorer une vidéo de 82 Mo alourdirait
+# définitivement chaque clone, pour un fichier que le build ne livre même pas.
+# Le dossier a été VIDÉ le 2026-08-22 (`hp3_video.mp4` détaché de l'index, les
+# deux fichiers supprimés) : les vidéos vivent désormais dans la release
+# `trailers-v1`. La ligne reste pour qu'un fichier déposé là pour un essai
+# local ne reparte jamais dans un commit.
+assets/videos/
+
 # Archives de jeu déposées à la main pour un essai. Le cache réel vit dans
 # ~/Games/AccioLauncher/.cache, mais une part de 2 Go oubliée à la racine
 # passerait inaperçue jusqu'au push.

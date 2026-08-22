@@ -59,7 +59,7 @@ LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 # embarquees : permet a un traducteur de tester son fichier sans release.
 USER_I18N_DIR = DEFAULT_INSTALL_PATH / "i18n"
 
-APP_VERSION = "0.5.5"
+APP_VERSION = "1.0.0"
 
 
 def _as_str(value: object, default: str) -> str:
@@ -120,6 +120,14 @@ class Config:
     # ouverture est une mauvaise surprise, et le son se rétablit d'un clic
     # sur la barre audio qui accompagne la vidéo.
     mute_videos: bool = True
+    # L'utilisateur veut-il les bandes-annonces ? Répondu à l'écran 4 de
+    # l'assistant, modifiable dans les Paramètres. PERSISTÉ et non traité en
+    # choix jetable : un téléchargement coupé (fermeture, réseau) reprend alors
+    # tout seul au démarrage suivant, au lieu de laisser sept vidéos sur huit
+    # et personne pour s'en apercevoir. Défaut False — un launcher mis à jour
+    # depuis une version qui embarquait les vidéos ne doit rien télécharger
+    # sans qu'on le lui demande.
+    trailers_optin: bool = False
     # Dernière vitesse de téléchargement observée (octets/s), pour estimer
     # une durée AVANT de cliquer : « 2,4 Go » ne décide personne, « ≈ 3 min » si.
     last_download_speed: float = 0.0
@@ -163,6 +171,7 @@ class Config:
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
+                    trailers_optin=_as_bool(data.get("trailers_optin"), False),
                     last_download_speed=_as_vitesse(data.get("last_download_speed")),
                     discord_presence=_as_bool(data.get("discord_presence"), True),
                     dismissed_launcher_version=_as_str(
@@ -193,6 +202,7 @@ class Config:
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
+                "trailers_optin": self.trailers_optin,
                 "last_download_speed": self.last_download_speed,
                 "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,

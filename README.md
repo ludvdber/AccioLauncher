@@ -4,7 +4,7 @@
 
 ### Le launcher magique pour les jeux Harry Potter PC
 
-[![Version](https://img.shields.io/badge/version-0.5.5-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=0d0d1a)](https://python.org)
 [![PyQt6](https://img.shields.io/badge/PyQt6-6.11-41cd52?style=for-the-badge&labelColor=0d0d1a)](https://pypi.org/project/PyQt6/)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d4?style=for-the-badge&logo=windows11&logoColor=white&labelColor=0d0d1a)](https://microsoft.com)
@@ -36,7 +36,7 @@
 | 🎨 **UI immersive style AAA** | Particules magiques, parallaxe, transitions cinématiques, glow doré |
 | 🏰 **5 thèmes de maison** | Poudlard (or), Gryffondor, Serpentard, Serdaigle, Poufsouffle |
 | 🍂 **Ambiances saisonnières** | Braises d'Halloween en octobre, flocons de Noël en décembre |
-| 📺 **Trailers vidéo** | Vidéos de présentation en arrière-plan avec contrôle du volume |
+| 📺 **Trailers vidéo** | Vidéos de présentation en arrière-plan, avec contrôle du volume — **facultatives et téléchargées à part**, pour ne pas alourdir le launcher |
 | 🔄 **Versioning et changelog** | Historique détaillé, mise à jour et retour à une version antérieure |
 | 🔧 **Vérifier / réparer** | Réinstalle par-dessus une installation abîmée, sans tout recommencer |
 | 📥 **System tray intelligent** | Se minimise pendant le jeu, se restaure automatiquement à la sortie |
@@ -200,7 +200,7 @@ Le numéro de version suit le catalogue : `0.0.x` correctif · `0.x.0` nouveau j
 - [x] **Confort** — thèmes de maison, ambiances saisonnières, temps de jeu, assistant de premier lancement
 - [x] **Internationalisation** — FR / EN / ES, catalogue traduit compris ([contribuez une langue !](docs/TRANSLATORS.md))
 - [x] **Catalogue complet** — Reliques de la Mort, parties 1 et 2 : les huit jeux sont en ligne
-- [ ] **1.0** — la version qui acte le catalogue complet
+- [x] **1.0** — la version qui acte le catalogue complet
 - [ ] **Après 1.0** — support Linux : launcher natif, puis lancement des jeux via Wine / Proton
 - [ ] **Ensuite** — configuration graphique intégrée (résolution, wrapper D3D, compatibilité)
 

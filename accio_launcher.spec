@@ -104,12 +104,25 @@ a = Analysis(
 
 
 def _keep(entry):
-    """Filtre des binaires/datas Qt inutiles (aucune fonctionnalité du launcher
-    ne les touche) : traductions Qt (dialogues natifs non utilisés), module PDF."""
-    name = entry[0].lower()
-    if name.startswith("pyqt6\\qt6\\translations"):
+    """Filtre des donnees inutiles a l'execution.
+
+    Traductions Qt (dialogues natifs non utilises), module PDF, et surtout
+    les BANDES-ANNONCES : deux d'entre elles faisaient passer l'exe de 74 a
+    160 Mo, et les huit l'auraient mene au-dela de 500 Mo pour un ornement
+    facultatif. Elles se telechargent desormais depuis les assets de release
+    (voir src/core/trailers.py). Le dossier reste dans l'arbre de travail :
+    il sert au developpement et a la fabrication des videos.
+
+    Les chemins sont normalises AVANT comparaison : PyInstaller les donne
+    avec le separateur de la plateforme, et un filtre ecrit en antislash ne
+    correspondrait a rien le jour ou le build tournera sous Linux.
+    """
+    chemin = entry[0].lower().replace("\\", "/")
+    if chemin.startswith("pyqt6/qt6/translations"):
         return False
-    if "qt6pdf" in name:
+    if "qt6pdf" in chemin:
+        return False
+    if chemin.startswith("assets/videos"):
         return False
     return True
 

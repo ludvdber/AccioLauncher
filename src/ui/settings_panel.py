@@ -27,7 +27,8 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager, GameState
-from src.core.formatting import format_bytes
+from src.core import trailers as trailer_store
+from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, translator_credits, tr
 from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.season import resolve as resolve_season
@@ -63,10 +64,16 @@ class SettingsDialog(QDialog):
     season_changed = pyqtSignal(str)       # saison RÉSOLUE, appliquée en direct
     restart_requested = pyqtSignal()       # « Redémarrer maintenant » (thème/langue)
 
-    def __init__(self, config: Config, manager: GameManager, parent=None) -> None:
+    def __init__(self, config: Config, manager: GameManager, parent=None,
+                 store=None) -> None:
         super().__init__(parent)
         self.config = config
         self.manager = manager
+        # Magasin de bandes-annonces (src.ui.trailer_store.TrailerStore).
+        # Optionnel : les tests ouvrent le dialogue sans, et la ligne se cache.
+        self._store = store
+        self._lbl_trailers = None
+        self._btn_trailers = None
         self.setWindowTitle(tr("Paramètres"))
         self.setMinimumSize(660, 470)
         self.setStyleSheet(themed(self._style()))
@@ -353,12 +360,102 @@ class SettingsDialog(QDialog):
         season_hint.setObjectName("subtitle")
         season_row.addWidget(season_hint, stretch=1)
 
+        trailer_row = QHBoxLayout()
+        self._lbl_trailers = QLabel("")
+        self._lbl_trailers.setObjectName("subtitle")
+        self._btn_trailers = QPushButton("")
+        self._btn_trailers.setObjectName("btnPath")
+        self._btn_trailers.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_trailers.clicked.connect(self._on_trailers_clicked)
+        trailer_row.addWidget(self._lbl_trailers, stretch=1)
+        trailer_row.addWidget(self._btn_trailers)
+        if self._store is not None:
+            self._store.state_changed.connect(self._refresh_trailers)
+            self._store.progress.connect(self._on_trailer_progress)
+            self._store.job_finished.connect(self._on_trailer_job_finished)
+        self._refresh_trailers()
+
         return self._page(
-            self._section(tr("Vidéos")), row_autoplay, row_mute,
+            self._section(tr("Vidéos")), row_autoplay, row_mute, trailer_row,
             self._section(tr("Thème")), theme_row,
             self._button_row(self._theme_restart), self._theme_hint,
             self._section(tr("Particules saisonnières")), season_row,
         )
+
+    # ── Bandes-annonces ──
+
+    def _trailers(self) -> tuple:
+        """Bandes-annonces déclarées par le catalogue."""
+        return self.manager.trailers()
+
+    def _refresh_trailers(self) -> None:
+        """Met la ligne à jour : ce qu'on a, ce qu'il manque, et quoi faire.
+
+        Cachée quand le catalogue n'en déclare aucune : proposer de télécharger
+        ce qui n'existe pas serait une promesse en l'air, et un launcher plus
+        ancien que son catalogue doit rester silencieux, pas cassé.
+        """
+        if self._lbl_trailers is None or self._btn_trailers is None:
+            return
+        liste = self._trailers()
+        if not liste:
+            self._lbl_trailers.hide()
+            self._btn_trailers.hide()
+            return
+        self._lbl_trailers.show()
+        self._btn_trailers.show()
+
+        if self._store is not None and self._store.is_busy:
+            self._btn_trailers.setText(tr("Annuler"))
+            return
+
+        presentes = trailer_store.nombre_present(liste)
+        octets = trailer_store.poids_disque()
+        if presentes == len(liste):
+            self._lbl_trailers.setText(
+                tr("Bandes-annonces : {n} sur le disque ({taille})").format(
+                    n=presentes, taille=format_bytes(octets)))
+            self._btn_trailers.setText(tr("Supprimer"))
+        else:
+            manque = trailer_store.poids_a_telecharger(liste)
+            self._lbl_trailers.setText(
+                tr("Bandes-annonces : {faites} sur {total}").format(
+                    faites=presentes, total=len(liste)))
+            self._btn_trailers.setText(
+                tr("Télécharger ({taille})").format(taille=format_size(manque)))
+
+    def _on_trailer_progress(self, faites: int, total: int, octets: int, sur: int) -> None:
+        if self._lbl_trailers is None:
+            return
+        pct = round(octets * 100 / sur) if sur else 0
+        self._lbl_trailers.setText(
+            tr("Téléchargement des bandes-annonces… {faites}/{total} · {pct} %").format(
+                faites=faites + 1, total=total, pct=pct))
+
+    def _on_trailer_job_finished(self, _ok: int, _echecs: int) -> None:
+        self._refresh_trailers()
+
+    def _on_trailers_clicked(self) -> None:
+        """Télécharger, annuler ou supprimer — selon ce que dit le bouton."""
+        if self._store is None:
+            return
+        if self._store.is_busy:
+            self._store.cancel()
+            self._refresh_trailers()
+            return
+        liste = self._trailers()
+        if trailer_store.nombre_present(liste) == len(liste):
+            # Supprimer, c'est aussi dire non : sans ça le rattrapage du
+            # prochain démarrage les re-téléchargerait aussitôt.
+            self.config.trailers_optin = False
+            self.config.save()
+            self._store.supprimer_tout()
+            self._refresh_trailers()
+            return
+        self.config.trailers_optin = True
+        self.config.save()
+        self._store.start(liste)
+        self._refresh_trailers()
 
     # ── Page Téléchargements ──
 

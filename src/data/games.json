@@ -1,6 +1,18 @@
 {
-    "catalog_version": "0.20",
+    "catalog_version": "0.21",
     "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
+    "trailers": {
+        "hp1": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp1_video.mp4",
+            "size_mb": 82
+        },
+        "hp3": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp3_video.mp4",
+            "size_mb": 22
+        }
+    },
     "games": [
         {
             "id": "hp1",

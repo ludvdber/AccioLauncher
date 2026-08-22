@@ -33,6 +33,7 @@ from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
 from src.ui.title_bar import TitleBar
 from src.ui.toast import Toast
+from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
 from src.ui.update_dispatcher import UpdateDispatcher
 from src.ui.utils import open_url
@@ -166,6 +167,13 @@ class MainWindow(QMainWindow):
         # Toast (notifications éphémères)
         self._toast = Toast(self)
         self._detail.ops.operation_finished.connect(self._notify_operation_finished)
+
+        # Bandes-annonces : hors de l'exécutable depuis la 1.0. Tout le
+        # pilotage vit dans le magasin ; ici, que ce qui SE VOIT.
+        self._trailers = TrailerStore(self.manager, self._detail.ops, self)
+        self._trailers.status_message.connect(self._toast.show_message)
+        self._trailers.job_finished.connect(self._detail.refresh_video)
+        self._trailers.armer_rattrapage(self.config)
         # Ce qui informait par dialogue modal passe par le toast : rien à
         # décider, donc rien qui justifie d'arrêter l'utilisateur.
         self._detail.notify.connect(self._toast.show_message)
@@ -346,6 +354,7 @@ class MainWindow(QMainWindow):
     def _on_catalog_updated(self, catalog) -> None:
         """Le catalogue distant est plus récent — recharger."""
         self.manager.reload_catalog(catalog)
+        self._trailers.rattraper_apres_catalogue(self.config)
         games = [entry.game for entry in self.manager.get_games()]
         # Vue détaillée : conserver le jeu si encore présent, sinon premier jeu.
         # La décision est prise AVANT de reconstruire la bande, et lui est
@@ -600,7 +609,7 @@ class MainWindow(QMainWindow):
         self._carousel.refresh_indicators()
 
     def _on_settings(self) -> None:
-        dlg = SettingsDialog(self.config, self.manager, self)
+        dlg = SettingsDialog(self.config, self.manager, self, store=self._trailers)
         dlg.config_changed.connect(self._on_config_changed)
         dlg.force_catalog_refresh.connect(lambda: self._force_update_check(dlg, catalog_only=True))
         dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
@@ -803,6 +812,7 @@ class MainWindow(QMainWindow):
         # Timer, checkers et téléchargement de mise à jour, dans le bon ordre.
         self._updates.shutdown()
         self._presence.shutdown()
+        self._trailers.shutdown()
         self._detail.cancel_operations()
         self._tray.hide()
         super().closeEvent(event)

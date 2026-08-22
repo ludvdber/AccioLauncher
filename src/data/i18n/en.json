@@ -250,6 +250,16 @@
     "{jeu} enregistre ses réglages dans le registre de Windows.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} stores its settings in the Windows registry.\n\nThe launcher will write this to {cle}:\n\n{valeurs}",
     "Sans cette écriture, le jeu risque de ne pas démarrer.": "Without it, the game may not start.",
     "Windows va ensuite demander une autorisation administrateur.": "Windows will then ask for administrator permission.",
-    "Continuer ?": "Continue?"
+    "Continuer ?": "Continue?",
+    "Bandes-annonces supprimées.": "Trailers deleted.",
+    "Bandes-annonces téléchargées.": "Trailers downloaded.",
+    "Bandes-annonces : {n} sur le disque ({taille})": "Trailers: {n} on disk ({taille})",
+    "Bandes-annonces : {faites} sur {total}": "Trailers: {faites} of {total}",
+    "Bandes-annonces : {ok} téléchargées, {echecs} indisponibles.": "Trailers: {ok} downloaded, {echecs} unavailable.",
+    "Télécharger ({taille})": "Download ({taille})",
+    "Téléchargement des bandes-annonces… {faites}/{total} · {pct} %": "Downloading trailers… {faites}/{total} · {pct}%",
+    "Télécharger les bandes-annonces ({taille})": "Download trailers ({taille})",
+    "Vous pourrez les ajouter ou les supprimer à tout moment dans les Paramètres.": "You can add or remove them at any time in Settings.",
+    "Supprimer": "Delete"
   }
 }

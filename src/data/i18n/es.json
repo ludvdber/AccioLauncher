@@ -250,6 +250,16 @@
     "{jeu} enregistre ses réglages dans le registre de Windows.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} guarda su configuración en el registro de Windows.\n\nEl launcher va a escribir esto en {cle}:\n\n{valeurs}",
     "Sans cette écriture, le jeu risque de ne pas démarrer.": "Sin esta entrada, es posible que el juego no arranque.",
     "Windows va ensuite demander une autorisation administrateur.": "Windows pedirá después permiso de administrador.",
-    "Continuer ?": "¿Continuar?"
+    "Continuer ?": "¿Continuar?",
+    "Bandes-annonces supprimées.": "Tráileres eliminados.",
+    "Bandes-annonces téléchargées.": "Tráileres descargados.",
+    "Bandes-annonces : {n} sur le disque ({taille})": "Tráileres: {n} en el disco ({taille})",
+    "Bandes-annonces : {faites} sur {total}": "Tráileres: {faites} de {total}",
+    "Bandes-annonces : {ok} téléchargées, {echecs} indisponibles.": "Tráileres: {ok} descargados, {echecs} no disponibles.",
+    "Télécharger ({taille})": "Descargar ({taille})",
+    "Téléchargement des bandes-annonces… {faites}/{total} · {pct} %": "Descargando tráileres… {faites}/{total} · {pct} %",
+    "Télécharger les bandes-annonces ({taille})": "Descargar los tráileres ({taille})",
+    "Vous pourrez les ajouter ou les supprimer à tout moment dans les Paramètres.": "Podrá añadirlos o eliminarlos en cualquier momento en Ajustes.",
+    "Supprimer": "Eliminar"
   }
 }

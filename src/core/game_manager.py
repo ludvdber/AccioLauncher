@@ -596,6 +596,32 @@ class GameManager:
 
         return self._digest_for(version.download_url) or None, []
 
+    # ──────────────────── Bandes-annonces ────────────────────
+
+    def trailers(self) -> tuple:
+        """Bandes-annonces déclarées par le catalogue (vide s'il n'en déclare pas)."""
+        return self._catalog.trailers
+
+    def trailer_hash(self, trailer) -> str | None:
+        """Empreinte à vérifier pour cette bande-annonce, ou None.
+
+        Mêmes sources et même ordre que `expected_hashes` : le catalogue
+        d'abord — seule option hors GitHub — puis l'empreinte publiée par
+        GitHub, récupérée sans requête supplémentaire. Rien des deux : la
+        vérification est sautée, jamais un échec.
+        """
+        return trailer.sha256 or self._digest_for(trailer.url) or None
+
+    def trailer_size_mb(self, trailer) -> int:
+        """Poids réel de la bande-annonce en Mo, sinon celui du catalogue.
+
+        Le chiffre sert au garde-fou de taille du téléchargeur ET au libellé du
+        bouton : deux chiffres différents feraient annoncer un poids que le
+        téléchargement ne respecte pas.
+        """
+        octets = self._size_for(trailer.url)
+        return round(octets / 1024 / 1024) if octets else trailer.size_mb
+
     def last_played_game_id(self) -> str | None:
         """Id du jeu joué le plus récemment (None si aucune session enregistrée).
 

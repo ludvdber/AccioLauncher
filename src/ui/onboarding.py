@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 from src.core.config import Config, DEFAULT_CACHE_PATH, DEFAULT_INSTALL_PATH
 from src.core.formatting import format_bytes
 from src.core.game_data import GameData, load_catalog
+from src.core.formatting import format_size
 from src.core.i18n import (
     available_languages, detect_system_language, set_language, tr,
 )
@@ -89,7 +90,9 @@ class OnboardingDialog(QDialog):
         self.langue = detect_system_language()
         self.theme = "poudlard"
         self.autoplay = True
-        self._games = list(load_catalog().games)
+        self.trailers_optin = True
+        self._catalogue = load_catalog()
+        self._games = list(self._catalogue.games)
         self._detected: list[tuple[GameData, Path]] = []
         # Widgets des écrans 2-4, créés seulement après le choix de la langue.
         self._path_label = QLabel()
@@ -98,6 +101,7 @@ class OnboardingDialog(QDialog):
         self._import_list = QListWidget()
         self._theme_combo = QComboBox()
         self._tgl_autoplay = None
+        self._tgl_trailers = None
         self._rest_built = False
 
         layout = QVBoxLayout(self)
@@ -248,6 +252,22 @@ class OnboardingDialog(QDialog):
             tr("Lire les bandes-annonces automatiquement"), True)
         lay.addWidget(row)
 
+        # Les bandes-annonces ne sont PAS dans l'exécutable : elles pèsent des
+        # centaines de Mo pour un ornement, et tout le monde n'en veut pas.
+        # On demande donc, en annonçant le poids — un téléchargement dont on
+        # n'a pas dit la taille est un mauvais tour, pas une fonctionnalité.
+        poids = sum(t.size_mb for t in self._catalogue.trailers)
+        if poids:
+            row_dl, self._tgl_trailers = toggle_row(
+                tr("Télécharger les bandes-annonces ({taille})").format(
+                    taille=format_size(poids)), True)
+            lay.addWidget(row_dl)
+            note = QLabel(tr("Vous pourrez les ajouter ou les supprimer "
+                             "à tout moment dans les Paramètres."))
+            note.setObjectName("wizHint")
+            note.setWordWrap(True)
+            lay.addWidget(note)
+
         done = QLabel(tr("C'est tout — bon retour à Poudlard"))
         done.setObjectName("wizHint")
         lay.addWidget(done)
@@ -277,7 +297,8 @@ class OnboardingDialog(QDialog):
             # Le catalogue résout ses traductions AU PARSING : celui chargé dans
             # __init__ l'a été avant ce choix, donc ses noms de jeux sont restés
             # en français. On le relit une fois la langue connue.
-            self._games = list(load_catalog().games)
+            self._catalogue = load_catalog()
+            self._games = list(self._catalogue.games)
             self.setWindowTitle(tr("Bienvenue dans Accio Launcher"))
             self._build_rest()
         elif i == 1 and not is_writable_dir(self.install_path):
@@ -287,6 +308,14 @@ class OnboardingDialog(QDialog):
         if i == TOTAL_PAGES - 1:
             self.theme = self._theme_combo.currentData()
             self.autoplay = self._tgl_autoplay.isChecked()
+            if self._tgl_trailers is not None:
+                self.trailers_optin = self._tgl_trailers.isChecked()
+            else:
+                # Catalogue sans bandes-annonces : rien n'a été proposé, donc
+                # rien n'a été accepté. Répondre « oui » à une question qu'on
+                # n'a pas posée ferait télécharger sans mandat le jour où le
+                # catalogue en déclare.
+                self.trailers_optin = False
             self.accept()
             return
         self._pages.setCurrentIndex(i + 1)
@@ -379,6 +408,7 @@ def run_onboarding() -> Config:
             langue=dlg.langue,
             theme=dlg.theme,
             autoplay_videos=dlg.autoplay,
+            trailers_optin=dlg.trailers_optin,
         )
         config.save()
         dlg.perform_imports(config)

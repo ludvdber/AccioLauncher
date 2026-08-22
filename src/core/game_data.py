@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -508,12 +509,82 @@ class GameData:
         )
 
 
+# Un identifiant de jeu et une version de bande-annonce viennent du catalogue
+# DISTANT et finissent tous les deux dans un NOM DE FICHIER. Sans ce filtre,
+# une version « ../../../evil » ferait écrire hors du dossier des trailers —
+# c'est le même risque que les chemins `executable`, au même endroit du code.
+_JETON_SUR = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+@dataclass(frozen=True, slots=True)
+class Trailer:
+    """Bande-annonce d'un jeu, hébergée HORS de l'exécutable.
+
+    Les vidéos ne sont plus embarquées : à elles seules, deux d'entre elles
+    faisaient passer l'exe de 74 à 160 Mo, et les huit l'auraient mené au-delà
+    de 500 — pour un ornement que tout le monde télécharge et que personne
+    n'est obligé de vouloir.
+    """
+
+    game_id: str
+    version: str
+    url: str
+    size_mb: int = 0
+    sha256: str | None = None
+
+    @property
+    def filename(self) -> str:
+        """Nom du fichier LOCAL — il porte la VERSION, et ce n'est pas cosmétique.
+
+        Le nom de l'asset distant, lui, ne la porte pas : deux releases peuvent
+        publier `hp1_video.mp4` à l'identique. Un fichier nommé d'après l'asset
+        ferait donc rejouer l'ancienne bande-annonce pour toujours — exactement
+        le défaut déjà payé sur les parts d'archive de HP5.
+        """
+        return f"{self.game_id}_video_v{self.version}.mp4"
+
+
+def _parse_trailers(raw) -> tuple[Trailer, ...]:
+    """Lit le bloc `trailers` du catalogue. Une entrée douteuse est IGNORÉE.
+
+    Jamais d'exception : une bande-annonce est un ornement, et un catalogue
+    trafiqué ne doit pas priver quelqu'un de sa bibliothèque de jeux.
+    """
+    if not isinstance(raw, dict):
+        return ()
+    trailers = []
+    for game_id, entree in raw.items():
+        if not isinstance(entree, dict):
+            log.warning("Bande-annonce ignorée (%s) : entrée de type %s",
+                        game_id, type(entree).__name__)
+            continue
+        version = entree.get("version")
+        url = _https_ou_rien(entree.get("url"))
+        if not isinstance(version, str) or url is None:
+            log.warning("Bande-annonce ignorée (%s) : version ou url absente/non-https", game_id)
+            continue
+        if not _JETON_SUR.match(str(game_id)) or not _JETON_SUR.match(version):
+            log.warning("Bande-annonce refusée (%s v%s) : identifiant ou version "
+                        "impropre à un nom de fichier", game_id, version)
+            continue
+        taille = entree.get("size_mb", 0)
+        trailers.append(Trailer(
+            game_id=str(game_id),
+            version=version,
+            url=url,
+            size_mb=taille if isinstance(taille, int) and taille >= 0 else 0,
+            sha256=_sha256_valide(entree.get("sha256")),
+        ))
+    return tuple(trailers)
+
+
 @dataclass(frozen=True, slots=True)
 class Catalog:
     """Catalogue complet de jeux avec métadonnées."""
     catalog_version: str
     catalog_url: str
     games: tuple[GameData, ...]
+    trailers: tuple[Trailer, ...] = ()
 
 
 def _parse_catalog(raw: dict | list) -> Catalog:
@@ -526,10 +597,12 @@ def _parse_catalog(raw: dict | list) -> Catalog:
     if isinstance(raw, list):
         entries = raw
         version, url = "0", ""
+        trailers = ()
     elif isinstance(raw, dict):
         entries = raw.get("games", [])
         version = raw.get("catalog_version", "0")
         url = raw.get("catalog_url", "")
+        trailers = _parse_trailers(raw.get("trailers"))
     else:
         raise ValueError(f"catalogue de type {type(raw).__name__}, attendu objet ou liste")
 
@@ -545,7 +618,8 @@ def _parse_catalog(raw: dict | list) -> Catalog:
             games.append(GameData.from_dict(entry))
         except (ValueError, TypeError, AttributeError, KeyError) as exc:
             log.warning("Jeu invalide ignoré dans le catalogue : %s", exc)
-    return Catalog(catalog_version=str(version), catalog_url=str(url), games=tuple(games))
+    return Catalog(catalog_version=str(version), catalog_url=str(url),
+                   games=tuple(games), trailers=trailers)
 
 
 def load_catalog(path: Path | None = None) -> Catalog:

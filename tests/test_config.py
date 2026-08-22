@@ -1,5 +1,6 @@
 """Tests pour src/core/config.py"""
 
+import re
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -127,3 +128,22 @@ class TestConfig:
         parts = APP_VERSION.split(".")
         assert len(parts) == 3
         assert all(p.isdigit() for p in parts)
+
+    def test_pyproject_annonce_la_meme_version(self):
+        """`pyproject.toml` est la source de vérité des métadonnées ; une version
+        qui dérive d'`APP_VERSION` fait publier une roue sous un numéro que le
+        launcher n'affiche nulle part."""
+        racine = Path(__file__).resolve().parent.parent
+        texte = (racine / "pyproject.toml").read_text(encoding="utf-8")
+        declaree = re.search(r'^version = "([^"]+)"', texte, re.MULTILINE)
+        assert declaree is not None, "pyproject.toml sans version"
+        assert declaree.group(1) == APP_VERSION
+
+    def test_le_badge_du_readme_suit_la_version(self):
+        """Le badge est la première chose que voit un visiteur : oublié, il annonce
+        une version antérieure à celle qu'il propose au téléchargement."""
+        racine = Path(__file__).resolve().parent.parent
+        texte = (racine / "README.md").read_text(encoding="utf-8")
+        badge = re.search(r"badge/version-([0-9.]+)-", texte)
+        assert badge is not None, "badge de version absent du README"
+        assert badge.group(1) == APP_VERSION
