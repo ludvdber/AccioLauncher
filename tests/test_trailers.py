@@ -283,3 +283,43 @@ class TestOutilDeSynchronisation:
         bloc, _ = outil.bloc_trailers(self.ASSETS, {}, None)
         outil.ecrire(cible, bloc, True)
         assert json.loads(cible.read_text(encoding="utf-8"))["catalog_version"] == "0.22"
+
+
+class TestTelechargementsInacheves:
+    """Le `.part` d'un téléchargement interrompu occupe la même place qu'un
+    fichier fini, et `_MOTIF` ne le voit pas (il exige `.mp4` en fin de nom).
+
+    Avec 8 bandes-annonces jusqu'à 267 Mo, un « Supprimer » qui les laissait
+    derrière abandonnait des centaines de Mo invisibles — et définitivement,
+    puisque le même clic remet `trailers_optin` à False.
+    """
+
+    def test_compte_dans_le_poids_disque(self, dossier):
+        _poser(dossier, 'hp1_video_v1.0.mp4', b'x' * 10)
+        _poser(dossier, 'hp5_video_v1.0.mp4.part', b'y' * 90)
+        assert store.poids_disque() == 100
+
+    def test_supprimer_tout_les_emporte(self, dossier):
+        _poser(dossier, 'hp1_video_v1.0.mp4', b'x' * 10)
+        _poser(dossier, 'hp5_video_v1.0.mp4.part', b'y' * 90)
+        n, octets = store.supprimer_tout()
+        assert (n, octets) == (2, 100)
+
+    def test_une_reprise_encore_attendue_est_preservee(self, dossier):
+        """C'est tout l'intérêt du `.part` : reprendre où l'on s'est arrêté.
+        Le nettoyer avant chaque téléchargement reprendrait tout à zéro."""
+        _poser(dossier, 'hp5_video_v1.0.mp4.part', b'y' * 90)
+        assert store.fichiers_perimes([_t('hp5', version='1.0')]) == []
+
+    def test_une_reprise_devenue_obsolete_part(self, dossier):
+        """Le catalogue attend désormais la 2.0 : reprendre la 1.0 n'aurait
+        aucun sens, et son poids ne serait jamais récupéré."""
+        chemin = _poser(dossier, 'hp5_video_v1.0.mp4.part', b'y' * 90)
+        assert store.fichiers_perimes([_t('hp5', version='2.0')]) == [chemin]
+
+    def test_un_part_etranger_n_est_pas_touche(self, dossier):
+        """Le dossier appartient à l'utilisateur : on ne supprime que ce qu'on
+        a écrit soi-même."""
+        intrus = _poser(dossier, 'vacances.mp4.part', b'z' * 5)
+        store.supprimer_tout()
+        assert intrus.exists()

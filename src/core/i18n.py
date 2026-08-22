@@ -44,9 +44,15 @@ class LanguageInfo(NamedTuple):
     code: str          # "fr", "en", "es"…
     name: str          # nom dans la langue elle-même ("Español")
     translators: tuple[str, ...]
+    # Séparateur décimal : « 1,1 Go » en français et en espagnol, « 1.1 GB » en
+    # anglais. Ce n'est pas une chaîne à traduire mais une propriété de la
+    # langue — d'où sa place dans `_meta` et non dans `strings`. La virgule est
+    # le défaut parce que c'est le cas majoritaire : une langue ajoutée sans y
+    # penser tombe du bon côté, et l'anglais, lui, le déclare.
+    decimal: str = ","
 
 
-_SOURCE_INFO = LanguageInfo(SOURCE_LANGUAGE, "Français", ("ASTeam",))
+_SOURCE_INFO = LanguageInfo(SOURCE_LANGUAGE, "Français", ("ASTeam",), ",")
 
 _lang = SOURCE_LANGUAGE
 # Cache des dictionnaires chargés : code → {clé française: traduction}
@@ -112,11 +118,17 @@ def _discover() -> dict[str, LanguageInfo]:
             translators = tuple(n for n in names if isinstance(n, str)) \
                 if isinstance(names, list) else ()
             existing = found.get(code)
+            # Une valeur fantaisiste ne doit pas se retrouver au milieu d'un
+            # nombre : seuls la virgule et le point sont acceptés.
+            sep = meta.get("decimal")
+            if sep not in (",", "."):
+                sep = existing.decimal if existing else ","
             found[code] = LanguageInfo(
                 code=code,
                 name=str(meta.get("name") or (existing.name if existing else code.upper())),
                 translators=tuple(dict.fromkeys((existing.translators if existing else ())
                                                 + translators)),
+                decimal=sep,
             )
 
     _catalogue = found
@@ -129,6 +141,12 @@ def available_languages() -> tuple[LanguageInfo, ...]:
     others = sorted((info for code, info in found.items() if code != SOURCE_LANGUAGE),
                     key=lambda i: i.code)
     return (found[SOURCE_LANGUAGE], *others)
+
+
+def decimal_separator() -> str:
+    """Séparateur décimal de la langue courante (« , » ou « . »)."""
+    info = _discover().get(_lang)
+    return info.decimal if info is not None else ","
 
 
 def is_supported(lang: str) -> bool:

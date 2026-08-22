@@ -31,6 +31,15 @@ TRAILERS_DIR = DEFAULT_INSTALL_PATH / "trailers"
 _MOTIF = re.compile(r"^(?P<id>[A-Za-z0-9][A-Za-z0-9._-]*)_video_v"
                     r"(?P<version>[A-Za-z0-9][A-Za-z0-9._-]*)\.mp4$")
 
+# Le téléchargement écrit dans `<destination>.part` et ne renomme qu'après
+# vérification de l'empreinte : un téléchargement interrompu laisse donc un
+# fichier que `_MOTIF` ne voit pas. Tant que le catalogue attend cette version,
+# c'est une REPRISE possible et il faut le garder ; dès qu'il en attend une
+# autre, ou que l'utilisateur demande la suppression, il doit partir. Sans ça un
+# « Supprimer » laissait jusqu'à 267 Mo invisibles sur le disque, que plus rien
+# ne serait jamais venu chercher.
+_MOTIF_PART = re.compile(_MOTIF.pattern[:-1] + r"\.part$")
+
 
 def dossier() -> Path:
     """Dossier des bandes-annonces (pas créé ici — l'écriture s'en charge)."""
@@ -95,18 +104,31 @@ def chemin_a_jouer(game_id: str, trailers) -> Path | None:
 
 
 def _fichiers() -> list[Path]:
-    """Fichiers du dossier qui répondent à notre convention de nom."""
+    """Bandes-annonces TERMINÉES du dossier."""
+    return _lister(_MOTIF)
+
+
+def _inacheves() -> list[Path]:
+    """Téléchargements interrompus (`.part`) laissés dans le dossier."""
+    return _lister(_MOTIF_PART)
+
+
+def _lister(motif: re.Pattern[str]) -> list[Path]:
     try:
         return [f for f in TRAILERS_DIR.iterdir()
-                if f.is_file() and _MOTIF.match(f.name)]
+                if f.is_file() and motif.match(f.name)]
     except OSError:
         return []
 
 
 def poids_disque() -> int:
-    """Octets réellement occupés par les bandes-annonces."""
+    """Octets réellement occupés — les téléchargements en cours COMPRIS.
+
+    Un `.part` de 160 Mo prend la même place qu'un fichier fini : l'omettre
+    ferait mentir la ligne des Paramètres exactement quand elle compte.
+    """
     total = 0
-    for f in _fichiers():
+    for f in _fichiers() + _inacheves():
         try:
             total += f.stat().st_size
         except OSError:
@@ -128,7 +150,12 @@ def fichiers_perimes(trailers) -> list[Path]:
     puisse dire pourquoi.
     """
     attendus = {t.filename for t in trailers}
-    return [f for f in _fichiers() if f.name not in attendus]
+    perimes = [f for f in _fichiers() if f.name not in attendus]
+    # Pour un `.part`, c'est la version VISÉE qui décide : celle qu'on attend
+    # encore est une reprise à préserver, pas un déchet à jeter.
+    perimes += [f for f in _inacheves()
+                if f.name.removesuffix(".part") not in attendus]
+    return perimes
 
 
 def supprimer(chemins) -> tuple[int, int]:
@@ -150,9 +177,11 @@ def supprimer_tout() -> tuple[int, int]:
     """Vide le dossier des bandes-annonces. Retourne (supprimés, octets libérés).
 
     Ne touche QUE les fichiers répondant au motif : si quelqu'un a déposé autre
-    chose là, ce n'est pas à nous de le jeter.
+    chose là, ce n'est pas à nous de le jeter. Les `.part` partent aussi —
+    « Supprimer » doit rendre la place, or l'utilisateur qui clique remet du
+    même geste `trailers_optin` à False : plus rien ne viendrait les reprendre.
     """
-    resultat = supprimer(_fichiers())
+    resultat = supprimer(_fichiers() + _inacheves())
     try:
         # Le dossier ne part que s'il est réellement vide — voir ci-dessus.
         TRAILERS_DIR.rmdir()

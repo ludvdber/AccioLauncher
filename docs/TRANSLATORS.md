@@ -30,14 +30,16 @@ le japonais… (codes [ISO 639-1](https://fr.wikipedia.org/wiki/Liste_des_codes_
 ### 2. Remplissez
 
 Le fichier a deux blocs. Dans `_meta`, mettez votre code, le nom de la langue
-**écrit dans cette langue**, et votre pseudo :
+**écrit dans cette langue**, votre pseudo, et le séparateur décimal de votre
+langue :
 
 ```json
 {
   "_meta": {
     "code": "de",
     "name": "Deutsch",
-    "translators": ["VotrePseudo"]
+    "translators": ["VotrePseudo"],
+    "decimal": ","
   },
   "strings": {
     "Fermer": "Schließen",
@@ -45,6 +47,11 @@ Le fichier a deux blocs. Dans `_meta`, mettez votre code, le nom de la langue
   }
 }
 ```
+
+`decimal` vaut `","` ou `"."`. C'est ce qui sépare les décimales d'un poids ou
+d'une vitesse : « 4,6 Go » en français et en allemand, « 4.6 GB » en anglais.
+Le champ est facultatif — sans lui vous aurez la virgule, qui est le cas le
+plus répandu — et toute autre valeur est ignorée.
 
 Dans `strings`, **les clés sont les chaînes françaises et ne doivent jamais
 être modifiées** — ce sont elles qui identifient chaque texte. Vous ne changez

@@ -7,6 +7,7 @@ import pytest
 from src.core.formatting import (
     append_part_info,
     format_bytes,
+    format_eta,
     format_playtime,
     format_progress_line,
     format_relative_date,
@@ -30,7 +31,7 @@ class TestUnitsI18n:
     def test_size_french(self):
         set_language("fr")
         assert format_size(431) == "431 Mo"
-        assert format_size(2500) == "2.5 Go"
+        assert format_size(2500) == "2,5 Go"
 
     def test_size_english(self):
         set_language("en")
@@ -105,3 +106,41 @@ class TestFormatProgressLine:
         assert line.startswith("Téléchargement : 50%")
 
 
+class TestSeparateurDecimal:
+    """« 1.1 Go » dans une interface française est une faute, et elle se voit sur
+    chaque poids de jeu — donc partout.
+
+    Le séparateur vient du bloc `_meta` du fichier de langue : ajouter une langue
+    doit rester un fichier à déposer, jamais une table à éditer dans le Python.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _restore_lang(self):
+        yield
+        set_language("fr")
+
+    def test_virgule_en_francais_point_en_anglais(self):
+        set_language("fr")
+        assert format_size(2500) == "2,5 Go"
+        set_language("en")
+        assert format_size(2500) == "2.5 GB"
+
+    def test_l_espagnol_aussi_prend_la_virgule(self):
+        set_language("es")
+        assert format_size(2500).startswith("2,5")
+
+    def test_toutes_les_valeurs_a_virgule_suivent(self):
+        """Quatre fonctions affichent une décimale : les quatre doivent suivre,
+        sinon on lit « 4,6 Go » et « 3.4 Mo/s » sur le même écran."""
+        set_language("fr")
+        assert format_bytes(2500 * 1024 * 1024).startswith("2,5")
+        assert format_speed(3.4 * 1024 * 1024) == "3,4 Mo/s"
+        assert "2,5" in format_eta(9000)
+
+    def test_une_valeur_aberrante_ne_passe_pas(self):
+        """Un fichier de langue contribué peut tout contenir : un séparateur
+        fantaisiste au milieu d'un nombre serait illisible."""
+        from src.core.i18n import LanguageInfo, decimal_separator
+        assert LanguageInfo("xx", "X", ()).decimal == ","
+        set_language("fr")
+        assert decimal_separator() == ","

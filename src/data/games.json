@@ -1,5 +1,5 @@
 {
-    "catalog_version": "0.21",
+    "catalog_version": "0.22",
     "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
     "trailers": {
         "hp1": {
@@ -7,10 +7,40 @@
             "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp1_video.mp4",
             "size_mb": 82
         },
+        "hp2": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp2_video.mp4",
+            "size_mb": 86
+        },
         "hp3": {
             "version": "1.0",
             "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp3_video.mp4",
             "size_mb": 22
+        },
+        "hp4": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp4_video.mp4",
+            "size_mb": 88
+        },
+        "hp5": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp5_video.mp4",
+            "size_mb": 161
+        },
+        "hp6": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp6_video.mp4",
+            "size_mb": 267
+        },
+        "hp7a": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp7a_video.mp4",
+            "size_mb": 192
+        },
+        "hp7b": {
+            "version": "1.0",
+            "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp7b_video.mp4",
+            "size_mb": 174
         }
     },
     "games": [

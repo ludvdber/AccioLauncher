@@ -12,10 +12,10 @@ class TestFormatSize:
         assert format_size(500) == "500 Mo"
 
     def test_gigabytes(self):
-        assert format_size(1500) == "1.5 Go"
+        assert format_size(1500) == "1,5 Go"
 
     def test_exact_threshold(self):
-        assert format_size(1000) == "1.0 Go"
+        assert format_size(1000) == "1,0 Go"
 
     def test_zero(self):
         assert format_size(0) == "0 Mo"

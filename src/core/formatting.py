@@ -5,13 +5,24 @@ Toutes les chaînes visibles passent par tr() (i18n FR/EN).
 
 from datetime import date, datetime
 
-from src.core.i18n import tr
+from src.core.i18n import decimal_separator, tr
+
+
+def _nombre(valeur: float, decimales: int = 1) -> str:
+    """Formate un nombre à virgule dans la convention de la langue courante.
+
+    « 1.1 Go » dans une interface française est une faute — discrète, mais elle
+    se voit sur chaque poids de jeu, donc partout. Le séparateur vient du bloc
+    `_meta` du fichier de langue, pas d'une table codée ici : ajouter une langue
+    doit rester un fichier à déposer.
+    """
+    return f"{valeur:.{decimales}f}".replace(".", decimal_separator())
 
 
 def format_size(size_mb: int) -> str:
     """Formate une taille en Mo/Go (entrée en mégaoctets). Unités traduites (GB/MB)."""
     if size_mb >= 1000:
-        return f"{size_mb / 1000:.1f} {tr('Go')}"
+        return f"{_nombre(size_mb / 1000)} {tr('Go')}"
     return f"{size_mb} {tr('Mo')}"
 
 
@@ -19,7 +30,7 @@ def format_bytes(b: int) -> str:
     """Formate une taille en Mo/Go (entrée en octets). Unités traduites (GB/MB)."""
     mb = b / (1024 * 1024)
     if mb >= 1000:
-        return f"{mb / 1000:.1f} {tr('Go')}"
+        return f"{_nombre(mb / 1000)} {tr('Go')}"
     return f"{mb:.0f} {tr('Mo')}"
 
 
@@ -27,7 +38,7 @@ def format_speed(bytes_per_sec: float) -> str:
     """Formate une vitesse en Ko/s ou Mo/s. Unités traduites (KB/s, MB/s)."""
     mb = bytes_per_sec / (1024 * 1024)
     if mb >= 1.0:
-        return f"{mb:.1f} {tr('Mo/s')}"
+        return f"{_nombre(mb)} {tr('Mo/s')}"
     kb = bytes_per_sec / 1024
     return f"{kb:.0f} {tr('Ko/s')}"
 
@@ -42,7 +53,7 @@ def format_eta(seconds: float) -> str:
     if minutes < 60:
         return tr("~{} min restantes").format(int(minutes))
     hours = minutes / 60
-    return tr("~{}h restantes").format(f"{hours:.1f}")
+    return tr("~{}h restantes").format(_nombre(hours))
 
 
 def format_progress_line(downloaded: int, total: int, speed: float,
