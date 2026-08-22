@@ -43,6 +43,8 @@
 | ⏱️ **Temps de jeu** | Suivi discret des sessions et de la dernière partie |
 | ♻️ **Mise à jour automatique** | Le launcher se met à jour lui-même, en un clic et sans réinstallation |
 | 🌍 **Multilingue** | Français, anglais, espagnol — noms, descriptions et changelogs des jeux compris |
+| 🗣️ **Langue par jeu** | Les Reliques de la Mort se jouent dans la langue de votre choix, changeable à tout moment |
+| ⚠️ **Mises en garde** | Un jeu dont une DLL est prise pour un virus le dit AVANT le téléchargement |
 | 🛡️ **Code audité** | HTTPS strict, anti path-traversal, protection Zip Slip, thread safety |
 
 ---
@@ -292,8 +294,9 @@ games in the catalogue, all playable. One-click download and install with resume
 and SHA-256 verification, an immersive AAA-style UI with particles, parallax and
 cinematic transitions, video backgrounds, five Hogwarts house themes, seasonal
 effects, version tracking with changelog and rollback, playtime stats, smart
-system tray minimisation during gameplay, one-click launcher self-update, and
-security-audited code.
+system tray minimisation during gameplay, one-click launcher self-update,
+per-game language selection for the Deathly Hallows, up-front warnings for games
+whose files antivirus software mistakes for malware, and security-audited code.
 
 **Quick start:** download `AccioLauncher.exe` from
 [Releases](https://github.com/ludvdber/AccioLauncher/releases), run it, follow the

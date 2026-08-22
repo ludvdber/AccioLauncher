@@ -1,5 +1,7 @@
 """Panneau d'informations du jeu — titre, metadata, description, tags, version."""
 
+from html import escape
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
@@ -22,6 +24,16 @@ from src.core.formatting import format_playtime, format_relative_date, format_si
 # texte était coupé net au bord du panneau.
 _TITLE_MAX_W = 600
 _DESC_MAX_W = 520
+# Crans de réduction du titre, en PIXELS (l'unité du stylesheet), et plancher.
+# UN seul cran, et c'est assez : le pire cas du catalogue — l'espagnol de HP7
+# partie 1 à 980×660, avec un avertissement ET un sélecteur de langue — réclame
+# 16 px, et passer de 36 à 30 px rend ce titre de 147 px à 123 (mesuré, vraies
+# polices : toujours trois lignes, mais un interligne plus serré). Un second
+# cran n'a PAS été retenu : quand on lui en laisse deux, le rattrapage les
+# prend tous les deux et descend le titre à 26 px sans que ce soit nécessaire —
+# il lit `overflow()` avant que la mise en page ne soit retombée.
+_TITRE_CRANS = (0, 6)
+_TITRE_MIN_PX = 24
 # Largeur de la barre de défilement stylée, à retrancher de la place utile.
 _SCROLLBAR_W = 6
 # Marge sur la hauteur calculée : sous-estimer de deux pixels suffit à faire
@@ -53,6 +65,11 @@ class InfoPanel(QWidget):
     """
 
     versions_clicked = pyqtSignal()
+    # Clic sur la langue du jeu dans la ligne méta. Elle vit LÀ et non sous les
+    # boutons : la zone d'action est le poste le plus contraint de la fiche
+    # (980×660 en espagnol, on s'y bat pour 20 px), alors que la ligne méta
+    # accueille un segment de plus sans coûter un seul pixel de hauteur.
+    language_clicked = pyqtSignal()
     # Le contenu a changé de hauteur (dépliage de la description) : le panneau
     # doit être repositionné, sinon il défile au lieu de grandir.
     content_changed = pyqtSignal()
@@ -66,7 +83,10 @@ class InfoPanel(QWidget):
         # Crans de troncature supplémentaires demandés par le parent quand le
         # panneau déborde alors qu'il ne peut plus grandir.
         self._desc_squeeze: int = 0
-        self._title_size: int = 36  # suivi par _apply_title_size
+        self._title_size: int = 0    # px, posé par _apply_title_size
+        # Crans de réduction du TITRE. Dernier levier de la chaîne de
+        # rattrapage, après la description (cf. squeeze_title).
+        self._title_squeeze: int = 0
         # Hauteur que le parent peut nous accorder (posée par GameDetailView).
         self._height_budget: int = 10_000
 
@@ -108,6 +128,7 @@ class InfoPanel(QWidget):
             # resserrement décidé pour une petite fenêtre survivrait à son
             # agrandissement et l'accroche resterait courte pour rien.
             self._desc_squeeze = 0
+            self._title_squeeze = 0
             if not self._desc_expanded and self._full_desc:
                 self._apply_desc_truncation()
 
@@ -256,10 +277,22 @@ class InfoPanel(QWidget):
         # Titre
         self._title = QLabel()
         self._title.setObjectName("gameTitle")
-        self._title.setFont(cinzel_decorative(36))
+        # PlainText : ce texte vient du CATALOGUE, qui se met à jour à
+        # distance. En `AutoText` (le défaut), Qt renifle le contenu et
+        # bascule en rich text dès qu'il ressemble à du HTML — un
+        # `<img src="http://…">` dans un nom de jeu déclenchait alors une
+        # requête réseau à l'affichage de la fiche. Posé À LA CONSTRUCTION
+        # pour qu'aucun `setText` ultérieur ne puisse l'oublier.
+        self._title.setTextFormat(Qt.TextFormat.PlainText)
+        self._title.setFont(cinzel_decorative(36))   # famille ; la TAILLE vient du QSS
         self._title.setWordWrap(True)
         self._title.setMaximumWidth(_TITLE_MAX_W)  # raboté dans _apply_available_width
-        self._title.setStyleSheet("QLabel { color: #eaeaea; background: transparent; }")
+        # Sélecteur par ID, comme la règle applicative de `styles.py` : à
+        # spécificité égale, celle posée sur le widget l'emporte. Avec un simple
+        # « QLabel », la règle `QLabel#gameTitle` de l'ancêtre gagnait et la
+        # taille était figée à 36 px quoi qu'on fasse.
+        self._title.setStyleSheet(
+            "QLabel#gameTitle { color: #eaeaea; background: transparent; }")
         lay.addWidget(self._title)
         lay.addSpacing(10)
 
@@ -293,7 +326,7 @@ class InfoPanel(QWidget):
             | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
         self._meta.setStyleSheet("QLabel { color: #8a8aaa; background: transparent; }")
-        self._meta.linkActivated.connect(lambda _: self.versions_clicked.emit())
+        self._meta.linkActivated.connect(self._on_meta_link)
         lay.addWidget(self._meta)
         lay.addSpacing(16)
 
@@ -311,6 +344,13 @@ class InfoPanel(QWidget):
         # Description
         self._desc = QLabel()
         self._desc.setObjectName("gameDescription")
+        # PlainText : ce texte vient du CATALOGUE, qui se met à jour à
+        # distance. En `AutoText` (le défaut), Qt renifle le contenu et
+        # bascule en rich text dès qu'il ressemble à du HTML — un
+        # `<img src="http://…">` dans un nom de jeu déclenchait alors une
+        # requête réseau à l'affichage de la fiche. Posé À LA CONSTRUCTION
+        # pour qu'aucun `setText` ultérieur ne puisse l'oublier.
+        self._desc.setTextFormat(Qt.TextFormat.PlainText)
         self._desc.setFont(body_font(15))
         self._desc.setWordWrap(True)
         self._desc.setMaximumWidth(_DESC_MAX_W)  # raboté dans _apply_available_width
@@ -380,16 +420,48 @@ class InfoPanel(QWidget):
             self._action_slot.setContentsMargins(left, 6, right, 0)
 
     def _apply_title_size(self, avail: int) -> None:
-        """Taille de titre proportionnée à la colonne.
+        """Taille de titre proportionnée à la colonne, moins les crans de squeeze.
 
         36 px dans une colonne de 466 px, c'est trois lignes de titre qui
         poussent la description hors de l'écran. Le corps suit donc la largeur
         réelle, ce qui garde le titre dominant sans qu'il dévore le panneau.
+
+        **La taille passe par le STYLESHEET, pas par `setFont`.** `styles.py`
+        pose une règle applicative `QLabel#gameTitle { font-size: 36px }`, et en
+        Qt une feuille de style l'emporte sur la police posée par `setFont` :
+        cette fonction était DU CODE MORT, ses trois paliers n'ont jamais rien
+        changé (mesuré le 2026-08-21 : hauteur du titre identique au pixel de
+        36 à 26, interligne bloqué à 48 px). Le sélecteur est repris à
+        l'identique — à spécificité égale, la feuille posée sur le widget
+        l'emporte sur celle de l'ancêtre.
+
+        La largeur ne dit d'ailleurs pas tout : à 980×660 la colonne fait 541 px,
+        donc le titre reste au palier haut alors que c'est la HAUTEUR qui manque.
+        D'où le second axe, appliqué UNIQUEMENT quand ça déborde.
         """
-        size = 36 if avail >= 520 else 30 if avail >= 440 else 26
+        base = 36 if avail >= 520 else 30 if avail >= 440 else 26
+        size = max(_TITRE_MIN_PX,
+                   base - _TITRE_CRANS[min(self._title_squeeze, len(_TITRE_CRANS) - 1)])
         if size != self._title_size:
             self._title_size = size
-            self._title.setFont(cinzel_decorative(size))
+            self._title.setStyleSheet(
+                "QLabel#gameTitle { color: #eaeaea; background: transparent;"
+                " font-size: %dpx; }" % size)
+
+    def squeeze_title(self) -> bool:
+        """Descend le titre d'un cran. False s'il n'y a plus de marge.
+
+        Dernier levier : le titre est le plus gros bloc du panneau (147 px sur
+        trois lignes pour le titre espagnol le plus long, contre 20 px pour une
+        accroche resserrée), et le seul qui reste quand tout le reste a donné.
+        """
+        avant = self._title_size
+        self._title_squeeze += 1
+        self._apply_available_width()
+        if self._title_size == avant:
+            self._title_squeeze -= 1
+            return False
+        return True
 
     @staticmethod
     def _fit_height(label: QLabel) -> None:
@@ -429,8 +501,28 @@ class InfoPanel(QWidget):
     _DESC_PALIERS = (160, 90, 55, 30)
     _DL_COUNT_MIN = 1  # seuil d'affichage de la pastille téléchargements (passer à ~100 plus tard)
 
+    def _on_meta_link(self, href: str) -> None:
+        """Aiguillage des liens de la ligne méta.
+
+        Elle en porte deux désormais : le changelog et la langue du jeu. Le
+        `lambda _: versions_clicked.emit()` d'avant ignorait le href, donc tout
+        clic aurait ouvert le changelog.
+        """
+        if href == "langue":
+            self.language_clicked.emit()
+        else:
+            self.versions_clicked.emit()
+
     def apply_game(self, game: GameData) -> None:
         """Met à jour tous les labels avec les données du jeu."""
+        # Repartir du titre PLEIN à chaque jeu. Le squeeze est décidé pour UN
+        # contenu : `set_height_budget` ne le remet à zéro que si la fenêtre
+        # change de taille, or on change de jeu bien plus souvent qu'on ne
+        # redimensionne. Sans ça, un cran arraché par le titre espagnol le plus
+        # long restait posé sur les sept autres jeux, dont le titre rapetissait
+        # sans raison — exactement la fuite d'état qu'on venait de corriger sur
+        # la sélection du carrousel.
+        self._title_squeeze = 0
         self._title.setText(game.name)
 
         # Metadata
@@ -442,8 +534,28 @@ class InfoPanel(QWidget):
         version = installed or game.recommended_version
         lien = (f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
                 + _insecable(tr("v{} · changelog").format(version)) + '</a>')
-        morceaux = [str(game.year), _insecable(game.developer),
-                    _insecable(size_str), lien]
+        # `escape` sur tout ce qui vient du CATALOGUE : la ligne méta est un
+        # QLabel en RichText, et un nom de studio contenant du balisage serait
+        # INTERPRÉTÉ — un `<img src="http://…">` suffirait à faire fuiter
+        # « qui regarde quel jeu » vers l'hébergeur de l'image. `size_str` et
+        # `year` sont fabriqués par nous, mais les passer aussi coûte zéro et
+        # évite d'avoir à se demander lesquels sont sûrs.
+        morceaux = [escape(str(game.year), quote=False),
+                    _insecable(escape(game.developer, quote=False)),
+                    _insecable(escape(size_str, quote=False)), lien]
+
+        # Langue du jeu — UNIQUEMENT pour les jeux qui en proposent plusieurs.
+        # Sept jeux sur huit n'ont pas ce bloc et ne doivent donc rien afficher :
+        # un réglage sans choix possible est du bruit. Pas de chevron ni de
+        # triangle : Cinzel n'a ni ▾ ni ▼ (vérifié), Windows partirait en repli
+        # de police. Le doré fait l'affordance, comme pour le changelog.
+        code = self._manager.game_language(game)
+        if code is not None and game.language_registry is not None:
+            langue = game.language_registry.get(code)
+            if langue is not None:
+                morceaux.append(
+                    f'<a href="langue" style="color:{gold}; text-decoration:none;">'
+                    + _insecable(escape(langue.label, quote=False)) + '</a>')
 
         # Compteur de téléchargements (GitHub, toutes versions cumulées). Il vit
         # DANS la ligne méta et non dans une pastille séparée : en pastille, le

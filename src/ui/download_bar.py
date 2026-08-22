@@ -49,6 +49,13 @@ class DownloadBar(QWidget):
         text_box.setSpacing(2)
         text_box.setContentsMargins(0, 0, 0, 0)
         self._title = QLabel("")
+        # PlainText : ce texte vient du CATALOGUE, qui se met à jour à
+        # distance. En `AutoText` (le défaut), Qt renifle le contenu et
+        # bascule en rich text dès qu'il ressemble à du HTML — un
+        # `<img src="http://…">` dans un nom de jeu déclenchait alors une
+        # requête réseau à l'affichage de la fiche. Posé À LA CONSTRUCTION
+        # pour qu'aucun `setText` ultérieur ne puisse l'oublier.
+        self._title.setTextFormat(Qt.TextFormat.PlainText)
         self._title.setFont(cinzel(11, bold=True))
         self._title.setStyleSheet("color: #e0e0e0; background: transparent;")
         self._status = QLabel("")

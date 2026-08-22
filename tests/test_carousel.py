@@ -85,3 +85,68 @@ class TestCarouselSetGames:
         assert c.current_index == 0
         c.select_prev()  # wrap arrière
         assert c.current_index == 2
+
+
+class TestSelectionPreserveeAuReload:
+    """Reconstruire la bande ne doit pas ramener la surbrillance sur l'item 0.
+
+    Cas réel (capture de Ludo, 2026-08-21) : la fiche s'ouvre sur le dernier
+    jeu joué (HP6), puis le catalogue distant arrive, `set_games` reconstruit
+    la bande et remet l'index à 0. Résultat : HP1 surligné, HP6 affiché
+    au-dessus. Le second effet est pire que le premier — `select` sort tôt
+    quand l'index ne change pas, donc cliquer sur HP1 ne faisait RIEN et
+    l'utilisateur ne pouvait plus revenir au jeu qu'il voyait surligné.
+    """
+
+    def test_garde_le_jeu_courant(self, qtbot):
+        jeux = [_make_game("hp1"), _make_game("hp2"), _make_game("hp6")]
+        c = Carousel(jeux, _FakeManager())
+        qtbot.addWidget(c)
+        c.select(2)
+        c.set_games(jeux)
+        assert c.current_index == 2
+        assert c.current_game_id() == "hp6"
+        assert [item.selected for item in c._items] == [False, False, True]
+
+    def test_id_explicite_prioritaire(self, qtbot):
+        """L'appelant décide : c'est lui qui pose la fiche, la bande le suit."""
+        jeux = [_make_game("hp1"), _make_game("hp2"), _make_game("hp6")]
+        c = Carousel(jeux, _FakeManager())
+        qtbot.addWidget(c)
+        c.set_games(jeux, selected_id="hp2")
+        assert c.current_index == 1
+        assert c.current_game_id() == "hp2"
+
+    def test_repli_sur_zero_si_le_jeu_disparait(self, qtbot):
+        jeux = [_make_game("hp1"), _make_game("hp2"), _make_game("hp6")]
+        c = Carousel(jeux, _FakeManager())
+        qtbot.addWidget(c)
+        c.select(2)
+        c.set_games([_make_game("hp1"), _make_game("hp2")])
+        assert c.current_index == 0
+        assert c._items[0].selected is True
+
+    def test_reload_reste_muet(self, qtbot):
+        """Contrat inchangé : `set_games` n'emet pas, l'appelant pose la fiche."""
+        jeux = [_make_game("hp1"), _make_game("hp2"), _make_game("hp6")]
+        c = Carousel(jeux, _FakeManager())
+        qtbot.addWidget(c)
+        c.select(2)
+        with qtbot.assertNotEmitted(c.game_selected):
+            c.set_games(jeux)
+
+    def test_clic_sur_le_jeu_affiche_apres_reload(self, qtbot):
+        """Un clic sur l'item VOISIN doit encore basculer la fiche.
+
+        Garde-fou contre la correction inverse (figer l'index sans bouger la
+        surbrillance) : la bande doit rester navigable apres reconstruction.
+        """
+        jeux = [_make_game("hp1"), _make_game("hp2"), _make_game("hp6")]
+        c = Carousel(jeux, _FakeManager())
+        qtbot.addWidget(c)
+        c.select(2)
+        c.set_games(jeux)
+        with qtbot.waitSignal(c.game_selected, timeout=500) as sig:
+            c.select(0)
+        assert sig.args == [0]
+        assert c.current_game_id() == "hp1"

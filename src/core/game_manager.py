@@ -10,12 +10,15 @@ from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
 
+from src.core import game_registry as registre
 from src.core.config import Config
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
+from src.core.i18n import get_language
 from src.core.pre_launch import (
     apply_ini_patches,
     create_pre_launch_files,
     delete_pre_launch_files,
+    substitute_vars,
     unblock_game_dlls,
 )
 from src.core.system_checks import prerequis_manquants
@@ -221,8 +224,13 @@ class GameManager:
         self._states[game_id] = state
         log.info("État de %s → %s", game_id, state)
 
-    def launch_game(self, game_id: str) -> subprocess.Popen | None:
-        """Lance le .exe du jeu en processus détaché."""
+    def launch_game(self, game_id: str, confirmer=None) -> subprocess.Popen | None:
+        """Lance le .exe du jeu en processus détaché.
+
+        `confirmer` est le rappel de prévenance avant écriture registre (cf.
+        `apply_game_language`) : il n'est appelé que s'il y a réellement une
+        écriture à faire, donc au premier lancement et après un changement.
+        """
         game = self._index.get(game_id)
         if game is None:
             log.warning("Impossible de lancer un jeu inconnu : %s", game_id)
@@ -247,6 +255,14 @@ class GameManager:
         if manquants:
             raise RuntimeError(f"prerequis_manquant:{manquants[0]}")
 
+        # Langue du jeu AVANT tout le reste : c'est la seule étape qui peut
+        # demander une élévation, et l'utilisateur doit voir l'invite UAC juste
+        # après son clic, pas après trois secondes de patches silencieux. Un
+        # échec (UAC refusé) ne bloque PAS le lancement : le jeu démarrera dans
+        # la langue déjà en place, ce qui vaut mieux que de ne pas démarrer.
+        if not self.apply_game_language(game, confirmer=confirmer):
+            log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
+
         # Pré-lancement (cf. src/core/pre_launch.py)
         unblock_game_dlls(exe_path.parent)
         delete_pre_launch_files(game, self.config)
@@ -269,6 +285,160 @@ class GameManager:
     def apply_pre_launch_patches(self, game: GameData) -> None:
         """Façade rétro-compat — délègue à pre_launch.apply_ini_patches."""
         apply_ini_patches(game, self.config)
+
+    # ──────────────────── Langue de jeu ────────────────────
+
+    def langues_disponibles(self, game: GameData) -> tuple:
+        """Langues que CETTE installation sait réellement faire.
+
+        Le registre ne fait que SÉLECTIONNER une langue ; les fichiers, eux,
+        viennent du disque d'origine. Un jeu installé en français n'a que les
+        fichiers français, et basculer la clé sur l'anglais ne donnerait pas un
+        jeu anglais (confirmé par deux guides communautaires : « you also have
+        to copy the language file from the DVD to your installation path »).
+        Proposer une langue que l'installation ne sait pas faire serait donc
+        promettre quelque chose de faux.
+
+        Une langue sans `requires_file` est toujours proposée : le contrôle est
+        une option du catalogue, pas une obligation.
+        """
+        lr = game.language_registry
+        if lr is None:
+            return ()
+        racine = self.config.install_path
+        gardees = []
+        for langue in lr.languages:
+            if not langue.requires_file:
+                gardees.append(langue)
+                continue
+            chemin = racine / langue.requires_file.replace("\\", "/")
+            try:
+                if chemin.exists():
+                    gardees.append(langue)
+            except OSError:
+                pass
+        return tuple(gardees)
+
+    def detect_game_language(self, game: GameData) -> str | None:
+        """Langue actuellement POSÉE dans le registre, None si indéterminable.
+
+        La lecture est gratuite (aucun privilège) et c'est la seule source qui
+        dise la vérité : le jeu peut avoir été installé par son installeur
+        d'origine, ou l'utilisateur avoir changé la clé à la main.
+        """
+        lr = game.language_registry
+        if lr is None:
+            return None
+        noms = {nom for langue in lr.languages for nom, _ in langue.values}
+        actuel = registre.lire_valeurs(lr.root, lr.key, sorted(noms), lr.view)
+        if not actuel:
+            return None
+        for langue in lr.languages:
+            if all(actuel.get(nom) == val for nom, val in langue.values):
+                return langue.code
+        return None
+
+    def game_language(self, game: GameData) -> str | None:
+        """Code de la langue de CE jeu, None s'il n'en propose pas.
+
+        Trois sources, dans l'ordre :
+        1. le choix EXPLICITE de l'utilisateur, s'il est encore proposé ;
+        2. ce que le registre porte RÉELLEMENT — sans quoi la ligne méta
+           annoncerait une langue que le jeu n'a pas, et le lancement voudrait
+           « corriger » le registre (donc demander une élévation) alors que
+           l'utilisateur n'a rien demandé ;
+        3. la langue de l'interface si le jeu la propose, sinon la première du
+           catalogue. Surtout PAS la langue système : l'utilisateur a déjà dit
+           sa langue à l'onboarding, et de toute façon aucun défaut figé ne peut
+           convenir tant qu'il n'est pas modifiable.
+        """
+        lr = game.language_registry
+        # Sans registre atteignable (Linux), aucune langue n'est « celle du
+        # jeu » : rien ne lit ni n'écrit ce réglage ici. Retourner None éteint
+        # le sélecteur de la ligne méta plutôt que d'afficher un choix sans
+        # effet — un réglage qui ne règle rien est pire que pas de réglage.
+        if not registre.disponible():
+            return None
+        if lr is None or not lr.languages:
+            return None
+        # Le choix et la détection portent sur TOUTES les langues déclarées :
+        # si le registre annonce l'allemand, on l'affiche, même si les fichiers
+        # allemands ne sont pas là — mieux vaut dire la vérité que la masquer.
+        # Seul le DÉFAUT se restreint à ce que l'installation sait faire.
+        choisi = self.config.game_language.get(game.id)
+        if choisi and lr.get(choisi) is not None:
+            return choisi
+        detecte = self.detect_game_language(game)
+        if detecte is not None:
+            return detecte
+        possibles = self.langues_disponibles(game) or lr.languages
+        interface = get_language()
+        if any(lg.code == interface for lg in possibles):
+            return interface
+        return possibles[0].code
+
+    def set_game_language(self, game_id: str, code: str) -> None:
+        """Enregistre le choix de langue d'un jeu (persisté en config)."""
+        game = self._index.get(game_id)
+        if game is None or game.language_registry is None:
+            return
+        if game.language_registry.get(code) is None:
+            log.warning("Langue %r non proposée par %s — ignorée", code, game_id)
+            return
+        self.config.game_language[game_id] = code
+        self.config.save()
+        log.info("Langue de %s : %s", game_id, code)
+
+    def valeurs_registre(self, game: GameData, code: str | None = None) -> dict:
+        """Tout ce qui doit être posé dans la clé du jeu, langue comprise.
+
+        Les valeurs communes (« Install Dir ») et celles de la langue vont dans
+        la MÊME clé : les écrire ensemble, c'est un seul .reg et une seule
+        invite UAC au lieu de deux à la suite. La langue passe en dernier —
+        elle est plus spécifique, elle gagne en cas de collision de nom.
+        """
+        lr = game.language_registry
+        if lr is None:
+            return {}
+        valeurs = {nom: substitute_vars(v, game, self.config) if isinstance(v, str) else v
+                   for nom, v in lr.common}
+        code = code or self.game_language(game)
+        langue = lr.get(code) if code else None
+        if langue is not None:
+            valeurs.update(langue.as_dict)
+        return valeurs
+
+    def apply_game_language(self, game: GameData, code: str | None = None,
+                            confirmer=None) -> bool:
+        """Écrit une langue dans le registre. True s'il n'y a rien à faire.
+
+        `code` permet d'appliquer AVANT de persister : si l'écriture échoue (UAC
+        refusé), on ne veut pas garder en config un choix que le registre n'a
+        pas pris — sinon la fiche annoncerait une langue que le jeu n'a pas, et
+        chaque lancement redemanderait l'élévation. Sans `code`, on applique ce
+        que `game_language` résout.
+
+        Ne demande une élévation que si les valeurs DIFFÈRENT réellement : le
+        cas courant est qu'elles sont déjà bonnes, et une invite UAC à chaque
+        lancement serait pire que le problème qu'on règle.
+
+        `confirmer(ruche, cle, valeurs)` est transmis tel quel : c'est l'UI qui
+        prévient, et seulement quand il y a vraiment quelque chose à écrire.
+        """
+        lr = game.language_registry
+        if lr is None:
+            return True
+        # Hors Windows il n'y a rien à écrire — et surtout pas d'avertissement
+        # à journaliser À CHAQUE lancement pour une opération qu'on n'a pas
+        # tentée. `launch_game` traite False comme un échec réel : ce n'en est
+        # pas un.
+        if not registre.disponible():
+            return True
+        valeurs = self.valeurs_registre(game, code)
+        if not valeurs:
+            return True
+        return registre.ecrire_valeurs(lr.root, lr.key, valeurs, lr.view,
+                                       confirmer=confirmer)
 
     # ──────────────────── Stats de jeu ────────────────────
 

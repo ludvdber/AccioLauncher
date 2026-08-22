@@ -515,3 +515,340 @@ class TestExpectedHashes:
         # …mais une variante de casse non listée n'est plus devinable.
         sha, _ = m.expected_hashes(self._version(download_url="https://x/GAME.7z"))
         assert sha is None
+
+
+# ── Langue de jeu (registre) ──
+
+_LANG_BLOCK = {
+    "root": "HKLM",
+    "view": 32,
+    "key": "SOFTWARE" + chr(92) + "Electronic Arts" + chr(92) + "Jeu",
+    "languages": {
+        "fr": {"label": "Français", "values": {"Language": "French", "Locale": "fr_FR"}},
+        "en": {"label": "English", "values": {"Language": "English", "Locale": "en_US"}},
+        "de": {"label": "Deutsch", "values": {"Language": "German", "Locale": "de_DE"}},
+    },
+}
+
+
+def _jeu_multilingue():
+    return GameData.from_dict({**GAME_DICT, "id": "hp7a", "language_registry": _LANG_BLOCK})
+
+
+class TestLangueDeJeu:
+    """La langue est une PRÉFÉRENCE, pas un fait d'installation.
+
+    Aucun défaut figé ne peut convenir — « English » bloque un francophone, la
+    langue système bloque un francophone qui veut jouer en anglais. Ce qui
+    bloquait tout le monde, c'était l'absence de bascule.
+    """
+
+    def test_aucune_langue_pour_un_jeu_qui_n_en_declare_pas(self, tmp_path):
+        m = _make_manager(tmp_path)
+        assert m.game_language(m.get_games()[0].game) is None
+
+    def test_defaut_sur_la_langue_de_l_interface(self, tmp_path):
+        from src.core.i18n import set_language
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        set_language("en")
+        try:
+            assert m.game_language(jeu) == "en"
+        finally:
+            set_language("fr")
+        assert m.game_language(jeu) == "fr"
+
+    def test_repli_sur_la_premiere_si_l_interface_n_est_pas_proposee(self, tmp_path):
+        from src.core.i18n import set_language
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        set_language("es")   # le jeu ne propose pas l'espagnol
+        try:
+            assert m.game_language(jeu) == "fr"
+        finally:
+            set_language("fr")
+
+    def test_le_choix_explicite_prime(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        m.set_game_language("hp7a", "de")
+        assert m.game_language(jeu) == "de"
+        assert m.config.game_language["hp7a"] == "de"
+
+    def test_une_langue_non_proposee_est_ignoree(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        m.set_game_language("hp7a", "ja")
+        assert "hp7a" not in m.config.game_language
+        assert m.game_language(jeu) == "fr"
+
+    def test_un_choix_devenu_invalide_retombe_sur_le_defaut(self, tmp_path):
+        """Le catalogue peut retirer une langue : le choix stocké ne doit pas
+        rendre le jeu inutilisable pour autant."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        m.config.game_language["hp7a"] = "ja"
+        assert m.game_language(jeu) == "fr"
+
+    def test_apply_ecrit_les_valeurs_de_la_langue_choisie(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        m.set_game_language("hp7a", "en")
+        vus = []
+        with patch("src.core.game_manager.registre.ecrire_valeurs",
+                   side_effect=lambda *a, **k: vus.append(a) or True):
+            assert m.apply_game_language(jeu) is True
+        assert vus[0][0] == "HKLM"
+        assert vus[0][2] == {"Language": "English", "Locale": "en_US"}
+        assert vus[0][3] == 32
+
+    def test_apply_ne_fait_rien_sans_bloc_de_langue(self, tmp_path):
+        m = _make_manager(tmp_path)
+        with patch("src.core.game_manager.registre.ecrire_valeurs") as ecrire:
+            assert m.apply_game_language(m.get_games()[0].game) is True
+        ecrire.assert_not_called()
+
+    def test_un_echec_de_registre_ne_bloque_pas_le_lancement(self, tmp_path, monkeypatch):
+        """UAC refusé : le jeu démarre dans la langue déjà en place, ce qui vaut
+        mieux que de ne pas démarrer du tout."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        monkeypatch.setattr("src.core.game_manager.unblock_game_dlls", lambda _p: None)
+        monkeypatch.setattr("src.core.game_manager.delete_pre_launch_files", lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.create_pre_launch_files", lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.apply_ini_patches", lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+                            lambda *a, **k: False)
+        lances = []
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen",
+                            lambda *a, **k: lances.append(a) or object())
+        assert m.launch_game("hp7a") is not None
+        assert len(lances) == 1
+
+
+class TestDetectionDeLaLangue:
+    """La ligne meta doit dire ce que le registre porte VRAIMENT.
+
+    Sinon elle annonce une langue que le jeu n'a pas, et le lancement veut
+    « corriger » le registre — donc demander une elevation — alors que
+    l'utilisateur n'a rien demande.
+    """
+
+    def test_detecte_la_langue_posee(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.lire_valeurs",
+                   return_value={"Language": "German", "Locale": "de_DE"}):
+            assert m.detect_game_language(jeu) == "de"
+
+    def test_none_si_la_cle_est_absente(self, tmp_path):
+        """Cas d'un jeu installe par le launcher : l'installeur EA n'a jamais
+        tourne, la cle n'existe pas."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.lire_valeurs", return_value={}):
+            assert m.detect_game_language(jeu) is None
+
+    def test_none_si_les_valeurs_ne_correspondent_a_aucune_langue(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.lire_valeurs",
+                   return_value={"Language": "Klingon", "Locale": "tlh"}):
+            assert m.detect_game_language(jeu) is None
+
+    def test_une_correspondance_PARTIELLE_ne_compte_pas(self, tmp_path):
+        """Toutes les valeurs de la langue doivent coller, sinon on ne sait pas
+        dans quel etat est le jeu — et pretendre le savoir serait pire."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.lire_valeurs",
+                   return_value={"Language": "German", "Locale": "fr_FR"}):
+            assert m.detect_game_language(jeu) is None
+
+    def test_la_detection_prime_sur_la_langue_d_interface(self, tmp_path):
+        from src.core.i18n import set_language
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        set_language("en")
+        try:
+            with patch("src.core.game_manager.registre.lire_valeurs",
+                       return_value={"Language": "German", "Locale": "de_DE"}):
+                assert m.game_language(jeu) == "de"
+        finally:
+            set_language("fr")
+
+    def test_le_choix_explicite_prime_sur_la_detection(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        m.set_game_language("hp7a", "en")
+        with patch("src.core.game_manager.registre.lire_valeurs",
+                   return_value={"Language": "German", "Locale": "de_DE"}):
+            assert m.game_language(jeu) == "en"
+
+    def test_rien_a_ecrire_quand_le_registre_est_deja_bon(self, tmp_path):
+        """Le point entier : aucune invite UAC sur un jeu qu'on n'a pas touche."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.lire_valeurs",
+                   return_value={"Language": "German", "Locale": "de_DE"}),              patch("src.core.game_manager.registre.ecrire_valeurs") as ecrire:
+            ecrire.return_value = True
+            assert m.apply_game_language(jeu) is True
+            # `ecrire_valeurs` est appelee, mais avec les valeurs DEJA en place :
+            # c'est elle qui court-circuite (deja_a_jour) sans elever.
+            assert ecrire.call_args[0][2] == {"Language": "German", "Locale": "de_DE"}
+
+    def test_apply_accepte_un_code_explicite(self, tmp_path):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.ecrire_valeurs",
+                   return_value=True) as ecrire:
+            m.apply_game_language(jeu, "en")
+        assert ecrire.call_args[0][2] == {"Language": "English", "Locale": "en_US"}
+
+
+class TestLanguesReellementInstallees:
+    """Le registre SELECTIONNE une langue ; il ne l'installe pas.
+
+    Deux guides communautaires le disent : « you also have to copy the language
+    file from the DVD to your installation path ». Un jeu installe en francais
+    n'a que les fichiers francais — proposer l'anglais promettrait quelque chose
+    de faux. Le catalogue declare donc, par langue, un fichier temoin.
+    """
+
+    @staticmethod
+    def _jeu_avec_temoins():
+        bloc = dict(_LANG_BLOCK)
+        bloc["languages"] = {
+            "fr": {"label": "Francais", "values": {"Language": "French"},
+                   "requires_file": "HPTest/fr.big"},
+            "en": {"label": "English", "values": {"Language": "English"},
+                   "requires_file": "HPTest/en.big"},
+            "de": {"label": "Deutsch", "values": {"Language": "German"}},
+        }
+        return GameData.from_dict({**GAME_DICT, "id": "hp7a",
+                                   "language_registry": bloc})
+
+    def test_seules_les_langues_presentes_sur_le_disque(self, tmp_path):
+        jeu = self._jeu_avec_temoins()
+        m = _make_manager(tmp_path, [jeu])
+        (tmp_path / "HPTest").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "HPTest" / "fr.big").write_bytes(b"")
+        codes = [lg.code for lg in m.langues_disponibles(jeu)]
+        # « de » n'a pas de temoin declare : toujours propose.
+        assert codes == ["fr", "de"]
+
+    def test_toutes_quand_rien_n_est_declare(self, tmp_path):
+        """Le controle est une OPTION du catalogue, pas une obligation."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        assert [lg.code for lg in m.langues_disponibles(jeu)] == ["fr", "en", "de"]
+
+    def test_aucune_pour_un_jeu_sans_bloc(self, tmp_path):
+        m = _make_manager(tmp_path)
+        assert m.langues_disponibles(m.get_games()[0].game) == ()
+
+    def test_le_defaut_evite_une_langue_non_installee(self, tmp_path):
+        """L'interface est en anglais mais seul le francais est installe : le
+        defaut doit tomber sur ce qui existe."""
+        from src.core.i18n import set_language
+        jeu = self._jeu_avec_temoins()
+        m = _make_manager(tmp_path, [jeu])
+        (tmp_path / "HPTest").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "HPTest" / "fr.big").write_bytes(b"")
+        set_language("en")
+        try:
+            with patch("src.core.game_manager.registre.lire_valeurs", return_value={}):
+                assert m.game_language(jeu) == "fr"
+        finally:
+            set_language("fr")
+
+    def test_le_registre_prime_meme_sur_une_langue_absente(self, tmp_path):
+        """Si le registre annonce l'allemand, on l'AFFICHE — mieux vaut dire la
+        verite que masquer l'etat reel du jeu."""
+        jeu = self._jeu_avec_temoins()
+        m = _make_manager(tmp_path, [jeu])
+        with patch("src.core.game_manager.registre.lire_valeurs",
+                   return_value={"Language": "German"}):
+            assert m.game_language(jeu) == "de"
+
+
+class TestValeursCommunes:
+    """Certaines valeurs de la clé ne dépendent PAS de la langue.
+
+    HP7 lit « Install Dir » pour retrouver ses données (relevé dans hp7.exe et
+    hp8.exe le 2026-08-22) ; sans elle il ne démarre pas, et c'est normalement
+    l'installeur EA qui l'écrit — il n'a jamais tourné quand le jeu vient du
+    launcher. Elles partent avec la langue, dans la MÊME écriture : même clé,
+    donc une seule invite UAC au lieu de deux à la suite.
+    """
+
+    _BLOC = {
+        **_LANG_BLOCK,
+        "values": {"Install Dir": "%INSTALL_DIR%" + chr(92)},
+    }
+
+    def _jeu(self):
+        return GameData.from_dict({**GAME_DICT, "id": "hp7a",
+                                   "language_registry": self._BLOC})
+
+    def test_les_communes_accompagnent_la_langue(self, tmp_path):
+        jeu = self._jeu()
+        m = _make_manager(tmp_path, [jeu])
+        m.set_game_language("hp7a", "en")
+        valeurs = m.valeurs_registre(jeu)
+        assert valeurs["Language"] == "English"     # la langue choisie
+        assert "Install Dir" in valeurs             # ET la commune
+
+    def test_install_dir_est_substitue(self, tmp_path):
+        """`%INSTALL_DIR%` doit devenir un VRAI chemin : c'est ce que le jeu
+        suivra pour trouver ses fichiers."""
+        jeu = self._jeu()
+        m = _make_manager(tmp_path, [jeu])
+        valeurs = m.valeurs_registre(jeu)
+        dossier_jeu = jeu.executable.replace(chr(92), "/").split("/")[0]
+        attendu = str(tmp_path / dossier_jeu) + chr(92)
+        assert valeurs["Install Dir"] == attendu
+        assert "%INSTALL_DIR%" not in valeurs["Install Dir"]
+
+    def test_la_langue_l_emporte_sur_une_commune_de_meme_nom(self, tmp_path):
+        """Plus spécifique gagne — sinon une commune mal placée figerait la
+        langue et le sélecteur n'aurait plus aucun effet."""
+        bloc = {**self._BLOC, "values": {"Locale": "zz_ZZ"}}
+        jeu = GameData.from_dict({**GAME_DICT, "id": "hp7a",
+                                  "language_registry": bloc})
+        m = _make_manager(tmp_path, [jeu])
+        m.set_game_language("hp7a", "fr")
+        assert m.valeurs_registre(jeu)["Locale"] == "fr_FR"
+
+    def test_une_seule_ecriture_pour_les_deux(self, tmp_path):
+        """Deux écritures = deux invites UAC de suite : le meilleur moyen de
+        faire refuser la seconde."""
+        jeu = self._jeu()
+        m = _make_manager(tmp_path, [jeu])
+        appels = []
+        with patch("src.core.game_manager.registre.ecrire_valeurs",
+                   side_effect=lambda *a, **k: appels.append(a) or True):
+            assert m.apply_game_language(jeu) is True
+        assert len(appels) == 1
+        assert set(appels[0][2]) == {"Install Dir", "Language", "Locale"}
+
+    def test_le_rappel_de_prevenance_est_transmis(self, tmp_path):
+        """`launch_game` doit pouvoir prévenir l'utilisateur : si le rappel
+        n'arrive pas jusqu'à `ecrire_valeurs`, l'écriture est silencieuse."""
+        jeu = self._jeu()
+        m = _make_manager(tmp_path, [jeu])
+        recus = {}
+        with patch("src.core.game_manager.registre.ecrire_valeurs",
+                   side_effect=lambda *a, **k: recus.update(k) or True):
+            m.apply_game_language(jeu, confirmer="sentinelle")
+        assert recus.get("confirmer") == "sentinelle"
+
+    def test_sans_communes_rien_ne_change(self, tmp_path):
+        """Le champ est OPTIONNEL : les sept autres jeux n'en ont pas."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        assert set(m.valeurs_registre(jeu)) == {"Language", "Locale"}

@@ -7,6 +7,7 @@ unitaires ne voient pas : hero dynamique, clavier, toast Ko-fi, phases, compteur
 saisons, cross-fade, mute en direct, boutons Redémarrer, imports d'onboarding.
 """
 
+import pathlib
 import re
 
 import pytest
@@ -115,6 +116,36 @@ class TestHeroDynamique:
 
     def test_defaults_to_first_game_without_history(self, make_window):
         win = make_window()
+        assert win._detail.game.id == _IDS[0]
+        assert win._carousel.current_index == 0
+
+    def test_le_carrousel_suit_la_fiche_apres_maj_du_catalogue(self, make_window):
+        """Scénario de la capture : premier lancement APRÈS une mise à jour.
+
+        La fiche s'ouvre sur le dernier jeu joué, puis le catalogue distant
+        arrive et la bande est reconstruite. Les deux doivent encore désigner
+        le MÊME jeu — on voyait HP1 surligné sous HP6 affiché.
+        """
+        target = _IDS[5]
+        win = make_window(last_played={target: "2026-06-10"},
+                          playtime_seconds={target: 3600})
+        assert win._detail.game.id == target
+
+        win._on_catalog_updated(_CATALOG)
+
+        assert win._detail.game.id == target
+        assert win._carousel.current_game_id() == target
+        assert win._carousel.current_index == 5
+        surlignes = [i for i, item in enumerate(win._carousel._items) if item.selected]
+        assert surlignes == [5]
+
+    def test_la_bande_reste_navigable_apres_maj_du_catalogue(self, make_window):
+        """Et le clic sur une autre vignette bascule toujours la fiche."""
+        target = _IDS[5]
+        win = make_window(last_played={target: "2026-06-10"},
+                          playtime_seconds={target: 3600})
+        win._on_catalog_updated(_CATALOG)
+        win._carousel.select(0)
         assert win._detail.game.id == _IDS[0]
         assert win._carousel.current_index == 0
 
@@ -787,6 +818,80 @@ class TestBandeauSansScrollbar:
             win.manager.set_game_state(entry.game.id, GameState.INSTALLED)
         assert self._balaye(win, qtbot, taille) == []
 
+    # Texte réaliste, volontairement long : c'est le catalogue qui l'écrit, à
+    # distance, et personne ne relancera cette suite avant de le publier.
+    _AVERTISSEMENT = (
+        "Votre antivirus peut mettre en quarantaine un fichier de ce jeu pendant "
+        "l'installation. S'il refuse de démarrer, restaurez ce fichier depuis la "
+        "quarantaine de votre antivirus."
+    )
+
+    @staticmethod
+    def _catalogue_avec_avertissement(monkeypatch, url=""):
+        """Colle la mise en garde sur TOUS les jeux — pire cas de mise en page."""
+        import dataclasses
+
+        from src.core import game_manager
+        vrai_load = game_manager.load_catalog
+
+        def _charge(*a, **k):
+            cat = vrai_load(*a, **k)
+            return dataclasses.replace(cat, games=tuple(
+                dataclasses.replace(
+                    g, warning=TestBandeauSansScrollbar._AVERTISSEMENT,
+                    warning_url=url)
+                for g in cat.games))
+
+        monkeypatch.setattr(game_manager, "load_catalog", _charge)
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1100, 720), (1320, 880)])
+    def test_avertissement_du_catalogue_avant_telechargement(
+            self, make_window, qtbot, monkeypatch, taille):
+        self._disque(monkeypatch, 900_000)
+        self._catalogue_avec_avertissement(monkeypatch)
+        win = make_window()
+        win.show()
+        assert self._balaye(win, qtbot, taille) == []
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1320, 880)])
+    def test_avertissement_du_catalogue_avec_lien(
+            self, make_window, qtbot, monkeypatch, taille):
+        """Le « En savoir plus » allonge la dernière ligne — cas le plus large."""
+        self._disque(monkeypatch, 900_000)
+        self._catalogue_avec_avertissement(
+            monkeypatch, url="https://acciolauncher.be/aide/antivirus")
+        win = make_window()
+        win.show()
+        assert self._balaye(win, qtbot, taille) == []
+
+    @pytest.mark.parametrize("taille", [(980, 660), (1320, 880)])
+    def test_avertissement_du_catalogue_sur_jeux_installes(
+            self, make_window, qtbot, monkeypatch, taille):
+        from src.core.game_manager import GameState
+        self._disque(monkeypatch, 900_000)
+        self._catalogue_avec_avertissement(monkeypatch)
+        win = make_window()
+        win.show()
+        for entry in win.manager.get_games():
+            win.manager.set_game_state(entry.game.id, GameState.INSTALLED)
+        assert self._balaye(win, qtbot, taille) == []
+
+    def test_le_bandeau_est_bien_la_pendant_le_balayage(
+            self, make_window, qtbot, monkeypatch):
+        """Garde-fou : sans lui, les trois tests ci-dessus passeraient à vide
+        si le mécanisme d'avertissement cessait d'afficher quoi que ce soit."""
+        self._disque(monkeypatch, 900_000)
+        self._catalogue_avec_avertissement(monkeypatch)
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        qtbot.wait(30)
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            qtbot.wait(20)
+            assert win._detail._action_panel.alert_height() > 0
+            assert "quarantaine" in win._detail._action_panel._alert.text()
+
     def test_le_bandeau_n_affiche_qu_un_message(self, make_window, qtbot, monkeypatch):
         """Hors ligne ET disque plein : le hors-ligne prime, le disque attend
         d'être actionnable (hors ligne, rien ne s'écrit sur le disque)."""
@@ -860,6 +965,283 @@ class TestCoutureCarrousel:
         win.show()
         qtbot.wait(60)
         assert self._ecart(win, qtbot) == 0
+
+
+class TestRecuperationDuVideDuHaut:
+    """Avant de rogner du TEXTE, la fiche récupère du VIDE.
+
+    Le retrait au-dessus du panneau vaut 10 % de la fiche (49 px à 980×660) et
+    ne porte aucune information : remonter le panneau ne coûte rien à
+    l'utilisateur, là où un cran d'accroche en moins lui coûte deux lignes.
+
+    Le cas qui l'a imposé existait AVANT le bandeau du catalogue : en espagnol,
+    à 980×660, l'avertissement d'espace disque faisait déjà défiler la fiche de
+    HP7 de 20 px. Il ne se reproduit pas ici — la suite tourne en `offscreen`,
+    où Qt substitue une autre police — donc on teste le MÉCANISME, et la mesure
+    en vraies polices est faite par `tools/audit_geometrie.py` (scénario
+    « bandeau », qui échoue si ce correctif disparaît).
+    """
+
+    @staticmethod
+    def _force_debordement(win, pixels):
+        """Fait croire au panneau qu'il déborde, sans toucher à la classe Qt.
+
+        Attribut d'INSTANCE : remplacer `InfoPanel.overflow` au niveau de la
+        classe laisserait un descripteur sip posé pour toute la session, et le
+        processus meurt plusieurs fichiers de tests plus loin.
+        """
+        win._detail._info.overflow = lambda: pixels
+
+    def test_le_panneau_remonte_au_lieu_de_rogner(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        qtbot.wait(60)
+        nominal = win._detail._info.y()
+        assert nominal > 0
+
+        self._force_debordement(win, 30)
+        win._detail._position_info()
+        # `waitUntil` et non un `wait` fixe : la remontée se fait par une
+        # chaîne de `singleShot(0)` qui se réarme, donc en plusieurs tours de
+        # boucle d'évènements. 80 ms suffisent à vide et pas toujours sous la
+        # charge de la suite complète — un test qui échoue une fois sur dix
+        # arrête `build.bat` au hasard, ce qui est pire qu'une absence de test.
+        qtbot.waitUntil(lambda: win._detail._info.y() < nominal, timeout=3000)
+
+    def test_jamais_sous_le_plancher(self, make_window, qtbot):
+        """Un débordement énorme ne doit pas coller le titre à la barre."""
+        from src.ui.game_detail import _INFO_TOP_MIN
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        qtbot.wait(60)
+        self._force_debordement(win, 10_000)
+        win._detail._position_info()
+        qtbot.waitUntil(lambda: win._detail._info.y() <= _INFO_TOP_MIN, timeout=3000)
+        assert win._detail._info.y() >= _INFO_TOP_MIN
+
+    def test_le_retrait_nominal_revient_au_redimensionnement(self, make_window, qtbot):
+        """`_position_info` repart du retrait nominal : un resserrement décidé
+        pour une petite fenêtre ne doit pas survivre à son agrandissement."""
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        qtbot.wait(60)
+        nominal = win._detail._info.y()
+        self._force_debordement(win, 30)
+        win._detail._position_info()
+        qtbot.waitUntil(lambda: win._detail._info.y() < nominal, timeout=3000)
+        remonte = win._detail._info.y()
+
+        del win._detail._info.overflow      # le panneau ne déborde plus
+        win.resize(1320, 880)
+        qtbot.waitUntil(lambda: win._detail._info.y() > remonte, timeout=3000)
+
+
+_LANG_BLOCK = {
+    "root": "HKLM",
+    "view": 32,
+    "key": chr(92).join(["SOFTWARE", "Electronic Arts", "Jeu"]),
+    "languages": {
+        "fr": {"label": "Français", "values": {"Language": "French", "Locale": "fr_FR"}},
+        "en": {"label": "English", "values": {"Language": "English", "Locale": "en_US"}},
+        "de": {"label": "Deutsch", "values": {"Language": "German", "Locale": "de_DE"}},
+    },
+}
+
+
+@pytest.fixture
+def make_window_multilingue(make_window, monkeypatch):
+    """MainWindow dont le PREMIER jeu propose trois langues.
+
+    Fabriqué, jamais cherché dans `games.json` : le catalogue se met à jour à
+    distance, un test qui suppose son contenu casse à chaque livraison de jeu.
+    """
+    def _make(**overrides):
+        import dataclasses
+
+        from src.core import game_manager
+        from src.core.game_data import _parse_language_registry
+        vrai_load = game_manager.load_catalog
+        bloc = _parse_language_registry(_LANG_BLOCK)
+        assert bloc is not None, "le bloc de test doit être accepté au parsing"
+
+        def _charge(*a, **k):
+            cat = vrai_load(*a, **k)
+            jeux = list(cat.games)
+            jeux[0] = dataclasses.replace(jeux[0], language_registry=bloc)
+            return dataclasses.replace(cat, games=tuple(jeux))
+
+        monkeypatch.setattr(game_manager, "load_catalog", _charge)
+        win = make_window(**overrides)
+        return win, win.manager.get_games()[0].game
+    return _make
+
+
+class TestSelecteurDeLangue:
+    """La langue du jeu vit dans la LIGNE MÉTA (choix de Ludo, 2026-08-21).
+
+    Elle y tient sans coûter un pixel de hauteur, là où une liste déroulante
+    sous les boutons aurait repris ~30 px dans la zone la plus contrainte de la
+    fiche — celle où l'on venait de récupérer 20 px en espagnol.
+    """
+
+    def test_visible_sur_un_jeu_multilingue(self, make_window_multilingue):
+        win, jeu = make_window_multilingue()
+        win._detail.set_game(jeu)
+        meta = win._detail._info._meta.text()
+        assert 'href="langue"' in meta
+        assert "Fran" in meta      # le label du catalogue, pas le code
+
+    def test_absent_sur_les_autres_jeux(self, make_window_multilingue):
+        """Sept jeux sur huit n'ont pas de bloc : un réglage sans choix
+        possible est du bruit."""
+        win, _ = make_window_multilingue()
+        autre = win.manager.get_games()[1].game
+        win._detail.set_game(autre)
+        assert 'href="langue"' not in win._detail._info._meta.text()
+
+    def test_les_deux_liens_coexistent(self, make_window_multilingue):
+        """La ligne méta porte DEUX liens maintenant. L'AIGUILLAGE lui-même est
+        testé sur un panneau isolé (`TestAiguillageLigneMeta`) : sur une vraie
+        fenêtre, `versions_clicked` est câblé au dialogue des versions, dont le
+        `exec()` bloque la suite de tests indéfiniment."""
+        win, jeu = make_window_multilingue()
+        win._detail.set_game(jeu)
+        meta = win._detail._info._meta.text()
+        assert 'href="changelog"' in meta
+        assert 'href="langue"' in meta
+
+    def test_le_libelle_suit_le_choix(self, make_window_multilingue):
+        win, jeu = make_window_multilingue()
+        win._detail.set_game(jeu)
+        assert "Deutsch" not in win._detail._info._meta.text()
+        win.manager.set_game_language(jeu.id, "de")
+        win._detail.set_game(jeu)
+        assert "Deutsch" in win._detail._info._meta.text()
+
+    def test_le_clic_ecrit_le_registre_et_rafraichit(self, make_window_multilingue,
+                                                     monkeypatch, qtbot):
+        win, jeu = make_window_multilingue()
+        win._detail.set_game(jeu)
+        ecrits = []
+        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+                            lambda *a, **k: ecrits.append(a) or True)
+        from src.ui import game_detail_handlers as handlers
+        handlers._appliquer_langue(win._detail, "en")
+        qtbot.wait(20)
+        assert win.manager.game_language(jeu) == "en"
+        assert ecrits and ecrits[0][2] == {"Language": "English", "Locale": "en_US"}
+        assert "English" in win._detail._info._meta.text()
+
+    def test_un_echec_de_registre_previent_par_un_modal(self, make_window_multilingue,
+                                                        monkeypatch):
+        """UAC refusé : le choix est enregistré mais SANS effet. Un toast qui
+        s'efface laisserait croire que c'est fait — donc un modal."""
+        win, jeu = make_window_multilingue()
+        win._detail.set_game(jeu)
+        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+                            lambda *a, **k: False)
+        vus = []
+        monkeypatch.setattr("src.ui.game_detail_handlers._boite",
+                            lambda *a, **k: vus.append(a))
+        from src.ui import game_detail_handlers as handlers
+        avant = win.manager.game_language(jeu)
+        handlers._appliquer_langue(win._detail, "en")
+        assert len(vus) == 1
+        # ET le choix ne doit PAS être enregistré : sinon la fiche annoncerait
+        # une langue que le jeu n'a pas, et chaque lancement redemanderait
+        # l'élévation pour un écart que l'utilisateur a déjà refusé de corriger.
+        assert jeu.id not in win.manager.config.game_language
+        assert win.manager.game_language(jeu) == avant
+
+    def test_choisir_la_langue_deja_active_ne_fait_rien(self, make_window_multilingue,
+                                                        monkeypatch):
+        win, jeu = make_window_multilingue()
+        win._detail.set_game(jeu)
+        ecrits = []
+        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+                            lambda *a, **k: ecrits.append(a) or True)
+        from src.ui import game_detail_handlers as handlers
+        handlers._appliquer_langue(win._detail, win.manager.game_language(jeu))
+        assert ecrits == []
+
+
+class TestTailleDuTitre:
+    """`_apply_title_size` était DU CODE MORT, et personne ne l'a vu.
+
+    `styles.py` pose une règle applicative `QLabel#gameTitle { font-size: 36px }`,
+    et en Qt une feuille de style l'emporte sur la police posée par `setFont` :
+    les trois paliers de la fonction ne changeaient donc rien (mesuré le
+    2026-08-21 : hauteur du titre identique AU PIXEL de 36 à 26, interligne
+    bloqué à 48).
+
+    Ces tests passent par une VRAIE MainWindow, et c'est le point : sur un
+    `InfoPanel` construit tout seul, la feuille applicative n'est pas là, le
+    `setFont` fonctionne, et le défaut ne se reproduit pas. C'est exactement
+    l'angle mort qui l'a laissé vivre.
+    """
+
+    @staticmethod
+    def _titre(win):
+        return win._detail._info._title
+
+    def test_la_taille_passe_par_le_stylesheet(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        qtbot.wait(40)
+        assert "font-size" in self._titre(win).styleSheet()
+
+    def test_le_squeeze_reduit_vraiment_la_hauteur(self, make_window, qtbot):
+        """LE test qui manquait : avec `setFont`, la hauteur ne bougeait pas."""
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        qtbot.wait(60)
+        info = win._detail._info
+        titre = self._titre(win)
+        largeur = titre.maximumWidth()
+        titre.setMinimumHeight(0)
+        avant = titre.heightForWidth(largeur)
+
+        assert info.squeeze_title() is True
+        titre.setMinimumHeight(0)
+        apres = titre.heightForWidth(largeur)
+        assert apres < avant, "le titre doit RÉTRÉCIR (régression du code mort)"
+
+    def test_le_squeeze_est_borne(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        qtbot.wait(40)
+        info = win._detail._info
+        crans = 0
+        while info.squeeze_title():
+            crans += 1
+            assert crans < 10, "squeeze_title ne s'arrête jamais"
+        assert crans >= 1
+
+    def test_pas_de_fuite_d_un_jeu_a_l_autre(self, make_window, qtbot):
+        """Un cran arraché par le titre le plus long ne doit pas rapetisser le
+        titre des sept autres jeux — même fuite d'état que la sélection du
+        carrousel, corrigée le même jour."""
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        qtbot.wait(60)
+        info = win._detail._info
+        jeux = [e.game for e in win.manager.get_games()]
+
+        win._detail.set_game(jeux[0])
+        qtbot.wait(40)
+        nominal = info._title_size
+
+        info.squeeze_title()
+        assert info._title_size < nominal
+
+        win._detail.set_game(jeux[1])
+        qtbot.wait(40)
+        assert info._title_size == nominal
 
 
 class TestPasDeScrollDansLeCasNominal:
@@ -1045,3 +1427,113 @@ class TestZoomSurLeTickerPartage:
         assert 0.0 <= bg._zoom_phase < 1.0
         assert 1.0 <= bg._zoom <= 1.05
         assert QAbstractAnimation is not None  # import utilisé, garde-fou lisible
+
+
+class TestBalisageDuCatalogueJamaisInterprete:
+    """Aucun texte du catalogue ne doit etre INTERPRETE comme du balisage.
+
+    Le catalogue se met a jour A DISTANCE. `QLabel` et `QMessageBox` sont en
+    `AutoText` par defaut : Qt renifle le contenu et bascule en rich text des
+    qu'il ressemble a du HTML. Un `<img src="http://...">` dans un nom de jeu
+    declenchait donc une requete reseau a l'affichage de la fiche — « qui
+    regarde quel jeu » partait chez l'hebergeur de l'image.
+
+    Ce test BALAYE tous les labels d'une vraie fenetre : il attrapera aussi le
+    prochain qu'on ajoutera sans y penser.
+    """
+
+    _MARQUEUR = "<b>INJECTE</b>"
+
+    @pytest.fixture
+    def fenetre_injectee(self, make_window, monkeypatch):
+        import dataclasses
+
+        from src.core import game_manager
+        vrai_load = game_manager.load_catalog
+        marque = self._MARQUEUR
+
+        def _charge(*a, **k):
+            cat = vrai_load(*a, **k)
+            jeux = list(cat.games)
+            jeux[0] = dataclasses.replace(
+                jeux[0],
+                name="Jeu " + marque,
+                description="Description " + marque + " et la suite du texte.",
+                developer="Studio " + marque,
+                tags=("Tag " + marque,),
+                warning="Avertissement " + marque,
+            )
+            return dataclasses.replace(cat, games=tuple(jeux))
+
+        monkeypatch.setattr(game_manager, "load_catalog", _charge)
+        win = make_window()
+        win.show()
+        return win, win.manager.get_games()[0].game
+
+    @staticmethod
+    def _labels_dangereux(win):
+        """Labels dont le texte serait rendu comme du HTML."""
+        from PyQt6.QtWidgets import QLabel
+
+        marque = TestBalisageDuCatalogueJamaisInterprete._MARQUEUR
+        dangereux = []
+        for lab in win.findChildren(QLabel):
+            texte = lab.text()
+            if marque not in texte:
+                continue
+            fmt = lab.textFormat()
+            if fmt == Qt.TextFormat.RichText or (
+                    fmt == Qt.TextFormat.AutoText and Qt.mightBeRichText(texte)):
+                dangereux.append((lab.objectName() or type(lab).__name__, fmt.name))
+        return dangereux
+
+    def test_aucun_label_n_interprete_le_catalogue(self, fenetre_injectee, qtbot):
+        win, jeu = fenetre_injectee
+        win.resize(1200, 800)
+        win._detail.set_game(jeu)
+        qtbot.wait(60)
+        assert self._labels_dangereux(win) == []
+
+    def test_le_marqueur_atteint_bien_l_ecran(self, fenetre_injectee, qtbot):
+        """Garde-fou : sans lui, le test ci-dessus passerait a vide si le texte
+        du catalogue cessait d'etre affiche."""
+        from PyQt6.QtWidgets import QLabel
+
+        win, jeu = fenetre_injectee
+        win.resize(1200, 800)
+        win._detail.set_game(jeu)
+        qtbot.wait(60)
+        porteurs = [lab for lab in win.findChildren(QLabel)
+                    if self._MARQUEUR in lab.text()]
+        assert porteurs, "aucun label ne porte le texte du catalogue"
+
+    def test_le_titre_et_la_description_sont_en_texte_brut(self, fenetre_injectee, qtbot):
+        """Les deux qui restent affiches en permanence : c'est la que la
+        requete reseau d'une balise partirait a chaque ouverture de fiche."""
+        win, jeu = fenetre_injectee
+        win._detail.set_game(jeu)
+        qtbot.wait(40)
+        info = win._detail._info
+        assert info._title.textFormat() == Qt.TextFormat.PlainText
+        assert info._desc.textFormat() == Qt.TextFormat.PlainText
+        assert self._MARQUEUR in info._title.text()
+
+    def test_les_dialogues_passent_par_le_helper_en_texte_brut(self):
+        """Un `QMessageBox.question(...)` direct reviendrait a l'AutoText."""
+        import ast
+
+        from src.ui import game_detail_handlers as handlers
+
+        source = pathlib.Path(handlers.__file__).read_text(encoding="utf-8")
+        arbre = ast.parse(source)
+        fautifs = []
+        for noeud in ast.walk(arbre):
+            if not isinstance(noeud, ast.Call):
+                continue
+            fonc = noeud.func
+            if (isinstance(fonc, ast.Attribute)
+                    and isinstance(fonc.value, ast.Name)
+                    and fonc.value.id == "QMessageBox"
+                    and fonc.attr in {"question", "warning", "information", "critical"}):
+                fautifs.append(fonc.attr)
+        assert not fautifs, "appels statiques a QMessageBox (AutoText) : %s" % fautifs

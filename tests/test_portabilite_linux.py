@@ -137,3 +137,51 @@ def test_les_bibliotheques_qt_restent_installees_par_la_ci(nom):
     """Retirer l'une d'elles casse la collecte entière, pas un test isolé."""
     workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
     assert nom in workflow
+
+
+class TestRegistreHorsWindows:
+    """`game_registry` touche a winreg et ctypes.windll : ni l'un ni l'autre
+    n'existe sous Linux. Meme piege que les constantes `CREATE_*`."""
+
+    def test_aucun_import_windows_au_niveau_module(self):
+        """`import winreg` en tete de fichier casserait l'import sous Linux —
+        et `game_data` importe `game_registry`, donc TOUT le catalogue."""
+        from src.core import game_registry
+
+        arbre = ast.parse(Path(game_registry.__file__).read_text(encoding="utf-8"))
+        au_module = set()
+        for noeud in arbre.body:            # NIVEAU MODULE uniquement
+            if isinstance(noeud, ast.Import):
+                au_module.update(a.name.split(".")[0] for a in noeud.names)
+            elif isinstance(noeud, ast.ImportFrom) and noeud.module:
+                au_module.add(noeud.module.split(".")[0])
+        assert "winreg" not in au_module
+        assert "ctypes" not in au_module
+
+    def test_windll_reste_dans_la_branche_elevee(self):
+        """`ctypes.windll` n'existe pas sous Linux : le nommer ailleurs que
+        dans `_ecrire_eleve` rendrait la fonction appelante intestable."""
+        from src.core import game_registry
+
+        source = Path(game_registry.__file__).read_text(encoding="utf-8")
+        arbre = ast.parse(source)
+        fautifs = []
+        for noeud in ast.walk(arbre):
+            if not isinstance(noeud, ast.FunctionDef) or noeud.name == "_ecrire_eleve":
+                continue
+            for sous in ast.walk(noeud):
+                if isinstance(sous, ast.Attribute) and sous.attr == "windll":
+                    fautifs.append(noeud.name)
+        assert not fautifs, "windll nomme hors de _ecrire_eleve : %s" % fautifs
+
+    def test_le_module_s_importe_et_degrade(self, monkeypatch):
+        from src.core import game_registry
+
+        monkeypatch.setattr("sys.platform", "linux")
+        cle = chr(92).join(["Software", "Editeur", "Jeu"])
+        assert game_registry.lire_valeurs("HKLM", cle, ["A"]) == {}
+        assert game_registry.ecrire_valeurs("HKLM", cle, {"A": "b"}) is False
+        # Les fonctions PURES, elles, doivent marcher partout : ce sont elles
+        # qui gardent le registre, et le catalogue est parse sur les deux OS.
+        assert game_registry.refus_de_cle("HKLM", cle) is None
+        assert "WOW6432Node" in game_registry.construire_reg("HKLM", cle, {"A": "b"})

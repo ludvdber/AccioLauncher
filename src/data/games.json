@@ -1,5 +1,5 @@
 {
-    "catalog_version": "0.18",
+    "catalog_version": "0.20",
     "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
     "games": [
         {
@@ -717,9 +717,11 @@
                     "version": "1.0",
                     "date": "2026-08-26",
                     "download_url": null,
-                    "download_parts": ["https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.001",
-                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.002",
-                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.003"],
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.002",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.0/hp7.7z.003"
+                    ],
                     "size_mb": 4445,
                     "changes": [
                         "Wrapper graphique D3D9 refondu",
@@ -744,6 +746,65 @@
                     }
                 }
             ],
+            "language_registry": {
+                "root": "HKLM",
+                "view": 32,
+                "key": "SOFTWARE\\Electronic Arts\\Harry Potter and the Deathly Hallows Part 1",
+                "values": {
+                    "Install Dir": "%INSTALL_DIR%\\"
+                },
+                "languages": {
+                    "en": {
+                        "label": "English",
+                        "values": {
+                            "Locale": "en_UK"
+                        },
+                        "requires_file": "HP7/DH1_English.pck"
+                    },
+                    "fr": {
+                        "label": "Français",
+                        "values": {
+                            "Locale": "fr_FR"
+                        },
+                        "requires_file": "HP7/DH1_French.pck"
+                    },
+                    "de": {
+                        "label": "Deutsch",
+                        "values": {
+                            "Locale": "de"
+                        },
+                        "requires_file": "HP7/DH1_German.pck"
+                    },
+                    "es": {
+                        "label": "Español",
+                        "values": {
+                            "Locale": "es"
+                        },
+                        "requires_file": "HP7/DH1_Spanish.pck"
+                    },
+                    "it": {
+                        "label": "Italiano",
+                        "values": {
+                            "Locale": "it"
+                        },
+                        "requires_file": "HP7/DH1_Italian.pck"
+                    },
+                    "pl": {
+                        "label": "Polski",
+                        "values": {
+                            "Locale": "pl"
+                        },
+                        "requires_file": "HP7/DH1_Polish.pck"
+                    },
+                    "ru": {
+                        "label": "Русский",
+                        "values": {
+                            "Locale": "ru"
+                        },
+                        "requires_file": "HP7/DH1_Russian.pck"
+                    }
+                }
+            },
             "post_install": {
                 "registry": []
             },
@@ -794,10 +855,12 @@
                     "version": "1.0",
                     "date": "2026-08-26",
                     "download_url": null,
-                    "download_parts": ["https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.001",
-                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.002",
-                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.003",
-                                       "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.004"],
+                    "download_parts": [
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.001",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.002",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.003",
+                        "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.004"
+                    ],
                     "size_mb": 7520,
                     "changes": [
                         "Wrapper graphique D3D9 refondu",
@@ -822,6 +885,65 @@
                     }
                 }
             ],
+            "language_registry": {
+                "root": "HKLM",
+                "view": 32,
+                "key": "SOFTWARE\\Electronic Arts\\Harry Potter and the Deathly Hallows Part 2",
+                "values": {
+                    "Install Dir": "%INSTALL_DIR%\\"
+                },
+                "languages": {
+                    "en": {
+                        "label": "English",
+                        "values": {
+                            "Locale": "en"
+                        },
+                        "requires_file": "HP8/DH2_English.pck"
+                    },
+                    "fr": {
+                        "label": "Français",
+                        "values": {
+                            "Locale": "fr"
+                        },
+                        "requires_file": "HP8/DH2_French.pck"
+                    },
+                    "de": {
+                        "label": "Deutsch",
+                        "values": {
+                            "Locale": "de"
+                        },
+                        "requires_file": "HP8/DH2_German.pck"
+                    },
+                    "es": {
+                        "label": "Español",
+                        "values": {
+                            "Locale": "es"
+                        },
+                        "requires_file": "HP8/DH2_Spanish.pck"
+                    },
+                    "it": {
+                        "label": "Italiano",
+                        "values": {
+                            "Locale": "it"
+                        },
+                        "requires_file": "HP8/DH2_Italian.pck"
+                    },
+                    "pl": {
+                        "label": "Polski",
+                        "values": {
+                            "Locale": "pl"
+                        },
+                        "requires_file": "HP8/DH2_Polish.pck"
+                    },
+                    "ru": {
+                        "label": "Русский",
+                        "values": {
+                            "Locale": "ru"
+                        },
+                        "requires_file": "HP8/DH2_Russian.pck"
+                    }
+                }
+            },
             "post_install": {
                 "registry": []
             },
@@ -834,7 +956,8 @@
                         "Third-person",
                         "Combat",
                         "Battle"
-                    ]
+                    ],
+                    "warning": "Your antivirus may delete Paul.dll during installation. If the game does not start, restore that file from quarantine."
                 },
                 "es": {
                     "name": "Harry Potter y las reliquias de la Muerte — Parte 2",
@@ -844,12 +967,14 @@
                         "Tercera persona",
                         "Combate",
                         "Batalla"
-                    ]
+                    ],
+                    "warning": "Su antivirus puede eliminar Paul.dll durante la instalación. Si el juego no arranca, restaure ese archivo desde la cuarentena."
                 }
             },
             "requires": [
                 "vcredist2008_x86"
-            ]
+            ],
+            "warning": "Votre antivirus peut supprimer Paul.dll pendant l'installation. Si le jeu ne démarre pas, restaurez ce fichier depuis la quarantaine."
         }
     ]
 }

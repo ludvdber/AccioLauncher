@@ -131,6 +131,11 @@ class Config:
     # Stats de jeu : cumul par jeu (secondes) et date de dernière session (ISO)
     playtime_seconds: dict[str, int] = field(default_factory=dict)
     last_played: dict[str, str] = field(default_factory=dict)
+    # Langue choisie POUR CHAQUE JEU (id → code i18n). Distincte de `langue`,
+    # qui est celle de l'interface : un francophone peut vouloir jouer en
+    # anglais, et c'est justement l'absence de bascule qui bloquait tout le
+    # monde — pas le défaut retenu. Voir `GameManager.game_language`.
+    game_language: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -167,6 +172,7 @@ class Config:
                     installed_versions=_as_map(data.get("installed_versions"), str),
                     playtime_seconds=_as_map(data.get("playtime_seconds"), int),
                     last_played=_as_map(data.get("last_played"), str),
+                    game_language=_as_map(data.get("game_language"), str),
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 import logging
@@ -194,6 +200,7 @@ class Config:
                 "installed_versions": self.installed_versions,
                 "playtime_seconds": self.playtime_seconds,
                 "last_played": self.last_played,
+                "game_language": self.game_language,
             },
             indent=4,
             ensure_ascii=False,

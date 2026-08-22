@@ -319,3 +319,161 @@ class TestCatalogueTraduit:
         finally:
             set_language("fr")
         assert game.name == "HP Test"
+
+
+class TestAvertissementDuCatalogue:
+    """Champs `warning` / `warning_url` : une mise en garde par jeu.
+
+    Le texte voyage DANS le catalogue (donc traduisible par son bloc `i18n` et
+    modifiable à distance, sans republier l'exécutable). L'URL, elle, est la
+    seule chaîne du catalogue qui finisse dans le navigateur de l'utilisateur :
+    elle est filtrée au parsing, et un refus dégrade le lien sans emporter
+    l'avertissement lui-même.
+    """
+
+    def test_absent_par_defaut(self):
+        game = GameData.from_dict(MINIMAL_GAME)
+        assert game.warning == ""
+        assert game.warning_url == ""
+
+    def test_texte_conserve(self):
+        game = GameData.from_dict({**MINIMAL_GAME, "warning": "Une DLL est mise en quarantaine."})
+        assert game.warning == "Une DLL est mise en quarantaine."
+
+    def test_texte_traduit_par_le_bloc_i18n(self):
+        data = {**MINIMAL_GAME,
+                "warning": "Une DLL est mise en quarantaine.",
+                "i18n": {"en": {"warning": "A DLL gets quarantined."}}}
+        set_language("en")
+        try:
+            game = GameData.from_dict(data)
+        finally:
+            set_language("fr")
+        assert game.warning == "A DLL gets quarantined."
+
+    def test_url_https_acceptee(self):
+        game = GameData.from_dict({**MINIMAL_GAME, "warning_url": "https://acciolauncher.be/aide"})
+        assert game.warning_url == "https://acciolauncher.be/aide"
+
+    @pytest.mark.parametrize("url", [
+        "http://acciolauncher.be/aide",      # clair
+        "javascript:alert(1)",               # exécution
+        "file:///C:/Windows/System32",       # disque local
+        "HTTPS:/acciolauncher.be",           # https mal formé
+        "https://",                          # vide derrière le schéma
+        "   ",                               # blancs
+        123,                                 # pas une chaîne
+        None,
+    ])
+    def test_url_refusee(self, url):
+        game = GameData.from_dict({**MINIMAL_GAME, "warning_url": url})
+        assert game.warning_url == ""
+
+    def test_une_url_refusee_n_emporte_pas_l_avertissement(self):
+        """Le message est l'information ; le lien n'est qu'un confort."""
+        game = GameData.from_dict({**MINIMAL_GAME,
+                                   "warning": "Une DLL est mise en quarantaine.",
+                                   "warning_url": "javascript:alert(1)"})
+        assert game.warning == "Une DLL est mise en quarantaine."
+        assert game.warning_url == ""
+
+    def test_un_bloc_i18n_ne_peut_pas_changer_le_type(self):
+        data = {**MINIMAL_GAME, "warning": "texte", "i18n": {"en": {"warning": ["liste"]}}}
+        set_language("en")
+        try:
+            game = GameData.from_dict(data)
+        finally:
+            set_language("fr")
+        assert game.warning == "texte"
+
+
+class TestBlocDeLangue:
+    """`language_registry` : TOUT ou RIEN.
+
+    Une déclaration à moitié valide est rejetée en entier plutôt que d'écrire
+    la moitié des valeurs dans le registre d'un utilisateur. Le catalogue se met
+    à jour à distance : il n'a pas droit à l'à-peu-près ici.
+    """
+
+    _BS = chr(92)
+    _CLE = chr(92).join(["SOFTWARE", "Electronic Arts", "Jeu"])
+
+    def _bloc(self, **surcharges):
+        base = {
+            "root": "HKLM", "view": 32, "key": self._CLE,
+            "languages": {
+                "fr": {"label": "Français",
+                       "values": {"Language": "French", "Locale": "fr_FR"}},
+                "en": {"label": "English",
+                       "values": {"Language": "English", "Num": 3}},
+            },
+        }
+        base.update(surcharges)
+        return GameData.from_dict({**MINIMAL_GAME, "language_registry": base})
+
+    def test_absent_par_defaut(self):
+        assert GameData.from_dict(MINIMAL_GAME).language_registry is None
+
+    def test_lecture_complete(self):
+        lr = self._bloc().language_registry
+        assert lr is not None
+        assert (lr.root, lr.view, lr.key) == ("HKLM", 32, self._CLE)
+        assert lr.codes == ("fr", "en")
+        assert lr.get("fr").label == "Français"
+        assert lr.get("fr").as_dict == {"Language": "French", "Locale": "fr_FR"}
+        assert lr.get("en").as_dict == {"Language": "English", "Num": 3}
+        assert lr.get("ja") is None
+
+    def test_ordre_du_catalogue_preserve(self):
+        """C'est l'ordre du sélecteur : il appartient au catalogue, pas au tri
+        alphabétique de Python."""
+        assert self._bloc().language_registry.codes == ("fr", "en")
+
+    def test_cle_dangereuse_rejette_tout_le_bloc(self):
+        cle = self._BS.join(["Software", "Microsoft", "Windows",
+                             "CurrentVersion", "Run"])
+        assert self._bloc(key=cle).language_registry is None
+
+    def test_ruche_inconnue_rejetee(self):
+        assert self._bloc(root="HKCR").language_registry is None
+
+    @pytest.mark.parametrize("vue", [16, 0, "trente-deux", None])
+    def test_vue_invalide_rejetee(self, vue):
+        assert self._bloc(view=vue).language_registry is None
+
+    def test_une_seule_valeur_interdite_rejette_tout_le_bloc(self):
+        """Le français resterait valide : on le jette quand même, sinon le
+        sélecteur proposerait une langue sur deux sans rien dire."""
+        langues = {
+            "fr": {"values": {"Language": "French"}},
+            "en": {"values": {"AppInit_DLLs": "x.dll"}},
+        }
+        assert self._bloc(languages=langues).language_registry is None
+
+    @pytest.mark.parametrize("langues", [
+        {},                                       # vide
+        {"fr": {}},                               # pas de values
+        {"fr": {"values": {}}},                   # values vide
+        {"fr": {"values": "French"}},             # values pas un dict
+        {"fr": "French"},                         # entrée pas un dict
+        "français",                               # pas un dict du tout
+        None,
+    ])
+    def test_langues_invalides_rejetees(self, langues):
+        assert self._bloc(languages=langues).language_registry is None
+
+    def test_label_manquant_retombe_sur_le_code(self):
+        langues = {"fr": {"values": {"Language": "French"}}}
+        lr = self._bloc(languages=langues).language_registry
+        assert lr.get("fr").label == "fr"
+
+    def test_un_bloc_absent_ou_mal_type_ne_leve_pas(self):
+        for valeur in (None, "oui", 42, []):
+            g = GameData.from_dict({**MINIMAL_GAME, "language_registry": valeur})
+            assert g.language_registry is None
+
+    def test_le_jeu_reste_utilisable_si_le_bloc_est_rejete(self):
+        """Un bloc douteux ne doit pas faire disparaître le jeu du catalogue."""
+        g = self._bloc(root="HKCR")
+        assert g.id == MINIMAL_GAME["id"]
+        assert g.language_registry is None

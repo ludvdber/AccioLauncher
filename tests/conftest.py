@@ -37,3 +37,27 @@ def _config_hors_du_vrai_dossier(tmp_path, monkeypatch):
     monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH",
                         tmp_path / "config_test.json")
     yield
+
+
+@pytest.fixture(autouse=True)
+def _jamais_d_elevation_uac(monkeypatch):
+    """Aucun test ne doit pouvoir faire apparaître une invite UAC.
+
+    `game_registry._ecrire_eleve` appelle `ShellExecuteW(..., "runas", ...)`,
+    qui ouvre une fenêtre de consentement Windows et **bloque jusqu'à ce qu'un
+    humain clique**. Dans une suite de tests, cela veut dire : une exécution
+    qui ne se termine jamais, en CI comme sur le poste de développement, avec
+    une boîte de dialogue système au milieu de l'écran.
+
+    Un oubli de bouchon dans UN seul test suffirait. La garde est donc posée
+    ici, pour tous : un test qui veut exercer ce chemin doit le remplacer
+    explicitement, jamais l'atteindre par accident. Même esprit que la garde
+    sur le vrai `config.json` ci-dessus.
+    """
+    def _interdit(*_a, **_k):
+        raise AssertionError(
+            "Un test a tenté une écriture registre ÉLEVÉE (invite UAC). "
+            "Bouchonner `game_registry.ecrire_valeurs` dans le test.")
+
+    monkeypatch.setattr("src.core.game_registry._ecrire_eleve", _interdit)
+    yield

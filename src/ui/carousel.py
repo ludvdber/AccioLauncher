@@ -68,13 +68,31 @@ class Carousel(QWidget):
 
         self.set_games(games)
 
-    def set_games(self, games: list[GameData]) -> None:
-        """Reconstruit la liste des items (appelé au reload du catalog)."""
+    def current_game_id(self) -> str | None:
+        """Id du jeu actuellement surligné (None si la bande est vide)."""
+        if 0 <= self._current_index < len(self._items):
+            return self._items[self._current_index].game.id
+        return None
+
+    def set_games(self, games: list[GameData], selected_id: str | None = None) -> None:
+        """Reconstruit la liste des items (appelé au reload du catalog).
+
+        `selected_id` dit sur quel jeu poser la surbrillance ; à défaut on garde
+        celui d'avant la reconstruction. Sans ça la bande repartait sur l'item 0
+        pendant que la fiche, elle, gardait son jeu : au premier lancement suivi
+        d'une mise à jour du catalogue, HP1 était surligné sous HP6 affiché.
+        Et comme `select` sort tôt quand l'index ne change pas, cliquer sur HP1
+        ne faisait alors plus rien — l'utilisateur était coincé.
+
+        Aucun signal n'est émis, le contrat ne change pas : c'est à l'appelant
+        de poser la fiche (voir `MainWindow._on_catalog_updated`).
+        """
+        vise = selected_id or self.current_game_id()
+
         for item in self._items:
             item.setParent(None)
             item.deleteLater()
         self._items.clear()
-        self._current_index = 0
 
         for i, game in enumerate(games):
             item = CarouselItem(game, self._manager, self)
@@ -82,8 +100,12 @@ class Carousel(QWidget):
             self._items_layout.addWidget(item, alignment=Qt.AlignmentFlag.AlignBottom)
             self._items.append(item)
 
+        # Le jeu visé peut avoir disparu du catalogue : repli sur le premier.
+        self._current_index = next(
+            (i for i, game in enumerate(games) if game.id == vise), 0)
+
         if self._items:
-            self._items[0].selected = True
+            self._items[self._current_index].selected = True
             self._update_depths()
             self.refresh_indicators()
 

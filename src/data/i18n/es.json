@@ -240,6 +240,16 @@
     "Visual C++ 2005 x86": "Visual C++ 2005 x86",
     "Composant Windows": "Componente de Windows",
     "Visual C++ 2008 x86": "Visual C++ 2008 x86",
-    "Le composant Visual C++ 2008 Redistributable x86": "El Visual C++ 2008 Redistributable x86"
+    "Le composant Visual C++ 2008 Redistributable x86": "El Visual C++ 2008 Redistributable x86",
+    "En savoir plus": "Más información",
+    "Langue du jeu : {}": "Idioma del juego: {}",
+    "Langue du jeu": "Idioma del juego",
+    "La langue n'a pas pu être écrite dans le registre.\n\nCe réglage demande une autorisation administrateur. Le jeu démarrera dans la langue actuellement en place.": "No se pudo escribir el idioma en el registro.\n\nEste ajuste requiere permisos de administrador. El juego se iniciará en el idioma actual.",
+    "Ce jeu n'est installé que dans une seule langue.": "Este juego solo está instalado en un idioma.",
+    "Réglage du jeu": "Ajuste del juego",
+    "{jeu} enregistre ses réglages dans le registre de Windows.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} guarda su configuración en el registro de Windows.\n\nEl launcher va a escribir esto en {cle}:\n\n{valeurs}",
+    "Sans cette écriture, le jeu risque de ne pas démarrer.": "Sin esta entrada, es posible que el juego no arranque.",
+    "Windows va ensuite demander une autorisation administrateur.": "Windows pedirá después permiso de administrador.",
+    "Continuer ?": "¿Continuar?"
   }
 }

@@ -5,7 +5,7 @@ utilisateur à `game_detail_handlers`.
 import logging
 
 from PyQt6.QtCore import (
-    QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal, QPointF, Qt,
+    QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal, QPoint, QPointF, Qt,
 )
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QMessageBox, QWidget
 
@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 # Délai avant de lancer la bande-annonce : les premières secondes servent
 # à lire le titre, sur une image fixe.
 _VIDEO_START_DELAY_MS = 2000
+
+
+# Retrait minimal au-dessus du panneau d'infos. En dessous, le titre du jeu
+# viendrait toucher la barre de titre de la fenêtre.
+_INFO_TOP_MIN = 24
 
 
 class GameDetailView(QWidget):
@@ -110,6 +115,7 @@ class GameDetailView(QWidget):
 
         # Info panel
         self._info.versions_clicked.connect(lambda: handlers.on_versions_clicked(self))
+        self._info.language_clicked.connect(lambda: handlers.on_language_clicked(self))
         self._info.content_changed.connect(self._position_info)
 
         # Menu contextuel
@@ -174,12 +180,47 @@ class GameDetailView(QWidget):
         nouvelle = min(dispo, self._info.height() + trop)
         if nouvelle != self._info.height():
             self._info.setGeometry(0, info_top, info_w, nouvelle)
+            # Réarmer : grandir peut ne pas suffire (on est borné par `dispo`),
+            # et sans cette passe de plus la chaîne s'arrêtait là. Elle ne
+            # convergeait que parce que `_position_info` est appelé plusieurs
+            # fois d'affilée lors d'un changement de jeu — c'est-à-dire par
+            # accident. Aucune boucle possible : chaque passe ne fait que
+            # GRANDIR ou REMONTER, les deux sont bornées, et `overflow() <= 0`
+            # sort immédiatement.
+            QTimer.singleShot(0, self._fit_info_height)
             return
+        # Le panneau occupe toute la hauteur qu'on lui a accordée. Avant de
+        # rogner du TEXTE, récupérer du VIDE : le retrait du haut vaut 10 % de
+        # la fiche (49 px à 980×660) et ne porte aucune information. Remonter le
+        # panneau d'autant qu'il déborde ne coûte donc rien à l'utilisateur,
+        # là où un cran d'accroche en moins lui coûte deux lignes de texte.
+        #
+        # Le cas qui l'a imposé existait AVANT le bandeau du catalogue : en
+        # espagnol, à 980×660, l'avertissement d'espace disque faisait déjà
+        # défiler la fiche de HP7 de 20 px. Invisible à la suite de tests (qui
+        # mesure une police substituée) comme à `tools/audit_geometrie.py` (qui
+        # écarte le bandeau par conception) — mesuré sur la plateforme native.
+        #
+        # Monotone et borné : on ne fait que remonter, jamais redescendre, et
+        # `_position_info` repart du retrait nominal à chaque redimensionnement.
+        if info_top > _INFO_TOP_MIN:
+            gagne = min(trop, info_top - _INFO_TOP_MIN)
+            if gagne > 0:
+                info_top -= gagne
+                dispo += gagne
+                self._pending_fit = (info_top, info_w, dispo)
+                self._info.setGeometry(0, info_top, info_w,
+                                       min(dispo, self._info.height() + trop))
+                QTimer.singleShot(0, self._fit_info_height)
+                return
         # Le panneau occupe déjà toute la place que la fenêtre lui laisse : la
         # seule variable qui reste est la longueur de l'accroche. Mieux vaut
         # deux lignes de moins suivies de « Lire la suite » qu'une barre de
         # défilement qui cache le bouton principal.
-        if self._info.squeeze_description():
+        # La description d'abord — la moins coûteuse à raccourcir. Le titre
+        # ensuite, et seulement s'il reste du débordement : c'est le plus gros
+        # bloc du panneau, mais aussi le plus visible.
+        if self._info.squeeze_description() or self._info.squeeze_title():
             QTimer.singleShot(0, self._fit_info_height)
 
     def resizeEvent(self, event) -> None:
@@ -248,6 +289,20 @@ class GameDetailView(QWidget):
         self._info_fade.setEndValue(1.0)
         self._info_fade.setDuration(500)
         self._info_fade.start()
+
+    def ancre_langue(self):
+        """Position GLOBALE où poser le menu de langue, sous la ligne méta.
+
+        `QCursor.pos()` ne convient pas seul : la ligne méta est accessible au
+        CLAVIER (`LinksAccessibleByKeyboard`), et un utilisateur qui active le
+        lien à la touche Entrée verrait le menu s'ouvrir là où traîne la souris
+        — potentiellement sur un autre écran. On ancre donc au widget, et on
+        garde le curseur en repli si la géométrie n'est pas encore posée.
+        """
+        meta = self._info._meta
+        if not meta.isVisible() or meta.width() <= 0:
+            return None
+        return meta.mapToGlobal(QPoint(0, meta.height()))
 
     def _refresh(self) -> None:
         """Rafraîchit le panneau d'actions, puis REPOSITIONNE le panneau d'infos.

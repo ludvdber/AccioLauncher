@@ -1,5 +1,7 @@
 """Panneau d'actions dynamique — boutons et barres de progression selon l'état du jeu."""
 
+from html import escape
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
@@ -39,6 +41,15 @@ _COMING_SOON_W = 300
 _BOUTON_MIN_W = 300
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
+
+# Plafond du bandeau, en lignes. Mesuré sur la plateforme native, vraies
+# polices : les bandeaux qui tiennent à 980×660 font 33 px (une ligne) ou 54 px
+# (deux) ; un troisième rang en coûte 75 et ramène la barre de défilement — le
+# même prix que les deux avertissements empilés que le projet s'interdit déjà.
+# Le texte de la mise en garde venant du CATALOGUE, donc de l'extérieur et sans
+# repasser par une build, la mise en page ne peut pas dépendre de sa longueur :
+# on élide, et « En savoir plus » porte la suite.
+_ALERTE_MAX_LIGNES = 2
 
 # Noms COURTS des prérequis, pour le bandeau : il tient sur une ligne, le
 # dialogue de lancement peut se permettre la formulation longue.
@@ -191,6 +202,16 @@ class ActionPanel(QWidget):
                     + " " + _LINK.format(manquants[0], _WARN, tr("Installer"))
                 )
 
+        # Dernier rang : la mise en garde que le CATALOGUE attache à ce jeu.
+        # Elle cède le pas à tout ce qui précède, qui est bloquant ici et
+        # maintenant, mais elle survit aux deux états qui comptent — avant le
+        # téléchargement (prévenir) et une fois installé (expliquer un jeu qui
+        # refuse de démarrer). Le texte vient du catalogue et non d'un `tr()` :
+        # il se met à jour à distance, sans republier l'exécutable, et voyage
+        # déjà traduit dans le bloc `i18n` du jeu.
+        if not message and state in (GameState.NOT_INSTALLED, GameState.INSTALLED):
+            message = self._alerte_catalogue()
+
         if not message:
             self._alert.hide()
             self._alert.clear()
@@ -203,6 +224,83 @@ class ActionPanel(QWidget):
         self._alert.setText(message)
         self._alert.show()
         self._fit_alert_height()
+
+    def _alerte_catalogue(self) -> str:
+        """Mise en garde déclarée par le catalogue pour ce jeu (vide sinon).
+
+        Cas réel : une DLL de HP7 partie 2 est mise en quarantaine par les
+        antivirus. L'installation réussit, puis le jeu ne démarre pas — et rien
+        à l'écran ne relie les deux. Le dire AVANT le téléchargement était la
+        demande de Ludo ; le redire une fois installé est ce qui rend le message
+        utile au moment où l'utilisateur en a besoin.
+        """
+        texte = self._game.warning.strip()
+        if not texte:
+            return ""
+        lien = ""
+        if self._game.warning_url:
+            lien = " " + _LINK.format("avertissement", _WARN, tr("En savoir plus"))
+        return self._elide_alerte(texte, lien)
+
+    def _elide_alerte(self, brut: str, lien: str) -> str:
+        """Ramène le bandeau à `_ALERTE_MAX_LIGNES` lignes (élision par la fin).
+
+        Le texte est ÉCHAPPÉ en HTML avant d'entrer dans le bandeau. Celui-ci
+        est un QLabel en `RichText` et le texte vient du CATALOGUE, c'est-à-dire
+        de l'extérieur : sans échappement, un `<img src="http://…">` déclenchait
+        une requête réseau à l'affichage de la fiche (donc « qui regarde quel
+        jeu » part chez l'hébergeur de l'image), et n'importe quel balisage
+        pouvait défaire la mise en page qu'on vient de border. On l'affiche
+        comme du TEXTE, ce qu'il est.
+
+        L'élision porte sur le texte BRUT et l'échappement vient après : couper
+        une chaîne déjà échappée trancherait une entité en deux (`&amp;` → `&am`).
+
+        `quote=False` : guillemets et apostrophes n'ont besoin d'être échappés
+        que DANS un attribut. Ici c'est du contenu d'élément — les échapper
+        remplissait le bandeau de `&#x27;` (rendus correctement par Qt, vérifié,
+        mais illisibles en journal comme en test).
+
+        La mesure passe par le VRAI QLabel et non par `QFontMetrics` : le
+        bandeau est en `RichText`, donc mis en page par un QTextDocument, dont
+        le retour à la ligne ne suit pas celui d'un `boundingRect` en texte
+        brut. Mesuré à côté : le texte élidé « tenait » en deux lignes selon
+        `QFontMetrics` et s'en affichait trois. On interroge donc exactement la
+        fonction qui décide de la hauteur finale, à la largeur qu'utilise
+        `_fit_alert_height` — les deux ne peuvent plus diverger.
+
+        Le lien entre dans la mesure : il s'ajoute à la dernière ligne et c'est
+        lui qui la fait déborder.
+        """
+        def rendu(n: int | None = None) -> str:
+            morceau = brut if n is None else brut[:n].rstrip() + "…"
+            return escape(morceau, quote=False) + lien
+
+        largeur = self.width() - 24
+        if largeur <= 40 or not brut:
+            return rendu()
+        avant = self._alert.text()
+        plafond = _ALERTE_MAX_LIGNES * QFontMetrics(self._alert.font()).lineSpacing() + 8
+
+        def hauteur(essai: str) -> int:
+            self._alert.setMinimumHeight(0)   # sinon heightForWidth fait cliquet
+            self._alert.setText(essai)
+            return self._alert.heightForWidth(largeur)
+
+        try:
+            if hauteur(rendu()) <= plafond:
+                return rendu()
+            bas, haut = 0, len(brut)
+            while bas < haut:
+                milieu = (bas + haut + 1) // 2
+                if hauteur(rendu(milieu)) <= plafond:
+                    bas = milieu
+                else:
+                    haut = milieu - 1
+            return rendu(bas if bas else 1)
+        finally:
+            self._alert.setMinimumHeight(0)
+            self._alert.setText(avant)
 
     def _disk_alert(self, version) -> str:
         """Avertissement d'espace disque, vide si la place suffit ou est inconnue.
@@ -238,6 +336,12 @@ class ActionPanel(QWidget):
     def _on_alert_link(self, href: str) -> None:
         if href == "settings":
             self.settings_requested.emit()
+        elif href == "avertissement":
+            # L'URL a été validée au PARSING (https uniquement) : le catalogue
+            # est distant, c'est la seule de ses chaînes qui atteigne le
+            # navigateur, et elle ne doit pas pouvoir être autre chose.
+            if self._game.warning_url:
+                open_url(self._game.warning_url)
         elif href in PREREQUIS:
             # L'utilisateur part installer le paquet : on note qu'il faudra
             # re-tester à son retour (cf. recheck_prerequisites). Le lien porte

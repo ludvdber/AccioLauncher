@@ -347,14 +347,17 @@ class MainWindow(QMainWindow):
         """Le catalogue distant est plus récent — recharger."""
         self.manager.reload_catalog(catalog)
         games = [entry.game for entry in self.manager.get_games()]
-        self._carousel.set_games(games)
-        # Vue détaillée : conserver le jeu si encore présent, sinon premier jeu
+        # Vue détaillée : conserver le jeu si encore présent, sinon premier jeu.
+        # La décision est prise AVANT de reconstruire la bande, et lui est
+        # passée : une seule source, donc plus de désaccord possible entre le
+        # jeu surligné et le jeu affiché (HP1 surligné sous HP6, 2026-08-21).
         current_id = self._detail.game.id if self._detail.game else None
         updated = self.manager.get_game_by_id(current_id) if current_id else None
+        if updated is None and games:
+            updated = games[0]
+        self._carousel.set_games(games, selected_id=updated.id if updated else None)
         if updated is not None:
             self._detail.set_game(updated)
-        elif games:
-            self._detail.set_game(games[0])
         # Le toast « mise à jour de jeu dispo » (actionnable) prime sur le toast
         # « catalogue mis à jour » (informatif) — un seul Toast à la fois.
         if not self._notify_game_updates():

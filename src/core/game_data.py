@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from src.core.config import GAMES_JSON_PATH
+from src.core import game_registry as registre
 from src.core.i18n import SOURCE_LANGUAGE, get_language
 
 log = logging.getLogger(__name__)
@@ -159,6 +160,143 @@ class IniPatch:
 
 
 @dataclass(frozen=True, slots=True)
+class GameLanguage:
+    """Une langue proposée par un jeu, et ce qu'elle écrit dans le registre."""
+    code: str                                  # « fr », « en »… (code i18n)
+    label: str                                 # écrit DANS sa propre langue
+    values: tuple[tuple[str, str | int], ...]  # (nom, valeur) — frozen ⇒ tuple
+    # Fichier dont la PRÉSENCE prouve que cette langue est réellement installée,
+    # relatif au dossier d'installation. Le registre ne fait que SÉLECTIONNER
+    # une langue : les fichiers, eux, viennent du disque d'origine, et un jeu
+    # installé en français n'a que les fichiers français. Sans ce contrôle, le
+    # sélecteur proposerait une langue que l'installation ne sait pas faire.
+    # Vide = pas de contrôle (la langue est toujours proposée).
+    requires_file: str = ""
+
+    @property
+    def as_dict(self) -> dict:
+        return dict(self.values)
+
+
+@dataclass(frozen=True, slots=True)
+class LanguageRegistry:
+    """Où un jeu lit sa langue, et ce qu'il faut y écrire pour chacune.
+
+    Déclaré par le CATALOGUE et non codé en dur : les valeurs attendues sont
+    propres à chaque jeu (« French », « fr_FR », un REG_DWORD…), personne ne
+    peut les deviner, et elles doivent pouvoir être corrigées sans republier
+    l'exécutable — c'est exactement ce que le catalogue distant permet.
+    """
+    root: str
+    key: str
+    view: int
+    languages: tuple[GameLanguage, ...]
+    # Valeurs posées AVEC n'importe quelle langue, dans la MÊME clé. Elles ne
+    # dépendent pas du choix du joueur mais de son installation : HP7 lit
+    # « Install Dir » pour retrouver ses données (relevé dans hp7.exe et
+    # hp8.exe le 2026-08-22), et sans elle le jeu ne démarre pas — c'est
+    # normalement l'installeur EA qui l'écrit, et il n'a jamais tourné ici.
+    # Elles voyagent avec la langue plutôt que dans un bloc à part pour une
+    # raison concrète : même clé, donc UNE seule écriture et UNE seule invite
+    # UAC. `%INSTALL_DIR%` y est substitué au moment de l'écriture.
+    common: tuple[tuple[str, str | int], ...] = ()
+
+    def get(self, code: str) -> GameLanguage | None:
+        return next((lg for lg in self.languages if lg.code == code), None)
+
+    @property
+    def codes(self) -> tuple[str, ...]:
+        return tuple(lg.code for lg in self.languages)
+
+
+def _est_relatif_sur(chemin: str) -> bool:
+    r"""True si ce chemin de catalogue peut être joint au dossier d'un jeu.
+
+    Mêmes refus que pour `executable` : pas de remontée, pas de racine, pas de
+    lettre de lecteur, pas d'octet nul. Normaliser AVANT de vérifier — sous
+    POSIX « \ » n'est pas un séparateur, et le garde-fou serait inopérant.
+    """
+    if not chemin or "\x00" in chemin or len(chemin) > 260:
+        return False
+    norm = chemin.replace("\\", "/")
+    if norm.startswith("/") or (len(norm) >= 2 and norm[1] == ":"):
+        return False
+    return ".." not in norm.split("/")
+
+
+def _parse_language_registry(data) -> "LanguageRegistry | None":
+    """Lit le bloc `language_registry`, ou None s'il est absent ou douteux.
+
+    TOUT ou RIEN : une déclaration à moitié valide est rejetée en entier plutôt
+    que d'écrire la moitié des valeurs dans le registre d'un utilisateur. Un
+    catalogue distant n'a pas droit à l'à-peu-près ici.
+    """
+    if not isinstance(data, dict):
+        return None
+    root = data.get("root", "HKCU")
+    cle = data.get("key", "")
+    try:
+        view = int(data.get("view", 32))
+    except (TypeError, ValueError):
+        return None
+    if view not in (32, 64):
+        return None
+    raison = registre.refus_de_cle(root, cle)
+    if raison is not None:
+        log.warning("Bloc language_registry ignoré (%s) : %r", raison, cle)
+        return None
+
+    brut = data.get("languages")
+    if not isinstance(brut, dict) or not brut:
+        return None
+    langues: list[GameLanguage] = []
+    for code, entree in brut.items():
+        if not isinstance(code, str) or not isinstance(entree, dict):
+            return None
+        valeurs = entree.get("values")
+        if not isinstance(valeurs, dict) or not valeurs:
+            return None
+        paires: list[tuple[str, str | int]] = []
+        for nom, valeur in valeurs.items():
+            raison = registre.refus_de_valeur(nom, valeur)
+            if raison is not None:
+                log.warning("Valeur de langue refusée (%s) : %r", raison, nom)
+                return None
+            paires.append((nom, valeur))
+        label = entree.get("label")
+        if not isinstance(label, str) or not label.strip():
+            label = code
+        fichier = entree.get("requires_file", "")
+        if not isinstance(fichier, str):
+            return None
+        # Même validation que `executable` : ce chemin vient du catalogue
+        # distant et sert à composer un chemin sur le disque de l'utilisateur.
+        if fichier and not _est_relatif_sur(fichier):
+            log.warning("requires_file non sûr, bloc de langue ignoré : %r", fichier)
+            return None
+        langues.append(GameLanguage(code=code, label=label, values=tuple(paires),
+                                    requires_file=fichier))
+
+    # Valeurs communes (« Install Dir »…). Même exigence de tout-ou-rien : une
+    # seule refusée annule le bloc entier. Le refus porte sur le GABARIT, avant
+    # substitution ; `ecrire_valeurs` revalidera le résultat, ce qui est le
+    # vrai garde-fou — la substitution pourrait théoriquement tout changer.
+    communes: list[tuple[str, str | int]] = []
+    brut_communes = data.get("values", {})
+    if not isinstance(brut_communes, dict):
+        return None
+    for nom, valeur in brut_communes.items():
+        raison = registre.refus_de_valeur(nom, valeur)
+        if raison is not None:
+            log.warning("Valeur commune refusée (%s) : %r", raison, nom)
+            return None
+        communes.append((nom, valeur))
+
+    return LanguageRegistry(root=root, key=cle, view=view, languages=tuple(langues),
+                            common=tuple(communes))
+
+
+@dataclass(frozen=True, slots=True)
 class PreLaunch:
     """Données de pré-lancement d'un jeu."""
     ini_patches: tuple[IniPatch, ...] = ()
@@ -216,6 +354,25 @@ class GameVersion:
         )
 
 
+def _url_aide_valide(brut) -> str:
+    """URL d'aide du catalogue, ou chaîne vide si elle n'est pas acceptable.
+
+    HTTPS EXCLUSIVEMENT, et jamais une exception : le catalogue se met à jour à
+    distance, donc cette valeur est la seule chaîne du catalogue qui finisse
+    dans `QDesktopServices.openUrl`. Un `file://`, un `javascript:` ou un simple
+    `http://` n'y a rien à faire, et un catalogue mal formé doit dégrader (pas
+    de lien) plutôt que priver l'utilisateur de l'avertissement lui-même.
+    """
+    if not isinstance(brut, str):
+        return ""
+    url = brut.strip()
+    if not url.lower().startswith("https://") or len(url) <= len("https://"):
+        if url:
+            log.warning("URL d'aide refusée (https attendu) : %r", url)
+        return ""
+    return url
+
+
 @dataclass(frozen=True, slots=True)
 class GameData:
     """Données immuables d'un jeu du catalogue."""
@@ -239,6 +396,19 @@ class GameData:
     # 2015-2022 vérifié pour tous les jeux. Sans cette déclaration, HP7 se
     # serait lancé puis refermé aussitôt, sans le moindre message.
     requires: tuple[str, ...] = ()
+    # Mise en garde propre à CE jeu, affichée dans le bandeau d'alerte avant
+    # le téléchargement ET une fois installé. Déclarée par le CATALOGUE, donc
+    # traduisible (bloc `i18n`) et modifiable à distance : le cas qui l'a fait
+    # naître est HP7 partie 2, dont une DLL est mise en quarantaine par les
+    # antivirus — le jeu s'installe « avec succès » puis refuse de démarrer,
+    # sans le moindre message. Vide pour les sept autres jeux : un bandeau ne
+    # s'affiche que lorsqu'il y a une DÉVIATION à signaler.
+    warning: str = ""
+    warning_url: str = ""   # « En savoir plus » — https uniquement, validé au parsing
+    # Langues proposées par le jeu + ce qu'elles écrivent dans le registre.
+    # None quand le jeu n'en propose pas : c'est le cas de sept jeux sur huit,
+    # et le sélecteur ne doit alors apparaître nulle part.
+    language_registry: LanguageRegistry | None = None
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -327,6 +497,9 @@ class GameData:
             tags=_tags_valides(_loc(data, "tags", [])),
             requires=tuple(r for r in data.get("requires", []) or ()
                            if isinstance(r, str)),
+            warning=_loc(data, "warning", ""),
+            warning_url=_url_aide_valide(data.get("warning_url", "")),
+            language_registry=_parse_language_registry(data.get("language_registry")),
             post_install=PostInstall(
                 registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),

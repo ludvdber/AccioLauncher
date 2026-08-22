@@ -240,6 +240,16 @@
     "Visual C++ 2005 x86": "Visual C++ 2005 x86",
     "Composant Windows": "Windows component",
     "Visual C++ 2008 x86": "Visual C++ 2008 x86",
-    "Le composant Visual C++ 2008 Redistributable x86": "The Visual C++ 2008 Redistributable x86"
+    "Le composant Visual C++ 2008 Redistributable x86": "The Visual C++ 2008 Redistributable x86",
+    "En savoir plus": "Learn more",
+    "Langue du jeu : {}": "Game language: {}",
+    "Langue du jeu": "Game language",
+    "La langue n'a pas pu être écrite dans le registre.\n\nCe réglage demande une autorisation administrateur. Le jeu démarrera dans la langue actuellement en place.": "The language could not be written to the registry.\n\nThis setting needs administrator permission. The game will start in the language currently set.",
+    "Ce jeu n'est installé que dans une seule langue.": "This game is installed in one language only.",
+    "Réglage du jeu": "Game setting",
+    "{jeu} enregistre ses réglages dans le registre de Windows.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} stores its settings in the Windows registry.\n\nThe launcher will write this to {cle}:\n\n{valeurs}",
+    "Sans cette écriture, le jeu risque de ne pas démarrer.": "Without it, the game may not start.",
+    "Windows va ensuite demander une autorisation administrateur.": "Windows will then ask for administrator permission.",
+    "Continuer ?": "Continue?"
   }
 }
