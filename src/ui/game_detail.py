@@ -33,6 +33,10 @@ _VIDEO_START_DELAY_MS = 2000
 # viendrait toucher la barre de titre de la fenêtre.
 _INFO_TOP_MIN = 24
 
+# Retrait de la barre audio par rapport aux bords bas et droit de la fiche.
+_MARGE_AUDIO = 18
+_MARGE_AUDIO_BAS = 14
+
 
 class GameDetailView(QWidget):
     """Zone centrale : fond + info panel + action panel + vidéo."""
@@ -55,6 +59,18 @@ class GameDetailView(QWidget):
         # Sous-systèmes
         self._video = VideoPlayer(self)
         self._pending_video_id: str = ""  # jeu dont la vidéo est programmée
+        # Minuteur POSSÉDÉ, et non un `QTimer.singleShot` : celui-ci ne
+        # s'annule pas et surtout ne se RÉARME pas. Chaque changement de jeu en
+        # ajoutait donc un de plus, et le premier de la rafale tirait sur le jeu
+        # affiché en DERNIER — parcourir vite le carrousel lançait la vidéo bien
+        # avant la fin du délai, et les minuteurs suivants la relançaient depuis
+        # le début (Ludo, 2026-08-23). `start()` sur un minuteur déjà armé
+        # repart de zéro : le délai est enfin remis à zéro à chaque jeu, et
+        # `stop()` l'annule pour de bon.
+        self._video_timer = QTimer(self)
+        self._video_timer.setSingleShot(True)
+        self._video_timer.setInterval(_VIDEO_START_DELAY_MS)
+        self._video_timer.timeout.connect(self._on_video_timer)
         # Géométrie en attente de rattrapage de hauteur (cf. _fit_info_height).
         self._pending_fit: tuple[int, int, int] | None = None
         self._ops = GameOperations(manager, self)
@@ -80,6 +96,7 @@ class GameDetailView(QWidget):
         self._audio_bar.mute_toggled.connect(self._on_mute_clicked)
         self._audio_bar.volume_changed.connect(self._on_volume_changed)
         self._audio_bar.play_toggled.connect(self._on_play_clicked)
+        self._audio_bar.replay_clicked.connect(self._on_replay_clicked)
 
         # Animations fade
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity")
@@ -226,12 +243,25 @@ class GameDetailView(QWidget):
         if self._info.squeeze_description() or self._info.squeeze_title():
             QTimer.singleShot(0, self._fit_info_height)
 
+    def _position_audio_bar(self) -> None:
+        """Colle la barre audio au coin bas-droit, D'APRÈS sa largeur réelle.
+
+        Elle était placée à `width() - 174` pour 192 px de large : 18 px
+        passaient donc HORS de la fenêtre, et la poignée de volume disparaissait
+        dès qu'on montait le son à fond (Ludo, 2026-08-23). Deux nombres qu'aucun
+        calcul ne relie — exactement le défaut du carrousel, le même jour. La
+        barre change en plus de taille à la fin d'une bande-annonce : lire sa
+        largeur est la seule façon de rester juste.
+        """
+        self._audio_bar.move(self.width() - self._audio_bar.width() - _MARGE_AUDIO,
+                             self.height() - self._audio_bar.height() - _MARGE_AUDIO_BAS)
+        self._audio_bar.raise_()
+
     def resizeEvent(self, event) -> None:
         self._bg.setGeometry(self.rect())
         self._bg.invalidate_cache()
         self._position_info()
-        self._audio_bar.move(self.width() - 174, self.height() - 46)
-        self._audio_bar.raise_()
+        self._position_audio_bar()
 
     # ──────────────────── Changement de jeu ────────────────────
 
@@ -357,8 +387,12 @@ class GameDetailView(QWidget):
         """
         self._pending_video_id = game_id
         if not self.manager.config.autoplay_videos:
+            self._video_timer.stop()
             return
-        QTimer.singleShot(_VIDEO_START_DELAY_MS, self._on_video_timer)
+        # Réarmement : `start()` sur un minuteur qui tourne déjà REPART de zéro.
+        # C'est tout l'intérêt d'en posséder un — le délai appartient au jeu
+        # affiché, pas au premier de la série.
+        self._video_timer.start()
 
     def _on_video_timer(self) -> None:
         # Le jeu a pu changer pendant le délai : on ne lance que le bon.
@@ -384,14 +418,14 @@ class GameDetailView(QWidget):
         if self._video.play(str(video_path), muted=muted, volume=self._audio_bar.volume() / 100.0):
             self._audio_bar.set_muted_icon(muted)
             self._audio_bar.set_paused_icon(False)
+            self._audio_bar.set_mode_fin(False)
+            self._position_audio_bar()   # la largeur a pu changer
             self._audio_bar.show()
-            self._audio_bar.raise_()
         else:
             self._audio_bar.hide()
 
     def _stop_video(self) -> None:
-        # ANNULER d'abord le démarrage en attente. `_schedule_video` arme un
-        # `singleShot` de 2 s que rien ne désarmait : couper la vidéo ne
+        # ANNULER d'abord le démarrage en attente : couper la vidéo ne
         # l'empêchait pas de repartir juste après. Cas réel (Ludo, 2026-08-23) :
         # un téléchargement en cours, on va lancer un AUTRE jeu — donc on change
         # de fiche puis on clique JOUER dans la foulée, en moins de deux
@@ -399,15 +433,36 @@ class GameDetailView(QWidget):
         # et la bande-annonce se met à jouer sans image. Sans téléchargement on
         # s'attarde sur la fiche, le minuteur a déjà tiré, et le défaut ne se
         # reproduit pas — d'où « ça marche pourtant d'habitude ».
-        # `QTimer.singleShot` ne s'annule pas : on invalide sa CONDITION.
+        self._video_timer.stop()
+        # Deuxième garde-fou, indépendant du minuteur : un `timeout` déjà posté
+        # dans la file d'événements ne serait pas retiré par `stop()`.
         self._pending_video_id = ""
         self._video.stop()
         self._bg.clear_video()
         self._audio_bar.hide()
 
     def _on_video_ended(self) -> None:
-        # EndOfMedia → relâcher la source pour libérer le décodeur
+        # EndOfMedia → relâcher la source pour libérer le décodeur…
         self._stop_video()
+        # …mais laisser de quoi la revoir. Sans ce bouton, revoir une
+        # bande-annonce obligeait à changer de jeu et à revenir : c'est la
+        # seule commande qui ait encore un sens ici, donc la seule affichée.
+        if self.game is not None and trailers.chemin_a_jouer(
+                self.game.id, self.manager.trailers()) is not None:
+            self._audio_bar.set_mode_fin(True)
+            self._position_audio_bar()
+            self._audio_bar.show()
+
+    def _on_replay_clicked(self) -> None:
+        """Rejoue la bande-annonce du jeu affiché, tout de suite.
+
+        Pas de délai : il sert à laisser lire le titre à l'arrivée sur la
+        fiche, or ici c'est un clic délibéré sur « revoir ».
+        """
+        if self.game is None:
+            return
+        self._pending_video_id = self.game.id
+        self._try_play_video(self.game.id)
 
     def _on_mute_clicked(self) -> None:
         self._audio_bar.set_muted_icon(self._video.toggle_mute())

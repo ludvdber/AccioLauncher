@@ -18,6 +18,7 @@ from PyQt6.QtCore import QEvent, Qt  # noqa: E402
 from PyQt6.QtGui import QKeyEvent  # noqa: E402
 
 from src.core.game_data import load_catalog  # noqa: E402
+from src.ui import game_detail as _gd  # noqa: E402
 
 _CATALOG = load_catalog()
 _IDS = [g.id for g in _CATALOG.games]
@@ -1757,3 +1758,190 @@ class TestBandeAnnonceNeRepartPasTouteSeule:
         joues = self._espionner(vue, monkeypatch)
         vue._on_video_timer()
         assert joues == [jeu.id]
+
+
+class TestDelaiBandeAnnonceRemisAZero:
+    """Changer vite de jeu ne doit pas raccourcir le délai de la bande-annonce.
+
+    `QTimer.singleShot` ne se réarme pas : chaque changement de jeu en ajoutait
+    un de plus, et le garde-fou de `_on_video_timer` compare le jeu AFFICHÉ au
+    jeu ATTENDU — deux valeurs qui sont toujours d'accord une fois la rafale
+    finie. Le minuteur du PREMIER jeu tirait donc sur le DERNIER, bien avant la
+    fin de son délai, puis les suivants relançaient la lecture depuis le début
+    (Ludo, 2026-08-23). Le minuteur est désormais possédé : `start()` repart de
+    zéro, `stop()` annule.
+    """
+
+    @staticmethod
+    def _preparer(win, delai_ms: int, monkeypatch):
+        """Fenêtre visible, minuteur raccourci, `_try_play_video` espionné.
+
+        Le délai est raccourci AUX DEUX endroits — la constante du module et
+        l'intervalle du minuteur — pour que ces tests restent un discriminant :
+        sur le code d'avant, seule la constante était lue.
+        """
+        win.show()
+        vue = win._detail
+        monkeypatch.setattr(_gd, "_VIDEO_START_DELAY_MS", delai_ms)
+        vue._video_timer.setInterval(delai_ms)
+        joues: list[str] = []
+        vue._try_play_video = joues.append   # instance, jamais la CLASSE Qt
+        return vue, joues
+
+    def test_une_rafale_ne_laisse_quun_seul_minuteur(self, make_window, qtbot, monkeypatch):
+        """Quatre jeux d'affilée : UNE lecture, celle du dernier.
+
+        C'est la mesure directe du défaut — avec un `singleShot` par changement,
+        les quatre arrivaient et rejouaient la même bande-annonce depuis le
+        début, la première 3 délais trop tôt.
+        """
+        win = make_window(autoplay_videos=True)
+        vue, joues = self._preparer(win, 250, monkeypatch)
+        jeux = [e.game for e in win.manager.get_games()][:4]
+        assert len(jeux) == 4
+        for jeu in jeux:
+            vue.set_game(jeu)          # sans attendre : c'est la rafale
+        qtbot.waitUntil(lambda: bool(joues), timeout=3000)
+        qtbot.wait(500)                # laisser venir d'éventuels retardataires
+        assert joues == [jeux[-1].id]
+
+    def test_le_delai_repart_de_zero_au_changement(self, make_window, qtbot, monkeypatch):
+        """Le compte à rebours reprend au maximum quand on change de jeu.
+
+        Mesuré sur le minuteur lui-même plutôt qu'à la montre : `remainingTime()`
+        dit exactement ce qu'on veut prouver, sans fenêtre de tir à rater sous
+        la charge de la suite complète. Sur le code d'avant il rend -1 — le
+        délai n'appartenait à personne.
+        """
+        win = make_window(autoplay_videos=True)
+        vue, joues = self._preparer(win, 1500, monkeypatch)
+        jeux = [e.game for e in win.manager.get_games()]
+        vue.set_game(jeux[0])
+        qtbot.wait(600)
+        restant_avant = vue._video_timer.remainingTime()
+        assert 0 < restant_avant < 1200, "le délai du premier jeu doit courir"
+        vue.set_game(jeux[1])
+        assert vue._video_timer.remainingTime() > restant_avant + 300
+        assert joues == [], "rien ne doit avoir démarré en 600 ms"
+
+    def test_couper_annule_vraiment_le_minuteur(self, make_window, qtbot, monkeypatch):
+        """`stop()` sur un minuteur possédé annule pour de bon.
+
+        Complément du garde-fou par condition (`_pending_video_id`), qui reste
+        en place pour un `timeout` déjà posté dans la file d'événements.
+        """
+        win = make_window(autoplay_videos=True)
+        vue, joues = self._preparer(win, 250, monkeypatch)
+        vue.set_game([e.game for e in win.manager.get_games()][1])
+        assert vue._video_timer.isActive()
+        vue._stop_video()
+        assert not vue._video_timer.isActive()
+        qtbot.wait(500)
+        assert joues == []
+
+
+class TestBarreAudioResteDansLaFiche:
+    """Elle était posée à `width() - 174` alors qu'elle fait 192 px de large.
+
+    18 px passaient donc HORS de la fenêtre : la poignée de volume disparaissait
+    dès qu'on montait le son à fond (Ludo, capture du 2026-08-23). Deux nombres
+    qu'aucun calcul ne reliait — le défaut du carrousel, à quelques jours près.
+    """
+
+    @pytest.mark.parametrize("taille", [(980, 560), (1200, 700), (1600, 800)])
+    def test_elle_ne_depasse_jamais_du_bord(self, make_window, taille):
+        win = make_window()
+        vue = win._detail
+        vue.resize(*taille)
+        vue._position_audio_bar()   # une fenêtre cachée ne délivre pas resizeEvent
+        bar = vue._audio_bar
+        assert bar.x() + bar.width() <= vue.width()
+        assert bar.y() + bar.height() <= vue.height()
+
+    def test_la_poignee_de_volume_tient_dans_la_fiche(self, make_window):
+        """Le symptôme exact : le curseur à 100 sortait de la fenêtre."""
+        win = make_window()
+        vue = win._detail
+        vue.resize(1200, 700)
+        vue._position_audio_bar()
+        bar = vue._audio_bar
+        bar.layout().activate()
+        coin = bar.mapTo(vue, bar._volume_slider.geometry().topRight())
+        assert coin.x() <= vue.width()
+
+    def test_le_mode_fin_reste_colle_au_meme_bord(self, make_window):
+        """La barre rétrécit à la fin : la position doit suivre sa largeur."""
+        win = make_window()
+        vue = win._detail
+        vue.resize(1200, 700)
+        vue._position_audio_bar()
+        bar = vue._audio_bar
+        marge = vue.width() - (bar.x() + bar.width())
+        assert marge > 0, "la barre doit déjà être DANS la fiche"
+        bar.set_mode_fin(True)
+        vue._position_audio_bar()
+        assert vue.width() - (bar.x() + bar.width()) == marge
+
+
+class TestRevoirLaBandeAnnonce:
+    """Une bande-annonce terminée ne laissait aucun moyen de la revoir.
+
+    Il fallait changer de jeu et revenir, en espérant que le délai reparte.
+    À la fin, la barre ne garde que le bouton « revoir » — les autres commandes
+    n'ont plus rien à commander.
+    """
+
+    @staticmethod
+    def _avec_bande_annonce(monkeypatch):
+        monkeypatch.setattr(_gd.trailers, "chemin_a_jouer",
+                            lambda gid, decl: pathlib.Path("bande.mp4"))
+
+    def test_la_pastille_revoir_reste_apres_la_fin(self, make_window, monkeypatch):
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        vue.set_game([e.game for e in win.manager.get_games()][1])
+        self._avec_bande_annonce(monkeypatch)
+        vue._on_video_ended()
+        bar = vue._audio_bar
+        assert not bar.isHidden()
+        assert not bar._btn_replay.isHidden()
+        assert bar._volume_slider.isHidden(), "plus rien à régler"
+        assert bar._btn_play.isHidden(), "plus rien à mettre en pause"
+
+    def test_sans_bande_annonce_rien_ne_reste(self, make_window, monkeypatch):
+        """`_stop_video` cache la barre : la fin ne doit pas la ressusciter."""
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        vue.set_game([e.game for e in win.manager.get_games()][1])
+        monkeypatch.setattr(_gd.trailers, "chemin_a_jouer", lambda gid, decl: None)
+        vue._on_video_ended()
+        assert vue._audio_bar.isHidden()
+
+    def test_le_bouton_rejoue_le_jeu_affiche(self, make_window, monkeypatch):
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        jeu = [e.game for e in win.manager.get_games()][1]
+        vue.set_game(jeu)
+        joues: list[str] = []
+        vue._try_play_video = joues.append
+        vue._audio_bar.replay_clicked.emit()
+        assert joues == [jeu.id]
+
+    def test_rejouer_remet_la_barre_complete(self, make_window, monkeypatch):
+        """Après un « revoir », les commandes reviennent — et la barre aussi."""
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        vue.set_game([e.game for e in win.manager.get_games()][1])
+        self._avec_bande_annonce(monkeypatch)
+        vue._on_video_ended()
+        assert vue._audio_bar._volume_slider.isHidden()
+        monkeypatch.setattr(type(vue._video), "play",
+                            lambda self, chemin, **kw: True)
+        vue._on_replay_clicked()
+        bar = vue._audio_bar
+        assert not bar._volume_slider.isHidden()
+        assert bar.x() + bar.width() <= vue.width()
