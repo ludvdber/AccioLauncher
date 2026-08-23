@@ -629,6 +629,49 @@ class TestLangueDeJeu:
         assert m.launch_game("hp7a") is not None
         assert len(lances) == 1
 
+    def _jeu_pret_a_lancer(self, tmp_path, monkeypatch, ecriture_ok):
+        """Un jeu lançable, avec toute la plomberie de pré-lancement neutralisée."""
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        for nom in ("unblock_game_dlls", "delete_pre_launch_files",
+                    "create_pre_launch_files", "apply_ini_patches"):
+            monkeypatch.setattr("src.core.game_manager." + nom, lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+                            lambda *a, **k: ecriture_ok)
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen",
+                            lambda *a, **k: object())
+        return m
+
+    def test_un_echec_de_registre_est_signale_a_l_appelant(self, tmp_path, monkeypatch):
+        """Le jeu démarre quand même, mais on ne se tait pas.
+
+        Sur HP7 partie 2, un `Locale` resté à `fr_FR` donne un jeu qui refuse
+        de se lancer : sans ce signal, l'utilisateur voit une fenêtre se
+        fermer et rien ne relie ça à l'invite qu'il vient de voir passer.
+        """
+        m = self._jeu_pret_a_lancer(tmp_path, monkeypatch, ecriture_ok=False)
+        avertis = []
+        assert m.launch_game("hp7a", avertir=lambda: avertis.append(1)) is not None
+        assert avertis == [1]
+
+    def test_rien_a_signaler_quand_le_registre_a_pris(self, tmp_path, monkeypatch):
+        """Un lancement normal ne doit produire AUCUN message : c'est le cas
+        courant, dès le deuxième démarrage."""
+        m = self._jeu_pret_a_lancer(tmp_path, monkeypatch, ecriture_ok=True)
+        avertis = []
+        assert m.launch_game("hp7a", avertir=lambda: avertis.append(1)) is not None
+        assert avertis == []
+
+    def test_l_absence_de_rappel_ne_casse_rien(self, tmp_path, monkeypatch):
+        """`avertir` est optionnel : les appelants qui l'ignorent doivent
+        continuer à lancer sans lever."""
+        m = self._jeu_pret_a_lancer(tmp_path, monkeypatch, ecriture_ok=False)
+        assert m.launch_game("hp7a") is not None
+
 
 class TestDetectionDeLaLangue:
     """La ligne meta doit dire ce que le registre porte VRAIMENT.

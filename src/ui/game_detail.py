@@ -117,6 +117,8 @@ class GameDetailView(QWidget):
         # Info panel
         self._info.versions_clicked.connect(lambda: handlers.on_versions_clicked(self))
         self._info.language_clicked.connect(lambda: handlers.on_language_clicked(self))
+        self._action_panel.game_settings_clicked.connect(
+            lambda: handlers.on_game_settings(self))
         self._info.content_changed.connect(self._position_info)
 
         # Menu contextuel
@@ -305,6 +307,18 @@ class GameDetailView(QWidget):
             return None
         return meta.mapToGlobal(QPoint(0, meta.height()))
 
+    def ancre_reglages(self):
+        """Position GLOBALE où poser le menu des réglages, sous l'engrenage.
+
+        Même raison que `ancre_langue` : le bouton s'active aussi à la touche
+        Entrée, et un menu qui s'ouvre là où traîne la souris — voire sur un
+        autre écran — n'a aucun rapport avec ce qu'on vient de faire.
+        """
+        btn = self._action_panel._btn_reglages
+        if btn is None or not btn.isVisible() or btn.width() <= 0:
+            return None
+        return btn.mapToGlobal(QPoint(0, btn.height()))
+
     def _refresh(self) -> None:
         """Rafraîchit le panneau d'actions, puis REPOSITIONNE le panneau d'infos.
 
@@ -348,8 +362,16 @@ class GameDetailView(QWidget):
 
     def _on_video_timer(self) -> None:
         # Le jeu a pu changer pendant le délai : on ne lance que le bon.
-        if self.game is not None and self.game.id == self._pending_video_id:
-            self._try_play_video(self.game.id)
+        if self.game is None or self.game.id != self._pending_video_id:
+            return
+        # …et la fenêtre a pu disparaître. Second garde-fou, indépendant de
+        # l'annulation faite par `_stop_video` : un `singleShot` déjà en vol au
+        # moment où la fenêtre part dans le tray ne doit jamais aboutir à du son
+        # sans image. `isVisible()` est faux pour toute la descendance dès que
+        # `MainWindow.hide()` est appelé.
+        if not self.isVisible():
+            return
+        self._try_play_video(self.game.id)
 
     def _try_play_video(self, game_id: str) -> None:
         # Les bandes-annonces ne sont plus embarquées : elles vivent dans
@@ -368,6 +390,17 @@ class GameDetailView(QWidget):
             self._audio_bar.hide()
 
     def _stop_video(self) -> None:
+        # ANNULER d'abord le démarrage en attente. `_schedule_video` arme un
+        # `singleShot` de 2 s que rien ne désarmait : couper la vidéo ne
+        # l'empêchait pas de repartir juste après. Cas réel (Ludo, 2026-08-23) :
+        # un téléchargement en cours, on va lancer un AUTRE jeu — donc on change
+        # de fiche puis on clique JOUER dans la foulée, en moins de deux
+        # secondes. La fenêtre part dans le tray, le minuteur arrive derrière,
+        # et la bande-annonce se met à jouer sans image. Sans téléchargement on
+        # s'attarde sur la fiche, le minuteur a déjà tiré, et le défaut ne se
+        # reproduit pas — d'où « ça marche pourtant d'habitude ».
+        # `QTimer.singleShot` ne s'annule pas : on invalide sa CONDITION.
+        self._pending_video_id = ""
         self._video.stop()
         self._bg.clear_video()
         self._audio_bar.hide()

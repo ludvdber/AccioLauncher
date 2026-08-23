@@ -202,14 +202,34 @@ def lire_valeurs(ruche: str, cle: str, noms, vue: int = 32) -> dict:
     return trouve
 
 
+def comparer(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> dict:
+    """Ce qui DIFFÈRE entre le registre et ce qu'on veut y poser.
+
+    Rend `{nom: (actuel, voulu)}`, limité aux valeurs qui ne concordent pas ;
+    `actuel` vaut None quand la valeur n'est pas là du tout. Vide = rien à
+    faire.
+
+    Cette comparaison existait déjà, mais elle ne rendait qu'un booléen : on
+    savait qu'il fallait écrire, jamais PAR-DESSUS QUOI. Or c'est le cas normal
+    et non l'exception — l'installeur EA laisse un `Locale` et un `Install Dir`
+    qui pointent sur son installation à lui, et sur la partie 2 son `fr_FR`
+    n'est même pas une valeur que le jeu accepte. Remplacer sans le dire, c'est
+    modifier le réglage de quelqu'un dans son dos ; le montrer, c'est la moitié
+    utile du message de prévenance.
+    """
+    actuel = lire_valeurs(ruche, cle, list(valeurs), vue)
+    return {nom: (actuel.get(nom), voulu)
+            for nom, voulu in valeurs.items()
+            if actuel.get(nom) != voulu}
+
+
 def deja_a_jour(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> bool:
     """True si le registre porte DÉJÀ exactement ces valeurs.
 
     C'est ce qui évite une demande d'élévation à chaque lancement : le cas
     courant, de très loin, est que rien n'a bougé depuis la dernière fois.
     """
-    actuel = lire_valeurs(ruche, cle, list(valeurs), vue)
-    return all(actuel.get(nom) == val for nom, val in valeurs.items())
+    return not comparer(ruche, cle, valeurs, vue)
 
 
 def _ecrire_direct(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
@@ -285,8 +305,11 @@ def ecrire_valeurs(ruche: str, cle: str, valeurs: dict, vue: int = 32,
     fait échouer l'opération ENTIÈRE : un catalogue distant ne compose pas une
     écriture registre à moitié.
 
-    `confirmer(ruche, cle, valeurs)` est appelé JUSTE AVANT l'écriture, et
-    seulement quand il y en a réellement une à faire. Modifier le registre de
+    `confirmer(ruche, cle, valeurs, ecarts)` est appelé JUSTE AVANT l'écriture,
+    et seulement quand il y en a réellement une à faire. `ecarts` est ce que
+    rend `comparer()` : il porte la valeur ACTUELLE de chaque entrée qu'on
+    s'apprête à écraser, pour que la question posée à l'utilisateur dise par
+    quoi on remplace quoi. Modifier le registre de
     quelqu'un sans le lui dire ne se fait pas, et sous HKLM ça enchaîne en plus
     sur une invite UAC : voir Windows demander une autorisation sans savoir
     pourquoi, c'est la refuser. Le rappel arrive donc au plus près du geste, et
@@ -306,9 +329,12 @@ def ecrire_valeurs(ruche: str, cle: str, valeurs: dict, vue: int = 32,
             return False
     if not valeurs:
         return True
-    if deja_a_jour(ruche, cle, valeurs, vue):
+    ecarts = comparer(ruche, cle, valeurs, vue)
+    if not ecarts:
         return True
-    if confirmer is not None and not confirmer(ruche, cle, valeurs):
+    for nom, (actuel, voulu) in ecarts.items():
+        log.info("Registre à corriger — %s : %r → %r", nom, actuel, voulu)
+    if confirmer is not None and not confirmer(ruche, cle, valeurs, ecarts):
         log.info("Écriture registre refusée par l'utilisateur : %s\\%s", ruche, cle)
         return False
 

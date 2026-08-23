@@ -1537,3 +1537,223 @@ class TestBalisageDuCatalogueJamaisInterprete:
                     and fonc.attr in {"question", "warning", "information", "critical"}):
                 fautifs.append(fonc.attr)
         assert not fautifs, "appels statiques a QMessageBox (AutoText) : %s" % fautifs
+
+
+class TestEngrenageReglagesDuJeu:
+    """La langue n'était atteignable que par le segment doré de la ligne méta.
+
+    Il se lit très bien mais ne s'annonce pas comme cliquable : un réglage qu'il
+    faut deviner n'existe pas. L'engrenage, lui, le dit — et c'est le point
+    d'entrée des réglages graphiques à venir, d'où un MENU et non un second
+    sélecteur.
+    """
+
+    @staticmethod
+    def _poser(win, jeu, etat):
+        win.manager._states[jeu.id] = etat
+        win._detail.set_game(jeu)
+        win._detail._action_panel.refresh()
+        return win._detail._action_panel
+
+    def test_present_sur_un_jeu_multilingue_installe(self, make_window_multilingue):
+        from src.core.game_manager import GameState
+        win, jeu = make_window_multilingue()
+        panneau = self._poser(win, jeu, GameState.INSTALLED)
+        assert panneau._btn_reglages is not None
+        assert panneau._btn_reglages.text() == "⚙"
+
+    def test_absent_sur_un_jeu_sans_reglage(self, make_window_multilingue):
+        """Sept jeux sur huit n'ont rien à régler : un engrenage y ouvrirait un
+        menu vide, ce qui est pire que pas d'engrenage."""
+        from src.core.game_manager import GameState
+        win, _ = make_window_multilingue()
+        autre = win.manager.get_games()[1].game
+        assert self._poser(win, autre, GameState.INSTALLED)._btn_reglages is None
+
+    def test_absent_quand_le_jeu_n_est_pas_installe(self, make_window_multilingue):
+        """Rien à régler sur un jeu qu'on n'a pas encore."""
+        from src.core.game_manager import GameState
+        win, jeu = make_window_multilingue()
+        assert self._poser(win, jeu, GameState.NOT_INSTALLED)._btn_reglages is None
+
+    def test_la_fenetre_porte_les_langues_disponibles(self, make_window_multilingue):
+        """La fenêtre est construite SANS `exec()` : l'ouvrir pour de vrai
+        bloquerait la suite de tests jusqu'à ce qu'un humain clique."""
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        proposables = [lg.code for lg in win.manager.langues_disponibles(jeu)]
+        assert set(dlg._boutons) == set(proposables)
+        courant = win.manager.game_language(jeu)
+        assert dlg._boutons[courant].isChecked()
+
+    def test_la_rubrique_affichage_est_verrouillee(self, make_window_multilingue):
+        """« Bientôt » doit être ANNONCÉ, pas absent : quelqu'un qui cherche la
+        résolution doit comprendre que ce n'est pas lui qui n'a pas trouvé."""
+        from PyQt6.QtWidgets import QRadioButton
+        from src.core.game_manager import GameState
+        from src.core.i18n import tr
+        from src.ui.game_settings_dialog import GameSettingsDialog, _A_VENIR
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        desactives = [b.text() for b in dlg.findChildren(QRadioButton)
+                      if not b.isEnabled()]
+        for nom in _A_VENIR:
+            assert tr(nom) in desactives, nom
+
+    def test_un_choix_refuse_remet_le_bouton_droit(self, make_window_multilingue):
+        """Laisser la sélection sur un choix que le registre n'a pas pris
+        afficherait une langue que le jeu n'a pas."""
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        courant = win.manager.game_language(jeu)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: False, parent=win)
+        autre = next(c for c in dlg._boutons if c != courant)
+        dlg._boutons[autre].setChecked(True)
+        assert dlg._boutons[courant].isChecked()
+        assert not dlg._boutons[autre].isChecked()
+
+    def test_l_engrenage_ouvre_bien_la_fenetre(self, make_window_multilingue, monkeypatch):
+        from src.core.game_manager import GameState
+        from src.ui import game_detail_handlers as gdh
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        ouvertes = []
+        monkeypatch.setattr(GameSettingsDialog, "exec",
+                            lambda self: ouvertes.append(self) or 0)
+        gdh.on_game_settings(win._detail)
+        assert len(ouvertes) == 1
+
+    def test_l_ancrage_retombe_sur_le_curseur_sans_bouton(self, make_window_multilingue):
+        """Pas d'engrenage (jeu non installé) : pas d'ancre, et surtout pas de
+        plantage — c'est `QCursor.pos()` qui prend le relais."""
+        from src.core.game_manager import GameState
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.NOT_INSTALLED)
+        assert win._detail.ancre_reglages() is None
+
+    def test_la_rubrique_fichiers_expose_le_clic_droit(self, make_window_multilingue):
+        """« Gérer les versions » et « Vérifier / réparer » n'étaient
+        atteignables qu'au clic droit — le défaut corrigé pour la langue."""
+        from src.core.game_manager import GameState
+        from src.core.i18n import tr
+        from src.ui import game_detail_handlers as gdh
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        libelles = [lib for lib, _ in gdh._actions_fichiers(win._detail, jeu)]
+        assert tr("Gérer les versions") in libelles
+        assert tr("Vérifier / réparer les fichiers") in libelles
+        assert tr("Ouvrir le dossier du jeu") in libelles
+
+    def test_rien_a_reparer_sur_un_jeu_absent(self, make_window_multilingue):
+        """Réparer un jeu non installé n'a pas de sens, et ouvrir son dossier
+        serait une erreur de plus à expliquer."""
+        from src.core.game_manager import GameState
+        from src.core.i18n import tr
+        from src.ui import game_detail_handlers as gdh
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.NOT_INSTALLED)
+        libelles = [lib for lib, _ in gdh._actions_fichiers(win._detail, jeu)]
+        assert libelles == [tr("Gérer les versions")]
+
+    def test_le_dossier_ouvert_est_celui_de_l_executable(self, make_window_multilingue,
+                                                        monkeypatch, tmp_path):
+        """Depuis que HP7 range ses fichiers dans `pc`, la racine
+        d'installation et le dossier du jeu ont divergé."""
+        import dataclasses
+        from src.ui import game_detail_handlers as gdh
+
+        win, jeu = make_window_multilingue()
+        jeu = dataclasses.replace(jeu, executable="HP7/pc/hp7.exe")
+        cible = win.manager.config.install_path / "HP7" / "pc"
+        cible.mkdir(parents=True, exist_ok=True)
+        ouverts = []
+        monkeypatch.setattr(gdh, "open_local_path", lambda p: ouverts.append(p))
+        gdh._ouvrir_dossier_du_jeu(win._detail, jeu)
+        assert ouverts == [str(cible)]
+
+    def test_le_pictogramme_est_a_presentation_texte(self):
+        """U+2699 tombe en repli MONOCHROME et suit le setPen. Les emoji
+        couleur (⚡ ✨ 🎃) y sont insensibles et sont écartés partout ailleurs
+        dans le projet — celui-ci ne doit pas rouvrir la porte."""
+        import unicodedata
+        assert unicodedata.name("⚙") == "GEAR"
+        assert ord("⚙") < 0x1F000
+
+
+class TestBandeAnnonceNeRepartPasTouteSeule:
+    """`_schedule_video` arme un `singleShot` de 2 s que rien ne désarmait.
+
+    Couper la vidéo ne l'empêchait donc pas de repartir juste après. Cas réel
+    (Ludo, 2026-08-23) : un téléchargement en cours, on va lancer un AUTRE jeu
+    — donc on change de fiche puis on clique JOUER dans la foulée, en moins de
+    deux secondes. La fenêtre part dans le tray, le minuteur arrive derrière, et
+    la bande-annonce joue sans image. Sans téléchargement on s'attarde sur la
+    fiche, le minuteur a déjà tiré, et le défaut ne se reproduit pas.
+    """
+
+    @staticmethod
+    def _espionner(vue, monkeypatch):
+        joues = []
+        monkeypatch.setattr(type(vue), "_try_play_video",
+                            lambda self, gid: joues.append(gid))
+        return joues
+
+    def test_stop_annule_le_demarrage_en_attente(self, make_window, monkeypatch):
+        win = make_window(autoplay_videos=True)
+        vue = win._detail
+        jeux = [e.game for e in win.manager.get_games()]
+        vue.set_game(jeux[0])
+        vue.set_game(jeux[1])          # arme le minuteur pour jeux[1]
+        joues = self._espionner(vue, monkeypatch)
+        vue._stop_video()              # ce que fait JOUER
+        vue._on_video_timer()          # le minuteur arrive derrière
+        assert joues == []
+
+    def test_la_mise_en_tray_annule_aussi(self, make_window, monkeypatch):
+        """`pause()` (tray) passe par `_stop_video` : même protection."""
+        win = make_window(autoplay_videos=True)
+        vue = win._detail
+        vue.set_game([e.game for e in win.manager.get_games()][1])
+        joues = self._espionner(vue, monkeypatch)
+        vue.pause()
+        vue._on_video_timer()
+        assert joues == []
+
+    def test_une_fenetre_cachee_ne_lance_rien(self, make_window, monkeypatch):
+        """Second garde-fou, indépendant de l'annulation : un `singleShot` déjà
+        en vol quand la fenêtre disparaît ne doit pas aboutir à du son sans
+        image."""
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        jeu = [e.game for e in win.manager.get_games()][1]
+        vue.set_game(jeu)
+        joues = self._espionner(vue, monkeypatch)
+        vue._pending_video_id = jeu.id      # comme si rien ne l'avait annulé
+        win.hide()
+        vue._on_video_timer()
+        assert joues == []
+
+    def test_le_cas_normal_joue_toujours(self, make_window, monkeypatch):
+        """Le garde-fou ne doit pas emporter la lecture normale."""
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        jeu = [e.game for e in win.manager.get_games()][1]
+        vue.set_game(jeu)
+        joues = self._espionner(vue, monkeypatch)
+        vue._on_video_timer()
+        assert joues == [jeu.id]

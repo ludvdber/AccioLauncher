@@ -1,5 +1,5 @@
 {
-    "catalog_version": "0.22",
+    "catalog_version": "0.23",
     "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
     "trailers": {
         "hp1": {
@@ -744,7 +744,7 @@
             "year": 2010,
             "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
             "developer": "EA Bright Light",
-            "executable": "HP7/hp7.exe",
+            "executable": "HP7/pc/hp7.exe",
             "cover_image": "hp7a_cover.jpg",
             "tags": [
                 "Action",
@@ -801,54 +801,55 @@
                         "values": {
                             "Locale": "en_UK"
                         },
-                        "requires_file": "HP7/DH1_English.pck"
+                        "requires_file": "HP7/pc/DH1_English.pck"
                     },
                     "fr": {
                         "label": "Français",
                         "values": {
                             "Locale": "fr_FR"
                         },
-                        "requires_file": "HP7/DH1_French.pck"
+                        "requires_file": "HP7/pc/DH1_French.pck"
                     },
                     "de": {
                         "label": "Deutsch",
                         "values": {
                             "Locale": "de"
                         },
-                        "requires_file": "HP7/DH1_German.pck"
+                        "requires_file": "HP7/pc/DH1_German.pck"
                     },
                     "es": {
                         "label": "Español",
                         "values": {
                             "Locale": "es"
                         },
-                        "requires_file": "HP7/DH1_Spanish.pck"
+                        "requires_file": "HP7/pc/DH1_Spanish.pck"
                     },
                     "it": {
                         "label": "Italiano",
                         "values": {
                             "Locale": "it"
                         },
-                        "requires_file": "HP7/DH1_Italian.pck"
+                        "requires_file": "HP7/pc/DH1_Italian.pck"
                     },
                     "pl": {
                         "label": "Polski",
                         "values": {
                             "Locale": "pl"
                         },
-                        "requires_file": "HP7/DH1_Polish.pck"
+                        "requires_file": "HP7/pc/DH1_Polish.pck"
                     },
                     "ru": {
                         "label": "Русский",
                         "values": {
                             "Locale": "ru"
                         },
-                        "requires_file": "HP7/DH1_Russian.pck"
+                        "requires_file": "HP7/pc/DH1_Russian.pck"
                     }
                 }
             },
             "post_install": {
-                "registry": []
+                "registry": [],
+                "sous_dossier": "pc"
             },
             "i18n": {
                 "en": {
@@ -882,7 +883,7 @@
             "year": 2011,
             "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
             "developer": "EA Bright Light",
-            "executable": "HP8/hp8.exe",
+            "executable": "HP8/pc/hp8.exe",
             "cover_image": "hp7b_cover.jpg",
             "tags": [
                 "Action",
@@ -940,54 +941,55 @@
                         "values": {
                             "Locale": "en"
                         },
-                        "requires_file": "HP8/DH2_English.pck"
+                        "requires_file": "HP8/pc/DH2_English.pck"
                     },
                     "fr": {
                         "label": "Français",
                         "values": {
                             "Locale": "fr"
                         },
-                        "requires_file": "HP8/DH2_French.pck"
+                        "requires_file": "HP8/pc/DH2_French.pck"
                     },
                     "de": {
                         "label": "Deutsch",
                         "values": {
                             "Locale": "de"
                         },
-                        "requires_file": "HP8/DH2_German.pck"
+                        "requires_file": "HP8/pc/DH2_German.pck"
                     },
                     "es": {
                         "label": "Español",
                         "values": {
                             "Locale": "es"
                         },
-                        "requires_file": "HP8/DH2_Spanish.pck"
+                        "requires_file": "HP8/pc/DH2_Spanish.pck"
                     },
                     "it": {
                         "label": "Italiano",
                         "values": {
                             "Locale": "it"
                         },
-                        "requires_file": "HP8/DH2_Italian.pck"
+                        "requires_file": "HP8/pc/DH2_Italian.pck"
                     },
                     "pl": {
                         "label": "Polski",
                         "values": {
                             "Locale": "pl"
                         },
-                        "requires_file": "HP8/DH2_Polish.pck"
+                        "requires_file": "HP8/pc/DH2_Polish.pck"
                     },
                     "ru": {
                         "label": "Русский",
                         "values": {
                             "Locale": "ru"
                         },
-                        "requires_file": "HP8/DH2_Russian.pck"
+                        "requires_file": "HP8/pc/DH2_Russian.pck"
                     }
                 }
             },
             "post_install": {
-                "registry": []
+                "registry": [],
+                "sous_dossier": "pc"
             },
             "i18n": {
                 "en": {

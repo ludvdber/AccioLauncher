@@ -69,6 +69,13 @@ class ActionPanel(QWidget):
     uninstall_clicked = pyqtSignal()
     update_clicked = pyqtSignal()
     settings_requested = pyqtSignal()   # « Changer de dossier » depuis l'alerte disque
+    # Engrenage « Réglages du jeu », à côté des boutons d'un jeu installé. La
+    # langue vivait UNIQUEMENT dans la ligne méta, en doré et sans pictogramme :
+    # elle s'y lit très bien, mais rien ne dit qu'on peut cliquer dessus. Un
+    # réglage qu'il faut deviner n'existe pas. L'engrenage est aussi le point
+    # d'entrée des réglages graphiques à venir — d'où un menu, et non un
+    # second sélecteur de langue.
+    game_settings_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -84,6 +91,9 @@ class ActionPanel(QWidget):
         # prouve un problème, on n'en invente pas un.
         self._online = True
         self._awaiting_vcredist = False
+        # Détruit et reconstruit à chaque `refresh` : jamais de `hasattr`,
+        # tout membre existe dès `__init__`.
+        self._btn_reglages = None
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -380,6 +390,7 @@ class ActionPanel(QWidget):
         self._download_label = None
         self._install_bar = None
         self._coming_soon_note = None
+        self._btn_reglages = None
         self._action_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
         self._action_layout.setSpacing(14)
 
@@ -594,6 +605,26 @@ class ActionPanel(QWidget):
         btn_uninstall.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_uninstall.clicked.connect(self.uninstall_clicked)
         self._action_layout.addWidget(btn_uninstall)
+
+        # Engrenage : uniquement s'il y a réellement quelque chose à régler.
+        # `game_language` rend None quand le jeu ne déclare pas de bloc, et
+        # hors Windows (pas de registre atteignable) — dans les deux cas un
+        # engrenage ouvrirait un menu vide, ce qui est pire que pas d'engrenage.
+        # U+2699 est un pictogramme à présentation TEXTE : repli monochrome,
+        # sensible au setPen, contrairement aux emoji couleur écartés ailleurs.
+        if self._manager.game_language(self._game) is not None:
+            btn_reglages = GlowButton("⚙", glow_color="#8a8aaa",
+                                      style="outline", text_color="#8a8aaa")
+            btn_reglages.setObjectName("btnGameSettings")
+            btn_reglages.setAccessibleName(
+                tr("Réglages de {}").format(self._game.name))
+            btn_reglages.setToolTip(tr("Réglages du jeu"))
+            btn_reglages.setFont(body_font(15))
+            btn_reglages.setFixedSize(36, 36)
+            btn_reglages.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_reglages.clicked.connect(self.game_settings_clicked)
+            self._action_layout.addWidget(btn_reglages)
+            self._btn_reglages = btn_reglages
 
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"

@@ -224,12 +224,21 @@ class GameManager:
         self._states[game_id] = state
         log.info("État de %s → %s", game_id, state)
 
-    def launch_game(self, game_id: str, confirmer=None) -> subprocess.Popen | None:
+    def launch_game(self, game_id: str, confirmer=None,
+                    avertir=None) -> subprocess.Popen | None:
         """Lance le .exe du jeu en processus détaché.
 
         `confirmer` est le rappel de prévenance avant écriture registre (cf.
         `apply_game_language`) : il n'est appelé que s'il y a réellement une
         écriture à faire, donc au premier lancement et après un changement.
+
+        `avertir()` est appelé quand cette écriture était NÉCESSAIRE et n'a pas
+        abouti. Le lancement continue — un jeu qui démarre mal vaut mieux qu'un
+        jeu qui ne démarre pas — mais se taire serait pire : sur HP7 partie 2,
+        un `Locale` resté à `fr_FR` (ce que pose l'installeur EA, et que cette
+        partie-là n'accepte pas) donne un jeu qui refuse de se lancer sans que
+        rien n'explique pourquoi. C'est à l'appelant de distinguer un ÉCHEC
+        d'un refus délibéré, qui n'a rien à signaler.
         """
         game = self._index.get(game_id)
         if game is None:
@@ -262,6 +271,8 @@ class GameManager:
         # la langue déjà en place, ce qui vaut mieux que de ne pas démarrer.
         if not self.apply_game_language(game, confirmer=confirmer):
             log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
+            if avertir is not None:
+                avertir()
 
         # Pré-lancement (cf. src/core/pre_launch.py)
         unblock_game_dlls(exe_path.parent)

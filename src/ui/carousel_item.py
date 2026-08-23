@@ -24,6 +24,37 @@ THUMB_H = 125
 REFLECTION_RATIO = 0.20
 REFLECTION_OPACITY = 0.06
 
+# Marges verticales de l'item, en dur dans `_update_size` : 6 px sous le reflet
+# et 10 px de respiration.
+_MARGE_V = 16
+# Rapport largeur/hauteur de la jaquette, à tenir quelle que soit la bande.
+_RAPPORT = THUMB_W / THUMB_H
+
+
+def vignette_pour(dispo: int, echelle_max: float) -> tuple[int, int]:
+    """Taille de vignette qui TIENT dans `dispo` pixels de hauteur d'item.
+
+    `dispo` est la place réellement offerte à l'item, marges du layout du
+    carrousel DÉDUITES — pas la hauteur de la bande.
+
+    `THUMB_H` était une constante, et la hauteur de la bande une autre : deux
+    nombres voisins qu'aucun calcul ne reliait. Ils ne concordaient que pour
+    l'item le plus LOIN de la sélection (150 px pour 160) ; le sélectionné, lui,
+    réclame 180 px et était rogné de 27 px — visible en permanence, sur la
+    vignette que l'œil regarde en premier. En bande compacte (124 px), les huit
+    l'étaient, de 33 à 63 px.
+
+    On inverse donc le calcul : la bande est la contrainte, la vignette s'y
+    plie. `echelle_max` est le plus grand facteur de profondeur appliqué
+    (`SCALE_SELECTED`) — c'est LUI qui décide, puisque c'est le plus grand item
+    qui doit tenir.
+    """
+    # hauteur_item(h) = h + int(h * RATIO) + _MARGE_V, avec h = THUMB_H * échelle
+    budget = max(1, dispo - _MARGE_V)
+    h_max = int(budget / (1.0 + REFLECTION_RATIO))
+    hauteur = max(1, int(h_max / echelle_max))
+    return max(1, int(hauteur * _RAPPORT)), hauteur
+
 # Corps des pastilles « NOUVEAU » / « BIENTÔT », du plus lisible au plus petit.
 # La vignette ne fait que 90 px : « PRÓXIMAMENTE » réclame 98 px à 8 pt. Plutôt
 # que de parier sur la brièveté des traductions, on réduit le corps jusqu'à ce
@@ -85,6 +116,11 @@ class CarouselItem(QWidget):
         self._pixmap: QPixmap | None = None
         self._anim_scale = 0.9
         self._anim_opacity = 0.45
+        # Taille de base de la jaquette. Ce n'est plus la constante du module :
+        # c'est le carrousel qui l'impose d'après la hauteur de sa bande (cf.
+        # `vignette_pour`), sinon l'item déborde et se fait rogner.
+        self._thumb_w = THUMB_W
+        self._thumb_h = THUMB_H
 
         self._reflection_cache: QPixmap | None = None
         self._reflection_cache_size: tuple[int, int] = (0, 0)
@@ -163,9 +199,21 @@ class CarouselItem(QWidget):
             return
         self._pixmap = QPixmap.fromImage(image)
 
+    def set_taille_vignette(self, largeur: int, hauteur: int) -> None:
+        """Impose la taille de base de la jaquette (décidée par le carrousel)."""
+        if (largeur, hauteur) == (self._thumb_w, self._thumb_h):
+            return
+        self._thumb_w, self._thumb_h = largeur, hauteur
+        # Le reflet est mis en cache à une taille : la changer sans l'invalider
+        # laisserait l'ancien, à l'échelle d'avant.
+        self._reflection_cache = None
+        self._reflection_cache_size = (0, 0)
+        self._update_size()
+        self.update()
+
     def _update_size(self) -> None:
-        w = int(THUMB_W * self._anim_scale)
-        h = int(THUMB_H * self._anim_scale)
+        w = int(self._thumb_w * self._anim_scale)
+        h = int(self._thumb_h * self._anim_scale)
         ref_h = int(h * REFLECTION_RATIO) + 6
         self.setFixedSize(w + 10, h + ref_h + 10)
 
@@ -207,8 +255,8 @@ class CarouselItem(QWidget):
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         scale = self._anim_scale
-        w = int(THUMB_W * scale)
-        h = int(THUMB_H * scale)
+        w = int(self._thumb_w * scale)
+        h = int(self._thumb_h * scale)
         x_off = (self.width() - w) // 2
         y_off = 5
         radius = 6.0

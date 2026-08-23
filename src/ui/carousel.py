@@ -10,17 +10,25 @@ from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
-from src.ui.carousel_item import CarouselItem
+from src.ui.carousel_item import CarouselItem, vignette_pour
 from src.ui.theme import accent_qcolor
 from src.ui.ticker import Ticker
 from src.ui import theme
 
 log = logging.getLogger(__name__)
 
-CAROUSEL_HEIGHT = 160
-# Version compacte pour les fenêtres basses : 160 px, c'est un quart d'un
-# écran de 660 px de haut, pris à la fiche de jeu.
-CAROUSEL_HEIGHT_COMPACT = 124
+# Hauteur de la bande. Elle est la CONTRAINTE : la vignette s'y plie
+# (`carousel_item.vignette_pour`), jamais l'inverse. 192 px redonnent la
+# jaquette de 125 px d'origine — à 160 px elle tombait à 99, soit un cinquième
+# de moins, ce qui se voit tout de suite sur la bande (Ludo, 2026-08-23).
+CAROUSEL_HEIGHT = 192
+# Version compacte pour les fenêtres basses (< 780 px) : la fiche de jeu a
+# alors plus besoin de ces pixels que le carrousel. Ce chiffre n'est PAS libre —
+# essayé à 150, l'audit géométrie (vraies polices) a rendu 8 anomalies : la
+# fiche de HP7 défilait de 18 à 20 px en espagnol à 980×660. Toute hausse ici
+# se paie sur le panneau d'infos, et l'espagnol est la langue qui a le moins de
+# marge.
+CAROUSEL_HEIGHT_COMPACT = 130
 
 SCALE_SELECTED = 1.1
 SCALE_ADJACENT = 1.0
@@ -103,6 +111,8 @@ class Carousel(QWidget):
         # Le jeu visé peut avoir disparu du catalogue : repli sur le premier.
         self._current_index = next(
             (i for i, game in enumerate(games) if game.id == vise), 0)
+
+        self._appliquer_taille_vignette()
 
         if self._items:
             self._items[self._current_index].selected = True
@@ -189,11 +199,28 @@ class Carousel(QWidget):
         if self._items:
             self.select((self._current_index - 1) % len(self._items))
 
+    def _appliquer_taille_vignette(self) -> None:
+        """Redimensionne les vignettes pour qu'elles TIENNENT dans la bande.
+
+        Sans ça, la taille de l'item et la hauteur de la bande étaient deux
+        constantes indépendantes : la sélectionnée réclamait 180 px pour 160
+        disponibles et se faisait rogner de 27 px EN PERMANENCE, et le mode
+        compact (124 px) rognait les huit, de 33 à 63 px.
+        """
+        marges = self._items_layout.contentsMargins()
+        dispo = self.height() - marges.top() - marges.bottom()
+        largeur, hauteur = vignette_pour(dispo, SCALE_SELECTED)
+        for item in self._items:
+            item.set_taille_vignette(largeur, hauteur)
+
     def set_compact(self, compact: bool) -> None:
         """Réduit la hauteur du carrousel quand la fenêtre manque de hauteur."""
         cible = CAROUSEL_HEIGHT_COMPACT if compact else CAROUSEL_HEIGHT
         if self.height() != cible:
             self.setFixedHeight(cible)
+            # La bande a changé de hauteur : les vignettes doivent suivre, sinon
+            # elles gardent la taille de l'ancienne et débordent.
+            self._appliquer_taille_vignette()
 
     def pause(self) -> None:
         if self._ticking:

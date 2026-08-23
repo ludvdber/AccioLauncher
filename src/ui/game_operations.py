@@ -273,7 +273,9 @@ class GameOperations(QObject):
             registry_entries=list(game.post_install.registry),
             config_files=config_files,
             game_dir=game_dir,
-            delete_archive=delete_archive, parent=self,
+            delete_archive=delete_archive,
+            sous_dossier=game.post_install.sous_dossier,
+            parent=self,
         )
         self._installer.progress.connect(self._on_install_progress)
         self._installer.finalizing.connect(self._on_finalizing)

@@ -150,3 +150,99 @@ class TestSelectionPreserveeAuReload:
             c.select(0)
         assert sig.args == [0]
         assert c.current_game_id() == "hp1"
+
+
+class TestVignettesTiennentDansLaBande:
+    """Les jaquettes ne doivent jamais être rognées par le bord de la bande.
+
+    La taille de l'item et la hauteur du carrousel étaient deux constantes
+    indépendantes, qui ne concordaient que pour l'item le plus ÉLOIGNÉ de la
+    sélection (150 px pour 160). La vignette sélectionnée, elle, réclamait
+    180 px et se faisait couper de 27 px — en permanence, sur celle que l'œil
+    regarde en premier. En bande compacte (fenêtre < 780 px), les huit étaient
+    coupées, de 33 à 63 px.
+    """
+
+    @staticmethod
+    def _debordements(c):
+        """Items dont la géométrie sort de la bande.
+
+        `activate()` force la passe de layout : redimensionner un enfant ne
+        replace pas les autres tout de suite, et sans ça on mesure des
+        positions d'avant le changement de bande — un test qui échoue pour une
+        raison qui n'est pas celle qu'il surveille.
+        """
+        c._items_layout.activate()
+        return [(i, item.geometry().height(), item.geometry().bottom() - c.height())
+                for i, item in enumerate(c._items)
+                if item.geometry().bottom() > c.height() or item.geometry().top() < 0]
+
+    def _carousel(self, qtbot, compact):
+        jeux = [_make_game("hp%d" % n) for n in range(1, 9)]
+        c = Carousel(jeux, _FakeManager())
+        qtbot.addWidget(c)
+        c.set_compact(compact)
+        c.resize(1200, c.height())
+        c.show()
+        c.select(6)
+        # L'échelle est animée : attendre qu'elle se pose, sinon on mesure
+        # l'état de départ et le test passe pour de mauvaises raisons.
+        qtbot.waitUntil(lambda: c._items[6]._anim_scale > 1.05, timeout=3000)
+        return c
+
+    def test_bande_normale(self, qtbot):
+        c = self._carousel(qtbot, compact=False)
+        assert self._debordements(c) == []
+
+    def test_bande_compacte(self, qtbot):
+        """Le cas signalé : redimensionner sous 780 px cassait la bande."""
+        c = self._carousel(qtbot, compact=True)
+        assert self._debordements(c) == []
+
+    def test_le_passage_en_compact_redimensionne_les_vignettes(self, qtbot):
+        """`set_compact` ne changeait QUE la hauteur de la bande."""
+        c = self._carousel(qtbot, compact=False)
+        avant = c._items[0]._thumb_h
+        c.set_compact(True)
+        assert c._items[0]._thumb_h < avant
+        assert self._debordements(c) == []
+
+    def test_retour_en_normal(self, qtbot):
+        """Aller-retour : les vignettes doivent reprendre leur taille."""
+        c = self._carousel(qtbot, compact=False)
+        depart = c._items[0]._thumb_h
+        c.set_compact(True)
+        c.set_compact(False)
+        assert c._items[0]._thumb_h == depart
+        assert self._debordements(c) == []
+
+
+class TestVignettePour:
+    """La formule, sans Qt : un item à l'échelle maximale doit tenir."""
+
+    def test_le_plus_grand_item_tient(self):
+        from src.ui.carousel import SCALE_SELECTED
+        from src.ui.carousel_item import REFLECTION_RATIO, _MARGE_V, vignette_pour
+
+        for dispo in (148, 112, 90, 200, 60):
+            _, h = vignette_pour(dispo, SCALE_SELECTED)
+            haut = int(h * SCALE_SELECTED)
+            total = haut + int(haut * REFLECTION_RATIO) + _MARGE_V
+            assert total <= dispo, "dispo=%d -> item de %d px" % (dispo, total)
+
+    def test_le_rapport_de_la_jaquette_est_tenu(self):
+        from src.ui.carousel import SCALE_SELECTED
+        from src.ui.carousel_item import THUMB_H, THUMB_W, vignette_pour
+
+        w, h = vignette_pour(148, SCALE_SELECTED)
+        assert abs(w / h - THUMB_W / THUMB_H) < 0.02
+
+    def test_une_bande_absurde_ne_leve_pas(self):
+        """Une hauteur nulle ou négative ne doit pas produire une taille nulle
+        (division par zéro plus loin) ni faire lever."""
+        from src.ui.carousel import SCALE_SELECTED
+        from src.ui.carousel_item import vignette_pour
+
+        for dispo in (0, -50, 1):
+            w, h = vignette_pour(dispo, SCALE_SELECTED)
+            assert w >= 1 and h >= 1

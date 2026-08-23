@@ -477,3 +477,39 @@ class TestBlocDeLangue:
         g = self._bloc(root="HKCR")
         assert g.id == MINIMAL_GAME["id"]
         assert g.language_registry is None
+
+
+class TestSousDossierDeRangement:
+    """`post_install.sous_dossier` compose un chemin sur le disque de
+    l'utilisateur ET y déplace tout un jeu. Il vient du catalogue DISTANT :
+    même exigence que `executable`, mais plus stricte — un seul composant.
+    """
+
+    @staticmethod
+    def _avec(valeur):
+        return GameData.from_dict({**MINIMAL_GAME,
+                                   "post_install": {"sous_dossier": valeur}})
+
+    def test_le_cas_reel_passe(self):
+        assert self._avec("pc").post_install.sous_dossier == "pc"
+
+    def test_absent_par_defaut(self):
+        """Les sept autres jeux n'ont pas ce champ."""
+        assert GameData.from_dict(MINIMAL_GAME).post_install.sous_dossier == ""
+
+    # `_BS` plutôt que des littéraux : un antislash dans une liste de cas se
+    # fait avaler par la première réécriture du fichier venue.
+    _BS = chr(92)
+
+    @pytest.mark.parametrize("mauvais", [
+        "..", ".", "../evil", ".." + _BS + "evil", "pc/sub", "pc" + _BS + "sub",
+        "C:", "C:" + _BS + "evil", "/etc", _BS * 2 + "serveur", "", "   ",
+        ".cache", "-rf",
+    ])
+    def test_les_chemins_sont_refuses(self, mauvais):
+        """Un refus DÉGRADE (on ne range pas) au lieu de déplacer ailleurs."""
+        assert self._avec(mauvais).post_install.sous_dossier == ""
+
+    @pytest.mark.parametrize("mauvais", [None, 12, [], {}, True])
+    def test_les_types_impropres_sont_refuses(self, mauvais):
+        assert self._avec(mauvais).post_install.sous_dossier == ""

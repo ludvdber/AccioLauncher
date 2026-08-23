@@ -261,6 +261,16 @@
     "Téléchargement des bandes-annonces… {faites}/{total} · {pct} %": "Downloading trailers… {faites}/{total} · {pct}%",
     "Télécharger les bandes-annonces ({taille})": "Download trailers ({taille})",
     "Vous pourrez les ajouter ou les supprimer à tout moment dans les Paramètres.": "You can add or remove them at any time in Settings.",
-    "Supprimer": "Delete"
+    "Supprimer": "Delete",
+    "remplace : {}": "replaces: {}",
+    "Le réglage n'a pas pu être écrit — le jeu démarre avec sa configuration actuelle.": "The setting could not be written — the game starts with its current configuration.",
+    "Réglages de {}": "Settings for {}",
+    "Réglages du jeu": "Game settings",
+    "Installé dans une seule langue": "Installed in one language only",
+    "Réglages — {}": "Settings — {}",
+    "Ce jeu n'est installé que dans une seule langue.\nLe lanceur ne peut que sélectionner une langue déjà présente sur le disque, pas la télécharger.": "This game is installed in one language only.\nThe launcher can only select a language already present on disk, not download it.",
+    "Fichiers du jeu": "Game files",
+    "Ouvrir le dossier du jeu": "Open game folder",
+    "Dossier introuvable — le jeu a peut-être été déplacé.": "Folder not found — the game may have been moved."
   }
 }

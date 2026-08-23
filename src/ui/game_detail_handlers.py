@@ -19,7 +19,8 @@ from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
 from src.core.game_manager import GameState
 from src.core.system_checks import PREREQUIS, VCREDIST_URL, needed_space_mb
-from src.ui.utils import open_url
+from src.ui.utils import open_local_path, open_url
+from src.ui.game_settings_dialog import GameSettingsDialog
 from src.ui.versions_dialog import VersionsDialog
 
 if TYPE_CHECKING:
@@ -64,9 +65,27 @@ def confirmer_registre(view: "GameDetailView", nom_jeu: str):
     (`game_registry.ecrire_valeurs` compare d'abord) : au deuxième lancement,
     personne n'est dérangé. C'est ce qui permet de prévenir TOUJOURS sans que
     ça devienne un nag.
+
+    `ecarts` porte la valeur qui est DÉJÀ en place pour chaque entrée qu'on
+    s'apprête à écraser. On l'affiche : « le launcher va écrire ceci » ne dit
+    pas qu'on remplace un réglage existant, et c'est pourtant le cas normal —
+    l'installeur EA laisse un `Install Dir` et un `Locale` à lui. Quelqu'un qui
+    voit ce qu'il perd peut refuser en connaissance de cause ; sans ça,
+    autoriser revient à signer sans lire.
     """
-    def demander(ruche: str, cle: str, valeurs: dict) -> bool:
-        detail = "\n".join(f"    {nom} = {valeur}" for nom, valeur in valeurs.items())
+    def demander(ruche: str, cle: str, valeurs: dict, ecarts: dict | None = None) -> bool:
+        ecarts = ecarts or {}
+        lignes = []
+        for nom, valeur in valeurs.items():
+            lignes.append(f"    {nom} = {valeur}")
+            actuel = ecarts.get(nom, (None, None))[0]
+            # Rien à annoncer si la valeur n'existait pas : on ne remplace
+            # alors rien du tout, et « remplace : (rien) » est du bruit.
+            # L'indentation reste dans le code : une clé de traduction qui
+            # commence par huit espaces est un piège à traducteur.
+            if actuel is not None:
+                lignes.append("        " + tr("remplace : {}").format(actuel))
+        detail = "\n".join(lignes)
         morceaux = [
             tr("{jeu} enregistre ses réglages dans le registre de Windows.\n\n"
                "Le launcher va écrire ceci dans {cle} :\n\n{valeurs}").format(
@@ -151,9 +170,27 @@ def on_play(view: "GameDetailView") -> None:
     if view.game is None:
         return
     view._stop_video()
+    demander = confirmer_registre(view, view.game.name)
+    accepte = True
+
+    def confirmer(ruche, cle, valeurs, ecarts=None):
+        nonlocal accepte
+        accepte = demander(ruche, cle, valeurs, ecarts)
+        return accepte
+
+    def avertir() -> None:
+        # Un REFUS n'a rien à signaler : l'utilisateur vient de répondre non,
+        # le lui répéter serait le lui reprocher. Un ÉCHEC, si — le jeu part
+        # avec un réglage que le launcher n'a pas pu corriger, et sans ce mot
+        # personne ne fera le lien entre l'invite et le jeu qui se ferme.
+        if accepte:
+            view.notify.emit(
+                tr("Le réglage n'a pas pu être écrit — le jeu démarre "
+                   "avec sa configuration actuelle."))
+
     try:
         proc = view.manager.launch_game(
-            view.game.id, confirmer=confirmer_registre(view, view.game.name))
+            view.game.id, confirmer=confirmer, avertir=avertir)
     except RuntimeError as exc:
         if str(exc).startswith("prerequis_manquant:"):
             manquant = str(exc).split(":", 1)[1]
@@ -326,6 +363,59 @@ def on_install_local(view: "GameDetailView") -> None:
     view._refresh()
 
 
+def on_game_settings(view: "GameDetailView") -> None:
+    """Ouvre la fenêtre de réglages du jeu (engrenage à côté des boutons).
+
+    Une FENÊTRE et pas un menu : les réglages d'un jeu vont s'étoffer
+    (résolution, qualité, mode fenêtré), et un menu qui grandit devient une
+    liste à dérouler. Une fenêtre a des rubriques, de la place pour expliquer,
+    et sait montrer ce qui n'est pas encore livré — ce que la rubrique
+    « Affichage », verrouillée, fait exprès.
+    """
+    game = view.game
+    if game is None:
+        return
+    dlg = GameSettingsDialog(
+        game, view.manager,
+        appliquer_langue=lambda code: _appliquer_langue(view, code),
+        actions=_actions_fichiers(view, game),
+        parent=view)
+    dlg.exec()
+
+
+def _actions_fichiers(view: "GameDetailView", game: GameData):
+    """Ce que la fenêtre de réglages propose sous « Fichiers du jeu ».
+
+    « Gérer les versions » et « Vérifier / réparer » n'étaient atteignables
+    qu'au CLIC DROIT — le défaut qu'on vient de corriger pour la langue, à
+    l'identique. Réparer n'a de sens que sur un jeu installé ; l'ouverture du
+    dossier non plus, et proposer d'ouvrir un dossier qui n'existe pas serait
+    une erreur de plus à expliquer.
+    """
+    actions = [(tr("Gérer les versions"), lambda: on_versions_clicked(view))]
+    if view.manager.get_state(game.id) == GameState.INSTALLED:
+        actions.append((tr("Vérifier / réparer les fichiers"),
+                        lambda: on_repair(view)))
+        actions.append((tr("Ouvrir le dossier du jeu"),
+                        lambda: _ouvrir_dossier_du_jeu(view, game)))
+    return actions
+
+
+def _ouvrir_dossier_du_jeu(view: "GameDetailView", game: GameData) -> None:
+    """Ouvre le dossier où le jeu est RÉELLEMENT installé.
+
+    Le dossier de l'exécutable, pas la racine d'installation : depuis que HP7
+    range ses fichiers dans un sous-dossier `pc`, les deux ont divergé, et
+    c'est celui qui contient le jeu qu'on veut voir.
+    """
+    dossier = (view.manager.config.install_path
+               / Path(game.executable.replace(chr(92), "/")).parent)
+    if not dossier.is_dir():
+        view.notify.emit(tr("Dossier introuvable — le jeu a peut-être été déplacé."))
+        return
+    open_local_path(str(dossier))
+
+
 def on_language_clicked(view: "GameDetailView") -> None:
     """Menu de choix de la langue du jeu, posé sous le segment de la ligne méta.
 
@@ -358,13 +448,19 @@ def on_language_clicked(view: "GameDetailView") -> None:
     menu.exec(view.ancre_langue() or QCursor.pos())
 
 
-def _appliquer_langue(view: "GameDetailView", code: str) -> None:
-    """Enregistre le choix, l'écrit dans le registre, rafraîchit la fiche."""
+def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
+    """Enregistre le choix, l'écrit dans le registre, rafraîchit la fiche.
+
+    Rend True si le registre porte RÉELLEMENT la nouvelle langue. La fenêtre
+    de réglages s'en sert pour remettre son bouton radio sur ce qui est vrai :
+    laisser la sélection sur un choix refusé afficherait une langue que le jeu
+    n'a pas.
+    """
     game = view.game
     if game is None or code == view.manager.game_language(game):
-        return
+        return False
     if game.language_registry is None:
-        return
+        return False
     # Appliquer D'ABORD, persister ENSUITE. Enregistrer un choix que le registre
     # n'a pas pris ferait annoncer à la fiche une langue que le jeu n'a pas, et
     # surtout : chaque lancement redemanderait l'élévation pour « corriger » un
@@ -380,11 +476,11 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> None:
     demander = confirmer_registre(view, game.name)
     accepte = True
 
-    def confirmer(ruche, cle, valeurs):
+    def confirmer(ruche, cle, valeurs, ecarts=None):
         nonlocal accepte
         QApplication.restoreOverrideCursor()
         try:
-            accepte = demander(ruche, cle, valeurs)
+            accepte = demander(ruche, cle, valeurs, ecarts)
         finally:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         return accepte
@@ -397,12 +493,14 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> None:
     if not accepte:
         # Refus délibéré : rien à signaler, l'utilisateur sait ce qu'il a fait.
         # Un modal d'erreur ici reprocherait à quelqu'un d'avoir répondu non.
-        return
+        return False
     if pose:
         view.manager.set_game_language(game.id, code)
         langue = game.language_registry.get(code)
         etiquette = langue.label if langue is not None else code
         view.notify.emit(tr("Langue du jeu : {}").format(etiquette))
+        view.set_game(game)
+        return True
     else:
         # Échec = UAC refusé, ou le registre n'a pas pris. Une vraie erreur,
         # donc un modal : le choix est enregistré mais SANS effet, et un toast
@@ -413,6 +511,7 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> None:
                "Ce réglage demande une autorisation administrateur. Le jeu "
                "démarrera dans la langue actuellement en place."))
     view.set_game(game)
+    return False
 
 
 def show_context_menu(view: "GameDetailView", pos) -> None:

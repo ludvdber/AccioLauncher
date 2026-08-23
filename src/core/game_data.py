@@ -310,6 +310,9 @@ class PostInstall:
     """Données de post-installation d'un jeu."""
     registry: RegistryEntries = field(default_factory=list)
     config_files: tuple[ConfigFile, ...] = ()
+    # Sous-dossier dans lequel ranger le jeu après extraction (« pc » pour HP7).
+    # Vide = on ne range rien, ce qui est le cas des sept autres jeux.
+    sous_dossier: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -372,6 +375,24 @@ def _url_aide_valide(brut) -> str:
             log.warning("URL d'aide refusée (https attendu) : %r", url)
         return ""
     return url
+
+
+def _sous_dossier_valide(brut) -> str:
+    """Nom du sous-dossier de rangement, ou chaîne vide s'il n'est pas sûr.
+
+    Ce nom vient du catalogue DISTANT et sert à composer un chemin sur le
+    disque de l'utilisateur, puis à y DÉPLACER tout un jeu. Un `..`, un
+    séparateur ou une lettre de lecteur enverrait l'installation ailleurs :
+    même exigence que `executable`, mais en plus strict — un seul composant,
+    jamais un chemin. `_JETON_SUR` refuse déjà `..`, `/`, `\\` et `:`.
+    """
+    if not isinstance(brut, str) or not brut:
+        return ""
+    nom = brut.strip()
+    if not _JETON_SUR.match(nom) or nom in (".", ".."):
+        log.warning("Sous-dossier de rangement refusé : %r", brut)
+        return ""
+    return nom
 
 
 @dataclass(frozen=True, slots=True)
@@ -504,6 +525,7 @@ class GameData:
             post_install=PostInstall(
                 registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
+                sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),
             ),
             pre_launch=pre_launch,
         )

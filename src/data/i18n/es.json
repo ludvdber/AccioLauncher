@@ -261,6 +261,16 @@
     "Téléchargement des bandes-annonces… {faites}/{total} · {pct} %": "Descargando tráileres… {faites}/{total} · {pct} %",
     "Télécharger les bandes-annonces ({taille})": "Descargar los tráileres ({taille})",
     "Vous pourrez les ajouter ou les supprimer à tout moment dans les Paramètres.": "Podrá añadirlos o eliminarlos en cualquier momento en Ajustes.",
-    "Supprimer": "Eliminar"
+    "Supprimer": "Eliminar",
+    "remplace : {}": "reemplaza: {}",
+    "Le réglage n'a pas pu être écrit — le jeu démarre avec sa configuration actuelle.": "No se pudo escribir el ajuste: el juego se inicia con su configuración actual.",
+    "Réglages de {}": "Ajustes de {}",
+    "Réglages du jeu": "Ajustes del juego",
+    "Installé dans une seule langue": "Instalado en un solo idioma",
+    "Réglages — {}": "Ajustes — {}",
+    "Ce jeu n'est installé que dans une seule langue.\nLe lanceur ne peut que sélectionner une langue déjà présente sur le disque, pas la télécharger.": "Este juego solo está instalado en un idioma.\nEl lanzador solo puede seleccionar un idioma ya presente en el disco, no descargarlo.",
+    "Fichiers du jeu": "Archivos del juego",
+    "Ouvrir le dossier du jeu": "Abrir la carpeta del juego",
+    "Dossier introuvable — le jeu a peut-être été déplacé.": "Carpeta no encontrada: puede que el juego se haya movido."
   }
 }

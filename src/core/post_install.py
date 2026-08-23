@@ -57,6 +57,51 @@ def config_dest_error(dest: Path, roots: list[Path]) -> str | None:
     return "hors des dossiers autorisés (Documents, Saved Games)"
 
 
+def ranger_dans_sous_dossier(dossier_jeu: Path, nom: str) -> int:
+    """Déplace le contenu de `dossier_jeu` dans `dossier_jeu/nom`. Rend le compte.
+
+    HP7 partie 1 et 2 ne démarrent QUE si leurs fichiers vivent dans un
+    sous-dossier `pc` sous la clé `Install Dir` du registre — relevé dans les
+    binaires (`Install Dir` suivi de `pc`) puis vérifié en lançant le jeu : à
+    plat il sort en 0,5 s avec le code 0, sans un mot, par le chemin
+    « insérez le disque ». Le NOM compte : `zz` échoue comme `à plat`.
+
+    Les archives publiées, elles, posent les fichiers à plat. Plutôt que de
+    republier 12 Go, on range après extraction — un renommage sur le même
+    volume, donc instantané quelle que soit la taille du jeu.
+
+    Idempotent : rejoué (réparation, mise à jour), il ne fait que redescendre
+    ce que la nouvelle extraction a reposé à plat, en écrasant l'ancien.
+    """
+    if not nom or not dossier_jeu.is_dir():
+        return 0
+    cible = dossier_jeu / nom
+    cible.mkdir(parents=True, exist_ok=True)
+    deplaces = 0
+    for entree in list(dossier_jeu.iterdir()):
+        if entree == cible:
+            continue
+        destination = cible / entree.name
+        try:
+            if destination.exists():
+                # Réparation : l'archive vient de reposer un fichier à plat
+                # par-dessus une installation déjà rangée. `os.replace` écrase
+                # en une opération ; sans ça le déplacement échouerait et on
+                # garderait l'ANCIEN fichier tout en croyant l'avoir remplacé.
+                if destination.is_dir():
+                    shutil.rmtree(destination)
+                else:
+                    destination.unlink()
+            entree.replace(destination)
+            deplaces += 1
+        except OSError as exc:
+            log.warning("Impossible de ranger %s dans %s/ : %s",
+                        entree.name, nom, exc)
+    if deplaces:
+        log.info("%d élément(s) rangé(s) dans %s/", deplaces, nom)
+    return deplaces
+
+
 def unblock_extracted(extracted_dirs: list[Path]) -> int:
     """Supprime le flag NTFS Zone.Identifier des fichiers extraits."""
     return sum(remove_zone_identifier(d) for d in extracted_dirs)

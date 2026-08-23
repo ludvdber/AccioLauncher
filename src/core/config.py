@@ -59,7 +59,7 @@ LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
 # embarquees : permet a un traducteur de tester son fichier sans release.
 USER_I18N_DIR = DEFAULT_INSTALL_PATH / "i18n"
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 
 def _as_str(value: object, default: str) -> str:

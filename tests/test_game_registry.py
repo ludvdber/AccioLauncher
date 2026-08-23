@@ -11,7 +11,7 @@ import sys
 import pytest
 
 from src.core.game_registry import (
-    construire_reg, deja_a_jour, ecrire_valeurs, lire_valeurs,
+    comparer, construire_reg, deja_a_jour, ecrire_valeurs, lire_valeurs,
     refus_de_cle, refus_de_valeur,
 )
 
@@ -164,7 +164,8 @@ class TestEcritureNeComprometPas:
                             lambda *a: appels.append(a) or True)
         monkeypatch.setattr("src.core.game_registry._ecrire_eleve",
                             lambda *a: appels.append(a) or True)
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: False)
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {"Language": ("x", "French")})
         return appels
 
     @pytest.mark.skipif(sys.platform != "win32", reason="chemin Windows")
@@ -184,7 +185,7 @@ class TestEcritureNeComprometPas:
     def test_rien_a_faire_si_deja_a_jour(self, monkeypatch):
         """Le point entier du dispositif : pas d'invite UAC pour rien."""
         appels = []
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: True)
+        monkeypatch.setattr("src.core.game_registry.comparer", lambda *a, **k: {})
         monkeypatch.setattr("src.core.game_registry._ecrire_direct",
                             lambda *a: appels.append(a) or True)
         monkeypatch.setattr("src.core.game_registry._ecrire_eleve",
@@ -195,8 +196,9 @@ class TestEcritureNeComprometPas:
     @pytest.mark.skipif(sys.platform != "win32", reason="chemin Windows")
     def test_l_elevation_prend_le_relais_si_l_ecriture_directe_echoue(self, monkeypatch):
         etapes = []
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour",
-                            lambda *a, **k: bool(etapes))
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {} if etapes
+                            else {"Language": ("x", "French")})
         monkeypatch.setattr("src.core.game_registry._ecrire_direct",
                             lambda *a: False)
         monkeypatch.setattr("src.core.game_registry._ecrire_eleve",
@@ -206,7 +208,8 @@ class TestEcritureNeComprometPas:
 
     @pytest.mark.skipif(sys.platform != "win32", reason="chemin Windows")
     def test_uac_refuse_rend_false(self, monkeypatch):
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: False)
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {"Language": ("x", "French")})
         monkeypatch.setattr("src.core.game_registry._ecrire_direct", lambda *a: False)
         monkeypatch.setattr("src.core.game_registry._ecrire_eleve", lambda *a: False)
         assert ecrire_valeurs("HKLM", CLE_JEU, {"Language": "French"}) is False
@@ -215,7 +218,8 @@ class TestEcritureNeComprometPas:
     def test_une_ecriture_qui_ne_prend_pas_rend_false(self, monkeypatch):
         """regedit /s est MUET, y compris en échec : c'est la relecture qui
         fait foi, jamais son code de retour."""
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: False)
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {"Language": ("x", "French")})
         monkeypatch.setattr("src.core.game_registry._ecrire_direct", lambda *a: False)
         monkeypatch.setattr("src.core.game_registry._ecrire_eleve", lambda *a: True)
         assert ecrire_valeurs("HKLM", CLE_JEU, {"Language": "French"},
@@ -287,6 +291,54 @@ class TestPasDeDoubleWow6432Node:
         assert section.lower().count("wow6432node") == 1
 
 
+class TestComparer:
+    """Ce qui est DÉJÀ en place face à ce qu'on veut poser.
+
+    Le cas réel qui a motivé cette fonction : sur une machine où le jeu a été
+    installé par EA, `Locale` et `Install Dir` existent déjà et pointent
+    ailleurs — et sur la partie 2, le `fr_FR` que l'installeur y écrit n'est
+    même pas une valeur que le jeu accepte (sa table est `en fr it de es pl
+    ru`). On remplace donc, mais en le disant.
+    """
+
+    def test_rien_a_faire_quand_tout_concorde(self, monkeypatch):
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs",
+                            lambda *a, **k: {"Locale": "fr", "Install Dir": "D:" + BS})
+        assert comparer("HKLM", CLE_JEU,
+                        {"Locale": "fr", "Install Dir": "D:" + BS}) == {}
+        assert deja_a_jour("HKLM", CLE_JEU, {"Locale": "fr"}) is True
+
+    def test_une_valeur_differente_remonte_avec_l_ancienne(self, monkeypatch):
+        """C'est le cas HP7 partie 2 : `fr_FR` posé par EA, `fr` attendu."""
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs",
+                            lambda *a, **k: {"Locale": "fr_FR"})
+        assert comparer("HKLM", CLE_JEU, {"Locale": "fr"}) == {
+            "Locale": ("fr_FR", "fr")}
+        assert deja_a_jour("HKLM", CLE_JEU, {"Locale": "fr"}) is False
+
+    def test_une_valeur_absente_remonte_avec_None(self, monkeypatch):
+        """None et « chaîne vide » ne veulent pas dire la même chose : l'un
+        n'écrase rien, l'autre remplace un réglage existant. Le dialogue
+        n'annonce un remplacement que dans le second cas."""
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: {})
+        assert comparer("HKLM", CLE_JEU, {"Locale": "fr"}) == {"Locale": (None, "fr")}
+
+    def test_seules_les_differences_sortent(self, monkeypatch):
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs",
+                            lambda *a, **k: {"Locale": "fr", "Install Dir": "C:" + BS})
+        assert comparer("HKLM", CLE_JEU,
+                        {"Locale": "fr", "Install Dir": "D:" + BS}) == {
+            "Install Dir": ("C:" + BS, "D:" + BS)}
+
+    def test_une_cle_absente_donne_tout_a_ecrire(self, monkeypatch):
+        """`lire_valeurs` rend {} aussi bien pour une clé absente que pour une
+        clé vide : dans les deux cas il n'y a rien à écraser."""
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: {})
+        ecarts = comparer("HKLM", CLE_JEU, {"Locale": "fr", "Install Dir": "D:" + BS})
+        assert set(ecarts) == {"Locale", "Install Dir"}
+        assert all(actuel is None for actuel, _ in ecarts.values())
+
+
 class TestPrevenanceAvantEcriture:
     """On ne modifie pas le registre de quelqu'un sans le lui dire — mais on ne
     le dérange pas non plus pour rien : le rappel n'est appelé que lorsqu'il y a
@@ -296,12 +348,15 @@ class TestPrevenanceAvantEcriture:
     def test_le_rappel_est_consulte_avant_toute_ecriture(self, monkeypatch):
         vus = []
         ecrites = []
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour",
-                            lambda *a, **k: bool(ecrites))
+        # `deja_a_jour` DÉLÈGUE à `comparer` : le patcher couvre donc aussi la
+        # relecture de vérification, qui suit l'écriture.
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {} if ecrites
+                            else {"Locale": (None, "fr_FR")})
         monkeypatch.setattr("src.core.game_registry._ecrire_direct",
                             lambda *a: ecrites.append(a) or True)
 
-        def confirmer(ruche, cle, valeurs):
+        def confirmer(ruche, cle, valeurs, ecarts):
             # Le rappel doit voir CE qui sera écrit : c'est ce qu'il affiche.
             vus.append((ruche, cle, dict(valeurs)))
             return True
@@ -312,9 +367,34 @@ class TestPrevenanceAvantEcriture:
         assert len(ecrites) == 1
 
     @pytest.mark.skipif(sys.platform != "win32", reason="chemin Windows")
+    def test_le_rappel_recoit_ce_qui_sera_ecrase(self, monkeypatch):
+        """La valeur ACTUELLE doit remonter jusqu'au dialogue.
+
+        Sans elle, « le launcher va écrire Locale = fr » ne dit pas qu'il y a
+        déjà un `fr_FR` posé par l'installeur EA. Autoriser sans savoir ce
+        qu'on perd, c'est signer sans lire.
+        """
+        ecarts_vus = []
+        monkeypatch.setattr(
+            "src.core.game_registry.comparer",
+            lambda *a, **k: {"Locale": ("fr_FR", "fr"),
+                             "Install Dir": (None, r"D:\HP8" + "\\")})
+        monkeypatch.setattr("src.core.game_registry._ecrire_direct", lambda *a: False)
+        monkeypatch.setattr("src.core.game_registry._ecrire_eleve", lambda *a: False)
+
+        def confirmer(ruche, cle, valeurs, ecarts):
+            ecarts_vus.append(dict(ecarts))
+            return False
+
+        ecrire_valeurs("HKLM", CLE_JEU, {"Locale": "fr"}, confirmer=confirmer)
+        assert ecarts_vus == [{"Locale": ("fr_FR", "fr"),
+                               "Install Dir": (None, r"D:\HP8" + "\\")}]
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="chemin Windows")
     def test_un_refus_n_ecrit_rien(self, monkeypatch):
         appels = []
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: False)
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {"Locale": ("fr_FR", "fr")})
         monkeypatch.setattr("src.core.game_registry._ecrire_direct",
                             lambda *a: appels.append(a) or True)
         monkeypatch.setattr("src.core.game_registry._ecrire_eleve",
@@ -327,7 +407,7 @@ class TestPrevenanceAvantEcriture:
     def test_pas_de_rappel_quand_il_n_y_a_rien_a_ecrire(self, monkeypatch):
         """Sinon on redemanderait à CHAQUE lancement, et prévenir deviendrait
         un harcèlement qu'on apprend à cliquer sans lire."""
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: True)
+        monkeypatch.setattr("src.core.game_registry.comparer", lambda *a, **k: {})
         appels = []
         assert ecrire_valeurs("HKLM", CLE_JEU, {"Locale": "fr_FR"},
                               confirmer=lambda *a: appels.append(a) or True) is True
@@ -337,7 +417,8 @@ class TestPrevenanceAvantEcriture:
     def test_pas_de_rappel_sur_une_cle_refusee(self, monkeypatch):
         """La validation passe AVANT : inutile de faire valider à l'utilisateur
         une écriture qu'on refusera de toute façon."""
-        monkeypatch.setattr("src.core.game_registry.deja_a_jour", lambda *a, **k: False)
+        monkeypatch.setattr("src.core.game_registry.comparer",
+                            lambda *a, **k: {"X": (None, "y")})
         appels = []
         assert ecrire_valeurs("HKCU", CLE_RUN, {"X": "y"},
                               confirmer=lambda *a: appels.append(a) or True) is False
