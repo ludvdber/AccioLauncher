@@ -50,6 +50,11 @@ class GameDetailView(QWidget):
     state_changed = pyqtSignal()
     settings_requested = pyqtSignal()   # depuis une alerte du panneau d'actions
     game_launched = pyqtSignal(object, str, str)  # (subprocess.Popen, game_name, game_id)
+    # Mode cinéma : la bande-annonce seule, sans voile ni texte. La FENÊTRE
+    # doit en être avertie — le carrousel, la barre de statut et l'engrenage
+    # ne lui appartiennent pas, et les laisser en place ferait une fiche à
+    # moitié effacée plutôt qu'un plein écran.
+    cinema_toggled = pyqtSignal(bool)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -74,6 +79,7 @@ class GameDetailView(QWidget):
         # Géométrie en attente de rattrapage de hauteur (cf. _fit_info_height).
         self._pending_fit: tuple[int, int, int] | None = None
         self._ops = GameOperations(manager, self)
+        self._cinema = False
 
         self._build_ui(manager)
         self._connect_signals()
@@ -97,6 +103,7 @@ class GameDetailView(QWidget):
         self._audio_bar.volume_changed.connect(self._on_volume_changed)
         self._audio_bar.play_toggled.connect(self._on_play_clicked)
         self._audio_bar.replay_clicked.connect(self._on_replay_clicked)
+        self._audio_bar.cinema_toggled.connect(self.basculer_cinema)
 
         # Animations fade
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity")
@@ -256,6 +263,45 @@ class GameDetailView(QWidget):
         self._audio_bar.move(self.width() - self._audio_bar.width() - _MARGE_AUDIO,
                              self.height() - self._audio_bar.height() - _MARGE_AUDIO_BAS)
         self._audio_bar.raise_()
+
+    # ──────────────────── Mode cinéma ────────────────────
+
+    def cinema(self) -> bool:
+        return self._cinema
+
+    def basculer_cinema(self) -> None:
+        self.set_cinema(not self._cinema)
+
+    def set_cinema(self, actif: bool) -> None:
+        """La bande-annonce seule, sans voile ni texte.
+
+        Le voile de 30 % vient d'être posé sur le chemin vidéo pour rendre le
+        titre et la description lisibles — c'est mesuré, et ce n'est pas
+        négociable tant qu'il y a un texte à lire par-dessus. Mais quelqu'un qui
+        veut simplement REGARDER la bande-annonce n'a aucune raison de la subir
+        assombrie : ici on retire le texte, donc on retire aussi ce qui le
+        protégeait. Le compromis disparaît au lieu d'être arbitré à la place de
+        l'utilisateur.
+
+        Sans effet quand aucune vidéo ne joue : un « plein écran » qui agrandit
+        une image fixe déjà en plein écran ne fait que vider l'interface.
+        """
+        # `is_playing` est une PROPERTY, pas une méthode : l'appeler lèverait
+        # `TypeError` au premier clic sur le bouton. Exactement le défaut qui
+        # avait empêché toute installation pendant une journée
+        # (`_speed_tracker.speed()`), et invisible ici pour la même raison —
+        # l'autre chemin (`set_cinema(False)`, appelé par `_stop_video`)
+        # court-circuite le `and` et ne l'évalue jamais.
+        if actif and not self._video.is_playing:
+            return
+        if actif == self._cinema:
+            return
+        self._cinema = actif
+        self._bg.set_cinema(actif)
+        self._info.setVisible(not actif)
+        self._audio_bar.set_cinema_icon(actif)
+        self._position_audio_bar()
+        self.cinema_toggled.emit(actif)
 
     def resizeEvent(self, event) -> None:
         self._bg.setGeometry(self.rect())
@@ -425,6 +471,11 @@ class GameDetailView(QWidget):
             self._audio_bar.hide()
 
     def _stop_video(self) -> None:
+        # Sortir du plein écran AVANT tout le reste : sans ça, une vidéo qui se
+        # termine (ou un changement de jeu, ou un clic sur JOUER) laisserait une
+        # fenêtre vide — une illustration fixe, sans titre, sans boutons et sans
+        # carrousel — dont rien n'indiquerait comment sortir.
+        self.set_cinema(False)
         # ANNULER d'abord le démarrage en attente : couper la vidéo ne
         # l'empêchait pas de repartir juste après. Cas réel (Ludo, 2026-08-23) :
         # un téléchargement en cours, on va lancer un AUTRE jeu — donc on change

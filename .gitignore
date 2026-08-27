@@ -86,9 +86,22 @@ docs/archives/
 # local ne reparte jamais dans un commit.
 assets/videos/
 
-# Archives de jeu déposées à la main pour un essai. Le cache réel vit dans
-# ~/Games/AccioLauncher/.cache, mais une part de 2 Go oubliée à la racine
-# passerait inaperçue jusqu'au push.
+# Données du launcher chez l'utilisateur, déposées ici pour un diagnostic.
+# Depuis le 2026-08-26 tout vit dans `_Launcher/` : journal de sessions,
+# config, cache de catalogue, journaux, bandes-annonces. Le motif vise le
+# DÉPÔT, pas le dossier de l'utilisateur — c'est le fichier qu'on se copie
+# « deux minutes » pour reproduire un bug qui part ensuite dans un commit.
+# `sessions.json` est le plus sensible des trois : il dit à quels jeux
+# quelqu'un a joué, quel jour et pendant combien de temps. Ce n'est pas de la
+# plomberie, c'est une donnée personnelle, et git la garderait pour toujours.
+_Launcher/
+sessions.json
+*.corrompu
+
+# Archives de jeu déposées à la main pour un essai. Le cache réel vit désormais
+# dans `<install_path>/_Launcher/cache` (il SUIT le dossier de jeux, pour que
+# l'archive et son extraction soient sur le même volume), mais une part de 2 Go
+# oubliée à la racine passerait inaperçue jusqu'au push.
 *.7z
 *.7z.[0-9][0-9][0-9]
 *.part

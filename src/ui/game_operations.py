@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
+from src.core import stats
 from src.core.downloader import Downloader
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
@@ -134,8 +135,7 @@ class GameOperations(QObject):
         self.state_changed.emit()
         self.status_message.emit(tr("Téléchargement de {} v{}…").format(game.name, version.version))
 
-        archive_name = f"{game.id}_v{version.version}.7z"
-        dest = self._manager.config.cache_path / archive_name
+        dest = self._manager.chemin_archive(game.id, version)
         # Empreintes : celles du catalogue si renseignées, sinon celles publiées
         # par GitHub (récupérées sans requête dédiée). Vide → vérification sautée.
         sha256, sha256_parts = self._manager.expected_hashes(version)
@@ -348,6 +348,12 @@ class GameOperations(QObject):
         game = self._active_game
         if game is None:
             return
+        # Ce que le launcher a réellement rapatrié, mesuré au disque comme
+        # `octets_deja_telecharges` (le seul décompte qui recouvre les volumes
+        # multiples). L'archive est encore là : l'installation n'a pas commencé.
+        if self._target_version is not None:
+            stats.enregistrer_telechargement(
+                self._manager.octets_deja_telecharges(game.id, self._target_version))
         # Switch de version : l'ancienne installation n'est supprimée que maintenant,
         # le téléchargement de la nouvelle étant terminé et vérifié.
         if self._uninstall_first:

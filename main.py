@@ -5,9 +5,8 @@ import traceback
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
-from src.core.config import DEFAULT_INSTALL_PATH, DEFAULT_LANGUAGE
+from src.core.config import DEFAULT_LANGUAGE, LOG_DIR, migrer_arborescence
 
-LOG_DIR = DEFAULT_INSTALL_PATH
 LOG_FILE = LOG_DIR / "accio_launcher.log"
 LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 Mo
 LOG_BACKUP_COUNT = 3
@@ -54,12 +53,26 @@ def _create_splash():
 
 
 def main():
+    # AVANT le logging : le journal s'ouvre dans `_Launcher/logs/`, et un
+    # `RotatingFileHandler` qui tient l'ancien fichier ouvert empêcherait de le
+    # déplacer. Avant `Config.exists()` aussi, sinon un `config.json` resté à
+    # l'ancien emplacement passerait pour absent et l'assistant de premier
+    # lancement rouvrirait chez quelqu'un qui a déjà huit jeux installés.
+    try:
+        _deplaces = migrer_arborescence()
+    except OSError as exc:
+        print(f"Migration de l'arborescence impossible : {exc}", file=sys.stderr)
+        _deplaces = []
+
     try:
         _setup_logging()
     except OSError as exc:
         print(f"Impossible d'initialiser le logging : {exc}", file=sys.stderr)
 
     log = logging.getLogger(__name__)
+    if _deplaces:
+        log.info("Arborescence rangée dans %s : %s",
+                 LOG_DIR.parent.name, ", ".join(_deplaces))
 
     # Identité applicative explicite : groupement taskbar, icône et
     # notifications corrects (sinon Windows regroupe sous "python.exe" en dev).
@@ -126,6 +139,11 @@ def main():
         # fenêtre réellement prête.
         splash.set_statut(tr("Ouverture de la fenêtre"), 0.92)
         window.show()
+        # Un démarrage de plus. Compté ICI et non à la construction de
+        # MainWindow : la suite de tests en construit des dizaines, et aucune
+        # n'est un lancement du launcher.
+        from src.core import stats as _stats
+        _stats.enregistrer_demarrage()
         splash.set_statut(tr("Prêt"), 1.0)
         splash.finish(window)
         sys.exit(app.exec())

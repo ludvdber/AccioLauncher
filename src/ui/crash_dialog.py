@@ -34,9 +34,9 @@ def scrub_user_paths(text: str) -> str:
 
 def _read_log_tail() -> str:
     """Dernières lignes du log applicatif (vide si introuvable)."""
-    from src.core.config import DEFAULT_INSTALL_PATH
+    from src.core.config import LOG_DIR
 
-    log_file = DEFAULT_INSTALL_PATH / "accio_launcher.log"
+    log_file = LOG_DIR / "accio_launcher.log"
     try:
         lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
         return "\n".join(lines[-_LOG_TAIL_LINES:])

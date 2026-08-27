@@ -32,6 +32,11 @@ IDENTIQUES_TOLEREES = {
     "v{} · changelog",
     # Noms de produits Microsoft : ils ne se traduisent pas.
     "Visual C++ x86", "Visual C++ 2005 x86", "Visual C++ 2008 x86",
+    # Abréviations d'unités de durée, identiques en FR/EN/ES. L'abréviation
+    # n'est pas une paresse : elle évite l'accord du singulier (« 1 hour » vs
+    # « 2 hours »), qu'une grille de statistiques rencontrerait à chaque ligne
+    # et qu'un format à trous ne sait pas rendre.
+    "{} h", "{} min", "{} h {} min",
 }
 
 LANG_FILES = sorted(Path(p) for p in glob.glob(str(I18N_DIR / "*.json")))

@@ -65,12 +65,20 @@ _BADGE_PADDING = 10
 
 
 def _badge_font(text: str, max_w: int) -> QFont:
-    """Plus grand corps auquel la pastille de `text` tient dans `max_w`."""
+    """Plus grand corps auquel la pastille de `text` tient dans `max_w`.
+
+    Cinzel, EMBARQUÉE, et non « Segoe UI » appelée par son nom : cette police
+    n'existe pas sous Linux, n'est garantie nulle part, et sous `offscreen` Qt
+    la remplace en silence par une police 22 % plus large — la boucle
+    ci-dessous mesurait donc autre chose que ce que l'utilisateur voit. Le
+    changement de police ne peut rien casser ici : c'est précisément le rôle de
+    cette boucle que de réduire le corps jusqu'à ce que ça tienne.
+    """
     for size in _BADGE_SIZES:
-        f = QFont("Segoe UI", size, QFont.Weight.Bold)
+        f = cinzel(size, bold=True)
         if QFontMetrics(f).horizontalAdvance(text) + _BADGE_PADDING <= max_w:
             return f
-    return QFont("Segoe UI", _BADGE_SIZES[-1], QFont.Weight.Bold)
+    return cinzel(_BADGE_SIZES[-1], bold=True)
 
 
 def _badge_texte(text: str, max_w: int) -> tuple[QFont, str]:
@@ -358,7 +366,7 @@ class CarouselItem(QWidget):
 
             ver_text = f"v{self._cached_version}" if self._cached_version else ""
             if ver_text:
-                p.setFont(QFont("Segoe UI", 9))
+                p.setFont(cinzel(9))
                 fm = p.fontMetrics()
                 tw = fm.horizontalAdvance(ver_text)
                 th = fm.height()
@@ -379,7 +387,7 @@ class CarouselItem(QWidget):
             p.setBrush(accent_qcolor(220))
             p.drawRoundedRect(QRectF(bx, by, badge_size, badge_size), 4, 4)
             p.setPen(QColor(255, 255, 255, 240))
-            p.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            p.setFont(cinzel(10, bold=True))
             p.drawText(QRectF(bx, by, badge_size, badge_size), Qt.AlignmentFlag.AlignCenter, "↑")
 
         if self._cached_is_new and not self._cached_installed:

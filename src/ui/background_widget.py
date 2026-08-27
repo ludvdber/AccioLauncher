@@ -25,6 +25,41 @@ _RACCORD_PX = 90
 # repeint du fond sur du fond. Il n'existe que pour les échelles fractionnaires.
 _DEBORD_PX = 2
 
+# Voile d'assombrissement posé sur l'illustration ET sur la bande-annonce, avant
+# les dégradés. 38/255 = 15 % de noir.
+#
+# Il valait 77 (30 %) depuis toujours, mais il ne s'appliquait qu'à
+# l'illustration : le jour où on l'a étendu à la vidéo, la MOITIÉ DROITE des
+# bandes-annonces — celle que le voile gauche ne couvre pas — est passée de 0 à
+# 30 % d'assombrissement d'un coup. « Un peu trop violent » (Ludo, 2026-08-26),
+# et il a raison : c'est la partie de l'image où il n'y a aucun texte à
+# protéger.
+#
+# Divisé par deux, donc, et la mesure dit que ça ne coûte presque rien — parce
+# que ce n'est pas ce voile-ci qui rend le texte lisible, c'est `_VOILE_GAUCHE`.
+# Sur 8 illustrations × 195 images de bande-annonce, sous le masque d'encre :
+#
+#     voile plein   titre        description   ligne méta
+#     77 (30 %)     0 % / 6,79   0 % / 5,17    0 % / 5,60
+#     38 (15 %)     0 % / 5,21   1 % / 4,29    0 % / 4,73
+#      0            0 % / 4,07   8 % / 3,59    3 % / 3,94
+#
+# (part sous le seuil AA / pire cas). Le seul prix est 1 % des plans où la
+# description passe à 4,29 au lieu de 4,50 — sur une image qui bouge, et pour
+# une bande-annonce deux fois plus visible. Le supprimer tout à fait, en
+# revanche, coûterait 8 %.
+_VOILE_ALPHA = 38
+
+# Voile gauche : (position sur la largeur, alpha). C'est LUI qui protège
+# réellement le texte — le voile plein ci-dessus assombrit uniformément, mais
+# le panneau d'infos occupe `min(650, 50 %)` de la largeur, et l'ancien profil
+# était déjà retombé à 20 dès 55 % : les dernières lettres d'un titre ou d'une
+# ligne méta tombaient donc sur l'illustration presque nue. Sorti en constante
+# pour être étalonnable — les valeurs ci-dessous sont mesurées, pas choisies à
+# l'œil (cf. `tests/test_contraste.py`).
+_VOILE_GAUCHE = ((0.0, 214), (0.32, 190), (0.47, 142), (0.60, 66),
+                 (0.72, 16), (0.82, 0))
+
 # Zoom cinématique : bornes et pas par tick du Ticker (~30 Hz), pour une jambe
 # de 8 s aller et 8 s retour — exactement l'ancien cycle de 16 s.
 _ZOOM_MIN = 1.0
@@ -56,6 +91,9 @@ class BackgroundWidget(QWidget):
         # dépendent que de la taille ; les rebâtir à chaque frame coûtait cher.
         self._overlay_cache: QPixmap | None = None
         self._overlay_for: tuple[int, int] = (0, 0)
+        # Mode cinéma : la bande-annonce seule, sans voile ni dégradés. Il n'y a
+        # plus un seul texte par-dessus, donc plus rien à rendre lisible.
+        self._cinema = False
 
         # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16 s), cadencé par
         # le Ticker partagé. Il tournait avant sur une QPropertyAnimation, donc
@@ -196,6 +234,21 @@ class BackgroundWidget(QWidget):
         else:
             self._old_frame = None
 
+    def cinema(self) -> bool:
+        return self._cinema
+
+    def set_cinema(self, actif: bool) -> None:
+        """Bascule l'affichage « bande-annonce seule ».
+
+        Le voile et les dégradés existent pour rendre lisibles le titre, la
+        description et les boutons. Quand la vue les a tous retirés, les garder
+        reviendrait à ternir l'image pour protéger un texte qui n'est plus là.
+        """
+        if actif == self._cinema:
+            return
+        self._cinema = actif
+        self.update()
+
     def set_video_frame(self, image: QImage | None) -> None:
         """Reçoit une frame vidéo à peindre à la place de l'image statique."""
         self._video_frame = image
@@ -290,14 +343,35 @@ class BackgroundWidget(QWidget):
                 src_rect = QRectF(cx - crop_w * 0.5, cy - crop_h * 0.5, crop_w, crop_h)
                 p.drawPixmap(QRectF(0, 0, w, h), self._prepared, src_rect)
 
-            # Overlay brightness (seulement sur l'image statique)
-            p.fillRect(rect, QColor(0, 0, 0, 77))
+        # Voile d'assombrissement — sur les DEUX chemins.
+        #
+        # Il était posé dans la branche `else`, donc l'illustration statique le
+        # recevait et la bande-annonce, non. Or c'est elle qui en a besoin : une
+        # image fixe est choisie une fois, un plan de bande-annonce change 25
+        # fois par seconde et personne ne l'a regardé sous le titre. Mesuré sur
+        # 195 images extraites des huit bandes-annonces, contraste WCAG relevé
+        # sur les pixels réellement situés sous chaque libellé (95e centile de
+        # luminance, donc la zone claire et non un pixel isolé) :
+        #
+        #     zone           sans voile      avec ce voile
+        #     titre          27 % sous AA     6 % sous AA
+        #     description    25 % sous AA     6 % sous AA
+        #
+        # Le voile ne recadre rien et ne réduit rien : la bande-annonce occupe
+        # toujours tout le fond. Au-delà de 30 % le rendement s'effondre (40 %
+        # ne gagne que 4 points sur le titre) pour un plan visiblement terni.
+        if not self._cinema:
+            p.fillRect(rect, QColor(0, 0, 0, _VOILE_ALPHA))
 
         # ── Permanent elements (opacity 1.0) — pré-rendus dans un pixmap ──
         p.setOpacity(1.0)
-        self._ensure_overlay(w, h)
-        if self._overlay_cache is not None:
-            p.drawPixmap(0, 0, self._overlay_cache)
+        # En mode cinéma, la bande-annonce est SEULE : pas de voile, pas de
+        # dégradés, pas de vignette. Rien de tout ça ne sert quand il n'y a plus
+        # un seul texte à rendre lisible par-dessus.
+        if not self._cinema:
+            self._ensure_overlay(w, h)
+            if self._overlay_cache is not None:
+                p.drawPixmap(0, 0, self._overlay_cache)
 
         # Bord bas — atteindre le pixel PHYSIQUE, pas le pixel logique.
         # Sur un écran à 125 %, le bas du widget tombe sur un demi-pixel
@@ -310,8 +384,11 @@ class BackgroundWidget(QWidget):
         # 125 %. On peint volontairement AU-DELÀ du bord : Qt découpe au rect
         # réel du widget, donc le débord couvre la rangée quelle que soit la
         # façon dont l'échelle est arrondie.
-        p.fillRect(QRectF(0, h - _DEBORD_PX, w, _DEBORD_PX * 2),
-                   theme.bg_qcolor(255))
+        # Sauf en mode cinéma : le carrousel est caché, il n'y a plus de raccord
+        # à faire et ce débord poserait un trait sombre en bas de l'image.
+        if not self._cinema:
+            p.fillRect(QRectF(0, h - _DEBORD_PX, w, _DEBORD_PX * 2),
+                       theme.bg_qcolor(255))
 
         p.end()
 
@@ -357,11 +434,8 @@ class BackgroundWidget(QWidget):
 
         # Voile gauche — simple dégradé horizontal, pas de blur
         veil_grad = QLinearGradient(0, 0, w, 0)
-        veil_grad.setColorAt(0.0, theme.bg_qcolor(200))
-        veil_grad.setColorAt(0.25, theme.bg_qcolor(150))
-        veil_grad.setColorAt(0.40, theme.bg_qcolor(80))
-        veil_grad.setColorAt(0.55, theme.bg_qcolor(20))
-        veil_grad.setColorAt(0.72, theme.bg_qcolor(0))
+        for position, alpha in _VOILE_GAUCHE:
+            veil_grad.setColorAt(position, theme.bg_qcolor(alpha))
         p.fillRect(rect, veil_grad)
 
         # Raccord avec le carrousel — EN DERNIER, après la vignette.

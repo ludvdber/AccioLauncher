@@ -174,8 +174,18 @@ class TestKeyboardNav:
 
 
 class TestKofiMilestone:
-    def test_toast_once_at_ten_hours(self, make_window):
-        win = make_window(playtime_seconds={_IDS[0]: 11 * 3600})
+    """Le cap est passé de 10 h à 2 h le 2026-08-26 (décision de Ludo).
+
+    Ce n'est PAS un assouplissement de la règle « pas de nag » : le
+    remerciement reste unique dans la vie du launcher, et c'est justement ce
+    qui rendait 10 h intenable — placé si loin, il n'atteignait presque
+    personne. Les deux tests lisent le seuil du code plutôt que de le recopier,
+    pour qu'un futur ajustement ne demande pas d'aller corriger un nombre ici.
+    """
+
+    def test_toast_une_seule_fois_au_cap(self, make_window):
+        from src.ui.main_window import _KOFI_CAP_SECONDES
+        win = make_window(playtime_seconds={_IDS[0]: _KOFI_CAP_SECONDES + 60})
         win.show()
         assert win.config.kofi_milestone_thanked is False
 
@@ -189,12 +199,23 @@ class TestKofiMilestone:
         win._maybe_thank_milestone()  # une seule fois dans la vie du launcher
         assert not win._toast.isVisible()
 
-    def test_no_toast_under_ten_hours(self, make_window):
-        win = make_window(playtime_seconds={_IDS[0]: 2 * 3600})
+    def test_pas_de_toast_sous_le_cap(self, make_window):
+        from src.ui.main_window import _KOFI_CAP_SECONDES
+        win = make_window(playtime_seconds={_IDS[0]: _KOFI_CAP_SECONDES - 60})
         win.show()
         win._maybe_thank_milestone()
         assert win.config.kofi_milestone_thanked is False
         assert not win._toast.isVisible()
+
+    def test_le_cap_reste_une_vraie_session_de_jeu(self):
+        """Garde-fou de PRODUIT, pas de code.
+
+        Descendre ce cap sous l'heure ferait du remerciement une relance
+        déguisée — exactement ce que le projet refuse. Le monter au-delà de
+        cinq heures le rendrait à nouveau inatteignable.
+        """
+        from src.ui.main_window import _KOFI_CAP_SECONDES
+        assert 3600 <= _KOFI_CAP_SECONDES <= 5 * 3600
 
 
 class TestPhaseWiring:
@@ -1081,19 +1102,30 @@ def make_window_multilingue(make_window, monkeypatch):
 
 
 class TestSelecteurDeLangue:
-    """La langue du jeu vit dans la LIGNE MÉTA (choix de Ludo, 2026-08-21).
+    """La langue du jeu N'EST PLUS dans la ligne méta (Ludo, 2026-08-26).
 
-    Elle y tient sans coûter un pixel de hauteur, là où une liste déroulante
-    sous les boutons aurait repris ~30 px dans la zone la plus contrainte de la
-    fiche — celle où l'on venait de récupérer 20 px en espagnol.
+    Elle y a vécu du 2026-08-21 au 2026-08-26, en segment doré cliquable. Le
+    grief est simple et il est de fond : ce segment affichait « FRANÇAIS »,
+    c'est-à-dire un ÉTAT NORMAL — la chose même que le projet s'interdit
+    partout ailleurs (« espace libre : 412 Go », « en ligne », « prérequis
+    OK »). Un état ne s'affiche que lorsqu'il DÉVIE ; celui-ci ne dévie
+    jamais. Il occupait donc en permanence la ligne la plus contrainte de la
+    fiche pour n'apprendre rien à personne.
+
+    Rien n'est perdu : l'engrenage s'affiche sous EXACTEMENT la même condition
+    (cf. `TestEngrenageReglagesDuJeu`) et nomme le réglage au lieu de le faire
+    deviner. Ces tests-ci gardent donc l'ABSENCE, et le comportement d'écriture
+    reste vérifié plus bas.
     """
 
-    def test_visible_sur_un_jeu_multilingue(self, make_window_multilingue):
+    def test_la_ligne_meta_ne_porte_plus_la_langue(self, make_window_multilingue):
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
         meta = win._detail._info._meta.text()
-        assert 'href="langue"' in meta
-        assert "Fran" in meta      # le label du catalogue, pas le code
+        assert 'href="langue"' not in meta
+        # Et pas davantage en clair : retirer le lien en laissant le mot aurait
+        # gardé le bruit tout en supprimant le raccourci.
+        assert "Fran" not in meta
 
     def test_absent_sur_les_autres_jeux(self, make_window_multilingue):
         """Sept jeux sur huit n'ont pas de bloc : un réglage sans choix
@@ -1103,27 +1135,27 @@ class TestSelecteurDeLangue:
         win._detail.set_game(autre)
         assert 'href="langue"' not in win._detail._info._meta.text()
 
-    def test_les_deux_liens_coexistent(self, make_window_multilingue):
-        """La ligne méta porte DEUX liens maintenant. L'AIGUILLAGE lui-même est
-        testé sur un panneau isolé (`TestAiguillageLigneMeta`) : sur une vraie
-        fenêtre, `versions_clicked` est câblé au dialogue des versions, dont le
-        `exec()` bloque la suite de tests indéfiniment."""
+    def test_le_changelog_reste_le_seul_lien(self, make_window_multilingue):
+        """L'AIGUILLAGE lui-même est testé sur un panneau isolé
+        (`TestAiguillageLigneMeta`) : sur une vraie fenêtre, `versions_clicked`
+        est câblé au dialogue des versions, dont le `exec()` bloque la suite de
+        tests indéfiniment."""
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
         meta = win._detail._info._meta.text()
         assert 'href="changelog"' in meta
-        assert 'href="langue"' in meta
+        assert meta.count("href=") == 1
 
-    def test_le_libelle_suit_le_choix(self, make_window_multilingue):
+    def test_le_choix_est_bien_retenu(self, make_window_multilingue):
+        """Le réglage vit toujours — il ne s'AFFICHE simplement plus sur la fiche."""
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
-        assert "Deutsch" not in win._detail._info._meta.text()
         win.manager.set_game_language(jeu.id, "de")
-        win._detail.set_game(jeu)
-        assert "Deutsch" in win._detail._info._meta.text()
+        assert win.manager.game_language(jeu) == "de"
+        assert "Deutsch" not in win._detail._info._meta.text()
 
-    def test_le_clic_ecrit_le_registre_et_rafraichit(self, make_window_multilingue,
-                                                     monkeypatch, qtbot):
+    def test_le_clic_ecrit_le_registre(self, make_window_multilingue,
+                                       monkeypatch, qtbot):
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
         ecrits = []
@@ -1134,7 +1166,6 @@ class TestSelecteurDeLangue:
         qtbot.wait(20)
         assert win.manager.game_language(jeu) == "en"
         assert ecrits and ecrits[0][2] == {"Language": "English", "Locale": "en_US"}
-        assert "English" in win._detail._info._meta.text()
 
     def test_un_echec_de_registre_previent_par_un_modal(self, make_window_multilingue,
                                                         monkeypatch):
@@ -1561,7 +1592,12 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         panneau = self._poser(win, jeu, GameState.INSTALLED)
         assert panneau._btn_reglages is not None
-        assert panneau._btn_reglages.text() == "⚙"
+        # PEINT, plus écrit : U+2699 partait en couleur sous Windows (65 % de
+        # pixels colorés, mesuré le 2026-08-26, contre 0 % pour une lettre
+        # témoin). Le bouton n'a donc plus de texte du tout.
+        from src.ui.icon_button import IconButton
+        assert isinstance(panneau._btn_reglages, IconButton)
+        assert panneau._btn_reglages.icone() == "reglages"
 
     def test_absent_sur_un_jeu_sans_reglage(self, make_window_multilingue):
         """Sept jeux sur huit n'ont rien à régler : un engrenage y ouvrirait un

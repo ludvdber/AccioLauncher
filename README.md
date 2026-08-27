@@ -16,6 +16,10 @@
 
 [**⬇ Télécharger**](https://github.com/ludvdber/AccioLauncher/releases) · [🐛 Signaler un bug](https://github.com/ludvdber/AccioLauncher/issues) · [💡 Demander une feature](https://github.com/ludvdber/AccioLauncher/issues/new)
 
+**Windows va afficher « Windows a protégé votre ordinateur ».** C'est attendu :
+le launcher est gratuit et n'a pas de certificat de signature.
+[Pourquoi, et comment vérifier vous-même le fichier ↓](#️-windows-a-protégé-votre-ordinateur)
+
 </div>
 
 ---

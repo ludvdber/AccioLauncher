@@ -146,7 +146,27 @@ class TestFenetreAllegee:
                 f"« {interdit} » est reparti dans main_window.py")
 
     def test_la_fenetre_reste_sous_le_seuil(self):
+        """Plafond de lignes — 830 → 875 puis 885, le 2026-08-26.
+
+        Un plafond qu'on remonte des qu'on le touche ne protege de rien, donc
+        le motif se justifie a chaque fois :
+
+        · 830 → 875 : le relais du mode cinema (le carrousel, la barre de
+          statut et l'engrenage sont enfants de la fenetre, pas de la vue),
+          Echap dans le filtre clavier applicatif, et le cap Ko-fi nomme.
+        · 875 → 885 : une DEUXIEME commande de fenetre, la page de
+          statistiques. Elle amene sa fabrique (`_commande`) et un placement
+          qui vaut desormais pour les deux boutons ; la page elle-meme vit dans
+          `src/ui/stats_dialog.py` et son calcul dans `src/core/stats.py`, donc
+          la fenetre ne gagne que le bouton, sa position et un slot de deux
+          lignes. C'est exactement ce qu'un hote de fenetre doit porter.
+
+        La vraie garde semantique est le test voisin, qui verifie que les
+        chaines de l'UpdateDispatcher ne sont pas revenues ici : c'est LUI qui
+        dit si la fenetre reprend du travail qu'on lui a retire. Celui-ci ne
+        fait que rendre la croissance visible, donc deliberee.
+        """
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 830, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 885, f"main_window.py a regrossi : {lignes} lignes"

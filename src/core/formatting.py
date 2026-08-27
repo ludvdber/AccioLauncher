@@ -119,3 +119,25 @@ def format_relative_date(iso_date: str, today: date | None = None) -> str:
     if delta <= 30:
         return tr("il y a {} jours").format(delta)
     return d.strftime("%d/%m/%Y")
+
+
+def format_duree_compacte(seconds: int) -> str:
+    """Durée nue : « 48 min », « 2 h 40 », « 14 h ».
+
+    Distincte de `format_playtime`, qui suffixe « de jeu » : cette phrase est
+    juste dans la fiche d'un jeu, où la ligne se lit d'un trait, et fautive dans
+    une grille de statistiques où l'en-tête de colonne l'a déjà dit — on y
+    lirait « Session moyenne : 48 min de jeu ».
+    """
+    if seconds < 60:
+        return tr("moins d'une minute")
+    minutes = round(seconds / 60)
+    if minutes < 60:
+        return tr("{} min").format(minutes)
+    heures, reste = divmod(minutes, 60)
+    if reste:
+        # Minutes sur deux chiffres : « 1 h 2 min » se lit comme une coquille,
+        # « 1 h 02 min » comme une heure. C'est la convention de tout affichage
+        # horaire, et elle aligne aussi la colonne dans la grille de stats.
+        return tr("{} h {} min").format(heures, f"{reste:02d}")
+    return tr("{} h").format(heures)

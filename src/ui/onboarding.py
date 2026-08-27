@@ -8,7 +8,7 @@
 2. Bienvenue + choix du dossier d'installation (espace libre affiché).
 3. « J'ai déjà certains jeux » — scan d'un dossier existant et import en masse
    (même disque : déplacement instantané, comme « J'ai déjà ce jeu »).
-4. Préférences rapides : thème, lecture auto des vidéos.
+4. Préférences rapides : thème, lecture auto des vidéos, son des vidéos.
 
 Les écrans 2 à 4 ne sont construits qu'à la sortie de l'écran 1, une fois
 `set_language()` appelé : les `tr()` sont évalués à la construction des widgets.
@@ -26,7 +26,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.config import Config, DEFAULT_CACHE_PATH, DEFAULT_INSTALL_PATH
+from src.core.config import (
+    Config, DEFAULT_CACHE_PATH, DEFAULT_INSTALL_PATH, cache_pour,
+)
 from src.core.formatting import format_bytes
 from src.core.game_data import GameData, load_catalog
 from src.core.formatting import format_size
@@ -90,6 +92,9 @@ class OnboardingDialog(QDialog):
         self.langue = detect_system_language()
         self.theme = "poudlard"
         self.autoplay = True
+        # Muet par défaut : c'est le réglage de `Config.mute_videos`,
+        # et l'assistant ne fait que le rendre visible.
+        self.mute_videos = True
         self.trailers_optin = True
         self._catalogue = load_catalog()
         self._games = list(self._catalogue.games)
@@ -101,6 +106,7 @@ class OnboardingDialog(QDialog):
         self._import_list = QListWidget()
         self._theme_combo = QComboBox()
         self._tgl_autoplay = None
+        self._tgl_son = None
         self._tgl_trailers = None
         self._rest_built = False
 
@@ -252,6 +258,18 @@ class OnboardingDialog(QDialog):
             tr("Lire les bandes-annonces automatiquement"), True)
         lay.addWidget(row)
 
+        # Le son, DÉCOCHÉ. `mute_videos` valait déjà True par défaut — c'est le
+        # bon réglage, et ce n'est pas lui qu'on corrige ici : c'est le fait que
+        # la question n'était jamais posée. Une bande-annonce se lance toute
+        # seule dès la première fiche ; du son qui part sans prévenir fait
+        # sursauter et chercher d'où il vient, et personne ne devine qu'il
+        # existe un réglage pour ça tant qu'il reste muet. Le poser à l'écran de
+        # bienvenue le rend découvrable sans jamais l'imposer, et sans coûter un
+        # écran de plus à un assistant qui en compte déjà quatre.
+        row_son, self._tgl_son = toggle_row(
+            tr("Activer le son des bandes-annonces"), False)
+        lay.addWidget(row_son)
+
         # Les bandes-annonces ne sont PAS dans l'exécutable : elles pèsent des
         # centaines de Mo pour un ornement, et tout le monde n'en veut pas.
         # On demande donc, en annonçant le poids — un téléchargement dont on
@@ -308,6 +326,7 @@ class OnboardingDialog(QDialog):
         if i == TOTAL_PAGES - 1:
             self.theme = self._theme_combo.currentData()
             self.autoplay = self._tgl_autoplay.isChecked()
+            self.mute_videos = not self._tgl_son.isChecked()
             if self._tgl_trailers is not None:
                 self.trailers_optin = self._tgl_trailers.isChecked()
             else:
@@ -404,10 +423,11 @@ def run_onboarding() -> Config:
     if dlg.exec() == QDialog.DialogCode.Accepted and is_writable_dir(dlg.install_path):
         config = Config(
             install_path=dlg.install_path,
-            cache_path=dlg.install_path / ".cache",
+            cache_path=cache_pour(dlg.install_path),
             langue=dlg.langue,
             theme=dlg.theme,
             autoplay_videos=dlg.autoplay,
+            mute_videos=dlg.mute_videos,
             trailers_optin=dlg.trailers_optin,
         )
         config.save()

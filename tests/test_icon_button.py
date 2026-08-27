@@ -118,3 +118,64 @@ class TestPlusAucunEmojiDansLaBarre:
         haut-parleur bleu vivait dans le fichier."""
         texte = (_RACINE / fichier).read_text(encoding="utf-8").lower()
         assert "' + chr(92) + 'u0001f" not in texte
+
+
+class TestClydeGardeSesYeux:
+    """La marque Discord est une silhouette PLEINE, et ses yeux sont des TROUS.
+
+    En contour, trace au meme stylo que les autres, Clyde se lisait comme une
+    tete d'ours : mesure a l'image le 2026-08-27, avec deux iterations avant
+    d'y arriver. On ne restyle pas la marque de quelqu'un d'autre pour
+    l'accorder a son trait maison.
+
+    Ce que ce test protege est le detail qui casserait EN SILENCE : si les yeux
+    redevenaient deux ovales PEINTS par-dessus le corps (c'etait le cas avant),
+    ils prendraient la couleur de l'encre — donc or sur or au survol, et Clyde
+    perdrait son visage precisement quand on le regarde. Un trou reste un trou,
+    quelle que soit la couleur.
+
+    **`qtbot` est demande alors qu'aucun widget n'est cree, et ce n'est pas
+    decoratif.** C'est la seule classe du fichier qui ne passe que par
+    `pixmap_icone`, donc la seule a n'avoir aucune raison d'avoir fait naitre
+    une `QApplication` — or `QPixmap` en exige une, et sans elle Qt appelle
+    `qFatal` : le processus est ABANDONNE (0xC0000409), sans trace ni sortie
+    pytest. Le defaut ne se voyait pas en lancant le fichier entier, les
+    classes d'avant construisant des `IconButton` via `qtbot` ; il n'apparait
+    qu'en jouant cette classe SEULE, ce qu'on fait justement quand on la
+    debogue. Toute future classe de test qui ne touche qu'a `pixmap_icone`
+    doit demander `qtbot`.
+    """
+
+    @staticmethod
+    def _rendu(couleur: str, taille: int = 64):
+        from src.ui.icon_button import pixmap_icone
+        return pixmap_icone("discord", taille=taille, couleur=QColor(couleur)).toImage()
+
+    @pytest.mark.parametrize("couleur", ["#eaeaea", "#d6a72c"])
+    def test_les_yeux_sont_des_trous(self, qtbot, couleur):
+        img = self._rendu(couleur)
+        e = 64 / 24.0
+        for cx, cy in ((8.2, 12.8), (15.8, 12.8)):           # centres des yeux
+            a = QColor.fromRgba(img.pixel(int(cx * e), int(cy * e))).alpha()
+            assert a == 0, f"oeil bouche ({cx}, {cy}) : alpha={a}"
+
+    @pytest.mark.parametrize("couleur", ["#eaeaea", "#d6a72c"])
+    def test_le_corps_est_plein(self, qtbot, couleur):
+        """Le controle du test precedent : sans lui, un pictogramme entierement
+        vide passerait pour deux yeux parfaitement perces."""
+        img = self._rendu(couleur)
+        e = 64 / 24.0
+        for cx, cy in ((12.0, 7.0), (12.0, 14.0), (4.5, 15.0), (19.5, 15.0)):
+            a = QColor.fromRgba(img.pixel(int(cx * e), int(cy * e))).alpha()
+            assert a > 200, f"corps troue en ({cx}, {cy}) : alpha={a}"
+
+    def test_plus_large_que_haut(self, qtbot):
+        """La silhouette s'evase vers le BAS et vaut ~1,34 de rapport. La
+        version d'avant etait presque carree, d'ou la tete d'ours."""
+        img = self._rendu("#eaeaea", 96)
+        xs = [x for y in range(96) for x in range(96)
+              if QColor.fromRgba(img.pixel(x, y)).alpha() > 128]
+        ys = [y for y in range(96) for x in range(96)
+              if QColor.fromRgba(img.pixel(x, y)).alpha() > 128]
+        largeur, hauteur = max(xs) - min(xs), max(ys) - min(ys)
+        assert 1.25 < largeur / hauteur < 1.45, f"{largeur}x{hauteur}"

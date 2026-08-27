@@ -1,11 +1,15 @@
 import ctypes
 import ctypes.wintypes
 import json
+import logging
 import os
 import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+
+log = logging.getLogger(__name__)
+
 
 def get_documents_dir() -> Path:
     """Retourne le vrai dossier Documents via l'API Windows (gère OneDrive, dossiers redirigés).
@@ -49,15 +53,40 @@ DEFAULT_LANGUAGE = "en"
 ASSETS_DIR = _BUNDLE_DIR.parent / "assets" if not IS_FROZEN else _BUNDLE_DIR / "assets"
 
 # --- Chemins utilisateur (toujours dans ~/Games/AccioLauncher) ---
+#
+# UN SEUL sous-dossier pour tout ce qui appartient au launcher, et la racine
+# pour les jeux — rien d'autre. Avant le 2026-08-26, `~/Games/AccioLauncher`
+# melangeait les dossiers de jeux (HP2, HP7, HP8...) avec `.cache`, `trailers`,
+# `accio_launcher.log`, `catalog_cache.json` et `config.json`. Quelqu'un qui
+# ouvre ce dossier veut y voir ses JEUX ; le reste est de la plomberie, et une
+# plomberie visible invite a la supprimer au hasard.
+#
+# Le nom commence par un tiret bas pour se poser en tete de liste dans
+# l'explorateur et pour ne ressembler a aucun identifiant de jeu.
 DEFAULT_INSTALL_PATH = Path.home() / "Games" / "AccioLauncher"
-DEFAULT_CACHE_PATH = DEFAULT_INSTALL_PATH / ".cache"
-CONFIG_FILE_PATH = DEFAULT_INSTALL_PATH / "config.json"
+LAUNCHER_DIR_NAME = "_Launcher"
+# Donnees du launcher : emplacement FIXE, independant de `install_path`.
+# Deplacer ses jeux sur un autre disque ne doit ni deplacer la configuration ni
+# rendre les journaux introuvables au moment ou on en a besoin.
+LAUNCHER_DATA_PATH = DEFAULT_INSTALL_PATH / LAUNCHER_DIR_NAME
+CONFIG_FILE_PATH = LAUNCHER_DATA_PATH / "config.json"
+LOCAL_CATALOG_PATH = LAUNCHER_DATA_PATH / "catalog_cache.json"
+LOG_DIR = LAUNCHER_DATA_PATH / "logs"
 
-LOCAL_CATALOG_PATH = DEFAULT_INSTALL_PATH / "catalog_cache.json"
+# Le cache de telechargement, LUI, suit les jeux : une archive de 7 Go doit
+# atterrir sur le meme volume que son extraction, sinon la verification
+# d'espace disque ment et le rangement final devient une copie.
+DEFAULT_CACHE_PATH = DEFAULT_INSTALL_PATH / LAUNCHER_DIR_NAME / "cache"
+
+
+def cache_pour(install_path: Path) -> Path:
+    """Ou ranger les archives quand les jeux vivent dans `install_path`."""
+    return Path(install_path) / LAUNCHER_DIR_NAME / "cache"
+
 
 # Traductions fournies par l'utilisateur, appliquees par-dessus celles
 # embarquees : permet a un traducteur de tester son fichier sans release.
-USER_I18N_DIR = DEFAULT_INSTALL_PATH / "i18n"
+USER_I18N_DIR = LAUNCHER_DATA_PATH / "i18n"
 
 APP_VERSION = "1.0.1"
 
@@ -230,3 +259,97 @@ class Config:
             except OSError:
                 pass
             raise
+
+
+# --- Migration de l'ancienne arborescence (avant le 2026-08-26) ---
+
+# Ce que la racine contenait en vrac, et ou chaque chose va desormais. Les
+# dossiers de JEUX n'y figurent pas : ils restent exactement ou ils sont, et
+# c'est tout l'interet de l'operation.
+#
+# Les destinations sont TOUTES relatives a la racine, sans exception. Elles ne
+# l'etaient pas : huit d'entre elles partaient du dossier de donnees et la
+# neuvieme de la racine, si bien que la boucle devait deviner laquelle par un
+# prefixe. Une entree ajoutee sans connaitre cette convention tacite serait
+# allee au mauvais endroit, en silence, dans le seul code du projet dont une
+# erreur se paie en reinstallation de plusieurs gigaoctets.
+_A_DEPLACER = tuple(
+    (ancien, f"{LAUNCHER_DIR_NAME}/{destination}") for ancien, destination in (
+        ("config.json", "config.json"),
+        ("catalog_cache.json", "catalog_cache.json"),
+        ("i18n", "i18n"),
+        ("trailers", "trailers"),
+        ("accio_launcher.log", "logs/accio_launcher.log"),
+        ("accio_launcher.log.1", "logs/accio_launcher.log.1"),
+        ("accio_launcher.log.2", "logs/accio_launcher.log.2"),
+        ("accio_launcher.log.3", "logs/accio_launcher.log.3"),
+        (".cache", "cache"),
+    )
+)
+
+
+def migrer_arborescence(racine: Path | None = None) -> list[str]:
+    """Range l'ancien fourre-tout dans `_Launcher/`. Idempotent, sans reseau.
+
+    Doit tourner AVANT `Config.exists()` : sans elle, un `config.json` reste a
+    l'ancien emplacement, le launcher le croit absent et rouvre l'assistant de
+    premier lancement — a quelqu'un qui a deja huit jeux installes.
+
+    Tout se passe sur le meme volume, donc chaque deplacement est un renommage :
+    mesure sur le dossier reel, l'ensemble prend quelques millisecondes meme
+    avec 1 Go de bandes-annonces. Ce qui existe deja a l'arrivee n'est jamais
+    ecrase — on prefere laisser un doublon a l'ancien emplacement plutot que de
+    detruire ce qui a ete ecrit depuis.
+
+    Retourne la liste de ce qui a bouge (vide si rien a faire), pour le journal.
+    """
+    racine = Path(racine) if racine is not None else DEFAULT_INSTALL_PATH
+    if not racine.is_dir():
+        return []
+    donnees = racine / LAUNCHER_DIR_NAME
+    deplaces: list[str] = []
+
+    for ancien_nom, destination in _A_DEPLACER:
+        source = racine / ancien_nom
+        if not source.exists():
+            continue
+        cible = racine / destination
+        if cible.exists():
+            continue
+        try:
+            cible.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(source, cible)
+        except OSError as exc:
+            # Un fichier verrouille (journal ouvert par une autre instance) ne
+            # doit pas empecher le reste : on reessaiera au prochain demarrage.
+            log.warning("Migration impossible pour %s : %s", ancien_nom, exc)
+            continue
+        deplaces.append(ancien_nom)
+
+    if deplaces:
+        _corriger_cache_path(donnees / "config.json", racine)
+    return deplaces
+
+
+def _corriger_cache_path(fichier: Path, racine: Path) -> None:
+    """Repointe `cache_path` s'il designe encore l'ancien `.cache`.
+
+    Le chemin du cache est PERSISTE dans la configuration : deplacer le dossier
+    sans corriger la valeur ferait recreer un `.cache` a la racine au premier
+    telechargement, et l'operation n'aurait servi a rien.
+    """
+    try:
+        data = json.loads(fichier.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    ancien = data.get("cache_path")
+    if not isinstance(ancien, str):
+        return
+    if Path(ancien) != racine / ".cache":
+        return
+    data["cache_path"] = str(cache_pour(Path(data.get("install_path", racine))))
+    try:
+        fichier.write_text(json.dumps(data, indent=4, ensure_ascii=False),
+                           encoding="utf-8")
+    except OSError as exc:
+        log.warning("cache_path non corrige : %s", exc)

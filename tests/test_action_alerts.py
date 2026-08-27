@@ -523,8 +523,16 @@ class TestBalisageDuCatalogue:
         assert "&am" not in rendu.replace("&amp;", "")
         assert rendu.endswith(chr(8230))      # ellipse
 
-    def test_le_libelle_de_langue_est_echappe(self, qtbot, tmp_path):
-        """Meme exposition dans la ligne meta, qui est aussi du RichText."""
+    def test_le_libelle_de_langue_n_atteint_plus_la_ligne_meta(self, qtbot, tmp_path):
+        """La ligne meta est du RichText, et le libelle vient du CATALOGUE.
+
+        Il y etait echappe ; depuis le 2026-08-26 il n'y entre plus du tout, la
+        langue etant passee a l'engrenage. Ce test garde l'ABSENCE plutot que
+        l'echappement : c'est la seule protection qui ne puisse pas etre
+        oubliee en re-ajoutant un segment. Le libelle est desormais affiche par
+        des QRadioButton (`GameSettingsDialog`), qui n'interpretent pas le
+        balisage — c'est pour ca que le remede n'a pas eu a demenager avec lui.
+        """
         import dataclasses
 
         from src.core.config import Config
@@ -545,5 +553,10 @@ class TestBalisageDuCatalogue:
         qtbot.addWidget(panel)
         jeu = dataclasses.replace(manager.get_games()[0].game, language_registry=bloc)
         panel.apply_game(jeu)
-        assert "<b>" not in panel._meta.text()
-        assert "&lt;b&gt;" in panel._meta.text()
+        rendu = panel._meta.text()
+        assert "<b>" not in rendu
+        assert "Francais" not in rendu
+        assert 'href="langue"' not in rendu
+        # Rien du libelle ne doit rester, pas meme sous forme echappee : ce
+        # n'est plus un contenu neutralise, c'est un contenu absent.
+        assert "&lt;b&gt;" not in rendu

@@ -601,12 +601,56 @@ def _parse_trailers(raw) -> tuple[Trailer, ...]:
 
 
 @dataclass(frozen=True, slots=True)
+class Contributor:
+    """Quelqu'un à remercier dans l'À propos.
+
+    Dans le CATALOGUE et non dans le code : remercier quelqu'un ne doit pas
+    attendre une release. Une traduction rendue un mardi doit pouvoir être
+    créditée le mardi, sinon la personne voit passer trois versions sans son
+    nom et n'en propose pas une deuxième.
+
+    `role` est traduisible par le bloc `i18n` de l'entrée, comme partout
+    ailleurs dans le catalogue. `url` est FACULTATIVE — quelqu'un peut ne rien
+    vouloir de public — et passe par la même validation https que `warning_url`,
+    puisqu'elle atteint le navigateur de l'utilisateur.
+    """
+    name: str
+    role: str = ""
+    url: str = ""
+
+
+def _parse_contributors(raw) -> tuple[Contributor, ...]:
+    """Bloc `contributors` du catalogue. Tolérant : une entrée fautive est sautée."""
+    if not isinstance(raw, list):
+        if raw is not None:
+            log.warning("'contributors' de type %s, ignoré", type(raw).__name__)
+        return ()
+    sortie: list[Contributor] = []
+    for entree in raw:
+        if not isinstance(entree, dict):
+            log.warning("Contributeur ignoré (type %s)", type(entree).__name__)
+            continue
+        nom = _loc(entree, "name", "")
+        if not isinstance(nom, str) or not nom.strip():
+            log.warning("Contributeur sans nom, ignoré")
+            continue
+        role = _loc(entree, "role", "")
+        sortie.append(Contributor(
+            name=nom.strip(),
+            role=role.strip() if isinstance(role, str) else "",
+            url=_url_aide_valide(entree.get("url", "")),
+        ))
+    return tuple(sortie)
+
+
+@dataclass(frozen=True, slots=True)
 class Catalog:
     """Catalogue complet de jeux avec métadonnées."""
     catalog_version: str
     catalog_url: str
     games: tuple[GameData, ...]
     trailers: tuple[Trailer, ...] = ()
+    contributors: tuple[Contributor, ...] = ()
 
 
 def _parse_catalog(raw: dict | list) -> Catalog:
@@ -620,11 +664,13 @@ def _parse_catalog(raw: dict | list) -> Catalog:
         entries = raw
         version, url = "0", ""
         trailers = ()
+        contributors = ()
     elif isinstance(raw, dict):
         entries = raw.get("games", [])
         version = raw.get("catalog_version", "0")
         url = raw.get("catalog_url", "")
         trailers = _parse_trailers(raw.get("trailers"))
+        contributors = _parse_contributors(raw.get("contributors"))
     else:
         raise ValueError(f"catalogue de type {type(raw).__name__}, attendu objet ou liste")
 
@@ -641,7 +687,8 @@ def _parse_catalog(raw: dict | list) -> Catalog:
         except (ValueError, TypeError, AttributeError, KeyError) as exc:
             log.warning("Jeu invalide ignoré dans le catalogue : %s", exc)
     return Catalog(catalog_version=str(version), catalog_url=str(url),
-                   games=tuple(games), trailers=trailers)
+                   games=tuple(games), trailers=trailers,
+                   contributors=contributors)
 
 
 def load_catalog(path: Path | None = None) -> Catalog:

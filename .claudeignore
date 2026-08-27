@@ -66,10 +66,17 @@ Desktop.ini
 .env
 *.env.local
 
-# Données locales utilisateur (hors repo en principe)
+# Données locales utilisateur (hors repo en principe). Depuis le 2026-08-26
+# elles sont toutes rangées dans `_Launcher/` : une seule ligne les couvre,
+# les trois suivantes rattrapent un fichier isolé posé ailleurs. Aucune n'a
+# d'intérêt à la lecture — `sessions.json` est un historique de parties, pas
+# du code, et le lire ne renseigne sur rien qu'on ne sache déjà.
+_Launcher/
 .cache/
 catalog_cache.json
 config.json
+sessions.json
+*.corrompu
 
 # Documents rangés hors du dépôt : conservés à dessein, mais périmés — les
 # relire ferait travailler sur un état du projet qui n'existe plus.

@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QPushButton,
     QStatusBar,
     QVBoxLayout,
     QWidget,
@@ -23,6 +22,7 @@ from src.ui.carousel import Carousel
 from src.ui.download_bar import DownloadBar
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
+from src.ui.icon_button import IconButton
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
 from src.ui.process_monitor import ProcessMonitor
@@ -39,6 +39,10 @@ from src.ui.update_dispatcher import UpdateDispatcher
 from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
+
+# Cap du remerciement Ko-fi unique. Nommé plutôt qu'écrit en clair : c'est un
+# réglage de produit, pas une constante technique, et il a déjà bougé une fois.
+_KOFI_CAP_SECONDES = 2 * 3600
 
 _ICON_PATH = ASSETS_DIR / "accio_launcher.ico"
 # Repli hors Windows : le .ico est un format Windows, et le portage Linux est
@@ -178,18 +182,15 @@ class MainWindow(QMainWindow):
         # décider, donc rien qui justifie d'arrêter l'utilisateur.
         self._detail.notify.connect(self._toast.show_message)
         self._detail.settings_requested.connect(self._on_settings)
+        self._detail.cinema_toggled.connect(self._on_cinema)
 
-        # Settings button
-        self._btn_settings = QPushButton("⚙", self)
-        self._btn_settings.setFixedSize(36, 36)
-        self._btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_settings.setStyleSheet(themed(
-            "QPushButton { background: rgba(0,0,0,0.4); color: #8a8aaa; border: none;"
-            " border-radius: 18px; font-size: 18px; }"
-            "QPushButton:hover { color: #d6a72c; background: rgba(0,0,0,0.6); }"
-        ))
-        self._btn_settings.clicked.connect(self._on_settings)
-        self._btn_settings.raise_()
+        # Settings button — roue PEINTE. C'était U+2699, réputé sûr parce que
+        # sa propriété Unicode est `Emoji_Presentation=No` ; mesuré le
+        # 2026-08-26, Windows le rendait à 49 % en couleur (0 % pour une lettre,
+        # 22 % pour 🔊 pris comme témoin). C'est le seul bouton présent en
+        # permanence à l'écran, donc le pire endroit pour un glyphe hors thème.
+        self._btn_settings = self._commande("reglages", tr("Paramètres"), self._on_settings)
+        self._btn_stats = self._commande("stats", tr("Statistiques"), self._on_stats)
 
         # Event filter on QApplication for global mouse tracking
         QApplication.instance().installEventFilter(self)
@@ -550,9 +551,10 @@ class MainWindow(QMainWindow):
 
     def _on_game_exited(self, game_name: str) -> None:
         """Le ProcessMonitor a détecté la fin du jeu (avec grâce de redémarrage)."""
-        # Stats : cumuler la session (les sessions < 10 s sont des faux lancements)
+        # La fenêtre chronomètre ; ce qui compte comme une vraie partie se
+        # décide dans `add_playtime` (`stats.DUREE_MINIMALE`).
         elapsed = time.monotonic() - self._session_start if self._session_start else 0.0
-        if self._session_game_id and elapsed >= 10:
+        if self._session_game_id:
             self.manager.add_playtime(self._session_game_id, int(elapsed))
         self._session_game_id = ""
         self._session_start = 0.0
@@ -567,19 +569,26 @@ class MainWindow(QMainWindow):
         self._maybe_thank_milestone()
 
     def _maybe_thank_milestone(self) -> None:
-        """Un seul remerciement Ko-fi dans la vie du launcher, au cap des 10 h de jeu.
+        """Un seul remerciement Ko-fi dans la vie du launcher, au cap de 2 h de jeu.
 
         Moment de joie (retour de jeu), jamais de répétition, jamais de
         culpabilisation — voir la stratégie « pas de nag » du projet.
+
+        Le cap était à 10 h, et c'était trop tard : le remerciement n'existe
+        qu'une fois dans la vie du launcher, donc le placer si loin revenait à
+        ne jamais l'adresser à la plupart des gens. 2 h (décision de Ludo,
+        2026-08-26) tombe après une vraie soirée de jeu — assez pour que le
+        launcher ait fait ses preuves, assez tôt pour que ce soit encore une
+        bonne surprise. La règle « une seule fois » ne bouge pas d'un pouce.
         """
         if self.config.kofi_milestone_thanked:
             return
-        if sum(self.config.playtime_seconds.values()) < 10 * 3600:
+        if sum(self.config.playtime_seconds.values()) < _KOFI_CAP_SECONDES:
             return
         self.config.kofi_milestone_thanked = True
         self.config.save()
         self._toast.show_message(
-            tr("Déjà 10 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici."),
+            tr("Déjà 2 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici."),
             duration_ms=9000,
             on_click=lambda: open_url("https://ko-fi.com/ludovic01"),
         )
@@ -616,6 +625,11 @@ class MainWindow(QMainWindow):
         dlg.season_changed.connect(self._particles.apply_season)
         dlg.restart_requested.connect(lambda: self._restart_launcher(dlg))
         dlg.exec()
+
+    def _on_stats(self) -> None:
+        """Page de statistiques — lecture seule, aucun réglage, donc rien à recâbler."""
+        from src.ui.stats_dialog import StatsDialog
+        StatsDialog(self.manager, self).exec()
 
     def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
         """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre."""
@@ -683,17 +697,28 @@ class MainWindow(QMainWindow):
 
     # ──────────────────── Événements ────────────────────
 
-    def _position_settings(self) -> None:
-        """Pose le bouton ⚙ SOUS le bandeau de notification quand il est là.
+    def _commande(self, icone: str, libelle: str, slot) -> IconButton:
+        """Bouton de fenêtre : posé en absolu par-dessus la fiche, pas dans un layout."""
+        bouton = IconButton(icone, taille=36, parent=self, galet=True)
+        bouton.setToolTip(libelle)
+        bouton.setAccessibleName(libelle)
+        bouton.clicked.connect(slot)
+        bouton.raise_()
+        return bouton
 
-        Le bouton est un enfant direct de la fenêtre, posé en absolu à y = 42 ;
+    def _position_settings(self) -> None:
+        """Pose les commandes SOUS le bandeau de notification quand il est là.
+
+        Elles sont enfants directs de la fenêtre, posées en absolu à y = 42 ;
         le bandeau, lui, vit dans le layout et occupe y = 38 → 73. Ils se
-        recouvraient exactement, et comme le ⚙ est remonté au premier plan, il
-        masquait la croix de fermeture du bandeau — invisible et incliquable.
+        recouvraient exactement, et comme les commandes sont remontées au
+        premier plan, elles masquaient la croix de fermeture du bandeau —
+        invisible et incliquable.
         """
         decalage = self._notif_bar.height() if self._notif_bar.isVisible() else 0
-        self._btn_settings.move(self.width() - 52, 42 + decalage)
-        self._btn_settings.raise_()
+        for i, bouton in enumerate((self._btn_settings, self._btn_stats)):
+            bouton.move(self.width() - 52 - i * 44, 42 + decalage)
+            bouton.raise_()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -781,21 +806,50 @@ class MainWindow(QMainWindow):
                 return True
         return super().eventFilter(obj, event)
 
+    def _on_cinema(self, actif: bool) -> None:
+        """Escamote ce qui n'appartient pas à la fiche pendant le plein écran.
+
+        Carrousel, barre de statut, engrenage et particules sont enfants de la
+        FENÊTRE : sans ce relais, « plein écran » n'effacerait que le titre et
+        les boutons. La barre de téléchargement se DÉDUIT de `current_game`
+        plutôt que d'un instantané pris à l'entrée — un téléchargement lancé ou
+        terminé pendant la bande-annonce la laisserait sinon visible et vide,
+        ou cachée alors qu'elle progresse.
+        """
+        self._carousel.setVisible(not actif)
+        self._status_bar.setVisible(not actif)
+        self._btn_settings.setVisible(not actif)
+        self._btn_stats.setVisible(not actif)
+        self._particles.setVisible(not actif)
+        self._download_bar.setVisible(
+            not actif and self._download_bar.current_game is not None)
+
     def _handle_global_key(self, event) -> bool:
         """←/→ naviguent le carrousel même quand un bouton a le focus (A11Y).
+
+        Échap sort du plein écran de la bande-annonce, et seulement de ça.
 
         Sans ce filtre, le premier clic sur un bouton lui donnait le focus et
         les flèches devenaient muettes (Qt les consomme pour déplacer le focus).
         Jamais actif quand un dialog modal est ouvert ni quand le focus est sur
         un widget d'édition (slider de volume, combo, champ texte).
         """
-        if event.key() not in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+        if event.key() not in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Escape):
             return False
         from PyQt6.QtWidgets import (
             QAbstractSpinBox, QApplication, QComboBox, QLineEdit, QSlider,
         )
         if QApplication.activeModalWidget() is not None or not self.isActiveWindow():
             return False
+        if event.key() == Qt.Key.Key_Escape:
+            # Échap ne sort QUE du plein écran : la fenêtre est sans cadre, et
+            # la fermer sur une touche pressée par réflexe serait une mauvaise
+            # surprise. False quand il n'y a rien à quitter, pour ne pas manger
+            # la touche que les widgets pourraient vouloir.
+            if not self._detail.cinema():
+                return False
+            self._detail.set_cinema(False)
+            return True
         focus = QApplication.focusWidget()
         if isinstance(focus, (QLineEdit, QComboBox, QSlider, QAbstractSpinBox)):
             return False

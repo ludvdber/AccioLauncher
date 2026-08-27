@@ -10,8 +10,10 @@ import logging
 import shutil
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from html import escape
+
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -19,22 +21,25 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QMessageBox,
     QPushButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from src.core.config import APP_VERSION, Config
+from src.core.config import APP_VERSION, Config, cache_pour
 from src.core.game_manager import GameManager, GameState
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, translator_credits, tr
+from src.ui.fonts import cinzel
+from src.ui.icon_button import pixmap_icone
 from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.season import resolve as resolve_season
-from src.ui.theme import THEMES, themed
+from src.ui.theme import THEMES, current as current_theme, themed
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import open_local_path, open_url
+from src.ui.utils import is_writable_dir, open_local_path, open_url
 
 log = logging.getLogger(__name__)
 
@@ -172,8 +177,14 @@ class SettingsDialog(QDialog):
         root.setSpacing(10)
         root.setContentsMargins(20, 16, 20, 16)
 
-        title = QLabel(tr("⚙ Paramètres"))
-        title.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
+        # Sans le ⚙ : il était rendu en couleur par Windows (49 % de pixels
+        # colorés, mesuré le 2026-08-26), et un titre de fenêtre n'a de toute
+        # façon pas besoin d'un pictogramme pour dire ce qu'il est. Et sans
+        # « Segoe UI », appelée par son NOM : elle n'existe pas sous Linux, et
+        # sous `offscreen` Qt lui substitue Cinzel, 22 % plus large — toute
+        # mesure de mise en page portait donc sur une autre police.
+        title = QLabel(tr("Paramètres"))
+        title.setFont(cinzel(18, bold=True))
         title.setStyleSheet("color: #ffffff;")
         root.addWidget(title)
 
@@ -511,34 +522,99 @@ class SettingsDialog(QDialog):
         version_line = QLabel(f"Accio Launcher v{APP_VERSION}")
         version_line.setObjectName("subtitle")
 
+        # Pictogrammes PEINTS sur les trois boutons. Ludo, 2026-08-26 : « il y
+        # a pas de logo web ou discord dans le à propos donc c'est pas fou pour
+        # vite reconnaître sans lire ». Trois libellés de longueurs voisines
+        # dans un cadre gris se ressemblent tous ; une silhouette de Clyde, un
+        # globe et une tasse se distinguent avant d'être lus — et survivent à la
+        # traduction, ce qu'un libellé ne fait pas.
         about_row = QHBoxLayout()
         about_row.setSpacing(10)
-        btn_website = QPushButton(tr("Site web"))
-        btn_website.setObjectName("btnPath")
-        btn_website.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_website.clicked.connect(self._on_website)
+        btn_website = self._bouton_lien(tr("Site web"), "site", self._on_website)
         about_row.addWidget(btn_website)
-        btn_discord = QPushButton(tr("Rejoindre le Discord"))
-        btn_discord.setObjectName("btnPath")
-        btn_discord.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_discord.clicked.connect(self._on_discord)
+        # « Discord » et « Ko-fi » ne passent PAS par tr() : ce sont des noms
+        # propres, identiques dans toutes les langues. Les y faire passer
+        # obligeait à écrire trois traductions identiques, ce que la suite
+        # refuse à juste titre (`test_pas_de_traduction_identique`).
+        btn_discord = self._bouton_lien("Discord", "discord", self._on_discord)
         about_row.addWidget(btn_discord)
-        btn_kofi = QPushButton(tr("❤ Soutenir sur Ko-fi"))
-        btn_kofi.setObjectName("btnKofi")
-        btn_kofi.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Le ❤ du libellé disparaît : la tasse dit déjà « café », et deux
+        # symboles pour un seul bouton, c'est un de trop. Les libellés
+        # raccourcissent aussi — « Rejoindre le Discord » et « Soutenir sur
+        # Ko-fi » débordaient de leur cadre une fois l'icône posée devant, et
+        # c'est précisément ce qu'un pictogramme reconnaissable permet
+        # d'économiser : le nom suffit quand la forme a déjà dit quoi.
+        btn_kofi = self._bouton_lien("Ko-fi", "kofi",
+                                     self._on_kofi, objet="btnKofi",
+                                     encre="#e8c547")
         btn_kofi.setToolTip(tr("Le projet est gratuit — un café aide à payer l'hébergement !"))
-        btn_kofi.clicked.connect(self._on_kofi)
         about_row.addWidget(btn_kofi)
         about_row.addStretch()
 
-        credits_line = QLabel(self._translator_credits_text())
-        credits_line.setObjectName("subtitle")
-        credits_line.setWordWrap(True)
-
         return self._page(
             self._section(tr("À propos")), about_text, version_line, about_row,
-            credits_line,
+            *self._bloc_remerciements(),
         )
+
+    @staticmethod
+    def _bouton_lien(libelle: str, icone: str, slot,
+                     objet: str = "btnPath", encre: str = "#ffffff") -> QPushButton:
+        """Bouton « pictogramme + libellé » vers un lien externe."""
+        btn = QPushButton(libelle)
+        btn.setObjectName(objet)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setIcon(QIcon(pixmap_icone(icone, 16, QColor(encre))))
+        btn.setIconSize(QSize(16, 16))
+        btn.clicked.connect(slot)
+        return btn
+
+    def _bloc_remerciements(self) -> list[QWidget]:
+        """Contributeurs du catalogue + traducteurs des fichiers de langue.
+
+        DEUX sources, une seule rubrique à l'écran. Les traducteurs vivent dans
+        le bloc `_meta.translators` de leur propre fichier de langue — ils
+        s'ajoutent dans la même contribution que la traduction, ce qui est le
+        bon endroit. Tous les autres vivent dans le CATALOGUE, qui se met à jour
+        à distance : remercier quelqu'un ne doit pas attendre une release, sinon
+        la personne voit passer trois versions sans son nom et n'en propose pas
+        une deuxième.
+        """
+        contributeurs = self.manager.catalog.contributors
+        traducteurs = self._translator_credits_text()
+        if not contributeurs and not traducteurs:
+            return []
+
+        widgets: list[QWidget] = [self._section(tr("Remerciements"))]
+        if contributeurs:
+            lignes = []
+            for c in contributeurs:
+                # RichText : tout ce qui vient du catalogue est ÉCHAPPÉ. Un
+                # `<img src="http://…">` dans un nom de contributeur ferait
+                # partir une requête à l'ouverture des Paramètres.
+                nom = escape(c.name, quote=False)
+                if c.url:
+                    nom = (f'<a href="{escape(c.url)}" style="color:'
+                           f'{current_theme().accent}; text-decoration:none;">{nom}</a>')
+                lignes.append(f"{nom} — {escape(c.role, quote=False)}"
+                              if c.role else nom)
+            lbl = QLabel("<br>".join(lignes))
+            lbl.setObjectName("subtitle")
+            lbl.setTextFormat(Qt.TextFormat.RichText)
+            lbl.setWordWrap(True)
+            lbl.setTextInteractionFlags(
+                Qt.TextInteractionFlag.LinksAccessibleByMouse
+                | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+            )
+            lbl.linkActivated.connect(open_url)
+            widgets.append(lbl)
+
+        if traducteurs:
+            lbl = QLabel(traducteurs)
+            lbl.setObjectName("subtitle")
+            lbl.setTextFormat(Qt.TextFormat.PlainText)
+            lbl.setWordWrap(True)
+            widgets.append(lbl)
+        return widgets
 
     @staticmethod
     def _translator_credits_text() -> str:
@@ -569,8 +645,20 @@ class SettingsDialog(QDialog):
             self, tr("Changer le dossier d'installation"), str(self.config.install_path)
         )
         if chosen:
+            # MÊME garde que l'assistant de premier lancement, qui la posait
+            # depuis toujours — pas ici. Or c'est par ce chemin qu'on choisit un
+            # dossier APRÈS coup, donc celui par lequel arrivent « Program
+            # Files », la racine d'un disque et les lecteurs réseau montés en
+            # lecture seule. Sans elle, le réglage était accepté, sauvegardé, et
+            # l'échec ne se manifestait qu'au téléchargement suivant, sous la
+            # forme d'une erreur qui n'accusait pas le dossier.
+            if not is_writable_dir(Path(chosen)):
+                QMessageBox.warning(
+                    self, tr("Dossier non inscriptible"),
+                    tr("Impossible d'écrire dans :\n{}").format(chosen))
+                return
             self.config.install_path = Path(chosen)
-            self.config.cache_path = Path(chosen) / ".cache"
+            self.config.cache_path = cache_pour(Path(chosen))
             self._path_label.setText(chosen)
             self._free_label.setText(tr("Espace libre : {}").format(_disk_free(Path(chosen))))
             self._save()

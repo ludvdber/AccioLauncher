@@ -17,6 +17,7 @@ from src.core.system_checks import (
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
+from src.ui.icon_button import IconButton
 from src.core.formatting import (
     append_part_info, format_progress_line, format_size,
 )
@@ -50,6 +51,10 @@ _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
 # repasser par une build, la mise en page ne peut pas dépendre de sa longueur :
 # on élide, et « En savoir plus » porte la suite.
 _ALERTE_MAX_LIGNES = 2
+# En deçà de quoi une archive déjà en cache vaut la peine d'être annoncée
+# comme reprise. Au-delà, elle est complète et attend son installation :
+# « REPRENDRE — 0 o restants » serait un contresens.
+_REPRISE_SEUIL = 0.99
 
 # Noms COURTS des prérequis, pour le bandeau : il tient sur une ligne, le
 # dialogue de lancement peut se permettre la formulation longue.
@@ -452,7 +457,16 @@ class ActionPanel(QWidget):
         # contredisait d'un écran à l'autre. Repli sur le catalogue tant que
         # l'API n'a pas répondu.
         poids = self._manager.archive_size_mb(dl) or dl.size_mb
-        libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(poids)}"
+        # Reprise : le téléchargeur la fait depuis toujours (`.part` + Range),
+        # mais RIEN ne le disait. Le bouton l'annonce quand — et seulement
+        # quand — il y a réellement quelque chose à reprendre : c'est la règle
+        # du projet, un état ne s'affiche que lorsqu'il DÉVIE de la normale.
+        deja_mo = self._manager.octets_deja_telecharges(self._game.id, dl) / 1_048_576
+        if poids and 0 < deja_mo < poids * _REPRISE_SEUIL:
+            libelle = (f"{tr('REPRENDRE')}  —  "
+                       + tr("{} restants").format(format_size(round(poids - deja_mo))))
+        else:
+            libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(poids)}"
         btn = GlowButton(libelle, style="outline")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
@@ -610,17 +624,19 @@ class ActionPanel(QWidget):
         # `game_language` rend None quand le jeu ne déclare pas de bloc, et
         # hors Windows (pas de registre atteignable) — dans les deux cas un
         # engrenage ouvrirait un menu vide, ce qui est pire que pas d'engrenage.
-        # U+2699 est un pictogramme à présentation TEXTE : repli monochrome,
-        # sensible au setPen, contrairement aux emoji couleur écartés ailleurs.
+        # Roue PEINTE, plus U+2699. Ce caractère était réputé sûr parce que sa
+        # propriété Unicode est `Emoji_Presentation=No` — mais la propriété dit
+        # ce que le caractère DEMANDE, pas ce que la chaîne de repli de Windows
+        # lui DONNE. Mesuré le 2026-08-26 en le rendant en anti-crénelage
+        # niveaux de gris : 49 % de pixels colorés, contre 0 % pour une lettre
+        # et 22 % pour 🔊 pris comme témoin. Il partait donc en couleur, comme
+        # le haut-parleur de la barre audio, et plus franchement encore.
         if self._manager.game_language(self._game) is not None:
-            btn_reglages = GlowButton("⚙", glow_color="#8a8aaa",
-                                      style="outline", text_color="#8a8aaa")
+            btn_reglages = IconButton("reglages", taille=36, cadre="#8a8aaa")
             btn_reglages.setObjectName("btnGameSettings")
             btn_reglages.setAccessibleName(
                 tr("Réglages de {}").format(self._game.name))
             btn_reglages.setToolTip(tr("Réglages du jeu"))
-            btn_reglages.setFont(body_font(15))
-            btn_reglages.setFixedSize(36, 36)
             btn_reglages.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_reglages.clicked.connect(self.game_settings_clicked)
             self._action_layout.addWidget(btn_reglages)

@@ -25,7 +25,8 @@ _HAUTEUR = 32
 # widget, donc il mange la place du layout. L'oublier serrait le curseur de
 # volume de 2 px — invisible, jusqu'au jour où il ne le serait plus.
 _BORDURE = 1
-_LARGEUR = 2 * (_BORDURE + _MARGE) + 3 * _BOUTON + 3 * _ESPACE + _SLIDER
+# Quatre boutons et un curseur = cinq éléments, donc QUATRE intervalles.
+_LARGEUR = 2 * (_BORDURE + _MARGE) + 4 * _BOUTON + 4 * _ESPACE + _SLIDER
 # Fin de lecture : une pastille RONDE (largeur = hauteur), pas un galet
 # rétréci — un rectangle aux bouts arrondis qui ne contient qu'une seule
 # icône a l'air d'une barre à qui il manque des boutons.
@@ -44,6 +45,7 @@ class AudioBar(QWidget):
     volume_changed = pyqtSignal(int)
     play_toggled = pyqtSignal()
     replay_clicked = pyqtSignal()
+    cinema_toggled = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -105,6 +107,14 @@ class AudioBar(QWidget):
         self._volume_slider.valueChanged.connect(self.volume_changed.emit)
         layout.addWidget(self._volume_slider)
 
+        # Plein écran — EN DERNIER, le plus à droite : c'est le seul bouton
+        # qui ne pilote pas la lecture, et il coupe le groupe s'il se glisse
+        # entre la pause et le son.
+        self._btn_cinema = IconButton("plein_ecran", _BOUTON, self)
+        self._btn_cinema.setAccessibleName("Bande-annonce en plein écran")
+        self._btn_cinema.clicked.connect(self.cinema_toggled.emit)
+        layout.addWidget(self._btn_cinema)
+
     def set_mode_fin(self, fin: bool) -> None:
         """Bascule entre la barre complète et la pastille « revoir ».
 
@@ -114,10 +124,18 @@ class AudioBar(QWidget):
         """
         self._btn_play.setVisible(not fin)
         self._btn_mute.setVisible(not fin)
+        self._btn_cinema.setVisible(not fin)
         self._volume_slider.setVisible(not fin)
         marge = _MARGE_FIN if fin else _MARGE
         self.layout().setContentsMargins(marge, 0, marge, 0)
         self.setFixedSize(_LARGEUR_FIN if fin else _LARGEUR, _HAUTEUR)
+
+    def set_cinema_icon(self, actif: bool) -> None:
+        self._btn_cinema.set_icone(
+            "quitter_plein_ecran" if actif else "plein_ecran")
+        self._btn_cinema.setAccessibleName(
+            "Quitter le plein écran" if actif
+            else "Bande-annonce en plein écran")
 
     def set_muted_icon(self, muted: bool) -> None:
         self._btn_mute.set_icone("muet" if muted else "volume")

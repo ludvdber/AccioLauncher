@@ -14,7 +14,7 @@ import logging
 import re
 from pathlib import Path
 
-from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH
+from src.core.config import ASSETS_DIR, LAUNCHER_DATA_PATH
 from src.core.game_data import Trailer
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 # Les mettre sous `config.install_path` les rendrait orphelines le jour où
 # quelqu'un déplace ses jeux — 400 Mo abandonnés en silence, sans que rien à
 # l'écran ne relie les deux.
-TRAILERS_DIR = DEFAULT_INSTALL_PATH / "trailers"
+TRAILERS_DIR = LAUNCHER_DATA_PATH / "trailers"
 
 # Ce que ce dossier a le droit de contenir. Sert de garde-fou au ménage : on ne
 # supprime QUE ce qui répond à ce motif, jamais un fichier qu'on n'a pas écrit.

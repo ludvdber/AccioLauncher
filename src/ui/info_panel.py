@@ -292,7 +292,7 @@ class InfoPanel(QWidget):
         # « QLabel », la règle `QLabel#gameTitle` de l'ancêtre gagnait et la
         # taille était figée à 36 px quoi qu'on fasse.
         self._title.setStyleSheet(
-            "QLabel#gameTitle { color: #eaeaea; background: transparent; }")
+            "QLabel#gameTitle { color: #f2f2f4; background: transparent; }")
         lay.addWidget(self._title)
         lay.addSpacing(10)
 
@@ -325,7 +325,15 @@ class InfoPanel(QWidget):
             Qt.TextInteractionFlag.LinksAccessibleByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
-        self._meta.setStyleSheet("QLabel { color: #8a8aaa; background: transparent; }")
+        # `#8a8aaa` jusqu'au 2026-08-26 — la ligne la moins lisible de toute la
+        # fiche, et celle qui porte la preuve sociale (le compteur de
+        # téléchargements). Mesuré sous les glyphes : 29 % des plans de
+        # bande-annonce et 44 % des illustrations sous le seuil WCAG AA, pire
+        # cas 2,50. À `#b4b4d0`, voile gauche resserré : 0 %, pire cas 5,60.
+        # Elle reste la plus sourde des trois — c'est sa taille, ses capitales
+        # et son interlettrage qui la tiennent au second plan, pas le fait
+        # d'être trop pâle pour se lire.
+        self._meta.setStyleSheet("QLabel { color: #b4b4d0; background: transparent; }")
         self._meta.linkActivated.connect(self._on_meta_link)
         lay.addWidget(self._meta)
         lay.addSpacing(16)
@@ -354,8 +362,23 @@ class InfoPanel(QWidget):
         self._desc.setFont(body_font(15))
         self._desc.setWordWrap(True)
         self._desc.setMaximumWidth(_DESC_MAX_W)  # raboté dans _apply_available_width
+        # OPAQUE, et c'est tout le correctif. Un texte semi-transparent se
+        # mélange à ce qu'il y a DERRIÈRE lui : plus le fond s'éclaircit, plus
+        # la couleur peinte s'en rapproche, donc son contraste s'effondre au
+        # moment précis où il en aurait le plus besoin. Mesuré sous les glyphes
+        # eux-mêmes, sur 195 images des huit bandes-annonces et sur les huit
+        # illustrations : à 0,75 d'opacité la description passait sous le seuil
+        # WCAG AA sur 11 % des plans de bande-annonce et 40 % des illustrations
+        # (pire cas 3,41). La MÊME couleur en opaque : 0 % et 0 %.
+        #
+        # Relevée ensuite de `#b0b0c8` à `#b8b8d0` — huit points de plus par
+        # canal, imperceptibles — quand le voile plein est passé de 30 à 15 % à
+        # la demande de Ludo : à 15 %, l'illustration de HP4 la faisait tomber à
+        # 4,29 pour un seuil à 4,50. C'est le seul cas qui résistait, et le
+        # corriger par la couleur coûte moins cher que de rendre au voile les
+        # 15 % qu'on venait de lui retirer.
         self._desc.setStyleSheet(
-            "QLabel { color: rgba(176, 176, 200, 0.75); background: transparent;"
+            "QLabel { color: #b8b8d0; background: transparent;"
             " line-height: 1.5; }"
         )
         lay.addWidget(self._desc)
@@ -445,7 +468,7 @@ class InfoPanel(QWidget):
         if size != self._title_size:
             self._title_size = size
             self._title.setStyleSheet(
-                "QLabel#gameTitle { color: #eaeaea; background: transparent;"
+                "QLabel#gameTitle { color: #f2f2f4; background: transparent;"
                 " font-size: %dpx; }" % size)
 
     def squeeze_title(self) -> bool:
@@ -504,9 +527,11 @@ class InfoPanel(QWidget):
     def _on_meta_link(self, href: str) -> None:
         """Aiguillage des liens de la ligne méta.
 
-        Elle en porte deux désormais : le changelog et la langue du jeu. Le
-        `lambda _: versions_clicked.emit()` d'avant ignorait le href, donc tout
-        clic aurait ouvert le changelog.
+        Elle n'en porte plus qu'un — le changelog — depuis que la langue du jeu
+        est passée à l'engrenage. L'aiguillage RESTE : un `lambda _:
+        versions_clicked.emit()` qui ignore le href renverrait tout clic vers le
+        changelog le jour où un second lien réapparaît, et c'est exactement le
+        défaut qui avait rendu cette méthode nécessaire.
         """
         if href == "langue":
             self.language_clicked.emit()
@@ -544,18 +569,20 @@ class InfoPanel(QWidget):
                     _insecable(escape(game.developer, quote=False)),
                     _insecable(escape(size_str, quote=False)), lien]
 
-        # Langue du jeu — UNIQUEMENT pour les jeux qui en proposent plusieurs.
-        # Sept jeux sur huit n'ont pas ce bloc et ne doivent donc rien afficher :
-        # un réglage sans choix possible est du bruit. Pas de chevron ni de
-        # triangle : Cinzel n'a ni ▾ ni ▼ (vérifié), Windows partirait en repli
-        # de police. Le doré fait l'affordance, comme pour le changelog.
-        code = self._manager.game_language(game)
-        if code is not None and game.language_registry is not None:
-            langue = game.language_registry.get(code)
-            if langue is not None:
-                morceaux.append(
-                    f'<a href="langue" style="color:{gold}; text-decoration:none;">'
-                    + _insecable(escape(langue.label, quote=False)) + '</a>')
+        # PAS de langue du jeu ici. Elle y a vécu du 2026-08-21 au 2026-08-26,
+        # en segment doré cliquable, et elle affichait « FRANÇAIS » — c'est-à-
+        # dire un ÉTAT NORMAL, la règle même que le projet s'interdit partout
+        # ailleurs (« espace libre : 412 Go », « en ligne », « prérequis OK »).
+        # Un état ne s'affiche que lorsqu'il dévie ; celui-ci ne dévie jamais,
+        # puisqu'il n'y a pas de mauvaise langue. Elle occupait donc en
+        # permanence la ligne la plus contrainte de la fiche pour n'apprendre
+        # rien à personne, et sur sept jeux sur huit elle n'apparaissait même
+        # pas, si bien que la ligne méta changeait de forme d'un jeu à l'autre.
+        # Le réglage n'est pas perdu : l'engrenage d'ActionPanel s'affiche sous
+        # EXACTEMENT la même condition (`game_language(game) is not None`) et
+        # ouvre GameSettingsDialog, qui le nomme au lieu de le faire deviner.
+        # `_on_meta_link` garde son aiguillage : le href « langue » n'est plus
+        # émis d'ici, mais le signal reste branché pour tout autre appelant.
 
         # Compteur de téléchargements (GitHub, toutes versions cumulées). Il vit
         # DANS la ligne méta et non dans une pastille séparée : en pastille, le

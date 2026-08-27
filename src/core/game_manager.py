@@ -5,12 +5,13 @@ import shutil
 import stat
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
 
 from src.core import game_registry as registre
+from src.core import stats
 from src.core.config import Config
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 from src.core.i18n import get_language
@@ -86,6 +87,12 @@ class GameManager:
         self._asset_sizes: dict[str, int] = {}
         self._sizes_lower: dict[str, int] = {}
         self._backfill_missing_versions()
+        # Journal des sessions : créé au premier démarrage qui suit sa mise en
+        # service, en y gelant les cumuls déjà connus. Sans cet instantané, le
+        # temps joué AVANT le journal disparaîtrait des totaux le jour où la
+        # page de statistiques cesserait de lire `config.playtime_seconds` —
+        # c'est de l'historique réel, il ne se reconstruit pas.
+        stats.amorcer(self.config.playtime_seconds)
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property
@@ -454,14 +461,29 @@ class GameManager:
     # ──────────────────── Stats de jeu ────────────────────
 
     def add_playtime(self, game_id: str, seconds: int) -> None:
-        """Cumule le temps d'une session et date la dernière partie (persisté en config)."""
-        if game_id not in self._index or seconds <= 0:
+        """Cumule le temps d'une session, date la partie, et la JOURNALISE.
+
+        Les cumuls en config restent la source rapide (fiche de jeu, cap Ko-fi) ;
+        le journal, lui, garde le détail dont se déduisent la durée moyenne, les
+        séries de jours et les heures de prédilection — voir `src/core/stats.py`.
+
+        L'heure de début est reconstituée par soustraction plutôt que relevée au
+        lancement : c'est exactement la même valeur, et ça évite de faire porter
+        un état de session de plus à la fenêtre, qui en a déjà deux.
+        """
+        # Le seuil du « vrai lancement » s'applique ICI, une fois, pour les deux
+        # destinations : sans ça la fenêtre le connaissait de son côté et
+        # `stats` du sien, et les cumuls en config auraient fini par diverger du
+        # journal sur les sessions limites, sans que rien ne le signale.
+        if game_id not in self._index or seconds < stats.DUREE_MINIMALE:
             return
         self.config.playtime_seconds[game_id] = (
             self.config.playtime_seconds.get(game_id, 0) + int(seconds)
         )
         self.config.last_played[game_id] = date.today().isoformat()
         self.config.save()
+        stats.enregistrer_session(
+            game_id, datetime.now() - timedelta(seconds=int(seconds)), int(seconds))
         log.info("Temps de jeu de %s : +%d s (total %d s)",
                  game_id, seconds, self.config.playtime_seconds[game_id])
 
@@ -563,6 +585,49 @@ class GameManager:
             return round(sum(tailles) / 1024 / 1024) if all(tailles) else 0
         octets = self._size_for(version.download_url)
         return round(octets / 1024 / 1024) if octets else 0
+
+    def octets_deja_telecharges(self, game_id: str, version: GameVersion) -> int:
+        """Ce qui attend déjà dans le cache pour cette version, en octets.
+
+        Le téléchargeur sait REPRENDRE depuis toujours : les `.part` restent en
+        cache et la requête repart en `Range`. Rien ne le DISAIT. Sur une
+        archive de 4,6 Go, quelqu'un dont la connexion tombe à 80 % suppose
+        qu'il a tout perdu — et abandonne, alors que le launcher aurait repris
+        où il en était. C'est la marche la plus chère de tout l'entonnoir : on
+        n'y perd pas un curieux, on y perd quelqu'un qui avait déjà attendu.
+
+        On compte au disque plutôt qu'en mémoire parce que le fait à annoncer
+        est justement celui qui SURVIT à la fermeture du launcher. Le motif
+        recouvre les deux conventions de nommage — fichier unique
+        (`hp3_v1.0.7z` + `.part`) comme volumes (`hp5_v1.1.7z.001`, `.001.part`)
+        — pour la même raison que `_supprimer_residus` : c'est la destination
+        qui porte la version, donc le préfixe est le même dans les deux cas.
+        """
+        dossier = self.config.cache_path
+        if not dossier.is_dir():
+            return 0
+        prefixe = self.chemin_archive(game_id, version).name
+        total = 0
+        for fichier in dossier.glob(prefixe + "*"):
+            try:
+                total += fichier.stat().st_size
+            except OSError:
+                continue        # supprimé entre le glob et le stat : il ne compte pas
+        return total
+
+    def chemin_archive(self, game_id: str, version: GameVersion) -> Path:
+        """Ou atterrit l'archive de cette version dans le cache.
+
+        SOURCE UNIQUE du nom : le telechargement (`GameOperations.download`),
+        le nettoyage des residus (`_supprimer_residus`) et le decompte de la
+        reprise le derivent tous d'ici. Le nom porte la VERSION parce que celui
+        de l'asset, lui, ne la porte pas : les deux releases de HP5 publient
+        `hp5.7z.001` a l'identique, et une part restee en cache s'installait
+        sous le numero de l'autre. Deux litteraux qui ne s'accordaient que
+        parce qu'on les avait recopies correctement, c'est exactement le defaut
+        qui a coute cet incident-la.
+        """
+        return self.config.cache_path / f"{game_id}_v{version.version}.7z"
 
     def _digest_for(self, url: str | None) -> str:
         """Empreinte publiée pour cette URL ("" si inconnue)."""
