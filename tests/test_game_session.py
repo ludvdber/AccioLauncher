@@ -144,3 +144,47 @@ class TestExtinction:
 
     def test_le_nom_en_cours_est_lisible(self, session):
         assert session.nom_en_cours == ""
+
+
+class TestUnLancementRateSeDitCommeTel:
+    """Un jeu qui n'a jamais démarré ne doit pas s'entendre souhaiter bon jeu.
+
+    Le launcher CONSIGNAIT déjà l'échec (`stats.Tentative`, avec son code de
+    sortie) et affichait quand même « Bon jeu ! » — mesuré le 2026-08-28 sur une
+    sortie en 0,5 s, code 0 : la signature exacte du dossier `pc` de HP7. C'est
+    le cas type de ce que le launcher SAIT et jette au moment de l'afficher.
+
+    Le verdict remonte d'`add_playtime`, seul endroit qui arbitre le seuil : le
+    faire redécider par la fenêtre l'aurait mis à deux endroits, et deux seuils
+    qu'aucun calcul ne relie finissent toujours par diverger.
+    """
+
+    def test_une_vraie_partie_annonce_une_partie(self, session, qtbot):
+        session.demarrer(_FauxProcess(), "HP1", "hp1")
+        with qtbot.waitSignal(session.terminee, timeout=1000) as bloc:
+            session._monitor.game_exited.emit("HP1", 0, 1200.0)
+        assert bloc.args == ["HP1", True]
+
+    def test_un_lancement_avorte_annonce_un_echec(self, session, qtbot):
+        session.demarrer(_FauxProcess(), "HP1", "hp1")
+        with qtbot.waitSignal(session.terminee, timeout=1000) as bloc:
+            session._monitor.game_exited.emit("HP1", 0, 0.5)
+        assert bloc.args == ["HP1", False]
+
+    def test_sans_session_ouverte_on_n_accuse_pas(self, session, qtbot):
+        """Le moniteur peut conclure sans qu'on ait rien ouvert (relance de
+        processus par UE1). Dans le doute on suppose une partie : accuser à
+        tort un jeu qui a très bien tourné serait pire que se taire."""
+        with qtbot.waitSignal(session.terminee, timeout=1000) as bloc:
+            session._monitor.game_exited.emit("HP1", 0, 1200.0)
+        assert bloc.args == ["HP1", True]
+
+    def test_le_seuil_reste_celui_d_add_playtime(self, session):
+        """Contre-épreuve du découplage : c'est bien le manager qui tranche."""
+        from src.core import stats
+        juste_sous = stats.DUREE_MINIMALE - 1
+        juste_au_dessus = stats.DUREE_MINIMALE + 1
+        m = session._manager
+        assert m.add_playtime("hp1", juste_sous, None, 0) is False
+        assert m.add_playtime("hp1", juste_au_dessus, None, 0) is True
+

@@ -42,8 +42,11 @@ class GameSession(QObject):
     # infobulle. Le nom seulement : rien de ce qui suit n'est son affaire.
     demarree = pyqtSignal(str)
     # Le jeu s'est fermé. Émis APRÈS l'enregistrement, pour que la fiche
-    # rafraîchie par la fenêtre porte déjà le temps de cette partie.
-    terminee = pyqtSignal(str)
+    # rafraîchie par la fenêtre porte déjà le temps de cette partie. Le booléen
+    # dit si c'était une VRAIE partie : un jeu mort en une demi-seconde ne doit
+    # pas s'entendre souhaiter « bon jeu ». Le verdict vient d'`add_playtime`,
+    # seul endroit où le seuil est arbitré.
+    terminee = pyqtSignal(str, bool)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -79,12 +82,16 @@ class GameSession(QObject):
         """Fin du jeu. `duree` est le temps OBSERVÉ, grâce exclue ; ce qui compte
         comme une vraie partie se décide dans `add_playtime`."""
         stats.fermer_session()
+        # Sans session ouverte (relance de processus par UE1), on ne peut rien
+        # affirmer : on suppose une partie plutôt que d'accuser à tort.
+        partie = True
         if self._game_id:
-            self._manager.add_playtime(self._game_id, int(duree), self._debut, code)
+            partie = self._manager.add_playtime(
+                self._game_id, int(duree), self._debut, code)
         self._game_id = ""
         self._debut = None
         self._presence.clear()
-        self.terminee.emit(game_name)
+        self.terminee.emit(game_name, partie)
 
     def shutdown(self) -> None:
         """Coupe la présence Discord à la fermeture du launcher.

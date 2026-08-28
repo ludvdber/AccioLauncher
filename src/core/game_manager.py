@@ -342,8 +342,13 @@ class GameManager:
     # ──────────────────── Stats de jeu ────────────────────
 
     def add_playtime(self, game_id: str, seconds: int,
-                     debut: datetime | None = None, code: int | None = None) -> None:
+                     debut: datetime | None = None, code: int | None = None) -> bool:
         """Consigne ce qu'un lancement a donné : une partie, ou une tentative.
+
+        **Rend True si c'était une vraie partie.** Le seuil est arbitré ici et
+        nulle part ailleurs ; l'affichage a besoin de la même réponse — un jeu
+        qui n'a pas démarré ne doit pas s'entendre souhaiter « bon jeu ». Le
+        faire redécider par la fenêtre aurait remis le seuil à deux endroits.
 
         Les cumuls en config restent la source rapide (fiche de jeu, cap Ko-fi) ;
         le journal, lui, garde le détail dont se déduisent la durée moyenne, les
@@ -360,18 +365,19 @@ class GameManager:
         pas au rattrapage d'une partie interrompue — d'où le paramètre.
         """
         if game_id not in self._index or seconds < 0:
-            return
+            return False
         debut = debut or (datetime.now() - timedelta(seconds=int(seconds)))
         if seconds < stats.DUREE_MINIMALE:
             stats.enregistrer_tentative(game_id, debut, int(seconds), code)
             log.info("Lancement sans partie : %s (%d s, code %s)", game_id, seconds, code)
-            return
+            return False
         self.config.playtime_seconds[game_id] = (
             self.config.playtime_seconds.get(game_id, 0) + int(seconds)
         )
         self.config.last_played[game_id] = date.today().isoformat()
         self.config.save()
         stats.enregistrer_session(game_id, debut, int(seconds))
+        return True
         log.info("Temps de jeu de %s : +%d s (total %d s)",
                  game_id, seconds, self.config.playtime_seconds[game_id])
 

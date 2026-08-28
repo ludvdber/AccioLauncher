@@ -11,9 +11,18 @@ class FlowLayout(QLayout):
         super().__init__(parent)
         self._items = []
         self._spacing = spacing
+        # Hauteurs déjà calculées, par largeur. Qt interroge `heightForWidth`
+        # en BOUCLE pendant une négociation de mise en page — mesuré ici :
+        # 107 appels pour un seul rafraîchissement de la fiche, chacun refaisant
+        # un passage complet sur les pastilles avec un `sizeHint()` par item.
+        # Le résultat ne dépend que de la largeur et du contenu, donc il se
+        # retient. Vidé par `invalidate()`, que Qt appelle dès qu'un enfant
+        # change de taille souhaitée, et par toute mutation de la liste.
+        self._hauteurs: dict[int, int] = {}
 
     def addItem(self, item):
         self._items.append(item)
+        self._hauteurs.clear()
 
     def count(self):
         return len(self._items)
@@ -25,14 +34,24 @@ class FlowLayout(QLayout):
 
     def takeAt(self, index):
         if 0 <= index < len(self._items):
+            self._hauteurs.clear()
             return self._items.pop(index)
         return None
+
+    def invalidate(self):
+        """Qt signale qu'un enfant a changé de taille souhaitée."""
+        self._hauteurs.clear()
+        super().invalidate()
 
     def hasHeightForWidth(self):
         return True
 
     def heightForWidth(self, width):
-        return self._do_layout(QRectF(0, 0, width, 0), test_only=True)
+        hauteur = self._hauteurs.get(width)
+        if hauteur is None:
+            hauteur = self._do_layout(QRectF(0, 0, width, 0), test_only=True)
+            self._hauteurs[width] = hauteur
+        return hauteur
 
     def setGeometry(self, rect):
         super().setGeometry(rect)

@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
-from PyQt6.QtCore import QEvent, Qt  # noqa: E402
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSignal  # noqa: E402
 from PyQt6.QtGui import QKeyEvent  # noqa: E402
 
 from src.core.game_data import load_catalog  # noqa: E402
@@ -2130,3 +2130,97 @@ class TestConfirmationAvantDeFermer:
         with self._occupe(fen):
             fen._fermeture_confirmee = True
             assert fen._confirmer_fermeture() is True
+
+
+class TestVerificationForceeHorsLigne:
+    """« Vérifier les mises à jour » ne doit pas AFFIRMER ce qu'il n'a pas vu.
+
+    Hors ligne, aucun `catalog_updated` n'est émis — exactement comme lorsque
+    le catalogue est réellement à jour. Le dialogue en déduisait « Catalogue
+    déjà à jour », c'est-à-dire une affirmation que le launcher n'était pas en
+    position de faire : mesuré le 2026-08-28, les deux situations rendaient la
+    MÊME chaîne, donc l'utilisateur sans réseau était informé que tout allait
+    bien. C'est le pendant du faux « hors ligne » que le projet s'interdit déjà
+    — mentir dans l'autre sens n'est pas moins grave.
+    """
+
+    class _FauxChecker(QObject):
+        """Checker qui ne trouve rien : ce que produit une coupure réseau."""
+        catalog_updated = pyqtSignal(object)
+        launcher_update = pyqtSignal(str, str, str, str)
+        finished = pyqtSignal()
+
+        def start(self):
+            self.finished.emit()
+
+    def _verifier(self, win, monkeypatch, *, en_ligne: bool):
+        """Joue une vérification forcée et rend (message, succès) affichés."""
+        from src.ui.settings_panel import SettingsDialog
+        faux = self._FauxChecker()
+        monkeypatch.setattr(win._updates, "forced_checker", lambda: faux)
+        dlg = SettingsDialog(win.config, win.manager, win, store=win._trailers)
+        vus: list[tuple] = []
+        # Faux posé sur l'INSTANCE du dialogue, jamais sur la classe : un
+        # attribut de classe d'un type sip laisse un descripteur cassé.
+        dlg.show_update_status = lambda msg, success=True: vus.append((msg, success))
+        win._online = en_ligne
+        win._force_update_check(dlg, catalog_only=True)
+        dlg.deleteLater()
+        return vus[-1] if vus else ("", None)
+
+    def test_hors_ligne_le_dit_au_lieu_de_rassurer(self, make_window, monkeypatch):
+        win = make_window()
+        message, succes = self._verifier(win, monkeypatch, en_ligne=False)
+        assert "Hors ligne" in message
+        assert succes is False, "un échec doit s'afficher comme un échec"
+
+    def test_en_ligne_le_message_rassurant_reste(self, make_window, monkeypatch):
+        """La correction ne doit pas avoir supprimé le cas nominal."""
+        win = make_window()
+        message, succes = self._verifier(win, monkeypatch, en_ligne=True)
+        assert "à jour" in message
+        assert succes is True
+
+    def test_les_deux_situations_ne_disent_PAS_la_meme_chose(self, make_window,
+                                                             monkeypatch):
+        """Le cœur du défaut : c'est l'INDISTINCTION qui trompait."""
+        win = make_window()
+        hors = self._verifier(win, monkeypatch, en_ligne=False)
+        dans = self._verifier(win, monkeypatch, en_ligne=True)
+        assert hors[0] != dans[0]
+
+
+class TestEchecDeLancementVisible:
+    """Bout en bout : le message qui s'affiche après un lancement raté."""
+
+    class _FauxProc:
+        pid = 1
+        args = ["C:/jeux/HP1/System/Harry.exe"]
+
+        def poll(self):
+            return None
+
+    def _retour(self, win, qtbot, duree: float) -> str:
+        win._session.demarrer(self._FauxProc(), "HP1", win._detail.game.id)
+        win._session._monitor.game_exited.emit("HP1", 0, duree)
+        qtbot.wait(20)
+        return win._status_bar.currentMessage()
+
+    def test_une_partie_normale_souhaite_bon_jeu(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        assert "Bon jeu" in self._retour(win, qtbot, 1200.0)
+
+    def test_un_jeu_qui_ne_demarre_pas_ne_dit_PAS_bon_jeu(self, make_window, qtbot):
+        """0,5 s et code 0 : la signature du dossier `pc` de HP7."""
+        win = make_window()
+        win.show()
+        assert "Bon jeu" not in self._retour(win, qtbot, 0.5)
+
+    def test_et_il_le_signale_par_un_toast(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        self._retour(win, qtbot, 0.5)
+        assert win._toast.isVisible(), "l'échec passe inaperçu"
+        assert "n'a pas démarré" in win._toast.text()
+

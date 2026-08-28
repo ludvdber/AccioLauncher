@@ -184,7 +184,6 @@
         ]
       },
       "post_install": {
-        "registry": [],
         "config_files": [
           {
             "source": "config/HP.ini",
@@ -328,7 +327,6 @@
         ]
       },
       "post_install": {
-        "registry": [],
         "config_files": [
           {
             "source": "config/Game.ini",
@@ -450,7 +448,6 @@
         }
       ],
       "post_install": {
-        "registry": [],
         "config_files": [
           {
             "source": "config/hppoa.ini",
@@ -537,9 +534,7 @@
           }
         }
       ],
-      "post_install": {
-        "registry": []
-      },
+      "post_install": {},
       "i18n": {
         "en": {
           "name": "Harry Potter and the Goblet of Fire",
@@ -652,9 +647,7 @@
           }
         }
       ],
-      "post_install": {
-        "registry": []
-      },
+      "post_install": {},
       "i18n": {
         "en": {
           "name": "Harry Potter and the Order of the Phoenix",
@@ -727,9 +720,7 @@
           }
         }
       ],
-      "post_install": {
-        "registry": []
-      },
+      "post_install": {},
       "i18n": {
         "en": {
           "name": "Harry Potter and the Half-Blood Prince",
@@ -863,7 +854,6 @@
         }
       },
       "post_install": {
-        "registry": [],
         "sous_dossier": "pc"
       },
       "i18n": {
@@ -1003,7 +993,6 @@
         }
       },
       "post_install": {
-        "registry": [],
         "sous_dossier": "pc"
       },
       "i18n": {

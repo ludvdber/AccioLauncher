@@ -63,9 +63,22 @@ def _tr_literals(path: str) -> list[str]:
     ]
 
 
+def _source_files() -> list[str]:
+    """Tous les fichiers qui peuvent appeler `tr()`.
+
+    **`main.py` en fait partie** et était absent de ce balayage : il porte les
+    cinq étapes de l'écran de démarrage — « Initialisation », « Prêt »… —,
+    c'est-à-dire le tout premier texte que voit un utilisateur. Elles se
+    trouvaient traduites (vérifié le 2026-08-28, aucune manquante), donc ce
+    n'était pas un défaut vivant ; mais rien n'obligeait la suivante à l'être.
+    Un filet qui laisse passer la première impression n'en est pas un.
+    """
+    return glob.glob("src/**/*.py", recursive=True) + ["main.py"]
+
+
 def _source_keys() -> set[str]:
     keys: set[str] = set()
-    for path in glob.glob("src/**/*.py", recursive=True):
+    for path in _source_files():
         keys |= set(_tr_literals(path))
     return keys
 
@@ -136,6 +149,56 @@ class TestCouverture:
             assert not manquants, (
                 f"{len(manquants)} chaîne(s) sans traduction dans {path.name} : "
                 f"{sorted(manquants)[:5]}")
+
+
+class TestPasDeClesOrphelines:
+    """Aucune clé de traduction ne doit survivre au texte qu'elle traduisait.
+
+    **34 clés mortes s'étaient accumulées** (audit du 2026-08-28) : l'ancien
+    tableau de bord des statistiques, le réglage « vérifier au démarrage »
+    supprimé, et une dizaine de formulations remplacées. Rien ne les voyait —
+    `TestCouverture` vérifie le sens INVERSE (toute chaîne du code est
+    traduite), et ce sens-là ne dit jamais qu'une clé ne sert plus.
+
+    Le coût n'est pas le poids du fichier : c'est qu'un traducteur bénévole
+    traduit ces lignes-là aussi. Lui faire dépenser son temps sur des chaînes
+    que personne ne verra est la meilleure façon de ne pas en recevoir une
+    seconde contribution.
+
+    La clé doit apparaître comme LITTÉRAL quelque part dans `src/`, pas
+    forcément dans un `tr()` : certaines sont résolues dynamiquement — les noms
+    de maison (`tr(palette.nom)`) et les formes singulier/pluriel du compteur
+    de téléchargements. Chercher dans le TEXTE des sources ne marcherait pas :
+    les commentaires citent « Serpentard » ou « Gryffondor » sans les employer.
+    """
+
+    @staticmethod
+    def _litteraux_du_code() -> set:
+        litteraux = set()
+        for chemin in _source_files():
+            arbre = ast.parse(Path(chemin).read_text(encoding="utf-8"))
+            for n in ast.walk(arbre):
+                if isinstance(n, ast.Constant) and isinstance(n.value, str):
+                    litteraux.add(n.value)
+        return litteraux
+
+    def test_chaque_cle_correspond_a_une_chaine_du_code(self):
+        litteraux = self._litteraux_du_code()
+        assert len(litteraux) > 200, "extraction AST anormalement pauvre"
+        for path in LANG_FILES:
+            orphelines = sorted(set(_strings(path)) - litteraux)
+            assert not orphelines, (
+                f"{len(orphelines)} clé(s) orpheline(s) dans {path.name} — "
+                f"le texte qu'elles traduisaient n'existe plus : "
+                f"{orphelines[:5]}")
+
+    def test_les_cles_resolues_dynamiquement_survivent(self):
+        """Contre-épreuve du test précédent : il ne doit pas se contenter des
+        `tr()` littéraux, sinon il exigerait la suppression de clés VIVANTES."""
+        litteraux = self._litteraux_du_code()
+        for cle in ("Gryffondor", "Serpentard", "Poudlard (or)",
+                    "{} téléchargement", "{} téléchargements"):
+            assert cle in litteraux, f"{cle!r} est pourtant utilisée"
 
 
 class TestTr:

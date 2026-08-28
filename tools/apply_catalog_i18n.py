@@ -168,6 +168,9 @@ CHANGES = {
     "Wrapper D3D9 Chip-Biscuit intégré (widescreen 1920x1080, 100 FPS, 16:9)": {
         "en": "Chip-Biscuit D3D9 wrapper bundled (1920x1080 widescreen, 100 FPS, 16:9)",
         "es": "Wrapper D3D9 Chip-Biscuit integrado (panorámico 1920x1080, 100 FPS, 16:9)"},
+    "Wrapper graphique D3D9 refondu": {
+        "en": "Rebuilt D3D9 graphics wrapper",
+        "es": "Wrapper gráfico D3D9 rediseñado"},
     "Wrapper graphique D3D9 refondu (pipeline de post-traitement réglable)": {
         "en": "Rebuilt D3D9 graphics wrapper (tunable post-processing pipeline)",
         "es": "Wrapper gráfico D3D9 rediseñado (pipeline de posprocesado ajustable)"},

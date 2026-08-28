@@ -558,11 +558,29 @@ class MainWindow(QMainWindow):
         self._tray.set_tooltip(tr("Accio Launcher — En jeu : {}").format(game_name))
         self._minimize_to_tray()
 
-    def _on_game_exited(self, game_name: str) -> None:
-        """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé."""
+    def _on_game_exited(self, game_name: str, partie: bool = True) -> None:
+        """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé.
+
+        `partie` vient d'`add_playtime`, seul endroit qui arbitre le seuil.
+        Faux, c'est un lancement qui n'est jamais devenu une partie : le
+        launcher le CONSIGNAIT déjà (`stats.Tentative` + code de sortie) et
+        souhaitait quand même « Bon jeu ! » — mesuré le 2026-08-28 sur une
+        sortie en 0,5 s, signature exacte du dossier `pc` de HP7.
+        """
         self._tray.set_tooltip("Accio Launcher")
         self._restore_from_tray()
-        self._status_bar.showMessage(tr("Retour de {} — Bon jeu !").format(game_name))
+        if partie:
+            self._status_bar.showMessage(
+                tr("Retour de {} — Bon jeu !").format(game_name))
+        else:
+            # Un toast et non la barre de statut : la fenêtre vient de
+            # reparaître, l'œil est sur la fiche. Rien d'actionnable n'est
+            # promis — on ignore POURQUOI, et inventer un remède serait pire.
+            self._status_bar.showMessage(tr("Retour de {}").format(game_name))
+            self._toast.show_message(
+                tr("{} s'est fermé aussitôt — le jeu n'a pas démarré.").format(
+                    game_name),
+                duration_ms=8000)
         # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh
         # sans transition) : le temps de cette partie vient d'être enregistré.
         if self._detail.game is not None:
@@ -689,11 +707,20 @@ class MainWindow(QMainWindow):
                 dlg.show_update_status(tr("Launcher v{} disponible !").format(version))
 
         def on_finished():
-            if _dlg_alive():
-                if not state["catalog_updated"]:
-                    dlg.show_update_status(tr("Catalogue déjà à jour"))
-                elif not catalog_only and not self._updates.url:
-                    dlg.show_update_status(tr("Tout est à jour"))
+            if not _dlg_alive():
+                return
+            # Hors ligne, l'absence de `catalog_updated` est indistinguable
+            # d'un catalogue à jour : sans ce test on répondait « Catalogue
+            # déjà à jour » sans avoir rien vérifié (mesuré le 2026-08-28, les
+            # deux cas rendaient la MÊME chaîne). `network_status` est la
+            # dernière instruction de `run()`, donc `self._online` est juste ici.
+            if not self._online:
+                dlg.show_update_status(
+                    tr("Hors ligne — vérification impossible."), success=False)
+            elif not state["catalog_updated"]:
+                dlg.show_update_status(tr("Catalogue déjà à jour"))
+            elif not catalog_only and not self._updates.url:
+                dlg.show_update_status(tr("Tout est à jour"))
 
         # Compteurs, empreintes et état réseau sont déjà branchés par
         # `forced_checker` : il ne reste ici que ce qui parle au dialogue.

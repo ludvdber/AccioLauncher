@@ -199,6 +199,22 @@ class TestFenetreAllegee:
           Un plafond ne doit jamais etre qu'un compteur : on le redescend des
           que le fichier maigrit, sinon il cesse de mordre.
 
+        · 910 -> 930, audit du 2026-08-28 : deux corrections de VÉRITÉ, qui
+          sont l'une et l'autre du ressort de la fenêtre parce qu'elles ne
+          portent que sur ce qu'elle AFFICHE.
+
+          - « Vérifier les mises à jour » hors ligne répondait « Catalogue
+            déjà à jour » : mesuré, les deux situations rendaient la MÊME
+            chaîne, donc le launcher affirmait ce qu'il n'avait pas vu.
+          - Un jeu mort en 0,5 s (signature du dossier `pc` de HP7) recevait
+            « Bon jeu ! », alors que `add_playtime` venait de le classer en
+            TENTATIVE. Le launcher savait, et se taisait.
+
+          Aucune des deux ne pouvait descendre ailleurs : le seuil est arbitré
+          dans `add_playtime` et l'état réseau dans le checker — la fenêtre ne
+          fait que dire la vérité qu'on lui remonte. Ce qui pouvait descendre
+          l'a déjà fait au cran précédent.
+
         La vraie garde semantique est le test voisin, qui verifie que les
         chaines de l'UpdateDispatcher ne sont pas revenues ici : c'est LUI qui
         dit si la fenetre reprend du travail qu'on lui a retire. Celui-ci ne
@@ -207,4 +223,4 @@ class TestFenetreAllegee:
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 910, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 930, f"main_window.py a regrossi : {lignes} lignes"
