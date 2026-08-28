@@ -1,6 +1,6 @@
 import logging
 import subprocess
-import time
+from datetime import datetime
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QIcon, QKeyEvent
@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core import stats
 from src.core.config import ASSETS_DIR, Config
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager, GameState
@@ -96,11 +97,14 @@ class MainWindow(QMainWindow):
         # La fenêtre n'en garde que ce qui s'affiche.
         self._updates = UpdateDispatcher(self.manager, self)
         self._launcher_update_asked = False          # dialogue posé une fois par session
+        # Fermeture déjà tranchée : la question a été posée ailleurs, ou il n'y
+        # a personne à qui la poser (relance déjà programmée). Voir closeEvent.
+        self._fermeture_confirmee = False
         self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
         self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
         # Session de jeu en cours (stats de temps de jeu)
         self._session_game_id: str = ""
-        self._session_start: float = 0.0
+        self._session_debut: datetime | None = None
         # État réseau — optimiste au départ : on n'affiche « hors ligne » que
         # sur une preuve, jamais par défaut (cf. UpdateChecker.is_online).
         self._online = True
@@ -266,6 +270,7 @@ class MainWindow(QMainWindow):
     def _build_process_monitor(self) -> None:
         self._monitor = ProcessMonitor(self)
         self._monitor.game_exited.connect(self._on_game_exited)
+        self._monitor.battement.connect(self._on_battement)
 
     # ──────────────────── Update checker ────────────────────
 
@@ -309,7 +314,10 @@ class MainWindow(QMainWindow):
         self._updates.network_status.connect(self._on_network_status)
         self._updates.launcher_message.connect(self._notif_bar.set_message)
         self._updates.launcher_busy.connect(self._notif_bar.set_busy)
-        self._updates.launcher_ready.connect(self.close)
+        # L'exe est déjà remplacé et le .bat attend notre mort : plus personne
+        # à qui poser la question. Elle a été posée à `_ask_launcher_update`,
+        # qui refuse d'ailleurs de s'ouvrir pendant une opération en cours.
+        self._updates.launcher_ready.connect(self._fermer_sans_demander)
 
     def _start_update_check(self) -> None:
         """Lance la vérification de fond. Neutralisée par les tests, d'où le
@@ -486,7 +494,16 @@ class MainWindow(QMainWindow):
         log.info("Launcher restauré depuis le tray")
 
     def _quit_app(self) -> None:
-        """Quitte proprement l'application."""
+        """« Quitter » du menu du tray.
+
+        Passe par `close()` — dont la valeur de retour dit si `closeEvent` a
+        accepté — et ne quitte que si c'est le cas. `QApplication.quit()` seul
+        marcherait (Qt 6 envoie le QCloseEvent et respecte un `ignore()`), mais
+        rien dans ce code ne le dirait : lire la réponse rend la règle visible
+        là où elle s'applique.
+        """
+        if not self.close():
+            return
         self._tray.hide()
         QApplication.quit()
 
@@ -542,22 +559,27 @@ class MainWindow(QMainWindow):
     def _on_game_launched(self, process: subprocess.Popen, game_name: str, game_id: str) -> None:
         """Appelé quand un jeu est lancé — minimise, surveille, présence Discord, stats."""
         self._session_game_id = game_id
-        self._session_start = time.monotonic()
+        self._session_debut = datetime.now()
+        # Notée DÈS MAINTENANT et non à la fin — raison dans `stats.EN_COURS_NAME`.
+        stats.ouvrir_session(game_id, self._session_debut)
         self._tray.set_tooltip(tr("Accio Launcher — En jeu : {}").format(game_name))
         self._minimize_to_tray()
         self._monitor.start(process, game_name)
         if self.config.discord_presence:
             self._presence.set_playing(game_name)
 
-    def _on_game_exited(self, game_name: str) -> None:
-        """Le ProcessMonitor a détecté la fin du jeu (avec grâce de redémarrage)."""
-        # La fenêtre chronomètre ; ce qui compte comme une vraie partie se
-        # décide dans `add_playtime` (`stats.DUREE_MINIMALE`).
-        elapsed = time.monotonic() - self._session_start if self._session_start else 0.0
+    def _on_battement(self) -> None:
+        """Le jeu tourne encore : on rafraîchit le filet de reprise."""
+        stats.battre_session(datetime.now())
+    def _on_game_exited(self, game_name: str, code: object, duree: float) -> None:
+        """Fin du jeu. `duree` est le temps OBSERVÉ, grâce exclue ; ce qui compte
+        comme une vraie partie se décide dans `add_playtime`."""
+        stats.fermer_session()
         if self._session_game_id:
-            self.manager.add_playtime(self._session_game_id, int(elapsed))
+            self.manager.add_playtime(self._session_game_id, int(duree),
+                                      self._session_debut, code)
         self._session_game_id = ""
-        self._session_start = 0.0
+        self._session_debut = None
 
         self._presence.clear()
         self._tray.set_tooltip("Accio Launcher")
@@ -632,12 +654,19 @@ class MainWindow(QMainWindow):
         StatsDialog(self.manager, self).exec()
 
     def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
-        """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre."""
+        """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre.
+
+        La question se pose AVANT `relaunch_after_exit()`, jamais après : le
+        script attend la mort du processus, donc un refus arrivé une fois
+        qu'il tourne le laisserait attendre pour rien.
+        """
         from src.core.self_update import relaunch_after_exit
+        if not self._confirmer_fermeture():
+            return
         if relaunch_after_exit():
             if dlg is not None:
                 dlg.accept()
-            self.close()
+            self._fermer_sans_demander()
         else:
             self._show_status(tr("Relance automatique impossible — redémarrez manuellement."))
 
@@ -859,8 +888,61 @@ class MainWindow(QMainWindow):
             self._carousel.select_next()
         return True
 
+    def _confirmer_fermeture(self) -> bool:
+        """Demande confirmation si une opération est en cours. True = on ferme.
+
+        **Un seul point de passage, et c'est mesuré** : sous Qt 6.11,
+        `QApplication.quit()` envoie un `QCloseEvent` et un `ignore()` ANNULE la
+        sortie. La croix, Alt+F4 et « Quitter » du tray convergent donc ici —
+        une garde posée sur un seul de ces chemins serait pire que rien, elle
+        apprendrait qu'on est protégé.
+
+        Le message DIFFÈRE selon la phase, parce que la perte diffère : un
+        téléchargement reprend où il s'est arrêté (`.part` + `Range`), une
+        installation est à refaire — l'archive, elle, reste en cache. « Êtes-vous
+        sûr ? » sans dire ce qu'on risque fait deviner, et qui devine clique.
+        """
+        ops = self._detail.ops
+        if self._fermeture_confirmee or not ops.is_busy:
+            return True
+
+        jeu = ops.active_game
+        boite = QMessageBox(self)
+        boite.setWindowTitle(tr("Opération en cours"))
+        boite.setIcon(QMessageBox.Icon.NoIcon)
+        # PlainText : le nom vient du CATALOGUE, et QMessageBox est en AutoText.
+        boite.setTextFormat(Qt.TextFormat.PlainText)
+        boite.setText(tr("« {} » est en cours.").format(
+            jeu.name if jeu is not None else tr("un jeu")))
+        boite.setInformativeText(
+            tr("Le téléchargement reprendra où il s'est arrêté au prochain "
+               "démarrage — rien n'est perdu.")
+            if ops.phase == "download" else
+            tr("L'installation devra être refaite depuis le début. L'archive "
+               "déjà téléchargée est conservée : il n'y aura rien à "
+               "re-télécharger."))
+        quitter = boite.addButton(tr("Quitter quand même"),
+                                  QMessageBox.ButtonRole.DestructiveRole)
+        boite.setDefaultButton(
+            boite.addButton(tr("Continuer"), QMessageBox.ButtonRole.RejectRole))
+        boite.exec()
+        return boite.clickedButton() is quitter
+
+    def _fermer_sans_demander(self) -> None:
+        """Ferme sans question — un `.bat` attend DÉJÀ la mort du processus.
+
+        Auto-update appliqué et « Redémarrer maintenant » : refuser ici
+        laisserait le script attendre pour rien. La question s'y pose AVANT
+        qu'il ne soit écrit, quand répondre non est encore sans conséquence.
+        """
+        self._fermeture_confirmee = True
+        self.close()
+
     def closeEvent(self, event) -> None:
         """Attend la fin des threads avant de fermer."""
+        if not self._confirmer_fermeture():
+            event.ignore()
+            return
         QApplication.instance().removeEventFilter(self)
 
         # Timer, checkers et téléchargement de mise à jour, dans le bon ordre.

@@ -42,6 +42,20 @@ log = logging.getLogger(__name__)
 
 JOURNAL_NAME = "sessions.json"
 
+# La partie EN COURS, hors du journal et dans son propre fichier. Elle y est
+# réécrite périodiquement pendant qu'on joue, pour une raison mesurée : une
+# session n'était écrite qu'à la FERMETURE du jeu, or c'est précisément
+# pendant la partie que le launcher dort dans la zone de notification — donc
+# qu'on le quitte par son menu, qu'une mise à jour Windows le tue, ou qu'il
+# plante. Plus une partie était LONGUE, plus elle avait de chances d'œtre
+# perdue : un biais silencieux qui contaminait la moyenne, le record, les
+# séries et les plages horaires à la fois.
+#
+# Le fichier est séparé pour ne pas réécrire tout le journal chaque minute, et
+# `vu_a` est une date OBSERVÉE, jamais estimée : au redémarrage, une partie
+# interrompue vaut ce qu'on a vraiment vu d'elle, pas une durée devinée.
+EN_COURS_NAME = "session_en_cours.json"
+
 # Une session par jour pendant 54 ans. Le plafond n'est pas là pour oublier de
 # l'histoire — il borne ce qu'un fichier corrompu ou trafiqué peut charger en
 # mémoire, au même titre que le plafond d'octets du téléchargeur.
@@ -52,6 +66,39 @@ _MAX_SESSIONS = 20_000
 # `MainWindow._on_game_exited` depuis toujours ; il est redit ici pour que le
 # journal reste propre même si un autre appelant arrive un jour.
 DUREE_MINIMALE = 10
+
+
+@dataclass(frozen=True, slots=True)
+class Tentative:
+    """Un lancement qui n'est jamais devenu une partie.
+
+    Le launcher OBSERVAIT déjà ces événements et les jetait : `ProcessMonitor`
+    lisait le code de sortie pour le journaliser, `add_playtime` sortait avant
+    d'écrire dès que la durée était sous le seuil. Or c'est la SEULE chose que
+    cette page puisse dire à quelqu'un qu'il ne sait pas déjà — « HP7 partie 1,
+    six essais, aucun au-delà de trois secondes » est actionnable, « 4 min de
+    jeu au total » ne l'est pas.
+
+    C'est aussi la signature exacte du défaut du sous-dossier `pc` de HP7,
+    relevée dans CLAUDE.md : sortie 0 en 0,5 s, aucun fichier écrit, rien dans
+    le journal d'événements Windows, pas de fenêtre. Un jeu de 2001-2011 sur
+    Windows 11 échoue en silence ; il faut donc l'enregistrer au moment où on
+    le voit, ce moment ne revient pas.
+
+    **Liste SÉPARÉE de `sessions`, jamais un drapeau dedans.** L'invariant qui
+    fait la valeur du module — `sessions` ne contient que de vraies parties,
+    donc aucune moyenne ni série ne peut être faussée, même écrite
+    distraitement — tomberait le jour où quelqu'un oublie de filtrer. Même
+    raisonnement structurel que `herite`, appliqué une deuxième fois. Accessoire
+    et décisif : `_parse_session` REFUSE déjà au parsing une durée sous le
+    seuil, donc une tentative glissée dans `sessions` serait relue puis jetée
+    sans un mot.
+    """
+
+    jeu: str
+    debut: datetime
+    duree: int          # secondes, < DUREE_MINIMALE par construction
+    code: int | None    # code de sortie du processus, None si inconnu
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +126,7 @@ class Historique:
     herite: dict[str, int] = field(default_factory=dict)
     demarrages: int = 0
     octets_telecharges: int = 0
+    tentatives: tuple[Tentative, ...] = ()
 
     @property
     def vide(self) -> bool:
@@ -131,6 +179,26 @@ def _parse_session(brut) -> Session | None:
     return Session(jeu=jeu, debut=debut, duree=duree)
 
 
+def _parse_tentative(brut) -> "Tentative | None":
+    """Une tentative fautive est ignorée, jamais fatale — comme une session."""
+    if not isinstance(brut, dict):
+        return None
+    jeu = brut.get("jeu")
+    duree = brut.get("duree")
+    if not isinstance(jeu, str) or not jeu:
+        return None
+    if not isinstance(duree, int) or isinstance(duree, bool) or duree < 0:
+        return None
+    code = brut.get("code")
+    if not isinstance(code, int) or isinstance(code, bool):
+        code = None
+    try:
+        debut = datetime.fromisoformat(str(brut.get("debut")))
+    except (ValueError, TypeError):
+        return None
+    return Tentative(jeu=jeu, debut=debut, duree=duree, code=code)
+
+
 def charger(chemin=None) -> Historique:
     """Lit le journal. Un fichier absent, vide ou fautif rend un historique vide."""
     data = _lire_brut(chemin or chemin_journal())
@@ -148,12 +216,20 @@ def charger(chemin=None) -> Historique:
         if isinstance(gid, str) and isinstance(secondes, int) and not isinstance(secondes, bool):
             herite[gid] = max(0, secondes)
 
+    tentatives: list[Tentative] = []
+    for entree in (data.get("tentatives") or [])[-_MAX_SESSIONS:]:
+        t = _parse_tentative(entree)
+        if t is not None:
+            tentatives.append(t)
+    tentatives.sort(key=lambda t: t.debut)
+
     def _entier(cle) -> int:
         v = data.get(cle)
         return max(0, v) if isinstance(v, int) and not isinstance(v, bool) else 0
 
     return Historique(tuple(sessions), herite,
-                      _entier("demarrages"), _entier("octets_telecharges"))
+                      _entier("demarrages"), _entier("octets_telecharges"),
+                      tuple(tentatives))
 
 
 def _ecrire_donnees(data: dict, chemin) -> None:
@@ -190,6 +266,11 @@ def _ecrire(hist: Historique, chemin) -> None:
                 {"jeu": s.jeu, "debut": s.debut.isoformat(timespec="seconds"),
                  "duree": s.duree}
                 for s in hist.sessions[-_MAX_SESSIONS:]
+            ],
+            "tentatives": [
+                {"jeu": t.jeu, "debut": t.debut.isoformat(timespec="seconds"),
+                 "duree": t.duree, "code": t.code}
+                for t in hist.tentatives[-_MAX_SESSIONS:]
             ],
         },
         chemin,
@@ -280,6 +361,101 @@ def enregistrer_telechargement(octets: int, chemin=None) -> None:
     if octets <= 0:
         return
     _muter_compteur(chemin, "octets_telecharges", int(octets))
+
+
+def enregistrer_tentative(jeu: str, debut: datetime, duree: int,
+                          code: int | None = None, chemin=None) -> None:
+    """Consigne un lancement qui n'a pas donné de partie.
+
+    Rien ne l'affiche aujourd'hui, et c'est volontaire : ce qui n'est pas
+    enregistré maintenant est perdu pour toujours, alors qu'un affichage se
+    calcule rétroactivement sur l'historique déjà constitué le jour où on
+    saura quoi en montrer. C'est tout l'intérêt d'un journal d'événements.
+    """
+    if not jeu or duree < 0:
+        return
+    t = Tentative(jeu=jeu, debut=debut, duree=int(duree), code=code)
+    _muter(chemin, lambda h: replace(h, tentatives=h.tentatives + (t,)))
+
+
+# ─── Partie en cours ───
+
+def chemin_en_cours():
+    """Résolu à l'appel, comme `chemin_journal` — même garde de test."""
+    from src.core.config import CONFIG_FILE_PATH
+    return CONFIG_FILE_PATH.parent / EN_COURS_NAME
+
+
+def ouvrir_session(jeu: str, debut: datetime, chemin=None) -> None:
+    """Note qu'une partie commence. À appeler AU LANCEMENT."""
+    _ecrire_en_cours(jeu, debut, debut, chemin)
+
+
+def battre_session(vu_a: datetime, chemin=None) -> None:
+    """Rafraîchit « dernière fois où on a vu le jeu tourner ».
+
+    Appelée périodiquement pendant la partie. C'est ce battement, et lui seul,
+    qui permet de récupérer une durée OBSERVÉE si le launcher meurt en route.
+    """
+    chemin = chemin or chemin_en_cours()
+    data = _lire_brut(chemin)
+    jeu, debut = data.get("jeu"), data.get("debut")
+    if not isinstance(jeu, str) or not jeu or not isinstance(debut, str):
+        return
+    try:
+        _ecrire_en_cours(jeu, datetime.fromisoformat(debut), vu_a, chemin)
+    except ValueError:
+        return
+
+
+def fermer_session(chemin=None) -> None:
+    """La partie s'est terminée normalement : plus rien à récupérer."""
+    chemin = chemin or chemin_en_cours()
+    try:
+        chemin.unlink(missing_ok=True)
+    except OSError as exc:
+        log.warning("Partie en cours non effacée : %s", exc)
+
+
+def recuperer_session_interrompue(chemin=None) -> Session | None:
+    """Rattrape une partie que le launcher n'a pas vue se terminer.
+
+    La durée retenue est `vu_a - debut`, c'est-à-dire ce qu'on a réellement
+    OBSERVÉ — jamais une estimation de ce qui a pu se passer ensuite. C'est une
+    borne basse, et c'est la seule valeur que la règle « aucun chiffre deviné »
+    autorise ici. Le fichier est effacé dans tous les cas : une partie ne se
+    rattrape qu'une fois.
+
+    Rend la session enregistrée, ou None s'il n'y avait rien à rattraper.
+    """
+    chemin = chemin or chemin_en_cours()
+    data = _lire_brut(chemin)
+    fermer_session(chemin)
+    jeu = data.get("jeu")
+    if not isinstance(jeu, str) or not jeu:
+        return None
+    try:
+        debut = datetime.fromisoformat(str(data.get("debut")))
+        vu_a = datetime.fromisoformat(str(data.get("vu_a")))
+    except (ValueError, TypeError):
+        return None
+    duree = int((vu_a - debut).total_seconds())
+    if duree < DUREE_MINIMALE:
+        return None
+    enregistrer_session(jeu, debut, duree)
+    log.info("Partie interrompue rattrapée : %s, %d s observées", jeu, duree)
+    return Session(jeu=jeu, debut=debut, duree=duree)
+
+
+def _ecrire_en_cours(jeu: str, debut: datetime, vu_a: datetime, chemin) -> None:
+    chemin = chemin or chemin_en_cours()
+    try:
+        _ecrire_donnees({"jeu": jeu,
+                         "debut": debut.isoformat(timespec="seconds"),
+                         "vu_a": vu_a.isoformat(timespec="seconds")}, chemin)
+    except OSError as exc:
+        # Perdre le filet ne doit pas empêcher de jouer.
+        log.warning("Partie en cours non notée : %s", exc)
 
 
 # ─── Dérivations (pures) ───

@@ -305,6 +305,23 @@
     "{} jours d'affilée": "{} días seguidos",
     "{} parties": "{} partidas",
     "{} téléchargés": "{} descargados",
-    "{} — {}, le {}": "{} — {}, el {}"
+    "{} — {}, le {}": "{} — {}, el {}",
+    "< 1 min": "< 1 min",
+    "Opération en cours": "Operación en curso",
+    "« {} » est en cours.": "«{}» está en curso.",
+    "un jeu": "un juego",
+    "Le téléchargement reprendra où il s'est arrêté au prochain démarrage — rien n'est perdu.": "La descarga se reanudará donde se detuvo en el próximo inicio: no se pierde nada.",
+    "L'installation devra être refaite depuis le début. L'archive déjà téléchargée est conservée : il n'y aura rien à re-télécharger.": "La instalación habrá que rehacerla desde el principio. El archivo ya descargado se conserva: no habrá que descargar nada de nuevo.",
+    "Quitter quand même": "Salir de todos modos",
+    "Continuer": "Continuar",
+    "Aucune partie enregistrée pour l'instant — lance un jeu, cette page se remplira toute seule.": "Aún no hay partidas registradas: inicia un juego y esta página se irá llenando sola.",
+    "Avant la mise en service du journal : {}, sans le détail des parties.": "Antes de la puesta en marcha del registro: {}, sin el detalle de las partidas.",
+    "Journal des parties": "Registro de partidas",
+    "La saga": "La saga",
+    "Plus longue partie : {} sur {}, le {}.": "Partida más larga: {} en {}, el {}.",
+    "{} : pas relancé depuis {} jours.": "{}: sin jugar desde hace {} días.",
+    "{} de jeu, sur les {} jeux de la saga.": "{} de juego, en los {} juegos de la saga.",
+    "{} de jeu, sur {} des {} jeux de la saga.": "{} de juego, en {} de los {} juegos de la saga.",
+    "… et {} parties plus anciennes, conservées dans le journal.": "… y {} partidas más antiguas, conservadas en el registro."
   }
 }

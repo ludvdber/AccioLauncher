@@ -37,6 +37,14 @@ IDENTIQUES_TOLEREES = {
     # « 2 hours »), qu'une grille de statistiques rencontrerait à chaque ligne
     # et qu'un format à trous ne sait pas rendre.
     "{} h", "{} min", "{} h {} min",
+    # « < 1 min » n'a rien a traduire : un signe mathematique et une
+    # abreviation d'unite, identiques dans les trois langues. C'est la forme
+    # courte de « moins d'une minute », reservee a la legende d'une jaquette
+    # ou la place se compte en dizaines de pixels.
+    "< 1 min",
+    # « saga » vient de l'islandais et a fait le tour de l'Europe sans changer :
+    # « La saga » s'ecrit a l'identique en francais et en espagnol.
+    "La saga",
 }
 
 LANG_FILES = sorted(Path(p) for p in glob.glob(str(I18N_DIR / "*.json")))

@@ -92,6 +92,13 @@ def lancer():
     MainWindow._start_update_check = lambda self: None
     window = MainWindow()
     window.show()
+    # Depuis le 2026-08-28, fermer pendant un telechargement pose une question.
+    # Ici il n'y a personne pour y repondre : ce drapeau EST la reponse
+    # « Quitter quand meme », c'est-a-dire exactement le chemin que ce test
+    # veut exercer. Sans lui, la boite modale bloque, la fenetre reste ouverte
+    # et le processus meurt avec son thread — un echec qui accuserait
+    # l'extinction alors qu'elle n'a jamais ete atteinte.
+    window._fermeture_confirmee = True
 
     if CAS == "jeu":
         proprietaire = window._detail.ops

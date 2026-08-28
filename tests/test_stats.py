@@ -333,3 +333,105 @@ class TestCompteurs:
         ch.write_text(json.dumps(data), encoding="utf-8")
         stats.enregistrer_demarrage(ch)
         assert stats.charger(ch).demarrages == 1
+
+
+class TestTentatives:
+    """Un lancement qui ne devient pas une partie laisse quand meme une trace.
+
+    C'est la seule chose que le launcher OBSERVE et que l'utilisateur ne sait
+    pas deja : un jeu de 2001-2011 sur Windows 11 echoue en silence (sortie 0
+    en une demi-seconde, pas de fenetre, rien dans le journal Windows). Le code
+    de sortie etait lu, journalise, puis jete.
+    """
+
+    def test_une_tentative_n_entre_pas_dans_les_sessions(self, tmp_path):
+        """L'invariant du module : `sessions` ne contient que de VRAIES parties,
+        donc aucune moyenne ni serie ne peut etre faussee. Une tentative vit a
+        cote, comme `herite` — separation STRUCTURELLE, jamais un drapeau."""
+        ch = tmp_path / "sessions.json"
+        stats.amorcer({}, ch)
+        stats.enregistrer_tentative("hp7a", datetime(2026, 8, 27, 21, 0), 2, 0, ch)
+        stats.enregistrer_session("hp2", datetime(2026, 8, 27, 21, 5), 3600, ch)
+
+        hist = stats.charger(ch)
+        assert [s.jeu for s in hist.sessions] == ["hp2"]
+        assert [(t.jeu, t.duree, t.code) for t in hist.tentatives] == [("hp7a", 2, 0)]
+        assert stats.temps_par_jeu(hist) == {"hp2": 3600}
+        assert stats.parties_par_jeu(hist) == {"hp2": 1}
+
+    def test_add_playtime_route_selon_la_duree(self, tmp_path, monkeypatch):
+        """Le seuil decide de la DESTINATION, il ne jette plus rien."""
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        from src.core.config import Config
+        from src.core.game_manager import GameManager
+        conf = Config(install_path=tmp_path / "g", cache_path=tmp_path / "g" / "c")
+        manager = GameManager(conf)
+        gid = manager.get_games()[0].game.id
+
+        manager.add_playtime(gid, 3, datetime(2026, 8, 27, 20, 0), 0)      # tentative
+        manager.add_playtime(gid, 1800, datetime(2026, 8, 27, 21, 0), 0)   # partie
+
+        hist = stats.charger(stats.chemin_journal())
+        assert [(t.duree, t.code) for t in hist.tentatives] == [(3, 0)]
+        assert [s.duree for s in hist.sessions] == [1800]
+        # Le cumul en config ne compte QUE la vraie partie.
+        assert conf.playtime_seconds[gid] == 1800
+
+    def test_un_code_absent_ne_fait_pas_echouer_la_relecture(self, tmp_path):
+        ch = tmp_path / "sessions.json"
+        stats.amorcer({}, ch)
+        stats.enregistrer_tentative("hp1", datetime(2026, 8, 27, 9, 0), 1, None, ch)
+        assert stats.charger(ch).tentatives[0].code is None
+
+
+class TestPartieInterrompue:
+    """Une partie que le launcher n'a pas vue se terminer.
+
+    Elle n'etait ecrite qu'a la FERMETURE du jeu, or c'est pendant la partie
+    que le launcher dort dans la zone de notification — donc qu'on le quitte,
+    qu'une mise a jour le tue, ou qu'il plante. Plus une partie etait LONGUE,
+    plus elle avait de chances d'etre perdue : un biais silencieux qui
+    contaminait moyenne, record, series et plages horaires a la fois.
+    """
+
+    def test_la_duree_rattrapee_est_celle_qu_on_a_OBSERVEE(self, tmp_path, monkeypatch):
+        """Jamais une estimation de ce qui a pu se passer apres le dernier
+        battement : la regle « aucun chiffre devine » n'autorise que la borne
+        basse mesuree."""
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        debut = datetime(2026, 8, 27, 20, 0)
+        stats.amorcer({}, stats.chemin_journal())
+        stats.ouvrir_session("hp5", debut)
+        stats.battre_session(debut + timedelta(minutes=95))
+        # ... le launcher meurt ici, sans passer par `fermer_session`.
+
+        recuperee = stats.recuperer_session_interrompue()
+        assert recuperee is not None
+        assert recuperee.duree == 95 * 60
+        assert stats.charger(stats.chemin_journal()).sessions[0].duree == 95 * 60
+
+    def test_une_partie_normalement_fermee_ne_se_rattrape_pas(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        stats.amorcer({}, stats.chemin_journal())
+        stats.ouvrir_session("hp5", datetime(2026, 8, 27, 20, 0))
+        stats.fermer_session()
+        assert stats.recuperer_session_interrompue() is None
+
+    def test_le_rattrapage_ne_se_produit_qu_une_fois(self, tmp_path, monkeypatch):
+        """Sinon chaque demarrage rejouterait la meme partie."""
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        debut = datetime(2026, 8, 27, 20, 0)
+        stats.amorcer({}, stats.chemin_journal())
+        stats.ouvrir_session("hp5", debut)
+        stats.battre_session(debut + timedelta(hours=2))
+        assert stats.recuperer_session_interrompue() is not None
+        assert stats.recuperer_session_interrompue() is None
+        assert len(stats.charger(stats.chemin_journal()).sessions) == 1
+
+    def test_sans_battement_rien_n_est_invente(self, tmp_path, monkeypatch):
+        """Le jeu s'est ferme avant le premier battement : on n'a rien observe,
+        donc on n'ecrit rien. Mieux vaut un trou qu'un chiffre faux."""
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        stats.amorcer({}, stats.chemin_journal())
+        stats.ouvrir_session("hp5", datetime(2026, 8, 27, 20, 0))
+        assert stats.recuperer_session_interrompue() is None

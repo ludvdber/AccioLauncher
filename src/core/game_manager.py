@@ -93,6 +93,11 @@ class GameManager:
         # page de statistiques cesserait de lire `config.playtime_seconds` —
         # c'est de l'historique réel, il ne se reconstruit pas.
         stats.amorcer(self.config.playtime_seconds)
+        # Une partie que le launcher n'a pas vue se terminer (quitté par la zone
+        # de notification, tué par une mise à jour, planté) est rattrapée ici,
+        # à hauteur de ce qu'on en a OBSERVÉ. Après `amorcer`, sinon la session
+        # rattrapée s'écrirait dans un journal qui n'existe pas encore.
+        stats.recuperer_session_interrompue()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property
@@ -460,30 +465,37 @@ class GameManager:
 
     # ──────────────────── Stats de jeu ────────────────────
 
-    def add_playtime(self, game_id: str, seconds: int) -> None:
-        """Cumule le temps d'une session, date la partie, et la JOURNALISE.
+    def add_playtime(self, game_id: str, seconds: int,
+                     debut: datetime | None = None, code: int | None = None) -> None:
+        """Consigne ce qu'un lancement a donné : une partie, ou une tentative.
 
         Les cumuls en config restent la source rapide (fiche de jeu, cap Ko-fi) ;
         le journal, lui, garde le détail dont se déduisent la durée moyenne, les
         séries de jours et les heures de prédilection — voir `src/core/stats.py`.
 
-        L'heure de début est reconstituée par soustraction plutôt que relevée au
-        lancement : c'est exactement la même valeur, et ça évite de faire porter
-        un état de session de plus à la fenêtre, qui en a déjà deux.
+        **Un lancement trop court n'est plus jeté : il devient une TENTATIVE.**
+        C'est la signature d'un jeu qui refuse de démarrer, et c'est la seule
+        chose que le launcher observe que l'utilisateur ne sait pas déjà. Le
+        seuil s'applique ICI, une fois, et décide de la destination : la
+        fenêtre chronomètre, elle n'arbitre pas.
+
+        `debut` est l'heure RELEVÉE au lancement. Sans elle on la reconstituait
+        par soustraction, ce qui reste juste à la seconde près mais ne survit
+        pas au rattrapage d'une partie interrompue — d'où le paramètre.
         """
-        # Le seuil du « vrai lancement » s'applique ICI, une fois, pour les deux
-        # destinations : sans ça la fenêtre le connaissait de son côté et
-        # `stats` du sien, et les cumuls en config auraient fini par diverger du
-        # journal sur les sessions limites, sans que rien ne le signale.
-        if game_id not in self._index or seconds < stats.DUREE_MINIMALE:
+        if game_id not in self._index or seconds < 0:
+            return
+        debut = debut or (datetime.now() - timedelta(seconds=int(seconds)))
+        if seconds < stats.DUREE_MINIMALE:
+            stats.enregistrer_tentative(game_id, debut, int(seconds), code)
+            log.info("Lancement sans partie : %s (%d s, code %s)", game_id, seconds, code)
             return
         self.config.playtime_seconds[game_id] = (
             self.config.playtime_seconds.get(game_id, 0) + int(seconds)
         )
         self.config.last_played[game_id] = date.today().isoformat()
         self.config.save()
-        stats.enregistrer_session(
-            game_id, datetime.now() - timedelta(seconds=int(seconds)), int(seconds))
+        stats.enregistrer_session(game_id, debut, int(seconds))
         log.info("Temps de jeu de %s : +%d s (total %d s)",
                  game_id, seconds, self.config.playtime_seconds[game_id])
 

@@ -7,6 +7,7 @@ unitaires ne voient pas : hero dynamique, clavier, toast Ko-fi, phases, compteur
 saisons, cross-fade, mute en direct, boutons Redémarrer, imports d'onboarding.
 """
 
+import contextlib
 import pathlib
 import re
 
@@ -1981,3 +1982,151 @@ class TestRevoirLaBandeAnnonce:
         bar = vue._audio_bar
         assert not bar._volume_slider.isHidden()
         assert bar.x() + bar.width() <= vue.width()
+
+
+class TestConfirmationAvantDeFermer:
+    """Fermer pendant un telechargement ou une installation demande confirmation.
+
+    Demande de Ludo (2026-08-28) : « dans le doute ou la personne a oublie ».
+    Le point non evident est qu'il n'y a qu'UN point de passage a garder, et
+    c'est mesure : sous Qt 6.11, `QApplication.quit()` envoie un QCloseEvent
+    aux fenetres et un `ignore()` ANNULE la sortie. La croix, Alt+F4 et le
+    « Quitter » du menu du tray convergent donc tous sur `closeEvent`. Une
+    garde posee sur un seul de ces chemins serait pire que pas de garde : elle
+    apprendrait a l'utilisateur qu'il est protege.
+
+    **Deux pieges d'outillage, tous deux payes en ecrivant ces tests.**
+
+    · L'etat « occupe » doit etre RENDU dans le corps du test, jamais dans un
+      finaliseur de fixture : `pytest-qt` ferme les widgets qu'on lui a confies
+      depuis son hook `pytest_runtest_teardown`, qui passe AVANT les
+      finaliseurs. La fenetre se refermait donc en etat occupe, la boite
+      modale se rouvrait, et plus aucun minuteur ne l'attendait. Symptome a
+      reconnaitre : le test AFFICHE son point (il a reussi) et le processus ne
+      rend jamais la main — c'est le demontage qui bloque, pas le test.
+    · Les boites sont pilotees par un QTimer et jamais par un monkeypatch de
+      `QMessageBox.exec` : remplacer un attribut de CLASSE sur un type sip
+      laisse un descripteur casse derriere lui et tue le processus plusieurs
+      fichiers de tests plus loin (regle de la maison, payee deux fois).
+    """
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _occupe(fen, phase="download"):
+        """Rend `ops.is_busy` vrai sans fabriquer de thread, et le defait.
+
+        Pas de vrai `Downloader` : le test porte sur la QUESTION, pas sur le
+        reseau, et un thread rendrait ces tests lents et capricieux.
+        """
+        ops = fen._detail.ops
+        ops._downloader = object()
+        ops._phase = phase
+        ops._active_game = fen.manager.get_games()[0].game
+        try:
+            yield ops
+        finally:
+            ops._downloader = None
+            ops._phase = ""
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _repond(libelle, vu):
+        """Clique le bouton `libelle` de la boite modale des qu'elle parait."""
+        from PyQt6.QtCore import QTimer
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+
+        minuteur = QTimer()
+        minuteur.setInterval(10)
+
+        def _essayer():
+            for w in QApplication.topLevelWidgets():
+                if isinstance(w, QMessageBox) and w.isVisible():
+                    vu["texte"], vu["detail"] = w.text(), w.informativeText()
+                    for b in w.buttons():
+                        if b.text() == libelle:
+                            minuteur.stop()
+                            b.click()
+                            return
+        minuteur.timeout.connect(_essayer)
+        minuteur.start()
+        try:
+            yield vu
+        finally:
+            minuteur.stop()
+
+    def test_rien_ne_se_passe_quand_il_n_y_a_rien_en_cours(self, make_window):
+        """Aucune boite ne doit s'ouvrir dans le cas NORMAL.
+
+        Posee a chaque fermeture, la question deviendrait un reflexe et ne
+        protegerait plus de rien.
+        """
+        assert make_window()._confirmer_fermeture() is True
+
+    def test_le_telechargement_annonce_qu_il_reprendra(self, make_window):
+        fen = make_window()
+        vu = {}
+        with self._occupe(fen, "download"), self._repond("Continuer", vu):
+            assert fen._confirmer_fermeture() is False
+        assert "reprendra" in vu["detail"], vu
+        assert fen.manager.get_games()[0].game.name in vu["texte"]
+
+    def test_l_installation_annonce_qu_elle_est_a_refaire(self, make_window):
+        """Le message DIFFERE selon la phase, parce que la perte differe.
+
+        Un telechargement reprend ou il s'est arrete ; une installation est a
+        refaire. Dire « etes-vous sur ? » sans dire ce qu'on risque fait
+        deviner, et qui devine clique.
+        """
+        fen = make_window()
+        vu = {}
+        with self._occupe(fen, "install"), self._repond("Continuer", vu):
+            fen._confirmer_fermeture()
+        assert "refaite" in vu["detail"], vu
+        assert "conserv" in vu["detail"], "il faut dire que l'archive est gardee"
+
+    def test_repondre_continuer_annule_la_fermeture(self, make_window):
+        fen = make_window()
+        with self._occupe(fen), self._repond("Continuer", {}):
+            assert fen.close() is False, "la fenetre ne doit PAS se fermer"
+
+    def test_repondre_quitter_quand_meme_ferme(self, make_window):
+        fen = make_window()
+        with self._occupe(fen), self._repond("Quitter quand même", {}):
+            assert fen._confirmer_fermeture() is True
+
+    def test_le_quitter_du_tray_passe_par_la_meme_garde(self, make_window,
+                                                       monkeypatch):
+        """Le chemin le plus probable : quitter par le tray pendant qu'on joue.
+
+        `_quit_app` ne doit appeler `QApplication.quit()` que si `close()` a
+        ete accepte, sinon le launcher partirait malgre le refus. Le faux est
+        pose sur le MODULE et non sur la classe Qt : monkeypatcher
+        `QApplication.quit` reviendrait a remplacer un attribut de type sip.
+        """
+        from PyQt6.QtWidgets import QApplication
+
+        appels = []
+        # SOUS-CLASSE : `instance()`, `topLevelWidgets()` et le reste restent
+        # ceux de Qt ; seul `quit` est detourne, et la classe reelle n'est pas
+        # touchee. Un faux ecrit de zero manquait `instance()`, que `closeEvent`
+        # appelle juste apres.
+        faux = type("FauxApp", (QApplication,),
+                    {"quit": staticmethod(lambda *a: appels.append(1))})
+        fen = make_window()
+        monkeypatch.setattr("src.ui.main_window.QApplication", faux)
+        with self._occupe(fen), self._repond("Continuer", {}):
+            fen._quit_app()
+        assert not appels, "le launcher a quitte malgre un refus"
+
+    def test_une_relance_deja_programmee_ne_repose_pas_la_question(
+            self, make_window):
+        """L'auto-update a deja ecrit son `.bat`, qui attend la mort du process.
+
+        Reposer la question la permettrait de repondre non, et le script
+        attendrait indefiniment. Elle est posee AVANT, la ou repondre non est
+        encore sans consequence.
+        """
+        fen = make_window()
+        with self._occupe(fen):
+            fen._fermeture_confirmee = True
+            assert fen._confirmer_fermeture() is True

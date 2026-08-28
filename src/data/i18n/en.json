@@ -305,6 +305,23 @@
     "{} jours d'affilée": "{} days in a row",
     "{} parties": "{} sessions",
     "{} téléchargés": "{} downloaded",
-    "{} — {}, le {}": "{} — {}, on {}"
+    "{} — {}, le {}": "{} — {}, on {}",
+    "< 1 min": "< 1 min",
+    "Opération en cours": "Operation in progress",
+    "« {} » est en cours.": "“{}” is in progress.",
+    "un jeu": "a game",
+    "Le téléchargement reprendra où il s'est arrêté au prochain démarrage — rien n'est perdu.": "The download will resume where it left off next time — nothing is lost.",
+    "L'installation devra être refaite depuis le début. L'archive déjà téléchargée est conservée : il n'y aura rien à re-télécharger.": "The installation will have to start over. The downloaded archive is kept, so there is nothing to download again.",
+    "Quitter quand même": "Quit anyway",
+    "Continuer": "Keep going",
+    "Aucune partie enregistrée pour l'instant — lance un jeu, cette page se remplira toute seule.": "No sessions recorded yet — launch a game and this page will fill itself in.",
+    "Avant la mise en service du journal : {}, sans le détail des parties.": "Before the log was introduced: {}, without the session breakdown.",
+    "Journal des parties": "Session log",
+    "La saga": "The saga",
+    "Plus longue partie : {} sur {}, le {}.": "Longest session: {} on {}, on {}.",
+    "{} : pas relancé depuis {} jours.": "{}: not played for {} days.",
+    "{} de jeu, sur les {} jeux de la saga.": "{} played, across all {} games in the saga.",
+    "{} de jeu, sur {} des {} jeux de la saga.": "{} played, across {} of the {} games in the saga.",
+    "… et {} parties plus anciennes, conservées dans le journal.": "… and {} older sessions, kept in the log."
   }
 }

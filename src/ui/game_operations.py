@@ -95,6 +95,17 @@ class GameOperations(QObject):
     def active_game(self) -> GameData | None:
         return self._active_game
 
+    @property
+    def phase(self) -> str:
+        """Phase en cours : "download" | "verify" | "install" | "finalize" | "".
+
+        Publiée parce qu'un appelant a besoin de savoir CE QUI serait perdu, et
+        pas seulement qu'il y a quelque chose en cours : un téléchargement
+        interrompu reprend où il s'est arrêté, une installation interrompue est
+        à refaire. Deux avertissements différents, une seule source.
+        """
+        return self._phase
+
     # ──────────────────── Téléchargement ────────────────────
 
     def check_disk_space(self, version: GameVersion) -> int | None:
