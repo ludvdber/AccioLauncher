@@ -10,10 +10,8 @@ import logging
 import shutil
 from pathlib import Path
 
-from html import escape
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -32,14 +30,14 @@ from src.core.config import APP_VERSION, Config, cache_pour
 from src.core.game_manager import GameManager, GameState
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
-from src.core.i18n import available_languages, translator_credits, tr
+from src.core.i18n import available_languages, tr
 from src.ui.fonts import cinzel
-from src.ui.icon_button import pixmap_icone
+from src.ui import about_page
 from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.season import resolve as resolve_season
-from src.ui.theme import THEMES, current as current_theme, themed
+from src.ui.theme import THEMES, themed
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import is_writable_dir, open_local_path, open_url
+from src.ui.utils import is_writable_dir, open_local_path
 
 log = logging.getLogger(__name__)
 
@@ -208,7 +206,8 @@ class SettingsDialog(QDialog):
         self._pages.addWidget(self._page_display())
         self._pages.addWidget(self._page_downloads())
         self._pages.addWidget(self._page_integrations())
-        self._pages.addWidget(self._page_about())
+        self._pages.addWidget(about_page.construire(
+            self.manager.catalog.contributors))
         body.addWidget(self._pages, stretch=1)
         root.addLayout(body, stretch=1)
 
@@ -514,123 +513,6 @@ class SettingsDialog(QDialog):
 
     # ── Page À propos ──
 
-    def _page_about(self) -> QWidget:
-        about_text = QLabel(tr("Launcher pour les jeux Harry Potter sur PC."))
-        about_text.setObjectName("subtitle")
-        about_text.setWordWrap(True)
-
-        version_line = QLabel(f"Accio Launcher v{APP_VERSION}")
-        version_line.setObjectName("subtitle")
-
-        # Pictogrammes PEINTS sur les trois boutons. Ludo, 2026-08-26 : « il y
-        # a pas de logo web ou discord dans le à propos donc c'est pas fou pour
-        # vite reconnaître sans lire ». Trois libellés de longueurs voisines
-        # dans un cadre gris se ressemblent tous ; une silhouette de Clyde, un
-        # globe et une tasse se distinguent avant d'être lus — et survivent à la
-        # traduction, ce qu'un libellé ne fait pas.
-        about_row = QHBoxLayout()
-        about_row.setSpacing(10)
-        btn_website = self._bouton_lien(tr("Site web"), "site", self._on_website)
-        about_row.addWidget(btn_website)
-        # « Discord » et « Ko-fi » ne passent PAS par tr() : ce sont des noms
-        # propres, identiques dans toutes les langues. Les y faire passer
-        # obligeait à écrire trois traductions identiques, ce que la suite
-        # refuse à juste titre (`test_pas_de_traduction_identique`).
-        btn_discord = self._bouton_lien("Discord", "discord", self._on_discord)
-        about_row.addWidget(btn_discord)
-        # Le ❤ du libellé disparaît : la tasse dit déjà « café », et deux
-        # symboles pour un seul bouton, c'est un de trop. Les libellés
-        # raccourcissent aussi — « Rejoindre le Discord » et « Soutenir sur
-        # Ko-fi » débordaient de leur cadre une fois l'icône posée devant, et
-        # c'est précisément ce qu'un pictogramme reconnaissable permet
-        # d'économiser : le nom suffit quand la forme a déjà dit quoi.
-        btn_kofi = self._bouton_lien("Ko-fi", "kofi",
-                                     self._on_kofi, objet="btnKofi",
-                                     encre="#e8c547")
-        btn_kofi.setToolTip(tr("Le projet est gratuit — un café aide à payer l'hébergement !"))
-        about_row.addWidget(btn_kofi)
-        about_row.addStretch()
-
-        return self._page(
-            self._section(tr("À propos")), about_text, version_line, about_row,
-            *self._bloc_remerciements(),
-        )
-
-    @staticmethod
-    def _bouton_lien(libelle: str, icone: str, slot,
-                     objet: str = "btnPath", encre: str = "#ffffff") -> QPushButton:
-        """Bouton « pictogramme + libellé » vers un lien externe."""
-        btn = QPushButton(libelle)
-        btn.setObjectName(objet)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setIcon(QIcon(pixmap_icone(icone, 16, QColor(encre))))
-        btn.setIconSize(QSize(16, 16))
-        btn.clicked.connect(slot)
-        return btn
-
-    def _bloc_remerciements(self) -> list[QWidget]:
-        """Contributeurs du catalogue + traducteurs des fichiers de langue.
-
-        DEUX sources, une seule rubrique à l'écran. Les traducteurs vivent dans
-        le bloc `_meta.translators` de leur propre fichier de langue — ils
-        s'ajoutent dans la même contribution que la traduction, ce qui est le
-        bon endroit. Tous les autres vivent dans le CATALOGUE, qui se met à jour
-        à distance : remercier quelqu'un ne doit pas attendre une release, sinon
-        la personne voit passer trois versions sans son nom et n'en propose pas
-        une deuxième.
-        """
-        contributeurs = self.manager.catalog.contributors
-        traducteurs = self._translator_credits_text()
-        if not contributeurs and not traducteurs:
-            return []
-
-        widgets: list[QWidget] = [self._section(tr("Remerciements"))]
-        if contributeurs:
-            lignes = []
-            for c in contributeurs:
-                # RichText : tout ce qui vient du catalogue est ÉCHAPPÉ. Un
-                # `<img src="http://…">` dans un nom de contributeur ferait
-                # partir une requête à l'ouverture des Paramètres.
-                nom = escape(c.name, quote=False)
-                if c.url:
-                    nom = (f'<a href="{escape(c.url)}" style="color:'
-                           f'{current_theme().accent}; text-decoration:none;">{nom}</a>')
-                lignes.append(f"{nom} — {escape(c.role, quote=False)}"
-                              if c.role else nom)
-            lbl = QLabel("<br>".join(lignes))
-            lbl.setObjectName("subtitle")
-            lbl.setTextFormat(Qt.TextFormat.RichText)
-            lbl.setWordWrap(True)
-            lbl.setTextInteractionFlags(
-                Qt.TextInteractionFlag.LinksAccessibleByMouse
-                | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
-            )
-            lbl.linkActivated.connect(open_url)
-            widgets.append(lbl)
-
-        if traducteurs:
-            lbl = QLabel(traducteurs)
-            lbl.setObjectName("subtitle")
-            lbl.setTextFormat(Qt.TextFormat.PlainText)
-            lbl.setWordWrap(True)
-            widgets.append(lbl)
-        return widgets
-
-    @staticmethod
-    def _translator_credits_text() -> str:
-        """Remerciements aux traducteurs, une ligne par langue.
-
-        Alimenté par le bloc `_meta.translators` de chaque fichier de langue :
-        un contributeur s'ajoute dans la même PR que sa traduction, sans qu'on
-        ait à toucher au code.
-        """
-        credits = translator_credits()
-        if not credits:
-            return ""
-        lines = [tr("Traductions")]
-        lines += [f"{name} — {', '.join(people)}" for name, people in credits]
-        return "\n".join(lines)
-
     # ──────────────────── Slots ────────────────────
 
     def _on_scan_done(self, count: int, total_bytes: int) -> None:
@@ -718,18 +600,6 @@ class SettingsDialog(QDialog):
 
     def _on_open_install_folder(self) -> None:
         open_local_path(str(self.config.install_path))
-
-    @staticmethod
-    def _on_website() -> None:
-        open_url("https://acciolauncher.be/")
-
-    @staticmethod
-    def _on_kofi() -> None:
-        open_url("https://ko-fi.com/ludovic01")
-
-    @staticmethod
-    def _on_discord() -> None:
-        open_url("https://discord.gg/TNwDQd7KGe")
 
     def _on_refresh_catalog(self) -> None:
         self._update_status.setText(tr("Actualisation du catalogue…"))

@@ -141,7 +141,10 @@ class TestFenetreAllegee:
         import src.ui.main_window as mw
         source = inspect.getsource(mw)
         for interdit in ("_build_notif_bar", "_launcher_dl", "_shutdown_checker",
-                         "_games_asset_urls", "SpeedTracker"):
+                         "_games_asset_urls", "SpeedTracker",
+                         # Extraits le 2026-08-28 — cf. le plafond ci-dessous.
+                         "_edges_at", "_update_resize_cursor",
+                         "DiscordPresence", "ProcessMonitor"):
             assert interdit not in source, (
                 f"« {interdit} » est reparti dans main_window.py")
 
@@ -175,11 +178,26 @@ class TestFenetreAllegee:
           ailleurs : `closeEvent` est le point de passage unique de la croix,
           d'Alt+F4 et du « Quitter » du tray (mesure : sous Qt 6.11,
           `QApplication.quit()` envoie un QCloseEvent et respecte un
-          `ignore()`). Le saut est reel, et il rapproche le fichier de la
-          taille qu'il avait AVANT l'extraction de NotificationBar et de
-          l'UpdateDispatcher (1015). C'est note dans `pending-tasks` : le
-          prochain ajout de cette ampleur doit s'accompagner d'une extraction,
-          pas d'un cran de plus.
+          `ignore()`).
+
+        · 970 -> 910, le meme jour : la dette annoncee au cran precedent est
+          PAYEE, et le plafond redescend avec. Deux extractions, choisies
+          parce que ces blocs ne touchaient aucun widget de la fenetre et
+          n'avaient, l'un comme l'autre, AUCUN test — ce qui est noye ne
+          s'exerce pas :
+
+          - `src/ui/window_chrome.py` : bords saisissables d'une fenetre sans
+            cadre. Geometrie PURE, donc testable sans ecran (20 tests).
+          - `src/ui/game_session.py` : une partie, du lancement au retour.
+            `ProcessMonitor` et `DiscordPresence` etaient crees par la fenetre
+            et n'etaient utilises QUE par ces quatre methodes ; ils descendent
+            avec elles. Meme contrat que l'UpdateDispatcher — ici, rien qui se
+            voie : la session tient le journal, la fenetre se retire et revient
+            (9 tests, dont l'invariant d'ordre « le temps est enregistre AVANT
+            que `terminee` ne parte »).
+
+          Un plafond ne doit jamais etre qu'un compteur : on le redescend des
+          que le fichier maigrit, sinon il cesse de mordre.
 
         La vraie garde semantique est le test voisin, qui verifie que les
         chaines de l'UpdateDispatcher ne sont pas revenues ici : c'est LUI qui
@@ -189,4 +207,4 @@ class TestFenetreAllegee:
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 970, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 910, f"main_window.py a regrossi : {lignes} lignes"

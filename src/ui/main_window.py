@@ -1,6 +1,4 @@
 import logging
-import subprocess
-from datetime import datetime
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QIcon, QKeyEvent
@@ -13,9 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import stats
 from src.core.config import ASSETS_DIR, Config
-from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.win_taskbar import TaskbarProgress
@@ -23,10 +19,10 @@ from src.ui.carousel import Carousel
 from src.ui.download_bar import DownloadBar
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
+from src.ui.game_session import GameSession
 from src.ui.icon_button import IconButton
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
-from src.ui.process_monitor import ProcessMonitor
 from src.ui.season import resolve as resolve_season
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
@@ -37,6 +33,7 @@ from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
 from src.ui.update_dispatcher import UpdateDispatcher
+from src.ui.window_chrome import WindowChrome
 from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
@@ -66,8 +63,6 @@ def _load_app_icon() -> QIcon:
 class MainWindow(QMainWindow):
     """Fenêtre principale d'Accio Launcher — style launcher AAA."""
 
-    RESIZE_MARGIN = 6  # zone de saisie des bords pour redimensionner (px)
-
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Accio Launcher")
@@ -79,7 +74,9 @@ class MainWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
         self.setMouseTracking(True)
-        self._edge_cursor_active = False  # override-cursor de resize posé ?
+        # Bords saisissables d'une fenêtre sans cadre — curseur et
+        # redimensionnement natif. Voir `src/ui/window_chrome.py`.
+        self._chrome = WindowChrome(self)
 
         load_fonts()
 
@@ -101,17 +98,13 @@ class MainWindow(QMainWindow):
         # a personne à qui la poser (relance déjà programmée). Voir closeEvent.
         self._fermeture_confirmee = False
         self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
-        self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
-        # Session de jeu en cours (stats de temps de jeu)
-        self._session_game_id: str = ""
-        self._session_debut: datetime | None = None
         # État réseau — optimiste au départ : on n'affiche « hors ligne » que
         # sur une preuve, jamais par défaut (cf. UpdateChecker.is_online).
         self._online = True
 
         self._build_ui()
         self._build_tray()
-        self._build_process_monitor()
+        self._build_session()
         self._wire_updates()
         self._start_update_check()
 
@@ -151,7 +144,6 @@ class MainWindow(QMainWindow):
         self._detail.setMouseTracking(True)
         self._detail.status_message.connect(self._show_status)
         self._detail.state_changed.connect(self._on_state_changed)
-        self._detail.game_launched.connect(self._on_game_launched)
         root_layout.addWidget(self._detail, stretch=1)
 
         # Barre de téléchargement persistante (visible pendant download/install)
@@ -267,10 +259,15 @@ class MainWindow(QMainWindow):
         self._download_bar.hide_bar()
         self._get_taskbar().clear()
 
-    def _build_process_monitor(self) -> None:
-        self._monitor = ProcessMonitor(self)
-        self._monitor.game_exited.connect(self._on_game_exited)
-        self._monitor.battement.connect(self._on_battement)
+    def _build_session(self) -> None:
+        """Le cycle de vie d'une partie vit dans `GameSession` ; la fenêtre ne
+        garde que ce qui se VOIT — se retirer, revenir, remercier."""
+        self._session = GameSession(self.manager, self)
+        # Le lancement part de la fiche et arrive DIRECTEMENT à la session :
+        # la fenêtre n'a que faire du Popen, elle n'en voit que le nom.
+        self._detail.game_launched.connect(self._session.demarrer)
+        self._session.demarree.connect(self._on_game_launched)
+        self._session.terminee.connect(self._on_game_exited)
 
     # ──────────────────── Update checker ────────────────────
 
@@ -483,7 +480,7 @@ class MainWindow(QMainWindow):
         self.hide()
         self._tray.show()
         self.pause_all_effects()
-        log.info("Launcher minimisé dans le tray — en jeu : %s", self._monitor.game_name)
+        log.info("Launcher minimisé dans le tray — en jeu : %s", self._session.nom_en_cours)
 
     def _restore_from_tray(self) -> None:
         """Restaure la fenêtre et reprend les effets."""
@@ -556,36 +553,18 @@ class MainWindow(QMainWindow):
 
     # ──────────────────── Surveillance du processus de jeu ────────────────────
 
-    def _on_game_launched(self, process: subprocess.Popen, game_name: str, game_id: str) -> None:
-        """Appelé quand un jeu est lancé — minimise, surveille, présence Discord, stats."""
-        self._session_game_id = game_id
-        self._session_debut = datetime.now()
-        # Notée DÈS MAINTENANT et non à la fin — raison dans `stats.EN_COURS_NAME`.
-        stats.ouvrir_session(game_id, self._session_debut)
+    def _on_game_launched(self, game_name: str) -> None:
+        """Une partie commence : infobulle, puis la fenêtre s'efface."""
         self._tray.set_tooltip(tr("Accio Launcher — En jeu : {}").format(game_name))
         self._minimize_to_tray()
-        self._monitor.start(process, game_name)
-        if self.config.discord_presence:
-            self._presence.set_playing(game_name)
 
-    def _on_battement(self) -> None:
-        """Le jeu tourne encore : on rafraîchit le filet de reprise."""
-        stats.battre_session(datetime.now())
-    def _on_game_exited(self, game_name: str, code: object, duree: float) -> None:
-        """Fin du jeu. `duree` est le temps OBSERVÉ, grâce exclue ; ce qui compte
-        comme une vraie partie se décide dans `add_playtime`."""
-        stats.fermer_session()
-        if self._session_game_id:
-            self.manager.add_playtime(self._session_game_id, int(duree),
-                                      self._session_debut, code)
-        self._session_game_id = ""
-        self._session_debut = None
-
-        self._presence.clear()
+    def _on_game_exited(self, game_name: str) -> None:
+        """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé."""
         self._tray.set_tooltip("Accio Launcher")
         self._restore_from_tray()
         self._status_bar.showMessage(tr("Retour de {} — Bon jeu !").format(game_name))
-        # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh sans transition)
+        # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh
+        # sans transition) : le temps de cette partie vient d'être enregistré.
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
         self._maybe_thank_milestone()
@@ -761,75 +740,31 @@ class MainWindow(QMainWindow):
 
     # ──────────────────── Redimensionnement fenêtre frameless ────────────────────
 
-    def _edges_at(self, pos) -> Qt.Edge:
-        """Bords de la fenêtre sous `pos` (coordonnées locales), zone de 6 px."""
-        m = self.RESIZE_MARGIN
-        edges = Qt.Edge(0)
-        if pos.x() <= m:
-            edges |= Qt.Edge.LeftEdge
-        elif pos.x() >= self.width() - m:
-            edges |= Qt.Edge.RightEdge
-        if pos.y() <= m:
-            edges |= Qt.Edge.TopEdge
-        elif pos.y() >= self.height() - m:
-            edges |= Qt.Edge.BottomEdge
-        return edges
-
-    def _update_resize_cursor(self, edges: Qt.Edge) -> None:
-        """Affiche/retire le curseur de redimensionnement (override global)."""
-        from PyQt6.QtGui import QCursor, QGuiApplication
-        E = Qt.Edge
-        if (edges & E.LeftEdge and edges & E.TopEdge) or (edges & E.RightEdge and edges & E.BottomEdge):
-            shape = Qt.CursorShape.SizeFDiagCursor
-        elif (edges & E.RightEdge and edges & E.TopEdge) or (edges & E.LeftEdge and edges & E.BottomEdge):
-            shape = Qt.CursorShape.SizeBDiagCursor
-        elif edges & (E.LeftEdge | E.RightEdge):
-            shape = Qt.CursorShape.SizeHorCursor
-        elif edges & (E.TopEdge | E.BottomEdge):
-            shape = Qt.CursorShape.SizeVerCursor
-        else:
-            if self._edge_cursor_active:
-                QGuiApplication.restoreOverrideCursor()
-                self._edge_cursor_active = False
-            return
-        if self._edge_cursor_active:
-            QGuiApplication.changeOverrideCursor(QCursor(shape))
-        else:
-            QGuiApplication.setOverrideCursor(QCursor(shape))
-            self._edge_cursor_active = True
-
     def eventFilter(self, obj, event) -> bool:
         # Couvre les MouseMove sur tous les widgets enfants (l'override mouseMoveEvent
         # ne firerait que sur la surface bare de MainWindow → redondant et incomplet).
         if event.type() == QEvent.Type.MouseMove:
             try:
-                global_pos = event.globalPosition()
-                local = self.mapFromGlobal(global_pos.toPoint())
+                local = self.mapFromGlobal(event.globalPosition().toPoint())
                 self._detail.handle_mouse_move(QPointF(local.x(), local.y()))
-                # Curseur de resize sur les bords (fenêtre frameless)
                 if not self.isMaximized() and self.isActiveWindow():
-                    self._update_resize_cursor(self._edges_at(local))
+                    self._chrome.survol(local)
             except (AttributeError, RuntimeError) as exc:
                 log.debug("eventFilter mouseMove failed: %s", exc)
         elif event.type() == QEvent.Type.MouseButtonPress and not self.isMaximized():
             # Saisie d'un bord → resize natif (uniquement pour NOS widgets)
             try:
-                from PyQt6.QtWidgets import QWidget
                 if (event.button() == Qt.MouseButton.LeftButton
-                        and isinstance(obj, QWidget) and obj.window() is self):
-                    local = self.mapFromGlobal(event.globalPosition().toPoint())
-                    edges = self._edges_at(local)
-                    if edges and self.windowHandle() is not None:
-                        self.windowHandle().startSystemResize(edges)
-                        return True
+                        and isinstance(obj, QWidget) and obj.window() is self
+                        and self._chrome.saisir(
+                            self.mapFromGlobal(event.globalPosition().toPoint()))):
+                    return True
             except (AttributeError, RuntimeError) as exc:
                 log.debug("eventFilter resize failed: %s", exc)
         elif event.type() == QEvent.Type.Leave:
-            # Souris sortie de la fenêtre → ne pas laisser un curseur de resize collé
-            if self._edge_cursor_active and not self.underMouse():
-                from PyQt6.QtGui import QGuiApplication
-                QGuiApplication.restoreOverrideCursor()
-                self._edge_cursor_active = False
+            # Souris sortie de la fenêtre → ne pas laisser un curseur collé
+            if not self.underMouse():
+                self._chrome.relacher_curseur()
         elif event.type() == QEvent.Type.KeyPress:
             if self._handle_global_key(event):
                 return True
@@ -947,7 +882,7 @@ class MainWindow(QMainWindow):
 
         # Timer, checkers et téléchargement de mise à jour, dans le bon ordre.
         self._updates.shutdown()
-        self._presence.shutdown()
+        self._session.shutdown()
         self._trailers.shutdown()
         self._detail.cancel_operations()
         self._tray.hide()

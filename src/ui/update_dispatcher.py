@@ -215,10 +215,6 @@ class UpdateDispatcher(QObject):
         """La mise à jour peut-elle s'installer sans passer par le navigateur ?"""
         return bool(self.asset_url) and can_self_update()
 
-    @property
-    def is_downloading(self) -> bool:
-        return self._download is not None
-
     def download(self) -> None:
         """Auto-update en un clic si possible, sinon ouverture de la page release."""
         if self._download is not None:

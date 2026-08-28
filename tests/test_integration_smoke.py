@@ -1160,7 +1160,7 @@ class TestSelecteurDeLangue:
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
         ecrits = []
-        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
                             lambda *a, **k: ecrits.append(a) or True)
         from src.ui import game_detail_handlers as handlers
         handlers._appliquer_langue(win._detail, "en")
@@ -1174,7 +1174,7 @@ class TestSelecteurDeLangue:
         s'efface laisserait croire que c'est fait — donc un modal."""
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
-        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
                             lambda *a, **k: False)
         vus = []
         monkeypatch.setattr("src.ui.game_detail_handlers._boite",
@@ -1194,7 +1194,7 @@ class TestSelecteurDeLangue:
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
         ecrits = []
-        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
                             lambda *a, **k: ecrits.append(a) or True)
         from src.ui import game_detail_handlers as handlers
         handlers._appliquer_langue(win._detail, win.manager.game_language(jeu))

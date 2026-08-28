@@ -330,6 +330,52 @@ class Downloader(QThread):
                 remaining -= len(chunk)
         return h
 
+    def _refuser_taille_annoncee(self, total: int) -> None:
+        """Refuse un corps que le serveur annonce déjà au-dessus du plafond.
+
+        Écrite deux fois — chemin nominal ET reprise après un HTTP 416 —, cette
+        garde était le genre de règle qu'on renforce d'un seul côté : le retry
+        serait alors devenu une porte dérobée pour un fichier surdimensionné.
+        """
+        if self._max_total_bytes and total > self._max_total_bytes:
+            raise OSError(
+                f"Taille annoncée ({total} octets) dépasse la limite "
+                f"({self._max_total_bytes} octets)"
+            )
+
+    def _ecrire_chunks(self, response, part_path: Path, mode: str,
+                       downloaded: int, total: int, hasher) -> bool:
+        """Écrit le corps de la réponse par blocs. False = annulé en cours.
+
+        SOURCE UNIQUE de la boucle de téléchargement. Elle existait en DEUX
+        exemplaires (chemin nominal et reprise après HTTP 416), portant chacun
+        sa copie du plafond d'octets, du hachage au fil de l'eau et de la
+        cadence d'émission — trois règles qu'un correctif n'aurait renforcées
+        que d'un côté, l'autre restant silencieusement en arrière.
+
+        Le plafond est re-testé PENDANT le stream et pas seulement sur
+        l'en-tête : un `Content-Length` peut manquer, ou mentir.
+        """
+        with open(part_path, mode) as f:
+            for chunk in response.iter_bytes(CHUNK_SIZE):
+                if self._cancelled:
+                    return False
+                f.write(chunk)
+                if hasher is not None:
+                    hasher.update(chunk)
+                downloaded += len(chunk)
+                if self._max_total_bytes and downloaded > self._max_total_bytes:
+                    raise OSError(
+                        f"Téléchargement dépasse la limite ({downloaded} > "
+                        f"{self._max_total_bytes} octets)"
+                    )
+                now = time.monotonic()
+                if now - self._last_emit >= 0.1:
+                    self.progress.emit(downloaded, total)
+                    self._last_emit = now
+        self.progress.emit(downloaded, total)  # final
+        return True
+
     def _download_stream(
         self, url: str, part_path: Path,
         global_offset: int = 0, global_total: int = 0,
@@ -388,33 +434,11 @@ class Downloader(QThread):
                         if compute_sha256:
                             hasher = hashlib.sha256()
 
-                    # Cap : refuser si le serveur annonce > expected * 1.5
-                    if self._max_total_bytes and total > self._max_total_bytes:
-                        raise OSError(
-                            f"Taille annoncée ({total} octets) dépasse la limite "
-                            f"({self._max_total_bytes} octets)"
-                        )
-
+                    self._refuser_taille_annoncee(total)
                     mode = "ab" if response.status_code == 206 else "wb"
-                    with open(part_path, mode) as f:
-                        for chunk in response.iter_bytes(CHUNK_SIZE):
-                            if self._cancelled:
-                                return None
-                            f.write(chunk)
-                            if hasher is not None:
-                                hasher.update(chunk)
-                            downloaded += len(chunk)
-                            # Cap en cours de stream (Content-Length manquant ou menteur)
-                            if self._max_total_bytes and downloaded > self._max_total_bytes:
-                                raise OSError(
-                                    f"Téléchargement dépasse la limite ({downloaded} > "
-                                    f"{self._max_total_bytes} octets)"
-                                )
-                            now = time.monotonic()
-                            if now - self._last_emit >= 0.1:
-                                self.progress.emit(downloaded, total)
-                                self._last_emit = now
-                    self.progress.emit(downloaded, total)  # final
+                    if not self._ecrire_chunks(response, part_path, mode,
+                                               downloaded, total, hasher):
+                        return None
                     return hasher.hexdigest() if hasher is not None else None
 
         if not needs_retry:
@@ -431,30 +455,8 @@ class Downloader(QThread):
                     total = int(raw_length)
                 except (ValueError, TypeError):
                     total = 0
-                # Même cap que le chemin nominal : un retry 416 ne doit pas être
-                # une porte dérobée pour un fichier surdimensionné.
-                if self._max_total_bytes and total > self._max_total_bytes:
-                    raise OSError(
-                        f"Taille annoncée ({total} octets) dépasse la limite "
-                        f"({self._max_total_bytes} octets)"
-                    )
-                with open(part_path, "wb") as f:
-                    downloaded = 0
-                    for chunk in response.iter_bytes(CHUNK_SIZE):
-                        if self._cancelled:
-                            return None
-                        f.write(chunk)
-                        if hasher is not None:
-                            hasher.update(chunk)
-                        downloaded += len(chunk)
-                        if self._max_total_bytes and downloaded > self._max_total_bytes:
-                            raise OSError(
-                                f"Téléchargement dépasse la limite ({downloaded} > "
-                                f"{self._max_total_bytes} octets)"
-                            )
-                        now = time.monotonic()
-                        if now - self._last_emit >= 0.1:
-                            self.progress.emit(downloaded, total)
-                            self._last_emit = now
-                self.progress.emit(downloaded, total)  # final
+                self._refuser_taille_annoncee(total)
+                if not self._ecrire_chunks(response, part_path, "wb",
+                                           0, total, hasher):
+                    return None
         return hasher.hexdigest() if hasher is not None else None

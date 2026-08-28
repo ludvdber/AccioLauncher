@@ -28,6 +28,36 @@ _SHA256_PREFIX = "sha256:"
 _CATALOG_MAX_BYTES = 4 * 1024 * 1024
 
 
+def _assets_publies(releases: list[dict]):
+    """Parcourt les assets exploitables des releases : (url, asset).
+
+    Les trois extracteurs qui suivent (empreintes, tailles, compteurs) lisaient
+    la MÊME réponse GitHub avec le MÊME préambule recopié trois fois. Le
+    troisième portait même le commentaire « mêmes gardes que ci-dessus » : le
+    dédoublement était connu, documenté, et laissé en place — c'est-à-dire une
+    règle de sécurité tenue par la vigilance de qui relit.
+
+    Ces gardes ne sont pas décoratives. Sans elles, une release nulle ou un
+    asset non-objet levait `AttributeError`, qui n'est PAS dans le tuple
+    `except` de l'appelant : l'exception sortait de `QThread.run()` et
+    l'utilisateur recevait un rapport de plantage pour une réponse HTTP
+    inattendue — portail captif, proxy, page d'erreur.
+
+    L'URL est exigée non vide ET de type `str` : c'est la plus stricte des trois
+    variantes d'origine, et elle évite d'indexer un dictionnaire sur un nombre
+    le jour où l'API renverrait autre chose.
+    """
+    for rel in releases:
+        if not isinstance(rel, dict):
+            continue
+        for asset in rel.get("assets", []) or []:
+            if not isinstance(asset, dict):
+                continue
+            url = asset.get("browser_download_url", "")
+            if url and isinstance(url, str):
+                yield url, asset
+
+
 def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
     """URL d'asset → empreinte SHA-256 (hex), depuis les releases GitHub.
 
@@ -45,19 +75,13 @@ def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
     dégrader vers « pas de vérification », jamais vers un échec de download.
     """
     digests: dict[str, str] = {}
-    for rel in releases:
-        if not isinstance(rel, dict):
+    for url, asset in _assets_publies(releases):
+        raw = asset.get("digest") or ""
+        if not isinstance(raw, str) or not raw.startswith(_SHA256_PREFIX):
             continue
-        for asset in rel.get("assets", []) or []:
-            if not isinstance(asset, dict):
-                continue
-            url = asset.get("browser_download_url", "")
-            raw = asset.get("digest") or ""
-            if not url or not isinstance(raw, str) or not raw.startswith(_SHA256_PREFIX):
-                continue
-            hexa = raw[len(_SHA256_PREFIX):].strip().lower()
-            if len(hexa) == 64 and all(c in "0123456789abcdef" for c in hexa):
-                digests[url] = hexa
+        hexa = raw[len(_SHA256_PREFIX):].strip().lower()
+        if len(hexa) == 64 and all(c in "0123456789abcdef" for c in hexa):
+            digests[url] = hexa
     return digests
 
 
@@ -78,16 +102,12 @@ def extract_asset_sizes(releases: list[dict]) -> dict[str, int]:
     archive hébergée ailleurs) → l'appelant retombe sur `size_mb`, comme avant.
     """
     tailles: dict[str, int] = {}
-    for rel in releases:
-        if not isinstance(rel, dict):
-            continue
-        for asset in rel.get("assets", []) or []:
-            if not isinstance(asset, dict):
-                continue
-            url = asset.get("browser_download_url", "")
-            taille = asset.get("size")
-            if url and isinstance(taille, int) and not isinstance(taille, bool) and taille > 0:
-                tailles[url] = taille
+    for url, asset in _assets_publies(releases):
+        taille = asset.get("size")
+        # `not isinstance(taille, bool)` : en Python `True` EST un entier, et
+        # `tailles[url] = True` passerait ensuite pour une taille de 1 octet.
+        if isinstance(taille, int) and not isinstance(taille, bool) and taille > 0:
+            tailles[url] = taille
     return tailles
 
 
@@ -102,23 +122,11 @@ def aggregate_download_counts(
     complets de cette version), puis on SOMME les versions du jeu.
     """
     url_counts: dict[str, int] = {}
-    for rel in releases:
-        # Mêmes gardes que `extract_asset_digests` juste au-dessus : sans elles,
-        # une release nulle ou un asset non-objet levait `AttributeError`, qui
-        # n'est PAS dans le tuple `except` de l'appelant. L'exception sortait de
-        # `QThread.run()` et l'utilisateur recevait un rapport de plantage pour
-        # une réponse HTTP inattendue (portail captif, proxy, page d'erreur).
-        if not isinstance(rel, dict):
-            continue
-        for asset in rel.get("assets", []) or []:
-            if not isinstance(asset, dict):
-                continue
-            url = asset.get("browser_download_url", "")
-            if url and isinstance(url, str):
-                try:
-                    url_counts[url] = max(0, int(asset.get("download_count", 0) or 0))
-                except (TypeError, ValueError):
-                    url_counts[url] = 0
+    for url, asset in _assets_publies(releases):
+        try:
+            url_counts[url] = max(0, int(asset.get("download_count", 0) or 0))
+        except (TypeError, ValueError):
+            url_counts[url] = 0
 
     totals: dict[str, int] = {}
     for game_id, versions in games_asset_urls.items():

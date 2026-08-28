@@ -29,7 +29,6 @@ GAME_DICT = {
         "download_url": "https://example.com/game.7z",
         "download_parts": None, "size_mb": 100, "changes": [],
     }],
-    "post_install": {"registry": []},
 }
 
 
@@ -595,7 +594,7 @@ class TestLangueDeJeu:
         m = _make_manager(tmp_path, [jeu])
         m.set_game_language("hp7a", "en")
         vus = []
-        with patch("src.core.game_manager.registre.ecrire_valeurs",
+        with patch("src.core.game_language.registre.ecrire_valeurs",
                    side_effect=lambda *a, **k: vus.append(a) or True):
             assert m.apply_game_language(jeu) is True
         assert vus[0][0] == "HKLM"
@@ -604,7 +603,7 @@ class TestLangueDeJeu:
 
     def test_apply_ne_fait_rien_sans_bloc_de_langue(self, tmp_path):
         m = _make_manager(tmp_path)
-        with patch("src.core.game_manager.registre.ecrire_valeurs") as ecrire:
+        with patch("src.core.game_language.registre.ecrire_valeurs") as ecrire:
             assert m.apply_game_language(m.get_games()[0].game) is True
         ecrire.assert_not_called()
 
@@ -621,7 +620,7 @@ class TestLangueDeJeu:
         monkeypatch.setattr("src.core.game_manager.delete_pre_launch_files", lambda *a: None)
         monkeypatch.setattr("src.core.game_manager.create_pre_launch_files", lambda *a: None)
         monkeypatch.setattr("src.core.game_manager.apply_ini_patches", lambda *a: None)
-        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
                             lambda *a, **k: False)
         lances = []
         monkeypatch.setattr("src.core.game_manager.subprocess.Popen",
@@ -640,7 +639,7 @@ class TestLangueDeJeu:
                     "create_pre_launch_files", "apply_ini_patches"):
             monkeypatch.setattr("src.core.game_manager." + nom, lambda *a: None)
         monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
-        monkeypatch.setattr("src.core.game_manager.registre.ecrire_valeurs",
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
                             lambda *a, **k: ecriture_ok)
         monkeypatch.setattr("src.core.game_manager.subprocess.Popen",
                             lambda *a, **k: object())
@@ -684,7 +683,7 @@ class TestDetectionDeLaLangue:
     def test_detecte_la_langue_posee(self, tmp_path):
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.lire_valeurs",
+        with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "German", "Locale": "de_DE"}):
             assert m.detect_game_language(jeu) == "de"
 
@@ -693,13 +692,13 @@ class TestDetectionDeLaLangue:
         tourne, la cle n'existe pas."""
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.lire_valeurs", return_value={}):
+        with patch("src.core.game_language.registre.lire_valeurs", return_value={}):
             assert m.detect_game_language(jeu) is None
 
     def test_none_si_les_valeurs_ne_correspondent_a_aucune_langue(self, tmp_path):
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.lire_valeurs",
+        with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "Klingon", "Locale": "tlh"}):
             assert m.detect_game_language(jeu) is None
 
@@ -708,7 +707,7 @@ class TestDetectionDeLaLangue:
         dans quel etat est le jeu — et pretendre le savoir serait pire."""
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.lire_valeurs",
+        with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "German", "Locale": "fr_FR"}):
             assert m.detect_game_language(jeu) is None
 
@@ -718,7 +717,7 @@ class TestDetectionDeLaLangue:
         m = _make_manager(tmp_path, [jeu])
         set_language("en")
         try:
-            with patch("src.core.game_manager.registre.lire_valeurs",
+            with patch("src.core.game_language.registre.lire_valeurs",
                        return_value={"Language": "German", "Locale": "de_DE"}):
                 assert m.game_language(jeu) == "de"
         finally:
@@ -728,7 +727,7 @@ class TestDetectionDeLaLangue:
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
         m.set_game_language("hp7a", "en")
-        with patch("src.core.game_manager.registre.lire_valeurs",
+        with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "German", "Locale": "de_DE"}):
             assert m.game_language(jeu) == "en"
 
@@ -736,8 +735,8 @@ class TestDetectionDeLaLangue:
         """Le point entier : aucune invite UAC sur un jeu qu'on n'a pas touche."""
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.lire_valeurs",
-                   return_value={"Language": "German", "Locale": "de_DE"}),              patch("src.core.game_manager.registre.ecrire_valeurs") as ecrire:
+        with patch("src.core.game_language.registre.lire_valeurs",
+                   return_value={"Language": "German", "Locale": "de_DE"}),              patch("src.core.game_language.registre.ecrire_valeurs") as ecrire:
             ecrire.return_value = True
             assert m.apply_game_language(jeu) is True
             # `ecrire_valeurs` est appelee, mais avec les valeurs DEJA en place :
@@ -747,7 +746,7 @@ class TestDetectionDeLaLangue:
     def test_apply_accepte_un_code_explicite(self, tmp_path):
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.ecrire_valeurs",
+        with patch("src.core.game_language.registre.ecrire_valeurs",
                    return_value=True) as ecrire:
             m.apply_game_language(jeu, "en")
         assert ecrire.call_args[0][2] == {"Language": "English", "Locale": "en_US"}
@@ -804,7 +803,7 @@ class TestLanguesReellementInstallees:
         (tmp_path / "HPTest" / "fr.big").write_bytes(b"")
         set_language("en")
         try:
-            with patch("src.core.game_manager.registre.lire_valeurs", return_value={}):
+            with patch("src.core.game_language.registre.lire_valeurs", return_value={}):
                 assert m.game_language(jeu) == "fr"
         finally:
             set_language("fr")
@@ -814,7 +813,7 @@ class TestLanguesReellementInstallees:
         verite que masquer l'etat reel du jeu."""
         jeu = self._jeu_avec_temoins()
         m = _make_manager(tmp_path, [jeu])
-        with patch("src.core.game_manager.registre.lire_valeurs",
+        with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "German"}):
             assert m.game_language(jeu) == "de"
 
@@ -873,7 +872,7 @@ class TestValeursCommunes:
         jeu = self._jeu()
         m = _make_manager(tmp_path, [jeu])
         appels = []
-        with patch("src.core.game_manager.registre.ecrire_valeurs",
+        with patch("src.core.game_language.registre.ecrire_valeurs",
                    side_effect=lambda *a, **k: appels.append(a) or True):
             assert m.apply_game_language(jeu) is True
         assert len(appels) == 1
@@ -885,7 +884,7 @@ class TestValeursCommunes:
         jeu = self._jeu()
         m = _make_manager(tmp_path, [jeu])
         recus = {}
-        with patch("src.core.game_manager.registre.ecrire_valeurs",
+        with patch("src.core.game_language.registre.ecrire_valeurs",
                    side_effect=lambda *a, **k: recus.update(k) or True):
             m.apply_game_language(jeu, confirmer="sentinelle")
         assert recus.get("confirmer") == "sentinelle"

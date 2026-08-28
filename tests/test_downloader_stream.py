@@ -30,7 +30,8 @@ class _URL:
 
 
 def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
-                     final_url: str = "https://x.test/a.7z"):
+                     final_url: str = "https://x.test/a.7z",
+                     range_416: bool = False):
     """Faux module httpx : Client → stream → réponse rejouant `full_payload`."""
     mod = types.ModuleType("httpx")
 
@@ -49,7 +50,12 @@ def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
     class _Response:
         def __init__(self, headers_in: dict):
             range_header = (headers_in or {}).get("Range")
-            if range_header and honor_range:
+            if range_header and range_416:
+                # Serveur qui déclare la plage insatisfaisable : c'est ce que
+                # renvoie GitHub quand le .part local est plus gros que l'asset.
+                self._body = b""
+                self.status_code = 416
+            elif range_header and honor_range:
                 offset = int(range_header.split("=")[1].rstrip("-"))
                 self._body = full_payload[offset:]
                 self.status_code = 206
@@ -60,7 +66,8 @@ def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
             self.url = _URL(final_url)  # httpx : URL finale après redirections
 
         def raise_for_status(self):
-            pass
+            if self.status_code >= 400:
+                raise HTTPStatusError(self)
 
         def iter_bytes(self, chunk_size):
             for i in range(0, len(self._body), chunk_size):
@@ -72,11 +79,14 @@ def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
         def __exit__(self, *a):
             return False
 
+    requetes: list[dict] = []
+
     class Client:
         def __init__(self, **kw):
             pass
 
         def stream(self, method, url, headers=None):
+            requetes.append(dict(headers or {}))
             return _Response(headers or {})
 
         def __enter__(self):
@@ -86,6 +96,7 @@ def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
             return False
 
     mod.Client = Client
+    mod.requetes = requetes  # en-têtes de chaque GET, dans l'ordre
     mod.Timeout = Timeout
     mod.HTTPError = HTTPError
     mod.HTTPStatusError = HTTPStatusError
@@ -184,3 +195,54 @@ class TestStreamIncrementalHash:
         with qtbot.waitSignal(dl.download_finished, timeout=5000):
             dl.run()
         assert dest.read_bytes() == PAYLOAD
+
+
+class TestReprise416:
+    """Le `.part` local est plus gros que l'asset — GitHub répond 416.
+
+    Ce chemin n'avait AUCUN test alors qu'il portait sa PROPRE copie de la
+    boucle de téléchargement : plafond d'octets, hachage et cadence d'émission
+    y étaient réécrits, donc libres de diverger du chemin nominal sans que rien
+    ne le signale. La boucle est désormais partagée (`_ecrire_chunks`) ; ces
+    tests couvrent ce qui reste propre au 416 — jeter le `.part` et repartir
+    sans en-tête Range.
+    """
+
+    def test_part_trop_gros_est_jete_et_retelecharge(self, tmp_path, fake_httpx, qtbot):
+        fake_httpx(range_416=True)
+        dest = tmp_path / "a.7z"
+        # Plus gros que l'asset : exactement le cas qui provoque un 416.
+        (tmp_path / "a.7z.part").write_bytes(b"z" * (len(PAYLOAD) + 4096))
+        dl = Downloader(url="https://x.test/a.7z", destination=dest,
+                        expected_sha256=PAYLOAD_SHA)
+        with qtbot.waitSignal(dl.download_finished, timeout=5000):
+            dl.run()
+        assert dest.read_bytes() == PAYLOAD
+
+    def test_le_plafond_vaut_aussi_apres_un_416(self, tmp_path, fake_httpx, qtbot):
+        """Le retry n'est pas une porte dérobée pour un fichier surdimensionné.
+
+        C'est la garde que la duplication mettait en danger : elle existait des
+        deux côtés par recopie, pas par construction.
+        """
+        faux = fake_httpx(b"x" * (5 * 1024 * 1024), range_416=True)
+        dest = tmp_path / "big.7z"
+        (tmp_path / "big.7z.part").write_bytes(b"z" * (6 * 1024 * 1024))
+        dl = Downloader(url="https://x.test/big.7z", destination=dest,
+                        expected_size_mb=1)
+        import src.core.downloader as dmod
+        old = dmod.BACKOFF_BASE
+        dmod.BACKOFF_BASE = 0
+        try:
+            with qtbot.waitSignal(dl.error, timeout=5000):
+                dl.run()
+        finally:
+            dmod.BACKOFF_BASE = old
+        assert not dest.exists()
+        # Sans cette vérification le test passerait AUSSI avec le 416 non
+        # traité — il échouerait alors sur l'erreur HTTP, sans jamais exercer
+        # la reprise qu'il prétend couvrir. Une requête sans en-tête Range
+        # derrière une requête qui en portait un : c'est la reprise, et rien
+        # d'autre ne produit cette séquence.
+        assert any("Range" in q for q in faux.requetes)
+        assert any("Range" not in q for q in faux.requetes)

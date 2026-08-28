@@ -104,7 +104,7 @@ class TestEspaceDisque:
         _prepare(panel, GameState.NOT_INSTALLED)
         assert 'href="settings"' in widget._alert.text()
         with qtbot.waitSignal(widget.settings_requested, timeout=500):
-            widget._on_alert_link("settings")
+            widget._alert._on_lien("settings")
 
     def test_le_seuil_est_celui_de_la_verification_au_clic(self, panel, monkeypatch):
         """Juste au-dessus du besoin → silence ; juste en dessous → bandeau."""
@@ -183,17 +183,17 @@ class TestPrerequisVCredist:
         jusqu'au prochain démarrage — le launcher aurait l'air cassé."""
         widget, manager = panel
         ouvert = []
-        monkeypatch.setattr("src.ui.action_panel.open_url", ouvert.append)
+        monkeypatch.setattr("src.ui.alert_banner.open_url", ouvert.append)
         monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
         _prepare(panel, GameState.INSTALLED)
 
-        widget._on_alert_link("vcredist_x86")
+        widget._alert._on_lien("vcredist_x86")
         assert ouvert and "vc_redist" in ouvert[0]
-        assert widget._awaiting_vcredist is True
+        assert widget._alert.prerequis_attendu is True
 
         monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: True)
         widget.recheck_prerequisites()
-        assert widget._awaiting_vcredist is False
+        assert widget._alert.prerequis_attendu is False
         assert widget._alert.isHidden()
 
     def test_recheck_est_muet_sans_demande(self, panel, monkeypatch):
@@ -342,23 +342,23 @@ class TestAvertissementDuCatalogue:
 
     def test_le_lien_ouvre_l_url_du_catalogue(self, panel, monkeypatch):
         ouvertes = []
-        monkeypatch.setattr("src.ui.action_panel.open_url", ouvertes.append)
+        monkeypatch.setattr("src.ui.alert_banner.open_url", ouvertes.append)
         _disque(monkeypatch, 900_000)
         widget = self._prepare(panel, GameState.NOT_INSTALLED, warning=self._TEXTE,
                                warning_url="https://acciolauncher.be/aide/antivirus")
-        widget._on_alert_link("avertissement")
+        widget._alert._on_lien("avertissement")
         assert ouvertes == ["https://acciolauncher.be/aide/antivirus"]
 
     def test_pas_de_lien_mort_si_l_url_a_ete_refusee(self, panel, monkeypatch):
         """Une URL non-https est vidée au parsing : le texte doit rester, mais
         sans lien, et un clic ne doit rien ouvrir."""
         ouvertes = []
-        monkeypatch.setattr("src.ui.action_panel.open_url", ouvertes.append)
+        monkeypatch.setattr("src.ui.alert_banner.open_url", ouvertes.append)
         _disque(monkeypatch, 900_000)
         widget = self._prepare(panel, GameState.NOT_INSTALLED, warning=self._TEXTE,
                                warning_url="")
         assert "En savoir plus" not in widget._alert.text()
-        widget._on_alert_link("avertissement")
+        widget._alert._on_lien("avertissement")
         assert ouvertes == []
 
 

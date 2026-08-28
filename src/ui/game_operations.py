@@ -201,11 +201,7 @@ class GameOperations(QObject):
         # et sans que rien ne les montre.
         if dest is not None:
             _supprimer_residus(dest)
-        game = self._active_game
-        self._active_game = None
-        self._target_version = None
-        self._uninstall_first = False
-        self._phase = ""
+        game, _ = self._relacher_operation()
         if game is not None:
             # Re-détecter plutôt que forcer NOT_INSTALLED : pour une mise à jour /
             # réparation annulée, l'ancienne version est toujours installée.
@@ -281,7 +277,6 @@ class GameOperations(QObject):
         game_dir = Path(game.executable).parts[0] if game.executable else None
         self._installer = Installer(
             archive_path, dest,
-            registry_entries=list(game.post_install.registry),
             config_files=config_files,
             game_dir=game_dir,
             delete_archive=delete_archive,
@@ -374,15 +369,34 @@ class GameOperations(QObject):
         self.install(game, Path(archive_path_str),
                      delete_archive=self._manager.config.delete_archives)
 
-    def _on_download_error(self, message: str) -> None:
-        if self._downloader is not None:
-            self._disconnect_downloader(self._downloader)
-        self._downloader = None
-        game = self._active_game
+    def _relacher_operation(self) -> tuple:
+        """Rend (jeu, version) de l'opération qui s'achève et remet TOUT à zéro.
+
+        Ce ménage se faisait à la main sur QUATRE chemins de sortie (annulation,
+        erreur de téléchargement, fin d'installation, erreur d'installation) —
+        et ils ne le faisaient déjà pas pareil : `_on_install_finished`
+        n'effaçait pas `_uninstall_first`. Ce n'était pas un défaut vivant, le
+        drapeau étant consommé plus tôt, dans `_on_download_finished`. Mais
+        c'est exactement la forme que prend le prochain : un champ ajouté
+        demain sera remis à zéro sur trois chemins et pas sur le quatrième — et
+        le quatrième est celui du SUCCÈS, donc le plus fréquent et le moins
+        suspecté.
+
+        Rend la version en plus du jeu parce que la fin d'installation en a
+        besoin APRÈS le ménage, pour enregistrer ce qui vient d'être posé.
+        """
+        game, version = self._active_game, self._target_version
         self._active_game = None
         self._target_version = None
         self._uninstall_first = False
         self._phase = ""
+        return game, version
+
+    def _on_download_error(self, message: str) -> None:
+        if self._downloader is not None:
+            self._disconnect_downloader(self._downloader)
+        self._downloader = None
+        game, _ = self._relacher_operation()
         if game is not None:
             # Re-détecter : une mise à jour/réparation échouée laisse l'ancienne
             # version installée (la désinstallation n'a lieu qu'après téléchargement).
@@ -411,9 +425,7 @@ class GameOperations(QObject):
         if self._installer is not None:
             self._disconnect_installer(self._installer)
         self._installer = None
-        self._phase = ""
-        game = self._active_game
-        self._active_game = None
+        game, target_ver = self._relacher_operation()
         if game is None:
             return
 
@@ -432,8 +444,6 @@ class GameOperations(QObject):
         # NB : pas d'apply_pre_launch_patches ici — les .ini live dans Documents
         # et n'existent souvent pas encore à ce stade. Ils seront patchés au lancement.
         self._manager.set_game_state(game.id, GameState.INSTALLED)
-        target_ver = self._target_version
-        self._target_version = None
         self._manager.save_installed_version(game.id, target_ver.version if target_ver else None)
         self.state_changed.emit()
         self.status_message.emit(tr("{} installé avec succès !").format(game.name))
@@ -443,11 +453,7 @@ class GameOperations(QObject):
         if self._installer is not None:
             self._disconnect_installer(self._installer)
         self._installer = None
-        self._phase = ""
-        game = self._active_game
-        self._active_game = None
-        self._target_version = None
-        self._uninstall_first = False
+        game, _ = self._relacher_operation()
         if game is not None:
             self._manager.redetect_state(game.id)
         self.state_changed.emit()

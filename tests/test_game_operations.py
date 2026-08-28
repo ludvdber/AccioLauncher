@@ -170,3 +170,59 @@ class TestVersionSansSource:
 
         assert operations._downloader is None
         assert messages and "bientôt" in messages[0]
+
+
+class TestAucuneOperationNeFuit:
+    """Tout chemin de sortie remet l'état d'opération à zéro, en entier.
+
+    Le ménage se faisait à la main sur QUATRE chemins (annulation, erreur de
+    téléchargement, fin d'installation, erreur d'installation) et ils ne le
+    faisaient déjà pas pareil : la fin d'installation n'effaçait pas
+    `_uninstall_first`. Ce n'était pas un défaut vivant — le drapeau est
+    consommé plus tôt — mais c'est la forme que prend le suivant, et il
+    tomberait sur le chemin du SUCCÈS, donc le plus fréquent et le moins
+    suspecté. Ce test vaut pour tout champ qu'on ajoutera : il les lit sur
+    l'objet plutôt que de les nommer un par un.
+    """
+
+    CHAMPS = ("_active_game", "_target_version", "_uninstall_first", "_phase")
+
+    def _salir(self, operations, manager):
+        """Pose un état d'opération en cours, comme le ferait un vrai switch."""
+        jeu = manager.get_game_by_id("hp_test")
+        operations._active_game = jeu
+        operations._target_version = jeu.versions[0]
+        operations._uninstall_first = True
+        operations._phase = "download"
+
+    def _propre(self, operations) -> bool:
+        return not any(getattr(operations, c) for c in self.CHAMPS)
+
+    @pytest.mark.parametrize("sortie", [
+        "_on_download_error", "_on_install_error",
+    ])
+    def test_les_chemins_d_erreur_ne_laissent_rien(self, ops, sortie):
+        operations, manager = ops
+        self._salir(operations, manager)
+        getattr(operations, sortie)("boum")
+        assert self._propre(operations), (
+            f"{sortie} a laissé un état d'opération derrière lui")
+
+    def test_la_fin_d_installation_ne_laisse_rien(self, ops):
+        operations, manager = ops
+        self._salir(operations, manager)
+        operations._on_install_finished("")
+        assert self._propre(operations)
+
+    def test_la_version_survit_assez_pour_etre_enregistree(self, ops, tmp_path):
+        """Le ménage ne doit pas emporter ce dont la fin d'installation a
+        besoin JUSTE APRÈS : sans la version, le jeu s'installerait sans
+        numéro et `has_update` resterait muet à vie."""
+        operations, manager = ops
+        self._salir(operations, manager)
+        exe = manager.config.install_path / "HPTest" / "System"
+        exe.mkdir(parents=True)
+        (exe / "Game.exe").write_bytes(b"MZ")
+        operations._on_install_finished("")
+        assert manager.installed_version("hp_test") == "1.0"
+

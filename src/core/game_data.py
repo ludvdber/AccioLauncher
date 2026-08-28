@@ -10,7 +10,6 @@ from src.core.i18n import SOURCE_LANGUAGE, get_language
 
 log = logging.getLogger(__name__)
 
-RegistryEntries = list[str]
 
 
 # Noms de périphériques réservés par Windows : ouvrir « CON » ouvre la console,
@@ -308,7 +307,6 @@ class PreLaunch:
 @dataclass(frozen=True, slots=True)
 class PostInstall:
     """Données de post-installation d'un jeu."""
-    registry: RegistryEntries = field(default_factory=list)
     config_files: tuple[ConfigFile, ...] = ()
     # Sous-dossier dans lequel ranger le jeu après extraction (« pc » pour HP7).
     # Vide = on ne range rien, ce qui est le cas des sept autres jeux.
@@ -523,7 +521,6 @@ class GameData:
             warning_url=_url_aide_valide(data.get("warning_url", "")),
             language_registry=_parse_language_registry(data.get("language_registry")),
             post_install=PostInstall(
-                registry=pi.get("registry", []),
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),
             ),

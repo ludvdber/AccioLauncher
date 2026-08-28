@@ -1,7 +1,5 @@
 """Panneau d'actions dynamique — boutons et barres de progression selon l'état du jeu."""
 
-from html import escape
-
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
@@ -11,9 +9,7 @@ from PyQt6.QtWidgets import (
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
-from src.core.system_checks import (
-    PREREQUIS, invalidate_vcredist_cache, needed_space_mb, prerequis_manquants,
-)
+from src.ui.alert_banner import AlertBanner
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
@@ -22,13 +18,7 @@ from src.core.formatting import (
     append_part_info, format_progress_line, format_size,
 )
 from src.ui.theme import themed
-from src.ui.utils import clear_layout, open_url
-
-# Ambre-orangé : volontairement hors palette de maison. Un avertissement passé
-# par `themed()` deviendrait vert chez Serpentard et bleu chez Serdaigle, où il
-# ne se distinguerait plus de la décoration.
-_WARN = "#e8955a"
-_LINK = '<a href="{}" style="color:{}; text-decoration: underline;">{}</a>'
+from src.ui.utils import clear_layout
 
 # Largeur du bloc « bientôt disponible » : le bouton ET la note en dessous.
 # Une seule constante parce que la hauteur de la note se calcule à cette
@@ -43,27 +33,10 @@ _BOUTON_MIN_W = 300
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
 
-# Plafond du bandeau, en lignes. Mesuré sur la plateforme native, vraies
-# polices : les bandeaux qui tiennent à 980×660 font 33 px (une ligne) ou 54 px
-# (deux) ; un troisième rang en coûte 75 et ramène la barre de défilement — le
-# même prix que les deux avertissements empilés que le projet s'interdit déjà.
-# Le texte de la mise en garde venant du CATALOGUE, donc de l'extérieur et sans
-# repasser par une build, la mise en page ne peut pas dépendre de sa longueur :
-# on élide, et « En savoir plus » porte la suite.
-_ALERTE_MAX_LIGNES = 2
 # En deçà de quoi une archive déjà en cache vaut la peine d'être annoncée
 # comme reprise. Au-delà, elle est complète et attend son installation :
 # « REPRENDRE — 0 o restants » serait un contresens.
 _REPRISE_SEUIL = 0.99
-
-# Noms COURTS des prérequis, pour le bandeau : il tient sur une ligne, le
-# dialogue de lancement peut se permettre la formulation longue.
-_NOMS_COURTS = {
-    "vcredist_x86": tr("Visual C++ x86"),
-    "vcredist2005_x86": tr("Visual C++ 2005 x86"),
-    "vcredist2008_x86": tr("Visual C++ 2008 x86"),
-}
-
 
 class ActionPanel(QWidget):
     """Panneau d'actions qui s'adapte à l'état du jeu (télécharger/installer/jouer)."""
@@ -95,7 +68,6 @@ class ActionPanel(QWidget):
         # État réseau et prérequis. Optimistes par défaut : tant que rien ne
         # prouve un problème, on n'en invente pas un.
         self._online = True
-        self._awaiting_vcredist = False
         # Détruit et reconstruit à chaque `refresh` : jamais de `hasattr`,
         # tout membre existe dès `__init__`.
         self._btn_reglages = None
@@ -105,25 +77,11 @@ class ActionPanel(QWidget):
         self._layout.setSpacing(8)
 
         # Bandeau d'avertissement, AU-DESSUS des boutons : on le lit avant d'agir.
-        self._alert = QLabel()
-        self._alert.setObjectName("actionAlert")
+        # Widget à part entière (`alert_banner.py`) : c'est lui qui décide du
+        # message, qui élide le texte du catalogue et qui mesure sa hauteur.
+        self._alert = AlertBanner(manager, self)
         self._alert.setFont(body_font(12))
-        self._alert.setWordWrap(True)
-        self._alert.setTextFormat(Qt.TextFormat.RichText)
-        self._alert.setTextInteractionFlags(
-            Qt.TextInteractionFlag.LinksAccessibleByMouse
-            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
-        )
-        self._alert.setStyleSheet(
-            # Pas de fond plein : la bande s'étirait sur toute la largeur du
-            # panneau et laissait un grand rectangle ambre vide à droite du
-            # texte. Le filet vertical suffit à marquer l'avertissement.
-            f"QLabel {{ color: {_WARN}; background: transparent;"
-            f" border-left: 3px solid {_WARN};"
-            " padding: 2px 0px 2px 11px; }"
-        )
-        self._alert.linkActivated.connect(self._on_alert_link)
-        self._alert.hide()
+        self._alert.settings_requested.connect(self.settings_requested)
         self._layout.addWidget(self._alert)
 
         # Ligne principale des boutons
@@ -172,218 +130,27 @@ class ActionPanel(QWidget):
         qu'après un clic sur « Installer », le seul cas où le résultat a pu
         changer.
         """
-        if not self._awaiting_vcredist:
+        if not self._alert.prerequis_attendu:
             return
-        self._awaiting_vcredist = False
-        invalidate_vcredist_cache()
+        self._alert.oublier_attente()
         self.refresh()
 
     # ── Avertissements (affichés UNIQUEMENT en cas de manque) ──
 
-    def _build_alerts(self, state: GameState) -> None:
-        """Bandeau d'avertissement — rien à l'écran quand tout va bien.
-
-        Un état ne s'affiche que lorsqu'il DÉVIE de la normale : une ligne
-        « espace disque : 412 Go » ou une pastille « prérequis OK » n'apprend
-        rien à personne et encombre. En revanche, découvrir qu'il manque 8 Go
-        APRÈS avoir lancé un téléchargement de 12 Go, ou que le jeu ne démarre
-        pas faute d'un redistribuable, ça mérite d'être dit avant le clic.
-
-        UN SEUL message à la fois, par ordre de blocage. Empiler « hors ligne »
-        et « espace insuffisant » coûtait 80 px sur une fenêtre de 980×660 et
-        ramenait la barre de défilement que le panneau vient tout juste de
-        perdre — pour un second conseil qui n'est même pas encore actionnable :
-        hors ligne, il n'y a rien à écrire sur le disque.
-        """
-        message = ""
-
-        if state == GameState.NOT_INSTALLED:
-            dl = self._game.current_download
-            if dl is not None and dl.is_available:
-                if not self._online:
-                    message = tr("Hors ligne — connexion requise pour télécharger.")
-                else:
-                    message = self._disk_alert(dl)
-        elif state == GameState.INSTALLED:
-            # Socle commun + ce que le catalogue déclare pour CE jeu. HP7 exige
-            # Visual C++ 2005, un runtime distinct du 2015-2022 : annoncer le
-            # mauvais aurait envoyé l'utilisateur installer un paquet qu'il a
-            # peut-être déjà, sans que le jeu démarre pour autant.
-            manquants = prerequis_manquants(("vcredist_x86", *self._game.requires))
-            if manquants:
-                message = (
-                    tr("{} manquant — requis pour lancer ce jeu.").format(
-                        _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
-                    + " " + _LINK.format(manquants[0], _WARN, tr("Installer"))
-                )
-
-        # Dernier rang : la mise en garde que le CATALOGUE attache à ce jeu.
-        # Elle cède le pas à tout ce qui précède, qui est bloquant ici et
-        # maintenant, mais elle survit aux deux états qui comptent — avant le
-        # téléchargement (prévenir) et une fois installé (expliquer un jeu qui
-        # refuse de démarrer). Le texte vient du catalogue et non d'un `tr()` :
-        # il se met à jour à distance, sans republier l'exécutable, et voyage
-        # déjà traduit dans le bloc `i18n` du jeu.
-        if not message and state in (GameState.NOT_INSTALLED, GameState.INSTALLED):
-            message = self._alerte_catalogue()
-
-        if not message:
-            self._alert.hide()
-            self._alert.clear()
-            return
-        # Aucun pictogramme. Cinzel n'a pas de glyphe pour U+26A0 (rendu en
-        # carré vide au test) : Windows part alors en repli de police, et
-        # c'est exactement ce repli qui avait donné le bouton pause bleu
-        # vif. Le filet ambre et la couleur du texte disent « attention »
-        # sans dépendre de la police installée.
-        self._alert.setText(message)
-        self._alert.show()
-        self._fit_alert_height()
-
-    def _alerte_catalogue(self) -> str:
-        """Mise en garde déclarée par le catalogue pour ce jeu (vide sinon).
-
-        Cas réel : une DLL de HP7 partie 2 est mise en quarantaine par les
-        antivirus. L'installation réussit, puis le jeu ne démarre pas — et rien
-        à l'écran ne relie les deux. Le dire AVANT le téléchargement était la
-        demande de Ludo ; le redire une fois installé est ce qui rend le message
-        utile au moment où l'utilisateur en a besoin.
-        """
-        texte = self._game.warning.strip()
-        if not texte:
-            return ""
-        lien = ""
-        if self._game.warning_url:
-            lien = " " + _LINK.format("avertissement", _WARN, tr("En savoir plus"))
-        return self._elide_alerte(texte, lien)
-
-    def _elide_alerte(self, brut: str, lien: str) -> str:
-        """Ramène le bandeau à `_ALERTE_MAX_LIGNES` lignes (élision par la fin).
-
-        Le texte est ÉCHAPPÉ en HTML avant d'entrer dans le bandeau. Celui-ci
-        est un QLabel en `RichText` et le texte vient du CATALOGUE, c'est-à-dire
-        de l'extérieur : sans échappement, un `<img src="http://…">` déclenchait
-        une requête réseau à l'affichage de la fiche (donc « qui regarde quel
-        jeu » part chez l'hébergeur de l'image), et n'importe quel balisage
-        pouvait défaire la mise en page qu'on vient de border. On l'affiche
-        comme du TEXTE, ce qu'il est.
-
-        L'élision porte sur le texte BRUT et l'échappement vient après : couper
-        une chaîne déjà échappée trancherait une entité en deux (`&amp;` → `&am`).
-
-        `quote=False` : guillemets et apostrophes n'ont besoin d'être échappés
-        que DANS un attribut. Ici c'est du contenu d'élément — les échapper
-        remplissait le bandeau de `&#x27;` (rendus correctement par Qt, vérifié,
-        mais illisibles en journal comme en test).
-
-        La mesure passe par le VRAI QLabel et non par `QFontMetrics` : le
-        bandeau est en `RichText`, donc mis en page par un QTextDocument, dont
-        le retour à la ligne ne suit pas celui d'un `boundingRect` en texte
-        brut. Mesuré à côté : le texte élidé « tenait » en deux lignes selon
-        `QFontMetrics` et s'en affichait trois. On interroge donc exactement la
-        fonction qui décide de la hauteur finale, à la largeur qu'utilise
-        `_fit_alert_height` — les deux ne peuvent plus diverger.
-
-        Le lien entre dans la mesure : il s'ajoute à la dernière ligne et c'est
-        lui qui la fait déborder.
-        """
-        def rendu(n: int | None = None) -> str:
-            morceau = brut if n is None else brut[:n].rstrip() + "…"
-            return escape(morceau, quote=False) + lien
-
-        largeur = self.width() - 24
-        if largeur <= 40 or not brut:
-            return rendu()
-        avant = self._alert.text()
-        plafond = _ALERTE_MAX_LIGNES * QFontMetrics(self._alert.font()).lineSpacing() + 8
-
-        def hauteur(essai: str) -> int:
-            self._alert.setMinimumHeight(0)   # sinon heightForWidth fait cliquet
-            self._alert.setText(essai)
-            return self._alert.heightForWidth(largeur)
-
-        try:
-            if hauteur(rendu()) <= plafond:
-                return rendu()
-            bas, haut = 0, len(brut)
-            while bas < haut:
-                milieu = (bas + haut + 1) // 2
-                if hauteur(rendu(milieu)) <= plafond:
-                    bas = milieu
-                else:
-                    haut = milieu - 1
-            return rendu(bas if bas else 1)
-        finally:
-            self._alert.setMinimumHeight(0)
-            self._alert.setText(avant)
-
-    def _disk_alert(self, version) -> str:
-        """Avertissement d'espace disque, vide si la place suffit ou est inconnue.
-
-        Prend la VERSION et non un nombre de Mo : le besoin réel est la somme de
-        l'archive et du jeu installé, et seule la version permet de retrouver le
-        poids réel de l'archive. Ce chiffre doit rester identique à celui de
-        `GameOperations.check_disk_space`, sinon le bandeau prévient d'un
-        blocage qui n'arrive pas.
-        """
-        free_mb = self._manager.free_space_mb()
-        needed = needed_space_mb(version.size_mb,
-                                 self._manager.archive_size_mb(version))
-        if free_mb is None or free_mb >= needed:
-            return ""
-        return (
-            tr("Espace insuffisant : {} libres, il en faut environ {}.").format(
-                format_size(free_mb), format_size(needed))
-            + " " + _LINK.format("settings", _WARN, tr("Changer de dossier"))
-        )
-
     def alert_height(self) -> int:
-        """Hauteur occupée par le bandeau, 0 quand il n'y a rien à signaler.
+        """Place prise par le bandeau, espacement du layout compris.
 
-        Le panneau d'info s'en sert pour raccourcir la description d'autant :
-        cette place-là est prise, et l'ignorer ferait revenir la barre de
-        défilement.
+        Lue par `GameDetailView._position_info` pour raccourcir la description
+        d'autant. L'espacement s'ajoute ICI et non dans le bandeau : c'est une
+        propriété de CE layout, que le widget n'a pas à connaître.
         """
-        if self._alert.isHidden() or not self._alert.text():
-            return 0
-        return self._alert.minimumHeight() + self._layout.spacing()
-
-    def _on_alert_link(self, href: str) -> None:
-        if href == "settings":
-            self.settings_requested.emit()
-        elif href == "avertissement":
-            # L'URL a été validée au PARSING (https uniquement) : le catalogue
-            # est distant, c'est la seule de ses chaînes qui atteigne le
-            # navigateur, et elle ne doit pas pouvoir être autre chose.
-            if self._game.warning_url:
-                open_url(self._game.warning_url)
-        elif href in PREREQUIS:
-            # L'utilisateur part installer le paquet : on note qu'il faudra
-            # re-tester à son retour (cf. recheck_prerequisites). Le lien porte
-            # l'IDENTIFIANT du prérequis manquant, donc on ouvre la bonne page
-            # même quand il y en a plusieurs possibles.
-            self._awaiting_vcredist = True
-            open_url(PREREQUIS[href][1])
-
-    def _fit_alert_height(self) -> None:
-        """Réserve la hauteur RÉELLE du bandeau (wordWrap ⇒ plusieurs lignes).
-
-        `sizeHint()` d'un QLabel wordWrap est calculé à une largeur arbitraire ;
-        sans hauteur minimale explicite, le panneau d'info sous-estime la place
-        nécessaire et rogne le bandeau. `setMinimumHeight(0)` d'abord, sinon
-        `heightForWidth` renvoie `max(minimumHeight, calculé)` et la hauteur ne
-        redescend jamais (effet cliquet).
-        """
-        avail = self.width() - 24
-        if avail <= 0 or not self._alert.text():
-            return
-        self._alert.setMinimumHeight(0)
-        self._alert.setMinimumHeight(self._alert.heightForWidth(avail))
+        hauteur = self._alert.hauteur_reservee()
+        return hauteur + self._layout.spacing() if hauteur else 0
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         if self._alert.isVisible():
-            self._fit_alert_height()
+            self._alert.ajuster_hauteur()
         self._fit_coming_soon_note()
 
     def refresh(self) -> None:
@@ -404,7 +171,7 @@ class ActionPanel(QWidget):
             return
 
         state = self._manager.get_state(self._game.id)
-        self._build_alerts(state)
+        self._alert.mettre_a_jour(self._game, state, online=self._online)
         match state:
             case GameState.NOT_INSTALLED:
                 self._build_not_installed()

@@ -9,7 +9,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 from src.core.extractors import extract_7z, extract_zip
 from src.core.post_install import (
-    apply_config_files, apply_registry, ranger_dans_sous_dossier, unblock_extracted,
+    apply_config_files, ranger_dans_sous_dossier, unblock_extracted,
 )
 
 log = logging.getLogger(__name__)
@@ -32,7 +32,6 @@ class Installer(QThread):
         self,
         archive_path: Path,
         destination: Path,
-        registry_entries: list[str] | None = None,
         config_files: list[tuple[str, str]] | None = None,
         game_dir: str | None = None,
         delete_archive: bool = False,
@@ -42,7 +41,6 @@ class Installer(QThread):
         super().__init__(parent)
         self.archive_path = archive_path
         self.destination = destination
-        self.registry_entries = registry_entries or []
         self.config_files = config_files or []
         self.game_dir = game_dir
         self.delete_archive = delete_archive
@@ -127,7 +125,6 @@ class Installer(QThread):
             count = unblock_extracted(self._extracted_dirs)
             if count > 0:
                 log.info("%d fichier(s) débloqué(s) (Zone.Identifier supprimé)", count)
-            apply_registry(self.registry_entries)
             apply_config_files(self.destination, self.game_dir, self.config_files)
 
             if self.delete_archive:
