@@ -429,6 +429,21 @@ class GameData:
     # None quand le jeu n'en propose pas : c'est le cas de sept jeux sur huit,
     # et le sélecteur ne doit alors apparaître nulle part.
     language_registry: LanguageRegistry | None = None
+    # Ce jeu doit-il être lancé en se déclarant conscient du DPI ?
+    #
+    # Windows VIRTUALISE un programme qui ne l'est pas : sur un écran mis à
+    # l'échelle, il multiplie par le facteur tout ce que le programme demande,
+    # fenêtre comprise. Invisible en plein écran exclusif ; visible dès qu'une
+    # vraie fenêtre existe. Mesuré le 2026-08-30 sur les deux parties de HP7,
+    # que leur wrapper `d3d9.dll` force en mode fenêtré : 3200×1800 sur un
+    # écran de 2560×1440 à 125 %, soit exactement le facteur d'échelle.
+    #
+    # Déclaré PAR JEU et par le CATALOGUE, comme `requires` — donc modifiable à
+    # distance sans republier l'exécutable, et surtout : les six autres jeux ne
+    # changent pas de comportement. Consigne explicite de Ludo (2026-08-30),
+    # et c'est la bonne règle — aucun d'eux n'a été mesuré, et un jeu qui va
+    # bien n'a pas besoin qu'on lui change son environnement de lancement.
+    dpi_aware: bool = False
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -520,6 +535,10 @@ class GameData:
             warning=_loc(data, "warning", ""),
             warning_url=_url_aide_valide(data.get("warning_url", "")),
             language_registry=_parse_language_registry(data.get("language_registry")),
+            # `is True` et non `bool(...)` : le catalogue est DISTANT, et une
+            # chaîne non vide ou un nombre y suffiraient à activer un réglage
+            # qui change la façon dont on lance un exécutable.
+            dpi_aware=data.get("dpi_aware") is True,
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),

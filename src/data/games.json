@@ -878,6 +878,7 @@
           ]
         }
       },
+      "dpi_aware": true,
       "requires": [
         "vcredist2005_x86"
       ]
@@ -1019,6 +1020,7 @@
           "warning": "Su antivirus puede eliminar Paul.dll durante la instalación. Si el juego no arranca, restaure ese archivo desde la cuarentena."
         }
       },
+      "dpi_aware": true,
       "requires": [
         "vcredist2008_x86"
       ],

@@ -894,3 +894,83 @@ class TestValeursCommunes:
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
         assert set(m.valeurs_registre(jeu)) == {"Language", "Locale"}
+
+
+class TestLeLancementPasseLaCoucheDpi:
+    """LE test du correctif : `launch_game` transmet l'env, et SEULEMENT au
+    jeu qui le déclare.
+
+    Le premier échoue sur le code d'avant, qui construisait `popen_kwargs`
+    sans `env` — le jeu héritait alors de l'environnement du launcher, sans
+    couche de compatibilité, et Windows agrandissait sa fenêtre. Le second
+    garde la restriction demandée par Ludo : six jeux sur huit n'ont jamais
+    posé ce problème, aucun n'a été mesuré, et on ne change pas la façon de
+    lancer un jeu qui va bien.
+    """
+
+    def _lancer(self, tmp_path, monkeypatch, dpi_aware):
+        jeu = GameData.from_dict({**GAME_DICT, "id": "hp7a",
+                                  "language_registry": _LANG_BLOCK,
+                                  "dpi_aware": dpi_aware})
+        m = _make_manager(tmp_path, [jeu])
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        for nom in ("unblock_game_dlls", "delete_pre_launch_files",
+                    "create_pre_launch_files", "apply_ini_patches"):
+            monkeypatch.setattr("src.core.game_manager." + nom, lambda *a: None)
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
+                            lambda *a, **k: True)
+        vus = {}
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen",
+                            lambda *a, **k: vus.update(k) or object())
+        assert m.launch_game("hp7a") is not None
+        return vus
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="couche Windows")
+    def test_le_jeu_qui_le_declare_recoit_la_couche(self, tmp_path, monkeypatch):
+        kwargs = self._lancer(tmp_path, monkeypatch, dpi_aware=True)
+        assert "env" in kwargs, "launch_game ne transmet aucun environnement"
+        couches = (kwargs["env"] or {}).get("__COMPAT_LAYER", "").split()
+        assert "HighDpiAware" in couches, (
+            "sans cette couche, Windows agrandit la fenetre du jeu de tout le "
+            "facteur d'echelle de l'ecran (mesure : 3200x1800 pour 2560x1440)")
+
+    def test_un_jeu_qui_ne_le_declare_pas_part_comme_avant(self, tmp_path, monkeypatch):
+        """Les six autres jeux : `env=None`, donc `Popen` hérite — exactement
+        le comportement d'avant le correctif, à l'octet près."""
+        kwargs = self._lancer(tmp_path, monkeypatch, dpi_aware=False)
+        assert kwargs.get("env") is None
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="couche Windows")
+    def test_le_jeu_garde_le_reste_de_l_environnement(self, tmp_path, monkeypatch):
+        """Un environnement amputé de PATH casserait le chargement des DLL du
+        jeu — ce serait échanger une fenêtre trop grande contre un jeu mort."""
+        kwargs = self._lancer(tmp_path, monkeypatch, dpi_aware=True)
+        assert "PATH" in kwargs["env"] or "Path" in kwargs["env"]
+
+
+class TestLeCatalogueDeclareQuiEnABesoin:
+    """Le champ vient du catalogue DISTANT : il ne s'active que sur `true`."""
+
+    def test_absent_par_defaut(self):
+        assert GameData.from_dict(GAME_DICT).dpi_aware is False
+
+    def test_actif_sur_true(self):
+        assert GameData.from_dict({**GAME_DICT, "dpi_aware": True}).dpi_aware is True
+
+    @pytest.mark.parametrize("valeur", ["true", 1, "oui", [], {}])
+    def test_toute_autre_valeur_est_refusee(self, valeur):
+        """`is True` et non `bool(...)` : une chaîne non vide ou un nombre
+        suffiraient sinon à changer la façon dont on lance un exécutable, sur
+        la foi d'un fichier qui vient du réseau."""
+        assert GameData.from_dict({**GAME_DICT, "dpi_aware": valeur}).dpi_aware is False
+
+    def test_les_deux_parties_de_hp7_le_declarent(self):
+        """Le catalogue EMBARQUÉ, lui, doit vraiment porter le réglage — sans
+        quoi tout le reste est inerte."""
+        from src.core.game_data import load_catalog
+        par_id = {g.id: g for g in load_catalog().games}
+        for gid in ("hp7a", "hp7b"):
+            assert par_id[gid].dpi_aware is True, gid

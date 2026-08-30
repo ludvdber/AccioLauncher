@@ -48,7 +48,7 @@ Two layers under `src/`, glued by an orchestrator (`game_operations`) and a Qt s
 
   **Ce que lisent réellement HP7 partie 1 et 2** (relevé le 2026-08-22 dans `hp7.exe` et `hp8.exe`, pas deviné) : la clé `SOFTWARE\Electronic Arts\Harry Potter and the Deathly Hallows Part 1` (resp. `Part 2`) est une chaîne du binaire, et les deux exe lisent **`Locale`** et **`Install Dir`** — **jamais `Language`**, contrairement à ce qu'écrit l'installeur EA. Les valeurs acceptées sont une table posée juste après la chaîne `Locale`, et elles **DIFFÈRENT d'une partie à l'autre** : partie 1 `en_UK fr_FR it de es pl ru`, partie 2 `en fr it de es pl ru`. C'est ce qui explique la contradiction des guides communautaires (« `fr` ») avec le registre d'une vraie machine (« `fr_FR` ») : les deux avaient raison, pour des parties différentes. Le nom de langue (`DH1_French.pck`) et le code du frontend (`fre_fr`) sont dérivés en interne à partir de cet index — d'où `DH1_%s.pck` dans le binaire.
 - `game_language.py` — **Langue d'un jeu : ce que le registre porte, ce qu'on peut lui proposer** (extrait de `game_manager` le 2026-08-28, 763 → 639 lignes). Le manager mélangeait quatre métiers sans rapport — états sur disque, temps de jeu, empreintes d'assets, langue — et celui-ci est le plus autonome : il ne touche ni les états, ni les stats, ni le cache. Les fonctions prennent `game` et `config` EXPLICITEMENT au lieu de lire `self`, donc elles s'exercent sans construire de manager ; `GameManager` garde des méthodes qui y délèguent (`langues_disponibles`, `detect_game_language`, `game_language`, `set_game_language`, `valeurs_registre`, `apply_game_language`) et **aucun appelant n'a changé**. Les tests qui bouchonnaient `src.core.game_manager.registre.*` visent désormais `src.core.game_language.registre.*` — même objet module, mais à l'endroit où il est réellement utilisé.
-- `pre_launch.py` — Pure functions for UE1 pre-launch (variable substitution, INI patches, file create/delete, DLL unblocking). See "UE1 engine quirks" below.
+- `pre_launch.py` — Pure functions for UE1 pre-launch (variable substitution, INI patches, file create/delete, DLL unblocking). See "UE1 engine quirks" below. **`env_de_lancement(dpi_aware)`** (2026-08-30) compose l'environnement du jeu : sous Windows, et **uniquement pour un jeu qui le déclare au catalogue** (`GameData.dpi_aware`), il y ajoute la couche `__COMPAT_LAYER=HighDpiAware` ; None sinon — ce que `Popen(env=None)` attend, donc le comportement d'avant à l'octet près. **Deux jeux sur huit le déclarent** (HP7 parties 1 et 2), et c'est une consigne explicite de Ludo : eux seuls posaient le problème, aucun des six autres n'a été mesuré, et on ne change pas la façon de lancer un jeu qui va bien. Aucun jeu du catalogue n'est conscient du DPI — ils sont tous de 2001-2011 —, donc sur un écran mis à l'échelle Windows les VIRTUALISE et multiplie par le facteur d'échelle tout ce qu'ils demandent, **fenêtre comprise**. Invisible tant que le jeu est en plein écran exclusif ; visible dès qu'une vraie fenêtre existe. Mesuré sur HP7 partie 2, que son wrapper `d3d9.dll` force en mode fenêtré (`ForceWindowedMode = 1`) : **3200×1800 sur un écran de 2560×1440 à 125 %**, soit exactement le facteur ; avec la couche, 2560×1440 à la position 0,0. Le piège est que la résolution, elle, est BONNE — l'énumération des modes Direct3D passe par le pilote et non par la couche virtualisée, donc le jeu propose puis retient un légitime 2560×1440, et c'est la FENÊTRE qui est agrandie derrière son dos. Tout ce que l'utilisateur peut inspecter est juste, d'où « je comprends pas » (Ludo, 2026-08-30). La variable ne persiste RIEN (portée au seul processus lancé), là où le réglage équivalent de l'onglet Compatibilité est indexé par CHEMIN COMPLET : celui que l'installeur EA avait posé sur `C:\Program Files (x86)\…\hp8.exe` ne suivait pas le jeu une fois installé par Accio, et le reposer dans le registre n'aurait réparé qu'une machine.
 - `downloader.py` — `QThread` over httpx streaming (**httpx importé paresseusement dans les méthodes des threads** — jamais au top-level, test AST de régression). HTTPS only, multi-part with resume. **Cap on total bytes** = `expected_size_mb × 1.5` (`SIZE_OVERHEAD_FACTOR`). `expected_size_mb=0` disables the cap. **SHA-256 incrémental pendant le stream** (`_download_stream(compute_sha256=True)` retourne le digest — plus d'UI figée à 100 %) ; `_verify_sha256` (relecture intégrale + signal `verifying`) ne sert plus qu'aux parts déjà en cache ; mismatch → delete + retry. **La boucle d'écriture est UNIQUE depuis le 2026-08-28** (`_ecrire_chunks`, `_refuser_taille_annoncee`) : elle existait en deux exemplaires — chemin nominal et reprise après un HTTP 416 —, chacun portant sa copie du plafond d'octets, du hachage au fil de l'eau et de la cadence d'émission. Le second n'avait **aucun test** ; il en a deux maintenant (`TestReprise416`), dont un qui prouve la reprise par la SÉQUENCE des requêtes (une avec `Range`, puis une sans) plutôt que par le message d'erreur, que le signal n'expose pas.
 - `self_update.py` — One-click launcher auto-update (Windows frozen only): `.bat` waits for process exit, swaps the exe, relaunches. `can_self_update()` gates it; non-Windows/dev falls back to opening the release page. **`relaunch_after_exit()`** (réutilisé par le bouton « Redémarrer maintenant » et le crash dialog) relance sans remplacer l'exe ; en dev résout `pythonw.exe`. **Le .bat s'écrit avec `newline=""` (sinon `\r\r\n` → cmd coincé dans `:wait`), se lance avec `CREATE_NO_WINDOW` + DEVNULL, JAMAIS `DETACHED_PROCESS` (qui bloque `tasklist | find`), et SURTOUT avec `env=_clean_pyinstaller_env()`** : sans purge des `_PYI_*` (+ `PYINSTALLER_RESET_ENVIRONMENT=1`), l'exe onefile relancé se croit enfant de l'instance morte et crashe « Failed to load Python DLL …\_MEIxxxxxx » — trois pièges Windows reproduits par simulation, voir pyqt-pitfalls #18 et #20.
 - `installer.py` — Slim `QThread` orchestrator (extraction → unblock → config_files → cleanup). Delegates to `extractors.py` and `post_install.py`.
@@ -225,6 +225,32 @@ Quatre règles, toutes payées ailleurs :
 - **Pas de `sha256` à la main** : GitHub publie la sienne et le launcher la récupère seule (`trailer_hash`), exactement comme pour les jeux. Le champ reste possible pour un hébergement hors GitHub.
 
 **Nom des fichiers à publier** : `<id>_video.mp4` — donc `hp1_video.mp4`, `hp2_video.mp4`, … `hp7a_video.mp4`, `hp7b_video.mp4`. L'identifiant est celui du CATALOGUE, pas celui de l'archive (rappel : `hp7b` est livré par la release `hp8-v1.0`).
+
+**Champ `dpi_aware`** (HP7a / HP7b) — lancer ce jeu en le déclarant conscient
+du DPI :
+
+```jsonc
+"dpi_aware": true      // seules les deux parties de HP7 le portent
+```
+
+Windows virtualise un programme qui ne se déclare pas conscient du DPI : sur un
+écran mis à l'échelle, il multiplie par le facteur tout ce qu'il demande,
+**fenêtre comprise**. Mesuré le 2026-08-30 sur les deux parties de HP7, que
+leur wrapper `d3d9.dll` force en mode fenêtré : **3200×1800 sur un écran de
+2560×1440 à 125 %**. Trois choses à ne pas oublier :
+
+- **Ce n'est PAS un réglage de résolution.** L'énumération des modes Direct3D
+  passe par le pilote, hors virtualisation : le jeu propose puis retient un
+  légitime 2560×1440. C'est la fenêtre qui est agrandie ensuite. Tout ce que
+  l'utilisateur peut inspecter est juste, d'où « je comprends pas ».
+- **Le champ est par JEU, et il le reste.** Six jeux sur huit n'ont jamais posé
+  ce problème et n'ont pas été mesurés. `is True` au parsing : une chaîne non
+  vide suffirait sinon à changer le lancement d'un exécutable sur la foi d'un
+  fichier venu du réseau.
+- **Le défaut est nul à 100 % d'échelle**, donc invisible à toute la suite de
+  tests et sur tout écran non mis à l'échelle. Troisième fois que ce projet
+  paie l'échelle fractionnaire, après le trait clair du carrousel et le
+  rognage de `pixmap_icone`.
 
 **Bloc `contributors`** (racine du catalogue) — qui remercier, et pour quoi :
 
@@ -622,6 +648,23 @@ These are non-obvious behaviors hard-won through debugging — read before touch
 - **Nommer une constante `subprocess.CREATE_*` ailleurs qu'à l'import, sous garde** — elles n'existent que sous Windows, et l'`AttributeError` tombe AVANT `Popen` : la fonction devient intestable hors Windows, même en remplaçant `Popen`. Voir `self_update._DRAPEAUX_DETACHE`.
 - **Laisser `write_text` choisir les fins de ligne d'un fichier qui ne nous appartient pas** — il traduit en `os.linesep` : CRLF sous Windows par coïncidence de plateforme, LF ailleurs. Les `.ini` sont écrits par UE1, un programme Windows : ils sont en CRLF partout, y compris quand le launcher tournera sous Linux (le jeu tournera sous Wine). `_INI_NEWLINE` l'impose des deux côtés — sans quoi la promesse d'aller-retour exact à l'octet ne tenait que par chance.
 - **Calling `apply_pre_launch_patches` at install time** — Documents INI files don't exist yet then. Pre-launch only.
+- **Lancer un jeu sans lui donner la couche de compatibilité DPI** — tous les
+  jeux du catalogue datent d'avant la question (2001-2011), donc Windows les
+  virtualise sur un écran mis à l'échelle : il multiplie leur fenêtre par le
+  facteur, et un jeu en mode fenêtré déborde de l'écran d'autant. Mesuré le
+  2026-08-30 sur HP7 partie 2 : **3200×1800 pour un écran de 2560×1440 à
+  125 %**. Passer par `pre_launch.env_de_lancement(game.dpi_aware)`, jamais un
+  `Popen` nu — et ne PAS l'étendre aux six autres jeux sans les avoir mesurés :
+  le champ est déclaré par jeu dans le catalogue exactement pour ça.
+  Deux angles morts à connaître : ① le défaut est **nul à 100 %**, donc
+  invisible à toute la suite de tests et sur tout écran non mis à l'échelle —
+  c'est le patron du trait clair du carrousel et du rognage de `pixmap_icone`,
+  la troisième fois que ce projet paie l'échelle fractionnaire ; ② **rien de ce
+  que l'utilisateur peut inspecter n'est faux** : la résolution du jeu est
+  bonne (Direct3D énumère les modes via le pilote, hors virtualisation), seule
+  la fenêtre est agrandie ensuite. Chercher du côté des réglages d'affichage du
+  jeu ne mène nulle part, et c'est exactement ce que le rapport initial disait
+  — « la fenêtre dépasse la taille de l'écran **malgré une bonne résolution** ».
 - **Faire dépendre un test du CONTENU de `games.json`** — le catalogue se met à jour
   **à distance**, sans republier le launcher : un test qui suppose ce qu'il contient
   casse à chaque livraison de jeu, loin de la ligne de code qu'il surveille. Quatre

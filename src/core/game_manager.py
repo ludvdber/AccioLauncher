@@ -18,6 +18,7 @@ from src.core.pre_launch import (
     apply_ini_patches,
     create_pre_launch_files,
     delete_pre_launch_files,
+    env_de_lancement,
     unblock_game_dlls,
 )
 from src.core.system_checks import prerequis_manquants
@@ -307,6 +308,12 @@ class GameManager:
             )
         else:
             popen_kwargs["start_new_session"] = True
+        # Voir `pre_launch.env_de_lancement` : sans cette couche, Windows
+        # agrandit la fenêtre d'un jeu non conscient du DPI sur un écran mis à
+        # l'échelle. Mesuré sur les deux parties de HP7 : 3200×1800 pour un
+        # écran de 2560×1440. None quand le jeu ne le déclare pas (six sur
+        # huit) et hors Windows : le jeu hérite alors simplement du nôtre.
+        popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
         return subprocess.Popen([str(exe_path)], **popen_kwargs)
 
     def apply_pre_launch_patches(self, game: GameData) -> None:

@@ -15,7 +15,11 @@ import pytest
 
 from src.core.config import Config
 from src.core.game_data import GameData
-from src.core.pre_launch import _INI_ENCODING, apply_ini_patches
+from src.core.pre_launch import (
+    _INI_ENCODING,
+    apply_ini_patches,
+    env_de_lancement,
+)
 
 B = chr(92)      # antislash, pour ne pas semer d'échappements dans le fichier
 CRLF = "\r\n"
@@ -92,3 +96,64 @@ class TestIniEcritParLeMoteur:
     @pytest.mark.skipif(sys.platform != "win32", reason="page de codes ANSI Windows")
     def test_l_encodage_est_celui_du_moteur(self):
         assert _INI_ENCODING == "mbcs"
+
+
+class TestCoucheDpi:
+    """La couche de compatibilité DPI donnée au jeu qu'on lance.
+
+    Windows virtualise les programmes qui ne se déclarent pas conscients du
+    DPI : sur un écran mis à l'échelle, il multiplie par le facteur d'échelle
+    tout ce qu'ils demandent, fenêtre comprise. Mesuré le 2026-08-30 sur les
+    DEUX parties de HP7, que leur wrapper `d3d9.dll` force en mode fenêtré :
+    la fenêtre sortait à 3200×1800 sur un écran de 2560×1440 à 125 %, soit
+    exactement le facteur d'échelle. Avec la couche : 2560×1440 à la position
+    0,0. La résolution du jeu, elle, était bonne dans les deux cas — c'est ce
+    qui rend le défaut si déroutant, et ce qui justifie de le corriger ici
+    plutôt que de renvoyer l'utilisateur à ses réglages d'affichage.
+    """
+
+    def test_la_couche_est_posee_sur_un_environnement_vide(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "win32")
+        assert env_de_lancement(True, {}) == {"__COMPAT_LAYER": "HighDpiAware"}
+
+    def test_un_jeu_qui_ne_le_declare_pas_ne_recoit_rien(self, monkeypatch):
+        """La garde demandée par Ludo (2026-08-30) : seules les deux parties de
+        HP7 posaient problème, et les six autres jeux ne doivent pas changer de
+        comportement. None = `Popen` hérite, exactement comme avant."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        assert env_de_lancement(False, {}) is None
+
+    def test_une_couche_existante_est_conservee(self, monkeypatch):
+        """`__COMPAT_LAYER` est une LISTE séparée par des espaces : quelqu'un
+        qui a réglé `WINXPSP3` à la main pour un jeu récalcitrant ne doit pas
+        la perdre parce qu'on lance ce jeu."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        env = env_de_lancement(True, {"__COMPAT_LAYER": "WINXPSP3"})
+        assert env["__COMPAT_LAYER"].split() == ["WINXPSP3", "HighDpiAware"]
+
+    def test_pas_de_doublon_si_deja_posee(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "win32")
+        env = env_de_lancement(True, {"__COMPAT_LAYER": "HighDpiAware"})
+        assert env["__COMPAT_LAYER"].split().count("HighDpiAware") == 1
+
+    def test_la_casse_ne_cree_pas_de_doublon(self, monkeypatch):
+        """Windows ne distingue pas la casse des noms de couches : ajouter
+        « HighDpiAware » à côté de « highdpiaware » poserait deux fois la même
+        chose, ce qui est au mieux du bruit."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        env = env_de_lancement(True, {"__COMPAT_LAYER": "highdpiaware"})
+        assert len(env["__COMPAT_LAYER"].split()) == 1
+
+    def test_le_reste_de_l_environnement_est_transmis(self, monkeypatch):
+        """On REMPLACE l'environnement du processus fils : tout oublier
+        priverait le jeu de PATH, TEMP et du reste."""
+        monkeypatch.setattr(sys, "platform", "win32")
+        env = env_de_lancement(True, {"PATH": "/x", "TEMP": "/t"})
+        assert env["PATH"] == "/x" and env["TEMP"] == "/t"
+
+    def test_hors_windows_on_ne_touche_a_rien(self, monkeypatch):
+        """None est exactement ce que `Popen(env=None)` attend — le jeu hérite
+        du nôtre. La couche de compatibilité est une notion Windows ; sous
+        Linux ces jeux tourneront sous Wine, qui a sa propre idée du DPI."""
+        monkeypatch.setattr(sys, "platform", "linux")
+        assert env_de_lancement(True, {}) is None

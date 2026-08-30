@@ -5,7 +5,9 @@ Reçoit le `Config` et le `GameData` en paramètres — pas de couplage à GameM
 """
 
 import logging
+import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 from src.core.config import Config, get_documents_dir
@@ -184,3 +186,71 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
             # écrire dans la page de codes ANSI — auquel cas le jeu ne saurait
             # de toute façon pas le lire : on journalise et on lance quand même.
             log.warning("Impossible de patcher %s : %s", ini_path, exc)
+
+
+# Ce que Windows raconte aux jeux sur la taille des pixels.
+#
+# Un programme qui ne se déclare pas conscient du DPI est VIRTUALISÉ : sur un
+# écran mis à l'échelle, Windows lui ment sur les dimensions, puis multiplie
+# par le facteur d'échelle tout ce qu'il demande. Pour une fenêtre c'est
+# direct : une fenêtre de 2560×1440 demandée à 125 % est CRÉÉE à 3200×1800.
+#
+# Aucun jeu du catalogue n'est conscient du DPI — ils sont tous antérieurs à la
+# question (2001-2011). Tant qu'ils s'affichent en plein écran exclusif, la
+# virtualisation ne se voit pas ; elle devient visible dès qu'une vraie fenêtre
+# est en jeu. HP7 partie 2 est exactement ce cas : le wrapper `d3d9.dll` livré
+# avec le jeu force le mode fenêtré (`ForceWindowedMode = 1`).
+#
+# MESURÉ le 2026-08-30 sur l'écran de Ludo (2560×1440 réels à 125 % d'échelle,
+# donc 2048×1152 logiques), en lisant le rectangle réel de la fenêtre depuis un
+# processus conscient du DPI :
+#
+#     hp8.exe tel quel            : 3200 × 1800   (déborde de 640 × 360)
+#     hp8.exe avec la couche DPI  : 2560 × 1440   à la position 0,0
+#
+# Le piège tient à ce que la résolution, elle, est BONNE : l'énumération des
+# modes Direct3D passe par le pilote et non par la couche virtualisée, donc le
+# jeu propose puis retient un légitime 2560×1440. C'est la FENÊTRE qui est
+# ensuite agrandie derrière son dos. Chercher la faute du côté des réglages
+# d'affichage du jeu ne mène donc nulle part — c'est ce qui rend ce défaut si
+# déroutant à l'usage : tout ce que l'utilisateur peut inspecter est juste.
+#
+# `__COMPAT_LAYER` applique la même correction que l'onglet Compatibilité de
+# Windows (« Remplacer le comportement de mise à l'échelle » → « Application »)
+# mais SANS rien écrire : la variable ne vit que dans le processus qu'on lance.
+# Le réglage de l'onglet, lui, est indexé par CHEMIN COMPLET, et c'est pour ça
+# qu'il ne pouvait pas nous sauver : celui que l'installeur EA avait laissé sur
+# « C:\Program Files (x86)\…\hp8.exe » ne suit pas le jeu quand Accio
+# l'installe ailleurs. Le poser dans le registre ne réparerait qu'une machine ;
+# ici, tout le monde en bénéficie sans avoir rien à régler.
+_COMPAT_LAYER = "__COMPAT_LAYER"
+_DPI_AWARE = "HighDpiAware"
+
+
+def env_de_lancement(dpi_aware: bool,
+                     base: Mapping[str, str] | None = None) -> dict[str, str] | None:
+    """Environnement à donner au jeu, ou None pour lui laisser le nôtre.
+
+    `dpi_aware` vient du CATALOGUE (`GameData.dpi_aware`) : seuls les jeux qui
+    le déclarent reçoivent la couche. Les autres partent avec exactement
+    l'environnement qu'ils avaient avant — on ne change pas la façon de lancer
+    un jeu qui va bien, et aucun des six autres n'a été mesuré (consigne de
+    Ludo, 2026-08-30).
+
+    None hors Windows, ce qui est exactement ce que `Popen(env=None)` attend :
+    la couche de compatibilité est une notion Windows, et le portage Linux fera
+    tourner ces jeux sous Wine, qui a sa propre idée du DPI.
+
+    Une valeur déjà posée est CONSERVÉE puis complétée : `__COMPAT_LAYER` est
+    une liste de couches séparées par des espaces, et quelqu'un qui en a réglé
+    une à la main (`WINXPSP3`, par exemple, pour un jeu récalcitrant) ne doit
+    pas la perdre parce qu'on lance son jeu.
+    """
+    if not dpi_aware or sys.platform != "win32":
+        return None
+    env = dict(os.environ if base is None else base)
+    couches = env.get(_COMPAT_LAYER, "").split()
+    if not any(c.lower() == _DPI_AWARE.lower() for c in couches):
+        couches.append(_DPI_AWARE)
+    env[_COMPAT_LAYER] = " ".join(couches)
+    return env
