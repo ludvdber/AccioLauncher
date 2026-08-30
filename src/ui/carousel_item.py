@@ -137,6 +137,7 @@ class CarouselItem(QWidget):
         self._cached_version: str = ""
         self._cached_is_new: bool = False
         self._cached_coming_soon: bool = False
+        self._cached_reprise: float = 0.0   # part déjà reçue, 0 = rien en attente
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -179,6 +180,11 @@ class CarouselItem(QWidget):
         # Jeu annoncé dont aucune archive n'est publiée : signalé dans la
         # vignette pour que l'utilisateur le sache AVANT de cliquer.
         self._cached_coming_soon = not self.game.is_downloadable
+        # Téléchargement INTERROMPU qui attend dans le cache. Le calcul (et son
+        # seuil) vit dans `GameManager.reprise` : le bouton de la fiche
+        # l'affiche aussi, et deux règles jumelles finissent par diverger.
+        reprise = self.manager.reprise(self.game)
+        self._cached_reprise = reprise[0] if reprise is not None else 0.0
         self.update()
 
     def _load_cover(self) -> None:
@@ -423,5 +429,31 @@ class CarouselItem(QWidget):
             p.drawRoundedRect(QRectF(bx, by, bw, bh), 3, 3)
             p.setPen(QColor(200, 200, 220, 230))
             p.drawText(QRectF(bx, by, bw, bh), Qt.AlignmentFlag.AlignCenter, text)
+
+        if self._cached_reprise > 0:
+            # Téléchargement interrompu : un filet au bas de la jaquette,
+            # rempli à hauteur de ce qui est déjà reçu.
+            #
+            # Le téléchargeur reprend depuis toujours (`.part` + `Range`), et
+            # jusqu'ici RIEN ne le disait avant d'avoir navigué sur la fiche du
+            # bon jeu, parmi huit : mesuré le 2026-08-29, à la réouverture
+            # aucun des 16 textes visibles n'en soufflait mot, et le launcher
+            # ouvre sur le dernier jeu JOUÉ, jamais sur celui qu'on
+            # téléchargeait. Sur 4,6 Go, c'est quelqu'un qui a déjà attendu et
+            # qui croit avoir tout perdu.
+            #
+            # Un filet et non une pastille chiffrée : la vignette fait 100 px
+            # de large au repos, un pourcentage y serait illisible — et la
+            # question n'est pas « combien » mais « il y a quelque chose ici ».
+            # Aucun pictogramme non plus : Cinzel n'a pas de glyphe de pause,
+            # Windows partirait en repli couleur (cf. `icon_button.py`).
+            p.setOpacity(1.0)
+            ep = max(2.0, h * 0.022)
+            y_filet = y_off + h - ep
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(theme.bg_qcolor(190))
+            p.drawRect(QRectF(x_off, y_filet, w, ep))
+            p.setBrush(accent_qcolor(235))
+            p.drawRect(QRectF(x_off, y_filet, w * self._cached_reprise, ep))
 
         p.end()

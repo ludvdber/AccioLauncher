@@ -33,10 +33,6 @@ _BOUTON_MIN_W = 300
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
 
-# En deçà de quoi une archive déjà en cache vaut la peine d'être annoncée
-# comme reprise. Au-delà, elle est complète et attend son installation :
-# « REPRENDRE — 0 o restants » serait un contresens.
-_REPRISE_SEUIL = 0.99
 
 class ActionPanel(QWidget):
     """Panneau d'actions qui s'adapte à l'état du jeu (télécharger/installer/jouer)."""
@@ -228,10 +224,13 @@ class ActionPanel(QWidget):
         # mais RIEN ne le disait. Le bouton l'annonce quand — et seulement
         # quand — il y a réellement quelque chose à reprendre : c'est la règle
         # du projet, un état ne s'affiche que lorsqu'il DÉVIE de la normale.
-        deja_mo = self._manager.octets_deja_telecharges(self._game.id, dl) / 1_048_576
-        if poids and 0 < deja_mo < poids * _REPRISE_SEUIL:
+        # Le CALCUL, lui, vit dans `GameManager.reprise` : la vignette du
+        # carrousel l'affiche aussi, et deux seuils recopiés divergent.
+        reprise = self._manager.reprise(self._game)
+        if reprise is not None:
+            _, restant = reprise
             libelle = (f"{tr('REPRENDRE')}  —  "
-                       + tr("{} restants").format(format_size(round(poids - deja_mo))))
+                       + tr("{} restants").format(format_size(round(restant))))
         else:
             libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(poids)}"
         btn = GlowButton(libelle, style="outline")

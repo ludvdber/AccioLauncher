@@ -31,9 +31,12 @@ class _URL:
 
 def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
                      final_url: str = "https://x.test/a.7z",
-                     range_416: bool = False):
+                     range_416: bool = False, couper_a: int | None = None):
     """Faux module httpx : Client → stream → réponse rejouant `full_payload`."""
     mod = types.ModuleType("httpx")
+    # Octets servis depuis la creation du faux module, toutes tentatives
+    # confondues (cf. `iter_bytes`).
+    etat = {"servi": 0}
 
     class HTTPError(Exception):
         pass
@@ -71,7 +74,23 @@ def _make_fake_httpx(full_payload: bytes, *, honor_range: bool = True,
 
         def iter_bytes(self, chunk_size):
             for i in range(0, len(self._body), chunk_size):
-                yield self._body[i:i + chunk_size]
+                bloc = self._body[i:i + chunk_size]
+                if couper_a is not None:
+                    # Le compteur est CUMULÉ sur toutes les tentatives : sinon
+                    # chaque reprise repart avec son quota, la troisième passe
+                    # et le téléchargement RÉUSSIT — le test attend alors une
+                    # erreur qui ne vient jamais (constaté). Et la coupure doit
+                    # pouvoir tomber au MILIEU d'un bloc : `_download_stream`
+                    # lit par 64 Ko, plus que la charge de test entière.
+                    restant = couper_a - etat["servi"]
+                    if restant <= 0:
+                        raise HTTPError("connexion interrompue")
+                    if len(bloc) > restant:
+                        etat["servi"] += restant
+                        yield bloc[:restant]
+                        raise HTTPError("connexion interrompue")
+                etat["servi"] += len(bloc)
+                yield bloc
 
         def __enter__(self):
             return self
@@ -246,3 +265,70 @@ class TestReprise416:
         # d'autre ne produit cette séquence.
         assert any("Range" in q for q in faux.requetes)
         assert any("Range" not in q for q in faux.requetes)
+
+
+class TestUnEchecNEstPasUnePerte:
+    """Le téléchargeur GARDE ce qu'il a reçu — et le disait à personne.
+
+    Mesuré le 2026-08-29 : câble coupé à 60 % d'une archive, le `.part`
+    conserve ses 2,4 Mo sur 4 et la requête suivante repart en `Range`. Le seul
+    mot affiché était pourtant « Échec du téléchargement après plusieurs
+    tentatives. » — que personne ne lit comme « tout est encore là ».
+
+    Sur 4,6 Go, c'est quelqu'un qui vient d'attendre vingt minutes et qui
+    renonce alors qu'il ne lui manque rien. C'est la marche la plus chère de
+    l'entonnoir, celle où l'on ne perd pas un curieux mais quelqu'un qui avait
+    déjà payé l'attente (cf. `GameManager.octets_deja_telecharges`).
+    """
+
+    def _echouer(self, tmp_path, fake_httpx, qtbot, *, couper_a):
+        fake_httpx(couper_a=couper_a)
+        dest = tmp_path / "a.7z"
+        dl = Downloader(url="https://x.test/a.7z", destination=dest,
+                        expected_size_mb=1)
+        import src.core.downloader as dmod
+        old = dmod.BACKOFF_BASE
+        dmod.BACKOFF_BASE = 0          # pas 3 s d'attente dans la suite
+        vus = []
+        dl.error.connect(vus.append)
+        try:
+            with qtbot.waitSignal(dl.error, timeout=5000):
+                dl.run()
+        finally:
+            dmod.BACKOFF_BASE = old
+        return vus[0], dest
+
+    def test_le_message_annonce_ce_qui_est_conserve(self, tmp_path,
+                                                    fake_httpx, qtbot):
+        msg, dest = self._echouer(tmp_path, fake_httpx, qtbot, couper_a=8000)
+        part = dest.with_suffix(dest.suffix + ".part")
+        assert part.exists() and part.stat().st_size > 0, (
+            "rien n'a été conservé : le test ne prouve rien")
+        assert "conservés" in msg, (
+            f"le joueur croit avoir tout perdu — message : {msg!r}")
+
+    def test_rien_n_est_ajoute_quand_il_n_y_a_rien_a_reprendre(
+            self, tmp_path, fake_httpx, qtbot):
+        """Un état ne s'affiche que lorsqu'il DÉVIE : promettre une reprise
+        quand le disque est vide serait un second mensonge."""
+        msg, dest = self._echouer(tmp_path, fake_httpx, qtbot, couper_a=0)
+        part = dest.with_suffix(dest.suffix + ".part")
+        assert not part.exists() or part.stat().st_size == 0
+        assert "conservés" not in msg, f"reprise promise à vide : {msg!r}"
+
+    def test_les_messages_d_echec_passent_par_tr(self):
+        """Ils étaient des littéraux français : un anglophone les recevait en
+        français, et `TestCouverture` ne pouvait pas le voir puisqu'elle ne
+        balaie que les appels à `tr()`."""
+        import ast
+        import pathlib
+        src = pathlib.Path("src/core/downloader.py").read_text(encoding="utf-8")
+        arbre = ast.parse(src)
+        traduits = {
+            n.args[0].value
+            for n in ast.walk(arbre)
+            if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "tr"
+            and n.args and isinstance(n.args[0], ast.Constant)
+        }
+        assert any("Échec du téléchargement" in t for t in traduits), (
+            "les messages d'échec ne passent plus par tr()")

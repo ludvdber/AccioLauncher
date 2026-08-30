@@ -25,6 +25,12 @@ from src.core.version_utils import update_disponible
 
 log = logging.getLogger(__name__)
 
+# Au-delà, l'archive est téléchargée et n'attend plus que son installation :
+# ce n'est plus une reprise. Vit ici, avec `GameManager.reprise`, parce que
+# deux endroits l'affichent désormais (le bouton et la vignette) et qu'un
+# seuil recopié finit par diverger de son jumeau.
+REPRISE_SEUIL = 0.99
+
 
 class GameState(StrEnum):
     """États possibles d'un jeu."""
@@ -508,6 +514,38 @@ class GameManager:
             except OSError:
                 continue        # supprimé entre le glob et le stat : il ne compte pas
         return total
+
+    def reprise(self, game: GameData) -> tuple[float, float] | None:
+        """Téléchargement INTERROMPU qui attend dans le cache.
+
+        Rend `(part déjà reçue de 0 à 1, mégaoctets restants)`, ou None quand
+        il n'y a rien à reprendre — donc rien à afficher, un état ne se
+        montrant que lorsqu'il DÉVIE.
+
+        Cette règle vivait dans `ActionPanel`, et elle n'y servait qu'au
+        libellé du bouton : il fallait donc AVOIR NAVIGUÉ sur la fiche du bon
+        jeu, parmi huit, pour apprendre que 2,4 Go attendaient. Mesuré le
+        2026-08-29 : à la réouverture, aucun des 16 textes visibles n'en
+        soufflait mot. Elle est ici pour que la vignette du carrousel le dise
+        aussi, et surtout pour qu'il n'y ait **qu'un seul** calcul : deux
+        seuils voisins qu'aucun code ne relie finissent toujours par diverger.
+
+        Le seuil écarte une archive quasi complète : à 99 % le fichier est
+        téléchargé et n'attend plus que son installation, ce n'est pas une
+        reprise.
+        """
+        version = game.current_download
+        if version is None:
+            return None
+        # Le poids RÉEL publié par GitHub, sinon le catalogue — qui annonce la
+        # taille INSTALLÉE (1,77 à 2,30 fois le téléchargement).
+        poids = self.archive_size_mb(version) or version.size_mb
+        if not poids:
+            return None
+        deja_mo = self.octets_deja_telecharges(game.id, version) / 1_048_576
+        if not 0 < deja_mo < poids * REPRISE_SEUIL:
+            return None
+        return deja_mo / poids, poids - deja_mo
 
     def chemin_archive(self, game_id: str, version: GameVersion) -> Path:
         """Ou atterrit l'archive de cette version dans le cache.

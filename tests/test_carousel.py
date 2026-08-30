@@ -4,8 +4,11 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
+from PyQt6.QtGui import QImage, QPainter  # noqa: E402
+
 from src.core.game_data import GameData  # noqa: E402
 from src.ui.carousel import Carousel  # noqa: E402
+from src.ui.carousel_item import CarouselItem  # noqa: E402
 
 
 _GAME_DICT = {
@@ -20,6 +23,8 @@ class _FakeManager:
     def installed_version(self, _: str) -> str | None: return None
     def is_new(self, _: str) -> bool: return False
     def mark_seen(self, _: str) -> None: pass
+    # Reprise d'un téléchargement interrompu : None = rien en attente.
+    def reprise(self, _game): return None
 
 
 def _make_game(game_id: str) -> GameData:
@@ -246,3 +251,88 @@ class TestVignettePour:
         for dispo in (0, -50, 1):
             w, h = vignette_pour(dispo, SCALE_SELECTED)
             assert w >= 1 and h >= 1
+
+
+class TestFiletDeReprise:
+    """Un téléchargement interrompu doit se voir SANS naviguer.
+
+    Mesuré le 2026-08-29 : 12 Mo de HP3 en cache, le launcher rouvre sur HP7
+    partie 2 (dernier jeu JOUÉ, jamais celui qu'on téléchargeait) et **aucun
+    des 16 textes visibles** ne mentionne l'attente. Il fallait deviner, puis
+    trouver la bonne fiche parmi huit, pour lire « REPRENDRE — 763 Mo
+    restants ». Le téléchargeur reprend pourtant depuis toujours.
+
+    Sur 4,6 Go, c'est quelqu'un qui a déjà attendu vingt minutes et qui croit
+    avoir tout perdu — la marche la plus chère de l'entonnoir.
+    """
+
+    def _vignette(self, qtbot, fraction):
+        class _M(_FakeManager):
+            def reprise(self, _game):
+                return (fraction, 100.0) if fraction else None
+
+        it = CarouselItem(_make_game("hp3"), _M())
+        qtbot.addWidget(it)
+        it.refresh_state()
+        it.resize(160, 220)
+        img = QImage(it.size(), QImage.Format.Format_ARGB32)
+        img.fill(0)
+        p = QPainter(img)
+        it.render(p)
+        p.end()
+        return it, img
+
+    def test_le_filet_apparait_quand_il_y_a_de_quoi_reprendre(self, qtbot):
+        _, avec = self._vignette(qtbot, 0.6)
+        _, sans = self._vignette(qtbot, 0.0)
+        differents = sum(
+            1 for y in range(avec.height()) for x in range(avec.width())
+            if avec.pixelColor(x, y) != sans.pixelColor(x, y))
+        assert differents > 30, (
+            f"seulement {differents} pixel(s) changent : aucun filet peint")
+
+    def test_rien_ne_se_voit_quand_il_n_y_a_rien_en_attente(self, qtbot):
+        """« Un état ne s'affiche que lorsqu'il DÉVIE » : sans reprise en
+        cours, la vignette doit être RIGOUREUSEMENT celle d'avant."""
+        it = CarouselItem(_make_game("hp3"), _FakeManager())
+        qtbot.addWidget(it)
+        it.refresh_state()
+        assert it._cached_reprise == 0.0
+
+    def test_le_filet_grandit_avec_la_part_telechargee(self, qtbot):
+        """Sinon il ne serait qu'un voyant : c'est l'avancement qui décide de
+        relancer maintenant ou plus tard.
+
+        On compte l'encre DORÉE, pas les pixels qui changent : la piste sombre
+        occupe toute la largeur dès qu'il y a une reprise, donc un écart mesuré
+        sur la différence avec la vignette nue vaut la même chose à 25 % et à
+        75 % — le test passait alors sans rien prouver.
+        """
+        def or_du_filet(img):
+            # Toute l'image : le filet est au bas de la JAQUETTE, au-dessus du
+            # reflet — pas au bas du widget.
+            n = 0
+            for y in range(img.height()):
+                for x in range(img.width()):
+                    c = img.pixelColor(x, y)
+                    if c.alpha() > 100 and c.red() > 120 and c.red() > c.blue() + 40:
+                        n += 1
+            return n
+
+        petit = or_du_filet(self._vignette(qtbot, 0.25)[1])
+        grand = or_du_filet(self._vignette(qtbot, 0.75)[1])
+        assert petit > 0, "aucune encre dorée : le filet n'est pas rempli"
+        assert grand > petit * 1.5, (
+            f"le remplissage ne suit pas la progression : {petit} px à 25 %, "
+            f"{grand} px à 75 %")
+
+    def test_le_seuil_et_le_calcul_ne_vivent_qu_a_UN_endroit(self):
+        """Le bouton de la fiche et la vignette affichent la même chose : deux
+        seuils recopiés divergent tôt ou tard (le défaut du carrousel, déjà
+        payé avec THUMB_H et CAROUSEL_HEIGHT)."""
+        import pathlib
+        panel = pathlib.Path("src/ui/action_panel.py").read_text(encoding="utf-8")
+        item = pathlib.Path("src/ui/carousel_item.py").read_text(encoding="utf-8")
+        assert "0.99" not in panel, "seuil de reprise recopié dans action_panel"
+        assert "0.99" not in item, "seuil de reprise recopié dans carousel_item"
+        assert "manager.reprise(" in item or ".reprise(" in item

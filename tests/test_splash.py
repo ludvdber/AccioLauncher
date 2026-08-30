@@ -164,3 +164,58 @@ class TestIconeApplication:
         assert sp._OR == "#d6a72c", "l'or du pack de marque"
         assert sp._FOND == "#060611", "le bleu nuit du pack"
         assert Qt is not None
+
+
+class TestLeSplashNeCoutePasUneSeconde:
+    """`QSplashScreen.show()` coûte ≈ 1 s sur Windows 11. Mesuré, pas supposé.
+
+    7 relevés entre 1 005 et 1 032 ms, plateforme déjà chaude et fenêtre
+    réellement exposée ; une `QWidget` portant EXACTEMENT les mêmes drapeaux
+    s'affiche en 2 à 19 ms. Ce n'était ni les polices (6 ms), ni le logo, ni
+    l'icône : la classe elle-même. Et c'est la seconde la plus chère du
+    launcher, puisqu'elle précède le PREMIER PIXEL — l'écran de marque existe
+    pour couvrir le chargement, il arrivait après.
+
+    Le contrôle est structurel et non chronométré : un test de durée serait
+    instable sous la charge de la suite, et `build.bat` s'arrête au premier
+    échec — un test qui rate une fois sur dix est pire que pas de test.
+    """
+
+    def test_le_splash_n_est_pas_un_QSplashScreen(self, qtbot):
+        from PyQt6.QtWidgets import QSplashScreen
+        s = sp.AccioSplash()
+        qtbot.addWidget(s)
+        assert not isinstance(s, QSplashScreen), (
+            "retour à QSplashScreen : ≈ 1 s rendue au démarrage, avant le "
+            "premier pixel (cf. docstring de la classe)")
+
+    def test_les_drapeaux_de_fenetre_sont_conserves(self, qtbot):
+        """QSplashScreen les posait pour nous ; sans eux le splash prend une
+        barre de titre et passe derrière la fenêtre principale."""
+        s = sp.AccioSplash()
+        qtbot.addWidget(s)
+        drapeaux = s.windowFlags()
+        assert drapeaux & Qt.WindowType.FramelessWindowHint, "barre de titre"
+        assert drapeaux & Qt.WindowType.WindowStaysOnTopHint, "passe derrière"
+
+    def test_finish_referme_le_splash(self, qtbot):
+        """`main.py` appelle `finish(window)` : sans lui, le splash reste
+        au-dessus de la fenêtre, pour toujours."""
+        s = sp.AccioSplash()
+        qtbot.addWidget(s)
+        s.show()
+        assert s.isVisible()
+        s.finish(None)
+        assert not s.isVisible()
+
+    def test_le_splash_est_centre(self, qtbot):
+        """QSplashScreen se centrait tout seul. Une QWidget s'ouvre en haut à
+        gauche — une régression qu'aucun test de RENDU ne verrait, puisque le
+        dessin, lui, resterait juste."""
+        s = sp.AccioSplash()
+        qtbot.addWidget(s)
+        s.show()
+        qtbot.waitExposed(s)
+        ecran = s.screen().availableGeometry()
+        assert abs(s.geometry().center().x() - ecran.center().x()) <= 2
+        assert abs(s.geometry().center().y() - ecran.center().y()) <= 2

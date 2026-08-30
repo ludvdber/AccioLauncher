@@ -291,6 +291,9 @@
     "{} : pas relancé depuis {} jours.": "{}: not played for {} days.",
     "{} de jeu, sur les {} jeux de la saga.": "{} played, across all {} games in the saga.",
     "{} de jeu, sur {} des {} jeux de la saga.": "{} played, across {} of the {} games in the saga.",
-    "… et {} parties plus anciennes, conservées dans le journal.": "… and {} older sessions, kept in the log."
+    "… et {} parties plus anciennes, conservées dans le journal.": "… and {} older sessions, kept in the log.",
+    "Échec du téléchargement après plusieurs tentatives.": "Download failed after several attempts.",
+    "Échec du téléchargement de la partie {}/{}.": "Download of part {}/{} failed.",
+    "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "{} have been kept: start again to resume where it stopped."
   }
 }

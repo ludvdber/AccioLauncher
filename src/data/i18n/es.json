@@ -291,6 +291,9 @@
     "{} : pas relancé depuis {} jours.": "{}: sin jugar desde hace {} días.",
     "{} de jeu, sur les {} jeux de la saga.": "{} de juego, en los {} juegos de la saga.",
     "{} de jeu, sur {} des {} jeux de la saga.": "{} de juego, en {} de los {} juegos de la saga.",
-    "… et {} parties plus anciennes, conservées dans le journal.": "… y {} partidas más antiguas, conservadas en el registro."
+    "… et {} parties plus anciennes, conservées dans le journal.": "… y {} partidas más antiguas, conservadas en el registro.",
+    "Échec du téléchargement après plusieurs tentatives.": "Error de descarga tras varios intentos.",
+    "Échec du téléchargement de la partie {}/{}.": "Error al descargar la parte {}/{}.",
+    "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "Se han conservado {}: vuelve a iniciar para reanudar donde se detuvo."
   }
 }

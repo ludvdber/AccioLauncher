@@ -1,13 +1,19 @@
 # Palette Poudlard — Launcher AAA
+#
+# Pas de constante pour le vert : ses cinq usages recouvrent DEUX sens
+# (le vert de marque du bouton JOUER, le vert « succès/installé » du
+# carrousel, des Paramètres et du dialogue des versions), et une seule
+# constante affirmerait qu'ils doivent rester égaux — ce qui n'est pas
+# vrai. Elles ont existé, n'ont JAMAIS été employées, et ont été retirées
+# le 2026-08-28 : une constante que tout le monde contourne ne documente
+# rien, elle promet une source unique qui n'existe pas. Même raison pour
+# le fond du carrousel, qui passe par `theme.bg_qcolor()`.
 COLOR_BG_PRIMARY = "#060611"
 COLOR_BG_CARD = "#0f1528"
-COLOR_BG_CAROUSEL = "rgba(6, 6, 17, 0.92)"
 COLOR_ACCENT_GOLD = "#d6a72c"
 COLOR_ACCENT_GOLD_LIGHT = "#f0d060"
 COLOR_ACCENT_GOLD_DARK = "#9a7209"
 COLOR_ACCENT_RED = "#c0392b"
-COLOR_ACCENT_GREEN = "#2ecc71"
-COLOR_ACCENT_GREEN_DARK = "#1a9c54"
 COLOR_TEXT = "#eaeaea"
 COLOR_TEXT_SECONDARY = "#8a8aaa"
 COLOR_BORDER = "#1a2744"

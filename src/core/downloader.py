@@ -9,6 +9,9 @@ from urllib.parse import urlparse
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from src.core.formatting import format_bytes
+from src.core.i18n import tr
+
 log = logging.getLogger(__name__)
 
 # httpx est importé paresseusement dans les méthodes du thread (~70 ms d'import
@@ -127,6 +130,38 @@ class Downloader(QThread):
         log.info("SHA-256 conforme : %s", path.name)
         return True
 
+    @staticmethod
+    def _octets_presents(*chemins: Path) -> int:
+        """Ce qui reste sur le disque et servira à la reprise."""
+        total = 0
+        for chemin in chemins:
+            try:
+                total += chemin.stat().st_size
+            except OSError:
+                pass
+        return total
+
+    @staticmethod
+    def _message_echec(base: str, conserves: int) -> str:
+        """Un échec de téléchargement N'EST PAS une perte, et se taire le
+
+        laisse croire. Mesuré : câble coupé à 60 % d'une archive, le `.part`
+        garde ses 2,4 Mo sur 4 et la requête suivante repart en `Range` — mais
+        le seul mot affiché était « Échec ». Sur 4,6 Go, quelqu'un qui vient
+        d'attendre vingt minutes lit ça et renonce, alors que tout est là.
+        C'est la marche la plus chère de l'entonnoir (cf.
+        `GameManager.octets_deja_telecharges`) : on n'y perd pas un curieux,
+        on y perd quelqu'un qui avait déjà payé l'attente.
+
+        Rien n'est ajouté quand il n'y a rien à reprendre — un état ne
+        s'affiche que lorsqu'il DÉVIE.
+        """
+        if conserves <= 0:
+            return base
+        return base + " " + tr(
+            "{} sont conservés : relancez pour reprendre là où ça s'est arrêté."
+        ).format(format_bytes(conserves))
+
     @property
     def _cancelled(self) -> bool:
         return self._cancel_event.is_set()
@@ -187,7 +222,9 @@ class Downloader(QThread):
                     wait = BACKOFF_BASE * (2 ** (attempt - 1))
                     time.sleep(wait)
 
-        self.error.emit("Échec du téléchargement après plusieurs tentatives.")
+        self.error.emit(self._message_echec(
+            tr("Échec du téléchargement après plusieurs tentatives."),
+            self._octets_presents(part_path)))
 
     # ─── Téléchargement multi-parts ───
 
@@ -294,7 +331,13 @@ class Downloader(QThread):
             else:
                 # Nettoyer le fichier .part temporaire de la part échouée
                 part_tmp.unlink(missing_ok=True)
-                self.error.emit(f"Échec du téléchargement de la partie {i + 1}/{total_parts}.")
+                # Les volumes DÉJÀ complets restent : sur HP5 (4,6 Go en huit
+                # parts), échouer sur la septième ne coûte pas les six
+                # premières — encore faut-il le dire.
+                self.error.emit(self._message_echec(
+                    tr("Échec du téléchargement de la partie {}/{}.").format(
+                        i + 1, total_parts),
+                    self._octets_presents(*part_paths)))
                 return
 
         if self._cancelled:
