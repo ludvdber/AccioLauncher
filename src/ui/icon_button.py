@@ -466,16 +466,34 @@ def pixmap_icone(icone: str, taille: int,
     Le rendu se fait à `devicePixelRatio` près : sur l'écran de Ludo (125 %) un
     pixmap à l'échelle 1 remonterait flou dans un bouton, ce qui se voit
     beaucoup plus qu'on ne le croit à 18 px.
+
+    **Ne PAS remettre un `p.scale(ratio, ratio)` ici.** Il y en avait un, et il
+    rognait le pictogramme : un `QPainter` ouvert sur un `QPixmap` qui porte un
+    `devicePixelRatio` applique DÉJÀ ce facteur, ses coordonnées étant logiques.
+    L'échelle valait donc ratio² — 1,25 × 1,25 × 22/24 = 1,80 au lieu de 1,15 —
+    et la boîte de 24 sortait à 43 px physiques dans un pixmap de 27 : le globe
+    perdait sa moitié droite, Clyde un œil, la tasse son anse (mesuré le
+    2026-08-30, l'encre atteignait le DERNIER pixel du pixmap au lieu de
+    s'arrêter deux pixels avant).
+
+    Le défaut ne pouvait pas se voir en test : à `devicePixelRatio` 1 — la suite
+    offscreen, et tout écran non mis à l'échelle — `p.scale(1, 1)` ne fait rien.
+    Il ne se manifestait que sur un écran à échelle fractionnaire, c'est-à-dire
+    uniquement chez l'utilisateur. Même angle mort que le trait clair du
+    carrousel (`tests/test_rendu_dpi.py`), et même remède : le vérifier dans un
+    sous-processus qui force l'échelle.
+
+    `round` et non `int` : `int(22 × 1,25)` rend 27 pour 27,5 attendus, soit un
+    demi-pixel de tracé perdu sur le bord.
     """
     ecran = QGuiApplication.primaryScreen()
     ratio = ecran.devicePixelRatio() if ecran is not None else 1.0
-    pm = QPixmap(int(taille * ratio), int(taille * ratio))
+    pm = QPixmap(round(taille * ratio), round(taille * ratio))
     pm.setDevicePixelRatio(ratio)
     pm.fill(Qt.GlobalColor.transparent)
 
     p = QPainter(pm)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.scale(ratio, ratio)
     encre = QColor(couleur) if couleur is not None else QColor(_COULEUR)
     p.scale(taille / _BOITE, taille / _BOITE)
     _appliquer_encre(p, encre)

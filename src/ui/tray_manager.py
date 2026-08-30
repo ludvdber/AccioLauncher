@@ -10,7 +10,8 @@ from src.core.i18n import tr
 class TrayManager(QObject):
     """Gère l'icône system tray + menu contextuel.
 
-    Émet `restore_requested` (double-click ou item menu) et `quit_requested`.
+    Émet `restore_requested` (clic gauche, double-clic ou item menu) et
+    `quit_requested`.
     """
 
     restore_requested = pyqtSignal()
@@ -35,7 +36,25 @@ class TrayManager(QObject):
         self._tray.activated.connect(self._on_activated)
 
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
-        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+        """Clic gauche SIMPLE ou double : on restaure.
+
+        Le simple clic manquait — seul `DoubleClick` était écouté —, et c'est
+        la convention de la zone de notification sous Windows : Steam, Discord,
+        Spotify et Teams rouvrent tous au PREMIER clic. Il fallait donc soit
+        deviner qu'un double-clic était exigé là où tout le reste du système
+        n'en demande pas, soit passer par « Restaurer » du menu contextuel.
+        Signalé par Ludo le 2026-08-30.
+
+        Le clic DROIT n'est volontairement pas listé : Qt le sert déjà par
+        `setContextMenu`, et le faire restaurer ouvrirait la fenêtre EN MÊME
+        TEMPS que le menu. `MiddleClick` non plus — il n'a pas de sens établi.
+
+        Un vrai double-clic émet `Trigger` PUIS `DoubleClick`, donc restaure
+        deux fois : sans conséquence, `_restore_from_tray` étant idempotente
+        (`Ticker.resume` est gardé par `isActive`).
+        """
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger,
+                      QSystemTrayIcon.ActivationReason.DoubleClick):
             self.restore_requested.emit()
 
     def show(self) -> None:
