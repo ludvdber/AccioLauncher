@@ -22,15 +22,23 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # La version du build (build.bat) et de tests.yml : c'est sous elle
+          # que les dépendances sont résolues, donc elle que l'audit doit voir.
+          python-version: "3.14"
 
       - name: Install security tools
         run: |
           python -m pip install --upgrade pip
           pip install bandit pip-audit
 
+      # Les règles écartées et leur raison sont dans `.bandit`, que Bandit lit
+      # tout seul. Chaque appel de processus relu porte un `# nosec` sur sa
+      # ligne : un appel ajouté sans relecture fait échouer ce job.
       - name: Bandit security scan
         run: bandit -r . -x ./tests
 
+      # `-r` : les dépendances DU LAUNCHER. Sans argument, pip-audit examine
+      # l'environnement courant — ici bandit et pip-audit eux-mêmes — et son
+      # vert ne disait rien du launcher (constaté le 2026-09-18).
       - name: Audit Python dependencies
-        run: pip-audit
+        run: pip-audit -r requirements.txt -r requirements-dev.txt

@@ -22,6 +22,11 @@ class Toast(QLabel):
         super().__init__(parent)
         self.setFont(body_font(13))
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # PlainText à la construction : le toast affiche des noms de jeux,
+        # donc du texte du catalogue DISTANT. En `AutoText` (le défaut de
+        # QLabel), un nom qui ressemble à du HTML serait interprété — la règle
+        # de CLAUDE.md, que ce widget avait échappée faute d'être balayé.
+        self.setTextFormat(Qt.TextFormat.PlainText)
         self.setStyleSheet(themed(
             "QLabel { background: rgba(13, 13, 26, 0.94); color: #e8c547;"
             " border: 1px solid rgba(214, 167, 44, 0.45); border-radius: 8px;"

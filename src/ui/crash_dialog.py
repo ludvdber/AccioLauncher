@@ -2,8 +2,8 @@
 
 Une exception non gérée dans un slot Qt tuerait l'application sans un mot.
 `install_excepthook()` (appelé par main.py après la création du QApplication)
-loggue l'erreur puis affiche un dialogue : « Copier le rapport » (pour le
-Discord) ou « Ouvrir une issue GitHub » pré-remplie. Aucun envoi automatique —
+loggue l'erreur puis affiche un dialogue : « Copier le rapport », « Ouvrir le
+Discord » ou « Ouvrir une issue GitHub » pré-remplie. Aucun envoi automatique —
 l'utilisateur voit exactement ce qui part.
 """
 
@@ -71,13 +71,26 @@ def github_issue_url(report: str) -> str:
             f"&body={urllib.parse.quote(fenced)}")
 
 
-def _show_crash_dialog(report: str) -> None:
+def construire_dialogue(report: str):
+    """Le dialogue de plantage, prêt à être `exec()`uté.
+
+    Séparé de `_show_crash_dialog` pour être construit dans un test sans le
+    modal bloquant.
+
+    Deux rangées, parce que ce sont deux questions différentes. En haut :
+    obtenir de l'aide. Le texte disait « à coller sur le Discord » sans donner
+    le lien, et le seul bouton de sortie était une issue GitHub — que la
+    plupart des joueurs ne savent pas ouvrir, faute de compte. En bas : que
+    faire du launcher. Les cinq boutons sur une seule rangée élargissaient le
+    dialogue bien au-delà de sa largeur minimale.
+    """
     from PyQt6.QtWidgets import (
         QApplication, QDialog, QHBoxLayout, QLabel, QPlainTextEdit,
         QPushButton, QVBoxLayout,
     )
 
     from src.core.i18n import tr
+    from src.core.liens import DISCORD_URL
     from src.ui.theme import themed
     from src.ui.utils import open_url
 
@@ -95,8 +108,9 @@ def _show_crash_dialog(report: str) -> None:
     ))
     layout = QVBoxLayout(dlg)
 
-    intro = QLabel(tr("Une erreur inattendue s'est produite. Tu peux copier le rapport "
-                      "(à coller sur le Discord) ou ouvrir une issue GitHub pré-remplie."))
+    intro = QLabel(tr("Une erreur inattendue s'est produite. Copiez le rapport et "
+                      "collez-le sur le Discord pour obtenir de l'aide, ou ouvrez une "
+                      "issue GitHub pré-remplie."))
     intro.setWordWrap(True)
     layout.addWidget(intro)
 
@@ -104,7 +118,7 @@ def _show_crash_dialog(report: str) -> None:
     text.setReadOnly(True)
     layout.addWidget(text, stretch=1)
 
-    buttons = QHBoxLayout()
+    aide = QHBoxLayout()
     btn_copy = QPushButton(tr("Copier le rapport"))
 
     def _copy() -> None:
@@ -112,12 +126,20 @@ def _show_crash_dialog(report: str) -> None:
         btn_copy.setText(tr("Copié ✓"))
 
     btn_copy.clicked.connect(_copy)
-    buttons.addWidget(btn_copy)
+    aide.addWidget(btn_copy)
+
+    btn_discord = QPushButton(tr("Ouvrir le Discord"))
+    btn_discord.setObjectName("crashDiscord")
+    btn_discord.clicked.connect(lambda: open_url(DISCORD_URL))
+    aide.addWidget(btn_discord)
 
     btn_issue = QPushButton(tr("Ouvrir une issue GitHub"))
     btn_issue.clicked.connect(lambda: open_url(github_issue_url(report)))
-    buttons.addWidget(btn_issue)
+    aide.addWidget(btn_issue)
+    aide.addStretch()
+    layout.addLayout(aide)
 
+    buttons = QHBoxLayout()
     buttons.addStretch()
 
     btn_restart = QPushButton(tr("Redémarrer le launcher"))
@@ -139,8 +161,11 @@ def _show_crash_dialog(report: str) -> None:
     btn_close.clicked.connect(dlg.accept)
     buttons.addWidget(btn_close)
     layout.addLayout(buttons)
+    return dlg
 
-    dlg.exec()
+
+def _show_crash_dialog(report: str) -> None:
+    construire_dialogue(report).exec()
 
 
 # Un seul dialogue de crash dans la vie du process (voir _hook).

@@ -159,7 +159,11 @@ def main():
                     f"Accio Launcher n'a pas pu démarrer.\n\n{exc}",
                 )
         except Exception:
-            pass
+            # Le démarrage a DÉJÀ échoué et c'est journalisé en critique :
+            # l'échec de la boîte ne change pas l'issue, mais il dit que
+            # l'utilisateur n'a rien vu à l'écran. Un `pass` le taisait.
+            log.warning("Boîte d'erreur fatale impossible à afficher",
+                        exc_info=True)
         print(f"Erreur fatale : {exc}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)

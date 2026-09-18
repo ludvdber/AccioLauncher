@@ -149,7 +149,7 @@ class TestFenetreAllegee:
                 f"« {interdit} » est reparti dans main_window.py")
 
     def test_la_fenetre_reste_sous_le_seuil(self):
-        """Plafond de lignes — 830 → 875 puis 885, puis 895 le 2026-08-27.
+        """Plafond de lignes — 830 → 875 puis 885, puis 895 le 2026-08-27, 937 le 2026-09-18.
 
         Un plafond qu'on remonte des qu'on le touche ne protege de rien, donc
         le motif se justifie a chaque fois :
@@ -215,6 +215,15 @@ class TestFenetreAllegee:
           fait que dire la vérité qu'on lui remonte. Ce qui pouvait descendre
           l'a déjà fait au cran précédent.
 
+        · 930 -> 937, le 2026-09-18 : une TROISIÈME commande de fenêtre, le
+          Discord — même cas que les statistiques au cran 875 → 885. L'exe
+          circule de main en main et le Discord n'était que dans Paramètres
+          → À propos, que personne n'ouvre (Ludo). La fenêtre ne gagne que le
+          bouton et le lien du toast « le jeu n'a pas démarré » ; les adresses
+          vivent dans `src/core/liens.py`, et les commandes sont désormais un
+          tuple (`_commandes`) que placement et mode cinéma parcourent — sans
+          quoi chaque bouton de plus coûtait trois lignes au lieu d'une.
+
         La vraie garde semantique est le test voisin, qui verifie que les
         chaines de l'UpdateDispatcher ne sont pas revenues ici : c'est LUI qui
         dit si la fenetre reprend du travail qu'on lui a retire. Celui-ci ne
@@ -223,4 +232,4 @@ class TestFenetreAllegee:
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 930, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 937, f"main_window.py a regrossi : {lignes} lignes"

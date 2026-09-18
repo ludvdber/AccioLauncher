@@ -22,13 +22,10 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import APP_VERSION
 from src.core.i18n import tr, translator_credits
+from src.core.liens import DISCORD_URL, KOFI_URL, SITE_URL
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current as current_theme
 from src.ui.utils import open_url
-
-SITE_URL = "https://acciolauncher.be/"
-KOFI_URL = "https://ko-fi.com/ludovic01"
-DISCORD_URL = "https://discord.gg/TNwDQd7KGe"
 
 
 def _section(texte: str) -> QLabel:

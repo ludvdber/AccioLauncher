@@ -178,7 +178,7 @@
     "Serdaigle": "Ravenclaw",
     "Poufsouffle": "Hufflepuff",
     "Accio Launcher — Erreur inattendue": "Accio Launcher — Error inesperado",
-    "Une erreur inattendue s'est produite. Tu peux copier le rapport (à coller sur le Discord) ou ouvrir une issue GitHub pré-remplie.": "Se ha producido un error inesperado. Puedes copiar el informe (para pegarlo en Discord) o abrir una incidencia de GitHub ya rellenada.",
+    "Une erreur inattendue s'est produite. Copiez le rapport et collez-le sur le Discord pour obtenir de l'aide, ou ouvrez une issue GitHub pré-remplie.": "Se ha producido un error inesperado. Copia el informe y pégalo en el Discord para obtener ayuda, o abre una incidencia de GitHub ya rellenada.",
     "Copier le rapport": "Copiar el informe",
     "Copié ✓": "Copiado ✓",
     "Ouvrir une issue GitHub": "Abrir una incidencia en GitHub",
@@ -294,6 +294,9 @@
     "… et {} parties plus anciennes, conservées dans le journal.": "… y {} partidas más antiguas, conservadas en el registro.",
     "Échec du téléchargement après plusieurs tentatives.": "Error de descarga tras varios intentos.",
     "Échec du téléchargement de la partie {}/{}.": "Error al descargar la parte {}/{}.",
-    "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "Se han conservado {}: vuelve a iniciar para reanudar donde se detuvo."
+    "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "Se han conservado {}: vuelve a iniciar para reanudar donde se detuvo.",
+    "Ouvrir le Discord": "Abrir el Discord",
+    "Discord : aide et communauté": "Discord: ayuda y comunidad",
+    "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "¿Necesitas ayuda? Haz clic aquí para abrir el Discord."
   }
 }

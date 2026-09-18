@@ -23,6 +23,8 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
+from src.core.win_utils import commande_systeme
+
 log = logging.getLogger(__name__)
 
 _POLL_MS = 2000
@@ -85,8 +87,11 @@ class ProcessMonitor(QObject):
         if not exe_name or sys.platform != "win32":
             return False
         try:
-            result = subprocess.run(
-                ["tasklist", "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
+            # Chemin système absolu, jamais « tasklist » seul (cf.
+            # `commande_systeme`). Arguments en liste, sans shell ; le nom
+            # vient d'un `executable` validé au parsing du catalogue.
+            result = subprocess.run(  # nosec B603
+                [commande_systeme("tasklist.exe"), "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
                 capture_output=True, text=True, timeout=5,
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )

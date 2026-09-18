@@ -30,9 +30,11 @@ jobs:
 
   linux-smoke:
     runs-on: ubuntu-latest
-    # Informatif tant que le portage Linux n'a pas commencé : ne bloque pas le
-    # merge, mais montre ce qui casserait. Passer à false au début du chantier.
-    continue-on-error: true
+    # BLOQUANT depuis le 2026-09-18. Il a été informatif (`continue-on-error`)
+    # tant que le portage Linux n'avait pas commencé, et il est resté rouge
+    # deux fois des semaines durant sans que personne le voie : un run dont la
+    # couleur globale reste verte ne se regarde pas. Un rouge ici doit arrêter
+    # le run, comme sous Windows.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

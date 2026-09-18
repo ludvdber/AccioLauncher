@@ -10,6 +10,7 @@ le 2026-06-10 : il ne savait ni annuler, ni progresser, ni lire BCJ2.
 """
 
 import logging
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -81,15 +82,15 @@ def find_7z_exe() -> str | None:
     for p in candidates:
         if p.exists():
             return str(p)
-    try:
-        subprocess.run(
-            ["7z"], capture_output=True, timeout=5,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
-        )
-        return "7z"
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    return None
+    # Sous Windows, on s'arrête là. L'ancien repli lançait « 7z » par son SEUL
+    # nom, donc cherché d'abord dans le dossier de l'exe appelant — souvent
+    # Téléchargements (cf. `win_utils.commande_systeme`) — pour un cas qui
+    # n'arrive pas : l'exe embarqué est toujours là, en mode gelé comme en
+    # développement. Ailleurs, `shutil.which` rend un chemin ABSOLU trouvé
+    # dans le PATH, sans lancer quoi que ce soit.
+    if sys.platform == "win32":
+        return None
+    return shutil.which("7z")
 
 
 def list_7z_entries(archive: Path, exe: str) -> list[str]:
@@ -103,7 +104,9 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
     kwargs: dict = {}
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-    proc = subprocess.run(
+    # `exe` est un chemin absolu (`find_7z_exe`), l'archive est la nôtre ;
+    # liste d'arguments, aucun shell.
+    proc = subprocess.run(  # nosec B603
         [exe, "l", "-slt", "-ba", "-p", str(archive)],
         capture_output=True, text=True, errors="replace",
         timeout=_LIST_TIMEOUT_S, **kwargs,
@@ -186,7 +189,8 @@ def extract_7z_subprocess(
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
-    proc = subprocess.Popen(
+    # Même 7z.exe absolu que ci-dessus, liste d'arguments, aucun shell.
+    proc = subprocess.Popen(  # nosec B603
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         # stdin fermé, pour la même raison que le `-p` de `list_7z_entries` :
         # 7z.exe peut demander un mot de passe (archive à contenu chiffré) ou

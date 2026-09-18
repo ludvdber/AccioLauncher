@@ -1,0 +1,18 @@
+[bandit]
+# Bandit lit ce fichier tout seul quand on le lance avec `bandit -r .` : la
+# commande de la CI (security.yml) n'a rien à changer. Vérifié le 2026-09-18
+# avec bandit 1.9.4 — 61 signalements sans lui, et seulement ceux qui restent
+# à relire avec lui.
+#
+# Deux règles écartées, et seulement deux, parce qu'elles ne peuvent rien
+# signaler de vrai dans ce dépôt :
+#
+# B311 — « random n'est pas cryptographique ». Vrai, et sans objet : il ne sert
+#   qu'aux particules, aux étoiles du carrousel et à l'image de partage générée
+#   au build. tests/test_securite.py échoue si un AUTRE module l'importe :
+#   c'est ce test qui garde cette exclusion honnête.
+# B404 — « importer subprocess a des implications ». Un launcher lance des
+#   jeux. Chaque APPEL, lui, reste contrôlé (B603, B607) et porte un nosec
+#   motivé sur sa ligne : un appel ajouté demain fera échouer la CI tant que
+#   personne ne l'aura relu.
+skips = B311,B404

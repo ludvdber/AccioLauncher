@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 from src.core.config import ASSETS_DIR, Config
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
+from src.core.liens import DISCORD_URL, KOFI_URL
 from src.core.win_taskbar import TaskbarProgress
 from src.ui.carousel import Carousel
 from src.ui.download_bar import DownloadBar
@@ -187,6 +188,13 @@ class MainWindow(QMainWindow):
         # permanence à l'écran, donc le pire endroit pour un glyphe hors thème.
         self._btn_settings = self._commande("reglages", tr("Paramètres"), self._on_settings)
         self._btn_stats = self._commande("stats", tr("Statistiques"), self._on_stats)
+        # Le Discord n'était que dans Paramètres → À propos, que personne
+        # n'ouvre : l'exe circule de main en main, et qui l'a reçu d'un ami
+        # ignore qu'une communauté existe — et où demander de l'aide.
+        self._btn_discord = self._commande(
+            "discord", tr("Discord : aide et communauté"), lambda: open_url(DISCORD_URL))
+        # De droite à gauche, dans l'ordre où `_position_settings` les pose.
+        self._commandes = (self._btn_settings, self._btn_stats, self._btn_discord)
 
         # Event filter on QApplication for global mouse tracking
         QApplication.instance().installEventFilter(self)
@@ -574,13 +582,15 @@ class MainWindow(QMainWindow):
                 tr("Retour de {} — Bon jeu !").format(game_name))
         else:
             # Un toast et non la barre de statut : la fenêtre vient de
-            # reparaître, l'œil est sur la fiche. Rien d'actionnable n'est
-            # promis — on ignore POURQUOI, et inventer un remède serait pire.
+            # reparaître, l'œil est sur la fiche. On ignore POURQUOI le jeu
+            # n'a pas démarré, et inventer un remède serait pire — mais on sait
+            # QUI peut aider. Deux lignes : sur une seule, le nom le plus long
+            # du catalogue ferait dépasser le toast d'une fenêtre de 980 px.
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
             self._toast.show_message(
-                tr("{} s'est fermé aussitôt — le jeu n'a pas démarré.").format(
-                    game_name),
-                duration_ms=8000)
+                tr("{} s'est fermé aussitôt — le jeu n'a pas démarré.").format(game_name)
+                + "\n" + tr("Besoin d'aide ? Cliquez ici pour ouvrir le Discord."),
+                duration_ms=12000, on_click=lambda: open_url(DISCORD_URL))
         # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh
         # sans transition) : le temps de cette partie vient d'être enregistré.
         if self._detail.game is not None:
@@ -609,7 +619,7 @@ class MainWindow(QMainWindow):
         self._toast.show_message(
             tr("Déjà 2 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici."),
             duration_ms=9000,
-            on_click=lambda: open_url("https://ko-fi.com/ludovic01"),
+            on_click=lambda: open_url(KOFI_URL),
         )
 
     # ──────────────────── Slots UI ────────────────────
@@ -751,7 +761,7 @@ class MainWindow(QMainWindow):
         invisible et incliquable.
         """
         decalage = self._notif_bar.height() if self._notif_bar.isVisible() else 0
-        for i, bouton in enumerate((self._btn_settings, self._btn_stats)):
+        for i, bouton in enumerate(self._commandes):
             bouton.move(self.width() - 52 - i * 44, 42 + decalage)
             bouton.raise_()
 
@@ -809,8 +819,8 @@ class MainWindow(QMainWindow):
         """
         self._carousel.setVisible(not actif)
         self._status_bar.setVisible(not actif)
-        self._btn_settings.setVisible(not actif)
-        self._btn_stats.setVisible(not actif)
+        for bouton in self._commandes:
+            bouton.setVisible(not actif)
         self._particles.setVisible(not actif)
         self._download_bar.setVisible(
             not actif and self._download_bar.current_game is not None)

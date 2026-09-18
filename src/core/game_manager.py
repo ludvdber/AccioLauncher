@@ -314,7 +314,9 @@ class GameManager:
         # écran de 2560×1440. None quand le jeu ne le déclare pas (six sur
         # huit) et hors Windows : le jeu hérite alors simplement du nôtre.
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
-        return subprocess.Popen([str(exe_path)], **popen_kwargs)
+        # Chemin absolu : dossier d'installation + `executable`, validé au
+        # parsing du catalogue (ni `..`, ni racine, ni lecteur). Aucun shell.
+        return subprocess.Popen([str(exe_path)], **popen_kwargs)  # nosec B603
 
     def apply_pre_launch_patches(self, game: GameData) -> None:
         """Façade rétro-compat — délègue à pre_launch.apply_ini_patches."""

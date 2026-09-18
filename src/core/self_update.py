@@ -12,6 +12,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from src.core.win_utils import commande_systeme, dossier_systeme
+
 log = logging.getLogger(__name__)
 
 
@@ -75,8 +77,9 @@ def _spawn_after_exit_bat(body: str, prefix: str,
     bat_content = (
         "@echo off\r\n"
         ":wait\r\n"
-        f'tasklist /FI "PID eq {pid}" 2>nul | find "{pid}" >nul && (\r\n'
-        "    ping -n 2 127.0.0.1 >nul\r\n"
+        f'"%ACCIO_SYS%\\tasklist.exe" /FI "PID eq {pid}" 2>nul'
+        f' | "%ACCIO_SYS%\\find.exe" "{pid}" >nul && (\r\n'
+        '    "%ACCIO_SYS%\\PING.EXE" -n 2 127.0.0.1 >nul\r\n'
         "    goto wait\r\n"
         ")\r\n"
         f"{body}"
@@ -100,13 +103,20 @@ def _spawn_after_exit_bat(body: str, prefix: str,
         # .bat survit à la mort du parent (vérifié par la même simulation).
         # env nettoyé : le .bat (puis le `start` qu'il contient) ne doit PAS
         # transmettre l'état du bootloader PyInstaller au processus relancé.
-        subprocess.Popen(
-            ["cmd", "/c", bat_path],
+        # cmd.exe par son chemin système, et `%ACCIO_SYS%` pour ce que le .bat
+        # appelle lui-même : un programme nommé seul est cherché dans le
+        # dossier de l'exe appelant, puis dans le dossier courant, avant
+        # System32 — souvent Téléchargements (cf. `commande_systeme`). `move`,
+        # `start` et `del` sont internes à cmd : rien à résoudre. Liste
+        # d'arguments, aucun shell.
+        variables = {"ACCIO_SYS": dossier_systeme(), **(variables or {})}
+        subprocess.Popen(  # nosec B603
+            [commande_systeme("cmd.exe"), "/c", bat_path],
             creationflags=_DRAPEAUX_DETACHE,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            env=_clean_pyinstaller_env() | (variables or {}),
+            env=_clean_pyinstaller_env() | variables,
         )
     except UnicodeEncodeError as exc:
         log.error("Corps de script non-ASCII (les chemins doivent passer par "
@@ -166,7 +176,9 @@ def relaunch_after_exit() -> bool:
             log.info("Relance du launcher programmée")
         return ok
     try:
-        subprocess.Popen([sys.executable] + sys.argv, env=_clean_pyinstaller_env())
+        # Mode développement : l'interpréteur courant, par son chemin absolu.
+        subprocess.Popen([sys.executable] + sys.argv,  # nosec B603
+                         env=_clean_pyinstaller_env())
         return True
     except OSError as exc:
         log.error("Impossible de relancer le launcher : %s", exc)

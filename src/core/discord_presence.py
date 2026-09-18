@@ -31,11 +31,11 @@ import time
 import uuid
 
 from src.core.i18n import tr
+from src.core.liens import SITE_URL
 
 log = logging.getLogger(__name__)
 
 DISCORD_CLIENT_ID = "1524077874087330007"  # TODO(Ludo) : coller l'Application ID Discord ici
-WEBSITE_URL = "https://acciolauncher.be/"
 
 _OP_HANDSHAKE = 0
 _OP_FRAME = 1
@@ -52,7 +52,9 @@ def _open_ipc():
         return None
     # Linux / macOS : socket Unix dans XDG_RUNTIME_DIR (fallback /tmp)
     import socket
-    base = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    # `/tmp` est le dernier emplacement où le client Discord lui-même pose
+    # son socket. On s'y CONNECTE seulement, sans rien y créer.
+    base = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"  # nosec B108
     for i in range(10):
         try:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -92,7 +94,7 @@ class DiscordPresence:
             "details": tr("Joue à {}").format(game_name),
             "timestamps": {"start": int(time.time())},
             "buttons": [
-                {"label": tr("Découvrir Accio Launcher"), "url": WEBSITE_URL},
+                {"label": tr("Découvrir Accio Launcher"), "url": SITE_URL},
             ],
         }))
 

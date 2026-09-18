@@ -63,6 +63,26 @@ def _jamais_d_elevation_uac(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _langue_retablie():
+    """La langue de l'interface est un état GLOBAL : on la rend après chaque test.
+
+    Construire une `MainWindow` appelle `set_language(config.langue)`, et le
+    défaut de `Config.langue` est l'ANGLAIS. Une fixture qui oublie
+    `langue="fr"` bascule donc toute la suite en anglais, et ce sont des tests
+    SANS RAPPORT, plusieurs fichiers plus loin, qui échouent sur « part 2/3 »
+    au lieu de « partie 2/3 ». Payé le 2026-09-18 : un build arrêté par deux
+    échecs qui accusaient la barre de téléchargement et le téléchargeur, pour
+    une fixture oubliée dans un fichier voisin. Plusieurs fichiers rétablissaient
+    déjà le français à la main ; la garde vaut désormais pour tous.
+    """
+    from src.core.i18n import get_language, set_language
+    avant = get_language()
+    yield
+    if get_language() != avant:
+        set_language(avant)
+
+
 @pytest.fixture
 def registre_atteignable(monkeypatch):
     """Un registre présent, quelle que soit la plateforme qui joue la suite.
