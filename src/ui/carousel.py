@@ -1,6 +1,5 @@
 """Carrousel de jeux : bande horizontale avec étoiles scintillantes et transitions."""
 
-import logging
 import math
 import random
 
@@ -15,7 +14,6 @@ from src.ui.theme import accent_qcolor
 from src.ui.ticker import Ticker
 from src.ui import theme
 
-log = logging.getLogger(__name__)
 
 # Hauteur de la bande. Elle est la CONTRAINTE : la vignette s'y plie
 # (`carousel_item.vignette_pour`), jamais l'inverse. 192 px redonnent la
@@ -119,7 +117,6 @@ class Carousel(QWidget):
             self._update_depths()
             self.refresh_indicators()
 
-        log.debug("Carousel — %d items, %d stars", len(self._items), len(self._stars))
 
     def _tick_stars(self) -> None:
         self._star_flip = not self._star_flip

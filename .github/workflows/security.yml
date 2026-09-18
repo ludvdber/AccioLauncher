@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           # La version du build (build.bat) et de tests.yml : c'est sous elle
           # que les dépendances sont résolues, donc elle que l'audit doit voir.

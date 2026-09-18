@@ -14,13 +14,14 @@ extérieur qu'il faut échapper.
 
 from html import escape
 
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
-from src.core.config import APP_VERSION
+from src.core import diagnostic
+from src.core.config import APP_VERSION, LOG_DIR
 from src.core.i18n import tr, translator_credits
 from src.core.liens import DISCORD_URL, KOFI_URL, SITE_URL
 from src.ui.icon_button import pixmap_icone
@@ -173,7 +174,59 @@ def _remerciements(contributeurs) -> list[QWidget]:
     return widgets
 
 
-def construire(contributeurs) -> QWidget:
+# Durée pendant laquelle le bouton confirme la copie avant de reprendre son
+# libellé. Assez longue pour être lue, assez courte pour ne pas faire croire
+# que la copie est un état.
+_CONFIRMATION_MS = 4000
+
+
+def texte_diagnostic(manager) -> str:
+    """Le bloc de diagnostic complet : écrans et journal lus ici, le reste en core."""
+    ecrans = [diagnostic.ecran(e.size().width(), e.size().height(), e.devicePixelRatio())
+              for e in QGuiApplication.screens()]
+    try:
+        journal = (LOG_DIR / "accio_launcher.log").read_text(
+            encoding="utf-8", errors="replace")
+    except OSError:
+        journal = ""
+    return diagnostic.rapport(manager, ecrans=ecrans, journal=journal)
+
+
+def _bouton_diagnostic(manager) -> QPushButton:
+    """« Copier les informations de diagnostic » — la réponse à la première
+    question de tout dépannage sur le Discord (version, Windows, jeux, erreurs),
+    sans rien avoir à dicter. Rien n'est envoyé : c'est le presse-papiers, et
+    la personne voit ce qu'elle colle.
+    """
+    libelle = tr("Copier les informations de diagnostic")
+    btn = QPushButton(libelle)
+    btn.setObjectName("btnPath")
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    # La confirmation est plus longue que le libellé : le bouton ne doit pas
+    # changer de largeur sous le curseur.
+    confirmation = tr("Copié — collez-le sur le Discord")
+    fm = btn.fontMetrics()
+    btn.setMinimumWidth(max(fm.horizontalAdvance(libelle),
+                            fm.horizontalAdvance(confirmation)) + 40)
+
+    # Minuteur POSSÉDÉ par le bouton : il meurt avec lui (fermer les Paramètres
+    # pendant la confirmation ne laisse rien viser un widget détruit), et un
+    # second clic remet le délai à zéro au lieu d'en armer un deuxième.
+    retour = QTimer(btn)
+    retour.setSingleShot(True)
+    retour.setInterval(_CONFIRMATION_MS)
+    retour.timeout.connect(lambda: btn.setText(libelle))
+
+    def copier():
+        QGuiApplication.clipboard().setText(texte_diagnostic(manager))
+        btn.setText(confirmation)
+        retour.start()
+
+    btn.clicked.connect(copier)
+    return btn
+
+
+def construire(contributeurs, manager=None) -> QWidget:
     """La page complète, prête à entrer dans le QStackedWidget des Paramètres."""
     rangee = QHBoxLayout()
     rangee.setSpacing(10)
@@ -204,6 +257,14 @@ def construire(contributeurs) -> QWidget:
     version.setObjectName("subtitle")
     lay.addWidget(version)
     lay.addLayout(rangee)
+    if manager is not None:
+        lay.addWidget(_sous_titre(tr(
+            "Un souci ? Ces informations aident à vous dépanner sur le Discord : "
+            "version, Windows, jeux installés, dernières erreurs. Rien de personnel.")))
+        ligne = QHBoxLayout()
+        ligne.addWidget(_bouton_diagnostic(manager))
+        ligne.addStretch()
+        lay.addLayout(ligne)
     for w in _remerciements(contributeurs):
         lay.addWidget(w)
     lay.addStretch()

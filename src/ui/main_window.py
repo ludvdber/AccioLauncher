@@ -617,7 +617,7 @@ class MainWindow(QMainWindow):
         self.config.kofi_milestone_thanked = True
         self.config.save()
         self._toast.show_message(
-            tr("Déjà 2 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici."),
+            tr("Déjà 2 h de magie retrouvée. Si le launcher vous plaît, un café fait plaisir — cliquez ici."),
             duration_ms=9000,
             on_click=lambda: open_url(KOFI_URL),
         )

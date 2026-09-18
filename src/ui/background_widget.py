@@ -1,6 +1,5 @@
 """BackgroundWidget — image de fond avec zoom cinématique et parallaxe."""
 
-import logging
 import math
 from pathlib import Path
 
@@ -13,7 +12,6 @@ from PyQt6.QtWidgets import QSizePolicy, QWidget
 from src.ui.ticker import TICK_MS, Ticker
 from src.ui import theme
 
-log = logging.getLogger(__name__)
 
 # Hauteur du raccord entre le bas de la fiche et le haut du carrousel.
 # Assez long pour que la transition soit invisible, assez court pour ne pas

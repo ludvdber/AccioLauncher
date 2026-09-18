@@ -11,9 +11,12 @@ import logging
 import sys
 import traceback
 import urllib.parse
-from pathlib import Path
 
 from src.core.config import APP_VERSION
+# `scrub_user_paths` vit désormais dans `diagnostic` (le bouton « Copier les
+# informations de diagnostic » en a besoin aussi) ; réexporté ici pour les
+# appelants existants.
+from src.core.diagnostic import identite, scrub_user_paths  # noqa: F401
 
 log = logging.getLogger(__name__)
 
@@ -22,14 +25,6 @@ _LOG_TAIL_LINES = 40
 # Les URLs ont une longueur max pratique (~2000) — le corps d'issue est tronqué,
 # le rapport complet passe par « Copier le rapport ».
 _MAX_ISSUE_BODY = 1500
-
-
-def scrub_user_paths(text: str) -> str:
-    """Remplace le dossier personnel par ~ (ne pas exposer le nom d'utilisateur)."""
-    home = str(Path.home())
-    for variant in (home, home.replace("\\", "/"), home.replace("\\", "\\\\")):
-        text = text.replace(variant, "~")
-    return text
 
 
 def _read_log_tail() -> str:
@@ -47,8 +42,7 @@ def _read_log_tail() -> str:
 def build_crash_report(exc_text: str, log_tail: str = "") -> str:
     """Assemble le rapport (version, OS, traceback, queue de log), chemins anonymisés."""
     parts = [
-        f"Accio Launcher v{APP_VERSION}",
-        f"Python {sys.version.split()[0]} — {sys.platform}",
+        identite(),
         "",
         "── Erreur ──",
         exc_text.rstrip(),

@@ -95,7 +95,6 @@
     "Installation incomplète": "Instalación incompleta",
     "L'installation semble incomplète : l'exécutable du jeu est introuvable.\nL'archive est peut-être corrompue.": "La instalación parece incompleta: no se encuentra el ejecutable del juego.\nEs posible que el archivo esté dañado.",
     "Échec du téléchargement": "Error en la descarga",
-    "Le téléchargement a échoué.\nVérifiez votre connexion internet et réessayez.": "La descarga ha fallado.\nComprueba tu conexión a internet e inténtalo de nuevo.",
     "Échec de l'installation": "Error en la instalación",
     "L'installation a échoué.\nL'archive est peut-être corrompue. Réessayez le téléchargement.": "La instalación ha fallado.\nEs posible que el archivo esté dañado. Prueba a descargarlo de nuevo.",
     "Erreur d'installation : {}": "Error de instalación: {}",
@@ -265,7 +264,7 @@
     "Fichiers du jeu": "Archivos del juego",
     "Ouvrir le dossier du jeu": "Abrir la carpeta del juego",
     "Dossier introuvable — le jeu a peut-être été déplacé.": "Carpeta no encontrada: puede que el juego se haya movido.",
-    "Déjà 2 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici.": "Ya llevas 2 h de magia. Si te gusta el launcher, un café siempre se agradece — haz clic aquí.",
+    "Déjà 2 h de magie retrouvée. Si le launcher vous plaît, un café fait plaisir — cliquez ici.": "Ya llevas 2 h de magia. Si te gusta el launcher, un café siempre se agradece — haz clic aquí.",
     "Activer le son des bandes-annonces": "Activar el sonido de los tráileres",
     "{} restants": "{} restantes",
     "Remerciements": "Agradecimientos",
@@ -297,6 +296,19 @@
     "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "Se han conservado {}: vuelve a iniciar para reanudar donde se detuvo.",
     "Ouvrir le Discord": "Abrir el Discord",
     "Discord : aide et communauté": "Discord: ayuda y comunidad",
-    "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "¿Necesitas ayuda? Haz clic aquí para abrir el Discord."
+    "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "¿Necesitas ayuda? Haz clic aquí para abrir el Discord.",
+    "Copier les informations de diagnostic": "Copiar la información de diagnóstico",
+    "Copié — collez-le sur le Discord": "Copiado — pégalo en el Discord",
+    "Un souci ? Ces informations aident à vous dépanner sur le Discord : version, Windows, jeux installés, dernières erreurs. Rien de personnel.": "¿Algún problema? Esta información ayuda a solucionarlo en el Discord: versión, Windows, juegos instalados, últimos errores. Nada personal.",
+    "La connexion a été interrompue.\nVérifiez votre connexion internet et réessayez.": "Se interrumpió la conexión.\nComprueba tu conexión a internet e inténtalo de nuevo.",
+    "Le disque est plein.\nLibérez de la place, ou choisissez un autre dossier d'installation dans les Paramètres.": "El disco está lleno.\nLibera espacio o elige otra carpeta de instalación en los Ajustes.",
+    "Votre antivirus a bloqué le fichier téléchargé.\nConsultez sa quarantaine, puis réessayez.": "Tu antivirus bloqueó el archivo descargado.\nRevisa su cuarentena y vuelve a intentarlo.",
+    "Windows a refusé l'accès au fichier téléchargé — le plus souvent un antivirus en train de l'analyser.\nRéessayez dans un instant ; si ça recommence, choisissez un autre dossier dans les Paramètres.": "Windows denegó el acceso al archivo descargado — casi siempre un antivirus que lo está analizando.\nInténtalo de nuevo en un momento; si vuelve a pasar, elige otra carpeta en los Ajustes.",
+    "Le fichier reçu était abîmé, à chaque essai.\nCela vient souvent d'un proxy, d'un antivirus qui inspecte les téléchargements ou d'une connexion instable. Réessayez plus tard.": "El archivo llegó dañado en cada intento.\nSuele deberse a un proxy, a un antivirus que inspecciona las descargas o a una conexión inestable. Inténtalo más tarde.",
+    "Le serveur a envoyé un fichier plus gros que prévu, refusé par sécurité.\nRéessayez plus tard ; si ça recommence, signalez-le sur le Discord.": "El servidor envió un archivo más grande de lo previsto, rechazado por seguridad.\nInténtalo más tarde; si vuelve a pasar, avísanos en el Discord.",
+    "Le fichier n'est plus sur le serveur (erreur {}).\nRelancez le launcher pour récupérer le catalogue à jour.": "El archivo ya no está en el servidor (error {}).\nReinicia el launcher para obtener el catálogo actualizado.",
+    "Le serveur limite les téléchargements pour le moment (erreur {}).\nRéessayez dans quelques minutes.": "El servidor está limitando las descargas en este momento (error {}).\nInténtalo de nuevo en unos minutos.",
+    "Le serveur de téléchargement a répondu par une erreur ({}).\nRéessayez plus tard.": "El servidor de descarga respondió con un error ({}).\nInténtalo más tarde.",
+    "Le téléchargement a échoué.\nRéessayez ; si ça recommence, le Discord peut vous aider.": "La descarga falló.\nInténtalo de nuevo; si vuelve a pasar, el Discord puede ayudarte."
   }
 }

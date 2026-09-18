@@ -268,8 +268,11 @@ class UpdateDispatcher(QObject):
             # Mode dev / échec du script : retomber sur la page release.
             open_url(self.url)
 
-    def _on_error(self, message: str) -> None:
-        log.warning("Échec du téléchargement de la mise à jour : %s", message)
+    def _on_error(self, message: str, echec=None) -> None:
+        # La cause part dans le journal : la page de release s'ouvre de toute
+        # façon, mais « disque plein » et « connexion » ne se dépannent pas pareil.
+        log.warning("Échec du téléchargement de la mise à jour (%s) : %s",
+                    echec.cause if echec is not None else "?", message)
         self._download = None
         self.launcher_busy.emit(False)
         self.launcher_message.emit(

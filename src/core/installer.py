@@ -76,7 +76,7 @@ class Installer(QThread):
 
     def run(self) -> None:
         """Boucle principale : extraction → post-install → nettoyage."""
-        log.debug("Installation démarrée : archive=%s, destination=%s",
+        log.info("Installation démarrée : archive=%s, destination=%s",
                   self.archive_path, self.destination)
         try:
             self.destination.mkdir(parents=True, exist_ok=True)

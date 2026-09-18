@@ -207,7 +207,7 @@ class SettingsDialog(QDialog):
         self._pages.addWidget(self._page_downloads())
         self._pages.addWidget(self._page_integrations())
         self._pages.addWidget(about_page.construire(
-            self.manager.catalog.contributors))
+            self.manager.catalog.contributors, manager=self.manager))
         body.addWidget(self._pages, stretch=1)
         root.addLayout(body, stretch=1)
 

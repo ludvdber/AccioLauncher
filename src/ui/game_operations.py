@@ -7,6 +7,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.core import stats
 from src.core.downloader import Downloader
+from src.core.echecs import Echec, explication
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -392,7 +393,7 @@ class GameOperations(QObject):
         self._phase = ""
         return game, version
 
-    def _on_download_error(self, message: str) -> None:
+    def _on_download_error(self, message: str, echec: Echec | None = None) -> None:
         if self._downloader is not None:
             self._disconnect_downloader(self._downloader)
         self._downloader = None
@@ -405,7 +406,9 @@ class GameOperations(QObject):
         self.status_message.emit(tr("Erreur : {}").format(message))
         self.operation_error.emit(
             tr("Échec du téléchargement"),
-            tr("Le téléchargement a échoué.\nVérifiez votre connexion internet et réessayez."),
+            # La VRAIE cause, puis ce qui est conservé sur le disque. Le texte
+            # d'avant accusait la connexion quoi qu'il arrive, disque plein compris.
+            explication(echec or Echec()),
         )
 
     def _on_part_info(self, current: int, total: int) -> None:

@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from src.core.echecs import Echec, EmpreinteInvalide, TailleDepassee, cause_de
 from src.core.formatting import format_bytes
 from src.core.i18n import tr
 
@@ -83,7 +84,10 @@ class Downloader(QThread):
     # NB : pas `finished` — ça masquerait le signal natif QThread.finished
     # (utilisé par GameOperations pour le nettoyage différé des threads annulés).
     download_finished = pyqtSignal(str)  # chemin du fichier téléchargé
-    error = pyqtSignal(str)              # message d'erreur
+    # (message pour la barre de statut, `echecs.Echec` : cause + octets conservés).
+    # La boîte d'échec affichait « vérifiez votre connexion » quelle que soit
+    # la cause ; elle a maintenant de quoi dire la vraie.
+    error = pyqtSignal(str, object)
     part_info = pyqtSignal(int, int)     # (part_courante, total_parts) — multi-parts uniquement
     verifying = pyqtSignal()             # vérification SHA-256 d'un fichier complet en cours
 
@@ -177,10 +181,11 @@ class Downloader(QThread):
             elif self.url:
                 self._run_single()
             else:
-                self.error.emit("Aucune URL de téléchargement.")
+                self.error.emit("Aucune URL de téléchargement.", Echec())
         except Exception as exc:
             log.exception("Erreur inattendue dans le downloader")
-            self.error.emit(f"Erreur : {exc}")
+            cause, code = cause_de(exc)
+            self.error.emit(f"Erreur : {exc}", Echec(cause, code_http=code))
 
     # ─── Téléchargement simple (fichier unique) ───
 
@@ -190,12 +195,13 @@ class Downloader(QThread):
         try:
             _validate_url(self.url)
         except ValueError as exc:
-            self.error.emit(str(exc))
+            self.error.emit(str(exc), Echec())
             return
 
         part_path = self.destination.with_suffix(self.destination.suffix + ".part")
         part_path.parent.mkdir(parents=True, exist_ok=True)
 
+        derniere: BaseException | None = None
         for attempt in range(1, MAX_RETRIES + 1):
             if self._cancelled:
                 return
@@ -211,20 +217,23 @@ class Downloader(QThread):
                     log.error("SHA-256 invalide pour %s : attendu %s, obtenu %s",
                               part_path, self.expected_sha256, digest)
                     part_path.unlink(missing_ok=True)
-                    raise OSError("empreinte SHA-256 invalide (fichier corrompu)")
+                    raise EmpreinteInvalide("empreinte SHA-256 invalide (fichier corrompu)")
                 part_path.replace(self.destination)
                 log.info("Téléchargement terminé : %s", self.destination)
                 self.download_finished.emit(str(self.destination))
                 return
             except (httpx.HTTPError, OSError) as exc:
+                derniere = exc
                 log.warning("Tentative %d/%d échouée : %s", attempt, MAX_RETRIES, exc)
                 if attempt < MAX_RETRIES:
                     wait = BACKOFF_BASE * (2 ** (attempt - 1))
                     time.sleep(wait)
 
+        conserves = self._octets_presents(part_path)
+        cause, code = cause_de(derniere)
         self.error.emit(self._message_echec(
-            tr("Échec du téléchargement après plusieurs tentatives."),
-            self._octets_presents(part_path)))
+            tr("Échec du téléchargement après plusieurs tentatives."), conserves),
+            Echec(cause, conserves, code))
 
     # ─── Téléchargement multi-parts ───
 
@@ -270,7 +279,7 @@ class Downloader(QThread):
             try:
                 _validate_url(url)
             except ValueError as exc:
-                self.error.emit(str(exc))
+                self.error.emit(str(exc), Echec())
                 return
 
         total_parts = len(self.parts)
@@ -295,6 +304,7 @@ class Downloader(QThread):
                 if i < len(self.expected_sha256_parts) else None
             )
 
+            derniere: BaseException | None = None
             for attempt in range(1, MAX_RETRIES + 1):
                 if self._cancelled:
                     return
@@ -319,11 +329,12 @@ class Downloader(QThread):
                         log.error("SHA-256 invalide pour %s : attendu %s, obtenu %s",
                                   part_tmp, expected_part_hash, digest)
                         part_tmp.unlink(missing_ok=True)
-                        raise OSError("empreinte SHA-256 invalide (part corrompue)")
+                        raise EmpreinteInvalide("empreinte SHA-256 invalide (part corrompue)")
                     part_tmp.replace(part_dest)
                     log.info("Part %d/%d terminée : %s", i + 1, total_parts, part_dest)
                     break
                 except (httpx.HTTPError, OSError) as exc:
+                    derniere = exc
                     log.warning("Part %d tentative %d/%d échouée : %s", i + 1, attempt, MAX_RETRIES, exc)
                     if attempt < MAX_RETRIES:
                         wait = BACKOFF_BASE * (2 ** (attempt - 1))
@@ -334,10 +345,12 @@ class Downloader(QThread):
                 # Les volumes DÉJÀ complets restent : sur HP5 (4,6 Go en huit
                 # parts), échouer sur la septième ne coûte pas les six
                 # premières — encore faut-il le dire.
+                conserves = self._octets_presents(*part_paths)
+                cause, code = cause_de(derniere)
                 self.error.emit(self._message_echec(
                     tr("Échec du téléchargement de la partie {}/{}.").format(
-                        i + 1, total_parts),
-                    self._octets_presents(*part_paths)))
+                        i + 1, total_parts), conserves),
+                    Echec(cause, conserves, code))
                 return
 
         if self._cancelled:
@@ -381,7 +394,7 @@ class Downloader(QThread):
         serait alors devenu une porte dérobée pour un fichier surdimensionné.
         """
         if self._max_total_bytes and total > self._max_total_bytes:
-            raise OSError(
+            raise TailleDepassee(
                 f"Taille annoncée ({total} octets) dépasse la limite "
                 f"({self._max_total_bytes} octets)"
             )
@@ -408,7 +421,7 @@ class Downloader(QThread):
                     hasher.update(chunk)
                 downloaded += len(chunk)
                 if self._max_total_bytes and downloaded > self._max_total_bytes:
-                    raise OSError(
+                    raise TailleDepassee(
                         f"Téléchargement dépasse la limite ({downloaded} > "
                         f"{self._max_total_bytes} octets)"
                     )

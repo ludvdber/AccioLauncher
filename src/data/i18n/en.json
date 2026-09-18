@@ -95,7 +95,6 @@
     "Installation incomplète": "Incomplete installation",
     "L'installation semble incomplète : l'exécutable du jeu est introuvable.\nL'archive est peut-être corrompue.": "The installation looks incomplete: the game executable is missing.\nThe archive may be corrupted.",
     "Échec du téléchargement": "Download failed",
-    "Le téléchargement a échoué.\nVérifiez votre connexion internet et réessayez.": "The download failed.\nCheck your internet connection and try again.",
     "Échec de l'installation": "Installation failed",
     "L'installation a échoué.\nL'archive est peut-être corrompue. Réessayez le téléchargement.": "The installation failed.\nThe archive may be corrupted. Try downloading again.",
     "Erreur d'installation : {}": "Installation error: {}",
@@ -265,7 +264,7 @@
     "Fichiers du jeu": "Game files",
     "Ouvrir le dossier du jeu": "Open game folder",
     "Dossier introuvable — le jeu a peut-être été déplacé.": "Folder not found — the game may have been moved.",
-    "Déjà 2 h de magie retrouvée. Si le launcher te plaît, un café fait plaisir — clique ici.": "2 hours of magic already. If you like the launcher, a coffee is always welcome — click here.",
+    "Déjà 2 h de magie retrouvée. Si le launcher vous plaît, un café fait plaisir — cliquez ici.": "2 hours of magic already. If you like the launcher, a coffee is always welcome — click here.",
     "Activer le son des bandes-annonces": "Enable trailer sound",
     "{} restants": "{} left",
     "Remerciements": "Thanks",
@@ -297,6 +296,19 @@
     "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "{} have been kept: start again to resume where it stopped.",
     "Ouvrir le Discord": "Open the Discord",
     "Discord : aide et communauté": "Discord: help and community",
-    "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "Need help? Click here to open the Discord."
+    "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "Need help? Click here to open the Discord.",
+    "Copier les informations de diagnostic": "Copy diagnostic information",
+    "Copié — collez-le sur le Discord": "Copied — paste it on the Discord",
+    "Un souci ? Ces informations aident à vous dépanner sur le Discord : version, Windows, jeux installés, dernières erreurs. Rien de personnel.": "Having trouble? This information helps us fix it on the Discord: version, Windows, installed games, latest errors. Nothing personal.",
+    "La connexion a été interrompue.\nVérifiez votre connexion internet et réessayez.": "The connection was interrupted.\nCheck your internet connection and try again.",
+    "Le disque est plein.\nLibérez de la place, ou choisissez un autre dossier d'installation dans les Paramètres.": "The disk is full.\nFree up some space, or choose another install folder in Settings.",
+    "Votre antivirus a bloqué le fichier téléchargé.\nConsultez sa quarantaine, puis réessayez.": "Your antivirus blocked the downloaded file.\nCheck its quarantine, then try again.",
+    "Windows a refusé l'accès au fichier téléchargé — le plus souvent un antivirus en train de l'analyser.\nRéessayez dans un instant ; si ça recommence, choisissez un autre dossier dans les Paramètres.": "Windows denied access to the downloaded file — most often an antivirus scanning it.\nTry again in a moment; if it happens again, choose another folder in Settings.",
+    "Le fichier reçu était abîmé, à chaque essai.\nCela vient souvent d'un proxy, d'un antivirus qui inspecte les téléchargements ou d'une connexion instable. Réessayez plus tard.": "The file arrived damaged on every attempt.\nThis often comes from a proxy, an antivirus inspecting downloads, or an unstable connection. Try again later.",
+    "Le serveur a envoyé un fichier plus gros que prévu, refusé par sécurité.\nRéessayez plus tard ; si ça recommence, signalez-le sur le Discord.": "The server sent a larger file than expected, rejected for safety.\nTry again later; if it happens again, report it on the Discord.",
+    "Le fichier n'est plus sur le serveur (erreur {}).\nRelancez le launcher pour récupérer le catalogue à jour.": "The file is no longer on the server (error {}).\nRestart the launcher to get the updated catalogue.",
+    "Le serveur limite les téléchargements pour le moment (erreur {}).\nRéessayez dans quelques minutes.": "The server is limiting downloads right now (error {}).\nTry again in a few minutes.",
+    "Le serveur de téléchargement a répondu par une erreur ({}).\nRéessayez plus tard.": "The download server returned an error ({}).\nTry again later.",
+    "Le téléchargement a échoué.\nRéessayez ; si ça recommence, le Discord peut vous aider.": "The download failed.\nTry again; if it happens again, the Discord can help."
   }
 }

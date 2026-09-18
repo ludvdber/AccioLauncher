@@ -1,5 +1,6 @@
 import logging
 import logging.handlers
+import os
 import sys
 import traceback
 
@@ -30,9 +31,22 @@ def _setup_logging() -> None:
         str(LOG_FILE), encoding="utf-8",
         maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT,
     )
-    file_handler.setLevel(logging.DEBUG)
+    # INFO dans l'exe, DEBUG depuis les sources. Le journal de l'exe est celui
+    # qu'on demande sur le Discord : en DEBUG, il racontait surtout le décor
+    # (une ligne par bouton reconstruit, une par perte de focus). Pour un cas
+    # difficile, ACCIO_JOURNAL=debug rend le détail sans republier.
+    detaille = (not getattr(sys, "frozen", False)
+                or os.environ.get("ACCIO_JOURNAL", "").lower() == "debug")
+    file_handler.setLevel(logging.DEBUG if detaille else logging.INFO)
     file_handler.setFormatter(fmt)
     root.addHandler(file_handler)
+
+    # En-tête de session : la version et le système. Hors ligne, la version
+    # n'apparaissait JAMAIS dans le journal (seule la vérification des mises à
+    # jour l'écrivait) — c'est pourtant la première question qu'on pose.
+    from src.core.diagnostic import identite
+    # ASCII : la console Windows est en cp1252 et refusait les filets « ─ ».
+    root.info("===== %s =====", identite())
 
     # httpcore déverse tous les en-têtes HTTP en DEBUG — il remplirait à lui
     # seul la rotation de 5 Mo ; httpx garde sa ligne INFO « HTTP Request: … ».
@@ -85,6 +99,12 @@ def main():
 
     try:
         app = QApplication(sys.argv)
+        # Écrans et mise à l'échelle : trois défauts de ce projet n'existaient
+        # qu'à 125 % (trait du carrousel, icônes rognées, fenêtre de HP7).
+        from src.core.diagnostic import ecran
+        log.info("Écrans : %s", " ; ".join(
+            ecran(e.size().width(), e.size().height(), e.devicePixelRatio())
+            for e in app.screens()))
 
         # La langue doit être active AVANT le premier texte affiché : le splash
         # apparaît bien avant MainWindow, qui appelait jusqu'ici set_language.
@@ -146,7 +166,22 @@ def main():
         _stats.enregistrer_demarrage()
         splash.set_statut(tr("Prêt"), 1.0)
         splash.finish(window)
-        sys.exit(app.exec())
+        code = app.exec()
+        # Sortie SANS finalisation de l'interpréteur. Pendant celle-ci, sip détruit
+        # les objets C++ restants dans un ordre qu'il ne maîtrise pas : mesuré le
+        # 2026-09-18, violation d'accès dans `sip.cp314-win_amd64.pyd` (offset
+        # 0x10726, aucune frame Python) à 2 fermetures sur 8 depuis les sources,
+        # et 5 fois dans le journal Windows depuis le 30 août, exe publié compris.
+        # Invisible — la fenêtre est déjà fermée — mais c'est un plantage à
+        # chaque fois. Rien n'est perdu à sauter cette étape : la config et les
+        # stats sont écrites dans `closeEvent`, les threads y sont arrêtés, le
+        # journal est vidé ici, et le dossier temporaire de l'exe est nettoyé
+        # par le processus parent de PyInstaller.
+        logging.shutdown()
+        for flux in (sys.stdout, sys.stderr):
+            if flux is not None:
+                flux.flush()
+        os._exit(code)
 
     except Exception as exc:
         log.critical("Erreur fatale au démarrage : %s", exc, exc_info=True)

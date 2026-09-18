@@ -7,7 +7,6 @@ Deux variantes :
 Pas de QGraphicsEffect — tout est dans paintEvent.
 """
 
-import logging
 import math
 
 from PyQt6.QtCore import Qt, QRectF
@@ -18,8 +17,6 @@ from PyQt6.QtWidgets import QPushButton, QWidget
 
 from src.ui import theme
 from src.ui.ticker import Ticker
-
-log = logging.getLogger(__name__)
 
 
 # Marge intérieure réservée au texte d'un GlowButton, en pixels logiques.
@@ -75,7 +72,6 @@ class GlowButton(QPushButton):
         self._ticking = False  # abonnement au ticker partagé (show/hide)
 
         self.setStyleSheet("QPushButton { background: transparent; border: none; }")
-        log.debug("[FX] GlowButton '%s' — style=%s, glow=%s", text, style, glow_color)
 
     def _animate(self) -> None:
         if not self.isVisible():

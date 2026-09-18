@@ -17,12 +17,10 @@ Le filtre est posé sur QApplication : il couvre aussi les dialogues et
 l'assistant de premier lancement, qui vivent avant MainWindow.
 """
 
-import logging
 
 from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtWidgets import QApplication, QWidget
 
-log = logging.getLogger(__name__)
 
 PROPRIETE = "focusClavier"
 
@@ -68,4 +66,3 @@ def install(app: QApplication) -> None:
         return
     _filtre = _FiltreFocus(app)
     app.installEventFilter(_filtre)
-    log.debug("[A11Y] anneau de focus limité au clavier")

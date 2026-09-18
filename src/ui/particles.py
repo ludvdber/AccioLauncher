@@ -124,7 +124,6 @@ class ParticleOverlay(QWidget):
 
         self.resume()
 
-        log.debug("[FX] ParticleOverlay — %d particules, ticker partagé, glow+oscillation", PARTICLE_COUNT)
 
     def apply_season(self, season: str) -> None:
         """Change la saison EN DIRECT : les particules sont re-semées au tick suivant."""

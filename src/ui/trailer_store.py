@@ -190,7 +190,7 @@ class TrailerStore(QObject):
         self._liberer()
         self._suivante()
 
-    def _on_error(self, message: str) -> None:
+    def _on_error(self, message: str, _echec=None) -> None:
         jeu = self._courante.game_id if self._courante is not None else "?"
         log.warning("Bande-annonce %s non téléchargée : %s", jeu, message)
         self._echecs += 1
