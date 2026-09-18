@@ -534,6 +534,7 @@ def _jeu_multilingue():
     return GameData.from_dict({**GAME_DICT, "id": "hp7a", "language_registry": _LANG_BLOCK})
 
 
+@pytest.mark.usefixtures("registre_atteignable")
 class TestLangueDeJeu:
     """La langue est une PRÉFÉRENCE, pas un fait d'installation.
 
@@ -672,6 +673,7 @@ class TestLangueDeJeu:
         assert m.launch_game("hp7a") is not None
 
 
+@pytest.mark.usefixtures("registre_atteignable")
 class TestDetectionDeLaLangue:
     """La ligne meta doit dire ce que le registre porte VRAIMENT.
 
@@ -752,6 +754,7 @@ class TestDetectionDeLaLangue:
         assert ecrire.call_args[0][2] == {"Language": "English", "Locale": "en_US"}
 
 
+@pytest.mark.usefixtures("registre_atteignable")
 class TestLanguesReellementInstallees:
     """Le registre SELECTIONNE une langue ; il ne l'installe pas.
 
@@ -818,6 +821,7 @@ class TestLanguesReellementInstallees:
             assert m.game_language(jeu) == "de"
 
 
+@pytest.mark.usefixtures("registre_atteignable")
 class TestValeursCommunes:
     """Certaines valeurs de la clé ne dépendent PAS de la langue.
 
@@ -845,9 +849,19 @@ class TestValeursCommunes:
         assert valeurs["Language"] == "English"     # la langue choisie
         assert "Install Dir" in valeurs             # ET la commune
 
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="sous Wine, « Install Dir » devra être un chemin Z:\\… — forme "
+               "à définir au portage Linux, pas un chemin POSIX à graver ici")
     def test_install_dir_est_substitue(self, tmp_path):
         """`%INSTALL_DIR%` doit devenir un VRAI chemin : c'est ce que le jeu
-        suivra pour trouver ses fichiers."""
+        suivra pour trouver ses fichiers.
+
+        Réservé à Windows, et c'est délibéré : sous Linux, `substitute_vars`
+        rend un chemin POSIX (`/…/HPTest/`), juste pour un fichier INI, faux
+        pour un registre que lira un jeu sous Wine. Exiger ici l'une ou
+        l'autre forme graverait un défaut. Le jour du portage, ce test
+        s'écrira pour de bon, avec la conversion en `Z:\\`."""
         jeu = self._jeu()
         m = _make_manager(tmp_path, [jeu])
         valeurs = m.valeurs_registre(jeu)

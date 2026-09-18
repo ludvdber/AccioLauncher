@@ -56,7 +56,7 @@ VSVersionInfo(
         StringStruct('FileDescription', 'Accio Launcher - launcher des jeux Harry Potter'),
         StringStruct('FileVersion', '{dotted}'),
         StringStruct('InternalName', 'AccioLauncher'),
-        StringStruct('LegalCopyright', 'Copyright (c) 2026 ASTeam. Licence MIT.'),
+        StringStruct('LegalCopyright', 'Copyright (c) 2026 ASTeam. Code MIT, binaire GPL v3.'),
         StringStruct('OriginalFilename', 'AccioLauncher.exe'),
         StringStruct('ProductName', 'Accio Launcher'),
         StringStruct('ProductVersion', '{dotted}')])

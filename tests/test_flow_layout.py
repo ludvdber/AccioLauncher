@@ -94,9 +94,15 @@ class TestInvalidation:
         # AMORCER le cache d'abord : sans cet appel il n'y a rien à périmer et
         # le test passerait même sans invalidation — il ne prouverait rien.
         amorce = lay.heightForWidth(300)
-        labels[0].setText(
-            "Un libellé nettement plus long que celui d'origine, "
-            "assez pour forcer un retour à la ligne supplémentaire")
+        # Un saut de ligne, et non un libellé plus LONG : la longueur ne crée
+        # une rangée de plus qu'avec les métriques de la police substituée sous
+        # Windows. Sous Linux (conteneur python:3.14-slim, avec ou sans DejaVu)
+        # la pastille allongée partait seule sur la première rangée, les cinq
+        # autres tenaient encore sur la seconde — 36 px avant, 36 px après, et
+        # le garde-fou ci-dessous échouait. Une pastille sur deux lignes
+        # relève la hauteur de SA rangée (`line_height` en prend le maximum),
+        # quelle que soit la police.
+        labels[0].setText("Un libellé devenu\nplus haut")
         qtbot.wait(1)
         assert lay.heightForWidth(300) == _direct(lay, 300)
         assert lay.heightForWidth(300) != amorce, (

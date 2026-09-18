@@ -61,3 +61,24 @@ def _jamais_d_elevation_uac(monkeypatch):
 
     monkeypatch.setattr("src.core.game_registry._ecrire_eleve", _interdit)
     yield
+
+
+@pytest.fixture
+def registre_atteignable(monkeypatch):
+    """Un registre présent, quelle que soit la plateforme qui joue la suite.
+
+    Les tests de LANGUE DE JEU exercent la logique qui décide quoi écrire
+    (choix, détection, défaut, valeurs communes, prévenance) en bouchonnant
+    lecture et écriture. Mais cette logique commence par demander à
+    `game_registry.disponible()` s'il y a un registre, et hors Windows la
+    réponse est non : sélecteur éteint, rien à écrire, par conception. Sans
+    cette fixture, la suite Linux ne testait donc pas une logique cassée — elle
+    testait l'ABSENCE de logique, et 25 tests échouaient pour de bon depuis le
+    2026-08-22 (job `linux-smoke`, rouge et non bloquant, donc vu de personne).
+
+    Le jour du portage, `disponible()` répondra oui sous Wine : ces tests
+    décrivent déjà ce qui devra marcher. `lire_valeurs` et `ecrire_valeurs`
+    gardent leur propre test de plateforme, donc forcer la réponse ici
+    n'atteint jamais `winreg` sous Linux.
+    """
+    monkeypatch.setattr("src.core.game_registry.disponible", lambda: True)

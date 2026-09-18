@@ -1102,6 +1102,7 @@ def make_window_multilingue(make_window, monkeypatch):
     return _make
 
 
+@pytest.mark.usefixtures("registre_atteignable")
 class TestSelecteurDeLangue:
     """La langue du jeu N'EST PLUS dans la ligne méta (Ludo, 2026-08-26).
 
@@ -1572,6 +1573,7 @@ class TestBalisageDuCatalogueJamaisInterprete:
         assert not fautifs, "appels statiques a QMessageBox (AutoText) : %s" % fautifs
 
 
+@pytest.mark.usefixtures("registre_atteignable")
 class TestEngrenageReglagesDuJeu:
     """La langue n'était atteignable que par le segment doré de la ligne méta.
 

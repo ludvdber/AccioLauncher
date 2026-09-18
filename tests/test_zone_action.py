@@ -73,9 +73,27 @@ def fenetre(qtbot, tmp_path, monkeypatch):
 
 
 def _stabiliser(qtbot, win) -> None:
-    """Laisse passer les `singleShot(0)` de `_fit_info_height`."""
-    for _ in range(4):
-        qtbot.wait(10)
+    """Attend que la fiche CESSE de bouger — une condition, pas une durée.
+
+    `_fit_info_height` se réarme par `singleShot(0)`, et le nombre de tours de
+    boucle qu'il lui faut dépend de la charge. Quatre attentes fixes de 10 ms
+    suffisaient fichier seul ; dans la suite complète sous Linux, une passe
+    est restée en vol UNE fois sur cinq (trou de 53 px au lieu de 27, jamais
+    reproduit fichier seul — conteneur python:3.14-slim, 2026-09-18). C'est le
+    piège « `qtbot.wait(n)` fixe » de CLAUDE.md : `build.bat` s'arrête au
+    premier échec, et un test qui rate au hasard apprend à relancer sans lire.
+
+    Trois relevés identiques de suite, espacés par `waitUntil`, valent
+    immobilité : chaque passe ne fait que grandir ou remonter, bornée.
+    """
+    info = win._detail._info
+    releves: list = []
+
+    def _immobile() -> bool:
+        releves.append((info.geometry(), _trou(win)))
+        return len(releves) >= 3 and releves[-1] == releves[-2] == releves[-3]
+
+    qtbot.waitUntil(_immobile, timeout=3000)
 
 
 def _trou(win) -> int:
