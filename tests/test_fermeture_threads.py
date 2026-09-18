@@ -187,18 +187,48 @@ class TestArretBorne:
         assert arreter_a_la_fermeture(th, "docile") is True
         assert not Docile.tue, "un thread qui obéit ne doit jamais être tué"
 
-    def test_un_thread_sourd_est_tue_plutot_que_laisse_vivant(self, qtbot):
-        """Le chemin de secours. Le laisser tourner, c'est le plantage à la fermeture."""
-        from PyQt6.QtCore import QThread
+    def test_un_thread_sourd_est_tue_plutot_que_laisse_vivant(self):
+        """Le chemin de secours. Le laisser tourner, c'est le plantage à la fermeture.
 
-        from src.core.thread_utils import arreter_a_la_fermeture
-
-        class Sourd(QThread):
-            def run(self):
-                self.sleep(30)
-
-        th = Sourd()
-        th.start()
-        qtbot.waitUntil(th.isRunning, timeout=2000)
-        assert arreter_a_la_fermeture(th, "sourd") is True
-        assert not th.isRunning()
+        En SOUS-PROCESSUS, obligatoirement : `terminate()` tue un thread qui
+        exécute du Python, et sa pile reste inscrite dans l'interpréteur. Joué
+        dans pytest, le GC de Python 3.14 (qui parcourt les piles de TOUS les
+        threads) finissait par lire cette pile libérée — violation d'accès
+        plusieurs fichiers plus loin, au hasard (CI Windows du 2026-09-18,
+        plantage dans `_peindre_discord`, le thread mort visible dans le
+        faulthandler avec `<invalid frame>`). En production c'est sans
+        conséquence : le processus s'en va aussitôt.
+        """
+        programme = (
+            "import sys; sys.path.insert(0, %r)
+"
+            "from PyQt6.QtCore import QThread
+"
+            "from PyQt6.QtWidgets import QApplication
+"
+            "from src.core.thread_utils import arreter_a_la_fermeture
+"
+            "app = QApplication(['x', '-platform', 'offscreen'])
+"
+            "class Sourd(QThread):
+"
+            "    def run(self):
+"
+            "        self.sleep(30)
+"
+            "th = Sourd(); th.start()
+"
+            "while not th.isRunning(): QThread.msleep(10)
+"
+            "ok = arreter_a_la_fermeture(th, 'sourd') and not th.isRunning()
+"
+            "print('ARRETE' if ok else 'VIVANT', flush=True)
+"
+            "import os; os._exit(0)
+"
+        ) % str(RACINE)
+        r = subprocess.run([sys.executable, "-c", programme], capture_output=True,
+                           text=True, timeout=60, cwd=str(RACINE))
+        assert "ARRETE" in r.stdout, f"{r.returncode}
+{r.stdout}
+{r.stderr}"

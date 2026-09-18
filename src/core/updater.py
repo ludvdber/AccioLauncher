@@ -128,11 +128,29 @@ def aggregate_download_counts(
         except (TypeError, ValueError):
             url_counts[url] = 0
 
+    # Index insensible à la casse, comme les empreintes et les tailles
+    # (`GameManager.set_asset_digests`) : le catalogue écrit « hp6.7z.001 »,
+    # l'asset s'appelle « HP6.7z.001 », et la comparaison exacte rendait le
+    # compteur de HP6 muet — 25 téléchargements réels invisibles, relevé le
+    # 2026-09-18. Une ambiguïté de casse est ignorée plutôt que devinée.
+    minuscules: dict[str, int] = {}
+    ambigus: set[str] = set()
+    for url, n in url_counts.items():
+        cle = url.lower()
+        if cle in minuscules and minuscules[cle] != n:
+            ambigus.add(cle)
+        minuscules[cle] = n
+    for cle in ambigus:
+        del minuscules[cle]
+
+    def compte(u: str) -> int:
+        return url_counts[u] if u in url_counts else minuscules.get(u.lower(), 0)
+
     totals: dict[str, int] = {}
     for game_id, versions in games_asset_urls.items():
         total = 0
         for urls in versions:
-            counts = [url_counts.get(u, 0) for u in urls if u]
+            counts = [compte(u) for u in urls if u]
             if counts:
                 total += max(counts)
         if total > 0:

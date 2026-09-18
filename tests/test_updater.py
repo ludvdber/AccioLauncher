@@ -391,3 +391,22 @@ class TestDiagnosticReseau:
         checker.network_status.connect(recu.append)
         checker.run()
         assert recu == []
+
+
+class TestCompteurInsensibleALaCasse:
+    """Catalogue « hp6.7z.001 », asset « HP6.7z.001 » : le compteur était muet."""
+
+    @staticmethod
+    def _rel(nom, n):
+        return {"assets": [{"browser_download_url":
+                            f"https://github.com/o/r/releases/download/hp6-v1.0/{nom}",
+                            "download_count": n}]}
+
+    def test_la_casse_ne_rend_plus_le_compteur_muet(self):
+        urls = {"hp6": [["https://github.com/o/r/releases/download/hp6-v1.0/hp6.7z.001"]]}
+        assert aggregate_download_counts([self._rel("HP6.7z.001", 25)], urls) == {"hp6": 25}
+
+    def test_une_ambiguite_de_casse_est_ignoree(self):
+        urls = {"hp6": [["https://github.com/o/r/releases/download/hp6-v1.0/hp6.7z.001"]]}
+        rels = [self._rel("HP6.7z.001", 25), self._rel("Hp6.7z.001", 3)]
+        assert aggregate_download_counts(rels, urls) == {}

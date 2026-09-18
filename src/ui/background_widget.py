@@ -60,8 +60,8 @@ _VOILE_ALPHA = 38
 _VOILE_GAUCHE = ((0.0, 214), (0.32, 190), (0.47, 142), (0.60, 66),
                  (0.72, 16), (0.82, 0))
 
-# Zoom cinématique : bornes et pas par tick du Ticker (~30 Hz), pour une jambe
-# de 8 s aller et 8 s retour — exactement l'ancien cycle de 16 s.
+# Zoom cinématique : bornes et pas par tick du Ticker (~30 Hz), pour un aller
+# unique de 8 s à chaque changement de jeu (cf. `_advance_zoom`).
 _ZOOM_MIN = 1.0
 _ZOOM_MAX = 1.05
 _ZOOM_LEG_MS = 8000
@@ -104,7 +104,6 @@ class BackgroundWidget(QWidget):
         # l'horloge : quand le Ticker s'arrête (fenêtre inactive, tray), le zoom
         # reprend exactement où il en était, sans saut ni comptabilité de temps.
         self._zoom = 1.0
-        self._zoom_forward = True
         self._zoom_phase = 0.0
         self._zoom_ticking = False
         self._zoom_running = False
@@ -120,7 +119,6 @@ class BackgroundWidget(QWidget):
         self._parallax_ticking = False
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        log.debug("[FX] BackgroundWidget — zoom 16s, parallaxe ±20/±12, gradient 75%%")
 
     # ── Propriétés Qt animables ──
 
@@ -146,7 +144,6 @@ class BackgroundWidget(QWidget):
 
     def start_zoom_loop(self) -> None:
         self._zoom = _ZOOM_MIN
-        self._zoom_forward = True
         self._zoom_phase = 0.0
         self._zoom_running = True
         self._set_zoom_ticking(True)
@@ -160,17 +157,23 @@ class BackgroundWidget(QWidget):
             self._zoom_ticking = False
 
     def _advance_zoom(self) -> None:
-        """Un pas de zoom, courbe InOutSine identique à l'ancienne animation."""
-        self._zoom_phase += _ZOOM_STEP
-        if self._zoom_phase >= 1.0:
-            self._zoom_phase = 0.0
-            self._zoom_forward = not self._zoom_forward
+        """Un pas de zoom, courbe InOutSine — UN SEUL aller, puis plus rien.
+
+        Le zoom faisait l'aller-retour à vie, et chaque pas repeint TOUTE la
+        fenêtre (le fond est sous tous les autres widgets). Mesuré le
+        2026-09-18 sur l'exe, fenêtre au premier plan : 35 à 41 % d'un cœur au
+        repos, dont ~96 % pour ce seul zoom — pour un tiers de pixel de
+        mouvement par image. Un aller à l'arrivée sur un jeu garde l'effet ;
+        le laisser tourner ne faisait que chauffer les portables.
+        """
+        self._zoom_phase = min(1.0, self._zoom_phase + _ZOOM_STEP)
         # InOutSine : 0.5 - 0.5*cos(pi*t), même profil que QEasingCurve.InOutSine.
         eased = 0.5 - 0.5 * math.cos(math.pi * self._zoom_phase)
-        depart, arrivee = ((_ZOOM_MIN, _ZOOM_MAX) if self._zoom_forward
-                           else (_ZOOM_MAX, _ZOOM_MIN))
-        self._zoom = depart + (arrivee - depart) * eased
+        self._zoom = _ZOOM_MIN + (_ZOOM_MAX - _ZOOM_MIN) * eased
         self.update()
+        if self._zoom_phase >= 1.0:
+            self._zoom_running = False      # resume() ne le relancera pas
+            self._set_zoom_ticking(False)
 
     def set_parallax_target(self, mouse_x: float, mouse_y: float,
                             win_w: float, win_h: float) -> None:

@@ -1455,11 +1455,15 @@ class TestZoomSurLeTickerPartage:
         bg = win._detail._bg
         assert not hasattr(bg, "_zoom_anim"), (
             "le zoom ne doit plus passer par une QPropertyAnimation")
-        # Le cycle reste borné : phase dans [0, 1], zoom entre 1.0 et 1.05.
+        # Un seul aller : au bout, le zoom est posé à 1.05 et se désabonne.
         for _ in range(400):
             bg._advance_zoom()
-        assert 0.0 <= bg._zoom_phase < 1.0
-        assert 1.0 <= bg._zoom <= 1.05
+        assert bg._zoom == 1.05 and bg._zoom_phase == 1.0
+        assert not bg._zoom_ticking, "le zoom doit s'arrêter après un aller"
+        bg.resume()
+        assert not bg._zoom_ticking, "revenir au premier plan ne relance pas le zoom"
+        bg.start_zoom_loop()
+        assert bg._zoom_ticking and bg._zoom == 1.0, "un nouveau jeu le relance"
         assert QAbstractAnimation is not None  # import utilisé, garde-fou lisible
 
 
