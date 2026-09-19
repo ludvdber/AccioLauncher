@@ -4,6 +4,8 @@
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/ludvdber/AccioLauncher/tests.yml?branch=main&style=for-the-badge&label=tests&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/actions/workflows/tests.yml)
 [![Sécurité](https://img.shields.io/github/actions/workflow/status/ludvdber/AccioLauncher/security.yml?branch=main&style=for-the-badge&label=s%C3%A9curit%C3%A9&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/actions/workflows/security.yml)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/ludvdber/AccioLauncher?style=for-the-badge&label=openssf%20scorecard&labelColor=0d0d1a)](https://scorecard.dev/viewer/?uri=github.com/ludvdber/AccioLauncher)
+[![OpenSSF Best Practices](https://img.shields.io/cii/summary/14714?style=for-the-badge&label=openssf%20best%20practices&labelColor=0d0d1a)](https://www.bestpractices.dev/projects/14714)
 [![Version](https://img.shields.io/badge/version-1.0.3-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases/latest)
 [![Téléchargements](https://img.shields.io/github/downloads/ludvdber/AccioLauncher/total?style=for-the-badge&label=t%C3%A9l%C3%A9chargements&color=d6a72c&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
 [![Windows 10 et 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases/latest)
