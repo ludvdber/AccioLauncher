@@ -413,16 +413,36 @@ class TestRetoursDuDixNeufSeptembre:
         assert len(marquees) == 1
         assert "Emplacement 2" in [lbl.text() for lbl in marquees[0].findChildren(QLabel)]
 
-    def test_une_seule_date_quand_elles_se_confondent(self, qtbot, manager):
-        TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
-        dlg = StatsDialog(manager)
-        qtbot.addWidget(dlg)
-        rendu = _labels(dlg)
-        # Cree aujourd'hui mais date de mars : une creation posterieure a la
-        # derniere ecriture (fichier copie) est ramenee a celle-ci, donc les
-        # deux dates se confondent et ne sont dites qu'une fois.
-        assert "Jouée le" in rendu and "08/03/2026" in rendu
-        assert "Commencée" not in rendu
+    @staticmethod
+    def _carte(qtbot, commencee, derniere):
+        """La carte seule, a partir d'une `Vue` : le test ne depend plus de ce
+        que le SYSTEME sait des fichiers. Sous Linux, un fichier n'a pas de
+        date de creation lisible (pas de `st_birthtime`) — la version
+        precedente de ce test la supposait, et n'echouait donc que sur la CI
+        Linux."""
+        from src.core.sauvegardes import Vue
+        carte = _CarteSauvegarde(Vue("Save0.usa", 1, commencee, derniere, 0, None), 0)
+        qtbot.addWidget(carte)
+        return [lbl.text() for lbl in carte.findChildren(QLabel)]
+
+    def test_une_seule_date_quand_elles_se_confondent(self, qtbot):
+        from datetime import date
+        textes = self._carte(qtbot, date(2026, 3, 8), date(2026, 3, 8))
+        assert "Jouée le" in textes and "08/03/2026" in textes
+        assert "Commencée" not in textes
+
+    def test_deux_dates_quand_elles_different(self, qtbot):
+        from datetime import date
+        textes = self._carte(qtbot, date(2026, 3, 4), date(2026, 4, 6))
+        assert "Commencée" in textes and "Dernière fois" in textes
+
+    def test_sans_date_de_creation_seule_la_derniere_est_dite(self, qtbot):
+        """Le cas Linux : on ne sait pas quand elle a commence, on ne le dit
+        pas — ni « Jouée le », qui laisserait croire a une seule seance."""
+        from datetime import date
+        textes = self._carte(qtbot, None, date(2026, 3, 8))
+        assert "Dernière fois" in textes
+        assert "Commencée" not in textes and "Jouée le" not in textes
 
 
 def test_la_barre_du_mois_et_la_colonne_disent_le_meme_chiffre():

@@ -79,6 +79,16 @@ def racines() -> dict[str, Path | None]:
 
     Fonction et non constante : `tests/conftest.py` la remplace, sans quoi la
     suite lirait les VRAIES sauvegardes de la machine qui la fait tourner.
+
+    **C'est le SEUL endroit à changer pour Linux**, sur le modèle de
+    `game_registry.disponible()`. Le catalogue ne contient aucun chemin
+    Windows : il nomme une racine abstraite et donne des motifs RELATIFS en
+    « / ». Sous Linux, le jeu tournera dans Wine, qui range ses Documents et
+    son AppData dans le préfixe (`$WINEPREFIX/drive_c/users/<nom>/…`) : le
+    portage n'aura qu'à faire pointer ces deux racines là-dedans, sans toucher
+    ni au catalogue ni au reste de ce module. D'ici là, hors Windows, AppData
+    n'existe pas (rien n'est relevé pour HP5-HP7) et Documents est le dossier
+    Documents de l'utilisateur — ce que Wine relie par défaut.
     """
     from src.core.config import get_documents_dir
     local = os.environ.get("LOCALAPPDATA") if sys.platform == "win32" else None

@@ -157,3 +157,20 @@ class TestCatalogue:
             "executable": "X/x.exe", "cover_image": "x.jpg",
             "saves": {"root": "documents", "folders": ["../../x"], "files": "a"}})
         assert jeu.sauvegardes is None
+
+
+def test_le_catalogue_ne_contient_aucun_chemin_windows():
+    """Le launcher sera porté sous Linux (le jeu, lui, tournera dans Wine) :
+    le bloc `saves` ne nomme qu'une racine abstraite et des motifs relatifs
+    en « / ». Seule `sauvegardes.racines()` saura où est la racine."""
+    import json
+    from pathlib import Path
+    brut = json.loads(Path("src/data/games.json").read_text(encoding="utf-8"))
+    for jeu in brut["games"]:
+        bloc = jeu.get("saves")
+        if not bloc:
+            continue
+        assert bloc["root"] in ("documents", "localappdata")
+        for motif in [*bloc["folders"], bloc["files"]]:
+            assert "\\" not in motif and ":" not in motif, (jeu["id"], motif)
+            assert not motif.startswith("/"), (jeu["id"], motif)
