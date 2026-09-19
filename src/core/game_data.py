@@ -372,7 +372,12 @@ def _url_aide_valide(brut) -> str:
         if url:
             log.warning("URL d'aide refusée (https attendu) : %r", url)
         return ""
-    return url
+    # Le schéma d'une URL ne tient pas compte de la casse : « httPs:// » EST du
+    # https, et le refuser serait faux. On le rend donc sous sa forme
+    # canonique, pour que tout ce qui sort du catalogue ait UNE forme — le
+    # fuzzing (2026-09-19) a trouvé cet écart entre ce contrôle, insensible à
+    # la casse, et celui des téléchargements, qui ne l'est pas.
+    return "https://" + url[len("https://"):]
 
 
 def _sous_dossier_valide(brut) -> str:

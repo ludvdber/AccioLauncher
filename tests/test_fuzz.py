@@ -49,6 +49,20 @@ class TestCatalogue:
         brut["games"][0][champ] = valeur
         invariants.catalogue(brut)
 
+    def test_schema_https_en_casse_mixte(self, vrai_catalogue):
+        """Trouvé par le fuzzing en CI (2026-09-19) : « httPs:// » était gardé
+        tel quel pour un contributeur et un avertissement, alors que les
+        téléchargements exigent « https:// ». C'est bien du https — il est
+        désormais rendu sous sa forme canonique."""
+        from src.core.game_data import _parse_catalog
+        brut = copy.deepcopy(vrai_catalogue)
+        brut["contributors"] = [{"name": "X", "url": "httPs://github.com/ludvdber"}]
+        brut["games"][0]["warning_url"] = "HTTPS://example.org/aide"
+        invariants.catalogue(brut)
+        cat = _parse_catalog(brut)
+        assert cat.contributors[0].url == "https://github.com/ludvdber"
+        assert cat.games[0].warning_url == "https://example.org/aide"
+
     def test_injection_reg_par_le_catalogue(self, vrai_catalogue):
         brut = copy.deepcopy(vrai_catalogue)
         jeu = next(j for j in brut["games"] if "language_registry" in j)
