@@ -96,10 +96,12 @@ class GameSession(QObject):
         if self._game_id:
             partie = self._manager.add_playtime(
                 self._game_id, int(duree), self._debut, code)
-            if partie and self._debut is not None:
+            spec = self._spec(self._game_id)
+            # Sans emplacement déclaré (HP4), on ne regarde rien : noter la
+            # partie « sans sauvegarde » serait affirmer ce qu'on n'a pas vu.
+            if partie and self._debut is not None and spec is not None:
                 sauvegardes.attribuer(
-                    self._game_id, self._avant,
-                    sauvegardes.releve(self._spec(self._game_id)),
+                    self._game_id, self._avant, sauvegardes.releve(spec),
                     self._debut, int(duree))
         self._game_id = ""
         self._debut = None

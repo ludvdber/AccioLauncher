@@ -246,7 +246,7 @@ class TestSauvegardesAffichees:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         rendu = _labels(dlg)
-        assert "Temps compté à partir de la prochaine partie." in rendu
+        assert rendu.count("se compte à partir de ta prochaine partie") == 1
         assert "Tes sauvegardes sont là" in rendu
 
     def test_un_jeu_sans_sauvegarde_n_a_pas_de_section(self, qtbot, manager):
@@ -364,3 +364,79 @@ class TestBoutonDeFenetre:
         qtbot.wait(10)
         assert win._btn_stats.isVisible()
         assert not win._btn_stats.geometry().intersects(win._btn_settings.geometry())
+
+
+class TestRetoursDuDixNeufSeptembre:
+    """Capture de Ludo du 2026-09-19 : un titre, un total dit deux fois, une
+    legende « sauvegardes », et une colonne dont les chiffres ne s'additionnaient
+    pas (46 au total, dont 43 cette annee et 4 d'avant)."""
+
+    def test_le_total_n_est_plus_repete_en_tete(self, qtbot, manager):
+        _remplir(manager, jours=3, jeux=2)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        rendu = _labels(dlg)
+        assert "jeux de la saga" not in rendu
+        assert rendu.count("Au total") == 1
+
+    def test_les_chiffres_affiches_s_additionnent(self, qtbot, tmp_path, monkeypatch):
+        """46,5 min au total = 42,9 cette annee + 3,6 d'avant : arrondis un par
+        un, 46 ≠ 43 + 4. Le total affiche doit etre la somme de ses parties."""
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        conf = Config(install_path=tmp_path / "g", cache_path=tmp_path / "g" / "c")
+        from src.core.game_data import load_catalog
+        gid = load_catalog().games[0].id
+        conf.playtime_seconds[gid] = 214
+        man = GameManager(conf)
+        stats.enregistrer_session(gid, datetime.now().replace(microsecond=0), 2576)
+        dlg = StatsDialog(man)
+        qtbot.addWidget(dlg)
+        rendu = _labels(dlg)
+        assert "47 min" in rendu
+        assert "43 min" in rendu and "Dont 4 min" in rendu
+
+    def test_une_jaquette_sans_temps_ne_dit_pas_sauvegardes(self, qtbot, manager):
+        TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        legendes = dlg.findChildren(_Etagere)[0]._legendes
+        assert legendes["hp1"] == "—"
+
+    def test_la_sauvegarde_la_plus_recente_est_designee(self, qtbot, manager):
+        TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
+        TestSauvegardesAffichees._save("Save1.usa", datetime(2026, 4, 3))
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        cartes = dlg.findChildren(_CarteSauvegarde)
+        marquees = [c for c in cartes
+                    if "dernière jouée" in [lbl.text() for lbl in c.findChildren(QLabel)]]
+        assert len(marquees) == 1
+        assert "Emplacement 2" in [lbl.text() for lbl in marquees[0].findChildren(QLabel)]
+
+    def test_une_seule_date_quand_elles_se_confondent(self, qtbot, manager):
+        TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        rendu = _labels(dlg)
+        # Cree aujourd'hui mais date de mars : une creation posterieure a la
+        # derniere ecriture (fichier copie) est ramenee a celle-ci, donc les
+        # deux dates se confondent et ne sont dites qu'une fois.
+        assert "Jouée le" in rendu and "08/03/2026" in rendu
+        assert "Commencée" not in rendu
+
+
+def test_la_barre_du_mois_et_la_colonne_disent_le_meme_chiffre():
+    """38,5 min : 38 sur la barre (arrondi au pair), 39 dans la colonne."""
+    from src.ui.stats_dialog import _duree_courte, _minutes
+    assert _duree_courte(2310) == "39 min" and _minutes(2310) == 39
+
+
+def test_le_temps_joue_sans_sauvegarder_est_dit(qtbot, manager):
+    from src.core import sauvegardes
+    TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
+    stats.enregistrer_session("hp1", datetime(2026, 9, 19, 21, 0), 1500)
+    etat = sauvegardes.releve(manager.get_game_by_id("hp1").sauvegardes)
+    sauvegardes.attribuer("hp1", etat, etat, datetime(2026, 9, 19, 21, 0), 1500)
+    dlg = StatsDialog(manager)
+    qtbot.addWidget(dlg)
+    assert "Dont 25 min jouées sans sauvegarder." in _labels(dlg)

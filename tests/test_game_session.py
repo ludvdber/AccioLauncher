@@ -233,3 +233,18 @@ class TestSauvegardeDeLaPartie:
         os.utime(dossier / "Save1.usa", (1_800_000_000, 1_800_000_000))
         s._monitor.game_exited.emit("HP1", 0, 3.0)
         assert not sauvegardes.chemin_fichier().exists()
+
+
+    def test_une_partie_sans_ecriture_est_notee_sans_sauvegarde(self, tmp_path, qtbot):
+        from src.core import sauvegardes
+        s, _spec, _dossier = self._session_avec_saves(tmp_path, qtbot)
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        s._monitor.game_exited.emit("HP1", 0, 900.0)
+        assert sauvegardes.temps_sans_sauvegarde("hp1") == 900
+
+    def test_un_jeu_sans_emplacement_declare_n_est_pas_note(self, session):
+        """HP4 n'a pas de bloc `saves` : on n'a rien regardé, on n'affirme rien."""
+        from src.core import sauvegardes
+        session.demarrer(_FauxProcess(), "HP1", "hp1")
+        session._monitor.game_exited.emit("HP1", 0, 900.0)
+        assert not sauvegardes.chemin_fichier().exists()

@@ -93,8 +93,29 @@ def _duree_courte(secondes: int) -> str:
     if secondes < 60:
         return tr("< 1 min")
     if secondes < 3600:
-        return format_duree_compacte(secondes)
-    return tr("{} h").format(round(secondes / 3600))
+        # Même arrondi que la colonne de la saga : la barre de septembre et
+        # la ligne « En septembre » portaient 38 et 39 min pour 38,5.
+        return _duree(secondes)
+    return tr("{} h").format(int(secondes / 3600 + 0.5))
+
+
+def _minutes(secondes: int) -> int:
+    """Arrondi à la minute la plus proche, demi-minute vers le haut.
+
+    `round()` arrondit au PAIR (46,5 → 46) : juste pour une moyenne, faux pour
+    un compteur qu'on additionne à la main.
+    """
+    return int(secondes / 60 + 0.5) if secondes > 0 else 0
+
+
+def _duree(secondes: int) -> str:
+    """Toute durée de la page passe par ici : même arrondi partout.
+
+    `format_duree_compacte` arrondit au PAIR (`round`), `_minutes` à la
+    demi-minute supérieure : mélangés, 38,5 min s'écrivaient 38 sur la barre
+    et 39 dans la colonne.
+    """
+    return format_duree_compacte(60 * _minutes(secondes) if secondes >= 60 else secondes)
 
 
 def _date(jour: date | None) -> str:
@@ -364,7 +385,7 @@ class _Mois(QWidget):
             col = self._colonne(i)
             if col.left() <= x <= col.right():
                 nom = _locale().standaloneMonthName(mois, QLocale.FormatType.LongFormat)
-                valeur = format_duree_compacte(secondes) if secondes else tr("aucune partie")
+                valeur = _duree(secondes) if secondes else tr("aucune partie")
                 self.setToolTip(f"{nom} {annee} : {valeur}")
                 return
         self.setToolTip("")
@@ -429,7 +450,8 @@ class _Jauge(QWidget):
 class _CarteSauvegarde(QFrame):
     """Une sauvegarde : son nom, son temps, et ce que le disque sait d'elle."""
 
-    def __init__(self, vue: sauvegardes.Vue, temps_max: int, parent=None) -> None:
+    def __init__(self, vue: sauvegardes.Vue, temps_max: int,
+                 recente: bool = False, parent=None) -> None:
         super().__init__(parent)
         self.setObjectName("carteSave")
         couche = QVBoxLayout(self)
@@ -443,20 +465,31 @@ class _CarteSauvegarde(QFrame):
         lbl_nom.setFont(cinzel(11, bold=True))
         lbl_nom.setStyleSheet("background: transparent;")
         haut.addWidget(lbl_nom)
+        if recente:
+            # Celle qu'on reprendra : c'est la question qu'on se pose en
+            # ouvrant un jeu à quatre emplacements, et les dates seules
+            # obligent à les comparer de tête.
+            haut.addWidget(_texte(tr("dernière jouée"), 11, "#d6a72c"))
         haut.addStretch(1)
-        haut.addWidget(_chiffre(
-            format_duree_compacte(vue.temps) if vue.temps else "—", 14,
-            "#d6a72c" if vue.temps else _DISCRET))
+        if vue.temps:
+            haut.addWidget(_chiffre(_duree(vue.temps), 14, "#d6a72c"))
         couche.addLayout(haut)
-        couche.addWidget(_Jauge((vue.temps or 0) / temps_max if temps_max else 0.0))
+        if vue.temps:
+            # Une jauge vide sur quatre cartes n'est pas une information, c'est
+            # quatre fois la même absence : elle n'apparaît qu'avec un temps.
+            couche.addWidget(_Jauge(vue.temps / temps_max if temps_max else 0.0))
 
         grille = QGridLayout()
         grille.setHorizontalSpacing(12)
         grille.setVerticalSpacing(2)
         grille.setColumnStretch(1, 1)
-        lignes = [(tr("Commencée"), _date(vue.commencee)),
-                  (tr("Dernière fois"), _date(vue.derniere)),
-                  (tr("Parties"), str(vue.parties) if vue.parties else "")]
+        if vue.commencee == vue.derniere:
+            # « Commencée le 4, dernière fois le 4 » : une date, dite une fois.
+            lignes = [(tr("Jouée le"), _date(vue.derniere))]
+        else:
+            lignes = [(tr("Commencée"), _date(vue.commencee)),
+                      (tr("Dernière fois"), _date(vue.derniere))]
+        lignes.append((tr("Parties"), str(vue.parties) if vue.parties else ""))
         rang = 0
         for libelle, valeur in lignes:
             if not valeur:
@@ -467,11 +500,6 @@ class _CarteSauvegarde(QFrame):
             grille.addWidget(v, rang, 1)
             rang += 1
         couche.addLayout(grille)
-        if vue.temps is None:
-            # On ne DEVINE pas le temps d'une sauvegarde née avant le relevé :
-            # on dit pourquoi il manque, et quand il viendra.
-            couche.addWidget(_Paragraphe(
-                tr("Temps compté à partir de la prochaine partie."), taille=11))
 
 
 class StatsDialog(QDialog):
@@ -488,9 +516,11 @@ class StatsDialog(QDialog):
         self._parties = stats.parties_par_jeu(self._hist)
         self._dernieres = stats.derniere_par_jeu(self._hist)
         stock = sauvegardes.charger()
+        self._sans_sauvegarde = {e.game.id: sauvegardes.temps_sans_sauvegarde(e.game.id, stock)
+                                 for e in self._entrees}
         self._vues = {e.game.id: sauvegardes.vues(e.game.id, e.game.sauvegardes, stock)
                       for e in self._entrees}
-        self.setWindowTitle(tr("La saga"))
+        self.setWindowTitle(tr("Mes années à Poudlard"))
         # Assez LARGE pour que huit jaquettes restent des images et non des
         # timbres. Pas de plancher en HAUTEUR : la page se rétrécit à son
         # contenu.
@@ -561,7 +591,10 @@ class StatsDialog(QDialog):
             if self._temps.get(gid):
                 legendes[gid] = _duree_courte(self._temps[gid])
             elif self._vues.get(gid):
-                legendes[gid] = tr("sauvegardes")
+                # Des sauvegardes, mais aucune partie chronométrée : le temps
+                # n'est pas connu, et on ne l'invente pas. Le tiret est la
+                # même convention que partout ailleurs sur la page.
+                legendes[gid] = "—"
         return legendes
 
     # ──────────────────── Construction ────────────────────
@@ -571,10 +604,16 @@ class StatsDialog(QDialog):
         root.setContentsMargins(22, 16, 22, 16)
         root.setSpacing(12)
 
-        titre = QLabel(tr("La saga"))
+        titre = QLabel(tr("Mes années à Poudlard"))
         titre.setFont(cinzel(18, bold=True))
         root.addWidget(titre)
-        root.addWidget(_texte(self._ouverture(), 13, _SECONDAIRE))
+        # Le résumé ne s'écrit en tête que lorsque la page n'a RIEN d'autre à
+        # dire : dès qu'il y a du temps, la colonne de la saga porte le même
+        # total, et le dire deux fois (Ludo, capture du 2026-09-19) fait
+        # chercher la différence entre les deux.
+        ouverture = self._ouverture()
+        if ouverture:
+            root.addWidget(_texte(ouverture, 13, _SECONDAIRE))
 
         possibles = self._selectionnables()
         # L'étagère est HORS de la zone défilante : c'est le squelette de la
@@ -634,21 +673,15 @@ class StatsDialog(QDialog):
         root.addLayout(bas)
 
     def _ouverture(self) -> str:
-        """Une PHRASE, et non une rangée de cartes : elle se raccourcit sans se
-        déformer, c'est la seule forme qui encaisse une donnée comme quatre."""
-        total = sum(self._temps.values())
-        if not total:
-            if any(self._vues.values()):
-                return tr("Tes sauvegardes sont là ; le temps de jeu se comptera "
-                          "à partir de ta prochaine partie.")
-            return tr("Aucune partie enregistrée pour l'instant — "
-                      "lance un jeu, cette page se remplira toute seule.")
-        joues = len([e for e in self._entrees if self._temps.get(e.game.id)])
-        if joues >= len(self._entrees) > 0:
-            return tr("{} de jeu, sur les {} jeux de la saga.").format(
-                format_duree_compacte(total), len(self._entrees))
-        return tr("{} de jeu, sur {} des {} jeux de la saga.").format(
-            format_duree_compacte(total), joues, len(self._entrees))
+        """La phrase d'en-tête des pages VIDES ; chaîne vide dès qu'il y a du
+        temps, que la colonne de la saga dit mieux."""
+        if sum(self._temps.values()):
+            return ""
+        if any(self._vues.values()):
+            return tr("Tes sauvegardes sont là ; le temps de jeu se comptera "
+                      "à partir de ta prochaine partie.")
+        return tr("Aucune partie enregistrée pour l'instant — "
+                  "lance un jeu, cette page se remplira toute seule.")
 
     def _colonne_saga(self) -> QWidget:
         """Toute la saga : total, année, mois, plus longue partie.
@@ -665,9 +698,16 @@ class StatsDialog(QDialog):
         couche.addWidget(_titre_section(tr("Toute la saga")))
 
         aujourdhui = date.today()
-        total = stats.temps_total(self._hist)
-        lignes = [(tr("Au total"), total, 17)]
         annee = stats.temps_annee(self._hist, aujourdhui.year)
+        herite = sum(self._hist.herite.values())
+        # Le total AFFICHÉ est la somme des parties AFFICHÉES, chacune arrondie
+        # à la minute. Arrondir chaque ligne de son côté donnait, sur les
+        # données de Ludo, « 46 min au total, dont 43 cette année et 4
+        # d'avant » : 46,5 → 46, 42,9 → 43, 3,6 → 4, et 43 + 4 = 47. Un seul
+        # compte qui ne tombe pas juste suffit à faire douter de toute la page.
+        autres = stats.temps_total(self._hist) - annee - herite
+        total = 60 * sum(_minutes(x) for x in (annee, autres, herite))
+        lignes = [(tr("Au total"), total, 17)]
         mois = stats.par_mois(self._hist).get((aujourdhui.year, aujourdhui.month), 0)
         lignes.append((tr("En {}").format(aujourdhui.year), annee, 13))
         lignes.append((tr("En {}").format(_locale().standaloneMonthName(
@@ -678,23 +718,23 @@ class StatsDialog(QDialog):
             ligne = QHBoxLayout()
             ligne.addWidget(_texte(libelle, 12, _SECONDAIRE))
             ligne.addStretch(1)
-            ligne.addWidget(_chiffre(format_duree_compacte(secondes), taille,
+            ligne.addWidget(_chiffre(_duree(secondes), taille,
                                      "#d6a72c" if taille > 13 else "#ffffff"))
             couche.addLayout(ligne)
 
-        herite = sum(self._hist.herite.values())
         if herite:
             # Sans cette ligne, l'année et le mois ne se raccordent pas au
             # total, et quelqu'un qui le remarque cesse de croire la page.
             couche.addWidget(_Paragraphe(
-                tr("Dont {} joués avant la mise en service du journal, sans "
-                   "date.").format(format_duree_compacte(herite)), taille=11))
+                tr("Dont {} jouées avant la mise en service du journal, sans "
+                   "date.").format(_duree(herite)),
+                taille=11))
 
         longue = stats.plus_longue(self._hist)
         if longue is not None:
             couche.addSpacing(10)
             couche.addWidget(_titre_section(tr("Plus longue partie")))
-            couche.addWidget(_chiffre(format_duree_compacte(longue.duree), 14))
+            couche.addWidget(_chiffre(_duree(longue.duree), 14))
             # Jamais un record sans sa date : daté, c'est un souvenir.
             couche.addWidget(_Paragraphe(tr("{}, le {}").format(
                 self._noms.get(longue.jeu, longue.jeu),
@@ -731,7 +771,7 @@ class StatsDialog(QDialog):
         derniere = self._dernieres.get(game_id)
         faits = []
         if temps:
-            faits.append((format_duree_compacte(temps), tr("de jeu")))
+            faits.append((_duree(temps), tr("de jeu")))
         if parties:
             faits.append((str(parties), tr("parties") if parties > 1 else tr("partie")))
         if derniere:
@@ -750,14 +790,32 @@ class StatsDialog(QDialog):
         if vues:
             couche.addSpacing(4)
             couche.addWidget(_titre_section(tr("Sauvegardes")))
+            if any(v.temps is None for v in vues):
+                # On ne DEVINE pas le temps d'une sauvegarde née avant le
+                # relevé : on dit pourquoi il manque et quand il viendra — une
+                # fois pour la section, pas une fois par carte.
+                couche.addWidget(_Paragraphe(
+                    tr("Le temps par sauvegarde se compte à partir de ta "
+                       "prochaine partie."), taille=11))
             grille = QGridLayout()
             grille.setSpacing(12)
             temps_max = max((v.temps or 0 for v in vues), default=0)
+            recente = (max(vues, key=lambda v: v.modifie).fichier
+                       if len(vues) > 1 else None)
             for i, vue in enumerate(vues):
-                grille.addWidget(_CarteSauvegarde(vue, temps_max), i // 2, i % 2)
+                grille.addWidget(_CarteSauvegarde(vue, temps_max, vue.fichier == recente),
+                                 i // 2, i % 2)
             grille.setColumnStretch(0, 1)
             grille.setColumnStretch(1, 1)
             couche.addLayout(grille)
+        sans = self._sans_sauvegarde.get(game_id, 0)
+        if sans >= 60:
+            # Sans cette ligne, la somme des cartes est inférieure au temps du
+            # jeu et rien ne dit pourquoi. Seules les parties OBSERVÉES sans
+            # écriture y entrent — jamais celles d'avant le relevé.
+            couche.addWidget(_Paragraphe(
+                tr("Dont {} jouées sans sauvegarder.").format(
+                    _duree(sans)), taille=11))
         couche.addStretch(1)
         return fiche
 

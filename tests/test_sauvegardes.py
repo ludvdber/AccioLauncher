@@ -111,7 +111,13 @@ class TestAttribution:
         _poser(docs, "Harry Potter/Save/Save0.usa", datetime(2026, 3, 8))
         etat = sauvegardes.releve(HP1)
         assert sauvegardes.attribuer("hp1", etat, etat, datetime.now(), 600) is None
-        assert not sauvegardes.chemin_fichier().exists()
+        # ...mais elle est NOTÉE comme telle, pour que la page puisse le dire.
+        assert sauvegardes.temps_sans_sauvegarde("hp1") == 600
+        assert [v.fichier for v in sauvegardes.vues("hp1", HP1)] == ["Save0.usa"]
+
+    def test_le_temps_sans_sauvegarde_n_inclut_pas_l_avant_releve(self):
+        """Rien d'observé = rien d'affirmé : zéro, pas « tout le temps du jeu »."""
+        assert sauvegardes.temps_sans_sauvegarde("hp6") == 0
 
     def test_plusieurs_changees_la_plus_recente_gagne(self):
         avant = {"a": sauvegardes.Etat(1.0, None), "b": sauvegardes.Etat(1.0, None)}

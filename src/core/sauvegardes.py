@@ -38,6 +38,12 @@ log = logging.getLogger(__name__)
 
 FICHIER = "sauvegardes.json"
 
+# Clé des parties OBSERVÉES qui n'ont écrit aucune sauvegarde. Elles sont
+# notées explicitement, et non déduites par soustraction : une soustraction
+# compterait aussi les parties jouées AVANT ce relevé, et dirait « 13 min sans
+# sauvegarde » d'un jeu dont on ne sait simplement rien.
+SANS_SAUVEGARDE = ""
+
 # Un dossier de sauvegardes raisonnable en porte une dizaine. Le plafond borne
 # ce qu'un motif trop large (ou un dossier pollué) coûterait à chaque partie.
 _MAX_FICHIERS = 64
@@ -63,6 +69,7 @@ class Vue:
     derniere: date | None
     parties: int
     temps: int | None           # None : aucune partie observée, on ne sait pas
+    modifie: float = 0.0        # horodatage exact : départage deux « derniere » du même jour
 
 
 # ─── Où chercher ───
@@ -187,7 +194,7 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict]:
         if not isinstance(e, dict):
             continue
         jeu, fichier = e.get("jeu"), e.get("fichier")
-        if not isinstance(jeu, str) or not jeu or not isinstance(fichier, str) or not fichier:
+        if not isinstance(jeu, str) or not jeu or not isinstance(fichier, str):
             continue
         commencee = _date(e.get("commencee"))
         parties = []
@@ -250,15 +257,24 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
               debut: datetime, duree: int, chemin: Path | None = None) -> str | None:
     """Donne la partie qui vient de finir à la sauvegarde qu'elle a écrite.
 
-    Rend le fichier retenu, ou None si aucune sauvegarde n'a bougé (on a joué
-    sans sauvegarder : la partie reste au jeu, elle n'appartient à personne).
-    Un échec d'écriture ne remonte jamais — même règle que le journal.
+    Rend le fichier retenu, ou None si aucune sauvegarde n'a bougé : on a joué
+    sans sauvegarder, et la partie est notée sous `SANS_SAUVEGARDE` pour que
+    la page puisse le dire. Un échec d'écriture ne remonte jamais — même règle
+    que le journal.
     """
-    rel = modifiee(avant, apres)
-    if rel is None or duree <= 0:
+    if duree <= 0:
         return None
+    rel = modifiee(avant, apres)
     chemin = chemin or chemin_fichier()
     stock = charger(chemin)
+    if rel is None:
+        stock.setdefault((jeu, SANS_SAUVEGARDE), {"commencee": None, "parties": []})[
+            "parties"].append((debut, int(duree)))
+        try:
+            _ecrire(stock, chemin)
+        except OSError as exc:
+            log.warning("Relevé des sauvegardes non mis à jour : %s", exc)
+        return None
     entree = stock.setdefault((jeu, rel), {"commencee": None, "parties": []})
     # Une sauvegarde CRÉÉE pendant cette partie a commencé avec elle ; sinon
     # le disque sait mieux que nous quand elle est née.
@@ -274,6 +290,12 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
 
 
 # ─── Pour l'affichage ───
+
+def temps_sans_sauvegarde(jeu: str, stock: dict[tuple[str, str], dict] | None = None) -> int:
+    """Secondes jouées, depuis le relevé, sans qu'aucune sauvegarde soit écrite."""
+    stock = charger() if stock is None else stock
+    return sum(d for _, d in stock.get((jeu, SANS_SAUVEGARDE), {}).get("parties", ()))
+
 
 def vues(jeu: str, spec: Sauvegardes | None,
          stock: dict[tuple[str, str], dict] | None = None) -> list[Vue]:
@@ -301,6 +323,7 @@ def vues(jeu: str, spec: Sauvegardes | None,
             derniere=derniere,
             parties=len(parties),
             temps=sum(d for _, d in parties) if parties else None,
+            modifie=etat.modifie,
         ))
     resultat.sort(key=lambda v: (v.numero is None, v.numero or 0, v.fichier))
     return resultat

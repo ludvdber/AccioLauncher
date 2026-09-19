@@ -283,9 +283,6 @@
     "Quitter quand même": "Salir de todos modos",
     "Continuer": "Continuar",
     "Aucune partie enregistrée pour l'instant — lance un jeu, cette page se remplira toute seule.": "Aún no hay partidas registradas: inicia un juego y esta página se irá llenando sola.",
-    "La saga": "La saga",
-    "{} de jeu, sur les {} jeux de la saga.": "{} de juego, en los {} juegos de la saga.",
-    "{} de jeu, sur {} des {} jeux de la saga.": "{} de juego, en {} de los {} juegos de la saga.",
     "Échec du téléchargement après plusieurs tentatives.": "Error de descarga tras varios intentos.",
     "Échec du téléchargement de la partie {}/{}.": "Error al descargar la parte {}/{}.",
     "{} sont conservés : relancez pour reprendre là où ça s'est arrêté.": "Se han conservado {}: vuelve a iniciar para reanudar donde se detuvo.",
@@ -308,7 +305,6 @@
     "Au total": "En total",
     "Commencée": "Empezada",
     "Dernière fois": "Última vez",
-    "Dont {} joués avant la mise en service du journal, sans date.": "De ello, {} jugados antes de que empezara el registro, sin fecha.",
     "Emplacement {}": "Ranura {}",
     "En {}": "En {}",
     "Jeux de la saga": "Juegos de la saga",
@@ -317,7 +313,6 @@
     "Plus longue partie": "Partida más larga",
     "Sauvegarde": "Partida guardada",
     "Sauvegardes": "Partidas guardadas",
-    "Temps compté à partir de la prochaine partie.": "El tiempo se contará a partir de la próxima partida.",
     "Tes sauvegardes sont là ; le temps de jeu se comptera à partir de ta prochaine partie.": "Tus partidas guardadas están aquí; el tiempo de juego se contará a partir de tu próxima partida.",
     "Toute la saga": "Toda la saga",
     "aucune partie": "ninguna partida",
@@ -325,7 +320,12 @@
     "dernière fois": "última vez",
     "partie": "partida",
     "parties": "partidas",
-    "sauvegardes": "guardadas",
-    "{}, le {}": "{}, el {}"
+    "{}, le {}": "{}, el {}",
+    "Mes années à Poudlard": "Mis años en Hogwarts",
+    "dernière jouée": "la última jugada",
+    "Jouée le": "Jugada el",
+    "Le temps par sauvegarde se compte à partir de ta prochaine partie.": "El tiempo por partida guardada se cuenta a partir de tu próxima partida.",
+    "Dont {} jouées avant la mise en service du journal, sans date.": "De ello, {} jugados antes de que empezara el registro, sin fecha.",
+    "Dont {} jouées sans sauvegarder.": "De ello, {} jugados sin guardar."
   }
 }
