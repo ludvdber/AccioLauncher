@@ -2,6 +2,7 @@
 
 import logging
 import shutil
+import stat
 from pathlib import Path
 
 from src.core.config import get_documents_dir
@@ -102,6 +103,22 @@ def unblock_extracted(extracted_dirs: list[Path]) -> int:
     return sum(remove_zone_identifier(d) for d in extracted_dirs)
 
 
+def _rendre_remplacable(chemin: Path) -> None:
+    """Retire la lecture seule d'un fichier qu'on s'apprête à remplacer.
+
+    Le `User.ini` de HP2 est livré en LECTURE SEULE dans l'archive, et
+    `copy2` recopie cet attribut. Sa copie dans Documents, puis sa sauvegarde
+    `.bak`, l'étaient donc aussi : à la réinstallation suivante, `copy2` levait
+    `PermissionError` et la config n'était plus jamais rafraîchie (relevé dans
+    le journal de Ludo, 2026-08-22 et 2026-09-19). L'attribut, lui, repart
+    avec la nouvelle copie : on ne change pas ce que l'archive a voulu.
+    """
+    try:
+        chemin.chmod(chemin.stat().st_mode | stat.S_IWRITE)
+    except FileNotFoundError:
+        pass
+
+
 def apply_config_files(
     destination: Path, game_dir: str | None,
     config_files: list[tuple[str, str]],
@@ -132,9 +149,11 @@ def apply_config_files(
 
             if dest.exists():
                 bak = dest.with_suffix(dest.suffix + ".bak")
+                _rendre_remplacable(bak)
                 shutil.copy2(dest, bak)
                 log.info("Backup de la config existante : %s → %s", dest, bak)
 
+            _rendre_remplacable(dest)
             shutil.copy2(src, dest)
             log.info("Config copiée : %s → %s", src, dest)
         except OSError as exc:

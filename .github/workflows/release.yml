@@ -8,18 +8,25 @@
 # dépôt, de quel commit et de quel workflow il sort. C'est ce qui tient lieu de
 # certificat de signature, que le projet n'a pas.
 #
-# Deux déclenchements :
-#   - pousser un tag vX.Y.Z : build, attestation, release en BROUILLON. Rien
-#     n'est public tant qu'on n'a pas écrit les nouveautés et cliqué
-#     « Publish release » ; l'auto-update ne voit pas un brouillon.
-#   - Actions → release → Run workflow : build d'essai, exe joint au run,
+# Tout se fait depuis le site GitHub, sans ligne de commande (souhait de Ludo) :
+# Actions → release → Run workflow.
+#   - case « Créer la release » décochée : build d'essai, exe joint au run,
 #     sans attestation ni release.
+#   - cochée : build, attestation, release en BROUILLON nommée d'après
+#     APP_VERSION. Le tag n'existe pas encore : GitHub le crée sur le commit
+#     construit au moment de « Publish release ». Rien n'est public avant, et
+#     l'auto-update ne voit pas un brouillon.
+# Pas de déclenchement sur tag : publier le brouillon CRÉE le tag, et ce tag
+# relancerait un second build qui échouerait sur une release déjà existante.
 name: release
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Créer la release (brouillon) — sinon simple build d'essai"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -49,19 +56,31 @@ jobs:
         with:
           python-version: "3.14"
 
-      # Le numéro vit dans config.APP_VERSION (accordé à pyproject et au README
-      # par test_config). Un tag qui ne le porte pas publierait un exe qui
-      # annonce une autre version que sa release, et l'auto-update, qui compare
-      # les deux, le reproposerait en boucle.
-      - name: Le tag correspond à la version du code
-        if: startsWith(github.ref, 'refs/tags/')
+      # Le tag se DÉDUIT de config.APP_VERSION (accordé à pyproject et au README
+      # par test_config) : un tag saisi à la main pourrait annoncer une autre
+      # version que l'exe, et l'auto-update, qui compare les deux, le
+      # reproposerait en boucle. Refusé hors de main, et si la version a déjà
+      # une release ou un tag : c'est qu'on a oublié de monter le numéro.
+      - name: Version à publier
+        id: version
+        if: inputs.release
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          $version = (Select-String -Path src/core/config.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
-          if ("v$version" -ne $env:GITHUB_REF_NAME) {
-            Write-Error "Le tag $env:GITHUB_REF_NAME ne correspond pas à APP_VERSION = $version (src/core/config.py)."
+          if ($env:GITHUB_REF -ne 'refs/heads/main') {
+            Write-Error "Une release se construit depuis main (lancé depuis $env:GITHUB_REF)."
             exit 1
           }
+          $version = (Select-String -Path src/core/config.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+          $tag = "v$version"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Error "La release $tag existe déjà : monter APP_VERSION."; exit 1 }
+          gh api "repos/$env:GH_REPO/git/ref/tags/$tag" *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Error "Le tag $tag existe déjà : monter APP_VERSION."; exit 1 }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          exit 0
 
       # build.bat enchaîne icône, lint, tests, géométrie avec les vraies polices
       # et PyInstaller, et s'arrête au premier échec : le même chemin que sur
@@ -89,7 +108,7 @@ jobs:
           "AccioLauncher.exe : SHA-256 ``$sha``" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Joindre l'exécutable au run (essai)
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ !inputs.release }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: AccioLauncher-essai
@@ -98,7 +117,7 @@ jobs:
 
       - name: Attestation de provenance
         id: attestation
-        if: startsWith(github.ref, 'refs/tags/')
+        if: inputs.release
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/AccioLauncher.exe
@@ -106,13 +125,14 @@ jobs:
       # Les notes partent de .github/release-notes.md, où l'empreinte et le tag
       # sont posés ici : il ne reste qu'à écrire les nouveautés.
       - name: Release en brouillon
-        if: startsWith(github.ref, 'refs/tags/')
+        if: inputs.release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           SHA256: ${{ steps.empreinte.outputs.sha256 }}
           BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           # La preuve de provenance voyage AUSSI à côté de l'exe : vérifiable
           # hors de GitHub (`cosign verify-blob-attestation --bundle`), et c'est
@@ -121,12 +141,13 @@ jobs:
           $signature = 'dist/AccioLauncher.exe.sigstore.json'
           Copy-Item $env:BUNDLE $signature
           $notes = Get-Content .github/release-notes.md -Raw -Encoding utf8
-          $notes = $notes.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:GITHUB_REF_NAME)
+          $notes = $notes.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:TAG)
           $fichier = Join-Path $env:RUNNER_TEMP 'notes.md'
           Set-Content -Path $fichier -Value $notes -Encoding utf8NoBOM
-          $version = $env:GITHUB_REF_NAME.TrimStart('v')
-          gh release create $env:GITHUB_REF_NAME dist/AccioLauncher.exe $signature `
-            --draft --verify-tag `
+          # --target : le tag naîtra sur le commit CONSTRUIT, à la publication.
+          $version = $env:TAG.TrimStart('v')
+          gh release create $env:TAG dist/AccioLauncher.exe $signature `
+            --draft --target $env:GITHUB_SHA `
             --title "🪄 Accio Launcher $version" `
             --notes-file $fichier
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
