@@ -151,3 +151,15 @@ jobs:
             --title "🪄 Accio Launcher $version" `
             --notes-file $fichier
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Le formulaire de Microsoft (SmartScreen), prérempli pour CETTE version,
+      # dans le résumé du run : chaque champ, et le texte anglais à copier.
+      - name: Texte de soumission à Microsoft
+        if: inputs.release
+        shell: pwsh
+        env:
+          SHA256: ${{ steps.empreinte.outputs.sha256 }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $texte = Get-Content .github/microsoft-submission.md -Raw -Encoding utf8
+          $texte.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:TAG) >> $env:GITHUB_STEP_SUMMARY
