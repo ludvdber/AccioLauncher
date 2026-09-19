@@ -29,10 +29,11 @@ jobs:
           # que les dépendances sont résolues, donc elle que l'audit doit voir.
           python-version: "3.14"
 
+      # Versions ET empreintes figées (.github/requirements/securite.txt) : un
+      # outil d'audit installé sans vérification serait le maillon faible de
+      # l'audit lui-même. Dependabot tient le fichier à jour.
       - name: Install security tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install bandit pip-audit
+        run: pip install --require-hashes -r .github/requirements/securite.txt
 
       # Les règles écartées et leur raison sont dans `.bandit`, que Bandit lit
       # tout seul. Chaque appel de processus relu porte un `# nosec` sur sa

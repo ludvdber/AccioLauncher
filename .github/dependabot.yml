@@ -29,3 +29,16 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "deps"
+
+  # Les paquets de la CI, figés avec leurs empreintes (Scorecard,
+  # « Pinned-Dependencies ») : Dependabot met à jour version et empreintes.
+  - package-ecosystem: pip
+    directory: "/.github/requirements"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      ci:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

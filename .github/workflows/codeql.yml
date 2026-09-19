@@ -1,0 +1,41 @@
+# CodeQL : analyse statique du code Python par GitHub, résultats dans
+# Security → Code scanning, à côté de ceux de Scorecard.
+#
+# Bandit (security.yml) cherche des MOTIFS connus ligne par ligne ; CodeQL suit
+# les données d'un bout à l'autre (une chaîne venue du catalogue distant qui
+# finit dans un chemin, un processus, un fichier). Les deux se complètent.
+# C'est aussi ce que Scorecard reconnaît comme outil SAST : Bandit n'y figure
+# pas, d'où le 0 sur ce critère avant l'ajout de ce fichier.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 7 * * 3"
+
+permissions:
+  contents: read
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write  # déposer les résultats dans Code scanning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Python n'a rien à compiler : CodeQL lit les sources telles quelles.
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          languages: python
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          category: /language:python

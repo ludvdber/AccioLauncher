@@ -1,0 +1,4 @@
+# Résolu dans le .txt voisin, versions et empreintes figées, par la commande
+# écrite en tête de ce fichier. La CI installe le .txt avec --require-hashes.
+# Les planchers du launcher, source de vérité, jobs de tests.yml.
+-r ../../requirements-dev.txt
