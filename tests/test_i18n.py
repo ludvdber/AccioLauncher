@@ -28,6 +28,8 @@ IDENTIQUES_TOLEREES = {
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
+    # « En 2026 », « En septembre » : la préposition est la même en espagnol.
+    "En {}",
     # « changelog » est le même mot en français et en anglais.
     "v{} · changelog",
     # Noms de produits Microsoft : ils ne se traduisent pas.

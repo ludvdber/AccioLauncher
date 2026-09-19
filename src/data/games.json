@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.24",
+  "catalog_version": "0.25",
   "contributors": [
     {
       "name": "ASTeam",
@@ -216,6 +216,14 @@
             "Puzles"
           ]
         }
+      },
+      "saves": {
+        "root": "documents",
+        "folders": [
+          "Harry Potter/Save"
+        ],
+        "files": "Save*.usa",
+        "first": 0
       }
     },
     {
@@ -359,6 +367,14 @@
             "Puzles"
           ]
         }
+      },
+      "saves": {
+        "root": "documents",
+        "folders": [
+          "Harry Potter II/Save"
+        ],
+        "files": "Slot*/Save0.usa",
+        "first": 1
       }
     },
     {
@@ -480,6 +496,17 @@
             "Multipersonaje"
           ]
         }
+      },
+      "saves": {
+        "root": "documents",
+        "folders": [
+          "Harry Potter*Azkaban/Save"
+        ],
+        "files": "Save*.usa",
+        "exclude": [
+          "Save1??.usa"
+        ],
+        "first": 0
       }
     },
     {
@@ -669,6 +696,13 @@
             "Exploración"
           ]
         }
+      },
+      "saves": {
+        "root": "localappdata",
+        "folders": [
+          "Electronic Arts/Harry Potter*Ph*nix/HPOOTP"
+        ],
+        "files": "HPOOTP"
       }
     },
     {
@@ -742,6 +776,13 @@
             "Quidditch"
           ]
         }
+      },
+      "saves": {
+        "root": "localappdata",
+        "folders": [
+          "Electronic Arts/Harry Potter*Prince*/HPHBP0"
+        ],
+        "files": "HPHBP0"
       }
     },
     {
@@ -881,7 +922,15 @@
       "dpi_aware": true,
       "requires": [
         "vcredist2005_x86"
-      ]
+      ],
+      "saves": {
+        "root": "localappdata",
+        "folders": [
+          "Electronic Arts/Harry Potter*Premi*re Partie",
+          "Electronic Arts/Harry Potter*Part* 1"
+        ],
+        "files": "auto.sav"
+      }
     },
     {
       "id": "hp7b",
@@ -1051,7 +1100,15 @@
       "requires": [
         "vcredist2008_x86"
       ],
-      "warning": "Votre antivirus peut supprimer Paul.dll pendant l'installation. Si le jeu ne démarre pas, restaurez ce fichier depuis la quarantaine."
+      "warning": "Votre antivirus peut supprimer Paul.dll pendant l'installation. Si le jeu ne démarre pas, restaurez ce fichier depuis la quarantaine.",
+      "saves": {
+        "root": "localappdata",
+        "folders": [
+          "Electronic Arts/Harry Potter*Deuxi*me Partie",
+          "Electronic Arts/Harry Potter*Part* 2"
+        ],
+        "files": "auto.sav"
+      }
     }
   ]
 }

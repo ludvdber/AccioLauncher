@@ -435,3 +435,28 @@ class TestPartieInterrompue:
         stats.amorcer({}, stats.chemin_journal())
         stats.ouvrir_session("hp5", datetime(2026, 8, 27, 20, 0))
         assert stats.recuperer_session_interrompue() is None
+
+
+class TestParMois:
+    def test_une_partie_compte_pour_le_mois_ou_elle_commence(self):
+        h = _hist([stats.Session("hp1", datetime(2026, 8, 31, 23, 0), 7200),
+                   stats.Session("hp2", datetime(2026, 9, 1, 20, 0), 600)])
+        assert stats.par_mois(h) == {(2026, 8): 7200, (2026, 9): 600}
+
+    def test_l_herite_n_a_pas_de_mois(self):
+        h = _hist(herite={"hp1": 99999})
+        assert stats.par_mois(h) == {}
+        assert stats.temps_annee(h, 2026) == 0
+
+    def test_douze_cases_le_mois_courant_en_dernier(self):
+        h = _hist([stats.Session("hp1", datetime(2026, 2, 3, 21, 0), 1200)])
+        cases = stats.douze_mois(h, date(2026, 9, 19))
+        assert len(cases) == 12
+        assert cases[0][:2] == (2025, 10) and cases[-1][:2] == (2026, 9)
+        assert dict(((a, m), s) for a, m, s in cases)[(2026, 2)] == 1200
+
+    def test_l_annee_additionne_ses_mois(self):
+        h = _hist([stats.Session("hp1", datetime(2025, 12, 31, 21, 0), 100),
+                   stats.Session("hp1", datetime(2026, 1, 1, 21, 0), 200),
+                   stats.Session("hp2", datetime(2026, 5, 1, 21, 0), 300)])
+        assert stats.temps_annee(h, 2026) == 500

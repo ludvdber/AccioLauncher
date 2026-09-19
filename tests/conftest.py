@@ -41,6 +41,21 @@ def _config_hors_du_vrai_dossier(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _sauvegardes_hors_du_vrai_disque(tmp_path, monkeypatch):
+    """Aucun test ne lit les VRAIES sauvegardes de la machine.
+
+    `sauvegardes.racines()` vise Documents et AppData : sans cette garde, la
+    page de statistiques testée afficherait les parties de la personne qui
+    fait tourner la suite, et un test passerait ou échouerait selon le poste.
+    Un test qui veut des sauvegardes les pose sous ces deux dossiers.
+    """
+    racines = {"documents": tmp_path / "Documents",
+               "localappdata": tmp_path / "AppData" / "Local"}
+    monkeypatch.setattr("src.core.sauvegardes.racines", lambda: racines)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_d_elevation_uac(monkeypatch):
     """Aucun test ne doit pouvoir faire apparaître une invite UAC.
 

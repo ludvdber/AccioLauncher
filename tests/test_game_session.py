@@ -188,3 +188,48 @@ class TestUnLancementRateSeDitCommeTel:
         assert m.add_playtime("hp1", juste_sous, None, 0) is False
         assert m.add_playtime("hp1", juste_au_dessus, None, 0) is True
 
+
+
+class TestSauvegardeDeLaPartie:
+    """La partie va à la sauvegarde qu'elle a ÉCRITE : relevé au lancement,
+    relevé à la fermeture, et la différence désigne l'emplacement joué."""
+
+    @staticmethod
+    def _session_avec_saves(tmp_path, qtbot):
+        import dataclasses
+        from src.core import sauvegardes
+        from src.core.game_data import Sauvegardes
+        s = GameSession(_manager(tmp_path))
+        s._monitor.start = lambda proc, nom: None
+        spec = Sauvegardes(racine="documents", dossiers=("Harry Potter/Save",),
+                           fichiers="Save*.usa")
+        jeu = s._manager.get_game_by_id("hp1")
+        s._manager._index["hp1"] = dataclasses.replace(jeu, sauvegardes=spec)
+        dossier = sauvegardes.racines()["documents"] / "Harry Potter" / "Save"
+        dossier.mkdir(parents=True)
+        (dossier / "Save0.usa").write_bytes(b"a")
+        (dossier / "Save1.usa").write_bytes(b"b")
+        import os
+        os.utime(dossier / "Save0.usa", (1_700_000_000, 1_700_000_000))
+        os.utime(dossier / "Save1.usa", (1_700_000_000, 1_700_000_000))
+        return s, spec, dossier
+
+    def test_la_sauvegarde_ecrite_recoit_la_partie(self, tmp_path, qtbot):
+        import os
+        from src.core import sauvegardes
+        s, spec, dossier = self._session_avec_saves(tmp_path, qtbot)
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        os.utime(dossier / "Save1.usa", (1_800_000_000, 1_800_000_000))
+        s._monitor.game_exited.emit("HP1", 0, 600.0)
+        vues = {v.fichier: v for v in sauvegardes.vues("hp1", spec)}
+        assert vues["Save1.usa"].temps == 600 and vues["Save1.usa"].parties == 1
+        assert vues["Save0.usa"].temps is None
+
+    def test_une_tentative_n_est_attribuee_a_personne(self, tmp_path, qtbot):
+        import os
+        from src.core import sauvegardes
+        s, spec, dossier = self._session_avec_saves(tmp_path, qtbot)
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        os.utime(dossier / "Save1.usa", (1_800_000_000, 1_800_000_000))
+        s._monitor.game_exited.emit("HP1", 0, 3.0)
+        assert not sauvegardes.chemin_fichier().exists()

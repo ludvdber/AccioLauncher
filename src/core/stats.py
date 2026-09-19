@@ -577,3 +577,35 @@ def jour_prefere(hist: Historique) -> int | None:
 
 def premiere_session(hist: Historique) -> datetime | None:
     return hist.sessions[0].debut if hist.sessions else None
+
+
+def par_mois(hist: Historique) -> dict[tuple[int, int], int]:
+    """Secondes par (année, mois) de DÉBUT de partie.
+
+    Même choix que `par_heure` : une partie commencée le 31 à 23 h compte pour
+    le mois où on l'a lancée. Le temps hérité n'a pas de date, il n'entre pas.
+    """
+    mois: Counter = Counter()
+    for s in hist.sessions:
+        mois[(s.debut.year, s.debut.month)] += s.duree
+    return dict(mois)
+
+
+def douze_mois(hist: Historique, aujourdhui: date | None = None) -> list[tuple[int, int, int]]:
+    """Les douze derniers mois, le courant en dernier : [(année, mois, secondes)].
+
+    Toujours douze cases, même vides — c'est l'axe du graphique, pas une
+    donnée ; un axe qui rétrécit quand on joue peu a l'air cassé.
+    """
+    aujourdhui = aujourdhui or date.today()
+    cumul = par_mois(hist)
+    cases = []
+    for recul in range(11, -1, -1):
+        rang = aujourdhui.year * 12 + (aujourdhui.month - 1) - recul
+        annee, mois = divmod(rang, 12)
+        cases.append((annee, mois + 1, cumul.get((annee, mois + 1), 0)))
+    return cases
+
+
+def temps_annee(hist: Historique, annee: int) -> int:
+    return sum(s for (a, _), s in par_mois(hist).items() if a == annee)

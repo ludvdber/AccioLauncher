@@ -42,6 +42,49 @@ class TestEcran:
         assert diagnostic.ecran(2048, 1152, 1.25) == "2560×1440 à 125 %"
 
 
+class TestMateriel:
+    """Processeur, carte graphique, pilote : la première question devant un
+    écran noir. Demandé par Ludo le 2026-09-19."""
+
+    def test_pilote_nvidia_au_numero_public(self):
+        assert diagnostic.version_pilote_publique(
+            "NVIDIA GeForce RTX 2060 SUPER", "32.0.16.1074") == "610.74"
+        assert diagnostic.version_pilote_publique(
+            "NVIDIA", "31.0.15.3623") == "536.23"
+
+    def test_pilote_amd_au_numero_adrenalin(self):
+        assert diagnostic.version_pilote_publique(
+            "Advanced Micro Devices, Inc. AMD Radeon RX 6700", "31.0.24033.1003",
+            "25.8.1") == "25.8.1"
+
+    def test_pilote_intel_tel_quel(self):
+        assert diagnostic.version_pilote_publique(
+            "Intel Corporation Intel(R) UHD Graphics", "31.0.101.5186") == "31.0.101.5186"
+
+    def test_ligne_de_carte(self):
+        ligne = diagnostic.carte_graphique({
+            "DriverDesc": "NVIDIA GeForce RTX 2060 SUPER", "ProviderName": "NVIDIA",
+            "DriverVersion": "32.0.16.1074", "DriverDate": "7-2-2026",
+            "HardwareInformation.qwMemorySize": 8 * 1024 ** 3,
+            "MatchingDeviceId": r"pci\ven_10de&dev_1f06"})
+        assert ligne == "NVIDIA GeForce RTX 2060 SUPER · pilote 610.74 · du 2026-07-02 · 8 Go"
+
+    def test_un_adaptateur_virtuel_est_signale(self):
+        ligne = diagnostic.carte_graphique({
+            "DriverDesc": "Parsec Virtual Display Adapter", "DriverVersion": "0.45.0.0",
+            "MatchingDeviceId": r"Root\Parsec\VDA"})
+        assert ligne.endswith("virtuel")
+
+    def test_le_rapport_porte_le_materiel(self):
+        from tests.test_diagnostic import TestRapport
+        texte = TestRapport()._rapport(tentatives=(),
+                                       machine=["Processeur : Ryzen (16 threads)"])
+        assert "Processeur : Ryzen (16 threads)" in texte
+
+    def test_le_materiel_se_lit_sans_lever(self):
+        assert diagnostic.materiel()[0].startswith("Processeur : ")
+
+
 class TestRapport:
     def _rapport(self, **kw):
         return diagnostic.rapport(

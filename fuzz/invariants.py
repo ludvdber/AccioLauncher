@@ -54,6 +54,16 @@ def catalogue(raw: object) -> None:
             for part in version.download_parts or ():
                 assert _https(part), part
 
+        sv = jeu.sauvegardes
+        if sv is not None:
+            # Ces motifs composent un chemin sur le disque de l'utilisateur :
+            # jamais absolus, jamais de remontée, jamais récursifs.
+            assert sv.racine in ("documents", "localappdata"), sv.racine
+            for motif in (*sv.dossiers, sv.fichiers):
+                assert _est_relatif_sur(motif) and ":" not in motif \
+                    and "**" not in motif, motif
+            assert sv.fichiers.count("/") <= 1, sv.fichiers
+
         lr = jeu.language_registry
         if lr is not None:
             for langue in lr.languages:

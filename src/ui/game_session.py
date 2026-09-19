@@ -27,7 +27,7 @@ from datetime import datetime
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.core import stats
+from src.core import sauvegardes, stats
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
 from src.ui.process_monitor import ProcessMonitor
@@ -57,6 +57,9 @@ class GameSession(QObject):
         self._monitor.battement.connect(self._on_battement)
         self._game_id: str = ""
         self._debut: datetime | None = None
+        # Les sauvegardes telles qu'elles étaient AU LANCEMENT : comparées à
+        # celles de la fermeture, elles disent dans laquelle on a joué.
+        self._avant: dict[str, sauvegardes.Etat] = {}
 
     @property
     def nom_en_cours(self) -> str:
@@ -69,10 +72,15 @@ class GameSession(QObject):
         self._debut = datetime.now()
         # Notée DÈS MAINTENANT et non à la fin — raison dans l'en-tête du module.
         stats.ouvrir_session(game_id, self._debut)
+        self._avant = sauvegardes.releve(self._spec(game_id))
         self._monitor.start(process, game_name)
         if self._manager.config.discord_presence:
             self._presence.set_playing(game_name)
         self.demarree.emit(game_name)
+
+    def _spec(self, game_id: str):
+        game = self._manager.get_game_by_id(game_id)
+        return game.sauvegardes if game is not None else None
 
     def _on_battement(self) -> None:
         """Le jeu tourne encore : on rafraîchit le filet de reprise."""
@@ -88,8 +96,14 @@ class GameSession(QObject):
         if self._game_id:
             partie = self._manager.add_playtime(
                 self._game_id, int(duree), self._debut, code)
+            if partie and self._debut is not None:
+                sauvegardes.attribuer(
+                    self._game_id, self._avant,
+                    sauvegardes.releve(self._spec(self._game_id)),
+                    self._debut, int(duree))
         self._game_id = ""
         self._debut = None
+        self._avant = {}
         self._presence.clear()
         self.terminee.emit(game_name, partie)
 

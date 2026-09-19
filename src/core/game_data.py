@@ -393,6 +393,78 @@ def _sous_dossier_valide(brut) -> str:
     return nom
 
 
+# Où un jeu range ses sauvegardes. Les racines sont une LISTE FERMÉE : le
+# catalogue distant choisit parmi elles, il n'écrit jamais un chemin absolu.
+RACINES_SAUVEGARDES = ("documents", "localappdata")
+
+
+@dataclass(frozen=True, slots=True)
+class Sauvegardes:
+    """Emplacement des sauvegardes d'un jeu, tel que le déclare le catalogue.
+
+    **Pourquoi dans le catalogue et pas en dur** : le nom du dossier dépend de
+    la LANGUE dans laquelle le jeu a été installé — relevé le 2026-09-19 sur
+    une vraie machine : « Harry Potter et le prisonnier d'Azkaban » dans
+    Documents, « Harry Potter et les Reliques de la Mort (TM) – Première
+    Partie » dans AppData, alors que HP5 et HP6 y gardent leur nom anglais. Un
+    motif par langue se corrige à distance le jour où quelqu'un joue en
+    italien ; un chemin en dur attendrait une release.
+
+    `dossiers` sont des motifs glob RELATIFS à la racine (on prend le premier
+    qui existe) ; `fichiers` un motif relatif au dossier, qui peut descendre
+    d'un niveau (« Slot*/Save0.usa » pour HP2, où l'emplacement est le
+    dossier). `exclure` écarte des noms (les sauvegardes miroir `Save100.usa`
+    de HP3). `premier` est le numéro que porte le PREMIER emplacement dans les
+    noms de fichier : 0 pour « Save0.usa », 1 pour « Slot1 ».
+    """
+
+    racine: str
+    dossiers: tuple[str, ...]
+    fichiers: str
+    exclure: tuple[str, ...] = ()
+    premier: int = 0
+
+
+def _motif_sur(motif) -> bool:
+    """Un motif de catalogue ne sert qu'à LIRE des dates de fichier, mais il
+    compose un chemin sur le disque de l'utilisateur : mêmes refus que
+    `executable`, plus le « : » (flux NTFS, lettre de lecteur) et « ** » (un
+    motif récursif parcourrait tout Documents à chaque partie)."""
+    return (isinstance(motif, str) and _est_relatif_sur(motif)
+            and ":" not in motif and "**" not in motif)
+
+
+def _parse_sauvegardes(data) -> "Sauvegardes | None":
+    """Tout ou rien, comme `language_registry` : un bloc douteux est ignoré en
+    entier, et le jeu n'a simplement pas de sauvegardes affichées."""
+    if not isinstance(data, dict):
+        return None
+    racine = data.get("root")
+    dossiers = data.get("folders")
+    fichiers = data.get("files")
+    exclure = data.get("exclude", [])
+    premier = data.get("first", 0)
+    if racine not in RACINES_SAUVEGARDES:
+        return None
+    if isinstance(dossiers, str):
+        dossiers = [dossiers]
+    if (not isinstance(dossiers, list) or not dossiers or len(dossiers) > 8
+            or not all(_motif_sur(d) for d in dossiers)):
+        log.warning("Bloc saves ignoré (dossiers) : %r", dossiers)
+        return None
+    if not _motif_sur(fichiers) or fichiers.replace("\\", "/").count("/") > 1:
+        log.warning("Bloc saves ignoré (fichiers) : %r", fichiers)
+        return None
+    if not isinstance(exclure, list) or not all(isinstance(e, str) for e in exclure):
+        return None
+    if not isinstance(premier, int) or isinstance(premier, bool) or not 0 <= premier <= 9:
+        return None
+    return Sauvegardes(racine=racine,
+                       dossiers=tuple(d.replace("\\", "/") for d in dossiers),
+                       fichiers=fichiers.replace("\\", "/"),
+                       exclure=tuple(exclure), premier=premier)
+
+
 @dataclass(frozen=True, slots=True)
 class GameData:
     """Données immuables d'un jeu du catalogue."""
@@ -444,6 +516,8 @@ class GameData:
     # et c'est la bonne règle — aucun d'eux n'a été mesuré, et un jeu qui va
     # bien n'a pas besoin qu'on lui change son environnement de lancement.
     dpi_aware: bool = False
+    # Où le jeu range ses sauvegardes ; None tant qu'on ne l'a pas relevé.
+    sauvegardes: Sauvegardes | None = None
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -539,6 +613,7 @@ class GameData:
             # chaîne non vide ou un nombre y suffiraient à activer un réglage
             # qui change la façon dont on lance un exécutable.
             dpi_aware=data.get("dpi_aware") is True,
+            sauvegardes=_parse_sauvegardes(data.get("saves")),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),
