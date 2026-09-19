@@ -91,6 +91,26 @@ class TestConfig:
             assert c.langue == DEFAULT_LANGUAGE
             assert c.installed_versions == {}
 
+    def test_config_corrompue_mise_de_cote(self, tmp_path):
+        """Le fichier illisible est déplacé, pas laissé à la merci de la
+        prochaine sauvegarde, qui effacerait temps de jeu et langue."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"langue": "fr", "playtime_seconds": {"hp1": 36', encoding="utf-8")
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            Config.load().save()
+        mis_de_cote = tmp_path / "config.corrompu"
+        assert mis_de_cote.read_text(encoding="utf-8").startswith('{"langue": "fr"')
+
+    def test_config_verrouillee_pas_mise_de_cote(self, tmp_path):
+        """Une erreur de LECTURE ne prouve rien sur le contenu : on n'y touche pas."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text("{}", encoding="utf-8")
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file), \
+                patch.object(Path, "read_text", side_effect=PermissionError("verrou")):
+            Config.load()
+        assert config_file.exists()
+        assert not (tmp_path / "config.corrompu").exists()
+
     def test_load_type_invalid_json_falls_back(self, tmp_path):
         """Régression d'audit : un JSON valide mais mal typé (config éditée à la
         main) ne doit JAMAIS crasher le boot — repli sur les défauts."""

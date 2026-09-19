@@ -1,0 +1,63 @@
+# Fuzzing (Atheris) : des centaines de milliers d'entrées tordues contre les
+# barrières qui séparent le catalogue DISTANT du disque et du registre de
+# l'utilisateur. Les cibles et ce qu'elles vérifient sont dans fuzz/.
+#
+# Deux minutes par cible à chaque push et chaque PR : assez pour attraper une
+# barrière cassée par un changement. Dix minutes le dimanche, pour chercher
+# plus loin. Un échec dépose l'entrée fautive en artefact : c'est elle qu'il
+# faut rejouer (python fuzz/fuzz_x.py <fichier>), puis ajouter à
+# tests/test_fuzz.py une fois corrigée.
+name: fuzz
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        cible: [catalogue, registre, archive]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Install Atheris
+        run: pip install --require-hashes -r .github/requirements/fuzz.txt
+
+      # Le vrai catalogue comme point de départ : muté, il atteint les
+      # validations au lieu de s'arrêter au premier caractère JSON invalide.
+      - name: Seed corpus
+        run: |
+          mkdir -p corpus artefacts
+          if [ "${{ matrix.cible }}" = catalogue ]; then cp src/data/games.json corpus/; fi
+
+      - name: Fuzz ${{ matrix.cible }}
+        env:
+          DUREE: ${{ github.event_name == 'schedule' && '600' || '120' }}
+        run: >-
+          python fuzz/fuzz_${{ matrix.cible }}.py corpus
+          -max_total_time="$DUREE" -artifact_prefix=artefacts/
+
+      - name: Keep the failing input
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-${{ matrix.cible }}-echec
+          path: artefacts/

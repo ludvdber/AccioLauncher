@@ -1,8 +1,8 @@
 {
-  "catalog_version": "0.23",
+  "catalog_version": "0.24",
   "contributors": [
     {
-      "name": "Ludovic",
+      "name": "ASTeam",
       "role": "Création, développement, catalogue",
       "url": "https://github.com/ludvdber",
       "i18n": {
@@ -897,9 +897,36 @@
         "Combat",
         "Bataille"
       ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
+      "latest_version": "1.1",
+      "recommended_version": "1.1",
       "versions": [
+        {
+          "version": "1.1",
+          "date": "2026-09-17",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.1/hp8.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.1/hp8.7z.002",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.1/hp8.7z.003",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.1/hp8.7z.004"
+          ],
+          "size_mb": 7701,
+          "changes": [
+            "Correction des crashs pendant les cinématiques"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Fixed crashes during cutscenes"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Corregidos los cierres durante las cinemáticas"
+              ]
+            }
+          }
+        },
         {
           "version": "1.0",
           "date": "2026-08-26",
@@ -910,7 +937,7 @@
             "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.003",
             "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.0/hp8.7z.004"
           ],
-          "size_mb": 7520,
+          "size_mb": 7701,
           "changes": [
             "Wrapper graphique D3D9 refondu",
             "Version originale du jeu",

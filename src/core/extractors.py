@@ -53,10 +53,19 @@ def is_unsafe_entry(name: str) -> bool:
     normalized = name.replace("\\", "/").strip()
     if not normalized:
         return True
-    if len(normalized) >= 2 and normalized[1] == ":":
-        return True          # C:\... ou C:/...
+    if ":" in normalized:
+        # C:\..., mais aussi « a/C:x » ou « HP.exe:flux » : un deux-points n'est
+        # jamais permis dans un nom Windows, et ailleurs qu'en tête il désigne
+        # un flux de données alternatif (NTFS). Aucune archive de jeu n'en a.
+        return True
     if normalized.startswith("/"):
         return True          # /abs, //serveur/partage
+    # « .. » déguisé : Windows retire les points et espaces en fin de nom, et
+    # un composant fait seulement de points et d'espaces (« .. », « ... »)
+    # n'a aucun usage légitime et un sens qui varie d'une API à l'autre.
+    # Sur le nom NON rogné : « ./x » précédé d'une espace, c'est « ␠. ».
+    if any(c != "." and c.strip(". ") == "" for c in name.replace("\\", "/").split("/") if c):
+        return True
     return ".." in PurePosixPath(normalized).parts
 
 

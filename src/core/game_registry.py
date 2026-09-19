@@ -24,6 +24,7 @@ Trois contraintes, relevées sur une vraie installation le 2026-08-21
 import logging
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -78,7 +79,10 @@ def _controle(texte: str) -> bool:
     les dégâts, mais par ACCIDENT, pas par conception. Aucune langue de jeu n'a
     besoin d'un caractère de contrôle : on refuse, et le problème disparaît.
     """
-    return any(ord(c) < 0x20 or ord(c) == 0x7F for c in texte)
+    # Cc : C0, DEL et C1 (dont U+0085, « next line ») ; Zl / Zp : séparateurs
+    # de ligne et de paragraphe Unicode. Aucun n'a sa place dans une valeur de
+    # registre, et on n'a pas à savoir lesquels regedit prend pour un saut.
+    return any(unicodedata.category(c) in ("Cc", "Zl", "Zp") for c in texte)
 
 
 def refus_de_cle(ruche: str, cle: str) -> str | None:

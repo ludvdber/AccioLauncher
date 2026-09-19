@@ -1,0 +1,4 @@
+# Résolu dans le .txt voisin, versions et empreintes figées, par la commande
+# écrite en tête de ce fichier. La CI installe le .txt avec --require-hashes.
+# L'outil du job fuzz.yml (Linux seulement : Atheris n'a pas de roue Windows).
+atheris

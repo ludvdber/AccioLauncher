@@ -147,7 +147,7 @@ class Config:
     trailers_optin: bool = False
     discord_presence: bool = True
     dismissed_launcher_version: str = ""
-    # Un seul remerciement Ko-fi (cap des 10 h de jeu) dans la vie du launcher.
+    # Un seul remerciement Ko-fi (cap des 2 h de jeu) dans la vie du launcher.
     kofi_milestone_thanked: bool = False
     installed_versions: dict[str, str] = field(default_factory=dict)
     # Stats de jeu : cumul par jeu (secondes) et date de dernière session (ISO)
@@ -197,8 +197,16 @@ class Config:
                     game_language=_as_map(data.get("game_language"), str),
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
-                import logging
-                logging.getLogger(__name__).warning("Config corrompue, valeurs par défaut : %s", exc)
+                log.warning("Config corrompue, valeurs par défaut : %s", exc)
+                # Mise de côté, comme le journal des sessions : la prochaine
+                # sauvegarde écraserait sinon le temps de jeu, la langue et les
+                # versions installées, qui restent récupérables à la main. Un
+                # fichier simplement illisible (verrouillé) n'est pas corrompu.
+                if not isinstance(exc, OSError):
+                    try:
+                        os.replace(CONFIG_FILE_PATH, CONFIG_FILE_PATH.with_suffix(".corrompu"))
+                    except OSError:
+                        pass
                 return cls()
         return cls()
 

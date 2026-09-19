@@ -37,9 +37,11 @@ jobs:
 
       # Les règles écartées et leur raison sont dans `.bandit`, que Bandit lit
       # tout seul. Chaque appel de processus relu porte un `# nosec` sur sa
-      # ligne : un appel ajouté sans relecture fait échouer ce job.
+      # ligne : un appel ajouté sans relecture fait échouer ce job. fuzz/ est
+      # écarté comme tests/ : du code de vérification, fait d'`assert`, qui ne
+      # part pas dans l'exécutable.
       - name: Bandit security scan
-        run: bandit -r . -x ./tests
+        run: bandit -r . -x ./tests,./fuzz
 
       # `-r` : les dépendances DU LAUNCHER. Sans argument, pip-audit examine
       # l'environnement courant — ici bandit et pip-audit eux-mêmes — et son

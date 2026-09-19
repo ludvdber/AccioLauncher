@@ -700,7 +700,11 @@ def _parse_catalog(raw: dict | list) -> Catalog:
             continue
         try:
             games.append(GameData.from_dict(entry))
-        except (ValueError, TypeError, AttributeError, KeyError) as exc:
+        # OverflowError : `"year": 1e999` est du JSON valide, lu comme l'infini,
+        # et `int()` le refuse par cette exception-là — qui n'est PAS une
+        # ValueError. Elle traversait `load_catalog` : un cache abîmé faisait
+        # planter chaque démarrage. Trouvé en préparant le fuzzing.
+        except (ValueError, TypeError, AttributeError, KeyError, OverflowError) as exc:
             log.warning("Jeu invalide ignoré dans le catalogue : %s", exc)
     return Catalog(catalog_version=str(version), catalog_url=str(url),
                    games=tuple(games), trailers=trailers,
