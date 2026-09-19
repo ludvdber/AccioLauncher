@@ -85,7 +85,7 @@ def _langue_retablie():
 
 
 @pytest.fixture(autouse=True)
-def _widgets_detruits_a_la_fin_du_test(request):
+def _widgets_detruits_a_la_fin_du_test(request, monkeypatch):
     """Les fenêtres d'un test meurent à la fin de CE test, pas n'importe quand.
 
     pytest-qt ferme chaque widget enregistré puis appelle `deleteLater()`. Mais
@@ -109,10 +109,34 @@ def _widgets_detruits_a_la_fin_du_test(request):
     Le ramasse-miettes n'est forcé qu'après une fenêtre principale ou un
     dialogue : ce sont eux qui portent des cycles de références, et le forcer
     après CHAQUE test Qt coûtait 18 s sur 85.
+
+    Une fenêtre doit aussi VIVRE jusque-là, et rien ne le garantissait.
+    pytest-qt ne garde d'un widget enregistré qu'une référence FAIBLE, et il
+    fait tourner la boucle d'événements juste après la fin du test, AVANT de
+    fermer quoi que ce soit (`pytest_runtest_call`). La variable `win` du test
+    n'existe plus à cet instant : une fenêtre encore AFFICHÉE ne tient plus
+    qu'à ses cycles de références, et la première allocation venue peut
+    déclencher le ramasse-miettes, qui la détruit au milieu de son propre
+    dessin. CI Windows 3.12, 2026-09-19 : le premier tick des particules crée
+    35 objets, le ramasse-miettes passe, et `self.height()` tombe sur un objet
+    détruit entre deux lignes du même slot. Reproduit à coup sûr en 3.12 comme
+    en 3.14, en forçant un passage du ramasse-miettes dans ce tick : 1 échec et
+    20 erreurs sur `test_integration_smoke.py` seul. Chaque widget enregistré
+    est donc tenu ici jusqu'à sa destruction.
     """
-    yield
     if "qtbot" not in request.fixturenames:
+        yield
         return
+    from pytestqt.qtbot import QtBot
+    tenus = []
+    vrai_add_widget = QtBot.addWidget
+
+    def _add_widget_tenu(self, widget, **kwargs):
+        vrai_add_widget(self, widget, **kwargs)
+        tenus.append(widget)
+
+    monkeypatch.setattr(QtBot, "addWidget", _add_widget_tenu)
+    yield
     from PyQt6.QtCore import QCoreApplication, QEvent
     from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow
     app = QApplication.instance()
@@ -120,6 +144,9 @@ def _widgets_detruits_a_la_fin_du_test(request):
         return
     lourde = any(isinstance(w, (QMainWindow, QDialog)) for w in app.topLevelWidgets())
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    # Relâchées APRÈS la destruction C++ : il ne reste plus que des enveloppes
+    # Python vides, que le ramasse-miettes peut prendre quand il veut.
+    tenus.clear()
     if lourde:
         gc.collect()
 
