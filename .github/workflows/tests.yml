@@ -1,5 +1,9 @@
 # CI Accio Launcher — pytest sur Windows (plateforme cible) + smoke test Linux
 # (objectif déclaré : portage Linux — attrape les fuites win32 dès la PR).
+#
+# Les actions sont épinglées par empreinte de commit, version en commentaire :
+# une étiquette (@v7) peut être déplacée par qui prend la main sur le dépôt de
+# l'action, une empreinte non. Dependabot tient les deux à jour ensemble.
 name: tests
 
 on:
@@ -10,14 +14,33 @@ on:
 permissions:
   contents: read
 
+# Un nouveau push rend le run précédent sans objet : on l'annule plutôt que de
+# le laisser occuper un runner Windows.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     runs-on: windows-latest
+    # Un test bloqué (invite UAC, exec() modal) ne doit pas brûler les six
+    # heures par défaut d'un runner.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12 est le plancher déclaré par pyproject, 3.14 celle du build. 3.12
+        # n'avait jamais été testé : `Path.read_text(newline=…)`, apparu en
+        # 3.13, y cassait tools/sync_trailers.py sans que rien le voie
+        # (2026-09-19).
+        python: ["3.12", "3.14"]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.14"
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
           cache: pip
       - name: Installer les dépendances
         run: |
@@ -42,23 +65,26 @@ jobs:
         run: python -m pytest -v --tb=short
       - name: Joindre les vidages de plantage
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: vidages-plantage-windows
+          name: vidages-plantage-windows-py${{ matrix.python }}
           path: ${{ runner.temp }}/vidages
           if-no-files-found: ignore
           retention-days: 7
 
   linux-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # BLOQUANT depuis le 2026-09-18. Il a été informatif (`continue-on-error`)
     # tant que le portage Linux n'avait pas commencé, et il est resté rouge
     # deux fois des semaines durant sans que personne le voie : un run dont la
     # couleur globale reste verte ne se regarde pas. Un rouge ici doit arrêter
     # le run, comme sous Windows.
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
           cache: pip

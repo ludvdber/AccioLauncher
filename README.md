@@ -161,9 +161,14 @@ faille de sécurité, voir [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-Le code source est sous licence [MIT](LICENSE). L'exécutable distribué est sous
-GNU GPL v3, parce qu'il embarque PyQt6, lui-même publié sous GPL v3. Le détail
-est dans [LICENSE](LICENSE) et [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
+Le code source est sous licence [MIT](LICENSE) : vous pouvez le reprendre, le
+modifier et le redistribuer, en gardant la mention de copyright. L'exécutable
+distribué est sous GNU GPL v3, parce qu'il embarque PyQt6, lui-même publié sous
+GPL v3 ; le détail est dans [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
+
+Le nom **Accio Launcher** et son logo, eux, ne sont pas libres. Forker et
+modifier le launcher pour vous, oui ; publier votre version sous ce nom ou avec
+ce logo, non. Voir [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Avertissement légal
 
@@ -202,6 +207,11 @@ code-signed: click *More info*, then *Run anyway*.
 
 **Translators welcome:** a language is one text file, no code involved — see
 [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
+
+**License:** the source code is MIT, the distributed executable GNU GPL v3
+(it bundles PyQt6). The Accio Launcher name and logo are not covered: fork and
+modify freely, but publish your version under another name — see
+[TRADEMARKS.md](TRADEMARKS.md).
 
 The launcher contains no game files. Harry Potter is a trademark of Warner Bros.
 Entertainment Inc.; this project is not affiliated with Warner Bros., Electronic

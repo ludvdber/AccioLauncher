@@ -1,10 +1,13 @@
 # Composants tiers
 
-Accio Launcher est publié sous licence MIT (voir [LICENSE](LICENSE)). Le binaire
+Accio Launcher est publié sous licence MIT (voir [LICENSE](../LICENSE)). Le binaire
 distribué `AccioLauncher.exe` embarque les composants ci-dessous, chacun soumis à
 sa propre licence.
 
 Ce fichier doit accompagner toute redistribution du binaire.
+
+Le nom et le logo d'Accio Launcher ne relèvent d'aucune de ces licences :
+voir [TRADEMARKS.md](../TRADEMARKS.md).
 
 ---
 

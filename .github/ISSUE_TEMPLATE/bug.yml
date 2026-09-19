@@ -1,0 +1,75 @@
+name: Signaler un bug
+description: Le launcher plante, affiche une erreur ou ne fait pas ce qu'il devrait.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de signaler ce problème. *You can write in English.*
+
+        - **Un jeu qui ne démarre pas, une question d'installation ?** Le [Discord](https://discord.gg/TNwDQd7KGe) répond souvent plus vite.
+        - **Une faille de sécurité ?** Ne l'écrivez pas ici, où tout le monde peut la lire : [signalez-la en privé](https://github.com/ludvdber/AccioLauncher/security/advisories/new).
+
+  - type: dropdown
+    id: jeu
+    attributes:
+      label: Jeu concerné
+      options:
+        - Le launcher lui-même (aucun jeu en particulier)
+        - Harry Potter à l'École des Sorciers
+        - Harry Potter et la Chambre des Secrets
+        - Harry Potter et le Prisonnier d'Azkaban
+        - Harry Potter et la Coupe de Feu
+        - Harry Potter et l'Ordre du Phénix
+        - Harry Potter et le Prince de Sang-Mêlé
+        - Harry Potter et les Reliques de la Mort, partie 1
+        - Harry Potter et les Reliques de la Mort, partie 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: probleme
+    attributes:
+      label: Que s'est-il passé ?
+      description: Ce que vous avez vu, et ce que vous attendiez à la place. Recopiez le message d'erreur s'il y en a un.
+      placeholder: "Ex. : le téléchargement de l'Ordre du Phénix s'arrête à 80 % sur « Échec », alors que ma connexion fonctionne."
+    validations:
+      required: true
+
+  - type: textarea
+    id: etapes
+    attributes:
+      label: Comment le reproduire ?
+      description: Les étapes, dans l'ordre. Si ça n'arrive qu'une fois de temps en temps, dites-le aussi.
+      placeholder: |
+        1. Ouvrir le launcher
+        2. Cliquer sur…
+        3. …
+
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Informations de diagnostic
+      description: |
+        Dans le launcher : **Paramètres → À propos → Copier les informations de diagnostic**, puis collez ici. On y trouve la version du launcher et de Windows, les jeux installés et les dernières erreurs. Les chemins sont anonymisés : rien de personnel n'y figure.
+
+        Si le launcher a planté, le rapport de plantage (bouton « Copier le rapport ») fait aussi l'affaire.
+      render: text
+      placeholder: "Collez ici le bloc copié depuis le launcher."
+
+  - type: textarea
+    id: captures
+    attributes:
+      label: Captures d'écran
+      description: Facultatif, mais une image en dit souvent plus qu'une description. Glissez-la dans ce champ.
+
+  - type: checkboxes
+    id: verifications
+    attributes:
+      label: Avant d'envoyer
+      options:
+        - label: J'ai la dernière version du launcher (sa version est affichée dans Paramètres → À propos).
+          required: true
+        - label: J'ai cherché dans les issues existantes, et ce problème n'y est pas encore.
+          required: true

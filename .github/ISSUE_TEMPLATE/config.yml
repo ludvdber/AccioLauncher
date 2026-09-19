@@ -1,0 +1,13 @@
+# Les issues « vierges » restent ouvertes, et ce n'est pas un oubli : le
+# dialogue de plantage des versions déjà publiées ouvre
+# issues/new?title=…&body=… avec le rapport pré-rempli (crash_dialog
+# .github_issue_url). Si on les fermait, ce lien risquerait d'arriver sur la
+# liste des modèles et le rapport serait perdu.
+blank_issues_enabled: true
+contact_links:
+  - name: Besoin d'aide ? Passez sur le Discord
+    url: https://discord.gg/TNwDQd7KGe
+    about: Un jeu qui ne démarre pas, une question d'installation. C'est là qu'on répond le plus vite.
+  - name: Signaler une faille de sécurité
+    url: https://github.com/ludvdber/AccioLauncher/security/advisories/new
+    about: En privé, jamais dans une issue publique.

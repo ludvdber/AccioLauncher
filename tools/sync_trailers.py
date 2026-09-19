@@ -95,8 +95,11 @@ def ecrire(chemin: Path, trailers: dict, bump: bool) -> bool:
     """Pose le bloc dans le fichier. Retourne True s'il a changé."""
     # `newline=""` est indispensable : sans lui Python traduit les CRLF en
     # LF à la LECTURE, la détection ci-dessous conclut « LF » et le fichier
-    # ressort reformaté de bout en bout.
-    brut = chemin.read_text(encoding="utf-8", newline="")
+    # ressort reformaté de bout en bout. `open` et non `read_text` : son
+    # paramètre `newline` n'existe que depuis Python 3.13, et le projet
+    # supporte 3.12 (TypeError constaté le 2026-09-19).
+    with open(chemin, encoding="utf-8", newline="") as f:
+        brut = f.read()
     # Réécrire avec la MISE EN FORME reçue : le dépôt du catalogue est en CRLF
     # indenté à 4 espaces, et reformater noierait la vraie modification.
     fin_de_ligne = "\r\n" if "\r\n" in brut else "\n"

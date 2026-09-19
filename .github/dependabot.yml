@@ -1,0 +1,31 @@
+# Dependabot : une pull request par semaine au plus et par écosystème, les
+# mises à jour regroupées. Chaque PR passe par la CI comme n'importe quelle
+# autre ; rien n'est fusionné tout seul.
+#
+# - github-actions : garde à jour les actions épinglées par empreinte dans
+#   .github/workflows (empreinte ET commentaire de version).
+# - pip : les planchers de pyproject.toml et des requirements. Les alertes
+#   de sécurité, elles, arrivent sans attendre le lundi.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      python:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"

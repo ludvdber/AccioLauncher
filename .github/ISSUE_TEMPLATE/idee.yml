@@ -1,0 +1,34 @@
+name: Proposer une idée
+description: Une fonctionnalité, une amélioration, quelque chose qui vous manque.
+title: "[Idée] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci ! Une idée s'accepte plus facilement quand on comprend le besoin qui est derrière. *You can write in English.*
+
+        Vous voulez traduire le launcher dans votre langue ? C'est un simple fichier texte, sans code : tout est dans [docs/TRANSLATORS.md](https://github.com/ludvdber/AccioLauncher/blob/main/docs/TRANSLATORS.md).
+
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Qu'est-ce qui vous manque ?
+      description: Ce qui vous gêne ou vous manque aujourd'hui, en partant de votre usage.
+      placeholder: "Ex. : je joue sur deux PC, et je dois recopier mes sauvegardes à la main de l'un à l'autre."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposition
+    attributes:
+      label: Ce que vous proposez
+      description: Comment vous verriez la chose. Pas besoin que ce soit technique.
+    validations:
+      required: true
+
+  - type: textarea
+    id: en_attendant
+    attributes:
+      label: Comment vous faites en attendant
+      description: Facultatif. Un contournement, un autre outil…

@@ -1,0 +1,124 @@
+# Release Accio Launcher : l'exécutable est construit ICI, plus sur un poste.
+#
+# Un exe construit à la main dépend de la machine qui le produit (le PATH de
+# Git Bash y glissait ses DLL), le tag pouvait ne pas pointer sur le commit
+# réellement construit, et rien ne prouvait à l'utilisateur que le fichier
+# téléchargé sortait de ce code. Construit par GitHub à partir du tag, il porte
+# une attestation de provenance signée (Sigstore) : qui la vérifie sait de quel
+# dépôt, de quel commit et de quel workflow il sort. C'est ce qui tient lieu de
+# certificat de signature, que le projet n'a pas.
+#
+# Deux déclenchements :
+#   - pousser un tag vX.Y.Z : build, attestation, release en BROUILLON. Rien
+#     n'est public tant qu'on n'a pas écrit les nouveautés et cliqué
+#     « Publish release » ; l'auto-update ne voit pas un brouillon.
+#   - Actions → release → Run workflow : build d'essai, exe joint au run,
+#     sans attestation ni release.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write           # créer la release en brouillon
+      id-token: write           # signer l'attestation (Sigstore)
+      attestations: write       # l'enregistrer auprès de GitHub
+      artifact-metadata: write  # demandé par actions/attest v4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Pas de cache pip ici : un exe publié se construit sur des paquets
+      # téléchargés pour lui, pas sur un cache partagé avec d'autres runs.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        id: python
+        with:
+          python-version: "3.14"
+
+      # Le numéro vit dans config.APP_VERSION (accordé à pyproject et au README
+      # par test_config). Un tag qui ne le porte pas publierait un exe qui
+      # annonce une autre version que sa release, et l'auto-update, qui compare
+      # les deux, le reproposerait en boucle.
+      - name: Le tag correspond à la version du code
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src/core/config.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+          if ("v$version" -ne $env:GITHUB_REF_NAME) {
+            Write-Error "Le tag $env:GITHUB_REF_NAME ne correspond pas à APP_VERSION = $version (src/core/config.py)."
+            exit 1
+          }
+
+      # build.bat enchaîne icône, lint, tests, géométrie avec les vraies polices
+      # et PyInstaller, et s'arrête au premier échec : le même chemin que sur
+      # un poste. PATH réduit au système et au Python du workflow, parce que
+      # PyInstaller cherche les DLL dépendantes dans le PATH et que le runner y
+      # expose Git, Perl, OpenSSL… L'exe ne doit rien devoir à la machine.
+      - name: Construire (build.bat)
+        shell: pwsh
+        env:
+          ACCIO_PY: python
+          PYTHON_EXE: ${{ steps.python.outputs.python-path }}
+        run: |
+          $py = Split-Path $env:PYTHON_EXE
+          $sys = $env:SystemRoot
+          $env:PATH = "$py;$py\Scripts;$sys\System32;$sys;$sys\System32\Wbem;$sys\System32\WindowsPowerShell\v1.0"
+          cmd /c build.bat
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Empreinte SHA-256
+        id: empreinte
+        shell: pwsh
+        run: |
+          $sha = (Get-FileHash dist/AccioLauncher.exe -Algorithm SHA256).Hash.ToLower()
+          "sha256=$sha" >> $env:GITHUB_OUTPUT
+          "AccioLauncher.exe : SHA-256 ``$sha``" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Joindre l'exécutable au run (essai)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: AccioLauncher-essai
+          path: dist/AccioLauncher.exe
+          retention-days: 7
+
+      - name: Attestation de provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/AccioLauncher.exe
+
+      # Les notes partent de .github/release-notes.md, où l'empreinte et le tag
+      # sont posés ici : il ne reste qu'à écrire les nouveautés.
+      - name: Release en brouillon
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA256: ${{ steps.empreinte.outputs.sha256 }}
+        run: |
+          $notes = Get-Content .github/release-notes.md -Raw -Encoding utf8
+          $notes = $notes.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:GITHUB_REF_NAME)
+          $fichier = Join-Path $env:RUNNER_TEMP 'notes.md'
+          Set-Content -Path $fichier -Value $notes -Encoding utf8NoBOM
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          gh release create $env:GITHUB_REF_NAME dist/AccioLauncher.exe `
+            --draft --verify-tag `
+            --title "🪄 Accio Launcher $version" `
+            --notes-file $fichier
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

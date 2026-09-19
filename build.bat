@@ -1,6 +1,17 @@
 @echo off
 setlocal
 
+:: En integration continue (GitHub Actions pose CI=true), personne n'est la
+:: pour appuyer sur une touche : aucune pause. L'interpreteur y est celui
+:: qu'a installe le workflow (ACCIO_PY), que le lanceur `py` ne connait pas
+:: forcement. Sur un poste, rien ne change.
+set "PAUSE=pause"
+if defined CI set "PAUSE=rem"
+if defined ACCIO_PY (
+    set "PY=%ACCIO_PY%"
+    goto :python_choisi
+)
+
 :: Prefere 3.14 (supporte depuis PyQt6 6.10.2 / PyInstaller 6.16), fallback 3.13 puis 3.12.
 :: 3.12 est le plancher reel : `enum.StrEnum` exige 3.11, et pyproject declare >=3.12.
 set PY=py -3.14
@@ -14,12 +25,13 @@ if errorlevel 1 (
         if errorlevel 1 (
             echo ERREUR : aucun Python 3.12+ trouve.
             echo Installe-le depuis https://python.org/downloads/
-            pause
+            %PAUSE%
             exit /b 1
         )
     )
 )
 
+:python_choisi
 echo === Accio Launcher - Build ===
 %PY% --version
 echo.
@@ -37,7 +49,7 @@ if not errorlevel 1 (
     echo   Fermez le launcher, y compris son icone dans la zone de
     echo   notification en bas a droite, puis relancez ce script.
     echo.
-    pause
+    %PAUSE%
     exit /b 1
 )
 
@@ -48,7 +60,7 @@ echo Installation des dependances de build...
 %PY% -m pip install -r requirements-dev.txt --quiet
 if errorlevel 1 (
     echo ERREUR : Installation des dependances echouee.
-    pause
+    %PAUSE%
     exit /b 1
 )
 echo.
@@ -60,7 +72,7 @@ echo [1/5] Verification de l'icone...
 %PY% "build\create_icon.py"
 if errorlevel 1 (
     echo ERREUR : Icone manquante ou illisible.
-    pause
+    %PAUSE%
     exit /b 1
 )
 
@@ -70,7 +82,7 @@ echo [2/5] Lint...
 %PY% -m ruff check .
 if errorlevel 1 (
     echo ERREUR : Lint echoue - build interrompu.
-    pause
+    %PAUSE%
     exit /b 1
 )
 
@@ -78,7 +90,7 @@ echo [3/5] Tests...
 %PY% -m pytest -q
 if errorlevel 1 (
     echo ERREUR : Tests en echec - build interrompu.
-    pause
+    %PAUSE%
     exit /b 1
 )
 
@@ -93,7 +105,7 @@ echo [4/5] Geometrie avec les vraies polices...
 %PY% "tools\audit_geometrie.py"
 if errorlevel 1 (
     echo ERREUR : Anomalie de mise en page - build interrompu.
-    pause
+    %PAUSE%
     exit /b 1
 )
 
@@ -101,7 +113,7 @@ echo [5/5] Build PyInstaller...
 %PY% -m PyInstaller accio_launcher.spec --noconfirm
 if errorlevel 1 (
     echo ERREUR : Build PyInstaller echoue.
-    pause
+    %PAUSE%
     exit /b 1
 )
 
@@ -109,4 +121,4 @@ echo.
 echo === Build termine ! ===
 echo Executable : dist\AccioLauncher.exe
 echo.
-pause
+%PAUSE%

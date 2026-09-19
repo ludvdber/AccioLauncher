@@ -13,7 +13,8 @@ Only the latest version of AccioLauncher is currently supported with security up
 
 If you discover a security vulnerability in AccioLauncher, please do not publish it publicly in a GitHub issue.
 
-Please report the vulnerability privately through GitHub Security Advisories.
+Please report the vulnerability privately through GitHub Security Advisories:
+[report a vulnerability](https://github.com/ludvdber/AccioLauncher/security/advisories/new).
 
 Include, if possible:
 
