@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QSlider, QWidget
 from src.ui.icon_button import IconButton
 from src.ui.theme import themed
 
-# Aucun pictogramme n'est plus écrit en caractères ici : ils sont PEINTS
+# Aucun pictogramme n'est plus écrit en caractères ici : ce sont des SVG
 # (`src/ui/icon_button.py`). Le haut-parleur était un emoji (U+1F50A), rendu
 # en couleur par Windows et insensible au thème, et trois glyphes servis par
 # trois polices différentes ne faisaient pas une famille.

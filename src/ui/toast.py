@@ -40,7 +40,9 @@ class Toast(QLabel):
         self._opacity.setOpacity(0.0)
         self.setGraphicsEffect(self._opacity)
 
-        self._anim = QPropertyAnimation(self._opacity, b"opacity")
+        # Parent explicite : l'animation meurt avec le toast, pas quand le
+        # ramasse-miettes de Python le décide.
+        self._anim = QPropertyAnimation(self._opacity, b"opacity", self)
         self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._anim.finished.connect(self._on_anim_finished)
 

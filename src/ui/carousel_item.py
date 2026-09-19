@@ -141,11 +141,13 @@ class CarouselItem(QWidget):
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        self._scale_anim = QPropertyAnimation(self, b"anim_scale")
+        # Parent explicite : l'animation meurt avec la vignette, pas quand le
+        # ramasse-miettes de Python le décide.
+        self._scale_anim = QPropertyAnimation(self, b"anim_scale", self)
         self._scale_anim.setDuration(400)
         self._scale_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
-        self._opacity_anim = QPropertyAnimation(self, b"anim_opacity")
+        self._opacity_anim = QPropertyAnimation(self, b"anim_opacity", self)
         self._opacity_anim.setDuration(400)
         self._opacity_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 

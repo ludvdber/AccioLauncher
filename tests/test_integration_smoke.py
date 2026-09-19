@@ -1599,7 +1599,7 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         panneau = self._poser(win, jeu, GameState.INSTALLED)
         assert panneau._btn_reglages is not None
-        # PEINT, plus écrit : U+2699 partait en couleur sous Windows (65 % de
+        # DESSINÉ, plus écrit : U+2699 partait en couleur sous Windows (65 % de
         # pixels colorés, mesuré le 2026-08-26, contre 0 % pour une lettre
         # témoin). Le bouton n'a donc plus de texte du tout.
         from src.ui.icon_button import IconButton

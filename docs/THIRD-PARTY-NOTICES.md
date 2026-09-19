@@ -122,6 +122,43 @@ identique sous Linux, où Georgia n'existe pas.
 
 ---
 
+## Phosphor Icons — Helena Zhang & Tobias Fried
+
+Fichiers : `assets/icons/phosphor/*.svg` (paquet `@phosphor-icons/core` 2.1.1,
+graisse Bold ; lecture et pause en graisse Fill)
+Licence : MIT
+Texte complet : **[`assets/icons/phosphor/LICENSE.txt`](assets/icons/phosphor/LICENSE.txt)**
+(copie verbatim du paquet)
+Source : <https://phosphoricons.com> · <https://github.com/phosphor-icons/core>
+
+Pictogrammes de l'interface (réglages, statistiques, site, lecteur vidéo),
+utilisés sans modification : la couleur est appliquée au rendu, les fichiers
+sont ceux du paquet à l'octet près. La MIT exige que sa mention accompagne
+toute copie, d'où la licence placée à côté des fichiers, dans l'exécutable.
+
+---
+
+## Logos Discord et Ko-fi — marques de leurs propriétaires
+
+**Discord** — `assets/icons/marques/Discord-Symbol-White.svg` et
+`Discord-Symbol-Blurple.svg`, fichiers du kit de marque officiel
+(<https://discord.com/branding>), inchangés. Discord est une marque de
+Discord Inc. Conformément à ses règles, le logo n'est ni modifié, ni déformé,
+ni recoloré : il est blanc au repos et Blurple au survol, ses deux versions
+officielles.
+
+**Ko-fi** — `assets/icons/marques/kofi.svg`, tracé publié par
+[Simple Icons](https://simpleicons.org) 16.31.0 (projet sous CC0 1.0), relevé
+par eux sur le kit de marque de Ko-fi (<https://more.ko-fi.com/brand-assets>).
+Ko-fi est une marque de Ko-fi Labs Limited. CC0 couvre le fichier, pas la
+marque : le logo est utilisé sans déformation, pour renvoyer vers la page
+Ko-fi du projet, ce à quoi il est destiné.
+
+Accio Launcher n'est ni affilié, ni approuvé, ni sponsorisé par Discord ou
+Ko-fi.
+
+---
+
 ## Contenu des jeux
 
 Accio Launcher **ne distribue aucun contenu de jeu**. Le launcher télécharge des

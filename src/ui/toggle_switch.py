@@ -30,7 +30,9 @@ class ToggleSwitch(QWidget):
         # une bande-annonce ni refuser Discord. Mesuré le 2026-08-28.
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self._anim = QPropertyAnimation(self, b"knob_x")
+        # Parent explicite : l'animation meurt avec l'interrupteur, pas quand
+        # le ramasse-miettes de Python le décide.
+        self._anim = QPropertyAnimation(self, b"knob_x", self)
         self._anim.setDuration(150)
         self._anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 

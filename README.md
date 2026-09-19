@@ -1,115 +1,134 @@
 <div align="center">
 
-# ⚡ Accio Launcher
+<img src="assets/accio_logo_horizontal.png" width="520" alt="Accio Launcher">
 
-### Le launcher magique pour les jeux Harry Potter PC
-
-[![Version](https://img.shields.io/badge/version-1.0.2-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
-[![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=0d0d1a)](https://python.org)
-[![PyQt6](https://img.shields.io/badge/PyQt6-6.11-41cd52?style=for-the-badge&labelColor=0d0d1a)](https://pypi.org/project/PyQt6/)
-[![Windows](https://img.shields.io/badge/Windows-10%2F11-0078d4?style=for-the-badge&logo=windows11&logoColor=white&labelColor=0d0d1a)](https://microsoft.com)
-[![License](https://img.shields.io/badge/code-MIT-e74c3c?style=for-the-badge&labelColor=0d0d1a)](LICENSE)
-[![Binaire](https://img.shields.io/badge/binaire-GPL%20v3-e74c3c?style=for-the-badge&labelColor=0d0d1a)](docs/THIRD-PARTY-NOTICES.md)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ludvdber/AccioLauncher/tests.yml?branch=main&style=for-the-badge&label=tests&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/actions/workflows/tests.yml)
+[![Sécurité](https://img.shields.io/github/actions/workflow/status/ludvdber/AccioLauncher/security.yml?branch=main&style=for-the-badge&label=s%C3%A9curit%C3%A9&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/actions/workflows/security.yml)
+[![Version](https://img.shields.io/badge/version-1.0.2-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases/latest)
+[![Téléchargements](https://img.shields.io/github/downloads/ludvdber/AccioLauncher/total?style=for-the-badge&label=t%C3%A9l%C3%A9chargements&color=d6a72c&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
+[![Windows 10 et 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases/latest)
+[![Discord](https://img.shields.io/badge/Discord-rejoindre-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=0d0d1a)](https://discord.gg/TNwDQd7KGe)
 
-*Je jure solennellement que mes intentions sont mauvaises.* 🗺️
+**Les huit jeux Harry Potter PC, téléchargés, installés et lancés en un clic.**
 
-[**⬇ Télécharger**](https://github.com/ludvdber/AccioLauncher/releases) · [🐛 Signaler un bug](https://github.com/ludvdber/AccioLauncher/issues) · [💡 Demander une feature](https://github.com/ludvdber/AccioLauncher/issues/new)
+### [Télécharger Accio Launcher](https://github.com/ludvdber/AccioLauncher/releases/latest)
 
-**Windows va afficher « Windows a protégé votre ordinateur ».** C'est attendu :
-le launcher est gratuit et n'a pas de certificat de signature.
-[Pourquoi, et comment vérifier vous-même le fichier ↓](#️-windows-a-protégé-votre-ordinateur)
+Gratuit · Windows 10 et 11 · [Site](https://acciolauncher.be/) · [Discord](https://discord.gg/TNwDQd7KGe)
 
 </div>
 
----
+<p align="center">
+  <img src="docs/screenshot.png" width="860" alt="Accio Launcher : la fiche d'un jeu et le carrousel des huit jeux">
+</p>
 
-<div align="center">
-  <img src="docs/social_preview.png" width="800" alt="Accio Launcher — Aperçu">
-</div>
+## Ce que fait le launcher
 
----
+- **Les huit jeux de la saga**, de *l'École des Sorciers* (2001) aux deux parties des *Reliques de la Mort* (2011), prêts à jouer sur un PC récent.
+- **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
+- **Tout se gère au même endroit** : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente.
+- **Votre saga** : le temps passé sur chaque jeu et le journal de vos parties.
+- **Une ambiance soignée** : thème de votre maison, particules saisonnières à Halloween et à Noël, bandes-annonces en fond (facultatives).
+- **En français, en anglais et en espagnol**, et la langue des *Reliques de la Mort* se choisit jeu par jeu.
+- **Le launcher se met à jour tout seul**, en un clic, sans rien réinstaller.
 
-## ✨ Fonctionnalités
+## Les jeux
 
-| | |
-|---|---|
-| 🎮 **Les 8 jeux de la saga** | De l'École des Sorciers (2001) aux Reliques de la Mort (2011) — catalogue complet, tous jouables |
-| ⬇️ **Téléchargement en un clic** | Reprise après coupure, archives multi-volumes, extraction et installation automatiques |
-| 🔒 **Archives vérifiées** | Empreinte SHA-256 contrôlée pendant le téléchargement, sans attente supplémentaire |
-| 🎨 **UI immersive style AAA** | Particules magiques, parallaxe, transitions cinématiques, glow doré |
-| 🏰 **5 thèmes de maison** | Poudlard (or), Gryffondor, Serpentard, Serdaigle, Poufsouffle |
-| 🍂 **Ambiances saisonnières** | Braises d'Halloween en octobre, flocons de Noël en décembre |
-| 📺 **Trailers vidéo** | Vidéos de présentation en arrière-plan, avec contrôle du volume — **facultatives et téléchargées à part**, pour ne pas alourdir le launcher |
-| 🔄 **Versioning et changelog** | Historique détaillé, mise à jour et retour à une version antérieure |
-| 🔧 **Vérifier / réparer** | Réinstalle par-dessus une installation abîmée, sans tout recommencer |
-| 📥 **System tray intelligent** | Se minimise pendant le jeu, se restaure automatiquement à la sortie |
-| ⏱️ **Temps de jeu** | Suivi discret des sessions et de la dernière partie |
-| ♻️ **Mise à jour automatique** | Le launcher se met à jour lui-même, en un clic et sans réinstallation |
-| 🌍 **Multilingue** | Français, anglais, espagnol — noms, descriptions et changelogs des jeux compris |
-| 🗣️ **Langue par jeu** | Les Reliques de la Mort se jouent dans la langue de votre choix, changeable à tout moment |
-| ⚠️ **Mises en garde** | Un jeu dont une DLL est prise pour un virus le dit AVANT le téléchargement |
-| 🛡️ **Code audité** | HTTPS strict, anti path-traversal, protection Zip Slip, thread safety |
+| Jeu | Année | Téléchargement | Espace installé |
+|-----|:-----:|:--------------:|:---------------:|
+| Harry Potter à l'École des Sorciers | 2001 | 243 Mo | 431 Mo |
+| Harry Potter et la Chambre des Secrets | 2002 | 247 Mo | 463 Mo |
+| Harry Potter et le Prisonnier d'Azkaban | 2004 | 337 Mo | 775 Mo |
+| Harry Potter et la Coupe de Feu | 2005 | 847 Mo | 1,7 Go |
+| Harry Potter et l'Ordre du Phénix | 2007 | 2,5 Go | 4,6 Go |
+| Harry Potter et le Prince de Sang-Mêlé | 2009 | 2,1 Go | 4,4 Go |
+| Harry Potter et les Reliques de la Mort, partie 1 | 2010 | 4,4 Go | 4,4 Go |
+| Harry Potter et les Reliques de la Mort, partie 2 | 2011 | 7,5 Go | 7,5 Go |
 
----
+Pendant l'installation, l'archive et le jeu cohabitent un moment : prévoyez la
+somme des deux colonnes. Le launcher fait le calcul et vous prévient avant de
+commencer si la place manque.
 
-## 🎮 Jeux supportés
+## Installer
 
-| # | Jeu | Année | Développeur | Téléchargement | Installé | État |
-|:-:|-----|:-----:|:-----------:|:--------------:|:--------:|:----:|
-| I | Harry Potter à l'École des Sorciers | 2001 | KnowWonder | 243 Mo | 431 Mo | ✅ Disponible |
-| II | Harry Potter et la Chambre des Secrets | 2002 | KnowWonder | 247 Mo | 463 Mo | ✅ Disponible |
-| III | Harry Potter et le Prisonnier d'Azkaban | 2004 | KnowWonder | 337 Mo | 775 Mo | ✅ Disponible |
-| IV | Harry Potter et la Coupe de Feu | 2005 | EA UK | 847 Mo | 1,7 Go | ✅ Disponible |
-| V | Harry Potter et l'Ordre du Phénix | 2007 | EA UK | 2,5 Go | 4,6 Go | ✅ Disponible |
-| VI | Harry Potter et le Prince de Sang-Mêlé | 2009 | EA UK | 2,1 Go | 4,4 Go | ✅ Disponible |
-| VII | Harry Potter et les Reliques de la Mort — Partie 1 | 2010 | EA Bright Light | 4,4 Go | 4,4 Go | ✅ Disponible |
-| VIII | Harry Potter et les Reliques de la Mort — Partie 2 | 2011 | EA Bright Light | 7,5 Go | 7,5 Go | ✅ Disponible |
+1. Téléchargez **AccioLauncher.exe** depuis la [dernière version](https://github.com/ludvdber/AccioLauncher/releases/latest).
+2. Lancez-le. Aucune installation n'est nécessaire.
+3. Choisissez votre langue et le dossier des jeux. Le launcher repère ceux que vous avez déjà.
+4. Choisissez un jeu et cliquez sur **Télécharger**.
 
-> Pendant l'installation, l'archive et les fichiers extraits cohabitent jusqu'au
-> nettoyage final : prévoyez **la somme des deux colonnes**. Le launcher fait ce
-> calcul pour vous et vous prévient avant le clic si la place manque.
+### « Windows a protégé votre ordinateur »
 
-> Le rapport entre les deux colonnes n'a rien de constant : les six premiers jeux
-> perdent près de la moitié à la compression, les deux Reliques de la Mort
-> quasiment rien. C'est pourquoi le tableau donne les deux chiffres plutôt qu'une
-> règle du pouce.
+Ce message est normal. Le launcher est gratuit et n'a pas de certificat de
+signature de code, qui coûte plusieurs centaines d'euros par an. Windows
+avertit donc pour tout programme qu'il ne connaît pas encore.
 
----
+Pour le lancer quand même, cliquez sur **Informations complémentaires**, puis
+sur **Exécuter quand même**.
 
-## 🚀 Installation
-
-### 💎 Méthode simple
-
-1. Téléchargez **AccioLauncher.exe** depuis les [Releases](https://github.com/ludvdber/AccioLauncher/releases)
-2. Lancez l'exécutable
-3. L'assistant vous demande votre langue, votre dossier d'installation, et détecte les jeux que vous possédez déjà
-4. Sélectionnez un jeu et cliquez sur **Télécharger** ⚡
-
-### 🛡️ « Windows a protégé votre ordinateur »
-
-C'est attendu, et ce n'est pas un virus.
-
-Accio Launcher est un projet libre et gratuit : il n'est pas signé par un
-certificat de signature de code, qui coûte plusieurs centaines d'euros par an.
-Windows SmartScreen affiche donc un avertissement pour tout exécutable qu'il ne
-connaît pas encore. L'avertissement disparaîtra de lui-même à mesure que le
-launcher sera téléchargé.
-
-**Pour lancer le launcher malgré l'avertissement :** cliquez sur
-**Informations complémentaires**, puis sur **Exécuter quand même**.
-
-**Pour vérifier vous-même que le fichier est authentique**, comparez son
-empreinte avec celle publiée sur la page de la release :
+Pour vérifier que le fichier est bien l'original, comparez son empreinte avec
+celle publiée sur la page de la version :
 
 ```powershell
 Get-FileHash .\AccioLauncher.exe -Algorithm SHA256
 ```
 
-Si l'empreinte ne correspond pas à celle annoncée, **ne lancez pas le fichier**
-et signalez-le sur le [Discord](https://discord.gg/TNwDQd7KGe).
+Si elles diffèrent, **ne lancez pas le fichier** et signalez-le sur le
+[Discord](https://discord.gg/TNwDQd7KGe).
 
-### 🧙 Méthode développeur
+## Aperçu
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screen_installed.png" alt="Un jeu installé, avec le temps de jeu"></td>
+    <td width="50%"><img src="docs/screen_saga.png" alt="La saga : temps de jeu et journal des parties"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Un jeu installé et votre temps de jeu</sub></td>
+    <td align="center"><sub>La saga : vos jeux et le journal de vos parties</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screen_changelog.png" alt="Les versions d'un jeu et leurs nouveautés"></td>
+    <td width="50%" valign="middle">
+      Chaque jeu a ses versions et leurs nouveautés. On passe de l'une à
+      l'autre en un clic, et la nouvelle est téléchargée <b>avant</b> que
+      l'ancienne ne soit retirée : un téléchargement raté ne vous laisse
+      jamais sans jeu.
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Versions et nouveautés</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+## Besoin d'aide ?
+
+Passez sur le [**Discord**](https://discord.gg/TNwDQd7KGe). Pour qu'on vous
+aide plus vite, ouvrez **Paramètres → À propos** et cliquez sur **Copier les
+informations de diagnostic**, puis collez le résultat dans votre message :
+version du launcher, Windows, jeux installés, dernières erreurs. Rien de
+personnel n'y figure.
+
+Un bug précis, une idée ? Ouvrez une [issue](https://github.com/ludvdber/AccioLauncher/issues).
+
+## Soutenir le projet
+
+Le launcher est gratuit et le restera, sans publicité. Si vous voulez aider à
+payer l'hébergement : [ko-fi.com/ludovic01](https://ko-fi.com/ludovic01).
+
+## Traduire le launcher
+
+Le launcher parle français, anglais et espagnol. Une autre langue est la
+bienvenue, et **aucune ligne de code n'est à écrire** : une traduction est un
+simple fichier texte, que vous pouvez essayer dans le launcher avant de le
+proposer. Tout est expliqué dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
+
+<details>
+<summary><b>Pour les développeurs</b></summary>
+
+<br>
+
+Python 3.12 ou plus récent, PyQt6, httpx. Windows 10 et 11 pour l'instant ; le
+support de Linux est prévu, et tout appel propre à Windows est déjà isolé.
 
 ```bash
 git clone https://github.com/ludvdber/AccioLauncher.git
@@ -118,202 +137,74 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> **Prérequis :** Python 3.12+, Windows 10/11.
-> Le plancher n'est pas décoratif : le code utilise `enum.StrEnum`, apparu en 3.11.
-
-<details>
-<summary><b>📦 Builder l'exécutable</b></summary>
+Tests et lint :
 
 ```bash
 pip install -r requirements-dev.txt
-build.bat
-# → dist/AccioLauncher.exe
-```
-
-`build.bat` détecte Python 3.14, puis 3.13, puis 3.12, et enchaîne cinq étapes :
-vérification de l'icône → lint → tests → audit de géométrie → PyInstaller.
-**Il s'arrête à la première qui échoue** : un exécutable publié avec une
-régression coûte bien plus cher que les vingt secondes de vérification.
-
-L'audit de géométrie rejoue l'interface avec les **vraies polices**, hors écran :
-la suite de tests tourne en `offscreen`, où Qt substitue une police 22 % plus
-large et fausse toute mesure d'empilement.
-
-</details>
-
-<details>
-<summary><b>🧪 Lancer les tests et le lint</b></summary>
-
-```bash
-pip install -r requirements-dev.txt
-python -m pytest          # 637 tests, sans écran (offscreen)
+python -m pytest        # plus de 1 300 tests, sans écran (offscreen)
 python -m ruff check .
 ```
 
-Le jeu de règles ruff est **figé dans `pyproject.toml`**. Sans ça, « le projet est
-propre » dépendrait du défaut de la version de ruff installée — le passage de 0.15
-à 0.16 a fait apparaître 119 signalements sans qu'une seule ligne de code change.
+Construire l'exécutable : `build.bat` (→ `dist/AccioLauncher.exe`). Il enchaîne
+vérification de l'icône, lint, tests, audit de mise en page avec les vraies
+polices, puis PyInstaller, et s'arrête à la première étape qui échoue.
+
+À chaque push, la CI rejoue les tests sous Windows et Linux, et un second
+workflow passe le code à Bandit et les dépendances à pip-audit.
+
+L'architecture, les pièges connus et les conventions sont décrits dans
+[CLAUDE.md](CLAUDE.md). Les composants tiers et leurs licences sont dans
+[docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md). Pour signaler une
+faille de sécurité, voir [SECURITY.md](SECURITY.md).
 
 </details>
 
----
+## Licence
 
-## 📸 Captures d'écran
+Le code source est sous licence [MIT](LICENSE). L'exécutable distribué est sous
+GNU GPL v3, parce qu'il embarque PyQt6, lui-même publié sous GPL v3. Le détail
+est dans [LICENSE](LICENSE) et [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
 
-<div align="center">
-  <img src="docs/screenshot.png" width="800" alt="Accio Launcher — Vue principale">
-  <br>
-  <sub><i>Vue principale — carrousel, particules magiques et effets de parallaxe</i></sub>
-  <br><br>
-  <table>
-    <tr>
-      <td><img src="docs/screen_installed.png" width="400" alt="Jeu installé avec vidéo"></td>
-      <td><img src="docs/screen_changelog.png" width="400" alt="Versions et changelog"></td>
-    </tr>
-    <tr>
-      <td align="center"><sub>Jeu installé — vidéo en fond et contrôle audio</sub></td>
-      <td align="center"><sub>Gestion des versions et changelog</sub></td>
-    </tr>
-  </table>
-</div>
+## Avertissement légal
 
----
+Accio Launcher **ne contient aucun fichier de jeu**. Il télécharge des archives
+depuis des sources tierces ; vous êtes responsable de disposer des droits
+nécessaires sur les jeux que vous installez.
 
-## 🛠️ Stack technique
-
-| Composant | Technologie |
-|-----------|------------|
-| **Langage** | Python 3.12+ avec type hints modernes |
-| **Interface** | PyQt6 6.11 — widgets custom, QPainter, QPropertyAnimation |
-| **Téléchargement** | httpx — streaming HTTPS avec reprise et suivi de progression |
-| **Extraction** | 7z.exe bundlé — archives 7z (multi-volumes incl.) et zip |
-| **Effets visuels** | Particules, parallaxe, glow, transitions — tout en QPainter natif |
-| **Architecture** | Séparation `core/` (logique métier) et `ui/` (interface) |
-| **Qualité** | ruff + 637 tests pytest, exécutés en CI à chaque push |
-| **Packaging** | PyInstaller — exécutable unique Windows |
-
----
-
-## 🗺️ Roadmap
-
-Le numéro de version suit le catalogue : `0.0.x` correctif · `0.x.0` nouveau jeu ·
-`x.0.0` catalogue complet.
-
-- [x] **Socle** — carrousel, téléchargement repris, extraction, versioning, system tray
-- [x] **Confiance** — vérification SHA-256, réparation d'installation, rapport de crash en un clic, mise à jour automatique du launcher
-- [x] **Confort** — thèmes de maison, ambiances saisonnières, temps de jeu, assistant de premier lancement
-- [x] **Internationalisation** — FR / EN / ES, catalogue traduit compris ([contribuez une langue !](docs/TRANSLATORS.md))
-- [x] **Catalogue complet** — Reliques de la Mort, parties 1 et 2 : les huit jeux sont en ligne
-- [x] **1.0** — la version qui acte le catalogue complet
-- [ ] **Après 1.0** — support Linux : launcher natif, puis lancement des jeux via Wine / Proton
-- [ ] **Ensuite** — configuration graphique intégrée (résolution, wrapper D3D, compatibilité)
-
-> Le support Linux vient **après** le dernier jeu, délibérément : finir le catalogue
-> profite à tout le monde tout de suite, alors qu'un portage à moitié fait ne profite
-> à personne. Le code est déjà écrit dans cette perspective — tout appel spécifique à
-> Windows est isolé derrière un test de plateforme avec un repli.
-
----
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues !
-
-- 🐛 **Bug ?** → Ouvrez une [Issue](https://github.com/ludvdber/AccioLauncher/issues)
-- 💡 **Idée ?** → Proposez une [Feature Request](https://github.com/ludvdber/AccioLauncher/issues/new)
-- 🔧 **Code ?** → Forkez, créez une branche, soumettez une PR
-- 🌍 **Une langue ?** → Voir ci-dessous
-
-### 🌍 Traduire le launcher
-
-Le launcher parle **français, anglais et espagnol**. Toute autre langue est la
-bienvenue, et **il n'y a pas une ligne de Python à écrire** : les traductions
-sont de simples fichiers de données.
-
-En résumé : copiez [`src/data/i18n/en.json`](src/data/i18n/en.json) sous le code
-de votre langue (`de.json`, `pt.json`, `ja.json`…), traduisez les valeurs de
-droite en laissant les clés françaises intactes, puis déposez le fichier dans
-`%USERPROFILE%\Games\AccioLauncher\i18n\` pour **le voir en direct dans le
-launcher**, sans build ni release. Quand le résultat vous convient, ouvrez une PR.
-
-Une traduction incomplète est acceptée : ce qui manque retombe sur l'anglais,
-puis sur le français — jamais sur du vide.
-
-👉 **Le guide complet est dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md)**, qui liste
-aussi les personnes ayant déjà contribué une langue. Merci à elles ❤
-
----
-
-## 📜 Licence
-
-**Le code source est sous licence [MIT](LICENSE).** Reprenez-le, modifiez-le,
-réutilisez-le — y compris commercialement. La seule condition est de conserver
-la mention de copyright, c'est-à-dire de créditer ASTeam comme base du travail.
-
-**L'exécutable distribué est sous GNU GPL v3.** Ce n'est pas un second choix
-mais une conséquence : il embarque PyQt6, publié sous GPL v3, ce qui rend le
-binaire assemblé dérivé de celle-ci. Le code source correspondant reste
-disponible dans ce dépôt, ce qui satisfait l'obligation.
-
-Les deux ne se contredisent pas : qui récupère le code depuis le dépôt l'obtient
-sous MIT ; seul le binaire assemblé porte la GPL v3.
-
-Les composants tiers embarqués (7-Zip, Qt, httpx, polices Cinzel…) et leurs
-licences respectives sont détaillés dans
-[docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
-
----
-
-## ⚖️ Avertissement légal
-
-Accio Launcher est un outil de gestion et de lancement de jeux. **Aucun fichier de jeu n'est inclus dans le launcher.**
-
-L'utilisation de ce logiciel implique que vous possédez une copie légale des jeux que vous installez via le launcher. Il est de votre entière responsabilité de vous assurer que vous disposez des droits nécessaires pour utiliser ces jeux dans votre juridiction.
-
-Les jeux Harry Potter sont la propriété intellectuelle de Warner Bros. Entertainment Inc. et Electronic Arts Inc. Ce projet n'est ni affilié, ni approuvé, ni sponsorisé par ces entreprises.
-
-Le développeur d'Accio Launcher ne peut être tenu responsable de l'utilisation qui est faite de ce logiciel par ses utilisateurs. Ce projet est fourni "tel quel", sans garantie d'aucune sorte.
-
----
-
-<div align="center">
-
-Fait avec 🪄 et beaucoup de ☕
-
-*Méfait accompli.* 🗺️
-
-</div>
+Harry Potter et les jeux associés sont la propriété de Warner Bros.
+Entertainment Inc. et d'Electronic Arts Inc. Ce projet n'est ni affilié, ni
+approuvé, ni sponsorisé par ces entreprises, ni par J.K. Rowling. Le logiciel
+est fourni « tel quel », sans garantie.
 
 ---
 
 <details>
-<summary><b>🇬🇧 English</b></summary>
+<summary><b>English</b></summary>
 
 <br>
 
-### Accio Launcher
+**Accio Launcher** puts all eight Harry Potter PC games (2001–2011) one click
+away: download, install and play, on Windows 10 and 11. Downloads resume after
+a dropped connection and every file is checked on arrival. Game updates,
+repair and rollback to an earlier version are built in, along with your
+playtime and a log of your sessions, house themes, seasonal effects, optional
+trailers, and a launcher that updates itself. The interface is available in
+English, French and Spanish.
 
-A magical desktop launcher for the Harry Potter PC games (2001–2011). All eight
-games in the catalogue, all playable. One-click download and install with resume
-and SHA-256 verification, an immersive AAA-style UI with particles, parallax and
-cinematic transitions, video backgrounds, five Hogwarts house themes, seasonal
-effects, version tracking with changelog and rollback, playtime stats, smart
-system tray minimisation during gameplay, one-click launcher self-update,
-per-game language selection for the Deathly Hallows, up-front warnings for games
-whose files antivirus software mistakes for malware, and security-audited code.
+**Get started:** download `AccioLauncher.exe` from the
+[latest release](https://github.com/ludvdber/AccioLauncher/releases/latest),
+run it, pick your language and games folder, then choose a game and click
+Download. Windows SmartScreen will warn you because the launcher is not
+code-signed: click *More info*, then *Run anyway*.
 
-**Quick start:** download `AccioLauncher.exe` from
-[Releases](https://github.com/ludvdber/AccioLauncher/releases), run it, follow the
-first-run wizard (language, install folder, detection of games you already own),
-then pick a game and hit Download.
+**Help:** join the [Discord](https://discord.gg/TNwDQd7KGe). In the launcher,
+*Settings → About → Copy diagnostic information* gives us what we need to help.
 
-**Dev setup:** `git clone` → `pip install -r requirements.txt` → `python main.py`
+**Translators welcome:** a language is one text file, no code involved — see
+[docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
-Built with Python 3.12+, PyQt6 6.11 and httpx (7z.exe bundled). Windows 10/11 for
-now — **Linux support is planned once the final game ships**, and every
-Windows-specific call is already isolated behind a platform check with a fallback.
-
-**Translators welcome:** adding a language means dropping one JSON file in
-`src/data/i18n/` — no Python involved. See [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
+The launcher contains no game files. Harry Potter is a trademark of Warner Bros.
+Entertainment Inc.; this project is not affiliated with Warner Bros., Electronic
+Arts or J.K. Rowling.
 
 </details>

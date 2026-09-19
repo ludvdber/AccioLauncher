@@ -181,8 +181,8 @@ class MainWindow(QMainWindow):
         self._detail.settings_requested.connect(self._on_settings)
         self._detail.cinema_toggled.connect(self._on_cinema)
 
-        # Settings button — roue PEINTE. C'était U+2699, réputé sûr parce que
-        # sa propriété Unicode est `Emoji_Presentation=No` ; mesuré le
+        # Settings button — roue DESSINÉE (SVG). C'était U+2699, réputé sûr
+        # parce que sa propriété Unicode est `Emoji_Presentation=No` ; mesuré le
         # 2026-08-26, Windows le rendait à 49 % en couleur (0 % pour une lettre,
         # 22 % pour 🔊 pris comme témoin). C'est le seul bouton présent en
         # permanence à l'écran, donc le pire endroit pour un glyphe hors thème.

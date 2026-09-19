@@ -4,6 +4,7 @@ Force le platform Qt à offscreen pour les CI sans display, et fournit
 des fixtures réutilisables pour les tests UI.
 """
 
+import gc
 import os
 
 # Doit être posé AVANT tout import PyQt6.
@@ -81,6 +82,62 @@ def _langue_retablie():
     yield
     if get_language() != avant:
         set_language(avant)
+
+
+@pytest.fixture(autouse=True)
+def _widgets_detruits_a_la_fin_du_test(request):
+    """Les fenêtres d'un test meurent à la fin de CE test, pas n'importe quand.
+
+    pytest-qt ferme chaque widget enregistré puis appelle `deleteLater()`. Mais
+    une suppression différée n'est traitée que par une boucle d'événements, et
+    `processEvents()` hors boucle ne la traite pas : mesuré le 2026-09-19, les
+    `MainWindow` fermées s'accumulaient (jusqu'à six vivantes en C++), puis
+    disparaissaient d'un coup quand le ramasse-miettes de Python passait sur
+    leurs cycles de références — donc à un instant quelconque, y compris en
+    plein `processEvents()` d'un test suivant, pendant qu'une AUTRE fenêtre se
+    peignait.
+
+    C'est le seul aléa avéré autour du plantage de la CI Windows (violation
+    d'accès dans un `paintEvent`, TestKofiMilestone, deux runs sur deux depuis
+    dbdae34, jamais reproduit en local — ni en Python 3.14.7, ni avec un
+    ramasse-miettes forcé cinquante fois plus souvent). Le site du plantage
+    changeait d'un run à l'autre, signature d'un état corrompu et non du code
+    qui peint. Ici, la destruction a lieu à un point sûr : après la fermeture
+    par pytest-qt (faite avant les finaliseurs de fixtures), hors de tout
+    dessin.
+
+    Le ramasse-miettes n'est forcé qu'après une fenêtre principale ou un
+    dialogue : ce sont eux qui portent des cycles de références, et le forcer
+    après CHAQUE test Qt coûtait 18 s sur 85.
+    """
+    yield
+    if "qtbot" not in request.fixturenames:
+        return
+    from PyQt6.QtCore import QCoreApplication, QEvent
+    from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow
+    app = QApplication.instance()
+    if app is None:
+        return
+    lourde = any(isinstance(w, (QMainWindow, QDialog)) for w in app.topLevelWidgets())
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    if lourde:
+        gc.collect()
+
+
+@pytest.fixture(autouse=True)
+def _jamais_le_vrai_discord(monkeypatch):
+    """Aucun test ne parle au client Discord de la machine.
+
+    Chaque fin de partie simulée envoie `clear()` à la présence Discord, dont
+    le thread ouvre le tube IPC local. Sur un poste où Discord tourne — celui
+    de Ludo —, la suite se connectait donc au VRAI client et effaçait l'activité
+    affichée sur son profil ; sur le runner, sans Discord, le même code prenait
+    un autre chemin. Un test ne doit ni toucher un programme réel, ni se
+    comporter différemment selon ce qui tourne à côté. Les tests du protocole
+    (`test_discord_presence.py`) posent leur propre faux tube par-dessus.
+    """
+    monkeypatch.setattr("src.core.discord_presence._open_ipc", lambda: None)
+    yield
 
 
 @pytest.fixture

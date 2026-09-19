@@ -147,9 +147,10 @@ def test_les_pictogrammes_ne_sont_pas_rognes_a_125_pourcent(tmp_path):
     """Le tracé doit tenir DANS son pixmap, marge comprise.
 
     Un pictogramme dont l'encre touche le bord de sa toile est un pictogramme
-    coupé : les tracés sont écrits dans une boîte de 24 et aucun n'atteint le
-    bord (le globe va de 3 à 21), donc une marge nulle ne peut signifier qu'une
-    chose — le glyphe est plus grand que le pixmap.
+    coupé : les SVG Phosphor gardent une marge dans leur boîte (le globe va de
+    20 à 236 sur 256) et les logos de marque en reçoivent une (`_MARGE`), donc
+    une marge nulle ne peut signifier qu'une chose — le glyphe est plus grand
+    que le pixmap.
 
     Échoue sur le code d'avant : l'encre y atteignait le DERNIER pixel, marge 0.
     """

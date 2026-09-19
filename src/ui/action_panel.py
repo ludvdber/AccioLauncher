@@ -390,10 +390,10 @@ class ActionPanel(QWidget):
         # `game_language` rend None quand le jeu ne déclare pas de bloc, et
         # hors Windows (pas de registre atteignable) — dans les deux cas un
         # engrenage ouvrirait un menu vide, ce qui est pire que pas d'engrenage.
-        # Roue PEINTE, plus U+2699. Ce caractère était réputé sûr parce que sa
-        # propriété Unicode est `Emoji_Presentation=No` — mais la propriété dit
-        # ce que le caractère DEMANDE, pas ce que la chaîne de repli de Windows
-        # lui DONNE. Mesuré le 2026-08-26 en le rendant en anti-crénelage
+        # Roue DESSINÉE (SVG Phosphor), plus U+2699. Ce caractère était réputé
+        # sûr parce que sa propriété Unicode est `Emoji_Presentation=No` — mais
+        # la propriété dit ce que le caractère DEMANDE, pas ce que la chaîne de
+        # repli de Windows lui DONNE. Mesuré le 2026-08-26 en le rendant en anti-crénelage
         # niveaux de gris : 49 % de pixels colorés, contre 0 % pour une lettre
         # et 22 % pour 🔊 pris comme témoin. Il partait donc en couleur, comme
         # le haut-parleur de la barre audio, et plus franchement encore.

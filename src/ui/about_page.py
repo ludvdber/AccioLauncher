@@ -42,23 +42,11 @@ def _sous_titre(texte: str) -> QLabel:
     return lbl
 
 
-# Un trait de `icon_button._TRAIT` (1,7) dans une boîte de 24 mesure
-# 1,7 x taille/24 pixels à l'écran. En dessous de ~1,5 px il ne peut plus
-# occuper une colonne entière : il s'étale sur deux, à alpha partiel, et le
-# pictogramme devient de la brume. **Mesuré le 2026-08-30 à 16 px : 59 % de
-# l'encre du globe et 61 % de celle de la tasse étaient de l'antialiasing**,
-# pas du trait — le globe se lisait comme un disque gris, la tasse comme une
-# tache, et Clyde perdait ses pieds.
-#
-# C'était le SEUL endroit de l'application sous le seuil : `IconButton` trace
-# la boîte de 24 à la taille exacte du bouton (`echelle = min(w,h)/24`), donc
-# la barre audio (26 px) sort un trait de 1,84 px et l'engrenage (36 px) de
-# 2,55 px. Le défaut était donc local, et **`_TRAIT` n'a pas à bouger** :
-# l'épaissir aurait alourdi des pictogrammes qui vont très bien.
-#
-# Deux itérations précédentes ont retouché les TRACÉS (méridien 7 → 9 unités,
-# cercle 15,2 → 18) sans rien régler, parce que le défaut n'était pas là : les
-# mêmes chemins sont impeccables à 160 px. Ne pas repartir sur la géométrie.
+# Sous ~1,5 px, un trait ne peut plus occuper une colonne entière : il s'étale
+# sur deux, à alpha partiel, et le pictogramme devient de la brume. **Mesuré
+# le 2026-08-30 à 16 px : 59 % de l'encre du globe et 61 % de celle de la tasse
+# étaient de l'antialiasing**, pas du trait. À 22 px, le trait des SVG Phosphor
+# Bold (3/32 de la boîte) mesure 2 px, et 2,6 px physiques à 125 %.
 _TAILLE_ICONE = 22
 
 # `QPushButton` colle le libellé au pictogramme : il n'expose aucun réglage
@@ -94,11 +82,11 @@ def _bouton_lien(libelle: str, icone: str, url: str,
                  objet: str = "btnPath", encre: str = "#ffffff") -> QPushButton:
     """Bouton « pictogramme + libellé » vers un lien externe.
 
-    Le pictogramme est PEINT (`pixmap_icone`), jamais un glyphe : Ludo,
+    Le pictogramme est un SVG (`pixmap_icone`), jamais un glyphe : Ludo,
     2026-08-26 — « il y a pas de logo web ou discord dans le à propos donc c'est
     pas fou pour vite reconnaître sans lire ». Trois libellés de longueurs
-    voisines dans un cadre gris se ressemblent tous ; une silhouette de Clyde,
-    un globe et une tasse se distinguent avant d'être lus — et survivent à la
+    voisines dans un cadre gris se ressemblent tous ; le Clyde et la tasse
+    OFFICIELS, et un globe, se distinguent avant d'être lus — et survivent à la
     traduction, ce qu'un libellé ne fait pas.
     """
     btn = QPushButton(libelle)

@@ -1,104 +1,80 @@
-"""Genere docs/social_preview.png — image social preview GitHub 1280x640."""
+"""Genere docs/social_preview.png — l'image de partage du depot, 1280x640.
 
-import random
+C'est la vignette que GitHub, Discord et les reseaux affichent quand on colle
+le lien du depot (a televerser dans Settings > Social preview). Refaite le
+2026-09-19 : l'ancienne ecrivait le nom en police de titre sur un semis de
+points, sans le logo de la marque ni rien qui montre de quoi il s'agit. Elle
+pose desormais le logo officiel (`assets/accio_logo_horizontal.png`), une
+accroche, et les huit jaquettes — ce qu'on comprend en un coup d'oeil.
+"""
+
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-WIDTH, HEIGHT = 1280, 640
-BG_TOP = (6, 6, 17)        # #060611
-BG_BOTTOM = (13, 13, 26)   # #0d0d1a
-GOLD = (214, 167, 44)      # #d6a72c
-SUBTITLE_COLOR = (138, 138, 170)  # #8a8aaa
+RACINE = Path(__file__).parent.parent
+SORTIE = RACINE / "docs" / "social_preview.png"
+LARGEUR, HAUTEUR = 1280, 640
+FOND_HAUT = (6, 6, 17)        # #060611
+FOND_BAS = (13, 13, 26)       # #0d0d1a
+OR = (214, 167, 44)           # #d6a72c, l'or du pack de marque
+TEXTE = (200, 200, 222)
+JEUX = ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b")
+ACCROCHE = "Les huit jeux Harry Potter PC, installés et lancés en un clic"
 
-FONTS_DIR = Path(__file__).parent.parent / "assets" / "fonts"
-OUTPUT = Path(__file__).parent.parent / "docs" / "social_preview.png"
+
+def _degrade() -> Image.Image:
+    img = Image.new("RGB", (LARGEUR, HAUTEUR))
+    trait = ImageDraw.Draw(img)
+    for y in range(HAUTEUR):
+        t = y / HAUTEUR
+        trait.line([(0, y), (LARGEUR, y)],
+                   fill=tuple(int(a + (b - a) * t) for a, b in zip(FOND_HAUT, FOND_BAS)))
+    return img
 
 
-def _lerp_color(c1: tuple, c2: tuple, t: float) -> tuple:
-    return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
+def _jaquette(gid: str, hauteur: int) -> Image.Image:
+    """Jaquette en 2:3 : les fichiers n'ont pas tous le meme rapport (trois
+    sont carres), on recadre au centre plutot que de les deformer."""
+    img = Image.open(RACINE / "assets" / "covers" / f"{gid}_cover.jpg").convert("RGB")
+    largeur = round(hauteur * 2 / 3)
+    echelle = max(largeur / img.width, hauteur / img.height)
+    img = img.resize((round(img.width * echelle), round(img.height * echelle)),
+                     Image.Resampling.LANCZOS)
+    x, y = (img.width - largeur) // 2, (img.height - hauteur) // 2
+    return img.crop((x, y, x + largeur, y + hauteur))
 
 
 def main() -> None:
-    img = Image.new("RGB", (WIDTH, HEIGHT))
-    draw = ImageDraw.Draw(img)
+    img = _degrade()
 
-    # Degrade vertical
-    for y in range(HEIGHT):
-        t = y / HEIGHT
-        color = _lerp_color(BG_TOP, BG_BOTTOM, t)
-        draw.line([(0, y), (WIDTH, y)], fill=color)
-
-    # Particules dorees
-    random.seed(42)
-    for _ in range(80):
-        x = random.randint(0, WIDTH)
-        y = random.randint(0, HEIGHT)
-        size = random.uniform(1.0, 3.5)
-        alpha = random.randint(40, 140)
-        # Dessiner sur une couche separee pour l'opacite
-        r, g, b = GOLD
-        draw.ellipse(
-            [x - size, y - size, x + size, y + size],
-            fill=(r, g, b, alpha) if img.mode == "RGBA" else (
-                int(r * alpha / 255 + BG_BOTTOM[0] * (1 - alpha / 255)),
-                int(g * alpha / 255 + BG_BOTTOM[1] * (1 - alpha / 255)),
-                int(b * alpha / 255 + BG_BOTTOM[2] * (1 - alpha / 255)),
-            ),
-        )
-
-    # Quelques particules plus grosses avec glow
-    for _ in range(12):
-        x = random.randint(100, WIDTH - 100)
-        y = random.randint(80, HEIGHT - 80)
-        for radius in range(12, 0, -2):
-            alpha_frac = 0.03 * (12 - radius) / 12
-            r = int(GOLD[0] * alpha_frac + BG_BOTTOM[0] * (1 - alpha_frac))
-            g = int(GOLD[1] * alpha_frac + BG_BOTTOM[1] * (1 - alpha_frac))
-            b = int(GOLD[2] * alpha_frac + BG_BOTTOM[2] * (1 - alpha_frac))
-            draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=(r, g, b))
-        draw.ellipse([x - 2, y - 2, x + 2, y + 2], fill=GOLD)
-
-    # Charger les polices
-    try:
-        title_font = ImageFont.truetype(str(FONTS_DIR / "CinzelDecorative-Bold.ttf"), 72)
-    except OSError:
-        title_font = ImageFont.load_default()
+    logo = Image.open(RACINE / "assets" / "accio_logo_horizontal.png").convert("RGBA")
+    lg = 640
+    logo = logo.resize((lg, round(logo.height * lg / logo.width)), Image.Resampling.LANCZOS)
+    img.paste(logo, ((LARGEUR - lg) // 2, 40), logo)
 
     try:
-        subtitle_font = ImageFont.truetype(str(FONTS_DIR / "Cinzel-Variable.ttf"), 24)
+        police = ImageFont.truetype(str(RACINE / "assets" / "fonts" / "Cinzel-Variable.ttf"), 30)
     except OSError:
-        subtitle_font = ImageFont.load_default()
+        police = ImageFont.load_default()
+    trait = ImageDraw.Draw(img)
+    boite = trait.textbbox((0, 0), ACCROCHE, font=police)
+    trait.text(((LARGEUR - (boite[2] - boite[0])) // 2, 262), ACCROCHE, font=police, fill=TEXTE)
 
-    # Titre
-    title = "Accio Launcher"
-    bbox = draw.textbbox((0, 0), title, font=title_font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    tx = (WIDTH - tw) // 2
-    ty = (HEIGHT - th) // 2 - 40
+    # Les huit jaquettes, en rang, avec un filet d'or dessous.
+    haut, ecart = 204, 12
+    jaquettes = [_jaquette(g, haut) for g in JEUX]
+    total = sum(j.width for j in jaquettes) + ecart * (len(jaquettes) - 1)
+    x, y = (LARGEUR - total) // 2, 336
+    for j in jaquettes:
+        img.paste(j, (x, y))
+        x += j.width + ecart
+    trait.line([((LARGEUR - total) // 2, y + haut + 16),
+                ((LARGEUR + total) // 2, y + haut + 16)], fill=OR, width=2)
 
-    # Titre sans pictogramme : Cinzel n'a pas de glyphe d'emoji, et le repli
-    # de police de Windows les rend en couleur — hors charte.
-    draw.text((tx, ty), title, font=title_font, fill=GOLD)
-
-    # Sous-titre
-    subtitle = "Le launcher magique pour les jeux Harry Potter PC"
-    bbox2 = draw.textbbox((0, 0), subtitle, font=subtitle_font)
-    sw = bbox2[2] - bbox2[0]
-    sx = (WIDTH - sw) // 2
-    sy = ty + th + 30
-    draw.text((sx, sy), subtitle, font=subtitle_font, fill=SUBTITLE_COLOR)
-
-    # Ligne doree decorative sous le sous-titre
-    line_w = 120
-    line_y = sy + 50
-    line_x = (WIDTH - line_w) // 2
-    draw.line([(line_x, line_y), (line_x + line_w, line_y)], fill=(*GOLD, 80), width=1)
-
-    # Sauvegarder
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    img.save(str(OUTPUT), format="PNG")
-    print(f"Social preview generee : {OUTPUT} ({WIDTH}x{HEIGHT})")
+    SORTIE.parent.mkdir(parents=True, exist_ok=True)
+    img.save(SORTIE, format="PNG", optimize=True)
+    print(f"Image de partage generee : {SORTIE} ({LARGEUR}x{HAUTEUR})")
 
 
 if __name__ == "__main__":

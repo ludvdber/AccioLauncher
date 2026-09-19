@@ -23,7 +23,11 @@ class TrayManager(QObject):
         self._tray.setIcon(icon)
         self._tray.setToolTip("Accio Launcher")
 
-        menu = QMenu()
+        # Parenté à la fenêtre : sans parent, un QMenu est une fenêtre à part
+        # entière que seule une référence Python garde en vie, détruite quand
+        # le ramasse-miettes le décide (`setContextMenu` n'en prend pas la
+        # propriété).
+        menu = QMenu(parent)
         act_restore = QAction(tr("Restaurer Accio Launcher"), parent)
         act_restore.triggered.connect(self.restore_requested.emit)
         menu.addAction(act_restore)

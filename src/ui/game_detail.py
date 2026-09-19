@@ -106,14 +106,17 @@ class GameDetailView(QWidget):
         self._audio_bar.cinema_toggled.connect(self.basculer_cinema)
 
         # Animations fade
-        self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity")
+        # Parent explicite sur chaque animation : sans lui, elle n'appartient
+        # qu'à Python et meurt quand le ramasse-miettes le décide, en survivant
+        # au widget qu'elle anime (voir `tests/conftest.py`).
+        self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity", self)
         self._fade_anim.setDuration(300)
         self._fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         self._info_opacity = QGraphicsOpacityEffect(self._info)
         self._info_opacity.setOpacity(1.0)
         self._info.setGraphicsEffect(self._info_opacity)
-        self._info_fade = QPropertyAnimation(self._info_opacity, b"opacity")
+        self._info_fade = QPropertyAnimation(self._info_opacity, b"opacity", self)
         self._info_fade.setEasingCurve(QEasingCurve.Type.OutCubic)
 
     def _connect_signals(self) -> None:
