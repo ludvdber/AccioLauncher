@@ -207,7 +207,7 @@ class Downloader(QThread):
                 return
             try:
                 digest = self._download_stream(
-                    self.url, part_path, global_offset=0, global_total=0,
+                    self.url, part_path,
                     compute_sha256=bool(self.expected_sha256),
                 )
                 if self._cancelled:
@@ -320,7 +320,6 @@ class Downloader(QThread):
                 try:
                     digest = self._download_stream(
                         url, part_tmp,
-                        global_offset=i, global_total=total_parts,
                         compute_sha256=bool(expected_part_hash),
                     )
                     if self._cancelled:
@@ -434,7 +433,6 @@ class Downloader(QThread):
 
     def _download_stream(
         self, url: str, part_path: Path,
-        global_offset: int = 0, global_total: int = 0,
         compute_sha256: bool = False,
     ) -> str | None:
         """Télécharge en streaming avec reprise via HTTP Range.

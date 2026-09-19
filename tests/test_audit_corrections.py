@@ -218,12 +218,6 @@ class TestConfigMalTypee:
         assert c.playtime_seconds == {"hp1": 60}
         assert c.installed_versions == {"hp1": "1.0"}
 
-    def test_vitesse_aberrante(self, tmp_path, monkeypatch):
-        assert self._charge(tmp_path, monkeypatch,
-                            {"last_download_speed": -5}).last_download_speed == 0.0
-        assert self._charge(tmp_path, monkeypatch,
-                            {"last_download_speed": "vite"}).last_download_speed == 0.0
-
 
 # ──────────────── A3 / A4 · durcissement du catalogue ──────────────────────
 

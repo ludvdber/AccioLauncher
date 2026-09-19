@@ -342,16 +342,6 @@ class GameOperations(QObject):
         if self._downloader is not None:
             self._disconnect_downloader(self._downloader)
         self._downloader = None
-        # Mémoriser la vitesse observée : elle sert à annoncer une durée AVANT
-        # le clic sur les téléchargements suivants (voir estimate_duration).
-        # `speed` est une PROPRIÉTÉ : l'appeler levait « 'float' object is not
-        # callable » à chaque téléchargement réussi, donc AVANT `install()` —
-        # aucun jeu ne pouvait plus s'installer et l'utilisateur recevait un
-        # rapport de crash à 100 %. Voir tests/test_game_operations.py.
-        observed = self._speed_tracker.speed
-        if observed > 0:
-            self._manager.config.last_download_speed = observed
-            self._manager.config.save()
         game = self._active_game
         if game is None:
             return

@@ -96,16 +96,6 @@ class TestFinDeTelechargement:
             operations._installer.cancel()
             operations._installer.wait(5000)
 
-    def test_la_vitesse_observee_est_memorisee(self, ops):
-        """Elle sert à annoncer une durée AVANT le clic suivant."""
-        operations, manager = ops
-        _en_cours_de_telechargement(ops)
-        operations._on_download_finished(str(_archive(ops)))
-        assert manager.config.last_download_speed > 0
-        if operations._installer is not None:
-            operations._installer.cancel()
-            operations._installer.wait(5000)
-
     def test_le_downloader_est_relache(self, ops):
         operations, manager = ops
         _en_cours_de_telechargement(ops)

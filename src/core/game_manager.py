@@ -392,9 +392,9 @@ class GameManager:
         self.config.last_played[game_id] = date.today().isoformat()
         self.config.save()
         stats.enregistrer_session(game_id, debut, int(seconds))
-        return True
         log.info("Temps de jeu de %s : +%d s (total %d s)",
                  game_id, seconds, self.config.playtime_seconds[game_id])
+        return True
 
     def get_playtime(self, game_id: str) -> int:
         """Temps de jeu cumulé en secondes (0 si jamais joué)."""

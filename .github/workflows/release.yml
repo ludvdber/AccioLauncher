@@ -97,6 +97,7 @@ jobs:
           retention-days: 7
 
       - name: Attestation de provenance
+        id: attestation
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
@@ -111,13 +112,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           SHA256: ${{ steps.empreinte.outputs.sha256 }}
+          BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
         run: |
+          # La preuve de provenance voyage AUSSI à côté de l'exe : vérifiable
+          # hors de GitHub (`cosign verify-blob-attestation --bundle`), et c'est
+          # ce que lit OpenSSF Scorecard (« Signed-Releases »). L'auto-update ne
+          # retient que l'asset en `.exe`, ce fichier ne le gêne pas.
+          $signature = 'dist/AccioLauncher.exe.sigstore.json'
+          Copy-Item $env:BUNDLE $signature
           $notes = Get-Content .github/release-notes.md -Raw -Encoding utf8
           $notes = $notes.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:GITHUB_REF_NAME)
           $fichier = Join-Path $env:RUNNER_TEMP 'notes.md'
           Set-Content -Path $fichier -Value $notes -Encoding utf8NoBOM
           $version = $env:GITHUB_REF_NAME.TrimStart('v')
-          gh release create $env:GITHUB_REF_NAME dist/AccioLauncher.exe `
+          gh release create $env:GITHUB_REF_NAME dist/AccioLauncher.exe $signature `
             --draft --verify-tag `
             --title "🪄 Accio Launcher $version" `
             --notes-file $fichier

@@ -106,18 +106,6 @@ def _as_bool(value: object, default: bool) -> bool:
     return value if isinstance(value, bool) else default
 
 
-def _as_vitesse(value: object) -> float:
-    """Dernière vitesse observée, en octets/s. 0.0 si absurde ou mal typée.
-
-    Une vitesse négative ferait annoncer un temps de téléchargement négatif ;
-    une chaîne faisait lever `float()` — rattrapé, mais toute la config
-    retombait alors aux valeurs par défaut pour un seul champ décoratif.
-    """
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return 0.0
-    return float(value) if value > 0 else 0.0
-
-
 def _as_map(value: object, type_valeur: type) -> dict:
     """Dict dont on ne garde QUE les paires (str → type_valeur) exploitables.
 
@@ -157,9 +145,6 @@ class Config:
     # depuis une version qui embarquait les vidéos ne doit rien télécharger
     # sans qu'on le lui demande.
     trailers_optin: bool = False
-    # Dernière vitesse de téléchargement observée (octets/s), pour estimer
-    # une durée AVANT de cliquer : « 2,4 Go » ne décide personne, « ≈ 3 min » si.
-    last_download_speed: float = 0.0
     discord_presence: bool = True
     dismissed_launcher_version: str = ""
     # Un seul remerciement Ko-fi (cap des 10 h de jeu) dans la vie du launcher.
@@ -201,7 +186,6 @@ class Config:
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
                     trailers_optin=_as_bool(data.get("trailers_optin"), False),
-                    last_download_speed=_as_vitesse(data.get("last_download_speed")),
                     discord_presence=_as_bool(data.get("discord_presence"), True),
                     dismissed_launcher_version=_as_str(
                         data.get("dismissed_launcher_version"), ""),
@@ -232,7 +216,6 @@ class Config:
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
                 "trailers_optin": self.trailers_optin,
-                "last_download_speed": self.last_download_speed,
                 "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,
