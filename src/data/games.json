@@ -74,8 +74,41 @@
         "Énigmes"
       ],
       "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-09-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.2/hp1.7z",
+          "size_mb": 431,
+          "changes": [
+            "1,3 Mo de fichiers inutilisés retirés : un wrapper Direct3D 9 qu'aucun fichier du jeu n'appelle, et trois de ses variantes déjà désactivées",
+            "Deux moteurs 3D fantômes retirés : le menu vidéo proposait S3 MeTaL et PowerVR, dont les fichiers ne sont pas livrés — les choisir empêchait le jeu de redémarrer",
+            "Affichage par défaut en 1920x1080",
+            "Antialiasing porté à 8x et modèles affichés sans simplification",
+            "Textures préchargées : moins de saccades en cours de niveau"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "1.3 MB of unused files removed: a Direct3D 9 wrapper that no game file calls, and three of its already-disabled variants",
+                "Two phantom 3D renderers removed: the video menu offered S3 MeTaL and PowerVR, whose files are not shipped — picking them stopped the game from starting again",
+                "Default display set to 1920x1080",
+                "Anti-aliasing raised to 8x, meshes shown without simplification",
+                "Textures precached: fewer hitches during levels"
+              ]
+            },
+            "es": {
+              "changes": [
+                "1,3 MB de archivos sin usar eliminados: un wrapper de Direct3D 9 que ningún archivo del juego llama, y tres de sus variantes ya desactivadas",
+                "Dos motores 3D fantasma eliminados: el menú de vídeo ofrecía S3 MeTaL y PowerVR, cuyos archivos no se incluyen — elegirlos impedía que el juego volviera a arrancar",
+                "Pantalla por defecto en 1920x1080",
+                "Antialiasing subido a 8x y modelos mostrados sin simplificar",
+                "Texturas precargadas: menos tirones durante el nivel"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-03-08",
@@ -212,7 +245,7 @@
             "Platformer",
             "Puzzles"
           ],
-          "warning": "Do not change the video options inside the game: only one graphics device is installed, and picking another one stops the game from starting again. Display settings are already prepared by the launcher."
+          "warning": "Do not change the video options inside the game: the launcher already sets the display at its best, and changing it here can stop the game from starting again."
         },
         "es": {
           "name": "Harry Potter y la piedra filosofal",
@@ -223,7 +256,7 @@
             "Plataformas",
             "Puzles"
           ],
-          "warning": "No cambies las opciones de vídeo dentro del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar. El lanzador ya prepara la pantalla."
+          "warning": "No cambies las opciones de vídeo dentro del juego: el lanzador ya ajusta la pantalla al máximo, y cambiarla aquí puede impedir que el juego vuelva a arrancar."
         }
       },
       "saves": {
@@ -235,7 +268,7 @@
         "first": 0
       },
       "display_locked": true,
-      "warning": "Ne changez pas les options vidéo dans le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer. L'affichage est déjà préparé par le lanceur."
+      "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
     },
     {
       "id": "hp2",
@@ -252,8 +285,41 @@
         "Énigmes"
       ],
       "latest_version": "1.0",
-      "recommended_version": "1.0",
+      "recommended_version": "1.1",
       "versions": [
+        {
+          "version": "1.1",
+          "date": "2026-09-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.1/hp2.7z",
+          "size_mb": 463,
+          "changes": [
+            "Détail des objets porté au maximum : il était réglé deux crans plus bas, et le fichier qui le porte était en lecture seule — le monter depuis le jeu ne servait donc à rien",
+            "Affichage par défaut corrigé : le jeu était livré en 640x480 en 16 bits, il démarre désormais en 1920x1080 en 32 bits",
+            "Moteur 3D par défaut corrigé : il désignait des fichiers non livrés",
+            "Réglages de rendu livrés avec le jeu : antialiasing 8x, anisotropie 16x, occlusion ambiante, reflets, relief",
+            "Textures préchargées : moins de saccades en cours de niveau"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Object detail raised to maximum: it was two steps below, and the file holding it was read-only — raising it from inside the game had no effect",
+                "Default display fixed: the game shipped at 640x480 in 16-bit colour, it now starts at 1920x1080 in 32-bit",
+                "Default 3D renderer fixed: it named files that are not shipped",
+                "Rendering settings now shipped with the game: 8x anti-aliasing, 16x anisotropic filtering, ambient occlusion, reflections, bump mapping",
+                "Textures precached: fewer hitches during levels"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Detalle de objetos al máximo: estaba dos niveles por debajo, y el archivo que lo guarda era de solo lectura — subirlo desde el juego no servía de nada",
+                "Pantalla por defecto corregida: el juego venía en 640x480 a 16 bits, ahora arranca en 1920x1080 a 32 bits",
+                "Motor 3D por defecto corregido: nombraba archivos que no se incluyen",
+                "Ajustes de render incluidos con el juego: antialiasing 8x, filtrado anisotrópico 16x, oclusión ambiental, reflejos, relieve",
+                "Texturas precargadas: menos tirones durante el nivel"
+              ]
+            }
+          }
+        },
         {
           "version": "1.0",
           "date": "2026-03-28",
@@ -374,7 +440,7 @@
             "Exploration",
             "Puzzles"
           ],
-          "warning": "Do not change the video options inside the game: only one graphics device is installed, and picking another one stops the game from starting again. Display settings are already prepared by the launcher."
+          "warning": "Do not change the video options inside the game: the launcher already sets the display at its best, and changing it here can stop the game from starting again."
         },
         "es": {
           "name": "Harry Potter y la cámara secreta",
@@ -385,7 +451,7 @@
             "Exploración",
             "Puzles"
           ],
-          "warning": "No cambies las opciones de vídeo dentro del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar. El lanzador ya prepara la pantalla."
+          "warning": "No cambies las opciones de vídeo dentro del juego: el lanzador ya ajusta la pantalla al máximo, y cambiarla aquí puede impedir que el juego vuelva a arrancar."
         }
       },
       "saves": {
@@ -397,7 +463,7 @@
         "first": 1
       },
       "display_locked": true,
-      "warning": "Ne changez pas les options vidéo dans le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer. L'affichage est déjà préparé par le lanceur."
+      "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
     },
     {
       "id": "hp3",
@@ -414,8 +480,35 @@
         "Multi-personnages"
       ],
       "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-09-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.2/hp3.7z",
+          "size_mb": 775,
+          "changes": [
+            "dgVoodoo 2.86.5 → 2.87.5",
+            "Antialiasing porté à 8x et filtrage anisotrope à 16x",
+            "Fichiers inutilisés retirés : deux bibliothèques Linux, deux moteurs 3D que le jeu ne peut pas charger, et des outils de développement"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "dgVoodoo 2.86.5 → 2.87.5",
+                "Anti-aliasing raised to 8x, anisotropic filtering to 16x",
+                "Unused files removed: two Linux libraries, two 3D renderers the game cannot load, and development tools"
+              ]
+            },
+            "es": {
+              "changes": [
+                "dgVoodoo 2.86.5 → 2.87.5",
+                "Antialiasing subido a 8x y filtrado anisotrópico a 16x",
+                "Archivos sin usar eliminados: dos bibliotecas de Linux, dos motores 3D que el juego no puede cargar y herramientas de desarrollo"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2025-03-06",
@@ -507,7 +600,7 @@
             "Platformer",
             "Multi-character"
           ],
-          "warning": "Do not change the video options inside the game: only one graphics device is installed, and picking another one stops the game from starting again. Display settings are already prepared by the launcher."
+          "warning": "Do not change the video options inside the game: the launcher already sets the display at its best, and changing it here can stop the game from starting again."
         },
         "es": {
           "name": "Harry Potter y el prisionero de Azkaban",
@@ -518,7 +611,7 @@
             "Plataformas",
             "Multipersonaje"
           ],
-          "warning": "No cambies las opciones de vídeo dentro del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar. El lanzador ya prepara la pantalla."
+          "warning": "No cambies las opciones de vídeo dentro del juego: el lanzador ya ajusta la pantalla al máximo, y cambiarla aquí puede impedir que el juego vuelva a arrancar."
         }
       },
       "saves": {
@@ -533,7 +626,7 @@
         "first": 0
       },
       "display_locked": true,
-      "warning": "Ne changez pas les options vidéo dans le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer. L'affichage est déjà préparé par le lanceur."
+      "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
     },
     {
       "id": "hp4",

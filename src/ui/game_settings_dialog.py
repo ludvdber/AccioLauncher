@@ -183,11 +183,10 @@ class GameSettingsDialog(QDialog):
             # résolution — donc celui qui, ne la trouvant pas ici, ira la
             # chercher dans le menu du jeu et cassera son installation.
             note = QLabel(tr(
-                "Ne touchez pas aux options vidéo DANS le jeu : une seule "
-                "carte graphique y est installée, et en choisir une autre "
-                "empêche le jeu de redémarrer.\n"
-                "L'affichage est déjà préparé par le lanceur, et ces réglages "
-                "viendront ici."))
+                "Ne touchez pas aux options vidéo DANS le jeu : l'affichage "
+                "est déjà réglé au mieux par le lanceur, et le modifier ici "
+                "peut empêcher le jeu de redémarrer.\n"
+                "Ces réglages viendront ici."))
             note.setFont(body_font(11))
             note.setWordWrap(True)
             note.setTextFormat(Qt.TextFormat.PlainText)
