@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.25",
+  "catalog_version": "0.26",
   "contributors": [
     {
       "name": "ASTeam",
@@ -159,6 +159,13 @@
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+            "section": "Engine.Engine",
+            "key": "WindowedRenderDevice",
+            "value": "D3D11Drv.D3D11RenderDevice",
+            "fallback": "D3DDrv.D3DRenderDevice"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
             "section": "D3D11Drv.D3D11RenderDevice",
             "key": "Borderless",
             "value": "True"
@@ -204,7 +211,8 @@
             "Action",
             "Platformer",
             "Puzzles"
-          ]
+          ],
+          "warning": "Do not change the video options inside the game: only one graphics device is installed, and picking another one stops the game from starting again. Display settings are already prepared by the launcher."
         },
         "es": {
           "name": "Harry Potter y la piedra filosofal",
@@ -214,7 +222,8 @@
             "Acción",
             "Plataformas",
             "Puzles"
-          ]
+          ],
+          "warning": "No cambies las opciones de vídeo dentro del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar. El lanzador ya prepara la pantalla."
         }
       },
       "saves": {
@@ -224,7 +233,9 @@
         ],
         "files": "Save*.usa",
         "first": 0
-      }
+      },
+      "display_locked": true,
+      "warning": "Ne changez pas les options vidéo dans le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer. L'affichage est déjà préparé par le lanceur."
     },
     {
       "id": "hp2",
@@ -304,6 +315,13 @@
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+            "section": "Engine.Engine",
+            "key": "WindowedRenderDevice",
+            "value": "D3D11Drv.D3D11RenderDevice",
+            "fallback": "D3DDrv.D3DRenderDevice"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
             "section": "D3D11Drv.D3D11RenderDevice",
             "key": "Borderless",
             "value": "True"
@@ -355,7 +373,8 @@
             "Action",
             "Exploration",
             "Puzzles"
-          ]
+          ],
+          "warning": "Do not change the video options inside the game: only one graphics device is installed, and picking another one stops the game from starting again. Display settings are already prepared by the launcher."
         },
         "es": {
           "name": "Harry Potter y la cámara secreta",
@@ -365,7 +384,8 @@
             "Acción",
             "Exploración",
             "Puzles"
-          ]
+          ],
+          "warning": "No cambies las opciones de vídeo dentro del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar. El lanzador ya prepara la pantalla."
         }
       },
       "saves": {
@@ -375,7 +395,9 @@
         ],
         "files": "Slot*/Save0.usa",
         "first": 1
-      }
+      },
+      "display_locked": true,
+      "warning": "Ne changez pas les options vidéo dans le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer. L'affichage est déjà préparé par le lanceur."
     },
     {
       "id": "hp3",
@@ -484,7 +506,8 @@
             "Action",
             "Platformer",
             "Multi-character"
-          ]
+          ],
+          "warning": "Do not change the video options inside the game: only one graphics device is installed, and picking another one stops the game from starting again. Display settings are already prepared by the launcher."
         },
         "es": {
           "name": "Harry Potter y el prisionero de Azkaban",
@@ -494,7 +517,8 @@
             "Acción",
             "Plataformas",
             "Multipersonaje"
-          ]
+          ],
+          "warning": "No cambies las opciones de vídeo dentro del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar. El lanzador ya prepara la pantalla."
         }
       },
       "saves": {
@@ -507,7 +531,9 @@
           "Save1??.usa"
         ],
         "first": 0
-      }
+      },
+      "display_locked": true,
+      "warning": "Ne changez pas les options vidéo dans le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer. L'affichage est déjà préparé par le lanceur."
     },
     {
       "id": "hp4",

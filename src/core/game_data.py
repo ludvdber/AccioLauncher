@@ -521,6 +521,18 @@ class GameData:
     # et c'est la bonne règle — aucun d'eux n'a été mesuré, et un jeu qui va
     # bien n'a pas besoin qu'on lui change son environnement de lancement.
     dpi_aware: bool = False
+    # Les options vidéo DU JEU sont-elles un piège ?
+    #
+    # Relevé le 2026-09-20 dans HP1 et HP2 : une seule carte de rendu est
+    # livrée, `d3d11drv.dll`. Ni SoftDrv, ni D3DDrv, ni OpenGLDrv (vérifié,
+    # zéro fichier). Or le menu vidéo du moteur, lui, les propose TOUTES —
+    # elles sont écrites dans le .ini d'origine. En choisir une autre donne un
+    # paquet introuvable, donc `RenDev` nul, donc « Assertion failed: RenDev
+    # [WinViewport.cpp:351] » à l'initialisation : le jeu ne redémarre plus.
+    #
+    # À partir de HP5 le moteur change et ses réglages fonctionnent : le champ
+    # est donc PAR JEU, et rien ne s'affiche pour ceux qui vont bien.
+    display_locked: bool = False
     # Où le jeu range ses sauvegardes ; None tant qu'on ne l'a pas relevé.
     sauvegardes: Sauvegardes | None = None
 
@@ -618,6 +630,7 @@ class GameData:
             # chaîne non vide ou un nombre y suffiraient à activer un réglage
             # qui change la façon dont on lance un exécutable.
             dpi_aware=data.get("dpi_aware") is True,
+            display_locked=data.get("display_locked") is True,
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),

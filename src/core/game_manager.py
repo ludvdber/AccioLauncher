@@ -15,6 +15,8 @@ from src.core import stats
 from src.core.config import Config
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 from src.core.pre_launch import (
+    besoin_de_documents,
+    documents_inutilisable,
     apply_ini_patches,
     create_pre_launch_files,
     delete_pre_launch_files,
@@ -280,6 +282,16 @@ class GameManager:
         manquants = prerequis_manquants(("vcredist_x86", *game.requires))
         if manquants:
             raise RuntimeError(f"prerequis_manquant:{manquants[0]}")
+
+        # HP1, HP2 et HP3 rangent configuration et sauvegardes dans Documents.
+        # Si Windows n'y donne pas accès, ces jeux plantent à l'initialisation
+        # avec un message à eux (« General protection fault! History: appInit »)
+        # que rien ne relie au vrai coupable — cas réel du 2026-09-20. On le dit
+        # AVANT de lancer, plutôt que de laisser le jeu accuser autre chose.
+        if besoin_de_documents(game):
+            docs = documents_inutilisable()
+            if docs is not None:
+                raise RuntimeError(f"documents_inutilisable:{docs}")
 
         # Langue du jeu AVANT tout le reste : c'est la seule étape qui peut
         # demander une élévation, et l'utilisateur doit voir l'invite UAC juste

@@ -7,6 +7,7 @@ Reçoit le `Config` et le `GameData` en paramètres — pas de couplage à GameM
 import logging
 import os
 import sys
+import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -42,6 +43,51 @@ _INI_ERRORS = "surrogateescape"
 # interdit. On impose donc CRLF des deux côtés. Même leçon que le .bat de
 # `self_update` (pyqt-pitfalls #18).
 _INI_NEWLINE = "\r\n"
+
+
+def besoin_de_documents(game: GameData) -> bool:
+    """Ce jeu a-t-il besoin du dossier Documents pour fonctionner ?
+
+    Trois jeux sur huit y écrivent leur configuration ET leurs sauvegardes
+    (HP1, HP2, HP3) ; les cinq autres passent par AppData. La réponse se LIT
+    dans le catalogue — chemins `%DOCUMENTS%` du bloc `pre_launch`, racine du
+    bloc `saves` — et n'est jamais une liste d'identifiants écrite ici : un jeu
+    ajouté demain doit être couvert sans republier l'exécutable.
+    """
+    if game.sauvegardes is not None and game.sauvegardes.racine == "documents":
+        return True
+    pl = game.pre_launch
+    if pl is None:
+        return False
+    chemins = [*pl.create_files, *pl.delete_files, *(p.file for p in pl.ini_patches)]
+    return any("%DOCUMENTS%" in c for c in chemins)
+
+
+def documents_inutilisable() -> Path | None:
+    """Rend le dossier Documents quand Windows n'y donne pas accès, sinon None.
+
+    **Né d'un rapport réel** (2026-09-20) : chez un utilisateur, HP1, HP2 et
+    HP3 échouaient tous les trois — « General protection fault! History:
+    appInit » pour les deux premiers — pendant que les cinq autres jeux
+    tournaient. Ce sont exactement les trois qui écrivent dans Documents, et le
+    journal du launcher en portait déjà la preuve : `[WinError 2]` en créant
+    `Documents/Harry Potter II`. Un Documents redirigé vers un emplacement
+    disparu (OneDrive délié, disque retiré) fait donc planter ces jeux de
+    2001-2004 à l'initialisation, sans que rien à l'écran ne relie les deux.
+
+    La sonde ÉCRIT réellement — un fichier temporaire aussitôt effacé — parce
+    qu'`os.access` ment sous Windows (il ignore les ACL) et qu'un dossier
+    existant peut être en lecture seule. Le jeu, lui, y écrira pour de bon.
+    """
+    docs = get_documents_dir()
+    try:
+        docs.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryFile(dir=docs, prefix=".accio-"):
+            pass
+    except OSError as exc:
+        log.warning("Dossier Documents inutilisable (%s) : %s", exc, docs)
+        return docs
+    return None
 
 
 def substitute_vars(raw: str, game: GameData, config: Config) -> str:

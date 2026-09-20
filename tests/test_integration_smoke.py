@@ -1650,6 +1650,46 @@ class TestEngrenageReglagesDuJeu:
         for nom in _A_VENIR:
             assert tr(nom) in desactives, nom
 
+    def test_la_rubrique_affichage_previent_du_piege_du_menu_du_jeu(
+            self, make_window_multilingue):
+        """HP1 a HP3 ne livrent qu'UNE carte de rendu (`d3d11drv.dll` ; ni
+        SoftDrv, ni D3DDrv, ni OpenGLDrv - verifie le 2026-09-20 sur une vraie
+        installation). Le menu video du moteur, lui, les propose toutes : en
+        choisir une autre donne `RenDev` nul, donc « Assertion failed: RenDev
+        [WinViewport.cpp:351] » a chaque demarrage suivant.
+
+        Cette rubrique est justement ou va celui qui cherche la resolution.
+        """
+        import dataclasses
+
+        from PyQt6.QtWidgets import QLabel
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        jeu = dataclasses.replace(jeu, display_locked=True)
+        self._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        textes = " ".join(lb.text() for lb in dlg.findChildren(QLabel))
+        assert "options vid" in textes and "redémarrer" in textes
+
+    def test_les_jeux_dont_les_reglages_marchent_ne_recoivent_aucune_note(
+            self, make_window_multilingue):
+        """A partir de HP5 le moteur change et son menu video fonctionne.
+        Afficher la mise en garde partout serait afficher un etat NORMAL."""
+        import dataclasses
+
+        from PyQt6.QtWidgets import QLabel
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        jeu = dataclasses.replace(jeu, display_locked=False)
+        self._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        textes = " ".join(lb.text() for lb in dlg.findChildren(QLabel))
+        assert "options vid" not in textes
+
     def test_un_choix_refuse_remet_le_bouton_droit(self, make_window_multilingue):
         """Laisser la sélection sur un choix que le registre n'a pas pris
         afficherait une langue que le jeu n'a pas."""

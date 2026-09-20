@@ -513,3 +513,40 @@ class TestSousDossierDeRangement:
     @pytest.mark.parametrize("mauvais", [None, 12, [], {}, True])
     def test_les_types_impropres_sont_refuses(self, mauvais):
         assert self._avec(mauvais).post_install.sous_dossier == ""
+
+
+class TestOptionsVideoVerrouillees:
+    """Le catalogue dit QUELS jeux plantent si on touche a leur menu video.
+
+    Releve le 2026-09-20 : HP1, HP2 et HP3 ne livrent que `d3d11drv.dll`. A
+    partir de HP5 le moteur change et ses reglages fonctionnent.
+    """
+
+    def test_les_trois_jeux_ue1_sont_declares(self):
+        from src.core.game_data import load_catalog
+        verrouilles = [g.id for g in load_catalog().games if g.display_locked]
+        assert verrouilles == ["hp1", "hp2", "hp3"]
+
+    def test_le_champ_vient_du_catalogue_et_exige_un_vrai_booleen(self):
+        """`is True` et non `bool(...)` : le catalogue est DISTANT, et une
+        chaine non vide y suffirait sinon a poser un avertissement."""
+        from src.core.game_data import GameData
+        base = {"id": "x", "name": "X", "year": 2001, "description": "d",
+                "developer": "d", "executable": "x/x.exe",
+                "cover_image": "c.jpg"}
+        assert GameData.from_dict(dict(base, display_locked=True)).display_locked
+        assert not GameData.from_dict(dict(base, display_locked="oui")).display_locked
+        assert not GameData.from_dict(base).display_locked
+
+    def test_le_lanceur_reimpose_la_carte_de_rendu_du_mode_fenetre(self):
+        """Le moteur lit `WindowedRenderDevice` quand il demarre en fenetre, et
+        le lanceur ne forcait que `GameRenderDevice`. Mesure le 2026-09-20 :
+        le .ini de HP2 pointait sur `SoftDrv.SoftwareRenderDevice`, une DLL qui
+        n'est pas livree - donc un plantage garanti des qu'on passe en fenetre.
+        """
+        from src.core.game_data import load_catalog
+        jeux = {g.id: g for g in load_catalog().games}
+        for gid in ("hp1", "hp2"):
+            cles = {p.key: p.value for p in jeux[gid].pre_launch.ini_patches}
+            assert cles.get("WindowedRenderDevice") == "D3D11Drv.D3D11RenderDevice", gid
+            assert cles["GameRenderDevice"] == cles["WindowedRenderDevice"], gid

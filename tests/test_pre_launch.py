@@ -157,3 +157,79 @@ class TestCoucheDpi:
         Linux ces jeux tourneront sous Wine, qui a sa propre idée du DPI."""
         monkeypatch.setattr(sys, "platform", "linux")
         assert env_de_lancement(True, {}) is None
+
+
+def _manager_avec_jeu(tmp_path, game_id: str):
+    """Un manager dont le jeu demandé est installé pour de faux : l'exécutable
+    existe, les prérequis sont réputés présents."""
+    from unittest.mock import patch as _patch
+
+    from src.core.config import Config
+    from src.core.game_data import load_catalog
+    from src.core.game_manager import GameManager
+
+    catalogue = load_catalog()
+    jeu = next(g for g in catalogue.games if g.id == game_id)
+    exe = tmp_path / "jeux" / jeu.executable
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    exe.write_bytes(b"MZ")
+    config = Config(install_path=tmp_path / "jeux", cache_path=tmp_path / "cache")
+    with _patch("src.core.game_manager.load_catalog", return_value=catalogue):
+        manager = GameManager(config)
+    return manager
+
+
+class TestDossierDocumentsInutilisable:
+    """Trois jeux sur huit écrivent dans Documents ; si Windows n'y donne pas
+    accès, ils plantent à l'initialisation avec un message à eux.
+
+    Cas réel du 2026-09-20 : HP1, HP2 et HP3 en échec (« General protection
+    fault! History: appInit ») pendant que les cinq autres tournaient, et le
+    journal du launcher portait déjà un `[WinError 2]` en créant le dossier.
+    """
+
+    def test_seuls_les_jeux_qui_y_ecrivent_sont_concernes(self):
+        from src.core.game_data import load_catalog
+        from src.core.pre_launch import besoin_de_documents
+        besoin = {g.id: besoin_de_documents(g) for g in load_catalog().games}
+        assert [gid for gid, b in besoin.items() if b] == ["hp1", "hp2", "hp3"]
+
+    def test_un_documents_normal_ne_gene_personne(self, tmp_path, monkeypatch):
+        from src.core import pre_launch
+        monkeypatch.setattr(pre_launch, "get_documents_dir", lambda: tmp_path / "Docs")
+        assert pre_launch.documents_inutilisable() is None
+        assert (tmp_path / "Docs").is_dir()      # créé au besoin, comme le fera le jeu
+
+    def test_un_documents_inaccessible_est_signale(self, tmp_path, monkeypatch):
+        """La sonde ÉCRIT : `os.access` ment sous Windows, et un dossier qui
+        existe peut refuser l'écriture."""
+        from src.core import pre_launch
+        fichier = tmp_path / "pas-un-dossier"
+        fichier.write_text("x", encoding="utf-8")
+        monkeypatch.setattr(pre_launch, "get_documents_dir", lambda: fichier / "Documents")
+        assert pre_launch.documents_inutilisable() == fichier / "Documents"
+
+    def test_le_lancement_refuse_avant_de_faire_planter_le_jeu(self, tmp_path, monkeypatch):
+        from src.core import game_manager as gm
+        manager = _manager_avec_jeu(tmp_path, "hp1")
+        monkeypatch.setattr(gm, "documents_inutilisable", lambda: tmp_path / "Docs")
+        lances = []
+        monkeypatch.setattr(gm.subprocess, "Popen", lambda *a, **k: lances.append(a))
+        with pytest.raises(RuntimeError) as erreur:
+            manager.launch_game("hp1")
+        assert str(erreur.value).startswith("documents_inutilisable:")
+        assert str(tmp_path / "Docs") in str(erreur.value)
+        assert not lances, "le jeu ne doit PAS être lancé"
+
+    def test_un_jeu_qui_n_en_a_pas_besoin_se_lance(self, tmp_path, monkeypatch):
+        """HP5 à HP7 écrivent dans AppData : un Documents cassé ne les regarde
+        pas, et les bloquer serait inventer une panne."""
+        from src.core import game_manager as gm
+        manager = _manager_avec_jeu(tmp_path, "hp5")
+        monkeypatch.setattr(gm, "documents_inutilisable", lambda: tmp_path / "Docs")
+        monkeypatch.setattr(gm, "prerequis_manquants", lambda *a: [])
+        lances = []
+        monkeypatch.setattr(gm.subprocess, "Popen",
+                            lambda *a, **k: lances.append(a) or object())
+        manager.launch_game("hp5")
+        assert lances, "HP5 doit démarrer"

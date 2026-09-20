@@ -20,6 +20,7 @@ note « bientôt disponible ») : le `sizeHint` d'un QLabel en `wordWrap` est
 calculé à une largeur qui n'est pas la sienne. Le remède reste `heightForWidth`.
 """
 
+import dataclasses
 import datetime
 
 import pytest
@@ -29,7 +30,13 @@ pytest.importorskip("pytestqt")
 from src.core.game_data import load_catalog  # noqa: E402
 
 _CATALOG = load_catalog()
-_HP2 = next(g for g in _CATALOG.games if g.id == "hp2")
+# Mise en garde RETIRÉE : ce fichier mesure des hauteurs, et le bandeau du
+# catalogue en ajoute. Sans ce retrait, ces tests dépendraient du CONTENU d'un
+# catalogue qui se met à jour à distance — HP2 a reçu la sienne le 2026-09-20
+# (options vidéo du moteur) et un test de mise en page est passé au rouge sans
+# qu'une ligne de code ait bougé. Le bandeau a ses propres tests.
+_HP2 = dataclasses.replace(
+    next(g for g in _CATALOG.games if g.id == "hp2"), warning="", warning_url="")
 
 
 @pytest.fixture

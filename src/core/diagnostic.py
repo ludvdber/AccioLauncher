@@ -26,7 +26,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from src.core.config import APP_VERSION
+from src.core.config import APP_VERSION, get_documents_dir
 
 log = logging.getLogger(__name__)
 
@@ -240,7 +240,7 @@ def _espace_libre(dossier: Path) -> str:
 
 def rapport(manager, ecrans: list[str] | None = None, journal: str = "",
             tentatives=None, prerequis: dict[str, bool] | None = None,
-            machine: list[str] | None = None) -> str:
+            machine: list[str] | None = None, documents: str | None = None) -> str:
     """Le bloc à coller sur le Discord.
 
     `tentatives`, `prerequis` et `machine` sont injectables pour les tests ;
@@ -260,6 +260,14 @@ def rapport(manager, ecrans: list[str] | None = None, journal: str = "",
         lignes.append("Écrans : " + " ; ".join(ecrans))
     lignes.append(f"Dossier des jeux : {config.install_path} — "
                   f"{_espace_libre(Path(config.install_path))}")
+    # Documents est le seul autre endroit où des jeux écrivent (HP1, HP2, HP3).
+    # Chez l'utilisateur du 2026-09-20 il était inaccessible, et il a fallu le
+    # DÉDUIRE d'un avertissement du journal : cette ligne donne la réponse.
+    if documents is None:
+        from src.core.pre_launch import documents_inutilisable
+        casse = documents_inutilisable() is not None
+        documents = f"{get_documents_dir()}" + (" — INACCESSIBLE" if casse else "")
+    lignes.append(f"Documents : {documents}")
 
     if prerequis is None:
         from src.core.system_checks import PREREQUIS, check_d3d11_feature_level

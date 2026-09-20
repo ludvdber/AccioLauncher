@@ -50,11 +50,19 @@ def _disque(monkeypatch, free_mb):
 
 
 def _jeu_telechargeable(manager):
-    """Premier jeu du catalogue dont une archive est réellement publiée."""
+    """Premier jeu téléchargeable du catalogue, SANS mise en garde.
+
+    L'avertissement est RETIRÉ ici, et les tests qui en veulent un le posent
+    eux-mêmes (`dataclasses.replace`). Sans ça, ces tests dépendraient du
+    CONTENU d'un catalogue qui se met à jour à distance : le jour où HP1 a reçu
+    sa mise en garde sur les options vidéo (2026-09-20), onze tests sans aucun
+    rapport avec elle sont passés au rouge d'un coup.
+    """
+    import dataclasses
     for entry in manager.get_games():
         dl = entry.game.current_download
         if dl is not None and dl.is_available and dl.size_mb > 0:
-            return entry.game
+            return dataclasses.replace(entry.game, warning="", warning_url="")
     pytest.skip("aucun jeu téléchargeable dans le catalogue embarqué")
 
 

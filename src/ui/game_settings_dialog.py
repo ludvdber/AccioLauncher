@@ -178,6 +178,22 @@ class GameSettingsDialog(QDialog):
                 "QRadioButton { color: #55556a; background: transparent;"
                 " padding: 2px 0px; }")
             layout.addWidget(item)
+        if self.game.display_locked:
+            # Cette rubrique est exactement l'endroit où va celui qui cherche la
+            # résolution — donc celui qui, ne la trouvant pas ici, ira la
+            # chercher dans le menu du jeu et cassera son installation.
+            note = QLabel(tr(
+                "Ne touchez pas aux options vidéo DANS le jeu : une seule "
+                "carte graphique y est installée, et en choisir une autre "
+                "empêche le jeu de redémarrer.\n"
+                "L'affichage est déjà préparé par le lanceur, et ces réglages "
+                "viendront ici."))
+            note.setFont(body_font(11))
+            note.setWordWrap(True)
+            note.setTextFormat(Qt.TextFormat.PlainText)
+            note.setStyleSheet("color: #e8955a; background: transparent;")
+            layout.addSpacing(6)
+            layout.addWidget(note)
         trait = QFrame()
         trait.setFrameShape(QFrame.Shape.HLine)
         trait.setStyleSheet("color: rgba(255,255,255,0.06);")

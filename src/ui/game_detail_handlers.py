@@ -204,6 +204,11 @@ def on_play(view: "GameDetailView") -> None:
             )
             if reply == QMessageBox.StandardButton.Yes:
                 open_url(PREREQUIS.get(manquant, (None, VCREDIST_URL))[1])
+        elif str(exc).startswith("documents_inutilisable:"):
+            _boite(QMessageBox.Icon.Critical, view,
+                   tr("Dossier Documents inaccessible"),
+                   tr("Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\nWindows refuse d'y écrire, donc le jeu ne peut pas démarrer.\n\nC'est en général une protection : dans Sécurité Windows → Protection contre les rançongiciels, désactivez « Accès contrôlé aux dossiers » ou autorisez Accio Launcher. Un antivirus tiers peut faire la même chose. Si ce dossier a été déplacé ou supprimé, rétablissez-le par clic droit sur Documents → Propriétés → Emplacement.").format(str(exc).split(":", 1)[1]),
+                   QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
         else:
             log.error("Erreur au lancement : %s", exc)
             view.status_message.emit(tr("Impossible de lancer le jeu."))

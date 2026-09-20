@@ -326,6 +326,9 @@
     "Jouée le": "Jugada el",
     "Le temps par sauvegarde se compte à partir de ta prochaine partie.": "El tiempo por partida guardada se cuenta a partir de tu próxima partida.",
     "Dont {} jouées avant la mise en service du journal, sans date.": "De ello, {} jugados antes de que empezara el registro, sin fecha.",
-    "Dont {} jouées sans sauvegarder.": "De ello, {} jugados sin guardar."
+    "Dont {} jouées sans sauvegarder.": "De ello, {} jugados sin guardar.",
+    "Dossier Documents inaccessible": "Carpeta Documentos inaccesible",
+    "Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\nWindows refuse d'y écrire, donc le jeu ne peut pas démarrer.\n\nC'est en général une protection : dans Sécurité Windows → Protection contre les rançongiciels, désactivez « Accès contrôlé aux dossiers » ou autorisez Accio Launcher. Un antivirus tiers peut faire la même chose. Si ce dossier a été déplacé ou supprimé, rétablissez-le par clic droit sur Documents → Propriétés → Emplacement.": "Este juego guarda su configuración y sus partidas en:\n\n{}\n\nWindows se niega a escribir ahí, así que el juego no puede arrancar.\n\nSuele ser una protección: en Seguridad de Windows → Protección contra ransomware, desactiva «Acceso controlado a carpetas» o autoriza Accio Launcher. Un antivirus de terceros puede hacer lo mismo. Si esa carpeta se movió o se borró, restáurala con clic derecho en Documentos → Propiedades → Ubicación.",
+    "Ne touchez pas aux options vidéo DANS le jeu : une seule carte graphique y est installée, et en choisir une autre empêche le jeu de redémarrer.\nL'affichage est déjà préparé par le lanceur, et ces réglages viendront ici.": "No toques las opciones de vídeo DENTRO del juego: solo hay una tarjeta gráfica instalada, y elegir otra impide que el juego vuelva a arrancar.\nEl lanzador ya prepara la pantalla, y estos ajustes vendrán aquí."
   }
 }

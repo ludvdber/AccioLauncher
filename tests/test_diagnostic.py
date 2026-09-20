@@ -81,6 +81,14 @@ class TestMateriel:
                                        machine=["Processeur : Ryzen (16 threads)"])
         assert "Processeur : Ryzen (16 threads)" in texte
 
+    def test_le_dossier_documents_est_dans_le_rapport(self, tmp_path, monkeypatch):
+        """Chez l'utilisateur du 2026-09-20, il a fallu DÉDUIRE d'un
+        avertissement du journal que Documents était inaccessible."""
+        from tests.test_diagnostic import TestRapport
+        texte = TestRapport()._rapport(tentatives=(), machine=[],
+                                       documents=r"D:\Docs — INACCESSIBLE")
+        assert "Documents : D:" in texte and "INACCESSIBLE" in texte
+
     def test_le_materiel_se_lit_sans_lever(self):
         assert diagnostic.materiel()[0].startswith("Processeur : ")
 
