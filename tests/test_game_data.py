@@ -539,10 +539,18 @@ class TestOptionsVideoVerrouillees:
         assert not GameData.from_dict(base).display_locked
 
     def test_le_lanceur_reimpose_la_carte_de_rendu_du_mode_fenetre(self):
-        """Le moteur lit `WindowedRenderDevice` quand il demarre en fenetre, et
-        le lanceur ne forcait que `GameRenderDevice`. Mesure le 2026-09-20 :
-        le .ini de HP2 pointait sur `SoftDrv.SoftwareRenderDevice`, une DLL qui
-        n'est pas livree - donc un plantage garanti des qu'on passe en fenetre.
+        """Ces deux cles nommaient des DLL qui ne sont PAS livrees.
+
+        Mesure le 2026-09-20 : le .ini de HP2 portait
+        `WindowedRenderDevice=SoftDrv.SoftwareRenderDevice`. Ne pas en deduire
+        que c'est la cause du plantage - le meme fichier porte
+        `RenderDevice=GlideDrv.GlideRenderDevice` depuis 2002, une carte 3dfx
+        que personne n'a, et le jeu a toujours demarre : le moteur ne lit donc
+        que `GameRenderDevice`, les deux autres sont des restes de l'editeur.
+
+        On les aligne quand meme, parce qu'une reference pendante vers une DLL
+        absente n'a aucune raison de survivre - mais le motif est le menage,
+        pas la reparation d'un plantage.
         """
         from src.core.game_data import load_catalog
         jeux = {g.id: g for g in load_catalog().games}
