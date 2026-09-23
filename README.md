@@ -29,7 +29,7 @@ Gratuit · Windows 10 et 11 · [Site](https://acciolauncher.be/) · [Discord](ht
 - **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
 - **Tout se gère au même endroit** : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente.
 - **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme une scolarité — sept jeux, sept années, celle où vous en êtes et celle qui vous attend.
-- **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres et le Poudlard Express en septembre, les citrouilles en octobre, le sapin en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond, facultatives. Tout est désactivable.
+- **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres de Poudlard en septembre, les braises en octobre, la neige en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond, facultatives. Tout est désactivable.
 - **En français, en anglais et en espagnol**, et la langue des *Reliques de la Mort* se choisit jeu par jeu.
 - **Le launcher se met à jour tout seul**, en un clic, sans rien réinstaller.
 

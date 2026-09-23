@@ -24,6 +24,31 @@ import src.core.self_update as self_update
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _attendre_contenu(marqueur: Path, delai: float = 20.0) -> str:
+    """Attend que le .bat ait ÉCRIT, pas seulement OUVERT, son marqueur.
+
+    `marqueur.exists()` devient vrai dès que `cmd` ouvre le fichier pour la
+    redirection `>`, c'est-à-dire AVANT que l'`echo` n'y dépose quoi que ce
+    soit. Une boucle qui s'arrête à l'existence lit donc une chaîne vide une
+    fois de temps en temps — CI Windows 3.14, 2026-09-23 : « env inattendu :
+    '' ». La lecture peut aussi échouer franchement tant que `cmd` tient le
+    fichier ouvert (partage refusé sous Windows), d'où le `except OSError`.
+
+    Un test qui rate une fois sur dix est pire que pas de test : `build.bat`
+    s'arrête au premier échec, et on apprend à le relancer sans le lire.
+    """
+    fin = time.monotonic() + delai
+    while time.monotonic() < fin:
+        try:
+            contenu = marqueur.read_text(encoding="ascii", errors="replace")
+        except OSError:
+            contenu = ""
+        if contenu.strip():
+            return contenu
+        time.sleep(0.2)
+    return ""
+
+
 class TestBatContent:
     @pytest.mark.skipif(sys.platform != "win32",
                         reason="constantes CREATE_NO_WINDOW Windows uniquement")
@@ -118,10 +143,7 @@ class TestBatEndToEnd:
                               capture_output=True)
         assert proc.returncode == 0, proc.stderr.decode(errors="replace")
 
-        deadline = time.monotonic() + 20
-        while time.monotonic() < deadline and not marker.exists():
-            time.sleep(0.5)
-        assert marker.exists(), "le .bat n'a pas exécuté le corps après la mort du parent"
+        assert _attendre_contenu(marker),             "le .bat n'a pas exécuté le corps après la mort du parent"
 
     def test_bat_does_not_leak_pyinstaller_env(self, tmp_path):
         """Simulation réelle du restart d'un exe gelé : le parent est pollué par
@@ -147,11 +169,8 @@ class TestBatEndToEnd:
                               capture_output=True)
         assert proc.returncode == 0, proc.stderr.decode(errors="replace")
 
-        deadline = time.monotonic() + 20
-        while time.monotonic() < deadline and not marker.exists():
-            time.sleep(0.5)
-        assert marker.exists(), "le .bat n'a pas tourné"
-        content = marker.read_text(encoding="ascii", errors="replace")
+        content = _attendre_contenu(marker)
+        assert content, "le .bat n'a pas tourné"
         # Dans un .bat, une variable absente s'étend en vide → "[][1]" attendu.
         assert "AccioLauncher.exe" not in content, f"fuite _PYI_* : {content!r}"
         assert "[][1]" in content, f"env inattendu : {content!r}"

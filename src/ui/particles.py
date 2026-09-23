@@ -29,7 +29,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QWidget
 
-from src.ui import decor, theme
+from src.ui import theme
 from src.core.season import Profil, profil as profil_de
 from src.ui.ticker import TICK_MS, Ticker
 
@@ -193,13 +193,6 @@ class ParticleOverlay(QWidget):
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Le décor AVANT les particules : les lettres et les flocons passent
-        # devant la silhouette, jamais derrière. Il est repeint à chaque image
-        # parce que l'overlay est translucide et que Qt efface la zone sale
-        # avant de la redessiner — mais son TRACÉ est mis en cache, donc le
-        # coût est celui d'un `drawPath` écrêté, pas d'une reconstruction.
-        decor.peindre(p, self._season, self.width(), self.height())
 
         for pt in self._particles:
             # Opacité oscillante (scintillement rapide pour les braises).
