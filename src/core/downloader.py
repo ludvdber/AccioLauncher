@@ -80,7 +80,10 @@ def file_sha256(path: Path, cancelled: Callable[[], bool] | None = None) -> str:
 class Downloader(QThread):
     """Télécharge une archive (simple ou multi-parts) en arrière-plan."""
 
-    progress = pyqtSignal(int, int)   # (octets_téléchargés, octets_total)
+    # Octets en « qlonglong » : un `int` Qt fait 32 bits, et au-delà de 2 Gio
+    # le slot recevait des valeurs NÉGATIVES. Invisible tant que GitHub plafonne
+    # chaque partie sous 2 Gio ; pas au premier fichier d'un seul tenant.
+    progress = pyqtSignal("qlonglong", "qlonglong")   # (octets_téléchargés, octets_total)
     # NB : pas `finished` — ça masquerait le signal natif QThread.finished
     # (utilisé par GameOperations pour le nettoyage différé des threads annulés).
     download_finished = pyqtSignal(str)  # chemin du fichier téléchargé

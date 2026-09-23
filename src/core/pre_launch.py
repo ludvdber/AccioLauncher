@@ -13,6 +13,7 @@ from pathlib import Path
 
 from src.core.config import Config, get_documents_dir
 from src.core.game_data import GameData
+from src.core.post_install import apply_config_files, destination_config
 from src.core.system_checks import check_d3d11_feature_level
 from src.core.win_utils import remove_zone_identifier
 
@@ -167,6 +168,33 @@ def create_pre_launch_files(game: GameData, config: Config) -> None:
             log.debug("Fichier pré-lancement créé : %s", p)
         except OSError as exc:
             log.warning("Impossible de créer %s : %s", p, exc)
+
+
+def restaurer_configs_manquantes(game: GameData, config: Config) -> None:
+    """Remet la configuration réglée d'un jeu quand son fichier a DISPARU.
+
+    L'installation dépose `post_install.config_files` dans Documents, et plus
+    rien ensuite ne les garantissait. Or ce dossier se vide sans nous : un
+    joueur qui « réinitialise » le jeu, une resynchronisation OneDrive, un
+    nettoyeur. Le moteur UE1 régénère alors son INI depuis `Default.ini`, avec
+    `Reconfig=1` — et au lancement s'ouvrait son assistant de configuration,
+    sur une liste de cartes vidéo VIDE (mesuré sur HP1 le 2026-09-24).
+    « Commencer ! » passait, mais une liste vide se lit comme un jeu cassé, et
+    `apply_ini_patches` sautait tous ses patchs, faute de fichier.
+
+    Seul un fichier ABSENT est recopié : une configuration présente appartient
+    au joueur, même modifiée. Toutes les gardes de l'installation s'appliquent,
+    puisque c'est la même fonction qui copie.
+    """
+    manquants = [(cf.source, cf.destination)
+                 for cf in game.post_install.config_files
+                 if not destination_config(cf.destination).exists()]
+    if not manquants:
+        return
+    log.info("Configuration absente pour %s, restaurée depuis le jeu : %s",
+             game.id, ", ".join(dest for _, dest in manquants))
+    game_dir = Path(game.executable).parts[0] if game.executable else None
+    apply_config_files(config.install_path, game_dir, manquants)
 
 
 def apply_ini_patches(game: GameData, config: Config) -> None:

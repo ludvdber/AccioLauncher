@@ -37,7 +37,7 @@ from src.core.i18n import (
     available_languages, detect_system_language, set_language, tr,
 )
 from src.ui.fonts import cinzel_decorative
-from src.ui.theme import THEMES
+from src.ui.theme import THEMES, themed
 from src.ui.toggle_switch import toggle_row
 from src.ui.utils import avertir, is_writable_dir
 
@@ -70,7 +70,10 @@ def _defilable(page: QWidget) -> QScrollArea:
 
     Le fond doit être rendu transparent sur le `QScrollArea` ET sur son
     viewport : un `QAbstractScrollArea` peint son propre fond, et la page
-    serait posée sur un rectangle clair au milieu du bleu nuit.
+    serait posée sur un rectangle clair au milieu du bleu nuit. Même raison
+    pour la barre : sans style, c'est la barre native de Windows, grise et
+    hachurée, qui apparaît au Choixpeau (vu dans l'exe le 2026-09-24). Celle
+    de « Mes années à Poudlard » : bleu nuit, or au survol, sans flèches.
     """
     zone = QScrollArea()
     zone.setWidget(page)
@@ -78,8 +81,16 @@ def _defilable(page: QWidget) -> QScrollArea:
     zone.setFrameShape(QScrollArea.Shape.NoFrame)
     zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-    zone.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget"
-                       " { background: transparent; border: none; }")
+    zone.setStyleSheet(themed(
+        "QScrollArea, QScrollArea > QWidget > QWidget"
+        " { background: transparent; border: none; }"
+        "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
+        "QScrollBar::handle:vertical {"
+        "  background: #2c3e6b; border-radius: 5px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #d6a72c; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical"
+        " { background: none; }"))
     zone.viewport().setAutoFillBackground(False)
     return zone
 
@@ -253,11 +264,14 @@ class OnboardingDialog(QDialog):
         Les widgets créés dans `__init__` et seulement POSÉS par les pages
         sont reparentés avant la destruction : les supprimer avec leur page
         laisserait des objets C++ morts derrière des attributs Python vivants.
+        Surtout PAS de `hide()` : `setParent` les retire déjà de l'écran, alors
+        qu'un widget caché EXPLICITEMENT le reste une fois reposé dans une
+        page. Le chemin du dossier et l'espace libre disparaissaient ainsi de
+        l'écran 2 après un passage par une autre langue (exe, 2026-09-24).
         """
         for w in (self._path_label, self._free_label, self._scan_label,
                   self._import_list, self._theme_combo, self._maison_label):
             w.setParent(self)
-            w.hide()
         while self._pages.count() > 1:
             page = self._pages.widget(1)
             self._pages.removeWidget(page)

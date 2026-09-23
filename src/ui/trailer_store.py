@@ -32,7 +32,7 @@ class TrailerStore(QObject):
     """Fait venir les bandes-annonces manquantes, dans l'ordre du catalogue."""
 
     # (faites, total, octets_de_la_courante, octets_total_de_la_courante)
-    progress = pyqtSignal(int, int, int, int)
+    progress = pyqtSignal(int, int, "qlonglong", "qlonglong")
     # (téléchargées, échouées) — nommé, jamais `finished` (cf. QThread)
     job_finished = pyqtSignal(int, int)
     state_changed = pyqtSignal()

@@ -299,6 +299,65 @@ class TestChangerDeLangueRebatitLesEcrans:
             set_language(origine)
 
 
+class TestLeRebatiRendLesWidgetsVisibles:
+    """Survivre ne suffit pas : il faut aussi RÉAPPARAÎTRE.
+
+    Le premier correctif cachait explicitement les widgets persistants avant
+    de jeter leurs pages, et un widget caché explicitement le reste quand on
+    le repose dans un layout. Vu dans l'exe le 2026-09-24 : après un passage
+    par l'anglais, l'écran 2 en français n'avait plus ni le chemin du dossier
+    ni l'espace libre. Les tests d'alors vérifiaient la survie, pas la vue.
+    """
+
+    PERSISTANTS = ("_path_label", "_free_label", "_scan_label",
+                   "_import_list", "_theme_combo", "_maison_label")
+
+    @staticmethod
+    def _choisir(dlg, code):
+        dlg._lang_combo.setCurrentIndex(dlg._lang_combo.findData(code))
+        dlg._go_next()
+
+    def _etats(self, dlg):
+        return {nom: getattr(dlg, nom).isHidden() for nom in self.PERSISTANTS}
+
+    def test_meme_visibilite_qu_a_la_premiere_construction(self, qtbot):
+        from src.core.i18n import get_language, set_language
+        from src.ui.onboarding import OnboardingDialog
+
+        origine = get_language()
+        try:
+            premiere = OnboardingDialog()
+            qtbot.addWidget(premiere)
+            self._choisir(premiere, "fr")
+            attendu = self._etats(premiere)
+
+            dlg = OnboardingDialog()
+            qtbot.addWidget(dlg)
+            self._choisir(dlg, "en")
+            dlg._go_back()
+            self._choisir(dlg, "fr")
+            assert self._etats(dlg) == attendu
+        finally:
+            set_language(origine)
+
+    def test_l_ecran_du_dossier_montre_chemin_et_espace(self, qtbot):
+        from src.core.i18n import get_language, set_language
+        from src.ui.onboarding import OnboardingDialog
+
+        origine = get_language()
+        try:
+            dlg = OnboardingDialog()
+            qtbot.addWidget(dlg)
+            dlg.show()
+            self._choisir(dlg, "en")
+            dlg._go_back()
+            self._choisir(dlg, "fr")
+            assert dlg._path_label.isVisible(), "chemin du dossier invisible"
+            assert dlg._free_label.isVisible(), "espace libre invisible"
+        finally:
+            set_language(origine)
+
+
 class TestLesEcransDefilentSiNecessaire:
     """Le Choixpeau débordait de la fenêtre, et un pixel de plus le réparait.
 
@@ -333,6 +392,9 @@ class TestLesEcransDefilentSiNecessaire:
                     == Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             assert (zone.horizontalScrollBarPolicy()
                     == Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            # Sans règle, c'est la barre native de Windows, grise et hachurée.
+            assert "QScrollBar::handle:vertical" in zone.styleSheet(), (
+                f"écran {index + 1} : barre de défilement non stylée")
 
     def test_le_choixpeau_reclame_plus_que_la_hauteur_minimale(self, qtbot):
         dlg = self._assistant(qtbot)

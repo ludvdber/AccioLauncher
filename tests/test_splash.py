@@ -151,13 +151,27 @@ class TestSplash:
 
 class TestIconeApplication:
     def test_licone_se_charge(self, qtbot):
-        from src.ui.main_window import _load_app_icon
-        icone = _load_app_icon()
+        from src.ui.utils import icone_application
+        icone = icone_application()
         assert not icone.isNull()
         # Le .ico apporte plusieurs tailles : c'est tout l'intérêt face au PNG.
         tailles = {s.width() for s in icone.availableSizes()}
         assert len(tailles) >= 4, f"une seule taille disponible : {tailles}"
         assert 16 in tailles or min(tailles) <= 32
+
+    def test_l_icone_est_posee_sur_toute_l_application(self):
+        """L'assistant s'ouvre AVANT la fenêtre principale : sans icône
+        d'application, il portait celle, générique, de Windows (exe, 2026-09-24)."""
+        import ast
+        from pathlib import Path
+        racine = Path(__file__).resolve().parent.parent
+        arbre = ast.parse((racine / "main.py").read_text(encoding="utf-8"))
+        appels = [n for n in ast.walk(arbre) if isinstance(n, ast.Call)
+                  and isinstance(n.func, ast.Attribute)
+                  and n.func.attr == "setWindowIcon"
+                  and isinstance(n.func.value, ast.Name)
+                  and n.func.value.id == "app"]
+        assert appels, "main.py ne pose plus l'icône sur QApplication"
 
     def test_le_splash_utilise_lidentite_de_marque(self):
         """Ni couleur ni proportion inventée : tout vient du pack."""

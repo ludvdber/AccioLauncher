@@ -10,7 +10,10 @@ class DiskScanWorker(QThread):
 
     Reçoit un snapshot de chemins (préparé sur le thread principal) pour rester thread-safe.
     """
-    result = pyqtSignal(int, int)  # (count, total_bytes)
+    # « qlonglong » et non `int` : côté Qt, un `int` fait 32 bits, et le total
+    # d'une bibliothèque de jeux dépasse 4 Gio. 13,04 Go arrivaient en
+    # 154,5 Mo — le modulo 2³² exact (mesuré le 2026-09-24).
+    result = pyqtSignal(int, "qlonglong")  # (count, total_bytes)
 
     def __init__(self, game_paths: list[Path], parent=None) -> None:
         super().__init__(parent)

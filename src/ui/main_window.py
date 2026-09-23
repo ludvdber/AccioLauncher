@@ -1,7 +1,7 @@
 import logging
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
-from PyQt6.QtGui import QIcon, QKeyEvent
+from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import almanach
-from src.core.config import ASSETS_DIR, Config
+from src.core.config import Config
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
@@ -36,7 +36,7 @@ from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
 from src.ui.update_dispatcher import UpdateDispatcher
 from src.ui.window_chrome import WindowChrome
-from src.ui.utils import open_url
+from src.ui.utils import icone_application, open_url
 
 log = logging.getLogger(__name__)
 
@@ -44,22 +44,6 @@ log = logging.getLogger(__name__)
 # réglage de produit, pas une constante technique, et il a déjà bougé une fois.
 _KOFI_CAP_SECONDES = 2 * 3600
 
-_ICON_PATH = ASSETS_DIR / "accio_launcher.ico"
-# Repli hors Windows : le .ico est un format Windows, et le portage Linux est
-# un objectif déclaré. Qt sait lire les deux, mais autant ne pas en dépendre.
-_ICON_FALLBACK = ASSETS_DIR / "accio_launcher.png"
-
-def _load_app_icon() -> QIcon:
-    """Icône de l'application — le .ico multi-résolution en priorité.
-
-    Il embarque les tailles 16 à 256 dessinées pour chacune : la barre des
-    tâches et la fenêtre y piochent la bonne au lieu de réduire un seul PNG,
-    ce qui rend les petites tailles nettement plus nettes. Repli sur le PNG si
-    le .ico manque (ou hors Windows).
-    """
-    if _ICON_PATH.exists():
-        return QIcon(str(_ICON_PATH))
-    return QIcon(str(_ICON_FALLBACK))
 
 
 class MainWindow(QMainWindow):
@@ -70,7 +54,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Accio Launcher")
         self.setMinimumSize(980, 660)
         self._apply_default_geometry()
-        self.setWindowIcon(_load_app_icon())
+        self.setWindowIcon(icone_application())
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
@@ -218,7 +202,7 @@ class MainWindow(QMainWindow):
     # ──────────────────── System Tray ────────────────────
 
     def _build_tray(self) -> None:
-        self._tray = TrayManager(_load_app_icon(), self)
+        self._tray = TrayManager(icone_application(), self)
         self._tray.restore_requested.connect(self._restore_from_tray)
         self._tray.quit_requested.connect(self._quit_app)
 

@@ -94,19 +94,57 @@ a = Analysis(
     # → rich/pygments/click/PIL/numpy), jamais utilisée au runtime. Vérifié par
     # grep : aucun import direct dans src/. ~40 Mo non compressés en moins.
     # tkinter : jamais utilisé (app 100 % PyQt6).
+    # brotli : httpx l'importe S'IL LE TROUVE, et il n'était là que parce que
+    # py7zr, retiré du projet, restait installé sur le poste de build. L'exe
+    # construit ici le portait, celui de la CI non : le contenu d'un build ne
+    # doit pas dépendre de ce qui traîne sur la machine. httpx s'en passe (gzip).
     excludes=[
         "numpy", "PIL", "rich", "pygments", "markdown_it", "mdurl",
-        "click", "tkinter", "_tkinter",
+        "click", "tkinter", "_tkinter", "brotli", "_brotli",
     ],
     cipher=block_cipher,
     noarchive=False,
 )
 
 
+# ─── Ce que Qt embarque d'office et que ce launcher n'atteint jamais ───
+# Relevé le 2026-09-23 sur l'exe 1.0.5 (51,85 Mo) en recompressant chaque
+# fichier de sa table des matières : le code et les assets du projet n'y
+# pesaient que 18 %, le reste était le moteur — dont ceci, mort. Ce qui doit
+# RESTER est tenu par tests/test_spec_build.py : un filtre trop gourmand ne
+# casserait que l'exe, jamais la suite, qui tourne depuis les sources.
+_JAMAIS_ATTEINTS = (
+    # Mesa, le rendu OpenGL LOGICIEL : 20,6 Mo bruts, 7,6 Mo dans l'exe, soit
+    # plus que toutes nos images réunies. L'interface est peinte au raster et
+    # la vidéo sort par QVideoSink ; seul `qwindows.dll` nomme ce fichier, en
+    # chargement à la demande. Vérifié en lançant l'exe (2026-09-24) : la
+    # conversion vidéo passe par Direct3D 11, et même sous QT_OPENGL=software
+    # aucune bibliothèque OpenGL n'est chargée — le 1.0.5, qui l'avait, ne l'a
+    # jamais ouvert non plus. Interface FORCÉE en OpenGL : Qt retombe sur le
+    # pilote, rendu identique.
+    "bin/opengl32sw.dll",
+    # Décodeurs d'image : les assets ne sont que JPEG, PNG (intégré à QtGui),
+    # ICO et SVG. qpdf.dll partait même sans Qt6Pdf.dll, que ce filtre écarte
+    # déjà : il ne pouvait pas se charger.
+    "imageformats/qgif.dll", "imageformats/qicns.dll", "imageformats/qpdf.dll",
+    "imageformats/qtga.dll", "imageformats/qtiff.dll",
+    "imageformats/qwbmp.dll", "imageformats/qwebp.dll",
+    # QtNetwork ne sert qu'à l'instance unique (QLocalServer) : les
+    # téléchargements passent par httpx et l'OpenSSL de Python, jamais par la
+    # pile TLS de Qt.
+    "tls/qopensslbackend.dll", "tls/qschannelbackend.dll",
+    "tls/qcertonlybackend.dll", "networkinformation/qnetworklistmanager.dll",
+    # Tactile TUIO (par UDP) et plateformes de test : jamais chargés par l'exe.
+    "generic/qtuiotouchplugin.dll", "platforms/qminimal.dll",
+    "platforms/qoffscreen.dll",
+)
+
+
 def _keep(entry):
     """Filtre des donnees inutiles a l'execution.
 
-    Traductions Qt, module PDF, et surtout les BANDES-ANNONCES.
+    Traductions Qt, module PDF, les BANDES-ANNONCES, et ce que Qt embarque
+    sans que le launcher l'atteigne jamais (_JAMAIS_ATTEINTS ci-dessus).
 
     ATTENTION au motif des traductions Qt : il a longtemps ete ecrit ici
     « dialogues natifs non utilises », et c'etait FAUX. Les boutons standard
@@ -135,6 +173,8 @@ def _keep(entry):
         return False
     if chemin.startswith("assets/videos"):
         return False
+    if chemin.endswith(_JAMAIS_ATTEINTS):
+        return False
     return True
 
 
@@ -157,8 +197,8 @@ exe = EXE(
     # upx=False VOLONTAIREMENT : la compression UPX d'un exe PyInstaller est un
     # déclencheur classique de faux positifs heuristiques (Defender & co.), et
     # sur un binaire non signé ça suffit à faire fuir les premiers utilisateurs.
-    # Les vraies économies de taille sont ailleurs (excludes ci-dessus, poids
-    # des assets vidéo). NE PAS repasser à True sans certificat de signature.
+    # Les vraies économies de taille sont ailleurs (excludes et
+    # _JAMAIS_ATTEINTS ci-dessus, bandes-annonces hors de l'exe). NE PAS repasser à True sans certificat de signature.
     upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,

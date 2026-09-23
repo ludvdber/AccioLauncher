@@ -119,6 +119,19 @@ def _rendre_remplacable(chemin: Path) -> None:
         pass
 
 
+def destination_config(dest_tilde: str) -> Path:
+    """Chemin réel d'une destination `config_files` (« ~/Documents/… »).
+
+    Une seule règle, partagée par l'installation qui COPIE et par le
+    lancement qui vérifie que la copie est toujours là
+    (`pre_launch.restaurer_configs_manquantes`) : deux résolutions jumelles
+    finiraient par ne plus désigner le même fichier.
+    """
+    docs_dir = get_documents_dir()
+    return Path(dest_tilde.replace("~/Documents", str(docs_dir))
+                .replace("~", str(Path.home())))
+
+
 def apply_config_files(
     destination: Path, game_dir: str | None,
     config_files: list[tuple[str, str]],
@@ -138,9 +151,7 @@ def apply_config_files(
                 log.warning("Fichier de config source introuvable : %s", src)
                 continue
 
-            docs_dir = get_documents_dir()
-            dest_str = dest_tilde.replace("~/Documents", str(docs_dir)).replace("~", str(Path.home()))
-            dest = Path(dest_str)
+            dest = destination_config(dest_tilde)
             reason = config_dest_error(dest, allowed_config_roots())
             if reason is not None:
                 log.warning("Config destination refusée (%s) : %s", reason, dest_tilde)

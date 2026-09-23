@@ -19,6 +19,7 @@ from src.core.pre_launch import (
     documents_inutilisable,
     apply_ini_patches,
     create_pre_launch_files,
+    restaurer_configs_manquantes,
     delete_pre_launch_files,
     env_de_lancement,
     unblock_game_dlls,
@@ -307,6 +308,9 @@ class GameManager:
         unblock_game_dlls(exe_path.parent)
         delete_pre_launch_files(game, self.config)
         create_pre_launch_files(game, self.config)
+        # Avant les patchs : ils sautent un fichier absent, et le moteur le
+        # régénérerait depuis Default.ini, assistant de configuration compris.
+        restaurer_configs_manquantes(game, self.config)
         apply_ini_patches(game, self.config)
 
         log.info("Lancement de %s (%s)", game.name, exe_path)

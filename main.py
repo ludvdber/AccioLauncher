@@ -99,6 +99,11 @@ def main():
 
     try:
         app = QApplication(sys.argv)
+        # Icône de TOUTE l'application, pas seulement de MainWindow :
+        # l'assistant de premier lancement s'ouvre avant elle et portait
+        # l'icône générique de Windows — la toute première fenêtre qu'on voit.
+        from src.ui.utils import icone_application
+        app.setWindowIcon(icone_application())
         # Écrans et mise à l'échelle : trois défauts de ce projet n'existaient
         # qu'à 125 % (trait du carrousel, icônes rognées, fenêtre de HP7).
         from src.core.diagnostic import ecran

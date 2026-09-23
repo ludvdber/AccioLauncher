@@ -15,12 +15,13 @@ import logging
 
 from PyQt6.QtCore import QRect, QRectF, Qt
 from PyQt6.QtGui import (
-    QColor, QFont, QGuiApplication, QIcon, QLinearGradient, QPainter, QPixmap,
+    QColor, QFont, QGuiApplication, QLinearGradient, QPainter, QPixmap,
     QRadialGradient,
 )
 from PyQt6.QtWidgets import QWidget
 
 from src.core.config import APP_VERSION, ASSETS_DIR
+from src.ui.utils import icone_application
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ class AccioSplash(QWidget):
         self._logo = QPixmap(str(ASSETS_DIR / "accio_logo_horizontal.png"))
         if self._logo.isNull():
             log.warning("Logo horizontal introuvable — écran de démarrage sans logo")
-        self.setWindowIcon(QIcon(str(ASSETS_DIR / "accio_launcher.ico")))
+        self.setWindowIcon(icone_application())
         self.setFixedSize(largeur, hauteur)
         self._centrer()
         self._redessine()

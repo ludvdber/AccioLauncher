@@ -1,10 +1,31 @@
 """Utilitaires Qt partagés entre les widgets UI."""
 
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QDesktopServices, QIcon
 from PyQt6.QtWidgets import QLayout, QMessageBox
 
+from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
+
+_ICONE = ASSETS_DIR / "accio_launcher.ico"
+# Repli hors Windows : le .ico est un format Windows, et le portage Linux est
+# un objectif déclaré. Qt sait lire les deux, mais autant ne pas en dépendre.
+_ICONE_REPLI = ASSETS_DIR / "accio_launcher.png"
+
+
+def icone_application() -> QIcon:
+    """Icône de l'application — le .ico multi-résolution en priorité.
+
+    Il embarque les tailles 16 à 256 dessinées pour chacune : la barre des
+    tâches et la fenêtre y piochent la bonne au lieu de réduire un seul PNG,
+    ce qui rend les petites tailles nettement plus nettes. Repli sur le PNG si
+    le .ico manque (ou hors Windows).
+
+    Source UNIQUE : `main.py` la pose sur l'application entière, pour que
+    l'assistant de premier lancement — ouvert avant la fenêtre principale —
+    ne porte plus l'icône générique de Windows.
+    """
+    return QIcon(str(_ICONE if _ICONE.exists() else _ICONE_REPLI))
 
 
 def avertir(parent, titre: str, texte: str) -> None:

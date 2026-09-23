@@ -50,7 +50,7 @@ class GameOperations(QObject):
     """
 
     # Progression téléchargement : (octets téléchargés, octets total, vitesse bytes/s, eta secondes)
-    download_progress = pyqtSignal(int, int, float, float)
+    download_progress = pyqtSignal("qlonglong", "qlonglong", float, float)
     # Progression installation : pourcentage 0-100
     install_progress = pyqtSignal(int)
     # Info multi-parts : (part courante, total)

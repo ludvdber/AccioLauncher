@@ -56,6 +56,24 @@ def _sauvegardes_hors_du_vrai_disque(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _documents_hors_du_vrai_dossier(tmp_path, monkeypatch):
+    """Aucun test n'écrit dans le VRAI dossier Documents.
+
+    Le lancement d'un jeu y écrit : `Running.ini`, les patchs d'INI, et depuis
+    le 2026-09-24 la configuration réglée qu'il recopie quand elle a disparu
+    (`pre_launch.restaurer_configs_manquantes`). Les tests existants
+    neutralisaient ces étapes UNE PAR UNE, par leur nom : une étape ajoutée
+    sans compléter la liste aurait écrit chez la personne qui lance la suite.
+    Même dossier que `_sauvegardes_hors_du_vrai_disque`, pour qu'un test ne
+    voie qu'un seul Documents. Un test qui veut le sien le pose par-dessus.
+    """
+    documents = tmp_path / "Documents"
+    for module in ("src.core.post_install", "src.core.pre_launch"):
+        monkeypatch.setattr(module + ".get_documents_dir", lambda: documents)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_d_elevation_uac(monkeypatch):
     """Aucun test ne doit pouvoir faire apparaître une invite UAC.
 

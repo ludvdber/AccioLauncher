@@ -988,3 +988,31 @@ class TestLeCatalogueDeclareQuiEnABesoin:
         par_id = {g.id: g for g in load_catalog().games}
         for gid in ("hp7a", "hp7b"):
             assert par_id[gid].dpi_aware is True, gid
+
+
+class TestLeLancementRestaureAvantDePatcher:
+    """La configuration disparue revient AVANT les patchs d'INI.
+
+    Dans l'autre ordre, les patchs sautent le fichier absent et la
+    restauration pose ensuite une config que plus rien ne corrige :
+    `Reconfig` resterait à la valeur livrée pour toute cette session.
+    """
+
+    def test_ordre_du_pre_lancement(self, tmp_path, monkeypatch):
+        m = _make_manager(tmp_path)
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        ordre = []
+        for nom in ("unblock_game_dlls", "delete_pre_launch_files",
+                    "create_pre_launch_files", "restaurer_configs_manquantes",
+                    "apply_ini_patches"):
+            monkeypatch.setattr("src.core.game_manager." + nom,
+                                lambda *a, _nom=nom: ordre.append(_nom))
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen",
+                            lambda *a, **k: object())
+        assert m.launch_game(GAME_DICT["id"]) is not None
+        assert "restaurer_configs_manquantes" in ordre, "étape jamais appelée"
+        assert (ordre.index("restaurer_configs_manquantes")
+                < ordre.index("apply_ini_patches"))
