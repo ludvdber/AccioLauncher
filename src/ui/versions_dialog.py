@@ -247,12 +247,23 @@ class VersionsDialog(QDialog):
         if self._installed_version is not None:
             action = tr("supprimer la version actuelle et installer")
 
-        reply = QMessageBox.question(
-            self, tr("Confirmer"),
-            tr("Ceci va {} la version {}.\nContinuer ?").format(action, version),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        # Pas de `QMessageBox.question` : ses boutons Yes/No sont traduits par
+        # les fichiers `qtbase_<langue>.qm` de Qt, que le build écarte — d'où
+        # un « Yes » anglais dans un launcher réglé en français. Et son texte
+        # reste en `AutoText` alors qu'il interpole un numéro de version venu
+        # du catalogue DISTANT, donc de l'extérieur.
+        boite = QMessageBox(self)
+        boite.setIcon(QMessageBox.Icon.Question)
+        boite.setWindowTitle(tr("Confirmer"))
+        boite.setTextFormat(Qt.TextFormat.PlainText)
+        boite.setText(
+            tr("Ceci va {} la version {}.\nContinuer ?").format(action, version))
+        installer = boite.addButton(tr("Installer cette version"),
+                                    QMessageBox.ButtonRole.AcceptRole)
+        annuler = boite.addButton(tr("Annuler"),
+                                  QMessageBox.ButtonRole.RejectRole)
+        boite.setDefaultButton(annuler)
+        boite.exec()
+        if boite.clickedButton() is installer:
             self.switch_to_version.emit(self.game.id, version)
             self.accept()

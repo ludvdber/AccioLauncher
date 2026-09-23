@@ -1,8 +1,34 @@
 """Utilitaires Qt partagés entre les widgets UI."""
 
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QLayout
+from PyQt6.QtWidgets import QLayout, QMessageBox
+
+from src.core.i18n import tr
+
+
+def avertir(parent, titre: str, texte: str) -> None:
+    """Constat sans question : un message, un bouton pour le congédier.
+
+    Remplace `QMessageBox.warning(...)`, qu'aucun widget ne doit appeler
+    directement — même règle que `open_url`, et pour deux raisons mesurées.
+
+    ① Le bouton de `QMessageBox.warning` est un bouton STANDARD de Qt, traduit
+    par les fichiers `qtbase_<langue>.qm` que le build écarte : il sortait donc
+    en anglais quelle que soit la langue choisie dans les Paramètres. Un
+    libellé passé par `tr()` vit dans `src/data/i18n/`, là où un traducteur
+    bénévole peut l'atteindre et où `tests/test_i18n.py` le voit.
+
+    ② Il est en `AutoText`, alors que ces messages interpolent des noms de jeu
+    et des chemins — Qt bascule en rich text dès que le contenu y ressemble.
+    """
+    boite = QMessageBox(parent)
+    boite.setIcon(QMessageBox.Icon.Warning)
+    boite.setWindowTitle(titre)
+    boite.setTextFormat(Qt.TextFormat.PlainText)
+    boite.setText(texte)
+    boite.addButton(tr("Fermer"), QMessageBox.ButtonRole.AcceptRole)
+    boite.exec()
 
 
 def clear_layout(layout: QLayout) -> None:

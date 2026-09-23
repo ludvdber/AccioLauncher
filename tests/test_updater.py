@@ -239,7 +239,7 @@ class TestLauncherDigest:
                         "digest": f"sha256:{self.HEX}"}],
         }, monkeypatch)
         assert len(recu) == 1
-        version, _url, asset, sha = recu[0]
+        version, _url, asset, sha, _notes = recu[0]
         assert version == "9.9.9"
         assert asset == "https://github.com/x/AccioLauncher.exe"
         assert sha == self.HEX

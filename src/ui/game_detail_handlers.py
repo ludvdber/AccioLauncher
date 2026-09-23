@@ -29,27 +29,54 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-def _boite(icone, view, titre: str, texte: str, boutons=None, defaut=None):
-    """QMessageBox en texte BRUT, pour tout message portant un nom de jeu.
+def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0) -> int:
+    """QMessageBox en texte BRUT et aux boutons NOMMÉS.
 
-    Les messages de ce module interpolent `game.name`, qui vient du CATALOGUE —
-    donc de l'extérieur, et modifiable à distance sans republier l'exécutable.
-    Or `QMessageBox` est en `AutoText` : Qt renifle le contenu et bascule en
-    rich text dès qu'il ressemble à du HTML, si bien qu'un nom de jeu contenant
-    `<img src="http://…">` déclencherait une requête réseau à l'ouverture du
-    dialogue. Un point de passage unique vaut mieux que huit rappels à ne pas
-    oublier au prochain dialogue ajouté.
+    Deux règles tenues au même endroit, parce qu'elles se sont toutes les deux
+    payées ici.
+
+    ① **Texte brut.** Les messages de ce module interpolent `game.name`, qui
+    vient du CATALOGUE — donc de l'extérieur, et modifiable à distance sans
+    republier l'exécutable. Or `QMessageBox` est en `AutoText` : Qt renifle le
+    contenu et bascule en rich text dès qu'il ressemble à du HTML, si bien
+    qu'un nom de jeu contenant du balisage serait INTERPRÉTÉ.
+
+    ② **Jamais de boutons standard.** `StandardButton.Yes` / `.No` ne sont pas
+    traduits par `tr()` mais par les fichiers `qtbase_<langue>.qm` de Qt —
+    que le build ÉCARTE volontairement (`_keep()` dans `accio_launcher.spec`).
+    Résultat mesuré : un launcher réglé en français affichait « Yes » et
+    « No ». Deux systèmes de traduction pour une même fenêtre, dont un que
+    `tests/test_i18n.py` ne voit pas et qu'un traducteur bénévole ne peut pas
+    corriger. Les libellés passent donc par `choix`, déjà traduits.
+
+    Et un bouton se lit mieux quand il DIT ce qu'il fait : « Désinstaller »
+    répond à la question tout seul, là où « Oui » oblige à relire l'intitulé —
+    même raison qui fait nommer la perte dans la confirmation de fermeture.
+
+    `choix` va du plus engageant au plus neutre ; le dernier est le retrait,
+    donc celui qu'Échap déclenche. Retourne l'INDEX du bouton cliqué, ou -1 si
+    la boîte a été fermée autrement (croix, Alt+F4) — jamais 0 par défaut, ce
+    qui reviendrait à consentir à la place de quelqu'un qui n'a rien répondu.
+    Sans `choix`, la boîte est un simple constat et ne porte qu'un congé.
     """
     boite = QMessageBox(view)
     boite.setIcon(icone)
     boite.setWindowTitle(titre)
     boite.setTextFormat(Qt.TextFormat.PlainText)
     boite.setText(texte)
-    if boutons is not None:
-        boite.setStandardButtons(boutons)
-    if defaut is not None:
-        boite.setDefaultButton(defaut)
-    return boite.exec()
+    if not choix:
+        boite.addButton(tr("Fermer"), QMessageBox.ButtonRole.AcceptRole)
+        boite.exec()
+        return -1
+    boutons = [
+        boite.addButton(libelle, QMessageBox.ButtonRole.AcceptRole if i == 0
+                        else QMessageBox.ButtonRole.RejectRole)
+        for i, libelle in enumerate(choix)
+    ]
+    boite.setDefaultButton(boutons[defaut])
+    boite.exec()
+    clique = boite.clickedButton()
+    return next((i for i, b in enumerate(boutons) if b is clique), -1)
 
 
 def confirmer_registre(view: "GameDetailView", nom_jeu: str):
@@ -99,9 +126,8 @@ def confirmer_registre(view: "GameDetailView", nom_jeu: str):
         return _boite(
             QMessageBox.Icon.Question, view, tr("Réglage du jeu"),
             "\n\n".join(morceaux),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        ) == QMessageBox.StandardButton.Yes
+            (tr("Écrire et lancer"), tr("Annuler")),
+        ) == 0
     return demander
 
 
@@ -199,16 +225,14 @@ def on_play(view: "GameDetailView") -> None:
                 tr("{} n'est pas installé sur ce PC.\nCe jeu ne peut pas démarrer sans lui.\n\n"
                    "Voulez-vous ouvrir la page de téléchargement ?").format(
                        nom_prerequis(manquant)),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+                (tr("Ouvrir la page"), tr("Plus tard")),
             )
-            if reply == QMessageBox.StandardButton.Yes:
+            if reply == 0:
                 open_url(PREREQUIS.get(manquant, (None, VCREDIST_URL))[1])
         elif str(exc).startswith("documents_inutilisable:"):
             _boite(QMessageBox.Icon.Critical, view,
                    tr("Dossier Documents inaccessible"),
-                   tr("Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\nWindows refuse d'y écrire, donc le jeu ne peut pas démarrer.\n\nC'est en général une protection : dans Sécurité Windows → Protection contre les rançongiciels, désactivez « Accès contrôlé aux dossiers » ou autorisez Accio Launcher. Un antivirus tiers peut faire la même chose. Si ce dossier a été déplacé ou supprimé, rétablissez-le par clic droit sur Documents → Propriétés → Emplacement.").format(str(exc).split(":", 1)[1]),
-                   QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok)
+                   tr("Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\nWindows refuse d'y écrire, donc le jeu ne peut pas démarrer.\n\nC'est en général une protection : dans Sécurité Windows → Protection contre les rançongiciels, désactivez « Accès contrôlé aux dossiers » ou autorisez Accio Launcher. Un antivirus tiers peut faire la même chose. Si ce dossier a été déplacé ou supprimé, rétablissez-le par clic droit sur Documents → Propriétés → Emplacement.").format(str(exc).split(":", 1)[1]))
         else:
             log.error("Erreur au lancement : %s", exc)
             view.status_message.emit(tr("Impossible de lancer le jeu."))
@@ -230,10 +254,9 @@ def on_uninstall(view: "GameDetailView") -> None:
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Confirmer la désinstallation"),
         tr("Voulez-vous vraiment désinstaller {} ?").format(view.game.name),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        (tr("Désinstaller"), tr("Annuler")), 1,
     )
-    if reply != QMessageBox.StandardButton.Yes:
+    if reply != 0:
         return
     has_config = bool(view.game.post_install.config_files)
     view.manager.uninstall_game(view.game.id)
@@ -257,10 +280,9 @@ def on_update_clicked(view: "GameDetailView") -> None:
         view, tr("Mise à jour disponible"),
         tr("Mettre à jour de v{} vers v{} ?\n\nChangements :\n{}\n\nLa version actuelle sera remplacée une fois le téléchargement terminé.").format(
             installed, ver.version, changes),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        (tr("Mettre à jour"), tr("Plus tard")), 1,
     )
-    if reply == QMessageBox.StandardButton.Yes:
+    if reply == 0:
         view._ops.switch_version(view.game, ver)
 
 
@@ -287,10 +309,9 @@ def on_repair(view: "GameDetailView") -> None:
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Vérifier / réparer les fichiers"),
         tr("L'archive de {} va être re-téléchargée (avec vérification d'intégrité quand elle est disponible) puis réinstallée par-dessus les fichiers existants.\n\nLes sauvegardes et la configuration ne sont pas touchées.\n\nContinuer ?").format(view.game.name),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        (tr("Vérifier et réparer"), tr("Annuler")), 1,
     )
-    if reply == QMessageBox.StandardButton.Yes:
+    if reply == 0:
         view._ops.repair(view.game)
         view._refresh()
 
@@ -335,10 +356,9 @@ def on_import_existing(view: "GameDetailView") -> None:
         view, tr("Importer ce jeu"),
         tr("Le dossier va être déplacé :\n\n{}\n→ {}\n\nLe jeu sera marqué en version {} (version réelle inconnue — utilisez « Vérifier / réparer » en cas de doute).\n\nContinuer ?").format(
             source, dest, game.recommended_version),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
+        (tr("Déplacer et importer"), tr("Annuler")), 1,
     )
-    if reply != QMessageBox.StandardButton.Yes:
+    if reply != 0:
         return
     try:
         dest.parent.mkdir(parents=True, exist_ok=True)

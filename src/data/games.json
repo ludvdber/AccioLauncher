@@ -187,15 +187,13 @@
             "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
             "section": "Engine.Engine",
             "key": "GameRenderDevice",
-            "value": "D3D11Drv.D3D11RenderDevice",
-            "fallback": "D3DDrv.D3DRenderDevice"
+            "value": "D3D11Drv.D3D11RenderDevice"
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
             "section": "Engine.Engine",
             "key": "WindowedRenderDevice",
-            "value": "D3D11Drv.D3D11RenderDevice",
-            "fallback": "D3DDrv.D3DRenderDevice"
+            "value": "D3D11Drv.D3D11RenderDevice"
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
@@ -376,15 +374,13 @@
             "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
             "section": "Engine.Engine",
             "key": "GameRenderDevice",
-            "value": "D3D11Drv.D3D11RenderDevice",
-            "fallback": "D3DDrv.D3DRenderDevice"
+            "value": "D3D11Drv.D3D11RenderDevice"
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
             "section": "Engine.Engine",
             "key": "WindowedRenderDevice",
-            "value": "D3D11Drv.D3D11RenderDevice",
-            "fallback": "D3DDrv.D3DRenderDevice"
+            "value": "D3D11Drv.D3D11RenderDevice"
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",

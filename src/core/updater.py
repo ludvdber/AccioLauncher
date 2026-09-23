@@ -58,6 +58,49 @@ def _assets_publies(releases: list[dict]):
                 yield url, asset
 
 
+def extract_release_notes(data: dict, max_lignes: int = 12) -> str:
+    """Les notes de release, mises au propre pour une boîte de dialogue.
+
+    GitHub renvoie déjà le corps de la release dans la MÊME réponse que le
+    numéro de version et l'empreinte de l'asset : on ne fait pas une requête
+    de plus, on cesse simplement de jeter ce qu'on a demandé.
+
+    Le texte est du Markdown écrit à la main et **il est DISTANT** : il ne
+    peut pas voyager tel quel vers l'écran. On en garde les lignes de contenu,
+    on rabote le balisage de titre et de liste, on coupe à `max_lignes` — une
+    boîte plus haute que la fenêtre ne s'annule pas —, et l'appelant l'affiche
+    en texte BRUT (`PlainText`), jamais en RichText.
+
+    Les blocs techniques sont retirés : l'empreinte SHA-256 et la commande de
+    vérification occupent la moitié de nos notes de release et ne disent rien
+    à quelqu'un qui veut savoir ce qui change.
+    """
+    corps = data.get("body", "")
+    if not isinstance(corps, str) or not corps.strip():
+        return ""
+    lignes: list[str] = []
+    dans_bloc_code = False
+    for brute in corps.replace("\r\n", "\n").split("\n"):
+        ligne = brute.strip()
+        if ligne.startswith("```"):
+            dans_bloc_code = not dans_bloc_code
+            continue
+        if dans_bloc_code or not ligne:
+            continue
+        if ligne.startswith("<!--") or set(ligne) <= {"-", "=", "*", "_"}:
+            continue                      # commentaire HTML, trait horizontal
+        ligne = ligne.lstrip("#").strip()
+        if ligne.startswith(("- ", "* ", "+ ")):
+            ligne = "• " + ligne[2:].strip()
+        if not ligne:
+            continue
+        lignes.append(ligne)
+        if len(lignes) >= max_lignes:
+            lignes.append("…")
+            break
+    return "\n".join(lignes)
+
+
 def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
     """URL d'asset → empreinte SHA-256 (hex), depuis les releases GitHub.
 
@@ -170,7 +213,7 @@ class UpdateChecker(QThread):
     """Vérifie les mises à jour du catalogue et du launcher en arrière-plan."""
 
     catalog_updated = pyqtSignal(object)        # Catalog
-    launcher_update = pyqtSignal(str, str, str, str)  # (version, url_release, url_asset_exe, sha256 hex)
+    launcher_update = pyqtSignal(str, str, str, str, str)  # (version, url_release, url_asset_exe, sha256 hex, notes)
     update_counts = pyqtSignal(int)             # nombre de jeux avec mise à jour dispo
     download_counts = pyqtSignal(object)        # dict game_id → téléchargements GitHub cumulés
     asset_digests = pyqtSignal(object)          # dict url_asset → sha256 hex (publié par GitHub)
@@ -396,7 +439,8 @@ class UpdateChecker(QThread):
                 log.info("Nouvelle version du launcher disponible : %s (actuelle: %s)", tag, APP_VERSION)
                 if asset_url and not asset_sha256:
                     log.warning("Aucune empreinte publiée pour %s — mise à jour non vérifiée", asset_url)
-                self.launcher_update.emit(tag.lstrip("v"), html_url, asset_url, asset_sha256)
+                self.launcher_update.emit(tag.lstrip("v"), html_url, asset_url,
+                                          asset_sha256, extract_release_notes(data))
             else:
                 log.info("Launcher à jour (v%s)", APP_VERSION)
 

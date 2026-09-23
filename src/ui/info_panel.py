@@ -522,7 +522,6 @@ class InfoPanel(QWidget):
     _DESC_TRUNCATE = 160
     # Longueurs d'accroche, du plus généreux au plus serré.
     _DESC_PALIERS = (160, 90, 55, 30)
-    _DL_COUNT_MIN = 1  # seuil d'affichage de la pastille téléchargements (passer à ~100 plus tard)
 
     def _on_meta_link(self, href: str) -> None:
         """Aiguillage des liens de la ligne méta.
@@ -587,10 +586,17 @@ class InfoPanel(QWidget):
         # Compteur de téléchargements (GitHub, toutes versions cumulées). Il vit
         # DANS la ligne méta et non dans une pastille séparée : en pastille, le
         # FlowLayout le renvoyait à la ligne ou non selon la longueur du nom du
-        # studio, et sa position sautait d'un jeu à l'autre. Caché tant
-        # qu'inconnu ou sous le seuil.
+        # studio, et sa position sautait d'un jeu à l'autre.
+        #
+        # AUCUN seuil de présentation : on affiche le vrai chiffre dès 1
+        # (décision de Ludo, 2026-09-23 — un seuil avait été prévu pour masquer
+        # les petits nombres, il est abandonné). Le `> 0` n'en est pas un :
+        # `download_count` rend 0 quand la réponse GitHub n'est PAS arrivée
+        # (hors ligne, limite d'API), donc zéro y signifie « je ne sais pas »
+        # et non « personne ». Écrire « 0 téléchargement » serait affirmer un
+        # résultat qu'on n'a pas obtenu.
         count = self._manager.download_count(game.id)
-        if count >= self._DL_COUNT_MIN:
+        if count > 0:
             pretty = f"{count:,}".replace(",", "\u202f")  # espace fine insécable FR
             key = "{} téléchargement" if count == 1 else "{} téléchargements"
             # En doré comme avant : c'est de la preuve sociale, elle mérite de

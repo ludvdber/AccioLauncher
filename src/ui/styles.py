@@ -196,14 +196,22 @@ QMessageBox QLabel, QInputDialog QLabel {{
     background: transparent;
 }}
 
+/* JAMAIS de `min-width` ici — voir la règle « Don't reintroduce » de
+   CLAUDE.md. Qt traduit un `min-width` de feuille de style en un
+   `setMinimumWidth()` POSÉ sur le widget, et `qSmartMinSize` REMPLACE alors le
+   minimum calculé par cette valeur au lieu d'en prendre le maximum. Le
+   minimum d'un bouton devenait donc 108 px (70 + 36 de padding + 2 de bordure)
+   quel que soit son libellé, et `QMessageBox` se dimensionne sur le MINIMUM de
+   son layout : « Mettre à jour maintenant » recevait 146 px pour 182 demandés,
+   et le texte sortait du cadre des deux côtés. La comfort visuelle d'un bouton
+   court se règle par le `padding`, qui lui s'AJOUTE au texte. */
 QMessageBox QPushButton, QInputDialog QPushButton {{
     background-color: #16213e;
     color: {COLOR_TEXT};
     border: 1px solid #2c3e6b;
     border-radius: 6px;
-    padding: 6px 18px;
+    padding: 7px 22px;
     font-size: 13px;
-    min-width: 70px;
 }}
 
 QMessageBox QPushButton:hover, QInputDialog QPushButton:hover {{

@@ -388,11 +388,11 @@ class MainWindow(QMainWindow):
         log.info("UI rafraîchie après mise à jour du catalogue")
 
     def _on_launcher_update(self, version: str, url: str, asset_url: str = "",
-                            asset_sha256: str = "") -> None:
+                            asset_sha256: str = "", notes: str = "") -> None:
         """Nouvelle version du launcher disponible."""
         if self.config.dismissed_launcher_version == version:
             return
-        self._updates.remember(version, url, asset_url, asset_sha256)
+        self._updates.remember(version, url, asset_url, asset_sha256, notes)
         self._notif_bar.announce(version, auto=self._updates.can_install_itself)
         self._position_settings()
         self._propose_launcher_update()
@@ -417,15 +417,26 @@ class MainWindow(QMainWindow):
         boite = QMessageBox(self)
         boite.setWindowTitle(tr("Mise à jour disponible"))
         boite.setIcon(QMessageBox.Icon.NoIcon)
+        # PlainText à la CONSTRUCTION : le texte des notes vient de GitHub,
+        # donc de l'extérieur, et `QMessageBox` est en `AutoText` par défaut —
+        # il bascule en rich text dès que le contenu y ressemble.
+        boite.setTextFormat(Qt.TextFormat.PlainText)
         boite.setText(tr("Accio Launcher v{} est disponible !").format(
             self._updates.version))
         auto = self._updates.can_install_itself
-        boite.setInformativeText(
+        mecanique = (
             tr("La mise à jour est téléchargée et installée automatiquement ; "
                "le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne "
                "sont pas touchés.")
             if auto else
             tr("La page de téléchargement va s'ouvrir dans votre navigateur."))
+        # Ce que la version APPORTE passe AVANT la façon dont elle s'installe :
+        # on demande d'accepter de remplacer un exécutable, la première chose
+        # à dire est donc ce qui change. Absent (release sans notes, hors
+        # ligne, API limitée) → on n'invente rien et on se tait.
+        notes = self._updates.notes.strip()
+        boite.setInformativeText(
+            f"{tr('Nouveautés :')}\n{notes}\n\n{mecanique}" if notes else mecanique)
         maintenant = boite.addButton(tr("Mettre à jour maintenant"),
                                      QMessageBox.ButtonRole.AcceptRole)
         boite.addButton(tr("Plus tard"), QMessageBox.ButtonRole.RejectRole)
@@ -704,7 +715,7 @@ class MainWindow(QMainWindow):
             if _dlg_alive():
                 dlg.update_catalog_version(new_catalog.catalog_version)
 
-        def on_launcher(version, url, asset_url="", asset_sha256=""):
+        def on_launcher(version, url, asset_url="", asset_sha256="", notes=""):
             # Le 4ᵉ argument est l'empreinte SHA-256 publiée par GitHub. Il
             # manquait ici : PyQt tronque silencieusement les arguments qu'un
             # slot ne déclare pas, donc « Vérifier les mises à jour » posait une
@@ -712,7 +723,7 @@ class MainWindow(QMainWindow):
             # vérifié — alors que la vérification au démarrage, elle, le
             # vérifiait. Voir tests/test_notif_update.py.
             self.config.dismissed_launcher_version = ""  # check forcé → toujours montrer
-            self._on_launcher_update(version, url, asset_url, asset_sha256)
+            self._on_launcher_update(version, url, asset_url, asset_sha256, notes)
             if _dlg_alive():
                 dlg.show_update_status(tr("Launcher v{} disponible !").format(version))
 

@@ -21,11 +21,12 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QStackedWidget, QVBoxLayout,
-    QWidget,
+    QButtonGroup, QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,
+    QListWidget, QListWidgetItem, QPushButton, QRadioButton,
+    QStackedWidget, QVBoxLayout, QWidget,
 )
 
+from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
 from src.core.config import (
     Config, DEFAULT_CACHE_PATH, DEFAULT_INSTALL_PATH, cache_pour,
 )
@@ -38,11 +39,11 @@ from src.core.i18n import (
 from src.ui.fonts import cinzel_decorative
 from src.ui.theme import THEMES
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import is_writable_dir
+from src.ui.utils import avertir, is_writable_dir
 
 log = logging.getLogger(__name__)
 
-TOTAL_PAGES = 4
+TOTAL_PAGES = 5
 
 
 def detect_installed_games(parent: Path, games: list[GameData]) -> list[tuple[GameData, Path]]:
@@ -105,6 +106,12 @@ class OnboardingDialog(QDialog):
         self._scan_label = QLabel()
         self._import_list = QListWidget()
         self._theme_combo = QComboBox()
+        # Choixpeau : un groupe de boutons par question, plus la maison tirée.
+        # Tout est initialisé ICI même si les widgets naissent à l'écran 4 —
+        # le projet s'interdit `hasattr` sur un attribut de widget.
+        self._groupes_maison: list[QButtonGroup] = []
+        self._maison = ""
+        self._maison_label = QLabel()
         self._tgl_autoplay = None
         self._tgl_son = None
         self._tgl_trailers = None
@@ -179,7 +186,65 @@ class OnboardingDialog(QDialog):
         self._rest_built = True
         self._pages.addWidget(self._build_page_welcome())
         self._pages.addWidget(self._build_page_import())
+        self._pages.addWidget(self._build_page_choixpeau())
         self._pages.addWidget(self._build_page_prefs())
+
+    def _build_page_choixpeau(self) -> QWidget:
+        """Écran 4 : le Choixpeau.
+
+        Il vient AVANT les préférences parce qu'il n'est pas un réglage : il
+        en PROPOSE un. Sa maison pré-sélectionne le thème à l'écran suivant,
+        où elle reste modifiable — répartir quelqu'un puis lui imposer la
+        couleur serait prendre une décision à sa place sur la foi d'un jeu.
+
+        Rien n'est obligatoire : sans une seule réponse, `repartir` rend une
+        chaîne vide et le thème Poudlard est conservé.
+        """
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        lay.setSpacing(10)
+        titre = QLabel(tr("Le Choixpeau"))
+        titre.setObjectName("wizTitle")
+        titre.setFont(cinzel_decorative(20))
+        lay.addWidget(titre)
+
+        intro = QLabel(tr("« Voyons voir… où vais-je bien pouvoir vous mettre ? »"))
+        intro.setWordWrap(True)
+        intro.setStyleSheet("color: #b0b0c8; background: transparent;")
+        lay.addWidget(intro)
+
+        for index in range(len(QUESTIONS)):
+            libelle = QLabel(question(index))
+            libelle.setWordWrap(True)
+            libelle.setStyleSheet("color: #e8e8f0; background: transparent;"
+                                  " margin-top: 6px;")
+            lay.addWidget(libelle)
+            groupe = QButtonGroup(page)      # parenté explicite, cf. CLAUDE.md
+            for rang, texte in enumerate(reponses(index)):
+                bouton = QRadioButton(texte)
+                bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+                groupe.addButton(bouton, rang)
+                lay.addWidget(bouton)
+            self._groupes_maison.append(groupe)
+
+        note = QLabel(tr("Sans réponse, vous gardez le thème de Poudlard."))
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #8a8aaa; background: transparent;")
+        lay.addWidget(note)
+        lay.addStretch()
+        return page
+
+    def _repartir(self) -> None:
+        """Dépouille les réponses et prépare l'écran des préférences."""
+        self._maison = repartir([g.checkedId() for g in self._groupes_maison])
+        if not self._maison:
+            self._maison_label.setVisible(False)
+            return
+        self._maison_label.setText(verdict(self._maison))
+        self._maison_label.setVisible(True)
+        rang = self._theme_combo.findData(self._maison)
+        if rang >= 0:
+            self._theme_combo.setCurrentIndex(rang)
 
     def _build_page_welcome(self) -> QWidget:
         page = QWidget()
@@ -245,6 +310,16 @@ class OnboardingDialog(QDialog):
         title.setObjectName("wizTitle")
         title.setFont(cinzel_decorative(20))
         lay.addWidget(title)
+
+        # Le verdict du Choixpeau, juste au-dessus du thème qu'il a choisi :
+        # sans ce voisinage, le thème paraîtrait avoir changé tout seul.
+        # Caché tant qu'aucune question n'a reçu de réponse — un état qui ne
+        # s'est pas produit ne s'affiche pas.
+        self._maison_label.setWordWrap(True)
+        self._maison_label.setVisible(False)
+        self._maison_label.setStyleSheet(
+            "color: #d6a72c; background: transparent;")
+        lay.addWidget(self._maison_label)
 
         theme_row = QHBoxLayout()
         theme_row.addWidget(QLabel(tr("Thème :")))
@@ -320,9 +395,13 @@ class OnboardingDialog(QDialog):
             self.setWindowTitle(tr("Bienvenue dans Accio Launcher"))
             self._build_rest()
         elif i == 1 and not is_writable_dir(self.install_path):
-            QMessageBox.warning(self, tr("Dossier non inscriptible"),
-                                tr("Impossible d'écrire dans :\n{}").format(self.install_path))
+            avertir(self, tr("Dossier non inscriptible"),
+                    tr("Impossible d'écrire dans :\n{}").format(self.install_path))
             return
+        elif i == TOTAL_PAGES - 2:
+            # On quitte le Choixpeau : dépouiller maintenant, pour que l'écran
+            # suivant s'ouvre déjà sur la maison et son thème.
+            self._repartir()
         if i == TOTAL_PAGES - 1:
             self.theme = self._theme_combo.currentData()
             self.autoplay = self._tgl_autoplay.isChecked()
@@ -411,7 +490,7 @@ class OnboardingDialog(QDialog):
         if done or errors:
             config.save()
         if errors:
-            QMessageBox.warning(
+            avertir(
                 self, tr("Import partiel"),
                 tr("Certains jeux n'ont pas pu être importés :\n\n{}").format(
                     "\n".join(errors)))

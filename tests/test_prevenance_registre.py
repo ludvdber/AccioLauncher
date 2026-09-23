@@ -15,8 +15,6 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
-from PyQt6.QtWidgets import QMessageBox  # noqa: E402
-
 from src.ui import game_detail_handlers as gdh  # noqa: E402
 
 CLE = chr(92).join(["SOFTWARE", "Electronic Arts",
@@ -28,13 +26,16 @@ def dialogue(monkeypatch):
     """Rend (demander, textes) : le rappel réel, et ce qu'il a affiché.
 
     `_boite` est bouchonné parce qu'il appelle `exec()`, qui BLOQUE la suite
-    de tests jusqu'à ce qu'un humain clique.
+    de tests jusqu'à ce qu'un humain clique. Le bouchon rend l'INDEX du bouton
+    accepté (0), comme le vrai depuis que les boutons portent un libellé au
+    lieu d'un `StandardButton.Yes` — un « Yes » que Qt traduit par ses propres
+    fichiers `.qm`, que le build écarte, donc qui sortait en anglais.
     """
     textes = []
 
-    def faux_boite(icone, parent, titre, texte, boutons=None, defaut=None):
+    def faux_boite(icone, parent, titre, texte, choix=(), defaut=0):
         textes.append(texte)
-        return QMessageBox.StandardButton.Yes
+        return 0
 
     monkeypatch.setattr(gdh, "_boite", faux_boite)
     return gdh.confirmer_registre(None, "Reliques de la Mort — partie 2"), textes
@@ -94,8 +95,18 @@ class TestReponse:
         assert demander("HKLM", CLE, {"Locale": "fr"}, {}) is True
 
     def test_non_refuse(self, monkeypatch):
-        monkeypatch.setattr(gdh, "_boite",
-                            lambda *a, **k: QMessageBox.StandardButton.No)
+        monkeypatch.setattr(gdh, "_boite", lambda *a, **k: 1)
+        demander = gdh.confirmer_registre(None, "Jeu")
+        assert demander("HKLM", CLE, {"Locale": "fr"}, {}) is False
+
+    def test_une_boite_fermee_sans_repondre_ne_vaut_pas_oui(self, monkeypatch):
+        """La croix et Alt+F4 rendent -1, et -1 n'est pas un consentement.
+
+        Écrire dans le registre de quelqu'un qui a fermé la fenêtre sans
+        répondre, c'est exactement ce que la prévenance existe pour empêcher —
+        et sous HKLM ça enchaîne sur une invite UAC qu'il n'a pas demandée.
+        """
+        monkeypatch.setattr(gdh, "_boite", lambda *a, **k: -1)
         demander = gdh.confirmer_registre(None, "Jeu")
         assert demander("HKLM", CLE, {"Locale": "fr"}, {}) is False
 

@@ -31,3 +31,69 @@ class TestDetectInstalledGames:
 
     def test_empty_parent(self, tmp_path):
         assert detect_installed_games(tmp_path, [_game("hp1", "HP1/System/HP.exe")]) == []
+
+
+class TestChoixpeauDansLAssistant:
+    """Le Choixpeau PROPOSE un thème, il ne l'impose pas.
+
+    Ludo, 2026-09-19 : « soit proposer le thème de la maison après le choix,
+    soit garder Poudlard en disant que c'est modifiable dans les Paramètres ».
+    On fait les deux : la maison pré-sélectionne le thème, qui reste un combo
+    modifiable juste à côté du verdict.
+    """
+
+    @staticmethod
+    def _assistant(qtbot):
+        from src.ui.onboarding import OnboardingDialog
+        dlg = OnboardingDialog()
+        qtbot.addWidget(dlg)
+        dlg._build_rest()          # les écrans 2-5 naissent après la langue
+        return dlg
+
+    def test_l_assistant_compte_bien_cinq_ecrans(self, qtbot):
+        from src.ui.onboarding import TOTAL_PAGES
+        dlg = self._assistant(qtbot)
+        assert dlg._pages.count() == TOTAL_PAGES == 5
+
+    def test_une_question_par_groupe_de_boutons(self, qtbot):
+        from src.core.choixpeau import QUESTIONS
+        dlg = self._assistant(qtbot)
+        assert len(dlg._groupes_maison) == len(QUESTIONS)
+        for groupe in dlg._groupes_maison:
+            assert len(groupe.buttons()) == 4
+            assert groupe.checkedId() == -1      # rien de coché d'avance
+
+    def test_la_maison_preselectionne_son_theme(self, qtbot):
+        from src.core.choixpeau import QUESTIONS, SERPENTARD
+        dlg = self._assistant(qtbot)
+        for index, groupe in enumerate(dlg._groupes_maison):
+            rang = next(i for i, (_, m) in enumerate(QUESTIONS[index][1])
+                        if m == SERPENTARD)
+            groupe.button(rang).setChecked(True)
+        dlg._repartir()
+        assert dlg._maison == SERPENTARD
+        assert dlg._theme_combo.currentData() == SERPENTARD
+        assert dlg._maison_label.isVisible() or dlg._maison_label.text()
+        assert "SERPENTARD" in dlg._maison_label.text()
+
+    def test_sans_reponse_le_theme_reste_poudlard(self, qtbot):
+        """Répartir quelqu'un qui n'a rien répondu serait inventer un choix."""
+        dlg = self._assistant(qtbot)
+        dlg._repartir()
+        assert dlg._maison == ""
+        assert dlg._theme_combo.currentData() == "poudlard"
+        assert not dlg._maison_label.isVisible()
+
+    def test_le_theme_reste_modifiable_apres_la_repartition(self, qtbot):
+        from src.core.choixpeau import QUESTIONS, GRYFFONDOR
+        dlg = self._assistant(qtbot)
+        for index, groupe in enumerate(dlg._groupes_maison):
+            rang = next(i for i, (_, m) in enumerate(QUESTIONS[index][1])
+                        if m == GRYFFONDOR)
+            groupe.button(rang).setChecked(True)
+        dlg._repartir()
+        assert dlg._theme_combo.currentData() == GRYFFONDOR
+        dlg._theme_combo.setCurrentIndex(dlg._theme_combo.findData("serdaigle"))
+        dlg._pages.setCurrentIndex(dlg._pages.count() - 1)
+        dlg._go_next()                       # « Terminer »
+        assert dlg.theme == "serdaigle"      # le dernier mot revient au joueur

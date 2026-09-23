@@ -7,7 +7,7 @@ import logging
 from PyQt6.QtCore import (
     QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal, QPoint, QPointF, Qt,
 )
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QMessageBox, QWidget
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
 from src.ui import game_detail_handlers as handlers
 from src.ui.action_panel import ActionPanel
@@ -15,6 +15,7 @@ from src.ui.audio_bar import AudioBar
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
+from src.ui.utils import avertir
 from src.ui.video_player import VideoPlayer
 
 from src.core import trailers
@@ -624,7 +625,7 @@ class GameDetailView(QWidget):
                 self.isVisible()
             except RuntimeError:
                 return
-            QMessageBox.warning(self, title, message)
+            avertir(self, title, message)
         QTimer.singleShot(0, _show)
 
 

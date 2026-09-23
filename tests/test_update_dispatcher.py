@@ -224,6 +224,20 @@ class TestFenetreAllegee:
           tuple (`_commandes`) que placement et mode cinéma parcourent — sans
           quoi chaque bouton de plus coûtait trois lignes au lieu d'une.
 
+        · 937 -> 950, le 2026-09-23 : la proposition de mise à jour dit enfin
+          CE QUE LA VERSION APPORTE. Le launcher demandait d'accepter le
+          remplacement de son propre exécutable en n'annonçant que le numéro
+          et la mécanique — alors qu'il affiche le changelog de chaque version
+          de JEU : il se tenait à une exigence plus basse que ce qu'il
+          distribue. Le texte est DÉJÀ téléchargé (même réponse GitHub que le
+          numéro et l'empreinte), il était simplement jeté.
+
+          Ce qui pouvait descendre est descendu : la mise au propre du
+          Markdown est une fonction PURE dans `src/core/updater.py`
+          (`extract_release_notes`, testée sans Qt). La fenêtre ne gagne que
+          la composition de la boîte et le `PlainText` qui la protège — le
+          texte vient de GitHub, donc de l'extérieur.
+
         La vraie garde semantique est le test voisin, qui verifie que les
         chaines de l'UpdateDispatcher ne sont pas revenues ici : c'est LUI qui
         dit si la fenetre reprend du travail qu'on lui a retire. Celui-ci ne
@@ -232,4 +246,4 @@ class TestFenetreAllegee:
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 937, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 950, f"main_window.py a regrossi : {lignes} lignes"

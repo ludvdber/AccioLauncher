@@ -19,7 +19,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QMessageBox,
     QPushButton,
     QStackedWidget,
     QVBoxLayout,
@@ -37,7 +36,7 @@ from src.ui.disk_scan_worker import DiskScanWorker
 from src.ui.season import resolve as resolve_season
 from src.ui.theme import THEMES, themed
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import is_writable_dir, open_local_path
+from src.ui.utils import avertir, is_writable_dir, open_local_path
 
 log = logging.getLogger(__name__)
 
@@ -535,7 +534,7 @@ class SettingsDialog(QDialog):
             # l'échec ne se manifestait qu'au téléchargement suivant, sous la
             # forme d'une erreur qui n'accusait pas le dossier.
             if not is_writable_dir(Path(chosen)):
-                QMessageBox.warning(
+                avertir(
                     self, tr("Dossier non inscriptible"),
                     tr("Impossible d'écrire dans :\n{}").format(chosen))
                 return

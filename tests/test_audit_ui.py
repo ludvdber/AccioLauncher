@@ -29,9 +29,9 @@ class TestAriteDesSlots:
         args = signature[signature.index("(") + 1:-1]
         return len([a for a in args.split(",") if a])
 
-    def test_launcher_update_porte_bien_quatre_arguments(self):
+    def test_launcher_update_porte_bien_cinq_arguments(self):
         checker = UpdateChecker("", "0", {})
-        assert self._arite_du_signal(checker.launcher_update) == 4
+        assert self._arite_du_signal(checker.launcher_update) == 5
 
     def test_le_slot_du_check_force_les_declare_tous(self):
         """Sans ça, l'empreinte est jetée sans le moindre message."""
@@ -39,8 +39,8 @@ class TestAriteDesSlots:
         ligne = [x for x in src.splitlines() if "def on_launcher" in x]
         assert ligne, "slot on_launcher introuvable"
         params = ligne[0][ligne[0].index("(") + 1:ligne[0].rindex(")")]
-        assert len([p for p in params.split(",") if p.strip()]) == 4, (
-            f"on_launcher doit déclarer 4 paramètres, vu : {ligne[0].strip()}")
+        assert len([p for p in params.split(",") if p.strip()]) == 5, (
+            f"on_launcher doit déclarer 5 paramètres, vu : {ligne[0].strip()}")
 
     def test_l_empreinte_arrive_jusqu_au_champ(self, qtbot, tmp_path, monkeypatch):
         """Bout en bout : le signal émis avec une empreinte doit la faire
@@ -82,7 +82,8 @@ class TestAriteDesSlots:
         fenetre._force_update_check(FauxDialogue(), catalog_only=False)
         captures["checker"].launcher_update.emit(
             "9.9.9", "https://github.com/ludvdber/AccioLauncher/releases",
-            "https://github.com/x/AccioLauncher.exe", empreinte)
+            "https://github.com/x/AccioLauncher.exe", empreinte,
+            "• Ce que la version apporte")
 
         assert fenetre._updates.asset_sha256 == empreinte, (
             "l'auto-update serait téléchargé sans vérification d'intégrité")

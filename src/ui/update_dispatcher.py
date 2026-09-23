@@ -63,7 +63,7 @@ class UpdateDispatcher(QObject):
 
     # ── Résultats des vérifications ──
     catalog_updated = pyqtSignal(object)          # Catalog distant plus récent
-    launcher_update = pyqtSignal(str, str, str, str)  # version, url, asset, sha256
+    launcher_update = pyqtSignal(str, str, str, str, str)  # version, url, asset, sha256, notes
     update_counts = pyqtSignal(int)               # nb de jeux à mettre à jour
     download_counts = pyqtSignal(dict)            # compteurs ⬇ de GitHub
     asset_sizes = pyqtSignal(dict)                # tailles réelles des archives
@@ -85,6 +85,7 @@ class UpdateDispatcher(QObject):
         self.url: str = ""
         self.asset_url: str = ""
         self.asset_sha256: str = ""
+        self.notes: str = ""
 
         self._download: Downloader | None = None
         self._speed = SpeedTracker()
@@ -203,12 +204,19 @@ class UpdateDispatcher(QObject):
 
     # ──────────────────── Mise à jour du launcher ────────────────────
 
-    def remember(self, version: str, url: str, asset_url: str, asset_sha256: str) -> None:
+    def remember(self, version: str, url: str, asset_url: str,
+                 asset_sha256: str, notes: str = "") -> None:
         """Retient ce que GitHub a annoncé, pour le clic qui viendra peut-être."""
         self.version = version
         self.url = url
         self.asset_url = asset_url
         self.asset_sha256 = asset_sha256
+        # Ce que la version APPORTE. Proposer de remplacer son propre
+        # exécutable sans dire ce qui change, c'est demander une confiance
+        # qu'on n'a pas justifiée — et le launcher affiche pourtant le
+        # changelog de chaque version de JEU. Il se tenait à une exigence
+        # plus basse que ce qu'il distribue.
+        self.notes = notes
 
     @property
     def can_install_itself(self) -> bool:

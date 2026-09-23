@@ -106,8 +106,19 @@ a = Analysis(
 def _keep(entry):
     """Filtre des donnees inutiles a l'execution.
 
-    Traductions Qt (dialogues natifs non utilises), module PDF, et surtout
-    les BANDES-ANNONCES : deux d'entre elles faisaient passer l'exe de 74 a
+    Traductions Qt, module PDF, et surtout les BANDES-ANNONCES.
+
+    ATTENTION au motif des traductions Qt : il a longtemps ete ecrit ici
+    « dialogues natifs non utilises », et c'etait FAUX. Les boutons standard
+    de QMessageBox (Yes / No / Ok) sont traduits par `qtbase_<langue>.qm` et
+    par rien d'autre : les ecarter du build faisait sortir « Yes » et « No »
+    en anglais dans un launcher regle en francais (signale le 2026-09-23).
+    Le filtre est juste DEPUIS que plus aucun dialogue n'emploie de bouton
+    standard : ils portent tous un libelle passe par `tr()`, donc traduit par
+    `src/data/i18n/`. Remettre un bouton standard quelque part remettrait de
+    l'anglais ici — d'ou le balayage AST de `tests/test_boutons_de_dialogue`.
+
+    Les bandes-annonces : deux d'entre elles faisaient passer l'exe de 74 a
     160 Mo, et les huit l'auraient mene au-dela de 500 Mo pour un ornement
     facultatif. Elles se telechargent desormais depuis les assets de release
     (voir src/core/trailers.py). Le dossier reste dans l'arbre de travail :
