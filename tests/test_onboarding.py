@@ -140,3 +140,204 @@ class TestChaquePageAUnTitre:
         assert lay.parentWidget() is page, (
             "la colonne doit être POSÉE sur la page, sinon les widgets ajoutés "
             "ensuite n'apparaissent nulle part")
+
+
+class TestFermerLAssistantNEcritRien:
+    """La croix doit REPORTER l'installation, pas la sauter.
+
+    `run_onboarding` écrivait des défauts quand l'assistant n'aboutissait
+    pas. Deux conséquences, toutes deux silencieuses : le launcher démarrait
+    comme si l'assistant avait été terminé, et `Config.exists()` devenait
+    vrai, si bien que l'assistant ne revenait JAMAIS. Fermer la fenêtre
+    n'était donc pas « pas maintenant » mais « plus jamais » — signalé par
+    Ludo le 2026-09-23 en testant l'exe 1.0.5.
+
+    On bouchonne la classe au niveau du MODULE (jamais un attribut de classe
+    Qt, cf. CLAUDE.md) : le faux assistant n'est même pas un widget.
+    """
+
+    @staticmethod
+    def _poser_faux_assistant(monkeypatch, code):
+        from pathlib import Path
+
+        from src.ui import onboarding as module
+
+        class _FauxAssistant:
+            def __init__(self):
+                self.install_path = Path.home() / "Games" / "AccioLauncher"
+                self.langue = "fr"
+                self.theme = "poudlard"
+                self.autoplay = True
+                self.mute_videos = True
+                self.trailers_optin = False
+
+            def exec(self):
+                return code
+
+            def perform_imports(self, _config):
+                raise AssertionError("ne doit pas être atteint après un abandon")
+
+        monkeypatch.setattr(module, "OnboardingDialog", _FauxAssistant)
+
+    def test_la_croix_leve_et_n_ecrit_aucune_config(self, monkeypatch):
+        import pytest
+        from PyQt6.QtWidgets import QDialog
+
+        from src.core.config import Config
+        from src.ui.onboarding import OnboardingAnnule, run_onboarding
+
+        self._poser_faux_assistant(monkeypatch, QDialog.DialogCode.Rejected)
+        assert not Config.exists(), "le test part d'un poste sans config"
+
+        with pytest.raises(OnboardingAnnule):
+            run_onboarding()
+
+        assert not Config.exists(), (
+            "une config a été écrite malgré l'abandon : l'assistant ne "
+            "reviendra jamais")
+
+    def test_un_dossier_inaccessible_abandonne_aussi(self, monkeypatch):
+        import pytest
+        from PyQt6.QtWidgets import QDialog
+
+        from src.core.config import Config
+        from src.ui import onboarding as module
+        from src.ui.onboarding import OnboardingAnnule, run_onboarding
+
+        self._poser_faux_assistant(monkeypatch, QDialog.DialogCode.Accepted)
+        monkeypatch.setattr(module, "is_writable_dir", lambda _p: False)
+
+        with pytest.raises(OnboardingAnnule):
+            run_onboarding()
+        assert not Config.exists()
+
+
+class TestChangerDeLangueRebatitLesEcrans:
+    """Revenir en arrière et changer de langue doit tout retraduire.
+
+    Les `tr()` sont évalués à la CONSTRUCTION des widgets, et `_rest_built`
+    ne les faisait construire qu'une fois : le titre de la fenêtre et les
+    boutons, refaits à chaque passage, obéissaient — pas les pages. D'où la
+    capture de Ludo (2026-09-23) : un launcher en anglais où seuls « Back »
+    et « Next » étaient traduits. Ces tests échouent sur le code d'avant.
+    """
+
+    @staticmethod
+    def _titre_de_la_page(dlg, index):
+        from PyQt6.QtWidgets import QLabel
+        page = dlg._pages.widget(index)
+        return next(w.text() for w in page.findChildren(QLabel)
+                    if w.objectName() == "wizTitle")
+
+    @staticmethod
+    def _choisir(dlg, code):
+        rang = dlg._lang_combo.findData(code)
+        assert rang >= 0, f"langue {code} absente du sélecteur"
+        dlg._lang_combo.setCurrentIndex(rang)
+        dlg._go_next()
+
+    def test_repasser_en_francais_retraduit_les_pages(self, qtbot):
+        from src.core.i18n import get_language, set_language
+        from src.ui.onboarding import OnboardingDialog
+
+        origine = get_language()
+        try:
+            dlg = OnboardingDialog()
+            qtbot.addWidget(dlg)
+
+            self._choisir(dlg, "en")
+            en_anglais = self._titre_de_la_page(dlg, 1)
+
+            dlg._go_back()
+            self._choisir(dlg, "fr")
+            en_francais = self._titre_de_la_page(dlg, 1)
+
+            assert en_anglais != en_francais, (
+                "les écrans sont restés dans la langue du premier passage : "
+                f"« {en_anglais} » des deux côtés")
+            assert en_francais == "Bienvenue dans Accio Launcher"
+        finally:
+            set_language(origine)
+
+    def test_le_choixpeau_ne_double_pas_ses_questions(self, qtbot):
+        from src.core.choixpeau import QUESTIONS
+        from src.core.i18n import get_language, set_language
+        from src.ui.onboarding import OnboardingDialog
+
+        origine = get_language()
+        try:
+            dlg = OnboardingDialog()
+            qtbot.addWidget(dlg)
+            self._choisir(dlg, "en")
+            dlg._go_back()
+            self._choisir(dlg, "fr")
+
+            assert len(dlg._groupes_maison) == len(QUESTIONS), (
+                "les groupes de boutons du Choixpeau se sont accumulés")
+        finally:
+            set_language(origine)
+
+    def test_les_widgets_persistants_survivent_au_rebati(self, qtbot):
+        from src.core.i18n import get_language, set_language
+        from src.ui.onboarding import OnboardingDialog
+
+        origine = get_language()
+        try:
+            dlg = OnboardingDialog()
+            qtbot.addWidget(dlg)
+            self._choisir(dlg, "en")
+            dlg._go_back()
+            self._choisir(dlg, "fr")
+
+            # Détruits avec leur page, ils laisseraient un objet C++ mort
+            # derrière un attribut Python vivant : le premier accès planterait.
+            for widget in (dlg._path_label, dlg._free_label, dlg._scan_label,
+                           dlg._import_list, dlg._theme_combo,
+                           dlg._maison_label):
+                widget.isVisible()
+        finally:
+            set_language(origine)
+
+
+class TestLesEcransDefilentSiNecessaire:
+    """Le Choixpeau débordait de la fenêtre, et un pixel de plus le réparait.
+
+    Quatre questions, seize réponses : la page réclame bien plus que les
+    430 px du minimum du dialogue. Sans zone défilante, le texte se
+    chevauchait, et agrandir d'un pixel remettait tout d'aplomb d'un coup —
+    c'est le redimensionnement qui déclenchait enfin la passe de mise en
+    page (Ludo, 2026-09-23, capture à l'appui).
+    """
+
+    @staticmethod
+    def _assistant(qtbot):
+        from src.ui.onboarding import OnboardingDialog
+        dlg = OnboardingDialog()
+        qtbot.addWidget(dlg)
+        dlg._build_rest()
+        return dlg
+
+    def test_chaque_ecran_est_dans_une_zone_defilante(self, qtbot):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QScrollArea
+
+        from src.ui.onboarding import TOTAL_PAGES
+
+        dlg = self._assistant(qtbot)
+        for index in range(TOTAL_PAGES):
+            zone = dlg._pages.widget(index)
+            assert isinstance(zone, QScrollArea), f"écran {index + 1}"
+            assert zone.widgetResizable(), f"écran {index + 1}"
+            # « Si ça ne fit pas » : la barre n'apparaît que lorsqu'elle sert.
+            assert (zone.verticalScrollBarPolicy()
+                    == Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            assert (zone.horizontalScrollBarPolicy()
+                    == Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+    def test_le_choixpeau_reclame_plus_que_la_hauteur_minimale(self, qtbot):
+        dlg = self._assistant(qtbot)
+        # L'écran du Choixpeau est l'avant-dernier.
+        interieur = dlg._pages.widget(dlg._pages.count() - 2).widget()
+        assert interieur.sizeHint().height() > dlg.minimumHeight(), (
+            "le Choixpeau tiendrait désormais sans défilement : ce test ne "
+            "garde plus rien, vérifier que la page n'a pas été vidée")

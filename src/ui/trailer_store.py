@@ -86,6 +86,11 @@ class TrailerStore(QObject):
             self.job_finished.emit(0, 0)
             return
         self.state_changed.emit()
+        # Prévenir AVANT de commencer : ce sont plusieurs centaines de Mo, et
+        # rien d'autre à l'écran ne disait qu'ils arrivaient. Un toast, pas un
+        # modal — il n'y a rien à décider, l'utilisateur vient de l'accepter.
+        self.status_message.emit(
+            tr("Les bandes-annonces se téléchargent en arrière-plan."))
         self._suivante()
 
     def cancel(self) -> None:

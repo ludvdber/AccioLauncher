@@ -419,6 +419,8 @@
     "« Toujours. » — la réponse de Rogue à Dumbledore.": "«Siempre.» — la respuesta de Snape a Dumbledore.",
     "À Noël, douze sapins décorent la Grande Salle.": "En Navidad, doce abetos decoran el Gran Comedor.",
     "Fait du jour dans la barre de statut": "Dato del día en la barra de estado",
-    "Almanach": "Almanaque"
+    "Almanach": "Almanaque",
+    "Bandes-annonces : {n}/{total} ({pct} %)": "Tráileres: {n}/{total} ({pct} %)",
+    "Les bandes-annonces se téléchargent en arrière-plan.": "Los tráileres se descargan en segundo plano."
   }
 }

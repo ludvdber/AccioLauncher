@@ -23,12 +23,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QButtonGroup, QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QPushButton, QRadioButton,
-    QStackedWidget, QVBoxLayout, QWidget,
+    QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
 from src.core.config import (
-    Config, DEFAULT_CACHE_PATH, DEFAULT_INSTALL_PATH, cache_pour,
+    Config, DEFAULT_INSTALL_PATH, cache_pour,
 )
 from src.core.formatting import format_bytes
 from src.core.game_data import GameData, load_catalog
@@ -44,6 +44,44 @@ from src.ui.utils import avertir, is_writable_dir
 log = logging.getLogger(__name__)
 
 TOTAL_PAGES = 5
+
+
+class OnboardingAnnule(Exception):
+    """L'assistant a été fermé sans être terminé.
+
+    Levée au lieu de rendre une `Config` de défaut : écrire une config ICI
+    démarrait le launcher comme si l'assistant avait abouti, ET rendait
+    `Config.exists()` vrai, si bien que l'assistant ne revenait JAMAIS —
+    fermer la fenêtre ne reportait donc pas l'installation, elle la sautait
+    définitivement (Ludo, 2026-09-23). Ne rien écrire est la seule façon de
+    tenir la promesse implicite de la croix : « pas maintenant ».
+    """
+
+
+def _defilable(page: QWidget) -> QScrollArea:
+    """Rend une page défilable UNIQUEMENT si son contenu ne tient pas.
+
+    `ScrollBarAsNeeded` ne montre la barre que lorsqu'elle sert, donc les
+    écrans courts sont inchangés. Sans ça, le Choixpeau — quatre questions,
+    seize réponses — débordait de la fenêtre : le texte se chevauchait, et
+    agrandir d'un pixel remettait tout en place d'un coup, parce que c'est
+    le redimensionnement qui déclenchait enfin la passe de mise en page
+    (Ludo, 2026-09-23, capture à l'appui).
+
+    Le fond doit être rendu transparent sur le `QScrollArea` ET sur son
+    viewport : un `QAbstractScrollArea` peint son propre fond, et la page
+    serait posée sur un rectangle clair au milieu du bleu nuit.
+    """
+    zone = QScrollArea()
+    zone.setWidget(page)
+    zone.setWidgetResizable(True)
+    zone.setFrameShape(QScrollArea.Shape.NoFrame)
+    zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    zone.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget"
+                       " { background: transparent; border: none; }")
+    zone.viewport().setAutoFillBackground(False)
+    return zone
 
 
 def _page_titree(libelle: str, taille: int = 20) -> tuple[QWidget, QVBoxLayout]:
@@ -142,7 +180,7 @@ class OnboardingDialog(QDialog):
         layout.setSpacing(12)
 
         self._pages = QStackedWidget()
-        self._pages.addWidget(self._build_page_language())
+        self._pages.addWidget(_defilable(self._build_page_language()))
         layout.addWidget(self._pages, stretch=1)
 
         nav = QHBoxLayout()
@@ -198,10 +236,37 @@ class OnboardingDialog(QDialog):
         if self._rest_built:
             return
         self._rest_built = True
-        self._pages.addWidget(self._build_page_welcome())
-        self._pages.addWidget(self._build_page_import())
-        self._pages.addWidget(self._build_page_choixpeau())
-        self._pages.addWidget(self._build_page_prefs())
+        self._pages.addWidget(_defilable(self._build_page_welcome()))
+        self._pages.addWidget(_defilable(self._build_page_import()))
+        self._pages.addWidget(_defilable(self._build_page_choixpeau()))
+        self._pages.addWidget(_defilable(self._build_page_prefs()))
+
+    def _oublier_les_pages(self) -> None:
+        """Jette les écrans 2-5 pour les rebâtir dans une autre langue.
+
+        `_rest_built` les faisait construire UNE fois : revenir à l'écran 1,
+        changer de langue et repartir laissait donc les pages dans la langue
+        d'avant, pendant que le titre de la fenêtre et les boutons — refaits
+        à chaque passage — obéissaient, eux. D'où la capture de Ludo, en
+        anglais, où seuls « Back » et « Next » étaient traduits.
+
+        Les widgets créés dans `__init__` et seulement POSÉS par les pages
+        sont reparentés avant la destruction : les supprimer avec leur page
+        laisserait des objets C++ morts derrière des attributs Python vivants.
+        """
+        for w in (self._path_label, self._free_label, self._scan_label,
+                  self._import_list, self._theme_combo, self._maison_label):
+            w.setParent(self)
+            w.hide()
+        while self._pages.count() > 1:
+            page = self._pages.widget(1)
+            self._pages.removeWidget(page)
+            page.deleteLater()
+        self._groupes_maison.clear()
+        self._tgl_autoplay = None
+        self._tgl_son = None
+        self._tgl_trailers = None
+        self._rest_built = False
 
     def _build_page_choixpeau(self) -> QWidget:
         """Écran 4 : le Choixpeau.
@@ -375,7 +440,12 @@ class OnboardingDialog(QDialog):
         if i == 0:
             # Fixer la langue AVANT de bâtir la suite : les tr() sont évalués
             # à la construction des widgets, pas à l'affichage.
-            self.langue = self._lang_combo.currentData()
+            choisie = self._lang_combo.currentData()
+            # Déjà passé par ici dans une AUTRE langue : les écrans suivants
+            # existent, figés dans celle d'avant. Les jeter pour les refaire.
+            if self._rest_built and choisie != self.langue:
+                self._oublier_les_pages()
+            self.langue = choisie
             set_language(self.langue)
             # Le catalogue résout ses traductions AU PARSING : celui chargé dans
             # __init__ l'a été avant ce choix, donc ses noms de jeux sont restés
@@ -487,25 +557,33 @@ class OnboardingDialog(QDialog):
 
 
 def run_onboarding() -> Config:
-    """Affiche l'assistant et retourne la Config créée (défauts si annulé)."""
+    """Affiche l'assistant et retourne la Config créée.
+
+    Lève `OnboardingAnnule` si l'assistant n'a pas abouti — la croix, Échap,
+    ou un dossier devenu inaccessible entre-temps. **Aucune config n'est
+    alors écrite** : c'est ce qui permet à l'assistant de revenir au
+    lancement suivant. Il écrivait auparavant des défauts, ce qui démarrait
+    le launcher ET sautait l'installation pour de bon.
+    """
     dlg = OnboardingDialog()
-    if dlg.exec() == QDialog.DialogCode.Accepted and is_writable_dir(dlg.install_path):
-        config = Config(
-            install_path=dlg.install_path,
-            cache_path=cache_pour(dlg.install_path),
-            langue=dlg.langue,
-            theme=dlg.theme,
-            autoplay_videos=dlg.autoplay,
-            mute_videos=dlg.mute_videos,
-            trailers_optin=dlg.trailers_optin,
-        )
-        config.save()
-        dlg.perform_imports(config)
-        return config
-    # Annulé → défauts sûrs (toujours créable sous le home). La langue retenue
-    # est celle déjà choisie à l'écran 1, pas le défaut global.
-    DEFAULT_INSTALL_PATH.mkdir(parents=True, exist_ok=True)
-    config = Config(install_path=DEFAULT_INSTALL_PATH, cache_path=DEFAULT_CACHE_PATH,
-                    langue=dlg.langue)
+    if dlg.exec() != QDialog.DialogCode.Accepted:
+        log.info("Assistant de premier lancement fermé sans être terminé")
+        raise OnboardingAnnule
+    if not is_writable_dir(dlg.install_path):
+        # L'écran 2 le refuse déjà : on n'arrive ici que si le dossier a
+        # disparu entre-temps. Abandonner vaut mieux qu'écrire une config
+        # qui désigne un dossier où rien ne pourra jamais s'installer.
+        log.warning("Dossier d'installation inaccessible : %s", dlg.install_path)
+        raise OnboardingAnnule
+    config = Config(
+        install_path=dlg.install_path,
+        cache_path=cache_pour(dlg.install_path),
+        langue=dlg.langue,
+        theme=dlg.theme,
+        autoplay_videos=dlg.autoplay,
+        mute_videos=dlg.mute_videos,
+        trailers_optin=dlg.trailers_optin,
+    )
     config.save()
+    dlg.perform_imports(config)
     return config

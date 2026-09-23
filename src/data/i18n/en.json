@@ -419,6 +419,8 @@
     "« Toujours. » — la réponse de Rogue à Dumbledore.": "\"Always.\" — Snape's answer to Dumbledore.",
     "À Noël, douze sapins décorent la Grande Salle.": "At Christmas, twelve fir trees decorate the Great Hall.",
     "Fait du jour dans la barre de statut": "Fact of the day in the status bar",
-    "Almanach": "Almanac"
+    "Almanach": "Almanac",
+    "Bandes-annonces : {n}/{total} ({pct} %)": "Trailers: {n}/{total} ({pct}%)",
+    "Les bandes-annonces se téléchargent en arrière-plan.": "Trailers are downloading in the background."
   }
 }

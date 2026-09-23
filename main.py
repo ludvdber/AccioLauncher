@@ -138,6 +138,7 @@ def main():
 
         from src.ui.main_window import MainWindow
         from src.core.config import Config
+        from src.ui.onboarding import OnboardingAnnule
 
         splash.set_statut(tr("Chargement des ressources"), 0.45)
         app.processEvents()
@@ -148,7 +149,18 @@ def main():
             splash.close()
 
         splash.set_statut(tr("Préparation de la bibliothèque"), 0.75)
-        window = MainWindow()
+        try:
+            window = MainWindow()
+        except OnboardingAnnule:
+            # L'assistant a été fermé sans aboutir. On n'écrit AUCUNE config et
+            # on ne démarre pas : la croix doit reporter l'installation, pas la
+            # sauter. Avant, des défauts étaient enregistrés, donc le launcher
+            # s'ouvrait ET `Config.exists()` devenait vrai — l'assistant ne
+            # revenait jamais (Ludo, 2026-09-23).
+            log.info("Premier lancement abandonné — aucune configuration écrite")
+            splash.close()
+            logging.shutdown()
+            os._exit(0)
         guard.activate_requested.connect(window.bring_to_front)
 
         # `window.show()` déclenche la première mise en page ET le premier rendu

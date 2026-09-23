@@ -175,6 +175,8 @@ class MainWindow(QMainWindow):
         self._trailers = TrailerStore(self.manager, self._detail.ops, self)
         self._trailers.status_message.connect(self._toast.show_message)
         self._trailers.job_finished.connect(self._detail.refresh_video)
+        self._trailers.progress.connect(self._on_trailer_progress)
+        self._trailers.job_finished.connect(self._on_trailer_done)
         self._trailers.armer_rattrapage(self.config)
         # Ce qui informait par dialogue modal passe par le toast : rien à
         # décider, donc rien qui justifie d'arrêter l'utilisateur.
@@ -457,6 +459,25 @@ class MainWindow(QMainWindow):
             # reste jouable, seuls les nouveaux téléchargements attendent.
             self._status_bar.showMessage(tr("Hors ligne — les jeux installés restent jouables."))
         else:
+            self._status_bar.showMessage(self._message_au_repos())
+
+    def _on_trailer_progress(self, faites: int, total: int,
+                             octets: int, total_octets: int) -> None:
+        """Bandes-annonces : le dire dans la barre de statut, pas dans la barre
+        de téléchargement (le parcours « 1/4 → 4/4 » ne veut rien dire pour un
+        fichier qui ne s'installe pas). N'en laisser la trace que dans les
+        Paramètres revenait à tirer des centaines de Mo sans le dire (Ludo,
+        2026-09-23). Un jeu en cours passe devant, ici comme dans la file."""
+        if self._detail.ops.is_busy:
+            return
+        pct = round(octets * 100 / total_octets) if total_octets > 0 else 0
+        self._status_bar.showMessage(
+            tr("Bandes-annonces : {n}/{total} ({pct} %)").format(
+                n=min(faites + 1, total), total=total, pct=pct))
+
+    def _on_trailer_done(self, _faites: int, _echecs: int) -> None:
+        """Rendre la barre de statut à son message ambiant."""
+        if not self._detail.ops.is_busy:
             self._status_bar.showMessage(self._message_au_repos())
 
     def _message_au_repos(self) -> str:
