@@ -14,7 +14,7 @@ from src.core.i18n import tr
 from src.core.installer import Installer
 from src.core.system_checks import needed_space_mb
 from src.core.thread_utils import arreter_a_la_fermeture
-from src.ui.speed_tracker import SpeedTracker
+from src.core.speed_tracker import SpeedTracker
 
 log = logging.getLogger(__name__)
 

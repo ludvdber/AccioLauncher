@@ -1,14 +1,22 @@
-"""Particules magiques flottantes — style prototype HTML.
+"""Particules magiques flottantes — le rendu de l'Almanach.
 
-Base : 35 particules subtiles (70 % accent du thème, 30 % argentées) qui
-dérivent lentement vers le haut avec oscillation sinusoïdale et opacité
-oscillante ; 15 % portent un glow.
+Ce module ne décide de RIEN : il reçoit un `season.Profil` (des nombres purs,
+testables sans Qt) et sait le peindre. Les ambiances, leurs couleurs et leurs
+dates vivent dans `season.py`.
 
-Saisons (visuellement DISTINCTES, pas un simple recolorage) :
-- halloween : braises — orange/violet, glow fréquent et large, scintillement
-  rapide, montée plus vive ;
-- noel : vrais flocons DESSINÉS (6 branches) qui tombent en tournoyant avec
-  une large oscillation, plus nombreux.
+Le partage est né du besoin. Les deux premières ambiances tenaient dans une
+cascade de `if season == …` au milieu du constructeur d'une particule ; à cinq,
+cette cascade devenait un mur, et rien n'y était vérifiable sans construire un
+widget. Ici on ne trouve donc plus que les QUATRE gestes de peinture — point,
+flocon, enveloppe, flamme — et la mécanique de déplacement, commune à tous.
+
+Formes :
+- `point` — le fond ordinaire, et la poudreuse derrière les autres formes ;
+- `flocon` — six branches dessinées, qui tournoient (Noël) ;
+- `enveloppe` — la lettre de Poudlard, cachet de cire à l'accent du THÈME,
+  donc à la couleur de la maison de l'utilisateur (rentrée) ;
+- `flamme` — une goutte inversée à cœur clair, posée dans un large halo : ce
+  sont les bougies de la Grande Salle, et c'est le HALO qui fait la scène.
 """
 
 import logging
@@ -16,21 +24,42 @@ import math
 import random
 
 from PyQt6.QtCore import Qt, QPointF, QRect, QRectF
-from PyQt6.QtGui import QColor, QPainter, QPen, QRadialGradient, QRegion
+from PyQt6.QtGui import (
+    QColor, QPainter, QPainterPath, QPen, QRadialGradient, QRegion,
+)
 from PyQt6.QtWidgets import QWidget
 
-from src.ui import theme
+from src.ui import decor, theme
+from src.core.season import Profil, profil as profil_de
 from src.ui.ticker import TICK_MS, Ticker
 
 log = logging.getLogger(__name__)
 
-PARTICLE_COUNT = 35
-SEASON_COUNTS = {"halloween": 45, "noel": 55}
 FPS_INTERVAL = TICK_MS  # cadence du ticker partagé (~30 FPS)
 # Marge autour d'une particule dans sa zone sale : antialiasing + le
 # déplacement d'un tick (< 1 px). Généreuse à dessein — deux pixels de trop
 # ne coûtent rien, deux de moins laisseraient une trainée.
 _MARGE_ZONE = 3
+
+
+def _tirer(intervalle: tuple[float, float]) -> float:
+    return random.uniform(*intervalle)
+
+
+def _tirer_couleur(palette) -> tuple[int, int, int]:
+    """Tire une couleur de la palette pondérée ; `None` = accent du thème.
+
+    Le repli sur l'accent n'est pas une précaution : c'est ce qui fait que les
+    particules ordinaires restent vertes chez Serpentard et or chez Poudlard.
+    """
+    tirage = random.random()
+    cumul = 0.0
+    for couleur, part in palette:
+        cumul += part
+        if tirage <= cumul:
+            return couleur if couleur is not None else theme.current().accent_rgb
+    couleur = palette[-1][0] if palette else None
+    return couleur if couleur is not None else theme.current().accent_rgb
 
 
 class _Particle:
@@ -40,72 +69,36 @@ class _Particle:
         "glow_size", "shape", "sway", "flicker", "rotation", "rot_speed",
     )
 
-    def __init__(self, width: int, height: int, season: str = "aucune") -> None:
+    def __init__(self, width: int, height: int, profil: Profil) -> None:
         self.x = random.uniform(0, max(width, 1))
         self.y = random.uniform(0, max(height, 1))
-        self.size = random.uniform(1.5, 4.0)
 
-        # Movement
-        self.speed_y = random.uniform(-0.5, -0.2)   # drift up, faster
-        self.speed_x = random.uniform(-0.2, 0.2)     # slight horizontal drift
-        self.phase = random.uniform(0, math.tau)
-        self.phase_speed = 0.008
-        self.sway = 0.15          # amplitude de l'oscillation horizontale
-        self.shape = "dot"
-        self.rotation = 0.0
-        self.rot_speed = 0.0
-        self.flicker = 1.5        # vitesse de l'oscillation d'opacité
-
-        # Oscillating opacity — more visible
-        self.base_opacity = random.uniform(0.10, 0.35)
-        self.opacity_variation = random.uniform(0.05, 0.15)
-
-        # Color: 70% accent du thème, 30% silver
-        if random.random() < 0.7:
-            self.color_rgb = theme.current().accent_rgb
+        # La forme n'est portée que par une PART des particules : le reste
+        # fait le fond (la poudreuse derrière les flocons, les escarbilles
+        # derrière les lettres). Sans ce fond, une ambiance à forme paraît
+        # vide entre ses éléments.
+        porte_la_forme = random.random() < profil.part_forme
+        self.shape = profil.forme if porte_la_forme else "point"
+        if porte_la_forme or profil.taille_fond is None:
+            self.size = _tirer(profil.taille)
         else:
-            self.color_rgb = (200, 200, 230)
+            self.size = _tirer(profil.taille_fond)
 
-        # 15% have glow — bigger
-        self.has_glow = random.random() < 0.15
-        self.glow_size = random.uniform(8, 14) if self.has_glow else 0
+        self.speed_y = _tirer(profil.vitesse_y)
+        self.speed_x = _tirer(profil.derive_x)
+        self.sway = profil.oscillation
+        self.phase = random.uniform(0, math.tau)
+        self.phase_speed = profil.vitesse_phase
+        self.rotation = random.uniform(0, 360) if porte_la_forme else 0.0
+        self.rot_speed = _tirer(profil.vitesse_rotation) if porte_la_forme else 0.0
+        self.flicker = _tirer(profil.scintillement)
 
-        # ── Variantes saisonnières ──
-        if season == "halloween":
-            # Braises : orange/violet, glow large et fréquent, scintillement
-            # rapide, montée plus vive — ambiance feu de sorcière.
-            roll = random.random()
-            if roll < 0.60:
-                self.color_rgb = (255, 140, 0)
-            elif roll < 0.85:
-                self.color_rgb = (150, 90, 220)
-            else:
-                self.color_rgb = (200, 200, 230)
-            self.size = random.uniform(1.5, 3.5)
-            self.speed_y = random.uniform(-0.75, -0.35)
-            self.sway = 0.30
-            self.flicker = random.uniform(3.0, 5.0)
-            self.base_opacity = random.uniform(0.15, 0.40)
-            self.opacity_variation = random.uniform(0.12, 0.28)
-            self.has_glow = random.random() < 0.55
-            self.glow_size = random.uniform(10, 18) if self.has_glow else 0
-        elif season == "noel":
-            # Flocons : DESSINÉS (6 branches), blancs/bleutés, qui TOMBENT en
-            # tournoyant avec une large oscillation.
-            self.color_rgb = (235, 240, 255) if random.random() < 0.8 else (200, 210, 240)
-            self.speed_y = random.uniform(0.25, 0.6)
-            self.sway = 0.50
-            self.phase_speed = 0.012
-            if random.random() < 0.75:
-                self.shape = "flake"
-                self.size = random.uniform(2.5, 5.0)   # longueur d'une branche
-                self.rotation = random.uniform(0, 360)
-                self.rot_speed = random.uniform(-0.8, 0.8)
-                self.base_opacity = random.uniform(0.20, 0.45)
-            else:
-                self.size = random.uniform(1.2, 2.5)    # poudreuse en fond
-            self.has_glow = random.random() < 0.10
-            self.glow_size = random.uniform(8, 14) if self.has_glow else 0
+        self.base_opacity = _tirer(profil.opacite)
+        self.opacity_variation = _tirer(profil.variation)
+        self.color_rgb = _tirer_couleur(profil.palette)
+
+        self.has_glow = random.random() < profil.proba_halo
+        self.glow_size = _tirer(profil.halo) if self.has_glow else 0.0
 
 
 class ParticleOverlay(QWidget):
@@ -121,35 +114,39 @@ class ParticleOverlay(QWidget):
         self._time = 0.0
         self._ticking = False
         self._season = "aucune"
+        self._profil = profil_de("aucune")
 
         self.resume()
 
-
     def apply_season(self, season: str) -> None:
-        """Change la saison EN DIRECT : les particules sont re-semées au tick suivant."""
+        """Change l'ambiance EN DIRECT : les particules sont re-semées au tick suivant."""
         if season == self._season:
             return
         self._season = season
+        self._profil = profil_de(season)
         self._particles.clear()
         self.update()
         log.info("Particules saisonnières : %s", season)
 
     def _target_count(self) -> int:
-        return SEASON_COUNTS.get(self._season, PARTICLE_COUNT)
+        return self._profil.nombre
 
     def _ensure_particles(self) -> None:
         w, h = self.width(), self.height()
         while len(self._particles) < self._target_count():
-            self._particles.append(_Particle(w, h, self._season))
+            self._particles.append(_Particle(w, h, self._profil))
 
     @staticmethod
     def _zone(pt: "_Particle") -> QRect:
-        """Rectangle sale d'une particule : sa taille, son glow, et une marge.
+        """Rectangle sale d'une particule : sa taille, son halo, et une marge.
 
         La marge couvre l'antialiasing et le déplacement d'un tick (moins de
         1 px), pour qu'aucune trainée ne subsiste hors de la zone repeinte.
+        Les formes ÉTENDUES (enveloppe, flamme) débordent du rayon `size` :
+        `_ETALEMENT` le rattrape, sinon une lettre laisserait sa trace.
         """
-        rayon = max(pt.size, pt.glow_size) + _MARGE_ZONE
+        rayon = max(pt.size * _ETALEMENT.get(pt.shape, 1.0),
+                    pt.glow_size) + _MARGE_ZONE
         return QRect(int(pt.x - rayon), int(pt.y - rayon),
                      int(rayon * 2) + 1, int(rayon * 2) + 1)
 
@@ -178,7 +175,8 @@ class ParticleOverlay(QWidget):
             pt.phase += pt.phase_speed
             pt.rotation += pt.rot_speed
 
-            # Wrap around (les flocons de Noël descendent → wrap dans les deux sens)
+            # Wrap : une ambiance peut MONTER (braises) ou DESCENDRE (flocons,
+            # lettres, cendres), donc les deux bords sont gérés.
             if pt.y < -20:
                 pt.y = h + 10
                 pt.x = random.uniform(0, max(w, 1))
@@ -196,8 +194,15 @@ class ParticleOverlay(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
+        # Le décor AVANT les particules : les lettres et les flocons passent
+        # devant la silhouette, jamais derrière. Il est repeint à chaque image
+        # parce que l'overlay est translucide et que Qt efface la zone sale
+        # avant de la redessiner — mais son TRACÉ est mis en cache, donc le
+        # coût est celui d'un `drawPath` écrêté, pas d'une reconstruction.
+        decor.peindre(p, self._season, self.width(), self.height())
+
         for pt in self._particles:
-            # Oscillating opacity (flicker rapide pour les braises d'halloween)
+            # Opacité oscillante (scintillement rapide pour les braises).
             opacity = pt.base_opacity + math.sin(
                 self._time * pt.flicker + pt.phase
             ) * pt.opacity_variation
@@ -206,7 +211,7 @@ class ParticleOverlay(QWidget):
 
             r, g, b = pt.color_rgb
 
-            # ── Glow (drawn behind, larger and more transparent) ──
+            # ── Halo (peint derrière, plus large et plus transparent) ──
             if pt.has_glow:
                 glow_alpha = max(int(alpha * 0.30), 3)
                 gs = pt.glow_size
@@ -217,18 +222,20 @@ class ParticleOverlay(QWidget):
                 p.setBrush(grad)
                 p.drawEllipse(QRectF(pt.x - gs, pt.y - gs, gs * 2, gs * 2))
 
-            if pt.shape == "flake":
-                self._paint_flake(p, pt, QColor(r, g, b, alpha))
+            peintre = _FORMES.get(pt.shape)
+            if peintre is not None:
+                peintre(p, pt, QColor(r, g, b, alpha))
                 continue
 
-            # ── Main particle (dot) ──
-            color = QColor(r, g, b, alpha)
+            # ── Point : le fond ordinaire ──
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(color)
+            p.setBrush(QColor(r, g, b, alpha))
             s = pt.size
             p.drawEllipse(QRectF(pt.x - s, pt.y - s, s * 2, s * 2))
 
         p.end()
+
+    # ── Les quatre gestes de peinture ────────────────────────────────────
 
     @staticmethod
     def _paint_flake(p: QPainter, pt: _Particle, color: QColor) -> None:
@@ -245,6 +252,72 @@ class ParticleOverlay(QWidget):
         p.setBrush(color)
         p.setPen(Qt.PenStyle.NoPen)
         p.drawEllipse(QRectF(-0.8, -0.8, 1.6, 1.6))
+        p.restore()
+
+    @staticmethod
+    def _paint_envelope(p: QPainter, pt: _Particle, color: QColor) -> None:
+        """Lettre de Poudlard : rectangle, rabat en V, cachet de cire.
+
+        Le cachet prend l'accent du THÈME, jamais la couleur du papier : c'est
+        le seul point de couleur de la forme, et il porte la maison. Il est
+        peint à l'alpha de la lettre pour ne pas rester visible quand elle
+        s'efface — un point de couleur qui survit à son support se lit comme
+        un défaut d'affichage.
+        """
+        demi_l = pt.size * 0.78
+        demi_h = pt.size * 0.52
+        p.save()
+        p.translate(pt.x, pt.y)
+        p.rotate(pt.rotation)
+
+        corps = QRectF(-demi_l, -demi_h, demi_l * 2, demi_h * 2)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(color.red(), color.green(), color.blue(),
+                          int(color.alpha() * 0.62)))
+        p.drawRect(corps)
+        p.setPen(QPen(color, 0.9))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawRect(corps)
+        # Rabat : les deux arêtes qui descendent des coins hauts vers le centre.
+        p.drawLine(QPointF(-demi_l, -demi_h), QPointF(0.0, demi_h * 0.18))
+        p.drawLine(QPointF(demi_l, -demi_h), QPointF(0.0, demi_h * 0.18))
+
+        r, g, b = theme.current().accent_rgb
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(r, g, b, color.alpha()))
+        cire = max(pt.size * 0.17, 0.7)
+        p.drawEllipse(QRectF(-cire, demi_h * 0.18 - cire, cire * 2, cire * 2))
+        p.restore()
+
+    @staticmethod
+    def _paint_flame(p: QPainter, pt: _Particle, color: QColor) -> None:
+        """Bougie flottante : une goutte inversée, et un cœur plus clair.
+
+        Pas de rotation : une flamme qui tourne n'est plus une flamme. Elle
+        est peinte en coordonnées locales de sorte que sa POINTE soit vers le
+        haut, quel que soit le sens de déplacement de la particule.
+        """
+        hauteur = pt.size
+        largeur = pt.size * 0.62
+        p.save()
+        p.translate(pt.x, pt.y)
+
+        goutte = QPainterPath()
+        goutte.moveTo(0.0, -hauteur)
+        goutte.quadTo(largeur, -hauteur * 0.15, 0.0, hauteur)
+        goutte.quadTo(-largeur, -hauteur * 0.15, 0.0, -hauteur)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(color)
+        p.drawPath(goutte)
+
+        # Cœur : la même goutte en réduction, plus claire. C'est ce qui
+        # empêche la flamme de se lire comme une simple tache.
+        coeur = QPainterPath()
+        coeur.moveTo(0.0, -hauteur * 0.45)
+        coeur.quadTo(largeur * 0.42, 0.0, 0.0, hauteur * 0.55)
+        coeur.quadTo(-largeur * 0.42, 0.0, 0.0, -hauteur * 0.45)
+        p.setBrush(QColor(255, 248, 225, min(255, int(color.alpha() * 1.35))))
+        p.drawPath(coeur)
         p.restore()
 
     def showEvent(self, event) -> None:
@@ -264,3 +337,21 @@ class ParticleOverlay(QWidget):
         if not self._ticking:
             Ticker.instance().tick.connect(self._advance)
             self._ticking = True
+
+
+# Aiguillage de peinture. Une forme absente de la table retombe sur le point,
+# ce qui est le bon défaut : une `config.json` écrite par une version plus
+# récente peut nommer une forme que ce launcher ne sait pas dessiner, et un
+# point discret vaut mieux qu'une particule invisible.
+_FORMES = {
+    "flocon": ParticleOverlay._paint_flake,
+    "enveloppe": ParticleOverlay._paint_envelope,
+    "flamme": ParticleOverlay._paint_flame,
+}
+
+# Débordement d'une forme au-delà de son rayon `size`, pour la zone sale.
+# Mesuré sur les tracés ci-dessus : la lettre s'étend à 0,78 × size en demi-
+# largeur, mais tourne — sa diagonale atteint donc ~0,94. On arrondit au-
+# dessus : deux pixels de trop ne coûtent rien, deux de moins laissent une
+# trainée à l'écran.
+_ETALEMENT = {"enveloppe": 1.1, "flamme": 1.05, "flocon": 1.0}

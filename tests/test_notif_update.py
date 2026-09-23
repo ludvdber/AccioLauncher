@@ -172,14 +172,81 @@ class TestNotesDeVersion:
             "```\r\n"
         )
         notes = extract_release_notes({"body": corps})
+        # Le `---` TERMINE les notes : tout ce qui le suit (« Vérification »,
+        # l'empreinte, la commande d'attestation) sert à lire la release sur
+        # GitHub, pas à décider d'une mise à jour.
         assert notes.splitlines() == [
             "Corrections",
             "• Un jeu ne démarre plus sans explication",
             "• Avertissement sur les options vidéo",
-            "Vérification",
         ]
         assert "gh attestation" not in notes, "le bloc de code doit disparaître"
         assert "#" not in notes and "---" not in notes
+
+    def test_le_trait_horizontal_termine_les_notes(self):
+        """Nos notes portent, après le changelog, tout le nécessaire pour les
+        lire sur GitHub : comment télécharger, l'empreinte, la licence. Ces
+        lignes mangeaient la moitié des douze disponibles, et la boîte
+        explique DÉJÀ elle-même comment la mise à jour s'installe."""
+        from src.core.updater import extract_release_notes
+        notes = extract_release_notes({"body": (
+            "## Nouveautés\n\n- Le Choixpeau\n\n"
+            "---\n\n"
+            "## Télécharger\n\nTéléchargez le fichier ci-dessous.\n")})
+        assert notes.splitlines() == ["Nouveautés", "• Le Choixpeau"]
+        assert "Télécharger" not in notes
+
+    def test_le_balisage_inline_est_rabattu(self):
+        """On lisait « Téléchargez **AccioLauncher.exe** » dans la boîte,
+        astérisques comprises : la fonction rabotait les titres et les listes,
+        jamais le gras."""
+        from src.core.updater import extract_release_notes
+        notes = extract_release_notes({"body": (
+            "- Téléchargez **AccioLauncher.exe** et `lancez-le`\n"
+            "- Voir [le guide](https://exemple.test/guide)\n"
+            "- Le fichier hp1_video.mp4 garde son nom\n")})
+        assert notes.splitlines() == [
+            "• Téléchargez AccioLauncher.exe et lancez-le",
+            "• Voir le guide",
+            "• Le fichier hp1_video.mp4 garde son nom",
+        ]
+
+    def test_un_commentaire_html_sur_plusieurs_lignes_est_ecarte(self):
+        """Ne sauter que la ligne qui ouvre le commentaire laissait passer les
+        suivantes : le commentaire qui explique le modèle de release
+        s'affichait dans la boîte, amputé de sa première ligne. Trouvé en
+        rejouant le VRAI `.github/release-notes.md`."""
+        from src.core.updater import extract_release_notes
+        notes = extract_release_notes({"body": """- Une nouveauté
+<!-- Ceci explique comment
+     remplir ce modèle, sur
+     plusieurs lignes. -->
+- Une autre
+"""})
+        assert notes.splitlines() == ["• Une nouveauté", "• Une autre"]
+
+    def test_le_modele_de_release_du_depot_se_rend_proprement(self):
+        """Le seul test qui exerce le VRAI fichier : c'est lui qui part dans
+        chaque brouillon de release, donc lui qui finit à l'écran."""
+        from pathlib import Path
+
+        from src.core.updater import extract_release_notes
+        modele = (Path(__file__).resolve().parents[1]
+                  / ".github" / "release-notes.md").read_text(encoding="utf-8")
+        corps = modele.replace("- …", "- Une vraie nouveauté")
+        rendu = extract_release_notes({"body": corps})
+        assert rendu.splitlines() == ["Nouveautés", "• Une vraie nouveauté"], rendu
+        assert "Télécharger" not in rendu, (
+            "le passe-partout d'installation passe le trait horizontal")
+        assert "<" not in rendu and "-->" not in rendu
+
+    def test_une_ligne_de_html_est_ecartee(self):
+        from src.core.updater import extract_release_notes
+        notes = extract_release_notes({"body": (
+            "- Une vraie nouveauté\n"
+            "<details>\n<summary><b>Détails</b></summary>\n"
+            "- Une autre\n")})
+        assert notes.splitlines() == ["• Une vraie nouveauté", "• Une autre"]
 
     def test_pas_de_notes_pas_d_invention(self):
         """Release sans corps, API limitée, réponse inattendue : on se tait."""

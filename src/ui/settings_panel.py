@@ -33,7 +33,9 @@ from src.core.i18n import available_languages, tr
 from src.ui.fonts import cinzel
 from src.ui import about_page
 from src.ui.disk_scan_worker import DiskScanWorker
-from src.ui.season import resolve as resolve_season
+from src.core.season import (
+    SEASON_LABELS, SEASONS, resolve as resolve_season,
+)
 from src.ui.theme import THEMES, themed
 from src.ui.toggle_switch import toggle_row
 from src.ui.utils import avertir, is_writable_dir, open_local_path
@@ -353,21 +355,25 @@ class SettingsDialog(QDialog):
 
         season_row = QHBoxLayout()
         self._season_combo = self._combo()
-        for value, label in (
-            ("auto", tr("Automatique (selon la date)")),
-            ("aucune", tr("Aucune")),
-            ("halloween", tr("Halloween")),
-            ("noel", tr("Noël")),
-        ):
-            self._season_combo.addItem(label, value)
-        season_ids = ["auto", "aucune", "halloween", "noel"]
+        # La LISTE vient de `season.SEASONS`, jamais d'une copie locale : il y
+        # en avait une ici, et deux listes qu'aucun calcul ne relie finissent
+        # par diverger — ajouter une ambiance l'aurait laissée invisible dans
+        # les Paramètres, sans que rien ne le signale.
+        for value in SEASONS:
+            self._season_combo.addItem(tr(SEASON_LABELS[value]), value)
         self._season_combo.setCurrentIndex(
-            season_ids.index(self.config.season) if self.config.season in season_ids else 0)
+            SEASONS.index(self.config.season)
+            if self.config.season in SEASONS else 0)
         self._season_combo.currentIndexChanged.connect(self._on_season_changed)
         season_row.addWidget(self._season_combo)
         season_hint = QLabel(tr("Appliqué immédiatement."))
         season_hint.setObjectName("subtitle")
         season_row.addWidget(season_hint, stretch=1)
+
+        row_faits, self._tgl_faits = toggle_row(
+            tr("Fait du jour dans la barre de statut"),
+            self.config.faits_du_jour)
+        self._tgl_faits.toggled.connect(self._on_setting_changed)
 
         trailer_row = QHBoxLayout()
         self._lbl_trailers = QLabel("")
@@ -389,6 +395,7 @@ class SettingsDialog(QDialog):
             self._section(tr("Thème")), theme_row,
             self._button_row(self._theme_restart), self._theme_hint,
             self._section(tr("Particules saisonnières")), season_row,
+            self._section(tr("Almanach")), row_faits,
         )
 
     # ── Bandes-annonces ──
@@ -548,6 +555,7 @@ class SettingsDialog(QDialog):
         self.config.delete_archives = self._tgl_delete.isChecked()
         self.config.autoplay_videos = self._tgl_autoplay.isChecked()
         self.config.mute_videos = self._tgl_mute.isChecked()
+        self.config.faits_du_jour = self._tgl_faits.isChecked()
         self.config.discord_presence = self._tgl_discord.isChecked()
         self._save()
 

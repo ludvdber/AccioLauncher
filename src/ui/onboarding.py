@@ -46,6 +46,26 @@ log = logging.getLogger(__name__)
 TOTAL_PAGES = 5
 
 
+def _page_titree(libelle: str, taille: int = 20) -> tuple[QWidget, QVBoxLayout]:
+    """Le squelette commun des cinq écrans : une page, sa colonne, son titre.
+
+    Les cinq le recopiaient à l'identique — sept lignes chacun, à la taille du
+    titre près. Ce n'était pas un coût de frappe mais un risque de dérive :
+    l'objectName `wizTitle` est ce qui donne au titre sa couleur et son
+    espacement dans la feuille de style de l'assistant, et une page qui
+    l'oublierait s'afficherait en texte ordinaire sans que rien ne le
+    signale — la suite tourne `offscreen`, où personne ne regarde.
+    """
+    page = QWidget()
+    lay = QVBoxLayout(page)
+    lay.setSpacing(10)
+    titre = QLabel(libelle)
+    titre.setObjectName("wizTitle")
+    titre.setFont(cinzel_decorative(taille))
+    lay.addWidget(titre)
+    return page, lay
+
+
 def detect_installed_games(parent: Path, games: list[GameData]) -> list[tuple[GameData, Path]]:
     """Détecte les installations existantes sous `parent` (fonction pure).
 
@@ -150,13 +170,7 @@ class OnboardingDialog(QDialog):
         du sélecteur sont écrites dans leur propre langue, donc l'écran se lit
         sans connaître celle du launcher.
         """
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        lay.setSpacing(10)
-        title = QLabel("Accio Launcher")
-        title.setObjectName("wizTitle")
-        title.setFont(cinzel_decorative(22))
-        lay.addWidget(title)
+        page, lay = _page_titree("Accio Launcher", 22)
 
         subtitle = QLabel("Langue · Language · Idioma")
         subtitle.setObjectName("wizHint")
@@ -200,13 +214,7 @@ class OnboardingDialog(QDialog):
         Rien n'est obligatoire : sans une seule réponse, `repartir` rend une
         chaîne vide et le thème Poudlard est conservé.
         """
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        lay.setSpacing(10)
-        titre = QLabel(tr("Le Choixpeau"))
-        titre.setObjectName("wizTitle")
-        titre.setFont(cinzel_decorative(20))
-        lay.addWidget(titre)
+        page, lay = _page_titree(tr("Le Choixpeau"))
 
         intro = QLabel(tr("« Voyons voir… où vais-je bien pouvoir vous mettre ? »"))
         intro.setWordWrap(True)
@@ -247,13 +255,7 @@ class OnboardingDialog(QDialog):
             self._theme_combo.setCurrentIndex(rang)
 
     def _build_page_welcome(self) -> QWidget:
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        lay.setSpacing(10)
-        title = QLabel(tr("Bienvenue dans Accio Launcher"))
-        title.setObjectName("wizTitle")
-        title.setFont(cinzel_decorative(22))
-        lay.addWidget(title)
+        page, lay = _page_titree(tr("Bienvenue dans Accio Launcher"), 22)
         intro = QLabel(tr("Les jeux Harry Potter PC, prêts à jouer en un clic.\n"
                           "Choisissez d'abord le dossier où les jeux seront installés."))
         intro.setWordWrap(True)
@@ -277,13 +279,7 @@ class OnboardingDialog(QDialog):
         return page
 
     def _build_page_import(self) -> QWidget:
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        lay.setSpacing(10)
-        title = QLabel(tr("Vous avez déjà certains jeux ?"))
-        title.setObjectName("wizTitle")
-        title.setFont(cinzel_decorative(20))
-        lay.addWidget(title)
+        page, lay = _page_titree(tr("Vous avez déjà certains jeux ?"))
         hint = QLabel(tr("Indiquez le dossier qui contient vos installations existantes : "
                          "les jeux reconnus seront déplacés dans le launcher (même disque, "
                          "instantané). Vous pouvez passer cette étape."))
@@ -303,13 +299,7 @@ class OnboardingDialog(QDialog):
         return page
 
     def _build_page_prefs(self) -> QWidget:
-        page = QWidget()
-        lay = QVBoxLayout(page)
-        lay.setSpacing(10)
-        title = QLabel(tr("Dernières touches"))
-        title.setObjectName("wizTitle")
-        title.setFont(cinzel_decorative(20))
-        lay.addWidget(title)
+        page, lay = _page_titree(tr("Dernières touches"))
 
         # Le verdict du Choixpeau, juste au-dessus du thème qu'il a choisi :
         # sans ce voisinage, le thème paraîtrait avoir changé tout seul.

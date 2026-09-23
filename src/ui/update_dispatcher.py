@@ -35,7 +35,7 @@ from src.core.i18n import tr
 from src.core.self_update import apply_update_and_restart, can_self_update
 from src.core.thread_utils import arreter_a_la_fermeture
 from src.core.updater import UpdateChecker
-from src.ui.speed_tracker import SpeedTracker
+from src.core.speed_tracker import SpeedTracker
 from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)

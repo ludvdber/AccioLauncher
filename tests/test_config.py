@@ -167,3 +167,64 @@ class TestConfig:
         badge = re.search(r"badge/version-([0-9.]+)-", texte)
         assert badge is not None, "badge de version absent du README"
         assert badge.group(1) == APP_VERSION
+
+
+class TestChaqueReglageEstReellementPersiste:
+    """`save()` et `load()` tiennent chacun leur liste de champs À LA MAIN.
+
+    Rien ne les reliait au dataclass : ajouter un champ sans toucher aux deux
+    listes donne un réglage qui s'affiche, se coche, se relit en mémoire — et
+    disparaît à la fermeture du launcher. Payé le 2026-09-23 sur
+    `faits_du_jour`, et le test qui l'a révélé était un test du RÉGLAGE, pas
+    de la config : sans ce filet, le prochain passera aussi.
+
+    Deux listes qu'aucun calcul ne relie finissent par diverger — c'est le
+    défaut `THUMB_H` / `CAROUSEL_HEIGHT`, une troisième fois.
+    """
+
+    # Champs dérivés de l'environnement, dont la valeur ne se compare pas
+    # telle quelle d'un aller-retour à l'autre.
+    _CHEMINS = {"install_path", "cache_path"}
+
+    @staticmethod
+    def _valeur_temoin(champ, valeur):
+        """Une valeur DIFFÉRENTE du défaut, pour que l'oubli se voie."""
+        if isinstance(valeur, bool):
+            return not valeur
+        if isinstance(valeur, str):
+            return "temoin"
+        if isinstance(valeur, dict):
+            return {"hp1": "temoin"} if not valeur else valeur
+        return valeur
+
+    def test_tous_les_champs_font_l_aller_retour(self, tmp_path, monkeypatch):
+        import dataclasses
+
+        import src.core.config as cfgmod
+        from src.core.config import Config
+
+        monkeypatch.setattr(cfgmod, "CONFIG_FILE_PATH", tmp_path / "config.json")
+        base = Config(install_path=tmp_path / "jeux",
+                      cache_path=tmp_path / "cache")
+
+        attendus = {}
+        for champ in dataclasses.fields(Config):
+            if champ.name in self._CHEMINS:
+                continue
+            actuel = getattr(base, champ.name)
+            if isinstance(actuel, dict) and champ.name == "playtime_seconds":
+                temoin = {"hp1": 4242}
+            else:
+                temoin = self._valeur_temoin(champ, actuel)
+            attendus[champ.name] = temoin
+            setattr(base, champ.name, temoin)
+
+        base.save()
+        relu = Config.load()
+
+        perdus = {nom: (valeur, getattr(relu, nom))
+                  for nom, valeur in attendus.items()
+                  if getattr(relu, nom) != valeur}
+        assert not perdus, (
+            "réglage(s) non persisté(s) — ajoute-les à Config.save ET "
+            f"Config.load : {perdus}")

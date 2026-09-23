@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.26",
+  "catalog_version": "0.28",
   "contributors": [
     {
       "name": "ASTeam",
@@ -63,6 +63,7 @@
       "id": "hp1",
       "name": "Harry Potter à l'École des Sorciers",
       "year": 2001,
+      "annee": 1,
       "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
       "developer": "KnowWonder",
       "executable": "HP1/System/HP.exe",
@@ -73,7 +74,7 @@
         "Plateforme",
         "Énigmes"
       ],
-      "latest_version": "1.1",
+      "latest_version": "1.2",
       "recommended_version": "1.2",
       "versions": [
         {
@@ -272,6 +273,7 @@
       "id": "hp2",
       "name": "Harry Potter et la Chambre des Secrets",
       "year": 2002,
+      "annee": 2,
       "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
       "developer": "KnowWonder",
       "executable": "HP2/system/Game.exe",
@@ -282,7 +284,7 @@
         "Exploration",
         "Énigmes"
       ],
-      "latest_version": "1.0",
+      "latest_version": "1.1",
       "recommended_version": "1.1",
       "versions": [
         {
@@ -465,6 +467,7 @@
       "id": "hp3",
       "name": "Harry Potter et le Prisonnier d'Azkaban",
       "year": 2004,
+      "annee": 3,
       "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
       "developer": "KnowWonder",
       "executable": "HP3/system/hppoa.exe",
@@ -475,7 +478,7 @@
         "Plateforme",
         "Multi-personnages"
       ],
-      "latest_version": "1.1",
+      "latest_version": "1.2",
       "recommended_version": "1.2",
       "versions": [
         {
@@ -628,6 +631,7 @@
       "id": "hp4",
       "name": "Harry Potter et la Coupe de Feu",
       "year": 2005,
+      "annee": 4,
       "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
       "developer": "EA UK",
       "executable": "HP4/gof_f.exe",
@@ -704,6 +708,7 @@
       "id": "hp5",
       "name": "Harry Potter et l'Ordre du Phénix",
       "year": 2007,
+      "annee": 5,
       "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
       "developer": "EA UK",
       "executable": "HP5/hp.exe",
@@ -824,6 +829,7 @@
       "id": "hp6",
       "name": "Harry Potter et le Prince de Sang-Mêlé",
       "year": 2009,
+      "annee": 6,
       "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
       "developer": "EA UK",
       "executable": "HP6/hp6.exe",
@@ -904,6 +910,7 @@
       "id": "hp7a",
       "name": "Harry Potter et les Reliques de la Mort — Partie 1",
       "year": 2010,
+      "annee": 7,
       "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
       "developer": "EA Bright Light",
       "executable": "HP7/pc/hp7.exe",
@@ -1051,6 +1058,7 @@
       "id": "hp7b",
       "name": "Harry Potter et les Reliques de la Mort — Partie 2",
       "year": 2011,
+      "annee": 7,
       "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
       "developer": "EA Bright Light",
       "executable": "HP8/pc/hp8.exe",

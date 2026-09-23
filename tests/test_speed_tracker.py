@@ -1,10 +1,10 @@
-"""Tests pour src/core/formatting.py et src/ui/speed_tracker.py"""
+"""Tests pour src/core/formatting.py et src/core/speed_tracker.py"""
 
 from src.core.formatting import (
     format_size, format_bytes, format_speed, format_eta,
     format_progress_line, append_part_info,
 )
-from src.ui.speed_tracker import SpeedTracker
+from src.core.speed_tracker import SpeedTracker
 
 
 class TestFormatSize:

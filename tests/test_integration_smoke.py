@@ -345,6 +345,13 @@ class TestSeasonLive:
     def test_apply_season_reseeds_particles(self, make_window):
         win = make_window()
         win._particles.resize(800, 600)
+        # L'ambiance de DÉPART est posée explicitement. Elle était implicite,
+        # et le test supposait alors que la fenêtre s'ouvre toujours sur des
+        # particules qui montent — vrai tant que l'Almanach ne connaissait que
+        # deux dates, faux dès qu'un mois entier porte une ambiance qui TOMBE
+        # (la rentrée). Un test qui dépend de la date du jour échoue un mois
+        # sur cinq, sans que rien n'ait changé dans le code.
+        win._particles.apply_season("aucune")
         win._particles._ensure_particles()
         assert all(p.speed_y < 0 for p in win._particles._particles)  # ça monte
 

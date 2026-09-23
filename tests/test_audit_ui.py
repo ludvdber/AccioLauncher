@@ -89,6 +89,66 @@ class TestAriteDesSlots:
             "l'auto-update serait téléchargé sans vérification d'intégrité")
 
 
+class TestLesDeuxDeclarationsDeSignauxSAccordent:
+    """`UpdateChecker` et `UpdateDispatcher` déclarent les MÊMES signaux.
+
+    C'est une duplication assumée : le checker est un `QThread` de `src/core`,
+    le dispatcher un relais de `src/ui`, et le second réémet ce que le premier
+    produit. Le relais est justement ce qui permet à la fenêtre de ne pas
+    connaître le thread (règle « ici, rien qui se voie »).
+
+    Mais deux déclarations qu'aucun calcul ne relie finissent par diverger —
+    et cette divergence-là a DÉJÀ coûté : PyQt tronque en silence les
+    arguments qu'un receveur ne déclare pas, et l'empreinte SHA-256 de
+    l'auto-update a ainsi été jetée pendant des semaines, l'exe étant installé
+    sans vérification. Le filet voisin garde les SLOTS ; celui-ci garde les
+    deux déclarations l'une contre l'autre.
+
+    L'arité seule est comparée, pas les types : le checker émet `object` là où
+    le dispatcher réémet `dict`, et c'est délibéré.
+    """
+
+    @staticmethod
+    def _signaux(chemin: str) -> dict[str, int]:
+        """{nom du signal: nombre d'arguments}, lu à l'AST.
+
+        À l'AST et non par instrospection : `UpdateDispatcher` réclame une
+        fenêtre pour naître, et un test qui construit une fenêtre pour lire
+        une déclaration de classe mesure surtout la fenêtre.
+        """
+        import ast
+        from pathlib import Path
+
+        racine = Path(__file__).resolve().parents[1]
+        arbre = ast.parse((racine / chemin).read_text(encoding="utf-8"))
+        trouves: dict[str, int] = {}
+        for noeud in ast.walk(arbre):
+            if not isinstance(noeud, ast.Assign):
+                continue
+            appel = noeud.value
+            if not (isinstance(appel, ast.Call)
+                    and getattr(appel.func, "id", "") == "pyqtSignal"):
+                continue
+            for cible in noeud.targets:
+                if isinstance(cible, ast.Name):
+                    trouves[cible.id] = len(appel.args)
+        return trouves
+
+    def test_les_signaux_partages_ont_la_meme_arite(self):
+        checker = self._signaux("src/core/updater.py")
+        dispatcher = self._signaux("src/ui/update_dispatcher.py")
+        partages = set(checker) & set(dispatcher)
+        assert len(partages) >= 5, (
+            f"seulement {len(partages)} signaux partagés trouvés — "
+            "l'extraction AST a probablement cessé de fonctionner")
+        ecarts = {nom: (checker[nom], dispatcher[nom])
+                  for nom in sorted(partages)
+                  if checker[nom] != dispatcher[nom]}
+        assert not ecarts, (
+            "un argument ajouté d'un seul côté est silencieusement jeté par "
+            f"PyQt : {ecarts}")
+
+
 class TestPeintureDesParticules:
     """L'overlay est TRANSLUCIDE et couvre toute la fenêtre : un `update()` nu
     oblige Qt à repeindre tout ce qui est dessous, trente fois par seconde,

@@ -1,8 +1,18 @@
-<!-- Brouillon créé par le workflow « release ». Écrivez les nouveautés, puis « Publish release ». -->
+<!-- Brouillon créé par le workflow « release ». Écrivez les nouveautés, puis « Publish release ».
+     Ces lignes sont de l'INTERFACE : le launcher les affiche dans sa boîte de mise à
+     jour. Pas d'emoji dans les titres (Windows les rend en couleur, hors palette), et
+     des phrases courtes — douze lignes au plus arrivent à l'écran. -->
 
-## ⚡ Nouveautés
+## Nouveautés
 
 - …
+
+<!-- Le trait ci-dessous TERMINE les notes affichées dans le launcher :
+     tout ce qui suit sert à lire la release sur GitHub et n'a rien à
+     faire dans la boîte de mise à jour, qui explique déjà elle-même
+     comment l'installation se fait. Ne pas le retirer. -->
+
+---
 
 ## Télécharger
 

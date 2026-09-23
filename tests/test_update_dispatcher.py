@@ -243,7 +243,11 @@ class TestFenetreAllegee:
         dit si la fenetre reprend du travail qu'on lui a retire. Celui-ci ne
         fait que rendre la croissance visible, donc deliberee.
         """
+        # Plafond 950 -> 975 le 2026-09-23 : `_message_au_repos` (le fait du
+        # jour dans la barre de statut, la ou « Prêt » vivait) et les cinq
+        # arguments du signal de mise a jour. Le plafond se releve en le
+        # DISANT, jamais en silence — sinon il devient un compteur.
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 950, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 975, f"main_window.py a regrossi : {lignes} lignes"

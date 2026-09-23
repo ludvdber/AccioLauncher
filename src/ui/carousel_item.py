@@ -1,6 +1,7 @@
 """Miniature d'un jeu dans le carrousel — reflet, profondeur, badges."""
 
 import re
+from typing import NamedTuple
 
 from PyQt6.QtCore import (
     Qt, pyqtSignal, QRect, QRectF, QPropertyAnimation, QEasingCurve, pyqtProperty,
@@ -108,6 +109,22 @@ def _game_roman(game_id: str) -> str:
         n = int(m.group(1))
         return _ARABIC_TO_ROMAN.get(n, str(n))
     return game_id.upper()
+
+
+class _Geo(NamedTuple):
+    """Où poser la jaquette, et à quelle opacité la peindre.
+
+    Un seul rectangle partagé par toutes les couches : deux gestes qui
+    recalculeraient chacun leur position finiraient par diverger, et le
+    carrousel a déjà payé exactement ça entre `THUMB_H` et `CAROUSEL_HEIGHT`.
+    """
+
+    x: int
+    y: int
+    w: int
+    h: int
+    radius: float
+    opacite: float
 
 
 class CarouselItem(QWidget):
@@ -266,196 +283,254 @@ class CarouselItem(QWidget):
             self.clicked.emit()
 
     def paintEvent(self, event) -> None:
+        """La vignette, couche par couche, du fond vers les marques.
+
+        Chaque couche est un geste NOMMÉ, et l'ordre de cette liste EST l'ordre
+        de profondeur : l'ombre portée passe sous la jaquette, le reflet sous
+        les pastilles, le voile « bientôt » par-dessus tout le reste.
+
+        Ce corps faisait 194 lignes d'un seul tenant — trois fois le plus long
+        `paintEvent` du projet, relevé par l'audit du 2026-09-23. On n'y lisait
+        plus ce qui se peignait quand, et surtout plus l'opacité en cours, qui
+        change six fois en chemin. Découpe à rendu IDENTIQUE, vérifiée à
+        l'octet sur dix états (`tests/test_carousel.py`).
+        """
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
+        geo = self._geometrie()
+        p.setOpacity(geo.opacite)
+
+        if self._selected:
+            self._peindre_ombre_portee(p, geo)
+        self._peindre_jaquette(p, geo)
+        if self._selected:
+            self._peindre_halo_selection(p, geo)
+        if self._pixmap:
+            self._peindre_reflet(p, geo)
+        if self._cached_installed:
+            self._peindre_pastille_installe(p, geo)
+        if self._cached_has_update:
+            self._peindre_badge_maj(p, geo)
+        if self._cached_is_new and not self._cached_installed:
+            self._peindre_ruban_nouveau(p, geo)
+        if self._cached_coming_soon:
+            self._peindre_voile_bientot(p, geo)
+        if self._cached_reprise > 0:
+            self._peindre_filet_reprise(p, geo)
+
+        p.end()
+
+    def _geometrie(self) -> "_Geo":
+        """Où la jaquette se pose, et à quelle opacité.
+
+        Calculée UNE fois et passée à chaque couche : c'est ce qui empêche
+        deux gestes de peinture de diverger sur le même rectangle — le défaut
+        `THUMB_H` / `CAROUSEL_HEIGHT`, en plus petit et à l'intérieur d'une
+        seule fonction.
+        """
         scale = self._anim_scale
         w = int(self._thumb_w * scale)
         h = int(self._thumb_h * scale)
-        x_off = (self.width() - w) // 2
-        y_off = 5
-        radius = 6.0
-
-        eff_opacity = self._anim_opacity
+        opacite = self._anim_opacity
         if self._hovered and not self._selected:
-            eff_opacity = min(eff_opacity + 0.2, 1.0)
+            opacite = min(opacite + 0.2, 1.0)
+        return _Geo(x=(self.width() - w) // 2, y=5, w=w, h=h,
+                    radius=6.0, opacite=opacite)
 
-        p.setOpacity(eff_opacity)
+    # ── Les couches, du fond vers la surface ────────────────────────────
 
-        if self._selected:
-            p.save()
-            p.setOpacity(0.4)
-            for i in range(4):
-                spread = (i + 1) * 3
-                alpha = 60 - i * 12
-                p.setPen(Qt.PenStyle.NoPen)
-                p.setBrush(QColor(0, 0, 0, max(alpha, 5)))
-                p.drawRoundedRect(
-                    x_off - spread, y_off - spread + 4,
-                    w + spread * 2, h + spread * 2,
-                    radius + spread, radius + spread,
-                )
-            p.restore()
-            p.setOpacity(eff_opacity)
+    def _peindre_ombre_portee(self, p: QPainter, geo: "_Geo") -> None:
+        """Quatre halos noirs de plus en plus larges sous la vignette choisie."""
+        p.save()
+        p.setOpacity(0.4)
+        for i in range(4):
+            spread = (i + 1) * 3
+            alpha = 60 - i * 12
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(0, 0, 0, max(alpha, 5)))
+            p.drawRoundedRect(
+                geo.x - spread, geo.y - spread + 4,
+                geo.w + spread * 2, geo.h + spread * 2,
+                geo.radius + spread, geo.radius + spread,
+            )
+        p.restore()
+        p.setOpacity(geo.opacite)
 
-        clip = QPainterPath()
-        clip.addRoundedRect(float(x_off), float(y_off), float(w), float(h), radius, radius)
-
+    def _peindre_jaquette(self, p: QPainter, geo: "_Geo") -> None:
+        """L'illustration, ou son remplacement quand elle manque."""
         if self._pixmap:
+            clip = QPainterPath()
+            clip.addRoundedRect(float(geo.x), float(geo.y), float(geo.w),
+                                float(geo.h), geo.radius, geo.radius)
             p.setClipPath(clip)
-            p.drawPixmap(x_off, y_off, w, h, self._pixmap)
+            p.drawPixmap(geo.x, geo.y, geo.w, geo.h, self._pixmap)
             p.setClipping(False)
-        else:
-            # Vignette de repli (jaquette absente) : dégradé teinté par le thème
-            # — un bleu nuit codé en dur restait bleu au milieu d'une interface
-            # verte chez Serpentard.
-            grad = QLinearGradient(x_off, y_off, x_off, y_off + h)
-            grad.setColorAt(0, QColor(theme.current().bg_card))
-            grad.setColorAt(1, theme.bg_qcolor(255))
-            p.setBrush(grad)
-            p.setPen(QPen(accent_qcolor(60), 1.0))
-            p.drawRoundedRect(x_off, y_off, w, h, radius, radius)
+            return
 
-            # Le chiffre romain SEUL, centré. Il portait au-dessus un ⚡ demandé
-            # en « Segoe UI Emoji » : U+26A1 est à présentation emoji par défaut,
-            # donc Windows le rendait en couleur, hors palette et insensible au
-            # `setPen` — le piège du bouton pause bleu, en plus discret.
-            p.setOpacity(1.0)
-            roman = _game_roman(self.game.id)
-            p.setPen(accent_qcolor(160))
-            p.setFont(cinzel(20, bold=True))
-            p.drawText(QRect(x_off, y_off, w, h), Qt.AlignmentFlag.AlignCenter, roman)
-            p.setOpacity(eff_opacity)
+        # Vignette de repli (jaquette absente) : dégradé teinté par le thème
+        # — un bleu nuit codé en dur restait bleu au milieu d'une interface
+        # verte chez Serpentard.
+        grad = QLinearGradient(geo.x, geo.y, geo.x, geo.y + geo.h)
+        grad.setColorAt(0, QColor(theme.current().bg_card))
+        grad.setColorAt(1, theme.bg_qcolor(255))
+        p.setBrush(grad)
+        p.setPen(QPen(accent_qcolor(60), 1.0))
+        p.drawRoundedRect(geo.x, geo.y, geo.w, geo.h, geo.radius, geo.radius)
 
-        if self._selected:
-            p.setOpacity(1.0)
-            for i in range(3):
-                glow = accent_qcolor(25 - i * 7)
-                p.setPen(Qt.PenStyle.NoPen)
-                p.setBrush(glow)
-                off = (i + 1) * 3
-                p.drawRoundedRect(x_off - off, y_off - off, w + off * 2, h + off * 2, radius + off, radius + off)
+        # Le chiffre romain SEUL, centré. Il portait au-dessus un ⚡ demandé
+        # en « Segoe UI Emoji » : U+26A1 est à présentation emoji par défaut,
+        # donc Windows le rendait en couleur, hors palette et insensible au
+        # `setPen` — le piège du bouton pause bleu, en plus discret.
+        p.setOpacity(1.0)
+        p.setPen(accent_qcolor(160))
+        p.setFont(cinzel(20, bold=True))
+        p.drawText(QRect(geo.x, geo.y, geo.w, geo.h),
+                   Qt.AlignmentFlag.AlignCenter, _game_roman(self.game.id))
+        p.setOpacity(geo.opacite)
 
-            pen = QPen(accent_qcolor(), 2.0)
-            p.setPen(pen)
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawRoundedRect(x_off + 1, y_off + 1, w - 2, h - 2, radius, radius)
-
-        if self._pixmap:
-            ref_h = int(h * REFLECTION_RATIO)
-            ref_y = y_off + h + 4
-            if self._reflection_cache is None or self._reflection_cache_size != (w, h):
-                self._reflection_cache = self._pixmap.scaled(
-                    w, h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                    Qt.TransformationMode.SmoothTransformation,
-                ).transformed(QTransform().scale(1, -1))
-                self._reflection_cache_size = (w, h)
-            flipped = self._reflection_cache
-
-            p.setOpacity(eff_opacity * REFLECTION_OPACITY)
-            ref_clip = QPainterPath()
-            ref_clip.addRoundedRect(float(x_off), float(ref_y), float(w), float(ref_h), 3, 3)
-            p.setClipPath(ref_clip)
-            p.drawPixmap(x_off, ref_y, w, h, flipped)
-            p.setClipping(False)
-
-            p.setOpacity(1.0)
-            fade = QLinearGradient(0, ref_y, 0, ref_y + ref_h)
-            fade.setColorAt(0, theme.bg_qcolor(80))
-            fade.setColorAt(1, theme.bg_qcolor(255))
-            p.fillRect(x_off, ref_y, w, ref_h, fade)
-
-        if self._cached_installed:
-            p.setOpacity(1.0)
+    def _peindre_halo_selection(self, p: QPainter, geo: "_Geo") -> None:
+        """Le halo doré et le filet de la vignette choisie."""
+        p.setOpacity(1.0)
+        for i in range(3):
+            glow = accent_qcolor(25 - i * 7)
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor("#2ecc71"))
-            p.drawEllipse(x_off + w - 14, y_off + h - 14, 10, 10)
+            p.setBrush(glow)
+            off = (i + 1) * 3
+            p.drawRoundedRect(geo.x - off, geo.y - off, geo.w + off * 2,
+                              geo.h + off * 2, geo.radius + off, geo.radius + off)
 
-            ver_text = f"v{self._cached_version}" if self._cached_version else ""
-            if ver_text:
-                p.setFont(cinzel(9))
-                fm = p.fontMetrics()
-                tw = fm.horizontalAdvance(ver_text)
-                th = fm.height()
-                pad_x, pad_y = 4, 2
-                bx = x_off + 3
-                by = y_off + h - th - pad_y * 2 - 3
-                p.setBrush(QColor(0, 0, 0, 153))
-                p.drawRoundedRect(QRectF(bx, by, tw + pad_x * 2, th + pad_y * 2), 3, 3)
-                p.setPen(QColor(220, 220, 240, 200))
-                p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th), Qt.AlignmentFlag.AlignCenter, ver_text)
+        p.setPen(QPen(accent_qcolor(), 2.0))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawRoundedRect(geo.x + 1, geo.y + 1, geo.w - 2, geo.h - 2,
+                          geo.radius, geo.radius)
 
-        if self._cached_has_update:
-            p.setOpacity(1.0)
-            badge_size = 18
-            bx = x_off + w - badge_size - 2
-            by = y_off + 2
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(accent_qcolor(220))
-            p.drawRoundedRect(QRectF(bx, by, badge_size, badge_size), 4, 4)
-            p.setPen(QColor(255, 255, 255, 240))
-            p.setFont(cinzel(10, bold=True))
-            p.drawText(QRectF(bx, by, badge_size, badge_size), Qt.AlignmentFlag.AlignCenter, "↑")
+    def _peindre_reflet(self, p: QPainter, geo: "_Geo") -> None:
+        """La jaquette retournée sous la vignette, fondue vers le fond.
 
-        if self._cached_is_new and not self._cached_installed:
-            # Ruban « NOUVEAU » en haut à gauche (jeu apparu via update du catalogue)
-            p.setOpacity(1.0)
-            police, text = _badge_texte(tr("NOUVEAU"), w - 6)
-            p.setFont(police)
-            fm = p.fontMetrics()
-            tw = fm.horizontalAdvance(text)
-            bx, by = x_off + 3, y_off + 3
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(accent_qcolor(235))
-            p.drawRoundedRect(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3), 3, 3)
-            p.setPen(theme.bg_qcolor(255))
-            p.drawText(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3),
-                       Qt.AlignmentFlag.AlignCenter, text)
+        Le reflet est mis en cache à une taille : la changer sans l'invalider
+        laisserait l'ancien, à l'échelle d'avant.
+        """
+        ref_h = int(geo.h * REFLECTION_RATIO)
+        ref_y = geo.y + geo.h + 4
+        if (self._reflection_cache is None
+                or self._reflection_cache_size != (geo.w, geo.h)):
+            self._reflection_cache = self._pixmap.scaled(
+                geo.w, geo.h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation,
+            ).transformed(QTransform().scale(1, -1))
+            self._reflection_cache_size = (geo.w, geo.h)
+        flipped = self._reflection_cache
 
-        if self._cached_coming_soon:
-            # Voile sombre + mention discrète : la vignette reste lisible et
-            # attractive (c'est un jeu à venir, pas une erreur), mais on ne
-            # laisse pas croire qu'elle est jouable.
-            p.setOpacity(1.0)
-            p.fillRect(x_off, y_off, w, h, theme.bg_qcolor(120))
-            police, text = _badge_texte(tr("BIENTÔT"), w - 6)
-            p.setFont(police)
-            fm = p.fontMetrics()
-            tw = fm.horizontalAdvance(text)
-            bw, bh = tw + _BADGE_PADDING, fm.height() + 3
-            bx = x_off + (w - bw) // 2
-            by = y_off + (h - bh) // 2
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(theme.bg_qcolor(200))
-            p.drawRoundedRect(QRectF(bx, by, bw, bh), 3, 3)
-            p.setPen(QColor(200, 200, 220, 230))
-            p.drawText(QRectF(bx, by, bw, bh), Qt.AlignmentFlag.AlignCenter, text)
+        p.setOpacity(geo.opacite * REFLECTION_OPACITY)
+        ref_clip = QPainterPath()
+        ref_clip.addRoundedRect(float(geo.x), float(ref_y), float(geo.w),
+                                float(ref_h), 3, 3)
+        p.setClipPath(ref_clip)
+        p.drawPixmap(geo.x, ref_y, geo.w, geo.h, flipped)
+        p.setClipping(False)
 
-        if self._cached_reprise > 0:
-            # Téléchargement interrompu : un filet au bas de la jaquette,
-            # rempli à hauteur de ce qui est déjà reçu.
-            #
-            # Le téléchargeur reprend depuis toujours (`.part` + `Range`), et
-            # jusqu'ici RIEN ne le disait avant d'avoir navigué sur la fiche du
-            # bon jeu, parmi huit : mesuré le 2026-08-29, à la réouverture
-            # aucun des 16 textes visibles n'en soufflait mot, et le launcher
-            # ouvre sur le dernier jeu JOUÉ, jamais sur celui qu'on
-            # téléchargeait. Sur 4,6 Go, c'est quelqu'un qui a déjà attendu et
-            # qui croit avoir tout perdu.
-            #
-            # Un filet et non une pastille chiffrée : la vignette fait 100 px
-            # de large au repos, un pourcentage y serait illisible — et la
-            # question n'est pas « combien » mais « il y a quelque chose ici ».
-            # Aucun pictogramme non plus : Cinzel n'a pas de glyphe de pause,
-            # Windows partirait en repli couleur (cf. `icon_button.py`).
-            p.setOpacity(1.0)
-            ep = max(2.0, h * 0.022)
-            y_filet = y_off + h - ep
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(theme.bg_qcolor(190))
-            p.drawRect(QRectF(x_off, y_filet, w, ep))
-            p.setBrush(accent_qcolor(235))
-            p.drawRect(QRectF(x_off, y_filet, w * self._cached_reprise, ep))
+        p.setOpacity(1.0)
+        fade = QLinearGradient(0, ref_y, 0, ref_y + ref_h)
+        fade.setColorAt(0, theme.bg_qcolor(80))
+        fade.setColorAt(1, theme.bg_qcolor(255))
+        p.fillRect(geo.x, ref_y, geo.w, ref_h, fade)
 
-        p.end()
+    def _peindre_pastille_installe(self, p: QPainter, geo: "_Geo") -> None:
+        """Le point vert, et le numéro de version s'il est connu."""
+        p.setOpacity(1.0)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor("#2ecc71"))
+        p.drawEllipse(geo.x + geo.w - 14, geo.y + geo.h - 14, 10, 10)
+
+        ver_text = f"v{self._cached_version}" if self._cached_version else ""
+        if not ver_text:
+            return
+        p.setFont(cinzel(9))
+        fm = p.fontMetrics()
+        tw = fm.horizontalAdvance(ver_text)
+        th = fm.height()
+        pad_x, pad_y = 4, 2
+        bx = geo.x + 3
+        by = geo.y + geo.h - th - pad_y * 2 - 3
+        p.setBrush(QColor(0, 0, 0, 153))
+        p.drawRoundedRect(QRectF(bx, by, tw + pad_x * 2, th + pad_y * 2), 3, 3)
+        p.setPen(QColor(220, 220, 240, 200))
+        p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th),
+                   Qt.AlignmentFlag.AlignCenter, ver_text)
+
+    def _peindre_badge_maj(self, p: QPainter, geo: "_Geo") -> None:
+        """La pastille « ↑ » d'une mise à jour disponible."""
+        p.setOpacity(1.0)
+        badge_size = 18
+        bx = geo.x + geo.w - badge_size - 2
+        by = geo.y + 2
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(accent_qcolor(220))
+        p.drawRoundedRect(QRectF(bx, by, badge_size, badge_size), 4, 4)
+        p.setPen(QColor(255, 255, 255, 240))
+        p.setFont(cinzel(10, bold=True))
+        p.drawText(QRectF(bx, by, badge_size, badge_size),
+                   Qt.AlignmentFlag.AlignCenter, "↑")
+
+    def _peindre_ruban_nouveau(self, p: QPainter, geo: "_Geo") -> None:
+        """Ruban « NOUVEAU » (jeu apparu via une mise à jour du catalogue)."""
+        p.setOpacity(1.0)
+        police, text = _badge_texte(tr("NOUVEAU"), geo.w - 6)
+        p.setFont(police)
+        fm = p.fontMetrics()
+        tw = fm.horizontalAdvance(text)
+        bx, by = geo.x + 3, geo.y + 3
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(accent_qcolor(235))
+        p.drawRoundedRect(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3), 3, 3)
+        p.setPen(theme.bg_qcolor(255))
+        p.drawText(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3),
+                   Qt.AlignmentFlag.AlignCenter, text)
+
+    def _peindre_voile_bientot(self, p: QPainter, geo: "_Geo") -> None:
+        """Voile sombre + mention discrète : la vignette reste lisible et
+        attractive (c'est un jeu à venir, pas une erreur), mais on ne laisse
+        pas croire qu'elle est jouable."""
+        p.setOpacity(1.0)
+        p.fillRect(geo.x, geo.y, geo.w, geo.h, theme.bg_qcolor(120))
+        police, text = _badge_texte(tr("BIENTÔT"), geo.w - 6)
+        p.setFont(police)
+        fm = p.fontMetrics()
+        tw = fm.horizontalAdvance(text)
+        bw, bh = tw + _BADGE_PADDING, fm.height() + 3
+        bx = geo.x + (geo.w - bw) // 2
+        by = geo.y + (geo.h - bh) // 2
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(theme.bg_qcolor(200))
+        p.drawRoundedRect(QRectF(bx, by, bw, bh), 3, 3)
+        p.setPen(QColor(200, 200, 220, 230))
+        p.drawText(QRectF(bx, by, bw, bh), Qt.AlignmentFlag.AlignCenter, text)
+
+    def _peindre_filet_reprise(self, p: QPainter, geo: "_Geo") -> None:
+        """Téléchargement interrompu : un filet au bas de la jaquette, rempli
+        à hauteur de ce qui est déjà reçu.
+
+        Le téléchargeur reprend depuis toujours (`.part` + `Range`), et
+        jusqu'ici RIEN ne le disait avant d'avoir navigué sur la fiche du bon
+        jeu, parmi huit : mesuré le 2026-08-29, à la réouverture aucun des 16
+        textes visibles n'en soufflait mot, et le launcher ouvre sur le dernier
+        jeu JOUÉ, jamais sur celui qu'on téléchargeait. Sur 4,6 Go, c'est
+        quelqu'un qui a déjà attendu et qui croit avoir tout perdu.
+
+        Un filet et non une pastille chiffrée : la vignette fait 100 px de
+        large au repos, un pourcentage y serait illisible — et la question
+        n'est pas « combien » mais « il y a quelque chose ici ». Aucun
+        pictogramme non plus : Cinzel n'a pas de glyphe de pause, Windows
+        partirait en repli couleur (cf. `icon_button.py`).
+        """
+        p.setOpacity(1.0)
+        ep = max(2.0, geo.h * 0.022)
+        y_filet = geo.y + geo.h - ep
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(theme.bg_qcolor(190))
+        p.drawRect(QRectF(geo.x, y_filet, geo.w, ep))
+        p.setBrush(accent_qcolor(235))
+        p.drawRect(QRectF(geo.x, y_filet, geo.w * self._cached_reprise, ep))
+

@@ -97,3 +97,46 @@ class TestChoixpeauDansLAssistant:
         dlg._pages.setCurrentIndex(dlg._pages.count() - 1)
         dlg._go_next()                       # « Terminer »
         assert dlg.theme == "serdaigle"      # le dernier mot revient au joueur
+
+
+class TestChaquePageAUnTitre:
+    """Les cinq écrans partageaient sept lignes de préambule, recopiées.
+
+    Ce n'était pas un coût de frappe : l'`objectName` « wizTitle » est ce qui
+    donne au titre sa couleur et son espacement dans la feuille de style de
+    l'assistant. Une page qui l'oublierait s'afficherait en texte ordinaire —
+    et personne ne le verrait, la suite tournant `offscreen`. Le préambule vit
+    désormais dans `_page_titree`, et ce test garde ce que le helper promet.
+    """
+
+    @staticmethod
+    def _assistant(qtbot):
+        from src.ui.onboarding import OnboardingDialog
+        dlg = OnboardingDialog()
+        qtbot.addWidget(dlg)
+        dlg._build_rest()
+        return dlg
+
+    def test_chaque_ecran_porte_exactement_un_titre_wiztitle(self, qtbot):
+        from PyQt6.QtWidgets import QLabel
+        from src.ui.onboarding import TOTAL_PAGES
+
+        dlg = self._assistant(qtbot)
+        for index in range(TOTAL_PAGES):
+            page = dlg._pages.widget(index)
+            titres = [w for w in page.findChildren(QLabel)
+                      if w.objectName() == "wizTitle"]
+            assert len(titres) == 1, (
+                f"écran {index + 1} : {len(titres)} titre(s) « wizTitle »")
+            assert titres[0].text().strip(), f"écran {index + 1} : titre vide"
+
+    def test_le_helper_rend_une_page_et_sa_colonne(self, qtbot):
+        from PyQt6.QtWidgets import QVBoxLayout, QWidget
+        from src.ui.onboarding import _page_titree
+
+        page, lay = _page_titree("Essai")
+        qtbot.addWidget(page)
+        assert isinstance(page, QWidget) and isinstance(lay, QVBoxLayout)
+        assert lay.parentWidget() is page, (
+            "la colonne doit être POSÉE sur la page, sinon les widgets ajoutés "
+            "ensuite n'apparaissent nulle part")

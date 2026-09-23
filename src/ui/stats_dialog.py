@@ -43,10 +43,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import sauvegardes, stats
+from src.core import sauvegardes, scolarite, stats
 from src.core.config import ASSETS_DIR
 from src.core.formatting import format_duree_compacte
-from src.core.game_manager import GameManager
+from src.core.game_manager import GameManager, GameState
 from src.core.i18n import get_language, tr
 from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
 from src.ui.fonts import cinzel
@@ -502,6 +502,157 @@ class _CarteSauvegarde(QFrame):
         couche.addLayout(grille)
 
 
+class _Scolarite(QWidget):
+    """Les sept années en une bande — où l'on en est dans la scolarité.
+
+    Toujours SEPT cases, même vides : une année que personne n'a commencée est
+    une information (« elle t'attend »), pas une absence à masquer. C'est le
+    même principe que l'étagère au-dessus, qui montre toujours huit jaquettes.
+
+    Rien n'est collecté pour ça : l'année vient du catalogue, le statut du
+    temps de jeu et de l'état d'installation, tous deux déjà mesurés. C'est une
+    LECTURE du catalogue, pas un mécanisme de plus.
+    """
+
+    _HAUTEUR = 42
+    _ECART = 6
+
+    # Une année se CHOISIT : elle porte le jeu de cette année dans la fiche du
+    # dessous. Un bloc qui a l'air d'un bouton et ne répond pas est pire qu'un
+    # bloc inerte — c'est le premier reproche de Ludo à cette bande.
+    choisi = pyqtSignal(str)              # identifiant du jeu de l'année
+
+    def __init__(self, annees: list[scolarite.Annee], courante: int,
+                 selectionnables: set[str] | None = None, parent=None) -> None:
+        super().__init__(parent)
+        self._annees = annees
+        self._courante = courante
+        self._selectionnables = selectionnables or set()
+        self._survol: int | None = None
+        self.setFixedHeight(self._HAUTEUR)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setMouseTracking(True)
+        if self._jouables():
+            self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self.setAccessibleName(tr("Les sept années"))
+
+    def _jouables(self) -> list[int]:
+        """Les index des années dont un jeu a quelque chose à montrer."""
+        return [i for i, a in enumerate(self._annees)
+                if any(j.id in self._selectionnables for j in a.jeux)]
+
+    def _jeu_de(self, i: int) -> str | None:
+        for jeu in self._annees[i].jeux:
+            if jeu.id in self._selectionnables:
+                return jeu.id
+        return None
+
+    def _case(self, i: int) -> QRectF:
+        largeur = (self.width() - self._ECART * (len(self._annees) - 1)) \
+            / max(len(self._annees), 1)
+        return QRectF(i * (largeur + self._ECART), 0.0,
+                      largeur, float(self._HAUTEUR))
+
+    def _index_sous(self, x: float) -> int | None:
+        for i in range(len(self._annees)):
+            if self._case(i).contains(x, self._HAUTEUR / 2):
+                return i
+        return None
+
+    def mouseMoveEvent(self, event) -> None:
+        i = self._index_sous(event.position().x())
+        survol = i if i is not None and self._jeu_de(i) else None
+        if survol != self._survol:
+            self._survol = survol
+            self.update()
+        if survol is None:
+            self.unsetCursor()
+        else:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def leaveEvent(self, event) -> None:
+        if self._survol is not None:
+            self._survol = None
+            self.update()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            i = self._index_sous(event.position().x())
+            if i is not None:
+                self._choisir(i)
+        super().mousePressEvent(event)
+
+    def keyPressEvent(self, event) -> None:
+        """←/→/Début/Fin, comme l'étagère : un contrôle peint qui se clique
+        doit s'atteindre au clavier (règle du projet, payée sur `ToggleSwitch`)."""
+        ordre = self._jouables()
+        if not ordre:
+            super().keyPressEvent(event)
+            return
+        pos = ordre.index(self._survol) if self._survol in ordre else -1
+        touche = event.key()
+        if touche == Qt.Key.Key_Right:
+            cible = ordre[min(pos + 1, len(ordre) - 1)]
+        elif touche == Qt.Key.Key_Left:
+            cible = ordre[max(pos - 1, 0)]
+        elif touche == Qt.Key.Key_Home:
+            cible = ordre[0]
+        elif touche == Qt.Key.Key_End:
+            cible = ordre[-1]
+        elif touche in (Qt.Key.Key_Space, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if pos >= 0:
+                self._choisir(ordre[pos])
+            return
+        else:
+            super().keyPressEvent(event)
+            return
+        self._survol = cible
+        self.update()
+        self._choisir(cible)
+
+    def _choisir(self, i: int) -> None:
+        gid = self._jeu_de(i)
+        if gid is not None:
+            self.choisi.emit(gid)
+
+    def paintEvent(self, event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setFont(cinzel(13, bold=True))
+        clavier = self.property(_FOCUS_CLAVIER) and self.hasFocus()
+        for i, annee in enumerate(self._annees):
+            case = self._case(i).adjusted(0.5, 0.5, -0.5, -0.5)
+            actuelle = annee.numero == self._courante
+            if annee.statut is scolarite.Statut.COMMENCEE:
+                p.setBrush(accent_qcolor(38))
+                bord, encre = accent_qcolor(165), QColor("#f2f2f4")
+            elif annee.statut is scolarite.Statut.EN_ATTENTE:
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                bord, encre = QColor(255, 255, 255, 52), QColor(_SECONDAIRE)
+            else:
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                bord, encre = QColor(255, 255, 255, 22), QColor("#6a6a82")
+            if i == self._survol:
+                p.setBrush(accent_qcolor(60))
+                bord, encre = accent_qcolor(200), QColor("#f2f2f4")
+            # L'année EN COURS se distingue par l'épaisseur du trait et non par
+            # une couleur de plus : la page en compte déjà assez, et un trait
+            # plus franc se lit sans qu'on ait à apprendre un code.
+            p.setPen(QPen(accent_qcolor(230) if actuelle else bord,
+                          2.0 if actuelle else 1.0))
+            p.drawRoundedRect(case, 5.0, 5.0)
+            p.setPen(encre)
+            p.drawText(case, int(Qt.AlignmentFlag.AlignCenter), str(annee.numero))
+            # Anneau de focus DESSINÉ : un widget peint n'est jamais atteint
+            # par la règle `:focus` de la feuille de style.
+            if clavier and i == self._survol:
+                p.setPen(QPen(accent_qcolor(255), 2.0))
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawRoundedRect(case.adjusted(-2, -2, 2, 2), 7.0, 7.0)
+        p.end()
+
+
 class StatsDialog(QDialog):
     """La saga : l'étagère, la fiche du jeu choisi, la saga, les mois."""
 
@@ -512,6 +663,7 @@ class StatsDialog(QDialog):
         # Les dérivées dont vit toute la page, calculées UNE fois.
         self._entrees = manager.get_games()
         self._noms = {e.game.id: e.game.name for e in self._entrees}
+        self._etats = {e.game.id: e.state for e in self._entrees}
         self._temps = stats.temps_par_jeu(self._hist)
         self._parties = stats.parties_par_jeu(self._hist)
         self._dernieres = stats.derniere_par_jeu(self._hist)
@@ -634,6 +786,10 @@ class StatsDialog(QDialog):
             # ligne de flottaison (mesuré à 920×720 avec les données de Ludo)
             # pendant que la fiche laissait une demi-largeur vide à côté de
             # ses cartes.
+            bande = self._bande_scolarite()
+            if bande is not None:
+                corps.addLayout(bande)
+
             rangee = QHBoxLayout()
             rangee.setSpacing(24)
             gauche = QVBoxLayout()
@@ -682,6 +838,66 @@ class StatsDialog(QDialog):
                       "à partir de ta prochaine partie.")
         return tr("Aucune partie enregistrée pour l'instant — "
                   "lance un jeu, cette page se remplira toute seule.")
+
+    def _bande_scolarite(self) -> QVBoxLayout | None:
+        """Les sept années — la bande, son titre et sa phrase.
+
+        None tant qu'AUCUNE année n'a commencé : la bande n'apprendrait alors
+        rien que la phrase d'ouverture ne dise déjà, et sept cases vides sous
+        « aucune partie enregistrée » sont du remplissage. Un état ne s'affiche
+        que lorsqu'il dévie.
+        """
+        liste = scolarite.annees(
+            [e.game for e in self._entrees],
+            lambda gid: self._etats.get(gid) is GameState.INSTALLED,
+            lambda gid: self._temps.get(gid, 0))
+        courante = scolarite.annee_courante(liste)
+        if courante == 0:
+            return None
+
+        bande = _Scolarite(liste, courante, self._selectionnables())
+        # Cliquer une année pose son jeu dans la fiche du dessous — le même
+        # geste que l'étagère, vers la même cible.
+        bande.choisi.connect(self._montrer_jeu)
+        bande.choisi.connect(self._etagere.choisir)
+        bloc = QVBoxLayout()
+        bloc.setSpacing(8)
+        bloc.addWidget(_titre_section(tr("Les sept années")))
+        bloc.addWidget(bande)
+        bloc.addWidget(_Paragraphe(self._phrase_scolarite(liste, courante)))
+        return bloc
+
+    @staticmethod
+    def _phrase_scolarite(liste, courante: int) -> str:
+        """« Tu es en 5ᵉ année. La 6ᵉ année t'attend. »
+
+        Deux suites possibles, et une seule à la fois. **Ce qui ATTEND est
+        devant** : la première année non commencée au-delà de celle où l'on
+        est. Quand il n'y a plus rien devant mais qu'on a sauté des années en
+        chemin, on ne dit pas qu'elles « attendent » — on dit combien il en
+        reste, et la bande juste au-dessus montre lesquelles. « Tu es en 7ᵉ
+        année. La 4ᵉ année t'attend. » était la première version, et Ludo l'a
+        justement trouvée ridicule.
+
+        L'ordinal ne se fabrique PAS en collant un suffixe au nombre : le
+        français écrit « 1ʳᵉ » et non « 1ᵉ », et l'anglais comme l'espagnol
+        construisent la phrase autrement. Chaque forme est donc une clé, et
+        c'est le traducteur qui décide de sa langue.
+        """
+        phrase = (tr("Tu es en 1ʳᵉ année.") if courante == 1
+                  else tr("Tu es en {}ᵉ année.").format(courante))
+        suivante = scolarite.prochaine_annee(liste)
+        if suivante is not None:
+            phrase += " " + (
+                tr("La 1ʳᵉ année t'attend.") if suivante.numero == 1
+                else tr("La {}ᵉ année t'attend.").format(suivante.numero))
+            return phrase
+        reste = len(scolarite.restantes(liste))
+        if reste == 1:
+            phrase += " " + tr("Il te reste une année à découvrir.")
+        elif reste > 1:
+            phrase += " " + tr("Il te reste {} années à découvrir.").format(reste)
+        return phrase
 
     def _colonne_saga(self) -> QWidget:
         """Toute la saga : total, année, mois, plus longue partie.

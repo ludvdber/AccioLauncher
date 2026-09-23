@@ -356,6 +356,19 @@ class GameVersion:
         )
 
 
+def _annee_valide(brut) -> int:
+    """Année de scolarité déclarée par le catalogue : 1 à 7, sinon 0.
+
+    0 signifie « hors programme », et c'est une réponse légitime, pas une
+    erreur : la Coupe du Monde de Quidditch n'est l'année de personne. Un
+    catalogue distant peut aussi envoyer n'importe quoi — `True` est un `int`
+    en Python et vaudrait « 1ʳᵉ année », d'où le refus explicite des booléens.
+    """
+    if isinstance(brut, bool) or not isinstance(brut, int):
+        return 0
+    return brut if 1 <= brut <= 7 else 0
+
+
 def _url_aide_valide(brut) -> str:
     """URL d'aide du catalogue, ou chaîne vide si elle n'est pas acceptable.
 
@@ -533,6 +546,19 @@ class GameData:
     # À partir de HP5 le moteur change et ses réglages fonctionnent : le champ
     # est donc PAR JEU, et rien ne s'affiche pour ceux qui vont bien.
     display_locked: bool = False
+    # Année de scolarité que ce jeu raconte — 1 à 7, ou 0 pour « hors
+    # programme ».
+    #
+    # Elle vient du CATALOGUE et jamais du RANG du jeu dans la liste, et c'est
+    # tout l'intérêt du champ : le catalogue accueillera un jour la Coupe du
+    # Monde de Quidditch, qui n'est l'année de personne. Déduire l'année d'un
+    # index aurait fait de ce jeu une « 9ᵉ année » et décalé tout ce qui le
+    # suit ; sans `annee`, il est simplement hors des cours.
+    #
+    # Une année peut porter PLUSIEURS jeux : les deux parties des Reliques de
+    # la Mort sont la même septième année, celle qui ne s'est pas passée à
+    # Poudlard. C'est ce que disent leurs titres, donc le modèle le dit aussi.
+    annee: int = 0
     # Où le jeu range ses sauvegardes ; None tant qu'on ne l'a pas relevé.
     sauvegardes: Sauvegardes | None = None
 
@@ -631,6 +657,7 @@ class GameData:
             # qui change la façon dont on lance un exécutable.
             dpi_aware=data.get("dpi_aware") is True,
             display_locked=data.get("display_locked") is True,
+            annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),

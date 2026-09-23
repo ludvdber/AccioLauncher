@@ -130,7 +130,12 @@ class Config:
     cache_path: Path = field(default_factory=lambda: DEFAULT_CACHE_PATH)
     langue: str = DEFAULT_LANGUAGE
     theme: str = "poudlard"
-    season: str = "auto"  # particules saisonnières : auto | aucune | halloween | noel
+    season: str = "auto"  # ambiance de l'Almanach ; voir src/core/season.py
+    # Le fait du jour, dans la barre de statut. Par défaut OUI : il prend la
+    # place de « Prêt », un état normal que le projet s'interdit d'afficher
+    # partout ailleurs, et il s'efface dès que le launcher a quelque chose
+    # de réel à dire. Il ne coûte donc aucune place et n'interrompt rien.
+    faits_du_jour: bool = True
     delete_archives: bool = True
     autoplay_videos: bool = True
     # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
@@ -182,6 +187,7 @@ class Config:
                     langue=_as_str(data.get("langue"), DEFAULT_LANGUAGE),
                     theme=_as_str(data.get("theme"), "poudlard"),
                     season=_as_str(data.get("season"), "auto"),
+                    faits_du_jour=_as_bool(data.get("faits_du_jour"), True),
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
@@ -220,6 +226,7 @@ class Config:
                 "langue": self.langue,
                 "theme": self.theme,
                 "season": self.season,
+                "faits_du_jour": self.faits_du_jour,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,

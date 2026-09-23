@@ -336,3 +336,90 @@ class TestFiletDeReprise:
         assert "0.99" not in panel, "seuil de reprise recopié dans action_panel"
         assert "0.99" not in item, "seuil de reprise recopié dans carousel_item"
         assert "manager.reprise(" in item or ".reprise(" in item
+
+
+class TestLesCouchesDeLaVignette:
+    """`paintEvent` faisait 194 lignes d'un seul tenant.
+
+    Trois fois le plus long `paintEvent` du projet (audit du 2026-09-23). On
+    n'y lisait plus ni l'ordre de profondeur ni l'opacité en cours, qui change
+    six fois en chemin. La découpe a été vérifiée à l'OCTET sur dix états —
+    ombre, jaquette, halo, reflet, pastilles, ruban, voile, filet — et ces
+    tests gardent ce que la découpe promet.
+    """
+
+    # L'ordre EST la profondeur : l'ombre sous la jaquette, le reflet sous les
+    # pastilles, le voile « bientôt » par-dessus tout ce qui est jouable.
+    _ORDRE = [
+        "_peindre_ombre_portee",
+        "_peindre_jaquette",
+        "_peindre_halo_selection",
+        "_peindre_reflet",
+        "_peindre_pastille_installe",
+        "_peindre_badge_maj",
+        "_peindre_ruban_nouveau",
+        "_peindre_voile_bientot",
+        "_peindre_filet_reprise",
+    ]
+
+    @staticmethod
+    def _source_paint() -> str:
+        import inspect
+        return inspect.getsource(CarouselItem.paintEvent)
+
+    def test_chaque_couche_existe(self):
+        for nom in self._ORDRE:
+            assert hasattr(CarouselItem, nom), f"couche manquante : {nom}"
+
+    def test_l_ordre_de_peinture_est_l_ordre_de_profondeur(self):
+        """Déplacer un appel ici change ce qui passe DEVANT quoi. Un reflet
+        peint après les pastilles les effacerait à moitié."""
+        src = self._source_paint()
+        positions = [src.find(nom) for nom in self._ORDRE]
+        assert all(p >= 0 for p in positions), "une couche n'est plus appelée"
+        assert positions == sorted(positions), (
+            "l'ordre des couches a changé — c'est l'ordre de profondeur")
+
+    def test_le_corps_reste_court(self):
+        """Un plafond qu'on ne tient pas redevient un mur de 194 lignes."""
+        lignes = [x for x in self._source_paint().splitlines()
+                  if x.strip() and not x.strip().startswith("#")]
+        assert len(lignes) <= 45, (
+            f"paintEvent est remonté à {len(lignes)} lignes — les nouvelles "
+            "couches se posent dans une méthode nommée, pas dans le corps")
+
+    @pytest.mark.parametrize("etat", [
+        {},
+        {"_selected": True, "_anim_scale": 1.0, "_anim_opacity": 1.0},
+        {"_hovered": True},
+        {"_cached_installed": True, "_cached_version": "1.2"},
+        {"_cached_has_update": True},
+        {"_cached_is_new": True},
+        {"_cached_coming_soon": True},
+        {"_cached_reprise": 0.42},
+    ])
+    def test_chaque_etat_se_peint_sans_erreur(self, qtbot, etat):
+        item = CarouselItem(_make_game("hp1"), _FakeManager())
+        qtbot.addWidget(item)
+        item.resize(200, 300)
+        for cle, val in etat.items():
+            setattr(item, cle, val)
+        image = QImage(200, 300, QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(0)
+        peintre = QPainter(image)
+        item.render(peintre)
+        peintre.end()
+        assert any(image.pixelColor(x, y).alpha() > 0
+                   for x in range(0, 200, 5) for y in range(0, 300, 5))
+
+    def test_la_geometrie_est_partagee_et_non_recalculee(self, qtbot):
+        """Chaque couche reçoit le MÊME rectangle. Deux couches qui le
+        recalculeraient chacune finiraient par diverger — c'est le défaut
+        `THUMB_H` / `CAROUSEL_HEIGHT`, à l'intérieur d'un seul fichier."""
+        item = CarouselItem(_make_game("hp1"), _FakeManager())
+        qtbot.addWidget(item)
+        item.resize(200, 300)
+        geo = item._geometrie()
+        assert geo.w > 0 and geo.h > 0
+        assert geo.x == (item.width() - geo.w) // 2, "la jaquette est centrée"
+        assert 0.0 <= geo.opacite <= 1.0

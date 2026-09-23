@@ -58,6 +58,14 @@ def _assets_publies(releases: list[dict]):
                 yield url, asset
 
 
+# Balisage inline rabattu par `_sans_balisage` : un lien garde son
+# libellé et perd son URL, une balise HTML disparaît. Le gras et les
+# accents de code sont retirés par simple remplacement — une expression
+# régulière pour `**gras**` mangerait les `*` d'une liste mal fermée.
+_LIEN_MD = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+_BALISE_HTML = re.compile(r"<[^>]+>")
+
+
 def extract_release_notes(data: dict, max_lignes: int = 12) -> str:
     """Les notes de release, mises au propre pour une boîte de dialogue.
 
@@ -67,19 +75,31 @@ def extract_release_notes(data: dict, max_lignes: int = 12) -> str:
 
     Le texte est du Markdown écrit à la main et **il est DISTANT** : il ne
     peut pas voyager tel quel vers l'écran. On en garde les lignes de contenu,
-    on rabote le balisage de titre et de liste, on coupe à `max_lignes` — une
-    boîte plus haute que la fenêtre ne s'annule pas —, et l'appelant l'affiche
-    en texte BRUT (`PlainText`), jamais en RichText.
+    on rabote le balisage, on coupe à `max_lignes` — une boîte plus haute que
+    la fenêtre n'a plus de bouton à cliquer —, et l'appelant l'affiche en
+    texte BRUT (`PlainText`), jamais en RichText.
 
-    Les blocs techniques sont retirés : l'empreinte SHA-256 et la commande de
-    vérification occupent la moitié de nos notes de release et ne disent rien
-    à quelqu'un qui veut savoir ce qui change.
+    **Un trait horizontal (`---`) TERMINE les notes.** Nos notes de release
+    portent, après le changelog, tout ce qui sert à les lire sur GitHub :
+    comment télécharger, l'empreinte SHA-256, la commande d'attestation, la
+    licence. Rien de tout ça n'a sa place dans la boîte — elle explique déjà
+    elle-même comment la mise à jour s'installe, et ces lignes mangeaient la
+    moitié des douze disponibles (constaté en rejouant le vrai modèle de
+    `.github/release-notes.md`). Le trait est le séparateur que Markdown
+    prévoit exactement pour ça, il se voit dans l'éditeur de GitHub, et il ne
+    demande à personne de retenir une règle.
+
+    Le balisage restant est rabattu plutôt que montré : les blocs de code
+    disparaissent (l'empreinte SHA-256 ne dit rien à qui veut savoir ce qui
+    change), le gras et les accents de code perdent leurs signes, un lien
+    garde son libellé et perd son URL, et une ligne de HTML est écartée.
     """
     corps = data.get("body", "")
     if not isinstance(corps, str) or not corps.strip():
         return ""
     lignes: list[str] = []
     dans_bloc_code = False
+    dans_commentaire = False
     for brute in corps.replace("\r\n", "\n").split("\n"):
         ligne = brute.strip()
         if ligne.startswith("```"):
@@ -87,11 +107,26 @@ def extract_release_notes(data: dict, max_lignes: int = 12) -> str:
             continue
         if dans_bloc_code or not ligne:
             continue
-        if ligne.startswith("<!--") or set(ligne) <= {"-", "=", "*", "_"}:
-            continue                      # commentaire HTML, trait horizontal
+        # Commentaire HTML, y compris sur PLUSIEURS lignes. Ne sauter que la
+        # ligne qui commence par `<!--` laissait passer les suivantes : le
+        # commentaire qui explique le modèle de release s'affichait dans la
+        # boîte de mise à jour, amputé de sa première ligne (constaté en
+        # rejouant le vrai `.github/release-notes.md`).
+        if dans_commentaire:
+            dans_commentaire = "-->" not in ligne
+            continue
+        if ligne.startswith("<!--"):
+            dans_commentaire = "-->" not in ligne
+            continue
+        # Trait horizontal : fin des notes, pas une ligne à sauter.
+        if len(ligne) >= 3 and set(ligne) <= {"-", "=", "*", "_"}:
+            break
+        if set(ligne) <= {"-", "=", "*", "_"}:
+            continue                      # « -- », trop court pour un trait
         ligne = ligne.lstrip("#").strip()
         if ligne.startswith(("- ", "* ", "+ ")):
             ligne = "• " + ligne[2:].strip()
+        ligne = _sans_balisage(ligne)
         if not ligne:
             continue
         lignes.append(ligne)
@@ -99,6 +134,24 @@ def extract_release_notes(data: dict, max_lignes: int = 12) -> str:
             lignes.append("…")
             break
     return "\n".join(lignes)
+
+
+def _sans_balisage(ligne: str) -> str:
+    """Rabat le balisage INLINE d'une ligne de Markdown.
+
+    Sans ça on lisait « Téléchargez **AccioLauncher.exe** ci-dessous » dans la
+    boîte, astérisques comprises : la fonction rabotait les titres et les
+    listes, jamais le gras.
+
+    `**` et `__` sont retirés, mais PAS les `*` et `_` isolés : un nom de
+    fichier comme `hp1_video.mp4` en porte, et les mutiler serait pire que
+    laisser passer une emphase que nos notes n'emploient pas.
+    """
+    ligne = _LIEN_MD.sub(r"\1", ligne)
+    ligne = ligne.replace("**", "").replace("__", "").replace("`", "")
+    if ligne.startswith("<"):
+        return ""                        # <details>, <summary>, <sub>…
+    return _BALISE_HTML.sub("", ligne).strip()
 
 
 def extract_asset_digests(releases: list[dict]) -> dict[str, str]:

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core import almanach
 from src.core.config import ASSETS_DIR, Config
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -24,7 +25,7 @@ from src.ui.game_session import GameSession
 from src.ui.icon_button import IconButton
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
-from src.ui.season import resolve as resolve_season
+from src.core.season import resolve as resolve_season
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
@@ -158,7 +159,7 @@ class MainWindow(QMainWindow):
 
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
-        self._status_bar.showMessage(tr("Prêt"))
+        self._status_bar.showMessage(self._message_au_repos())
 
         # Overlay particules (+ saison décorative, changeable en direct dans Paramètres)
         self._particles = ParticleOverlay(self)
@@ -456,7 +457,25 @@ class MainWindow(QMainWindow):
             # reste jouable, seuls les nouveaux téléchargements attendent.
             self._status_bar.showMessage(tr("Hors ligne — les jeux installés restent jouables."))
         else:
-            self._status_bar.showMessage(tr("Prêt"))
+            self._status_bar.showMessage(self._message_au_repos())
+
+    def _message_au_repos(self) -> str:
+        """Ce que dit la barre de statut quand il n'y a RIEN à signaler.
+
+        « Prêt » est un état normal, et le projet s'interdit d'en afficher
+        partout ailleurs : ça n'apprenait rien à personne tout en occupant
+        cette ligne en permanence. Le fait du jour prend donc sa place — il
+        n'ajoute aucun pixel, et il s'efface de lui-même dès qu'un vrai
+        message arrive, puisque ce message le remplace. C'est ce qui le rend
+        non intrusif : il n'interrompt jamais rien, il occupe un silence.
+
+        Désactivable (`config.faits_du_jour`) ; on retombe alors sur « Prêt ».
+        """
+        if self.config.faits_du_jour:
+            fait = almanach.fait_du_jour()
+            if fait:
+                return tr(fait)
+        return tr("Prêt")
 
     def _notify_game_updates(self) -> bool:
         """Toast cliquable si des jeux installés ont une mise à jour. Recompte LOCAL :
