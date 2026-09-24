@@ -16,6 +16,12 @@ env/
 dist/
 build/accio_launcher/
 build/output/
+# AppImage (build.sh) : l'AppDir assemblé, et les outils épinglés téléchargés
+# (appimagetool, runtime), vérifiés par empreinte à chaque build.
+build/appimage/
+build/linux/outils/
+# Environnement créé par build.sh quand il n'est pas lancé dans un venv.
+.venv-build/
 # Ressource de version : régénérée depuis APP_VERSION à chaque build par
 # accio_launcher.spec — la suivre en git ne ferait que créer des divergences.
 build/version_info.txt

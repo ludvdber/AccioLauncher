@@ -1,11 +1,12 @@
 # Composants tiers
 
 Accio Launcher est publié sous GNU GPL v3 uniquement, avec des termes additionnels
-(voir [LICENSE](../LICENSE) et [ADDITIONAL-TERMS.md](../ADDITIONAL-TERMS.md)). Le binaire
-distribué `AccioLauncher.exe` embarque les composants ci-dessous, chacun soumis à
-sa propre licence.
+(voir [LICENSE](../LICENSE) et [ADDITIONAL-TERMS.md](../ADDITIONAL-TERMS.md)). Les
+binaires distribués — `AccioLauncher.exe` pour Windows,
+`AccioLauncher-x86_64.AppImage` pour Linux — embarquent les composants
+ci-dessous, chacun soumis à sa propre licence.
 
-Ce fichier doit accompagner toute redistribution du binaire.
+Ce fichier doit accompagner toute redistribution des binaires.
 
 Le nom et le logo d'Accio Launcher ne relèvent d'aucune de ces licences :
 voir [TRADEMARKS.md](../TRADEMARKS.md).
@@ -84,7 +85,10 @@ Site : <https://riverbankcomputing.com/software/pyqt/>
 
 ## Qt 6 — The Qt Company
 
-Fichiers : bibliothèques `Qt6*.dll` embarquées par PyQt6
+Fichiers : bibliothèques `Qt6*.dll` (Windows) et `libQt6*.so.6` (Linux)
+embarquées par PyQt6, avec ce que le paquet PyQt6-Qt6 livre à côté : FFmpeg
+(`avcodec`, `avformat`, `avutil`, `swresample`, `swscale` — GNU LGPL v2.1+) et,
+sous Linux, ICU (`libicu*` — licence Unicode)
 Licence : GNU LGPL v3 (ou licence commerciale)
 Site : <https://www.qt.io>
 
@@ -120,6 +124,70 @@ Site : <https://pyinstaller.org>
 L'exception attachée au bootloader autorise explicitement la distribution de
 l'application gelée sous les termes que son auteur choisit. PyInstaller n'impose
 donc aucune contrainte propre sur `AccioLauncher.exe`.
+
+---
+
+## Runtime AppImage (`type2-runtime`) — projet AppImage
+
+Fichier : l'en-tête exécutable de `AccioLauncher-x86_64.AppImage` (Linux)
+Version : `20251108`, SHA-256
+`2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d`
+Licence : MIT
+Source : <https://github.com/AppImage/type2-runtime/tree/20251108>
+
+Le runtime est la partie de toute AppImage qui monte l'image et lance le
+programme. Il est lié **statiquement** à :
+
+| Composant | Licence |
+|---|---|
+| libfuse 3.15.0 | GNU LGPL v2.1+ (bibliothèque) |
+| squashfuse 0.5.2 | BSD 2-clause |
+| zstd | BSD 3-clause (ou GPL v2) |
+| zlib | licence zlib |
+| mimalloc | MIT |
+| musl libc | MIT |
+
+Les sources du runtime et ses scripts de construction (qui téléchargent et
+vérifient libfuse et squashfuse par empreinte) sont publics à l'adresse
+ci-dessus : c'est ce qui permet, comme l'exige la LGPL pour une liaison
+statique, de le reconstruire avec une libfuse modifiée.
+
+---
+
+## appimagetool — projet AppImage
+
+Version : `1.9.1`, SHA-256
+`ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0`
+Licence : MIT
+Source : <https://github.com/AppImage/appimagetool/tree/1.9.1>
+
+Outil de CONSTRUCTION : il assemble l'AppImage (`build/linux/appimage.py`) et
+n'est pas distribué avec elle. Cité pour la provenance du fichier publié.
+
+---
+
+## Bibliothèques système embarquées dans l'AppImage (Linux)
+
+PyInstaller copie dans l'AppImage les bibliothèques de la machine de build
+(Ubuntu 22.04) dont dépendent Python et Qt, sauf celles que toute machine
+fournit (liste d'exclusion AppImage, `build/linux/dependances.py`). Toutes
+sont utilisées sans modification et liées dynamiquement :
+
+| Bibliothèques | Licence |
+|---|---|
+| OpenSSL 3 (`libssl`, `libcrypto`) | Apache 2.0 |
+| GLib (`libglib-2.0`, `libgthread-2.0`), libsndfile, mpg123, PulseAudio (client), libsystemd, libgcrypt, libapparmor, libasyncns, keyutils | GNU LGPL v2.1+ |
+| LAME (`libmp3lame`) | GNU LGPL v2+ |
+| D-Bus (`libdbus-1`) | AFL 2.1 ou GNU GPL v2+ |
+| X11 et XCB (`libXext`, `libXrandr`, `libXrender`, `libxcb-*`), libxkbcommon, libffi, MIT Kerberos (`libkrb5`, `libgssapi_krb5`, `libk5crypto`) | MIT / X11 |
+| FLAC, Ogg, Vorbis, Opus, zstd, PCRE2 | BSD 3-clause |
+| lz4, libcap | BSD 2-clause |
+| Brotli | MIT |
+| XZ (`liblzma`) | 0BSD / domaine public |
+| bzip2 | licence bzip2 (BSD) |
+
+Le code source de chacune est disponible dans les dépôts d'Ubuntu 22.04
+(`apt source <paquet>`), et sur le site de chaque projet.
 
 ---
 

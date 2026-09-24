@@ -111,6 +111,50 @@ class TestCeQuiSertReste:
                 assert _garde(rf"PyQt6\Qt6\plugins\imageformats\{plugin}.dll"), (
                     f"des assets {extension} sont embarqués mais leur décodeur "
                     f"{plugin}.dll est écarté du build")
+                assert _garde(f"PyQt6/Qt6/plugins/imageformats/lib{plugin}.so"), (
+                    f"des assets {extension} sont embarqués mais leur décodeur "
+                    f"lib{plugin}.so est écarté de l'AppImage")
+
+
+class TestLesGreffonsLinux:
+    """Les mêmes deux sens pour l'AppImage : ce qui est mort sort, ce qui sert
+    reste. Une AppImage sans `libqxcb` ne démarre pas en mode Jeu (XWayland) ;
+    sans `libqwayland` ni `libxdg-shell`, pas sous KDE Wayland."""
+
+    @pytest.mark.parametrize("chemin", [
+        "PyQt6/Qt6/plugins/platformthemes/libqgtk3.so",
+        "PyQt6/Qt6/plugins/platforms/libqoffscreen.so",
+        "PyQt6/Qt6/plugins/platforms/libqminimal.so",
+        "PyQt6/Qt6/plugins/platforms/libqeglfs.so",
+        "PyQt6/Qt6/plugins/platforms/libqlinuxfb.so",
+        "PyQt6/Qt6/plugins/platforms/libqvnc.so",
+        "PyQt6/Qt6/plugins/imageformats/libqwebp.so",
+        "PyQt6/Qt6/plugins/imageformats/libqpdf.so",
+        "PyQt6/Qt6/plugins/tls/libqopensslbackend.so",
+        "PyQt6/Qt6/plugins/networkinformation/libqnetworkmanager.so",
+        "PyQt6/Qt6/plugins/generic/libqevdevmouseplugin.so",
+    ])
+    def test_ecarte(self, chemin):
+        assert not _garde(chemin)
+
+    @pytest.mark.parametrize("chemin", [
+        "PyQt6/Qt6/plugins/platforms/libqxcb.so",
+        "PyQt6/Qt6/plugins/platforms/libqwayland.so",
+        "PyQt6/Qt6/plugins/wayland-shell-integration/libxdg-shell.so",
+        "PyQt6/Qt6/plugins/wayland-decoration-client/libbradient.so",
+        "PyQt6/Qt6/plugins/wayland-graphics-integration-client/libqt-plugin-wayland-egl.so",
+        "PyQt6/Qt6/plugins/xcbglintegrations/libqxcb-glx-integration.so",
+        # Touches mortes et composition : les accents d'un chemin de dossier.
+        "PyQt6/Qt6/plugins/platforminputcontexts/libcomposeplatforminputcontextplugin.so",
+        "PyQt6/Qt6/plugins/platforminputcontexts/libibusplatforminputcontextplugin.so",
+        "PyQt6/Qt6/plugins/platformthemes/libqxdgdesktopportal.so",
+        "PyQt6/Qt6/plugins/multimedia/libffmpegmediaplugin.so",
+        "PyQt6/Qt6/plugins/iconengines/libqsvgicon.so",
+        "PyQt6/Qt6/lib/libQt6XcbQpa.so.6",
+        "PyQt6/Qt6/lib/libQt6WaylandClient.so.6",
+    ])
+    def test_garde(self, chemin):
+        assert _garde(chemin)
 
 
 class TestLeBuildNeDependPasDuPoste:
