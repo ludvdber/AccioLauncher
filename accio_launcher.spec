@@ -237,6 +237,11 @@ if sys.platform.startswith("linux"):
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 if sys.platform.startswith("linux"):
+    # strip=True : le Python d'`actions/setup-python` (celui de la release)
+    # livre `libpython` et ses modules natifs AVEC leurs symboles de débogage
+    # — 33 Mo pour libpython seule, contre 7 une fois épurée. Relevé sur le
+    # build d'essai : AppImage de 77 Mo, contre 62 depuis un Python de
+    # distribution. Les bibliothèques de Qt sont déjà épurées : rien n'y change.
     exe = EXE(
         pyz,
         a.scripts,
@@ -245,7 +250,7 @@ if sys.platform.startswith("linux"):
         name="AccioLauncher",
         debug=False,
         bootloader_ignore_signals=False,
-        strip=False,
+        strip=True,
         upx=False,
         console=False,
     )
@@ -254,7 +259,7 @@ if sys.platform.startswith("linux"):
         a.binaries,
         a.zipfiles,
         a.datas,
-        strip=False,
+        strip=True,
         upx=False,
         name="AccioLauncher",
     )

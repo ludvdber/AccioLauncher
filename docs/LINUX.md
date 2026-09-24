@@ -494,8 +494,22 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 | Chargeur PyInstaller (onedir) et `LD_LIBRARY_PATH` | `_internal` placé en tête ; un enfant du launcher gelé reçoit la valeur d'ORIGINE (absente, ou `/opt/x`) |
 | `.desktop` | `desktop-file-validate` sans remarque |
 
-**Non vérifié ici** : le build sur `ubuntu-22.04` (le workflow le fera), une
-session Wayland, le montage FUSE par un utilisateur non root (`fusermount3`),
+### Build d'essai du workflow (`ubuntu-22.04`, run 36058062239)
+
+Lancé par Ludo, case décochée : les deux jobs verts. Côté Linux, 1878 tests,
+audit de géométrie OK (xcb, 22 familles), 48 bibliothèques laissées à la
+machine, 0 dépendance manquante — mais une AppImage de **77 Mo au lieu de
+62**. Cause relevée en rejouant le build avec le MÊME Python (setup-python
+3.14.7 pour 22.04) : sa `libpython3.14.so` fait 33 Mo, **avec ses symboles de
+débogage**, comme ses modules natifs ; celle d'Ubuntu est déjà épurée. Le
+spec passe donc `strip=True` sous Linux (l'exe Windows ne change pas) :
+dossier 209 → 163 Mo, AppImage 78 → 62 Mo, `7zzs` intact (c'est une donnée,
+pas un binaire pour PyInstaller). L'AppImage épurée a été relancée sous Xvfb
+jusqu'à la fenêtre principale : illustrations, icônes SVG, polices,
+particules, et une poignée de main TLS menée jusqu'à la vérification du
+certificat (refusé ici par le proxy du conteneur, pas par le launcher).
+
+**Non vérifié ici** : une session Wayland, le montage FUSE par un utilisateur non root (`fusermount3`),
 Gear Lever, le mode Jeu, et l'auto-mise à jour d'une AppImage — elle ne se
 testera qu'à la release SUIVANT la première qui porte une AppImage.
 
@@ -592,7 +606,9 @@ L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
 
 Avec l'AppImage d'un build d'essai (Actions → release → Run workflow, case
 décochée → artefact « AccioLauncher-linux-essai », un zip qui la contient) ou
-d'un brouillon de release.
+d'un brouillon de release. **Un build d'essai POSTÉRIEUR à l'épuration**
+(`strip=True`, § 9) : celui du run 36058062239 date d'avant, et c'est
+l'AppImage de 62 Mo qui sera publiée, pas celle de 77.
 
 1. **Lancer sans rien installer** : ranger le fichier dans `~/AppImages`,
    clic droit → Propriétés → « Exécutable », double-clic. Le launcher s'ouvre ;
