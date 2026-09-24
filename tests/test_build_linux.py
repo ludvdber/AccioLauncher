@@ -252,6 +252,8 @@ class TestOutilsEpingles:
 
 
 class TestIcones:
+    @pytest.mark.skipif(sys.platform == "win32",
+                        reason="`.DirIcon` est un lien symbolique : privilège sous Windows")
     def test_chaque_taille_dessinee_telle_quelle(self, tmp_path):
         """Aucune taille recalculée : l'.ico en porte sept, ajustées à la main."""
         pytest.importorskip("PIL")
