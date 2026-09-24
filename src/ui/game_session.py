@@ -75,7 +75,7 @@ class GameSession(QObject):
         self._avant = sauvegardes.releve(self._spec(game_id))
         self._monitor.start(process, game_name)
         if self._manager.config.discord_presence:
-            self._presence.set_playing(game_name)
+            self._presence.set_playing(game_name, game_id)
         self.demarree.emit(game_name)
 
     def _spec(self, game_id: str):

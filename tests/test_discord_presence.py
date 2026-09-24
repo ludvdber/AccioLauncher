@@ -55,7 +55,7 @@ def _run_flow(monkeypatch, partial: bool) -> _FakeDiscord:
     fake = _FakeDiscord(partial_reads=partial)
     monkeypatch.setattr("src.core.discord_presence._open_ipc", lambda: fake)
     p = DiscordPresence(client_id="123456789012345678")
-    p.set_playing("Harry Potter à l'école des sorciers")
+    p.set_playing("Harry Potter à l'école des sorciers", "hp1")
     time.sleep(0.3)
     p.clear()
     time.sleep(0.2)
@@ -75,12 +75,34 @@ class TestFlow:
         assert activity["buttons"][0]["url"].startswith("https://")
         assert fake.received[2][1]["args"]["activity"] is None  # clear
 
+    def test_jaquette_en_grande_image_logo_en_pastille(self, monkeypatch):
+        fake = _run_flow(monkeypatch, partial=False)
+        assets = fake.received[1][1]["args"]["activity"]["assets"]
+        assert assets["large_image"] == "hp1"
+        assert assets["large_text"] == "Harry Potter à l'école des sorciers"
+        assert assets["small_image"] == "logo"
+
     def test_full_flow_survives_partial_reads(self, monkeypatch):
         """Régression : un pipe qui sert le message en morceaux ne doit PAS
         déclencher une reconnexion en boucle (bug des reads tronqués)."""
         fake = _run_flow(monkeypatch, partial=True)
         ops = [op for op, _ in fake.received]
         assert ops == [0, 1, 1]  # et pas [0, 0, 0, …]
+
+
+class TestCleAsset:
+    """L'id du jeu vient du catalogue DISTANT : il ne devient une clé d'image
+    que s'il en a la forme."""
+
+    def test_id_du_catalogue_accepte(self):
+        from src.core.discord_presence import _cle_asset
+        assert _cle_asset("hp7b") == "hp7b"
+        assert _cle_asset("HP7A") == "hp7a"
+
+    def test_forme_inattendue_refusee(self):
+        from src.core.discord_presence import _cle_asset
+        for mauvais in ("", "../x", "hp 1", "a" * 33, "https://evil"):
+            assert _cle_asset(mauvais) == ""
 
 
 class TestConfiguration:

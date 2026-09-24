@@ -10,8 +10,9 @@ sous Linux — déjà géré pour l'objectif Linux).
   1. https://discord.com/developers/applications → « New Application » nommée
      « Accio Launcher » (le nom affiché dans « Joue à … » vient de là).
   2. Copier l'« Application ID » dans DISCORD_CLIENT_ID ci-dessous.
-  3. Optionnel : onglet Rich Presence → Art Assets → uploader les covers avec
-     comme clé l'id du jeu (hp1…hp7b) + un asset « logo » pour la grande image.
+  3. Onglet Rich Presence → Art Assets : la jaquette de chaque jeu sous la clé
+     de son id (hp1…hp7b), et le logo sous la clé « logo » (petite pastille).
+     Une clé absente du portail ne casse rien : Discord n'affiche pas d'image.
 Sans ID, la fonctionnalité se désactive silencieusement.
 
 NB : les boutons d'activité ne sont PAS visibles sur son propre profil —
@@ -24,6 +25,7 @@ import json
 import logging
 import os
 import queue
+import re
 import struct
 import sys
 import threading
@@ -35,7 +37,18 @@ from src.core.liens import SITE_URL
 
 log = logging.getLogger(__name__)
 
-DISCORD_CLIENT_ID = "1524077874087330007"  # TODO(Ludo) : coller l'Application ID Discord ici
+DISCORD_CLIENT_ID = "1524077874087330007"
+
+# Clé de la petite pastille (Art Assets du portail). Celle de la grande image est
+# l'id du jeu : `_cle_asset` le filtre, parce qu'il vient du catalogue DISTANT.
+_ASSET_LOGO = "logo"
+_CLE_SURE = re.compile(r"[a-z0-9_]{1,32}")
+
+
+def _cle_asset(game_id: str) -> str:
+    """L'id du jeu comme clé d'image, ou "" s'il n'en a pas la forme."""
+    cle = (game_id or "").lower()
+    return cle if _CLE_SURE.fullmatch(cle) else ""
 
 _OP_HANDSHAKE = 0
 _OP_FRAME = 1
@@ -80,7 +93,7 @@ class DiscordPresence:
 
     # ── API publique (thread-safe, jamais bloquante) ──
 
-    def set_playing(self, game_name: str) -> None:
+    def set_playing(self, game_name: str, game_id: str = "") -> None:
         """Affiche « Joue à <game_name> » avec le bouton vers le site.
 
         L'activité est composée ICI, sur le thread appelant, et non dans le
@@ -90,13 +103,20 @@ class DiscordPresence:
         ou hispanophone diffusait « Joue à … » à tout son entourage. Traduire
         au point d'appel garde aussi `tr()` hors du thread réseau.
         """
-        self._post(("set", {
+        activite = {
             "details": tr("Joue à {}").format(game_name),
             "timestamps": {"start": int(time.time())},
+            "assets": {"small_image": _ASSET_LOGO, "small_text": "Accio Launcher"},
             "buttons": [
                 {"label": tr("Découvrir Accio Launcher"), "url": SITE_URL},
             ],
-        }))
+        }
+        # La jaquette en grande image, le logo en pastille : sans image, la
+        # carte d'activité n'était qu'une ligne de texte grise.
+        cle = _cle_asset(game_id)
+        if cle:
+            activite["assets"].update(large_image=cle, large_text=game_name)
+        self._post(("set", activite))
 
     def clear(self) -> None:
         """Efface l'activité (le jeu est fermé)."""
