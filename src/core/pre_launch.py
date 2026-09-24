@@ -31,8 +31,20 @@ log = logging.getLogger(__name__)
 # `surrogateescape` garantit l'aller-retour EXACT des octets qu'on ne touche
 # pas (vérifié, y compris sur des séquences non décodables) : on ne peut donc
 # pas abîmer une ligne qu'on se contente de recopier.
-_INI_ENCODING = "mbcs" if sys.platform == "win32" else "utf-8"
+#
+# Sous Linux, le moteur tourne sous Wine et écrit dans la page ANSI du PRÉFIXE,
+# pas en UTF-8 : `_encodage_ini()` la lit dans son registre, et cp1252 — celle
+# d'un préfixe neuf dans une langue occidentale — sert de repli.
+_INI_ENCODING = "mbcs" if sys.platform == "win32" else "cp1252"
 _INI_ERRORS = "surrogateescape"
+
+
+def _encodage_ini() -> str:
+    """Page de codes dans laquelle le moteur lit et écrit ses INI, ici."""
+    if sys.platform == "win32":
+        return _INI_ENCODING
+    from src.core import compat
+    return compat.encodage_ansi(defaut=_INI_ENCODING)
 
 # Fins de ligne des .ini de jeu. Elles aussi appartiennent au moteur : UE1 est
 # un programme Windows, ses fichiers sont en CRLF, et ils le resteront même
@@ -109,6 +121,26 @@ def substitute_vars(raw: str, game: GameData, config: Config) -> str:
     docs_dir = get_documents_dir()
     install_dir = str(config.install_path / Path(game.executable).parts[0])
     return raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
+
+
+def substituer_pour_le_jeu(raw: str, game: GameData, config: Config) -> str:
+    r"""Comme `substitute_vars`, pour une VALEUR que le jeu lira (INI, registre).
+
+    Sous Windows, c'est exactement `substitute_vars`. Sous Linux, les deux ne
+    désignent plus la même chose : le FICHIER à patcher est un chemin de
+    l'hôte (Python l'ouvre), mais ce qu'on écrit DEDANS est lu par un jeu qui
+    tourne sous Wine et attend un chemin Windows. `SavePath=/home/…` ne
+    tombait juste que par accident, si le lecteur courant du jeu était `Z:`.
+    Les antislashs du gabarit sont donc GARDÉS, et les variables deviennent
+    `C:\users\steamuser\Documents` ou `Z:\home\…` (`compat.chemin_windows`).
+    """
+    if sys.platform == "win32":
+        return substitute_vars(raw, game, config)
+    from src.core import compat
+    pfx = compat.prefixe()
+    dossier_jeu = config.install_path / Path(game.executable.replace("\\", "/")).parts[0]
+    return (raw.replace("%DOCUMENTS%", compat.chemin_windows(get_documents_dir(), pfx))
+            .replace("%INSTALL_DIR%", compat.chemin_windows(dossier_jeu, pfx)))
 
 
 def resolve_safe_path(raw: str, game: GameData, config: Config) -> Path | None:
@@ -218,9 +250,10 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
             log.warning("GPU ne supporte pas DX11 feature level 11_0, fallback : %s → %s",
                         patch.value, patch.fallback)
             effective_value = patch.fallback
-        value = substitute_vars(effective_value, game, config)
+        value = substituer_pour_le_jeu(effective_value, game, config)
+        encodage = _encodage_ini()
         try:
-            with ini_path.open("r", encoding=_INI_ENCODING,
+            with ini_path.open("r", encoding=encodage,
                                errors=_INI_ERRORS) as f:
                 # Lecture en « newline universel » : toutes les fins de
                 # ligne sont normalisées, ce que suppose le patch ci-dessous.
@@ -250,7 +283,7 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
             # Réécrit dans l'encodage du MOTEUR, pas dans le nôtre : en UTF-8,
             # UE1 relisait « Frédéric » comme « FrÃ©dÃ©ric » et cherchait ses
             # sauvegardes dans un dossier inexistant.
-            with ini_path.open("w", encoding=_INI_ENCODING, errors=_INI_ERRORS,
+            with ini_path.open("w", encoding=encodage, errors=_INI_ERRORS,
                                newline=_INI_NEWLINE) as f:
                 f.write("".join(lines))
             log.info("Patch INI appliqué : [%s] %s=%s dans %s",
@@ -311,9 +344,10 @@ def env_de_lancement(dpi_aware: bool,
     un jeu qui va bien, et aucun des six autres n'a été mesuré (consigne de
     Ludo, 2026-08-30).
 
-    None hors Windows, ce qui est exactement ce que `Popen(env=None)` attend :
-    la couche de compatibilité est une notion Windows, et le portage Linux fera
-    tourner ces jeux sous Wine, qui a sa propre idée du DPI.
+    None hors Windows : la couche de compatibilité est une notion Windows, sans
+    équivalent sous Wine, et le réglage y est IGNORÉ sans bruit.
+    L'environnement d'un jeu lancé sous Linux est composé par
+    `compat.environnement`.
 
     Une valeur déjà posée est CONSERVÉE puis complétée : `__COMPAT_LAYER` est
     une liste de couches séparées par des espaces, et quelqu'un qui en a réglé

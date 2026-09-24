@@ -2,7 +2,9 @@
 
 import json
 import logging
+import platform
 import re
+import sys
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -254,6 +256,50 @@ def aggregate_download_counts(
     return totals
 
 
+# Architectures qu'un nom d'AppImage peut porter, ramenées à la forme de
+# `platform.machine()` (« amd64 » et « x86_64 » désignent la même chose).
+_ARCHITECTURES = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64",
+                  "arm64": "aarch64", "armhf": "armv7l", "i686": "i686", "i386": "i686"}
+
+
+def asset_de_la_plateforme(assets, plateforme: str | None = None,
+                           machine: str | None = None) -> dict | None:
+    """L'asset de mise à jour qui convient à CETTE plateforme, ou None. Pure.
+
+    Une release porte désormais l'exe Windows ET l'AppImage Linux, plus leurs
+    preuves de provenance (`….sigstore.json`). Windows garde exactement sa
+    règle d'avant : le premier `.exe` en https. Linux prend l'AppImage de SON
+    architecture, ou à défaut une AppImage qui n'en nomme aucune — jamais
+    celle d'une AUTRE : un launcher qui téléchargerait l'exe, ou l'AppImage
+    x86_64 sur une machine ARM, remplacerait son programme par un fichier qui
+    ne peut pas démarrer. Rien qui convienne → None → page de release.
+    """
+    plateforme = plateforme or sys.platform
+    valides = []
+    for asset in assets or []:
+        if not isinstance(asset, dict):
+            continue
+        url = asset.get("browser_download_url", "")
+        nom = asset.get("name", "")
+        if isinstance(url, str) and isinstance(nom, str) and url.startswith("https://"):
+            valides.append((nom.lower(), asset))
+    if plateforme == "win32":
+        return next((a for nom, a in valides if nom.endswith(".exe")), None)
+    machine = (machine or platform.machine()).lower()
+    machine = _ARCHITECTURES.get(machine, machine)
+    generiques = []
+    for nom, asset in valides:
+        if not nom.endswith(".appimage"):
+            continue
+        archis = {v for k, v in _ARCHITECTURES.items()
+                  if re.search(rf"(?<![a-z0-9]){k}(?![a-z0-9])", nom)}
+        if machine in archis:
+            return asset
+        if not archis:
+            generiques.append(asset)
+    return generiques[0] if generiques else None
+
+
 def _releases_api_from_catalog_url(catalog_url: str) -> str:
     """Déduit l'API releases du repo des jeux depuis l'URL raw du catalogue."""
     m = re.search(r"raw\.githubusercontent\.com/([^/]+)/([^/]+)/", catalog_url or "")
@@ -472,23 +518,17 @@ class UpdateChecker(QThread):
                 if not isinstance(html_url, str) or not html_url.startswith("https://github.com/"):
                     log.warning("URL de release suspecte ignorée : %s", html_url)
                     html_url = "https://github.com/ludvdber/AccioLauncher/releases/latest"
-                # Asset .exe pour l'auto-update (vide si introuvable → fallback page release)
+                # Asset de SA plateforme pour l'auto-update — l'exe sous Windows,
+                # l'AppImage sous Linux (vide si introuvable → page de release).
                 asset_url = ""
                 asset_sha256 = ""
-                for asset in data.get("assets", []) or []:
-                    if not isinstance(asset, dict):
-                        continue
-                    url = asset.get("browser_download_url", "")
-                    nom = asset.get("name", "")
-                    if not isinstance(url, str) or not isinstance(nom, str):
-                        continue
-                    if nom.lower().endswith(".exe") and url.startswith("https://"):
-                        asset_url = url
-                        # GitHub publie l'empreinte de l'asset : elle évite d'avoir
-                        # à la recopier à la main dans le code à chaque release,
-                        # et sans elle l'auto-update installait un exe non vérifié.
-                        asset_sha256 = extract_asset_digests([data]).get(url, "")
-                        break
+                asset = asset_de_la_plateforme(data.get("assets", []))
+                if asset is not None:
+                    asset_url = asset["browser_download_url"]
+                    # GitHub publie l'empreinte de l'asset : elle évite d'avoir
+                    # à la recopier à la main dans le code à chaque release,
+                    # et sans elle l'auto-update installait un exe non vérifié.
+                    asset_sha256 = extract_asset_digests([data]).get(asset_url, "")
                 log.info("Nouvelle version du launcher disponible : %s (actuelle: %s)", tag, APP_VERSION)
                 if asset_url and not asset_sha256:
                     log.warning("Aucune empreinte publiée pour %s — mise à jour non vérifiée", asset_url)

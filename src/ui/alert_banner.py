@@ -12,12 +12,14 @@ La règle du projet — **un état ne s'affiche que lorsqu'il DÉVIE** — est i
 entière : rien ne s'affiche tant que rien ne manque.
 """
 
+import sys
 from html import escape
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QLabel, QWidget
 
+from src.core import compat
 from src.core.formatting import format_size
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
@@ -25,6 +27,7 @@ from src.core.i18n import tr
 from src.core.system_checks import (
     PREREQUIS, invalidate_vcredist_cache, needed_space_mb, prerequis_manquants,
 )
+from src.core.liens import GUIDE_LINUX_URL
 from src.ui.utils import open_url
 
 # Ambre-orangé : volontairement hors palette de maison. Un avertissement passé
@@ -59,6 +62,9 @@ class AlertBanner(QLabel):
     """Un seul message à la fois, par ordre de blocage, et rien sinon."""
 
     settings_requested = pyqtSignal()   # « Changer de dossier »
+    # « Installer » d'un composant manquant SOUS LINUX : il s'installe dans le
+    # préfixe Wine, par la fiche de jeu — pas sur une page web.
+    preparation_requested = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -147,12 +153,26 @@ class AlertBanner(QLabel):
                 manque = self._disque(dl)
                 if manque:
                     return manque
+            # Sous Linux sans umu ni wine, le jeu ne pourra pas démarrer : le
+            # dire AVANT un téléchargement de plusieurs Go, pas après.
+            if self._sans_lanceur():
+                return self._message_sans_lanceur()
         elif state == GameState.INSTALLED:
+            if self._sans_lanceur():
+                return self._message_sans_lanceur()
             # Socle commun + ce que le catalogue déclare pour CE jeu. HP7 exige
             # Visual C++ 2005, un runtime distinct du 2015-2022 : annoncer le
             # mauvais aurait envoyé l'utilisateur installer un paquet qu'il a
             # peut-être déjà, sans que le jeu démarre pour autant.
             manquants = prerequis_manquants(("vcredist_x86", *game.requires))
+            if manquants and sys.platform != "win32":
+                # Dans le PRÉFIXE, et installé par le launcher : le lien ne
+                # mène pas à Microsoft mais à la préparation de Wine.
+                return (
+                    tr("{} manquant dans Wine — requis pour lancer ce jeu.").format(
+                        _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
+                    + " " + LIEN.format("preparer", WARN, tr("Installer"))
+                )
             if manquants:
                 return (
                     tr("{} manquant — requis pour lancer ce jeu.").format(
@@ -169,6 +189,15 @@ class AlertBanner(QLabel):
         if state in (GameState.NOT_INSTALLED, GameState.INSTALLED):
             return self._catalogue(game)
         return ""
+
+    @staticmethod
+    def _sans_lanceur() -> bool:
+        return sys.platform != "win32" and compat.lanceur() is None
+
+    @staticmethod
+    def _message_sans_lanceur() -> str:
+        return (tr("Wine introuvable — requis pour lancer ce jeu.")
+                + " " + LIEN.format("guide_linux", WARN, tr("En savoir plus")))
 
     def _disque(self, version) -> str:
         """Avertissement d'espace disque, vide si la place suffit ou est inconnue.
@@ -301,6 +330,13 @@ class AlertBanner(QLabel):
     def _on_lien(self, href: str) -> None:
         if href == "settings":
             self.settings_requested.emit()
+        elif href == "preparer":
+            self.preparation_requested.emit()
+        elif href == "guide_linux":
+            # Même aller-retour que « Installer » : au retour dans la fenêtre,
+            # on cherche à nouveau umu et wine (`invalidate_vcredist_cache`).
+            self._attend_prerequis = True
+            open_url(GUIDE_LINUX_URL)
         elif href == "avertissement":
             # L'URL a été validée au PARSING (https uniquement) : le catalogue
             # est distant, c'est la seule de ses chaînes qui atteigne le

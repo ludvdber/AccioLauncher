@@ -231,18 +231,32 @@ class TestLauncherDigest:
         return recu
 
     def test_empreinte_transmise(self, monkeypatch):
+        """L'asset de SA plateforme, et l'empreinte de CET asset : une release
+        porte désormais l'exe ET l'AppImage, chacun avec la sienne."""
+        autre = "c3" * 32
+        # Une machine de test ARM ne doit pas faire échouer ce test-ci : le
+        # choix de l'architecture a les siens (`TestAssetDeLaPlateforme`).
+        import platform
+        monkeypatch.setattr(platform, "machine", lambda: "x86_64")
         recu = self._run({
             "tag_name": "v9.9.9",
             "html_url": "https://github.com/ludvdber/AccioLauncher/releases/tag/v9.9.9",
             "assets": [{"name": "AccioLauncher.exe",
                         "browser_download_url": "https://github.com/x/AccioLauncher.exe",
-                        "digest": f"sha256:{self.HEX}"}],
+                        "digest": f"sha256:{self.HEX}"},
+                       {"name": "AccioLauncher-x86_64.AppImage",
+                        "browser_download_url": "https://github.com/x/AccioLauncher-x86_64.AppImage",
+                        "digest": f"sha256:{autre}"}],
         }, monkeypatch)
         assert len(recu) == 1
         version, _url, asset, sha, _notes = recu[0]
         assert version == "9.9.9"
-        assert asset == "https://github.com/x/AccioLauncher.exe"
-        assert sha == self.HEX
+        if sys.platform == "win32":
+            assert asset == "https://github.com/x/AccioLauncher.exe"
+            assert sha == self.HEX
+        else:
+            assert asset == "https://github.com/x/AccioLauncher-x86_64.AppImage"
+            assert sha == autre
 
     def test_sans_digest_reste_vide(self, monkeypatch):
         """Pas d'empreinte publiée → on ne bloque pas la mise à jour."""
@@ -250,7 +264,9 @@ class TestLauncherDigest:
             "tag_name": "v9.9.9",
             "html_url": "https://github.com/ludvdber/AccioLauncher/releases/tag/v9.9.9",
             "assets": [{"name": "AccioLauncher.exe",
-                        "browser_download_url": "https://github.com/x/AccioLauncher.exe"}],
+                        "browser_download_url": "https://github.com/x/AccioLauncher.exe"},
+                       {"name": "AccioLauncher-x86_64.AppImage",
+                        "browser_download_url": "https://github.com/x/A-x86_64.AppImage"}],
         }, monkeypatch)
         assert recu and recu[0][3] == ""
 
@@ -410,3 +426,61 @@ class TestCompteurInsensibleALaCasse:
         urls = {"hp6": [["https://github.com/o/r/releases/download/hp6-v1.0/hp6.7z.001"]]}
         rels = [self._rel("HP6.7z.001", 25), self._rel("Hp6.7z.001", 3)]
         assert aggregate_download_counts(rels, urls) == {}
+
+
+class TestAssetDeLaPlateforme:
+    """Une release porte l'exe, l'AppImage et leurs preuves de provenance :
+    chaque launcher doit prendre le SIEN."""
+
+    RELEASE = [
+        {"name": "AccioLauncher.exe", "browser_download_url": "https://g/AccioLauncher.exe"},
+        {"name": "AccioLauncher.exe.sigstore.json",
+         "browser_download_url": "https://g/AccioLauncher.exe.sigstore.json"},
+        {"name": "AccioLauncher-x86_64.AppImage",
+         "browser_download_url": "https://g/AccioLauncher-x86_64.AppImage"},
+        {"name": "AccioLauncher-x86_64.AppImage.sigstore.json",
+         "browser_download_url": "https://g/AccioLauncher-x86_64.AppImage.sigstore.json"},
+    ]
+
+    def test_windows_garde_sa_regle(self):
+        from src.core.updater import asset_de_la_plateforme
+        assert asset_de_la_plateforme(self.RELEASE, "win32")["name"] == "AccioLauncher.exe"
+
+    def test_linux_prend_l_appimage(self):
+        from src.core.updater import asset_de_la_plateforme
+        choisi = asset_de_la_plateforme(self.RELEASE, "linux", "x86_64")
+        assert choisi["name"] == "AccioLauncher-x86_64.AppImage"
+
+    def test_jamais_l_appimage_d_une_autre_architecture(self):
+        """Sur ARM, l'AppImage x86_64 ne démarrerait pas : l'installer
+        remplacerait un launcher qui marche par un fichier mort."""
+        from src.core.updater import asset_de_la_plateforme
+        assert asset_de_la_plateforme(self.RELEASE, "linux", "aarch64") is None
+
+    def test_la_bonne_architecture_parmi_plusieurs(self):
+        from src.core.updater import asset_de_la_plateforme
+        release = self.RELEASE + [
+            {"name": "AccioLauncher-aarch64.AppImage",
+             "browser_download_url": "https://g/AccioLauncher-aarch64.AppImage"}]
+        assert asset_de_la_plateforme(release, "linux", "arm64")["name"] \
+            == "AccioLauncher-aarch64.AppImage"
+        assert asset_de_la_plateforme(release, "linux", "AMD64")["name"] \
+            == "AccioLauncher-x86_64.AppImage"
+
+    def test_une_appimage_sans_architecture_convient_a_tous(self):
+        from src.core.updater import asset_de_la_plateforme
+        generique = [{"name": "AccioLauncher.AppImage",
+                      "browser_download_url": "https://g/AccioLauncher.AppImage"}]
+        assert asset_de_la_plateforme(generique, "linux", "aarch64") is generique[0]
+
+    def test_une_ancienne_release_sans_appimage(self):
+        """Les releases d'avant le portage : rien pour Linux, donc la page."""
+        from src.core.updater import asset_de_la_plateforme
+        assert asset_de_la_plateforme(self.RELEASE[:2], "linux") is None
+
+    def test_https_exige_et_entrees_douteuses(self):
+        from src.core.updater import asset_de_la_plateforme
+        douteux = [None, 12, {"name": "A.AppImage", "browser_download_url": "http://g/A.AppImage"},
+                   {"name": 3, "browser_download_url": "https://g/x"}]
+        assert asset_de_la_plateforme(douteux, "linux") is None
+        assert asset_de_la_plateforme(None, "win32") is None

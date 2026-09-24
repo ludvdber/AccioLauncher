@@ -522,7 +522,19 @@ class MainWindow(QMainWindow):
             self.config.save()
 
     def _minimize_to_tray(self) -> None:
-        """Cache la fenêtre dans le system tray et pause tous les effets."""
+        """Cache la fenêtre dans le system tray et pause tous les effets.
+
+        Sans zone de notification — GNOME sans l'extension AppIndicator,
+        certains compositeurs Wayland —, cacher la fenêtre la rendrait
+        INTROUVABLE jusqu'à la fin de la partie : pas d'icône pour la rappeler.
+        Elle est alors réduite. Sous Windows, la zone existe toujours.
+        """
+        if not self._tray.disponible():
+            self.showMinimized()
+            self.pause_all_effects()
+            log.info("Pas de zone de notification : launcher réduit — en jeu : %s",
+                     self._session.nom_en_cours)
+            return
         self.hide()
         self._tray.show()
         self.pause_all_effects()

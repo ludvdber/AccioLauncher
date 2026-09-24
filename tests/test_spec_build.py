@@ -84,7 +84,6 @@ class TestCeQuiSertReste:
         r"libssl-3.dll",
         r"libcrypto-3.dll",
         r"assets\backgrounds\hp1_bg.jpg",
-        r"assets\7z\7z.exe",
         r"data\i18n\en.json",
     ])
     def test_garde(self, chemin):
@@ -112,6 +111,50 @@ class TestCeQuiSertReste:
                 assert _garde(rf"PyQt6\Qt6\plugins\imageformats\{plugin}.dll"), (
                     f"des assets {extension} sont embarqués mais leur décodeur "
                     f"{plugin}.dll est écarté du build")
+                assert _garde(f"PyQt6/Qt6/plugins/imageformats/lib{plugin}.so"), (
+                    f"des assets {extension} sont embarqués mais leur décodeur "
+                    f"lib{plugin}.so est écarté de l'AppImage")
+
+
+class TestLesGreffonsLinux:
+    """Les mêmes deux sens pour l'AppImage : ce qui est mort sort, ce qui sert
+    reste. Une AppImage sans `libqxcb` ne démarre pas en mode Jeu (XWayland) ;
+    sans `libqwayland` ni `libxdg-shell`, pas sous KDE Wayland."""
+
+    @pytest.mark.parametrize("chemin", [
+        "PyQt6/Qt6/plugins/platformthemes/libqgtk3.so",
+        "PyQt6/Qt6/plugins/platforms/libqoffscreen.so",
+        "PyQt6/Qt6/plugins/platforms/libqminimal.so",
+        "PyQt6/Qt6/plugins/platforms/libqeglfs.so",
+        "PyQt6/Qt6/plugins/platforms/libqlinuxfb.so",
+        "PyQt6/Qt6/plugins/platforms/libqvnc.so",
+        "PyQt6/Qt6/plugins/imageformats/libqwebp.so",
+        "PyQt6/Qt6/plugins/imageformats/libqpdf.so",
+        "PyQt6/Qt6/plugins/tls/libqopensslbackend.so",
+        "PyQt6/Qt6/plugins/networkinformation/libqnetworkmanager.so",
+        "PyQt6/Qt6/plugins/generic/libqevdevmouseplugin.so",
+    ])
+    def test_ecarte(self, chemin):
+        assert not _garde(chemin)
+
+    @pytest.mark.parametrize("chemin", [
+        "PyQt6/Qt6/plugins/platforms/libqxcb.so",
+        "PyQt6/Qt6/plugins/platforms/libqwayland.so",
+        "PyQt6/Qt6/plugins/wayland-shell-integration/libxdg-shell.so",
+        "PyQt6/Qt6/plugins/wayland-decoration-client/libbradient.so",
+        "PyQt6/Qt6/plugins/wayland-graphics-integration-client/libqt-plugin-wayland-egl.so",
+        "PyQt6/Qt6/plugins/xcbglintegrations/libqxcb-glx-integration.so",
+        # Touches mortes et composition : les accents d'un chemin de dossier.
+        "PyQt6/Qt6/plugins/platforminputcontexts/libcomposeplatforminputcontextplugin.so",
+        "PyQt6/Qt6/plugins/platforminputcontexts/libibusplatforminputcontextplugin.so",
+        "PyQt6/Qt6/plugins/platformthemes/libqxdgdesktopportal.so",
+        "PyQt6/Qt6/plugins/multimedia/libffmpegmediaplugin.so",
+        "PyQt6/Qt6/plugins/iconengines/libqsvgicon.so",
+        "PyQt6/Qt6/lib/libQt6XcbQpa.so.6",
+        "PyQt6/Qt6/lib/libQt6WaylandClient.so.6",
+    ])
+    def test_garde(self, chemin):
+        assert _garde(chemin)
 
 
 class TestLeBuildNeDependPasDuPoste:
@@ -128,3 +171,45 @@ class TestLeBuildNeDependPasDuPoste:
                      and getattr(n.func, "id", "") == "Analysis")
         excludes = next(k.value for k in appel.keywords if k.arg == "excludes")
         assert "brotli" in ast.literal_eval(excludes)
+
+    def test_linux_epure_ses_binaires_windows_inchange(self):
+        """Le Python d'`actions/setup-python` livre libpython AVEC ses symboles
+        de débogage (33 Mo, 7 une fois épurée) : sans `strip`, l'AppImage de la
+        release pesait 77 Mo, contre 62 construite depuis un Python de
+        distribution. L'exe Windows, lui, ne change pas."""
+        branche = next(n for n in _arbre().body
+                       if isinstance(n, ast.If)
+                       and any(isinstance(c, ast.Call) and getattr(c.func, "id", "") == "EXE"
+                               for c in ast.walk(n)))
+
+        def strip(noeuds, nom):
+            appels = [c for n in noeuds for c in ast.walk(n)
+                      if isinstance(c, ast.Call) and getattr(c.func, "id", "") == nom]
+            assert appels, f"aucun appel {nom}"
+            return {ast.literal_eval(k.value) for c in appels for k in c.keywords
+                    if k.arg == "strip"}
+
+        assert "linux" in ast.unparse(branche.test)
+        assert strip(branche.body, "EXE") == {True}
+        assert strip(branche.body, "COLLECT") == {True}
+        assert strip(branche.orelse, "EXE") == {False}
+
+
+class TestChaquePlateformeSonSeptZip:
+    """Le 7-Zip de l'autre plateforme est du poids mort : 7z.exe ne tourne pas
+    sous Linux, `7zzs` pas sous Windows. Et l'exe Windows doit rester ce qu'il
+    était avant le portage."""
+
+    @pytest.mark.parametrize("plateforme, garde, ecarte", [
+        ("win32", [r"assets\7z\7z.exe", r"assets\7z\7z.dll", r"assets\7z\License.txt"],
+         [r"assets\7z\linux\7zzs", r"assets\7z\linux\License.txt"]),
+        ("linux", [r"assets\7z\linux\7zzs", r"assets\7z\linux\License.txt"],
+         [r"assets\7z\7z.exe", r"assets\7z\7z.dll"]),
+    ])
+    def test_par_plateforme(self, monkeypatch, plateforme, garde, ecarte):
+        import sys
+        monkeypatch.setattr(sys, "platform", plateforme)
+        for chemin in garde:
+            assert _garde(chemin), f"{plateforme} doit garder {chemin}"
+        for chemin in ecarte:
+            assert not _garde(chemin), f"{plateforme} doit écarter {chemin}"

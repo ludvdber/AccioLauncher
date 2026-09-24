@@ -43,6 +43,10 @@ class TestCatalogue:
         ("post_install", {"sous_dossier": "../pc"}),
         ("versions", [{"version": "1", "download_url": "http://x"}]),
         ("versions", [{"version": "1", "download_parts": ["https://a", "file:///b"]}]),
+        ("dll_overrides", ["d3d9=;dxgi=b"]),
+        ("dll_overrides", ["..\\d3d9"]),
+        ("dll_overrides", "d3d9"),
+        ("dll_overrides", [None, "d3d9"]),
     ])
     def test_valeurs_hostiles(self, vrai_catalogue, champ, valeur):
         brut = copy.deepcopy(vrai_catalogue)

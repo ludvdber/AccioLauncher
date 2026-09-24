@@ -558,3 +558,57 @@ class TestOptionsVideoVerrouillees:
             cles = {p.key: p.value for p in jeux[gid].pre_launch.ini_patches}
             assert cles.get("WindowedRenderDevice") == "D3D11Drv.D3D11RenderDevice", gid
             assert cles["GameRenderDevice"] == cles["WindowedRenderDevice"], gid
+
+
+class TestSurchargesDeDll:
+    """`dll_overrides` finit dans `WINEDLLOVERRIDES`, et vient du catalogue
+    DISTANT : ce qui sépare les entrées de cette variable (`=`, `,`, `;`)
+    n'a rien à faire dans un nom."""
+
+    @staticmethod
+    def _avec(valeur):
+        return GameData.from_dict({**MINIMAL_GAME, "dll_overrides": valeur})
+
+    def test_absent_par_defaut(self):
+        assert GameData.from_dict(MINIMAL_GAME).dll_overrides == ()
+
+    def test_le_cas_reel_passe(self):
+        assert self._avec(["d3d9", "msvcr71"]).dll_overrides == ("d3d9", "msvcr71")
+
+    def test_suffixe_casse_et_doublons(self):
+        assert self._avec(["D3D9.dll", "d3d9", "DDraw"]).dll_overrides == ("d3d9", "ddraw")
+
+    _BS = chr(92)
+
+    @pytest.mark.parametrize("mauvais", [
+        ["d3d9=;dxgi=b"], ["d3d9,dxgi"], ["d3d9;x"], [".." + _BS + "d3d9"], ["a/b"],
+        ["C:d3d9"], [""], ["-rf"], ["x" * 65], ["d3d9", 12], ["d3d9"] * 17,
+    ])
+    def test_tout_ou_rien(self, mauvais):
+        """Un bloc douteux est ignoré EN ENTIER : le jeu part avec les DLL de
+        Wine — dégradé, mais lancé — plutôt qu'avec la moitié d'un réglage."""
+        assert self._avec(mauvais).dll_overrides == ()
+
+    @pytest.mark.parametrize("mauvais", [None, "d3d9", {"d3d9": "n"}, 12, True])
+    def test_les_types_impropres_sont_refuses(self, mauvais):
+        assert self._avec(mauvais).dll_overrides == ()
+
+
+class TestLeCatalogueEmbarqueDeclareLesSurcharges:
+    """Le relevé du 2026-09-24 (docs/LINUX.md § 3) : ce que chaque archive
+    LIVRE et que Wine 9.0 fournit aussi. Rien de deviné, rien d'oublié —
+    un `d3d9` manquant ici et Wine remplace le wrapper du jeu en silence."""
+
+    ATTENDU = {
+        "hp1": (), "hp2": (),
+        "hp3": ("d3d8", "d3d9", "ddraw", "msvcr70"),
+        "hp4": ("d3d9", "msvcr71"),
+        "hp5": ("d3d9",), "hp6": ("d3d9",), "hp7a": ("d3d9",), "hp7b": ("d3d9",),
+    }
+
+    def test_releve(self):
+        from src.core.game_data import load_catalog
+        from pathlib import Path
+        from src.core.config import GAMES_JSON_PATH
+        cat = load_catalog(Path(GAMES_JSON_PATH))
+        assert {g.id: g.dll_overrides for g in cat.games} == self.ATTENDU

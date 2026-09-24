@@ -92,7 +92,7 @@ class TestInstallerSignals:
 def _make_7z(tmp_path, *, volume_size: str | None = None):
     """Crée une archive 7z de test via 7z.exe (py7zr retiré du projet)."""
     exe = find_7z_exe()
-    assert exe is not None, "7z.exe bundlé manquant dans assets/7z/"
+    assert exe is not None, "7-Zip embarqué manquant dans assets/7z/"
 
     src = tmp_path / "src" / "Game"
     src.mkdir(parents=True)
@@ -112,7 +112,7 @@ def _make_7z(tmp_path, *, volume_size: str | None = None):
     return archive
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="7z.exe bundlé Windows uniquement")
+@pytest.mark.skipif(find_7z_exe() is None, reason="7-Zip embarqué introuvable")
 class TestExtract7z:
     def test_extract_simple(self, tmp_path):
         archive = _make_7z(tmp_path)
@@ -139,7 +139,7 @@ class TestExtract7z:
         assert (dest / "Game" / "big.bin").stat().st_size == 30_000
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="7z.exe bundlé Windows uniquement")
+@pytest.mark.skipif(find_7z_exe() is None, reason="7-Zip embarqué introuvable")
 class TestVerifyArchiveEntries:
     """Le contrôle anti-évasion doit avoir lieu AVANT l'écriture sur disque.
 
@@ -246,3 +246,74 @@ class TestDeblocageSurReparation:
 
         assert (jeu / "Game.exe").exists(), (
             "le nettoyage a supprimé une installation préexistante")
+
+
+class TestProgressionDu7ZipLinux:
+    """Le 7-Zip officiel pour Linux recule avec des `\\b` au lieu de passer à la
+    ligne : lu ligne à ligne, toute l'extraction était UNE ligne, et la barre
+    restait à 0 % jusqu'au bout."""
+
+    # Relevé sur 7zzs 26.00 (2026-09-24), extraction avec -bsp1 dans un tube.
+    RELEVE = (b"\n  0%\x08\x08\x08\x08    \x08\x08\x08\x08 29% 1 - src/f1.bin"
+              b"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08"
+              b"                   \x08\x08\x08 59% 2 - src/f2.bin\x08\x08\rEverything is Ok\n")
+
+    def test_decoupage_aux_retours_arriere(self):
+        from src.core.extractors import _segments_de_progression
+        lecture, ecriture = os.pipe()
+        os.write(ecriture, self.RELEVE)
+        os.close(ecriture)
+        with os.fdopen(lecture, "rb") as flux:
+            segments = [s.strip() for s in _segments_de_progression(flux)]
+        assert "29% 1 - src/f1.bin" in segments
+        assert "59% 2 - src/f2.bin" in segments
+        assert segments[-1] == "Everything is Ok"
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="7-Zip pour Linux, lu par descripteur")
+    def test_le_releve_passe_par_le_vrai_chemin(self, tmp_path, monkeypatch):
+        """Le RELEVÉ rejoué par un faux 7-Zip, à travers `extract_7z` lui-même :
+        `Popen`, lecture du descripteur, analyse. Lu ligne à ligne, ce flux ne
+        donnait QUE le 100 % final.
+
+        Pourquoi un faux et pas le vrai 7zzs : 7-Zip ne publie un pourcentage
+        qu'environ toutes les 200 ms (mesuré : 39 valeurs en 8 s). Une vraie
+        extraction assez courte pour un test finit parfois AVANT le premier —
+        la version précédente de ce test échouait une fois sur quelques-unes
+        sous charge, ce qui la rendait pire qu'une absence de test."""
+        from src.core import extractors
+        faux = tmp_path / "7zz"
+        faux.write_text(
+            "#!/bin/sh\n"
+            'if [ "$1" = l ]; then printf "Path = Game/f1.bin\\n"; exit 0; fi\n'
+            "printf '\\n  0%%\\b\\b\\b\\b    \\b\\b\\b\\b 29%% 1 - Game/f1.bin'\n"
+            "sleep 0.2\n"
+            "printf '\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b\\b"
+            "                   \\b\\b\\b 59%% 2 - Game/f2.bin\\b\\b'\n"
+            "sleep 0.2\n"
+            "printf '\\rEverything is Ok\\n'\n",
+            encoding="utf-8")
+        faux.chmod(0o755)
+        monkeypatch.setattr(extractors, "find_7z_exe", lambda: str(faux))
+        valeurs: list[int] = []
+        extract_7z(tmp_path / "a.7z", tmp_path, valeurs.append, lambda: False)
+        assert valeurs == [29, 59, 100]
+
+    @pytest.mark.skipif(sys.platform == "win32" or find_7z_exe() is None,
+                        reason="7-Zip officiel pour Linux")
+    def test_une_vraie_extraction(self, tmp_path):
+        """Le 7-Zip EMBARQUÉ accepte nos options (`-bsp1`, `-snl-`, la liste
+        `-slt` de la vérification) et rend les fichiers intacts. La
+        progression intermédiaire est prouvée ci-dessus, pas ici."""
+        src = tmp_path / "src" / "Game"
+        src.mkdir(parents=True)
+        for i in range(2):
+            (src / f"f{i}.bin").write_bytes(os.urandom(1_000_000))
+        archive = tmp_path / "a.7z"
+        subprocess.run([find_7z_exe(), "a", "-mx1", str(archive), "Game"],
+                       cwd=str(tmp_path / "src"), capture_output=True, check=True, timeout=120)
+        valeurs: list[int] = []
+        dest = tmp_path / "out"
+        dest.mkdir()
+        extract_7z(archive, dest, valeurs.append, lambda: False)
+        assert (dest / "Game" / "f1.bin").read_bytes() == (src / "f1.bin").read_bytes()
+        assert valeurs[-1] == 100

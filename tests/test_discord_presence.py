@@ -166,3 +166,48 @@ def test_read_exact_reassembles_fragments():
     assert got == b"abcdef"
     with pytest.raises(OSError):
         DiscordPresence._read_exact(Frag([b"ab"]), 6)  # fermé avant la fin
+
+
+# `_open_ipc` d'origine, capturé à l'import : la garde de conftest le remplace
+# pendant chaque test (aucun test ne parle au VRAI client Discord).
+_OPEN_IPC_REEL = __import__("src.core.discord_presence", fromlist=["_open_ipc"])._open_ipc
+
+
+class TestSocketSousLinux:
+    """Sur Bazzite, Discord s'installe le plus souvent en Flatpak, qui range son
+    socket dans le bac à sable : chercher à la seule racine de
+    `$XDG_RUNTIME_DIR` laissait la présence éteinte sans un mot."""
+
+    def test_les_emplacements_dans_l_ordre(self):
+        from src.core.discord_presence import dossiers_ipc
+        assert dossiers_ipc({"XDG_RUNTIME_DIR": "/run/user/1000"}) == [
+            "/run/user/1000",
+            "/run/user/1000/app/com.discordapp.Discord",
+            "/run/user/1000/app/com.discordapp.DiscordCanary",
+            "/run/user/1000/.flatpak/dev.vencord.Vesktop/xdg-run",
+            "/run/user/1000/snap.discord",
+            "/tmp",
+        ]
+
+    def test_sans_xdg_runtime_dir(self):
+        from src.core.discord_presence import dossiers_ipc
+        assert dossiers_ipc({})[0] == "/tmp"
+        assert dossiers_ipc({}).count("/tmp") == 1
+
+    @pytest.mark.skipif(not hasattr(__import__("socket"), "AF_UNIX"), reason="sockets Unix")
+    def test_le_socket_du_flatpak_est_trouve(self, tmp_path, monkeypatch):
+        import socket
+        import sys as _sys
+        dossier = tmp_path / "app" / "com.discordapp.Discord"
+        dossier.mkdir(parents=True)
+        serveur = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        serveur.bind(str(dossier / "discord-ipc-0"))
+        serveur.listen(1)
+        try:
+            monkeypatch.setattr(_sys, "platform", "linux")
+            monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+            flux = _OPEN_IPC_REEL()
+            assert flux is not None, "le socket du Flatpak n'a pas été trouvé"
+            flux.close()
+        finally:
+            serveur.close()

@@ -43,6 +43,7 @@ class ActionPanel(QWidget):
     uninstall_clicked = pyqtSignal()
     update_clicked = pyqtSignal()
     settings_requested = pyqtSignal()   # « Changer de dossier » depuis l'alerte disque
+    preparation_requested = pyqtSignal()  # « Installer » un composant dans Wine (Linux)
     # Engrenage « Réglages du jeu », à côté des boutons d'un jeu installé. La
     # langue vivait UNIQUEMENT dans la ligne méta, en doré et sans pictogramme :
     # elle s'y lit très bien, mais rien ne dit qu'on peut cliquer dessus. Un
@@ -78,6 +79,7 @@ class ActionPanel(QWidget):
         self._alert = AlertBanner(manager, self)
         self._alert.setFont(body_font(12))
         self._alert.settings_requested.connect(self.settings_requested)
+        self._alert.preparation_requested.connect(self.preparation_requested)
         self._layout.addWidget(self._alert)
 
         # Ligne principale des boutons

@@ -16,6 +16,10 @@
 # Les scripts POSIX, à l'inverse : un shebang suivi de CRLF donne
 # « bad interpreter: /bin/sh^M ». Le portage Linux est un objectif déclaré.
 *.sh   text eol=lf
+# Même raison pour le point d'entrée de l'AppImage (sans extension) et le
+# fichier .desktop, lus sous Linux uniquement.
+build/linux/AppRun  text eol=lf
+*.desktop  text eol=lf
 
 # Fichiers texte du projet : normalisés en LF dans le dépôt, laissés au
 # réglage du poste à la sortie.
@@ -32,6 +36,12 @@
 *.png  binary
 *.jpg  binary
 *.exe  binary
+# 7-Zip officiel pour Linux (binaire ELF sans extension) : jamais touché, et
+# son bit exécutable est enregistré par git (mode 100755).
+assets/7z/linux/7zzs  binary
+# Sa licence reste OCTET POUR OCTET celle de l'archive officielle (CRLF
+# compris) : son empreinte est publiée dans docs/THIRD-PARTY-NOTICES.md.
+assets/7z/linux/License.txt  -text
 *.7z   binary
 *.ttf  binary
 *.mp4  binary

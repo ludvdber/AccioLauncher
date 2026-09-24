@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Accio Launcher
+GenericName=Game launcher
+GenericName[fr]=Lanceur de jeux
+GenericName[es]=Lanzador de juegos
+Comment=All eight Harry Potter PC games, downloaded, installed and launched in one click
+Comment[fr]=Les huit jeux Harry Potter PC, téléchargés, installés et lancés en un clic
+Comment[es]=Los ocho juegos de Harry Potter para PC, descargados, instalados y lanzados con un clic
+Exec=AccioLauncher
+Icon=be.acciolauncher.AccioLauncher
+Terminal=false
+Categories=Game;
+Keywords=Harry Potter;Hogwarts;Wine;Proton;
+StartupWMClass=AccioLauncher
+SingleMainWindow=true

@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.28",
+  "catalog_version": "0.29",
   "contributors": [
     {
       "name": "ASTeam",
@@ -471,6 +471,12 @@
       "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
       "developer": "KnowWonder",
       "executable": "HP3/system/hppoa.exe",
+      "dll_overrides": [
+        "d3d8",
+        "d3d9",
+        "ddraw",
+        "msvcr70"
+      ],
       "cover_image": "hp3_cover.jpg",
       "tags": [
         "Aventure",
@@ -635,6 +641,10 @@
       "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
       "developer": "EA UK",
       "executable": "HP4/gof_f.exe",
+      "dll_overrides": [
+        "d3d9",
+        "msvcr71"
+      ],
       "cover_image": "hp4_cover.jpg",
       "tags": [
         "Action",
@@ -712,6 +722,9 @@
       "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
       "developer": "EA UK",
       "executable": "HP5/hp.exe",
+      "dll_overrides": [
+        "d3d9"
+      ],
       "cover_image": "hp5_cover.jpg",
       "tags": [
         "Monde ouvert",
@@ -833,6 +846,9 @@
       "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
       "developer": "EA UK",
       "executable": "HP6/hp6.exe",
+      "dll_overrides": [
+        "d3d9"
+      ],
       "cover_image": "hp6_cover.jpg",
       "tags": [
         "Monde ouvert",
@@ -914,6 +930,9 @@
       "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
       "developer": "EA Bright Light",
       "executable": "HP7/pc/hp7.exe",
+      "dll_overrides": [
+        "d3d9"
+      ],
       "cover_image": "hp7a_cover.jpg",
       "tags": [
         "Action",
@@ -1062,6 +1081,9 @@
       "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
       "developer": "EA Bright Light",
       "executable": "HP8/pc/hp8.exe",
+      "dll_overrides": [
+        "d3d9"
+      ],
       "cover_image": "hp7b_cover.jpg",
       "tags": [
         "Action",

@@ -411,6 +411,45 @@ def _sous_dossier_valide(brut) -> str:
     return nom
 
 
+# Au-delà, un bloc `dll_overrides` n'a rien d'un relevé : les jeux du catalogue
+# en déclarent un à quatre (docs/LINUX.md, § 3).
+_MAX_SURCHARGES_DLL = 16
+
+
+def _surcharges_dll_valides(brut) -> tuple[str, ...]:
+    """DLL livrées avec le jeu que Wine doit charger AVANT les siennes.
+
+    Ces noms viennent du catalogue DISTANT et finissent dans la variable
+    `WINEDLLOVERRIDES`, dont la syntaxe tient à trois caractères : `=` sépare
+    le mode, `,` et `;` les entrées. Un nom qui en porterait un pourrait donc
+    réécrire le réglage d'une AUTRE DLL, ou désactiver la sienne (`d3d9=`).
+    `_JETON_SUR` les refuse tous, avec les séparateurs de chemin. Un suffixe
+    `.dll` est toléré et retiré ; les doublons, fusionnés.
+
+    Tout ou rien, comme `language_registry` : un bloc douteux est ignoré en
+    entier, et le jeu part avec les DLL de Wine — dégradé, mais lancé.
+    """
+    if brut is None:
+        return ()
+    if not isinstance(brut, list) or len(brut) > _MAX_SURCHARGES_DLL:
+        log.warning("Bloc dll_overrides ignoré : %r", brut)
+        return ()
+    noms: list[str] = []
+    for nom in brut:
+        if not isinstance(nom, str):
+            log.warning("Bloc dll_overrides ignoré (entrée %r)", nom)
+            return ()
+        propre = nom.strip()
+        if propre.lower().endswith(".dll"):
+            propre = propre[:-4]
+        if not _JETON_SUR.match(propre) or len(propre) > 64:
+            log.warning("Bloc dll_overrides ignoré (nom %r)", nom)
+            return ()
+        if propre.lower() not in noms:
+            noms.append(propre.lower())
+    return tuple(noms)
+
+
 # Où un jeu range ses sauvegardes. Les racines sont une LISTE FERMÉE : le
 # catalogue distant choisit parmi elles, il n'écrit jamais un chemin absolu.
 RACINES_SAUVEGARDES = ("documents", "localappdata")
@@ -561,6 +600,18 @@ class GameData:
     annee: int = 0
     # Où le jeu range ses sauvegardes ; None tant qu'on ne l'a pas relevé.
     sauvegardes: Sauvegardes | None = None
+    # DLL que le jeu LIVRE et que Wine fournit aussi : sous Linux, Wine
+    # charge SA version si on ne lui dit rien, même quand celle du jeu est à
+    # côté de l'exe (vérifié sous Wine 9.0, docs/LINUX.md § 3). Le jeu
+    # démarre alors sans son wrapper — plus de fenêtré forcé, de bride FPS
+    # ni de champ de vision corrigé —, sans que rien ne le signale. Chaque nom
+    # part en `n,b` (la DLL du jeu d'abord) dans `WINEDLLOVERRIDES`.
+    #
+    # Relevé DANS les archives, jamais deviné : c'est l'intersection entre ce
+    # qu'elles livrent et ce que Wine fournit. Ignoré sous Windows, qui charge
+    # d'office la DLL du dossier du jeu. Par jeu et dans le catalogue, comme
+    # `dpi_aware` : un jeu ajouté déclare les siennes sans nouvelle release.
+    dll_overrides: tuple[str, ...] = ()
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -659,6 +710,7 @@ class GameData:
             display_locked=data.get("display_locked") is True,
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),
+            dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),

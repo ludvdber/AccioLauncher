@@ -200,6 +200,59 @@ def _jamais_le_vrai_discord(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _linux_pret_a_jouer(tmp_path_factory, monkeypatch):
+    """Par défaut, les tests voient une machine où les jeux PEUVENT démarrer.
+
+    Sous Windows, c'est le cas du runner : Visual C++ y est installé, et le
+    bandeau de la fiche reste caché. Sous Linux, l'équivalent est un lanceur
+    de compatibilité, un préfixe initialisé et ses composants en place. Sans
+    cette garde, la même suite se comporterait autrement selon la machine :
+    « Wine introuvable » sur le runner (qui n'a pas Wine), et un VRAI wine
+    lancé sur un poste qui l'a — même esprit que `_jamais_le_vrai_discord`.
+
+    Le lanceur est factice et son chemin n'existe pas : un test qui oublierait
+    de remplacer `Popen` échouerait franchement au lieu de lancer quoi que ce
+    soit. Le `_Launcher/` de `compat` (préfixes, journaux Wine) vit dans un
+    dossier temporaire À PART, propre à CE test : dans `tmp_path`, il se
+    serait mêlé à ce que les autres tests y listent. Un test qui veut une
+    autre machine le dit : `sans_lanceur`, ou il vide le `winetricks.log`.
+
+    Les contrôles de prérequis sont mémorisés pour la session : on les oublie
+    avant et après, sans quoi le résultat d'un test déborderait sur le suivant.
+    """
+    from src.core import compat, system_checks
+    faux = compat.Lanceur("wine", "/nonexistent/accio-test/wine")
+    monkeypatch.setattr("src.core.compat.lanceur", lambda: faux)
+    racine = tmp_path_factory.mktemp("_Launcher")
+    monkeypatch.setattr("src.core.compat._donnees_launcher", lambda: racine)
+    pfx = compat.prefixe("wine")
+    (pfx / "drive_c").mkdir(parents=True, exist_ok=True)
+    (pfx / "system.reg").write_text("WINE REGISTRY Version 2\n\n#arch=win64\n",
+                                    encoding="utf-8")
+    (pfx / "winetricks.log").write_text("vcrun2022\nvcrun2005\nvcrun2008\n",
+                                        encoding="utf-8")
+    system_checks.invalidate_vcredist_cache()
+    yield faux
+    system_checks.invalidate_vcredist_cache()
+
+
+@pytest.fixture
+def lanceur_factice(_linux_pret_a_jouer):
+    """Le lanceur factice de la garde ci-dessus, pour un test qui s'en sert."""
+    return _linux_pret_a_jouer
+
+
+@pytest.fixture
+def sans_lanceur(monkeypatch):
+    """Une machine Linux sans umu-run ni wine : rien ne peut démarrer."""
+    from src.core import system_checks
+    monkeypatch.setattr("src.core.compat.lanceur", lambda: None)
+    system_checks.invalidate_vcredist_cache()
+    yield
+    system_checks.invalidate_vcredist_cache()
+
+
 @pytest.fixture
 def registre_atteignable(monkeypatch):
     """Un registre présent, quelle que soit la plateforme qui joue la suite.

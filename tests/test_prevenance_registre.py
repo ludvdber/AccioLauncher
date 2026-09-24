@@ -11,6 +11,7 @@ Dire « le launcher va écrire Locale = fr » sans dire qu'un `fr_FR` est en pla
 laisse autoriser sans savoir ce qu'on perd.
 """
 
+import sys
 import pytest
 
 pytest.importorskip("pytestqt")
@@ -73,12 +74,25 @@ class TestCeQuiEstAnnonce:
         assert textes[0].count("fr_FR") == 1
         assert textes[0].lower().count("remplace") == 1
 
-    def test_l_elevation_est_annoncee_sous_hklm(self, dialogue):
+    def test_l_elevation_est_annoncee_sous_hklm(self, dialogue, monkeypatch):
         """Voir Windows demander une autorisation sans savoir pourquoi, c'est
         la refuser."""
+        monkeypatch.setattr(sys, "platform", "win32")
         demander, textes = dialogue
         demander("HKLM", CLE, {"Locale": "fr"}, {})
         assert "administrateur" in textes[0].lower()
+
+    def test_sous_wine_on_previent_sans_promettre_d_uac(self, dialogue, monkeypatch):
+        """Sous Linux, c'est le registre du PRÉFIXE Wine, sans invite UAC : la
+        prévenance reste, mais annoncer une autorisation qui ne viendra pas
+        ferait attendre une fenêtre fantôme."""
+        monkeypatch.setattr(sys, "platform", "linux")
+        demander, textes = dialogue
+        demander("HKLM", CLE, {"Locale": "fr"}, {"Locale": ("fr_FR", "fr")})
+        texte = textes[0].lower()
+        assert "administrateur" not in texte
+        assert "wine" in texte and "windows" not in texte.split("\n")[0]
+        assert "fr_fr" in texte, "ce qu'on remplace doit rester dit"
 
     def test_pas_d_annonce_d_elevation_sous_hkcu(self, dialogue):
         """HKCU n'élève pas : promettre une invite qui ne viendra pas est un

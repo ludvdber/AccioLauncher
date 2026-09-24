@@ -15,6 +15,7 @@ from src.ui.audio_bar import AudioBar
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
+from src.ui.preparateur_wine import PreparateurWine
 from src.ui.utils import avertir
 from src.ui.video_player import VideoPlayer
 
@@ -22,6 +23,8 @@ from src.core import trailers
 from src.core.config import ASSETS_DIR
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
+from src.core.i18n import tr
+from src.core.system_checks import invalidate_vcredist_cache
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +83,9 @@ class GameDetailView(QWidget):
         # Géométrie en attente de rattrapage de hauteur (cf. _fit_info_height).
         self._pending_fit: tuple[int, int, int] | None = None
         self._ops = GameOperations(manager, self)
+        # Linux : préparation du préfixe Wine (création, composants). Inerte
+        # sous Windows, où rien ne la demande jamais.
+        self._wine = PreparateurWine(self)
         self._cinema = False
 
         self._build_ui(manager)
@@ -141,6 +147,13 @@ class GameDetailView(QWidget):
         self._action_panel.uninstall_clicked.connect(lambda: handlers.on_uninstall(self))
         self._action_panel.update_clicked.connect(lambda: handlers.on_update_clicked(self))
         self._action_panel.settings_requested.connect(self.settings_requested)
+        self._action_panel.preparation_requested.connect(
+            lambda: handlers.proposer_preparation(self, self.game, puis_jouer=False))
+
+        # Préparation de Wine (Linux) : l'état dans la barre de statut, la
+        # suite (lancer, prévenir, expliquer) dans les handlers.
+        self._wine.message.connect(self.status_message)
+        self._wine.terminee.connect(self._on_wine_prepare)
 
         # Info panel
         self._info.versions_clicked.connect(lambda: handlers.on_versions_clicked(self))
@@ -561,6 +574,31 @@ class GameDetailView(QWidget):
 
     def cancel_operations(self) -> None:
         self._ops.cancel_all()
+        self._wine.shutdown()
+
+    # ──────────────────── Préparation de Wine (Linux) ────────────────────
+
+    @property
+    def preparation_en_cours(self) -> bool:
+        return self._wine.en_cours
+
+    @property
+    def journal_preparation(self):
+        return self._wine.journal
+
+    def preparer_wine(self, game: GameData, verbes, puis_jouer: bool) -> None:
+        """Lance la préparation du préfixe pour ce jeu (une seule à la fois)."""
+        if self._wine.en_cours:
+            self.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+            return
+        self._wine.demarrer(game, verbes, puis_jouer)
+
+    def _on_wine_prepare(self, game_id: str, reussie: bool, raison: str,
+                         puis_jouer: bool) -> None:
+        # Ce qui est installé a changé : les contrôles mémorisés mentent.
+        invalidate_vcredist_cache()
+        self.refresh_actions()
+        handlers.apres_preparation(self, game_id, reussie, raison, puis_jouer)
 
     def set_online(self, online: bool) -> None:
         """Propage le diagnostic réseau jusqu'au panneau d'actions."""

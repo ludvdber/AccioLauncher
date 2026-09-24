@@ -76,6 +76,51 @@ Get-FileHash .\AccioLauncher.exe -Algorithm SHA256
 Si elles diffèrent, **ne lancez pas le fichier** et signalez-le sur le
 [Discord](https://discord.gg/TNwDQd7KGe).
 
+## Linux / Bazzite
+
+**Installer** : téléchargez `AccioLauncher-x86_64.AppImage` depuis la
+[dernière release](https://github.com/ludvdber/AccioLauncher/releases/latest).
+
+- **Avec Gear Lever** (recommandé sur Bazzite, dans Bazaar / Flathub) : ouvrez
+  l'AppImage avec Gear Lever et choisissez « Déplacer vers le menu des
+  applications ». Le launcher apparaît dans le menu, avec son icône.
+- **Sans rien installer** : clic droit sur le fichier → Propriétés → cochez
+  « Exécutable », ou dans un terminal `chmod +x AccioLauncher-x86_64.AppImage`,
+  puis double-cliquez dessus.
+
+Le launcher se met à jour tout seul, comme sous Windows : il remplace son
+propre fichier (qui doit donc être dans un dossier où vous pouvez écrire).
+En mode Jeu (Steam Deck, Bazzite), ajoutez l'AppImage à Steam comme « jeu
+non-Steam » depuis le mode Bureau.
+
+Sous Linux, le launcher lance les jeux Windows avec **umu-launcher** (Proton
+hors de Steam), ou à défaut avec **Wine**.
+
+- **Sur Bazzite**, tout est déjà là : umu-launcher et winetricks font partie
+  du système. S'ils manquent, mettez Bazzite à jour (`ujust update`) puis
+  redémarrez.
+- **Ailleurs**, installez le paquet `umu-launcher` de votre distribution
+  (recommandé), ou Wine avec le support 32 bits et `winetricks`.
+
+Au premier lancement d'un jeu, le launcher propose de **préparer Wine** : il
+crée son préfixe dans `~/Games/AccioLauncher/_Launcher/prefixes/` et y
+installe les composants Visual C++ demandés par le jeu. La première fois, umu
+télécharge aussi Proton (plusieurs centaines de Mo) : comptez quelques
+minutes.
+
+En cas de souci, ce que disent Wine et Proton est gardé dans
+`~/Games/AccioLauncher/_Launcher/logs/` (`wine-<jeu>.log`,
+`wine-preparation.log`). Les détails techniques du portage sont dans
+[docs/LINUX.md](docs/LINUX.md).
+
+**Vérifier le fichier** : l'empreinte SHA-256 de chaque AppImage est dans les
+notes de sa release (`sha256sum AccioLauncher-x86_64.AppImage`), et le fichier
+porte une attestation de provenance :
+`gh attestation verify AccioLauncher-x86_64.AppImage --repo ludvdber/AccioLauncher`.
+
+**Construire soi-même** : `./build.sh` (Python 3.12+ ; il crée son propre
+environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
+
 ## Aperçu
 
 <table>
@@ -129,8 +174,9 @@ proposer. Tout est expliqué dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
 <br>
 
-Python 3.12 ou plus récent, PyQt6, httpx. Windows 10 et 11 pour l'instant ; le
-support de Linux est prévu, et tout appel propre à Windows est déjà isolé.
+Python 3.12 ou plus récent, PyQt6, httpx. Windows 10 et 11, et Linux : tout
+appel propre à Windows est isolé derrière `sys.platform`, et les jeux y passent
+par Proton ou Wine (`src/core/compat.py`, [docs/LINUX.md](docs/LINUX.md)).
 
 ```bash
 git clone https://github.com/ludvdber/AccioLauncher.git
@@ -147,9 +193,11 @@ python -m pytest        # plus de 1 580 tests, sans écran (offscreen)
 python -m ruff check .
 ```
 
-Construire l'exécutable : `build.bat` (→ `dist/AccioLauncher.exe`). Il enchaîne
-vérification de l'icône, lint, tests, audit de mise en page avec les vraies
-polices, puis PyInstaller, et s'arrête à la première étape qui échoue.
+Construire l'exécutable : `build.bat` (→ `dist/AccioLauncher.exe`) sous
+Windows, `./build.sh` (→ `dist/AccioLauncher-x86_64.AppImage`) sous Linux. Ils
+enchaînent vérification de l'icône, lint, tests, audit de mise en page avec
+les vraies polices, puis PyInstaller (et l'AppImage), et s'arrêtent à la
+première étape qui échoue.
 
 À chaque push, la CI rejoue les tests sous Windows et Linux, et un second
 workflow passe le code à Bandit et les dépendances à pip-audit.

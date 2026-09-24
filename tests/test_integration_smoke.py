@@ -10,6 +10,7 @@ saisons, cross-fade, mute en direct, boutons Redémarrer, imports d'onboarding.
 import contextlib
 import pathlib
 import re
+import sys
 
 import pytest
 
@@ -2277,3 +2278,51 @@ class TestEchecDeLancementVisible:
         assert win._toast.isVisible(), "l'échec passe inaperçu"
         assert "n'a pas démarré" in win._toast.text()
 
+
+
+class TestSansZoneDeNotification:
+    """GNOME sans l'extension AppIndicator, certains compositeurs Wayland :
+    aucune zone de notification. Y « ranger » la fenêtre au lancement d'un jeu
+    la rendait INTROUVABLE jusqu'à la fin de la partie — aucune icône pour la
+    rappeler. Le faux est posé sur l'INSTANCE (règle 12)."""
+
+    def test_sans_zone_la_fenetre_est_reduite_pas_cachee(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win._tray.disponible = lambda: False
+        win._minimize_to_tray()
+        assert win.isVisible(), "cachée sans icône pour la rappeler"
+        assert win.windowState() & Qt.WindowState.WindowMinimized
+        win._restore_from_tray()
+        assert not win.windowState() & Qt.WindowState.WindowMinimized
+
+    def test_avec_zone_elle_s_y_range(self, make_window, qtbot):
+        win = make_window()
+        win.show()
+        win._tray.disponible = lambda: True
+        win._minimize_to_tray()
+        assert not win.isVisible()
+
+    def test_sous_windows_la_zone_existe_toujours(self, monkeypatch):
+        """Le comportement Windows ne change pas : on ne demande même pas."""
+        from src.ui.tray_manager import TrayManager
+        monkeypatch.setattr(sys, "platform", "win32")
+        assert TrayManager.disponible() is True
+
+    def test_ailleurs_on_demande_a_qt(self, monkeypatch):
+        from PyQt6.QtWidgets import QSystemTrayIcon
+
+        from src.ui.tray_manager import TrayManager
+        monkeypatch.setattr(sys, "platform", "linux")
+        assert TrayManager.disponible() is QSystemTrayIcon.isSystemTrayAvailable()
+
+
+class TestIdentifiantDeBureau:
+    """Sous Wayland, `setWindowIcon` est ignoré : c'est l'`app_id` qui relie
+    la fenêtre à son `.desktop`, donc à son icône et à son nom dans le dock."""
+
+    def test_un_identifiant_de_bureau_valide(self):
+        """Nom en DNS inversé, composants sans chiffre en tête : la règle des
+        identifiants de fichiers `.desktop` (spécification freedesktop)."""
+        import main
+        assert re.fullmatch(r"[A-Za-z_][\w-]*(\.[A-Za-z_][\w-]*)+", main.DESKTOP_ID)

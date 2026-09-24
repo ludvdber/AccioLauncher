@@ -64,6 +64,13 @@ def catalogue(raw: object) -> None:
                     and "**" not in motif, motif
             assert sv.fichiers.count("/") <= 1, sv.fichiers
 
+        # Ces noms finissent dans `WINEDLLOVERRIDES`, dont la syntaxe tient à
+        # `=`, `,` et `;` : un seul de ces caractères réécrirait le réglage
+        # d'une AUTRE DLL, ou désactiverait celle-ci.
+        for dll in jeu.dll_overrides:
+            assert _JETON_SUR.match(dll) and not set(dll) & set("=,;/\\:"), dll
+            assert dll == dll.lower() and not dll.endswith(".dll"), dll
+
         lr = jeu.language_registry
         if lr is not None:
             for langue in lr.languages:

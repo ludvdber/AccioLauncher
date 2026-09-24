@@ -10,6 +10,7 @@ from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
 
+from src.core import compat
 from src.core import game_language as langue
 from src.core import stats
 from src.core.config import Config
@@ -244,9 +245,15 @@ class GameManager:
         self._states[game_id] = state
         log.info("État de %s → %s", game_id, state)
 
-    def launch_game(self, game_id: str, confirmer=None,
-                    avertir=None) -> subprocess.Popen | None:
+    def launch_game(self, game_id: str, confirmer=None, avertir=None,
+                    ignorer_prerequis: bool = False) -> subprocess.Popen | None:
         """Lance le .exe du jeu en processus détaché.
+
+        Sous Linux, par le lanceur de compatibilité (umu-run ou wine), dans le
+        préfixe partagé — voir `src/core/compat.py`. `ignorer_prerequis` n'y
+        sert qu'à « Lancer quand même » après un échec de winetricks : les
+        composants intégrés à Wine suffisent parfois, et c'est à l'utilisateur
+        d'en décider, pas au launcher de le lui interdire.
 
         `confirmer` est le rappel de prévenance avant écriture registre (cf.
         `apply_game_language`) : il n'est appelé que s'il y a réellement une
@@ -277,10 +284,27 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
+        # Sous Linux, le « Windows » du jeu est un préfixe Wine, et c'est le
+        # lanceur de compatibilité qui l'exécute. Sans lui, rien de ce qui suit
+        # n'a de sens : on le dit tout de suite, avant d'écrire quoi que ce
+        # soit dans un préfixe que personne ne lira.
+        lanceur = None
+        if sys.platform != "win32":
+            lanceur = compat.lanceur()
+            if lanceur is None:
+                # Installé depuis, peut-être (le message le propose) : on
+                # cherche à nouveau avant de refuser, sans redémarrage.
+                compat.oublier()
+                lanceur = compat.lanceur()
+            if lanceur is None:
+                raise RuntimeError("compat_absent")
+
         # Socle commun + ce que le catalogue déclare pour CE jeu (ex. HP7 et
         # son Visual C++ 2005). L'identifiant manquant remonte dans le message
-        # d'erreur : c'est lui qui permet à l'UI d'ouvrir la bonne page.
-        manquants = prerequis_manquants(("vcredist_x86", *game.requires))
+        # d'erreur : c'est lui qui permet à l'UI d'ouvrir la bonne page — ou,
+        # sous Linux, de proposer l'installation dans le préfixe.
+        manquants = ([] if ignorer_prerequis
+                     else prerequis_manquants(("vcredist_x86", *game.requires)))
         if manquants:
             raise RuntimeError(f"prerequis_manquant:{manquants[0]}")
 
@@ -318,21 +342,59 @@ class GameManager:
         # `sys.platform == "win32"` et non `platform.system()` : c'est la
         # convention de tout le reste du projet (16 autres sites), et le
         # portage Linux impose que le test soit repérable d'un seul motif.
-        if sys.platform == "win32":
-            popen_kwargs["creationflags"] = (
-                subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-            )
-        else:
-            popen_kwargs["start_new_session"] = True
+        if sys.platform != "win32":
+            return self._lancer_sous_wine(game, exe_path, lanceur, popen_kwargs)
+        popen_kwargs["creationflags"] = (
+            subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        )
         # Voir `pre_launch.env_de_lancement` : sans cette couche, Windows
         # agrandit la fenêtre d'un jeu non conscient du DPI sur un écran mis à
         # l'échelle. Mesuré sur les deux parties de HP7 : 3200×1800 pour un
         # écran de 2560×1440. None quand le jeu ne le déclare pas (six sur
-        # huit) et hors Windows : le jeu hérite alors simplement du nôtre.
+        # huit) : le jeu hérite alors simplement du nôtre.
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
         # Chemin absolu : dossier d'installation + `executable`, validé au
         # parsing du catalogue (ni `..`, ni racine, ni lecteur). Aucun shell.
         return subprocess.Popen([str(exe_path)], **popen_kwargs)  # nosec B603
+
+    @staticmethod
+    def _lancer_sous_wine(game: GameData, exe_path: Path, lanceur,
+                          popen_kwargs: dict) -> subprocess.Popen:
+        """Lance le jeu par umu-run ou wine, dans le préfixe partagé.
+
+        `dpi_aware` n'a pas de sens ici — `__COMPAT_LAYER` est une couche de
+        Windows — et il est ignoré sans bruit. Les DLL que le jeu livre et que
+        Wine fournit aussi partent en `WINEDLLOVERRIDES` (`dll_overrides`).
+
+        Ce que disent Wine ou Proton part dans `_Launcher/logs/wine-<jeu>.log`,
+        réécrit à chaque lancement : c'est la première chose à demander devant
+        un jeu qui ne démarre pas, et rien n'en sort de la machine.
+        """
+        pfx = compat.prefixe(lanceur.famille)
+        popen_kwargs["start_new_session"] = True
+        popen_kwargs["env"] = compat.environnement(lanceur, pfx, game.dll_overrides)
+        commande = compat.commande_jeu(lanceur, exe_path)
+        journal = compat.journal_du_jeu(game.id)
+        log.info("Lancement sous %s (%s) : préfixe %s, surcharges %s, journal %s",
+                 lanceur.famille, lanceur.executable, pfx,
+                 ",".join(game.dll_overrides) or "aucune", journal)
+        try:
+            journal.parent.mkdir(parents=True, exist_ok=True)
+            sortie = open(journal, "wb")
+        except OSError as exc:
+            log.warning("Journal Wine impossible (%s) : sortie ignorée", exc)
+            sortie = None
+        try:
+            # Lanceur trouvé par chemin ABSOLU (`compat._trouver`), exe validé au
+            # parsing du catalogue ; liste d'arguments, aucun shell.
+            return subprocess.Popen(  # nosec B603
+                commande, stdin=subprocess.DEVNULL,
+                stdout=sortie if sortie is not None else subprocess.DEVNULL,
+                stderr=subprocess.STDOUT, **popen_kwargs)
+        finally:
+            # Le processus a sa propre copie du descripteur : la nôtre se ferme.
+            if sortie is not None:
+                sortie.close()
 
     def apply_pre_launch_patches(self, game: GameData) -> None:
         """Façade rétro-compat — délègue à pre_launch.apply_ini_patches."""

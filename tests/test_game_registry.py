@@ -137,8 +137,11 @@ class TestConstruireReg:
         assert texte.encode("utf-16").startswith(b"\xff\xfe")
 
 
+@pytest.mark.usefixtures("sans_lanceur")
 class TestHorsWindows:
-    """Objectif Linux : rien ne doit lever, tout doit dégrader."""
+    """Linux SANS Wine ni umu : rien ne doit lever, tout doit dégrader.
+
+    Avec un lanceur, le registre est celui du préfixe : `test_compat.py`."""
 
     def test_lecture_vide_hors_windows(self, monkeypatch):
         monkeypatch.setattr(sys, "platform", "linux")

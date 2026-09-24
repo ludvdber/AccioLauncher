@@ -6,6 +6,8 @@ présence même du bandeau est l'information. Les tests vérifient donc autant s
 absence que son contenu.
 """
 
+import sys
+
 import pytest
 
 pytest.importorskip("pytestqt")
@@ -176,7 +178,13 @@ class TestPrerequisVCredist:
         monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
         _prepare(panel, GameState.INSTALLED)
         assert "Visual C++" in widget._alert.text()
-        assert 'href="vcredist_x86"' in widget._alert.text()
+        if sys.platform == "win32":
+            assert 'href="vcredist_x86"' in widget._alert.text()
+        else:
+            # Sous Linux, le composant s'installe DANS le préfixe Wine, par le
+            # launcher : le lien mène à la préparation, pas chez Microsoft.
+            assert "dans Wine" in widget._alert.text()
+            assert 'href="preparer"' in widget._alert.text()
 
     def test_pas_avant_installation(self, panel, monkeypatch):
         """Rien à lancer encore : l'avertissement viendrait trop tôt."""

@@ -1,5 +1,7 @@
 """Wrapper autour de QSystemTrayIcon : icône, menu, signaux haut-niveau."""
 
+import sys
+
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon, QWidget
@@ -60,6 +62,17 @@ class TrayManager(QObject):
         if reason in (QSystemTrayIcon.ActivationReason.Trigger,
                       QSystemTrayIcon.ActivationReason.DoubleClick):
             self.restore_requested.emit()
+
+    @staticmethod
+    def disponible() -> bool:
+        """Une zone de notification existe-t-elle pour y ranger la fenêtre ?
+
+        Toujours vrai sous Windows, sans même demander : le comportement y
+        reste celui d'avant. Sous Linux, pas sur GNOME sans l'extension
+        AppIndicator ni sur certains compositeurs Wayland : y « ranger » la
+        fenêtre la ferait disparaître sans icône pour la rappeler.
+        """
+        return sys.platform == "win32" or QSystemTrayIcon.isSystemTrayAvailable()
 
     def show(self) -> None:
         self._tray.show()

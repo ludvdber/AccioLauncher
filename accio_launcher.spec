@@ -1,8 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec pour Accio Launcher — mode onefile, windowed."""
+"""PyInstaller spec pour Accio Launcher.
+
+Windows : un seul `AccioLauncher.exe` (onefile, windowed) — inchangé.
+Linux : un DOSSIER (onedir), que `build/linux/appimage.sh` range dans une
+AppImage. Pas de onefile là-bas : l'AppImage est déjà un fichier unique et
+compressé, et un onefile dedans se décompresserait EN PLUS dans /tmp à
+chaque démarrage (~200 Mo écrits pour rien, et plusieurs secondes).
+"""
 
 import os
 import re
+import sys
 
 block_cipher = None
 
@@ -137,6 +145,31 @@ _JAMAIS_ATTEINTS = (
     # Tactile TUIO (par UDP) et plateformes de test : jamais chargés par l'exe.
     "generic/qtuiotouchplugin.dll", "platforms/qminimal.dll",
     "platforms/qoffscreen.dll",
+    # ── Linux (AppImage) : les mêmes, sous leur nom Linux ──
+    "imageformats/libqgif.so", "imageformats/libqicns.so", "imageformats/libqpdf.so",
+    "imageformats/libqtga.so", "imageformats/libqtiff.so",
+    "imageformats/libqwbmp.so", "imageformats/libqwebp.so",
+    "tls/libqopensslbackend.so", "tls/libqcertonlybackend.so",
+    "networkinformation/libqnetworkmanager.so", "networkinformation/libqconnman.so",
+    "networkinformation/libqglib.so",
+    "generic/libqtuiotouchplugin.so", "platforms/libqminimal.so",
+    "platforms/libqoffscreen.so",
+    # Plateformes d'écran EMBARQUÉ (framebuffer, EGL sans compositeur, VNC,
+    # Vulkan direct) et leurs entrées evdev : un bureau passe par Wayland ou
+    # X11 (`libqwayland`, `libqxcb`) — le mode Jeu de Bazzite aussi, Gamescope
+    # étant un compositeur.
+    "platforms/libqeglfs.so", "platforms/libqlinuxfb.so", "platforms/libqvnc.so",
+    "platforms/libqminimalegl.so", "platforms/libqvkkhrdisplay.so",
+    "egldeviceintegrations/libqeglfs-emu-integration.so",
+    "egldeviceintegrations/libqeglfs-x11-integration.so",
+    "generic/libqevdevkeyboardplugin.so", "generic/libqevdevmouseplugin.so",
+    "generic/libqevdevtabletplugin.so", "generic/libqevdevtouchplugin.so",
+    # Thème GTK 3 : il tirait TOUTE la pile GTK de la machine de build (23
+    # bibliothèques, 14,9 Mo), qui aurait lu les thèmes et modules GTK de la
+    # machine de l'utilisateur. L'interface est peinte par le launcher :
+    # ce greffon ne lui apporte rien. `build/linux/dependances.elaguer` retire
+    # ensuite ce qui ne servait qu'à lui.
+    "platformthemes/libqgtk3.so",
 )
 
 
@@ -166,7 +199,17 @@ def _keep(entry):
     avec le separateur de la plateforme, et un filtre ecrit en antislash ne
     correspondrait a rien le jour ou le build tournera sous Linux.
     """
+    import sys as _sys
+
     chemin = entry[0].lower().replace("\\", "/")
+    # 7-Zip : chaque plateforme n'embarque que le sien. 7z.exe et 7z.dll ne
+    # tournent pas sous Linux, `7zzs` (7-Zip officiel pour Linux) pas sous
+    # Windows : 3,7 Mo morts dans l'exe, 1,9 dans l'AppImage. Le build Windows
+    # reste ainsi exactement ce qu'il était avant le portage.
+    if chemin.startswith("assets/7z/linux/"):
+        return _sys.platform != "win32"
+    if chemin in ("assets/7z/7z.exe", "assets/7z/7z.dll"):
+        return _sys.platform == "win32"
     if chemin.startswith("pyqt6/qt6/translations"):
         return False
     if "qt6pdf" in chemin:
@@ -181,33 +224,71 @@ def _keep(entry):
 a.binaries = [e for e in a.binaries if _keep(e)]
 a.datas = [e for e in a.datas if _keep(e)]
 
+if sys.platform.startswith("linux"):
+    # Ce que la machine fournit, et ce que plus rien n'atteint une fois les
+    # greffons écartés : voir build/linux/dependances.py.
+    sys.path.insert(0, os.path.join(ROOT, "build", "linux"))
+    from dependances import elaguer
+
+    a.binaries, _retires = elaguer(a.binaries)
+    print(f"[accio] {len(_retires)} bibliotheques laissees a la machine :",
+          ", ".join(sorted(os.path.basename(e[0]) for e in _retires)))
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name="AccioLauncher",
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    # upx=False VOLONTAIREMENT : la compression UPX d'un exe PyInstaller est un
-    # déclencheur classique de faux positifs heuristiques (Defender & co.), et
-    # sur un binaire non signé ça suffit à faire fuir les premiers utilisateurs.
-    # Les vraies économies de taille sont ailleurs (excludes et
-    # _JAMAIS_ATTEINTS ci-dessus, bandes-annonces hors de l'exe). NE PAS repasser à True sans certificat de signature.
-    upx=False,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=os.path.join(ROOT, "assets", "accio_launcher.ico"),
-    version=VERSION_FILE,
-)
+if sys.platform.startswith("linux"):
+    # strip=True : le Python d'`actions/setup-python` (celui de la release)
+    # livre `libpython` et ses modules natifs AVEC leurs symboles de débogage
+    # — 33 Mo pour libpython seule, contre 7 une fois épurée. Relevé sur le
+    # build d'essai : AppImage de 77 Mo, contre 62 depuis un Python de
+    # distribution. Les bibliothèques de Qt sont déjà épurées : rien n'y change.
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name="AccioLauncher",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=True,
+        upx=False,
+        console=False,
+    )
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=True,
+        upx=False,
+        name="AccioLauncher",
+    )
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name="AccioLauncher",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        # upx=False VOLONTAIREMENT : la compression UPX d'un exe PyInstaller est un
+        # déclencheur classique de faux positifs heuristiques (Defender & co.), et
+        # sur un binaire non signé ça suffit à faire fuir les premiers utilisateurs.
+        # Les vraies économies de taille sont ailleurs (excludes et
+        # _JAMAIS_ATTEINTS ci-dessus, bandes-annonces hors de l'exe). NE PAS repasser à True sans certificat de signature.
+        upx=False,
+        upx_exclude=[],
+        runtime_tmpdir=None,
+        console=False,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=os.path.join(ROOT, "assets", "accio_launcher.ico"),
+        version=VERSION_FILE,
+    )

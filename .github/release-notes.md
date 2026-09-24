@@ -16,9 +16,16 @@
 
 ## Télécharger
 
-Téléchargez **AccioLauncher.exe** ci-dessous et lancez-le, aucune installation
-n'est nécessaire. Si vous avez déjà le launcher, il vous propose la mise à jour
-tout seul.
+**Windows 10 et 11** — téléchargez **AccioLauncher.exe** ci-dessous et
+lancez-le, aucune installation n'est nécessaire.
+
+**Linux (Bazzite, Steam Deck, Fedora, Ubuntu…)** — téléchargez
+**AccioLauncher-x86_64.AppImage**, rendez-le exécutable (clic droit →
+Propriétés, ou `chmod +x`) et lancez-le. Les jeux tournent par Proton (via
+`umu-run`) ou Wine : voir
+[Linux / Bazzite](https://github.com/ludvdber/AccioLauncher#linux--bazzite).
+
+Si vous avez déjà le launcher, il vous propose la mise à jour tout seul.
 
 <details>
 <summary><b>Vérifier que le fichier est l'original</b></summary>
@@ -40,6 +47,15 @@ porte une attestation de provenance signée. Pour la vérifier avec
 ```
 gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
 ```
+
+Empreinte SHA-256 de `AccioLauncher-x86_64.AppImage` :
+
+```
+{SHA256_LINUX}
+```
+
+Sous Linux : `sha256sum AccioLauncher-x86_64.AppImage`, puis
+`gh attestation verify AccioLauncher-x86_64.AppImage --repo ludvdber/AccioLauncher`.
 
 </details>
 
