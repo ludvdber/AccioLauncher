@@ -27,10 +27,12 @@ from datetime import datetime
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.core import sauvegardes, stats
+from src.core import sauvegardes, scolarite, stats
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
+from src.core.i18n import tr
 from src.ui.process_monitor import ProcessMonitor
+from src.ui.theme import THEMES
 
 log = logging.getLogger(__name__)
 
@@ -75,8 +77,31 @@ class GameSession(QObject):
         self._avant = sauvegardes.releve(self._spec(game_id))
         self._monitor.start(process, game_name)
         if self._manager.config.discord_presence:
-            self._presence.set_playing(game_name, game_id)
+            self._presence.set_playing(game_name, game_id, self.ligne_profil(game_id))
         self.demarree.emit(game_name)
+
+    def ligne_profil(self, game_id: str) -> str:
+        """« Serdaigle · 6ᵉ année » : la seconde ligne de la carte Discord.
+
+        Rien de nouveau n'est mesuré : la maison est le thème (le Choixpeau le
+        propose, et les identifiants de maison SONT ceux des thèmes), l'année
+        vient de `scolarite`. Poudlard n'est pas une maison, donc ne s'affiche
+        pas. Le jeu qu'on lance compte comme commencé : c'est le cas une seconde
+        plus tard, et la carte, elle, s'affiche maintenant.
+        """
+        parties = []
+        maison = THEMES.get(self._manager.config.theme)
+        if maison is not None and maison.id != "poudlard":
+            parties.append(tr(maison.nom))
+        annee = scolarite.annee_courante(scolarite.annees(
+            [e.game for e in self._manager.get_games()],
+            self._manager.is_installed,
+            lambda gid: self._manager.get_playtime(gid) + (gid == game_id)))
+        if annee == 1:
+            parties.append(tr("1ʳᵉ année"))
+        elif annee:
+            parties.append(tr("{}ᵉ année").format(annee))
+        return " · ".join(parties)
 
     def _spec(self, game_id: str):
         game = self._manager.get_game_by_id(game_id)

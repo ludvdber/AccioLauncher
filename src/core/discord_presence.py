@@ -1,7 +1,8 @@
 r"""Discord Rich Presence via l'IPC local de Discord — sans dépendance externe.
 
-Affiche « Joue à <jeu> » sur le profil Discord de l'utilisateur, avec un bouton
-« Découvrir Accio Launcher » pointant vers le site. Protocole : trames JSON
+Affiche « Joue à <jeu> » sur le profil Discord de l'utilisateur, avec la
+jaquette, une ligne « maison · année » et deux boutons : le site et le Discord
+de la communauté. Protocole : trames JSON
 (handshake op 0, commandes op 1) sur le named pipe Windows
 `\\.\pipe\discord-ipc-N` (ou socket Unix `$XDG_RUNTIME_DIR/discord-ipc-N`
 sous Linux — déjà géré pour l'objectif Linux).
@@ -33,7 +34,7 @@ import time
 import uuid
 
 from src.core.i18n import tr
-from src.core.liens import SITE_URL
+from src.core.liens import DISCORD_URL, SITE_URL
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class DiscordPresence:
 
     # ── API publique (thread-safe, jamais bloquante) ──
 
-    def set_playing(self, game_name: str, game_id: str = "") -> None:
+    def set_playing(self, game_name: str, game_id: str = "", ligne: str = "") -> None:
         """Affiche « Joue à <game_name> » avec le bouton vers le site.
 
         L'activité est composée ICI, sur le thread appelant, et non dans le
@@ -102,15 +103,25 @@ class DiscordPresence:
         d'amis. Elle était codée en français en dur, donc un joueur anglophone
         ou hispanophone diffusait « Joue à … » à tout son entourage. Traduire
         au point d'appel garde aussi `tr()` hors du thread réseau.
+
+        `ligne` est la seconde ligne de la carte (« Serdaigle · 6ᵉ année »),
+        composée par l'appelant : la maison vit dans le thème, donc côté `ui`.
+        Vide, elle est omise plutôt qu'envoyée blanche.
         """
         activite = {
             "details": tr("Joue à {}").format(game_name),
             "timestamps": {"start": int(time.time())},
             "assets": {"small_image": _ASSET_LOGO, "small_text": "Accio Launcher"},
+            # Deux boutons, le maximum de Discord. Ils ne sont vus que des
+            # AUTRES : c'est le seul endroit où les amis d'un joueur croisent
+            # le projet, d'où le Discord de la communauté à côté du site.
             "buttons": [
                 {"label": tr("Découvrir Accio Launcher"), "url": SITE_URL},
+                {"label": tr("Rejoindre la communauté"), "url": DISCORD_URL},
             ],
         }
+        if ligne:
+            activite["state"] = ligne
         # La jaquette en grande image, le logo en pastille : sans image, la
         # carte d'activité n'était qu'une ligne de texte grise.
         cle = _cle_asset(game_id)

@@ -248,3 +248,42 @@ class TestSauvegardeDeLaPartie:
         session.demarrer(_FauxProcess(), "HP1", "hp1")
         session._monitor.game_exited.emit("HP1", 0, 900.0)
         assert not sauvegardes.chemin_fichier().exists()
+
+
+class TestLigneDeProfil:
+    """« Serdaigle · 6ᵉ année », seconde ligne de la carte Discord."""
+
+    @staticmethod
+    def _session(tmp_path, theme: str, annee: int = 0, secondes: int = 0) -> GameSession:
+        jeux = (GameData.from_dict({**GAME, "annee": annee}),
+                GameData.from_dict({**GAME, "id": "hp6", "annee": 6}))
+        catalog = Catalog(catalog_version="1.0", catalog_url="", games=jeux)
+        config = Config(install_path=tmp_path, cache_path=tmp_path / ".cache", theme=theme)
+        config.playtime_seconds["hp6"] = secondes
+        with patch("src.core.game_manager.load_catalog", return_value=catalog):
+            return GameSession(GameManager(config))
+
+    def test_maison_et_annee_du_jeu_lance(self, tmp_path, qtbot):
+        s = self._session(tmp_path, "serdaigle", annee=1)
+        assert s.ligne_profil("hp1") == "Serdaigle · 1ʳᵉ année"
+
+    def test_l_annee_est_la_plus_haute_commencee(self, tmp_path, qtbot):
+        """Relancer HP1 après avoir joué HP6, c'est toujours être en 6ᵉ année."""
+        s = self._session(tmp_path, "gryffondor", annee=1, secondes=3600)
+        assert s.ligne_profil("hp1") == "Gryffondor · 6ᵉ année"
+
+    def test_poudlard_n_est_pas_une_maison(self, tmp_path, qtbot):
+        s = self._session(tmp_path, "poudlard", annee=1)
+        assert s.ligne_profil("hp1") == "1ʳᵉ année"
+
+    def test_hors_programme_et_sans_maison_ligne_vide(self, tmp_path, qtbot):
+        s = self._session(tmp_path, "poudlard", annee=0)
+        assert s.ligne_profil("hp1") == ""
+
+    def test_la_ligne_part_avec_la_presence(self, tmp_path, qtbot):
+        s = self._session(tmp_path, "serpentard", annee=1)
+        s._monitor.start = lambda proc, nom: None
+        envois = []
+        s._presence.set_playing = lambda *args: envois.append(args)
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        assert envois == [("HP1", "hp1", "Serpentard · 1ʳᵉ année")]

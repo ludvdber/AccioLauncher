@@ -51,11 +51,11 @@ class _FakeDiscord:
         pass
 
 
-def _run_flow(monkeypatch, partial: bool) -> _FakeDiscord:
+def _run_flow(monkeypatch, partial: bool, ligne: str = "") -> _FakeDiscord:
     fake = _FakeDiscord(partial_reads=partial)
     monkeypatch.setattr("src.core.discord_presence._open_ipc", lambda: fake)
     p = DiscordPresence(client_id="123456789012345678")
-    p.set_playing("Harry Potter à l'école des sorciers", "hp1")
+    p.set_playing("Harry Potter à l'école des sorciers", "hp1", ligne)
     time.sleep(0.3)
     p.clear()
     time.sleep(0.2)
@@ -88,6 +88,35 @@ class TestFlow:
         fake = _run_flow(monkeypatch, partial=True)
         ops = [op for op, _ in fake.received]
         assert ops == [0, 1, 1]  # et pas [0, 0, 0, …]
+
+
+class TestCarte:
+    def test_deux_boutons_le_site_puis_la_communaute(self, monkeypatch):
+        from src.core.liens import DISCORD_URL, SITE_URL
+        fake = _run_flow(monkeypatch, partial=False)
+        boutons = fake.received[1][1]["args"]["activity"]["buttons"]
+        assert [b["url"] for b in boutons] == [SITE_URL, DISCORD_URL]
+
+    def test_la_ligne_maison_annee_devient_le_state(self, monkeypatch):
+        fake = _run_flow(monkeypatch, partial=False, ligne="Serdaigle · 6ᵉ année")
+        assert fake.received[1][1]["args"]["activity"]["state"] == "Serdaigle · 6ᵉ année"
+
+    def test_sans_ligne_aucun_state_blanc(self, monkeypatch):
+        fake = _run_flow(monkeypatch, partial=False)
+        assert "state" not in fake.received[1][1]["args"]["activity"]
+
+    def test_libelles_de_bouton_sous_32_caracteres_dans_chaque_langue(self):
+        """Discord refuse toute l'activité au-delà de 32 caractères : un
+        libellé traduit trop long effacerait la carte entière, en silence."""
+        from src.core import i18n
+        avant = i18n.get_language()
+        try:
+            for langue in i18n.available_languages():
+                i18n.set_language(langue.code)
+                for cle in ("Découvrir Accio Launcher", "Rejoindre la communauté"):
+                    assert len(i18n.tr(cle)) <= 32, (langue.code, i18n.tr(cle))
+        finally:
+            i18n.set_language(avant)
 
 
 class TestCleAsset:
