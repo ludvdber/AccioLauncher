@@ -174,3 +174,62 @@ class TestBatEndToEnd:
         # Dans un .bat, une variable absente s'étend en vide → "[][1]" attendu.
         assert "AccioLauncher.exe" not in content, f"fuite _PYI_* : {content!r}"
         assert "[][1]" in content, f"env inattendu : {content!r}"
+
+
+def _remplacement_sous_verrou(tmp_path: Path, corps: str) -> str:
+    """Rejoue une mise à jour pendant que l'exe est encore VERROUILLÉ.
+
+    Un processus « bootloader » garde la cible ouverte 3 s — ce que fait le
+    bootloader PyInstaller en effaçant son `_MEI` après la mort de l'enfant
+    Python. Pendant ce temps, l'« enfant » lance le VRAI .bat puis meurt
+    aussitôt. Rend le contenu final de la cible, une fois le .bat passé.
+    """
+    cible = tmp_path / "AccioLauncher.exe"
+    cible.write_text("ancien", encoding="ascii")
+    neuf = tmp_path / "AccioLauncher_v9.exe"
+    neuf.write_text("nouveau", encoding="ascii")
+    marker = tmp_path / "fini.txt"
+
+    # Python ouvre sans FILE_SHARE_DELETE : tant que le handle vit, `move`
+    # vers ce nom est refusé, exactement comme sur l'image d'un exe en cours.
+    verrou = subprocess.Popen([sys.executable, "-c", textwrap.dedent(f"""
+        import time
+        f = open({str(cible)!r}, "rb")
+        print("pris", flush=True)
+        time.sleep(3)
+    """)], stdout=subprocess.PIPE)
+    assert verrou.stdout.readline().strip() == b"pris"
+
+    enfant = tmp_path / "enfant.py"
+    corps_complet = corps + 'echo fini > "' + str(marker) + '"\r\n'
+    variables = {"ACCIO_NOUVEL_EXE": str(neuf), "ACCIO_EXE": str(cible)}
+    enfant.write_text("\n".join([
+        "import sys",
+        f"sys.path.insert(0, {str(_REPO_ROOT)!r})",
+        "from src.core.self_update import _spawn_after_exit_bat",
+        f"ok = _spawn_after_exit_bat({corps_complet!r}, prefix='accio_pytest_maj_',",
+        f"                           variables={variables!r})",
+        "sys.exit(0 if ok else 1)",
+    ]), encoding="utf-8")
+    proc = subprocess.run([sys.executable, str(enfant)], timeout=30, capture_output=True)
+    assert proc.returncode == 0, proc.stderr.decode(errors="replace")
+
+    assert _attendre_contenu(marker, delai=60), "le .bat n'est jamais allé au bout"
+    verrou.wait(timeout=10)
+    return cible.read_text(encoding="ascii")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason=".bat Windows uniquement")
+class TestRemplacementSousVerrou:
+    """Joueur, 2026-09-24 : « ça commence le dl, ça ferme le launcher, et ça
+    remet le message la mise à jour est disponible ». Le nouvel exe était
+    resté dans le cache : le remplacement avait été refusé, en silence."""
+
+    def test_le_remplacement_attend_que_l_exe_soit_libere(self, tmp_path):
+        assert _remplacement_sous_verrou(tmp_path, self_update._CORPS_REMPLACEMENT) == "nouveau"
+
+    def test_contre_epreuve_l_ancien_move_unique_echouait(self, tmp_path):
+        """Sans cette contre-épreuve, le test ci-dessus pourrait passer parce
+        que le verrou ne verrouille rien."""
+        ancien = 'move /y "%ACCIO_NOUVEL_EXE%" "%ACCIO_EXE%" >nul\r\n'
+        assert _remplacement_sous_verrou(tmp_path, ancien) == "ancien"
