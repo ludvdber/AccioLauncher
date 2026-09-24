@@ -219,11 +219,15 @@ QMessageBox QPushButton:hover, QInputDialog QPushButton:hover {{
     color: {COLOR_ACCENT_GOLD_LIGHT};
 }}
 
+/* JAMAIS de propriété de POLICE dans un pseudo-état (`:default`, `:hover`…).
+   Qt calcule la taille du bouton avec la police de la règle de BASE et
+   n'applique le gras qu'au dessin : « Mettre à jour maintenant » recevait
+   144 px de place pour 154 px de texte gras, coupé des deux côtés (boîte de
+   mise à jour vers la 1.0.6, Segoe UI 13 px). L'or suffit à désigner le bouton. */
 QMessageBox QPushButton:default {{
     background-color: rgba(214, 167, 44, 0.18);
     border-color: rgba(214, 167, 44, 0.55);
     color: {COLOR_ACCENT_GOLD_LIGHT};
-    font-weight: bold;
 }}
 
 QToolTip {{

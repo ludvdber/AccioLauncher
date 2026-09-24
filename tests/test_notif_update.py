@@ -302,6 +302,38 @@ class TestNotesDeVersion:
         # Le texte vient de l'EXTÉRIEUR : jamais interprété comme du balisage.
         assert vu["format"] == Qt.TextFormat.PlainText
 
+    def test_le_titre_des_notes_n_est_pas_repete(self, qtbot, fenetre, monkeypatch):
+        """Les notes portent déjà leur titre (`## Nouveautés` du modèle de
+        release). La boîte en ajoutait un second, traduit : « Nouveautés : »
+        puis « Nouveautés » l'une sous l'autre (Ludo, mise à jour vers 1.0.6)."""
+        import src.ui.main_window as mw
+
+        vu = {}
+
+        class FausseBoite:
+            def __init__(self, parent=None): pass
+            def setWindowTitle(self, *a): pass
+            def setIcon(self, *a): pass
+            def setTextFormat(self, *a): pass
+            def setText(self, *a): pass
+            def setInformativeText(self, t): vu["info"] = t
+            def setDefaultButton(self, *a): pass
+            def addButton(self, texte, role): return texte
+            def exec(self): return 0
+            def clickedButton(self): return None
+
+        FausseBoite.Icon = mw.QMessageBox.Icon
+        FausseBoite.ButtonRole = mw.QMessageBox.ButtonRole
+        monkeypatch.setattr(mw, "QMessageBox", FausseBoite)
+
+        fenetre._launcher_update_asked = False
+        fenetre._on_launcher_update(
+            "9.9.9", "https://github.com/ludvdber/AccioLauncher/releases",
+            "", "", "Nouveautés\n• Launcher plus léger")
+
+        assert vu["info"].count("Nouveautés") == 1, vu["info"]
+        assert vu["info"].startswith("Nouveautés\n• Launcher plus léger")
+
     def test_sans_notes_la_boite_ne_montre_que_la_mecanique(self, qtbot, fenetre,
                                                             monkeypatch):
         import src.ui.main_window as mw

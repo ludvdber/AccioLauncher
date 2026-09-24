@@ -421,9 +421,12 @@ class MainWindow(QMainWindow):
         # on demande d'accepter de remplacer un exécutable, la première chose
         # à dire est donc ce qui change. Absent (release sans notes, hors
         # ligne, API limitée) → on n'invente rien et on se tait.
+        #
+        # Aucun en-tête « Nouveautés : » ajouté ici : les notes portent DÉJÀ
+        # leur titre (`## Nouveautés` du modèle de release, ou « Corrections »,
+        # plus parlant), et la boîte de la 1.0.6 l'affichait deux fois de suite.
         notes = self._updates.notes.strip()
-        boite.setInformativeText(
-            f"{tr('Nouveautés :')}\n{notes}\n\n{mecanique}" if notes else mecanique)
+        boite.setInformativeText(f"{notes}\n\n{mecanique}" if notes else mecanique)
         maintenant = boite.addButton(tr("Mettre à jour maintenant"),
                                      QMessageBox.ButtonRole.AcceptRole)
         boite.addButton(tr("Plus tard"), QMessageBox.ButtonRole.RejectRole)

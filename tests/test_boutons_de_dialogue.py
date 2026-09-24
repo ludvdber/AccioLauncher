@@ -107,6 +107,33 @@ class TestLaFeuilleDeStyleNeBridePasLesBoutons:
             "largeur — le confort visuel se règle par le padding")
 
 
+class TestAucunePoliceDansUnPseudoEtat:
+    """Le cas que `TestUnBoutonNEstJamaisRogne` ne pouvait pas voir.
+
+    `QMessageBox QPushButton:default` passait le bouton par défaut en GRAS.
+    Qt dimensionne le bouton avec la police de la règle de base et n'applique
+    le gras qu'au dessin : 144 px de place pour 154 px de texte, « Mettre à
+    jour maintenant » coupé des deux côtés (Ludo, boîte de mise à jour vers la
+    1.0.6). Les tests de largeur mesuraient le texte avec `fontMetrics()` du
+    widget — la police NON grasse — donc passaient au vert sur le défaut.
+    """
+
+    def test_aucune_propriete_de_police_sous_un_pseudo_etat(self):
+        import re
+
+        # Les commentaires d'abord : ils CITENT des pseudo-états pour expliquer.
+        style = re.sub(r"/\*.*?\*/", "", MAIN_STYLE, flags=re.S)
+        fautes = []
+        for selecteur, corps in re.findall(r"([^{}]+)\{\{?([^{}]*)\}", style):
+            if ":" not in selecteur.split("::")[0]:
+                continue
+            if "QPushButton" in selecteur and re.search(r"\bfont(-[a-z]+)?\s*:", corps):
+                fautes.append(" ".join(selecteur.split()))
+        assert not fautes, (
+            "police changée dans un pseudo-état : le bouton est dimensionné "
+            "sans elle et son libellé sera rogné — " + ", ".join(fautes))
+
+
 class TestUnBoutonNEstJamaisRogne:
 
     @staticmethod
