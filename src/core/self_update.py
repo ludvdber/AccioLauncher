@@ -128,6 +128,31 @@ def _spawn_after_exit_bat(body: str, prefix: str,
     return True
 
 
+# Remplacement de l'exe, RÉESSAYÉ jusqu'à ~30 s avant de relancer.
+#
+# L'exe est un onefile PyInstaller, donc DEUX processus : le bootloader (qui
+# tient l'image de l'exe) lance un enfant, et c'est l'enfant que voit
+# `os.getpid()`. La boucle :wait attend donc l'enfant, et le bootloader, lui,
+# vit encore le temps d'effacer son dossier `_MEI` : mesuré le 2026-09-24 sur un
+# onefile de 23 Mo, **5 remplacements sur 5 refusés** (accès refusé, code 5) juste
+# après la mort de l'enfant, bootloader mort 340 à 390 ms plus tard. L'ancien
+# `move` unique échouait donc en silence dès que l'enfant mourait juste avant un
+# tour de :wait, ou qu'un antivirus retenait le fichier : le .bat relançait
+# l'ANCIEN exe, qui reproposait la même mise à jour, le nouveau restant dans le
+# cache (signalé par un joueur, 1.0.4 → 1.0.6). Au bout des essais, on relance
+# quand même l'exe en place : un launcher qui ne revient pas serait pire.
+_CORPS_REMPLACEMENT = (
+    "set ACCIO_ESSAIS=0\r\n"
+    ":remplace\r\n"
+    'move /y "%ACCIO_NOUVEL_EXE%" "%ACCIO_EXE%" >nul 2>&1 && goto relance\r\n'
+    "set /a ACCIO_ESSAIS+=1\r\n"
+    "if %ACCIO_ESSAIS% geq 30 goto relance\r\n"
+    '"%ACCIO_SYS%\\PING.EXE" -n 2 127.0.0.1 >nul\r\n'
+    "goto remplace\r\n"
+    ":relance\r\n"
+)
+
+
 def apply_update_and_restart(new_exe: Path) -> bool:
     """Programme le remplacement de l'exe courant par `new_exe`, à exécuter après la fermeture.
 
@@ -140,8 +165,7 @@ def apply_update_and_restart(new_exe: Path) -> bool:
     # Les deux chemins voyagent par l'environnement, pas dans le corps du .bat
     # (cf. _spawn_after_exit_bat : un chemin accentué y était mutilé).
     ok = _spawn_after_exit_bat(
-        'move /y "%ACCIO_NOUVEL_EXE%" "%ACCIO_EXE%" >nul\r\n'
-        'start "" "%ACCIO_EXE%"\r\n',
+        _CORPS_REMPLACEMENT + 'start "" "%ACCIO_EXE%"\r\n',
         prefix="accio_update_",
         variables={"ACCIO_NOUVEL_EXE": str(new_exe), "ACCIO_EXE": str(current)},
     )
