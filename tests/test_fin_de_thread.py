@@ -204,4 +204,8 @@ def test_l_ancien_code_plante_bien(cas):
     assert r.returncode != 0 and "SORTIE PROPRE" not in r.stdout, (
         "l'ancien code ne plante plus : le scénario ne reproduit plus rien, "
         f"ce test ne garde donc plus rien.\n{r.stdout}\n{r.stderr}")
-    assert "Destroyed while thread" in r.stderr
+    # Le message du qFatal n'arrive sur stderr qu'hors Windows : là-bas il part
+    # au débogueur (OutputDebugString), et le code de sortie (0xC0000409) seul
+    # témoigne de l'abandon.
+    if sys.platform != "win32":
+        assert "Destroyed while thread" in r.stderr
