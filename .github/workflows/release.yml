@@ -1,23 +1,29 @@
-# Release Accio Launcher : l'exécutable est construit ICI, plus sur un poste.
+# Release Accio Launcher : l'exe Windows ET l'AppImage Linux sont construits
+# ICI, plus sur un poste, en une seule passe.
 #
 # Un exe construit à la main dépend de la machine qui le produit (le PATH de
 # Git Bash y glissait ses DLL), le tag pouvait ne pas pointer sur le commit
 # réellement construit, et rien ne prouvait à l'utilisateur que le fichier
-# téléchargé sortait de ce code. Construit par GitHub à partir du tag, il porte
-# une attestation de provenance signée (Sigstore) : qui la vérifie sait de quel
-# dépôt, de quel commit et de quel workflow il sort. C'est ce qui tient lieu de
-# certificat de signature, que le projet n'a pas.
+# téléchargé sortait de ce code. Construits par GitHub, les deux fichiers
+# portent chacun leur attestation de provenance signée (Sigstore) : qui la
+# vérifie sait de quel dépôt, de quel commit et de quel workflow il sort. C'est
+# ce qui tient lieu de certificat de signature, que le projet n'a pas.
 #
 # Tout se fait depuis le site GitHub, sans ligne de commande (souhait de Ludo) :
 # Actions → release → Run workflow.
-#   - case « Créer la release » décochée : build d'essai, exe joint au run,
-#     sans attestation ni release.
-#   - cochée : build, attestation, release en BROUILLON nommée d'après
-#     APP_VERSION. Le tag n'existe pas encore : GitHub le crée sur le commit
-#     construit au moment de « Publish release ». Rien n'est public avant, et
-#     l'auto-update ne voit pas un brouillon.
+#   - case « Créer la release » décochée : build d'essai, l'exe et l'AppImage
+#     joints au run, sans attestation ni release.
+#   - cochée : build, attestations, UNE release en BROUILLON nommée d'après
+#     APP_VERSION, qui porte les deux fichiers. Le tag n'existe pas encore :
+#     GitHub le crée sur le commit construit au moment de « Publish release ».
+#     Rien n'est public avant, et l'auto-update ne voit pas un brouillon.
 # Pas de déclenchement sur tag : publier le brouillon CRÉE le tag, et ce tag
 # relancerait un second build qui échouerait sur une release déjà existante.
+#
+# Tout ou rien : le brouillon n'est créé que si les DEUX builds ont réussi.
+# Une release sans AppImage laisserait les launchers Linux sur la page de
+# release ; une release sans exe, les launchers Windows — et publier l'autre
+# à part supposerait de rééditer un brouillon à la main.
 name: release
 
 on:
@@ -36,11 +42,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  # Le tag se DÉDUIT de config.APP_VERSION (accordé à pyproject et au README
+  # par test_config) : un tag saisi à la main pourrait annoncer une autre
+  # version que l'exe, et l'auto-update, qui compare les deux, le reproposerait
+  # en boucle. Refusé hors de main, et si la version a déjà une release ou un
+  # tag : c'est qu'on a oublié de monter le numéro. Calculé UNE fois, pour les
+  # deux plateformes.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version à publier
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          version=$(sed -n 's/^APP_VERSION = "\(.*\)"$/\1/p' src/core/config.py)
+          if [ -z "$version" ]; then
+            echo "::error::APP_VERSION introuvable dans src/core/config.py"
+            exit 1
+          fi
+          tag="v$version"
+          if [ "$RELEASE" = "true" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::Une release se construit depuis main (lancé depuis $GITHUB_REF)."
+              exit 1
+            fi
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "::error::La release $tag existe déjà : monter APP_VERSION."
+              exit 1
+            fi
+            if gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+              echo "::error::Le tag $tag existe déjà : monter APP_VERSION."
+              exit 1
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
-      contents: write           # créer la release en brouillon
+      contents: read
       id-token: write           # signer l'attestation (Sigstore)
       attestations: write       # l'enregistrer auprès de GitHub
       artifact-metadata: write  # demandé par actions/attest v4
@@ -55,32 +107,6 @@ jobs:
         id: python
         with:
           python-version: "3.14"
-
-      # Le tag se DÉDUIT de config.APP_VERSION (accordé à pyproject et au README
-      # par test_config) : un tag saisi à la main pourrait annoncer une autre
-      # version que l'exe, et l'auto-update, qui compare les deux, le
-      # reproposerait en boucle. Refusé hors de main, et si la version a déjà
-      # une release ou un tag : c'est qu'on a oublié de monter le numéro.
-      - name: Version à publier
-        id: version
-        if: inputs.release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          if ($env:GITHUB_REF -ne 'refs/heads/main') {
-            Write-Error "Une release se construit depuis main (lancé depuis $env:GITHUB_REF)."
-            exit 1
-          }
-          $version = (Select-String -Path src/core/config.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
-          $tag = "v$version"
-          gh release view $tag *> $null
-          if ($LASTEXITCODE -eq 0) { Write-Error "La release $tag existe déjà : monter APP_VERSION."; exit 1 }
-          gh api "repos/$env:GH_REPO/git/ref/tags/$tag" *> $null
-          if ($LASTEXITCODE -eq 0) { Write-Error "Le tag $tag existe déjà : monter APP_VERSION."; exit 1 }
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-          exit 0
 
       # build.bat enchaîne icône, lint, tests, géométrie avec les vraies polices
       # et PyInstaller, et s'arrête au premier échec : le même chemin que sur
@@ -100,11 +126,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Empreinte SHA-256
-        id: empreinte
         shell: pwsh
         run: |
           $sha = (Get-FileHash dist/AccioLauncher.exe -Algorithm SHA256).Hash.ToLower()
-          "sha256=$sha" >> $env:GITHUB_OUTPUT
           "AccioLauncher.exe : SHA-256 ``$sha``" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Joindre l'exécutable au run (essai)
@@ -122,35 +146,26 @@ jobs:
         with:
           subject-path: dist/AccioLauncher.exe
 
-      # Les notes partent de .github/release-notes.md, où l'empreinte et le tag
-      # sont posés ici : il ne reste qu'à écrire les nouveautés.
-      - name: Release en brouillon
+      # La preuve de provenance voyage AUSSI à côté de l'exe : vérifiable hors
+      # de GitHub (`cosign verify-blob-attestation --bundle`), et c'est ce que
+      # lit OpenSSF Scorecard (« Signed-Releases »). L'auto-update ne retient
+      # que l'asset de SA plateforme, ce fichier ne le gêne pas.
+      - name: Transmettre au brouillon
         if: inputs.release
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          SHA256: ${{ steps.empreinte.outputs.sha256 }}
           BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          # La preuve de provenance voyage AUSSI à côté de l'exe : vérifiable
-          # hors de GitHub (`cosign verify-blob-attestation --bundle`), et c'est
-          # ce que lit OpenSSF Scorecard (« Signed-Releases »). L'auto-update ne
-          # retient que l'asset en `.exe`, ce fichier ne le gêne pas.
-          $signature = 'dist/AccioLauncher.exe.sigstore.json'
-          Copy-Item $env:BUNDLE $signature
-          $notes = Get-Content .github/release-notes.md -Raw -Encoding utf8
-          $notes = $notes.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:TAG)
-          $fichier = Join-Path $env:RUNNER_TEMP 'notes.md'
-          Set-Content -Path $fichier -Value $notes -Encoding utf8NoBOM
-          # --target : le tag naîtra sur le commit CONSTRUIT, à la publication.
-          $version = $env:TAG.TrimStart('v')
-          gh release create $env:TAG dist/AccioLauncher.exe $signature `
-            --draft --target $env:GITHUB_SHA `
-            --title "🪄 Accio Launcher $version" `
-            --notes-file $fichier
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: Copy-Item $env:BUNDLE dist/AccioLauncher.exe.sigstore.json
+
+      - name: Transmettre au brouillon (fichiers)
+        if: inputs.release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: publication-windows
+          path: |
+            dist/AccioLauncher.exe
+            dist/AccioLauncher.exe.sigstore.json
+          retention-days: 1
 
       # Le formulaire de Microsoft (SmartScreen), prérempli pour CETTE version,
       # dans le résumé du run : chaque champ, et le texte anglais à copier.
@@ -158,8 +173,134 @@ jobs:
         if: inputs.release
         shell: pwsh
         env:
-          SHA256: ${{ steps.empreinte.outputs.sha256 }}
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG: ${{ needs.version.outputs.tag }}
         run: |
+          $sha = (Get-FileHash dist/AccioLauncher.exe -Algorithm SHA256).Hash.ToLower()
           $texte = Get-Content .github/microsoft-submission.md -Raw -Encoding utf8
-          $texte.Replace('{SHA256}', $env:SHA256).Replace('{TAG}', $env:TAG) >> $env:GITHUB_STEP_SUMMARY
+          $texte.Replace('{SHA256}', $sha).Replace('{TAG}', $env:TAG) >> $env:GITHUB_STEP_SUMMARY
+
+  # Ubuntu 22.04 et non « latest » : une AppImage exige au minimum la glibc de
+  # la machine qui l'a construite. 22.04 (glibc 2.35) couvre Bazzite, le Steam
+  # Deck et toute distribution de bureau encore suivie ; 24.04 fermerait la
+  # porte à tout ce qui est antérieur à 2.39 sans rien apporter.
+  linux:
+    needs: version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      # PyInstaller n'embarque que ce qu'il VOIT sur la machine de build : sans
+      # les bibliothèques du greffon xcb (libxcb-cursor0 & co.), l'AppImage
+      # partirait sans elles et ne démarrerait pas sous X11 ni en mode Jeu
+      # (XWayland) chez qui ne les a pas. `build/linux/appimage.py` le vérifie
+      # et refuse d'emballer un dossier incomplet. Xvfb et fontconfig servent à
+      # l'audit de géométrie (vraies polices, étape 4/6 de build.sh).
+      - name: Bibliothèques système (Qt, xcb, Wayland, audio, audit)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            binutils libegl1 libgl1 libglib2.0-0 libdbus-1-3 libfontconfig1 \
+            libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-shm0 \
+            libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xkb1 \
+            libwayland-client0 libwayland-cursor0 libwayland-egl1 \
+            libpulse0 libgssapi-krb5-2 \
+            xvfb xauth fontconfig fonts-dejavu-core fonts-liberation
+
+      # Même règle que build.bat : icône, lint, tests, géométrie, PyInstaller,
+      # AppImage, arrêt au premier échec.
+      - name: Construire (build.sh)
+        env:
+          ACCIO_PY: python
+        run: ./build.sh
+
+      - name: Empreinte SHA-256
+        run: |
+          sha=$(sha256sum dist/AccioLauncher-x86_64.AppImage | cut -d' ' -f1)
+          echo "AccioLauncher-x86_64.AppImage : SHA-256 \`$sha\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Joindre l'AppImage au run (essai)
+        if: ${{ !inputs.release }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: AccioLauncher-linux-essai
+          path: dist/AccioLauncher-x86_64.AppImage
+          retention-days: 7
+
+      - name: Attestation de provenance
+        id: attestation
+        if: inputs.release
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/AccioLauncher-x86_64.AppImage
+
+      - name: Transmettre au brouillon
+        if: inputs.release
+        env:
+          BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
+        run: cp "$BUNDLE" dist/AccioLauncher-x86_64.AppImage.sigstore.json
+
+      - name: Transmettre au brouillon (fichiers)
+        if: inputs.release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: publication-linux
+          path: |
+            dist/AccioLauncher-x86_64.AppImage
+            dist/AccioLauncher-x86_64.AppImage.sigstore.json
+          retention-days: 1
+
+  # UN brouillon pour les deux plateformes, créé seulement si les deux builds
+  # ont réussi. Les notes partent de .github/release-notes.md, où les
+  # empreintes et le tag sont posés ici : il ne reste qu'à écrire les
+  # nouveautés.
+  brouillon:
+    needs: [version, windows, linux]
+    if: inputs.release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write           # créer la release en brouillon
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: publication-*
+          path: dist
+          merge-multiple: true
+
+      - name: Release en brouillon
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          exe=dist/AccioLauncher.exe
+          appimage=dist/AccioLauncher-x86_64.AppImage
+          sha_exe=$(sha256sum "$exe" | cut -d' ' -f1)
+          sha_appimage=$(sha256sum "$appimage" | cut -d' ' -f1)
+          notes="$RUNNER_TEMP/notes.md"
+          sed -e "s/{SHA256}/$sha_exe/g" -e "s/{SHA256_LINUX}/$sha_appimage/g" \
+              -e "s/{TAG}/$TAG/g" .github/release-notes.md > "$notes"
+          # --target : le tag naîtra sur le commit CONSTRUIT, à la publication.
+          gh release create "$TAG" \
+            "$exe" "$exe.sigstore.json" "$appimage" "$appimage.sigstore.json" \
+            --draft --target "$GITHUB_SHA" \
+            --title "🪄 Accio Launcher ${TAG#v}" \
+            --notes-file "$notes"

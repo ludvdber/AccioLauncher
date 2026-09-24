@@ -1,0 +1,7 @@
+#!/bin/sh
+# Point d'entrée de l'AppImage : le runtime l'exécute depuis le montage, avec
+# APPDIR posé. Il lance le launcher gelé, rien d'autre : l'environnement des
+# programmes que le launcher lance (Wine, umu, xdg-open) se règle DANS le
+# programme (`compat.assainir_environnement`), pas ici.
+ICI="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+exec "$ICI/usr/lib/AccioLauncher/AccioLauncher" "$@"

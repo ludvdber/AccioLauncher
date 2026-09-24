@@ -462,7 +462,44 @@ conteneur), winetricks (absent, et Wine sans support 32 bits), un vrai jeu.
 Discord, une vraie session Wayland ou GNOME sans zone de notification, une
 vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 
-## 9. Limites de l'audit (phase 1)
+## 9. État : phase 4 — l'AppImage et la release commune
+
+- **`./build.sh`** : icône → lint → tests → géométrie (vraies polices, Xvfb
+  sans session graphique) → PyInstaller (dossier) → AppImage, arrêt au premier
+  échec. Hors d'un environnement virtuel, il crée `.venv-build`.
+- **`build/linux/appimage.py`** assemble l'AppDir (`AppRun`, `.desktop`
+  `be.acciolauncher.AccioLauncher`, icônes extraites des sept tailles de
+  l'`.ico`, licence et avis tiers) et appelle appimagetool 1.9.1 avec le
+  runtime `type2-runtime` 20251108, **épinglés par empreinte**. Le runtime est
+  statique : pas de libfuse2 à installer.
+- **`build/linux/dependances.py`** : ce que la machine fournit n'est pas
+  embarqué (liste d'exclusion AppImage), ce que plus rien n'atteint est
+  élagué (la pile GTK du greffon `libqgtk3`, 23 bibliothèques), et un dossier
+  dont une dépendance manquerait est REFUSÉ avant emballage.
+- **`release.yml`** : job `version` (tag déduit une fois), builds Windows et
+  Linux (`ubuntu-22.04`) en parallèle, puis UN brouillon portant l'exe,
+  l'AppImage et leurs deux attestations — seulement si les deux builds ont
+  réussi. Rien n'est publié automatiquement ; case décochée, les deux
+  fichiers sont joints au run (7 jours).
+- **Notes de release** : section Linux après le trait (hors de la boîte de
+  mise à jour du launcher), empreinte `{SHA256_LINUX}` posée par le workflow.
+
+### Vérifié dans l'environnement de travail (Ubuntu 24.04, Xvfb)
+
+| Vérification | Résultat |
+|---|---|
+| `./build.sh` de bout en bout | 1814 tests, audit de géométrie OK (xcb, 27 familles, 78 s), AppImage de 62 Mo, en 3 min 19 |
+| Dossier gelé : dépendances | 0 défaut ; 47 bibliothèques laissées à la machine ; 195 → 168 Mo |
+| L'AppImage lancée sous Xvfb (plateforme `xcb`) | démarre, affiche l'assistant, journal « (AppImage) », `WM_CLASS` = `AccioLauncher` |
+| Chargeur PyInstaller (onedir) et `LD_LIBRARY_PATH` | `_internal` placé en tête ; un enfant du launcher gelé reçoit la valeur d'ORIGINE (absente, ou `/opt/x`) |
+| `.desktop` | `desktop-file-validate` sans remarque |
+
+**Non vérifié ici** : le build sur `ubuntu-22.04` (le workflow le fera), une
+session Wayland, le montage FUSE par un utilisateur non root (`fusermount3`),
+Gear Lever, le mode Jeu, et l'auto-mise à jour d'une AppImage — elle ne se
+testera qu'à la release SUIVANT la première qui porte une AppImage.
+
+## 10. Limites de l'audit (phase 1)
 
 Vérifié dans l'environnement de travail (Ubuntu 24.04, Wine 9.0 64 bits, sans
 affichage) : contenu des archives, ordre de chargement des DLL sous Wine,
@@ -550,3 +587,34 @@ L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
    (une seule fenêtre).
 8. **Liens** : « Ouvrir le dossier » d'un jeu et un lien web (Ko-fi, Discord)
    doivent ouvrir Dolphin et le navigateur normalement.
+
+## À tester sur Bazzite par Ludo (phase 4)
+
+Avec l'AppImage d'un build d'essai (Actions → release → Run workflow, case
+décochée → artefact « AccioLauncher-linux-essai », un zip qui la contient) ou
+d'un brouillon de release.
+
+1. **Lancer sans rien installer** : ranger le fichier dans `~/AppImages`,
+   clic droit → Propriétés → « Exécutable », double-clic. Le launcher s'ouvre ;
+   `~/Games/AccioLauncher/_Launcher/logs/accio_launcher.log` commence par
+   `Accio Launcher … (AppImage) · Bazzite …`.
+2. **Empreinte** : `sha256sum AccioLauncher-x86_64.AppImage` doit donner celle
+   du résumé du run (ou des notes du brouillon).
+3. **Gear Lever** : ouvrir l'AppImage avec Gear Lever, « Déplacer vers le
+   menu des applications ». « Accio Launcher » apparaît dans le menu avec son
+   icône ; lancé depuis le menu, la barre des tâches montre l'icône du
+   launcher (et non une icône générique Wayland).
+4. **Jouer depuis l'AppImage** : installer HP1, JOUER (préparation de Wine
+   comme en phase 2), quitter le jeu : le launcher revient.
+5. **Liens** : un lien web (Ko-fi) et « Ouvrir le dossier » d'un jeu. Le
+   navigateur et Dolphin doivent s'ouvrir normalement — une erreur de
+   bibliothèque ici désignerait `LD_LIBRARY_PATH`.
+6. **Mode Jeu** : en mode Bureau, Steam → « Ajouter un jeu non-Steam » →
+   l'AppImage ; passer en mode Jeu et lancer. Noter : la fenêtre s'affiche-t-
+   elle, la souris/manette pilote-t-elle le launcher, un jeu se lance-t-il ?
+7. **Brouillon de release** (à la prochaine version) : vérifier qu'il porte
+   quatre fichiers — `AccioLauncher.exe`, `AccioLauncher-x86_64.AppImage` et
+   leurs `.sigstore.json` — et que les notes affichent les deux empreintes.
+8. **Auto-mise à jour** (à la version SUIVANTE) : l'AppImage de la version
+   précédente doit proposer la mise à jour, la télécharger, remplacer le
+   fichier au même endroit (celui de Gear Lever compris) et se rouvrir.

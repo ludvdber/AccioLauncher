@@ -16,6 +16,10 @@
 # Les scripts POSIX, à l'inverse : un shebang suivi de CRLF donne
 # « bad interpreter: /bin/sh^M ». Le portage Linux est un objectif déclaré.
 *.sh   text eol=lf
+# Même raison pour le point d'entrée de l'AppImage (sans extension) et le
+# fichier .desktop, lus sous Linux uniquement.
+build/linux/AppRun  text eol=lf
+*.desktop  text eol=lf
 
 # Fichiers texte du projet : normalisés en LF dans le dépôt, laissés au
 # réglage du poste à la sortie.
