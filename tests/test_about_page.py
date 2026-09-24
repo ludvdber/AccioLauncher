@@ -55,6 +55,33 @@ class TestContenu:
         assert "Ko-fi" in libelles
 
 
+class TestMentionLegale:
+    """Les termes additionnels (article 7 b) exigent qu'une version dérivée
+    CONSERVE le copyright et le lien dans son « À propos » : l'original doit
+    donc les afficher, sinon il n'y a rien à conserver."""
+
+    def _mention(self, page) -> QLabel:
+        return next(lbl for lbl in _labels(page) if "ASTeam" in lbl.text())
+
+    def test_copyright_licence_et_lien_vers_le_depot(self, qtbot):
+        from src.core.liens import DEPOT_URL
+        page = about_page.construire([])
+        qtbot.addWidget(page)
+        texte = self._mention(page).text()
+        assert "GPL v3" in texte
+        assert f'href="{DEPOT_URL}"' in texte
+
+    def test_le_lien_passe_par_open_url_et_s_atteint_au_clavier(self, qtbot, monkeypatch):
+        ouverts = []
+        monkeypatch.setattr(about_page, "open_url", ouverts.append)
+        page = about_page.construire([])
+        qtbot.addWidget(page)
+        lbl = self._mention(page)
+        assert lbl.textInteractionFlags() & Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        lbl.linkActivated.emit("https://github.com/ludvdber/AccioLauncher")
+        assert ouverts == ["https://github.com/ludvdber/AccioLauncher"]
+
+
 class TestRemerciements:
     def test_sans_contributeur_ni_traducteur_aucune_rubrique(self, qtbot, monkeypatch):
         """Un titre « Remerciements » au-dessus de rien annoncerait une liste
@@ -84,7 +111,9 @@ class TestRemerciements:
         monkeypatch.setattr("src.ui.about_page.translator_credits", lambda: [])
         page = about_page.construire([Contributor(name="Anonyme", role="", url="")])
         qtbot.addWidget(page)
-        assert "<a href" not in _textes(page)
+        # Le label du contributeur seul : la mention légale porte, elle, un vrai lien.
+        credit = next(lbl for lbl in _labels(page) if "Anonyme" in lbl.text())
+        assert "<a href" not in credit.text()
 
 
 class TestBalisageDuCatalogueJamaisInterprete:

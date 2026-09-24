@@ -43,11 +43,10 @@ Pour demander : sur le [Discord](https://discord.gg/TNwDQd7KGe), ou dans une
 
 ## Et les licences ?
 
-Le code source est sous licence [MIT](LICENSE) et l'exécutable distribué sous
-GNU GPL v3. Ces licences portent sur le **droit d'auteur** : elles vous
-permettent de copier, modifier et redistribuer le logiciel. Elles n'accordent
-aucun droit sur le nom ni sur le logo **en tant que marque**. Pour
-l'exécutable, c'est une condition prévue par la GPL v3 elle-même
+Le code source et l'exécutable sont sous GNU GPL v3, avec des
+[termes additionnels](ADDITIONAL-TERMS.md). Cette licence porte sur le
+**droit d'auteur** : elle n'accorde aucun droit sur le nom ni sur le logo
+**en tant que marque**, condition prévue par la GPL v3 elle-même
 (article 7, point e).
 
 ---
@@ -79,8 +78,9 @@ icon, state that it is not the official project, and change the project URLs
 otherwise the official launcher would replace your version on its first
 update.
 
-The MIT license (source code) and the GNU GPL v3 (distributed executable)
-cover copyright. Neither grants any trademark rights to the name or logo; for
-the executable, this is an additional term permitted by GPL v3 section 7(e).
+The source code and the executable are under GNU GPL v3, with
+[additional terms](ADDITIONAL-TERMS.md). It covers copyright and grants no
+trademark rights to the name or logo, an additional term permitted by GPL v3
+section 7(e).
 
 </details>

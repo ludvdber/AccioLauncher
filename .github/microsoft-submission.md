@@ -18,7 +18,7 @@
 **Additional information** :
 
 ```text
-AccioLauncher.exe {TAG} is a free, open-source (MIT) launcher that downloads, installs and starts classic PC games on Windows 10/11. Publisher: ASTeam. It is flagged by SmartScreen only because it is new and not code-signed; it contains no malware.
+AccioLauncher.exe {TAG} is a free, open-source (GNU GPL v3) launcher that downloads, installs and starts classic PC games on Windows 10/11. Publisher: ASTeam. It is flagged by SmartScreen only because it is new and not code-signed; it contains no malware.
 
 - Source code: https://github.com/ludvdber/AccioLauncher
 - Official download: https://github.com/ludvdber/AccioLauncher/releases/tag/{TAG}

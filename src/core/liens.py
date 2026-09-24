@@ -16,3 +16,6 @@ affiche le site dans ses boutons.
 SITE_URL = "https://acciolauncher.be/"
 DISCORD_URL = "https://discord.gg/TNwDQd7KGe"
 KOFI_URL = "https://ko-fi.com/ludovic01"
+# Le dépôt porte le code source ET la licence : la GPL v3 et ses termes
+# additionnels exigent qu'on sache où les trouver (voir ADDITIONAL-TERMS.md).
+DEPOT_URL = "https://github.com/ludvdber/AccioLauncher"

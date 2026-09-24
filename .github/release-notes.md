@@ -45,6 +45,7 @@ gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
 
 ---
 
-<sub>L'exécutable est distribué sous GNU GPL v3, parce qu'il embarque PyQt6 ; le
-code source est sous licence MIT, sur ce dépôt. Composants tiers :
+<sub>Code source et exécutable sous GNU GPL v3, avec
+[termes additionnels](https://github.com/ludvdber/AccioLauncher/blob/{TAG}/ADDITIONAL-TERMS.md).
+Composants tiers :
 [THIRD-PARTY-NOTICES](https://github.com/ludvdber/AccioLauncher/blob/{TAG}/docs/THIRD-PARTY-NOTICES.md).</sub>

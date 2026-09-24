@@ -1,3 +1,6 @@
+# Accio Launcher — Copyright (c) 2026 ASTeam — https://acciolauncher.be/
+# GNU GPL v3 uniquement, avec des termes additionnels (article 7) qui valent pour
+# tous les fichiers du dépôt : voir LICENSE et ADDITIONAL-TERMS.md.
 import logging
 import logging.handlers
 import os

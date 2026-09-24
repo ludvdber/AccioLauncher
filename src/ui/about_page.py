@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 from src.core import diagnostic
 from src.core.config import APP_VERSION, LOG_DIR
 from src.core.i18n import tr, translator_credits
-from src.core.liens import DISCORD_URL, KOFI_URL, SITE_URL
+from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, SITE_URL
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current as current_theme
 from src.ui.utils import open_url
@@ -162,6 +162,31 @@ def _remerciements(contributeurs) -> list[QWidget]:
     return widgets
 
 
+def _mention_legale() -> QLabel:
+    """Copyright, licence et lien vers le code source.
+
+    La GPL v3 appelle ces « mentions légales appropriées » ; les termes
+    additionnels (ADDITIONAL-TERMS.md, article 7 b) exigent qu'une version
+    dérivée les CONSERVE dans son « À propos ». Encore faut-il que l'original
+    les affiche : sans cette ligne, l'obligation de crédit n'avait rien à
+    recopier. Le lien mène au dépôt, qui porte le code ET la licence.
+    """
+    lien = (f'<a href="{escape(DEPOT_URL)}" style="color:{current_theme().accent}; '
+            f'text-decoration:none;">{escape(tr("Code source et licence"), quote=False)}</a>')
+    lbl = QLabel(escape(tr(
+        "© 2026 ASTeam — logiciel libre sous licence GNU GPL v3, "
+        "fourni sans aucune garantie."), quote=False) + "<br>" + lien)
+    lbl.setObjectName("subtitle")
+    lbl.setTextFormat(Qt.TextFormat.RichText)
+    lbl.setWordWrap(True)
+    lbl.setTextInteractionFlags(
+        Qt.TextInteractionFlag.LinksAccessibleByMouse
+        | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+    )
+    lbl.linkActivated.connect(open_url)
+    return lbl
+
+
 # Durée pendant laquelle le bouton confirme la copie avant de reprendre son
 # libellé. Assez longue pour être lue, assez courte pour ne pas faire croire
 # que la copie est un état.
@@ -244,6 +269,7 @@ def construire(contributeurs, manager=None) -> QWidget:
     version = QLabel(f"Accio Launcher v{APP_VERSION}")
     version.setObjectName("subtitle")
     lay.addWidget(version)
+    lay.addWidget(_mention_legale())
     lay.addLayout(rangee)
     if manager is not None:
         lay.addWidget(_sous_titre(tr(

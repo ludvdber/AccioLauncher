@@ -163,10 +163,13 @@ faille de sécurité, voir [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-Le code source est sous licence [MIT](LICENSE) : vous pouvez le reprendre, le
-modifier et le redistribuer, en gardant la mention de copyright. L'exécutable
-distribué est sous GNU GPL v3, parce qu'il embarque PyQt6, lui-même publié sous
-GPL v3 ; le détail est dans [docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
+Copyright © 2026 ASTeam. Le code source et l'exécutable sont sous
+[GNU GPL v3 uniquement](LICENSE), avec des [termes additionnels](ADDITIONAL-TERMS.md) :
+vous pouvez forker et modifier le launcher, mais toute version distribuée doit
+l'être avec son code source complet, sous la même licence, en créditant
+Accio Launcher et sans se faire passer pour le projet officiel. Les versions
+jusqu'à la 1.0.6 restent sous licence MIT. Composants tiers :
+[docs/THIRD-PARTY-NOTICES.md](docs/THIRD-PARTY-NOTICES.md).
 
 Le nom **Accio Launcher** et son logo, eux, ne sont pas libres. Forker et
 modifier le launcher pour vous, oui ; publier votre version sous ce nom ou avec

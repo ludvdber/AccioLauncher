@@ -1,6 +1,7 @@
 # Composants tiers
 
-Accio Launcher est publié sous licence MIT (voir [LICENSE](../LICENSE)). Le binaire
+Accio Launcher est publié sous GNU GPL v3 uniquement, avec des termes additionnels
+(voir [LICENSE](../LICENSE) et [ADDITIONAL-TERMS.md](../ADDITIONAL-TERMS.md)). Le binaire
 distribué `AccioLauncher.exe` embarque les composants ci-dessous, chacun soumis à
 sa propre licence.
 
@@ -36,21 +37,21 @@ n'utilise que la décompression 7z et zip — jamais le moteur RAR.
 Licence : **GNU GPL v3** (ou licence commerciale Riverbank)
 Site : <https://riverbankcomputing.com/software/pyqt/>
 
-> **Décision retenue : code en MIT, binaire en GPL v3.**
+> **Décision retenue (2026-09-24) : code ET binaire en GPL v3 uniquement, avec
+> termes additionnels.**
 >
 > PyQt6 est distribué sous GPL v3. Un exécutable qui l'embarque est un travail
 > dérivé, donc `AccioLauncher.exe` est redistribué sous GPL v3, laquelle exige
 > que le code source correspondant reste disponible — il l'est, sur
 > <https://github.com/ludvdber/AccioLauncher>.
 >
-> Le code source lui-même reste sous licence MIT. L'objectif est explicite :
-> **n'importe qui doit pouvoir reprendre et réutiliser ce code**, y compris
-> commercialement, à la seule condition de conserver la mention de copyright et
-> donc de créditer ASTeam comme base du travail. La MIT étant compatible GPL,
-> les deux coexistent sans conflit : seul l'exécutable assemblé porte la GPL v3.
->
-> Concrètement, il suffit que la page de release et le site mentionnent que
-> l'exécutable est couvert par la GPL v3, avec un lien vers le dépôt.
+> Le code était sous MIT jusqu'à la 1.0.6. Il passe sous GPL v3 pour que
+> **personne ne puisse en tirer une version fermée** : quiconque redistribue
+> doit publier ses sources sous la même licence. C'est la licence la plus
+> stricte que permet PyQt6 : interdire la redistribution exigerait une licence
+> commerciale Riverbank ou le passage à PySide6 (LGPL). Les termes additionnels
+> (article 7 : attribution, origine, publicité, marque) sont dans
+> [ADDITIONAL-TERMS.md](../ADDITIONAL-TERMS.md).
 
 ---
 
