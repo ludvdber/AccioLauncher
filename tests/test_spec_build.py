@@ -172,6 +172,28 @@ class TestLeBuildNeDependPasDuPoste:
         excludes = next(k.value for k in appel.keywords if k.arg == "excludes")
         assert "brotli" in ast.literal_eval(excludes)
 
+    def test_linux_epure_ses_binaires_windows_inchange(self):
+        """Le Python d'`actions/setup-python` livre libpython AVEC ses symboles
+        de débogage (33 Mo, 7 une fois épurée) : sans `strip`, l'AppImage de la
+        release pesait 77 Mo, contre 62 construite depuis un Python de
+        distribution. L'exe Windows, lui, ne change pas."""
+        branche = next(n for n in _arbre().body
+                       if isinstance(n, ast.If)
+                       and any(isinstance(c, ast.Call) and getattr(c.func, "id", "") == "EXE"
+                               for c in ast.walk(n)))
+
+        def strip(noeuds, nom):
+            appels = [c for n in noeuds for c in ast.walk(n)
+                      if isinstance(c, ast.Call) and getattr(c.func, "id", "") == nom]
+            assert appels, f"aucun appel {nom}"
+            return {ast.literal_eval(k.value) for c in appels for k in c.keywords
+                    if k.arg == "strip"}
+
+        assert "linux" in ast.unparse(branche.test)
+        assert strip(branche.body, "EXE") == {True}
+        assert strip(branche.body, "COLLECT") == {True}
+        assert strip(branche.orelse, "EXE") == {False}
+
 
 class TestChaquePlateformeSonSeptZip:
     """Le 7-Zip de l'autre plateforme est du poids mort : 7z.exe ne tourne pas
