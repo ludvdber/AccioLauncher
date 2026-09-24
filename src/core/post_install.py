@@ -3,6 +3,7 @@
 import logging
 import shutil
 import stat
+import sys
 from pathlib import Path
 
 from src.core.config import get_documents_dir
@@ -29,8 +30,20 @@ def allowed_config_roots() -> list[Path]:
     session — qui survivrait à la désinstallation du jeu. Tous les jeux du
     catalogue écrivent dans `~/Documents/<jeu>/` ; « Saved Games » est ajouté
     parce que c'est l'autre emplacement standard des sauvegardes Windows.
+
+    Sous Linux, les deux sont ceux du PRÉFIXE Wine : c'est là que le jeu les
+    cherchera. Le dossier personnel de l'utilisateur n'est jamais une racine.
     """
-    return [get_documents_dir(), Path.home() / "Saved Games"]
+    return [get_documents_dir(), _profil_windows() / "Saved Games"]
+
+
+def _profil_windows() -> Path:
+    """Le dossier personnel tel que le JEU le voit : `~` sous Windows, le
+    profil du préfixe Wine ailleurs."""
+    if sys.platform == "win32":
+        return Path.home()
+    from src.core import compat
+    return compat.profil()
 
 
 def config_dest_error(dest: Path, roots: list[Path]) -> str | None:
@@ -129,7 +142,7 @@ def destination_config(dest_tilde: str) -> Path:
     """
     docs_dir = get_documents_dir()
     return Path(dest_tilde.replace("~/Documents", str(docs_dir))
-                .replace("~", str(Path.home())))
+                .replace("~", str(_profil_windows())))
 
 
 def apply_config_files(

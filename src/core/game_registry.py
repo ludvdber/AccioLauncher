@@ -19,9 +19,20 @@ Trois contraintes, relevées sur une vraie installation le 2026-08-21
   d'abord (gratuit), on compare, et on n'écrit que si ça diffère réellement.
   L'écriture élevée passe par un .reg + « regedit /s », et **on relit derrière
   pour vérifier** — regedit est muet en mode silencieux, y compris quand il échoue.
+
+Sous Linux : le registre du PRÉFIXE Wine
+========================================
+Le jeu tourne sous Wine, qui a son registre. Deux points seulement changent,
+comme annoncé depuis le début : `disponible()`, et `_ecrire_eleve`, qui importe
+le même `.reg` (même `construire_reg`, même barrière) par `regedit /S` dans le
+préfixe, via le lanceur de compatibilité. La lecture ne lance rien : le
+registre d'un préfixe est du texte, lu par `compat.lire_valeurs`. Pas d'UAC
+sous Wine — mais la prévenance (`confirmer`) reste : on ne modifie pas le
+réglage de quelqu'un sans le lui dire, quel que soit le système.
 """
 
 import logging
+import subprocess
 import sys
 import tempfile
 import unicodedata
@@ -50,19 +61,22 @@ _RUCHES_LONGUES = {"HKCU": "HKEY_CURRENT_USER", "HKLM": "HKEY_LOCAL_MACHINE"}
 
 
 def disponible() -> bool:
-    """True si ce système a un registre Windows que le launcher sait atteindre.
+    """True si ce système a un registre que le launcher sait atteindre.
 
-    Sous Linux le jeu tournera sous Wine, qui a bien un registre — mais on n'y
-    accède pas par `winreg`, et le portage n'a pas commencé (cf. CLAUDE.md :
-    Linux après le dernier jeu HP). Le jour venu, c'est ICI que passera
-    l'écriture par `wine regedit`, et rien d'autre ne bougera.
+    Sous Windows, toujours. Sous Linux, celui du préfixe Wine — à condition
+    qu'il existe : un lanceur de compatibilité ET un préfixe initialisé. Avant
+    sa première préparation, il n'y a rien à lire, et écrire lancerait umu
+    pendant que la fenêtre attend (umu peut alors télécharger Proton).
 
-    D'ici là on ne fait pas SEMBLANT : sans registre, la fiche n'affiche aucun
+    On ne fait pas SEMBLANT : sans registre, la fiche n'affiche aucun
     sélecteur de langue (annoncer un réglage qu'on ne sait pas appliquer est un
     mensonge) et le lancement ne journalise pas un échec à chaque partie pour
     une chose qu'on n'a jamais tenté de faire.
     """
-    return sys.platform == "win32"
+    if sys.platform == "win32":
+        return True
+    from src.core import compat
+    return compat.lanceur() is not None and compat.pret(compat.prefixe())
 
 
 def _controle(texte: str) -> bool:
@@ -185,13 +199,16 @@ def lire_valeurs(ruche: str, cle: str, noms, vue: int = 32) -> dict:
     Retourne les seules valeurs trouvées : une clé absente n'est pas une erreur,
     c'est simplement « rien à comparer ».
     """
-    if sys.platform != "win32":
+    if ruche not in RUCHES:
         return {}
+    if sys.platform != "win32":
+        # Le registre du préfixe est du texte : on le lit sans lancer Wine.
+        from src.core import compat
+        pfx = compat.prefixe()
+        return compat.lire_valeurs(pfx, ruche, cle, noms, vue) if compat.pret(pfx) else {}
     import winreg
 
     ruches = {"HKCU": winreg.HKEY_CURRENT_USER, "HKLM": winreg.HKEY_LOCAL_MACHINE}
-    if ruche not in ruches:
-        return {}
     acces = winreg.KEY_WOW64_32KEY if vue == 32 else winreg.KEY_WOW64_64KEY
     trouve: dict = {}
     try:
@@ -237,7 +254,14 @@ def deja_a_jour(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> bool:
 
 
 def _ecrire_direct(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
-    """Écriture sans élévation. Suffit pour HKCU, et pour HKLM si déjà élevé."""
+    """Écriture sans élévation. Suffit pour HKCU, et pour HKLM si déjà élevé.
+
+    Sous Linux, il n'y a pas d'accès direct au registre d'un préfixe : Wine
+    le tient en mémoire tant que son serveur tourne, et réécrire ses fichiers
+    à côté serait écrasé à son arrêt. Tout passe par `_ecrire_eleve`.
+    """
+    if sys.platform != "win32":
+        return False
     import winreg
 
     ruches = {"HKCU": winreg.HKEY_CURRENT_USER, "HKLM": winreg.HKEY_LOCAL_MACHINE}
@@ -260,7 +284,11 @@ def _ecrire_eleve(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
     format « Version 5.00 » — et le seul qui tienne un chemin ou une valeur
     accentués. Rien n'est déduit de regedit lui-même : en mode silencieux il ne
     dit rien, même en échec. C'est la RELECTURE qui fait foi (`ecrire_valeurs`).
+
+    Sous Linux, le même `.reg` part dans le préfixe (`_ecrire_par_wine`).
     """
+    if sys.platform != "win32":
+        return _ecrire_par_wine(ruche, cle, valeurs, vue)
     import ctypes
 
     # Dossier temporaire à nom ALÉATOIRE, et non un chemin fixe dans %TEMP%.
@@ -286,6 +314,52 @@ def _ecrire_eleve(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
         return False
 
 
+# Délai maximal d'un import par le lanceur de compatibilité. umu démarre le
+# conteneur du Steam Linux Runtime avant Proton : quelques secondes d'habitude.
+_DELAI_REGEDIT_WINE_S = 120
+
+
+def _ecrire_par_wine(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
+    r"""Importe le `.reg` dans le registre du préfixe, par `regedit /S`.
+
+    Vérifié sur un préfixe Wine 9.0 (2026-09-24) : l'import prend 0,5 s, et
+    le fichier `system.reg` n'est réécrit qu'à l'arrêt du wineserver, deux à
+    trois secondes plus tard — d'où l'attente de `ecrire_valeurs`, qui relit
+    jusqu'à ce que ce soit vrai. Le `.reg` est posé DANS le préfixe
+    (`C:\windows\temp`) : c'est un chemin que tout préfixe connaît, sans
+    dépendre du lecteur `Z:`.
+    """
+    from src.core import compat
+
+    lanceur = compat.lanceur()
+    pfx = compat.prefixe()
+    if lanceur is None or not compat.pret(pfx):
+        return False
+    try:
+        temp = pfx / "drive_c" / "windows" / "temp"
+        temp.mkdir(parents=True, exist_ok=True)
+        dossier = Path(tempfile.mkdtemp(prefix="accio_reg_", dir=temp))
+        _dossiers_a_nettoyer.append(dossier)
+        fichier = dossier / "langue.reg"
+        fichier.write_text(construire_reg(ruche, cle, valeurs,
+                                          compat.vue_effective(pfx, ruche, vue)),
+                           encoding="utf-16")
+        env = compat.environnement(lanceur, pfx)
+        # La fenêtre attend : pas de mise à jour du runtime d'umu maintenant.
+        env.setdefault("UMU_RUNTIME_UPDATE", "0")
+        commande = compat.commande_regedit(lanceur, pfx, compat.chemin_windows(fichier, pfx))
+        log.info("Import du registre dans le préfixe : %s", " ".join(commande))
+        # Lanceur trouvé par chemin ABSOLU (`compat._trouver`), fichier .reg
+        # construit et validé par `construire_reg` ; liste d'arguments, aucun shell.
+        subprocess.run(commande, env=env, stdin=subprocess.DEVNULL,  # nosec B603
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       timeout=_DELAI_REGEDIT_WINE_S, check=False)
+        return True
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        log.warning("Import du registre dans le préfixe impossible : %s", exc)
+        return False
+
+
 # Dossiers temporaires à retirer une fois regedit passé. On ne les supprime pas
 # tout de suite : `regedit /s` rend la main AVANT d'avoir lu le fichier, et
 # l'effacer trop tôt ferait échouer l'import sans un mot.
@@ -301,7 +375,7 @@ def _nettoyer_reg() -> None:
 
 
 def ecrire_valeurs(ruche: str, cle: str, valeurs: dict, vue: int = 32,
-                   attente_s: float = 6.0, confirmer=None) -> bool:
+                   attente_s: float | None = None, confirmer=None) -> bool:
     """Pose les valeurs et VÉRIFIE qu'elles y sont. False si ça n'a pas pris.
 
     Ne fait rien — et surtout ne demande aucune élévation — si le registre porte
@@ -319,9 +393,14 @@ def ecrire_valeurs(ruche: str, cle: str, valeurs: dict, vue: int = 32,
     pourquoi, c'est la refuser. Le rappel arrive donc au plus près du geste, et
     jamais pour rien — au deuxième lancement le registre est déjà bon et
     personne n'est dérangé. Retourner False annule proprement (False global).
+
+    `attente_s` borne la relecture : 6 s sous Windows, 20 s sous Wine, où le
+    registre n'arrive sur le disque qu'à l'arrêt du wineserver.
     """
-    if sys.platform != "win32":
+    if not disponible():
         return False
+    if attente_s is None:
+        attente_s = 6.0 if sys.platform == "win32" else 20.0
     raison = refus_de_cle(ruche, cle)
     if raison is not None:
         log.warning("Clé de registre refusée (%s) : %s\\%s", raison, ruche, cle)
@@ -349,12 +428,15 @@ def ecrire_valeurs(ruche: str, cle: str, valeurs: dict, vue: int = 32,
             return False
         # regedit rend la main avant d'avoir fini : on relit jusqu'à ce que ce
         # soit vrai, plutôt que de dormir un temps arbitraire et d'espérer.
+        # Sous Wine, chaque relecture reparse un `system.reg` de plusieurs Mo :
+        # un pas plus long, pour une attente qui l'est aussi.
         import time
+        pas = 0.15 if sys.platform == "win32" else 0.5
         limite = time.monotonic() + attente_s
         while time.monotonic() < limite:
             if deja_a_jour(ruche, cle, valeurs, vue):
                 return True
-            time.sleep(0.15)
+            time.sleep(pas)
     finally:
         _nettoyer_reg()
     log.warning("Le registre n'a pas pris les valeurs attendues : %s\\%s", ruche, cle)

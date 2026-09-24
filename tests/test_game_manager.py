@@ -389,8 +389,15 @@ class TestSystemChecks:
             assert check_vcredist_x86() is True
 
     def test_d3d11_non_windows(self):
-        with patch.object(sys, "platform", "linux"):
-            assert check_d3d11_feature_level() is False
+        """Hors Windows, Direct3D 11 vient de DXVK ou de wined3d, pas d'un
+        pilote qu'on interroge : répondre False enverrait tout le monde sur le
+        `fallback` d'INI, vers un renderer que HP1 et HP2 ne livrent pas."""
+        check_d3d11_feature_level.cache_clear()
+        try:
+            with patch.object(sys, "platform", "linux"):
+                assert check_d3d11_feature_level() is True
+        finally:
+            check_d3d11_feature_level.cache_clear()
 
 
 class TestExpectedHashes:
@@ -952,10 +959,15 @@ class TestLeLancementPasseLaCoucheDpi:
             "facteur d'echelle de l'ecran (mesure : 3200x1800 pour 2560x1440)")
 
     def test_un_jeu_qui_ne_le_declare_pas_part_comme_avant(self, tmp_path, monkeypatch):
-        """Les six autres jeux : `env=None`, donc `Popen` hérite — exactement
-        le comportement d'avant le correctif, à l'octet près."""
+        """Les six autres jeux : `env=None` sous Windows, donc `Popen` hérite —
+        exactement le comportement d'avant le correctif, à l'octet près. Sous
+        Linux, l'environnement est celui du lanceur de compatibilité, et la
+        couche Windows n'y figure jamais."""
         kwargs = self._lancer(tmp_path, monkeypatch, dpi_aware=False)
-        assert kwargs.get("env") is None
+        if sys.platform == "win32":
+            assert kwargs.get("env") is None
+        else:
+            assert "__COMPAT_LAYER" not in kwargs["env"]
 
     @pytest.mark.skipif(sys.platform != "win32", reason="couche Windows")
     def test_le_jeu_garde_le_reste_de_l_environnement(self, tmp_path, monkeypatch):

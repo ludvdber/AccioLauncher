@@ -75,15 +75,82 @@ def crt_x86_present(winsxs: Path, version: str) -> bool:
         return False
 
 
+def crt_x86_reel(winsxs: Path, version: str) -> bool:
+    """Comme `crt_x86_present`, mais dans un préfixe WINE. Pure.
+
+    Un préfixe neuf contient DÉJÀ des dossiers d'assembly VC80 et VC90, remplis
+    des DLL internes de Wine — rangées exactement là où irait le vrai
+    redistribuable, jusqu'au jeton de clé publique (vérifié sur Wine 9.0 le
+    2026-09-24). Le test Windows y verrait un Visual C++ installé. On écarte
+    donc toute DLL qui porte la marque de Wine ; le nom de dossier ne suffit
+    pas non plus à trancher, puisque Wine range aussi les VRAIS
+    redistribuables sous un suffixe `_none_deadbeef`. La casse est ignorée :
+    le système de fichiers de Linux, lui, ne l'ignore pas.
+    """
+    from src.core.compat import est_dll_interne_wine
+
+    numero = version.removeprefix("vc")
+    debut = f"x86_microsoft.{version}.crt_{_CRT_JETON}_"
+    try:
+        dossiers = [d for d in winsxs.iterdir() if d.name.lower().startswith(debut)]
+    except OSError:
+        return False
+    for dossier in dossiers:
+        for dll in (dossier / f"msvcr{numero}.dll", dossier / f"MSVCR{numero}.DLL"):
+            if dll.is_file() and not est_dll_interne_wine(dll):
+                return True
+    return False
+
+
 def _winsxs() -> Path:
     return Path(os.environ.get("SystemRoot", r"C:\Windows")) / "WinSxS"
+
+
+# Sous Linux, un prérequis s'installe DANS LE PRÉFIXE, par winetricks : le
+# verbe à demander, pour chaque identifiant que le catalogue peut déclarer.
+VERBES_WINETRICKS = {
+    "vcredist_x86": "vcrun2022",
+    "vcredist2005_x86": "vcrun2005",
+    "vcredist2008_x86": "vcrun2008",
+}
+
+# Tout runtime 14.x satisfait le socle, comme le test Windows (clé 14.0)
+# l'accepte : un préfixe où l'on a installé vcrun2019 n'a pas à recommencer.
+_VERBES_VC14 = frozenset({"vcrun2015", "vcrun2017", "vcrun2019", "vcrun2022"})
+_CLE_VC14_X86 = r"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86"
+
+
+def _dans_le_prefixe(verbes, test) -> bool:
+    """Un prérequis est-il présent dans le préfixe Wine ?
+
+    Sans lanceur de compatibilité, on répond oui : rien ne peut démarrer de
+    toute façon, et c'est l'absence de Wine qu'on signale — en premier, et
+    une seule fois — plutôt qu'une cascade de composants « manquants » dans un
+    préfixe qui n'existe pas. Un préfixe pas encore créé, lui, n'a rien :
+    c'est la préparation qui le crée et y installe les composants.
+
+    Deux preuves acceptées : le journal de winetricks (ce qu'il a mené à bien)
+    ou le composant réellement en place — quelqu'un qui a lancé l'installeur
+    de Microsoft à la main dans le préfixe n'a pas à recommencer.
+    """
+    from src.core import compat
+
+    if compat.lanceur() is None:
+        return True
+    pfx = compat.prefixe()
+    if not compat.pret(pfx):
+        return False
+    if compat.verbes_installes(pfx) & set(verbes):
+        return True
+    return bool(test(pfx))
 
 
 @functools.cache
 def check_vcredist_2005_x86() -> bool:
     """Vérifie si le Visual C++ 2005 Redistributable x86 est installé (HP7 partie 1)."""
     if sys.platform != "win32":
-        return True
+        return _dans_le_prefixe({"vcrun2005"}, lambda pfx: crt_x86_reel(
+            pfx / "drive_c" / "windows" / "winsxs", "vc80"))
     return crt_x86_present(_winsxs(), "vc80")
 
 
@@ -91,7 +158,8 @@ def check_vcredist_2005_x86() -> bool:
 def check_vcredist_2008_x86() -> bool:
     """Vérifie si le Visual C++ 2008 Redistributable x86 est installé (HP7 partie 2)."""
     if sys.platform != "win32":
-        return True
+        return _dans_le_prefixe({"vcrun2008"}, lambda pfx: crt_x86_reel(
+            pfx / "drive_c" / "windows" / "winsxs", "vc90"))
     return crt_x86_present(_winsxs(), "vc90")
 
 
@@ -127,19 +195,29 @@ def invalidate_vcredist_cache() -> None:
     Le `cache_clear` est cherché plutôt qu'appelé d'autorité : une vérification
     de prérequis n'a pas l'obligation d'être mémoïsée, et cette fonction ne
     doit jamais être ce qui casse au retour dans la fenêtre.
+
+    Sous Linux, la détection du lanceur de compatibilité est oubliée aussi :
+    le lien « En savoir plus » du bandeau « Wine introuvable » mène au même
+    aller-retour que « Installer », et quelqu'un qui vient d'installer umu
+    n'a pas à redémarrer le launcher pour qu'on le voie.
     """
     for verification in (check_vcredist_x86, check_vcredist_2005_x86,
                          check_vcredist_2008_x86):
         vider = getattr(verification, "cache_clear", None)
         if vider is not None:
             vider()
+    if sys.platform != "win32":
+        from src.core import compat
+        compat.oublier()
 
 
 @functools.cache
 def check_vcredist_x86() -> bool:
     """Vérifie si le Visual C++ Redistributable x86 (2015-2022) est installé."""
     if sys.platform != "win32":
-        return True
+        from src.core import compat
+        return _dans_le_prefixe(_VERBES_VC14, lambda pfx: compat.lire_valeurs(
+            pfx, "HKLM", _CLE_VC14_X86, ["Installed"], vue=32).get("Installed") == 1)
     import winreg
     for sub_key in (
         r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86",
@@ -162,9 +240,15 @@ def check_d3d11_feature_level() -> bool:
     Crée un device D3D11 temporaire pour tester le support matériel.
     Retourne False si le GPU ne supporte pas DX11 ou en cas d'erreur.
     Le résultat est mis en cache (invariant pour la session).
+
+    Hors Windows, True : sous Wine, Direct3D 11 est fourni par DXVK (Proton)
+    ou wined3d, pas par un pilote qu'on pourrait interroger d'ici. Rendre
+    False, comme avant le portage, aurait envoyé TOUT le monde sur le
+    `fallback` d'INI — un renderer que HP1 et HP2 ne livrent pas (CLAUDE.md,
+    « UE1 engine quirks »).
     """
     if sys.platform != "win32":
-        return False
+        return True
     try:
         import ctypes
         d3d11 = ctypes.WinDLL("d3d11")

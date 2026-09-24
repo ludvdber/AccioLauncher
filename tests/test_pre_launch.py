@@ -213,6 +213,10 @@ class TestDossierDocumentsInutilisable:
         from src.core import game_manager as gm
         manager = _manager_avec_jeu(tmp_path, "hp1")
         monkeypatch.setattr(gm, "documents_inutilisable", lambda: tmp_path / "Docs")
+        # Réputés présents POUR DE BON : sans ça, le test dépendait du Visual
+        # C++ du poste (Windows) ou du préfixe Wine (Linux), et un prérequis
+        # manquant aurait masqué ce qu'il vérifie.
+        monkeypatch.setattr(gm, "prerequis_manquants", lambda *a: [])
         lances = []
         monkeypatch.setattr(gm.subprocess, "Popen", lambda *a, **k: lances.append(a))
         with pytest.raises(RuntimeError) as erreur:

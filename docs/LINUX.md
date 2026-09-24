@@ -367,7 +367,60 @@ détaille aussi l'installation manuelle d'umu (archive « zipapp » dans
 
 ---
 
-## 7. Limites de cette phase
+## 7. État : phase 2 — le lanceur de compatibilité
+
+Ce qui est en place (voir aussi `CLAUDE.md`, modules `compat`,
+`preparation_wine`, `game_registry`, `system_checks`, `pre_launch`) :
+
+- **Détection** : `umu-run`, puis `wine`/`wine64` ; `ACCIO_COMPAT=umu|wine`
+  force une famille. Un GE-Proton installé est passé en `PROTONPATH`, sinon un
+  UMU-Proton déjà téléchargé, sinon umu choisit (et télécharge).
+- **Lancement** : `umu-run <exe>` ou `wine <exe>`, dans le préfixe partagé,
+  avec `WINEDLLOVERRIDES` d'après le champ `dll_overrides` du catalogue. La
+  sortie de Wine/Proton va dans `_Launcher/logs/wine-<jeu>.log`, réécrit à
+  chaque lancement. Sans lanceur : message « Wine introuvable » qui dit quoi
+  installer, et bandeau sur la fiche avant même le téléchargement.
+- **Préparation** : au premier lancement, un dialogue propose de créer le
+  préfixe et d'y installer les composants (winetricks, depuis Microsoft) ;
+  rien ne se fait sans clic. En cas d'échec des composants, « Lancer quand
+  même ». Journal : `_Launcher/logs/wine-preparation.log`.
+- **Registre** : lecture des `.reg` du préfixe, écriture par `regedit /S` via
+  le lanceur, relecture ; prévenance conservée, sans mention d'UAC.
+- **Chemins** : Documents/AppData du préfixe pour les fichiers ; chemins
+  Windows (`C:\…`, `Z:\…`) pour les valeurs lues par le jeu ; page ANSI du
+  préfixe pour les INI.
+- **Surveillance** : `/proc`, même grâce de 10 s.
+- **Catalogue** : `catalog_version` 0.29 = 0.28 + `dll_overrides`. **À reporter
+  à l'identique dans `accio-launcher-games`** avant sa prochaine version, sinon
+  un catalogue distant plus récent sans ce champ l'effacerait.
+
+### Vérifié dans l'environnement de travail (Wine 9.0 64 bits, 2026-09-24)
+
+Avec `tools/verifier_wine.py`, sur un vrai préfixe :
+
+| Vérification | Résultat |
+|---|---|
+| Création du préfixe par `wine wineboot --init`, attente de `system.reg` | prêt en 16 s |
+| Écriture HKCU par le vrai `_ecrire_par_wine` puis relecture | OK en 3,1 s |
+| Cas HP7 : HKLM vue 32 bits, `Install Dir` accentué (`Z:\home\frédéric\…`) | écrit sous `Wow6432Node`, relu à l'identique |
+| Deuxième passage avec les mêmes valeurs | aucune écriture, **aucune question** |
+| `processus_du_jeu` sur un vrai processus Wine (`ping.exe`) | trouvé ; ignoré pour un autre préfixe |
+| Surcharge `d3d9=n,b` | DLL du dossier chargée en `native` (§ 3) |
+
+**Non vérifié ici** : umu-run et Proton (pas de Steam Linux Runtime dans ce
+conteneur), winetricks (absent, et Wine sans support 32 bits), un vrai jeu.
+
+### Pour dépanner
+
+- `python3 tools/verifier_wine.py` : relevé (lanceur, préfixe, composants).
+  `--preparer` fait la préparation, `--registre` un aller-retour d'essai sous
+  `HKCU\Software\AccioLauncher\Verification`.
+- `UMU_LOG=1` (umu) ou `PROTON_LOG=1` (Proton) dans l'environnement du
+  launcher : journaux détaillés, écrits par umu et Proton eux-mêmes.
+- Les préfixes se suppriment sans risque pour les jeux eux-mêmes — mais les
+  **sauvegardes de HP1 à HP7b sont dedans** (Documents et AppData du préfixe).
+
+## 8. Limites de l'audit (phase 1)
 
 Vérifié dans l'environnement de travail (Ubuntu 24.04, Wine 9.0 64 bits, sans
 affichage) : contenu des archives, ordre de chargement des DLL sous Wine,
@@ -388,3 +441,39 @@ suivantes :
 2. `ls ~/.local/share/Steam/compatibilitytools.d ~/.steam/root/compatibilitytools.d`
    : un GE-Proton est-il installé ?
 3. `flatpak list | grep -i -E "discord|vesktop"` : quelle version de Discord ?
+
+## À tester sur Bazzite par Ludo (phase 2)
+
+Depuis les sources de la branche de la phase 2 (Python 3.12+ est dans l'image) :
+
+```sh
+python3 -m venv ~/accio-venv && ~/accio-venv/bin/pip install -r requirements.txt
+~/accio-venv/bin/python main.py
+```
+
+1. `~/accio-venv/bin/python tools/verifier_wine.py` : attendu « famille umu »,
+   le Proton retenu, « prêt : NON ».
+2. Installer **HP1** (le plus léger), cliquer **JOUER** : le dialogue
+   « Préparer Wine » doit lister le préfixe et Visual C++ 2015-2022.
+   « Préparer et lancer » → la barre de statut suit les étapes ; la première
+   fois, umu télécharge Proton (plusieurs minutes). Le jeu doit démarrer seul
+   à la fin.
+3. Relancer `tools/verifier_wine.py` : « prêt : oui », composants présents.
+4. Dans HP1, **charger une sauvegarde** (UE1 relance son processus) : le
+   launcher ne doit PAS revenir au bout de 10 s. Quitter le jeu : le launcher
+   revient, le temps de jeu est compté.
+5. Page de statistiques : les sauvegardes de HP1 apparaissent (elles sont dans
+   le Documents du préfixe).
+6. **HP7 partie 1** : au JOUER, le dialogue « Préparer Wine » ajoute Visual C++
+   2005 ; puis la prévenance du registre doit parler du **registre de Wine**,
+   sans mention d'autorisation administrateur. Le jeu doit démarrer (fichiers
+   rangés dans `pc`). Un deuxième lancement ne doit plus rien demander.
+7. Changer la langue de HP7 partie 2 dans ses réglages : même prévenance, et la
+   langue doit suivre en jeu.
+8. **Surcharge de DLL** : fermer le launcher, le relancer avec
+   `WINEDEBUG=+loaddll ~/accio-venv/bin/python main.py`, jouer à HP5 puis
+   quitter : `~/Games/AccioLauncher/_Launcher/logs/wine-hp5.log` doit contenir
+   `HP5\d3d9.dll" … : native`.
+9. Cas sans Wine : `ACCIO_COMPAT=wine ~/accio-venv/bin/python main.py` (Bazzite
+   n'a pas `wine`) → bandeau « Wine introuvable » sur les fiches, et au JOUER le
+   message qui dit quoi installer.

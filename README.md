@@ -76,6 +76,28 @@ Get-FileHash .\AccioLauncher.exe -Algorithm SHA256
 Si elles diffèrent, **ne lancez pas le fichier** et signalez-le sur le
 [Discord](https://discord.gg/TNwDQd7KGe).
 
+## Linux / Bazzite
+
+Sous Linux, le launcher lance les jeux Windows avec **umu-launcher** (Proton
+hors de Steam), ou à défaut avec **Wine**.
+
+- **Sur Bazzite**, tout est déjà là : umu-launcher et winetricks font partie
+  du système. S'ils manquent, mettez Bazzite à jour (`ujust update`) puis
+  redémarrez.
+- **Ailleurs**, installez le paquet `umu-launcher` de votre distribution
+  (recommandé), ou Wine avec le support 32 bits et `winetricks`.
+
+Au premier lancement d'un jeu, le launcher propose de **préparer Wine** : il
+crée son préfixe dans `~/Games/AccioLauncher/_Launcher/prefixes/` et y
+installe les composants Visual C++ demandés par le jeu. La première fois, umu
+télécharge aussi Proton (plusieurs centaines de Mo) : comptez quelques
+minutes.
+
+En cas de souci, ce que disent Wine et Proton est gardé dans
+`~/Games/AccioLauncher/_Launcher/logs/` (`wine-<jeu>.log`,
+`wine-preparation.log`). Les détails techniques du portage sont dans
+[docs/LINUX.md](docs/LINUX.md).
+
 ## Aperçu
 
 <table>

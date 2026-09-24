@@ -14,22 +14,25 @@ log = logging.getLogger(__name__)
 def get_documents_dir() -> Path:
     """Retourne le vrai dossier Documents via l'API Windows (gère OneDrive, dossiers redirigés).
 
-    Fallback sur %USERPROFILE%/Documents si l'API échoue ou hors Windows.
+    Fallback sur %USERPROFILE%/Documents si l'API échoue.
+
+    Hors Windows, c'est le Documents du PRÉFIXE Wine : c'est lui que lisent
+    les jeux (HP1-HP3 y rangent configuration et sauvegardes), pas celui de
+    l'utilisateur. Résolu, comme sous Windows : `pre_launch.resolve_safe_path`
+    compare des chemins résolus, et Wine fait parfois de ce dossier un lien.
     """
-    if sys.platform == "win32":
-        try:
-            CSIDL_PERSONAL = 5
-            buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
-            ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_PERSONAL, None, 0, buf)
-            if buf.value:
-                return Path(buf.value).resolve()
-        except (OSError, ValueError):
-            pass
-    if sys.platform == "win32":
-        return (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
-    # Hors Windows, `expandvars` ne connaît pas %USERPROFILE% : la chaîne restait
-    # littérale et `resolve()` fabriquait « <dossier courant>/%USERPROFILE%/Documents ».
-    return (Path.home() / "Documents").resolve()
+    if sys.platform != "win32":
+        from src.core import compat
+        return compat.documents().resolve()
+    try:
+        CSIDL_PERSONAL = 5
+        buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+        ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_PERSONAL, None, 0, buf)
+        if buf.value:
+            return Path(buf.value).resolve()
+    except (OSError, ValueError):
+        pass
+    return (Path(os.path.expandvars("%USERPROFILE%")) / "Documents").resolve()
 
 
 # --- Mode frozen (PyInstaller) ---

@@ -10,7 +10,8 @@ règles soient réellement subtiles :
   registre SÉLECTIONNE, il n'installe rien) ;
 - les valeurs communes et celles de la langue partent dans la MÊME écriture,
   sinon deux invites UAC de suite — et la seconde se refuse ;
-- hors Windows, il n'y a rien à lire ni à écrire, et surtout rien à signaler
+- sans registre atteignable (Linux sans Wine, ou préfixe pas encore
+  préparé), il n'y a rien à lire ni à écrire, et surtout rien à signaler
   comme un échec.
 
 Ces fonctions prennent `game` et `config` EXPLICITEMENT au lieu de lire `self` :
@@ -24,7 +25,7 @@ import logging
 from src.core import game_registry as registre
 from src.core.game_data import GameData
 from src.core.i18n import get_language
-from src.core.pre_launch import substitute_vars
+from src.core.pre_launch import substituer_pour_le_jeu
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ def resoudre(game: GameData, config) -> str | None:
        convenir tant qu'il n'est pas modifiable.
     """
     lr = game.language_registry
-    # Sans registre atteignable (Linux), aucune langue n'est « celle du jeu » :
+    # Sans registre atteignable (Linux sans préfixe prêt), aucune langue n'est « celle du jeu » :
     # rien ne lit ni n'écrit ce réglage ici. Retourner None éteint le sélecteur
     # plutôt que d'afficher un choix sans effet — un réglage qui ne règle rien
     # est pire que pas de réglage.
@@ -147,7 +148,9 @@ def valeurs_registre(game: GameData, config, code: str | None = None) -> dict:
     lr = game.language_registry
     if lr is None:
         return {}
-    valeurs = {nom: substitute_vars(v, game, config) if isinstance(v, str) else v
+    # Chemin tel que le JEU le lit : identique sous Windows, `Z:\…` sous Wine
+    # (un `Install Dir` en chemin Unix ne mènerait le jeu nulle part).
+    valeurs = {nom: substituer_pour_le_jeu(v, game, config) if isinstance(v, str) else v
                for nom, v in lr.common}
     code = code or resoudre(game, config)
     langue = lr.get(code) if code else None
@@ -176,7 +179,7 @@ def appliquer(game: GameData, config, code: str | None = None,
     lr = game.language_registry
     if lr is None:
         return True
-    # Hors Windows il n'y a rien à écrire — et surtout pas d'avertissement à
+    # Sans registre atteignable il n'y a rien à écrire — et surtout pas d'avertissement à
     # journaliser À CHAQUE lancement pour une opération qu'on n'a pas tentée.
     # `launch_game` traite False comme un échec réel : ce n'en est pas un.
     if not registre.disponible():

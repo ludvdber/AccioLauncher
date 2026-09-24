@@ -7,6 +7,7 @@ prend la vue en premier argument et utilise ses signaux + sous-systèmes.
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,8 +18,14 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox
 from src.core.formatting import format_size
 from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
+from src.core import compat
+from src.core import preparation_wine as preparation
 from src.core.game_manager import GameState
-from src.core.system_checks import PREREQUIS, VCREDIST_URL, needed_space_mb
+from src.core.liens import GUIDE_LINUX_URL
+from src.core.system_checks import (
+    PREREQUIS, VCREDIST_URL, VERBES_WINETRICKS, needed_space_mb, prerequis_manquants,
+)
+from src.ui.preparateur_wine import noms_des_verbes
 from src.ui.utils import open_local_path, open_url
 from src.ui.game_settings_dialog import GameSettingsDialog
 from src.ui.versions_dialog import VersionsDialog
@@ -113,13 +120,22 @@ def confirmer_registre(view: "GameDetailView", nom_jeu: str):
             if actuel is not None:
                 lignes.append("        " + tr("remplace : {}").format(actuel))
         detail = "\n".join(lignes)
+        # Sous Linux, le registre est celui du préfixe Wine : le dire, pour
+        # que personne ne croie qu'on touche à quoi que ce soit du système.
+        if sys.platform == "win32":
+            intro = tr("{jeu} enregistre ses réglages dans le registre de Windows.\n\n"
+                       "Le launcher va écrire ceci dans {cle} :\n\n{valeurs}")
+        else:
+            intro = tr("{jeu} enregistre ses réglages dans le registre de Wine, "
+                       "celui du préfixe du launcher.\n\n"
+                       "Le launcher va écrire ceci dans {cle} :\n\n{valeurs}")
         morceaux = [
-            tr("{jeu} enregistre ses réglages dans le registre de Windows.\n\n"
-               "Le launcher va écrire ceci dans {cle} :\n\n{valeurs}").format(
-                   jeu=nom_jeu, cle=f"{ruche}\\{cle}", valeurs=detail),
+            intro.format(jeu=nom_jeu, cle=f"{ruche}\\{cle}", valeurs=detail),
             tr("Sans cette écriture, le jeu risque de ne pas démarrer."),
         ]
-        if ruche == "HKLM":
+        # Pas d'UAC sous Wine : l'annoncer ferait attendre une fenêtre qui ne
+        # viendra pas.
+        if ruche == "HKLM" and sys.platform == "win32":
             morceaux.append(tr("Windows va ensuite demander une autorisation "
                                "administrateur."))
         morceaux.append(tr("Continuer ?"))
@@ -192,8 +208,13 @@ def on_cancel_download(view: "GameDetailView") -> None:
     view._refresh()
 
 
-def on_play(view: "GameDetailView") -> None:
+def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
     if view.game is None:
+        return
+    if view.preparation_en_cours:
+        # Deux winetricks dans le même préfixe se marcheraient dessus, et le
+        # jeu partirait sans ce qu'on est justement en train d'installer.
+        view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
         return
     view._stop_video()
     demander = confirmer_registre(view, view.game.name)
@@ -214,11 +235,18 @@ def on_play(view: "GameDetailView") -> None:
                 tr("Le réglage n'a pas pu être écrit — le jeu démarre "
                    "avec sa configuration actuelle."))
 
+    # Passé seulement quand il sert : les tests remplacent `launch_game`
+    # par des doublures qui ne connaissent pas ce paramètre.
+    options = {"ignorer_prerequis": True} if ignorer_prerequis else {}
     try:
         proc = view.manager.launch_game(
-            view.game.id, confirmer=confirmer, avertir=avertir)
+            view.game.id, confirmer=confirmer, avertir=avertir, **options)
     except RuntimeError as exc:
-        if str(exc).startswith("prerequis_manquant:"):
+        if str(exc) == "compat_absent":
+            signaler_compat_absent(view)
+        elif str(exc).startswith("prerequis_manquant:") and sys.platform != "win32":
+            proposer_preparation(view, view.game, puis_jouer=True)
+        elif str(exc).startswith("prerequis_manquant:"):
             manquant = str(exc).split(":", 1)[1]
             reply = _boite(QMessageBox.Icon.Warning,
                 view, tr("Composant Windows manquant"),
@@ -229,6 +257,14 @@ def on_play(view: "GameDetailView") -> None:
             )
             if reply == 0:
                 open_url(PREREQUIS.get(manquant, (None, VCREDIST_URL))[1])
+        elif str(exc).startswith("documents_inutilisable:") and sys.platform != "win32":
+            _boite(QMessageBox.Icon.Critical, view,
+                   tr("Dossier Documents inaccessible"),
+                   tr("Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\n"
+                      "Ce dossier du préfixe Wine refuse l'écriture, donc le jeu ne peut pas "
+                      "démarrer.\n\nVérifiez qu'il reste de la place sur le disque, et que "
+                      "le dossier « _Launcher » d'Accio Launcher vous appartient bien.")
+                   .format(str(exc).split(":", 1)[1]))
         elif str(exc).startswith("documents_inutilisable:"):
             _boite(QMessageBox.Icon.Critical, view,
                    tr("Dossier Documents inaccessible"),
@@ -246,6 +282,107 @@ def on_play(view: "GameDetailView") -> None:
         view.game_launched.emit(proc, view.game.name, view.game.id)
     else:
         view.status_message.emit(tr("Impossible de lancer le jeu."))
+
+
+def signaler_compat_absent(view: "GameDetailView") -> None:
+    """Ni umu-run ni wine : dire QUOI installer, jamais un échec muet.
+
+    Sur Bazzite, umu-launcher fait partie de l'image (relevé dans son
+    `Containerfile`) : s'il manque, c'est une image ancienne ou modifiée, et
+    la mise à jour du système le ramène. Ailleurs, le paquet de la
+    distribution. La détection est refaite au clic suivant sur JOUER : pas
+    besoin de redémarrer le launcher.
+    """
+    reponse = _boite(
+        QMessageBox.Icon.Warning, view, tr("Wine introuvable"),
+        tr("Accio Launcher lance ces jeux Windows avec umu-launcher (recommandé) "
+           "ou Wine. Aucun des deux n'est installé.\n\n"
+           "Sur Bazzite, umu-launcher fait partie du système : mettez Bazzite à "
+           "jour (« ujust update ») puis redémarrez. Sur une autre distribution, "
+           "installez le paquet umu-launcher, ou Wine avec le support 32 bits.\n\n"
+           "Cliquez ensuite à nouveau sur JOUER : le launcher les cherchera de "
+           "nouveau."),
+        (tr("Ouvrir le guide"), tr("Fermer")))
+    if reponse == 0:
+        open_url(GUIDE_LINUX_URL)
+
+
+def proposer_preparation(view: "GameDetailView", game: GameData | None,
+                         puis_jouer: bool) -> None:
+    """Propose de préparer Wine pour ce jeu : préfixe, puis composants.
+
+    Une QUESTION, pas une initiative : winetricks télécharge chez Microsoft,
+    et umu peut télécharger Proton la première fois. On dit ce qui va se
+    passer, on laisse décider, et on ne le fait que sur un clic.
+    """
+    if game is None:
+        return
+    if view.preparation_en_cours:
+        view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+        return
+    manquants = prerequis_manquants(("vcredist_x86", *game.requires))
+    verbes = [VERBES_WINETRICKS[m] for m in manquants if m in VERBES_WINETRICKS]
+    etapes = []
+    if not compat.pret(compat.prefixe()):
+        etapes.append("• " + tr("créer le préfixe Wine du launcher"))
+    if verbes:
+        etapes.append("• " + tr("y installer {}").format(noms_des_verbes(verbes)))
+    if not etapes:
+        return
+    reponse = _boite(
+        QMessageBox.Icon.Question, view, tr("Préparer Wine"),
+        tr("Avant de lancer {jeu}, le launcher doit préparer Wine :\n\n{etapes}\n\n"
+           "Les composants Visual C++ sont téléchargés depuis Microsoft par "
+           "winetricks. Avec umu, la première préparation télécharge aussi Proton "
+           "(plusieurs centaines de Mo). Comptez quelques minutes ; le launcher "
+           "reste utilisable pendant ce temps.").format(
+               jeu=game.name, etapes="\n".join(etapes)),
+        (tr("Préparer et lancer") if puis_jouer else tr("Préparer"), tr("Plus tard")))
+    if reponse == 0:
+        view.preparer_wine(game, verbes, puis_jouer)
+
+
+def apres_preparation(view: "GameDetailView", game_id: str, reussie: bool,
+                      raison: str, puis_jouer: bool) -> None:
+    """La préparation est finie : lancer, prévenir, ou expliquer l'échec.
+
+    Un échec n'est pas une impasse quand le préfixe existe : les composants
+    INTÉGRÉS à Wine suffisent parfois, et c'est à l'utilisateur d'essayer —
+    d'où « Lancer quand même ». Sans préfixe, rien ne peut démarrer.
+    """
+    game = view.manager.get_game_by_id(game_id)
+    if game is None or raison == preparation.ANNULEE:
+        return
+    affiche = view.game is not None and view.game.id == game_id
+    if reussie:
+        if puis_jouer and affiche:
+            on_play(view)
+        else:
+            view.notify.emit(tr("Wine est prêt : {} peut être lancé.").format(game.name))
+        return
+    journal = str(view.journal_preparation)
+    if raison == preparation.PREFIXE:
+        _boite(QMessageBox.Icon.Critical, view, tr("Préparer Wine"),
+               tr("Le préfixe Wine n'a pas pu être créé.\n\nCe qu'ont dit umu ou Wine "
+                  "est dans :\n{}").format(journal))
+        return
+    if raison == preparation.WINETRICKS_ABSENT:
+        texte = tr("winetricks est introuvable : les composants Visual C++ ne peuvent "
+                   "pas être installés dans Wine.\n\nInstallez winetricks (il fait "
+                   "partie de Bazzite) ou umu-launcher. Le jeu peut aussi démarrer "
+                   "sans eux : les composants intégrés à Wine suffisent parfois.")
+    else:
+        texte = tr("L'installation des composants Visual C++ dans Wine a échoué.\n\n"
+                   "Ce qu'a dit winetricks est dans :\n{}\n\nLe jeu peut tout de même "
+                   "démarrer : les composants intégrés à Wine suffisent parfois.").format(
+                       journal)
+    if not affiche:
+        _boite(QMessageBox.Icon.Warning, view, tr("Préparer Wine"), texte)
+        return
+    reponse = _boite(QMessageBox.Icon.Warning, view, tr("Préparer Wine"), texte,
+                     (tr("Lancer quand même"), tr("Fermer")), 1)
+    if reponse == 0:
+        on_play(view, ignorer_prerequis=True)
 
 
 def on_uninstall(view: "GameDetailView") -> None:
@@ -530,11 +667,15 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
         # Échec = UAC refusé, ou le registre n'a pas pris. Une vraie erreur,
         # donc un modal : le choix est enregistré mais SANS effet, et un toast
         # qui s'efface laisserait l'utilisateur croire que c'est fait.
-        _boite(QMessageBox.Icon.Warning,
-            view, tr("Langue du jeu"),
-            tr("La langue n'a pas pu être écrite dans le registre.\n\n"
-               "Ce réglage demande une autorisation administrateur. Le jeu "
-               "démarrera dans la langue actuellement en place."))
+        if sys.platform == "win32":
+            texte = tr("La langue n'a pas pu être écrite dans le registre.\n\n"
+                       "Ce réglage demande une autorisation administrateur. Le jeu "
+                       "démarrera dans la langue actuellement en place.")
+        else:
+            texte = tr("La langue n'a pas pu être écrite dans le registre de Wine.\n\n"
+                       "Le jeu démarrera dans la langue actuellement en place. Le "
+                       "journal du launcher dit ce qui s'est passé.")
+        _boite(QMessageBox.Icon.Warning, view, tr("Langue du jeu"), texte)
     view.set_game(game)
     return False
 
