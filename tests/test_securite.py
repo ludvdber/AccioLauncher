@@ -14,6 +14,7 @@ doivent rester vraies :
 
 import ast
 import configparser
+import os
 import sys
 from pathlib import Path
 
@@ -113,7 +114,8 @@ class TestSeptZip:
         monkeypatch.setattr(sys, "platform", "linux")
         monkeypatch.setattr(extractors, "Path", _PathSansEmbarque)
         monkeypatch.setattr(extractors.shutil, "which", lambda nom: f"/usr/bin/{nom}")
-        assert extractors.find_7z_exe() == "/usr/bin/7zz"
+        # `abspath` : ce test tourne AUSSI sous Windows, où il rend D:\usr\bin\7zz.
+        assert extractors.find_7z_exe() == os.path.abspath("/usr/bin/7zz")
 
     def test_hors_windows_p7zip_en_repli(self, monkeypatch):
         """Bazzite a p7zip (`7z`, `7za`) dans son image, pas `7zz`."""
@@ -121,7 +123,7 @@ class TestSeptZip:
         monkeypatch.setattr(extractors, "Path", _PathSansEmbarque)
         monkeypatch.setattr(extractors.shutil, "which",
                             lambda nom: "/usr/bin/7za" if nom == "7za" else None)
-        assert extractors.find_7z_exe() == "/usr/bin/7za"
+        assert extractors.find_7z_exe() == os.path.abspath("/usr/bin/7za")
 
     def test_hors_windows_l_embarque_passe_d_abord(self, monkeypatch):
         """Le 7-Zip officiel pour Linux, livré avec le launcher comme 7z.exe."""

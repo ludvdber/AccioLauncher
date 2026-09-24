@@ -29,23 +29,31 @@ def _which(disponibles: dict):
     return lambda nom: disponibles.get(nom)
 
 
+def _abs(chemin: str) -> str:
+    """Ce que `_trouver` rend d'un chemin donné par `which` : sous Windows,
+    `/usr/bin/wine` devient `D:\\usr\\bin\\wine`. La CI Windows rejoue
+    aussi ces tests : ils doivent y attendre la même transformation."""
+    return os.path.abspath(chemin)
+
+
 class TestDetection:
     def test_umu_passe_avant_wine(self):
         trouve = compat.detecter({}, _which({"umu-run": "/usr/bin/umu-run",
                                              "wine": "/usr/bin/wine"}),
                                  programmes=[], protons=[])
-        assert trouve == Lanceur("umu", "/usr/bin/umu-run")
+        assert trouve == Lanceur("umu", _abs("/usr/bin/umu-run"))
 
     def test_wine_ensuite_avec_son_winetricks(self):
         trouve = compat.detecter({}, _which({"wine": "/usr/bin/wine",
                                              "winetricks": "/usr/bin/winetricks"}),
                                  programmes=[], protons=[])
-        assert trouve == Lanceur("wine", "/usr/bin/wine", winetricks="/usr/bin/winetricks")
+        assert trouve == Lanceur("wine", _abs("/usr/bin/wine"),
+                                 winetricks=_abs("/usr/bin/winetricks"))
 
     def test_wine64_seul_suffit(self):
         trouve = compat.detecter({}, _which({"wine64": "/usr/bin/wine64"}),
                                  programmes=[], protons=[])
-        assert trouve.famille == "wine" and trouve.executable == "/usr/bin/wine64"
+        assert trouve.famille == "wine" and trouve.executable == _abs("/usr/bin/wine64")
         assert trouve.winetricks == ""
 
     def test_rien_trouve(self):
