@@ -49,7 +49,7 @@ jobs:
   # tag : c'est qu'on a oublié de monter le numéro. Calculé UNE fois, pour les
   # deux plateformes.
   version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       tag: ${{ steps.version.outputs.tag }}
@@ -270,7 +270,7 @@ jobs:
   brouillon:
     needs: [version, windows, linux]
     if: inputs.release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write           # créer la release en brouillon

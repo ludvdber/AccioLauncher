@@ -76,7 +76,11 @@ jobs:
           retention-days: 7
 
   linux-smoke:
-    runs-on: ubuntu-latest
+    # Figé, pas `ubuntu-latest` : ce label passe à Ubuntu 26 le 2026-10-19, et
+    # un runner qui change sous nos pieds rend un rouge ininterprétable. Même
+    # choix dans tous les workflows ; seul le build AppImage reste en 22.04
+    # (glibc de la machine de build).
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     # BLOQUANT depuis le 2026-09-18. Il a été informatif (`continue-on-error`)
     # tant que le portage Linux n'avait pas commencé, et il est resté rouge
