@@ -219,6 +219,26 @@ class TestOrchestrateur:
         with qtbot.waitSignal(orch.terminee, timeout=5000):
             attente["fin"] = True
 
+    def test_terminee_n_est_emis_qu_une_fois_le_fil_arrete(self, qtbot, monkeypatch):
+        """CI Linux, 2026-09-24 : le fil annonçait sa fin puis tournait encore ;
+        détruit à ce moment-là avec son parent, Qt abandonnait le processus
+        (code 134), une exécution sur deux. On élargit ici la fenêtre à 300 ms
+        pour que l'ancien code échoue à tous les coups."""
+        from src.ui.preparateur_wine import PreparateurWine
+
+        def annonce_puis_traine(self):
+            self.preparation_terminee.emit(True, "")
+            self.msleep(300)
+        monkeypatch.setattr(prep.PreparationWine, "run", annonce_puis_traine)
+        orch = PreparateurWine()
+        assert orch.demarrer(self._jeu(), [], puis_jouer=False)
+        fil = orch._fil
+        encore_en_marche = []
+        orch.terminee.connect(lambda *_: encore_en_marche.append(fil.isRunning()))
+        with qtbot.waitSignal(orch.terminee, timeout=5000):
+            pass
+        assert encore_en_marche == [False]
+
     def test_la_fermeture_arrete_le_fil(self, qtbot, monkeypatch):
         """Sans `terminate()` : le fil honore l'interruption à son sondage."""
         from src.ui.preparateur_wine import PreparateurWine
