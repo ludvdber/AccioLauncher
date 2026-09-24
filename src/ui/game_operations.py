@@ -13,7 +13,7 @@ from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.installer import Installer
 from src.core.system_checks import needed_space_mb
-from src.core.thread_utils import arreter_a_la_fermeture
+from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 from src.core.speed_tracker import SpeedTracker
 
 log = logging.getLogger(__name__)
@@ -238,6 +238,26 @@ class GameOperations(QObject):
             self._zombies.remove(dl)
         dl.deleteLater()
 
+    def _liberer_downloader(self) -> None:
+        """Relâche le downloader depuis le slot de SON signal de fin.
+
+        Oublier la référence ne le détruit pas — il reste enfant de cet objet —
+        mais il mourrait avec lui, et ce signal part de `run()` juste avant son
+        retour : cf. `liberer_apres_fin`. Sans ça, en plus, chaque téléchargement
+        terminé laissait un `QThread` de plus accroché ici jusqu'à la fermeture.
+        """
+        dl, self._downloader = self._downloader, None
+        if dl is not None:
+            self._disconnect_downloader(dl)
+            liberer_apres_fin(dl)
+
+    def _liberer_installer(self) -> None:
+        """Même chose pour l'installer (`install_finished` / `error`)."""
+        inst, self._installer = self._installer, None
+        if inst is not None:
+            self._disconnect_installer(inst)
+            liberer_apres_fin(inst)
+
     def _disconnect_downloader(self, dl: Downloader) -> None:
         """Disconnect symétrique des signaux du downloader."""
         try:
@@ -339,9 +359,7 @@ class GameOperations(QObject):
         )
 
     def _on_download_finished(self, archive_path_str: str) -> None:
-        if self._downloader is not None:
-            self._disconnect_downloader(self._downloader)
-        self._downloader = None
+        self._liberer_downloader()
         game = self._active_game
         if game is None:
             return
@@ -384,9 +402,7 @@ class GameOperations(QObject):
         return game, version
 
     def _on_download_error(self, message: str, echec: Echec | None = None) -> None:
-        if self._downloader is not None:
-            self._disconnect_downloader(self._downloader)
-        self._downloader = None
+        self._liberer_downloader()
         game, _ = self._relacher_operation()
         if game is not None:
             # Re-détecter : une mise à jour/réparation échouée laisse l'ancienne
@@ -415,9 +431,7 @@ class GameOperations(QObject):
         self.status_message.emit(tr("Finalisation de l'installation…"))
 
     def _on_install_finished(self, _path: str) -> None:
-        if self._installer is not None:
-            self._disconnect_installer(self._installer)
-        self._installer = None
+        self._liberer_installer()
         game, target_ver = self._relacher_operation()
         if game is None:
             return
@@ -443,9 +457,7 @@ class GameOperations(QObject):
         self.operation_finished.emit(game)
 
     def _on_install_error(self, message: str) -> None:
-        if self._installer is not None:
-            self._disconnect_installer(self._installer)
-        self._installer = None
+        self._liberer_installer()
         game, _ = self._relacher_operation()
         if game is not None:
             self._manager.redetect_state(game.id)

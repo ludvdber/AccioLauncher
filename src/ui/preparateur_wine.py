@@ -17,7 +17,7 @@ from src.core import compat
 from src.core.game_data import GameData
 from src.core.i18n import tr
 from src.core.preparation_wine import PreparationWine
-from src.core.thread_utils import arreter_a_la_fermeture
+from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 
 log = logging.getLogger(__name__)
 
@@ -97,16 +97,10 @@ class PreparateurWine(QObject):
                 fil.preparation_terminee.disconnect(self._on_terminee)
             except TypeError:
                 pass
-            # `preparation_terminee` part de run() JUSTE AVANT son retour : quand
-            # ce slot s'exécute, le fil peut encore tourner. Le détruire alors
-            # (deleteLater, ou la mort du parent) abandonne le processus —
-            # « QThread: Destroyed while thread is still running », qFatal
-            # (CI Linux, 2026-09-24, une exécution sur deux). On attend sa vraie
-            # fin ; le résultat de l'attente n'est pas jetable (cf. thread_utils).
-            if fil.wait(5000):
-                fil.deleteLater()
-            else:
-                fil.finished.connect(fil.deleteLater)
+            # `preparation_terminee` part de run() JUSTE AVANT son retour : le
+            # détruire tout de suite abandonnait le processus (qFatal, code 134,
+            # CI Linux du 2026-09-24, une exécution sur deux).
+            liberer_apres_fin(fil)
         self.terminee.emit(self._jeu_id, reussie, raison, self._puis_jouer)
 
     def shutdown(self) -> None:
