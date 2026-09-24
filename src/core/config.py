@@ -91,7 +91,7 @@ def cache_pour(install_path: Path) -> Path:
 # embarquees : permet a un traducteur de tester son fichier sans release.
 USER_I18N_DIR = LAUNCHER_DATA_PATH / "i18n"
 
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.1.0"
 
 
 def _as_str(value: object, default: str) -> str:

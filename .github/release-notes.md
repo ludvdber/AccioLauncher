@@ -19,11 +19,13 @@
 **Windows 10 et 11** — téléchargez **AccioLauncher.exe** ci-dessous et
 lancez-le, aucune installation n'est nécessaire.
 
-**Linux (Bazzite, Steam Deck, Fedora, Ubuntu…)** — téléchargez
+**Linux (Bazzite, Steam Deck, Fedora, Ubuntu…) — préversion** — téléchargez
 **AccioLauncher-x86_64.AppImage**, rendez-le exécutable (clic droit →
 Propriétés, ou `chmod +x`) et lancez-le. Les jeux tournent par Proton (via
 `umu-run`) ou Wine : voir
 [Linux / Bazzite](https://github.com/ludvdber/AccioLauncher#linux--bazzite).
+Cette version Linux n'a pas encore été essayée sur une vraie machine : vos
+retours sont les bienvenus sur le [Discord](https://discord.gg/TNwDQd7KGe).
 
 Si vous avez déjà le launcher, il vous propose la mise à jour tout seul.
 
