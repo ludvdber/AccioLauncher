@@ -4,8 +4,9 @@ Affiche « Joue à <jeu> » sur le profil Discord de l'utilisateur, avec la
 jaquette, une ligne « maison · année » et deux boutons : le site et le Discord
 de la communauté. Protocole : trames JSON
 (handshake op 0, commandes op 1) sur le named pipe Windows
-`\\.\pipe\discord-ipc-N` (ou socket Unix `$XDG_RUNTIME_DIR/discord-ipc-N`
-sous Linux — déjà géré pour l'objectif Linux).
+`\\.\pipe\discord-ipc-N`, ou un socket Unix sous Linux — là où le client
+Discord l'a posé, qui dépend de la façon dont il est installé (voir
+`dossiers_ipc`, et Discord en Flatpak, fréquent sur Bazzite).
 
 ⚠️ IMPORTANT (à faire une fois par Ludo) :
   1. https://discord.com/developers/applications → « New Application » nommée
@@ -64,20 +65,48 @@ def _open_ipc():
             except OSError:
                 continue
         return None
-    # Linux / macOS : socket Unix dans XDG_RUNTIME_DIR (fallback /tmp)
+    # Linux / macOS : socket Unix, dans le dossier que le client a choisi.
     import socket
-    # `/tmp` est le dernier emplacement où le client Discord lui-même pose
-    # son socket. On s'y CONNECTE seulement, sans rien y créer.
-    base = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"  # nosec B108
-    for i in range(10):
-        try:
+    for dossier in dossiers_ipc():
+        for i in range(10):
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.settimeout(2.0)
-            sock.connect(f"{base}/discord-ipc-{i}")
-            return sock.makefile("rwb", buffering=0)
-        except OSError:
-            continue
+            try:
+                sock.settimeout(2.0)
+                sock.connect(f"{dossier}/discord-ipc-{i}")
+                return sock.makefile("rwb", buffering=0)
+            except OSError:
+                sock.close()
     return None
+
+
+def dossiers_ipc(env=None) -> list[str]:
+    """Où chercher le socket de Discord sous Linux, dans l'ordre. Pure.
+
+    Discord installé en paquet le pose dans `$XDG_RUNTIME_DIR`. Mais sur
+    Bazzite, Discord s'installe le plus souvent en **Flatpak**, dont le bac à
+    sable le range dans `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/` — un
+    launcher qui ne cherchait qu'à la racine n'y trouvait rien, et la présence
+    restait éteinte sans un mot. Même chose pour Discord Canary, pour Vesktop
+    (client alternatif courant en Flatpak) et pour le paquet Snap.
+
+    `/tmp` en dernier : c'est le repli du client lui-même quand
+    `XDG_RUNTIME_DIR` n'existe pas. On s'y CONNECTE seulement, sans rien y
+    créer.
+    """
+    env = os.environ if env is None else env
+    # `/tmp` (ici et plus bas) : le repli du client lui-même, où l'on se
+    # connecte sans rien y créer.
+    base = env.get("XDG_RUNTIME_DIR") or "/tmp"  # nosec B108
+    dossiers = [
+        base,
+        f"{base}/app/com.discordapp.Discord",
+        f"{base}/app/com.discordapp.DiscordCanary",
+        f"{base}/.flatpak/dev.vencord.Vesktop/xdg-run",
+        f"{base}/snap.discord",
+    ]
+    if base != "/tmp":  # nosec B108
+        dossiers.append("/tmp")  # nosec B108
+    return dossiers
 
 
 class DiscordPresence:

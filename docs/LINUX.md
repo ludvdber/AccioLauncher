@@ -420,7 +420,49 @@ conteneur), winetricks (absent, et Wine sans support 32 bits), un vrai jeu.
 - Les préfixes se suppriment sans risque pour les jeux eux-mêmes — mais les
   **sauvegardes de HP1 à HP7b sont dedans** (Documents et AppData du préfixe).
 
-## 8. Limites de l'audit (phase 1)
+## 8. État : phase 3 — le reste du portage
+
+- **7-Zip** : le 7-Zip officiel pour Linux (`assets/7z/linux/7zzs`, 26.00,
+  variante statique) est embarqué et passe avant tout 7-Zip du système ;
+  chaque build n'embarque que le sien. Sa progression s'efface par retours
+  arrière (`\x08`) sans jamais de `\r` : elle est découpée dessus, sinon la
+  barre restait à 0 % jusqu'à la fin.
+- **Mise à jour du launcher** : dans une AppImage, le fichier désigné par
+  `$APPIMAGE` est remplacé atomiquement (copie à côté, `chmod 755`,
+  `os.replace`), puis un `/bin/sh` détaché attend la fin du processus et
+  relance. Un dossier en lecture seule, ou un lancement depuis les sources,
+  retombe sur la page de release. Le vérificateur choisit l'asset `.AppImage`
+  (et son empreinte), plus jamais l'`.exe`.
+- **« Redémarrer maintenant »** attend désormais la fin du processus avant de
+  relancer (la relance immédiate butait sur l'instance unique).
+- **Discord** : sockets natifs, **Flatpak** (`app/com.discordapp.Discord`) et
+  Snap.
+- **Environnement** : l'AppImage retire ses propres bibliothèques de
+  `LD_LIBRARY_PATH` pour tout ce qu'elle lance (Wine, umu, `xdg-open`, le
+  navigateur).
+- **Bureau** : `app_id` Wayland `be.acciolauncher.AccioLauncher` (le nom du
+  `.desktop` de la phase 4) ; sans zone de notification, la fenêtre est
+  RÉDUITE pendant une partie au lieu d'être cachée sans moyen de la rappeler.
+- **Diagnostic** : distribution, noyau, session (`KDE · Wayland`,
+  `Gamescope`), processeur, mémoire, cartes graphiques (`/sys/class/drm`,
+  `pci.ids`, version NVIDIA), et une ligne « Compatibilité » (lanceur, Proton,
+  préfixe, composants), aussi écrite en tête du journal. Le nom Unix du profil
+  Wine est masqué comme le dossier personnel.
+
+### Vérifié dans l'environnement de travail (Ubuntu 24.04, sans affichage)
+
+| Vérification | Résultat |
+|---|---|
+| Extraction réelle par `7zzs` : 48 Mo (suite de tests), puis 120 Mo en quatre volumes `.7z.001` par le vrai `extract_7z` | fichiers identiques, progression intermédiaire reçue (56 %, 84 %, 100 %) |
+| Relance par le vrai `/bin/sh` : attend la fin du processus, puis lance | test de bout en bout dans la suite |
+| Remplacement d'un fichier « AppImage » factice ; dossier en lecture seule (simulé : le conteneur tourne en root, qui écrit partout) | remplacé / renvoi à la page de release |
+| Socket Discord factice sous `app/com.discordapp.Discord` | trouvé, préféré aux emplacements absents |
+
+**Non vérifié ici** : une vraie AppImage (construite en phase 4), un vrai
+Discord, une vraie session Wayland ou GNOME sans zone de notification, une
+vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
+
+## 9. Limites de l'audit (phase 1)
 
 Vérifié dans l'environnement de travail (Ubuntu 24.04, Wine 9.0 64 bits, sans
 affichage) : contenu des archives, ordre de chargement des DLL sous Wine,
@@ -477,3 +519,34 @@ python3 -m venv ~/accio-venv && ~/accio-venv/bin/pip install -r requirements.txt
 9. Cas sans Wine : `ACCIO_COMPAT=wine ~/accio-venv/bin/python main.py` (Bazzite
    n'a pas `wine`) → bandeau « Wine introuvable » sur les fiches, et au JOUER le
    message qui dit quoi installer.
+
+## À tester sur Bazzite par Ludo (phase 3)
+
+Depuis les sources de la branche de la phase 3 (même venv que la phase 2).
+L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
+
+1. **Extraction** : désinstaller puis réinstaller **HP1** ; la barre
+   « Installation » doit AVANCER (pas rester à 0 % puis sauter à 100 %). Le
+   journal `~/Games/AccioLauncher/_Launcher/logs/accio_launcher.log` doit
+   mentionner `assets/7z/linux/7zzs`.
+2. **Journal** : ses deux premières lignes doivent porter
+   `Bazzite … · noyau … (x86_64) · KDE · Wayland` (ou `Gamescope` en mode Jeu),
+   puis `Compatibilité : umu-run (…) · GE-Proton… · préfixe … prêt`.
+3. **Diagnostic** : Paramètres → À propos → « Copier les informations de
+   diagnostic », coller dans un éditeur : la carte graphique doit être nommée
+   (`AMD · Navi …` ou `NVIDIA · … · pilote nvidia 5xx.xx`), et aucune ligne ne
+   doit contenir ton nom d'utilisateur.
+4. **Discord Flatpak** : Discord ouvert, activer la présence dans les
+   Paramètres, lancer un jeu : l'activité « Accio Launcher » doit apparaître
+   sur ton profil (vu depuis un autre compte, pour les boutons).
+5. **Zone de notification** : lancer un jeu. Sous KDE, le launcher doit se
+   ranger dans la zone (icône près de l'horloge) et revenir à la fin de la
+   partie. En mode Jeu (Gamescope), noter ce qui se passe : réduit, ou caché ?
+6. **Icône Wayland** : la fenêtre du launcher doit porter son icône dans la
+   barre des tâches (depuis les sources, sans `.desktop` installé, une icône
+   générique est ATTENDUE ; c'est l'AppImage de la phase 4 qui la fournira).
+7. **Redémarrer maintenant** : changer la langue dans les Paramètres, cliquer
+   « Redémarrer maintenant » : le launcher doit se fermer PUIS se rouvrir
+   (une seule fenêtre).
+8. **Liens** : « Ouvrir le dossier » d'un jeu et un lien web (Ko-fi, Discord)
+   doivent ouvrir Dolphin et le navigateur normalement.

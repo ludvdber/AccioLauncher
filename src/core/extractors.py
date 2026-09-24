@@ -10,12 +10,14 @@ le 2026-06-10 : il ne savait ni annuler, ni progresser, ni lire BCJ2.
 """
 
 import logging
+import os
+import re
 import shutil
 import subprocess
 import sys
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Iterator
 
 log = logging.getLogger(__name__)
 
@@ -75,11 +77,19 @@ def unsafe_archive_entries(names: Iterable[str]) -> list[str]:
 
 
 def find_7z_exe() -> str | None:
-    """Cherche 7z.exe : d'abord bundlé avec l'app, puis sur le système."""
+    """Cherche 7z.exe : d'abord bundlé avec l'app, puis sur le système.
+
+    Sous Linux, le 7-Zip OFFICIEL pour Linux (`7zzs`, lié statiquement : il ne
+    dépend pas de la libstdc++ de la machine), embarqué comme 7z.exe l'est
+    sous Windows ; puis celui du système — `7zz` (l'officiel), `7z` et `7za`
+    (p7zip, présent dans l'image Bazzite). Jamais py7zr (règle 92).
+    """
     if getattr(sys, "frozen", False):
         base = Path(sys._MEIPASS)  # type: ignore[attr-defined]
     else:
         base = Path(__file__).resolve().parent.parent.parent
+    if sys.platform != "win32":
+        return _find_7z_linux(base)
     bundled = base / "assets" / "7z" / "7z.exe"
     if bundled.exists():
         return str(bundled)
@@ -95,11 +105,49 @@ def find_7z_exe() -> str | None:
     # nom, donc cherché d'abord dans le dossier de l'exe appelant — souvent
     # Téléchargements (cf. `win_utils.commande_systeme`) — pour un cas qui
     # n'arrive pas : l'exe embarqué est toujours là, en mode gelé comme en
-    # développement. Ailleurs, `shutil.which` rend un chemin ABSOLU trouvé
-    # dans le PATH, sans lancer quoi que ce soit.
-    if sys.platform == "win32":
-        return None
-    return shutil.which("7z")
+    # développement. Sous Linux (`_find_7z_linux`), `shutil.which` rend un
+    # chemin ABSOLU trouvé dans le PATH, sans lancer quoi que ce soit.
+    return None
+
+
+def _find_7z_linux(base: Path) -> str | None:
+    """7-Zip sous Linux : l'embarqué, sinon celui du système (chemin ABSOLU)."""
+    embarque = base / "assets" / "7z" / "linux" / "7zzs"
+    if embarque.is_file() and os.access(embarque, os.X_OK):
+        return str(embarque)
+    for nom in ("7zz", "7z", "7za"):
+        trouve = shutil.which(nom)
+        if trouve:
+            return os.path.abspath(trouve)
+    return None
+
+
+# Ce que 7-Zip écrit pour revenir sur sa ligne de progression. Sous Linux, le
+# 7-Zip officiel ne passe PAS à la ligne entre deux pourcentages : il recule
+# avec des retours arrière (`\b`), relevé sur 7zzs 26.00 (« 0%\b\b\b\b 29% 1 -
+# src/f1.bin\b\b… »). Lu ligne à ligne, tout le flux d'une extraction n'était
+# qu'UNE ligne : la barre restait à 0 % jusqu'à la fin.
+_RETOURS_DE_7Z = re.compile(rb"[\r\n\x08]+")
+
+
+def _segments_de_progression(flux) -> Iterator[str]:
+    """Le flux de 7-Zip découpé à chaque retour — ligne, chariot OU arrière.
+
+    Lu sur le descripteur brut, par blocs : `os.read` rend ce qui est déjà
+    arrivé, au lieu d'attendre une fin de ligne qui ne vient pas.
+    """
+    fd = flux.fileno()
+    reste = b""
+    while True:
+        bloc = os.read(fd, 4096)
+        if not bloc:
+            break
+        *morceaux, reste = _RETOURS_DE_7Z.split(reste + bloc)
+        for morceau in morceaux:
+            if morceau:
+                yield morceau.decode("utf-8", "replace")
+    if reste:
+        yield reste.decode("utf-8", "replace")
 
 
 def list_7z_entries(archive: Path, exe: str) -> list[str]:
@@ -190,7 +238,10 @@ def extract_7z_subprocess(
     # Valider le contenu AVANT d'écrire quoi que ce soit sur le disque.
     verify_archive_entries(archive, exe)
 
-    log.info("Extraction via 7z.exe : %s → %s", archive, destination)
+    # Sous Linux, CHEMIN compris : embarqué ou celui du système, ce n'est pas
+    # le même 7-Zip, et c'est la première chose à savoir d'une extraction ratée.
+    outil = "7z.exe" if sys.platform == "win32" else exe
+    log.info("Extraction via %s : %s → %s", outil, archive, destination)
     # -snl- : ne jamais matérialiser de lien symbolique (un lien extrait pourrait
     # pointer hors du dossier d'installation et servir de relais d'écriture).
     cmd = [exe, "x", str(archive), f"-o{destination}", "-y", "-bsp1", "-snl-"]
@@ -212,9 +263,12 @@ def extract_7z_subprocess(
         text=True, **kwargs,
     )
 
+    # Sous Windows, le flux tel qu'il a toujours été lu. Ailleurs, découpé
+    # aussi aux retours arrière (cf. `_RETOURS_DE_7Z`).
+    lignes = proc.stdout if sys.platform == "win32" else _segments_de_progression(proc.stdout)
     try:
         last_pct = 0
-        for line in proc.stdout:
+        for line in lignes:
             if cancelled():
                 proc.kill()
                 return
@@ -239,7 +293,7 @@ def extract_7z_subprocess(
             raise RuntimeError(f"7z.exe a échoué (code {ret})")
         progress(100)
         verify_extracted_paths(destination)
-        log.info("Extraction 7z.exe terminée")
+        log.info("Extraction %s terminée", "7z.exe" if sys.platform == "win32" else Path(exe).name)
     except subprocess.TimeoutExpired:
         log.error("7z.exe ne rend pas la main après la fin de son flux, kill du processus")
         proc.kill()

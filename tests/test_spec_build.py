@@ -84,7 +84,6 @@ class TestCeQuiSertReste:
         r"libssl-3.dll",
         r"libcrypto-3.dll",
         r"assets\backgrounds\hp1_bg.jpg",
-        r"assets\7z\7z.exe",
         r"data\i18n\en.json",
     ])
     def test_garde(self, chemin):
@@ -128,3 +127,23 @@ class TestLeBuildNeDependPasDuPoste:
                      and getattr(n.func, "id", "") == "Analysis")
         excludes = next(k.value for k in appel.keywords if k.arg == "excludes")
         assert "brotli" in ast.literal_eval(excludes)
+
+
+class TestChaquePlateformeSonSeptZip:
+    """Le 7-Zip de l'autre plateforme est du poids mort : 7z.exe ne tourne pas
+    sous Linux, `7zzs` pas sous Windows. Et l'exe Windows doit rester ce qu'il
+    était avant le portage."""
+
+    @pytest.mark.parametrize("plateforme, garde, ecarte", [
+        ("win32", [r"assets\7z\7z.exe", r"assets\7z\7z.dll", r"assets\7z\License.txt"],
+         [r"assets\7z\linux\7zzs", r"assets\7z\linux\License.txt"]),
+        ("linux", [r"assets\7z\linux\7zzs", r"assets\7z\linux\License.txt"],
+         [r"assets\7z\7z.exe", r"assets\7z\7z.dll"]),
+    ])
+    def test_par_plateforme(self, monkeypatch, plateforme, garde, ecarte):
+        import sys
+        monkeypatch.setattr(sys, "platform", plateforme)
+        for chemin in garde:
+            assert _garde(chemin), f"{plateforme} doit garder {chemin}"
+        for chemin in ecarte:
+            assert not _garde(chemin), f"{plateforme} doit écarter {chemin}"

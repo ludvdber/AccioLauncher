@@ -350,8 +350,21 @@ class TestEnvironnement:
     def test_hote_gele_sans_ld_library_path_d_origine(self):
         """Le chargeur l'a CRÉÉ : l'hériter ferait charger nos bibliothèques
         embarquées par wine, umu et le navigateur."""
-        env = compat.environnement_hote({"LD_LIBRARY_PATH": "/tmp/_MEI"}, gele=True)
+        env = compat.environnement_hote({"LD_LIBRARY_PATH": "/tmp/_MEI"}, gele=True,
+                                        embarque="/tmp/_MEI")
         assert "LD_LIBRARY_PATH" not in env
+
+    def test_hote_gele_garde_ce_que_l_utilisateur_avait_pose(self):
+        """Sans `LD_LIBRARY_PATH_ORIG`, seules NOS entrées partent."""
+        base = {"LD_LIBRARY_PATH": "/tmp/_MEI:/tmp/_MEI/lib:/opt/mes-libs:/tmp/_MEIxyz"}
+        env = compat.environnement_hote(base, gele=True, embarque="/tmp/_MEI/")
+        assert env["LD_LIBRARY_PATH"] == "/opt/mes-libs:/tmp/_MEIxyz"
+
+    def test_hote_gele_origine_vide(self):
+        """`LD_LIBRARY_PATH_ORIG` vide : il n'y avait rien avant nous."""
+        base = {"LD_LIBRARY_PATH": "/tmp/_MEI", "LD_LIBRARY_PATH_ORIG": ""}
+        env = compat.environnement_hote(base, gele=True, embarque="/tmp/_MEI")
+        assert "LD_LIBRARY_PATH" not in env and "LD_LIBRARY_PATH_ORIG" not in env
 
     def test_depuis_les_sources_rien_ne_change(self):
         base = {"LD_LIBRARY_PATH": "/opt/lib"}
@@ -377,6 +390,39 @@ class TestEnvironnement:
         assert env["WINEDEBUG"] == "-all"
         assert env["WINE"] == "/usr/bin/wine"     # le winetricks du système l'utilise
         assert "WINEDLLOVERRIDES" not in env
+
+
+class TestAssainirLeProcessus:
+    """`assainir_environnement` retouche `os.environ` du launcher lui-même,
+    pour ce que Qt lance sans nous (`xdg-open`, le navigateur qui suit)."""
+
+    def test_exe_gele_sous_linux(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", "/tmp/_MEI42", raising=False)
+        monkeypatch.setenv("LD_LIBRARY_PATH", "/tmp/_MEI42:/opt/lib")
+        monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/opt/lib")
+        compat.assainir_environnement()
+        assert os.environ["LD_LIBRARY_PATH"] == "/opt/lib"
+        assert "LD_LIBRARY_PATH_ORIG" not in os.environ
+
+    def test_rien_a_garder(self, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", "/tmp/_MEI42", raising=False)
+        monkeypatch.setenv("LD_LIBRARY_PATH", "/tmp/_MEI42")
+        monkeypatch.delenv("LD_LIBRARY_PATH_ORIG", raising=False)
+        compat.assainir_environnement()
+        assert "LD_LIBRARY_PATH" not in os.environ
+
+    @pytest.mark.parametrize("plateforme, gele", [("win32", True), ("linux", False)])
+    def test_ailleurs_rien_ne_bouge(self, monkeypatch, plateforme, gele):
+        """Windows et les sources : l'environnement est celui qu'on a reçu."""
+        monkeypatch.setattr(sys, "platform", plateforme)
+        monkeypatch.setattr(sys, "frozen", gele, raising=False)
+        monkeypatch.setenv("LD_LIBRARY_PATH", "/tmp/_MEI42:/opt/lib")
+        compat.assainir_environnement()
+        assert os.environ["LD_LIBRARY_PATH"] == "/tmp/_MEI42:/opt/lib"
 
 
 class TestCommandes:

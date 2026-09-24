@@ -166,7 +166,17 @@ def _keep(entry):
     avec le separateur de la plateforme, et un filtre ecrit en antislash ne
     correspondrait a rien le jour ou le build tournera sous Linux.
     """
+    import sys as _sys
+
     chemin = entry[0].lower().replace("\\", "/")
+    # 7-Zip : chaque plateforme n'embarque que le sien. 7z.exe et 7z.dll ne
+    # tournent pas sous Linux, `7zzs` (7-Zip officiel pour Linux) pas sous
+    # Windows : 3,7 Mo morts dans l'exe, 1,9 dans l'AppImage. Le build Windows
+    # reste ainsi exactement ce qu'il était avant le portage.
+    if chemin.startswith("assets/7z/linux/"):
+        return _sys.platform != "win32"
+    if chemin in ("assets/7z/7z.exe", "assets/7z/7z.dll"):
+        return _sys.platform == "win32"
     if chemin.startswith("pyqt6/qt6/translations"):
         return False
     if "qt6pdf" in chemin:

@@ -21,7 +21,9 @@ plantage.
 from __future__ import annotations
 
 import logging
+import os
 import platform
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -42,7 +44,20 @@ def scrub_user_paths(text: str) -> str:
     home = str(Path.home())
     for variant in (home, home.replace("\\", "/"), home.replace("\\", "\\\\")):
         text = text.replace(variant, "~")
+    if sys.platform != "win32":
+        text = _sans_profil_wine(text)
     return text
+
+
+def _sans_profil_wine(text: str) -> str:
+    """Le profil d'un préfixe Wine porte le nom UNIX (`drive_c/users/ludo`,
+    `C:\\users\\ludo`) : remplacer le dossier personnel ne le cache pas."""
+    from src.core.compat import PROFIL_PROTON, _nom_unix
+    nom = _nom_unix()
+    if not nom or nom == PROFIL_PROTON:
+        return text
+    return re.sub(r"(users(?:/|\\{1,2}))" + re.escape(nom) + r"(?![\w.-])", r"\1~",
+                  text, flags=re.IGNORECASE)
 
 
 def systeme() -> str:
@@ -51,9 +66,37 @@ def systeme() -> str:
         release, version, _, _ = platform.win32_ver()
         edition = platform.win32_edition() or ""
         nom = " ".join(x for x in ("Windows", release, edition, version) if x)
+    elif sys.platform.startswith("linux"):
+        # « Linux 6.15.9 » ne dit ni la distribution ni la session : sur
+        # Bazzite, le mode Jeu (Gamescope) et le bureau (KDE, Wayland) ne se
+        # dépannent pas de la même façon.
+        try:
+            os_release = platform.freedesktop_os_release()
+        except OSError:
+            os_release = {}
+        nom = f"{distribution(os_release)} · noyau {platform.release()}"
+        session = session_graphique(os.environ)
+        return f"{nom} ({platform.machine()})" + (f" · {session}" if session else "")
     else:
         nom = f"{platform.system()} {platform.release()}"
     return f"{nom} ({platform.machine()})"
+
+
+def distribution(os_release: dict) -> str:
+    """« Bazzite 42 (FROM Fedora Kinoite) » — le nom que la personne connaît."""
+    nom = os_release.get("PRETTY_NAME") or " ".join(
+        x for x in (os_release.get("NAME", ""), os_release.get("VERSION_ID", "")) if x)
+    return " ".join(nom.split()) or "Linux"
+
+
+def session_graphique(env) -> str:
+    """« KDE · Wayland », « Gamescope » (mode Jeu de Bazzite / Steam Deck)."""
+    if env.get("GAMESCOPE_WAYLAND_DISPLAY") or "gamescope" in env.get(
+            "XDG_CURRENT_DESKTOP", "").lower():
+        return "Gamescope"
+    bureau = env.get("XDG_CURRENT_DESKTOP", "").split(":")[0].strip()
+    type_ = {"wayland": "Wayland", "x11": "X11"}.get(env.get("XDG_SESSION_TYPE", "").lower(), "")
+    return " · ".join(x for x in (bureau, type_) if x)
 
 
 def identite() -> str:
@@ -64,6 +107,8 @@ def identite() -> str:
     except ImportError:
         qt = ""
     forme = "exe" if getattr(sys, "frozen", False) else "sources"
+    if forme == "exe" and sys.platform != "win32" and os.environ.get("APPIMAGE"):
+        forme = "AppImage"
     return (f"Accio Launcher {APP_VERSION} ({forme}) · {systeme()}"
             f" · Python {platform.python_version()}{qt}")
 
@@ -102,7 +147,6 @@ def version_pilote_publique(fournisseur: str, version: str, radeon: str = "") ->
 
 def _processeur() -> str:
     """Nom commercial du processeur et nombre de cœurs logiques."""
-    import os
     nom = ""
     if sys.platform == "win32":
         import winreg
@@ -112,14 +156,37 @@ def _processeur() -> str:
                 nom = str(winreg.QueryValueEx(cle, "ProcessorNameString")[0])
         except OSError:
             pass
+    elif sys.platform.startswith("linux"):
+        # `platform.processor()` y rend « x86_64 », ou rien.
+        nom = processeur_linux(_lire_texte(Path("/proc/cpuinfo")))
     nom = " ".join((nom or platform.processor() or "inconnu").split())
     return f"{nom} ({os.cpu_count() or '?'} threads)"
+
+
+def processeur_linux(cpuinfo: str) -> str:
+    """Le « model name » de `/proc/cpuinfo` (vide sur ARM, qui ne le porte pas)."""
+    for ligne in cpuinfo.splitlines():
+        cle, _, valeur = ligne.partition(":")
+        if cle.strip() == "model name" and valeur.strip():
+            return valeur.strip()
+    return ""
+
+
+def _lire_texte(chemin: Path) -> str:
+    try:
+        return chemin.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
 
 
 def _memoire() -> str:
     """Mémoire vive totale, en Go ; vide si le système ne la dit pas."""
     if sys.platform != "win32":
-        return ""
+        try:
+            total = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+        except (AttributeError, ValueError, OSError):
+            return ""
+        return f"{total / 1024 ** 3:.0f} Go" if total > 0 else ""
     import ctypes
 
     class _Etat(ctypes.Structure):
@@ -148,6 +215,8 @@ def _cartes_graphiques() -> list[str]:
     valeurs). Les adaptateurs virtuels (Parsec, écran distant…) sont gardés et
     signalés : ils sont justement une cause classique de plein écran raté.
     """
+    if sys.platform.startswith("linux"):
+        return cartes_graphiques_linux()
     if sys.platform != "win32":
         return []
     import winreg
@@ -206,6 +275,114 @@ def carte_graphique(v: dict) -> str:
     return " · ".join(morceaux)
 
 
+# Base des noms PCI : `hwdata` (Fedora, donc Bazzite), `pciutils` (Debian).
+_PCI_IDS = (Path("/usr/share/hwdata/pci.ids"), Path("/usr/share/misc/pci.ids"),
+            Path("/usr/share/pci.ids"))
+
+
+def cartes_graphiques_linux(drm: Path = Path("/sys/class/drm"),
+                            bases=_PCI_IDS,
+                            nvidia: Path = Path("/proc/driver/nvidia/version")) -> list[str]:
+    """Une ligne par carte vue par le noyau (`/sys/class/drm/cardN`).
+
+    Aucun programme lancé (ni `lspci` ni `glxinfo`, absents d'une image
+    atomique ou lents) : le noyau dit le pilote et l'identifiant PCI, la base
+    `pci.ids` le nom. La version du pilote NVIDIA propriétaire se lit dans
+    `/proc` ; celle de Mesa n'existe qu'en espace utilisateur, on ne la devine
+    pas.
+    """
+    try:
+        cartes = sorted(d for d in drm.iterdir() if re.fullmatch(r"card\d+", d.name))
+    except OSError:
+        return []
+    base: str | None = None      # lue au premier besoin, une seule fois (1,4 Mo)
+    lignes = []
+    for carte in cartes:
+        uevent = _lire_texte(carte / "device" / "uevent")
+        if not uevent:
+            continue
+        if base is None:
+            base = next((t for t in map(_lire_texte, bases) if t), "")
+        vram = _lire_texte(carte / "device" / "mem_info_vram_total").strip()
+        lignes.append(carte_graphique_linux(
+            uevent, base, int(vram) if vram.isdigit() else 0, _lire_texte(nvidia)))
+    return lignes
+
+
+def carte_graphique_linux(uevent: str, pci_ids: str = "", vram: int = 0,
+                          version_nvidia: str = "") -> str:
+    """Met en forme une carte (pure) : nom, pilote du noyau, version, mémoire."""
+    champs = dict(ligne.partition("=")[::2] for ligne in uevent.splitlines() if "=" in ligne)
+    fabricant, _, modele = champs.get("PCI_ID", "").lower().partition(":")
+    pilote = champs.get("DRIVER", "") or "sans pilote"
+    nom = nom_pci(fabricant, modele, pci_ids) or (
+        f"PCI {fabricant}:{modele}" if modele else "carte inconnue")
+    morceaux = [nom, f"pilote {pilote}"]
+    if pilote == "nvidia":
+        m = re.search(r"Kernel Module(?:\s+for\s+\S+)?\s+(\d+(?:\.\d+)+)", version_nvidia)
+        if m:
+            morceaux[-1] += f" {m.group(1)}"
+    if vram > 0:
+        morceaux.append(f"{vram / 1024 ** 3:.0f} Go")
+    return " · ".join(morceaux)
+
+
+def nom_pci(fabricant: str, modele: str, pci_ids: str) -> str:
+    """« AMD · Navi 21 [Radeon RX 6800/6800 XT / 6900 XT] » d'après `pci.ids`.
+
+    Le fabricant est abrégé à ce qu'on reconnaît (les noms complets
+    ressemblent à « Advanced Micro Devices, Inc. [AMD/ATI] »).
+    """
+    if not (fabricant and modele and pci_ids):
+        return ""
+    nom_fabricant = ""
+    dans_le_fabricant = False
+    for ligne in pci_ids.splitlines():
+        if not ligne or ligne.startswith("#"):
+            continue
+        if not ligne.startswith("\t"):
+            if dans_le_fabricant:
+                break
+            code, _, nom = ligne.partition(" ")
+            if code.lower() == fabricant:
+                dans_le_fabricant, nom_fabricant = True, nom.strip()
+        elif dans_le_fabricant and not ligne.startswith("\t\t"):
+            code, _, nom = ligne[1:].partition(" ")
+            if code.lower() == modele:
+                return f"{_FABRICANTS.get(fabricant, nom_fabricant)} · {nom.strip()}"
+    return f"{_FABRICANTS.get(fabricant, nom_fabricant)} · {modele}" if nom_fabricant else ""
+
+
+_FABRICANTS = {"1002": "AMD", "10de": "NVIDIA", "8086": "Intel"}
+
+
+def ligne_compatibilite(trouve=None, pfx: Path | None = None) -> str:
+    """Le lanceur, le Proton choisi et l'état du préfixe (Linux).
+
+    Sous Linux, ce sont les réponses à « ça ne se lance pas » : quel lanceur,
+    quel Proton, le préfixe existe-t-il, qu'y a-t-on installé.
+    """
+    from src.core import compat
+    trouve = compat.lanceur() if trouve is None else trouve
+    if trouve is None:
+        return "Compatibilité : aucun lanceur trouvé (ni umu-run ni wine)"
+    morceaux = [f"{Path(trouve.executable).name} ({trouve.executable})"]
+    if trouve.proton:
+        morceaux.append(Path(trouve.proton).name)
+    if trouve.famille == "wine":
+        morceaux.append("winetricks " + ("présent" if trouve.winetricks else "ABSENT"))
+    pfx = compat.prefixe(trouve.famille) if pfx is None else pfx
+    if compat.pret(pfx):
+        etat = f"préfixe {pfx} prêt ({compat.architecture(pfx) or '?'}"
+        etat += f", {compat.encodage_ansi(pfx)})"
+        verbes = sorted(compat.verbes_installes(pfx))
+        morceaux.append(etat)
+        morceaux.append("composants " + (", ".join(verbes) if verbes else "aucun"))
+    else:
+        morceaux.append(f"préfixe {pfx} PAS ENCORE CRÉÉ")
+    return "Compatibilité : " + " · ".join(morceaux)
+
+
 def materiel() -> list[str]:
     """Processeur, mémoire et cartes graphiques : ce qu'on demande d'abord
     devant un écran noir ou un jeu qui ne passe pas en plein écran."""
@@ -240,12 +417,13 @@ def _espace_libre(dossier: Path) -> str:
 
 def rapport(manager, ecrans: list[str] | None = None, journal: str = "",
             tentatives=None, prerequis: dict[str, bool] | None = None,
-            machine: list[str] | None = None, documents: str | None = None) -> str:
+            machine: list[str] | None = None, documents: str | None = None,
+            compatibilite: str | None = None) -> str:
     """Le bloc à coller sur le Discord.
 
-    `tentatives`, `prerequis` et `machine` sont injectables pour les tests ;
-    par défaut ils sont lus (journal des sessions, contrôles système mis en
-    cache, registre en lecture seule).
+    `tentatives`, `prerequis`, `machine` et `compatibilite` sont injectables
+    pour les tests ; par défaut ils sont lus (journal des sessions, contrôles
+    système mis en cache, registre en lecture seule, préfixe Wine).
     """
     config = manager.config
     lignes = [identite()]
@@ -269,10 +447,22 @@ def rapport(manager, ecrans: list[str] | None = None, journal: str = "",
         documents = f"{get_documents_dir()}" + (" — INACCESSIBLE" if casse else "")
     lignes.append(f"Documents : {documents}")
 
+    if compatibilite is None and sys.platform != "win32":
+        try:
+            compatibilite = ligne_compatibilite()
+        except Exception as exc:  # un préfixe inattendu ne doit pas priver du reste
+            log.warning("Préfixe illisible pour le diagnostic : %s", exc)
+    if compatibilite:
+        lignes.append(compatibilite)
+
     if prerequis is None:
         from src.core.system_checks import PREREQUIS, check_d3d11_feature_level
         prerequis = {nom: bool(test()) for nom, (test, _) in PREREQUIS.items()}
-        prerequis["directx11"] = bool(check_d3d11_feature_level())
+        # Hors Windows, `check_d3d11_feature_level` répond oui sans avoir rien
+        # mesuré (DXVK s'en charge) : l'écrire « OK » affirmerait un résultat
+        # qu'on n'a pas obtenu.
+        if sys.platform == "win32":
+            prerequis["directx11"] = bool(check_d3d11_feature_level())
     lignes.append("Prérequis : " + ", ".join(
         f"{nom} {'OK' if ok else 'MANQUANT'}" for nom, ok in prerequis.items()))
 

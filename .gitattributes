@@ -32,6 +32,12 @@
 *.png  binary
 *.jpg  binary
 *.exe  binary
+# 7-Zip officiel pour Linux (binaire ELF sans extension) : jamais touché, et
+# son bit exécutable est enregistré par git (mode 100755).
+assets/7z/linux/7zzs  binary
+# Sa licence reste OCTET POUR OCTET celle de l'archive officielle (CRLF
+# compris) : son empreinte est publiée dans docs/THIRD-PARTY-NOTICES.md.
+assets/7z/linux/License.txt  -text
 *.7z   binary
 *.ttf  binary
 *.mp4  binary

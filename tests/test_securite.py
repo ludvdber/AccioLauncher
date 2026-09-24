@@ -109,10 +109,27 @@ class TestLeScriptDeRelance:
 
 class TestSeptZip:
     def test_hors_windows_un_chemin_absolu_du_path(self, monkeypatch, tmp_path):
+        """Sans 7-Zip embarqué : l'officiel (`7zz`) d'abord, par chemin absolu."""
         monkeypatch.setattr(sys, "platform", "linux")
         monkeypatch.setattr(extractors, "Path", _PathSansEmbarque)
         monkeypatch.setattr(extractors.shutil, "which", lambda nom: f"/usr/bin/{nom}")
-        assert extractors.find_7z_exe() == "/usr/bin/7z"
+        assert extractors.find_7z_exe() == "/usr/bin/7zz"
+
+    def test_hors_windows_p7zip_en_repli(self, monkeypatch):
+        """Bazzite a p7zip (`7z`, `7za`) dans son image, pas `7zz`."""
+        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(extractors, "Path", _PathSansEmbarque)
+        monkeypatch.setattr(extractors.shutil, "which",
+                            lambda nom: "/usr/bin/7za" if nom == "7za" else None)
+        assert extractors.find_7z_exe() == "/usr/bin/7za"
+
+    def test_hors_windows_l_embarque_passe_d_abord(self, monkeypatch):
+        """Le 7-Zip officiel pour Linux, livré avec le launcher comme 7z.exe."""
+        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(extractors.shutil, "which", lambda nom: pytest.fail("PATH"))
+        trouve = extractors.find_7z_exe()
+        if sys.platform != "win32":     # le bit exécutable n'existe que sous POSIX
+            assert trouve.endswith("7zzs")
 
     def test_sous_windows_jamais_de_repli_par_le_nom(self, monkeypatch):
         """Sans exe embarqué ni 7-Zip installé : None, pas « 7z »."""
@@ -125,6 +142,9 @@ class _PathSansEmbarque(type(Path())):
     """Un `Path` pour lequel aucun 7z.exe n'existe, ni embarqué ni installé."""
 
     def exists(self, *a, **k):  # noqa: D401
+        return False
+
+    def is_file(self, *a, **k):  # noqa: D401
         return False
 
 

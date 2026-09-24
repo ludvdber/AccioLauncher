@@ -858,17 +858,15 @@ class TestValeursCommunes:
 
     @pytest.mark.skipif(
         sys.platform != "win32",
-        reason="sous Wine, « Install Dir » devra être un chemin Z:\\… — forme "
-               "à définir au portage Linux, pas un chemin POSIX à graver ici")
+        reason="sous Wine, « Install Dir » est un chemin Z:\\… : "
+               "test_lancement_linux.py::…::test_install_dir_est_un_chemin_z")
     def test_install_dir_est_substitue(self, tmp_path):
         """`%INSTALL_DIR%` doit devenir un VRAI chemin : c'est ce que le jeu
         suivra pour trouver ses fichiers.
 
-        Réservé à Windows, et c'est délibéré : sous Linux, `substitute_vars`
-        rend un chemin POSIX (`/…/HPTest/`), juste pour un fichier INI, faux
-        pour un registre que lira un jeu sous Wine. Exiger ici l'une ou
-        l'autre forme graverait un défaut. Le jour du portage, ce test
-        s'écrira pour de bon, avec la conversion en `Z:\\`."""
+        Réservé à Windows : sous Linux, le jeu lit ce registre sous Wine, donc
+        attend un chemin `Z:\\…` — son pendant vit dans
+        `tests/test_lancement_linux.py`."""
         jeu = self._jeu()
         m = _make_manager(tmp_path, [jeu])
         valeurs = m.valeurs_registre(jeu)

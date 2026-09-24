@@ -523,7 +523,17 @@ def composer_surcharges(existant: str, noms) -> str:
 
 # ─── Environnement et commandes ───
 
-def environnement_hote(base=None, gele: bool | None = None) -> dict[str, str]:
+def _dans_le_dossier(chemin: str, dossier: str) -> bool:
+    """`chemin` est `dossier` ou en dessous — par COMPOSANTS : `/tmp/_MEIabc`
+    n'est pas sous `/tmp/_MEI`."""
+    if not dossier:
+        return False
+    racine = dossier.rstrip("/")
+    return chemin.rstrip("/") == racine or chemin.startswith(racine + "/")
+
+
+def environnement_hote(base=None, gele: bool | None = None,
+                       embarque: str | None = None) -> dict[str, str]:
     """L'environnement d'origine, débarrassé de ce que PyInstaller y a mis.
 
     Le chargeur d'un exécutable PyInstaller Linux ajoute son dossier en tête de
@@ -532,18 +542,46 @@ def environnement_hote(base=None, gele: bool | None = None) -> dict[str, str]:
     embarquées par wine, par umu et par le navigateur qu'ouvre `xdg-open` —
     des plantages qui n'auraient aucun rapport apparent avec le launcher. Les
     `_PYI_*` sont purgés pour la même raison que dans `self_update`.
+
+    Sans `LD_LIBRARY_PATH_ORIG`, on ne retire QUE les entrées qui pointent
+    dans notre dossier embarqué (`sys._MEIPASS`) : une valeur que
+    l'utilisateur avait posée lui-même reste la sienne.
     """
     env = dict(os.environ if base is None else base)
     gele = bool(getattr(sys, "frozen", False)) if gele is None else gele
+    embarque = getattr(sys, "_MEIPASS", "") if embarque is None else embarque
     for cle in [k for k in env if k.startswith("_PYI_") or k == "_MEIPASS2"]:
         del env[cle]
     if gele:
         origine = env.pop("LD_LIBRARY_PATH_ORIG", None)
-        if origine:
-            env["LD_LIBRARY_PATH"] = origine
+        if origine is not None:
+            gardes = [origine] if origine else []
+        else:
+            gardes = [c for c in env.get("LD_LIBRARY_PATH", "").split(":")
+                      if c and not _dans_le_dossier(c, embarque)]
+        if gardes:
+            env["LD_LIBRARY_PATH"] = ":".join(gardes)
         else:
             env.pop("LD_LIBRARY_PATH", None)
     return env
+
+
+def assainir_environnement() -> None:
+    """Applique `environnement_hote` au processus LUI-MÊME (exe gelé, Linux).
+
+    Pour ce que Qt lance sans nous demander l'environnement : `xdg-open`, puis
+    le navigateur ou le gestionnaire de fichiers qu'il ouvre. Sans risque pour
+    le launcher : la glibc ne lit `LD_LIBRARY_PATH` qu'au démarrage du
+    processus, ses propres chargements n'en dépendent plus.
+    """
+    if sys.platform == "win32" or not getattr(sys, "frozen", False):
+        return
+    propre = environnement_hote()
+    for cle in ("LD_LIBRARY_PATH", "LD_LIBRARY_PATH_ORIG"):
+        if cle in propre:
+            os.environ[cle] = propre[cle]
+        else:
+            os.environ.pop(cle, None)
 
 
 def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None) -> dict[str, str]:

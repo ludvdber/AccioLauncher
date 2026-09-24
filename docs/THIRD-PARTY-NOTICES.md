@@ -32,6 +32,33 @@ n'utilise que la décompression 7z et zip — jamais le moteur RAR.
 
 ---
 
+## 7-Zip 26.00 pour Linux (`7zzs`) — Igor Pavlov
+
+Fichier : `assets/7z/linux/7zzs` (build Linux uniquement : `accio_launcher.spec`
+l'écarte de l'exe Windows, comme il écarte `7z.exe` du build Linux)
+Licence : GNU LGPL v2.1+, avec restriction unRAR et portions BSD 2/3-clause
+Texte complet : **[`assets/7z/linux/License.txt`](assets/7z/linux/License.txt)**
+(copie verbatim de l'archive officielle)
+Site : <https://7-zip.org>
+
+Provenance : `7z2600-linux-x64.tar.xz`, publié par l'auteur sur
+<https://www.7-zip.org/download.html> et sur son dépôt officiel
+<https://github.com/ip7z/7zip/releases/tag/26.00>.
+
+| Fichier | SHA-256 |
+|---|---|
+| `7z2600-linux-x64.tar.xz` (archive d'origine) | `c74dc4a48492cde43f5fec10d53fb2a66f520e4a62a69d630c44cb22c477edc6` |
+| `7zzs` | `4836193a032a410c3e0f3c177705ed4da51d4bfb396263add6b2d68d79cd518a` |
+| `License.txt` | `1790374e5352329cedb46ee3808930a88e9ca2f08b82b10fcf5cf605d2c301b1` |
+
+`7zzs` est la variante **liée statiquement** de l'archive : elle ne dépend
+d'aucune bibliothèque du système, donc tourne à l'identique sur Bazzite, sur
+une Debian ancienne ou dans le Steam Linux Runtime. Même usage que sous
+Windows : décompression 7z et zip, jamais RAR. La même obligation de
+reproduire `License.txt` s'applique : il voyage avec le binaire.
+
+---
+
 ## PyQt6 — Riverbank Computing
 
 Licence : **GNU GPL v3** (ou licence commerciale Riverbank)

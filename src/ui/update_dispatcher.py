@@ -32,7 +32,9 @@ from src.core.downloader import Downloader
 from src.core.formatting import format_progress_line
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
-from src.core.self_update import apply_update_and_restart, can_self_update
+from src.core.self_update import (
+    apply_update_and_restart, can_self_update, nom_du_telechargement,
+)
 from src.core.thread_utils import arreter_a_la_fermeture
 from src.core.updater import UpdateChecker
 from src.core.speed_tracker import SpeedTracker
@@ -231,7 +233,7 @@ class UpdateDispatcher(QObject):
             if self.url:
                 open_url(self.url)
             return
-        dest = self._manager.config.cache_path / f"AccioLauncher_v{self.version}.exe"
+        dest = self._manager.config.cache_path / nom_du_telechargement(self.version)
         dest.unlink(missing_ok=True)
         self.launcher_busy.emit(True)
         self._speed.reset()

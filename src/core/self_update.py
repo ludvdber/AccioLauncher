@@ -1,12 +1,17 @@
 """Auto-mise à jour du launcher : remplacement de l'exe courant et relance.
 
-Windows uniquement pour l'instant : un .bat détaché attend la fin du processus,
-remplace l'exe et relance la nouvelle version. Sur les autres plateformes (objectif
-Linux à terme), retourne False — l'appelant retombe sur la page de release.
+Windows : un .bat détaché attend la fin du processus, remplace l'exe et relance
+la nouvelle version.
+
+Linux : l'AppImage désignée par `$APPIMAGE` est remplacée TOUT DE SUITE — on
+peut remplacer le fichier d'une AppImage qui tourne, puisqu'elle garde l'ancien
+monté —, puis un `/bin/sh` détaché attend la mort du processus et relance. Hors
+AppImage (depuis les sources), l'appelant retombe sur la page de release.
 """
 
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,8 +23,40 @@ log = logging.getLogger(__name__)
 
 
 def can_self_update() -> bool:
-    """True si l'auto-remplacement est possible (exe frozen sous Windows)."""
-    return bool(getattr(sys, "frozen", False)) and sys.platform == "win32"
+    """True si l'auto-remplacement est possible.
+
+    Windows : l'exe gelé. Linux : une AppImage dont le dossier accepte
+    l'écriture (Gear Lever la range dans `~/AppImages`) ; un dossier en lecture
+    seule fait retomber sur la page de release, plutôt que d'échouer après un
+    téléchargement.
+    """
+    if sys.platform == "win32":
+        return bool(getattr(sys, "frozen", False))
+    cible = appimage_courante()
+    return cible is not None and os.access(cible.parent, os.W_OK)
+
+
+def appimage_courante() -> Path | None:
+    """Le fichier AppImage qui nous a lancés, ou None.
+
+    `$APPIMAGE` est posé par le runtime AppImage. Surtout PAS `sys.executable` :
+    dans une AppImage, il vit dans un montage temporaire qui disparaît avec le
+    processus — le relancer après sa mort ne mènerait nulle part.
+    """
+    if sys.platform == "win32" or not getattr(sys, "frozen", False):
+        return None
+    chemin = os.environ.get("APPIMAGE", "")
+    if not chemin:
+        return None
+    cible = Path(chemin)
+    return cible if cible.is_file() else None
+
+
+def nom_du_telechargement(version: str) -> str:
+    """Nom du fichier de mise à jour téléchargé, selon la plateforme."""
+    if sys.platform == "win32":
+        return f"AccioLauncher_v{version}.exe"
+    return f"AccioLauncher_v{version}.AppImage"
 
 
 def _clean_pyinstaller_env() -> dict[str, str]:
@@ -132,10 +169,12 @@ def apply_update_and_restart(new_exe: Path) -> bool:
     """Programme le remplacement de l'exe courant par `new_exe`, à exécuter après la fermeture.
 
     Retourne True si le script de remplacement est lancé (l'appelant doit alors
-    quitter l'application), False si non applicable (mode dev / non-Windows).
+    quitter l'application), False si non applicable (mode dev, hors AppImage).
     """
     if not can_self_update():
         return False
+    if sys.platform != "win32":
+        return _remplacer_l_appimage(new_exe)
     current = Path(sys.executable).resolve()
     # Les deux chemins voyagent par l'environnement, pas dans le corps du .bat
     # (cf. _spawn_after_exit_bat : un chemin accentué y était mutilé).
@@ -155,7 +194,8 @@ def relaunch_after_exit() -> bool:
 
     Utilisé par le bouton « Redémarrer maintenant » (changement de thème/langue)
     et par le dialogue de crash. L'appelant doit ensuite fermer l'application.
-    Hors Windows : Popen direct, best effort (objectif Linux à terme).
+    Hors Windows : un `/bin/sh` détaché, qui attend lui aussi la mort du
+    processus (`_relancer_apres_la_fin`).
     """
     if sys.platform == "win32":
         exe = Path(sys.executable).resolve()
@@ -175,11 +215,76 @@ def relaunch_after_exit() -> bool:
         if ok:
             log.info("Relance du launcher programmée")
         return ok
+    cible = appimage_courante()
+    if cible is not None:
+        commande = [str(cible)]
+    elif getattr(sys, "frozen", False):
+        commande = [sys.executable]
+    else:
+        # Depuis les sources : l'interpréteur courant et `main.py`, par leurs
+        # chemins ABSOLUS — `sys.argv[0]` est relatif au dossier de lancement.
+        commande = [sys.executable, str(Path(__file__).resolve().parents[2] / "main.py")]
+    ok = _relancer_apres_la_fin(commande)
+    if ok:
+        log.info("Relance du launcher programmée")
+    return ok
+
+
+# L'attente de la mort du processus, en sh. Le PID et la commande arrivent par
+# l'environnement et par "$@", JAMAIS dans le corps du script : même principe
+# que les `%ACCIO_*%` du .bat, pour qu'un chemin accentué ou étrange ne puisse
+# ni se casser ni s'interpréter.
+_SCRIPT_RELANCE = 'while kill -0 "$ACCIO_PID" 2>/dev/null; do sleep 0.5; done; exec "$@"'
+
+
+def _relancer_apres_la_fin(commande: list[str]) -> bool:
+    """Lance `commande` une fois le processus courant terminé (Linux).
+
+    La relance IMMÉDIATE d'avant butait sur l'instance unique : le nouveau
+    launcher trouvait l'ancien encore en vie, lui demandait de passer au
+    premier plan et quittait — puis l'ancien se fermait. « Redémarrer
+    maintenant » fermait donc le launcher sans le rouvrir.
+    """
+    from src.core.compat import environnement_hote
+
+    env = environnement_hote() | {"ACCIO_PID": str(os.getpid()),
+                                  "PYINSTALLER_RESET_ENVIRONMENT": "1"}
     try:
-        # Mode développement : l'interpréteur courant, par son chemin absolu.
-        subprocess.Popen([sys.executable] + sys.argv,  # nosec B603
-                         env=_clean_pyinstaller_env())
-        return True
+        # `/bin/sh` par son chemin absolu ; script constant, arguments en liste.
+        subprocess.Popen(  # nosec B603
+            ["/bin/sh", "-c", _SCRIPT_RELANCE, "accio-relance", *commande],
+            env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
     except OSError as exc:
         log.error("Impossible de relancer le launcher : %s", exc)
         return False
+    return True
+
+
+def _remplacer_l_appimage(nouvelle: Path) -> bool:
+    """Remplace l'AppImage courante par `nouvelle`, puis programme la relance.
+
+    Le remplacement se fait TOUT DE SUITE, et atomiquement : copie à côté de
+    la cible (même volume — le cache des jeux peut être sur un autre disque,
+    et `os.replace` n'y traverserait pas), bit exécutable, puis `os.replace`.
+    Le processus qui tourne garde l'ancien fichier monté : rien ne casse sous
+    lui, et une coupure au mauvais moment laisse l'ancienne version intacte.
+    """
+    cible = appimage_courante()
+    if cible is None:
+        return False
+    temporaire = cible.with_name(f".{cible.name}.nouvelle")
+    try:
+        shutil.copyfile(nouvelle, temporaire)
+        temporaire.chmod(0o755)
+        os.replace(temporaire, cible)
+    except OSError as exc:
+        log.error("Remplacement de l'AppImage impossible : %s", exc)
+        temporaire.unlink(missing_ok=True)
+        return False
+    try:
+        nouvelle.unlink()
+    except OSError:
+        log.info("Téléchargement de la mise à jour laissé en cache : %s", nouvelle)
+    log.info("AppImage remplacée : %s", cible)
+    return _relancer_apres_la_fin([str(cible)])

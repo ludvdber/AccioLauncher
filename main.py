@@ -12,6 +12,9 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 from src.core.config import DEFAULT_LANGUAGE, LOG_DIR, migrer_arborescence
 
 LOG_FILE = LOG_DIR / "accio_launcher.log"
+# Identifiant de l'application sous Linux : nom du `.desktop` de l'AppImage
+# (sans l'extension), et `app_id` de la fenêtre sous Wayland.
+DESKTOP_ID = "be.acciolauncher.AccioLauncher"
 LOG_MAX_BYTES = 5 * 1024 * 1024  # 5 Mo
 LOG_BACKUP_COUNT = 3
 
@@ -50,6 +53,13 @@ def _setup_logging() -> None:
     from src.core.diagnostic import identite
     # ASCII : la console Windows est en cp1252 et refusait les filets « ─ ».
     root.info("===== %s =====", identite())
+    if sys.platform != "win32":
+        # Sous Linux, la seconde question est « avec quoi le jeu tourne-t-il ? ».
+        from src.core.diagnostic import ligne_compatibilite
+        try:
+            root.info("%s", ligne_compatibilite())
+        except Exception as exc:  # une ligne de journal n'empêche jamais de démarrer
+            root.warning("Préfixe Wine illisible : %s", exc)
 
     # httpcore déverse tous les en-têtes HTTP en DEBUG — il remplirait à lui
     # seul la rotation de 5 Mo ; httpx garde sa ligne INFO « HTTP Request: … ».
@@ -99,9 +109,20 @@ def main():
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ASTeam.AccioLauncher")
         except (AttributeError, OSError):
             pass
+    else:
+        # Dans l'AppImage : ce que Qt lancera (xdg-open, le navigateur) ne doit
+        # pas hériter des bibliothèques embarquées. Voir `compat`.
+        from src.core.compat import assainir_environnement
+        assainir_environnement()
 
     try:
         app = QApplication(sys.argv)
+        if sys.platform != "win32":
+            # L'équivalent de l'AppUserModelID : sous Wayland, c'est CE nom qui
+            # relie la fenêtre à son `.desktop`, donc à son icône et à son nom
+            # dans le dock (`setWindowIcon` y est ignoré). Même identifiant
+            # que le `.desktop` de l'AppImage.
+            app.setDesktopFileName(DESKTOP_ID)
         # Icône de TOUTE l'application, pas seulement de MainWindow :
         # l'assistant de premier lancement s'ouvre avant elle et portait
         # l'icône générique de Windows — la toute première fenêtre qu'on voit.
