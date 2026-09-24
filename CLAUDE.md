@@ -12,6 +12,8 @@ Launcher PyQt6 pour 8 jeux Harry Potter PC (Windows 10/11). **Interface et comme
 
 **Le registre sous Linux** : il n'y en a pas, mais le jeu tournera sous **Wine, qui a le sien**. Le travail n'est pas à supprimer, il est à rebrancher sur `wine regedit`. Tout passe par `game_registry.disponible()` — un seul point à changer, plus `_ecrire_eleve`.
 
+**Portage Linux : `docs/LINUX.md` fait foi** (audit `fichier:ligne`, contenu RELEVÉ des archives, décisions : umu puis wine, préfixe partagé, chemins du préfixe, surcharges de DLL, AppImage).
+
 ## Commands
 
 ```bash
