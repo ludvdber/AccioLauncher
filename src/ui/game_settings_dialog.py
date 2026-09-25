@@ -1,4 +1,4 @@
-"""Réglages d'UN jeu : langue aujourd'hui, affichage plus tard.
+"""Réglages d'UN jeu : langue, et pour HP4-HP6 les réglages confirmés de leur correctif PC.
 
 Pourquoi une FENÊTRE et pas le menu qu'il y avait ici d'abord : un menu est un
 choix qu'on prend et qui se referme, alors que les réglages d'un jeu vont
@@ -11,9 +11,13 @@ n'est pas une promesse en l'air : c'est la moitié de la réponse à « pourquoi
 lanceur ne me laisse pas régler la résolution ».
 """
 
+import logging
+from pathlib import Path
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
+    QComboBox,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -24,11 +28,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core import reglages_correctif
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.fonts import body_font, cinzel
+from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
+from src.ui.toggle_switch import toggle_row
+
+log = logging.getLogger(__name__)
 
 # Réglages annoncés mais pas encore livrés. Ils sont ÉCRITS, pas résumés en
 # « bientôt » : quelqu'un qui cherche la résolution doit reconnaître ce qu'il
@@ -64,6 +73,14 @@ class GameSettingsDialog(QDialog):
         self._actions = tuple(actions)
         self._groupe = QButtonGroup(self)
         self._boutons: dict[str, QRadioButton] = {}
+        # Réglages du correctif que le catalogue déclare confirmés pour ce jeu,
+        # et son ini (à côté de l'exécutable, là où le correctif le lit).
+        self._reglages = reglages_correctif.reglages_du_jeu(game.fix_settings)
+        self._ini: Path | None = (
+            reglages_correctif.chemin_ini(
+                manager.config.install_path / Path(game.executable).parent)
+            if self._reglages else None)
+        self._erreur: QLabel | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -168,6 +185,9 @@ class GameSettingsDialog(QDialog):
             layout.addWidget(radio)
 
     def _section_affichage(self, layout: QVBoxLayout) -> None:
+        if self._reglages:
+            self._section_correctif(layout)
+            return
         layout.addWidget(self._titre_rubrique(tr("Affichage"), verrouille=True))
         layout.addSpacing(8)
         for nom in _A_VENIR:
@@ -198,6 +218,105 @@ class GameSettingsDialog(QDialog):
         trait.setStyleSheet("color: rgba(255,255,255,0.06);")
         layout.addSpacing(6)
         layout.addWidget(trait)
+
+    def _section_correctif(self, layout: QVBoxLayout) -> None:
+        """Réglages du correctif PC (HP4-HP6), ceux que le catalogue déclare confirmés.
+
+        Trois cas, et chacun le DIT : jeu absent, ancien correctif (les archives
+        publiées le portent encore : rien ne lirait ces clés), nouveau correctif.
+        """
+        layout.addWidget(self._titre_rubrique(tr("Affichage et jeu")))
+        layout.addSpacing(8)
+        ini = self._ini
+        if ini is None or not ini.is_file():
+            self._note(layout, tr("Installez le jeu pour régler son correctif."))
+        elif not reglages_correctif.est_nouveau_correctif(ini):
+            self._note(layout, tr(
+                "Ces réglages arrivent avec la prochaine version du correctif "
+                "de ce jeu."))
+        else:
+            for reglage in self._reglages:
+                self._controle(layout, ini, reglage)
+            self._erreur = QLabel("")
+            self._erreur.setFont(body_font(11))
+            self._erreur.setWordWrap(True)
+            self._erreur.setTextFormat(Qt.TextFormat.PlainText)
+            self._erreur.setStyleSheet("color: #e8955a; background: transparent;")
+            self._erreur.hide()
+            layout.addWidget(self._erreur)
+            self._note(layout, tr("Pris en compte au prochain lancement du jeu."))
+        layout.addSpacing(10)
+        layout.addWidget(self._titre_rubrique(tr("Plus tard"), verrouille=True))
+        layout.addSpacing(4)
+        # Une ligne et non une liste de boutons grisés : trois réglages actifs
+        # et leurs explications occupent déjà la hauteur d'un petit écran.
+        bientot = QLabel(" · ".join(tr(nom) for nom in reglages_correctif.A_VENIR))
+        bientot.setFont(body_font(11))
+        bientot.setWordWrap(True)
+        bientot.setTextFormat(Qt.TextFormat.PlainText)
+        bientot.setStyleSheet("color: #6a6a80; background: transparent;")
+        layout.addWidget(bientot)
+        trait = QFrame()
+        trait.setFrameShape(QFrame.Shape.HLine)
+        trait.setStyleSheet("color: rgba(255,255,255,0.06);")
+        layout.addSpacing(6)
+        layout.addWidget(trait)
+
+    def _note(self, layout: QVBoxLayout, texte: str) -> None:
+        note = QLabel(texte)
+        note.setFont(body_font(11))
+        note.setWordWrap(True)
+        note.setTextFormat(Qt.TextFormat.PlainText)
+        note.setStyleSheet("color: #8a8aaa; background: transparent;")
+        layout.addWidget(note)
+
+    def _controle(self, layout: QVBoxLayout, ini: Path, reglage) -> None:
+        try:
+            etat = reglages_correctif.lire(ini, reglage)
+        except OSError:
+            log.warning("Correctif : %s illisible", ini, exc_info=True)
+            return
+        libelle_txt, aide_txt = reglages_correctif.textes(reglage)
+        if reglage.ident == "limite_fps":
+            ligne = QWidget()
+            ligne.setStyleSheet("background: transparent;")
+            h = QHBoxLayout(ligne)
+            h.setContentsMargins(0, 4, 0, 4)
+            h.setSpacing(12)
+            libelle = QLabel(libelle_txt)
+            libelle.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
+            h.addWidget(libelle, stretch=1)
+            choix = QComboBox()
+            choix.setStyleSheet(themed(_COMBO_STYLE))
+            choix.setAccessibleName(libelle_txt)
+            for n in reglages_correctif.LIMITES_FPS:
+                choix.addItem(tr("Aucune") if n == 0 else str(n), n)
+            if etat.personnalise:
+                # Une valeur posée à la main dans l'ini : la montrer telle
+                # quelle plutôt que d'afficher un choix qui n'est pas le sien.
+                choix.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+            choix.setCurrentIndex(max(0, choix.findData(etat.valeur)))
+            choix.currentIndexChanged.connect(
+                lambda _i, c=choix, r=reglage: self._on_reglage(r, c.currentData(), c))
+            h.addWidget(choix)
+            layout.addWidget(ligne)
+        else:
+            ligne, bascule = toggle_row(libelle_txt, bool(etat.valeur))
+            layout.addWidget(ligne)
+            if etat.personnalise:
+                # Des touches choisies à la main dans l'ini : le préréglage les
+                # écraserait. On le dit, on n'y touche pas.
+                bascule.setEnabled(False)
+                self._note(layout, tr(
+                    "Touches personnalisées dans d3d9.ini : le lanceur n'y touche pas."))
+            bascule.toggled.connect(
+                lambda coche, r=reglage, b=bascule: self._on_reglage(r, coche, b))
+        aide = QLabel(aide_txt)
+        aide.setFont(body_font(10))
+        aide.setWordWrap(True)
+        aide.setTextFormat(Qt.TextFormat.PlainText)
+        aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
+        layout.addWidget(aide)
 
     def _section_fichiers(self, layout: QVBoxLayout) -> None:
         """Actions qui n'étaient atteignables qu'au CLIC DROIT.
@@ -244,6 +363,35 @@ class GameSettingsDialog(QDialog):
             # registre. Laisser la sélection sur un choix qui n'a pas pris
             # afficherait une langue que le jeu n'a pas.
             self._resynchroniser()
+
+    def _on_reglage(self, reglage, valeur, widget) -> None:
+        """Écrit AUSSITÔT, comme la langue : pas de bouton « Appliquer »."""
+        if reglage.ident == "limite_fps" and valeur not in reglages_correctif.LIMITES_FPS:
+            return   # l'entrée « réglé à la main » : c'est déjà ce que porte le fichier
+        try:
+            reglages_correctif.ecrire(self._ini, reglage, valeur)
+        except (OSError, ValueError):
+            log.warning("Correctif : %s non écrit", reglage.ident, exc_info=True)
+            # Remettre le contrôle sur ce que porte VRAIMENT le fichier.
+            try:
+                etat = reglages_correctif.lire(self._ini, reglage)
+            except OSError:
+                etat = None
+            widget.blockSignals(True)
+            if isinstance(widget, QComboBox):
+                if etat is not None:
+                    widget.setCurrentIndex(max(0, widget.findData(etat.valeur)))
+            elif etat is not None:
+                widget.setChecked(bool(etat.valeur))
+            widget.blockSignals(False)
+            if self._erreur is not None:
+                self._erreur.setText(tr(
+                    "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
+                    "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+                self._erreur.show()
+            return
+        if self._erreur is not None:
+            self._erreur.hide()
 
     def _resynchroniser(self) -> None:
         courant = self.manager.game_language(self.game)

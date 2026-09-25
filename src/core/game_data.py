@@ -612,6 +612,12 @@ class GameData:
     # d'office la DLL du dossier du jeu. Par jeu et dans le catalogue, comme
     # `dpi_aware` : un jeu ajouté déclare les siennes sans nouvelle release.
     dll_overrides: tuple[str, ...] = ()
+    # Réglages du correctif PC (HP4-HP6) que le lanceur peut changer, CONFIRMÉS
+    # en jeu un par un (`src/core/reglages_correctif.py`). Dans le catalogue et
+    # non dans le code : un réglage vu en jeu un mardi doit pouvoir s'ouvrir le
+    # mardi, sans republier l'exécutable. Un identifiant que ce lanceur ne
+    # connaît pas est ignoré à l'affichage.
+    fix_settings: tuple[str, ...] = ()
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -711,6 +717,8 @@ class GameData:
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),
+            fix_settings=tuple(r for r in (data.get("fix_settings") if isinstance(data.get("fix_settings"), list) else ())
+                               if isinstance(r, str) and _JETON_SUR.match(r)),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),

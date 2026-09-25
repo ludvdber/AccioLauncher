@@ -448,6 +448,25 @@
     "winetricks est introuvable : les composants Visual C++ ne peuvent pas être installés dans Wine.\n\nInstallez winetricks (il fait partie de Bazzite) ou umu-launcher. Le jeu peut aussi démarrer sans eux : les composants intégrés à Wine suffisent parfois.": "No se encuentra winetricks: los componentes Visual C++ no se pueden instalar en Wine.\n\nInstala winetricks (viene con Bazzite) o umu-launcher. El juego también puede arrancar sin ellos: los componentes integrados de Wine a veces bastan.",
     "y installer {}": "instalar {} en él",
     "{jeu} enregistre ses réglages dans le registre de Wine, celui du préfixe du launcher.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} guarda sus ajustes en el registro de Wine, el del prefijo del launcher.\n\nEl launcher va a escribir esto en {cle}:\n\n{valeurs}",
-    "{} manquant dans Wine — requis pour lancer ce jeu.": "Falta {} en Wine — necesario para iniciar este juego."
+    "{} manquant dans Wine — requis pour lancer ce jeu.": "Falta {} en Wine — necesario para iniciar este juego.",
+    "Continuer à tourner après un Alt+Tab": "Seguir funcionando tras un Alt+Tab",
+    "Le jeu ne se fige plus quand une autre fenêtre passe devant, et reprend le clavier dès qu'on revient.": "El juego ya no se congela cuando otra ventana pasa delante, y recupera el teclado en cuanto vuelves.",
+    "Limite d'images par seconde": "Límite de fotogramas por segundo",
+    "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins de bruit.": "Limita el número de fotogramas calculados: el ordenador se calienta menos y hace menos ruido.",
+    "Déplacement {} et sorts à la souris": "Movimiento {} y hechizos con el ratón",
+    "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, qui fait reculer.": "Moverse con {0}, Encantamiento con el clic izquierdo, Maleficio con el clic derecho, Accio con {1}, Extremos con {2}. Las teclas originales siguen funcionando, salvo {3}, que hace retroceder.",
+    "Format d'image": "Relación de aspecto",
+    "Compteur d'images (FPS) et performances": "Contador de fotogramas (FPS) y rendimiento",
+    "Effets d'image (lissage, lumière, ombres)": "Efectos de imagen (suavizado, luz, sombras)",
+    "Affichage et jeu": "Pantalla y juego",
+    "Installez le jeu pour régler son correctif.": "Instala el juego para ajustar su parche.",
+    "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "Estos ajustes llegarán con la próxima versión del parche de este juego.",
+    "Pris en compte au prochain lancement du jeu.": "Se aplica la próxima vez que se inicie el juego.",
+    "{} (réglé à la main)": "{} (ajustado a mano)",
+    "Touches personnalisées dans d3d9.ini : le lanceur n'y touche pas.": "Teclas personalizadas en d3d9.ini: el lanzador no las toca.",
+    "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Ajuste no guardado: no se pudo modificar el archivo d3d9.ini del juego (juego en curso o archivo de solo lectura).",
+    "Résolution": "Resolución",
+    "Qualité graphique": "Calidad gráfica",
+    "Mode fenêtré / plein écran": "Ventana / pantalla completa"
   }
 }

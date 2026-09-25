@@ -448,6 +448,25 @@
     "winetricks est introuvable : les composants Visual C++ ne peuvent pas être installés dans Wine.\n\nInstallez winetricks (il fait partie de Bazzite) ou umu-launcher. Le jeu peut aussi démarrer sans eux : les composants intégrés à Wine suffisent parfois.": "winetricks was not found: the Visual C++ components cannot be installed into Wine.\n\nInstall winetricks (it comes with Bazzite) or umu-launcher. The game may also start without them: Wine's built-in components are sometimes enough.",
     "y installer {}": "install {} into it",
     "{jeu} enregistre ses réglages dans le registre de Wine, celui du préfixe du launcher.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} stores its settings in Wine's registry, the one of the launcher's prefix.\n\nThe launcher is going to write this to {cle}:\n\n{valeurs}",
-    "{} manquant dans Wine — requis pour lancer ce jeu.": "{} missing in Wine — required to launch this game."
+    "{} manquant dans Wine — requis pour lancer ce jeu.": "{} missing in Wine — required to launch this game.",
+    "Continuer à tourner après un Alt+Tab": "Keep running after Alt+Tab",
+    "Le jeu ne se fige plus quand une autre fenêtre passe devant, et reprend le clavier dès qu'on revient.": "The game no longer freezes when another window comes to the front, and takes the keyboard back as soon as you return.",
+    "Limite d'images par seconde": "Frame rate limit",
+    "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins de bruit.": "Caps the number of frames drawn: the computer runs cooler and quieter.",
+    "Déplacement {} et sorts à la souris": "{} movement and spells on the mouse",
+    "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, qui fait reculer.": "Move with {0}, Charm on left click, Jinx on right click, Accio on {1}, Extremos on {2}. The original keys keep working, except {3}, which moves back.",
+    "Format d'image": "Aspect ratio",
+    "Compteur d'images (FPS) et performances": "Frame counter (FPS) and performance",
+    "Effets d'image (lissage, lumière, ombres)": "Image effects (smoothing, lighting, shadows)",
+    "Affichage et jeu": "Display and gameplay",
+    "Installez le jeu pour régler son correctif.": "Install the game to adjust its fix.",
+    "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "These settings arrive with the next version of this game's fix.",
+    "Pris en compte au prochain lancement du jeu.": "Applied the next time the game starts.",
+    "{} (réglé à la main)": "{} (set by hand)",
+    "Touches personnalisées dans d3d9.ini : le lanceur n'y touche pas.": "Custom keys in d3d9.ini: the launcher leaves them alone.",
+    "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Setting not saved: the game's d3d9.ini file could not be changed (game running, or read-only file).",
+    "Résolution": "Resolution",
+    "Qualité graphique": "Graphics quality",
+    "Mode fenêtré / plein écran": "Windowed / full screen"
   }
 }
