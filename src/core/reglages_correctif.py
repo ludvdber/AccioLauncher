@@ -102,8 +102,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "continuent de marcher, sauf {3}, qui fait reculer."),
     # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
     # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
-    # allumés) l'éteindre les éteindrait tous. Le MSAA, lui, n'a AUCUN effet
-    # dans HP4 (vu le 2026-09-25) : il ne se propose pas.
+    # allumés) l'éteindre les éteindrait tous. Le MSAA ne se propose pas : celui
+    # du correctif ne touche que l'image finale, et HP4 dessine sa scène dans
+    # une cible à lui (relevé le 2026-09-25).
     Reglage("lissage", "Accio.Graphics", "FXAA",
             "Lissage des contours (FXAA)",
             "Adoucit les escaliers au bord des personnages et du décor "
