@@ -58,3 +58,33 @@ def arreter_a_la_fermeture(thread: QThread, nom: str) -> bool:
         log.error("%s n'a pas répondu à terminate() — fermeture à risque", nom)
         return False
     return True
+
+
+# Temps laissé à un thread pour finir son `run()` APRÈS avoir émis son signal de
+# fin nommé. Il ne lui reste qu'à revenir : l'attente se compte en
+# microsecondes, le plafond ne sert qu'à ne jamais figer la fenêtre.
+DELAI_FIN_MS = 5000
+
+
+def liberer_apres_fin(thread: QThread) -> None:
+    """Détruit `thread` depuis le slot de son PROPRE signal de fin nommé.
+
+    Ces signaux (`download_finished`, `install_finished`, `error`,
+    `preparation_terminee`…) partent de `run()` JUSTE AVANT son retour, et le
+    slot s'exécute sur le thread principal : quand il tourne, le thread peut
+    encore être vivant. Le détruire alors — `deleteLater()`, ou la mort de son
+    parent, dont il reste l'enfant quand on se contente d'oublier la référence —
+    abandonne le processus (« QThread: Destroyed while thread is still
+    running », qFatal : code 134 sous Linux, une exécution sur deux en CI pour
+    la préparation de Wine, 2026-09-24).
+
+    On attend donc sa vraie fin. Le résultat de l'attente n'est pas jetable
+    (cf. `arreter_a_la_fermeture`) : un thread qui n'a pas fini n'est détruit
+    qu'à son `finished` natif.
+    """
+    if thread.wait(DELAI_FIN_MS):
+        thread.deleteLater()
+    else:
+        log.warning("%s encore actif après son signal de fin — libération différée",
+                    type(thread).__name__)
+        thread.finished.connect(thread.deleteLater)

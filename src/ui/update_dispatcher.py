@@ -35,7 +35,7 @@ from src.core.i18n import tr
 from src.core.self_update import (
     apply_update_and_restart, can_self_update, nom_du_telechargement,
 )
-from src.core.thread_utils import arreter_a_la_fermeture
+from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 from src.core.updater import UpdateChecker
 from src.core.speed_tracker import SpeedTracker
 from src.ui.utils import open_url
@@ -268,7 +268,7 @@ class UpdateDispatcher(QObject):
         self.launcher_message.emit(f"{tr('Téléchargement de la mise à jour…')} {ligne}")
 
     def _on_finished(self, path_str: str) -> None:
-        self._download = None
+        self._liberer_download()
         self.launcher_busy.emit(False)
         if apply_update_and_restart(Path(path_str)):
             self.launcher_message.emit(tr("Redémarrage…"))
@@ -283,12 +283,31 @@ class UpdateDispatcher(QObject):
         # façon, mais « disque plein » et « connexion » ne se dépannent pas pareil.
         log.warning("Échec du téléchargement de la mise à jour (%s) : %s",
                     echec.cause if echec is not None else "?", message)
-        self._download = None
+        self._liberer_download()
         self.launcher_busy.emit(False)
         self.launcher_message.emit(
             tr("Échec du téléchargement — ouverture de la page de release"))
         if self.url:
             open_url(self.url)
+
+    def _liberer_download(self) -> None:
+        """Relâche le downloader depuis le slot de SON signal de fin.
+
+        Oublier la référence ne le détruisait pas : il restait enfant du
+        dispatcher, donc mourait avec lui — or `download_finished` précède de
+        peu la fermeture (`launcher_ready`), et ce signal part de `run()` juste
+        avant son retour. Cf. `liberer_apres_fin`.
+        """
+        dl, self._download = self._download, None
+        if dl is not None:
+            for signal, slot in ((dl.progress, self._on_progress),
+                                 (dl.download_finished, self._on_finished),
+                                 (dl.error, self._on_error)):
+                try:
+                    signal.disconnect(slot)
+                except TypeError:
+                    pass
+            liberer_apres_fin(dl)
 
     # ──────────────────── Extinction ────────────────────
 

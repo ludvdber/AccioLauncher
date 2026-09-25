@@ -15,7 +15,7 @@ from src.core import trailers as store
 from src.core.downloader import Downloader
 from src.core.game_data import Trailer
 from src.core.i18n import tr
-from src.core.thread_utils import arreter_a_la_fermeture
+from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 
 log = logging.getLogger(__name__)
 
@@ -210,7 +210,10 @@ class TrailerStore(QObject):
         self._courante = None
         if dl is not None:
             self._deconnecter(dl)
-            dl.deleteLater()
+            # Appelé depuis `download_finished` / `error`, qui partent de run()
+            # JUSTE AVANT son retour : un `deleteLater()` nu détruisait un
+            # thread peut-être encore vivant (qFatal). Cf. `liberer_apres_fin`.
+            liberer_apres_fin(dl)
 
     def _reap(self, dl: Downloader) -> None:
         if dl in self._zombies:
