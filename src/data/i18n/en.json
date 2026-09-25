@@ -456,8 +456,6 @@
     "Déplacement {} et sorts à la souris": "{} movement and spells on the mouse",
     "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, qui fait reculer.": "Move with {0}, Charm on left click, Jinx on right click, Accio on {1}, Extremos on {2}. The original keys keep working, except {3}, which moves back.",
     "Format d'image": "Aspect ratio",
-    "Compteur d'images (FPS) et performances": "Frame counter (FPS) and performance",
-    "Effets d'image (lissage, lumière, ombres)": "Image effects (smoothing, lighting, shadows)",
     "Affichage et jeu": "Display and gameplay",
     "Installez le jeu pour régler son correctif.": "Install the game to adjust its fix.",
     "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "These settings arrive with the next version of this game's fix.",
@@ -467,6 +465,14 @@
     "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Setting not saved: the game's d3d9.ini file could not be changed (game running, or read-only file).",
     "Résolution": "Resolution",
     "Qualité graphique": "Graphics quality",
-    "Mode fenêtré / plein écran": "Windowed / full screen"
+    "Mode fenêtré / plein écran": "Windowed / full screen",
+    "Compteur d'images (FPS)": "Frame counter (FPS)",
+    "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le remet.": "Shows frames per second in the top-left corner. In game, F10 hides or shows it.",
+    "Panneau de performances": "Performance panel",
+    "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un benchmark, enregistré dans le dossier « benchmarks » du jeu.": "Frame time and its graph, CPU, graphics card, video and system memory, latency. In game, F11 starts and stops a benchmark, saved in the game's \"benchmarks\" folder.",
+    "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau.": "Partly set by hand in d3d9.ini: turning it on switches on the whole panel.",
+    "Lissage des contours (FXAA)": "Edge smoothing (FXAA)",
+    "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté.": "Softens the jagged edges of characters and scenery (hair, clothes, tents), with slight sharpening.",
+    "Effets d'image (lumière, ombres)": "Image effects (lighting, shadows)"
   }
 }

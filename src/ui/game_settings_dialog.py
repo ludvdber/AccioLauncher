@@ -303,12 +303,17 @@ class GameSettingsDialog(QDialog):
         else:
             ligne, bascule = toggle_row(libelle_txt, bool(etat.valeur))
             layout.addWidget(ligne)
-            if etat.personnalise:
+            if etat.personnalise and reglage.ident == "touches_zqsd":
                 # Des touches choisies à la main dans l'ini : le préréglage les
                 # écraserait. On le dit, on n'y touche pas.
                 bascule.setEnabled(False)
                 self._note(layout, tr(
                     "Touches personnalisées dans d3d9.ini : le lanceur n'y touche pas."))
+            elif etat.personnalise:
+                # Quelques lignes du panneau allumées à la main : rien n'est
+                # perdu à le dire, et l'interrupteur reste libre.
+                self._note(layout, tr(
+                    "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau."))
             bascule.toggled.connect(
                 lambda coche, r=reglage, b=bascule: self._on_reglage(r, coche, b))
         aide = QLabel(aide_txt)

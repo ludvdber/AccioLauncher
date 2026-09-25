@@ -36,6 +36,17 @@ INI_V2 = "\r\n".join([
     "[Accio.Graphics]",
     "FXAA=0",
     "",
+    "[Accio.Overlay]",
+    "ShowFPS=0",
+    "ShowFrameTime=0",
+    "ShowGraph=0",
+    "ShowCPU=0",
+    "ShowGPU=0",
+    "ShowVRAM=0",
+    "ShowRAM=0",
+    "ShowLatency=0",
+    "OverlayKey=121",
+    "",
 ])
 
 # L'ancien wrapper, celui que portent encore les archives publiées.
@@ -134,6 +145,46 @@ class TestEcritureEnPlace:
         p.write_bytes(INI_ANCIEN.encode("ascii"))
         with pytest.raises(ValueError):
             rc.ecrire(p, rc.REGLAGES["arriere_plan"], True)
+
+
+class TestPerformances:
+    def test_eteints_par_defaut_meme_sans_la_cle(self, ini):
+        """Le correctif n'affiche rien tant qu'on ne le demande pas : une clé
+        absente vaut 0, pas 1 comme KeepRunningInBackground."""
+        ini.write_bytes(ini.read_bytes().replace(b"ShowFPS=0\r\n", b""))
+        assert rc.lire(ini, rc.REGLAGES["compteur_fps"]) == rc.Etat(False)
+        assert rc.lire(ini, rc.REGLAGES["panneau_perfs"]) == rc.Etat(False)
+
+    def test_compteur_aller_retour(self, ini):
+        r = rc.REGLAGES["compteur_fps"]
+        rc.ecrire(ini, r, True)
+        assert b"ShowFPS=1" in ini.read_bytes()
+        assert rc.lire(ini, r) == rc.Etat(True)
+
+    def test_le_panneau_allume_ses_sept_lignes_et_pas_le_compteur(self, ini):
+        r = rc.REGLAGES["panneau_perfs"]
+        rc.ecrire(ini, r, True)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        for cle in ("ShowFrameTime", "ShowGraph", "ShowCPU", "ShowGPU", "ShowVRAM", "ShowRAM", "ShowLatency"):
+            assert f"{cle}=1" in lignes
+        assert "ShowFPS=0" in lignes and "OverlayKey=121" in lignes
+        assert rc.lire(ini, r) == rc.Etat(True)
+        rc.ecrire(ini, r, False)
+        assert rc.lire(ini, r) == rc.Etat(False)
+
+    def test_panneau_regle_en_partie_a_la_main(self, ini):
+        ini.write_bytes(ini.read_bytes().replace(b"ShowGPU=0", b"ShowGPU=1"))
+        assert rc.lire(ini, rc.REGLAGES["panneau_perfs"]) == rc.Etat(False, personnalise=True)
+
+    def test_lissage_aller_retour(self, ini):
+        r = rc.REGLAGES["lissage"]
+        assert rc.lire(ini, r) == rc.Etat(False)
+        rc.ecrire(ini, r, True)
+        assert "FXAA=1" in ini.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini, r) == rc.Etat(True)
+
+    def test_retires_de_la_liste_a_venir(self):
+        assert not any("FPS" in x for x in rc.A_VENIR)
 
 
 class TestTouches:

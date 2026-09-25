@@ -115,6 +115,8 @@ class TestLancementSousWine:
 
     def test_dpi_aware_est_ignore_sous_wine(self, tmp_path, monkeypatch):
         """`__COMPAT_LAYER` est une couche de Windows : sans objet sous Wine."""
+        # Le processus qui lance la suite peut l'avoir hérité (`RunAsInvoker` : vu en session).
+        monkeypatch.delenv("__COMPAT_LAYER", raising=False)
         m = _manager(tmp_path, monkeypatch)
         _sans_prelancement(monkeypatch)
         vus = _popen_espion(monkeypatch)

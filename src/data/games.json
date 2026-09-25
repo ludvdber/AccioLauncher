@@ -644,7 +644,10 @@
       "fix_settings": [
         "arriere_plan",
         "limite_fps",
-        "touches_zqsd"
+        "touches_zqsd",
+        "lissage",
+        "compteur_fps",
+        "panneau_perfs"
       ],
       "dll_overrides": [
         "d3d9",
@@ -728,7 +731,9 @@
       "developer": "EA UK",
       "executable": "HP5/hp.exe",
       "fix_settings": [
-        "arriere_plan"
+        "arriere_plan",
+        "compteur_fps",
+        "panneau_perfs"
       ],
       "dll_overrides": [
         "d3d9"
@@ -855,7 +860,9 @@
       "developer": "EA UK",
       "executable": "HP6/hp6.exe",
       "fix_settings": [
-        "arriere_plan"
+        "arriere_plan",
+        "compteur_fps",
+        "panneau_perfs"
       ],
       "dll_overrides": [
         "d3d9"

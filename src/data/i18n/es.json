@@ -456,8 +456,6 @@
     "Déplacement {} et sorts à la souris": "Movimiento {} y hechizos con el ratón",
     "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, qui fait reculer.": "Moverse con {0}, Encantamiento con el clic izquierdo, Maleficio con el clic derecho, Accio con {1}, Extremos con {2}. Las teclas originales siguen funcionando, salvo {3}, que hace retroceder.",
     "Format d'image": "Relación de aspecto",
-    "Compteur d'images (FPS) et performances": "Contador de fotogramas (FPS) y rendimiento",
-    "Effets d'image (lissage, lumière, ombres)": "Efectos de imagen (suavizado, luz, sombras)",
     "Affichage et jeu": "Pantalla y juego",
     "Installez le jeu pour régler son correctif.": "Instala el juego para ajustar su parche.",
     "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "Estos ajustes llegarán con la próxima versión del parche de este juego.",
@@ -467,6 +465,14 @@
     "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Ajuste no guardado: no se pudo modificar el archivo d3d9.ini del juego (juego en curso o archivo de solo lectura).",
     "Résolution": "Resolución",
     "Qualité graphique": "Calidad gráfica",
-    "Mode fenêtré / plein écran": "Ventana / pantalla completa"
+    "Mode fenêtré / plein écran": "Ventana / pantalla completa",
+    "Compteur d'images (FPS)": "Contador de fotogramas (FPS)",
+    "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le remet.": "Muestra los fotogramas por segundo arriba a la izquierda. En el juego, F10 lo oculta o lo vuelve a mostrar.",
+    "Panneau de performances": "Panel de rendimiento",
+    "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un benchmark, enregistré dans le dossier « benchmarks » du jeu.": "Tiempo por fotograma y su gráfico, procesador, tarjeta gráfica, memoria de vídeo y RAM, latencia. En el juego, F11 inicia y detiene un benchmark, guardado en la carpeta «benchmarks» del juego.",
+    "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau.": "Ajustado en parte a mano en d3d9.ini: activarlo enciende todo el panel.",
+    "Lissage des contours (FXAA)": "Suavizado de bordes (FXAA)",
+    "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté.": "Suaviza los dientes de sierra en los bordes de personajes y escenarios (pelo, ropa, tiendas), con un ligero aumento de nitidez.",
+    "Effets d'image (lumière, ombres)": "Efectos de imagen (luz, sombras)"
   }
 }

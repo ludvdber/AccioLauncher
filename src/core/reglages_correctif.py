@@ -48,6 +48,10 @@ _POSITIONS = (("MoveUp", 0x11, "W"), ("MoveLeft", 0x1E, "A"), ("MoveDown", 0x1F,
               ("MoveRight", 0x20, "D"), ("Accio", 0x12, "E"), ("Extremos", 0x13, "R"))
 _SOURIS = (("Charm", "MouseLeft"), ("Jinx", "MouseRight"))
 
+# Le panneau de performances : tout ce que l'overlay sait afficher en plus du
+# compteur d'images, réglé d'un seul geste (le détail reste dans l'ini).
+_PANNEAU = ("ShowFrameTime", "ShowGraph", "ShowCPU", "ShowGPU", "ShowVRAM", "ShowRAM", "ShowLatency")
+
 
 def _lettre(scan: int, repli: str) -> str:
     """La lettre imprimée à cette position sur le clavier actif (Windows).
@@ -75,9 +79,10 @@ def touches_preregle() -> tuple[tuple[str, str], ...]:
 class Reglage:
     ident: str
     section: str
-    cle: str          # vide pour un réglage composé (les touches)
+    cle: str          # vide pour un réglage composé (touches, panneau)
     libelle: str      # clé tr() ; passer par textes() pour l'afficher
     aide: str         # clé tr()
+    defaut: bool = True   # interrupteur : ce que fait le correctif quand la clé manque
 
 
 # L'ordre est celui de l'affichage.
@@ -95,6 +100,24 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic "
             "droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine "
             "continuent de marcher, sauf {3}, qui fait reculer."),
+    # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
+    # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
+    # allumés) l'éteindre les éteindrait tous. Le MSAA, lui, n'a AUCUN effet
+    # dans HP4 (vu le 2026-09-25) : il ne se propose pas.
+    Reglage("lissage", "Accio.Graphics", "FXAA",
+            "Lissage des contours (FXAA)",
+            "Adoucit les escaliers au bord des personnages et du décor "
+            "(cheveux, vêtements, toiles de tente), avec un léger renforcement "
+            "de la netteté.", defaut=False),
+    Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
+            "Compteur d'images (FPS)",
+            "Affiche les images par seconde en haut à gauche. En jeu, F10 le "
+            "masque ou le remet.", defaut=False),
+    Reglage("panneau_perfs", "Accio.Overlay", "",
+            "Panneau de performances",
+            "Temps par image et son graphe, processeur, carte graphique, "
+            "mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un "
+            "benchmark, enregistré dans le dossier « benchmarks » du jeu.", defaut=False),
 )}
 
 
@@ -113,8 +136,7 @@ def textes(reglage: Reglage) -> tuple[str, str]:
 A_VENIR = (
     "Résolution",
     "Format d'image",
-    "Compteur d'images (FPS) et performances",
-    "Effets d'image (lissage, lumière, ombres)",
+    "Effets d'image (lumière, ombres)",
 )
 
 
@@ -235,6 +257,10 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
         if all(actives[cle] is not None and actives[cle].lower() == v.lower() for cle, v in preregle):
             return Etat(True)
         return Etat(False, personnalise=any(v is not None for v in actives.values()))
+    if reglage.ident == "panneau_perfs":
+        # Un mélange (quelques lignes à la main) se montre éteint et se signale.
+        allumees = [_valeur(lignes, reglage.section, cle) not in (None, "0", "") for cle in _PANNEAU]
+        return Etat(all(allumees), personnalise=any(allumees) and not all(allumees))
     brut = _valeur(lignes, reglage.section, reglage.cle)
     if reglage.ident == "limite_fps":
         try:
@@ -242,9 +268,9 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
         except ValueError:
             return Etat(0, personnalise=True)
         return Etat(n, personnalise=n not in LIMITES_FPS)
-    # Interrupteur : le correctif lit 0 = non, tout autre nombre = oui ; défaut oui.
+    # Interrupteur : le correctif lit 0 = non, tout autre nombre = oui.
     if brut is None:
-        return Etat(True)
+        return Etat(reglage.defaut)
     return Etat(brut.strip() not in ("0", ""))
 
 
@@ -255,6 +281,10 @@ def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
     if reglage.ident == "touches_zqsd":
         for cle, touche in touches_preregle():
             if not _poser(lignes, reglage.section, cle, touche if valeur else None):
+                raise ValueError(f"section [{reglage.section}] absente")
+    elif reglage.ident == "panneau_perfs":
+        for cle in _PANNEAU:
+            if not _poser(lignes, reglage.section, cle, "1" if valeur else "0"):
                 raise ValueError(f"section [{reglage.section}] absente")
     elif reglage.ident == "limite_fps":
         if valeur not in LIMITES_FPS:
