@@ -2,10 +2,11 @@
 
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
-from PyQt6.QtWidgets import QLayout, QMessageBox
+from PyQt6.QtWidgets import QLayout, QMessageBox, QScrollArea, QWidget
 
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
+from src.ui.theme import themed
 
 _ICONE = ASSETS_DIR / "accio_launcher.ico"
 # Repli hors Windows : le .ico est un format Windows, et le portage Linux est
@@ -84,3 +85,43 @@ def is_writable_dir(path) -> bool:
         return True
     except OSError:
         return False
+
+
+def zone_defilable(page: QWidget) -> QScrollArea:
+    """Rend une page défilable UNIQUEMENT si son contenu ne tient pas.
+
+    Partagée par l'assistant et la fenêtre de réglages d'un jeu : deux
+    barres de défilement écrites deux fois finissent par diverger.
+
+    `ScrollBarAsNeeded` ne montre la barre que lorsqu'elle sert, donc les
+    écrans courts sont inchangés. Sans ça, le Choixpeau — quatre questions,
+    seize réponses — débordait de la fenêtre : le texte se chevauchait, et
+    agrandir d'un pixel remettait tout en place d'un coup, parce que c'est
+    le redimensionnement qui déclenchait enfin la passe de mise en page
+    (Ludo, 2026-09-23, capture à l'appui).
+
+    Le fond doit être rendu transparent sur le `QScrollArea` ET sur son
+    viewport : un `QAbstractScrollArea` peint son propre fond, et la page
+    serait posée sur un rectangle clair au milieu du bleu nuit. Même raison
+    pour la barre : sans style, c'est la barre native de Windows, grise et
+    hachurée, qui apparaît au Choixpeau (vu dans l'exe le 2026-09-24). Celle
+    de « Mes années à Poudlard » : bleu nuit, or au survol, sans flèches.
+    """
+    zone = QScrollArea()
+    zone.setWidget(page)
+    zone.setWidgetResizable(True)
+    zone.setFrameShape(QScrollArea.Shape.NoFrame)
+    zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    zone.setStyleSheet(themed(
+        "QScrollArea, QScrollArea > QWidget > QWidget"
+        " { background: transparent; border: none; }"
+        "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
+        "QScrollBar::handle:vertical {"
+        "  background: #2c3e6b; border-radius: 5px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #d6a72c; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical"
+        " { background: none; }"))
+    zone.viewport().setAutoFillBackground(False)
+    return zone

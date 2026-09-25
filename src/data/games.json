@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.30",
+  "catalog_version": "0.31",
   "contributors": [
     {
       "name": "ASTeam",
@@ -646,6 +646,7 @@
         "limite_fps",
         "touches_zqsd",
         "lissage",
+        "anticrenelage",
         "compteur_fps",
         "panneau_perfs"
       ],
@@ -861,6 +862,7 @@
       "executable": "HP6/hp6.exe",
       "fix_settings": [
         "arriere_plan",
+        "anticrenelage",
         "compteur_fps",
         "panneau_perfs"
       ],

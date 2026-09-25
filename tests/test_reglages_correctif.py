@@ -187,6 +187,41 @@ class TestPerformances:
         assert not any("FPS" in x for x in rc.A_VENIR)
 
 
+class TestAnticrenelage:
+    """Le MSAA : un réglage à CHOIX, par le même mécanisme que la limite d'images."""
+
+    R = rc.REGLAGES["anticrenelage"]
+
+    def test_eteint_quand_la_cle_manque(self, ini):
+        assert rc.lire(ini, self.R) == rc.Etat(0)
+
+    def test_aller_retour(self, ini):
+        rc.ecrire(ini, self.R, 8)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert "Antialiasing=8" in lignes
+        # Ajoutée dans SA section, pas ailleurs.
+        assert lignes.index("[Accio.Graphics]") < lignes.index("Antialiasing=8") < lignes.index("[Accio.Overlay]")
+        assert rc.lire(ini, self.R) == rc.Etat(8)
+        rc.ecrire(ini, self.R, 0)
+        assert rc.lire(ini, self.R) == rc.Etat(0)
+
+    def test_seize_pose_a_la_main_montre_pas_ecrase(self, ini):
+        """16 (l'ini de HP5) n'est pas proposé : il se montre tel quel."""
+        ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=0\r\nAntialiasing=16"))
+        assert rc.lire(ini, self.R) == rc.Etat(16, personnalise=True)
+
+    def test_une_valeur_non_proposee_est_refusee(self, ini):
+        with pytest.raises(ValueError):
+            rc.ecrire(ini, self.R, 3)
+
+    def test_chaque_choix_a_son_libelle(self):
+        """0 se lit par une clé traduite ; aucun réglage à choix n'oublie ce libellé."""
+        for r in rc.REGLAGES.values():
+            if r.choix:
+                assert r.choix[0] == 0 and r.zero and tr(r.zero)
+        assert self.R.format_choix.format(8) == "8×"
+
+
 class TestTouches:
     def test_desactive_par_defaut(self, ini, azerty):
         assert rc.lire(ini, rc.REGLAGES["touches_zqsd"]) == rc.Etat(False)
@@ -276,6 +311,40 @@ class TestFenetre:
         assert choix.currentData() == 100
         choix.setCurrentIndex(choix.findData(60))
         assert b"FPSLimit=60" in ini.read_bytes()
+
+    def test_l_anticrenelage_ecrit_aussitot(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QComboBox
+        (tmp_path / "HP4").mkdir()
+        ini = tmp_path / "HP4" / "d3d9.ini"
+        ini.write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["anticrenelage"]), _manager(tmp_path))
+        (choix,) = dlg.findChildren(QComboBox)
+        assert choix.currentData() == 0 and choix.currentText() == tr("Désactivé")
+        assert [choix.itemText(i) for i in range(1, choix.count())] == ["2×", "4×", "8×"]
+        choix.setCurrentIndex(choix.findData(4))
+        assert b"Antialiasing=4" in ini.read_bytes()
+
+    def test_tout_hp4_tient_dans_l_ecran_et_fermer_ne_chevauche_rien(self, qtbot, tmp_path):
+        """Les sept réglages de HP4 et le titre sur deux lignes : la fenêtre ne
+        dépasse pas l'écran (les rubriques défilent), et « Fermer » est SOUS la
+        zone qui défile. Le layout seul comptait le titre sur une ligne, et le
+        bouton recouvrait les rubriques."""
+        from PyQt6.QtWidgets import QPushButton
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        tous = ["arriere_plan", "limite_fps", "touches_zqsd", "lissage", "anticrenelage",
+                "compteur_fps", "panneau_perfs"]
+        jeu = GameData.from_dict({
+            "id": "hp4", "name": "Harry Potter et la Coupe de Feu", "year": 2005, "description": "d",
+            "developer": "d", "executable": "HP4/gof_f.exe", "cover_image": "c.jpg", "fix_settings": tous})
+        dlg = _dialogue(qtbot, jeu, _manager(tmp_path))
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        assert dlg.height() <= dlg.screen().availableGeometry().height()
+        (fermer,) = [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Fermer")]
+        bas_zone = dlg._defile.geometry().bottom()
+        assert fermer.geometry().top() > bas_zone
+        assert fermer.geometry().bottom() < dlg.height()
 
     def test_echec_d_ecriture_remet_le_controle_et_le_dit(self, qtbot, tmp_path, monkeypatch):
         from src.ui.toggle_switch import ToggleSwitch

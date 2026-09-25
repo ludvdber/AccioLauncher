@@ -23,7 +23,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QButtonGroup, QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QPushButton, QRadioButton,
-    QScrollArea, QStackedWidget, QVBoxLayout, QWidget,
+    QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
@@ -37,9 +37,9 @@ from src.core.i18n import (
     available_languages, detect_system_language, set_language, tr,
 )
 from src.ui.fonts import cinzel_decorative
-from src.ui.theme import THEMES, themed
+from src.ui.theme import THEMES
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import avertir, is_writable_dir
+from src.ui.utils import avertir, is_writable_dir, zone_defilable
 
 log = logging.getLogger(__name__)
 
@@ -56,43 +56,6 @@ class OnboardingAnnule(Exception):
     définitivement (Ludo, 2026-09-23). Ne rien écrire est la seule façon de
     tenir la promesse implicite de la croix : « pas maintenant ».
     """
-
-
-def _defilable(page: QWidget) -> QScrollArea:
-    """Rend une page défilable UNIQUEMENT si son contenu ne tient pas.
-
-    `ScrollBarAsNeeded` ne montre la barre que lorsqu'elle sert, donc les
-    écrans courts sont inchangés. Sans ça, le Choixpeau — quatre questions,
-    seize réponses — débordait de la fenêtre : le texte se chevauchait, et
-    agrandir d'un pixel remettait tout en place d'un coup, parce que c'est
-    le redimensionnement qui déclenchait enfin la passe de mise en page
-    (Ludo, 2026-09-23, capture à l'appui).
-
-    Le fond doit être rendu transparent sur le `QScrollArea` ET sur son
-    viewport : un `QAbstractScrollArea` peint son propre fond, et la page
-    serait posée sur un rectangle clair au milieu du bleu nuit. Même raison
-    pour la barre : sans style, c'est la barre native de Windows, grise et
-    hachurée, qui apparaît au Choixpeau (vu dans l'exe le 2026-09-24). Celle
-    de « Mes années à Poudlard » : bleu nuit, or au survol, sans flèches.
-    """
-    zone = QScrollArea()
-    zone.setWidget(page)
-    zone.setWidgetResizable(True)
-    zone.setFrameShape(QScrollArea.Shape.NoFrame)
-    zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-    zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-    zone.setStyleSheet(themed(
-        "QScrollArea, QScrollArea > QWidget > QWidget"
-        " { background: transparent; border: none; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
-        "QScrollBar::handle:vertical {"
-        "  background: #2c3e6b; border-radius: 5px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #d6a72c; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical"
-        " { background: none; }"))
-    zone.viewport().setAutoFillBackground(False)
-    return zone
 
 
 def _page_titree(libelle: str, taille: int = 20) -> tuple[QWidget, QVBoxLayout]:
@@ -191,7 +154,7 @@ class OnboardingDialog(QDialog):
         layout.setSpacing(12)
 
         self._pages = QStackedWidget()
-        self._pages.addWidget(_defilable(self._build_page_language()))
+        self._pages.addWidget(zone_defilable(self._build_page_language()))
         layout.addWidget(self._pages, stretch=1)
 
         nav = QHBoxLayout()
@@ -247,10 +210,10 @@ class OnboardingDialog(QDialog):
         if self._rest_built:
             return
         self._rest_built = True
-        self._pages.addWidget(_defilable(self._build_page_welcome()))
-        self._pages.addWidget(_defilable(self._build_page_import()))
-        self._pages.addWidget(_defilable(self._build_page_choixpeau()))
-        self._pages.addWidget(_defilable(self._build_page_prefs()))
+        self._pages.addWidget(zone_defilable(self._build_page_welcome()))
+        self._pages.addWidget(zone_defilable(self._build_page_import()))
+        self._pages.addWidget(zone_defilable(self._build_page_choixpeau()))
+        self._pages.addWidget(zone_defilable(self._build_page_prefs()))
 
     def _oublier_les_pages(self) -> None:
         """Jette les écrans 2-5 pour les rebâtir dans une autre langue.

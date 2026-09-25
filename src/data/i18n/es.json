@@ -473,6 +473,9 @@
     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau.": "Ajustado en parte a mano en d3d9.ini: activarlo enciende todo el panel.",
     "Lissage des contours (FXAA)": "Suavizado de bordes (FXAA)",
     "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté.": "Suaviza los dientes de sierra en los bordes de personajes y escenarios (pelo, ropa, tiendas), con un ligero aumento de nitidez.",
-    "Effets d'image (lumière, ombres)": "Efectos de imagen (luz, sombras)"
+    "Effets d'image (lumière, ombres)": "Efectos de imagen (luz, sombras)",
+    "Anticrénelage (MSAA)": "Antialiasing (MSAA)",
+    "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille.": "Suaviza los bordes de los personajes y del escenario calculando varios puntos por píxel. Cuanto mayor es el número, más suave queda y más trabaja la tarjeta gráfica.",
+    "Désactivé": "Desactivado"
   }
 }

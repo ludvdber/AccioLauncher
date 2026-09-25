@@ -473,6 +473,9 @@
     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau.": "Partly set by hand in d3d9.ini: turning it on switches on the whole panel.",
     "Lissage des contours (FXAA)": "Edge smoothing (FXAA)",
     "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté.": "Softens the jagged edges of characters and scenery (hair, clothes, tents), with slight sharpening.",
-    "Effets d'image (lumière, ombres)": "Image effects (lighting, shadows)"
+    "Effets d'image (lumière, ombres)": "Image effects (lighting, shadows)",
+    "Anticrénelage (MSAA)": "Anti-aliasing (MSAA)",
+    "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille.": "Smooths the edges of characters and scenery by working out several points per pixel. The higher the number, the smoother the edges, and the harder the graphics card works.",
+    "Désactivé": "Off"
   }
 }

@@ -35,6 +35,10 @@ _MARQUE_V2 = "Accio.Window"   # section qu'a seul le nouveau correctif
 
 # Choix proposés pour la limite d'images. 0 = aucune.
 LIMITES_FPS = (0, 60, 100, 120, 144)
+# Échantillons du MSAA. Le correctif descend de lui-même à ce que la carte sait
+# faire ; 16 n'est pas proposé : peu de cartes le font, et l'écart avec 8 ne se
+# voit pas.
+ECHANTILLONS_MSAA = (0, 2, 4, 8)
 
 # Le préréglage « déplacement à gauche du clavier + sorts à la souris » :
 # celui que l'ini livre en commentaire (tools/make_ini.py du correctif). Le
@@ -83,6 +87,12 @@ class Reglage:
     libelle: str      # clé tr() ; passer par textes() pour l'afficher
     aide: str         # clé tr()
     defaut: bool = True   # interrupteur : ce que fait le correctif quand la clé manque
+    # Réglage à CHOIX (liste déroulante) : les valeurs proposées, dans l'ordre.
+    # 0 s'affiche `zero` (clé tr()) et vaut aussi pour une clé absente ; les
+    # autres s'affichent avec `format_choix`. Vide : un interrupteur.
+    choix: tuple[int, ...] = ()
+    zero: str = ""
+    format_choix: str = "{}"
 
 
 # L'ordre est celui de l'affichage.
@@ -94,7 +104,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
             "Plafonne le nombre d'images calculées : l'ordinateur chauffe "
-            "moins et fait moins de bruit."),
+            "moins et fait moins de bruit.", choix=LIMITES_FPS, zero="Aucune"),
     Reglage("touches_zqsd", "Accio.Keys", "",
             "Déplacement {} et sorts à la souris",
             "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic "
@@ -102,14 +112,23 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "continuent de marcher, sauf {3}, qui fait reculer."),
     # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
     # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
-    # allumés) l'éteindre les éteindrait tous. Le MSAA ne se propose pas : celui
-    # du correctif ne touche que l'image finale, et HP4 dessine sa scène dans
-    # une cible à lui (relevé le 2026-09-25).
+    # allumés) l'éteindre les éteindrait tous.
     Reglage("lissage", "Accio.Graphics", "FXAA",
             "Lissage des contours (FXAA)",
             "Adoucit les escaliers au bord des personnages et du décor "
             "(cheveux, vêtements, toiles de tente), avec un léger renforcement "
             "de la netteté.", defaut=False),
+    # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
+    # HP4) avec le correctif qui multi-échantillonne la cible de scène du jeu
+    # et garde l'anticrénelage que le jeu éteint. Pas HP5 : avec son SSAO, le
+    # MSAA n'atteint pas la scène (la profondeur lue ne se multi-échantillonne
+    # pas en Direct3D 9).
+    Reglage("anticrenelage", "Accio.Graphics", "Antialiasing",
+            "Anticrénelage (MSAA)",
+            "Lisse les contours des personnages et du décor en calculant "
+            "plusieurs points par pixel. Plus le nombre est grand, plus c'est "
+            "lisse, et plus la carte graphique travaille.",
+            choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×"),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le "
@@ -234,7 +253,7 @@ def _ancienne(ligne: str) -> str:
 class Etat:
     """Ce que porte l'ini pour un réglage.
 
-    `valeur` : bool pour un interrupteur, int pour la limite d'images.
+    `valeur` : bool pour un interrupteur, int pour un réglage à choix.
     `personnalise` : l'ini porte une valeur que l'interface ne sait pas
     représenter (touches choisies à la main) — on l'affiche, on ne l'écrase pas.
     """
@@ -263,12 +282,12 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
         allumees = [_valeur(lignes, reglage.section, cle) not in (None, "0", "") for cle in _PANNEAU]
         return Etat(all(allumees), personnalise=any(allumees) and not all(allumees))
     brut = _valeur(lignes, reglage.section, reglage.cle)
-    if reglage.ident == "limite_fps":
+    if reglage.choix:
         try:
             n = int(brut) if brut is not None else 0
         except ValueError:
             return Etat(0, personnalise=True)
-        return Etat(n, personnalise=n not in LIMITES_FPS)
+        return Etat(n, personnalise=n not in reglage.choix)
     # Interrupteur : le correctif lit 0 = non, tout autre nombre = oui.
     if brut is None:
         return Etat(reglage.defaut)
@@ -287,9 +306,9 @@ def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
         for cle in _PANNEAU:
             if not _poser(lignes, reglage.section, cle, "1" if valeur else "0"):
                 raise ValueError(f"section [{reglage.section}] absente")
-    elif reglage.ident == "limite_fps":
-        if valeur not in LIMITES_FPS:
-            raise ValueError(f"limite {valeur!r} non proposée")
+    elif reglage.choix:
+        if valeur not in reglage.choix:
+            raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
         if not _poser(lignes, reglage.section, reglage.cle, str(int(valeur))):
             raise ValueError(f"section [{reglage.section}] absente")
     else:

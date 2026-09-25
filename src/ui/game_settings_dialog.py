@@ -15,6 +15,7 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -36,8 +37,17 @@ from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
 from src.ui.toggle_switch import toggle_row
+from src.ui.utils import zone_defilable
 
 log = logging.getLogger(__name__)
+
+# Les mesures du cadre : `_ajuster_hauteur` les additionne, la construction les pose.
+_LARGEUR = 430
+_MARGES_H = 22 + 22   # contentsMargins gauche et droite de la fenêtre
+_MARGE_HAUT, _MARGE_BAS = 20, 16
+_ESPACE_TITRE = 18
+_ESPACE_PIED = 8
+_HAUTEUR_PIED = 32    # le bouton « Fermer »
 
 # Réglages annoncés mais pas encore livrés. Ils sont ÉCRITS, pas résumés en
 # « bientôt » : quelqu'un qui cherche la résolution doit reconnaître ce qu'il
@@ -87,17 +97,39 @@ class GameSettingsDialog(QDialog):
             "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"
         ))
         self._build_ui()
-        # Pas de taille fixe : le nombre de langues varie de 1 à 7 selon ce que
-        # l'installation porte réellement. Une hauteur figée couperait les
-        # dernières ou laisserait un grand vide.
-        self.setFixedWidth(430)
-        self.adjustSize()
+        # La hauteur suit le contenu (de 1 à 7 langues, de 0 à 7 réglages), et
+        # l'écran la plafonne : au-delà, les rubriques défilent.
+        self.setFixedWidth(_LARGEUR)
+        self._ajuster_hauteur()
+
+    def _ajuster_hauteur(self) -> None:
+        """Hauteur calculée, pas demandée à `adjustSize`.
+
+        Chaque bloc qui passe à la ligne est mesuré par `heightForWidth` à la
+        largeur RÉELLE : le layout, lui, comptait le titre (deux lignes pour « La
+        Coupe de Feu ») sur une seule, et « Fermer » chevauchait les rubriques
+        (règles 38 et 39).
+        """
+        largeur = _LARGEUR - _MARGES_H
+        corps = self._contenu.layout()
+        corps.activate()
+        voulu = corps.totalHeightForWidth(largeur) if corps.hasHeightForWidth() else corps.sizeHint().height()
+        cadre = _MARGE_HAUT + self._titre.heightForWidth(largeur) + _ESPACE_TITRE + _ESPACE_PIED + _HAUTEUR_PIED + _MARGE_BAS
+        ecran = self.screen() or QGuiApplication.primaryScreen()
+        # La barre de titre de Windows et un peu d'air au-dessus de la barre des tâches.
+        plafond = ecran.availableGeometry().height() - cadre - 60 if ecran is not None else voulu
+        if voulu > plafond:
+            # La barre de défilement prend sa place à droite : le texte s'en écarte.
+            corps.setContentsMargins(0, 0, 18, 0)
+        hauteur = max(120, min(voulu, plafond))
+        self._defile.setFixedHeight(hauteur)
+        self.setFixedHeight(cadre + hauteur)
 
     # ── Construction ──
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(22, 20, 22, 16)
+        layout.setContentsMargins(_MARGES_H // 2, _MARGE_HAUT, _MARGES_H // 2, _MARGE_BAS)
         layout.setSpacing(0)
 
         titre = QLabel(tr("Réglages — {}").format(self.game.name))
@@ -106,21 +138,34 @@ class GameSettingsDialog(QDialog):
         titre.setWordWrap(True)
         titre.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
         layout.addWidget(titre)
-        layout.addSpacing(18)
+        layout.addSpacing(_ESPACE_TITRE)
+        self._titre = titre
 
-        self._section_langue(layout)
-        layout.addSpacing(20)
-        self._section_affichage(layout)
-        layout.addSpacing(18)
-        self._section_fichiers(layout)
-        layout.addSpacing(16)
+        # Les rubriques défilent, le titre et « Fermer » restent : avec les sept
+        # réglages de HP4 et les fichiers du jeu, la fenêtre dépasse 718 px, plus
+        # que ce qu'offre un écran de 768 px une fois la barre des tâches ôtée
+        # (règle 52 : une page qui peut déborder doit pouvoir défiler).
+        self._contenu = QWidget()
+        self._contenu.setStyleSheet("background: transparent;")
+        corps = QVBoxLayout(self._contenu)
+        corps.setContentsMargins(0, 0, 0, 0)
+        corps.setSpacing(0)
+        self._section_langue(corps)
+        corps.addSpacing(20)
+        self._section_affichage(corps)
+        corps.addSpacing(18)
+        self._section_fichiers(corps)
+        corps.addSpacing(16)
+        self._defile = zone_defilable(self._contenu)
+        layout.addWidget(self._defile)
+        layout.addSpacing(_ESPACE_PIED)
 
         pied = QHBoxLayout()
         pied.addStretch()
         fermer = QPushButton(tr("Fermer"))
         fermer.setFont(body_font(12))
         fermer.setCursor(Qt.CursorShape.PointingHandCursor)
-        fermer.setFixedSize(110, 32)
+        fermer.setFixedSize(110, _HAUTEUR_PIED)
         fermer.clicked.connect(self.accept)
         pied.addWidget(fermer)
         layout.addLayout(pied)
@@ -277,7 +322,7 @@ class GameSettingsDialog(QDialog):
             log.warning("Correctif : %s illisible", ini, exc_info=True)
             return
         libelle_txt, aide_txt = reglages_correctif.textes(reglage)
-        if reglage.ident == "limite_fps":
+        if reglage.choix:
             ligne = QWidget()
             ligne.setStyleSheet("background: transparent;")
             h = QHBoxLayout(ligne)
@@ -289,8 +334,8 @@ class GameSettingsDialog(QDialog):
             choix = QComboBox()
             choix.setStyleSheet(themed(_COMBO_STYLE))
             choix.setAccessibleName(libelle_txt)
-            for n in reglages_correctif.LIMITES_FPS:
-                choix.addItem(tr("Aucune") if n == 0 else str(n), n)
+            for n in reglage.choix:
+                choix.addItem(tr(reglage.zero) if n == 0 else reglage.format_choix.format(n), n)
             if etat.personnalise:
                 # Une valeur posée à la main dans l'ini : la montrer telle
                 # quelle plutôt que d'afficher un choix qui n'est pas le sien.
@@ -371,7 +416,7 @@ class GameSettingsDialog(QDialog):
 
     def _on_reglage(self, reglage, valeur, widget) -> None:
         """Écrit AUSSITÔT, comme la langue : pas de bouton « Appliquer »."""
-        if reglage.ident == "limite_fps" and valeur not in reglages_correctif.LIMITES_FPS:
+        if reglage.choix and valeur not in reglage.choix:
             return   # l'entrée « réglé à la main » : c'est déjà ce que porte le fichier
         try:
             reglages_correctif.ecrire(self._ini, reglage, valeur)
