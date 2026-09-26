@@ -129,6 +129,16 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "plusieurs points par pixel. Plus le nombre est grand, plus c'est "
             "lisse, et plus la carte graphique travaille.",
             choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×"),
+    # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
+    # découpés (cheveux, feuilles, herbe) restent en escalier ; le correctif
+    # les suréchantillonne sur carte NVIDIA (mèches de Harry et Ron au choix du
+    # personnage de HP4, pins de HP6). Coût : 1 % low 101 → 76 sur HP6 en
+    # 2560×1440, 94 → 84 sur HP4 (RTX 2060 SUPER). Sans effet sans MSAA.
+    Reglage("anticrenelage_transparence", "Accio.Graphics", "TransparencyAntialiasing",
+            "Cheveux et feuillage lissés",
+            "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les "
+            "feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la "
+            "carte graphique là où il y a beaucoup de feuillage.", defaut=False),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le "

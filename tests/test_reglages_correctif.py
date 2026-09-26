@@ -324,8 +324,22 @@ class TestFenetre:
         choix.setCurrentIndex(choix.findData(4))
         assert b"Antialiasing=4" in ini.read_bytes()
 
+    def test_transparence_eteinte_sans_la_cle_puis_aller_retour(self, ini):
+        """TransparencyAntialiasing : un interrupteur, 0 quand la clé manque
+        (l'ini des archives publiées ne la porte pas), ajouté dans SA section."""
+        r = rc.REGLAGES["anticrenelage_transparence"]
+        assert rc.lire(ini, r) == rc.Etat(False)
+        rc.ecrire(ini, r, True)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert "TransparencyAntialiasing=1" in lignes
+        assert (lignes.index("[Accio.Graphics]") < lignes.index("TransparencyAntialiasing=1")
+                < lignes.index("[Accio.Overlay]"))
+        assert rc.lire(ini, r) == rc.Etat(True)
+        rc.ecrire(ini, r, False)
+        assert rc.lire(ini, r) == rc.Etat(False)
+
     def test_tout_hp4_tient_dans_l_ecran_et_fermer_ne_chevauche_rien(self, qtbot, tmp_path):
-        """Les sept réglages de HP4 et le titre sur deux lignes : la fenêtre ne
+        """Les huit réglages de HP4 et le titre sur deux lignes : la fenêtre ne
         dépasse pas l'écran (les rubriques défilent), et « Fermer » est SOUS la
         zone qui défile. Le layout seul comptait le titre sur une ligne, et le
         bouton recouvrait les rubriques."""
@@ -333,7 +347,7 @@ class TestFenetre:
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         tous = ["arriere_plan", "limite_fps", "touches_zqsd", "lissage", "anticrenelage",
-                "compteur_fps", "panneau_perfs"]
+                "anticrenelage_transparence", "compteur_fps", "panneau_perfs"]
         jeu = GameData.from_dict({
             "id": "hp4", "name": "Harry Potter et la Coupe de Feu", "year": 2005, "description": "d",
             "developer": "d", "executable": "HP4/gof_f.exe", "cover_image": "c.jpg", "fix_settings": tous})

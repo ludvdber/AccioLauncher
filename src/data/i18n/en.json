@@ -476,6 +476,8 @@
     "Effets d'image (lumière, ombres)": "Image effects (lighting, shadows)",
     "Anticrénelage (MSAA)": "Anti-aliasing (MSAA)",
     "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille.": "Smooths the edges of characters and scenery by working out several points per pixel. The higher the number, the smoother the edges, and the harder the graphics card works.",
+    "Cheveux et feuillage lissés": "Smooth hair and leaves",
+    "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la carte graphique là où il y a beaucoup de feuillage.": "With anti-aliasing on, also smooths the tips of hair, leaves and grass. NVIDIA cards only; the graphics card works harder where there are many leaves.",
     "Désactivé": "Off"
   }
 }

@@ -647,6 +647,7 @@
         "touches_zqsd",
         "lissage",
         "anticrenelage",
+        "anticrenelage_transparence",
         "compteur_fps",
         "panneau_perfs"
       ],
@@ -733,6 +734,7 @@
       "executable": "HP5/hp.exe",
       "fix_settings": [
         "arriere_plan",
+        "limite_fps",
         "compteur_fps",
         "panneau_perfs"
       ],
@@ -862,7 +864,9 @@
       "executable": "HP6/hp6.exe",
       "fix_settings": [
         "arriere_plan",
+        "limite_fps",
         "anticrenelage",
+        "anticrenelage_transparence",
         "compteur_fps",
         "panneau_perfs"
       ],
