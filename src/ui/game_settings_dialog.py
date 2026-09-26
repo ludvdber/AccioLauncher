@@ -195,7 +195,7 @@ class GameSettingsDialog(QDialog):
         layout.addWidget(self._titre_rubrique(tr("Langue du jeu")))
         layout.addSpacing(8)
 
-        lr = self.game.language_registry
+        lr = self.game.langues
         courant = self.manager.game_language(self.game)
         proposables = self.manager.langues_disponibles(self.game) if lr else ()
 

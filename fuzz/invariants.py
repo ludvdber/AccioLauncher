@@ -82,6 +82,23 @@ def catalogue(raw: object) -> None:
                 reg(registre.construire_reg(lr.root, lr.key, valeurs, lr.view),
                     len(valeurs))
 
+        lf = jeu.language_files
+        if lf is not None:
+            assert jeu.language_registry is None
+            for langue in lf.languages:
+                assert _JETON_SUR.match(langue.code), langue.code
+                assert langue.requires_file == "" or _est_relatif_sur(langue.requires_file)
+                for source, destination in langue.copies:
+                    assert _est_relatif_sur(source) and _est_relatif_sur(destination)
+                # Une clé INI s'écrit sur UNE ligne, dans la section qu'elle
+                # nomme : aucun saut de ligne, aucun crochet ni « = » dans le
+                # nom, et le fichier est dans Documents ou le dossier du jeu.
+                for p in langue.ini:
+                    assert not re.search(r"[\x00-\x1f\x7f]", p.value + p.file), p
+                    assert not re.search(r"[\x00-\x1f\x7f\[\]=]", p.section + p.key), p
+                    assert p.file.startswith(("%DOCUMENTS%", "%INSTALL_DIR%")), p.file
+                    assert ".." not in p.file.replace("\\", "/").split("/"), p.file
+
     for bande in cat.trailers:
         assert _JETON_SUR.match(bande.game_id) and _JETON_SUR.match(bande.version)
         assert _https(bande.url), bande.url

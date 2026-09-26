@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from src.core.config import Config, get_documents_dir
-from src.core.game_data import GameData
+from src.core.game_data import GameData, IniPatch
 from src.core.post_install import apply_config_files, destination_config
 from src.core.system_checks import check_d3d11_feature_level
 from src.core.win_utils import remove_zone_identifier
@@ -239,60 +239,99 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
     if game.pre_launch is None or not game.pre_launch.ini_patches:
         return
     for patch in game.pre_launch.ini_patches:
-        ini_path = resolve_safe_path(patch.file, game, config)
-        if ini_path is None:
-            continue
-        if not ini_path.exists():
-            log.warning("Fichier INI introuvable, skip : %s", ini_path)
-            continue
         effective_value = patch.value
         if patch.fallback and "D3D11Drv" in patch.value and not check_d3d11_feature_level():
             log.warning("GPU ne supporte pas DX11 feature level 11_0, fallback : %s → %s",
                         patch.value, patch.fallback)
             effective_value = patch.fallback
-        value = substituer_pour_le_jeu(effective_value, game, config)
-        encodage = _encodage_ini()
-        try:
-            with ini_path.open("r", encoding=encodage,
-                               errors=_INI_ERRORS) as f:
-                # Lecture en « newline universel » : toutes les fins de
-                # ligne sont normalisées, ce que suppose le patch ci-dessous.
-                lines = f.read().splitlines(keepends=True)
-            current_section: str | None = None
-            found = False
-            for i, line in enumerate(lines):
-                stripped = line.strip()
-                if stripped.startswith("[") and stripped.endswith("]"):
-                    current_section = stripped[1:-1]
-                    continue
-                if current_section == patch.section:
-                    eq_pos = stripped.find("=")
-                    if eq_pos > 0 and stripped[:eq_pos].rstrip() == patch.key:
-                        lines[i] = f"{patch.key}={value}\n"
-                        found = True
-                        break
-            if not found:
-                section_exists = any(
-                    line.strip() == f"[{patch.section}]" for line in lines
-                )
-                if not section_exists:
-                    if lines and not lines[-1].endswith("\n"):
-                        lines.append("\n")
-                    lines.append(f"[{patch.section}]\n")
-                lines.append(f"{patch.key}={value}\n")
-            # Réécrit dans l'encodage du MOTEUR, pas dans le nôtre : en UTF-8,
-            # UE1 relisait « Frédéric » comme « FrÃ©dÃ©ric » et cherchait ses
-            # sauvegardes dans un dossier inexistant.
-            with ini_path.open("w", encoding=encodage, errors=_INI_ERRORS,
-                               newline=_INI_NEWLINE) as f:
-                f.write("".join(lines))
-            log.info("Patch INI appliqué : [%s] %s=%s dans %s",
-                     patch.section, patch.key, value, ini_path)
-        except (OSError, UnicodeError) as exc:
-            # UnicodeError couvre le cas résiduel d'un chemin impossible à
-            # écrire dans la page de codes ANSI — auquel cas le jeu ne saurait
-            # de toute façon pas le lire : on journalise et on lance quand même.
-            log.warning("Impossible de patcher %s : %s", ini_path, exc)
+        ecrire_cle_ini(patch, game, config, effective_value)
+
+
+def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
+    """La valeur que porte `[section] clé` du fichier du patch, None si absente.
+
+    Même lecture que l'écriture (encodage du moteur, fins de ligne
+    universelles) : ce qu'on compare est exactement ce qu'on écrirait.
+    """
+    ini_path = resolve_safe_path(patch.file, game, config)
+    if ini_path is None:
+        return None
+    try:
+        with ini_path.open("r", encoding=_encodage_ini(), errors=_INI_ERRORS) as f:
+            lignes = f.read().splitlines()
+    except (OSError, UnicodeError):
+        return None
+    section: str | None = None
+    for ligne in lignes:
+        propre = ligne.strip()
+        if propre.startswith("[") and propre.endswith("]"):
+            section = propre[1:-1]
+            continue
+        if section == patch.section:
+            egal = propre.find("=")
+            if egal > 0 and propre[:egal].rstrip() == patch.key:
+                return propre[egal + 1:].strip()
+    return None
+
+
+def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
+                   valeur: str | None = None) -> bool:
+    """Pose `[section] clé=valeur` dans le fichier du patch. True si c'est fait.
+
+    Patche ligne par ligne (sans configparser.write, pour garder commentaires et
+    ordre). Un fichier ABSENT n'est pas créé : c'est le jeu qui l'écrit.
+    """
+    ini_path = resolve_safe_path(patch.file, game, config)
+    if ini_path is None:
+        return False
+    if not ini_path.exists():
+        log.warning("Fichier INI introuvable, skip : %s", ini_path)
+        return False
+    value = substituer_pour_le_jeu(patch.value if valeur is None else valeur, game, config)
+    encodage = _encodage_ini()
+    try:
+        with ini_path.open("r", encoding=encodage,
+                           errors=_INI_ERRORS) as f:
+            # Lecture en « newline universel » : toutes les fins de
+            # ligne sont normalisées, ce que suppose le patch ci-dessous.
+            lines = f.read().splitlines(keepends=True)
+        current_section: str | None = None
+        found = False
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                current_section = stripped[1:-1]
+                continue
+            if current_section == patch.section:
+                eq_pos = stripped.find("=")
+                if eq_pos > 0 and stripped[:eq_pos].rstrip() == patch.key:
+                    lines[i] = f"{patch.key}={value}\n"
+                    found = True
+                    break
+        if not found:
+            section_exists = any(
+                line.strip() == f"[{patch.section}]" for line in lines
+            )
+            if not section_exists:
+                if lines and not lines[-1].endswith("\n"):
+                    lines.append("\n")
+                lines.append(f"[{patch.section}]\n")
+            lines.append(f"{patch.key}={value}\n")
+        # Réécrit dans l'encodage du MOTEUR, pas dans le nôtre : en UTF-8,
+        # UE1 relisait « Frédéric » comme « FrÃ©dÃ©ric » et cherchait ses
+        # sauvegardes dans un dossier inexistant.
+        with ini_path.open("w", encoding=encodage, errors=_INI_ERRORS,
+                           newline=_INI_NEWLINE) as f:
+            f.write("".join(lines))
+        log.info("Patch INI appliqué : [%s] %s=%s dans %s",
+                 patch.section, patch.key, value, ini_path)
+        return True
+    except (OSError, UnicodeError) as exc:
+        # UnicodeError couvre le cas résiduel d'un chemin impossible à
+        # écrire dans la page de codes ANSI — auquel cas le jeu ne saurait
+        # de toute façon pas le lire : on journalise et on lance quand même.
+        log.warning("Impossible de patcher %s : %s", ini_path, exc)
+        return False
 
 
 # Ce que Windows raconte aux jeux sur la taille des pixels.

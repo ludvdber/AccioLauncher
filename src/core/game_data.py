@@ -209,6 +209,107 @@ class LanguageRegistry:
         return tuple(lg.code for lg in self.languages)
 
 
+@dataclass(frozen=True, slots=True)
+class LangueFichiers:
+    """Une langue d'un jeu qui la lit dans ses FICHIERS, pas dans le registre.
+
+    HP1 (Unreal Engine 1) : `Language=fre|int` dans `HP.ini` ET dans
+    `System\\Default.ini` — avec `Running.ini` présent, c'est Default.ini qui
+    décide —, plus l'écran de démarrage `Help\\splash<langue>.bmp`, que
+    l'archive n'a qu'en français : sans lui, « Assertion failed:
+    Bitmap.LoadFile » au démarrage. VU en jeu le 2026-09-26 (essais E2 à E7).
+    """
+    code: str
+    label: str
+    ini: tuple[IniPatch, ...]
+    # (source, destination) relatifs au dossier d'installation, comme
+    # `requires_file` ; copiés seulement si la destination MANQUE.
+    copies: tuple[tuple[str, str], ...] = ()
+    requires_file: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class LanguageFiles:
+    """Pendant de `LanguageRegistry` pour les jeux qui lisent leur langue dans
+    des fichiers : même surface (`languages`, `get`, `codes`), donc le
+    sélecteur et la fiche n'ont pas à savoir d'où vient la langue. Pas de
+    registre : ni élévation, ni invite UAC, et ça marche tel quel sous Wine."""
+    languages: tuple[LangueFichiers, ...]
+
+    def get(self, code: str) -> LangueFichiers | None:
+        return next((lg for lg in self.languages if lg.code == code), None)
+
+    @property
+    def codes(self) -> tuple[str, ...]:
+        return tuple(lg.code for lg in self.languages)
+
+
+# Section, clé et valeur d'un INI s'écrivent sur UNE ligne : un saut de ligne
+# (ou tout caractère de contrôle) venu du catalogue distant ajouterait des
+# lignes au fichier du jeu. Crochets et « = » sont refusés dans section/clé
+# pour la même raison : ils changeraient la structure du fichier.
+_INI_INTERDIT_NOM = re.compile(r"[\x00-\x1f\x7f\[\]=]")
+_INI_INTERDIT_VALEUR = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _parse_language_files(data) -> "LanguageFiles | None":
+    """Lit le bloc `language_files`, ou None s'il est absent ou douteux.
+
+    Tout ou rien, comme `language_registry` : une langue à moitié posée donne
+    un jeu à moitié traduit — ou qui ne démarre pas (le splash de HP1).
+    """
+    if not isinstance(data, dict):
+        return None
+    brut = data.get("languages")
+    if not isinstance(brut, dict) or not brut:
+        return None
+    langues: list[LangueFichiers] = []
+    for code, entree in brut.items():
+        if not isinstance(code, str) or not _JETON_SUR.match(code) or not isinstance(entree, dict):
+            return None
+        patches = entree.get("ini")
+        if not isinstance(patches, list) or not patches:
+            return None
+        ini: list[IniPatch] = []
+        for p in patches:
+            if not isinstance(p, dict):
+                return None
+            champs = [p.get(k) for k in ("file", "section", "key", "value")]
+            if not all(isinstance(c, str) and c for c in champs):
+                return None
+            fichier, section, cle, valeur = champs
+            if not fichier.startswith(("%DOCUMENTS%", "%INSTALL_DIR%")) \
+                    or ".." in fichier.replace("\\", "/").split("/") \
+                    or _INI_INTERDIT_VALEUR.search(fichier) \
+                    or _INI_INTERDIT_NOM.search(section) or _INI_INTERDIT_NOM.search(cle) \
+                    or _INI_INTERDIT_VALEUR.search(valeur):
+                log.warning("Bloc language_files ignoré (patch INI douteux) : %r", p)
+                return None
+            ini.append(IniPatch(file=fichier, section=section, key=cle, value=valeur))
+        copies: list[tuple[str, str]] = []
+        brut_copies = entree.get("copy", [])
+        if not isinstance(brut_copies, list):
+            return None
+        for c in brut_copies:
+            if not isinstance(c, dict):
+                return None
+            src, dst = c.get("from"), c.get("to")
+            if not (isinstance(src, str) and isinstance(dst, str)
+                    and _est_relatif_sur(src) and _est_relatif_sur(dst)):
+                log.warning("Bloc language_files ignoré (copie douteuse) : %r", c)
+                return None
+            copies.append((src, dst))
+        temoin = entree.get("requires_file", "")
+        if not isinstance(temoin, str) or (temoin and not _est_relatif_sur(temoin)):
+            return None
+        label = entree.get("label")
+        if not isinstance(label, str) or not label.strip():
+            label = code
+        langues.append(LangueFichiers(code=code, label=label, ini=tuple(ini),
+                                      copies=tuple(copies), requires_file=temoin))
+    return LanguageFiles(languages=tuple(langues))
+
+
 def _est_relatif_sur(chemin: str) -> bool:
     r"""True si ce chemin de catalogue peut être joint au dossier d'un jeu.
 
@@ -558,6 +659,9 @@ class GameData:
     # None quand le jeu n'en propose pas : c'est le cas de sept jeux sur huit,
     # et le sélecteur ne doit alors apparaître nulle part.
     language_registry: LanguageRegistry | None = None
+    # Même chose pour un jeu qui lit sa langue dans ses FICHIERS (HP1). Un jeu
+    # déclare l'un OU l'autre ; `langues` rend celui qui existe.
+    language_files: LanguageFiles | None = None
     # Ce jeu doit-il être lancé en se déclarant conscient du DPI ?
     #
     # Windows VIRTUALISE un programme qui ne l'est pas : sur un écran mis à
@@ -618,6 +722,19 @@ class GameData:
     # mardi, sans republier l'exécutable. Un identifiant que ce lanceur ne
     # connaît pas est ignoré à l'affichage.
     fix_settings: tuple[str, ...] = ()
+
+    @property
+    def langues(self) -> "LanguageRegistry | LanguageFiles | None":
+        """Le bloc de langues du jeu, registre ou fichiers : ce que voit l'UI."""
+        return self.language_registry or self.language_files
+
+    @property
+    def langue_par_fichiers(self) -> bool:
+        """True si la langue passe par les FICHIERS du jeu. Le registre, déclaré,
+        l'emporte toujours — la même règle que `langues`, en un seul endroit
+        (un test a greffé un registre sur HP1, qui a aussi ses fichiers : tester
+        `language_files` d'abord partait sur le mauvais chemin)."""
+        return self.language_registry is None and self.language_files is not None
 
     @property
     def current_download(self) -> GameVersion | None:
@@ -709,6 +826,8 @@ class GameData:
             warning=_loc(data, "warning", ""),
             warning_url=_url_aide_valide(data.get("warning_url", "")),
             language_registry=_parse_language_registry(data.get("language_registry")),
+            language_files=(None if data.get("language_registry") is not None
+                            else _parse_language_files(data.get("language_files"))),
             # `is True` et non `bool(...)` : le catalogue est DISTANT, et une
             # chaîne non vide ou un nombre y suffiraient à activer un réglage
             # qui change la façon dont on lance un exécutable.

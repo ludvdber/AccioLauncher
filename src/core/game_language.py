@@ -21,13 +21,21 @@ délèguent — aucun appelant ne change.
 """
 
 import logging
+import shutil
 
 from src.core import game_registry as registre
 from src.core.game_data import GameData
 from src.core.i18n import get_language
-from src.core.pre_launch import substituer_pour_le_jeu
+from src.core.pre_launch import ecrire_cle_ini, lire_cle_ini, substituer_pour_le_jeu
 
 log = logging.getLogger(__name__)
+
+# Deux façons de porter une langue, une seule surface pour l'UI :
+# - `language_registry` (HP7) : des valeurs de registre, parfois sous HKLM ;
+# - `language_files` (HP1) : des clés INI et des fichiers à recopier — ni
+#   registre, ni élévation, et identique sous Wine.
+# Les fonctions ci-dessous lisent `game.langues` quand la règle vaut pour les
+# deux, et bifurquent seulement pour lire et écrire.
 
 
 def langues_disponibles(game: GameData, config) -> tuple:
@@ -46,7 +54,7 @@ def langues_disponibles(game: GameData, config) -> tuple:
     Une langue sans `requires_file` est toujours proposée : le contrôle est une
     option du catalogue, pas une obligation.
     """
-    lr = game.language_registry
+    lr = game.langues
     if lr is None:
         return ()
     racine = config.install_path
@@ -64,13 +72,18 @@ def langues_disponibles(game: GameData, config) -> tuple:
     return tuple(gardees)
 
 
-def detecter(game: GameData) -> str | None:
-    """Langue actuellement POSÉE dans le registre, None si indéterminable.
+def detecter(game: GameData, config=None) -> str | None:
+    """Langue actuellement POSÉE (registre ou fichiers), None si indéterminable.
 
     La lecture est gratuite (aucun privilège) et c'est la seule source qui dise
     la vérité : le jeu peut avoir été installé par son installeur d'origine, ou
     l'utilisateur avoir changé la clé à la main.
+
+    Pour une langue portée par des fichiers, `config` est nécessaire (chemins
+    du jeu) ; sans lui, rien n'est lu.
     """
+    if game.langue_par_fichiers:
+        return _detecter_fichiers(game, config) if config is not None else None
     lr = game.language_registry
     if lr is None:
         return None
@@ -98,12 +111,13 @@ def resoudre(game: GameData, config) -> str | None:
        langue à l'onboarding, et de toute façon aucun défaut figé ne peut
        convenir tant qu'il n'est pas modifiable.
     """
-    lr = game.language_registry
+    lr = game.langues
     # Sans registre atteignable (Linux sans préfixe prêt), aucune langue n'est « celle du jeu » :
     # rien ne lit ni n'écrit ce réglage ici. Retourner None éteint le sélecteur
     # plutôt que d'afficher un choix sans effet — un réglage qui ne règle rien
-    # est pire que pas de réglage.
-    if not registre.disponible():
+    # est pire que pas de réglage. Une langue portée par des FICHIERS n'en
+    # dépend pas.
+    if game.language_registry is not None and not registre.disponible():
         return None
     if lr is None or not lr.languages:
         return None
@@ -114,7 +128,7 @@ def resoudre(game: GameData, config) -> str | None:
     choisi = config.game_language.get(game.id)
     if choisi and lr.get(choisi) is not None:
         return choisi
-    detecte = detecter(game)
+    detecte = detecter(game, config)
     if detecte is not None:
         return detecte
     possibles = langues_disponibles(game, config) or lr.languages
@@ -126,9 +140,9 @@ def resoudre(game: GameData, config) -> str | None:
 
 def memoriser(game: GameData | None, code: str, config) -> None:
     """Enregistre le choix de langue d'un jeu (persisté en config)."""
-    if game is None or game.language_registry is None:
+    if game is None or game.langues is None:
         return
-    if game.language_registry.get(code) is None:
+    if game.langues.get(code) is None:
         log.warning("Langue %r non proposée par %s — ignorée",
                     code, game.id if game else "?")
         return
@@ -175,7 +189,11 @@ def appliquer(game: GameData, config, code: str | None = None,
 
     `confirmer(ruche, cle, valeurs)` est transmis tel quel : c'est l'UI qui
     prévient, et seulement quand il y a vraiment quelque chose à écrire.
+    Une langue portée par des fichiers n'appelle jamais `confirmer` : rien ne
+    sort du dossier du jeu et de sa configuration dans Documents.
     """
+    if game.langue_par_fichiers:
+        return _appliquer_fichiers(game, config, code)
     lr = game.language_registry
     if lr is None:
         return True
@@ -189,3 +207,59 @@ def appliquer(game: GameData, config, code: str | None = None,
         return True
     return registre.ecrire_valeurs(lr.root, lr.key, valeurs, lr.view,
                                    confirmer=confirmer)
+
+
+# ─── Langue portée par des fichiers (HP1) ───
+
+def _detecter_fichiers(game: GameData, config) -> str | None:
+    """La langue dont TOUTES les clés INI portent déjà la valeur, sinon None.
+
+    Toutes, et pas la première : sur HP1, `HP.ini` et `Default.ini` doivent
+    dire la même chose (avec `Running.ini` présent, c'est Default.ini qui
+    décide), et un fichier sur deux ne fait pas une langue. La casse n'est pas
+    comparée : le moteur écrit « fre », un joueur peut avoir écrit « FRE ».
+    """
+    for langue in game.language_files.languages:
+        valeurs = [lire_cle_ini(p, game, config) for p in langue.ini]
+        if all(v is not None and v.casefold() == p.value.casefold()
+               for v, p in zip(valeurs, langue.ini)):
+            return langue.code
+    return None
+
+
+def _appliquer_fichiers(game: GameData, config, code: str | None) -> bool:
+    """Pose une langue dans les fichiers du jeu. True si elle y est.
+
+    Les COPIES d'abord (l'écran de démarrage anglais de HP1) : si l'une manque,
+    on n'écrit pas la langue — HP1 en `int` sans `splashint.bmp` s'arrête au
+    démarrage sur « Assertion failed: Bitmap.LoadFile » (vu, essai E4). Mieux
+    vaut un jeu qui démarre dans l'ancienne langue. Une copie existante n'est
+    jamais écrasée, et seule une clé qui DIFFÈRE est réécrite.
+    """
+    code = code or resoudre(game, config)
+    langue = game.language_files.get(code) if code else None
+    if langue is None:
+        return True
+    racine = config.install_path.resolve()
+    for source, destination in langue.copies:
+        src = (config.install_path / source.replace("\\", "/")).resolve()
+        dst = (config.install_path / destination.replace("\\", "/")).resolve()
+        if not (src.is_relative_to(racine) and dst.is_relative_to(racine)):
+            log.warning("Copie de langue hors du dossier des jeux, refusée : %s → %s", src, dst)
+            return False
+        if dst.exists():
+            continue
+        try:
+            shutil.copyfile(src, dst)
+            log.info("Langue %s de %s : %s copié en %s", code, game.id, src.name, dst.name)
+        except OSError as exc:
+            log.warning("Langue %s de %s non posée, copie impossible (%s) : %s",
+                        code, game.id, exc, dst)
+            return False
+    ok = True
+    for patch in langue.ini:
+        actuel = lire_cle_ini(patch, game, config)
+        if actuel is not None and actuel.casefold() == patch.value.casefold():
+            continue
+        ok = ecrire_cle_ini(patch, game, config) and ok
+    return ok

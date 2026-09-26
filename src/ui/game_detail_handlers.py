@@ -588,7 +588,7 @@ def on_language_clicked(view: "GameDetailView") -> None:
     revérifie de toute façon, et n'élève que si ça a réellement bougé.
     """
     game = view.game
-    if game is None or game.language_registry is None:
+    if game is None or game.langues is None:
         return
     courant = view.manager.game_language(game)
     # Seules les langues que l'installation sait RÉELLEMENT faire. Une langue
@@ -621,7 +621,7 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
     game = view.game
     if game is None or code == view.manager.game_language(game):
         return False
-    if game.language_registry is None:
+    if game.langues is None:
         return False
     # Appliquer D'ABORD, persister ENSUITE. Enregistrer un choix que le registre
     # n'a pas pris ferait annoncer à la fiche une langue que le jeu n'a pas, et
@@ -658,7 +658,7 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
         return False
     if pose:
         view.manager.set_game_language(game.id, code)
-        langue = game.language_registry.get(code)
+        langue = game.langues.get(code)
         etiquette = langue.label if langue is not None else code
         view.notify.emit(tr("Langue du jeu : {}").format(etiquette))
         view.set_game(game)
@@ -667,7 +667,11 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
         # Échec = UAC refusé, ou le registre n'a pas pris. Une vraie erreur,
         # donc un modal : le choix est enregistré mais SANS effet, et un toast
         # qui s'efface laisserait l'utilisateur croire que c'est fait.
-        if sys.platform == "win32":
+        if game.langue_par_fichiers:
+            texte = tr("La langue n'a pas pu être écrite dans les fichiers du jeu.\n\n"
+                       "Le jeu démarrera dans la langue actuellement en place. Le "
+                       "journal du launcher dit ce qui s'est passé.")
+        elif sys.platform == "win32":
             texte = tr("La langue n'a pas pu être écrite dans le registre.\n\n"
                        "Ce réglage demande une autorisation administrateur. Le jeu "
                        "démarrera dans la langue actuellement en place.")

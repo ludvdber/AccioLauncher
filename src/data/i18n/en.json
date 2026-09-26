@@ -242,6 +242,7 @@
     "Langue du jeu : {}": "Game language: {}",
     "Langue du jeu": "Game language",
     "La langue n'a pas pu être écrite dans le registre.\n\nCe réglage demande une autorisation administrateur. Le jeu démarrera dans la langue actuellement en place.": "The language could not be written to the registry.\n\nThis setting needs administrator permission. The game will start in the language currently set.",
+    "La langue n'a pas pu être écrite dans les fichiers du jeu.\n\nLe jeu démarrera dans la langue actuellement en place. Le journal du launcher dit ce qui s'est passé.": "The language could not be written to the game's files.\n\nThe game will start in the language currently in place. The launcher log says what happened.",
     "Ce jeu n'est installé que dans une seule langue.": "This game is installed in one language only.",
     "Réglage du jeu": "Game setting",
     "{jeu} enregistre ses réglages dans le registre de Windows.\n\nLe launcher va écrire ceci dans {cle} :\n\n{valeurs}": "{jeu} stores its settings in the Windows registry.\n\nThe launcher will write this to {cle}:\n\n{valeurs}",

@@ -323,7 +323,8 @@ class GameManager:
         # après son clic, pas après trois secondes de patches silencieux. Un
         # échec (UAC refusé) ne bloque PAS le lancement : le jeu démarrera dans
         # la langue déjà en place, ce qui vaut mieux que de ne pas démarrer.
-        if not self.apply_game_language(game, confirmer=confirmer):
+        if game.language_registry is not None \
+                and not self.apply_game_language(game, confirmer=confirmer):
             log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
             if avertir is not None:
                 avertir()
@@ -336,6 +337,15 @@ class GameManager:
         # régénérerait depuis Default.ini, assistant de configuration compris.
         restaurer_configs_manquantes(game, self.config)
         apply_ini_patches(game, self.config)
+        # Une langue portée par des FICHIERS (HP1) se pose APRÈS la
+        # restauration : un HP.ini disparu serait recopié depuis l'archive, en
+        # français, par-dessus la langue choisie. Rien à demander ici (aucun
+        # registre), mais un échec se dit comme pour le registre.
+        if game.langue_par_fichiers \
+                and not self.apply_game_language(game):
+            log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
+            if avertir is not None:
+                avertir()
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}
@@ -412,8 +422,8 @@ class GameManager:
         return langue.langues_disponibles(game, self.config)
 
     def detect_game_language(self, game: GameData) -> str | None:
-        """Langue actuellement posée dans le registre, None si indéterminable."""
-        return langue.detecter(game)
+        """Langue actuellement posée (registre ou fichiers), None si indéterminable."""
+        return langue.detecter(game, self.config)
 
     def game_language(self, game: GameData) -> str | None:
         """Langue de ce jeu : choix explicite → registre → interface → catalogue."""

@@ -97,18 +97,44 @@ def racines() -> dict[str, Path | None]:
 
 
 def dossier(spec: Sauvegardes) -> Path | None:
-    """Le premier dossier déclaré qui existe réellement."""
+    """Le dossier où l'on a joué en DERNIER, parmi ceux que déclare le catalogue.
+
+    HP7 nomme le sien d'après la langue JOUÉE (« … – Deuxième Partie »,
+    « … – Parte 2 »…, relevé dans les exe) : qui a changé de langue en a
+    plusieurs. Le premier motif qui existe n'était donc pas forcément celui de
+    la partie en cours. On prend le dossier qui porte la sauvegarde la plus
+    récemment écrite ; sans sauvegarde nulle part, le premier trouvé.
+    """
     base = racines().get(spec.racine)
     if base is None or not base.is_dir():
         return None
+    candidats: list[Path] = []
     for motif in spec.dossiers:
         try:
             trouves = sorted(p for p in base.glob(motif) if p.is_dir())
         except (OSError, ValueError):
             continue
-        if trouves:
-            return trouves[0]
-    return None
+        candidats.extend(p for p in trouves if p not in candidats)
+    if len(candidats) <= 1:
+        return candidats[0] if candidats else None
+    # max() garde le PREMIER des ex aequo : l'ordre du catalogue départage.
+    return max(candidats, key=lambda d: _derniere_ecriture(d, spec))
+
+
+def _derniere_ecriture(racine: Path, spec: Sauvegardes) -> float:
+    """La date de la sauvegarde la plus récente du dossier, 0 s'il n'en a pas."""
+    plus_recente = 0.0
+    try:
+        for n, chemin in enumerate(racine.glob(spec.fichiers)):
+            if n >= _MAX_FICHIERS:
+                break
+            try:
+                plus_recente = max(plus_recente, chemin.stat().st_mtime)
+            except OSError:
+                continue
+    except (OSError, ValueError):
+        pass
+    return plus_recente
 
 
 def releve(spec: Sauvegardes | None) -> dict[str, Etat]:

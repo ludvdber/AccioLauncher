@@ -66,6 +66,39 @@ class TestReleve:
         assert sauvegardes.releve(HP1) == {}      # dossier absent
 
 
+HP7B = Sauvegardes(racine="localappdata",
+                   dossiers=("Electronic Arts/Harry Potter*Deuxi*me Partie",
+                             "Electronic Arts/Harry Potter*Part* 2"),
+                   fichiers="auto.sav")
+
+
+class TestPlusieursLangues:
+    """HP7 range ses sauvegardes sous le titre de la langue JOUÉE : qui a joué
+    en français puis en espagnol a deux dossiers (cas réel du 2026-09-26)."""
+
+    FR = "Electronic Arts/Harry Potter et les Reliques de la Mort (TM) – Deuxième Partie"
+    ES = "Electronic Arts/Harry Potter y las Reliquias de la Muerte (TM) – Parte 2"
+
+    def test_le_dossier_de_la_derniere_partie_l_emporte(self):
+        appdata = sauvegardes.racines()["localappdata"]
+        _poser(appdata, f"{self.FR}/auto.sav", datetime(2026, 9, 1))
+        _poser(appdata, f"{self.ES}/auto.sav", datetime(2026, 9, 20))
+        assert sauvegardes.dossier(HP7B) == appdata / self.ES
+
+    def test_un_dossier_sans_sauvegarde_ne_prend_pas_la_place(self):
+        """Le cas de la machine relevée : l'espagnol n'a qu'un `config.txt`."""
+        appdata = sauvegardes.racines()["localappdata"]
+        _poser(appdata, f"{self.FR}/auto.sav", datetime(2026, 9, 1))
+        _poser(appdata, f"{self.ES}/config.txt", datetime(2026, 9, 25))
+        assert sauvegardes.dossier(HP7B) == appdata / self.FR
+
+    def test_sans_aucune_sauvegarde_l_ordre_du_catalogue_decide(self):
+        appdata = sauvegardes.racines()["localappdata"]
+        _poser(appdata, f"{self.ES}/config.txt", datetime(2026, 9, 25))
+        _poser(appdata, f"{self.FR}/config.txt", datetime(2026, 9, 1))
+        assert sauvegardes.dossier(HP7B) == appdata / self.FR
+
+
 class TestNumeros:
     def test_numerote_a_partir_du_premier_declare(self):
         assert sauvegardes.numero("Save0.usa", HP1, 2) == 1

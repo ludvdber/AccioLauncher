@@ -266,6 +266,52 @@
         "files": "Save*.usa",
         "first": 0
       },
+      "language_files": {
+        "languages": {
+          "fr": {
+            "label": "Français",
+            "requires_file": "HP1/Sounds/AllDialog.fre_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "fre"
+              },
+              {
+                "file": "%INSTALL_DIR%\\System\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "fre"
+              }
+            ]
+          },
+          "en": {
+            "label": "English",
+            "requires_file": "HP1/Sounds/AllDialog.uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "int"
+              },
+              {
+                "file": "%INSTALL_DIR%\\System\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "int"
+              }
+            ],
+            "copy": [
+              {
+                "from": "HP1/Help/Splash0.bmp",
+                "to": "HP1/Help/splashint.bmp"
+              }
+            ]
+          }
+        }
+      },
       "display_locked": true,
       "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
     },
@@ -1095,7 +1141,10 @@
         "root": "localappdata",
         "folders": [
           "Electronic Arts/Harry Potter*Premi*re Partie",
-          "Electronic Arts/Harry Potter*Part* 1"
+          "Electronic Arts/Harry Potter*Part* 1",
+          "Electronic Arts/Harry Potter*Teil 1",
+          "Electronic Arts/Harry Potter*cz??? 1",
+          "Electronic Arts/Гарри Поттер*Часть первая"
         ],
         "files": "auto.sav"
       }
@@ -1277,7 +1326,10 @@
         "root": "localappdata",
         "folders": [
           "Electronic Arts/Harry Potter*Deuxi*me Partie",
-          "Electronic Arts/Harry Potter*Part* 2"
+          "Electronic Arts/Harry Potter*Part* 2",
+          "Electronic Arts/Harry Potter*Teil 2",
+          "Electronic Arts/Harry Potter*cz??? 2",
+          "Electronic Arts/Гарри Поттер*Часть вторая"
         ],
         "files": "auto.sav"
       }
