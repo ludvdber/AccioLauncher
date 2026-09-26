@@ -656,8 +656,8 @@ class GameData:
     warning: str = ""
     warning_url: str = ""   # « En savoir plus » — https uniquement, validé au parsing
     # Langues proposées par le jeu + ce qu'elles écrivent dans le registre.
-    # None quand le jeu n'en propose pas : c'est le cas de sept jeux sur huit,
-    # et le sélecteur ne doit alors apparaître nulle part.
+    # None quand le jeu n'en propose pas par le registre (seuls HP7a et HP7b le
+    # font) ; sans aucun bloc de langue, le sélecteur n'apparaît nulle part.
     language_registry: LanguageRegistry | None = None
     # Même chose pour un jeu qui lit sa langue dans ses FICHIERS (HP1). Un jeu
     # déclare l'un OU l'autre ; `langues` rend celui qui existe.
