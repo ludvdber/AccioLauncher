@@ -39,6 +39,16 @@ LIMITES_FPS = (0, 60, 100, 120, 144)
 # faire ; 16 n'est pas proposé : peu de cartes le font, et l'écart avec 8 ne se
 # voit pas.
 ECHANTILLONS_MSAA = (0, 2, 4, 8)
+# Langues du menu de démarrage de HP6 (les 16 qu'il propose), écrites dans leur
+# propre langue comme dans le menu du jeu : un nom de langue ne se traduit pas
+# pour celui qui la cherche. « auto » (le défaut du correctif) est la langue de
+# Windows ramenée à la variante que le jeu connaît.
+LANGUES_MENU = (
+    ("auto", ""), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("de", "Deutsch"),
+    ("it", "Italiano"), ("nl", "Nederlands"), ("pt", "Português"), ("pt-br", "Português (Brasil)"),
+    ("pl", "Polski"), ("ru", "Русский"), ("sv", "Svenska"), ("da", "Dansk"), ("fi", "Suomi"),
+    ("no", "Norsk"), ("cs", "Čeština"), ("hu", "Magyar"),
+)
 
 # Le préréglage « déplacement à gauche du clavier + sorts à la souris » :
 # celui que l'ini livre en commentaire (tools/make_ini.py du correctif). Le
@@ -88,11 +98,16 @@ class Reglage:
     aide: str         # clé tr()
     defaut: bool = True   # interrupteur : ce que fait le correctif quand la clé manque
     # Réglage à CHOIX (liste déroulante) : les valeurs proposées, dans l'ordre.
-    # 0 s'affiche `zero` (clé tr()) et vaut aussi pour une clé absente ; les
-    # autres s'affichent avec `format_choix`. Vide : un interrupteur.
-    choix: tuple[int, ...] = ()
+    # La PREMIÈRE (0 d'ordinaire ; 1 pour un facteur) s'affiche `zero` (clé
+    # tr()) et vaut aussi pour une clé absente ; les autres s'affichent avec
+    # `format_choix`. Vide : un interrupteur.
+    # Des choix TEXTUELS (une langue) portent leur libellé : `noms_choix`,
+    # (valeur, libellé) ; le premier vaut pour une clé absente et s'affiche
+    # `zero`.
+    choix: tuple = ()
     zero: str = ""
     format_choix: str = "{}"
+    noms_choix: tuple[tuple[str, str], ...] = ()
 
 
 # L'ordre est celui de l'affichage.
@@ -139,6 +154,26 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les "
             "feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la "
             "carte graphique là où il y a beaucoup de feuillage.", defaut=False),
+    # HP5, vu en jeu le 2026-09-26 : son occlusion ambiante lit la profondeur
+    # comme une texture, ce qui ferme le MSAA à la scène ; le suréchantillonnage
+    # (image calculée en ×2 puis réduite) lisse quand même, et affine textures
+    # et contours lointains (tapisseries, vitraux, échiquier). Coût mesuré en
+    # 2560×1440, RTX 2060 SUPER : moyenne 120 → 84, 1 % low 82 → 39. La première
+    # valeur (1) est l'« éteint » du correctif.
+    Reglage("surechantillonnage", "Accio.Graphics", "SSAAFactor",
+            "Suréchantillonnage (image plus fine)",
+            "Calcule l'image en deux fois plus grand puis la réduit : contours, "
+            "textures et détails lointains nettement plus fins. Demande beaucoup "
+            "à la carte graphique : pour les PC puissants.",
+            choix=(1, 2), zero="Désactivé", format_choix="×{}"),
+    # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
+    # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
+    # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
+    # Un choix d'artiste du jeu : allumé par défaut, comme livré.
+    Reglage("brouillard", "Accio.Game", "DistanceFog",
+            "Brouillard lointain",
+            "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : "
+            "collines et paysages nets et contrastés, la scène un peu plus sombre."),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le "
@@ -148,7 +183,29 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Temps par image et son graphe, processeur, carte graphique, "
             "mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un "
             "benchmark, enregistré dans le dossier « benchmarks » du jeu.", defaut=False),
+    # HP6, vu en jeu le 2026-09-26 : son menu de langue s'ouvre sur la langue
+    # de Windows, mais le jeu ne connaît qu'une variante de chaque langue — un
+    # Windows en français de Belgique le faisait partir en ANGLAIS (le menu se
+    # valide seul au bout de 15 s). « auto » : menu sur Français ; « es » :
+    # sur Español. HP4 et HP5 ne demandent rien à Windows : pas pour eux.
+    Reglage("langue_menu", "Accio.Game", "Language",
+            "Langue au démarrage",
+            "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul "
+            "après quelques secondes. « Celle de Windows » corrige un défaut du jeu : "
+            "un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, "
+            "le faisait démarrer en anglais.",
+            choix=tuple(v for v, _ in LANGUES_MENU), zero="Celle de Windows",
+            noms_choix=LANGUES_MENU),
 )}
+
+
+def libelle_choix(reglage: Reglage, valeur) -> str:
+    """Ce que la liste déroulante affiche pour une valeur."""
+    if reglage.noms_choix:
+        if valeur == reglage.choix[0]:
+            return tr(reglage.zero)
+        return dict(reglage.noms_choix).get(valeur, str(valeur))
+    return tr(reglage.zero) if valeur == reglage.choix[0] else reglage.format_choix.format(valeur)
 
 
 def textes(reglage: Reglage) -> tuple[str, str]:
@@ -292,9 +349,13 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
         allumees = [_valeur(lignes, reglage.section, cle) not in (None, "0", "") for cle in _PANNEAU]
         return Etat(all(allumees), personnalise=any(allumees) and not all(allumees))
     brut = _valeur(lignes, reglage.section, reglage.cle)
+    if reglage.noms_choix:
+        # Le correctif compare sans tenir compte de la casse.
+        v = brut.lower() if brut else reglage.choix[0]
+        return Etat(v, personnalise=v not in reglage.choix)
     if reglage.choix:
         try:
-            n = int(brut) if brut is not None else 0
+            n = int(brut) if brut is not None else reglage.choix[0]
         except ValueError:
             return Etat(0, personnalise=True)
         return Etat(n, personnalise=n not in reglage.choix)
@@ -319,7 +380,8 @@ def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
     elif reglage.choix:
         if valeur not in reglage.choix:
             raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
-        if not _poser(lignes, reglage.section, reglage.cle, str(int(valeur))):
+        texte = str(valeur) if reglage.noms_choix else str(int(valeur))
+        if not _poser(lignes, reglage.section, reglage.cle, texte):
             raise ValueError(f"section [{reglage.section}] absente")
     else:
         if not _poser(lignes, reglage.section, reglage.cle, "1" if valeur else "0"):

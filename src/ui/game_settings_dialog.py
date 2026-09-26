@@ -335,7 +335,7 @@ class GameSettingsDialog(QDialog):
             choix.setStyleSheet(themed(_COMBO_STYLE))
             choix.setAccessibleName(libelle_txt)
             for n in reglage.choix:
-                choix.addItem(tr(reglage.zero) if n == 0 else reglage.format_choix.format(n), n)
+                choix.addItem(reglages_correctif.libelle_choix(reglage, n), n)
             if etat.personnalise:
                 # Une valeur posée à la main dans l'ini : la montrer telle
                 # quelle plutôt que d'afficher un choix qui n'est pas le sien.

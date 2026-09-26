@@ -478,6 +478,13 @@
     "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille.": "Suaviza los bordes de los personajes y del escenario calculando varios puntos por píxel. Cuanto mayor es el número, más suave queda y más trabaja la tarjeta gráfica.",
     "Cheveux et feuillage lissés": "Pelo y follaje suavizados",
     "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la carte graphique là où il y a beaucoup de feuillage.": "Con el antialiasing activado, suaviza también las puntas del pelo, las hojas y la hierba. Solo tarjetas NVIDIA; la tarjeta gráfica trabaja más donde hay mucho follaje.",
+    "Langue au démarrage": "Idioma al iniciar",
+    "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "El idioma con el que se abre el menú del juego, que lo elige solo tras unos segundos. «El de Windows» corrige un fallo del juego: un Windows en francés de Bélgica, Suiza o Canadá, o en español, lo hacía arrancar en inglés.",
+    "Celle de Windows": "El de Windows",
+    "Suréchantillonnage (image plus fine)": "Supermuestreo (imagen más fina)",
+    "Calcule l'image en deux fois plus grand puis la réduit : contours, textures et détails lointains nettement plus fins. Demande beaucoup à la carte graphique : pour les PC puissants.": "Calcula la imagen al doble de tamaño y luego la reduce: bordes, texturas y detalles lejanos mucho más finos. Exige mucho a la tarjeta gráfica: para PC potentes.",
+    "Brouillard lointain": "Niebla lejana",
+    "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "El velo verde en el que el juego ahoga el paisaje lejano. Apagado: colinas y paisajes nítidos y contrastados, la escena algo más oscura.",
     "Désactivé": "Desactivado"
   }
 }

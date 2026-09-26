@@ -215,11 +215,95 @@ class TestAnticrenelage:
             rc.ecrire(ini, self.R, 3)
 
     def test_chaque_choix_a_son_libelle(self):
-        """0 se lit par une clé traduite ; aucun réglage à choix n'oublie ce libellé."""
+        """Le premier choix (0, ou « auto ») se lit par une clé traduite ; aucun réglage à choix n'oublie ce libellé."""
         for r in rc.REGLAGES.values():
             if r.choix:
-                assert r.choix[0] == 0 and r.zero and tr(r.zero)
+                assert r.zero and tr(r.zero) and rc.libelle_choix(r, r.choix[0]) == tr(r.zero)
+                assert all(rc.libelle_choix(r, v) for v in r.choix)
         assert self.R.format_choix.format(8) == "8×"
+        assert rc.libelle_choix(self.R, 8) == "8×"
+
+
+class TestSurechantillonnage:
+    """HP5 : un facteur, dont l'« éteint » vaut 1 et non 0."""
+
+    R = rc.REGLAGES["surechantillonnage"]
+
+    def test_eteint_quand_la_cle_manque_ou_vaut_un(self, ini):
+        assert rc.lire(ini, self.R) == rc.Etat(1)
+        ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=0\r\nSSAAFactor=1"))
+        assert rc.lire(ini, self.R) == rc.Etat(1)
+        assert rc.libelle_choix(self.R, 1) == tr("Désactivé")
+        assert rc.libelle_choix(self.R, 2) == "×2"
+
+    def test_aller_retour(self, ini):
+        rc.ecrire(ini, self.R, 2)
+        assert "SSAAFactor=2" in ini.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini, self.R) == rc.Etat(2)
+        rc.ecrire(ini, self.R, 1)
+        assert rc.lire(ini, self.R) == rc.Etat(1)
+
+    def test_quatre_a_la_main_se_montre(self, ini):
+        ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=0\r\nSSAAFactor=4"))
+        assert rc.lire(ini, self.R) == rc.Etat(4, personnalise=True)
+
+
+class TestBrouillard:
+    """HP6 : un interrupteur ALLUMÉ quand la clé manque (le correctif garde le brouillard)."""
+
+    R = rc.REGLAGES["brouillard"]
+
+    def test_allume_par_defaut_puis_aller_retour(self, ini):
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Game]\r\nLanguage=auto\r\n")
+        assert rc.lire(ini, self.R) == rc.Etat(True)
+        rc.ecrire(ini, self.R, False)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert lignes.index("[Accio.Game]") < lignes.index("DistanceFog=0")
+        assert rc.lire(ini, self.R) == rc.Etat(False)
+        rc.ecrire(ini, self.R, True)
+        assert rc.lire(ini, self.R) == rc.Etat(True)
+
+
+class TestLangueAuDemarrage:
+    """HP6 : un réglage à choix TEXTUELS (la clé Language du correctif)."""
+
+    R = rc.REGLAGES["langue_menu"]
+
+    @pytest.fixture
+    def ini_jeu(self, ini):
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Game]\r\nWidth=1920\r\nLanguage=auto\r\n")
+        return ini
+
+    def test_auto_par_defaut_et_quand_la_cle_manque(self, ini_jeu, ini):
+        assert rc.lire(ini_jeu, self.R) == rc.Etat("auto")
+        ini.write_bytes(ini.read_bytes().replace(b"Language=auto\r\n", b""))
+        assert rc.lire(ini, self.R) == rc.Etat("auto")
+
+    def test_aller_retour_en_place(self, ini_jeu):
+        rc.ecrire(ini_jeu, self.R, "es")
+        lignes = ini_jeu.read_bytes().decode().split("\r\n")
+        assert "Language=es" in lignes and "Language=auto" not in lignes
+        assert rc.lire(ini_jeu, self.R) == rc.Etat("es")
+        rc.ecrire(ini_jeu, self.R, "auto")
+        assert rc.lire(ini_jeu, self.R) == rc.Etat("auto")
+
+    def test_la_casse_ne_compte_pas_comme_dans_le_correctif(self, ini_jeu):
+        ini_jeu.write_bytes(ini_jeu.read_bytes().replace(b"Language=auto", b"Language=FR"))
+        assert rc.lire(ini_jeu, self.R) == rc.Etat("fr")
+
+    def test_une_valeur_a_la_main_se_montre(self, ini_jeu):
+        """« windows » (laisser faire le jeu) n'est pas proposé : il se montre tel quel."""
+        ini_jeu.write_bytes(ini_jeu.read_bytes().replace(b"Language=auto", b"Language=windows"))
+        assert rc.lire(ini_jeu, self.R) == rc.Etat("windows", personnalise=True)
+        with pytest.raises(ValueError):
+            rc.ecrire(ini_jeu, self.R, "windows")
+
+    def test_les_langues_s_ecrivent_dans_leur_propre_langue(self):
+        assert rc.libelle_choix(self.R, "es") == "Español"
+        assert rc.libelle_choix(self.R, "fr") == "Français"
+        assert rc.libelle_choix(self.R, "auto") == tr("Celle de Windows")
+        # Les 16 langues du menu de HP6, plus « auto ».
+        assert len(self.R.choix) == 17 and len(set(self.R.choix)) == 17
 
 
 class TestTouches:

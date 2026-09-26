@@ -735,6 +735,7 @@
       "fix_settings": [
         "arriere_plan",
         "limite_fps",
+        "surechantillonnage",
         "compteur_fps",
         "panneau_perfs"
       ],
@@ -867,6 +868,8 @@
         "limite_fps",
         "anticrenelage",
         "anticrenelage_transparence",
+        "brouillard",
+        "langue_menu",
         "compteur_fps",
         "panneau_perfs"
       ],

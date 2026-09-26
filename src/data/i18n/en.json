@@ -478,6 +478,13 @@
     "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille.": "Smooths the edges of characters and scenery by working out several points per pixel. The higher the number, the smoother the edges, and the harder the graphics card works.",
     "Cheveux et feuillage lissés": "Smooth hair and leaves",
     "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la carte graphique là où il y a beaucoup de feuillage.": "With anti-aliasing on, also smooths the tips of hair, leaves and grass. NVIDIA cards only; the graphics card works harder where there are many leaves.",
+    "Langue au démarrage": "Start-up language",
+    "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "The language the game's menu opens on; the game takes it by itself after a few seconds. “Windows language” fixes a flaw in the game: Windows set to French from Belgium, Switzerland or Canada, or to Spanish, made it start in English.",
+    "Celle de Windows": "Windows language",
+    "Suréchantillonnage (image plus fine)": "Supersampling (finer image)",
+    "Calcule l'image en deux fois plus grand puis la réduit : contours, textures et détails lointains nettement plus fins. Demande beaucoup à la carte graphique : pour les PC puissants.": "Renders the image twice as large, then scales it down: edges, textures and far details much finer. Heavy on the graphics card: for powerful PCs.",
+    "Brouillard lointain": "Distance fog",
+    "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "The green haze the game drowns distant scenery in. Off: sharp, contrasted hills and landscapes, the scene a little darker.",
     "Désactivé": "Off"
   }
 }
