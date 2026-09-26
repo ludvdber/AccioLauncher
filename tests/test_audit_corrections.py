@@ -279,8 +279,8 @@ class TestPrerequisRuntimes:
             (Path(__file__).resolve().parents[1] / "src/data/games.json")
             .read_text(encoding="utf-8"))
         par_id = {g["id"]: g for g in catalogue["games"]}
-        assert par_id["hp7a"].get("requires") == ["vcredist2005_x86"]
-        assert par_id["hp7b"].get("requires") == ["vcredist2008_x86"]
+        assert "vcredist2005_x86" in par_id["hp7a"].get("requires", [])
+        assert "vcredist2008_x86" in par_id["hp7b"].get("requires", [])
 
     def test_requires_parse(self):
         jeu = GameData.from_dict(dict(JEU_MINIMAL, requires=["vcredist2005_x86", 42]))

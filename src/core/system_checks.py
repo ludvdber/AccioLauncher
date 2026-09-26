@@ -18,6 +18,48 @@ VCREDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
 VCREDIST_2005_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26347"
 VCREDIST_2008_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26368"
 
+# Le runtime DirectX 9.0c de juin 2010, que Windows n'a JAMAIS livré (ni 10 ni
+# 11 : ils portent xinput1_4 et xinput9_1_0, aucune d3dx9). Relevé dans les
+# binaires le 2026-09-26 : HP5 et HP6 importent `xinput1_3.dll`, les deux
+# Reliques `d3dx9_37.dll` et `xinput1_3.dll`, et le wrapper d3d9 de HP4 à HP7b
+# `d3dx9_43.dll` — aucune archive ne les livre. Sur un Windows neuf, sans jeu
+# plus ancien pour les avoir apportées, ces jeux s'arrêtent avant leur première
+# image sur « xinput1_3.dll est introuvable ». Une DLL par identifiant : le
+# catalogue déclare ce que CHAQUE jeu charge, et HP4 n'a pas à attendre une
+# xinput qu'il n'ouvre pas. Le même installeur de Microsoft les pose toutes.
+DIRECTX9_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=35"
+DLL_DIRECTX9 = ("d3dx9_43", "d3dx9_37", "xinput1_3")
+
+
+def dll_x86_presente(systeme: Path, nom: str) -> bool:
+    """La DLL `nom` du runtime DirectX est-elle dans ce dossier système ? Pure."""
+    return (systeme / f"{nom}.dll").is_file()
+
+
+def _systeme_x86() -> Path:
+    """Dossier où le chargeur trouve les DLL SYSTÈME d'un programme 32 bits.
+
+    Les jeux sont 32 bits : sur un Windows 64 bits c'est SysWOW64 (le launcher,
+    64 bits, verrait dans System32 les DLL 64 bits, que le jeu ne peut pas
+    charger) ; sur un Windows 32 bits, System32.
+    """
+    racine = Path(os.environ.get("SystemRoot", r"C:\Windows"))
+    wow64 = racine / "SysWOW64"
+    return wow64 if wow64.is_dir() else racine / "System32"
+
+
+@functools.cache
+def check_directx9(nom: str) -> bool:
+    """Vérifie si la DLL `nom` du runtime DirectX de juin 2010 est installée.
+
+    Sous Linux, oui : Wine a les siennes (d3dx9_24 à 43, xinput1_3), et c'est
+    avec elles que tournent déjà les jeux. Seule `d3d9` reçoit une surcharge
+    (`dll_overrides`), pour que le wrapper du jeu passe devant celle de Wine.
+    """
+    if sys.platform != "win32":
+        return True
+    return dll_x86_presente(_systeme_x86(), nom)
+
 # Jeton de clé publique des assemblies CRT de Microsoft (le même pour VC8 et
 # VC9). Il fait partie de l'identité forte de l'assembly : c'est ce qui
 # distingue le vrai redistribuable d'un dossier homonyme.
@@ -112,6 +154,11 @@ VERBES_WINETRICKS = {
     "vcredist_x86": "vcrun2022",
     "vcredist2005_x86": "vcrun2005",
     "vcredist2008_x86": "vcrun2008",
+    # Jamais demandés en pratique (Wine a ses propres DLL, voir check_directx9),
+    # mais chaque identifiant garde son verbe : la table reste complète.
+    "d3dx9_43": "d3dx9_43",
+    "d3dx9_37": "d3dx9_37",
+    "xinput1_3": "xinput",
 }
 
 # Tout runtime 14.x satisfait le socle, comme le test Windows (clé 14.0)
@@ -172,6 +219,7 @@ PREREQUIS = {
     "vcredist_x86": (lambda: check_vcredist_x86(), VCREDIST_URL),
     "vcredist2005_x86": (lambda: check_vcredist_2005_x86(), VCREDIST_2005_URL),
     "vcredist2008_x86": (lambda: check_vcredist_2008_x86(), VCREDIST_2008_URL),
+    **{nom: (lambda nom=nom: check_directx9(nom), DIRECTX9_URL) for nom in DLL_DIRECTX9},
 }
 
 
@@ -202,7 +250,7 @@ def invalidate_vcredist_cache() -> None:
     n'a pas à redémarrer le launcher pour qu'on le voie.
     """
     for verification in (check_vcredist_x86, check_vcredist_2005_x86,
-                         check_vcredist_2008_x86):
+                         check_vcredist_2008_x86, check_directx9):
         vider = getattr(verification, "cache_clear", None)
         if vider is not None:
             vider()

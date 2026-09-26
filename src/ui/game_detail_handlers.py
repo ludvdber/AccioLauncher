@@ -23,7 +23,8 @@ from src.core import preparation_wine as preparation
 from src.core.game_manager import GameState
 from src.core.liens import GUIDE_LINUX_URL
 from src.core.system_checks import (
-    PREREQUIS, VCREDIST_URL, VERBES_WINETRICKS, needed_space_mb, prerequis_manquants,
+    DLL_DIRECTX9, PREREQUIS, VCREDIST_URL, VERBES_WINETRICKS, needed_space_mb,
+    prerequis_manquants,
 )
 from src.ui.preparateur_wine import noms_des_verbes
 from src.ui.utils import open_local_path, open_url
@@ -157,6 +158,8 @@ def nom_prerequis(identifiant: str) -> str:
         "vcredist_x86": tr("Le composant Visual C++ Redistributable x86 (2015-2022)"),
         "vcredist2005_x86": tr("Le composant Visual C++ 2005 Redistributable x86"),
         "vcredist2008_x86": tr("Le composant Visual C++ 2008 Redistributable x86"),
+        **{nom: tr("Le runtime DirectX 9.0c de Microsoft ({})").format(f"{nom}.dll")
+           for nom in DLL_DIRECTX9},
     }
     return noms.get(identifiant, tr("Un composant Windows requis"))
 

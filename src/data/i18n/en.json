@@ -238,6 +238,8 @@
     "Composant Windows": "Windows component",
     "Visual C++ 2008 x86": "Visual C++ 2008 x86",
     "Le composant Visual C++ 2008 Redistributable x86": "The Visual C++ 2008 Redistributable x86",
+    "DirectX 9 ({})": "DirectX 9 ({})",
+    "Le runtime DirectX 9.0c de Microsoft ({})": "Microsoft's DirectX 9.0c runtime ({})",
     "En savoir plus": "Learn more",
     "Langue du jeu : {}": "Game language: {}",
     "Langue du jeu": "Game language",
