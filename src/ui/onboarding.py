@@ -38,6 +38,7 @@ from src.core.i18n import (
     available_languages, detect_system_language, set_language, tr,
 )
 from src.ui.fonts import cinzel_decorative
+from src.ui.styles import RADIO_STYLE
 from src.ui.theme import THEMES
 from src.ui.toggle_switch import toggle_row
 from src.ui.utils import avertir, is_writable_dir, zone_defilable
@@ -119,6 +120,7 @@ class OnboardingDialog(QDialog):
             " border-radius: 6px; padding: 6px 12px; font-size: 13px; }"
             "QComboBox QAbstractItemView { background: #16213e; color: #ffffff;"
             " selection-background-color: #2c3e6b; }"
+            + RADIO_STYLE
         )
 
         # Résultats lus par run_onboarding() après accept()

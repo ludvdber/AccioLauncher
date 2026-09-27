@@ -35,6 +35,7 @@ from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
+from src.ui.styles import RADIO_STYLE
 from src.ui.theme import themed
 from src.ui.toggle_switch import toggle_row
 from src.ui.utils import open_local_path, zone_defilable
@@ -151,8 +152,12 @@ class GameSettingsDialog(QDialog):
         corps = QVBoxLayout(self._contenu)
         corps.setContentsMargins(0, 0, 0, 0)
         corps.setSpacing(0)
-        self._section_langue(corps)
-        corps.addSpacing(20)
+        # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
+        # et registre atteignable pour ceux qui la lisent là. Sinon la fenêtre
+        # s'ouvre sur l'affichage (l'engrenage est sur tout jeu installé).
+        if self.manager.game_language(self.game) is not None:
+            self._section_langue(corps)
+            corps.addSpacing(20)
         self._section_affichage(corps)
         corps.addSpacing(18)
         if self._section_captures(corps):
@@ -216,20 +221,18 @@ class GameSettingsDialog(QDialog):
             layout.addWidget(note)
             return
 
-        for langue in proposables:
+        for rang, langue in enumerate(proposables):
             radio = QRadioButton(langue.label)
             radio.setFont(body_font(12))
             radio.setCursor(Qt.CursorShape.PointingHandCursor)
-            radio.setStyleSheet(themed(
-                "QRadioButton { color: #e8e8f0; background: transparent;"
-                " padding: 3px 0px; }"
-                "QRadioButton:hover { color: #d6a72c; }"
-            ))
+            radio.setStyleSheet(themed(RADIO_STYLE))
             radio.setChecked(langue.code == courant)
             radio.toggled.connect(
                 lambda coche, code=langue.code: self._on_langue(coche, code))
             self._groupe.addButton(radio)
             self._boutons[langue.code] = radio
+            if rang:
+                layout.addSpacing(6)
             layout.addWidget(radio)
 
     def _section_affichage(self, layout: QVBoxLayout) -> None:

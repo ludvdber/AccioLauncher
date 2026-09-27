@@ -18,6 +18,35 @@ COLOR_TEXT = "#eaeaea"
 COLOR_TEXT_SECONDARY = "#8a8aaa"
 COLOR_BORDER = "#1a2744"
 
+# Un CHOIX parmi plusieurs (langue du jeu, réponses du Choixpeau). Le rond natif
+# de Windows se remplit de sombre quand il est coché : sur fond bleu nuit, le
+# choix retenu était le SEUL qu'on ne voyait plus (Ludo, 2026-09-27). Chaque
+# réponse devient une rangée cadrée ; la retenue s'allume en or — cadre, fond,
+# texte ET point plein — pour se lire d'un coup d'œil, sans chercher un rond.
+# Aucune propriété de police dans un pseudo-état (règle 49).
+RADIO_STYLE = """
+QRadioButton {
+    color: #e8e8f0; background: transparent;
+    spacing: 10px; padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.10); border-radius: 6px;
+}
+QRadioButton:hover { border-color: rgba(214, 167, 44, 0.55); }
+QRadioButton:checked {
+    color: #f0d060; background: rgba(214, 167, 44, 0.14);
+    border-color: rgba(214, 167, 44, 0.80);
+}
+QRadioButton[focusClavier="true"]:focus { border-color: #f0d060; }
+QRadioButton::indicator {
+    width: 12px; height: 12px; border-radius: 8px;
+    border: 2px solid #8a8aaa; background: transparent;
+}
+QRadioButton::indicator:checked {
+    border-color: #d6a72c;
+    background: qradialgradient(cx: 0.5, cy: 0.5, radius: 0.5, fx: 0.5, fy: 0.5,
+        stop: 0 #d6a72c, stop: 0.55 #d6a72c, stop: 0.62 rgba(0, 0, 0, 0));
+}
+"""
+
 MAIN_STYLE = f"""
 QMainWindow {{
     background-color: {COLOR_BG_PRIMARY};

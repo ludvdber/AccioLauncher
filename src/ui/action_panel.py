@@ -388,27 +388,27 @@ class ActionPanel(QWidget):
         btn_uninstall.clicked.connect(self.uninstall_clicked)
         self._action_layout.addWidget(btn_uninstall)
 
-        # Engrenage : uniquement s'il y a réellement quelque chose à régler.
-        # `game_language` rend None quand le jeu ne déclare pas de bloc, et
-        # hors Windows (pas de registre atteignable) — dans les deux cas un
-        # engrenage ouvrirait un menu vide, ce qui est pire que pas d'engrenage.
-        # Roue DESSINÉE (SVG Phosphor), plus U+2699. Ce caractère était réputé
+        # Engrenage sur TOUT jeu installé. Il n'apparaissait qu'avec une langue
+        # à choisir, donc sur HP1 seul, alors que la fenêtre porte toujours les
+        # fichiers du jeu (versions, réparation, dossier) et, pour HP4-HP7b, les
+        # captures et les réglages du correctif — inatteignables autrement
+        # (Ludo, 2026-09-27). La rubrique « Langue » s'y cache quand il n'y a
+        # pas de langue à régler. Roue DESSINÉE (SVG Phosphor), plus U+2699. Ce caractère était réputé
         # sûr parce que sa propriété Unicode est `Emoji_Presentation=No` — mais
         # la propriété dit ce que le caractère DEMANDE, pas ce que la chaîne de
         # repli de Windows lui DONNE. Mesuré le 2026-08-26 en le rendant en anti-crénelage
         # niveaux de gris : 49 % de pixels colorés, contre 0 % pour une lettre
         # et 22 % pour 🔊 pris comme témoin. Il partait donc en couleur, comme
         # le haut-parleur de la barre audio, et plus franchement encore.
-        if self._manager.game_language(self._game) is not None:
-            btn_reglages = IconButton("reglages", taille=36, cadre="#8a8aaa")
-            btn_reglages.setObjectName("btnGameSettings")
-            btn_reglages.setAccessibleName(
-                tr("Réglages de {}").format(self._game.name))
-            btn_reglages.setToolTip(tr("Réglages du jeu"))
-            btn_reglages.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_reglages.clicked.connect(self.game_settings_clicked)
-            self._action_layout.addWidget(btn_reglages)
-            self._btn_reglages = btn_reglages
+        btn_reglages = IconButton("reglages", taille=36, cadre="#8a8aaa")
+        btn_reglages.setObjectName("btnGameSettings")
+        btn_reglages.setAccessibleName(
+            tr("Réglages de {}").format(self._game.name))
+        btn_reglages.setToolTip(tr("Réglages du jeu"))
+        btn_reglages.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_reglages.clicked.connect(self.game_settings_clicked)
+        self._action_layout.addWidget(btn_reglages)
+        self._btn_reglages = btn_reglages
 
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"

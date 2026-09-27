@@ -1614,13 +1614,53 @@ class TestEngrenageReglagesDuJeu:
         assert isinstance(panneau._btn_reglages, IconButton)
         assert panneau._btn_reglages.icone() == "reglages"
 
-    def test_absent_sur_un_jeu_sans_reglage(self, make_window_multilingue):
-        """Sept jeux sur huit n'ont rien à régler : un engrenage y ouvrirait un
-        menu vide, ce qui est pire que pas d'engrenage."""
+    def test_present_sur_un_jeu_sans_langue(self, make_window_multilingue):
+        """Il n'apparaissait qu'avec une langue à choisir, donc sur HP1 seul :
+        les fichiers du jeu, les captures et les réglages du correctif de HP4-HP7b
+        étaient inatteignables (Ludo, 2026-09-27). La fenêtre n'est jamais vide :
+        « Fichiers du jeu » y est toujours, et la rubrique « Langue » s'efface."""
         from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
         win, _ = make_window_multilingue()
         autre = win.manager.get_games()[1].game
-        assert self._poser(win, autre, GameState.INSTALLED)._btn_reglages is None
+        assert win.manager.game_language(autre) is None
+        assert self._poser(win, autre, GameState.INSTALLED)._btn_reglages is not None
+        dlg = GameSettingsDialog(autre, win.manager, lambda code: True,
+                                 actions=[("Ouvrir le dossier du jeu", lambda: None)], parent=win)
+        assert not dlg._boutons
+        from PyQt6.QtWidgets import QLabel
+        textes = " ".join(lb.text() for lb in dlg.findChildren(QLabel))
+        assert "Langue du jeu" not in textes and "une seule langue" not in textes
+
+    def test_le_choix_retenu_se_voit(self, make_window_multilingue):
+        """Le rond natif coché se remplissait de sombre : sur fond bleu nuit, la
+        langue RETENUE était la seule invisible (Ludo, 2026-09-27). Rendu réel :
+        la rangée cochée doit porter de l'or, les autres non."""
+        from PyQt6.QtGui import QColor
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        dlg.show()
+
+        def or_(radio):
+            img = radio.grab().toImage()
+            n = 0
+            for x in range(0, img.width(), 2):
+                for y in range(0, img.height(), 2):
+                    c = QColor(img.pixel(x, y))
+                    if c.red() > 150 and c.green() > 110 and c.blue() < 90:
+                        n += 1
+            return n
+
+        courant = win.manager.game_language(jeu)
+        coche = or_(dlg._boutons[courant])
+        autres = [or_(b) for c, b in dlg._boutons.items() if c != courant]
+        assert coche > 40, coche
+        assert all(a < coche / 4 for a in autres), (coche, autres)
 
     def test_absent_quand_le_jeu_n_est_pas_installe(self, make_window_multilingue):
         """Rien à régler sur un jeu qu'on n'a pas encore."""

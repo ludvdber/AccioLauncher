@@ -577,9 +577,10 @@ class InfoPanel(QWidget):
         # permanence la ligne la plus contrainte de la fiche pour n'apprendre
         # rien à personne, et sur sept jeux sur huit elle n'apparaissait même
         # pas, si bien que la ligne méta changeait de forme d'un jeu à l'autre.
-        # Le réglage n'est pas perdu : l'engrenage d'ActionPanel s'affiche sous
-        # EXACTEMENT la même condition (`game_language(game) is not None`) et
-        # ouvre GameSettingsDialog, qui le nomme au lieu de le faire deviner.
+        # Le réglage n'est pas perdu : l'engrenage d'ActionPanel (sur tout jeu
+        # installé) ouvre GameSettingsDialog, dont la rubrique « Langue » paraît
+        # sous la condition `game_language(game) is not None` et le nomme au
+        # lieu de le faire deviner.
         # `_on_meta_link` garde son aiguillage : le href « langue » n'est plus
         # émis d'ici, mais le signal reste branché pour tout autre appelant.
 
