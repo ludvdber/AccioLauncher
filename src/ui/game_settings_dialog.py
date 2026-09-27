@@ -387,7 +387,10 @@ class GameSettingsDialog(QDialog):
         ini = reglages_correctif.chemin_ini(
             self.manager.config.install_path / Path(self.game.executable).parent)
         touche = reglages_correctif.touche_capture(ini) or self.game.touche_capture
-        if not (touche or n):
+        # Un jeu dont le catalogue déclare les captures a sa rubrique même sans
+        # touche connue : sous l'ancien correctif, elle disparaissait sans un
+        # mot, et Ludo cherchait le bouton annoncé (2026-09-27).
+        if not (touche or n or self.game.captures):
             return False
         layout.addWidget(self._titre_rubrique(tr("Captures d'écran")))
         layout.addSpacing(8)
@@ -396,6 +399,12 @@ class GameSettingsDialog(QDialog):
                 "Touche {} en jeu. Les captures sont rangées hors du dossier du jeu : "
                 "le désinstaller ne les efface pas.").format(touche))
             layout.addSpacing(4)
+        elif not n:
+            # Rien à ouvrir : un bouton vers un dossier vide ne servirait à rien.
+            self._note(layout, tr(
+                "La touche de capture arrive avec la prochaine version du correctif "
+                "de ce jeu."))
+            return True
         ligne = QWidget()
         ligne.setStyleSheet("background: transparent;")
         h = QHBoxLayout(ligne)

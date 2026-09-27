@@ -462,6 +462,7 @@
     "Affichage et jeu": "Display and gameplay",
     "Installez le jeu pour régler son correctif.": "Install the game to adjust its fix.",
     "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "These settings arrive with the next version of this game's fix.",
+    "La touche de capture arrive avec la prochaine version du correctif de ce jeu.": "The screenshot key arrives with the next version of this game's fix.",
     "Pris en compte au prochain lancement du jeu.": "Applied the next time the game starts.",
     "{} (réglé à la main)": "{} (set by hand)",
     "Touches personnalisées dans d3d9.ini : le lanceur n'y touche pas.": "Custom keys in d3d9.ini: the launcher leaves them alone.",

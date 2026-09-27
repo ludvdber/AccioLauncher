@@ -244,6 +244,17 @@ class TestFenetre:
         assert dlg._compte_captures is not None and dlg._compte_captures.text() == ""
         assert any("F12" in lbl.text() for lbl in dlg.findChildren(QLabel))
 
+    def test_ancien_correctif_la_rubrique_le_dit(self, qtbot, tmp_path):
+        """Captures déclarées, aucune touche connue (ancien correctif), aucune capture : la rubrique
+        disparaissait sans un mot et le bouton annoncé restait introuvable (Ludo, 2026-09-27)."""
+        from PyQt6.QtWidgets import QLabel, QPushButton
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(b"[MAIN]\r\nScreenshotKey=123\r\n")
+        dlg = self._dialogue(qtbot, _jeu(screenshots={"collect": ["HP4/screenshots/*.png"]}), tmp_path)
+        textes = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
+        assert "Captures d'écran" in textes and "prochaine version" in textes
+        assert not any("captures" in b.text() for b in dlg.findChildren(QPushButton))
+
     def test_un_jeu_desinstalle_garde_l_acces_a_ses_captures(self, qtbot, tmp_path):
         dossier = captures.dossier(_jeu())
         dossier.mkdir(parents=True)
