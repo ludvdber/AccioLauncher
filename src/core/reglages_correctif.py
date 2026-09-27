@@ -365,6 +365,51 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
     return Etat(brut.strip() not in ("0", ""))
 
 
+def touche_capture(ini: Path) -> str:
+    """La touche de capture que lira le correctif, telle qu'on la montre (« F12 »), ou "".
+
+    Lue dans l'ini plutôt que déclarée : seul le NOUVEAU correctif en a une, et
+    un joueur a pu la changer (`ScreenshotKey`, code de touche Windows, 0 = aucune).
+    """
+    if not est_nouveau_correctif(ini):
+        return ""
+    try:
+        lignes, _ = _lire(ini)
+    except OSError:
+        return ""
+    brut = _valeur(lignes, _MARQUE_V2, "ScreenshotKey")
+    try:
+        code = int(brut) if brut is not None else 0x7B   # défaut du correctif : F12
+    except ValueError:
+        return ""
+    if 0x70 <= code <= 0x87:
+        return f"F{code - 0x6F}"
+    if code == 0x2C:
+        return tr("Impr. écran")
+    if 0x30 <= code <= 0x5A:
+        return chr(code)
+    return ""
+
+
+def poser_valeur(ini: Path, section: str, cle: str, valeur: str) -> bool:
+    """Pose une clé que le LANCEUR tient à jour (pas un réglage de l'interface).
+
+    N'écrit que si la valeur change : le fichier n'est pas réécrit à chaque
+    lancement pour rien. Rend True s'il a été écrit. Lève OSError si le fichier
+    ne peut pas l'être, ValueError si la section manque ou si la valeur ferait
+    une seconde ligne.
+    """
+    if any(c in valeur for c in "\r\n\x00"):
+        raise ValueError(f"{cle} : valeur sur plusieurs lignes")
+    lignes, fin = _lire(ini)
+    if _valeur(lignes, section, cle) == valeur:
+        return False
+    if not _poser(lignes, section, cle, valeur):
+        raise ValueError(f"section [{section}] absente")
+    _ecrire(ini, lignes, fin)
+    return True
+
+
 def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
     """Écrit un réglage. Lève OSError si le fichier ne peut pas être écrit,
     ValueError si la valeur n'est pas de celles que l'interface propose."""

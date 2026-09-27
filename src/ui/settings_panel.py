@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import APP_VERSION, Config, cache_pour
 from src.core.game_manager import GameManager, GameState
+from src.core import manette
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, tr
@@ -515,7 +516,12 @@ class SettingsDialog(QDialog):
         row_discord, self._tgl_discord = toggle_row(
             tr("Afficher le jeu en cours sur Discord"), self.config.discord_presence)
         self._tgl_discord.toggled.connect(self._on_setting_changed)
-        return self._page(self._section(tr("Discord")), row_discord)
+        row_manette, self._tgl_manette = toggle_row(
+            tr("Barre lumineuse de la manette aux couleurs de votre maison"), self.config.couleur_manette)
+        self._tgl_manette.toggled.connect(self._on_setting_changed)
+        self._tgl_manette.toggled.connect(self._on_couleur_manette)
+        return self._page(self._section(tr("Discord")), row_discord,
+                          self._section(tr("Manette PlayStation")), row_manette)
 
     # ── Page À propos ──
 
@@ -557,7 +563,13 @@ class SettingsDialog(QDialog):
         self.config.mute_videos = self._tgl_mute.isChecked()
         self.config.faits_du_jour = self._tgl_faits.isChecked()
         self.config.discord_presence = self._tgl_discord.isChecked()
+        self.config.couleur_manette = self._tgl_manette.isChecked()
         self._save()
+
+    def _on_couleur_manette(self, coche: bool) -> None:
+        # Allumé : la manette prend la couleur tout de suite, c'est ce qui dit que ça marche.
+        if coche:
+            manette.colorer_en_fond(self.config.theme)
 
     def _on_language_changed(self) -> None:
         """Change la langue (effective au prochain démarrage — chaînes posées à la construction)."""
@@ -570,6 +582,9 @@ class SettingsDialog(QDialog):
     def _on_theme_changed(self) -> None:
         """Change le thème (effectif au prochain démarrage — couleurs posées à la construction)."""
         self.config.theme = self._theme_combo.currentData()
+        # La fenêtre attend un redémarrage ; la manette, elle, change tout de suite.
+        if self.config.couleur_manette:
+            manette.colorer_en_fond(self.config.theme)
         self._theme_hint.setText(tr("Redémarrez le launcher pour appliquer le thème."))
         self._theme_hint.show()
         self._theme_restart.show()

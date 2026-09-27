@@ -27,7 +27,7 @@ from datetime import datetime
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.core import sauvegardes, scolarite, stats
+from src.core import captures, sauvegardes, scolarite, stats
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -128,6 +128,11 @@ class GameSession(QObject):
                 sauvegardes.attribuer(
                     self._game_id, self._avant, sauvegardes.releve(spec),
                     self._debut, int(duree))
+            # Les captures que le jeu a posées chez lui rejoignent son dossier,
+            # hors de ce qu'une désinstallation emporterait.
+            game = self._manager.get_game_by_id(self._game_id)
+            if game is not None:
+                captures.ramasser(game, self._manager.config.install_path)
         self._game_id = ""
         self._debut = None
         self._avant = {}

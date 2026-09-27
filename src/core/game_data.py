@@ -592,6 +592,43 @@ def _motif_sur(motif) -> bool:
             and ":" not in motif and "**" not in motif)
 
 
+def _tous_les_noms(data: dict) -> tuple[str, ...]:
+    """Le nom du jeu dans chaque langue du catalogue, français d'abord, sans doublon."""
+    noms = [data.get("name")]
+    bloc = data.get("i18n")
+    if isinstance(bloc, dict):
+        noms += [t.get("name") for t in bloc.values() if isinstance(t, dict)]
+    vus: list[str] = []
+    for nom in noms:
+        if isinstance(nom, str) and nom.strip() and nom.strip() not in vus:
+            vus.append(nom.strip())
+    return tuple(vus)
+
+
+def _touche_capture(data) -> str:
+    """Nom de touche affiché tel quel (« F12 », « Impr. écran ») : court, sur une ligne."""
+    touche = data.get("key") if isinstance(data, dict) else None
+    if not isinstance(touche, str) or not 0 < len(touche.strip()) <= 24 \
+            or any(ord(c) < 32 or c in "<>&" for c in touche):
+        return ""
+    return touche.strip()
+
+
+def _motifs_captures(data) -> tuple[str, ...]:
+    """Motifs `screenshots.collect` : tout ou rien, au plus 8, chacun sous un dossier de jeu.
+
+    Un motif sans « / » viserait la RACINE des jeux ; ce qu'il attraperait
+    serait DÉPLACÉ, pas seulement lu : un motif douteux n'a pas de seconde chance.
+    """
+    data = data.get("collect") if isinstance(data, dict) else None
+    if not isinstance(data, list) or not data or len(data) > 8:
+        return ()
+    if not all(_motif_sur(m) and "/" in m.replace("\\", "/").strip("/") for m in data):
+        log.warning("Bloc screenshots ignoré : %r", data)
+        return ()
+    return tuple(m.replace("\\", "/") for m in data)
+
+
 def _parse_sauvegardes(data) -> "Sauvegardes | None":
     """Tout ou rien, comme `language_registry` : un bloc douteux est ignoré en
     entier, et le jeu n'a simplement pas de sauvegardes affichées."""
@@ -722,6 +759,16 @@ class GameData:
     # mardi, sans republier l'exécutable. Un identifiant que ce lanceur ne
     # connaît pas est ignoré à l'affichage.
     fix_settings: tuple[str, ...] = ()
+    # Tous les noms du jeu, une entrée par langue du catalogue. Le dossier des
+    # captures porte le nom LISIBLE du jeu ; quelqu'un qui change la langue du
+    # lanceur doit retrouver le sien, pas en voir naître un second.
+    noms: tuple[str, ...] = ()
+    # Bloc `screenshots` : la touche de capture du jeu, telle qu'on la montre
+    # (« F12 »), et où le JEU dépose lui-même ses captures (motifs relatifs au
+    # dossier des jeux) — le lanceur les en sort vers le dossier des captures,
+    # pour qu'une désinstallation ne les emporte pas. Mêmes gardes que `saves`.
+    touche_capture: str = ""
+    captures: tuple[str, ...] = ()
 
     @property
     def langues(self) -> "LanguageRegistry | LanguageFiles | None":
@@ -838,6 +885,9 @@ class GameData:
             dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),
             fix_settings=tuple(r for r in (data.get("fix_settings") if isinstance(data.get("fix_settings"), list) else ())
                                if isinstance(r, str) and _JETON_SUR.match(r)),
+            noms=_tous_les_noms(data),
+            touche_capture=_touche_capture(data.get("screenshots")),
+            captures=_motifs_captures(data.get("screenshots")),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),

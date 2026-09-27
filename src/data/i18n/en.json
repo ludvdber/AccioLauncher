@@ -488,6 +488,14 @@
     "Calcule l'image en deux fois plus grand puis la réduit : contours, textures et détails lointains nettement plus fins. Demande beaucoup à la carte graphique : pour les PC puissants.": "Renders the image twice as large, then scales it down: edges, textures and far details much finer. Heavy on the graphics card: for powerful PCs.",
     "Brouillard lointain": "Distance fog",
     "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "The green haze the game drowns distant scenery in. Off: sharp, contrasted hills and landscapes, the scene a little darker.",
-    "Désactivé": "Off"
+    "Désactivé": "Off",
+    "Captures d'écran": "Screenshots",
+    "Touche {} en jeu. Les captures sont rangées hors du dossier du jeu : le désinstaller ne les efface pas.": "Press {} in game. Screenshots are kept outside the game folder: uninstalling the game does not delete them.",
+    "Ouvrir le dossier des captures": "Open the screenshots folder",
+    "1 capture": "1 screenshot",
+    "{} captures": "{} screenshots",
+    "Impr. écran": "Print Screen",
+    "Barre lumineuse de la manette aux couleurs de votre maison": "Controller light bar in your house colours",
+    "Manette PlayStation": "PlayStation controller"
   }
 }

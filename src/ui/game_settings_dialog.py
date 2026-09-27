@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import reglages_correctif
+from src.core import captures, reglages_correctif
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -37,7 +37,7 @@ from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import zone_defilable
+from src.ui.utils import open_local_path, zone_defilable
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +91,7 @@ class GameSettingsDialog(QDialog):
                 manager.config.install_path / Path(game.executable).parent)
             if self._reglages else None)
         self._erreur: QLabel | None = None
+        self._compte_captures: QLabel | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -154,6 +155,8 @@ class GameSettingsDialog(QDialog):
         corps.addSpacing(20)
         self._section_affichage(corps)
         corps.addSpacing(18)
+        if self._section_captures(corps):
+            corps.addSpacing(18)
         self._section_fichiers(corps)
         corps.addSpacing(16)
         self._defile = zone_defilable(self._contenu)
@@ -367,6 +370,72 @@ class GameSettingsDialog(QDialog):
         aide.setTextFormat(Qt.TextFormat.PlainText)
         aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
         layout.addWidget(aide)
+
+    def _section_captures(self, layout: QVBoxLayout) -> bool:
+        """Le dossier des captures de CE jeu, hors de son dossier d'installation.
+
+        Affichée si le jeu sait en prendre (touche déclarée au catalogue) ou si
+        le dossier en contient déjà — un jeu désinstallé garde ses captures, et
+        c'est justement là qu'on vient les chercher.
+        """
+        n = captures.nombre(self.game)
+        # La touche du correctif se lit dans SON ini (seul le nouveau en a une) ;
+        # celle d'un autre moteur, le catalogue la déclare.
+        ini = reglages_correctif.chemin_ini(
+            self.manager.config.install_path / Path(self.game.executable).parent)
+        touche = reglages_correctif.touche_capture(ini) or self.game.touche_capture
+        if not (touche or n):
+            return False
+        layout.addWidget(self._titre_rubrique(tr("Captures d'écran")))
+        layout.addSpacing(8)
+        if touche:
+            self._note(layout, tr(
+                "Touche {} en jeu. Les captures sont rangées hors du dossier du jeu : "
+                "le désinstaller ne les efface pas.").format(touche))
+            layout.addSpacing(4)
+        ligne = QWidget()
+        ligne.setStyleSheet("background: transparent;")
+        h = QHBoxLayout(ligne)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(12)
+        ouvrir = QPushButton(tr("Ouvrir le dossier des captures"))
+        ouvrir.setFont(body_font(12))
+        ouvrir.setCursor(Qt.CursorShape.PointingHandCursor)
+        ouvrir.setStyleSheet(themed(
+            "QPushButton { color: #d6a72c; background: transparent;"
+            " border: none; text-align: left; padding: 4px 0px; }"
+            "QPushButton:hover { color: #e8c547; text-decoration: underline; }"
+        ))
+        ouvrir.clicked.connect(self._ouvrir_captures)
+        h.addWidget(ouvrir)
+        h.addStretch()
+        self._compte_captures = QLabel("")
+        self._compte_captures.setFont(body_font(11))
+        self._compte_captures.setStyleSheet("color: #8a8aaa; background: transparent;")
+        h.addWidget(self._compte_captures)
+        layout.addWidget(ligne)
+        self._afficher_compte(n)
+        return True
+
+    def _afficher_compte(self, n: int) -> None:
+        # Rien quand il n'y en a pas : « 0 capture » ne dit rien d'utile.
+        if self._compte_captures is None:
+            return
+        self._compte_captures.setText(
+            "" if not n else tr("1 capture") if n == 1 else tr("{} captures").format(n))
+
+    def _ouvrir_captures(self) -> None:
+        """Range d'abord ce que le jeu a laissé chez lui, puis ouvre le dossier."""
+        install = self.manager.config.install_path
+        captures.ramasser(self.game, install)
+        dossier = captures.dossier(self.game)
+        try:
+            dossier.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            log.warning("Captures : %s impossible à créer", dossier, exc_info=True)
+            return
+        self._afficher_compte(len(captures.images(dossier)))
+        open_local_path(str(dossier))
 
     def _section_fichiers(self, layout: QVBoxLayout) -> None:
         """Actions qui n'étaient atteignables qu'au CLIC DROIT.

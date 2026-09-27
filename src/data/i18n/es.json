@@ -488,6 +488,14 @@
     "Calcule l'image en deux fois plus grand puis la réduit : contours, textures et détails lointains nettement plus fins. Demande beaucoup à la carte graphique : pour les PC puissants.": "Calcula la imagen al doble de tamaño y luego la reduce: bordes, texturas y detalles lejanos mucho más finos. Exige mucho a la tarjeta gráfica: para PC potentes.",
     "Brouillard lointain": "Niebla lejana",
     "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "El velo verde en el que el juego ahoga el paisaje lejano. Apagado: colinas y paisajes nítidos y contrastados, la escena algo más oscura.",
-    "Désactivé": "Desactivado"
+    "Désactivé": "Desactivado",
+    "Captures d'écran": "Capturas de pantalla",
+    "Touche {} en jeu. Les captures sont rangées hors du dossier du jeu : le désinstaller ne les efface pas.": "Tecla {} en el juego. Las capturas se guardan fuera de la carpeta del juego: desinstalarlo no las borra.",
+    "Ouvrir le dossier des captures": "Abrir la carpeta de capturas",
+    "1 capture": "1 captura",
+    "{} captures": "{} capturas",
+    "Impr. écran": "Impr Pant",
+    "Barre lumineuse de la manette aux couleurs de votre maison": "Barra de luz del mando con los colores de tu casa",
+    "Manette PlayStation": "Mando de PlayStation"
   }
 }

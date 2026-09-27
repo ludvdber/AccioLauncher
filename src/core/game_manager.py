@@ -10,7 +10,7 @@ from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
 
-from src.core import compat
+from src.core import captures, compat, manette
 from src.core import game_language as langue
 from src.core import stats
 from src.core.config import Config
@@ -346,6 +346,11 @@ class GameManager:
             log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
             if avertir is not None:
                 avertir()
+        # Le correctif PC écrit ses captures directement hors du dossier du jeu.
+        captures.preparer(game, self.config.install_path)
+        # Et la couleur de la maison, que son xinput1_3.dll repose sur la manette.
+        manette.preparer((self.config.install_path / game.executable).parent,
+                         self.config.theme if self.config.couleur_manette else None)
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}

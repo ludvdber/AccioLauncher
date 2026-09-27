@@ -139,6 +139,9 @@ class Config:
     # partout ailleurs, et il s'efface dès que le launcher a quelque chose
     # de réel à dire. Il ne coûte donc aucune place et n'interrompt rien.
     faits_du_jour: bool = True
+    # La barre lumineuse d'une manette PlayStation aux couleurs de la maison
+    # (`src/core/manette.py`). Oui par défaut : sans manette, rien ne se passe.
+    couleur_manette: bool = True
     delete_archives: bool = True
     autoplay_videos: bool = True
     # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
@@ -191,6 +194,7 @@ class Config:
                     theme=_as_str(data.get("theme"), "poudlard"),
                     season=_as_str(data.get("season"), "auto"),
                     faits_du_jour=_as_bool(data.get("faits_du_jour"), True),
+                    couleur_manette=_as_bool(data.get("couleur_manette"), True),
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
@@ -230,6 +234,7 @@ class Config:
                 "theme": self.theme,
                 "season": self.season,
                 "faits_du_jour": self.faits_du_jour,
+                "couleur_manette": self.couleur_manette,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,

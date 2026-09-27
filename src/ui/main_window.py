@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import almanach
+from src.core import almanach, manette
 from src.core.config import Config
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -93,6 +93,9 @@ class MainWindow(QMainWindow):
         self._build_session()
         self._wire_updates()
         self._start_update_check()
+        # Manette PlayStation branchée : couleur de la maison, dès l'ouverture.
+        if self.config.couleur_manette:
+            manette.colorer_en_fond(self.config.theme)
 
     @staticmethod
     def _first_launch_or_load() -> Config:

@@ -74,6 +74,36 @@ def _documents_hors_du_vrai_dossier(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _jamais_la_vraie_manette(monkeypatch):
+    """Aucun test n'écrit sur une vraie manette branchée.
+
+    La fenêtre principale, l'assistant et les réglages colorent la barre
+    lumineuse à l'ouverture : sans cette garde, la suite changerait la couleur
+    de la manette de celui qui la lance. Les appels restent observables
+    (`src.core.manette.appels`) ; les tests du module lui-même passent par
+    `_manettes_linux`/`rapport`, qui ne touchent rien.
+    """
+    from src.core import manette
+    appels: list[str] = []
+    monkeypatch.setattr(manette, "colorer_en_fond", appels.append)
+    monkeypatch.setattr(manette, "manettes", lambda: [])
+    monkeypatch.setattr(manette, "appels", appels, raising=False)
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _captures_hors_des_vraies_images(tmp_path, monkeypatch):
+    """Aucun test n'écrit ni ne lit dans les VRAIES Images de la machine.
+
+    Un lancement de jeu testé crée le dossier des captures, et la fin d'une
+    partie testée y DÉPLACE des fichiers : sans cette garde, la suite rangerait
+    dans les Images de celui qui la lance.
+    """
+    monkeypatch.setattr("src.core.captures.racine", lambda: tmp_path / "Images" / "Accio Launcher")
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_d_elevation_uac(monkeypatch):
     """Aucun test ne doit pouvoir faire apparaître une invite UAC.
 

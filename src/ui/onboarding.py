@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QVBoxLayout, QWidget,
 )
 
+from src.core import manette
 from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
 from src.core.config import (
     Config, DEFAULT_INSTALL_PATH, cache_pour,
@@ -292,6 +293,8 @@ class OnboardingDialog(QDialog):
             return
         self._maison_label.setText(verdict(self._maison))
         self._maison_label.setVisible(True)
+        # Le Choixpeau a parlé : la manette, si elle est là, le sait aussitôt.
+        manette.colorer_en_fond(self._maison)
         rang = self._theme_combo.findData(self._maison)
         if rang >= 0:
             self._theme_combo.setCurrentIndex(rang)

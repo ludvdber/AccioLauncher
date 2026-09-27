@@ -64,6 +64,15 @@ def catalogue(raw: object) -> None:
                     and "**" not in motif, motif
             assert sv.fichiers.count("/") <= 1, sv.fichiers
 
+        # Ce qu'attrapent ces motifs est DÉPLACÉ hors du dossier des jeux :
+        # jamais la racine, jamais une remontée, jamais récursif.
+        assert len(jeu.captures) <= 8
+        for motif in jeu.captures:
+            assert _est_relatif_sur(motif) and ":" not in motif and "**" not in motif, motif
+            assert "/" in motif.strip("/"), motif
+        # Affichée telle quelle dans la fenêtre de réglages : une ligne, courte.
+        assert len(jeu.touche_capture) <= 24 and not re.search(r"[\x00-\x1f<>&]", jeu.touche_capture)
+
         # Ces noms finissent dans `WINEDLLOVERRIDES`, dont la syntaxe tient à
         # `=`, `,` et `;` : un seul de ces caractères réécrirait le réglage
         # d'une AUTRE DLL, ou désactiverait celle-ci.
