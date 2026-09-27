@@ -270,6 +270,22 @@ class TestLectureEcriture:
         monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: {})
         assert manette.activee(_jeu()) is False
 
+    def test_sous_wine_lu_dans_le_user_reg_du_prefixe(self, monkeypatch):
+        """Linux : le choix vit dans le `user.reg` du préfixe, lu comme du texte, sans lancer Wine.
+
+        `HKCU\\Software` n'est pas redirigé en vue 32 bits : la clé s'y lit telle que le catalogue l'écrit.
+        """
+        import sys
+        from src.core import compat
+        monkeypatch.setattr(sys, "platform", "linux")
+        cle = _BLOC["key"].replace("\\", "\\\\")
+        user_reg = compat.prefixe() / "user.reg"
+        user_reg.write_text(f'WINE REGISTRY Version 2\n\n[{cle}] 1727000000\n"CurrentSelection"=dword:00000004\n',
+                            encoding="utf-8")
+        assert manette.activee(_jeu()) is True
+        user_reg.write_text(user_reg.read_text(encoding="utf-8").replace("00000004", "00000000"), encoding="utf-8")
+        assert manette.activee(_jeu()) is False
+
     def test_rien_sans_bloc_ni_registre(self, monkeypatch):
         assert manette.activee(_jeu(None)) is None
         monkeypatch.setattr("src.core.game_registry.disponible", lambda: False)

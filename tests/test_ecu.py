@@ -5,7 +5,7 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QColor, QImage, QRegion
 from PyQt6.QtWidgets import QWidget
 
-from src.core.i18n import tr
+from src.core.i18n import available_languages, set_language, tr
 from src.ui.ecu import EMAUX, Ecu, emaux
 from src.ui.theme import THEMES, set_theme
 from src.ui.title_bar import TitleBar
@@ -16,6 +16,17 @@ def _reset_theme():
     set_theme("poudlard")
     yield
     set_theme("poudlard")
+
+
+def _contraste(a: str, b: str) -> float:
+    """Rapport de contraste WCAG entre deux couleurs hexadécimales."""
+    def lum(h: str) -> float:
+        c = QColor(h)
+        canaux = [v / 255 for v in (c.red(), c.green(), c.blue())]
+        lin = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in canaux]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    la, lb = sorted((lum(a), lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
 
 
 def _rendu(widget: QWidget) -> QImage:
@@ -33,6 +44,13 @@ class TestEmaux:
         for couleurs in EMAUX.values():
             assert len(couleurs) == 2 and couleurs[0] != couleurs[1]
             assert all(QColor(c).isValid() for c in couleurs)
+
+    def test_chaque_email_se_detache_du_fond_de_son_theme(self):
+        # Planche 28 : le vrai noir de Poufsouffle (1,13 contre son fond) disparaissait.
+        for maison, couleurs in EMAUX.items():
+            for c in couleurs:
+                assert _contraste(c, THEMES[maison].bg) >= 1.4, (maison, c)
+        assert _contraste("#1b1a17", THEMES["poufsouffle"].bg) < 1.4       # contre-épreuve : l'ancien
 
     def test_poudlard_et_l_inconnu_n_ont_pas_d_ecu(self):
         assert emaux("poudlard") is None
@@ -97,3 +115,18 @@ class TestBarreDeTitre:
         set_theme("poufsouffle")
         barre = self._barre(qtbot)
         assert barre._ecu.height() <= barre.height()
+
+    @pytest.mark.parametrize("langue", [i.code for i in available_languages()])
+    @pytest.mark.parametrize("maison", sorted(EMAUX))
+    def test_la_maison_n_est_pas_rognee_a_la_plus_petite_fenetre(self, qtbot, maison, langue):
+        # 980 px = la largeur minimale de la fenêtre ; « Estudiante de Hufflepuff » est le plus long.
+        set_language(langue)
+        set_theme(maison)
+        hote = QWidget()
+        qtbot.addWidget(hote)
+        barre = TitleBar(hote)
+        hote.resize(980, 38)
+        barre.setGeometry(0, 0, 980, 38)
+        hote.show()
+        barre.layout().activate()
+        assert barre._eleve.width() >= barre._eleve.sizeHint().width()

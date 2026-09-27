@@ -19,11 +19,13 @@ from src.ui import theme
 
 # Les deux « émaux » de chaque maison, dans l'ordre héraldique (dextre, senestre).
 # Couleurs des LIVRES : écarlate et or, vert et argent, bleu et bronze, jaune et noir.
+# Le noir de Poufsouffle est un brun très sombre (planche 28 B, 2026-09-27) : un
+# vrai noir disparaissait dans le fond de son thème, seul le liseré dessinait l'écu.
 EMAUX = {
     "gryffondor": ("#a3201f", "#d6a72c"),
     "serpentard": ("#1f6b40", "#c3cbc7"),
     "serdaigle": ("#1f3f8f", "#b07a3a"),
-    "poufsouffle": ("#e3bf45", "#1b1a17"),
+    "poufsouffle": ("#e3bf45", "#3b3629"),
 }
 
 

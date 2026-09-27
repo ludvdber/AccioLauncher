@@ -157,7 +157,9 @@ class TestPreparer:
         assert captures.preparer(_jeu(), tmp_path) is True
         texte = ini.read_bytes().decode("utf-8")
         cible = captures.dossier(_jeu())
-        assert f"ScreenshotFolder={cible}\r\n" in texte
+        # Le chemin tel que le JEU le lit : natif sous Windows, `Z:\…` sous Linux (le jeu
+        # tourne sous Wine). Attendre `cible` telle quelle cassait le job Linux de la CI.
+        assert f"ScreenshotFolder={captures.chemin_pour_le_jeu(cible)}\r\n" in texte
         assert texte.index("ScreenshotFolder") < texte.index("[Accio.Game]")
         assert cible.is_dir()
 
