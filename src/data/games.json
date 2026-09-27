@@ -795,6 +795,13 @@
         "xinput1_3",
         "d3dx9_43"
       ],
+      "controller_registry": {
+        "root": "HKCU",
+        "key": "Software\\Electronic Arts\\Harry Potter and the Order of the Phoenix\\ControllerConfig",
+        "value": "CurrentSelection",
+        "on": 4,
+        "off": 0
+      },
       "fix_settings": [
         "arriere_plan",
         "limite_fps",
@@ -935,6 +942,13 @@
         "xinput1_3",
         "d3dx9_43"
       ],
+      "controller_registry": {
+        "root": "HKCU",
+        "key": "Software\\Electronic Arts\\Harry Potter and the Half Blood Prince\\ControllerConfig",
+        "value": "CurrentSelection",
+        "on": 4,
+        "off": 0
+      },
       "fix_settings": [
         "arriere_plan",
         "limite_fps",

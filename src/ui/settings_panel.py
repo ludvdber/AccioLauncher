@@ -39,7 +39,7 @@ from src.core.season import (
 )
 from src.ui.theme import THEMES, themed
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import avertir, is_writable_dir, open_local_path
+from src.ui.utils import avertir, is_writable_dir, open_local_path, zone_defilable
 
 log = logging.getLogger(__name__)
 
@@ -203,13 +203,16 @@ class SettingsDialog(QDialog):
             self._nav.addItem(label)
         body.addWidget(self._nav)
 
+        # Chaque page DÉFILE au besoin (règle 52) : changer de thème ou de langue
+        # fait apparaître « Redémarrer maintenant » et une ligne d'aide, et la page
+        # Affichage ne tenait plus — Qt écrasait les lignes sous leur hauteur,
+        # textes rognés par le bas (capture de Ludo, 2026-09-27).
         self._pages = QStackedWidget()
-        self._pages.addWidget(self._page_general())
-        self._pages.addWidget(self._page_display())
-        self._pages.addWidget(self._page_downloads())
-        self._pages.addWidget(self._page_integrations())
-        self._pages.addWidget(about_page.construire(
-            self.manager.catalog.contributors, manager=self.manager))
+        for page in (self._page_general(), self._page_display(),
+                     self._page_downloads(), self._page_integrations(),
+                     about_page.construire(self.manager.catalog.contributors,
+                                           manager=self.manager)):
+            self._pages.addWidget(zone_defilable(page))
         body.addWidget(self._pages, stretch=1)
         root.addLayout(body, stretch=1)
 

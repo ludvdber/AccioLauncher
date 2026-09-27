@@ -27,6 +27,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.core import game_registry as registre
 from src.core import reglages_correctif
 
 log =logging.getLogger(__name__)
@@ -290,3 +291,30 @@ def preparer(executable_dir: Path, theme: str | None) -> bool:
     except OSError:
         log.warning("Manette : couleur non transmise au correctif (%s)", ini, exc_info=True)
         return False
+
+
+# ── « Jouer à la manette » dans le jeu lui-même (HP5, HP6) ──
+#
+# Ces jeux ignorent la manette tant qu'on ne l'a pas choisie dans leur menu, et
+# ce choix vit dans le registre du compte (bloc `controller_registry` du
+# catalogue). Le launcher le propose aussi, EN PRÉVENANT : c'est une écriture
+# dans le registre, même sans élévation (règle 69).
+
+def activee(game) -> bool | None:
+    """True / False selon le registre, None si ce jeu n'a rien à régler ici ou
+    s'il n'y a pas de registre atteignable (Linux sans préfixe prêt)."""
+    r = getattr(game, "manette_registre", None)
+    if r is None or not registre.disponible():
+        return None
+    return registre.lire_valeurs(r.root, r.key, [r.value], r.view).get(r.value) == r.on
+
+
+def activer(game, oui: bool, confirmer=None) -> bool:
+    """Pose le choix ; `confirmer(ruche, cle, valeurs, ecarts)` est appelé juste
+    avant d'écrire, et seulement s'il y a quelque chose à changer. True si le
+    registre porte bien le choix (relu), False sinon — refus compris."""
+    r = getattr(game, "manette_registre", None)
+    if r is None:
+        return False
+    return registre.ecrire_valeurs(r.root, r.key, {r.value: r.on if oui else r.off}, r.view,
+                                   confirmer=confirmer)

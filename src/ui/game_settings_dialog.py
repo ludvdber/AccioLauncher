@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import captures, reglages_correctif
+from src.core import captures, manette, reglages_correctif
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -71,7 +71,7 @@ class GameSettingsDialog(QDialog):
 
     def __init__(self, game: GameData, manager: GameManager,
                  appliquer_langue, actions=(),
-                 parent: QWidget | None = None) -> None:
+                 parent: QWidget | None = None, appliquer_manette=None) -> None:
         super().__init__(parent)
         self.game = game
         self.manager = manager
@@ -82,6 +82,9 @@ class GameSettingsDialog(QDialog):
         # bête : elle affiche et referme, elle ne sait pas réparer un jeu.
         # Ajouter une entrée demain ne la touchera pas.
         self._actions = tuple(actions)
+        # (oui) -> bool : prévient, écrit, dit si c'est pris. None = pas de rubrique.
+        self._appliquer_manette = appliquer_manette
+        self._bascule_manette = None
         self._groupe = QButtonGroup(self)
         self._boutons: dict[str, QRadioButton] = {}
         # Réglages du correctif que le catalogue déclare confirmés pour ce jeu,
@@ -160,6 +163,8 @@ class GameSettingsDialog(QDialog):
             corps.addSpacing(20)
         self._section_affichage(corps)
         corps.addSpacing(18)
+        if self._section_manette(corps):
+            corps.addSpacing(18)
         if self._section_captures(corps):
             corps.addSpacing(18)
         self._section_fichiers(corps)
@@ -373,6 +378,36 @@ class GameSettingsDialog(QDialog):
         aide.setTextFormat(Qt.TextFormat.PlainText)
         aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
         layout.addWidget(aide)
+
+    def _section_manette(self, layout: QVBoxLayout) -> bool:
+        """« Jouer à la manette » (HP5, HP6) : le choix que le jeu garde dans le registre.
+
+        Deux voies, toutes deux voulues par Ludo (2026-09-27) : le menu du jeu, ou
+        cet interrupteur — qui PRÉVIENT avant d'écrire (le rappel de l'appelant).
+        """
+        etat = manette.activee(self.game)
+        if etat is None or self._appliquer_manette is None:
+            return False
+        layout.addWidget(self._titre_rubrique(tr("Manette")))
+        layout.addSpacing(8)
+        ligne, bascule = toggle_row(tr("Jouer à la manette"), etat)
+        layout.addWidget(ligne)
+        self._bascule_manette = bascule
+        bascule.toggled.connect(self._on_manette)
+        self._note(layout, tr(
+            "Le jeu garde ce choix dans le registre de Windows : le lanceur vous "
+            "prévient avant de le modifier. Il se règle aussi dans les options du jeu."))
+        return True
+
+    def _on_manette(self, oui: bool) -> None:
+        if self._appliquer_manette(oui):
+            return
+        # Refusé ou pas pris : l'interrupteur revient sur ce que porte VRAIMENT
+        # le registre, comme la langue (règle 118).
+        vrai = bool(manette.activee(self.game))
+        self._bascule_manette.blockSignals(True)
+        self._bascule_manette.setChecked(vrai)
+        self._bascule_manette.blockSignals(False)
 
     def _section_captures(self, layout: QVBoxLayout) -> bool:
         """Le dossier des captures de CE jeu, hors de son dossier d'installation.

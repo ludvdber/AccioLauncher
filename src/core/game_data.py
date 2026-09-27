@@ -210,6 +210,26 @@ class LanguageRegistry:
 
 
 @dataclass(frozen=True, slots=True)
+class ManetteRegistre:
+    """Où un jeu range « jouer à la manette », et les deux valeurs qui le disent.
+
+    HP5 et HP6 ne lisent la manette que si on l'a choisie dans leur menu, et ce
+    choix ne vit PAS dans la sauvegarde mais sous `HKCU\\Software\\Electronic
+    Arts\\<jeu>\\ControllerConfig`, `CurrentSelection` : 0 = désactivée,
+    4 = manette (épreuve propre de Ludo le 2026-09-27 : il n'a changé QUE ce
+    réglage, et c'est la seule différence relevée ; `hp6.exe` n'accepte que
+    0 à 4). Déclaré au catalogue pour la même raison que la langue : personne ne
+    devine ces valeurs, et une erreur doit se corriger sans republier l'exe.
+    """
+    root: str
+    key: str
+    view: int
+    value: str
+    on: int
+    off: int
+
+
+@dataclass(frozen=True, slots=True)
 class LangueFichiers:
     """Une langue d'un jeu qui la lit dans ses FICHIERS, pas dans le registre.
 
@@ -323,6 +343,38 @@ def _est_relatif_sur(chemin: str) -> bool:
     if norm.startswith("/") or (len(norm) >= 2 and norm[1] == ":"):
         return False
     return ".." not in norm.split("/")
+
+
+def _parse_manette_registre(data) -> "ManetteRegistre | None":
+    """Lit le bloc `controller_registry`, ou None s'il est absent ou douteux.
+
+    Mêmes barrières que `language_registry` (clé et valeur passent par
+    `refus_de_cle` / `refus_de_valeur`), plus : deux entiers distincts. Les
+    booléens sont refusés explicitement — `True` EST un `int`.
+    """
+    if not isinstance(data, dict):
+        return None
+    root = data.get("root", "HKCU")
+    cle = data.get("key", "")
+    try:
+        view = int(data.get("view", 32))
+    except (TypeError, ValueError):
+        return None
+    if view not in (32, 64):
+        return None
+    raison = registre.refus_de_cle(root, cle)
+    if raison is not None:
+        log.warning("Bloc controller_registry ignoré (%s) : %r", raison, cle)
+        return None
+    nom, on, off = data.get("value"), data.get("on"), data.get("off")
+    if any(isinstance(v, bool) or not isinstance(v, int) for v in (on, off)) or on == off:
+        return None
+    for v in (on, off):
+        raison = registre.refus_de_valeur(nom, v)
+        if raison is not None:
+            log.warning("Bloc controller_registry ignoré (%s) : %r", raison, nom)
+            return None
+    return ManetteRegistre(root=root, key=cle, view=view, value=nom, on=on, off=off)
 
 
 def _parse_language_registry(data) -> "LanguageRegistry | None":
@@ -699,6 +751,8 @@ class GameData:
     # Même chose pour un jeu qui lit sa langue dans ses FICHIERS (HP1). Un jeu
     # déclare l'un OU l'autre ; `langues` rend celui qui existe.
     language_files: LanguageFiles | None = None
+    # Où le jeu range « jouer à la manette » (HP5, HP6) ; None ailleurs.
+    manette_registre: ManetteRegistre | None = None
     # Ce jeu doit-il être lancé en se déclarant conscient du DPI ?
     #
     # Windows VIRTUALISE un programme qui ne l'est pas : sur un écran mis à
@@ -875,6 +929,7 @@ class GameData:
             language_registry=_parse_language_registry(data.get("language_registry")),
             language_files=(None if data.get("language_registry") is not None
                             else _parse_language_files(data.get("language_files"))),
+            manette_registre=_parse_manette_registre(data.get("controller_registry")),
             # `is True` et non `bool(...)` : le catalogue est DISTANT, et une
             # chaîne non vide ou un nombre y suffiraient à activer un réglage
             # qui change la façon dont on lance un exécutable.

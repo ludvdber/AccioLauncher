@@ -416,6 +416,29 @@ class TestSettingsRestart:
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
 
+    def test_changer_de_theme_ne_rogne_aucune_ligne(self, make_window, qtbot):
+        """« Redémarrer maintenant » et l'aide apparaissent : la page Affichage ne tenait plus à la
+        taille minimale, Qt accordait aux lignes MOINS que leur hauteur et rognait les textes par le
+        bas (« Supprimer », les listes déroulantes — capture de Ludo, 2026-09-27). La page défile."""
+        from PyQt6.QtWidgets import QComboBox, QPushButton
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg.resize(dlg.minimumSize())
+        dlg.show()
+        dlg._nav.setCurrentRow(1)
+        dlg._theme_combo.setCurrentIndex(1)
+        qtbot.waitUntil(lambda: dlg._theme_restart.isVisible(), timeout=1000)
+        qtbot.wait(200)    # les demandes de mise en page partent par la boucle d'événements
+        page = dlg._pages.currentWidget()
+        ecrases = [(w.text() if hasattr(w, "text") else w.currentText(), w.height(), w.sizeHint().height())
+                   for w in page.widget().findChildren((QPushButton, QComboBox))
+                   if w.isVisible() and w.height() < w.sizeHint().height()]
+        assert not ecrases, ecrases
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
     def test_season_change_emits_resolved_season(self, make_window, qtbot):
         from src.ui.settings_panel import SettingsDialog
         win = make_window()

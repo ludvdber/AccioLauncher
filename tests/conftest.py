@@ -124,6 +124,25 @@ def _jamais_d_elevation_uac(monkeypatch):
             "Bouchonner `game_registry.ecrire_valeurs` dans le test.")
 
     monkeypatch.setattr("src.core.game_registry._ecrire_eleve", _interdit)
+
+    # L'écriture DIRECTE aussi : sous HKCU elle réussit sans rien demander, donc
+    # un test sans bouchon changerait EN SILENCE le vrai registre de celui qui
+    # lance la suite — le choix « manette » de HP5/HP6 (`manette.activer`) y vit.
+    import sys
+
+    from src.core import game_registry
+    vraie_ecriture = game_registry._ecrire_direct
+
+    def _interdit_direct(*a, **k):
+        # Hors Windows (plateforme SIMULÉE par les tests Linux), la vraie fonction
+        # ne touche à rien et rend False : on la laisse répondre.
+        if sys.platform != "win32":
+            return vraie_ecriture(*a, **k)
+        raise AssertionError(
+            "Un test a tenté une écriture registre DIRECTE (vrai HKCU). "
+            "Bouchonner `game_registry._ecrire_direct` ou `ecrire_valeurs`.")
+
+    monkeypatch.setattr("src.core.game_registry._ecrire_direct", _interdit_direct)
     yield
 
 

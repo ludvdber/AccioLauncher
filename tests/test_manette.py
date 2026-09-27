@@ -221,3 +221,111 @@ def test_reglage_persiste(tmp_path, monkeypatch, cle):
     setattr(c, cle, False)
     c.save()
     assert getattr(cfg.Config.load(), cle) is False
+
+
+# ── « Jouer à la manette » dans le registre du jeu (HP5, HP6) ──
+
+_BLOC = {"root": "HKCU", "key": r"Software\Electronic Arts\Harry Potter and the Half Blood Prince\ControllerConfig",
+         "value": "CurrentSelection", "on": 4, "off": 0}
+
+
+def _jeu(bloc=_BLOC, **extra):
+    from src.core.game_data import GameData
+    base = {"id": "hp6", "name": "HP6", "year": 2009, "description": "d", "developer": "d",
+            "executable": "HP6/hp6.exe", "cover_image": "c.jpg", "controller_registry": bloc}
+    base.update(extra)
+    return GameData.from_dict(base)
+
+
+class TestBlocDuCatalogue:
+    def test_hp5_et_hp6_le_declarent(self):
+        """Relevé en jeu (L6/L7, 2026-09-27) : 0 = désactivée, 4 = manette."""
+        from src.core.game_data import load_catalog
+        jeux = {g.id: g for g in load_catalog().games}
+        for gid in ("hp5", "hp6"):
+            r = jeux[gid].manette_registre
+            assert r is not None and (r.root, r.value, r.on, r.off) == ("HKCU", "CurrentSelection", 4, 0)
+            assert r.key.endswith(r"\ControllerConfig")
+        assert all(g.manette_registre is None for g in jeux.values() if g.id not in ("hp5", "hp6"))
+
+    @pytest.mark.parametrize("change", [
+        {"on": True}, {"off": False}, {"on": 0}, {"on": "4"}, {"value": ""}, {"value": "a\nb"},
+        {"key": r"System\CurrentControlSet"}, {"key": r"Software\..\x"}, {"root": "HKCR"}, {"view": 16},
+        {"on": -1}, {"off": 2 ** 32},
+    ])
+    def test_un_bloc_douteux_est_ignore(self, change):
+        assert _jeu({**_BLOC, **change}).manette_registre is None
+
+    def test_absent_ou_mal_forme(self):
+        assert _jeu(None).manette_registre is None
+        assert _jeu(["x"]).manette_registre is None
+
+
+class TestLectureEcriture:
+    def test_etat_lu_dans_le_registre(self, monkeypatch, registre_atteignable):
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: {"CurrentSelection": 4})
+        assert manette.activee(_jeu()) is True
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: {"CurrentSelection": 0})
+        assert manette.activee(_jeu()) is False
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: {})
+        assert manette.activee(_jeu()) is False
+
+    def test_rien_sans_bloc_ni_registre(self, monkeypatch):
+        assert manette.activee(_jeu(None)) is None
+        monkeypatch.setattr("src.core.game_registry.disponible", lambda: False)
+        assert manette.activee(_jeu()) is None
+
+    def test_ecrit_la_bonne_valeur_et_passe_le_rappel(self, monkeypatch):
+        vus = []
+        monkeypatch.setattr("src.core.game_registry.ecrire_valeurs",
+                            lambda ruche, cle, valeurs, vue, confirmer=None: vus.append((ruche, valeurs, confirmer)) or True)
+        rappel = object()
+        assert manette.activer(_jeu(), True, confirmer=rappel)
+        assert manette.activer(_jeu(), False)
+        assert vus[0] == ("HKCU", {"CurrentSelection": 4}, rappel)
+        assert vus[1][1] == {"CurrentSelection": 0}
+
+    def test_la_barriere_du_registre_s_applique(self, monkeypatch, registre_atteignable):
+        """Le vrai `ecrire_valeurs` : compare d'abord, prévient seulement s'il y a un écart, écrit en direct."""
+        from src.core import game_registry
+        etat = {"CurrentSelection": 0}
+        monkeypatch.setattr(game_registry, "lire_valeurs", lambda r, c, noms, v=32: dict(etat))
+        monkeypatch.setattr(game_registry, "_ecrire_direct", lambda r, c, valeurs, v: etat.update(valeurs) or True)
+        demandes = []
+        assert manette.activer(_jeu(), True, confirmer=lambda *a: demandes.append(a) or True)
+        assert etat == {"CurrentSelection": 4} and len(demandes) == 1
+        assert demandes[0][3] == {"CurrentSelection": (0, 4)}          # « remplace : 0 » affiché
+        assert manette.activer(_jeu(), True, confirmer=lambda *a: demandes.append(a) or True)
+        assert len(demandes) == 1                                        # déjà à 4 : personne n'est dérangé
+        assert not manette.activer(_jeu(), False, confirmer=lambda *a: False)
+        assert etat == {"CurrentSelection": 4}                           # refus : rien écrit
+
+
+class TestFenetreDeReglages:
+    def _dialogue(self, qtbot, monkeypatch, tmp_path, lu, appliquer):
+        from types import SimpleNamespace
+
+        from src.ui.game_settings_dialog import GameSettingsDialog
+        monkeypatch.setattr("src.core.game_registry.disponible", lambda: True)
+        monkeypatch.setattr("src.core.game_registry.lire_valeurs", lambda *a, **k: dict(lu))
+        mgr = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
+                              config=SimpleNamespace(install_path=tmp_path))
+        dlg = GameSettingsDialog(_jeu(), mgr, lambda c: True, appliquer_manette=appliquer)
+        qtbot.addWidget(dlg)
+        return dlg
+
+    def test_l_interrupteur_montre_le_registre(self, qtbot, monkeypatch, tmp_path):
+        dlg = self._dialogue(qtbot, monkeypatch, tmp_path, {"CurrentSelection": 4}, lambda oui: True)
+        assert dlg._bascule_manette is not None and dlg._bascule_manette.isChecked()
+
+    def test_un_refus_remet_l_interrupteur_sur_le_vrai(self, qtbot, monkeypatch, tmp_path):
+        demandes = []
+        dlg = self._dialogue(qtbot, monkeypatch, tmp_path, {"CurrentSelection": 0},
+                             lambda oui: demandes.append(oui) or False)
+        dlg._bascule_manette._basculer()        # un clic (setChecked n'émet rien)
+        assert demandes == [True]
+        assert not dlg._bascule_manette.isChecked()
+
+    def test_pas_de_rubrique_sans_rappel_ni_bloc(self, qtbot, monkeypatch, tmp_path):
+        dlg = self._dialogue(qtbot, monkeypatch, tmp_path, {"CurrentSelection": 4}, None)
+        assert dlg._bascule_manette is None

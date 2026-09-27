@@ -56,21 +56,29 @@ THEMES: dict[str, Palette] = {
         "poudlard", "Poudlard (or)", "#d6a72c", "#f0d060", "#9a7209",
         "#060611", "#0d0d1a", "#0f1528", "#16213e", "#1a2744", "#2c3e6b",
     ),
+    # Gryffondor et Serpentard revus le 2026-09-27 (planches 11 C et 12 C, choix de
+    # Ludo) : l'ancien rouge `#b22222` faisait 2,99 de contraste sur son fond et 2,35
+    # sur un bouton — illisible, et « agressif » parce que sombre ET saturé. Un
+    # écarlate plus clair (5,3) sur des fonds bordeaux garde la maison et se lit ;
+    # même remède pour le vert (4,5 → émeraude plus clair). `test_contraste` tient
+    # le seuil pour chaque thème.
     "gryffondor": Palette(
-        "gryffondor", "Gryffondor", "#b22222", "#e05a50", "#7a1414",
-        "#110607", "#1a0d0e", "#281013", "#3e161c", "#441a20", "#6b2c36",
+        "gryffondor", "Gryffondor", "#e0584f", "#f39a8f", "#962b2b",
+        "#1a0709", "#240b10", "#330f17", "#4a1422", "#5a1a2a", "#8c2a3e",
     ),
     "serpentard": Palette(
-        "serpentard", "Serpentard", "#2e8b57", "#4cbf7e", "#1d5c39",
-        "#061109", "#0d1a11", "#0f2817", "#163e25", "#1a4429", "#2c6b42",
+        "serpentard", "Serpentard", "#3fbf7f", "#7fdcaa", "#23784d",
+        "#061209", "#0c1d13", "#0f2c1b", "#16432a", "#1b4c31", "#2e7550",
     ),
     "serdaigle": Palette(
         "serdaigle", "Serdaigle", "#4a7fd4", "#7da7e8", "#2d5191",
         "#060a16", "#0d1226", "#0f1c3a", "#162a52", "#1a3058", "#2c4a80",
     ),
+    # Jaune adouci (planche 14 B, 2026-09-27) : `#e8c200` était saturé à 100 %,
+    # « bizarre » ; surfaces presque noires — l'autre couleur de la maison.
     "poufsouffle": Palette(
-        "poufsouffle", "Poufsouffle", "#e8c200", "#f5dd55", "#a98c00",
-        "#100f06", "#19160d", "#26200f", "#3b3216", "#423a1a", "#685a2c",
+        "poufsouffle", "Poufsouffle", "#e3bf45", "#f2d97e", "#9a7d1c",
+        "#0c0b08", "#15130e", "#1f1c12", "#2e2918", "#37311c", "#5c522e",
     ),
 }
 

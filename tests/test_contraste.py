@@ -418,3 +418,27 @@ class TestModeCinema:
         nu = bg.grab().toImage().pixelColor(300, 120).red()
         assert nu == 255, f"le mode cinema assombrit encore ({nu})"
         assert nu > voile
+
+
+def _hex(h: str) -> tuple[int, int, int]:
+    return int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+
+
+class TestContrasteDesThemes:
+    """L'accent d'un thème sert là où Poudlard met de l'OR : titres, liens, cadres, texte de bouton.
+
+    Le rouge de Gryffondor `#b22222` faisait 2,99 sur son fond et 2,35 sur un bouton — « agressif et pas
+    très beau » (Ludo, 2026-09-27) parce qu'illisible. Seuil : AA (4,5) sur le fond, 3 (texte large)
+    sur la surface la plus claire où il s'écrit, celle des contrôles."""
+
+    @pytest.mark.parametrize("theme_id", ["poudlard", "gryffondor", "serpentard", "serdaigle", "poufsouffle"])
+    def test_l_accent_se_lit(self, theme_id):
+        from src.ui.theme import THEMES
+        p = THEMES[theme_id]
+        assert _contraste(_hex(p.accent), _hex(p.bg)) >= AA
+        assert _contraste(_hex(p.accent), _hex(p.bg_control)) >= 3.0
+
+    def test_l_ancien_rouge_echouait(self):
+        """Contre-épreuve : sans elle, un seuil mal écrit passerait tout."""
+        assert _contraste(_hex("#b22222"), _hex("#110607")) < AA
+        assert _contraste(_hex("#b22222"), _hex("#3e161c")) < 3.0

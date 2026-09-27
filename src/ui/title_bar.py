@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 from src.core.i18n import tr
 from src.ui.fonts import cinzel
 from src.ui import theme
+from src.ui.ecu import Ecu, emaux
 
 # Débord opaque sous le bord bas, en pixels logiques — même remède que
 # `background_widget._DEBORD_PX` pour la couture du carrousel : Qt découpe
@@ -36,6 +37,20 @@ class TitleBar(QWidget):
         self._title.setFont(cinzel(13, bold=True))
         self._title.setStyleSheet("color: #d6a72c; background: transparent;")
         layout.addWidget(self._title)
+
+        # L'écu et la maison, seulement avec un thème de maison (voir src/ui/ecu.py).
+        self._ecu = None
+        self._eleve = None
+        palette = theme.current()
+        if emaux(palette.id) is not None:
+            layout.addSpacing(14)
+            self._ecu = Ecu(palette.id, self)
+            layout.addWidget(self._ecu, alignment=Qt.AlignmentFlag.AlignVCenter)
+            layout.addSpacing(8)
+            self._eleve = QLabel(tr("Élève de {}").format(tr(palette.nom)))
+            self._eleve.setFont(cinzel(10))
+            self._eleve.setStyleSheet("color: #8a8aaa; background: transparent;")
+            layout.addWidget(self._eleve)
 
         layout.addStretch()
 

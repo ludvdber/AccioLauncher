@@ -19,6 +19,7 @@ from src.core.formatting import format_size
 from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
 from src.core import compat
+from src.core import manette
 from src.core import preparation_wine as preparation
 from src.core.game_manager import GameState
 from src.core.liens import GUIDE_LINUX_URL
@@ -544,8 +545,34 @@ def on_game_settings(view: "GameDetailView") -> None:
         game, view.manager,
         appliquer_langue=lambda code: _appliquer_langue(view, code),
         actions=_actions_fichiers(view, game),
-        parent=view)
+        parent=view,
+        appliquer_manette=lambda oui: _appliquer_manette(view, game, oui))
     dlg.exec()
+
+
+def _appliquer_manette(view: "GameDetailView", game: GameData, oui: bool) -> bool:
+    """Pose « jouer à la manette » dans le registre du jeu, APRÈS l'avoir dit.
+
+    Même prévenance que la langue (règle 69) : la clé, la valeur actuelle et la
+    nouvelle, juste avant d'écrire. Un refus n'est pas une erreur ; un échec
+    réel, si — un toast suffit ici, la fenêtre remet l'interrupteur sur le vrai.
+    """
+    demander = confirmer_registre(view, game.name)
+    accepte = True
+
+    def confirmer(ruche, cle, valeurs, ecarts=None):
+        nonlocal accepte
+        accepte = demander(ruche, cle, valeurs, ecarts)
+        return accepte
+
+    pose = manette.activer(game, oui, confirmer=confirmer)
+    if pose:
+        view.notify.emit(tr("Manette activée pour {}.").format(game.name) if oui
+                         else tr("Manette désactivée pour {}.").format(game.name))
+    elif accepte:
+        view.notify.emit(tr("Le registre n'a pas pu être modifié : réglez la manette "
+                            "dans les options du jeu."))
+    return pose
 
 
 def _actions_fichiers(view: "GameDetailView", game: GameData):
