@@ -130,3 +130,28 @@ class TestReponse:
         demander, textes = dialogue
         assert demander("HKLM", CLE, {"Locale": "fr"}) is True
         assert "Locale = fr" in textes[0]
+
+
+from src.core.i18n import tr  # noqa: E402
+
+
+class TestLeBoutonDitCeQuiSeFait:
+    """Seul JOUER lance le jeu : depuis la fenêtre de réglages (manette, langue),
+    « Écrire et lancer » faisait attendre un jeu qui ne s'ouvrait pas (Ludo, 2026-09-28)."""
+
+    def _boutons(self, monkeypatch, **kw):
+        vus = []
+        monkeypatch.setattr(gdh, "_boite", lambda icone, parent, titre, texte, choix=(), defaut=0:
+                            vus.append((texte, choix)) or 0)
+        gdh.confirmer_registre(None, "Jeu", **kw)("HKCU", CLE, {"Locale": "fr"}, {})
+        return vus[0]
+
+    def test_hors_lancement_on_ecrit_seulement(self, monkeypatch):
+        texte, choix = self._boutons(monkeypatch)
+        assert choix[0] == tr("Écrire")
+        assert tr("Sans cette écriture, le jeu risque de ne pas démarrer.") not in texte
+
+    def test_au_lancement_on_ecrit_et_on_lance(self, monkeypatch):
+        texte, choix = self._boutons(monkeypatch, au_lancement=True)
+        assert choix[0] == tr("Écrire et lancer")
+        assert tr("Sans cette écriture, le jeu risque de ne pas démarrer.") in texte

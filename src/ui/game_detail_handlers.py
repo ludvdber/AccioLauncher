@@ -88,7 +88,7 @@ def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0) -> in
     return next((i for i, b in enumerate(boutons) if b is clique), -1)
 
 
-def confirmer_registre(view: "GameDetailView", nom_jeu: str):
+def confirmer_registre(view: "GameDetailView", nom_jeu: str, au_lancement: bool = False):
     """Fabrique le rappel de prévenance affiché avant une écriture registre.
 
     On ne touche pas au registre de quelqu'un sans le lui dire, et on lui dit
@@ -108,6 +108,10 @@ def confirmer_registre(view: "GameDetailView", nom_jeu: str):
     l'installeur EA laisse un `Install Dir` et un `Locale` à lui. Quelqu'un qui
     voit ce qu'il perd peut refuser en connaissance de cause ; sans ça,
     autoriser revient à signer sans lire.
+
+    `au_lancement` : seul JOUER enchaîne sur le jeu. Depuis la fenêtre de
+    réglages (langue, manette), on écrit et c'est tout — un bouton « Écrire et
+    lancer » y faisait attendre un jeu qui ne s'ouvrait pas (Ludo, 2026-09-28).
     """
     def demander(ruche: str, cle: str, valeurs: dict, ecarts: dict | None = None) -> bool:
         ecarts = ecarts or {}
@@ -131,10 +135,9 @@ def confirmer_registre(view: "GameDetailView", nom_jeu: str):
             intro = tr("{jeu} enregistre ses réglages dans le registre de Wine, "
                        "celui du préfixe du launcher.\n\n"
                        "Le launcher va écrire ceci dans {cle} :\n\n{valeurs}")
-        morceaux = [
-            intro.format(jeu=nom_jeu, cle=f"{ruche}\\{cle}", valeurs=detail),
-            tr("Sans cette écriture, le jeu risque de ne pas démarrer."),
-        ]
+        morceaux = [intro.format(jeu=nom_jeu, cle=f"{ruche}\\{cle}", valeurs=detail)]
+        if au_lancement:
+            morceaux.append(tr("Sans cette écriture, le jeu risque de ne pas démarrer."))
         # Pas d'UAC sous Wine : l'annoncer ferait attendre une fenêtre qui ne
         # viendra pas.
         if ruche == "HKLM" and sys.platform == "win32":
@@ -144,7 +147,7 @@ def confirmer_registre(view: "GameDetailView", nom_jeu: str):
         return _boite(
             QMessageBox.Icon.Question, view, tr("Réglage du jeu"),
             "\n\n".join(morceaux),
-            (tr("Écrire et lancer"), tr("Annuler")),
+            (tr("Écrire et lancer") if au_lancement else tr("Écrire"), tr("Annuler")),
         ) == 0
     return demander
 
@@ -221,7 +224,7 @@ def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
         view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
         return
     view._stop_video()
-    demander = confirmer_registre(view, view.game.name)
+    demander = confirmer_registre(view, view.game.name, au_lancement=True)
     accepte = True
 
     def confirmer(ruche, cle, valeurs, ecarts=None):

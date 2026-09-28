@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,6 +32,9 @@ from src.core.i18n import decimal_separator, tr
 log = logging.getLogger(__name__)
 
 NOM_INI = "d3d9.ini"
+# Copie de l'ini tel qu'il était AVANT la première retouche du lanceur : ce que
+# « Rétablir les réglages d'origine » remet en place.
+SUFFIXE_ORIGINE = ".origine"
 _MARQUE_V2 = "Accio.Window"   # section qu'a seul le nouveau correctif
 
 # Choix proposés pour la limite d'images. 0 = aucune.
@@ -39,6 +43,13 @@ LIMITES_FPS = (0, 60, 100, 120, 144)
 # faire ; 16 n'est pas proposé : peu de cartes le font, et l'écart avec 8 ne se
 # voit pas.
 ECHANTILLONS_MSAA = (0, 2, 4, 8)
+# Filtrage anisotrope : 0 = éteint (textures floues de biais), 16 = livré.
+FILTRAGES = (0, 2, 4, 8, 16)
+# Vivacité et contraste de l'étalonnage : des crans nommés plutôt que des
+# nombres, qui ne disent rien à qui ne connaît pas le correctif. Les valeurs
+# livrées y sont toutes (HP4/HP6 0.30 et 0.20, HP5 0.60 et 0.30).
+VIVACITES = ((0, "Aucune"), (0.15, "Légère"), (0.3, "Moyenne"), (0.45, "Forte"), (0.6, "Très forte"))
+CONTRASTES = ((0, "D'origine"), (0.1, "Léger"), (0.2, "Moyen"), (0.3, "Fort"))
 # Langues du menu de démarrage de HP6 (les 16 qu'il propose), écrites dans leur
 # propre langue comme dans le menu du jeu : un nom de langue ne se traduit pas
 # pour celui qui la cherche. « auto » (le défaut du correctif) est la langue de
@@ -117,6 +128,9 @@ class Reglage:
     cout: tuple[tuple[str, int], ...] = ()
     # Change-t-il VRAIMENT l'image ? Beaucoup d'effets sont discrets ; ceux-là se voient.
     se_voit: bool = False
+    # Libellés de choix NUMÉRIQUES (clés tr()) : (valeur, libellé). Le premier
+    # s'affiche quand même `zero`. Vide : `format_choix`.
+    etiquettes: tuple[tuple[object, str], ...] = ()
 
 
 # L'ordre est celui de l'affichage.
@@ -141,7 +155,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Lissage des contours (FXAA)",
             "Adoucit les escaliers au bord des personnages et du décor "
             "(cheveux, vêtements, toiles de tente), avec un léger renforcement "
-            "de la netteté.", defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+            "de la netteté. Il porte aussi les effets ci-dessous : l'éteindre éteint "
+            "ombres de contact, halo, rayons et couleurs.",
+            defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
     # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
     # HP4) avec le correctif qui multi-échantillonne la cible de scène du jeu
     # et garde l'anticrénelage que le jeu éteint. Pas HP5 : avec son SSAO, le
@@ -151,7 +167,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Anticrénelage (MSAA)",
             "Lisse les contours des personnages et du décor en calculant "
             "plusieurs points par pixel. Plus le nombre est grand, plus c'est "
-            "lisse, et plus la carte graphique travaille.",
+            "lisse, et plus la carte graphique travaille. N'agit sur le décor "
+            "que si les ombres de contact sont éteintes : sinon, préférez le "
+            "suréchantillonnage.",
             choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
             onglet="image", cout=(("GPU", 2),), se_voit=True),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
@@ -181,6 +199,46 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "se voit le plus, et le plus exigeant : ×2 est pour les PC puissants.",
             choix=(1, 1.5, 2), zero="Désactivé", format_choix="×{}",
             onglet="image", cout=(("GPU", 3),), se_voit=True),
+    # Les effets du correctif (HP4-HP6), tous allumés dans les ini livrés et
+    # joués ainsi ; F8 (CompareKey) les montre éteints. Ouverts au lanceur à la
+    # demande de Ludo (2026-09-28) : « beaucoup d'options dans l'ini, quasiment
+    # aucune modifiable depuis le launcher ». Tous passent par le FXAA.
+    Reglage("filtrage", "Accio.Graphics", "AnisotropicFiltering",
+            "Netteté des textures de biais",
+            "Sols, murs et chemins vus en biais restent nets au lieu de devenir "
+            "flous (filtrage anisotrope). Presque gratuit sur une carte récente.",
+            choix=FILTRAGES, zero="Désactivé", format_choix="×{}",
+            onglet="image", cout=(("GPU", 1),), se_voit=True),
+    Reglage("occlusion", "Accio.Graphics", "SSAO",
+            "Ombres de contact",
+            "Assombrit les recoins, le pied des murs et le contact des objets : "
+            "le décor gagne en relief (occlusion ambiante). Ferme la porte au MSAA.",
+            defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True),
+    Reglage("halo", "Accio.Graphics", "Bloom",
+            "Halo lumineux",
+            "Les lumières vives (fenêtres, torches, sorts) débordent doucement "
+            "autour d'elles.", defaut=False, onglet="image", cout=(("GPU", 1),)),
+    Reglage("rayons", "Accio.Graphics", "GodRays",
+            "Rayons de lumière",
+            "Des rayons partent des sources de lumière fortes, comme le soleil "
+            "à travers les arbres.", defaut=False, onglet="image", cout=(("GPU", 1),)),
+    Reglage("couleurs", "Accio.Graphics", "ColorGrading",
+            "Couleurs retravaillées",
+            "Active la vivacité et le contraste ci-dessous, en épargnant les "
+            "visages. Éteint : les couleurs d'origine du jeu.",
+            defaut=False, onglet="image", se_voit=True),
+    Reglage("vivacite", "Accio.Graphics", "Vibrance",
+            "Vivacité des couleurs",
+            "Ravive les couleurs ternes sans saturer celles qui le sont déjà. "
+            "Seulement avec « Couleurs retravaillées ».",
+            choix=tuple(v for v, _ in VIVACITES), zero="Aucune", etiquettes=VIVACITES,
+            onglet="image", se_voit=True),
+    Reglage("contraste", "Accio.Graphics", "Contrast",
+            "Contraste",
+            "Creuse l'écart entre zones claires et sombres. Seulement avec "
+            "« Couleurs retravaillées ».",
+            choix=tuple(v for v, _ in CONTRASTES), zero="D'origine", etiquettes=CONTRASTES,
+            onglet="image", se_voit=True),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
     # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
     # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
@@ -224,6 +282,8 @@ def libelle_choix(reglage: Reglage, valeur) -> str:
         return dict(reglage.noms_choix).get(valeur, str(valeur))
     if valeur == reglage.choix[0]:
         return tr(reglage.zero)
+    if reglage.etiquettes:
+        return tr(dict(reglage.etiquettes).get(valeur, _nombre(valeur)))
     return reglage.format_choix.format(_nombre(valeur).replace(".", decimal_separator()))
 
 
@@ -247,7 +307,6 @@ def textes(reglage: Reglage) -> tuple[str, str]:
 A_VENIR = (
     "Résolution",
     "Format d'image",
-    "Effets d'image (lumière, ombres)",
 )
 
 
@@ -437,10 +496,58 @@ def poser_valeur(ini: Path, section: str, cle: str, valeur: str) -> bool:
     return True
 
 
+def chemin_origine(ini: Path) -> Path:
+    return ini.with_name(ini.name + SUFFIXE_ORIGINE)
+
+
+def _garder_origine(ini: Path) -> None:
+    """Copie l'ini AVANT la première retouche d'un réglage, une fois pour toutes.
+
+    Un échec n'empêche pas le réglage : il ne coûte que la remise à l'origine.
+    """
+    copie = chemin_origine(ini)
+    if copie.exists():
+        return
+    try:
+        shutil.copy2(ini, copie)
+    except OSError:
+        log.warning("Correctif : copie d'origine de %s impossible", ini, exc_info=True)
+
+
+def _cles(reglage: Reglage) -> tuple[str, ...]:
+    if reglage.ident == "touches_zqsd":
+        return tuple(cle for cle, _ in touches_preregle())
+    if reglage.ident == "panneau_perfs":
+        return _PANNEAU
+    return (reglage.cle,)
+
+
+def a_une_origine(ini: Path) -> bool:
+    return chemin_origine(ini).is_file()
+
+
+def remettre_origine(ini: Path, reglages) -> None:
+    """Remet les clés de CES réglages telles que les portait l'ini d'origine.
+
+    Seulement les clés que le lanceur règle : le reste du fichier (touches
+    posées à la main, dossier des captures) ne bouge pas. Une clé absente de
+    l'origine est commentée, donc rendue au défaut du correctif. Lève OSError
+    si un des deux fichiers ne peut pas être lu ou écrit.
+    """
+    origine, _ = _lire(chemin_origine(ini))
+    lignes, fin = _lire(ini)
+    for reglage in reglages:
+        for cle in _cles(reglage):
+            _poser(lignes, reglage.section, cle, _valeur(origine, reglage.section, cle))
+    _ecrire(ini, lignes, fin)
+    log.info("Correctif : réglages d'origine remis dans %s", ini)
+
+
 def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
     """Écrit un réglage. Lève OSError si le fichier ne peut pas être écrit,
     ValueError si la valeur n'est pas de celles que l'interface propose."""
     lignes, fin = _lire(ini)
+    _garder_origine(ini)
     if reglage.ident == "touches_zqsd":
         for cle, touche in touches_preregle():
             if not _poser(lignes, reglage.section, cle, touche if valeur else None):

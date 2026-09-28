@@ -30,6 +30,8 @@ IDENTIQUES_TOLEREES = {
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.
     "En {}",
+    # « Contraste » : même mot en espagnol (réglage d'image du correctif).
+    "Contraste",
     # « changelog » est le même mot en français et en anglais.
     "v{} · changelog",
     # Noms de produits Microsoft : ils ne se traduisent pas.

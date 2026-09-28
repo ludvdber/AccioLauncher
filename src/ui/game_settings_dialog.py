@@ -125,6 +125,10 @@ class GameSettingsDialog(QDialog):
             if self._reglages else None)
         self._erreur: QLabel | None = None
         self._compte_captures: QLabel | None = None
+        # Le contrôle de chaque réglage du correctif, par identifiant : la remise
+        # à l'origine les remet sur ce que porte le fichier, sans rebâtir la page.
+        self._controles: dict[str, QWidget] = {}
+        self._bouton_reset: QPushButton | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -334,7 +338,8 @@ class GameSettingsDialog(QDialog):
             if not self._reglages:
                 self._section_affichage(corps)
                 return True
-            self._section_correctif(corps, "image", avertir=True)
+            if self._section_correctif(corps, "image", avertir=True):
+                self._bouton_origine(corps)
             corps.addSpacing(10)
             corps.addWidget(self._titre_rubrique(tr("Plus tard"), verrouille=True))
             corps.addSpacing(4)
@@ -436,6 +441,74 @@ class GameSettingsDialog(QDialog):
             self._controle(layout, ini, reglage)
         return True
 
+    def _bouton_origine(self, layout: QVBoxLayout) -> None:
+        """« Rétablir les réglages d'origine » : ceux de l'ini tel qu'il était avant
+        la première retouche du lanceur (demandé par Ludo, 2026-09-28 — surtout
+        maintenant que les couleurs se règlent).
+        """
+        if self._ini is None or not self._ini.is_file():
+            return
+        bouton = QPushButton(tr("Rétablir les réglages d'origine"))
+        bouton.setFont(body_font(12))
+        # Même lien doré que les actions de « Fichiers » ; grisé tant qu'il n'y a
+        # rien à rétablir.
+        bouton.setStyleSheet(themed(
+            "QPushButton { color: #d6a72c; background: transparent;"
+            " border: none; text-align: left; padding: 4px 0px; }"
+            "QPushButton:hover { color: #e8c547; text-decoration: underline; }"
+            "QPushButton:disabled { color: #55556a; }"))
+        bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+        bouton.setEnabled(reglages_correctif.a_une_origine(self._ini))
+        bouton.setToolTip(tr("Ceux du jeu tel qu'il a été installé. "
+                             "Rien n'a encore été changé depuis le lanceur."))
+        if bouton.isEnabled():
+            bouton.setToolTip(tr("Remet image, commandes et performances comme à "
+                                 "l'installation du jeu."))
+        bouton.clicked.connect(self._remettre_origine)
+        self._bouton_reset = bouton
+        layout.addSpacing(8)
+        ligne = QHBoxLayout()
+        ligne.addWidget(bouton)
+        ligne.addStretch()
+        layout.addLayout(ligne)
+
+    def _remettre_origine(self) -> None:
+        try:
+            reglages_correctif.remettre_origine(self._ini, self._reglages)
+        except OSError:
+            log.warning("Correctif : remise à l'origine impossible", exc_info=True)
+            self._montrer_erreur()
+            return
+        for reglage in self._reglages:
+            widget = self._controles.get(reglage.ident)
+            if widget is not None:
+                self._remettre_controle(widget, reglage)
+
+    def _remettre_controle(self, widget, reglage) -> None:
+        """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
+        try:
+            etat = reglages_correctif.lire(self._ini, reglage)
+        except OSError:
+            return
+        widget.blockSignals(True)
+        if isinstance(widget, QComboBox):
+            index = widget.findData(etat.valeur)
+            if index < 0:
+                widget.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+                index = widget.count() - 1
+            widget.setCurrentIndex(index)
+        else:
+            widget.setChecked(bool(etat.valeur))
+        widget.blockSignals(False)
+
+    def _montrer_erreur(self) -> None:
+        self._erreur.setText(tr(
+            "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
+            "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+        if self._erreur.isHidden():
+            self._erreur.show()
+            self._ajuster_hauteur()   # le message ne doit rien recouvrir
+
     def _note(self, layout: QVBoxLayout, texte: str) -> None:
         note = QLabel(texte)
         note.setFont(body_font(11))
@@ -473,6 +546,7 @@ class GameSettingsDialog(QDialog):
             choix.currentIndexChanged.connect(
                 lambda _i, c=choix, r=reglage: self._on_reglage(r, c.currentData(), c))
             h.addWidget(choix)
+            self._controles[reglage.ident] = choix
             layout.addWidget(ligne)
         else:
             ligne, bascule = toggle_row(libelle_txt, bool(etat.valeur))
@@ -490,6 +564,7 @@ class GameSettingsDialog(QDialog):
                     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau."))
             bascule.toggled.connect(
                 lambda coche, r=reglage, b=bascule: self._on_reglage(r, coche, b))
+            self._controles[reglage.ident] = bascule
         self._reperes(layout, reglage)
         aide = QLabel(aide_txt)
         aide.setFont(body_font(10))
@@ -686,25 +761,14 @@ class GameSettingsDialog(QDialog):
             reglages_correctif.ecrire(self._ini, reglage, valeur)
         except (OSError, ValueError):
             log.warning("Correctif : %s non écrit", reglage.ident, exc_info=True)
-            # Remettre le contrôle sur ce que porte VRAIMENT le fichier.
-            try:
-                etat = reglages_correctif.lire(self._ini, reglage)
-            except OSError:
-                etat = None
-            widget.blockSignals(True)
-            if isinstance(widget, QComboBox):
-                if etat is not None:
-                    widget.setCurrentIndex(max(0, widget.findData(etat.valeur)))
-            elif etat is not None:
-                widget.setChecked(bool(etat.valeur))
-            widget.blockSignals(False)
-            self._erreur.setText(tr(
-                "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
-                "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
-            if self._erreur.isHidden():
-                self._erreur.show()
-                self._ajuster_hauteur()   # le message ne doit rien recouvrir
+            self._remettre_controle(widget, reglage)
+            self._montrer_erreur()
             return
+        if self._bouton_reset is not None and not self._bouton_reset.isEnabled():
+            # La première retouche vient de garder l'ini d'origine.
+            self._bouton_reset.setEnabled(reglages_correctif.a_une_origine(self._ini))
+            self._bouton_reset.setToolTip(tr("Remet image, commandes et performances "
+                                             "comme à l'installation du jeu."))
         if not self._erreur.isHidden():
             self._erreur.hide()
             self._ajuster_hauteur()

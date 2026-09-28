@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.33",
+  "catalog_version": "0.34",
   "contributors": [
     {
       "name": "ASTeam",
@@ -698,7 +698,17 @@
         "touches_zqsd",
         "compteur_fps",
         "panneau_perfs",
-        "surechantillonnage"
+        "surechantillonnage",
+        "lissage",
+        "anticrenelage",
+        "anticrenelage_transparence",
+        "filtrage",
+        "occlusion",
+        "halo",
+        "rayons",
+        "couleurs",
+        "vivacite",
+        "contraste"
       ],
       "dll_overrides": [
         "d3d9",
@@ -835,7 +845,15 @@
         "limite_fps",
         "surechantillonnage",
         "compteur_fps",
-        "panneau_perfs"
+        "panneau_perfs",
+        "lissage",
+        "filtrage",
+        "occlusion",
+        "halo",
+        "rayons",
+        "couleurs",
+        "vivacite",
+        "contraste"
       ],
       "dll_overrides": [
         "d3d9"
@@ -1020,7 +1038,17 @@
         "langue_menu",
         "compteur_fps",
         "panneau_perfs",
-        "surechantillonnage"
+        "surechantillonnage",
+        "lissage",
+        "anticrenelage",
+        "anticrenelage_transparence",
+        "filtrage",
+        "occlusion",
+        "halo",
+        "rayons",
+        "couleurs",
+        "vivacite",
+        "contraste"
       ],
       "dll_overrides": [
         "d3d9"

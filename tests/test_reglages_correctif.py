@@ -507,3 +507,89 @@ class TestFenetre:
 def test_le_module_ne_depend_pas_de_qt():
     source = Path(rc.__file__).read_text(encoding="utf-8")
     assert "PyQt6" not in source
+
+
+class TestEffetsDImage:
+    """Les effets du correctif ouverts au lanceur (Ludo, 2026-09-28 : « il y a bcp
+    d'options dans le ini mais quasiment aucune modifiable depuis le launcher »)."""
+
+    def test_un_effet_s_eteint_en_place(self, ini):
+        ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=1\r\nSSAO=1\r\nVibrance=0.30"))
+        rc.ecrire(ini, rc.REGLAGES["occlusion"], False)
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
+        assert b"SSAO=0\r\n" in ini.read_bytes()
+
+    def test_la_vivacite_livree_se_lit_comme_un_cran_nomme(self, ini):
+        ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=1\r\nVibrance=0.30"))
+        reglage = rc.REGLAGES["vivacite"]
+        etat = rc.lire(ini, reglage)
+        assert etat == rc.Etat(0.3)
+        assert rc.libelle_choix(reglage, etat.valeur) == tr("Moyenne")
+        assert rc.libelle_choix(reglage, 0) == tr("Aucune")
+
+    def test_les_valeurs_livrees_sont_des_crans(self):
+        """HP4/HP6 livrent 0.30 et 0.20, HP5 0.60 et 0.30 : aucun « réglé à la main »."""
+        assert {0.3, 0.6} <= set(rc.REGLAGES["vivacite"].choix)
+        assert {0.2, 0.3} <= set(rc.REGLAGES["contraste"].choix)
+        assert 16 in rc.REGLAGES["filtrage"].choix
+
+    def test_chaque_effet_est_dans_l_onglet_image(self):
+        for ident in ("filtrage", "occlusion", "halo", "rayons", "couleurs", "vivacite", "contraste"):
+            assert rc.REGLAGES[ident].onglet == "image", ident
+
+
+class TestRemiseALOrigine:
+    """« Rétablir les réglages d'origine » : l'ini d'avant la première retouche."""
+
+    def test_la_premiere_retouche_garde_l_origine(self, ini):
+        avant = ini.read_bytes()
+        assert not rc.a_une_origine(ini)
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 60)
+        assert rc.chemin_origine(ini).read_bytes() == avant
+
+    def test_la_copie_n_est_jamais_ecrasee(self, ini):
+        avant = ini.read_bytes()
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 60)
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 144)
+        assert rc.chemin_origine(ini).read_bytes() == avant
+
+    def test_remet_les_reglages_et_rien_d_autre(self, ini):
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 60)
+        rc.ecrire(ini, rc.REGLAGES["lissage"], True)
+        # Une clé que le lanceur ne règle pas, posée après coup : elle reste.
+        rc.poser_valeur(ini, "Accio.Overlay", "OverlayKey", "120")
+        rc.remettre_origine(ini, (rc.REGLAGES["limite_fps"], rc.REGLAGES["lissage"]))
+        assert rc.lire(ini, rc.REGLAGES["limite_fps"]).valeur == 100
+        assert rc.lire(ini, rc.REGLAGES["lissage"]).valeur is False
+        assert b"OverlayKey=120\r\n" in ini.read_bytes()
+
+    def test_une_cle_absente_de_l_origine_retourne_au_defaut(self, ini):
+        rc.ecrire(ini, rc.REGLAGES["occlusion"], True)   # SSAO n'existait pas
+        rc.remettre_origine(ini, (rc.REGLAGES["occlusion"],))
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
+        assert b"\r\nSSAO=1" not in ini.read_bytes()
+
+    def test_touches_et_panneau_reviennent_aussi(self, ini, azerty):
+        rc.ecrire(ini, rc.REGLAGES["touches_zqsd"], True)
+        rc.ecrire(ini, rc.REGLAGES["panneau_perfs"], True)
+        rc.remettre_origine(ini, (rc.REGLAGES["touches_zqsd"], rc.REGLAGES["panneau_perfs"]))
+        assert rc.lire(ini, rc.REGLAGES["touches_zqsd"]).valeur is False
+        assert rc.lire(ini, rc.REGLAGES["panneau_perfs"]).valeur is False
+
+    def test_le_bouton_remet_les_controles(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QPushButton
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["lissage"]), _manager(tmp_path))
+        bouton = next(b for b in dlg.findChildren(QPushButton)
+                      if b.text() == tr("Rétablir les réglages d'origine"))
+        assert not bouton.isEnabled()   # rien à rétablir tant que rien n'a changé
+        bascule = dlg._controles["lissage"]
+        qtbot.mouseClick(bascule, Qt.MouseButton.LeftButton)
+        assert bascule.isChecked()
+        assert bouton.isEnabled()
+        bouton.click()
+        assert not bascule.isChecked()
+        assert rc.lire(dossier / "d3d9.ini", rc.REGLAGES["lissage"]).valeur is False
