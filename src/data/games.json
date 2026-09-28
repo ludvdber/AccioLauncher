@@ -692,16 +692,10 @@
           "HP4/screenshots/*.png"
         ]
       },
-      "requires": [
-        "d3dx9_43"
-      ],
       "fix_settings": [
         "arriere_plan",
         "limite_fps",
         "touches_zqsd",
-        "lissage",
-        "anticrenelage",
-        "anticrenelage_transparence",
         "compteur_fps",
         "panneau_perfs"
       ],
@@ -716,9 +710,46 @@
         "Combat",
         "Aventure"
       ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
+      "latest_version": "1.1",
+      "recommended_version": "1.1",
       "versions": [
+        {
+          "version": "1.1",
+          "date": "2026-09-28",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.1/hp4.7z",
+          "download_parts": null,
+          "size_mb": 1729,
+          "changes": [
+            "Nouveau correctif PC Accio : image plus nette (suréchantillonnage, FXAA, filtrage anisotrope ×16, textures fines au loin)",
+            "Ombres de contact, halo lumineux, rayons de lumière et couleurs plus vivantes",
+            "Brume de la Forêt interdite, du lac, du labyrinthe et du cimetière rendue, sans plantage",
+            "Manettes PlayStation 4 et 5 reconnues",
+            "Alt+Tab sans figer le jeu, clavier et souris repris au retour",
+            "Touches réglables depuis le launcher (ZQSD), capture d'écran (F12), 120 images/s"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New Accio PC fix: sharper image (supersampling, FXAA, 16× anisotropic filtering, fine distant textures)",
+                "Contact shadows, bloom, light shafts and livelier colours",
+                "Haze of the Forbidden Forest, the lake, the maze and the graveyard drawn again, without crashing",
+                "PlayStation 4 and 5 controllers recognised",
+                "Alt+Tab without freezing the game, keyboard and mouse taken back on return",
+                "Keys set from the launcher (WASD), screenshot key (F12), 120 fps"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo parche PC de Accio: imagen más nítida (supermuestreo, FXAA, filtrado anisotrópico 16×, texturas finas a lo lejos)",
+                "Sombras de contacto, resplandor, rayos de luz y colores más vivos",
+                "La niebla del Bosque Prohibido, el lago, el laberinto y el cementerio vuelve a verse, sin cierres",
+                "Mandos de PlayStation 4 y 5 reconocidos",
+                "Alt+Tab sin congelar el juego, teclado y ratón recuperados al volver",
+                "Teclas configurables desde el launcher (WASD), captura de pantalla (F12), 120 fps"
+              ]
+            }
+          }
+        },
         {
           "version": "1.0",
           "date": "2026-04-08",
@@ -791,10 +822,6 @@
           "HP5/screenshots/*.png"
         ]
       },
-      "requires": [
-        "xinput1_3",
-        "d3dx9_43"
-      ],
       "controller_registry": {
         "root": "HKCU",
         "key": "Software\\Electronic Arts\\Harry Potter and the Order of the Phoenix\\ControllerConfig",
@@ -819,9 +846,49 @@
         "Duel",
         "Exploration"
       ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "latest_version": "1.2",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-09-28",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.2/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.2/hp5.7z.002"
+          ],
+          "size_mb": 4600,
+          "changes": [
+            "Nouveau correctif PC Accio : plus besoin du runtime DirectX de 2010",
+            "Couleurs revues : moins de jaune sur la pierre et l'herbe, le reste plus vivant",
+            "Manettes PlayStation 4 et 5 reconnues, barre lumineuse aux couleurs de votre maison",
+            "Textures lointaines plus fines, sans scintillement",
+            "120 images/s régulières (plus d'à-coups), capture d'écran (F12) sans figer le jeu",
+            "Alt+Tab : le jeu continue, clavier et souris repris au retour"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New Accio PC fix: the 2010 DirectX runtime is no longer needed",
+                "Colours reworked: less yellow on stone and grass, everything else livelier",
+                "PlayStation 4 and 5 controllers recognised, light bar in your house colours",
+                "Finer distant textures, without shimmering",
+                "Steady 120 fps (no more stutter), screenshot key (F12) that no longer freezes the game",
+                "Alt+Tab: the game keeps running, keyboard and mouse taken back on return"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo parche PC de Accio: ya no hace falta el runtime de DirectX de 2010",
+                "Colores revisados: menos amarillo en la piedra y la hierba, el resto más vivo",
+                "Mandos de PlayStation 4 y 5 reconocidos, barra de luz con los colores de tu casa",
+                "Texturas lejanas más finas, sin parpadeo",
+                "120 fps estables (sin tirones), captura de pantalla (F12) sin congelar el juego",
+                "Alt+Tab: el juego sigue, teclado y ratón recuperados al volver"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-07-07",
@@ -938,10 +1005,6 @@
           "HP6/screenshots/*.png"
         ]
       },
-      "requires": [
-        "xinput1_3",
-        "d3dx9_43"
-      ],
       "controller_registry": {
         "root": "HKCU",
         "key": "Software\\Electronic Arts\\Harry Potter and the Half Blood Prince\\ControllerConfig",
@@ -969,9 +1032,49 @@
         "Potions",
         "Quidditch"
       ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
+      "latest_version": "1.1",
+      "recommended_version": "1.1",
       "versions": [
+        {
+          "version": "1.1",
+          "date": "2026-09-28",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.1/hp6.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.1/hp6.7z.002"
+          ],
+          "size_mb": 4414,
+          "changes": [
+            "Nouveau correctif PC Accio : plus besoin du runtime DirectX de 2010",
+            "FXAA, filtrage anisotrope ×16, ombres de contact, halo lumineux et couleurs douces, visages préservés",
+            "Manettes PlayStation 4 et 5 reconnues, barre lumineuse aux couleurs de votre maison",
+            "Le menu de langue s'ouvre sur votre langue, y compris en Belgique, en Suisse et au Canada",
+            "120 images/s régulières (plus d'à-coups), capture d'écran (F12) sans figer le jeu",
+            "Alt+Tab : le jeu continue, clavier et souris repris au retour"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New Accio PC fix: the 2010 DirectX runtime is no longer needed",
+                "FXAA, 16× anisotropic filtering, contact shadows, bloom and soft colours that spare faces",
+                "PlayStation 4 and 5 controllers recognised, light bar in your house colours",
+                "The language menu opens on your language, Belgium, Switzerland and Canada included",
+                "Steady 120 fps (no more stutter), screenshot key (F12) that no longer freezes the game",
+                "Alt+Tab: the game keeps running, keyboard and mouse taken back on return"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo parche PC de Accio: ya no hace falta el runtime de DirectX de 2010",
+                "FXAA, filtrado anisotrópico 16×, sombras de contacto, resplandor y colores suaves que respetan las caras",
+                "Mandos de PlayStation 4 y 5 reconocidos, barra de luz con los colores de tu casa",
+                "El menú de idioma se abre en tu idioma, también en Bélgica, Suiza y Canadá",
+                "120 fps estables (sin tirones), captura de pantalla (F12) sin congelar el juego",
+                "Alt+Tab: el juego sigue, teclado y ratón recuperados al volver"
+              ]
+            }
+          }
+        },
         {
           "version": "1.0",
           "date": "2026-08-17",
