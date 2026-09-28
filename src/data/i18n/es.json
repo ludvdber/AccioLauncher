@@ -510,11 +510,9 @@
     "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et détails lointains nettement plus fins. Le réglage qui se voit le plus, et le plus exigeant : ×2 est pour les PC puissants.": "Calcula la imagen más grande y luego la reduce: bordes, pelo, follaje y detalles lejanos mucho más finos. El ajuste que más se nota, y el más exigente: ×2 es para PC potentes.",
     "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance un benchmark et F11 à nouveau l'arrête ; il est enregistré dans le dossier « benchmarks » du jeu.": "Tiempo por fotograma y su gráfica, procesador, tarjeta gráfica, memoria de vídeo y RAM, latencia. En el juego, F11 inicia un benchmark y F11 de nuevo lo detiene; se guarda en la carpeta «benchmarks» del juego.",
     "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté. Il porte aussi les effets ci-dessous : l'éteindre éteint ombres de contact, halo, rayons et couleurs.": "Suaviza los bordes dentados de personajes y decorado (pelo, ropa, lonas), con un ligero aumento de nitidez. También lleva los efectos de abajo: apagarlo apaga las sombras de contacto, el resplandor, los rayos y los colores.",
-    "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille. N'agit sur le décor que si les ombres de contact sont éteintes : sinon, préférez le suréchantillonnage.": "Suaviza los bordes de personajes y decorado calculando varios puntos por píxel. Cuanto mayor el número, más suave, y más trabaja la tarjeta gráfica. Solo actúa sobre el decorado con las sombras de contacto apagadas: si no, mejor el supermuestreo.",
     "Netteté des textures de biais": "Texturas nítidas en ángulo",
     "Sols, murs et chemins vus en biais restent nets au lieu de devenir flous (filtrage anisotrope). Presque gratuit sur une carte récente.": "Suelos, muros y caminos vistos en ángulo siguen nítidos en vez de desenfocarse (filtrado anisotrópico). Casi gratis en una tarjeta reciente.",
     "Ombres de contact": "Sombras de contacto",
-    "Assombrit les recoins, le pied des murs et le contact des objets : le décor gagne en relief (occlusion ambiante). Ferme la porte au MSAA.": "Oscurece rincones, la base de los muros y el contacto entre objetos: el decorado gana relieve (oclusión ambiental). Deja fuera el MSAA.",
     "Halo lumineux": "Resplandor",
     "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour d'elles.": "Las luces intensas (ventanas, antorchas, hechizos) se desbordan suavemente a su alrededor.",
     "Rayons de lumière": "Rayos de luz",
@@ -535,6 +533,9 @@
     "Fort": "Fuerte",
     "Rétablir les réglages d'origine": "Restablecer los ajustes originales",
     "Ceux du jeu tel qu'il a été installé. Rien n'a encore été changé depuis le lanceur.": "Los del juego tal como se instaló. Aún no se ha cambiado nada desde el launcher.",
-    "Remet image, commandes et performances comme à l'installation du jeu.": "Devuelve gráficos, controles y rendimiento a como estaban al instalar el juego."
+    "Remet image, commandes et performances comme à l'installation du jeu.": "Devuelve gráficos, controles y rendimiento a como estaban al instalar el juego.",
+    "Lisse les contours des personnages et du décor en calculant plusieurs points par pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique travaille. L'allumer éteint les ombres de contact, qui l'empêchent d'atteindre le décor.": "Suaviza los bordes de personajes y decorado calculando varios puntos por píxel. Cuanto mayor el número, más suave, y más trabaja la tarjeta gráfica. Activarlo apaga las sombras de contacto, que le impiden llegar al decorado.",
+    "Assombrit les recoins, le pied des murs et le contact des objets : le décor gagne en relief (occlusion ambiante). Les allumer éteint l'anticrénelage (MSAA).": "Oscurece rincones, la base de los muros y el contacto entre objetos: el decorado gana relieve (oclusión ambiental). Activarlas apaga el antialiasing (MSAA).",
+    "Sans effet tant que « {} » est éteint.": "Sin efecto mientras «{}» esté apagado."
   }
 }

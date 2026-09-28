@@ -1,0 +1,22 @@
+{
+  "_lisezmoi": "Étiquettes du dépôt, posées par le workflow « étiquettes » (Actions → étiquettes → Run workflow). « jeu » : la réponse du formulaire d'issue qui déclenche l'étiquette, recopiée MOT POUR MOT depuis .github/ISSUE_TEMPLATE.",
+  "etiquettes": [
+    {"nom": "launcher", "couleur": "d6a72c", "description": "Le launcher lui-même", "jeu": "Le launcher lui-même (aucun jeu en particulier)"},
+    {"nom": "HP1", "couleur": "7f1d1d", "description": "Harry Potter à l'École des Sorciers", "jeu": "Harry Potter à l'École des Sorciers"},
+    {"nom": "HP2", "couleur": "14532d", "description": "Harry Potter et la Chambre des Secrets", "jeu": "Harry Potter et la Chambre des Secrets"},
+    {"nom": "HP3", "couleur": "1e3a8a", "description": "Harry Potter et le Prisonnier d'Azkaban", "jeu": "Harry Potter et le Prisonnier d'Azkaban"},
+    {"nom": "HP4", "couleur": "9a3412", "description": "Harry Potter et la Coupe de Feu", "jeu": "Harry Potter et la Coupe de Feu"},
+    {"nom": "HP5", "couleur": "4c1d95", "description": "Harry Potter et l'Ordre du Phénix", "jeu": "Harry Potter et l'Ordre du Phénix"},
+    {"nom": "HP6", "couleur": "166534", "description": "Harry Potter et le Prince de Sang-Mêlé", "jeu": "Harry Potter et le Prince de Sang-Mêlé"},
+    {"nom": "HP7 partie 1", "couleur": "374151", "description": "Harry Potter et les Reliques de la Mort, partie 1", "jeu": "Harry Potter et les Reliques de la Mort, partie 1"},
+    {"nom": "HP7 partie 2", "couleur": "1f2937", "description": "Harry Potter et les Reliques de la Mort, partie 2", "jeu": "Harry Potter et les Reliques de la Mort, partie 2"},
+    {"nom": "correctif PC", "couleur": "b45309", "description": "Le correctif des jeux (d3d9.dll, xinput1_3.dll, d3d9.ini)"},
+    {"nom": "graphismes", "couleur": "0e7490", "description": "Image, effets, résolution, anticrénelage"},
+    {"nom": "manette", "couleur": "0369a1", "description": "Manettes Xbox, PlayStation, barre lumineuse"},
+    {"nom": "stream", "couleur": "be185d", "description": "Jeu en live : OBS, TikTok Live Studio, capture"},
+    {"nom": "linux", "couleur": "facc15", "description": "Linux, Steam Deck, Bazzite, Wine/Proton"},
+    {"nom": "catalogue", "couleur": "6b7280", "description": "games.json : versions, liens, réglages déclarés"},
+    {"nom": "à confirmer", "couleur": "fbca04", "description": "Correctif livré, en attente du retour de la personne"},
+    {"nom": "confirmé", "couleur": "0e8a16", "description": "Reproduit ou confirmé par la personne qui l'a signalé"}
+  ]
+}

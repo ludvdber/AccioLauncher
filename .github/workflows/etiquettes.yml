@@ -1,0 +1,68 @@
+name: étiquettes
+
+# Deux usages :
+# - Actions → étiquettes → Run workflow : crée ou met à jour les étiquettes de
+#   .github/etiquettes.json (couleur et description comprises ; aucune n'est supprimée).
+# - À l'ouverture ou la modification d'une issue : pose l'étiquette du jeu choisi
+#   dans le formulaire (« Jeu concerné »).
+#
+# Le texte de l'issue vient de n'importe qui : il est LU par jq depuis le fichier
+# de l'événement, jamais recopié dans le script (injection de commandes).
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened, edited]
+
+permissions: {}
+
+jobs:
+  creer:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Créer ou mettre à jour les étiquettes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          jq -c '.etiquettes[]' .github/etiquettes.json | while read -r e; do
+            gh label create "$(jq -r .nom <<<"$e")" \
+              --color "$(jq -r .couleur <<<"$e")" \
+              --description "$(jq -r .description <<<"$e")" --force
+          done
+
+  jeu:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Étiquette du jeu choisi dans le formulaire
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Un formulaire rend « ### Jeu concerné », une ligne vide, puis la réponse.
+          reponse=$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH" | tr -d '\r' \
+            | awk '/^### Jeu concerné/ { getline; getline; print; exit }')
+          nom=$(jq -r --arg j "$reponse" \
+            '.etiquettes[] | select(.jeu != null and .jeu == $j) | .nom' .github/etiquettes.json)
+          if [ -z "$nom" ]; then
+            echo "Aucun jeu reconnu dans le formulaire : rien à poser."
+            exit 0
+          fi
+          gh issue edit "$(jq -r .issue.number "$GITHUB_EVENT_PATH")" --add-label "$nom"

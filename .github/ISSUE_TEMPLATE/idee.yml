@@ -10,6 +10,23 @@ body:
 
         Vous voulez traduire le launcher dans votre langue ? C'est un simple fichier texte, sans code : tout est dans [docs/TRANSLATORS.md](https://github.com/ludvdber/AccioLauncher/blob/main/docs/TRANSLATORS.md).
 
+  # Mêmes réponses, mot pour mot, que bug.yml : elles déclenchent l'étiquette du
+  # jeu (.github/etiquettes.json, workflow « étiquettes »).
+  - type: dropdown
+    id: jeu
+    attributes:
+      label: Jeu concerné
+      options:
+        - Le launcher lui-même (aucun jeu en particulier)
+        - Harry Potter à l'École des Sorciers
+        - Harry Potter et la Chambre des Secrets
+        - Harry Potter et le Prisonnier d'Azkaban
+        - Harry Potter et la Coupe de Feu
+        - Harry Potter et l'Ordre du Phénix
+        - Harry Potter et le Prince de Sang-Mêlé
+        - Harry Potter et les Reliques de la Mort, partie 1
+        - Harry Potter et les Reliques de la Mort, partie 2
+
   - type: textarea
     id: besoin
     attributes:

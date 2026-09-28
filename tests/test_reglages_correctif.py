@@ -593,3 +593,63 @@ class TestRemiseALOrigine:
         bouton.click()
         assert not bascule.isChecked()
         assert rc.lire(dossier / "d3d9.ini", rc.REGLAGES["lissage"]).valeur is False
+
+
+class TestDependances:
+    """Ce qu'un réglage éteint prive d'effet se grise ; MSAA et ombres de contact
+    s'excluent (Ludo, 2026-09-28 : « si un paramètre désactive d'autres paramètres,
+    il faut que ça se désactive aussi dans le launcher »)."""
+
+    def test_fxaa_eteint_bloque_les_effets_et_les_couleurs(self):
+        valeurs = {"lissage": False, "couleurs": True, "vivacite": 0.3, "occlusion": True}
+        for ident in ("occlusion", "couleurs", "vivacite"):
+            assert rc.bloque_par(rc.REGLAGES[ident], valeurs) is rc.REGLAGES["lissage"], ident
+
+    def test_couleurs_eteintes_bloquent_vivacite_et_contraste(self):
+        valeurs = {"lissage": True, "couleurs": False, "vivacite": 0.3}
+        assert rc.bloque_par(rc.REGLAGES["vivacite"], valeurs) is rc.REGLAGES["couleurs"]
+        assert rc.bloque_par(rc.REGLAGES["couleurs"], valeurs) is None
+
+    def test_un_parent_absent_du_jeu_ne_bloque_rien(self):
+        assert rc.bloque_par(rc.REGLAGES["occlusion"], {"occlusion": True}) is None
+
+    def test_la_transparence_suit_le_msaa(self):
+        assert rc.bloque_par(rc.REGLAGES["anticrenelage_transparence"],
+                             {"anticrenelage": 0}) is rc.REGLAGES["anticrenelage"]
+        assert rc.bloque_par(rc.REGLAGES["anticrenelage_transparence"], {"anticrenelage": 4}) is None
+
+    def _fenetre(self, qtbot, tmp_path, idents):
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(
+            INI_V2.replace("FXAA=0", "FXAA=1\r\nAntialiasing=0\r\nSSAO=1\r\nColorGrading=1").encode("ascii"))
+        return _dialogue(qtbot, _jeu(tmp_path, idents), _manager(tmp_path)), dossier / "d3d9.ini"
+
+    def test_eteindre_le_fxaa_grise_les_effets_sans_les_reecrire(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "occlusion", "couleurs"])
+        assert dlg._blocs["occlusion"].isEnabled()
+        qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
+        assert not dlg._blocs["occlusion"].isEnabled()
+        assert not dlg._blocs["couleurs"].isEnabled()
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True   # rallumer rend l'effet
+        qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
+        assert dlg._blocs["occlusion"].isEnabled()
+
+    def test_choisir_le_msaa_eteint_les_ombres_de_contact(self, qtbot, tmp_path):
+        dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "anticrenelage", "occlusion"])
+        choix = dlg._controles["anticrenelage"]
+        choix.setCurrentIndex(choix.findData(4))
+        assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 4
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
+        assert not dlg._controles["occlusion"].isChecked()
+
+    def test_rallumer_les_ombres_eteint_le_msaa(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "anticrenelage", "occlusion"])
+        choix = dlg._controles["anticrenelage"]
+        choix.setCurrentIndex(choix.findData(4))
+        qtbot.mouseClick(dlg._controles["occlusion"], Qt.MouseButton.LeftButton)
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True
+        assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 0
+        assert choix.currentData() == 0

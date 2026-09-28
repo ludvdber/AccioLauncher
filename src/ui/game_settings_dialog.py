@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -128,6 +129,9 @@ class GameSettingsDialog(QDialog):
         # Le contrôle de chaque réglage du correctif, par identifiant : la remise
         # à l'origine les remet sur ce que porte le fichier, sans rebâtir la page.
         self._controles: dict[str, QWidget] = {}
+        # Le bloc entier de chaque réglage (ligne, pastilles, aide) : grisé quand
+        # un autre réglage, éteint, lui retire tout effet.
+        self._blocs: dict[str, QWidget] = {}
         self._bouton_reset: QPushButton | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
@@ -439,7 +443,56 @@ class GameSettingsDialog(QDialog):
             layout.addWidget(avis)
         for reglage in reglages:
             self._controle(layout, ini, reglage)
+        self._maj_dependances()
         return True
+
+    def _valeurs_affichees(self) -> dict:
+        """identifiant → valeur que montre son contrôle."""
+        valeurs = {}
+        for ident, widget in self._controles.items():
+            valeurs[ident] = (widget.currentData() if isinstance(widget, QComboBox)
+                              else widget.isChecked())
+        return valeurs
+
+    def _maj_dependances(self) -> None:
+        """Grise ce qu'un réglage éteint prive d'effet, et dit lequel.
+
+        Grisé et non caché : la page ne saute pas, et on voit ce qu'il faut
+        rallumer. La valeur n'est PAS réécrite — rallumer le parent rend l'effet
+        tel qu'il était.
+        """
+        valeurs = self._valeurs_affichees()
+        for ident, bloc in self._blocs.items():
+            reglage = reglages_correctif.REGLAGES[ident]
+            bloquant = reglages_correctif.bloque_par(reglage, valeurs)
+            bloc.setEnabled(bloquant is None)
+            effet = bloc.graphicsEffect()
+            if bloquant is None:
+                if effet is not None:
+                    bloc.setGraphicsEffect(None)
+                bloc.setToolTip("")
+            else:
+                if effet is None:
+                    effet = QGraphicsOpacityEffect(bloc)
+                    effet.setOpacity(0.4)
+                    bloc.setGraphicsEffect(effet)
+                bloc.setToolTip(tr("Sans effet tant que « {} » est éteint.").format(
+                    reglages_correctif.textes(bloquant)[0]))
+
+    def _appliquer_exclusion(self, reglage, valeur) -> None:
+        """Allumer un réglage éteint celui qu'il exclut (MSAA ↔ ombres de contact)."""
+        autre = reglages_correctif.REGLAGES.get(reglage.exclut)
+        widget = self._controles.get(reglage.exclut)
+        if autre is None or widget is None or not reglages_correctif.allume(reglage, valeur):
+            return
+        if not reglages_correctif.allume(autre, self._valeurs_affichees()[autre.ident]):
+            return
+        try:
+            reglages_correctif.ecrire(self._ini, autre, reglages_correctif.eteint(autre))
+        except (OSError, ValueError):
+            log.warning("Correctif : %s non éteint", autre.ident, exc_info=True)
+            self._montrer_erreur()
+        self._remettre_controle(widget, autre)
 
     def _bouton_origine(self, layout: QVBoxLayout) -> None:
         """« Rétablir les réglages d'origine » : ceux de l'ini tel qu'il était avant
@@ -483,6 +536,7 @@ class GameSettingsDialog(QDialog):
             widget = self._controles.get(reglage.ident)
             if widget is not None:
                 self._remettre_controle(widget, reglage)
+        self._maj_dependances()
 
     def _remettre_controle(self, widget, reglage) -> None:
         """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
@@ -517,12 +571,19 @@ class GameSettingsDialog(QDialog):
         note.setStyleSheet("color: #8a8aaa; background: transparent;")
         layout.addWidget(note)
 
-    def _controle(self, layout: QVBoxLayout, ini: Path, reglage) -> None:
+    def _controle(self, parent: QVBoxLayout, ini: Path, reglage) -> None:
         try:
             etat = reglages_correctif.lire(ini, reglage)
         except OSError:
             log.warning("Correctif : %s illisible", ini, exc_info=True)
             return
+        bloc = QWidget()
+        bloc.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(bloc)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        parent.addWidget(bloc)
+        self._blocs[reglage.ident] = bloc
         libelle_txt, aide_txt = reglages_correctif.textes(reglage)
         if reglage.choix:
             ligne = QWidget()
@@ -763,7 +824,10 @@ class GameSettingsDialog(QDialog):
             log.warning("Correctif : %s non écrit", reglage.ident, exc_info=True)
             self._remettre_controle(widget, reglage)
             self._montrer_erreur()
+            self._maj_dependances()
             return
+        self._appliquer_exclusion(reglage, valeur)
+        self._maj_dependances()
         if self._bouton_reset is not None and not self._bouton_reset.isEnabled():
             # La première retouche vient de garder l'ini d'origine.
             self._bouton_reset.setEnabled(reglages_correctif.a_une_origine(self._ini))

@@ -131,6 +131,13 @@ class Reglage:
     # Libellés de choix NUMÉRIQUES (clés tr()) : (valeur, libellé). Le premier
     # s'affiche quand même `zero`. Vide : `format_choix`.
     etiquettes: tuple[tuple[object, str], ...] = ()
+    # Ce que le correctif fait VRAIMENT de ces clés (Ludo, 2026-09-28 : « si un
+    # paramètre désactive d'autres paramètres, il faut que ça se voie dans le
+    # launcher ») :
+    # `depend_de` — sans CE réglage allumé, celui-ci n'a aucun effet (grisé) ;
+    # `exclut` — l'allumer éteint l'autre, dans l'ini comme à l'écran.
+    depend_de: str = ""
+    exclut: str = ""
 
 
 # L'ordre est celui de l'affichage.
@@ -167,11 +174,10 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Anticrénelage (MSAA)",
             "Lisse les contours des personnages et du décor en calculant "
             "plusieurs points par pixel. Plus le nombre est grand, plus c'est "
-            "lisse, et plus la carte graphique travaille. N'agit sur le décor "
-            "que si les ombres de contact sont éteintes : sinon, préférez le "
-            "suréchantillonnage.",
+            "lisse, et plus la carte graphique travaille. L'allumer éteint les "
+            "ombres de contact, qui l'empêchent d'atteindre le décor.",
             choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
-            onglet="image", cout=(("GPU", 2),), se_voit=True),
+            onglet="image", cout=(("GPU", 2),), se_voit=True, exclut="occlusion"),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
     # découpés (cheveux, feuilles, herbe) restent en escalier ; le correctif
     # les suréchantillonne sur carte NVIDIA (mèches de Harry et Ron au choix du
@@ -182,7 +188,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les "
             "feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la "
             "carte graphique là où il y a beaucoup de feuillage.", defaut=False,
-            onglet="image", cout=(("GPU", 2),)),
+            onglet="image", cout=(("GPU", 2),), depend_de="anticrenelage"),
     # HP5, vu en jeu le 2026-09-26 : son occlusion ambiante lit la profondeur
     # comme une texture, ce qui ferme le MSAA à la scène ; le suréchantillonnage
     # (image calculée en ×2 puis réduite) lisse quand même, et affine textures
@@ -212,33 +218,37 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("occlusion", "Accio.Graphics", "SSAO",
             "Ombres de contact",
             "Assombrit les recoins, le pied des murs et le contact des objets : "
-            "le décor gagne en relief (occlusion ambiante). Ferme la porte au MSAA.",
-            defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True),
+            "le décor gagne en relief (occlusion ambiante). Les allumer éteint "
+            "l'anticrénelage (MSAA).",
+            defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True,
+            depend_de="lissage", exclut="anticrenelage"),
     Reglage("halo", "Accio.Graphics", "Bloom",
             "Halo lumineux",
             "Les lumières vives (fenêtres, torches, sorts) débordent doucement "
-            "autour d'elles.", defaut=False, onglet="image", cout=(("GPU", 1),)),
+            "autour d'elles.", defaut=False, onglet="image", cout=(("GPU", 1),),
+            depend_de="lissage"),
     Reglage("rayons", "Accio.Graphics", "GodRays",
             "Rayons de lumière",
             "Des rayons partent des sources de lumière fortes, comme le soleil "
-            "à travers les arbres.", defaut=False, onglet="image", cout=(("GPU", 1),)),
+            "à travers les arbres.", defaut=False, onglet="image", cout=(("GPU", 1),),
+            depend_de="lissage"),
     Reglage("couleurs", "Accio.Graphics", "ColorGrading",
             "Couleurs retravaillées",
             "Active la vivacité et le contraste ci-dessous, en épargnant les "
             "visages. Éteint : les couleurs d'origine du jeu.",
-            defaut=False, onglet="image", se_voit=True),
+            defaut=False, onglet="image", se_voit=True, depend_de="lissage"),
     Reglage("vivacite", "Accio.Graphics", "Vibrance",
             "Vivacité des couleurs",
             "Ravive les couleurs ternes sans saturer celles qui le sont déjà. "
             "Seulement avec « Couleurs retravaillées ».",
             choix=tuple(v for v, _ in VIVACITES), zero="Aucune", etiquettes=VIVACITES,
-            onglet="image", se_voit=True),
+            onglet="image", se_voit=True, depend_de="couleurs"),
     Reglage("contraste", "Accio.Graphics", "Contrast",
             "Contraste",
             "Creuse l'écart entre zones claires et sombres. Seulement avec "
             "« Couleurs retravaillées ».",
             choix=tuple(v for v, _ in CONTRASTES), zero="D'origine", etiquettes=CONTRASTES,
-            onglet="image", se_voit=True),
+            onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
     # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
     # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
@@ -272,6 +282,32 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=tuple(v for v, _ in LANGUES_MENU), zero="Celle de Windows",
             noms_choix=LANGUES_MENU),
 )}
+
+
+def allume(reglage: Reglage, valeur) -> bool:
+    """Le réglage agit-il ? Un interrupteur coché, ou un choix autre que le premier (l'« éteint »)."""
+    if reglage.choix:
+        return valeur != reglage.choix[0]
+    return bool(valeur)
+
+
+def eteint(reglage: Reglage):
+    """La valeur qui l'éteint."""
+    return reglage.choix[0] if reglage.choix else False
+
+
+def bloque_par(reglage: Reglage, valeurs: dict) -> Reglage | None:
+    """Le réglage ÉTEINT dont dépend celui-ci (directement ou non), ou None s'il agit.
+
+    `valeurs` : identifiant → valeur, pour les réglages présents dans la fenêtre.
+    Un parent absent (non déclaré pour ce jeu) ne bloque rien.
+    """
+    parent = REGLAGES.get(reglage.depend_de)
+    while parent is not None and parent.ident in valeurs:
+        if not allume(parent, valeurs[parent.ident]):
+            return parent
+        parent = REGLAGES.get(parent.depend_de)
+    return None
 
 
 def libelle_choix(reglage: Reglage, valeur) -> str:
