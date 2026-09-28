@@ -9,6 +9,11 @@ expliquer, et sait montrer ce qui n'est pas encore là.
 La rubrique « Affichage » est justement là, verrouillée. Annoncer ce qui vient
 n'est pas une promesse en l'air : c'est la moitié de la réponse à « pourquoi le
 lanceur ne me laisse pas régler la résolution ».
+
+Des ONGLETS depuis le 2026-09-28 : une seule colonne était « hyper grande et
+confuse » (Ludo) — qui voulait l'image traversait la réinstallation, qui voulait
+son clavier traversait l'anticrénelage. Chaque réglage du correctif porte son
+onglet (`Reglage.onglet`) ; un onglet sans rien à montrer n'apparaît pas.
 """
 
 import logging
@@ -25,6 +30,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QRadioButton,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -43,12 +49,35 @@ from src.ui.utils import open_local_path, zone_defilable
 log = logging.getLogger(__name__)
 
 # Les mesures du cadre : `_ajuster_hauteur` les additionne, la construction les pose.
-_LARGEUR = 430
+_LARGEUR = 540        # cinq onglets côte à côte, « Performances » compris
 _MARGES_H = 22 + 22   # contentsMargins gauche et droite de la fenêtre
 _MARGE_HAUT, _MARGE_BAS = 20, 16
-_ESPACE_TITRE = 18
+_ESPACE_TITRE = 14
+_HAUTEUR_ONGLETS = 34
+_ESPACE_ONGLETS = 16
 _ESPACE_PIED = 8
 _HAUTEUR_PIED = 32    # le bouton « Fermer »
+
+# (identifiant, libellé) dans l'ordre des onglets. L'image d'abord : c'est ce
+# qu'on vient régler le plus souvent.
+_ONGLETS = (
+    ("image", "Image"),
+    ("commandes", "Commandes"),
+    ("jeu", "Jeu"),
+    ("perfs", "Performances"),
+    ("fichiers", "Fichiers"),
+)
+
+_ONGLET_STYLE = (
+    "QPushButton { color: #8a8aaa; background: transparent; border: none;"
+    " border-bottom: 2px solid rgba(255,255,255,0.06); padding: 6px 10px; }"
+    "QPushButton:hover { color: #e8c547; }"
+    "QPushButton:checked { color: #d6a72c; border-bottom: 2px solid #d6a72c; }"
+)
+
+# Repères de coût : plus le niveau monte, plus la pastille chauffe. Hors palette
+# de maison, comme le filet des alertes : ce sont des avertissements.
+_COULEURS_COUT = {1: "#8a8aaa", 2: "#d9b45a", 3: "#e8955a"}
 
 # Réglages annoncés mais pas encore livrés. Ils sont ÉCRITS, pas résumés en
 # « bientôt » : quelqu'un qui cherche la résolution doit reconnaître ce qu'il
@@ -116,16 +145,27 @@ class GameSettingsDialog(QDialog):
         (règles 38 et 39).
         """
         largeur = _LARGEUR - _MARGES_H
-        corps = self._contenu.layout()
-        corps.activate()
-        voulu = corps.totalHeightForWidth(largeur) if corps.hasHeightForWidth() else corps.sizeHint().height()
-        cadre = _MARGE_HAUT + self._titre.heightForWidth(largeur) + _ESPACE_TITRE + _ESPACE_PIED + _HAUTEUR_PIED + _MARGE_BAS
+        # La page la plus haute fixe la hauteur : changer d'onglet ne fait pas
+        # sauter la fenêtre.
+        voulus = []
+        for contenu in self._contenus:
+            corps = contenu.layout()
+            corps.activate()
+            voulus.append(corps.totalHeightForWidth(largeur) if corps.hasHeightForWidth()
+                          else corps.sizeHint().height())
+        voulu = max(voulus, default=120)
+        pied = sum(lbl.heightForWidth(largeur) for lbl in (self._pied_notes, self._erreur)
+                   if not lbl.isHidden())
+        cadre = (_MARGE_HAUT + self._titre.heightForWidth(largeur) + _ESPACE_TITRE
+                 + (_HAUTEUR_ONGLETS + _ESPACE_ONGLETS if not self._barre_onglets.isHidden() else 0)
+                 + pied + _ESPACE_PIED + _HAUTEUR_PIED + _MARGE_BAS)
         ecran = self.screen() or QGuiApplication.primaryScreen()
         # La barre de titre de Windows et un peu d'air au-dessus de la barre des tâches.
         plafond = ecran.availableGeometry().height() - cadre - 60 if ecran is not None else voulu
-        if voulu > plafond:
-            # La barre de défilement prend sa place à droite : le texte s'en écarte.
-            corps.setContentsMargins(0, 0, 18, 0)
+        for contenu, v in zip(self._contenus, voulus):
+            if v > plafond:
+                # La barre de défilement prend sa place à droite : le texte s'en écarte.
+                contenu.layout().setContentsMargins(0, 0, 18, 0)
         hauteur = max(120, min(voulu, plafond))
         self._defile.setFixedHeight(hauteur)
         self.setFixedHeight(cadre + hauteur)
@@ -146,31 +186,71 @@ class GameSettingsDialog(QDialog):
         layout.addSpacing(_ESPACE_TITRE)
         self._titre = titre
 
-        # Les rubriques défilent, le titre et « Fermer » restent : avec les sept
-        # réglages de HP4 et les fichiers du jeu, la fenêtre dépasse 718 px, plus
-        # que ce qu'offre un écran de 768 px une fois la barre des tâches ôtée
-        # (règle 52 : une page qui peut déborder doit pouvoir défiler).
-        self._contenu = QWidget()
-        self._contenu.setStyleSheet("background: transparent;")
-        corps = QVBoxLayout(self._contenu)
-        corps.setContentsMargins(0, 0, 0, 0)
-        corps.setSpacing(0)
-        # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
-        # et registre atteignable pour ceux qui la lisent là. Sinon la fenêtre
-        # s'ouvre sur l'affichage (l'engrenage est sur tout jeu installé).
-        if self.manager.game_language(self.game) is not None:
-            self._section_langue(corps)
-            corps.addSpacing(20)
-        self._section_affichage(corps)
-        corps.addSpacing(18)
-        if self._section_manette(corps):
-            corps.addSpacing(18)
-        if self._section_captures(corps):
-            corps.addSpacing(18)
-        self._section_fichiers(corps)
-        corps.addSpacing(16)
-        self._defile = zone_defilable(self._contenu)
+        # Une rangée d'onglets, puis leurs pages. Chaque page défile seule, le
+        # titre, les onglets et « Fermer » restent (règle 52 : une page qui peut
+        # déborder doit pouvoir défiler — les huit réglages de HP4 dépassaient
+        # un écran de 768 px).
+        self._barre_onglets = QWidget()
+        self._barre_onglets.setStyleSheet("background: transparent;")
+        barre = QHBoxLayout(self._barre_onglets)
+        barre.setContentsMargins(0, 0, 0, 0)
+        barre.setSpacing(2)
+        self._groupe_onglets = QButtonGroup(self)
+        self._groupe_onglets.setExclusive(True)
+        self._defile = QStackedWidget()
+        self._defile.setStyleSheet("background: transparent;")
+        self._contenus: list[QWidget] = []
+        self._onglets: dict[str, QPushButton] = {}
+        for ident, libelle in _ONGLETS:
+            contenu = QWidget()
+            contenu.setStyleSheet("background: transparent;")
+            corps = QVBoxLayout(contenu)
+            corps.setContentsMargins(0, 0, 0, 0)
+            corps.setSpacing(0)
+            if not self._remplir(ident, corps):
+                contenu.deleteLater()
+                continue
+            corps.addStretch()
+            bouton = QPushButton(tr(libelle))
+            bouton.setCheckable(True)
+            bouton.setFont(cinzel(10, bold=True))
+            bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+            bouton.setStyleSheet(themed(_ONGLET_STYLE))
+            rang = len(self._contenus)
+            bouton.clicked.connect(lambda _c=False, r=rang: self._defile.setCurrentIndex(r))
+            self._groupe_onglets.addButton(bouton)
+            barre.addWidget(bouton)
+            self._onglets[ident] = bouton
+            self._contenus.append(contenu)
+            self._defile.addWidget(zone_defilable(contenu))
+        barre.addStretch()
+        if self._onglets:
+            next(iter(self._onglets.values())).setChecked(True)
+        # Un seul onglet : la rangée ne dirait rien.
+        self._barre_onglets.setVisible(len(self._onglets) > 1)
+        layout.addWidget(self._barre_onglets)
+        layout.addSpacing(_ESPACE_ONGLETS if len(self._onglets) > 1 else 0)
         layout.addWidget(self._defile)
+
+        # Sous les pages, visibles quel que soit l'onglet : l'échec d'écriture
+        # et le rappel que tout vaut au prochain lancement.
+        self._pied_notes = QLabel("")
+        self._pied_notes.setFont(body_font(10))
+        self._pied_notes.setWordWrap(True)
+        self._pied_notes.setTextFormat(Qt.TextFormat.PlainText)
+        self._pied_notes.setStyleSheet("color: #8a8aaa; background: transparent; padding-top: 6px;")
+        if self._correctif_actif():
+            self._pied_notes.setText(tr("Pris en compte au prochain lancement du jeu."))
+        else:
+            self._pied_notes.hide()
+        layout.addWidget(self._pied_notes)
+        self._erreur = QLabel("")
+        self._erreur.setFont(body_font(11))
+        self._erreur.setWordWrap(True)
+        self._erreur.setTextFormat(Qt.TextFormat.PlainText)
+        self._erreur.setStyleSheet("color: #e8955a; background: transparent;")
+        self._erreur.hide()
+        layout.addWidget(self._erreur)
         layout.addSpacing(_ESPACE_PIED)
 
         pied = QHBoxLayout()
@@ -240,10 +320,56 @@ class GameSettingsDialog(QDialog):
                 layout.addSpacing(6)
             layout.addWidget(radio)
 
+    # ── Les onglets ──
+
+    def _correctif_actif(self) -> bool:
+        """Le jeu déclare des réglages ET porte le nouveau correctif, qui les lira."""
+        ini = self._ini
+        return bool(self._reglages) and ini is not None and ini.is_file() \
+            and reglages_correctif.est_nouveau_correctif(ini)
+
+    def _remplir(self, onglet: str, corps: QVBoxLayout) -> bool:
+        """Pose le contenu d'un onglet ; False s'il n'a rien à montrer."""
+        if onglet == "image":
+            if not self._reglages:
+                self._section_affichage(corps)
+                return True
+            self._section_correctif(corps, "image", avertir=True)
+            corps.addSpacing(10)
+            corps.addWidget(self._titre_rubrique(tr("Plus tard"), verrouille=True))
+            corps.addSpacing(4)
+            # Une ligne et non une liste de boutons grisés : ce qui vient se lit,
+            # sans prendre la hauteur des réglages actifs.
+            bientot = QLabel(" · ".join(tr(nom) for nom in reglages_correctif.A_VENIR))
+            bientot.setFont(body_font(11))
+            bientot.setWordWrap(True)
+            bientot.setTextFormat(Qt.TextFormat.PlainText)
+            bientot.setStyleSheet("color: #6a6a80; background: transparent;")
+            corps.addWidget(bientot)
+            return True
+        if onglet == "commandes":
+            a_des_touches = self._section_correctif(corps, "commandes")
+            if a_des_touches:
+                corps.addSpacing(18)
+            return self._section_manette(corps) or a_des_touches
+        if onglet == "jeu":
+            rempli = False
+            # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
+            # et registre atteignable pour ceux qui la lisent là.
+            if self.manager.game_language(self.game) is not None:
+                self._section_langue(corps)
+                corps.addSpacing(20)
+                rempli = True
+            if self._section_correctif(corps, "jeu"):
+                corps.addSpacing(18)
+                rempli = True
+            return self._section_captures(corps) or rempli
+        if onglet == "perfs":
+            return self._section_correctif(corps, "perfs")
+        return self._section_fichiers(corps)
+
     def _section_affichage(self, layout: QVBoxLayout) -> None:
-        if self._reglages:
-            self._section_correctif(layout)
-            return
+        """Jeu sans réglage de correctif : la rubrique verrouillée, qui dit ce qui vient."""
         layout.addWidget(self._titre_rubrique(tr("Affichage"), verrouille=True))
         layout.addSpacing(8)
         for nom in _A_VENIR:
@@ -275,48 +401,40 @@ class GameSettingsDialog(QDialog):
         layout.addSpacing(6)
         layout.addWidget(trait)
 
-    def _section_correctif(self, layout: QVBoxLayout) -> None:
-        """Réglages du correctif PC (HP4-HP6), ceux que le catalogue déclare confirmés.
+    def _section_correctif(self, layout: QVBoxLayout, onglet: str, avertir: bool = False) -> bool:
+        """Les réglages du correctif PC (HP4-HP6) rangés dans CET onglet ; False s'il n'y en a pas.
 
-        Trois cas, et chacun le DIT : jeu absent, ancien correctif (les archives
-        publiées le portent encore : rien ne lirait ces clés), nouveau correctif.
+        Trois cas, et chacun le DIT : jeu absent, ancien correctif (rien ne
+        lirait ces clés), nouveau correctif.
         """
-        layout.addWidget(self._titre_rubrique(tr("Affichage et jeu")))
-        layout.addSpacing(8)
+        reglages = [r for r in self._reglages if r.onglet == onglet]
+        if not reglages:
+            return False
         ini = self._ini
         if ini is None or not ini.is_file():
             self._note(layout, tr("Installez le jeu pour régler son correctif."))
-        elif not reglages_correctif.est_nouveau_correctif(ini):
+            return True
+        if not reglages_correctif.est_nouveau_correctif(ini):
             self._note(layout, tr(
                 "Ces réglages arrivent avec la prochaine version du correctif "
                 "de ce jeu."))
-        else:
-            for reglage in self._reglages:
-                self._controle(layout, ini, reglage)
-            self._erreur = QLabel("")
-            self._erreur.setFont(body_font(11))
-            self._erreur.setWordWrap(True)
-            self._erreur.setTextFormat(Qt.TextFormat.PlainText)
-            self._erreur.setStyleSheet("color: #e8955a; background: transparent;")
-            self._erreur.hide()
-            layout.addWidget(self._erreur)
-            self._note(layout, tr("Pris en compte au prochain lancement du jeu."))
-        layout.addSpacing(10)
-        layout.addWidget(self._titre_rubrique(tr("Plus tard"), verrouille=True))
-        layout.addSpacing(4)
-        # Une ligne et non une liste de boutons grisés : trois réglages actifs
-        # et leurs explications occupent déjà la hauteur d'un petit écran.
-        bientot = QLabel(" · ".join(tr(nom) for nom in reglages_correctif.A_VENIR))
-        bientot.setFont(body_font(11))
-        bientot.setWordWrap(True)
-        bientot.setTextFormat(Qt.TextFormat.PlainText)
-        bientot.setStyleSheet("color: #6a6a80; background: transparent;")
-        layout.addWidget(bientot)
-        trait = QFrame()
-        trait.setFrameShape(QFrame.Shape.HLine)
-        trait.setStyleSheet("color: rgba(255,255,255,0.06);")
-        layout.addSpacing(6)
-        layout.addWidget(trait)
+            return True
+        if avertir:
+            # Demandé par Ludo (2026-09-28) : dire que tout se règle, mais à ses
+            # risques, et DIRIGER — ce qui coûte, et ce qui se voit vraiment.
+            avis = QLabel(tr(
+                "Réglables à vos risques : un réglage exigeant peut faire ramer ou "
+                "chauffer un PC modeste. GPU, CPU et RAM disent ce qu'il demande à la "
+                "carte graphique, au processeur ou à la mémoire (+ un peu, +++ "
+                "beaucoup) ; « Se voit » marque ce qui change vraiment l'image."))
+            avis.setFont(body_font(10))
+            avis.setWordWrap(True)
+            avis.setTextFormat(Qt.TextFormat.PlainText)
+            avis.setStyleSheet("color: #e8955a; background: transparent; padding-bottom: 8px;")
+            layout.addWidget(avis)
+        for reglage in reglages:
+            self._controle(layout, ini, reglage)
+        return True
 
     def _note(self, layout: QVBoxLayout, texte: str) -> None:
         note = QLabel(texte)
@@ -372,12 +490,41 @@ class GameSettingsDialog(QDialog):
                     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau."))
             bascule.toggled.connect(
                 lambda coche, r=reglage, b=bascule: self._on_reglage(r, coche, b))
+        self._reperes(layout, reglage)
         aide = QLabel(aide_txt)
         aide.setFont(body_font(10))
         aide.setWordWrap(True)
         aide.setTextFormat(Qt.TextFormat.PlainText)
         aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
         layout.addWidget(aide)
+
+    def _reperes(self, layout: QVBoxLayout, reglage) -> None:
+        """Pastilles sous le réglage : ce qu'il coûte (« GPU +++ ») et s'il se voit.
+
+        Du TEXTE, pas des pictogrammes : Cinzel n'a pas les symboles, et Windows
+        les rendrait en emoji couleur (règles 59 et 60).
+        """
+        pastilles = [(f"{ressource} {'+' * niveau}", _COULEURS_COUT.get(niveau, "#8a8aaa"))
+                     for ressource, niveau in reglage.cout]
+        if reglage.se_voit:
+            pastilles.append((tr("Se voit"), "#d6a72c"))
+        if not pastilles:
+            return
+        ligne = QWidget()
+        ligne.setStyleSheet("background: transparent;")
+        h = QHBoxLayout(ligne)
+        h.setContentsMargins(0, 0, 0, 2)
+        h.setSpacing(6)
+        for texte, couleur in pastilles:
+            pastille = QLabel(texte)
+            pastille.setFont(body_font(9))
+            pastille.setTextFormat(Qt.TextFormat.PlainText)
+            pastille.setStyleSheet(themed(
+                f"color: {couleur}; background: transparent; border: 1px solid {couleur};"
+                " border-radius: 3px; padding: 0px 6px;"))
+            h.addWidget(pastille)
+        h.addStretch()
+        layout.addWidget(ligne)
 
     def _section_manette(self, layout: QVBoxLayout) -> bool:
         """« Jouer à la manette » (HP5, HP6) : le choix que le jeu garde dans le registre.
@@ -484,7 +631,7 @@ class GameSettingsDialog(QDialog):
         self._afficher_compte(len(captures.images(dossier)))
         open_local_path(str(dossier))
 
-    def _section_fichiers(self, layout: QVBoxLayout) -> None:
+    def _section_fichiers(self, layout: QVBoxLayout) -> bool:
         """Actions qui n'étaient atteignables qu'au CLIC DROIT.
 
         « Gérer les versions » et « Vérifier / réparer » existaient déjà, mais
@@ -494,7 +641,7 @@ class GameSettingsDialog(QDialog):
         s'empilerait par-dessus celui-ci.
         """
         if not self._actions:
-            return
+            return False
         layout.addWidget(self._titre_rubrique(tr("Fichiers du jeu")))
         layout.addSpacing(8)
         for libelle, rappel in self._actions:
@@ -508,6 +655,7 @@ class GameSettingsDialog(QDialog):
             ))
             btn.clicked.connect(lambda _c=False, r=rappel: self._lancer(r))
             layout.addWidget(btn)
+        return True
 
     def _lancer(self, rappel) -> None:
         self.accept()
@@ -550,14 +698,16 @@ class GameSettingsDialog(QDialog):
             elif etat is not None:
                 widget.setChecked(bool(etat.valeur))
             widget.blockSignals(False)
-            if self._erreur is not None:
-                self._erreur.setText(tr(
-                    "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
-                    "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            self._erreur.setText(tr(
+                "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
+                "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            if self._erreur.isHidden():
                 self._erreur.show()
+                self._ajuster_hauteur()   # le message ne doit rien recouvrir
             return
-        if self._erreur is not None:
+        if not self._erreur.isHidden():
             self._erreur.hide()
+            self._ajuster_hauteur()
 
     def _resynchroniser(self) -> None:
         courant = self.manager.game_language(self.game)

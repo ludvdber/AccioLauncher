@@ -26,7 +26,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.core.i18n import tr
+from src.core.i18n import decimal_separator, tr
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +108,15 @@ class Reglage:
     zero: str = ""
     format_choix: str = "{}"
     noms_choix: tuple[tuple[str, str], ...] = ()
+    # L'onglet de la fenêtre de réglages : quelqu'un qui cherche son clavier ne
+    # doit pas traverser l'anticrénelage (Ludo, 2026-09-28).
+    onglet: str = "jeu"
+    # Ce que le réglage demande à la machine, au plus fort de ses choix :
+    # (ressource, niveau 1 à 3) — « GPU », « CPU », « RAM ». Affiché en repère,
+    # pour diriger vers ce qui coûte avant qu'un PC modeste ne rame.
+    cout: tuple[tuple[str, int], ...] = ()
+    # Change-t-il VRAIMENT l'image ? Beaucoup d'effets sont discrets ; ceux-là se voient.
+    se_voit: bool = False
 
 
 # L'ordre est celui de l'affichage.
@@ -119,12 +128,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
             "Plafonne le nombre d'images calculées : l'ordinateur chauffe "
-            "moins et fait moins de bruit.", choix=LIMITES_FPS, zero="Aucune"),
+            "moins et fait moins de bruit.", choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
     Reglage("touches_zqsd", "Accio.Keys", "",
             "Déplacement {} et sorts à la souris",
             "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic "
             "droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine "
-            "continuent de marcher, sauf {3}, qui fait reculer."),
+            "continuent de marcher, sauf {3}, qui fait reculer.", onglet="commandes"),
     # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
     # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
     # allumés) l'éteindre les éteindrait tous.
@@ -132,7 +141,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Lissage des contours (FXAA)",
             "Adoucit les escaliers au bord des personnages et du décor "
             "(cheveux, vêtements, toiles de tente), avec un léger renforcement "
-            "de la netteté.", defaut=False),
+            "de la netteté.", defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
     # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
     # HP4) avec le correctif qui multi-échantillonne la cible de scène du jeu
     # et garde l'anticrénelage que le jeu éteint. Pas HP5 : avec son SSAO, le
@@ -143,7 +152,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Lisse les contours des personnages et du décor en calculant "
             "plusieurs points par pixel. Plus le nombre est grand, plus c'est "
             "lisse, et plus la carte graphique travaille.",
-            choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×"),
+            choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
+            onglet="image", cout=(("GPU", 2),), se_voit=True),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
     # découpés (cheveux, feuilles, herbe) restent en escalier ; le correctif
     # les suréchantillonne sur carte NVIDIA (mèches de Harry et Ron au choix du
@@ -153,19 +163,24 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Cheveux et feuillage lissés",
             "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les "
             "feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la "
-            "carte graphique là où il y a beaucoup de feuillage.", defaut=False),
+            "carte graphique là où il y a beaucoup de feuillage.", defaut=False,
+            onglet="image", cout=(("GPU", 2),)),
     # HP5, vu en jeu le 2026-09-26 : son occlusion ambiante lit la profondeur
     # comme une texture, ce qui ferme le MSAA à la scène ; le suréchantillonnage
     # (image calculée en ×2 puis réduite) lisse quand même, et affine textures
     # et contours lointains (tapisseries, vitraux, échiquier). Coût mesuré en
     # 2560×1440, RTX 2060 SUPER : moyenne 120 → 84, 1 % low 82 → 39. La première
-    # valeur (1) est l'« éteint » du correctif.
+    # valeur (1) est l'« éteint » du correctif. ×1,5 (un peu plus de deux fois
+    # les pixels) : HP4 et HP6 le prennent eux aussi, joués ainsi par Ludo le
+    # 2026-09-27/28 (forêt interdite, menus de HP6 qui cliquent juste) ; c'est
+    # leur défaut depuis, parce qu'il veut « le moins de pixelisation possible ».
     Reglage("surechantillonnage", "Accio.Graphics", "SSAAFactor",
             "Suréchantillonnage (image plus fine)",
-            "Calcule l'image en deux fois plus grand puis la réduit : contours, "
-            "textures et détails lointains nettement plus fins. Demande beaucoup "
-            "à la carte graphique : pour les PC puissants.",
-            choix=(1, 2), zero="Désactivé", format_choix="×{}"),
+            "Calcule l'image en plus grand puis la réduit : contours, cheveux, "
+            "feuillages et détails lointains nettement plus fins. Le réglage qui "
+            "se voit le plus, et le plus exigeant : ×2 est pour les PC puissants.",
+            choix=(1, 1.5, 2), zero="Désactivé", format_choix="×{}",
+            onglet="image", cout=(("GPU", 3),), se_voit=True),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
     # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
     # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
@@ -173,16 +188,18 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("brouillard", "Accio.Game", "DistanceFog",
             "Brouillard lointain",
             "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : "
-            "collines et paysages nets et contrastés, la scène un peu plus sombre."),
+            "collines et paysages nets et contrastés, la scène un peu plus sombre.",
+            onglet="image", se_voit=True),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le "
-            "masque ou le remet.", defaut=False),
+            "masque ou le remet.", defaut=False, onglet="perfs"),
     Reglage("panneau_perfs", "Accio.Overlay", "",
             "Panneau de performances",
             "Temps par image et son graphe, processeur, carte graphique, "
-            "mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un "
-            "benchmark, enregistré dans le dossier « benchmarks » du jeu.", defaut=False),
+            "mémoire vidéo et vive, latence. En jeu, F11 lance un benchmark "
+            "et F11 à nouveau l'arrête ; il est enregistré dans le dossier "
+            "« benchmarks » du jeu.", defaut=False, onglet="perfs", cout=(("CPU", 1),)),
     # HP6, vu en jeu le 2026-09-26 : son menu de langue s'ouvre sur la langue
     # de Windows, mais le jeu ne connaît qu'une variante de chaque langue — un
     # Windows en français de Belgique le faisait partir en ANGLAIS (le menu se
@@ -205,7 +222,14 @@ def libelle_choix(reglage: Reglage, valeur) -> str:
         if valeur == reglage.choix[0]:
             return tr(reglage.zero)
         return dict(reglage.noms_choix).get(valeur, str(valeur))
-    return tr(reglage.zero) if valeur == reglage.choix[0] else reglage.format_choix.format(valeur)
+    if valeur == reglage.choix[0]:
+        return tr(reglage.zero)
+    return reglage.format_choix.format(_nombre(valeur).replace(".", decimal_separator()))
+
+
+def _nombre(valeur) -> str:
+    """1.5 → « 1.5 », 2.0 → « 2 » : ce que lit le correctif, sans décimale inutile."""
+    return f"{valeur:g}" if isinstance(valeur, float) else str(valeur)
 
 
 def textes(reglage: Reglage) -> tuple[str, str]:
@@ -354,10 +378,13 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
         v = brut.lower() if brut else reglage.choix[0]
         return Etat(v, personnalise=v not in reglage.choix)
     if reglage.choix:
+        # Un facteur peut être décimal (SSAAFactor=1.5) ; un entier reste un int.
         try:
-            n = int(brut) if brut is not None else reglage.choix[0]
+            n = float(brut) if brut is not None else reglage.choix[0]
         except ValueError:
             return Etat(0, personnalise=True)
+        if isinstance(n, float) and n.is_integer():
+            n = int(n)
         return Etat(n, personnalise=n not in reglage.choix)
     # Interrupteur : le correctif lit 0 = non, tout autre nombre = oui.
     if brut is None:
@@ -425,7 +452,7 @@ def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
     elif reglage.choix:
         if valeur not in reglage.choix:
             raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
-        texte = str(valeur) if reglage.noms_choix else str(int(valeur))
+        texte = str(valeur) if reglage.noms_choix else _nombre(valeur)
         if not _poser(lignes, reglage.section, reglage.cle, texte):
             raise ValueError(f"section [{reglage.section}] absente")
     else:
