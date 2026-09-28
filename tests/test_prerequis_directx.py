@@ -81,14 +81,13 @@ class TestDeclaration:
         catalogue = json.loads((Path(__file__).resolve().parents[1] / "src/data/games.json")
                                .read_text(encoding="utf-8"))
         requis = {g["id"]: set(g.get("requires", [])) for g in catalogue["games"]}
-        for jeu in ("hp4", "hp5", "hp6", "hp7a", "hp7b"):
-            assert "d3dx9_43" in requis[jeu], jeu          # le wrapper d3d9
-        for jeu in ("hp5", "hp6", "hp7a", "hp7b"):
-            assert "xinput1_3" in requis[jeu], jeu
+        # Les Reliques gardent l'ancien wrapper d3d9 (D3DX) et chargent elles-mêmes d3dx9_37 et xinput1_3.
         for jeu in ("hp7a", "hp7b"):
-            assert "d3dx9_37" in requis[jeu], jeu
-        # HP4 n'ouvre pas xinput : il n'a pas à attendre qu'on l'installe.
-        assert "xinput1_3" not in requis["hp4"]
+            assert {"d3dx9_43", "d3dx9_37", "xinput1_3"} <= requis[jeu], jeu
+        # HP4 à HP6 portent le nouveau correctif (catalogue 0.33) : plus de D3DX, et leur archive livre SON
+        # xinput1_3.dll. Exiger le runtime de 2010 bloquerait le lancement pour une DLL que plus rien ne charge.
+        for jeu in ("hp4", "hp5", "hp6"):
+            assert not requis[jeu] & set(DLL_DIRECTX9), jeu
         # HP1 à HP3 (Unreal, dgVoodoo) n'ont besoin d'aucune.
         for jeu in ("hp1", "hp2", "hp3"):
             assert not requis[jeu] & set(DLL_DIRECTX9), jeu

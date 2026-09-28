@@ -247,6 +247,21 @@ class TestSurechantillonnage:
         ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=0\r\nSSAAFactor=4"))
         assert rc.lire(ini, self.R) == rc.Etat(4, personnalise=True)
 
+    def test_un_et_demi_decimal_aller_retour(self, ini):
+        """×1,5 : le défaut livré de HP4 et HP6 (2026-09-28). Écrit « 1.5 » (ce que lit
+        le correctif), relu tel quel, et « 2.0 » reste le choix ×2."""
+        rc.ecrire(ini, self.R, 1.5)
+        assert "SSAAFactor=1.5" in ini.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini, self.R) == rc.Etat(1.5)
+        ini.write_bytes(ini.read_bytes().replace(b"SSAAFactor=1.5", b"SSAAFactor=2.0"))
+        assert rc.lire(ini, self.R) == rc.Etat(2)
+
+    def test_la_virgule_suit_la_langue(self, monkeypatch):
+        monkeypatch.setattr(rc, "decimal_separator", lambda: ",")
+        assert rc.libelle_choix(self.R, 1.5) == "×1,5"
+        monkeypatch.setattr(rc, "decimal_separator", lambda: ".")
+        assert rc.libelle_choix(self.R, 1.5) == "×1.5"
+
 
 class TestBrouillard:
     """HP6 : un interrupteur ALLUMÉ quand la clé manque (le correctif garde le brouillard)."""
@@ -457,6 +472,31 @@ class TestFenetre:
         bascule._basculer()
         assert bascule.isChecked()   # remis sur ce que porte le fichier
         assert not dlg._erreur.isHidden()
+
+    def test_chaque_reglage_dans_son_onglet(self, qtbot, tmp_path):
+        """« Celui qui veut juste son clavier voit des paramètres graphiques » (Ludo,
+        2026-09-28) : les touches ne sont PAS sur la page de l'image, et un onglet
+        sans contenu n'existe pas."""
+        from src.ui.toggle_switch import ToggleSwitch
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["touches_zqsd", "surechantillonnage", "compteur_fps"]),
+                        _manager(tmp_path))
+        # « Jeu » porte les captures : le nouveau correctif a sa touche (F12).
+        assert list(dlg._onglets) == ["image", "commandes", "jeu", "perfs"]
+        image, commandes, _jeu_, perfs = dlg._contenus
+        assert not image.findChildren(ToggleSwitch) and len(commandes.findChildren(ToggleSwitch)) == 1
+        assert len(perfs.findChildren(ToggleSwitch)) == 1
+        dlg._onglets["perfs"].click()
+        assert dlg._defile.currentIndex() == 3
+
+    def test_les_reperes_disent_le_cout_et_ce_qui_se_voit(self, qtbot, tmp_path):
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "arriere_plan"]), _manager(tmp_path))
+        textes = _textes(dlg)
+        assert "GPU +++" in textes and tr("Se voit") in textes
+        assert tr("Réglables à vos risques").split(" :")[0] in textes
 
     def test_sans_reglage_declare_la_rubrique_reste_verrouillee(self, qtbot, tmp_path):
         dlg = _dialogue(qtbot, _jeu(tmp_path, []), _manager(tmp_path))

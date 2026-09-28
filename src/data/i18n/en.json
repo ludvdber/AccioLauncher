@@ -466,7 +466,6 @@
     "Déplacement {} et sorts à la souris": "{} movement and spells on the mouse",
     "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, qui fait reculer.": "Move with {0}, Charm on left click, Jinx on right click, Accio on {1}, Extremos on {2}. The original keys keep working, except {3}, which moves back.",
     "Format d'image": "Aspect ratio",
-    "Affichage et jeu": "Display and gameplay",
     "Installez le jeu pour régler son correctif.": "Install the game to adjust its fix.",
     "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "These settings arrive with the next version of this game's fix.",
     "La touche de capture arrive avec la prochaine version du correctif de ce jeu.": "The screenshot key arrives with the next version of this game's fix.",
@@ -480,7 +479,6 @@
     "Compteur d'images (FPS)": "Frame counter (FPS)",
     "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le remet.": "Shows frames per second in the top-left corner. In game, F10 hides or shows it.",
     "Panneau de performances": "Performance panel",
-    "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un benchmark, enregistré dans le dossier « benchmarks » du jeu.": "Frame time and its graph, CPU, graphics card, video and system memory, latency. In game, F11 starts and stops a benchmark, saved in the game's \"benchmarks\" folder.",
     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau.": "Partly set by hand in d3d9.ini: turning it on switches on the whole panel.",
     "Lissage des contours (FXAA)": "Edge smoothing (FXAA)",
     "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté.": "Softens the jagged edges of characters and scenery (hair, clothes, tents), with slight sharpening.",
@@ -493,7 +491,6 @@
     "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "The language the game's menu opens on; the game takes it by itself after a few seconds. “Windows language” fixes a flaw in the game: Windows set to French from Belgium, Switzerland or Canada, or to Spanish, made it start in English.",
     "Celle de Windows": "Windows language",
     "Suréchantillonnage (image plus fine)": "Supersampling (finer image)",
-    "Calcule l'image en deux fois plus grand puis la réduit : contours, textures et détails lointains nettement plus fins. Demande beaucoup à la carte graphique : pour les PC puissants.": "Renders the image twice as large, then scales it down: edges, textures and far details much finer. Heavy on the graphics card: for powerful PCs.",
     "Brouillard lointain": "Distance fog",
     "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "The green haze the game drowns distant scenery in. Off: sharp, contrasted hills and landscapes, the scene a little darker.",
     "Désactivé": "Off",
@@ -504,6 +501,15 @@
     "{} captures": "{} screenshots",
     "Impr. écran": "Print Screen",
     "Barre lumineuse de la manette aux couleurs de votre maison": "Controller light bar in your house colours",
-    "Manette PlayStation": "PlayStation controller"
+    "Manette PlayStation": "PlayStation controller",
+    "Image": "Graphics",
+    "Commandes": "Controls",
+    "Jeu": "Game",
+    "Performances": "Performance",
+    "Fichiers": "Files",
+    "Se voit": "Visible",
+    "Réglables à vos risques : un réglage exigeant peut faire ramer ou chauffer un PC modeste. GPU, CPU et RAM disent ce qu'il demande à la carte graphique, au processeur ou à la mémoire (+ un peu, +++ beaucoup) ; « Se voit » marque ce qui change vraiment l'image.": "Adjust at your own risk: a demanding setting can make a modest PC stutter or run hot. GPU, CPU and RAM tell what it asks of the graphics card, the processor or the memory (+ a little, +++ a lot); “Visible” marks what really changes the picture.",
+    "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et détails lointains nettement plus fins. Le réglage qui se voit le plus, et le plus exigeant : ×2 est pour les PC puissants.": "Renders the picture larger, then scales it down: edges, hair, foliage and distant detail much finer. The setting you see the most, and the most demanding: ×2 is for powerful PCs.",
+    "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance un benchmark et F11 à nouveau l'arrête ; il est enregistré dans le dossier « benchmarks » du jeu.": "Frame time and its graph, processor, graphics card, video and system memory, latency. In game, F11 starts a benchmark and F11 again stops it; it is saved in the game's “benchmarks” folder."
   }
 }
