@@ -154,9 +154,10 @@ class GameSettingsDialog(QDialog):
             voulus.append(corps.totalHeightForWidth(largeur) if corps.hasHeightForWidth()
                           else corps.sizeHint().height())
         voulu = max(voulus, default=120)
-        pied = self._pied_notes.heightForWidth(largeur) if self._pied_notes.isVisibleTo(self) else 0
+        pied = sum(lbl.heightForWidth(largeur) for lbl in (self._pied_notes, self._erreur)
+                   if not lbl.isHidden())
         cadre = (_MARGE_HAUT + self._titre.heightForWidth(largeur) + _ESPACE_TITRE
-                 + (_HAUTEUR_ONGLETS + _ESPACE_ONGLETS if self._barre_onglets.isVisibleTo(self) else 0)
+                 + (_HAUTEUR_ONGLETS + _ESPACE_ONGLETS if not self._barre_onglets.isHidden() else 0)
                  + pied + _ESPACE_PIED + _HAUTEUR_PIED + _MARGE_BAS)
         ecran = self.screen() or QGuiApplication.primaryScreen()
         # La barre de titre de Windows et un peu d'air au-dessus de la barre des tâches.
@@ -697,14 +698,16 @@ class GameSettingsDialog(QDialog):
             elif etat is not None:
                 widget.setChecked(bool(etat.valeur))
             widget.blockSignals(False)
-            if self._erreur is not None:
-                self._erreur.setText(tr(
-                    "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
-                    "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            self._erreur.setText(tr(
+                "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
+                "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            if self._erreur.isHidden():
                 self._erreur.show()
+                self._ajuster_hauteur()   # le message ne doit rien recouvrir
             return
-        if self._erreur is not None:
+        if not self._erreur.isHidden():
             self._erreur.hide()
+            self._ajuster_hauteur()
 
     def _resynchroniser(self) -> None:
         courant = self.manager.game_language(self.game)

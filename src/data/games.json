@@ -697,7 +697,8 @@
         "limite_fps",
         "touches_zqsd",
         "compteur_fps",
-        "panneau_perfs"
+        "panneau_perfs",
+        "surechantillonnage"
       ],
       "dll_overrides": [
         "d3d9",
@@ -1015,12 +1016,11 @@
       "fix_settings": [
         "arriere_plan",
         "limite_fps",
-        "anticrenelage",
-        "anticrenelage_transparence",
         "brouillard",
         "langue_menu",
         "compteur_fps",
-        "panneau_perfs"
+        "panneau_perfs",
+        "surechantillonnage"
       ],
       "dll_overrides": [
         "d3d9"

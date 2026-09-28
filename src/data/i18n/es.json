@@ -466,7 +466,6 @@
     "Déplacement {} et sorts à la souris": "Movimiento {} y hechizos con el ratón",
     "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, qui fait reculer.": "Moverse con {0}, Encantamiento con el clic izquierdo, Maleficio con el clic derecho, Accio con {1}, Extremos con {2}. Las teclas originales siguen funcionando, salvo {3}, que hace retroceder.",
     "Format d'image": "Relación de aspecto",
-    "Affichage et jeu": "Pantalla y juego",
     "Installez le jeu pour régler son correctif.": "Instala el juego para ajustar su parche.",
     "Ces réglages arrivent avec la prochaine version du correctif de ce jeu.": "Estos ajustes llegarán con la próxima versión del parche de este juego.",
     "La touche de capture arrive avec la prochaine version du correctif de ce jeu.": "La tecla de captura llegará con la próxima versión del parche de este juego.",
@@ -480,7 +479,6 @@
     "Compteur d'images (FPS)": "Contador de fotogramas (FPS)",
     "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le remet.": "Muestra los fotogramas por segundo arriba a la izquierda. En el juego, F10 lo oculta o lo vuelve a mostrar.",
     "Panneau de performances": "Panel de rendimiento",
-    "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance puis arrête un benchmark, enregistré dans le dossier « benchmarks » du jeu.": "Tiempo por fotograma y su gráfico, procesador, tarjeta gráfica, memoria de vídeo y RAM, latencia. En el juego, F11 inicia y detiene un benchmark, guardado en la carpeta «benchmarks» del juego.",
     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau.": "Ajustado en parte a mano en d3d9.ini: activarlo enciende todo el panel.",
     "Lissage des contours (FXAA)": "Suavizado de bordes (FXAA)",
     "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, toiles de tente), avec un léger renforcement de la netteté.": "Suaviza los dientes de sierra en los bordes de personajes y escenarios (pelo, ropa, tiendas), con un ligero aumento de nitidez.",
@@ -493,7 +491,6 @@
     "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "El idioma con el que se abre el menú del juego, que lo elige solo tras unos segundos. «El de Windows» corrige un fallo del juego: un Windows en francés de Bélgica, Suiza o Canadá, o en español, lo hacía arrancar en inglés.",
     "Celle de Windows": "El de Windows",
     "Suréchantillonnage (image plus fine)": "Supermuestreo (imagen más fina)",
-    "Calcule l'image en deux fois plus grand puis la réduit : contours, textures et détails lointains nettement plus fins. Demande beaucoup à la carte graphique : pour les PC puissants.": "Calcula la imagen al doble de tamaño y luego la reduce: bordes, texturas y detalles lejanos mucho más finos. Exige mucho a la tarjeta gráfica: para PC potentes.",
     "Brouillard lointain": "Niebla lejana",
     "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "El velo verde en el que el juego ahoga el paisaje lejano. Apagado: colinas y paisajes nítidos y contrastados, la escena algo más oscura.",
     "Désactivé": "Desactivado",
@@ -504,6 +501,15 @@
     "{} captures": "{} capturas",
     "Impr. écran": "Impr Pant",
     "Barre lumineuse de la manette aux couleurs de votre maison": "Barra de luz del mando con los colores de tu casa",
-    "Manette PlayStation": "Mando de PlayStation"
+    "Manette PlayStation": "Mando de PlayStation",
+    "Image": "Gráficos",
+    "Commandes": "Controles",
+    "Jeu": "Juego",
+    "Performances": "Rendimiento",
+    "Fichiers": "Archivos",
+    "Se voit": "Se nota",
+    "Réglables à vos risques : un réglage exigeant peut faire ramer ou chauffer un PC modeste. GPU, CPU et RAM disent ce qu'il demande à la carte graphique, au processeur ou à la mémoire (+ un peu, +++ beaucoup) ; « Se voit » marque ce qui change vraiment l'image.": "Ajustes bajo tu responsabilidad: un ajuste exigente puede hacer que un PC modesto vaya a tirones o se caliente. GPU, CPU y RAM indican lo que pide a la tarjeta gráfica, al procesador o a la memoria (+ un poco, +++ mucho); «Se nota» marca lo que cambia de verdad la imagen.",
+    "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et détails lointains nettement plus fins. Le réglage qui se voit le plus, et le plus exigeant : ×2 est pour les PC puissants.": "Calcula la imagen más grande y luego la reduce: bordes, pelo, follaje y detalles lejanos mucho más finos. El ajuste que más se nota, y el más exigente: ×2 es para PC potentes.",
+    "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance un benchmark et F11 à nouveau l'arrête ; il est enregistré dans le dossier « benchmarks » du jeu.": "Tiempo por fotograma y su gráfica, procesador, tarjeta gráfica, memoria de vídeo y RAM, latencia. En el juego, F11 inicia un benchmark y F11 de nuevo lo detiene; se guarda en la carpeta «benchmarks» del juego."
   }
 }
