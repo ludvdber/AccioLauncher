@@ -6,4 +6,4 @@ pyinstaller>=6.22
 Pillow>=12.3          # build/create_icon.py + build/create_social_preview.py
 pytest>=9.1
 pytest-qt>=4.5
-ruff>=0.16
+ruff>=0.16.9
