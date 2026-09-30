@@ -19,6 +19,8 @@ pytest.importorskip("pytestqt")
 
 from pathlib import Path  # noqa: E402
 
+from PyQt6.QtCore import QObject, pyqtSignal  # noqa: E402
+
 from src.core.config import Config  # noqa: E402
 from src.core.game_data import Catalog, GameData  # noqa: E402
 from src.core.game_manager import GameManager, GameState  # noqa: E402
@@ -223,3 +225,46 @@ class TestAucuneOperationNeFuit:
         operations._on_install_finished("")
         assert manager.installed_version("hp_test") == "1.0"
 
+
+
+class _FauxDownloader(QObject):
+    """Un téléchargeur qui ne part jamais sur le réseau."""
+    progress = pyqtSignal(object, object)
+    download_finished = pyqtSignal(str)
+    error = pyqtSignal(str, object)
+    verifying = pyqtSignal()
+    part_info = pyqtSignal(int, int)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.destination = kwargs["destination"]
+
+    def start(self):
+        pass
+
+
+class TestQuiEcouteVoitUneOperationEnCours:
+    """Parcours du 2026-09-30 (`test_parcours.py`) : `state_changed` partait
+    AVANT la création du fil. La barre du bas, qui exige `is_busy`, lisait donc
+    « rien en cours » et restait cachée pendant tout le téléchargement ET toute
+    l'installation — depuis que cette condition existe (2026-06-10)."""
+
+    def test_au_telechargement(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _FauxDownloader)
+        vus = []
+        operations.state_changed.connect(lambda: vus.append(operations.is_busy))
+        jeu = manager.get_games()[0].game
+        operations.download(jeu, jeu.current_download)
+        assert vus == [True]
+
+    def test_a_l_installation(self, ops):
+        operations, manager = ops
+        vus = []
+        operations.state_changed.connect(lambda: vus.append(operations.is_busy))
+        operations.install(manager.get_games()[0].game, _archive(ops), delete_archive=False)
+        try:
+            assert vus[0] is True
+        finally:
+            operations._installer.cancel()
+            operations._installer.wait(5000)

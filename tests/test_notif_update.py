@@ -266,7 +266,6 @@ class TestNotesDeVersion:
 
     def test_les_notes_arrivent_dans_la_boite(self, qtbot, fenetre, monkeypatch):
         """Bout en bout : ce que GitHub publie doit se lire à l'écran."""
-        import src.ui.main_window as mw
 
         vu = {}
 
@@ -307,7 +306,6 @@ class TestNotesDeVersion:
         """Les notes portent déjà leur titre (`## Nouveautés` du modèle de
         release). La boîte en ajoutait un second, traduit : « Nouveautés : »
         puis « Nouveautés » l'une sous l'autre (Ludo, mise à jour vers 1.0.6)."""
-        import src.ui.main_window as mw
 
         vu = {}
 
@@ -337,7 +335,6 @@ class TestNotesDeVersion:
 
     def test_sans_notes_la_boite_ne_montre_que_la_mecanique(self, qtbot, fenetre,
                                                             monkeypatch):
-        import src.ui.main_window as mw
 
         vu = {}
 

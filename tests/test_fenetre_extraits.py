@@ -76,9 +76,9 @@ class TestBarreDeStatut:
 # ─── Géométrie d'ouverture ───
 
 class TestGeometrieDOuverture:
-    def _g(self, x, y, l, h):
+    def _g(self, x, y, largeur, hauteur):
         from src.ui.window_chrome import geometrie_d_ouverture
-        return geometrie_d_ouverture(QRect(x, y, l, h))
+        return geometrie_d_ouverture(QRect(x, y, largeur, hauteur))
 
     def test_un_portable_1366x768_tient_entier(self):
         """728 px utiles une fois la barre des tâches retirée : l'ancien 1200x800 débordait."""

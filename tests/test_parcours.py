@@ -38,9 +38,10 @@ class _FauxJeu:
     """Le processus d'un jeu qui tourne jusqu'à ce que le test le ferme."""
     pid = 424_242
     args = ["Game.exe"]
+    code = None
 
     def poll(self):
-        return None
+        return self.code
 
 
 @pytest.fixture
@@ -96,11 +97,11 @@ class TestDuTelechargementAuRetourDePartie:
         assert "installé avec succès" in win._toast.text()
 
         # ② JOUER : le lancement part par le vrai `launch_game`, jusqu'au Popen.
-        lances = []
+        lances, processus = [], _FauxJeu()
 
         def popen(args, **kwargs):
             lances.append((args, kwargs))
-            return _FauxJeu()
+            return processus
         faux_subprocess = SimpleNamespace(
             Popen=popen, DETACHED_PROCESS=getattr(subprocess, "DETACHED_PROCESS", 0),
             CREATE_NEW_PROCESS_GROUP=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
@@ -119,8 +120,17 @@ class TestDuTelechargementAuRetourDePartie:
         gdh.on_play(vue)
         assert len(lances) == 1, "deux instances du même jeu"
 
-        # ④ Retour de partie : la fenêtre revient, le temps est compté.
-        win._session._monitor.game_exited.emit(jeu.name, 0, 1500.0)
+        # ④ Le jeu se ferme, et c'est le VRAI moniteur qui le constate : le
+        # processus rend son code, la grâce (10 s pour les relances d'UE1) est
+        # ramenée à zéro, plus rien ne tourne sous ce nom. 25 minutes de jeu
+        # sans les attendre : le début de la partie est reculé d'autant.
+        moniteur = win._session._monitor
+        moniteur._debut -= 1500
+        moniteur._is_exe_running = lambda nom: False      # sur l'INSTANCE (règle 12)
+        monkeypatch.setattr("src.ui.process_monitor._GRACE_S", 0.0)
+        processus.code = 0
+        moniteur._poll()      # le processus initial s'est terminé → grâce
+        moniteur._poll()      # plus rien ne tourne → fin de partie
         qtbot.waitUntil(win.isVisible, timeout=3000)
         assert "Bon jeu" in win._status_bar.currentMessage()
         assert win.manager.get_playtime(jeu.id) >= 1500
@@ -142,11 +152,14 @@ class TestDuTelechargementAuRetourDePartie:
         casse.write_bytes(b"PK\x03\x04 ceci n'est pas une archive")
         monkeypatch.setattr(gdh, "QFileDialog", SimpleNamespace(
             getOpenFileName=lambda *a, **k: (str(casse), "")))
-        erreurs = []
-        vue.ops.operation_error.connect(lambda *a: erreurs.append(a))
+        # La boîte d'erreur est MODALE : le faux, sur le nom du module, relève
+        # ce qu'elle aurait dit au lieu de bloquer la suite.
+        avertis = []
+        monkeypatch.setattr("src.ui.game_detail.avertir", lambda *a: avertis.append(a[1]))
         gdh.on_install_local(vue)
-        qtbot.waitUntil(lambda: not vue.ops.is_busy, timeout=15000)
-        assert erreurs, "l'échec doit être signalé"
+        qtbot.waitUntil(lambda: bool(avertis), timeout=15000)
+        assert avertis == ["Échec de l'installation"]
+        assert not vue.ops.is_busy
         assert win.manager.get_state(vue.game.id) == GameState.NOT_INSTALLED
         assert not (win.config.install_path / "HPParcours").exists()
         qtbot.waitUntil(lambda: not win._download_bar.isVisible(), timeout=3000)
@@ -220,10 +233,15 @@ class TestLaBarreDuBasPendantLaPreparationDeWine:
         réparer, mettre à jour, télécharger. Seuls des toasts ; aucune opération."""
         from src.ui import game_detail_handlers as gdh
         vue = fenetre._detail
-        monkeypatch.setattr(vue.wine, "_fil", object())       # « en cours »
         monkeypatch.setattr(gdh, "_boite", lambda *a, **k: pytest.fail("question posée"))
-        for porte in (gdh.on_repair, gdh.on_update_clicked, gdh.on_download,
-                      gdh.on_install_local):
-            porte(vue)
-            assert not vue.ops.is_busy, porte.__name__
-        assert "Préparation de Wine" in fenetre._toast.text()
+        # « En cours », et rendu DANS le corps du test : pytest-qt ferme la
+        # fenêtre avant les finaliseurs, et sa fermeture annule la préparation.
+        vue.wine._fil = object()
+        try:
+            for porte in (gdh.on_repair, gdh.on_update_clicked, gdh.on_download,
+                          gdh.on_install_local):
+                porte(vue)
+                assert not vue.ops.is_busy, porte.__name__
+            assert "Préparation de Wine" in fenetre._toast.text()
+        finally:
+            vue.wine._fil = None
