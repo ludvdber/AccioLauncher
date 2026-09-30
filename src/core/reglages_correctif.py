@@ -156,10 +156,9 @@ class Reglage:
     exclut: str = ""
 
 
-# L'ordre est celui de l'affichage. Les aides tiennent en UNE phrase (Ludo,
-# 2026-09-30 : « beaucoup de texte », « une description concise de ce que fait
-# chaque paramètre ») : ce qu'un réglage emporte avec lui se voit à l'écran
-# (grisé, `depend_de`) ou se fait tout seul (`exclut`), il n'a plus à s'écrire.
+# L'ordre est celui de l'affichage. L'aide est une description COMPLÈTE : elle
+# ne s'affiche plus sous la ligne mais dans la fiche du « ? » (Ludo, 2026-09-30),
+# qui y ajoute d'elle-même le coût, « se voit » et les dépendances.
 REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # ── Affichage (onglet Image, au-dessus de la qualité) ──
     # Clés lues par le nouveau correctif (tools/make_ini.py du dépôt du
@@ -167,72 +166,94 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # EN JEU avant de publier le catalogue qui les déclare.
     Reglage("resolution", "Accio.Game", "",
             "Résolution",
-            "La taille de l'image au démarrage ; elle se change aussi dans les options du jeu.",
+            "La taille de l'image au démarrage du jeu, livré en 640×480. Choisissez celle de "
+            "votre écran pour l'image la plus nette ; elle se change aussi dans les options "
+            "du jeu.",
             choix=tuple(v for v, _ in RESOLUTIONS), zero="D'origine (640×480)",
             noms_choix=RESOLUTIONS, onglet="affichage"),
     Reglage("mode_fenetre", "Accio.Window", "WindowStyle",
             "Mode d'affichage",
-            "Sans bordure, le jeu couvre l'écran et Alt+Tab ne le fige pas.",
+            "Plein écran sans bordure : le jeu couvre tout l'écran, et Alt+Tab passe à une "
+            "autre fenêtre sans le figer (recommandé). Fenêtre : une fenêtre ordinaire, "
+            "redimensionnable ou non. Sans bordure à la taille de l'image : ni cadre ni "
+            "étirement.",
             choix=tuple(v for v, _ in MODES_FENETRE), zero="Plein écran sans bordure",
             etiquettes=MODES_FENETRE, onglet="affichage"),
     Reglage("format_image", "Accio.Game", "AspectRatio",
             "Format d'image",
-            "Le format de l'image, pour remplir un écran large sans la déformer.",
+            "Le format de l'image. « D'origine » garde celui que prévoit le jeu ; choisissez "
+            "celui de votre écran (16:10, 21:9, 32:9) pour que l'image le remplisse sans être"
+            " étirée.",
             choix=tuple(v for v, _ in FORMATS), zero="D'origine", noms_choix=FORMATS,
             onglet="affichage"),
     Reglage("champ_vision", "Accio.Game", "FOV",
             "Champ de vision",
-            "Élargit la vue autour du personnage.",
+            "Élargit l'angle de vue de la caméra : on voit davantage autour du personnage, "
+            "surtout utile sur un écran large. « D'origine » garde la vue du jeu.",
             choix=(0, 1.15, 1.25, 1.4), zero="D'origine", format_choix="×{}",
             onglet="affichage"),
     Reglage("ecran_principal", "Accio.Window", "UsePrimaryMonitor",
             "Toujours sur l'écran principal",
-            "Ouvre le jeu sur l'écran principal de Windows plutôt que sur un autre.",
+            "Avec plusieurs écrans, ouvre toujours le jeu sur l'écran principal de Windows. "
+            "Éteint, il s'ouvre sur l'écran où il démarre.",
             defaut=False, onglet="affichage"),
     Reglage("premier_plan", "Accio.Window", "AlwaysOnTop",
             "Toujours au premier plan",
-            "En fenêtre, le jeu reste devant les autres fenêtres.",
+            "En mode fenêtre, garde le jeu devant toutes les autres fenêtres, même quand vous"
+            " cliquez ailleurs.",
             defaut=False, onglet="affichage"),
     # ── Jeu, commandes, performances ──
     Reglage("arriere_plan", "Accio.Window", "KeepRunningInBackground",
             "Continuer à tourner après un Alt+Tab",
-            "Le jeu ne se fige plus quand une autre fenêtre passe devant."),
+            "Le jeu ne se fige plus quand une autre fenêtre passe devant, et reprend le "
+            "clavier dès qu'on revient."),
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
-            "Plafonne les images calculées : moins de chauffe, de bruit et d'à-coups.",
+            "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins"
+            " de bruit.",
             choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
     Reglage("synchro_verticale", "Accio.Graphics", "VSync",
             "Synchronisation verticale",
-            "Supprime les déchirures de l'image, au prix d'un peu de réactivité.",
+            "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale "
+            "quand la caméra tourne. En contrepartie, un peu plus de délai entre la souris et"
+            " l'image.",
             defaut=False, onglet="perfs"),
     Reglage("touches_zqsd", "Accio.Keys", "",
             "Déplacement {} et sorts à la souris",
-            "Déplacement sur {0}, sorts aux clics, Accio sur {1}, Extremos sur {2} ; "
-            "{3} fait reculer.", onglet="commandes"),
+            "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic droit, Accio sur "
+            "{1}, Extremos sur {2}. Les touches d'origine continuent de marcher, sauf {3}, "
+            "qui fait reculer.", onglet="commandes"),
     # [Accio.Controller] est lu par le xinput1_3.dll du correctif (HP5-HP7b) ;
     # HP4 n'a pas cette DLL, son correctif lit sa propre clé dans [Accio.Game].
     Reglage("manette_playstation", "Accio.Controller", "PlayStation",
             "Manette PlayStation reconnue",
-            "Elle joue comme une manette Xbox ; à éteindre si Steam Input ou DS4Windows "
-            "la convertit déjà.", onglet="manette"),
+            "Une manette PlayStation 4 ou 5 branchée est vue comme une manette Xbox, que le "
+            "jeu connaît. Éteignez-le si Steam Input ou DS4Windows la convertissent déjà : le"
+            " jeu la verrait deux fois.", onglet="manette"),
     Reglage("manette_playstation_hp4", "Accio.Game", "PlayStationController",
             "Manette PlayStation reconnue",
-            "Elle joue comme une manette Xbox ; à éteindre si Steam Input ou DS4Windows "
-            "la convertit déjà.", onglet="manette"),
+            "Une manette PlayStation 4 ou 5 branchée est vue comme une manette Xbox, que le "
+            "jeu connaît. Éteignez-le si Steam Input ou DS4Windows la convertissent déjà : le"
+            " jeu la verrait deux fois.", onglet="manette"),
     Reglage("vibrations", "Accio.Controller", "Rumble",
             "Vibrations de la manette PlayStation",
-            "En USB seulement.", onglet="manette"),
+            "Les vibrations d'une manette PlayStation branchée en USB. Sans effet en "
+            "Bluetooth.", onglet="manette"),
     # ── Qualité d'image (préréglages, puis le détail) ──
     # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
     # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
     # allumés) l'éteindre les éteindrait tous.
     Reglage("lissage", "Accio.Graphics", "FXAA",
             "Lissage des contours (FXAA)",
-            "Adoucit les contours en escalier ; porte aussi les effets de lumière et de couleur.",
+            "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, "
+            "toiles de tente), avec un léger renforcement de la netteté. Il porte aussi les "
+            "effets ci-dessous : l'éteindre éteint ombres de contact, halo, rayons et "
+            "couleurs.",
             defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("nettete", "Accio.Graphics", "Sharpness",
             "Netteté",
-            "Rend du piqué à l'image après le lissage.",
+            "Rend du piqué à l'image que le lissage (FXAA) adoucit : contours et textures "
+            "plus nets. Trop fort, un liseré clair apparaît autour des contours.",
             choix=tuple(v for v, _ in NETTETES), zero="Aucune", etiquettes=NETTETES,
             onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
@@ -242,7 +263,10 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # pas en Direct3D 9).
     Reglage("anticrenelage", "Accio.Graphics", "Antialiasing",
             "Anticrénelage (MSAA)",
-            "Lisse les contours en calculant plusieurs points par pixel.",
+            "Lisse les contours des personnages et du décor en calculant plusieurs points par"
+            " pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique "
+            "travaille. L'allumer éteint les ombres de contact, qui l'empêchent d'atteindre "
+            "le décor.",
             choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
             onglet="image", cout=(("GPU", 2),), se_voit=True, exclut="occlusion"),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
@@ -252,7 +276,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # 2560×1440, 94 → 84 sur HP4 (RTX 2060 SUPER). Sans effet sans MSAA.
     Reglage("anticrenelage_transparence", "Accio.Graphics", "TransparencyAntialiasing",
             "Cheveux et feuillage lissés",
-            "Lisse aussi cheveux, feuilles et herbe ; cartes NVIDIA seulement.", defaut=False,
+            "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les feuilles et "
+            "l'herbe. Cartes NVIDIA seulement ; demande plus à la carte graphique là où il y "
+            "a beaucoup de feuillage.", defaut=False,
             onglet="image", cout=(("GPU", 2),), depend_de="anticrenelage"),
     # HP5, vu en jeu le 2026-09-26 : son occlusion ambiante lit la profondeur
     # comme une texture, ce qui ferme le MSAA à la scène ; le suréchantillonnage
@@ -265,7 +291,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # leur défaut depuis, parce qu'il veut « le moins de pixelisation possible ».
     Reglage("surechantillonnage", "Accio.Graphics", "SSAAFactor",
             "Suréchantillonnage",
-            "Calcule l'image en plus grand puis la réduit : l'image la plus fine.",
+            "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et "
+            "détails lointains nettement plus fins. Le réglage qui se voit le plus, et le "
+            "plus exigeant : ×2 est pour les PC puissants.",
             choix=(1, 1.5, 2), zero="Désactivé", format_choix="×{}",
             onglet="image", cout=(("GPU", 3),), se_voit=True),
     # Les effets du correctif (HP4-HP6), tous allumés dans les ini livrés et
@@ -274,49 +302,61 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # aucune modifiable depuis le launcher ». Tous passent par le FXAA.
     Reglage("filtrage", "Accio.Graphics", "AnisotropicFiltering",
             "Netteté des textures de biais",
-            "Garde nets les sols et les murs vus de biais.",
+            "Sols, murs et chemins vus en biais restent nets au lieu de devenir flous "
+            "(filtrage anisotrope). Presque gratuit sur une carte récente.",
             choix=FILTRAGES, zero="Désactivé", format_choix="×{}",
             onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("textures_lointaines", "Accio.Graphics", "TextureLODBias",
             "Textures lointaines",
-            "Rend plus nettes les textures au loin.",
+            "Garde les textures nettes plus loin : sols, murs et chemins restent détaillés au"
+            " lieu de flouter avec la distance. Un réglage fort peut faire scintiller "
+            "certaines surfaces.",
             choix=tuple(v for v, _ in NETTETES_LOINTAINES), zero="D'origine",
             etiquettes=NETTETES_LOINTAINES, onglet="image", cout=(("GPU", 1),)),
     Reglage("feuillage_lointain", "Accio.Graphics", "MipmapCoverage",
             "Feuillage dense au loin",
-            "Feuilles, cheveux et grilles gardent leur densité au lieu de disparaître au loin.",
+            "Feuilles, cheveux et grilles gardent leur densité au loin, au lieu de "
+            "s'éclaircir puis de disparaître. Surtout visible dans les forêts.",
             defaut=False, onglet="image", cout=(("GPU", 1),)),
     Reglage("occlusion", "Accio.Graphics", "SSAO",
             "Ombres de contact",
-            "Assombrit les recoins et le contact des objets : le décor gagne en relief.",
+            "Assombrit les recoins, le pied des murs et le contact des objets : le décor "
+            "gagne en relief (occlusion ambiante). Les allumer éteint l'anticrénelage (MSAA).",
             defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True,
             depend_de="lissage", exclut="anticrenelage"),
     # « Expérimental » dans l'ini livré : agrandit aussi les reflets.
     Reglage("ombres_nettes", "Accio.Graphics", "ShadowMapScale",
             "Ombres plus nettes",
-            "Affine les ombres portées ; expérimental, agrandit aussi les reflets.",
+            "Calcule les ombres portées en plus fin : des bords nets au lieu de flous et "
+            "crénelés. Expérimental : agrandit aussi les reflets, et demande plus de mémoire "
+            "vidéo.",
             choix=(1, 2, 4), zero="D'origine", format_choix="×{}",
             onglet="image", cout=(("GPU", 2), ("RAM", 1))),
     Reglage("halo", "Accio.Graphics", "Bloom",
             "Halo lumineux",
-            "Les lumières vives débordent doucement autour d'elles.",
+            "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour "
+            "d'elles.",
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     Reglage("rayons", "Accio.Graphics", "GodRays",
             "Rayons de lumière",
-            "Des rayons partent des lumières fortes, comme le soleil dans les arbres.",
+            "Des rayons partent des sources de lumière fortes, comme le soleil à travers les "
+            "arbres.",
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     Reglage("couleurs", "Accio.Graphics", "ColorGrading",
             "Couleurs retravaillées",
-            "Active la vivacité et le contraste, en épargnant les visages.",
+            "Active la vivacité et le contraste ci-dessous, en épargnant les visages. Éteint "
+            ": les couleurs d'origine du jeu.",
             defaut=False, onglet="image", se_voit=True, depend_de="lissage"),
     Reglage("vivacite", "Accio.Graphics", "Vibrance",
             "Vivacité des couleurs",
-            "Ravive les couleurs ternes sans saturer les autres.",
+            "Ravive les couleurs ternes sans saturer celles qui le sont déjà. Seulement avec "
+            "« Couleurs retravaillées ».",
             choix=tuple(v for v, _ in VIVACITES), zero="Aucune", etiquettes=VIVACITES,
             onglet="image", se_voit=True, depend_de="couleurs"),
     Reglage("contraste", "Accio.Graphics", "Contrast",
             "Contraste",
-            "Creuse l'écart entre zones claires et sombres.",
+            "Creuse l'écart entre zones claires et sombres. Seulement avec « Couleurs "
+            "retravaillées ».",
             choix=tuple(v for v, _ in CONTRASTES), zero="D'origine", etiquettes=CONTRASTES,
             onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
@@ -325,15 +365,19 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # Un choix d'artiste du jeu : allumé par défaut, comme livré.
     Reglage("brouillard", "Accio.Game", "DistanceFog",
             "Brouillard lointain",
-            "Le voile vert du décor au loin ; éteint, les paysages sont nets.",
+            "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et "
+            "paysages nets et contrastés, la scène un peu plus sombre.",
             onglet="image", se_voit=True),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
-            "Les images par seconde en haut à gauche ; F10 le masque en jeu.",
+            "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "
+            "remet.",
             defaut=False, onglet="perfs"),
     Reglage("panneau_perfs", "Accio.Overlay", "",
             "Panneau de performances",
-            "Temps par image, processeur, carte graphique et mémoire ; F11 lance un benchmark.",
+            "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et "
+            "vive, latence. En jeu, F11 lance un benchmark et F11 à nouveau l'arrête ; il est"
+            " enregistré dans le dossier « benchmarks » du jeu.",
             defaut=False, onglet="perfs", cout=(("CPU", 1),)),
     # HP6, vu en jeu le 2026-09-26 : son menu de langue s'ouvre sur la langue
     # de Windows, mais le jeu ne connaît qu'une variante de chaque langue — un
@@ -342,8 +386,10 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # sur Español. HP4 et HP5 ne demandent rien à Windows : pas pour eux.
     Reglage("langue_menu", "Accio.Game", "Language",
             "Langue au démarrage",
-            "La langue du menu d'ouverture ; « Celle de Windows » corrige les Windows "
-            "belges, suisses, canadiens ou espagnols.",
+            "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après "
+            "quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en"
+            " français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait "
+            "démarrer en anglais.",
             choix=tuple(v for v, _ in LANGUES_MENU), zero="Celle de Windows",
             noms_choix=LANGUES_MENU),
 )}

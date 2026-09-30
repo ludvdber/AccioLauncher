@@ -58,6 +58,8 @@ _FICHIERS = {
     "plein_ecran": "phosphor/corners-out-bold.svg",
     "quitter_plein_ecran": "phosphor/corners-in-bold.svg",
     "site": "phosphor/globe-bold.svg",
+    "deplier": "phosphor/caret-down-bold.svg",
+    "replier": "phosphor/caret-up-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

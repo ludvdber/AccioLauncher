@@ -32,6 +32,8 @@ IDENTIQUES_TOLEREES = {
     "En {}",
     # « Contraste » : même mot en espagnol (réglage d'image du correctif).
     "Contraste",
+    # « Textures » : même mot en anglais (famille d'effets de « Qualité d'image »).
+    "Textures",
     # Éditeur de touches de HP4 : « Pause » en anglais, « Fin » (la touche) en espagnol.
     "Pause", "Fin",
     # « changelog » est le même mot en français et en anglais.

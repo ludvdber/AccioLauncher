@@ -21,7 +21,7 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtGui import QGuiApplication, QIcon
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -41,18 +41,20 @@ from src.core import captures, manette, reglages_correctif
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
+from src.ui.aide_reglage import BoutonAide
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font, cinzel
+from src.ui.icon_button import pixmap_icone
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.styles import RADIO_STYLE
-from src.ui.theme import themed
+from src.ui.theme import accent_qcolor, themed
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import open_local_path, zone_defilable
 
 log = logging.getLogger(__name__)
 
 # Les mesures du cadre : `_ajuster_hauteur` les additionne, la construction les pose.
-_LARGEUR = 540        # cinq onglets côte à côte, « Performances » compris
+_LARGEUR = 590        # cinq onglets, et une ligne de réglage avec son « ? », ses pastilles et sa liste
 _MARGES_H = 22 + 22   # contentsMargins gauche et droite de la fenêtre
 _MARGE_HAUT, _MARGE_BAS = 20, 16
 _ESPACE_TITRE = 14
@@ -89,6 +91,24 @@ _LIEN_STYLE = (
     " border: none; text-align: left; padding: 4px 0px; }"
     "QPushButton:hover { color: #e8c547; text-decoration: underline; }"
     "QPushButton:disabled { color: #55556a; }"
+)
+
+# Les familles d'effets de « Qualité d'image », dans l'ordre d'affichage.
+_GROUPES_EFFETS = (
+    ("Contours", ("lissage", "nettete", "anticrenelage", "anticrenelage_transparence",
+                  "surechantillonnage")),
+    ("Textures", ("filtrage", "textures_lointaines", "feuillage_lointain")),
+    ("Lumière et ombres", ("occlusion", "ombres_nettes", "halo", "rayons", "brouillard")),
+    ("Couleurs", ("couleurs", "vivacite", "contraste")),
+)
+_RESSOURCES = {"GPU": "Carte graphique (GPU)", "CPU": "Processeur (CPU)", "RAM": "Mémoire (RAM)"}
+_NIVEAUX = {1: "faible", 2: "moyenne", 3: "extrême"}
+
+_GROUPE_STYLE = (
+    "QPushButton { color: #d0d0e0; background: #141428; border: 1px solid #2a2a48;"
+    " border-radius: 6px; padding: 7px 10px; text-align: left; }"
+    "QPushButton:hover { border-color: #d6a72c; color: #e8c547; }"
+    "QPushButton:checked { border-color: rgba(214,167,44,0.55); }"
 )
 
 _PREREGLAGE_STYLE = (
@@ -147,6 +167,8 @@ class GameSettingsDialog(QDialog):
         # Le contrôle de chaque réglage du correctif, par identifiant : la remise
         # à l'origine les remet sur ce que porte le fichier, sans rebâtir la page.
         self._controles: dict[str, QWidget] = {}
+        # Le « ? » de chaque ligne, par identifiant (par libellé hors correctif).
+        self._aides: dict[str, BoutonAide] = {}
         # Le bloc entier de chaque réglage (ligne, pastilles, aide) : grisé quand
         # un autre réglage, éteint, lui retire tout effet.
         self._blocs: dict[str, QWidget] = {}
@@ -160,8 +182,9 @@ class GameSettingsDialog(QDialog):
         self._prereglages: tuple = ()
         self._boutons_prereglage: dict[str, QPushButton] = {}
         self._texte_prereglage: QLabel | None = None
-        self._detail: QWidget | None = None
-        self._lien_detail: QPushButton | None = None
+        # Les familles d'effets repliables (en-tête, contenu) et « Tout déplier ».
+        self._groupes: list[tuple[QPushButton, QWidget]] = []
+        self._tout: QPushButton | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -404,11 +427,13 @@ class GameSettingsDialog(QDialog):
         return self._section_fichiers(corps)
 
     def _onglet_image(self, corps: QVBoxLayout) -> bool:
-        """Affichage, puis « Qualité d'image » : des préréglages, le détail replié.
+        """Affichage, puis « Qualité d'image » : des préréglages, les effets par groupes repliés.
 
         Variante B choisie par Ludo le 2026-09-30 (« les gens s'y retrouvent
-        pas, beaucoup de texte ») : on choisit d'abord une qualité en un clic ;
-        chaque effet reste réglable, derrière un lien, avec ce qu'il coûte.
+        pas, beaucoup de texte ») : on choisit d'abord une qualité en un clic.
+        Chaque effet reste réglable, rangé dans un groupe qui se déplie (un seul
+        lien « Régler chaque effet » n'était « pas intuitif »), et « Tout
+        déplier » les ouvre tous d'un geste.
         """
         if not self._correctif_actif():
             # Jeu absent ou ancien correctif : une seule note pour tout l'onglet.
@@ -426,34 +451,88 @@ class GameSettingsDialog(QDialog):
             self._prereglages = reglages_correctif.prereglages_du_jeu(qualite)
             if self._prereglages:
                 self._barre_prereglages(corps)
-            self._detail = QWidget()
-            self._detail.setStyleSheet("background: transparent;")
-            detail = QVBoxLayout(self._detail)
-            detail.setContentsMargins(0, 0, 0, 0)
-            detail.setSpacing(0)
-            self._legende(detail)
-            for reglage in qualite:
-                self._controle(detail, self._ini, reglage)
-            if self._prereglages:
-                self._lien_detail = QPushButton()
-                self._lien_detail.setFont(body_font(12))
-                self._lien_detail.setCursor(Qt.CursorShape.PointingHandCursor)
-                self._lien_detail.setStyleSheet(themed(_LIEN_STYLE))
-                self._lien_detail.clicked.connect(lambda: self._deplier(self._detail.isHidden()))
-                corps.addSpacing(4)
-                ligne = QHBoxLayout()
-                ligne.addWidget(self._lien_detail)
-                ligne.addStretch()
-                corps.addLayout(ligne)
-                self._detail.hide()
-                self._maj_lien_detail()
-            corps.addWidget(self._detail)
+                corps.addSpacing(12)
+            self._effets_par_groupes(corps, qualite)
             self._maj_dependances()
             self._maj_prereglage()
             rempli = True
         if rempli:
             self._bouton_origine(corps)
         return rempli
+
+    def _effets_par_groupes(self, corps: QVBoxLayout, qualite) -> None:
+        """« Régler chaque effet » + « Tout déplier », la légende, puis un groupe repliable par famille."""
+        tete = QHBoxLayout()
+        titre = QLabel(tr("Régler chaque effet"))
+        titre.setFont(body_font(12))
+        titre.setStyleSheet("color: #d0d0e0; background: transparent;")
+        tete.addWidget(titre)
+        tete.addStretch()
+        self._tout = QPushButton()
+        self._tout.setFont(body_font(12))
+        self._tout.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._tout.setStyleSheet(themed(_LIEN_STYLE))
+        self._tout.clicked.connect(lambda: self._deplier_tout(not self._tout_deplie()))
+        tete.addWidget(self._tout)
+        corps.addLayout(tete)
+        self._legende(corps)
+        restants = list(qualite)
+        familles = []
+        for nom, idents in _GROUPES_EFFETS:
+            membres = [r for r in restants if r.ident in idents]
+            if membres:
+                familles.append((nom, membres))
+                restants = [r for r in restants if r not in membres]
+        if restants:
+            # Un réglage d'image qu'aucune famille ne nomme encore n'est jamais perdu.
+            familles.append(("Autres", restants))
+        for nom, membres in familles:
+            entete = QPushButton(f"{tr(nom)} ({len(membres)})")
+            entete.setCheckable(True)
+            entete.setFont(body_font(12))
+            entete.setCursor(Qt.CursorShape.PointingHandCursor)
+            entete.setStyleSheet(themed(_GROUPE_STYLE))
+            corps_groupe = QWidget()
+            corps_groupe.setStyleSheet("background: transparent;")
+            v = QVBoxLayout(corps_groupe)
+            v.setContentsMargins(4, 2, 0, 8)
+            v.setSpacing(0)
+            for reglage in membres:
+                self._controle(v, self._ini, reglage)
+            corps_groupe.hide()
+            entete.toggled.connect(lambda oui, c=corps_groupe, e=entete: self._deplier_groupe(e, c, oui))
+            corps.addSpacing(6)
+            corps.addWidget(entete)
+            corps.addWidget(corps_groupe)
+            self._groupes.append((entete, corps_groupe))
+            self._poser_chevron(entete, False)
+        self._maj_tout()
+
+    def _poser_chevron(self, entete: QPushButton, ouvert: bool) -> None:
+        entete.setIcon(QIcon(pixmap_icone("replier" if ouvert else "deplier", 14, accent_qcolor())))
+
+    def _deplier_groupe(self, entete: QPushButton, corps_groupe: QWidget, oui: bool) -> None:
+        corps_groupe.setVisible(oui)
+        self._poser_chevron(entete, oui)
+        self._maj_tout()
+        self._ajuster_hauteur()
+
+    def _tout_deplie(self) -> bool:
+        return bool(self._groupes) and all(e.isChecked() for e, _c in self._groupes)
+
+    def _deplier_tout(self, oui: bool) -> None:
+        for entete, corps_groupe in self._groupes:
+            entete.blockSignals(True)
+            entete.setChecked(oui)
+            entete.blockSignals(False)
+            corps_groupe.setVisible(oui)
+            self._poser_chevron(entete, oui)
+        self._maj_tout()
+        self._ajuster_hauteur()
+
+    def _maj_tout(self) -> None:
+        if self._tout is not None:
+            self._tout.setText(tr("Tout replier") if self._tout_deplie() else tr("Tout déplier"))
 
     def _barre_prereglages(self, layout: QVBoxLayout) -> None:
         """Légère · Équilibrée · Maximale · Sur mesure, et ce que fait le choix."""
@@ -496,27 +575,42 @@ class GameSettingsDialog(QDialog):
         texte = (html.escape(tr("Exigence pour la carte graphique (GPU), le processeur (CPU) "
                                 "ou la mémoire (RAM) :"))
                  + " " + " · ".join(morceaux) + ". "
-                 + html.escape(tr("Un réglage exigeant peut faire ramer un PC modeste.")))
+                 + html.escape(tr("Chaque « ? » explique son réglage.")))
         legende = QLabel(texte)
         legende.setTextFormat(Qt.TextFormat.RichText)
         legende.setFont(body_font(10))
         legende.setWordWrap(True)
-        legende.setStyleSheet("color: #8a8aaa; background: transparent; padding: 8px 0px 6px 0px;")
+        legende.setStyleSheet("color: #8a8aaa; background: transparent; padding: 2px 0px 2px 0px;")
         layout.addWidget(legende)
 
-    def _deplier(self, oui: bool) -> None:
-        if self._detail is None:
-            return
-        self._detail.setVisible(oui)
-        self._maj_lien_detail()
-        self._ajuster_hauteur()
+    def _fiche(self, aide_txt: str, reglage=None) -> str:
+        """Ce qu'ouvre le « ? » : la description, puis tout ce qu'on sait du réglage."""
+        e = html.escape
+        paragraphes = [e(aide_txt)]
+        if reglage is not None:
+            if reglage.cout:
+                paragraphes.append("<br>".join(
+                    f'{e(tr(_RESSOURCES.get(r, r)))} : <span style="color:{_COULEURS_COUT[n]}">'
+                    f"{e(tr(_NIVEAUX[n]))} ({'+' * n})</span>" for r, n in reglage.cout))
+            if reglage.se_voit:
+                paragraphes.append(f'<span style="color:{_COULEUR_SE_VOIT}">'
+                                   f"{e(tr('Se voit nettement à l’écran.'))}</span>")
+            declares = {r.ident for r in self._reglages}
 
-    def _maj_lien_detail(self) -> None:
-        if self._lien_detail is None:
-            return
-        n = sum(1 for r in self._reglages if r.onglet == "image")
-        self._lien_detail.setText(tr("Masquer le détail") if not self._detail.isHidden()
-                                  else tr("Régler chaque effet ({})").format(n))
+            def deja_dit(autre) -> bool:
+                # La description le nomme déjà (« l'allumer éteint les ombres de contact ») :
+                # la fiche ne le répète pas.
+                return reglages_correctif.textes(autre)[0].lower() in aide_txt.lower()
+
+            parent = reglages_correctif.REGLAGES.get(reglage.depend_de)
+            if parent is not None and parent.ident in declares and not deja_dit(parent):
+                paragraphes.append(e(tr("Sans effet tant que « {} » est éteint.").format(
+                    reglages_correctif.textes(parent)[0])))
+            exclu = reglages_correctif.REGLAGES.get(reglage.exclut)
+            if exclu is not None and exclu.ident in declares and not deja_dit(exclu):
+                paragraphes.append(e(tr("L'allumer éteint « {} », qui ne peut pas agir en même "
+                                        "temps.").format(reglages_correctif.textes(exclu)[0])))
+        return "".join(f"<p>{p}</p>" for p in paragraphes)
 
     def _maj_prereglage(self) -> None:
         """Le bouton coché et la phrase suivent ce que portent VRAIMENT les contrôles."""
@@ -532,8 +626,8 @@ class GameSettingsDialog(QDialog):
 
     def _choisir_prereglage(self, ident: str) -> None:
         if not ident:
-            # « Sur mesure » n'écrit rien : il ouvre le détail.
-            self._deplier(True)
+            # « Sur mesure » n'écrit rien : il ouvre tous les effets.
+            self._deplier_tout(True)
             self._maj_prereglage()
             return
         voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
@@ -781,17 +875,25 @@ class GameSettingsDialog(QDialog):
 
     def _ligne(self, layout: QVBoxLayout, libelle_txt: str, controle: QWidget, aide_txt: str,
                reglage=None) -> None:
-        """Une ligne par réglage : le nom, ce qu'il coûte, le contrôle toujours à
-        DROITE (maquette B, 2026-09-30) ; la phrase qui dit ce qu'il fait, dessous."""
+        """Une ligne par réglage : le nom, son « ? », ce qu'il coûte, le contrôle
+        toujours à DROITE (maquette B, 2026-09-30).
+
+        L'explication vit derrière le « ? », au clic (Ludo : « une
+        bonne description au survol de la souris ou un bouton ? ») : une phrase
+        sous chaque ligne, c'était le mur de texte qu'on voulait retirer.
+        """
         ligne = QWidget()
         ligne.setStyleSheet("background: transparent;")
         h = QHBoxLayout(ligne)
-        h.setContentsMargins(0, 6, 0, 0)
-        h.setSpacing(8)
+        h.setContentsMargins(0, 5, 0, 5)
+        h.setSpacing(6)
         libelle = QLabel(libelle_txt)
         libelle.setTextFormat(Qt.TextFormat.PlainText)
         libelle.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
         h.addWidget(libelle)
+        aide = BoutonAide(libelle_txt, self._fiche(aide_txt, reglage))
+        h.addWidget(aide, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self._aides[reglage.ident if reglage is not None else libelle_txt] = aide
         if reglage is not None:
             self._reperes(h, reglage)
         h.addStretch(1)
@@ -800,14 +902,9 @@ class GameSettingsDialog(QDialog):
             # d'écran n'annoncerait qu'« interrupteur » (règle 15).
             controle.setToolTip(libelle_txt)
         controle.setAccessibleName(libelle_txt)
+        controle.setAccessibleDescription(aide_txt)
         h.addWidget(controle)
         layout.addWidget(ligne)
-        aide = QLabel(aide_txt)
-        aide.setFont(body_font(10))
-        aide.setWordWrap(True)
-        aide.setTextFormat(Qt.TextFormat.PlainText)
-        aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
-        layout.addWidget(aide)
 
     def _controle(self, parent: QVBoxLayout, ini: Path, reglage) -> None:
         try:
@@ -827,7 +924,7 @@ class GameSettingsDialog(QDialog):
             choix = QComboBox()
             choix.setStyleSheet(themed(_COMBO_STYLE))
             # Une largeur commune : les listes s'alignent en colonne à droite.
-            choix.setMinimumWidth(150)
+            choix.setMinimumWidth(130)
             for n in reglage.choix:
                 choix.addItem(reglages_correctif.libelle_choix(reglage, n), n)
             if etat.personnalise:
@@ -883,7 +980,7 @@ class GameSettingsDialog(QDialog):
             pastille.setTextFormat(Qt.TextFormat.PlainText)
             pastille.setStyleSheet(themed(
                 f"color: {couleur}; background: transparent; border: 1px solid {couleur};"
-                " border-radius: 3px; padding: 0px 5px;"))
+                " border-radius: 3px; padding: 0px 4px;"))
             # Centrée, à sa hauteur : sinon elle s'étire à celle de la liste voisine.
             ligne.addWidget(pastille, alignment=Qt.AlignmentFlag.AlignVCenter)
 
@@ -909,8 +1006,10 @@ class GameSettingsDialog(QDialog):
             # HP5 et HP6 (lu dans leurs exe, 2026-09-30) : au démarrage, un choix
             # « manette » sans manette vue retombe au clavier ET s'écrit ainsi.
             self._ligne(layout, tr("Jouer à la manette"), bascule, tr(
-                "Branchez-la avant de lancer le jeu. Ce choix vit dans le registre de "
-                "Windows : le lanceur prévient avant d'y écrire."))
+                "Le jeu garde ce choix dans le registre de Windows : le lanceur vous "
+                "prévient avant de le modifier. Il se règle aussi dans les options du jeu. "
+                "Branchez la manette avant de lancer le jeu : s'il ne la trouve pas au "
+                "démarrage, il repasse au clavier."))
         for reglage in du_correctif:
             self._controle(layout, self._ini, reglage)
         return True

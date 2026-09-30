@@ -510,13 +510,33 @@ class TestFenetre:
         assert _COULEURS_COUT[3] in style["GPU +++"]
         assert len(set(_COULEURS_COUT.values())) == 3
 
-    def test_chaque_reglage_dit_ce_qu_il_fait_en_une_phrase(self):
-        """« Une description concise de ce que fait chaque paramètre » : une phrase, courte."""
+    def test_chaque_reglage_a_une_vraie_description(self):
+        """Derrière le « ? », une description qui explique (Ludo : « une bonne description »)."""
         for r in rc.REGLAGES.values():
             _libelle, aide = rc.textes(r)
-            assert aide, r.ident
-            assert len(aide) <= 125, f"{r.ident} : {len(aide)} caractères"
-            assert aide.count(". ") == 0, f"{r.ident} : plus d'une phrase"
+            assert len(aide) >= 40, f"{r.ident} : « {aide} »"
+
+    def test_le_point_d_interrogation_ouvre_toute_la_fiche(self, qtbot, tmp_path):
+        """Description, coût en clair, « se voit » et ce qu'il éteint : tout dans la fiche."""
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["lissage", "anticrenelage", "occlusion"]),
+                        _manager(tmp_path))
+        aide = dlg._aides["anticrenelage"]
+        aide.click()
+        assert aide.fiche is not None and aide.fiche.isVisible()
+        texte = aide.fiche.texte.text()
+        assert tr("Carte graphique (GPU)") in texte and tr("moyenne") in texte
+        assert tr("Ombres de contact").lower() in texte.lower()   # l'allumer les éteint
+        # Rien de coupé en bas : la hauteur suit le texte passé à la ligne (règle 38).
+        assert aide.fiche.texte.height() >= aide.fiche.texte.heightForWidth(aide.fiche.texte.width())
+        aide.fiche.close()
+
+    def test_une_dependance_absente_du_jeu_n_est_pas_citee(self, qtbot, tmp_path):
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["occlusion"]), _manager(tmp_path))
+        assert "FXAA" not in dlg._fiche("x", rc.REGLAGES["occlusion"])
 
     def test_sans_reglage_declare_la_rubrique_reste_verrouillee(self, qtbot, tmp_path):
         dlg = _dialogue(qtbot, _jeu(tmp_path, []), _manager(tmp_path))
@@ -758,7 +778,7 @@ class TestPrereglages:
 
 
 class TestFenetreQualite:
-    """Variante B (Ludo, 2026-09-30) : préréglages en tête, le détail replié."""
+    """Variante B (Ludo, 2026-09-30) : préréglages en tête, les effets en groupes repliés."""
 
     IDENTS = ["lissage", "surechantillonnage", "filtrage", "occlusion", "halo", "rayons"]
 
@@ -769,19 +789,65 @@ class TestFenetreQualite:
         return (_dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ["resolution"]), _manager(tmp_path)),
                 dossier / "d3d9.ini")
 
-    def test_le_detail_est_replie_et_se_deplie(self, qtbot, tmp_path):
+    def test_les_groupes_sont_replies_et_se_deplient(self, qtbot, tmp_path):
         dlg, _ini = self._fenetre(qtbot, tmp_path)
-        assert dlg._detail.isHidden()
-        assert dlg._lien_detail.text() == tr("Régler chaque effet ({})").format(len(self.IDENTS))
+        assert [e.text() for e, _c in dlg._groupes] == [
+            f"{tr('Contours')} (2)", f"{tr('Textures')} (1)", f"{tr('Lumière et ombres')} (3)"]
+        assert all(c.isHidden() for _e, c in dlg._groupes)
         hauteur = dlg.height()
-        dlg._lien_detail.click()
-        assert not dlg._detail.isHidden()
+        dlg._groupes[0][0].click()
+        assert not dlg._groupes[0][1].isHidden() and dlg._groupes[1][1].isHidden()
         assert dlg.height() >= hauteur
-        assert dlg._lien_detail.text() == tr("Masquer le détail")
+
+    def test_tout_deplier_puis_tout_replier(self, qtbot, tmp_path):
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        assert dlg._tout.text() == tr("Tout déplier")
+        dlg._tout.click()
+        assert not any(c.isHidden() for _e, c in dlg._groupes)
+        assert all(e.isChecked() for e, _c in dlg._groupes)
+        assert dlg._tout.text() == tr("Tout replier")
+        dlg._tout.click()
+        assert all(c.isHidden() for _e, c in dlg._groupes)
+
+    @pytest.mark.parametrize("langue", ["fr", "en", "es"])
+    def test_tout_deplie_rien_ne_deborde_a_droite(self, qtbot, tmp_path, qapp, langue):
+        """Nom, « ? », pastilles et liste tiennent dans la largeur, barre de défilement comprise.
+
+        Le « ? » a fait déborder « Netteté des textures de biais » de 30 px. Mesuré
+        avec les VRAIES polices et la feuille de l'application : sous offscreen, la
+        police de substitution fait « Se voit » de 108 px et ne prouve rien.
+        """
+        from src.core import i18n
+        from src.ui.fonts import load_fonts
+        from src.ui.game_settings_dialog import _LARGEUR, _MARGES_H
+        from src.ui.styles import MAIN_STYLE
+        from src.ui.theme import themed
+        load_fonts()
+        ancienne_langue, ancienne_feuille = i18n.get_language(), qapp.styleSheet()
+        try:
+            i18n.set_language(langue)
+            qapp.setStyleSheet(themed(MAIN_STYLE))
+            dossier = tmp_path / "HP4"
+            dossier.mkdir()
+            (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
+            tous = [r.ident for r in rc.REGLAGES.values() if r.onglet in ("image", "affichage")]
+            dlg = _dialogue(qtbot, _jeu(tmp_path, tous), _manager(tmp_path))
+            dlg._tout.click()
+            for contenu in dlg._contenus:
+                assert contenu.minimumSizeHint().width() <= _LARGEUR - _MARGES_H - 18
+        finally:
+            qapp.setStyleSheet(ancienne_feuille)
+            i18n.set_language(ancienne_langue)
+
+    def test_ouvrir_chaque_groupe_a_la_main_vaut_tout_deplier(self, qtbot, tmp_path):
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        for entete, _c in dlg._groupes:
+            entete.click()
+        assert dlg._tout.text() == tr("Tout replier")
 
     def test_l_affichage_reste_visible(self, qtbot, tmp_path):
         dlg, _ini = self._fenetre(qtbot, tmp_path)
-        assert not dlg._detail.isAncestorOf(dlg._controles["resolution"])
+        assert not any(c.isAncestorOf(dlg._controles["resolution"]) for _e, c in dlg._groupes)
         assert dlg._controles["resolution"].currentData() == "1920x1080"
 
     def test_un_prereglage_ecrit_ses_valeurs_et_se_coche(self, qtbot, tmp_path):
@@ -799,16 +865,16 @@ class TestFenetreQualite:
         dlg, _ini = self._fenetre(qtbot, tmp_path)
         from PyQt6.QtCore import Qt
         dlg._boutons_prereglage["equilibree"].click()
-        dlg._lien_detail.click()
+        dlg._tout.click()
         qtbot.mouseClick(dlg._controles["halo"], Qt.MouseButton.LeftButton)
         assert dlg._boutons_prereglage[""].isChecked()
         assert dlg._texte_prereglage.text() == tr("Vos propres réglages, effet par effet.")
 
-    def test_sur_mesure_ouvre_le_detail_sans_rien_ecrire(self, qtbot, tmp_path):
+    def test_sur_mesure_ouvre_tous_les_effets_sans_rien_ecrire(self, qtbot, tmp_path):
         dlg, ini = self._fenetre(qtbot, tmp_path)
         avant = ini.read_bytes()
         dlg._boutons_prereglage[""].click()
-        assert not dlg._detail.isHidden()
+        assert not any(c.isHidden() for _e, c in dlg._groupes)
         assert ini.read_bytes() == avant
 
 
