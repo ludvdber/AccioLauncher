@@ -26,12 +26,11 @@ class _Poignee:
         return self.accepte
 
 
-def _presser(barre: TitleBar) -> None:
-    p = QPointF(50, 10)
-    barre.mousePressEvent(QMouseEvent(
-        QEvent.Type.MouseButtonPress, p, barre.mapToGlobal(p),
-        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
-        Qt.KeyboardModifier.NoModifier))
+def _evenement(barre: TitleBar, genre: QEvent.Type, x: float) -> QMouseEvent:
+    p = QPointF(x, 10)
+    return QMouseEvent(genre, p, barre.mapToGlobal(p),
+                       Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
+                       Qt.KeyboardModifier.NoModifier)
 
 
 @pytest.mark.parametrize("accepte", [True, False])
@@ -41,7 +40,10 @@ def test_le_compositeur_deplace_la_fenetre(qtbot, accepte):
     barre = TitleBar(fenetre)
     poignee = _Poignee(accepte)
     fenetre.windowHandle = lambda: poignee    # sur l'INSTANCE (règle 12)
-    _presser(barre)
+    barre.mousePressEvent(_evenement(barre, QEvent.Type.MouseButtonPress, 50))
+    # L'appui seul ne passe pas la main : sous Windows, il avalerait le double-clic.
+    assert poignee.appels == 0
+    barre.mouseMoveEvent(_evenement(barre, QEvent.Type.MouseMove, 60))
     assert poignee.appels == 1
     # Accepté : aucun suivi manuel. Refusé : repli sur `move()`.
     assert (barre._drag_pos is None) is accepte

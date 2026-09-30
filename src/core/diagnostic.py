@@ -66,12 +66,16 @@ def formes_du_dossier_personnel(home: str, resolu: str, windows: bool) -> list[s
 
 def scrub_user_paths(text: str) -> str:
     """Remplace le dossier personnel par ~ (ne pas exposer le nom d'utilisateur)."""
+    windows = sys.platform == "win32"
     home = Path.home()
     try:
-        resolu = str(home.resolve())
+        resolu = home.resolve()
     except OSError:
-        resolu = str(home)
-    for variant in formes_du_dossier_personnel(str(home), resolu, sys.platform == "win32"):
+        resolu = home
+    # Hors Windows, des chemins POSIX quel que soit le type de `Path` : les tests
+    # qui simulent Linux tournent aussi sous Windows, où `str()` rend des « \ ».
+    texte_de = str if windows else (lambda p: p.as_posix())
+    for variant in formes_du_dossier_personnel(texte_de(home), texte_de(resolu), windows):
         text = text.replace(variant, "~")
     if sys.platform != "win32":
         text = _sans_profil_wine(text)

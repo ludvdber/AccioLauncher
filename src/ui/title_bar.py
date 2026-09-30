@@ -124,18 +124,22 @@ class TitleBar(QWidget):
                 self._window.move(new_x, 0)
                 self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
             else:
-                # Sous Wayland, `move()` est ignoré : seul le compositeur
-                # déplace une fenêtre. `startSystemMove` lui passe la main
-                # (X11 et Windows l'acceptent aussi) ; repli manuel s'il refuse.
-                poignee = self._window.windowHandle()
-                if poignee is not None and poignee.startSystemMove():
-                    self._drag_pos = None
-                    return
                 self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self._drag_pos and event.buttons() & Qt.MouseButton.LeftButton:
-            self._window.move(event.globalPosition().toPoint() - self._drag_pos)
+        if not (self._drag_pos and event.buttons() & Qt.MouseButton.LeftButton):
+            return
+        # Sous Wayland, `move()` est ignoré : seul le compositeur déplace une
+        # fenêtre. `startSystemMove` lui passe la main (X11 et Windows
+        # l'acceptent aussi) ; repli manuel s'il refuse. Au premier MOUVEMENT
+        # et non à l'appui : sous Windows, la boucle modale de déplacement
+        # ouverte à l'appui avale le second clic, donc le double-clic qui
+        # agrandit la fenêtre.
+        poignee = self._window.windowHandle()
+        if poignee is not None and poignee.startSystemMove():
+            self._drag_pos = None
+            return
+        self._window.move(event.globalPosition().toPoint() - self._drag_pos)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         self._drag_pos = None
