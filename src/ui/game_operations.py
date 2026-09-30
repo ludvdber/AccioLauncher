@@ -144,7 +144,6 @@ class GameOperations(QObject):
         self._uninstall_first = uninstall_first
         self._manager.set_game_state(game.id, GameState.DOWNLOADING)
         self._speed_tracker.reset()
-        self.state_changed.emit()
         self.status_message.emit(tr("Téléchargement de {} v{}…").format(game.name, version.version))
 
         dest = self._manager.chemin_archive(game.id, version)
@@ -171,6 +170,10 @@ class GameOperations(QObject):
         self._downloader.verifying.connect(self._on_verifying)
         if version.download_parts:
             self._downloader.part_info.connect(self._on_part_info)
+        # APRÈS l'existence du fil : `is_busy` doit déjà être vrai pour qui
+        # écoute. Émis avant, la barre du bas lisait « rien en cours » et restait
+        # cachée pendant tout le téléchargement (parcours du 2026-09-30).
+        self.state_changed.emit()
         self._set_phase("download")
         self._downloader.start()
 
@@ -288,7 +291,6 @@ class GameOperations(QObject):
         """Lance l'installation d'un jeu depuis une archive."""
         self._active_game = game
         self._manager.set_game_state(game.id, GameState.INSTALLING)
-        self.state_changed.emit()
 
         dest = self._manager.config.install_path
         config_files = [
@@ -308,6 +310,7 @@ class GameOperations(QObject):
         self._installer.finalizing.connect(self._on_finalizing)
         self._installer.install_finished.connect(self._on_install_finished)
         self._installer.error.connect(self._on_install_error)
+        self.state_changed.emit()     # après le fil, comme dans `download`
         self._set_phase("install")
         self._installer.start()
 

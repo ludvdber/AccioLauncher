@@ -2,21 +2,17 @@ import logging
 
 from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QMessageBox,
-    QStatusBar,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
-from src.core import almanach, compat, manette
+from src.core import compat, manette
 from src.core.config import Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
+from src.ui import dialogues_fenetre, verification_forcee
+from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
+from src.ui.clavier_global import touche_globale
 from src.ui.download_bar import DownloadBar
 from src.ui.retrait_differe import RetraitDiffere
 from src.ui.suivi_barre import SuiviBarre
@@ -36,7 +32,7 @@ from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
 from src.ui.update_dispatcher import UpdateDispatcher
-from src.ui.window_chrome import WindowChrome
+from src.ui.window_chrome import WindowChrome, geometrie_d_ouverture
 from src.ui.utils import icone_application, open_url
 
 log = logging.getLogger(__name__)
@@ -44,8 +40,6 @@ log = logging.getLogger(__name__)
 # Cap du remerciement Ko-fi unique. Nommé plutôt qu'écrit en clair : c'est un
 # réglage de produit, pas une constante technique, et il a déjà bougé une fois.
 _KOFI_CAP_SECONDES = 2 * 3600
-
-
 
 
 class MainWindow(QMainWindow):
@@ -149,9 +143,8 @@ class MainWindow(QMainWindow):
         self._carousel.game_selected.connect(self._on_carousel_select)
         root_layout.addWidget(self._carousel)
 
-        self._status_bar = QStatusBar()
+        self._status_bar = BarreDeStatut(self.config, self._detail.ops)
         self.setStatusBar(self._status_bar)
-        self._status_bar.showMessage(self._message_au_repos())
 
         # Overlay particules (+ saison décorative, changeable en direct dans Paramètres)
         self._particles = ParticleOverlay(self)
@@ -167,8 +160,8 @@ class MainWindow(QMainWindow):
         self._trailers = TrailerStore(self.manager, self._detail.ops, self)
         self._trailers.status_message.connect(self._toast.show_message)
         self._trailers.job_finished.connect(self._detail.refresh_video)
-        self._trailers.progress.connect(self._on_trailer_progress)
-        self._trailers.job_finished.connect(self._on_trailer_done)
+        self._trailers.progress.connect(self._status_bar.bandes_annonces)
+        self._trailers.job_finished.connect(self._status_bar.bandes_annonces_finies)
         self._trailers.armer_rattrapage(self.config)
         # Ce qui informait par dialogue modal passe par le toast : rien à
         # décider, donc rien qui justifie d'arrêter l'utilisateur.
@@ -241,30 +234,12 @@ class MainWindow(QMainWindow):
     # ──────────────────── Update checker ────────────────────
 
     def _apply_default_geometry(self) -> None:
-        """Taille d'ouverture proportionnée à l'écran, fenêtre centrée.
-
-        L'ancienne valeur fixe (1200x800) ne tenait pas sur un portable
-        1366x768, où il ne reste que ~728 px une fois la barre des tâches
-        déduite : la fenêtre débordait par le bas. À l'inverse elle paraissait
-        étriquée sur un grand écran. On prend donc une fraction de la zone
-        disponible, bornée des deux côtés.
-        """
+        """Taille d'ouverture : voir `window_chrome.geometrie_d_ouverture`."""
         screen = self.screen() or QApplication.primaryScreen()
         if screen is None:  # sans écran (tests offscreen) : valeur historique
             self.resize(1200, 800)
             return
-        avail = screen.availableGeometry()
-        # 62 % et non 72 % : le catalogue tient en huit jaquettes, soit ~900 px.
-        # Plus large, le carrousel flotte au milieu de deux grandes marges vides
-        # et le panneau d'info laisse une moitié droite déserte.
-        width = max(980, min(1320, int(avail.width() * 0.62)))
-        height = max(660, min(880, int(avail.height() * 0.76)))
-        # Jamais plus grand que l'écran, même si les bornes basses l'imposaient.
-        width = min(width, avail.width())
-        height = min(height, avail.height())
-        self.resize(width, height)
-        self.move(avail.x() + (avail.width() - width) // 2,
-                  avail.y() + (avail.height() - height) // 2)
+        self.setGeometry(geometrie_d_ouverture(screen.availableGeometry()))
 
     def _wire_updates(self) -> None:
         """Branche le dispatcher sur ce qui s'affiche.
@@ -275,8 +250,8 @@ class MainWindow(QMainWindow):
         self._updates.catalog_updated.connect(self._on_catalog_updated)
         self._updates.launcher_update.connect(self._on_launcher_update)
         self._updates.update_counts.connect(self._on_update_counts)
-        self._updates.download_counts.connect(self._on_download_counts)
-        self._updates.asset_sizes.connect(self._on_asset_sizes)
+        self._updates.download_counts.connect(self._rafraichir_fiche)
+        self._updates.asset_sizes.connect(self._rafraichir_fiche)
         self._updates.network_status.connect(self._on_network_status)
         self._updates.launcher_message.connect(self._notif_bar.set_message)
         self._updates.launcher_busy.connect(self._notif_bar.set_busy)
@@ -311,19 +286,11 @@ class MainWindow(QMainWindow):
                       if self.manager.has_update(entry.game.id))
         self._on_update_counts(pending)
 
-    def _on_download_counts(self, counts: dict) -> None:
-        """Compteurs ⬇ reçus — rafraîchir la fiche affichée (même id = pas de
-        transition). Le manager a déjà été servi par le dispatcher."""
-        if self._detail.game is not None:
-            self._detail.set_game(self._detail.game)
-
-    def _on_asset_sizes(self, sizes: dict) -> None:
-        """Tailles réelles reçues — le bouton « TÉLÉCHARGER » porte le poids.
-
-        Tant que l'API n'a pas répondu, il affiche celui du catalogue (la taille
-        installée). Sans ce rafraîchissement il le garderait toute la session,
-        alors que le bon chiffre est arrivé entre-temps.
-        """
+    def _rafraichir_fiche(self, *_args) -> None:
+        """Compteurs de téléchargements ou tailles réelles reçus : la fiche
+        affichée se refait (même id = pas de transition). Sans ça, le bouton
+        « TÉLÉCHARGER » garderait toute la session le poids du catalogue (la
+        taille INSTALLÉE), alors que le bon chiffre est arrivé entre-temps."""
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
 
@@ -362,103 +329,21 @@ class MainWindow(QMainWindow):
     def _propose_launcher_update(self) -> None:
         """Demande franchement s'il faut mettre à jour, une fois par session.
 
-        Un bandeau discret en haut de fenêtre se rate : c'est une bande de
-        35 px qu'on survole sans lire. Une mise à jour du launcher est une
-        vraie question — donc un vrai dialogue, conformément à la règle du
-        projet (les modaux sont pour les QUESTIONS, les toasts pour ce qui
-        n'attend rien).
-
-        Une seule fois par session : si l'utilisateur répond « Plus tard », le
-        bandeau reste comme rappel permanent et on ne le relance pas. La croix
-        du bandeau, elle, écarte la version pour de bon.
+        Un bandeau de 35 px se survole sans se lire : une mise à jour du
+        launcher est une vraie QUESTION, donc un vrai dialogue. « Plus tard »
+        laisse le bandeau comme rappel sans reposer la question ; sa croix,
+        elle, écarte la version pour de bon.
         """
         if self._launcher_update_asked or self._detail.ops.is_busy:
             return
         self._launcher_update_asked = True
-
-        boite = QMessageBox(self)
-        boite.setWindowTitle(tr("Mise à jour disponible"))
-        boite.setIcon(QMessageBox.Icon.NoIcon)
-        # PlainText à la CONSTRUCTION : le texte des notes vient de GitHub,
-        # donc de l'extérieur, et `QMessageBox` est en `AutoText` par défaut —
-        # il bascule en rich text dès que le contenu y ressemble.
-        boite.setTextFormat(Qt.TextFormat.PlainText)
-        boite.setText(tr("Accio Launcher v{} est disponible !").format(
-            self._updates.version))
-        auto = self._updates.can_install_itself
-        mecanique = (
-            tr("La mise à jour est téléchargée et installée automatiquement ; "
-               "le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne "
-               "sont pas touchés.")
-            if auto else
-            tr("La page de téléchargement va s'ouvrir dans votre navigateur."))
-        # Ce que la version APPORTE passe AVANT la façon dont elle s'installe :
-        # on demande d'accepter de remplacer un exécutable, la première chose
-        # à dire est donc ce qui change. Absent (release sans notes, hors
-        # ligne, API limitée) → on n'invente rien et on se tait.
-        #
-        # Aucun en-tête « Nouveautés : » ajouté ici : les notes portent DÉJÀ
-        # leur titre (`## Nouveautés` du modèle de release, ou « Corrections »,
-        # plus parlant), et la boîte de la 1.0.6 l'affichait deux fois de suite.
-        notes = self._updates.notes.strip()
-        boite.setInformativeText(f"{notes}\n\n{mecanique}" if notes else mecanique)
-        maintenant = boite.addButton(tr("Mettre à jour maintenant"),
-                                     QMessageBox.ButtonRole.AcceptRole)
-        boite.addButton(tr("Plus tard"), QMessageBox.ButtonRole.RejectRole)
-        boite.setDefaultButton(maintenant)
-        boite.exec()
-        if boite.clickedButton() is maintenant:
+        if dialogues_fenetre.proposer_mise_a_jour(
+                self, self._updates.version, self._updates.notes,
+                self._updates.can_install_itself):
             self._on_notif_download()
 
     def _on_update_counts(self, count: int) -> None:
-        """Message ambiant de la status bar : mises à jour, hors ligne, ou « Prêt »."""
-        if self._detail.ops.is_busy:
-            return  # ne pas écraser le statut d'un téléchargement en cours
-        if count > 0:
-            self._status_bar.showMessage(tr("{} mise(s) à jour disponible(s)").format(count))
-        elif not self._online:
-            # Dire ce qui change vraiment pour l'utilisateur : sa bibliothèque
-            # reste jouable, seuls les nouveaux téléchargements attendent.
-            self._status_bar.showMessage(tr("Hors ligne — les jeux installés restent jouables."))
-        else:
-            self._status_bar.showMessage(self._message_au_repos())
-
-    def _on_trailer_progress(self, faites: int, total: int,
-                             octets: int, total_octets: int) -> None:
-        """Bandes-annonces : le dire dans la barre de statut, pas dans la barre
-        de téléchargement (le parcours « 1/4 → 4/4 » ne veut rien dire pour un
-        fichier qui ne s'installe pas). N'en laisser la trace que dans les
-        Paramètres revenait à tirer des centaines de Mo sans le dire (Ludo,
-        2026-09-23). Un jeu en cours passe devant, ici comme dans la file."""
-        if self._detail.ops.is_busy:
-            return
-        pct = round(octets * 100 / total_octets) if total_octets > 0 else 0
-        self._status_bar.showMessage(
-            tr("Bandes-annonces : {n}/{total} ({pct} %)").format(
-                n=min(faites + 1, total), total=total, pct=pct))
-
-    def _on_trailer_done(self, _faites: int, _echecs: int) -> None:
-        """Rendre la barre de statut à son message ambiant."""
-        if not self._detail.ops.is_busy:
-            self._status_bar.showMessage(self._message_au_repos())
-
-    def _message_au_repos(self) -> str:
-        """Ce que dit la barre de statut quand il n'y a RIEN à signaler.
-
-        « Prêt » est un état normal, et le projet s'interdit d'en afficher
-        partout ailleurs : ça n'apprenait rien à personne tout en occupant
-        cette ligne en permanence. Le fait du jour prend donc sa place — il
-        n'ajoute aucun pixel, et il s'efface de lui-même dès qu'un vrai
-        message arrive, puisque ce message le remplace. C'est ce qui le rend
-        non intrusif : il n'interrompt jamais rien, il occupe un silence.
-
-        Désactivable (`config.faits_du_jour`) ; on retombe alors sur « Prêt ».
-        """
-        if self.config.faits_du_jour:
-            fait = almanach.fait_du_jour()
-            if fait:
-                return tr(fait)
-        return tr("Prêt")
+        self._status_bar.ambiance(count, self._online)
 
     def _notify_game_updates(self) -> bool:
         """Toast cliquable si des jeux installés ont une mise à jour. Recompte LOCAL :
@@ -719,67 +604,15 @@ class MainWindow(QMainWindow):
             self._show_status(tr("Relance automatique impossible — redémarrez manuellement."))
 
     def _force_update_check(self, dlg: SettingsDialog, *, catalog_only: bool) -> None:
-        """Lance une vérification forcée (catalogue et/ou launcher).
-
-        Protégé contre dlg détruit avant la fin du checker : chaque slot vérifie
-        que le dialog est encore vivant via _dlg_alive.
-        """
-        checker = self._updates.forced_checker()
-        state = {"catalog_updated": False, "dlg_alive": True}
-
-        def _dlg_alive() -> bool:
-            if not state["dlg_alive"]:
-                return False
-            try:
-                dlg.isVisible()
-                return True
-            except RuntimeError:
-                state["dlg_alive"] = False
-                return False
-
-        dlg.destroyed.connect(lambda *_: state.update(dlg_alive=False))
-
-        def on_catalog(new_catalog):
-            state["catalog_updated"] = True
-            self._on_catalog_updated(new_catalog)
-            if _dlg_alive():
-                dlg.update_catalog_version(new_catalog.catalog_version)
-
-        def on_launcher(version, url, asset_url="", asset_sha256="", notes=""):
-            # Le 4ᵉ argument est l'empreinte SHA-256 publiée par GitHub. Il
-            # manquait ici : PyQt tronque silencieusement les arguments qu'un
-            # slot ne déclare pas, donc « Vérifier les mises à jour » posait une
-            # empreinte VIDE et l'exe d'auto-update était installé sans être
-            # vérifié — alors que la vérification au démarrage, elle, le
-            # vérifiait. Voir tests/test_notif_update.py.
+        """« Vérifier les mises à jour » des Paramètres : voir `verification_forcee`.
+        Compteurs, empreintes et état réseau sont déjà branchés par `forced_checker`."""
+        def sur_launcher(*args) -> None:
             self.config.dismissed_launcher_version = ""  # check forcé → toujours montrer
-            self._on_launcher_update(version, url, asset_url, asset_sha256, notes)
-            if _dlg_alive():
-                dlg.show_update_status(tr("Launcher v{} disponible !").format(version))
-
-        def on_finished():
-            if not _dlg_alive():
-                return
-            # Hors ligne, l'absence de `catalog_updated` est indistinguable
-            # d'un catalogue à jour : sans ce test on répondait « Catalogue
-            # déjà à jour » sans avoir rien vérifié (mesuré le 2026-08-28, les
-            # deux cas rendaient la MÊME chaîne). `network_status` est la
-            # dernière instruction de `run()`, donc `self._online` est juste ici.
-            if not self._online:
-                dlg.show_update_status(
-                    tr("Hors ligne — vérification impossible."), success=False)
-            elif not state["catalog_updated"]:
-                dlg.show_update_status(tr("Catalogue déjà à jour"))
-            elif not catalog_only and not self._updates.url:
-                dlg.show_update_status(tr("Tout est à jour"))
-
-        # Compteurs, empreintes et état réseau sont déjà branchés par
-        # `forced_checker` : il ne reste ici que ce qui parle au dialogue.
-        checker.catalog_updated.connect(on_catalog)
-        if not catalog_only:
-            checker.launcher_update.connect(on_launcher)
-        checker.finished.connect(on_finished)
-        checker.start()
+            self._on_launcher_update(*args)
+        verification_forcee.verifier(
+            self._updates.forced_checker(), dlg, catalog_only=catalog_only,
+            sur_catalogue=self._on_catalog_updated, sur_launcher=sur_launcher,
+            en_ligne=lambda: self._online, url_launcher=lambda: self._updates.url)
 
     # ──────────────────── Événements ────────────────────
 
@@ -819,33 +652,18 @@ class MainWindow(QMainWindow):
     # ──────────────────── Redimensionnement fenêtre frameless ────────────────────
 
     def eventFilter(self, obj, event) -> bool:
-        # Couvre les MouseMove sur tous les widgets enfants (l'override mouseMoveEvent
-        # ne firerait que sur la surface bare de MainWindow → redondant et incomplet).
-        if event.type() == QEvent.Type.MouseMove:
-            try:
+        # Filtre posé sur QApplication : il voit les MouseMove de TOUS les widgets
+        # enfants (un mouseMoveEvent ne tirerait que sur la surface nue).
+        try:
+            if event.type() == QEvent.Type.MouseMove:
                 local = self.mapFromGlobal(event.globalPosition().toPoint())
                 self._detail.handle_mouse_move(QPointF(local.x(), local.y()))
-                if not self.isMaximized() and self.isActiveWindow():
-                    self._chrome.survol(local)
-            except (AttributeError, RuntimeError) as exc:
-                log.debug("eventFilter mouseMove failed: %s", exc)
-        elif event.type() == QEvent.Type.MouseButtonPress and not self.isMaximized():
-            # Saisie d'un bord → resize natif (uniquement pour NOS widgets)
-            try:
-                if (event.button() == Qt.MouseButton.LeftButton
-                        and isinstance(obj, QWidget) and obj.window() is self
-                        and self._chrome.saisir(
-                            self.mapFromGlobal(event.globalPosition().toPoint()))):
-                    return True
-            except (AttributeError, RuntimeError) as exc:
-                log.debug("eventFilter resize failed: %s", exc)
-        elif event.type() == QEvent.Type.Leave:
-            # Souris sortie de la fenêtre → ne pas laisser un curseur collé
-            if not self.underMouse():
-                self._chrome.relacher_curseur()
-        elif event.type() == QEvent.Type.KeyPress:
-            if self._handle_global_key(event):
+            if self._chrome.evenement(obj, event):
                 return True
+        except (AttributeError, RuntimeError) as exc:
+            log.debug("eventFilter : %s", exc)
+        if event.type() == QEvent.Type.KeyPress and self._handle_global_key(event):
+            return True
         return super().eventFilter(obj, event)
 
     def _on_cinema(self, actif: bool) -> None:
@@ -867,39 +685,8 @@ class MainWindow(QMainWindow):
             not actif and self._download_bar.current_game is not None)
 
     def _handle_global_key(self, event) -> bool:
-        """←/→ naviguent le carrousel même quand un bouton a le focus (A11Y).
-
-        Échap sort du plein écran de la bande-annonce, et seulement de ça.
-
-        Sans ce filtre, le premier clic sur un bouton lui donnait le focus et
-        les flèches devenaient muettes (Qt les consomme pour déplacer le focus).
-        Jamais actif quand un dialog modal est ouvert ni quand le focus est sur
-        un widget d'édition (slider de volume, combo, champ texte).
-        """
-        if event.key() not in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Escape):
-            return False
-        from PyQt6.QtWidgets import (
-            QAbstractSpinBox, QApplication, QComboBox, QLineEdit, QSlider,
-        )
-        if QApplication.activeModalWidget() is not None or not self.isActiveWindow():
-            return False
-        if event.key() == Qt.Key.Key_Escape:
-            # Échap ne sort QUE du plein écran : la fenêtre est sans cadre, et
-            # la fermer sur une touche pressée par réflexe serait une mauvaise
-            # surprise. False quand il n'y a rien à quitter, pour ne pas manger
-            # la touche que les widgets pourraient vouloir.
-            if not self._detail.cinema():
-                return False
-            self._detail.set_cinema(False)
-            return True
-        focus = QApplication.focusWidget()
-        if isinstance(focus, (QLineEdit, QComboBox, QSlider, QAbstractSpinBox)):
-            return False
-        if event.key() == Qt.Key.Key_Left:
-            self._carousel.select_prev()
-        else:
-            self._carousel.select_next()
-        return True
+        """←/→ et Échap avant les widgets : voir `clavier_global.touche_globale`."""
+        return touche_globale(event, self._carousel, self._detail, self.isActiveWindow())
 
     def _confirmer_fermeture(self) -> bool:
         """Demande confirmation si une opération est en cours. True = on ferme.
@@ -909,37 +696,13 @@ class MainWindow(QMainWindow):
         sortie. La croix, Alt+F4 et « Quitter » du tray convergent donc ici —
         une garde posée sur un seul de ces chemins serait pire que rien, elle
         apprendrait qu'on est protégé.
-
-        Le message DIFFÈRE selon la phase, parce que la perte diffère : un
-        téléchargement reprend où il s'est arrêté (`.part` + `Range`), une
-        installation est à refaire — l'archive, elle, reste en cache. « Êtes-vous
-        sûr ? » sans dire ce qu'on risque fait deviner, et qui devine clique.
         """
         ops = self._detail.ops
         if self._fermeture_confirmee or not ops.is_busy:
             return True
-
         jeu = ops.active_game
-        boite = QMessageBox(self)
-        boite.setWindowTitle(tr("Opération en cours"))
-        boite.setIcon(QMessageBox.Icon.NoIcon)
-        # PlainText : le nom vient du CATALOGUE, et QMessageBox est en AutoText.
-        boite.setTextFormat(Qt.TextFormat.PlainText)
-        boite.setText(tr("« {} » est en cours.").format(
-            jeu.name if jeu is not None else tr("un jeu")))
-        boite.setInformativeText(
-            tr("Le téléchargement reprendra où il s'est arrêté au prochain "
-               "démarrage — rien n'est perdu.")
-            if ops.phase == "download" else
-            tr("L'installation devra être refaite depuis le début. L'archive "
-               "déjà téléchargée est conservée : il n'y aura rien à "
-               "re-télécharger."))
-        quitter = boite.addButton(tr("Quitter quand même"),
-                                  QMessageBox.ButtonRole.DestructiveRole)
-        boite.setDefaultButton(
-            boite.addButton(tr("Continuer"), QMessageBox.ButtonRole.RejectRole))
-        boite.exec()
-        return boite.clickedButton() is quitter
+        return dialogues_fenetre.confirmer_fermeture(
+            self, jeu.name if jeu is not None else None, ops.phase)
 
     def _fermer_sans_demander(self) -> None:
         """Ferme sans question — un `.bat` attend DÉJÀ la mort du processus.

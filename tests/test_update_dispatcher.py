@@ -253,7 +253,11 @@ class TestFenetreAllegee:
         # — le magasin, lui, n'affiche rien : c'est son contrat.
         # Le plafond se releve en le DISANT, jamais en silence — sinon il
         # devient un compteur.
+        # 990 -> 760 le 2026-09-30 (978 -> 741 lignes) : barre de statut,
+        # deux questions, verification forcee, touches globales, geometrie
+        # d'ouverture et bords de fenetre sortis dans leurs modules, testes
+        # sans construire la fenetre.
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 990, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 760, f"main_window.py a regrossi : {lignes} lignes"

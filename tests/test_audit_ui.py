@@ -35,9 +35,10 @@ class TestAriteDesSlots:
 
     def test_le_slot_du_check_force_les_declare_tous(self):
         """Sans ça, l'empreinte est jetée sans le moindre message."""
-        src = inspect.getsource(mw.MainWindow._force_update_check)
-        ligne = [x for x in src.splitlines() if "def on_launcher" in x]
-        assert ligne, "slot on_launcher introuvable"
+        from src.ui import verification_forcee
+        src = inspect.getsource(verification_forcee.verifier)
+        ligne = [x for x in src.splitlines() if "def launcher(" in x]
+        assert ligne, "slot launcher introuvable"
         params = ligne[0][ligne[0].index("(") + 1:ligne[0].rindex(")")]
         assert len([p for p in params.split(",") if p.strip()]) == 5, (
             f"on_launcher doit déclarer 5 paramètres, vu : {ligne[0].strip()}")

@@ -158,12 +158,12 @@ class TestDansLaBarreDeStatut:
 
     def test_le_fait_remplace_pret(self, qtbot, tmp_path, monkeypatch):
         w = self._fenetre(qtbot, tmp_path, monkeypatch, faits=True)
-        assert w._message_au_repos() != "Prêt"
-        assert w._message_au_repos()
+        assert w._status_bar.au_repos() != "Prêt"
+        assert w._status_bar.au_repos()
 
     def test_desactive_on_retombe_sur_pret(self, qtbot, tmp_path, monkeypatch):
         w = self._fenetre(qtbot, tmp_path, monkeypatch, faits=False)
-        assert w._message_au_repos() == "Prêt"
+        assert w._status_bar.au_repos() == "Prêt"
 
     def test_un_vrai_message_passe_devant(self, qtbot, tmp_path, monkeypatch):
         """Le fait occupe un SILENCE : dès qu'il y a quelque chose à dire, il
@@ -176,4 +176,4 @@ class TestDansLaBarreDeStatut:
         assert "ligne" in w._status_bar.currentMessage()
         w._online = True
         w._on_update_counts(0)
-        assert w._status_bar.currentMessage() == w._message_au_repos()
+        assert w._status_bar.currentMessage() == w._status_bar.au_repos()

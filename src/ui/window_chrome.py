@@ -13,13 +13,33 @@ et c'est là que se cachent les erreurs de bord (le `>=` qui devient `>`, la
 marge comptée deux fois dans un coin).
 """
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, QRect, Qt
 from PyQt6.QtGui import QCursor, QGuiApplication
+from PyQt6.QtWidgets import QWidget
 
 # Zone de saisie des bords, en pixels. 6 px est un compromis mesuré à
 # l'usage : en dessous le bord se rate à la souris, au-dessus il vole des
 # clics aux boutons posés près du cadre.
 MARGE_BORD = 6
+
+
+def geometrie_d_ouverture(dispo: QRect) -> QRect:
+    """Taille d'ouverture proportionnée à l'écran, fenêtre centrée. Pure.
+
+    L'ancienne valeur fixe (1200x800) ne tenait pas sur un portable 1366x768,
+    où il ne reste que ~728 px une fois la barre des tâches déduite : la
+    fenêtre débordait par le bas. À l'inverse elle paraissait étriquée sur un
+    grand écran. D'où une fraction de la zone disponible, bornée des deux côtés.
+    62 % et non 72 % : le catalogue tient en huit jaquettes, soit ~900 px ; plus
+    large, le carrousel flotte entre deux grandes marges vides.
+    """
+    largeur = max(980, min(1320, int(dispo.width() * 0.62)))
+    hauteur = max(660, min(880, int(dispo.height() * 0.76)))
+    # Jamais plus grand que l'écran, même si les bornes basses l'imposaient.
+    largeur = min(largeur, dispo.width())
+    hauteur = min(hauteur, dispo.height())
+    return QRect(dispo.x() + (dispo.width() - largeur) // 2,
+                 dispo.y() + (dispo.height() - hauteur) // 2, largeur, hauteur)
 
 
 def bords_a(x: int, y: int, largeur: int, hauteur: int,
@@ -110,6 +130,27 @@ class WindowChrome:
         if self._curseur_pose:
             QGuiApplication.restoreOverrideCursor()
             self._curseur_pose = False
+
+    def evenement(self, obj, event) -> bool:
+        """Un événement vu par le filtre applicatif de la fenêtre. True = consommé.
+
+        Survol → curseur de bord ; clic gauche sur un bord d'un de NOS widgets →
+        redimensionnement natif ; souris sortie → le curseur est relâché (sinon
+        il resterait collé). Rien de tout ça fenêtre agrandie, et le curseur
+        seulement fenêtre active.
+        """
+        fen = self._fenetre
+        genre = event.type()
+        if genre == QEvent.Type.MouseMove:
+            if not fen.isMaximized() and fen.isActiveWindow():
+                self.survol(fen.mapFromGlobal(event.globalPosition().toPoint()))
+        elif genre == QEvent.Type.MouseButtonPress and not fen.isMaximized():
+            return (event.button() == Qt.MouseButton.LeftButton
+                    and isinstance(obj, QWidget) and obj.window() is fen
+                    and self.saisir(fen.mapFromGlobal(event.globalPosition().toPoint())))
+        elif genre == QEvent.Type.Leave and not fen.underMouse():
+            self.relacher_curseur()
+        return False
 
     def saisir(self, local) -> bool:
         """Démarre le redimensionnement natif. True = pris en charge.
