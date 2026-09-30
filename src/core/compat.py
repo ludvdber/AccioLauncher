@@ -195,6 +195,18 @@ def lanceur() -> Lanceur | None:
     return trouve
 
 
+# Hors ligne, umu ne doit pas chercher à mettre à jour le Steam Linux Runtime
+# avant CHAQUE lancement : il attendait ses délais réseau avant d'ouvrir le jeu
+# (Ludo, Bazzite sans connexion, 2026-09-30 : « plus d'une minute avant que le
+# jeu décide de s'ouvrir »). La fenêtre le signale d'après son diagnostic réseau.
+_hors_ligne = False
+
+
+def signaler_reseau(en_ligne: bool) -> None:
+    global _hors_ligne
+    _hors_ligne = not en_ligne
+
+
 def oublier() -> None:
     """Refait la détection au prochain appel.
 
@@ -594,6 +606,8 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None) -> dict[
         env.setdefault("GAMEID", "umu-default")
         if trouve.proton and not env.get("PROTONPATH"):
             env["PROTONPATH"] = trouve.proton
+        if _hors_ligne:
+            env.setdefault("UMU_RUNTIME_UPDATE", "0")
     else:
         env.setdefault("WINEDEBUG", "-all")
         if trouve.winetricks:

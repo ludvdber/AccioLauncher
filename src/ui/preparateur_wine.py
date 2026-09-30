@@ -16,7 +16,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from src.core import compat
 from src.core.game_data import GameData
 from src.core.i18n import tr
-from src.core.preparation_wine import PreparationWine
+from src.core.preparation_wine import ANNULEE, PreparationWine
 from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 
 log = logging.getLogger(__name__)
@@ -39,6 +39,10 @@ class PreparateurWine(QObject):
     """Possède l'unique `PreparationWine` en cours."""
 
     message = pyqtSignal(str)
+    # Le jeu pour lequel on prépare : la barre du bas s'ouvre à son nom.
+    commencee = pyqtSignal(object)
+    # (étape lisible, détail : la dernière ligne de winetricks ou d'umu)
+    progression = pyqtSignal(str, str)
     # (id du jeu, réussie, raison, puis_jouer)
     terminee = pyqtSignal(str, bool, str, bool)
 
@@ -48,6 +52,7 @@ class PreparateurWine(QObject):
         self._jeu_id = ""
         self._famille = ""
         self._puis_jouer = False
+        self._etape = ""
 
     @property
     def en_cours(self) -> bool:
@@ -71,29 +76,49 @@ class PreparateurWine(QObject):
         self._fil = PreparationWine(lanceur, compat.prefixe(lanceur.famille),
                                     tuple(verbes), self.journal, parent=self)
         self._fil.etape.connect(self._on_etape)
+        self._fil.avancement.connect(self._on_avancement)
         self._fil.preparation_terminee.connect(self._on_terminee)
         log.info("Préparation de Wine pour %s (%s) : %s", game.id, lanceur.famille,
                  " ".join(verbes) or "préfixe seul")
+        self._etape = tr("Préparation de Wine…")
+        self.commencee.emit(game)
         self._fil.start()
         return True
 
+    def annuler(self) -> None:
+        """Arrête la préparation en cours (bouton « Annuler » de la barre du bas).
+
+        Le fil tue tout le groupe de processus (umu, le conteneur, winetricks) et
+        termine par `ANNULEE`, que `apres_preparation` laisse passer sans boîte.
+        """
+        if self._fil is not None:
+            self._fil.annuler()
+            self.message.emit(tr("Préparation de Wine annulée."))
+
     def _on_etape(self, etape: str, verbes: str) -> None:
         if etape == "prefixe":
+            self._etape = tr("Création du préfixe Wine")
             if self._famille == "umu":
-                self.message.emit(tr(
-                    "Préparation de Wine : création du préfixe… (umu peut d'abord "
-                    "télécharger Proton, plusieurs centaines de Mo)"))
+                texte = tr("Préparation de Wine : création du préfixe… (umu peut d'abord "
+                           "télécharger Proton, plusieurs centaines de Mo)")
             else:
-                self.message.emit(tr("Préparation de Wine : création du préfixe…"))
+                texte = tr("Préparation de Wine : création du préfixe…")
         else:
-            self.message.emit(tr("Préparation de Wine : installation de {}…").format(
-                noms_des_verbes(verbes.split())))
+            self._etape = tr("Installation de {}").format(noms_des_verbes(verbes.split()))
+            texte = tr("Préparation de Wine : installation de {}…").format(
+                noms_des_verbes(verbes.split()))
+        self.message.emit(texte)
+        self.progression.emit(self._etape, "")
+
+    def _on_avancement(self, ligne: str) -> None:
+        self.progression.emit(self._etape, ligne)
 
     def _on_terminee(self, reussie: bool, raison: str) -> None:
         fil, self._fil = self._fil, None
         if fil is not None:
             try:
                 fil.etape.disconnect(self._on_etape)
+                fil.avancement.disconnect(self._on_avancement)
                 fil.preparation_terminee.disconnect(self._on_terminee)
             except TypeError:
                 pass
@@ -101,6 +126,12 @@ class PreparateurWine(QObject):
             # détruire tout de suite abandonnait le processus (qFatal, code 134,
             # CI Linux du 2026-09-24, une exécution sur deux).
             liberer_apres_fin(fil)
+        # La barre de statut portait l'étape : sans ce mot, elle restait sur
+        # « installation de Visual C++ » jusque dans le jeu (Ludo, 2026-09-30).
+        if reussie:
+            self.message.emit(tr("Wine est prêt."))
+        elif raison != ANNULEE:
+            self.message.emit(tr("La préparation de Wine a échoué."))
         self.terminee.emit(self._jeu_id, reussie, raison, self._puis_jouer)
 
     def shutdown(self) -> None:

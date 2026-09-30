@@ -42,6 +42,7 @@ class VideoPlayer(QObject):
         self._audio = None
         self._muted = False
         self._paused = False
+        self._image_vide_signalee = False
 
     @property
     def is_playing(self) -> bool:
@@ -135,6 +136,12 @@ class VideoPlayer(QObject):
             image = frame.toImage()
             if not image.isNull():
                 self.video_frame.emit(image)
+            elif not self._image_vide_signalee:
+                # Le seul symptôme serait « le son sans l'image » : on le dit au
+                # journal une fois, avec ce qui permet d'en trouver la cause.
+                self._image_vide_signalee = True
+                log.warning("Vidéo : image reçue mais non convertible (format %s, support %s)",
+                            frame.pixelFormat(), frame.handleType())
 
     def _on_media_status(self, status) -> None:
         if status == QMediaPlayer.MediaStatus.EndOfMedia:

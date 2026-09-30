@@ -552,7 +552,11 @@ def _garder_origine(ini: Path) -> None:
 
 def _cles(reglage: Reglage) -> tuple[str, ...]:
     if reglage.ident == "touches_zqsd":
-        return tuple(cle for cle, _ in touches_preregle())
+        # Toutes les actions, pas seulement celles du préréglage : l'éditeur de
+        # touches (touches_correctif, qui importe ce module) règle aussi Pause,
+        # Valider et Retour.
+        from src.core.touches_correctif import ACTIONS
+        return tuple(a.cle for a in ACTIONS)
     if reglage.ident == "panneau_perfs":
         return _PANNEAU
     return (reglage.cle,)

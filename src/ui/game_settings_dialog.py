@@ -40,6 +40,7 @@ from src.core import captures, manette, reglages_correctif
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
+from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.styles import RADIO_STYLE
@@ -133,6 +134,10 @@ class GameSettingsDialog(QDialog):
         # un autre réglage, éteint, lui retire tout effet.
         self._blocs: dict[str, QWidget] = {}
         self._bouton_reset: QPushButton | None = None
+        # L'éditeur de touches (HP4) et la note sous le préréglage ZQSD, que
+        # l'éditeur fait apparaître dès qu'une touche est choisie à l'unité.
+        self._editeur: EditeurTouches | None = None
+        self._note_preregle: QLabel | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -358,6 +363,9 @@ class GameSettingsDialog(QDialog):
             return True
         if onglet == "commandes":
             a_des_touches = self._section_correctif(corps, "commandes")
+            if a_des_touches and "touches_zqsd" in self._controles:
+                corps.addSpacing(14)
+                self._section_touches(corps)
             if a_des_touches:
                 corps.addSpacing(18)
             return self._section_manette(corps) or a_des_touches
@@ -376,6 +384,44 @@ class GameSettingsDialog(QDialog):
         if onglet == "perfs":
             return self._section_correctif(corps, "perfs")
         return self._section_fichiers(corps)
+
+    def _section_touches(self, layout: QVBoxLayout) -> None:
+        """Chaque action de HP4 et sa touche, réglables une par une.
+
+        Sous le préréglage : il couvre le cas le plus courant en un geste,
+        l'éditeur tout le reste (gaucher, pavé numérique, souris à boutons).
+        """
+        layout.addWidget(self._titre_rubrique(tr("Touches une par une")))
+        layout.addSpacing(4)
+        self._note(layout, tr("Cliquez sur la touche d'une action, puis appuyez sur celle que vous "
+                              "voulez, ou recliquez-la avec le bouton de souris voulu. Échap ou un "
+                              "clic ailleurs annule."))
+        layout.addSpacing(6)
+        self._editeur = EditeurTouches(self._ini)
+        self._editeur.modifie.connect(self._touches_modifiees)
+        self._editeur.echec.connect(self._montrer_erreur)
+        layout.addWidget(self._editeur)
+
+    def _touches_modifiees(self) -> None:
+        self._maj_preregle()
+        self._apres_ecriture()
+
+    def _maj_preregle(self) -> None:
+        """L'interrupteur ZQSD suit le fichier : libre tant qu'aucune touche n'est
+        choisie à l'unité, verrouillé (et la note le dit) sinon — il les écraserait."""
+        bascule = self._controles.get("touches_zqsd")
+        if bascule is None:
+            return
+        try:
+            etat = reglages_correctif.lire(self._ini, reglages_correctif.REGLAGES["touches_zqsd"])
+        except OSError:
+            return
+        bascule.blockSignals(True)
+        bascule.setChecked(bool(etat.valeur))
+        bascule.blockSignals(False)
+        bascule.setEnabled(not etat.personnalise)
+        if self._note_preregle is not None:
+            self._note_preregle.setVisible(etat.personnalise)
 
     def _section_affichage(self, layout: QVBoxLayout) -> None:
         """Jeu sans réglage de correctif : la rubrique verrouillée, qui dit ce qui vient."""
@@ -536,6 +582,9 @@ class GameSettingsDialog(QDialog):
             widget = self._controles.get(reglage.ident)
             if widget is not None:
                 self._remettre_controle(widget, reglage)
+        if self._editeur is not None:
+            self._editeur.rafraichir()
+        self._maj_preregle()
         self._maj_dependances()
 
     def _remettre_controle(self, widget, reglage) -> None:
@@ -612,12 +661,11 @@ class GameSettingsDialog(QDialog):
         else:
             ligne, bascule = toggle_row(libelle_txt, bool(etat.valeur))
             layout.addWidget(ligne)
-            if etat.personnalise and reglage.ident == "touches_zqsd":
-                # Des touches choisies à la main dans l'ini : le préréglage les
-                # écraserait. On le dit, on n'y touche pas.
-                bascule.setEnabled(False)
-                self._note(layout, tr(
-                    "Touches personnalisées dans d3d9.ini : le lanceur n'y touche pas."))
+            if reglage.ident == "touches_zqsd":
+                # Des touches choisies une par une (ci-dessous, ou à la main dans
+                # l'ini) : le préréglage les écraserait. On le dit sous son aide,
+                # on n'y touche pas ; la note suit l'éditeur (_maj_preregle).
+                bascule.setEnabled(not etat.personnalise)
             elif etat.personnalise:
                 # Quelques lignes du panneau allumées à la main : rien n'est
                 # perdu à le dire, et l'interrupteur reste libre.
@@ -633,6 +681,16 @@ class GameSettingsDialog(QDialog):
         aide.setTextFormat(Qt.TextFormat.PlainText)
         aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
         layout.addWidget(aide)
+        if reglage.ident == "touches_zqsd":
+            note = QLabel(tr("Touches choisies une par une : le préréglage ne les remplace pas. "
+                             "« Remettre toutes les touches du jeu » le libère."))
+            note.setFont(body_font(10))
+            note.setWordWrap(True)
+            note.setTextFormat(Qt.TextFormat.PlainText)
+            note.setStyleSheet("color: #e8955a; background: transparent; padding-bottom: 4px;")
+            note.setVisible(etat.personnalise)
+            layout.addWidget(note)
+            self._note_preregle = note
 
     def _reperes(self, layout: QVBoxLayout, reglage) -> None:
         """Pastilles sous le réglage : ce qu'il coûte (« GPU +++ ») et s'il se voit.
@@ -677,9 +735,13 @@ class GameSettingsDialog(QDialog):
         layout.addWidget(ligne)
         self._bascule_manette = bascule
         bascule.toggled.connect(self._on_manette)
+        # HP5 et HP6 (lu dans leurs exe, 2026-09-30) : au démarrage, un choix
+        # « manette » sans manette vue retombe au clavier ET s'écrit ainsi.
         self._note(layout, tr(
             "Le jeu garde ce choix dans le registre de Windows : le lanceur vous "
-            "prévient avant de le modifier. Il se règle aussi dans les options du jeu."))
+            "prévient avant de le modifier. Il se règle aussi dans les options du jeu. "
+            "Branchez la manette avant de lancer le jeu : s'il ne la trouve pas au "
+            "démarrage, il repasse au clavier."))
         return True
 
     def _on_manette(self, oui: bool) -> None:
@@ -828,6 +890,13 @@ class GameSettingsDialog(QDialog):
             return
         self._appliquer_exclusion(reglage, valeur)
         self._maj_dependances()
+        if reglage.ident == "touches_zqsd" and self._editeur is not None:
+            self._editeur.rafraichir()
+        self._apres_ecriture()
+
+    def _apres_ecriture(self) -> None:
+        """Ce que change toute écriture réussie : le bouton de remise à l'origine
+        (la première retouche vient de garder l'ini d'origine), et l'erreur passée."""
         if self._bouton_reset is not None and not self._bouton_reset.isEnabled():
             # La première retouche vient de garder l'ini d'origine.
             self._bouton_reset.setEnabled(reglages_correctif.a_une_origine(self._ini))

@@ -1,6 +1,8 @@
 """Barre de progression persistante en bas de la fenêtre, visible pendant les téléchargements."""
 
-from PyQt6.QtCore import Qt, pyqtSignal
+import time
+
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget,
@@ -24,6 +26,9 @@ class DownloadBar(QWidget):
     """Barre de progression visible globalement pendant un téléchargement/installation."""
 
     cancel_clicked = pyqtSignal()
+    # « Annuler » pendant une préparation de Wine (Linux) : ce n'est pas un
+    # téléchargement qu'on arrête, et l'appelant doit le savoir.
+    preparation_cancel_clicked = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -87,10 +92,55 @@ class DownloadBar(QWidget):
         self._btn_cancel.setAccessibleName(tr("Annuler le téléchargement"))
         self._btn_cancel.setToolTip(tr("Annuler"))
         self._btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_cancel.clicked.connect(self.cancel_clicked.emit)
+        self._btn_cancel.clicked.connect(self._on_cancel)
         layout.addWidget(self._btn_cancel)
 
         self._game: GameData | None = None
+        # Préparation de Wine : la barre dit l'étape, le temps écoulé et la
+        # dernière ligne de winetricks. Sans ça, plusieurs minutes passaient
+        # sous un texte figé (Ludo, Bazzite, 2026-09-30 : « on ne voit pas
+        # l'avancement, on ne sait pas où ça en est »).
+        self._preparation = False
+        self._debut = 0.0
+        self._etape = ""
+        self._chrono = QTimer(self)
+        self._chrono.setInterval(1000)
+        self._chrono.timeout.connect(self._afficher_chrono)
+
+    @property
+    def en_preparation(self) -> bool:
+        return self._preparation
+
+    def _on_cancel(self) -> None:
+        if self._preparation:
+            self.preparation_cancel_clicked.emit()
+        else:
+            self.cancel_clicked.emit()
+
+    def show_preparation(self, game: GameData) -> None:
+        """Préparation de Wine pour ce jeu : barre indéterminée et chronomètre."""
+        self.show_for_game(game, GameState.INSTALLED)
+        self._preparation = True
+        self._debut = time.monotonic()
+        self._etape = tr("Préparation de Wine…")
+        self._progress.setRange(0, 0)
+        self._status.setText(tr("Comptez quelques minutes la première fois."))
+        self._btn_cancel.setAccessibleName(tr("Annuler la préparation de Wine"))
+        self._btn_cancel.show()
+        self._afficher_chrono()
+        self._chrono.start()
+
+    def set_preparation(self, etape: str, detail: str) -> None:
+        if not self._preparation:
+            return
+        self._etape = etape
+        if detail:
+            self._status.setText(detail)
+        self._afficher_chrono()
+
+    def _afficher_chrono(self) -> None:
+        ecoule = int(time.monotonic() - self._debut)
+        self._phase_label.setText(f"{self._etape} · {ecoule // 60}:{ecoule % 60:02d}")
 
     @property
     def current_game(self) -> GameData | None:
@@ -171,6 +221,9 @@ class DownloadBar(QWidget):
         self._status.setText(append_part_info(self._status.text(), current, total))
 
     def hide_bar(self) -> None:
+        self._chrono.stop()
+        self._preparation = False
+        self._btn_cancel.setAccessibleName(tr("Annuler le téléchargement"))
         self._game = None
         self._title.setText("")
         self._status.setText("")

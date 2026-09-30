@@ -64,6 +64,9 @@ class GameDetailView(QWidget):
         super().__init__(parent)
         self.manager = manager
         self.game: GameData | None = None
+        # Nom du jeu qui tourne (ou démarre), "" sinon — fourni par la fenêtre,
+        # qui possède la session. Seul, sans fenêtre : rien ne tourne.
+        self.partie_en_cours = lambda: ""
 
         # Sous-systèmes
         self._video = VideoPlayer(self)
@@ -583,6 +586,11 @@ class GameDetailView(QWidget):
         return self._wine.en_cours
 
     @property
+    def wine(self) -> PreparateurWine:
+        """Le préparateur, pour que la fenêtre montre l'avancement dans sa barre du bas."""
+        return self._wine
+
+    @property
     def journal_preparation(self):
         return self._wine.journal
 
@@ -590,6 +598,12 @@ class GameDetailView(QWidget):
         """Lance la préparation du préfixe pour ce jeu (une seule à la fois)."""
         if self._wine.en_cours:
             self.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+            return
+        if self._ops.is_busy:
+            # Une seule chose à la fois dans la barre du bas, et un préfixe qu'on
+            # prépare pendant qu'une installation écrit ses fichiers n'y gagne rien.
+            self.notify.emit(tr("Un téléchargement est en cours : Wine sera préparé "
+                                "quand il sera fini. Cliquez à nouveau sur JOUER."))
             return
         self._wine.demarrer(game, verbes, puis_jouer)
 

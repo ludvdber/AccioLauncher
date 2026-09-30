@@ -171,6 +171,11 @@ def nom_prerequis(identifiant: str) -> str:
 def on_download(view: "GameDetailView", version: GameVersion | None = None) -> None:
     if view.game is None:
         return
+    if view.preparation_en_cours:
+        # La barre du bas montre la préparation jusqu'à sa fin ; un
+        # téléchargement lancé en même temps n'aurait nulle part où s'afficher.
+        view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+        return
     if view._ops.is_busy:
         active = view._ops.active_game
         if active and active.id != view.game.id:
@@ -222,6 +227,12 @@ def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
         # Deux winetricks dans le même préfixe se marcheraient dessus, et le
         # jeu partirait sans ce qu'on est justement en train d'installer.
         view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+        return
+    en_cours = view.partie_en_cours()
+    if en_cours:
+        # Sous Linux la fenêtre reste affichée pendant que Wine ouvre le jeu :
+        # un second clic lançait une seconde instance.
+        view.notify.emit(tr("{} est en train de démarrer ou déjà lancé.").format(en_cours))
         return
     view._stop_video()
     demander = confirmer_registre(view, view.game.name, au_lancement=True)

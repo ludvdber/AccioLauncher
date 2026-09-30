@@ -19,6 +19,7 @@ de ce qui s'affiche.
 
 import logging
 import os
+import re
 import signal
 import subprocess
 import time
@@ -43,6 +44,35 @@ _ATTENTE_PREFIXE_S = 90
 _ATTENTE_APRES_ERREUR_S = 10
 _PAS_S = 0.5
 _ARRET_S = 3
+# Ce qu'on relit de la fin du journal pour dire où en est winetricks.
+_QUEUE_OCTETS = 4096
+_LIGNE_MAX = 110
+_SEQUENCES_TERMINAL = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+
+
+def derniere_ligne(journal: Path) -> str:
+    """La dernière ligne non vide du journal, lisible et courte ; "" si rien. Pure.
+
+    Ce que winetricks et umu écrivent en dernier (« Executing … vc_redist.x86.exe »,
+    « Downloading … ») : sans elle, une préparation de plusieurs minutes ne
+    montrait qu'un texte figé, et Ludo ne savait pas « où ça en est » (2026-09-30).
+    Les barres de progression de wget/curl réécrivent leur ligne par `\r` :
+    on découpe aussi là. Codes de couleur du terminal retirés.
+    """
+    try:
+        with open(journal, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            taille = f.tell()
+            f.seek(max(0, taille - _QUEUE_OCTETS))
+            brut = f.read()
+    except OSError:
+        return ""
+    texte = _SEQUENCES_TERMINAL.sub("", brut.decode("utf-8", "replace"))
+    for ligne in reversed(re.split(r"[\r\n]+", texte)):
+        ligne = "".join(c for c in ligne if c.isprintable()).strip()
+        if ligne and not ligne.startswith("====="):
+            return ligne if len(ligne) <= _LIGNE_MAX else ligne[:_LIGNE_MAX - 1] + "…"
+    return ""
 
 
 class PreparationWine(QThread):
@@ -52,6 +82,8 @@ class PreparationWine(QThread):
     etape = pyqtSignal(str, str)
     # (réussie, raison) — nommé, jamais `finished` (cf. QThread)
     preparation_terminee = pyqtSignal(bool, str)
+    # La dernière ligne du journal, quand elle change (au plus une fois par seconde).
+    avancement = pyqtSignal(str)
 
     def __init__(self, lanceur: compat.Lanceur, prefixe: Path, verbes,
                  journal: Path, parent=None) -> None:
@@ -144,6 +176,7 @@ class PreparationWine(QThread):
             proc = subprocess.Popen(  # nosec B603
                 commande, env=env, cwd=str(self._prefixe), stdin=subprocess.DEVNULL,
                 stdout=sortie, stderr=subprocess.STDOUT, start_new_session=True)
+            dite = ""
             while True:
                 try:
                     code = proc.wait(timeout=_PAS_S)
@@ -153,6 +186,10 @@ class PreparationWine(QThread):
                     if self.isInterruptionRequested():
                         self._arreter(proc)
                         return None
+                    ligne = derniere_ligne(self._journal)
+                    if ligne and ligne != dite:
+                        dite = ligne
+                        self.avancement.emit(ligne)
 
     @staticmethod
     def _arreter(proc: subprocess.Popen) -> None:

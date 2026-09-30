@@ -32,6 +32,8 @@ IDENTIQUES_TOLEREES = {
     "En {}",
     # « Contraste » : même mot en espagnol (réglage d'image du correctif).
     "Contraste",
+    # Éditeur de touches de HP4 : « Pause » en anglais, « Fin » (la touche) en espagnol.
+    "Pause", "Fin",
     # « changelog » est le même mot en français et en anglais.
     "v{} · changelog",
     # Noms de produits Microsoft : ils ne se traduisent pas.

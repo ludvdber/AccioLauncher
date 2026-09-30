@@ -114,6 +114,12 @@ def main():
         # pas hériter des bibliothèques embarquées. Voir `compat`.
         from src.core.compat import assainir_environnement
         assainir_environnement()
+        # Bandes-annonces : le son jouait, l'image restait celle du jeu (Ludo,
+        # Bazzite, Intel UHD, 2026-09-30). Le FFmpeg de Qt décode en MATÉRIEL
+        # (VAAPI) : l'image reste dans la carte graphique, et sans rendu GPU
+        # pour la recevoir, `QVideoFrame.toImage()` la rend vide. Une valeur
+        # VIDE coupe le décodage matériel ; une valeur de l'utilisateur reste la sienne.
+        os.environ.setdefault("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "")
 
     try:
         app = QApplication(sys.argv)

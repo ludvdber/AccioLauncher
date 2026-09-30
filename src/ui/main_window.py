@@ -11,14 +11,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import almanach, manette
+from src.core import almanach, compat, manette
 from src.core.config import Config
-from src.core.game_manager import GameManager, GameState
+from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.core.win_taskbar import TaskbarProgress
 from src.ui.carousel import Carousel
 from src.ui.download_bar import DownloadBar
+from src.ui.retrait_differe import RetraitDiffere
+from src.ui.suivi_barre import SuiviBarre
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
 from src.ui.game_session import GameSession
@@ -46,11 +47,15 @@ _KOFI_CAP_SECONDES = 2 * 3600
 
 
 
+
 class MainWindow(QMainWindow):
     """Fenêtre principale d'Accio Launcher — style launcher AAA."""
 
     def __init__(self) -> None:
         super().__init__()
+        # Linux : se retirer quand le jeu prend la main (`retrait_differe`).
+        # Posé AVANT tout : `changeEvent` peut partir pendant la construction.
+        self._retrait = RetraitDiffere(self._retirer_si_en_jeu, self)
         self.setWindowTitle("Accio Launcher")
         self.setMinimumSize(980, 660)
         self._apply_default_geometry()
@@ -83,7 +88,6 @@ class MainWindow(QMainWindow):
         # Fermeture déjà tranchée : la question a été posée ailleurs, ou il n'y
         # a personne à qui la poser (relance déjà programmée). Voir closeEvent.
         self._fermeture_confirmee = False
-        self._taskbar: TaskbarProgress | None = None  # créé paresseusement (winId après show)
         # État réseau — optimiste au départ : on n'affiche « hors ligne » que
         # sur une preuve, jamais par défaut (cf. UpdateChecker.is_online).
         self._online = True
@@ -138,7 +142,8 @@ class MainWindow(QMainWindow):
         # Barre de téléchargement persistante (visible pendant download/install)
         self._download_bar = DownloadBar(self)
         root_layout.addWidget(self._download_bar)
-        self._wire_download_bar()
+        self._suivi = SuiviBarre(self._download_bar, self._detail.ops, self._detail.wine,
+                                 self.manager, lambda: int(self.winId()), self)
 
         self._carousel = Carousel(games, self.manager, self)
         self._carousel.game_selected.connect(self._on_carousel_select)
@@ -209,31 +214,6 @@ class MainWindow(QMainWindow):
         self._tray.restore_requested.connect(self._restore_from_tray)
         self._tray.quit_requested.connect(self._quit_app)
 
-    def _wire_download_bar(self) -> None:
-        """Connecte la barre de téléchargement aux signaux du GameOperations."""
-        ops = self._detail.ops
-        ops.download_progress.connect(self._download_bar.update_download_progress)
-        ops.install_progress.connect(self._download_bar.update_install_progress)
-        ops.part_info.connect(self._download_bar.update_part_info)
-        ops.phase_changed.connect(self._download_bar.set_phase)
-        ops.state_changed.connect(self._on_ops_state_changed)
-        self._download_bar.cancel_clicked.connect(ops.cancel_download)
-        # Progression sur l'icône de la barre des tâches Windows
-        ops.download_progress.connect(self._on_taskbar_download_progress)
-        ops.install_progress.connect(self._on_taskbar_install_progress)
-
-    def _get_taskbar(self) -> TaskbarProgress:
-        if self._taskbar is None:
-            self._taskbar = TaskbarProgress(int(self.winId()))
-        return self._taskbar
-
-    def _on_taskbar_download_progress(self, downloaded: int, total: int,
-                                      _speed: float, _eta: float) -> None:
-        self._get_taskbar().set_progress(downloaded, max(total, 1))
-
-    def _on_taskbar_install_progress(self, pct: int) -> None:
-        self._get_taskbar().set_progress(pct, 100)
-
     def _notify_operation_finished(self, game) -> None:
         """Fin d'installation : toast, et notification système si on n'est pas devant."""
         self._toast.show_message(tr("{} installé avec succès ✓").format(game.name))
@@ -245,18 +225,6 @@ class MainWindow(QMainWindow):
         elif not self.isActiveWindow():
             QApplication.alert(self)  # fait clignoter l'icône taskbar
 
-    def _on_ops_state_changed(self) -> None:
-        """Affiche/cache la barre de téléchargement selon l'état des opérations."""
-        ops = self._detail.ops
-        if ops.is_busy and ops.active_game is not None:
-            game = ops.active_game
-            state = self.manager.get_state(game.id)
-            if state in (GameState.DOWNLOADING, GameState.INSTALLING):
-                self._download_bar.show_for_game(game, state)
-                return
-        self._download_bar.hide_bar()
-        self._get_taskbar().clear()
-
     def _build_session(self) -> None:
         """Le cycle de vie d'une partie vit dans `GameSession` ; la fenêtre ne
         garde que ce qui se VOIT — se retirer, revenir, remercier."""
@@ -265,6 +233,9 @@ class MainWindow(QMainWindow):
         # la fenêtre n'a que faire du Popen, elle n'en voit que le nom.
         self._detail.game_launched.connect(self._session.demarrer)
         self._session.demarree.connect(self._on_game_launched)
+        # Un second clic sur JOUER pendant que Wine démarre le jeu le lancerait
+        # deux fois : la fiche demande à la session ce qui tourne.
+        self._detail.partie_en_cours = lambda: self._session.nom_en_cours
         self._session.terminee.connect(self._on_game_exited)
 
     # ──────────────────── Update checker ────────────────────
@@ -328,6 +299,7 @@ class MainWindow(QMainWindow):
         transition, sinon un seul essai serait fait.
         """
         self._updates.schedule_retry(online)
+        compat.signaler_reseau(online)
         if online == self._online:
             return
         self._online = online
@@ -607,6 +579,9 @@ class MainWindow(QMainWindow):
                 # Retour d'une installation de prérequis lancée depuis le
                 # bandeau d'avertissement (no-op le reste du temps).
                 self._detail.recheck_prerequisites()
+            elif self._retrait.attend:
+                # Le jeu vient de prendre la main : c'est maintenant qu'on se retire.
+                self._retrait.desactivee()
             elif self.isVisible():  # pas via le tray (géré par pause_all_effects)
                 Ticker.instance().pause()
                 self._detail.pause_effects()
@@ -615,9 +590,19 @@ class MainWindow(QMainWindow):
     # ──────────────────── Surveillance du processus de jeu ────────────────────
 
     def _on_game_launched(self, game_name: str) -> None:
-        """Une partie commence : infobulle, puis la fenêtre s'efface."""
+        """Une partie commence : infobulle, puis la fenêtre s'efface — sous Linux
+        seulement quand le jeu prend la main (`retrait_differe`)."""
         self._tray.set_tooltip(tr("Accio Launcher — En jeu : {}").format(game_name))
-        self._minimize_to_tray()
+        if self._retrait.differer(game_name, self.isActiveWindow()):
+            self._status_bar.showMessage(tr(
+                "Démarrage de {}… Wine peut mettre jusqu'à une minute à ouvrir le jeu."
+            ).format(game_name))
+        else:
+            self._minimize_to_tray()
+
+    def _retirer_si_en_jeu(self) -> None:
+        if self.isVisible() and self._session.nom_en_cours:
+            self._minimize_to_tray()
 
     def _on_game_exited(self, game_name: str, partie: bool = True) -> None:
         """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé.
@@ -629,6 +614,7 @@ class MainWindow(QMainWindow):
         sortie en 0,5 s, signature exacte du dossier `pc` de HP7.
         """
         self._tray.set_tooltip("Accio Launcher")
+        self._retrait.oublier()
         self._restore_from_tray()
         if partie:
             self._status_bar.showMessage(
