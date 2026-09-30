@@ -724,6 +724,15 @@
         "d3d9",
         "msvcr71"
       ],
+      "saves": {
+        "root": "localappdata",
+        "folders": [
+          "Electronic Arts/Harry Potter and the Goblet of Fire/HPGOF"
+        ],
+        "files": "HPGOF",
+        "first": 1,
+        "slots": "hp4"
+      },
       "cover_image": "hp4_cover.jpg",
       "tags": [
         "Action",

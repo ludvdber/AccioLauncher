@@ -243,7 +243,7 @@ class TestSauvegardeDeLaPartie:
         assert sauvegardes.temps_sans_sauvegarde("hp1") == 900
 
     def test_un_jeu_sans_emplacement_declare_n_est_pas_note(self, session):
-        """HP4 n'a pas de bloc `saves` : on n'a rien regardé, on n'affirme rien."""
+        """Un jeu sans bloc `saves` : on n'a rien regardé, on n'affirme rien."""
         from src.core import sauvegardes
         session.demarrer(_FauxProcess(), "HP1", "hp1")
         session._monitor.game_exited.emit("HP1", 0, 900.0)

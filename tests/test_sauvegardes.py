@@ -207,3 +207,88 @@ def test_le_catalogue_ne_contient_aucun_chemin_windows():
         for motif in [*bloc["folders"], bloc["files"]]:
             assert "\\" not in motif and ":" not in motif, (jeu["id"], motif)
             assert not motif.startswith("/"), (jeu["id"], motif)
+
+
+# ─── HP4 : trois emplacements dans un seul fichier ───
+
+HP4 = Sauvegardes(racine="localappdata",
+                  dossiers=("Electronic Arts/Harry Potter and the Goblet of Fire/HPGOF",),
+                  fichiers="HPGOF", premier=1, emplacements="hp4")
+
+
+def _hpgof(*emplacements) -> bytes:
+    """Un `HPGOF` fabriqué sur la disposition relevée le 2026-09-30 (vraie
+    sauvegarde de Ludo : emplacement 1 le 28/09 12:23:58, classement 4 niveau 3 ;
+    emplacement 2 le 30/09 18:54:30 ; emplacement 3 vide). `None` : vide."""
+    entete = bytearray(b"20CM" + b"\0" * 0x21C) + b"\0" * 0x7000
+    for k, quand in enumerate((*emplacements, None, None, None)[:3]):
+        base = 0x10 + k * 0xAC
+        if quand is None:
+            entete[base + 0xAC:base + 0xB4] = b"\xff" * 8
+            continue
+        entete[base + 0x6C:base + 0x76] = quand.strftime("%d/%m/%Y").encode()
+        entete[base + 0x8C:base + 0x94] = quand.strftime("%H:%M:%S").encode()
+        entete[base + 0xAC:base + 0xB4] = (4).to_bytes(4, "little") + (3).to_bytes(4, "little")
+    return bytes(entete)
+
+
+@pytest.fixture
+def appdata():
+    return sauvegardes.racines()["localappdata"]
+
+
+RANGEE = "Electronic Arts/Harry Potter and the Goblet of Fire/HPGOF/HPGOF"
+
+
+class TestEmplacementsDansUnFichier:
+    """HP4 range ses trois parties dans `HPGOF` (vu à l'écran « Sélectionnez un
+    emplacement ») : ses dates de fichier ne disent pas laquelle a bougé."""
+
+    def test_les_emplacements_occupes_seulement(self):
+        lus = sauvegardes.emplacements_hp4(
+            _hpgof(datetime(2026, 9, 28, 12, 23, 58), datetime(2026, 9, 30, 18, 54, 30), None))
+        assert lus == [(1, datetime(2026, 9, 28, 12, 23, 58).timestamp()),
+                       (2, datetime(2026, 9, 30, 18, 54, 30).timestamp())]
+
+    def test_un_fichier_etranger_ne_rend_rien(self):
+        assert sauvegardes.emplacements_hp4(b"PK\x03\x04" + b"\0" * 0x300) == []
+        assert sauvegardes.emplacements_hp4(b"20CM") == []
+
+    def test_une_date_illisible_garde_l_emplacement(self):
+        entete = bytearray(_hpgof(datetime(2026, 9, 28, 12, 0, 0)))
+        entete[0x7C:0x86] = b"31/31/2026"
+        assert sauvegardes.emplacements_hp4(bytes(entete)) == [(1, None)]
+
+    def test_le_releve_en_fait_des_sauvegardes_distinctes(self, appdata):
+        _poser(appdata, RANGEE, datetime(2026, 9, 30, 18, 54, 30),
+               _hpgof(datetime(2026, 9, 28, 12, 23, 58), datetime(2026, 9, 30, 18, 54, 30), None))
+        etats = sauvegardes.releve(HP4)
+        assert set(etats) == {"HPGOF#1", "HPGOF#2"}
+        assert etats["HPGOF#1"].modifie == datetime(2026, 9, 28, 12, 23, 58).timestamp()
+
+    def test_la_partie_va_a_l_emplacement_reecrit(self, appdata, tmp_path):
+        """Le fichier entier est réécrit ; seul l'en-tête de l'emplacement joué change."""
+        avant_1, avant_2 = datetime(2026, 9, 28, 12, 23, 58), datetime(2026, 9, 29, 20, 0, 0)
+        _poser(appdata, RANGEE, avant_2, _hpgof(avant_1, avant_2, None))
+        avant = sauvegardes.releve(HP4)
+        _poser(appdata, RANGEE, datetime(2026, 9, 30, 21, 0, 0),
+               _hpgof(datetime(2026, 9, 30, 21, 0, 0), avant_2, None))
+        retenu = sauvegardes.attribuer("hp4", avant, sauvegardes.releve(HP4),
+                                       datetime(2026, 9, 30, 20, 0, 0), 3600,
+                                       chemin=tmp_path / "s.json")
+        assert retenu == "HPGOF#1"
+
+    def test_chaque_carte_porte_son_emplacement(self, appdata):
+        """Même seul, « Emplacement 2 » est vrai : le jeu en montre toujours trois."""
+        _poser(appdata, RANGEE, datetime(2026, 9, 30),
+               _hpgof(None, datetime(2026, 9, 30, 18, 54, 30), None))
+        vues = sauvegardes.vues("hp4", HP4, stock={})
+        assert [(v.fichier, v.numero) for v in vues] == [("HPGOF#2", 2)]
+        assert vues[0].derniere == date(2026, 9, 30)
+
+    def test_le_catalogue_declare_le_format(self):
+        bloc = {"root": "localappdata", "folders": ["Electronic Arts/X/HPGOF"],
+                "files": "HPGOF", "slots": "hp4"}
+        assert _parse_sauvegardes(bloc).emplacements == "hp4"
+        # Un format que ce launcher ne connaît pas : le fichier reste UNE sauvegarde.
+        assert _parse_sauvegardes({**bloc, "slots": "hp9"}).emplacements == ""

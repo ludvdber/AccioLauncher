@@ -122,7 +122,7 @@ class GameSession(QObject):
             partie = self._manager.add_playtime(
                 self._game_id, int(duree), self._debut, code)
             spec = self._spec(self._game_id)
-            # Sans emplacement déclaré (HP4), on ne regarde rien : noter la
+            # Sans emplacement déclaré, on ne regarde rien : noter la
             # partie « sans sauvegarde » serait affirmer ce qu'on n'a pas vu.
             if partie and self._debut is not None and spec is not None:
                 sauvegardes.attribuer(
