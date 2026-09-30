@@ -16,6 +16,7 @@ son clavier traversait l'anticrénelage. Chaque réglage du correctif porte son
 onglet (`Reglage.onglet`) ; un onglet sans rien à montrer n'apparaît pas.
 """
 
+import html
 import logging
 from pathlib import Path
 
@@ -45,7 +46,7 @@ from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.styles import RADIO_STYLE
 from src.ui.theme import themed
-from src.ui.toggle_switch import toggle_row
+from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import open_local_path, zone_defilable
 
 log = logging.getLogger(__name__)
@@ -77,9 +78,25 @@ _ONGLET_STYLE = (
     "QPushButton:checked { color: #d6a72c; border-bottom: 2px solid #d6a72c; }"
 )
 
-# Repères de coût : plus le niveau monte, plus la pastille chauffe. Hors palette
-# de maison, comme le filet des alertes : ce sont des avertissements.
-_COULEURS_COUT = {1: "#8a8aaa", 2: "#d9b45a", 3: "#e8955a"}
+# Repères de coût (Ludo, 2026-09-30) : vert faible, orange moyen, rouge extrême.
+# Hors palette de maison, comme le filet des alertes : ce sont des signaux, et
+# ils se lisent aussi sans la couleur (+, ++, +++).
+_COULEURS_COUT = {1: "#6cc58a", 2: "#e8955a", 3: "#ec5f5f"}
+_COULEUR_SE_VOIT = "#d6a72c"
+
+_LIEN_STYLE = (
+    "QPushButton { color: #d6a72c; background: transparent;"
+    " border: none; text-align: left; padding: 4px 0px; }"
+    "QPushButton:hover { color: #e8c547; text-decoration: underline; }"
+    "QPushButton:disabled { color: #55556a; }"
+)
+
+_PREREGLAGE_STYLE = (
+    "QPushButton { color: #b0b0c8; background: #141428; border: 1px solid #2a2a48;"
+    " padding: 5px 8px; }"
+    "QPushButton:hover { color: #e8c547; }"
+    "QPushButton:checked { color: #0d0d1a; background: #d6a72c; border-color: #d6a72c; }"
+)
 
 # Réglages annoncés mais pas encore livrés. Ils sont ÉCRITS, pas résumés en
 # « bientôt » : quelqu'un qui cherche la résolution doit reconnaître ce qu'il
@@ -138,6 +155,13 @@ class GameSettingsDialog(QDialog):
         # l'éditeur fait apparaître dès qu'une touche est choisie à l'unité.
         self._editeur: EditeurTouches | None = None
         self._note_preregle: QLabel | None = None
+        # « Qualité d'image » : les préréglages de CE jeu, leurs boutons, la
+        # phrase qui dit ce que fait celui qui est choisi, et le détail replié.
+        self._prereglages: tuple = ()
+        self._boutons_prereglage: dict[str, QPushButton] = {}
+        self._texte_prereglage: QLabel | None = None
+        self._detail: QWidget | None = None
+        self._lien_detail: QPushButton | None = None
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -176,9 +200,9 @@ class GameSettingsDialog(QDialog):
         # La barre de titre de Windows et un peu d'air au-dessus de la barre des tâches.
         plafond = ecran.availableGeometry().height() - cadre - 60 if ecran is not None else voulu
         for contenu, v in zip(self._contenus, voulus):
-            if v > plafond:
-                # La barre de défilement prend sa place à droite : le texte s'en écarte.
-                contenu.layout().setContentsMargins(0, 0, 18, 0)
+            # La barre de défilement prend sa place à droite : le texte s'en écarte.
+            # Remis à zéro quand elle part (le détail de la qualité se replie).
+            contenu.layout().setContentsMargins(0, 0, 18 if v > plafond else 0, 0)
         hauteur = max(120, min(voulu, plafond))
         self._defile.setFixedHeight(hauteur)
         self.setFixedHeight(cadre + hauteur)
@@ -347,21 +371,15 @@ class GameSettingsDialog(QDialog):
             if not self._reglages:
                 self._section_affichage(corps)
                 return True
-            if self._section_correctif(corps, "image", avertir=True):
-                self._bouton_origine(corps)
-            corps.addSpacing(10)
-            corps.addWidget(self._titre_rubrique(tr("Plus tard"), verrouille=True))
-            corps.addSpacing(4)
-            # Une ligne et non une liste de boutons grisés : ce qui vient se lit,
-            # sans prendre la hauteur des réglages actifs.
-            bientot = QLabel(" · ".join(tr(nom) for nom in reglages_correctif.A_VENIR))
-            bientot.setFont(body_font(11))
-            bientot.setWordWrap(True)
-            bientot.setTextFormat(Qt.TextFormat.PlainText)
-            bientot.setStyleSheet("color: #6a6a80; background: transparent;")
-            corps.addWidget(bientot)
-            return True
+            return self._onglet_image(corps)
         if onglet == "commandes":
+            if not self._correctif_actif():
+                # Une seule note pour les touches ET la manette du correctif.
+                note = (self._section_correctif(corps, "commandes")
+                        or self._section_correctif(corps, "manette"))
+                if note:
+                    corps.addSpacing(18)
+                return self._section_manette(corps) or note
             a_des_touches = self._section_correctif(corps, "commandes")
             if a_des_touches and "touches_zqsd" in self._controles:
                 corps.addSpacing(14)
@@ -384,6 +402,156 @@ class GameSettingsDialog(QDialog):
         if onglet == "perfs":
             return self._section_correctif(corps, "perfs")
         return self._section_fichiers(corps)
+
+    def _onglet_image(self, corps: QVBoxLayout) -> bool:
+        """Affichage, puis « Qualité d'image » : des préréglages, le détail replié.
+
+        Variante B choisie par Ludo le 2026-09-30 (« les gens s'y retrouvent
+        pas, beaucoup de texte ») : on choisit d'abord une qualité en un clic ;
+        chaque effet reste réglable, derrière un lien, avec ce qu'il coûte.
+        """
+        if not self._correctif_actif():
+            # Jeu absent ou ancien correctif : une seule note pour tout l'onglet.
+            return (self._section_correctif(corps, "affichage")
+                    or self._section_correctif(corps, "image"))
+        rempli = False
+        if self._section_correctif(corps, "affichage", titre=tr("Affichage")):
+            rempli = True
+        qualite = [r for r in self._reglages if r.onglet == "image"]
+        if qualite:
+            if rempli:
+                corps.addSpacing(18)
+            corps.addWidget(self._titre_rubrique(tr("Qualité d'image")))
+            corps.addSpacing(8)
+            self._prereglages = reglages_correctif.prereglages_du_jeu(qualite)
+            if self._prereglages:
+                self._barre_prereglages(corps)
+            self._detail = QWidget()
+            self._detail.setStyleSheet("background: transparent;")
+            detail = QVBoxLayout(self._detail)
+            detail.setContentsMargins(0, 0, 0, 0)
+            detail.setSpacing(0)
+            self._legende(detail)
+            for reglage in qualite:
+                self._controle(detail, self._ini, reglage)
+            if self._prereglages:
+                self._lien_detail = QPushButton()
+                self._lien_detail.setFont(body_font(12))
+                self._lien_detail.setCursor(Qt.CursorShape.PointingHandCursor)
+                self._lien_detail.setStyleSheet(themed(_LIEN_STYLE))
+                self._lien_detail.clicked.connect(lambda: self._deplier(self._detail.isHidden()))
+                corps.addSpacing(4)
+                ligne = QHBoxLayout()
+                ligne.addWidget(self._lien_detail)
+                ligne.addStretch()
+                corps.addLayout(ligne)
+                self._detail.hide()
+                self._maj_lien_detail()
+            corps.addWidget(self._detail)
+            self._maj_dependances()
+            self._maj_prereglage()
+            rempli = True
+        if rempli:
+            self._bouton_origine(corps)
+        return rempli
+
+    def _barre_prereglages(self, layout: QVBoxLayout) -> None:
+        """Légère · Équilibrée · Maximale · Sur mesure, et ce que fait le choix."""
+        barre = QHBoxLayout()
+        barre.setSpacing(0)
+        groupe = QButtonGroup(self)
+        groupe.setExclusive(True)
+        entrees = [(ident, nom) for ident, nom, _t, _v in self._prereglages] + [("", "Sur mesure")]
+        for rang, (ident, nom) in enumerate(entrees):
+            bouton = QPushButton(tr(nom))
+            bouton.setCheckable(True)
+            bouton.setFont(body_font(12))
+            bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+            bouton.setMinimumHeight(32)
+            coins = ("border-top-left-radius: 6px; border-bottom-left-radius: 6px;" if rang == 0
+                     else "border-top-right-radius: 6px; border-bottom-right-radius: 6px;"
+                     if rang == len(entrees) - 1 else "")
+            bouton.setStyleSheet(themed(_PREREGLAGE_STYLE.replace(
+                "padding: 5px 8px; }", f"padding: 5px 8px; {coins} }}", 1)))
+            bouton.clicked.connect(lambda _c=False, i=ident: self._choisir_prereglage(i))
+            groupe.addButton(bouton)
+            barre.addWidget(bouton, stretch=1)
+            self._boutons_prereglage[ident] = bouton
+        layout.addLayout(barre)
+        layout.addSpacing(6)
+        self._texte_prereglage = QLabel("")
+        self._texte_prereglage.setFont(body_font(10))
+        self._texte_prereglage.setWordWrap(True)
+        self._texte_prereglage.setTextFormat(Qt.TextFormat.PlainText)
+        self._texte_prereglage.setStyleSheet("color: #8a8aaa; background: transparent;")
+        layout.addWidget(self._texte_prereglage)
+
+    def _legende(self, layout: QVBoxLayout) -> None:
+        """Ce que disent les pastilles, en une ligne, avec leurs propres couleurs."""
+        morceaux = [
+            f'<span style="color:{_COULEURS_COUT[1]}">{html.escape(tr("vert faible"))}</span>',
+            f'<span style="color:{_COULEURS_COUT[2]}">{html.escape(tr("orange moyen"))}</span>',
+            f'<span style="color:{_COULEURS_COUT[3]}">{html.escape(tr("rouge extrême"))}</span>',
+        ]
+        texte = (html.escape(tr("Exigence pour la carte graphique (GPU), le processeur (CPU) "
+                                "ou la mémoire (RAM) :"))
+                 + " " + " · ".join(morceaux) + ". "
+                 + html.escape(tr("Un réglage exigeant peut faire ramer un PC modeste.")))
+        legende = QLabel(texte)
+        legende.setTextFormat(Qt.TextFormat.RichText)
+        legende.setFont(body_font(10))
+        legende.setWordWrap(True)
+        legende.setStyleSheet("color: #8a8aaa; background: transparent; padding: 8px 0px 6px 0px;")
+        layout.addWidget(legende)
+
+    def _deplier(self, oui: bool) -> None:
+        if self._detail is None:
+            return
+        self._detail.setVisible(oui)
+        self._maj_lien_detail()
+        self._ajuster_hauteur()
+
+    def _maj_lien_detail(self) -> None:
+        if self._lien_detail is None:
+            return
+        n = sum(1 for r in self._reglages if r.onglet == "image")
+        self._lien_detail.setText(tr("Masquer le détail") if not self._detail.isHidden()
+                                  else tr("Régler chaque effet ({})").format(n))
+
+    def _maj_prereglage(self) -> None:
+        """Le bouton coché et la phrase suivent ce que portent VRAIMENT les contrôles."""
+        if not self._prereglages:
+            return
+        courant = reglages_correctif.prereglage_courant(self._prereglages, self._valeurs_affichees())
+        bouton = self._boutons_prereglage.get(courant)
+        if bouton is not None:
+            bouton.setChecked(True)
+        textes = {ident: texte for ident, _n, texte, _v in self._prereglages}
+        self._texte_prereglage.setText(
+            tr(textes[courant]) if courant else tr("Vos propres réglages, effet par effet."))
+
+    def _choisir_prereglage(self, ident: str) -> None:
+        if not ident:
+            # « Sur mesure » n'écrit rien : il ouvre le détail.
+            self._deplier(True)
+            self._maj_prereglage()
+            return
+        voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
+        try:
+            for cle, valeur in voulues.items():
+                reglages_correctif.ecrire(self._ini, reglages_correctif.REGLAGES[cle], valeur)
+        except (OSError, ValueError):
+            log.warning("Correctif : préréglage %s non écrit", ident, exc_info=True)
+            self._montrer_erreur()
+        # Les contrôles reprennent ce que porte le fichier, écrit en entier ou non.
+        for cle in voulues:
+            widget = self._controles.get(cle)
+            if widget is not None:
+                self._remettre_controle(widget, reglages_correctif.REGLAGES[cle])
+        self._maj_dependances()
+        self._maj_prereglage()
+        if self._erreur.isHidden():
+            self._apres_ecriture()
 
     def _section_touches(self, layout: QVBoxLayout) -> None:
         """Chaque action de HP4 et sa touche, réglables une par une.
@@ -456,8 +624,8 @@ class GameSettingsDialog(QDialog):
         layout.addSpacing(6)
         layout.addWidget(trait)
 
-    def _section_correctif(self, layout: QVBoxLayout, onglet: str, avertir: bool = False) -> bool:
-        """Les réglages du correctif PC (HP4-HP6) rangés dans CET onglet ; False s'il n'y en a pas.
+    def _section_correctif(self, layout: QVBoxLayout, onglet: str, titre: str = "") -> bool:
+        """Les réglages du correctif PC (HP4-HP7b) rangés dans CET onglet ; False s'il n'y en a pas.
 
         Trois cas, et chacun le DIT : jeu absent, ancien correctif (rien ne
         lirait ces clés), nouveau correctif.
@@ -474,19 +642,9 @@ class GameSettingsDialog(QDialog):
                 "Ces réglages arrivent avec la prochaine version du correctif "
                 "de ce jeu."))
             return True
-        if avertir:
-            # Demandé par Ludo (2026-09-28) : dire que tout se règle, mais à ses
-            # risques, et DIRIGER — ce qui coûte, et ce qui se voit vraiment.
-            avis = QLabel(tr(
-                "Réglables à vos risques : un réglage exigeant peut faire ramer ou "
-                "chauffer un PC modeste. GPU, CPU et RAM disent ce qu'il demande à la "
-                "carte graphique, au processeur ou à la mémoire (+ un peu, +++ "
-                "beaucoup) ; « Se voit » marque ce qui change vraiment l'image."))
-            avis.setFont(body_font(10))
-            avis.setWordWrap(True)
-            avis.setTextFormat(Qt.TextFormat.PlainText)
-            avis.setStyleSheet("color: #e8955a; background: transparent; padding-bottom: 8px;")
-            layout.addWidget(avis)
+        if titre:
+            layout.addWidget(self._titre_rubrique(titre))
+            layout.addSpacing(4)
         for reglage in reglages:
             self._controle(layout, ini, reglage)
         self._maj_dependances()
@@ -586,6 +744,7 @@ class GameSettingsDialog(QDialog):
             self._editeur.rafraichir()
         self._maj_preregle()
         self._maj_dependances()
+        self._maj_prereglage()
 
     def _remettre_controle(self, widget, reglage) -> None:
         """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
@@ -620,6 +779,36 @@ class GameSettingsDialog(QDialog):
         note.setStyleSheet("color: #8a8aaa; background: transparent;")
         layout.addWidget(note)
 
+    def _ligne(self, layout: QVBoxLayout, libelle_txt: str, controle: QWidget, aide_txt: str,
+               reglage=None) -> None:
+        """Une ligne par réglage : le nom, ce qu'il coûte, le contrôle toujours à
+        DROITE (maquette B, 2026-09-30) ; la phrase qui dit ce qu'il fait, dessous."""
+        ligne = QWidget()
+        ligne.setStyleSheet("background: transparent;")
+        h = QHBoxLayout(ligne)
+        h.setContentsMargins(0, 6, 0, 0)
+        h.setSpacing(8)
+        libelle = QLabel(libelle_txt)
+        libelle.setTextFormat(Qt.TextFormat.PlainText)
+        libelle.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
+        h.addWidget(libelle)
+        if reglage is not None:
+            self._reperes(h, reglage)
+        h.addStretch(1)
+        if isinstance(controle, ToggleSwitch):
+            # Le libellé est à côté, pas dedans : sans nom accessible, un lecteur
+            # d'écran n'annoncerait qu'« interrupteur » (règle 15).
+            controle.setToolTip(libelle_txt)
+        controle.setAccessibleName(libelle_txt)
+        h.addWidget(controle)
+        layout.addWidget(ligne)
+        aide = QLabel(aide_txt)
+        aide.setFont(body_font(10))
+        aide.setWordWrap(True)
+        aide.setTextFormat(Qt.TextFormat.PlainText)
+        aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
+        layout.addWidget(aide)
+
     def _controle(self, parent: QVBoxLayout, ini: Path, reglage) -> None:
         try:
             etat = reglages_correctif.lire(ini, reglage)
@@ -635,17 +824,10 @@ class GameSettingsDialog(QDialog):
         self._blocs[reglage.ident] = bloc
         libelle_txt, aide_txt = reglages_correctif.textes(reglage)
         if reglage.choix:
-            ligne = QWidget()
-            ligne.setStyleSheet("background: transparent;")
-            h = QHBoxLayout(ligne)
-            h.setContentsMargins(0, 4, 0, 4)
-            h.setSpacing(12)
-            libelle = QLabel(libelle_txt)
-            libelle.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
-            h.addWidget(libelle, stretch=1)
             choix = QComboBox()
             choix.setStyleSheet(themed(_COMBO_STYLE))
-            choix.setAccessibleName(libelle_txt)
+            # Une largeur commune : les listes s'alignent en colonne à droite.
+            choix.setMinimumWidth(150)
             for n in reglage.choix:
                 choix.addItem(reglages_correctif.libelle_choix(reglage, n), n)
             if etat.personnalise:
@@ -655,12 +837,14 @@ class GameSettingsDialog(QDialog):
             choix.setCurrentIndex(max(0, choix.findData(etat.valeur)))
             choix.currentIndexChanged.connect(
                 lambda _i, c=choix, r=reglage: self._on_reglage(r, c.currentData(), c))
-            h.addWidget(choix)
             self._controles[reglage.ident] = choix
-            layout.addWidget(ligne)
+            self._ligne(layout, libelle_txt, choix, aide_txt, reglage)
         else:
-            ligne, bascule = toggle_row(libelle_txt, bool(etat.valeur))
-            layout.addWidget(ligne)
+            bascule = ToggleSwitch(bool(etat.valeur))
+            bascule.toggled.connect(
+                lambda coche, r=reglage, b=bascule: self._on_reglage(r, coche, b))
+            self._controles[reglage.ident] = bascule
+            self._ligne(layout, libelle_txt, bascule, aide_txt, reglage)
             if reglage.ident == "touches_zqsd":
                 # Des touches choisies une par une (ci-dessous, ou à la main dans
                 # l'ini) : le préréglage les écraserait. On le dit sous son aide,
@@ -671,16 +855,6 @@ class GameSettingsDialog(QDialog):
                 # perdu à le dire, et l'interrupteur reste libre.
                 self._note(layout, tr(
                     "Réglé en partie à la main dans d3d9.ini : l'activer allume tout le panneau."))
-            bascule.toggled.connect(
-                lambda coche, r=reglage, b=bascule: self._on_reglage(r, coche, b))
-            self._controles[reglage.ident] = bascule
-        self._reperes(layout, reglage)
-        aide = QLabel(aide_txt)
-        aide.setFont(body_font(10))
-        aide.setWordWrap(True)
-        aide.setTextFormat(Qt.TextFormat.PlainText)
-        aide.setStyleSheet("color: #8a8aaa; background: transparent; padding-bottom: 4px;")
-        layout.addWidget(aide)
         if reglage.ident == "touches_zqsd":
             note = QLabel(tr("Touches choisies une par une : le préréglage ne les remplace pas. "
                              "« Remettre toutes les touches du jeu » le libère."))
@@ -692,33 +866,26 @@ class GameSettingsDialog(QDialog):
             layout.addWidget(note)
             self._note_preregle = note
 
-    def _reperes(self, layout: QVBoxLayout, reglage) -> None:
-        """Pastilles sous le réglage : ce qu'il coûte (« GPU +++ ») et s'il se voit.
+    def _reperes(self, ligne: QHBoxLayout, reglage) -> None:
+        """Pastilles À CÔTÉ du nom : ce qu'il coûte (« GPU +++ ») et s'il se voit.
 
         Du TEXTE, pas des pictogrammes : Cinzel n'a pas les symboles, et Windows
-        les rendrait en emoji couleur (règles 59 et 60).
+        les rendrait en emoji couleur (règles 59 et 60). La couleur double le
+        nombre de + (vert, orange, rouge), elle ne le remplace pas.
         """
         pastilles = [(f"{ressource} {'+' * niveau}", _COULEURS_COUT.get(niveau, "#8a8aaa"))
                      for ressource, niveau in reglage.cout]
         if reglage.se_voit:
-            pastilles.append((tr("Se voit"), "#d6a72c"))
-        if not pastilles:
-            return
-        ligne = QWidget()
-        ligne.setStyleSheet("background: transparent;")
-        h = QHBoxLayout(ligne)
-        h.setContentsMargins(0, 0, 0, 2)
-        h.setSpacing(6)
+            pastilles.append((tr("Se voit"), _COULEUR_SE_VOIT))
         for texte, couleur in pastilles:
             pastille = QLabel(texte)
             pastille.setFont(body_font(9))
             pastille.setTextFormat(Qt.TextFormat.PlainText)
             pastille.setStyleSheet(themed(
                 f"color: {couleur}; background: transparent; border: 1px solid {couleur};"
-                " border-radius: 3px; padding: 0px 6px;"))
-            h.addWidget(pastille)
-        h.addStretch()
-        layout.addWidget(ligne)
+                " border-radius: 3px; padding: 0px 5px;"))
+            # Centrée, à sa hauteur : sinon elle s'étire à celle de la liste voisine.
+            ligne.addWidget(pastille, alignment=Qt.AlignmentFlag.AlignVCenter)
 
     def _section_manette(self, layout: QVBoxLayout) -> bool:
         """« Jouer à la manette » (HP5, HP6) : le choix que le jeu garde dans le registre.
@@ -726,22 +893,26 @@ class GameSettingsDialog(QDialog):
         Deux voies, toutes deux voulues par Ludo (2026-09-27) : le menu du jeu, ou
         cet interrupteur — qui PRÉVIENT avant d'écrire (le rappel de l'appelant).
         """
-        etat = manette.activee(self.game)
-        if etat is None or self._appliquer_manette is None:
+        etat = manette.activee(self.game) if self._appliquer_manette is not None else None
+        # Ce que le correctif règle de la manette (PlayStation, vibrations), sous
+        # le même titre : quelqu'un qui cherche sa manette ne la cherche qu'une fois.
+        du_correctif = [r for r in self._reglages if r.onglet == "manette"] \
+            if self._correctif_actif() else []
+        if etat is None and not du_correctif:
             return False
         layout.addWidget(self._titre_rubrique(tr("Manette")))
-        layout.addSpacing(8)
-        ligne, bascule = toggle_row(tr("Jouer à la manette"), etat)
-        layout.addWidget(ligne)
-        self._bascule_manette = bascule
-        bascule.toggled.connect(self._on_manette)
-        # HP5 et HP6 (lu dans leurs exe, 2026-09-30) : au démarrage, un choix
-        # « manette » sans manette vue retombe au clavier ET s'écrit ainsi.
-        self._note(layout, tr(
-            "Le jeu garde ce choix dans le registre de Windows : le lanceur vous "
-            "prévient avant de le modifier. Il se règle aussi dans les options du jeu. "
-            "Branchez la manette avant de lancer le jeu : s'il ne la trouve pas au "
-            "démarrage, il repasse au clavier."))
+        layout.addSpacing(4)
+        if etat is not None:
+            bascule = ToggleSwitch(etat)
+            self._bascule_manette = bascule
+            bascule.toggled.connect(self._on_manette)
+            # HP5 et HP6 (lu dans leurs exe, 2026-09-30) : au démarrage, un choix
+            # « manette » sans manette vue retombe au clavier ET s'écrit ainsi.
+            self._ligne(layout, tr("Jouer à la manette"), bascule, tr(
+                "Branchez-la avant de lancer le jeu. Ce choix vit dans le registre de "
+                "Windows : le lanceur prévient avant d'y écrire."))
+        for reglage in du_correctif:
+            self._controle(layout, self._ini, reglage)
         return True
 
     def _on_manette(self, oui: bool) -> None:
@@ -887,9 +1058,11 @@ class GameSettingsDialog(QDialog):
             self._remettre_controle(widget, reglage)
             self._montrer_erreur()
             self._maj_dependances()
+            self._maj_prereglage()
             return
         self._appliquer_exclusion(reglage, valeur)
         self._maj_dependances()
+        self._maj_prereglage()
         if reglage.ident == "touches_zqsd" and self._editeur is not None:
             self._editeur.rafraichir()
         self._apres_ecriture()

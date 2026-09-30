@@ -1,4 +1,4 @@
-"""Réglages du correctif PC de HP4, HP5 et HP6, lus et écrits dans son `d3d9.ini`.
+"""Réglages du correctif PC de HP4 à HP7 partie 2, lus et écrits dans son `d3d9.ini`.
 
 Le correctif (dépôt Harry-Potter-PC-Fix) lit un `d3d9.ini` à côté de l'exécutable
 du jeu. Ce module en règle QUELQUES clés depuis le lanceur ; tout le reste du
@@ -50,6 +50,20 @@ FILTRAGES = (0, 2, 4, 8, 16)
 # livrées y sont toutes (HP4/HP6 0.30 et 0.20, HP5 0.60 et 0.30).
 VIVACITES = ((0, "Aucune"), (0.15, "Légère"), (0.3, "Moyenne"), (0.45, "Forte"), (0.6, "Très forte"))
 CONTRASTES = ((0, "D'origine"), (0.1, "Léger"), (0.2, "Moyen"), (0.3, "Fort"))
+# Netteté après le FXAA (livrée à 0.40 partout) et netteté des textures au loin
+# (TextureLODBias : négatif = plus net ; HP5 livré à -1.5).
+NETTETES = ((0, "Aucune"), (0.2, "Légère"), (0.4, "Moyenne"), (0.6, "Forte"))
+NETTETES_LOINTAINES = ((0, "D'origine"), (-0.5, "Un peu plus nettes"), (-1, "Plus nettes"),
+                       (-1.5, "Très nettes"))
+# Taille de l'image au démarrage, [Accio.Game] Width et Height. Le jeu livré
+# démarre en 640×480 : c'est l'« éteint », écrit tel quel s'il est choisi.
+RESOLUTIONS = (("640x480", ""), ("1280x720", "1280×720"), ("1600x900", "1600×900"),
+               ("1920x1080", "1920×1080"), ("2560x1440", "2560×1440"), ("3840x2160", "3840×2160"))
+# WindowStyle du correctif : 1 = sans bordure sur tout l'écran (recommandé).
+MODES_FENETRE = ((1, "Plein écran sans bordure"), (2, "Fenêtre"), (3, "Fenêtre redimensionnable"),
+                 (4, "Sans bordure, à la taille de l'image"))
+# AspectRatio : 0 = format livré. Les rapports sont écrits tels que le correctif les lit.
+FORMATS = (("0", ""), ("16:9", "16:9"), ("16:10", "16:10"), ("21:9", "21:9"), ("32:9", "32:9"))
 # Langues du menu de démarrage de HP6 (les 16 qu'il propose), écrites dans leur
 # propre langue comme dans le menu du jeu : un nom de langue ne se traduit pas
 # pour celui qui la cherche. « auto » (le défaut du correctif) est la langue de
@@ -76,6 +90,8 @@ _SOURIS = (("Charm", "MouseLeft"), ("Jinx", "MouseRight"))
 # Le panneau de performances : tout ce que l'overlay sait afficher en plus du
 # compteur d'images, réglé d'un seul geste (le détail reste dans l'ini).
 _PANNEAU = ("ShowFrameTime", "ShowGraph", "ShowCPU", "ShowGPU", "ShowVRAM", "ShowRAM", "ShowLatency")
+# La résolution : deux clés, un seul choix (« 1920x1080 »).
+_RESOLUTION = ("Width", "Height")
 
 
 def _lettre(scan: int, repli: str) -> str:
@@ -140,31 +156,85 @@ class Reglage:
     exclut: str = ""
 
 
-# L'ordre est celui de l'affichage.
+# L'ordre est celui de l'affichage. Les aides tiennent en UNE phrase (Ludo,
+# 2026-09-30 : « beaucoup de texte », « une description concise de ce que fait
+# chaque paramètre ») : ce qu'un réglage emporte avec lui se voit à l'écran
+# (grisé, `depend_de`) ou se fait tout seul (`exclut`), il n'a plus à s'écrire.
 REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
+    # ── Affichage (onglet Image, au-dessus de la qualité) ──
+    # Clés lues par le nouveau correctif (tools/make_ini.py du dépôt du
+    # correctif), ouvertes au lanceur le 2026-09-30 à la demande de Ludo : À VOIR
+    # EN JEU avant de publier le catalogue qui les déclare.
+    Reglage("resolution", "Accio.Game", "",
+            "Résolution",
+            "La taille de l'image au démarrage ; elle se change aussi dans les options du jeu.",
+            choix=tuple(v for v, _ in RESOLUTIONS), zero="D'origine (640×480)",
+            noms_choix=RESOLUTIONS, onglet="affichage"),
+    Reglage("mode_fenetre", "Accio.Window", "WindowStyle",
+            "Mode d'affichage",
+            "Sans bordure, le jeu couvre l'écran et Alt+Tab ne le fige pas.",
+            choix=tuple(v for v, _ in MODES_FENETRE), zero="Plein écran sans bordure",
+            etiquettes=MODES_FENETRE, onglet="affichage"),
+    Reglage("format_image", "Accio.Game", "AspectRatio",
+            "Format d'image",
+            "Le format de l'image, pour remplir un écran large sans la déformer.",
+            choix=tuple(v for v, _ in FORMATS), zero="D'origine", noms_choix=FORMATS,
+            onglet="affichage"),
+    Reglage("champ_vision", "Accio.Game", "FOV",
+            "Champ de vision",
+            "Élargit la vue autour du personnage.",
+            choix=(0, 1.15, 1.25, 1.4), zero="D'origine", format_choix="×{}",
+            onglet="affichage"),
+    Reglage("ecran_principal", "Accio.Window", "UsePrimaryMonitor",
+            "Toujours sur l'écran principal",
+            "Ouvre le jeu sur l'écran principal de Windows plutôt que sur un autre.",
+            defaut=False, onglet="affichage"),
+    Reglage("premier_plan", "Accio.Window", "AlwaysOnTop",
+            "Toujours au premier plan",
+            "En fenêtre, le jeu reste devant les autres fenêtres.",
+            defaut=False, onglet="affichage"),
+    # ── Jeu, commandes, performances ──
     Reglage("arriere_plan", "Accio.Window", "KeepRunningInBackground",
             "Continuer à tourner après un Alt+Tab",
-            "Le jeu ne se fige plus quand une autre fenêtre passe devant, "
-            "et reprend le clavier dès qu'on revient."),
+            "Le jeu ne se fige plus quand une autre fenêtre passe devant."),
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
-            "Plafonne le nombre d'images calculées : l'ordinateur chauffe "
-            "moins et fait moins de bruit.", choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
+            "Plafonne les images calculées : moins de chauffe, de bruit et d'à-coups.",
+            choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
+    Reglage("synchro_verticale", "Accio.Graphics", "VSync",
+            "Synchronisation verticale",
+            "Supprime les déchirures de l'image, au prix d'un peu de réactivité.",
+            defaut=False, onglet="perfs"),
     Reglage("touches_zqsd", "Accio.Keys", "",
             "Déplacement {} et sorts à la souris",
-            "Se déplacer avec {0}, Charme au clic gauche, Maléfice au clic "
-            "droit, Accio sur {1}, Extremos sur {2}. Les touches d'origine "
-            "continuent de marcher, sauf {3}, qui fait reculer.", onglet="commandes"),
+            "Déplacement sur {0}, sorts aux clics, Accio sur {1}, Extremos sur {2} ; "
+            "{3} fait reculer.", onglet="commandes"),
+    # [Accio.Controller] est lu par le xinput1_3.dll du correctif (HP5-HP7b) ;
+    # HP4 n'a pas cette DLL, son correctif lit sa propre clé dans [Accio.Game].
+    Reglage("manette_playstation", "Accio.Controller", "PlayStation",
+            "Manette PlayStation reconnue",
+            "Elle joue comme une manette Xbox ; à éteindre si Steam Input ou DS4Windows "
+            "la convertit déjà.", onglet="manette"),
+    Reglage("manette_playstation_hp4", "Accio.Game", "PlayStationController",
+            "Manette PlayStation reconnue",
+            "Elle joue comme une manette Xbox ; à éteindre si Steam Input ou DS4Windows "
+            "la convertit déjà.", onglet="manette"),
+    Reglage("vibrations", "Accio.Controller", "Rumble",
+            "Vibrations de la manette PlayStation",
+            "En USB seulement.", onglet="manette"),
+    # ── Qualité d'image (préréglages, puis le détail) ──
     # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
     # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
     # allumés) l'éteindre les éteindrait tous.
     Reglage("lissage", "Accio.Graphics", "FXAA",
             "Lissage des contours (FXAA)",
-            "Adoucit les escaliers au bord des personnages et du décor "
-            "(cheveux, vêtements, toiles de tente), avec un léger renforcement "
-            "de la netteté. Il porte aussi les effets ci-dessous : l'éteindre éteint "
-            "ombres de contact, halo, rayons et couleurs.",
+            "Adoucit les contours en escalier ; porte aussi les effets de lumière et de couleur.",
             defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+    Reglage("nettete", "Accio.Graphics", "Sharpness",
+            "Netteté",
+            "Rend du piqué à l'image après le lissage.",
+            choix=tuple(v for v, _ in NETTETES), zero="Aucune", etiquettes=NETTETES,
+            onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
     # HP4) avec le correctif qui multi-échantillonne la cible de scène du jeu
     # et garde l'anticrénelage que le jeu éteint. Pas HP5 : avec son SSAO, le
@@ -172,10 +242,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # pas en Direct3D 9).
     Reglage("anticrenelage", "Accio.Graphics", "Antialiasing",
             "Anticrénelage (MSAA)",
-            "Lisse les contours des personnages et du décor en calculant "
-            "plusieurs points par pixel. Plus le nombre est grand, plus c'est "
-            "lisse, et plus la carte graphique travaille. L'allumer éteint les "
-            "ombres de contact, qui l'empêchent d'atteindre le décor.",
+            "Lisse les contours en calculant plusieurs points par pixel.",
             choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
             onglet="image", cout=(("GPU", 2),), se_voit=True, exclut="occlusion"),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
@@ -185,9 +252,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # 2560×1440, 94 → 84 sur HP4 (RTX 2060 SUPER). Sans effet sans MSAA.
     Reglage("anticrenelage_transparence", "Accio.Graphics", "TransparencyAntialiasing",
             "Cheveux et feuillage lissés",
-            "Avec l'anticrénelage, lisse aussi les pointes des cheveux, les "
-            "feuilles et l'herbe. Cartes NVIDIA seulement ; demande plus à la "
-            "carte graphique là où il y a beaucoup de feuillage.", defaut=False,
+            "Lisse aussi cheveux, feuilles et herbe ; cartes NVIDIA seulement.", defaut=False,
             onglet="image", cout=(("GPU", 2),), depend_de="anticrenelage"),
     # HP5, vu en jeu le 2026-09-26 : son occlusion ambiante lit la profondeur
     # comme une texture, ce qui ferme le MSAA à la scène ; le suréchantillonnage
@@ -199,10 +264,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # 2026-09-27/28 (forêt interdite, menus de HP6 qui cliquent juste) ; c'est
     # leur défaut depuis, parce qu'il veut « le moins de pixelisation possible ».
     Reglage("surechantillonnage", "Accio.Graphics", "SSAAFactor",
-            "Suréchantillonnage (image plus fine)",
-            "Calcule l'image en plus grand puis la réduit : contours, cheveux, "
-            "feuillages et détails lointains nettement plus fins. Le réglage qui "
-            "se voit le plus, et le plus exigeant : ×2 est pour les PC puissants.",
+            "Suréchantillonnage",
+            "Calcule l'image en plus grand puis la réduit : l'image la plus fine.",
             choix=(1, 1.5, 2), zero="Désactivé", format_choix="×{}",
             onglet="image", cout=(("GPU", 3),), se_voit=True),
     # Les effets du correctif (HP4-HP6), tous allumés dans les ini livrés et
@@ -211,42 +274,49 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # aucune modifiable depuis le launcher ». Tous passent par le FXAA.
     Reglage("filtrage", "Accio.Graphics", "AnisotropicFiltering",
             "Netteté des textures de biais",
-            "Sols, murs et chemins vus en biais restent nets au lieu de devenir "
-            "flous (filtrage anisotrope). Presque gratuit sur une carte récente.",
+            "Garde nets les sols et les murs vus de biais.",
             choix=FILTRAGES, zero="Désactivé", format_choix="×{}",
             onglet="image", cout=(("GPU", 1),), se_voit=True),
+    Reglage("textures_lointaines", "Accio.Graphics", "TextureLODBias",
+            "Textures lointaines",
+            "Rend plus nettes les textures au loin.",
+            choix=tuple(v for v, _ in NETTETES_LOINTAINES), zero="D'origine",
+            etiquettes=NETTETES_LOINTAINES, onglet="image", cout=(("GPU", 1),)),
+    Reglage("feuillage_lointain", "Accio.Graphics", "MipmapCoverage",
+            "Feuillage dense au loin",
+            "Feuilles, cheveux et grilles gardent leur densité au lieu de disparaître au loin.",
+            defaut=False, onglet="image", cout=(("GPU", 1),)),
     Reglage("occlusion", "Accio.Graphics", "SSAO",
             "Ombres de contact",
-            "Assombrit les recoins, le pied des murs et le contact des objets : "
-            "le décor gagne en relief (occlusion ambiante). Les allumer éteint "
-            "l'anticrénelage (MSAA).",
+            "Assombrit les recoins et le contact des objets : le décor gagne en relief.",
             defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True,
             depend_de="lissage", exclut="anticrenelage"),
+    # « Expérimental » dans l'ini livré : agrandit aussi les reflets.
+    Reglage("ombres_nettes", "Accio.Graphics", "ShadowMapScale",
+            "Ombres plus nettes",
+            "Affine les ombres portées ; expérimental, agrandit aussi les reflets.",
+            choix=(1, 2, 4), zero="D'origine", format_choix="×{}",
+            onglet="image", cout=(("GPU", 2), ("RAM", 1))),
     Reglage("halo", "Accio.Graphics", "Bloom",
             "Halo lumineux",
-            "Les lumières vives (fenêtres, torches, sorts) débordent doucement "
-            "autour d'elles.", defaut=False, onglet="image", cout=(("GPU", 1),),
-            depend_de="lissage"),
+            "Les lumières vives débordent doucement autour d'elles.",
+            defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     Reglage("rayons", "Accio.Graphics", "GodRays",
             "Rayons de lumière",
-            "Des rayons partent des sources de lumière fortes, comme le soleil "
-            "à travers les arbres.", defaut=False, onglet="image", cout=(("GPU", 1),),
-            depend_de="lissage"),
+            "Des rayons partent des lumières fortes, comme le soleil dans les arbres.",
+            defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     Reglage("couleurs", "Accio.Graphics", "ColorGrading",
             "Couleurs retravaillées",
-            "Active la vivacité et le contraste ci-dessous, en épargnant les "
-            "visages. Éteint : les couleurs d'origine du jeu.",
+            "Active la vivacité et le contraste, en épargnant les visages.",
             defaut=False, onglet="image", se_voit=True, depend_de="lissage"),
     Reglage("vivacite", "Accio.Graphics", "Vibrance",
             "Vivacité des couleurs",
-            "Ravive les couleurs ternes sans saturer celles qui le sont déjà. "
-            "Seulement avec « Couleurs retravaillées ».",
+            "Ravive les couleurs ternes sans saturer les autres.",
             choix=tuple(v for v, _ in VIVACITES), zero="Aucune", etiquettes=VIVACITES,
             onglet="image", se_voit=True, depend_de="couleurs"),
     Reglage("contraste", "Accio.Graphics", "Contrast",
             "Contraste",
-            "Creuse l'écart entre zones claires et sombres. Seulement avec "
-            "« Couleurs retravaillées ».",
+            "Creuse l'écart entre zones claires et sombres.",
             choix=tuple(v for v, _ in CONTRASTES), zero="D'origine", etiquettes=CONTRASTES,
             onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
@@ -255,19 +325,16 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # Un choix d'artiste du jeu : allumé par défaut, comme livré.
     Reglage("brouillard", "Accio.Game", "DistanceFog",
             "Brouillard lointain",
-            "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : "
-            "collines et paysages nets et contrastés, la scène un peu plus sombre.",
+            "Le voile vert du décor au loin ; éteint, les paysages sont nets.",
             onglet="image", se_voit=True),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
-            "Affiche les images par seconde en haut à gauche. En jeu, F10 le "
-            "masque ou le remet.", defaut=False, onglet="perfs"),
+            "Les images par seconde en haut à gauche ; F10 le masque en jeu.",
+            defaut=False, onglet="perfs"),
     Reglage("panneau_perfs", "Accio.Overlay", "",
             "Panneau de performances",
-            "Temps par image et son graphe, processeur, carte graphique, "
-            "mémoire vidéo et vive, latence. En jeu, F11 lance un benchmark "
-            "et F11 à nouveau l'arrête ; il est enregistré dans le dossier "
-            "« benchmarks » du jeu.", defaut=False, onglet="perfs", cout=(("CPU", 1),)),
+            "Temps par image, processeur, carte graphique et mémoire ; F11 lance un benchmark.",
+            defaut=False, onglet="perfs", cout=(("CPU", 1),)),
     # HP6, vu en jeu le 2026-09-26 : son menu de langue s'ouvre sur la langue
     # de Windows, mais le jeu ne connaît qu'une variante de chaque langue — un
     # Windows en français de Belgique le faisait partir en ANGLAIS (le menu se
@@ -275,13 +342,35 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # sur Español. HP4 et HP5 ne demandent rien à Windows : pas pour eux.
     Reglage("langue_menu", "Accio.Game", "Language",
             "Langue au démarrage",
-            "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul "
-            "après quelques secondes. « Celle de Windows » corrige un défaut du jeu : "
-            "un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, "
-            "le faisait démarrer en anglais.",
+            "La langue du menu d'ouverture ; « Celle de Windows » corrige les Windows "
+            "belges, suisses, canadiens ou espagnols.",
             choix=tuple(v for v, _ in LANGUES_MENU), zero="Celle de Windows",
             noms_choix=LANGUES_MENU),
 )}
+
+# Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,
+# valeurs). Seulement ce qui COÛTE : le goût (couleurs, brouillard, netteté) et
+# l'expérimental (ombres) ne bougent pas quand on choisit un préréglage. Le MSAA
+# reste éteint partout : il exclut les ombres de contact, que les trois gardent
+# ou éteignent ensemble.
+PREREGLAGES = (
+    ("legere", "Légère",
+     "Pour un PC modeste ou un portable : effets de lumière éteints, contours lissés.",
+     {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
+      "surechantillonnage": 1, "filtrage": 4, "occlusion": False, "halo": False,
+      "rayons": False, "feuillage_lointain": False}),
+    ("equilibree", "Équilibrée",
+     "Tous les effets de lumière, sans suréchantillonnage.",
+     {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
+      "surechantillonnage": 1, "filtrage": 16, "occlusion": True, "halo": True,
+      "rayons": True, "feuillage_lointain": False}),
+    ("maximale", "Maximale",
+     "Tous les effets et l'image la plus fine (suréchantillonnage ×1,5), pour une "
+     "carte graphique récente.",
+     {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
+      "surechantillonnage": 1.5, "filtrage": 16, "occlusion": True, "halo": True,
+      "rayons": True, "feuillage_lointain": True}),
+)
 
 
 def allume(reglage: Reglage, valeur) -> bool:
@@ -337,19 +426,30 @@ def textes(reglage: Reglage) -> tuple[str, str]:
     return (tr(reglage.libelle).format(deplacement),
             tr(reglage.aide).format(deplacement, t["Accio"], t["Extremos"], t["MoveDown"]))
 
-# Réglages du correctif pas encore confirmés en jeu : écrits, pour que celui
-# qui les cherche comprenne qu'ils arrivent (même principe que la rubrique
-# « Affichage » verrouillée).
-A_VENIR = (
-    "Résolution",
-    "Format d'image",
-)
-
-
 def reglages_du_jeu(idents) -> tuple[Reglage, ...]:
     """Les réglages déclarés par le catalogue, connus de CE lanceur, dans l'ordre d'affichage."""
     voulus = set(idents or ())
     return tuple(r for r in REGLAGES.values() if r.ident in voulus)
+
+
+def prereglages_du_jeu(reglages) -> tuple[tuple[str, str, str, dict], ...]:
+    """Les préréglages réduits aux réglages que CE jeu déclare ; () s'il y en a trop peu.
+
+    Moins de trois réglages en commun, un préréglage ne résumerait rien : le
+    détail suffit.
+    """
+    presents = {r.ident for r in reglages}
+    reduits = tuple((ident, nom, texte, {k: v for k, v in valeurs.items() if k in presents})
+                    for ident, nom, texte, valeurs in PREREGLAGES)
+    return reduits if len(reduits[0][3]) >= 3 else ()
+
+
+def prereglage_courant(prereglages, valeurs: dict) -> str:
+    """L'identifiant du préréglage que portent `valeurs` (identifiant → valeur), "" sinon."""
+    for ident, _nom, _texte, voulues in prereglages:
+        if all(k in valeurs and valeurs[k] == v for k, v in voulues.items()):
+            return ident
+    return ""
 
 
 def chemin_ini(dossier_exe: Path) -> Path:
@@ -467,6 +567,12 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
         # Un mélange (quelques lignes à la main) se montre éteint et se signale.
         allumees = [_valeur(lignes, reglage.section, cle) not in (None, "0", "") for cle in _PANNEAU]
         return Etat(all(allumees), personnalise=any(allumees) and not all(allumees))
+    if reglage.ident == "resolution":
+        largeur, hauteur = (_valeur(lignes, reglage.section, cle) for cle in _RESOLUTION)
+        if largeur is None and hauteur is None:
+            return Etat(reglage.choix[0])
+        v = f"{(largeur or '').strip()}x{(hauteur or '').strip()}"
+        return Etat(v, personnalise=v not in reglage.choix)
     brut = _valeur(lignes, reglage.section, reglage.cle)
     if reglage.noms_choix:
         # Le correctif compare sans tenir compte de la casse.
@@ -559,6 +665,8 @@ def _cles(reglage: Reglage) -> tuple[str, ...]:
         return tuple(a.cle for a in ACTIONS)
     if reglage.ident == "panneau_perfs":
         return _PANNEAU
+    if reglage.ident == "resolution":
+        return _RESOLUTION
     return (reglage.cle,)
 
 
@@ -595,6 +703,12 @@ def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
     elif reglage.ident == "panneau_perfs":
         for cle in _PANNEAU:
             if not _poser(lignes, reglage.section, cle, "1" if valeur else "0"):
+                raise ValueError(f"section [{reglage.section}] absente")
+    elif reglage.ident == "resolution":
+        if valeur not in reglage.choix:
+            raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+        for cle, nombre in zip(_RESOLUTION, valeur.split("x")):
+            if not _poser(lignes, reglage.section, cle, nombre):
                 raise ValueError(f"section [{reglage.section}] absente")
     elif reglage.choix:
         if valeur not in reglage.choix:

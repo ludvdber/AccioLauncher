@@ -183,9 +183,6 @@ class TestPerformances:
         assert "FXAA=1" in ini.read_bytes().decode().split("\r\n")
         assert rc.lire(ini, r) == rc.Etat(True)
 
-    def test_retires_de_la_liste_a_venir(self):
-        assert not any("FPS" in x for x in rc.A_VENIR)
-
 
 class TestAnticrenelage:
     """Le MSAA : un réglage à CHOIX, par le même mécanisme que la limite d'images."""
@@ -496,7 +493,30 @@ class TestFenetre:
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "arriere_plan"]), _manager(tmp_path))
         textes = _textes(dlg)
         assert "GPU +++" in textes and tr("Se voit") in textes
-        assert tr("Réglables à vos risques").split(" :")[0] in textes
+        assert tr("rouge extrême") in textes   # la légende des couleurs
+
+    def test_la_couleur_suit_le_niveau(self, qtbot, tmp_path):
+        """Vert faible, orange moyen, rouge extrême (Ludo, 2026-09-30)."""
+        from PyQt6.QtWidgets import QLabel
+
+        from src.ui.game_settings_dialog import _COULEURS_COUT
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "filtrage", "anticrenelage"]),
+                        _manager(tmp_path))
+        style = {lb.text(): lb.styleSheet() for lb in dlg.findChildren(QLabel)}
+        assert _COULEURS_COUT[1] in style["GPU +"]
+        assert _COULEURS_COUT[2] in style["GPU ++"]
+        assert _COULEURS_COUT[3] in style["GPU +++"]
+        assert len(set(_COULEURS_COUT.values())) == 3
+
+    def test_chaque_reglage_dit_ce_qu_il_fait_en_une_phrase(self):
+        """« Une description concise de ce que fait chaque paramètre » : une phrase, courte."""
+        for r in rc.REGLAGES.values():
+            _libelle, aide = rc.textes(r)
+            assert aide, r.ident
+            assert len(aide) <= 125, f"{r.ident} : {len(aide)} caractères"
+            assert aide.count(". ") == 0, f"{r.ident} : plus d'une phrase"
 
     def test_sans_reglage_declare_la_rubrique_reste_verrouillee(self, qtbot, tmp_path):
         dlg = _dialogue(qtbot, _jeu(tmp_path, []), _manager(tmp_path))
@@ -653,3 +673,157 @@ class TestDependances:
         assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True
         assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 0
         assert choix.currentData() == 0
+
+
+INI_JEU = INI_V2 + "\r\n".join(["[Accio.Game]", "Width=1920", "Height=1080", "AspectRatio=16:9", ""])
+
+
+class TestAffichage:
+    """Résolution, mode, format : ouverts au lanceur le 2026-09-30, à voir en jeu."""
+
+    def test_la_resolution_se_lit_et_s_ecrit_sur_ses_deux_cles(self, tmp_path):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(INI_JEU.encode("ascii"))
+        r = rc.REGLAGES["resolution"]
+        assert rc.lire(ini, r) == rc.Etat("1920x1080")
+        rc.ecrire(ini, r, "2560x1440")
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert "Width=2560" in lignes and "Height=1440" in lignes
+        assert rc.lire(ini, r) == rc.Etat("2560x1440")
+
+    def test_une_resolution_absente_est_celle_du_jeu_livre(self, ini):
+        r = rc.REGLAGES["resolution"]
+        assert rc.lire(ini, r) == rc.Etat("640x480")
+        assert rc.libelle_choix(r, "640x480") == tr("D'origine (640×480)")
+
+    def test_une_resolution_hors_liste_est_montree_pas_ecrasee(self, tmp_path):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(INI_JEU.replace("Width=1920", "Width=3440").replace(
+            "Height=1080", "Height=1440").encode("ascii"))
+        assert rc.lire(ini, rc.REGLAGES["resolution"]) == rc.Etat("3440x1440", personnalise=True)
+        with pytest.raises(ValueError):
+            rc.ecrire(ini, rc.REGLAGES["resolution"], "3440x1440")
+
+    def test_la_remise_a_l_origine_couvre_les_deux_cles(self, tmp_path):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(INI_JEU.encode("ascii"))
+        r = rc.REGLAGES["resolution"]
+        rc.ecrire(ini, r, "1280x720")
+        rc.remettre_origine(ini, [r])
+        assert rc.lire(ini, r) == rc.Etat("1920x1080")
+
+    def test_le_format_est_un_choix_textuel(self, tmp_path):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(INI_JEU.encode("ascii"))
+        r = rc.REGLAGES["format_image"]
+        assert rc.lire(ini, r) == rc.Etat("16:9")
+        rc.ecrire(ini, r, "21:9")
+        assert "AspectRatio=21:9" in ini.read_bytes().decode().split("\r\n")
+
+    def test_le_mode_d_affichage_se_nomme(self):
+        r = rc.REGLAGES["mode_fenetre"]
+        assert rc.libelle_choix(r, 1) == tr("Plein écran sans bordure")
+        assert rc.libelle_choix(r, 3) == tr("Fenêtre redimensionnable")
+
+
+class TestPrereglages:
+    def test_reduits_aux_reglages_du_jeu(self):
+        hp5 = rc.reglages_du_jeu(["lissage", "surechantillonnage", "filtrage", "occlusion", "halo"])
+        prereglages = rc.prereglages_du_jeu(hp5)
+        assert [p[0] for p in prereglages] == ["legere", "equilibree", "maximale"]
+        for _i, _n, _t, valeurs in prereglages:
+            assert set(valeurs) <= {r.ident for r in hp5}
+            assert "anticrenelage" not in valeurs   # HP5 n'a pas de MSAA
+
+    def test_trop_peu_de_reglages_pas_de_prereglage(self):
+        assert rc.prereglages_du_jeu(rc.reglages_du_jeu(["lissage", "couleurs"])) == ()
+
+    def test_le_courant_se_reconnait(self):
+        prereglages = rc.prereglages_du_jeu(rc.reglages_du_jeu(
+            ["lissage", "surechantillonnage", "filtrage", "occlusion"]))
+        maximale = dict(next(p[3] for p in prereglages if p[0] == "maximale"))
+        assert rc.prereglage_courant(prereglages, maximale) == "maximale"
+        assert rc.prereglage_courant(prereglages, {**maximale, "filtrage": 8}) == ""
+
+    def test_aucun_prereglage_ne_contredit_une_exclusion(self):
+        """Le MSAA et les ombres de contact s'excluent : un préréglage ne pose pas les deux."""
+        for _i, _n, _t, valeurs in rc.PREREGLAGES:
+            assert not (valeurs.get("anticrenelage") and valeurs.get("occlusion"))
+
+    def test_chaque_valeur_est_proposee_par_son_reglage(self):
+        for _i, _n, _t, valeurs in rc.PREREGLAGES:
+            for ident, valeur in valeurs.items():
+                r = rc.REGLAGES[ident]
+                assert (valeur in r.choix) if r.choix else isinstance(valeur, bool), ident
+
+
+class TestFenetreQualite:
+    """Variante B (Ludo, 2026-09-30) : préréglages en tête, le détail replié."""
+
+    IDENTS = ["lissage", "surechantillonnage", "filtrage", "occlusion", "halo", "rayons"]
+
+    def _fenetre(self, qtbot, tmp_path):
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
+        return (_dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ["resolution"]), _manager(tmp_path)),
+                dossier / "d3d9.ini")
+
+    def test_le_detail_est_replie_et_se_deplie(self, qtbot, tmp_path):
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        assert dlg._detail.isHidden()
+        assert dlg._lien_detail.text() == tr("Régler chaque effet ({})").format(len(self.IDENTS))
+        hauteur = dlg.height()
+        dlg._lien_detail.click()
+        assert not dlg._detail.isHidden()
+        assert dlg.height() >= hauteur
+        assert dlg._lien_detail.text() == tr("Masquer le détail")
+
+    def test_l_affichage_reste_visible(self, qtbot, tmp_path):
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        assert not dlg._detail.isAncestorOf(dlg._controles["resolution"])
+        assert dlg._controles["resolution"].currentData() == "1920x1080"
+
+    def test_un_prereglage_ecrit_ses_valeurs_et_se_coche(self, qtbot, tmp_path):
+        dlg, ini = self._fenetre(qtbot, tmp_path)
+        dlg._boutons_prereglage["legere"].click()
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
+        assert rc.lire(ini, rc.REGLAGES["filtrage"]).valeur == 4
+        assert dlg._controles["filtrage"].currentData() == 4
+        assert dlg._boutons_prereglage["legere"].isChecked()
+        dlg._boutons_prereglage["maximale"].click()
+        assert rc.lire(ini, rc.REGLAGES["surechantillonnage"]).valeur == 1.5
+        assert dlg._boutons_prereglage["maximale"].isChecked()
+
+    def test_retoucher_un_effet_passe_en_sur_mesure(self, qtbot, tmp_path):
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        from PyQt6.QtCore import Qt
+        dlg._boutons_prereglage["equilibree"].click()
+        dlg._lien_detail.click()
+        qtbot.mouseClick(dlg._controles["halo"], Qt.MouseButton.LeftButton)
+        assert dlg._boutons_prereglage[""].isChecked()
+        assert dlg._texte_prereglage.text() == tr("Vos propres réglages, effet par effet.")
+
+    def test_sur_mesure_ouvre_le_detail_sans_rien_ecrire(self, qtbot, tmp_path):
+        dlg, ini = self._fenetre(qtbot, tmp_path)
+        avant = ini.read_bytes()
+        dlg._boutons_prereglage[""].click()
+        assert not dlg._detail.isHidden()
+        assert ini.read_bytes() == avant
+
+
+class TestCatalogueEmbarque:
+    def test_chaque_reglage_declare_est_connu(self):
+        """Un identifiant inconnu serait ignoré en silence : au catalogue embarqué, c'est une faute."""
+        import json
+        data = json.loads((Path(__file__).parent.parent / "src/data/games.json").read_text(encoding="utf-8"))
+        for jeu in data["games"]:
+            for ident in jeu.get("fix_settings", ()):
+                assert ident in rc.REGLAGES, f"{jeu['id']} : {ident}"
+
+    def test_hp7b_n_a_pas_de_format(self):
+        """Son ini n'a pas d'AspectRatio : rien ne lirait la clé."""
+        import json
+        data = json.loads((Path(__file__).parent.parent / "src/data/games.json").read_text(encoding="utf-8"))
+        hp7b = next(j for j in data["games"] if j["id"] == "hp7b")
+        assert "format_image" not in hp7b["fix_settings"]

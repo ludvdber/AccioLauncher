@@ -718,7 +718,19 @@
         "rayons",
         "couleurs",
         "vivacite",
-        "contraste"
+        "contraste",
+        "resolution",
+        "mode_fenetre",
+        "format_image",
+        "champ_vision",
+        "ecran_principal",
+        "premier_plan",
+        "synchro_verticale",
+        "manette_playstation_hp4",
+        "nettete",
+        "textures_lointaines",
+        "feuillage_lointain",
+        "ombres_nettes"
       ],
       "dll_overrides": [
         "d3d9",
@@ -875,7 +887,21 @@
         "rayons",
         "couleurs",
         "vivacite",
-        "contraste"
+        "contraste",
+        "resolution",
+        "mode_fenetre",
+        "format_image",
+        "champ_vision",
+        "ecran_principal",
+        "premier_plan",
+        "synchro_verticale",
+        "manette_playstation",
+        "vibrations",
+        "brouillard",
+        "nettete",
+        "textures_lointaines",
+        "feuillage_lointain",
+        "ombres_nettes"
       ],
       "dll_overrides": [
         "d3d9"
@@ -1073,7 +1099,20 @@
         "rayons",
         "couleurs",
         "vivacite",
-        "contraste"
+        "contraste",
+        "resolution",
+        "mode_fenetre",
+        "format_image",
+        "champ_vision",
+        "ecran_principal",
+        "premier_plan",
+        "synchro_verticale",
+        "manette_playstation",
+        "vibrations",
+        "nettete",
+        "textures_lointaines",
+        "feuillage_lointain",
+        "ombres_nettes"
       ],
       "dll_overrides": [
         "d3d9"
@@ -1206,6 +1245,19 @@
       },
       "dll_overrides": [
         "d3d9"
+      ],
+      "fix_settings": [
+        "arriere_plan",
+        "limite_fps",
+        "synchro_verticale",
+        "compteur_fps",
+        "panneau_perfs",
+        "mode_fenetre",
+        "format_image",
+        "ecran_principal",
+        "premier_plan",
+        "manette_playstation",
+        "vibrations"
       ],
       "cover_image": "hp7a_cover.jpg",
       "tags": [
@@ -1368,6 +1420,18 @@
       },
       "dll_overrides": [
         "d3d9"
+      ],
+      "fix_settings": [
+        "arriere_plan",
+        "limite_fps",
+        "synchro_verticale",
+        "compteur_fps",
+        "panneau_perfs",
+        "mode_fenetre",
+        "ecran_principal",
+        "premier_plan",
+        "manette_playstation",
+        "vibrations"
       ],
       "cover_image": "hp7b_cover.jpg",
       "tags": [
