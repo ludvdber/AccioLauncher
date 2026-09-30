@@ -249,10 +249,10 @@ class TestImportParRegedit:
         assert len(vus["reg"]) == 1 and "WOW6432Node" in vus["reg"][0]
         assert '"Locale"="fr"' in vus["reg"][0]
 
-    def test_pas_de_mise_a_jour_d_umu_pendant_que_la_fenetre_attend(self, monkeypatch):
+    def test_l_import_se_fait_dans_le_prefixe_du_lanceur(self, monkeypatch):
+        """Le runtime d'umu, que la fenêtre n'attend pas : `test_linux_retours.py`."""
         vus = self._espion(monkeypatch)
         game_registry._ecrire_par_wine("HKLM", CLE, {"Locale": "fr"}, 32)
-        assert vus["env"]["UMU_RUNTIME_UPDATE"] == "0"
         assert vus["env"]["WINEPREFIX"] == str(compat.prefixe("wine"))
 
     def test_la_barriere_anti_injection_reste_la_meme(self, monkeypatch):

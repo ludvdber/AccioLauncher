@@ -171,13 +171,23 @@ def nom_prerequis(identifiant: str) -> str:
     return noms.get(identifiant, tr("Un composant Windows requis"))
 
 
+def _preparation_bloque(view: "GameDetailView") -> bool:
+    """Refuse, d'un toast, tant que Wine se prépare. True si c'est refusé.
+
+    Toute porte qui lance une opération de jeu passe par ici, AVANT sa question
+    éventuelle : la barre du bas montre la préparation jusqu'à sa fin, et une
+    opération lancée pendant ce temps y écrirait sa progression, avec un
+    « Annuler » qui arrêterait la préparation et non l'opération. Filet :
+    `test_toute_porte_d_operation_passe_par_la_garde`.
+    """
+    if not view.preparation_en_cours:
+        return False
+    view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+    return True
+
+
 def on_download(view: "GameDetailView", version: GameVersion | None = None) -> None:
-    if view.game is None:
-        return
-    if view.preparation_en_cours:
-        # La barre du bas montre la préparation jusqu'à sa fin ; un
-        # téléchargement lancé en même temps n'aurait nulle part où s'afficher.
-        view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+    if view.game is None or _preparation_bloque(view):
         return
     if view._ops.is_busy:
         active = view._ops.active_game
@@ -226,10 +236,9 @@ def on_cancel_download(view: "GameDetailView") -> None:
 def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
     if view.game is None:
         return
-    if view.preparation_en_cours:
-        # Deux winetricks dans le même préfixe se marcheraient dessus, et le
-        # jeu partirait sans ce qu'on est justement en train d'installer.
-        view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+    # Deux winetricks dans le même préfixe se marcheraient dessus, et le
+    # jeu partirait sans ce qu'on est justement en train d'installer.
+    if _preparation_bloque(view):
         return
     en_cours = view.partie_en_cours()
     if en_cours:
@@ -336,10 +345,7 @@ def proposer_preparation(view: "GameDetailView", game: GameData | None,
     et umu peut télécharger Proton la première fois. On dit ce qui va se
     passer, on laisse décider, et on ne le fait que sur un clic.
     """
-    if game is None:
-        return
-    if view.preparation_en_cours:
-        view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+    if game is None or _preparation_bloque(view):
         return
     manquants = prerequis_manquants(("vcredist_x86", *game.requires))
     verbes = [VERBES_WINETRICKS[m] for m in manquants if m in VERBES_WINETRICKS]
@@ -427,7 +433,7 @@ def on_uninstall(view: "GameDetailView") -> None:
 
 
 def on_update_clicked(view: "GameDetailView") -> None:
-    if view.game is None:
+    if view.game is None or _preparation_bloque(view):
         return
     ver = view.game.get_version(view.game.recommended_version)
     if ver is None:
@@ -445,7 +451,7 @@ def on_update_clicked(view: "GameDetailView") -> None:
 
 
 def on_switch_version(view: "GameDetailView", game_id: str, version: str) -> None:
-    if view.game is None or view.game.id != game_id:
+    if view.game is None or view.game.id != game_id or _preparation_bloque(view):
         return
     ver = view.game.get_version(version)
     if ver is not None:
@@ -462,7 +468,7 @@ def on_versions_clicked(view: "GameDetailView") -> None:
 
 def on_repair(view: "GameDetailView") -> None:
     """Vérifie / répare un jeu installé : re-téléchargement (SHA-256 si dispo) + réinstallation."""
-    if view.game is None or view._ops.is_busy:
+    if view.game is None or view._ops.is_busy or _preparation_bloque(view):
         return
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Vérifier / réparer les fichiers"),
@@ -534,7 +540,7 @@ def on_import_existing(view: "GameDetailView") -> None:
 
 
 def on_install_local(view: "GameDetailView") -> None:
-    if view.game is None or view._ops.is_busy:
+    if view.game is None or view._ops.is_busy or _preparation_bloque(view):
         return
     path, _ = QFileDialog.getOpenFileName(
         view, tr("Sélectionner une archive de jeu"), "", "Archives (*.7z *.zip)",

@@ -692,8 +692,15 @@ def assainir_environnement() -> None:
             os.environ.pop(cle, None)
 
 
-def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None) -> dict[str, str]:
-    """Environnement d'un processus lancé dans le préfixe."""
+def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None, *,
+                  mise_a_jour_runtime: bool = True) -> dict[str, str]:
+    """Environnement d'un processus lancé dans le préfixe.
+
+    `mise_a_jour_runtime=False` : un processus que la fenêtre attend (l'import
+    d'un `.reg`) ne laisse pas umu vérifier son runtime, SANS consommer la
+    vérification de la semaine — elle reste due à la prochaine partie. Demandée
+    puis refusée, elle aurait sauté sept jours (revue du 2026-09-30).
+    """
     env = environnement_hote(base)
     env["WINEPREFIX"] = str(pfx)
     if trouve.famille == "umu":
@@ -702,7 +709,7 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None) -> dict[
         env.setdefault("GAMEID", "umu-default")
         if trouve.proton and not env.get("PROTONPATH"):
             env["PROTONPATH"] = trouve.proton
-        if not mise_a_jour_runtime_permise():
+        if not (mise_a_jour_runtime and mise_a_jour_runtime_permise()):
             env.setdefault("UMU_RUNTIME_UPDATE", "0")
     else:
         env.setdefault("WINEDEBUG", "-all")

@@ -100,6 +100,30 @@ class TestRuntimeUmuUneFoisParSemaine:
         env = compat.environnement(self.LANCEUR, tmp_path, base={"UMU_RUNTIME_UPDATE": "1"})
         assert env["UMU_RUNTIME_UPDATE"] == "1"
 
+    def test_un_import_de_registre_ne_prend_pas_la_verification_de_la_semaine(
+            self, monkeypatch, tmp_path):
+        """Revue du 2026-09-30 : l'import d'un .reg (changer la langue d'un jeu)
+        consommait la vérification de la semaine sans la faire — UMU_RUNTIME_UPDATE=0
+        posé juste après —, et la partie suivante n'en avait plus pour sept jours."""
+        from src.core import game_registry
+        umu = tmp_path / "umu"
+        _runtime_installe(umu)
+        monkeypatch.setattr(compat, "dossier_umu", lambda: umu)
+        lanceur = compat.Lanceur("umu", "/nonexistent/accio-test/umu-run")
+        monkeypatch.setattr(compat, "lanceur", lambda: lanceur)
+        pfx = compat.prefixe("umu")
+        (pfx / "drive_c").mkdir(parents=True)
+        (pfx / "system.reg").write_text("WINE REGISTRY Version 2\n\n#arch=win64\n",
+                                        encoding="utf-8")
+        vus = []
+        monkeypatch.setattr(game_registry.subprocess, "run",
+                            lambda commande, **kw: vus.append(kw["env"]))
+        assert game_registry._ecrire_par_wine(
+            "HKLM", "SOFTWARE\\Electronic Arts\\HP7", {"Locale": "fr"}, 32) is True
+        game_registry._nettoyer_reg()
+        assert vus[0]["UMU_RUNTIME_UPDATE"] == "0"       # la fenêtre attend regedit
+        assert "UMU_RUNTIME_UPDATE" not in compat.environnement(lanceur, pfx, base={})
+
 
 class TestRetraitDiffere:
     def test_sous_linux_la_fenetre_attend_le_jeu(self, qtbot, monkeypatch):

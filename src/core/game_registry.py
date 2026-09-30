@@ -344,9 +344,8 @@ def _ecrire_par_wine(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
         fichier.write_text(construire_reg(ruche, cle, valeurs,
                                           compat.vue_effective(pfx, ruche, vue)),
                            encoding="utf-16")
-        env = compat.environnement(lanceur, pfx)
         # La fenêtre attend : pas de mise à jour du runtime d'umu maintenant.
-        env.setdefault("UMU_RUNTIME_UPDATE", "0")
+        env = compat.environnement(lanceur, pfx, mise_a_jour_runtime=False)
         commande = compat.commande_regedit(lanceur, pfx, compat.chemin_windows(fichier, pfx))
         log.info("Import du registre dans le préfixe : %s", " ".join(commande))
         # Lanceur trouvé par chemin ABSOLU (`compat._trouver`), fichier .reg

@@ -169,6 +169,10 @@ def _position(nom: str) -> int | None:
 def touches(ini: Path) -> dict[str, tuple[str, ...]]:
     """action → touches choisies (vide : la touche d'origine du jeu). Lève OSError."""
     lignes, _ = rc._lire(ini)
+    return _touches_de(lignes)
+
+
+def _touches_de(lignes) -> dict[str, tuple[str, ...]]:
     choisies = {}
     for action in ACTIONS:
         brut = rc._valeur(lignes, SECTION, action.cle)
@@ -204,7 +208,7 @@ def attribuer(ini: Path, action: str, nom: str) -> tuple[str, ...]:
     if canon is None or action not in PAR_CLE:
         raise ValueError(f"touche {nom!r} pour {action!r}")
     lignes, fin = rc._lire(ini)
-    avant = touches(ini)
+    avant = _touches_de(lignes)
     rc._garder_origine(ini)
     perdues = []
     for autre, noms in avant.items():

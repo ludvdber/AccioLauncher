@@ -396,3 +396,61 @@ class TestLesDialogues:
         vue.manager.launch_game = lambda *a, **k: pytest.fail("lancé pendant winetricks")
         gdh.on_play(vue)
         assert len(vue.notes) == 1
+
+
+class _OpsInterdites:
+    """Des opérations de jeu au repos, qu'aucune porte ne doit lancer."""
+
+    is_busy = False
+    active_game = None
+
+    def __getattr__(self, nom):
+        pytest.fail(f"opération « {nom} » lancée pendant la préparation de Wine")
+
+
+class TestAucuneOperationPendantUnePreparation:
+    """Revue du 2026-09-30 : la barre du bas montre la préparation jusqu'à sa fin.
+    Seuls TÉLÉCHARGER et JOUER étaient refusés ; mettre à jour, changer de version,
+    réparer ou installer une archive locale écrivaient leur progression dans cette
+    barre, dont « Annuler » aurait arrêté la préparation et non l'opération."""
+
+    @pytest.mark.parametrize("porte", [
+        lambda gdh, vue: gdh.on_download(vue),
+        lambda gdh, vue: gdh.on_update_clicked(vue),
+        lambda gdh, vue: gdh.on_switch_version(vue, vue.game.id, "1.0"),
+        lambda gdh, vue: gdh.on_repair(vue),
+        lambda gdh, vue: gdh.on_install_local(vue),
+    ], ids=["telecharger", "mettre_a_jour", "changer_de_version", "reparer", "archive_locale"])
+    def test_refusee_avant_toute_question(self, monkeypatch, jeu_hp7a, porte):
+        from src.ui import game_detail_handlers as gdh
+        monkeypatch.setattr(gdh, "_boite", lambda *a, **k: pytest.fail("question posée"))
+        # Le nom du MODULE, pas la classe Qt (règle 12 de CLAUDE.md).
+        monkeypatch.setattr(gdh, "QFileDialog", SimpleNamespace(
+            getOpenFileName=lambda *a, **k: pytest.fail("archive demandée")))
+        vue = _Vue(jeu_hp7a, en_cours=True)
+        vue._ops = _OpsInterdites()
+        porte(gdh, vue)
+        assert len(vue.notes) == 1
+
+    def test_toute_porte_d_operation_passe_par_la_garde(self):
+        """Une porte ajoutée demain sans la garde referait le défaut, et aucun
+        test de comportement ne la connaîtrait : balayage de l'AST."""
+        import ast
+        from pathlib import Path
+        source = Path(__file__).parents[1] / "src" / "ui" / "game_detail_handlers.py"
+        arbre = ast.parse(source.read_text(encoding="utf-8"))
+        operations = {"download", "switch_version", "repair", "install"}
+        portes, sans_garde = [], []
+        for fonction in arbre.body:
+            if not isinstance(fonction, ast.FunctionDef):
+                continue
+            appels = [n.func for n in ast.walk(fonction) if isinstance(n, ast.Call)]
+            if not any(isinstance(f, ast.Attribute) and f.attr in operations
+                       and isinstance(f.value, ast.Attribute) and f.value.attr == "_ops"
+                       for f in appels):
+                continue
+            portes.append(fonction.name)
+            if not any(isinstance(f, ast.Name) and f.id == "_preparation_bloque" for f in appels):
+                sans_garde.append(fonction.name)
+        assert len(portes) >= 5, f"le balayage ne voit plus les portes : {portes}"
+        assert not sans_garde
