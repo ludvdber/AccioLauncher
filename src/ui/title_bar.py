@@ -124,6 +124,13 @@ class TitleBar(QWidget):
                 self._window.move(new_x, 0)
                 self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
             else:
+                # Sous Wayland, `move()` est ignoré : seul le compositeur
+                # déplace une fenêtre. `startSystemMove` lui passe la main
+                # (X11 et Windows l'acceptent aussi) ; repli manuel s'il refuse.
+                poignee = self._window.windowHandle()
+                if poignee is not None and poignee.startSystemMove():
+                    self._drag_pos = None
+                    return
                 self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:

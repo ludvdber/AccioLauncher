@@ -210,3 +210,16 @@ pas lire Python 3.14, pas de pile relevée.
   (menu des applications) et sa copie sur le Bureau, icône 256 px extraite de `assets/accio_launcher.ico` dans
   `~/.local/share/icons/hicolor/256x256/apps/`, `StartupWMClass=AccioLauncher`. Il vise
   `~/Downloads/AccioLauncher-x86_64.appimage` : si l'AppImage est déplacée, corriger la ligne `Exec`.
+
+## Complément (après-midi)
+
+- **C, HP6** : pas reproduit. Nouvelle partie lancée par umu (GE-Proton10-34), son coupé : la cinématique du
+  serment joue jusqu'au bout sans toucher au clavier, puis la partie démarre ; Meta pendant le jeu → le correctif
+  journalise `another program in front, the game is not told` puis `back in front`, le jeu continue. Dans
+  l'ancien journal, en revanche, la cadence tombe à ~3 images/s (images 12062 → 13006 en 313 s) avant la fin :
+  c'est là que le gel a eu lieu. Journaux : `~/Accio-essais/hp6-d3d9-ancien.log`, `hp6-d3d9-essai.log`.
+  Sauvegardes copiées avant, remises après.
+- **D** : trouvé une cause certaine pour le déplacement : sous Wayland `move()` est ignoré, la barre de titre
+  ne déplaçait donc pas la fenêtre. `TitleBar.mousePressEvent` passe maintenant par `startSystemMove`
+  (repli manuel s'il refuse) ; test `tests/test_title_bar_wayland.py`. L'agrandissement n'a pas été revu.
+- AppImage reconstruite (`build.sh`, sortie 0) et copiée dans `~/Téléchargements/` pour le raccourci : pas relancée.
