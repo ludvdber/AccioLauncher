@@ -6,6 +6,14 @@ relève à nouveau. Celle qui a changé est celle dans laquelle on vient de
 jouer : elle reçoit la partie (date et durée). On ne lit RIEN du contenu des
 fichiers — seulement leurs dates — et on n'y écrit jamais.
 
+**Une exception, déclarée par le catalogue : les emplacements rangés DANS un
+fichier** (`Sauvegardes.emplacements`). HP4 garde ses trois parties dans un
+seul `HPGOF` (vu à l'écran « Sélectionnez un emplacement », 2026-09-30) : ses
+dates de fichier ne disent pas QUELLE partie a bougé. On lit alors son EN-TÊTE,
+et seulement lui — la date et l'heure que le jeu y écrit pour chaque emplacement
+— pour en faire trois sauvegardes distinctes, `HPGOF#1` à `#3`. Toujours en
+lecture seule.
+
 **Un fichier à part, `_Launcher/sauvegardes.json`**, et non un champ de
 `sessions.json` : le journal des sessions reste la seule source du temps de
 jeu. Une attribution perdue, fausse ou effacée ne peut donc jamais faire
@@ -166,10 +174,66 @@ def releve(spec: Sauvegardes | None) -> dict[str, Etat]:
             cree = getattr(st, "st_birthtime", None)
             if cree is None and sys.platform == "win32":
                 cree = st.st_ctime       # sous Windows, c'est la création
-            etats[rel] = Etat(modifie=st.st_mtime, cree=cree)
+            lire = _EMPLACEMENTS.get(spec.emplacements)
+            if lire is None:
+                etats[rel] = Etat(modifie=st.st_mtime, cree=cree)
+                continue
+            for n, ecrit in lire(_entete(chemin)):
+                # Sans date lisible, celle du fichier : l'emplacement existe,
+                # et c'est le mieux qu'on sache de lui.
+                etats[f"{rel}#{n}"] = Etat(modifie=ecrit or st.st_mtime, cree=None)
     except (OSError, ValueError) as exc:
         log.debug("Relevé des sauvegardes impossible : %s", exc)
     return etats
+
+
+# ─── Emplacements rangés dans un fichier ───
+
+_TAILLE_ENTETE = 0x220
+
+
+def _entete(chemin: Path) -> bytes:
+    """Les premiers octets seulement : l'en-tête suffit, le reste n'est pas lu."""
+    try:
+        with open(chemin, "rb") as f:
+            return f.read(_TAILLE_ENTETE)
+    except OSError:
+        return b""
+
+
+def _texte(entete: bytes, debut: int, taille: int) -> str:
+    return entete[debut:debut + taille].split(b"\0", 1)[0].decode("ascii", "replace")
+
+
+def emplacements_hp4(entete: bytes) -> list[tuple[int, float | None]]:
+    """HP4 : (numéro, horodatage écrit par le jeu) de chaque emplacement OCCUPÉ.
+
+    Relevé sur une vraie sauvegarde (2026-09-30) : magie `20CM`, puis trois
+    fiches de 0xAC octets. Dans chacune, la date « 28/09/2026 » à +0x6C, l'heure
+    « 12:23:58 » à +0x8C, et deux entiers à +0xAC (classement, niveau) qui
+    valent -1 et -1 pour un emplacement vide — c'est ce qu'affiche le jeu
+    (« Vide »). Tout écart de format rend une liste vide, jamais une exception :
+    le jeu se lance quand même, les statistiques n'affichent rien de faux.
+    """
+    if len(entete) < _TAILLE_ENTETE or entete[:4] != b"20CM":
+        return []
+    trouves = []
+    for k in range(3):
+        base = 0x10 + k * 0xAC
+        classement = int.from_bytes(entete[base + 0xAC:base + 0xB0], "little", signed=True)
+        if classement < 0:
+            continue
+        jour = _texte(entete, base + 0x6C, 16)
+        heure = _texte(entete, base + 0x8C, 16)
+        try:
+            ecrit = datetime.strptime(f"{jour} {heure}", "%d/%m/%Y %H:%M:%S").timestamp()
+        except (ValueError, OverflowError, OSError):
+            ecrit = None
+        trouves.append((k + 1, ecrit))
+    return trouves
+
+
+_EMPLACEMENTS = {"hp4": emplacements_hp4}
 
 
 def modifiee(avant: dict[str, Etat], apres: dict[str, Etat]) -> str | None:
@@ -189,7 +253,14 @@ def numero(rel: str, spec: Sauvegardes, nb_fichiers: int) -> int | None:
     → 1 si c'est « Slot » qui porte le numéro à partir de 1. Un jeu à
     sauvegarde unique (HP5 à HP7) n'a pas de numéro : « Emplacement 1 » sur
     une seule carte laisserait croire qu'il en existe d'autres.
+
+    Un emplacement lu dans un fichier (`HPGOF#2`) porte son numéro après le
+    « # » : le jeu en montre toujours trois, donc « Emplacement 2 » est vrai
+    même seul.
     """
+    if "#" in rel:
+        n = rel.rsplit("#", 1)[1]
+        return int(n) if n.isdigit() and int(n) >= 1 else None
     if nb_fichiers <= 1 and "*" not in spec.fichiers:
         return None
     trouve = re.search(r"\d+", rel)

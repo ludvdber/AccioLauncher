@@ -633,6 +633,15 @@ class Sauvegardes:
     fichiers: str
     exclure: tuple[str, ...] = ()
     premier: int = 0
+    # Les emplacements rangés DANS un seul fichier (« slots » au catalogue) :
+    # HP4 garde ses trois parties dans `HPGOF`. Vide : un fichier = une sauvegarde.
+    emplacements: str = ""
+
+
+# Formats d'emplacements que ce launcher sait lire (`sauvegardes._EMPLACEMENTS`).
+# Un format inconnu est ignoré, pas le bloc : un launcher plus ancien que son
+# catalogue voit alors le fichier comme une seule sauvegarde, ce qui reste vrai.
+FORMATS_EMPLACEMENTS = ("hp4",)
 
 
 def _motif_sur(motif) -> bool:
@@ -706,10 +715,14 @@ def _parse_sauvegardes(data) -> "Sauvegardes | None":
         return None
     if not isinstance(premier, int) or isinstance(premier, bool) or not 0 <= premier <= 9:
         return None
+    emplacements = data.get("slots", "")
+    if emplacements not in FORMATS_EMPLACEMENTS:
+        emplacements = ""
     return Sauvegardes(racine=racine,
                        dossiers=tuple(d.replace("\\", "/") for d in dossiers),
                        fichiers=fichiers.replace("\\", "/"),
-                       exclure=tuple(exclure), premier=premier)
+                       exclure=tuple(exclure), premier=premier,
+                       emplacements=emplacements)
 
 
 @dataclass(frozen=True, slots=True)
