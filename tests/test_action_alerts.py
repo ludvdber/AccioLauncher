@@ -19,8 +19,18 @@ from src.ui.action_panel import ActionPanel  # noqa: E402
 
 @pytest.fixture
 def panel(qtbot, tmp_path, monkeypatch):
-    """ActionPanel sur un manager isolé, prérequis système réputés satisfaits."""
-    monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: True)
+    """ActionPanel sur un manager isolé, prérequis système réputés satisfaits.
+
+    TOUS, pas seulement le socle : le jeu retenu est le premier téléchargeable
+    (HP1), qui exige depuis le catalogue 0.35 DirectX de juin 2010 et Visual
+    C++ 2010. Le poste de Ludo les a, un runner GitHub ou un PC neuf non —
+    quatre tests y passaient au rouge (rejoué avec un SysWOW64 vide, 2026-09-30).
+    """
+    for verification in ("check_vcredist_x86", "check_vcredist_2005_x86",
+                         "check_vcredist_2008_x86", "check_vcredist_2010_x86"):
+        monkeypatch.setattr(f"src.core.system_checks.{verification}", lambda: True)
+    for verification in ("check_directx9", "check_dll_native"):
+        monkeypatch.setattr(f"src.core.system_checks.{verification}", lambda _nom: True)
     cfg = Config(install_path=tmp_path / "games",
                  cache_path=tmp_path / "games" / ".cache", langue="fr")
     manager = GameManager(cfg)

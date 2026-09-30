@@ -24,6 +24,16 @@ except ImportError:                                   # pragma: no cover
 
 log = logging.getLogger(__name__)
 
+# Écart minimal entre deux images montées en fond, en microsecondes. Les
+# bandes-annonces sont en 1080p à 60 images/s, et CHAQUE image coûtait sa
+# conversion en QImage (8 ms, décodage logiciel) puis une peinture de toute la
+# fenêtre (2 à 8 ms selon la taille) : environ 60 % d'un cœur de bureau pour un
+# fond d'écran, bien plus sur le portable de Ludo (« le launcher consomme
+# beaucoup », 2026-09-30). Le reste de l'interface vit à 30 images/s (Ticker) :
+# une image sur deux suffit. 25 ms et non 33 : une source à 30 ou 25 images/s
+# garde toutes les siennes malgré la gigue des horodatages.
+ECART_FOND_US = 25_000
+
 
 class VideoPlayer(QObject):
     """Gère la lecture vidéo (QMediaPlayer + QVideoSink + QAudioOutput).
@@ -43,6 +53,25 @@ class VideoPlayer(QObject):
         self._muted = False
         self._paused = False
         self._image_vide_signalee = False
+        # Toutes les images (mode cinéma : la vidéo est ce qu'on regarde), ou
+        # une sur deux au plus (`ECART_FOND_US`) quand elle n'est qu'un fond.
+        self._plein_debit = False
+        self._derniere_us = -1
+        # Mise en pause par la fenêtre réduite, pas par l'utilisateur : seule
+        # celle-là reprend d'elle-même au retour.
+        self._pause_reduite = False
+
+    def set_plein_debit(self, oui: bool) -> None:
+        self._plein_debit = oui
+
+    def set_reduite(self, oui: bool) -> None:
+        """Fenêtre réduite : rien ne se voit, inutile de décoder. La position est gardée."""
+        if oui and self._player is not None and not self._paused:
+            self.pause()
+            self._pause_reduite = True
+        elif not oui and self._pause_reduite:
+            self._pause_reduite = False
+            self.resume()
 
     @property
     def is_playing(self) -> bool:
@@ -90,6 +119,8 @@ class VideoPlayer(QObject):
         self._player.setSource(QUrl.fromLocalFile(video_path))
         self._player.play()
         self._paused = False
+        self._pause_reduite = False
+        self._derniere_us = -1
         return True
 
     def stop(self) -> None:
@@ -131,8 +162,19 @@ class VideoPlayer(QObject):
 
     # ── Slots internes ──
 
+    def a_monter(self, debut_us: int) -> bool:
+        """Cette image (horodatée en µs) doit-elle être convertie et peinte ?"""
+        if self._plein_debit or debut_us < 0:
+            return True
+        ecart = debut_us - self._derniere_us
+        if self._derniere_us >= 0 and 0 <= ecart < ECART_FOND_US:
+            return False
+        # Premier plan, ou retour en arrière (reprise, boucle) : on repart d'ici.
+        self._derniere_us = debut_us
+        return True
+
     def _on_frame(self, frame) -> None:
-        if frame.isValid():
+        if frame.isValid() and self.a_monter(frame.startTime()):
             image = frame.toImage()
             if not image.isNull():
                 self.video_frame.emit(image)

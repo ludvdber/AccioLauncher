@@ -20,11 +20,14 @@ __pycache__/
 coverage.xml
 htmlcov/
 
-# Sorties de build
+# Sorties de build (Windows, puis AppImage de build.sh et son environnement)
 dist/
 build/accio_launcher/
 build/output/
 build/version_info.txt
+build/appimage/
+build/linux/outils/
+.venv-build/
 *.manifest
 *.spec.bak
 
@@ -81,6 +84,8 @@ sessions.json
 # Documents rangés hors du dépôt : conservés à dessein, mais périmés — les
 # relire ferait travailler sur un état du projet qui n'existe plus.
 docs/archives/
+# Mission du portable (2026-09-30) : exécutée, son résultat est RETOUR_BAZZITE.md.
+docs/linux/MISSION_BAZZITE.md
 
 # Documents générés à la demande, pas à relire en boucle. Les deux premiers ont
 # été déplacés dans docs/archives/ le 2026-08-20 ; les motifs restent, ils ne

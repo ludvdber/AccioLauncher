@@ -317,6 +317,8 @@ class GameDetailView(QWidget):
         if actif == self._cinema:
             return
         self._cinema = actif
+        # Regardée pour elle-même, la vidéo garde toutes ses images ; en fond, une sur deux.
+        self._video.set_plein_debit(actif)
         self._bg.set_cinema(actif)
         self._info.setVisible(not actif)
         self._audio_bar.set_cinema_icon(actif)
@@ -574,6 +576,11 @@ class GameDetailView(QWidget):
 
     def resume_effects(self) -> None:
         self._bg.resume()
+
+    def set_reduite(self, oui: bool) -> None:
+        """Fenêtre réduite (bouton de la barre de titre) : la bande-annonce se suspend
+        et reprend au même endroit. Elle continuait d'être décodée pour rien."""
+        self._video.set_reduite(oui)
 
     def cancel_operations(self) -> None:
         self._ops.cancel_all()

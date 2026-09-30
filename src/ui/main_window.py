@@ -572,6 +572,8 @@ class MainWindow(QMainWindow):
         La vidéo continue (l'utilisateur peut regarder un trailer en arrière-plan) ;
         seuls particules, étoiles, glow et zoom s'arrêtent — CPU/GPU quasi nul.
         """
+        if event.type() == QEvent.Type.WindowStateChange:
+            self._detail.set_reduite(self.isMinimized())
         if event.type() == QEvent.Type.ActivationChange:
             if self.isActiveWindow():
                 Ticker.instance().resume()
