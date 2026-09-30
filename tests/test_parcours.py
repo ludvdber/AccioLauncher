@@ -102,9 +102,13 @@ class TestDuTelechargementAuRetourDePartie:
         def popen(args, **kwargs):
             lances.append((args, kwargs))
             return processus
+        # Seul `Popen` est faux : le chemin Wine lit aussi `DEVNULL`, et un faux
+        # module qui n'énumère que ce que lit Windows cassait la CI Linux.
         faux_subprocess = SimpleNamespace(
-            Popen=popen, DETACHED_PROCESS=getattr(subprocess, "DETACHED_PROCESS", 0),
-            CREATE_NEW_PROCESS_GROUP=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+            **{nom: getattr(subprocess, nom) for nom in dir(subprocess) if nom.isupper()},
+            Popen=popen)
+        faux_subprocess.DETACHED_PROCESS = getattr(subprocess, "DETACHED_PROCESS", 0)
+        faux_subprocess.CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         monkeypatch.setattr("src.core.game_manager.subprocess", faux_subprocess)
         monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda ids: [])
         gdh.on_play(vue)
