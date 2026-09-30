@@ -30,6 +30,22 @@ VCREDIST_2008_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26
 DIRECTX9_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=35"
 DLL_DIRECTX9 = ("d3dx9_43", "d3dx9_37", "xinput1_3")
 
+# Le compilateur d'effets du même runtime de juin 2010. `d3d11drv.dll` de HP1 et
+# HP2 importe `d3dx11_43.dll` et `d3dcompiler_43.dll`, et compile
+# `System/d3d11drv/ASSAO.fx` à CHAQUE démarrage (`D3DX11CompileFromMemory`).
+# Sous Wine, ses propres DLL échouent sur cet effet : « Error compiling effects
+# file » puis « Initializing Direct3D failed » (HP.log, Bazzite, 2026-09-30).
+# Il faut les DEUX natives : chacune seule échoue à l'identique, les deux
+# ensemble mènent au menu (essais sur trois copies du préfixe). C'est la
+# différence avec `DLL_DIRECTX9` : là, les DLL de Wine suffisent.
+DLL_COMPILATEUR = ("d3dx11_43", "d3dcompiler_43")
+
+# Visual C++ 2010, importé par le même `d3d11drv.dll` (`msvcr100.dll`,
+# `msvcp100.dll`). Pas d'assembly WinSxS pour ce runtime : ses DLL vont
+# directement dans le dossier système.
+VCREDIST_2010_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26999"
+DLL_VCREDIST_2010 = ("msvcr100", "msvcp100")
+
 
 def dll_x86_presente(systeme: Path, nom: str) -> bool:
     """La DLL `nom` du runtime DirectX est-elle dans ce dossier système ? Pure."""
@@ -59,6 +75,53 @@ def check_directx9(nom: str) -> bool:
     if sys.platform != "win32":
         return True
     return dll_x86_presente(_systeme_x86(), nom)
+
+
+def dll_native_dans_le_prefixe(pfx: Path, nom: str) -> bool:
+    """La VRAIE DLL `nom` est-elle en place dans ce préfixe Wine, et choisie ? Pure.
+
+    Deux conditions, comme ce que pose winetricks : le fichier dans le dossier
+    système 32 bits (`syswow64` d'un préfixe 64 bits), qui ne soit pas la DLL
+    de Wine rangée au même endroit, ET une surcharge « native » dans
+    `HKCU\\Software\\Wine\\DllOverrides` — sans elle, Wine charge la sienne
+    et le fichier ne sert à rien.
+    """
+    from src.core import compat
+
+    systeme = "syswow64" if compat.architecture(pfx) == "win64" else "system32"
+    dll = pfx / "drive_c" / "windows" / systeme / f"{nom}.dll"
+    if not dll.is_file() or compat.est_dll_interne_wine(dll):
+        return False
+    surcharges = compat.lire_valeurs(pfx, "HKCU", r"Software\Wine\DllOverrides",
+                                     [f"*{nom}", nom], vue=64)
+    return any(isinstance(v, str) and v.strip().lower().startswith("n")
+               for v in surcharges.values())
+
+
+@functools.cache
+def check_dll_native(nom: str) -> bool:
+    """Vérifie si la DLL `nom` du compilateur d'effets (`DLL_COMPILATEUR`) est installée.
+
+    Sous Windows, comme `check_directx9`. Sous Linux, dans le préfixe : le
+    verbe au journal de winetricks, ou la DLL native réellement en place.
+    """
+    if sys.platform != "win32":
+        return _dans_le_prefixe({nom}, lambda pfx: dll_native_dans_le_prefixe(pfx, nom))
+    return dll_x86_presente(_systeme_x86(), nom)
+
+
+@functools.cache
+def check_vcredist_2010_x86() -> bool:
+    """Vérifie si le Visual C++ 2010 Redistributable x86 est installé (HP1, HP2).
+
+    Sous Linux, oui : les `msvcr100`/`msvcp100` de Wine suffisent, VU le
+    2026-09-30 — HP1 atteint son menu avec elles (chargées depuis
+    `lib/wine/i386-windows` de Proton, relevé dans `/proc/<pid>/maps`).
+    """
+    if sys.platform != "win32":
+        return True
+    systeme = _systeme_x86()
+    return all(dll_x86_presente(systeme, nom) for nom in DLL_VCREDIST_2010)
 
 # Jeton de clé publique des assemblies CRT de Microsoft (le même pour VC8 et
 # VC9). Il fait partie de l'identité forte de l'assembly : c'est ce qui
@@ -154,11 +217,16 @@ VERBES_WINETRICKS = {
     "vcredist_x86": "vcrun2022",
     "vcredist2005_x86": "vcrun2005",
     "vcredist2008_x86": "vcrun2008",
+    # Les DLL natives du compilateur d'effets (HP1, HP2) : celles de Wine
+    # échouent, il faut les verbes.
+    "d3dx11_43": "d3dx11_43",
+    "d3dcompiler_43": "d3dcompiler_43",
     # Jamais demandés en pratique (Wine a ses propres DLL, voir check_directx9),
     # mais chaque identifiant garde son verbe : la table reste complète.
     "d3dx9_43": "d3dx9_43",
     "d3dx9_37": "d3dx9_37",
     "xinput1_3": "xinput",
+    "vcredist2010_x86": "vcrun2010",
 }
 
 # Tout runtime 14.x satisfait le socle, comme le test Windows (clé 14.0)
@@ -219,7 +287,9 @@ PREREQUIS = {
     "vcredist_x86": (lambda: check_vcredist_x86(), VCREDIST_URL),
     "vcredist2005_x86": (lambda: check_vcredist_2005_x86(), VCREDIST_2005_URL),
     "vcredist2008_x86": (lambda: check_vcredist_2008_x86(), VCREDIST_2008_URL),
+    "vcredist2010_x86": (lambda: check_vcredist_2010_x86(), VCREDIST_2010_URL),
     **{nom: (lambda nom=nom: check_directx9(nom), DIRECTX9_URL) for nom in DLL_DIRECTX9},
+    **{nom: (lambda nom=nom: check_dll_native(nom), DIRECTX9_URL) for nom in DLL_COMPILATEUR},
 }
 
 
@@ -250,7 +320,8 @@ def invalidate_vcredist_cache() -> None:
     n'a pas à redémarrer le launcher pour qu'on le voie.
     """
     for verification in (check_vcredist_x86, check_vcredist_2005_x86,
-                         check_vcredist_2008_x86, check_directx9):
+                         check_vcredist_2008_x86, check_vcredist_2010_x86,
+                         check_directx9, check_dll_native):
         vider = getattr(verification, "cache_clear", None)
         if vider is not None:
             vider()

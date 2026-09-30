@@ -338,7 +338,7 @@ class TestDiagnosticSousLinux:
         ligne = diagnostic.ligne_compatibilite()
         assert ligne.startswith("Compatibilité : wine (/nonexistent/accio-test/wine)")
         assert "prêt (win64, cp1252)" in ligne
-        assert "composants vcrun2005, vcrun2008, vcrun2022" in ligne
+        assert "composants d3dcompiler_43, d3dx11_43, vcrun2005, vcrun2008, vcrun2022" in ligne
         assert "winetricks ABSENT" in ligne
 
     def test_compatibilite_umu_et_prefixe_a_creer(self, tmp_path):
@@ -372,3 +372,38 @@ class TestDiagnosticSousLinux:
             "C:\\\\users\\\\ludo\\\\Saves users/ludovic users/steamuser")
         assert texte == ("/x/drive_c/users/~/Documents C:\\users\\~\\AppData "
                          "C:\\\\users\\\\~\\\\Saves users/ludovic users/steamuser")
+
+
+class TestDossierPersonnelSousSilverblue:
+    """Bazzite : `/home` est un lien vers `/var/home`, et `$HOME` peut valoir l'un ou l'autre."""
+
+    def _nettoyer(self, monkeypatch, home, resolu, texte):
+        monkeypatch.setattr(diagnostic.sys, "platform", "linux")
+        monkeypatch.setattr(diagnostic, "_sans_profil_wine", lambda t: t)
+        monkeypatch.setattr(diagnostic.Path, "home", classmethod(lambda cls: Path(home)))
+        monkeypatch.setattr(diagnostic.Path, "resolve", lambda self, strict=False: Path(resolu))
+        return diagnostic.scrub_user_paths(texte)
+
+    def test_la_forme_longue_ne_laisse_pas_var_tilde(self, monkeypatch):
+        """Le défaut relevé : « Documents : /var~/Games/… »."""
+        texte = self._nettoyer(monkeypatch, "/home/ludo", "/var/home/ludo",
+                               "Documents : /var/home/ludo/Games et /home/ludo/Games")
+        assert texte == "Documents : ~/Games et ~/Games"
+
+    def test_home_deja_sous_var(self, monkeypatch):
+        texte = self._nettoyer(monkeypatch, "/var/home/ludo", "/var/home/ludo",
+                               "/home/ludo/a /var/home/ludo/b")
+        assert texte == "~/a ~/b"
+
+    def test_la_forme_windows_que_donne_wine(self, monkeypatch):
+        texte = self._nettoyer(monkeypatch, "/home/ludo", "/var/home/ludo",
+                               "SavePath=Z:\\var\\home\\ludo\\Games Z:\\\\home\\\\ludo\\\\x")
+        assert "ludo" not in texte and "var~" not in texte
+
+    def test_la_plus_longue_d_abord(self):
+        formes = diagnostic.formes_du_dossier_personnel("/home/ludo", "/var/home/ludo", False)
+        assert formes.index("/var/home/ludo") < formes.index("/home/ludo")
+
+    def test_sous_windows_rien_ne_change(self):
+        formes = diagnostic.formes_du_dossier_personnel("C:\\Users\\ludo", "C:\\Users\\ludo", True)
+        assert set(formes) == {"C:\\Users\\ludo", "C:/Users/ludo", "C:\\\\Users\\\\ludo"}

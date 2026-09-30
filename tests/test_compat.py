@@ -209,6 +209,17 @@ class TestCheminWindows:
         (profil / "Documents").symlink_to(tmp_path / "vrais-documents")
         assert compat.chemin_windows(profil / "Documents", pfx).startswith("C:" + B)
 
+    def test_le_meme_dossier_par_un_lien_vers_le_prefixe(self, tmp_path):
+        """Bazzite : `/home` → `/var/home`. `get_documents_dir` rend le chemin
+        RÉSOLU, le préfixe ne l'est pas ; le SavePath de HP1 partait en `Z:`."""
+        (tmp_path / "var" / "home" / "ludo").mkdir(parents=True)
+        (tmp_path / "home").symlink_to(tmp_path / "var" / "home")
+        pfx = tmp_path / "home" / "ludo" / "umu"
+        docs = tmp_path / "var" / "home" / "ludo" / "umu" / "drive_c" / "users" / "steamuser" / "Documents"
+        docs.mkdir(parents=True)
+        assert compat.chemin_windows(docs, pfx) == (
+            "C:" + B + B.join(["users", "steamuser", "Documents"]))
+
 
 # Échantillon RELEVÉ dans le system.reg d'un préfixe Wine 9.0, après import par
 # `regedit /S` d'un .reg construit par `construire_reg` (2026-09-24).
@@ -314,6 +325,23 @@ class TestPageDeCodes:
         (tmp_path / "system.reg").write_text(
             SYSTEM_REG.replace('"ACP"="1252"', '"ACP"="99999"'), encoding="utf-8")
         assert compat.encodage_ansi(tmp_path, defaut="cp1252") == "cp1252"
+
+    def test_relue_une_seule_fois_tant_que_le_registre_ne_change_pas(self, tmp_path, monkeypatch):
+        """Chaque patch d'INI la demandait : 186 ms par lecture d'un system.reg de 4 Mo."""
+        import os
+        (tmp_path / "system.reg").write_text(SYSTEM_REG, encoding="utf-8")
+        lectures = []
+        vraie = compat.lire_valeurs
+        monkeypatch.setattr(compat, "lire_valeurs", lambda *a, **k: lectures.append(1) or vraie(*a, **k))
+        for _ in range(7):
+            assert compat.encodage_ansi(tmp_path) == "cp1252"
+        assert len(lectures) == 1
+        (tmp_path / "system.reg").write_text(
+            SYSTEM_REG.replace('"ACP"="1252"', '"ACP"="1251"'), encoding="utf-8")
+        etat = (tmp_path / "system.reg").stat()
+        os.utime(tmp_path / "system.reg", ns=(etat.st_atime_ns, etat.st_mtime_ns + 10**9))
+        assert compat.encodage_ansi(tmp_path) == "cp1251"
+        assert len(lectures) == 2
 
 
 class TestPrerequisDuPrefixe:

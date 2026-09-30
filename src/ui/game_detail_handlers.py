@@ -24,7 +24,7 @@ from src.core import preparation_wine as preparation
 from src.core.game_manager import GameState
 from src.core.liens import GUIDE_LINUX_URL
 from src.core.system_checks import (
-    DLL_DIRECTX9, PREREQUIS, VCREDIST_URL, VERBES_WINETRICKS, needed_space_mb,
+    DLL_COMPILATEUR, DLL_DIRECTX9, PREREQUIS, VCREDIST_URL, VERBES_WINETRICKS, needed_space_mb,
     prerequis_manquants,
 )
 from src.ui.preparateur_wine import noms_des_verbes
@@ -164,6 +164,9 @@ def nom_prerequis(identifiant: str) -> str:
         "vcredist2008_x86": tr("Le composant Visual C++ 2008 Redistributable x86"),
         **{nom: tr("Le runtime DirectX 9.0c de Microsoft ({})").format(f"{nom}.dll")
            for nom in DLL_DIRECTX9},
+        "vcredist2010_x86": tr("Le composant Visual C++ 2010 Redistributable x86"),
+        **{nom: tr("Le runtime DirectX de Microsoft ({})").format(f"{nom}.dll")
+           for nom in DLL_COMPILATEUR},
     }
     return noms.get(identifiant, tr("Un composant Windows requis"))
 
@@ -350,7 +353,7 @@ def proposer_preparation(view: "GameDetailView", game: GameData | None,
     reponse = _boite(
         QMessageBox.Icon.Question, view, tr("Préparer Wine"),
         tr("Avant de lancer {jeu}, le launcher doit préparer Wine :\n\n{etapes}\n\n"
-           "Les composants Visual C++ sont téléchargés depuis Microsoft par "
+           "Les composants (Visual C++, DirectX) sont téléchargés depuis Microsoft par "
            "winetricks. Avec umu, la première préparation télécharge aussi Proton "
            "(plusieurs centaines de Mo). Comptez quelques minutes ; le launcher "
            "reste utilisable pendant ce temps.").format(

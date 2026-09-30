@@ -2,6 +2,7 @@
 fenêtre qui attend le jeu, umu sans réseau."""
 
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 from src.core import compat
@@ -38,6 +39,66 @@ class TestUmuHorsLigne:
             assert "UMU_RUNTIME_UPDATE" not in compat.environnement(lanceur, tmp_path, base={})
         finally:
             compat.signaler_reseau(True)
+
+
+def _runtime_installe(dossier: Path, variante: str = "steamrt3") -> None:
+    racine = dossier / variante if variante else dossier
+    (racine / "pressure-vessel").mkdir(parents=True)
+    (racine / "sniper_platform_3.0.20260914.260626").mkdir()
+
+
+class TestRuntimeUmuUneFoisParSemaine:
+    """En ligne, umu retéléchargeait 195 Mo de runtime avant chaque partie (17 s au lieu de 4,5)."""
+
+    LANCEUR = SimpleNamespace(famille="umu", proton="", executable="/usr/bin/umu-run", winetricks="")
+
+    def test_detection_du_runtime(self, tmp_path):
+        assert compat.runtime_umu_installe(tmp_path) is False
+        (tmp_path / "steamrt3" / "pressure-vessel").mkdir(parents=True)
+        assert compat.runtime_umu_installe(tmp_path) is False     # incomplet
+        (tmp_path / "steamrt3" / "sniper_platform_3.0").mkdir()
+        assert compat.runtime_umu_installe(tmp_path) is True
+
+    def test_l_ancienne_disposition_a_la_racine(self, tmp_path):
+        _runtime_installe(tmp_path, variante="")
+        assert compat.runtime_umu_installe(tmp_path) is True
+
+    def test_pas_installe_umu_doit_pouvoir_l_installer(self, tmp_path):
+        assert "UMU_RUNTIME_UPDATE" not in compat.environnement(self.LANCEUR, tmp_path, base={})
+
+    def test_une_verification_par_semaine(self, monkeypatch, tmp_path):
+        umu = tmp_path / "umu"
+        _runtime_installe(umu)
+        monkeypatch.setattr(compat, "dossier_umu", lambda: umu)
+        t0 = 1_800_000_000.0
+        assert compat.mise_a_jour_runtime_permise(t0) is True
+        assert compat.mise_a_jour_runtime_permise(t0 + 60) is False
+        assert compat.mise_a_jour_runtime_permise(t0 + compat.INTERVALLE_RUNTIME_S - 1) is False
+        assert compat.mise_a_jour_runtime_permise(t0 + compat.INTERVALLE_RUNTIME_S + 1) is True
+        assert compat.mise_a_jour_runtime_permise(t0 + compat.INTERVALLE_RUNTIME_S + 2) is False
+
+    def test_l_environnement_de_la_partie_suivante(self, monkeypatch, tmp_path):
+        umu = tmp_path / "umu"
+        _runtime_installe(umu)
+        monkeypatch.setattr(compat, "dossier_umu", lambda: umu)
+        assert "UMU_RUNTIME_UPDATE" not in compat.environnement(self.LANCEUR, tmp_path, base={})
+        assert compat.environnement(self.LANCEUR, tmp_path, base={})["UMU_RUNTIME_UPDATE"] == "0"
+
+    def test_une_date_dans_le_futur_ne_bloque_pas_pour_toujours(self, monkeypatch, tmp_path):
+        """Une horloge remise à l'heure : la marque ne doit pas geler le runtime."""
+        umu = tmp_path / "umu"
+        _runtime_installe(umu)
+        monkeypatch.setattr(compat, "dossier_umu", lambda: umu)
+        assert compat.mise_a_jour_runtime_permise(2_000_000_000.0) is True
+        assert compat.mise_a_jour_runtime_permise(1_900_000_000.0) is True
+
+    def test_la_valeur_de_l_utilisateur_reste_la_sienne(self, monkeypatch, tmp_path):
+        umu = tmp_path / "umu"
+        _runtime_installe(umu)
+        monkeypatch.setattr(compat, "dossier_umu", lambda: umu)
+        compat.mise_a_jour_runtime_permise()
+        env = compat.environnement(self.LANCEUR, tmp_path, base={"UMU_RUNTIME_UPDATE": "1"})
+        assert env["UMU_RUNTIME_UPDATE"] == "1"
 
 
 class TestRetraitDiffere:

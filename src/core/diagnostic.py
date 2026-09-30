@@ -39,10 +39,39 @@ _LIGNES_NOTABLES = 12
 _TENTATIVES = 5
 
 
+def formes_du_dossier_personnel(home: str, resolu: str, windows: bool) -> list[str]:
+    """Toutes les écritures du dossier personnel, la plus LONGUE d'abord. Pure.
+
+    Sur Bazzite (Silverblue), `/home` est un lien vers `/var/home` : `$HOME`
+    vaut `/home/ludo` alors que Proton et tout chemin résolu disent
+    `/var/home/ludo`. Remplacer la seule forme courte laissait `/var~/Games`
+    (diagnostic de Ludo, 2026-09-30). D'où les deux formes, et l'ordre : la
+    longue avant celle qu'elle contient. Hors Windows s'ajoute la forme
+    Windows que Wine donne au même dossier (`Z:\\var\\home\\ludo`), simple et
+    doublée comme dans un `.ini` ou un journal.
+    """
+    racines = {home, resolu}
+    for racine in list(racines):
+        if racine.startswith("/var/home/"):
+            racines.add(racine.removeprefix("/var"))
+        elif racine.startswith("/home/"):
+            racines.add("/var" + racine)
+    formes = set()
+    for racine in filter(None, racines):
+        formes |= {racine, racine.replace("\\", "/"), racine.replace("\\", "\\\\")}
+        if not windows:
+            formes |= {racine.replace("/", "\\"), racine.replace("/", "\\\\")}
+    return sorted(formes, key=len, reverse=True)
+
+
 def scrub_user_paths(text: str) -> str:
     """Remplace le dossier personnel par ~ (ne pas exposer le nom d'utilisateur)."""
-    home = str(Path.home())
-    for variant in (home, home.replace("\\", "/"), home.replace("\\", "\\\\")):
+    home = Path.home()
+    try:
+        resolu = str(home.resolve())
+    except OSError:
+        resolu = str(home)
+    for variant in formes_du_dossier_personnel(str(home), resolu, sys.platform == "win32"):
         text = text.replace(variant, "~")
     if sys.platform != "win32":
         text = _sans_profil_wine(text)

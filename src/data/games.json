@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.34",
+  "catalog_version": "0.35",
   "contributors": [
     {
       "name": "ASTeam",
@@ -67,6 +67,11 @@
       "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
       "developer": "KnowWonder",
       "executable": "HP1/System/HP.exe",
+      "requires": [
+        "d3dx11_43",
+        "d3dcompiler_43",
+        "vcredist2010_x86"
+      ],
       "cover_image": "hp1_cover.jpg",
       "tags": [
         "Aventure",
@@ -323,6 +328,11 @@
       "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
       "developer": "KnowWonder",
       "executable": "HP2/system/Game.exe",
+      "requires": [
+        "d3dx11_43",
+        "d3dcompiler_43",
+        "vcredist2010_x86"
+      ],
       "cover_image": "hp2_cover.jpg",
       "tags": [
         "Aventure",
@@ -828,6 +838,9 @@
       "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
       "developer": "EA UK",
       "executable": "HP5/hp.exe",
+      "requires": [
+        "vcredist2005_x86"
+      ],
       "screenshots": {
         "collect": [
           "HP5/screenshots/*.png"
@@ -1019,6 +1032,9 @@
       "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
       "developer": "EA UK",
       "executable": "HP6/hp6.exe",
+      "requires": [
+        "vcredist2005_x86"
+      ],
       "screenshots": {
         "collect": [
           "HP6/screenshots/*.png"

@@ -275,11 +275,14 @@ def _linux_pret_a_jouer(tmp_path_factory, monkeypatch):
     monkeypatch.setattr("src.core.compat.lanceur", lambda: faux)
     racine = tmp_path_factory.mktemp("_Launcher")
     monkeypatch.setattr("src.core.compat._donnees_launcher", lambda: racine)
+    # Le Steam Linux Runtime d'umu : celui de la machine qui joue la suite
+    # changerait l'environnement de lancement d'un poste à l'autre.
+    monkeypatch.setattr("src.core.compat.dossier_umu", lambda: racine / "umu-absent")
     pfx = compat.prefixe("wine")
     (pfx / "drive_c").mkdir(parents=True, exist_ok=True)
     (pfx / "system.reg").write_text("WINE REGISTRY Version 2\n\n#arch=win64\n",
                                     encoding="utf-8")
-    (pfx / "winetricks.log").write_text("vcrun2022\nvcrun2005\nvcrun2008\n",
+    (pfx / "winetricks.log").write_text("vcrun2022\nvcrun2005\nvcrun2008\nd3dx11_43\nd3dcompiler_43\n",
                                         encoding="utf-8")
     system_checks.invalidate_vcredist_cache()
     yield faux

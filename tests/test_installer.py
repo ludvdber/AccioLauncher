@@ -317,3 +317,41 @@ class TestProgressionDu7ZipLinux:
         extract_7z(archive, dest, valeurs.append, lambda: False)
         assert (dest / "Game" / "f1.bin").read_bytes() == (src / "f1.bin").read_bytes()
         assert valeurs[-1] == 100
+
+
+class TestVerificationApresExtraction:
+    """La destination est le dossier des jeux : il contient aussi `_Launcher/`,
+    et sous Linux le préfixe Wine, dont `dosdevices/z:` pointe LÉGITIMEMENT
+    vers `/`. Tout parcourir refusait toute installation une fois Wine préparé
+    (HP2 sur Bazzite, 2026-09-30)."""
+
+    def test_premiers_niveaux(self):
+        from src.core.extractors import premiers_niveaux
+        assert premiers_niveaux(["HP2/system/Game.exe", "HP2", "HP2\\Maps\\a.unr",
+                                 "lisez-moi.txt", "./x", ""]) == {"HP2", "lisez-moi.txt", "x"}
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="liens symboliques POSIX")
+    def test_le_prefixe_wine_voisin_n_est_pas_une_evasion(self, tmp_path):
+        from src.core.extractors import verify_extracted_paths
+        dosdevices = tmp_path / "_Launcher" / "prefixes" / "umu" / "dosdevices"
+        dosdevices.mkdir(parents=True)
+        (dosdevices / "z:").symlink_to("/")
+        (tmp_path / "HP2" / "system").mkdir(parents=True)
+        verify_extracted_paths(tmp_path, {"HP2"})               # ne lève pas
+        with pytest.raises(ValueError):
+            verify_extracted_paths(tmp_path)                    # l'ancien parcours
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="liens symboliques POSIX")
+    def test_un_lien_hors_destination_dans_le_jeu_reste_refuse(self, tmp_path):
+        from src.core.extractors import verify_extracted_paths
+        (tmp_path / "HP2" / "system").mkdir(parents=True)
+        (tmp_path / "HP2" / "system" / "evasion").symlink_to("/etc")
+        with pytest.raises(ValueError):
+            verify_extracted_paths(tmp_path, {"HP2"})
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="liens symboliques POSIX")
+    def test_un_premier_niveau_qui_est_lui_meme_un_lien(self, tmp_path):
+        from src.core.extractors import verify_extracted_paths
+        (tmp_path / "HP2").symlink_to("/etc")
+        with pytest.raises(ValueError):
+            verify_extracted_paths(tmp_path, {"HP2"})

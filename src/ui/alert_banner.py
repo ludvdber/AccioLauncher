@@ -25,7 +25,8 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.system_checks import (
-    DLL_DIRECTX9, PREREQUIS, invalidate_vcredist_cache, needed_space_mb, prerequis_manquants,
+    DLL_COMPILATEUR, DLL_DIRECTX9, PREREQUIS, invalidate_vcredist_cache, needed_space_mb,
+    prerequis_manquants,
 )
 from src.core.liens import GUIDE_LINUX_URL
 from src.ui.utils import open_url
@@ -58,6 +59,8 @@ _NOMS_COURTS = {
     # Le nom de la DLL, parce que c'est lui que Windows affiche quand le jeu
     # refuse de démarrer : qui a déjà vu l'erreur fait le lien.
     **{nom: tr("DirectX 9 ({})").format(f"{nom}.dll") for nom in DLL_DIRECTX9},
+    "vcredist2010_x86": tr("Visual C++ 2010 x86"),
+    **{nom: tr("DirectX ({})").format(f"{nom}.dll") for nom in DLL_COMPILATEUR},
 }
 
 

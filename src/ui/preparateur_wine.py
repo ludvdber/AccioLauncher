@@ -27,6 +27,9 @@ _NOMS_VERBES = {
     "vcrun2022": "Visual C++ 2015-2022",
     "vcrun2005": "Visual C++ 2005",
     "vcrun2008": "Visual C++ 2008",
+    "vcrun2010": "Visual C++ 2010",
+    "d3dx11_43": "DirectX (d3dx11_43)",
+    "d3dcompiler_43": "DirectX (d3dcompiler_43)",
 }
 
 

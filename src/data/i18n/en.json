@@ -437,7 +437,6 @@
     "Bandes-annonces : {n}/{total} ({pct} %)": "Trailers: {n}/{total} ({pct}%)",
     "Les bandes-annonces se téléchargent en arrière-plan.": "Trailers are downloading in the background.",
     "Accio Launcher lance ces jeux Windows avec umu-launcher (recommandé) ou Wine. Aucun des deux n'est installé.\n\nSur Bazzite, umu-launcher fait partie du système : mettez Bazzite à jour (« ujust update ») puis redémarrez. Sur une autre distribution, installez le paquet umu-launcher, ou Wine avec le support 32 bits.\n\nCliquez ensuite à nouveau sur JOUER : le launcher les cherchera de nouveau.": "Accio Launcher runs these Windows games with umu-launcher (recommended) or Wine. Neither is installed.\n\nOn Bazzite, umu-launcher is part of the system: update Bazzite (“ujust update”), then restart. On another distribution, install the umu-launcher package, or Wine with 32-bit support.\n\nThen click PLAY again: the launcher will look for them again.",
-    "Avant de lancer {jeu}, le launcher doit préparer Wine :\n\n{etapes}\n\nLes composants Visual C++ sont téléchargés depuis Microsoft par winetricks. Avec umu, la première préparation télécharge aussi Proton (plusieurs centaines de Mo). Comptez quelques minutes ; le launcher reste utilisable pendant ce temps.": "Before launching {jeu}, the launcher needs to prepare Wine:\n\n{etapes}\n\nThe Visual C++ components are downloaded from Microsoft by winetricks. With umu, the first preparation also downloads Proton (several hundred MB). Allow a few minutes; you can keep using the launcher in the meantime.",
     "Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\nCe dossier du préfixe Wine refuse l'écriture, donc le jeu ne peut pas démarrer.\n\nVérifiez qu'il reste de la place sur le disque, et que le dossier « _Launcher » d'Accio Launcher vous appartient bien.": "This game stores its settings and saves in:\n\n{}\n\nThis folder of the Wine prefix cannot be written to, so the game cannot start.\n\nCheck that there is free space left on the disk, and that Accio Launcher's “_Launcher” folder belongs to you.",
     "L'installation des composants Visual C++ dans Wine a échoué.\n\nCe qu'a dit winetricks est dans :\n{}\n\nLe jeu peut tout de même démarrer : les composants intégrés à Wine suffisent parfois.": "Installing the Visual C++ components into Wine failed.\n\nwinetricks' output is in:\n{}\n\nThe game may still start: Wine's built-in components are sometimes enough.",
     "La langue n'a pas pu être écrite dans le registre de Wine.\n\nLe jeu démarrera dans la langue actuellement en place. Le journal du launcher dit ce qui s'est passé.": "The language could not be written to Wine's registry.\n\nThe game will start in the language currently set. The launcher's log says what happened.",
@@ -593,6 +592,11 @@
     "Préparation de Wine…": "Setting up Wine…",
     "Un téléchargement est en cours : Wine sera préparé quand il sera fini. Cliquez à nouveau sur JOUER.": "A download is in progress: Wine will be set up once it is done. Click PLAY again then.",
     "Wine est prêt.": "Wine is ready.",
-    "{} est en train de démarrer ou déjà lancé.": "{} is starting or already running."
+    "{} est en train de démarrer ou déjà lancé.": "{} is starting or already running.",
+    "Avant de lancer {jeu}, le launcher doit préparer Wine :\n\n{etapes}\n\nLes composants (Visual C++, DirectX) sont téléchargés depuis Microsoft par winetricks. Avec umu, la première préparation télécharge aussi Proton (plusieurs centaines de Mo). Comptez quelques minutes ; le launcher reste utilisable pendant ce temps.": "Before launching {jeu}, the launcher needs to prepare Wine:\n\n{etapes}\n\nThe components (Visual C++, DirectX) are downloaded from Microsoft by winetricks. With umu, the first preparation also downloads Proton (several hundred MB). Allow a few minutes; you can keep using the launcher in the meantime.",
+    "Visual C++ 2010 x86": "Visual C++ 2010 x86",
+    "DirectX ({})": "DirectX ({})",
+    "Le composant Visual C++ 2010 Redistributable x86": "The Visual C++ 2010 Redistributable x86",
+    "Le runtime DirectX de Microsoft ({})": "Microsoft's DirectX runtime ({})"
   }
 }

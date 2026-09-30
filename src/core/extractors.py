@@ -179,7 +179,7 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
     ]
 
 
-def verify_archive_entries(archive: Path, exe: str) -> None:
+def verify_archive_entries(archive: Path, exe: str) -> list[str]:
     """Refuse une archive dont une entrée sortirait du dossier de destination.
 
     Contrôle AVANT extraction : c'est le seul moment où l'on peut encore
@@ -199,9 +199,20 @@ def verify_archive_entries(archive: Path, exe: str) -> None:
             f"dossier d'installation (première : {unsafe[0]!r})"
         )
     log.info("Contenu de l'archive validé : %d entrées, aucune évasion", len(entries))
+    return entries
 
 
-def verify_extracted_paths(destination: Path) -> None:
+def premiers_niveaux(entries: Iterable[str]) -> set[str]:
+    """Noms de premier niveau que pose une archive (`HP2/system/x` → `HP2`). Pure."""
+    niveaux = set()
+    for nom in entries:
+        parties = [x for x in nom.replace("\\", "/").split("/") if x not in ("", ".")]
+        if parties and parties[0] != "..":
+            niveaux.add(parties[0])
+    return niveaux
+
+
+def verify_extracted_paths(destination: Path, racines: Iterable[str] | None = None) -> None:
     """Vérifie post-extraction qu'aucun lien ne pointe hors de destination.
 
     Complément de `verify_archive_entries` : le parcours n'énumère que
@@ -213,14 +224,29 @@ def verify_extracted_paths(destination: Path) -> None:
     milliers d'appels système sur un jeu de plusieurs Go, barre figée à 100 %.
     Un `is_symlink()` est un simple lstat, et un fichier ordinaire ne peut pas
     sortir de la destination puisqu'il y a été écrit.
+
+    `racines` : les noms de premier niveau que l'archive a posés — on ne
+    parcourt QU'EUX. La destination est le dossier des jeux, qui contient
+    aussi `_Launcher/` et, sous Linux, le préfixe Wine, où `dosdevices/z:`
+    est un lien LÉGITIME vers `/`. Parcourir tout le dossier refusait donc
+    TOUTE installation une fois Wine préparé (« Path traversal détecté après
+    extraction : …/prefixes/umu/dosdevices/z: », HP2 sur Bazzite, 2026-09-30),
+    et visitait au passage les milliers de fichiers du préfixe.
     """
     dest_resolved = destination.resolve()
-    for item in destination.rglob("*"):
-        if not item.is_symlink():
-            continue
-        if not item.resolve().is_relative_to(dest_resolved):
-            log.critical("Lien hors destination détecté post-extraction : %s", item)
-            raise ValueError(f"Path traversal détecté après extraction : {item}")
+    if racines is None:
+        departs = [destination]
+    else:
+        departs = [destination / nom for nom in sorted(racines)]
+    for depart in departs:
+        elements = [depart] if depart.is_symlink() else (
+            depart.rglob("*") if depart.is_dir() else [])
+        for item in elements:
+            if not item.is_symlink():
+                continue
+            if not item.resolve().is_relative_to(dest_resolved):
+                log.critical("Lien hors destination détecté post-extraction : %s", item)
+                raise ValueError(f"Path traversal détecté après extraction : {item}")
 
 
 def extract_7z_subprocess(
@@ -236,7 +262,7 @@ def extract_7z_subprocess(
         )
 
     # Valider le contenu AVANT d'écrire quoi que ce soit sur le disque.
-    verify_archive_entries(archive, exe)
+    entries = verify_archive_entries(archive, exe)
 
     # Sous Linux, CHEMIN compris : embarqué ou celui du système, ce n'est pas
     # le même 7-Zip, et c'est la première chose à savoir d'une extraction ratée.
@@ -292,7 +318,7 @@ def extract_7z_subprocess(
         if ret != 0:
             raise RuntimeError(f"7z.exe a échoué (code {ret})")
         progress(100)
-        verify_extracted_paths(destination)
+        verify_extracted_paths(destination, premiers_niveaux(entries))
         log.info("Extraction %s terminée", "7z.exe" if sys.platform == "win32" else Path(exe).name)
     except subprocess.TimeoutExpired:
         log.error("7z.exe ne rend pas la main après la fin de son flux, kill du processus")

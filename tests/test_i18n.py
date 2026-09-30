@@ -37,7 +37,8 @@ IDENTIQUES_TOLEREES = {
     # « changelog » est le même mot en français et en anglais.
     "v{} · changelog",
     # Noms de produits Microsoft : ils ne se traduisent pas.
-    "Visual C++ x86", "Visual C++ 2005 x86", "Visual C++ 2008 x86", "DirectX 9 ({})",
+    "Visual C++ x86", "Visual C++ 2005 x86", "Visual C++ 2008 x86", "Visual C++ 2010 x86",
+    "DirectX 9 ({})", "DirectX ({})",
     # Abréviations d'unités de durée, identiques en FR/EN/ES. L'abréviation
     # n'est pas une paresse : elle évite l'accord du singulier (« 1 hour » vs
     # « 2 hours »), qu'une grille de statistiques rencontrerait à chaque ligne

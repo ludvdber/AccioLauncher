@@ -33,6 +33,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -207,6 +208,75 @@ def signaler_reseau(en_ligne: bool) -> None:
     _hors_ligne = not en_ligne
 
 
+# En ligne aussi, umu vérifiait le Steam Linux Runtime avant CHAQUE partie, et
+# la vérification tournait au retéléchargement : le `VERSION.txt` que sert le
+# CDN de Valve varie d'un nœud à l'autre (`3.0.20260805…` ou `…0928…`), jamais
+# celui qui est installé, si bien qu'umu reprenait l'archive entière — 195 Mo,
+# décompressés et revérifiés — puis déclarait « steamrt3 is up to date ».
+# Mesuré sur Bazzite le 2026-09-30 : 17 s du clic au jeu (59 s quand le
+# téléchargement traîne, avec parfois « Digest mismatched »), contre 4,5 s
+# sans cette vérification. Une fois le runtime installé, on la laisse passer
+# au plus une fois par semaine : assez pour suivre Valve, sans le payer à
+# chaque partie. Une installation incomplète, elle, n'est jamais retenue.
+INTERVALLE_RUNTIME_S = 7 * 24 * 3600
+
+
+def dossier_umu() -> Path:
+    """Là où umu range ses runtimes (`$XDG_DATA_HOME/umu`)."""
+    donnees = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(donnees) / "umu"
+
+
+def runtime_umu_installe(dossier: Path | None = None) -> bool:
+    """Un Steam Linux Runtime complet est-il déjà en place ?
+
+    umu 1.2+ le range dans un sous-dossier par variante (`steamrt3/`), les
+    versions d'avant à la racine ; dans les deux cas, un `*_platform_*` à côté
+    de `pressure-vessel` — ce que vérifie umu lui-même avant de le réparer.
+    """
+    dossier = dossier if dossier is not None else dossier_umu()
+    for racine in (dossier, *_sous_dossiers(dossier)):
+        if (racine / "pressure-vessel").is_dir() and any(
+                p.is_dir() for p in racine.glob("*_platform_*")):
+            return True
+    return False
+
+
+def _sous_dossiers(dossier: Path) -> list[Path]:
+    try:
+        return [p for p in dossier.iterdir() if p.is_dir()]
+    except OSError:
+        return []
+
+
+def mise_a_jour_runtime_permise(maintenant: float | None = None) -> bool:
+    """umu peut-il vérifier son runtime pour ce lancement-ci ?
+
+    Oui s'il n'est pas installé (umu doit l'installer), ou si la dernière
+    vérification permise date de plus d'`INTERVALLE_RUNTIME_S` ; on note alors
+    la date dans `_Launcher/`. Hors ligne, non : c'était déjà la règle.
+    """
+    if _hors_ligne:
+        return False
+    if not runtime_umu_installe():
+        return True
+    marque = _donnees_launcher() / "umu-runtime-verifie"
+    maintenant = time.time() if maintenant is None else maintenant
+    try:
+        derniere = marque.stat().st_mtime
+    except OSError:
+        derniere = 0.0
+    if 0 <= maintenant - derniere < INTERVALLE_RUNTIME_S:
+        return False
+    try:
+        marque.parent.mkdir(parents=True, exist_ok=True)
+        marque.touch()
+        os.utime(marque, (maintenant, maintenant))
+    except OSError:
+        pass
+    return True
+
+
 def oublier() -> None:
     """Refait la détection au prochain appel.
 
@@ -315,7 +385,15 @@ def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
     try:
         relatif = chemin.relative_to(lecteur_c)
     except ValueError:
-        return "Z:" + str(chemin).replace("/", "\\")
+        # Même dossier, écrit autrement : sur Bazzite (Silverblue), `/home`
+        # est un lien vers `/var/home`, et `config.get_documents_dir` rend un
+        # chemin RÉSOLU alors que le préfixe ne l'est pas. Le SavePath de HP1
+        # partait en `Z:\var\home\…\drive_c\users\…` (juste, par Z:, mais
+        # pas ce que le jeu connaît). On compare alors les deux résolus.
+        try:
+            relatif = Path(os.path.realpath(chemin)).relative_to(os.path.realpath(lecteur_c))
+        except ValueError:
+            return "Z:" + str(chemin).replace("/", "\\")
     return "C:\\" + "\\".join(relatif.parts)
 
 
@@ -481,14 +559,32 @@ def encodage_ansi(pfx: Path | None = None, defaut: str = "cp1252") -> str:
     `1252` relevé sur un préfixe neuf).
     """
     pfx = pfx if pfx is not None else prefixe()
-    acp = lire_valeurs(pfx, "HKLM", r"System\CurrentControlSet\Control\Nls\Codepage",
-                       ["ACP"], vue=64).get("ACP")
+    try:
+        etat = (pfx / "system.reg").stat()
+        cle = (str(pfx), etat.st_mtime_ns, etat.st_size)
+    except OSError:
+        cle = None
+    if cle is not None and cle in _acp_lus:
+        acp = _acp_lus[cle]
+    else:
+        acp = lire_valeurs(pfx, "HKLM", r"System\CurrentControlSet\Control\Nls\Codepage",
+                           ["ACP"], vue=64).get("ACP")
+        if cle is not None:
+            _acp_lus.clear()
+            _acp_lus[cle] = acp
     if isinstance(acp, str) and acp.isdigit():
         try:
             return codecs.lookup(f"cp{acp}").name
         except LookupError:
             log.info("Page de codes %s inconnue de Python — repli %s", acp, defaut)
     return defaut
+
+
+# `ACP` lu, par (préfixe, date, taille) de `system.reg`. Relire ce fichier de
+# 4 Mo coûtait 186 ms, et chaque patch d'INI le relisait : 1,3 s de plus avant
+# chaque partie de HP1, pour une valeur qui ne change qu'avec le préfixe
+# (Bazzite, 2026-09-30). La date ET la taille : un préfixe recréé est relu.
+_acp_lus: dict[tuple[str, int, int], object] = {}
 
 
 # ─── Prérequis ───
@@ -606,7 +702,7 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None) -> dict[
         env.setdefault("GAMEID", "umu-default")
         if trouve.proton and not env.get("PROTONPATH"):
             env["PROTONPATH"] = trouve.proton
-        if _hors_ligne:
+        if not mise_a_jour_runtime_permise():
             env.setdefault("UMU_RUNTIME_UPDATE", "0")
     else:
         env.setdefault("WINEDEBUG", "-all")
