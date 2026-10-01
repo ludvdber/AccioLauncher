@@ -216,7 +216,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Synchronisation verticale",
             "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale "
             "quand la caméra tourne. En contrepartie, un peu plus de délai entre la souris et"
-            " l'image.",
+            " l'image. Avec une limite d'images qui ne divise pas la fréquence de l'écran, le"
+            " jeu peut retomber à la moitié de celle-ci (144 sur un écran à 180 Hz donne 90"
+            " images) : choisissez alors une autre limite.",
             defaut=False, onglet="perfs"),
     Reglage("touches_zqsd", "Accio.Keys", "",
             "Déplacement {} et sorts à la souris",

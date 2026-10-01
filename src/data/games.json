@@ -719,7 +719,6 @@
         "couleurs",
         "vivacite",
         "contraste",
-        "resolution",
         "mode_fenetre",
         "format_image",
         "champ_vision",
@@ -728,9 +727,7 @@
         "synchro_verticale",
         "manette_playstation_hp4",
         "nettete",
-        "textures_lointaines",
-        "feuillage_lointain",
-        "ombres_nettes"
+        "feuillage_lointain"
       ],
       "dll_overrides": [
         "d3d9",
@@ -888,7 +885,6 @@
         "couleurs",
         "vivacite",
         "contraste",
-        "resolution",
         "mode_fenetre",
         "format_image",
         "champ_vision",
@@ -897,10 +893,8 @@
         "synchro_verticale",
         "manette_playstation",
         "vibrations",
-        "brouillard",
         "nettete",
         "textures_lointaines",
-        "feuillage_lointain",
         "ombres_nettes"
       ],
       "dll_overrides": [
@@ -1100,8 +1094,6 @@
         "couleurs",
         "vivacite",
         "contraste",
-        "resolution",
-        "mode_fenetre",
         "format_image",
         "champ_vision",
         "ecran_principal",
@@ -1110,8 +1102,6 @@
         "manette_playstation",
         "vibrations",
         "nettete",
-        "textures_lointaines",
-        "feuillage_lointain",
         "ombres_nettes"
       ],
       "dll_overrides": [
@@ -1423,7 +1413,6 @@
       ],
       "fix_settings": [
         "arriere_plan",
-        "limite_fps",
         "synchro_verticale",
         "compteur_fps",
         "panneau_perfs",
