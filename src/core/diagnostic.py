@@ -529,3 +529,69 @@ def rapport(manager, ecrans: list[str] | None = None, journal: str = "",
         lignes.append(f"── Journal : {len(notables)} derniers avertissements ──")
         lignes += notables
     return scrub_user_paths("\n".join(lignes))
+
+
+# ── Le rapport COMPLET ──────────────────────────────────────────────────────
+# Demande de Ludo (2026-10-01) : « les gens oublient où ils installent le
+# jeu, c'est terrible pour demander des logs ». Le bloc ci-dessus tient dans
+# un message Discord ; le rapport complet, non — il part en FICHIER, avec le
+# journal du launcher ET ceux que les jeux écrivent chez eux (correctif,
+# manette, moteur UE1), que personne ne saurait retrouver.
+
+# Octets gardés de la FIN de chaque journal : c'est la fin qui raconte la
+# panne, et un journal du correctif peut grossir sans limite.
+JOURNAL_MAX = 200_000
+
+
+def lire_la_fin(chemin: Path, n: int = JOURNAL_MAX) -> str:
+    """La fin d'un journal, quel que soit son encodage.
+
+    UE1 écrit ses `.log` en UTF-16 (avec BOM) ou en ANSI selon la version, le
+    correctif en UTF-8 : un journal mal décodé ne doit jamais coûter le reste.
+    """
+    try:
+        brut = chemin.read_bytes()
+    except OSError as exc:
+        return f"(illisible : {exc.__class__.__name__})"
+    if brut[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        texte = brut.decode("utf-16", errors="replace")
+    else:
+        try:
+            texte = brut.decode("utf-8")
+        except UnicodeDecodeError:
+            texte = brut.decode("cp1252", errors="replace")
+    if len(texte) > n:
+        texte = "[…]\n" + texte[-n:].split("\n", 1)[-1]
+    return texte
+
+
+def journaux_des_jeux(manager) -> list[tuple[str, Path]]:
+    """Les `.log` des jeux installés : à côté de l'exe (correctif, manette,
+    dgVoodoo) et dans leur dossier de Documents (HP1-HP3 : `HP.log`…)."""
+    from src.core import sauvegardes
+    from src.core.game_manager import GameState
+    trouves: list[tuple[str, Path]] = []
+    for g in manager.catalog.games:
+        if manager.get_state(g.id) == GameState.NOT_INSTALLED:
+            continue
+        dossiers = [(Path(manager.config.install_path) / g.executable).parent]
+        spec = g.sauvegardes
+        if spec is not None and spec.racine == "documents":
+            d = sauvegardes.dossier(spec)
+            if d is not None:
+                dossiers.append(d.parent)
+        for d in dossiers:
+            try:
+                fichiers = sorted(f for f in d.glob("*.log") if f.is_file())
+            except OSError:
+                continue
+            trouves += [(f"{g.id} · {f.name}", f) for f in fichiers]
+    return trouves
+
+
+def rapport_complet(resume: str, journaux: list[tuple[str, str]]) -> str:
+    """Le résumé, puis chaque journal sous son titre ; chemins personnels cachés."""
+    parties = [resume]
+    for nom, texte in journaux:
+        parties += ["", f"══ {nom} ══", texte.rstrip() or "(vide)"]
+    return scrub_user_paths("\n".join(parties)) + "\n"

@@ -65,3 +65,49 @@ def remove_zone_identifier(root: Path, pattern: str = "*") -> int:
         except OSError:
             pass
     return count
+
+
+# Où Windows range l'onglet « Compatibilité » des propriétés d'un exe : une
+# valeur par exe, nommée par son chemin COMPLET, contenant les couches
+# (« ~ RUNASADMIN WINXPSP3 »). HKCU = « ce compte », HKLM = « tous les
+# utilisateurs ». Lu, jamais écrit.
+_CLE_COUCHES = r"Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"
+
+
+def couches_de_compatibilite(exe: Path) -> dict[str, list[str]]:
+    """Les couches posées sur `exe`, par ruche (`{"HKCU": ["RUNASADMIN"]}`).
+
+    Né d'un rapport du 2026-10-01 : « Exécuter ce programme en tant
+    qu'administrateur » coché sur `Game.exe` de HP2, et chaque clic sur JOUER
+    finissait en `WinError 740` sans que rien à l'écran ne dise pourquoi. Le
+    nom de la valeur est comparé sans la casse (Windows ne la garde pas
+    forcément). Hors Windows, ou registre illisible : rien.
+    """
+    if sys.platform != "win32":
+        return {}
+    import winreg
+    cible = os.path.normcase(str(exe))
+    trouve: dict[str, list[str]] = {}
+    for nom, ruche in (("HKCU", winreg.HKEY_CURRENT_USER),
+                       ("HKLM", winreg.HKEY_LOCAL_MACHINE)):
+        try:
+            cle = winreg.OpenKey(ruche, _CLE_COUCHES, 0,
+                                 winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
+        except OSError:
+            continue
+        with cle:
+            i = 0
+            while True:
+                try:
+                    valeur, donnee, _ = winreg.EnumValue(cle, i)
+                except OSError:
+                    break
+                i += 1
+                if os.path.normcase(valeur) == cible and isinstance(donnee, str):
+                    trouve[nom] = [c for c in donnee.split() if c not in ("~", "$")]
+    return trouve
+
+
+def exige_l_administrateur(couches: dict[str, list[str]]) -> list[str]:
+    """Les ruches où la case « administrateur » est cochée (pure)."""
+    return [ruche for ruche, liste in couches.items() if "RUNASADMIN" in liste]

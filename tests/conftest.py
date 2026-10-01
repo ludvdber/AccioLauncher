@@ -104,6 +104,14 @@ def _captures_hors_des_vraies_images(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _rapport_hors_du_vrai_bureau(tmp_path, monkeypatch):
+    """Aucun test ne dépose le rapport de diagnostic sur le VRAI Bureau : le
+    bouton l'écrit à chaque clic, et un test le clique."""
+    monkeypatch.setattr("src.ui.about_page.dossier_du_rapport", lambda: tmp_path)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_d_elevation_uac(monkeypatch):
     """Aucun test ne doit pouvoir faire apparaître une invite UAC.
 

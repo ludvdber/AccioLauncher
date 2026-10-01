@@ -1026,3 +1026,41 @@ class TestLeLancementRestaureAvantDePatcher:
         assert "restaurer_configs_manquantes" in ordre, "étape jamais appelée"
         assert (ordre.index("restaurer_configs_manquantes")
                 < ordre.index("apply_ini_patches"))
+
+
+class TestElevationExigee:
+    """« Exécuter en tant qu'administrateur » coché sur l'exe (rapport du
+    2026-10-01, HP2) : `Popen` lève `WinError 740`, qui finissait en
+    « Impossible de lancer le jeu. » sans un mot de la cause."""
+
+    def _manager(self, tmp_path, monkeypatch, erreur):
+        jeu = _jeu_multilingue()
+        m = _make_manager(tmp_path, [jeu])
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        for nom in ("unblock_game_dlls", "delete_pre_launch_files",
+                    "create_pre_launch_files", "apply_ini_patches"):
+            monkeypatch.setattr("src.core.game_manager." + nom, lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        monkeypatch.setattr("src.core.game_language.registre.ecrire_valeurs",
+                            lambda *a, **k: True)
+
+        def popen(*a, **k):
+            raise erreur
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen", popen)
+        return m
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="code d'erreur Windows")
+    def test_le_740_devient_une_cause_nommee(self, tmp_path, monkeypatch):
+        erreur = OSError(22, "L'opération demandée nécessite une élévation")
+        erreur.winerror = 740
+        m = self._manager(tmp_path, monkeypatch, erreur)
+        with pytest.raises(RuntimeError, match="^elevation_requise:.*Game.exe$"):
+            m.launch_game("hp7a")
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="lancement Windows")
+    def test_une_autre_erreur_reste_une_oserror(self, tmp_path, monkeypatch):
+        m = self._manager(tmp_path, monkeypatch, PermissionError(13, "refusé"))
+        with pytest.raises(PermissionError):
+            m.launch_game("hp7a")

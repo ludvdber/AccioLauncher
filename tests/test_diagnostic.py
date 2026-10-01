@@ -192,11 +192,15 @@ class TestBoutonDiagnostic:
         qtbot.addWidget(page)
         monkeypatch.setattr(about_page.diagnostic, "rapport",
                             lambda manager, **kw: "DIAGNOSTIC-TEST")
+        monkeypatch.setattr(about_page.diagnostic, "journaux_des_jeux", lambda m: [])
         btn = next(b for b in page.findChildren(QPushButton)
                    if "diagnostic" in b.text())
         largeur = btn.minimumWidth()
         btn.click()
         assert QGuiApplication.clipboard().text() == "DIAGNOSTIC-TEST"
+        # Le rapport COMPLET part en fichier joint (garde conftest : tmp_path).
+        assert (tmp_path / about_page.NOM_RAPPORT).read_text(
+            encoding="utf-8").startswith("DIAGNOSTIC-TEST")
         assert "Discord" in btn.text()
         assert btn.minimumWidth() == largeur
 

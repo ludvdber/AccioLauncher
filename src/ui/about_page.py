@@ -12,9 +12,11 @@ les remerciements viennent de DEUX sources (le catalogue distant et les blocs
 extérieur qu'il faut échapper.
 """
 
+import logging
 from html import escape
+from pathlib import Path
 
-from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtCore import QMimeData, QSize, QStandardPaths, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
@@ -27,6 +29,8 @@ from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, SITE_URL
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current as current_theme
 from src.ui.utils import open_url
+
+log = logging.getLogger(__name__)
 
 
 def _section(texte: str) -> QLabel:
@@ -205,6 +209,41 @@ def texte_diagnostic(manager) -> str:
     return diagnostic.rapport(manager, ecrans=ecrans, journal=journal)
 
 
+# Nom FIXE : chaque copie remplace la précédente, rien ne s'accumule.
+NOM_RAPPORT = "Accio Launcher - rapport.txt"
+
+
+def dossier_du_rapport() -> Path:
+    """Le Bureau : c'est là qu'on retrouve un fichier qu'on n'a pas cherché."""
+    bureau = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DesktopLocation)
+    return Path(bureau) if bureau and Path(bureau).is_dir() else LOG_DIR
+
+
+def enregistrer_rapport(manager, resume: str) -> Path | None:
+    """Écrit le rapport complet (résumé + tous les journaux) ; None si impossible."""
+    journaux = [("launcher · " + f.name, f) for f in sorted(LOG_DIR.glob("*.log"))]
+    journaux += diagnostic.journaux_des_jeux(manager)
+    texte = diagnostic.rapport_complet(
+        resume, [(nom, diagnostic.lire_la_fin(f)) for nom, f in journaux])
+    chemin = dossier_du_rapport() / NOM_RAPPORT
+    try:
+        chemin.write_text(texte, encoding="utf-8")
+    except OSError as exc:
+        log.warning("Rapport complet non écrit (%s) : %s", chemin, exc)
+        return None
+    return chemin
+
+
+def presse_papiers(resume: str, fichier: Path | None) -> QMimeData:
+    """Le FICHIER (Ctrl+V sur Discord le joint) et le résumé en texte, pour
+    tout endroit qui n'accepte pas de fichier."""
+    donnees = QMimeData()
+    if fichier is not None:
+        donnees.setUrls([QUrl.fromLocalFile(str(fichier))])
+    donnees.setText(resume)
+    return donnees
+
+
 def _bouton_diagnostic(manager) -> QPushButton:
     """« Copier les informations de diagnostic » — la réponse à la première
     question de tout dépannage sur le Discord (version, Windows, jeux, erreurs),
@@ -217,7 +256,7 @@ def _bouton_diagnostic(manager) -> QPushButton:
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     # La confirmation est plus longue que le libellé : le bouton ne doit pas
     # changer de largeur sous le curseur.
-    confirmation = tr("Copié — collez-le sur le Discord")
+    confirmation = tr("Copié — Ctrl+V sur le Discord joint le rapport")
     fm = btn.fontMetrics()
     btn.setMinimumWidth(max(fm.horizontalAdvance(libelle),
                             fm.horizontalAdvance(confirmation)) + 40)
@@ -231,7 +270,9 @@ def _bouton_diagnostic(manager) -> QPushButton:
     retour.timeout.connect(lambda: btn.setText(libelle))
 
     def copier():
-        QGuiApplication.clipboard().setText(texte_diagnostic(manager))
+        resume = texte_diagnostic(manager)
+        QGuiApplication.clipboard().setMimeData(
+            presse_papiers(resume, enregistrer_rapport(manager, resume)))
         btn.setText(confirmation)
         retour.start()
 
@@ -273,8 +314,9 @@ def construire(contributeurs, manager=None) -> QWidget:
     lay.addLayout(rangee)
     if manager is not None:
         lay.addWidget(_sous_titre(tr(
-            "Un souci ? Ces informations aident à vous dépanner sur le Discord : "
-            "version, Windows, jeux installés, dernières erreurs. Rien de personnel.")))
+            "Un souci ? Ce bouton copie le rapport de dépannage (version, Windows, "
+            "jeux installés, journaux des jeux) et l'enregistre aussi sur votre Bureau : "
+            "collez-le sur le Discord. Rien de personnel.")))
         ligne = QHBoxLayout()
         ligne.addWidget(_bouton_diagnostic(manager))
         ligne.addStretch()

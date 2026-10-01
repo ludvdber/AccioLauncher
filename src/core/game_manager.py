@@ -30,6 +30,9 @@ from src.core.version_utils import update_disponible
 
 log = logging.getLogger(__name__)
 
+# ERROR_ELEVATION_REQUIRED : CreateProcess refuse un exe qui exige l'administrateur.
+ERREUR_ELEVATION = 740
+
 # Au-delà, l'archive est téléchargée et n'attend plus que son installation :
 # ce n'est plus une reprise. Vit ici, avec `GameManager.reprise`, parce que
 # deux endroits l'affichent désormais (le bouton et la vignette) et qu'un
@@ -370,7 +373,15 @@ class GameManager:
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
         # Chemin absolu : dossier d'installation + `executable`, validé au
         # parsing du catalogue (ni `..`, ni racine, ni lecteur). Aucun shell.
-        return subprocess.Popen([str(exe_path)], **popen_kwargs)  # nosec B603
+        try:
+            return subprocess.Popen([str(exe_path)], **popen_kwargs)  # nosec B603
+        except OSError as exc:
+            # 740 : Windows exige l'élévation, presque toujours parce que
+            # « Exécuter en tant qu'administrateur » est coché sur l'exe
+            # (rapport du 2026-10-01). Le dire, pas « Impossible de lancer ».
+            if getattr(exc, "winerror", None) == ERREUR_ELEVATION:
+                raise RuntimeError(f"elevation_requise:{exe_path}") from exc
+            raise
 
     @staticmethod
     def _lancer_sous_wine(game: GameData, exe_path: Path, lanceur,

@@ -302,8 +302,6 @@
     "Discord : aide et communauté": "Discord: ayuda y comunidad",
     "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "¿Necesitas ayuda? Haz clic aquí para abrir el Discord.",
     "Copier les informations de diagnostic": "Copiar la información de diagnóstico",
-    "Copié — collez-le sur le Discord": "Copiado — pégalo en el Discord",
-    "Un souci ? Ces informations aident à vous dépanner sur le Discord : version, Windows, jeux installés, dernières erreurs. Rien de personnel.": "¿Algún problema? Esta información ayuda a solucionarlo en el Discord: versión, Windows, juegos instalados, últimos errores. Nada personal.",
     "La connexion a été interrompue.\nVérifiez votre connexion internet et réessayez.": "Se interrumpió la conexión.\nComprueba tu conexión a internet e inténtalo de nuevo.",
     "Le disque est plein.\nLibérez de la place, ou choisissez un autre dossier d'installation dans les Paramètres.": "El disco está lleno.\nLibera espacio o elige otra carpeta de instalación en los Ajustes.",
     "Votre antivirus a bloqué le fichier téléchargé.\nConsultez sa quarantaine, puis réessayez.": "Tu antivirus bloqueó el archivo descargado.\nRevisa su cuarentena y vuelve a intentarlo.",
@@ -659,6 +657,12 @@
     "faible": "baja",
     "moyenne": "media",
     "extrême": "extrema",
-    "Se voit nettement à l’écran.": "Se nota claramente en pantalla."
+    "Se voit nettement à l’écran.": "Se nota claramente en pantalla.",
+    "Copié — Ctrl+V sur le Discord joint le rapport": "Copiado — Ctrl+V en Discord adjunta el informe",
+    "Un souci ? Ce bouton copie le rapport de dépannage (version, Windows, jeux installés, journaux des jeux) et l'enregistre aussi sur votre Bureau : collez-le sur le Discord. Rien de personnel.": "¿Algún problema? Este botón copia el informe de diagnóstico (versión, Windows, juegos instalados, registros de los juegos) y también lo guarda en tu Escritorio: pégalo en Discord. Nada personal.",
+    "Windows refuse de lancer {} sans les droits administrateur. Les jeux n'en ont pas besoin : c'est un réglage posé sur ce fichier :\n\n{}\n\nClic droit sur le fichier → Propriétés → Compatibilité, décochez « Exécuter ce programme en tant qu'administrateur », puis relancez.": "Windows se niega a iniciar {} sin derechos de administrador. Los juegos no los necesitan: es un ajuste puesto en este archivo:\n\n{}\n\nClic derecho en el archivo → Propiedades → Compatibilidad, desmarca «Ejecutar este programa como administrador» y vuelve a iniciarlo.",
+    "La case est cochée pour tous les utilisateurs : passez par « Modifier les paramètres pour tous les utilisateurs ».": "La casilla está marcada para todos los usuarios: pasa por «Cambiar la configuración para todos los usuarios».",
+    "Si elle n'est pas cochée, regardez aussi « Modifier les paramètres pour tous les utilisateurs ».": "Si no está marcada, revisa también «Cambiar la configuración para todos los usuarios».",
+    "Droits administrateur demandés": "Se piden derechos de administrador"
   }
 }

@@ -302,8 +302,6 @@
     "Discord : aide et communauté": "Discord: help and community",
     "Besoin d'aide ? Cliquez ici pour ouvrir le Discord.": "Need help? Click here to open the Discord.",
     "Copier les informations de diagnostic": "Copy diagnostic information",
-    "Copié — collez-le sur le Discord": "Copied — paste it on the Discord",
-    "Un souci ? Ces informations aident à vous dépanner sur le Discord : version, Windows, jeux installés, dernières erreurs. Rien de personnel.": "Having trouble? This information helps us fix it on the Discord: version, Windows, installed games, latest errors. Nothing personal.",
     "La connexion a été interrompue.\nVérifiez votre connexion internet et réessayez.": "The connection was interrupted.\nCheck your internet connection and try again.",
     "Le disque est plein.\nLibérez de la place, ou choisissez un autre dossier d'installation dans les Paramètres.": "The disk is full.\nFree up some space, or choose another install folder in Settings.",
     "Votre antivirus a bloqué le fichier téléchargé.\nConsultez sa quarantaine, puis réessayez.": "Your antivirus blocked the downloaded file.\nCheck its quarantine, then try again.",
@@ -659,6 +657,12 @@
     "faible": "low",
     "moyenne": "medium",
     "extrême": "extreme",
-    "Se voit nettement à l’écran.": "Clearly visible on screen."
+    "Se voit nettement à l’écran.": "Clearly visible on screen.",
+    "Copié — Ctrl+V sur le Discord joint le rapport": "Copied — Ctrl+V on the Discord attaches the report",
+    "Un souci ? Ce bouton copie le rapport de dépannage (version, Windows, jeux installés, journaux des jeux) et l'enregistre aussi sur votre Bureau : collez-le sur le Discord. Rien de personnel.": "Having trouble? This button copies the troubleshooting report (version, Windows, installed games, game logs) and also saves it on your Desktop: paste it on the Discord. Nothing personal.",
+    "Windows refuse de lancer {} sans les droits administrateur. Les jeux n'en ont pas besoin : c'est un réglage posé sur ce fichier :\n\n{}\n\nClic droit sur le fichier → Propriétés → Compatibilité, décochez « Exécuter ce programme en tant qu'administrateur », puis relancez.": "Windows refuses to start {} without administrator rights. The games don't need them: it's a setting placed on this file:\n\n{}\n\nRight-click the file → Properties → Compatibility, untick “Run this program as an administrator”, then launch again.",
+    "La case est cochée pour tous les utilisateurs : passez par « Modifier les paramètres pour tous les utilisateurs ».": "The box is ticked for all users: go through “Change settings for all users”.",
+    "Si elle n'est pas cochée, regardez aussi « Modifier les paramètres pour tous les utilisateurs ».": "If it isn't ticked, also check “Change settings for all users”.",
+    "Droits administrateur demandés": "Administrator rights requested"
   }
 }

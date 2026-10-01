@@ -295,6 +295,8 @@ def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
                       "démarrer.\n\nVérifiez qu'il reste de la place sur le disque, et que "
                       "le dossier « _Launcher » d'Accio Launcher vous appartient bien.")
                    .format(str(exc).split(":", 1)[1]))
+        elif str(exc).startswith("elevation_requise:"):
+            signaler_elevation(view, Path(str(exc).split(":", 1)[1]))
         elif str(exc).startswith("documents_inutilisable:"):
             _boite(QMessageBox.Icon.Critical, view,
                    tr("Dossier Documents inaccessible"),
@@ -312,6 +314,33 @@ def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
         view.game_launched.emit(proc, view.game.name, view.game.id)
     else:
         view.status_message.emit(tr("Impossible de lancer le jeu."))
+
+
+def signaler_elevation(view: "GameDetailView", exe: Path) -> None:
+    """Windows exige l'administrateur pour l'exe : dire quelle case décocher.
+
+    Aucun des huit jeux ne le demande de lui-même (aucun manifeste : relevé
+    sur `Game.exe` de HP2). C'est une case de l'onglet Compatibilité, cochée à
+    la main ou par l'assistant de Windows après un premier échec. On la LIT
+    pour être affirmatif quand on la voit ; on ne la décoche pas : c'est son
+    registre, et la personne le fait en deux clics.
+    """
+    from src.core.win_utils import couches_de_compatibilite, exige_l_administrateur
+    ruches = exige_l_administrateur(couches_de_compatibilite(exe))
+    texte = tr("Windows refuse de lancer {} sans les droits administrateur. "
+               "Les jeux n'en ont pas besoin : c'est un réglage posé sur ce fichier :\n\n{}\n\n"
+               "Clic droit sur le fichier → Propriétés → Compatibilité, décochez "
+               "« Exécuter ce programme en tant qu'administrateur », puis relancez.").format(
+                   view.game.name, exe)
+    if "HKLM" in ruches:
+        texte += "\n\n" + tr("La case est cochée pour tous les utilisateurs : passez par "
+                             "« Modifier les paramètres pour tous les utilisateurs ».")
+    elif not ruches:
+        texte += "\n\n" + tr("Si elle n'est pas cochée, regardez aussi « Modifier les "
+                             "paramètres pour tous les utilisateurs ».")
+    if _boite(QMessageBox.Icon.Warning, view, tr("Droits administrateur demandés"), texte,
+              (tr("Ouvrir le dossier du jeu"), tr("Fermer"))) == 0:
+        open_local_path(str(exe.parent))
 
 
 def signaler_compat_absent(view: "GameDetailView") -> None:
