@@ -843,9 +843,37 @@
         "Combat",
         "Aventure"
       ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "latest_version": "1.2",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-10-01",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.2/hp4.7z",
+          "download_parts": null,
+          "size_mb": 1729,
+          "changes": [
+            "Limite à 144 images/s réellement atteinte",
+            "Alt+Tab : le pointeur reste visible et libre sur les autres fenêtres",
+            "Plantage lié au son en cours de partie corrigé"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "144 fps limit now actually reached",
+                "Alt+Tab: the pointer stays visible and free over the other windows",
+                "In-game crash caused by the sound fixed"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Límite de 144 fps alcanzado de verdad",
+                "Alt+Tab: el puntero sigue visible y libre sobre las demás ventanas",
+                "Cierre del juego causado por el sonido corregido"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-09-28",
@@ -1002,9 +1030,40 @@
         "Duel",
         "Exploration"
       ],
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-01",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.3/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.3/hp5.7z.002"
+          ],
+          "size_mb": 4600,
+          "changes": [
+            "Limite à 144 images/s réellement atteinte",
+            "Qualité des textures au maximum dès le premier lancement",
+            "Alt+Tab : le pointeur reste visible et libre sur les autres fenêtres"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "144 fps limit now actually reached",
+                "Texture quality at its highest from the first launch",
+                "Alt+Tab: the pointer stays visible and free over the other windows"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Límite de 144 fps alcanzado de verdad",
+                "Calidad de texturas al máximo desde el primer inicio",
+                "Alt+Tab: el puntero sigue visible y libre sobre las demás ventanas"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-09-28",
@@ -1211,9 +1270,46 @@
         "Potions",
         "Quidditch"
       ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "latest_version": "1.2",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-10-01",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.2/hp6.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.2/hp6.7z.002"
+          ],
+          "size_mb": 4414,
+          "changes": [
+            "Limite à 144 images/s réellement atteinte",
+            "Qualité des textures au maximum dès le premier lancement",
+            "Fenêtre à la bonne taille avec une mise à l'échelle Windows (125 %…)",
+            "Couleurs revues, verdure moins envahissante",
+            "Alt+Tab : le pointeur reste visible et libre sur les autres fenêtres"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "144 fps limit now actually reached",
+                "Texture quality at its highest from the first launch",
+                "Window at the right size with Windows scaling (125 %…)",
+                "Colours reworked, less overpowering green",
+                "Alt+Tab: the pointer stays visible and free over the other windows"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Límite de 144 fps alcanzado de verdad",
+                "Calidad de texturas al máximo desde el primer inicio",
+                "Ventana del tamaño correcto con el escalado de Windows (125 %…)",
+                "Colores revisados, verde menos invasivo",
+                "Alt+Tab: el puntero sigue visible y libre sobre las demás ventanas"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-09-28",
@@ -1354,9 +1450,50 @@
         "Infiltration",
         "Combat"
       ],
-      "latest_version": "1.0",
-      "recommended_version": "1.0",
+      "latest_version": "1.1",
+      "recommended_version": "1.1",
       "versions": [
+        {
+          "version": "1.1",
+          "date": "2026-10-01",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.1/hp7.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.1/hp7.7z.002",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.1/hp7.7z.003"
+          ],
+          "size_mb": 4445,
+          "changes": [
+            "Nouveau correctif PC Accio : image plus nette, champ de vision corrigé, réglages depuis le launcher",
+            "Limité à 60 images/s : les cinématiques ne passent plus en accéléré",
+            "Souris à vitesse constante, quelle que soit la cadence",
+            "Manettes PlayStation 4 et 5 reconnues, barre lumineuse aux couleurs de la maison",
+            "Fenêtre à la taille de l'écran, sans passer sous la barre des tâches",
+            "Alt+Tab sans figer le jeu ; pointeur visible et clics libres sur les autres fenêtres"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New Accio PC fix: sharper image, corrected field of view, settings from the launcher",
+                "Capped at 60 fps: cutscenes no longer play fast-forward",
+                "Mouse at a steady speed, whatever the frame rate",
+                "PlayStation 4 and 5 controllers recognised, light bar in your house colours",
+                "Window fitted to the screen, never under the taskbar",
+                "Alt+Tab without freezing the game; pointer visible and clicks free over the other windows"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo parche PC de Accio: imagen más nítida, campo de visión corregido, ajustes desde el launcher",
+                "Limitado a 60 fps: las cinemáticas ya no se aceleran",
+                "Ratón a velocidad constante, sea cual sea la tasa de imágenes",
+                "Mandos de PlayStation 4 y 5 reconocidos, barra de luz con los colores de tu casa",
+                "Ventana ajustada a la pantalla, sin quedar bajo la barra de tareas",
+                "Alt+Tab sin congelar el juego; puntero visible y clics libres sobre las demás ventanas"
+              ]
+            }
+          }
+        },
         {
           "version": "1.0",
           "date": "2026-08-26",
@@ -1528,9 +1665,48 @@
         "Combat",
         "Bataille"
       ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "latest_version": "1.2",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-10-01",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.2/hp8.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.2/hp8.7z.002",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.2/hp8.7z.003",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.2/hp8.7z.004"
+          ],
+          "size_mb": 7701,
+          "changes": [
+            "Nouveau correctif PC Accio : image plus nette, champ de vision corrigé, réglages depuis le launcher",
+            "Souris à vitesse constante, quelle que soit la cadence",
+            "Manettes PlayStation 4 et 5 reconnues, barre lumineuse aux couleurs de la maison",
+            "Fenêtre à la taille de l'écran, sans passer sous la barre des tâches",
+            "Alt+Tab sans figer le jeu ; pointeur visible et clics libres sur les autres fenêtres"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New Accio PC fix: sharper image, corrected field of view, settings from the launcher",
+                "Mouse at a steady speed, whatever the frame rate",
+                "PlayStation 4 and 5 controllers recognised, light bar in your house colours",
+                "Window fitted to the screen, never under the taskbar",
+                "Alt+Tab without freezing the game; pointer visible and clicks free over the other windows"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo parche PC de Accio: imagen más nítida, campo de visión corregido, ajustes desde el launcher",
+                "Ratón a velocidad constante, sea cual sea la tasa de imágenes",
+                "Mandos de PlayStation 4 y 5 reconocidos, barra de luz con los colores de tu casa",
+                "Ventana ajustada a la pantalla, sin quedar bajo la barra de tareas",
+                "Alt+Tab sin congelar el juego; puntero visible y clics libres sobre las demás ventanas"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-09-17",

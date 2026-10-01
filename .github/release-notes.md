@@ -5,18 +5,7 @@
 
 ## Nouveautés
 
-- Réglages par jeu bien plus complets (HP4 à HP7), en onglets, avec préréglages Légère, Équilibrée, Maximale.
-- Bouton « ? » sur chaque réglage, et « Rétablir les réglages d'origine ».
-- La fenêtre des réglages s'agrandit et se réduit.
-- Limite à 144 images/s réellement atteinte sur HP4, HP5 et HP6.
-- HP7 partie 1 limité à 60 images/s : ses cinématiques ne passent plus en accéléré.
-- HP2 : manette PlayStation configurée (stick gauche pour Harry, stick droit pour la caméra).
-- HP4 : emplacements de sauvegarde reconnus séparément.
-- Composants manquants signalés avant le lancement (DirectX, Visual C++).
-- Message clair quand Windows exige l'administrateur pour un jeu.
-- Rapport de dépannage complet en un clic, prêt à coller sur Discord.
-- Barre lumineuse de la manette éteinte à la fermeture.
-- Linux : nombreuses corrections (installation après préparation de Wine, HP1, HP3, manette).
+- …
 
 <!-- Le trait ci-dessous TERMINE les notes affichées dans le launcher :
      tout ce qui suit sert à lire la release sur GitHub et n'a rien à
