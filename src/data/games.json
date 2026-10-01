@@ -1094,6 +1094,7 @@
         "couleurs",
         "vivacite",
         "contraste",
+        "mode_fenetre",
         "format_image",
         "champ_vision",
         "ecran_principal",
