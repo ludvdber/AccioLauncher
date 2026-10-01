@@ -339,7 +339,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Ombres plus nettes",
             "Calcule les ombres portées en plus fin : des bords nets au lieu de flous et "
             "crénelés. Expérimental : agrandit aussi les reflets, et demande plus de mémoire "
-            "vidéo.",
+            "vidéo. À vos risques : sur Le Prince de Sang-Mêlé, ×4 laisse des taches sombres "
+            "sur les personnages dehors quand la caméra tourne.",
             choix=(1, 2, 4), zero="D'origine", format_choix="×{}",
             onglet="image", cout=(("GPU", 2), ("RAM", 1))),
     Reglage("halo", "Accio.Graphics", "Bloom",

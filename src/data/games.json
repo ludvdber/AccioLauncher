@@ -469,6 +469,102 @@
             "section": "UWindow.UWindowRootWindow",
             "key": "GUIScale",
             "value": "2.25"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy1",
+            "value": "AltFire | Button bBroomAction | Button bVendorReply"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy2",
+            "value": "jump | Button bBroomAction | Button bDuelCycleSpell"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy3",
+            "value": "button bSkipCutScene"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy4",
+            "value": "Button bDrinkWiggenwell | button bDuelCycleSpell"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy6",
+            "value": "AltFire | Button bBroomAction | Button bVendorReply"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy8",
+            "value": "AltFire | Button bBroomAction | Button bVendorReply"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyX",
+            "value": "Axis aStrafe Speed=2 | Axis aJoyBroomYaw Speed=2.0"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyY",
+            "value": "Axis aBaseY speed=2 | Axis aJoyBroomPitch Speed=-2.0"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyZ",
+            "value": "Axis aMouseX Speed=0.13"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyR",
+            "value": "Axis aMouseY Speed=-0.065"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyU",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyV",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyPovLeft",
+            "value": "Button bDuelRictusempra"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyPovUp",
+            "value": "Button bDuelMimblewimble"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyPovRight",
+            "value": "Button bDuelExpelliarmus"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+            "section": "WinDrv.WindowsClient",
+            "key": "DeadZoneRUV",
+            "value": "True"
           }
         ]
       },
