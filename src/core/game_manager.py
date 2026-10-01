@@ -387,12 +387,14 @@ class GameManager:
         """
         pfx = compat.prefixe(lanceur.famille)
         popen_kwargs["start_new_session"] = True
-        popen_kwargs["env"] = compat.environnement(lanceur, pfx, game.dll_overrides)
+        popen_kwargs["env"] = compat.environnement(lanceur, pfx, game.dll_overrides,
+                                                   ips_max=game.max_fps)
         commande = compat.commande_jeu(lanceur, exe_path)
         journal = compat.journal_du_jeu(game.id)
-        log.info("Lancement sous %s (%s) : préfixe %s, surcharges %s, journal %s",
+        log.info("Lancement sous %s (%s) : préfixe %s, surcharges %s, plafond %s, journal %s",
                  lanceur.famille, lanceur.executable, pfx,
-                 ",".join(game.dll_overrides) or "aucune", journal)
+                 ",".join(game.dll_overrides) or "aucune",
+                 f"{game.max_fps} ips" if game.max_fps else "aucun", journal)
         try:
             journal.parent.mkdir(parents=True, exist_ok=True)
             sortie = open(journal, "wb")

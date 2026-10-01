@@ -693,8 +693,11 @@ def assainir_environnement() -> None:
 
 
 def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None, *,
-                  mise_a_jour_runtime: bool = True) -> dict[str, str]:
+                  mise_a_jour_runtime: bool = True, ips_max: int = 0) -> dict[str, str]:
     """Environnement d'un processus lancé dans le préfixe.
+
+    `ips_max` : plafond d'images/s du jeu (`DXVK_FRAME_RATE`), sans effet sur
+    wined3d. Une valeur posée par l'utilisateur reste la sienne.
 
     `mise_a_jour_runtime=False` : un processus que la fenêtre attend (l'import
     d'un `.reg`) ne laisse pas umu vérifier son runtime, SANS consommer la
@@ -718,6 +721,8 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None, *,
     dlls = composer_surcharges(env.get("WINEDLLOVERRIDES", ""), surcharges)
     if dlls:
         env["WINEDLLOVERRIDES"] = dlls
+    if ips_max > 0:
+        env.setdefault("DXVK_FRAME_RATE", str(ips_max))
     return env
 
 

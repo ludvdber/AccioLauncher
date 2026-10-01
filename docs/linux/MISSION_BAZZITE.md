@@ -78,6 +78,27 @@ remplace en silence une DLL livrée par la sienne quand il en a une du même nom
 Si un jeu ne démarre pas, la cause passe avant le reste : journaux, verbes winetricks essayés **sur une copie
 du préfixe**, un à la fois, et ne déclarer que ce qui est prouvé (`requires` dans l'embarqué, comme HP1).
 
+### Après l'audit Windows de ton commit 9998e0d (à faire en premier)
+
+L'audit valide `xinput1_3` et le retrait de dgVoodoo. Il a trouvé un défaut, corrigé côté Windows :
+
+1. **HP3 : le plafond de 60 images/s était parti avec dgVoodoo.** Sous Windows, c'est son `dgVoodoo.conf`
+   (`FPSLimit = 60`) qui le tient, et HP3 ne doit **jamais** dépasser 60. Le catalogue porte maintenant
+   `"max_fps": 60` pour hp3, que le launcher passe en `DXVK_FRAME_RATE=60` (journal du launcher :
+   `plafond 60 ips`). **À vérifier** : lance HP3 par JOUER avec `DXVK_HUD=fps` exporté avant de démarrer le
+   launcher depuis les sources. Le compteur doit rester ≤ 60, y compris si tu peux brancher un écran à plus de
+   60 Hz. Fais-en une contre-épreuve avec `DXVK_FRAME_RATE=0` (sans plafond) : si le compteur ne dépasse pas
+   60 non plus, c'est la synchro de l'écran qui limite, et le test ne prouve rien. Dis-le alors.
+2. **HP7a/HP7b et `xinput1_3`** : les archives installées sous Windows n'ont **pas** de `xinput1_3.dll`
+   (seuls HP5 et HP6 en livrent un). La surcharge `n,b` retombe alors sur la DLL de Wine : sans danger. Vérifie
+   juste, à l'installation de HP7a, que la manette (ou le clavier) marche.
+3. **HP2, menu vide** : tu notes que le jeu efface lui-même `Running.ini` 13 s après le lancement, et que
+   l'autodétection tourne. Chez HP1, c'est exactement le cas où le moteur réécrit `GameRenderDevice` et plante
+   au rechargement du rendu. Relève `System/HP2.ini` (ou l'ini utilisateur dans le préfixe) **pendant** que le
+   jeu tourne, pas seulement après : `GameRenderDevice` vaut-il `D3DDrv` à ce moment-là ? Ne force pas le plein
+   écran (ni `StartupFullscreen`, ni Alt+Entrée) : chez HP1, c'est ce geste qui plante sans `Running.ini`.
+   La comparaison avec Windows sera faite ici.
+
 ### Restes du premier passage
 
 - Préparer Wine **pendant** un téléchargement (retour 3, sens 2), le bouton Annuler de la préparation, et le

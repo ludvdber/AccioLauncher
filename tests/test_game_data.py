@@ -616,3 +616,26 @@ class TestLeCatalogueEmbarqueDeclareLesSurcharges:
         from src.core.config import GAMES_JSON_PATH
         cat = load_catalog(Path(GAMES_JSON_PATH))
         assert {g.id: g.dll_overrides for g in cat.games} == self.ATTENDU
+
+
+class TestPlafondImagesParSeconde:
+    """`max_fps` : HP3 ne doit JAMAIS dépasser 60 images/s. Sous Windows, dgVoodoo
+    le tient ; sous Linux, dgVoodoo n'est plus surchargé (il plante sous Proton),
+    donc c'est DXVK qui doit le tenir, par `DXVK_FRAME_RATE`."""
+
+    def _avec(self, valeur):
+        return GameData.from_dict({**MINIMAL_GAME, "max_fps": valeur})
+
+    def test_hp3_embarque_plafonne_a_60(self):
+        from src.core.game_data import load_catalog
+        from pathlib import Path
+        from src.core.config import GAMES_JSON_PATH
+        cat = load_catalog(Path(GAMES_JSON_PATH))
+        assert {g.id: g.max_fps for g in cat.games if g.max_fps} == {"hp3": 60}
+
+    def test_valeur_lue(self):
+        assert self._avec(60).max_fps == 60
+
+    @pytest.mark.parametrize("mauvais", [None, True, False, "60", 60.0, 0, -5, 100000])
+    def test_valeurs_impropres_sans_plafond(self, mauvais):
+        assert self._avec(mauvais).max_fps == 0

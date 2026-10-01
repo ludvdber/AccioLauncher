@@ -527,6 +527,7 @@
       "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
       "developer": "KnowWonder",
       "executable": "HP3/system/hppoa.exe",
+      "max_fps": 60,
       "dll_overrides": [
         "msvcr70"
       ],

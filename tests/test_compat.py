@@ -427,6 +427,14 @@ class TestEnvironnement:
         assert env["WINE"] == "/usr/bin/wine"     # le winetricks du système l'utilise
         assert "WINEDLLOVERRIDES" not in env
 
+    def test_plafond_d_images_par_dxvk(self, tmp_path):
+        """HP3 sous Linux : dgVoodoo n'est plus là pour tenir les 60 images/s."""
+        umu = Lanceur("umu", "/usr/bin/umu-run", proton="/p/GE")
+        assert compat.environnement(umu, tmp_path, base={}, ips_max=60)["DXVK_FRAME_RATE"] == "60"
+        assert "DXVK_FRAME_RATE" not in compat.environnement(umu, tmp_path, base={})
+        env = compat.environnement(umu, tmp_path, base={"DXVK_FRAME_RATE": "30"}, ips_max=60)
+        assert env["DXVK_FRAME_RATE"] == "30"     # le réglage de l'utilisateur reste le sien
+
 
 class TestAssainirLeProcessus:
     """`assainir_environnement` retouche `os.environ` du launcher lui-même,

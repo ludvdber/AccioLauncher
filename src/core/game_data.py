@@ -522,6 +522,16 @@ def _annee_valide(brut) -> int:
     return brut if 1 <= brut <= 7 else 0
 
 
+def _ips_max_valide(brut) -> int:
+    """Plafond d'images/s déclaré par le catalogue : 1 à 1000, sinon 0 (aucun).
+
+    Booléens refusés comme pour `annee` : `true` vaudrait « 1 image/s ».
+    """
+    if isinstance(brut, bool) or not isinstance(brut, int):
+        return 0
+    return brut if 1 <= brut <= 1000 else 0
+
+
 def _url_aide_valide(brut) -> str:
     """URL d'aide du catalogue, ou chaîne vide si elle n'est pas acceptable.
 
@@ -820,6 +830,11 @@ class GameData:
     # d'office la DLL du dossier du jeu. Par jeu et dans le catalogue, comme
     # `dpi_aware` : un jeu ajouté déclare les siennes sans nouvelle release.
     dll_overrides: tuple[str, ...] = ()
+    # Plafond d'images/s sous Linux (0 = aucun), passé à DXVK (`DXVK_FRAME_RATE`).
+    # HP3 : sous Windows, c'est dgVoodoo qui le tient (`FPSLimit = 60`) ; sous
+    # Proton dgVoodoo plante et c'est DXVK qui rend le jeu (2026-10-01), donc le
+    # plafond doit voyager AVEC le jeu, pas avec le wrapper. Ignoré sous Windows.
+    max_fps: int = 0
     # Réglages du correctif PC (HP4-HP6) que le lanceur peut changer, CONFIRMÉS
     # en jeu un par un (`src/core/reglages_correctif.py`). Dans le catalogue et
     # non dans le code : un réglage vu en jeu un mardi doit pouvoir s'ouvrir le
@@ -951,6 +966,7 @@ class GameData:
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),
+            max_fps=_ips_max_valide(data.get("max_fps")),
             fix_settings=tuple(r for r in (data.get("fix_settings") if isinstance(data.get("fix_settings"), list) else ())
                                if isinstance(r, str) and _JETON_SUR.match(r)),
             noms=_tous_les_noms(data),
