@@ -223,3 +223,72 @@ pas lire Python 3.14, pas de pile relevée.
   ne déplaçait donc pas la fenêtre. `TitleBar.mousePressEvent` passe maintenant par `startSystemMove`
   (repli manuel s'il refuse) ; test `tests/test_title_bar_wayland.py`. L'agrandissement n'a pas été revu.
 - AppImage reconstruite (`build.sh`, sortie 0) et copiée dans `~/Téléchargements/` pour le raccourci : pas relancée.
+
+## Deuxième passage (2026-10-01)
+
+Launcher depuis les sources (catalogue embarqué modifié), préfixe copié avant (`~/AccioSauvegardes/prefixe-umu-1001`),
+son coupé. Suite : **2313 réussis, 33 sautés**, ruff propre ; AppImage reconstruite (66 Mo).
+
+### `xinput1_3` : défaut confirmé et corrigé
+
+HP6 lancé exactement comme le launcher (`WINEDLLOVERRIDES=d3d9=n,b`, `WINEDEBUG=+loaddll`) :
+
+```
+Loaded L"X:\\Games\\AccioLauncher\\HP6\\d3d9.dll" at 7AF50000: native
+Loaded L"X:\\Games\\AccioLauncher\\HP6\\XINPUT1_3.dll" at 7AF20000: builtin
+```
+
+Aucun `xinput_accio.log`. Avec `d3d9=n,b;xinput1_3=n,b` : `XINPUT1_3.dll … native`, et le journal du correctif
+apparaît (`settings: PlayStation=1 Rumble=1 LightBar=set`, `Accio xinput1_3: Xbox pads through xinput1_4.dll`).
+→ `"xinput1_3"` ajouté à `dll_overrides` de hp5, hp6, hp7a, hp7b (`src/data/games.json`, embarqué, sans
+nouveau numéro), `docs/LINUX.md` § 3, `CLAUDE.md`, et `TestLeCatalogueEmbarqueDeclareLesSurcharges`.
+**À reporter dans le catalogue distant.**
+
+### D : fenêtre du launcher sous KWin (Wayland)
+
+Sur la vraie fenêtre, souris pilotée par `ydotool` : glisser la barre de titre **déplace** la fenêtre
+(correctif `startSystemMove` du premier passage, vérifié) ; double clic sur la barre **agrandit**. Pendant une
+action : pas encore essayé.
+
+### HP2 : premier lancement
+
+| | |
+|---|---|
+| Bandeau de prérequis | aucun : le préfixe a déjà `d3dx11_43`/`d3dcompiler_43` posés pour HP1. |
+| Démarrage | oui, par JOUER ; launcher rangé dans la zone de notification. |
+| Écran | la fenêtre de démarrage du jeu « Menu principal » s'affiche **sans fond ni boutons** : seul « Quitter » est dessiné, avec le texte « clique sur Nouvelle partie ou Charger partie ». Survol, Alt+N : rien. **Injouable en l'état.** |
+| `Running.ini` | créé par le launcher à 11:17:24 (`Fichier pré-lancement créé : …/Harry Potter II/Running.ini`), **absent** 13 s plus tard ; `Detected.log` montre l'autodétection (`testrendev=D3DDrv.D3DRenderDevice`, `Can't find file for package 'D3DDrv'`). Le jeu retire donc le fichier lui-même : le garde-fou ne joue pas chez HP2 comme chez HP1 (non mesuré sous Windows). `GameRenderDevice` reste `D3D11Drv` après la sortie. |
+| Sortie | « Quitter » ferme proprement. |
+
+Piste pour le menu vide : ses boutons sont des images de la fenêtre de démarrage (Window.dll/GDI), pas du
+rendu D3D11 ; à comparer avec Windows (le même écran y a-t-il ses quatre boutons ?).
+
+### HP3 : dgVoodoo plante sous Proton, DXVK seul fonctionne
+
+| | |
+|---|---|
+| Installation | par le launcher, 336 Mo à ~23 Mo/s, barre du bas visible, `État de hp3 → installed`. |
+| Lancement avec le catalogue (`d3d8,d3d9,ddraw,msvcr70`) | **plantage au démarrage** : « Critical Error — General protection fault », `History: CreateDevice <- UD3DRenderDevice::SetRes <- UWindowsViewport::TryRenderDevice <- UWindowsViewport::OpenWindow <- UGameEngine::Init <- InitEngine`, carte vue comme « Intel(R) Graphics (ADL GT2) (dgVoodoo DX API Layer) ». Capture : `~/Accio-essais/hp3-critical.png`. |
+| Sans surcharge (d3d8/d3d9 de Proton = DXVK) | menu complet, nouvelle partie, emplacement, cinématique du train avec sous-titres : **le jeu tourne**. |
+| Catalogue | `dll_overrides` de hp3 ramené à `["msvcr70"]` (embarqué ; test, `docs/LINUX.md`, `CLAUDE.md`). Relancé par JOUER : `surcharges msvcr70`, menu atteint, « Quitter → Oui » sort en code 0. **À reporter dans le catalogue distant.** Cadence ≤ 60 : non mesurée. |
+
+Ce que dgVoodoo apportait sous Windows (cartes modernes) est fait sous Linux par DXVK ; si un réglage de
+`dgVoodoo.conf` le rend viable sous Proton, c'est à chercher côté Windows (non essayé ici).
+
+### Reste de ce passage
+
+HP4 en partie (ci-dessus), HP5, HP7a, HP7b (non installés), le correctif de cette nuit
+(`gh` absent : artefact `d3d9-win32` à fournir par Ludo), HP6 sur 10 min et ombres ×4, HP1 (charger une partie),
+D pendant une action (le double clic simulé par `ydotool` ne tombe pas de façon fiable sur la barre de titre :
+à faire avec Ludo), retours 3/Annuler/double clic sur JOUER, AppImage. Suppression de `~/Accio-essais/pfx-*` :
+à demander.
+
+### HP4 : invite de sauvegarde automatique, 10 démarrages sur 10 sans plantage
+
+Installé par le launcher (847 Mo, extraction 7zzs en 21 s), lancé par JOUER (`surcharges d3d9,msvcr71`) : choix
+de langue, puis « Voulez-vous activer la sauvegarde automatique », « Oui ». L'archive porte déjà le nouveau
+correctif (`d3d9_accio.log` écrit). Puis neuf démarrages scriptés (`~/Accio-essais/hp4-boucle.sh`, même
+`WINEDLLOVERRIDES`, aucune sauvegarde n'étant écrite avant la fin des logos l'invite revient à chaque fois) :
+**10 / 10 vivants 8 s après « Oui »**, captures `hp4-invite*.png` / `hp4-apres*.png`. Le plantage Windows
+d'environ 1 sur 10 ne se montre pas sous Wine (sans la DLL de cette nuit, donc sans `AudioStreamGuard`).
+Note : le jeu ne reçoit le clavier qu'après un clic dans sa fenêtre (focus). ZQSD en partie : non essayé.

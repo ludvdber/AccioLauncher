@@ -528,9 +528,6 @@
       "developer": "KnowWonder",
       "executable": "HP3/system/hppoa.exe",
       "dll_overrides": [
-        "d3d8",
-        "d3d9",
-        "ddraw",
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
@@ -898,7 +895,8 @@
         "ombres_nettes"
       ],
       "dll_overrides": [
-        "d3d9"
+        "d3d9",
+        "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
       "tags": [
@@ -1106,7 +1104,8 @@
         "ombres_nettes"
       ],
       "dll_overrides": [
-        "d3d9"
+        "d3d9",
+        "xinput1_3"
       ],
       "cover_image": "hp6_cover.jpg",
       "tags": [
@@ -1235,7 +1234,8 @@
         ]
       },
       "dll_overrides": [
-        "d3d9"
+        "d3d9",
+        "xinput1_3"
       ],
       "fix_settings": [
         "arriere_plan",
@@ -1410,7 +1410,8 @@
         ]
       },
       "dll_overrides": [
-        "d3d9"
+        "d3d9",
+        "xinput1_3"
       ],
       "fix_settings": [
         "arriere_plan",

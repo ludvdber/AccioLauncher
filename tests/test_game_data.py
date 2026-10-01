@@ -601,9 +601,13 @@ class TestLeCatalogueEmbarqueDeclareLesSurcharges:
 
     ATTENDU = {
         "hp1": (), "hp2": (),
-        "hp3": ("d3d8", "d3d9", "ddraw", "msvcr70"),
+        # dgVoodoo (d3d8, d3d9, ddraw) plante sous Proton : `UD3DRenderDevice::SetRes`,
+        # General protection fault ; DXVK seul rend le jeu (HP3, 2026-10-01).
+        "hp3": ("msvcr70",),
         "hp4": ("d3d9", "msvcr71"),
-        "hp5": ("d3d9",), "hp6": ("d3d9",), "hp7a": ("d3d9",), "hp7b": ("d3d9",),
+        # xinput1_3 : la DLL manette du correctif, `builtin` sans surcharge (HP6, 2026-10-01).
+        "hp5": ("d3d9", "xinput1_3"), "hp6": ("d3d9", "xinput1_3"),
+        "hp7a": ("d3d9", "xinput1_3"), "hp7b": ("d3d9", "xinput1_3"),
     }
 
     def test_releve(self):
