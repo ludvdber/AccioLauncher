@@ -292,3 +292,38 @@ correctif (`d3d9_accio.log` écrit). Puis neuf démarrages scriptés (`~/Accio-e
 **10 / 10 vivants 8 s après « Oui »**, captures `hp4-invite*.png` / `hp4-apres*.png`. Le plantage Windows
 d'environ 1 sur 10 ne se montre pas sous Wine (sans la DLL de cette nuit, donc sans `AudioStreamGuard`).
 Note : le jeu ne reçoit le clavier qu'après un clic dans sa fenêtre (focus). ZQSD en partie : non essayé.
+
+### Après l'audit de 9998e0d
+
+**1. HP3, `max_fps` : le plafond n'est PAS appliqué.** Le launcher journalise bien `surcharges msvcr70, plafond 60 ips`
+et le processus reçoit `DXVK_FRAME_RATE=60` (lu dans `/proc/<pid>/environ`), mais **HP3 ne passe pas par DXVK** :
+`/proc/<pid>/maps` montre `lib/wine/i386-windows/d3d8.dll` + `wined3d.dll`. Proton ne pose `d3d8=n` (et ne copie le
+d3d8 de DXVK dans `syswow64`) que si `PROTON_DXVK_D3D8=1` ; sans lui, le `syswow64/d3d8.dll` du préfixe est celui
+de Wine (`Wine builtin`, pas de « dxvk »). Le compteur `DXVK_HUD=fps` n'apparaît d'ailleurs jamais.
+
+Essais pour mettre HP3 sur DXVK, chaque fois DLL de dgVoodoo mises de côté puis remises (`cmp` : identiques) :
+
+| Essai | Résultat |
+|---|---|
+| `PROTON_DXVK_D3D8=1`, `D3D8.dll` de dgVoodoo écarté seul | le d3d8 de DXVK charge le `D3D9.dll` de dgVoodoo du dossier du jeu → « Please install DirectX 8.1b or later » |
+| `PROTON_DXVK_D3D8=1`, les quatre DLL de dgVoodoo écartées | DXVK chargé (`syswow64/d3d8.dll` + `d3d9.dll`, compteur visible) mais **image figée** sur l'introduction (compteur bloqué à 35,8, jeu à ~10 % CPU), > 1 min, Échap/Entrée/clic sans effet |
+| dgVoodoo + `Resolution = unforced` (au lieu de `max`) | même « General protection fault » dans `UD3DRenderDevice::SetRes` |
+| dgVoodoo + `OutputAPI = d3d11_fl11_0` | idem |
+
+Cadence réelle sous wined3d (`WINEDEBUG=+fps`, menu) : **57-59 images/s**. Contre-épreuve `vblank_mode=0` :
+**58 images/s** aussi → **ne prouve rien** : écran à 60 Hz et XWayland/KWin synchronisent de toute façon. Pas
+d'écran > 60 Hz disponible. Conclusion : `DXVK_FRAME_RATE` est sans effet sur HP3 tel que lancé ; wined3d n'a
+pas de limiteur. Pistes (côté Windows / décision) : faire tourner dgVoodoo sous Proton, ou plafonner par un
+autre moyen que DXVK (le moteur, ou un limiteur dans le correctif s'il en existe un pour UE2/HP3).
+
+**3. HP2, `GameRenderDevice` pendant la partie.** `Running.ini` posé, jeu lancé (12:57:48), relevé toutes les 2 s :
+`Running.ini` présent jusqu'à ~12 s, **absent à 15 s** ; à 12:58:03 `Detected.ini`, `Detected.log` et `Game.ini`
+sont réécrits ensemble (autodétection), mais **`GameRenderDevice` et `WindowedRenderDevice` restent
+`D3D11Drv.D3D11RenderDevice`** pendant toute la partie (relevé à 2, 4, …, 25 et 50 s). Seul `RunCount` change
+(50 → 52) entre avant et après. Différence avec HP1 : la détection n'y réécrit pas le pilote. Plein écran non
+touché. Le menu reste sans fond ni boutons.
+
+**2. HP7a/HP7b et `xinput1_3`** : non fait (non installés).
+
+L'écran s'est verrouillé à 12:59 : essais à l'écran interrompus là. HP2, HP3 et HP4 fermés, `dgVoodoo.conf`
+et DLL de HP3 remis, préfixe sauvegardé dans `~/AccioSauvegardes/prefixe-umu-1001`.
