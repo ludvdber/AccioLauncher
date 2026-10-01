@@ -7,6 +7,95 @@ lire ton rapport puis le rapportera à la session Windows.
 Réponds à Ludo **en français**. Lis d'abord `CLAUDE.md` (toutes les règles du projet) et
 `docs/LINUX.md` (portage : umu puis wine, préfixe partagé, surcharges de DLL).
 
+## Deuxième passage (2026-10-01) : chaque jeu, un par un
+
+Le premier passage (tâches A à F, plus bas) est fait : lis `docs/linux/RETOUR_BAZZITE.md` pour savoir
+où il s'est arrêté. Ludo demande maintenant d'essayer **chaque jeu** sous Linux. Ajoute tes résultats dans
+`RETOUR_BAZZITE.md`, sous un titre « Deuxième passage (2026-10-01) », sans effacer le premier.
+
+**Ce qui change dans les autorisations** : HP7a et HP7b peuvent maintenant être lancés (« chaque jeu »).
+Sous Windows, HP8 s'est déjà figé à 100 % sur tous les cœurs (2026-09-25) : surveille-le (`top`) et, s'il
+ne répond plus pendant 30 s, arrête-le (`pkill -f hp8.exe`, puis `wineserver -k` avec le `WINEPREFIX` du
+launcher) et note-le. Tout le reste de « Ce que tu as le droit de faire » reste valable : son coupé,
+sauvegarde du préfixe d'abord, pas de commit, rien d'installé sur le système.
+
+### Le correctif de cette nuit (DLL Windows, à récupérer)
+
+Le correctif `Harry-Potter-PC-Fix` a changé cette nuit, côté Windows. Les archives publiées ne le portent
+pas encore. Pour l'essayer :
+
+1. Le build GitHub du dépôt `ludvdber/Harry-Potter-PC-Fix` publie l'artefact **`d3d9-win32`** (un seul
+   `d3d9.dll` et un seul `xinput1_3.dll` pour tous les jeux). Prends celui du dernier commit **vert** :
+   `gh run download --repo ludvdber/Harry-Potter-PC-Fix -n d3d9-win32` si `gh` est connecté. Sinon,
+   demande à Ludo de le télécharger depuis la page Actions du dépôt.
+2. Les `d3d9.ini` viennent du même commit : `data/<jeu>/d3d9.ini` du dépôt (clone-le à côté s'il n'y est pas).
+3. Avant de remplacer quoi que ce soit dans `~/Games/AccioLauncher/<jeu>/`, copie `d3d9.dll`, `d3d9.ini`
+   et `xinput1_3.dll` d'origine dans `~/AccioSauvegardes/`, et remets-les à la fin. Une « Vérification /
+   réparation » du launcher les remet aussi.
+4. Essaie chaque jeu **d'abord avec ce que l'archive installe**, puis avec la nouvelle DLL. Les deux
+   résultats comptent : les joueurs Linux ont aujourd'hui la version de l'archive.
+
+Nouveautés à regarder sous Wine (sous Windows, toutes ont été vues en jeu) :
+
+| Clé de l'ini | Jeux | Ce qu'elle fait | Quoi vérifier sous Linux |
+|---|---|---|---|
+| `MouseFrameRate=30` | HP7a, HP7b | La caméra tournait selon « mouvement de la souris × durée de l'image » ; elle répond maintenant comme à 30 images/s quelle que soit la cadence. | Le journal dit `Input: mouse scaled to 30 frames per second`. La caméra suit la souris sans à-coups ni inversion. |
+| `FitToScreen=1` | tous (HP4-HP7b) | Une fenêtre à bordure plus grande que la place libre de l'écran est réduite dedans, même si le jeu la redimensionne. | Avec `WindowStyle=2` : la fenêtre ne passe pas sous le panneau de KDE ; ligne `too big for the screen's free area` au journal. Wayland/XWayland peut répondre autrement que Windows : note ce qui se passe. |
+| `DPIAware=1` | HP5, HP6 | Sous Windows à 125 %, HP6 en fenêtre était agrandi du facteur d'échelle. | Rien à voir à 100 %. Si KDE est réglé à plus de 100 %, la fenêtre a la taille demandée. |
+| `ShadowMapScale=4` | HP6 | Ombres ×4, choisies par Ludo dehors. | **Coût sur l'Intel UHD** : images/s (`ShowFPS=1` ou le panneau F11) avec 4 puis 1, même scène. Si c'est injouable, dis-le avec les chiffres. |
+| `GreenRestraint=1.00` | HP6 | Retire la teinte menthe des collines et du ciel. | Juste que l'image s'affiche ; le goût a été jugé sous Windows. |
+| `AudioStreamGuard` | HP4 | Sous Windows, environ un démarrage sur dix plantait 2 s après le « Oui » de l'invite de sauvegarde automatique. | Une dizaine de démarrages jusqu'à l'invite, « Oui » : combien de plantages. |
+| `TextureDetail=2` | HP5, HP6 | Démarre en « Qualité » quand le registre n'a pas encore d'`OptionLOD`. | **Jamais vu en jeu, même sous Windows** : Options → Vidéo d'une installation neuve dit « Qualité ». |
+
+### Un défaut probable à confirmer en premier : `xinput1_3` sans surcharge
+
+Les archives de HP5 à HP7b livrent un **`xinput1_3.dll`** du correctif (manette PlayStation, barre lumineuse,
+manette reconnue dès le démarrage). Le catalogue ne déclare pour eux que `"dll_overrides": ["d3d9"]`. Or Wine
+remplace en silence une DLL livrée par la sienne quand il en a une du même nom (vu pour `d3d9`, voir
+`docs/LINUX.md` § 3). Sous Linux, la DLL manette du correctif ne serait donc **jamais chargée**.
+
+1. Lance HP5 (ou HP6) par le launcher, manette branchée si possible. Regarde si `HP5/xinput_accio.log`
+   est écrit ou mis à jour, et cherche `xinput1_3` dans `_Launcher/logs/wine-hp5.log` (avec
+   `WINEDEBUG=+loaddll` si besoin : `native` ou `builtin`).
+2. Si c'est `builtin` : ajoute `"xinput1_3"` à `dll_overrides` de **hp5, hp6, hp7a, hp7b** dans
+   `src/data/games.json` (l'embarqué : le catalogue 0.35 n'est pas encore publié, pas de nouveau numéro),
+   relance, et vérifie que le journal du correctif apparaît. Mets à jour `docs/LINUX.md` § 3 et la ligne
+   `dll_overrides` de `CLAUDE.md`. Tests verts.
+
+### Jeu par jeu
+
+| Jeu | Déjà fait | À faire |
+|---|---|---|
+| HP1 | Menu atteint par le launcher (d3dx11_43 + d3dcompiler_43). | Charger une partie, jouer une minute, Alt+Tab aller-retour, quitter par le menu. `HP.ini` reste en `D3D11Drv` après la sortie. |
+| HP2 | Installé, jamais lancé. | Premier lancement par le launcher : le bandeau demande-t-il les mêmes composants que HP1 (déjà dans le préfixe) ? Menu, nouvelle partie, Alt+Tab. |
+| HP3 | Rien. | Installer par le launcher, lancer (dgVoodoo : surcharges `d3d8 d3d9 ddraw msvcr70`). Menu, une partie, cadence ≤ 60. Note ce que dit `wine-hp3.log` sur les DLL chargées. |
+| HP4 | Rien. | Lancer ; les touches ZQSD du préréglage sur le clavier du portable (la disposition se lit par `VkKeyScan`, sous Wine elle peut différer) ; l'invite de sauvegarde (voir `AudioStreamGuard`). |
+| HP5 | Rien. | Lancer, puis `xinput1_3` (ci-dessus) ; `TextureDetail` ; Alt+Tab, le pointeur reste visible au-dessus du jeu. |
+| HP6 | Cinématique jouée sans gel ; Meta géré. | Le gel ancien (cadence tombée à ~3 images/s) : surveiller les images/s sur 10 min de partie. Puis la nouvelle DLL (ombres ×4, coût). `vcrun2005` : le launcher le demande-t-il, et le jeu en a-t-il besoin (essai sur une copie du préfixe, comme pour HP1) ? |
+| HP7a | Rien. | Installer par le launcher : le rangement dans `HP7/pc/`, l'écriture de `Locale` + `Install Dir` par `regedit` dans le préfixe (la boîte de prévenance s'affiche, pas d'UAC), `d3dx9_37`, VC++ 2005. Le jeu démarre (s'il quitte en 0,5 s sans rien dire, c'est le piège du dossier `pc` : voir `CLAUDE.md`). Puis `MouseFrameRate` et `FitToScreen`. |
+| HP7b | Rien. | Comme HP7a (`Locale=fr`, VC++ 2008). Surveillance du gel (voir plus haut). |
+
+Si un jeu ne démarre pas, la cause passe avant le reste : journaux, verbes winetricks essayés **sur une copie
+du préfixe**, un à la fois, et ne déclarer que ce qui est prouvé (`requires` dans l'embarqué, comme HP1).
+
+### Restes du premier passage
+
+- Préparer Wine **pendant** un téléchargement (retour 3, sens 2), le bouton Annuler de la préparation, et le
+  double clic sur JOUER.
+- D : agrandir la fenêtre du launcher sous KWin (pas dans gamescope : en session KDE normale, Ludo présent).
+- L'AppImage (`./build.sh`) : refaire HP1 et un jeu à correctif avec elle.
+- Supprimer les copies `~/Accio-essais/pfx-*` (≈ 700 Mo chacune) **après avoir demandé à Ludo**.
+
+### Rapport de ce passage
+
+Dans `RETOUR_BAZZITE.md`, un tableau par jeu : démarre ou non, ce qui a été essayé, ce qui casse (lignes de
+journal), verbes winetricks prouvés. Puis la conclusion sur `xinput1_3`, et les mesures d'images/s de HP6
+(ombres ×1 / ×4). Tout ce qui demande de toucher à la DLL du correctif : décris, la session Windows corrige.
+
+---
+
+## Premier passage (2026-09-30) : fait, gardé pour mémoire
+
 ## Ce que tu as le droit de faire, et pas
 
 **Autorisé pour cette mission** (Ludo l'a demandé explicitement) :
@@ -15,7 +104,7 @@ Réponds à Ludo **en français**. Lis d'abord `CLAUDE.md` (toutes les règles d
 - créer un venv Python dans le dépôt, modifier le code du launcher, ajouter des tests.
 
 **Interdit :**
-- **HP7a et HP7b (hp7 / hp8) : ne jamais les lancer.**
+- ~~HP7a et HP7b (hp7 / hp8) : ne jamais les lancer.~~ Levé au deuxième passage (voir plus haut).
 - Supprimer une sauvegarde de jeu. Sauvegarder AVANT tout essai (voir plus bas), restaurer à l'identique.
 - Commit ou push : **Ludo commit lui-même.** Jamais de trailer `Co-Authored-By`.
 - Installer quoi que ce soit sur le système (`rpm-ostree`, flatpak, toolbox, paquets) : demander à Ludo.
