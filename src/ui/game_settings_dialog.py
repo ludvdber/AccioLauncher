@@ -62,6 +62,10 @@ _HAUTEUR_ONGLETS = 34
 _ESPACE_ONGLETS = 16
 _ESPACE_PIED = 8
 _HAUTEUR_PIED = 32    # le bouton « Fermer »
+# Part de l'écran que la fenêtre prend d'elle-même au plus : au-delà, elle
+# défile (Ludo, 2026-10-01 : « pas évident quand elle prend tout l'écran »).
+_PART_ECRAN = 0.8
+_HAUTEUR_MIN_PAGE = 120
 
 # (identifiant, libellé) dans l'ordre des onglets. L'image d'abord : c'est ce
 # qu'on vient régler le plus souvent.
@@ -185,6 +189,10 @@ class GameSettingsDialog(QDialog):
         # Les familles d'effets repliables (en-tête, contenu) et « Tout déplier ».
         self._groupes: list[tuple[QPushButton, QWidget]] = []
         self._tout: QPushButton | None = None
+        # Vrai dès que la personne a redimensionné la fenêtre elle-même : sa
+        # taille l'emporte alors sur celle que suggère le contenu.
+        self._taille_choisie = False
+        self._on_redimensionne = False
 
         self.setWindowTitle(tr("Réglages — {}").format(game.name))
         self.setStyleSheet(themed(
@@ -192,9 +200,42 @@ class GameSettingsDialog(QDialog):
         ))
         self._build_ui()
         # La hauteur suit le contenu (de 1 à 7 langues, de 0 à 7 réglages), et
-        # l'écran la plafonne : au-delà, les rubriques défilent.
-        self.setFixedWidth(_LARGEUR)
+        # l'écran la plafonne : au-delà, les rubriques défilent. La largeur
+        # mesurée est un MINIMUM : la fenêtre s'élargit et se réduit à la main
+        # (retour de Ludo, 2026-10-01 : elle était figée dans les deux sens).
+        self.setMinimumWidth(_LARGEUR)
+        self.setSizeGripEnabled(True)
+        self._redimensionner(_LARGEUR, self.height())
         self._ajuster_hauteur()
+
+    def _redimensionner(self, largeur: int, hauteur: int) -> None:
+        self._on_redimensionne = True
+        try:
+            self.resize(largeur, hauteur)
+        finally:
+            self._on_redimensionne = False
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().resizeEvent(event)
+        if not self._on_redimensionne and self.isVisible() and event.spontaneous():
+            self._taille_choisie = True
+        self._marges_de_defilement(self._defile.height())
+
+    def _hauteurs_voulues(self, largeur: int) -> list[int]:
+        voulus = []
+        for contenu in self._contenus:
+            corps = contenu.layout()
+            corps.activate()
+            voulus.append(corps.totalHeightForWidth(largeur) if corps.hasHeightForWidth()
+                          else corps.sizeHint().height())
+        return voulus
+
+    def _marges_de_defilement(self, dispo: int) -> None:
+        """La barre de défilement prend sa place à droite : le texte s'en écarte.
+        Remis à zéro quand elle part (le détail de la qualité se replie)."""
+        largeur = max(self.width(), _LARGEUR) - _MARGES_H
+        for contenu, v in zip(self._contenus, self._hauteurs_voulues(largeur)):
+            contenu.layout().setContentsMargins(0, 0, 18 if v > dispo else 0, 0)
 
     def _ajuster_hauteur(self) -> None:
         """Hauteur calculée, pas demandée à `adjustSize`.
@@ -204,31 +245,32 @@ class GameSettingsDialog(QDialog):
         Coupe de Feu ») sur une seule, et « Fermer » chevauchait les rubriques
         (règles 38 et 39).
         """
-        largeur = _LARGEUR - _MARGES_H
+        largeur = max(self.width(), _LARGEUR) - _MARGES_H
         # La page la plus haute fixe la hauteur : changer d'onglet ne fait pas
         # sauter la fenêtre.
-        voulus = []
-        for contenu in self._contenus:
-            corps = contenu.layout()
-            corps.activate()
-            voulus.append(corps.totalHeightForWidth(largeur) if corps.hasHeightForWidth()
-                          else corps.sizeHint().height())
-        voulu = max(voulus, default=120)
+        voulu = max(self._hauteurs_voulues(largeur), default=_HAUTEUR_MIN_PAGE)
         pied = sum(lbl.heightForWidth(largeur) for lbl in (self._pied_notes, self._erreur)
                    if not lbl.isHidden())
         cadre = (_MARGE_HAUT + self._titre.heightForWidth(largeur) + _ESPACE_TITRE
                  + (_HAUTEUR_ONGLETS + _ESPACE_ONGLETS if not self._barre_onglets.isHidden() else 0)
                  + pied + _ESPACE_PIED + _HAUTEUR_PIED + _MARGE_BAS)
         ecran = self.screen() or QGuiApplication.primaryScreen()
-        # La barre de titre de Windows et un peu d'air au-dessus de la barre des tâches.
-        plafond = ecran.availableGeometry().height() - cadre - 60 if ecran is not None else voulu
-        for contenu, v in zip(self._contenus, voulus):
-            # La barre de défilement prend sa place à droite : le texte s'en écarte.
-            # Remis à zéro quand elle part (le détail de la qualité se replie).
-            contenu.layout().setContentsMargins(0, 0, 18 if v > plafond else 0, 0)
-        hauteur = max(120, min(voulu, plafond))
-        self._defile.setFixedHeight(hauteur)
-        self.setFixedHeight(cadre + hauteur)
+        # La barre de titre de Windows et un peu d'air au-dessus de la barre des
+        # tâches ; et jamais plus de `_PART_ECRAN` de l'écran d'elle-même.
+        if ecran is not None:
+            dispo = ecran.availableGeometry().height()
+            plafond = min(dispo - 60, int(dispo * _PART_ECRAN)) - cadre
+        else:
+            plafond = voulu
+        self.setMinimumHeight(cadre + _HAUTEUR_MIN_PAGE)
+        self._defile.setMinimumHeight(_HAUTEUR_MIN_PAGE)
+        if self._taille_choisie:
+            # La personne a choisi sa taille : le contenu défile dedans.
+            self._marges_de_defilement(self._defile.height())
+            return
+        hauteur = max(_HAUTEUR_MIN_PAGE, min(voulu, plafond))
+        self._marges_de_defilement(hauteur)
+        self._redimensionner(self.width(), cadre + hauteur)
 
     # ── Construction ──
 
@@ -290,7 +332,7 @@ class GameSettingsDialog(QDialog):
         self._barre_onglets.setVisible(len(self._onglets) > 1)
         layout.addWidget(self._barre_onglets)
         layout.addSpacing(_ESPACE_ONGLETS if len(self._onglets) > 1 else 0)
-        layout.addWidget(self._defile)
+        layout.addWidget(self._defile, 1)
 
         # Sous les pages, visibles quel que soit l'onglet : l'échec d'écriture
         # et le rappel que tout vaut au prochain lancement.

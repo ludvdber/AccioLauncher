@@ -663,6 +663,8 @@
     "Windows refuse de lancer {} sans les droits administrateur. Les jeux n'en ont pas besoin : c'est un réglage posé sur ce fichier :\n\n{}\n\nClic droit sur le fichier → Propriétés → Compatibilité, décochez « Exécuter ce programme en tant qu'administrateur », puis relancez.": "Windows se niega a iniciar {} sin derechos de administrador. Los juegos no los necesitan: es un ajuste puesto en este archivo:\n\n{}\n\nClic derecho en el archivo → Propiedades → Compatibilidad, desmarca «Ejecutar este programa como administrador» y vuelve a iniciarlo.",
     "La case est cochée pour tous les utilisateurs : passez par « Modifier les paramètres pour tous les utilisateurs ».": "La casilla está marcada para todos los usuarios: pasa por «Cambiar la configuración para todos los usuarios».",
     "Si elle n'est pas cochée, regardez aussi « Modifier les paramètres pour tous les utilisateurs ».": "Si no está marcada, revisa también «Cambiar la configuración para todos los usuarios».",
-    "Droits administrateur demandés": "Se piden derechos de administrador"
+    "Droits administrateur demandés": "Se piden derechos de administrador",
+    "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques passent en accéléré. 30 fait moins chauffer l'ordinateur.": "Este juego no debe superar 60 imágenes por segundo: por encima, sus cinemáticas se reproducen aceleradas. 30 calienta menos el ordenador.",
+    "60 (vitesse normale)": "60 (velocidad normal)"
   }
 }

@@ -663,6 +663,8 @@
     "Windows refuse de lancer {} sans les droits administrateur. Les jeux n'en ont pas besoin : c'est un réglage posé sur ce fichier :\n\n{}\n\nClic droit sur le fichier → Propriétés → Compatibilité, décochez « Exécuter ce programme en tant qu'administrateur », puis relancez.": "Windows refuses to start {} without administrator rights. The games don't need them: it's a setting placed on this file:\n\n{}\n\nRight-click the file → Properties → Compatibility, untick “Run this program as an administrator”, then launch again.",
     "La case est cochée pour tous les utilisateurs : passez par « Modifier les paramètres pour tous les utilisateurs ».": "The box is ticked for all users: go through “Change settings for all users”.",
     "Si elle n'est pas cochée, regardez aussi « Modifier les paramètres pour tous les utilisateurs ».": "If it isn't ticked, also check “Change settings for all users”.",
-    "Droits administrateur demandés": "Administrator rights requested"
+    "Droits administrateur demandés": "Administrator rights requested",
+    "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques passent en accéléré. 30 fait moins chauffer l'ordinateur.": "This game must not go above 60 frames per second: beyond that, its cutscenes play fast-forwarded. 30 keeps the computer cooler.",
+    "60 (vitesse normale)": "60 (normal speed)"
   }
 }

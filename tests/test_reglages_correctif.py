@@ -893,3 +893,96 @@ class TestCatalogueEmbarque:
         data = json.loads((Path(__file__).parent.parent / "src/data/games.json").read_text(encoding="utf-8"))
         hp7b = next(j for j in data["games"] if j["id"] == "hp7b")
         assert "format_image" not in hp7b["fix_settings"]
+
+
+class TestFenetreRedimensionnable:
+    """Retour de Ludo (2026-10-01) : la fenêtre ne s'élargissait ni ne se
+    réduisait, et prenait toute la hauteur de l'écran."""
+
+    def _dlg(self, qtbot, tmp_path):
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        tous = ["arriere_plan", "limite_fps", "touches_zqsd", "lissage", "anticrenelage",
+                "anticrenelage_transparence", "compteur_fps", "panneau_perfs"]
+        jeu = GameData.from_dict({
+            "id": "hp4", "name": "Harry Potter et la Coupe de Feu", "year": 2005,
+            "description": "d", "developer": "d", "executable": "HP4/gof_f.exe",
+            "cover_image": "c.jpg", "fix_settings": tous})
+        dlg = _dialogue(qtbot, jeu, _manager(tmp_path))
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        return dlg
+
+    def test_la_largeur_mesuree_est_un_minimum_pas_une_cage(self, qtbot, tmp_path):
+        from src.ui.game_settings_dialog import _LARGEUR
+        dlg = self._dlg(qtbot, tmp_path)
+        assert dlg.minimumWidth() == _LARGEUR
+        assert dlg.maximumWidth() > _LARGEUR
+        assert dlg.maximumHeight() > dlg.height()
+
+    def test_jamais_plus_de_quatre_cinquiemes_de_l_ecran(self, qtbot, tmp_path):
+        from src.ui.game_settings_dialog import _PART_ECRAN
+        dlg = self._dlg(qtbot, tmp_path)
+        dispo = dlg.screen().availableGeometry().height()
+        assert dlg.height() <= max(int(dispo * _PART_ECRAN), dlg.minimumHeight())
+
+    def test_une_taille_choisie_n_est_plus_reprise_par_le_contenu(self, qtbot, tmp_path):
+        dlg = self._dlg(qtbot, tmp_path)
+        dlg._taille_choisie = True
+        dlg.resize(dlg.width() + 200, dlg.minimumHeight())
+        taille = dlg.size()
+        dlg._ajuster_hauteur()
+        assert dlg.size() == taille
+
+
+class TestLaLimiteEntraineLePlafondDuJeu:
+    """« 144 me bloque quand même à 120 même sans vsync » (Ludo, 2026-10-01) :
+    HP4-HP6 livrent `FrameRateCap=120`, plafond tenu DANS le jeu."""
+
+    INI = ("[Accio.Window]\r\nFPSLimit=120\r\n\r\n"
+           "[Accio.Game]\r\nFrameRateCap=120\r\n")
+
+    def _ini(self, tmp_path, texte=None):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes((texte or self.INI).encode("ascii"))
+        return ini
+
+    def test_144_releve_le_plafond(self, tmp_path):
+        ini = self._ini(tmp_path)
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 144)
+        texte = ini.read_text(encoding="ascii")
+        assert "FPSLimit=144" in texte and "FrameRateCap=144" in texte
+
+    def test_une_limite_plus_basse_ne_baisse_jamais_le_plafond(self, tmp_path):
+        ini = self._ini(tmp_path)
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 60)
+        assert "FrameRateCap=120" in ini.read_text(encoding="ascii")
+
+    def test_sans_plafond_dans_l_ini_rien_n_est_ajoute(self, tmp_path):
+        ini = self._ini(tmp_path, "[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Game]\r\n")
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 144)
+        assert "FrameRateCap" not in ini.read_text(encoding="ascii")
+
+    def test_l_origine_remet_aussi_le_plafond(self, tmp_path):
+        ini = self._ini(tmp_path)
+        limite = rc.REGLAGES["limite_fps"]
+        rc.ecrire(ini, limite, 144)
+        rc.remettre_origine(ini, [limite])
+        texte = ini.read_text(encoding="ascii")
+        assert "FPSLimit=120" in texte and "FrameRateCap=120" in texte
+
+
+class TestHp7NeDepassePas60:
+    """« Hp7 il faut pas autoriser plus de 60fps car les cinématiques vont
+    ultra vite » (Ludo, 2026-10-01)."""
+
+    def test_le_reglage_borne_ne_propose_rien_au_dela_de_60(self):
+        reglage = rc.REGLAGES["limite_fps_60"]
+        assert reglage.cle == "FPSLimit" and max(reglage.choix) == 60
+        assert 0 not in reglage.choix, "« Aucune » laisserait le jeu filer"
+
+    def test_le_catalogue_le_donne_a_hp7a_au_lieu_de_l_autre(self):
+        from src.core.game_data import load_catalog
+        hp7a = next(g for g in load_catalog().games if g.id == "hp7a")
+        assert "limite_fps_60" in hp7a.fix_settings
+        assert "limite_fps" not in hp7a.fix_settings

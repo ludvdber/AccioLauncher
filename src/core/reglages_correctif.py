@@ -212,6 +212,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins"
             " de bruit.",
             choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
+    # HP7 partie 1 : au-delà de 60 images/s, ses cinématiques passent en accéléré
+    # (Ludo, 2026-10-01). Même clé, choix bornés ; le correctif tient aussi
+    # `FPSCeiling=60` au cas où l'ini dirait plus.
+    Reglage("limite_fps_60", "Accio.Window", "FPSLimit",
+            "Limite d'images par seconde",
+            "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques "
+            "passent en accéléré. 30 fait moins chauffer l'ordinateur.",
+            choix=(60, 30), zero="60 (vitesse normale)", onglet="perfs"),
     Reglage("synchro_verticale", "Accio.Graphics", "VSync",
             "Synchronisation verticale",
             "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale "
@@ -718,6 +726,25 @@ def _cles(reglage: Reglage) -> tuple[str, ...]:
     return (reglage.cle,)
 
 
+# Le plafond que le correctif tient DANS le jeu (HP4-HP6 : 120). Au-dessous de
+# la limite choisie, c'est lui qui l'emporte : « 144 » donnait 120 images, même
+# sans synchro (Ludo, 2026-10-01). Il suit donc la limite vers le HAUT ; jamais
+# vers le bas (un plafond livré n'est pas une préférence qu'on retire).
+_PLAFOND = ("Accio.Game", "FrameRateCap")
+
+
+def _relever_plafond(lignes: list[str], limite) -> None:
+    actuel = _valeur(lignes, *_PLAFOND)
+    if actuel is None or not limite:
+        return
+    try:
+        plafond = int(float(actuel))
+    except ValueError:
+        return
+    if 0 < plafond < int(limite):
+        _poser(lignes, *_PLAFOND, str(int(limite)))
+
+
 def a_une_origine(ini: Path) -> bool:
     return chemin_origine(ini).is_file()
 
@@ -735,6 +762,8 @@ def remettre_origine(ini: Path, reglages) -> None:
     for reglage in reglages:
         for cle in _cles(reglage):
             _poser(lignes, reglage.section, cle, _valeur(origine, reglage.section, cle))
+        if reglage.cle == "FPSLimit" and _valeur(lignes, *_PLAFOND) is not None:
+            _poser(lignes, *_PLAFOND, _valeur(origine, *_PLAFOND))
     _ecrire(ini, lignes, fin)
     log.info("Correctif : réglages d'origine remis dans %s", ini)
 
@@ -764,6 +793,8 @@ def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
         texte = str(valeur) if reglage.noms_choix else _nombre(valeur)
         if not _poser(lignes, reglage.section, reglage.cle, texte):
             raise ValueError(f"section [{reglage.section}] absente")
+        if reglage.cle == "FPSLimit":
+            _relever_plafond(lignes, valeur)
     else:
         if not _poser(lignes, reglage.section, reglage.cle, "1" if valeur else "0"):
             raise ValueError(f"section [{reglage.section}] absente")

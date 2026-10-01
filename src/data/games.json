@@ -1240,7 +1240,7 @@
       ],
       "fix_settings": [
         "arriere_plan",
-        "limite_fps",
+        "limite_fps_60",
         "synchro_verticale",
         "compteur_fps",
         "panneau_perfs",
