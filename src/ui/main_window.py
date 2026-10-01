@@ -721,12 +721,16 @@ class MainWindow(QMainWindow):
             return
         QApplication.instance().removeEventFilter(self)
 
+        # Une partie en cours garde sa barre : c'est le jeu qui la tient.
+        eteindre_manette = self.config.couleur_manette and not self._session.nom_en_cours
         # Timer, checkers et téléchargement de mise à jour, dans le bon ordre.
         self._updates.shutdown()
         self._session.shutdown()
         self._trailers.shutdown()
         self._detail.cancel_operations()
         self._tray.hide()
+        if eteindre_manette:
+            manette.eteindre()  # c'est nous qui l'avions allumée
         super().closeEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:

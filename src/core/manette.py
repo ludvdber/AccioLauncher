@@ -240,11 +240,11 @@ def manettes() -> list[Manette]:
         return []
 
 
-def colorer(theme: str) -> int:
-    """Colore chaque manette aux couleurs de `theme`. Rend le nombre colorées ; ne lève jamais."""
+def _poser(rgb: tuple[int, int, int]) -> int:
+    """Pose `rgb` sur chaque manette. Rend le nombre de manettes atteintes ; ne lève jamais."""
     faites = 0
     for m in manettes():
-        donnees = rapport(m, couleur(theme))
+        donnees = rapport(m, rgb)
         if donnees is None:
             log.info("Manette %04X (rapport de %d octets) : barre lumineuse non gérée", m.pid, m.sortie)
             continue
@@ -253,6 +253,12 @@ def colorer(theme: str) -> int:
         except OSError:
             ok = False
         faites += ok
+    return faites
+
+
+def colorer(theme: str) -> int:
+    """Colore chaque manette aux couleurs de `theme`. Rend le nombre colorées ; ne lève jamais."""
+    faites = _poser(couleur(theme))
     if faites:
         log.info("Manette : barre lumineuse aux couleurs de « %s » (%d)", theme, faites)
     return faites
@@ -261,6 +267,21 @@ def colorer(theme: str) -> int:
 def colorer_en_fond(theme: str) -> None:
     """Même chose sur un fil à part : l'énumération HID ne doit jamais retenir la fenêtre."""
     threading.Thread(target=colorer, args=(theme,), name="barre-lumineuse", daemon=True).start()
+
+
+def eteindre(attente: float = 1.0) -> None:
+    """Éteint la barre à la fermeture du launcher (demande de Ludo, 2026-10-01).
+
+    Allumée par nous, elle restait allumée launcher fermé, pour rien : la
+    manette branchée consomme tant qu'on ne la débranche pas. Sur un fil, mais
+    ATTENDU (au plus `attente` s) : le processus sort juste après par
+    `os._exit`, qui tuerait un fil laissé en arrière-plan avant qu'il écrive.
+    Un jeu lancé depuis le launcher garde la main : son `xinput1_3.dll` repose
+    `LightBar` à chaque manette qu'il ouvre.
+    """
+    fil = threading.Thread(target=_poser, args=((0, 0, 0),), name="barre-eteinte", daemon=True)
+    fil.start()
+    fil.join(attente)
 
 
 # ── En jeu : le correctif garde la couleur ──

@@ -99,6 +99,23 @@ class TestColorer:
         assert manette.colorer("gryffondor") == 0            # conftest : aucune manette
 
 
+class TestEteindre:
+    """La barre s'éteint à la fermeture du launcher (2026-10-01)."""
+
+    def test_noir_sur_chaque_manette_et_ecrit_avant_le_retour(self, monkeypatch):
+        ecrits = []
+        monkeypatch.setattr(manette, "manettes", lambda: [Manette("a", 0x09CC, 32)])
+        monkeypatch.setattr(manette, "_ecrire_windows", lambda m, d: ecrits.append(d) or True)
+        monkeypatch.setattr(manette, "_ecrire_linux", lambda m, d: ecrits.append(d) or True)
+        manette.eteindre()
+        # Attendu, pas lancé en fond : `os._exit` suit la fermeture.
+        (donnees,) = ecrits
+        assert tuple(donnees[6:9]) == (0, 0, 0)
+
+    def test_sans_manette_ne_leve_pas(self):
+        manette.eteindre()                                   # conftest : aucune manette
+
+
 _INI_HP5 = (
     "[Accio.Window]\r\nWindowed=1\r\n\r\n"
     "[Accio.Controller]\r\n"
@@ -201,6 +218,25 @@ class TestBranchements:
     def test_reglage_eteint_rien(self, fenetre):
         fenetre(couleur_manette=False)
         assert manette.appels == []
+
+    @staticmethod
+    def _fermer(win, monkeypatch) -> list:
+        eteintes = []
+        monkeypatch.setattr(manette, "eteindre", lambda *a: eteintes.append(True))
+        win.close()
+        return eteintes
+
+    def test_la_fermeture_eteint_la_barre_qu_elle_a_allumee(self, fenetre, monkeypatch):
+        assert self._fermer(fenetre(), monkeypatch) == [True]
+
+    def test_reglage_coupe_la_fermeture_n_y_touche_pas(self, fenetre, monkeypatch):
+        assert self._fermer(fenetre(couleur_manette=False), monkeypatch) == []
+
+    def test_une_partie_en_cours_garde_sa_barre(self, fenetre, monkeypatch):
+        win = fenetre()
+        # Sur l'INSTANCE (règle 12 : jamais une propriété de classe Qt).
+        monkeypatch.setattr(win._session._monitor, "_game_name", "HP6")
+        assert self._fermer(win, monkeypatch) == []
 
     def test_le_choixpeau_colore_la_manette(self, qtbot):
         from src.ui.onboarding import OnboardingDialog
