@@ -17,6 +17,9 @@
 
 Gratuit · Windows 10 et 11 · [Site](https://acciolauncher.be/) · [Discord](https://discord.gg/TNwDQd7KGe)
 
+*Les jeux restent la propriété de Warner Bros. et d'Electronic Arts : pour y jouer
+légalement, il faut en posséder une copie originale (CD, DVD ou achat numérique).*
+
 </div>
 
 <p align="center">
@@ -233,9 +236,12 @@ le fichier concerné : il est retiré sous 48 heures, sans discussion.
 
 ## Avertissement légal
 
-Accio Launcher **ne contient aucun fichier de jeu**. Il télécharge des archives
-depuis des sources tierces ; vous êtes responsable de disposer des droits
-nécessaires sur les jeux que vous installez.
+Accio Launcher **ne contient aucun fichier de jeu**. Les archives qu'il installe
+sont publiées dans le dépôt [accio-launcher-games](https://github.com/ludvdber/accio-launcher-games)
+pour remplacer des supports d'origine abîmés, perdus ou illisibles sur un PC
+récent. Elles sont destinées aux personnes qui possèdent une copie originale de
+chaque jeu installé ; en installer un sans le posséder se fait sous votre seule
+responsabilité.
 
 Harry Potter et les jeux associés sont la propriété de Warner Bros.
 Entertainment Inc. et d'Electronic Arts Inc. Ce projet n'est ni affilié, ni
@@ -275,12 +281,16 @@ launcher and the fixes; it gives access to no game and pays for no game.
 **Translators welcome:** a language is one text file, no code involved — see
 [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
-**License:** the source code is MIT, the distributed executable GNU GPL v3
-(it bundles PyQt6). The Accio Launcher name and logo are not covered: fork and
-modify freely, but publish your version under another name — see
-[TRADEMARKS.md](TRADEMARKS.md).
+**License:** GNU GPL v3 only, with [additional terms](ADDITIONAL-TERMS.md)
+(versions up to 1.0.6 remain MIT). The Accio Launcher name and logo are not
+covered: fork and modify freely, but publish your version under another name —
+see [TRADEMARKS.md](TRADEMARKS.md).
 
-The launcher contains no game files. Harry Potter is a trademark of Warner Bros.
+**You must own the games.** The launcher contains no game files. The archives
+it installs, published in [accio-launcher-games](https://github.com/ludvdber/accio-launcher-games),
+replace original discs that are damaged, lost or unreadable on a modern PC, and
+are meant for people who own an original copy (CD, DVD or digital purchase) of
+each game they install. Harry Potter is a trademark of Warner Bros.
 Entertainment Inc.; this project is not affiliated with Warner Bros., Electronic
 Arts or J.K. Rowling.
 

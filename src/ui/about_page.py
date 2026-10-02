@@ -311,6 +311,10 @@ def construire(contributeurs, manager=None) -> QWidget:
     version.setObjectName("subtitle")
     lay.addWidget(version)
     lay.addWidget(_mention_legale())
+    lay.addWidget(_sous_titre(tr(
+        "Les jeux restent la propriété de Warner Bros. et d'Electronic Arts : "
+        "pour y jouer légalement, il faut en posséder une copie originale "
+        "(CD, DVD ou achat numérique).")))
     lay.addLayout(rangee)
     if manager is not None:
         lay.addWidget(_sous_titre(tr(

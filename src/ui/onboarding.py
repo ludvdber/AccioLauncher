@@ -323,6 +323,15 @@ class OnboardingDialog(QDialog):
         lay.addWidget(self._free_label)
         self._refresh_free_space()
         lay.addStretch()
+        # Dit une fois, avant le premier téléchargement : c'est le seul écran
+        # que tout le monde voit.
+        mention = QLabel(tr(
+            "Les jeux restent la propriété de Warner Bros. et d'Electronic Arts : "
+            "pour y jouer légalement, il faut en posséder une copie originale "
+            "(CD, DVD ou achat numérique)."))
+        mention.setObjectName("wizHint")
+        mention.setWordWrap(True)
+        lay.addWidget(mention)
         return page
 
     def _build_page_import(self) -> QWidget:
