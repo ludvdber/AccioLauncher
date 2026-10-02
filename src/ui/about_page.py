@@ -297,7 +297,7 @@ def construire(contributeurs, manager=None) -> QWidget:
     # pictogramme reconnaissable permet d'économiser : le nom suffit quand la
     # forme a déjà dit quoi.
     kofi = _bouton_lien("Ko-fi", "kofi", KOFI_URL, objet="btnKofi", encre="#e8c547")
-    kofi.setToolTip(tr("Le projet est gratuit — un café aide à payer l'hébergement !"))
+    kofi.setToolTip(tr("Le launcher est gratuit — un café finance son développement et celui des correctifs."))
     rangee.addWidget(kofi)
     rangee.addStretch()
 

@@ -159,8 +159,10 @@ Un bug précis, une idée ? Ouvrez une [issue](https://github.com/ludvdber/Accio
 
 ## Soutenir le projet
 
-Le launcher est gratuit et le restera, sans publicité. Si vous voulez aider à
-payer l'hébergement : [ko-fi.com/ludovic01](https://ko-fi.com/ludovic01).
+Le launcher est gratuit et le restera, sans publicité. Un soutien sur
+[ko-fi.com/ludovic01](https://ko-fi.com/ludovic01) finance le développement du
+**launcher et des correctifs** (temps de travail, matériel d'essai) ; il ne
+donne accès à aucun jeu et ne paie aucun jeu.
 
 ## Traduire le launcher
 
@@ -223,6 +225,12 @@ Le nom **Accio Launcher** et son logo, eux, ne sont pas libres. Forker et
 modifier le launcher pour vous, oui ; publier votre version sous ce nom ou avec
 ce logo, non. Voir [TRADEMARKS.md](TRADEMARKS.md).
 
+## Demande de retrait
+
+Vous êtes titulaire de droits sur un fichier mis à disposition dans le cadre de
+ce projet ? Ouvrez une [issue](https://github.com/ludvdber/accio-launcher-games/issues) en indiquant
+le fichier concerné : il est retiré sous 48 heures, sans discussion.
+
 ## Avertissement légal
 
 Accio Launcher **ne contient aucun fichier de jeu**. Il télécharge des archives
@@ -254,6 +262,12 @@ English, French and Spanish.
 run it, pick your language and games folder, then choose a game and click
 Download. Windows SmartScreen will warn you because the launcher is not
 code-signed: click *More info*, then *Run anyway*.
+
+**Support:** a coffee on [Ko-fi](https://ko-fi.com/ludovic01) funds the development of the
+launcher and the fixes; it gives access to no game and pays for no game.
+
+**Takedown requests:** if you hold rights to a file made available by this project, open an
+[issue](https://github.com/ludvdber/accio-launcher-games/issues) naming it: it is removed within 48 hours.
 
 **Help:** join the [Discord](https://discord.gg/TNwDQd7KGe). In the launcher,
 *Settings → About → Copy diagnostic information* gives us what we need to help.
