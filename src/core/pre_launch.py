@@ -146,10 +146,16 @@ def substituer_pour_le_jeu(raw: str, game: GameData, config: Config) -> str:
 def resolve_safe_path(raw: str, game: GameData, config: Config) -> Path | None:
     """Résout un chemin pré-lancement avec substitution de variables et anti-path-traversal.
 
-    Retourne None si le chemin est hors des zones autorisées (Documents ou install_path).
+    Retourne None si le chemin est hors des zones autorisées (Documents ou install_path),
+    ou s'il ne désigne pas un `.ini` : la zone couvre tout Documents, où vivent
+    les SAUVEGARDES, et ce chemin vient du catalogue distant, qui ne fait que
+    créer, supprimer ou patcher des `.ini`.
     """
     docs_dir = get_documents_dir()
     p = Path(substitute_vars(raw, game, config))
+    if p.suffix.lower() != ".ini":
+        log.warning("Chemin pré-lancement refusé (un .ini attendu) : %s", p)
+        return None
     try:
         p.resolve().relative_to(docs_dir)
         return p
@@ -288,6 +294,10 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
         log.warning("Fichier INI introuvable, skip : %s", ini_path)
         return False
     value = substituer_pour_le_jeu(patch.value if valeur is None else valeur, game, config)
+    # Un saut de ligne ajouterait ses propres lignes à l'ini.
+    if any(c in s for s in (patch.section, patch.key, value) for c in "\r\n"):
+        log.warning("Patch INI refusé (saut de ligne) : [%s] %s", patch.section, patch.key)
+        return False
     encodage = _encodage_ini()
     try:
         with ini_path.open("r", encoding=encodage,

@@ -24,6 +24,20 @@ def dossier_systeme() -> str:
     return str(Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32")
 
 
+def dossier_windows() -> str:
+    """Le dossier de Windows (`C:\\Windows`), en chemin absolu.
+
+    Là vit `regedit.exe`, ABSENT de System32. Même source que
+    `dossier_systeme` : l'API, pas `%SystemRoot%`.
+    """
+    if sys.platform == "win32":
+        import ctypes
+        tampon = ctypes.create_unicode_buffer(260)
+        if ctypes.windll.kernel32.GetSystemWindowsDirectoryW(tampon, len(tampon)):
+            return tampon.value
+    return os.environ.get("SystemRoot", r"C:\Windows")
+
+
 def commande_systeme(nom: str) -> str:
     """Chemin ABSOLU d'un programme de Windows (`tasklist.exe`, `cmd.exe`…).
 

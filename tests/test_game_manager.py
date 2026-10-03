@@ -9,7 +9,9 @@ from src.core.config import Config
 from src.core.game_data import GameData, GameVersion, Catalog
 from src.core.game_language import detecter
 from src.core.game_manager import GameManager, GameState, _is_safe_relative
-from src.core.pre_launch import apply_ini_patches, create_pre_launch_files, unblock_game_dlls
+from src.core.pre_launch import (
+    apply_ini_patches, create_pre_launch_files, delete_pre_launch_files, unblock_game_dlls,
+)
 from src.core.system_checks import check_vcredist_x86, check_d3d11_feature_level
 
 
@@ -310,6 +312,21 @@ class TestPreLaunch:
         with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
             create_pre_launch_files(game, mgr.config)
         assert (tmp_path / "TestDir" / "Running.ini").exists()
+
+    def test_delete_files_ne_supprime_qu_un_ini(self, tmp_path):
+        """Le catalogue est distant, et Documents porte les sauvegardes."""
+        ini = tmp_path / "Detected.ini"
+        sauvegarde = tmp_path / "Save" / "Slot1.sav"
+        sauvegarde.parent.mkdir()
+        ini.write_text("x", encoding="utf-8")
+        sauvegarde.write_text("x", encoding="utf-8")
+        game = GameData.from_dict({**GAME_DICT, "pre_launch": {
+            "delete_files": [str(ini), str(sauvegarde)]}})
+        mgr = _make_manager(tmp_path, games=[game])
+        with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
+            delete_pre_launch_files(game, mgr.config)
+        assert not ini.exists()
+        assert sauvegarde.exists()
 
     def test_apply_ini_patches(self, tmp_path):
         ini_file = tmp_path / "Game.ini"

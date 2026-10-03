@@ -59,6 +59,24 @@ class TestAucunProgrammeLanceParSonSeulNom:
             "programme lancé par son seul nom — passer par "
             f"win_utils.commande_systeme : {fautifs}")
 
+    def test_shellexecute_par_chemin(self):
+        """`ShellExecuteW(…, "regedit.exe", …)` : le nom seul, lancé ÉLEVÉ."""
+        fautifs = []
+        for nom, arbre in _arbres():
+            for noeud in ast.walk(arbre):
+                if (isinstance(noeud, ast.Call)
+                        and isinstance(noeud.func, ast.Attribute)
+                        and noeud.func.attr == "ShellExecuteW"
+                        and len(noeud.args) > 2
+                        and isinstance(noeud.args[2], ast.Constant)):
+                    fautifs.append(f"{nom}:{noeud.lineno} « {noeud.args[2].value} »")
+        assert not fautifs, f"ShellExecuteW sur un nom écrit en dur : {fautifs}"
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="C:\\Windows : Windows uniquement")
+    def test_regedit_existe_au_chemin_utilise(self):
+        from src.core.win_utils import dossier_windows
+        assert (Path(dossier_windows()) / "regedit.exe").is_file()
+
     @pytest.mark.skipif(sys.platform != "win32", reason="System32 : Windows uniquement")
     @pytest.mark.parametrize("programme", ["tasklist.exe", "cmd.exe", "find.exe", "PING.EXE"])
     def test_chemin_absolu_et_reel(self, programme):

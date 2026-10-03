@@ -302,8 +302,13 @@ def _ecrire_eleve(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
     _dossiers_a_nettoyer.append(dossier)
     try:
         fichier.write_text(construire_reg(ruche, cle, valeurs, vue), encoding="utf-16")
+        # regedit par son chemin ABSOLU (règle 1) : nommé seul, ShellExecute le
+        # cherche d'abord dans le dossier courant — souvent Téléchargements —, et
+        # un `regedit.exe` déposé là serait lancé EN ADMINISTRATEUR.
+        from src.core.win_utils import dossier_windows
+        regedit = str(Path(dossier_windows()) / "regedit.exe")
         rc = ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", "regedit.exe", '/s "%s"' % fichier, None, 0)
+            None, "runas", regedit, '/s "%s"' % fichier, None, 0)
         if rc <= 32:
             # 5 = SE_ERR_ACCESSDENIED : l'utilisateur a refusé l'invite UAC.
             log.info("Élévation refusée ou impossible (ShellExecuteW=%d)", rc)
