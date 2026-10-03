@@ -93,3 +93,10 @@ docs/linux/MISSION_BAZZITE.md
 AUDIT_*.md
 WEBSITE_BRIEF.md
 CHANGELOG_*.md
+
+# Textes générés ou figés, jamais utiles à relire : les paquets de la CI
+# figés avec leurs empreintes (des centaines de lignes de sha256, régénérés
+# par pip-compile) et le texte officiel de la GPL (le projet n'y touche pas ;
+# ce qui lui est propre vit dans ADDITIONAL-TERMS.md).
+.github/requirements/*.txt
+LICENSE
