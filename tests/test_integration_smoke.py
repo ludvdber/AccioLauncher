@@ -1789,13 +1789,6 @@ class TestEngrenageReglagesDuJeu:
         gdh.on_game_settings(win._detail)
         assert len(ouvertes) == 1
 
-    def test_l_ancrage_retombe_sur_le_curseur_sans_bouton(self, make_window_multilingue):
-        """Pas d'engrenage (jeu non installé) : pas d'ancre, et surtout pas de
-        plantage — c'est `QCursor.pos()` qui prend le relais."""
-        from src.core.game_manager import GameState
-        win, jeu = make_window_multilingue()
-        self._poser(win, jeu, GameState.NOT_INSTALLED)
-        assert win._detail.ancre_reglages() is None
 
     def test_la_rubrique_fichiers_expose_le_clic_droit(self, make_window_multilingue):
         """« Gérer les versions » et « Vérifier / réparer » n'étaient

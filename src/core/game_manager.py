@@ -439,9 +439,6 @@ class GameManager:
         """Langues que cette installation sait réellement faire (fichiers présents)."""
         return langue.langues_disponibles(game, self.config)
 
-    def detect_game_language(self, game: GameData) -> str | None:
-        """Langue actuellement posée (registre ou fichiers), None si indéterminable."""
-        return langue.detecter(game, self.config)
 
     def game_language(self, game: GameData) -> str | None:
         """Langue de ce jeu : choix explicite → registre → interface → catalogue."""

@@ -15,7 +15,7 @@ import dataclasses
 
 from src.core.game_data import GameData, _annee_valide
 from src.core.scolarite import (
-    ANNEES, Statut, annee_courante, annees, hors_programme,
+    ANNEES, Statut, annee_courante, annees,
     prochaine_annee, restantes,
 )
 
@@ -56,10 +56,6 @@ class TestLeSqueletteNeDependPasDesDonnees:
 class TestLeQuidditchNeCasseRien:
     """Un jeu hors programme ne décale AUCUNE année."""
 
-    def test_un_jeu_sans_annee_est_hors_programme(self):
-        quidditch = jeu("quidditch", 0)
-        catalogue = [jeu("hp1", 1), jeu("hp2", 2), quidditch]
-        assert hors_programme(catalogue) == [quidditch]
 
     def test_il_n_apparait_dans_aucune_annee(self):
         catalogue = [jeu("hp1", 1), jeu("quidditch", 0), jeu("hp2", 2)]

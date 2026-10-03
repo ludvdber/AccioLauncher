@@ -405,17 +405,6 @@ class GameDetailView(QWidget):
             return None
         return meta.mapToGlobal(QPoint(0, meta.height()))
 
-    def ancre_reglages(self):
-        """Position GLOBALE où poser le menu des réglages, sous l'engrenage.
-
-        Même raison que `ancre_langue` : le bouton s'active aussi à la touche
-        Entrée, et un menu qui s'ouvre là où traîne la souris — voire sur un
-        autre écran — n'a aucun rapport avec ce qu'on vient de faire.
-        """
-        btn = self._action_panel._btn_reglages
-        if btn is None or not btn.isVisible() or btn.width() <= 0:
-            return None
-        return btn.mapToGlobal(QPoint(0, btn.height()))
 
     def _refresh(self) -> None:
         """Rafraîchit le panneau d'actions, puis REPOSITIONNE le panneau d'infos.

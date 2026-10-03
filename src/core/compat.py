@@ -362,10 +362,6 @@ def appdata_local(pfx: Path | None = None) -> Path:
     return base / "AppData" / "Local"
 
 
-def saved_games(pfx: Path | None = None) -> Path:
-    return profil(pfx) / "Saved Games"
-
-
 def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
     r"""Le chemin tel que le JEU le lit, sous Wine.
 

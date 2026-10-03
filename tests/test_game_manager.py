@@ -7,6 +7,7 @@ import pytest
 
 from src.core.config import Config
 from src.core.game_data import GameData, GameVersion, Catalog
+from src.core.game_language import detecter
 from src.core.game_manager import GameManager, GameState, _is_safe_relative
 from src.core.pre_launch import apply_ini_patches, create_pre_launch_files, unblock_game_dlls
 from src.core.system_checks import check_vcredist_x86, check_d3d11_feature_level
@@ -694,7 +695,7 @@ class TestDetectionDeLaLangue:
         m = _make_manager(tmp_path, [jeu])
         with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "German", "Locale": "de_DE"}):
-            assert m.detect_game_language(jeu) == "de"
+            assert detecter(jeu, m.config) == "de"
 
     def test_none_si_la_cle_est_absente(self, tmp_path):
         """Cas d'un jeu installe par le launcher : l'installeur EA n'a jamais
@@ -702,14 +703,14 @@ class TestDetectionDeLaLangue:
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
         with patch("src.core.game_language.registre.lire_valeurs", return_value={}):
-            assert m.detect_game_language(jeu) is None
+            assert detecter(jeu, m.config) is None
 
     def test_none_si_les_valeurs_ne_correspondent_a_aucune_langue(self, tmp_path):
         jeu = _jeu_multilingue()
         m = _make_manager(tmp_path, [jeu])
         with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "Klingon", "Locale": "tlh"}):
-            assert m.detect_game_language(jeu) is None
+            assert detecter(jeu, m.config) is None
 
     def test_une_correspondance_PARTIELLE_ne_compte_pas(self, tmp_path):
         """Toutes les valeurs de la langue doivent coller, sinon on ne sait pas
@@ -718,7 +719,7 @@ class TestDetectionDeLaLangue:
         m = _make_manager(tmp_path, [jeu])
         with patch("src.core.game_language.registre.lire_valeurs",
                    return_value={"Language": "German", "Locale": "fr_FR"}):
-            assert m.detect_game_language(jeu) is None
+            assert detecter(jeu, m.config) is None
 
     def test_la_detection_prime_sur_la_langue_d_interface(self, tmp_path):
         from src.core.i18n import set_language

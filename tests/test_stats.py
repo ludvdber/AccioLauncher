@@ -131,67 +131,18 @@ class TestHeriteNEntreQueDansLesTotaux:
 
     def test_aucune_derivation_de_session_ne_le_voit(self, que_de_l_herite):
         h = que_de_l_herite
-        assert stats.duree_moyenne(h) == 0
         assert stats.parties_par_jeu(h) == {}
         assert stats.plus_longue(h) is None
-        assert stats.jours_joues(h) == []
-        assert stats.serie_actuelle(h) == 0
-        assert stats.meilleure_serie(h) == 0
-        assert stats.par_heure(h) == [0] * 24
-        assert stats.par_jour_semaine(h) == [0] * 7
-        assert stats.plage_de_predilection(h) is None
-        assert stats.jour_prefere(h) is None
-        assert stats.premiere_session(h) is None
 
     def test_le_total_additionne_herite_et_sessions(self):
         h = _hist([_s("hp2", 0, duree=1800)], herite={"hp2": 7200})
         assert stats.temps_par_jeu(h) == {"hp2": 9000}
 
 
-class TestSeries:
-    def test_une_serie_qui_finit_aujourd_hui(self):
-        h = _hist([_s("hp1", -2), _s("hp1", -1), _s("hp1", 0)])
-        assert stats.serie_actuelle(h) == 3
-
-    def test_hier_maintient_la_serie(self):
-        """La journee n'est pas finie : annoncer la serie rompue avant minuit
-        serait faux, et decourageant au moment precis ou elle tient encore."""
-        h = _hist([_s("hp1", -2), _s("hp1", -1)])
-        assert stats.serie_actuelle(h) == 2
-
-    def test_avant_hier_la_rompt(self):
-        assert stats.serie_actuelle(_hist([_s("hp1", -2)])) == 0
-
-    def test_plusieurs_parties_le_meme_jour_comptent_pour_un_jour(self):
-        h = _hist([_s("hp1", -1, heure=14), _s("hp1", -1, heure=21), _s("hp1", 0)])
-        assert stats.serie_actuelle(h) == 2
-
-    def test_le_record_survit_a_une_coupure(self):
-        h = _hist([_s("hp1", -20), _s("hp1", -19), _s("hp1", -18), _s("hp1", -17),
-                   _s("hp1", -1), _s("hp1", 0)])
-        assert stats.meilleure_serie(h) == 4
-        assert stats.serie_actuelle(h) == 2
-
-    def test_aucune_session(self):
-        assert stats.serie_actuelle(_hist()) == 0
-        assert stats.meilleure_serie(_hist()) == 0
-
-    def test_serie_calculee_a_une_date_donnee(self):
-        """Sans injection possible, ce test ne passerait qu'un jour sur deux."""
-        h = stats.Historique((
-            stats.Session("hp1", datetime(2026, 8, 24, 21), 3600),
-            stats.Session("hp1", datetime(2026, 8, 25, 21), 3600),
-        ))
-        assert stats.serie_actuelle(h, date(2026, 8, 25)) == 2
-        assert stats.serie_actuelle(h, date(2026, 8, 26)) == 2  # hier : vivante
-        assert stats.serie_actuelle(h, date(2026, 8, 27)) == 0  # rompue
-
-
 class TestDerivations:
-    def test_moyenne_et_plus_longue(self):
+    def test_plus_longue(self):
         h = _hist([_s("hp1", -3, duree=1200), _s("hp2", -2, duree=3600),
                    _s("hp1", -1, duree=2400)])
-        assert stats.duree_moyenne(h) == 2400
         longue = stats.plus_longue(h)
         assert (longue.jeu, longue.duree) == ("hp2", 3600)
 
@@ -201,36 +152,6 @@ class TestDerivations:
         derniere = stats.derniere_par_jeu(h)
         assert derniere["hp1"] == (datetime.now() - timedelta(days=1)).date()
 
-    def test_repartition_horaire(self):
-        h = _hist([_s("hp1", -1, heure=21, duree=3600),
-                   _s("hp1", -2, heure=21, duree=1800),
-                   _s("hp1", -3, heure=9, duree=600)])
-        cases = stats.par_heure(h)
-        assert cases[21] == 5400 and cases[9] == 600 and sum(cases) == 6000
-
-    def test_plage_de_predilection(self):
-        h = _hist([_s("hp1", -i, heure=22, duree=3600) for i in range(1, 6)])
-        debut, fin = stats.plage_de_predilection(h)
-        assert debut <= 22 < debut + 3
-        assert fin == (debut + 3) % 24
-
-    def test_la_plage_boucle_sur_minuit(self):
-        """23 h, minuit et 1 h forment une soiree, pas trois moments epars."""
-        h = _hist([_s("hp1", -1, heure=23), _s("hp1", -2, heure=0),
-                   _s("hp1", -3, heure=1)])
-        assert stats.plage_de_predilection(h) == (23, 2)
-
-    def test_jour_prefere(self):
-        h = stats.Historique((
-            stats.Session("hp1", datetime(2026, 8, 22, 21), 7200),  # samedi
-            stats.Session("hp1", datetime(2026, 8, 24, 21), 600),   # lundi
-        ))
-        assert stats.jour_prefere(h) == 5  # 0 = lundi
-
-    def test_premiere_session(self):
-        h = _hist([_s("hp1", -10), _s("hp2", -1)])
-        assert stats.premiere_session(h).date() == (
-            datetime.now() - timedelta(days=10)).date()
 
     def test_vide(self):
         assert _hist().vide

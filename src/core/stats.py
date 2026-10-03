@@ -36,7 +36,7 @@ import os
 import tempfile
 from collections import Counter
 from dataclasses import dataclass, field, replace
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 log = logging.getLogger(__name__)
 
@@ -476,13 +476,6 @@ def parties_par_jeu(hist: Historique) -> dict[str, int]:
     return dict(Counter(s.jeu for s in hist.sessions))
 
 
-def duree_moyenne(hist: Historique) -> int:
-    """Moyenne sur les VRAIES sessions ; 0 s'il n'y en a aucune."""
-    if not hist.sessions:
-        return 0
-    return round(sum(s.duree for s in hist.sessions) / len(hist.sessions))
-
-
 def plus_longue(hist: Historique) -> Session | None:
     return max(hist.sessions, key=lambda s: s.duree, default=None)
 
@@ -496,93 +489,10 @@ def derniere_par_jeu(hist: Historique) -> dict[str, date]:
     return dernier
 
 
-def jours_joues(hist: Historique) -> list[date]:
-    """Jours distincts où au moins une partie a été lancée, triés."""
-    return sorted({s.jour for s in hist.sessions})
-
-
-def serie_actuelle(hist: Historique, aujourdhui: date | None = None) -> int:
-    """Jours consécutifs joués, en cours.
-
-    La série reste vivante si la dernière partie date d'HIER : la journée n'est
-    pas finie, et l'annoncer rompue avant minuit serait faux — c'est le seul
-    endroit où ce détail se décide.
-    """
-    jours = jours_joues(hist)
-    if not jours:
-        return 0
-    aujourdhui = aujourdhui or date.today()
-    dernier = jours[-1]
-    if (aujourdhui - dernier).days > 1:
-        return 0
-    serie, attendu = 0, dernier
-    for jour in reversed(jours):
-        if jour == attendu:
-            serie += 1
-            attendu -= timedelta(days=1)
-        elif jour < attendu:
-            break
-    return serie
-
-
-def meilleure_serie(hist: Historique) -> int:
-    jours = jours_joues(hist)
-    if not jours:
-        return 0
-    record = courante = 1
-    for precedent, jour in zip(jours, jours[1:]):
-        courante = courante + 1 if (jour - precedent).days == 1 else 1
-        record = max(record, courante)
-    return record
-
-
-def par_heure(hist: Historique) -> list[int]:
-    """Secondes jouées par heure de DÉBUT (24 cases).
-
-    Rattacher une partie à son heure de début plutôt que de l'étaler sur les
-    heures traversées : c'est le moment où quelqu'un décide de jouer qui est
-    intéressant, et c'est aussi le seul que le launcher observe réellement.
-    """
-    cases = [0] * 24
-    for s in hist.sessions:
-        cases[s.debut.hour] += s.duree
-    return cases
-
-
-def par_jour_semaine(hist: Historique) -> list[int]:
-    """Secondes par jour de la semaine (0 = lundi)."""
-    cases = [0] * 7
-    for s in hist.sessions:
-        cases[s.debut.weekday()] += s.duree
-    return cases
-
-
-def plage_de_predilection(hist: Historique, largeur: int = 3) -> tuple[int, int] | None:
-    """Fenêtre de `largeur` heures où le plus de temps a été lancé.
-
-    Une seule heure serait trop pointue pour dire quelque chose de vrai
-    (« tu joues à 21 h » sur trois parties), une plage se reconnaît.
-    """
-    cases = par_heure(hist)
-    if not any(cases):
-        return None
-    meilleur = max(range(24), key=lambda h: sum(cases[(h + i) % 24] for i in range(largeur)))
-    return meilleur, (meilleur + largeur) % 24
-
-
-def jour_prefere(hist: Historique) -> int | None:
-    cases = par_jour_semaine(hist)
-    return max(range(7), key=cases.__getitem__) if any(cases) else None
-
-
-def premiere_session(hist: Historique) -> datetime | None:
-    return hist.sessions[0].debut if hist.sessions else None
-
-
 def par_mois(hist: Historique) -> dict[tuple[int, int], int]:
     """Secondes par (année, mois) de DÉBUT de partie.
 
-    Même choix que `par_heure` : une partie commencée le 31 à 23 h compte pour
+    Une partie se rattache à son DÉBUT : commencée le 31 à 23 h, elle compte pour
     le mois où on l'a lancée. Le temps hérité n'a pas de date, il n'entre pas.
     """
     mois: Counter = Counter()

@@ -7,6 +7,12 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 Deux couches sous `src/`, reliées par un orchestrateur (`game_operations`) et un bus de signaux Qt.
 
+**Découpes du 2026-10-03** (méthodes et fonctions déplacées telles quelles ; l'ancien module RÉEXPORTE les noms, donc les imports existants marchent) :
+- `src/core/catalogue_blocs.py` ← `game_data.py` (1 172 → 424 lignes) : validateurs (`_https_ou_rien`, `_JETON_SUR`, `_motif_sur`…), `_loc`, et les blocs `language_registry`, `language_files`, `controller_registry`, `saves`, `screenshots`, `trailers`, `contributors` avec leurs parseurs. `game_data` garde `GameVersion`, `GameData`, `Catalog`, `_parse_catalog`, `load_catalog`.
+- `src/ui/stats_widgets.py` ← `stats_dialog.py` (1 062 → 484) : `_Etagere`, `_Mois`, `_Jauge`, `_CarteSauvegarde`, `_Scolarite`, `_Paragraphe` et les petites fonctions de format (`_minutes`, `_duree_courte`, `_hauteur_max`…).
+- `src/ui/reglages_rubriques.py` ← `game_settings_dialog.py` (1 228 → 874) : classe parente `RubriquesDuJeu` (langue, touches, affichage verrouillé, manette, captures, fichiers) et les constantes de la fenêtre (`_LARGEUR`, `_COULEURS_COUT`…). Les effets d'image, préréglages et dépendances restent dans `game_settings_dialog`. **Un `monkeypatch` vise le module où la fonction est APPELÉE** : `open_local_path` des captures se patche dans `reglages_rubriques`.
+- `src/core/reglages_table.py` ← `reglages_correctif.py` (804 → 454) : les listes de choix (`LIMITES_FPS`, `RESOLUTIONS`…), la classe `Reglage`, la table `REGLAGES` et les `PREREGLAGES`. **Ajouter ou modifier un réglage se fait là** ; la lecture/écriture du `d3d9.ini` reste dans `reglages_correctif`.
+
 ### `src/core/` — logique métier (pas de widgets, sauf QThread/QObject/pyqtSignal)
 
 - **`config.py`** — dataclass `Config`, sauvegarde JSON atomique (tmp+rename). `get_documents_dir()` passe par `SHGetFolderPathW` (OneDrive / Documents redirigés). Chemins différents en mode gelé (`sys._MEIPASS`). `APP_VERSION` vit ici, synchronisé avec `pyproject.toml`.

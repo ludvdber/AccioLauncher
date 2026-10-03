@@ -266,7 +266,7 @@ class TestFenetre:
 
     def test_ouvrir_range_puis_ouvre(self, qtbot, tmp_path, monkeypatch):
         ouverts = []
-        monkeypatch.setattr("src.ui.game_settings_dialog.open_local_path", ouverts.append)
+        monkeypatch.setattr("src.ui.reglages_rubriques.open_local_path", ouverts.append)
         jeu = _jeu(id="hp1", executable="HP1/System/HP.exe",
                    screenshots={"key": "F12", "collect": ["HP1/System/Shot*.bmp"]})
         _bmp(tmp_path / "HP1" / "System" / "Shot0000.bmp")

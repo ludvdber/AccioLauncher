@@ -94,16 +94,6 @@ def annees(games: Iterable[GameData], installe, temps) -> list[Annee]:
     return resultat
 
 
-def hors_programme(games: Iterable[GameData]) -> list[GameData]:
-    """Les jeux que le catalogue ne rattache à aucune année.
-
-    Aucun aujourd'hui. Le jour où la Coupe du Monde de Quidditch arrive, elle
-    se range ici sans qu'une ligne change — c'est précisément ce que cette
-    fonction existe pour garantir.
-    """
-    return [j for j in games if not 1 <= j.annee <= ANNEES]
-
-
 def annee_courante(liste: Sequence[Annee]) -> int:
     """L'année où l'on se trouve : la plus haute qui soit COMMENCÉE, sinon 0.
 
