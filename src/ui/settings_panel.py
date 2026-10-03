@@ -327,11 +327,21 @@ class SettingsDialog(QDialog):
         self._lang_restart = self._restart_button()
         self._lang_hint = self._hint_label()
 
+        row_copies, self._tgl_copies = toggle_row(
+            tr("Copier les sauvegardes avant chaque partie"), self.config.copies_sauvegardes)
+        self._tgl_copies.toggled.connect(self._on_setting_changed)
+        copies_aide = QLabel(tr(
+            "Une copie de chaque sauvegarde qui a changé, rangée à part. Pour revenir à une "
+            "version précédente : réglages du jeu, onglet Fichiers."))
+        copies_aide.setObjectName("subtitle")
+        copies_aide.setWordWrap(True)
+
         return self._page(
             self._section(tr("Dossier d'installation")), path_row,
             self._free_label, self._installed_label,
             self._section(tr("Langue")), lang_row,
             self._button_row(self._lang_restart), self._lang_hint,
+            self._section(tr("Sauvegardes")), row_copies, copies_aide,
         )
 
     # ── Page Affichage ──
@@ -577,6 +587,7 @@ class SettingsDialog(QDialog):
         self.config.discord_presence = self._tgl_discord.isChecked()
         self.config.couleur_manette = self._tgl_manette.isChecked()
         self.config.navigation_manette = self._tgl_nav_manette.isChecked()
+        self.config.copies_sauvegardes = self._tgl_copies.isChecked()
         self._save()
 
     @staticmethod

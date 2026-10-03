@@ -318,6 +318,12 @@
         }
       },
       "display_locked": true,
+      "resolution": {
+        "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+        "section": "WinDrv.WindowsClient",
+        "width": "WindowedViewportX",
+        "height": "WindowedViewportY"
+      },
       "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
     },
     {
@@ -613,6 +619,12 @@
         "first": 1
       },
       "display_locked": true,
+      "resolution": {
+        "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+        "section": "WinDrv.WindowsClient",
+        "width": "WindowedViewportX",
+        "height": "WindowedViewportY"
+      },
       "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
     },
     {

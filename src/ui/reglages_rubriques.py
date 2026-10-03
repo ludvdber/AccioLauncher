@@ -11,6 +11,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -20,10 +21,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import captures, manette, reglages_correctif
+from src.core import captures, manette, reglages_correctif, resolution_jeu
 from src.core.i18n import tr
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font, cinzel
+from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.styles import RADIO_STYLE
 from src.ui.theme import themed
 from src.ui.toggle_switch import ToggleSwitch
@@ -210,10 +212,16 @@ class RubriquesDuJeu:
             self._note_preregle.setVisible(etat.personnalise)
 
     def _section_affichage(self, layout: QVBoxLayout) -> None:
-        """Jeu sans réglage de correctif : la rubrique verrouillée, qui dit ce qui vient."""
-        layout.addWidget(self._titre_rubrique(tr("Affichage"), verrouille=True))
-        layout.addSpacing(8)
-        for nom in _A_VENIR:
+        """Jeu sans réglage de correctif : la résolution si le catalogue dit où
+        l'écrire (HP1, HP2), et ce qui vient, verrouillé."""
+        reglable = self.game.resolution is not None
+        layout.addWidget(self._titre_rubrique(tr("Affichage"), verrouille=not reglable))
+        layout.addSpacing(8 if not reglable else 2)
+        if reglable:
+            self._ligne_resolution(layout)
+        # Sous une rubrique active, des choix grisés sans « BIENTÔT » auraient
+        # l'air de réglages cassés (règle 119) : on ne les annonce plus ici.
+        for nom in (() if reglable else _A_VENIR):
             item = QRadioButton(tr(nom))
             item.setFont(body_font(12))
             item.setEnabled(False)
@@ -229,7 +237,9 @@ class RubriquesDuJeu:
                 "Ne touchez pas aux options vidéo DANS le jeu : l'affichage "
                 "est déjà réglé au mieux par le lanceur, et le modifier ici "
                 "peut empêcher le jeu de redémarrer.\n"
-                "Ces réglages viendront ici."))
+                "Ces réglages viendront ici.") if not reglable else tr(
+                "Réglez la résolution ici, pas dans le menu du jeu : ses options "
+                "vidéo peuvent l'empêcher de redémarrer."))
             note.setFont(body_font(11))
             note.setWordWrap(True)
             note.setTextFormat(Qt.TextFormat.PlainText)
@@ -241,6 +251,47 @@ class RubriquesDuJeu:
         trait.setStyleSheet("color: rgba(255,255,255,0.06);")
         layout.addSpacing(6)
         layout.addWidget(trait)
+
+    def _ligne_resolution(self, layout: QVBoxLayout) -> None:
+        """La taille de la fenêtre du jeu : celle de l'écran par défaut.
+
+        Enregistrée dans la config du launcher, ÉCRITE dans l'ini au lancement
+        (`resolution_jeu`) : le jeu, son menu vidéo ou un Alt+Entrée peuvent la
+        changer, le lancement suivant remet celle-ci.
+        """
+        ecran = resolution_jeu.ecran_principal()
+        choix = QComboBox()
+        choix.setStyleSheet(themed(_COMBO_STYLE))
+        choix.setMinimumWidth(130)
+        if ecran is not None:
+            choix.addItem(tr("Celle de l'écran ({} × {})").format(*ecran), "")
+        else:
+            choix.addItem(tr("Celle de l'écran"), "")
+        for taille in resolution_jeu.proposees(ecran):
+            choix.addItem("{} × {}".format(*taille), resolution_jeu.ecrire(taille))
+        courant = self.manager.config.resolution_jeu.get(self.game.id, "")
+        if courant and choix.findData(courant) < 0:
+            taille = resolution_jeu.lire(courant)
+            if taille is not None:
+                # Choisie sur un autre écran, plus grand : la montrer telle quelle,
+                # le lancement repliera sur l'écran tant qu'elle ne tient pas.
+                choix.addItem(tr("{} × {} (plus grande que cet écran)").format(*taille), courant)
+        choix.setCurrentIndex(max(0, choix.findData(courant)))
+        choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_resolution(c.currentData()))
+        self._choix_resolution = choix
+        self._ligne(layout, tr("Résolution"), choix, tr(
+            "La taille de la fenêtre du jeu, sans bordure. Par défaut celle de l'écran : "
+            "le jeu le remplit, sans passer en plein écran exclusif. Une taille plus petite "
+            "allège le travail de la carte graphique. Appliquée à chaque lancement, même si "
+            "le menu du jeu ou Alt+Entrée l'a changée entre-temps."))
+
+    def _on_resolution(self, valeur: str) -> None:
+        resolutions = self.manager.config.resolution_jeu
+        if valeur:
+            resolutions[self.game.id] = valeur
+        else:
+            resolutions.pop(self.game.id, None)
+        self.manager.config.save()
 
     def _note(self, layout: QVBoxLayout, texte: str) -> None:
         note = QLabel(texte)

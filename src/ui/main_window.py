@@ -9,7 +9,7 @@ from src.core.config import Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.ui import dialogues_fenetre, verification_forcee
+from src.ui import dialogues_fenetre, game_detail_handlers, verification_forcee
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
 from src.ui.clavier_global import touche_globale
@@ -224,6 +224,7 @@ class MainWindow(QMainWindow):
         # deux fois : la fiche demande à la session ce qui tourne.
         self._detail.partie_en_cours = lambda: self._session.nom_en_cours
         self._session.terminee.connect(self._on_game_exited)
+        self._session.configuration_cassee.connect(self._on_configuration_cassee)
 
     # ──────────────────── Update checker ────────────────────
 
@@ -494,6 +495,12 @@ class MainWindow(QMainWindow):
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
         self._maybe_thank_milestone()
+
+    def _on_configuration_cassee(self, game_id: str, ligne: str) -> None:
+        """Le jeu s'est arrêté sur une erreur d'affichage : proposer la remise."""
+        game = self.manager.get_game_by_id(game_id)
+        if game is not None:
+            game_detail_handlers.proposer_apres_plantage(self._detail, game, ligne)
 
     def _maybe_thank_milestone(self) -> None:
         """Un seul remerciement Ko-fi dans la vie du launcher, au cap de 2 h de jeu.

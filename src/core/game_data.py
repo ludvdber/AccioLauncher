@@ -29,6 +29,8 @@ from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
     _est_relatif_sur,
     _parse_manette_registre,
     _parse_language_registry,
+    Resolution,
+    _parse_resolution,
     PreLaunch,
     PostInstall,
     _annee_valide,
@@ -166,6 +168,9 @@ class GameData:
     # À partir de HP5 le moteur change et ses réglages fonctionnent : le champ
     # est donc PAR JEU, et rien ne s'affiche pour ceux qui vont bien.
     display_locked: bool = False
+    # Où écrire la taille de la fenêtre (`catalogue_blocs.Resolution`) ; None :
+    # le launcher ne règle pas la résolution de ce jeu.
+    resolution: Resolution | None = None
     # Année de scolarité que ce jeu raconte — 1 à 7, ou 0 pour « hors
     # programme ».
     #
@@ -326,6 +331,7 @@ class GameData:
             # qui change la façon dont on lance un exécutable.
             dpi_aware=data.get("dpi_aware") is True,
             display_locked=data.get("display_locked") is True,
+            resolution=_parse_resolution(data.get("resolution")),
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),

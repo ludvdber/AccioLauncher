@@ -100,6 +100,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # (oui) -> bool : prévient, écrit, dit si c'est pris. None = pas de rubrique.
         self._appliquer_manette = appliquer_manette
         self._bascule_manette = None
+        # La liste des résolutions (HP1, HP2) ; None pour les autres jeux.
+        self._choix_resolution: QComboBox | None = None
         self._groupe = QButtonGroup(self)
         self._boutons: dict[str, QRadioButton] = {}
         # Réglages du correctif que le catalogue déclare confirmés pour ce jeu,

@@ -145,6 +145,33 @@ def _derniere_ecriture(racine: Path, spec: Sauvegardes) -> float:
     return plus_recente
 
 
+def fichiers(spec: Sauvegardes | None) -> dict[str, Path]:
+    """Les FICHIERS de sauvegarde présents, clé = chemin relatif au dossier.
+
+    Ce que `copies_sauvegardes` met à l'abri : un fichier entier, même quand il
+    porte plusieurs emplacements (HP4). Mêmes motifs, exclusions et plafond que
+    `releve`. Ne lève jamais.
+    """
+    if spec is None:
+        return {}
+    racine = dossier(spec)
+    if racine is None:
+        return {}
+    trouves: dict[str, Path] = {}
+    try:
+        for chemin in racine.glob(spec.fichiers):
+            if len(trouves) >= _MAX_FICHIERS:
+                break
+            rel = chemin.relative_to(racine).as_posix()
+            if any(fnmatch.fnmatch(rel, e) or fnmatch.fnmatch(chemin.name, e)
+                   for e in spec.exclure) or not chemin.is_file():
+                continue
+            trouves[rel] = chemin
+    except (OSError, ValueError) as exc:
+        log.debug("Liste des sauvegardes impossible : %s", exc)
+    return trouves
+
+
 def releve(spec: Sauvegardes | None) -> dict[str, Etat]:
     """Les sauvegardes présentes, clé = chemin relatif au DOSSIER du jeu.
 

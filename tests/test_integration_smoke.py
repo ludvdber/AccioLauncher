@@ -1713,13 +1713,36 @@ class TestEngrenageReglagesDuJeu:
         from src.core.i18n import tr
         from src.ui.game_settings_dialog import GameSettingsDialog, _A_VENIR
 
+        from dataclasses import replace
+
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.INSTALLED)
-        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        # Un jeu dont le catalogue ne dit pas où écrire la résolution.
+        sans = replace(jeu, resolution=None)
+        dlg = GameSettingsDialog(sans, win.manager, lambda code: True, parent=win)
         desactives = [b.text() for b in dlg.findChildren(QRadioButton)
                       if not b.isEnabled()]
         for nom in _A_VENIR:
             assert tr(nom) in desactives, nom
+        assert dlg._choix_resolution is None
+
+    def test_la_resolution_se_regle_quand_le_catalogue_dit_ou(self, make_window_multilingue):
+        """HP1/HP2 (bloc `resolution`) : la rubrique devient un vrai réglage, et
+        plus aucun choix grisé sans « BIENTÔT » ne traîne dessous (règle 119)."""
+        from dataclasses import replace
+        from PyQt6.QtWidgets import QRadioButton
+        from src.core.catalogue_blocs import Resolution
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        avec = replace(jeu, resolution=Resolution(
+            "%DOCUMENTS%\\Harry Potter\\HP.ini", "WinDrv.WindowsClient",
+            "WindowedViewportX", "WindowedViewportY"))
+        dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
+        assert dlg._choix_resolution is not None and dlg._choix_resolution.count() >= 1
+        assert not [b for b in dlg.findChildren(QRadioButton) if not b.isEnabled()]
 
     def test_la_rubrique_affichage_previent_du_piege_du_menu_du_jeu(
             self, make_window_multilingue):

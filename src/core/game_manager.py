@@ -5,6 +5,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
 from datetime import date, datetime, timedelta
 from enum import StrEnum, auto
 from pathlib import Path, PurePosixPath
@@ -12,7 +13,7 @@ from typing import NamedTuple
 
 from src.core import captures, compat, manette
 from src.core import game_language as langue
-from src.core import stats
+from src.core import copies_sauvegardes, resolution_jeu, stats
 from src.core.config import Config
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 from src.core.pre_launch import (
@@ -304,6 +305,9 @@ class GameManager:
         # régénérerait depuis Default.ini, assistant de configuration compris.
         restaurer_configs_manquantes(game, self.config)
         apply_ini_patches(game, self.config)
+        # Taille de fenêtre APRÈS la restauration, qui recopierait le modèle
+        # (1024×768 pour HP2) ; écrite à chaque fois, raison dans le module.
+        resolution_jeu.appliquer(game, self.config, resolution_jeu.ecran_principal())
         # Langue par FICHIERS (HP1) APRÈS la restauration, qui recopierait un
         # HP.ini français par-dessus.
         if game.langue_par_fichiers \
@@ -316,6 +320,16 @@ class GameManager:
         # Et la couleur de la maison, que son xinput1_3.dll repose sur la manette.
         manette.preparer((self.config.install_path / game.executable).parent,
                          self.config.theme if self.config.couleur_manette else None)
+
+        # Les sauvegardes telles qu'elles sont AVANT la partie
+        # (`copies_sauvegardes`). Sur un fil : la toute première fois, HP3 en a
+        # 25 Mo à compresser, et le clic sur JOUER ne doit pas attendre. Le jeu
+        # met plusieurs secondes à charger ; une sauvegarde réécrite pendant la
+        # copie est de toute façon détectée et sa copie jetée.
+        if self.config.copies_sauvegardes and game.sauvegardes is not None:
+            threading.Thread(target=copies_sauvegardes.avant_partie,
+                             args=(game.id, game.sauvegardes), daemon=True,
+                             name=f"copies-{game.id}").start()
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}

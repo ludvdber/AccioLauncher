@@ -21,7 +21,7 @@ from src.core.i18n import tr
 from src.core import compat
 from src.core import manette
 from src.core import preparation_wine as preparation
-from src.core import reparation_config
+from src.core import copies_sauvegardes, reparation_config
 from src.core.game_manager import GameState
 from src.core.liens import GUIDE_LINUX_URL
 from src.core.system_checks import (
@@ -30,6 +30,7 @@ from src.core.system_checks import (
 )
 from src.ui.preparateur_wine import noms_des_verbes
 from src.ui.utils import open_local_path, open_url
+from src.ui.copies_dialog import CopiesDialog
 from src.ui.game_settings_dialog import GameSettingsDialog
 from src.ui.versions_dialog import VersionsDialog
 
@@ -532,24 +533,49 @@ def _proposer_la_configuration(view: "GameDetailView") -> None:
         (tr("Remettre la configuration"), tr("Retélécharger le jeu"), tr("Annuler")), 2,
     )
     if choix == 0:
-        en_cours = view.partie_en_cours()
-        if en_cours:
-            # Le jeu réécrit sa configuration en quittant : elle écraserait la nôtre.
-            view.notify.emit(tr("Fermez {} avant de remettre sa configuration.").format(en_cours))
-            return
-        resultat = reparation_config.remettre(game, view.manager.config.install_path)
-        if resultat.echoues:
-            _boite(QMessageBox.Icon.Warning, view, tr("Configuration non remise"),
-                   tr("Ces fichiers n'ont pas pu être remis :\n{}\n\nLe journal du launcher en dit la raison.")
-                   .format("\n".join(resultat.echoues)))
-        else:
-            view.notify.emit(tr("Configuration de {} remise.").format(game.name))
+        _remettre_la_configuration(view, game)
     elif choix == 1:
         # Re-gardé : une préparation de Wine a pu démarrer pendant la question.
         if _preparation_bloque(view):
             return
         view._ops.repair(game)
         view._refresh()
+
+
+def _remettre_la_configuration(view: "GameDetailView", game: GameData) -> None:
+    en_cours = view.partie_en_cours()
+    if en_cours:
+        # Le jeu réécrit sa configuration en quittant : elle écraserait la nôtre.
+        view.notify.emit(tr("Fermez {} avant de remettre sa configuration.").format(en_cours))
+        return
+    resultat = reparation_config.remettre(game, view.manager.config.install_path)
+    if resultat.echoues:
+        _boite(QMessageBox.Icon.Warning, view, tr("Configuration non remise"),
+               tr("Ces fichiers n'ont pas pu être remis :\n{}\n\nLe journal du launcher en dit la raison.")
+               .format("\n".join(resultat.echoues)))
+    else:
+        view.notify.emit(tr("Configuration de {} remise.").format(game.name))
+
+
+def proposer_apres_plantage(view: "GameDetailView", game: GameData, ligne: str) -> None:
+    """Le jeu vient de s'arrêter sur une erreur d'affichage (`config_cassee`).
+
+    Une QUESTION, donc une boîte et pas un toast (règle 115) : la réponse
+    écrit dans Documents. La ligne du journal est montrée telle quelle — c'est
+    celle que le joueur a vue en anglais dans la boîte du jeu, et celle qu'il
+    collerait sur Discord : la reconnaître le rassure sur le diagnostic.
+    """
+    choix = _boite(QMessageBox.Icon.Question,
+        view, tr("{} n'a pas pu s'afficher").format(game.name),
+        tr("Le jeu s'est arrêté sur une erreur d'affichage :\n« {} »\n\n"
+           "C'est presque toujours sa configuration, abîmée par un changement dans ses "
+           "options graphiques. La remettre suffit le plus souvent : c'est immédiat, "
+           "rien n'est téléchargé.\n\nL'ancienne configuration est gardée de côté ; "
+           "les sauvegardes ne sont pas touchées.").format(ligne),
+        (tr("Remettre la configuration"), tr("Plus tard")), 1,
+    )
+    if choix == 0:
+        _remettre_la_configuration(view, game)
 
 
 def find_import_error(game: GameData, source: Path, install_path: Path) -> str | None:
@@ -685,7 +711,16 @@ def _actions_fichiers(view: "GameDetailView", game: GameData):
                         lambda: on_repair(view)))
         actions.append((tr("Ouvrir le dossier du jeu"),
                         lambda: _ouvrir_dossier_du_jeu(view, game)))
+    # Même désinstallé : les copies vivent hors du dossier du jeu, et c'est
+    # peut-être justement pour les récupérer qu'on revient.
+    if game.sauvegardes is not None and copies_sauvegardes.versions(game.id):
+        actions.append((tr("Revenir à une version précédente des sauvegardes"),
+                        lambda: _ouvrir_copies(view, game)))
     return actions
+
+
+def _ouvrir_copies(view: "GameDetailView", game: GameData) -> None:
+    CopiesDialog(game, partie_en_cours=view.partie_en_cours, parent=view).exec()
 
 
 def _ouvrir_dossier_du_jeu(view: "GameDetailView", game: GameData) -> None:

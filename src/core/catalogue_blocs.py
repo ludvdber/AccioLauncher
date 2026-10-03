@@ -394,6 +394,42 @@ def _parse_language_registry(data) -> "LanguageRegistry | None":
 
 
 @dataclass(frozen=True, slots=True)
+class Resolution:
+    """Où le jeu lit la taille de sa fenêtre : deux clés d'un `.ini`.
+
+    HP1 et HP2 (UE1, 2026-10-03) : `[WinDrv.WindowsClient] WindowedViewportX/Y`,
+    VU en jeu le 2026-10-01 — le moteur ouvre sa fenêtre sans bordure à cette
+    taille. Le launcher y écrit celle de l'écran à chaque lancement, ou celle que
+    la personne a choisie (`resolution_jeu`).
+    """
+    file: str       # chemin avec %DOCUMENTS% / %INSTALL_DIR%, un `.ini`
+    section: str
+    width: str      # clé de la largeur
+    height: str     # clé de la hauteur
+
+
+def _parse_resolution(data) -> "Resolution | None":
+    """Lit le bloc `resolution`, ou None s'il est absent ou douteux.
+
+    Mêmes barrières que les patchs de `language_files` : rien qui puisse
+    ajouter une ligne ou une section à l'ini. Le chemin, lui, est encore
+    contrôlé à l'écriture (`resolve_safe_path` : un `.ini`, dans Documents ou
+    le dossier des jeux).
+    """
+    if not isinstance(data, dict):
+        return None
+    champs = [data.get(k) for k in ("file", "section", "width", "height")]
+    if not all(isinstance(c, str) and c.strip() for c in champs):
+        return None
+    fichier, section, largeur, hauteur = champs
+    if _INI_INTERDIT_VALEUR.search(fichier) or largeur == hauteur or any(
+            _INI_INTERDIT_NOM.search(c) for c in (section, largeur, hauteur)):
+        log.warning("Bloc resolution ignoré (douteux) : %r", data)
+        return None
+    return Resolution(file=fichier, section=section, width=largeur, height=hauteur)
+
+
+@dataclass(frozen=True, slots=True)
 class PreLaunch:
     """Données de pré-lancement d'un jeu."""
     ini_patches: tuple[IniPatch, ...] = ()

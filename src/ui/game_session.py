@@ -27,7 +27,7 @@ from datetime import datetime
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.core import captures, sauvegardes, scolarite, stats
+from src.core import captures, config_cassee, reparation_config, sauvegardes, scolarite, stats
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -49,6 +49,12 @@ class GameSession(QObject):
     # pas s'entendre souhaiter « bon jeu ». Le verdict vient d'`add_playtime`,
     # seul endroit où le seuil est arbitré.
     terminee = pyqtSignal(str, bool)
+    # Le jeu s'est arrêté sur une erreur d'AFFICHAGE que remettre sa
+    # configuration répare (`config_cassee`) : identifiant du jeu, ligne du
+    # journal. Émis APRÈS `terminee`, quand la fenêtre est revenue : c'est une
+    # question à poser, et on ne la pose pas à une fenêtre dans la zone de
+    # notification.
+    configuration_cassee = pyqtSignal(str, str)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -118,6 +124,8 @@ class GameSession(QObject):
         # Sans session ouverte (relance de processus par UE1), on ne peut rien
         # affirmer : on suppose une partie plutôt que d'accuser à tort.
         partie = True
+        cassee = ""
+        game_id = self._game_id
         if self._game_id:
             partie = self._manager.add_playtime(
                 self._game_id, int(duree), self._debut, code)
@@ -133,11 +141,17 @@ class GameSession(QObject):
             game = self._manager.get_game_by_id(self._game_id)
             if game is not None:
                 captures.ramasser(game, self._manager.config.install_path)
+                # Seulement si la remise est POSSIBLE : sinon la question
+                # n'aurait pas de bonne réponse.
+                if reparation_config.disponible(game, self._manager.config.install_path):
+                    cassee = config_cassee.apres_la_partie(game, self._debut) or ""
         self._game_id = ""
         self._debut = None
         self._avant = {}
         self._presence.clear()
         self.terminee.emit(game_name, partie)
+        if cassee:
+            self.configuration_cassee.emit(game_id, cassee)
 
     def shutdown(self) -> None:
         """Coupe la présence Discord à la fermeture du launcher.

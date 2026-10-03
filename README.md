@@ -30,7 +30,9 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 
 - **Les huit jeux de la saga**, de *l'École des Sorciers* (2001) aux deux parties des *Reliques de la Mort* (2011), prêts à jouer sur un PC récent.
 - **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
-- **Tout se gère au même endroit** : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques retrouve sa configuration en un clic, sans rien retélécharger.
+- **Tout se gère au même endroit** : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
+- **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics.
+- **À la taille de votre écran** : *l'École des Sorciers* et *la Chambre des Secrets* s'ouvrent à la résolution de votre écran, 1440p et 4K compris, ou à celle que vous choisissez dans leurs réglages.
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
 - **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme une scolarité — sept jeux, sept années, celle où vous en êtes et celle qui vous attend.
 - **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres de Poudlard en septembre, les braises en octobre, la neige en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond, facultatives. Tout est désactivable.

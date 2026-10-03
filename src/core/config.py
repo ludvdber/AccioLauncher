@@ -146,6 +146,10 @@ class Config:
     # défaut : sans manette, rien n'est lu plus de deux fois par seconde, et
     # rien du tout pendant une partie.
     navigation_manette: bool = True
+    # Une copie de chaque sauvegarde qui a changé, avant chaque partie
+    # (`src/core/copies_sauvegardes.py`). Oui par défaut : c'est le seul filet
+    # contre une sauvegarde abîmée par un plantage, et il coûte quelques Mo.
+    copies_sauvegardes: bool = True
     delete_archives: bool = True
     autoplay_videos: bool = True
     # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
@@ -173,6 +177,9 @@ class Config:
     # anglais, et c'est justement l'absence de bascule qui bloquait tout le
     # monde — pas le défaut retenu. Voir `GameManager.game_language`.
     game_language: dict[str, str] = field(default_factory=dict)
+    # Taille de fenêtre choisie POUR CHAQUE JEU (id → « 2560x1440 »). Absent :
+    # celle de l'écran, recalculée à chaque lancement (`resolution_jeu`).
+    resolution_jeu: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -200,6 +207,7 @@ class Config:
                     faits_du_jour=_as_bool(data.get("faits_du_jour"), True),
                     couleur_manette=_as_bool(data.get("couleur_manette"), True),
                     navigation_manette=_as_bool(data.get("navigation_manette"), True),
+                    copies_sauvegardes=_as_bool(data.get("copies_sauvegardes"), True),
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
@@ -213,6 +221,7 @@ class Config:
                     playtime_seconds=_as_map(data.get("playtime_seconds"), int),
                     last_played=_as_map(data.get("last_played"), str),
                     game_language=_as_map(data.get("game_language"), str),
+                    resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 log.warning("Config corrompue, valeurs par défaut : %s", exc)
@@ -241,6 +250,7 @@ class Config:
                 "faits_du_jour": self.faits_du_jour,
                 "couleur_manette": self.couleur_manette,
                 "navigation_manette": self.navigation_manette,
+                "copies_sauvegardes": self.copies_sauvegardes,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
@@ -252,6 +262,7 @@ class Config:
                 "playtime_seconds": self.playtime_seconds,
                 "last_played": self.last_played,
                 "game_language": self.game_language,
+                "resolution_jeu": self.resolution_jeu,
             },
             indent=4,
             ensure_ascii=False,
