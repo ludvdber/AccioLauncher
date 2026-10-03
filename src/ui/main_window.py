@@ -169,16 +169,10 @@ class MainWindow(QMainWindow):
         self._detail.settings_requested.connect(self._on_settings)
         self._detail.cinema_toggled.connect(self._on_cinema)
 
-        # Settings button — roue DESSINÉE (SVG). C'était U+2699, réputé sûr
-        # parce que sa propriété Unicode est `Emoji_Presentation=No` ; mesuré le
-        # 2026-08-26, Windows le rendait à 49 % en couleur (0 % pour une lettre,
-        # 22 % pour 🔊 pris comme témoin). C'est le seul bouton présent en
-        # permanence à l'écran, donc le pire endroit pour un glyphe hors thème.
+        # Pictogrammes DESSINÉS (règle 60 : U+2699 sortait en couleur).
         self._btn_settings = self._commande("reglages", tr("Paramètres"), self._on_settings)
         self._btn_stats = self._commande("stats", tr("Statistiques"), self._on_stats)
-        # Le Discord n'était que dans Paramètres → À propos, que personne
-        # n'ouvre : l'exe circule de main en main, et qui l'a reçu d'un ami
-        # ignore qu'une communauté existe — et où demander de l'aide.
+        # Discord visible : enfoui dans À propos, personne ne le trouvait.
         self._btn_discord = self._commande(
             "discord", tr("Discord : aide et communauté"), lambda: open_url(DISCORD_URL))
         # De droite à gauche, dans l'ordre où `_position_settings` les pose.
@@ -255,9 +249,8 @@ class MainWindow(QMainWindow):
         self._updates.network_status.connect(self._on_network_status)
         self._updates.launcher_message.connect(self._notif_bar.set_message)
         self._updates.launcher_busy.connect(self._notif_bar.set_busy)
-        # L'exe est déjà remplacé et le .bat attend notre mort : plus personne
-        # à qui poser la question. Elle a été posée à `_ask_launcher_update`,
-        # qui refuse d'ailleurs de s'ouvrir pendant une opération en cours.
+        # L'exe est remplacé et le .bat attend notre mort : la question a déjà
+        # été posée (jamais pendant une opération en cours).
         self._updates.launcher_ready.connect(self._fermer_sans_demander)
 
     def _start_update_check(self) -> None:
@@ -266,13 +259,8 @@ class MainWindow(QMainWindow):
         self._updates.start()
 
     def _on_network_status(self, online: bool) -> None:
-        """Aucun serveur joignable → le dire, et re-tester tout seul.
-
-        Sans re-tentative, rebrancher son câble laisserait « Télécharger »
-        grisé jusqu'au prochain démarrage : l'utilisateur croirait le launcher
-        en panne. Le timer est ré-armé à CHAQUE échec, pas seulement à la
-        transition, sinon un seul essai serait fait.
-        """
+        """Aucun serveur joignable → le dire, et re-tester tout seul (règle
+        110), le minuteur ré-armé à CHAQUE échec."""
         self._updates.schedule_retry(online)
         compat.signaler_reseau(online)
         if online == self._online:
@@ -288,9 +276,8 @@ class MainWindow(QMainWindow):
 
     def _rafraichir_fiche(self, *_args) -> None:
         """Compteurs de téléchargements ou tailles réelles reçus : la fiche
-        affichée se refait (même id = pas de transition). Sans ça, le bouton
-        « TÉLÉCHARGER » garderait toute la session le poids du catalogue (la
-        taille INSTALLÉE), alors que le bon chiffre est arrivé entre-temps."""
+        affichée se refait (même id = pas de transition), sinon le bouton
+        garderait la taille INSTALLÉE du catalogue."""
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
 
@@ -299,10 +286,8 @@ class MainWindow(QMainWindow):
         self.manager.reload_catalog(catalog)
         self._trailers.rattraper_apres_catalogue(self.config)
         games = [entry.game for entry in self.manager.get_games()]
-        # Vue détaillée : conserver le jeu si encore présent, sinon premier jeu.
-        # La décision est prise AVANT de reconstruire la bande, et lui est
-        # passée : une seule source, donc plus de désaccord possible entre le
-        # jeu surligné et le jeu affiché (HP1 surligné sous HP6, 2026-08-21).
+        # Garder le jeu affiché s'il existe encore, décidé AVANT de
+        # reconstruire la bande et passé à elle (règle 101).
         current_id = self._detail.game.id if self._detail.game else None
         updated = self.manager.get_game_by_id(current_id) if current_id else None
         if updated is None and games:
@@ -329,10 +314,8 @@ class MainWindow(QMainWindow):
     def _propose_launcher_update(self) -> None:
         """Demande franchement s'il faut mettre à jour, une fois par session.
 
-        Un bandeau de 35 px se survole sans se lire : une mise à jour du
-        launcher est une vraie QUESTION, donc un vrai dialogue. « Plus tard »
-        laisse le bandeau comme rappel sans reposer la question ; sa croix,
-        elle, écarte la version pour de bon.
+        Une vraie QUESTION, donc un dialogue (un bandeau se survole sans se
+        lire). « Plus tard » laisse le bandeau ; sa croix écarte la version.
         """
         if self._launcher_update_asked or self._detail.ops.is_busy:
             return
@@ -384,10 +367,8 @@ class MainWindow(QMainWindow):
     def _minimize_to_tray(self) -> None:
         """Cache la fenêtre dans le system tray et pause tous les effets.
 
-        Sans zone de notification — GNOME sans l'extension AppIndicator,
-        certains compositeurs Wayland —, cacher la fenêtre la rendrait
-        INTROUVABLE jusqu'à la fin de la partie : pas d'icône pour la rappeler.
-        Elle est alors réduite. Sous Windows, la zone existe toujours.
+        Sans zone de notification (GNOME sans AppIndicator), cachée elle serait
+        INTROUVABLE : elle est alors réduite.
         """
         if not self._tray.disponible():
             self.showMinimized()
@@ -411,11 +392,8 @@ class MainWindow(QMainWindow):
     def _quit_app(self) -> None:
         """« Quitter » du menu du tray.
 
-        Passe par `close()` — dont la valeur de retour dit si `closeEvent` a
-        accepté — et ne quitte que si c'est le cas. `QApplication.quit()` seul
-        marcherait (Qt 6 envoie le QCloseEvent et respecte un `ignore()`), mais
-        rien dans ce code ne le dirait : lire la réponse rend la règle visible
-        là où elle s'applique.
+        Par `close()`, dont le retour dit si `closeEvent` a accepté : la règle
+        reste visible là où elle s'applique.
         """
         if not self.close():
             return
@@ -494,11 +472,8 @@ class MainWindow(QMainWindow):
     def _on_game_exited(self, game_name: str, partie: bool = True) -> None:
         """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé.
 
-        `partie` vient d'`add_playtime`, seul endroit qui arbitre le seuil.
-        Faux, c'est un lancement qui n'est jamais devenu une partie : le
-        launcher le CONSIGNAIT déjà (`stats.Tentative` + code de sortie) et
-        souhaitait quand même « Bon jeu ! » — mesuré le 2026-08-28 sur une
-        sortie en 0,5 s, signature exacte du dossier `pc` de HP7.
+        `partie` vient d'`add_playtime`, seul arbitre du seuil. Faux : le jeu
+        n'a pas démarré, donc pas de « Bon jeu ! » (règle 108).
         """
         self._tray.set_tooltip("Accio Launcher")
         self._retrait.oublier()
@@ -507,11 +482,8 @@ class MainWindow(QMainWindow):
             self._status_bar.showMessage(
                 tr("Retour de {} — Bon jeu !").format(game_name))
         else:
-            # Un toast et non la barre de statut : la fenêtre vient de
-            # reparaître, l'œil est sur la fiche. On ignore POURQUOI le jeu
-            # n'a pas démarré, et inventer un remède serait pire — mais on sait
-            # QUI peut aider. Deux lignes : sur une seule, le nom le plus long
-            # du catalogue ferait dépasser le toast d'une fenêtre de 980 px.
+            # Toast : l'œil est sur la fiche. On ignore pourquoi, mais on sait
+            # qui peut aider. Deux lignes pour tenir à 980 px.
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
             self._toast.show_message(
                 tr("{} s'est fermé aussitôt — le jeu n'a pas démarré.").format(game_name)
@@ -526,15 +498,8 @@ class MainWindow(QMainWindow):
     def _maybe_thank_milestone(self) -> None:
         """Un seul remerciement Ko-fi dans la vie du launcher, au cap de 2 h de jeu.
 
-        Moment de joie (retour de jeu), jamais de répétition, jamais de
-        culpabilisation — voir la stratégie « pas de nag » du projet.
-
-        Le cap était à 10 h, et c'était trop tard : le remerciement n'existe
-        qu'une fois dans la vie du launcher, donc le placer si loin revenait à
-        ne jamais l'adresser à la plupart des gens. 2 h (décision de Ludo,
-        2026-08-26) tombe après une vraie soirée de jeu — assez pour que le
-        launcher ait fait ses preuves, assez tôt pour que ce soit encore une
-        bonne surprise. La règle « une seule fois » ne bouge pas d'un pouce.
+        Au retour de jeu, jamais répété, jamais culpabilisant (« pas de nag »).
+        La règle « une seule fois » ne bouge pas.
         """
         if self.config.kofi_milestone_thanked:
             return
@@ -628,11 +593,7 @@ class MainWindow(QMainWindow):
     def _position_settings(self) -> None:
         """Pose les commandes SOUS le bandeau de notification quand il est là.
 
-        Elles sont enfants directs de la fenêtre, posées en absolu à y = 42 ;
-        le bandeau, lui, vit dans le layout et occupe y = 38 → 73. Ils se
-        recouvraient exactement, et comme les commandes sont remontées au
-        premier plan, elles masquaient la croix de fermeture du bandeau —
-        invisible et incliquable.
+        Règle 29 : posées en absolu, elles masquaient la croix du bandeau.
         """
         decalage = self._notif_bar.height() if self._notif_bar.isVisible() else 0
         for i, bouton in enumerate(self._commandes):
@@ -669,12 +630,8 @@ class MainWindow(QMainWindow):
     def _on_cinema(self, actif: bool) -> None:
         """Escamote ce qui n'appartient pas à la fiche pendant le plein écran.
 
-        Carrousel, barre de statut, engrenage et particules sont enfants de la
-        FENÊTRE : sans ce relais, « plein écran » n'effacerait que le titre et
-        les boutons. La barre de téléchargement se DÉDUIT de `current_game`
-        plutôt que d'un instantané pris à l'entrée — un téléchargement lancé ou
-        terminé pendant la bande-annonce la laisserait sinon visible et vide,
-        ou cachée alors qu'elle progresse.
+        Ces widgets sont enfants de la FENÊTRE. La barre de téléchargement se
+        DÉDUIT de `current_game` (un téléchargement peut finir pendant la vidéo).
         """
         self._carousel.setVisible(not actif)
         self._status_bar.setVisible(not actif)
@@ -691,11 +648,8 @@ class MainWindow(QMainWindow):
     def _confirmer_fermeture(self) -> bool:
         """Demande confirmation si une opération est en cours. True = on ferme.
 
-        **Un seul point de passage, et c'est mesuré** : sous Qt 6.11,
-        `QApplication.quit()` envoie un `QCloseEvent` et un `ignore()` ANNULE la
-        sortie. La croix, Alt+F4 et « Quitter » du tray convergent donc ici —
-        une garde posée sur un seul de ces chemins serait pire que rien, elle
-        apprendrait qu'on est protégé.
+        Point de passage unique : croix, Alt+F4 et « Quitter » du tray (Qt 6.11
+        envoie un `QCloseEvent` dont `ignore()` annule la sortie).
         """
         ops = self._detail.ops
         if self._fermeture_confirmee or not ops.is_busy:
@@ -707,9 +661,7 @@ class MainWindow(QMainWindow):
     def _fermer_sans_demander(self) -> None:
         """Ferme sans question — un `.bat` attend DÉJÀ la mort du processus.
 
-        Auto-update appliqué et « Redémarrer maintenant » : refuser ici
-        laisserait le script attendre pour rien. La question s'y pose AVANT
-        qu'il ne soit écrit, quand répondre non est encore sans conséquence.
+        La question a été posée AVANT d'écrire le script.
         """
         self._fermeture_confirmee = True
         self.close()
@@ -734,10 +686,7 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        # ←/→ ne sont PAS traitées ici : le filtre applicatif `_handle_global_key`
-        # les consomme avant, y compris quand un bouton a le focus (c'est tout
-        # son intérêt). Les dupliquer donnait deux règles pour un seul
-        # comportement, dont une inatteignable — et donc jamais vérifiée.
+        # ←/→ : consommées avant par `_handle_global_key`.
         match event.key():
             case Qt.Key.Key_Return | Qt.Key.Key_Enter:
                 self._detail.trigger_primary_action()

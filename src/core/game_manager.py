@@ -33,10 +33,8 @@ log = logging.getLogger(__name__)
 # ERROR_ELEVATION_REQUIRED : CreateProcess refuse un exe qui exige l'administrateur.
 ERREUR_ELEVATION = 740
 
-# Au-delà, l'archive est téléchargée et n'attend plus que son installation :
-# ce n'est plus une reprise. Vit ici, avec `GameManager.reprise`, parce que
-# deux endroits l'affichent désormais (le bouton et la vignette) et qu'un
-# seuil recopié finit par diverger de son jumeau.
+# Au-delà, l'archive n'attend plus que son installation : ce n'est plus une
+# reprise. Un seul seuil pour le bouton et la vignette (règle 98).
 REPRISE_SEUIL = 0.99
 
 
@@ -86,29 +84,20 @@ class GameManager:
         }
         # Jeux apparus via un reload de catalogue pendant la session (badge « NOUVEAU »)
         self._new_game_ids: set[str] = set()
-        # Compteurs de téléchargement GitHub (toutes versions cumulées), remplis
-        # en arrière-plan par l'UpdateChecker — vide tant que le fetch n'a pas abouti.
+        # Remplis en arrière-plan par l'UpdateChecker, vides tant que l'API
+        # GitHub n'a pas répondu : téléchargements cumulés, empreintes SHA-256
+        # et tailles réelles par URL d'asset (sinon `size_mb` du catalogue).
         self._download_counts: dict[str, int] = {}
-        # URL d'asset → empreinte SHA-256 publiée par GitHub, remplies en
-        # arrière-plan par l'UpdateChecker (vide tant que le fetch n'a pas abouti).
         self._asset_digests: dict[str, str] = {}
         self._digests_lower: dict[str, str] = {}
-        # URL d'asset → taille réelle en octets, même provenance et même réserve :
-        # vide tant que l'API n'a pas répondu, auquel cas on retombe sur le
-        # `size_mb` du catalogue.
         self._asset_sizes: dict[str, int] = {}
         self._sizes_lower: dict[str, int] = {}
         self._backfill_missing_versions()
-        # Journal des sessions : créé au premier démarrage qui suit sa mise en
-        # service, en y gelant les cumuls déjà connus. Sans cet instantané, le
-        # temps joué AVANT le journal disparaîtrait des totaux le jour où la
-        # page de statistiques cesserait de lire `config.playtime_seconds` —
-        # c'est de l'historique réel, il ne se reconstruit pas.
+        # Gèle les cumuls d'avant le journal des sessions : cet historique ne
+        # se reconstruit pas.
         stats.amorcer(self.config.playtime_seconds)
-        # Une partie que le launcher n'a pas vue se terminer (quitté par la zone
-        # de notification, tué par une mise à jour, planté) est rattrapée ici,
-        # à hauteur de ce qu'on en a OBSERVÉ. Après `amorcer`, sinon la session
-        # rattrapée s'écrirait dans un journal qui n'existe pas encore.
+        # Rattrape une partie dont le launcher n'a pas vu la fin (zone de
+        # notification, mise à jour, plantage). Après `amorcer`.
         stats.recuperer_session_interrompue()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
@@ -159,13 +148,9 @@ class GameManager:
     def _backfill_missing_versions(self) -> None:
         """Enregistre une version pour les jeux INSTALLÉS sans version connue.
 
-        Un jeu détecté sur le disque sans entrée dans `installed_versions`
-        (dossier déjà présent lors d'un changement d'install_path, config
-        réinitialisée…) ne recevrait JAMAIS de notification de mise à jour :
-        `has_update` exige une version connue. Convention optimiste identique
-        à l'import « J'ai déjà ce jeu » : version recommandée du moment —
-        « Vérifier / réparer » couvre le doute. Modif en mémoire seulement
-        (persistée au prochain save naturel de la config ; idempotent au boot).
+        Sans elle, `has_update` ne les notifierait jamais. Convention optimiste
+        (version recommandée du moment), comme l'import « J'ai déjà ce jeu ».
+        En mémoire seulement ; idempotent.
         """
         for g in self._games:
             if (self._states.get(g.id) == GameState.INSTALLED
@@ -229,11 +214,8 @@ class GameManager:
         return self.config.installed_versions.get(game_id)
 
     def has_update(self, game_id: str) -> bool:
-        """Vérifie si une mise à jour est disponible pour un jeu installé.
-
-        La règle elle-même vit dans `version_utils.update_disponible` : elle
-        était dupliquée ici et dans l'UpdateChecker, en comparaison de chaînes.
-        """
+        """Vérifie si une mise à jour est disponible pour un jeu installé
+        (règle unique : `version_utils.update_disponible`)."""
         if not self.is_installed(game_id):
             return False
         game = self._index.get(game_id)
@@ -252,23 +234,16 @@ class GameManager:
                     ignorer_prerequis: bool = False) -> subprocess.Popen | None:
         """Lance le .exe du jeu en processus détaché.
 
-        Sous Linux, par le lanceur de compatibilité (umu-run ou wine), dans le
-        préfixe partagé — voir `src/core/compat.py`. `ignorer_prerequis` n'y
-        sert qu'à « Lancer quand même » après un échec de winetricks : les
-        composants intégrés à Wine suffisent parfois, et c'est à l'utilisateur
-        d'en décider, pas au launcher de le lui interdire.
+        Sous Linux, par umu-run ou wine dans le préfixe partagé (`compat.py`).
+        `ignorer_prerequis` : « Lancer quand même » après un échec de
+        winetricks — Wine suffit parfois, c'est à l'utilisateur d'en décider.
 
-        `confirmer` est le rappel de prévenance avant écriture registre (cf.
-        `apply_game_language`) : il n'est appelé que s'il y a réellement une
-        écriture à faire, donc au premier lancement et après un changement.
+        `confirmer` : prévenance avant écriture registre, appelée seulement
+        s'il y a une écriture à faire (règle 69).
 
-        `avertir()` est appelé quand cette écriture était NÉCESSAIRE et n'a pas
-        abouti. Le lancement continue — un jeu qui démarre mal vaut mieux qu'un
-        jeu qui ne démarre pas — mais se taire serait pire : sur HP7 partie 2,
-        un `Locale` resté à `fr_FR` (ce que pose l'installeur EA, et que cette
-        partie-là n'accepte pas) donne un jeu qui refuse de se lancer sans que
-        rien n'explique pourquoi. C'est à l'appelant de distinguer un ÉCHEC
-        d'un refus délibéré, qui n'a rien à signaler.
+        `avertir()` : l'écriture était NÉCESSAIRE et a échoué. Le lancement
+        continue, mais on le dit (HP7b refuse de démarrer avec `Locale=fr_FR`,
+        sans rien expliquer).
         """
         game = self._index.get(game_id)
         if game is None:
@@ -287,45 +262,34 @@ class GameManager:
             log.warning("Exécutable introuvable : %s", exe_path)
             return None
 
-        # Sous Linux, le « Windows » du jeu est un préfixe Wine, et c'est le
-        # lanceur de compatibilité qui l'exécute. Sans lui, rien de ce qui suit
-        # n'a de sens : on le dit tout de suite, avant d'écrire quoi que ce
-        # soit dans un préfixe que personne ne lira.
+        # Sous Linux, sans lanceur de compatibilité rien de la suite n'a de
+        # sens : le dire avant d'écrire dans un préfixe que personne ne lira.
         lanceur = None
         if sys.platform != "win32":
             lanceur = compat.lanceur()
             if lanceur is None:
-                # Installé depuis, peut-être (le message le propose) : on
-                # cherche à nouveau avant de refuser, sans redémarrage.
+                # Peut-être installé depuis (le message le propose) : rechercher.
                 compat.oublier()
                 lanceur = compat.lanceur()
             if lanceur is None:
                 raise RuntimeError("compat_absent")
 
-        # Socle commun + ce que le catalogue déclare pour CE jeu (ex. HP7 et
-        # son Visual C++ 2005). L'identifiant manquant remonte dans le message
-        # d'erreur : c'est lui qui permet à l'UI d'ouvrir la bonne page — ou,
-        # sous Linux, de proposer l'installation dans le préfixe.
+        # Socle commun + `requires` du jeu. L'identifiant manquant remonte
+        # pour que l'UI ouvre la bonne page (ou l'installe dans le préfixe).
         manquants = ([] if ignorer_prerequis
                      else prerequis_manquants(("vcredist_x86", *game.requires)))
         if manquants:
             raise RuntimeError(f"prerequis_manquant:{manquants[0]}")
 
-        # HP1, HP2 et HP3 rangent configuration et sauvegardes dans Documents.
-        # Si Windows n'y donne pas accès, ces jeux plantent à l'initialisation
-        # avec un message à eux (« General protection fault! History: appInit »)
-        # que rien ne relie au vrai coupable — cas réel du 2026-09-20. On le dit
-        # AVANT de lancer, plutôt que de laisser le jeu accuser autre chose.
+        # HP1-HP3 vivent dans Documents ; sans accès, ils plantent sur un
+        # « General protection fault » que rien ne relie au coupable. Le dire avant.
         if besoin_de_documents(game):
             docs = documents_inutilisable()
             if docs is not None:
                 raise RuntimeError(f"documents_inutilisable:{docs}")
 
-        # Langue du jeu AVANT tout le reste : c'est la seule étape qui peut
-        # demander une élévation, et l'utilisateur doit voir l'invite UAC juste
-        # après son clic, pas après trois secondes de patches silencieux. Un
-        # échec (UAC refusé) ne bloque PAS le lancement : le jeu démarrera dans
-        # la langue déjà en place, ce qui vaut mieux que de ne pas démarrer.
+        # Langue d'abord : seule étape qui peut demander l'UAC, à montrer juste
+        # après le clic. Un refus ne bloque pas le lancement.
         if game.language_registry is not None \
                 and not self.apply_game_language(game, confirmer=confirmer):
             log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
@@ -340,10 +304,8 @@ class GameManager:
         # régénérerait depuis Default.ini, assistant de configuration compris.
         restaurer_configs_manquantes(game, self.config)
         apply_ini_patches(game, self.config)
-        # Une langue portée par des FICHIERS (HP1) se pose APRÈS la
-        # restauration : un HP.ini disparu serait recopié depuis l'archive, en
-        # français, par-dessus la langue choisie. Rien à demander ici (aucun
-        # registre), mais un échec se dit comme pour le registre.
+        # Langue par FICHIERS (HP1) APRÈS la restauration, qui recopierait un
+        # HP.ini français par-dessus.
         if game.langue_par_fichiers \
                 and not self.apply_game_language(game):
             log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
@@ -357,28 +319,20 @@ class GameManager:
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
         popen_kwargs: dict = {"cwd": str(exe_path.parent)}
-        # `sys.platform == "win32"` et non `platform.system()` : c'est la
-        # convention de tout le reste du projet (16 autres sites), et le
-        # portage Linux impose que le test soit repérable d'un seul motif.
         if sys.platform != "win32":
             return self._lancer_sous_wine(game, exe_path, lanceur, popen_kwargs)
         popen_kwargs["creationflags"] = (
             subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
         )
-        # Voir `pre_launch.env_de_lancement` : sans cette couche, Windows
-        # agrandit la fenêtre d'un jeu non conscient du DPI sur un écran mis à
-        # l'échelle. Mesuré sur les deux parties de HP7 : 3200×1800 pour un
-        # écran de 2560×1440. None quand le jeu ne le déclare pas (six sur
-        # huit) : le jeu hérite alors simplement du nôtre.
+        # Couche DPI (règle 104) : sans elle, HP7 s'ouvrait en 3200×1800 sur
+        # un écran 2560×1440 à l'échelle. None : le jeu hérite du nôtre.
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
-        # Chemin absolu : dossier d'installation + `executable`, validé au
-        # parsing du catalogue (ni `..`, ni racine, ni lecteur). Aucun shell.
+        # Chemin absolu validé au parsing du catalogue. Aucun shell.
         try:
             return subprocess.Popen([str(exe_path)], **popen_kwargs)  # nosec B603
         except OSError as exc:
-            # 740 : Windows exige l'élévation, presque toujours parce que
-            # « Exécuter en tant qu'administrateur » est coché sur l'exe
-            # (rapport du 2026-10-01). Le dire, pas « Impossible de lancer ».
+            # 740 : « Exécuter en tant qu'administrateur » coché sur l'exe.
+            # Le dire, pas « Impossible de lancer ».
             if getattr(exc, "winerror", None) == ERREUR_ELEVATION:
                 raise RuntimeError(f"elevation_requise:{exe_path}") from exc
             raise
@@ -388,13 +342,9 @@ class GameManager:
                           popen_kwargs: dict) -> subprocess.Popen:
         """Lance le jeu par umu-run ou wine, dans le préfixe partagé.
 
-        `dpi_aware` n'a pas de sens ici — `__COMPAT_LAYER` est une couche de
-        Windows — et il est ignoré sans bruit. Les DLL que le jeu livre et que
-        Wine fournit aussi partent en `WINEDLLOVERRIDES` (`dll_overrides`).
-
-        Ce que disent Wine ou Proton part dans `_Launcher/logs/wine-<jeu>.log`,
-        réécrit à chaque lancement : c'est la première chose à demander devant
-        un jeu qui ne démarre pas, et rien n'en sort de la machine.
+        `dpi_aware` est ignoré (couche Windows). `dll_overrides` part en
+        `WINEDLLOVERRIDES`. La sortie de Wine va dans
+        `_Launcher/logs/wine-<jeu>.log`, réécrit à chaque lancement.
         """
         pfx = compat.prefixe(lanceur.famille)
         popen_kwargs["start_new_session"] = True
@@ -429,11 +379,7 @@ class GameManager:
         apply_ini_patches(game, self.config)
 
     # ──────────────────── Langue de jeu ────────────────────
-
-    # ── Langue du jeu — les règles vivent dans `core/game_language.py` ──
-    # Ces méthodes ne font que passer la config : les appelants (fiche,
-    # dialogue de réglages, lancement) gardent exactement la même API, et la
-    # logique s'exerce désormais sans construire de manager.
+    # Façades : les règles vivent dans `core/game_language.py`.
 
     def langues_disponibles(self, game: GameData) -> tuple:
         """Langues que cette installation sait réellement faire (fichiers présents)."""
@@ -463,24 +409,14 @@ class GameManager:
                      debut: datetime | None = None, code: int | None = None) -> bool:
         """Consigne ce qu'un lancement a donné : une partie, ou une tentative.
 
-        **Rend True si c'était une vraie partie.** Le seuil est arbitré ici et
-        nulle part ailleurs ; l'affichage a besoin de la même réponse — un jeu
-        qui n'a pas démarré ne doit pas s'entendre souhaiter « bon jeu ». Le
-        faire redécider par la fenêtre aurait remis le seuil à deux endroits.
+        **Rend True si c'était une vraie partie** : le seuil est arbitré ici
+        seulement, et l'affichage en a besoin (pas de « bon jeu » à un jeu qui
+        n'a pas démarré). Trop court, c'est une TENTATIVE, signature d'un jeu
+        qui refuse de démarrer.
 
-        Les cumuls en config restent la source rapide (fiche de jeu, cap Ko-fi) ;
-        le journal, lui, garde le détail dont se déduisent la durée moyenne, les
-        séries de jours et les heures de prédilection — voir `src/core/stats.py`.
-
-        **Un lancement trop court n'est plus jeté : il devient une TENTATIVE.**
-        C'est la signature d'un jeu qui refuse de démarrer, et c'est la seule
-        chose que le launcher observe que l'utilisateur ne sait pas déjà. Le
-        seuil s'applique ICI, une fois, et décide de la destination : la
-        fenêtre chronomètre, elle n'arbitre pas.
-
-        `debut` est l'heure RELEVÉE au lancement. Sans elle on la reconstituait
-        par soustraction, ce qui reste juste à la seconde près mais ne survit
-        pas au rattrapage d'une partie interrompue — d'où le paramètre.
+        Cumuls en config = source rapide (fiche, cap Ko-fi) ; le journal
+        (`stats.py`) garde le détail. `debut` : heure RELEVÉE au lancement,
+        nécessaire au rattrapage d'une partie interrompue.
         """
         if game_id not in self._index or seconds < 0:
             return False
@@ -510,10 +446,8 @@ class GameManager:
     def free_space_mb(self) -> int | None:
         """Mo libres sur le disque du dossier d'installation, None si illisible.
 
-        None signifie « je ne sais pas » et doit toujours désactiver la
-        vérification plutôt que la faire échouer : un disque non interrogeable
-        (chemin absent, lecteur réseau déconnecté) ne prouve pas qu'il manque
-        de la place.
+        None = « je ne sais pas » : désactive la vérification, ne la fait
+        jamais échouer.
         """
         try:
             return int(shutil.disk_usage(self.config.install_path).free // (1024 * 1024))
@@ -531,11 +465,9 @@ class GameManager:
     def set_asset_digests(self, digests: dict[str, str]) -> None:
         """Reçoit les empreintes publiées par GitHub (thread principal).
 
-        Construit au passage un index insensible à la casse : le catalogue peut
-        référencer « hp6.7z.001 » alors que l'asset s'appelle « HP6.7z.001 ».
-        GitHub sert les deux formes (vérifié : même taille, même contenu), mais
-        son API ne publie que la forme canonique — sans cet index, ces versions
-        perdraient leur vérification d'intégrité sans que rien ne le signale.
+        Index insensible à la casse en plus : le catalogue écrit « hp6.7z.001 »,
+        l'API ne publie que « HP6.7z.001 », et ces versions perdaient sinon
+        leur vérification sans bruit.
         """
         self._asset_digests = dict(digests)
         lower: dict[str, str] = {}
@@ -555,11 +487,8 @@ class GameManager:
     def set_asset_sizes(self, sizes: dict[str, int]) -> None:
         """Reçoit les tailles réelles publiées par GitHub (thread principal).
 
-        Même index insensible à la casse que les empreintes, et pour la même
-        raison : le catalogue écrit « hp5.7z.001 » là où l'asset s'appelle
-        « HP5.7z.001 ». Une ambiguïté de casse est ignorée plutôt que devinée —
-        une taille fausse ferait promettre au bouton un poids qui n'est pas le
-        bon, ce qui est exactement le défaut qu'on répare.
+        Même index insensible à la casse que les empreintes ; une ambiguïté
+        est ignorée plutôt que devinée.
         """
         self._asset_sizes = dict(sizes)
         lower: dict[str, int] = {}
@@ -583,14 +512,9 @@ class GameManager:
     def archive_size_mb(self, version: GameVersion) -> int:
         """Poids RÉEL du téléchargement, en Mo — 0 si GitHub ne l'a pas dit.
 
-        À ne pas confondre avec `version.size_mb`, qui est la taille du jeu une
-        fois INSTALLÉ (mesuré : de 1,77 à 2,30 fois le téléchargement réel). Le
-        bouton, le garde-fou de taille du téléchargeur et le calcul d'espace
-        disque veulent ce chiffre-ci ; l'espace disque veut les deux.
-
-        Multi-parts : **tout ou rien**. Une somme partielle annoncerait un poids
-        plus petit que la réalité, ce qui est pire que de ne rien annoncer — le
-        garde-fou du téléchargeur couperait alors un téléchargement sain.
+        Pas `version.size_mb`, la taille INSTALLÉE (1,77 à 2,30 fois plus,
+        règle 86). Multi-parts : tout ou rien — une somme partielle ferait
+        couper un téléchargement sain par le garde-fou de taille.
         """
         if version.download_parts:
             tailles = [self._size_for(url) for url in version.download_parts]
@@ -601,19 +525,9 @@ class GameManager:
     def octets_deja_telecharges(self, game_id: str, version: GameVersion) -> int:
         """Ce qui attend déjà dans le cache pour cette version, en octets.
 
-        Le téléchargeur sait REPRENDRE depuis toujours : les `.part` restent en
-        cache et la requête repart en `Range`. Rien ne le DISAIT. Sur une
-        archive de 4,6 Go, quelqu'un dont la connexion tombe à 80 % suppose
-        qu'il a tout perdu — et abandonne, alors que le launcher aurait repris
-        où il en était. C'est la marche la plus chère de tout l'entonnoir : on
-        n'y perd pas un curieux, on y perd quelqu'un qui avait déjà attendu.
-
-        On compte au disque plutôt qu'en mémoire parce que le fait à annoncer
-        est justement celui qui SURVIT à la fermeture du launcher. Le motif
-        recouvre les deux conventions de nommage — fichier unique
-        (`hp3_v1.0.7z` + `.part`) comme volumes (`hp5_v1.1.7z.001`, `.001.part`)
-        — pour la même raison que `_supprimer_residus` : c'est la destination
-        qui porte la version, donc le préfixe est le même dans les deux cas.
+        Sert à DIRE que la reprise existe (sinon on croit avoir tout perdu à
+        80 % et on abandonne). Compté au disque : le fait survit à la fermeture.
+        Le préfixe couvre fichier unique et volumes (`.7z.001.part`).
         """
         dossier = self.config.cache_path
         if not dossier.is_dir():
@@ -630,27 +544,13 @@ class GameManager:
     def reprise(self, game: GameData) -> tuple[float, float] | None:
         """Téléchargement INTERROMPU qui attend dans le cache.
 
-        Rend `(part déjà reçue de 0 à 1, mégaoctets restants)`, ou None quand
-        il n'y a rien à reprendre — donc rien à afficher, un état ne se
-        montrant que lorsqu'il DÉVIE.
-
-        Cette règle vivait dans `ActionPanel`, et elle n'y servait qu'au
-        libellé du bouton : il fallait donc AVOIR NAVIGUÉ sur la fiche du bon
-        jeu, parmi huit, pour apprendre que 2,4 Go attendaient. Mesuré le
-        2026-08-29 : à la réouverture, aucun des 16 textes visibles n'en
-        soufflait mot. Elle est ici pour que la vignette du carrousel le dise
-        aussi, et surtout pour qu'il n'y ait **qu'un seul** calcul : deux
-        seuils voisins qu'aucun code ne relie finissent toujours par diverger.
-
-        Le seuil écarte une archive quasi complète : à 99 % le fichier est
-        téléchargé et n'attend plus que son installation, ce n'est pas une
-        reprise.
+        Rend `(part reçue de 0 à 1, Mo restants)`, ou None s'il n'y a rien à
+        reprendre. Calcul unique pour le bouton ET la vignette (règle 98).
         """
         version = game.current_download
         if version is None:
             return None
-        # Le poids RÉEL publié par GitHub, sinon le catalogue — qui annonce la
-        # taille INSTALLÉE (1,77 à 2,30 fois le téléchargement).
+        # Poids RÉEL publié par GitHub, sinon la taille installée du catalogue.
         poids = self.archive_size_mb(version) or version.size_mb
         if not poids:
             return None
@@ -662,14 +562,9 @@ class GameManager:
     def chemin_archive(self, game_id: str, version: GameVersion) -> Path:
         """Ou atterrit l'archive de cette version dans le cache.
 
-        SOURCE UNIQUE du nom : le telechargement (`GameOperations.download`),
-        le nettoyage des residus (`_supprimer_residus`) et le decompte de la
-        reprise le derivent tous d'ici. Le nom porte la VERSION parce que celui
-        de l'asset, lui, ne la porte pas : les deux releases de HP5 publient
-        `hp5.7z.001` a l'identique, et une part restee en cache s'installait
-        sous le numero de l'autre. Deux litteraux qui ne s'accordaient que
-        parce qu'on les avait recopies correctement, c'est exactement le defaut
-        qui a coute cet incident-la.
+        SOURCE UNIQUE du nom (téléchargement, résidus, reprise). Il porte la
+        VERSION : deux releases de HP5 publient le même `hp5.7z.001`, et une
+        part restée en cache s'installait sous l'autre numéro (règle 83).
         """
         return self.config.cache_path / f"{game_id}_v{version.version}.7z"
 
@@ -682,17 +577,9 @@ class GameManager:
     def expected_hashes(self, version: GameVersion) -> tuple[str | None, list[str]]:
         """Empreintes à vérifier pour une version : (sha256 simple, sha256 des parts).
 
-        Deux sources possibles, dans cet ordre :
-
-        1. Le **catalogue** (`sha256` / `sha256_parts`) — attestation explicite,
-           seule option pour une archive hébergée ailleurs que sur GitHub.
-        2. Les **empreintes publiées par GitHub**, récupérées sans requête
-           supplémentaire par l'UpdateChecker. Elles évitent d'avoir à recopier
-           64 caractères à la main à chaque release, oubli qui laisserait la
-           vérification dormante.
-
-        Retourne (None, []) si aucune source n'est disponible : la vérification
-        est alors sautée, comme avant — jamais un échec de téléchargement.
+        Le catalogue d'abord (seule option hors GitHub), puis les empreintes
+        publiées par GitHub (règle 75). (None, []) sans source : vérification
+        sautée, jamais un échec.
         """
         if version.download_parts:
             catalogue = list(version.sha256_parts)
@@ -725,19 +612,14 @@ class GameManager:
     def trailer_hash(self, trailer) -> str | None:
         """Empreinte à vérifier pour cette bande-annonce, ou None.
 
-        Mêmes sources et même ordre que `expected_hashes` : le catalogue
-        d'abord — seule option hors GitHub — puis l'empreinte publiée par
-        GitHub, récupérée sans requête supplémentaire. Rien des deux : la
-        vérification est sautée, jamais un échec.
+        Mêmes sources et même ordre que `expected_hashes`.
         """
         return trailer.sha256 or self._digest_for(trailer.url) or None
 
     def trailer_size_mb(self, trailer) -> int:
         """Poids réel de la bande-annonce en Mo, sinon celui du catalogue.
 
-        Le chiffre sert au garde-fou de taille du téléchargeur ET au libellé du
-        bouton : deux chiffres différents feraient annoncer un poids que le
-        téléchargement ne respecte pas.
+        Même chiffre pour le garde-fou du téléchargeur et le libellé du bouton.
         """
         octets = self._size_for(trailer.url)
         return round(octets / 1024 / 1024) if octets else trailer.size_mb

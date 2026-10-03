@@ -25,13 +25,8 @@ _PERIPHERIQUES = frozenset(
 
 
 def _tags_valides(tags) -> tuple:
-    """Tags du catalogue, réduits à une liste de chaînes.
-
-    Un dict passait sans broncher : Python itère alors ses CLÉS, qui se
-    retrouvaient affichées en pastilles sous la description. Ce qui n'est pas
-    une liste ne donne aucun tag, ce qui est le comportement attendu d'un champ
-    mal formé — mieux vaut pas de tag qu'un tag inventé.
-    """
+    """Tags du catalogue, réduits à une liste de chaînes (un dict affichait
+    ses CLÉS en pastilles : mieux vaut pas de tag qu'un tag inventé)."""
     if not isinstance(tags, (list, tuple)):
         return ()
     return tuple(t for t in tags if isinstance(t, str))
@@ -45,16 +40,9 @@ def _est_peripherique(nom: str) -> bool:
 def _https_ou_rien(url):
     """Écarte au PARSING toute URL de téléchargement non-https.
 
-    Le téléchargeur refuse déjà tout sauf https (`_validate_url`, plus
-    `_ensure_response_https` sur l'URL d'arrivée après redirection) : la
-    sécurité ne dépend pas de cette fonction. Ce qu'elle apporte, c'est le
-    MOMENT du refus. Une coquille dans `games.json` — `http` au lieu de
-    `https` — ne se voyait qu'au clic de l'utilisateur, sous la forme d'un
-    message technique sur une version présentée comme téléchargeable. Écartée
-    ici, la version devient simplement « bientôt disponible », ce qui est vrai.
-
-    Accepte une chaîne ou une liste de parts ; retourne None / [] si tout est
-    écarté, ce que `is_available` interprète correctement.
+    Le téléchargeur refuse déjà tout sauf https ; ceci avance le MOMENT du
+    refus : une coquille `http` donne « bientôt disponible » au lieu d'une
+    erreur technique au clic. Chaîne ou liste de parts ; None si écarté.
     """
     if isinstance(url, str):
         return url if url.startswith("https://") else None
@@ -66,13 +54,8 @@ def _https_ou_rien(url):
 
 
 def _sha256_valide(value) -> str | None:
-    """Empreinte hexadécimale de 64 caractères, ou None.
-
-    Le catalogue est mis à jour à distance : une coquille (`"sha256": 12345`,
-    une empreinte tronquée) ne doit pas remonter jusqu'au comparateur. Elle y
-    provoquait un `AttributeError` sur `.lower()`, donc un rapport de plantage
-    pour une faute de frappe. Pas d'empreinte vaut mieux qu'une fausse.
-    """
+    """Empreinte hexadécimale de 64 caractères, ou None (une coquille du
+    catalogue faisait planter le comparateur sur `.lower()`)."""
     if not isinstance(value, str):
         return None
     hexa = value.strip().lower()
@@ -84,13 +67,8 @@ def _sha256_valide(value) -> str | None:
 
 
 def _taille_mo(value) -> int:
-    """Taille annoncée en Mo, jamais négative.
-
-    Une valeur négative avait deux effets fâcheux et silencieux : la
-    vérification d'espace disque passait toujours (`needed_space_mb` rendait un
-    nombre négatif), et le plafond du téléchargeur tombait à 0, c'est-à-dire
-    DÉSACTIVÉ. Un catalogue trafiqué n'a donc pas à pouvoir lever le plafond.
-    """
+    """Taille annoncée en Mo, jamais négative : négative, elle passait la
+    vérification d'espace et DÉSACTIVAIT le plafond du téléchargeur."""
     try:
         taille = int(value)
     except (TypeError, ValueError):
@@ -101,17 +79,9 @@ def _taille_mo(value) -> int:
 def _loc(data: dict, key: str, default):
     """Valeur du champ `key` dans la langue active, sinon en français.
 
-    Les traductions du catalogue voyagent DANS le catalogue (bloc `i18n` par
-    jeu et par version) et non dans le dictionnaire du launcher : le catalogue
-    se met à jour à distance, indépendamment des releases, donc un jeu ajouté
-    doit pouvoir arriver déjà traduit sans qu'on republie l'exécutable.
-
-    La résolution se fait au parsing — `set_language()` tourne avant
-    `load_catalog()` — ce qui laisse `game.name` directement utilisable par
-    l'UI, sans champ « traduit » parallèle à oublier quelque part.
-
-    Le repli est par CHAMP : une traduction partielle (nom traduit, changelog
-    pas encore) reste utilisable telle quelle.
+    Traductions DANS le catalogue (bloc `i18n`, règle 55) : un jeu ajouté
+    arrive traduit sans republier l'exe. Résolu au parsing (`set_language()`
+    tourne avant `load_catalog()`). Repli par CHAMP.
     """
     lang = get_language()
     if lang != SOURCE_LANGUAGE:
@@ -122,12 +92,7 @@ def _loc(data: dict, key: str, default):
                 value = translated[key]
                 # Un bloc i18n trafiqué ne doit pas changer le TYPE du champ…
                 if isinstance(value, type(default)):
-                    # …ni le VIDER. `from_dict` valide que le nom français est
-                    # une chaîne non vide, mais cette validation portait sur le
-                    # champ source : une traduction vide passait derrière et
-                    # donnait une fiche de jeu sans titre. Un champ traduit vide
-                    # se comporte désormais comme un champ absent, c'est-à-dire
-                    # qu'il retombe sur le français — le repli par CHAMP prévu.
+                    # …ni le VIDER (fiche sans titre) : vide = absent → français.
                     if isinstance(value, str) and not value.strip():
                         log.warning("Traduction vide (%s/%s) — repli sur le français", lang, key)
                     else:
@@ -168,12 +133,8 @@ class GameLanguage:
     code: str                                  # « fr », « en »… (code i18n)
     label: str                                 # écrit DANS sa propre langue
     values: tuple[tuple[str, str | int], ...]  # (nom, valeur) — frozen ⇒ tuple
-    # Fichier dont la PRÉSENCE prouve que cette langue est réellement installée,
-    # relatif au dossier d'installation. Le registre ne fait que SÉLECTIONNER
-    # une langue : les fichiers, eux, viennent du disque d'origine, et un jeu
-    # installé en français n'a que les fichiers français. Sans ce contrôle, le
-    # sélecteur proposerait une langue que l'installation ne sait pas faire.
-    # Vide = pas de contrôle (la langue est toujours proposée).
+    # Fichier dont la PRÉSENCE prouve la langue installée (le registre ne fait
+    # que sélectionner, règle 73). Relatif au dossier ; vide = toujours proposée.
     requires_file: str = ""
 
     @property
@@ -185,23 +146,16 @@ class GameLanguage:
 class LanguageRegistry:
     """Où un jeu lit sa langue, et ce qu'il faut y écrire pour chacune.
 
-    Déclaré par le CATALOGUE et non codé en dur : les valeurs attendues sont
-    propres à chaque jeu (« French », « fr_FR », un REG_DWORD…), personne ne
-    peut les deviner, et elles doivent pouvoir être corrigées sans republier
-    l'exécutable — c'est exactement ce que le catalogue distant permet.
+    Au catalogue : valeurs propres à chaque jeu (« French », « fr_FR »,
+    DWORD…), corrigeables sans republier l'exe.
     """
     root: str
     key: str
     view: int
     languages: tuple[GameLanguage, ...]
-    # Valeurs posées AVEC n'importe quelle langue, dans la MÊME clé. Elles ne
-    # dépendent pas du choix du joueur mais de son installation : HP7 lit
-    # « Install Dir » pour retrouver ses données (relevé dans hp7.exe et
-    # hp8.exe le 2026-08-22), et sans elle le jeu ne démarre pas — c'est
-    # normalement l'installeur EA qui l'écrit, et il n'a jamais tourné ici.
-    # Elles voyagent avec la langue plutôt que dans un bloc à part pour une
-    # raison concrète : même clé, donc UNE seule écriture et UNE seule invite
-    # UAC. `%INSTALL_DIR%` y est substitué au moment de l'écriture.
+    # Posées AVEC toute langue, même clé, donc une seule invite UAC : HP7 ne
+    # démarre pas sans « Install Dir » (écrit d'ordinaire par l'installeur EA).
+    # `%INSTALL_DIR%` substitué à l'écriture.
     common: tuple[tuple[str, str | int], ...] = ()
 
     def get(self, code: str) -> GameLanguage | None:
@@ -216,13 +170,9 @@ class LanguageRegistry:
 class ManetteRegistre:
     """Où un jeu range « jouer à la manette », et les deux valeurs qui le disent.
 
-    HP5 et HP6 ne lisent la manette que si on l'a choisie dans leur menu, et ce
-    choix ne vit PAS dans la sauvegarde mais sous `HKCU\\Software\\Electronic
-    Arts\\<jeu>\\ControllerConfig`, `CurrentSelection` : 0 = désactivée,
-    4 = manette (épreuve propre de Ludo le 2026-09-27 : il n'a changé QUE ce
-    réglage, et c'est la seule différence relevée ; `hp6.exe` n'accepte que
-    0 à 4). Déclaré au catalogue pour la même raison que la langue : personne ne
-    devine ces valeurs, et une erreur doit se corriger sans republier l'exe.
+    HP5/HP6 ne lisent la manette que choisie dans leur menu, choix rangé sous
+    `HKCU\\Software\\Electronic Arts\\<jeu>\\ControllerConfig`,
+    `CurrentSelection` : 0 = désactivée, 4 = manette. Au catalogue, comme la langue.
     """
     root: str
     key: str
@@ -236,11 +186,9 @@ class ManetteRegistre:
 class LangueFichiers:
     """Une langue d'un jeu qui la lit dans ses FICHIERS, pas dans le registre.
 
-    HP1 (Unreal Engine 1) : `Language=fre|int` dans `HP.ini` ET dans
-    `System\\Default.ini` — avec `Running.ini` présent, c'est Default.ini qui
-    décide —, plus l'écran de démarrage `Help\\splash<langue>.bmp`, que
-    l'archive n'a qu'en français : sans lui, « Assertion failed:
-    Bitmap.LoadFile » au démarrage. VU en jeu le 2026-09-26 (essais E2 à E7).
+    HP1 : `Language=fre|int` dans `HP.ini` ET `System\\Default.ini` (qui
+    décide avec `Running.ini`), plus `Help\\splash<langue>.bmp`, sans lequel
+    « Assertion failed: Bitmap.LoadFile ».
     """
     code: str
     label: str
@@ -267,10 +215,8 @@ class LanguageFiles:
         return tuple(lg.code for lg in self.languages)
 
 
-# Section, clé et valeur d'un INI s'écrivent sur UNE ligne : un saut de ligne
-# (ou tout caractère de contrôle) venu du catalogue distant ajouterait des
-# lignes au fichier du jeu. Crochets et « = » sont refusés dans section/clé
-# pour la même raison : ils changeraient la structure du fichier.
+# Un caractère de contrôle ajouterait des lignes à l'ini du jeu ; crochets et
+# « = » dans section/clé en changeraient la structure.
 _INI_INTERDIT_NOM = re.compile(r"[\x00-\x1f\x7f\[\]=]")
 _INI_INTERDIT_VALEUR = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -383,9 +329,7 @@ def _parse_manette_registre(data) -> "ManetteRegistre | None":
 def _parse_language_registry(data) -> "LanguageRegistry | None":
     """Lit le bloc `language_registry`, ou None s'il est absent ou douteux.
 
-    TOUT ou RIEN : une déclaration à moitié valide est rejetée en entier plutôt
-    que d'écrire la moitié des valeurs dans le registre d'un utilisateur. Un
-    catalogue distant n'a pas droit à l'à-peu-près ici.
+    TOUT ou RIEN : jamais la moitié des valeurs dans le registre de quelqu'un.
     """
     if not isinstance(data, dict):
         return None
@@ -425,18 +369,15 @@ def _parse_language_registry(data) -> "LanguageRegistry | None":
         fichier = entree.get("requires_file", "")
         if not isinstance(fichier, str):
             return None
-        # Même validation que `executable` : ce chemin vient du catalogue
-        # distant et sert à composer un chemin sur le disque de l'utilisateur.
+        # Même validation que `executable`.
         if fichier and not _est_relatif_sur(fichier):
             log.warning("requires_file non sûr, bloc de langue ignoré : %r", fichier)
             return None
         langues.append(GameLanguage(code=code, label=label, values=tuple(paires),
                                     requires_file=fichier))
 
-    # Valeurs communes (« Install Dir »…). Même exigence de tout-ou-rien : une
-    # seule refusée annule le bloc entier. Le refus porte sur le GABARIT, avant
-    # substitution ; `ecrire_valeurs` revalidera le résultat, ce qui est le
-    # vrai garde-fou — la substitution pourrait théoriquement tout changer.
+    # Valeurs communes, tout ou rien. Contrôle du GABARIT ici ; le vrai
+    # garde-fou est `ecrire_valeurs`, qui revalide après substitution.
     communes: list[tuple[str, str | int]] = []
     brut_communes = data.get("values", {})
     if not isinstance(brut_communes, dict):
@@ -470,13 +411,8 @@ class PostInstall:
 
 
 def _annee_valide(brut) -> int:
-    """Année de scolarité déclarée par le catalogue : 1 à 7, sinon 0.
-
-    0 signifie « hors programme », et c'est une réponse légitime, pas une
-    erreur : la Coupe du Monde de Quidditch n'est l'année de personne. Un
-    catalogue distant peut aussi envoyer n'importe quoi — `True` est un `int`
-    en Python et vaudrait « 1ʳᵉ année », d'où le refus explicite des booléens.
-    """
+    """Année de scolarité déclarée par le catalogue : 1 à 7, sinon 0 (« hors
+    programme », légitime). Booléens refusés : `True` vaudrait « 1ʳᵉ année »."""
     if isinstance(brut, bool) or not isinstance(brut, int):
         return 0
     return brut if 1 <= brut <= 7 else 0
@@ -495,11 +431,8 @@ def _ips_max_valide(brut) -> int:
 def _url_aide_valide(brut) -> str:
     """URL d'aide du catalogue, ou chaîne vide si elle n'est pas acceptable.
 
-    HTTPS EXCLUSIVEMENT, et jamais une exception : le catalogue se met à jour à
-    distance, donc cette valeur est la seule chaîne du catalogue qui finisse
-    dans `QDesktopServices.openUrl`. Un `file://`, un `javascript:` ou un simple
-    `http://` n'y a rien à faire, et un catalogue mal formé doit dégrader (pas
-    de lien) plutôt que priver l'utilisateur de l'avertissement lui-même.
+    HTTPS seul, jamais d'exception : cette chaîne finit dans `openUrl`. Mal
+    formée, on perd le lien, pas l'avertissement.
     """
     if not isinstance(brut, str):
         return ""
@@ -508,22 +441,16 @@ def _url_aide_valide(brut) -> str:
         if url:
             log.warning("URL d'aide refusée (https attendu) : %r", url)
         return ""
-    # Le schéma d'une URL ne tient pas compte de la casse : « httPs:// » EST du
-    # https, et le refuser serait faux. On le rend donc sous sa forme
-    # canonique, pour que tout ce qui sort du catalogue ait UNE forme — le
-    # fuzzing (2026-09-19) a trouvé cet écart entre ce contrôle, insensible à
-    # la casse, et celui des téléchargements, qui ne l'est pas.
+    # « httPs:// » EST du https : rendu sous forme canonique (écart trouvé
+    # par le fuzzing avec le contrôle des téléchargements).
     return "https://" + url[len("https://"):]
 
 
 def _sous_dossier_valide(brut) -> str:
     """Nom du sous-dossier de rangement, ou chaîne vide s'il n'est pas sûr.
 
-    Ce nom vient du catalogue DISTANT et sert à composer un chemin sur le
-    disque de l'utilisateur, puis à y DÉPLACER tout un jeu. Un `..`, un
-    séparateur ou une lettre de lecteur enverrait l'installation ailleurs :
-    même exigence que `executable`, mais en plus strict — un seul composant,
-    jamais un chemin. `_JETON_SUR` refuse déjà `..`, `/`, `\\` et `:`.
+    On y DÉPLACE tout un jeu : un seul composant, jamais un chemin
+    (`_JETON_SUR` refuse `..`, `/`, `\\` et `:`).
     """
     if not isinstance(brut, str) or not brut:
         return ""
@@ -542,15 +469,9 @@ _MAX_SURCHARGES_DLL = 16
 def _surcharges_dll_valides(brut) -> tuple[str, ...]:
     """DLL livrées avec le jeu que Wine doit charger AVANT les siennes.
 
-    Ces noms viennent du catalogue DISTANT et finissent dans la variable
-    `WINEDLLOVERRIDES`, dont la syntaxe tient à trois caractères : `=` sépare
-    le mode, `,` et `;` les entrées. Un nom qui en porterait un pourrait donc
-    réécrire le réglage d'une AUTRE DLL, ou désactiver la sienne (`d3d9=`).
-    `_JETON_SUR` les refuse tous, avec les séparateurs de chemin. Un suffixe
-    `.dll` est toléré et retiré ; les doublons, fusionnés.
-
-    Tout ou rien, comme `language_registry` : un bloc douteux est ignoré en
-    entier, et le jeu part avec les DLL de Wine — dégradé, mais lancé.
+    Finissent dans `WINEDLLOVERRIDES`, où `=`, `,` et `;` réécriraient le
+    réglage d'une autre DLL : `_JETON_SUR` les refuse. `.dll` retiré,
+    doublons fusionnés. Tout ou rien : sinon les DLL de Wine.
     """
     if brut is None:
         return ()
@@ -582,20 +503,13 @@ RACINES_SAUVEGARDES = ("documents", "localappdata")
 class Sauvegardes:
     """Emplacement des sauvegardes d'un jeu, tel que le déclare le catalogue.
 
-    **Pourquoi dans le catalogue et pas en dur** : le nom du dossier dépend de
-    la LANGUE dans laquelle le jeu a été installé — relevé le 2026-09-19 sur
-    une vraie machine : « Harry Potter et le prisonnier d'Azkaban » dans
-    Documents, « Harry Potter et les Reliques de la Mort (TM) – Première
-    Partie » dans AppData, alors que HP5 et HP6 y gardent leur nom anglais. Un
-    motif par langue se corrige à distance le jour où quelqu'un joue en
-    italien ; un chemin en dur attendrait une release.
+    Au catalogue : le nom du dossier dépend de la LANGUE d'installation
+    (« …prisonnier d'Azkaban », « …Reliques de la Mort (TM) – Première Partie »).
 
-    `dossiers` sont des motifs glob RELATIFS à la racine (on prend le premier
-    qui existe) ; `fichiers` un motif relatif au dossier, qui peut descendre
-    d'un niveau (« Slot*/Save0.usa » pour HP2, où l'emplacement est le
-    dossier). `exclure` écarte des noms (les sauvegardes miroir `Save100.usa`
-    de HP3). `premier` est le numéro que porte le PREMIER emplacement dans les
-    noms de fichier : 0 pour « Save0.usa », 1 pour « Slot1 ».
+    `dossiers` : motifs glob relatifs à la racine (le premier qui existe) ;
+    `fichiers` : motif relatif au dossier, un niveau au plus (« Slot*/Save0.usa »
+    pour HP2) ; `exclure` : noms écartés (miroirs `Save100.usa` de HP3) ;
+    `premier` : numéro du premier emplacement (0 « Save0.usa », 1 « Slot1 »).
     """
 
     racine: str
@@ -695,22 +609,14 @@ def _parse_sauvegardes(data) -> "Sauvegardes | None":
                        emplacements=emplacements)
 
 
-# Un identifiant de jeu et une version de bande-annonce viennent du catalogue
-# DISTANT et finissent tous les deux dans un NOM DE FICHIER. Sans ce filtre,
-# une version « ../../../evil » ferait écrire hors du dossier des trailers —
-# c'est le même risque que les chemins `executable`, au même endroit du code.
+# Pour tout ce qui finit dans un NOM DE FICHIER (identifiant, version) :
+# « ../../../evil » écrirait hors du dossier.
 _JETON_SUR = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 @dataclass(frozen=True, slots=True)
 class Trailer:
-    """Bande-annonce d'un jeu, hébergée HORS de l'exécutable.
-
-    Les vidéos ne sont plus embarquées : à elles seules, deux d'entre elles
-    faisaient passer l'exe de 74 à 160 Mo, et les huit l'auraient mené au-delà
-    de 500 — pour un ornement que tout le monde télécharge et que personne
-    n'est obligé de vouloir.
-    """
+    """Bande-annonce d'un jeu, hébergée HORS de l'exécutable (règle 90)."""
 
     game_id: str
     version: str
@@ -720,13 +626,8 @@ class Trailer:
 
     @property
     def filename(self) -> str:
-        """Nom du fichier LOCAL — il porte la VERSION, et ce n'est pas cosmétique.
-
-        Le nom de l'asset distant, lui, ne la porte pas : deux releases peuvent
-        publier `hp1_video.mp4` à l'identique. Un fichier nommé d'après l'asset
-        ferait donc rejouer l'ancienne bande-annonce pour toujours — exactement
-        le défaut déjà payé sur les parts d'archive de HP5.
-        """
+        """Nom du fichier LOCAL, qui porte la VERSION (règle 91) : l'asset
+        ne la porte pas, et l'ancienne vidéo rejouerait pour toujours."""
         return f"{self.game_id}_video_v{self.version}.mp4"
 
 
@@ -768,15 +669,8 @@ def _parse_trailers(raw) -> tuple[Trailer, ...]:
 class Contributor:
     """Quelqu'un à remercier dans l'À propos.
 
-    Dans le CATALOGUE et non dans le code : remercier quelqu'un ne doit pas
-    attendre une release. Une traduction rendue un mardi doit pouvoir être
-    créditée le mardi, sinon la personne voit passer trois versions sans son
-    nom et n'en propose pas une deuxième.
-
-    `role` est traduisible par le bloc `i18n` de l'entrée, comme partout
-    ailleurs dans le catalogue. `url` est FACULTATIVE — quelqu'un peut ne rien
-    vouloir de public — et passe par la même validation https que `warning_url`,
-    puisqu'elle atteint le navigateur de l'utilisateur.
+    Au catalogue : remercier ne doit pas attendre une release. `role`
+    traduisible (`i18n`) ; `url` facultative, validée https comme `warning_url`.
     """
     name: str
     role: str = ""

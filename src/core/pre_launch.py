@@ -19,22 +19,9 @@ from src.core.win_utils import remove_zone_identifier
 
 log = logging.getLogger(__name__)
 
-# Encodage des .ini de jeu. Ces fichiers ne nous appartiennent pas : c'est le
-# MOTEUR qui les écrit, et UE1 écrit en ANSI (page de codes du système). Les
-# lire en UTF-8 strict levait `UnicodeDecodeError` dès que le chemin de
-# sauvegarde contenait un accent — c'est-à-dire pour tout utilisateur dont le
-# profil s'appelle « Frédéric ». Cette exception dérive de `ValueError`, pas
-# d'`OSError` : elle traversait le `except OSError` d'`apply_ini_patches`, puis
-# `launch_game`, puis `on_play` (qui ne rattrape que RuntimeError/OSError), et
-# ressortait en rapport de plantage au lieu d'un lancement de jeu.
-#
-# `surrogateescape` garantit l'aller-retour EXACT des octets qu'on ne touche
-# pas (vérifié, y compris sur des séquences non décodables) : on ne peut donc
-# pas abîmer une ligne qu'on se contente de recopier.
-#
-# Sous Linux, le moteur tourne sous Wine et écrit dans la page ANSI du PRÉFIXE,
-# pas en UTF-8 : `_encodage_ini()` la lit dans son registre, et cp1252 — celle
-# d'un préfixe neuf dans une langue occidentale — sert de repli.
+# Encodage du MOTEUR (règle 81) : UE1 écrit en ANSI, et lire en UTF-8 plantait
+# pour tout profil « Frédéric ». `surrogateescape` garde à l'octet les lignes
+# recopiées. Sous Wine : la page ANSI du préfixe (`_encodage_ini`), cp1252 en repli.
 _INI_ENCODING = "mbcs" if sys.platform == "win32" else "cp1252"
 _INI_ERRORS = "surrogateescape"
 
@@ -46,26 +33,15 @@ def _encodage_ini() -> str:
     from src.core import compat
     return compat.encodage_ansi(defaut=_INI_ENCODING)
 
-# Fins de ligne des .ini de jeu. Elles aussi appartiennent au moteur : UE1 est
-# un programme Windows, ses fichiers sont en CRLF, et ils le resteront même
-# quand le launcher tournera sous Linux (le jeu, lui, tournera sous Wine et
-# relira ses propres fins de ligne). Or `write_text` traduit le saut de ligne
-# en `os.linesep` : correct sous Windows par coïncidence de plateforme, il
-# réécrivait TOUT le fichier en LF sous Linux — y compris les lignes qu'on se
-# contente de recopier, ce que la promesse d'aller-retour exact ci-dessus
-# interdit. On impose donc CRLF des deux côtés. Même leçon que le .bat de
-# `self_update` (pyqt-pitfalls #18).
+# CRLF imposé (règle 82) : sous Linux, `os.linesep` réécrivait tout en LF.
 _INI_NEWLINE = "\r\n"
 
 
 def besoin_de_documents(game: GameData) -> bool:
     """Ce jeu a-t-il besoin du dossier Documents pour fonctionner ?
 
-    Trois jeux sur huit y écrivent leur configuration ET leurs sauvegardes
-    (HP1, HP2, HP3) ; les cinq autres passent par AppData. La réponse se LIT
-    dans le catalogue — chemins `%DOCUMENTS%` du bloc `pre_launch`, racine du
-    bloc `saves` — et n'est jamais une liste d'identifiants écrite ici : un jeu
-    ajouté demain doit être couvert sans republier l'exécutable.
+    LU dans le catalogue (`%DOCUMENTS%` de `pre_launch`, racine de `saves`),
+    jamais une liste d'identifiants écrite ici.
     """
     if game.sauvegardes is not None and game.sauvegardes.racine == "documents":
         return True
@@ -79,18 +55,9 @@ def besoin_de_documents(game: GameData) -> bool:
 def documents_inutilisable() -> Path | None:
     """Rend le dossier Documents quand Windows n'y donne pas accès, sinon None.
 
-    **Né d'un rapport réel** (2026-09-20) : chez un utilisateur, HP1, HP2 et
-    HP3 échouaient tous les trois — « General protection fault! History:
-    appInit » pour les deux premiers — pendant que les cinq autres jeux
-    tournaient. Ce sont exactement les trois qui écrivent dans Documents, et le
-    journal du launcher en portait déjà la preuve : `[WinError 2]` en créant
-    `Documents/Harry Potter II`. Un Documents redirigé vers un emplacement
-    disparu (OneDrive délié, disque retiré) fait donc planter ces jeux de
-    2001-2004 à l'initialisation, sans que rien à l'écran ne relie les deux.
-
-    La sonde ÉCRIT réellement — un fichier temporaire aussitôt effacé — parce
-    qu'`os.access` ment sous Windows (il ignore les ACL) et qu'un dossier
-    existant peut être en lecture seule. Le jeu, lui, y écrira pour de bon.
+    Un Documents redirigé vers un emplacement disparu (OneDrive délié) fait
+    planter HP1-HP3 sur « General protection fault » (rapport réel). La sonde
+    ÉCRIT pour de bon : `os.access` ignore les ACL sous Windows.
     """
     docs = get_documents_dir()
     try:
@@ -106,15 +73,8 @@ def documents_inutilisable() -> Path | None:
 def substitute_vars(raw: str, game: GameData, config: Config) -> str:
     r"""Remplace %DOCUMENTS% et %INSTALL_DIR% par leurs vraies valeurs.
 
-    Le catalogue écrit ses chemins à la Windows (« %DOCUMENTS%\Harry Potter\
-    HP.ini ») et se met à jour à distance : on ne peut pas en changer la
-    convention. Sous POSIX, « \ » n'étant pas un séparateur, le tout devenait
-    UN SEUL nom de fichier et `resolve_safe_path` le refusait comme hors zone —
-    donc aucun patch INI ne s'appliquait.
-
-    La normalisation porte sur le GABARIT, jamais sur le résultat : les valeurs
-    substituées sont de vrais chemins natifs, et sous Windows leurs antislashs
-    doivent rester tels quels.
+    Le catalogue écrit à la Windows ; sous POSIX « \ » n'est pas un séparateur
+    (règle 77) : on normalise le GABARIT, jamais les valeurs substituées.
     """
     if sys.platform != "win32":
         raw = raw.replace("\\", "/")
@@ -126,13 +86,8 @@ def substitute_vars(raw: str, game: GameData, config: Config) -> str:
 def substituer_pour_le_jeu(raw: str, game: GameData, config: Config) -> str:
     r"""Comme `substitute_vars`, pour une VALEUR que le jeu lira (INI, registre).
 
-    Sous Windows, c'est exactement `substitute_vars`. Sous Linux, les deux ne
-    désignent plus la même chose : le FICHIER à patcher est un chemin de
-    l'hôte (Python l'ouvre), mais ce qu'on écrit DEDANS est lu par un jeu qui
-    tourne sous Wine et attend un chemin Windows. `SavePath=/home/…` ne
-    tombait juste que par accident, si le lecteur courant du jeu était `Z:`.
-    Les antislashs du gabarit sont donc GARDÉS, et les variables deviennent
-    `C:\users\steamuser\Documents` ou `Z:\home\…` (`compat.chemin_windows`).
+    Sous Linux, le jeu (sous Wine) attend un chemin Windows : antislashs
+    GARDÉS, variables en `C:\users\…` ou `Z:\…` (`compat.chemin_windows`).
     """
     if sys.platform == "win32":
         return substitute_vars(raw, game, config)
@@ -211,18 +166,9 @@ def create_pre_launch_files(game: GameData, config: Config) -> None:
 def restaurer_configs_manquantes(game: GameData, config: Config) -> None:
     """Remet la configuration réglée d'un jeu quand son fichier a DISPARU.
 
-    L'installation dépose `post_install.config_files` dans Documents, et plus
-    rien ensuite ne les garantissait. Or ce dossier se vide sans nous : un
-    joueur qui « réinitialise » le jeu, une resynchronisation OneDrive, un
-    nettoyeur. Le moteur UE1 régénère alors son INI depuis `Default.ini`, avec
-    `Reconfig=1` — et au lancement s'ouvrait son assistant de configuration,
-    sur une liste de cartes vidéo VIDE (mesuré sur HP1 le 2026-09-24).
-    « Commencer ! » passait, mais une liste vide se lit comme un jeu cassé, et
-    `apply_ini_patches` sautait tous ses patchs, faute de fichier.
-
-    Seul un fichier ABSENT est recopié : une configuration présente appartient
-    au joueur, même modifiée. Toutes les gardes de l'installation s'appliquent,
-    puisque c'est la même fonction qui copie.
+    Règle 106 : sinon UE1 régénère son INI et ouvre son assistant sur une
+    liste de cartes vidéo VIDE. Seul un fichier ABSENT est recopié ; mêmes
+    gardes que l'installation.
     """
     manquants = [(cf.source, cf.destination)
                  for cf in game.post_install.config_files
@@ -327,9 +273,7 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
                     lines.append("\n")
                 lines.append(f"[{patch.section}]\n")
             lines.append(f"{patch.key}={value}\n")
-        # Réécrit dans l'encodage du MOTEUR, pas dans le nôtre : en UTF-8,
-        # UE1 relisait « Frédéric » comme « FrÃ©dÃ©ric » et cherchait ses
-        # sauvegardes dans un dossier inexistant.
+        # Encodage du MOTEUR : en UTF-8, UE1 lisait « FrÃ©dÃ©ric ».
         with ini_path.open("w", encoding=encodage, errors=_INI_ERRORS,
                            newline=_INI_NEWLINE) as f:
             f.write("".join(lines))
@@ -337,48 +281,15 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
                  patch.section, patch.key, value, ini_path)
         return True
     except (OSError, UnicodeError) as exc:
-        # UnicodeError couvre le cas résiduel d'un chemin impossible à
-        # écrire dans la page de codes ANSI — auquel cas le jeu ne saurait
-        # de toute façon pas le lire : on journalise et on lance quand même.
+        # UnicodeError : chemin hors page ANSI, que le jeu ne lirait pas non plus.
         log.warning("Impossible de patcher %s : %s", ini_path, exc)
         return False
 
 
-# Ce que Windows raconte aux jeux sur la taille des pixels.
-#
-# Un programme qui ne se déclare pas conscient du DPI est VIRTUALISÉ : sur un
-# écran mis à l'échelle, Windows lui ment sur les dimensions, puis multiplie
-# par le facteur d'échelle tout ce qu'il demande. Pour une fenêtre c'est
-# direct : une fenêtre de 2560×1440 demandée à 125 % est CRÉÉE à 3200×1800.
-#
-# Aucun jeu du catalogue n'est conscient du DPI — ils sont tous antérieurs à la
-# question (2001-2011). Tant qu'ils s'affichent en plein écran exclusif, la
-# virtualisation ne se voit pas ; elle devient visible dès qu'une vraie fenêtre
-# est en jeu. HP7 partie 2 est exactement ce cas : le wrapper `d3d9.dll` livré
-# avec le jeu force le mode fenêtré (`ForceWindowedMode = 1`).
-#
-# MESURÉ le 2026-08-30 sur l'écran de Ludo (2560×1440 réels à 125 % d'échelle,
-# donc 2048×1152 logiques), en lisant le rectangle réel de la fenêtre depuis un
-# processus conscient du DPI :
-#
-#     hp8.exe tel quel            : 3200 × 1800   (déborde de 640 × 360)
-#     hp8.exe avec la couche DPI  : 2560 × 1440   à la position 0,0
-#
-# Le piège tient à ce que la résolution, elle, est BONNE : l'énumération des
-# modes Direct3D passe par le pilote et non par la couche virtualisée, donc le
-# jeu propose puis retient un légitime 2560×1440. C'est la FENÊTRE qui est
-# ensuite agrandie derrière son dos. Chercher la faute du côté des réglages
-# d'affichage du jeu ne mène donc nulle part — c'est ce qui rend ce défaut si
-# déroutant à l'usage : tout ce que l'utilisateur peut inspecter est juste.
-#
-# `__COMPAT_LAYER` applique la même correction que l'onglet Compatibilité de
-# Windows (« Remplacer le comportement de mise à l'échelle » → « Application »)
-# mais SANS rien écrire : la variable ne vit que dans le processus qu'on lance.
-# Le réglage de l'onglet, lui, est indexé par CHEMIN COMPLET, et c'est pour ça
-# qu'il ne pouvait pas nous sauver : celui que l'installeur EA avait laissé sur
-# « C:\Program Files (x86)\…\hp8.exe » ne suit pas le jeu quand Accio
-# l'installe ailleurs. Le poser dans le registre ne réparerait qu'une machine ;
-# ici, tout le monde en bénéficie sans avoir rien à régler.
+# Couche DPI (règle 104). Un jeu non conscient du DPI est VIRTUALISÉ : à 125 %,
+# une fenêtre de 2560×1440 est CRÉÉE à 3200×1800 (mesuré sur hp8.exe), alors
+# que la résolution choisie reste juste. `__COMPAT_LAYER` fait comme l'onglet
+# Compatibilité sans rien écrire : la variable ne vit que dans le processus lancé.
 _COMPAT_LAYER = "__COMPAT_LAYER"
 _DPI_AWARE = "HighDpiAware"
 
@@ -387,21 +298,8 @@ def env_de_lancement(dpi_aware: bool,
                      base: Mapping[str, str] | None = None) -> dict[str, str] | None:
     """Environnement à donner au jeu, ou None pour lui laisser le nôtre.
 
-    `dpi_aware` vient du CATALOGUE (`GameData.dpi_aware`) : seuls les jeux qui
-    le déclarent reçoivent la couche. Les autres partent avec exactement
-    l'environnement qu'ils avaient avant — on ne change pas la façon de lancer
-    un jeu qui va bien, et aucun des six autres n'a été mesuré (consigne de
-    Ludo, 2026-08-30).
-
-    None hors Windows : la couche de compatibilité est une notion Windows, sans
-    équivalent sous Wine, et le réglage y est IGNORÉ sans bruit.
-    L'environnement d'un jeu lancé sous Linux est composé par
-    `compat.environnement`.
-
-    Une valeur déjà posée est CONSERVÉE puis complétée : `__COMPAT_LAYER` est
-    une liste de couches séparées par des espaces, et quelqu'un qui en a réglé
-    une à la main (`WINXPSP3`, par exemple, pour un jeu récalcitrant) ne doit
-    pas la perdre parce qu'on lance son jeu.
+    Seuls les jeux qui déclarent `dpi_aware` au catalogue reçoivent la
+    couche. None hors Windows. Une couche déjà posée (`WINXPSP3`…) est gardée.
     """
     if not dpi_aware or sys.platform != "win32":
         return None

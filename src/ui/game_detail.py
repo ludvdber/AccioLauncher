@@ -46,18 +46,13 @@ class GameDetailView(QWidget):
     """Zone centrale : fond + info panel + action panel + vidéo."""
 
     status_message = pyqtSignal(str)
-    # Message ÉPHÉMÈRE et visible (toast), pour ce qui méritait un dialogue
-    # modal sans mériter d'interrompre : « déjà en cours », « sauvegardes
-    # conservées »… La status bar, elle, passe inaperçue ; un modal, lui, exige
-    # un clic pour dire quelque chose qui n'appelle aucune décision.
+    # Toast : visible sans exiger de clic, pour ce qui n'appelle aucune décision.
     notify = pyqtSignal(str)
     state_changed = pyqtSignal()
     settings_requested = pyqtSignal()   # depuis une alerte du panneau d'actions
     game_launched = pyqtSignal(object, str, str)  # (subprocess.Popen, game_name, game_id)
-    # Mode cinéma : la bande-annonce seule, sans voile ni texte. La FENÊTRE
-    # doit en être avertie — le carrousel, la barre de statut et l'engrenage
-    # ne lui appartiennent pas, et les laisser en place ferait une fiche à
-    # moitié effacée plutôt qu'un plein écran.
+    # Mode cinéma : la FENÊTRE doit masquer ce qui ne nous appartient pas
+    # (carrousel, barre de statut, engrenage).
     cinema_toggled = pyqtSignal(bool)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
@@ -71,14 +66,8 @@ class GameDetailView(QWidget):
         # Sous-systèmes
         self._video = VideoPlayer(self)
         self._pending_video_id: str = ""  # jeu dont la vidéo est programmée
-        # Minuteur POSSÉDÉ, et non un `QTimer.singleShot` : celui-ci ne
-        # s'annule pas et surtout ne se RÉARME pas. Chaque changement de jeu en
-        # ajoutait donc un de plus, et le premier de la rafale tirait sur le jeu
-        # affiché en DERNIER — parcourir vite le carrousel lançait la vidéo bien
-        # avant la fin du délai, et les minuteurs suivants la relançaient depuis
-        # le début (Ludo, 2026-08-23). `start()` sur un minuteur déjà armé
-        # repart de zéro : le délai est enfin remis à zéro à chaque jeu, et
-        # `stop()` l'annule pour de bon.
+        # Minuteur POSSÉDÉ (règle 102) : un `singleShot` ne se réarme ni ne
+        # s'annule, et parcourir vite le carrousel relançait la vidéo en rafale.
         self._video_timer = QTimer(self)
         self._video_timer.setSingleShot(True)
         self._video_timer.setInterval(_VIDEO_START_DELAY_MS)
@@ -86,8 +75,7 @@ class GameDetailView(QWidget):
         # Géométrie en attente de rattrapage de hauteur (cf. _fit_info_height).
         self._pending_fit: tuple[int, int, int] | None = None
         self._ops = GameOperations(manager, self)
-        # Linux : préparation du préfixe Wine (création, composants). Inerte
-        # sous Windows, où rien ne la demande jamais.
+        # Linux : préparation du préfixe Wine. Inerte sous Windows.
         self._wine = PreparateurWine(self)
         self._cinema = False
 
@@ -115,10 +103,7 @@ class GameDetailView(QWidget):
         self._audio_bar.replay_clicked.connect(self._on_replay_clicked)
         self._audio_bar.cinema_toggled.connect(self.basculer_cinema)
 
-        # Animations fade
-        # Parent explicite sur chaque animation : sans lui, elle n'appartient
-        # qu'à Python et meurt quand le ramasse-miettes le décide, en survivant
-        # au widget qu'elle anime (voir `tests/conftest.py`).
+        # Animations fade, parent explicite (règle 11).
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity", self)
         self._fade_anim.setDuration(300)
         self._fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
@@ -173,50 +158,30 @@ class GameDetailView(QWidget):
 
     def _position_info(self) -> None:
         w, h = self.width(), self.height()
-        # Part de largeur donnée au panneau. Elle AUGMENTE quand la fenêtre
-        # rétrécit : à 50 % fixes, une fenêtre de 1100 px ne laissait que 466 px
-        # utiles au texte, le titre passait à trois lignes et la description
-        # sortait de l'écran — pendant que la moitié droite restait vide.
+        # La part de largeur AUGMENTE quand la fenêtre rétrécit (à 50 % fixes,
+        # 466 px de texte à 1100 px de large).
         frac = 0.50 if w >= 1300 else 0.58 if w >= 1100 else 0.64
         info_w = min(700, int(w * frac))
-        # Retrait vertical : généreux sur grand écran (le panneau respire), réduit
-        # quand la hauteur manque — 22 % de 427 px, c'est 94 px de vide au-dessus
-        # du titre pendant que la description sortait par le bas.
+        # Retrait vertical réduit quand la hauteur manque.
         info_top = int(h * (0.22 if h >= 560 else 0.10))
         dispo = h - info_top - 20
-        # Un bandeau d'avertissement mange la place du texte. Sans cette
-        # soustraction, la description garde sa longueur de fenêtre confortable
-        # et le panneau se remet à défiler dès qu'un avertissement s'affiche.
-        # Vaut 0 en temps normal : le cas nominal est inchangé.
+        # Le bandeau d'avertissement mange la place du texte (0 sinon).
         self._info.set_height_budget(dispo - self._action_panel.alert_height())
-        # Poser d'abord la largeur définitive : la hauteur nécessaire en dépend.
+        # Largeur définitive d'abord : la hauteur nécessaire en dépend.
         self._info.setGeometry(0, info_top, info_w, dispo)
-        # Puis rétrécir à ce que le contenu réclame — la zone d'action est
-        # épinglée en bas du panneau, donc un panneau trop haut creuse un vide
-        # entre la description et le bouton.
+        # Puis la hauteur du contenu, sinon un vide sous la description.
         self._info.setGeometry(0, info_top, info_w,
                                max(220, min(dispo, self._info.natural_height())))
-        # Rattrapage DIFFÉRÉ : `natural_height()` sous-estime dans les cas
-        # limites (titre sur trois lignes, note « bientôt disponible » sur
-        # deux), et il est de toute façon calculé avant que la zone d'action
-        # n'ait sa taille définitive. Plutôt que de regonfler une marge fixe au
-        # jugé — ce qui ne ferait que déplacer le seuil — on repasse une fois la
-        # mise en page faite et on rallonge d'EXACTEMENT ce qui déborde.
+        # Rattrapage DIFFÉRÉ, une fois la mise en page faite : rallonger
+        # d'EXACTEMENT ce qui déborde plutôt que d'une marge au jugé.
         self._pending_fit = (info_top, info_w, dispo)
         QTimer.singleShot(0, self._fit_info_height)
 
     def _fit_info_height(self) -> None:
         """Rallonge le panneau de ce qui déborde encore, dans la place restante.
 
-        Idempotent : dès que tout tient, `overflow()` vaut 0 et l'appel ne fait
-        rien. C'est ce qui permet de le laisser s'exécuter autant de fois qu'il
-        est programmé, sans consommer de jeton — `_position_info` est appelé
-        plusieurs fois d'affilée lors d'un changement de jeu, et une passe qui
-        s'exécutait trop tôt (avant que la zone d'action ait sa taille finale)
-        aurait sinon désamorcé toutes les suivantes.
-
-        Ne rappelle JAMAIS `_position_info`, et ne fait que GRANDIR : aucune
-        oscillation possible.
+        Idempotent (sans jeton consommé, règle 42) et monotone : ne rappelle
+        jamais `_position_info`, ne fait que GRANDIR ou REMONTER.
         """
         if self._pending_fit is None:
             return
@@ -227,29 +192,11 @@ class GameDetailView(QWidget):
         nouvelle = min(dispo, self._info.height() + trop)
         if nouvelle != self._info.height():
             self._info.setGeometry(0, info_top, info_w, nouvelle)
-            # Réarmer : grandir peut ne pas suffire (on est borné par `dispo`),
-            # et sans cette passe de plus la chaîne s'arrêtait là. Elle ne
-            # convergeait que parce que `_position_info` est appelé plusieurs
-            # fois d'affilée lors d'un changement de jeu — c'est-à-dire par
-            # accident. Aucune boucle possible : chaque passe ne fait que
-            # GRANDIR ou REMONTER, les deux sont bornées, et `overflow() <= 0`
-            # sort immédiatement.
+            # Réarmer : grandir peut ne pas suffire (borné par `dispo`).
             QTimer.singleShot(0, self._fit_info_height)
             return
-        # Le panneau occupe toute la hauteur qu'on lui a accordée. Avant de
-        # rogner du TEXTE, récupérer du VIDE : le retrait du haut vaut 10 % de
-        # la fiche (49 px à 980×660) et ne porte aucune information. Remonter le
-        # panneau d'autant qu'il déborde ne coûte donc rien à l'utilisateur,
-        # là où un cran d'accroche en moins lui coûte deux lignes de texte.
-        #
-        # Le cas qui l'a imposé existait AVANT le bandeau du catalogue : en
-        # espagnol, à 980×660, l'avertissement d'espace disque faisait déjà
-        # défiler la fiche de HP7 de 20 px. Invisible à la suite de tests (qui
-        # mesure une police substituée) comme à `tools/audit_geometrie.py` (qui
-        # écarte le bandeau par conception) — mesuré sur la plateforme native.
-        #
-        # Monotone et borné : on ne fait que remonter, jamais redescendre, et
-        # `_position_info` repart du retrait nominal à chaque redimensionnement.
+        # Avant de rogner du TEXTE, récupérer du VIDE (règle 41) : le retrait
+        # du haut ne porte aucune information.
         if info_top > _INFO_TOP_MIN:
             gagne = min(trop, info_top - _INFO_TOP_MIN)
             if gagne > 0:
@@ -260,26 +207,14 @@ class GameDetailView(QWidget):
                                        min(dispo, self._info.height() + trop))
                 QTimer.singleShot(0, self._fit_info_height)
                 return
-        # Le panneau occupe déjà toute la place que la fenêtre lui laisse : la
-        # seule variable qui reste est la longueur de l'accroche. Mieux vaut
-        # deux lignes de moins suivies de « Lire la suite » qu'une barre de
-        # défilement qui cache le bouton principal.
-        # La description d'abord — la moins coûteuse à raccourcir. Le titre
-        # ensuite, et seulement s'il reste du débordement : c'est le plus gros
-        # bloc du panneau, mais aussi le plus visible.
+        # Plus de place : raccourcir la description, puis le titre (le plus
+        # visible) seulement s'il reste du débordement.
         if self._info.squeeze_description() or self._info.squeeze_title():
             QTimer.singleShot(0, self._fit_info_height)
 
     def _position_audio_bar(self) -> None:
-        """Colle la barre audio au coin bas-droit, D'APRÈS sa largeur réelle.
-
-        Elle était placée à `width() - 174` pour 192 px de large : 18 px
-        passaient donc HORS de la fenêtre, et la poignée de volume disparaissait
-        dès qu'on montait le son à fond (Ludo, 2026-08-23). Deux nombres qu'aucun
-        calcul ne relie — exactement le défaut du carrousel, le même jour. La
-        barre change en plus de taille à la fin d'une bande-annonce : lire sa
-        largeur est la seule façon de rester juste.
-        """
+        """Colle la barre audio au coin bas-droit, D'APRÈS sa largeur réelle
+        (règle 36) : elle change de taille à la fin d'une bande-annonce."""
         self._audio_bar.move(self.width() - self._audio_bar.width() - _MARGE_AUDIO,
                              self.height() - self._audio_bar.height() - _MARGE_AUDIO_BAS)
         self._audio_bar.raise_()
@@ -295,23 +230,10 @@ class GameDetailView(QWidget):
     def set_cinema(self, actif: bool) -> None:
         """La bande-annonce seule, sans voile ni texte.
 
-        Le voile de 30 % vient d'être posé sur le chemin vidéo pour rendre le
-        titre et la description lisibles — c'est mesuré, et ce n'est pas
-        négociable tant qu'il y a un texte à lire par-dessus. Mais quelqu'un qui
-        veut simplement REGARDER la bande-annonce n'a aucune raison de la subir
-        assombrie : ici on retire le texte, donc on retire aussi ce qui le
-        protégeait. Le compromis disparaît au lieu d'être arbitré à la place de
-        l'utilisateur.
-
-        Sans effet quand aucune vidéo ne joue : un « plein écran » qui agrandit
-        une image fixe déjà en plein écran ne fait que vider l'interface.
+        Sans texte, plus besoin du voile qui le protégeait. Sans effet quand
+        aucune vidéo ne joue.
         """
-        # `is_playing` est une PROPERTY, pas une méthode : l'appeler lèverait
-        # `TypeError` au premier clic sur le bouton. Exactement le défaut qui
-        # avait empêché toute installation pendant une journée
-        # (`_speed_tracker.speed()`), et invisible ici pour la même raison —
-        # l'autre chemin (`set_cinema(False)`, appelé par `_stop_video`)
-        # court-circuite le `and` et ne l'évalue jamais.
+        # `is_playing` est une PROPERTY (règle 10).
         if actif and not self._video.is_playing:
             return
         if actif == self._cinema:
@@ -340,10 +262,7 @@ class GameDetailView(QWidget):
             self.game = game
             self._info.apply_game(game)
             self._refresh()
-            # Le contenu a pu changer de hauteur — c'est le cas quand les
-            # compteurs de téléchargement arrivent quelques secondes après le
-            # démarrage et rallongent la ligne méta. Sans ce repositionnement,
-            # le panneau garde sa taille d'avant et rogne « Lire la suite ».
+            # La hauteur a pu changer (compteurs arrivés après le démarrage).
             self._position_info()
             QTimer.singleShot(0, self._position_info)
             return
@@ -361,9 +280,7 @@ class GameDetailView(QWidget):
         self.game = game
         self._info.apply_game(game)
 
-        # Background — la jaquette d'abord, la bande-annonce ensuite (voir
-        # _schedule_video) : les premières secondes sont celles où on lit le
-        # titre et la description, et du mouvement derrière le texte y nuit.
+        # La jaquette d'abord, la bande-annonce après le délai de lecture.
         self._bg.set_image(ASSETS_DIR / "backgrounds" / f"{game.id}_bg.jpg")
         self._schedule_video(game.id)
 
@@ -380,10 +297,7 @@ class GameDetailView(QWidget):
         # Fade-in info
         self._info.show()
         self._position_info()
-        # Deuxième passe au tour de boucle suivant : à la première, le panneau
-        # d'actions vient d'être reconstruit et la hauteur réclamée par le
-        # contenu n'est pas encore stabilisée — on gardait un panneau trop haut,
-        # donc un vide entre la description et le bouton.
+        # Seconde passe : le panneau d'actions vient d'être reconstruit.
         QTimer.singleShot(0, self._position_info)
         self._info_fade.stop()
         self._info_fade.setStartValue(0.0)
@@ -394,11 +308,8 @@ class GameDetailView(QWidget):
     def ancre_langue(self):
         """Position GLOBALE où poser le menu de langue, sous la ligne méta.
 
-        `QCursor.pos()` ne convient pas seul : la ligne méta est accessible au
-        CLAVIER (`LinksAccessibleByKeyboard`), et un utilisateur qui active le
-        lien à la touche Entrée verrait le menu s'ouvrir là où traîne la souris
-        — potentiellement sur un autre écran. On ancre donc au widget, et on
-        garde le curseur en repli si la géométrie n'est pas encore posée.
+        Ancré au widget, pas à `QCursor.pos()` (règle 28) ; None si la
+        géométrie n'est pas posée (l'appelant replie sur le curseur).
         """
         meta = self._info._meta
         if not meta.isVisible() or meta.width() <= 0:
@@ -409,17 +320,8 @@ class GameDetailView(QWidget):
     def _refresh(self) -> None:
         """Rafraîchit le panneau d'actions, puis REPOSITIONNE le panneau d'infos.
 
-        Changer d'état reconstruit entièrement la zone d'action : passer en
-        téléchargement y ajoute une barre de progression, un stepper et une
-        ligne de vitesse, soit ~50 px de plus. Sans le repositionnement, la
-        hauteur du panneau reste celle calculée pour l'ancien panneau d'actions
-        et la fiche se met à défiler pendant TOUTE la durée du téléchargement
-        (22 à 24 px de débordement, mesurés sur les 8 jeux à toutes les
-        tailles) — puis la barre disparaît toute seule à la fin, ce qui rend le
-        défaut irreproductible sur demande.
-
-        Même discipline que `set_online()` et `recheck_prerequisites()` : dès
-        que la zone d'action change de hauteur, la géométrie est à revoir.
+        Règle 40 : un changement d'état reconstruit la zone d'action (~50 px
+        de plus en téléchargement), sinon la fiche défile tout le téléchargement.
         """
         self._action_panel.set_game(self.game)
         self._action_panel.refresh()
@@ -438,35 +340,27 @@ class GameDetailView(QWidget):
     def _schedule_video(self, game_id: str) -> None:
         """Programme le démarrage de la bande-annonce après un court délai.
 
-        Trois bénéfices : la lecture du titre se fait sur une image fixe, le
-        temps de chargement de la vidéo devient invisible, et parcourir le
-        carrousel ne déclenche plus un lecteur par vignette survolée.
+        Titre lu sur une image fixe, chargement invisible, pas un lecteur par
+        vignette survolée.
         """
         self._pending_video_id = game_id
         if not self.manager.config.autoplay_videos:
             self._video_timer.stop()
             return
-        # Réarmement : `start()` sur un minuteur qui tourne déjà REPART de zéro.
-        # C'est tout l'intérêt d'en posséder un — le délai appartient au jeu
-        # affiché, pas au premier de la série.
+        # `start()` sur un minuteur armé REPART de zéro.
         self._video_timer.start()
 
     def _on_video_timer(self) -> None:
         # Le jeu a pu changer pendant le délai : on ne lance que le bon.
         if self.game is None or self.game.id != self._pending_video_id:
             return
-        # …et la fenêtre a pu disparaître. Second garde-fou, indépendant de
-        # l'annulation faite par `_stop_video` : un `singleShot` déjà en vol au
-        # moment où la fenêtre part dans le tray ne doit jamais aboutir à du son
-        # sans image. `isVisible()` est faux pour toute la descendance dès que
-        # `MainWindow.hide()` est appelé.
+        # …et la fenêtre a pu partir dans le tray : jamais du son sans image.
         if not self.isVisible():
             return
         self._try_play_video(self.game.id)
 
     def _try_play_video(self, game_id: str) -> None:
-        # Les bandes-annonces ne sont plus embarquées : elles vivent dans
-        # ~/Games/AccioLauncher/trailers, à la version que le catalogue attend.
+        # Bandes-annonces téléchargées, à la version que le catalogue attend.
         video_path = trailers.chemin_a_jouer(game_id, self.manager.trailers())
         if video_path is None:
             self._audio_bar.hide()
@@ -482,22 +376,12 @@ class GameDetailView(QWidget):
             self._audio_bar.hide()
 
     def _stop_video(self) -> None:
-        # Sortir du plein écran AVANT tout le reste : sans ça, une vidéo qui se
-        # termine (ou un changement de jeu, ou un clic sur JOUER) laisserait une
-        # fenêtre vide — une illustration fixe, sans titre, sans boutons et sans
-        # carrousel — dont rien n'indiquerait comment sortir.
+        # Sortir du mode cinéma d'abord, sinon une fenêtre vide sans issue.
         self.set_cinema(False)
-        # ANNULER d'abord le démarrage en attente : couper la vidéo ne
-        # l'empêchait pas de repartir juste après. Cas réel (Ludo, 2026-08-23) :
-        # un téléchargement en cours, on va lancer un AUTRE jeu — donc on change
-        # de fiche puis on clique JOUER dans la foulée, en moins de deux
-        # secondes. La fenêtre part dans le tray, le minuteur arrive derrière,
-        # et la bande-annonce se met à jouer sans image. Sans téléchargement on
-        # s'attarde sur la fiche, le minuteur a déjà tiré, et le défaut ne se
-        # reproduit pas — d'où « ça marche pourtant d'habitude ».
+        # ANNULER le démarrage en attente : sinon, JOUER moins de 2 s après un
+        # changement de fiche lançait le son dans le tray.
         self._video_timer.stop()
-        # Deuxième garde-fou, indépendant du minuteur : un `timeout` déjà posté
-        # dans la file d'événements ne serait pas retiré par `stop()`.
+        # Un `timeout` déjà posté n'est pas retiré par `stop()`.
         self._pending_video_id = ""
         self._video.stop()
         self._bg.clear_video()
@@ -506,9 +390,7 @@ class GameDetailView(QWidget):
     def _on_video_ended(self) -> None:
         # EndOfMedia → relâcher la source pour libérer le décodeur…
         self._stop_video()
-        # …mais laisser de quoi la revoir. Sans ce bouton, revoir une
-        # bande-annonce obligeait à changer de jeu et à revenir : c'est la
-        # seule commande qui ait encore un sens ici, donc la seule affichée.
+        # …mais laisser le bouton « revoir », seule commande encore utile.
         if self.game is not None and trailers.chemin_a_jouer(
                 self.game.id, self.manager.trailers()) is not None:
             self._audio_bar.set_mode_fin(True)
@@ -516,11 +398,7 @@ class GameDetailView(QWidget):
             self._audio_bar.show()
 
     def _on_replay_clicked(self) -> None:
-        """Rejoue la bande-annonce du jeu affiché, tout de suite.
-
-        Pas de délai : il sert à laisser lire le titre à l'arrivée sur la
-        fiche, or ici c'est un clic délibéré sur « revoir ».
-        """
+        """Rejoue la bande-annonce du jeu affiché, sans délai (clic délibéré)."""
         if self.game is None:
             return
         self._pending_video_id = self.game.id
@@ -553,13 +431,8 @@ class GameDetailView(QWidget):
     def pause_effects(self) -> None:
         """Perte de FOCUS : on suspend les effets décoratifs, pas la vidéo.
 
-        La fenêtre reste souvent visible quand elle perd le focus — second
-        écran, fenêtre côte à côte. Couper la bande-annonce dans ce cas se voit
-        et fait mauvais effet. Les trailers durent moins de deux minutes et
-        s'arrêtent d'eux-mêmes à la fin (`_on_video_ended` rend la main à
-        l'image de fond) ; c'est suffisant. La vidéo n'est réellement coupée que
-        lorsque la fenêtre n'est plus visible du tout — voir `pause()`, appelée
-        par la mise en tray.
+        Sans focus, la fenêtre reste souvent visible (second écran) : la vidéo
+        n'est coupée que fenêtre cachée, par `pause()`.
         """
         self._bg.pause()
 
@@ -621,33 +494,21 @@ class GameDetailView(QWidget):
         self._position_info()
 
     def refresh_video(self) -> None:
-        """Retente la bande-annonce du jeu affiché — les fichiers viennent d'arriver.
-
-        Sans ça, quelqu'un qui vient de télécharger les bandes-annonces
-        garderait un fond fixe jusqu'à ce qu'il change de jeu, et croirait le
-        téléchargement inutile. Ne coupe jamais une vidéo en cours.
-        """
+        """Retente la bande-annonce du jeu affiché — les fichiers viennent
+        d'arriver. Ne coupe jamais une vidéo en cours."""
         if self.game is None or self._video.is_playing:
             return
         self._schedule_video(self.game.id)
 
     def refresh_actions(self) -> None:
         """Rafraîchit le panneau d'actions après un changement d'état externe
-        (ex: re-détection des états suite à un changement d'install_path).
-
-        Repositionne aussi : changer de dossier d'installation fait apparaître
-        ou disparaître le bandeau d'espace disque, et la hauteur du panneau en
-        dépend.
-        """
+        (ex: changement d'install_path, qui peut faire paraître le bandeau
+        d'espace disque : d'où le repositionnement)."""
         self._refresh()
         self._position_info()
 
     def apply_audio_config(self) -> None:
-        """Applique « Couper le son des vidéos » à la vidéo EN COURS (réglage live).
-
-        Sans ça, le toggle des Paramètres n'affectait que la prochaine vidéo —
-        l'utilisateur avait l'impression qu'il ne fonctionnait pas.
-        """
+        """Applique « Couper le son des vidéos » à la vidéo EN COURS (réglage live)."""
         muted = self.manager.config.mute_videos
         self._video.set_muted(muted)
         self._audio_bar.set_muted_icon(muted)

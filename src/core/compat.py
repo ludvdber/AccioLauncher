@@ -1,29 +1,19 @@
 """Couche de compatibilité Linux : lancer des jeux Windows par umu-run ou wine.
 
-Sous Linux, le launcher est natif mais les huit jeux restent des `.exe` : on
-les lance par **umu-run** (Proton hors de Steam, dans le conteneur du Steam
-Linux Runtime) de préférence, sinon par le **wine** du système. Tout ce qui
-suit en découle, et `docs/LINUX.md` en garde les raisons et les relevés.
+**umu-run** (Proton hors de Steam) de préférence, sinon le **wine** du
+système. Raisons et relevés : `docs/LINUX.md`.
 
-Le « Windows » des jeux est un PRÉFIXE Wine : leur Documents, leur AppData,
-leur registre et leurs runtimes Visual C++ y vivent, pas dans le `$HOME` de
-l'utilisateur. Ce module est le seul à savoir où il est et comment on y parle ;
-les autres (`config`, `sauvegardes`, `game_registry`, `system_checks`,
-`pre_launch`, `game_manager`) lui posent la question au lieu de la trancher.
+Le « Windows » des jeux est un PRÉFIXE Wine (Documents, AppData, registre,
+Visual C++). Ce module est le seul à savoir où il est ; les autres lui posent
+la question.
 
-**Un préfixe PARTAGÉ par tous les jeux**, un par famille de lanceur
-(`_Launcher/prefixes/umu`, `_Launcher/prefixes/wine`). Partagé parce que c'est
-le modèle que tout le code suppose déjà — un Documents, un AppData, un
-registre, exactement comme sous Windows — et que le socle Visual C++ exigé par
-les huit jeux ne s'installe alors qu'une fois. Un par FAMILLE parce que Proton
-range le profil sous `steamuser` et Wine sous le nom Unix, et que Proton
-« met à niveau » un préfixe Wine en y recopiant le sien : passer de l'un à
-l'autre sur le même dossier rendrait les sauvegardes invisibles, sans un mot.
+**Un préfixe PARTAGÉ par tous les jeux** (comme sous Windows ; Visual C++
+installé une fois), **un par famille** (`_Launcher/prefixes/umu|wine`) :
+Proton range le profil sous `steamuser` et « met à niveau » un préfixe Wine,
+ce qui rendrait les sauvegardes invisibles.
 
-Rien ici n'importe Qt, et rien ne se lance à l'import : tout ce qui touche au
-disque ou au système se fait À L'APPEL, avec des chemins résolus depuis
-`config.CONFIG_FILE_PATH` — c'est ce que `tests/conftest.py` redirige, et la
-garde qui protège la vraie configuration protège donc aussi le vrai préfixe.
+Pas de Qt, rien à l'import : chemins résolus À L'APPEL depuis
+`config.CONFIG_FILE_PATH`, que `tests/conftest.py` redirige.
 """
 
 import codecs
@@ -128,12 +118,9 @@ def _cle_version(nom: str) -> list:
 def proton_installe(dossiers: list[Path] | None = None) -> str:
     """Le Proton à donner à umu, ou chaîne vide pour le laisser choisir.
 
-    GE-Proton d'abord (ProtonUp-Qt l'installe, et c'est ce qu'on attend sur
-    une machine de jeu), puis un UMU-Proton déjà téléchargé. Donner un chemin
-    ABSOLU a un second intérêt : umu ne contacte plus GitHub pour vérifier
-    qu'une version plus récente existe (`umu_proton.get_umu_proton`) — ce qui,
-    sur une écriture de registre faite pendant que la fenêtre attend, pourrait
-    déclencher le téléchargement de plusieurs centaines de Mo.
+    GE-Proton d'abord, puis un UMU-Proton déjà téléchargé. Un chemin ABSOLU
+    évite aussi qu'umu ne consulte GitHub (et télécharge des centaines de Mo)
+    pendant une écriture de registre que la fenêtre attend.
     """
     candidats: dict[str, list[Path]] = {"GE-Proton": [], "UMU-Proton": []}
     for dossier in dossiers if dossiers is not None else dossiers_proton():
@@ -196,10 +183,8 @@ def lanceur() -> Lanceur | None:
     return trouve
 
 
-# Hors ligne, umu ne doit pas chercher à mettre à jour le Steam Linux Runtime
-# avant CHAQUE lancement : il attendait ses délais réseau avant d'ouvrir le jeu
-# (Ludo, Bazzite sans connexion, 2026-09-30 : « plus d'une minute avant que le
-# jeu décide de s'ouvrir »). La fenêtre le signale d'après son diagnostic réseau.
+# Hors ligne, umu attendait ses délais réseau plus d'une minute avant d'ouvrir
+# le jeu. La fenêtre le signale d'après son diagnostic réseau.
 _hors_ligne = False
 
 
@@ -208,16 +193,9 @@ def signaler_reseau(en_ligne: bool) -> None:
     _hors_ligne = not en_ligne
 
 
-# En ligne aussi, umu vérifiait le Steam Linux Runtime avant CHAQUE partie, et
-# la vérification tournait au retéléchargement : le `VERSION.txt` que sert le
-# CDN de Valve varie d'un nœud à l'autre (`3.0.20260805…` ou `…0928…`), jamais
-# celui qui est installé, si bien qu'umu reprenait l'archive entière — 195 Mo,
-# décompressés et revérifiés — puis déclarait « steamrt3 is up to date ».
-# Mesuré sur Bazzite le 2026-09-30 : 17 s du clic au jeu (59 s quand le
-# téléchargement traîne, avec parfois « Digest mismatched »), contre 4,5 s
-# sans cette vérification. Une fois le runtime installé, on la laisse passer
-# au plus une fois par semaine : assez pour suivre Valve, sans le payer à
-# chaque partie. Une installation incomplète, elle, n'est jamais retenue.
+# En ligne, la vérification du Steam Linux Runtime retéléchargeait 195 Mo à
+# chaque partie (le `VERSION.txt` du CDN varie d'un nœud à l'autre) : 17 s du
+# clic au jeu contre 4,5 s. Runtime installé : au plus une fois par semaine.
 INTERVALLE_RUNTIME_S = 7 * 24 * 3600
 
 
@@ -365,15 +343,9 @@ def appdata_local(pfx: Path | None = None) -> Path:
 def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
     r"""Le chemin tel que le JEU le lit, sous Wine.
 
-    Ce que Python écrit est un chemin de l'hôte ; ce que le jeu lit dans son
-    INI ou dans son registre doit être un chemin WINDOWS. Un `SavePath=/home/…`
-    ne tombait juste que si le lecteur courant du jeu était `Z:` — par
-    accident. Dans `drive_c` : `C:\…` ; ailleurs : `Z:\…`, que Wine et Proton
-    relient à `/`.
-
-    La comparaison est LEXICALE, sans résoudre les liens : Documents peut être
-    un lien vers `~/Documents` (Wine le fait), et c'est `C:\users\…` que le jeu
-    connaît.
+    Dans `drive_c` : `C:\…` ; ailleurs : `Z:\…` (relié à `/`). Comparaison
+    LEXICALE d'abord : Documents peut être un lien, et c'est `C:\users\…`
+    que le jeu connaît.
     """
     chemin = Path(os.path.abspath(chemin))
     pfx = pfx if pfx is not None else prefixe()
@@ -381,11 +353,8 @@ def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
     try:
         relatif = chemin.relative_to(lecteur_c)
     except ValueError:
-        # Même dossier, écrit autrement : sur Bazzite (Silverblue), `/home`
-        # est un lien vers `/var/home`, et `config.get_documents_dir` rend un
-        # chemin RÉSOLU alors que le préfixe ne l'est pas. Le SavePath de HP1
-        # partait en `Z:\var\home\…\drive_c\users\…` (juste, par Z:, mais
-        # pas ce que le jeu connaît). On compare alors les deux résolus.
+        # Bazzite : `/home` est un lien vers `/var/home`, et Documents arrive
+        # RÉSOLU alors que le préfixe ne l'est pas. Comparer les deux résolus.
         try:
             relatif = Path(os.path.realpath(chemin)).relative_to(os.path.realpath(lecteur_c))
         except ValueError:
@@ -403,13 +372,9 @@ _ECHAPPEMENTS = {"a": "\a", "b": "\b", "e": "\x1b", "f": "\f", "n": "\n",
 def desechapper(texte: str) -> str:
     r"""Chaîne d'un `.reg` de Wine → texte. Pure.
 
-    Relevé sur un préfixe Wine 9.0 : « frédéric » y est écrit
-    `fr\x00e9d\xe9ric`. Wine note tout caractère hors ASCII en `\x` suivi de
-    UN à QUATRE chiffres hexadécimaux, et en met quatre dès que le caractère
-    suivant pourrait être pris pour un chiffre de plus. Lire jusqu'à quatre
-    chiffres est donc exact dans tous les cas — c'est ce que fait Wine
-    lui-même (`parse_strW`). Les caractères de contrôle sortent en
-    `\n`-style ou en octal.
+    Wine écrit « frédéric » `fr\x00e9d\xe9ric` : `\x` + un à quatre chiffres
+    hexadécimaux (quatre si le suivant pourrait en être un). Lire jusqu'à
+    quatre est exact, comme `parse_strW`. Contrôles en `\n` ou en octal.
     """
     sortie: list[str] = []
     i, n = 0, len(texte)
@@ -576,10 +541,8 @@ def encodage_ansi(pfx: Path | None = None, defaut: str = "cp1252") -> str:
     return defaut
 
 
-# `ACP` lu, par (préfixe, date, taille) de `system.reg`. Relire ce fichier de
-# 4 Mo coûtait 186 ms, et chaque patch d'INI le relisait : 1,3 s de plus avant
-# chaque partie de HP1, pour une valeur qui ne change qu'avec le préfixe
-# (Bazzite, 2026-09-30). La date ET la taille : un préfixe recréé est relu.
+# `ACP` par (préfixe, date, taille) de `system.reg` : relu à chaque patch
+# d'INI, ce fichier de 4 Mo coûtait 1,3 s avant chaque partie de HP1.
 _acp_lus: dict[tuple[str, int, int], object] = {}
 
 
@@ -640,16 +603,10 @@ def environnement_hote(base=None, gele: bool | None = None,
                        embarque: str | None = None) -> dict[str, str]:
     """L'environnement d'origine, débarrassé de ce que PyInstaller y a mis.
 
-    Le chargeur d'un exécutable PyInstaller Linux ajoute son dossier en tête de
-    `LD_LIBRARY_PATH` (l'ancienne valeur est gardée dans
-    `LD_LIBRARY_PATH_ORIG`). Hérité, il ferait charger nos bibliothèques
-    embarquées par wine, par umu et par le navigateur qu'ouvre `xdg-open` —
-    des plantages qui n'auraient aucun rapport apparent avec le launcher. Les
-    `_PYI_*` sont purgés pour la même raison que dans `self_update`.
-
-    Sans `LD_LIBRARY_PATH_ORIG`, on ne retire QUE les entrées qui pointent
-    dans notre dossier embarqué (`sys._MEIPASS`) : une valeur que
-    l'utilisateur avait posée lui-même reste la sienne.
+    PyInstaller met son dossier en tête de `LD_LIBRARY_PATH` (ancienne valeur
+    dans `LD_LIBRARY_PATH_ORIG`) : hérité, wine, umu et le navigateur
+    chargeraient nos bibliothèques. `_PYI_*` purgés comme dans `self_update`.
+    Sans `_ORIG`, seules nos entrées (`sys._MEIPASS`) sont retirées.
     """
     env = dict(os.environ if base is None else base)
     gele = bool(getattr(sys, "frozen", False)) if gele is None else gele
@@ -695,10 +652,8 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None, *,
     `ips_max` : plafond d'images/s du jeu (`DXVK_FRAME_RATE`), sans effet sur
     wined3d. Une valeur posée par l'utilisateur reste la sienne.
 
-    `mise_a_jour_runtime=False` : un processus que la fenêtre attend (l'import
-    d'un `.reg`) ne laisse pas umu vérifier son runtime, SANS consommer la
-    vérification de la semaine — elle reste due à la prochaine partie. Demandée
-    puis refusée, elle aurait sauté sept jours (revue du 2026-09-30).
+    `mise_a_jour_runtime=False` : processus que la fenêtre attend (import
+    d'un `.reg`) ; la vérification hebdomadaire n'est PAS consommée.
     """
     env = environnement_hote(base)
     env["WINEPREFIX"] = str(pfx)
@@ -791,11 +746,9 @@ def _wineprefix_de(dossier: Path) -> str | None:
 def processus_du_jeu(exe: str, pfx: Path | None = None, proc: Path = Path("/proc")) -> bool:
     """Un processus du jeu tourne-t-il, sous Wine ? Équivalent de `tasklist`.
 
-    Wine nomme le processus (`comm`, tronqué à 15 caractères par le noyau)
-    d'après l'exe WINDOWS, et met son chemin en premier argument. On ne
-    regarde que les processus de l'utilisateur courant, et — quand leur
-    environnement est lisible — ceux de NOTRE préfixe : un autre jeu du même
-    nom lancé par Lutris ne doit pas prolonger une session.
+    `comm` (15 caractères) ou premier argument = l'exe Windows. Seulement
+    l'utilisateur courant et NOTRE préfixe quand il est lisible (pas un jeu
+    homonyme lancé par Lutris).
     """
     cible = (exe or "").lower()
     if not cible:
