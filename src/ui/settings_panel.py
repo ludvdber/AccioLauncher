@@ -32,7 +32,7 @@ from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, tr
 from src.ui.fonts import cinzel
-from src.ui import about_page
+from src.ui import about_page, manette_nav
 from src.ui.disk_scan_worker import DiskScanWorker
 from src.core.season import (
     SEASON_LABELS, SEASONS, resolve as resolve_season,
@@ -519,12 +519,21 @@ class SettingsDialog(QDialog):
         row_discord, self._tgl_discord = toggle_row(
             tr("Afficher le jeu en cours sur Discord"), self.config.discord_presence)
         self._tgl_discord.toggled.connect(self._on_setting_changed)
+        row_nav, self._tgl_nav_manette = toggle_row(
+            tr("Naviguer dans le launcher à la manette"), self.config.navigation_manette)
+        self._tgl_nav_manette.toggled.connect(self._on_setting_changed)
+        self._tgl_nav_manette.toggled.connect(self._on_navigation_manette)
+        nav_aide = QLabel(tr(
+            "Croix directionnelle : changer de jeu et de bouton. Croix ou A : valider. "
+            "Rond ou B : retour. Stick droit : faire défiler."))
+        nav_aide.setObjectName("subtitle")
+        nav_aide.setWordWrap(True)
         row_manette, self._tgl_manette = toggle_row(
             tr("Barre lumineuse de la manette aux couleurs de votre maison"), self.config.couleur_manette)
         self._tgl_manette.toggled.connect(self._on_setting_changed)
         self._tgl_manette.toggled.connect(self._on_couleur_manette)
         return self._page(self._section(tr("Discord")), row_discord,
-                          self._section(tr("Manette PlayStation")), row_manette)
+                          self._section(tr("Manette")), row_nav, nav_aide, row_manette)
 
     # ── Page À propos ──
 
@@ -567,7 +576,15 @@ class SettingsDialog(QDialog):
         self.config.faits_du_jour = self._tgl_faits.isChecked()
         self.config.discord_presence = self._tgl_discord.isChecked()
         self.config.couleur_manette = self._tgl_manette.isChecked()
+        self.config.navigation_manette = self._tgl_nav_manette.isChecked()
         self._save()
+
+    @staticmethod
+    def _on_navigation_manette(coche: bool) -> None:
+        # Tout de suite : c'est en essayant qu'on voit si ça marche.
+        navigation = manette_nav.navigation()
+        if navigation is not None:
+            navigation.set_actif(coche)
 
     def _on_couleur_manette(self, coche: bool) -> None:
         # Allumé : la manette prend la couleur tout de suite, c'est ce qui dit que ça marche.

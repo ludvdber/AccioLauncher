@@ -88,6 +88,10 @@ def _jamais_la_vraie_manette(monkeypatch):
     monkeypatch.setattr(manette, "colorer_en_fond", appels.append)
     monkeypatch.setattr(manette, "manettes", lambda: [])
     monkeypatch.setattr(manette, "appels", appels, raising=False)
+    # La navigation non plus ne lit pas la vraie : une manette branchée sur le
+    # poste qui lance la suite appuierait sur les boutons des tests.
+    from src.core import manette_lecture
+    monkeypatch.setattr(manette_lecture, "lecteur", manette_lecture.LecteurMuet)
     yield
 
 

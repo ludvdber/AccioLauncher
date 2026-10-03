@@ -1,0 +1,296 @@
+"""Naviguer dans le launcher à la manette.
+
+Aucun test ne lit une vraie manette (conftest._jamais_la_vraie_manette rend un
+lecteur muet) : la logique se teste sur des relevés fabriqués, dont ceux de la
+DS4 de Ludo (054C:09CC, 2026-10-03), et l'interface sur de vrais widgets avec
+un faux lecteur.
+"""
+import struct
+
+import pytest
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QApplication, QDialog, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget,
+)
+
+from src.core import manette_lecture as lec
+from src.core.manette_lecture import Etat, Repetition
+
+
+class TestPov:
+    @pytest.mark.parametrize("pov, attendu", [
+        (0, lec.HAUT), (9000, lec.DROITE), (18000, lec.BAS), (27000, lec.GAUCHE),
+        (4500, lec.DROITE), (13500, lec.BAS), (31500, lec.HAUT), (3000, lec.HAUT),
+    ])
+    def test_une_seule_direction(self, pov, attendu):
+        assert lec.directions_du_pov(pov) == {attendu}
+
+    def test_centre(self):
+        assert lec.directions_du_pov(0xFFFF) == frozenset()
+
+
+def _caps():
+    caps = lec._JOYCAPSW()
+    caps.wXmax = caps.wYmax = caps.wRmax = 65535
+    return caps
+
+
+def _info(boutons=0, pov=0xFFFF, x=32767, y=32767, r=32767):
+    info = lec._JOYINFOEX()
+    info.dwButtons, info.dwPOV, info.dwXpos, info.dwYpos, info.dwRpos = boutons, pov, x, y, r
+    return info
+
+
+class TestWinmm:
+    def test_ds4_croix_valide_rond_revient(self):
+        """Numéros VUS sur la DS4 de Ludo : croix = bouton 2 (bit 1), rond = 3 (bit 2)."""
+        assert lec.etat_winmm(_info(1 << 1), _caps(), lec.PLAYSTATION).appuis == {lec.VALIDER}
+        assert lec.etat_winmm(_info(1 << 2), _caps(), lec.PLAYSTATION).appuis == {lec.RETOUR}
+        # Carré (bouton 1) ne fait rien sur une PlayStation…
+        assert lec.etat_winmm(_info(1 << 0), _caps(), lec.PLAYSTATION).appuis == frozenset()
+
+    def test_xbox_a_valide_b_revient(self):
+        assert lec.etat_winmm(_info(1 << 0), _caps(), lec.XBOX).appuis == {lec.VALIDER}
+        assert lec.etat_winmm(_info(1 << 1), _caps(), lec.XBOX).appuis == {lec.RETOUR}
+
+    def test_l1_r1_et_croix_directionnelle(self):
+        e = lec.etat_winmm(_info((1 << 4) | (1 << 5), pov=27000), _caps(), lec.PLAYSTATION)
+        assert e.appuis == {lec.PRECEDENT, lec.SUIVANT, lec.GAUCHE}
+
+    def test_axes_normalises(self):
+        """Repos de la DS4 de Ludo : R 31 743 → à peine -3 %, sous la zone morte."""
+        e = lec.etat_winmm(_info(x=0, y=65535, r=31743), _caps(), lec.PLAYSTATION)
+        assert e.stick_x == -1.0 and e.stick_y == 1.0
+        assert lec.defilement_utile(e.defilement) == 0.0
+
+    def test_axe_sans_course_ne_divise_pas_par_zero(self):
+        assert lec.etat_winmm(_info(), lec._JOYCAPSW(), lec.XBOX).stick_x == 0.0
+
+
+class TestStick:
+    def test_seuil_et_hysteresis(self):
+        assert lec.directions_du_stick(0.5, 0, frozenset()) == frozenset()
+        assert lec.directions_du_stick(0.7, 0, frozenset()) == {lec.DROITE}
+        # Allumée, elle tient jusqu'à 40 % : un stick près du seuil ne clignote pas.
+        assert lec.directions_du_stick(0.5, 0, frozenset({lec.DROITE})) == {lec.DROITE}
+        assert lec.directions_du_stick(0.3, 0, frozenset({lec.DROITE})) == frozenset()
+
+    def test_diagonale_l_axe_le_plus_pousse(self):
+        assert lec.directions_du_stick(-0.7, 0.9, frozenset()) == {lec.BAS}
+        assert lec.directions_du_stick(-0.9, -0.7, frozenset()) == {lec.GAUCHE}
+
+    def test_defilement(self):
+        assert lec.defilement_utile(0.2) == 0.0
+        assert lec.defilement_utile(1.0) == 1.0
+        assert lec.defilement_utile(-1.0) == -1.0
+
+
+class TestRepetition:
+    def test_un_appui_une_action(self):
+        r = Repetition()
+        assert r.actions(Etat(frozenset({lec.VALIDER})), 0.0) == [lec.VALIDER]
+        assert r.actions(Etat(frozenset({lec.VALIDER})), 5.0) == []     # tenu : pas de répétition
+        assert r.actions(Etat(), 5.1) == []                              # rien au relâchement
+        assert r.actions(Etat(frozenset({lec.VALIDER})), 5.2) == [lec.VALIDER]
+
+    def test_une_direction_tenue_repete_comme_une_touche(self):
+        r = Repetition()
+        tenu = Etat(frozenset({lec.DROITE}))
+        assert r.actions(tenu, 0.0) == [lec.DROITE]
+        assert r.actions(tenu, 0.39) == []
+        assert r.actions(tenu, 0.40) == [lec.DROITE]
+        assert r.actions(tenu, 0.50) == []
+        assert r.actions(tenu, 0.51) == [lec.DROITE]
+
+    def test_le_stick_repete_aussi(self):
+        r = Repetition()
+        assert r.actions(Etat(stick_y=1.0), 0.0) == [lec.BAS]
+        assert r.actions(Etat(stick_y=1.0), 0.4) == [lec.BAS]
+
+    def test_reprendre_rend_muet_ce_qui_est_deja_tenu(self):
+        """Retour d'un jeu, croix encore enfoncée : elle n'agit pas dans le launcher."""
+        r = Repetition()
+        r.reprendre(Etat(frozenset({lec.VALIDER, lec.DROITE})))
+        assert r.actions(Etat(frozenset({lec.VALIDER, lec.DROITE})), 0.0) == []
+        assert r.actions(Etat(frozenset({lec.VALIDER, lec.DROITE})), 9.0) == []
+        assert r.actions(Etat(frozenset({lec.VALIDER, lec.RETOUR})), 9.1) == [lec.RETOUR]
+        assert r.actions(Etat(), 9.2) == []
+        assert r.actions(Etat(frozenset({lec.VALIDER})), 9.3) == [lec.VALIDER]
+
+
+def test_deux_manettes_naviguent_ensemble():
+    e = lec.fusionner([Etat(frozenset({lec.VALIDER}), stick_x=0.2),
+                       Etat(frozenset({lec.RETOUR}), stick_x=-0.9)])
+    assert e.appuis == {lec.VALIDER, lec.RETOUR} and e.stick_x == -0.9
+    assert lec.fusionner([]) == Etat()
+
+
+def _evenement(type_, numero, valeur):
+    return struct.pack("<IhBB", 0, valeur, type_, numero)
+
+
+class TestLinux:
+    AXES = {0: lec.ABS_X, 1: lec.ABS_Y, 4: lec.ABS_RY, 6: lec.ABS_HAT0X, 7: lec.ABS_HAT0Y}
+
+    def test_evenements(self):
+        m = lec.ManetteJs(axes=self.AXES)
+        m.appliquer(_evenement(lec.JS_EVENT_BUTTON | lec.JS_EVENT_INIT, 0, 0)
+                    + _evenement(lec.JS_EVENT_BUTTON, 0, 1)
+                    + _evenement(lec.JS_EVENT_AXIS, 6, -32767)
+                    + _evenement(lec.JS_EVENT_AXIS, 4, 32767)
+                    + b"\x01\x02")                         # morceau d'événement : ignoré
+        e = m.etat()
+        assert e.appuis == {lec.VALIDER, lec.GAUCHE} and e.defilement == 1.0
+
+    def test_axe_inconnu_ignore_et_diagonale_horizontale(self):
+        m = lec.ManetteJs(axes=self.AXES)
+        m.appliquer(_evenement(lec.JS_EVENT_AXIS, 9, 32767)
+                    + _evenement(lec.JS_EVENT_AXIS, 6, 32767)
+                    + _evenement(lec.JS_EVENT_AXIS, 7, 32767))
+        assert m.etat().appuis == {lec.DROITE}
+
+    def test_lecteur_sur_un_faux_dossier(self, tmp_path):
+        """Un fichier ordinaire : `read` rend tout puis rien, et l'ioctl échoue → axes par défaut."""
+        (tmp_path / "js0").write_bytes(_evenement(lec.JS_EVENT_BUTTON, 1, 1))
+        (tmp_path / "event3").write_bytes(b"")             # pas un js : jamais ouvert
+        lecteur = lec.LecteurLinux(tmp_path)
+        try:
+            assert lecteur.lire(0.0).appuis == {lec.RETOUR}
+            assert lecteur.nombre() == 1
+            lecteur._dossier = tmp_path / "debranchee"     # Windows verrouille un fichier ouvert
+            assert lecteur.lire(5.0) == Etat() and lecteur.nombre() == 0
+        finally:
+            for fd, _ in lecteur._ouvertes.values():
+                import os
+                os.close(fd)
+
+    def test_dossier_absent(self, tmp_path):
+        assert lec.LecteurLinux(tmp_path / "rien").lire(0.0) == Etat()
+
+
+def test_lecteur_muet():
+    m = lec.LecteurMuet()
+    m.prechauffer()
+    assert m.lire(0.0) == Etat() and m.nombre() == 0
+
+
+# ──────────────────── Interface ────────────────────
+
+class _FauxLecteur:
+    def __init__(self):
+        self.etat = Etat()
+
+    def prechauffer(self):
+        pass
+
+    def lire(self, _maintenant):
+        return self.etat
+
+    def nombre(self):
+        return 1
+
+
+@pytest.fixture
+def nav(qtbot):
+    from src.ui.manette_nav import NavigationManette
+    temps = [0.0]
+    n = NavigationManette(QApplication.instance(), _FauxLecteur(), horloge=lambda: temps[0])
+    n.temps = temps
+    yield n
+    n.set_actif(False)
+    n.deleteLater()
+
+
+@pytest.fixture
+def fenetre(qtbot):
+    w = QWidget()
+    lay = QVBoxLayout(w)
+    boutons = [QPushButton(f"b{i}") for i in range(3)]
+    for b in boutons:
+        lay.addWidget(b)
+    qtbot.addWidget(w)
+    w.show()
+    w.activateWindow()
+    qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+    boutons[0].setFocus(Qt.FocusReason.OtherFocusReason)
+    qtbot.waitUntil(boutons[0].hasFocus)
+    return w, boutons
+
+
+class TestNavigation:
+    def test_bas_et_haut_deplacent_le_focus_avec_l_anneau(self, nav, fenetre):
+        _w, b = fenetre
+        nav.agir(lec.BAS)
+        assert b[1].hasFocus()
+        nav.agir(lec.HAUT)
+        assert b[0].hasFocus()
+
+    def test_valider_appuie_sur_le_bouton(self, nav, fenetre, qtbot):
+        _w, b = fenetre
+        with qtbot.waitSignal(b[0].clicked, timeout=1000):
+            nav.agir(lec.VALIDER)
+
+    def test_retour_ferme_le_dialogue(self, nav, qtbot):
+        d = QDialog()
+        qtbot.addWidget(d)
+        d.show()
+        d.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is d)
+        with qtbot.waitSignal(d.rejected, timeout=1000):
+            nav.agir(lec.RETOUR)
+
+    def test_un_champ_texte_valide_par_entree_sans_ecrire_d_espace(self, nav, qtbot):
+        w = QWidget()
+        champ = QLineEdit(w)
+        qtbot.addWidget(w)
+        w.show()
+        w.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+        champ.setFocus()
+        qtbot.waitUntil(champ.hasFocus)
+        with qtbot.waitSignal(champ.returnPressed, timeout=1000):
+            nav.agir(lec.VALIDER)
+        assert champ.text() == ""
+
+    def test_lecture_complete_et_retour_de_jeu(self, nav, fenetre, qtbot):
+        """Premier relevé : on note ce qui est tenu, sans agir ; ensuite, l'appui agit."""
+        _w, b = fenetre
+        nav._lecteur.etat = Etat(frozenset({lec.BAS}))
+        nav._lire()
+        assert b[0].hasFocus()                 # tenu au retour : muet
+        nav._lecteur.etat = Etat()
+        nav.temps[0] = 1.0
+        nav._lire()
+        nav._lecteur.etat = Etat(frozenset({lec.BAS}))
+        nav.temps[0] = 1.1
+        nav._lire()
+        assert b[1].hasFocus()
+
+    def test_stick_droit_fait_defiler(self, nav, qtbot):
+        zone = QScrollArea()
+        contenu = QWidget()
+        contenu.setMinimumHeight(3000)
+        bouton = QPushButton("dans la zone", contenu)
+        zone.setWidget(contenu)
+        zone.resize(200, 200)
+        qtbot.addWidget(zone)
+        zone.show()
+        bouton.setFocus()
+        nav._reprendre = False
+        nav._lecteur.etat = Etat(defilement=1.0)
+        nav._lire()
+        assert zone.verticalScrollBar().value() > 0
+
+    def test_arret_quand_desactive(self, nav):
+        nav.set_actif(True)
+        nav.set_actif(False)
+        assert not nav._timer.isActive() and not nav.actif
+
+    def test_sans_cible_rien_ne_casse(self, nav, monkeypatch):
+        from src.ui import manette_nav
+        monkeypatch.setattr(manette_nav.NavigationManette, "_cible", staticmethod(lambda: None))
+        nav.agir(lec.VALIDER)
+
+
+def test_la_suite_ne_lit_jamais_la_vraie_manette():
+    assert isinstance(lec.lecteur(), lec.LecteurMuet)

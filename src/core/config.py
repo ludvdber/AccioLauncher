@@ -142,6 +142,10 @@ class Config:
     # La barre lumineuse d'une manette PlayStation aux couleurs de la maison
     # (`src/core/manette.py`). Oui par défaut : sans manette, rien ne se passe.
     couleur_manette: bool = True
+    # Naviguer dans le launcher à la manette (`src/ui/manette_nav.py`). Oui par
+    # défaut : sans manette, rien n'est lu plus de deux fois par seconde, et
+    # rien du tout pendant une partie.
+    navigation_manette: bool = True
     delete_archives: bool = True
     autoplay_videos: bool = True
     # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
@@ -195,6 +199,7 @@ class Config:
                     season=_as_str(data.get("season"), "auto"),
                     faits_du_jour=_as_bool(data.get("faits_du_jour"), True),
                     couleur_manette=_as_bool(data.get("couleur_manette"), True),
+                    navigation_manette=_as_bool(data.get("navigation_manette"), True),
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
@@ -235,6 +240,7 @@ class Config:
                 "season": self.season,
                 "faits_du_jour": self.faits_du_jour,
                 "couleur_manette": self.couleur_manette,
+                "navigation_manette": self.navigation_manette,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,

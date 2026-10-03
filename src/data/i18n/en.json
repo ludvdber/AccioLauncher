@@ -487,7 +487,8 @@
     "{} captures": "{} screenshots",
     "Impr. écran": "Print Screen",
     "Barre lumineuse de la manette aux couleurs de votre maison": "Controller light bar in your house colours",
-    "Manette PlayStation": "PlayStation controller",
+    "Naviguer dans le launcher à la manette": "Navigate the launcher with a controller",
+    "Croix directionnelle : changer de jeu et de bouton. Croix ou A : valider. Rond ou B : retour. Stick droit : faire défiler.": "D-pad: change game and button. Cross or A: confirm. Circle or B: back. Right stick: scroll.",
     "Image": "Graphics",
     "Commandes": "Controls",
     "Jeu": "Game",
@@ -666,6 +667,14 @@
     "Si elle n'est pas cochée, regardez aussi « Modifier les paramètres pour tous les utilisateurs ».": "If it isn't ticked, also check “Change settings for all users”.",
     "Droits administrateur demandés": "Administrator rights requested",
     "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques passent en accéléré. 30 fait moins chauffer l'ordinateur.": "This game must not go above 60 frames per second: beyond that, its cutscenes play fast-forwarded. 30 keeps the computer cooler.",
-    "60 (vitesse normale)": "60 (normal speed)"
+    "60 (vitesse normale)": "60 (normal speed)",
+    "Vérifier / réparer": "Verify / repair",
+    "Le jeu ne démarre plus après un changement dans ses options graphiques ? Remettre sa configuration suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\nFichiers remis :\n{}\n\nL'ancienne configuration est gardée de côté ; les sauvegardes ne sont pas touchées.\n\nSi le problème vient des fichiers du jeu, « Retélécharger le jeu » re-télécharge l'archive et la réinstalle par-dessus.": "Game no longer starts after changing its graphics options? Restoring its configuration is usually enough: it's instant, nothing is downloaded.\n\nFiles restored:\n{}\n\nThe old configuration is kept aside; saves are not touched.\n\nIf the problem lies in the game files, \"Download the game again\" re-downloads the archive and reinstalls it on top.",
+    "Remettre la configuration": "Restore the configuration",
+    "Retélécharger le jeu": "Download the game again",
+    "Configuration non remise": "Configuration not restored",
+    "Ces fichiers n'ont pas pu être remis :\n{}\n\nLe journal du launcher en dit la raison.": "These files could not be restored:\n{}\n\nThe launcher log gives the reason.",
+    "Configuration de {} remise.": "{} configuration restored.",
+    "Fermez {} avant de remettre sa configuration.": "Close {} before restoring its configuration."
   }
 }

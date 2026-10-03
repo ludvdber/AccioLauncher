@@ -152,6 +152,12 @@ def main():
         from src.ui.focus_visible import install as install_focus_clavier
         install_focus_clavier(app)
 
+        # La manette rejoue ses appuis comme des touches : posée ici, elle
+        # pilote aussi l'assistant de premier lancement.
+        from src.ui import manette_nav
+        manette_nav.install(
+            app, _Config.load().navigation_manette if _Config.exists() else True)
+
         # Rapport de crash en un clic : les exceptions non gérées dans les slots
         # affichent un dialogue copiable au lieu de tuer le process en silence.
         from src.ui.crash_dialog import install_excepthook

@@ -21,6 +21,7 @@ from src.core.i18n import tr
 from src.core import compat
 from src.core import manette
 from src.core import preparation_wine as preparation
+from src.core import reparation_config
 from src.core.game_manager import GameState
 from src.core.liens import GUIDE_LINUX_URL
 from src.core.system_checks import (
@@ -496,8 +497,16 @@ def on_versions_clicked(view: "GameDetailView") -> None:
 
 
 def on_repair(view: "GameDetailView") -> None:
-    """Vérifie / répare un jeu installé : re-téléchargement (SHA-256 si dispo) + réinstallation."""
+    """Vérifie / répare un jeu installé : re-téléchargement (SHA-256 si dispo) + réinstallation.
+
+    Un jeu dont la configuration vit dans Documents (HP1-HP3) se voit d'abord
+    proposer de la remettre : c'est elle qui casse quand on touche aux options
+    graphiques du jeu, et le re-téléchargement ne la touche pas.
+    """
     if view.game is None or view._ops.is_busy or _preparation_bloque(view):
+        return
+    if reparation_config.disponible(view.game, view.manager.config.install_path):
+        _proposer_la_configuration(view)
         return
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Vérifier / réparer les fichiers"),
@@ -506,6 +515,40 @@ def on_repair(view: "GameDetailView") -> None:
     )
     if reply == 0:
         view._ops.repair(view.game)
+        view._refresh()
+
+
+def _proposer_la_configuration(view: "GameDetailView") -> None:
+    game = view.game
+    noms = "\n".join(f"• {f.name}" for f in reparation_config.fichiers(game))
+    choix = _boite(QMessageBox.Icon.Question,
+        view, tr("Vérifier / réparer"),
+        tr("Le jeu ne démarre plus après un changement dans ses options graphiques ? "
+           "Remettre sa configuration suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\n"
+           "Fichiers remis :\n{}\n\nL'ancienne configuration est gardée de côté ; "
+           "les sauvegardes ne sont pas touchées.\n\n"
+           "Si le problème vient des fichiers du jeu, « Retélécharger le jeu » re-télécharge l'archive "
+           "et la réinstalle par-dessus.").format(noms),
+        (tr("Remettre la configuration"), tr("Retélécharger le jeu"), tr("Annuler")), 2,
+    )
+    if choix == 0:
+        en_cours = view.partie_en_cours()
+        if en_cours:
+            # Le jeu réécrit sa configuration en quittant : elle écraserait la nôtre.
+            view.notify.emit(tr("Fermez {} avant de remettre sa configuration.").format(en_cours))
+            return
+        resultat = reparation_config.remettre(game, view.manager.config.install_path)
+        if resultat.echoues:
+            _boite(QMessageBox.Icon.Warning, view, tr("Configuration non remise"),
+                   tr("Ces fichiers n'ont pas pu être remis :\n{}\n\nLe journal du launcher en dit la raison.")
+                   .format("\n".join(resultat.echoues)))
+        else:
+            view.notify.emit(tr("Configuration de {} remise.").format(game.name))
+    elif choix == 1:
+        # Re-gardé : une préparation de Wine a pu démarrer pendant la question.
+        if _preparation_bloque(view):
+            return
+        view._ops.repair(game)
         view._refresh()
 
 

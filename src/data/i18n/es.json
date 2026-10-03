@@ -487,7 +487,8 @@
     "{} captures": "{} capturas",
     "Impr. écran": "Impr Pant",
     "Barre lumineuse de la manette aux couleurs de votre maison": "Barra de luz del mando con los colores de tu casa",
-    "Manette PlayStation": "Mando de PlayStation",
+    "Naviguer dans le launcher à la manette": "Navegar por el launcher con el mando",
+    "Croix directionnelle : changer de jeu et de bouton. Croix ou A : valider. Rond ou B : retour. Stick droit : faire défiler.": "Cruceta: cambiar de juego y de botón. Cruz o A: aceptar. Círculo o B: volver. Stick derecho: desplazarse.",
     "Image": "Gráficos",
     "Commandes": "Controles",
     "Jeu": "Juego",
@@ -666,6 +667,14 @@
     "Si elle n'est pas cochée, regardez aussi « Modifier les paramètres pour tous les utilisateurs ».": "Si no está marcada, revisa también «Cambiar la configuración para todos los usuarios».",
     "Droits administrateur demandés": "Se piden derechos de administrador",
     "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques passent en accéléré. 30 fait moins chauffer l'ordinateur.": "Este juego no debe superar 60 imágenes por segundo: por encima, sus cinemáticas se reproducen aceleradas. 30 calienta menos el ordenador.",
-    "60 (vitesse normale)": "60 (velocidad normal)"
+    "60 (vitesse normale)": "60 (velocidad normal)",
+    "Vérifier / réparer": "Verificar / reparar",
+    "Le jeu ne démarre plus après un changement dans ses options graphiques ? Remettre sa configuration suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\nFichiers remis :\n{}\n\nL'ancienne configuration est gardée de côté ; les sauvegardes ne sont pas touchées.\n\nSi le problème vient des fichiers du jeu, « Retélécharger le jeu » re-télécharge l'archive et la réinstalle par-dessus.": "¿El juego ya no arranca después de cambiar sus opciones gráficas? Restablecer su configuración suele bastar: es inmediato y no se descarga nada.\n\nArchivos restablecidos:\n{}\n\nLa configuración anterior se guarda aparte; las partidas guardadas no se tocan.\n\nSi el problema está en los archivos del juego, «Volver a descargar el juego» descarga de nuevo el archivo y lo reinstala encima.",
+    "Remettre la configuration": "Restablecer la configuración",
+    "Retélécharger le jeu": "Volver a descargar el juego",
+    "Configuration non remise": "Configuración no restablecida",
+    "Ces fichiers n'ont pas pu être remis :\n{}\n\nLe journal du launcher en dit la raison.": "No se pudieron restablecer estos archivos:\n{}\n\nEl registro del launcher indica el motivo.",
+    "Configuration de {} remise.": "Configuración de {} restablecida.",
+    "Fermez {} avant de remettre sa configuration.": "Cierra {} antes de restablecer su configuración."
   }
 }
