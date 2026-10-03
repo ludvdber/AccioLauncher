@@ -23,7 +23,7 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 </div>
 
 <p align="center">
-  <img src="docs/screenshot.png" width="860" alt="Accio Launcher : la fiche d'un jeu et le carrousel des huit jeux">
+  <img src="docs/screenshot.jpg" width="860" alt="Accio Launcher : la fiche d'un jeu et le carrousel des huit jeux">
 </p>
 
 ## Ce que fait le launcher
@@ -128,25 +128,20 @@ environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screen_installed.png" alt="Un jeu installé, avec le temps de jeu"></td>
-    <td width="50%"><img src="docs/screen_saga.png" alt="La saga : temps de jeu et journal des parties"></td>
+    <td width="50%"><img src="docs/screen_installed.jpg" alt="Un jeu installé, avec le temps de jeu"></td>
+    <td width="50%"><img src="docs/screen_stats.jpg" alt="Mes années à Poudlard : temps de jeu, sauvegardes et douze derniers mois"></td>
   </tr>
   <tr>
     <td align="center"><sub>Un jeu installé et votre temps de jeu</sub></td>
-    <td align="center"><sub>La saga : vos jeux et le journal de vos parties</sub></td>
+    <td align="center"><sub>Mes années à Poudlard : vos parties et vos sauvegardes</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screen_changelog.png" alt="Les versions d'un jeu et leurs nouveautés"></td>
-    <td width="50%" valign="middle">
-      Chaque jeu a ses versions et leurs nouveautés. On passe de l'une à
-      l'autre en un clic, et la nouvelle est téléchargée <b>avant</b> que
-      l'ancienne ne soit retirée : un téléchargement raté ne vous laisse
-      jamais sans jeu.
-    </td>
+    <td width="50%"><img src="docs/screen_reglages.jpg" alt="Les réglages d'image d'un jeu"></td>
+    <td width="50%"><img src="docs/screen_versions.jpg" alt="Les versions d'un jeu et leurs nouveautés"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Versions et nouveautés</sub></td>
-    <td></td>
+    <td align="center"><sub>Les réglages de chaque jeu, avec leur coût</sub></td>
+    <td align="center"><sub>Versions et nouveautés : on change en un clic, sans jamais rester sans jeu</sub></td>
   </tr>
 </table>
 
