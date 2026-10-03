@@ -139,7 +139,8 @@ class TestSession:
         game, dossier = jeu
         manager = SimpleNamespace(
             config=SimpleNamespace(install_path=tmp_path / "Jeux", discord_presence=False),
-            add_playtime=lambda *a: False, get_game_by_id=lambda _i: game)
+            add_playtime=lambda *a: False, get_game_by_id=lambda _i: game,
+            get_game_path=lambda _i: tmp_path / "Jeux" / "HP2")
         session = gs.GameSession(manager)
         monkeypatch.setattr(gs.reparation_config, "disponible", lambda *_a: True)
         monkeypatch.setattr(gs.captures, "ramasser", lambda *_a: None)
@@ -157,7 +158,8 @@ class TestSession:
         game, dossier = jeu
         manager = SimpleNamespace(
             config=SimpleNamespace(install_path=tmp_path / "Jeux", discord_presence=False),
-            add_playtime=lambda *a: True, get_game_by_id=lambda _i: game)
+            add_playtime=lambda *a: True, get_game_by_id=lambda _i: game,
+            get_game_path=lambda _i: tmp_path / "Jeux" / "HP2")
         session = gs.GameSession(manager)
         monkeypatch.setattr(gs.reparation_config, "disponible", lambda *_a: True)
         monkeypatch.setattr(gs.captures, "ramasser", lambda *_a: None)

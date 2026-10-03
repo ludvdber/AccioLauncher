@@ -74,6 +74,19 @@ def _documents_hors_du_vrai_dossier(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _jamais_les_vrais_journaux_de_windows(monkeypatch):
+    """Aucun test ne lit le journal d'événements de la machine qui le lance.
+
+    Au retour d'un jeu raté, `diagnostic_plantage` interroge `wevtutil` : sans
+    cette garde, le résultat d'un test dépendrait des plantages et des
+    détections Defender de CE poste (celui de Ludo a un `paul.dll` en
+    quarantaine). Les tests du module posent leurs propres événements.
+    """
+    monkeypatch.setattr("src.core.diagnostic_plantage._evenements", lambda *_a: [])
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_la_vraie_manette(monkeypatch):
     """Aucun test n'écrit sur une vraie manette branchée.
 

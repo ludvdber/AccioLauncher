@@ -578,6 +578,33 @@ def proposer_apres_plantage(view: "GameDetailView", game: GameData, ligne: str) 
         _remettre_la_configuration(view, game)
 
 
+def signaler_plantage(view: "GameDetailView", game: GameData, constat) -> None:
+    """Ce que Windows a noté d'un lancement raté (`diagnostic_plantage`).
+
+    Une boîte et pas un toast (règle 115) : c'est une ERREUR, et le joueur doit
+    pouvoir relire le chemin à suivre. Le détail technique se copie, pour le
+    coller sur Discord sans le recopier à la main.
+    """
+    if constat.genre == "antivirus":
+        _boite(QMessageBox.Icon.Warning,
+            view, tr("{} : un fichier a été retiré par l'antivirus").format(game.name),
+            tr("Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut "
+               "pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → "
+               "Protection contre les virus et menaces → Historique de protection, "
+               "puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le "
+               "jeu.").format("\n".join(f"• {f}" for f in constat.fichiers)),
+        )
+        return
+    choix = _boite(QMessageBox.Icon.Warning,
+        view, tr("{} s'est arrêté brutalement").format(game.name),
+        tr("{}\n\nDétail technique : {}").format(constat.cause, constat.detail),
+        (tr("Copier le détail"), tr("Fermer")), 1,
+    )
+    if choix == 0:
+        QApplication.clipboard().setText(f"{game.name} — {constat.detail}")
+        view.notify.emit(tr("Détail copié."))
+
+
 def find_import_error(game: GameData, source: Path, install_path: Path) -> str | None:
     """Valide un dossier d'installation existant à importer.
 

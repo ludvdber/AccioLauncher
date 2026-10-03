@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
         self._detail.partie_en_cours = lambda: self._session.nom_en_cours
         self._session.terminee.connect(self._on_game_exited)
         self._session.configuration_cassee.connect(self._on_configuration_cassee)
+        self._session.diagnostic.connect(self._on_diagnostic)
 
     # ──────────────────── Update checker ────────────────────
 
@@ -501,6 +502,13 @@ class MainWindow(QMainWindow):
         game = self.manager.get_game_by_id(game_id)
         if game is not None:
             game_detail_handlers.proposer_apres_plantage(self._detail, game, ligne)
+
+    def _on_diagnostic(self, game_id: str, constat: object) -> None:
+        """Windows a noté pourquoi le jeu s'est arrêté : le dire."""
+        game = self.manager.get_game_by_id(game_id)
+        # Un autre jeu lancé entre-temps : la boîte arriverait en pleine partie.
+        if game is not None and not self._session.nom_en_cours:
+            game_detail_handlers.signaler_plantage(self._detail, game, constat)
 
     def _maybe_thank_milestone(self) -> None:
         """Un seul remerciement Ko-fi dans la vie du launcher, au cap de 2 h de jeu.

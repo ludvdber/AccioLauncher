@@ -23,11 +23,21 @@ rattrapée après une coupure est OBSERVÉE et non devinée.
 
 import logging
 import subprocess
+import threading
 from datetime import datetime
+from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.core import captures, config_cassee, reparation_config, sauvegardes, scolarite, stats
+from src.core import (
+    captures,
+    config_cassee,
+    diagnostic_plantage,
+    reparation_config,
+    sauvegardes,
+    scolarite,
+    stats,
+)
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -55,6 +65,11 @@ class GameSession(QObject):
     # question à poser, et on ne la pose pas à une fenêtre dans la zone de
     # notification.
     configuration_cassee = pyqtSignal(str, str)
+    # Ce que Windows a noté d'un lancement qui a planté ou échoué
+    # (`diagnostic_plantage`) : identifiant du jeu, `Constat`. Émis depuis un
+    # fil à part (~105 ms de `wevtutil`), donc reçu en file par la fenêtre,
+    # toujours APRÈS `terminee`.
+    diagnostic = pyqtSignal(str, object)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -65,6 +80,9 @@ class GameSession(QObject):
         self._monitor.battement.connect(self._on_battement)
         self._game_id: str = ""
         self._debut: datetime | None = None
+        # Le processus lancé : c'est SON plantage qu'on cherche au journal de
+        # Windows, pas celui d'un autre (`diagnostic_plantage`).
+        self._pid: int | None = None
         # Les sauvegardes telles qu'elles étaient AU LANCEMENT : comparées à
         # celles de la fermeture, elles disent dans laquelle on a joué.
         self._avant: dict[str, sauvegardes.Etat] = {}
@@ -78,6 +96,7 @@ class GameSession(QObject):
         """Un jeu vient d'être lancé : ouvrir la session et surveiller."""
         self._game_id = game_id
         self._debut = datetime.now()
+        self._pid = process.pid
         # Notée DÈS MAINTENANT et non à la fin — raison dans l'en-tête du module.
         stats.ouvrir_session(game_id, self._debut)
         self._avant = sauvegardes.releve(self._spec(game_id))
@@ -126,6 +145,7 @@ class GameSession(QObject):
         partie = True
         cassee = ""
         game_id = self._game_id
+        a_diagnostiquer: tuple | None = None
         if self._game_id:
             partie = self._manager.add_playtime(
                 self._game_id, int(duree), self._debut, code)
@@ -145,13 +165,33 @@ class GameSession(QObject):
                 # n'aurait pas de bonne réponse.
                 if reparation_config.disponible(game, self._manager.config.install_path):
                     cassee = config_cassee.apres_la_partie(game, self._debut) or ""
+                # Une seule question au retour : la remise de configuration,
+                # quand elle s'applique, répond déjà à l'arrêt.
+                if not cassee:
+                    a_diagnostiquer = (
+                        self._manager.get_game_path(game_id), Path(game.executable).name,
+                        self._pid, code, self._debut, partie)
         self._game_id = ""
         self._debut = None
+        self._pid = None
         self._avant = {}
         self._presence.clear()
         self.terminee.emit(game_name, partie)
         if cassee:
             self.configuration_cassee.emit(game_id, cassee)
+        elif a_diagnostiquer is not None:
+            threading.Thread(target=self._diagnostiquer, args=(game_id, *a_diagnostiquer),
+                             daemon=True, name=f"diagnostic-{game_id}").start()
+
+    def _diagnostiquer(self, game_id: str, *args) -> None:
+        """Hors du fil de l'interface : le signal arrive en file à la fenêtre."""
+        constat = diagnostic_plantage.apres_la_partie(*args)
+        if constat is None:
+            return
+        try:
+            self.diagnostic.emit(game_id, constat)
+        except RuntimeError:
+            pass      # launcher fermé pendant la lecture : plus personne à prévenir
 
     def shutdown(self) -> None:
         """Coupe la présence Discord à la fermeture du launcher.
