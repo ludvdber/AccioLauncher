@@ -154,8 +154,15 @@ def _hex(texte: str) -> int | None:
 
 def choisir_evenement(evenements: list[dict[str, str]], exe: str, pid: int | None,
                       code: int) -> dict[str, str] | None:
-    """L'événement 1000 de NOTRE processus, ou None. Raison dans l'en-tête."""
-    for ev in evenements:
+    """L'événement 1000 de NOTRE processus, ou None. Raison dans l'en-tête.
+
+    Le PREMIER de ce processus, pas le dernier : un plantage en entraîne
+    souvent un second pendant que le processus meurt. Relevé réel (HP8,
+    2026-09-17, même pid) : `d3d9.dll` du correctif à 14:56:43, puis
+    `ntdll.dll` à 14:56:44. Le dernier aurait accusé Windows à tort.
+    `evenements` va du plus récent au plus ancien (`/rd:true`).
+    """
+    for ev in reversed(evenements):
         if ev.get("AppName", "").lower() != exe.lower():
             continue
         if _hex(ev.get("ExceptionCode", "")) != code:

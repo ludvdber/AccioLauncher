@@ -701,6 +701,20 @@
     "{} n'a pas pu s'afficher": "{} could not open its display",
     "{} × {} (plus grande que cet écran)": "{} × {} (larger than this screen)",
     "« {} » est revenue à sa version du {}.": "“{}” is back to its version of {}.",
-    "« {} » va revenir à sa version du {}.\n\nSon état actuel est copié d'abord : vous pourrez y revenir de la même façon.": "“{}” will go back to its version of {}.\n\nIts current state is copied first: you can come back to it the same way."
+    "« {} » va revenir à sa version du {}.\n\nSon état actuel est copié d'abord : vous pourrez y revenir de la même façon.": "“{}” will go back to its version of {}.\n\nIts current state is copied first: you can come back to it the same way.",
+    "Windows n'a pas trouvé un fichier DLL dont le jeu a besoin. « Vérifier / réparer les fichiers », dans les réglages du jeu, le remet en place.": "Windows could not find a DLL file the game needs. “Verify / repair files”, in the game's settings, puts it back.",
+    "Un fichier DLL du jeu est abîmé ou n'a pas pu démarrer. « Vérifier / réparer les fichiers », dans les réglages du jeu, le remet en place.": "One of the game's DLL files is damaged or could not start. “Verify / repair files”, in the game's settings, puts it back.",
+    "Windows n'a pas noté où le plantage a eu lieu.": "Windows did not record where the crash happened.",
+    "Le plantage a eu lieu dans {}, un programme extérieur au jeu qui s'y accroche (une surimpression comme celle de Discord, Steam ou RivaTuner, un enregistreur vidéo…). Essayez de jouer sans lui.": "The crash happened in {}, a program outside the game that hooks into it (an overlay such as Discord, Steam or RivaTuner, a video recorder…). Try playing without it.",
+    "Le plantage a eu lieu dans le jeu lui-même ({}).": "The crash happened in the game itself ({}).",
+    "Le plantage a eu lieu dans {}, un fichier installé avec le jeu (un correctif ou un composant).": "The crash happened in {}, a file installed with the game (a fix or a component).",
+    "Le plantage a eu lieu dans le pilote de la carte graphique ({}). Mettre ce pilote à jour règle le plus souvent ce cas.": "The crash happened in the graphics card driver ({}). Updating that driver usually fixes this.",
+    "Le plantage a eu lieu dans un composant de Windows ({}). La cause est souvent ailleurs : un pilote graphique ancien, ou un programme qui s'affiche par-dessus le jeu.": "The crash happened in a Windows component ({}). The cause is often elsewhere: an old graphics driver, or a program that draws over the game.",
+    "Copier le détail": "Copy the details",
+    "Détail copié.": "Details copied.",
+    "{} s'est arrêté brutalement": "{} stopped unexpectedly",
+    "{}\n\nDétail technique : {}": "{}\n\nTechnical details: {}",
+    "{} : un fichier a été retiré par l'antivirus": "{}: a file was removed by the antivirus",
+    "Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → Protection contre les virus et menaces → Historique de protection, puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le jeu.": "Microsoft Defender quarantined this game file, and the game cannot start without it:\n{}\n\nTo get it back: Windows Security → Virus & threat protection → Protection history, then “Actions” → “Restore” on that file. Then start the game again."
   }
 }

@@ -701,6 +701,20 @@
     "{} n'a pas pu s'afficher": "{} no pudo abrir su pantalla",
     "{} × {} (plus grande que cet écran)": "{} × {} (más grande que esta pantalla)",
     "« {} » est revenue à sa version du {}.": "«{}» ha vuelto a su versión del {}.",
-    "« {} » va revenir à sa version du {}.\n\nSon état actuel est copié d'abord : vous pourrez y revenir de la même façon.": "«{}» volverá a su versión del {}.\n\nSu estado actual se copia primero: podrás volver a él de la misma manera."
+    "« {} » va revenir à sa version du {}.\n\nSon état actuel est copié d'abord : vous pourrez y revenir de la même façon.": "«{}» volverá a su versión del {}.\n\nSu estado actual se copia primero: podrás volver a él de la misma manera.",
+    "Windows n'a pas trouvé un fichier DLL dont le jeu a besoin. « Vérifier / réparer les fichiers », dans les réglages du jeu, le remet en place.": "Windows no encontró un archivo DLL que el juego necesita. «Verificar / reparar archivos», en los ajustes del juego, lo restaura.",
+    "Un fichier DLL du jeu est abîmé ou n'a pas pu démarrer. « Vérifier / réparer les fichiers », dans les réglages du jeu, le remet en place.": "Un archivo DLL del juego está dañado o no pudo iniciarse. «Verificar / reparar archivos», en los ajustes del juego, lo restaura.",
+    "Windows n'a pas noté où le plantage a eu lieu.": "Windows no registró dónde se produjo el fallo.",
+    "Le plantage a eu lieu dans {}, un programme extérieur au jeu qui s'y accroche (une surimpression comme celle de Discord, Steam ou RivaTuner, un enregistreur vidéo…). Essayez de jouer sans lui.": "El fallo se produjo en {}, un programa ajeno al juego que se engancha a él (una superposición como la de Discord, Steam o RivaTuner, un grabador de vídeo…). Pruebe a jugar sin él.",
+    "Le plantage a eu lieu dans le jeu lui-même ({}).": "El fallo se produjo en el propio juego ({}).",
+    "Le plantage a eu lieu dans {}, un fichier installé avec le jeu (un correctif ou un composant).": "El fallo se produjo en {}, un archivo instalado con el juego (un parche o un componente).",
+    "Le plantage a eu lieu dans le pilote de la carte graphique ({}). Mettre ce pilote à jour règle le plus souvent ce cas.": "El fallo se produjo en el controlador de la tarjeta gráfica ({}). Actualizar ese controlador suele resolverlo.",
+    "Le plantage a eu lieu dans un composant de Windows ({}). La cause est souvent ailleurs : un pilote graphique ancien, ou un programme qui s'affiche par-dessus le jeu.": "El fallo se produjo en un componente de Windows ({}). La causa suele estar en otra parte: un controlador gráfico antiguo, o un programa que se muestra encima del juego.",
+    "Copier le détail": "Copiar el detalle",
+    "Détail copié.": "Detalle copiado.",
+    "{} s'est arrêté brutalement": "{} se detuvo de golpe",
+    "{}\n\nDétail technique : {}": "{}\n\nDetalle técnico: {}",
+    "{} : un fichier a été retiré par l'antivirus": "{}: el antivirus retiró un archivo",
+    "Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → Protection contre les virus et menaces → Historique de protection, puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le jeu.": "Microsoft Defender puso en cuarentena este archivo del juego, que no puede iniciarse sin él:\n{}\n\nPara recuperarlo: Seguridad de Windows → Protección antivirus y contra amenazas → Historial de protección, luego «Acciones» → «Restaurar» en ese archivo. Después vuelva a iniciar el juego."
   }
 }

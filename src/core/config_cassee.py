@@ -42,6 +42,8 @@ log = logging.getLogger(__name__)
 # Ce qu'un journal UE1 dit d'un affichage qui n'a pas pu s'ouvrir. Comparé en
 # minuscules, sur les seules lignes « Critical: ».
 _SIGNES = ("rendev", "renderdevice", "viewport", "d3d11drv", "d3ddrv", "setres")
+# … sauf quand l'historique montre une image EN COURS de dessin.
+_EN_DESSIN = ("viewport::repaint", "ugameengine::draw")
 # La fin suffit : le bloc fatal est le dernier écrit.
 _FIN = 64_000
 # Un journal écrit un peu AVANT le lancement noté n'est pas le nôtre ; la marge
@@ -102,6 +104,13 @@ def erreur_d_affichage(texte: str) -> str | None:
                  for ligne in texte.splitlines()
                  if ligne.strip().startswith("Critical:")]
     if not any(signe in c.lower() for c in critiques for signe in _SIGNES):
+        return None
+    # Un arrêt PENDANT le dessin d'une image : l'affichage s'était ouvert, la
+    # configuration n'y est pour rien. Cas réel (HP3, joueur sur Intel UHD,
+    # 2026-10-06) : « SetRenderTarget failed(D3DERR_INVALIDCALL) », historique
+    # « … UGameEngine::Draw <- UWindowsViewport::Repaint … » — « viewport »
+    # y figure, et proposer la remise aurait été mentir (règle 108).
+    if any(d in c.lower() for c in critiques for d in _EN_DESSIN):
         return None
     for c in critiques:
         if c and not c.lower().startswith("appError called".lower()):

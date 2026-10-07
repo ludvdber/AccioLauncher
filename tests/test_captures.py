@@ -293,7 +293,7 @@ class TestFinDePartie:
             manager = GameManager(Config(install_path=tmp_path, cache_path=tmp_path / ".cache"))
         session = GameSession(manager)
         session._monitor.start = lambda proc, nom: None
-        session.demarrer(object(), jeu.name, "hp1")
+        session.demarrer(SimpleNamespace(pid=1), jeu.name, "hp1")
         _bmp(tmp_path / "HP1" / "System" / "Shot0000.bmp")
         session._on_game_exited(jeu.name, 0, 600.0)
         assert len(captures.images(captures.dossier(jeu))) == 1
