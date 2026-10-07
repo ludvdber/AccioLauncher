@@ -37,7 +37,13 @@ import logging
 import re
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
+# B405/B314 relus le 2026-10-07 (règle 2) : le XML lu ici est la SORTIE de
+# `wevtutil.exe` (chemin absolu), jamais un fichier venu d'ailleurs. Les
+# attaques visées (entités en cascade, entités externes) exigent une DTD dans
+# le document ; wevtutil n'en écrit pas et échappe le texte des événements, et
+# expat ne résout plus les entités externes depuis Python 3.7.1. `defusedxml`
+# ajouterait une dépendance à l'exécutable pour un risque absent.
+import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PureWindowsPath
@@ -132,7 +138,7 @@ def lire_evenements(brut: bytes) -> list[dict[str, str]]:
     """Le XML de `wevtutil` (UTF-16, BOM ou non) en liste de dictionnaires."""
     try:
         texte = brut.decode("utf-16-le").lstrip("\ufeff")
-        racine = ET.fromstring("<r>" + texte + "</r>")  # nosec B314 : sortie de wevtutil
+        racine = ET.fromstring("<r>" + texte + "</r>")  # nosec B314
     except (UnicodeDecodeError, ET.ParseError):
         return []
     sortie = []

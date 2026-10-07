@@ -655,21 +655,21 @@
           "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.2/hp3.7z",
           "size_mb": 775,
           "changes": [
-            "dgVoodoo 2.86.5 → 2.87.5",
+            "Traducteur graphique mis à jour",
             "Antialiasing porté à 8x et filtrage anisotrope à 16x",
             "Fichiers inutilisés retirés : deux bibliothèques Linux, deux moteurs 3D que le jeu ne peut pas charger, et des outils de développement"
           ],
           "i18n": {
             "en": {
               "changes": [
-                "dgVoodoo 2.86.5 → 2.87.5",
+                "Graphics translator updated",
                 "Anti-aliasing raised to 8x, anisotropic filtering to 16x",
                 "Unused files removed: two Linux libraries, two 3D renderers the game cannot load, and development tools"
               ]
             },
             "es": {
               "changes": [
-                "dgVoodoo 2.86.5 → 2.87.5",
+                "Traductor gráfico actualizado",
                 "Antialiasing subido a 8x y filtrado anisotrópico a 16x",
                 "Archivos sin usar eliminados: dos bibliotecas de Linux, dos motores 3D que el juego no puede cargar y herramientas de desarrollo"
               ]
@@ -683,10 +683,10 @@
           "download_parts": null,
           "size_mb": 775,
           "changes": [
-            "DGVoodoo 2.8.1 → 2.86.5",
+            "Traducteur graphique mis à jour",
             "Anti-aliasing 4x, filtrage anisotrope 8x",
             "Widescreen 16:9 (1920x1080) avec FOV ajusté",
-            "Cap 60 FPS intégré via DGVoodoo",
+            "Cap 60 FPS intégré via le traducteur graphique",
             "VSync activé, upscaling Lanczos-2",
             "Nettoyage des fichiers inutiles (~15 Mo)",
             "Vidéos d'intro adaptées au widescreen"
@@ -694,10 +694,10 @@
           "i18n": {
             "en": {
               "changes": [
-                "DGVoodoo 2.8.1 → 2.86.5",
+                "Graphics translator updated",
                 "4x anti-aliasing, 8x anisotropic filtering",
                 "16:9 widescreen (1920x1080) with adjusted FOV",
-                "Built-in 60 FPS cap via DGVoodoo",
+                "Built-in 60 FPS cap via the graphics translator",
                 "VSync enabled, Lanczos-2 upscaling",
                 "Useless files removed (~15 MB)",
                 "Intro videos adapted to widescreen"
@@ -705,10 +705,10 @@
             },
             "es": {
               "changes": [
-                "DGVoodoo 2.8.1 → 2.86.5",
+                "Traductor gráfico actualizado",
                 "Antialiasing 4x, filtrado anisotrópico 8x",
                 "Panorámico 16:9 (1920x1080) con FOV ajustado",
-                "Límite de 60 FPS integrado mediante DGVoodoo",
+                "Límite de 60 FPS integrado mediante el traductor gráfico",
                 "VSync activado, escalado Lanczos-2",
                 "Archivos innecesarios eliminados (~15 MB)",
                 "Vídeos de introducción adaptados a pantalla panorámica"
@@ -724,21 +724,21 @@
           "size_mb": 790,
           "changes": [
             "Version originale du jeu",
-            "DGVoodoo 2.8.1 intégré",
+            "Traducteur graphique intégré",
             "Configuration par défaut optimisée"
           ],
           "i18n": {
             "en": {
               "changes": [
                 "Original game release",
-                "DGVoodoo 2.8.1 bundled",
+                "Graphics translator bundled",
                 "Optimised default configuration"
               ]
             },
             "es": {
               "changes": [
                 "Versión original del juego",
-                "DGVoodoo 2.8.1 integrado",
+                "Traductor gráfico integrado",
                 "Configuración predeterminada optimizada"
               ]
             }
@@ -1167,21 +1167,21 @@
           "size_mb": 4600,
           "changes": [
             "Version originale du jeu",
-            "DGVoodoo 2.8 intégré",
+            "Traducteur graphique intégré",
             "Configuration par défaut optimisée"
           ],
           "i18n": {
             "en": {
               "changes": [
                 "Original game release",
-                "DGVoodoo 2.8 bundled",
+                "Graphics translator bundled",
                 "Optimised default configuration"
               ]
             },
             "es": {
               "changes": [
                 "Versión original del juego",
-                "DGVoodoo 2.8 integrado",
+                "Traductor gráfico integrado",
                 "Configuración predeterminada optimizada"
               ]
             }
