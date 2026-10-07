@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import captures, manette, reglages_correctif, resolution_jeu
+from src.core import captures, manette, reglages_correctif, reglages_graphiques, resolution_jeu
 from src.core.i18n import tr
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font, cinzel
@@ -292,6 +292,116 @@ class RubriquesDuJeu:
         else:
             resolutions.pop(self.game.id, None)
         self.manager.config.save()
+
+    def _section_graphiques(self, layout: QVBoxLayout, onglet: str) -> bool:
+        """HP3 : les réglages graphiques rangés dans CET onglet (`reglages_graphiques`).
+
+        Même présentation que le correctif (ligne, « ? », pastilles), écrite
+        aussitôt dans `dgVoodoo.conf`. False si ce jeu n'en a pas.
+        """
+        conf = self._conf_graph
+        reglages = reglages_graphiques.du_onglet(onglet)
+        if conf is None or not reglages:
+            return False
+        if onglet == "image":
+            layout.addWidget(self._titre_rubrique(tr("Image")))
+            layout.addSpacing(4)
+        for reglage in reglages:
+            self._controle_graph(layout, conf, reglage)
+        if onglet == "image":
+            self._bouton_origine_graph(layout)
+        return True
+
+    def _controle_graph(self, layout: QVBoxLayout, conf: Path, reglage) -> None:
+        try:
+            etat = reglages_graphiques.lire(conf, reglage)
+        except OSError:
+            log.warning("Réglages graphiques : %s illisible", conf, exc_info=True)
+            return
+        libelle_txt, aide_txt = tr(reglage.libelle), tr(reglage.aide)
+        if reglage.choix:
+            controle = QComboBox()
+            controle.setStyleSheet(themed(_COMBO_STYLE))
+            controle.setMinimumWidth(130)
+            noms = dict(reglage.noms_choix)
+            for valeur in reglage.choix:
+                controle.addItem(tr(reglage.zero) if valeur == reglage.choix[0]
+                                 else tr(noms[valeur]), valeur)
+            if etat.personnalise:
+                controle.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+            controle.setCurrentIndex(max(0, controle.findData(etat.valeur)))
+            controle.currentIndexChanged.connect(
+                lambda _i, c=controle, r=reglage: self._on_graph(r, c.currentData(), c))
+        else:
+            controle = ToggleSwitch(bool(etat.valeur))
+            controle.toggled.connect(
+                lambda coche, r=reglage, b=controle: self._on_graph(r, coche, b))
+        self._controles_graph[reglage.ident] = controle
+        self._ligne(layout, libelle_txt, controle, aide_txt, reglage)
+
+    def _remettre_controle_graph(self, controle: QWidget, reglage) -> None:
+        """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
+        try:
+            etat = reglages_graphiques.lire(self._conf_graph, reglage)
+        except OSError:
+            return
+        controle.blockSignals(True)
+        if isinstance(controle, QComboBox):
+            index = controle.findData(etat.valeur)
+            if index < 0:
+                controle.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+                index = controle.count() - 1
+            controle.setCurrentIndex(index)
+        else:
+            controle.setChecked(bool(etat.valeur))
+        controle.blockSignals(False)
+
+    def _on_graph(self, reglage, valeur, controle: QWidget) -> None:
+        """Écrit AUSSITÔT, comme les réglages du correctif."""
+        if reglage.choix and valeur not in reglage.choix:
+            return   # l'entrée « réglé à la main » : c'est déjà ce que porte le fichier
+        try:
+            reglages_graphiques.ecrire(self._conf_graph, reglage, valeur)
+        except (OSError, ValueError):
+            log.warning("Réglages graphiques : %s non écrit", reglage.ident, exc_info=True)
+            self._remettre_controle_graph(controle, reglage)
+            self._montrer_erreur(tr(
+                "Réglage non enregistré : le fichier des réglages graphiques du jeu "
+                "n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            return
+        if self._bouton_reset is not None:
+            self._bouton_reset.setEnabled(reglages_graphiques.a_une_origine(self._conf_graph))
+        if not self._erreur.isHidden():
+            self._erreur.hide()
+            self._ajuster_hauteur()
+
+    def _bouton_origine_graph(self, layout: QVBoxLayout) -> None:
+        """« Rétablir les réglages d'origine » : ceux du fichier tel qu'installé."""
+        bouton = QPushButton(tr("Rétablir les réglages d'origine"))
+        bouton.setFont(body_font(12))
+        bouton.setStyleSheet(themed(_LIEN_STYLE))
+        bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+        bouton.setEnabled(reglages_graphiques.a_une_origine(self._conf_graph))
+        bouton.setToolTip(tr("Remet image et performances comme à l'installation du jeu."))
+        bouton.clicked.connect(self._remettre_origine_graph)
+        self._bouton_reset = bouton
+        layout.addSpacing(8)
+        ligne = QHBoxLayout()
+        ligne.addWidget(bouton)
+        ligne.addStretch()
+        layout.addLayout(ligne)
+
+    def _remettre_origine_graph(self) -> None:
+        try:
+            reglages_graphiques.remettre_origine(self._conf_graph)
+        except OSError:
+            log.warning("Réglages graphiques : remise à l'origine impossible", exc_info=True)
+            self._montrer_erreur(tr(
+                "Réglage non enregistré : le fichier des réglages graphiques du jeu "
+                "n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            return
+        for ident, controle in self._controles_graph.items():
+            self._remettre_controle_graph(controle, reglages_graphiques.REGLAGES[ident])
 
     def _note(self, layout: QVBoxLayout, texte: str) -> None:
         note = QLabel(texte)

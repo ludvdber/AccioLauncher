@@ -37,7 +37,13 @@ import logging
 import re
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
+# B405/B314 relus le 2026-10-07 (règle 2) : le XML lu ici est la SORTIE de
+# `wevtutil.exe` (chemin absolu), jamais un fichier venu d'ailleurs. Les
+# attaques visées (entités en cascade, entités externes) exigent une DTD dans
+# le document ; wevtutil n'en écrit pas et échappe le texte des événements, et
+# expat ne résout plus les entités externes depuis Python 3.7.1. `defusedxml`
+# ajouterait une dépendance à l'exécutable pour un risque absent.
+import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PureWindowsPath
@@ -132,7 +138,7 @@ def lire_evenements(brut: bytes) -> list[dict[str, str]]:
     """Le XML de `wevtutil` (UTF-16, BOM ou non) en liste de dictionnaires."""
     try:
         texte = brut.decode("utf-16-le").lstrip("\ufeff")
-        racine = ET.fromstring("<r>" + texte + "</r>")  # nosec B314 : sortie de wevtutil
+        racine = ET.fromstring("<r>" + texte + "</r>")  # nosec B314
     except (UnicodeDecodeError, ET.ParseError):
         return []
     sortie = []
@@ -154,8 +160,15 @@ def _hex(texte: str) -> int | None:
 
 def choisir_evenement(evenements: list[dict[str, str]], exe: str, pid: int | None,
                       code: int) -> dict[str, str] | None:
-    """L'événement 1000 de NOTRE processus, ou None. Raison dans l'en-tête."""
-    for ev in evenements:
+    """L'événement 1000 de NOTRE processus, ou None. Raison dans l'en-tête.
+
+    Le PREMIER de ce processus, pas le dernier : un plantage en entraîne
+    souvent un second pendant que le processus meurt. Relevé réel (HP8,
+    2026-09-17, même pid) : `d3d9.dll` du correctif à 14:56:43, puis
+    `ntdll.dll` à 14:56:44. Le dernier aurait accusé Windows à tort.
+    `evenements` va du plus récent au plus ancien (`/rd:true`).
+    """
+    for ev in reversed(evenements):
         if ev.get("AppName", "").lower() != exe.lower():
             continue
         if _hex(ev.get("ExceptionCode", "")) != code:

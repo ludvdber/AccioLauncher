@@ -53,6 +53,15 @@ class TestLecture:
     def test_un_journal_sans_erreur(self):
         assert config_cassee.erreur_d_affichage(SAIN) is None
 
+    def test_un_arret_pendant_le_dessin_n_est_pas_la_configuration(self):
+        """Cas réel HP3 sur Intel UHD : l'affichage s'était ouvert, « viewport »
+        n'apparaît que dans l'historique du dessin."""
+        hp3 = ("Critical: appError called:\r\n"
+               "Critical: SetRenderTarget failed(D3DERR_INVALIDCALL).\r\n"
+               "Critical: FD3DRenderInterface::SetRenderTarget <- UShadowBitmapMaterial::Get"
+               " <- UGameEngine::Draw <- UWindowsViewport::Repaint <- MainLoop\r\n")
+        assert config_cassee.erreur_d_affichage(hp3) is None
+
     def test_le_mot_hors_d_une_ligne_critique_ne_compte_pas(self):
         assert config_cassee.erreur_d_affichage("Log: Viewport opened, RenDev ok\r\n") is None
 

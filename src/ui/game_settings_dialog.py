@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import reglages_correctif
+from src.core import reglages_correctif, reglages_graphiques
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -111,6 +111,11 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             reglages_correctif.chemin_ini(
                 manager.config.install_path / Path(game.executable).parent)
             if self._reglages else None)
+        # HP3 : pas de correctif, mais le fichier de son traducteur D3D8 (`reglages_graphiques`).
+        conf = reglages_graphiques.chemin(manager.config.install_path / Path(game.executable).parent)
+        self._conf_graph: Path | None = (
+            conf if not self._reglages and reglages_graphiques.disponible(conf) else None)
+        self._controles_graph: dict[str, QWidget] = {}
         self._erreur: QLabel | None = None
         self._compte_captures: QLabel | None = None
         # Le contrôle de chaque réglage du correctif, par identifiant : la remise
@@ -286,7 +291,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._pied_notes.setWordWrap(True)
         self._pied_notes.setTextFormat(Qt.TextFormat.PlainText)
         self._pied_notes.setStyleSheet("color: #8a8aaa; background: transparent; padding-top: 6px;")
-        if self._correctif_actif():
+        if self._correctif_actif() or self._conf_graph is not None:
             self._pied_notes.setText(tr("Pris en compte au prochain lancement du jeu."))
         else:
             self._pied_notes.hide()
@@ -322,6 +327,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _remplir(self, onglet: str, corps: QVBoxLayout) -> bool:
         """Pose le contenu d'un onglet ; False s'il n'a rien à montrer."""
         if onglet == "image":
+            if self._section_graphiques(corps, "image"):
+                return True
             if not self._reglages:
                 self._section_affichage(corps)
                 return True
@@ -354,7 +361,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 rempli = True
             return self._section_captures(corps) or rempli
         if onglet == "perfs":
-            return self._section_correctif(corps, "perfs")
+            return (self._section_correctif(corps, "perfs")
+                    or self._section_graphiques(corps, "perfs"))
         return self._section_fichiers(corps)
 
     def _onglet_image(self, corps: QVBoxLayout) -> bool:
@@ -718,8 +726,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             widget.setChecked(bool(etat.valeur))
         widget.blockSignals(False)
 
-    def _montrer_erreur(self) -> None:
-        self._erreur.setText(tr(
+    def _montrer_erreur(self, texte: str = "") -> None:
+        self._erreur.setText(texte or tr(
             "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
             "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
         if self._erreur.isHidden():

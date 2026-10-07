@@ -72,9 +72,12 @@ class TestNotreProcessus:
     def test_un_autre_jeu_n_est_pas_le_notre(self):
         assert dp.choisir_evenement([dict(WRAPPER)], "hp7.exe", 0x31e8, C0000005) is None
 
-    def test_le_plus_recent_d_abord(self):
-        evs = [dict(WRAPPER, FaultingOffset="2"), dict(WRAPPER, FaultingOffset="1")]
-        assert dp.choisir_evenement(evs, "hp8.exe", None, C0000005)["FaultingOffset"] == "2"
+    def test_le_premier_plantage_et_pas_sa_suite(self):
+        """Relevé réel : même pid, `d3d9.dll` puis `ntdll.dll` une seconde après.
+        La liste arrive du plus récent au plus ancien."""
+        suite = dict(WRAPPER, ModuleName="ntdll.dll", ModulePath=r"C:\Windows\SysWOW64\ntdll.dll")
+        ev = dp.choisir_evenement([suite, dict(WRAPPER)], "hp8.exe", 0x31e8, C0000005)
+        assert ev["ModuleName"] == "d3d9.dll"
 
     def test_requete_bornee_au_debut_de_la_partie(self, monkeypatch):
         vu = []
