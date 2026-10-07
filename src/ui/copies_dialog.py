@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QDate, QLocale, Qt, QTime
 from PyQt6.QtWidgets import (
-    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -29,7 +28,7 @@ from src.core.i18n import get_language, tr
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
-from src.ui.utils import open_local_path
+from src.ui.utils import liste_deroulante, open_local_path
 
 _LISTE_STYLE = (
     "QListWidget { color: #e0e0f0; background: #141428; border: 1px solid #2a2a48;"
@@ -95,7 +94,7 @@ class CopiesDialog(QDialog):
         note.setStyleSheet("color: #8a8aaa; background: transparent;")
         layout.addWidget(note)
 
-        self._choix = QComboBox()
+        self._choix = liste_deroulante()
         self._choix.setStyleSheet(themed(_COMBO_STYLE))
         self._choix.currentIndexChanged.connect(self._montrer)
         layout.addWidget(self._choix)

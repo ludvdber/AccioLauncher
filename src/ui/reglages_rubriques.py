@@ -29,7 +29,7 @@ from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.styles import RADIO_STYLE
 from src.ui.theme import themed
 from src.ui.toggle_switch import ToggleSwitch
-from src.ui.utils import open_local_path
+from src.ui.utils import liste_deroulante, open_local_path
 
 log = logging.getLogger(__name__)
 
@@ -260,7 +260,7 @@ class RubriquesDuJeu:
         changer, le lancement suivant remet celle-ci.
         """
         place = resolution_jeu.place_pour(self.game, self.manager.config)
-        choix = QComboBox()
+        choix = liste_deroulante()
         choix.setStyleSheet(themed(_COMBO_STYLE))
         choix.setMinimumWidth(130)
         if place is not None:
@@ -320,7 +320,7 @@ class RubriquesDuJeu:
             return
         libelle_txt, aide_txt = tr(reglage.libelle), tr(reglage.aide)
         if reglage.choix:
-            controle = QComboBox()
+            controle = liste_deroulante()
             controle.setStyleSheet(themed(_COMBO_STYLE))
             controle.setMinimumWidth(130)
             noms = dict(reglage.noms_choix)

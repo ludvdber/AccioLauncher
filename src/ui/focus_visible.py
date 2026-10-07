@@ -46,6 +46,17 @@ def _marque(widget: QWidget, actif: bool) -> None:
     widget.update()
 
 
+def marquer(widget: QWidget | None) -> None:
+    """Allume l'anneau du widget qui a DÉJÀ le focus (la manette, `manette_nav`).
+
+    Une fenêtre qui s'ouvre donne le focus à son premier contrôle sans raison
+    clavier : pas d'anneau, et à la manette on ne savait pas où l'on était.
+    Tout appui de la manette est une intention de navigation : il l'allume.
+    """
+    if widget is not None and widget.hasFocus():
+        _marque(widget, True)
+
+
 class _FiltreFocus(QObject):
     def eventFilter(self, obj, event) -> bool:
         type_ = event.type()

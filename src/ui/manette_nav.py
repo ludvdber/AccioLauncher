@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import manette_lecture as lecture
+from src.ui import focus_visible
 
 log = logging.getLogger(__name__)
 
@@ -167,6 +168,8 @@ class NavigationManette(QObject):
                     self._envoyer(cible, Qt.Key.Key_Return)
             case lecture.RETOUR:
                 self._envoyer(cible, Qt.Key.Key_Escape)
+        # Le focus d'arrivée, même posé sans le clavier (fenêtre qui s'ouvre) : cerclé.
+        focus_visible.marquer(QApplication.focusWidget())
 
     @staticmethod
     def _zone_defilante() -> QAbstractScrollArea | None:

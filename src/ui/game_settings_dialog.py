@@ -46,7 +46,7 @@ from src.ui.icon_button import pixmap_icone
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import accent_qcolor, themed
 from src.ui.toggle_switch import ToggleSwitch
-from src.ui.utils import zone_defilable
+from src.ui.utils import liste_deroulante, zone_defilable
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     log,
     _LARGEUR,
@@ -783,7 +783,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._blocs[reglage.ident] = bloc
         libelle_txt, aide_txt = reglages_correctif.textes(reglage)
         if reglage.choix:
-            choix = QComboBox()
+            choix = liste_deroulante()
             choix.setStyleSheet(themed(_COMBO_STYLE))
             # Une largeur commune : les listes s'alignent en colonne à droite.
             choix.setMinimumWidth(130)

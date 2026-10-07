@@ -372,3 +372,42 @@ class TestDansLaVraieFenetre:
         qtbot.waitUntil(liste.hasFocus)
         nav.agir(lec.BAS)
         assert apres.hasFocus() and liste.currentIndex() == 0
+
+
+class TestMiseEnEvidence:
+    """Ludo, 2026-10-07, à la manette : « tout n'est pas mis en évidence clairement,
+    surtout côté paramètres graphiques et dropdown ». Quatre causes, mesurées sur capture."""
+
+    def test_le_focus_d_ouverture_s_allume_au_premier_appui(self, nav, fenetre):
+        from src.ui.focus_visible import PROPRIETE
+        _w, b = fenetre                       # focus posé SANS le clavier : pas d'anneau
+        assert not b[0].property(PROPRIETE)
+        nav.agir(lec.RETOUR)                  # un appui qui ne déplace pas le focus
+        assert b[0].hasFocus() and b[0].property(PROPRIETE)
+
+    def test_la_ligne_choisie_d_une_liste_obeit_au_style(self, qtbot):
+        from PyQt6.QtWidgets import QStyledItemDelegate
+        from src.ui.settings_panel import _COMBO_STYLE
+        from src.ui.utils import liste_deroulante
+        liste = liste_deroulante()
+        qtbot.addWidget(liste)
+        liste.setStyleSheet(_COMBO_STYLE)
+        # Le délégué standard, qui lit la feuille de style. Celui d'une QComboBox
+        # nue (QComboMenuDelegate) ignore ::item:selected : la ligne choisie
+        # restait du même bleu que les autres.
+        assert isinstance(liste.view().itemDelegate(), QStyledItemDelegate)
+        assert "::item:selected" in _COMBO_STYLE
+        assert '[focusClavier="true"]:focus' in _COMBO_STYLE
+
+    def test_l_anneau_de_l_interrupteur_est_hors_de_la_piste(self, qtbot):
+        from src.ui.toggle_switch import ToggleSwitch
+        t = ToggleSwitch(True)
+        qtbot.addWidget(t)
+        # Or sur or quand il était dans la piste : il faut de la place autour.
+        assert t.width() >= t._TRACK_W + 6 and t.height() >= t._TRACK_H + 6
+
+    def test_une_zone_defilante_n_est_pas_un_arret(self, qtbot):
+        from src.ui.utils import zone_defilable
+        zone = zone_defilable(QWidget())
+        qtbot.addWidget(zone)
+        assert zone.focusPolicy() == Qt.FocusPolicy.NoFocus

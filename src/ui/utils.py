@@ -2,7 +2,7 @@
 
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
-from PyQt6.QtWidgets import QLayout, QMessageBox, QScrollArea, QWidget
+from PyQt6.QtWidgets import QComboBox, QLayout, QListView, QMessageBox, QScrollArea, QWidget
 
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
@@ -87,6 +87,20 @@ def is_writable_dir(path) -> bool:
         return False
 
 
+def liste_deroulante() -> QComboBox:
+    """Une QComboBox dont la liste ouverte obéit à la feuille de style.
+
+    La vue par défaut d'une QComboBox peint ses lignes par un délégué qui ignore
+    `::item:selected` : la ligne choisie au clavier ou à la manette restait du
+    même bleu que les autres (mesuré sur capture, 2026-10-07 : « tout n'est pas
+    mis en évidence pour la manette, surtout les dropdown »). Une QListView posée
+    explicitement prend le délégué standard, qui lit la feuille de style.
+    """
+    liste = QComboBox()
+    liste.setView(QListView(liste))
+    return liste
+
+
 def zone_defilable(page: QWidget) -> QScrollArea:
     """Rend une page défilable UNIQUEMENT si son contenu ne tient pas.
 
@@ -111,6 +125,11 @@ def zone_defilable(page: QWidget) -> QScrollArea:
     zone.setWidget(page)
     zone.setWidgetResizable(True)
     zone.setFrameShape(QScrollArea.Shape.NoFrame)
+    # Pas un arrêt de Tab : la zone prenait le focus sans rien montrer, et à la
+    # manette un appui sur ↓ semblait ne rien faire (capture du 2026-10-07).
+    # Ce qu'elle contient s'atteint toujours, et la zone défile jusqu'au widget
+    # qui reçoit le focus ; le stick droit et la molette la font défiler.
+    zone.setFocusPolicy(Qt.FocusPolicy.NoFocus)
     zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     zone.setStyleSheet(themed(

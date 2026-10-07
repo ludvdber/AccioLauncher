@@ -21,7 +21,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QButtonGroup, QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,
+    QButtonGroup, QDialog, QFileDialog, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QPushButton, QRadioButton,
     QStackedWidget, QVBoxLayout, QWidget,
 )
@@ -41,7 +41,7 @@ from src.ui.fonts import cinzel_decorative
 from src.ui.styles import RADIO_STYLE
 from src.ui.theme import THEMES
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import avertir, is_writable_dir, zone_defilable
+from src.ui.utils import avertir, is_writable_dir, liste_deroulante, zone_defilable
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class OnboardingDialog(QDialog):
         self._free_label = QLabel()
         self._scan_label = QLabel()
         self._import_list = QListWidget()
-        self._theme_combo = QComboBox()
+        self._theme_combo = liste_deroulante()
         # Choixpeau : un groupe de boutons par question, plus la maison tirée.
         # Tout est initialisé ICI même si les widgets naissent à l'écran 4 —
         # le projet s'interdit `hasattr` sur un attribut de widget.
@@ -192,7 +192,7 @@ class OnboardingDialog(QDialog):
         lay.addWidget(subtitle)
         lay.addSpacing(8)
 
-        self._lang_combo = QComboBox()
+        self._lang_combo = liste_deroulante()
         for info in available_languages():
             self._lang_combo.addItem(info.name, info.code)
         index = self._lang_combo.findData(self.langue)

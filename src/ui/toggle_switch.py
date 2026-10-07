@@ -16,12 +16,16 @@ class ToggleSwitch(QWidget):
     _TRACK_W = 40
     _TRACK_H = 22
     _KNOB_R = 8   # rayon du cercle
+    # Marge autour de la piste, pour l'anneau de focus. Il était peint DANS la
+    # piste, or sur un interrupteur allumé : or sur or, invisible (Ludo,
+    # 2026-10-07, à la manette : « tout n'est pas mis en évidence »).
+    _MARGE = 4
 
     def __init__(self, checked: bool = False, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._checked = checked
         self._knob_x = float(self._TRACK_W - 12 if checked else 12)
-        self.setFixedSize(self._TRACK_W, self._TRACK_H)
+        self.setFixedSize(self._TRACK_W + 2 * self._MARGE, self._TRACK_H + 2 * self._MARGE)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         # Sans ceci l'interrupteur était `NoFocus` : SEPT réglages ne
         # s'atteignaient qu'à la souris — lecture automatique des vidéos, son,
@@ -85,6 +89,7 @@ class ToggleSwitch(QWidget):
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.translate(self._MARGE, self._MARGE)
         # Piste
         # Piste off = bordure forte du thème (bleu nuit en Poudlard, teinte maison sinon)
         track_color = accent_qcolor() if self._checked else QColor(current_theme().border_strong)
@@ -101,10 +106,10 @@ class ToggleSwitch(QWidget):
         # atteindre l'interrupteur sans jamais voir lequel est sélectionné.
         if self.property(_FOCUS_CLAVIER):
             p.setBrush(Qt.BrushStyle.NoBrush)
-            p.setPen(QPen(accent_qcolor(210), 1.2))
+            p.setPen(QPen(accent_qcolor(255), 2.0))
             p.drawRoundedRect(
-                QRectF(0, 0, self._TRACK_W, self._TRACK_H).adjusted(0.6, 0.6, -0.6, -0.6),
-                11, 11)
+                QRectF(0, 0, self._TRACK_W, self._TRACK_H).adjusted(-3, -3, 3, 3),
+                14, 14)
         p.end()
 
 

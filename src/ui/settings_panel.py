@@ -39,16 +39,28 @@ from src.core.season import (
 )
 from src.ui.theme import THEMES, themed
 from src.ui.toggle_switch import toggle_row
-from src.ui.utils import avertir, is_writable_dir, open_local_path, zone_defilable
+from src.ui.utils import avertir, is_writable_dir, liste_deroulante, open_local_path, zone_defilable
 
 log = logging.getLogger(__name__)
 
 # Style partagé des QComboBox du panneau (langue, thème, saison)
+# Le focus clavier et la ligne choisie d'une liste ouverte, en OR : `outline`
+# n'est pas peint sur une QComboBox (la règle globale de styles.py ne s'y
+# voyait pas), et la ligne choisie, #2c3e6b sur #16213e, ne se distinguait
+# pas des autres. Mesuré sur capture, Ludo à la manette le 2026-10-07 : « tout
+# n'est pas mis en évidence, surtout les paramètres graphiques et dropdown ».
+# Le cadre passe à 2 px et le remplissage perd 1 px : rien ne bouge.
 _COMBO_STYLE = (
     "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
     " border-radius: 6px; padding: 6px 12px; font-size: 13px; }"
-    "QComboBox QAbstractItemView { background: #16213e; color: #ffffff;"
-    " selection-background-color: #2c3e6b; }"
+    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 5px 11px; }"
+    "QComboBox QAbstractItemView { background: #16213e; color: #ffffff; outline: none;"
+    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
+    # La liste peint ses lignes elle-même : `selection-*` seul n'y changeait rien
+    # (ligne choisie au clavier, mesurée sans aucune différence de couleur).
+    "QComboBox QAbstractItemView::item { padding: 4px 8px; }"
+    "QComboBox QAbstractItemView::item:selected { background: rgba(214, 167, 44, 0.30);"
+    " color: #f0d060; }"
 )
 
 
@@ -246,7 +258,7 @@ class SettingsDialog(QDialog):
         return lbl
 
     def _combo(self) -> QComboBox:
-        combo = QComboBox()
+        combo = liste_deroulante()
         combo.setCursor(Qt.CursorShape.PointingHandCursor)
         combo.setStyleSheet(themed(_COMBO_STYLE))
         return combo
