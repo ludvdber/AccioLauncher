@@ -217,6 +217,16 @@ class TestGameManager:
         mgr.add_playtime("hp_test", 0)  # durée nulle ignorée
         assert mgr.get_playtime("hp_test") == 180
 
+    def test_un_arret_fatal_ne_compte_que_passe_dix_minutes(self, tmp_path):
+        """La boîte « Critical Error » d'UE1 garde le jeu en vie : 2 min devant
+        elle ne sont pas une partie (P1-001). 20 min, si : le plantage est venu
+        après une vraie partie, et l'effacer serait mentir aussi."""
+        mgr = _make_manager(tmp_path)
+        assert mgr.add_playtime("hp_test", 120, arret=True) is False
+        assert mgr.get_playtime("hp_test") == 0
+        assert mgr.add_playtime("hp_test", 1200, arret=True) is True
+        assert mgr.get_playtime("hp_test") == 1200
+
     def test_last_played_game_id(self, tmp_path):
         """Hero dynamique : jeu joué le plus récemment, ids retirés du catalogue ignorés."""
         mgr = _make_manager(tmp_path)

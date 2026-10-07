@@ -54,17 +54,22 @@ class GameSession(QObject):
     # infobulle. Le nom seulement : rien de ce qui suit n'est son affaire.
     demarree = pyqtSignal(str)
     # Le jeu s'est fermé. Émis APRÈS l'enregistrement, pour que la fiche
-    # rafraîchie par la fenêtre porte déjà le temps de cette partie. Le booléen
-    # dit si c'était une VRAIE partie : un jeu mort en une demi-seconde ne doit
-    # pas s'entendre souhaiter « bon jeu ». Le verdict vient d'`add_playtime`,
-    # seul endroit où le seuil est arbitré.
-    terminee = pyqtSignal(str, bool)
+    # rafraîchie par la fenêtre porte déjà le temps de cette partie. Le premier
+    # booléen dit si c'était une VRAIE partie : un jeu mort en une demi-seconde
+    # ne doit pas s'entendre souhaiter « bon jeu ». Le verdict vient
+    # d'`add_playtime`, seul endroit où le seuil est arbitré. Le second dit que
+    # le jeu a écrit un arrêt fatal : une boîte suit (`configuration_cassee` ou
+    # `arret_fatal`), la fenêtre n'a rien à dire de plus.
+    terminee = pyqtSignal(str, bool, bool)
     # Le jeu s'est arrêté sur une erreur d'AFFICHAGE que remettre sa
     # configuration répare (`config_cassee`) : identifiant du jeu, ligne du
     # journal. Émis APRÈS `terminee`, quand la fenêtre est revenue : c'est une
     # question à poser, et on ne la pose pas à une fenêtre dans la zone de
     # notification.
     configuration_cassee = pyqtSignal(str, str)
+    # Tout autre arrêt fatal écrit au journal du jeu (HP1-HP3) : identifiant du
+    # jeu, `config_cassee.Arret`. Émis APRÈS `terminee`, pour la même raison.
+    arret_fatal = pyqtSignal(str, object)
     # Ce que Windows a noté d'un lancement qui a planté ou échoué
     # (`diagnostic_plantage`) : identifiant du jeu, `Constat`. Émis depuis un
     # fil à part (~105 ms de `wevtutil`), donc reçu en file par la fenêtre,
@@ -144,11 +149,18 @@ class GameSession(QObject):
         # affirmer : on suppose une partie plutôt que d'accuser à tort.
         partie = True
         cassee = ""
+        arret: config_cassee.Arret | None = None
         game_id = self._game_id
         a_diagnostiquer: tuple | None = None
         if self._game_id:
+            game = self._manager.get_game_by_id(self._game_id)
+            # Lu AVANT de compter : la boîte « Critical Error » garde le jeu en
+            # vie tant qu'on ne la ferme pas, et la durée seule en faisait une
+            # partie (audit du 2026-10-07, P1-001).
+            if game is not None:
+                arret = config_cassee.apres_la_partie(game, self._debut)
             partie = self._manager.add_playtime(
-                self._game_id, int(duree), self._debut, code)
+                self._game_id, int(duree), self._debut, code, arret is not None)
             spec = self._spec(self._game_id)
             # Sans emplacement déclaré, on ne regarde rien : noter la
             # partie « sans sauvegarde » serait affirmer ce qu'on n'a pas vu.
@@ -158,16 +170,17 @@ class GameSession(QObject):
                     self._debut, int(duree))
             # Les captures que le jeu a posées chez lui rejoignent son dossier,
             # hors de ce qu'une désinstallation emporterait.
-            game = self._manager.get_game_by_id(self._game_id)
             if game is not None:
                 captures.ramasser(game, self._manager.config.install_path)
-                # Seulement si la remise est POSSIBLE : sinon la question
-                # n'aurait pas de bonne réponse.
-                if reparation_config.disponible(game, self._manager.config.install_path):
-                    cassee = config_cassee.apres_la_partie(game, self._debut) or ""
-                # Une seule question au retour : la remise de configuration,
-                # quand elle s'applique, répond déjà à l'arrêt.
-                if not cassee:
+                # La remise n'est proposée que si elle est POSSIBLE : sinon la
+                # question n'aurait pas de bonne réponse, et l'arrêt reçoit la
+                # boîte générale.
+                if (arret is not None and arret.genre == config_cassee.AFFICHAGE
+                        and reparation_config.disponible(game, self._manager.config.install_path)):
+                    cassee = arret.ligne
+                # Une seule boîte au retour : le journal du jeu, quand il en
+                # dit la cause, répond déjà à l'arrêt.
+                if arret is None:
                     a_diagnostiquer = (
                         self._manager.get_game_path(game_id), Path(game.executable).name,
                         self._pid, code, self._debut, partie)
@@ -176,9 +189,11 @@ class GameSession(QObject):
         self._pid = None
         self._avant = {}
         self._presence.clear()
-        self.terminee.emit(game_name, partie)
+        self.terminee.emit(game_name, partie, arret is not None)
         if cassee:
             self.configuration_cassee.emit(game_id, cassee)
+        elif arret is not None:
+            self.arret_fatal.emit(game_id, arret)
         elif a_diagnostiquer is not None:
             threading.Thread(target=self._diagnostiquer, args=(game_id, *a_diagnostiquer),
                              daemon=True, name=f"diagnostic-{game_id}").start()

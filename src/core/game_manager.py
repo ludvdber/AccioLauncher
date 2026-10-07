@@ -420,13 +420,16 @@ class GameManager:
     # ──────────────────── Stats de jeu ────────────────────
 
     def add_playtime(self, game_id: str, seconds: int,
-                     debut: datetime | None = None, code: int | None = None) -> bool:
+                     debut: datetime | None = None, code: int | None = None,
+                     arret: bool = False) -> bool:
         """Consigne ce qu'un lancement a donné : une partie, ou une tentative.
 
         **Rend True si c'était une vraie partie** : le seuil est arbitré ici
         seulement, et l'affichage en a besoin (pas de « bon jeu » à un jeu qui
         n'a pas démarré). Trop court, c'est une TENTATIVE, signature d'un jeu
-        qui refuse de démarrer.
+        qui refuse de démarrer. `arret` : le jeu a écrit un arrêt fatal dans son
+        journal (`config_cassee`) — sa boîte d'erreur le garde en vie tant
+        qu'on la regarde, d'où un seuil plus haut (`DUREE_MINIMALE_APRES_ARRET`).
 
         Cumuls en config = source rapide (fiche, cap Ko-fi) ; le journal
         (`stats.py`) garde le détail. `debut` : heure RELEVÉE au lancement,
@@ -435,9 +438,11 @@ class GameManager:
         if game_id not in self._index or seconds < 0:
             return False
         debut = debut or (datetime.now() - timedelta(seconds=int(seconds)))
-        if seconds < stats.DUREE_MINIMALE:
+        seuil = stats.DUREE_MINIMALE_APRES_ARRET if arret else stats.DUREE_MINIMALE
+        if seconds < seuil:
             stats.enregistrer_tentative(game_id, debut, int(seconds), code)
-            log.info("Lancement sans partie : %s (%d s, code %s)", game_id, seconds, code)
+            log.info("Lancement sans partie : %s (%d s, code %s%s)", game_id, seconds, code,
+                     ", arrêt fatal au journal" if arret else "")
             return False
         self.config.playtime_seconds[game_id] = (
             self.config.playtime_seconds.get(game_id, 0) + int(seconds)

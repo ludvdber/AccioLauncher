@@ -21,13 +21,14 @@ from src.core.i18n import tr
 from src.core import compat
 from src.core import manette
 from src.core import preparation_wine as preparation
-from src.core import copies_sauvegardes, reparation_config
+from src.core import config_cassee, copies_sauvegardes, reglages_graphiques, reparation_config
 from src.core.game_manager import GameState
 from src.core.liens import GUIDE_LINUX_URL
 from src.core.system_checks import (
     DLL_COMPILATEUR, DLL_DIRECTX9, PREREQUIS, VCREDIST_URL, VERBES_WINETRICKS, needed_space_mb,
     prerequis_manquants,
 )
+from src.ui.about_page import enregistrer_rapport, presse_papiers, texte_diagnostic
 from src.ui.preparateur_wine import noms_des_verbes
 from src.ui.utils import open_local_path, open_url
 from src.ui.copies_dialog import CopiesDialog
@@ -576,6 +577,94 @@ def proposer_apres_plantage(view: "GameDetailView", game: GameData, ligne: str) 
     )
     if choix == 0:
         _remettre_la_configuration(view, game)
+
+
+def _repli_graphique(view: "GameDetailView", game: GameData, arret):
+    """(fichier, réglage, avant, après) si un cran plus bas peut aider, None sinon.
+
+    Seulement pour un arrêt PENDANT le dessin d'une image, et un jeu dont les
+    réglages graphiques se règlent ici (HP3 sous Windows).
+    """
+    if arret.genre != config_cassee.DESSIN:
+        return None
+    conf = reglages_graphiques.chemin(
+        Path(view.manager.config.install_path) / Path(game.executable).parent)
+    if not reglages_graphiques.disponible(conf):
+        return None
+    repli = reglages_graphiques.repli_apres_echec(conf)
+    return None if repli is None else (conf, *repli)
+
+
+def _proposition_de_repli(reglage, apres) -> tuple[str, str]:
+    """Le paragraphe qui dit le cran proposé, et le libellé de son bouton."""
+    if reglage.ident == "graph_antialiasing" and apres != "off":
+        return (tr("Certaines puces graphiques, Intel notamment, refusent un anticrénelage "
+                   "aussi fort. Le launcher peut le passer à {} et relancer le jeu.").format(apres),
+                tr("Réessayer en {}").format(apres))
+    if reglage.ident == "graph_antialiasing":
+        return (tr("Certaines puces graphiques, Intel notamment, refusent l'anticrénelage. "
+                   "Le launcher peut l'éteindre et relancer le jeu."),
+                tr("Réessayer sans anticrénelage"))
+    return (tr("L'anticrénelage est déjà éteint, mais les ombres et reflets sont encore "
+               "agrandis. Le launcher peut les remettre à leur taille d'origine et relancer le jeu."),
+            tr("Réessayer avec les ombres d'origine"))
+
+
+def signaler_arret(view: "GameDetailView", game: GameData, arret) -> None:
+    """Le jeu a écrit un arrêt fatal dans son journal (`config_cassee`).
+
+    Une boîte et pas un toast (règle 115). La ligne est montrée telle que le
+    joueur l'a vue dans la boîte du jeu. « Copier le rapport » met le rapport
+    complet (journaux du jeu compris) dans le presse-papiers : un Ctrl+V sur le
+    Discord le joint, sans photo de l'écran prise au téléphone (audit du
+    2026-10-07, P1-007). Pour HP3, un cran de réglage graphique plus bas est
+    proposé d'abord, puis le jeu est relancé (P3-001).
+    """
+    texte = tr("Le jeu a écrit cette erreur avant de s'arrêter :\n« {} »").format(arret.ligne)
+    repli = _repli_graphique(view, game, arret)
+    choix: tuple[str, ...] = (tr("Copier le rapport"), tr("Fermer"))
+    if repli is not None:
+        conf, reglage, _avant, apres = repli
+        paragraphe, bouton = _proposition_de_repli(reglage, apres)
+        texte += "\n\n" + paragraphe + " " + tr(
+            "« Rétablir les réglages d'origine », dans l'engrenage du jeu, remet tout comme avant.")
+        choix = (bouton, *choix)
+    texte += "\n\n" + tr("Si le problème continue, « Copier le rapport » prépare tout ce qu'il "
+                         "faut pour demander de l'aide sur le Discord : un Ctrl+V l'y joint.")
+    reponse = _boite(QMessageBox.Icon.Warning, view,
+                     tr("{} s'est arrêté sur une erreur").format(game.name), texte, choix,
+                     len(choix) - 1)
+    if repli is not None:
+        if reponse == 0:
+            _reessayer_plus_bas(view, game, conf, reglage, apres)
+            return
+        reponse -= 1          # les deux autres boutons, comme sans repli
+    if reponse == 0:
+        _copier_le_rapport(view)
+
+
+def _reessayer_plus_bas(view: "GameDetailView", game: GameData, conf: Path, reglage, apres) -> None:
+    try:
+        reglages_graphiques.ecrire(conf, reglage, apres)
+    except (OSError, ValueError):
+        log.warning("Repli graphique de %s impossible", game.id, exc_info=True)
+        _boite(QMessageBox.Icon.Warning, view, tr("Réglage non changé"),
+               tr("Le fichier des réglages graphiques n'a pas pu être écrit. "
+                  "Le journal du launcher en dit la raison."))
+        return
+    log.info("Repli graphique après un arrêt de %s : %s = %s", game.id, reglage.cle, apres)
+    if view.game is not None and view.game.id == game.id:
+        on_play(view)
+    else:
+        view.notify.emit(tr("Réglage changé : relancez {}.").format(game.name))
+
+
+def _copier_le_rapport(view: "GameDetailView") -> None:
+    """Le même rapport que Paramètres → À propos : le fichier, et le résumé en texte."""
+    resume = texte_diagnostic(view.manager)
+    QApplication.clipboard().setMimeData(
+        presse_papiers(resume, enregistrer_rapport(view.manager, resume)))
+    view.notify.emit(tr("Copié — Ctrl+V sur le Discord joint le rapport"))
 
 
 def signaler_plantage(view: "GameDetailView", game: GameData, constat) -> None:

@@ -66,6 +66,12 @@ _MAX_SESSIONS = 20_000
 # `MainWindow._on_game_exited` depuis toujours ; il est redit ici pour que le
 # journal reste propre même si un autre appelant arrive un jour.
 DUREE_MINIMALE = 10
+# Un jeu qui a écrit un arrêt fatal (`config_cassee`) : sa boîte d'erreur le
+# garde en vie tant qu'on la regarde, voire pendant qu'on demande de l'aide sur
+# Discord. Sous ce seuil, la durée peut n'être QUE la boîte : tentative. Au-delà,
+# une partie a bien été jouée avant le plantage, et l'effacer des statistiques
+# serait un autre mensonge.
+DUREE_MINIMALE_APRES_ARRET = 600
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +103,7 @@ class Tentative:
 
     jeu: str
     debut: datetime
-    duree: int          # secondes, < DUREE_MINIMALE par construction
+    duree: int          # secondes, < DUREE_MINIMALE (< DUREE_MINIMALE_APRES_ARRET après un arrêt fatal)
     code: int | None    # code de sortie du processus, None si inconnu
 
 

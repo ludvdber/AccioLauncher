@@ -2357,6 +2357,26 @@ class TestEchecDeLancementVisible:
         assert win._toast.isVisible(), "l'échec passe inaperçu"
         assert "n'a pas démarré" in win._toast.text()
 
+    def test_un_arret_fatal_hors_affichage_n_annonce_pas_bon_jeu(self, make_window, qtbot, monkeypatch):
+        """M-04 de l'audit du 2026-10-07 : la boîte « Critical Error » d'UE1
+        regardée longtemps gardait le jeu en vie, et le joueur recevait « Bon
+        jeu ! ». Le journal du jeu est simulé (règle 78 : rien du catalogue)."""
+        from src.core import config_cassee
+        from src.ui import game_detail_handlers, game_session
+        arret = config_cassee.Arret("Assertion failed: Bitmap.LoadFile(Filename)", config_cassee.AUTRE)
+        monkeypatch.setattr(game_session.config_cassee, "apres_la_partie", lambda *_a: arret)
+        boites = []
+        monkeypatch.setattr(game_detail_handlers, "signaler_arret",
+                            lambda _v, game, a: boites.append((game.id, a)))
+        win = make_window()
+        win.show()
+        jeu = win._detail.game.id
+        message = self._retour(win, qtbot, 120.0)
+        assert "Bon jeu" not in message
+        assert not win._toast.isVisible(), "un toast par-dessus la boîte"
+        assert boites == [(jeu, arret)]
+        assert win.manager.get_playtime(jeu) == 0, "deux minutes devant l'erreur comptées comme partie"
+
 
 
 class TestSansZoneDeNotification:

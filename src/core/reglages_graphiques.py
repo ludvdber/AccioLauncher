@@ -179,6 +179,35 @@ def ecrire(conf: Path, reglage: Reglage, valeur) -> None:
     log.info("Réglages graphiques : %s = %s dans %s", reglage.cle, texte, conf)
 
 
+# Après un arrêt PENDANT le dessin d'une image (`config_cassee.DESSIN`), un cran
+# à la fois : l'anticrénelage d'abord (8x → 4x → aucun, ce que l'aide du réglage
+# conseille déjà), puis ses effets sur les ombres et reflets. Un cran, et non
+# tout d'un coup : le joueur garde la plus belle image que sa puce accepte.
+_ANTIALIASING_PLUS_BAS = {"8x": "4x", "4x": "off", "2x": "off"}
+
+
+def repli_apres_echec(conf: Path) -> tuple[Reglage, object, object] | None:
+    """Le prochain cran à descendre : (réglage, valeur actuelle, valeur proposée).
+
+    None quand il n'y a plus rien à baisser, ou que le fichier est illisible :
+    proposer de réessayer sans rien changer serait promettre pour rien (règle 108).
+    """
+    aa = REGLAGES["graph_antialiasing"]
+    rendu = REGLAGES["graph_textures_rendu"]
+    try:
+        actuel = lire(conf, aa).valeur
+        if actuel in _ANTIALIASING_PLUS_BAS:
+            return aa, actuel, _ANTIALIASING_PLUS_BAS[actuel]
+        # Une valeur posée à la main (16x…) : le premier cran proposé.
+        if actuel not in ("off", "appdriven"):
+            return aa, actuel, "4x"
+        if lire(conf, rendu).valeur:
+            return rendu, True, False
+    except OSError:
+        log.warning("Réglages graphiques : %s illisible pour un repli", conf, exc_info=True)
+    return None
+
+
 def remettre_origine(conf: Path) -> None:
     """Remet les clés réglables telles que les portait le fichier d'origine."""
     origine, _ = _lire(chemin_origine(conf))

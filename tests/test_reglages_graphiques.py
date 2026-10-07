@@ -104,6 +104,27 @@ class TestEcriture:
         assert conf.read_bytes() == CONF.encode()
 
 
+class TestRepliApresEchec:
+    """Après « SetRenderTarget failed » : un cran plus bas à la fois (P3-001)."""
+
+    def test_l_echelle_complete(self, conf):
+        crans = []
+        while (repli := rg.repli_apres_echec(conf)) is not None:
+            reglage, avant, apres = repli
+            crans.append((reglage.ident, avant, apres))
+            rg.ecrire(conf, reglage, apres)
+        assert crans == [("graph_antialiasing", "8x", "4x"),
+                         ("graph_antialiasing", "4x", "off"),
+                         ("graph_textures_rendu", True, False)]
+
+    def test_une_valeur_posee_a_la_main_descend_a_4x(self, conf):
+        conf.write_bytes(CONF.replace("= 8x", "= 16x").encode())
+        assert rg.repli_apres_echec(conf)[1:] == ("16x", "4x")
+
+    def test_fichier_illisible_rien_a_proposer(self, tmp_path):
+        assert rg.repli_apres_echec(tmp_path / "absent.conf") is None
+
+
 class TestDisponible:
     def test_windows_seulement(self, conf, monkeypatch):
         monkeypatch.setattr(rg.sys, "platform", "linux")

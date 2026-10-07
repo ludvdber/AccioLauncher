@@ -25,12 +25,22 @@ configuration n'y ferait rien, et le proposer serait mentir (règle 108).
 vie jusqu'à ce qu'on la ferme. Un jeu qui ne démarre pas peut donc « durer »
 une minute. C'est la DATE du journal qui dit qu'il vient de cette partie.
 
+**Tout arrêt fatal compte, pas seulement l'affichage** (audit du 2026-10-07,
+P1-001) : le joueur HP3 sur Intel UHD restait la boîte « Critical Error »
+ouverte plus de 10 s, recevait « Bon jeu ! », et sa tentative comptait comme une
+partie. `apres_la_partie` rend donc un `Arret` pour toute ligne `Critical:`,
+avec son genre : seul « affichage » se répare en remettant la configuration ;
+« dessin » est l'arrêt PENDANT le dessin d'une image (HP3 : moins
+d'anticrénelage, `reglages_graphiques.repli_apres_echec`) ; « autre » n'a que le
+rapport à offrir.
+
 Lecture seule, ne lève jamais.
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -49,6 +59,21 @@ _FIN = 64_000
 # Un journal écrit un peu AVANT le lancement noté n'est pas le nôtre ; la marge
 # couvre l'arrondi des dates de fichier (2 s sous FAT, 1 s ailleurs).
 _MARGE_S = 2.0
+
+AFFICHAGE = "affichage"
+DESSIN = "dessin"
+AUTRE = "autre"
+
+
+@dataclass(frozen=True)
+class Arret:
+    """Un arrêt fatal lu au journal du jeu.
+
+    `ligne` : la première ligne « Critical: » qui porte un message, telle que
+    le joueur l'a vue dans la boîte du jeu. `genre` : AFFICHAGE, DESSIN ou AUTRE.
+    """
+    ligne: str
+    genre: str
 
 
 def journal(game: GameData) -> Path | None:
@@ -93,17 +118,18 @@ def _lire_la_fin(chemin: Path) -> str:
         return f.read().decode("cp1252", errors="replace")
 
 
-def erreur_d_affichage(texte: str) -> str | None:
-    """La ligne qui nomme l'erreur, si le journal finit sur une erreur d'affichage.
+def arret_fatal(texte: str) -> Arret | None:
+    """L'arrêt fatal que le journal raconte, None s'il n'y en a pas.
 
-    Rend la première ligne « Critical: » qui porte un message (pas « appError
-    called: »), pour la montrer telle quelle : c'est celle qu'on cherche sur
-    Discord. None si aucune ligne critique ne parle d'affichage.
+    La ligne rendue est la première « Critical: » qui porte un message (pas
+    « appError called: ») : c'est celle qu'on cherche sur Discord.
     """
     critiques = [ligne.strip()[len("Critical:"):].strip()
                  for ligne in texte.splitlines()
                  if ligne.strip().startswith("Critical:")]
-    if not any(signe in c.lower() for c in critiques for signe in _SIGNES):
+    ligne = next((c for c in critiques
+                  if c and not c.lower().startswith("apperror called")), "")
+    if not ligne:
         return None
     # Un arrêt PENDANT le dessin d'une image : l'affichage s'était ouvert, la
     # configuration n'y est pour rien. Cas réel (HP3, joueur sur Intel UHD,
@@ -111,15 +137,21 @@ def erreur_d_affichage(texte: str) -> str | None:
     # « … UGameEngine::Draw <- UWindowsViewport::Repaint … » — « viewport »
     # y figure, et proposer la remise aurait été mentir (règle 108).
     if any(d in c.lower() for c in critiques for d in _EN_DESSIN):
-        return None
-    for c in critiques:
-        if c and not c.lower().startswith("appError called".lower()):
-            return c
-    return None
+        return Arret(ligne, DESSIN)
+    if any(signe in c.lower() for c in critiques for signe in _SIGNES):
+        return Arret(ligne, AFFICHAGE)
+    return Arret(ligne, AUTRE)
 
 
-def apres_la_partie(game: GameData, debut: datetime | None) -> str | None:
-    """L'erreur d'affichage que le jeu vient d'écrire, None sinon."""
+def erreur_d_affichage(texte: str) -> str | None:
+    """La ligne qui nomme l'erreur, si le journal finit sur une erreur d'affichage
+    que remettre la configuration répare. None sinon."""
+    arret = arret_fatal(texte)
+    return arret.ligne if arret is not None and arret.genre == AFFICHAGE else None
+
+
+def apres_la_partie(game: GameData, debut: datetime | None) -> Arret | None:
+    """L'arrêt fatal que le jeu vient d'écrire dans son journal, None sinon."""
     if debut is None:
         return None
     chemin = journal(game)
@@ -131,7 +163,8 @@ def apres_la_partie(game: GameData, debut: datetime | None) -> str | None:
         texte = _lire_la_fin(chemin)
     except OSError:
         return None
-    ligne = erreur_d_affichage(texte)
-    if ligne:
-        log.info("%s : erreur d'affichage au journal (%s) : %s", game.id, chemin.name, ligne)
-    return ligne
+    arret = arret_fatal(texte)
+    if arret is not None:
+        log.info("%s : arrêt fatal au journal (%s, %s) : %s",
+                 game.id, chemin.name, arret.genre, arret.ligne)
+    return arret

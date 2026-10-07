@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
         self._detail.partie_en_cours = lambda: self._session.nom_en_cours
         self._session.terminee.connect(self._on_game_exited)
         self._session.configuration_cassee.connect(self._on_configuration_cassee)
+        self._session.arret_fatal.connect(self._on_arret_fatal)
         self._session.diagnostic.connect(self._on_diagnostic)
 
     # ──────────────────── Update checker ────────────────────
@@ -471,16 +472,20 @@ class MainWindow(QMainWindow):
         if self.isVisible() and self._session.nom_en_cours:
             self._minimize_to_tray()
 
-    def _on_game_exited(self, game_name: str, partie: bool = True) -> None:
+    def _on_game_exited(self, game_name: str, partie: bool = True, arret: bool = False) -> None:
         """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé.
 
         `partie` vient d'`add_playtime`, seul arbitre du seuil. Faux : le jeu
-        n'a pas démarré, donc pas de « Bon jeu ! » (règle 108).
+        n'a pas démarré, donc pas de « Bon jeu ! » (règle 108). `arret` : le
+        jeu a écrit un arrêt fatal, la boîte qui suit dit tout — ni « Bon jeu ! »
+        ni toast par-dessus.
         """
         self._tray.set_tooltip("Accio Launcher")
         self._retrait.oublier()
         self._restore_from_tray()
-        if partie:
+        if arret:
+            self._status_bar.showMessage(tr("Retour de {}").format(game_name))
+        elif partie:
             self._status_bar.showMessage(
                 tr("Retour de {} — Bon jeu !").format(game_name))
         else:
@@ -495,13 +500,22 @@ class MainWindow(QMainWindow):
         # sans transition) : le temps de cette partie vient d'être enregistré.
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
-        self._maybe_thank_milestone()
+        # Un remerciement juste avant une boîte d'erreur serait déplacé : il
+        # attendra le prochain retour sans accroc.
+        if not arret:
+            self._maybe_thank_milestone()
 
     def _on_configuration_cassee(self, game_id: str, ligne: str) -> None:
         """Le jeu s'est arrêté sur une erreur d'affichage : proposer la remise."""
         game = self.manager.get_game_by_id(game_id)
         if game is not None:
             game_detail_handlers.proposer_apres_plantage(self._detail, game, ligne)
+
+    def _on_arret_fatal(self, game_id: str, arret: object) -> None:
+        """Le jeu a écrit un arrêt fatal : le dire, avec le rapport à copier."""
+        game = self.manager.get_game_by_id(game_id)
+        if game is not None:
+            game_detail_handlers.signaler_arret(self._detail, game, arret)
 
     def _on_diagnostic(self, game_id: str, constat: object) -> None:
         """Windows a noté pourquoi le jeu s'est arrêté : le dire."""

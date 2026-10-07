@@ -163,13 +163,13 @@ class TestUnLancementRateSeDitCommeTel:
         session.demarrer(_FauxProcess(), "HP1", "hp1")
         with qtbot.waitSignal(session.terminee, timeout=1000) as bloc:
             session._monitor.game_exited.emit("HP1", 0, 1200.0)
-        assert bloc.args == ["HP1", True]
+        assert bloc.args == ["HP1", True, False]
 
     def test_un_lancement_avorte_annonce_un_echec(self, session, qtbot):
         session.demarrer(_FauxProcess(), "HP1", "hp1")
         with qtbot.waitSignal(session.terminee, timeout=1000) as bloc:
             session._monitor.game_exited.emit("HP1", 0, 0.5)
-        assert bloc.args == ["HP1", False]
+        assert bloc.args == ["HP1", False, False]
 
     def test_sans_session_ouverte_on_n_accuse_pas(self, session, qtbot):
         """Le moniteur peut conclure sans qu'on ait rien ouvert (relance de
@@ -177,7 +177,7 @@ class TestUnLancementRateSeDitCommeTel:
         tort un jeu qui a très bien tourné serait pire que se taire."""
         with qtbot.waitSignal(session.terminee, timeout=1000) as bloc:
             session._monitor.game_exited.emit("HP1", 0, 1200.0)
-        assert bloc.args == ["HP1", True]
+        assert bloc.args == ["HP1", True, False]
 
     def test_le_seuil_reste_celui_d_add_playtime(self, session):
         """Contre-épreuve du découplage : c'est bien le manager qui tranche."""

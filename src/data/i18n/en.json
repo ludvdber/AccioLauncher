@@ -733,6 +733,19 @@
     "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Setting not saved: the game's graphics settings file could not be changed (game running, or read-only file).",
     "Remplir l'écran ({} × {})": "Fill the screen ({} × {})",
     "Remplir l'écran": "Fill the screen",
-    "La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.": "The size of the game's image. By default, the largest whose window fits on the screen, title bar included, without going under the taskbar. A smaller size lightens the graphics card's work. Applied at every launch, even if the game's menu or Alt+Enter changed it in the meantime."
+    "La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.": "The size of the game's image. By default, the largest whose window fits on the screen, title bar included, without going under the taskbar. A smaller size lightens the graphics card's work. Applied at every launch, even if the game's menu or Alt+Enter changed it in the meantime.",
+    "Le jeu a écrit cette erreur avant de s'arrêter :\n« {} »": "The game wrote this error before stopping:\n“{}”",
+    "{} s'est arrêté sur une erreur": "{} stopped on an error",
+    "Certaines puces graphiques, Intel notamment, refusent un anticrénelage aussi fort. Le launcher peut le passer à {} et relancer le jeu.": "Some graphics chips, Intel ones in particular, refuse such strong anti-aliasing. The launcher can lower it to {} and start the game again.",
+    "Réessayer en {}": "Retry at {}",
+    "Certaines puces graphiques, Intel notamment, refusent l'anticrénelage. Le launcher peut l'éteindre et relancer le jeu.": "Some graphics chips, Intel ones in particular, refuse anti-aliasing. The launcher can turn it off and start the game again.",
+    "Réessayer sans anticrénelage": "Retry without anti-aliasing",
+    "L'anticrénelage est déjà éteint, mais les ombres et reflets sont encore agrandis. Le launcher peut les remettre à leur taille d'origine et relancer le jeu.": "Anti-aliasing is already off, but shadows and reflections are still enlarged. The launcher can put them back to their original size and start the game again.",
+    "Réessayer avec les ombres d'origine": "Retry with the original shadows",
+    "« Rétablir les réglages d'origine », dans l'engrenage du jeu, remet tout comme avant.": "“Restore the original settings”, in the game's gear, puts everything back as it was.",
+    "Si le problème continue, « Copier le rapport » prépare tout ce qu'il faut pour demander de l'aide sur le Discord : un Ctrl+V l'y joint.": "If the problem goes on, “Copy report” prepares everything needed to ask for help on the Discord: Ctrl+V attaches it there.",
+    "Réglage non changé": "Setting not changed",
+    "Le fichier des réglages graphiques n'a pas pu être écrit. Le journal du launcher en dit la raison.": "The graphics settings file could not be written. The launcher's log says why.",
+    "Réglage changé : relancez {}.": "Setting changed: start {} again."
   }
 }
