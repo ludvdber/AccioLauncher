@@ -31,19 +31,26 @@ import time
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
 from PyQt6.QtGui import QCursor, QKeyEvent
 from PyQt6.QtWidgets import (
-    QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QApplication,
-    QComboBox, QLineEdit, QSlider, QWidget,
+    QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QApplication,
+    QComboBox, QSlider, QWidget,
 )
 
 from src.core import manette_lecture as lecture
 
 log = logging.getLogger(__name__)
 
-# Ces widgets gardent leurs flèches ↑ ↓ : elles y ont un sens (même liste
-# que `clavier_global._EDITION`, plus les listes, dont les popups des combos).
-_GARDENT_HAUT_BAS = (QLineEdit, QComboBox, QSlider, QAbstractSpinBox, QAbstractItemView)
-# Espace y écrirait ou n'y ferait rien : on y valide par Entrée.
-_VALIDENT_PAR_ENTREE = (QLineEdit, QAbstractSpinBox, QAbstractItemView)
+# Ces widgets gardent leurs flèches ↑ ↓ : elles y font défiler une liste ou
+# un nombre. PAS une liste déroulante fermée (↑ ↓ y changeaient le réglage, et
+# l'écrivaient aussitôt) ni un curseur horizontal (← → y règlent déjà la
+# valeur) : Ludo, 2026-10-07, « bloqué sur la barre de son, qui augmente et
+# diminue sans arrêt » — rien ne faisait sortir du curseur de volume. La
+# croix ouvre la liste déroulante ; dans la liste ouverte, ↑ ↓ choisissent.
+_GARDENT_HAUT_BAS = (QAbstractSpinBox, QAbstractItemView)
+# Seuls ces widgets se PRESSENT à l'Espace. Ailleurs (zone qui défile, texte de
+# la fiche, champ de saisie) on envoie Entrée, que la fenêtre principale
+# change en JOUER quand le widget n'en fait rien : la croix au démarrage lance
+# le jeu au lieu de ne rien faire.
+_SE_PRESSENT = (QAbstractButton, QComboBox)
 
 PERIODE_MS = 16            # 60 lectures par seconde : un appui bref (≈ 60 ms) n'échappe pas
 PERIODE_SANS_MANETTE_MS = 500
@@ -145,18 +152,19 @@ class NavigationManette(QObject):
             case lecture.DROITE | lecture.SUIVANT:
                 self._envoyer(cible, Qt.Key.Key_Right)
             case lecture.HAUT | lecture.BAS:
-                if dans_un_menu or isinstance(focus, _GARDENT_HAUT_BAS):
+                if dans_un_menu or isinstance(focus, _GARDENT_HAUT_BAS) or (
+                        isinstance(focus, QSlider)
+                        and focus.orientation() == Qt.Orientation.Vertical):
                     self._envoyer(cible, Qt.Key.Key_Up if action == lecture.HAUT else Qt.Key.Key_Down)
                 elif action == lecture.HAUT:
                     self._envoyer(cible, Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
                 else:
                     self._envoyer(cible, Qt.Key.Key_Tab)
             case lecture.VALIDER:
-                if dans_un_menu or focus is None or focus.isWindow() \
-                        or isinstance(focus, _VALIDENT_PAR_ENTREE):
-                    self._envoyer(cible, Qt.Key.Key_Return)
-                else:
+                if not dans_un_menu and isinstance(focus, _SE_PRESSENT):
                     self._envoyer(cible, Qt.Key.Key_Space)
+                else:
+                    self._envoyer(cible, Qt.Key.Key_Return)
             case lecture.RETOUR:
                 self._envoyer(cible, Qt.Key.Key_Escape)
 

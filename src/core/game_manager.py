@@ -307,7 +307,7 @@ class GameManager:
         apply_ini_patches(game, self.config)
         # Taille de fenêtre APRÈS la restauration, qui recopierait le modèle
         # (1024×768 pour HP2) ; écrite à chaque fois, raison dans le module.
-        resolution_jeu.appliquer(game, self.config, resolution_jeu.ecran_principal())
+        resolution_jeu.appliquer(game, self.config, resolution_jeu.place_pour(game, self.config))
         # Langue par FICHIERS (HP1) APRÈS la restauration, qui recopierait un
         # HP.ini français par-dessus.
         if game.langue_par_fichiers \

@@ -678,12 +678,10 @@
     "Fermez {} avant de remettre sa configuration.": "Close {} before restoring its configuration.",
     "Avant chaque partie, le lanceur garde une copie de chaque sauvegarde qui a changé. Les dates sont celles où le jeu a écrit chaque version.": "Before each session, the launcher keeps a copy of every save that has changed. The dates are when the game wrote each version.",
     "Celle de l'écran": "Same as the screen",
-    "Celle de l'écran ({} × {})": "Same as the screen ({} × {})",
     "Copier les sauvegardes avant chaque partie": "Copy saves before each session",
     "Fermez {} avant de remettre une sauvegarde : il la réécrirait en quittant.": "Close {} before restoring a save: it would overwrite it when quitting.",
     "Ko": "KB",
     "La sauvegarde": "The save",
-    "La taille de la fenêtre du jeu, sans bordure. Par défaut celle de l'écran : le jeu le remplit, sans passer en plein écran exclusif. Une taille plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.": "The size of the game's borderless window. By default, the screen's: the game fills it without switching to exclusive fullscreen. A smaller size lightens the graphics card's load. Applied at every launch, even if the game's menu or Alt+Enter changed it in the meantime.",
     "Le jeu s'est arrêté sur une erreur d'affichage :\n« {} »\n\nC'est presque toujours sa configuration, abîmée par un changement dans ses options graphiques. La remettre suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\nL'ancienne configuration est gardée de côté ; les sauvegardes ne sont pas touchées.": "The game stopped on a display error:\n“{}”\n\nThis is almost always its configuration, damaged by a change in its graphics options. Restoring it is usually enough: it's instant, nothing is downloaded.\n\nThe old configuration is kept aside; saves are not touched.",
     "Ouvrir le dossier des copies": "Open the copies folder",
     "Partie en cours": "Game running",
@@ -732,6 +730,9 @@
     "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, le diablotin se fige et certains portraits ne s'ouvrent plus. 30 fait moins chauffer l'ordinateur.": "This game must not go above 60 frames per second: beyond that, the imp freezes and some portraits no longer open. 30 makes the computer run cooler.",
     "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale quand la caméra tourne, contre un peu plus de délai entre la souris et l'image.": "Locks frames to the screen's refresh rate: no more horizontal tearing when the camera turns, at the cost of a little more delay between the mouse and the image.",
     "Remet image et performances comme à l'installation du jeu.": "Puts image and performance back as they were when the game was installed.",
-    "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Setting not saved: the game's graphics settings file could not be changed (game running, or read-only file)."
+    "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Setting not saved: the game's graphics settings file could not be changed (game running, or read-only file).",
+    "Remplir l'écran ({} × {})": "Fill the screen ({} × {})",
+    "Remplir l'écran": "Fill the screen",
+    "La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.": "The size of the game's image. By default, the largest whose window fits on the screen, title bar included, without going under the taskbar. A smaller size lightens the graphics card's work. Applied at every launch, even if the game's menu or Alt+Enter changed it in the meantime."
   }
 }

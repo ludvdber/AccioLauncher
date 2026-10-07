@@ -678,12 +678,10 @@
     "Fermez {} avant de remettre sa configuration.": "Cierra {} antes de restablecer su configuración.",
     "Avant chaque partie, le lanceur garde une copie de chaque sauvegarde qui a changé. Les dates sont celles où le jeu a écrit chaque version.": "Antes de cada partida, el lanzador guarda una copia de cada partida guardada que ha cambiado. Las fechas son las del momento en que el juego escribió cada versión.",
     "Celle de l'écran": "La de la pantalla",
-    "Celle de l'écran ({} × {})": "La de la pantalla ({} × {})",
     "Copier les sauvegardes avant chaque partie": "Copiar las partidas guardadas antes de cada partida",
     "Fermez {} avant de remettre une sauvegarde : il la réécrirait en quittant.": "Cierra {} antes de restaurar una partida guardada: la sobrescribiría al salir.",
     "Ko": "KB",
     "La sauvegarde": "La partida guardada",
-    "La taille de la fenêtre du jeu, sans bordure. Par défaut celle de l'écran : le jeu le remplit, sans passer en plein écran exclusif. Une taille plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.": "El tamaño de la ventana sin bordes del juego. Por defecto, el de la pantalla: el juego la llena sin pasar a pantalla completa exclusiva. Un tamaño menor aligera el trabajo de la tarjeta gráfica. Se aplica en cada inicio, aunque el menú del juego o Alt+Intro lo hayan cambiado mientras tanto.",
     "Le jeu s'est arrêté sur une erreur d'affichage :\n« {} »\n\nC'est presque toujours sa configuration, abîmée par un changement dans ses options graphiques. La remettre suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\nL'ancienne configuration est gardée de côté ; les sauvegardes ne sont pas touchées.": "El juego se detuvo por un error de visualización:\n«{}»\n\nCasi siempre es su configuración, dañada por un cambio en sus opciones gráficas. Restaurarla suele bastar: es inmediato, no se descarga nada.\n\nLa configuración anterior se guarda aparte; las partidas guardadas no se tocan.",
     "Ouvrir le dossier des copies": "Abrir la carpeta de copias",
     "Partie en cours": "Partida en curso",
@@ -732,6 +730,9 @@
     "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, le diablotin se fige et certains portraits ne s'ouvrent plus. 30 fait moins chauffer l'ordinateur.": "Este juego no debe superar 60 imágenes por segundo: por encima, el diablillo se congela y algunos retratos ya no se abren. 30 calienta menos el ordenador.",
     "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale quand la caméra tourne, contre un peu plus de délai entre la souris et l'image.": "Ajusta las imágenes a la frecuencia de la pantalla: se acaba el desgarro horizontal al girar la cámara, a cambio de un poco más de retardo entre el ratón y la imagen.",
     "Remet image et performances comme à l'installation du jeu.": "Devuelve imagen y rendimiento a como estaban al instalar el juego.",
-    "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Ajuste no guardado: no se pudo modificar el archivo de ajustes gráficos del juego (juego en curso o archivo de solo lectura)."
+    "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Ajuste no guardado: no se pudo modificar el archivo de ajustes gráficos del juego (juego en curso o archivo de solo lectura).",
+    "Remplir l'écran ({} × {})": "Llenar la pantalla ({} × {})",
+    "Remplir l'écran": "Llenar la pantalla",
+    "La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.": "El tamaño de la imagen del juego. Por defecto, el mayor cuya ventana cabe en la pantalla, barra de título incluida, sin pasar bajo la barra de tareas. Un tamaño menor aligera el trabajo de la tarjeta gráfica. Se aplica en cada inicio, aunque el menú del juego o Alt+Intro lo hayan cambiado mientras tanto."
   }
 }

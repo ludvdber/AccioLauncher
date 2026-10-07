@@ -116,10 +116,10 @@ class TestLancement:
         appels = []
         monkeypatch.setattr(gm.resolution_jeu, "appliquer",
                             lambda g, c, e: appels.append((g.id, e)))
-        monkeypatch.setattr(gm.resolution_jeu, "ecran_principal", lambda: (1920, 1200))
+        monkeypatch.setattr(gm.resolution_jeu, "place_disponible", lambda: (1920, 1200))
         source = __import__("inspect").getsource(gm.GameManager.launch_game)
         assert source.index("apply_ini_patches(") < source.index("resolution_jeu.appliquer(")
-        gm.resolution_jeu.appliquer(game, config, gm.resolution_jeu.ecran_principal())
+        gm.resolution_jeu.appliquer(game, config, gm.resolution_jeu.place_disponible())
         assert appels == [("hp2", (1920, 1200))]
 
 
@@ -129,7 +129,7 @@ class TestFenetre:
     def _dialogue(self, qtbot, game, config, monkeypatch, ecran=(2560, 1440)):
         from src.ui import game_settings_dialog as gsd
         from src.ui import reglages_rubriques as rr
-        monkeypatch.setattr(rr.resolution_jeu, "ecran_principal", lambda: ecran)
+        monkeypatch.setattr(rr.resolution_jeu, "place_disponible", lambda: ecran)
         manager = SimpleNamespace(config=config, game_language=lambda _g: None)
         dlg = gsd.GameSettingsDialog(game, manager, appliquer_langue=lambda _c: True)
         qtbot.addWidget(dlg)
@@ -146,7 +146,7 @@ class TestFenetre:
         game, config, _ = jeu
         dlg = self._dialogue(qtbot, self._jeu_complet(game), config, monkeypatch)
         choix = dlg._choix_resolution
-        assert choix.currentText() == "Celle de l'écran (2560 × 1440)"
+        assert choix.currentText() == "Remplir l'écran (2560 × 1440)"
         choix.setCurrentIndex(choix.findData("1920x1080"))
         assert config.resolution_jeu == {"hp2": "1920x1080"}
         choix.setCurrentIndex(0)
@@ -164,3 +164,70 @@ class TestFenetre:
                                                  resolution=None))
         dlg = self._dialogue(qtbot, sans, config, monkeypatch)
         assert dlg._choix_resolution is None
+
+
+class TestPlaceDisponible:
+    """VU le 2026-10-07 : la fenêtre a un cadre ; à la taille de l'écran, elle
+    passait sous la barre des tâches (2578×1487 sur un écran 2560×1440 à 125 %)."""
+
+    def test_le_cadre_mesure_a_125_pourcent(self, monkeypatch):
+        if __import__("sys").platform == "win32":
+            assert rj.cadre(120) == (18, 47)               # mesuré sur la fenêtre de HP1
+        monkeypatch.setattr(rj.sys, "platform", "linux")
+        assert rj.cadre(96) == (16, 39) and rj.cadre(120) == (20, 49)
+
+    def test_zone_de_travail_moins_le_cadre(self, monkeypatch):
+        monkeypatch.setattr(rj, "cadre", lambda dpi: (18, 47))
+        # 2560×1440, barre des tâches de 48 px : 2560×1392 de zone de travail.
+        assert rj.dans_le_cadre((2560, 1392), 120) == (2542, 1345)
+
+    def test_trop_petit_rien(self, monkeypatch):
+        monkeypatch.setattr(rj, "cadre", lambda dpi: (18, 47))
+        assert rj.dans_le_cadre((1000, 640), 120) is None
+
+    def test_un_choix_de_la_taille_de_l_ecran_ne_deborde_plus(self, monkeypatch):
+        monkeypatch.setattr(rj, "cadre", lambda dpi: (18, 47))
+        place = rj.dans_le_cadre((2560, 1392), 120)
+        assert rj.voulue("2560x1440", place) == place
+        assert (2560, 1440) not in rj.proposees(place)
+
+
+class TestRemplitLEcran:
+    """Avec le winmm.dll du correctif (FillScreen), l'écran ENTIER : la DLL ôte le cadre."""
+
+    @pytest.fixture
+    def dossier(self, jeu, monkeypatch):
+        game, config, _ = jeu
+        monkeypatch.setattr(rj.sys, "platform", "win32")
+        d = config.install_path / "HP2" / "system"
+        d.mkdir(parents=True)
+        return game, config, d
+
+    def test_sans_la_dll_le_cadre_compte(self, dossier):
+        game, config, _ = dossier
+        assert not rj.remplit_l_ecran(game, config)
+
+    @pytest.mark.parametrize("ini, attendu", [
+        (None, True), (b"[Accio.Window]\r\nFillScreen=1\r\n", True),
+        (b"[Accio.Window]\r\nFillScreen=0\r\n", False), (b"[Accio.Window]\r\nLog=1\r\n", True),
+    ])
+    def test_la_dll_et_son_ini(self, dossier, ini, attendu):
+        game, config, d = dossier
+        (d / "winmm.dll").write_bytes(b"MZ")
+        if ini is not None:
+            (d / "winmm.ini").write_bytes(ini)
+        assert rj.remplit_l_ecran(game, config) is attendu
+
+    def test_place_pour_choisit(self, dossier, monkeypatch):
+        game, config, d = dossier
+        monkeypatch.setattr(rj, "ecran_entier", lambda: (2560, 1440))
+        monkeypatch.setattr(rj, "place_disponible", lambda: (2542, 1333))
+        assert rj.place_pour(game, config) == (2542, 1333)
+        (d / "winmm.dll").write_bytes(b"MZ")
+        assert rj.place_pour(game, config) == (2560, 1440)
+
+    def test_jamais_sous_linux(self, dossier, monkeypatch):
+        game, config, d = dossier
+        (d / "winmm.dll").write_bytes(b"MZ")
+        monkeypatch.setattr(rj.sys, "platform", "linux")
+        assert not rj.remplit_l_ecran(game, config)

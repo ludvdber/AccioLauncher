@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import manette_lecture as lec
 from src.core.manette_lecture import Etat, Repetition
+from tests.test_integration_smoke import make_window  # noqa: F401  (fixture)
 
 
 class TestPov:
@@ -294,3 +295,80 @@ class TestNavigation:
 
 def test_la_suite_ne_lit_jamais_la_vraie_manette():
     assert isinstance(lec.lecteur(), lec.LecteurMuet)
+
+
+class TestDansLaVraieFenetre:
+    """Ce que Ludo a vécu le 2026-10-07 avec sa DS4, rejoué sur la vraie fenêtre.
+
+    La croix au démarrage RÉDUISAIT le launcher (le focus était sur « Réduire »
+    de la barre de titre) ; une fois sur la barre de volume, plus rien n'en
+    faisait sortir et chaque direction changeait le volume.
+    """
+
+    @pytest.fixture
+    def fenetre_reelle(self, make_window, qtbot, nav):  # noqa: F811  (fixture importée)
+        win = make_window()
+        win.show()
+        win.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is win, timeout=3000)
+        return win
+
+    def test_la_barre_de_titre_n_est_pas_dans_l_anneau(self, fenetre_reelle):
+        from src.ui.title_bar import TitleBar
+        boutons = fenetre_reelle.findChild(TitleBar).findChildren(QPushButton)
+        assert boutons and all(b.focusPolicy() == Qt.FocusPolicy.NoFocus for b in boutons)
+
+    def test_la_croix_au_demarrage_lance_l_action_principale(self, fenetre_reelle, nav,
+                                                            monkeypatch):
+        appels = []
+        monkeypatch.setattr(fenetre_reelle._detail, "trigger_primary_action",
+                            lambda: appels.append(1))
+        nav.agir(lec.VALIDER)
+        assert appels == [1]
+        assert fenetre_reelle.isVisible() and not fenetre_reelle.isMinimized()
+
+    def test_aucun_appui_vers_le_bas_ne_tombe_sur_la_fenetre(self, fenetre_reelle, nav):
+        from src.ui.title_bar import TitleBar
+        barre = fenetre_reelle.findChild(TitleBar)
+        for _ in range(30):
+            nav.agir(lec.BAS)
+            assert not barre.isAncestorOf(QApplication.focusWidget())
+
+    def test_on_sort_d_un_curseur_horizontal_sans_changer_sa_valeur(self, nav, qtbot):
+        from PyQt6.QtWidgets import QSlider
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        curseur = QSlider(Qt.Orientation.Horizontal)
+        curseur.setValue(50)
+        apres = QPushButton("après")
+        lay.addWidget(curseur)
+        lay.addWidget(apres)
+        qtbot.addWidget(w)
+        w.show()
+        w.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+        curseur.setFocus()
+        qtbot.waitUntil(curseur.hasFocus)
+        nav.agir(lec.BAS)
+        assert apres.hasFocus() and curseur.value() == 50
+        nav.agir(lec.HAUT)
+        nav.agir(lec.DROITE)                     # ← → règlent toujours la valeur
+        assert curseur.value() > 50
+
+    def test_une_liste_fermee_ne_change_pas_en_passant(self, nav, qtbot):
+        from PyQt6.QtWidgets import QComboBox
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        liste = QComboBox()
+        liste.addItems(["8x", "4x", "aucun"])
+        apres = QPushButton("après")
+        lay.addWidget(liste)
+        lay.addWidget(apres)
+        qtbot.addWidget(w)
+        w.show()
+        w.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+        liste.setFocus()
+        qtbot.waitUntil(liste.hasFocus)
+        nav.agir(lec.BAS)
+        assert apres.hasFocus() and liste.currentIndex() == 0

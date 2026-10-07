@@ -253,37 +253,37 @@ class RubriquesDuJeu:
         layout.addWidget(trait)
 
     def _ligne_resolution(self, layout: QVBoxLayout) -> None:
-        """La taille de la fenêtre du jeu : celle de l'écran par défaut.
+        """La taille de l'image du jeu : la plus grande que l'écran permet, par défaut.
 
         Enregistrée dans la config du launcher, ÉCRITE dans l'ini au lancement
         (`resolution_jeu`) : le jeu, son menu vidéo ou un Alt+Entrée peuvent la
         changer, le lancement suivant remet celle-ci.
         """
-        ecran = resolution_jeu.ecran_principal()
+        place = resolution_jeu.place_pour(self.game, self.manager.config)
         choix = QComboBox()
         choix.setStyleSheet(themed(_COMBO_STYLE))
         choix.setMinimumWidth(130)
-        if ecran is not None:
-            choix.addItem(tr("Celle de l'écran ({} × {})").format(*ecran), "")
+        if place is not None:
+            choix.addItem(tr("Remplir l'écran ({} × {})").format(*place), "")
         else:
-            choix.addItem(tr("Celle de l'écran"), "")
-        for taille in resolution_jeu.proposees(ecran):
+            choix.addItem(tr("Remplir l'écran"), "")
+        for taille in resolution_jeu.proposees(place):
             choix.addItem("{} × {}".format(*taille), resolution_jeu.ecrire(taille))
         courant = self.manager.config.resolution_jeu.get(self.game.id, "")
         if courant and choix.findData(courant) < 0:
             taille = resolution_jeu.lire(courant)
             if taille is not None:
                 # Choisie sur un autre écran, plus grand : la montrer telle quelle,
-                # le lancement repliera sur l'écran tant qu'elle ne tient pas.
+                # le lancement repliera sur la place disponible tant qu'elle ne tient pas.
                 choix.addItem(tr("{} × {} (plus grande que cet écran)").format(*taille), courant)
         choix.setCurrentIndex(max(0, choix.findData(courant)))
         choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_resolution(c.currentData()))
         self._choix_resolution = choix
         self._ligne(layout, tr("Résolution"), choix, tr(
-            "La taille de la fenêtre du jeu, sans bordure. Par défaut celle de l'écran : "
-            "le jeu le remplit, sans passer en plein écran exclusif. Une taille plus petite "
-            "allège le travail de la carte graphique. Appliquée à chaque lancement, même si "
-            "le menu du jeu ou Alt+Entrée l'a changée entre-temps."))
+            "La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à "
+            "l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille "
+            "plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, "
+            "même si le menu du jeu ou Alt+Entrée l'a changée entre-temps."))
 
     def _on_resolution(self, valeur: str) -> None:
         resolutions = self.manager.config.resolution_jeu

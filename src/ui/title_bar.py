@@ -65,6 +65,13 @@ class TitleBar(QWidget):
             btn.setToolTip(label)
             btn.setFixedSize(44, 38)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            # Hors de l'anneau de focus, comme les boutons d'une vraie barre de
+            # titre Windows (le clavier a Alt+F4 et Win+↓). Ils étaient les
+            # PREMIERS de l'anneau : la croix de la manette, au démarrage,
+            # RÉDUISAIT le launcher, et deux appuis vers le bas plus loin elle
+            # l'aurait FERMÉ (Ludo, 2026-10-07 : « HP1 ne s'ouvre pas et le
+            # launcher ne revient pas »).
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn.setStyleSheet(
                 f"QPushButton {{ background: transparent; color: #8a8aaa; border: none;"
                 f" font-size: 13px; }}"
