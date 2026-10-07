@@ -715,6 +715,23 @@
     "{} s'est arrêté brutalement": "{} se detuvo de golpe",
     "{}\n\nDétail technique : {}": "{}\n\nDetalle técnico: {}",
     "{} : un fichier a été retiré par l'antivirus": "{}: el antivirus retiró un archivo",
-    "Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → Protection contre les virus et menaces → Historique de protection, puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le jeu.": "Microsoft Defender puso en cuarentena este archivo del juego, que no puede iniciarse sin él:\n{}\n\nPara recuperarlo: Seguridad de Windows → Protección antivirus y contra amenazas → Historial de protección, luego «Acciones» → «Restaurar» en ese archivo. Después vuelva a iniciar el juego."
+    "Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → Protection contre les virus et menaces → Historique de protection, puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le jeu.": "Microsoft Defender puso en cuarentena este archivo del juego, que no puede iniciarse sin él:\n{}\n\nPara recuperarlo: Seguridad de Windows → Protección antivirus y contra amenazas → Historial de protección, luego «Acciones» → «Restaurar» en ese archivo. Después vuelva a iniciar el juego.",
+    "Résolution de rendu": "Resolución de renderizado",
+    "La taille à laquelle l'image est calculée, quelle que soit celle que choisit le jeu. « Celle de l'écran » donne l'image la plus nette ; « Jusqu'à 1080p » soulage une carte graphique modeste sur un grand écran.": "El tamaño al que se calcula la imagen, sea cual sea el que elija el juego. «La de la pantalla» da la imagen más nítida; «Hasta 1080p» alivia una tarjeta gráfica modesta en una pantalla grande.",
+    "Celle du jeu": "La del juego",
+    "Jusqu'à 1080p": "Hasta 1080p",
+    "Jusqu'à 1440p": "Hasta 1440p",
+    "Anticrénelage": "Antialiasing",
+    "Lisse les bords en escalier des objets. 8x est livré ; 4x se voit à peine moins et coûte moins. Si le jeu s'arrête dès son lancement (« SetRenderTarget failed »), essayez 4x, puis « Aucun » : certaines puces graphiques, Intel notamment, refusent le 8x.": "Suaviza los bordes dentados de los objetos. 8x es el valor de serie; 4x apenas se distingue y cuesta menos. Si el juego se detiene nada más arrancar («SetRenderTarget failed»), pruebe 4x y luego «Ninguno»: algunos chips gráficos, sobre todo Intel, rechazan el 8x.",
+    "Aucun": "Ninguno",
+    "Lisser aussi les ombres et reflets": "Suavizar también sombras y reflejos",
+    "Applique la résolution et l'anticrénelage choisis aux images que le jeu calcule à part, comme l'ombre de Harry : elles restent fines au lieu de pixeliser. Éteint, elles gardent leur taille d'origine. À éteindre si le jeu s'arrête dès son lancement et que baisser l'anticrénelage n'a pas suffi.": "Aplica la resolución y el antialiasing elegidos a las imágenes que el juego calcula aparte, como la sombra de Harry: quedan finas en lugar de pixelarse. Desactivado, conservan su tamaño original. Desactívelo si el juego se detiene nada más arrancar y bajar el antialiasing no bastó.",
+    "Filtrage des textures": "Filtrado de texturas",
+    "Garde nettes les textures vues de biais, comme le sol au loin. 16x est livré et ne coûte presque rien.": "Mantiene nítidas las texturas vistas de lado, como el suelo a lo lejos. 16x es el valor de serie y casi no cuesta nada.",
+    "Celui du jeu": "El del juego",
+    "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, le diablotin se fige et certains portraits ne s'ouvrent plus. 30 fait moins chauffer l'ordinateur.": "Este juego no debe superar 60 imágenes por segundo: por encima, el diablillo se congela y algunos retratos ya no se abren. 30 calienta menos el ordenador.",
+    "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale quand la caméra tourne, contre un peu plus de délai entre la souris et l'image.": "Ajusta las imágenes a la frecuencia de la pantalla: se acaba el desgarro horizontal al girar la cámara, a cambio de un poco más de retardo entre el ratón y la imagen.",
+    "Remet image et performances comme à l'installation du jeu.": "Devuelve imagen y rendimiento a como estaban al instalar el juego.",
+    "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Ajuste no guardado: no se pudo modificar el archivo de ajustes gráficos del juego (juego en curso o archivo de solo lectura)."
   }
 }

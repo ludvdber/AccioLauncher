@@ -715,6 +715,23 @@
     "{} s'est arrêté brutalement": "{} stopped unexpectedly",
     "{}\n\nDétail technique : {}": "{}\n\nTechnical details: {}",
     "{} : un fichier a été retiré par l'antivirus": "{}: a file was removed by the antivirus",
-    "Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → Protection contre les virus et menaces → Historique de protection, puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le jeu.": "Microsoft Defender quarantined this game file, and the game cannot start without it:\n{}\n\nTo get it back: Windows Security → Virus & threat protection → Protection history, then “Actions” → “Restore” on that file. Then start the game again."
+    "Microsoft Defender a mis en quarantaine ce fichier du jeu, qui ne peut pas démarrer sans :\n{}\n\nPour le récupérer : Sécurité Windows → Protection contre les virus et menaces → Historique de protection, puis « Actions » → « Restaurer » sur ce fichier. Relancez ensuite le jeu.": "Microsoft Defender quarantined this game file, and the game cannot start without it:\n{}\n\nTo get it back: Windows Security → Virus & threat protection → Protection history, then “Actions” → “Restore” on that file. Then start the game again.",
+    "Résolution de rendu": "Render resolution",
+    "La taille à laquelle l'image est calculée, quelle que soit celle que choisit le jeu. « Celle de l'écran » donne l'image la plus nette ; « Jusqu'à 1080p » soulage une carte graphique modeste sur un grand écran.": "The size at which the image is computed, whatever size the game picks. “The screen's” gives the sharpest image; “Up to 1080p” eases a modest graphics card on a large screen.",
+    "Celle du jeu": "The game's",
+    "Jusqu'à 1080p": "Up to 1080p",
+    "Jusqu'à 1440p": "Up to 1440p",
+    "Anticrénelage": "Anti-aliasing",
+    "Lisse les bords en escalier des objets. 8x est livré ; 4x se voit à peine moins et coûte moins. Si le jeu s'arrête dès son lancement (« SetRenderTarget failed »), essayez 4x, puis « Aucun » : certaines puces graphiques, Intel notamment, refusent le 8x.": "Smooths the jagged edges of objects. 8x is the shipped value; 4x looks barely different and costs less. If the game stops as soon as it starts (“SetRenderTarget failed”), try 4x, then “None”: some graphics chips, Intel ones in particular, refuse 8x.",
+    "Aucun": "None",
+    "Lisser aussi les ombres et reflets": "Smooth shadows and reflections too",
+    "Applique la résolution et l'anticrénelage choisis aux images que le jeu calcule à part, comme l'ombre de Harry : elles restent fines au lieu de pixeliser. Éteint, elles gardent leur taille d'origine. À éteindre si le jeu s'arrête dès son lancement et que baisser l'anticrénelage n'a pas suffi.": "Applies the chosen resolution and anti-aliasing to the images the game computes separately, such as Harry's shadow: they stay fine instead of pixelating. Off, they keep their original size. Turn it off if the game stops as soon as it starts and lowering anti-aliasing was not enough.",
+    "Filtrage des textures": "Texture filtering",
+    "Garde nettes les textures vues de biais, comme le sol au loin. 16x est livré et ne coûte presque rien.": "Keeps textures seen at an angle sharp, like the ground in the distance. 16x is the shipped value and costs almost nothing.",
+    "Celui du jeu": "The game's",
+    "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, le diablotin se fige et certains portraits ne s'ouvrent plus. 30 fait moins chauffer l'ordinateur.": "This game must not go above 60 frames per second: beyond that, the imp freezes and some portraits no longer open. 30 makes the computer run cooler.",
+    "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale quand la caméra tourne, contre un peu plus de délai entre la souris et l'image.": "Locks frames to the screen's refresh rate: no more horizontal tearing when the camera turns, at the cost of a little more delay between the mouse and the image.",
+    "Remet image et performances comme à l'installation du jeu.": "Puts image and performance back as they were when the game was installed.",
+    "Réglage non enregistré : le fichier des réglages graphiques du jeu n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule).": "Setting not saved: the game's graphics settings file could not be changed (game running, or read-only file)."
   }
 }

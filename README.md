@@ -32,6 +32,7 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 - **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
 - **Tout se gère au même endroit** : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
 - **Un plantage expliqué** : quand un jeu s'arrête brutalement, le launcher lit ce que Windows a noté et dit où chercher (pilote graphique, programme qui s'incruste, fichier du jeu, fichier retiré par l'antivirus), avec un détail à copier pour demander de l'aide.
+- **Les réglages graphiques de *Prisonnier d'Azkaban*** dans l'engrenage du jeu : anticrénelage, résolution de rendu, filtrage, synchronisation et limite d'images (jamais au-delà de 60), sans ouvrir un fichier au Bloc-notes.
 - **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics.
 - **À la taille de votre écran** : *l'École des Sorciers* et *la Chambre des Secrets* s'ouvrent à la résolution de votre écran, 1440p et 4K compris, ou à celle que vous choisissez dans leurs réglages.
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
