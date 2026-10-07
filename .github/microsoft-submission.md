@@ -33,4 +33,7 @@ Expected behaviour an analyst may observe:
 - Removes the Zone.Identifier stream from extracted game files, so that old games can load their own DLLs.
 - For two games only, and after asking the user, writes their language and install path under HKLM\SOFTWARE\WOW6432Node\Electronic Arts\... through an elevated regedit import (UAC prompt).
 - Optional Discord Rich Presence through the local Discord named pipe.
+- After a game crash only: System32\wevtutil.exe qe (read-only) on the Application log, to name the crashed module.
+- Reads the game controller via winmm joyGetPosEx.
+- Before each session, gzips copies of the game's saves into its data folder.
 ```
