@@ -17,8 +17,10 @@ import subprocess
 import sys
 import zipfile
 from collections import deque
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Callable, Iterable, Iterator
+
+from src.core.chemins import chemin_relatif_sur
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +62,7 @@ _REAP_TIMEOUT_S = 30
 def check_path_traversal(destination: Path, member_name: str) -> bool:
     r"""Vérifie qu'un fichier extrait ne sort pas du dossier de destination (Zip Slip).
 
-    Les « \ » sont normalisés d'abord, comme le fait déjà `is_unsafe_entry`.
+    Les « \ » sont normalisés d'abord, comme le fait déjà `chemins.refus_de_chemin`.
     Nos archives sont fabriquées sous Windows et leurs entrées portent donc des
     antislashs — or sous POSIX ce n'est PAS un séparateur : « ..\..\evil.dll »
     y passait pour un nom de fichier ordinaire, et la vérification le déclarait
@@ -73,26 +75,10 @@ def check_path_traversal(destination: Path, member_name: str) -> bool:
 def is_unsafe_entry(name: str) -> bool:
     """True si un nom d'entrée d'archive sortirait du dossier de destination.
 
-    Fonction pure (testable sans 7z ni disque). Rejette les chemins absolus,
-    les lettres de lecteur, les chemins UNC et toute remontée `..`.
+    Fonction pure (testable sans 7z ni disque) : la barrière commune à tout
+    chemin venu du dehors (`chemins.refus_de_chemin`, ACT-007).
     """
-    normalized = name.replace("\\", "/").strip()
-    if not normalized:
-        return True
-    if ":" in normalized:
-        # C:\..., mais aussi « a/C:x » ou « HP.exe:flux » : un deux-points n'est
-        # jamais permis dans un nom Windows, et ailleurs qu'en tête il désigne
-        # un flux de données alternatif (NTFS). Aucune archive de jeu n'en a.
-        return True
-    if normalized.startswith("/"):
-        return True          # /abs, //serveur/partage
-    # « .. » déguisé : Windows retire les points et espaces en fin de nom, et
-    # un composant fait seulement de points et d'espaces (« .. », « ... »)
-    # n'a aucun usage légitime et un sens qui varie d'une API à l'autre.
-    # Sur le nom NON rogné : « ./x » précédé d'une espace, c'est « ␠. ».
-    if any(c != "." and c.strip(". ") == "" for c in name.replace("\\", "/").split("/") if c):
-        return True
-    return ".." in PurePosixPath(normalized).parts
+    return not chemin_relatif_sur(name)
 
 
 def unsafe_archive_entries(names: Iterable[str]) -> list[str]:

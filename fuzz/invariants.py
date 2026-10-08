@@ -16,8 +16,9 @@ import unicodedata
 from pathlib import Path
 
 from src.core import game_registry as registre
+from src.core.chemins import chemin_relatif_sur as _est_relatif_sur
 from src.core.extractors import check_path_traversal, is_unsafe_entry
-from src.core.game_data import _JETON_SUR, _est_relatif_sur, _parse_catalog
+from src.core.game_data import _JETON_SUR, GameData, _parse_catalog
 
 # Une ligne de valeur d'un .reg : "nom"="chaîne" ou "nom"=dword:xxxxxxxx, où
 # une chaîne ne contient que des caractères ordinaires ou des échappements.
@@ -154,3 +155,24 @@ def entree_archive(destination: Path, nom: str) -> None:
         return
     if not is_unsafe_entry(nom):
         assert check_path_traversal(destination, nom), nom
+
+
+_JEU_MINIMAL = {"id": "x", "name": "X", "year": 2001, "description": "",
+                "developer": "D", "cover_image": "x.jpg"}
+
+
+def meme_verdict(nom: str) -> None:
+    """Une entrée d'archive et un exécutable de catalogue reçoivent le même
+    verdict (ACT-007) : il y avait quatre gardes, et le fuzzing en avait déjà
+    trouvé deux en désaccord. Seule exception permise, voulue : le catalogue
+    refuse en plus un exécutable qui ne nomme aucun fichier (« . »)."""
+    sur = not is_unsafe_entry(nom)
+    try:
+        GameData.from_dict({**_JEU_MINIMAL, "executable": nom})
+        exe_accepte = True
+    except ValueError:
+        exe_accepte = False
+    if exe_accepte:
+        assert sur, nom
+    elif sur:
+        assert not [c for c in nom.replace("\\", "/").split("/") if c not in ("", ".")], nom

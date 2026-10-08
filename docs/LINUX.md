@@ -113,7 +113,7 @@ quelle pull request le traite.
 ### 2.6 Déjà portable (vérifié, rien à faire)
 
 - Les chemins du catalogue écrits à la Windows (`HP1\System\…`, `%DOCUMENTS%\…`)
-  sont normalisés AVANT vérification (`game_data._est_relatif_sur`,
+  sont normalisés AVANT vérification (`chemins.refus_de_chemin`,
   `extractors.check_path_traversal`, `pre_launch.substitute_vars`).
 - Les INI gardent leurs fins de ligne CRLF (`pre_launch._INI_NEWLINE`) : le jeu
   tournera sous Wine et relira ses propres fins de ligne.

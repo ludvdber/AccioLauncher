@@ -126,3 +126,33 @@ class TestArchive:
         données alternatif."""
         from src.core.extractors import is_unsafe_entry
         assert is_unsafe_entry(nom)
+
+
+class TestCheminUnique:
+    """Audit du 2026-10-07 (P1-006, ACT-007, M-10) : quatre gardes « chemin
+    relatif sûr » qui ne refusaient pas la même chose. Une seule maintenant."""
+
+    @pytest.mark.parametrize("nom", [
+        "HP1/System/HP.exe", "game.exe", "../evil.dll", "a/C:x", "HP.exe:flux",
+        ".. /evil.dll", "a/... /x", " ./x", "x/\x00.exe", "x" * 261, "HP1/CON",
+        "HP1/nul.txt", "/etc/passwd", "\\\\srv\\p\\x", "", "   ", ".", "./", "Game/./x",
+    ])
+    def test_les_trois_gardes_de_chemin_donnent_le_meme_verdict(self, nom):
+        invariants.meme_verdict(nom)
+
+    def test_aucune_garde_ne_redefinit_la_sienne(self):
+        """Le motif « deux listes qu'aucun calcul ne relie » revient dès qu'un
+        module se refait SA garde : chacun doit appeler `chemins`."""
+        from src.core import catalogue_blocs, extractors, game_data, game_manager
+        for module in (catalogue_blocs, extractors, game_data, game_manager):
+            assert not hasattr(module, "_est_relatif_sur"), module.__name__
+            assert not hasattr(module, "_is_safe_relative"), module.__name__
+            assert not hasattr(module, "_PERIPHERIQUES"), module.__name__
+
+    def test_un_executable_sans_nom_de_fichier_est_refuse(self):
+        """Le manager tire le dossier du jeu du premier composant : « . »
+        passait la barrière et `get_game_path` levait IndexError."""
+        from src.core.game_data import GameData
+        for exe in (".", "./", ".\\"):
+            with pytest.raises(ValueError):
+                GameData.from_dict({**invariants._JEU_MINIMAL, "executable": exe})

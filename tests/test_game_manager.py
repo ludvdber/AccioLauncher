@@ -8,7 +8,8 @@ import pytest
 from src.core.config import Config
 from src.core.game_data import GameData, GameVersion, Catalog
 from src.core.game_language import detecter
-from src.core.game_manager import GameManager, GameState, _is_safe_relative
+from src.core.chemins import chemin_relatif_sur
+from src.core.game_manager import GameManager, GameState
 from src.core.pre_launch import (
     apply_ini_patches, create_pre_launch_files, delete_pre_launch_files, unblock_game_dlls,
 )
@@ -52,27 +53,27 @@ def _make_manager(tmp_path, games=None):
         return GameManager(config)
 
 
-# ── Tests _is_safe_relative ──
+# ── Tests chemin_relatif_sur (la garde du manager, ACT-007) ──
 
 class TestIsSafeRelative:
     def test_normal_path(self):
-        assert _is_safe_relative("HP1/System/Game.exe") is True
+        assert chemin_relatif_sur("HP1/System/Game.exe") is True
 
     def test_backslash(self):
-        assert _is_safe_relative("HP1\\System\\Game.exe") is True
+        assert chemin_relatif_sur("HP1\\System\\Game.exe") is True
 
     def test_traversal(self):
-        assert _is_safe_relative("../evil.exe") is False
+        assert chemin_relatif_sur("../evil.exe") is False
 
     def test_absolute(self):
-        assert _is_safe_relative("/usr/bin/evil") is False
-        assert _is_safe_relative("C:\\Windows\\System32\\evil.exe") is False
+        assert chemin_relatif_sur("/usr/bin/evil") is False
+        assert chemin_relatif_sur("C:\\Windows\\System32\\evil.exe") is False
 
     def test_hidden_traversal(self):
-        assert _is_safe_relative("HP1/../../evil.exe") is False
+        assert chemin_relatif_sur("HP1/../../evil.exe") is False
 
     def test_single_file(self):
-        assert _is_safe_relative("game.exe") is True
+        assert chemin_relatif_sur("game.exe") is True
 
 
 # ── Tests GameManager ──

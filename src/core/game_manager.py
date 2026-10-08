@@ -8,10 +8,11 @@ import sys
 import threading
 from datetime import date, datetime, timedelta
 from enum import StrEnum, auto
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import NamedTuple
 
 from src.core import captures, compat, manette
+from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, resolution_jeu, stats
 from src.core.config import Config
@@ -51,21 +52,6 @@ class GameEntry(NamedTuple):
     """Jeu enrichi avec son état — retourné par GameManager.get_games()."""
     game: GameData
     state: GameState
-
-
-def _is_safe_relative(path_str: str) -> bool:
-    """Vérifie qu'un chemin relatif ne sort pas de sa racine (anti path-traversal)."""
-    normalized = path_str.replace("\\", "/")
-    if len(normalized) >= 2 and normalized[1] == ":":
-        return False
-    p = PurePosixPath(normalized)
-    if p.is_absolute():
-        return False
-    try:
-        p.relative_to(".")
-    except ValueError:
-        return False
-    return ".." not in p.parts
 
 
 class GameManager:
@@ -172,7 +158,7 @@ class GameManager:
 
     def _detect_state(self, game: GameData) -> GameState:
         """Détecte l'état d'un jeu en vérifiant le disque."""
-        if not _is_safe_relative(game.executable):
+        if not chemin_relatif_sur(game.executable):
             log.warning("Chemin executable suspect ignoré : %s", game.executable)
             return GameState.NOT_INSTALLED
         exe_path = self.config.install_path / game.executable
@@ -200,7 +186,7 @@ class GameManager:
         game = self._index.get(game_id)
         if game is None:
             return None
-        if not _is_safe_relative(game.executable):
+        if not chemin_relatif_sur(game.executable):
             return None
         return self.config.install_path / Path(game.executable).parts[0]
 
@@ -250,7 +236,7 @@ class GameManager:
         if game is None:
             log.warning("Impossible de lancer un jeu inconnu : %s", game_id)
             return None
-        if not _is_safe_relative(game.executable):
+        if not chemin_relatif_sur(game.executable):
             log.warning("Chemin executable non sûr : %s", game.executable)
             return None
         exe_path = self.config.install_path / game.executable

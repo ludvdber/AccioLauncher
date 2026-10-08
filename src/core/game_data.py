@@ -8,10 +8,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from src.core.config import GAMES_JSON_PATH
+from src.core.chemins import refus_de_chemin
 from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
-    _PERIPHERIQUES,
     _tags_valides,
-    _est_peripherique,
     _https_ou_rien,
     _sha256_valide,
     _taille_mo,
@@ -26,7 +25,6 @@ from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
     _INI_INTERDIT_NOM,
     _INI_INTERDIT_VALEUR,
     _parse_language_files,
-    _est_relatif_sur,
     _parse_manette_registre,
     _parse_language_registry,
     Resolution,
@@ -305,24 +303,16 @@ class GameData:
                     f"Champ {champ!r} invalide dans games.json : {valeur!r} "
                     "(chaîne non vide attendue)")
 
-        # Validation anti path-traversal de l'executable au parsing (défense en profondeur)
+        # Validation anti path-traversal de l'executable au parsing (défense en
+        # profondeur) : la barrière commune à tout chemin venu du dehors.
         executable = data["executable"]
-        normalized = executable.replace("\\", "/")
-        if (len(normalized) >= 2 and normalized[1] == ":") or normalized.startswith("/") \
-                or ".." in normalized.split("/"):
-            raise ValueError(f"executable non sûr : {executable!r}")
-        # Trois refus de plus, sans exploitation démontrée mais sans usage
-        # légitime non plus : un octet nul tronque le chemin au niveau de l'API
-        # Windows, un nom de périphérique réservé (CON, NUL, COM1…) ouvre un
-        # flux au lieu d'un fichier, et un chemin déraisonnablement long échoue
-        # de toute façon plus loin — autant le dire ici, où le message est clair.
-        if "\x00" in executable:
-            raise ValueError(f"executable non sûr (octet nul) : {executable!r}")
-        if len(executable) > 260:
-            raise ValueError(
-                f"executable trop long ({len(executable)} caractères) : {executable[:40]!r}…")
-        if any(_est_peripherique(part) for part in normalized.split("/")):
-            raise ValueError(f"executable non sûr (nom réservé) : {executable!r}")
+        raison = refus_de_chemin(executable)
+        if raison is not None:
+            raise ValueError(f"executable non sûr ({raison}) : {executable[:60]!r}")
+        # Le manager en tire le dossier du jeu (son premier composant) :
+        # « . » ou « ./ » passeraient la barrière sans nommer aucun fichier.
+        if not [c for c in executable.replace("\\", "/").split("/") if c not in ("", ".")]:
+            raise ValueError(f"executable sans nom de fichier : {executable!r}")
         pi = data.get("post_install", {})
         pl = data.get("pre_launch")
         versions = tuple(

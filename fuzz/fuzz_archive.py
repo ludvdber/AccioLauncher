@@ -24,7 +24,9 @@ _DESTINATION.mkdir()
 
 def test_un(data: bytes) -> None:
     fdp = atheris.FuzzedDataProvider(data)
-    invariants.entree_archive(_DESTINATION, fdp.ConsumeUnicodeNoSurrogates(200))
+    nom = fdp.ConsumeUnicodeNoSurrogates(300)
+    invariants.entree_archive(_DESTINATION, nom)
+    invariants.meme_verdict(nom)
 
 
 if __name__ == "__main__":

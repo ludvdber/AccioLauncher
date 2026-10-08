@@ -10,18 +10,10 @@ import re
 from dataclasses import dataclass
 
 from src.core import game_registry as registre
+from src.core.chemins import chemin_relatif_sur
 from src.core.i18n import SOURCE_LANGUAGE, get_language
 
 log = logging.getLogger(__name__)
-
-
-# Noms de périphériques réservés par Windows : ouvrir « CON » ouvre la console,
-# pas un fichier — quel que soit le dossier et quelle que soit l'extension.
-_PERIPHERIQUES = frozenset(
-    ["con", "prn", "aux", "nul"]
-    + ["com%d" % i for i in range(1, 10)]
-    + ["lpt%d" % i for i in range(1, 10)]
-)
 
 
 def _tags_valides(tags) -> tuple:
@@ -30,11 +22,6 @@ def _tags_valides(tags) -> tuple:
     if not isinstance(tags, (list, tuple)):
         return ()
     return tuple(t for t in tags if isinstance(t, str))
-
-
-def _est_peripherique(nom: str) -> bool:
-    """True si `nom` est un nom de périphérique Windows réservé."""
-    return nom.split(".")[0].strip().lower() in _PERIPHERIQUES
 
 
 def _https_ou_rien(url):
@@ -264,12 +251,12 @@ def _parse_language_files(data) -> "LanguageFiles | None":
                 return None
             src, dst = c.get("from"), c.get("to")
             if not (isinstance(src, str) and isinstance(dst, str)
-                    and _est_relatif_sur(src) and _est_relatif_sur(dst)):
+                    and chemin_relatif_sur(src) and chemin_relatif_sur(dst)):
                 log.warning("Bloc language_files ignoré (copie douteuse) : %r", c)
                 return None
             copies.append((src, dst))
         temoin = entree.get("requires_file", "")
-        if not isinstance(temoin, str) or (temoin and not _est_relatif_sur(temoin)):
+        if not isinstance(temoin, str) or (temoin and not chemin_relatif_sur(temoin)):
             return None
         label = entree.get("label")
         if not isinstance(label, str) or not label.strip():
@@ -277,21 +264,6 @@ def _parse_language_files(data) -> "LanguageFiles | None":
         langues.append(LangueFichiers(code=code, label=label, ini=tuple(ini),
                                       copies=tuple(copies), requires_file=temoin))
     return LanguageFiles(languages=tuple(langues))
-
-
-def _est_relatif_sur(chemin: str) -> bool:
-    r"""True si ce chemin de catalogue peut être joint au dossier d'un jeu.
-
-    Mêmes refus que pour `executable` : pas de remontée, pas de racine, pas de
-    lettre de lecteur, pas d'octet nul. Normaliser AVANT de vérifier — sous
-    POSIX « \ » n'est pas un séparateur, et le garde-fou serait inopérant.
-    """
-    if not chemin or "\x00" in chemin or len(chemin) > 260:
-        return False
-    norm = chemin.replace("\\", "/")
-    if norm.startswith("/") or (len(norm) >= 2 and norm[1] == ":"):
-        return False
-    return ".." not in norm.split("/")
 
 
 def _parse_manette_registre(data) -> "ManetteRegistre | None":
@@ -370,7 +342,7 @@ def _parse_language_registry(data) -> "LanguageRegistry | None":
         if not isinstance(fichier, str):
             return None
         # Même validation que `executable`.
-        if fichier and not _est_relatif_sur(fichier):
+        if fichier and not chemin_relatif_sur(fichier):
             log.warning("requires_file non sûr, bloc de langue ignoré : %r", fichier)
             return None
         langues.append(GameLanguage(code=code, label=label, values=tuple(paires),
@@ -567,10 +539,9 @@ FORMATS_EMPLACEMENTS = ("hp4",)
 def _motif_sur(motif) -> bool:
     """Un motif de catalogue ne sert qu'à LIRE des dates de fichier, mais il
     compose un chemin sur le disque de l'utilisateur : mêmes refus que
-    `executable`, plus le « : » (flux NTFS, lettre de lecteur) et « ** » (un
-    motif récursif parcourrait tout Documents à chaque partie)."""
-    return (isinstance(motif, str) and _est_relatif_sur(motif)
-            and ":" not in motif and "**" not in motif)
+    `executable` (`chemins.refus_de_chemin`), plus « ** » (un motif récursif
+    parcourrait tout Documents à chaque partie)."""
+    return isinstance(motif, str) and chemin_relatif_sur(motif) and "**" not in motif
 
 
 def _tous_les_noms(data: dict) -> tuple[str, ...]:
