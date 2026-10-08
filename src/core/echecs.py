@@ -114,3 +114,97 @@ def explication(echec: Echec) -> str:
             "{} sont conservés : relancez pour reprendre là où ça s'est arrêté."
         ).format(format_bytes(echec.conserves))
     return texte
+
+
+# ─── Installation ────────────────────────────────────────────────────────────
+#
+# Même faute, même remède, à l'étape suivante : jusqu'au 2026-10-08 la boîte
+# d'échec d'INSTALLATION disait « L'archive est peut-être corrompue.
+# Réessayez le téléchargement » quoi qu'il arrive (ACT-003). Retélécharger
+# 4 Go ne libère pas un disque plein et ne convainc pas un antivirus.
+
+# Messages propres de 7-Zip (anglais quelle que soit la langue de Windows),
+# relevés le 2026-10-08 sur une archive tronquée, abîmée et qui n'en est pas
+# une. 7-Zip écrit « Cannot » ou « Can not » selon les versions.
+_ARCHIVE_ABIMEE = ("cannot open the file as", "unexpected end", "is not archive",
+                   "data error", "crc failed", "headers error", "data after the end")
+_ECRITURE_REFUSEE = ("cannot open output file", "cannot create", "access is denied")
+# Sous ce seuil d'espace libre, un échec de 7-Zip est un disque plein : le
+# message système que 7-Zip recopie est traduit (« Espace insuffisant sur le
+# disque »), on ne peut pas le reconnaître au texte.
+DISQUE_QUASI_PLEIN = 64 * 1024 * 1024
+_CHEMIN_TROP_LONG = 206             # ERROR_FILENAME_EXCED_RANGE
+
+
+def cause_installation(exc: BaseException | None, octets_libres: int | None = None) -> str:
+    """Pourquoi une installation a échoué. Pure.
+
+    `octets_libres` : l'espace restant sur le volume de destination, mesuré
+    APRÈS l'échec — seul moyen de reconnaître un disque plein derrière un
+    message de 7-Zip.
+    """
+    import zipfile
+    import zlib
+
+    from src.core.extractors import ArchiveRefusee, ExtractionEchouee, SeptZipIntrouvable
+
+    if exc is None:
+        return "inconnu"
+    if isinstance(exc, ArchiveRefusee):
+        return "refusee"
+    if isinstance(exc, SeptZipIntrouvable):
+        return "outil"
+    if isinstance(exc, (zipfile.BadZipFile, EOFError, zlib.error)):
+        return "archive"
+    if isinstance(exc, ExtractionEchouee):
+        sortie = exc.sortie.lower().replace("can not", "cannot")
+        if octets_libres is not None and octets_libres < DISQUE_QUASI_PLEIN:
+            return "disque_plein"
+        if any(m in sortie for m in _ARCHIVE_ABIMEE):
+            return "archive"
+        if any(m in sortie for m in _ECRITURE_REFUSEE):
+            return "acces_refuse"
+        return "inconnu"
+    if isinstance(exc, OSError):
+        winerror = getattr(exc, "winerror", None)
+        if winerror in _DISQUE_PLEIN or exc.errno == errno.ENOSPC:
+            return "disque_plein"
+        if winerror in _ANTIVIRUS:
+            return "antivirus"
+        if winerror == _CHEMIN_TROP_LONG or exc.errno == errno.ENAMETOOLONG:
+            return "chemin_long"
+        if isinstance(exc, PermissionError) or winerror in _ACCES:
+            return "acces_refuse"
+    return "inconnu"
+
+
+def explication_installation(cause: str, archive_du_launcher: bool = True) -> str:
+    """Le texte de la boîte d'échec d'installation.
+
+    `archive_du_launcher` : l'archive vient du cache du launcher (et non d'un
+    fichier choisi par la personne). Seule une archive abîmée du cache est
+    supprimée, donc seule elle peut être retéléchargée par un nouvel essai.
+    """
+    if cause == "archive":
+        if archive_du_launcher:
+            return tr("L'archive téléchargée est abîmée. Elle a été supprimée : "
+                      "relancez l'installation pour la télécharger à nouveau.")
+        return tr("L'archive choisie est abîmée ou incomplète.\nVérifiez-la, "
+                  "ou installez le jeu depuis le launcher.")
+    textes = {
+        "disque_plein": tr("Le disque est plein.\nLibérez de la place, ou choisissez "
+                           "un autre dossier d'installation dans les Paramètres."),
+        "antivirus": tr("Votre antivirus a bloqué un fichier du jeu pendant "
+                        "l'installation.\nConsultez sa quarantaine, puis réessayez."),
+        "acces_refuse": tr("Windows a refusé l'écriture dans le dossier d'installation "
+                           "— un antivirus, ou un dossier protégé.\nRéessayez ; si ça "
+                           "recommence, choisissez un autre dossier dans les Paramètres."),
+        "chemin_long": tr("Le chemin du dossier d'installation est trop long pour "
+                          "Windows.\nChoisissez un dossier plus court dans les Paramètres."),
+        "refusee": tr("Cette archive a été refusée par sécurité : elle voulait écrire "
+                      "hors du dossier d'installation.\nSignalez-le sur le Discord."),
+        "outil": tr("7-Zip est introuvable : le launcher ne peut pas décompresser ce "
+                    "jeu.\nRéinstallez Accio Launcher."),
+    }
+    return textes.get(cause, tr("L'installation a échoué.\nRéessayez ; si ça "
+                                "recommence, le Discord peut vous aider."))

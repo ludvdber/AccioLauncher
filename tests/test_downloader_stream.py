@@ -216,6 +216,47 @@ class TestStreamIncrementalHash:
         assert dest.read_bytes() == PAYLOAD
 
 
+class TestArchiveDejaDansLeCache:
+    """M-06 / ACT-003 : l'archive complète est déjà là (« garder les archives »,
+    ou une installation qui a échoué après le téléchargement). Les parts d'un
+    multi-volumes étaient reprises ; une archive d'un seul tenant était
+    retéléchargée en entier."""
+
+    def test_une_archive_conforme_n_est_pas_redemandee(self, tmp_path, fake_httpx, qtbot):
+        httpx = fake_httpx()
+        dest = tmp_path / "a.7z"
+        dest.write_bytes(PAYLOAD)
+        dl = Downloader(url="https://x.test/a.7z", destination=dest,
+                        expected_sha256=PAYLOAD_SHA)
+        with qtbot.waitSignal(dl.download_finished, timeout=5000):
+            dl.run()
+        assert httpx.requetes == [], "aucun octet ne devait être redemandé"
+        assert dest.read_bytes() == PAYLOAD
+
+    def test_une_archive_non_conforme_est_retelechargee(self, tmp_path, fake_httpx, qtbot):
+        httpx = fake_httpx()
+        dest = tmp_path / "a.7z"
+        dest.write_bytes(b"abime" * 100)
+        dl = Downloader(url="https://x.test/a.7z", destination=dest,
+                        expected_sha256=PAYLOAD_SHA)
+        with qtbot.waitSignal(dl.download_finished, timeout=5000):
+            dl.run()
+        assert len(httpx.requetes) == 1
+        assert dest.read_bytes() == PAYLOAD
+
+    def test_sans_empreinte_on_retelecharge(self, tmp_path, fake_httpx, qtbot):
+        """Rien ne dirait qu'elle est abîmée : la resservir, ce serait reboucler
+        sur la même archive à chaque essai."""
+        httpx = fake_httpx()
+        dest = tmp_path / "a.7z"
+        dest.write_bytes(b"abime" * 100)
+        dl = Downloader(url="https://x.test/a.7z", destination=dest)
+        with qtbot.waitSignal(dl.download_finished, timeout=5000):
+            dl.run()
+        assert len(httpx.requetes) == 1
+        assert dest.read_bytes() == PAYLOAD
+
+
 class TestReprise416:
     """Le `.part` local est plus gros que l'asset — GitHub répond 416.
 

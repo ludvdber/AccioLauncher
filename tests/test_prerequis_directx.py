@@ -5,8 +5,6 @@ Reliques d3dx9_37.dll et xinput1_3.dll, le wrapper d3d9 de HP4 à HP7b
 d3dx9_43.dll. Sur un Windows neuf, ces jeux s'arrêtaient sur « xinput1_3.dll est
 introuvable » sans que le launcher ait rien dit.
 """
-import json
-from pathlib import Path
 
 import pytest
 
@@ -76,22 +74,7 @@ class TestDeclaration:
 
     def test_chaque_identifiant_a_son_verbe(self):
         assert set(DLL_DIRECTX9) <= set(VERBES_WINETRICKS)
-
-    def test_le_catalogue_embarque_declare_ce_que_chaque_jeu_charge(self):
-        catalogue = json.loads((Path(__file__).resolve().parents[1] / "src/data/games.json")
-                               .read_text(encoding="utf-8"))
-        requis = {g["id"]: set(g.get("requires", [])) for g in catalogue["games"]}
-        # Les Reliques : hp7.exe importe d3dx9_37 (le runtime de 2010, seul à déclarer) ; plus de d3dx9_43 (ancien
-        # wrapper) et leur archive livre SON xinput1_3.dll, comme HP5 et HP6 (relevé des imports le 2026-10-08).
-        for jeu in ("hp7a", "hp7b"):
-            assert requis[jeu] & set(DLL_DIRECTX9) == {"d3dx9_37"}, jeu
-        # HP4 à HP6 portent le nouveau correctif (catalogue 0.33) : plus de D3DX, et leur archive livre SON
-        # xinput1_3.dll. Exiger le runtime de 2010 bloquerait le lancement pour une DLL que plus rien ne charge.
-        for jeu in ("hp4", "hp5", "hp6"):
-            assert not requis[jeu] & set(DLL_DIRECTX9), jeu
-        # HP1 à HP3 (Unreal, dgVoodoo) n'ont besoin d'aucune.
-        for jeu in ("hp1", "hp2", "hp3"):
-            assert not requis[jeu] & set(DLL_DIRECTX9), jeu
+    # Ce que le catalogue embarqué déclare : tests/test_catalogue_embarque.py.
 
 
 class TestLibelles:

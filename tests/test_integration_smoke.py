@@ -416,7 +416,7 @@ class TestSettingsRestart:
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
 
-    def test_changer_de_theme_ne_rogne_aucune_ligne(self, make_window, qtbot):
+    def test_changer_de_theme_ne_rogne_aucune_ligne(self, make_window, qtbot, mise_en_page_stable):
         """« Redémarrer maintenant » et l'aide apparaissent : la page Affichage ne tenait plus à la
         taille minimale, Qt accordait aux lignes MOINS que leur hauteur et rognait les textes par le
         bas (« Supprimer », les listes déroulantes — capture de Ludo, 2026-09-27). La page défile."""
@@ -430,7 +430,7 @@ class TestSettingsRestart:
         dlg._nav.setCurrentRow(1)
         dlg._theme_combo.setCurrentIndex(1)
         qtbot.waitUntil(lambda: dlg._theme_restart.isVisible(), timeout=1000)
-        qtbot.wait(200)    # les demandes de mise en page partent par la boucle d'événements
+        mise_en_page_stable(dlg)
         page = dlg._pages.currentWidget()
         ecrases = [(w.text() if hasattr(w, "text") else w.currentText(), w.height(), w.sizeHint().height())
                    for w in page.widget().findChildren((QPushButton, QComboBox))
@@ -570,15 +570,15 @@ class TestPasDeTroncature:
     def _jeu_le_plus_charge(win):
         return max((e.game for e in win.manager.get_games()), key=lambda g: len(g.tags))
 
-    def test_titre_et_description_tiennent_dans_le_panneau(self, make_window, qtbot):
+    def test_titre_et_description_tiennent_dans_le_panneau(self, make_window, qtbot, mise_en_page_stable):
         win = make_window()
         win.show()
         info = win._detail._info
         for w, h in self.TAILLES:
             win.resize(w, h)
-            qtbot.wait(10)
+            mise_en_page_stable(win)
             win._detail.set_game(self._jeu_le_plus_charge(win))
-            qtbot.wait(10)
+            mise_en_page_stable(win)
             assert info._title.width() <= info.available_width(), (
                 f"titre plus large que le panneau en {w}x{h}")
             assert info._desc.width() <= info.available_width(), (
@@ -587,15 +587,15 @@ class TestPasDeTroncature:
             assert info._title.height() >= besoin, (
                 f"titre amputé en {w}x{h} : {info._title.height()} px pour {besoin} px de texte")
 
-    def test_tags_jamais_coupes(self, make_window, qtbot):
+    def test_tags_jamais_coupes(self, make_window, qtbot, mise_en_page_stable):
         win = make_window()
         win.show()
         info = win._detail._info
         for w, h in self.TAILLES:
             win.resize(w, h)
-            qtbot.wait(10)
+            mise_en_page_stable(win)
             win._detail.set_game(self._jeu_le_plus_charge(win))
-            qtbot.wait(10)
+            mise_en_page_stable(win)
             besoin = info._tags_layout.heightForWidth(info._tags_container.width())
             assert info._tags_container.height() >= besoin, (
                 f"tags coupés en {w}x{h} : {info._tags_container.height()} < {besoin}")
@@ -706,32 +706,32 @@ class TestDescriptionEntreJeux:
         return besoin
 
     def test_hauteur_suit_le_texte_apres_changement_de_jeu(self, make_window_jeu_a_venir,
-                                                          qtbot):
+                                                          qtbot, mise_en_page_stable):
         win, soon = make_window_jeu_a_venir()
         win.show()
         info = win._detail._info
         autre = next(e.game for e in win.manager.get_games() if e.game.is_downloadable)
 
         win._detail.set_game(soon)
-        qtbot.wait(30)
+        mise_en_page_stable(win)
         info._toggle_desc()               # « Lire la suite »
-        qtbot.wait(30)
+        mise_en_page_stable(win)
         assert info._desc_expanded is True
 
         win._detail.set_game(autre)
-        qtbot.wait(30)
+        mise_en_page_stable(win)
         assert info._desc_expanded is False, "le dépliage ne doit pas survivre au changement"
         ecart = info._desc.height() - self._besoin(info._desc)
         assert abs(ecart) <= 2, f"{ecart} px de vide sous la description"
 
-    def test_bouton_coherent_avec_le_texte(self, make_window, qtbot):
+    def test_bouton_coherent_avec_le_texte(self, make_window, qtbot, mise_en_page_stable):
         """« Lire la suite » ne s'affiche que si du texte est réellement caché."""
         win = make_window()
         win.show()
         info = win._detail._info
         for entry in win.manager.get_games():
             win._detail.set_game(entry.game)
-            qtbot.wait(20)
+            mise_en_page_stable(win)
             tronque = info._desc.text() != info._full_desc
             assert info._btn_expand.isVisible() == tronque, (
                 f"{entry.game.id} : bouton={info._btn_expand.isVisible()} "
@@ -801,7 +801,7 @@ class TestToastsAuLieuDeModaux:
         win = make_window()
         win.show()
         win._detail.notify.emit("Sauvegardes conservées")
-        qtbot.wait(20)
+        qtbot.waitUntil(win._toast.isVisible, timeout=3000)
         assert win._toast.text() == "Sauvegardes conservées"
         assert win._toast.isVisible()
 
@@ -970,7 +970,7 @@ class TestCoutureCarrousel:
     non aux images.
     """
 
-    def _ecart(self, win, qtbot):
+    def _ecart(self, win, stable):
         """Somme |dRGB| max entre la dernière ligne de la fiche et la première
         du carrousel, échantillonnée sur toute la largeur.
 
@@ -990,7 +990,7 @@ class TestCoutureCarrousel:
         win._particles.hide()
         win._carousel._stars.clear()   # décor aléatoire : fausserait la mesure
         win._carousel.update()
-        qtbot.wait(40)
+        stable(win)
         img = win.grab().toImage()
         haut = win._carousel.mapTo(win, win._carousel.rect().topLeft()).y()
         pire = 0
@@ -1001,24 +1001,24 @@ class TestCoutureCarrousel:
                        + abs(a.blue() - b.blue()))
         return pire
 
-    def test_aucune_marche_sur_aucun_jeu(self, make_window, qtbot):
+    def test_aucune_marche_sur_aucun_jeu(self, make_window, mise_en_page_stable):
         win = make_window()
         win.resize(1320, 880)
         win.show()
-        qtbot.wait(60)
+        mise_en_page_stable(win)
         for entry in win.manager.get_games():
             win._detail.set_game(entry.game)
-            ecart = self._ecart(win, qtbot)
+            ecart = self._ecart(win, mise_en_page_stable)
             assert ecart == 0, (
                 f"{entry.game.id} : marche de {ecart}/765 au-dessus du carrousel")
 
-    def test_tient_aussi_en_carrousel_compact(self, make_window, qtbot):
+    def test_tient_aussi_en_carrousel_compact(self, make_window, mise_en_page_stable):
         """Sous 780 px de haut le carrousel se compacte : le raccord suit."""
         win = make_window()
         win.resize(1000, 700)
         win.show()
-        qtbot.wait(60)
-        assert self._ecart(win, qtbot) == 0
+        mise_en_page_stable(win)
+        assert self._ecart(win, mise_en_page_stable) == 0
 
 
 class TestRecuperationDuVideDuHaut:
@@ -1046,11 +1046,11 @@ class TestRecuperationDuVideDuHaut:
         """
         win._detail._info.overflow = lambda: pixels
 
-    def test_le_panneau_remonte_au_lieu_de_rogner(self, make_window, qtbot):
+    def test_le_panneau_remonte_au_lieu_de_rogner(self, make_window, qtbot, mise_en_page_stable):
         win = make_window()
         win.show()
         win.resize(980, 660)
-        qtbot.wait(60)
+        mise_en_page_stable(win)
         nominal = win._detail._info.y()
         assert nominal > 0
 
@@ -1063,25 +1063,25 @@ class TestRecuperationDuVideDuHaut:
         # arrête `build.bat` au hasard, ce qui est pire qu'une absence de test.
         qtbot.waitUntil(lambda: win._detail._info.y() < nominal, timeout=3000)
 
-    def test_jamais_sous_le_plancher(self, make_window, qtbot):
+    def test_jamais_sous_le_plancher(self, make_window, qtbot, mise_en_page_stable):
         """Un débordement énorme ne doit pas coller le titre à la barre."""
         from src.ui.game_detail import _INFO_TOP_MIN
         win = make_window()
         win.show()
         win.resize(980, 660)
-        qtbot.wait(60)
+        mise_en_page_stable(win)
         self._force_debordement(win, 10_000)
         win._detail._position_info()
         qtbot.waitUntil(lambda: win._detail._info.y() <= _INFO_TOP_MIN, timeout=3000)
         assert win._detail._info.y() >= _INFO_TOP_MIN
 
-    def test_le_retrait_nominal_revient_au_redimensionnement(self, make_window, qtbot):
+    def test_le_retrait_nominal_revient_au_redimensionnement(self, make_window, qtbot, mise_en_page_stable):
         """`_position_info` repart du retrait nominal : un resserrement décidé
         pour une petite fenêtre ne doit pas survivre à son agrandissement."""
         win = make_window()
         win.show()
         win.resize(980, 660)
-        qtbot.wait(60)
+        mise_en_page_stable(win)
         nominal = win._detail._info.y()
         self._force_debordement(win, 30)
         win._detail._position_info()
@@ -1401,17 +1401,17 @@ class TestNoteBientotDisponible:
         return None
 
     @pytest.mark.parametrize("taille", [(980, 660), (1200, 800), (1500, 950)])
-    def test_hauteur_suffisante(self, make_window_jeu_a_venir, qtbot, taille):
+    def test_hauteur_suffisante(self, make_window_jeu_a_venir, qtbot, taille, mise_en_page_stable):
         win, _ = make_window_jeu_a_venir()
         win.show()
         win.resize(*taille)
-        qtbot.wait(40)
+        mise_en_page_stable(win)
         vus = 0
         for entry in win.manager.get_games():
             if entry.game.is_downloadable:
                 continue
             win._detail.set_game(entry.game)
-            qtbot.wait(30)
+            mise_en_page_stable(win)
             note = self._note(win)
             assert note is not None, f"{entry.game.id} : note introuvable"
             vus += 1

@@ -12,6 +12,8 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
+from PyQt6.QtCore import QObject, pyqtSignal  # noqa: E402
+
 from src.core.config import Config  # noqa: E402
 from src.core.game_manager import GameManager  # noqa: E402
 from src.ui.notification_bar import NotificationBar  # noqa: E402
@@ -110,6 +112,96 @@ class TestDispatcher:
         monkeypatch.setattr(UpdateChecker, "start", lambda self: None)
         dispatcher = UpdateDispatcher(manager)
         assert dispatcher.forced_checker()._current_version == "0"
+
+
+class _FauxTelechargement(QObject):
+    """Un téléchargeur de mise à jour qui ne part jamais sur le réseau."""
+    progress = pyqtSignal(object, object)
+    download_finished = pyqtSignal(str)
+    error = pyqtSignal(str, object)
+    crees: list = []
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.kwargs = kwargs
+        _FauxTelechargement.crees.append(self)
+
+    def start(self):
+        pass
+
+    def wait(self, _ms=0):
+        return True
+
+
+class TestCheminsDErreurDeLaMiseAJour:
+    """M-15 / ACT-020 : ce que le launcher fait quand SA mise à jour tourne mal.
+
+    Partout, la page de release est le repli : la personne doit pouvoir finir
+    à la main ce que le launcher n'a pas pu faire seul."""
+
+    @pytest.fixture
+    def dispatcher(self, qtbot, manager, monkeypatch):
+        import src.ui.update_dispatcher as mod
+        monkeypatch.setattr(mod, "can_self_update", lambda: True)
+        monkeypatch.setattr(mod, "Downloader", _FauxTelechargement)
+        self.ouvertes = []
+        monkeypatch.setattr(mod, "open_url", self.ouvertes.append)
+        _FauxTelechargement.crees = []
+        d = UpdateDispatcher(manager)
+        d.remember("9.9.9", "https://exemple/release", "https://exemple/a.exe", "ab" * 32)
+        self.messages, self.occupe, self.pret = [], [], []
+        d.launcher_message.connect(self.messages.append)
+        d.launcher_busy.connect(self.occupe.append)
+        d.launcher_ready.connect(lambda: self.pret.append(True))
+        return d
+
+    def test_un_echec_de_telechargement_renvoie_a_la_page(self, dispatcher):
+        from src.core.echecs import Echec
+        dispatcher.download()
+        assert self.occupe == [True]
+        _FauxTelechargement.crees[0].error.emit("coupé", Echec("connexion"))
+        assert self.occupe == [True, False]
+        assert self.messages[-1] == "Échec du téléchargement — ouverture de la page de release"
+        assert self.ouvertes == ["https://exemple/release"]
+        assert dispatcher._download is None
+
+    def test_un_remplacement_impossible_renvoie_a_la_page(self, dispatcher, monkeypatch):
+        import src.ui.update_dispatcher as mod
+        monkeypatch.setattr(mod, "apply_update_and_restart", lambda _p: False)
+        dispatcher.download()
+        _FauxTelechargement.crees[0].download_finished.emit("C:/x/maj.exe")
+        assert self.pret == [], "rien ne doit annoncer un redémarrage"
+        assert self.ouvertes == ["https://exemple/release"]
+
+    def test_un_remplacement_reussi_annonce_le_redemarrage(self, dispatcher, monkeypatch):
+        import src.ui.update_dispatcher as mod
+        monkeypatch.setattr(mod, "apply_update_and_restart", lambda _p: True)
+        dispatcher.download()
+        _FauxTelechargement.crees[0].download_finished.emit("C:/x/maj.exe")
+        assert self.pret == [True]
+        assert self.messages[-1] == "Redémarrage…"
+        assert self.ouvertes == []
+
+    def test_un_second_clic_ne_relance_pas_de_telechargement(self, dispatcher):
+        dispatcher.download()
+        dispatcher.download()
+        assert len(_FauxTelechargement.crees) == 1
+
+    def test_la_progression_dit_vitesse_et_volume(self, dispatcher):
+        dispatcher.download()
+        dl = _FauxTelechargement.crees[0]
+        dl.progress.emit(0, 0)                  # taille inconnue : rien à dire
+        assert self.messages == ["Téléchargement de la mise à jour…"]
+        dl.progress.emit(4 * 1024 * 1024, 4 * 1024 * 1024)
+        assert self.messages[-1].startswith("Téléchargement de la mise à jour… ")
+        assert len(self.messages[-1]) > len("Téléchargement de la mise à jour… ")
+
+    def test_sans_page_de_release_rien_ne_s_ouvre(self, dispatcher):
+        from src.core.echecs import Echec
+        dispatcher.url = ""
+        dispatcher.download()
+        _FauxTelechargement.crees[0].error.emit("coupé", Echec())
+        assert self.ouvertes == []
 
 
 class TestBandeau:

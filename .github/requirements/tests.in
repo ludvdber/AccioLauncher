@@ -2,3 +2,7 @@
 # écrite en tête de ce fichier. La CI installe le .txt avec --require-hashes.
 # Les planchers du launcher, source de vérité, jobs de tests.yml.
 -r ../../requirements-dev.txt
+# Outils propres à la CI (ACT-016), pas aux postes : couverture visible à
+# chaque run, et un test bloqué qui meurt en 60 s au lieu de 30 min.
+pytest-cov>=7.1
+pytest-timeout>=2.4

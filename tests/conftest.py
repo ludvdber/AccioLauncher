@@ -363,3 +363,38 @@ def registre_atteignable(monkeypatch):
     n'atteint jamais `winreg` sous Linux.
     """
     monkeypatch.setattr("src.core.game_registry.disponible", lambda: True)
+
+
+@pytest.fixture
+def mise_en_page_stable(qtbot):
+    """Attend que la géométrie d'un widget ET de ses descendants ne bouge plus.
+
+    Remplace les `qtbot.wait(n)` posés avant une mesure (ACT-015, règle
+    « Un test de mise en page avec un `qtbot.wait(n)` fixe ») : la mise en
+    page passe par des chaînes de `singleShot(0)` qui se réarment, donc par
+    un nombre de tours de boucle qu'aucune durée fixe ne garantit sous charge.
+    Chaque relevé de `waitUntil` laisse la boucle tourner ; trois relevés
+    identiques d'affilée disent que plus rien n'est en chemin.
+
+        mise_en_page_stable(win)
+    """
+    from PyQt6.QtWidgets import QWidget
+
+    def _releve(racine):
+        return tuple((w.geometry().getRect(), w.isVisible())
+                     for w in [racine, *racine.findChildren(QWidget)])
+
+    def attendre(racine, timeout: int = 3000) -> None:
+        etat = {"dernier": None, "pareils": 0}
+
+        def _stable() -> bool:
+            releve = _releve(racine)
+            if releve == etat["dernier"]:
+                etat["pareils"] += 1
+            else:
+                etat["dernier"], etat["pareils"] = releve, 0
+            return etat["pareils"] >= 3
+
+        qtbot.waitUntil(_stable, timeout=timeout)
+
+    return attendre

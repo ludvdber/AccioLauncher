@@ -7,12 +7,28 @@ from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from src.core.echecs import cause_installation
 from src.core.extractors import extract_7z, extract_zip
 from src.core.post_install import (
     apply_config_files, ranger_dans_sous_dossier, unblock_extracted,
 )
 
 log = logging.getLogger(__name__)
+
+
+def supprimer_archive(archive_path: Path) -> None:
+    """Supprime l'archive — toutes les parts pour une archive multi-volumes (.001)."""
+    targets = [archive_path]
+    if archive_path.suffix == ".001":
+        # « jeu.7z.001 » → supprimer jeu.7z.001, .002, … (toutes les parts du set)
+        stem = archive_path.name[: -len(".001")]
+        targets = sorted(archive_path.parent.glob(stem + ".[0-9][0-9][0-9]"))
+    for target in targets:
+        try:
+            target.unlink(missing_ok=True)
+            log.info("Archive supprimée : %s", target)
+        except PermissionError:
+            log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", target)
 
 
 class Installer(QThread):
@@ -26,7 +42,9 @@ class Installer(QThread):
     finalizing = pyqtSignal()
     # NB : pas `finished` — ça masquerait le signal natif QThread.finished.
     install_finished = pyqtSignal(str)  # chemin du dossier d'installation
-    error = pyqtSignal(str)             # message d'erreur
+    # Message pour le journal, puis la CAUSE (`echecs.cause_installation`) :
+    # c'est elle que la boîte d'échec explique.
+    error = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -94,7 +112,7 @@ class Installer(QThread):
                     extract_zip(self.archive_path, self.destination,
                                 self.progress.emit, lambda: self._cancelled)
                 case _:
-                    self.error.emit(f"Format d'archive non supporté : {suffix}")
+                    self.error.emit(f"Format d'archive non supporté : {suffix}", "archive")
                     return
 
             apres = set(p.name for p in self.destination.iterdir() if p.is_dir())
@@ -136,21 +154,19 @@ class Installer(QThread):
         except Exception as exc:
             log.exception("Erreur pendant l'installation")
             # NE PAS cleanup en cas d'erreur d'extraction — laisser les fichiers pour debug
-            self.error.emit(f"Erreur d'installation : {exc}")
+            cause = cause_installation(exc, self._octets_libres())
+            log.info("Cause retenue pour l'échec d'installation : %s", cause)
+            self.error.emit(f"Erreur d'installation : {exc}", cause)
+
+    def _octets_libres(self) -> int | None:
+        """Espace restant sur le volume de destination, ou None s'il est illisible."""
+        try:
+            return shutil.disk_usage(self.destination).free
+        except OSError:
+            return None
 
     def _delete_archive(self) -> None:
-        """Supprime l'archive — toutes les parts pour une archive multi-volumes (.001)."""
-        targets = [self.archive_path]
-        if self.archive_path.suffix == ".001":
-            # « jeu.7z.001 » → supprimer jeu.7z.001, .002, … (toutes les parts du set)
-            stem = self.archive_path.name[: -len(".001")]
-            targets = sorted(self.archive_path.parent.glob(stem + ".[0-9][0-9][0-9]"))
-        for target in targets:
-            try:
-                target.unlink(missing_ok=True)
-                log.info("Archive supprimée : %s", target)
-            except PermissionError:
-                log.warning("Impossible de supprimer l'archive (fichier verrouillé) : %s", target)
+        supprimer_archive(self.archive_path)
 
     def _cleanup(self) -> None:
         """Nettoie UNIQUEMENT les dossiers CRÉÉS par cette extraction.

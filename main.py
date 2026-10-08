@@ -238,14 +238,8 @@ def main():
 
     except Exception as exc:
         log.critical("Erreur fatale au démarrage : %s", exc, exc_info=True)
-        # Tenter d'afficher une boîte de dialogue si QApplication existe
         try:
-            app_instance = QApplication.instance()
-            if app_instance:
-                QMessageBox.critical(
-                    None, "Erreur fatale",
-                    f"Accio Launcher n'a pas pu démarrer.\n\n{exc}",
-                )
+            afficher_erreur_fatale(exc)
         except Exception:
             # Le démarrage a DÉJÀ échoué et c'est journalisé en critique :
             # l'échec de la boîte ne change pas l'issue, mais il dit que
@@ -255,6 +249,35 @@ def main():
         print(f"Erreur fatale : {exc}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
+
+
+def afficher_erreur_fatale(exc: BaseException, fabrique=QMessageBox) -> bool:
+    """La boîte d'un démarrage raté. Rend False quand rien ne peut s'afficher.
+
+    Elle était en français en dur, par le raccourci `QMessageBox.critical`
+    (règle 116), et ne disait pas où trouver le journal : la seule chose dont
+    l'aide sur le Discord a besoin (audit du 2026-10-07, ACT-005). La langue
+    est celle de la config si elle a eu le temps d'être posée, le français
+    sinon — `tr` ne lève jamais.
+    """
+    if QApplication.instance() is None:
+        return False
+    from PyQt6.QtCore import Qt
+
+    from src.core.i18n import tr
+    boite = fabrique()
+    boite.setWindowTitle("Accio Launcher")
+    boite.setIcon(QMessageBox.Icon.Critical)
+    boite.setTextFormat(Qt.TextFormat.PlainText)
+    boite.setText(tr("Accio Launcher n'a pas pu démarrer."))
+    boite.setInformativeText(tr(
+        "Le détail est dans le journal :\n{}\n\nJoignez ce fichier à votre "
+        "message sur le Discord.").format(LOG_FILE))
+    boite.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    boite.setDetailedText(f"{type(exc).__name__}: {exc}")
+    boite.addButton(tr("Fermer"), QMessageBox.ButtonRole.AcceptRole)
+    boite.exec()
+    return True
 
 
 if __name__ == "__main__":

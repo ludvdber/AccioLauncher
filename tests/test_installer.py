@@ -112,6 +112,16 @@ def _make_7z(tmp_path, *, volume_size: str | None = None):
     return archive
 
 
+def _zip(tmp_path, noms: list[str]):
+    """Petite archive zip réelle (l'extracteur zip n'a pas besoin de 7-Zip)."""
+    import zipfile
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        for nom in noms:
+            zf.writestr(nom, "contenu")
+    return archive
+
+
 @pytest.mark.skipif(find_7z_exe() is None, reason="7-Zip embarqué introuvable")
 class TestExtract7z:
     def test_extract_simple(self, tmp_path):
@@ -201,35 +211,59 @@ class TestDeblocageSurReparation:
         from src.core.installer import Installer
         return Installer(archive, destination, game_dir=game_dir)
 
+    # Ces deux tests RECOPIAIENT le calcul de `run()` au lieu de l'appeler : ils
+    # restaient verts quoi qu'on fasse de `run()` (audit du 2026-10-07, ACT-010).
+    # Ils passent maintenant par une vraie extraction.
+
     def test_premiere_installation(self, tmp_path):
-        inst = self._installer(tmp_path / "a.7z", tmp_path / "jeux")
-        (tmp_path / "jeux").mkdir()
-        inst._created_dirs = [tmp_path / "jeux" / "HP1"]
-        inst._extracted_dirs = [tmp_path / "jeux" / "HP1"]
-        assert inst._extracted_dirs, "rien à débloquer sur une première installation"
+        dest = tmp_path / "jeux"
+        inst = self._installer(_zip(tmp_path, ["HP1/System/Core.dll"]), dest)
+        inst.run()
+        assert inst._created_dirs == [dest / "HP1"]
+        assert inst._extracted_dirs == [dest / "HP1"]
 
     def test_le_dossier_du_jeu_est_debloque_meme_s_il_preexiste(self, tmp_path):
         """Le cœur du correctif : ce qu'on DÉBLOQUE et ce qu'on peut SUPPRIMER
         sont deux questions différentes."""
         dest = tmp_path / "jeux"
         (dest / "HP1" / "System").mkdir(parents=True)
-        archive = tmp_path / "a.7z"
-        archive.write_bytes(b"7z")
-        inst = self._installer(archive, dest)
-
-        # On rejoue le calcul de run() sans lancer d'extraction réelle.
-        avant = {p.name for p in dest.iterdir() if p.is_dir()}   # {"HP1"}
-        apres = {p.name for p in dest.iterdir() if p.is_dir()}
-        nouveaux = apres - avant
-        inst._created_dirs = [dest / d for d in nouveaux]
-        a_debloquer = set(nouveaux)
-        if inst.game_dir and inst.game_dir in apres:
-            a_debloquer.add(inst.game_dir)
-        inst._extracted_dirs = [dest / d for d in a_debloquer]
-
+        inst = self._installer(_zip(tmp_path, ["HP1/System/Core.dll"]), dest)
+        inst.run()
         assert inst._created_dirs == [], "aucun dossier n'a été créé"
         assert inst._extracted_dirs == [dest / "HP1"], (
             "le dossier du jeu doit être débloqué même s'il préexistait")
+
+    def test_annuler_une_reparation_ne_supprime_que_ce_que_l_extraction_a_cree(self, tmp_path):
+        """M-01 : vraie archive, annulation posée depuis la progression. Le jeu
+        déjà installé reste intact, le dossier neuf de l'archive disparaît."""
+        dest = tmp_path / "jeux"
+        jeu = dest / "HP1" / "System"
+        jeu.mkdir(parents=True)
+        (jeu / "Game.exe").write_text("precieux")
+        # « Extras » en tête : l'annulation tombe après la première entrée.
+        archive = _zip(tmp_path, ["Extras/lisez-moi.txt", "HP1/System/Core.dll"])
+        inst = self._installer(archive, dest)
+        inst.progress.connect(lambda _pct: inst.cancel())
+        fins = []
+        inst.install_finished.connect(fins.append)
+
+        inst.run()
+
+        assert (jeu / "Game.exe").read_text() == "precieux"
+        assert not (dest / "Extras").exists(), "le dossier créé par l'extraction devait partir"
+        assert fins == [], "une installation annulée ne doit pas s'annoncer finie"
+
+    def test_le_nettoyage_refuse_le_dossier_racine_d_installation(self, tmp_path, caplog):
+        """M-02 : même si la liste des dossiers créés venait à contenir la racine."""
+        dest = tmp_path / "jeux"
+        dest.mkdir()
+        (dest / "HP2").mkdir()
+        inst = self._installer(tmp_path / "a.7z", dest)
+        inst._created_dirs = [dest]
+        with caplog.at_level("CRITICAL", logger="src.core.installer"):
+            inst._cleanup()
+        assert (dest / "HP2").is_dir()
+        assert any("REFUS" in r.getMessage() for r in caplog.records)
 
     def test_le_nettoyage_ne_touche_pas_un_dossier_preexistant(self, tmp_path):
         """Annuler une réparation ne doit JAMAIS emporter l'installation que
@@ -246,6 +280,49 @@ class TestDeblocageSurReparation:
 
         assert (jeu / "Game.exe").exists(), (
             "le nettoyage a supprimé une installation préexistante")
+
+
+class TestSuppressionDeLArchive:
+    """M-03 : « supprimer les archives après installation » sur un multi-volumes."""
+
+    @staticmethod
+    def _parts(dossier, nom, n):
+        for i in range(1, n + 1):
+            (dossier / f"{nom}.{i:03d}").write_bytes(b"x")
+
+    def test_toutes_les_parts_sont_supprimees_et_elles_seules(self, tmp_path):
+        from src.core.installer import supprimer_archive
+        self._parts(tmp_path, "hp1_v1.3.7z", 3)
+        self._parts(tmp_path, "hp2_v1.2.7z", 1)
+        supprimer_archive(tmp_path / "hp1_v1.3.7z.001")
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["hp2_v1.2.7z.001"]
+
+    def test_une_part_verrouillee_ne_fait_pas_echouer(self, tmp_path, monkeypatch, caplog):
+        from pathlib import Path
+
+        from src.core.installer import supprimer_archive
+        self._parts(tmp_path, "hp1_v1.3.7z", 3)
+        vrai_unlink = Path.unlink
+
+        def unlink(self, missing_ok=False):
+            if self.name.endswith(".002"):
+                raise PermissionError(32, "fichier utilisé par un autre processus")
+            return vrai_unlink(self, missing_ok=missing_ok)
+        monkeypatch.setattr(Path, "unlink", unlink)
+
+        with caplog.at_level("WARNING", logger="src.core.installer"):
+            supprimer_archive(tmp_path / "hp1_v1.3.7z.001")
+
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["hp1_v1.3.7z.002"]
+        assert any("verrouillé" in r.getMessage() for r in caplog.records)
+
+    def test_l_installeur_supprime_apres_une_vraie_installation(self, tmp_path):
+        from src.core.installer import Installer
+        archive = _zip(tmp_path, ["HP1/System/Core.dll"])
+        inst = Installer(archive, tmp_path / "jeux", game_dir="HP1", delete_archive=True)
+        inst.run()
+        assert (tmp_path / "jeux" / "HP1" / "System" / "Core.dll").exists()
+        assert not archive.exists()
 
 
 class TestProgressionDu7ZipLinux:

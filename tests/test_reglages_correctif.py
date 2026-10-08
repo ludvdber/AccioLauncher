@@ -878,21 +878,7 @@ class TestFenetreQualite:
         assert ini.read_bytes() == avant
 
 
-class TestCatalogueEmbarque:
-    def test_chaque_reglage_declare_est_connu(self):
-        """Un identifiant inconnu serait ignoré en silence : au catalogue embarqué, c'est une faute."""
-        import json
-        data = json.loads((Path(__file__).parent.parent / "src/data/games.json").read_text(encoding="utf-8"))
-        for jeu in data["games"]:
-            for ident in jeu.get("fix_settings", ()):
-                assert ident in rc.REGLAGES, f"{jeu['id']} : {ident}"
-
-    def test_hp7b_n_a_pas_de_format(self):
-        """Son ini n'a pas d'AspectRatio : rien ne lirait la clé."""
-        import json
-        data = json.loads((Path(__file__).parent.parent / "src/data/games.json").read_text(encoding="utf-8"))
-        hp7b = next(j for j in data["games"] if j["id"] == "hp7b")
-        assert "format_image" not in hp7b["fix_settings"]
+# Les réglages que déclare le catalogue embarqué : tests/test_catalogue_embarque.py.
 
 
 class TestFenetreRedimensionnable:

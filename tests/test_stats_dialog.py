@@ -322,29 +322,29 @@ class TestFriseSeDessine:
 
 
 class TestParagrapheMesure:
-    def test_la_hauteur_suit_la_largeur_reelle(self, qtbot):
+    def test_la_hauteur_suit_la_largeur_reelle(self, qtbot, mise_en_page_stable):
         lbl = _Paragraphe(" · ".join(["Harry Potter et la Chambre des Secrets"] * 4))
         qtbot.addWidget(lbl)
         lbl.show()
         lbl.resize(300, 10)
-        qtbot.wait(1)
+        mise_en_page_stable(lbl)
         assert lbl.minimumHeight() > lbl.fontMetrics().height() * 2
 
-    def test_elle_se_recalcule_en_s_elargissant(self, qtbot):
+    def test_elle_se_recalcule_en_s_elargissant(self, qtbot, mise_en_page_stable):
         lbl = _Paragraphe(" · ".join(["Harry Potter et la Coupe de Feu"] * 4))
         qtbot.addWidget(lbl)
         lbl.show()
         lbl.resize(240, 10)
-        qtbot.wait(1)
+        mise_en_page_stable(lbl)
         etroit = lbl.minimumHeight()
         lbl.resize(900, 10)
-        qtbot.wait(1)
+        mise_en_page_stable(lbl)
         assert lbl.minimumHeight() < etroit
 
 
 class TestBoutonDeFenetre:
     def test_la_fenetre_porte_une_commande_de_statistiques(self, qtbot, tmp_path,
-                                                           monkeypatch):
+                                                           monkeypatch, mise_en_page_stable):
         """Deux commandes cote a cote, et qui ne se recouvrent pas.
 
         Le bouton n'est PAS clique (`exec()` bloquerait la suite) et la fenetre
@@ -361,7 +361,7 @@ class TestBoutonDeFenetre:
         win = MainWindow()
         qtbot.addWidget(win)
         win.show()
-        qtbot.wait(10)
+        mise_en_page_stable(win)
         assert win._btn_stats.isVisible()
         assert not win._btn_stats.geometry().intersects(win._btn_settings.geometry())
 

@@ -184,11 +184,13 @@ class Downloader(QThread):
             elif self.url:
                 self._run_single()
             else:
-                self.error.emit("Aucune URL de téléchargement.", Echec())
+                self.error.emit(tr("Aucune URL de téléchargement."), Echec())
         except Exception as exc:
             log.exception("Erreur inattendue dans le downloader")
             cause, code = cause_de(exc)
-            self.error.emit(f"Erreur : {exc}", Echec(cause, code_http=code))
+            # Le message part dans la barre d'état, que l'orchestrateur préfixe
+            # déjà de « Erreur : » traduit.
+            self.error.emit(str(exc), Echec(cause, code_http=code))
 
     # ─── Téléchargement simple (fichier unique) ───
 
@@ -203,6 +205,22 @@ class Downloader(QThread):
 
         part_path = self.destination.with_suffix(self.destination.suffix + ".part")
         part_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # L'archive complète est déjà dans le cache — « garder les archives »
+        # coché, ou une installation qui a échoué APRÈS le téléchargement.
+        # Même règle que les parts d'un multi-volumes, à une différence près :
+        # sans empreinte, on retélécharge. Une archive abîmée sans empreinte
+        # pour le dire serait resservie à chaque essai (ACT-003).
+        if self.destination.exists() and self.expected_sha256:
+            if self._verify_sha256(self.destination, self.expected_sha256):
+                log.info("Archive déjà présente et conforme, rien à télécharger : %s",
+                         self.destination)
+                self.download_finished.emit(str(self.destination))
+                return
+            if self._cancelled:
+                return
+            log.warning("Archive en cache non conforme, re-téléchargement : %s", self.destination)
+            self.destination.unlink(missing_ok=True)
 
         derniere: BaseException | None = None
         for attempt in range(1, MAX_RETRIES + 1):

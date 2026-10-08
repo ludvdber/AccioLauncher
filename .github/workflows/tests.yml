@@ -64,8 +64,23 @@ jobs:
           New-ItemProperty -Path $cle -Name DumpFolder -PropertyType ExpandString -Value "$env:RUNNER_TEMP\vidages" -Force | Out-Null
           New-ItemProperty -Path $cle -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
           New-ItemProperty -Path $cle -Name DumpCount -PropertyType DWord -Value 3 -Force | Out-Null
+      # --timeout : un test bloqué meurt en 60 s, sa pile au journal, au lieu
+      # de brûler les 30 minutes du job (le plus long en mesure 4 s).
+      # --cov : couverture visible à chaque run (85 % mesurés le 2026-10-08),
+      # plancher bas à 83 % : il arrête une chute, pas un écart de quelques
+      # lignes (ACT-016).
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short
+        run: python -m pytest -v --tb=short --timeout=60 --cov=src --cov=main --cov-report=term --cov-fail-under=83
+      # Les tests tournent en offscreen, où Qt ne voit aucune police système et
+      # mesure tout en Cinzel. tools/audit_geometrie.py rejoue la mise en page
+      # sur la plateforme native, avec les vraies polices de Windows. Il ne
+      # tournait que dans build.bat, donc sur la machine qui publie, au moment
+      # de publier : une régression de mise en page rougit maintenant la PR
+      # (117 s mesurées). Une seule version de Python suffit, c'est la mise en
+      # page qu'on mesure.
+      - name: Geometrie avec les vraies polices
+        if: matrix.python == '3.14'
+        run: python tools/audit_geometrie.py
       - name: Joindre les vidages de plantage
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -102,4 +117,4 @@ jobs:
       - name: Installer les dépendances
         run: pip install --require-hashes -r .github/requirements/tests.txt
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short
+        run: python -m pytest -v --tb=short --timeout=60

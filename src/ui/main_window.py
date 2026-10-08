@@ -542,8 +542,13 @@ class MainWindow(QMainWindow):
             return
         self.config.kofi_milestone_thanked = True
         self.config.save()
+        # Dire ce que le café finance — le travail fait à la main, jamais les
+        # jeux — plutôt que « un café fait plaisir » (ACT-071). Deux lignes : le
+        # toast ne passe pas à la ligne seul, et une seule aurait dépassé une
+        # fenêtre de 980 px (573 px mesurés au plus, polices réelles).
         self._toast.show_message(
-            tr("Déjà 2 h de magie retrouvée. Si le launcher vous plaît, un café fait plaisir — cliquez ici."),
+            tr("Déjà 2 h de magie retrouvée. Accio et ses correctifs sont faits à la main.\n"
+               "Un café sur Ko-fi soutient ce travail, jamais les jeux — cliquez ici."),
             duration_ms=9000,
             on_click=lambda: open_url(KOFI_URL),
         )

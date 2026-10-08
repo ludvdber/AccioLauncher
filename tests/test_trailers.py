@@ -83,14 +83,7 @@ class TestParsing:
         t = _parse_trailers({"hp1": {"version": "1.0", "url": "https://x/a.mp4",
                                      "size_mb": -500}})
         assert t[0].size_mb == 0
-
-    def test_catalogue_reel_parse_ses_trailers(self):
-        """Le `games.json` embarqué déclare bien ses bandes-annonces."""
-        from src.core.config import GAMES_JSON_PATH
-        brut = json.loads(GAMES_JSON_PATH.read_text(encoding="utf-8"))
-        declares = brut.get("trailers", {})
-        assert declares, "le catalogue embarqué ne déclare aucune bande-annonce"
-        assert len(_parse_trailers(declares)) == len(declares)
+    # Les bandes-annonces du catalogue embarqué : tests/test_catalogue_embarque.py.
 
 
 class TestNomDeFichier:

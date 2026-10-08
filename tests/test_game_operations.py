@@ -11,6 +11,7 @@ Les tests ci-dessous couvrent les trois transitions qui portent l'essentiel de
 la valeur : la fin du téléchargement, la fin de l'installation, et l'annulation.
 """
 
+import errno
 import time
 
 import pytest
@@ -197,13 +198,13 @@ class TestAucuneOperationNeFuit:
     def _propre(self, operations) -> bool:
         return not any(getattr(operations, c) for c in self.CHAMPS)
 
-    @pytest.mark.parametrize("sortie", [
-        "_on_download_error", "_on_install_error",
+    @pytest.mark.parametrize("sortie, args", [
+        ("_on_download_error", ("boum",)), ("_on_install_error", ("boum", "inconnu")),
     ])
-    def test_les_chemins_d_erreur_ne_laissent_rien(self, ops, sortie):
+    def test_les_chemins_d_erreur_ne_laissent_rien(self, ops, sortie, args):
         operations, manager = ops
         self._salir(operations, manager)
-        getattr(operations, sortie)("boum")
+        getattr(operations, sortie)(*args)
         assert self._propre(operations), (
             f"{sortie} a laissé un état d'opération derrière lui")
 
@@ -268,3 +269,63 @@ class TestQuiEcouteVoitUneOperationEnCours:
         finally:
             operations._installer.cancel()
             operations._installer.wait(5000)
+
+
+class TestUnEchecDInstallationDitSaCause:
+    """M-05 / ACT-003 : la boîte disait « L'archive est peut-être corrompue.
+    Réessayez le téléchargement » quelle que soit la cause. Retélécharger 4 Go
+    ne libère pas un disque plein. Ici, une VRAIE installation (le fil de
+    l'installeur, son classement, le slot de l'orchestrateur) dont seule
+    l'extraction est remplacée par l'erreur à éprouver."""
+
+    @staticmethod
+    def _echouer(ops_tuple, qtbot, monkeypatch, exc, archive=None):
+        operations, manager = ops_tuple
+
+        def extraction(*_a, **_k):
+            raise exc
+        monkeypatch.setattr("src.core.installer.extract_7z", extraction)
+        archive = archive or _archive(ops_tuple)
+        with qtbot.waitSignal(operations.operation_error, timeout=10_000) as recu:
+            operations.install(manager.get_games()[0].game, archive, delete_archive=False)
+        return recu.args[1], archive
+
+    @pytest.fixture(autouse=True)
+    def _francais(self):
+        from src.core.i18n import get_language, set_language
+        avant = get_language()
+        set_language("fr")
+        yield
+        set_language(avant)
+
+    @pytest.mark.parametrize("exc, attendu", [
+        (PermissionError(errno.EACCES, "Accès refusé"), "Windows a refusé l'écriture"),
+        (OSError(errno.ENOSPC, "No space left on device"), "Le disque est plein"),
+        (OSError(errno.ENAMETOOLONG, "File name too long"), "trop long"),
+    ])
+    def test_seule_l_archive_illisible_accuse_l_archive(self, ops, qtbot, monkeypatch, exc, attendu):
+        texte, archive = self._echouer(ops, qtbot, monkeypatch, exc)
+        assert attendu in texte
+        assert "abîmée" not in texte and "corrompue" not in texte
+        assert archive.exists(), "une archive saine ne doit pas être supprimée"
+
+    def test_une_archive_illisible_du_cache_est_retiree(self, ops, qtbot, monkeypatch):
+        """Sinon le téléchargeur, qui reprend ce qu'il trouve, la resservirait."""
+        from src.core.extractors import ExtractionEchouee
+        exc = ExtractionEchouee("7z.exe a échoué (code 2)",
+                                "Open ERROR: Cannot open the file as [7z] archive\n"
+                                "ERRORS:\nUnexpected end of archive")
+        texte, archive = self._echouer(ops, qtbot, monkeypatch, exc)
+        assert "abîmée" in texte and "supprimée" in texte
+        assert not archive.exists()
+
+    def test_une_archive_choisie_par_la_personne_n_est_jamais_supprimee(
+            self, ops, qtbot, monkeypatch, tmp_path):
+        from src.core.extractors import ExtractionEchouee
+        choisie = tmp_path / "Mes archives" / "hp1.7z"
+        choisie.parent.mkdir()
+        choisie.write_bytes(b"7z\xbc\xaf\x27\x1c")
+        exc = ExtractionEchouee("code 2", "ERRORS:\nIs not archive")
+        texte, archive = self._echouer(ops, qtbot, monkeypatch, exc, archive=choisie)
+        assert "L'archive choisie est abîmée" in texte
+        assert choisie.exists()

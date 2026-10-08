@@ -16,10 +16,34 @@ import shutil
 import subprocess
 import sys
 import zipfile
+from collections import deque
 from pathlib import Path, PurePosixPath
 from typing import Callable, Iterable, Iterator
 
 log = logging.getLogger(__name__)
+
+
+class ExtractionEchouee(RuntimeError):
+    """7-Zip a rendu un code d'échec. `sortie` garde ses dernières lignes.
+
+    Sans elles, la seule chose connue était « code 2 », qui couvre aussi bien
+    une archive tronquée qu'un fichier qu'un antivirus refuse de laisser
+    écrire : la boîte d'échec accusait l'archive dans tous les cas (ACT-003).
+    Les messages propres de 7-Zip sont en anglais quelle que soit la langue de
+    Windows ; c'est sur eux que `echecs.cause_installation` s'appuie.
+    """
+
+    def __init__(self, message: str, sortie: str = "") -> None:
+        super().__init__(message)
+        self.sortie = sortie
+
+
+class SeptZipIntrouvable(RuntimeError):
+    """Ni 7-Zip embarqué ni 7-Zip du système : rien ne peut décompresser."""
+
+
+class ArchiveRefusee(ValueError):
+    """Une entrée sortirait du dossier d'installation (avant ou après extraction)."""
 
 # Callbacks injectés depuis l'Installer.
 ProgressCb = Callable[[int], None]
@@ -169,8 +193,9 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
         timeout=_LIST_TIMEOUT_S, **kwargs,
     )
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"Impossible de lire le contenu de l'archive (7z.exe code {proc.returncode})"
+        raise ExtractionEchouee(
+            f"Impossible de lire le contenu de l'archive (7z.exe code {proc.returncode})",
+            "\n".join((proc.stdout + "\n" + proc.stderr).strip().splitlines()[-8:]),
         )
     return [
         line[len("Path = "):].strip()
@@ -194,7 +219,7 @@ def verify_archive_entries(archive: Path, exe: str) -> list[str]:
     if unsafe:
         log.critical("Archive refusée — %d entrée(s) hors destination : %s",
                      len(unsafe), unsafe[:5])
-        raise ValueError(
+        raise ArchiveRefusee(
             f"Archive refusée : {len(unsafe)} entrée(s) tentent de sortir du "
             f"dossier d'installation (première : {unsafe[0]!r})"
         )
@@ -246,7 +271,7 @@ def verify_extracted_paths(destination: Path, racines: Iterable[str] | None = No
                 continue
             if not item.resolve().is_relative_to(dest_resolved):
                 log.critical("Lien hors destination détecté post-extraction : %s", item)
-                raise ValueError(f"Path traversal détecté après extraction : {item}")
+                raise ArchiveRefusee(f"Path traversal détecté après extraction : {item}")
 
 
 def extract_7z_subprocess(
@@ -256,7 +281,7 @@ def extract_7z_subprocess(
     """Extraction via 7z.exe — progression parsée sur stdout (-bsp1), kill sur annulation."""
     exe = find_7z_exe()
     if exe is None:
-        raise RuntimeError(
+        raise SeptZipIntrouvable(
             "7z.exe introuvable — l'extraction de cette archive a échoué.\n"
             "Réinstallez Accio Launcher ou installez 7-Zip depuis https://7-zip.org."
         )
@@ -292,6 +317,10 @@ def extract_7z_subprocess(
     # Sous Windows, le flux tel qu'il a toujours été lu. Ailleurs, découpé
     # aussi aux retours arrière (cf. `_RETOURS_DE_7Z`).
     lignes = proc.stdout if sys.platform == "win32" else _segments_de_progression(proc.stdout)
+    # Les dernières lignes qui ne sont PAS de la progression : c'est là que
+    # 7-Zip dit pourquoi il échoue (« Data Error », « Unexpected end of
+    # archive », « Cannot open output file »…).
+    messages: deque[str] = deque(maxlen=12)
     try:
         last_pct = 0
         for line in lignes:
@@ -299,6 +328,8 @@ def extract_7z_subprocess(
                 proc.kill()
                 return
             line = line.strip()
+            if line and "%" not in line:
+                messages.append(line)
             if line.endswith("%") or "%" in line:
                 try:
                     pct_str = line.split("%")[0].strip().split()[-1]
@@ -316,7 +347,8 @@ def extract_7z_subprocess(
         # d'erreur qui prétendait le contraire.
         ret = proc.wait(timeout=_REAP_TIMEOUT_S)
         if ret != 0:
-            raise RuntimeError(f"7z.exe a échoué (code {ret})")
+            log.error("Sortie de 7-Zip :\n%s", "\n".join(messages))
+            raise ExtractionEchouee(f"7z.exe a échoué (code {ret})", "\n".join(messages))
         progress(100)
         verify_extracted_paths(destination, premiers_niveaux(entries))
         log.info("Extraction %s terminée", "7z.exe" if sys.platform == "win32" else Path(exe).name)
@@ -355,7 +387,7 @@ def extract_zip(archive: Path, destination: Path,
         if unsafe:
             log.critical("Archive zip refusée — %d entrée(s) hors destination : %s",
                          len(unsafe), unsafe[:5])
-            raise ValueError(
+            raise ArchiveRefusee(
                 f"Archive refusée : {len(unsafe)} entrée(s) tentent de sortir du "
                 f"dossier d'installation (première : {unsafe[0]!r})"
             )

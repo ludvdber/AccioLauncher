@@ -3,6 +3,7 @@
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QSlider, QWidget
 
+from src.core.i18n import tr
 from src.ui.icon_button import IconButton
 from src.ui.theme import themed
 
@@ -74,18 +75,18 @@ class AudioBar(QWidget):
         # espérant que le délai reparte. Ce bouton reste donc affiché
         # après la fin, seul, dans une pastille réduite.
         self._btn_replay = IconButton("replay", _BOUTON, self)
-        self._btn_replay.setAccessibleName("Revoir la bande-annonce")
+        self._btn_replay.setAccessibleName(tr("Revoir la bande-annonce"))
         layout.addWidget(self._btn_replay)
         self._btn_replay.clicked.connect(self.replay_clicked.emit)
 
         # Pause de la bande-annonce : un contrôle explicite, à côté du son.
         self._btn_play = IconButton("pause", _BOUTON, self)
-        self._btn_play.setAccessibleName("Mettre la bande-annonce en pause")
+        self._btn_play.setAccessibleName(tr("Mettre la bande-annonce en pause"))
         self._btn_play.clicked.connect(self.play_toggled.emit)
         layout.addWidget(self._btn_play)
 
         self._btn_mute = IconButton("volume", _BOUTON, self)
-        self._btn_mute.setAccessibleName("Couper le son de la vidéo")
+        self._btn_mute.setAccessibleName(tr("Couper le son de la vidéo"))
         self._btn_mute.clicked.connect(self.mute_toggled.emit)
         layout.addWidget(self._btn_mute)
 
@@ -94,7 +95,7 @@ class AudioBar(QWidget):
         self._volume_slider.setFixedWidth(_SLIDER)   # la largeur du calcul ci-dessus
         self._volume_slider.setValue(25)
         self._volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._volume_slider.setAccessibleName("Volume de la vidéo")
+        self._volume_slider.setAccessibleName(tr("Volume de la vidéo"))
         self._volume_slider.setStyleSheet(themed(
             "QSlider::groove:horizontal { background: rgba(255,255,255,0.14);"
             " height: 3px; border-radius: 1px; }"
@@ -111,7 +112,7 @@ class AudioBar(QWidget):
         # qui ne pilote pas la lecture, et il coupe le groupe s'il se glisse
         # entre la pause et le son.
         self._btn_cinema = IconButton("plein_ecran", _BOUTON, self)
-        self._btn_cinema.setAccessibleName("Bande-annonce en plein écran")
+        self._btn_cinema.setAccessibleName(tr("Bande-annonce en plein écran"))
         self._btn_cinema.clicked.connect(self.cinema_toggled.emit)
         layout.addWidget(self._btn_cinema)
 
@@ -134,14 +135,22 @@ class AudioBar(QWidget):
         self._btn_cinema.set_icone(
             "quitter_plein_ecran" if actif else "plein_ecran")
         self._btn_cinema.setAccessibleName(
-            "Quitter le plein écran" if actif
-            else "Bande-annonce en plein écran")
+            tr("Quitter le plein écran") if actif
+            else tr("Bande-annonce en plein écran"))
 
     def set_muted_icon(self, muted: bool) -> None:
         self._btn_mute.set_icone("muet" if muted else "volume")
+        # Le nom suit l'icône : un lecteur d'écran annonçait « Couper le son »
+        # sur un son déjà coupé.
+        self._btn_mute.setAccessibleName(
+            tr("Rétablir le son de la vidéo") if muted
+            else tr("Couper le son de la vidéo"))
 
     def set_paused_icon(self, paused: bool) -> None:
         self._btn_play.set_icone("play" if paused else "pause")
+        self._btn_play.setAccessibleName(
+            tr("Reprendre la bande-annonce") if paused
+            else tr("Mettre la bande-annonce en pause"))
 
     def volume(self) -> int:
         return self._volume_slider.value()

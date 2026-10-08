@@ -7,11 +7,11 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.core import stats
 from src.core.downloader import Downloader
-from src.core.echecs import Echec, explication
+from src.core.echecs import Echec, explication, explication_installation
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
-from src.core.installer import Installer
+from src.core.installer import Installer, supprimer_archive
 from src.core.system_checks import needed_space_mb
 from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 from src.core.speed_tracker import SpeedTracker
@@ -447,7 +447,11 @@ class GameOperations(QObject):
             self.status_message.emit(tr("Installation incomplète."))
             self.operation_error.emit(
                 tr("Installation incomplète"),
-                tr("L'installation semble incomplète : l'exécutable du jeu est introuvable.\nL'archive est peut-être corrompue."),
+                # 7-Zip a fini sans erreur : l'archive était lisible. Un
+                # exécutable qui manque juste après, c'est le plus souvent
+                # un antivirus qui l'a retiré (ACT-003).
+                tr("L'installation semble incomplète : l'exécutable du jeu est introuvable.\n"
+                   "Un antivirus l'a peut-être retiré : consultez sa quarantaine, puis réessayez."),
             )
             return
 
@@ -459,14 +463,32 @@ class GameOperations(QObject):
         self.status_message.emit(tr("{} installé avec succès !").format(game.name))
         self.operation_finished.emit(game)
 
-    def _on_install_error(self, message: str) -> None:
+    def _on_install_error(self, message: str, cause: str) -> None:
+        inst = self._installer
+        archive = inst.archive_path if inst is not None else None
         self._liberer_installer()
         game, _ = self._relacher_operation()
         if game is not None:
             self._manager.redetect_state(game.id)
+        # Une archive abîmée du CACHE est retirée : sinon le téléchargeur, qui
+        # reprend ce qu'il trouve, la resservirait au prochain essai. Une
+        # archive choisie par la personne (« installer depuis un fichier »)
+        # n'est jamais touchée.
+        du_launcher = archive is not None and self._dans_le_cache(archive)
+        if cause == "archive" and du_launcher:
+            supprimer_archive(archive)
         self.state_changed.emit()
-        self.status_message.emit(tr("Erreur d'installation : {}").format(message))
+        # Le message de l'installeur est en français et technique : il va au
+        # journal. La barre d'état dit l'échec, la boîte dit la cause.
+        log.error("Installation échouée (cause : %s) : %s", cause, message)
+        self.status_message.emit(tr("Échec de l'installation"))
         self.operation_error.emit(
             tr("Échec de l'installation"),
-            tr("L'installation a échoué.\nL'archive est peut-être corrompue. Réessayez le téléchargement."),
+            explication_installation(cause, archive_du_launcher=du_launcher),
         )
+
+    def _dans_le_cache(self, archive: Path) -> bool:
+        try:
+            return archive.resolve().parent == self._manager.config.cache_path.resolve()
+        except OSError:
+            return False

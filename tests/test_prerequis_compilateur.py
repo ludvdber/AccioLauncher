@@ -8,7 +8,6 @@
 
 `sys.platform` est simulé dans les deux sens : ces tests tournent partout.
 """
-import json
 import sys
 from pathlib import Path
 
@@ -141,16 +140,7 @@ class TestDeclaration:
     def test_les_pages_d_aide(self):
         assert {PREREQUIS[nom][1] for nom in DLL_COMPILATEUR} == {DIRECTX9_URL}
         assert VCREDIST_2010_URL.startswith("https://www.microsoft.com/")
-
-    def test_le_catalogue_embarque_declare_ce_que_charge_d3d11drv(self):
-        catalogue = json.loads((Path(__file__).resolve().parents[1] / "src/data/games.json")
-                               .read_text(encoding="utf-8"))
-        requis = {g["id"]: set(g.get("requires", [])) for g in catalogue["games"]}
-        for jeu in ("hp1", "hp2"):
-            assert {"d3dx11_43", "d3dcompiler_43", "vcredist2010_x86"} <= requis[jeu], jeu
-        # HP5 et HP6 importent msvcr80.dll.
-        for jeu in ("hp5", "hp6"):
-            assert "vcredist2005_x86" in requis[jeu], jeu
+    # Ce que le catalogue embarqué déclare : tests/test_catalogue_embarque.py.
 
 
 class TestLibelles:

@@ -132,7 +132,7 @@ elif CAS in ("ops_telechargement_erreur", "ops_installation"):
 
 elif CAS in ("ops_installation_erreur",):
     mod, proprietaire, jeu = ops_et_jeu()
-    mod.Installer = lent(Installer, "error", "archive corrompue")
+    mod.Installer = lent(Installer, "error", "archive corrompue", "archive")
     if MODE == "naif":
         naif(mod, lambda th: None)
     proprietaire.install(jeu, tmp / "cache" / "a.7z")

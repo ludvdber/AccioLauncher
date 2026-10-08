@@ -49,39 +49,39 @@ def _croix(fenetre):
 
 
 class TestLeBandeauResteAtteignable:
-    def test_le_bouton_parametres_ne_recouvre_pas_le_bandeau(self, qtbot, fenetre):
+    def test_le_bouton_parametres_ne_recouvre_pas_le_bandeau(self, qtbot, fenetre, mise_en_page_stable):
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        qtbot.wait(10)
+        mise_en_page_stable(fenetre)
         assert fenetre._notif_bar.isVisible()
         engrenage = fenetre._btn_settings.geometry()
         assert not engrenage.intersects(fenetre._notif_bar.geometry()), (
             "le bouton ⚙ est posé par-dessus le bandeau : il en masque la croix")
 
-    def test_le_bouton_parametres_ne_recouvre_pas_la_croix(self, qtbot, fenetre):
+    def test_le_bouton_parametres_ne_recouvre_pas_la_croix(self, qtbot, fenetre, mise_en_page_stable):
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        qtbot.wait(10)
+        mise_en_page_stable(fenetre)
         croix = _croix(fenetre)
         barre = fenetre._notif_bar
         zone = croix.geometry().translated(barre.mapTo(fenetre, croix.pos())
                                            - croix.pos())
         assert not fenetre._btn_settings.geometry().intersects(zone)
 
-    def test_le_bouton_parametres_remonte_quand_le_bandeau_part(self, qtbot, fenetre):
+    def test_le_bouton_parametres_remonte_quand_le_bandeau_part(self, qtbot, fenetre, mise_en_page_stable):
         haut_initial = fenetre._btn_settings.geometry().top()
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        qtbot.wait(10)
+        mise_en_page_stable(fenetre)
         assert fenetre._btn_settings.geometry().top() > haut_initial
         fenetre._dismiss_notif()
-        qtbot.wait(10)
+        mise_en_page_stable(fenetre)
         assert fenetre._btn_settings.geometry().top() == haut_initial
 
 
 class TestLeBandeauNeSEffacePas:
-    def test_il_reste_visible(self, qtbot, fenetre):
+    def test_il_reste_visible(self, qtbot, fenetre, mise_en_page_stable):
         """Il disparaissait au bout de 30 s : on le ratait, et plus rien ne
         rappelait qu'une mise à jour attendait."""
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        qtbot.wait(120)
+        mise_en_page_stable(fenetre)
         assert fenetre._notif_bar.isVisible()
 
     def test_aucun_effacement_automatique_dans_le_code(self):

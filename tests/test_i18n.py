@@ -319,3 +319,93 @@ class TestSurchargeUtilisateur:
                     translators=("Ada",))
         credits = dict(translator_credits())
         assert "Ada" in credits.get("Deutsch", ())
+
+
+class TestAucunTexteVisibleHorsTr:
+    """M-08 / ACT-005 : `TestCouverture` ne voit que ce qui passe par `tr()`.
+    Un texte écrit en dur dans un `setText` ou un `setAccessibleName` lui
+    échappe par construction — neuf l'avaient fait (audit du 2026-10-07),
+    dont cinq noms qu'un lecteur d'écran lisait en français à tout le monde.
+
+    Le balayage cherche les littéraux d'au moins un mot passés DIRECTEMENT à un
+    appel d'affichage. Ce qui doit rester en dur est listé ci-dessous, avec sa
+    raison : une exception s'ajoute en connaissance de cause, jamais pour faire
+    passer le test."""
+
+    APPELS = {
+        "setText", "setWindowTitle", "setToolTip", "showMessage", "setPlaceholderText",
+        "QLabel", "QPushButton", "QCheckBox", "QRadioButton", "QGroupBox", "addItem",
+        "show_message", "addAction", "setStatusTip", "emit", "critical", "warning",
+        "information", "question", "setInformativeText", "setAccessibleName",
+        "setAccessibleDescription", "addButton",
+    }
+    # Noms propres, qui ne se traduisent pas.
+    NOMS = {"Discord", "Ko-fi", "Accio Launcher", "GitHub"}
+    # (fichier, début du texte) → raison.
+    EXCEPTIONS = {
+        ("about_page.py", "Accio Launcher v"): "la marque et son numéro",
+        ("onboarding.py", "Langue · Language · Idioma"):
+            "trilingue exprès : la langue n'est pas encore choisie",
+        ("onboarding.py", "Vous pourrez en changer dans les Paramètres."):
+            "trilingue exprès : la langue n'est pas encore choisie",
+        ("installer.py", "Erreur d'installation :"):
+            "va au journal ; la boîte dit la cause traduite (ACT-003)",
+        ("installer.py", "Format d'archive non supporté :"):
+            "va au journal ; la boîte dit la cause traduite (ACT-003)",
+    }
+
+    @staticmethod
+    def _nom(appel: ast.Call) -> str:
+        f = appel.func
+        return f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", "")
+
+    @classmethod
+    def _textes(cls, noeud):
+        if isinstance(noeud, ast.Constant) and isinstance(noeud.value, str):
+            yield noeud.value
+        elif isinstance(noeud, ast.JoinedStr):
+            yield "".join(v.value for v in noeud.values if isinstance(v, ast.Constant))
+        elif isinstance(noeud, ast.BinOp):
+            yield from cls._textes(noeud.left)
+            yield from cls._textes(noeud.right)
+        elif isinstance(noeud, ast.IfExp):
+            yield from cls._textes(noeud.body)
+            yield from cls._textes(noeud.orelse)
+
+    def _fautes(self) -> list[str]:
+        import re
+        mot = re.compile(r"[A-Za-zÀ-ÿ]{3,}")
+        fautes = []
+        for chemin in _source_files():
+            nom_fichier = Path(chemin).name
+            arbre = ast.parse(Path(chemin).read_text(encoding="utf-8"))
+            for n in ast.walk(arbre):
+                if not isinstance(n, ast.Call) or self._nom(n) not in self.APPELS:
+                    continue
+                # Le journal n'est pas affiché.
+                if isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name) \
+                        and n.func.value.id in ("log", "logging", "logger", "root"):
+                    continue
+                for arg in n.args:
+                    for texte in self._textes(arg):
+                        t = texte.strip()
+                        if not mot.search(t) or t in self.NOMS:
+                            continue
+                        if t.startswith("<") or re.fullmatch(r"[a-z_][a-z0-9_]*", t):
+                            continue      # balisage, identifiant d'objet
+                        if any(nom_fichier == f and t.startswith(debut)
+                               for f, debut in self.EXCEPTIONS):
+                            continue
+                        fautes.append(f"{nom_fichier}:{n.lineno} {self._nom(n)}({t[:60]!r})")
+        return fautes
+
+    def test_aucun_texte_visible_hors_tr(self):
+        fautes = self._fautes()
+        assert not fautes, "Texte visible écrit en dur, à passer par tr() :\n" + "\n".join(fautes)
+
+    def test_le_balayage_voit_encore_quelque_chose(self):
+        """Sans cette garde, un balayage cassé passerait à vide en restant vert."""
+        assert len(_source_files()) > 50
+        assert self._nom(ast.parse('w.setText("x")').body[0].value) == "setText"
+        assert list(self._textes(ast.parse('"a" if c else "Texte visible"').body[0].value)) \
+            == ["a", "Texte visible"]

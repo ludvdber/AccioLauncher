@@ -65,7 +65,7 @@ class TestInvalidation:
             lay.addWidget(QLabel(t, hote))
         assert lay.heightForWidth(200) > avant, "cache non invalidé à l'ajout"
 
-    def test_le_cross_fade_ne_perime_pas_le_cache(self, flow, qtbot):
+    def test_le_cross_fade_ne_perime_pas_le_cache(self, flow, qtbot, mise_en_page_stable):
         """Les pastilles sont CACHÉES pendant le fondu du panneau d'info.
 
         `QWidgetItem.sizeHint()` vaut (0, 0) tant que son widget est caché —
@@ -74,23 +74,23 @@ class TestInvalidation:
         aurait rouvert exactement ce trou, avec une hauteur figée à la valeur
         d'un panneau invisible.
         """
-        _, lay, labels = flow
+        conteneur, lay, labels = flow
         visible = lay.heightForWidth(300)
         for lbl in labels:
             lbl.hide()
-        qtbot.wait(1)
+        mise_en_page_stable(conteneur)
         pendant = lay.heightForWidth(300)
         for lbl in labels:
             lbl.show()
-        qtbot.wait(1)
+        mise_en_page_stable(conteneur)
         assert pendant == visible, "la hauteur s'est effondrée pendant le fondu"
         assert lay.heightForWidth(300) == visible, "cache périmé après le fondu"
 
-    def test_changer_le_texte_d_une_pastille_invalide(self, flow, qtbot):
+    def test_changer_le_texte_d_une_pastille_invalide(self, flow, qtbot, mise_en_page_stable):
         """Une fiche à l'autre, les tags changent de LIBELLÉ sans changer de
         nombre. `setText` déclenche `updateGeometry`, donc `invalidate()` —
         vérifié ici plutôt que supposé."""
-        _, lay, labels = flow
+        conteneur, lay, labels = flow
         # AMORCER le cache d'abord : sans cet appel il n'y a rien à périmer et
         # le test passerait même sans invalidation — il ne prouverait rien.
         amorce = lay.heightForWidth(300)
@@ -103,7 +103,7 @@ class TestInvalidation:
         # relève la hauteur de SA rangée (`line_height` en prend le maximum),
         # quelle que soit la police.
         labels[0].setText("Un libellé devenu\nplus haut")
-        qtbot.wait(1)
+        mise_en_page_stable(conteneur)
         assert lay.heightForWidth(300) == _direct(lay, 300)
         assert lay.heightForWidth(300) != amorce, (
             "la hauteur devait changer : sinon ce test ne prouve rien")

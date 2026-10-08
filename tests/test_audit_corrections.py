@@ -272,15 +272,8 @@ class TestCatalogueDurci:
 
 class TestPrerequisRuntimes:
     """HP7 partie 1 réclame Visual C++ 2005, partie 2 Visual C++ 2008 —
-    deux runtimes distincts du 2015-2022 vérifié pour tous les jeux."""
-
-    def test_le_catalogue_embarque_declare_les_deux(self):
-        catalogue = json.loads(
-            (Path(__file__).resolve().parents[1] / "src/data/games.json")
-            .read_text(encoding="utf-8"))
-        par_id = {g["id"]: g for g in catalogue["games"]}
-        assert "vcredist2005_x86" in par_id["hp7a"].get("requires", [])
-        assert "vcredist2008_x86" in par_id["hp7b"].get("requires", [])
+    deux runtimes distincts du 2015-2022 vérifié pour tous les jeux. Ce que
+    déclare le catalogue embarqué : tests/test_catalogue_embarque.py."""
 
     def test_requires_parse(self):
         jeu = GameData.from_dict(dict(JEU_MINIMAL, requires=["vcredist2005_x86", 42]))
