@@ -1260,7 +1260,8 @@
             "Aventura"
           ]
         }
-      }
+      },
+      "controller": "yes"
     },
     {
       "id": "hp5",
