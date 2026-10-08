@@ -73,6 +73,28 @@ class TestReglages:
         hp7b = next(j for j in catalogue["games"] if j["id"] == "hp7b")
         assert "format_image" not in hp7b["fix_settings"]
 
+    def test_hp7a_n_expose_pas_le_format_tant_que_l_effet_n_est_pas_vu(self, catalogue):
+        """Audit du 2026-10-07 (P4-002, ACT-039) : `PatchAspect` y cherche « le premier
+        flottant égal à 16/9 » dans l'exécutable, motif jamais vérifié. Un réglage dont
+        on n'a pas vu l'effet n'a pas à être proposé (règle 118). À remettre le jour où
+        un essai en jeu l'aura vu."""
+        hp7a = next(j for j in catalogue["games"] if j["id"] == "hp7a")
+        assert "format_image" not in hp7a["fix_settings"]
+
+    def test_hp7_ne_promet_pas_une_image_plus_nette(self, catalogue):
+        """Audit du 2026-10-07 (P4-001, ACT-037) : les réglages d'image de HP7a/HP7b sont
+        livrés éteints (`FXAA=0`, `Antialiasing=0`, `AnisotropicFiltering=0`…). Le texte de
+        version ne peut donc pas dire « image plus nette » (règle 108). À rétablir si
+        ACT-038 livre un réglage qu'on a vu."""
+        for gid in ("hp7a", "hp7b"):
+            jeu = next(j for j in catalogue["games"] if j["id"] == gid)
+            for v in jeu["versions"]:
+                lignes = [*v["changes"], *(v.get("i18n", {}).get("en", {}).get("changes") or ()),
+                          *(v.get("i18n", {}).get("es", {}).get("changes") or ())]
+                for ligne in lignes:
+                    assert "plus nette" not in ligne and "sharper" not in ligne \
+                        and "más nítida" not in ligne, (gid, ligne)
+
 
 def test_les_sauvegardes_ne_nomment_aucun_chemin_windows(catalogue):
     """Le launcher sera porté sous Linux (le jeu, lui, tournera dans Wine) :

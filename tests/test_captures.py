@@ -292,7 +292,7 @@ class TestFinDePartie:
         with patch("src.core.game_manager.load_catalog", return_value=catalog):
             manager = GameManager(Config(install_path=tmp_path, cache_path=tmp_path / ".cache"))
         session = GameSession(manager)
-        session._monitor.start = lambda proc, nom: None
+        session._monitor.start = lambda proc, nom, *, relance: None
         session.demarrer(SimpleNamespace(pid=1), jeu.name, "hp1")
         _bmp(tmp_path / "HP1" / "System" / "Shot0000.bmp")
         session._on_game_exited(jeu.name, 0, 600.0)

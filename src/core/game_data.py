@@ -182,6 +182,13 @@ class GameData:
     # À partir de HP5 le moteur change et ses réglages fonctionnent : le champ
     # est donc PAR JEU, et rien ne s'affiche pour ceux qui vont bien.
     display_locked: bool = False
+    # Le jeu se RELANCE-t-il lui-même (le processus lancé meurt, un autre prend
+    # sa place) ? Vrai pour HP1 et HP2, dont l'assistant UE1 ré-exécute un
+    # enfant au chargement d'une sauvegarde : le launcher attend alors 10 s
+    # avant de les croire fermés. Mesuré le 2026-10-07 (audit P6-005) : HP3 à
+    # HP6 ne se relancent pas, et leur joueur attendait ces 10 s pour rien
+    # devant son bureau. Faux par défaut, donc sans attente.
+    relance: bool = False
     # « Se joue à la manette » : `yes`, `partial` ou `no`, vide tant que le jeu
     # n'a pas été ESSAYÉ manette en main (une affirmation fausse discrédite la
     # fiche, donc « non renseigné » ne s'affiche pas). Par jeu et dans le
@@ -353,6 +360,7 @@ class GameData:
             # qui change la façon dont on lance un exécutable.
             dpi_aware=data.get("dpi_aware") is True,
             display_locked=data.get("display_locked") is True,
+            relance=data.get("relance") is True,
             controller=_niveau_manette(data.get("controller")),
             controller_note=_loc(data, "controller_note", ""),
             resolution=_parse_resolution(data.get("resolution")),

@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.40",
+  "catalog_version": "0.41",
   "contributors": [
     {
       "name": "ASTeam",
@@ -415,6 +415,7 @@
         }
       },
       "display_locked": true,
+      "relance": true,
       "resolution": {
         "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
         "section": "WinDrv.WindowsClient",
@@ -758,6 +759,7 @@
         "first": 1
       },
       "display_locked": true,
+      "relance": true,
       "resolution": {
         "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
         "section": "WinDrv.WindowsClient",
@@ -1732,7 +1734,6 @@
         "compteur_fps",
         "panneau_perfs",
         "mode_fenetre",
-        "format_image",
         "ecran_principal",
         "premier_plan",
         "manette_playstation",
@@ -1759,7 +1760,7 @@
           ],
           "size_mb": 4445,
           "changes": [
-            "Nouveau correctif PC Accio : image plus nette, champ de vision corrigé, réglages depuis le launcher",
+            "Nouveau correctif PC Accio : champ de vision corrigé, réglages depuis le launcher",
             "Limité à 60 images/s : les cinématiques ne passent plus en accéléré",
             "Souris à vitesse constante, quelle que soit la cadence",
             "Manettes PlayStation 4 et 5 reconnues, barre lumineuse aux couleurs de la maison",
@@ -1769,7 +1770,7 @@
           "i18n": {
             "en": {
               "changes": [
-                "New Accio PC fix: sharper image, corrected field of view, settings from the launcher",
+                "New Accio PC fix: corrected field of view, settings from the launcher",
                 "Capped at 60 fps: cutscenes no longer play fast-forward",
                 "Mouse at a steady speed, whatever the frame rate",
                 "PlayStation 4 and 5 controllers recognised, light bar in your house colours",
@@ -1779,7 +1780,7 @@
             },
             "es": {
               "changes": [
-                "Nuevo parche PC de Accio: imagen más nítida, campo de visión corregido, ajustes desde el launcher",
+                "Nuevo parche PC de Accio: campo de visión corregido, ajustes desde el launcher",
                 "Limitado a 60 fps: las cinemáticas ya no se aceleran",
                 "Ratón a velocidad constante, sea cual sea la tasa de imágenes",
                 "Mandos de PlayStation 4 y 5 reconocidos, barra de luz con los colores de tu casa",
@@ -1973,7 +1974,7 @@
           ],
           "size_mb": 7701,
           "changes": [
-            "Nouveau correctif PC Accio : image plus nette, champ de vision corrigé, réglages depuis le launcher",
+            "Nouveau correctif PC Accio : champ de vision corrigé, réglages depuis le launcher",
             "Souris à vitesse constante, quelle que soit la cadence",
             "Manettes PlayStation 4 et 5 reconnues, barre lumineuse aux couleurs de la maison",
             "Fenêtre à la taille de l'écran, sans passer sous la barre des tâches",
@@ -1982,7 +1983,7 @@
           "i18n": {
             "en": {
               "changes": [
-                "New Accio PC fix: sharper image, corrected field of view, settings from the launcher",
+                "New Accio PC fix: corrected field of view, settings from the launcher",
                 "Mouse at a steady speed, whatever the frame rate",
                 "PlayStation 4 and 5 controllers recognised, light bar in your house colours",
                 "Window fitted to the screen, never under the taskbar",
@@ -1991,7 +1992,7 @@
             },
             "es": {
               "changes": [
-                "Nuevo parche PC de Accio: imagen más nítida, campo de visión corregido, ajustes desde el launcher",
+                "Nuevo parche PC de Accio: campo de visión corregido, ajustes desde el launcher",
                 "Ratón a velocidad constante, sea cual sea la tasa de imágenes",
                 "Mandos de PlayStation 4 y 5 reconocidos, barra de luz con los colores de tu casa",
                 "Ventana ajustada a la pantalla, sin quedar bajo la barra de tareas",

@@ -125,16 +125,15 @@ class TestDuTelechargementAuRetourDePartie:
         assert len(lances) == 1, "deux instances du même jeu"
 
         # ④ Le jeu se ferme, et c'est le VRAI moniteur qui le constate : le
-        # processus rend son code, la grâce (10 s pour les relances d'UE1) est
-        # ramenée à zéro, plus rien ne tourne sous ce nom. 25 minutes de jeu
-        # sans les attendre : le début de la partie est reculé d'autant.
+        # processus rend son code et plus rien ne tourne sous ce nom : ce jeu
+        # ne se relance pas (`relance` absent), donc UN sondage conclut, sans
+        # les 10 s de grâce d'UE1. 25 minutes de jeu sans les attendre : le
+        # début de la partie est reculé d'autant.
         moniteur = win._session._monitor
         moniteur._debut -= 1500
         moniteur._is_exe_running = lambda nom: False      # sur l'INSTANCE (règle 12)
-        monkeypatch.setattr("src.ui.process_monitor._GRACE_S", 0.0)
         processus.code = 0
-        moniteur._poll()      # le processus initial s'est terminé → grâce
-        moniteur._poll()      # plus rien ne tourne → fin de partie
+        moniteur._poll()      # le processus s'est terminé → fin de partie
         qtbot.waitUntil(win.isVisible, timeout=3000)
         assert "partie terminée" in win._status_bar.currentMessage()
         assert win.manager.get_playtime(jeu.id) >= 1500

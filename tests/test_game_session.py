@@ -58,7 +58,7 @@ def session(tmp_path, qtbot):
     """
     s = GameSession(_manager(tmp_path))
     demarrages: list = []
-    s._monitor.start = lambda proc, nom: demarrages.append((proc, nom))
+    s._monitor.start = lambda proc, nom, *, relance: demarrages.append((proc, nom, relance))
     s.demarrages = demarrages
     return s
 
@@ -69,7 +69,16 @@ class TestOuvertureDeSession:
         with qtbot.waitSignal(session.demarree, timeout=1000) as bloc:
             session.demarrer(proc, "HP1", "hp1")
         assert bloc.args == ["HP1"]
-        assert session.demarrages == [(proc, "HP1")]
+        assert session.demarrages == [(proc, "HP1", False)]
+
+    def test_un_jeu_qui_se_relance_le_dit_au_moniteur(self, session):
+        """`relance` vient du catalogue (HP1, HP2) : c'est lui qui décide de la grâce."""
+        import dataclasses
+        index = session._manager._index
+        index["hp1"] = dataclasses.replace(index["hp1"], relance=True)
+        proc = _FauxProcess()
+        session.demarrer(proc, "HP1", "hp1")
+        assert session.demarrages == [(proc, "HP1", True)]
 
     def test_la_session_est_ouverte_AVANT_la_fin_du_jeu(self, session):
         """Écrite au lancement et non à la fermeture.
@@ -200,7 +209,7 @@ class TestSauvegardeDeLaPartie:
         from src.core import sauvegardes
         from src.core.game_data import Sauvegardes
         s = GameSession(_manager(tmp_path))
-        s._monitor.start = lambda proc, nom: None
+        s._monitor.start = lambda proc, nom, *, relance: None
         spec = Sauvegardes(racine="documents", dossiers=("Harry Potter/Save",),
                            fichiers="Save*.usa")
         jeu = s._manager.get_game_by_id("hp1")
@@ -282,7 +291,7 @@ class TestLigneDeProfil:
 
     def test_la_ligne_part_avec_la_presence(self, tmp_path, qtbot):
         s = self._session(tmp_path, "serpentard", annee=1)
-        s._monitor.start = lambda proc, nom: None
+        s._monitor.start = lambda proc, nom, *, relance: None
         envois = []
         s._presence.set_playing = lambda *args: envois.append(args)
         s.demarrer(_FauxProcess(), "HP1", "hp1")

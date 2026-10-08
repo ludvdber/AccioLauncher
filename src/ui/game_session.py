@@ -105,7 +105,8 @@ class GameSession(QObject):
         # Notée DÈS MAINTENANT et non à la fin — raison dans l'en-tête du module.
         stats.ouvrir_session(game_id, self._debut)
         self._avant = sauvegardes.releve(self._spec(game_id))
-        self._monitor.start(process, game_name)
+        jeu = self._manager.get_game_by_id(game_id)
+        self._monitor.start(process, game_name, relance=jeu is not None and jeu.relance)
         if self._manager.config.discord_presence:
             self._presence.set_playing(game_name, game_id, self.ligne_profil(game_id))
         self.demarree.emit(game_name)

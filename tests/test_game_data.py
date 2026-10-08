@@ -538,6 +538,23 @@ class TestOptionsVideoVerrouillees:
         assert not GameData.from_dict(dict(base, display_locked="oui")).display_locked
         assert not GameData.from_dict(base).display_locked
 
+    def test_seuls_hp1_et_hp2_se_relancent(self):
+        """Audit du 2026-10-07 (P6-005) : l'assistant UE1 ré-exécute un enfant
+        au chargement d'une sauvegarde, et c'est ce que les 10 s de grâce du
+        moniteur attendent. HP3 à HP8 ne se relancent pas."""
+        from src.core.game_data import load_catalog
+        assert [g.id for g in load_catalog().games if g.relance] == ["hp1", "hp2"]
+
+    def test_relance_exige_un_vrai_booleen(self):
+        """Le catalogue est DISTANT : une chaîne ne doit pas rallonger l'attente."""
+        from src.core.game_data import GameData
+        base = {"id": "x", "name": "X", "year": 2001, "description": "d",
+                "developer": "d", "executable": "x/x.exe",
+                "cover_image": "c.jpg"}
+        assert GameData.from_dict(dict(base, relance=True)).relance
+        assert not GameData.from_dict(dict(base, relance="oui")).relance
+        assert not GameData.from_dict(base).relance
+
     def test_le_lanceur_reimpose_la_carte_de_rendu_du_mode_fenetre(self):
         """Ces deux cles nommaient des DLL qui ne sont PAS livrees.
 

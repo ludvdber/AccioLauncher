@@ -5,7 +5,10 @@ Gère deux modes :
 2. Recherche par nom d'exe — si le jeu redémarre son propre process
    (ex: UE1 wizard → jeu — relance après chargement d'une save) : `tasklist`
    sous Windows, `/proc` sous Linux, où le jeu tourne sous Wine
-   (`compat.processus_du_jeu`). Même grâce de 10 s des deux côtés.
+   (`compat.processus_du_jeu`). Même grâce de 10 s des deux côtés — mais
+   seulement pour un jeu qui se relance (`GameData.relance`) : pour les autres,
+   la fin du processus EST la fin de la partie, et la grâce faisait attendre
+   10 s devant un bureau vide (audit du 2026-10-07, P6-005).
 
 Émet `game_exited(nom, code, durée)` quand le jeu est vraiment fermé, et
 `battement()` régulièrement tant qu'il tourne (le launcher s'en sert pour
@@ -51,6 +54,7 @@ class ProcessMonitor(QObject):
         self._game_name: str = ""
         self._exe_name: str = ""
         self._grace_until: float = 0.0
+        self._relance: bool = False
         self._code: int | None = None
         self._debut: float = 0.0
         self._vu_vivant: float = 0.0   # dernier instant où le jeu tournait VRAIMENT
@@ -63,9 +67,14 @@ class ProcessMonitor(QObject):
     def game_name(self) -> str:
         return self._game_name
 
-    def start(self, process: subprocess.Popen, game_name: str) -> None:
-        """Démarre la surveillance d'un nouveau process de jeu."""
+    def start(self, process: subprocess.Popen, game_name: str, *, relance: bool) -> None:
+        """Démarre la surveillance d'un nouveau process de jeu.
+
+        `relance` : le jeu ré-exécute un autre processus à sa place (HP1, HP2) ;
+        alors, et alors seulement, la mort du premier ouvre une grâce.
+        """
         self._process = process
+        self._relance = relance
         self._game_name = game_name
         self._exe_name = self._nom_de_l_exe(process.args)
         self._code = None
@@ -136,15 +145,22 @@ class ProcessMonitor(QObject):
             if ret is None:
                 self._vivant()
                 return  # process initial vivant
-            log.info("Process initial terminé (code %s), grâce de %ds…", ret, int(_GRACE_S))
+            grace = _GRACE_S if self._relance else 0.0
+            if self._relance:
+                log.info("Process initial terminé (code %s), grâce de %ds…", ret, int(grace))
+            else:
+                log.info("Process initial terminé (code %s), ce jeu ne se relance pas", ret)
             # Le code de sortie était journalisé puis JETÉ. C'est pourtant la
             # seule trace d'un jeu qui refuse de démarrer — et ces huit jeux de
             # 2001-2011 sur Windows 11 échouent en silence, sortie 0 en une
             # demi-seconde, sans fenêtre ni entrée dans le journal Windows.
             self._code = ret
             self._process = None
-            self._grace_until = time.monotonic() + _GRACE_S
-            return
+            self._grace_until = time.monotonic() + grace
+            if self._relance:
+                return
+            # Sans relance, pas de sondage de plus à attendre : on cherche tout
+            # de suite le nom de l'exe (un lanceur qui passe la main), puis on conclut.
 
         if self._exe_name and self._is_exe_running(self._exe_name):
             self._vivant()
