@@ -22,7 +22,7 @@ mise en page et mesurable, mais elle n'apparaît jamais à l'écran. Il est appe
 par `build.bat` juste avant PyInstaller, c'est-à-dire sur la machine qui publie
 — la seule qui ait à coup sûr les polices du poste cible.
 
-Ce qu'il vérifie, pour 8 jeux × 4 états × 4 tailles × 2 scénarios × toutes
+Ce qu'il vérifie, pour 8 jeux × 4 états × 4 tailles × 3 scénarios × toutes
 les langues :
   * aucun libellé tronqué horizontalement (sizeHint vs largeur accordée) ;
   * aucun libellé en `wordWrap` coupé en bas (heightForWidth vs hauteur) ;

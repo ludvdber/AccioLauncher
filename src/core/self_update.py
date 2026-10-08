@@ -25,15 +25,36 @@ log = logging.getLogger(__name__)
 def can_self_update() -> bool:
     """True si l'auto-remplacement est possible.
 
-    Windows : l'exe gelé. Linux : une AppImage dont le dossier accepte
-    l'écriture (Gear Lever la range dans `~/AppImages`) ; un dossier en lecture
-    seule fait retomber sur la page de release, plutôt que d'échouer après un
-    téléchargement.
+    Windows : l'exe gelé, rangé dans un dossier qui accepte l'écriture (sous
+    « Program Files », page de release). Linux : une AppImage dont le dossier
+    accepte l'écriture (Gear Lever la range dans `~/AppImages`). Un dossier en
+    lecture seule fait retomber sur la page de release, plutôt que d'échouer
+    après un téléchargement.
     """
     if sys.platform == "win32":
-        return bool(getattr(sys, "frozen", False))
+        return (bool(getattr(sys, "frozen", False))
+                and _dossier_inscriptible(Path(sys.executable).parent))
     cible = appimage_courante()
     return cible is not None and os.access(cible.parent, os.W_OK)
+
+
+def _dossier_inscriptible(dossier: Path) -> bool:
+    """Le dossier accepte-t-il la création d'un fichier ? On l'ESSAIE.
+
+    `os.access(dossier, W_OK)` ne dit rien d'utile sous Windows : il rend vrai
+    pour « Program Files » alors que l'écriture y est refusée sans élévation.
+    Sans cette sonde, l'enchaînement était : téléchargement, 30 essais de `move`
+    (~30 s), relance de l'ANCIEN exe, puis la même mise à jour reproposée à
+    chaque démarrage, sans un mot (ACT-004). Refusé, l'appelant retombe sur la
+    page de release, et la raison va au journal.
+    """
+    try:
+        with tempfile.TemporaryFile(dir=dossier):
+            return True
+    except OSError as e:
+        log.warning("Mise à jour automatique impossible : %s n'accepte pas l'écriture (%s). "
+                    "Page de release à la place.", dossier, e)
+        return False
 
 
 def appimage_courante() -> Path | None:

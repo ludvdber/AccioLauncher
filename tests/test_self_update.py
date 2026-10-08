@@ -192,6 +192,35 @@ def appimage(tmp_path, monkeypatch):
     return cible
 
 
+class TestWindowsDossierProtege:
+    """ACT-004 : un exe sous « Program Files » ne s'auto-remplace pas."""
+
+    @pytest.fixture
+    def exe_gele(self, monkeypatch, tmp_path):
+        exe = tmp_path / "AccioLauncher.exe"
+        exe.write_bytes(b"MZ")
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "executable", str(exe))
+        return exe
+
+    def test_dossier_inscriptible_auto_remplacement_possible(self, exe_gele):
+        assert self_update.can_self_update() is True
+
+    def test_dossier_non_inscriptible_renvoie_a_la_page(self, exe_gele, monkeypatch, caplog):
+        def refuse(*args, **kwargs):
+            raise PermissionError(13, "Accès refusé")
+        monkeypatch.setattr(self_update.tempfile, "TemporaryFile", refuse)
+        with caplog.at_level("WARNING"):
+            assert self_update.can_self_update() is False
+        assert "n'accepte pas l'écriture" in caplog.text
+
+    def test_depuis_les_sources_toujours_faux(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        assert self_update.can_self_update() is False
+
+
 class TestAppImage:
     def test_la_cible_est_l_appimage_et_non_sys_executable(self, appimage):
         """Dans une AppImage, `sys.executable` vit dans un montage qui

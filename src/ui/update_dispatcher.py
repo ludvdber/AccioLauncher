@@ -223,13 +223,16 @@ class UpdateDispatcher(QObject):
     @property
     def can_install_itself(self) -> bool:
         """La mise à jour peut-elle s'installer sans passer par le navigateur ?"""
-        return bool(self.asset_url) and can_self_update()
+        return bool(self.asset_url) and bool(self.asset_sha256) and can_self_update()
 
     def download(self) -> None:
         """Auto-update en un clic si possible, sinon ouverture de la page release."""
         if self._download is not None:
             return
         if not self.can_install_itself:
+            if self.asset_url and not self.asset_sha256:
+                log.warning("Mise à jour v%s : GitHub n'a pas publié d'empreinte pour l'exécutable, "
+                            "pas d'installation automatique ; page de release.", self.version)
             if self.url:
                 open_url(self.url)
             return
@@ -239,11 +242,12 @@ class UpdateDispatcher(QObject):
         self._speed.reset()
         self.launcher_message.emit(tr("Téléchargement de la mise à jour…"))
         # L'empreinte vient de l'API GitHub (cf. UpdateChecker._check_launcher).
-        # Vide → téléchargement non vérifié, comme avant : on ne bloque pas une
-        # mise à jour parce que GitHub n'a pas publié de digest.
+        # Sans elle, `can_install_itself` est faux et on n'arrive pas ici : la
+        # page de release existe déjà comme repli, donc refuser ne coûte rien
+        # (ACT-008). On remplace un exécutable : on ne le fait pas à l'aveugle.
         self._download = Downloader(
             url=self.asset_url, destination=dest,
-            expected_sha256=self.asset_sha256 or None,
+            expected_sha256=self.asset_sha256,
             parent=self,
         )
         self._download.progress.connect(self._on_progress)

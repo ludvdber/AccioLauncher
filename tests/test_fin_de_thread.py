@@ -150,6 +150,7 @@ elif CAS in ("maj_fini", "maj_erreur"):
     manager = SimpleNamespace(config=SimpleNamespace(cache_path=tmp))
     proprietaire = mod.UpdateDispatcher(manager)
     proprietaire.asset_url = "https://x/AccioLauncher.exe"
+    proprietaire.asset_sha256 = "ab" * 32  # sans empreinte, pas d'installation automatique (ACT-008)
     proprietaire.download()
     detruire_bientot(proprietaire)
 

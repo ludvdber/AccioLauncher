@@ -61,6 +61,28 @@ class TestDispatcher:
         dispatcher.remember("9.9.9", "https://exemple/release", "", "")
         assert not dispatcher.can_install_itself
 
+    def test_une_mise_a_jour_sans_empreinte_renvoie_a_la_page(self, qtbot, manager, monkeypatch, caplog):
+        """ACT-008 : pas d'empreinte publiée → aucun téléchargement, page de release, raison au journal."""
+        import src.ui.update_dispatcher as mod
+        monkeypatch.setattr(mod, "can_self_update", lambda: True)
+        ouvertes = []
+        monkeypatch.setattr(mod, "open_url", ouvertes.append)
+        dispatcher = UpdateDispatcher(manager)
+        dispatcher.remember("9.9.9", "https://exemple/release", "https://exemple/a.exe", "")
+        assert not dispatcher.can_install_itself
+        with caplog.at_level("WARNING"):
+            dispatcher.download()
+        assert ouvertes == ["https://exemple/release"]
+        assert dispatcher._download is None
+        assert "pas publié d'empreinte" in caplog.text
+
+    def test_avec_empreinte_l_installation_automatique_reste_permise(self, qtbot, manager, monkeypatch):
+        import src.ui.update_dispatcher as mod
+        monkeypatch.setattr(mod, "can_self_update", lambda: True)
+        dispatcher = UpdateDispatcher(manager)
+        dispatcher.remember("9.9.9", "https://exemple/release", "https://exemple/a.exe", "ab" * 32)
+        assert dispatcher.can_install_itself
+
     def test_la_re_tentative_s_arme_hors_ligne_et_s_arrete_en_ligne(self, qtbot, manager):
         dispatcher = UpdateDispatcher(manager)
         dispatcher.schedule_retry(False)
