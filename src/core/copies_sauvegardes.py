@@ -251,10 +251,6 @@ def versions(jeu: str) -> dict[str, list[Version]]:
     return resultat
 
 
-def taille_totale(jeu: str) -> int:
-    return sum(v.taille for liste in versions(jeu).values() for v in liste)
-
-
 def dossier_du_jeu(jeu: str) -> Path:
     return racine() / jeu
 

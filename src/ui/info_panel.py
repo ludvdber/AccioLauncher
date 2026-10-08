@@ -399,7 +399,7 @@ class InfoPanel(QWidget):
         installed = self._manager.installed_version(game.id)
         version = installed or game.recommended_version
         lien = (f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
-                + _insecable(tr("v{} · changelog").format(version)) + '</a>')
+                + _insecable(tr("v{} · nouveautés").format(version)) + '</a>')
         # `escape` sur tout (règle 58) : en RichText, le balisage d'un nom de
         # studio serait interprété (et un `<img src="file:///…">` lu).
         morceaux = [escape(str(game.year), quote=False),

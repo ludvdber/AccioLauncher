@@ -563,9 +563,15 @@ class SettingsDialog(QDialog):
 
     def _on_scan_done(self, count: int, total_bytes: int) -> None:
         """Callback quand le scan disque en arrière-plan est terminé."""
-        self._installed_label.setText(
-            tr("{} jeu(x) installé(s) — {} utilisés").format(count, format_bytes(total_bytes))
-        )
+        # Une clé par nombre : « (x) » ne se traduit pas, et l'anglais met
+        # 0 au pluriel quand le français le met au singulier.
+        if count == 0:
+            texte = tr("Aucun jeu installé")
+        elif count == 1:
+            texte = tr("1 jeu installé — {} utilisés").format(format_bytes(total_bytes))
+        else:
+            texte = tr("{} jeux installés — {} utilisés").format(count, format_bytes(total_bytes))
+        self._installed_label.setText(texte)
         log.info("Total installé : %d jeu(x), %s", count, format_bytes(total_bytes))
 
     def _on_change_path(self) -> None:

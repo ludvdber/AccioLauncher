@@ -122,6 +122,10 @@ class TestLeJeuQuiNeDemarrePas:
         assert "Discord" in fenetre._toast.text()
         qtbot.mouseClick(fenetre._toast, Qt.MouseButton.LeftButton)
         assert fenetre.ouverts == [liens.DISCORD_URL]
+        # Et le rapport part avec le joueur (ACT-068) : fichier et résumé copiés.
+        from PyQt6.QtWidgets import QApplication
+        donnees = QApplication.clipboard().mimeData()
+        assert donnees.hasUrls() and donnees.text()
 
     def test_une_partie_normale_ne_propose_pas_d_aide(self, fenetre):
         """Rien ne s'affiche quand tout va bien — la règle du projet."""

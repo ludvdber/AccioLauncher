@@ -359,6 +359,7 @@ class TestLesDialogues:
 
     def test_echec_des_composants_propose_de_lancer_quand_meme(self, monkeypatch, jeu_hp7a):
         from src.ui import game_detail_handlers as gdh
+        monkeypatch.setattr(sys, "platform", "linux")   # sous Windows : test_composants_windows
         vus = _boite_espion(monkeypatch, 0)
         joues = []
         monkeypatch.setattr(gdh, "on_play", lambda vue, **k: joues.append(k))
@@ -368,6 +369,7 @@ class TestLesDialogues:
 
     def test_sans_prefixe_pas_de_lancement_possible(self, monkeypatch, jeu_hp7a):
         from src.ui import game_detail_handlers as gdh
+        monkeypatch.setattr(sys, "platform", "linux")
         vus = _boite_espion(monkeypatch, 0)
         monkeypatch.setattr(gdh, "on_play", lambda *a, **k: pytest.fail("rien ne peut démarrer"))
         gdh.apres_preparation(_Vue(jeu_hp7a), "hp7a", False, prep.PREFIXE, True)

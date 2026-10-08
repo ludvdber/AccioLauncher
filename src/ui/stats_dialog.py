@@ -1,4 +1,4 @@
-"""La saga — ce que le launcher a observé de tes parties.
+"""La saga — ce que le launcher a observé de vos parties.
 
 **Refondue le 2026-09-19** sur la maquette « l'étagère » choisie par Ludo,
 avec le grand histogramme des mois de la maquette « le registre » :
@@ -256,10 +256,10 @@ class StatsDialog(QDialog):
         if sum(self._temps.values()):
             return ""
         if any(self._vues.values()):
-            return tr("Tes sauvegardes sont là ; le temps de jeu se comptera "
-                      "à partir de ta prochaine partie.")
+            return tr("Vos sauvegardes sont là ; le temps de jeu se comptera "
+                      "à partir de votre prochaine partie.")
         return tr("Aucune partie enregistrée pour l'instant — "
-                  "lance un jeu, cette page se remplira toute seule.")
+                  "lancez un jeu, cette page se remplira toute seule.")
 
     def _bande_scolarite(self) -> QVBoxLayout | None:
         """Les sept années — la bande, son titre et sa phrase.
@@ -291,7 +291,7 @@ class StatsDialog(QDialog):
 
     @staticmethod
     def _phrase_scolarite(liste, courante: int) -> str:
-        """« Tu es en 5ᵉ année. La 6ᵉ année t'attend. »
+        """« Vous êtes en 5ᵉ année. La 6ᵉ année vous attend. »
 
         Deux suites possibles, et une seule à la fois. **Ce qui ATTEND est
         devant** : la première année non commencée au-delà de celle où l'on
@@ -306,19 +306,19 @@ class StatsDialog(QDialog):
         construisent la phrase autrement. Chaque forme est donc une clé, et
         c'est le traducteur qui décide de sa langue.
         """
-        phrase = (tr("Tu es en 1ʳᵉ année.") if courante == 1
-                  else tr("Tu es en {}ᵉ année.").format(courante))
+        phrase = (tr("Vous êtes en 1ʳᵉ année.") if courante == 1
+                  else tr("Vous êtes en {}ᵉ année.").format(courante))
         suivante = scolarite.prochaine_annee(liste)
         if suivante is not None:
             phrase += " " + (
-                tr("La 1ʳᵉ année t'attend.") if suivante.numero == 1
-                else tr("La {}ᵉ année t'attend.").format(suivante.numero))
+                tr("La 1ʳᵉ année vous attend.") if suivante.numero == 1
+                else tr("La {}ᵉ année vous attend.").format(suivante.numero))
             return phrase
         reste = len(scolarite.restantes(liste))
         if reste == 1:
-            phrase += " " + tr("Il te reste une année à découvrir.")
+            phrase += " " + tr("Il vous reste une année à découvrir.")
         elif reste > 1:
-            phrase += " " + tr("Il te reste {} années à découvrir.").format(reste)
+            phrase += " " + tr("Il vous reste {} années à découvrir.").format(reste)
         return phrase
 
     def _colonne_saga(self) -> QWidget:
@@ -433,7 +433,7 @@ class StatsDialog(QDialog):
                 # relevé : on dit pourquoi il manque et quand il viendra — une
                 # fois pour la section, pas une fois par carte.
                 couche.addWidget(_Paragraphe(
-                    tr("Le temps par sauvegarde se compte à partir de ta "
+                    tr("Le temps par sauvegarde se compte à partir de votre "
                        "prochaine partie."), taille=11))
             grille = QGridLayout()
             grille.setSpacing(12)

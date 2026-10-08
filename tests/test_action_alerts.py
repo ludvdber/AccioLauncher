@@ -189,12 +189,27 @@ class TestPrerequisVCredist:
         _prepare(panel, GameState.INSTALLED)
         assert "Visual C++" in widget._alert.text()
         if sys.platform == "win32":
-            assert 'href="vcredist_x86"' in widget._alert.text()
+            # Le launcher l'installe lui-même (ACT-054) : le lien mène à la
+            # proposition d'installation, la page de Microsoft reste en repli.
+            assert 'href="preparer"' in widget._alert.text()
         else:
             # Sous Linux, le composant s'installe DANS le préfixe Wine, par le
             # launcher : le lien mène à la préparation, pas chez Microsoft.
             assert "dans Wine" in widget._alert.text()
             assert 'href="preparer"' in widget._alert.text()
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="installation Windows (ACT-054)")
+    def test_plusieurs_manquants_sont_comptes_et_installes_d_un_clic(self, panel, monkeypatch):
+        """Le bandeau ne nommait que le premier : chaque composant coûtait un
+        aller-retour par la page de Microsoft, jusqu'à cinq pour la saga."""
+        widget, manager = panel
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_x86", lambda: False)
+        monkeypatch.setattr("src.core.system_checks.check_directx9", lambda _nom: False)
+        monkeypatch.setattr("src.core.system_checks.check_vcredist_2010_x86", lambda: False)
+        _prepare(panel, GameState.INSTALLED)
+        texte = widget._alert.text()
+        assert "composants Windows manquants" in texte
+        assert 'href="preparer"' in texte and "Tout installer" in texte
 
     def test_pas_avant_installation(self, panel, monkeypatch):
         """Rien à lancer encore : l'avertissement viendrait trop tôt."""
@@ -453,6 +468,42 @@ class TestPlafondDuBandeau:
         pave = self._pose(panel, "Blabla très long. " * 80)
         assert pave.alert_height() <= max(h_court * 2, 60)
         assert self._lignes(pave) <= 2
+
+    def test_l_elision_suit_la_largeur(self, panel, monkeypatch, qtbot):
+        """P7-001 (audit du 2026-10-07) : la fiche est bâtie AVANT l'affichage, à
+        une largeur qui n'est pas la bonne, et un redimensionnement ne refaisait
+        que la hauteur. Le texte restait coupé à la largeur de la construction
+        (« Ne changez… »), ou passait à trois lignes une fois la fenêtre
+        rétrécie. Il se refait maintenant depuis le texte brut."""
+        _disque(monkeypatch, 900_000)
+        widget = self._pose(panel, self._LONG)
+        widget.resize(420, 120)
+        widget.show()
+        qtbot.waitExposed(widget)
+        qtbot.waitUntil(lambda: self._lignes(widget) <= 2, timeout=2000)
+        etroit = widget._alert.text()
+        assert etroit.endswith("…")
+        widget.resize(1600, 120)
+        qtbot.waitUntil(lambda: len(widget._alert.text()) > len(etroit), timeout=2000)
+        large = widget._alert.text()
+        assert large.startswith("Votre antivirus peut mettre en quarantaine")
+        widget.resize(420, 120)
+        qtbot.waitUntil(lambda: len(widget._alert.text()) < len(large), timeout=2000)
+        assert self._lignes(widget) <= 2
+
+    def test_un_autre_message_n_est_pas_reelide(self, panel, monkeypatch, qtbot):
+        """Seule la mise en garde du catalogue est élidée : un message du
+        launcher (hors ligne, disque…) garde son texte et son lien."""
+        _disque(monkeypatch, 900_000)
+        widget = self._pose(panel, self._LONG)
+        widget._alert.mettre_a_jour(widget._alert._game, GameState.NOT_INSTALLED, online=False)
+        hors_ligne = widget._alert.text()
+        assert hors_ligne.startswith("Hors ligne")
+        widget.show()
+        qtbot.waitExposed(widget)
+        widget.resize(420, 120)
+        qtbot.waitUntil(lambda: widget.width() == 420, timeout=2000)
+        assert widget._alert.text() == hors_ligne
 
 
 class TestAiguillageLigneMeta:

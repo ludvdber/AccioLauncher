@@ -266,7 +266,7 @@ class TestBoiteDArret:
         game, _ = jeu
         boites = self._repondre(monkeypatch, handlers, choix)
         copies = []
-        monkeypatch.setattr(handlers, "_copier_le_rapport", copies.append)
+        monkeypatch.setattr(handlers, "copier_le_rapport", copies.append)
         vue, _ = self._vue(tmp_path, game)
         handlers.signaler_arret(vue, game, config_cassee.arret_fatal(BITMAP))
         texte, boutons = boites[0]
@@ -300,7 +300,7 @@ class TestBoiteDArret:
         game, conf = hp3
         self._repondre(monkeypatch, handlers, 1)
         copies = []
-        monkeypatch.setattr(handlers, "_copier_le_rapport", copies.append)
+        monkeypatch.setattr(handlers, "copier_le_rapport", copies.append)
         avant = conf.read_bytes()
         vue, _ = self._vue(tmp_path / "Jeux", game)
         handlers.signaler_arret(vue, game, config_cassee.arret_fatal(HP3_INTEL))

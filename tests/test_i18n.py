@@ -36,8 +36,6 @@ IDENTIQUES_TOLEREES = {
     "Textures",
     # Éditeur de touches de HP4 : « Pause » en anglais, « Fin » (la touche) en espagnol.
     "Pause", "Fin",
-    # « changelog » est le même mot en français et en anglais.
-    "v{} · changelog",
     # Noms de produits Microsoft : ils ne se traduisent pas.
     "Visual C++ x86", "Visual C++ 2005 x86", "Visual C++ 2008 x86", "Visual C++ 2010 x86",
     "DirectX 9 ({})", "DirectX ({})",

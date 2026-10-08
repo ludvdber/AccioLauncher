@@ -15,6 +15,8 @@ from src.ui.audio_bar import AudioBar
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
+from src.core import composants_windows
+from src.ui.installateur_composants import InstallateurComposants
 from src.ui.preparateur_wine import PreparateurWine
 from src.ui.utils import avertir
 from src.ui.video_player import VideoPlayer
@@ -75,8 +77,11 @@ class GameDetailView(QWidget):
         # Géométrie en attente de rattrapage de hauteur (cf. _fit_info_height).
         self._pending_fit: tuple[int, int, int] | None = None
         self._ops = GameOperations(manager, self)
-        # Linux : préparation du préfixe Wine. Inerte sous Windows.
-        self._wine = PreparateurWine(self)
+        # Ce qui manque à Windows pour lancer un jeu : le préfixe Wine et ses
+        # composants sous Linux, les composants de Microsoft sous Windows
+        # (ACT-054). Même contrat : la fiche et la barre du bas n'en savent rien.
+        self._wine = (InstallateurComposants(self) if composants_windows.disponible()
+                      else PreparateurWine(self))
         self._cinema = False
 
         self._build_ui(manager)
@@ -455,7 +460,7 @@ class GameDetailView(QWidget):
         return self._wine.en_cours
 
     @property
-    def wine(self) -> PreparateurWine:
+    def wine(self) -> PreparateurWine | InstallateurComposants:
         """Le préparateur, pour que la fenêtre montre l'avancement dans sa barre du bas."""
         return self._wine
 
@@ -466,13 +471,17 @@ class GameDetailView(QWidget):
     def preparer_wine(self, game: GameData, verbes, puis_jouer: bool) -> None:
         """Lance la préparation du préfixe pour ce jeu (une seule à la fois)."""
         if self._wine.en_cours:
-            self.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+            self.notify.emit(handlers.texte_preparation_en_cours())
             return
         if self._ops.is_busy:
             # Une seule chose à la fois dans la barre du bas, et un préfixe qu'on
             # prépare pendant qu'une installation écrit ses fichiers n'y gagne rien.
-            self.notify.emit(tr("Un téléchargement est en cours : Wine sera préparé "
-                                "quand il sera fini. Cliquez à nouveau sur JOUER."))
+            self.notify.emit(
+                tr("Un téléchargement est en cours : les composants seront installés "
+                   "quand il sera fini. Cliquez à nouveau sur JOUER.")
+                if composants_windows.disponible() else
+                tr("Un téléchargement est en cours : Wine sera préparé "
+                   "quand il sera fini. Cliquez à nouveau sur JOUER."))
             return
         self._wine.demarrer(game, verbes, puis_jouer)
 

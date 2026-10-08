@@ -44,7 +44,8 @@ class BarreDeStatut(QStatusBar):
         if self._ops.is_busy:
             return  # ne pas écraser le statut d'un téléchargement en cours
         if mises_a_jour > 0:
-            self.showMessage(tr("{} mise(s) à jour disponible(s)").format(mises_a_jour))
+            self.showMessage(tr("1 mise à jour disponible") if mises_a_jour == 1
+                             else tr("{} mises à jour disponibles").format(mises_a_jour))
         elif not en_ligne:
             # Dire ce qui change vraiment pour l'utilisateur : sa bibliothèque
             # reste jouable, seuls les nouveaux téléchargements attendent.

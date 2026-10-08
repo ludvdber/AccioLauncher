@@ -205,12 +205,13 @@ class TestSessionEtFenetre:
     @pytest.mark.parametrize("constat, boutons", [
         (dp.Constat("antivirus", "", fichiers=(r"pc\paul.dll",)), ()),
         (dp.Constat("plantage", "La cause.", "hp8.exe · 0xc0000005"),
-         ("Copier le détail", "Fermer")),
+         ("Copier le rapport", "Fermer")),
     ])
     def test_la_boite(self, qtbot, monkeypatch, constat, boutons):
         from src.ui import game_detail_handlers as h
-        vues = []
+        vues, copies = [], []
         monkeypatch.setattr(h, "_boite", lambda *a, **k: vues.append(a) or 0)
+        monkeypatch.setattr(h, "copier_le_rapport", lambda v, en_tete="": copies.append(en_tete))
         notes = []
         vue = SimpleNamespace(notify=SimpleNamespace(emit=notes.append))
         h.signaler_plantage(vue, SimpleNamespace(name="HP8"), constat)
@@ -221,6 +222,5 @@ class TestSessionEtFenetre:
         else:
             assert "La cause." in texte and "hp8.exe · 0xc0000005" in texte
             assert vues[0][4] == boutons
-            from PyQt6.QtWidgets import QApplication
-            assert QApplication.clipboard().text() == "HP8 — hp8.exe · 0xc0000005"
-            assert notes == ["Détail copié."]
+            # Le rapport complet, et en tête ce que la boîte vient de montrer.
+            assert copies == ["HP8 — hp8.exe · 0xc0000005"]

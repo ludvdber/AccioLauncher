@@ -136,7 +136,7 @@ class TestDuTelechargementAuRetourDePartie:
         moniteur._poll()      # le processus initial s'est terminé → grâce
         moniteur._poll()      # plus rien ne tourne → fin de partie
         qtbot.waitUntil(win.isVisible, timeout=3000)
-        assert "Bon jeu" in win._status_bar.currentMessage()
+        assert "partie terminée" in win._status_bar.currentMessage()
         assert win.manager.get_playtime(jeu.id) >= 1500
         assert not win._session.nom_en_cours
 
@@ -246,6 +246,6 @@ class TestLaBarreDuBasPendantLaPreparationDeWine:
                           gdh.on_install_local):
                 porte(vue)
                 assert not vue.ops.is_busy, porte.__name__
-            assert "Préparation de Wine" in fenetre._toast.text()
+            assert gdh.texte_preparation_en_cours() == fenetre._toast.text()
         finally:
             vue.wine._fil = None

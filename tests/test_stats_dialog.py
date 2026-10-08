@@ -246,8 +246,8 @@ class TestSauvegardesAffichees:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         rendu = _labels(dlg)
-        assert rendu.count("se compte à partir de ta prochaine partie") == 1
-        assert "Tes sauvegardes sont là" in rendu
+        assert rendu.count("se compte à partir de votre prochaine partie") == 1
+        assert "Vos sauvegardes sont là" in rendu
 
     def test_un_jeu_sans_sauvegarde_n_a_pas_de_section(self, qtbot, manager):
         _remplir(manager, jours=2, jeux=1)

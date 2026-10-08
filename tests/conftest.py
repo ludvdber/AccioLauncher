@@ -150,6 +150,15 @@ def _jamais_d_elevation_uac(monkeypatch):
 
     monkeypatch.setattr("src.core.game_registry._ecrire_eleve", _interdit)
 
+    # Les composants Windows (ACT-054) passent par la même invite, et leurs
+    # installeurs modifieraient VRAIMENT le système de qui lance la suite.
+    def _installation_interdite(*_a, **_k):
+        raise AssertionError(
+            "Un test a tenté d'exécuter les installeurs de Microsoft (invite UAC). "
+            "Bouchonner `composants_windows.executer_eleve`.")
+
+    monkeypatch.setattr("src.core.composants_windows.executer_eleve", _installation_interdite)
+
     # L'écriture DIRECTE aussi : sous HKCU elle réussit sans rien demander, donc
     # un test sans bouchon changerait EN SILENCE le vrai registre de celui qui
     # lance la suite — le choix « manette » de HP5/HP6 (`manette.activer`) y vit.

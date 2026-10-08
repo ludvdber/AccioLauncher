@@ -1,5 +1,6 @@
 """Barre de progression persistante en bas de la fenêtre, visible pendant les téléchargements."""
 
+import sys
 import time
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -118,14 +119,20 @@ class DownloadBar(QWidget):
             self.cancel_clicked.emit()
 
     def show_preparation(self, game: GameData) -> None:
-        """Préparation de Wine pour ce jeu : barre indéterminée et chronomètre."""
+        """Préparation pour ce jeu (Wine, ou composants Windows) : barre indéterminée et chronomètre."""
         self.show_for_game(game, GameState.INSTALLED)
         self._preparation = True
         self._debut = time.monotonic()
-        self._etape = tr("Préparation de Wine…")
         self._progress.setRange(0, 0)
-        self._status.setText(tr("Comptez quelques minutes la première fois."))
-        self._btn_cancel.setAccessibleName(tr("Annuler la préparation de Wine"))
+        if sys.platform == "win32":
+            # Les composants de Microsoft (ACT-054), même barre que Wine.
+            self._etape = tr("Composants Windows…")
+            self._status.setText(tr("Téléchargement depuis Microsoft."))
+            self._btn_cancel.setAccessibleName(tr("Annuler l'installation des composants"))
+        else:
+            self._etape = tr("Préparation de Wine…")
+            self._status.setText(tr("Comptez quelques minutes la première fois."))
+            self._btn_cancel.setAccessibleName(tr("Annuler la préparation de Wine"))
         self._btn_cancel.show()
         self._afficher_chrono()
         self._chrono.start()

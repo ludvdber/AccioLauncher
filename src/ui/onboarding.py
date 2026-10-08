@@ -500,7 +500,9 @@ class OnboardingDialog(QDialog):
         if not self._detected:
             self._scan_label.setText(tr("Aucun jeu reconnu dans ce dossier."))
             return
-        self._scan_label.setText(tr("{} jeu(x) reconnu(s)").format(len(self._detected)))
+        n = len(self._detected)
+        self._scan_label.setText(tr("1 jeu reconnu") if n == 1
+                                 else tr("{} jeux reconnus").format(n))
         for game, src in self._detected:
             item = QListWidgetItem(f"{game.name} — {src}")
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)

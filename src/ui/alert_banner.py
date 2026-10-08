@@ -19,7 +19,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QLabel, QWidget
 
-from src.core import compat
+from src.core import compat, composants_windows
 from src.core.formatting import format_size
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
@@ -82,6 +82,13 @@ class AlertBanner(QLabel):
         # L'utilisateur est-il parti installer un prérequis ? Sert à ne
         # re-tester qu'à ce retour-là, et pas à chaque alt-tab.
         self._attend_prerequis = False
+        # Mise en garde du catalogue gardée BRUTE, avec la largeur à laquelle
+        # on l'a élidée : la fiche est bâtie AVANT l'affichage, à une largeur
+        # qui n'est pas la bonne, et un redimensionnement ne repassait que par
+        # la hauteur — « Ne changez… » restait en deux mots (P7-001 de l'audit
+        # du 2026-10-07). None : le message affiché ne vient pas du catalogue.
+        self._brut: tuple[str, str] | None = None
+        self._largeur_elision = -1
 
         self.setObjectName("actionAlert")
         self.setWordWrap(True)
@@ -135,6 +142,7 @@ class AlertBanner(QLabel):
         ligne, il n'y a rien à écrire sur le disque.
         """
         self._game = game
+        self._brut = None
         message = "" if game is None else self._message(game, state, online)
         if not message:
             self.hide()
@@ -179,11 +187,22 @@ class AlertBanner(QLabel):
                         _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
                     + " " + LIEN.format("preparer", WARN, tr("Installer"))
                 )
+            paquets = composants_windows.paquets_pour(manquants)
+            if len(paquets) > 1:
+                # TOUS les manquants, et un seul clic pour les installer
+                # (ACT-054) : le bandeau ne nommait que le premier, et chaque
+                # composant coûtait un aller-retour par la page de Microsoft.
+                return (
+                    tr("{} composants Windows manquants — requis pour lancer ce jeu.").format(
+                        len(paquets))
+                    + " " + LIEN.format("preparer", WARN, tr("Tout installer"))
+                )
             if manquants:
                 return (
                     tr("{} manquant — requis pour lancer ce jeu.").format(
                         _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
-                    + " " + LIEN.format(manquants[0], WARN, tr("Installer"))
+                    + " " + LIEN.format("preparer" if paquets else manquants[0], WARN,
+                                        tr("Installer"))
                 )
         # Dernier rang : la mise en garde que le CATALOGUE attache à ce jeu.
         # Elle cède le pas à tout ce qui précède, qui est bloquant ici et
@@ -240,6 +259,8 @@ class AlertBanner(QLabel):
         lien = ""
         if game.warning_url:
             lien = " " + LIEN.format("avertissement", WARN, tr("En savoir plus"))
+        self._brut = (texte, lien)
+        self._largeur_elision = self._largeur_utile()
         return self._elider(texte, lien)
 
     # ──────────────────── Mesure ────────────────────
@@ -319,6 +340,7 @@ class AlertBanner(QLabel):
     def ajuster_hauteur(self) -> None:
         """Réserve la hauteur RÉELLE du bandeau (wordWrap ⇒ plusieurs lignes).
 
+        La mise en garde du catalogue est réélidée quand la largeur a changé.
         `sizeHint()` d'un QLabel wordWrap est calculé à une largeur arbitraire ;
         sans hauteur minimale explicite, le panneau d'info sous-estime la place
         nécessaire et rogne le bandeau. `setMinimumHeight(0)` d'abord, sinon
@@ -328,6 +350,11 @@ class AlertBanner(QLabel):
         largeur = self._largeur_utile()
         if largeur <= 0 or not self.text():
             return
+        if self._brut is not None and largeur != self._largeur_elision:
+            # Nouvelle largeur : on refait l'élision depuis le texte BRUT, pas
+            # depuis le texte déjà coupé, qui ne saurait plus s'allonger.
+            self._largeur_elision = largeur
+            self.setText(self._elider(*self._brut))
         self.setMinimumHeight(0)
         self.setMinimumHeight(self.heightForWidth(largeur))
 

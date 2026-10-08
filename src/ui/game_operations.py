@@ -451,7 +451,7 @@ class GameOperations(QObject):
             )
             return
 
-        # NB : pas d'apply_pre_launch_patches ici — les .ini live dans Documents
+        # NB : pas d'apply_ini_patches ici — les .ini live dans Documents
         # et n'existent souvent pas encore à ce stade. Ils seront patchés au lancement.
         self._manager.set_game_state(game.id, GameState.INSTALLED)
         self._manager.save_installed_version(game.id, target_ver.version if target_ver else None)

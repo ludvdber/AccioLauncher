@@ -48,7 +48,7 @@ class TestBarreDeStatut:
     def test_ordre_des_messages_ambiants(self, qtbot):
         barre = self._barre(qtbot)
         barre.ambiance(2, en_ligne=False)
-        assert "2 mise(s) à jour" in barre.currentMessage(), "une mise à jour passe avant tout"
+        assert "2 mises à jour" in barre.currentMessage(), "une mise à jour passe avant tout"
         barre.ambiance(0, en_ligne=False)
         assert "Hors ligne" in barre.currentMessage()
         assert "jouables" in barre.currentMessage(), "dire ce qui reste possible"

@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox
 from src.core.formatting import format_size
 from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
-from src.core import compat
+from src.core import compat, composants_windows
 from src.core import manette
 from src.core import preparation_wine as preparation
 from src.core import config_cassee, copies_sauvegardes, reglages_graphiques, reparation_config
@@ -174,6 +174,13 @@ def nom_prerequis(identifiant: str) -> str:
     return noms.get(identifiant, tr("Un composant Windows requis"))
 
 
+def texte_preparation_en_cours() -> str:
+    """Le toast qui fait patienter, selon ce qui se prépare sur ce système."""
+    if composants_windows.disponible():
+        return tr("Installation des composants Windows en cours — patientez un instant.")
+    return tr("Préparation de Wine en cours — patientez un instant.")
+
+
 def _preparation_bloque(view: "GameDetailView") -> bool:
     """Refuse, d'un toast, tant que Wine se prépare. True si c'est refusé.
 
@@ -185,7 +192,7 @@ def _preparation_bloque(view: "GameDetailView") -> bool:
     """
     if not view.preparation_en_cours:
         return False
-    view.notify.emit(tr("Préparation de Wine en cours — patientez un instant."))
+    view.notify.emit(texte_preparation_en_cours())
     return True
 
 
@@ -277,7 +284,10 @@ def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
     except RuntimeError as exc:
         if str(exc) == "compat_absent":
             signaler_compat_absent(view)
-        elif str(exc).startswith("prerequis_manquant:") and sys.platform != "win32":
+        elif str(exc).startswith("prerequis_manquant:") and (
+                sys.platform != "win32"
+                or composants_windows.paquets_pour([str(exc).split(":", 1)[1]])):
+            # Linux : préparer Wine. Windows : tout installer d'un clic (ACT-054).
             proposer_preparation(view, view.game, puis_jouer=True)
         elif str(exc).startswith("prerequis_manquant:"):
             manquant = str(exc).split(":", 1)[1]
@@ -380,6 +390,9 @@ def proposer_preparation(view: "GameDetailView", game: GameData | None,
     if game is None or _preparation_bloque(view):
         return
     manquants = prerequis_manquants(("vcredist_x86", *game.requires))
+    if composants_windows.disponible():
+        _proposer_composants(view, game, manquants, puis_jouer)
+        return
     verbes = [VERBES_WINETRICKS[m] for m in manquants if m in VERBES_WINETRICKS]
     etapes = []
     if not compat.pret(compat.prefixe()):
@@ -401,6 +414,73 @@ def proposer_preparation(view: "GameDetailView", game: GameData | None,
         view.preparer_wine(game, verbes, puis_jouer)
 
 
+def _proposer_composants(view: "GameDetailView", game: GameData, manquants,
+                         puis_jouer: bool) -> None:
+    """Windows : TOUS les composants manquants, en un clic (ACT-054).
+
+    Une QUESTION, et l'invite administrateur ANNONCÉE avant (règle 69) : une
+    autorisation qui surgit sans raison connue se refuse. Le poids est dit
+    (une case cochée d'avance porte son poids) ; la page de Microsoft reste en
+    repli pour qui préfère installer à la main.
+    """
+    paquets = composants_windows.paquets_pour(manquants)
+    if not paquets:
+        return
+    liste = "\n".join(f"• {p.nom}" for p in paquets)
+    poids = sum(p.taille_mo for p in paquets)
+    texte = tr("Pour lancer {jeu}, Windows a besoin de :\n\n{liste}\n\n"
+               "Le launcher les télécharge sur le site de Microsoft (environ {poids} Mo), "
+               "vérifie qu'ils sont bien signés par Microsoft, puis les installe en une "
+               "fois.\n\nWindows va demander une autorisation d'administrateur : c'est "
+               "elle qui permet d'installer ces composants.").format(
+                   jeu=game.name, liste=liste, poids=poids)
+    if any(p.cle == "directx" for p in paquets):
+        texte += "\n\n" + tr("L'installeur DirectX télécharge lui-même ce qui manque : "
+                             "jusqu'à une centaine de Mo de plus.")
+    reponse = _boite(QMessageBox.Icon.Question, view, tr("Composants Windows manquants"),
+                     texte,
+                     (tr("Tout installer et lancer") if puis_jouer else tr("Tout installer"),
+                      tr("Ouvrir la page Microsoft"), tr("Plus tard")), 2)
+    if reponse == 0:
+        view.preparer_wine(game, manquants, puis_jouer)
+    elif reponse == 1:
+        open_url(PREREQUIS.get(manquants[0], (None, VCREDIST_URL))[1])
+
+
+def _apres_composants(view: "GameDetailView", game: GameData, reussie: bool,
+                      raison: str, puis_jouer: bool, affiche: bool) -> None:
+    """Windows : la suite de l'installation des composants."""
+    if reussie:
+        if puis_jouer and affiche:
+            on_play(view)
+        else:
+            view.notify.emit(tr("Composants installés : {} peut être lancé.").format(game.name))
+        return
+    if raison == composants_windows.REFUSEE:
+        # Un refus n'est pas une erreur (règle 69) : pas de boîte.
+        view.notify.emit(tr("Composants non installés : l'autorisation de Windows a été refusée."))
+        return
+    restants = prerequis_manquants(("vcredist_x86", *game.requires))
+    page = PREREQUIS.get(restants[0], (None, VCREDIST_URL))[1] if restants else VCREDIST_URL
+    if raison == composants_windows.SIGNATURE:
+        texte = tr("Un fichier téléchargé n'était pas signé par Microsoft : il n'a pas "
+                   "été exécuté, et rien n'a été installé.\n\nVous pouvez installer les "
+                   "composants depuis la page de Microsoft.")
+    elif raison == composants_windows.TELECHARGEMENT:
+        texte = tr("Les installeurs n'ont pas pu être téléchargés depuis Microsoft. "
+                   "Rien n'a été installé.\n\nVérifiez la connexion, puis réessayez, ou "
+                   "passez par la page de Microsoft.")
+    else:
+        texte = tr("Les installeurs de Microsoft ont tourné, mais il manque encore :\n\n"
+                   "{}\n\nRedémarrer Windows suffit parfois. Sinon, installez-le depuis "
+                   "la page de Microsoft.").format(
+                       "\n".join(f"• {nom_prerequis(m)}" for m in restants) or "—")
+    reponse = _boite(QMessageBox.Icon.Warning, view, tr("Composants Windows"), texte,
+                     (tr("Ouvrir la page Microsoft"), tr("Fermer")), 1)
+    if reponse == 0:
+        open_url(page)
+
+
 def apres_preparation(view: "GameDetailView", game_id: str, reussie: bool,
                       raison: str, puis_jouer: bool) -> None:
     """La préparation est finie : lancer, prévenir, ou expliquer l'échec.
@@ -410,9 +490,12 @@ def apres_preparation(view: "GameDetailView", game_id: str, reussie: bool,
     d'où « Lancer quand même ». Sans préfixe, rien ne peut démarrer.
     """
     game = view.manager.get_game_by_id(game_id)
-    if game is None or raison == preparation.ANNULEE:
+    if game is None or raison in (preparation.ANNULEE, composants_windows.ANNULEE):
         return
     affiche = view.game is not None and view.game.id == game_id
+    if composants_windows.disponible():
+        _apres_composants(view, game, reussie, raison, puis_jouer, affiche)
+        return
     if reussie:
         if puis_jouer and affiche:
             on_play(view)
@@ -454,13 +537,22 @@ def on_uninstall(view: "GameDetailView") -> None:
     )
     if reply != 0:
         return
+    # Ce qui reste se dit d'après le bloc `saves` : aucun des huit jeux ne range
+    # ses sauvegardes dans son dossier. Sans bloc, on ne sait pas : on se tait
+    # plutôt que d'affirmer (règle 108).
+    conservees = view.game.sauvegardes is not None
     has_config = bool(view.game.post_install.config_files)
     view.manager.uninstall_game(view.game.id)
     view._refresh()
     view.state_changed.emit()
-    if has_config:
-        view.notify.emit(
-            tr("Les sauvegardes et la configuration dans Mes Documents ont été conservées."))
+    if conservees and has_config:
+        view.notify.emit(tr("Vos sauvegardes et la configuration du jeu sont conservées : "
+                            "elles ne sont pas rangées dans le dossier du jeu."))
+    elif conservees:
+        view.notify.emit(tr("Vos sauvegardes sont conservées : elles ne sont pas rangées "
+                            "dans le dossier du jeu."))
+    elif has_config:
+        view.notify.emit(tr("La configuration du jeu dans Mes Documents est conservée."))
     view.status_message.emit(tr("{} désinstallé.").format(view.game.name))
 
 
@@ -640,7 +732,7 @@ def signaler_arret(view: "GameDetailView", game: GameData, arret) -> None:
             return
         reponse -= 1          # les deux autres boutons, comme sans repli
     if reponse == 0:
-        _copier_le_rapport(view)
+        copier_le_rapport(view)
 
 
 def _reessayer_plus_bas(view: "GameDetailView", game: GameData, conf: Path, reglage, apres) -> None:
@@ -659,9 +751,16 @@ def _reessayer_plus_bas(view: "GameDetailView", game: GameData, conf: Path, regl
         view.notify.emit(tr("Réglage changé : relancez {}.").format(game.name))
 
 
-def _copier_le_rapport(view: "GameDetailView") -> None:
-    """Le même rapport que Paramètres → À propos : le fichier, et le résumé en texte."""
+def copier_le_rapport(view: "GameDetailView", en_tete: str = "") -> None:
+    """Le même rapport que Paramètres → À propos : le fichier, et le résumé en texte.
+
+    Offert partout où un joueur en a besoin (ACT-068) : boîte d'arrêt, boîte de
+    plantage, clic droit de la fiche, toast « n'a pas démarré ». `en_tete` :
+    ce que la boîte vient de montrer, en tête du résumé.
+    """
     resume = texte_diagnostic(view.manager)
+    if en_tete:
+        resume = en_tete + "\n\n" + resume
     QApplication.clipboard().setMimeData(
         presse_papiers(resume, enregistrer_rapport(view.manager, resume)))
     view.notify.emit(tr("Copié — Ctrl+V sur le Discord joint le rapport"))
@@ -687,11 +786,10 @@ def signaler_plantage(view: "GameDetailView", game: GameData, constat) -> None:
     choix = _boite(QMessageBox.Icon.Warning,
         view, tr("{} s'est arrêté brutalement").format(game.name),
         tr("{}\n\nDétail technique : {}").format(constat.cause, constat.detail),
-        (tr("Copier le détail"), tr("Fermer")), 1,
+        (tr("Copier le rapport"), tr("Fermer")), 1,
     )
     if choix == 0:
-        QApplication.clipboard().setText(f"{game.name} — {constat.detail}")
-        view.notify.emit(tr("Détail copié."))
+        copier_le_rapport(view, f"{game.name} — {constat.detail}")
 
 
 def find_import_error(game: GameData, source: Path, install_path: Path) -> str | None:
@@ -979,6 +1077,10 @@ def show_context_menu(view: "GameDetailView", pos) -> None:
         act_repair = QAction(tr("Vérifier / réparer les fichiers"), view)
         act_repair.triggered.connect(lambda: on_repair(view))
         menu.addAction(act_repair)
+    menu.addSeparator()
+    act_rapport = QAction(tr("Copier le rapport"), view)
+    act_rapport.triggered.connect(lambda: copier_le_rapport(view))
+    menu.addAction(act_rapport)
     menu.exec(view.mapToGlobal(pos))
 
 

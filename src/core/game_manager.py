@@ -388,10 +388,6 @@ class GameManager:
             if sortie is not None:
                 sortie.close()
 
-    def apply_pre_launch_patches(self, game: GameData) -> None:
-        """Façade rétro-compat — délègue à pre_launch.apply_ini_patches."""
-        apply_ini_patches(game, self.config)
-
     # ──────────────────── Langue de jeu ────────────────────
     # Façades : les règles vivent dans `core/game_language.py`.
 

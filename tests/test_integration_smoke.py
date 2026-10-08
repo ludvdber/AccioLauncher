@@ -2339,16 +2339,16 @@ class TestEchecDeLancementVisible:
         qtbot.wait(20)
         return win._status_bar.currentMessage()
 
-    def test_une_partie_normale_souhaite_bon_jeu(self, make_window, qtbot):
+    def test_une_partie_normale_dit_partie_terminee(self, make_window, qtbot):
         win = make_window()
         win.show()
-        assert "Bon jeu" in self._retour(win, qtbot, 1200.0)
+        assert "partie terminée" in self._retour(win, qtbot, 1200.0)
 
-    def test_un_jeu_qui_ne_demarre_pas_ne_dit_PAS_bon_jeu(self, make_window, qtbot):
+    def test_un_jeu_qui_ne_demarre_pas_ne_dit_PAS_partie_terminee(self, make_window, qtbot):
         """0,5 s et code 0 : la signature du dossier `pc` de HP7."""
         win = make_window()
         win.show()
-        assert "Bon jeu" not in self._retour(win, qtbot, 0.5)
+        assert "partie terminée" not in self._retour(win, qtbot, 0.5)
 
     def test_et_il_le_signale_par_un_toast(self, make_window, qtbot):
         win = make_window()
@@ -2357,7 +2357,7 @@ class TestEchecDeLancementVisible:
         assert win._toast.isVisible(), "l'échec passe inaperçu"
         assert "n'a pas démarré" in win._toast.text()
 
-    def test_un_arret_fatal_hors_affichage_n_annonce_pas_bon_jeu(self, make_window, qtbot, monkeypatch):
+    def test_un_arret_fatal_hors_affichage_n_annonce_pas_partie_terminee(self, make_window, qtbot, monkeypatch):
         """M-04 de l'audit du 2026-10-07 : la boîte « Critical Error » d'UE1
         regardée longtemps gardait le jeu en vie, et le joueur recevait « Bon
         jeu ! ». Le journal du jeu est simulé (règle 78 : rien du catalogue)."""
@@ -2372,7 +2372,7 @@ class TestEchecDeLancementVisible:
         win.show()
         jeu = win._detail.game.id
         message = self._retour(win, qtbot, 120.0)
-        assert "Bon jeu" not in message
+        assert "partie terminée" not in message
         assert not win._toast.isVisible(), "un toast par-dessus la boîte"
         assert boites == [(jeu, arret)]
         assert win.manager.get_playtime(jeu) == 0, "deux minutes devant l'erreur comptées comme partie"

@@ -476,8 +476,8 @@ class MainWindow(QMainWindow):
         """Retour de jeu : la fenêtre revient et rafraîchit ce qui a changé.
 
         `partie` vient d'`add_playtime`, seul arbitre du seuil. Faux : le jeu
-        n'a pas démarré, donc pas de « Bon jeu ! » (règle 108). `arret` : le
-        jeu a écrit un arrêt fatal, la boîte qui suit dit tout — ni « Bon jeu ! »
+        n'a pas démarré, donc pas de « partie terminée » (règle 108). `arret` : le
+        jeu a écrit un arrêt fatal, la boîte qui suit dit tout — ni « partie terminée »
         ni toast par-dessus.
         """
         self._tray.set_tooltip("Accio Launcher")
@@ -487,15 +487,15 @@ class MainWindow(QMainWindow):
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
         elif partie:
             self._status_bar.showMessage(
-                tr("Retour de {} — Bon jeu !").format(game_name))
+                tr("Retour de {} — partie terminée.").format(game_name))
         else:
             # Toast : l'œil est sur la fiche. On ignore pourquoi, mais on sait
             # qui peut aider. Deux lignes pour tenir à 980 px.
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
             self._toast.show_message(
                 tr("{} s'est fermé aussitôt — le jeu n'a pas démarré.").format(game_name)
-                + "\n" + tr("Besoin d'aide ? Cliquez ici pour ouvrir le Discord."),
-                duration_ms=12000, on_click=lambda: open_url(DISCORD_URL))
+                + "\n" + tr("Besoin d'aide ? Cliquez : rapport copié, Discord ouvert."),
+                duration_ms=12000, on_click=self._aide_apres_echec)
         # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh
         # sans transition) : le temps de cette partie vient d'être enregistré.
         if self._detail.game is not None:
@@ -504,6 +504,12 @@ class MainWindow(QMainWindow):
         # attendra le prochain retour sans accroc.
         if not arret:
             self._maybe_thank_milestone()
+
+    def _aide_apres_echec(self) -> None:
+        """Clic sur le toast « n'a pas démarré » : le rapport part avec le joueur
+        (Ctrl+V sur Discord le joint) au lieu d'une photo prise au téléphone."""
+        game_detail_handlers.copier_le_rapport(self._detail)
+        open_url(DISCORD_URL)
 
     def _on_configuration_cassee(self, game_id: str, ligne: str) -> None:
         """Le jeu s'est arrêté sur une erreur d'affichage : proposer la remise."""
