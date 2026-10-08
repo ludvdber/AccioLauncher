@@ -17,7 +17,7 @@ dev = [
     "Pillow>=12.3",       # build/create_icon.py + create_social_preview.py
     "pytest>=9.1",
     "pytest-qt>=4.5",
-    "ruff>=0.16",         # utilisé depuis toujours, mais n'était pas déclaré
+    "ruff>=0.16.10",      # utilisé depuis toujours, mais n'était pas déclaré
 ]
 
 [project.scripts]

@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.38",
+  "catalog_version": "0.39",
   "contributors": [
     {
       "name": "ASTeam",
@@ -1204,7 +1204,7 @@
           "download_parts": null,
           "size_mb": 1680,
           "changes": [
-            "Wrapper D3D9 Chip-Biscuit intégré (widescreen 1920x1080, 100 FPS, 16:9)",
+            "Traducteur graphique D3D9 intégré (widescreen 1920x1080, 100 FPS, 16:9)",
             "Mode borderless windowed (alt-tab sans crash)",
             "Fix crash sur Forêt Interdite, Lac, Labyrinthe et Voldemort",
             "Voix et textes FR inclus",
@@ -1213,7 +1213,7 @@
           "i18n": {
             "en": {
               "changes": [
-                "Chip-Biscuit D3D9 wrapper bundled (1920x1080 widescreen, 100 FPS, 16:9)",
+                "D3D9 graphics translator bundled (1920x1080 widescreen, 100 FPS, 16:9)",
                 "Borderless windowed mode (crash-free alt-tab)",
                 "Fixed crashes in the Forbidden Forest, the Lake, the Maze and the Voldemort fight",
                 "French voices and text included",
@@ -1222,7 +1222,7 @@
             },
             "es": {
               "changes": [
-                "Wrapper D3D9 Chip-Biscuit integrado (panorámico 1920x1080, 100 FPS, 16:9)",
+                "Traductor gráfico D3D9 integrado (panorámico 1920x1080, 100 FPS, 16:9)",
                 "Modo ventana sin bordes (alt-tab sin cierres)",
                 "Corregidos los cierres en el Bosque Prohibido, el Lago, el Laberinto y el combate contra Voldemort",
                 "Voces y textos en francés incluidos",
@@ -1900,9 +1900,7 @@
       "dpi_aware": true,
       "requires": [
         "vcredist2005_x86",
-        "d3dx9_37",
-        "xinput1_3",
-        "d3dx9_43"
+        "d3dx9_37"
       ],
       "saves": {
         "root": "localappdata",
@@ -2143,9 +2141,7 @@
       "dpi_aware": true,
       "requires": [
         "vcredist2008_x86",
-        "d3dx9_37",
-        "xinput1_3",
-        "d3dx9_43"
+        "d3dx9_37"
       ],
       "warning": "Votre antivirus peut supprimer Paul.dll pendant l'installation. Si le jeu ne démarre pas, restaurez ce fichier depuis la quarantaine.",
       "saves": {

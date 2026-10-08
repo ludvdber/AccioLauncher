@@ -14,10 +14,11 @@ VCREDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
 VCREDIST_2005_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26347"
 VCREDIST_2008_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=26368"
 
-# Runtime DirectX 9.0c de juin 2010, jamais livré par Windows : HP5/HP6
-# importent `xinput1_3`, HP7 `d3dx9_37` + `xinput1_3`, l'ancien wrapper d3d9
-# `d3dx9_43`. Une DLL par identifiant : le catalogue déclare ce que CHAQUE jeu
-# charge. Un seul installeur Microsoft pour toutes.
+# Runtime DirectX 9.0c de juin 2010, jamais livré par Windows : HP7 importe
+# `d3dx9_37` (le seul que le catalogue déclare encore ; `xinput1_3.dll` est livrée
+# dans l'archive, `d3dx9_43` datait de l'ancien wrapper d3d9). Une DLL par
+# identifiant : le catalogue déclare ce que CHAQUE jeu charge. Un seul installeur
+# Microsoft pour toutes.
 DIRECTX9_URL = "https://www.microsoft.com/en-us/download/details.aspx?id=35"
 DLL_DIRECTX9 = ("d3dx9_43", "d3dx9_37", "xinput1_3")
 

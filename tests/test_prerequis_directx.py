@@ -81,9 +81,10 @@ class TestDeclaration:
         catalogue = json.loads((Path(__file__).resolve().parents[1] / "src/data/games.json")
                                .read_text(encoding="utf-8"))
         requis = {g["id"]: set(g.get("requires", [])) for g in catalogue["games"]}
-        # Les Reliques gardent l'ancien wrapper d3d9 (D3DX) et chargent elles-mêmes d3dx9_37 et xinput1_3.
+        # Les Reliques : hp7.exe importe d3dx9_37 (le runtime de 2010, seul à déclarer) ; plus de d3dx9_43 (ancien
+        # wrapper) et leur archive livre SON xinput1_3.dll, comme HP5 et HP6 (relevé des imports le 2026-10-08).
         for jeu in ("hp7a", "hp7b"):
-            assert {"d3dx9_43", "d3dx9_37", "xinput1_3"} <= requis[jeu], jeu
+            assert requis[jeu] & set(DLL_DIRECTX9) == {"d3dx9_37"}, jeu
         # HP4 à HP6 portent le nouveau correctif (catalogue 0.33) : plus de D3DX, et leur archive livre SON
         # xinput1_3.dll. Exiger le runtime de 2010 bloquerait le lancement pour une DLL que plus rien ne charge.
         for jeu in ("hp4", "hp5", "hp6"):

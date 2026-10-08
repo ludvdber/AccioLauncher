@@ -29,6 +29,10 @@ retours sont les bienvenus sur le [Discord](https://discord.gg/TNwDQd7KGe).
 
 Si vous avez déjà le launcher, il vous propose la mise à jour tout seul.
 
+**Soutenir le projet** — le launcher est gratuit et le restera. Un café sur
+[Ko-fi](https://ko-fi.com/ludovic01) finance le travail sur le launcher et les
+correctifs ; il ne paie aucun jeu et ne débloque rien.
+
 <details>
 <summary><b>Vérifier que le fichier est l'original</b></summary>
 

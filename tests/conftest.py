@@ -6,9 +6,14 @@ des fixtures réutilisables pour les tests UI.
 
 import gc
 import os
+from pathlib import Path
 
 # Doit être posé AVANT tout import PyQt6.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+# Racine du dépôt comme dossier courant : des tests lisent `src/…` par un chemin relatif
+# (plafonds de lignes), et pytest lancé depuis un autre dossier les faisait échouer (ACT-014).
+os.chdir(Path(__file__).resolve().parents[1])
 
 
 # Charger les modules d'extension Qt MAINTENANT, à la collecte, alors qu'il
