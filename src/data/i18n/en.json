@@ -239,6 +239,8 @@
     "En savoir plus": "Learn more",
     "Langue du jeu : {}": "Game language: {}",
     "Manette": "Controller",
+    "Manette en partie": "Partial controller support",
+    "Sans manette": "No controller support",
     "Jouer à la manette": "Play with a controller",
     "Manette activée pour {}.": "Controller enabled for {}.",
     "Manette désactivée pour {}.": "Controller disabled for {}.",

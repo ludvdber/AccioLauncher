@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.39",
+  "catalog_version": "0.40",
   "contributors": [
     {
       "name": "ASTeam",
@@ -420,7 +420,8 @@
         "section": "WinDrv.WindowsClient",
         "width": "WindowedViewportX",
         "height": "WindowedViewportY"
-      }
+      },
+      "controller": "yes"
     },
     {
       "id": "hp2",
@@ -733,7 +734,8 @@
             "Action",
             "Exploration",
             "Puzzles"
-          ]
+          ],
+          "controller_note": "The game is playable with a controller, but its start window (before the game) needs the mouse."
         },
         "es": {
           "name": "Harry Potter y la cámara secreta",
@@ -743,7 +745,8 @@
             "Acción",
             "Exploración",
             "Puzles"
-          ]
+          ],
+          "controller_note": "El juego se juega con mando, pero su ventana de inicio (antes de la partida) requiere el ratón."
         }
       },
       "saves": {
@@ -760,7 +763,9 @@
         "section": "WinDrv.WindowsClient",
         "width": "WindowedViewportX",
         "height": "WindowedViewportY"
-      }
+      },
+      "controller": "partial",
+      "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris."
     },
     {
       "id": "hp3",
@@ -1067,7 +1072,8 @@
         ],
         "first": 0
       },
-      "display_locked": true
+      "display_locked": true,
+      "controller": "yes"
     },
     {
       "id": "hp4",
@@ -1491,7 +1497,8 @@
           "Electronic Arts/Harry Potter*Ph*nix/HPOOTP"
         ],
         "files": "HPOOTP"
-      }
+      },
+      "controller": "yes"
     },
     {
       "id": "hp6",
@@ -1697,7 +1704,8 @@
           "Electronic Arts/Harry Potter*Prince*/HPHBP0"
         ],
         "files": "HPHBP0"
-      }
+      },
+      "controller": "yes"
     },
     {
       "id": "hp7a",

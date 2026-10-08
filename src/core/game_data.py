@@ -56,6 +56,20 @@ from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
 
 log = logging.getLogger(__name__)
 
+# Le jeu se joue-t-il à la manette ? Trois réponses, jamais davantage : un
+# vocabulaire FERMÉ, parce que le libellé affiché en dépend et que le catalogue
+# est distant. Toute autre valeur vaut « non renseigné » (rien ne s'affiche).
+NIVEAUX_MANETTE = ("yes", "partial", "no")
+
+
+def _niveau_manette(valeur: object) -> str:
+    """`yes` / `partial` / `no`, sinon vide. Jamais une valeur devinée."""
+    if isinstance(valeur, str) and valeur in NIVEAUX_MANETTE:
+        return valeur
+    if valeur not in (None, ""):
+        log.warning("Niveau de manette inconnu ignoré : %r", valeur)
+    return ""
+
 
 @dataclass(frozen=True, slots=True)
 class GameVersion:
@@ -168,6 +182,14 @@ class GameData:
     # À partir de HP5 le moteur change et ses réglages fonctionnent : le champ
     # est donc PAR JEU, et rien ne s'affiche pour ceux qui vont bien.
     display_locked: bool = False
+    # « Se joue à la manette » : `yes`, `partial` ou `no`, vide tant que le jeu
+    # n'a pas été ESSAYÉ manette en main (une affirmation fausse discrédite la
+    # fiche, donc « non renseigné » ne s'affiche pas). Par jeu et dans le
+    # catalogue, comme `requires` : la réponse diffère d'un jeu à l'autre et
+    # change quand un correctif arrive. `controller_note` dit CE qui manque
+    # (traduisible), en infobulle de la pastille.
+    controller: str = ""
+    controller_note: str = ""
     # Où écrire la taille de la fenêtre (`catalogue_blocs.Resolution`) ; None :
     # le launcher ne règle pas la résolution de ce jeu.
     resolution: Resolution | None = None
@@ -331,6 +353,8 @@ class GameData:
             # qui change la façon dont on lance un exécutable.
             dpi_aware=data.get("dpi_aware") is True,
             display_locked=data.get("display_locked") is True,
+            controller=_niveau_manette(data.get("controller")),
+            controller_note=_loc(data, "controller_note", ""),
             resolution=_parse_resolution(data.get("resolution")),
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),

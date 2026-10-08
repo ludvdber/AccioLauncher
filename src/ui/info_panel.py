@@ -499,6 +499,37 @@ class InfoPanel(QWidget):
                 " padding: 4px 14px; letter-spacing: 2px; }"
             ))
             self._tags_layout.addWidget(badge)
+        self._ajouter_pastille_manette(game)
         self._tags_container.updateGeometry()
         # Sinon la dernière ligne de pastilles reste coupée.
         self._relayout_tags()
+
+    def _ajouter_pastille_manette(self, game: GameData) -> None:
+        """« Manette » / « Manette en partie » / « Sans manette », à la suite des tags.
+
+        Rien pour un jeu non essayé (`controller` vide) : ne rien dire vaut
+        mieux qu'affirmer ce qu'on n'a pas vu (règle 108). Le trait : plein pour
+        « oui », en tirets pour « en partie » (le jeu se joue, pas tout), et gris
+        pour « non » — la forme porte la nuance, pas seulement la teinte. Ce que
+        « en partie » veut dire est en infobulle (`controller_note`, catalogue).
+        """
+        libelles = {"yes": tr("Manette"), "partial": tr("Manette en partie"),
+                    "no": tr("Sans manette")}
+        libelle = libelles.get(game.controller)
+        if libelle is None:
+            return
+        badge = QLabel(libelle.upper())
+        badge.setFont(cinzel(10, bold=True))
+        if game.controller == "no":
+            style = ("QLabel { background: transparent; color: #9a9ab8;"
+                     " border: 1px solid rgba(154, 154, 184, 0.4); border-radius: 12px;"
+                     " padding: 4px 14px; letter-spacing: 2px; }")
+        else:
+            trait = "solid" if game.controller == "yes" else "dashed"
+            style = themed(
+                "QLabel { background: rgba(214, 167, 44, 0.05); color: #d6a72c;"
+                f" border: 1px {trait} rgba(214, 167, 44, 0.5); border-radius: 12px;"
+                " padding: 4px 14px; letter-spacing: 2px; }")
+        badge.setStyleSheet(style)
+        badge.setToolTip(game.controller_note)
+        self._tags_layout.addWidget(badge)
