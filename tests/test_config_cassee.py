@@ -39,6 +39,15 @@ HP3_INTEL = (
 )
 
 
+@pytest.fixture(autouse=True)
+def _jeu_complet(monkeypatch):
+    """Les jeux d'ici n'existent pas sur le disque : sans ceci, la boîte des
+    fichiers manquants passerait avant celle qu'on teste (cas couvert dans
+    `test_fichiers_essentiels.py`)."""
+    from src.core import fichiers_essentiels
+    monkeypatch.setattr(fichiers_essentiels, "manquants", lambda *_a: [])
+
+
 @pytest.fixture
 def jeu(tmp_path):
     game = SimpleNamespace(

@@ -47,6 +47,9 @@ class TestCatalogue:
         ("dll_overrides", ["..\\d3d9"]),
         ("dll_overrides", "d3d9"),
         ("dll_overrides", [None, "d3d9"]),
+        ("essential_files", ["..\\..\\Windows\\System32\\d3d11.dll"]),
+        ("essential_files", ["HP1/System/HP.exe", "C:/x.dll"]),
+        ("essential_files", "HP1/System/HP.exe"),
     ])
     def test_valeurs_hostiles(self, vrai_catalogue, champ, valeur):
         brut = copy.deepcopy(vrai_catalogue)

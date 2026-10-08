@@ -22,8 +22,13 @@ def jeu(tmp_path):
     modeles.mkdir(parents=True)
     (modeles / "Game.ini").write_bytes(b"[Engine.Engine]\r\nGameRenderDevice=D3D11Drv.D3D11RenderDevice\r\n")
     (modeles / "User.ini").write_bytes(b"[Engine.Input]\r\nJoy2=Jump\r\n")
+    # Un jeu installé a son exécutable : sinon « Vérifier / réparer » le
+    # signale manquant avant toute question sur la configuration.
+    (install / "HP2" / "system").mkdir()
+    (install / "HP2" / "system" / "Game.exe").write_bytes(b"MZ")
     game = SimpleNamespace(
         id="hp2", name="Harry Potter II", executable="HP2/system/Game.exe",
+        fichiers_essentiels=(),
         post_install=PostInstall(config_files=(
             ConfigFile("config/Game.ini", "~/Documents/Harry Potter II/Game.ini"),
             ConfigFile("config/User.ini", "~/Documents/Harry Potter II/User.ini"),

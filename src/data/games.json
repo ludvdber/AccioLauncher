@@ -67,6 +67,21 @@
       "description": "Incarnez Harry Potter et découvrez l'univers magique de Poudlard pour la toute première fois. Explorez les couloirs du château, apprenez des sortilèges, préparez des potions et découvrez des passages secrets tout en suivant l'intrigue du premier livre. Participez à des matchs de Quidditch effrénés et affrontez des créatures magiques dans cette aventure inoubliable.",
       "developer": "KnowWonder",
       "executable": "HP1/System/HP.exe",
+      "essential_files": [
+        "HP1/System/Core.dll",
+        "HP1/System/d3d11drv.dll",
+        "HP1/System/Editor.dll",
+        "HP1/System/Effects11.dll",
+        "HP1/System/Engine.dll",
+        "HP1/System/Fire.dll",
+        "HP1/System/Galaxy.dll",
+        "HP1/System/IpDrv.dll",
+        "HP1/System/Render.dll",
+        "HP1/System/UWeb.dll",
+        "HP1/System/Window.dll",
+        "HP1/System/WinDrv.dll",
+        "HP1/System/winmm.dll"
+      ],
       "requires": [
         "d3dx11_43",
         "d3dcompiler_43",
@@ -432,6 +447,24 @@
       "description": "Replongez dans le monde des sorciers avec un Poudlard plus ouvert et plus riche à explorer que jamais. Apprenez de nouveaux sortilèges comme Expelliarmus et Lumos pour résoudre des énigmes et vaincre vos ennemis. Entre les matchs de Quidditch, les infiltrations sous la Cape d'Invisibilité et l'exploration de la Forêt Interdite, chaque recoin du château regorge de secrets à découvrir.",
       "developer": "KnowWonder",
       "executable": "HP2/system/Game.exe",
+      "essential_files": [
+        "HP2/system/ALAudio.dll",
+        "HP2/system/Core.dll",
+        "HP2/system/d3d11drv.dll",
+        "HP2/system/Editor.dll",
+        "HP2/system/Effects11.dll",
+        "HP2/system/Engine.dll",
+        "HP2/system/Fire.dll",
+        "HP2/system/ogg.dll",
+        "HP2/system/OpenAL32.dll",
+        "HP2/system/Render.dll",
+        "HP2/system/vorbis.dll",
+        "HP2/system/vorbisfile.dll",
+        "HP2/system/Window.dll",
+        "HP2/system/WinDrv.dll",
+        "HP2/system/WinKeyHook.dll",
+        "HP2/system/winmm.dll"
+      ],
       "requires": [
         "d3dx11_43",
         "d3dcompiler_43",
@@ -777,6 +810,35 @@
       "description": "Pour la première fois, incarnez non seulement Harry, mais aussi Ron et Hermione, chacun disposant de capacités et sortilèges uniques. Explorez librement Poudlard et ses alentours, résolvez des énigmes en alternant entre les trois personnages et envolez-vous à dos d'Hippogriffe. Avec ses quêtes secondaires et ses combats magiques, cette aventure offre une expérience riche et variée.",
       "developer": "KnowWonder",
       "executable": "HP3/system/hppoa.exe",
+      "essential_files": [
+        "HP3/system/ALAudio.dll",
+        "HP3/system/binkmake.dll",
+        "HP3/system/binkw32.dll",
+        "HP3/system/Core.dll",
+        "HP3/system/D3D8.dll",
+        "HP3/system/D3D9.dll",
+        "HP3/system/D3DDrv.dll",
+        "HP3/system/D3DImm.dll",
+        "HP3/system/DDraw.dll",
+        "HP3/system/DefOpenAL32.dll",
+        "HP3/system/dinput8.dll",
+        "HP3/system/Editor.dll",
+        "HP3/system/Engine.dll",
+        "HP3/system/Fire.dll",
+        "HP3/system/GUI.dll",
+        "HP3/system/IFC23.DLL",
+        "HP3/system/IpDrv.dll",
+        "HP3/system/KWGame.dll",
+        "HP3/system/msvcr70.dll",
+        "HP3/system/ogg.dll",
+        "HP3/system/radutil.dll",
+        "HP3/system/UWeb.dll",
+        "HP3/system/Vehicles.dll",
+        "HP3/system/vorbis.dll",
+        "HP3/system/vorbisfile.dll",
+        "HP3/system/Window.dll",
+        "HP3/system/WinDrv.dll"
+      ],
       "max_fps": 60,
       "dll_overrides": [
         "msvcr70"
@@ -1085,6 +1147,11 @@
       "description": "Affrontez les épreuves du Tournoi des Trois Sorciers en incarnant Harry, Ron ou Hermione dans cette aventure d'action coopérative. Lancez des sortilèges puissants, combattez des créatures redoutables et relevez les trois tâches mortelles du tournoi jusqu'à l'ultime confrontation avec Lord Voldemort. Jouez en coopération avec jusqu'à deux amis pour la première fois dans la série.",
       "developer": "EA UK",
       "executable": "HP4/gof_f.exe",
+      "essential_files": [
+        "HP4/d3d9.dll",
+        "HP4/GofInput.dll",
+        "HP4/MSVCR71.DLL"
+      ],
       "screenshots": {
         "collect": [
           "HP4/screenshots/*.png"
@@ -1273,6 +1340,11 @@
       "description": "Explorez une reconstitution complète et détaillée de Poudlard en monde ouvert, sans aucun écran de chargement, dans l'aventure la plus immersive de la série. Recrutez des membres pour l'Armée de Dumbledore, affrontez les Serpentard en duels de sorciers et interagissez avec l'ensemble du château grâce à vos sortilèges. Découvrez chaque recoin de l'école tout en accomplissant les missions inspirées du livre et du film.",
       "developer": "EA UK",
       "executable": "HP5/hp.exe",
+      "essential_files": [
+        "HP5/d3d9.dll",
+        "HP5/hpexhdlr.dll",
+        "HP5/xinput1_3.dll"
+      ],
       "requires": [
         "vcredist2005_x86"
       ],
@@ -1511,6 +1583,10 @@
       "description": "Parcourez une fois de plus les couloirs de Poudlard dans cette aventure d'action qui met l'accent sur les duels de sorciers, la préparation de potions et le Quidditch. Affrontez vos adversaires dans des combats magiques intenses, perfectionnez vos talents de potioniste et menez l'équipe de Gryffondor à la victoire. Explorez le château à différents moments de la journée et percez les mystères qui entourent le Prince de Sang-Mêlé.",
       "developer": "EA UK",
       "executable": "HP6/hp6.exe",
+      "essential_files": [
+        "HP6/d3d9.dll",
+        "HP6/xinput1_3.dll"
+      ],
       "requires": [
         "vcredist2005_x86"
       ],
@@ -1718,6 +1794,10 @@
       "description": "Plongez dans l'aventure la plus sombre de la saga. Harry, Ron et Hermione ont quitté Poudlard pour traquer et détruire les Horcruxes de Voldemort. Affrontez des Rafleurs et des Mangemorts dans des combats intenses à la troisième personne, infiltrez le Ministère de la Magie et survivez dans des environnements hostiles. Avec son gameplay orienté action et ses missions furtives, ce jeu vous place au cœur d'une guerre où chaque sortilège compte.",
       "developer": "EA Bright Light",
       "executable": "HP7/pc/hp7.exe",
+      "essential_files": [
+        "HP7/pc/d3d9.dll",
+        "HP7/pc/xinput1_3.dll"
+      ],
       "screenshots": {
         "collect": [
           "HP7/pc/screenshots/*.png"
@@ -1932,6 +2012,10 @@
       "description": "L'ultime bataille pour Poudlard. Incarnez Harry et ses alliés dans un jeu d'action explosif centré sur la Bataille de Poudlard. Enchaînez les sortilèges offensifs et défensifs dans des affrontements spectaculaires, protégez le château contre les forces de Voldemort et menez le combat final. Avec ses combats à couvert, ses duels de baguettes intenses et ses moments cinématiques, cette conclusion épique met un point final à la saga vidéoludique Harry Potter.",
       "developer": "EA Bright Light",
       "executable": "HP8/pc/hp8.exe",
+      "essential_files": [
+        "HP8/pc/d3d9.dll",
+        "HP8/pc/xinput1_3.dll"
+      ],
       "screenshots": {
         "collect": [
           "HP8/pc/screenshots/*.png"

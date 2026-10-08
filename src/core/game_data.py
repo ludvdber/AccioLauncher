@@ -37,6 +37,7 @@ from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
     _sous_dossier_valide,
     _MAX_SURCHARGES_DLL,
     _surcharges_dll_valides,
+    _fichiers_essentiels_valides,
     RACINES_SAUVEGARDES,
     Sauvegardes,
     FORMATS_EMPLACEMENTS,
@@ -246,6 +247,15 @@ class GameData:
     # pour qu'une désinstallation ne les emporte pas. Mêmes gardes que `saves`.
     touche_capture: str = ""
     captures: tuple[str, ...] = ()
+    # Fichiers sans lesquels le jeu ne démarre pas, en plus de l'exécutable,
+    # relatifs au dossier des jeux comme lui. Né d'un rapport du 2026-10-09 :
+    # l'antivirus avait retiré `d3d11drv.dll` de HP2 après l'installation, et
+    # le launcher proposait de remettre la configuration. Relevés DANS les
+    # archives publiées (les programmes livrés à côté de l'exécutable), jamais
+    # devinés : un fichier déclaré que l'archive n'a pas serait signalé
+    # « manquant » à tout le monde. Vérifiés seulement sur demande ou après un
+    # échec, jamais au lancement : un mod qui en remplace un ne bloque rien.
+    fichiers_essentiels: tuple[str, ...] = ()
 
     @property
     def langues(self) -> "LanguageRegistry | LanguageFiles | None":
@@ -363,6 +373,7 @@ class GameData:
             noms=_tous_les_noms(data),
             touche_capture=_touche_capture(data.get("screenshots")),
             captures=_motifs_captures(data.get("screenshots")),
+            fichiers_essentiels=_fichiers_essentiels_valides(data.get("essential_files")),
             post_install=PostInstall(
                 config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),

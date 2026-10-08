@@ -74,6 +74,12 @@ def catalogue(raw: object) -> None:
         # Affichée telle quelle dans la fenêtre de réglages : une ligne, courte.
         assert len(jeu.touche_capture) <= 24 and not re.search(r"[\x00-\x1f<>&]", jeu.touche_capture)
 
+        # Lus sur le disque de l'utilisateur, sous le dossier des jeux : même
+        # garde que l'exécutable, séparateur déjà ramené à « / ».
+        assert len(jeu.fichiers_essentiels) <= 64
+        for f in jeu.fichiers_essentiels:
+            assert _est_relatif_sur(f) and "\\" not in f, f
+
         # Ces noms finissent dans `WINEDLLOVERRIDES`, dont la syntaxe tient à
         # `=`, `,` et `;` : un seul de ces caractères réécrirait le réglage
         # d'une AUTRE DLL, ou désactiverait celle-ci.

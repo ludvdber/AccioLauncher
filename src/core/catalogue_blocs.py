@@ -502,6 +502,35 @@ def _surcharges_dll_valides(brut) -> tuple[str, ...]:
     return tuple(noms)
 
 
+# Au-delà, un bloc `essential_files` n'a rien d'une sélection : les jeux du
+# catalogue en déclarent 3 à 31 (programmes livrés à côté de l'exécutable).
+_MAX_FICHIERS_ESSENTIELS = 64
+
+
+def _fichiers_essentiels_valides(brut) -> tuple[str, ...]:
+    """Fichiers dont l'absence empêche le jeu de démarrer, relatifs au dossier des jeux.
+
+    Seulement LUS (« ce fichier est-il là ? ») par `fichiers_essentiels`, mais
+    le chemin vient du dehors : la garde commune de `chemins`. Séparateur
+    ramené à « / », doublons fusionnés. Tout ou rien : une liste à moitié
+    retenue annoncerait « tout est là » sur la foi d'un catalogue abîmé.
+    """
+    if brut is None:
+        return ()
+    if not isinstance(brut, list) or len(brut) > _MAX_FICHIERS_ESSENTIELS:
+        log.warning("Bloc essential_files ignoré : %r", brut)
+        return ()
+    chemins: list[str] = []
+    for chemin in brut:
+        if not isinstance(chemin, str) or not chemin_relatif_sur(chemin):
+            log.warning("Bloc essential_files ignoré (chemin %r)", chemin)
+            return ()
+        propre = chemin.replace("\\", "/")
+        if propre not in chemins:
+            chemins.append(propre)
+    return tuple(chemins)
+
+
 # Où un jeu range ses sauvegardes. Les racines sont une LISTE FERMÉE : le
 # catalogue distant choisit parmi elles, il n'écrit jamais un chemin absolu.
 RACINES_SAUVEGARDES = ("documents", "localappdata")

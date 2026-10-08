@@ -1872,7 +1872,8 @@ class TestEngrenageReglagesDuJeu:
         cible = win.manager.config.install_path / "HP7" / "pc"
         cible.mkdir(parents=True, exist_ok=True)
         ouverts = []
-        monkeypatch.setattr(gdh, "open_local_path", lambda p: ouverts.append(p))
+        from src.ui import fichiers_manquants
+        monkeypatch.setattr(fichiers_manquants, "open_local_path", lambda p: ouverts.append(p))
         gdh._ouvrir_dossier_du_jeu(win._detail, jeu)
         assert ouverts == [str(cible)]
 

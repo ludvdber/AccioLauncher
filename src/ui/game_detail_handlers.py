@@ -32,6 +32,8 @@ from src.ui.about_page import enregistrer_rapport, presse_papiers, texte_diagnos
 from src.ui.preparateur_wine import noms_des_verbes
 from src.ui.utils import open_local_path, open_url
 from src.ui.copies_dialog import CopiesDialog
+from src.ui.fichiers_manquants import (
+    constat_complet, ouvrir_dossier_du_jeu as _ouvrir_dossier_du_jeu, signaler_fichiers_manquants)
 from src.ui.game_settings_dialog import GameSettingsDialog
 from src.ui.versions_dialog import VersionsDialog
 
@@ -599,12 +601,17 @@ def on_repair(view: "GameDetailView") -> None:
     """
     if view.game is None or view._ops.is_busy or _preparation_bloque(view):
         return
+    # Ce qui manque d'abord : la configuration n'aide pas un jeu privé de son
+    # pilote d'affichage (rapport du 2026-10-09).
+    if signaler_fichiers_manquants(view, view.game):
+        return
+    constat = constat_complet(view.game)
     if reparation_config.disponible(view.game, view.manager.config.install_path):
-        _proposer_la_configuration(view)
+        _proposer_la_configuration(view, constat)
         return
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Vérifier / réparer les fichiers"),
-        tr("L'archive de {} va être re-téléchargée (avec vérification d'intégrité quand elle est disponible) puis réinstallée par-dessus les fichiers existants.\n\nLes sauvegardes et la configuration ne sont pas touchées.\n\nContinuer ?").format(view.game.name),
+        constat + tr("L'archive de {} va être re-téléchargée (avec vérification d'intégrité quand elle est disponible) puis réinstallée par-dessus les fichiers existants.\n\nLes sauvegardes et la configuration ne sont pas touchées.\n\nContinuer ?").format(view.game.name),
         (tr("Vérifier et réparer"), tr("Annuler")), 1,
     )
     if reply == 0:
@@ -612,12 +619,12 @@ def on_repair(view: "GameDetailView") -> None:
         view._refresh()
 
 
-def _proposer_la_configuration(view: "GameDetailView") -> None:
+def _proposer_la_configuration(view: "GameDetailView", constat: str = "") -> None:
     game = view.game
     noms = "\n".join(f"• {f.name}" for f in reparation_config.fichiers(game))
     choix = _boite(QMessageBox.Icon.Question,
         view, tr("Vérifier / réparer"),
-        tr("Le jeu ne démarre plus après un changement dans ses options graphiques ? "
+        constat + tr("Le jeu ne démarre plus après un changement dans ses options graphiques ? "
            "Remettre sa configuration suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\n"
            "Fichiers remis :\n{}\n\nL'ancienne configuration est gardée de côté ; "
            "les sauvegardes ne sont pas touchées.\n\n"
@@ -657,7 +664,10 @@ def proposer_apres_plantage(view: "GameDetailView", game: GameData, ligne: str) 
     écrit dans Documents. La ligne du journal est montrée telle quelle — c'est
     celle que le joueur a vue en anglais dans la boîte du jeu, et celle qu'il
     collerait sur Discord : la reconnaître le rassure sur le diagnostic.
+    Un fichier essentiel absent passe avant (rapport du 2026-10-09).
     """
+    if signaler_fichiers_manquants(view, game):
+        return
     choix = _boite(QMessageBox.Icon.Question,
         view, tr("{} n'a pas pu s'afficher").format(game.name),
         tr("Le jeu s'est arrêté sur une erreur d'affichage :\n« {} »\n\n"
@@ -710,8 +720,11 @@ def signaler_arret(view: "GameDetailView", game: GameData, arret) -> None:
     complet (journaux du jeu compris) dans le presse-papiers : un Ctrl+V sur le
     Discord le joint, sans photo de l'écran prise au téléphone (audit du
     2026-10-07, P1-007). Pour HP3, un cran de réglage graphique plus bas est
-    proposé d'abord, puis le jeu est relancé (P3-001).
+    proposé d'abord, puis le jeu est relancé (P3-001). Un fichier essentiel
+    absent passe avant tout.
     """
+    if signaler_fichiers_manquants(view, game):
+        return
     texte = tr("Le jeu a écrit cette erreur avant de s'arrêter :\n« {} »").format(arret.ligne)
     repli = _repli_graphique(view, game, arret)
     choix: tuple[str, ...] = (tr("Copier le rapport"), tr("Fermer"))
@@ -938,21 +951,6 @@ def _actions_fichiers(view: "GameDetailView", game: GameData):
 
 def _ouvrir_copies(view: "GameDetailView", game: GameData) -> None:
     CopiesDialog(game, partie_en_cours=view.partie_en_cours, parent=view).exec()
-
-
-def _ouvrir_dossier_du_jeu(view: "GameDetailView", game: GameData) -> None:
-    """Ouvre le dossier où le jeu est RÉELLEMENT installé.
-
-    Le dossier de l'exécutable, pas la racine d'installation : depuis que HP7
-    range ses fichiers dans un sous-dossier `pc`, les deux ont divergé, et
-    c'est celui qui contient le jeu qu'on veut voir.
-    """
-    dossier = (view.manager.config.install_path
-               / Path(game.executable.replace(chr(92), "/")).parent)
-    if not dossier.is_dir():
-        view.notify.emit(tr("Dossier introuvable — le jeu a peut-être été déplacé."))
-        return
-    open_local_path(str(dossier))
 
 
 def on_language_clicked(view: "GameDetailView") -> None:
