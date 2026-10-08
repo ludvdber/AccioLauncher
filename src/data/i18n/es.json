@@ -50,8 +50,6 @@
     "Télécharger {}": "Descargar {}",
     "JOUER": "JUGAR",
     "Jouer à {}": "Jugar a {}",
-    "DÉSINSTALLER": "DESINSTALAR",
-    "Désinstaller {}": "Desinstalar {}",
     "Annuler": "Cancelar",
     "Annuler le téléchargement": "Cancelar la descarga",
     "Installation… %p%": "Instalando… %p%",
@@ -777,6 +775,7 @@
     "Un téléchargement est en cours : les composants seront installés quand il sera fini. Cliquez à nouveau sur JOUER.": "Hay una descarga en curso: los componentes se instalarán cuando termine. Vuelve a hacer clic en JUGAR.",
     "{} : {}": "{}: {}",
     "{} : {} sur {}": "{}: {} de {}",
-    "{} composants Windows manquants — requis pour lancer ce jeu.": "Faltan {} componentes de Windows — necesarios para iniciar este juego."
+    "{} composants Windows manquants — requis pour lancer ce jeu.": "Faltan {} componentes de Windows — necesarios para iniciar este juego.",
+    "Désinstaller le jeu": "Desinstalar el juego"
   }
 }

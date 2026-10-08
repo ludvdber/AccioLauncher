@@ -925,6 +925,9 @@ def _actions_fichiers(view: "GameDetailView", game: GameData):
                         lambda: on_repair(view)))
         actions.append((tr("Ouvrir le dossier du jeu"),
                         lambda: _ouvrir_dossier_du_jeu(view, game)))
+        # Ici depuis ACT-055 : un bouton de la fiche, plus visible que
+        # l'engrenage, pour une action qu'on fait une fois. En dernier.
+        actions.append((tr("Désinstaller le jeu"), lambda: on_uninstall(view)))
     # Même désinstallé : les copies vivent hors du dossier du jeu, et c'est
     # peut-être justement pour les récupérer qu'on revient.
     if game.sauvegardes is not None and copies_sauvegardes.versions(game.id):

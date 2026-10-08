@@ -1827,6 +1827,27 @@ class TestEngrenageReglagesDuJeu:
         assert tr("Vérifier / réparer les fichiers") in libelles
         assert tr("Ouvrir le dossier du jeu") in libelles
 
+    def test_desinstaller_vit_dans_la_rubrique_fichiers(self, make_window_multilingue, monkeypatch):
+        """ACT-055 : plus de DÉSINSTALLER dans la rangée de la fiche, il passait
+        avant l'engrenage. On le trouve sous « Fichiers du jeu », et il mène
+        toujours à la confirmation."""
+        from PyQt6.QtWidgets import QPushButton
+        from src.core.game_manager import GameState
+        from src.core.i18n import tr
+        from src.ui import game_detail_handlers as gdh
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        panneau = win._detail._action_panel
+        assert panneau.findChild(QPushButton, "btnUninstall") is None
+        actions = gdh._actions_fichiers(win._detail, jeu)
+        libelle, rappel = actions[-1]
+        assert libelle == tr("Désinstaller le jeu")
+        appels = []
+        monkeypatch.setattr(gdh, "on_uninstall", lambda view: appels.append(view))
+        rappel()
+        assert appels == [win._detail]
+
     def test_rien_a_reparer_sur_un_jeu_absent(self, make_window_multilingue):
         """Réparer un jeu non installé n'a pas de sens, et ouvrir son dossier
         serait une erreur de plus à expliquer."""

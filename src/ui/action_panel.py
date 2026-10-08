@@ -17,7 +17,7 @@ from src.ui.icon_button import IconButton
 from src.core.formatting import (
     append_part_info, format_progress_line, format_size,
 )
-from src.ui.theme import themed
+from src.ui.theme import current as palette_courante, themed
 from src.ui.utils import clear_layout
 
 # Largeur du bloc « bientôt disponible » : le bouton ET la note en dessous.
@@ -40,7 +40,6 @@ class ActionPanel(QWidget):
     download_clicked = pyqtSignal()
     cancel_clicked = pyqtSignal()
     play_clicked = pyqtSignal()
-    uninstall_clicked = pyqtSignal()
     update_clicked = pyqtSignal()
     settings_requested = pyqtSignal()   # « Changer de dossier » depuis l'alerte disque
     preparation_requested = pyqtSignal()  # « Installer » un composant dans Wine (Linux)
@@ -235,7 +234,11 @@ class ActionPanel(QWidget):
                        + tr("{} restants").format(format_size(round(restant))))
         else:
             libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(poids)}"
-        btn = GlowButton(libelle, style="outline")
+        # PLEIN, dans l'accent de la maison (ACT-055, 2026-10-08) : c'est l'action
+        # principale d'un jeu absent, elle doit peser autant que le JOUER vert
+        # d'un jeu installé. En contour, elle pesait MOINS que le DÉSINSTALLER
+        # voisin. Texte sombre : du blanc sur l'or ne passe pas le contraste.
+        btn = GlowButton(libelle, text_color=palette_courante().bg)
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
         btn.setFont(cinzel(13, bold=True))
@@ -379,15 +382,10 @@ class ActionPanel(QWidget):
         btn_play.clicked.connect(self.play_clicked)
         self._action_layout.addWidget(btn_play)
 
-        btn_uninstall = GlowButton(tr("DÉSINSTALLER"), glow_color="#8a8aaa", style="outline", text_color="#8a8aaa")
-        btn_uninstall.setObjectName("btnUninstall")
-        btn_uninstall.setAccessibleName(tr("Désinstaller {}").format(self._game.name))
-        btn_uninstall.setFont(cinzel(10, bold=True))
-        btn_uninstall.setFixedSize(160, 36)
-        btn_uninstall.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_uninstall.clicked.connect(self.uninstall_clicked)
-        self._action_layout.addWidget(btn_uninstall)
-
+        # Plus de DÉSINSTALLER ici (ACT-055, 2026-10-08) : deuxième bouton de la
+        # rangée, il passait avant l'engrenage qui ouvre tout le reste. Il vit
+        # dans la rubrique « Fichiers du jeu » de l'engrenage, à côté de
+        # « Réparer » ; la confirmation, elle, n'a pas bougé.
         # Engrenage sur TOUT jeu installé. Il n'apparaissait qu'avec une langue
         # à choisir, donc sur HP1 seul, alors que la fenêtre porte toujours les
         # fichiers du jeu (versions, réparation, dossier) et, pour HP4-HP7b, les

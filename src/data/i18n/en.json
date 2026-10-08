@@ -50,8 +50,6 @@
     "Télécharger {}": "Download {}",
     "JOUER": "PLAY",
     "Jouer à {}": "Play {}",
-    "DÉSINSTALLER": "UNINSTALL",
-    "Désinstaller {}": "Uninstall {}",
     "Annuler": "Cancel",
     "Annuler le téléchargement": "Cancel download",
     "Installation… %p%": "Installing… %p%",
@@ -777,6 +775,7 @@
     "Un téléchargement est en cours : les composants seront installés quand il sera fini. Cliquez à nouveau sur JOUER.": "A download is in progress: the components will be installed once it is done. Click PLAY again.",
     "{} : {}": "{}: {}",
     "{} : {} sur {}": "{}: {} of {}",
-    "{} composants Windows manquants — requis pour lancer ce jeu.": "{} Windows components missing — required to launch this game."
+    "{} composants Windows manquants — requis pour lancer ce jeu.": "{} Windows components missing — required to launch this game.",
+    "Désinstaller le jeu": "Uninstall the game"
   }
 }

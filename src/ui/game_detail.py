@@ -137,7 +137,6 @@ class GameDetailView(QWidget):
         self._action_panel.download_clicked.connect(lambda: handlers.on_download(self))
         self._action_panel.cancel_clicked.connect(lambda: handlers.on_cancel_download(self))
         self._action_panel.play_clicked.connect(lambda: handlers.on_play(self))
-        self._action_panel.uninstall_clicked.connect(lambda: handlers.on_uninstall(self))
         self._action_panel.update_clicked.connect(lambda: handlers.on_update_clicked(self))
         self._action_panel.settings_requested.connect(self.settings_requested)
         self._action_panel.preparation_requested.connect(

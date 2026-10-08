@@ -94,6 +94,9 @@ class GlowButton(QPushButton):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        if not self.isEnabled():
+            # TÉLÉCHARGER hors ligne : plein et doré, il avait l'air cliquable.
+            p.setOpacity(0.45)
 
         w = self.width()
         h = self.height()

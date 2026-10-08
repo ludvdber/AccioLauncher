@@ -148,7 +148,7 @@ class IconButton(QAbstractButton):
         """Trois habillages, selon ce qu'il y a derrière le bouton.
 
         `cadre` — couleur du contour, ou None pour un bouton nu. Encadré dans
-        une rangée d'actions : à côté d'un DÉSINSTALLER de 160 × 36 en style
+        une rangée d'actions : à côté d'un bouton de 36 px de haut en style
         « outline », un pictogramme sans cadre se détache de la rangée et
         paraît flotter. Le contour reprend la géométrie et les alphas de
         `GlowButton` outline (rayon 6, 1,5 px, 120 au repos, 180 au survol),
