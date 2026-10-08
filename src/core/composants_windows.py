@@ -172,7 +172,9 @@ def signature_microsoft(fichier: Path) -> bool:
     commande = base64.b64encode(_SCRIPT_SIGNATURE.encode("utf-16-le")).decode("ascii")
     env = {**os.environ, "ACCIO_FICHIER": str(fichier)}
     try:
-        sortie = subprocess.run(
+        # PowerShell par chemin système ABSOLU (règle 1), liste d'arguments, aucun shell ; le script
+        # est une constante d'ici, et le fichier arrive par l'environnement, jamais dans la commande.
+        sortie = subprocess.run(  # nosec B603
             [str(powershell), "-NoProfile", "-NonInteractive", "-EncodedCommand", commande],
             capture_output=True, timeout=60, env=env, creationflags=_SANS_FENETRE)
     except (OSError, subprocess.SubprocessError) as exc:
