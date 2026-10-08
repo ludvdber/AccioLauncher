@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.36",
+  "catalog_version": "0.38",
   "contributors": [
     {
       "name": "ASTeam",
@@ -79,9 +79,42 @@
         "Plateforme",
         "Énigmes"
       ],
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-08",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.3/hp1.7z",
+          "size_mb": 431,
+          "changes": [
+            "Se joue à la manette : marcher, regarder, lancer un sort, sauter, voler sur le balai",
+            "Manette Xbox ou PlayStation : les mêmes boutons au même endroit",
+            "Start (Options sur PlayStation) ouvre le menu du jeu",
+            "Plus d'assistant de configuration à chaque démarrage : le jeu démarre directement",
+            "La fenêtre remplit l'écran, sans bordure"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Playable with a controller: walk, look around, cast spells, jump, fly the broom",
+                "Xbox or PlayStation controller: the same buttons in the same place",
+                "Start (Options on PlayStation) opens the game menu",
+                "No more setup wizard at every start: the game starts straight away",
+                "The window fills the screen, without a border"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Se juega con mando: caminar, mirar, lanzar hechizos, saltar, volar en escoba",
+                "Mando de Xbox o de PlayStation: los mismos botones en el mismo sitio",
+                "Start (Options en PlayStation) abre el menú del juego",
+                "Se acabó el asistente de configuración en cada arranque: el juego arranca directamente",
+                "La ventana llena la pantalla, sin borde"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-09-20",
@@ -224,6 +257,72 @@
             "section": "Core.System",
             "key": "CachePath",
             "value": "%DOCUMENTS%\\Harry Potter\\Cache"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy1",
+            "value": "AltFire | Button bBroomBrake"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy2",
+            "value": "Jump | Button bBroomBoost"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy4",
+            "value": "LookToggle"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy6",
+            "value": "AltFire | Button bBroomBrake"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy8",
+            "value": "AltFire | Button bBroomBrake"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyX",
+            "value": "Axis aStrafe Speed=2"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyY",
+            "value": "Axis aBaseY Speed=2"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyZ",
+            "value": "Axis aMouseX Speed=0.13 | Axis aBroomYaw Speed=0.13"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyR",
+            "value": "Axis aMouseY Speed=-0.065 | Axis aBroomPitch Speed=0.065"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyU",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyV",
+            "value": ""
           }
         ]
       },
@@ -248,8 +347,7 @@
             "Action",
             "Platformer",
             "Puzzles"
-          ],
-          "warning": "Do not change the video options inside the game: the launcher already sets the display at its best, and changing it here can stop the game from starting again."
+          ]
         },
         "es": {
           "name": "Harry Potter y la piedra filosofal",
@@ -259,8 +357,7 @@
             "Acción",
             "Plataformas",
             "Puzles"
-          ],
-          "warning": "No cambies las opciones de vídeo dentro del juego: el lanzador ya ajusta la pantalla al máximo, y cambiarla aquí puede impedir que el juego vuelva a arrancar."
+          ]
         }
       },
       "saves": {
@@ -323,8 +420,7 @@
         "section": "WinDrv.WindowsClient",
         "width": "WindowedViewportX",
         "height": "WindowedViewportY"
-      },
-      "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
+      }
     },
     {
       "id": "hp2",
@@ -346,9 +442,45 @@
         "Exploration",
         "Énigmes"
       ],
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "latest_version": "1.2",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-10-08",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.2/hp2.7z",
+          "size_mb": 463,
+          "changes": [
+            "Manette : Start (Options sur PlayStation) ouvre enfin le menu du jeu",
+            "Manette Xbox ou PlayStation : les mêmes boutons au même endroit",
+            "Pendant un sort, le stick gauche ne baisse plus la visée en reculant",
+            "Espace fait sauter, comme Ctrl ; boire la potion reste sur sa touche",
+            "Alt+Entrée ne casse plus le menu en jeu",
+            "La fenêtre remplit l'écran, sans bordure"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Controller: Start (Options on PlayStation) finally opens the game menu",
+                "Xbox or PlayStation controller: the same buttons in the same place",
+                "While casting, the left stick no longer drops your aim when walking backwards",
+                "Space jumps, like Ctrl; drinking the potion keeps its own key",
+                "Alt+Enter no longer breaks the in-game menu",
+                "The window fills the screen, without a border"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Mando: Start (Options en PlayStation) por fin abre el menú del juego",
+                "Mando de Xbox o de PlayStation: los mismos botones en el mismo sitio",
+                "Al lanzar un hechizo, el stick izquierdo ya no baja la mira al retroceder",
+                "Espacio salta, como Ctrl; beber la poción conserva su tecla",
+                "Alt+Intro ya no rompe el menú del juego",
+                "La ventana llena la pantalla, sin borde"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-09-20",
@@ -479,6 +611,12 @@
           {
             "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
             "section": "Engine.Input",
+            "key": "Space",
+            "value": "Jump | Button bBroomAction | button bDuelCycleSpell"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
             "key": "Joy1",
             "value": "AltFire | Button bBroomAction | Button bVendorReply"
           },
@@ -522,7 +660,7 @@
             "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
             "section": "Engine.Input",
             "key": "JoyY",
-            "value": "Axis aBaseY speed=2 | Axis aJoyBroomPitch Speed=-2.0"
+            "value": "Axis aForward Speed=2 | Axis aJoyBroomPitch Speed=-2.0"
           },
           {
             "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
@@ -595,8 +733,7 @@
             "Action",
             "Exploration",
             "Puzzles"
-          ],
-          "warning": "Do not change the video options inside the game: the launcher already sets the display at its best, and changing it here can stop the game from starting again."
+          ]
         },
         "es": {
           "name": "Harry Potter y la cámara secreta",
@@ -606,8 +743,7 @@
             "Acción",
             "Exploración",
             "Puzles"
-          ],
-          "warning": "No cambies las opciones de vídeo dentro del juego: el lanzador ya ajusta la pantalla al máximo, y cambiarla aquí puede impedir que el juego vuelva a arrancar."
+          ]
         }
       },
       "saves": {
@@ -624,8 +760,7 @@
         "section": "WinDrv.WindowsClient",
         "width": "WindowedViewportX",
         "height": "WindowedViewportY"
-      },
-      "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
+      }
     },
     {
       "id": "hp3",
@@ -646,9 +781,39 @@
         "Plateforme",
         "Multi-personnages"
       ],
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-08",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.3/hp3.7z",
+          "size_mb": 775,
+          "changes": [
+            "Se joue à la manette : marcher, regarder, lancer un sort, sauter, changer de sort",
+            "Au repos, les sticks ne font plus bouger Harry",
+            "Manette Xbox ou PlayStation : les mêmes boutons au même endroit",
+            "Start (Options sur PlayStation) ouvre et referme le menu du jeu"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Playable with a controller: walk, look around, cast spells, jump, switch spells",
+                "At rest, the sticks no longer move Harry",
+                "Xbox or PlayStation controller: the same buttons in the same place",
+                "Start (Options on PlayStation) opens and closes the game menu"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Se juega con mando: caminar, mirar, lanzar hechizos, saltar, cambiar de hechizo",
+                "En reposo, los sticks ya no mueven a Harry",
+                "Mando de Xbox o de PlayStation: los mismos botones en el mismo sitio",
+                "Start (Options en PlayStation) abre y cierra el menú del juego"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-09-20",
@@ -678,7 +843,7 @@
         },
         {
           "version": "1.1",
-          "date": "2025-03-06",
+          "date": "2026-03-06",
           "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.1/hp3.7z",
           "download_parts": null,
           "size_mb": 775,
@@ -745,6 +910,118 @@
           }
         }
       ],
+      "pre_launch": {
+        "ini_patches": [
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy1",
+            "value": "Fire"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy2",
+            "value": "Jump | WingFlap | bWingFlap"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy3",
+            "value": "Use | BypassCutscene | EndCreaturePossess"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy4",
+            "value": "Zoom"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy5",
+            "value": "PrevSkill"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy6",
+            "value": "NextSkill"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy7",
+            "value": "Walking"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy8",
+            "value": "Fire"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy9",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "Joy10",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyX",
+            "value": "Axis aStrafe SpeedBase=40"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyY",
+            "value": "Axis aBaseY SpeedBase=40 Invert=-1"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyZ",
+            "value": "Axis aMouseX SpeedBase=2.5"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyV",
+            "value": "Axis aMouseY SpeedBase=1.0 Invert=-1"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyR",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "JoyU",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+            "section": "WinDrv.WindowsClient",
+            "key": "UseJoystick",
+            "value": "True"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+            "section": "SDLDrv.SDLClient",
+            "key": "UseJoystick",
+            "value": "True"
+          }
+        ]
+      },
       "post_install": {
         "config_files": [
           {
@@ -766,8 +1043,7 @@
             "Action",
             "Platformer",
             "Multi-character"
-          ],
-          "warning": "Do not change the video options inside the game: the launcher already sets the display at its best, and changing it here can stop the game from starting again."
+          ]
         },
         "es": {
           "name": "Harry Potter y el prisionero de Azkaban",
@@ -777,8 +1053,7 @@
             "Acción",
             "Plataformas",
             "Multipersonaje"
-          ],
-          "warning": "No cambies las opciones de vídeo dentro del juego: el lanzador ya ajusta la pantalla al máximo, y cambiarla aquí puede impedir que el juego vuelva a arrancar."
+          ]
         }
       },
       "saves": {
@@ -792,8 +1067,7 @@
         ],
         "first": 0
       },
-      "display_locked": true,
-      "warning": "Ne changez pas les options vidéo dans le jeu : l'affichage est déjà réglé au mieux par le lanceur, et le modifier ici peut empêcher le jeu de redémarrer."
+      "display_locked": true
     },
     {
       "id": "hp4",
