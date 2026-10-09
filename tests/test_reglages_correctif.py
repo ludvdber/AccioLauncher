@@ -434,11 +434,11 @@ class TestFenetre:
         rc.ecrire(ini, r, False)
         assert rc.lire(ini, r) == rc.Etat(False)
 
-    def test_tout_hp4_tient_dans_l_ecran_et_fermer_ne_chevauche_rien(self, qtbot, tmp_path):
-        """Les huit réglages de HP4 et le titre sur deux lignes : la fenêtre ne
-        dépasse pas l'écran (les rubriques défilent), et « Fermer » est SOUS la
-        zone qui défile. Le layout seul comptait le titre sur une ligne, et le
-        bouton recouvrait les rubriques."""
+    def test_tout_hp4_tient_dans_l_ecran_et_le_pied_ne_chevauche_rien(self, qtbot, tmp_path):
+        """Les réglages de HP4 et son long titre : la fenêtre ne dépasse pas
+        l'écran (les pages défilent), et le pied, avec « Rétablir », est SOUS la
+        zone qui défile. L'ancienne boîte comptait le titre sur une ligne, et
+        son bouton recouvrait les rubriques."""
         from PyQt6.QtWidgets import QPushButton
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
@@ -451,10 +451,14 @@ class TestFenetre:
         dlg.show()
         qtbot.waitExposed(dlg)
         assert dlg.height() <= dlg.screen().availableGeometry().height()
-        (fermer,) = [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Fermer")]
-        bas_zone = dlg._defile.geometry().bottom()
-        assert fermer.geometry().top() > bas_zone
-        assert fermer.geometry().bottom() < dlg.height()
+        (reset,) = [b for b in dlg.findChildren(QPushButton)
+                    if b.text() == tr("Rétablir les réglages d'origine")]
+        haut_reset = reset.mapTo(dlg, reset.rect().topLeft()).y()
+        assert haut_reset > dlg._defile.geometry().bottom()
+        assert haut_reset + reset.height() <= dlg.height()
+        # Plus de bouton « Fermer » : le retour à la fiche est en haut du rail.
+        assert not [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Fermer")]
+        assert [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Retour à la fiche")]
 
     def test_echec_d_ecriture_remet_le_controle_et_le_dit(self, qtbot, tmp_path, monkeypatch):
         from src.ui.toggle_switch import ToggleSwitch
@@ -482,32 +486,37 @@ class TestFenetre:
         # « Jeu » porte les captures : le nouveau correctif a sa touche (F12).
         assert list(dlg._onglets) == ["image", "commandes", "jeu", "perfs"]
         image, commandes, _jeu_, perfs = dlg._contenus
-        assert not image.findChildren(ToggleSwitch) and len(commandes.findChildren(ToggleSwitch)) == 1
+        assert not image.findChildren(ToggleSwitch)
+        assert commandes.isAncestorOf(dlg._controles["touches_zqsd"])
         assert len(perfs.findChildren(ToggleSwitch)) == 1
         dlg._onglets["perfs"].click()
         assert dlg._defile.currentIndex() == 3
 
     def test_les_reperes_disent_le_cout_et_ce_qui_se_voit(self, qtbot, tmp_path):
+        """Trois points pour le coût, l'œil pour ce qui se voit, le détail au survol."""
+        from PyQt6.QtWidgets import QLabel, QWidget
+
+        from src.ui.game_settings_dialog import _Points
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "arriere_plan"]), _manager(tmp_path))
-        textes = _textes(dlg)
-        assert "GPU +++" in textes and tr("Se voit") in textes
-        assert tr("rouge extrême") in textes   # la légende des couleurs
+        bloc = dlg._blocs["surechantillonnage"]
+        (points,) = [p for p in bloc.findChildren(_Points) if p.niveau]
+        assert points.niveau == 3 and tr("Carte graphique (GPU)") in points.toolTip()
+        assert any(lb.toolTip() == tr("Se voit nettement à l’écran.") for lb in bloc.findChildren(QLabel))
+        # La légende des couleurs, au survol de l'en-tête des effets.
+        assert any(tr("rouge extrême") in w.toolTip() for w in dlg.findChildren(QWidget))
 
     def test_la_couleur_suit_le_niveau(self, qtbot, tmp_path):
         """Vert faible, orange moyen, rouge extrême (Ludo, 2026-09-30)."""
-        from PyQt6.QtWidgets import QLabel
-
-        from src.ui.game_settings_dialog import _COULEURS_COUT
+        from src.ui.game_settings_dialog import _COULEURS_COUT, _Points
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "filtrage", "anticrenelage"]),
                         _manager(tmp_path))
-        style = {lb.text(): lb.styleSheet() for lb in dlg.findChildren(QLabel)}
-        assert _COULEURS_COUT[1] in style["GPU +"]
-        assert _COULEURS_COUT[2] in style["GPU ++"]
-        assert _COULEURS_COUT[3] in style["GPU +++"]
+        for ident, niveau in (("filtrage", 1), ("anticrenelage", 2), ("surechantillonnage", 3)):
+            (points,) = [p for p in dlg._blocs[ident].findChildren(_Points) if p.niveau]
+            assert (points.niveau, points.couleur) == (niveau, _COULEURS_COUT[niveau])
         assert len(set(_COULEURS_COUT.values())) == 3
 
     def test_chaque_reglage_a_une_vraie_description(self):
@@ -778,9 +787,10 @@ class TestPrereglages:
 
 
 class TestFenetreQualite:
-    """Variante B (Ludo, 2026-09-30) : préréglages en tête, les effets en groupes repliés."""
+    """Préréglages en cartes, et CHAQUE effet visible à côté (maquette du 2026-10-09 :
+    repliés par familles, il fallait déplier pour voir ce que fait un préréglage)."""
 
-    IDENTS = ["lissage", "surechantillonnage", "filtrage", "occlusion", "halo", "rayons"]
+    IDENTS = ["lissage", "nettete", "surechantillonnage", "filtrage", "occlusion", "halo", "rayons"]
 
     def _fenetre(self, qtbot, tmp_path):
         dossier = tmp_path / "HP4"
@@ -789,37 +799,45 @@ class TestFenetreQualite:
         return (_dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ["resolution"]), _manager(tmp_path)),
                 dossier / "d3d9.ini")
 
-    def test_les_groupes_sont_replies_et_se_deplient(self, qtbot, tmp_path):
+    def test_chaque_effet_est_visible_dans_sa_famille(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QLabel
         dlg, _ini = self._fenetre(qtbot, tmp_path)
-        assert [e.text() for e, _c in dlg._groupes] == [
-            f"{tr('Contours')} (2)", f"{tr('Textures')} (1)", f"{tr('Lumière et ombres')} (3)"]
-        assert all(c.isHidden() for _e, c in dlg._groupes)
-        hauteur = dlg.height()
-        dlg._groupes[0][0].click()
-        assert not dlg._groupes[0][1].isHidden() and dlg._groupes[1][1].isHidden()
-        assert dlg.height() >= hauteur
+        carte = dlg._carte_des_effets
+        noms = [tr("Contours").upper(), tr("Textures").upper(), tr("Lumière et ombres").upper()]
+        familles = [lb.text() for lb in carte.findChildren(QLabel) if lb.text() in noms]
+        assert familles == noms
+        for ident in self.IDENTS:
+            assert carte.isAncestorOf(dlg._controles[ident]) and not dlg._blocs[ident].isHidden()
 
-    def test_tout_deplier_puis_tout_replier(self, qtbot, tmp_path):
+    def test_un_effet_qui_depend_d_un_autre_est_en_retrait_sous_lui(self, qtbot, tmp_path):
         dlg, _ini = self._fenetre(qtbot, tmp_path)
-        assert dlg._tout.text() == tr("Tout déplier")
-        dlg._tout.click()
-        assert not any(c.isHidden() for _e, c in dlg._groupes)
-        assert all(e.isChecked() for e, _c in dlg._groupes)
-        assert dlg._tout.text() == tr("Tout replier")
-        dlg._tout.click()
-        assert all(c.isHidden() for _e, c in dlg._groupes)
+        marge = {i: dlg._blocs[i].layout().contentsMargins().left() for i in ("lissage", "nettete")}
+        assert marge["nettete"] > marge["lissage"]
+
+    def test_une_ligne_eteinte_dit_ce_qui_l_eteint(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        if not dlg._controles["lissage"].isChecked():
+            qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
+        assert dlg._blocs["occlusion"].note.isHidden()
+        qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
+        note = dlg._blocs["occlusion"].note
+        assert not note.isHidden()
+        assert note.text() == tr("Sans effet tant que « {} » est éteint.").format(
+            rc.textes(rc.REGLAGES["lissage"])[0])
 
     @pytest.mark.parametrize("langue", ["fr", "en", "es"])
-    def test_tout_deplie_rien_ne_deborde_a_droite(self, qtbot, tmp_path, qapp, langue):
-        """Nom, « ? », pastilles et liste tiennent dans la largeur, barre de défilement comprise.
+    def test_a_la_taille_minimale_rien_ne_deborde_a_droite(self, qtbot, tmp_path, qapp, langue):
+        """Nom, « ? », repères et liste tiennent dans la largeur de la page, à la
+        plus petite taille de la fenêtre : aucune page ne défile de côté.
 
         Le « ? » a fait déborder « Netteté des textures de biais » de 30 px. Mesuré
         avec les VRAIES polices et la feuille de l'application : sous offscreen, la
-        police de substitution fait « Se voit » de 108 px et ne prouve rien.
+        police de substitution ne prouve rien.
         """
         from src.core import i18n
         from src.ui.fonts import load_fonts
-        from src.ui.game_settings_dialog import _LARGEUR, _MARGES_H
+        from src.ui.game_settings_dialog import _TAILLE_MIN
         from src.ui.styles import MAIN_STYLE
         from src.ui.theme import themed
         load_fonts()
@@ -830,25 +848,30 @@ class TestFenetreQualite:
             dossier = tmp_path / "HP4"
             dossier.mkdir()
             (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
-            tous = [r.ident for r in rc.REGLAGES.values() if r.onglet in ("image", "affichage")]
+            tous = [r.ident for r in rc.REGLAGES.values()
+                    if r.onglet in ("image", "affichage", "commandes", "perfs", "jeu", "manette")]
             dlg = _dialogue(qtbot, _jeu(tmp_path, tous), _manager(tmp_path))
-            dlg._tout.click()
-            for contenu in dlg._contenus:
-                assert contenu.minimumSizeHint().width() <= _LARGEUR - _MARGES_H - 18
+            dlg.show()
+            dlg.resize(_TAILLE_MIN)
+            qtbot.waitExposed(dlg)
+            for rang, contenu in enumerate(dlg._contenus):
+                dlg._defile.setCurrentIndex(rang)
+                zone = dlg._defile.currentWidget()
+                qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
+                assert contenu.minimumSizeHint().width() <= zone.viewport().width(), rang
         finally:
             qapp.setStyleSheet(ancienne_feuille)
             i18n.set_language(ancienne_langue)
 
-    def test_ouvrir_chaque_groupe_a_la_main_vaut_tout_deplier(self, qtbot, tmp_path):
+    def test_l_affichage_reste_hors_des_effets(self, qtbot, tmp_path):
         dlg, _ini = self._fenetre(qtbot, tmp_path)
-        for entete, _c in dlg._groupes:
-            entete.click()
-        assert dlg._tout.text() == tr("Tout replier")
-
-    def test_l_affichage_reste_visible(self, qtbot, tmp_path):
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        assert not any(c.isAncestorOf(dlg._controles["resolution"]) for _e, c in dlg._groupes)
+        assert not dlg._carte_des_effets.isAncestorOf(dlg._controles["resolution"])
         assert dlg._controles["resolution"].currentData() == "1920x1080"
+
+    def test_une_seule_largeur_de_liste_par_carte(self, qtbot, tmp_path):
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        largeurs = {dlg._controles[i].width() for i in ("nettete", "surechantillonnage", "filtrage")}
+        assert len(largeurs) == 1
 
     def test_un_prereglage_ecrit_ses_valeurs_et_se_coche(self, qtbot, tmp_path):
         dlg, ini = self._fenetre(qtbot, tmp_path)
@@ -865,17 +888,18 @@ class TestFenetreQualite:
         dlg, _ini = self._fenetre(qtbot, tmp_path)
         from PyQt6.QtCore import Qt
         dlg._boutons_prereglage["equilibree"].click()
-        dlg._tout.click()
         qtbot.mouseClick(dlg._controles["halo"], Qt.MouseButton.LeftButton)
         assert dlg._boutons_prereglage[""].isChecked()
-        assert dlg._texte_prereglage.text() == tr("Vos propres réglages, effet par effet.")
 
-    def test_sur_mesure_ouvre_tous_les_effets_sans_rien_ecrire(self, qtbot, tmp_path):
+    def test_sur_mesure_n_ecrit_rien_et_ne_ment_pas(self, qtbot, tmp_path):
+        """Cliquer « Sur mesure » mène aux effets ; la carte cochée reste celle
+        qui correspond VRAIMENT aux valeurs."""
         dlg, ini = self._fenetre(qtbot, tmp_path)
+        dlg._boutons_prereglage["equilibree"].click()
         avant = ini.read_bytes()
         dlg._boutons_prereglage[""].click()
-        assert not any(c.isHidden() for _e, c in dlg._groupes)
         assert ini.read_bytes() == avant
+        assert dlg._boutons_prereglage["equilibree"].isChecked()
 
 
 # Les réglages que déclare le catalogue embarqué : tests/test_catalogue_embarque.py.
@@ -899,26 +923,16 @@ class TestFenetreRedimensionnable:
         qtbot.waitExposed(dlg)
         return dlg
 
-    def test_la_largeur_mesuree_est_un_minimum_pas_une_cage(self, qtbot, tmp_path):
-        from src.ui.game_settings_dialog import _LARGEUR
+    def test_un_minimum_pas_une_cage(self, qtbot, tmp_path):
         dlg = self._dlg(qtbot, tmp_path)
-        assert dlg.minimumWidth() == _LARGEUR
-        assert dlg.maximumWidth() > _LARGEUR
-        assert dlg.maximumHeight() > dlg.height()
+        assert dlg.maximumWidth() > dlg.width() and dlg.maximumHeight() > dlg.height()
+        assert dlg.minimumWidth() <= dlg.width() and dlg.minimumHeight() <= dlg.height()
 
-    def test_jamais_plus_de_quatre_cinquiemes_de_l_ecran(self, qtbot, tmp_path):
-        from src.ui.game_settings_dialog import _PART_ECRAN
+    def test_jamais_plus_que_l_ecran(self, qtbot, tmp_path):
         dlg = self._dlg(qtbot, tmp_path)
-        dispo = dlg.screen().availableGeometry().height()
-        assert dlg.height() <= max(int(dispo * _PART_ECRAN), dlg.minimumHeight())
-
-    def test_une_taille_choisie_n_est_plus_reprise_par_le_contenu(self, qtbot, tmp_path):
-        dlg = self._dlg(qtbot, tmp_path)
-        dlg._taille_choisie = True
-        dlg.resize(dlg.width() + 200, dlg.minimumHeight())
-        taille = dlg.size()
-        dlg._ajuster_hauteur()
-        assert dlg.size() == taille
+        dispo = dlg.screen().availableGeometry()
+        assert dlg.height() <= max(int(dispo.height() * 0.9), dlg.minimumHeight())
+        assert dlg.width() <= max(int(dispo.width() * 0.92), dlg.minimumWidth())
 
 
 class TestLaLimiteEntraineLePlafondDuJeu:

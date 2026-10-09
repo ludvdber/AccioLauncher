@@ -254,7 +254,7 @@ class TestFenetre:
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(b"[MAIN]\r\nScreenshotKey=123\r\n")
         dlg = self._dialogue(qtbot, _jeu(screenshots={"collect": ["HP4/screenshots/*.png"]}), tmp_path)
         textes = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
-        assert "Captures d'écran" in textes and "prochaine version" in textes
+        assert "captures d'écran" in textes.lower() and "prochaine version" in textes
         assert not any("captures" in b.text() for b in dlg.findChildren(QPushButton))
 
     def test_un_jeu_desinstalle_garde_l_acces_a_ses_captures(self, qtbot, tmp_path):

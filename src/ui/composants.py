@@ -9,10 +9,10 @@ Les couleurs sont écrites dans la palette Poudlard et passent par `themed()` :
 une maison les remplace toutes d'un coup.
 """
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from src.ui.fonts import body_font, cinzel
@@ -88,6 +88,75 @@ def surtitre(contenu: str) -> QLabel:
     lbl.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
     lbl.setContentsMargins(2, 0, 0, 0)
     return lbl
+
+
+def petit_titre(contenu: str) -> QLabel:
+    """Le titre gris DANS une carte (« SE DÉPLACER », « CONTOURS »)."""
+    lbl = QLabel(contenu.upper())
+    lbl.setTextFormat(Qt.TextFormat.PlainText)
+    f = cinzel(7, bold=True)
+    f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 2.2)
+    lbl.setFont(f)
+    lbl.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent; border: none;")
+    return lbl
+
+
+class Rangee(QWidget):
+    """Des blocs côte à côte, empilés quand la place manque.
+
+    `seuil` est la largeur sous laquelle tout passe en une colonne : trois
+    cartes de touches de 200 px ne tiennent pas dans une fenêtre réduite, et
+    les écraser couperait leurs libellés. `etirements` donne la part de chaque
+    colonne quand elles sont côte à côte.
+    """
+
+    def __init__(self, blocs: list[QWidget], colonnes: int, seuil: int,
+                 etirements: tuple[int, ...] = (), ecart: int = 16) -> None:
+        super().__init__()
+        self.setStyleSheet("background: transparent;")
+        self._blocs = list(blocs)
+        self._colonnes = colonnes
+        self._seuil = seuil
+        self._etirements = etirements or (1,) * colonnes
+        self._grille = QGridLayout(self)
+        self._grille.setContentsMargins(0, 0, 0, 0)
+        self._grille.setHorizontalSpacing(ecart)
+        self._grille.setVerticalSpacing(ecart)
+        self._n = 0
+        self._poser(colonnes)
+
+    def colonnes(self) -> int:
+        return self._n
+
+    def _poser(self, n: int) -> None:
+        if n == self._n:
+            return
+        self._n = n
+        for bloc in self._blocs:
+            self._grille.removeWidget(bloc)
+        for c in range(self._colonnes):
+            self._grille.setColumnStretch(c, self._etirements[c] if n > 1 else (1 if c == 0 else 0))
+        for rang, bloc in enumerate(self._blocs):
+            ligne, col = divmod(rang, n)
+            self._grille.addWidget(bloc, ligne, col, Qt.AlignmentFlag.AlignTop if n == 1 else
+                                   Qt.AlignmentFlag(0))
+
+    def _largeur_cote_a_cote(self) -> int:
+        """Ce que demandent VRAIMENT les blocs côte à côte : jamais moins que le seuil."""
+        mini = sum(b.minimumSizeHint().width() for b in self._blocs[:self._colonnes])
+        return max(self._seuil, mini + self._grille.horizontalSpacing() * (self._colonnes - 1))
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt)
+        """Le minimum d'UNE colonne : annoncer celui des blocs côte à côte
+        bloquerait la zone défilante à cette largeur, et la rangée ne
+        s'empilerait plus jamais."""
+        largeur = max((b.minimumSizeHint().width() for b in self._blocs), default=0)
+        return QSize(largeur, super().minimumSizeHint().height())
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().resizeEvent(event)
+        large = event.size().width() >= self._largeur_cote_a_cote()
+        self._poser(self._colonnes if large else 1)
 
 
 def bouton(libelle: str, principal: bool = False) -> QPushButton:
