@@ -26,7 +26,8 @@ from src.core import stats  # noqa: E402
 from src.core.config import Config  # noqa: E402
 from src.core.game_manager import GameManager  # noqa: E402
 from src.ui.stats_dialog import (  # noqa: E402
-    _CarteSauvegarde, _Etagere, _Mois, _Paragraphe, StatsDialog)
+    _CarteSauvegarde, _Mois, _Paragraphe, StatsDialog)
+from src.ui.stats_releve import _Ligne, _Nom, _Releve  # noqa: E402
 
 
 @pytest.fixture
@@ -65,9 +66,10 @@ class TestLeSqueletteNeBougePas:
             _remplir(manager)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        frises = dlg.findChildren(_Etagere)
+        frises = dlg.findChildren(_Releve)
         assert len(frises) == 1
         assert len(frises[0]._entrees) == len(manager.get_games()) == 8
+        assert len(frises[0].findChildren(_Ligne)) == 8
 
     def test_la_frise_n_est_pas_dans_la_zone_defilante(self, qtbot, manager):
         """C'est le squelette : il ne doit jamais partir sous la ligne de
@@ -75,7 +77,7 @@ class TestLeSqueletteNeBougePas:
         _remplir(manager, jours=40)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        frise = dlg.findChildren(_Etagere)[0]
+        frise = dlg.findChildren(_Releve)[0]
         assert not frise.findChildren(QScrollArea)
         parents = []
         w = frise.parentWidget()
@@ -103,7 +105,7 @@ class TestEtatVide:
             self, qtbot, manager):
         vide = self._ouvrir(qtbot, manager)
         assert not vide.findChildren(QScrollArea)
-        assert vide.height() < 420, f"{vide.height()} px pour une etagere et une phrase"
+        assert vide.height() < 720, f"{vide.height()} px pour un releve et une phrase"
         _remplir(manager, jours=30)
         pleine = self._ouvrir(qtbot, manager)
         assert pleine.height() > vide.height()
@@ -136,21 +138,21 @@ class TestEtatVide:
         assert not any(t.startswith("0 ") for t in textes), textes
 
 
-class TestEtagere:
+class TestReleve:
     def test_le_dernier_jeu_joue_est_choisi_a_l_ouverture(self, qtbot, manager):
         ids = [e.game.id for e in manager.get_games()]
         stats.enregistrer_session(ids[0], datetime(2026, 8, 20, 21, 0), 3600)
         stats.enregistrer_session(ids[3], datetime(2026, 8, 25, 21, 0), 1800)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        assert dlg.findChildren(_Etagere)[0].choix == ids[3]
+        assert dlg.findChildren(_Releve)[0].choix == ids[3]
 
     def test_un_jeu_sans_rien_ne_se_choisit_pas(self, qtbot, manager):
         ids = [e.game.id for e in manager.get_games()]
         stats.enregistrer_session(ids[0], datetime(2026, 8, 20, 21, 0), 3600)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        etagere = dlg.findChildren(_Etagere)[0]
+        etagere = dlg.findChildren(_Releve)[0]
         etagere.choisir(ids[5])
         assert etagere.choix == ids[0]
 
@@ -159,7 +161,7 @@ class TestEtagere:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         noms = {e.game.id: e.game.name for e in manager.get_games()}
-        etagere = dlg.findChildren(_Etagere)[0]
+        etagere = dlg.findChildren(_Releve)[0]
         autre = ids[0] if etagere.choix == ids[1] else ids[1]
         etagere.choisir(autre)
         visibles = [lbl.text() for lbl in dlg._fiche.findChildren(QLabel)]
@@ -170,7 +172,7 @@ class TestEtagere:
         ids = _remplir(manager, jours=4, jeux=2)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        etagere = dlg.findChildren(_Etagere)[0]
+        etagere = dlg.findChildren(_Releve)[0]
         qtbot.keyClick(etagere, Qt.Key.Key_Home)
         assert etagere.choix == ids[0]
         qtbot.keyClick(etagere, Qt.Key.Key_Right)
@@ -235,7 +237,7 @@ class TestSauvegardesAffichees:
         self._save("Save1.usa", datetime(2026, 4, 3))
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        assert dlg.findChildren(_Etagere)[0].choix == "hp1"
+        assert dlg.findChildren(_Releve)[0].choix == "hp1"
         assert len(dlg.findChildren(_CarteSauvegarde)) == 2
         rendu = _labels(dlg)
         assert "Emplacement 1" in rendu and "Emplacement 2" in rendu
@@ -282,43 +284,55 @@ class TestSurfaceDuCatalogue:
         interprete : `QToolTip` est un `QLabel` laisse en `AutoText`, alors que
         tout le reste est pose en `PlainText` a la construction."""
         import dataclasses
-        from PyQt6.QtCore import QPointF, Qt
-        from PyQt6.QtGui import QMouseEvent
         entrees = list(manager.get_games())
         piege = dataclasses.replace(entrees[2].game, name='<img src="file:///C:/x.png">')
         entrees[2] = entrees[2]._replace(game=piege)   # GameEntry est un NamedTuple
 
-        w = _Etagere(entrees, {}, set())
+        w = _Releve(entrees, {}, {}, {}, {}, set())
         qtbot.addWidget(w)
-        w.resize(800, 142)
-        pas = 800 / len(entrees)
-        pos = QPointF(pas * 2 + pas / 2, 60.0)
-        w.mouseMoveEvent(QMouseEvent(
-            QMouseEvent.Type.MouseMove, pos, QPointF(pos),
-            Qt.MouseButton.NoButton, Qt.MouseButton.NoButton,
-            Qt.KeyboardModifier.NoModifier))
-        assert "<img" not in w.toolTip(), w.toolTip()
-        assert "&lt;img" in w.toolTip()
+        bulles = [n.toolTip() for n in w.findChildren(_Nom)]
+        assert "&lt;img" in " ".join(bulles)
+        assert not any("<img" in b for b in bulles)
 
 
-class TestFriseSeDessine:
+class TestReleveSeDessine:
     def test_de_l_encre_est_posee(self, qtbot, manager):
-        """Les jaquettes sont peintes : un paintEvent muet passerait tous les
-        autres tests sans qu'on voie rien a l'ecran."""
+        """Jaquettes et barres sont peintes : un paintEvent muet passerait tous
+        les autres tests sans qu'on voie rien a l'ecran."""
         from PyQt6.QtGui import QColor, QImage, QPainter
         entrees = manager.get_games()
         gid = entrees[0].game.id
-        w = _Etagere(entrees, {gid: "1 h"}, {gid}, gid)
+        w = _Releve(entrees, {gid: 3600}, {gid: 2}, {}, {gid: "1 h"}, {gid}, gid)
         qtbot.addWidget(w)
-        w.resize(800, 142)
-        img = QImage(800, 142, QImage.Format.Format_ARGB32)
+        w.resize(900, w.sizeHint().height())
+        img = QImage(w.size(), QImage.Format.Format_ARGB32)
         img.fill(QColor(0, 0, 0, 0))
         p = QPainter(img)
         w.render(p)
         p.end()
-        poses = sum(1 for y in range(0, 142, 2) for x in range(0, 800, 2)
+        poses = sum(1 for y in range(0, img.height(), 2) for x in range(0, img.width(), 2)
                     if QColor.fromRgba(img.pixel(x, y)).alpha() > 0)
-        assert poses > 5000, f"frise quasi vide : {poses} pixels"
+        assert poses > 2000, f"releve quasi vide : {poses} pixels"
+
+    def test_l_annee_sept_a_deux_lignes_et_un_seul_chiffre(self, qtbot, manager):
+        w = _Releve(manager.get_games(), {}, {}, {}, {}, set())
+        qtbot.addWidget(w)
+        textes = [lbl.text() for lbl in w.findChildren(QLabel)]
+        assert textes.count("VII") == 1
+        septieme = [e.game.id for e in manager.get_games() if e.game.annee == 7]
+        rattachees = [li.game_id for li in w.findChildren(_Ligne) if li._rattachee]
+        assert len(septieme) == 2 and rattachees == septieme[1:]
+
+    def test_hors_des_cours_seulement_s_il_y_a_un_tel_jeu(self, qtbot, manager):
+        import dataclasses
+        w = _Releve(manager.get_games(), {}, {}, {}, {}, set())
+        qtbot.addWidget(w)
+        assert "HORS DES COURS" not in [lbl.text() for lbl in w.findChildren(QLabel)]
+        entrees = list(manager.get_games())
+        entrees[0] = entrees[0]._replace(game=dataclasses.replace(entrees[0].game, annee=0))
+        w = _Releve(entrees, {}, {}, {}, {}, set())
+        qtbot.addWidget(w)
+        assert "HORS DES COURS" in [lbl.text() for lbl in w.findChildren(QLabel)]
 
 
 class TestParagrapheMesure:
@@ -399,7 +413,7 @@ class TestRetoursDuDixNeufSeptembre:
         TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        legendes = dlg.findChildren(_Etagere)[0]._legendes
+        legendes = dlg.findChildren(_Releve)[0]._legendes
         assert legendes["hp1"] == "—"
 
     def test_la_sauvegarde_la_plus_recente_est_designee(self, qtbot, manager):

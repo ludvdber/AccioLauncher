@@ -1,26 +1,20 @@
 """La saga — ce que le launcher a observé de vos parties.
 
-**Refondue le 2026-09-19** sur la maquette « l'étagère » choisie par Ludo,
-avec le grand histogramme des mois de la maquette « le registre » :
+**Refondue le 2026-10-09** sur la maquette « Mes années » validée par Ludo
+(relevé de scolarité), après la version « l'étagère » du 2026-09-19 :
 
-· **l'étagère** — les huit jaquettes dans l'ordre de la saga, toujours huit.
-  C'est le squelette de la page, et il ne dépend pas des données : une page
-  dont la structure varie a l'air cassée bien avant d'avoir l'air pauvre
-  (diagnostic de la version du 2026-08-27, qui reste vrai). On y CHOISIT un
-  jeu : seuls ceux qui ont quelque chose à dire se laissent choisir ;
-· **la fiche du jeu choisi** — son temps, ses parties, la dernière fois, puis
-  ses SAUVEGARDES en cartes : commencée quand, écrite pour la dernière fois
-  quand, combien de parties, combien de temps. C'était la demande principale ;
-  les chiffres viennent de `src/core/sauvegardes.py`, qui compare les
-  sauvegardes avant et après chaque partie ;
+· **le relevé** (`stats_releve.py`) — une ligne par jeu sous son année, l'année
+  VII en deux lignes reliées, une section « hors des cours » pour un jeu sans
+  année. Toujours huit lignes : c'est le squelette, il ne dépend pas des
+  données. On y CHOISIT un jeu ;
+· **les sauvegardes du jeu choisi** en cartes : commencée quand, écrite pour la
+  dernière fois quand, combien de parties, combien de temps. Les chiffres
+  viennent de `src/core/sauvegardes.py` ;
 · **la colonne de la saga** — le total, l'année, le mois, la plus longue
-  partie avec sa date ;
-· **les douze derniers mois** en barres. Des heures, pas des pourcentages, et
-  des barres, pas un camembert : ce que réclament les joueurs de Steam et de
-  GOG Galaxy (audit du 2026-09-19).
+  partie avec sa date — et **les douze derniers mois** en barres.
 
 Ce qui ne revient pas, pour les raisons écrites dans la version précédente :
-la liste des jeux jamais lancés, la série de jours, le jour et la plage
+la série de jours, le jour et la plage
 horaire de prédilection, les démarrages du launcher et les octets téléchargés.
 Et **aucun zéro** : une ligne sans valeur ne s'affiche pas, une sauvegarde
 dont on n'a vu aucune partie dit « — » et pourquoi, jamais une estimation.
@@ -45,15 +39,12 @@ from src.core import sauvegardes, scolarite, stats
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.ui.ecu import emaux
+from src.ui.stats_releve import _Releve
 from src.ui.fonts import cinzel
 from src.ui.theme import current as theme_courant, themed
 from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _SECONDAIRE,
     _DISCRET,
-    _FRISE_RAPPORT,
-    _FRISE_LEGENDE_H,
-    _FRISE_ECART,
-    _FRISE_LEVEE,
     _HISTO_H,
     _COLONNE_SAGA,
     _HAUTEUR_MAX,
@@ -68,12 +59,15 @@ from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _chiffre,
     _titre_section,
     _Paragraphe,
-    _Etagere,
     _Mois,
     _Jauge,
     _CarteSauvegarde,
-    _Scolarite,
 )
+
+
+# Colonne de droite (saga, douze mois) : à 250 px, les noms des mois
+# s'élidaient en « n… d… j… ».
+_COLONNE_DROITE = 310
 
 
 class StatsDialog(QDialog):
@@ -99,14 +93,14 @@ class StatsDialog(QDialog):
         # Assez LARGE pour que huit jaquettes restent des images et non des
         # timbres. Pas de plancher en HAUTEUR : la page se rétrécit à son
         # contenu.
-        self.setMinimumWidth(820)
+        self.setMinimumWidth(1080)
         self._zone: QScrollArea | None = None
         self._contenu: QWidget | None = None
-        self._etagere: _Etagere | None = None
+        self._releve: _Releve | None = None
         self._fiche_hote: QVBoxLayout | None = None
         self._fiche: QWidget | None = None
         self._ajuste = False
-        self.resize(920, 720)
+        self.resize(1200, 760)
         self.setStyleSheet(themed(self._style()))
         self._build()
 
@@ -176,18 +170,26 @@ class StatsDialog(QDialog):
 
     def _build(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(22, 16, 22, 16)
+        root.setContentsMargins(26, 18, 26, 16)
         root.setSpacing(12)
 
+        tete = QVBoxLayout()
+        tete.setSpacing(6)
+        surtitre = QLabel(tr("Relevé de scolarité").upper())
+        surtitre.setFont(cinzel(8, bold=True))
+        surtitre.setStyleSheet(f"color: {theme_courant().accent}; letter-spacing: 4px;")
+        tete.addWidget(surtitre)
         titre = QLabel(tr("Mes années à Poudlard"))
         titre.setFont(cinzel(18, bold=True))
-        root.addWidget(titre)
+        tete.addWidget(titre)
         # Sous le titre : la maison et l'avancée (refonte du 2026-10-09). La
         # phrase vivait dans la barre du haut, où elle ne tenait plus à côté
         # des onglets ; ici, c'est la page de la scolarité.
-        entete = self._phrase_entete(theme_courant(), self._annees())
+        liste = self._annees()
+        entete = self._phrase_entete(theme_courant(), liste)
         if entete:
-            root.addWidget(_texte(entete, 13, theme_courant().accent))
+            tete.addWidget(_texte(entete, 13, theme_courant().accent))
+        root.addLayout(tete)
         # Le résumé ne s'écrit en tête que lorsque la page n'a RIEN d'autre à
         # dire : dès qu'il y a du temps, la colonne de la saga porte le même
         # total, et le dire deux fois (Ludo, capture du 2026-09-19) fait
@@ -197,54 +199,63 @@ class StatsDialog(QDialog):
             root.addWidget(_texte(ouverture, 13, _SECONDAIRE))
 
         possibles = self._selectionnables()
-        # L'étagère est HORS de la zone défilante : c'est le squelette de la
+        # Le relevé est HORS de la zone défilante : c'est le squelette de la
         # page, il ne doit jamais partir sous la ligne de flottaison.
-        self._etagere = _Etagere(self._entrees, self._legendes(), possibles,
-                                 self._choix_initial(possibles))
-        self._etagere.choisi.connect(self._montrer_jeu)
-        root.addWidget(self._etagere)
+        self._releve = _Releve(self._entrees, self._temps, self._parties, self._dernieres,
+                               self._legendes(), possibles, self._choix_initial(possibles))
+        self._releve.choisi.connect(self._montrer_jeu)
+        haut = QHBoxLayout()
+        haut.setSpacing(28)
+        gauche = QVBoxLayout()
+        gauche.setSpacing(10)
+        gauche.addWidget(self._releve)
+        courante = scolarite.annee_courante(liste)
+        if courante:
+            gauche.addWidget(_Paragraphe(self._phrase_scolarite(liste, courante)))
+        gauche.addStretch(1)
+        haut.addLayout(gauche, 1)
 
-        if possibles or stats.temps_total(self._hist):
-            contenu = QWidget()
-            corps = QVBoxLayout(contenu)
-            corps.setContentsMargins(0, 8, 8, 4)
-            corps.setSpacing(24)
-
-            # Deux colonnes : à gauche le jeu choisi PUIS les douze mois, à
-            # droite la saga. Posés sous la rangée, les mois tombaient sous la
-            # ligne de flottaison (mesuré à 920×720 avec les données de Ludo)
-            # pendant que la fiche laissait une demi-largeur vide à côté de
-            # ses cartes.
-            bande = self._bande_scolarite()
-            if bande is not None:
-                corps.addLayout(bande)
-
-            rangee = QHBoxLayout()
-            rangee.setSpacing(24)
-            gauche = QVBoxLayout()
-            gauche.setSpacing(24)
-            self._fiche_hote = QVBoxLayout()
-            self._fiche_hote.setContentsMargins(0, 0, 0, 0)
-            gauche.addLayout(self._fiche_hote)
+        # À droite, ce qui parle de TOUTE la saga : le total et les mois.
+        if stats.temps_total(self._hist):
+            droite = QVBoxLayout()
+            droite.setSpacing(22)
+            saga = self._colonne_saga()
+            saga.setFixedWidth(_COLONNE_DROITE)
+            droite.addWidget(saga)
             cases = stats.douze_mois(self._hist)
             if any(s for _, _, s in cases):
                 bloc = QVBoxLayout()
                 bloc.setSpacing(8)
                 bloc.addWidget(_titre_section(tr("Les douze derniers mois")))
-                bloc.addWidget(_Mois(cases))
-                gauche.addLayout(bloc)
-            gauche.addStretch(1)
-            rangee.addLayout(gauche, 1)
-            rangee.addWidget(self._colonne_saga(), 0, Qt.AlignmentFlag.AlignTop)
-            corps.addLayout(rangee)
-            if self._etagere.choix is not None:
-                self._montrer_jeu(self._etagere.choix)
+                mois = _Mois(cases)
+                mois.setFixedWidth(_COLONNE_DROITE)
+                bloc.addWidget(mois)
+                droite.addLayout(bloc)
+            droite.addStretch(1)
+            haut.addLayout(droite)
+        root.addLayout(haut)
+
+        if possibles:
+            # Dessous, les sauvegardes du jeu choisi : seule partie qui défile.
+            contenu = QWidget()
+            corps = QVBoxLayout(contenu)
+            corps.setContentsMargins(0, 4, 8, 4)
+            corps.setSpacing(12)
+            self._fiche_hote = QVBoxLayout()
+            self._fiche_hote.setContentsMargins(0, 0, 0, 0)
+            corps.addLayout(self._fiche_hote)
+            if self._releve.choix is not None:
+                self._montrer_jeu(self._releve.choix)
             corps.addStretch(1)
 
             zone = QScrollArea()
             zone.setWidgetResizable(True)
             zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             zone.setWidget(contenu)
+            # Sous son `minimumSizeHint` (~70 px), la zone ne descendait pas :
+            # une fiche courte laissait 15 px de vide au bas de la page. Un
+            # minimum EXPLICITE le remplace ; la hauteur vient d'_ajuster_hauteur.
+            zone.setMinimumHeight(1)
             root.addWidget(zone, 1)
             self._zone, self._contenu = zone, contenu
 
@@ -292,31 +303,6 @@ class StatsDialog(QDialog):
             morceaux.append(tr("{} années commencées sur {}").format(
                 commencees, scolarite.ANNEES))
         return "  ·  ".join(morceaux)
-
-    def _bande_scolarite(self) -> QVBoxLayout | None:
-        """Les sept années — la bande, son titre et sa phrase.
-
-        None tant qu'AUCUNE année n'a commencé : la bande n'apprendrait alors
-        rien que la phrase d'ouverture ne dise déjà, et sept cases vides sous
-        « aucune partie enregistrée » sont du remplissage. Un état ne s'affiche
-        que lorsqu'il dévie.
-        """
-        liste = self._annees()
-        courante = scolarite.annee_courante(liste)
-        if courante == 0:
-            return None
-
-        bande = _Scolarite(liste, courante, self._selectionnables())
-        # Cliquer une année pose son jeu dans la fiche du dessous — le même
-        # geste que l'étagère, vers la même cible.
-        bande.choisi.connect(self._montrer_jeu)
-        bande.choisi.connect(self._etagere.choisir)
-        bloc = QVBoxLayout()
-        bloc.setSpacing(8)
-        bloc.addWidget(_titre_section(tr("Les sept années")))
-        bloc.addWidget(bande)
-        bloc.addWidget(_Paragraphe(self._phrase_scolarite(liste, courante)))
-        return bloc
 
     @staticmethod
     def _phrase_scolarite(liste, courante: int) -> str:
@@ -431,28 +417,8 @@ class StatsDialog(QDialog):
         nom.setWordWrap(True)
         couche.addWidget(nom)
 
-        chiffres = QHBoxLayout()
-        chiffres.setSpacing(28)
-        temps = self._temps.get(game_id, 0)
-        parties = self._parties.get(game_id, 0)
-        derniere = self._dernieres.get(game_id)
-        faits = []
-        if temps:
-            faits.append((_duree(temps), tr("de jeu")))
-        if parties:
-            faits.append((str(parties), tr("parties") if parties > 1 else tr("partie")))
-        if derniere:
-            faits.append((_date(derniere), tr("dernière fois")))
-        for valeur, libelle in faits:
-            col = QVBoxLayout()
-            col.setSpacing(0)
-            col.addWidget(_chiffre(valeur, 16))
-            col.addWidget(_texte(libelle, 11, _DISCRET))
-            chiffres.addLayout(col)
-        if faits:
-            chiffres.addStretch(1)
-            couche.addLayout(chiffres)
-
+        # Temps, parties et dernière fois sont sur la ligne du relevé : la
+        # fiche ne garde que ce que le relevé ne peut pas montrer.
         vues = self._vues.get(game_id) or []
         if vues:
             couche.addSpacing(4)

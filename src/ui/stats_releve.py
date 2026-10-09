@@ -39,8 +39,8 @@ _ROMAINS = ("I", "II", "III", "IV", "V", "VI", "VII")
 _COL_ANNEE = 52
 _COL_TEMPS = 210
 _COL_PARTIES = 64
-_COL_DERNIERE = 136
-_BARRE_MAX = 120
+_COL_DERNIERE = 150
+_BARRE_MAX = 90
 _JAQUETTE = (30, 42)
 _HAUTEUR_LIGNE = 54
 _ECART = 14
@@ -111,12 +111,12 @@ class _Nom(QLabel):
     en AutoText, le seul endroit où du balisage du catalogue serait interprété.
     """
 
-    def __init__(self, nom: str, parent=None) -> None:
+    def __init__(self, nom: str, complet: str, parent=None) -> None:
         super().__init__(parent)
         self._nom = nom
         self.setTextFormat(Qt.TextFormat.PlainText)
         self.setFont(body_font(14))
-        self.setToolTip(escape(nom, quote=False))
+        self.setToolTip(escape(complet, quote=False))
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.setMinimumWidth(60)
         self.setText(nom)
@@ -124,7 +124,9 @@ class _Nom(QLabel):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self.setText(self.fontMetrics().elidedText(
-            self._nom, Qt.TextElideMode.ElideRight, self.width()))
+            # Par le MILIEU : « Les Reliques… Partie 1 » et « … Partie 2 » se
+            # distinguent encore, coupés par la fin ils devenaient identiques.
+            self._nom, Qt.TextElideMode.ElideMiddle, self.width()))
 
 
 def _cellule(texte: str, largeur: int, *, droite: bool = False,
@@ -140,6 +142,31 @@ def _cellule(texte: str, largeur: int, *, droite: bool = False,
     if droite:
         lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     return lbl
+
+
+def noms_courts(noms: list[str]) -> list[str]:
+    """« La Chambre des Secrets » plutôt que « Harry Potter et la Chambre… ».
+
+    Le préfixe commun à tous les titres est retiré, coupé à un mot entier,
+    puis un petit mot de liaison qui ouvre la plupart des restes (« et » en
+    français ; l'anglais et l'espagnol l'ont déjà dans le préfixe). Rien
+    d'écrit à la main par langue : un titre traduit demain suit la même règle.
+    Le nom entier reste en infobulle.
+    """
+    if len(noms) < 2:
+        return list(noms)
+    prefixe = noms[0]
+    for nom in noms[1:]:
+        while not nom.startswith(prefixe):
+            prefixe = prefixe[:-1]
+    prefixe = prefixe[:prefixe.rfind(" ") + 1]
+    restes = [nom[len(prefixe):] or nom for nom in noms]
+    premiers = [r.split(" ", 1)[0] for r in restes]
+    liaison = max(set(premiers), key=premiers.count)
+    if len(liaison) <= 3 and premiers.count(liaison) * 2 > len(restes):
+        restes = [r[len(liaison) + 1:] if r.startswith(liaison + " ") else r
+                  for r in restes]
+    return [r[:1].upper() + r[1:] for r in restes]
 
 
 def _quand(jour: date) -> str:
@@ -214,6 +241,8 @@ class _Releve(QWidget):
         couche.addWidget(self._entete())
 
         temps_max = max(temps.values(), default=0)
+        self._courts = dict(zip((e.game.id for e in self._entrees),
+                                noms_courts([e.game.name for e in self._entrees])))
         scolaires = sorted((e for e in self._entrees if 1 <= e.game.annee <= ANNEES),
                            key=lambda e: e.game.annee)
         hors = [e for e in self._entrees if not 1 <= e.game.annee <= ANNEES]
@@ -250,7 +279,9 @@ class _Releve(QWidget):
             lbl.setFont(cinzel(8, bold=True))
             lbl.setStyleSheet(style)
             if largeur:
-                lbl.setFixedWidth(largeur)
+                # MINIMUM et non fixe : avec l'espacement des lettres, « DERNIÈRE
+                # SESSION » dépassait sa colonne et perdait son D.
+                lbl.setMinimumWidth(largeur)
             if droite:
                 lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             rang.addWidget(lbl, 0 if largeur else 1)
@@ -298,7 +329,7 @@ class _Releve(QWidget):
         jeu_rang.setContentsMargins(0, 0, 0, 0)
         jeu_rang.setSpacing(12)
         jeu_rang.addWidget(_Jaquette(_jaquette(game.cover_image)))
-        jeu_rang.addWidget(_Nom(game.name), 1)
+        jeu_rang.addWidget(_Nom(self._courts.get(gid, game.name), game.name), 1)
         rang.addWidget(jeu, 1)
 
         secondes = temps.get(gid, 0)
@@ -311,6 +342,7 @@ class _Releve(QWidget):
             bloc_rang.setSpacing(12)
             bloc_rang.addWidget(_Barre(secondes / temps_max if temps_max else 0))
             valeur = QLabel(_duree(secondes))
+            valeur.setTextFormat(Qt.TextFormat.PlainText)
             valeur.setFont(body_font(13))
             valeur.setStyleSheet("color: #f2f2f4;")
             bloc_rang.addWidget(valeur, 1)
