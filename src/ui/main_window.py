@@ -5,7 +5,7 @@ from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
 from src.core import compat, manette
-from src.core.config import Config
+from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
@@ -22,6 +22,7 @@ from src.ui.game_session import GameSession
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
 from src.core.season import resolve as resolve_season
+from src.core.version_utils import compare_versions
 from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
@@ -36,9 +37,15 @@ from src.ui.utils import icone_application, open_url
 
 log = logging.getLogger(__name__)
 
-# Cap du remerciement Ko-fi unique. Nommé plutôt qu'écrit en clair : c'est un
-# réglage de produit, pas une constante technique, et il a déjà bougé une fois.
-_KOFI_CAP_SECONDES = 2 * 3600
+
+def mise_a_jour_installee(precedente: str) -> bool:
+    """La version lancée la dernière fois est-elle plus ancienne que celle-ci ?
+
+    Vide : la config a été écrite par une version d'avant la 1.1.6, qui ne
+    notait pas encore sa version. C'est donc aussi une mise à jour. Un premier
+    lancement, lui, part de `Config()`, qui porte déjà la version courante.
+    """
+    return not precedente or compare_versions(APP_VERSION, precedente) > 0
 
 
 class MainWindow(QMainWindow):
@@ -195,7 +202,13 @@ class MainWindow(QMainWindow):
 
         # Notification VISIBLE des mises à jour de jeux (recompte local, différé
         # après le fade-in). La status bar seule passait inaperçue — retour Ludo.
-        QTimer.singleShot(2500, self._notify_game_updates)
+        QTimer.singleShot(2500, self._toasts_du_demarrage)
+
+    def _toasts_du_demarrage(self) -> None:
+        # Un toast à la fois : si une mise à jour de jeu parle déjà, le merci
+        # attend le prochain retour de partie ou le prochain démarrage.
+        if not self._notify_game_updates():
+            self._maybe_thank_milestone()
 
     # ──────────────────── System Tray ────────────────────
 
@@ -532,26 +545,32 @@ class MainWindow(QMainWindow):
             game_detail_handlers.signaler_plantage(self._detail, game, constat)
 
     def _maybe_thank_milestone(self) -> None:
-        """Un seul remerciement Ko-fi dans la vie du launcher, au cap de 2 h de jeu.
+        """Un seul remerciement Ko-fi dans la vie du launcher, à la première
+        mise à jour du launcher installée. Jamais répété, jamais culpabilisant.
 
-        Au retour de jeu, jamais répété, jamais culpabilisant (« pas de nag »).
-        La règle « une seule fois » ne bouge pas.
+        Il venait au cap de 2 h de jeu (ACT-072, changé le 2026-10-09) : un merci
+        qui dépend des heures passées dans les jeux d'EA et de Warner relie
+        l'argent à leur consommation. Une nouvelle version, c'est le travail du
+        projet qui se voit : c'est pour lui qu'on remercie.
         """
-        if self.config.kofi_milestone_thanked:
+        cfg = self.config
+        if cfg.version_lancee == APP_VERSION:
             return
-        if sum(self.config.playtime_seconds.values()) < _KOFI_CAP_SECONDES:
+        merci = not cfg.kofi_milestone_thanked and mise_a_jour_installee(cfg.version_lancee)
+        cfg.version_lancee = APP_VERSION
+        cfg.kofi_milestone_thanked = cfg.kofi_milestone_thanked or merci
+        cfg.save()
+        if not merci:
             return
-        self.config.kofi_milestone_thanked = True
-        self.config.save()
         # Dire ce que le café finance (un travail fait main, en français,
         # introuvable ailleurs) plutôt que « un café fait plaisir » (ACT-071).
         # Lignes coupées à la main : le toast ne passe pas à la ligne seul, et
-        # une seule aurait dépassé une fenêtre de 980 px (634 px mesurés au
-        # plus, polices réelles, espagnol).
+        # une seule aurait dépassé une fenêtre de 980 px.
         self._toast.show_message(
-            tr("Déjà 2 h de magie retrouvée. Accio est fait à la main, par un francophone.\n"
+            tr("Accio vient de passer en {}. Il est fait à la main, par un francophone.\n"
                "Ses correctifs n'existent nulle part ailleurs, et ici, tout est en français.\n"
-               "Un café sur Ko-fi soutient ce travail francophone, si rare. Cliquez ici."),
+               "Un café sur Ko-fi soutient ce travail francophone, si rare. Cliquez ici.")
+            .format(APP_VERSION),
             duration_ms=9000,
             on_click=lambda: open_url(KOFI_URL),
         )

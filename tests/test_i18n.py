@@ -24,7 +24,7 @@ from src.core.i18n import (
 IDENTIQUES_TOLEREES = {
     # « Halloween » s'écrit pareil dans les trois langues (la citrouille qui
     # accompagnait la clé a été retirée : U+1F383 sortait en emoji couleur).
-    "Discord", "Version {}", "Versions — {}", "Halloween",
+    "Discord", "Version {}", "Catalogue {}", "Versions — {}", "Halloween",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
@@ -345,7 +345,7 @@ class TestAucunTexteVisibleHorsTr:
     NOMS = {"Discord", "Ko-fi", "Accio Launcher", "GitHub"}
     # (fichier, début du texte) → raison.
     EXCEPTIONS = {
-        ("about_page.py", "Accio Launcher v"): "la marque et son numéro",
+        ("settings_panel.py", "Accio Launcher "): "la marque et son numéro",
         ("onboarding.py", "Langue · Language · Idioma"):
             "trilingue exprès : la langue n'est pas encore choisie",
         ("onboarding.py", "Vous pourrez en changer dans les Paramètres."):

@@ -206,6 +206,23 @@ def _langue_retablie():
 
 
 @pytest.fixture(autouse=True)
+def _polices_chargees(request):
+    """Les polices embarquées, et Gelasio comme police de l'application, AVANT
+    le premier widget de chaque test Qt.
+
+    `load_fonts()` ne tournait qu'à la construction d'une `MainWindow` : depuis
+    que Gelasio est la police par défaut de l'application (ACT-056), un test de
+    boîte de dialogue aurait mesuré la police système s'il passait AVANT la
+    première fenêtre de la suite, et Gelasio s'il passait après.
+    """
+    if "qtbot" in request.fixturenames:
+        request.getfixturevalue("qapp")
+        from src.ui.fonts import load_fonts
+        load_fonts()
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _widgets_detruits_a_la_fin_du_test(request, monkeypatch):
     """Les fenêtres d'un test meurent à la fin de CE test, pas n'importe quand.
 

@@ -19,6 +19,7 @@ pytest.importorskip("pytestqt")
 from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSignal  # noqa: E402
 from PyQt6.QtGui import QKeyEvent  # noqa: E402
 
+from src.core.config import APP_VERSION  # noqa: E402
 from src.core.game_data import load_catalog  # noqa: E402
 from src.ui import game_detail as _gd  # noqa: E402
 
@@ -176,48 +177,62 @@ class TestKeyboardNav:
 
 
 class TestKofiMilestone:
-    """Le cap est passé de 10 h à 2 h le 2026-08-26 (décision de Ludo).
+    """Le merci unique vient à la première mise à jour du launcher installée
+    (ACT-072, 2026-10-09), plus au cap des 2 h de jeu : on remercie pour le
+    travail du projet, pas pour les heures passées dans les jeux."""
 
-    Ce n'est PAS un assouplissement de la règle « pas de nag » : le
-    remerciement reste unique dans la vie du launcher, et c'est justement ce
-    qui rendait 10 h intenable — placé si loin, il n'atteignait presque
-    personne. Les deux tests lisent le seuil du code plutôt que de le recopier,
-    pour qu'un futur ajustement ne demande pas d'aller corriger un nombre ici.
-    """
-
-    def test_toast_une_seule_fois_au_cap(self, make_window):
-        from src.ui.main_window import _KOFI_CAP_SECONDES
-        win = make_window(playtime_seconds={_IDS[0]: _KOFI_CAP_SECONDES + 60})
+    def test_toast_une_seule_fois_apres_une_mise_a_jour(self, make_window):
+        win = make_window(version_lancee="1.1.5")
         win.show()
         assert win.config.kofi_milestone_thanked is False
 
         win._maybe_thank_milestone()
         assert win.config.kofi_milestone_thanked is True
+        assert win.config.version_lancee == APP_VERSION
         assert win._toast.isVisible()
+        assert APP_VERSION in win._toast.text()
         assert "caf" in win._toast.text()          # message « célébration », pas de nag
         assert win._toast._on_click is not None     # cliquable -> ouvre Ko-fi
 
         win._toast.hide()
+        win.config.version_lancee = "1.1.5"   # même une autre mise à jour plus tard
         win._maybe_thank_milestone()  # une seule fois dans la vie du launcher
         assert not win._toast.isVisible()
 
-    def test_pas_de_toast_sous_le_cap(self, make_window):
-        from src.ui.main_window import _KOFI_CAP_SECONDES
-        win = make_window(playtime_seconds={_IDS[0]: _KOFI_CAP_SECONDES - 60})
+    def test_config_d_avant_la_1_1_6_compte_comme_une_mise_a_jour(self, make_window):
+        win = make_window(version_lancee="")
+        win.show()
+        win._maybe_thank_milestone()
+        assert win.config.kofi_milestone_thanked is True
+
+    def test_les_heures_de_jeu_ne_declenchent_plus_rien(self, make_window):
+        """Premier lancement (config neuve) et beaucoup de jeu : pas de merci."""
+        win = make_window(playtime_seconds={_IDS[0]: 50 * 3600})
         win.show()
         win._maybe_thank_milestone()
         assert win.config.kofi_milestone_thanked is False
         assert not win._toast.isVisible()
 
-    def test_le_cap_reste_une_vraie_session_de_jeu(self):
-        """Garde-fou de PRODUIT, pas de code.
+    def test_deja_remercie_au_cap_des_2_h(self, make_window):
+        win = make_window(version_lancee="1.1.5", kofi_milestone_thanked=True)
+        win.show()
+        win._maybe_thank_milestone()
+        assert not win._toast.isVisible()
+        assert win.config.version_lancee == APP_VERSION
 
-        Descendre ce cap sous l'heure ferait du remerciement une relance
-        déguisée — exactement ce que le projet refuse. Le monter au-delà de
-        cinq heures le rendrait à nouveau inatteignable.
-        """
-        from src.ui.main_window import _KOFI_CAP_SECONDES
-        assert 3600 <= _KOFI_CAP_SECONDES <= 5 * 3600
+    def test_retour_en_arriere_pas_de_merci(self, make_window):
+        win = make_window(version_lancee="9.0.0")
+        win.show()
+        win._maybe_thank_milestone()
+        assert win.config.kofi_milestone_thanked is False
+
+    def test_le_merci_cede_la_place_a_une_mise_a_jour_de_jeu(self, make_window, monkeypatch):
+        win = make_window(version_lancee="1.1.5")
+        win.show()
+        monkeypatch.setattr(win, "_notify_game_updates", lambda: True)
+        win._toasts_du_demarrage()
+        assert win.config.kofi_milestone_thanked is False   # il attend son tour
+        assert win.config.version_lancee == "1.1.5"
 
 
 class TestPhaseWiring:

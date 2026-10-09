@@ -31,28 +31,40 @@ class TestContenu:
         from src.core.config import APP_VERSION
         page = about_page.construire([])
         qtbot.addWidget(page)
-        assert f"v{APP_VERSION}" in _textes(page)
+        assert APP_VERSION in page.findChild(QLabel, "versions").text()
 
-    def test_les_trois_liens_portent_un_pictogramme(self, qtbot):
-        """Sans icône, trois cadres gris ne se distinguent qu'en LISANT —
-        et le libellé change avec la langue, la destination non."""
-        from PyQt6.QtWidgets import QPushButton
+    def test_les_trois_tuiles_portent_un_pictogramme(self, qtbot):
+        """Sans icône, trois cadres ne se distinguent qu'en LISANT, et le
+        libellé change avec la langue, la destination non."""
         page = about_page.construire([])
         qtbot.addWidget(page)
-        boutons = page.findChildren(QPushButton)
-        assert len(boutons) == 3
-        for b in boutons:
-            assert not b.icon().isNull(), f"{b.text()} n'a pas de pictogramme"
+        tuiles = page.findChildren(about_page.Tuile)
+        assert [t.icone for t in tuiles] == ["site", "discord", "kofi"]
+        for t in tuiles:
+            image = t.findChildren(QLabel)[0]
+            assert image.pixmap() is not None and not image.pixmap().isNull(), t.nom
+
+    def test_les_tuiles_ont_la_meme_hauteur(self, qtbot):
+        page = about_page.construire([])
+        qtbot.addWidget(page)
+        assert len({t.height() for t in page.findChildren(about_page.Tuile)}) == 1
 
     def test_discord_et_kofi_ne_sont_pas_traduits(self, qtbot):
         """Ce sont des noms propres. Les passer par tr() obligerait à écrire
         trois traductions identiques, ce que la suite i18n refuse."""
-        from PyQt6.QtWidgets import QPushButton
         page = about_page.construire([])
         qtbot.addWidget(page)
-        libelles = {b.text() for b in page.findChildren(QPushButton)}
-        assert "Discord" in libelles
-        assert "Ko-fi" in libelles
+        noms = {t.nom for t in page.findChildren(about_page.Tuile)}
+        assert {"Discord", "Ko-fi"} <= noms
+
+    def test_une_tuile_ouvre_son_lien(self, qtbot, monkeypatch):
+        from src.core.liens import KOFI_URL
+        ouverts = []
+        monkeypatch.setattr(about_page, "open_url", ouverts.append)
+        page = about_page.construire([])
+        qtbot.addWidget(page)
+        next(t for t in page.findChildren(about_page.Tuile) if t.nom == "Ko-fi").click()
+        assert ouverts == [KOFI_URL]
 
 
 class TestMentionLegale:
@@ -61,7 +73,7 @@ class TestMentionLegale:
     donc les afficher, sinon il n'y a rien à conserver."""
 
     def _mention(self, page) -> QLabel:
-        return next(lbl for lbl in _labels(page) if "ASTeam" in lbl.text())
+        return page.findChild(QLabel, "mentionLegale")
 
     def test_copyright_licence_et_lien_vers_le_depot(self, qtbot):
         from src.core.liens import DEPOT_URL
@@ -82,14 +94,14 @@ class TestMentionLegale:
         assert ouverts == ["https://github.com/ludvdber/AccioLauncher"]
 
 
-class TestRemerciements:
+class TestGenerique:
     def test_sans_contributeur_ni_traducteur_aucune_rubrique(self, qtbot, monkeypatch):
         """Un titre « Remerciements » au-dessus de rien annoncerait une liste
         qui n'existe pas — la règle « rien de normal ne s'affiche »."""
         monkeypatch.setattr("src.ui.about_page.translator_credits", lambda: [])
         page = about_page.construire([])
         qtbot.addWidget(page)
-        assert "Remerciements" not in _textes(page)
+        assert "GÉNÉRIQUE" not in _textes(page)
 
     def test_un_contributeur_est_affiche_avec_son_role(self, qtbot, monkeypatch):
         monkeypatch.setattr("src.ui.about_page.translator_credits", lambda: [])
@@ -97,7 +109,7 @@ class TestRemerciements:
             [Contributor(name="Ludovic", role="Création", url="")])
         qtbot.addWidget(page)
         texte = _textes(page)
-        assert "Remerciements" in texte
+        assert "GÉNÉRIQUE" in texte
         assert "Ludovic" in texte and "Création" in texte
 
     def test_une_url_devient_un_lien(self, qtbot, monkeypatch):
@@ -141,7 +153,8 @@ class TestBalisageDuCatalogueJamaisInterprete:
         page = about_page.construire(
             [Contributor(name="X", role="<b>patron</b>", url="")])
         qtbot.addWidget(page)
-        assert "&lt;b&gt;" in _textes(page)
+        role = next(lbl for lbl in _labels(page) if "patron" in lbl.text())
+        assert role.textFormat() == Qt.TextFormat.PlainText
 
     def test_l_apostrophe_reste_lisible(self, qtbot, monkeypatch):
         """`quote=False` : dans un contenu d'élément, échapper l'apostrophe ne

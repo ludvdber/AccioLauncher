@@ -16,7 +16,7 @@ embarquée, elle mesure enfin la bonne.
 
 import logging
 
-from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtGui import QFont, QFontDatabase, QGuiApplication
 
 from src.core.config import ASSETS_DIR
 
@@ -75,6 +75,9 @@ def load_fonts() -> None:
                 _body_family = families[0]
                 log.info("Police de corps chargée : %s", _body_family)
 
+    if _body_family:
+        police_de_l_application(_body_family)
+
     if not _cinzel_family:
         log.warning("Cinzel non trouvée, repli sur %s", _REPLI_CORPS)
     if not _cinzel_deco_family:
@@ -82,6 +85,24 @@ def load_fonts() -> None:
     if not _body_family:
         log.warning("Gelasio non trouvée, repli sur %s (absente sous Linux)",
                     _REPLI_CORPS)
+
+
+def police_de_l_application(famille: str) -> None:
+    """Gelasio pour TOUT widget qui ne choisit pas sa police (ACT-056, 2026-10-09).
+
+    Sans ça, Paramètres, les boîtes de dialogue et l'assistant prenaient la
+    police du système : Segoe UI sous Windows, et sous Linux ce que la
+    distribution fournit. On changeait d'application en ouvrant une fenêtre,
+    et sous Linux personne ne savait ce que les gens voyaient. La TAILLE reste
+    celle du système : seule la famille change.
+    """
+    app = QGuiApplication.instance()
+    if app is None:
+        return
+    police = QGuiApplication.font()
+    police.setFamilies([famille])
+    police.setStyleHint(QFont.StyleHint.Serif)
+    QGuiApplication.setFont(police)
 
 
 def cinzel(size: int, bold: bool = False) -> QFont:

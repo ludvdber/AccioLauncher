@@ -60,6 +60,14 @@ _FICHIERS = {
     "site": "phosphor/globe-bold.svg",
     "deplier": "phosphor/caret-down-bold.svg",
     "replier": "phosphor/caret-up-bold.svg",
+    # Rubriques des Paramètres (refonte du 2026-10-09).
+    "dossier": "phosphor/folder-simple-bold.svg",
+    "ecran": "phosphor/monitor-bold.svg",
+    "telechargement": "phosphor/download-simple-bold.svg",
+    "integrations": "phosphor/plugs-connected-bold.svg",
+    "infos": "phosphor/info-bold.svg",
+    "retour": "phosphor/arrow-left-bold.svg",
+    "rapport": "phosphor/clipboard-text-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

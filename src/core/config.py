@@ -166,8 +166,13 @@ class Config:
     trailers_optin: bool = False
     discord_presence: bool = True
     dismissed_launcher_version: str = ""
-    # Un seul remerciement Ko-fi (cap des 2 h de jeu) dans la vie du launcher.
+    # Un seul remerciement Ko-fi dans la vie du launcher, à la première mise à
+    # jour installée (le nom date du cap des 2 h de jeu, remplacé par ACT-072).
     kofi_milestone_thanked: bool = False
+    # Version du launcher lancée la dernière fois : c'est en la voyant monter
+    # qu'on sait qu'une mise à jour vient d'être installée. Une config neuve
+    # porte la version courante ; une config d'avant la 1.1.6 se charge VIDE.
+    version_lancee: str = APP_VERSION
     installed_versions: dict[str, str] = field(default_factory=dict)
     # Stats de jeu : cumul par jeu (secondes) et date de dernière session (ISO)
     playtime_seconds: dict[str, int] = field(default_factory=dict)
@@ -217,6 +222,7 @@ class Config:
                         data.get("dismissed_launcher_version"), ""),
                     kofi_milestone_thanked=_as_bool(
                         data.get("kofi_milestone_thanked"), False),
+                    version_lancee=_as_str(data.get("version_lancee"), ""),
                     installed_versions=_as_map(data.get("installed_versions"), str),
                     playtime_seconds=_as_map(data.get("playtime_seconds"), int),
                     last_played=_as_map(data.get("last_played"), str),
@@ -258,6 +264,7 @@ class Config:
                 "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,
+                "version_lancee": self.version_lancee,
                 "installed_versions": self.installed_versions,
                 "playtime_seconds": self.playtime_seconds,
                 "last_played": self.last_played,

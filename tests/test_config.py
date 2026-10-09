@@ -82,6 +82,19 @@ class TestConfig:
             assert loaded.playtime_seconds == {"hp1": 3600}
             assert loaded.last_played == {"hp1": "2026-06-11"}
 
+    def test_version_lancee(self, tmp_path):
+        """Neuve : la version courante (un premier lancement n'est pas une mise
+        à jour). Absente d'un fichier écrit avant la 1.1.6 : vide."""
+        config_file = tmp_path / "config.json"
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            assert Config().version_lancee == APP_VERSION
+            c = Config(install_path=tmp_path, cache_path=tmp_path / ".cache",
+                       version_lancee="1.1.5")
+            c.save()
+            assert Config.load().version_lancee == "1.1.5"
+            config_file.write_text('{"langue": "fr"}', encoding="utf-8")
+            assert Config.load().version_lancee == ""
+
     def test_load_corrupted(self, tmp_path):
         config_file = tmp_path / "config.json"
         config_file.write_text("NOT JSON", encoding="utf-8")
