@@ -170,8 +170,11 @@ _JEU_MINIMAL = {"id": "x", "name": "X", "year": 2001, "description": "",
 def meme_verdict(nom: str) -> None:
     """Une entrée d'archive et un exécutable de catalogue reçoivent le même
     verdict (ACT-007) : il y avait quatre gardes, et le fuzzing en avait déjà
-    trouvé deux en désaccord. Seule exception permise, voulue : le catalogue
-    refuse en plus un exécutable qui ne nomme aucun fichier (« . »)."""
+    trouvé deux en désaccord. Exceptions permises, voulues : le catalogue
+    refuse en plus un exécutable qui ne nomme aucun fichier (« . »), et un
+    champ BLANC (« \\n », « \\u3000 ») : c'est la règle « chaîne non vide »
+    de tous ses champs, pas une affaire de chemin (trouvé par le fuzzing en
+    CI le 2026-10-09, entrée « =\\n »)."""
     sur = not is_unsafe_entry(nom)
     try:
         GameData.from_dict({**_JEU_MINIMAL, "executable": nom})
@@ -180,5 +183,5 @@ def meme_verdict(nom: str) -> None:
         exe_accepte = False
     if exe_accepte:
         assert sur, nom
-    elif sur:
+    elif sur and nom.strip():
         assert not [c for c in nom.replace("\\", "/").split("/") if c not in ("", ".")], nom

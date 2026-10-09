@@ -5,7 +5,8 @@ Les tests automatiques ne lancent aucun vrai jeu. Cet essai, si : il joue chaque
 ## Ce qu'il faut
 
 - **Le « oui » de Ludo pour la session.** L'essai prend la souris et le clavier : le PC doit être libre pendant environ 15 minutes pour les six jeux. Le pilote refuse de partir sans `ACCIO_OUI=1`.
-- **Jamais HP7 ni HP8** (HP8 fige tous les cœurs). L'essai ne couvre que HP1 à HP6.
+- **HP7 et HP8 seulement si Ludo les demande** (HP8 s'est figé sur tous les cœurs le 2026-09-25). Le pilote les sait depuis le 2026-10-09 (`hp7a`, `hp7b` : démarrage, image qui bouge, processeur sous 50 %, Alt+Tab, fermeture) ; ce jour-là, à sa demande, 10/10 chacun, aucun figeage.
+- **Une étiquette par jeu** (`v1.1.6-hp2`…) : les preuves d'une même étiquette s'écrasent d'un jeu à l'autre.
 - Le son du jeu est coupé tout seul (`son.py`). Après un plantage du pilote : `python son.py retablir`, jeu relancé.
 
 ## Les six lancements
@@ -32,4 +33,6 @@ Pour tous : fermeture propre (WM_CLOSE, sans tuer le jeu), le launcher revient �
 
 Les preuves sont dans `essais_release\<étiquette>\` : `journal.txt` (dernière ligne : `VERDICT HPx : n/m points`), captures, `launcher.log`, bancs F11. Le code de sortie est 1 s'il y a un échec. **Un seul ÉCHEC bloque la release** tant qu'il n'est pas expliqué.
 
-Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre la main en moins de 6 s, HP1 et HP2 garder leur grâce d'au moins 8 s (`relance` au catalogue).
+Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre la main en moins de 6 s, HP1 et HP2 garder leur grâce d'au moins 8 s (`relance` au catalogue). Pour HP2, la grâce sert au CHARGEMENT de la partie (le processus de départ meurt, le jeu relancé prend sa place) : le point passe si la session a survécu à cette relance avec une seule fin, et la fermeture est ensuite vue tout de suite (0,8 s, normal).
+
+**Points déjà connus, non bloquants** (phase 6 de l'audit, revus le 2026-10-09) : HP3 n'a plus de fenêtre après l'Alt+Tab du pilote (il est minimisé, et le pilote n'a pas le premier plan pour le remettre ; un second Alt+Tab de joueur le rend) et ignore `WM_CLOSE` (tué après 25 s, tâche ACT-046). HP3 finit donc à 6/8.

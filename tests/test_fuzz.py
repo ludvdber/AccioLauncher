@@ -139,6 +139,9 @@ class TestCheminUnique:
         "HP1/System/HP.exe", "game.exe", "../evil.dll", "a/C:x", "HP.exe:flux",
         ".. /evil.dll", "a/... /x", " ./x", "x/\x00.exe", "x" * 261, "HP1/CON",
         "HP1/nul.txt", "/etc/passwd", "\\\\srv\\p\\x", "", "   ", ".", "./", "Game/./x",
+        # Trouvé par le fuzzing en CI (2026-10-09) : un nom BLANC, refusé par
+        # le catalogue comme champ vide, pas comme chemin.
+        "\n", "\t", "　", "\x85",
     ])
     def test_les_trois_gardes_de_chemin_donnent_le_meme_verdict(self, nom):
         invariants.meme_verdict(nom)

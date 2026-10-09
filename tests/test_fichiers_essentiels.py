@@ -69,9 +69,11 @@ class TestManquants:
             "HP2/system/Game.exe", "HP2/system/d3d11drv.dll"]
 
     def test_la_casse_ne_compte_pas(self, tmp_path):
-        """Sous Linux, `System` au catalogue et `system` sur le disque."""
-        _installer(tmp_path, "hp2/SYSTEM/game.EXE", "hp2/system/D3D11DRV.DLL",
-                   "HP2/system/effects11.dll")
+        """Sous Linux, `System` au catalogue et `system` sur le disque. Une
+        seule casse PAR DOSSIER : sous Linux, `hp2` et `HP2` seraient deux
+        dossiers (la CI l'a vu le 2026-10-09), ce qu'aucune archive ne livre."""
+        _installer(tmp_path, "hp2/SYSTEM/game.EXE", "hp2/SYSTEM/D3D11DRV.DLL",
+                   "hp2/SYSTEM/effects11.dll")
         assert fichiers_essentiels.manquants(_jeu(), tmp_path) == []
 
     def test_un_dossier_au_nom_du_fichier_ne_compte_pas(self, tmp_path):
