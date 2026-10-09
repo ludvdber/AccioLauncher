@@ -74,13 +74,24 @@ class TestUneSeuleAdresse:
 
 
 class TestBoutonPermanent:
-    def test_present_visible_et_a_gauche_des_statistiques(self, fenetre):
+    def test_present_visible_dans_la_barre_a_droite_des_onglets(self, fenetre):
+        from src.ui.title_bar import TitleBar
         win = fenetre
         assert win._btn_discord.isVisible()
-        stats, discord = win._btn_stats.geometry(), win._btn_discord.geometry()
-        assert discord.top() == stats.top(), "pas sur la même rangée"
-        assert discord.right() < stats.left(), "doit être à GAUCHE des statistiques"
-        assert not discord.intersects(stats)
+        assert isinstance(win._btn_discord.parentWidget(), TitleBar)
+        assert win._btn_discord.geometry().left() > win._btn_settings.geometry().right()
+
+    @pytest.mark.parametrize("cle, page", [("annees", "_on_stats"), ("parametres", "_on_settings")])
+    def test_l_onglet_ouvre_sa_page_puis_rend_la_main(self, fenetre, qtbot, monkeypatch, cle, page):
+        """Mes années et Paramètres sont modaux : l'onglet est souligné tant
+        que la page est ouverte, puis Bibliothèque reprend."""
+        barre = fenetre._title_bar
+        vus = []
+        monkeypatch.setattr(fenetre, page, lambda: vus.append(barre.onglet(cle).isChecked()))
+        qtbot.mouseClick(barre.onglet(cle), Qt.MouseButton.LeftButton)
+        assert vus == [True]
+        assert barre.onglet("bibliotheque").isChecked()
+        assert not barre.onglet(cle).isChecked()
 
     def test_le_clic_ouvre_le_discord(self, fenetre, qtbot):
         qtbot.mouseClick(fenetre._btn_discord, Qt.MouseButton.LeftButton)
@@ -98,18 +109,15 @@ class TestBoutonPermanent:
         fenetre._on_cinema(False)
         assert all(b.isVisible() for b in fenetre._commandes)
 
-    def test_descend_sous_le_bandeau_comme_les_autres(self, fenetre, qtbot):
-        """Le placement vaut pour TOUTES les commandes : un bouton oublié dans
-        la boucle recouvrirait la croix du bandeau de mise à jour."""
-        avant = fenetre._btn_discord.geometry().top()
+    def test_le_bandeau_s_ouvre_sous_la_barre(self, fenetre, qtbot):
+        """Les commandes vivent dans la barre du haut : le bandeau de mise à
+        jour s'ouvre DESSOUS, il ne peut plus en recouvrir aucune."""
         fenetre._launcher_update_asked = True       # pas de dialogue modal ici
         fenetre._on_launcher_update(
             "9.9.9", "https://github.com/ludvdber/AccioLauncher/releases",
             "https://github.com/ludvdber/AccioLauncher/releases/download/v9/A.exe", "")
-        qtbot.waitUntil(lambda: fenetre._btn_discord.geometry().top() > avant,
-                        timeout=2000)
-        tops = {b.geometry().top() for b in fenetre._commandes}
-        assert len(tops) == 1, f"commandes désalignées : {tops}"
+        qtbot.waitUntil(fenetre._notif_bar.isVisible, timeout=2000)
+        assert fenetre._notif_bar.geometry().top() >= fenetre._title_bar.geometry().bottom()
 
 
 class TestLeJeuQuiNeDemarrePas:

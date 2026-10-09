@@ -19,7 +19,6 @@ from src.ui.suivi_barre import SuiviBarre
 from src.ui.fonts import load_fonts
 from src.ui.game_detail import GameDetailView
 from src.ui.game_session import GameSession
-from src.ui.icon_button import IconButton
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
 from src.core.season import resolve as resolve_season
@@ -27,7 +26,7 @@ from src.ui.settings_panel import SettingsDialog
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
-from src.ui.title_bar import TitleBar
+from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, PARAMETRES, TitleBar
 from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
@@ -116,9 +115,6 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        self._title_bar = TitleBar(self)
-        root_layout.addWidget(self._title_bar)
-
         # Bandeau de mise à jour du launcher (caché par défaut)
         self._notif_bar = NotificationBar(self)
         self._notif_bar.download_clicked.connect(self._on_notif_download)
@@ -169,13 +165,20 @@ class MainWindow(QMainWindow):
         self._detail.settings_requested.connect(self._on_settings)
         self._detail.cinema_toggled.connect(self._on_cinema)
 
-        # Pictogrammes DESSINÉS (règle 60 : U+2699 sortait en couleur).
-        self._btn_settings = self._commande("reglages", tr("Paramètres"), self._on_settings)
-        self._btn_stats = self._commande("stats", tr("Statistiques"), self._on_stats)
-        # Discord visible : enfoui dans À propos, personne ne le trouvait.
-        self._btn_discord = self._commande(
-            "discord", tr("Discord : aide et communauté"), lambda: open_url(DISCORD_URL))
-        # De droite à gauche, dans l'ordre où `_position_settings` les pose.
+        # Construite APRÈS la fiche et le carrousel, posée en tête du layout :
+        # l'anneau de focus suit l'ordre de création, et des onglets créés en
+        # premier prenaient le focus au démarrage (la croix de la manette ouvrait
+        # la bibliothèque au lieu de JOUER).
+        self._title_bar = TitleBar(self)
+        root_layout.insertWidget(0, self._title_bar)
+        # Les pages et Discord vivent dans la barre du haut (refonte du
+        # 2026-10-09) : plus de boutons flottants posés sur la fiche.
+        self._title_bar.onglet_demande.connect(self._on_onglet)
+        self._title_bar.discord_demande.connect(lambda: open_url(DISCORD_URL))
+        self._btn_settings = self._title_bar.onglet(PARAMETRES)
+        self._btn_stats = self._title_bar.onglet(ANNEES)
+        self._btn_discord = self._title_bar.discord
+        # Ce que le mode cinéma escamote.
         self._commandes = (self._btn_settings, self._btn_stats, self._btn_discord)
 
         # Event filter on QApplication for global mouse tracking
@@ -311,7 +314,6 @@ class MainWindow(QMainWindow):
             return
         self._updates.remember(version, url, asset_url, asset_sha256, notes)
         self._notif_bar.announce(version, auto=self._updates.can_install_itself)
-        self._position_settings()
         self._propose_launcher_update()
 
     def _propose_launcher_update(self) -> None:
@@ -362,7 +364,6 @@ class MainWindow(QMainWindow):
         chaque vérification. Appelable directement, d'où le `hide()` : le
         bandeau s'est déjà caché quand c'est sa croix qui a déclenché."""
         self._notif_bar.hide()
-        self._position_settings()
         if self._updates.version:
             self.config.dismissed_launcher_version = self._updates.version
             self.config.save()
@@ -623,28 +624,23 @@ class MainWindow(QMainWindow):
 
     # ──────────────────── Événements ────────────────────
 
-    def _commande(self, icone: str, libelle: str, slot) -> IconButton:
-        """Bouton de fenêtre : posé en absolu par-dessus la fiche, pas dans un layout."""
-        bouton = IconButton(icone, taille=36, parent=self, galet=True)
-        bouton.setToolTip(libelle)
-        bouton.setAccessibleName(libelle)
-        bouton.clicked.connect(slot)
-        bouton.raise_()
-        return bouton
-
-    def _position_settings(self) -> None:
-        """Pose les commandes SOUS le bandeau de notification quand il est là.
-
-        Règle 29 : posées en absolu, elles masquaient la croix du bandeau.
-        """
-        decalage = self._notif_bar.height() if self._notif_bar.isVisible() else 0
-        for i, bouton in enumerate(self._commandes):
-            bouton.move(self.width() - 52 - i * 44, 42 + decalage)
-            bouton.raise_()
+    def _on_onglet(self, cle: str) -> None:
+        """Mes années et Paramètres sont modaux : l'onglet reste souligné le
+        temps de la fenêtre, puis Bibliothèque reprend."""
+        if cle == BIBLIOTHEQUE:
+            self._title_bar.set_onglet(BIBLIOTHEQUE)
+            return
+        self._title_bar.set_onglet(cle)
+        try:
+            if cle == ANNEES:
+                self._on_stats()
+            else:
+                self._on_settings()
+        finally:
+            self._title_bar.set_onglet(BIBLIOTHEQUE)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._position_settings()
         self._particles.setGeometry(self.centralWidget().geometry())
         self._particles.raise_()
         self._toast.reposition()

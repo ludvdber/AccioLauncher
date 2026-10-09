@@ -100,16 +100,16 @@ class TestBarreDeTitre:
         qtbot.addWidget(hote)
         return TitleBar(hote)
 
-    def test_poudlard_sans_ecu_ni_maison(self, qtbot):
+    def test_poudlard_sans_ecu(self, qtbot):
         barre = self._barre(qtbot)
-        assert barre._ecu is None and barre._eleve is None
+        assert barre._ecu is None
 
     @pytest.mark.parametrize("maison", sorted(EMAUX))
-    def test_theme_de_maison_nomme_la_maison(self, qtbot, maison):
+    def test_l_infobulle_de_l_ecu_nomme_la_maison(self, qtbot, maison):
         set_theme(maison)
         barre = self._barre(qtbot)
         assert barre._ecu is not None
-        assert tr(THEMES[maison].nom) in barre._eleve.text()
+        assert tr(THEMES[maison].nom) in barre._support_ecu.toolTip()
 
     def test_l_ecu_tient_dans_la_barre(self, qtbot):
         set_theme("poufsouffle")
@@ -118,8 +118,12 @@ class TestBarreDeTitre:
 
     @pytest.mark.parametrize("langue", [i.code for i in available_languages()])
     @pytest.mark.parametrize("maison", sorted(EMAUX))
-    def test_la_maison_n_est_pas_rognee_a_la_plus_petite_fenetre(self, qtbot, maison, langue):
-        # 980 px = la largeur minimale de la fenêtre ; « Estudiante de Hufflepuff » est le plus long.
+    def test_rien_n_est_rogne_a_la_plus_petite_fenetre(self, qtbot, maison, langue):
+        # 980 px = la largeur minimale de la fenêtre : nom, écu, trois onglets,
+        # Discord et boutons de fenêtre doivent tous y tenir entiers.
+        from src.ui.fonts import load_fonts
+        from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, PARAMETRES
+        load_fonts()  # sous offscreen, sans elles, Qt substitue une police 22 % plus large
         set_language(langue)
         set_theme(maison)
         hote = QWidget()
@@ -129,4 +133,6 @@ class TestBarreDeTitre:
         barre.setGeometry(0, 0, 980, 38)
         hote.show()
         barre.layout().activate()
-        assert barre._eleve.width() >= barre._eleve.sizeHint().width()
+        for w in (barre.onglet(BIBLIOTHEQUE), barre.onglet(ANNEES),
+                  barre.onglet(PARAMETRES), barre.discord, barre._title):
+            assert w.width() >= w.sizeHint().width(), w.text()

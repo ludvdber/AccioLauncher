@@ -49,31 +49,15 @@ def _croix(fenetre):
 
 
 class TestLeBandeauResteAtteignable:
-    def test_le_bouton_parametres_ne_recouvre_pas_le_bandeau(self, qtbot, fenetre, mise_en_page_stable):
+    def test_le_bandeau_s_ouvre_sous_la_barre_du_haut(self, qtbot, fenetre, mise_en_page_stable):
+        """Paramètres est un onglet de la barre du haut : le bandeau s'ouvre
+        dessous, donc ni lui ni sa croix ne peuvent être recouverts."""
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
         mise_en_page_stable(fenetre)
         assert fenetre._notif_bar.isVisible()
-        engrenage = fenetre._btn_settings.geometry()
-        assert not engrenage.intersects(fenetre._notif_bar.geometry()), (
-            "le bouton ⚙ est posé par-dessus le bandeau : il en masque la croix")
-
-    def test_le_bouton_parametres_ne_recouvre_pas_la_croix(self, qtbot, fenetre, mise_en_page_stable):
-        fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        mise_en_page_stable(fenetre)
+        assert fenetre._notif_bar.geometry().top() >= fenetre._title_bar.geometry().bottom()
         croix = _croix(fenetre)
-        barre = fenetre._notif_bar
-        zone = croix.geometry().translated(barre.mapTo(fenetre, croix.pos())
-                                           - croix.pos())
-        assert not fenetre._btn_settings.geometry().intersects(zone)
-
-    def test_le_bouton_parametres_remonte_quand_le_bandeau_part(self, qtbot, fenetre, mise_en_page_stable):
-        haut_initial = fenetre._btn_settings.geometry().top()
-        fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
-        mise_en_page_stable(fenetre)
-        assert fenetre._btn_settings.geometry().top() > haut_initial
-        fenetre._dismiss_notif()
-        mise_en_page_stable(fenetre)
-        assert fenetre._btn_settings.geometry().top() == haut_initial
+        assert croix.isVisible()
 
 
 class TestLeBandeauNeSEffacePas:

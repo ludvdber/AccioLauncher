@@ -297,6 +297,14 @@ def test_la_suite_ne_lit_jamais_la_vraie_manette():
     assert isinstance(lec.lecteur(), lec.LecteurMuet)
 
 
+def _boutons_de_fenetre(fenetre):
+    """Réduire, agrandir, fermer : les QPushButton nus de la barre du haut."""
+    from PyQt6.QtWidgets import QPushButton
+    from src.ui.title_bar import TitleBar
+    return [b for b in fenetre.findChild(TitleBar).findChildren(QPushButton)
+            if type(b) is QPushButton]
+
+
 class TestDansLaVraieFenetre:
     """Ce que Ludo a vécu le 2026-10-07 avec sa DS4, rejoué sur la vraie fenêtre.
 
@@ -313,10 +321,13 @@ class TestDansLaVraieFenetre:
         qtbot.waitUntil(lambda: QApplication.activeWindow() is win, timeout=3000)
         return win
 
-    def test_la_barre_de_titre_n_est_pas_dans_l_anneau(self, fenetre_reelle):
-        from src.ui.title_bar import TitleBar
-        boutons = fenetre_reelle.findChild(TitleBar).findChildren(QPushButton)
-        assert boutons and all(b.focusPolicy() == Qt.FocusPolicy.NoFocus for b in boutons)
+    def test_les_boutons_de_fenetre_ne_sont_pas_dans_l_anneau(self, fenetre_reelle):
+        boutons = _boutons_de_fenetre(fenetre_reelle)
+        assert len(boutons) == 3
+        assert all(b.focusPolicy() == Qt.FocusPolicy.NoFocus for b in boutons)
+
+    def test_les_onglets_sont_dans_l_anneau(self, fenetre_reelle):
+        assert fenetre_reelle._btn_stats.focusPolicy() != Qt.FocusPolicy.NoFocus
 
     def test_la_croix_au_demarrage_lance_l_action_principale(self, fenetre_reelle, nav,
                                                             monkeypatch):
@@ -328,11 +339,11 @@ class TestDansLaVraieFenetre:
         assert fenetre_reelle.isVisible() and not fenetre_reelle.isMinimized()
 
     def test_aucun_appui_vers_le_bas_ne_tombe_sur_la_fenetre(self, fenetre_reelle, nav):
-        from src.ui.title_bar import TitleBar
-        barre = fenetre_reelle.findChild(TitleBar)
+        boutons = _boutons_de_fenetre(fenetre_reelle)
         for _ in range(30):
             nav.agir(lec.BAS)
-            assert not barre.isAncestorOf(QApplication.focusWidget())
+            assert QApplication.focusWidget() not in boutons
+        assert fenetre_reelle.isVisible() and not fenetre_reelle.isMinimized()
 
     def test_on_sort_d_un_curseur_horizontal_sans_changer_sa_valeur(self, nav, qtbot):
         from PyQt6.QtWidgets import QSlider

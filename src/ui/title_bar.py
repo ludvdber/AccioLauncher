@@ -1,13 +1,14 @@
 """Barre de titre custom pour fenêtre sans cadre."""
 
-from PyQt6.QtCore import Qt, QPoint, QRectF
-from PyQt6.QtGui import QMouseEvent, QPainter
+from PyQt6.QtCore import Qt, QPoint, QRectF, QSize, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QIcon, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
 from src.core.i18n import tr
-from src.ui.fonts import cinzel
+from src.ui.fonts import body_font, cinzel
 from src.ui import theme
 from src.ui.ecu import Ecu, emaux
+from src.ui.icon_button import BLURPLE, pixmap_icone
 
 # Débord opaque sous le bord bas, en pixels logiques — même remède que
 # `background_widget._DEBORD_PX` pour la couture du carrousel : Qt découpe
@@ -15,15 +16,101 @@ from src.ui.ecu import Ecu, emaux
 # quelle que soit l'échelle d'affichage.
 _DEBORD_PX = 2.0
 
+HAUTEUR = 38
+
+# Les trois onglets, par clé (le libellé est traduit, la clé non).
+BIBLIOTHEQUE = "bibliotheque"
+ANNEES = "annees"
+PARAMETRES = "parametres"
+
+_TAILLE_LOGO = 16
+_ECART_LOGO = 8
+
+
+class _Onglet(QPushButton):
+    """Onglet de la barre : capitales Cinzel, trait à l'accent sous l'onglet ouvert.
+
+    Dans l'anneau de focus (règle 15), contrairement aux boutons de fenêtre :
+    ce sont les pages du launcher, la manette doit pouvoir les atteindre.
+    """
+
+    def __init__(self, libelle: str, palette: theme.Palette, parent: QWidget) -> None:
+        super().__init__(libelle.upper(), parent)
+        self.setCheckable(True)
+        self.setAccessibleName(libelle)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedHeight(HAUTEUR)
+        police = cinzel(9, bold=True)
+        police.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.6)
+        self.setFont(police)
+        # Bordure haute transparente de même épaisseur : le libellé reste
+        # centré quand le trait du bas apparaît.
+        self.setStyleSheet(
+            "QPushButton { background: transparent; color: #a9a7c4; padding: 0 12px;"
+            " border: none; border-top: 2px solid transparent;"
+            " border-bottom: 2px solid transparent; }"
+            f"QPushButton:hover {{ color: {palette.accent_light}; }}"
+            f"QPushButton:checked {{ color: #f2eee2; border-bottom-color: {palette.accent}; }}"
+            f"QPushButton:focus {{ color: {palette.accent_light}; }}"
+        )
+
+
+def _logo_espace(couleur: QColor) -> QIcon:
+    """Le logo suivi d'un blanc, en un seul pixmap (règle 30, même remède que
+    `about_page._icone_espacee`)."""
+    pm = pixmap_icone("discord", _TAILLE_LOGO, couleur)
+    ratio = pm.devicePixelRatio()
+    large = QPixmap(round((_TAILLE_LOGO + _ECART_LOGO) * ratio), round(_TAILLE_LOGO * ratio))
+    large.setDevicePixelRatio(ratio)
+    large.fill(Qt.GlobalColor.transparent)
+    p = QPainter(large)
+    p.drawPixmap(0, 0, pm)
+    p.end()
+    return QIcon(large)
+
+
+class _PastilleDiscord(QPushButton):
+    """« Discord » en pastille : logo officiel blanc, Blurple au survol."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__("Discord", parent)
+        libelle = tr("Discord : aide et communauté")
+        self.setToolTip(libelle)
+        self.setAccessibleName(libelle)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFont(body_font(10))
+        self.setFixedHeight(26)
+        self.setIconSize(QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
+        self._blanc = _logo_espace(QColor("#ffffff"))
+        self._survol = _logo_espace(BLURPLE)
+        self.setIcon(self._blanc)
+        self.setStyleSheet(
+            "QPushButton { background: transparent; color: #d9d6e8; padding: 0 12px 0 10px;"
+            " border: 1px solid rgba(255,255,255,0.12); border-radius: 13px; }"
+            "QPushButton:hover, QPushButton:focus { border-color: rgba(88,101,242,0.6);"
+            " background: rgba(88,101,242,0.12); }"
+        )
+
+    def enterEvent(self, event) -> None:
+        self.setIcon(self._survol)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self.setIcon(self._blanc)
+        super().leaveEvent(event)
+
 
 class TitleBar(QWidget):
-    """Barre de titre draggable avec boutons min/max/close."""
+    """Barre du haut : nom, écu, onglets, Discord et boutons de fenêtre."""
+
+    onglet_demande = pyqtSignal(str)
+    discord_demande = pyqtSignal()
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
         self._window = parent
         self._drag_pos: QPoint | None = None
-        self.setFixedHeight(38)
+        self.setFixedHeight(HAUTEUR)
         self.setStyleSheet("background: transparent;")
 
         layout = QHBoxLayout(self)
@@ -35,24 +122,51 @@ class TitleBar(QWidget):
         # couleur à côté d'un titre or — en permanence, sur l'élément de marque.
         self._title = QLabel("Accio Launcher")
         self._title.setFont(cinzel(13, bold=True))
-        self._title.setStyleSheet("color: #d6a72c; background: transparent;")
+        self._title.setStyleSheet(f"color: {theme.current().accent}; background: transparent;")
         layout.addWidget(self._title)
 
-        # L'écu et la maison, seulement avec un thème de maison (voir src/ui/ecu.py).
+        # L'écu, seulement avec un thème de maison (voir src/ui/ecu.py). La
+        # phrase « Élève de … » vivait à côté : avec les onglets, elle ne tenait
+        # plus à 980 px en espagnol. Elle passe dans l'infobulle de l'écu.
+        # L'écu laisse passer la souris (glisser la fenêtre par-dessus) : c'est
+        # son support, un QWidget nu qui ignore aussi le clic, qui porte la bulle.
         self._ecu = None
-        self._eleve = None
         palette = theme.current()
         if emaux(palette.id) is not None:
             layout.addSpacing(14)
-            self._ecu = Ecu(palette.id, self)
-            layout.addWidget(self._ecu, alignment=Qt.AlignmentFlag.AlignVCenter)
-            layout.addSpacing(8)
-            self._eleve = QLabel(tr("Élève de {}").format(tr(palette.nom)))
-            self._eleve.setFont(cinzel(10))
-            self._eleve.setStyleSheet("color: #8a8aaa; background: transparent;")
-            layout.addWidget(self._eleve)
+            support = QWidget(self)
+            support.setToolTip(tr("Élève de {}").format(tr(palette.nom)))
+            boite = QHBoxLayout(support)
+            boite.setContentsMargins(0, 0, 0, 0)
+            self._ecu = Ecu(palette.id, support)
+            boite.addWidget(self._ecu)
+            layout.addWidget(support, alignment=Qt.AlignmentFlag.AlignVCenter)
+            self._support_ecu = support
+
+        layout.addSpacing(18)
+        self._onglets: dict[str, QPushButton] = {}
+        for cle, libelle in ((BIBLIOTHEQUE, tr("Bibliothèque")),
+                             (ANNEES, tr("Mes années")),
+                             (PARAMETRES, tr("Paramètres"))):
+            onglet = _Onglet(libelle, palette, self)
+            onglet.clicked.connect(lambda _=False, c=cle: self.onglet_demande.emit(c))
+            layout.addWidget(onglet)
+            self._onglets[cle] = onglet
+        self.set_onglet(BIBLIOTHEQUE)
 
         layout.addStretch()
+
+        # Discord : le logo officiel, blanc au repos et Blurple au survol, dans
+        # TOUS les thèmes (une marque ne prend pas la couleur de la maison).
+        self._discord = _PastilleDiscord(self)
+        self._discord.clicked.connect(self.discord_demande)
+        layout.addWidget(self._discord, alignment=Qt.AlignmentFlag.AlignVCenter)
+        filet = QWidget(self)
+        filet.setFixedSize(1, 18)
+        filet.setStyleSheet("background: rgba(255,255,255,0.10);")
+        layout.addSpacing(14)
+        layout.addWidget(filet, alignment=Qt.AlignmentFlag.AlignVCenter)
+        layout.addSpacing(6)
 
         # Boutons minimalistes
         for text, slot, hover_bg, label in (
@@ -79,6 +193,19 @@ class TitleBar(QWidget):
             )
             btn.clicked.connect(slot)
             layout.addWidget(btn)
+
+    def set_onglet(self, cle: str) -> None:
+        """Souligne l'onglet ouvert. Mes années et Paramètres sont des fenêtres
+        modales : la fenêtre principale remet Bibliothèque à leur fermeture."""
+        for c, onglet in self._onglets.items():
+            onglet.setChecked(c == cle)
+
+    def onglet(self, cle: str) -> QPushButton:
+        return self._onglets[cle]
+
+    @property
+    def discord(self) -> QPushButton:
+        return self._discord
 
     def _on_minimize(self) -> None:
         self._window.showMinimized()
