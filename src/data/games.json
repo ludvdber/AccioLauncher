@@ -2014,6 +2014,7 @@
       "executable": "HP8/pc/hp8.exe",
       "essential_files": [
         "HP8/pc/d3d9.dll",
+        "HP8/pc/paul.dll",
         "HP8/pc/xinput1_3.dll"
       ],
       "screenshots": {
