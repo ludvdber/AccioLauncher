@@ -23,3 +23,6 @@ DEPOT_URL = "https://github.com/ludvdber/AccioLauncher"
 # wine ne sont trouvés. Une ancre de titre GitHub : « Linux / Bazzite » donne
 # `linux--bazzite` (minuscules, espaces en tirets, barre oblique retirée).
 GUIDE_LINUX_URL = "https://github.com/ludvdber/AccioLauncher#linux--bazzite"
+# « Protection contre les virus et menaces » de Sécurité Windows, ouverte par
+# l'aide antivirus de la fiche (Windows seulement : le bouton n'existe pas ailleurs).
+SECURITE_WINDOWS_URL = "windowsdefender://threatsettings/"

@@ -51,28 +51,37 @@ class TestPastille:
         qtbot.addWidget(p)
         return p
 
+    # Depuis la piste A (2026-10-09), la manette n'est plus une pastille parmi
+    # les genres : elle ouvre la ligne d'indices sous le bouton.
     @staticmethod
     def _pastilles(panneau):
         lay = panneau._tags_layout
         return [lay.itemAt(i).widget().text() for i in range(lay.count())]
 
     def _montrer(self, panneau, **champs):
-        panneau._refresh_tags(GameData.from_dict(dict(BASE, tags=["Aventure"], **champs)))
-        return self._pastilles(panneau)
+        jeu = GameData.from_dict(dict(BASE, tags=["Aventure"], **champs))
+        panneau._refresh_tags(jeu)
+        panneau._refresh_indices(jeu)
+        return panneau._indices.text()
 
     def test_rien_tant_que_le_jeu_n_est_pas_essaye(self, panneau):
-        assert self._montrer(panneau) == ["AVENTURE"]
+        assert "manette" not in self._montrer(panneau).lower()
 
     @pytest.mark.parametrize("niveau, texte", [
-        ("yes", "MANETTE"), ("partial", "MANETTE EN PARTIE"), ("no", "SANS MANETTE")])
+        ("yes", "Jouable à la manette"), ("partial", "Manette en partie"),
+        ("no", "Sans manette")])
     def test_chaque_niveau_a_son_libelle(self, panneau, niveau, texte):
-        assert self._montrer(panneau, controller=niveau) == ["AVENTURE", texte]
+        assert self._montrer(panneau, controller=niveau).startswith(texte)
+
+    def test_plus_de_pastille_parmi_les_genres(self, panneau):
+        self._montrer(panneau, controller="yes")
+        assert self._pastilles(panneau) == ["AVENTURE"]
 
     def test_la_note_est_en_infobulle(self, panneau):
         self._montrer(panneau, controller="partial", controller_note="Souris au démarrage")
-        lay = panneau._tags_layout
-        assert lay.itemAt(lay.count() - 1).widget().toolTip() == "Souris au démarrage"
+        assert panneau._indices.toolTip() == "Souris au démarrage"
 
-    def test_changer_de_jeu_efface_la_pastille(self, panneau):
+    def test_changer_de_jeu_efface_la_manette(self, panneau):
         self._montrer(panneau, controller="yes")
-        assert self._montrer(panneau) == ["AVENTURE"]
+        assert "manette" not in self._montrer(panneau).lower()
+

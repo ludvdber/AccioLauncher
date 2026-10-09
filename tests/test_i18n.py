@@ -30,6 +30,8 @@ IDENTIQUES_TOLEREES = {
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.
     "En {}",
+    # Le nom du menu de Sécurité Windows en anglais (aide antivirus).
+    "Exclusions",
     # « Contraste » : même mot en espagnol (réglage d'image du correctif).
     "Contraste",
     # « Textures » : même mot en anglais (famille d'effets de « Qualité d'image »).

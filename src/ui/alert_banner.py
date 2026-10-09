@@ -14,6 +14,7 @@ entière : rien ne s'affiche tant que rien ne manque.
 
 import sys
 from html import escape
+from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
@@ -257,7 +258,11 @@ class AlertBanner(QLabel):
         if not texte:
             return ""
         lien = ""
-        if game.warning_url:
+        if game.warning_help:
+            # Aide intégrée (aide_antivirus.py) : prime sur l'adresse, la
+            # réponse s'ouvre dans le launcher au lieu d'un navigateur.
+            lien = " " + LIEN.format("aide", WARN, tr("Que faire ?"))
+        elif game.warning_url:
             lien = " " + LIEN.format("avertissement", WARN, tr("En savoir plus"))
         self._brut = (texte, lien)
         self._largeur_elision = self._largeur_utile()
@@ -370,6 +375,10 @@ class AlertBanner(QLabel):
             # on cherche à nouveau umu et wine (`invalidate_vcredist_cache`).
             self._attend_prerequis = True
             open_url(GUIDE_LINUX_URL)
+        elif href == "aide":
+            # Import tardif : aide_antivirus importe WARN d'ici.
+            from src.ui.aide_antivirus import AideAntivirus
+            AideAntivirus(Path(self._manager.config.install_path), self.window()).exec()
         elif href == "avertissement":
             # L'URL a été validée au PARSING (https uniquement) : le catalogue
             # est distant, c'est la seule de ses chaînes qui atteigne le

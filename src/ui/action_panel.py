@@ -15,7 +15,8 @@ from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
 from src.ui.icon_button import IconButton
 from src.core.formatting import (
-    append_part_info, format_progress_line, format_size,
+    append_part_info, format_duree_compacte, format_progress_line,
+    format_relative_date, format_size,
 )
 from src.ui.theme import current as palette_courante, themed
 from src.ui.utils import clear_layout
@@ -32,6 +33,27 @@ _COMING_SOON_W = 300
 _BOUTON_MIN_W = 300
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
+# Bouton JOUER et engrenage à la même hauteur (piste A, 2026-10-09).
+_HAUTEUR_JOUER = 48
+
+
+def _colonne_stat(libelle: str, valeur: str) -> QWidget:
+    """« TEMPS DE JEU » au-dessus de « 14 h 22 » : le libellé petit et gris,
+    la valeur lisible. Une colonne par fait, posées côte à côte."""
+    col = QWidget()
+    col.setStyleSheet("background: transparent;")
+    boite = QVBoxLayout(col)
+    boite.setContentsMargins(0, 0, 0, 0)
+    boite.setSpacing(3)
+    haut = QLabel(libelle.upper())
+    haut.setFont(cinzel(8, bold=True))
+    haut.setStyleSheet("color: #8f8db0; letter-spacing: 2px;")
+    bas = QLabel(valeur)
+    bas.setFont(body_font(15))
+    bas.setStyleSheet("color: #f2f2f4;")
+    boite.addWidget(haut)
+    boite.addWidget(bas)
+    return col
 
 
 class ActionPanel(QWidget):
@@ -89,6 +111,20 @@ class ActionPanel(QWidget):
         self._action_layout.setSpacing(14)
         self._action_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._layout.addWidget(self._action_container)
+
+        # Temps de jeu et dernière session, À DROITE des boutons quand la place
+        # le permet (maquette piste A), sinon sur leur propre ligne en dessous.
+        # Recréées à chaque `refresh`, déplacées sans être détruites au
+        # redimensionnement (_placer_stats).
+        self._stats: QWidget | None = None
+        self._separateur: QWidget | None = None
+        self._stats_dessous = QWidget()
+        self._stats_dessous.setStyleSheet("background: transparent;")
+        self._stats_dessous_layout = QHBoxLayout(self._stats_dessous)
+        self._stats_dessous_layout.setContentsMargins(0, 2, 0, 0)
+        self._stats_dessous_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._stats_dessous.hide()
+        self._layout.addWidget(self._stats_dessous)
 
         # Ligne de mise à jour
         self._update_row = QWidget()
@@ -149,11 +185,20 @@ class ActionPanel(QWidget):
         if self._alert.isVisible():
             self._alert.ajuster_hauteur()
         self._fit_coming_soon_note()
+        self._placer_stats()
 
     def refresh(self) -> None:
         """Reconstruit le panneau selon l'état courant du jeu."""
         self._clear_layout(self._action_layout)
+        # Séparateur hors de tout layout quand les stats sont dessous : le
+        # vider des layouts ne le détruirait pas.
+        if self._separateur is not None and self._action_layout.indexOf(self._separateur) < 0:
+            self._separateur.deleteLater()
         self._clear_layout(self._update_row_layout)
+        self._clear_layout(self._stats_dessous_layout)
+        self._stats_dessous.hide()
+        self._stats = None
+        self._separateur = None
         self._update_row.hide()
         self._progress_bar = None
         self._download_label = None
@@ -377,7 +422,7 @@ class ActionPanel(QWidget):
         btn_play.setObjectName("btnPlay")
         btn_play.setAccessibleName(tr("Jouer à {}").format(self._game.name))
         btn_play.setFont(cinzel(15, bold=True))
-        btn_play.setFixedSize(200, 48)
+        btn_play.setFixedSize(200, _HAUTEUR_JOUER)
         btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_play.clicked.connect(self.play_clicked)
         self._action_layout.addWidget(btn_play)
@@ -398,7 +443,7 @@ class ActionPanel(QWidget):
         # niveaux de gris : 49 % de pixels colorés, contre 0 % pour une lettre
         # et 22 % pour 🔊 pris comme témoin. Il partait donc en couleur, comme
         # le haut-parleur de la barre audio, et plus franchement encore.
-        btn_reglages = IconButton("reglages", taille=36, cadre="#8a8aaa")
+        btn_reglages = IconButton("reglages", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
         btn_reglages.setObjectName("btnGameSettings")
         btn_reglages.setAccessibleName(
             tr("Réglages de {}").format(self._game.name))
@@ -407,6 +452,7 @@ class ActionPanel(QWidget):
         btn_reglages.clicked.connect(self.game_settings_clicked)
         self._action_layout.addWidget(btn_reglages)
         self._btn_reglages = btn_reglages
+        self._construire_stats()
 
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"
@@ -424,6 +470,62 @@ class ActionPanel(QWidget):
             self._update_row_layout.addWidget(lbl)
             self._update_row_layout.addWidget(link)
             self._update_row.show()
+
+    def _construire_stats(self) -> None:
+        """Les deux colonnes, seulement pour un jeu déjà joué (règle 107)."""
+        secondes = self._manager.get_playtime(self._game.id)
+        if secondes <= 0:
+            return
+        stats = QWidget()
+        stats.setObjectName("statsJeu")
+        stats.setStyleSheet("background: transparent;")
+        rang = QHBoxLayout(stats)
+        rang.setContentsMargins(0, 0, 0, 0)
+        rang.setSpacing(26)
+        rang.addWidget(_colonne_stat(tr("Temps de jeu"), format_duree_compacte(secondes)))
+        derniere = self._manager.last_played(self._game.id)
+        if derniere:
+            quand = format_relative_date(derniere)
+            rang.addWidget(_colonne_stat(tr("Dernière session"), quand[:1].upper() + quand[1:]))
+        self._separateur = QWidget()
+        self._separateur.setFixedSize(1, 40)
+        self._separateur.setStyleSheet("background: rgba(255,255,255,0.14);")
+        self._stats = stats
+        self._placer_stats()
+
+    def _placer_stats(self) -> None:
+        """À droite des boutons si la rangée tient dans la largeur, dessous sinon.
+
+        Déplacées, pas reconstruites : un `refresh` à chaque redimensionnement
+        rebâtirait les boutons et volerait le focus de la manette.
+        """
+        if self._stats is None or self._separateur is None:
+            return
+        rangee = self._action_layout
+        a_droite = rangee.indexOf(self._stats) >= 0
+        largeur = self.width()
+        boutons = sum(rangee.itemAt(i).widget().width()
+                      for i in range(rangee.count())
+                      if rangee.itemAt(i).widget() not in (self._stats, self._separateur))
+        besoin = (boutons + self._stats.sizeHint().width() + self._separateur.width()
+                  + 4 * rangee.spacing())
+        veut_droite = largeur <= 0 or besoin <= largeur
+        dessous = self._stats_dessous_layout.indexOf(self._stats) >= 0
+        if (veut_droite and a_droite) or (not veut_droite and dessous):
+            return
+        rangee.removeWidget(self._separateur)
+        rangee.removeWidget(self._stats)
+        self._stats_dessous_layout.removeWidget(self._stats)
+        if veut_droite:
+            rangee.addWidget(self._separateur, 0, Qt.AlignmentFlag.AlignVCenter)
+            rangee.addWidget(self._stats, 0, Qt.AlignmentFlag.AlignVCenter)
+            self._separateur.show()
+            self._stats_dessous.hide()
+        else:
+            self._separateur.hide()
+            self._stats_dessous_layout.addWidget(self._stats)
+            self._stats_dessous.show()
+        self._stats.show()
 
     @staticmethod
     def _clear_layout(layout) -> None:

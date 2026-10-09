@@ -7,6 +7,7 @@ absence que son contenu.
 """
 
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -401,6 +402,61 @@ class TestAvertissementDuCatalogue:
         assert "En savoir plus" not in widget._alert.text()
         widget._alert._on_lien("avertissement")
         assert ouvertes == []
+
+    def test_l_aide_integree_prime_sur_l_adresse(self, panel, monkeypatch):
+        _disque(monkeypatch, 900_000)
+        widget = self._prepare(panel, GameState.NOT_INSTALLED, warning=self._TEXTE,
+                               warning_url="https://acciolauncher.be/aide/antivirus",
+                               warning_help="antivirus")
+        assert "Que faire ?" in widget._alert.text()
+        assert "En savoir plus" not in widget._alert.text()
+
+    def test_que_faire_ouvre_l_aide_sur_le_dossier_des_jeux(self, panel, monkeypatch):
+        ouvertes = []
+
+        class _Aide:
+            def __init__(self, dossier, parent):
+                ouvertes.append(dossier)
+
+            def exec(self):
+                return 0
+
+        monkeypatch.setattr("src.ui.aide_antivirus.AideAntivirus", _Aide)
+        _disque(monkeypatch, 900_000)
+        widget = self._prepare(panel, GameState.INSTALLED, warning=self._TEXTE,
+                               warning_help="antivirus")
+        widget._alert._on_lien("aide")
+        assert ouvertes == [Path(panel[1].config.install_path)]
+
+
+class TestAideAntivirus:
+    def test_le_chemin_se_copie(self, qtbot, tmp_path):
+        from PyQt6.QtGui import QGuiApplication
+        from src.ui.aide_antivirus import AideAntivirus
+        aide = AideAntivirus(tmp_path)
+        qtbot.addWidget(aide)
+        aide._copier.click()
+        assert QGuiApplication.clipboard().text() == str(tmp_path)
+
+    def test_le_bouton_ouvre_securite_windows(self, qtbot, tmp_path, monkeypatch):
+        import sys
+        from src.core.liens import SECURITE_WINDOWS_URL
+        from src.ui import aide_antivirus
+        ouvertes = []
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(aide_antivirus, "open_url", ouvertes.append)
+        aide = aide_antivirus.AideAntivirus(tmp_path)
+        qtbot.addWidget(aide)
+        aide._ouvrir.click()
+        assert ouvertes == [SECURITE_WINDOWS_URL]
+
+    def test_pas_de_bouton_windows_ailleurs(self, qtbot, tmp_path, monkeypatch):
+        import sys
+        from src.ui.aide_antivirus import AideAntivirus
+        monkeypatch.setattr(sys, "platform", "linux")
+        aide = AideAntivirus(tmp_path)
+        qtbot.addWidget(aide)
+        assert aide._ouvrir is None
 
 
 class TestPlafondDuBandeau:

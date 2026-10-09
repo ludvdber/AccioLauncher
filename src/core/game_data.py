@@ -70,6 +70,12 @@ def _niveau_manette(valeur: object) -> str:
     return ""
 
 
+# Aides intégrées qu'une mise en garde du catalogue peut nommer. Une valeur
+# inconnue (catalogue plus récent que le launcher) est ignorée : le bandeau
+# reste lisible sans son lien.
+AIDES_AVERTISSEMENT = frozenset({"antivirus"})
+
+
 @dataclass(frozen=True, slots=True)
 class GameVersion:
     """Une version téléchargeable d'un jeu."""
@@ -145,6 +151,11 @@ class GameData:
     # s'affiche que lorsqu'il y a une DÉVIATION à signaler.
     warning: str = ""
     warning_url: str = ""   # « En savoir plus » — https uniquement, validé au parsing
+    # Aide intégrée « Que faire ? » attachée à la mise en garde. Le catalogue
+    # NOMME une aide que le launcher connaît (AIDES_AVERTISSEMENT) et n'envoie
+    # jamais son texte : les étapes passent par `tr()` et le bouton ouvre un
+    # réglage de Windows, deux choses qu'une chaîne distante ne doit pas porter.
+    warning_help: str = ""
     # Langues proposées par le jeu + ce qu'elles écrivent dans le registre.
     # None quand le jeu n'en propose pas par le registre (seuls HP7a et HP7b le
     # font) ; sans aucun bloc de langue, le sélecteur n'apparaît nulle part.
@@ -351,6 +362,8 @@ class GameData:
                            if isinstance(r, str)),
             warning=_loc(data, "warning", ""),
             warning_url=_url_aide_valide(data.get("warning_url", "")),
+            warning_help=(data.get("warning_help", "")
+                          if data.get("warning_help") in AIDES_AVERTISSEMENT else ""),
             language_registry=_parse_language_registry(data.get("language_registry")),
             language_files=(None if data.get("language_registry") is not None
                             else _parse_language_files(data.get("language_files"))),

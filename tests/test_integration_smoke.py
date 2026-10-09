@@ -1175,9 +1175,12 @@ class TestSelecteurDeLangue:
         tests indéfiniment."""
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
-        meta = win._detail._info._meta.text()
-        assert 'href="changelog"' in meta
-        assert meta.count("href=") == 1
+        # Le changelog est descendu sous le bouton (piste A, 2026-10-09) :
+        # la ligne méta n'a plus AUCUN lien, la ligne d'indices un seul.
+        assert "href=" not in win._detail._info._meta.text()
+        indices = win._detail._info._indices.text()
+        assert 'href="changelog"' in indices
+        assert indices.count("href=") == 1
 
     def test_le_choix_est_bien_retenu(self, make_window_multilingue):
         """Le réglage vit toujours — il ne s'AFFICHE simplement plus sur la fiche."""

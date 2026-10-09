@@ -44,8 +44,9 @@ from PyQt6.QtWidgets import (
 from src.core import sauvegardes, scolarite, stats
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
+from src.ui.ecu import emaux
 from src.ui.fonts import cinzel
-from src.ui.theme import themed
+from src.ui.theme import current as theme_courant, themed
 from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _SECONDAIRE,
     _DISCRET,
@@ -181,6 +182,12 @@ class StatsDialog(QDialog):
         titre = QLabel(tr("Mes années à Poudlard"))
         titre.setFont(cinzel(18, bold=True))
         root.addWidget(titre)
+        # Sous le titre : la maison et l'avancée (refonte du 2026-10-09). La
+        # phrase vivait dans la barre du haut, où elle ne tenait plus à côté
+        # des onglets ; ici, c'est la page de la scolarité.
+        entete = self._phrase_entete(theme_courant(), self._annees())
+        if entete:
+            root.addWidget(_texte(entete, 13, theme_courant().accent))
         # Le résumé ne s'écrit en tête que lorsque la page n'a RIEN d'autre à
         # dire : dès qu'il y a du temps, la colonne de la saga porte le même
         # total, et le dire deux fois (Ludo, capture du 2026-09-19) fait
@@ -261,6 +268,31 @@ class StatsDialog(QDialog):
         return tr("Aucune partie enregistrée pour l'instant — "
                   "lancez un jeu, cette page se remplira toute seule.")
 
+    def _annees(self):
+        return scolarite.annees(
+            [e.game for e in self._entrees],
+            lambda gid: self._etats.get(gid) is GameState.INSTALLED,
+            lambda gid: self._temps.get(gid, 0))
+
+    @staticmethod
+    def _phrase_entete(palette, liste) -> str:
+        """« Élève de Serdaigle · 5 années commencées sur 7 ».
+
+        Chaque moitié n'apparaît que si elle dit quelque chose : pas de maison
+        sous le thème Poudlard, pas de compte tant qu'aucune année n'a commencé
+        (« 0 année commencée » serait un état normal affiché, règle 107).
+        """
+        morceaux = []
+        if emaux(palette.id) is not None:
+            morceaux.append(tr("Élève de {}").format(tr(palette.nom)))
+        commencees = sum(1 for a in liste if a.statut is scolarite.Statut.COMMENCEE)
+        if commencees == 1:
+            morceaux.append(tr("1 année commencée sur {}").format(scolarite.ANNEES))
+        elif commencees > 1:
+            morceaux.append(tr("{} années commencées sur {}").format(
+                commencees, scolarite.ANNEES))
+        return "  ·  ".join(morceaux)
+
     def _bande_scolarite(self) -> QVBoxLayout | None:
         """Les sept années — la bande, son titre et sa phrase.
 
@@ -269,10 +301,7 @@ class StatsDialog(QDialog):
         « aucune partie enregistrée » sont du remplissage. Un état ne s'affiche
         que lorsqu'il dévie.
         """
-        liste = scolarite.annees(
-            [e.game for e in self._entrees],
-            lambda gid: self._etats.get(gid) is GameState.INSTALLED,
-            lambda gid: self._temps.get(gid, 0))
+        liste = self._annees()
         courante = scolarite.annee_courante(liste)
         if courante == 0:
             return None

@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.41",
+  "catalog_version": "0.42",
   "contributors": [
     {
       "name": "ASTeam",
@@ -2219,7 +2219,7 @@
             "Combat",
             "Battle"
           ],
-          "warning": "Your antivirus may delete Paul.dll during installation. If the game does not start, restore that file from quarantine."
+          "warning": "Your antivirus may delete Paul.dll during installation."
         },
         "es": {
           "name": "Harry Potter y las reliquias de la Muerte — Parte 2",
@@ -2230,7 +2230,7 @@
             "Combate",
             "Batalla"
           ],
-          "warning": "Su antivirus puede eliminar Paul.dll durante la instalación. Si el juego no arranca, restaure ese archivo desde la cuarentena."
+          "warning": "Su antivirus puede eliminar Paul.dll durante la instalación."
         }
       },
       "dpi_aware": true,
@@ -2238,7 +2238,8 @@
         "vcredist2008_x86",
         "d3dx9_37"
       ],
-      "warning": "Votre antivirus peut supprimer Paul.dll pendant l'installation. Si le jeu ne démarre pas, restaurez ce fichier depuis la quarantaine.",
+      "warning": "Votre antivirus peut supprimer Paul.dll pendant l'installation.",
+      "warning_help": "antivirus",
       "saves": {
         "root": "localappdata",
         "folders": [

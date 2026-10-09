@@ -127,16 +127,10 @@ _TROU_MAX = 40
 
 
 class TestHauteurZoneAction:
-    def test_une_ligne_de_stats_ne_compte_pas_pour_quatre(self, fenetre, qtbot):
-        """La mesure retenue doit être celle de la place RÉELLEMENT occupée."""
-        win = fenetre(temps_de_jeu=70)
-        info = win._detail._info
-        assert info._stats_label.isVisible(), "la ligne de stats doit être là"
-
-        annonce = info._action_slot.sizeHint().height()
-        calcul = info._hauteur_zone_action()
-        # Place réellement occupée, marges du slot comprises — elles font partie
-        # de la zone, même si aucun widget ne les dessine.
+    @staticmethod
+    def _reel(info):
+        """Place réellement occupée, marges du slot comprises — elles font
+        partie de la zone, même si aucun widget ne les dessine."""
         marges = info._action_slot.contentsMargins()
         premier_widget = min(
             info._action_slot.itemAt(i).widget().mapTo(
@@ -144,22 +138,26 @@ class TestHauteurZoneAction:
             for i in range(info._action_slot.count())
             if info._action_slot.itemAt(i).widget() is not None
         )
-        reel = info.height() - premier_widget + marges.top() + marges.bottom()
+        return info.height() - premier_widget + marges.top() + marges.bottom()
 
-        assert abs(calcul - reel) <= 4, (
-            f"la hauteur calculée ({calcul}) doit coller à la réalité ({reel})")
-        assert calcul < annonce, (
-            f"le sizeHint du slot ({annonce}) surestime, il ne doit plus servir")
-
-    def test_un_widget_cache_ne_prend_pas_de_place(self, fenetre, qtbot):
-        """Jamais joué : la ligne de stats est cachée, elle ne compte pas."""
-        win = fenetre()
+    def test_les_stats_a_cote_du_bouton_comptent_juste(self, fenetre, qtbot):
+        """Déjà joué et installé : les deux colonnes de statistiques sont à
+        droite du bouton, et la mesure suit la place RÉELLEMENT occupée."""
+        win = fenetre(temps_de_jeu=70, installe=True)
         info = win._detail._info
-        assert not info._stats_label.isVisible()
-        bouton_seul = info._action_slot.itemAt(0).widget().sizeHint().height()
-        marges = info._action_slot.contentsMargins()
-        assert info._hauteur_zone_action() == (
-            bouton_seul + marges.top() + marges.bottom())
+        panneau = win._detail._action_panel
+        assert panneau._stats is not None and panneau._stats.isVisible()
+        assert panneau._action_layout.indexOf(panneau._stats) >= 0, (
+            "à 1250 px, les statistiques tiennent à droite du bouton")
+        assert abs(info._hauteur_zone_action() - self._reel(info)) <= 4
+
+    def test_jamais_joue_pas_de_stats(self, fenetre, qtbot):
+        """Jamais joué : aucune colonne, et la mesure colle toujours."""
+        win = fenetre(installe=True)
+        info = win._detail._info
+        assert win._detail._action_panel._stats is None
+        assert not win._detail._action_panel._stats_dessous.isVisible()
+        assert abs(info._hauteur_zone_action() - self._reel(info)) <= 4
 
 
 class TestTrouSousLaDescription:

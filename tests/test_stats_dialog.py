@@ -460,3 +460,29 @@ def test_le_temps_joue_sans_sauvegarder_est_dit(qtbot, manager):
     dlg = StatsDialog(manager)
     qtbot.addWidget(dlg)
     assert "Dont 25 min jouées sans sauvegarder." in _labels(dlg)
+
+
+class TestPhraseDEntete:
+    """« Élève de Serdaigle · 5 années commencées sur 7 », sous le titre."""
+
+    @staticmethod
+    def _liste(commencees):
+        from src.core.scolarite import Annee, Statut
+        return [Annee(n, (), Statut.COMMENCEE if n <= commencees else Statut.ABSENTE, 0)
+                for n in range(1, 8)]
+
+    def test_maison_et_annees(self):
+        from src.ui.theme import THEMES
+        phrase = StatsDialog._phrase_entete(THEMES["serdaigle"], self._liste(5))
+        assert phrase == "Élève de Serdaigle  ·  5 années commencées sur 7"
+
+    def test_une_seule_annee_au_singulier(self):
+        from src.ui.theme import THEMES
+        assert (StatsDialog._phrase_entete(THEMES["poudlard"], self._liste(1))
+                == "1 année commencée sur 7")
+
+    def test_rien_a_dire_rien_d_ecrit(self):
+        from src.ui.theme import THEMES
+        assert StatsDialog._phrase_entete(THEMES["poudlard"], self._liste(0)) == ""
+        assert (StatsDialog._phrase_entete(THEMES["gryffondor"], self._liste(0))
+                == "Élève de Gryffondor")

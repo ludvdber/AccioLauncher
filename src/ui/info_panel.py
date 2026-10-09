@@ -15,7 +15,7 @@ from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.theme import current as current_theme, themed
 from src.ui.utils import clear_layout
-from src.core.formatting import format_playtime, format_relative_date, format_size
+from src.core.formatting import format_size
 
 # Largeurs de CONFORT, toujours rabotées à la place réelle : figées, elles
 # débordaient sous ~1100 px de fenêtre.
@@ -227,8 +227,9 @@ class InfoPanel(QWidget):
         lay.addWidget(self._tags_container)
         lay.addSpacing(10)
 
-        # Ligne méta UNIQUE (année, studio, poids, version + changelog,
-        # téléchargements) : un seul libellé qui se replie comme une phrase.
+        # Ligne méta UNIQUE (année, studio, poids, téléchargements) : un seul
+        # libellé qui se replie comme une phrase. La version et ses nouveautés
+        # sont descendues sous le bouton (piste A, 2026-10-09).
         # En plusieurs widgets, le compteur sautait de place d'un jeu à l'autre.
         self._meta = QLabel()
         self._meta.setObjectName("gameMeta")
@@ -245,14 +246,22 @@ class InfoPanel(QWidget):
         lay.addWidget(self._meta)
         lay.addSpacing(16)
 
-        # Statistiques : créées ici, épinglées sous le bouton (add_bottom_widget).
-        self._stats_label = QLabel()
-        self._stats_label.setFont(body_font(12))
-        self._stats_label.setStyleSheet(themed(
-            "QLabel { color: rgba(214, 167, 44, 0.70); background: transparent; }"
-        ))
-        self._stats_label.setWordWrap(True)
-        self._stats_label.setVisible(False)
+        # Ligne d'indices, épinglée sous le bouton (add_bottom_widget) :
+        # « Jouable à la manette · Version 1.3 · Nouveautés ». La manette
+        # était une pastille parmi les genres, la version un lien dans la
+        # ligne méta ; ici, ce sont des faits sur CE qu'on lance.
+        self._indices = QLabel()
+        self._indices.setObjectName("indicesJeu")
+        self._indices.setFont(body_font(13))
+        self._indices.setWordWrap(True)
+        self._indices.setTextFormat(Qt.TextFormat.RichText)
+        self._indices.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        )
+        self._indices.setStyleSheet(
+            "QLabel { color: #a3a1bf; background: transparent; padding-top: 6px; }")
+        self._indices.linkActivated.connect(self._on_meta_link)
 
         # Description
         self._desc = QLabel()
@@ -301,12 +310,12 @@ class InfoPanel(QWidget):
         self._apply_title_size(avail)
         self._title.setMaximumWidth(min(_TITLE_MAX_W, avail))
         self._desc.setMaximumWidth(min(_DESC_MAX_W, avail))
-        self._stats_label.setMaximumWidth(avail)
+        self._indices.setMaximumWidth(avail)
         self._tags_container.setMaximumWidth(avail)
         self._meta.setMaximumWidth(avail)
         self._fit_height(self._title)
         self._fit_height(self._desc)
-        self._fit_height(self._stats_label)
+        self._fit_height(self._indices)
         self._relayout_tags(avail)
         self._fit_height(self._meta)
 
@@ -396,15 +405,11 @@ class InfoPanel(QWidget):
         sep = f'<span style="color:{gold}; margin: 0 6px;"> ◆ </span>'
         dl = game.current_download
         size_str = format_size(dl.size_mb) if dl else "?"
-        installed = self._manager.installed_version(game.id)
-        version = installed or game.recommended_version
-        lien = (f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
-                + _insecable(tr("v{} · nouveautés").format(version)) + '</a>')
         # `escape` sur tout (règle 58) : en RichText, le balisage d'un nom de
         # studio serait interprété (et un `<img src="file:///…">` lu).
         morceaux = [escape(str(game.year), quote=False),
                     _insecable(escape(game.developer, quote=False)),
-                    _insecable(escape(size_str, quote=False)), lien]
+                    _insecable(escape(size_str, quote=False))]
 
         # PAS de langue du jeu ici : « FRANÇAIS » est un état normal (règle 107).
         # Le réglage vit dans l'engrenage (GameSettingsDialog, rubrique « Langue »).
@@ -428,9 +433,7 @@ class InfoPanel(QWidget):
             + sep.join(morceaux) + '</span>'
         )
 
-
-        # Stats de jeu — une seule ligne discrète, affichée uniquement si déjà joué
-        self._refresh_stats(game)
+        self._refresh_indices(game)
 
         # Description
         self._set_desc_text(game.description)
@@ -443,10 +446,10 @@ class InfoPanel(QWidget):
         self._apply_available_width()
 
     def add_bottom_widget(self, widget: QWidget) -> None:
-        """Épingle un widget sous la zone défilante, suivi des statistiques :
-        elles commentent l'action (« reprendre ? »)."""
+        """Épingle un widget sous la zone défilante, suivi de la ligne
+        d'indices : elle parle de ce que le bouton lance."""
         self._action_slot.addWidget(widget)
-        self._action_slot.addWidget(self._stats_label)
+        self._action_slot.addWidget(self._indices)
 
     def add_stretch(self) -> None:
         self._layout.addStretch()
@@ -471,20 +474,27 @@ class InfoPanel(QWidget):
         self._apply_available_width()
         self.content_changed.emit()
 
-    # ──────────────────── Stats de jeu ────────────────────
+    # ──────────────────── Indices ────────────────────
 
-    def _refresh_stats(self, game: GameData) -> None:
-        """Ligne « 14 h de jeu · Dernière session : hier » — cachée si jamais joué."""
-        seconds = self._manager.get_playtime(game.id)
-        if seconds <= 0:
-            self._stats_label.setVisible(False)
-            return
-        parts = [format_playtime(seconds)]
-        last = self._manager.last_played(game.id)
-        if last:
-            parts.append(tr("Dernière session : {}").format(format_relative_date(last)))
-        self._stats_label.setText("  ·  ".join(parts))
-        self._stats_label.setVisible(True)
+    def _refresh_indices(self, game: GameData) -> None:
+        """« Jouable à la manette · Version 1.3 · Nouveautés ».
+
+        La manette n'est dite que si le jeu a été essayé (`controller` vide :
+        rien, règle 108) ; sa nuance est en infobulle (`controller_note`).
+        """
+        gold = current_theme().accent
+        morceaux = []
+        manette = {"yes": tr("Jouable à la manette"), "partial": tr("Manette en partie"),
+                   "no": tr("Sans manette")}.get(game.controller)
+        if manette:
+            morceaux.append(escape(manette, quote=False))
+        version = self._manager.installed_version(game.id) or game.recommended_version
+        morceaux.append(_insecable(escape(tr("Version {}").format(version), quote=False)))
+        morceaux.append(f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
+                        + escape(tr("Nouveautés"), quote=False) + '</a>')
+        point = '<span style="color:#4c4a68;">&nbsp;·&nbsp;</span>'
+        self._indices.setText(point.join(morceaux))
+        self._indices.setToolTip(game.controller_note if manette else "")
 
     # ──────────────────── Tags ────────────────────
 
@@ -499,37 +509,6 @@ class InfoPanel(QWidget):
                 " padding: 4px 14px; letter-spacing: 2px; }"
             ))
             self._tags_layout.addWidget(badge)
-        self._ajouter_pastille_manette(game)
         self._tags_container.updateGeometry()
         # Sinon la dernière ligne de pastilles reste coupée.
         self._relayout_tags()
-
-    def _ajouter_pastille_manette(self, game: GameData) -> None:
-        """« Manette » / « Manette en partie » / « Sans manette », à la suite des tags.
-
-        Rien pour un jeu non essayé (`controller` vide) : ne rien dire vaut
-        mieux qu'affirmer ce qu'on n'a pas vu (règle 108). Le trait : plein pour
-        « oui », en tirets pour « en partie » (le jeu se joue, pas tout), et gris
-        pour « non » — la forme porte la nuance, pas seulement la teinte. Ce que
-        « en partie » veut dire est en infobulle (`controller_note`, catalogue).
-        """
-        libelles = {"yes": tr("Manette"), "partial": tr("Manette en partie"),
-                    "no": tr("Sans manette")}
-        libelle = libelles.get(game.controller)
-        if libelle is None:
-            return
-        badge = QLabel(libelle.upper())
-        badge.setFont(cinzel(10, bold=True))
-        if game.controller == "no":
-            style = ("QLabel { background: transparent; color: #9a9ab8;"
-                     " border: 1px solid rgba(154, 154, 184, 0.4); border-radius: 12px;"
-                     " padding: 4px 14px; letter-spacing: 2px; }")
-        else:
-            trait = "solid" if game.controller == "yes" else "dashed"
-            style = themed(
-                "QLabel { background: rgba(214, 167, 44, 0.05); color: #d6a72c;"
-                f" border: 1px {trait} rgba(214, 167, 44, 0.5); border-radius: 12px;"
-                " padding: 4px 14px; letter-spacing: 2px; }")
-        badge.setStyleSheet(style)
-        badge.setToolTip(game.controller_note)
-        self._tags_layout.addWidget(badge)
