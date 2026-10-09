@@ -33,8 +33,9 @@ _COMING_SOON_W = 300
 _BOUTON_MIN_W = 300
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
-# Bouton JOUER et engrenage à la même hauteur (piste A, 2026-10-09).
-_HAUTEUR_JOUER = 48
+# Bouton JOUER et engrenage à la même hauteur que TÉLÉCHARGER (piste A,
+# 2026-10-09). À 48, l'espagnol de HP7 débordait de 2 px à 980×660.
+_HAUTEUR_JOUER = 46
 
 
 def _colonne_stat(libelle: str, valeur: str) -> QWidget:

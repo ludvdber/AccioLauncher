@@ -252,7 +252,7 @@ class InfoPanel(QWidget):
         # ligne méta ; ici, ce sont des faits sur CE qu'on lance.
         self._indices = QLabel()
         self._indices.setObjectName("indicesJeu")
-        self._indices.setFont(body_font(13))
+        self._indices.setFont(body_font(12))
         self._indices.setWordWrap(True)
         self._indices.setTextFormat(Qt.TextFormat.RichText)
         self._indices.setTextInteractionFlags(
@@ -260,7 +260,7 @@ class InfoPanel(QWidget):
             | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
         self._indices.setStyleSheet(
-            "QLabel { color: #a3a1bf; background: transparent; padding-top: 6px; }")
+            "QLabel { color: #a3a1bf; background: transparent; }")
         self._indices.linkActivated.connect(self._on_meta_link)
 
         # Description
