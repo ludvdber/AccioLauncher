@@ -28,6 +28,7 @@ from src.core.i18n import get_language, tr
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
+from src.ui.fenetre_message import message
 from src.ui.utils import liste_deroulante, open_local_path
 
 _LISTE_STYLE = (
@@ -177,19 +178,8 @@ class CopiesDialog(QDialog):
 
     def _boite(self, icone, titre: str, texte: str, choix=()) -> int:
         """Texte brut, boutons nommés : mêmes raisons que `game_detail_handlers._boite`."""
-        boite = QMessageBox(self)
-        boite.setIcon(icone)
-        boite.setWindowTitle(titre)
-        boite.setTextFormat(Qt.TextFormat.PlainText)
-        boite.setText(texte)
-        boutons = [boite.addButton(c, QMessageBox.ButtonRole.AcceptRole if i == 0
-                                   else QMessageBox.ButtonRole.RejectRole)
-                   for i, c in enumerate(choix or (tr("Fermer"),))]
-        boite.setDefaultButton(boutons[-1])
-        boite.setEscapeButton(boutons[-1])
-        boite.exec()
-        clique = boite.clickedButton()
-        return boutons.index(clique) if clique in boutons else -1
+        # Le défaut est le RETRAIT : remettre une sauvegarde ne se fait pas d'un Entrée distrait.
+        return message(self, icone, titre, texte, choix, defaut=max(0, len(choix) - 1))
 
     def _nom_courant(self) -> str:
         """Le nom à écrire dans les questions : l'emplacement, ou « la sauvegarde »

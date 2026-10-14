@@ -242,9 +242,7 @@ class TestBranchements:
         from src.ui.onboarding import OnboardingDialog
         dlg = OnboardingDialog()
         qtbot.addWidget(dlg)
-        dlg._build_rest()
-        for groupe in dlg._groupes_maison:
-            groupe.buttons()[0].click()
+        dlg._reponses = [0, 0, 0, 0]
         dlg._repartir()
         assert manette.appels and manette.appels[-1] == dlg._maison
 

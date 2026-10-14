@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -16,6 +15,7 @@ from src.core.game_data import GameData, GameVersion
 from src.core.i18n import tr
 from src.core.game_manager import GameManager
 from src.core.version_utils import compare_versions
+from src.ui.fenetre_message import FenetreMessage
 from src.ui.fonts import cinzel, body_font
 from src.ui.theme import current as current_theme, themed
 from src.core.formatting import format_size
@@ -252,16 +252,15 @@ class VersionsDialog(QDialog):
         # un « Yes » anglais dans un launcher réglé en français. Et son texte
         # reste en `AutoText` alors qu'il interpole un numéro de version venu
         # du catalogue DISTANT, donc de l'extérieur.
-        boite = QMessageBox(self)
-        boite.setIcon(QMessageBox.Icon.Question)
+        boite = FenetreMessage(self)
+        boite.setIcon(FenetreMessage.Icon.Question)
         boite.setWindowTitle(tr("Confirmer"))
-        boite.setTextFormat(Qt.TextFormat.PlainText)
         boite.setText(
             tr("Ceci va {} la version {}.\nContinuer ?").format(action, version))
         installer = boite.addButton(tr("Installer cette version"),
-                                    QMessageBox.ButtonRole.AcceptRole)
+                                    FenetreMessage.ButtonRole.AcceptRole)
         annuler = boite.addButton(tr("Annuler"),
-                                  QMessageBox.ButtonRole.RejectRole)
+                                  FenetreMessage.ButtonRole.RejectRole)
         boite.setDefaultButton(annuler)
         boite.exec()
         if boite.clickedButton() is installer:

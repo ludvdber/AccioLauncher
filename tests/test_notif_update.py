@@ -105,9 +105,9 @@ class TestDialogue:
             def exec(self): return 0
             def clickedButton(self): return None
 
-        FausseBoite.Icon = dialogues_fenetre.QMessageBox.Icon
-        FausseBoite.ButtonRole = dialogues_fenetre.QMessageBox.ButtonRole
-        monkeypatch.setattr(dialogues_fenetre, "QMessageBox", FausseBoite)
+        FausseBoite.Icon = dialogues_fenetre.FenetreMessage.Icon
+        FausseBoite.ButtonRole = dialogues_fenetre.FenetreMessage.ButtonRole
+        monkeypatch.setattr(dialogues_fenetre, "FenetreMessage", FausseBoite)
 
         fenetre._launcher_update_asked = False
         fenetre._on_launcher_update("9.9.9", URL, ASSET, "")
@@ -271,9 +271,9 @@ class TestNotesDeVersion:
             def exec(self): return 0
             def clickedButton(self): return None
 
-        FausseBoite.Icon = dialogues_fenetre.QMessageBox.Icon
-        FausseBoite.ButtonRole = dialogues_fenetre.QMessageBox.ButtonRole
-        monkeypatch.setattr(dialogues_fenetre, "QMessageBox", FausseBoite)
+        FausseBoite.Icon = dialogues_fenetre.FenetreMessage.Icon
+        FausseBoite.ButtonRole = dialogues_fenetre.FenetreMessage.ButtonRole
+        monkeypatch.setattr(dialogues_fenetre, "FenetreMessage", FausseBoite)
 
         # La fixture arme le garde-fou pour qu'aucun test n'ouvre de modal :
         # ici on veut justement la boîte, donc on le désarme.
@@ -305,9 +305,9 @@ class TestNotesDeVersion:
             def exec(self): return 0
             def clickedButton(self): return None
 
-        FausseBoite.Icon = dialogues_fenetre.QMessageBox.Icon
-        FausseBoite.ButtonRole = dialogues_fenetre.QMessageBox.ButtonRole
-        monkeypatch.setattr(dialogues_fenetre, "QMessageBox", FausseBoite)
+        FausseBoite.Icon = dialogues_fenetre.FenetreMessage.Icon
+        FausseBoite.ButtonRole = dialogues_fenetre.FenetreMessage.ButtonRole
+        monkeypatch.setattr(dialogues_fenetre, "FenetreMessage", FausseBoite)
 
         fenetre._launcher_update_asked = False
         fenetre._on_launcher_update(
@@ -334,9 +334,9 @@ class TestNotesDeVersion:
             def exec(self): return 0
             def clickedButton(self): return None
 
-        FausseBoite.Icon = dialogues_fenetre.QMessageBox.Icon
-        FausseBoite.ButtonRole = dialogues_fenetre.QMessageBox.ButtonRole
-        monkeypatch.setattr(dialogues_fenetre, "QMessageBox", FausseBoite)
+        FausseBoite.Icon = dialogues_fenetre.FenetreMessage.Icon
+        FausseBoite.ButtonRole = dialogues_fenetre.FenetreMessage.ButtonRole
+        monkeypatch.setattr(dialogues_fenetre, "FenetreMessage", FausseBoite)
 
         fenetre._launcher_update_asked = False
         fenetre._on_launcher_update(

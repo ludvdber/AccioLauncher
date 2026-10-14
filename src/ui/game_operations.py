@@ -7,7 +7,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.core import stats
 from src.core.downloader import Downloader
-from src.core.echecs import Echec, explication, explication_installation
+from src.core.echecs import Echec, explication, explication_installation, reste
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -58,7 +58,7 @@ class GameOperations(QObject):
     # Opération terminée avec succès
     operation_finished = pyqtSignal(object)  # GameData
     # Erreur pendant l'opération
-    operation_error = pyqtSignal(str, str)  # (titre, message)
+    operation_error = pyqtSignal(str, str, str)  # (titre, message, ce qui est conservé)
     # État d'un jeu a changé (pour rafraîchir l'UI)
     state_changed = pyqtSignal()
     # Message de statut
@@ -413,11 +413,13 @@ class GameOperations(QObject):
             self._manager.redetect_state(game.id)
         self.state_changed.emit()
         self.status_message.emit(tr("Erreur : {}").format(message))
+        echec = echec or Echec()
         self.operation_error.emit(
             tr("Échec du téléchargement"),
-            # La VRAIE cause, puis ce qui est conservé sur le disque. Le texte
+            # La VRAIE cause ; ce qui est conservé va sur la ligne verte. Le texte
             # d'avant accusait la connexion quoi qu'il arrive, disque plein compris.
-            explication(echec or Echec()),
+            explication(echec, avec_reste=False),
+            self._ce_qui_reste(game, reste(echec)),
         )
 
     def _on_part_info(self, current: int, total: int) -> None:
@@ -452,6 +454,7 @@ class GameOperations(QObject):
                 # un antivirus qui l'a retiré (ACT-003).
                 tr("L'installation semble incomplète : l'exécutable du jeu est introuvable.\n"
                    "Un antivirus l'a peut-être retiré : consultez sa quarantaine, puis réessayez."),
+                self._ce_qui_reste(None),
             )
             return
 
@@ -482,10 +485,23 @@ class GameOperations(QObject):
         # journal. La barre d'état dit l'échec, la boîte dit la cause.
         log.error("Installation échouée (cause : %s) : %s", cause, message)
         self.status_message.emit(tr("Échec de l'installation"))
+        archive_gardee = (du_launcher and cause != "archive" and archive is not None
+                          and archive.exists())
         self.operation_error.emit(
             tr("Échec de l'installation"),
             explication_installation(cause, archive_du_launcher=du_launcher),
+            self._ce_qui_reste(game, tr(
+                "L'archive téléchargée reste en cache : un nouvel essai ne la "
+                "retélécharge pas.") if archive_gardee else ""),
         )
+
+    def _ce_qui_reste(self, game: GameData | None, premier: str = "") -> str:
+        """La ligne verte de la boîte d'échec : ce qui n'a PAS été perdu (règle 112)."""
+        phrases = [premier] if premier else []
+        if game is not None and self._manager.is_installed(game.id):
+            phrases.append(tr("La version déjà installée reste en place."))
+        phrases.append(tr("Vos sauvegardes ne sont pas touchées."))
+        return " ".join(phrases)
 
     def _dans_le_cache(self, archive: Path) -> bool:
         try:

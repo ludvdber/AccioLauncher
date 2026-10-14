@@ -56,6 +56,8 @@ class GameDetailView(QWidget):
     # Mode cinéma : la FENÊTRE doit masquer ce qui ne nous appartient pas
     # (carrousel, barre de statut, engrenage).
     cinema_toggled = pyqtSignal(bool)
+    # Les réglages du jeu, à ouvrir en PAGE par la fenêtre (`pages.py`).
+    page_demandee = pyqtSignal(object)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -128,6 +130,8 @@ class GameDetailView(QWidget):
         self._ops.download_progress.connect(self._action_panel.update_download_progress)
         self._ops.install_progress.connect(self._action_panel.update_install_progress)
         self._ops.part_info.connect(self._action_panel.update_part_info)
+        self._ops.phase_changed.connect(self._action_panel.set_phase)
+        self._action_panel.phase_courante = lambda: self._ops.phase
         self._ops.operation_finished.connect(self._on_operation_finished)
         self._ops.operation_error.connect(self._deferred_warning)
         self._ops.state_changed.connect(self._on_ops_state_changed)
@@ -536,13 +540,13 @@ class GameDetailView(QWidget):
             self._refresh()
         self.state_changed.emit()
 
-    def _deferred_warning(self, title: str, message: str) -> None:
+    def _deferred_warning(self, title: str, message: str, conserve: str = "") -> None:
         def _show() -> None:
             try:
                 self.isVisible()
             except RuntimeError:
                 return
-            avertir(self, title, message)
+            avertir(self, title, message, conserve)
         QTimer.singleShot(0, _show)
 
 

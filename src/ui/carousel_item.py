@@ -17,6 +17,7 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.fonts import cinzel
+from src.ui import images
 from src.ui.theme import accent_qcolor
 from src.ui import theme
 
@@ -230,7 +231,9 @@ class CarouselItem(QWidget):
         image = reader.read()
         if image.isNull():
             return
-        self._pixmap = QPixmap.fromImage(image)
+        # Aux proportions EXACTES de la vignette : peinte ensuite dans un
+        # rectangle 18:25, une jaquette carrée y était étirée (`images.py`).
+        self._pixmap = QPixmap.fromImage(images.jaquette(image, cible_w, cible_h))
 
     def set_taille_vignette(self, largeur: int, hauteur: int) -> None:
         """Impose la taille de base de la jaquette (décidée par le carrousel)."""

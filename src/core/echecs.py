@@ -79,8 +79,12 @@ def cause_de(exc: BaseException | None) -> tuple[str, int]:
     return "inconnu", 0
 
 
-def explication(echec: Echec) -> str:
-    """Le texte de la boîte d'échec : la cause, ce qu'on peut faire, ce qui reste."""
+def explication(echec: Echec, avec_reste: bool = True) -> str:
+    """Le texte de la boîte d'échec : la cause, ce qu'on peut faire, ce qui reste.
+
+    `avec_reste=False` : sans la phrase sur ce qui est conservé, que la fenêtre
+    de message pose à part, sur sa ligne verte (`reste`).
+    """
     code = echec.code_http
     textes = {
         "connexion": tr("La connexion a été interrompue.\n"
@@ -109,11 +113,17 @@ def explication(echec: Echec) -> str:
     texte = textes.get(echec.cause, tr(
         "Le téléchargement a échoué.\nRéessayez ; si ça recommence, "
         "le Discord peut vous aider."))
-    if echec.conserves > 0:
-        texte += "\n\n" + tr(
-            "{} sont conservés : relancez pour reprendre là où ça s'est arrêté."
-        ).format(format_bytes(echec.conserves))
+    if avec_reste and echec.conserves > 0:
+        texte += "\n\n" + reste(echec)
     return texte
+
+
+def reste(echec: Echec) -> str:
+    """Ce que l'échec n'a pas emporté : les octets déjà reçus, s'il y en a."""
+    if echec.conserves <= 0:
+        return ""
+    return tr("{} sont conservés : relancez pour reprendre là où ça s'est arrêté.").format(
+        format_bytes(echec.conserves))
 
 
 # ─── Installation ────────────────────────────────────────────────────────────

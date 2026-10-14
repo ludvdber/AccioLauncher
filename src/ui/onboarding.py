@@ -1,51 +1,72 @@
-"""Assistant de premier lancement — 4 écrans.
+"""Assistant de premier lancement, refait le 2026-10-09 sur la maquette validée.
 
-1. Langue. Volontairement en PREMIER : c'est ce qui permet aux trois écrans
-   suivants de naître déjà traduits, alors qu'aucune config n'existe encore.
-   Le choix est pré-sélectionné sur la langue du système (`detect_system_language`),
-   avec l'anglais en repli — un utilisateur non francophone ne doit pas tomber
-   sur un assistant en français.
-2. Bienvenue + choix du dossier d'installation (espace libre affiché).
-3. « J'ai déjà certains jeux » — scan d'un dossier existant et import en masse
-   (même disque : déplacement instantané, comme « J'ai déjà ce jeu »).
-4. Préférences rapides : thème, lecture auto des vidéos, son des vidéos.
+Un écran de langue, plein cadre, puis quatre étapes dans une fenêtre à rail :
 
-Les écrans 2 à 4 ne sont construits qu'à la sortie de l'écran 1, une fois
-`set_language()` appelé : les `tr()` sont évalués à la construction des widgets.
-Le thème choisi, lui, s'applique après (MainWindow appelle `set_theme`).
+1. Langue. Volontairement en PREMIER et seule : c'est ce qui fait naître la
+   suite déjà traduite, alors qu'aucune config n'existe encore. Elle est
+   pré-choisie sur la langue du système (`detect_system_language`), anglais en
+   repli, et l'écran se retraduit dès qu'on en touche une autre.
+2. Dossier : où ranger les jeux, la place qu'il faut, et ce qu'il contient déjà.
+3. Vos jeux. Ceux qui sont DÉJÀ dans le dossier sont repris d'office : une
+   config effacée ou un launcher réinstallé ne fait plus repartir de zéro
+   (Ludo, 2026-10-09). D'autres se montrent depuis un autre dossier et y sont
+   déplacés (même disque : instantané).
+4. Le Choixpeau, une question à la fois, puis son verdict : l'assistant prend
+   aussitôt les couleurs de la maison.
+5. Dernières touches : couleurs du launcher, bandes-annonces.
+
+**Rattrapage** (`run_rattrapage`) : à quelqu'un qui avait le launcher avant le
+Choixpeau et les bandes-annonces, seules les étapes jamais vues, une fois
+(`src/core/assistant.py`).
+
+Les étapes ne sont construites qu'à la sortie de l'écran de langue, une fois
+`set_language()` appelé : les `tr()` sont évalués à la construction.
 """
 
 import logging
-import shutil
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPixmap
 from PyQt6.QtWidgets import (
-    QButtonGroup, QDialog, QFileDialog, QHBoxLayout, QLabel,
-    QListWidget, QListWidgetItem, QPushButton, QRadioButton,
+    QButtonGroup, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from src.core import manette
+from src.core.assistant import CHOIXPEAU, ETAPES_RATTRAPABLES, TOUCHES, etapes_a_rattraper
 from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
-from src.core.config import (
-    Config, DEFAULT_INSTALL_PATH, cache_pour,
-)
-from src.core.formatting import format_bytes
+from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH, Config, cache_pour
+from src.core.formatting import format_bytes, format_size
 from src.core.game_data import GameData, load_catalog
-from src.core.formatting import format_size
-from src.core.i18n import (
-    available_languages, detect_system_language, set_language, tr,
+from src.core.i18n import available_languages, detect_system_language, set_language, tr
+from src.ui.assistant_widgets import (
+    STYLE, BarreDisque, CarteCouleur, CarteLangue, CarteReponse, LigneJeu, Progression,
+    RailEtapes, bouton_suivant, lien, surtitre_etape, titre_etape,
 )
-from src.ui.fonts import cinzel_decorative
-from src.ui.styles import RADIO_STYLE
-from src.ui.theme import THEMES
-from src.ui.toggle_switch import toggle_row
-from src.ui.utils import avertir, is_writable_dir, liste_deroulante, zone_defilable
+from src.ui.composants import (
+    ENCRE_DISCRETE, ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
+    espace_du_volume, feuille_de_style, police, texte,
+)
+from src.ui.ecu import Ecu
+from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.icon_button import pixmap_icone
+from src.ui.theme import THEMES, accent_qcolor, current as theme_courant, set_theme, themed
+from src.ui.toggle_switch import ToggleSwitch
+from src.ui.utils import avertir, is_writable_dir, zone_defilable
 
 log = logging.getLogger(__name__)
 
-TOTAL_PAGES = 5
+# Les écrans de la fenêtre à rail. Le verdict n'est pas une étape : il clôt
+# celle du Choixpeau, et le rail reste dessus.
+DOSSIER, JEUX, CHOIXPEAU_Q, VERDICT, DERNIERES = "dossier", "jeux", "choixpeau", "verdict", "touches"
+_ETAPE_DU_RAIL = {DOSSIER: DOSSIER, JEUX: JEUX, CHOIXPEAU_Q: CHOIXPEAU_Q,
+                  VERDICT: CHOIXPEAU_Q, DERNIERES: DERNIERES}
+_NOMS_DU_RAIL = {DOSSIER: "Dossier", JEUX: "Vos jeux", CHOIXPEAU_Q: "Le Choixpeau",
+                 DERNIERES: "Dernières touches"}
+_VERT = "#5fbf86"
+_ORANGE = "#e0a05a"
+_LARGEUR_LECTURE = 720
 
 
 class OnboardingAnnule(Exception):
@@ -58,26 +79,6 @@ class OnboardingAnnule(Exception):
     définitivement (Ludo, 2026-09-23). Ne rien écrire est la seule façon de
     tenir la promesse implicite de la croix : « pas maintenant ».
     """
-
-
-def _page_titree(libelle: str, taille: int = 20) -> tuple[QWidget, QVBoxLayout]:
-    """Le squelette commun des cinq écrans : une page, sa colonne, son titre.
-
-    Les cinq le recopiaient à l'identique — sept lignes chacun, à la taille du
-    titre près. Ce n'était pas un coût de frappe mais un risque de dérive :
-    l'objectName `wizTitle` est ce qui donne au titre sa couleur et son
-    espacement dans la feuille de style de l'assistant, et une page qui
-    l'oublierait s'afficherait en texte ordinaire sans que rien ne le
-    signale — la suite tourne `offscreen`, où personne ne regarde.
-    """
-    page = QWidget()
-    lay = QVBoxLayout(page)
-    lay.setSpacing(10)
-    titre = QLabel(libelle)
-    titre.setObjectName("wizTitle")
-    titre.setFont(cinzel_decorative(taille))
-    lay.addWidget(titre)
-    return page, lay
 
 
 def detect_installed_games(parent: Path, games: list[GameData]) -> list[tuple[GameData, Path]]:
@@ -97,426 +98,851 @@ def detect_installed_games(parent: Path, games: list[GameData]) -> list[tuple[Ga
     return found
 
 
+def _meme_dossier(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve() == b.resolve()
+    except OSError:
+        return False
+
+
+def _meme_disque(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve().drive.lower() == b.resolve().drive.lower()
+    except OSError:
+        return False
+
+
+def poids_installe(game: GameData) -> int:
+    """Ce que pèse le jeu installé, en octets (version recommandée)."""
+    for version in game.versions:
+        if version.version == game.recommended_version:
+            return version.size_mb * 1024 * 1024
+    return 0
+
+
 class OnboardingDialog(QDialog):
-    """Assistant 4 écrans, modal, affiché avant la construction de MainWindow."""
+    """L'assistant, modal, affiché avant la construction de MainWindow.
 
-    def __init__(self) -> None:
+    `config` et `rattrapage` : la version courte, pour une config existante.
+    """
+
+    def __init__(self, config: Config | None = None, rattrapage: tuple[str, ...] = ()) -> None:
         super().__init__()
-        self.setWindowTitle("Accio Launcher")
-        self.setMinimumSize(560, 430)
-        self.setStyleSheet(
-            "QDialog { background: #0d0d1a; }"
-            "QLabel { color: #eaeaea; font-size: 13px; }"
-            "QLabel#wizTitle { color: #d6a72c; }"
-            "QLabel#wizHint { color: #8a8aaa; font-size: 12px; }"
-            "QPushButton { background: #16213e; color: #eaeaea; border: 1px solid #2c3e6b;"
-            " border-radius: 6px; padding: 8px 18px; font-size: 13px; }"
-            "QPushButton:hover { border-color: #d6a72c; color: #e8c547; }"
-            "QPushButton#wizNext { background: #d6a72c; color: #000; font-weight: bold; border: none; }"
-            "QPushButton#wizNext:hover { background: #e6b422; }"
-            "QListWidget { background: #060611; color: #eaeaea; border: 1px solid #1a2744;"
-            " border-radius: 6px; font-size: 13px; }"
-            "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
-            " border-radius: 6px; padding: 6px 12px; font-size: 13px; }"
-            "QComboBox QAbstractItemView { background: #16213e; color: #ffffff;"
-            " selection-background-color: #2c3e6b; }"
-            + RADIO_STYLE
-        )
+        self.setObjectName("assistant")
+        self.setWindowTitle(tr("Bienvenue dans Accio Launcher") if config else "Accio Launcher")
+        self.setMinimumSize(860, 600)
+        self.resize(960, 640)
+        self._rattrapage = tuple(e for e in ETAPES_RATTRAPABLES if e in rattrapage)
 
-        # Résultats lus par run_onboarding() après accept()
-        self.install_path: Path = DEFAULT_INSTALL_PATH
-        self.langue = detect_system_language()
-        self.theme = "poudlard"
-        self.autoplay = True
-        # Muet par défaut : c'est le réglage de `Config.mute_videos`,
-        # et l'assistant ne fait que le rendre visible.
-        self.mute_videos = True
+        # Résultats lus par run_onboarding() / run_rattrapage() après accept().
+        base = config or Config()
+        self.install_path: Path = base.install_path if config else DEFAULT_INSTALL_PATH
+        self.langue = base.langue if config else detect_system_language()
+        self._theme_initial = base.theme if config else "poudlard"
+        self.theme = self._theme_initial
+        self.autoplay = base.autoplay_videos
+        # Muet par défaut : c'est le réglage de `Config.mute_videos`, et
+        # l'assistant ne fait que le rendre visible.
+        self.mute_videos = base.mute_videos
         self.trailers_optin = True
+        self._reponses = [-1] * len(QUESTIONS)
+        self._question = 0
+        self._maison = ""
+        self._en_place: list[tuple[GameData, Path]] = []
+        self._ailleurs: list[tuple[GameData, Path]] = []
+        self._dossier_cherche: Path | None = None
+        self._coches: dict[str, bool] = {}
+        self._lignes: dict[str, LigneJeu] = {}
+        self._icones: list[tuple[QLabel, str, int]] = []
         self._catalogue = load_catalog()
         self._games = list(self._catalogue.games)
-        self._detected: list[tuple[GameData, Path]] = []
-        # Widgets des écrans 2-4, créés seulement après le choix de la langue.
-        self._path_label = QLabel()
-        self._free_label = QLabel()
-        self._scan_label = QLabel()
-        self._import_list = QListWidget()
-        self._theme_combo = liste_deroulante()
-        # Choixpeau : un groupe de boutons par question, plus la maison tirée.
-        # Tout est initialisé ICI même si les widgets naissent à l'écran 4 —
-        # le projet s'interdit `hasattr` sur un attribut de widget.
-        self._groupes_maison: list[QButtonGroup] = []
-        self._maison = ""
-        self._maison_label = QLabel()
-        self._tgl_autoplay = None
-        self._tgl_son = None
-        self._tgl_trailers = None
-        self._rest_built = False
+        self._etapes: QWidget | None = None
+        self._ecran = ""
+        self._ecrans: list[str] = []
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 24, 28, 20)
-        layout.setSpacing(12)
+        racine = QVBoxLayout(self)
+        racine.setContentsMargins(0, 0, 0, 0)
+        self._racine = QStackedWidget()
+        racine.addWidget(self._racine)
+        if config is None:
+            set_language(self.langue)
+            self._racine.addWidget(self._page_langue())
+        else:
+            set_theme(self.theme)
+            self._construire_etapes()
+        self._appliquer_style()
 
-        self._pages = QStackedWidget()
-        self._pages.addWidget(zone_defilable(self._build_page_language()))
-        layout.addWidget(self._pages, stretch=1)
+    # ── Style et couleurs ──
 
-        nav = QHBoxLayout()
-        self._step_label = QLabel()
-        self._step_label.setObjectName("wizHint")
-        nav.addWidget(self._step_label)
-        nav.addStretch()
-        self._btn_back = QPushButton()
-        self._btn_back.clicked.connect(self._go_back)
-        nav.addWidget(self._btn_back)
-        self._btn_next = QPushButton()
-        self._btn_next.setObjectName("wizNext")
-        self._btn_next.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_next.clicked.connect(self._go_next)
-        nav.addWidget(self._btn_next)
-        layout.addLayout(nav)
-        self._sync_nav()
+    def _appliquer_style(self) -> None:
+        self.setStyleSheet(themed(STYLE) + feuille_de_style())
+        for lbl, nom, taille in self._icones:
+            lbl.setPixmap(pixmap_icone(nom, taille, accent_qcolor()))
 
-    # ── Pages ──
+    def _appliquer_theme(self, theme_id: str) -> None:
+        """Les couleurs d'une maison, tout de suite : rien n'est reconstruit."""
+        if theme_courant().id == theme_id:
+            return
+        set_theme(theme_id)
+        self._appliquer_style()
 
-    def _build_page_language(self) -> QWidget:
-        """Écran 1 : la langue, avant toute autre chose.
+    def _icone(self, nom: str, taille: int = 22, couleur: str = "") -> QLabel:
+        """Un pictogramme posé dans un libellé ; doré, il suit la maison."""
+        lbl = QLabel()
+        lbl.setFixedSize(taille, taille)
+        lbl.setStyleSheet("background: transparent;")
+        if couleur:
+            lbl.setPixmap(pixmap_icone(nom, taille, QColor(couleur)))
+        else:
+            lbl.setPixmap(pixmap_icone(nom, taille, accent_qcolor()))
+            self._icones.append((lbl, nom, taille))
+        return lbl
 
-        Volontairement neutre : le titre porte les trois langues et les entrées
-        du sélecteur sont écrites dans leur propre langue, donc l'écran se lit
-        sans connaître celle du launcher.
-        """
-        page, lay = _page_titree("Accio Launcher", 22)
+    # ── Écran de langue ──
 
-        subtitle = QLabel("Langue · Language · Idioma")
-        subtitle.setObjectName("wizHint")
-        lay.addWidget(subtitle)
-        lay.addSpacing(8)
+    def _page_langue(self) -> QWidget:
+        """Plein cadre, neutre : chaque carte est écrite dans sa propre langue."""
+        page = QWidget()
+        page.setStyleSheet("background: transparent;")
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(40, 30, 40, 30)
+        lay.setSpacing(0)
+        lay.addStretch(3)
 
-        self._lang_combo = liste_deroulante()
+        logo = QLabel()
+        logo.setStyleSheet("background: transparent;")
+        ecran = QGuiApplication.primaryScreen()
+        ratio = ecran.devicePixelRatio() if ecran is not None else 1.0
+        pm = QPixmap(str(ASSETS_DIR / "accio_logo_horizontal.png"))
+        if not pm.isNull():
+            pm = pm.scaledToWidth(round(300 * ratio), Qt.TransformationMode.SmoothTransformation)
+            pm.setDevicePixelRatio(ratio)
+            logo.setPixmap(pm)
+        lay.addWidget(logo, alignment=Qt.AlignmentFlag.AlignHCenter)
+        lay.addSpacing(30)
+
+        langues = QLabel("Langue · Language · Idioma")
+        f = cinzel(10, bold=True)
+        f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 4)
+        langues.setFont(f)
+        langues.setStyleSheet("color: #a9a7c4; background: transparent;")
+        lay.addWidget(langues, alignment=Qt.AlignmentFlag.AlignHCenter)
+        lay.addSpacing(22)
+
+        rangee = QHBoxLayout()
+        rangee.setSpacing(16)
+        rangee.addStretch()
+        self._groupe_langue = QButtonGroup(page)
+        self._cartes_langue: list[CarteLangue] = []
         for info in available_languages():
-            self._lang_combo.addItem(info.name, info.code)
-        index = self._lang_combo.findData(self.langue)
-        if index >= 0:
-            self._lang_combo.setCurrentIndex(index)
-        lay.addWidget(self._lang_combo)
+            carte = CarteLangue(info.code, info.name)
+            self._groupe_langue.addButton(carte)
+            self._cartes_langue.append(carte)
+            rangee.addWidget(carte)
+            if info.code == self.langue:
+                carte.setChecked(True)
+        rangee.addStretch()
+        lay.addLayout(rangee)
+        self._groupe_langue.buttonClicked.connect(self._sur_langue)
+        lay.addSpacing(22)
 
-        hint = QLabel("Vous pourrez en changer dans les Paramètres.\n"
-                      "You can change this later in Settings.\n"
-                      "Podrás cambiarlo más tarde en los Ajustes.")
-        hint.setObjectName("wizHint")
-        lay.addWidget(hint)
-        lay.addStretch()
+        self._aide_langue = texte("", 13, ENCRE_DOUCE, retour=True)
+        self._aide_langue.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        lay.addWidget(self._aide_langue)
+        lay.addSpacing(30)
+        self._continuer = bouton_suivant("")
+        self._continuer.clicked.connect(self._quitter_la_langue)
+        lay.addWidget(self._continuer, alignment=Qt.AlignmentFlag.AlignHCenter)
+        lay.addStretch(4)
+        self._traduire_la_langue()
         return page
 
-    def _build_rest(self) -> None:
-        """Construit les écrans 2-4, une fois la langue active fixée."""
-        if self._rest_built:
-            return
-        self._rest_built = True
-        self._pages.addWidget(zone_defilable(self._build_page_welcome()))
-        self._pages.addWidget(zone_defilable(self._build_page_import()))
-        self._pages.addWidget(zone_defilable(self._build_page_choixpeau()))
-        self._pages.addWidget(zone_defilable(self._build_page_prefs()))
+    def _traduire_la_langue(self) -> None:
+        self._aide_langue.setText(tr("Choisie d'après votre système. "
+                                     "Elle se change plus tard dans les Paramètres."))
+        self._continuer.setText(tr("Suivant"))
 
-    def _oublier_les_pages(self) -> None:
-        """Jette les écrans 2-5 pour les rebâtir dans une autre langue.
+    def langue_choisie(self) -> str:
+        carte = self._groupe_langue.checkedButton()
+        return carte.code if isinstance(carte, CarteLangue) else self.langue
 
-        `_rest_built` les faisait construire UNE fois : revenir à l'écran 1,
-        changer de langue et repartir laissait donc les pages dans la langue
-        d'avant, pendant que le titre de la fenêtre et les boutons — refaits
-        à chaque passage — obéissaient, eux. D'où la capture de Ludo, en
-        anglais, où seuls « Back » et « Next » étaient traduits.
+    def choisir_langue(self, code: str) -> None:
+        for carte in self._cartes_langue:
+            if carte.code == code:
+                carte.setChecked(True)
+                self._sur_langue(carte)
 
-        Les widgets créés dans `__init__` et seulement POSÉS par les pages
-        sont reparentés avant la destruction : les supprimer avec leur page
-        laisserait des objets C++ morts derrière des attributs Python vivants.
-        Surtout PAS de `hide()` : `setParent` les retire déjà de l'écran, alors
-        qu'un widget caché EXPLICITEMENT le reste une fois reposé dans une
-        page. Le chemin du dossier et l'espace libre disparaissaient ainsi de
-        l'écran 2 après un passage par une autre langue (exe, 2026-09-24).
+    def _sur_langue(self, carte) -> None:
+        """L'écran se retraduit au clic : on voit tout de suite ce qu'on choisit."""
+        set_language(carte.code)
+        self._traduire_la_langue()
+
+    def _quitter_la_langue(self) -> None:
+        choisie = self.langue_choisie()
+        # Déjà passé par ici dans une AUTRE langue : les étapes existent,
+        # figées dans celle d'avant (`tr()` est évalué à la construction).
+        if self._etapes is not None and choisie != self.langue:
+            self._oublier_les_etapes()
+        self.langue = choisie
+        set_language(self.langue)
+        # Le catalogue résout ses traductions AU PARSING : relu une fois la
+        # langue connue, sinon les noms de jeux resteraient en français.
+        self._catalogue = load_catalog()
+        self._games = list(self._catalogue.games)
+        self.setWindowTitle(tr("Bienvenue dans Accio Launcher"))
+        if self._etapes is None:
+            self._construire_etapes()
+        self._racine.setCurrentWidget(self._etapes)
+        self._afficher(self._ecrans[0])
+
+    def _oublier_les_etapes(self) -> None:
+        """Jette les étapes pour les rebâtir dans une autre langue.
+
+        Les réponses déjà données (dossier, jeux cochés, Choixpeau) vivent dans
+        des attributs, pas dans les widgets : elles survivent au rebâti.
         """
-        for w in (self._path_label, self._free_label, self._scan_label,
-                  self._import_list, self._theme_combo, self._maison_label):
-            w.setParent(self)
-        while self._pages.count() > 1:
-            page = self._pages.widget(1)
-            self._pages.removeWidget(page)
-            page.deleteLater()
-        self._groupes_maison.clear()
-        self._tgl_autoplay = None
-        self._tgl_son = None
-        self._tgl_trailers = None
-        self._rest_built = False
+        self._racine.removeWidget(self._etapes)
+        self._etapes.deleteLater()
+        self._etapes = None
+        # Les pictogrammes dorés partent avec les étapes ; l'écran de langue n'en a pas.
+        self._icones = []
+        self._lignes = {}
 
-    def _build_page_choixpeau(self) -> QWidget:
-        """Écran 4 : le Choixpeau.
+    # ── Fenêtre à rail ──
 
-        Il vient AVANT les préférences parce qu'il n'est pas un réglage : il
-        en PROPOSE un. Sa maison pré-sélectionne le thème à l'écran suivant,
-        où elle reste modifiable — répartir quelqu'un puis lui imposer la
-        couleur serait prendre une décision à sa place sur la foi d'un jeu.
+    def _construire_etapes(self) -> None:
+        plein = not self._rattrapage
+        if plein:
+            self._ecrans = [DOSSIER, JEUX, CHOIXPEAU_Q, VERDICT, DERNIERES]
+        else:
+            self._ecrans = ([CHOIXPEAU_Q, VERDICT] if CHOIXPEAU in self._rattrapage else []) \
+                + ([DERNIERES] if TOUCHES in self._rattrapage else [])
+        self._rail_noms = [e for e in self._ecrans if e != VERDICT]
 
-        Rien n'est obligatoire : sans une seule réponse, `repartir` rend une
-        chaîne vide et le thème Poudlard est conservé.
-        """
-        page, lay = _page_titree(tr("Le Choixpeau"))
+        self._etapes = QWidget()
+        self._etapes.setStyleSheet("background: transparent;")
+        h = QHBoxLayout(self._etapes)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0)
 
-        intro = QLabel(tr("« Voyons voir… où vais-je bien pouvoir vous mettre ? »"))
-        intro.setWordWrap(True)
-        intro.setStyleSheet("color: #b0b0c8; background: transparent;")
-        lay.addWidget(intro)
+        rail = QFrame()
+        rail.setObjectName("railAssistant")
+        rail.setFixedWidth(232)
+        v = QVBoxLayout(rail)
+        v.setContentsMargins(24, 30, 24, 24)
+        v.setSpacing(0)
+        marque = QLabel("Accio Launcher")
+        marque.setObjectName("marque")
+        marque.setFont(cinzel(12, bold=True))
+        v.addWidget(marque)
+        v.addSpacing(26)
+        self._rail = RailEtapes([tr(_NOMS_DU_RAIL[e]) for e in self._rail_noms],
+                                premiere_faite=tr("Langue") if plein else "")
+        v.addWidget(self._rail)
+        v.addStretch()
+        note = tr("Tout se change plus tard, dans les Paramètres.") if plein else tr(
+            "Ce que le launcher ne vous avait encore jamais montré. "
+            "Tout se change plus tard, dans les Paramètres.")
+        v.addWidget(texte(note, 12, "#5f5d80", retour=True))
+        h.addWidget(rail)
 
-        for index in range(len(QUESTIONS)):
-            libelle = QLabel(question(index))
-            libelle.setWordWrap(True)
-            libelle.setStyleSheet("color: #e8e8f0; background: transparent;"
-                                  " margin-top: 6px;")
-            lay.addWidget(libelle)
-            groupe = QButtonGroup(page)      # parenté explicite, cf. CLAUDE.md
-            for rang, texte in enumerate(reponses(index)):
-                bouton = QRadioButton(texte)
-                bouton.setCursor(Qt.CursorShape.PointingHandCursor)
-                groupe.addButton(bouton, rang)
-                lay.addWidget(bouton)
-            self._groupes_maison.append(groupe)
+        droite = QVBoxLayout()
+        droite.setContentsMargins(0, 0, 0, 0)
+        droite.setSpacing(0)
+        self._pile = QStackedWidget()
+        self._zones: dict[str, QWidget] = {}
+        for ecran in self._ecrans:
+            zone = zone_defilable(self._construire(ecran))
+            self._zones[ecran] = zone
+            self._pile.addWidget(zone)
+        droite.addWidget(self._pile, stretch=1)
+        droite.addWidget(self._pied())
+        h.addLayout(droite, stretch=1)
+        self._racine.addWidget(self._etapes)
+        self._racine.setCurrentWidget(self._etapes)
+        if not plein:
+            self._afficher(self._ecrans[0])
 
-        note = QLabel(tr("Sans réponse, vous gardez le thème de Poudlard."))
-        note.setWordWrap(True)
-        note.setStyleSheet("color: #8a8aaa; background: transparent;")
-        lay.addWidget(note)
+    def _pied(self) -> QFrame:
+        pied = QFrame()
+        pied.setObjectName("piedAssistant")
+        pied.setFixedHeight(72)
+        lay = QHBoxLayout(pied)
+        lay.setContentsMargins(44, 0, 44, 0)
+        lay.setSpacing(12)
+        self._btn_retour = bouton(tr("Retour"))
+        self._btn_retour.setAutoDefault(False)
+        self._btn_retour.clicked.connect(self._retour)
+        lay.addWidget(self._btn_retour)
         lay.addStretch()
-        return page
+        self._fin = texte(tr("C'est tout. Bon retour à Poudlard."), 13, ENCRE_DOUCE)
+        lay.addWidget(self._fin)
+        self._lien = lien("")
+        self._lien.clicked.connect(self._sur_lien)
+        lay.addWidget(self._lien)
+        self._btn_suivant = bouton_suivant("")
+        self._btn_suivant.clicked.connect(self._suivant)
+        lay.addWidget(self._btn_suivant)
+        return pied
 
-    def _repartir(self) -> None:
-        """Dépouille les réponses et prépare l'écran des préférences."""
-        self._maison = repartir([g.checkedId() for g in self._groupes_maison])
-        if not self._maison:
-            self._maison_label.setVisible(False)
-            return
-        self._maison_label.setText(verdict(self._maison))
-        self._maison_label.setVisible(True)
-        # Le Choixpeau a parlé : la manette, si elle est là, le sait aussitôt.
-        manette.colorer_en_fond(self._maison)
-        rang = self._theme_combo.findData(self._maison)
-        if rang >= 0:
-            self._theme_combo.setCurrentIndex(rang)
+    def _construire(self, ecran: str) -> QWidget:
+        return {DOSSIER: self._page_dossier, JEUX: self._page_jeux,
+                CHOIXPEAU_Q: self._page_choixpeau, VERDICT: self._page_verdict,
+                DERNIERES: self._page_dernieres}[ecran]()
 
-    def _build_page_welcome(self) -> QWidget:
-        page, lay = _page_titree(tr("Bienvenue dans Accio Launcher"), 22)
-        intro = QLabel(tr("Les jeux Harry Potter PC, prêts à jouer en un clic.\n"
-                          "Choisissez d'abord le dossier où les jeux seront installés."))
-        intro.setWordWrap(True)
-        lay.addWidget(intro)
-        lay.addSpacing(8)
+    def _squelette(self, ecran: str, titre: str = "", lede: str = "") -> tuple[QWidget, QVBoxLayout]:
+        """Surtitre, titre, phrase d'entrée : le haut commun des étapes."""
+        cadre = QWidget()
+        cadre.setStyleSheet("background: transparent;")
+        h = QHBoxLayout(cadre)
+        h.setContentsMargins(44, 36, 44, 24)
+        page = QWidget()
+        page.setStyleSheet("background: transparent;")
+        page.setMaximumWidth(_LARGEUR_LECTURE)
+        h.addWidget(page, stretch=1)
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        lay.addWidget(surtitre_etape(self._surtitre(ecran)))
+        if titre:
+            lay.addSpacing(6)
+            lay.addWidget(titre_etape(titre))
+        if lede:
+            lay.addSpacing(10)
+            phrase = texte(lede, 15, "#a9a7c4", retour=True)
+            phrase.setMaximumWidth(580)
+            lay.addWidget(phrase)
+        return cadre, lay
 
-        row = QHBoxLayout()
-        self._path_label.setText(str(self.install_path))
-        self._path_label.setObjectName("wizHint")
-        self._path_label.setWordWrap(True)
-        row.addWidget(self._path_label, stretch=1)
-        btn = QPushButton(tr("Changer…"))
-        btn.clicked.connect(self._choose_install_dir)
-        row.addWidget(btn)
-        lay.addLayout(row)
+    def _surtitre(self, ecran: str) -> str:
+        if ecran == VERDICT:
+            return tr("Le Choixpeau a parlé")
+        rang = self._rail_noms.index(_ETAPE_DU_RAIL[ecran])
+        if self._rattrapage:
+            return tr("Nouveau · étape {n} sur {total}").format(n=rang + 1, total=len(self._rail_noms))
+        return tr("Étape {n} sur {total}").format(n=rang + 2, total=len(self._rail_noms) + 1)
 
-        self._free_label.setObjectName("wizHint")
-        lay.addWidget(self._free_label)
-        self._refresh_free_space()
+    # ── Étape : dossier ──
+
+    def _page_dossier(self) -> QWidget:
+        page, lay = self._squelette(DOSSIER, tr("Où ranger les jeux ?"), tr(
+            "Les jeux seront installés ici. Les fichiers du launcher tiennent dans un seul "
+            "sous-dossier, _Launcher : le reste, ce sont vos jeux."))
+        lay.addSpacing(26)
+        carte = Carte()
+        self._chemin = Chemin(str(self.install_path))
+        changer = bouton(tr("Changer…"))
+        changer.clicked.connect(self._changer_dossier)
+        self._ligne_dossier = LigneReglage(self._chemin, "", changer, icone=self._icone("dossier"))
+        carte.ajouter(self._ligne_dossier)
+
+        disque = QWidget()
+        disque.setStyleSheet("background: transparent;")
+        v = QVBoxLayout(disque)
+        v.setContentsMargins(20, 16, 20, 18)
+        v.setSpacing(10)
+        self._barre = BarreDisque()
+        v.addWidget(self._barre)
+        legende = QHBoxLayout()
+        legende.setSpacing(7)
+        legende.addWidget(Pastille(QColor(255, 255, 255, 56)))
+        legende.addWidget(texte(tr("Déjà occupé"), 12, ENCRE_DOUCE))
+        legende.addSpacing(14)
+        self._pastille_saga = Pastille(accent_qcolor())
+        legende.addWidget(self._pastille_saga)
+        self._legende_saga = texte("", 12, ENCRE_DOUCE)
+        legende.addWidget(self._legende_saga)
+        legende.addStretch()
+        self._libre = texte("", 12, "#d9d6e8")
+        legende.addWidget(self._libre)
+        v.addLayout(legende)
+        carte.ajouter(disque)
+
+        avis = QWidget()
+        avis.setStyleSheet("background: transparent;")
+        a = QHBoxLayout(avis)
+        a.setContentsMargins(20, 12, 20, 14)
+        a.setSpacing(12)
+        self._picto_place = QLabel()
+        self._picto_place.setFixedSize(18, 18)
+        a.addWidget(self._picto_place, alignment=Qt.AlignmentFlag.AlignTop)
+        self._texte_place = texte("", 13, "#b9d8c4", retour=True)
+        a.addWidget(self._texte_place, stretch=1)
+        carte.ajouter(avis)
+        lay.addWidget(carte)
         lay.addStretch()
+        lay.addSpacing(18)
         # Dit une fois, avant le premier téléchargement : c'est le seul écran
         # que tout le monde voit.
-        mention = QLabel(tr(
+        lay.addWidget(texte(tr(
             "Les jeux restent la propriété de Warner Bros. et d'Electronic Arts : "
             "pour y jouer légalement, il faut en posséder une copie originale "
-            "(CD, DVD ou achat numérique)."))
-        mention.setObjectName("wizHint")
-        mention.setWordWrap(True)
-        lay.addWidget(mention)
+            "(CD, DVD ou achat numérique)."), 12, ENCRE_DISCRETE, retour=True))
+        self._regler_dossier()
         return page
 
-    def _build_page_import(self) -> QWidget:
-        page, lay = _page_titree(tr("Vous avez déjà certains jeux ?"))
-        hint = QLabel(tr("Indiquez le dossier qui contient vos installations existantes : "
-                         "les jeux reconnus seront déplacés dans le launcher (même disque, "
-                         "instantané). Vous pouvez passer cette étape."))
-        hint.setWordWrap(True)
-        hint.setObjectName("wizHint")
-        lay.addWidget(hint)
+    def _regler_dossier(self) -> None:
+        self._en_place = (detect_installed_games(self.install_path, self._games)
+                          if self.install_path.is_dir() else [])
+        presents = {g.id for g, _ in self._en_place}
+        saga = sum(poids_installe(g) for g in self._games if g.id not in presents)
+        libre, total = espace_du_volume(self.install_path)
+        self._chemin.definir(str(self.install_path))
+        self._ligne_dossier.decrire(
+            tr("Dossier proposé. Un dossier à vous, hors de Program Files.")
+            if self.install_path == DEFAULT_INSTALL_PATH else tr("Dossier choisi."))
+        self._barre.regler(total - libre, saga, total)
+        self._legende_saga.setText(
+            (tr("Les jeux qui manquent · {}") if presents else tr("Toute la saga · {}"))
+            .format(format_bytes(saga)))
+        self._pastille_saga.setVisible(saga > 0)
+        self._legende_saga.setVisible(saga > 0)
+        self._libre.setText(tr("{libre} libres sur {total}").format(
+            libre=format_bytes(libre), total=format_bytes(total)) if total else tr("Espace libre inconnu"))
 
-        row = QHBoxLayout()
-        btn_scan = QPushButton(tr("Rechercher dans un dossier…"))
-        btn_scan.clicked.connect(self._scan_folder)
-        row.addWidget(btn_scan)
-        self._scan_label.setObjectName("wizHint")
-        row.addWidget(self._scan_label, stretch=1)
-        lay.addLayout(row)
+        phrases = []
+        n = len(presents)
+        if n == 1:
+            phrases.append(tr("Ce dossier contient déjà un jeu : il sera repris tel quel."))
+        elif n > 1:
+            phrases.append(tr("Ce dossier contient déjà {} jeux : ils seront repris tels quels.").format(n))
+        assez = not total or libre >= saga
+        if saga and total:
+            if not assez:
+                phrases.append(tr("Il manque {} pour toute la saga. Chaque jeu se télécharge à part : "
+                                  "vous pourrez en installer une partie.").format(format_bytes(saga - libre)))
+            elif presents:
+                phrases.append(tr("Assez de place pour ceux qui manquent."))
+            else:
+                phrases.append(tr("Assez de place pour toute la saga. "
+                                  "Chaque jeu se télécharge quand vous le choisissez."))
+        couleur = _VERT if assez else _ORANGE
+        self._picto_place.setPixmap(pixmap_icone("coche" if assez else "attention", 18, QColor(couleur)))
+        self._texte_place.setStyleSheet(
+            f"color: {'#b9d8c4' if assez else '#ecc896'}; background: transparent;")
+        self._texte_place.setText(" ".join(phrases))
+        self._picto_place.parentWidget().setVisible(bool(phrases))
 
-        lay.addWidget(self._import_list, stretch=1)
+    def _changer_dossier(self) -> None:
+        choisi = QFileDialog.getExistingDirectory(
+            self, tr("Dossier d'installation des jeux"), str(self.install_path))
+        if not choisi:
+            return
+        self.install_path = Path(choisi)
+        if self._dossier_cherche is not None and _meme_dossier(self._dossier_cherche, self.install_path):
+            self._dossier_cherche = None
+        self._regler_dossier()
+        self._regler_jeux()
+
+    # ── Étape : vos jeux ──
+
+    def _page_jeux(self) -> QWidget:
+        page, lay = self._squelette(JEUX, tr("Vous avez déjà des jeux ?"), tr(
+            "Ceux qui sont déjà dans le dossier du launcher sont repris tels quels. "
+            "D'autres ailleurs ? Montrez le dossier qui les contient."))
+        lay.addSpacing(22)
+        self._hote_jeux = QVBoxLayout()
+        self._hote_jeux.setContentsMargins(0, 0, 0, 0)
+        lay.addLayout(self._hote_jeux)
+        lay.addSpacing(14)
+        self._note_jeux = texte(tr(
+            "Les jeux cochés sont déplacés dans le dossier du launcher, pas copiés : "
+            "sur un même disque, c'est instantané."), 13, ENCRE_DOUCE, retour=True)
+        lay.addWidget(self._note_jeux)
+        lay.addStretch()
+        self._carte_jeux: Carte | None = None
+        self._regler_jeux()
         return page
 
-    def _build_page_prefs(self) -> QWidget:
-        page, lay = _page_titree(tr("Dernières touches"))
+    def _regler_jeux(self) -> None:
+        """Rebâtit la carte des jeux : ceux du dossier, puis ceux trouvés ailleurs."""
+        if self._carte_jeux is not None:
+            self._hote_jeux.removeWidget(self._carte_jeux)
+            self._carte_jeux.deleteLater()
+        presents = {g.id for g, _ in self._en_place}
+        self._ailleurs = []
+        if self._dossier_cherche is not None:
+            self._ailleurs = [(g, src) for g, src in detect_installed_games(self._dossier_cherche, self._games)
+                              if g.id not in presents]
+        carte = Carte()
+        if self._dossier_cherche is not None:
+            n = len(self._ailleurs)
+            etat = (tr("1 jeu reconnu") if n == 1 else tr("{} jeux reconnus").format(n)) if n \
+                else tr("Aucun jeu reconnu dans ce dossier.")
+            tete = LigneReglage(Chemin(str(self._dossier_cherche)), etat, self._bouton_chercher(tr("Autre dossier…")),
+                                icone=self._icone("dossier"))
+        elif self._en_place:
+            n = len(self._en_place)
+            etat = tr("1 jeu déjà dans le dossier du launcher") if n == 1 \
+                else tr("{} jeux déjà dans le dossier du launcher").format(n)
+            tete = LigneReglage(Chemin(str(self.install_path)), etat,
+                                self._bouton_chercher(tr("Chercher ailleurs…")), icone=self._icone("dossier"))
+        else:
+            tete = LigneReglage(tr("Aucun jeu dans le dossier du launcher pour l'instant."),
+                                tr("Si vous en avez installé ailleurs, montrez le dossier qui les contient."),
+                                self._bouton_chercher(tr("Chercher dans un dossier…")), icone=self._icone("dossier"))
+        if self._dossier_cherche is not None or self._en_place:
+            tete.description.setStyleSheet(themed("color: #e8c547; background: transparent;"))
+        carte.ajouter(tete)
 
-        # Le verdict du Choixpeau, juste au-dessus du thème qu'il a choisi :
-        # sans ce voisinage, le thème paraîtrait avoir changé tout seul.
-        # Caché tant qu'aucune question n'a reçu de réponse — un état qui ne
-        # s'est pas produit ne s'affiche pas.
-        self._maison_label.setWordWrap(True)
-        self._maison_label.setVisible(False)
-        self._maison_label.setStyleSheet(
-            "color: #d6a72c; background: transparent;")
-        lay.addWidget(self._maison_label)
+        self._lignes = {}
+        for game, src in self._en_place:
+            carte.ajouter(LigneJeu(game.name, game.cover_image, str(src), tr("Déjà en place")))
+        for game, src in self._ailleurs:
+            if _meme_disque(src, self.install_path):
+                ligne = LigneJeu(game.name, game.cover_image, str(src))
+                ligne.setChecked(self._coches.get(game.id, True))
+                ligne.toggled.connect(lambda coche, gid=game.id: self._cocher(gid, coche))
+                self._lignes[game.id] = ligne
+            else:
+                ligne = LigneJeu(game.name, game.cover_image, str(src),
+                                 tr("Autre disque : à déplacer à la main"), "#ecc896")
+            carte.ajouter(ligne)
+        self._carte_jeux = carte
+        self._hote_jeux.addWidget(carte)
+        self._note_jeux.setVisible(bool(self._lignes))
+        if self._ecran == JEUX:
+            self._regler_pied()
 
-        theme_row = QHBoxLayout()
-        theme_row.addWidget(QLabel(tr("Thème :")))
-        for palette in THEMES.values():
-            self._theme_combo.addItem(tr(palette.nom), palette.id)
-        theme_row.addWidget(self._theme_combo)
-        theme_row.addStretch()
-        lay.addLayout(theme_row)
+    def _bouton_chercher(self, libelle: str):
+        btn = bouton(libelle)
+        btn.clicked.connect(self._chercher_ailleurs)
+        return btn
 
-        row, self._tgl_autoplay = toggle_row(
-            tr("Lire les bandes-annonces automatiquement"), True)
-        lay.addWidget(row)
+    def _chercher_ailleurs(self) -> None:
+        choisi = QFileDialog.getExistingDirectory(
+            self, tr("Dossier contenant vos jeux"), str(Path.home()))
+        if not choisi:
+            return
+        dossier = Path(choisi)
+        # Montrer le dossier du launcher lui-même : ses jeux sont déjà repris.
+        self._dossier_cherche = None if _meme_dossier(dossier, self.install_path) else dossier
+        self._regler_jeux()
 
-        # Le son, DÉCOCHÉ. `mute_videos` valait déjà True par défaut — c'est le
-        # bon réglage, et ce n'est pas lui qu'on corrige ici : c'est le fait que
-        # la question n'était jamais posée. Une bande-annonce se lance toute
-        # seule dès la première fiche ; du son qui part sans prévenir fait
-        # sursauter et chercher d'où il vient, et personne ne devine qu'il
-        # existe un réglage pour ça tant qu'il reste muet. Le poser à l'écran de
-        # bienvenue le rend découvrable sans jamais l'imposer, et sans coûter un
-        # écran de plus à un assistant qui en compte déjà quatre.
-        row_son, self._tgl_son = toggle_row(
-            tr("Activer le son des bandes-annonces"), False)
-        lay.addWidget(row_son)
+    def _cocher(self, game_id: str, coche: bool) -> None:
+        self._coches[game_id] = coche
+        self._regler_pied()
 
-        # Les bandes-annonces ne sont PAS dans l'exécutable : elles pèsent des
-        # centaines de Mo pour un ornement, et tout le monde n'en veut pas.
-        # On demande donc, en annonçant le poids — un téléchargement dont on
-        # n'a pas dit la taille est un mauvais tour, pas une fonctionnalité.
-        poids = sum(t.size_mb for t in self._catalogue.trailers)
-        if poids:
-            row_dl, self._tgl_trailers = toggle_row(
-                tr("Télécharger les bandes-annonces ({taille})").format(
-                    taille=format_size(poids)), True)
-            lay.addWidget(row_dl)
-            note = QLabel(tr("Vous pourrez les ajouter ou les supprimer "
-                             "à tout moment dans les Paramètres."))
-            note.setObjectName("wizHint")
-            note.setWordWrap(True)
-            lay.addWidget(note)
+    def _a_deplacer(self) -> int:
+        return sum(1 for ligne in self._lignes.values() if ligne.isChecked())
 
-        done = QLabel(tr("C'est tout — bon retour à Poudlard"))
-        done.setObjectName("wizHint")
-        lay.addWidget(done)
+    def checked_imports(self) -> list[tuple[GameData, Path]]:
+        """Les jeux déjà en place (à inscrire) et ceux cochés ailleurs (à déplacer)."""
+        coches = [(g, src) for g, src in self._ailleurs
+                  if g.id in self._lignes and self._lignes[g.id].isChecked()]
+        return list(self._en_place) + coches
+
+    # ── Étape : le Choixpeau ──
+
+    def _page_choixpeau(self) -> QWidget:
+        page, lay = self._squelette(CHOIXPEAU_Q, tr("Le Choixpeau"), tr(
+            "« Voyons voir… où vais-je bien pouvoir vous mettre ? » "
+            "Quatre questions, et votre maison donnera ses couleurs au launcher."))
+        lay.addSpacing(24)
+        rang = QHBoxLayout()
+        rang.setSpacing(12)
+        self._progression = Progression(len(QUESTIONS))
+        rang.addWidget(self._progression, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self._compte = texte("", 12, ENCRE_DOUCE)
+        rang.addWidget(self._compte)
+        rang.addStretch()
+        lay.addLayout(rang)
+        lay.addSpacing(14)
+        self._intitule = QLabel()
+        self._intitule.setTextFormat(Qt.TextFormat.PlainText)
+        self._intitule.setWordWrap(True)
+        f = police(21)
+        f.setItalic(True)
+        self._intitule.setFont(f)
+        self._intitule.setStyleSheet("color: #f4f2f8; background: transparent;")
+        lay.addWidget(self._intitule)
+        lay.addSpacing(18)
+        grille = QGridLayout()
+        grille.setSpacing(12)
+        self._groupe_reponses = QButtonGroup(self)
+        self._cartes_reponse: list[CarteReponse] = []
+        for i in range(4):
+            carte = CarteReponse()
+            self._groupe_reponses.addButton(carte, i)
+            self._cartes_reponse.append(carte)
+            grille.addWidget(carte, i // 2, i % 2)
+        grille.setColumnStretch(0, 1)
+        grille.setColumnStretch(1, 1)
+        self._groupe_reponses.idClicked.connect(self._sur_reponse)
+        lay.addLayout(grille)
+        lay.addStretch()
+        self._regler_question()
+        return page
+
+    def _regler_question(self) -> None:
+        q = self._question
+        self._progression.regler(q)
+        self._compte.setText(tr("Question {n} sur {total}").format(n=q + 1, total=len(QUESTIONS)))
+        self._intitule.setText(question(q))
+        self._groupe_reponses.setExclusive(False)
+        for i, (carte, contenu) in enumerate(zip(self._cartes_reponse, reponses(q))):
+            carte.dire(contenu)
+            carte.setChecked(self._reponses[q] == i)
+        self._groupe_reponses.setExclusive(True)
+
+    def _sur_reponse(self, rang: int) -> None:
+        self._reponses[self._question] = rang
+        self._regler_pied()
+
+    def _repartir(self) -> None:
+        """Dépouille les réponses : la maison, ou rien si personne n'a répondu."""
+        self._maison = repartir(self._reponses)
+        if self._maison:
+            self.theme = self._maison
+            # Le Choixpeau a parlé : la manette, si elle est là, le sait aussitôt.
+            manette.colorer_en_fond(self._maison)
+
+    def _oublier_le_choixpeau(self) -> None:
+        self._reponses = [-1] * len(QUESTIONS)
+        self._question = 0
+        self._maison = ""
+        self.theme = self._theme_initial
+        self._regler_question()
+
+    # ── Le verdict ──
+
+    def _page_verdict(self) -> QWidget:
+        # Pas de titre : c'est le cri de la maison, en grand sous l'écu.
+        page, lay = self._squelette(VERDICT)
+        lay.addStretch()
+        self._hote_ecu = QHBoxLayout()
+        self._hote_ecu.addStretch()
+        self._ecu: QWidget | None = None
+        self._hote_ecu.addStretch()
+        lay.addLayout(self._hote_ecu)
+        lay.addSpacing(26)
+        self._devise = QLabel()
+        self._devise.setTextFormat(Qt.TextFormat.PlainText)
+        self._devise.setWordWrap(True)
+        self._devise.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        f = police(21)
+        f.setItalic(True)
+        self._devise.setFont(f)
+        self._devise.setStyleSheet("color: #e9e6f2; background: transparent;")
+        lay.addWidget(self._devise)
+        lay.addSpacing(12)
+        self._cri = QLabel()
+        self._cri.setObjectName("marque")
+        self._cri.setTextFormat(Qt.TextFormat.PlainText)
+        self._cri.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._cri.setFont(cinzel_decorative(28, QFont.Weight.Bold))
+        lay.addWidget(self._cri)
+        lay.addSpacing(18)
+        self._note_verdict = texte("", 13, ENCRE_DOUCE, retour=True)
+        self._note_verdict.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        lay.addWidget(self._note_verdict)
         lay.addStretch()
         return page
+
+    def _regler_verdict(self) -> None:
+        if self._ecu is not None:
+            self._hote_ecu.removeWidget(self._ecu)
+            self._ecu.deleteLater()
+        self._ecu = Ecu(self._maison, hauteur=132)
+        self._hote_ecu.insertWidget(1, self._ecu)
+        devise, cri = verdict(self._maison)
+        self._devise.setText(tr("« {} »").format(devise))
+        self._cri.setText(cri)
+        self._note_verdict.setText(tr(
+            "Le launcher prend déjà les couleurs de {maison}. "
+            "Vous pourrez en choisir d'autres à l'étape suivante.").format(maison=tr(THEMES[self._maison].nom)))
+
+    # ── Étape : dernières touches ──
+
+    def _page_dernieres(self) -> QWidget:
+        page, lay = self._squelette(DERNIERES, tr("Dernières touches"), tr(
+            "Trois questions de goût, et la bibliothèque s'ouvre."))
+        lay.addSpacing(24)
+        lay.addWidget(surtitre_etape(tr("Couleurs du launcher")))
+        lay.addSpacing(10)
+        rangee = QHBoxLayout()
+        rangee.setSpacing(10)
+        self._groupe_couleurs = QButtonGroup(self)
+        self._cartes_couleur: dict[str, CarteCouleur] = {}
+        for palette in THEMES.values():
+            nom = tr("Poudlard") if palette.id == "poudlard" else tr(palette.nom)
+            carte = CarteCouleur(palette.id, nom)
+            self._groupe_couleurs.addButton(carte)
+            self._cartes_couleur[palette.id] = carte
+            rangee.addWidget(carte, stretch=1)
+        self._groupe_couleurs.buttonClicked.connect(lambda c: self._choisir_couleur(c.theme_id))
+        lay.addLayout(rangee)
+
+        lay.addSpacing(24)
+        lay.addWidget(surtitre_etape(tr("Bandes-annonces")))
+        lay.addSpacing(10)
+        carte = Carte()
+        # Les bandes-annonces ne sont PAS dans l'exécutable : elles pèsent des
+        # centaines de Mo pour un ornement, et tout le monde n'en veut pas. On
+        # demande donc, en annonçant le poids.
+        poids = sum(t.size_mb for t in self._catalogue.trailers)
+        self._tgl_trailers: ToggleSwitch | None = None
+        if poids:
+            ligne, self._tgl_trailers = self._interrupteur(
+                tr("Télécharger les bandes-annonces"), True,
+                tr("Une vidéo par jeu, {taille} en tout. Elles se suppriment d'un clic "
+                   "dans les Paramètres.").format(taille=format_size(poids)))
+            carte.ajouter(ligne)
+        ligne, self._tgl_autoplay = self._interrupteur(
+            tr("Les lire automatiquement sur la fiche"), self.autoplay)
+        carte.ajouter(ligne)
+        # Le son, DÉCOCHÉ par défaut : une bande-annonce se lance toute seule
+        # dès la première fiche, et du son qui part sans prévenir fait
+        # sursauter. Le poser ici le rend découvrable sans l'imposer.
+        ligne, self._tgl_son = self._interrupteur(
+            tr("Avec le son"), not self.mute_videos,
+            tr("Coupé par défaut : rien ne part fort à l'ouverture."))
+        carte.ajouter(ligne)
+        lay.addWidget(carte)
+        lay.addStretch()
+        return page
+
+    @staticmethod
+    def _interrupteur(titre: str, coche: bool, phrase: str = "") -> tuple[LigneReglage, ToggleSwitch]:
+        bascule = ToggleSwitch(coche)
+        bascule.setAccessibleName(titre)
+        return LigneReglage(titre, phrase, bascule), bascule
+
+    def _regler_dernieres(self) -> None:
+        for theme_id, carte in self._cartes_couleur.items():
+            carte.annoter(tr("Choisie par le Choixpeau") if theme_id == self._maison else "")
+            carte.setChecked(theme_id == self.theme)
+
+    def _choisir_couleur(self, theme_id: str) -> None:
+        self.theme = theme_id
+        self._appliquer_theme(theme_id)
 
     # ── Navigation ──
 
-    def _sync_nav(self) -> None:
-        i = self._pages.currentIndex()
-        self._step_label.setText(f"{i + 1}/{TOTAL_PAGES}")
-        self._btn_back.setVisible(i > 0)
-        self._btn_back.setText(tr("Retour"))
-        self._btn_next.setText(tr("Terminer") if i == TOTAL_PAGES - 1 else tr("Suivant"))
+    def _afficher(self, ecran: str) -> None:
+        self._ecran = ecran
+        # Chaque écran porte ses couleurs : celles d'avant le Choixpeau,
+        # la maison au verdict, la couleur choisie aux dernières touches.
+        if ecran == VERDICT:
+            self._regler_verdict()
+            self._appliquer_theme(self._maison)
+        elif ecran == DERNIERES:
+            self._regler_dernieres()
+            self._appliquer_theme(self.theme)
+        else:
+            self._appliquer_theme(self._theme_initial)
+        if ecran == CHOIXPEAU_Q:
+            self._regler_question()
+        self._pile.setCurrentWidget(self._zones[ecran])
+        self._rail.regler(self._rail_noms.index(_ETAPE_DU_RAIL[ecran]))
+        self._regler_pied()
 
-    def _go_back(self) -> None:
-        self._pages.setCurrentIndex(max(0, self._pages.currentIndex() - 1))
-        self._sync_nav()
+    def _regler_pied(self) -> None:
+        ecran = self._ecran
+        # Le rattrapage n'a rien avant sa première question : pas de retour.
+        premier = bool(self._rattrapage) and ecran == self._ecrans[0] and self._question == 0
+        self._btn_retour.setVisible(not premier)
+        self._btn_retour.setText(tr("Refaire le test") if ecran == VERDICT else tr("Retour"))
+        self._fin.setVisible(ecran == DERNIERES)
+        lien_txt = ""
+        suivant, actif = tr("Suivant"), True
+        if ecran == JEUX:
+            n = self._a_deplacer()
+            if n:
+                suivant = tr("Importer 1 jeu") if n == 1 else tr("Importer {} jeux").format(n)
+                lien_txt = tr("Passer sans importer")
+        elif ecran == CHOIXPEAU_Q:
+            derniere = self._question == len(QUESTIONS) - 1
+            suivant = tr("Voir le verdict") if derniere else tr("Question suivante")
+            actif = self._reponses[self._question] >= 0
+            lien_txt = tr("Garder le thème de Poudlard") if self._theme_initial == "poudlard" \
+                else tr("Garder mes couleurs")
+        elif ecran == DERNIERES:
+            suivant = tr("Ouvrir la bibliothèque") if not self._rattrapage else tr("Terminer")
+        self._lien.setText(lien_txt)
+        self._lien.setVisible(bool(lien_txt))
+        self._btn_suivant.setText(suivant)
+        self._btn_suivant.setEnabled(actif)
 
-    def _go_next(self) -> None:
-        i = self._pages.currentIndex()
-        if i == 0:
-            # Fixer la langue AVANT de bâtir la suite : les tr() sont évalués
-            # à la construction des widgets, pas à l'affichage.
-            choisie = self._lang_combo.currentData()
-            # Déjà passé par ici dans une AUTRE langue : les écrans suivants
-            # existent, figés dans celle d'avant. Les jeter pour les refaire.
-            if self._rest_built and choisie != self.langue:
-                self._oublier_les_pages()
-            self.langue = choisie
-            set_language(self.langue)
-            # Le catalogue résout ses traductions AU PARSING : celui chargé dans
-            # __init__ l'a été avant ce choix, donc ses noms de jeux sont restés
-            # en français. On le relit une fois la langue connue.
-            self._catalogue = load_catalog()
-            self._games = list(self._catalogue.games)
-            self.setWindowTitle(tr("Bienvenue dans Accio Launcher"))
-            self._build_rest()
-        elif i == 1 and not is_writable_dir(self.install_path):
-            avertir(self, tr("Dossier non inscriptible"),
-                    tr("Impossible d'écrire dans :\n{}").format(self.install_path))
-            return
-        elif i == TOTAL_PAGES - 2:
-            # On quitte le Choixpeau : dépouiller maintenant, pour que l'écran
-            # suivant s'ouvre déjà sur la maison et son thème.
+    def _suivant(self) -> None:
+        ecran = self._ecran
+        if ecran == DOSSIER:
+            if not is_writable_dir(self.install_path):
+                avertir(self, tr("Dossier non inscriptible"),
+                        tr("Impossible d'écrire dans :\n{}").format(self.install_path))
+                return
+            self._afficher(JEUX)
+        elif ecran == JEUX:
+            self._afficher(CHOIXPEAU_Q)
+        elif ecran == CHOIXPEAU_Q:
+            if self._reponses[self._question] < 0:
+                return
+            if self._question < len(QUESTIONS) - 1:
+                self._question += 1
+                self._regler_question()
+                self._regler_pied()
+                return
             self._repartir()
-        if i == TOTAL_PAGES - 1:
-            self.theme = self._theme_combo.currentData()
+            self._afficher_ou_finir(VERDICT if self._maison else self._apres_choixpeau())
+        elif ecran == VERDICT:
+            self._afficher_ou_finir(self._apres_choixpeau())
+        elif ecran == DERNIERES:
+            self._terminer()
+
+    def _apres_choixpeau(self) -> str:
+        return DERNIERES if DERNIERES in self._ecrans else ""
+
+    def _afficher_ou_finir(self, ecran: str) -> None:
+        if ecran:
+            self._afficher(ecran)
+        else:
+            self._terminer()
+
+    def _retour(self) -> None:
+        ecran = self._ecran
+        if ecran == DOSSIER:
+            self._racine.setCurrentIndex(0)
+            self._appliquer_theme(self._theme_initial)
+        elif ecran == JEUX:
+            self._afficher(DOSSIER)
+        elif ecran == CHOIXPEAU_Q:
+            if self._question > 0:
+                self._question -= 1
+                self._regler_question()
+                self._regler_pied()
+            elif JEUX in self._ecrans:
+                self._afficher(JEUX)
+        elif ecran == VERDICT:
+            self._oublier_le_choixpeau()
+            self._afficher(CHOIXPEAU_Q)
+        elif ecran == DERNIERES:
+            if self._maison:
+                self._afficher(VERDICT)
+            elif CHOIXPEAU_Q in self._ecrans:
+                self._afficher(CHOIXPEAU_Q)
+
+    def _sur_lien(self) -> None:
+        if self._ecran == JEUX:
+            for ligne in self._lignes.values():
+                ligne.setChecked(False)
+            self._afficher(CHOIXPEAU_Q)
+        elif self._ecran == CHOIXPEAU_Q:
+            # Rien n'est obligatoire : sans maison, les couleurs d'avant restent.
+            self._oublier_le_choixpeau()
+            self._afficher_ou_finir(self._apres_choixpeau())
+
+    def _terminer(self) -> None:
+        if self._ecran == DERNIERES:
             self.autoplay = self._tgl_autoplay.isChecked()
             self.mute_videos = not self._tgl_son.isChecked()
-            if self._tgl_trailers is not None:
-                self.trailers_optin = self._tgl_trailers.isChecked()
-            else:
-                # Catalogue sans bandes-annonces : rien n'a été proposé, donc
-                # rien n'a été accepté. Répondre « oui » à une question qu'on
-                # n'a pas posée ferait télécharger sans mandat le jour où le
-                # catalogue en déclare.
-                self.trailers_optin = False
-            self.accept()
-            return
-        self._pages.setCurrentIndex(i + 1)
-        self._sync_nav()
-
-    # ── Écran 2 : dossier ──
-
-    def _choose_install_dir(self) -> None:
-        chosen = QFileDialog.getExistingDirectory(
-            self, tr("Dossier d'installation des jeux"), str(self.install_path))
-        if chosen:
-            self.install_path = Path(chosen)
-            self._path_label.setText(chosen)
-            self._refresh_free_space()
-
-    def _refresh_free_space(self) -> None:
-        try:
-            free = format_bytes(shutil.disk_usage(self.install_path.anchor or ".").free)
-        except OSError:
-            free = "?"
-        self._free_label.setText(tr("Espace libre : {}").format(free))
-
-    # ── Écran 3 : scan/import ──
-
-    def _scan_folder(self) -> None:
-        chosen = QFileDialog.getExistingDirectory(
-            self, tr("Dossier contenant vos jeux"), str(Path.home()))
-        if not chosen:
-            return
-        parent = Path(chosen)
-        self._detected = detect_installed_games(parent, self._games)
-        self._import_list.clear()
-        if not self._detected:
-            self._scan_label.setText(tr("Aucun jeu reconnu dans ce dossier."))
-            return
-        n = len(self._detected)
-        self._scan_label.setText(tr("1 jeu reconnu") if n == 1
-                                 else tr("{} jeux reconnus").format(n))
-        for game, src in self._detected:
-            item = QListWidgetItem(f"{game.name} — {src}")
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Checked)
-            self._import_list.addItem(item)
-
-    def checked_imports(self) -> list[tuple[GameData, Path]]:
-        return [
-            pair for row, pair in enumerate(self._detected)
-            if self._import_list.item(row).checkState() == Qt.CheckState.Checked
-        ]
+            # Catalogue sans bandes-annonces : rien n'a été proposé, donc rien
+            # n'a été accepté. Répondre « oui » à une question qu'on n'a pas
+            # posée ferait télécharger sans mandat le jour où il en déclarera.
+            self.trailers_optin = self._tgl_trailers.isChecked() if self._tgl_trailers else False
+        self.accept()
 
     def perform_imports(self, config: Config) -> None:
-        """Déplace les jeux cochés dans le dossier d'installation (config déjà créée)."""
+        """Inscrit les jeux déjà en place et déplace les jeux cochés (config déjà créée)."""
         from src.ui.game_detail_handlers import find_import_error
 
         done: list[str] = []
@@ -563,8 +989,8 @@ def run_onboarding() -> Config:
         log.info("Assistant de premier lancement fermé sans être terminé")
         raise OnboardingAnnule
     if not is_writable_dir(dlg.install_path):
-        # L'écran 2 le refuse déjà : on n'arrive ici que si le dossier a
-        # disparu entre-temps. Abandonner vaut mieux qu'écrire une config
+        # L'étape du dossier le refuse déjà : on n'arrive ici que si le dossier
+        # a disparu entre-temps. Abandonner vaut mieux qu'écrire une config
         # qui désigne un dossier où rien ne pourra jamais s'installer.
         log.warning("Dossier d'installation inaccessible : %s", dlg.install_path)
         raise OnboardingAnnule
@@ -579,4 +1005,44 @@ def run_onboarding() -> Config:
     )
     config.save()
     dlg.perform_imports(config)
+    return config
+
+
+def run_rattrapage(config: Config, etapes: tuple[str, ...]) -> None:
+    """Les étapes jamais vues, une fois, puis la bibliothèque.
+
+    Fermer la fenêtre ne repose pas la question au lancement suivant : un
+    écran qui revient tant qu'on ne l'a pas rempli, c'est une relance, et le
+    launcher s'interdit d'insister. Rien de ce qui n'a pas été répondu n'est
+    changé ; les étapes sont seulement notées comme vues.
+    """
+    dlg = OnboardingDialog(config, etapes)
+    if dlg.exec() == QDialog.DialogCode.Accepted:
+        config.theme = dlg.theme
+        if TOUCHES in etapes:
+            config.autoplay_videos = dlg.autoplay
+            config.mute_videos = dlg.mute_videos
+            config.trailers_optin = dlg.trailers_optin
+        log.info("Rattrapage de l'assistant terminé (%s)", ", ".join(etapes))
+    else:
+        log.info("Rattrapage de l'assistant fermé (%s)", ", ".join(etapes))
+    for etape in etapes:
+        if etape not in config.etapes_assistant:
+            config.etapes_assistant.append(etape)
+    config.save()
+
+
+def charger_ou_accueillir() -> Config:
+    """La config du launcher, après l'assistant s'il y a lieu.
+
+    Aucune config : l'assistant complet (`run_onboarding`). Une config d'avant
+    le Choixpeau ou les bandes-annonces : ces étapes-là seulement, une fois.
+    """
+    if not Config.exists():
+        return run_onboarding()
+    config = Config.load()
+    etapes = etapes_a_rattraper(config.etapes_assistant, config.theme, config.trailers_optin)
+    if etapes:
+        set_language(config.langue)
+        run_rattrapage(config, etapes)
     return config

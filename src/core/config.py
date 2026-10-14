@@ -109,6 +109,13 @@ def _as_bool(value: object, default: bool) -> bool:
     return value if isinstance(value, bool) else default
 
 
+def _as_liste(value: object) -> list[str]:
+    """Une liste de textes ; tout le reste est écarté (absent = vide)."""
+    if not isinstance(value, list):
+        return []
+    return [v for v in value if isinstance(v, str)]
+
+
 def _as_map(value: object, type_valeur: type) -> dict:
     """Dict dont on ne garde QUE les paires (str → type_valeur) exploitables.
 
@@ -173,6 +180,11 @@ class Config:
     # qu'on sait qu'une mise à jour vient d'être installée. Une config neuve
     # porte la version courante ; une config d'avant la 1.1.6 se charge VIDE.
     version_lancee: str = APP_VERSION
+    # Étapes de l'assistant déjà MONTRÉES (`src/core/assistant.py`). Une config
+    # neuve les porte toutes ; une config d'avant la 1.1.6 se charge VIDE, et
+    # c'est ce qui fait montrer, une fois, le Choixpeau et les bandes-annonces
+    # à ceux qui avaient le launcher avant qu'ils existent.
+    etapes_assistant: list[str] = field(default_factory=lambda: ["choixpeau", "touches"])
     installed_versions: dict[str, str] = field(default_factory=dict)
     # Stats de jeu : cumul par jeu (secondes) et date de dernière session (ISO)
     playtime_seconds: dict[str, int] = field(default_factory=dict)
@@ -223,6 +235,7 @@ class Config:
                     kofi_milestone_thanked=_as_bool(
                         data.get("kofi_milestone_thanked"), False),
                     version_lancee=_as_str(data.get("version_lancee"), ""),
+                    etapes_assistant=_as_liste(data.get("etapes_assistant")),
                     installed_versions=_as_map(data.get("installed_versions"), str),
                     playtime_seconds=_as_map(data.get("playtime_seconds"), int),
                     last_played=_as_map(data.get("last_played"), str),
@@ -265,6 +278,7 @@ class Config:
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,
                 "version_lancee": self.version_lancee,
+                "etapes_assistant": self.etapes_assistant,
                 "installed_versions": self.installed_versions,
                 "playtime_seconds": self.playtime_seconds,
                 "last_played": self.last_played,

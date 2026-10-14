@@ -100,7 +100,7 @@ class TestLeQuestionnaire:
         try:
             assert "corridor" in question(0).lower()
             assert any("library" in r.lower() for r in reponses(0))
-            assert "GRYFFINDOR" in verdict(GRYFFONDOR)
+            assert verdict(GRYFFONDOR)[1] == "GRYFFINDOR!"
         finally:
             set_language("fr")
 
@@ -112,4 +112,5 @@ class TestLeQuestionnaire:
 
 @pytest.mark.parametrize("maison", MAISONS)
 def test_chaque_maison_a_son_verdict(maison):
-    assert verdict(maison).strip()
+    devise, cri = verdict(maison)
+    assert devise.strip() and cri.strip()

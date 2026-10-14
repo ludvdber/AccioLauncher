@@ -130,7 +130,7 @@ class TestFinDInstallation:
         operations._active_game = jeu
         operations._target_version = jeu.current_download
         erreurs = []
-        operations.operation_error.connect(lambda t, m: erreurs.append(t))
+        operations.operation_error.connect(lambda t, m, c: erreurs.append(t))
 
         operations._on_install_finished(str(manager.config.install_path))
 

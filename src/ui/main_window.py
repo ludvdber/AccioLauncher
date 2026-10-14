@@ -23,7 +23,9 @@ from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
 from src.core.season import resolve as resolve_season
 from src.core.version_utils import compare_versions
+from src.ui.pages import Pages
 from src.ui.settings_panel import SettingsDialog
+from src.ui.desinstallation_dialog import desinstaller
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
@@ -103,12 +105,10 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _first_launch_or_load() -> Config:
-        if Config.exists():
-            return Config.load()
-        # Premier lancement : assistant 3 écrans (dossier, import en masse,
-        # langue/thème — appliqués dès la suite de la construction).
-        from src.ui.onboarding import run_onboarding
-        return run_onboarding()
+        # Premier lancement : l'assistant ; config d'avant le Choixpeau : ses
+        # étapes jamais vues, une fois. Langue et thème appliqués juste après.
+        from src.ui.onboarding import charger_ou_accueillir
+        return charger_ou_accueillir()
 
     # ──────────────────── Construction UI ────────────────────
 
@@ -134,17 +134,18 @@ class MainWindow(QMainWindow):
         self._detail.setMouseTracking(True)
         self._detail.status_message.connect(self._show_status)
         self._detail.state_changed.connect(self._on_state_changed)
-        root_layout.addWidget(self._detail, stretch=1)
+        self._carousel = Carousel(games, self.manager, self)
+        self._carousel.game_selected.connect(self._on_carousel_select)
+        # La bibliothèque (fiche + carrousel) en page 0 ; Mes années, Paramètres
+        # et les réglages d'un jeu s'ouvrent à sa place (`pages.py`).
+        self._pages = Pages(self._detail, self._carousel, self)
+        root_layout.addWidget(self._pages, stretch=1)
 
-        # Barre de téléchargement persistante (visible pendant download/install)
+        # Barre de téléchargement persistante, SOUS les pages : visible partout.
         self._download_bar = DownloadBar(self)
         root_layout.addWidget(self._download_bar)
         self._suivi = SuiviBarre(self._download_bar, self._detail.ops, self._detail.wine,
                                  self.manager, lambda: int(self.winId()), self)
-
-        self._carousel = Carousel(games, self.manager, self)
-        self._carousel.game_selected.connect(self._on_carousel_select)
-        root_layout.addWidget(self._carousel)
 
         self._status_bar = BarreDeStatut(self.config, self._detail.ops)
         self.setStatusBar(self._status_bar)
@@ -181,6 +182,8 @@ class MainWindow(QMainWindow):
         # Les pages et Discord vivent dans la barre du haut (refonte du
         # 2026-10-09) : plus de boutons flottants posés sur la fiche.
         self._title_bar.onglet_demande.connect(self._on_onglet)
+        self._pages.brancher(self._particles, self._title_bar)
+        self._detail.page_demandee.connect(self._pages.ouvrir)
         self._title_bar.discord_demande.connect(lambda: open_url(DISCORD_URL))
         self._btn_settings = self._title_bar.onglet(PARAMETRES)
         self._btn_stats = self._title_bar.onglet(ANNEES)
@@ -606,12 +609,14 @@ class MainWindow(QMainWindow):
         dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
         dlg.season_changed.connect(self._particles.apply_season)
         dlg.restart_requested.connect(lambda: self._restart_launcher(dlg))
-        dlg.exec()
+        dlg.desinstallation_demandee.connect(
+            lambda jeux, copies: desinstaller(self, dlg, jeux, copies))
+        self._pages.ouvrir(dlg, PARAMETRES)
 
     def _on_stats(self) -> None:
         """Page de statistiques — lecture seule, aucun réglage, donc rien à recâbler."""
         from src.ui.stats_dialog import StatsDialog
-        StatsDialog(self.manager, self).exec()
+        self._pages.ouvrir(StatsDialog(self.manager, self), ANNEES)
 
     def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
         """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre.
@@ -644,19 +649,13 @@ class MainWindow(QMainWindow):
     # ──────────────────── Événements ────────────────────
 
     def _on_onglet(self, cle: str) -> None:
-        """Mes années et Paramètres sont modaux : l'onglet reste souligné le
-        temps de la fenêtre, puis Bibliothèque reprend."""
+        """Bibliothèque ferme la page ouverte ; les deux autres ouvrent la leur."""
         if cle == BIBLIOTHEQUE:
-            self._title_bar.set_onglet(BIBLIOTHEQUE)
-            return
-        self._title_bar.set_onglet(cle)
-        try:
-            if cle == ANNEES:
-                self._on_stats()
-            else:
-                self._on_settings()
-        finally:
-            self._title_bar.set_onglet(BIBLIOTHEQUE)
+            self._pages.fermer()
+        elif cle == ANNEES:
+            self._on_stats()
+        else:
+            self._on_settings()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -700,7 +699,8 @@ class MainWindow(QMainWindow):
 
     def _handle_global_key(self, event) -> bool:
         """←/→ et Échap avant les widgets : voir `clavier_global.touche_globale`."""
-        return touche_globale(event, self._carousel, self._detail, self.isActiveWindow())
+        return touche_globale(event, self._carousel, self._detail, self.isActiveWindow(),
+                              page_ouverte=self._pages.page is not None)
 
     def _confirmer_fermeture(self) -> bool:
         """Demande confirmation si une opération est en cours. True = on ferme.
@@ -729,6 +729,8 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
         QApplication.instance().removeEventFilter(self)
+        # Une page ouverte se ferme par son chemin normal (`done()` arrête ses threads).
+        self._pages.fermer()
 
         # Une partie en cours garde sa barre : c'est le jeu qui la tient.
         eteindre_manette = self.config.couleur_manette and not self._session.nom_en_cours
@@ -745,7 +747,7 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         # ←/→ : consommées avant par `_handle_global_key`.
         match event.key():
-            case Qt.Key.Key_Return | Qt.Key.Key_Enter:
+            case Qt.Key.Key_Return | Qt.Key.Key_Enter if self._pages.page is None:
                 self._detail.trigger_primary_action()
             case _:
                 super().keyPressEvent(event)

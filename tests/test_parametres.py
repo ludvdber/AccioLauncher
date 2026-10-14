@@ -10,7 +10,8 @@ from PyQt6.QtCore import Qt  # noqa: E402
 from src.core.config import Config  # noqa: E402
 from src.core.game_manager import GameManager  # noqa: E402
 from src.ui import composants  # noqa: E402
-from src.ui.settings_panel import SettingsDialog, _Chemin  # noqa: E402
+from src.ui.composants import Chemin as _Chemin  # noqa: E402
+from src.ui.settings_panel import SettingsDialog  # noqa: E402
 
 
 @pytest.fixture

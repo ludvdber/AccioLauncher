@@ -2,24 +2,24 @@
 
 Extrait de `main_window` (plafond de lignes). Ce sont des QUESTIONS, donc de
 vrais dialogues (les toasts sont pour ce qui n'attend rien), et toutes deux
-affichent du texte venu de l'extérieur : `PlainText` à la construction, parce
-que `QMessageBox` est en `AutoText` par défaut et interpréterait du balisage.
-Boutons NOMMÉS, jamais `StandardButton` (règle 116 de CLAUDE.md).
+affichent du texte venu de l'extérieur : `FenetreMessage` les pose toujours en
+texte brut. Boutons NOMMÉS, jamais `StandardButton` (règle 116 de CLAUDE.md).
 """
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox
 
 from src.core.i18n import tr
+from src.ui.fenetre_message import FenetreMessage
 
 
-def _boite(parent, titre: str, texte: str, detail: str) -> QMessageBox:
-    boite = QMessageBox(parent)
+def _boite(parent, titre: str, texte: str, detail: str, conserve: str = "") -> FenetreMessage:
+    boite = FenetreMessage(parent)
     boite.setWindowTitle(titre)
-    boite.setIcon(QMessageBox.Icon.NoIcon)
-    boite.setTextFormat(Qt.TextFormat.PlainText)
+    boite.setTextFormat(Qt.TextFormat.PlainText)   # sans effet ici : le dit quand même
     boite.setText(texte)
     boite.setInformativeText(detail)
+    if conserve:
+        boite.setConserve(conserve)
     return boite
 
 
@@ -44,8 +44,8 @@ def proposer_mise_a_jour(parent, version: str, notes: str, auto: bool) -> bool:
                    tr("Accio Launcher v{} est disponible !").format(version),
                    f"{notes}\n\n{mecanique}" if notes else mecanique)
     maintenant = boite.addButton(tr("Mettre à jour maintenant"),
-                                 QMessageBox.ButtonRole.AcceptRole)
-    boite.addButton(tr("Plus tard"), QMessageBox.ButtonRole.RejectRole)
+                                 FenetreMessage.ButtonRole.AcceptRole)
+    boite.addButton(tr("Plus tard"), FenetreMessage.ButtonRole.RejectRole)
     boite.setDefaultButton(maintenant)
     boite.exec()
     return boite.clickedButton() is maintenant
@@ -68,7 +68,7 @@ def confirmer_fermeture(parent, nom_du_jeu: str | None, phase: str) -> bool:
         tr("L'installation devra être refaite depuis le début. L'archive "
            "déjà téléchargée est conservée : il n'y aura rien à "
            "re-télécharger."))
-    quitter = boite.addButton(tr("Quitter quand même"), QMessageBox.ButtonRole.DestructiveRole)
-    boite.setDefaultButton(boite.addButton(tr("Continuer"), QMessageBox.ButtonRole.RejectRole))
+    quitter = boite.addButton(tr("Quitter quand même"), FenetreMessage.ButtonRole.DestructiveRole)
+    boite.setDefaultButton(boite.addButton(tr("Continuer"), FenetreMessage.ButtonRole.RejectRole))
     boite.exec()
     return boite.clickedButton() is quitter

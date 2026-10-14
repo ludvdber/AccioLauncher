@@ -13,7 +13,8 @@ from PyQt6.QtWidgets import (
 _EDITION = (QLineEdit, QComboBox, QSlider, QAbstractSpinBox)
 
 
-def touche_globale(event, carrousel, fiche, fenetre_active: bool) -> bool:
+def touche_globale(event, carrousel, fiche, fenetre_active: bool,
+                   page_ouverte: bool = False) -> bool:
     """←/→ naviguent le carrousel même quand un bouton a le focus (A11Y).
     Échap sort du plein écran de la bande-annonce, et seulement de ça.
     True = la touche est consommée.
@@ -25,7 +26,9 @@ def touche_globale(event, carrousel, fiche, fenetre_active: bool) -> bool:
     """
     if event.key() not in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Escape):
         return False
-    if QApplication.activeModalWidget() is not None or not fenetre_active:
+    # Une page (Paramètres, Mes années…) garde ses touches : les flèches y
+    # déplacent le focus, Échap la ferme.
+    if QApplication.activeModalWidget() is not None or not fenetre_active or page_ouverte:
         return False
     if event.key() == Qt.Key.Key_Escape:
         # Échap ne sort QUE du plein écran : la fenêtre est sans cadre, et la
