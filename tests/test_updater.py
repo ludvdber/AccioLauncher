@@ -276,6 +276,86 @@ class TestLauncherDigest:
         assert recu == []
 
 
+class TestJamaisDeRetrogradation:
+    """Le catalogue distant ne remplace le local que s'il est plus RÉCENT.
+
+    « Vérifier » des Paramètres partait d'une version « 0 » : tout catalogue
+    distant gagnait, et la 0.42 embarquée de Ludo est redescendue en 0.41 tant
+    que le dépôt des jeux n'avait pas reçu la 0.42 (2026-10-14).
+    """
+
+    @staticmethod
+    def _distant(monkeypatch, tmp_path, version: str):
+        mod = types.ModuleType("httpx")
+
+        class HTTPError(Exception):
+            pass
+
+        class _Resp:
+            def raise_for_status(self):
+                pass
+
+            def iter_bytes(self, taille=None):
+                yield b"{}"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        class Client:
+            def __init__(self, *a, **kw):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def stream(self, methode, url, **kw):
+                return _Resp()
+
+        mod.HTTPError = HTTPError
+        mod.TransportError = HTTPError
+        mod.Timeout = lambda *a, **kw: None
+        mod.Client = Client
+        monkeypatch.setitem(sys.modules, "httpx", mod)
+        jeu = types.SimpleNamespace(id="hp1", recommended_version="1")
+        monkeypatch.setattr("src.core.updater._parse_catalog",
+                            lambda raw: types.SimpleNamespace(catalog_version=version, games=(jeu,)))
+        cache = tmp_path / "catalog_cache.json"
+        monkeypatch.setattr("src.core.updater._LOCAL_CATALOG_PATH", cache)
+        return cache
+
+    @staticmethod
+    def _verifier(locale: str, force: bool) -> list:
+        checker = UpdateChecker(catalog_url="https://raw.githubusercontent.com/o/r/main/games.json",
+                                current_catalog_version=locale, installed_versions={}, force=force)
+        recus = []
+        checker.catalog_updated.connect(recus.append)
+        checker._check_catalog()
+        return recus
+
+    def test_force_ne_redescend_jamais(self, monkeypatch, tmp_path):
+        cache = self._distant(monkeypatch, tmp_path, "0.41")
+        assert self._verifier("0.42", force=True) == []
+        assert not cache.exists()
+
+    def test_force_recharge_la_meme_version(self, monkeypatch, tmp_path):
+        self._distant(monkeypatch, tmp_path, "0.42")
+        assert len(self._verifier("0.42", force=True)) == 1
+
+    def test_sans_force_la_meme_version_ne_change_rien(self, monkeypatch, tmp_path):
+        self._distant(monkeypatch, tmp_path, "0.42")
+        assert self._verifier("0.42", force=False) == []
+
+    def test_une_version_plus_recente_passe_toujours(self, monkeypatch, tmp_path):
+        self._distant(monkeypatch, tmp_path, "0.43")
+        assert len(self._verifier("0.42", force=False)) == 1
+
+
 class TestDiagnosticReseau:
     """`network_status` : False UNIQUEMENT si plus rien ne répond.
 

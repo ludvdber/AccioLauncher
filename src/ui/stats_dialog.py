@@ -36,8 +36,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import sauvegardes, scolarite, stats
-from src.core.game_manager import GameManager, GameState
+from src.core import sauvegardes, stats
+from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.ecu import emaux
 from src.ui.stats_releve import _Releve
@@ -198,11 +198,9 @@ class StatsDialog(QDialog):
         titre = QLabel(tr("Mes années à Poudlard"))
         titre.setFont(cinzel(18, bold=True))
         tete.addWidget(titre)
-        # Sous le titre : la maison et l'avancée (refonte du 2026-10-09). La
-        # phrase vivait dans la barre du haut, où elle ne tenait plus à côté
-        # des onglets ; ici, c'est la page de la scolarité.
-        liste = self._annees()
-        entete = self._phrase_entete(theme_courant(), liste)
+        # Sous le titre : la maison (refonte du 2026-10-09). La phrase vivait
+        # dans la barre du haut, où elle ne tenait plus à côté des onglets.
+        entete = self._phrase_entete(theme_courant())
         if entete:
             tete.addWidget(_texte(entete, 13, theme_courant().accent))
         root.addLayout(tete)
@@ -224,10 +222,9 @@ class StatsDialog(QDialog):
         haut.setSpacing(28)
         gauche = QVBoxLayout()
         gauche.setSpacing(10)
+        # Plus de « Vous êtes en 7ᵉ année » ni de compte des années sous le
+        # relevé (Ludo, 2026-10-14) : le relevé MONTRE déjà ce qui est fait.
         gauche.addWidget(self._releve)
-        courante = scolarite.annee_courante(liste)
-        if courante:
-            gauche.addWidget(_Paragraphe(self._phrase_scolarite(liste, courante)))
         gauche.addStretch(1)
         haut.addLayout(gauche, 1)
 
@@ -287,62 +284,16 @@ class StatsDialog(QDialog):
         return tr("Aucune partie enregistrée pour l'instant — "
                   "lancez un jeu, cette page se remplira toute seule.")
 
-    def _annees(self):
-        return scolarite.annees(
-            [e.game for e in self._entrees],
-            lambda gid: self._etats.get(gid) is GameState.INSTALLED,
-            lambda gid: self._temps.get(gid, 0))
-
     @staticmethod
-    def _phrase_entete(palette, liste) -> str:
-        """« Élève de Serdaigle · 5 années commencées sur 7 ».
+    def _phrase_entete(palette) -> str:
+        """« Élève de Serdaigle », sous le titre ; rien sous le thème Poudlard.
 
-        Chaque moitié n'apparaît que si elle dit quelque chose : pas de maison
-        sous le thème Poudlard, pas de compte tant qu'aucune année n'a commencé
-        (« 0 année commencée » serait un état normal affiché, règle 107).
+        Le compte « 5 années commencées sur 7 » est parti le 2026-10-14 (Ludo) :
+        le relevé juste dessous le montre, le redire était du bruit.
         """
-        morceaux = []
-        if emaux(palette.id) is not None:
-            morceaux.append(tr("Élève de {}").format(tr(palette.nom)))
-        commencees = sum(1 for a in liste if a.statut is scolarite.Statut.COMMENCEE)
-        if commencees == 1:
-            morceaux.append(tr("1 année commencée sur {}").format(scolarite.ANNEES))
-        elif commencees > 1:
-            morceaux.append(tr("{} années commencées sur {}").format(
-                commencees, scolarite.ANNEES))
-        return "  ·  ".join(morceaux)
-
-    @staticmethod
-    def _phrase_scolarite(liste, courante: int) -> str:
-        """« Vous êtes en 5ᵉ année. La 6ᵉ année vous attend. »
-
-        Deux suites possibles, et une seule à la fois. **Ce qui ATTEND est
-        devant** : la première année non commencée au-delà de celle où l'on
-        est. Quand il n'y a plus rien devant mais qu'on a sauté des années en
-        chemin, on ne dit pas qu'elles « attendent » — on dit combien il en
-        reste, et la bande juste au-dessus montre lesquelles. « Tu es en 7ᵉ
-        année. La 4ᵉ année t'attend. » était la première version, et Ludo l'a
-        justement trouvée ridicule.
-
-        L'ordinal ne se fabrique PAS en collant un suffixe au nombre : le
-        français écrit « 1ʳᵉ » et non « 1ᵉ », et l'anglais comme l'espagnol
-        construisent la phrase autrement. Chaque forme est donc une clé, et
-        c'est le traducteur qui décide de sa langue.
-        """
-        phrase = (tr("Vous êtes en 1ʳᵉ année.") if courante == 1
-                  else tr("Vous êtes en {}ᵉ année.").format(courante))
-        suivante = scolarite.prochaine_annee(liste)
-        if suivante is not None:
-            phrase += " " + (
-                tr("La 1ʳᵉ année vous attend.") if suivante.numero == 1
-                else tr("La {}ᵉ année vous attend.").format(suivante.numero))
-            return phrase
-        reste = len(scolarite.restantes(liste))
-        if reste == 1:
-            phrase += " " + tr("Il vous reste une année à découvrir.")
-        elif reste > 1:
-            phrase += " " + tr("Il vous reste {} années à découvrir.").format(reste)
-        return phrase
+        if emaux(palette.id) is None:
+            return ""
+        return tr("Élève de {}").format(tr(palette.nom))
 
     def _colonne_saga(self) -> QWidget:
         """Toute la saga : total, année, mois, plus longue partie.
@@ -370,9 +321,13 @@ class StatsDialog(QDialog):
         total = 60 * sum(_minutes(x) for x in (annee, autres, herite))
         lignes = [(tr("Au total"), total, 17)]
         mois = stats.par_mois(self._hist).get((aujourdhui.year, aujourdhui.month), 0)
-        lignes.append((tr("En {}").format(aujourdhui.year), annee, 13))
-        lignes.append((tr("En {}").format(_locale().standaloneMonthName(
-            aujourdhui.month, QLocale.FormatType.LongFormat)), mois, 13))
+        # Une ligne qui redit le chiffre du dessus ne s'écrit pas : « Au total
+        # 13 h 18 · En 2026 13 h 18 · En octobre 13 h 18 » (Ludo, 2026-10-14).
+        if _minutes(annee) != _minutes(total):
+            lignes.append((tr("En {}").format(aujourdhui.year), annee, 13))
+        if _minutes(mois) != _minutes(annee):
+            lignes.append((tr("En {}").format(_locale().standaloneMonthName(
+                aujourdhui.month, QLocale.FormatType.LongFormat)), mois, 13))
         for libelle, secondes, taille in lignes:
             if not secondes:
                 continue

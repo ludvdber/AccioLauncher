@@ -38,7 +38,7 @@ from src.core.game_manager import GameManager, GameState
 from src.core import manette
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
-from src.core.i18n import available_languages, tr
+from src.core.i18n import available_languages, get_language, tr
 from src.ui.composants import (
     ENCRE_DISCRETE, ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
     espace_du_volume, feuille_de_style, police, surtitre, texte,
@@ -227,6 +227,8 @@ class SettingsDialog(QDialog):
         self._nav.currentRowChanged.connect(
             lambda rang: pied.setVisible(rang != len(_RUBRIQUES) - 1))
         self._nav.setCurrentRow(0)
+        # Rouverte après un changement pas encore appliqué : la ligne le redit.
+        self._regler_redemarrage()
 
     def _colonne_rubriques(self) -> QFrame:
         colonne = QFrame()
@@ -709,8 +711,14 @@ class SettingsDialog(QDialog):
     def _on_language_changed(self) -> None:
         """Change la langue (effective au prochain démarrage — chaînes posées à la construction)."""
         self.config.langue = self._lang_combo.currentData()
-        self._lang_hint.show()
+        self._regler_redemarrage()
         self._save()
+
+    def _regler_redemarrage(self) -> None:
+        """« Redémarrer » seulement si la config diffère de ce qui TOURNE : revenir
+        à la langue (ou au thème) de départ n'a rien à appliquer."""
+        self._lang_hint.setVisible(self.config.langue != get_language())
+        self._theme_hint.setVisible(self.config.theme != current_theme().id)
 
     def _on_theme_changed(self) -> None:
         """Change le thème (effectif au prochain démarrage — couleurs posées à la construction)."""
@@ -718,7 +726,7 @@ class SettingsDialog(QDialog):
         # La fenêtre attend un redémarrage ; la manette, elle, change tout de suite.
         if self.config.couleur_manette:
             manette.colorer_en_fond(self.config.theme)
-        self._theme_hint.show()
+        self._regler_redemarrage()
         self._save()
 
     def _on_season_changed(self) -> None:

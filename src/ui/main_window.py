@@ -39,6 +39,10 @@ from src.ui.utils import icone_application, open_url
 
 log = logging.getLogger(__name__)
 
+# Ce que `eventFilter` traite (souris pour la fiche et les bords, clavier global).
+_EVENEMENTS_FILTRES = frozenset((QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress,
+                                 QEvent.Type.Leave, QEvent.Type.KeyPress))
+
 
 def mise_a_jour_installee(precedente: str) -> bool:
     """La version lancée la dernière fois est-elle plus ancienne que celle-ci ?
@@ -671,6 +675,9 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event) -> bool:
         # Filtre posé sur QApplication : il voit les MouseMove de TOUS les widgets
         # enfants (un mouseMoveEvent ne tirerait que sur la surface nue).
+        # Et TOUS les autres : 14 000 en bâtissant les Paramètres. Sortie au plus tôt.
+        if event.type() not in _EVENEMENTS_FILTRES:
+            return False
         try:
             if event.type() == QEvent.Type.MouseMove:
                 local = self.mapFromGlobal(event.globalPosition().toPoint())

@@ -106,12 +106,18 @@ class TestDispatcher:
         dispatcher._forget(checker)
         assert checker not in dispatcher._extra_checkers
 
-    def test_le_checker_force_demande_bien_un_fetch(self, qtbot, manager, monkeypatch):
-        """Version « 0 » : le catalogue distant est retéléchargé quoi qu'on ait."""
+    def test_le_checker_force_part_de_la_version_courante(self, qtbot, manager, monkeypatch):
+        """Forcé : il recharge la même version, mais compare à la VRAIE version.
+
+        Il partait de « 0 » et acceptait donc un catalogue plus ancien (0.42 → 0.41).
+        """
         from src.core.updater import UpdateChecker
         monkeypatch.setattr(UpdateChecker, "start", lambda self: None)
         dispatcher = UpdateDispatcher(manager)
-        assert dispatcher.forced_checker()._current_version == "0"
+        checker = dispatcher.forced_checker()
+        assert checker._current_version == manager.catalog.catalog_version
+        assert checker._force is True
+        assert dispatcher._new_checker(forced=False)._force is False
 
 
 class _FauxTelechargement(QObject):

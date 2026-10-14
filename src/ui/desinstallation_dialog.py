@@ -67,8 +67,9 @@ class DesinstallationDialog(QDialog):
         carte = Carte()
         self._ligne_jeux, self.tgl_jeux = _interrupteur(tr("Garder mes jeux"), True)
         self.tgl_jeux.toggled.connect(self._regler)
-        self._ligne_jeux.setVisible(a_des_jeux)
         carte.ajouter(self._ligne_jeux)
+        # Après l'ajout : sans parent, une ligne rendue visible est une FENÊTRE.
+        self._ligne_jeux.setVisible(a_des_jeux)
         ligne_copies, self.tgl_copies = _interrupteur(tr("Garder les copies de sauvegardes"), True)
         ligne_copies.decrire(tr("Elles restent seules dans le dossier _Launcher."))
         carte.ajouter(ligne_copies)

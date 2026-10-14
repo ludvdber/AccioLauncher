@@ -454,6 +454,44 @@ class TestSettingsRestart:
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
 
+    def test_revenir_a_la_langue_de_depart_cache_redemarrer(self, make_window, qtbot):
+        """Aller-retour de langue : rien à appliquer, plus de « Redémarrer »
+        (Ludo, 2026-10-14). Pareil pour le thème."""
+        from src.core.i18n import get_language
+        from src.ui.settings_panel import SettingsDialog
+        from src.ui.theme import current as theme_courant
+        win = make_window()
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        combo = dlg._lang_combo
+        autre = next(i for i in range(combo.count()) if combo.itemData(i) != get_language())
+        combo.setCurrentIndex(autre)
+        assert dlg._lang_restart.isVisible()
+        combo.setCurrentIndex(combo.findData(get_language()))
+        assert not dlg._lang_restart.isVisible()
+
+        dlg._nav.setCurrentRow(1)
+        themes = dlg._theme_combo
+        themes.setCurrentIndex(themes.findData("gryffondor"))
+        assert dlg._theme_restart.isVisible()
+        themes.setCurrentIndex(themes.findData(theme_courant().id))
+        assert not dlg._theme_restart.isVisible()
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
+    def test_rouverte_apres_un_changement_elle_le_redit(self, make_window, qtbot):
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        win.config.theme = "serpentard"
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg._nav.setCurrentRow(1)
+        assert dlg._theme_restart.isVisible()
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
     def test_season_change_emits_resolved_season(self, make_window, qtbot):
         from src.ui.settings_panel import SettingsDialog
         win = make_window()
@@ -465,6 +503,53 @@ class TestSettingsRestart:
         assert win.config.season == "noel"
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
+
+
+class TestAucuneFenetreParasite:
+    """Ouvrir une page ne fait naître AUCUNE fenêtre à côté.
+
+    `LigneReglage` rendait sa description visible avant de l'avoir rattachée :
+    un widget sans parent rendu visible devient une fenêtre. Huit petites
+    fenêtres clignotaient à l'ouverture des Paramètres, et l'ouverture
+    traînait (Ludo, 2026-10-14).
+    """
+
+    def test_parametres_annees_et_reglages_des_jeux(self, make_window, qtbot):
+        from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow
+        from src.ui import game_detail_handlers
+
+        class _Espion(QObject):
+            vues: list = []
+
+            def eventFilter(self, obj, ev):
+                if (ev.type() == QEvent.Type.Show and obj.isWidgetType() and obj.isWindow()
+                        and not isinstance(obj, (QDialog, QMainWindow))):
+                    self.vues.append(f"{type(obj).__name__} {getattr(obj, 'text', str)()!r}")
+                return False
+
+        win = make_window()
+        win.show()
+        qtbot.waitExposed(win)
+        espion = _Espion()
+        QApplication.instance().installEventFilter(espion)
+        try:
+            win._on_settings()
+            for rang in range(win._pages.page._nav.count()):
+                win._pages.page._nav.setCurrentRow(rang)
+            win._pages.fermer()
+            win._on_stats()
+            win._pages.fermer()
+            game_detail_handlers.on_game_settings(win._detail)
+            win._pages.fermer()
+            # Même défaut, même cause, dans la fenêtre « Désinstaller ».
+            from src.ui.desinstallation_dialog import DesinstallationDialog
+            dlg = DesinstallationDialog(win.config.install_path, 0, True, win)
+            dlg.show()
+            QApplication.processEvents()
+            dlg.close()
+        finally:
+            QApplication.instance().removeEventFilter(espion)
+        assert espion.vues == []
 
 
 class TestOnboardingImport:
@@ -1196,6 +1281,9 @@ class TestSelecteurDeLangue:
         indices = win._detail._info._indices.text()
         assert 'href="changelog"' in indices
         assert indices.count("href=") == 1
+        # Et ce lien, c'est la version elle-même (Ludo, 2026-10-14).
+        assert "Nouveautés" not in indices
+        assert indices.split('href="changelog"')[1].split("</a>")[0].count("Version") == 1
 
     def test_le_choix_est_bien_retenu(self, make_window_multilingue):
         """Le réglage vit toujours — il ne s'AFFICHE simplement plus sur la fiche."""

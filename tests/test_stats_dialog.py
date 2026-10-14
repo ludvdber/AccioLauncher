@@ -182,12 +182,26 @@ class TestReleve:
 class TestSaga:
     def test_le_mois_l_annee_et_le_total(self, qtbot, manager):
         gid = manager.get_games()[0].game.id
+        maintenant = datetime.now().replace(microsecond=0)
+        stats.enregistrer_session(gid, maintenant, 2 * 3600)
+        stats.enregistrer_session(gid, maintenant.replace(year=maintenant.year - 1, month=6, day=1), 3600)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        rendu = _labels(dlg)
+        assert "Au total" in rendu
+        assert f"En {maintenant.year}" in rendu
+
+    def test_une_ligne_qui_redit_le_chiffre_du_dessus_ne_s_ecrit_pas(self, qtbot, manager):
+        """« Au total 13 h 18 · En 2026 13 h 18 · En octobre 13 h 18 » : trois
+        fois le même chiffre (Ludo, 2026-10-14). Tout joué ce mois-ci : le total seul."""
+        gid = manager.get_games()[0].game.id
         stats.enregistrer_session(gid, datetime.now().replace(microsecond=0), 2 * 3600)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         rendu = _labels(dlg)
         assert "Au total" in rendu
-        assert f"En {datetime.now().year}" in rendu
+        # Ni l'année ni le mois : aucune ligne « En … ».
+        assert not [ligne for ligne in rendu.splitlines() if ligne.startswith("En ")]
 
     def test_la_plus_longue_partie_porte_sa_date(self, qtbot, manager):
         """Date, c'est un souvenir ; sans date, c'est un chiffre."""
@@ -219,6 +233,22 @@ class TestSaga:
         qtbot.addWidget(dlg)
         (mois,) = dlg.findChildren(_Mois)
         assert len(mois._cases) == 12
+
+    def test_aucun_nom_de_mois_n_est_rogne(self, qtbot):
+        """« n… ja… fé… se… » sous les barres, vu avec les vraies polices le
+        2026-10-14 : les abréviations ne tenaient pas dans une colonne sur douze."""
+        from PyQt6.QtGui import QFont, QFontMetrics
+        from src.ui.stats_dialog import _COLONNE_DROITE
+        cases = [(2025 + (m + 10) // 12, (m + 10) % 12 + 1, 3600) for m in range(12)]
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(_COLONNE_DROITE, mois.height())
+        police = QFont()
+        police.setPointSize(8)
+        fm = QFontMetrics(police)
+        noms = mois._noms(fm)
+        assert len(noms) == 12
+        assert all(fm.horizontalAdvance(n) <= mois._colonne(0).width() for n in noms), noms
 
 
 class TestSauvegardesAffichees:
@@ -477,26 +507,26 @@ def test_le_temps_joue_sans_sauvegarder_est_dit(qtbot, manager):
 
 
 class TestPhraseDEntete:
-    """« Élève de Serdaigle · 5 années commencées sur 7 », sous le titre."""
+    """« Élève de Serdaigle » sous le titre, et rien d'autre.
 
-    @staticmethod
-    def _liste(commencees):
-        from src.core.scolarite import Annee, Statut
-        return [Annee(n, (), Statut.COMMENCEE if n <= commencees else Statut.ABSENTE, 0)
-                for n in range(1, 8)]
+    Le compte des années et « Vous êtes en 7ᵉ année » sont partis le 2026-10-14
+    (Ludo) : le relevé montre déjà ce qui est fait.
+    """
 
-    def test_maison_et_annees(self):
+    def test_la_maison_seule(self):
         from src.ui.theme import THEMES
-        phrase = StatsDialog._phrase_entete(THEMES["serdaigle"], self._liste(5))
-        assert phrase == "Élève de Serdaigle  ·  5 années commencées sur 7"
+        assert StatsDialog._phrase_entete(THEMES["serdaigle"]) == "Élève de Serdaigle"
 
-    def test_une_seule_annee_au_singulier(self):
+    def test_sans_maison_rien_d_ecrit(self):
         from src.ui.theme import THEMES
-        assert (StatsDialog._phrase_entete(THEMES["poudlard"], self._liste(1))
-                == "1 année commencée sur 7")
+        assert StatsDialog._phrase_entete(THEMES["poudlard"]) == ""
 
-    def test_rien_a_dire_rien_d_ecrit(self):
-        from src.ui.theme import THEMES
-        assert StatsDialog._phrase_entete(THEMES["poudlard"], self._liste(0)) == ""
-        assert (StatsDialog._phrase_entete(THEMES["gryffondor"], self._liste(0))
-                == "Élève de Gryffondor")
+    def test_plus_aucun_compte_d_annees_sur_la_page(self, qtbot, manager):
+        """Même quand des années sont commencées."""
+        _remplir(manager)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        textes = _labels(dlg)
+        assert "commencée" not in textes
+        assert "Vous êtes en" not in textes
+        assert "vous attend" not in textes

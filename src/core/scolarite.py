@@ -107,29 +107,3 @@ def annee_courante(liste: Sequence[Annee]) -> int:
     """
     return max((a.numero for a in liste if a.statut is Statut.COMMENCEE),
                default=0)
-
-
-def restantes(liste: Sequence[Annee]) -> list[Annee]:
-    """Les années qui ont un jeu et qu'on n'a pas commencées."""
-    return [a for a in liste if a.statut is not Statut.COMMENCEE and not a.vide]
-
-
-def prochaine_annee(liste: Sequence[Annee]) -> Annee | None:
-    """La prochaine année à commencer — celle qui est DEVANT, jamais derrière.
-
-    « Tu es en 7ᵉ année. La 4ᵉ année t'attend. » : c'est la première version,
-    et Ludo l'a qualifiée de ridicule le 2026-09-23. Il avait raison. « Attendre »
-    décrit ce qui vient ensuite ; une année sautée en chemin n'attend pas, elle
-    manque. Le défaut venait de « la première non commencée », qui regarde la
-    liste depuis le début au lieu de regarder depuis OÙ L'ON EST.
-
-    None quand il n'y a plus rien devant — soit tout est commencé, soit les
-    années qui restent sont derrière, et c'est alors `restantes()` qui a
-    quelque chose à dire.
-    """
-    courante = annee_courante(liste)
-    for annee in liste:
-        if (annee.numero > courante and annee.statut is not Statut.COMMENCEE
-                and not annee.vide):
-            return annee
-    return None

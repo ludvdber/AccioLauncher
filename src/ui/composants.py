@@ -214,9 +214,11 @@ class LigneReglage(QWidget):
         self.titre.setMinimumWidth(1)
         colonne.addWidget(self.titre)
         self.description = texte(description, 13, ENCRE_DOUCE, retour=True)
-        self.description.setVisible(bool(description))
         colonne.addWidget(self.description)
         lay.addLayout(colonne, stretch=1)
+        # APRÈS l'avoir rattachée : un widget sans parent rendu visible devient
+        # une FENÊTRE (huit petites fenêtres et 0,5 s à l'ouverture des Paramètres).
+        self.description.setVisible(bool(description))
         for commande in commandes:
             lay.addWidget(commande, alignment=Qt.AlignmentFlag.AlignVCenter)
 

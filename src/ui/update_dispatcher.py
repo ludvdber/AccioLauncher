@@ -112,11 +112,13 @@ class UpdateDispatcher(QObject):
         catalog = self._manager.catalog
         return UpdateChecker(
             catalog_url=catalog.catalog_url,
-            # Version « 0 » → force le fetch, quel que soit ce qu'on a déjà.
-            current_catalog_version="0" if forced else catalog.catalog_version,
+            # Forcé : la même version se recharge, une plus ancienne jamais. Le
+            # « 0 » d'avant acceptait tout, et rétrogradait le catalogue.
+            current_catalog_version=catalog.catalog_version,
             installed_versions=self._manager.config.installed_versions,
             games_asset_urls=self._games_asset_urls(),
             parent=self,
+            force=forced,
         )
 
     def start(self) -> None:
