@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from src.core import stats
+from src.core import reglages_conserves, stats
 from src.core.downloader import Downloader
 from src.core.echecs import Echec, explication, explication_installation, reste
 from src.core.game_data import GameData, GameVersion
@@ -77,6 +77,9 @@ class GameOperations(QObject):
         # True si la version installée doit être désinstallée APRÈS le téléchargement
         # (jamais avant : un échec réseau ne doit pas laisser l'utilisateur sans jeu).
         self._uninstall_first = False
+        # Les réglages rangés à côté de l'exe, lus avant que l'opération ne les
+        # efface (changement de version) ou ne les réécrive (réparation).
+        self._reglages_gardes: dict[Path, bytes] = {}
         # Downloaders annulés dont le thread n'a pas fini dans le délai
         # (read réseau bloquant) — gardés vivants jusqu'à leur fin réelle.
         self._zombies: list[Downloader] = []
@@ -292,12 +295,19 @@ class GameOperations(QObject):
 
     # ──────────────────── Installation ────────────────────
 
-    def install(self, game: GameData, archive_path: Path, *, delete_archive: bool = True) -> None:
-        """Lance l'installation d'un jeu depuis une archive."""
+    def install(self, game: GameData, archive_path: Path, *, delete_archive: bool = True,
+                reglages: dict[Path, bytes] | None = None) -> None:
+        """Lance l'installation d'un jeu depuis une archive.
+
+        `reglages` : ceux qu'un changement de version a lus avant de supprimer
+        l'ancienne installation ; sinon, ceux qui sont là (réparation).
+        """
         self._active_game = game
         self._manager.set_game_state(game.id, GameState.INSTALLING)
 
         dest = self._manager.config.install_path
+        self._reglages_gardes = (reglages if reglages is not None
+                                 else reglages_conserves.mettre_de_cote(game, dest))
         config_files = [
             (cf.source, cf.destination)
             for cf in game.post_install.config_files
@@ -378,12 +388,15 @@ class GameOperations(QObject):
                 self._manager.octets_deja_telecharges(game.id, self._target_version))
         # Switch de version : l'ancienne installation n'est supprimée que maintenant,
         # le téléchargement de la nouvelle étant terminé et vérifié.
+        reglages = None
         if self._uninstall_first:
             self._uninstall_first = False
+            # Lus AVANT la suppression : ils reviennent dans la nouvelle version.
+            reglages = reglages_conserves.mettre_de_cote(game, self._manager.config.install_path)
             self._manager.uninstall_game(game.id)  # install() repasse l'état à INSTALLING juste après
         self.status_message.emit(tr("Installation de {}…").format(game.name))
         self.install(game, Path(archive_path_str),
-                     delete_archive=self._manager.config.delete_archives)
+                     delete_archive=self._manager.config.delete_archives, reglages=reglages)
 
     def _relacher_operation(self) -> tuple:
         """Rend (jeu, version) de l'opération qui s'achève et remet TOUT à zéro.
@@ -405,6 +418,7 @@ class GameOperations(QObject):
         self._active_game = None
         self._target_version = None
         self._uninstall_first = False
+        self._reglages_gardes = {}
         self._phase = ""
         self.derniere_progression = {}
         return game, version
@@ -444,6 +458,7 @@ class GameOperations(QObject):
 
     def _on_install_finished(self, _path: str) -> None:
         self._liberer_installer()
+        reglages = self._reglages_gardes
         game, target_ver = self._relacher_operation()
         if game is None:
             return
@@ -467,6 +482,8 @@ class GameOperations(QObject):
 
         # NB : pas d'apply_ini_patches ici — les .ini live dans Documents
         # et n'existent souvent pas encore à ce stade. Ils seront patchés au lancement.
+        if reglages:
+            reglages_conserves.reposer(game, self._manager.config.install_path, reglages)
         self._manager.set_game_state(game.id, GameState.INSTALLED)
         self._manager.save_installed_version(game.id, target_ver.version if target_ver else None)
         self.state_changed.emit()

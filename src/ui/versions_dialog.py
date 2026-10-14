@@ -11,9 +11,10 @@ Le rail reprend celui des réglages du jeu (retour « Bibliothèque », jaquette
 nom) : deux pages d'un même jeu se reconnaissent.
 
 Ce que la page promet, elle le tient : changer de version SUPPRIME le dossier
-du jeu (`GameOperations.switch_version`), donc les réglages d'image posés à
-côté de l'exécutable partent avec. Seules les sauvegardes, rangées dans
-Documents ou AppData, restent : c'est tout ce qu'elle annonce.
+du jeu (`GameOperations.switch_version`), mais les réglages posés à côté de
+l'exécutable sont lus avant et reportés dans la nouvelle version
+(`reglages_conserves`), et les configs de Documents ne sont plus écrasées.
+Les sauvegardes, rangées dans Documents ou AppData, ne bougent pas.
 """
 
 import html
@@ -257,7 +258,7 @@ class VersionsDialog(QDialog):
             self._lignes[ver.version] = ligne
             lay.addWidget(ligne)
         lay.addStretch()
-        lay.addWidget(texte(tr("Changer de version garde vos sauvegardes."), 12,
+        lay.addWidget(texte(tr("Changer de version garde vos sauvegardes et vos réglages."), 12,
                             ENCRE_DOUCE, retour=True))
         return rail
 
@@ -338,7 +339,7 @@ class VersionsDialog(QDialog):
         self._actions[ver.version] = btn
         col.addWidget(btn, alignment=Qt.AlignmentFlag.AlignRight)
         if self._installed_version is not None:
-            col.addWidget(texte(tr("Vos sauvegardes restent."), 13, _VERT),
+            col.addWidget(texte(tr("Vos sauvegardes et vos réglages restent."), 13, _VERT),
                           alignment=Qt.AlignmentFlag.AlignRight)
         return col
 

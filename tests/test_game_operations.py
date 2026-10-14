@@ -185,7 +185,7 @@ class TestAucuneOperationNeFuit:
     l'objet plutôt que de les nommer un par un.
     """
 
-    CHAMPS = ("_active_game", "_target_version", "_uninstall_first", "_phase")
+    CHAMPS = ("_active_game", "_target_version", "_uninstall_first", "_phase", "_reglages_gardes")
 
     def _salir(self, operations, manager):
         """Pose un état d'opération en cours, comme le ferait un vrai switch."""
@@ -329,3 +329,38 @@ class TestUnEchecDInstallationDitSaCause:
         texte, archive = self._echouer(ops, qtbot, monkeypatch, exc, archive=choisie)
         assert "L'archive choisie est abîmée" in texte
         assert choisie.exists()
+
+
+class TestReglagesGardesAuChangementDeVersion:
+    """Relevé le 2026-10-14 : changer de version supprimait le `d3d9.ini` du
+    joueur avec le dossier du jeu."""
+
+    def test_lus_avant_la_suppression_reposes_apres_l_installation(self, ops, monkeypatch):
+        operations, manager = ops
+        jeu = manager.get_games()[0].game
+        systeme = manager.config.install_path / "HPTest" / "System"
+        systeme.mkdir(parents=True)
+        (systeme / "Game.exe").write_bytes(b"MZ")
+        (systeme / "d3d9.ini").write_text("[Accio.Window]\nWindowed=1\n")
+        manager.set_game_state(jeu.id, GameState.INSTALLED)
+        recus = {}
+
+        def installer(game, archive, *, delete_archive=True, reglages=None):
+            # La suppression a eu lieu ; la nouvelle version arrive avec SON ini.
+            assert not systeme.exists()
+            recus["reglages"] = reglages
+            operations._active_game = game
+            operations._reglages_gardes = reglages
+            systeme.mkdir(parents=True)
+            (systeme / "Game.exe").write_bytes(b"MZ")
+            (systeme / "d3d9.ini").write_text("[Accio.Window]\nWindowed=0\nNouvelle=1\n")
+
+        monkeypatch.setattr(operations, "install", installer)
+        operations._active_game = jeu
+        operations._target_version = jeu.versions[0]
+        operations._uninstall_first = True
+        operations._on_download_finished(str(_archive(ops)))
+        assert recus["reglages"], "les réglages n'ont pas été lus avant la suppression"
+        operations._on_install_finished("")
+        texte = (systeme / "d3d9.ini").read_text()
+        assert "Windowed=1" in texte and "Nouvelle=1" in texte

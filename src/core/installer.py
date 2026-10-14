@@ -143,7 +143,8 @@ class Installer(QThread):
             count = unblock_extracted(self._extracted_dirs)
             if count > 0:
                 log.info("%d fichier(s) débloqué(s) (Zone.Identifier supprimé)", count)
-            apply_config_files(self.destination, self.game_dir, self.config_files)
+            apply_config_files(self.destination, self.game_dir, self.config_files,
+                               garder_existants=True)
 
             if self.delete_archive:
                 self._delete_archive()

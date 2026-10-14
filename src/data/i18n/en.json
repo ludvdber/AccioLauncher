@@ -120,8 +120,6 @@
     "Versions": "Versions",
     "Ce qui change": "What changes",
     "C'est la version installée": "This is the installed version",
-    "Changer de version garde vos sauvegardes.": "Switching versions keeps your saves.",
-    "Vos sauvegardes restent.": "Your saves stay.",
     "Mettre à jour vers v{}": "Update to v{}",
     "Revenir à v{}": "Roll back to v{}",
     "Installer v{}": "Install v{}",
@@ -993,6 +991,8 @@
     "Pas encore trouvée": "Not found yet",
     "Elle se cache quelque part dans le château. Le folio ne dit pas où, pour ne rien gâcher.": "It is hiding somewhere in the castle. The folio won't say where, so as not to spoil anything.",
     "Ouvrir le folio": "Open the folio",
-    "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cards, beans and house points, read from your saves"
+    "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cards, beans and house points, read from your saves",
+    "Changer de version garde vos sauvegardes et vos réglages.": "Switching versions keeps your saves and your settings.",
+    "Vos sauvegardes et vos réglages restent.": "Your saves and settings stay."
   }
 }

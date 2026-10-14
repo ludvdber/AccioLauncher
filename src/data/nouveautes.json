@@ -70,6 +70,30 @@
           }
         },
         {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Une galerie de vos captures d'écran, tous jeux confondus, à partager sur Discord en un clic.",
+            "en": "A gallery of your screenshots from every game, ready to share on Discord in one click.",
+            "es": "Una galería con tus capturas de todos los juegos, para compartir en Discord con un clic."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le folio de L'École des Sorciers : cartes trouvées, dragées et points des quatre maisons, lus dans vos sauvegardes.",
+            "en": "The Philosopher's Stone folio: cards found, beans and the points of all four houses, read from your saves.",
+            "es": "El folio de La piedra filosofal: cromos encontrados, grageas y puntos de las cuatro casas, leídos de tus partidas."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "« Contribuer » ouvre l'atelier : jaquettes, textures, écrans de chargement et vidéos qui cherchent un artiste.",
+            "en": "“Contribute” opens the workshop: covers, textures, loading screens and videos looking for an artist.",
+            "es": "«Contribuir» abre el taller: portadas, texturas, pantallas de carga y vídeos que buscan artista."
+          }
+        },
+        {
           "genre": "ameliore",
           "texte": {
             "fr": "Pendant un téléchargement : l'étape, la vitesse et le temps restant.",
@@ -94,6 +118,14 @@
           }
         },
         {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "L'écran de démarrage dit ce qu'il fait, étape par étape.",
+            "en": "The startup screen says what it is doing, step by step.",
+            "es": "La pantalla de inicio dice lo que está haciendo, paso a paso."
+          }
+        },
+        {
           "genre": "corrige",
           "texte": {
             "fr": "« Actualiser le catalogue » ne revient plus à une version plus ancienne du catalogue.",
@@ -115,6 +147,14 @@
             "fr": "Les jaquettes carrées ne sont plus déformées.",
             "en": "Square covers are no longer distorted.",
             "es": "Las portadas cuadradas ya no se deforman."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Changer de version ou réparer un jeu garde vos réglages d'image et vos touches.",
+            "en": "Switching versions or repairing a game keeps your image settings and your keys.",
+            "es": "Cambiar de versión o reparar un juego conserva tus ajustes de imagen y tus teclas."
           }
         }
       ]

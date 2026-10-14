@@ -3,6 +3,8 @@
 Les helpers de date sont gardés hors classe pour rester testables sans Qt.
 """
 
+from pathlib import Path
+
 import pytest
 
 from src.ui.versions_dialog import _date_sort_key, date_courte
@@ -136,7 +138,7 @@ class TestPageDesVersions:
         dlg = _dialogue(qtbot, None)
         assert _actions(dlg) == {"1.0": "Installer v1.0", "1.1": "Installer v1.1",
                                  "1.2": "Installer v1.2", "1.3": None}
-        assert not any(lbl.text() == "Vos sauvegardes restent." for lbl in dlg.findChildren(QLabel)), \
+        assert not any(lbl.text() == "Vos sauvegardes et vos réglages restent." for lbl in dlg.findChildren(QLabel)), \
             "rien à garder quand rien n'est installé"
 
     def test_s_ouvre_sur_la_version_installee(self, qtbot):
@@ -164,12 +166,16 @@ class TestPageDesVersions:
         assert "Recommandée" in dlg._lignes["1.2"].accessibleName()
         assert "Installée" not in dlg._lignes["1.0"].accessibleName()
 
-    def test_ne_promet_pas_les_reglages(self, qtbot):
-        """Changer de version supprime le dossier du jeu, et l'ini du correctif avec."""
+    def test_promet_sauvegardes_et_reglages(self, qtbot):
+        """Promesse tenue depuis le 2026-10-14 : les réglages sont lus avant la
+        suppression du dossier et reportés (`reglages_conserves`). Si ce
+        mécanisme disparaît, la promesse doit disparaître avec lui."""
+        from src.ui import game_operations
+        assert "reglages_conserves.mettre_de_cote" in Path(game_operations.__file__).read_text(
+            encoding="utf-8")
         dlg = _dialogue(qtbot, "1.1")
         textes = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
-        assert "sauvegardes" in textes
-        assert "réglages" not in textes
+        assert "sauvegardes et vos réglages" in textes
 
     def test_le_retour_ferme_la_page(self, qtbot):
         dlg = _dialogue(qtbot, "1.1")

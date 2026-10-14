@@ -120,8 +120,6 @@
     "Versions": "Versiones",
     "Ce qui change": "Qué cambia",
     "C'est la version installée": "Es la versión instalada",
-    "Changer de version garde vos sauvegardes.": "Cambiar de versión conserva tus partidas guardadas.",
-    "Vos sauvegardes restent.": "Tus partidas guardadas se conservan.",
     "Mettre à jour vers v{}": "Actualizar a la v{}",
     "Revenir à v{}": "Volver a la v{}",
     "Installer v{}": "Instalar la v{}",
@@ -993,6 +991,8 @@
     "Pas encore trouvée": "Aún no encontrado",
     "Elle se cache quelque part dans le château. Le folio ne dit pas où, pour ne rien gâcher.": "Se esconde en algún lugar del castillo. El folio no dice dónde, para no estropear nada.",
     "Ouvrir le folio": "Abrir el folio",
-    "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cromos, grageas y puntos de las casas, leídos de tus partidas"
+    "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cromos, grageas y puntos de las casas, leídos de tus partidas",
+    "Changer de version garde vos sauvegardes et vos réglages.": "Cambiar de versión conserva tus partidas y tus ajustes.",
+    "Vos sauvegardes et vos réglages restent.": "Tus partidas y tus ajustes se quedan."
   }
 }

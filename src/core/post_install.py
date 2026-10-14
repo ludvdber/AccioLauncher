@@ -147,9 +147,17 @@ def destination_config(dest_tilde: str) -> Path:
 
 def apply_config_files(
     destination: Path, game_dir: str | None,
-    config_files: list[tuple[str, str]],
+    config_files: list[tuple[str, str]], *, garder_existants: bool = False,
 ) -> None:
-    """Copie les fichiers de configuration vers Documents (avec backup .bak)."""
+    """Copie les fichiers de configuration vers Documents (avec backup .bak).
+
+    `garder_existants` (l'installation) : une config déjà là est celle du
+    joueur, réglée par lui (touches, résolution) ; une réinstallation ou un
+    changement de version la remettait à zéro (relevé le 2026-10-14). Elle
+    reste. Ce que le jeu exige est reposé au lancement (`ini_patches`), et
+    « Remettre la configuration d'origine » (`reparation_config`) écrase
+    toujours, c'est son rôle.
+    """
     if not config_files:
         return
 
@@ -168,6 +176,9 @@ def apply_config_files(
             reason = config_dest_error(dest, allowed_config_roots())
             if reason is not None:
                 log.warning("Config destination refusée (%s) : %s", reason, dest_tilde)
+                continue
+            if garder_existants and dest.is_file():
+                log.info("Config du joueur gardée : %s", dest)
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
 
