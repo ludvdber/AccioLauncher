@@ -2149,7 +2149,7 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         pastille = win._detail._pastille_atelier
         pastille._mesures = [atelier.Besoin(atelier.court(jeu.id), "Fond d'écran", "",
-                                            atelier.CHERCHE, atelier.FOND)]
+                                            atelier.CHERCHE, atelier.FOND, True)]
         monkeypatch.setattr(atelier_page, "besoins_mesures", lambda _jeux: pastille._mesures)
         pastille.pour(jeu.id, [jeu])
         assert not pastille.isHidden()
