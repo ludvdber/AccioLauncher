@@ -5,7 +5,7 @@ from html import escape
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QLabel, QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout, QWidget,
 )
 
 from src.core.game_data import GameData
@@ -31,6 +31,7 @@ _SCROLLBAR_W = 6
 _HAUTEUR_SLACK = 8
 # Écart entre le bouton principal et la ligne « JOUABLE À LA MANETTE · VERSION 1.3 ».
 _ECART_INDICES = 12
+_HAUTEUR_ECART_PLEIN = 760
 
 
 def _insecable(texte: str) -> str:
@@ -260,6 +261,7 @@ class InfoPanel(QWidget):
         # ligne méta ; ici, ce sont des faits sur CE qu'on lance.
         self._indices = QLabel()
         self._indices.setObjectName("indicesJeu")
+        self._ecart_indices = QSpacerItem(0, _ECART_INDICES)
         # En petites capitales espacées, comme « TEMPS DE JEU » à côté du
         # bouton d'un jeu installé : des faits sur le jeu, pas une phrase.
         police_indices = cinzel(8, bold=True)
@@ -334,6 +336,13 @@ class InfoPanel(QWidget):
 
     def _apply_margins(self) -> None:
         """Marges resserrées sur panneau étroit (80 px sur 550, c'est 15 %)."""
+        # L'écart sous le bouton rend sa place sur une fenêtre basse : à
+        # 980×660, en espagnol, les 12 px faisaient défiler HP7 de 7 px
+        # (audit de géométrie, 2026-10-14).
+        ecart = _ECART_INDICES if self.window().height() >= _HAUTEUR_ECART_PLEIN else 4
+        if self._ecart_indices.sizeHint().height() != ecart:
+            self._ecart_indices.changeSize(0, ecart)
+            self._action_slot.invalidate()
         wide = self.width() >= 620
         left, right = (50, 30) if wide else (32, 22)
         if self._layout.contentsMargins().left() != left:
@@ -464,7 +473,7 @@ class InfoPanel(QWidget):
         self._action_slot.addWidget(widget)
         # De l'air sous le bouton : collée à lui, la ligne avait l'air d'en
         # faire partie (Ludo, 2026-10-14).
-        self._action_slot.addSpacing(_ECART_INDICES)
+        self._action_slot.addSpacerItem(self._ecart_indices)
         self._action_slot.addWidget(self._indices)
 
     def add_stretch(self) -> None:

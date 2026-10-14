@@ -299,10 +299,8 @@ def test_la_suite_ne_lit_jamais_la_vraie_manette():
 
 def _boutons_de_fenetre(fenetre):
     """Réduire, agrandir, fermer : les QPushButton nus de la barre du haut."""
-    from PyQt6.QtWidgets import QPushButton
-    from src.ui.title_bar import TitleBar
-    return [b for b in fenetre.findChild(TitleBar).findChildren(QPushButton)
-            if type(b) is QPushButton]
+    from src.ui.title_bar import TitleBar, _BoutonFenetre
+    return fenetre.findChild(TitleBar).findChildren(_BoutonFenetre)
 
 
 class TestDansLaVraieFenetre:

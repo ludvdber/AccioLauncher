@@ -143,12 +143,10 @@ class TestBouton:
     """Ce que l'utilisateur lit réellement sur le bouton principal."""
 
     def _libelle(self, panel):
-        for i in range(panel._action_layout.count()):
-            w = panel._action_layout.itemAt(i).widget()
-            texte = w.text() if w is not None and hasattr(w, "text") else ""
-            if texte and "CHARGER" in texte:
-                return texte
-        return ""
+        # Le poids est le DÉTAIL du bouton « INSTALLER » (2026-10-14).
+        from src.ui.glow_button import GlowButton
+        bouton = panel.findChild(GlowButton, "btnDownload")
+        return f"{bouton.text()} {bouton.detail()}" if bouton is not None else ""
 
     def test_le_poids_reel_remplace_celui_du_catalogue(self, manager, qtbot):
         from src.core.i18n import set_language

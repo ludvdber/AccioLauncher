@@ -78,7 +78,9 @@ class TestChaquePictogrammeSeDessine:
         b = IconButton(nom)
         qtbot.addWidget(b)
         encre = _pixels(_peindre(b))
-        assert len(encre) > 40, f"{nom} ne peint presque rien"
+        # « Réduire » est un trait : peu d'encre par nature.
+        seuil = 20 if nom == "reduire" else 40
+        assert len(encre) > seuil, f"{nom} ne peint presque rien"
 
     @pytest.mark.parametrize("nom", ICONES)
     def test_l_encre_tient_dans_le_bouton(self, qtbot, nom):
