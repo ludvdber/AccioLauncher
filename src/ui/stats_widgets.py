@@ -15,7 +15,7 @@ from src.core import sauvegardes
 from src.core.formatting import format_duree_compacte
 from src.core.i18n import get_language, tr
 from src.ui.fonts import cinzel
-from src.ui.theme import accent_qcolor
+from src.ui.theme import accent_qcolor, current as current_theme
 
 _SECONDAIRE = "#b0b0c8"
 _DISCRET = "#8a8aa6"
@@ -173,7 +173,7 @@ class _Mois(QWidget):
         haut_texte = fm.height() + 4
         maxi = max((s for _, _, s in self._cases), default=0) or 1
         zone_h = self.height() - 2 * haut_texte
-        loc = _locale()
+        noms = self._noms(fm)
         for i, (annee, mois, secondes) in enumerate(self._cases):
             col = self._colonne(i)
             actuel = i == len(self._cases) - 1
@@ -192,14 +192,29 @@ class _Mois(QWidget):
             else:
                 p.fillRect(QRectF(col.left(), sol - 2, col.width(), 2),
                            QColor(44, 62, 107, 140))
-            nom = loc.standaloneMonthName(mois, QLocale.FormatType.ShortFormat)
-            if mois == 1:
-                nom = f"{nom} {annee % 100:02d}"
             p.setPen(accent_qcolor() if actuel else QColor(_DISCRET))
             p.drawText(QRectF(col.left(), sol + 3, col.width(), haut_texte),
                        int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop),
-                       fm.elidedText(nom, Qt.TextElideMode.ElideRight, int(col.width())))
+                       noms[i])
         p.end()
+
+    def _noms(self, fm: QFontMetrics) -> list[str]:
+        """« nov. déc. janv. 26 … », ou les initiales si UNE seule ne tient pas.
+
+        Les abréviations du système rognées donnaient « n… ja… fé… se… », vu
+        avec les vraies polices le 2026-10-14. Toutes en initiales plutôt qu'un
+        mélange : l'infobulle redit le mois et l'année en entier.
+        """
+        loc = _locale()
+        largeur = self._colonne(0).width()
+        courts = []
+        for annee, mois, _s in self._cases:
+            nom = loc.standaloneMonthName(mois, QLocale.FormatType.ShortFormat)
+            courts.append(f"{nom} {annee % 100:02d}" if mois == 1 else nom)
+        if all(fm.horizontalAdvance(nom) <= largeur for nom in courts):
+            return courts
+        return [loc.standaloneMonthName(mois, QLocale.FormatType.NarrowFormat)
+                for _a, mois, _s in self._cases]
 
 
 class _Jauge(QWidget):
@@ -242,10 +257,10 @@ class _CarteSauvegarde(QFrame):
             # Celle qu'on reprendra : c'est la question qu'on se pose en
             # ouvrant un jeu à quatre emplacements, et les dates seules
             # obligent à les comparer de tête.
-            haut.addWidget(_texte(tr("dernière jouée"), 11, "#d6a72c"))
+            haut.addWidget(_texte(tr("dernière jouée"), 11, current_theme().accent))
         haut.addStretch(1)
         if vue.temps:
-            haut.addWidget(_chiffre(_duree(vue.temps), 14, "#d6a72c"))
+            haut.addWidget(_chiffre(_duree(vue.temps), 14, current_theme().accent))
         couche.addLayout(haut)
         if vue.temps:
             # Une jauge vide sur quatre cartes n'est pas une information, c'est

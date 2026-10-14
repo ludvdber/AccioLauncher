@@ -322,10 +322,14 @@ class UpdateChecker(QThread):
     def __init__(self, catalog_url: str, current_catalog_version: str,
                  installed_versions: dict[str, str],
                  games_asset_urls: dict[str, list[list[str]]] | None = None,
-                 parent=None) -> None:
+                 parent=None, force: bool = False) -> None:
         super().__init__(parent)
         self._catalog_url = catalog_url
         self._current_version = current_catalog_version
+        # « Vérifier » des Paramètres : la MÊME version se recharge aussi.
+        # Jamais une plus ancienne : le dépôt des jeux peut retarder sur le
+        # catalogue embarqué, et la v0.42 de Ludo était redescendue en 0.41.
+        self._force = force
         self._installed_versions = dict(installed_versions)  # snapshot thread-safe
         self._games_asset_urls = games_asset_urls or {}      # snapshot (compteur ⬇)
         # Diagnostic réseau. `_contact` passe à True dès qu'un serveur RÉPOND,
@@ -453,7 +457,8 @@ class UpdateChecker(QThread):
                 log.warning("Catalogue distant vide, ignoré")
                 return
 
-            if compare_versions(catalog.catalog_version, self._current_version) > 0:
+            ecart = compare_versions(catalog.catalog_version, self._current_version)
+            if ecart > 0 or (self._force and ecart == 0):
                 # Sauvegarder localement
                 try:
                     _LOCAL_CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)

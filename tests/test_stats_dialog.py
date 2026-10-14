@@ -71,20 +71,28 @@ class TestLeSqueletteNeBougePas:
         assert len(frises[0]._entrees) == len(manager.get_games()) == 8
         assert len(frises[0].findChildren(_Ligne)) == 8
 
-    def test_la_frise_n_est_pas_dans_la_zone_defilante(self, qtbot, manager):
-        """C'est le squelette : il ne doit jamais partir sous la ligne de
-        flottaison quand le journal s'allonge."""
-        _remplir(manager, jours=40)
+    def test_a_la_taille_d_un_portable_tout_reste_atteignable(self, qtbot, manager):
+        """Devenue une PAGE de hauteur fixe, la page gardait le relevé hors de la
+        zone défilante : à 980 × 600 (portable 1366 × 768), la zone des
+        sauvegardes tombait à 1 px et le relevé recevait 590 px pour 634, d'où
+        « À …rs » (2026-10-14). Toute la page défile ; la saga passe dessous."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QBoxLayout
+        _remplir(manager, jours=14)
         dlg = StatsDialog(manager)
+        dlg.setWindowFlags(Qt.WindowType.Widget)
+        dlg.setMinimumSize(0, 0)
         qtbot.addWidget(dlg)
-        frise = dlg.findChildren(_Releve)[0]
-        assert not frise.findChildren(QScrollArea)
-        parents = []
-        w = frise.parentWidget()
-        while w is not None:
-            parents.append(type(w).__name__)
-            w = w.parentWidget()
-        assert "QScrollArea" not in parents
+        dlg.resize(980, 600)
+        dlg.show()
+        qtbot.waitUntil(lambda: dlg._haut.direction() == QBoxLayout.Direction.TopToBottom,
+                        timeout=1000)
+        dlg.layout().activate()
+        releve = dlg.findChildren(_Releve)[0]
+        assert releve.width() >= releve.minimumSizeHint().width()
+        assert dlg._fiche is not None
+        barre = dlg._zone.verticalScrollBar()
+        assert barre.maximum() > 0, "la fiche des sauvegardes doit être atteignable"
 
 
 class TestEtatVide:
@@ -104,7 +112,6 @@ class TestEtatVide:
     def test_premier_lancement_la_page_s_arrete_ou_le_contenu_s_arrete(
             self, qtbot, manager):
         vide = self._ouvrir(qtbot, manager)
-        assert not vide.findChildren(QScrollArea)
         assert vide.height() < 720, f"{vide.height()} px pour un releve et une phrase"
         _remplir(manager, jours=30)
         pleine = self._ouvrir(qtbot, manager)
@@ -182,12 +189,26 @@ class TestReleve:
 class TestSaga:
     def test_le_mois_l_annee_et_le_total(self, qtbot, manager):
         gid = manager.get_games()[0].game.id
+        maintenant = datetime.now().replace(microsecond=0)
+        stats.enregistrer_session(gid, maintenant, 2 * 3600)
+        stats.enregistrer_session(gid, maintenant.replace(year=maintenant.year - 1, month=6, day=1), 3600)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        rendu = _labels(dlg)
+        assert "Au total" in rendu
+        assert f"En {maintenant.year}" in rendu
+
+    def test_une_ligne_qui_redit_le_chiffre_du_dessus_ne_s_ecrit_pas(self, qtbot, manager):
+        """« Au total 13 h 18 · En 2026 13 h 18 · En octobre 13 h 18 » : trois
+        fois le même chiffre (Ludo, 2026-10-14). Tout joué ce mois-ci : le total seul."""
+        gid = manager.get_games()[0].game.id
         stats.enregistrer_session(gid, datetime.now().replace(microsecond=0), 2 * 3600)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         rendu = _labels(dlg)
         assert "Au total" in rendu
-        assert f"En {datetime.now().year}" in rendu
+        # Ni l'année ni le mois : aucune ligne « En … ».
+        assert not [ligne for ligne in rendu.splitlines() if ligne.startswith("En ")]
 
     def test_la_plus_longue_partie_porte_sa_date(self, qtbot, manager):
         """Date, c'est un souvenir ; sans date, c'est un chiffre."""
@@ -219,6 +240,22 @@ class TestSaga:
         qtbot.addWidget(dlg)
         (mois,) = dlg.findChildren(_Mois)
         assert len(mois._cases) == 12
+
+    def test_aucun_nom_de_mois_n_est_rogne(self, qtbot):
+        """« n… ja… fé… se… » sous les barres, vu avec les vraies polices le
+        2026-10-14 : les abréviations ne tenaient pas dans une colonne sur douze."""
+        from PyQt6.QtGui import QFont, QFontMetrics
+        from src.ui.stats_dialog import _COLONNE_DROITE
+        cases = [(2025 + (m + 10) // 12, (m + 10) % 12 + 1, 3600) for m in range(12)]
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(_COLONNE_DROITE, mois.height())
+        police = QFont()
+        police.setPointSize(8)
+        fm = QFontMetrics(police)
+        noms = mois._noms(fm)
+        assert len(noms) == 12
+        assert all(fm.horizontalAdvance(n) <= mois._colonne(0).width() for n in noms), noms
 
 
 class TestSauvegardesAffichees:
@@ -476,27 +513,44 @@ def test_le_temps_joue_sans_sauvegarder_est_dit(qtbot, manager):
     assert "Dont 25 min jouées sans sauvegarder." in _labels(dlg)
 
 
+class TestCouleursDeLaMaison:
+    def test_aucun_chiffre_ne_reste_en_or_poudlard(self, qtbot, manager):
+        """« Au total », « dernière jouée » et le temps d'une sauvegarde étaient
+        en `#d6a72c` écrit en dur (vérification du 2026-10-14)."""
+        from src.ui.theme import set_theme
+        set_theme("gryffondor")
+        try:
+            _remplir(manager)
+            dlg = StatsDialog(manager)
+            qtbot.addWidget(dlg)
+            restes = [lbl.text() for lbl in dlg.findChildren(QLabel)
+                      if "#d6a72c" in lbl.styleSheet().lower()]
+            assert not restes, restes
+        finally:
+            set_theme("poudlard")
+
+
 class TestPhraseDEntete:
-    """« Élève de Serdaigle · 5 années commencées sur 7 », sous le titre."""
+    """« Élève de Serdaigle » sous le titre, et rien d'autre.
 
-    @staticmethod
-    def _liste(commencees):
-        from src.core.scolarite import Annee, Statut
-        return [Annee(n, (), Statut.COMMENCEE if n <= commencees else Statut.ABSENTE, 0)
-                for n in range(1, 8)]
+    Le compte des années et « Vous êtes en 7ᵉ année » sont partis le 2026-10-14
+    (Ludo) : le relevé montre déjà ce qui est fait.
+    """
 
-    def test_maison_et_annees(self):
+    def test_la_maison_seule(self):
         from src.ui.theme import THEMES
-        phrase = StatsDialog._phrase_entete(THEMES["serdaigle"], self._liste(5))
-        assert phrase == "Élève de Serdaigle  ·  5 années commencées sur 7"
+        assert StatsDialog._phrase_entete(THEMES["serdaigle"]) == "Élève de Serdaigle"
 
-    def test_une_seule_annee_au_singulier(self):
+    def test_sans_maison_rien_d_ecrit(self):
         from src.ui.theme import THEMES
-        assert (StatsDialog._phrase_entete(THEMES["poudlard"], self._liste(1))
-                == "1 année commencée sur 7")
+        assert StatsDialog._phrase_entete(THEMES["poudlard"]) == ""
 
-    def test_rien_a_dire_rien_d_ecrit(self):
-        from src.ui.theme import THEMES
-        assert StatsDialog._phrase_entete(THEMES["poudlard"], self._liste(0)) == ""
-        assert (StatsDialog._phrase_entete(THEMES["gryffondor"], self._liste(0))
-                == "Élève de Gryffondor")
+    def test_plus_aucun_compte_d_annees_sur_la_page(self, qtbot, manager):
+        """Même quand des années sont commencées."""
+        _remplir(manager)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        textes = _labels(dlg)
+        assert "commencée" not in textes
+        assert "Vous êtes en" not in textes
+        assert "vous attend" not in textes

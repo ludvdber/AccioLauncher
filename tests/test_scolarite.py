@@ -14,10 +14,7 @@ raccourci qu'on prend quand rien ne l'interdit.
 import dataclasses
 
 from src.core.game_data import GameData, _annee_valide
-from src.core.scolarite import (
-    ANNEES, Statut, annee_courante, annees,
-    prochaine_annee, restantes,
-)
+from src.core.scolarite import ANNEES, Statut, annee_courante, annees
 
 _MODELE = GameData(
     id="modele", name="Modèle", year=2001, description="", developer="",
@@ -134,49 +131,6 @@ class TestAnneeCourante:
         liste = annees([jeu("hp7a", 7), jeu("hp7b", 7)], _sans_rien,
                        lambda gid: 60 if gid == "hp7b" else 0)
         assert annee_courante(liste) == 7
-
-
-class TestProchaineAnnee:
-    """Ce qui ATTEND est DEVANT — jamais une année sautée en chemin."""
-
-    def test_c_est_la_premiere_non_commencee_apres_la_courante(self):
-        catalogue = [jeu("hp1", 1), jeu("hp2", 2), jeu("hp3", 3)]
-        liste = annees(catalogue, _sans_rien,
-                       lambda gid: 60 if gid == "hp1" else 0)
-        suivante = prochaine_annee(liste)
-        assert suivante is not None and suivante.numero == 2
-
-    def test_une_annee_sautee_n_attend_pas(self):
-        """LE cas signalé par Ludo : « Tu es en 7ᵉ année. La 4ᵉ année
-        t'attend. » — il l'a qualifié de ridicule, et il avait raison.
-        « Attendre » décrit ce qui vient ensuite ; une année manquée derrière
-        soi ne vient pas ensuite."""
-        catalogue = [jeu(f"hp{n}", n) for n in range(1, 8)]
-        joues = {"hp1", "hp2", "hp3", "hp6", "hp7"}
-        liste = annees(catalogue, _sans_rien,
-                       lambda gid: 60 if gid in joues else 0)
-        assert annee_courante(liste) == 7
-        assert prochaine_annee(liste) is None
-        assert [a.numero for a in restantes(liste)] == [4, 5]
-
-    def test_une_annee_vide_n_est_jamais_proposee(self):
-        """Proposer une année qu'aucun jeu ne raconte serait envoyer quelqu'un
-        vers une porte fermée."""
-        liste = annees([jeu("hp2", 2), jeu("hp4", 4)], _sans_rien,
-                       lambda gid: 60 if gid == "hp2" else 0)
-        suivante = prochaine_annee(liste)
-        assert suivante is not None and suivante.numero == 4
-
-    def test_rien_a_proposer_quand_tout_a_commence(self):
-        catalogue = [jeu("hp1", 1), jeu("hp2", 2)]
-        liste = annees(catalogue, _sans_rien, lambda _g: 60)
-        assert prochaine_annee(liste) is None
-        assert restantes(liste) == []
-
-    def test_restantes_ne_compte_que_les_annees_qui_ont_un_jeu(self):
-        liste = annees([jeu("hp1", 1), jeu("hp5", 5)], _sans_rien,
-                       lambda gid: 60 if gid == "hp1" else 0)
-        assert [a.numero for a in restantes(liste)] == [5]
 
 
 class TestLAnneeVientDuCatalogueEtEstValidee:

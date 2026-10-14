@@ -4,13 +4,19 @@ Extrait de `main_window` (plafond de lignes) : la décision ne lit que la
 touche, le focus, le carrousel et la fiche — pas la fenêtre.
 """
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtWidgets import (
     QAbstractSpinBox, QApplication, QComboBox, QLineEdit, QSlider,
 )
 
 # Le focus sur l'un de ces widgets garde ses flèches : elles y ont un sens.
 _EDITION = (QLineEdit, QComboBox, QSlider, QAbstractSpinBox)
+
+# Ce que le filtre applicatif de `MainWindow` traite (souris pour la fiche et
+# les bords, clavier global). Il voit TOUS les événements, 14 000 en bâtissant
+# les Paramètres : les autres sortent au plus tôt (2026-10-14).
+EVENEMENTS_FILTRES = frozenset((QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress,
+                                QEvent.Type.Leave, QEvent.Type.KeyPress))
 
 
 def touche_globale(event, carrousel, fiche, fenetre_active: bool,

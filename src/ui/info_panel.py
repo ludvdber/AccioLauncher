@@ -489,9 +489,11 @@ class InfoPanel(QWidget):
         if manette:
             morceaux.append(escape(manette, quote=False))
         version = self._manager.installed_version(game.id) or game.recommended_version
-        morceaux.append(_insecable(escape(tr("Version {}").format(version), quote=False)))
+        # La version EST le lien vers ses changements (Ludo, 2026-10-14) : un
+        # « Nouveautés » à côté redisait la même chose en plus long.
         morceaux.append(f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
-                        + escape(tr("Nouveautés"), quote=False) + '</a>')
+                        + _insecable(escape(tr("Version {}").format(version), quote=False))
+                        + '</a>')
         point = '<span style="color:#4c4a68;">&nbsp;·&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
         self._indices.setToolTip(game.controller_note if manette else "")

@@ -142,6 +142,8 @@ class ActionPanel(QWidget):
         # quand la fiche se reconstruit en route (retour sur ce jeu).
         self._carte: CarteProgression | None = None
         self.phase_courante = lambda: ""
+        # Et ses derniers chiffres (`GameOperations.derniere_progression`).
+        self.progression_courante = lambda: {}
         # Note « bientôt disponible » : sa hauteur se recalcule à chaque
         # redimensionnement, donc on garde la référence (cf. _fit_coming_soon_note).
         self._coming_soon_note: QLabel | None = None
@@ -388,6 +390,14 @@ class ActionPanel(QWidget):
         self._carte = CarteProgression(phase)
         self._carte.annuler.connect(self.cancel_clicked)
         self._action_layout.addWidget(self._carte, stretch=1)
+        # Rebâtie en route : elle reprend les derniers chiffres au lieu de 0 %.
+        chiffres = self.progression_courante()
+        if "parties" in chiffres:
+            self._carte.regler_parties(*chiffres["parties"])
+        if phase == "download" and "telechargement" in chiffres:
+            self._carte.regler_telechargement(*chiffres["telechargement"])
+        elif phase == "install" and "installation" in chiffres:
+            self._carte.regler_installation(*chiffres["installation"])
 
     def _build_installed(self) -> None:
         # « REPRENDRE » quand le jeu a déjà été lancé : le même clic, mais

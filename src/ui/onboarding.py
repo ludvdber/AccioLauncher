@@ -748,9 +748,14 @@ class OnboardingDialog(QDialog):
         devise, cri = verdict(self._maison)
         self._devise.setText(tr("« {} »").format(devise))
         self._cri.setText(cri)
-        self._note_verdict.setText(tr(
-            "Le launcher prend déjà les couleurs de {maison}. "
-            "Vous pourrez en choisir d'autres à l'étape suivante.").format(maison=tr(THEMES[self._maison].nom)))
+        # Rattrapage « Choixpeau seul » : il n'y a PAS d'étape suivante, le
+        # bouton termine (vérification du 2026-10-14).
+        note = (tr("Le launcher prend déjà les couleurs de {maison}. "
+                   "Vous pourrez en choisir d'autres à l'étape suivante.")
+                if DERNIERES in self._ecrans else
+                tr("Le launcher prend déjà les couleurs de {maison}. "
+                   "Vous pourrez en changer dans les Paramètres."))
+        self._note_verdict.setText(note.format(maison=tr(THEMES[self._maison].nom)))
 
     # ── Étape : dernières touches ──
 
@@ -857,7 +862,7 @@ class OnboardingDialog(QDialog):
             actif = self._reponses[self._question] >= 0
             lien_txt = tr("Garder le thème de Poudlard") if self._theme_initial == "poudlard" \
                 else tr("Garder mes couleurs")
-        elif ecran == DERNIERES:
+        elif ecran == DERNIERES or (ecran == VERDICT and not self._apres_choixpeau()):
             suivant = tr("Ouvrir la bibliothèque") if not self._rattrapage else tr("Terminer")
         self._lien.setText(lien_txt)
         self._lien.setVisible(bool(lien_txt))
@@ -1026,9 +1031,14 @@ def run_rattrapage(config: Config, etapes: tuple[str, ...]) -> None:
         log.info("Rattrapage de l'assistant terminé (%s)", ", ".join(etapes))
     else:
         log.info("Rattrapage de l'assistant fermé (%s)", ", ".join(etapes))
-    for etape in etapes:
-        if etape not in config.etapes_assistant:
-            config.etapes_assistant.append(etape)
+    _toutes_vues(config)
+
+
+def _toutes_vues(config: Config) -> None:
+    """TOUTES les étapes rattrapables notées vues, pas seulement les montrées :
+    une étape jugée inutile au premier lancement (une maison déjà choisie) ne
+    doit pas surgir le jour où l'on repasse à Poudlard (vérification du 2026-10-14)."""
+    config.etapes_assistant = list(ETAPES_RATTRAPABLES)
     config.save()
 
 
@@ -1045,4 +1055,6 @@ def charger_ou_accueillir() -> Config:
     if etapes:
         set_language(config.langue)
         run_rattrapage(config, etapes)
+    elif set(config.etapes_assistant) != set(ETAPES_RATTRAPABLES):
+        _toutes_vues(config)   # rien à rattraper : la décision est prise, une fois
     return config

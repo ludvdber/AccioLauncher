@@ -261,6 +261,50 @@ class TestPhaseWiring:
         assert win._download_bar._phase_label.text().startswith("4/4")
 
 
+class TestCarteRebatieEnRoute:
+    """Un aller-retour de jeu rebâtit la carte : elle repartait à « 0 % » pendant
+    que la barre du bas disait 57 %, et perdait « partie 2 sur 3 »."""
+
+    def _en_cours(self, win, etat, phase):
+        from src.core.game_manager import GameState
+        jeu = win._detail.game
+        ops = win._detail.ops
+        win.manager.set_game_state(jeu.id, getattr(GameState, etat))
+        ops._active_game = jeu
+        ops._set_phase(phase)
+        win._detail.refresh_actions()
+        return ops
+
+    def _aller_retour(self, win):
+        win._carousel.select_next()
+        win._carousel.select_prev()
+
+    def test_installation(self, make_window):
+        win = make_window()
+        ops = self._en_cours(win, "INSTALLING", "install")
+        ops._on_install_progress(57)
+        self._aller_retour(win)
+        assert win._detail._action_panel._carte.pourcentage.text() == "57 %"
+
+    def test_telechargement_et_parties(self, make_window):
+        win = make_window()
+        ops = self._en_cours(win, "DOWNLOADING", "download")
+        ops._on_part_info(2, 3)
+        ops._speed_tracker.should_update_ui = lambda: True
+        ops._on_download_progress(500_000_000, 1_000_000_000)
+        self._aller_retour(win)
+        carte = win._detail._action_panel._carte
+        assert carte.pourcentage.text() == "50 %"
+        assert "partie 2 sur 3" in carte.detail.text()
+
+    def test_une_nouvelle_operation_repart_de_zero(self, make_window):
+        win = make_window()
+        ops = self._en_cours(win, "INSTALLING", "install")
+        ops._on_install_progress(57)
+        ops._relacher_operation()
+        assert ops.derniere_progression == {}
+
+
 class TestDownloadCounts:
     """Le compteur vit DANS la ligne méta, à une place stable.
 
@@ -454,6 +498,44 @@ class TestSettingsRestart:
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
 
+    def test_revenir_a_la_langue_de_depart_cache_redemarrer(self, make_window, qtbot):
+        """Aller-retour de langue : rien à appliquer, plus de « Redémarrer »
+        (Ludo, 2026-10-14). Pareil pour le thème."""
+        from src.core.i18n import get_language
+        from src.ui.settings_panel import SettingsDialog
+        from src.ui.theme import current as theme_courant
+        win = make_window()
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        combo = dlg._lang_combo
+        autre = next(i for i in range(combo.count()) if combo.itemData(i) != get_language())
+        combo.setCurrentIndex(autre)
+        assert dlg._lang_restart.isVisible()
+        combo.setCurrentIndex(combo.findData(get_language()))
+        assert not dlg._lang_restart.isVisible()
+
+        dlg._nav.setCurrentRow(1)
+        themes = dlg._theme_combo
+        themes.setCurrentIndex(themes.findData("gryffondor"))
+        assert dlg._theme_restart.isVisible()
+        themes.setCurrentIndex(themes.findData(theme_courant().id))
+        assert not dlg._theme_restart.isVisible()
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
+    def test_rouverte_apres_un_changement_elle_le_redit(self, make_window, qtbot):
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        win.config.theme = "serpentard"
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg._nav.setCurrentRow(1)
+        assert dlg._theme_restart.isVisible()
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
     def test_season_change_emits_resolved_season(self, make_window, qtbot):
         from src.ui.settings_panel import SettingsDialog
         win = make_window()
@@ -465,6 +547,102 @@ class TestSettingsRestart:
         assert win.config.season == "noel"
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
+
+
+class TestAucuneFenetreParasite:
+    """Ouvrir une page ne fait naître AUCUNE fenêtre à côté.
+
+    `LigneReglage` rendait sa description visible avant de l'avoir rattachée :
+    un widget sans parent rendu visible devient une fenêtre. Huit petites
+    fenêtres clignotaient à l'ouverture des Paramètres, et l'ouverture
+    traînait (Ludo, 2026-10-14).
+    """
+
+    def test_parametres_annees_et_reglages_des_jeux(self, make_window, qtbot):
+        from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow
+        from src.ui import game_detail_handlers
+
+        class _Espion(QObject):
+            vues: list = []
+
+            def eventFilter(self, obj, ev):
+                if (ev.type() == QEvent.Type.Show and obj.isWidgetType() and obj.isWindow()
+                        and not isinstance(obj, (QDialog, QMainWindow))):
+                    self.vues.append(f"{type(obj).__name__} {getattr(obj, 'text', str)()!r}")
+                return False
+
+        win = make_window()
+        win.show()
+        qtbot.waitExposed(win)
+        espion = _Espion()
+        QApplication.instance().installEventFilter(espion)
+        try:
+            win._on_settings()
+            for rang in range(win._pages.page._nav.count()):
+                win._pages.page._nav.setCurrentRow(rang)
+            win._pages.fermer()
+            win._on_stats()
+            win._pages.fermer()
+            game_detail_handlers.on_game_settings(win._detail)
+            win._pages.fermer()
+            # Même défaut, même cause, dans la fenêtre « Désinstaller ».
+            from src.ui.desinstallation_dialog import DesinstallationDialog
+            dlg = DesinstallationDialog(win.config.install_path, 0, True, win)
+            dlg.show()
+            QApplication.processEvents()
+            dlg.close()
+        finally:
+            QApplication.instance().removeEventFilter(espion)
+        assert espion.vues == []
+
+
+class TestOngletsDuHaut:
+    """Rapportés par la vérification du 2026-10-14."""
+
+    def test_bibliotheque_sans_page_reste_soulignee(self, make_window, qtbot):
+        from src.ui.title_bar import BIBLIOTHEQUE
+        win = make_window()
+        onglet = win._title_bar.onglet(BIBLIOTHEQUE)
+        qtbot.mouseClick(onglet, Qt.MouseButton.LeftButton)
+        assert onglet.isChecked(), "plus aucun onglet n'était souligné"
+
+    def test_recliquer_l_onglet_ouvert_ne_rebatit_pas_la_page(self, make_window, qtbot):
+        from src.ui.title_bar import PARAMETRES
+        win = make_window()
+        onglet = win._title_bar.onglet(PARAMETRES)
+        qtbot.mouseClick(onglet, Qt.MouseButton.LeftButton)
+        page = win._pages.page
+        page._nav.setCurrentRow(2)
+        qtbot.mouseClick(onglet, Qt.MouseButton.LeftButton)
+        assert win._pages.page is page and page._nav.currentRow() == 2
+        assert onglet.isChecked()
+        win._pages.fermer()
+
+    def test_echap_depuis_un_onglet_ferme_la_page(self, make_window, qtbot):
+        from src.ui.title_bar import ANNEES
+        win = make_window()
+        win.show()
+        qtbot.waitExposed(win)
+        onglet = win._title_bar.onglet(ANNEES)
+        qtbot.mouseClick(onglet, Qt.MouseButton.LeftButton)
+        assert win._pages.page is not None
+        qtbot.keyClick(onglet, Qt.Key.Key_Escape)
+        assert win._pages.page is None
+
+
+class TestEffetsDerriereUnePage:
+    def test_un_retour_de_partie_ne_relance_rien_derriere_une_page(self, make_window, qtbot):
+        """Particules et fond de la fiche cachés par la page : les relancer au
+        retour d'un jeu, c'était du calcul pour rien jusqu'à la fermeture."""
+        win = make_window()
+        win.show()
+        qtbot.waitExposed(win)
+        win.pause_all_effects()
+        win._on_stats()
+        win.resume_all_effects()
+        assert not win._particles._ticking
+        win._pages.fermer()
+        assert win._particles._ticking, "la page fermée, tout repart"
 
 
 class TestOnboardingImport:
@@ -670,6 +848,30 @@ class TestBandesAnnonces:
         detail.pause_effects()
         assert detail._video.paused is False or not detail._video.is_playing
         detail.resume_effects()
+
+    def test_sans_lecture_automatique_la_pastille_lire_reste(self, make_window, qtbot,
+                                                            tmp_path, monkeypatch):
+        """Lecture auto coupée : la fiche n'avait plus AUCUNE commande vidéo, ni
+        lecture, ni son (Ludo, 2026-10-14). La pastille « Lire » la lance."""
+        from src.core import trailers
+        faux = tmp_path / "t.mp4"
+        faux.write_bytes(b"x")
+        monkeypatch.setattr(trailers, "chemin_a_jouer", lambda *a, **k: faux)
+        win = make_window(autoplay_videos=False)
+        win.show()
+        qtbot.waitExposed(win)
+        detail = win._detail
+        lances = []
+        monkeypatch.setattr(detail._video, "play", lambda *a, **k: lances.append(a) or True)
+        autre = next(e.game for e in win.manager.get_games() if e.game.id != detail.game.id)
+        detail.set_game(autre)
+        bar = detail._audio_bar
+        qtbot.waitUntil(bar.isVisible, timeout=1000)
+        assert bar._btn_replay.accessibleName() == "Lire la bande-annonce"
+        assert not bar._btn_mute.isVisible()
+        bar._btn_replay.click()
+        assert lances, "le clic doit lancer la bande-annonce"
+        assert bar._btn_mute.isVisible() and bar._btn_play.isVisible()
 
     def test_barre_audio_a_un_bouton_pause(self, make_window):
         win = make_window()
@@ -1196,6 +1398,9 @@ class TestSelecteurDeLangue:
         indices = win._detail._info._indices.text()
         assert 'href="changelog"' in indices
         assert indices.count("href=") == 1
+        # Et ce lien, c'est la version elle-même (Ludo, 2026-10-14).
+        assert "Nouveautés" not in indices
+        assert indices.split('href="changelog"')[1].split("</a>")[0].count("Version") == 1
 
     def test_le_choix_est_bien_retenu(self, make_window_multilingue):
         """Le réglage vit toujours — il ne s'AFFICHE simplement plus sur la fiche."""
@@ -2073,8 +2278,10 @@ class TestBarreAudioResteDansLaFiche:
         win = make_window()
         vue = win._detail
         vue.resize(1200, 700)
-        vue._position_audio_bar()
         bar = vue._audio_bar
+        # La barre COMPLÈTE : sans lecture auto, la fiche montre la pastille « Lire ».
+        bar.set_mode_fin(False)
+        vue._position_audio_bar()
         bar.layout().activate()
         coin = bar.mapTo(vue, bar._volume_slider.geometry().topRight())
         assert coin.x() <= vue.width()

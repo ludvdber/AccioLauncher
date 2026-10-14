@@ -295,6 +295,33 @@ class TestLeRattrapage:
         assert dlg._cartes_couleur["serdaigle"].isChecked()
         assert dlg._btn_suivant.text() == "Terminer"
 
+    def test_une_maison_deja_choisie_ne_rappelle_jamais_le_choixpeau(self, monkeypatch):
+        """Rien à rattraper (maison et bandes-annonces déjà là) : la décision est
+        notée. Repasser à Poudlard plus tard ne fait pas surgir le Choixpeau."""
+        from src.core.assistant import etapes_a_rattraper
+        from src.core.config import Config
+        from src.ui import onboarding
+        appels = []
+        monkeypatch.setattr(onboarding, "run_rattrapage", lambda *a: appels.append(a))
+        Config(etapes_assistant=[], theme="serdaigle", trailers_optin=True).save()
+        config = onboarding.charger_ou_accueillir()
+        assert appels == []
+        assert set(Config.load().etapes_assistant) == {"choixpeau", "touches"}
+        assert etapes_a_rattraper(config.etapes_assistant, "poudlard", True) == ()
+
+    def test_choixpeau_seul_le_verdict_ne_promet_pas_d_etape_suivante(self, qtbot):
+        """« Vous pourrez en choisir d'autres à l'étape suivante » et « Suivant »,
+        puis le clic fermait l'assistant (vérification du 2026-10-14)."""
+        from src.core.config import Config
+        from src.ui.onboarding import VERDICT, OnboardingDialog
+        dlg = OnboardingDialog(Config(langue="fr"), ("choixpeau",))
+        qtbot.addWidget(dlg)
+        _repondre_partout(dlg, "serdaigle")
+        assert dlg._ecran == VERDICT
+        assert "étape suivante" not in dlg._note_verdict.text()
+        assert "Paramètres" in dlg._note_verdict.text()
+        assert dlg._btn_suivant.text() == "Terminer"
+
 
 class TestChangerDeLangueRebatitLesEcrans:
     """Revenir à la langue et en changer doit tout retraduire (capture de Ludo, 2026-09-23)."""
