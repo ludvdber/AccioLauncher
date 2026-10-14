@@ -11,16 +11,23 @@ scintille, c'est le code visuel des faux boutons de téléchargement des sites
 douteux. Le halo, peint HORS du rectangle arrondi mais rogné au rectangle du
 widget, laissait aussi un voile carré dans les quatre coins. Plus rien ne bouge
 au repos : le survol éclaircit, l'appui assombrit, et c'est tout.
+
+Le même jour, deuxième passe (« le bouton Installer ressemble trop à un bouton
+virus des sites internet, le Reprendre également ») : plus de dégradé, des
+couleurs mates, le libellé en minuscules de Gelasio et un pictogramme devant,
+comme les boutons de Steam ou de GOG. Les capitales Cinzel dorées sur un aplat
+vif, c'était la même grammaire que les faux boutons.
 """
 
 from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import (
-    QColor, QEnterEvent, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath,
+    QColor, QEnterEvent, QFont, QFontMetrics, QPainter, QPainterPath,
     QPen,
 )
 from PyQt6.QtWidgets import QPushButton, QWidget
 
 from src.ui import theme
+from src.ui.icon_button import pixmap_icone
 
 
 # Marge intérieure réservée au texte d'un GlowButton, en pixels logiques.
@@ -31,6 +38,9 @@ _MARGE_TEXTE = 20
 ECART_DETAIL = 14
 # Le détail est lu après le libellé : même couleur, moins appuyée.
 _OPACITE_DETAIL = 0.72
+# Pictogramme devant le libellé : 18 px, le plancher du Bold de Phosphor (règle 51).
+TAILLE_ICONE = 18
+ECART_ICONE = 10
 
 
 class GlowButton(QPushButton):
@@ -54,6 +64,7 @@ class GlowButton(QPushButton):
         parent: QWidget | None = None,
         detail: str = "",
         detail_font: QFont | None = None,
+        icone: str = "",
     ) -> None:
         super().__init__(text, parent)
         palette = theme.current()
@@ -63,6 +74,7 @@ class GlowButton(QPushButton):
         self._glow_color = QColor(glow_color)
         self._detail = detail
         self._detail_font = detail_font
+        self._icone = icone
 
         if bg_stops:
             self._bg_top = QColor(bg_stops[0])
@@ -88,6 +100,10 @@ class GlowButton(QPushButton):
 
     def police_detail(self) -> QFont:
         return self._detail_font if self._detail_font is not None else self.font()
+
+    def largeur_icone(self) -> int:
+        """Ce que le pictogramme ajoute devant le libellé (0 sans pictogramme)."""
+        return TAILLE_ICONE + ECART_ICONE if self._icone else 0
 
     def paintEvent(self, event) -> None:
         p = QPainter(self)
@@ -135,7 +151,8 @@ class GlowButton(QPushButton):
         ceci garantit qu'aucun GlowButton ne déborde en silence, quelle que
         soit la traduction. Le détail cède sa place en premier.
         """
-        dispo = max(0, int(rect.width()) - _MARGE_TEXTE)
+        icone = self.largeur_icone()
+        dispo = max(0, int(rect.width()) - _MARGE_TEXTE - icone)
         fm = self.fontMetrics()
         fm_detail = QFontMetrics(self.police_detail())
         detail = self._detail
@@ -143,18 +160,20 @@ class GlowButton(QPushButton):
         if detail and fm.horizontalAdvance(self.text()) + ECART_DETAIL + largeur_detail > dispo:
             detail, largeur_detail = "", 0
         texte = fm.elidedText(self.text(), Qt.TextElideMode.ElideRight, dispo)
-        if not detail:
-            p.setPen(couleur)
-            p.setFont(self.font())
-            p.drawText(rect, Qt.AlignmentFlag.AlignCenter, texte)
-            return
         largeur = fm.horizontalAdvance(texte)
-        x = rect.x() + (rect.width() - largeur - ECART_DETAIL - largeur_detail) / 2
+        ecart = ECART_DETAIL if detail else 0
+        x = rect.x() + (rect.width() - icone - largeur - ecart - largeur_detail) / 2
+        if self._icone:
+            pm = pixmap_icone(self._icone, TAILLE_ICONE, couleur)
+            p.drawPixmap(round(x), round(rect.y() + (rect.height() - TAILLE_ICONE) / 2), pm)
+            x += icone
         p.setPen(couleur)
         p.setFont(self.font())
         p.drawText(QRectF(x, rect.y(), largeur, rect.height()),
                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
                    | Qt.TextFlag.TextDontClip, texte)
+        if not detail:
+            return
         p.save()
         p.setOpacity(p.opacity() * _OPACITE_DETAIL)
         p.setFont(self.police_detail())
@@ -167,17 +186,14 @@ class GlowButton(QPushButton):
                    | Qt.TextFlag.TextDontClip, detail)
         p.restore()
 
-    def _paint_filled(self, p: QPainter, h: int, rect: QRectF) -> None:
-        """Fond plein, un dégradé à peine sensible de haut en bas."""
-        haut, bas = QColor(self._bg_top), QColor(self._bg_bot)
+    def _paint_filled(self, p: QPainter, _h: int, rect: QRectF) -> None:
+        """Fond UNI, mat : le survol éclaircit à peine, l'appui assombrit."""
+        fond = QColor(self._bg_top)
         if self._pressed:
-            haut, bas = bas, bas.darker(115)
+            fond = fond.darker(112)
         elif self._hovered:
-            haut, bas = haut.lighter(110), bas.lighter(110)
-        bg = QLinearGradient(0, 0, 0, h)
-        bg.setColorAt(0, haut)
-        bg.setColorAt(1, bas)
-        p.fillRect(rect, bg)
+            fond = fond.lighter(108)
+        p.fillRect(rect, fond)
 
     def _paint_outline(self, p: QPainter, rect: QRectF) -> None:
         """Fond à peine teinté — pour les actions secondaires."""

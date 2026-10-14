@@ -145,6 +145,17 @@ class TestPage:
         assert QGuiApplication.clipboard().image().width() == 64
         assert "Ctrl+V" in page._confirmation.text() and not page._confirmation.isHidden()
 
+    def test_ouvrir_l_image_la_donne_a_la_visionneuse(self, qtbot, monkeypatch):
+        ouverts = []
+        monkeypatch.setattr("src.ui.galerie_page.open_local_path", ouverts.append)
+        chemin = _capture(HP4, "a.png", datetime(2026, 9, 3))
+        page = self._page(qtbot)
+        page._ouvrir.click()
+        assert ouverts == [str(chemin)], "l'image elle-même, pas son dossier"
+
+    def test_vide_ouvrir_l_image_est_eteint(self, qtbot):
+        assert not self._page(qtbot)._ouvrir.isEnabled()
+
     def test_une_image_illisible_ne_promet_rien(self, qtbot, monkeypatch):
         ouverts = []
         monkeypatch.setattr("src.ui.galerie_page.open_url", ouverts.append)
@@ -165,11 +176,12 @@ class TestDepuisMesAnnees:
         monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "c.json")
         manager = GameManager(Config(install_path=tmp_path / "g", cache_path=tmp_path / "c"))
         ouvertes = []
-        dlg = StatsDialog(manager, ouvrir_page=ouvertes.append)
+        dlg = StatsDialog(manager, ouvrir_page=lambda page, cle="": ouvertes.append((page, cle)))
         qtbot.addWidget(dlg)
         dlg.ouvrir_galerie()
-        assert len(ouvertes) == 1 and isinstance(ouvertes[0], GaleriePage)
-        qtbot.addWidget(ouvertes[0])
+        assert len(ouvertes) == 1 and isinstance(ouvertes[0][0], GaleriePage)
+        assert ouvertes[0][1] == "galerie", "l'onglet Galerie se souligne, même venue de Mes années"
+        qtbot.addWidget(ouvertes[0][0])
 
     def test_sans_hote_pas_de_bouton(self, qtbot, tmp_path, monkeypatch):
         from PyQt6.QtWidgets import QPushButton

@@ -325,6 +325,14 @@ class GaleriePage(QDialog):
         self._confirmation.hide()
         lay.addWidget(self._confirmation)
         lay.addSpacing(8)
+        # L'image en grand, dans la visionneuse du système : il manquait un
+        # moyen de la REGARDER autrement qu'en vignette (Ludo, 2026-10-14).
+        self._ouvrir = bouton(tr("Ouvrir l'image"))
+        self._ouvrir.setAutoDefault(False)
+        self._ouvrir.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._ouvrir.clicked.connect(self.ouvrir_image)
+        lay.addWidget(self._ouvrir)
+        lay.addSpacing(8)
         ligne = QHBoxLayout()
         ligne.setSpacing(8)
         self._copier = bouton(tr("Copier l'image"))
@@ -389,7 +397,7 @@ class GaleriePage(QDialog):
     def _montrer(self, capture: galerie.Capture | None) -> None:
         self.choisie = capture
         self._confirmation.hide()
-        for b in (self._partager, self._copier, self._dossier):
+        for b in (self._partager, self._ouvrir, self._copier, self._dossier):
             b.setEnabled(capture is not None)
         if capture is None:
             self._apercu.clear()
@@ -439,6 +447,10 @@ class GaleriePage(QDialog):
         self._confirmation.setStyleSheet(
             f"color: {'#7be0a4' if reussi else '#f0b46a'}; background: transparent;")
         self._confirmation.show()
+
+    def ouvrir_image(self) -> None:
+        if self.choisie is not None:
+            open_local_path(str(self.choisie.chemin))
 
     def _ouvrir_dossier(self) -> None:
         if self.choisie is not None:

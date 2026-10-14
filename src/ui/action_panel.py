@@ -13,7 +13,7 @@ from src.ui.alert_banner import AlertBanner
 from src.ui.carte_progression import CarteProgression
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
-from src.ui.glow_button import ECART_DETAIL, GlowButton
+from src.ui.glow_button import ECART_DETAIL, GlowButton, TAILLE_ICONE, ECART_ICONE
 from src.ui.icon_button import IconButton
 from src.core.formatting import (
     format_duree_compacte, format_relative_date, format_size,
@@ -30,12 +30,20 @@ _COMING_SOON_W = 300
 # estimée n'apparaît qu'après un premier téléchargement) mais reste imposant
 # quand le libellé est court, et ne dépasse jamais la moitié d'un panneau
 # d'info de 700 px.
-_BOUTON_MIN_W = 300
+_BOUTON_MIN_W = 240
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
 # Bouton JOUER et engrenage à la même hauteur que TÉLÉCHARGER (piste A,
 # 2026-10-09). À 48, l'espagnol de HP7 débordait de 2 px à 980×660.
 _HAUTEUR_JOUER = 46
+_VERT_JOUER = "#2b8c53"
+
+
+def _police_action():
+    """Le libellé des boutons d'action : Gelasio gras, en minuscules."""
+    police = body_font(15)
+    police.setBold(True)
+    return police
 
 
 def _colonne_stat(libelle: str, valeur: str) -> QWidget:
@@ -277,28 +285,31 @@ class ActionPanel(QWidget):
         # bouton des sites douteux (« fait vraiment virus », Ludo), et le tiret
         # cadratin faisait texte généré. Installer est ce que le clic accomplit
         # (télécharger, extraire, corriger), et le mot de Steam, GOG et Epic.
+        # Deuxième passe le même jour (Ludo : « ressemble trop à un bouton virus
+        # des sites internet ») : minuscules de Gelasio, pictogramme devant, fond
+        # uni (`glow_button.py`), comme Steam et GOG.
         if reprise is not None:
             _, restant = reprise
-            libelle = tr("REPRENDRE")
+            libelle = tr("Reprendre")
             detail = tr("{} restants").format(format_size(round(restant)))
         else:
-            libelle = tr("INSTALLER")
+            libelle = tr("Installer")
             detail = format_size(poids)
         # PLEIN, dans l'accent de la maison (ACT-055, 2026-10-08) : c'est l'action
         # principale d'un jeu absent, elle doit peser autant que le JOUER vert
         # d'un jeu installé. En contour, elle pesait MOINS que le DÉSINSTALLER
         # voisin. Texte sombre : du blanc sur l'or ne passe pas le contraste.
         btn = GlowButton(libelle, text_color=palette_courante().bg,
-                         detail=detail, detail_font=body_font(14))
+                         detail=detail, detail_font=body_font(14), icone="telechargement")
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Installer {}").format(self._game.name) + f" ({detail})")
-        btn.setFont(cinzel(13, bold=True))
+        btn.setFont(_police_action())
         # Largeur SUIVIE SUR LE CONTENU, et non figée à 300 px. Le libellé
         # portait une durée estimée après un premier téléchargement, et il
         # réclamait alors jusqu'à 403 px : le texte débordait des deux côtés du
         # cadre (« CHARGER — 463 Mo · ≈ ~19s resta »). Les traductions, elles,
         # peuvent toujours s'allonger.
-        btn.setFixedSize(self._largeur_bouton(libelle, cinzel(13, bold=True),
+        btn.setFixedSize(self._largeur_bouton(libelle, _police_action(),
                                               detail, body_font(14)), 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.download_clicked)
@@ -319,7 +330,8 @@ class ActionPanel(QWidget):
         jamais plus que la place réellement disponible dans le panneau — sans
         quoi on remplacerait une troncature par un débordement.
         """
-        besoin = QFontMetrics(police).horizontalAdvance(libelle) + _MARGE_BOUTON
+        besoin = (QFontMetrics(police).horizontalAdvance(libelle) + _MARGE_BOUTON
+                  + TAILLE_ICONE + ECART_ICONE)
         if detail:
             besoin += ECART_DETAIL + QFontMetrics(police_detail or police).horizontalAdvance(detail)
         dispo = self._action_container.width() or self.width()
@@ -414,12 +426,14 @@ class ActionPanel(QWidget):
         # l'écran reconnaît un joueur qui revient au lieu de le traiter en
         # nouveau venu à chaque ouverture.
         deja_joue = self._manager.get_playtime(self._game.id) > 0
-        libelle = tr("REPRENDRE") if deja_joue else tr("JOUER")
-        btn_play = GlowButton(libelle, glow_color="#2ecc71", style="filled",
-                              bg_stops=("#2ecc71", "#27ae60", "#1a9c54"), text_color="#ffffff")
+        libelle = tr("Reprendre") if deja_joue else tr("Jouer")
+        # Vert MAT : le `#2ecc71` vif d'avant était l'autre moitié du code des
+        # faux boutons. 4,2 de contraste avec le blanc (gras 15 pt : seuil 3).
+        btn_play = GlowButton(libelle, glow_color=_VERT_JOUER, style="filled",
+                              bg_stops=(_VERT_JOUER,) * 3, text_color="#ffffff", icone="play")
         btn_play.setObjectName("btnPlay")
         btn_play.setAccessibleName(tr("Jouer à {}").format(self._game.name))
-        btn_play.setFont(cinzel(15, bold=True))
+        btn_play.setFont(_police_action())
         btn_play.setFixedSize(200, _HAUTEUR_JOUER)
         btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_play.clicked.connect(self.play_clicked)

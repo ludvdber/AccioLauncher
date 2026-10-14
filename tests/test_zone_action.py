@@ -204,7 +204,7 @@ class TestLibelleDuBouton:
                     for i in range(layout.count())
                     if layout.itemAt(i).widget() is not None
                     and hasattr(layout.itemAt(i).widget(), "text")]
-        assert "INSTALLER" in libelles, f"bouton d'installation introuvable dans {libelles}"
+        assert "Installer" in libelles, f"bouton d'installation introuvable dans {libelles}"
         # Le poids est le DÉTAIL du bouton (2026-10-14), et rien d'autre.
         bouton = win._detail._action_panel.findChild(GlowButton, "btnDownload")
         assert "≈" not in bouton.detail(), f"durée estimée encore présente : {bouton.detail()!r}"

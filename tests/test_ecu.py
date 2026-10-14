@@ -122,7 +122,7 @@ class TestBarreDeTitre:
         # 980 px = la largeur minimale de la fenêtre : nom, écu, trois onglets,
         # Discord et boutons de fenêtre doivent tous y tenir entiers.
         from src.ui.fonts import load_fonts
-        from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, PARAMETRES
+        from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, GALERIE, PARAMETRES
         load_fonts()  # sous offscreen, sans elles, Qt substitue une police 22 % plus large
         set_language(langue)
         set_theme(maison)
@@ -133,6 +133,25 @@ class TestBarreDeTitre:
         barre.setGeometry(0, 0, 980, 38)
         hote.show()
         barre.layout().activate()
-        for w in (barre.onglet(BIBLIOTHEQUE), barre.onglet(ANNEES),
-                  barre.onglet(PARAMETRES), barre.discord, barre._title):
+        for w in (barre.onglet(BIBLIOTHEQUE), barre.onglet(ANNEES), barre.onglet(GALERIE),
+                  barre.onglet(PARAMETRES), barre.discord, barre.contribuer, barre._title):
             assert w.width() >= w.sizeHint().width(), w.text()
+        assert barre.layout().minimumSize().width() <= 980
+
+    def test_contribuer_garde_son_nom_quand_il_y_a_la_place(self, qtbot):
+        """Le pinceau seul n'est qu'un repli de fenêtre étroite (2026-10-14)."""
+        from src.ui.fonts import load_fonts
+        load_fonts()
+        set_language("fr")
+        set_theme("gryffondor")
+        hote = QWidget()
+        qtbot.addWidget(hote)
+        barre = TitleBar(hote)
+        hote.show()
+        barre.setGeometry(0, 0, 980, 38)
+        barre.layout().activate()
+        assert barre.contribuer.compact and barre.contribuer.text() == ""
+        assert "atelier" in barre.contribuer.accessibleName()
+        barre.setGeometry(0, 0, 1500, 38)
+        barre.layout().activate()
+        assert not barre.contribuer.compact and barre.contribuer.text() == "Contribuer"

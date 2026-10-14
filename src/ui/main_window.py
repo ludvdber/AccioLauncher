@@ -29,7 +29,8 @@ from src.ui.desinstallation_dialog import desinstaller
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
-from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, HAUTEUR as HAUTEUR_BARRE, PARAMETRES, TitleBar
+from src.ui.galerie_page import GaleriePage
+from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, GALERIE, HAUTEUR as HAUTEUR_BARRE, PARAMETRES, TitleBar
 from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
@@ -179,8 +180,8 @@ class MainWindow(QMainWindow):
         self._btn_stats = self._title_bar.onglet(ANNEES)
         self._btn_discord = self._title_bar.discord
         # Ce que le mode cinéma escamote.
-        self._commandes = (self._btn_settings, self._btn_stats, self._btn_discord,
-                           self._title_bar.contribuer)
+        self._commandes = (self._btn_settings, self._btn_stats, self._title_bar.onglet(GALERIE),
+                           self._btn_discord, self._title_bar.contribuer)
 
         # Event filter on QApplication for global mouse tracking
         QApplication.instance().installEventFilter(self)
@@ -650,15 +651,14 @@ class MainWindow(QMainWindow):
     # ──────────────────── Événements ────────────────────
 
     def _on_onglet(self, cle: str) -> None:
-        """Bibliothèque ferme la page ouverte ; les deux autres ouvrent la leur."""
+        """Bibliothèque ferme la page ouverte ; les autres ouvrent la leur."""
         if self._pages.affiche(cle):
             self._title_bar.set_onglet(cle)   # le clic l'avait seulement décoché
         elif cle == BIBLIOTHEQUE:
             self._pages.fermer()
-        elif cle == ANNEES:
-            self._on_stats()
         else:
-            self._on_settings()
+            {ANNEES: self._on_stats, GALERIE: lambda: self._pages.ouvrir(GaleriePage(
+                [e.game for e in self.manager.get_games()], self), GALERIE)}.get(cle, self._on_settings)()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

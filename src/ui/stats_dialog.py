@@ -136,7 +136,8 @@ class StatsDialog(QDialog):
 
     def ouvrir_galerie(self) -> None:
         from src.ui.galerie_page import GaleriePage
-        self._ouvrir_page(GaleriePage([e.game for e in self._entrees], self.parentWidget()))
+        from src.ui.title_bar import GALERIE
+        self._ouvrir_page(GaleriePage([e.game for e in self._entrees], self.parentWidget()), GALERIE)
 
     def _style(self) -> str:
         return """

@@ -81,7 +81,7 @@ class TestBoutonPermanent:
         assert isinstance(win._btn_discord.parentWidget(), TitleBar)
         assert win._btn_discord.geometry().left() > win._btn_settings.geometry().right()
 
-    @pytest.mark.parametrize("cle", ["annees", "parametres"])
+    @pytest.mark.parametrize("cle", ["annees", "galerie", "parametres"])
     def test_l_onglet_ouvre_sa_page_et_bibliotheque_la_ferme(self, fenetre, qtbot, cle):
         """Mes années et Paramètres sont des PAGES depuis le 2026-10-09 : l'onglet
         reste souligné tant que la page est là, Bibliothèque la referme."""

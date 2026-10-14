@@ -18,9 +18,12 @@ _DEBORD_PX = 2.0
 
 HAUTEUR = 38
 
-# Les trois onglets, par clé (le libellé est traduit, la clé non).
+# Les onglets, par clé (le libellé est traduit, la clé non).
 BIBLIOTHEQUE = "bibliotheque"
 ANNEES = "annees"
+# La galerie n'était qu'un bouton de Mes années, et on ne l'y trouvait pas
+# (Ludo, 2026-10-14) : elle a son onglet.
+GALERIE = "galerie"
 PARAMETRES = "parametres"
 
 _TAILLE_LOGO = 16
@@ -46,7 +49,7 @@ class _Onglet(QPushButton):
         # Bordure haute transparente de même épaisseur : le libellé reste
         # centré quand le trait du bas apparaît.
         self.setStyleSheet(
-            "QPushButton { background: transparent; color: #a9a7c4; padding: 0 12px;"
+            "QPushButton { background: transparent; color: #a9a7c4; padding: 0 10px;"
             " border: none; border-top: 2px solid transparent;"
             " border-bottom: 2px solid transparent; }"
             f"QPushButton:hover {{ color: {palette.accent_light}; }}"
@@ -116,7 +119,11 @@ class _Contribuer(QPushButton):
         self.setFont(body_font(10))
         self.setFixedHeight(26)
         palette = theme.current()
-        self.setIcon(_logo_espace(QColor(palette.accent_light), "pinceau"))
+        self._libelle = tr("Contribuer")
+        self._espace = _logo_espace(QColor(palette.accent_light), "pinceau")
+        self._seul = QIcon(pixmap_icone("pinceau", _TAILLE_LOGO, QColor(palette.accent_light)))
+        self.compact = False
+        self.setIcon(self._espace)
         self.setIconSize(QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
         self.setStyleSheet(
             "QPushButton { background: transparent; color: #c9c7da; padding: 0 6px;"
@@ -124,6 +131,18 @@ class _Contribuer(QPushButton):
             f"QPushButton:hover, QPushButton:focus {{ color: {palette.accent_light};"
             " border-color: rgba(214,167,44,0.35); }"
         )
+        self.largeur_complete = self.sizeHint().width()
+
+    def compacter(self, oui: bool) -> None:
+        """Le pinceau seul quand la fenêtre est étroite ; le nom reste dans
+        l'infobulle et pour les aides techniques."""
+        if oui == self.compact:
+            return
+        self.compact = oui
+        self.setText("" if oui else self._libelle)
+        self.setIcon(self._seul if oui else self._espace)
+        self.setIconSize(QSize(_TAILLE_LOGO, _TAILLE_LOGO) if oui
+                         else QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
 
 
 class _BoutonFenetre(QPushButton):
@@ -206,6 +225,7 @@ class TitleBar(QWidget):
         self._onglets: dict[str, QPushButton] = {}
         for cle, libelle in ((BIBLIOTHEQUE, tr("Bibliothèque")),
                              (ANNEES, tr("Mes années")),
+                             (GALERIE, tr("Galerie")),
                              (PARAMETRES, tr("Paramètres"))):
             onglet = _Onglet(libelle, palette, self)
             onglet.clicked.connect(lambda _=False, c=cle: self.onglet_demande.emit(c))
@@ -264,6 +284,23 @@ class TitleBar(QWidget):
         # Suivi sur l'état réel (Win+↑, double-clic, aimantation au bord).
         self._window.installEventFilter(self)
         self._suivre_agrandissement()
+
+    def resizeEvent(self, event) -> None:
+        """Quatre onglets, l'écu et une langue longue ne tiennent pas tous à
+        980 px (1056 en français avec un écu, mesuré le 2026-10-14) : sous la
+        largeur qu'il faut, « Contribuer » ne garde que son pinceau."""
+        super().resizeEvent(event)
+        self._ajuster_contribuer()
+
+    def _ajuster_contribuer(self) -> None:
+        lay = self.layout()
+        bouton = self._contribuer
+        if bouton.compact:
+            gain = bouton.largeur_complete - bouton.sizeHint().width()
+            besoin = lay.minimumSize().width() + gain
+        else:
+            besoin = lay.minimumSize().width()
+        bouton.compacter(besoin > self.width())
 
     def eventFilter(self, obj, event) -> bool:
         if obj is self._window and event.type() == QEvent.Type.WindowStateChange:

@@ -489,6 +489,7 @@ class TestMuteLive:
         win = make_window()
         dlg = SettingsDialog(win.config, win.manager)
         dlg.config_changed.connect(win._on_config_changed)
+        dlg.construire_rubrique(1)   # Affichage, bâtie à sa première visite
 
         dlg._tgl_mute.setChecked(True)
         dlg._on_setting_changed()  # ToggleSwitch n'émet que sur clic souris
@@ -583,10 +584,57 @@ class TestSettingsRestart:
         win = make_window()
         dlg = SettingsDialog(win.config, win.manager)
         qtbot.addWidget(dlg)
+        dlg.construire_rubrique(1)
         with qtbot.waitSignal(dlg.season_changed, timeout=1000) as blocker:
             dlg._season_combo.setCurrentIndex(3)  # Noël
         assert blocker.args == ["noel"]
         assert win.config.season == "noel"
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
+
+class TestParametresAuPremierClic:
+    """Seule la rubrique Général se bâtit à l'ouverture (Ludo, 2026-10-14 :
+    « charger la page paramètre est toujours lente ») ; 0,82 s → 0,22 s à froid."""
+
+    def test_les_autres_rubriques_attendent_leur_visite(self, make_window, qtbot):
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        assert dlg._construites == {0}
+        assert dlg._theme_hint is None
+        dlg._nav.setCurrentRow(2)
+        assert dlg._construites == {0, 2}
+        assert dlg._pages.currentIndex() == 2
+        assert dlg._versions_label is not None
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
+    def test_un_interrupteur_n_ecrase_pas_ceux_des_rubriques_pas_construites(self, make_window, qtbot):
+        """L'enregistrement relisait TOUS les interrupteurs : il ne relit que
+        ceux qui existent, et laisse les autres champs tels quels."""
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        win.config.mute_videos = True
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg._tgl_copies.setChecked(not win.config.copies_sauvegardes)
+        attendu = dlg._tgl_copies.isChecked()
+        dlg._on_setting_changed()
+        assert win.config.copies_sauvegardes is attendu
+        assert win.config.mute_videos is True
+        dlg._scan_worker.requestInterruption()
+        dlg._scan_worker.wait()
+
+    def test_un_message_de_mise_a_jour_batit_sa_rubrique(self, make_window, qtbot):
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        dlg.show_update_status("Launcher à jour")
+        assert dlg._update_status.text() == "Launcher à jour"
+        assert dlg._pages.currentIndex() == 0, "la rubrique visible ne change pas"
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()
 
@@ -906,13 +954,13 @@ class TestReprendre:
         win._detail.set_game(game)
         qtbot.wait(10)
         libelles = _libelles_du_layout(win._detail._action_panel)
-        assert any("JOUER" in t for t in libelles), libelles
+        assert any("Jouer" in t for t in libelles), libelles
 
         win.manager.add_playtime(game.id, 3600)
         win._detail.set_game(game)
         qtbot.wait(10)
         libelles = _libelles_du_layout(win._detail._action_panel)
-        assert any("REPRENDRE" in t for t in libelles), libelles
+        assert any("Reprendre" in t for t in libelles), libelles
 
 
 class TestDescriptionEntreJeux:

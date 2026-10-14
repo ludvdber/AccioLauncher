@@ -62,6 +62,7 @@ _ENCRE_RUBRIQUE = "#a9a7c4"
 _RUBRIQUES = (("Général", "dossier"), ("Affichage", "ecran"),
               ("Téléchargements", "telechargement"), ("Intégrations", "integrations"),
               ("À propos", "infos"))
+_RANG_TELECHARGEMENTS = 2   # ses messages arrivent de la fenêtre, après un clic
 
 # Style partagé des QComboBox du panneau (langue, thème, saison)
 # Le focus clavier et la ligne choisie d'une liste ouverte, en OR : `outline`
@@ -149,6 +150,13 @@ class SettingsDialog(QDialog):
         self._store = store
         self._lbl_trailers = None
         self._btn_trailers = None
+        # Bâtis avec leur rubrique, à sa première visite (`construire_rubrique`).
+        self._theme_hint = None
+        self._update_status = None
+        self._versions_label = None
+        # (interrupteur, champ de Config) : l'enregistrement ne relit que ceux
+        # des rubriques déjà construites.
+        self._interrupteurs: list[tuple[ToggleSwitch, str]] = []
         self.setWindowTitle(tr("Paramètres"))
         self.setMinimumSize(840, 560)
         self.resize(1000, 680)
@@ -204,17 +212,18 @@ class SettingsDialog(QDialog):
         # fait apparaître « Redémarrer maintenant » et une ligne d'aide, et la page
         # Affichage ne tenait plus — Qt écrasait les lignes sous leur hauteur,
         # textes rognés par le bas (capture de Ludo, 2026-09-27).
+        # Seule la rubrique Général se construit à l'ouverture ; les autres à
+        # leur PREMIÈRE visite, une place vide gardant leur rang dans la pile.
+        # Les poser toutes dans leur zone défilante coûtait 0,39 s à froid sur
+        # les 0,82 de l'ouverture (mise en forme de quatre pages dont une seule
+        # se voit), mesuré le 2026-10-14 sur Windows avec les vraies polices.
+        # La rubrique visitée ensuite ne paie que sa propre mise en forme.
         self._pages = QStackedWidget()
-        for page in (self._page_general(), self._page_display(),
-                     self._page_downloads(), self._page_integrations()):
-            self._pages.addWidget(zone_defilable(self._marges(page)))
-        # À propos se construit à sa PREMIÈRE visite : il ne règle rien, rien
-        # d'autre n'y renvoie, et c'est la plus lourde des cinq (60 ms sur
-        # les ~400 de l'ouverture, mesuré le 2026-10-14). Une place vide
-        # garde son rang dans la pile.
-        self._pages.addWidget(QWidget())
-        self._apropos_construit = False
-        self._nav.currentRowChanged.connect(self._construire_apropos)
+        self._pages.addWidget(zone_defilable(self._marges(self._page_general())))
+        for _ in _RUBRIQUES[1:]:
+            self._pages.addWidget(QWidget())
+        self._construites = {0}
+        self._nav.currentRowChanged.connect(self.construire_rubrique)
 
         droite = QVBoxLayout()
         droite.setContentsMargins(0, 0, 0, 0)
@@ -236,18 +245,25 @@ class SettingsDialog(QDialog):
         # Rouverte après un changement pas encore appliqué : la ligne le redit.
         self._regler_redemarrage()
 
-    def _construire_apropos(self, rang: int) -> None:
-        if self._apropos_construit or rang != len(_RUBRIQUES) - 1:
+    def construire_rubrique(self, rang: int) -> None:
+        """Bâtit la rubrique `rang` si ce n'est pas déjà fait (idempotent)."""
+        if rang in self._construites or not 0 <= rang < len(_RUBRIQUES):
             return
-        self._apropos_construit = True
+        self._construites.add(rang)
+        if rang == len(_RUBRIQUES) - 1:
+            contenu = about_page.construire(
+                self.manager.catalog.contributors, manager=self.manager,
+                ouvrir_nouveautes=self.nouveautes_demandees.emit)
+        else:
+            contenu = (None, self._page_display, self._page_downloads,
+                       self._page_integrations)[rang]()
+        courante = self._pages.currentIndex()
         vide = self._pages.widget(rang)
-        page = zone_defilable(self._marges(about_page.construire(
-            self.manager.catalog.contributors, manager=self.manager,
-            ouvrir_nouveautes=self.nouveautes_demandees.emit)))
-        self._pages.insertWidget(rang, page)
+        self._pages.insertWidget(rang, zone_defilable(self._marges(contenu)))
         self._pages.removeWidget(vide)
         vide.deleteLater()
-        self._pages.setCurrentIndex(rang)
+        self._pages.setCurrentIndex(courante)
+        self._regler_redemarrage()
 
     def _colonne_rubriques(self) -> QFrame:
         colonne = QFrame()
@@ -346,6 +362,14 @@ class SettingsDialog(QDialog):
         bascule.setToolTip(titre)
         return LigneReglage(titre, description, bascule), bascule
 
+    def _reglage(self, titre: str, champ: str,
+                 description: str = "") -> tuple[LigneReglage, ToggleSwitch]:
+        """Un interrupteur relié au champ `champ` de la config, enregistré au basculement."""
+        ligne, bascule = self._interrupteur(titre, getattr(self.config, champ), description)
+        self._interrupteurs.append((bascule, champ))
+        bascule.toggled.connect(self._on_setting_changed)
+        return ligne, bascule
+
     def _restart_button(self) -> QPushButton:
         btn = bouton(tr("Redémarrer maintenant"), principal=True)
         btn.clicked.connect(self.restart_requested)
@@ -432,10 +456,9 @@ class SettingsDialog(QDialog):
         langue.ajouter(self._lang_hint)
 
         sauvegardes = Carte()
-        ligne, self._tgl_copies = self._interrupteur(
-            tr("Copier les sauvegardes avant chaque partie"), self.config.copies_sauvegardes,
+        ligne, self._tgl_copies = self._reglage(
+            tr("Copier les sauvegardes avant chaque partie"), "copies_sauvegardes",
             tr("Une copie de chaque sauvegarde qui a changé, rangée à part."))
-        self._tgl_copies.toggled.connect(self._on_setting_changed)
         sauvegardes.ajouter(ligne)
         sauvegardes.ajouter(LigneReglage(
             tr("Revenir à une copie"),
@@ -468,13 +491,11 @@ class SettingsDialog(QDialog):
 
     def _page_display(self) -> QWidget:
         videos = Carte()
-        ligne, self._tgl_autoplay = self._interrupteur(
-            tr("Lecture automatique des vidéos"), self.config.autoplay_videos)
-        self._tgl_autoplay.toggled.connect(self._on_setting_changed)
+        ligne, self._tgl_autoplay = self._reglage(
+            tr("Lecture automatique des vidéos"), "autoplay_videos")
         videos.ajouter(ligne)
-        ligne, self._tgl_mute = self._interrupteur(
-            tr("Couper le son des vidéos"), self.config.mute_videos)
-        self._tgl_mute.toggled.connect(self._on_setting_changed)
+        ligne, self._tgl_mute = self._reglage(
+            tr("Couper le son des vidéos"), "mute_videos")
         videos.ajouter(ligne)
 
         self._btn_trailers = bouton("", principal=True)
@@ -515,9 +536,8 @@ class SettingsDialog(QDialog):
         self._season_combo.currentIndexChanged.connect(self._on_season_changed)
         ambiance.ajouter(LigneReglage(tr("Particules saisonnières"),
                                       tr("Appliqué immédiatement."), self._season_combo))
-        ligne, self._tgl_faits = self._interrupteur(
-            tr("Fait du jour dans la barre de statut"), self.config.faits_du_jour)
-        self._tgl_faits.toggled.connect(self._on_setting_changed)
+        ligne, self._tgl_faits = self._reglage(
+            tr("Fait du jour dans la barre de statut"), "faits_du_jour")
         ambiance.ajouter(ligne)
 
         return self._page((tr("Vidéos"), videos), (tr("Thème"), theme),
@@ -599,9 +619,8 @@ class SettingsDialog(QDialog):
 
     def _page_downloads(self) -> QWidget:
         archives = Carte()
-        ligne, self._tgl_delete = self._interrupteur(
-            tr("Supprimer les archives après installation"), self.config.delete_archives)
-        self._tgl_delete.toggled.connect(self._on_setting_changed)
+        ligne, self._tgl_delete = self._reglage(
+            tr("Supprimer les archives après installation"), "delete_archives")
         archives.ajouter(ligne)
 
         majs = Carte()
@@ -637,23 +656,19 @@ class SettingsDialog(QDialog):
 
     def _page_integrations(self) -> QWidget:
         discord = Carte()
-        ligne, self._tgl_discord = self._interrupteur(
-            tr("Afficher le jeu en cours sur Discord"), self.config.discord_presence)
-        self._tgl_discord.toggled.connect(self._on_setting_changed)
+        ligne, self._tgl_discord = self._reglage(
+            tr("Afficher le jeu en cours sur Discord"), "discord_presence")
         discord.ajouter(ligne)
 
         manette_carte = Carte()
-        ligne, self._tgl_nav_manette = self._interrupteur(
-            tr("Naviguer dans le launcher à la manette"), self.config.navigation_manette,
+        ligne, self._tgl_nav_manette = self._reglage(
+            tr("Naviguer dans le launcher à la manette"), "navigation_manette",
             tr("Croix directionnelle : changer de jeu et de bouton. Croix ou A : valider. "
                "Rond ou B : retour. Stick droit : faire défiler."))
-        self._tgl_nav_manette.toggled.connect(self._on_setting_changed)
         self._tgl_nav_manette.toggled.connect(self._on_navigation_manette)
         manette_carte.ajouter(ligne)
-        ligne, self._tgl_manette = self._interrupteur(
-            tr("Barre lumineuse de la manette aux couleurs de votre maison"),
-            self.config.couleur_manette)
-        self._tgl_manette.toggled.connect(self._on_setting_changed)
+        ligne, self._tgl_manette = self._reglage(
+            tr("Barre lumineuse de la manette aux couleurs de votre maison"), "couleur_manette")
         self._tgl_manette.toggled.connect(self._on_couleur_manette)
         manette_carte.ajouter(ligne)
         return self._page((tr("Discord"), discord), (tr("Manette"), manette_carte))
@@ -703,14 +718,8 @@ class SettingsDialog(QDialog):
             self._save()
 
     def _on_setting_changed(self) -> None:
-        self.config.delete_archives = self._tgl_delete.isChecked()
-        self.config.autoplay_videos = self._tgl_autoplay.isChecked()
-        self.config.mute_videos = self._tgl_mute.isChecked()
-        self.config.faits_du_jour = self._tgl_faits.isChecked()
-        self.config.discord_presence = self._tgl_discord.isChecked()
-        self.config.couleur_manette = self._tgl_manette.isChecked()
-        self.config.navigation_manette = self._tgl_nav_manette.isChecked()
-        self.config.copies_sauvegardes = self._tgl_copies.isChecked()
+        for bascule, champ in self._interrupteurs:
+            setattr(self.config, champ, bascule.isChecked())
         self._save()
 
     @staticmethod
@@ -735,7 +744,8 @@ class SettingsDialog(QDialog):
         """« Redémarrer » seulement si la config diffère de ce qui TOURNE : revenir
         à la langue (ou au thème) de départ n'a rien à appliquer."""
         self._lang_hint.setVisible(self.config.langue != get_language())
-        self._theme_hint.setVisible(self.config.theme != current_theme().id)
+        if self._theme_hint is not None:
+            self._theme_hint.setVisible(self.config.theme != current_theme().id)
 
     def _on_theme_changed(self) -> None:
         """Change le thème (effectif au prochain démarrage — couleurs posées à la construction)."""
@@ -793,6 +803,7 @@ class SettingsDialog(QDialog):
 
     def update_catalog_version(self, version: str) -> None:
         """Met à jour l'affichage de la version du catalogue après un refresh."""
+        self.construire_rubrique(_RANG_TELECHARGEMENTS)
         self._versions_label.setText(
             tr("Launcher v{}  ·  Catalogue v{}").format(APP_VERSION, version)
         )
@@ -802,6 +813,7 @@ class SettingsDialog(QDialog):
 
     def show_update_status(self, message: str, success: bool = True) -> None:
         """Affiche un message de statut dans la section mises à jour."""
+        self.construire_rubrique(_RANG_TELECHARGEMENTS)
         color = "#2ecc71" if success else "#8a8aaa"
         self._update_status.setText(message)
         self._update_status.setStyleSheet(f"color: {color};")
