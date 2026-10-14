@@ -21,7 +21,7 @@
 AccioLauncher.exe {TAG} is a free, open-source (GNU GPL v3) launcher that downloads, installs and starts classic PC games on Windows 10/11. Publisher: ASTeam. It is flagged by SmartScreen only because it is new and not code-signed; it contains no malware.
 
 - Source code: https://github.com/ludvdber/AccioLauncher
-- Official download: https://github.com/ludvdber/AccioLauncher/releases/tag/{TAG}
+- URL where the warning appears: https://github.com/ludvdber/AccioLauncher/releases/download/{TAG}/AccioLauncher.exe
 - Website: https://acciolauncher.be/
 - SHA-256: {SHA256}
 - Built by GitHub Actions from the public source (workflow release.yml), never on a personal machine. The release carries a signed build provenance attestation (Sigstore): gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
@@ -32,7 +32,7 @@ Expected behaviour an analyst may observe:
 - Self-update: a small .bat waits for the exit, swaps the exe and restarts it.
 - Removes Zone.Identifier from extracted game files so old games can load their DLLs.
 - For two games only, and after asking the user, writes their language and install path under HKLM\SOFTWARE\WOW6432Node\Electronic Arts\... through an elevated regedit import (UAC prompt).
-- Optional Discord Rich Presence through the local Discord named pipe.
+- Optional Discord Rich Presence via the local named pipe.
 - After a game crash only: System32\wevtutil.exe qe (read-only) on the Application log, to name the crashed module.
 - Reads the game controller via winmm joyGetPosEx.
 - Before each session, gzips copies of the game's saves into its data folder.
