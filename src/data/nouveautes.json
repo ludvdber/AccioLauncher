@@ -137,9 +137,17 @@
         {
           "genre": "ameliore",
           "texte": {
-            "fr": "Le launcher garde moins de mémoire, et l'atelier s'ouvre sans attendre.",
-            "en": "The launcher uses less memory, and the workshop opens at once.",
-            "es": "El launcher usa menos memoria, y el taller se abre al momento."
+            "fr": "Le launcher garde moins de mémoire et travaille moins au repos ; l'atelier et la galerie s'ouvrent sans attendre.",
+            "en": "The launcher uses less memory and works less when idle; the workshop and the gallery open at once.",
+            "es": "El launcher usa menos memoria y trabaja menos en reposo; el taller y la galería se abren al momento."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "En plein écran, la galerie, le folio et cette page profitent de la place.",
+            "en": "In full screen, the gallery, the folio and this page make use of the space.",
+            "es": "En pantalla completa, la galería, el folio y esta página aprovechan el espacio."
           }
         },
         {
@@ -180,6 +188,22 @@
             "fr": "Un fichier du jeu abîmé ne peut plus figer le folio.",
             "en": "A damaged game file can no longer freeze the folio.",
             "es": "Un archivo del juego dañado ya no puede congelar el folio."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "La molette fait défiler la page sans changer un réglage au passage.",
+            "en": "The mouse wheel scrolls the page without changing a setting on the way.",
+            "es": "La rueda del ratón desplaza la página sin cambiar un ajuste por el camino."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "La page de HP5, HP6 et HP7 ne marque plus de temps d'arrêt à son ouverture.",
+            "en": "The HP5, HP6 and HP7 pages no longer pause when they open.",
+            "es": "Las páginas de HP5, HP6 y HP7 ya no se detienen al abrirse."
           }
         }
       ]
