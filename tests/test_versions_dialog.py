@@ -110,7 +110,7 @@ class TestFenetreDesVersions:
 
     @pytest.mark.parametrize("accepter, attendu", [(True, [("hpx", "1.0")]), (False, [])])
     def test_la_confirmation_decide_du_changement(self, qtbot, monkeypatch, accepter, attendu):
-        monkeypatch.setattr("src.ui.versions_dialog.QMessageBox", _FausseConfirmation)
+        monkeypatch.setattr("src.ui.versions_dialog.FenetreMessage", _FausseConfirmation)
         monkeypatch.setattr(_FausseConfirmation, "accepter", accepter)
         dlg = _dialogue(qtbot, "1.1")
         demandes = []

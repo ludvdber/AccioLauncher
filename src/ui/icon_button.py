@@ -76,6 +76,11 @@ _FICHIERS = {
     "fleche_haut": "phosphor/arrow-up-bold.svg",
     "fleche_bas": "phosphor/arrow-down-bold.svg",
     "fleche_droite": "phosphor/arrow-right-bold.svg",
+    # Assistant, fenêtres d'erreur, désinstallation du launcher.
+    "coche": "phosphor/check-bold.svg",
+    "attention": "phosphor/warning-bold.svg",
+    "corbeille": "phosphor/trash-bold.svg",
+    "sortie": "phosphor/sign-out-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

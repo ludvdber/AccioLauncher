@@ -1,4 +1,8 @@
-"""Tests pour src/ui/onboarding.py — détection des installations existantes (pur)."""
+"""Tests de l'assistant de premier lancement (refait le 2026-10-09) et de son rattrapage."""
+
+from pathlib import Path
+
+import pytest
 
 from src.core.game_data import GameData
 from src.ui.onboarding import detect_installed_games
@@ -33,140 +37,180 @@ class TestDetectInstalledGames:
         assert detect_installed_games(tmp_path, [_game("hp1", "HP1/System/HP.exe")]) == []
 
 
-class TestChoixpeauDansLAssistant:
-    """Le Choixpeau PROPOSE un thème, il ne l'impose pas.
+def _poser_un_jeu(racine: Path, game: GameData) -> None:
+    exe = racine / Path(game.executable)
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    exe.write_bytes(b"exe")
 
-    Ludo, 2026-09-19 : « soit proposer le thème de la maison après le choix,
-    soit garder Poudlard en disant que c'est modifiable dans les Paramètres ».
-    On fait les deux : la maison pré-sélectionne le thème, qui reste un combo
-    modifiable juste à côté du verdict.
-    """
 
-    @staticmethod
-    def _assistant(qtbot):
+@pytest.fixture
+def assistant(qtbot, tmp_path, monkeypatch):
+    """L'assistant en français, sur un dossier de jeux temporaire."""
+    monkeypatch.setattr("src.ui.onboarding.DEFAULT_INSTALL_PATH", tmp_path / "jeux")
+    (tmp_path / "jeux").mkdir()
+
+    def _fabriquer(avant=None):
         from src.ui.onboarding import OnboardingDialog
+        if avant is not None:
+            avant(tmp_path / "jeux")
         dlg = OnboardingDialog()
         qtbot.addWidget(dlg)
-        dlg._build_rest()          # les écrans 2-5 naissent après la langue
+        dlg.choisir_langue("fr")
+        dlg._quitter_la_langue()
+        return dlg
+    return _fabriquer
+
+
+def _repondre_partout(dlg, maison):
+    from src.core.choixpeau import QUESTIONS
+    for index in range(len(QUESTIONS)):
+        rang = next(i for i, (_, m) in enumerate(QUESTIONS[index][1]) if m == maison)
+        dlg._cartes_reponse[rang].click()
+        dlg._suivant()
+
+
+class TestLeParcours:
+    def test_la_langue_ouvre_sur_le_dossier(self, assistant):
+        from src.ui.onboarding import DOSSIER
+        dlg = assistant()
+        assert dlg._ecran == DOSSIER
+        assert dlg._btn_retour.isVisibleTo(dlg)
+
+    def test_le_rail_dit_ce_qui_vient(self, assistant):
+        dlg = assistant()
+        noms = [e.libelle.text() for e in dlg._rail.etapes]
+        assert noms == ["Dossier", "Vos jeux", "Le Choixpeau", "Dernières touches"]
+
+    def test_chaque_ecran_est_dans_une_zone_defilante(self, assistant):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QScrollArea
+        dlg = assistant()
+        for ecran, zone in dlg._zones.items():
+            assert isinstance(zone, QScrollArea), ecran
+            assert zone.widgetResizable(), ecran
+            assert zone.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+
+
+class TestLesJeuxDejaLa:
+    """Config effacée, jeux restés : l'assistant les retrouve tout seul (Ludo, 2026-10-09)."""
+
+    def test_les_jeux_du_dossier_sont_repris_d_office(self, assistant, tmp_path):
+        from src.core.config import Config
+        from src.core.game_data import load_catalog
+        jeu = load_catalog().games[0]
+        dlg = assistant(lambda dossier: _poser_un_jeu(dossier, jeu))
+
+        assert [g.id for g, _ in dlg._en_place] == [jeu.id]
+        assert "déjà un jeu" in dlg._texte_place.text()
+        assert [g.id for g, _ in dlg.checked_imports()] == [jeu.id]
+
+        config = Config(install_path=tmp_path / "jeux", cache_path=tmp_path / "jeux" / "c")
+        dlg.perform_imports(config)
+        assert config.installed_versions[jeu.id] == jeu.recommended_version
+        assert (tmp_path / "jeux" / Path(jeu.executable)).exists(), "rien ne doit bouger"
+
+    def test_sans_jeu_l_ecran_propose_de_chercher(self, assistant):
+        dlg = assistant()
+        assert dlg._en_place == []
+        assert dlg.checked_imports() == []
+
+    def test_un_jeu_trouve_ailleurs_se_coche_et_se_decoche(self, assistant, tmp_path):
+        from src.core.game_data import load_catalog
+        from src.ui.onboarding import JEUX
+        jeu = load_catalog().games[0]
+        _poser_un_jeu(tmp_path / "ailleurs", jeu)
+        dlg = assistant()
+        dlg._suivant()
+        assert dlg._ecran == JEUX
+        dlg._dossier_cherche = tmp_path / "ailleurs"
+        dlg._regler_jeux()
+        assert dlg._btn_suivant.text() == "Importer 1 jeu"
+        dlg._lignes[jeu.id].click()
+        assert dlg.checked_imports() == []
+        assert dlg._btn_suivant.text() == "Suivant"
+
+
+class TestLeChoixpeau:
+    """Une question à la fois, et la maison PROPOSE ses couleurs sans les imposer."""
+
+    def _au_choixpeau(self, assistant):
+        from src.ui.onboarding import CHOIXPEAU_Q
+        dlg = assistant()
+        dlg._suivant()      # dossier
+        dlg._suivant()      # vos jeux
+        assert dlg._ecran == CHOIXPEAU_Q
         return dlg
 
-    def test_l_assistant_compte_bien_cinq_ecrans(self, qtbot):
-        from src.ui.onboarding import TOTAL_PAGES
-        dlg = self._assistant(qtbot)
-        assert dlg._pages.count() == TOTAL_PAGES == 5
+    def test_suivant_attend_une_reponse(self, assistant):
+        dlg = self._au_choixpeau(assistant)
+        assert not dlg._btn_suivant.isEnabled()
+        dlg._cartes_reponse[0].click()
+        assert dlg._btn_suivant.isEnabled()
 
-    def test_une_question_par_groupe_de_boutons(self, qtbot):
-        from src.core.choixpeau import QUESTIONS
-        dlg = self._assistant(qtbot)
-        assert len(dlg._groupes_maison) == len(QUESTIONS)
-        for groupe in dlg._groupes_maison:
-            assert len(groupe.buttons()) == 4
-            assert groupe.checkedId() == -1      # rien de coché d'avance
+    def test_rien_n_est_coche_d_avance(self, assistant):
+        dlg = self._au_choixpeau(assistant)
+        assert not any(c.isChecked() for c in dlg._cartes_reponse)
 
-    def test_la_maison_preselectionne_son_theme(self, qtbot):
-        from src.core.choixpeau import QUESTIONS, SERPENTARD
-        dlg = self._assistant(qtbot)
-        for index, groupe in enumerate(dlg._groupes_maison):
-            rang = next(i for i, (_, m) in enumerate(QUESTIONS[index][1])
-                        if m == SERPENTARD)
-            groupe.button(rang).setChecked(True)
-        dlg._repartir()
+    def test_le_verdict_prend_les_couleurs_de_la_maison(self, assistant):
+        from src.core.choixpeau import SERPENTARD
+        from src.ui.onboarding import DERNIERES, VERDICT
+        from src.ui.theme import current
+        dlg = self._au_choixpeau(assistant)
+        _repondre_partout(dlg, SERPENTARD)
+        assert dlg._ecran == VERDICT
         assert dlg._maison == SERPENTARD
-        assert dlg._theme_combo.currentData() == SERPENTARD
-        assert dlg._maison_label.isVisible() or dlg._maison_label.text()
-        assert "SERPENTARD" in dlg._maison_label.text()
+        assert current().id == SERPENTARD
+        dlg._suivant()
+        assert dlg._ecran == DERNIERES
+        assert dlg._cartes_couleur[SERPENTARD].isChecked()
+        assert dlg._cartes_couleur[SERPENTARD].note.text() == "Choisie par le Choixpeau"
 
-    def test_sans_reponse_le_theme_reste_poudlard(self, qtbot):
-        """Répartir quelqu'un qui n'a rien répondu serait inventer un choix."""
-        dlg = self._assistant(qtbot)
-        dlg._repartir()
-        assert dlg._maison == ""
-        assert dlg._theme_combo.currentData() == "poudlard"
-        assert not dlg._maison_label.isVisible()
-
-    def test_le_theme_reste_modifiable_apres_la_repartition(self, qtbot):
-        from src.core.choixpeau import QUESTIONS, GRYFFONDOR
-        dlg = self._assistant(qtbot)
-        for index, groupe in enumerate(dlg._groupes_maison):
-            rang = next(i for i, (_, m) in enumerate(QUESTIONS[index][1])
-                        if m == GRYFFONDOR)
-            groupe.button(rang).setChecked(True)
-        dlg._repartir()
-        assert dlg._theme_combo.currentData() == GRYFFONDOR
-        dlg._theme_combo.setCurrentIndex(dlg._theme_combo.findData("serdaigle"))
-        dlg._pages.setCurrentIndex(dlg._pages.count() - 1)
-        dlg._go_next()                       # « Terminer »
+    def test_les_couleurs_restent_au_choix_du_joueur(self, assistant):
+        from src.core.choixpeau import GRYFFONDOR
+        dlg = self._au_choixpeau(assistant)
+        _repondre_partout(dlg, GRYFFONDOR)
+        dlg._suivant()
+        dlg._cartes_couleur["serdaigle"].click()
+        dlg._suivant()                       # « Ouvrir la bibliothèque »
         assert dlg.theme == "serdaigle"      # le dernier mot revient au joueur
 
+    def test_garder_poudlard_saute_le_test(self, assistant):
+        from src.ui.onboarding import DERNIERES
+        dlg = self._au_choixpeau(assistant)
+        dlg._cartes_reponse[2].click()
+        dlg._sur_lien()
+        assert dlg._ecran == DERNIERES
+        assert dlg._maison == ""
+        assert dlg.theme == "poudlard"
 
-class TestChaquePageAUnTitre:
-    """Les cinq écrans partageaient sept lignes de préambule, recopiées.
-
-    Ce n'était pas un coût de frappe : l'`objectName` « wizTitle » est ce qui
-    donne au titre sa couleur et son espacement dans la feuille de style de
-    l'assistant. Une page qui l'oublierait s'afficherait en texte ordinaire —
-    et personne ne le verrait, la suite tournant `offscreen`. Le préambule vit
-    désormais dans `_page_titree`, et ce test garde ce que le helper promet.
-    """
-
-    @staticmethod
-    def _assistant(qtbot):
-        from src.ui.onboarding import OnboardingDialog
-        dlg = OnboardingDialog()
-        qtbot.addWidget(dlg)
-        dlg._build_rest()
-        return dlg
-
-    def test_chaque_ecran_porte_exactement_un_titre_wiztitle(self, qtbot):
-        from PyQt6.QtWidgets import QLabel
-        from src.ui.onboarding import TOTAL_PAGES
-
-        dlg = self._assistant(qtbot)
-        for index in range(TOTAL_PAGES):
-            page = dlg._pages.widget(index)
-            titres = [w for w in page.findChildren(QLabel)
-                      if w.objectName() == "wizTitle"]
-            assert len(titres) == 1, (
-                f"écran {index + 1} : {len(titres)} titre(s) « wizTitle »")
-            assert titres[0].text().strip(), f"écran {index + 1} : titre vide"
-
-    def test_le_helper_rend_une_page_et_sa_colonne(self, qtbot):
-        from PyQt6.QtWidgets import QVBoxLayout, QWidget
-        from src.ui.onboarding import _page_titree
-
-        page, lay = _page_titree("Essai")
-        qtbot.addWidget(page)
-        assert isinstance(page, QWidget) and isinstance(lay, QVBoxLayout)
-        assert lay.parentWidget() is page, (
-            "la colonne doit être POSÉE sur la page, sinon les widgets ajoutés "
-            "ensuite n'apparaissent nulle part")
+    def test_refaire_le_test_repart_de_zero(self, assistant):
+        from src.core.choixpeau import SERDAIGLE
+        from src.ui.onboarding import CHOIXPEAU_Q
+        from src.ui.theme import current
+        dlg = self._au_choixpeau(assistant)
+        _repondre_partout(dlg, SERDAIGLE)
+        dlg._retour()                        # « Refaire le test »
+        assert dlg._ecran == CHOIXPEAU_Q
+        assert dlg._question == 0 and dlg._reponses == [-1] * 4
+        assert current().id == "poudlard"
 
 
 class TestFermerLAssistantNEcritRien:
-    """La croix doit REPORTER l'installation, pas la sauter.
-
-    `run_onboarding` écrivait des défauts quand l'assistant n'aboutissait
-    pas. Deux conséquences, toutes deux silencieuses : le launcher démarrait
-    comme si l'assistant avait été terminé, et `Config.exists()` devenait
-    vrai, si bien que l'assistant ne revenait JAMAIS. Fermer la fenêtre
-    n'était donc pas « pas maintenant » mais « plus jamais » — signalé par
-    Ludo le 2026-09-23 en testant l'exe 1.0.5.
+    """La croix doit REPORTER l'installation, pas la sauter (Ludo, 2026-09-23).
 
     On bouchonne la classe au niveau du MODULE (jamais un attribut de classe
-    Qt, cf. CLAUDE.md) : le faux assistant n'est même pas un widget.
+    Qt) : le faux assistant n'est même pas un widget.
     """
 
     @staticmethod
     def _poser_faux_assistant(monkeypatch, code):
-        from pathlib import Path
-
         from src.ui import onboarding as module
 
         class _FauxAssistant:
-            def __init__(self):
+            def __init__(self, *_a):
                 self.install_path = Path.home() / "Games" / "AccioLauncher"
                 self.langue = "fr"
-                self.theme = "poudlard"
+                self.theme = "serdaigle"
                 self.autoplay = True
                 self.mute_videos = True
                 self.trailers_optin = False
@@ -180,7 +224,6 @@ class TestFermerLAssistantNEcritRien:
         monkeypatch.setattr(module, "OnboardingDialog", _FauxAssistant)
 
     def test_la_croix_leve_et_n_ecrit_aucune_config(self, monkeypatch):
-        import pytest
         from PyQt6.QtWidgets import QDialog
 
         from src.core.config import Config
@@ -188,16 +231,11 @@ class TestFermerLAssistantNEcritRien:
 
         self._poser_faux_assistant(monkeypatch, QDialog.DialogCode.Rejected)
         assert not Config.exists(), "le test part d'un poste sans config"
-
         with pytest.raises(OnboardingAnnule):
             run_onboarding()
-
-        assert not Config.exists(), (
-            "une config a été écrite malgré l'abandon : l'assistant ne "
-            "reviendra jamais")
+        assert not Config.exists(), "une config a été écrite malgré l'abandon"
 
     def test_un_dossier_inaccessible_abandonne_aussi(self, monkeypatch):
-        import pytest
         from PyQt6.QtWidgets import QDialog
 
         from src.core.config import Config
@@ -206,200 +244,103 @@ class TestFermerLAssistantNEcritRien:
 
         self._poser_faux_assistant(monkeypatch, QDialog.DialogCode.Accepted)
         monkeypatch.setattr(module, "is_writable_dir", lambda _p: False)
-
         with pytest.raises(OnboardingAnnule):
             run_onboarding()
         assert not Config.exists()
 
+    def test_le_rattrapage_ferme_note_les_etapes_sans_rien_changer(self, monkeypatch):
+        from PyQt6.QtWidgets import QDialog
+
+        from src.core.config import Config
+        from src.ui.onboarding import run_rattrapage
+
+        self._poser_faux_assistant(monkeypatch, QDialog.DialogCode.Rejected)
+        config = Config(etapes_assistant=[], trailers_optin=False)
+        run_rattrapage(config, ("choixpeau", "touches"))
+        relue = Config.load()
+        assert relue.theme == "poudlard", "rien de ce qui n'a pas été répondu ne change"
+        assert set(relue.etapes_assistant) == {"choixpeau", "touches"}, (
+            "fermée, la fenêtre ne doit pas revenir au lancement suivant")
+
+    def test_le_rattrapage_termine_applique_les_reponses(self, monkeypatch):
+        from PyQt6.QtWidgets import QDialog
+
+        from src.core.config import Config
+        from src.ui.onboarding import run_rattrapage
+
+        self._poser_faux_assistant(monkeypatch, QDialog.DialogCode.Accepted)
+        config = Config(etapes_assistant=[])
+        run_rattrapage(config, ("choixpeau", "touches"))
+        assert Config.load().theme == "serdaigle"
+
+
+class TestLeRattrapage:
+    """Ceux qui avaient le launcher avant le Choixpeau : ces étapes-là, rien d'autre."""
+
+    def test_il_ouvre_sur_le_choixpeau_sans_retour(self, qtbot):
+        from src.core.config import Config
+        from src.ui.onboarding import CHOIXPEAU_Q, OnboardingDialog
+        dlg = OnboardingDialog(Config(langue="fr"), ("choixpeau", "touches"))
+        qtbot.addWidget(dlg)
+        assert dlg._ecran == CHOIXPEAU_Q
+        assert not dlg._btn_retour.isVisibleTo(dlg)
+        assert [e.libelle.text() for e in dlg._rail.etapes] == ["Le Choixpeau", "Dernières touches"]
+
+    def test_seulement_les_dernieres_touches(self, qtbot):
+        from src.core.config import Config
+        from src.ui.onboarding import DERNIERES, OnboardingDialog
+        dlg = OnboardingDialog(Config(langue="fr", theme="serdaigle"), ("touches",))
+        qtbot.addWidget(dlg)
+        assert dlg._ecran == DERNIERES
+        assert dlg._cartes_couleur["serdaigle"].isChecked()
+        assert dlg._btn_suivant.text() == "Terminer"
+
 
 class TestChangerDeLangueRebatitLesEcrans:
-    """Revenir en arrière et changer de langue doit tout retraduire.
+    """Revenir à la langue et en changer doit tout retraduire (capture de Ludo, 2026-09-23)."""
 
-    Les `tr()` sont évalués à la CONSTRUCTION des widgets, et `_rest_built`
-    ne les faisait construire qu'une fois : le titre de la fenêtre et les
-    boutons, refaits à chaque passage, obéissaient — pas les pages. D'où la
-    capture de Ludo (2026-09-23) : un launcher en anglais où seuls « Back »
-    et « Next » étaient traduits. Ces tests échouent sur le code d'avant.
-    """
+    def test_repasser_en_francais_retraduit_les_etapes(self, assistant):
+        dlg = assistant()
+        dlg._retour()
+        dlg.choisir_langue("en")
+        dlg._quitter_la_langue()
+        en_anglais = [e.libelle.text() for e in dlg._rail.etapes]
+        dlg._retour()
+        dlg.choisir_langue("fr")
+        dlg._quitter_la_langue()
+        en_francais = [e.libelle.text() for e in dlg._rail.etapes]
+        assert en_anglais != en_francais
+        assert en_francais[0] == "Dossier"
 
-    @staticmethod
-    def _titre_de_la_page(dlg, index):
-        from PyQt6.QtWidgets import QLabel
-        page = dlg._pages.widget(index)
-        return next(w.text() for w in page.findChildren(QLabel)
-                    if w.objectName() == "wizTitle")
-
-    @staticmethod
-    def _choisir(dlg, code):
-        rang = dlg._lang_combo.findData(code)
-        assert rang >= 0, f"langue {code} absente du sélecteur"
-        dlg._lang_combo.setCurrentIndex(rang)
-        dlg._go_next()
-
-    def test_repasser_en_francais_retraduit_les_pages(self, qtbot):
-        from src.core.i18n import get_language, set_language
-        from src.ui.onboarding import OnboardingDialog
-
-        origine = get_language()
-        try:
-            dlg = OnboardingDialog()
-            qtbot.addWidget(dlg)
-
-            self._choisir(dlg, "en")
-            en_anglais = self._titre_de_la_page(dlg, 1)
-
-            dlg._go_back()
-            self._choisir(dlg, "fr")
-            en_francais = self._titre_de_la_page(dlg, 1)
-
-            assert en_anglais != en_francais, (
-                "les écrans sont restés dans la langue du premier passage : "
-                f"« {en_anglais} » des deux côtés")
-            assert en_francais == "Bienvenue dans Accio Launcher"
-        finally:
-            set_language(origine)
-
-    def test_le_choixpeau_ne_double_pas_ses_questions(self, qtbot):
-        from src.core.choixpeau import QUESTIONS
-        from src.core.i18n import get_language, set_language
-        from src.ui.onboarding import OnboardingDialog
-
-        origine = get_language()
-        try:
-            dlg = OnboardingDialog()
-            qtbot.addWidget(dlg)
-            self._choisir(dlg, "en")
-            dlg._go_back()
-            self._choisir(dlg, "fr")
-
-            assert len(dlg._groupes_maison) == len(QUESTIONS), (
-                "les groupes de boutons du Choixpeau se sont accumulés")
-        finally:
-            set_language(origine)
-
-    def test_les_widgets_persistants_survivent_au_rebati(self, qtbot):
-        from src.core.i18n import get_language, set_language
-        from src.ui.onboarding import OnboardingDialog
-
-        origine = get_language()
-        try:
-            dlg = OnboardingDialog()
-            qtbot.addWidget(dlg)
-            self._choisir(dlg, "en")
-            dlg._go_back()
-            self._choisir(dlg, "fr")
-
-            # Détruits avec leur page, ils laisseraient un objet C++ mort
-            # derrière un attribut Python vivant : le premier accès planterait.
-            for widget in (dlg._path_label, dlg._free_label, dlg._scan_label,
-                           dlg._import_list, dlg._theme_combo,
-                           dlg._maison_label):
-                widget.isVisible()
-        finally:
-            set_language(origine)
-
-
-class TestLeRebatiRendLesWidgetsVisibles:
-    """Survivre ne suffit pas : il faut aussi RÉAPPARAÎTRE.
-
-    Le premier correctif cachait explicitement les widgets persistants avant
-    de jeter leurs pages, et un widget caché explicitement le reste quand on
-    le repose dans un layout. Vu dans l'exe le 2026-09-24 : après un passage
-    par l'anglais, l'écran 2 en français n'avait plus ni le chemin du dossier
-    ni l'espace libre. Les tests d'alors vérifiaient la survie, pas la vue.
-    """
-
-    PERSISTANTS = ("_path_label", "_free_label", "_scan_label",
-                   "_import_list", "_theme_combo", "_maison_label")
-
-    @staticmethod
-    def _choisir(dlg, code):
-        dlg._lang_combo.setCurrentIndex(dlg._lang_combo.findData(code))
-        dlg._go_next()
-
-    def _etats(self, dlg):
-        return {nom: getattr(dlg, nom).isHidden() for nom in self.PERSISTANTS}
-
-    def test_meme_visibilite_qu_a_la_premiere_construction(self, qtbot):
-        from src.core.i18n import get_language, set_language
-        from src.ui.onboarding import OnboardingDialog
-
-        origine = get_language()
-        try:
-            premiere = OnboardingDialog()
-            qtbot.addWidget(premiere)
-            self._choisir(premiere, "fr")
-            attendu = self._etats(premiere)
-
-            dlg = OnboardingDialog()
-            qtbot.addWidget(dlg)
-            self._choisir(dlg, "en")
-            dlg._go_back()
-            self._choisir(dlg, "fr")
-            assert self._etats(dlg) == attendu
-        finally:
-            set_language(origine)
-
-    def test_l_ecran_du_dossier_montre_chemin_et_espace(self, qtbot):
-        from src.core.i18n import get_language, set_language
-        from src.ui.onboarding import OnboardingDialog
-
-        origine = get_language()
-        try:
-            dlg = OnboardingDialog()
-            qtbot.addWidget(dlg)
-            dlg.show()
-            self._choisir(dlg, "en")
-            dlg._go_back()
-            self._choisir(dlg, "fr")
-            assert dlg._path_label.isVisible(), "chemin du dossier invisible"
-            assert dlg._free_label.isVisible(), "espace libre invisible"
-        finally:
-            set_language(origine)
-
-
-class TestLesEcransDefilentSiNecessaire:
-    """Le Choixpeau débordait de la fenêtre, et un pixel de plus le réparait.
-
-    Quatre questions, seize réponses : la page réclame bien plus que les
-    430 px du minimum du dialogue. Sans zone défilante, le texte se
-    chevauchait, et agrandir d'un pixel remettait tout d'aplomb d'un coup —
-    c'est le redimensionnement qui déclenchait enfin la passe de mise en
-    page (Ludo, 2026-09-23, capture à l'appui).
-    """
-
-    @staticmethod
-    def _assistant(qtbot):
+    def test_l_ecran_de_langue_se_retraduit_au_clic(self, qtbot):
         from src.ui.onboarding import OnboardingDialog
         dlg = OnboardingDialog()
         qtbot.addWidget(dlg)
-        dlg._build_rest()
-        return dlg
+        dlg.choisir_langue("fr")
+        assert dlg._continuer.text() == "Suivant"
+        dlg.choisir_langue("en")
+        assert dlg._continuer.text() == "Next"
 
-    def test_chaque_ecran_est_dans_une_zone_defilante(self, qtbot):
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtWidgets import QScrollArea
 
-        from src.ui.onboarding import TOTAL_PAGES
+@pytest.mark.parametrize("langue", ["fr", "en", "es"])
+def test_a_la_taille_minimale_rien_ne_deborde_a_droite(qtbot, qapp, tmp_path, monkeypatch, langue):
+    """Chaque étape tient dans la largeur à 860 × 600, vraies polices.
 
-        dlg = self._assistant(qtbot)
-        for index in range(TOTAL_PAGES):
-            zone = dlg._pages.widget(index)
-            assert isinstance(zone, QScrollArea), f"écran {index + 1}"
-            assert zone.widgetResizable(), f"écran {index + 1}"
-            # « Si ça ne fit pas » : la barre n'apparaît que lorsqu'elle sert.
-            assert (zone.verticalScrollBarPolicy()
-                    == Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-            assert (zone.horizontalScrollBarPolicy()
-                    == Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            # Sans règle, c'est la barre native de Windows, grise et hachurée.
-            assert "QScrollBar::handle:vertical" in zone.styleSheet(), (
-                f"écran {index + 1} : barre de défilement non stylée")
-
-    def test_le_choixpeau_reclame_plus_que_la_hauteur_minimale(self, qtbot):
-        dlg = self._assistant(qtbot)
-        # L'écran du Choixpeau est l'avant-dernier.
-        interieur = dlg._pages.widget(dlg._pages.count() - 2).widget()
-        assert interieur.sizeHint().height() > dlg.minimumHeight(), (
-            "le Choixpeau tiendrait désormais sans défilement : ce test ne "
-            "garde plus rien, vérifier que la page n'a pas été vidée")
+    Cinq cartes de couleurs débordaient : un bouton tient sa largeur voulue
+    pour un minimum, et la rangée demandait 590 px pour 532 de place.
+    """
+    from src.ui.fonts import load_fonts
+    from src.ui.onboarding import OnboardingDialog
+    load_fonts()
+    monkeypatch.setattr("src.ui.onboarding.DEFAULT_INSTALL_PATH", tmp_path)
+    dlg = OnboardingDialog()
+    qtbot.addWidget(dlg)
+    dlg.choisir_langue(langue)
+    dlg._quitter_la_langue()
+    dlg.show()
+    dlg.resize(dlg.minimumSize())
+    qtbot.waitExposed(dlg)
+    for ecran, zone in dlg._zones.items():
+        dlg._pile.setCurrentWidget(zone)
+        qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
+        assert zone.widget().minimumSizeHint().width() <= zone.viewport().width(), ecran

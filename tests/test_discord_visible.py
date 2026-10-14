@@ -81,15 +81,16 @@ class TestBoutonPermanent:
         assert isinstance(win._btn_discord.parentWidget(), TitleBar)
         assert win._btn_discord.geometry().left() > win._btn_settings.geometry().right()
 
-    @pytest.mark.parametrize("cle, page", [("annees", "_on_stats"), ("parametres", "_on_settings")])
-    def test_l_onglet_ouvre_sa_page_puis_rend_la_main(self, fenetre, qtbot, monkeypatch, cle, page):
-        """Mes années et Paramètres sont modaux : l'onglet est souligné tant
-        que la page est ouverte, puis Bibliothèque reprend."""
+    @pytest.mark.parametrize("cle", ["annees", "parametres"])
+    def test_l_onglet_ouvre_sa_page_et_bibliotheque_la_ferme(self, fenetre, qtbot, cle):
+        """Mes années et Paramètres sont des PAGES depuis le 2026-10-09 : l'onglet
+        reste souligné tant que la page est là, Bibliothèque la referme."""
         barre = fenetre._title_bar
-        vus = []
-        monkeypatch.setattr(fenetre, page, lambda: vus.append(barre.onglet(cle).isChecked()))
         qtbot.mouseClick(barre.onglet(cle), Qt.MouseButton.LeftButton)
-        assert vus == [True]
+        assert fenetre._pages.page is not None and fenetre._pages.cle == cle
+        assert barre.onglet(cle).isChecked()
+        qtbot.mouseClick(barre.onglet("bibliotheque"), Qt.MouseButton.LeftButton)
+        assert fenetre._pages.page is None
         assert barre.onglet("bibliotheque").isChecked()
         assert not barre.onglet(cle).isChecked()
 

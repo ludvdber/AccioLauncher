@@ -2,15 +2,18 @@
 
 Refonte du 2026-10-09. Chaque page avait été dessinée seule, avec ses propres
 tailles, marges et boutons : ouvrir les Paramètres après la fiche, c'était
-changer d'application. Paramètres et À propos sont les premiers à s'en servir ;
-les fenêtres d'erreur et l'assistant de premier lancement suivront.
+changer d'application. Paramètres, À propos, l'assistant de premier lancement,
+les fenêtres de message (`fenetre_message.py`) et la désinstallation s'en servent.
 
 Les couleurs sont écrites dans la palette Poudlard et passent par `themed()` :
 une maison les remplace toutes d'un coup.
 """
 
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QFont
+import shutil
+from pathlib import Path
+
+from PyQt6.QtCore import QRectF, QSize, Qt
+from PyQt6.QtGui import QColor, QFont, QPainter
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
@@ -220,3 +223,72 @@ class LigneReglage(QWidget):
     def decrire(self, contenu: str) -> None:
         self.description.setText(contenu)
         self.description.setVisible(bool(contenu))
+
+
+def espace_du_volume(path: Path) -> tuple[int, int]:
+    """(octets libres, octets au total) du volume ; (0, 0) si illisible.
+
+    Le dossier n'existe pas forcément encore (rien d'installé) : c'est son
+    plus proche parent existant qui dit sur quel volume il tombera.
+    """
+    while not path.exists() and path.parent != path:
+        path = path.parent
+    try:
+        usage = shutil.disk_usage(path)
+    except OSError:
+        return 0, 0
+    return usage.free, usage.total
+
+
+class Pastille(QWidget):
+    """Le petit carré de couleur d'une légende."""
+
+    def __init__(self, couleur: QColor) -> None:
+        super().__init__()
+        self._couleur = couleur
+        self.setFixedSize(9, 9)
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(self._couleur)
+        p.drawRoundedRect(QRectF(self.rect()), 2, 2)
+        p.end()
+
+
+class Chemin(QLabel):
+    """Le chemin du dossier, coupé AU MILIEU s'il ne tient pas.
+
+    Il se cassait juste après « C: » en retour à la ligne (maquette « avant »).
+    Coupé au milieu, on garde le lecteur ET le nom du dossier ; le chemin
+    complet reste dans l'infobulle.
+    """
+
+    def __init__(self, chemin: str, px: int = 14, encre: str = ENCRE) -> None:
+        super().__init__()
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setFont(police(px))
+        self.setStyleSheet(f"color: {encre}; background: transparent;")
+        self.setMinimumWidth(1)
+        self.definir(chemin)
+
+    def definir(self, chemin: str) -> None:
+        self._chemin = chemin
+        self.setToolTip(chemin)
+        self._couper()
+
+    def text(self) -> str:  # le chemin ENTIER, pas sa forme coupée
+        return self._chemin
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._couper()
+
+    def _couper(self) -> None:
+        super().setText(self.fontMetrics().elidedText(
+            self._chemin, Qt.TextElideMode.ElideMiddle, max(1, self.width())))
+
+    def sizeHint(self) -> QSize:
+        return QSize(self.fontMetrics().horizontalAdvance(self._chemin),
+                     super().sizeHint().height())

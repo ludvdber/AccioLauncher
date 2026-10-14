@@ -65,13 +65,25 @@ def format_progress_line(downloaded: int, total: int, speed: float,
     """
     if total <= 0:
         return ""
-    pct = downloaded * 100 // total
+    pct, recu, attendu, vitesse, eta = morceaux_de_progression(downloaded, total, speed, eta_seconds)
     head = f"{tr('Téléchargement :')} {pct}%" if with_label else f"{pct}%"
-    parts = [head, f"{format_bytes(downloaded)} / {format_bytes(total)}", format_speed(speed)]
-    eta = format_eta(eta_seconds)
+    parts = [head, f"{recu} / {attendu}", vitesse]
     if eta:
         parts.append(eta)
     return " — ".join(parts)
+
+
+def morceaux_de_progression(downloaded: int, total: int, speed: float,
+                            eta_seconds: float) -> tuple[int, str, str, str, str]:
+    """(pourcentage, reçu, attendu, vitesse, temps restant) : les morceaux de la ligne.
+
+    La carte de progression de la fiche les pose chacun à sa place ; la barre
+    du bas les met bout à bout (`format_progress_line`). Une seule source,
+    pour que les deux ne disent jamais deux choses différentes.
+    """
+    pct = downloaded * 100 // total if total > 0 else 0
+    return (pct, format_bytes(downloaded), format_bytes(total), format_speed(speed),
+            format_eta(eta_seconds))
 
 
 def append_part_info(line: str, current: int, total: int) -> str:

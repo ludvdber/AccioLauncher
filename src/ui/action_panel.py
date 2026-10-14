@@ -3,20 +3,20 @@
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget,
+    QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.ui.alert_banner import AlertBanner
+from src.ui.carte_progression import CarteProgression
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import GlowButton
 from src.ui.icon_button import IconButton
 from src.core.formatting import (
-    append_part_info, format_duree_compacte, format_progress_line,
-    format_relative_date, format_size,
+    format_duree_compacte, format_relative_date, format_size,
 )
 from src.ui.theme import current as palette_courante, themed
 from src.ui.utils import clear_layout
@@ -137,10 +137,11 @@ class ActionPanel(QWidget):
         self._update_row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._layout.addWidget(self._update_row)
 
-        # Widgets dynamiques
-        self._progress_bar: QProgressBar | None = None
-        self._download_label: QLabel | None = None
-        self._install_bar: QProgressBar | None = None
+        # Widgets dynamiques. La carte de progression vit tant que le jeu se
+        # télécharge ou s'installe ; `phase_courante` dit où en est l'opération
+        # quand la fiche se reconstruit en route (retour sur ce jeu).
+        self._carte: CarteProgression | None = None
+        self.phase_courante = lambda: ""
         # Note « bientôt disponible » : sa hauteur se recalcule à chaque
         # redimensionnement, donc on garde la référence (cf. _fit_coming_soon_note).
         self._coming_soon_note: QLabel | None = None
@@ -201,9 +202,7 @@ class ActionPanel(QWidget):
         self._stats = None
         self._separateur = None
         self._update_row.hide()
-        self._progress_bar = None
-        self._download_label = None
-        self._install_bar = None
+        self._carte = None
         self._coming_soon_note = None
         self._btn_reglages = None
         self._action_layout.setDirection(QHBoxLayout.Direction.LeftToRight)
@@ -229,23 +228,20 @@ class ActionPanel(QWidget):
 
     def update_download_progress(self, downloaded: int, total: int,
                                    speed: float, eta_seconds: float) -> None:
-        pct = downloaded * 100 // total if total > 0 else 0
-        if self._progress_bar is not None:
-            self._progress_bar.setValue(pct)
-        if self._download_label is not None:
-            self._download_label.setText(
-                format_progress_line(downloaded, total, speed, eta_seconds, with_label=True)
-            )
+        if self._carte is not None:
+            self._carte.regler_telechargement(downloaded, total, speed, eta_seconds)
 
     def update_install_progress(self, pct: int) -> None:
-        if self._install_bar is not None:
-            self._install_bar.setValue(pct)
+        if self._carte is not None:
+            self._carte.regler_installation(pct)
 
     def update_part_info(self, current: int, total: int) -> None:
-        if self._download_label is not None:
-            self._download_label.setText(
-                append_part_info(self._download_label.text(), current, total)
-            )
+        if self._carte is not None:
+            self._carte.regler_parties(current, total)
+
+    def set_phase(self, phase: str) -> None:
+        if self._carte is not None:
+            self._carte.regler_phase(phase)
 
     # ── Construction des états ──
 
@@ -381,36 +377,17 @@ class ActionPanel(QWidget):
         note.setMinimumHeight(note.heightForWidth(largeur))
 
     def _build_downloading(self) -> None:
-        self._action_layout.setDirection(QVBoxLayout.Direction.TopToBottom)
-        self._progress_bar = QProgressBar()
-        self._progress_bar.setRange(0, 100)
-        self._progress_bar.setValue(0)
-        self._progress_bar.setFixedWidth(400)
-        self._action_layout.addWidget(self._progress_bar)
-
-        row = QWidget()
-        row.setStyleSheet("background: transparent;")
-        row_layout = QHBoxLayout(row)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(12)
-        self._download_label = QLabel(f"{tr('Téléchargement :')} 0%")
-        self._download_label.setObjectName("downloadLabel")
-        row_layout.addWidget(self._download_label, stretch=1)
-        btn_cancel = QPushButton(tr("Annuler"))
-        btn_cancel.setObjectName("btnCancel")
-        btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_cancel.clicked.connect(self.cancel_clicked)
-        row_layout.addWidget(btn_cancel)
-        self._action_layout.addWidget(row)
+        self._build_progression("download")
 
     def _build_installing(self) -> None:
-        self._action_layout.setDirection(QVBoxLayout.Direction.TopToBottom)
-        self._install_bar = QProgressBar()
-        self._install_bar.setRange(0, 100)
-        self._install_bar.setValue(0)
-        self._install_bar.setFormat(tr("Installation\u2026 %p%"))
-        self._install_bar.setFixedWidth(400)
-        self._action_layout.addWidget(self._install_bar)
+        self._build_progression("install")
+
+    def _build_progression(self, par_defaut: str) -> None:
+        """La carte de progression à la place du bouton (`carte_progression.py`)."""
+        phase = self.phase_courante() or par_defaut
+        self._carte = CarteProgression(phase)
+        self._carte.annuler.connect(self.cancel_clicked)
+        self._action_layout.addWidget(self._carte, stretch=1)
 
     def _build_installed(self) -> None:
         # « REPRENDRE » quand le jeu a déjà été lancé : le même clic, mais

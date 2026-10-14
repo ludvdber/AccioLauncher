@@ -30,6 +30,7 @@ from src.core import diagnostic
 from src.core.config import APP_VERSION, ASSETS_DIR, LOG_DIR
 from src.core.i18n import tr, translator_credits
 from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, SITE_URL
+from src.ui import appel_artistes
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, texte
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
@@ -433,6 +434,10 @@ def construire(contributeurs, manager=None) -> QWidget:
         lay.addSpacing(26)
         lay.addWidget(generique)
     if manager is not None:
+        appel = appel_artistes.construire(manager.catalog.games)
+        if appel is not None:
+            lay.addSpacing(22)
+            lay.addWidget(appel)
         lay.addSpacing(22)
         lay.addWidget(_depannage(manager))
     lay.addStretch()

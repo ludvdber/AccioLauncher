@@ -186,8 +186,15 @@ def main():
 
         # Vérifier si c'est le premier lancement AVANT de créer MainWindow
         # pour cacher le splash qui bloquerait les dialogues de bienvenue.
+        # Même chose pour la version courte de l'assistant, montrée une fois à
+        # ceux qui avaient le launcher avant le Choixpeau.
+        from src.core.assistant import etapes_a_rattraper
         if not Config.exists():
             splash.close()
+        else:
+            _cfg = Config.load()
+            if etapes_a_rattraper(_cfg.etapes_assistant, _cfg.theme, _cfg.trailers_optin):
+                splash.close()
 
         splash.set_statut(tr("Préparation de la bibliothèque"), 0.75)
         try:

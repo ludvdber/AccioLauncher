@@ -79,9 +79,9 @@ QPushButton#choix:disabled { border-color: rgba(255, 255, 255, 0.05); }
 class _Jaquette(QWidget):
     """La jaquette du jeu, recadrée « par expansion » (les carrées aussi)."""
 
-    def __init__(self, nom_fichier: str) -> None:
+    def __init__(self, nom_fichier: str, taille: QSize = _JAQUETTE) -> None:
         super().__init__()
-        self.setFixedSize(_JAQUETTE)
+        self.setFixedSize(taille)
         chemin = ASSETS_DIR / "covers" / nom_fichier
         self._pm = QPixmap(str(chemin)) if nom_fichier and chemin.is_file() else QPixmap()
 

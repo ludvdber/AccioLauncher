@@ -186,6 +186,10 @@ def _spawn_after_exit_bat(body: str, prefix: str,
     return True
 
 
+# Le même script détaché sert à la désinstallation (`desinstallation.py`).
+executer_apres_la_fin = _spawn_after_exit_bat
+
+
 # Remplacement de l'exe, RÉESSAYÉ jusqu'à ~30 s avant de relancer.
 #
 # L'exe est un onefile PyInstaller, donc DEUX processus : le bootloader (qui

@@ -91,7 +91,7 @@ class TestBoiteDEchec:
 
         ops = GameOperations(MagicMock())
         recu = []
-        ops.operation_error.connect(lambda t, m: recu.append(m))
+        ops.operation_error.connect(lambda t, m, c: recu.append(m + c))
         ops._on_download_error("Échec", Echec("disque_plein", conserves=2048))
         assert recu and "Le disque est plein" in recu[0]
         assert "connexion internet" not in recu[0]
