@@ -30,13 +30,17 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 
 - **Les huit jeux de la saga**, de *l'École des Sorciers* (2001) aux deux parties des *Reliques de la Mort* (2011), prêts à jouer sur un PC récent.
 - **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
-- **Tout se gère au même endroit** : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
+- **Tout se gère au même endroit**, depuis une barre en haut (Bibliothèque, Mes années, Galerie, Paramètres) : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
 - **Un plantage expliqué** : quand un jeu s'arrête brutalement, le launcher lit ce que Windows a noté et dit où chercher (pilote graphique, programme qui s'incruste, fichier du jeu, fichier retiré par l'antivirus), avec un détail à copier pour demander de l'aide.
 - **Les réglages graphiques de *Prisonnier d'Azkaban*** dans l'engrenage du jeu : anticrénelage, résolution de rendu, filtrage, synchronisation et limite d'images (jamais au-delà de 60), sans ouvrir un fichier au Bloc-notes.
 - **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics.
 - **À la taille de votre écran** : *l'École des Sorciers* et *la Chambre des Secrets* s'ouvrent à la résolution de votre écran, 1440p et 4K compris, ou à celle que vous choisissez dans leurs réglages.
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
-- **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme une scolarité — sept jeux, sept années, celle où vous en êtes et celle qui vous attend.
+- **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme un relevé de scolarité — sept jeux, sept années, celle où vous en êtes et celle qui vous attend.
+- **Le folio de *l'École des Sorciers*** : vos cartes de sorciers célèbres, vos dragées et les points des maisons, lus directement dans vos sauvegardes.
+- **Une galerie de vos captures**, rangées par jeu dans vos Images (plus perdues à la désinstallation), à copier en un clic pour Discord.
+- **Les réglages lisibles** : chaque réglage d'un jeu dit ce qu'il change et ce qu'il demande à la machine, et survit à une mise à jour ou à une réparation.
+- **Vos jeux déjà installés sont repris** : au premier lancement, le launcher retrouve ceux qui sont déjà sur le disque.
 - **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres de Poudlard en septembre, les braises en octobre, la neige en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond, facultatives. Tout est désactivable.
 - **En français, en anglais et en espagnol**, et la langue des *Reliques de la Mort* se choisit jeu par jeu.
 - **Le launcher se met à jour tout seul**, en un clic, sans rien réinstaller.
@@ -194,7 +198,7 @@ Tests et lint :
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest        # plus de 1 580 tests, sans écran (offscreen)
+python -m pytest        # plus de 3 100 tests, sans écran (offscreen)
 python -m ruff check .
 ```
 
@@ -259,8 +263,9 @@ est fourni « tel quel », sans garantie.
 away: download, install and play, on Windows 10 and 11. Downloads resume after
 a dropped connection and every file is checked on arrival. Game updates,
 repair and rollback to an earlier version are built in, along with your
-playtime and a log of your sessions, house themes, seasonal effects, optional
-trailers, and a launcher that updates itself. The interface is available in
+playtime and a log of your sessions, a folio of famous wizard cards read from
+your saves, a gallery of your screenshots, house themes, seasonal effects,
+optional trailers, and a launcher that updates itself. The interface is available in
 English, French and Spanish.
 
 **Get started:** download `AccioLauncher.exe` from the
