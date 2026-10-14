@@ -10,8 +10,8 @@ vignette reste pleine.
 Les fonds trop petits (HP3, HP4, HP5), eux, n'ont pas de remède ici : un flou
 avant agrandissement a été essayé (avant/après du 2026-10-09) et rendait
 l'image plus floue sans rien gagner. Le vrai remède est une illustration
-faite pour le launcher : `src/core/images_a_refaire.py` et l'appel aux
-artistes d'À propos.
+faite pour le launcher : `src/core/images_a_refaire.py` et l'atelier des
+artistes (`atelier_page.py`).
 """
 
 from PyQt6.QtCore import QRectF, QSize, Qt

@@ -66,17 +66,21 @@ def _setup_logging() -> None:
     logging.getLogger("httpcore").setLevel(logging.INFO)
 
 
-def _create_splash():
+def _create_splash(faits_du_jour: bool):
     """Écran de démarrage de marque (cf. src/ui/splash.py).
 
     Les polices sont chargées ici parce que le splash est le tout premier
     élément peint : sans elles, son libellé d'état partirait en repli système.
+    Le fait du jour est celui de la barre du bas, et se coupe avec elle.
     """
+    from src.core import almanach
+    from src.core.i18n import tr
     from src.ui.fonts import load_fonts
     from src.ui.splash import AccioSplash
 
     load_fonts()
-    return AccioSplash()
+    fait = almanach.fait_du_jour() if faits_du_jour else ""
+    return AccioSplash(fait=tr(fait) if fait else "")
 
 
 def main():
@@ -144,7 +148,7 @@ def main():
         # La langue doit être active AVANT le premier texte affiché : le splash
         # apparaît bien avant MainWindow, qui appelait jusqu'ici set_language.
         from src.core.config import Config as _Config
-        from src.core.i18n import set_language, tr
+        from src.core.i18n import set_language
         set_language(_Config.load().langue if _Config.exists() else DEFAULT_LANGUAGE)
 
         # L'anneau de focus doré ne doit apparaître qu'au clavier. Posé ici,
@@ -169,20 +173,17 @@ def main():
         if not guard.try_acquire():
             sys.exit(0)
 
-        splash = _create_splash()
+        splash = _create_splash(_Config.load().faits_du_jour if _Config.exists() else True)
         splash.show()
-        # Les états annoncés correspondent à de VRAIES étapes : rien n'est
-        # simulé, et la progression n'avance que quand quelque chose a
-        # réellement été fait.
-        splash.set_statut(tr("Initialisation"), 0.10)
+        # Les étapes affichées sont annoncées par le code qui les fait
+        # (`src/core/demarrage.py`) : rien n'est simulé, et la ligne n'avance
+        # que quand quelque chose commence réellement.
         app.processEvents()
 
+        from src.core import demarrage
         from src.ui.main_window import MainWindow
         from src.core.config import Config
         from src.ui.onboarding import OnboardingAnnule
-
-        splash.set_statut(tr("Chargement des ressources"), 0.45)
-        app.processEvents()
 
         # Vérifier si c'est le premier lancement AVANT de créer MainWindow
         # pour cacher le splash qui bloquerait les dialogues de bienvenue.
@@ -196,7 +197,6 @@ def main():
             if etapes_a_rattraper(_cfg.etapes_assistant, _cfg.theme, _cfg.trailers_optin):
                 splash.close()
 
-        splash.set_statut(tr("Préparation de la bibliothèque"), 0.75)
         try:
             window = MainWindow()
         except OnboardingAnnule:
@@ -215,16 +215,15 @@ def main():
         # complet de l'interface : 304 ms mesurées, la deuxième étape la plus
         # coûteuse du démarrage. Elle se déroulait sous le libellé « Prêt », qui
         # promettait donc la fin alors qu'il restait un tiers de seconde. Elle a
-        # maintenant son propre libellé, et « Prêt » ne s'affiche qu'une fois la
-        # fenêtre réellement prête.
-        splash.set_statut(tr("Ouverture de la fenêtre"), 0.92)
+        # maintenant sa propre étape, et l'écran se ferme sans « Prêt » : la
+        # fenêtre qui apparaît le dit mieux (règle 107).
+        demarrage.annoncer(demarrage.FENETRE)
         window.show()
         # Un démarrage de plus. Compté ICI et non à la construction de
         # MainWindow : la suite de tests en construit des dizaines, et aucune
         # n'est un lancement du launcher.
         from src.core import stats as _stats
         _stats.enregistrer_demarrage()
-        splash.set_statut(tr("Prêt"), 1.0)
         splash.finish(window)
         code = app.exec()
         # Sortie SANS finalisation de l'interpréteur. Pendant celle-ci, sip détruit

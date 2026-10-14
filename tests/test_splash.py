@@ -12,14 +12,11 @@ pytest.importorskip("pytestqt")
 from PyQt6.QtCore import Qt  # noqa: E402
 from PyQt6.QtGui import QFont, QFontMetrics  # noqa: E402
 
+from src.core import almanach, demarrage  # noqa: E402
 from src.core.config import APP_VERSION, ASSETS_DIR  # noqa: E402
 from src.core.i18n import available_languages, set_language, tr  # noqa: E402
-from src.ui.fonts import cinzel, load_fonts  # noqa: E402
+from src.ui.fonts import load_fonts  # noqa: E402
 import src.ui.splash as sp  # noqa: E402
-
-# Les libellés réellement affichés par main.py pendant le démarrage.
-ETATS = ["Initialisation", "Chargement des ressources",
-         "Préparation de la bibliothèque", "Ouverture de la fenêtre", "Prêt"]
 
 
 class TestAssetsDeMarque:
@@ -54,31 +51,108 @@ class TestSplash:
         pix = s.pixmap()
         assert not pix.isNull()
         # Le pixmap est peint a la resolution PHYSIQUE : sur un ecran a 125 %
-        # il fait 700x394 pour 560x315 logiques. Comparer les tailles brutes
+        # il fait 900x506 pour 720x405 logiques. Comparer les tailles brutes
         # ne passerait qu'en offscreen (DPR 1), pas sur la machine de Ludo.
-        assert pix.deviceIndependentSize().width() == pytest.approx(560, abs=1)
-        assert pix.deviceIndependentSize().height() == pytest.approx(315, abs=1)
+        assert pix.deviceIndependentSize().width() == pytest.approx(720, abs=1)
+        assert pix.deviceIndependentSize().height() == pytest.approx(405, abs=1)
 
-    def test_le_statut_et_la_progression_changent_le_rendu(self, qtbot):
+    def test_chaque_etape_change_le_rendu(self, qtbot):
         """La règle du pack : le statut ne doit PAS être figé dans une image."""
         load_fonts()
         s = sp.AccioSplash()
         qtbot.addWidget(s)
-        s.set_statut(tr("Initialisation"), 0.1)
-        debut = s.pixmap().toImage()
-        s.set_statut(tr("Prêt"), 1.0)
-        fin = s.pixmap().toImage()
-        assert debut != fin, "le splash ne reflète pas le changement d'état"
+        rendus = [s.pixmap().toImage()]
+        for etape in demarrage.ETAPES:
+            s.etape(etape)
+            rendus.append(s.pixmap().toImage())
+        for avant, apres in zip(rendus, rendus[1:]):
+            assert avant != apres, "le splash ne reflète pas le changement d'étape"
 
-    def test_la_progression_est_bornee(self, qtbot):
-        load_fonts()
+    def test_la_ligne_avance_avec_les_etapes(self, qtbot):
         s = sp.AccioSplash()
         qtbot.addWidget(s)
-        s.set_statut("x", -5.0)
-        assert s._progres == 0.0
-        s.set_statut("x", 42.0)
-        assert s._progres == 1.0
+        assert s.progres == 0.0
+        vus = []
+        for etape in demarrage.ETAPES:
+            s.etape(etape)
+            vus.append(s.progres)
+        assert vus == sorted(vus) and 0 < vus[0] and vus[-1] < 1, (
+            "la ligne ne se remplit jamais toute seule : la fenêtre le fait")
 
+    def test_une_etape_inconnue_ne_change_rien(self, qtbot):
+        s = sp.AccioSplash()
+        qtbot.addWidget(s)
+        s.etape(demarrage.JEUX)
+        s.etape("bandes-annonces")
+        assert s.progres == pytest.approx(0.375)
+
+
+class TestEtapesAnnoncees:
+    """Les étapes viennent du code qui les fait, pas d'un minuteur."""
+
+    def test_l_ecran_affiche_ecoute_et_l_ecran_ferme_n_ecoute_plus(self, qtbot):
+        s = sp.AccioSplash()
+        qtbot.addWidget(s)
+        s.show()
+        demarrage.annoncer(demarrage.CATALOGUE)
+        assert s.progres == pytest.approx(0.125)
+        s.close()
+        demarrage.annoncer(demarrage.FENETRE)
+        assert s.progres == pytest.approx(0.125), (
+            "un écran fermé écoute encore : il repeindrait un widget détruit")
+
+    def test_le_gestionnaire_annonce_catalogue_puis_jeux(self):
+        from src.core.config import Config
+        from src.core.game_manager import GameManager
+        vues = []
+        demarrage.ecouter(vues.append)
+        try:
+            GameManager(Config())
+        finally:
+            demarrage.ecouter(None)
+        assert vues == [demarrage.CATALOGUE, demarrage.JEUX]
+
+    def test_sans_auditeur_l_annonce_ne_fait_rien(self):
+        demarrage.ecouter(None)
+        demarrage.annoncer(demarrage.CATALOGUE)
+
+    def test_main_annonce_la_fenetre_et_ne_dit_plus_pret(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parent.parent / "main.py").read_text(encoding="utf-8")
+        assert "demarrage.annoncer(demarrage.FENETRE)" in source
+        assert "set_statut" not in source
+
+
+class TestFaitDuJour:
+    def test_le_fait_est_peint(self, qtbot):
+        load_fonts()
+        sans = sp.AccioSplash()
+        avec = sp.AccioSplash(fait="Nick Quasi-Sans-Tête fête l'anniversaire de sa mort.")
+        qtbot.addWidget(sans)
+        qtbot.addWidget(avec)
+        assert sans.pixmap().toImage() != avec.pixmap().toImage()
+
+    @pytest.mark.parametrize("largeur", [560, 720])
+    def test_aucun_fait_ne_depasse_trois_lignes(self, qtbot, largeur):
+        """Le cadre du fait coupe net au-delà : aucun fait ne doit l'être."""
+        load_fonts()
+        s = sp.AccioSplash(largeur)
+        qtbot.addWidget(s)
+        fm = QFontMetrics(s.police_du_fait())
+        zone = s.zone_du_fait().toRect()
+        try:
+            for info in available_languages():
+                set_language(info.code)
+                for fait in almanach.tous_les_textes():
+                    texte = tr(fait)
+                    besoin = fm.boundingRect(zone, int(Qt.TextFlag.TextWordWrap), texte)
+                    assert besoin.height() <= zone.height() + 1, (
+                        f"{info.code} : « {texte} » prend {besoin.height()} px "
+                        f"pour {zone.height()}")
+        finally:
+            set_language("fr")
+
+class TestRendu:
     def test_la_version_affichee_suit_APP_VERSION(self, qtbot):
         """Le mockup portait « v1.1 » en dur : la vraie version doit être lue."""
         source = (sp.__file__ and open(sp.__file__, encoding="utf-8").read())
@@ -86,40 +160,40 @@ class TestSplash:
         assert "v1.1" not in source
         assert APP_VERSION
 
-    @pytest.mark.parametrize("largeur", [480, 560, 640])
-    def test_aucun_libelle_ne_deborde_dans_aucune_langue(self, largeur):
-        """Même contrôle que pour le reste de l'interface, appliqué au splash."""
+    # 720 est la taille réelle ; sous offscreen la police de repli est 22 %
+    # plus large que Gelasio, donc 560 n'y tient qu'à 9 px.
+    @pytest.mark.parametrize("largeur", [720, 900])
+    def test_les_etapes_tiennent_sous_la_ligne_dans_chaque_langue(self, qtbot, largeur):
+        """Quatre noms côte à côte : ils doivent tenir sous la ligne, avec de l'air."""
         load_fonts()
-        hauteur = int(largeur * 9 / 16)
-        corps = max(8, int(hauteur * sp._STATUT_CORPS))
-        police = cinzel(corps)
-        police.setLetterSpacing(QFont.SpacingType.PercentageSpacing, 132)
-        fm = QFontMetrics(police)
-        dispo = int(largeur * 0.92)
+        s = sp.AccioSplash(largeur)
+        qtbot.addWidget(s)
         try:
             for info in available_languages():
                 set_language(info.code)
-                for cle in ETATS:
-                    texte = tr(cle).upper()
-                    besoin = fm.horizontalAdvance(texte)
-                    assert besoin <= dispo, (
-                        f"{info.code} « {texte} » : {besoin} px pour {dispo} "
-                        f"disponibles sur un splash de {largeur} px")
+                fm = QFontMetrics(s.police_etapes())
+                besoin = sum(fm.horizontalAdvance(sp.libelle_etape(e))
+                             for e in demarrage.ETAPES)
+                assert besoin + 3 * fm.horizontalAdvance("  ") <= s._ligne().width() + 1, (
+                    f"{info.code} : {besoin} px de noms pour {s._ligne().width():.0f}")
+                assert s.police_etapes().pixelSize() >= 10, info.code
         finally:
             set_language("fr")
 
-    def test_aucun_pictogramme_hors_police(self, qtbot):
-        """Les libellés du splash doivent tenir dans Cinzel, sans repli."""
+    @pytest.mark.parametrize("largeur", [560, 720])
+    def test_aucune_phrase_ne_deborde(self, qtbot, largeur):
         load_fonts()
-        fm = QFontMetrics(cinzel(12))
+        s = sp.AccioSplash(largeur)
+        qtbot.addWidget(s)
+        police = sp._en_pixels(QFont(s.police_du_fait()), s._h * sp._CORPS_PHRASE)
+        police.setItalic(False)
+        fm = QFontMetrics(police)
         try:
             for info in available_languages():
                 set_language(info.code)
-                for cle in ETATS:
-                    for ch in tr(cle).upper():
-                        assert fm.inFont(ch), (
-                            f"{info.code} : {ch!r} (U+{ord(ch):04X}) absent de "
-                            "Cinzel — repli de police sur l'écran de démarrage")
+                for etape in (None, *demarrage.ETAPES):
+                    texte = sp.phrase_etape(etape)
+                    assert fm.horizontalAdvance(texte) <= largeur * 0.9, (info.code, texte)
         finally:
             set_language("fr")
 

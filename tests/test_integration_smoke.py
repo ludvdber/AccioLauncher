@@ -2061,6 +2061,35 @@ class TestEngrenageReglagesDuJeu:
         page.reject()   # Échap
         assert win._pages.page is None
 
+    def test_contribuer_ouvre_l_atelier_en_page(self, make_window_multilingue):
+        """L'appel aux artistes vivait au bout d'À propos ; il est dans la barre."""
+        from src.ui.atelier_page import AtelierPage
+
+        win, _jeu = make_window_multilingue()
+        win._title_bar.contribuer.click()
+        page = win._pages.page
+        assert isinstance(page, AtelierPage)
+        assert not page.isWindow()
+        page.reject()
+        assert win._pages.page is None
+
+    def test_la_pastille_de_la_fiche_ouvre_les_jaquettes(self, make_window_multilingue, monkeypatch):
+        from src.core import atelier
+        from src.ui import atelier_page
+        from src.ui.atelier_page import AtelierPage
+
+        win, jeu = make_window_multilingue()
+        pastille = win._detail._pastille_atelier
+        pastille._mesures = [atelier.Besoin(atelier.court(jeu.id), "Fond d'écran", "",
+                                            atelier.CHERCHE, atelier.FOND)]
+        monkeypatch.setattr(atelier_page, "besoins_mesures", lambda _jeux: pastille._mesures)
+        pastille.pour(jeu.id, [jeu])
+        assert not pastille.isHidden()
+        pastille.click()
+        page = win._pages.page
+        assert isinstance(page, AtelierPage) and page.metier_affiche == "jaquettes"
+        page.reject()
+
 
     def test_la_rubrique_fichiers_expose_le_clic_droit(self, make_window_multilingue):
         """« Gérer les versions » et « Vérifier / réparer » n'étaient

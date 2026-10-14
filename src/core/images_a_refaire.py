@@ -4,8 +4,8 @@ Les images viennent d'où elles ont pu : des fonds de 849 px de large étirés
 sur un écran de 2560, des jaquettes CARRÉES dans un carrousel en portrait. Le
 launcher les rend au mieux (`src/ui/images.py`), mais le vrai remède est une
 illustration faite pour lui. Cette règle dit lesquelles, d'après leurs
-dimensions : À propos en tire son appel aux artistes, qui se met donc à jour
-tout seul à mesure que les images arrivent.
+dimensions : l'atelier (`atelier.py`) en tire son métier « Jaquettes et
+fonds », qui se met donc à jour tout seul à mesure que les images arrivent.
 
 Les cibles sont celles du cahier des charges envoyé aux artistes : jaquette
 1080 × 1500 (le rapport 18:25 des vignettes du carrousel), fond 3840 × 2160.

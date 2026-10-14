@@ -51,26 +51,3 @@ class TestLaJaquetteNEstPlusEtiree:
         rendue = jaquette(portrait, 180, 250)
         assert QColor(rendue.pixel(90, 2)).green() > 240, "aucune bande : recadrage simple"
 
-
-class TestLAppel:
-    def test_sans_besoin_pas_d_appel(self, qapp, monkeypatch):
-        from src.ui import appel_artistes
-        monkeypatch.setattr(appel_artistes, "besoins", lambda _jeux: [])
-        assert appel_artistes.construire([]) is None
-
-    def test_il_nomme_chaque_image(self, qapp, monkeypatch):
-        from PyQt6.QtWidgets import QLabel
-
-        from src.core.i18n import get_language, set_language
-        from src.ui import appel_artistes
-        avant = get_language()
-        set_language("fr")
-        try:
-            monkeypatch.setattr(appel_artistes, "besoins",
-                                lambda _jeux: [("Jeu A", "jaquette"), ("Jeu B", "fond")])
-            cadre = appel_artistes.construire([])
-            textes = [lbl.text() for lbl in cadre.findChildren(QLabel)]
-            assert "Jeu A" in textes and "Jeu B" in textes
-            assert "Jaquette" in textes and "Fond d'écran" in textes
-        finally:
-            set_language(avant)

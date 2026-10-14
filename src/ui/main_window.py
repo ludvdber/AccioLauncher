@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
-from src.core import compat, manette, nouveautes
+from src.core import compat, demarrage, manette, nouveautes
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
         # sur une preuve, jamais par défaut (cf. UpdateChecker.is_online).
         self._online = True
 
+        demarrage.annoncer(demarrage.BIBLIOTHEQUE)
         self._build_ui()
         self._build_tray()
         self._build_session()
@@ -163,23 +164,23 @@ class MainWindow(QMainWindow):
         self._detail.settings_requested.connect(self._on_settings)
         self._detail.cinema_toggled.connect(self._on_cinema)
 
-        # Construite APRÈS la fiche et le carrousel, posée en tête du layout :
-        # l'anneau de focus suit l'ordre de création, et des onglets créés en
-        # premier prenaient le focus au démarrage (la croix de la manette ouvrait
-        # la bibliothèque au lieu de JOUER).
+        # Construite APRÈS la fiche et le carrousel, posée en tête : l'anneau de focus
+        # suit l'ordre de création, et des onglets créés en premier prenaient le focus
+        # au démarrage (la croix de la manette ouvrait la bibliothèque au lieu de JOUER).
         self._title_bar = TitleBar(self)
         root_layout.insertWidget(0, self._title_bar)
-        # Les pages et Discord vivent dans la barre du haut (refonte du
-        # 2026-10-09) : plus de boutons flottants posés sur la fiche.
+        # Pages, atelier et Discord vivent dans la barre du haut (refonte du 2026-10-09).
         self._title_bar.onglet_demande.connect(self._on_onglet)
         self._pages.brancher(self._particles, self._title_bar)
         self._detail.page_demandee.connect(self._pages.ouvrir)
         self._title_bar.discord_demande.connect(lambda: open_url(DISCORD_URL))
+        self._title_bar.contribuer_demande.connect(self._detail.ouvrir_atelier)
         self._btn_settings = self._title_bar.onglet(PARAMETRES)
         self._btn_stats = self._title_bar.onglet(ANNEES)
         self._btn_discord = self._title_bar.discord
         # Ce que le mode cinéma escamote.
-        self._commandes = (self._btn_settings, self._btn_stats, self._btn_discord)
+        self._commandes = (self._btn_settings, self._btn_stats, self._btn_discord,
+                           self._title_bar.contribuer)
 
         # Event filter on QApplication for global mouse tracking
         QApplication.instance().installEventFilter(self)
@@ -616,7 +617,7 @@ class MainWindow(QMainWindow):
     def _on_stats(self) -> None:
         """Page de statistiques — lecture seule, aucun réglage, donc rien à recâbler."""
         from src.ui.stats_dialog import StatsDialog
-        self._pages.ouvrir(StatsDialog(self.manager, self), ANNEES)
+        self._pages.ouvrir(StatsDialog(self.manager, self, self._pages.ouvrir), ANNEES)
 
     def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
         """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre.

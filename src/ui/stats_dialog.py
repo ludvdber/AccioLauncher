@@ -37,15 +37,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import sauvegardes, stats
+from src.core import folio, sauvegardes, stats
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.ecu import emaux
 from src.ui.stats_releve import _Releve
-from src.ui.composants import police
+from src.ui.composants import bouton, feuille_de_style, police
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current as theme_courant, themed
+from src.ui.title_bar import ANNEES
 from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _SECONDAIRE,
     _DISCRET,
@@ -80,9 +81,12 @@ _LARGEUR_DEUX_COLONNES = 1060
 class StatsDialog(QDialog):
     """La saga : l'étagère, la fiche du jeu choisi, la saga, les mois."""
 
-    def __init__(self, manager: GameManager, parent=None) -> None:
+    def __init__(self, manager: GameManager, parent=None, ouvrir_page=None) -> None:
         super().__init__(parent)
         self.manager = manager
+        # Pour la galerie des captures : `Pages.ouvrir`, fourni par la fenêtre.
+        # Sans lui (tests, page seule), pas de bouton qui ne mènerait nulle part.
+        self._ouvrir_page = ouvrir_page
         self._hist = stats.charger()
         # Les dérivées dont vit toute la page, calculées UNE fois.
         self._entrees = manager.get_games()
@@ -109,8 +113,30 @@ class StatsDialog(QDialog):
         self._fiche: QWidget | None = None
         self._ajuste = False
         self.resize(1200, 760)
-        self.setStyleSheet(themed(self._style()))
+        self.setStyleSheet(themed(self._style()) + feuille_de_style())
         self._build()
+
+    def _bouton_galerie(self) -> QPushButton:
+        """Les captures de tous les jeux, en page (`galerie_page.py`)."""
+        from src.core import galerie
+        n = len(galerie.lister([e.game for e in self._entrees]))
+        btn = bouton(tr("Galerie · {}").format(n) if n else tr("Galerie"))
+        btn.setAutoDefault(False)
+        btn.setToolTip(tr("Vos captures d'écran, de tous les jeux"))
+        btn.clicked.connect(self.ouvrir_galerie)
+        return btn
+
+    def ouvrir_folio(self, game_id: str) -> None:
+        """Le folio du jeu ; son retour rouvre Mes années."""
+        from src.ui.folio_page import FolioPage
+        jeu = next(e.game for e in self._entrees if e.game.id == game_id)
+        hote, ouvrir, manager = self.parentWidget(), self._ouvrir_page, self.manager
+        ouvrir(FolioPage(jeu, manager.config.install_path, hote,
+                         revenir=lambda: ouvrir(StatsDialog(manager, hote, ouvrir), ANNEES)))
+
+    def ouvrir_galerie(self) -> None:
+        from src.ui.galerie_page import GaleriePage
+        self._ouvrir_page(GaleriePage([e.game for e in self._entrees], self.parentWidget()))
 
     def _style(self) -> str:
         return """
@@ -224,7 +250,12 @@ class StatsDialog(QDialog):
         entete = self._phrase_entete(theme_courant())
         if entete:
             tete.addWidget(_texte(entete, 13, theme_courant().accent))
-        root.addLayout(tete)
+        haut = QHBoxLayout()
+        haut.setSpacing(16)
+        haut.addLayout(tete, stretch=1)
+        if self._ouvrir_page is not None:
+            haut.addWidget(self._bouton_galerie(), alignment=Qt.AlignmentFlag.AlignBottom)
+        root.addLayout(haut)
         # Le résumé ne s'écrit en tête que lorsque la page n'a RIEN d'autre à
         # dire : dès qu'il y a du temps, la colonne de la saga porte le même
         # total, et le dire deux fois (Ludo, capture du 2026-09-19) fait
@@ -394,6 +425,12 @@ class StatsDialog(QDialog):
         nom.setFont(cinzel(14, bold=True))
         nom.setWordWrap(True)
         couche.addWidget(nom)
+        if self._ouvrir_page is not None and game_id in folio.JEUX:
+            ouvrir = bouton(tr("Ouvrir le folio"), principal=True)
+            ouvrir.setAutoDefault(False)
+            ouvrir.setToolTip(tr("Cartes, dragées et points des maisons, lus dans vos sauvegardes"))
+            ouvrir.clicked.connect(lambda _c=False, g=game_id: self.ouvrir_folio(g))
+            couche.addWidget(ouvrir, alignment=Qt.AlignmentFlag.AlignLeft)
 
         # Temps, parties et dernière fois sont sur la ligne du relevé : la
         # fiche ne garde que ce que le relevé ne peut pas montrer.

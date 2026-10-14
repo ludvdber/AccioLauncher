@@ -11,7 +11,7 @@ from enum import StrEnum, auto
 from pathlib import Path
 from typing import NamedTuple
 
-from src.core import captures, compat, manette
+from src.core import captures, compat, demarrage, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, resolution_jeu, stats
@@ -63,9 +63,11 @@ class GameManager:
 
     def __init__(self, config: Config) -> None:
         self.config = config
+        demarrage.annoncer(demarrage.CATALOGUE)
         self._catalog = load_catalog()
         self._games = self._catalog.games
         self._index: dict[str, GameData] = {g.id: g for g in self._games}
+        demarrage.annoncer(demarrage.JEUX)
         self._states: dict[str, GameState] = {
             g.id: self._detect_state(g) for g in self._games
         }

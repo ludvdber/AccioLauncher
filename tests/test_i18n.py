@@ -25,7 +25,7 @@ IDENTIQUES_TOLEREES = {
     # « Halloween » s'écrit pareil dans les trois langues (la citrouille qui
     # accompagnait la clé a été retirée : U+1F383 sortait en emoji couleur).
     "Discord", "Version {}", "Catalogue {}", "Menus", "Versions — {}", "Versions", "Halloween",
-    "Accio Launcher {}",
+    "Accio Launcher {}", "Folio",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
@@ -79,8 +79,8 @@ def _tr_literals(path: str) -> list[str]:
 def _source_files() -> list[str]:
     """Tous les fichiers qui peuvent appeler `tr()`.
 
-    **`main.py` en fait partie** et était absent de ce balayage : il porte les
-    cinq étapes de l'écran de démarrage — « Initialisation », « Prêt »… —,
+    **`main.py` en fait partie** et était absent de ce balayage : il portait
+    alors les étapes de l'écran de démarrage — « Initialisation », « Prêt »… —,
     c'est-à-dire le tout premier texte que voit un utilisateur. Elles se
     trouvaient traduites (vérifié le 2026-08-28, aucune manquante), donc ce
     n'était pas un défaut vivant ; mais rien n'obligeait la suivante à l'être.

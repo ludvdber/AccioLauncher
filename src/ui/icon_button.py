@@ -87,6 +87,10 @@ _FICHIERS = {
     "agrandir": "phosphor/square-bold.svg",
     "restaurer": "phosphor/copy-bold.svg",
     "fermer": "phosphor/x-bold.svg",
+    # Atelier des artistes et galerie de captures (2026-10-14).
+    "pinceau": "phosphor/paint-brush-bold.svg",
+    "images": "phosphor/images-bold.svg",
+    "appareil": "phosphor/camera-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

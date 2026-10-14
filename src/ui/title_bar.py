@@ -55,10 +55,10 @@ class _Onglet(QPushButton):
         )
 
 
-def _logo_espace(couleur: QColor) -> QIcon:
+def _logo_espace(couleur: QColor, icone: str = "discord") -> QIcon:
     """Le logo suivi d'un blanc, en un seul pixmap (règle 30, même remède que
     `about_page._icone_espacee`)."""
-    pm = pixmap_icone("discord", _TAILLE_LOGO, couleur)
+    pm = pixmap_icone(icone, _TAILLE_LOGO, couleur)
     ratio = pm.devicePixelRatio()
     large = QPixmap(round((_TAILLE_LOGO + _ECART_LOGO) * ratio), round(_TAILLE_LOGO * ratio))
     large.setDevicePixelRatio(ratio)
@@ -100,6 +100,32 @@ class _PastilleDiscord(QPushButton):
         super().leaveEvent(event)
 
 
+class _Contribuer(QPushButton):
+    """« Contribuer » : l'atelier des artistes, à côté du Discord (2026-10-14).
+
+    Discret comme un lien : l'atelier n'est pas une page qu'on visite tous les
+    jours, mais un artiste qui passe doit le trouver sans fouiller.
+    """
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(tr("Contribuer"), parent)
+        libelle = tr("L'atelier : refaire une image, une texture, une vidéo")
+        self.setToolTip(libelle)
+        self.setAccessibleName(libelle)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFont(body_font(10))
+        self.setFixedHeight(26)
+        palette = theme.current()
+        self.setIcon(_logo_espace(QColor(palette.accent_light), "pinceau"))
+        self.setIconSize(QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
+        self.setStyleSheet(
+            "QPushButton { background: transparent; color: #c9c7da; padding: 0 6px;"
+            " border: 1px solid transparent; border-radius: 13px; }"
+            f"QPushButton:hover, QPushButton:focus {{ color: {palette.accent_light};"
+            " border-color: rgba(214,167,44,0.35); }"
+        )
+
+
 class _BoutonFenetre(QPushButton):
     """Réduire / agrandir / fermer : un pictogramme gris qui blanchit au survol.
 
@@ -137,6 +163,7 @@ class TitleBar(QWidget):
 
     onglet_demande = pyqtSignal(str)
     discord_demande = pyqtSignal()
+    contribuer_demande = pyqtSignal()
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
@@ -187,6 +214,11 @@ class TitleBar(QWidget):
         self.set_onglet(BIBLIOTHEQUE)
 
         layout.addStretch()
+
+        self._contribuer = _Contribuer(self)
+        self._contribuer.clicked.connect(self.contribuer_demande)
+        layout.addWidget(self._contribuer, alignment=Qt.AlignmentFlag.AlignVCenter)
+        layout.addSpacing(8)
 
         # Discord : le logo officiel, blanc au repos et Blurple au survol, dans
         # TOUS les thèmes (une marque ne prend pas la couleur de la maison).
@@ -257,6 +289,10 @@ class TitleBar(QWidget):
     @property
     def discord(self) -> QPushButton:
         return self._discord
+
+    @property
+    def contribuer(self) -> QPushButton:
+        return self._contribuer
 
     def _on_minimize(self) -> None:
         self._window.showMinimized()

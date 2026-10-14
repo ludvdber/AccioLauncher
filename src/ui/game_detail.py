@@ -15,6 +15,7 @@ from src.ui.audio_bar import AudioBar
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
+from src.ui.pastille_atelier import PastilleAtelier
 from src.core import composants_windows
 from src.ui.installateur_composants import InstallateurComposants
 from src.ui.preparateur_wine import PreparateurWine
@@ -109,6 +110,9 @@ class GameDetailView(QWidget):
         self._audio_bar.play_toggled.connect(self._on_play_clicked)
         self._audio_bar.replay_clicked.connect(self._on_replay_clicked)
         self._audio_bar.cinema_toggled.connect(self.basculer_cinema)
+        # Le fond ou la jaquette du jeu cherche un artiste : la fiche le dit.
+        self._pastille_atelier = PastilleAtelier(self)
+        self._pastille_atelier.clicked.connect(lambda: self.ouvrir_atelier("jaquettes"))
 
         # Animations fade, parent explicite (règle 11).
         self._fade_anim = QPropertyAnimation(self._bg, b"bg_opacity", self)
@@ -227,6 +231,12 @@ class GameDetailView(QWidget):
         self._audio_bar.move(self.width() - self._audio_bar.width() - _MARGE_AUDIO,
                              self.height() - self._audio_bar.height() - _MARGE_AUDIO_BAS)
         self._audio_bar.raise_()
+        self._pastille_atelier.placer(self._audio_bar, _MARGE_AUDIO)
+
+    def ouvrir_atelier(self, metier: str = "") -> None:
+        """L'atelier des artistes, à la place de la bibliothèque (`pages.py`)."""
+        from src.ui.atelier_page import AtelierPage
+        self.page_demandee.emit(AtelierPage(self.manager.catalog.games, self.window(), metier))
 
     # ──────────────────── Mode cinéma ────────────────────
 
@@ -252,6 +262,10 @@ class GameDetailView(QWidget):
         self._video.set_plein_debit(actif)
         self._bg.set_cinema(actif)
         self._info.setVisible(not actif)
+        if actif:
+            self._pastille_atelier.hide()
+        elif self.game is not None:
+            self._pastille_atelier.pour(self.game.id, self.manager.catalog.games)
         self._audio_bar.set_cinema_icon(actif)
         self._position_audio_bar()
         self.cinema_toggled.emit(actif)
@@ -292,6 +306,9 @@ class GameDetailView(QWidget):
         # La jaquette d'abord, la bande-annonce après le délai de lecture.
         self._bg.set_image(ASSETS_DIR / "backgrounds" / f"{game.id}_bg.jpg")
         self._schedule_video(game.id)
+        if not self._cinema:
+            self._pastille_atelier.pour(game.id, self.manager.catalog.games)
+            self._position_audio_bar()
 
         self._refresh()
 

@@ -1,0 +1,112 @@
+{
+  "_comment": "Les métiers de l'atelier (src/core/atelier.py). Le métier « jaquettes » se remplit tout seul d'après la taille des images (images_a_refaire.py) ; les autres listent ici leurs besoins. etat : cherche | cours | fait.",
+  "metiers": [
+    {
+      "id": "jaquettes",
+      "auto": true,
+      "nom": {"fr": "Jaquettes et fonds", "en": "Covers and backgrounds", "es": "Portadas y fondos"},
+      "ou": {"fr": "Dans le launcher", "en": "In the launcher", "es": "En el launcher"},
+      "texte": {
+        "fr": "Ce que l'on voit avant même de jouer. Certaines images actuelles sont trop petites pour un grand écran, ou carrées dans un carrousel en portrait.",
+        "en": "What you see before you even play. Some of the current images are too small for a large screen, or square in a portrait carousel.",
+        "es": "Lo que se ve antes incluso de jugar. Algunas imágenes actuales son demasiado pequeñas para una pantalla grande, o cuadradas en un carrusel vertical."
+      },
+      "formats": [
+        {"fr": "Jaquette 1080 × 1500", "en": "Cover 1080 × 1500", "es": "Portada 1080 × 1500"},
+        {"fr": "Fond 3840 × 2160", "en": "Background 3840 × 2160", "es": "Fondo 3840 × 2160"},
+        {"fr": "PNG ou JPG", "en": "PNG or JPG", "es": "PNG o JPG"}
+      ],
+      "besoins": []
+    },
+    {
+      "id": "textures",
+      "nom": {"fr": "Textures en jeu", "en": "In-game textures", "es": "Texturas del juego"},
+      "ou": {"fr": "Dans le jeu", "en": "In the game", "es": "En el juego"},
+      "texte": {
+        "fr": "Les visages, les murs, les tableaux. Une texture refaite remplace l'originale à l'installation ; l'originale reste dans l'archive.",
+        "en": "Faces, walls, paintings. A remade texture replaces the original at installation; the original stays in the archive.",
+        "es": "Las caras, las paredes, los cuadros. Una textura rehecha sustituye a la original al instalar; la original se queda en el archivo."
+      },
+      "formats": [
+        {"fr": "Même taille ou le double", "en": "Same size or twice as large", "es": "Mismo tamaño o el doble"},
+        {"fr": "Même nom de fichier", "en": "Same file name", "es": "Mismo nombre de archivo"}
+      ],
+      "besoins": [
+        {"jeu": "HP4", "etat": "cherche",
+         "quoi": {"fr": "Visages des personnages", "en": "Character faces", "es": "Caras de los personajes"},
+         "detail": {"fr": "Flous de près", "en": "Blurry up close", "es": "Borrosas de cerca"}}
+      ]
+    },
+    {
+      "id": "chargement",
+      "nom": {"fr": "Écrans de chargement", "en": "Loading screens", "es": "Pantallas de carga"},
+      "ou": {"fr": "Dans le jeu", "en": "In the game", "es": "En el juego"},
+      "texte": {
+        "fr": "L'image que l'on regarde entre deux niveaux. Sur un écran large, la plupart sont étirées ou bordées de noir.",
+        "en": "The image you look at between two levels. On a wide screen, most of them are stretched or framed in black.",
+        "es": "La imagen que se ve entre dos niveles. En una pantalla ancha, la mayoría salen estiradas o con bandas negras."
+      },
+      "formats": [
+        {"fr": "16:9", "en": "16:9", "es": "16:9"}
+      ],
+      "besoins": [
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "Chargement des niveaux", "en": "Level loading", "es": "Carga de los niveles"},
+         "detail": {"fr": "Une vidéo : LoadLevel.bik", "en": "A video: LoadLevel.bik", "es": "Un vídeo: LoadLevel.bik"}}
+      ]
+    },
+    {
+      "id": "sauvegardes",
+      "nom": {"fr": "Images de sauvegarde", "en": "Save images", "es": "Imágenes de guardado"},
+      "ou": {"fr": "Dans le jeu", "en": "In the game", "es": "En el juego"},
+      "texte": {
+        "fr": "La vignette à côté de chaque partie dans le menu Charger. HP1 en a une par endroit où l'on peut sauvegarder.",
+        "en": "The thumbnail next to each game in the Load menu. HP1 has one for each place where you can save.",
+        "es": "La miniatura junto a cada partida en el menú Cargar. HP1 tiene una por cada lugar donde se puede guardar."
+      },
+      "formats": [
+        {"fr": "HP1 : 128 × 128", "en": "HP1: 128 × 128", "es": "HP1: 128 × 128"},
+        {"fr": "256 couleurs (BMP)", "en": "256 colours (BMP)", "es": "256 colores (BMP)"}
+      ],
+      "besoins": [
+        {"jeu": "HP1", "etat": "cherche",
+         "quoi": {"fr": "Les 30 vignettes", "en": "The 30 thumbnails", "es": "Las 30 miniaturas"},
+         "detail": {"fr": "Devant Poudlard, le Quidditch, le troll, l'échiquier…", "en": "In front of Hogwarts, Quidditch, the troll, the chessboard…", "es": "Delante de Hogwarts, el quidditch, el trol, el tablero de ajedrez…"}}
+      ]
+    },
+    {
+      "id": "videos",
+      "nom": {"fr": "Vidéos d'intro", "en": "Intro videos", "es": "Vídeos de introducción"},
+      "ou": {"fr": "Dans le jeu", "en": "In the game", "es": "En el juego"},
+      "texte": {
+        "fr": "Les vidéos du jeu, en Bink (.bik). Une vidéo remastérisée doit garder la même durée : le son et les sous-titres en dépendent.",
+        "en": "The game's videos, in Bink (.bik). A remastered video must keep the same length: the sound and subtitles depend on it.",
+        "es": "Los vídeos del juego, en Bink (.bik). Un vídeo remasterizado debe durar lo mismo: el sonido y los subtítulos dependen de ello."
+      },
+      "formats": [
+        {"fr": "Bink (.bik)", "en": "Bink (.bik)", "es": "Bink (.bik)"},
+        {"fr": "Même durée", "en": "Same length", "es": "Misma duración"}
+      ],
+      "besoins": [
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "L'Animagus de McGonagall", "en": "McGonagall the Animagus", "es": "McGonagall, animaga"},
+         "detail": {"fr": "McGonaCat.bik", "en": "McGonaCat.bik", "es": "McGonaCat.bik"}},
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "Lupin se transforme", "en": "Lupin transforms", "es": "Lupin se transforma"},
+         "detail": {"fr": "LupinWolf.bik", "en": "LupinWolf.bik", "es": "LupinWolf.bik"}},
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "Sirius et son chien", "en": "Sirius and his dog form", "es": "Sirius y su forma de perro"},
+         "detail": {"fr": "SiriusDog.bik, DogSirius.bik", "en": "SiriusDog.bik, DogSirius.bik", "es": "SiriusDog.bik, DogSirius.bik"}},
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "Pettigrow et Croûtard", "en": "Pettigrew and Scabbers", "es": "Pettigrew y Scabbers"},
+         "detail": {"fr": "PettiScab.bik", "en": "PettiScab.bik", "es": "PettiScab.bik"}},
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "La photo de Sirius", "en": "Sirius's photo", "es": "La foto de Sirius"},
+         "detail": {"fr": "SiriusPhoto.bik", "en": "SiriusPhoto.bik", "es": "SiriusPhoto.bik"}},
+        {"jeu": "HP3", "etat": "cherche",
+         "quoi": {"fr": "Le sablier, la Grosse Dame", "en": "The hourglass, the Fat Lady", "es": "El reloj de arena, la Señora Gorda"},
+         "detail": {"fr": "HourGlassBac.bik, PinkLady.bik", "en": "HourGlassBac.bik, PinkLady.bik", "es": "HourGlassBac.bik, PinkLady.bik"}}
+      ]
+    }
+  ]
+}
