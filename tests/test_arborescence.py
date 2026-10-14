@@ -216,6 +216,7 @@ class TestContributeurs:
 
         dlg = SettingsDialog(cfg, manager)
         qtbot.addWidget(dlg)
+        dlg._nav.setCurrentRow(dlg._nav.count() - 1)   # À propos se construit à sa visite
         from PyQt6.QtWidgets import QLabel
         rendu = "".join(lbl.text() for lbl in dlg.findChildren(QLabel))
         assert "<img" not in rendu

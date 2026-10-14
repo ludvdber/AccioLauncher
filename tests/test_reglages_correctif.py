@@ -458,7 +458,7 @@ class TestFenetre:
         assert haut_reset + reset.height() <= dlg.height()
         # Plus de bouton « Fermer » : le retour à la fiche est en haut du rail.
         assert not [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Fermer")]
-        assert [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Retour à la fiche")]
+        assert [b for b in dlg.findChildren(QPushButton) if b.text() == tr("Bibliothèque")]
 
     def test_echec_d_ecriture_remet_le_controle_et_le_dit(self, qtbot, tmp_path, monkeypatch):
         from src.ui.toggle_switch import ToggleSwitch

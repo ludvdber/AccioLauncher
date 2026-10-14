@@ -205,10 +205,15 @@ class SettingsDialog(QDialog):
         # textes rognés par le bas (capture de Ludo, 2026-09-27).
         self._pages = QStackedWidget()
         for page in (self._page_general(), self._page_display(),
-                     self._page_downloads(), self._page_integrations(),
-                     about_page.construire(self.manager.catalog.contributors,
-                                           manager=self.manager)):
+                     self._page_downloads(), self._page_integrations()):
             self._pages.addWidget(zone_defilable(self._marges(page)))
+        # À propos se construit à sa PREMIÈRE visite : il ne règle rien, rien
+        # d'autre n'y renvoie, et c'est la plus lourde des cinq (60 ms sur
+        # les ~400 de l'ouverture, mesuré le 2026-10-14). Une place vide
+        # garde son rang dans la pile.
+        self._pages.addWidget(QWidget())
+        self._apropos_construit = False
+        self._nav.currentRowChanged.connect(self._construire_apropos)
 
         droite = QVBoxLayout()
         droite.setContentsMargins(0, 0, 0, 0)
@@ -229,6 +234,18 @@ class SettingsDialog(QDialog):
         self._nav.setCurrentRow(0)
         # Rouverte après un changement pas encore appliqué : la ligne le redit.
         self._regler_redemarrage()
+
+    def _construire_apropos(self, rang: int) -> None:
+        if self._apropos_construit or rang != len(_RUBRIQUES) - 1:
+            return
+        self._apropos_construit = True
+        vide = self._pages.widget(rang)
+        page = zone_defilable(self._marges(about_page.construire(
+            self.manager.catalog.contributors, manager=self.manager)))
+        self._pages.insertWidget(rang, page)
+        self._pages.removeWidget(vide)
+        vide.deleteLater()
+        self._pages.setCurrentIndex(rang)
 
     def _colonne_rubriques(self) -> QFrame:
         colonne = QFrame()
@@ -275,11 +292,9 @@ class SettingsDialog(QDialog):
             pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(current_theme().accent_light)),
                                   QIcon.Mode.Selected)
             self._nav.addItem(QListWidgetItem(pictogramme, tr(libelle)))
+        # Plus de version au pied de la colonne : À propos la porte, cliquable
+        # (une seule fois, Ludo, 2026-10-14).
         lay.addWidget(self._nav, stretch=1)
-
-        version = texte(f"Accio Launcher {APP_VERSION}", 12, "#5f5d80")
-        version.setContentsMargins(4, 0, 0, 0)
-        lay.addWidget(version)
         return colonne
 
     @staticmethod

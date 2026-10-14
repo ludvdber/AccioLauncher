@@ -1,35 +1,47 @@
-"""Boutons entièrement peints — style launcher moderne.
+"""Boutons entièrement peints — le bouton principal de la fiche.
 
 Deux variantes :
-- "filled" : fond dégradé subtil (pour le bouton principal JOUER)
-- "outline" : fond semi-transparent + bordure colorée (pour TELECHARGER)
+- "filled" : fond plein (JOUER, INSTALLER)
+- "outline" : fond à peine teinté + bordure colorée (actions secondaires)
 
-Pas de QGraphicsEffect — tout est dans paintEvent.
+Le nom est historique. Le bouton portait un halo qui pulsait et un reflet qui le
+traversait toutes les quelques secondes : retirés le 2026-10-14 à la demande de
+Ludo, « le bouton télécharger fait vraiment virus ». Un gros bouton doré qui
+scintille, c'est le code visuel des faux boutons de téléchargement des sites
+douteux. Le halo, peint HORS du rectangle arrondi mais rogné au rectangle du
+widget, laissait aussi un voile carré dans les quatre coins. Plus rien ne bouge
+au repos : le survol éclaircit, l'appui assombrit, et c'est tout.
 """
-
-import math
 
 from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtGui import (
-    QColor, QEnterEvent, QLinearGradient, QPainter, QPainterPath, QPen,
+    QColor, QEnterEvent, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath,
+    QPen,
 )
 from PyQt6.QtWidgets import QPushButton, QWidget
 
 from src.ui import theme
-from src.ui.ticker import Ticker
 
 
 # Marge intérieure réservée au texte d'un GlowButton, en pixels logiques.
 # Elle évite que l'élision ne colle le libellé au bord arrondi.
 _MARGE_TEXTE = 20
+# Écart entre le libellé et son détail (« INSTALLER   4,6 Go »). Un espace, pas
+# un tiret cadratin : « TÉLÉCHARGER — 4,6 GO » faisait texte généré.
+ECART_DETAIL = 14
+# Le détail est lu après le libellé : même couleur, moins appuyée.
+_OPACITE_DETAIL = 0.72
 
 
 class GlowButton(QPushButton):
-    """Bouton avec glow pulsant et shimmer — deux styles : filled / outline.
+    """Bouton peint, deux styles : filled / outline.
 
     Sans `glow_color` / `bg_stops` explicites, l'accent du thème actif est
-    utilisé (thèmes maisons). Les couleurs passées explicitement (JOUER vert,
-    DÉSINSTALLER gris) ne sont pas thématisées.
+    utilisé (thèmes maisons). Les couleurs passées explicitement (JOUER vert)
+    ne sont pas thématisées.
+
+    `detail` : un complément plus discret à droite du libellé (le poids d'un
+    jeu à installer), dans la police du texte courant.
     """
 
     def __init__(
@@ -40,6 +52,8 @@ class GlowButton(QPushButton):
         bg_stops: tuple[str, str, str] | None = None,
         text_color: str | None = None,
         parent: QWidget | None = None,
+        detail: str = "",
+        detail_font: QFont | None = None,
     ) -> None:
         super().__init__(text, parent)
         palette = theme.current()
@@ -47,14 +61,14 @@ class GlowButton(QPushButton):
             glow_color = palette.accent
         self._style = style  # "filled" or "outline"
         self._glow_color = QColor(glow_color)
+        self._detail = detail
+        self._detail_font = detail_font
 
         if bg_stops:
             self._bg_top = QColor(bg_stops[0])
-            self._bg_mid = QColor(bg_stops[1])
             self._bg_bot = QColor(bg_stops[2])
         else:
-            self._bg_top = QColor(palette.accent_light)
-            self._bg_mid = QColor(palette.accent)
+            self._bg_top = QColor(palette.accent)
             self._bg_bot = QColor(palette.accent_dark)
 
         if text_color:
@@ -64,138 +78,109 @@ class GlowButton(QPushButton):
         else:
             self._text_color = QColor("#ffffff")
 
-        self._glow_phase = 0.0
-        self._glow_alpha = 40
-        self._shimmer_offset = -1.0
         self._hovered = False
         self._pressed = False
-        self._ticking = False  # abonnement au ticker partagé (show/hide)
 
         self.setStyleSheet("QPushButton { background: transparent; border: none; }")
 
-    def _animate(self) -> None:
-        if not self.isVisible():
-            return
-        self._glow_phase = (self._glow_phase + 0.025) % math.tau
-        t = (math.sin(self._glow_phase) + 1) / 2
+    def detail(self) -> str:
+        return self._detail
 
-        if self._hovered:
-            self._glow_alpha = int(80 + t * 60)
-        else:
-            self._glow_alpha = int(30 + t * 30)
-
-        self._shimmer_offset += 0.02
-        if self._shimmer_offset > 2.5:
-            self._shimmer_offset = -1.0
-
-        self.update()
+    def police_detail(self) -> QFont:
+        return self._detail_font if self._detail_font is not None else self.font()
 
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         if not self.isEnabled():
-            # TÉLÉCHARGER hors ligne : plein et doré, il avait l'air cliquable.
+            # INSTALLER hors ligne : plein et doré, il avait l'air cliquable.
             p.setOpacity(0.45)
 
         w = self.width()
         h = self.height()
-        radius = 8.0
-
-        btn_rect = QRectF(0, 0, w, h)
+        radius = 6.0
+        # Tout ce qui est peint reste DANS le rectangle arrondi : rien ne
+        # déborde vers les coins du widget.
+        btn_rect = QRectF(0.5, 0.5, w - 1, h - 1)
         clip = QPainterPath()
         clip.addRoundedRect(btn_rect, radius, radius)
-
-        # ── Glow externe subtil ──
-        r, g, b = self._glow_color.red(), self._glow_color.green(), self._glow_color.blue()
-        for i in range(3):
-            spread = (i + 1) * 3
-            alpha = max(self._glow_alpha // (i + 2), 3)
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(r, g, b, alpha))
-            p.drawRoundedRect(
-                QRectF(-spread, -spread + 1, w + spread * 2, h + spread * 2),
-                radius + spread, radius + spread,
-            )
-
         p.setClipPath(clip)
-
         if self._style == "filled":
-            self._paint_filled(p, w, h, btn_rect)
+            self._paint_filled(p, h, btn_rect)
         else:
-            self._paint_outline(p, w, h, btn_rect)
-
-        # ── Shimmer traversant ──
-        if -0.5 < self._shimmer_offset < 1.5:
-            offset_px = self._shimmer_offset * w
-            shimmer = QLinearGradient(offset_px - 50, 0, offset_px + 50, h)
-            alpha = 35 if self._style == "filled" else 18
-            shimmer.setColorAt(0, QColor(255, 255, 255, 0))
-            shimmer.setColorAt(0.4, QColor(255, 255, 255, alpha))
-            shimmer.setColorAt(0.5, QColor(255, 255, 255, int(alpha * 1.4)))
-            shimmer.setColorAt(0.6, QColor(255, 255, 255, alpha))
-            shimmer.setColorAt(1.0, QColor(255, 255, 255, 0))
-            p.fillRect(btn_rect, shimmer)
-
+            self._paint_outline(p, btn_rect)
         p.setClipping(False)
 
-        # ── Bordure ──
-        if self._style == "filled":
-            border_alpha = 70 if self._hovered else 35
-            p.setPen(QPen(QColor(255, 255, 255, border_alpha), 1.0))
-        else:
+        if self._style == "outline":
             r, g, b = self._glow_color.red(), self._glow_color.green(), self._glow_color.blue()
-            border_alpha = 180 if self._hovered else 120
-            p.setPen(QPen(QColor(r, g, b, border_alpha), 1.5))
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), radius, radius)
+            p.setPen(QPen(QColor(r, g, b, 180 if self._hovered else 120), 1.5))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawRoundedRect(btn_rect, radius, radius)
 
-        # ── Texte ──
         tc = QColor(self._text_color)
         if self._style == "outline" and self._hovered:
             tc = tc.lighter(130)
-        p.setPen(tc)
-        p.setFont(self.font())
-        # Élision — filet de sécurité. `drawText` centré ne coupe RIEN : un
-        # libellé plus large que le bouton déborde des DEUX côtés, hors du
-        # cadre dessiné, et le début du mot disparaît. Constaté sur le bouton
-        # TÉLÉCHARGER, qui gagne une durée estimée dès qu'un premier
-        # téléchargement a abouti : « TÉLÉCHARGER — 463 Mo · ≈ 19 s » réclame
-        # jusqu'à 103 px de plus que les 300 px du bouton, sur les 6 jeux et
-        # les 3 langues. Les appelants dimensionnent le bouton à son contenu
-        # (cf. ActionPanel) ; ceci garantit qu'aucun GlowButton ne pourra plus
-        # jamais déborder en silence, quelle que soit la traduction.
-        texte = self.fontMetrics().elidedText(
-            self.text(), Qt.TextElideMode.ElideRight,
-            max(0, int(btn_rect.width()) - _MARGE_TEXTE))
-        p.drawText(btn_rect, Qt.AlignmentFlag.AlignCenter, texte)
-
+        self._paint_texte(p, tc, QRectF(0, 0, w, h))
         p.end()
 
-    def _paint_filled(self, p: QPainter, w: int, h: int, rect: QRectF) -> None:
-        """Fond dégradé plein — pour le bouton principal (JOUER)."""
-        bg = QLinearGradient(0, 0, 0, h)
+    def _paint_texte(self, p: QPainter, couleur: QColor, rect: QRectF) -> None:
+        """Libellé, et détail à sa droite, centrés ensemble.
+
+        Élision — filet de sécurité. `drawText` centré ne coupe RIEN : un
+        libellé plus large que le bouton déborde des DEUX côtés, hors du cadre
+        dessiné, et le début du mot disparaît (constaté le 2026-08-20 sur le
+        bouton de téléchargement, qui portait alors une durée estimée). Les
+        appelants dimensionnent le bouton à son contenu (cf. ActionPanel) ;
+        ceci garantit qu'aucun GlowButton ne déborde en silence, quelle que
+        soit la traduction. Le détail cède sa place en premier.
+        """
+        dispo = max(0, int(rect.width()) - _MARGE_TEXTE)
+        fm = self.fontMetrics()
+        fm_detail = QFontMetrics(self.police_detail())
+        detail = self._detail
+        largeur_detail = fm_detail.horizontalAdvance(detail) if detail else 0
+        if detail and fm.horizontalAdvance(self.text()) + ECART_DETAIL + largeur_detail > dispo:
+            detail, largeur_detail = "", 0
+        texte = fm.elidedText(self.text(), Qt.TextElideMode.ElideRight, dispo)
+        if not detail:
+            p.setPen(couleur)
+            p.setFont(self.font())
+            p.drawText(rect, Qt.AlignmentFlag.AlignCenter, texte)
+            return
+        largeur = fm.horizontalAdvance(texte)
+        x = rect.x() + (rect.width() - largeur - ECART_DETAIL - largeur_detail) / 2
+        p.setPen(couleur)
+        p.setFont(self.font())
+        p.drawText(QRectF(x, rect.y(), largeur, rect.height()),
+                   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+                   | Qt.TextFlag.TextDontClip, texte)
+        p.save()
+        p.setOpacity(p.opacity() * _OPACITE_DETAIL)
+        p.setFont(self.police_detail())
+        # TextDontClip : la mesure de la police du détail peut différer d'un
+        # pixel du rendu (police en points), et un rectangle au pixel près
+        # rognait la dernière lettre (« 4,6 Gc »).
+        p.drawText(QRectF(x + largeur + ECART_DETAIL, rect.y(), largeur_detail,
+                          rect.height()),
+                   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+                   | Qt.TextFlag.TextDontClip, detail)
+        p.restore()
+
+    def _paint_filled(self, p: QPainter, h: int, rect: QRectF) -> None:
+        """Fond plein, un dégradé à peine sensible de haut en bas."""
+        haut, bas = QColor(self._bg_top), QColor(self._bg_bot)
         if self._pressed:
-            bg.setColorAt(0, self._bg_bot)
-            bg.setColorAt(1, self._bg_bot.darker(130))
+            haut, bas = bas, bas.darker(115)
         elif self._hovered:
-            bg.setColorAt(0, self._bg_top.lighter(112))
-            bg.setColorAt(0.5, self._bg_mid.lighter(108))
-            bg.setColorAt(1, self._bg_bot)
-        else:
-            bg.setColorAt(0, self._bg_top)
-            bg.setColorAt(0.5, self._bg_mid)
-            bg.setColorAt(1, self._bg_bot)
+            haut, bas = haut.lighter(110), bas.lighter(110)
+        bg = QLinearGradient(0, 0, 0, h)
+        bg.setColorAt(0, haut)
+        bg.setColorAt(1, bas)
         p.fillRect(rect, bg)
 
-        # Highlight haut
-        hl = QLinearGradient(0, 0, 0, h * 0.45)
-        hl.setColorAt(0, QColor(255, 255, 255, 50 if self._hovered else 30))
-        hl.setColorAt(1, QColor(255, 255, 255, 0))
-        p.fillRect(QRectF(0, 0, w, h * 0.45), hl)
-
-    def _paint_outline(self, p: QPainter, w: int, h: int, rect: QRectF) -> None:
-        """Fond semi-transparent — pour TELECHARGER et actions secondaires."""
+    def _paint_outline(self, p: QPainter, rect: QRectF) -> None:
+        """Fond à peine teinté — pour les actions secondaires."""
         if self._pressed:
             p.fillRect(rect, QColor(255, 255, 255, 12))
         elif self._hovered:
@@ -204,24 +189,14 @@ class GlowButton(QPushButton):
         else:
             p.fillRect(rect, QColor(255, 255, 255, 6))
 
-    def showEvent(self, event) -> None:
-        if not self._ticking:
-            Ticker.instance().tick.connect(self._animate)
-            self._ticking = True
-        super().showEvent(event)
-
-    def hideEvent(self, event) -> None:
-        if self._ticking:
-            Ticker.detach(self._animate)
-            self._ticking = False
-        super().hideEvent(event)
-
     def enterEvent(self, event: QEnterEvent) -> None:
         self._hovered = True
+        self.update()
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:
         self._hovered = False
+        self.update()
         super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:

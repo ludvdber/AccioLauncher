@@ -1,5 +1,6 @@
 """Worker QThread pour scanner la taille des jeux installés en arrière-plan."""
 
+import os
 from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -22,17 +23,25 @@ class DiskScanWorker(QThread):
     def run(self) -> None:
         count = len(self._game_paths)
         total_bytes = 0
-        for game_path in self._game_paths:
-            if not game_path.exists():
-                continue
+        # `os.scandir` et non `rglob` + `stat` : sous Windows, la taille vient
+        # avec l'entrée de dossier, sans appel système par fichier. Mesuré le
+        # 2026-10-14 sur les 8 jeux de Ludo (2 040 fichiers, 25,9 Go) : 10 ms
+        # contre 150, à disque chaud. Ce fil tenait le verrou de Python
+        # pendant que la page des Paramètres se construisait : l'ouverture
+        # « freezait » (Ludo).
+        pile = [str(p) for p in self._game_paths if p.exists()]
+        while pile:
             try:
-                for f in game_path.rglob("*"):
-                    # Interruption coopérative : permet à closeEvent d'attendre
-                    # la fin du thread sans risquer un wait() infini.
-                    if self.isInterruptionRequested():
-                        return
-                    if f.is_file():
-                        total_bytes += f.stat().st_size
+                with os.scandir(pile.pop()) as entrees:
+                    for entree in entrees:
+                        # Interruption coopérative : permet à done() d'attendre
+                        # la fin du thread sans risquer un wait() infini.
+                        if self.isInterruptionRequested():
+                            return
+                        if entree.is_dir(follow_symlinks=False):
+                            pile.append(entree.path)
+                        elif entree.is_file(follow_symlinks=False):
+                            total_bytes += entree.stat(follow_symlinks=False).st_size
             except OSError:
                 pass
         self.result.emit(count, total_bytes)

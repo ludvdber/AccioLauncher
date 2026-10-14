@@ -21,6 +21,9 @@ La durée a depuis été RETIRÉE du bouton (Ludo, 2026-08-20) : elle promettait
 temps calculé sur la vitesse du dernier téléchargement, sans raison de valoir
 encore. Ces tests restent le filet du reste — le libellé doit tenir dans son
 bouton, quelle que soit la langue.
+
+Depuis le 2026-10-14, « INSTALLER » et le poids en détail plus discret, sans
+tiret cadratin : la mesure porte sur les deux.
 """
 
 import pytest
@@ -32,16 +35,21 @@ from PyQt6.QtGui import QFontMetrics  # noqa: E402
 import src.core.i18n as i18n  # noqa: E402
 from src.core.formatting import format_size  # noqa: E402
 from src.ui.action_panel import _BOUTON_MAX_W, _BOUTON_MIN_W, _MARGE_BOUTON  # noqa: E402
-from src.ui.fonts import cinzel, load_fonts  # noqa: E402
-from src.ui.glow_button import GlowButton  # noqa: E402
+from src.ui.fonts import body_font, cinzel, load_fonts  # noqa: E402
+from src.ui.glow_button import ECART_DETAIL, GlowButton  # noqa: E402
 
 # Tailles réelles des six jeux téléchargeables du catalogue.
 TAILLES = [431, 463, 775, 1680, 4600, 4414]
 
 
-def _libelle(size_mb: int) -> str:
-    """Reconstitue exactement le libellé posé par `ActionPanel`."""
-    return f"{i18n.tr('TÉLÉCHARGER')}  —  {format_size(size_mb)}"
+def _libelle(size_mb: int) -> tuple[str, str]:
+    """Reconstitue exactement le libellé et le détail posés par `ActionPanel`."""
+    return i18n.tr("INSTALLER"), format_size(size_mb)
+
+
+def _besoin(libelle: str, detail: str) -> int:
+    return (QFontMetrics(cinzel(13, bold=True)).horizontalAdvance(libelle)
+            + ECART_DETAIL + QFontMetrics(body_font(14)).horizontalAdvance(detail))
 
 
 class TestLargeur:
@@ -68,10 +76,10 @@ class TestLargeur:
             panneau = ActionPanel(GameManager(Config()))
             qtbot.addWidget(panneau)
             police = cinzel(13, bold=True)
-            libelle = _libelle(size_mb)
-            besoin = QFontMetrics(police).horizontalAdvance(libelle)
+            libelle, detail = _libelle(size_mb)
+            besoin = _besoin(libelle, detail)
 
-            largeur = panneau._largeur_bouton(libelle, police)
+            largeur = panneau._largeur_bouton(libelle, police, detail, body_font(14))
 
             assert besoin <= largeur, (
                 f"[{langue}] {libelle!r} réclame {besoin} px pour un bouton "
@@ -89,8 +97,7 @@ class TestLargeur:
         ancienne = i18n.get_language()
         try:
             i18n.set_language(langue)
-            besoin = QFontMetrics(cinzel(13, bold=True)).horizontalAdvance(
-                _libelle(size_mb))
+            besoin = _besoin(*_libelle(size_mb))
             assert besoin + _MARGE_BOUTON <= _BOUTON_MAX_W, (
                 f"[{langue}] le libellé dépasse même le plafond du bouton")
         finally:
@@ -138,3 +145,34 @@ class TestElision:
             "même élidé, le texte doit tenir dans le bouton")
         # Et le rendu ne doit pas lever (paintEvent complet).
         bouton.grab()
+
+
+class TestDetail:
+    """Le poids à côté du libellé, et rien qui déborde du bouton (2026-10-14)."""
+
+    def test_le_detail_cede_sa_place_avant_le_libelle(self, qtbot):
+        load_fonts()
+        bouton = GlowButton("INSTALLER", detail="4,6 Go", detail_font=body_font(14))
+        qtbot.addWidget(bouton)
+        bouton.setFont(cinzel(13, bold=True))
+        bouton.setFixedSize(150, 46)
+        bouton.grab()   # le rendu ne lève pas, le détail est simplement omis
+
+    def test_rien_n_est_peint_dans_les_coins(self, qtbot):
+        """Le halo débordait du rectangle arrondi : un voile carré dans les
+        quatre coins du widget (« un bord aux 4 coins », Ludo)."""
+        from PyQt6.QtCore import QPoint, Qt
+        from PyQt6.QtGui import QImage, QPainter, QRegion
+        from PyQt6.QtWidgets import QWidget
+
+        bouton = GlowButton("INSTALLER", detail="4,6 Go")
+        qtbot.addWidget(bouton)
+        bouton.setFixedSize(300, 46)
+        image = QImage(300, 46, QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(Qt.GlobalColor.transparent)
+        p = QPainter(image)
+        # Sans le fond de fenêtre : seul compte ce que le bouton peint.
+        bouton.render(p, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)
+        p.end()
+        for x, y in ((0, 0), (299, 0), (0, 45), (299, 45)):
+            assert image.pixelColor(x, y).alpha() == 0, (x, y)

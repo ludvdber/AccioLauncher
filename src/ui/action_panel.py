@@ -13,7 +13,7 @@ from src.ui.alert_banner import AlertBanner
 from src.ui.carte_progression import CarteProgression
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
-from src.ui.glow_button import GlowButton
+from src.ui.glow_button import ECART_DETAIL, GlowButton
 from src.ui.icon_button import IconButton
 from src.core.formatting import (
     format_duree_compacte, format_relative_date, format_size,
@@ -272,27 +272,34 @@ class ActionPanel(QWidget):
         # Le CALCUL, lui, vit dans `GameManager.reprise` : la vignette du
         # carrousel l'affiche aussi, et deux seuils recopiés divergent.
         reprise = self._manager.reprise(self._game)
+        # « INSTALLER », et le poids à côté, plus discret (audit UI, 2026-10-14).
+        # « TÉLÉCHARGER — 4,6 GO » en grandes capitales dorées, c'était le faux
+        # bouton des sites douteux (« fait vraiment virus », Ludo), et le tiret
+        # cadratin faisait texte généré. Installer est ce que le clic accomplit
+        # (télécharger, extraire, corriger), et le mot de Steam, GOG et Epic.
         if reprise is not None:
             _, restant = reprise
-            libelle = (f"{tr('REPRENDRE')}  —  "
-                       + tr("{} restants").format(format_size(round(restant))))
+            libelle = tr("REPRENDRE")
+            detail = tr("{} restants").format(format_size(round(restant)))
         else:
-            libelle = f"{tr('TÉLÉCHARGER')}  —  {format_size(poids)}"
+            libelle = tr("INSTALLER")
+            detail = format_size(poids)
         # PLEIN, dans l'accent de la maison (ACT-055, 2026-10-08) : c'est l'action
         # principale d'un jeu absent, elle doit peser autant que le JOUER vert
         # d'un jeu installé. En contour, elle pesait MOINS que le DÉSINSTALLER
         # voisin. Texte sombre : du blanc sur l'or ne passe pas le contraste.
-        btn = GlowButton(libelle, text_color=palette_courante().bg)
+        btn = GlowButton(libelle, text_color=palette_courante().bg,
+                         detail=detail, detail_font=body_font(14))
         btn.setObjectName("btnDownload")
-        btn.setAccessibleName(tr("Télécharger {}").format(self._game.name))
+        btn.setAccessibleName(tr("Installer {}").format(self._game.name) + f" ({detail})")
         btn.setFont(cinzel(13, bold=True))
         # Largeur SUIVIE SUR LE CONTENU, et non figée à 300 px. Le libellé
-        # gagne une durée estimée dès qu'un premier téléchargement a abouti, et
-        # il réclamait alors jusqu'à 403 px : le texte débordait des deux côtés
-        # du cadre, si bien qu'on lisait « CHARGER — 463 Mo · ≈ ~19s resta ».
-        # Mesuré sur les 6 jeux téléchargeables × 3 langues : débordement
-        # systématique, de +8 px (anglais) à +103 px (français).
-        btn.setFixedSize(self._largeur_bouton(libelle, cinzel(13, bold=True)), 46)
+        # portait une durée estimée après un premier téléchargement, et il
+        # réclamait alors jusqu'à 403 px : le texte débordait des deux côtés du
+        # cadre (« CHARGER — 463 Mo · ≈ ~19s resta »). Les traductions, elles,
+        # peuvent toujours s'allonger.
+        btn.setFixedSize(self._largeur_bouton(libelle, cinzel(13, bold=True),
+                                              detail, body_font(14)), 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.download_clicked)
         if not self._online:
@@ -303,8 +310,9 @@ class ActionPanel(QWidget):
             btn.setToolTip(tr("Hors ligne — connexion requise pour télécharger."))
         self._action_layout.addWidget(btn)
 
-    def _largeur_bouton(self, libelle: str, police) -> int:
-        """Largeur qu'il faut au bouton pour afficher `libelle` en entier.
+    def _largeur_bouton(self, libelle: str, police, detail: str = "",
+                        police_detail=None) -> int:
+        """Largeur qu'il faut au bouton pour afficher `libelle` (et son détail) en entier.
 
         Bornée des deux côtés : jamais moins que la largeur historique (le
         bouton principal doit rester imposant même avec un libellé court),
@@ -312,6 +320,8 @@ class ActionPanel(QWidget):
         quoi on remplacerait une troncature par un débordement.
         """
         besoin = QFontMetrics(police).horizontalAdvance(libelle) + _MARGE_BOUTON
+        if detail:
+            besoin += ECART_DETAIL + QFontMetrics(police_detail or police).horizontalAdvance(detail)
         dispo = self._action_container.width() or self.width()
         plafond = max(_BOUTON_MIN_W, dispo) if dispo else _BOUTON_MAX_W
         return max(_BOUTON_MIN_W, min(besoin, plafond, _BOUTON_MAX_W))

@@ -22,6 +22,10 @@ DEPOT_URL = "https://github.com/ludvdber/AccioLauncher"
 # Section « Linux / Bazzite » du README : quoi installer quand ni umu-run ni
 # wine ne sont trouvés. Une ancre de titre GitHub : « Linux / Bazzite » donne
 # `linux--bazzite` (minuscules, espaces en tirets, barre oblique retirée).
+# Notes de chaque version du launcher, ouvertes par le numéro de version dans
+# À propos. La LISTE et non le tag courant : un exe lancé avant la publication
+# de sa release (essais, build locale) mènerait sinon à une page 404.
+NOTES_VERSIONS_URL = "https://github.com/ludvdber/AccioLauncher/releases"
 GUIDE_LINUX_URL = "https://github.com/ludvdber/AccioLauncher#linux--bazzite"
 # « Protection contre les virus et menaces » de Sécurité Windows, ouverte par
 # l'aide antivirus de la fiche (Windows seulement : le bouton n'existe pas ailleurs).

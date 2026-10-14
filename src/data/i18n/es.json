@@ -42,8 +42,6 @@
     "Le launcher est gratuit — un café finance son développement et celui des correctifs.": "El launcher es gratuito — un café financia su desarrollo y el de los parches.",
     "Les jeux restent la propriété de Warner Bros. et d'Electronic Arts : pour y jouer légalement, il faut en posséder une copie originale (CD, DVD ou achat numérique).": "Los juegos siguen siendo propiedad de Warner Bros. y Electronic Arts: para jugarlos legalmente, hay que poseer una copia original (CD, DVD o compra digital).",
     "Fermer": "Cerrar",
-    "TÉLÉCHARGER": "DESCARGAR",
-    "Télécharger {}": "Descargar {}",
     "JOUER": "JUGAR",
     "Jouer à {}": "Jugar a {}",
     "Annuler": "Cancelar",
@@ -807,7 +805,6 @@
     "Les flèches pour se déplacer, une touche par sort : les touches que le jeu connaît.": "Las flechas para moverse, una tecla por hechizo: las teclas que conoce el juego.",
     "Menus": "Menús",
     "Remettre les touches du jeu": "Restaurar las teclas del juego",
-    "Retour à la fiche": "Volver a la ficha",
     "Se déplacer": "Moverse",
     "exigence": "exigencia",
     "se voit": "se nota",
@@ -916,6 +913,10 @@
     "Jaquette : {jl} × {jh} px. Fond : {fl} × {fh} px. Sous licence CC BY 4.0, sans logo de Warner ou d'EA ni visage d'acteur.": "Portada: {jl} × {jh} px. Fondo: {fl} × {fh} px. Con licencia CC BY 4.0, sin logotipo de Warner ni de EA ni cara de actor.",
     "En parler sur le Discord": "Hablarlo en el Discord",
     "Lire la bande-annonce": "Ver el tráiler",
-    "Le launcher prend déjà les couleurs de {maison}. Vous pourrez en changer dans les Paramètres.": "El launcher ya lleva los colores de {maison}. Podrás cambiarlos en Ajustes."
+    "Le launcher prend déjà les couleurs de {maison}. Vous pourrez en changer dans les Paramètres.": "El launcher ya lleva los colores de {maison}. Podrás cambiarlos en Ajustes.",
+    "INSTALLER": "INSTALAR",
+    "Installer {}": "Instalar {}",
+    "Restaurer": "Restaurar",
+    "Ce que contient chaque version": "Qué contiene cada versión"
   }
 }
