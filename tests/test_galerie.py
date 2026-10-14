@@ -193,3 +193,46 @@ class TestDepuisMesAnnees:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         assert not [b for b in dlg.findChildren(QPushButton) if b.text().startswith("Galerie")]
+
+
+class TestVignettesEnCache:
+    """Une capture de 10 Mo coûtait 155 ms à chaque ouverture (2026-10-14)."""
+
+    def test_rangee_puis_relue_sans_redecoder(self, qtbot, monkeypatch):
+        from src.ui import galerie_page
+        chemin = _capture(HP4, "a.png", datetime(2026, 9, 3), taille=(1920, 1080))
+        premiere = galerie_page._vignette(chemin)
+        cache = galerie.chemin_vignette(chemin)
+        assert cache is not None and cache.is_file()
+        assert premiere.width() == galerie_page._VIGNETTE.width() * 2
+
+        def interdit(*_a):
+            raise AssertionError("la capture a été redécodée")
+        monkeypatch.setattr(galerie_page, "_lire", interdit)
+        assert not galerie_page._vignette(chemin).isNull()
+
+    def test_une_capture_remplacee_a_une_autre_vignette(self):
+        chemin = _capture(HP4, "a.png", datetime(2026, 9, 3))
+        avant = galerie.chemin_vignette(chemin)
+        _capture(HP4, "a.png", datetime(2026, 9, 4), taille=(80, 45))
+        assert galerie.chemin_vignette(chemin) != avant
+
+    def test_capture_disparue(self, tmp_path):
+        assert galerie.chemin_vignette(tmp_path / "absente.png") is None
+
+    def test_fermer_la_page_arrete_le_chargement(self, qtbot):
+        from src.ui.galerie_page import GaleriePage
+        _capture(HP4, "a.png", datetime(2026, 9, 3))
+        page = GaleriePage([HP4])
+        qtbot.addWidget(page)
+        page.accept()
+        assert not page._chargeur.isActive()
+
+    def test_l_apercu_arrive_en_grand_apres_coup(self, qtbot):
+        from src.ui.galerie_page import GaleriePage
+        _capture(HP4, "a.png", datetime(2026, 9, 3), taille=(1920, 1080))
+        page = GaleriePage([HP4])
+        qtbot.addWidget(page)
+        page.show()
+        qtbot.waitUntil(lambda: page._apercu_attendu is None, timeout=3000)
+        assert not page._apercu.pixmap().isNull()

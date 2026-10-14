@@ -173,14 +173,19 @@ def _filet() -> QFrame:
     return trait
 
 
-def _nom_contributeur(c) -> QLabel:
+def _nom_contributeur(c) -> QWidget:
     """Nom en RichText ÉCHAPPÉ : sans ça, le balisage d'un nom venu du
     catalogue serait INTERPRÉTÉ (mise en page détournée, `<img src="file:///…">`
-    qui lit un fichier LOCAL). L'`url` a déjà été validée au parsing (https)."""
+    qui lit un fichier LOCAL). L'`url` a déjà été validée au parsing (https).
+
+    Un nom qui mène quelque part est SOULIGNÉ, suivi du globe et d'une
+    infobulle qui nomme le site : en or seul, on ne savait pas qu'il se
+    cliquait (Ludo, 2026-10-14).
+    """
     nom = escape(c.name, quote=False)
     if c.url:
         nom = (f'<a href="{escape(c.url)}" style="color:{current_theme().accent};'
-               f' text-decoration:none;">{nom}</a>')
+               f' text-decoration:underline;">{nom}</a>')
     lbl = QLabel(nom)
     lbl.setTextFormat(Qt.TextFormat.RichText)
     lbl.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
@@ -191,7 +196,23 @@ def _nom_contributeur(c) -> QLabel:
     f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.5)
     lbl.setFont(f)
     lbl.setStyleSheet(f"color: {ENCRE}; background: transparent;")
-    return lbl
+    if not c.url:
+        return lbl
+    site = urlparse(c.url).hostname or c.url
+    if site.startswith("www."):
+        site = site[4:]
+    lbl.setToolTip(tr("Ouvrir {}").format(site))
+    ligne = QWidget()
+    ligne.setStyleSheet("background: transparent;")
+    h = QHBoxLayout(ligne)
+    h.setContentsMargins(0, 0, 0, 0)
+    h.setSpacing(6)
+    h.addWidget(lbl)
+    globe = QLabel()
+    globe.setPixmap(pixmap_icone("site", 18, accent_qcolor()))   # règle 51
+    globe.setToolTip(lbl.toolTip())
+    h.addWidget(globe)
+    return ligne
 
 
 def _generique(contributeurs) -> QWidget | None:
@@ -207,7 +228,7 @@ def _generique(contributeurs) -> QWidget | None:
     « ASTeam » trois fois, pour la création, l'anglais et l'espagnol. Le nom
     paraît une fois, avec son lien, et ses rôles en dessous.
     """
-    personnes: dict[str, tuple[QLabel, list[str]]] = {}
+    personnes: dict[str, tuple[QWidget, list[str]]] = {}
     for c in contributeurs:
         if c.name not in personnes:
             personnes[c.name] = (_nom_contributeur(c), [])
@@ -237,8 +258,7 @@ def _generique(contributeurs) -> QWidget | None:
     for nom, roles in personnes.values():
         fiche = QVBoxLayout()
         fiche.setSpacing(3)
-        nom.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        fiche.addWidget(nom)
+        fiche.addWidget(nom, alignment=Qt.AlignmentFlag.AlignHCenter)
         for role in roles:
             # Le rôle en PlainText : jamais interprété, sans rien à échapper.
             ligne = texte(role, 14, ENCRE_DOUCE)

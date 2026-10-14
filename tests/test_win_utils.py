@@ -43,3 +43,36 @@ class TestRemoveZoneIdentifier:
         (sub / "deep.dll").write_text("x")
         result = remove_zone_identifier(tmp_path)
         assert isinstance(result, int)
+
+
+class TestNomsCommencantPar:
+    """La recherche par motif qui remplace le parcours de WinSxS (90 ms → 0,2)."""
+
+    def test_casse_ignoree_et_seulement_le_debut(self, tmp_path):
+        from src.core.win_utils import noms_commencant_par
+        (tmp_path / "X86_Microsoft.VC80.CRT_abc_8.0").mkdir()
+        (tmp_path / "x86_microsoft.vc90.crt_abc_9.0").mkdir()
+        (tmp_path / "autre_x86_microsoft.vc80.crt_abc").mkdir()
+        assert noms_commencant_par(tmp_path, "x86_microsoft.vc80.crt_abc_") == [
+            "X86_Microsoft.VC80.CRT_abc_8.0"]
+
+    def test_rien_ou_dossier_absent(self, tmp_path):
+        from src.core.win_utils import noms_commencant_par
+        assert noms_commencant_par(tmp_path, "x86_") == []
+        assert noms_commencant_par(tmp_path / "absent", "x86_") == []
+
+    def test_repli_quand_le_systeme_refuse(self, tmp_path, monkeypatch):
+        """L'appel système qui échoue ne doit rien cacher : on parcourt."""
+        from src.core import win_utils
+
+        def refus(*_a):
+            raise OSError("refusé")
+        monkeypatch.setattr(win_utils, "_noms_par_le_systeme", refus)
+        (tmp_path / "x86_a").mkdir()
+        assert win_utils.noms_commencant_par(tmp_path, "X86_") == ["x86_a"]
+
+    def test_le_motif_n_est_jamais_un_joker(self, tmp_path):
+        """Un « * » dans le début n'élargit pas la recherche."""
+        from src.core.win_utils import noms_commencant_par
+        (tmp_path / "abc").mkdir()
+        assert noms_commencant_par(tmp_path, "a*") == []

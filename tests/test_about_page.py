@@ -176,3 +176,18 @@ class TestBalisageDuCatalogueJamaisInterprete:
         assert porteurs, "la ligne des traducteurs a disparu"
         for lbl in porteurs:
             assert lbl.textFormat() == Qt.TextFormat.PlainText
+
+
+class TestLienVisible:
+    def test_un_nom_qui_mene_quelque_part_se_voit(self, qtbot, monkeypatch):
+        """Souligné, globe et infobulle : en or seul, on ne savait pas qu'il se
+        cliquait (Ludo, 2026-10-14)."""
+        monkeypatch.setattr("src.ui.about_page.translator_credits", lambda: [])
+        page = about_page.construire(
+            [Contributor(name="Sara", role="", url="https://www.example.org/sara")])
+        qtbot.addWidget(page)
+        nom = next(lbl for lbl in _labels(page) if "Sara" in lbl.text())
+        assert "text-decoration:underline" in nom.text()
+        assert nom.toolTip() == "Ouvrir example.org"
+        voisins = nom.parentWidget().findChildren(QLabel)
+        assert any(not v.pixmap().isNull() for v in voisins if v is not nom)

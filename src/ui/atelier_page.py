@@ -233,30 +233,54 @@ class AtelierPage(QDialog):
         liste = QVBoxLayout(cadre)
         liste.setContentsMargins(20, 8, 20, 8)
         liste.setSpacing(0)
-        for i, besoin in enumerate(metier.besoins):
+        # Un jeu une fois, ses besoins dessous : « HP1 » écrit sur chaque
+        # ligne se répétait jusqu'à seize fois (Ludo, 2026-10-14).
+        groupes: list[list[atelier.Besoin]] = []
+        for besoin in metier.besoins:
+            if groupes and groupes[-1][0].jeu == besoin.jeu:
+                groupes[-1].append(besoin)
+            else:
+                groupes.append([besoin])
+        for i, groupe in enumerate(groupes):
             if i:
                 filet = QFrame()
                 filet.setObjectName("filetBesoin")
                 filet.setFixedHeight(1)
                 liste.addWidget(filet)
-            liste.addWidget(self._ligne_besoin(besoin))
+            liste.addWidget(self._groupe_besoins(groupe))
         lay.addWidget(cadre)
         lay.addSpacing(26)
         lay.addWidget(self._etapes())
         lay.addStretch()
         return page
 
+    @classmethod
+    def _groupe_besoins(cls, groupe: list[atelier.Besoin]) -> QWidget:
+        """Le jeu à gauche, une fois ; ses besoins l'un sous l'autre à droite."""
+        bloc = QWidget()
+        h = QHBoxLayout(bloc)
+        h.setContentsMargins(0, 6, 0, 6)
+        h.setSpacing(16)
+        jeu = texte(groupe[0].jeu, 15, current_theme().accent_light)
+        jeu.setFont(police(15, gras=True))
+        jeu.setFixedWidth(64)
+        h.addWidget(jeu, alignment=Qt.AlignmentFlag.AlignTop)
+        colonne = QVBoxLayout()
+        colonne.setSpacing(0)
+        for besoin in groupe:
+            colonne.addWidget(cls._ligne_besoin(besoin))
+        h.addLayout(colonne, stretch=1)
+        # Le nom du jeu au niveau de la première ligne.
+        jeu.setContentsMargins(0, 6, 0, 0)
+        return bloc
+
     @staticmethod
     def _ligne_besoin(besoin: atelier.Besoin) -> QWidget:
         ligne = QWidget()
         ligne.setObjectName("besoin")
         h = QHBoxLayout(ligne)
-        h.setContentsMargins(0, 12, 0, 12)
+        h.setContentsMargins(0, 6, 0, 6)
         h.setSpacing(16)
-        jeu = texte(besoin.jeu, 15, current_theme().accent_light)
-        jeu.setFont(police(15, gras=True))
-        jeu.setFixedWidth(64)
-        h.addWidget(jeu, alignment=Qt.AlignmentFlag.AlignTop)
         quoi = QVBoxLayout()
         quoi.setSpacing(2)
         quoi.addWidget(texte(besoin.quoi, 15, ENCRE, retour=True))

@@ -161,7 +161,7 @@ class GameDetailView(QWidget):
         self._info.language_clicked.connect(lambda: handlers.on_language_clicked(self))
         self._action_panel.game_settings_clicked.connect(
             lambda: handlers.on_game_settings(self))
-        self._action_panel.folio_clicked.connect(self.ouvrir_folio)
+        self._info.folio_clicked.connect(self.ouvrir_folio)
         self._info.content_changed.connect(self._position_info)
 
         # Menu contextuel
@@ -358,6 +358,8 @@ class GameDetailView(QWidget):
         """
         self._action_panel.set_game(self.game)
         self._action_panel.refresh()
+        # Installé ou non : le lien « Folio » et la version en dépendent.
+        self._info.rafraichir_indices(self.game)
         self._position_info()
 
     # ──────────────────── Parallaxe ────────────────────

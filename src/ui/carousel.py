@@ -3,8 +3,8 @@
 import math
 import random
 
-from PyQt6.QtCore import Qt, pyqtSignal, QRectF
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter
+from PyQt6.QtCore import QPoint, QRect, Qt, pyqtSignal, QRectF
+from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QRegion
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from src.core.game_data import GameData
@@ -123,7 +123,31 @@ class Carousel(QWidget):
         if self._star_flip:
             return  # 1 tick sur 2 → ~15 FPS visuel pour le scintillement
         self._star_phase += 0.04
-        self.update()
+        self.update(self._zone_des_etoiles())
+
+    def _zone_des_etoiles(self) -> QRegion:
+        """Les étoiles seules, jaquettes exclues : un `update()` de la bande
+        repeignait aussi les huit jaquettes, 10 à 15 fois par seconde, pour des
+        points de 1 à 2 px. Une étoile derrière une jaquette y reste fixe."""
+        w, h = self.width(), self.height()
+        zone = QRegion()
+        for sx, sy, size, *_reste in self._stars:
+            cote = int(size) + 3
+            zone += QRect(int(sx * w) - cote // 2 - 1, int(sy * h) - cote // 2 - 1,
+                          cote + 2, cote + 2)
+        for item in self._items:
+            if item.isVisible():
+                zone -= QRegion(item.geometry())
+        return zone
+
+    def zones_jaquettes(self) -> list[QRect]:
+        """Les jaquettes visibles, en coordonnées de la fenêtre : les particules
+        passent derrière (`ParticleOverlay.masquer`)."""
+        if not self.isVisible():
+            return []
+        fenetre = self.window()
+        return [QRect(item.mapTo(fenetre, QPoint(0, 0)), item.size())
+                for item in self._items if item.isVisible()]
 
     def paintEvent(self, event) -> None:
         """Dégradé vertical + étoiles scintillantes."""

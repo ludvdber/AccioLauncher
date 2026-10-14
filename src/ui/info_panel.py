@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
+from src.core import folio
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -50,6 +51,10 @@ class InfoPanel(QWidget):
     language_clicked = pyqtSignal()
     # Le contenu a changé de hauteur : le parent doit repositionner le panneau.
     content_changed = pyqtSignal()
+    # « Folio » de la ligne d'indices, pour un jeu installé dont il sait lire
+    # les sauvegardes. Bouton près de l'engrenage jusqu'au 2026-10-14 : il
+    # faisait passer le temps de jeu sous la rangée (Ludo).
+    folio_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -387,6 +392,8 @@ class InfoPanel(QWidget):
         mais un lambda qui ignore le href renverrait tout futur lien vers lui."""
         if href == "langue":
             self.language_clicked.emit()
+        elif href == "folio":
+            self.folio_clicked.emit()
         else:
             self.versions_clicked.emit()
 
@@ -473,6 +480,11 @@ class InfoPanel(QWidget):
 
     # ──────────────────── Indices ────────────────────
 
+    def rafraichir_indices(self, game: GameData | None) -> None:
+        """Après un changement d'état du jeu (installé, désinstallé)."""
+        if game is not None:
+            self._refresh_indices(game)
+
     def _refresh_indices(self, game: GameData) -> None:
         """« Jouable à la manette · Version 1.3 · Nouveautés ».
 
@@ -492,7 +504,10 @@ class InfoPanel(QWidget):
                         + _insecable(escape(tr("Version {}").format(version).upper(),
                                             quote=False))
                         + '</a>')
-        point = '<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
+        if game.id in folio.JEUX and self._manager.is_installed(game.id):
+            morceaux.append(f'<a href="folio" style="color:{gold}; text-decoration:none;">'
+                            + _insecable(escape(tr("Folio").upper(), quote=False)) + '</a>')
+        point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
         self._indices.setToolTip(game.controller_note if manette else "")
 

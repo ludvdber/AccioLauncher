@@ -1,6 +1,6 @@
 """FlowLayout — layout qui wrap les items à la ligne suivante."""
 
-from PyQt6.QtCore import QRect, QRectF, QSize
+from PyQt6.QtCore import QRect, QRectF, QSize, Qt
 from PyQt6.QtWidgets import QLayout
 
 
@@ -45,6 +45,13 @@ class FlowLayout(QLayout):
 
     def hasHeightForWidth(self):
         return True
+
+    def expandingDirections(self):
+        """Ni l'un ni l'autre. Par défaut un QLayout s'étend dans les deux
+        sens : en plein écran, les filtres et chaque mois de la galerie
+        prenaient l'espace libre, et un grand vide s'ouvrait sous les filtres
+        (Ludo, 2026-10-14)."""
+        return Qt.Orientation(0)
 
     def heightForWidth(self, width):
         hauteur = self._hauteurs.get(width)

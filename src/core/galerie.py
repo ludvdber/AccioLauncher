@@ -68,3 +68,24 @@ def compte_par_jeu(liste: list[Capture]) -> dict[str, int]:
         compte[c.jeu] = compte.get(c.jeu, 0) + 1
     return compte
 
+
+
+def chemin_vignette(capture: Path) -> Path | None:
+    """Où ranger la petite image de `capture`, dans `_Launcher/cache/vignettes`.
+
+    Une capture fait 10 Mo en PNG chez Ludo (2026-10-14) : la décoder pour une
+    vignette coûtait 155 ms, à chaque ouverture de la galerie. Le nom dépend du
+    chemin, de la date et de la taille : une capture remplacée a une autre
+    vignette. Résolu À L'APPEL (les tests déplacent `_Launcher`). None si la
+    capture n'existe plus.
+    """
+    import hashlib
+
+    from src.core import config
+    try:
+        infos = capture.stat()
+    except OSError:
+        return None
+    cle = f"{capture}|{infos.st_mtime_ns}|{infos.st_size}".encode("utf-8", "surrogatepass")
+    return (config.CONFIG_FILE_PATH.parent / "cache" / "vignettes"
+            / f"{hashlib.sha256(cle).hexdigest()[:24]}.jpg")

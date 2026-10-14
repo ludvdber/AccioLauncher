@@ -86,9 +86,10 @@ class TestEngrenageReglagesDuJeu:
         assert coche > 40, coche
         assert all(a < coche / 4 for a in autres), (coche, autres)
 
-    def test_le_folio_a_cote_de_l_engrenage(self, make_window_multilingue, monkeypatch):
-        """Depuis Mes années seulement, le folio était « horrible à trouver »
-        (Ludo, 2026-10-14) : un bouton juste avant l'engrenage, qui ouvre la page."""
+    def test_le_folio_dans_la_ligne_d_indices(self, make_window_multilingue, monkeypatch):
+        """Depuis Mes années seulement, le folio était « horrible à trouver » ;
+        en bouton près de l'engrenage, il faisait passer le temps de jeu sous
+        la rangée (Ludo, 2026-10-14). Il est un lien à côté de la version."""
         from src.ui.icon_button import IconButton
         from src.core import folio
         from src.core.game_manager import GameState
@@ -96,15 +97,23 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         autre = win.manager.get_games()[1].game
         monkeypatch.setattr(folio, "JEUX", (jeu.id,))
-        assert self._poser(win, autre, GameState.INSTALLED).findChild(
-            IconButton, "btnFolio") is None, "seulement là où le folio sait lire"
+        self._poser(win, autre, GameState.INSTALLED)
+        assert 'href="folio"' not in win._detail._info._indices.text(),             "seulement là où le folio sait lire"
         panneau = self._poser(win, jeu, GameState.INSTALLED)
-        bouton = panneau.findChild(IconButton, "btnFolio")
-        assert bouton is not None and bouton.icone() == "folio"
-        rangee = panneau._action_layout
-        assert rangee.indexOf(bouton) + 1 == rangee.indexOf(panneau._btn_reglages)
-        bouton.click()
+        win._detail._info.rafraichir_indices(jeu)
+        assert panneau.findChild(IconButton, "btnFolio") is None, "plus de bouton dans la rangée"
+        assert 'href="folio"' in win._detail._info._indices.text()
+        win._detail._info._on_meta_link("folio")
         assert isinstance(win._pages.page, FolioPage) and win._pages.page.game is jeu
+
+    def test_pas_de_folio_sur_un_jeu_non_installe(self, make_window_multilingue, monkeypatch):
+        from src.core import folio
+        from src.core.game_manager import GameState
+        win, jeu = make_window_multilingue()
+        monkeypatch.setattr(folio, "JEUX", (jeu.id,))
+        self._poser(win, jeu, GameState.NOT_INSTALLED)
+        win._detail._info.rafraichir_indices(jeu)
+        assert 'href="folio"' not in win._detail._info._indices.text()
 
     def test_absent_quand_le_jeu_n_est_pas_installe(self, make_window_multilingue):
         """Rien à régler sur un jeu qu'on n'a pas encore."""

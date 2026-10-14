@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -171,7 +172,12 @@ class NouveautesPage(QDialog):
         if self.nouveautes.points_forts:
             lay.addSpacing(24)
             cartes = [_CartePointFort(p) for p in self.nouveautes.points_forts]
-            lay.addWidget(Rangee(cartes, len(cartes), seuil=720, ecart=18))
+            rangee = Rangee(cartes, len(cartes), seuil=720, ecart=18)
+            # La hauteur de leur texte, pas celle de la fenêtre : en plein
+            # écran, les cartes prenaient 300 px de vide (Ludo, 2026-10-14).
+            for bloc in (rangee, *cartes):
+                bloc.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+            lay.addWidget(rangee)
         if self.nouveautes.changements:
             lay.addSpacing(26)
             lignes = [_LigneChangement(c) for c in self.nouveautes.changements]

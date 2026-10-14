@@ -58,6 +58,70 @@ def commande_systeme(nom: str) -> str:
     return str(Path(dossier_systeme()) / nom)
 
 
+def noms_commencant_par(dossier: Path, debut: str) -> list[str]:
+    """Les noms des entrées de `dossier` qui commencent par `debut`, casse ignorée.
+
+    Sous Windows, c'est le système qui filtre (un motif `debut*`) : WinSxS a
+    quelque 25 000 entrées, et les parcourir en Python figeait la fiche 90 ms
+    au premier affichage de HP5 ou de HP7 (mesuré le 2026-10-14 ; 0,2 ms par
+    le système). Ailleurs, ou si l'appel échoue, `os.scandir`. Dossier absent : [].
+    """
+    if sys.platform == "win32" and not any(c in debut for c in "*?"):
+        try:
+            noms = _noms_par_le_systeme(dossier, debut)
+        except OSError:
+            log.debug("Recherche par motif refusée dans %s", dossier, exc_info=True)
+        else:
+            # Le motif voit aussi les noms courts (8.3) : on ne garde que les longs.
+            return [n for n in noms if n.lower().startswith(debut.lower())]
+    try:
+        with os.scandir(dossier) as entrees:
+            return [e.name for e in entrees if e.name.lower().startswith(debut.lower())]
+    except OSError:
+        return []
+
+
+def _noms_par_le_systeme(dossier: Path, debut: str) -> list[str]:
+    """`FindFirstFileExW` sur `dossier\\debut*` ; OSError si l'API refuse."""
+    import ctypes
+    from ctypes import wintypes
+
+    class _Trouve(ctypes.Structure):          # WIN32_FIND_DATAW
+        _fields_ = [("attributs", wintypes.DWORD), ("creation", wintypes.FILETIME),
+                    ("acces", wintypes.FILETIME), ("ecriture", wintypes.FILETIME),
+                    ("taille_haute", wintypes.DWORD), ("taille_basse", wintypes.DWORD),
+                    ("reserve0", wintypes.DWORD), ("reserve1", wintypes.DWORD),
+                    ("nom", wintypes.WCHAR * 260), ("nom_court", wintypes.WCHAR * 14)]
+
+    # Une instance À NOUS : poser `argtypes` sur `ctypes.windll.kernel32`
+    # changerait ces fonctions pour tout le processus.
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.FindFirstFileExW.restype = wintypes.HANDLE
+    k32.FindFirstFileExW.argtypes = [wintypes.LPCWSTR, ctypes.c_int, ctypes.c_void_p,
+                                     ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+    k32.FindNextFileW.restype = wintypes.BOOL
+    k32.FindNextFileW.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+    k32.FindClose.argtypes = [wintypes.HANDLE]
+    trouve = _Trouve()
+    # 1 = FindExInfoBasic (pas de nom court à calculer), 0 = FindExSearchNameMatch.
+    poignee = k32.FindFirstFileExW(str(Path(dossier) / f"{debut}*"), 1,
+                                   ctypes.byref(trouve), 0, None, 0)
+    if poignee in (None, wintypes.HANDLE(-1).value):
+        erreur = ctypes.get_last_error()
+        if erreur in (2, 3):           # rien ne correspond, ou dossier absent
+            return []
+        raise ctypes.WinError(erreur)
+    noms = []
+    try:
+        while True:
+            noms.append(trouve.nom)
+            if not k32.FindNextFileW(poignee, ctypes.byref(trouve)):
+                break
+    finally:
+        k32.FindClose(poignee)
+    return noms
+
+
 def remove_zone_identifier(root: Path, pattern: str = "*") -> int:
     """Supprime le flag NTFS Zone.Identifier des fichiers sous `root` matchant `pattern`.
 

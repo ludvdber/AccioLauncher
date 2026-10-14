@@ -145,6 +145,7 @@ class MainWindow(QMainWindow):
         # Overlay particules (+ saison décorative, changeable en direct dans Paramètres)
         self._particles = ParticleOverlay(self)
         self._particles.apply_season(resolve_season(self.config.season))
+        self._particles.masquer(self._carousel.zones_jaquettes)
         self._particles.raise_()
 
         # Toast (notifications éphémères)

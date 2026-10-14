@@ -42,12 +42,14 @@ from src.ui.theme import current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
-_LARGEUR_FICHE = (236, 290)   # suit la fenêtre : 30 % de ce qui reste après le rail
+_LARGEUR_FICHE = (236, 420)   # suit la fenêtre : 30 % de ce qui reste après le rail
 _MARGE_FICHE = 24
 _IMAGE_FICHE = 220        # la carte du jeu fait 256 : jamais agrandie
 _COLONNES = 5             # 25 cartes : cinq rangées de cinq
 _ECART_CASES = 8
-_CASE_MIN, _CASE_MAX = 56, 108
+# Plafonds relevés le 2026-10-14 (108 et 290 px) : en plein écran, la grille
+# restait minuscule à gauche d'un grand vide (capture de Ludo, 2552 px).
+_CASE_MIN, _CASE_MAX = 56, 160
 
 # Les couleurs des maisons (maquette) : le haut du sablier, puis le bas.
 _COULEURS = {
@@ -373,7 +375,7 @@ class FolioPage(QDialog):
         self._groupe_cartes.setExclusive(True)
         for numero in range(1, folio.CARTES_HP1 + 1):
             trouvee = numero in releve.cartes
-            vignette = folio.image_carte_hp1(self._paquet, numero, grande=False) if trouvee else None
+            vignette = folio.image_carte_hp1(self._paquet, numero) if trouvee else None
             case = _CarteSorcier(numero, self.cartes.get(numero), trouvee, vignette)
             case.toggled.connect(lambda oui, n=numero: oui and self._montrer_carte(n))
             self._groupe_cartes.addButton(case)
@@ -433,7 +435,8 @@ class FolioPage(QDialog):
         return super().eventFilter(objet, event)
 
     def _ajuster_cases(self) -> None:
-        """Les cases suivent la place : cinq par rangée, entre 56 et 108 px."""
+        """Les cases suivent la place : cinq par rangée, entre 56 et 160 px
+        (la grande texture, 256 px : la petite serait floue à cette taille)."""
         if not self._cases:
             return
         marges = self._zone.widget().layout().contentsMargins()

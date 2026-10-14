@@ -115,8 +115,28 @@ class ParticleOverlay(QWidget):
         self._ticking = False
         self._season = "aucune"
         self._profil = profil_de("aucune")
+        # Ce que les particules contournent (`masquer`) : rien par défaut.
+        self._zones_masquees = lambda: []
 
         self.resume()
+
+    def masquer(self, zones) -> None:
+        """Les particules passent DERRIÈRE ces zones : ni peintes ni repeintes.
+
+        `zones()` rend des QRect en coordonnées de la fenêtre, lues à chaque
+        image (une jaquette grossit au survol). Ce sont les jaquettes du
+        carrousel : une particule qui les traversait les faisait repeindre,
+        environ 130 fois par seconde pour les huit, le premier poste de calcul
+        au repos (mesuré le 2026-10-14 ; Ludo : « une anomalie »).
+        """
+        self._zones_masquees = zones
+
+    def _masque(self) -> QRegion:
+        masque = QRegion()
+        decalage = self.pos()     # enfant direct de la fenêtre
+        for zone in self._zones_masquees():
+            masque += zone.translated(-decalage)
+        return masque
 
     def apply_season(self, season: str) -> None:
         """Change l'ambiance EN DIRECT : les particules sont re-semées au tick suivant."""
@@ -188,11 +208,16 @@ class ParticleOverlay(QWidget):
             elif pt.x > w + 20:
                 pt.x = -10
             sale += self._zone(pt)          # là où elle arrive
-        self.update(sale)
+        self.update(sale - self._masque())
 
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        masque = self._masque()
+        if not masque.isEmpty():
+            # Aussi sur une repeinte complète (redimensionnement) : peinte une
+            # fois sur une jaquette, une particule y resterait, jamais effacée.
+            p.setClipRegion(QRegion(self.rect()) - masque)
 
         for pt in self._particles:
             # Opacité oscillante (scintillement rapide pour les braises).

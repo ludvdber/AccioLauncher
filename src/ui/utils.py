@@ -1,8 +1,11 @@
 """Utilitaires Qt partagés entre les widgets UI."""
 
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import QEvent, QObject, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
-from PyQt6.QtWidgets import QComboBox, QLayout, QListView, QMessageBox, QScrollArea, QWidget
+from PyQt6.QtWidgets import (
+    QAbstractScrollArea, QApplication, QComboBox, QLayout, QListView, QMessageBox, QScrollArea,
+    QWidget,
+)
 
 from src.core.config import ASSETS_DIR
 from src.ui.theme import themed
@@ -94,7 +97,28 @@ def liste_deroulante() -> QComboBox:
     """
     liste = QComboBox()
     liste.setView(QListView(liste))
+    liste.installEventFilter(_SansMolette(liste))
     return liste
+
+
+class _SansMolette(QObject):
+    """La molette fait défiler la PAGE, jamais le réglage sous le curseur.
+
+    Une liste fermée changeait de valeur, et l'écrivait aussitôt, quand on
+    faisait défiler les réglages graphiques et que le curseur passait dessus
+    (Ludo, 2026-10-14 : « un scroll sans faire exprès peut tout ruiner »).
+    L'événement est passé à la zone défilante qui la contient, s'il y en a une.
+    """
+
+    def eventFilter(self, objet, event) -> bool:
+        if event.type() != QEvent.Type.Wheel:
+            return False
+        zone = objet.parentWidget()
+        while zone is not None and not isinstance(zone, QAbstractScrollArea):
+            zone = zone.parentWidget()
+        if zone is not None:
+            QApplication.sendEvent(zone.viewport(), event)
+        return True
 
 
 def zone_defilable(page: QWidget) -> QScrollArea:

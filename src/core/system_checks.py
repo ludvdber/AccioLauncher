@@ -5,6 +5,8 @@ import os
 import sys
 from pathlib import Path
 
+from src.core.win_utils import noms_commencant_par
+
 # Page officielle du redistribuable manquant. Elle vit ici, à côté du test qui
 # le détecte : le correctif et le diagnostic ne doivent pas pouvoir diverger.
 VCREDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
@@ -132,11 +134,9 @@ def crt_x86_present(winsxs: Path, version: str) -> bool:
     Windows) : l'assembly est là où le chargeur la cherche.
     """
     numero = version.removeprefix("vc")          # "80" / "90"
-    try:
-        motif = f"x86_microsoft.{version}.crt_{_CRT_JETON}_*/msvcr{numero}.dll"
-        return any(winsxs.glob(motif))
-    except OSError:
-        return False
+    debut = f"x86_microsoft.{version}.crt_{_CRT_JETON}_"
+    return any((winsxs / nom / f"msvcr{numero}.dll").is_file()
+               for nom in noms_commencant_par(winsxs, debut))
 
 
 def crt_x86_reel(winsxs: Path, version: str) -> bool:

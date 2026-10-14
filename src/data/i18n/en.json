@@ -971,8 +971,6 @@
     "Image copiée.": "Image copied.",
     "Image copiée, Discord s'ouvre. Dans le salon de votre choix, collez-la avec Ctrl+V.": "Image copied, Discord is opening. In the channel of your choice, paste it with Ctrl+V.",
     "Folio": "Folio",
-    "Folio de {}": "{} folio",
-    "Folio : cartes, dragées et Coupe des maisons": "Folio: cards, beans and the House Cup",
     "À égalité": "Tied",
     "Gryffondor mène": "Gryffindor leads",
     "{} mène de {} points": "{} leads by {} points",
@@ -996,6 +994,7 @@
     "Ouvrir le folio": "Open the folio",
     "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cards, beans and house points, read from your saves",
     "Changer de version garde vos sauvegardes et vos réglages.": "Switching versions keeps your saves and your settings.",
-    "Vos sauvegardes et vos réglages restent.": "Your saves and settings stay."
+    "Vos sauvegardes et vos réglages restent.": "Your saves and settings stay.",
+    "Ouvrir {}": "Open {}"
   }
 }

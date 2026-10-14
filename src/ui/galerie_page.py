@@ -10,13 +10,15 @@ Il copie l'image dans le presse-papiers et ouvre le Discord ; c'est le joueur
 qui la colle où il veut. La page le dit, pour qu'on ne cherche pas où elle est
 partie.
 
-Contenu : `src/core/galerie.py`. Les vignettes se chargent une par une après
-l'ouverture (`_charger_suivante`) : décoder d'un coup cent PNG de 2560 px
-figeait la page plusieurs secondes.
+Contenu : `src/core/galerie.py`. Les vignettes se décodent sur un fil à part
+après l'ouverture et se rangent dans `_Launcher/cache/vignettes`
+(`_poser_pretes`) : décoder d'un coup cent PNG de 2560 px figeait la page
+plusieurs secondes. Seule la capture choisie est lue en grand.
 """
 
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from PyQt6.QtCore import QDate, QLocale, QRectF, QSize, Qt, QTime, QTimer
 from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QImage, QImageReader, QPainter, QPixmap
@@ -45,6 +47,11 @@ from src.ui.utils import open_local_path, open_url, zone_defilable
 log = logging.getLogger(__name__)
 
 _LARGEUR_COTE = 380
+# En plein écran, la colonne et les vignettes grandissent (Ludo, 2026-10-14 :
+# « mettre en plein écran n'adapte pas trop les sections »). La vignette en
+# cache fait 416 px de large : au-delà de 330, elle s'agrandirait floue.
+_LARGEUR_COTE_MAX = 600
+_VIGNETTE_MAX = 330
 _VIGNETTE = QSize(208, 117)   # 16:9
 _APERCU_LARGEUR = _LARGEUR_COTE - 2 * 24
 
@@ -125,6 +132,29 @@ def _lire(chemin, largeur: int) -> QImage:
     return image
 
 
+def _vignette(chemin) -> QImage:
+    """La petite image d'une capture : depuis le cache, sinon décodée puis rangée.
+
+    Appelée HORS du fil de l'interface (un QImage s'y décode sans risque ; le
+    QPixmap, lui, se fabrique dans le fil de l'interface, `_Vignette.poser`).
+    """
+    cache = galerie.chemin_vignette(chemin)
+    if cache is not None and cache.is_file():
+        image = QImage(str(cache))
+        if not image.isNull():
+            return image
+    image = _lire(chemin, _VIGNETTE.width() * 2)
+    if cache is not None and not image.isNull():
+        try:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            provisoire = cache.with_suffix(".tmp")
+            if image.save(str(provisoire), "JPG", 90):
+                provisoire.replace(cache)
+        except OSError:
+            log.debug("Galerie : vignette de %s non gardée", chemin, exc_info=True)
+    return image
+
+
 class _Vignette(QPushButton):
     """Une capture : son image recadrée, un filet d'or quand elle est choisie."""
 
@@ -137,11 +167,20 @@ class _Vignette(QPushButton):
         self.setFixedSize(_VIGNETTE)
         self.setAccessibleName(f"{nom_jeu}, {quand(capture)}")
         self._pix: QPixmap | None = None
+        self._image: QImage | None = None
 
-    def charger(self) -> None:
-        if self._pix is None:
-            self._pix = _recadree(_lire(self.capture.chemin, _VIGNETTE.width() * 2), _VIGNETTE)
-            self.update()
+    def poser(self, image: QImage) -> None:
+        self._image = image
+        self.recadrer()
+
+    def recadrer(self) -> None:
+        """À la taille du bouton, en pixels réels (nette à 125 %)."""
+        if self._image is None:
+            return
+        echelle = self.devicePixelRatioF()
+        self._pix = _recadree(self._image, self.size() * echelle)
+        self._pix.setDevicePixelRatio(echelle)
+        self.update()
 
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
@@ -178,6 +217,7 @@ class GaleriePage(QDialog):
         self._mois: list[tuple[QWidget, list[_Vignette]]] = []
         self._filtres: dict[str, QPushButton] = {}
         self.choisie: galerie.Capture | None = None
+        self._apercu_image: QImage | None = None
 
         racine = QHBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
@@ -185,12 +225,26 @@ class GaleriePage(QDialog):
         racine.addWidget(zone_defilable(self._contenu()), stretch=1)
         racine.addWidget(self._cote())
 
-        self._a_charger = list(self._vignettes)
+        # Décodées sur un fil à part, les plus récentes d'abord, posées ici au
+        # fil de l'eau : chaque PNG de 10 Mo coûtait 155 ms au fil de
+        # l'interface (Ludo, 2026-10-14 : « ça met déjà du temps à charger avec
+        # 6 images »). Le cache des vignettes rend les ouvertures suivantes
+        # quasi immédiates.
+        self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="galerie")
+        self._attendues = [(v, self._fil.submit(_vignette, v.capture.chemin))
+                           for v in self._vignettes]
         self._chargeur = QTimer(self)
-        self._chargeur.setInterval(0)
-        self._chargeur.timeout.connect(self._charger_suivante)
-        if self._a_charger:
+        self._chargeur.setInterval(30)
+        self._chargeur.timeout.connect(self._poser_pretes)
+        self._fil_apercu: ThreadPoolExecutor | None = None
+        self._apercu_attendu = None
+        self._attente_apercu = QTimer(self)
+        self._attente_apercu.setInterval(30)
+        self._attente_apercu.timeout.connect(self._apercu_pret)
+        if self._attendues:
             self._chargeur.start()
+        else:
+            self._fil.shutdown(wait=False)
         self.filtrer(jeu if jeu in self._filtres else "")
         if self.choisie is None:
             self._montrer(None)
@@ -294,6 +348,7 @@ class GaleriePage(QDialog):
         cote = QFrame()
         cote.setObjectName("cote")
         cote.setFixedWidth(_LARGEUR_COTE)
+        self._cote_cadre = cote
         lay = QVBoxLayout(cote)
         lay.setContentsMargins(24, 28, 24, 22)
         lay.setSpacing(0)
@@ -364,11 +419,73 @@ class GaleriePage(QDialog):
 
     # ── Chargement des vignettes ──
 
-    def _charger_suivante(self) -> None:
-        if not self._a_charger:
+    def _poser_pretes(self) -> None:
+        restantes = []
+        for vignette, futur in self._attendues:
+            if not futur.done():
+                restantes.append((vignette, futur))
+            elif not futur.cancelled() and futur.exception() is None:
+                vignette.poser(futur.result())
+            elif not futur.cancelled():
+                log.warning("Galerie : vignette de %s impossible", vignette.capture.chemin,
+                            exc_info=futur.exception())
+        self._attendues = restantes
+        if not restantes:
             self._chargeur.stop()
+            self._fil.shutdown(wait=False)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._adapter()
+
+    def _adapter(self) -> None:
+        """La colonne de droite, l'aperçu et les vignettes suivent la largeur."""
+        cote = max(_LARGEUR_COTE, min(_LARGEUR_COTE_MAX, self.width() * 24 // 100))
+        if cote != self._cote_cadre.width():
+            self._cote_cadre.setFixedWidth(cote)
+            apercu = cote - 2 * 24
+            self._apercu.setFixedSize(apercu, apercu * 9 // 16)
+            if self._apercu_image is not None:
+                self._poser_apercu(self._apercu_image)
+        # Marges de la page (2 × 40) et place d'une barre de défilement.
+        place = self.width() - cote - 2 * 40 - 14
+        # Assez de colonnes pour ne pas dépasser `_VIGNETTE_MAX`, pas plus.
+        colonnes = max(1, -(-(place + 10) // (_VIGNETTE_MAX + 10)))
+        largeur = max(_VIGNETTE.width(),
+                      min(_VIGNETTE_MAX, (place - (colonnes - 1) * 10) // colonnes))
+        taille = QSize(largeur, largeur * 9 // 16)
+        for vignette in self._vignettes:
+            if vignette.size() != taille:
+                vignette.setFixedSize(taille)
+                vignette.recadrer()
+
+    def _poser_apercu(self, image: QImage) -> None:
+        self._apercu_image = image
+        pix = _recadree(image, self._apercu.size() * self.devicePixelRatioF())
+        pix.setDevicePixelRatio(self.devicePixelRatioF())
+        self._apercu.setPixmap(pix)
+
+    def _apercu_pret(self) -> None:
+        if self._apercu_attendu is None:
+            self._attente_apercu.stop()
             return
-        self._a_charger.pop(0).charger()
+        capture, futur = self._apercu_attendu
+        if not futur.done():
+            return
+        self._attente_apercu.stop()
+        self._apercu_attendu = None
+        # Un autre choix a pu passer entre-temps : on ne pose que le bon.
+        if capture == self.choisie and not futur.cancelled() and futur.exception() is None:
+            self._poser_apercu(futur.result())
+
+    def done(self, resultat: int) -> None:
+        """La page se ferme : plus rien à décoder pour elle."""
+        self._chargeur.stop()
+        self._attente_apercu.stop()
+        self._fil.shutdown(wait=False, cancel_futures=True)
+        if self._fil_apercu is not None:
+            self._fil_apercu.shutdown(wait=False, cancel_futures=True)
+        super().done(resultat)
 
     # ── Filtre et choix ──
 
@@ -403,12 +520,20 @@ class GaleriePage(QDialog):
             self._titre_jeu.setText("")
             self._details.setText("")
             return
-        image = _lire(capture.chemin, self._apercu.width() * 2)
+        # La vignette en cache tout de suite, la capture en grand dès qu'elle
+        # est décodée (155 ms pour un PNG de 10 Mo, hors du fil de l'interface).
+        cache = galerie.chemin_vignette(capture.chemin)
+        if cache is not None and cache.is_file():
+            self._poser_apercu(QImage(str(cache)))
+        else:
+            self._apercu.clear()
+        if self._fil_apercu is None:
+            self._fil_apercu = ThreadPoolExecutor(max_workers=1, thread_name_prefix="apercu")
+        self._apercu_attendu = (capture, self._fil_apercu.submit(
+            _lire, capture.chemin, self._apercu.width() * 2))
+        self._attente_apercu.start()
         lecteur = QImageReader(str(capture.chemin))
         taille = lecteur.size()
-        pix = _recadree(image, self._apercu.size() * self.devicePixelRatioF())
-        pix.setDevicePixelRatio(self.devicePixelRatioF())
-        self._apercu.setPixmap(pix)
         nom = next((g.name for g in self._jeux if g.id == capture.jeu), capture.jeu)
         self._titre_jeu.setText(nom)
         details = quand(capture)
