@@ -76,12 +76,9 @@ class GlowButton(QPushButton):
         self._detail_font = detail_font
         self._icone = icone
 
-        if bg_stops:
-            self._bg_top = QColor(bg_stops[0])
-            self._bg_bot = QColor(bg_stops[2])
-        else:
-            self._bg_top = QColor(palette.accent)
-            self._bg_bot = QColor(palette.accent_dark)
+        # Le dégradé est parti avec l'animation (2026-10-14) : seule la
+        # couleur du haut fait encore le fond.
+        self._bg_top = QColor(bg_stops[0] if bg_stops else palette.accent)
 
         if text_color:
             self._text_color = QColor(text_color)

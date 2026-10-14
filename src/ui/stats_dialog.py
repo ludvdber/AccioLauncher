@@ -91,7 +91,6 @@ class StatsDialog(QDialog):
         # Les dérivées dont vit toute la page, calculées UNE fois.
         self._entrees = manager.get_games()
         self._noms = {e.game.id: e.game.name for e in self._entrees}
-        self._etats = {e.game.id: e.state for e in self._entrees}
         self._temps = stats.temps_par_jeu(self._hist)
         self._parties = stats.parties_par_jeu(self._hist)
         self._dernieres = stats.derniere_par_jeu(self._hist)

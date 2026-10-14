@@ -3,6 +3,8 @@ le modèle de `HPMenu.u` relevé le 2026-10-14 (aucune donnée du jeu)."""
 
 import struct
 
+import pytest
+
 from src.core import folio, textures_ue1
 
 
@@ -97,6 +99,25 @@ class TestTexture:
         for coupe in (40, 80, len(complet) - 20):
             chemin.write_bytes(complet[:coupe])
             assert textures_ue1.texture(chemin, "Tex0") is None
+
+    def test_une_taille_negative_ne_fait_pas_reculer_la_lecture(self):
+        """Un booléen dont la taille (sur 4 octets) vaut -6 ramenait la lecture
+        au début de la propriété : boucle sans fin, page du folio figée."""
+        p = textures_ue1.Paquet.__new__(textures_ue1.Paquet)
+        p.noms = ["None", "bMasked"]
+        # Nom 1, octet d'info : booléen (3), taille sur 4 octets (code 7).
+        donnees = bytes([1, 0x73]) + struct.pack("<i", -6)
+        lecteur = textures_ue1._Lecteur(donnees)
+        with pytest.raises(ValueError):
+            p._proprietes(lecteur, len(donnees))
+
+    def test_des_tables_annoncees_plus_grandes_que_le_fichier(self, tmp_path):
+        """Des compteurs absurdes sont refusés d'emblée, sans des millions de tours."""
+        complet = bytearray(paquet())
+        struct.pack_into("<i", complet, 12, 2**31 - 1)     # nombre de noms
+        chemin = tmp_path / "Menu.u"
+        chemin.write_bytes(bytes(complet))
+        assert textures_ue1.texture(chemin, "Tex0") is None
 
 
 class TestCartesDuFolio:

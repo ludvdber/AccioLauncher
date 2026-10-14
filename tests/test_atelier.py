@@ -136,8 +136,19 @@ class TestPage:
     def test_chaque_besoin_a_sa_ligne(self, qtbot):
         from PyQt6.QtWidgets import QWidget
         page = self._page(qtbot)
+        for m in page.metiers:
+            page.choisir(m.id)
         lignes = [w for w in page.findChildren(QWidget) if w.objectName() == "besoin"]
         assert len(lignes) == sum(len(m.besoins) for m in page.metiers)
+
+    def test_seul_le_metier_affiche_est_construit(self, qtbot):
+        """Les sept pages d'avance coûtaient 550 ms d'ouverture (2026-10-14)."""
+        page = self._page(qtbot)
+        assert page._details.count() == 1
+        page.choisir(page.metiers[1].id)
+        page.choisir(page.metiers[0].id)
+        assert page._details.count() == 2
+        assert page.metier_affiche == page.metiers[0].id
 
     def test_choisir_un_metier_change_la_page(self, qtbot):
         page = self._page(qtbot)

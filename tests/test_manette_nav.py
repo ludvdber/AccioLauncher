@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
 
 from src.core import manette_lecture as lec
 from src.core.manette_lecture import Etat, Repetition
-from tests.test_integration_smoke import make_window  # noqa: F401  (fixture)
 
 
 class TestPov:

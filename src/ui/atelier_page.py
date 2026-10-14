@@ -149,13 +149,14 @@ class AtelierPage(QDialog):
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
         racine.addWidget(self._rail())
+        # La page d'un métier se construit à sa première visite : les sept
+        # d'avance, chacune dans sa zone défilante, faisaient 550 ms
+        # d'ouverture pour n'en montrer qu'une (mesuré le 2026-10-14).
         self._details = QStackedWidget()
         self._details.setStyleSheet("background: transparent;")
-        for m in self.metiers:
-            self._index[m.id] = self._details.addWidget(zone_defilable(self._detail(m)))
         racine.addWidget(self._details, stretch=1)
         if self.metiers:
-            self.choisir(metier if metier in self._index else self.metiers[0].id)
+            self.choisir(metier if metier in self._lignes else self.metiers[0].id)
 
     def _rail(self) -> QFrame:
         rail = QFrame()
@@ -307,6 +308,9 @@ class AtelierPage(QDialog):
             ligne.setChecked(True)
 
     def _montrer(self, metier: str) -> None:
+        if metier not in self._index:
+            choisi = self._lignes[metier].metier
+            self._index[metier] = self._details.addWidget(zone_defilable(self._detail(choisi)))
         self._details.setCurrentIndex(self._index[metier])
 
     @property

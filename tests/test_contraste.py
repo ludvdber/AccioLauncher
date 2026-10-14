@@ -36,9 +36,10 @@ from PyQt6.QtWidgets import QApplication, QWidget  # noqa: E402
 def fenetre(qtbot, tmp_path, monkeypatch):
     """MainWindow sur une config temporaire — même recette que le smoke test.
 
-    Dupliquée plutôt qu'importée : `make_window` vit dans
-    `test_integration_smoke.py`, et importer une fixture d'un module de tests à
-    l'autre crée une dépendance qu'aucun des deux ne déclare.
+    Écrite quand `make_window` vivait dans `test_integration_smoke.py` :
+    importer une fixture d'un module de tests à l'autre créait une dépendance
+    qu'aucun des deux ne déclarait. Elle est dans `conftest.py` depuis le
+    2026-10-14.
     """
     monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
     monkeypatch.setattr("src.ui.main_window.MainWindow._start_update_check",

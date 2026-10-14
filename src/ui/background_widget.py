@@ -1,6 +1,7 @@
 """BackgroundWidget — image de fond avec zoom cinématique et parallaxe."""
 
 import math
+from collections import OrderedDict
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QRectF, pyqtProperty
@@ -48,8 +49,12 @@ _DEBORD_PX = 2
 # revanche, coûterait 8 %.
 _VOILE_ALPHA = 38
 
-# Fonds déjà décodés, par chemin (voir `BackgroundWidget.set_image`).
-_FONDS_DECODES: dict[str, QPixmap | None] = {}
+# Fonds déjà décodés, par chemin, le plus récent en dernier (voir
+# `BackgroundWidget.set_image`). Les trois derniers seulement : les huit
+# gardés coûtaient 30 Mo de plus après un tour des fiches (mesuré le
+# 2026-10-14, 57 → 87 Mo), pour 12 ms par retour sur un jeu déjà vu.
+_FONDS_DECODES: OrderedDict[str, QPixmap | None] = OrderedDict()
+_FONDS_GARDES = 3
 
 # Voile gauche : (position sur la largeur, alpha). C'est LUI qui protège
 # réellement le texte — le voile plein ci-dessus assombrit uniformément, mais
@@ -264,12 +269,16 @@ class BackgroundWidget(QWidget):
         self.update()
 
     def set_image(self, path: Path | None) -> None:
-        # Décodées UNE fois par session : le JPEG était relu et décodé à chaque
-        # changement de jeu, 12 ms sur les ~60 du clic (mesuré le 2026-10-14).
-        # Huit fonds au plus, de 1 à 5 Mo chacun une fois décodés.
+        # Le JPEG était relu et décodé à chaque changement de jeu, 12 ms sur
+        # les ~60 du clic (mesuré le 2026-10-14) : les trois derniers fonds
+        # restent décodés, de quoi aller et venir entre voisins.
         cle = str(path) if path else ""
-        if cle not in _FONDS_DECODES:
+        if cle in _FONDS_DECODES:
+            _FONDS_DECODES.move_to_end(cle)
+        else:
             _FONDS_DECODES[cle] = (QPixmap(cle) if path and path.exists() else None)
+            while len(_FONDS_DECODES) > _FONDS_GARDES:
+                _FONDS_DECODES.popitem(last=False)
         self._pixmap = _FONDS_DECODES[cle]
         self._prepared = None
         self._prepared_for = (0, 0)

@@ -194,7 +194,7 @@ class TestAuLancement:
 
 @pytest.fixture
 def fenetre(qtbot, tmp_path, monkeypatch):
-    """Une MainWindow sur une config isolée (comme `make_window` de test_integration_smoke)."""
+    """Une MainWindow sur une config isolée (comme `make_window` de conftest)."""
     def _make(**overrides):
         monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
         monkeypatch.setattr("src.ui.main_window.MainWindow._start_update_check", lambda self: None)

@@ -89,6 +89,10 @@ class Paquet:
         lec.i32()   # drapeaux
         nb_noms, pos_noms, nb_exports, pos_exports, nb_imports, pos_imports = (
             lec.i32() for _ in range(6))
+        # Chaque entrée occupe au moins un octet : un compteur plus grand que le
+        # fichier ne peut être que faux (sinon des millions de tours avant l'erreur).
+        if not all(0 <= n <= len(data) for n in (nb_noms, nb_exports, nb_imports)):
+            raise ValueError("tables plus grandes que le paquet")
         self._d = data
         self.noms: list[str] = []
         lec.p = pos_noms
@@ -143,6 +147,9 @@ class Paquet:
                 lec.p += 2
             else:
                 taille = lec.i32()
+            if taille < 0:
+                # Elle ferait RECULER la lecture : boucle sans fin.
+                raise ValueError("taille de propriété négative")
             if genre == _BOOL:
                 # La valeur est le bit « tableau » ; pas d'octets (taille 0, relevé).
                 props[nom] = bool(tableau)

@@ -382,7 +382,6 @@ class GaleriePage(QDialog):
                 vignette.setVisible(garder)
                 visibles += garder
             bloc.setVisible(visibles > 0)
-        self.jeu_filtre = jeu
         visible = self.choisie_visible()
         if visible is not None and visible != self.choisie:
             next(v for v in self._vignettes if v.capture == visible).setChecked(True)

@@ -415,3 +415,102 @@ def mise_en_page_stable(qtbot):
         qtbot.waitUntil(_stable, timeout=timeout)
 
     return attendre
+
+
+# ── Une vraie MainWindow (sorties de test_integration_smoke.py, 2026-10-14) ──
+
+@pytest.fixture
+def make_window(qtbot, tmp_path, monkeypatch):
+    """Construit une MainWindow sur une config temporaire isolée."""
+    def _make(**overrides):
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        from src.core.config import Config
+        # La vérification des MAJ est inconditionnelle en production : c'est ici
+        # qu'on la neutralise, pas via un réglage utilisateur qui n'existe plus.
+        monkeypatch.setattr("src.ui.main_window.MainWindow._start_update_check",
+                            lambda self: None)
+        cfg = Config(
+            install_path=tmp_path / "games",
+            cache_path=tmp_path / "games" / ".cache",
+            # Le défaut applicatif est l'anglais ; ces tests vérifient des
+            # chaînes FRANÇAISES, donc ils demandent explicitement le français.
+            langue="fr",
+            **{"autoplay_videos": False, **overrides},  # surchargeable par test
+        )
+        cfg.save()
+        from src.ui.main_window import MainWindow
+        win = MainWindow()
+        qtbot.addWidget(win)
+        return win
+    yield _make
+    from src.core.i18n import set_language
+    from src.ui.theme import set_theme
+    set_language("fr")
+    set_theme("poudlard")
+
+
+@pytest.fixture
+def make_window_jeu_a_venir(make_window, monkeypatch):
+    """MainWindow dont le DERNIER jeu du catalogue est privé de ses sources.
+
+    Depuis la v0.18 du catalogue, les huit jeux sont en ligne : le cas « bientôt
+    disponible » n'a plus d'illustration réelle. Le comportement reste pourtant
+    du code vivant, et le prochain jeu annoncé le réactivera.
+
+    On fabrique donc le cas au lieu de le chercher. C'est aussi le bon découplage
+    sur le fond : `games.json` se met à jour **à distance**, sans republier le
+    launcher — un test qui suppose son contenu casse à chaque livraison de jeu,
+    loin de la ligne de code qu'il surveille.
+
+    Retourne `(fenêtre, jeu_sans_source)`.
+    """
+    def _make(**overrides):
+        import dataclasses
+
+        from src.core import game_manager
+        vrai_load = game_manager.load_catalog
+
+        def _catalogue_ampute(*a, **k):
+            cat = vrai_load(*a, **k)
+            jeux = list(cat.games)
+            sans_source = dataclasses.replace(
+                jeux[-1],
+                versions=tuple(dataclasses.replace(v, download_url=None,
+                                                   download_parts=None)
+                               for v in jeux[-1].versions))
+            jeux[-1] = sans_source
+            return dataclasses.replace(cat, games=tuple(jeux))
+
+        monkeypatch.setattr(game_manager, "load_catalog", _catalogue_ampute)
+        win = make_window(**overrides)
+        return win, win.manager.get_games()[-1].game
+    return _make
+
+
+@pytest.fixture
+def make_window_multilingue(make_window, monkeypatch):
+    """MainWindow dont le PREMIER jeu propose trois langues.
+
+    Fabriqué, jamais cherché dans `games.json` : le catalogue se met à jour à
+    distance, un test qui suppose son contenu casse à chaque livraison de jeu.
+    """
+    def _make(**overrides):
+        import dataclasses
+
+        from src.core import game_manager
+        from src.core.game_data import _parse_language_registry
+        vrai_load = game_manager.load_catalog
+        from tests.fenetre_commune import _LANG_BLOCK
+        bloc = _parse_language_registry(_LANG_BLOCK)
+        assert bloc is not None, "le bloc de test doit être accepté au parsing"
+
+        def _charge(*a, **k):
+            cat = vrai_load(*a, **k)
+            jeux = list(cat.games)
+            jeux[0] = dataclasses.replace(jeux[0], language_registry=bloc)
+            return dataclasses.replace(cat, games=tuple(jeux))
+
+        monkeypatch.setattr(game_manager, "load_catalog", _charge)
+        win = make_window(**overrides)
+        return win, win.manager.get_games()[0].game
+    return _make

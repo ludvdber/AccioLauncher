@@ -19,16 +19,16 @@
           }
         },
         {
-          "icone": "drapeau",
+          "icone": "folio",
           "titre": {
-            "fr": "Un premier lancement refait",
-            "en": "A new first launch",
-            "es": "Un primer inicio renovado"
+            "fr": "Le folio de L'École des Sorciers",
+            "en": "The Philosopher's Stone folio",
+            "es": "El folio de La piedra filosofal"
           },
           "texte": {
-            "fr": "Le Choixpeau pose une question à la fois. Les jeux déjà dans votre dossier sont repris tout seuls.",
-            "en": "The Sorting Hat asks one question at a time. Games already in your folder are picked up on their own.",
-            "es": "El Sombrero Seleccionador hace una pregunta a la vez. Los juegos que ya están en tu carpeta se recuperan solos."
+            "fr": "Vos cartes de sorciers, vos dragées et les points des quatre maisons, lus dans vos sauvegardes.",
+            "en": "Your wizard cards, your beans and the points of all four houses, read from your saves.",
+            "es": "Tus cromos de magos, tus grageas y los puntos de las cuatro casas, leídos de tus partidas."
           }
         },
         {
@@ -81,17 +81,25 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "Le folio de L'École des Sorciers : cartes trouvées, dragées et points des quatre maisons, lus dans vos sauvegardes.",
-            "en": "The Philosopher's Stone folio: cards found, beans and the points of all four houses, read from your saves.",
-            "es": "El folio de La piedra filosofal: cromos encontrados, grageas y puntos de las cuatro casas, leídos de tus partidas."
+            "fr": "« Contribuer » ouvre l'atelier : jaquettes, textures, écrans de chargement et vidéos qui cherchent un artiste.",
+            "en": "“Contribute” opens the workshop: covers, textures, loading screens and videos looking for an artist.",
+            "es": "«Contribuir» abre el taller: portadas, texturas, pantallas de carga y vídeos que buscan artista."
           }
         },
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "« Contribuer » ouvre l'atelier : jaquettes, textures, écrans de chargement et vidéos qui cherchent un artiste.",
-            "en": "“Contribute” opens the workshop: covers, textures, loading screens and videos looking for an artist.",
-            "es": "«Contribuir» abre el taller: portadas, texturas, pantallas de carga y vídeos que buscan artista."
+            "fr": "Après une mise à jour, cette page dit ce qu'elle apporte.",
+            "en": "After an update, this page tells you what it brings.",
+            "es": "Tras una actualización, esta página cuenta lo que trae."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Le premier lancement refait : le Choixpeau pose une question à la fois, et les jeux déjà dans votre dossier sont repris tout seuls.",
+            "en": "A new first launch: the Sorting Hat asks one question at a time, and games already in your folder are picked up on their own.",
+            "es": "Un primer inicio renovado: el Sombrero Seleccionador hace una pregunta a la vez, y los juegos que ya están en tu carpeta se recuperan solos."
           }
         },
         {
@@ -127,6 +135,14 @@
           }
         },
         {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Le launcher garde moins de mémoire, et l'atelier s'ouvre sans attendre.",
+            "en": "The launcher uses less memory, and the workshop opens at once.",
+            "es": "El launcher usa menos memoria, y el taller se abre al momento."
+          }
+        },
+        {
           "genre": "corrige",
           "texte": {
             "fr": "« Actualiser le catalogue » ne revient plus à une version plus ancienne du catalogue.",
@@ -156,6 +172,14 @@
             "fr": "Changer de version ou réparer un jeu garde vos réglages d'image et vos touches.",
             "en": "Switching versions or repairing a game keeps your image settings and your keys.",
             "es": "Cambiar de versión o reparar un juego conserva tus ajustes de imagen y tus teclas."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Un fichier du jeu abîmé ne peut plus figer le folio.",
+            "en": "A damaged game file can no longer freeze the folio.",
+            "es": "Un archivo del juego dañado ya no puede congelar el folio."
           }
         }
       ]
