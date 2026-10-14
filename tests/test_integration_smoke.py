@@ -1967,6 +1967,26 @@ class TestEngrenageReglagesDuJeu:
         assert coche > 40, coche
         assert all(a < coche / 4 for a in autres), (coche, autres)
 
+    def test_le_folio_a_cote_de_l_engrenage(self, make_window_multilingue, monkeypatch):
+        """Depuis Mes années seulement, le folio était « horrible à trouver »
+        (Ludo, 2026-10-14) : un bouton juste avant l'engrenage, qui ouvre la page."""
+        from src.ui.icon_button import IconButton
+        from src.core import folio
+        from src.core.game_manager import GameState
+        from src.ui.folio_page import FolioPage
+        win, jeu = make_window_multilingue()
+        autre = win.manager.get_games()[1].game
+        monkeypatch.setattr(folio, "JEUX", (jeu.id,))
+        assert self._poser(win, autre, GameState.INSTALLED).findChild(
+            IconButton, "btnFolio") is None, "seulement là où le folio sait lire"
+        panneau = self._poser(win, jeu, GameState.INSTALLED)
+        bouton = panneau.findChild(IconButton, "btnFolio")
+        assert bouton is not None and bouton.icone() == "folio"
+        rangee = panneau._action_layout
+        assert rangee.indexOf(bouton) + 1 == rangee.indexOf(panneau._btn_reglages)
+        bouton.click()
+        assert isinstance(win._pages.page, FolioPage) and win._pages.page.game is jeu
+
     def test_absent_quand_le_jeu_n_est_pas_installe(self, make_window_multilingue):
         """Rien à régler sur un jeu qu'on n'a pas encore."""
         from src.core.game_manager import GameState

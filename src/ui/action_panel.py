@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
+from src.core import folio
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -81,6 +82,10 @@ class ActionPanel(QWidget):
     # d'entrée des réglages graphiques à venir — d'où un menu, et non un
     # second sélecteur de langue.
     game_settings_clicked = pyqtSignal()
+    # Folio, à côté de l'engrenage, pour les jeux dont il sait lire les
+    # sauvegardes : depuis Mes années seulement, il était « horrible à
+    # trouver » (Ludo, 2026-10-14).
+    folio_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -455,6 +460,14 @@ class ActionPanel(QWidget):
         # niveaux de gris : 49 % de pixels colorés, contre 0 % pour une lettre
         # et 22 % pour 🔊 pris comme témoin. Il partait donc en couleur, comme
         # le haut-parleur de la barre audio, et plus franchement encore.
+        if self._game.id in folio.JEUX:
+            btn_folio = IconButton("folio", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
+            btn_folio.setObjectName("btnFolio")
+            btn_folio.setAccessibleName(tr("Folio de {}").format(self._game.name))
+            btn_folio.setToolTip(tr("Folio : cartes, dragées et Coupe des maisons"))
+            btn_folio.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_folio.clicked.connect(self.folio_clicked)
+            self._action_layout.addWidget(btn_folio)
         btn_reglages = IconButton("reglages", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
         btn_reglages.setObjectName("btnGameSettings")
         btn_reglages.setAccessibleName(

@@ -161,6 +161,7 @@ class GameDetailView(QWidget):
         self._info.language_clicked.connect(lambda: handlers.on_language_clicked(self))
         self._action_panel.game_settings_clicked.connect(
             lambda: handlers.on_game_settings(self))
+        self._action_panel.folio_clicked.connect(self.ouvrir_folio)
         self._info.content_changed.connect(self._position_info)
 
         # Menu contextuel
@@ -237,6 +238,12 @@ class GameDetailView(QWidget):
         """L'atelier des artistes, à la place de la bibliothèque (`pages.py`)."""
         from src.ui.atelier_page import AtelierPage
         self.page_demandee.emit(AtelierPage(self.manager.catalog.games, self.window(), metier))
+
+    def ouvrir_folio(self) -> None:
+        """Le folio du jeu affiché ; son retour ramène à la bibliothèque."""
+        from src.ui.folio_page import FolioPage
+        self.page_demandee.emit(FolioPage(self.game, self.manager.config.install_path,
+                                          self.window()))
 
     # ──────────────────── Mode cinéma ────────────────────
 

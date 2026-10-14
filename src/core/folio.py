@@ -45,7 +45,27 @@ MAISONS = (GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE)
 # Les jeux dont le folio sait lire les sauvegardes, par id du catalogue.
 JEUX = ("hp1",)
 
-CARTES_HP1 = 28
+# Le folio du jeu, emplacement par emplacement : `WizardCards[i]` de la
+# sauvegarde est la carte i + 1 de cette liste. Relevé le 2026-10-14 dans le
+# jeu installé, pas déduit des textes :
+# - l'ordre vient des propriétés par défaut de `baseHarry` (`HPBase.u`), où
+#   chaque `WizardCards[i]` porte l'`ID` de collection de sa carte ;
+# - l'ID mène au texte par `FEFolioPage.GetWizardText` et à l'image par
+#   `GetBigTexture` / `GetSmallTexture` (`HPMenu.u`).
+# 25 cartes : le fichier de textes en a 28, mais Merwyn (06), Archibald (13)
+# et Grogan (16) n'y sont jamais appelés. Le numéro PEINT sur la carte (96 pour
+# Hengist) est l'ID de collection, pas l'emplacement.
+# (nom de la texture dans `HPMenu.u`, numéro de `wizard_card_new_NN`)
+_FOLIO_HP1 = (
+    ("Dumbledore", 4), ("Merlin", 1), ("Tilly", 12), ("Burdock", 2),
+    ("Adalbert", 11), ("Uric", 8), ("Derwent", 25), ("Cornelius", 10),
+    ("Newt", 9), ("Edgar", 18), ("Bowman", 14), ("Godric", 17),
+    ("Morgan", 7), ("Bertie", 23), ("Salizar", 19), ("Cassandra", 15),
+    ("Ignatia", 22), ("Gifford", 21), ("Elladora", 20), ("Hengist", 28),
+    ("Helga", 24), ("Rowena", 26), ("Roderic", 27), ("Herpo", 5),
+    ("Harry", 3),
+)
+CARTES_HP1 = len(_FOLIO_HP1)
 _PROPRIETES_HP1 = {
     GRYFFONDOR: "numHousePointsGryffindor",
     SERPENTARD: "numHousePointsSlytherin",
@@ -64,7 +84,7 @@ _EXTENSIONS = {"fr": "fre", "es": "esp", "de": "det", "it": "itt", "en": "int"}
 
 @dataclass(frozen=True)
 class Carte:
-    numero: int        # 1 à 28, comme le jeu
+    numero: int        # emplacement du folio, 1 à 25, dans l'ordre du jeu
     nom: str
     dates: str
     texte: str
@@ -78,7 +98,7 @@ class Releve:
     modifie: datetime
     niveau: str = ""              # code du niveau (« LEV2_HOGFRONT »)
     lu: bool = False              # False : aucun bloc d'Harry (tout début du jeu)
-    cartes: frozenset[int] = field(default_factory=frozenset)   # numéros 1 à 28
+    cartes: frozenset[int] = field(default_factory=frozenset)   # emplacements 1 à 25
     dragees: int = 0
     points: dict[str, int] = field(default_factory=dict)        # par maison
     points_harry: int = 0
@@ -200,7 +220,7 @@ def fichier_textes(system: Path, langue: str) -> Path | None:
 
 
 def textes_hp1(fichier: Path | None) -> tuple[dict[int, Carte], dict[str, str]]:
-    """(cartes par numéro, titres des niveaux par code en minuscules)."""
+    """(cartes par emplacement du folio, titres des niveaux par code en minuscules)."""
     if fichier is None:
         return {}, {}
     try:
@@ -223,9 +243,9 @@ def textes_hp1(fichier: Path | None) -> tuple[dict[int, Carte], dict[str, str]]:
         elif cle.startswith("title_"):
             titres.setdefault(cle[len("title_"):], valeur.strip())
     cartes: dict[int, Carte] = {}
-    for numero in range(1, CARTES_HP1 + 1):
+    for numero, (_texture, texte_jeu) in enumerate(_FOLIO_HP1, start=1):
         # La variante « b » est la version corrigée du jeu (28 : « Ecosse. fondant »).
-        brut = brutes.get(f"{numero:02d}b") or brutes.get(f"{numero:02d}")
+        brut = brutes.get(f"{texte_jeu:02d}b") or brutes.get(f"{texte_jeu:02d}")
         if not brut:
             continue
         morceaux = re.split(r"\.\s+", brut, maxsplit=2)
@@ -238,3 +258,24 @@ def textes_hp1(fichier: Path | None) -> tuple[dict[int, Carte], dict[str, str]]:
 
 def lieu(titres: dict[str, str], niveau: str) -> str:
     return titres.get(niveau.lower(), "") if niveau else ""
+
+
+# ── Les images des cartes, dans le jeu installé ──
+
+def paquet_menu(system: Path) -> Path | None:
+    """`HPMenu.u`, quelle que soit sa casse."""
+    try:
+        return next((p for p in system.iterdir() if p.name.lower() == "hpmenu.u"), None)
+    except OSError:
+        return None
+
+
+def image_carte_hp1(paquet: Path | None, numero: int, grande: bool = True):
+    """La carte de l'emplacement `numero` telle que le jeu la dessine
+    (`textures_ue1.TexturePaletee`), ou None. Noms de texture du jeu,
+    orthographe comprise (« Salizar », « Uric »)."""
+    if paquet is None or not 1 <= numero <= CARTES_HP1:
+        return None
+    nom = _FOLIO_HP1[numero - 1][0]
+    from src.core import textures_ue1
+    return textures_ue1.texture(paquet, f"WizCard{nom}{'Big' if grande else 'Small'}Texture")

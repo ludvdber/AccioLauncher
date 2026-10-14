@@ -9,7 +9,8 @@ from src.core.config import ATELIER_PATH
 from src.core.i18n import set_language
 
 LIBELLES = {atelier.JAQUETTE: "Jaquette", atelier.FOND: "Fond d'écran",
-            "carree": "Carrée aujourd'hui", "taille": "{} × {} aujourd'hui"}
+            "carree": "Carrée aujourd'hui", "taille": "{} × {} aujourd'hui",
+            "priorite": "en priorité"}
 
 
 @pytest.fixture(autouse=True)
@@ -20,10 +21,11 @@ def _francais():
 
 
 class TestContenuEmbarque:
-    def test_cinq_metiers_dont_un_mesure(self):
+    def test_sept_metiers_dont_un_mesure(self):
         data = json.loads(ATELIER_PATH.read_text(encoding="utf-8"))
         ids = [m["id"] for m in data["metiers"]]
-        assert ids == ["jaquettes", "textures", "chargement", "sauvegardes", "videos"]
+        assert ids == ["jaquettes", "bandes-annonces", "cartes", "textures", "chargement",
+                       "sauvegardes", "videos"]
         assert [m["id"] for m in data["metiers"] if m.get("auto")] == ["jaquettes"]
 
     @pytest.mark.parametrize("langue", ["fr", "en", "es"])
@@ -47,16 +49,20 @@ class TestContenuEmbarque:
 
 
 class TestBesoinsMesures:
-    def test_une_jaquette_carree_et_un_fond_trop_petit(self):
+    def test_toutes_les_images_les_petites_en_priorite(self):
+        """Toutes, pas seulement les trop petites : le but est aussi de ne plus
+        dépendre des images de Warner (Ludo, 2026-10-14)."""
         besoins = atelier.besoins_mesures(
             {"hp2": ((1024, 1024), (1920, 620)), "hp3": ((1080, 1500), (920, 430))}, LIBELLES)
-        assert [(b.jeu, b.genre, b.detail) for b in besoins] == [
-            ("HP2", atelier.JAQUETTE, "Carrée aujourd'hui"),
-            ("HP3", atelier.FOND, "920 × 430 aujourd'hui")]
+        assert [(b.jeu, b.genre, b.detail, b.prioritaire) for b in besoins] == [
+            ("HP2", atelier.JAQUETTE, "Carrée aujourd'hui · en priorité", True),
+            ("HP2", atelier.FOND, "1920 × 620 aujourd'hui", False),
+            ("HP3", atelier.JAQUETTE, "1080 × 1500 aujourd'hui", False),
+            ("HP3", atelier.FOND, "920 × 430 aujourd'hui · en priorité", True)]
 
     def test_une_image_absente_n_a_pas_de_taille_a_dire(self):
         besoins = atelier.besoins_mesures({"hp9": ((0, 0), (0, 0))}, LIBELLES)
-        assert [b.detail for b in besoins] == ["", ""]
+        assert [b.detail for b in besoins] == ["en priorité", "en priorité"]
 
     @pytest.mark.parametrize("id_jeu,court", [("hp1", "HP1"), ("hp7a", "HP7 · 1"),
                                               ("hp7b", "HP7 · 2"), ("bonus", "BONUS")])
@@ -67,6 +73,10 @@ class TestBesoinsMesures:
         besoins = atelier.besoins_mesures({"hp6": ((267, 400), (849, 274))}, LIBELLES)
         assert atelier.pour_le_jeu(besoins, "hp6").genre == atelier.FOND
         assert atelier.pour_le_jeu(besoins, "hp1") is None
+
+    def test_une_image_nette_n_allume_pas_la_fiche(self):
+        besoins = atelier.besoins_mesures({"hp4": ((1080, 1500), (3840, 2160))}, LIBELLES)
+        assert len(besoins) == 2 and atelier.pour_le_jeu(besoins, "hp4") is None
 
 
 class TestLecture:
@@ -159,7 +169,7 @@ class TestPastille:
         from src.ui import atelier_page
         from src.ui.pastille_atelier import PastilleAtelier
         monkeypatch.setattr(atelier_page, "besoins_mesures", lambda _jeux: [
-            atelier.Besoin("HP3", "Fond d'écran", "", atelier.CHERCHE, atelier.FOND)])
+            atelier.Besoin("HP3", "Fond d'écran", "", atelier.CHERCHE, atelier.FOND, True)])
         hote = QWidget()
         qtbot.addWidget(hote)
         pastille = PastilleAtelier(hote)

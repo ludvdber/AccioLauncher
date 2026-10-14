@@ -7,9 +7,9 @@
       "nom": {"fr": "Jaquettes et fonds", "en": "Covers and backgrounds", "es": "Portadas y fondos"},
       "ou": {"fr": "Dans le launcher", "en": "In the launcher", "es": "En el launcher"},
       "texte": {
-        "fr": "Ce que l'on voit avant même de jouer. Certaines images actuelles sont trop petites pour un grand écran, ou carrées dans un carrousel en portrait.",
-        "en": "What you see before you even play. Some of the current images are too small for a large screen, or square in a portrait carousel.",
-        "es": "Lo que se ve antes incluso de jugar. Algunas imágenes actuales son demasiado pequeñas para una pantalla grande, o cuadradas en un carrusel vertical."
+        "fr": "Ce que l'on voit avant même de jouer. Toutes peuvent être refaites, à l'identique en meilleure qualité ou tout autrement : le but est aussi de ne plus dépendre des images de Warner. Celles marquées « en priorité » sont trop petites pour un grand écran, ou carrées dans un carrousel en portrait.",
+        "en": "What you see before you even play. Any of them can be remade, the same but in better quality or something else entirely: the aim is also to stop relying on Warner's images. The ones marked \"priority\" are too small for a large screen, or square in a portrait carousel.",
+        "es": "Lo que se ve antes incluso de jugar. Todas se pueden rehacer, iguales pero con mejor calidad o de otra forma: el objetivo es también dejar de depender de las imágenes de Warner. Las marcadas «con prioridad» son demasiado pequeñas para una pantalla grande, o cuadradas en un carrusel vertical."
       },
       "formats": [
         {"fr": "Jaquette 1080 × 1500", "en": "Cover 1080 × 1500", "es": "Portada 1080 × 1500"},
@@ -17,6 +17,50 @@
         {"fr": "PNG ou JPG", "en": "PNG or JPG", "es": "PNG o JPG"}
       ],
       "besoins": []
+    },
+    {
+      "id": "bandes-annonces",
+      "nom": {"fr": "Bandes-annonces", "en": "Trailers", "es": "Tráileres"},
+      "ou": {"fr": "Dans le launcher", "en": "In the launcher", "es": "En el launcher"},
+      "texte": {
+        "fr": "La vidéo qui joue derrière la fiche de chaque jeu. Montée avec des images du jeu, ou animée de toutes pièces ; jamais avec des extraits des films.",
+        "en": "The video that plays behind each game's page. Cut from footage of the game, or animated from scratch; never with clips from the films.",
+        "es": "El vídeo que se reproduce detrás de la ficha de cada juego. Montado con imágenes del juego, o animado desde cero; nunca con fragmentos de las películas."
+      },
+      "formats": [
+        {"fr": "MP4 (H.264)", "en": "MP4 (H.264)", "es": "MP4 (H.264)"},
+        {"fr": "1920 × 1080", "en": "1920 × 1080", "es": "1920 × 1080"},
+        {"fr": "1 à 2 minutes", "en": "1 to 2 minutes", "es": "De 1 a 2 minutos"}
+      ],
+      "besoins": [
+        {"jeu": "HP1", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "L'École des Sorciers", "en": "The Philosopher's Stone", "es": "La piedra filosofal"}},
+        {"jeu": "HP2", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "La Chambre des Secrets", "en": "The Chamber of Secrets", "es": "La cámara secreta"}},
+        {"jeu": "HP3", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Le Prisonnier d'Azkaban", "en": "The Prisoner of Azkaban", "es": "El prisionero de Azkaban"}},
+        {"jeu": "HP4", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "La Coupe de Feu", "en": "The Goblet of Fire", "es": "El cáliz de fuego"}},
+        {"jeu": "HP5", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "L'Ordre du Phénix", "en": "The Order of the Phoenix", "es": "La Orden del Fénix"}},
+        {"jeu": "HP6", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Le Prince de Sang-Mêlé", "en": "The Half-Blood Prince", "es": "El misterio del príncipe"}},
+        {"jeu": "HP7 · 1", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Les Reliques de la Mort, partie 1", "en": "The Deathly Hallows, Part 1", "es": "Las reliquias de la Muerte, parte 1"}},
+        {"jeu": "HP7 · 2", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Les Reliques de la Mort, partie 2", "en": "The Deathly Hallows, Part 2", "es": "Las reliquias de la Muerte, parte 2"}}
+      ]
+    },
+    {
+      "id": "cartes",
+      "nom": {"fr": "Cartes de sorciers", "en": "Wizard cards", "es": "Cromos de magos"},
+      "ou": {"fr": "Dans le folio", "en": "In the folio", "es": "En el folio"},
+      "texte": {
+        "fr": "Les cartes des sorcières et sorciers célèbres que le folio montre en grand. Le launcher les lit aujourd'hui dans le jeu installé ; une carte dessinée prendrait leur place.",
+        "en": "The famous witches and wizards cards that the folio shows in full. Today the launcher reads them from the installed game; a drawn card would take their place.",
+        "es": "Los cromos de brujas y magos famosos que el folio muestra en grande. Hoy el launcher los lee del juego instalado; un cromo dibujado ocuparía su lugar."
+      },
+      "formats": [
+        {"fr": "Pentagone sur fond transparent", "en": "Pentagon on a transparent background", "es": "Pentágono con fondo transparente"},
+        {"fr": "512 × 512 (PNG)", "en": "512 × 512 (PNG)", "es": "512 × 512 (PNG)"}
+      ],
+      "besoins": [
+        {"jeu": "HP1", "etat": "cherche",
+         "quoi": {"fr": "Les 25 cartes", "en": "The 25 cards", "es": "Los 25 cromos"},
+         "detail": {"fr": "Dumbledore, Merlin, Morgane, les quatre fondateurs…", "en": "Dumbledore, Merlin, Morgan le Fay, the four founders…", "es": "Dumbledore, Merlín, Morgana, los cuatro fundadores…"}}
+      ]
     },
     {
       "id": "textures",
@@ -79,9 +123,9 @@
       "nom": {"fr": "Vidéos d'intro", "en": "Intro videos", "es": "Vídeos de introducción"},
       "ou": {"fr": "Dans le jeu", "en": "In the game", "es": "En el juego"},
       "texte": {
-        "fr": "Les vidéos du jeu, en Bink (.bik). Une vidéo remastérisée doit garder la même durée : le son et les sous-titres en dépendent.",
-        "en": "The game's videos, in Bink (.bik). A remastered video must keep the same length: the sound and subtitles depend on it.",
-        "es": "Los vídeos del juego, en Bink (.bik). Un vídeo remasterizado debe durar lo mismo: el sonido y los subtítulos dependen de ello."
+        "fr": "Les vidéos du jeu, en Bink (.bik) : remastérisées, ou refaites tout autrement. Gardez la même durée : le son et les sous-titres en dépendent.",
+        "en": "The game's videos, in Bink (.bik): remastered, or remade in a completely different way. Keep the same length: the sound and subtitles depend on it.",
+        "es": "Los vídeos del juego, en Bink (.bik): remasterizados, o rehechos de otra forma. Mantén la misma duración: el sonido y los subtítulos dependen de ello."
       },
       "formats": [
         {"fr": "Bink (.bik)", "en": "Bink (.bik)", "es": "Bink (.bik)"},

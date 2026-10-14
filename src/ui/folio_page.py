@@ -5,14 +5,19 @@ cartes trouvées, les dragées, et la Coupe des quatre maisons en sabliers (les
 points de chaque maison sont dans la sauvegarde, pas seulement ceux de
 Gryffondor : la course se voit).
 
-Ouverte depuis la fiche du jeu dans Mes années ; son retour y ramène. Lecture
-seule : `src/core/folio.py` ne fait que lire la sauvegarde et les textes du jeu.
+Ouverte depuis la fiche du jeu dans Mes années, ou depuis le bouton Folio de
+la bibliothèque ; son retour ramène d'où l'on vient. Lecture seule :
+`src/core/folio.py` ne fait que lire la sauvegarde, les textes du jeu et les
+images des cartes (`textures_ue1.py`), toutes dans la copie installée.
+
+La carte choisie s'affiche dans une colonne FIXE à droite (Ludo, 2026-10-14) :
+sous la grille, sa fiche tombait hors de l'écran et l'on cliquait sans rien voir.
 """
 
 from pathlib import Path
 
-from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QIcon, QLinearGradient, QPainter, QPen
+from PyQt6.QtCore import QEvent, QRectF, QSize, Qt
+from PyQt6.QtGui import QColor, QIcon, QImage, QLinearGradient, QPainter, QPen, QPixmap, qRgba
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -37,6 +42,12 @@ from src.ui.theme import current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
+_LARGEUR_FICHE = (236, 290)   # suit la fenêtre : 30 % de ce qui reste après le rail
+_MARGE_FICHE = 24
+_IMAGE_FICHE = 220        # la carte du jeu fait 256 : jamais agrandie
+_COLONNES = 5             # 25 cartes : cinq rangées de cinq
+_ECART_CASES = 8
+_CASE_MIN, _CASE_MAX = 56, 108
 
 # Les couleurs des maisons (maquette) : le haut du sablier, puis le bas.
 _COULEURS = {
@@ -55,8 +66,11 @@ QPushButton#emplacement:checked {
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
 }
 QPushButton#emplacement[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QFrame#tuile, QFrame#coupe, QFrame#fiche {
+QFrame#tuile, QFrame#coupe {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
+}
+QFrame#fiche {
+    background: #0a0a16; border: none; border-left: 1px solid rgba(214, 167, 44, 0.16);
 }
 """
 
@@ -106,20 +120,42 @@ class _Sablier(QWidget):
         p.end()
 
 
-class _CarteSorcier(QPushButton):
-    """Une case du folio : le nom si la carte est trouvée, des pointillés sinon."""
+def pixmap_texture(tex, cote: int, dpr: float) -> QPixmap:
+    """Une texture du jeu (256 couleurs) en pixmap de `cote` px logiques."""
+    image = QImage(tex.indices, tex.largeur, tex.hauteur, tex.largeur,
+                   QImage.Format.Format_Indexed8)
+    image.setColorTable([qRgba(r, v, b, 0 if tex.masquee and i == 0 else 255)
+                         for i, (r, v, b, _a) in enumerate(tex.palette)])
+    physique = max(1, round(cote * dpr))
+    pix = QPixmap.fromImage(
+        image.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied).scaled(
+            physique, physique, Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation))
+    pix.setDevicePixelRatio(dpr)
+    return pix
 
-    def __init__(self, numero: int, carte: folio.Carte | None, trouvee: bool) -> None:
+
+class _CarteSorcier(QPushButton):
+    """Une case du folio : la carte trouvée telle que le jeu la dessine, son
+    numéro si le jeu n'est plus installé, des pointillés si elle reste à trouver."""
+
+    def __init__(self, numero: int, carte: folio.Carte | None, trouvee: bool,
+                 vignette=None) -> None:
         super().__init__()
         self.numero = numero
         self.trouvee = trouvee
+        self.vignette = vignette if trouvee else None   # textures_ue1.TexturePaletee
+        self._pix: QPixmap | None = None
         self.setCheckable(True)
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(68, 95)   # 5:7
+        self.setFixedSize(_CASE_MIN, _CASE_MIN)
         nom = carte.nom if carte else tr("Carte {}").format(numero)
-        self._libelle = nom.split(" ")[0] if trouvee else ""
         self.setAccessibleName(nom if trouvee else tr("Carte pas encore trouvée"))
+
+    def resizeEvent(self, event) -> None:
+        self._pix = None
+        super().resizeEvent(event)
 
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
@@ -137,11 +173,15 @@ class _CarteSorcier(QPushButton):
             stylo.setStyle(Qt.PenStyle.DashLine)
             p.setPen(stylo)
         p.drawRoundedRect(cadre, 6, 6)
-        if self._libelle:
+        if self.vignette is not None:
+            if self._pix is None:
+                self._pix = pixmap_texture(self.vignette, self.width() - 6,
+                                           self.devicePixelRatioF())
+            p.drawPixmap(3, 3, self._pix)
+        elif self.trouvee:
             p.setPen(QColor("#f2e6c4") if choisie else QColor("#d9cfae"))
-            p.setFont(cinzel(7, bold=True))
-            p.drawText(cadre.adjusted(3, 3, -3, -3),
-                       Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap, self._libelle)
+            p.setFont(cinzel(10, bold=True))
+            p.drawText(cadre, Qt.AlignmentFlag.AlignCenter, str(self.numero))
         p.end()
 
 
@@ -193,6 +233,8 @@ class FolioPage(QDialog):
         self.releves = folio.emplacements_hp1(sauvegardes.fichiers(game.sauvegardes))
         system = install_path / Path(game.executable).parent
         self.cartes, self._titres = folio.textes_hp1(folio.fichier_textes(system, get_language()))
+        self._paquet = folio.paquet_menu(system) if system.is_dir() else None
+        self._cases: list[_CarteSorcier] = []
         self._plus = folio.le_plus_avance(self.releves)
         self.releve: folio.Releve | None = None
         self._lignes: dict[int, _LigneEmplacement] = {}
@@ -286,7 +328,12 @@ class FolioPage(QDialog):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(36, 30, 36, 28)
         lay.setSpacing(0)
-        h.addWidget(zone_defilable(page), stretch=1)
+        self._zone = zone_defilable(page)
+        # La largeur utile est celle du VIEWPORT, connue après la mise en page
+        # de la zone, pas au redimensionnement de la page (cases trop petites).
+        self._zone.viewport().installEventFilter(self)
+        h.addWidget(self._zone, stretch=1)
+        self._cases = []
 
         if releve is None or not releve.lu:
             message = (tr("Aucune sauvegarde trouvée pour ce jeu.") if releve is None else
@@ -313,51 +360,94 @@ class FolioPage(QDialog):
         lay.addWidget(self._coupe(releve))
         lay.addSpacing(26)
 
-        entete = QHBoxLayout()
-        entete.addWidget(surtitre(tr("Cartes des sorcières et sorciers célèbres")))
-        entete.addStretch()
-        entete.addWidget(texte(tr("Pointillés : pas encore trouvée"), 12, ENCRE_DOUCE))
-        lay.addLayout(entete)
+        # L'un SOUS l'autre : côte à côte, ils imposaient 470 px à la colonne
+        # et la faisaient déborder sous la fiche de la carte à 980 px.
+        lay.addWidget(surtitre(tr("Cartes des sorcières et sorciers célèbres")))
+        lay.addSpacing(4)
+        lay.addWidget(texte(tr("Pointillés : pas encore trouvée"), 12, ENCRE_DOUCE))
         lay.addSpacing(12)
         grille = QGridLayout()
-        grille.setHorizontalSpacing(10)
-        grille.setVerticalSpacing(10)
+        grille.setHorizontalSpacing(_ECART_CASES)
+        grille.setVerticalSpacing(_ECART_CASES)
         self._groupe_cartes = QButtonGroup(corps)
         self._groupe_cartes.setExclusive(True)
-        self._cases: list[_CarteSorcier] = []
         for numero in range(1, folio.CARTES_HP1 + 1):
-            case = _CarteSorcier(numero, self.cartes.get(numero), numero in releve.cartes)
+            trouvee = numero in releve.cartes
+            vignette = folio.image_carte_hp1(self._paquet, numero, grande=False) if trouvee else None
+            case = _CarteSorcier(numero, self.cartes.get(numero), trouvee, vignette)
             case.toggled.connect(lambda oui, n=numero: oui and self._montrer_carte(n))
             self._groupe_cartes.addButton(case)
-            grille.addWidget(case, (numero - 1) // 7, (numero - 1) % 7)
+            grille.addWidget(case, (numero - 1) // _COLONNES, (numero - 1) % _COLONNES)
             self._cases.append(case)
-        grille.setColumnStretch(7, 1)
+        grille.setColumnStretch(_COLONNES, 1)
         lay.addLayout(grille)
-        lay.addSpacing(16)
+        lay.addStretch()
+        h.addWidget(self._colonne_fiche())
+        premiere = min(releve.cartes) if releve.cartes else 1
+        self._cases[premiere - 1].setChecked(True)
+        self._ajuster_cases()
+        return corps
 
+    def _colonne_fiche(self) -> QFrame:
+        """La carte choisie, toujours visible à droite de la grille."""
         self._fiche = QFrame()
         self._fiche.setObjectName("fiche")
-        f = QVBoxLayout(self._fiche)
-        f.setContentsMargins(20, 16, 20, 18)
+        self._fiche.setFixedWidth(self._largeur_fiche())
+        contenu = QWidget()
+        contenu.setStyleSheet("background: transparent;")
+        f = QVBoxLayout(contenu)
+        f.setContentsMargins(_MARGE_FICHE, 30, _MARGE_FICHE, 24)
         f.setSpacing(6)
+        self._fiche_image = QLabel()
+        self._fiche_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._fiche_image.setStyleSheet("background: transparent;")
+        f.addWidget(self._fiche_image)
+        f.addSpacing(10)
         self._fiche_nom = texte("", 18, ENCRE, retour=True)
         self._fiche_nom.setFont(cinzel(13, bold=True))
         self._fiche_dates = texte("", 13, current_theme().accent_light, retour=True)
-        self._fiche_texte = texte("", 15, "#c9c7da", retour=True)
+        self._fiche_texte = texte("", 14, "#c9c7da", retour=True)
         f.addWidget(self._fiche_nom)
         f.addWidget(self._fiche_dates)
         f.addSpacing(8)
         f.addWidget(self._fiche_texte)
-        lay.addWidget(self._fiche)
-        lay.addStretch()
-        premiere = min(releve.cartes) if releve.cartes else 1
-        self._cases[premiere - 1].setChecked(True)
-        return corps
+        f.addStretch()
+        v = QVBoxLayout(self._fiche)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.addWidget(zone_defilable(contenu))
+        return self._fiche
+
+    def _largeur_fiche(self) -> int:
+        mini, maxi = _LARGEUR_FICHE
+        return max(mini, min(maxi, int((self.width() - _LARGEUR_RAIL) * 0.3)))
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._cases and self._fiche.width() != self._largeur_fiche():
+            self._fiche.setFixedWidth(self._largeur_fiche())
+            self._montrer_carte(self.carte_montree)
+
+    def eventFilter(self, objet, event) -> bool:
+        if event.type() == QEvent.Type.Resize and self._cases and objet is self._zone.viewport():
+            self._ajuster_cases()
+        return super().eventFilter(objet, event)
+
+    def _ajuster_cases(self) -> None:
+        """Les cases suivent la place : cinq par rangée, entre 56 et 108 px."""
+        if not self._cases:
+            return
+        marges = self._zone.widget().layout().contentsMargins()
+        dispo = self._zone.viewport().width() - marges.left() - marges.right()
+        cote = (dispo - (_COLONNES - 1) * _ECART_CASES) // _COLONNES
+        cote = max(_CASE_MIN, min(_CASE_MAX, cote))
+        for case in self._cases:
+            if case.width() != cote:
+                case.setFixedSize(cote, cote)
 
     def _tuile(self, chiffre: str, libelle: str) -> QFrame:
         tuile = QFrame()
         tuile.setObjectName("tuile")
-        tuile.setMinimumWidth(190)
+        tuile.setMinimumWidth(150)
         v = QVBoxLayout(tuile)
         v.setContentsMargins(18, 14, 18, 14)
         v.setSpacing(2)
@@ -373,9 +463,10 @@ class FolioPage(QDialog):
         v = QVBoxLayout(coupe)
         v.setContentsMargins(20, 14, 20, 16)
         v.setSpacing(12)
-        entete = QHBoxLayout()
+        # La phrase SOUS le titre : côte à côte, ils faisaient déborder la colonne à 980 px.
+        entete = QVBoxLayout()
+        entete.setSpacing(4)
         entete.addWidget(surtitre(tr("La Coupe des quatre maisons")))
-        entete.addStretch()
         self.phrase_coupe = texte(phrase_coupe(releve), 13, current_theme().accent_light)
         entete.addWidget(self.phrase_coupe)
         v.addLayout(entete)
@@ -405,7 +496,15 @@ class FolioPage(QDialog):
 
     def _montrer_carte(self, numero: int) -> None:
         carte = self.cartes.get(numero)
-        if self.releve is not None and numero in self.releve.cartes:
+        trouvee = self.releve is not None and numero in self.releve.cartes
+        # Une carte pas trouvée ne montre pas son image : ce serait la dévoiler.
+        image = folio.image_carte_hp1(self._paquet, numero) if trouvee else None
+        self._fiche_image.setVisible(image is not None)
+        if image is not None:
+            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE)
+            self._fiche_image.setFixedHeight(cote)
+            self._fiche_image.setPixmap(pixmap_texture(image, cote, self.devicePixelRatioF()))
+        if trouvee:
             self._fiche_nom.setText(carte.nom if carte else tr("Carte {}").format(numero))
             self._fiche_dates.setText(carte.dates if carte else "")
             self._fiche_texte.setText(carte.texte if carte else

@@ -18,7 +18,7 @@ BLOC = (b"\x00\x01\x07Player\x00u\nClass=HarryPotter.Harry Name=Harry0\r\n{\r\n"
         b"numHousePointsSlytherin=173\r\nnumHousePointsHufflepuff=93\r\n"
         b"numHousePointsRavenclaw=111\r\nnumBeans=112\r\n"
         b"WizardCards[0]=(bHasCard=True)\r\nWizardCards[3]=(bHasCard=True)\r\n"
-        b"WizardCards[27]=(bHasCard=True)\r\nWizardCards[40]=(bHasCard=True)\r\n"
+        b"WizardCards[24]=(bHasCard=True)\r\nWizardCards[25]=(bHasCard=True)\r\n"
         b"Weapon=baseWand4\r\nbaseWand'LEV_TUT3B.baseWand4'\r\n}\r\n"
         b"Class=HPBase.baseWand Name=baseWand4\r\n{\r\n}\r\n\x00x\x1c")
 
@@ -51,7 +51,7 @@ class TestLecture:
         assert bloc["points"] == {"gryffondor": 155, "serpentard": 173,
                                   "serdaigle": 111, "poufsouffle": 93}
         assert bloc["dragees"] == 112 and bloc["points_harry"] == 155
-        assert bloc["cartes"] == frozenset({1, 4, 28}), "numéros 1 à 28, la 41e est ignorée"
+        assert bloc["cartes"] == frozenset({1, 4, 25}), "emplacements 1 à 25, le 26e est ignoré"
 
     def test_sans_bloc_rien_n_est_invente(self):
         assert folio.lire_bloc_hp1(b"\x00" * 1000) is None
@@ -102,10 +102,12 @@ class TestTextesDuJeu:
         (system / "HPmenu.fre").write_bytes(MENU.encode("cp1252"))
         (system / "HPMenu.int").write_bytes(b"wizard_card_new_01=Merlin. Medieval. Famous.\r\n")
         cartes, titres = folio.textes_hp1(folio.fichier_textes(system, "fr"))
-        assert cartes[1] == folio.Carte(1, "Merlin", "Moyen Age, dates inconnues",
+        # L'ordre du FOLIO du jeu, pas celui du fichier de textes : l'emplacement 1
+        # est Dumbledore (texte 04), le 2 Merlin (texte 01), le 20 Hengist (texte 28).
+        assert cartes[2] == folio.Carte(2, "Merlin", "Moyen Age, dates inconnues",
                                         "Le plus célèbre sorcier.")
-        assert cartes[4].dates == "??? - vit encore"
-        assert cartes[28].texte == "Ecosse, fondant.", "la variante corrigée « b » l'emporte"
+        assert cartes[1].dates == "??? - vit encore"
+        assert cartes[20].texte == "Ecosse, fondant.", "la variante corrigée « b » l'emporte"
         assert folio.lieu(titres, "LEV2_HOGFRONT") == "Parc de Poudlard"
 
     def test_sans_la_langue_l_anglais(self, tmp_path):
@@ -150,7 +152,7 @@ class TestPage:
         qtbot.addWidget(page)
         assert page.releve.emplacement == 2
         assert page.phrase_coupe.text() == "Serpentard mène de 18 points"
-        assert page.carte_montree == 1 and page._fiche_nom.text() == "Merlin"
+        assert page.carte_montree == 1 and page._fiche_nom.text() == "Albus Dumbledore"
 
     def test_une_carte_pas_trouvee_ne_se_devoile_pas(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage
@@ -158,9 +160,29 @@ class TestPage:
         _save(saves, 0, BLOC, b"X", datetime(2026, 3, 8))
         page = FolioPage(jeu, install)
         qtbot.addWidget(page)
-        page._cases[1].click()   # carte 2, pas trouvée
+        page._cases[1].click()   # emplacement 2 (Merlin), pas trouvé
         assert page._fiche_nom.text() == "Pas encore trouvée"
-        assert "Burdock" not in page._fiche_texte.text()
+        assert "célèbre" not in page._fiche_texte.text()
+        assert page._fiche_image.isHidden(), "l'image la dévoilerait"
+
+    def test_la_carte_trouvee_montre_son_image_du_jeu(self, qtbot, hp1):
+        from src.ui.folio_page import FolioPage
+        from tests.test_textures_ue1 import paquet
+        jeu, install, saves = hp1
+        (install / "HP1" / "System" / "HPMenu.u").write_bytes(paquet("WizCardDumbledoreBigTexture"))
+        _save(saves, 0, BLOC, b"X", datetime(2026, 3, 8))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        assert page.carte_montree == 1 and not page._fiche_image.isHidden()
+        assert not page._fiche_image.pixmap().isNull()
+
+    def test_sans_le_jeu_pas_d_image_mais_la_fiche(self, qtbot, hp1):
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"X", datetime(2026, 3, 8))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        assert page._fiche_image.isHidden() and page._fiche_nom.text() == "Albus Dumbledore"
 
     def test_debut_de_jeu_il_le_dit(self, qtbot, hp1):
         from PyQt6.QtWidgets import QLabel

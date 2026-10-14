@@ -11,9 +11,11 @@ traductions (`{"fr": …, "en": …, "es": …}`, repli sur le français), comme
 nouveautés. Un besoin pris par quelqu'un passe « en cours » dans le fichier, et
 le joueur le voit à la mise à jour suivante du launcher.
 
-Le métier « jaquettes » est le seul qui se remplit tout seul : ses besoins
-viennent de la taille des images (`images_a_refaire.py`), donc il se vide à
-mesure qu'elles arrivent, sans toucher au fichier.
+Le métier « jaquettes » est le seul qui se remplit tout seul : il liste TOUTES
+les jaquettes et tous les fonds du catalogue (Ludo, 2026-10-14 : le but est
+aussi de ne plus dépendre des images de Warner, donc même une image nette peut
+être refaite). Celles que `images_a_refaire.py` juge trop petites sont
+« prioritaires » : elles seules allument la pastille de la fiche.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ class Besoin:
     detail: str
     etat: str
     genre: str = ""   # JAQUETTE ou FOND pour les besoins mesurés, sinon vide
+    prioritaire: bool = False   # trop petite ou mal cadrée aujourd'hui
 
 
 @dataclass(frozen=True)
@@ -91,22 +94,26 @@ def court(id_jeu: str) -> str:
 
 def besoins_mesures(tailles: dict[str, tuple[tuple[int, int], tuple[int, int]]],
                     libelles: dict[str, str]) -> list[Besoin]:
-    """Les jaquettes et fonds à refaire, d'après leur taille, dans l'ordre du catalogue.
+    """Toutes les jaquettes et tous les fonds, dans l'ordre du catalogue, avec
+    leur taille d'aujourd'hui ; les trop petites sont marquées prioritaires.
 
     `tailles` : id → ((l, h) de la jaquette, (l, h) du fond).
     `libelles` : les mots traduits, fournis par l'interface (« Jaquette »,
-    « Fond d'écran », « Carrée aujourd'hui », « {} × {} aujourd'hui »).
+    « Fond d'écran », « Carrée aujourd'hui », « {} × {} aujourd'hui »,
+    « en priorité »).
     """
     besoins: list[Besoin] = []
     for jeu, (jaquette, fond) in tailles.items():
-        if jaquette_a_refaire(*jaquette):
-            carree = jaquette[0] > 0 and jaquette[0] == jaquette[1]
-            detail = (libelles["carree"] if carree
-                      else libelles["taille"].format(*jaquette) if jaquette[0] > 0 else "")
-            besoins.append(Besoin(court(jeu), libelles[JAQUETTE], detail, CHERCHE, JAQUETTE))
-        if fond_a_refaire(*fond):
-            detail = libelles["taille"].format(*fond) if fond[0] > 0 else ""
-            besoins.append(Besoin(court(jeu), libelles[FOND], detail, CHERCHE, FOND))
+        carree = jaquette[0] > 0 and jaquette[0] == jaquette[1]
+        for genre, taille, urgente, detail in (
+                (JAQUETTE, jaquette, jaquette_a_refaire(*jaquette),
+                 libelles["carree"] if carree else ""),
+                (FOND, fond, fond_a_refaire(*fond), "")):
+            if not detail and taille[0] > 0:
+                detail = libelles["taille"].format(*taille)
+            if urgente:
+                detail = " · ".join(t for t in (detail, libelles["priorite"]) if t)
+            besoins.append(Besoin(court(jeu), libelles[genre], detail, CHERCHE, genre, urgente))
     return besoins
 
 
@@ -148,7 +155,8 @@ def charger(mesures: list[Besoin] | None = None, langue: str | None = None,
 
 
 def pour_le_jeu(mesures: list[Besoin], id_jeu: str) -> Besoin | None:
-    """Le besoin mesuré du jeu affiché, pour la pastille de la fiche : le fond
-    d'abord, puisque c'est lui qui se voit en grand derrière la fiche."""
-    siens = [b for b in mesures if b.jeu == court(id_jeu)]
+    """Le besoin PRIORITAIRE du jeu affiché, pour la pastille de la fiche : le
+    fond d'abord, puisque c'est lui qui se voit en grand derrière la fiche.
+    Une image nette n'allume rien : l'atelier la liste, la fiche n'insiste pas."""
+    siens = [b for b in mesures if b.jeu == court(id_jeu) and b.prioritaire]
     return next((b for b in siens if b.genre == FOND), siens[0] if siens else None)

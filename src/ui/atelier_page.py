@@ -81,6 +81,7 @@ def besoins_mesures(jeux) -> list[atelier.Besoin]:
         atelier.FOND: tr("Fond d'écran"),
         "carree": tr("Carrée aujourd'hui"),
         "taille": tr("{} × {} aujourd'hui"),
+        "priorite": tr("en priorité"),
     })
 
 
@@ -176,7 +177,10 @@ class AtelierPage(QDialog):
         lay.addSpacing(16)
         lay.addWidget(surtitre(tr("L'atelier")))
         lay.addSpacing(4)
-        lay.addWidget(texte(tr("Tout ce qui se voit peut être refait. Choisissez votre métier."),
+        # Ludo, 2026-10-14 : refaire à l'identique en meilleure qualité est aussi
+        # bienvenu que tout réinventer, cinématiques comprises.
+        lay.addWidget(texte(tr("Tout ce qui se voit peut être refait : à l'identique en "
+                               "meilleure qualité, ou tout autrement. Choisissez votre métier."),
                             14, "#c9c7da", retour=True))
         lay.addSpacing(12)
 
@@ -218,8 +222,9 @@ class AtelierPage(QDialog):
             formats.addStretch()
             lay.addLayout(formats)
             lay.addSpacing(8)
-        lay.addWidget(texte(tr("Sous licence CC BY 4.0, sans logo de Warner ou d'EA "
-                               "ni visage d'acteur."), 13, ENCRE_DOUCE, retour=True))
+        lay.addWidget(texte(tr("Sous licence CC BY 4.0, sans logo de Warner ou d'EA. Les "
+                               "personnages des jeux, oui ; les visages des acteurs des films, "
+                               "non."), 13, ENCRE_DOUCE, retour=True))
         lay.addSpacing(20)
 
         cadre = QFrame()
