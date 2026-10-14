@@ -402,6 +402,18 @@ class TestGameUpdateNotification:
 
 
 class TestSeasonLive:
+    def test_les_particules_ne_passent_pas_sur_la_barre_du_haut(
+            self, make_window, mise_en_page_stable):
+        """Elles passaient devant les onglets et les boutons de la fenêtre."""
+        win = make_window()
+        win.show()
+        win.resize(1200, 800)
+        mise_en_page_stable(win)
+        barre = win._title_bar
+        bas_barre = barre.mapTo(win, barre.rect().bottomLeft()).y()
+        assert win._particles.geometry().top() > bas_barre
+        assert win._particles.geometry().bottom() == win.centralWidget().geometry().bottom()
+
     def test_apply_season_reseeds_particles(self, make_window):
         win = make_window()
         win._particles.resize(800, 600)
@@ -753,15 +765,14 @@ class TestPasDeTroncature:
 
     Le panneau d'info est positionné en `setGeometry` à 50 % de la fenêtre.
     Des largeurs figées en pixels (600 / 520) le débordaient dès que la fenêtre
-    passait sous ~1100 px, et le conteneur de tags avait un plafond de hauteur
-    qui coupait sa dernière ligne de pastilles.
+    passait sous ~1100 px.
     """
 
     TAILLES = ((1200, 800), (980, 660), (1600, 900))
 
     @staticmethod
     def _jeu_le_plus_charge(win):
-        return max((e.game for e in win.manager.get_games()), key=lambda g: len(g.tags))
+        return max((e.game for e in win.manager.get_games()), key=lambda g: len(g.name) + len(g.description))
 
     def test_titre_et_description_tiennent_dans_le_panneau(self, make_window, qtbot, mise_en_page_stable):
         win = make_window()
@@ -779,36 +790,6 @@ class TestPasDeTroncature:
             besoin = info._title.heightForWidth(info._title.width())
             assert info._title.height() >= besoin, (
                 f"titre amputé en {w}x{h} : {info._title.height()} px pour {besoin} px de texte")
-
-    def test_tags_jamais_coupes(self, make_window, qtbot, mise_en_page_stable):
-        win = make_window()
-        win.show()
-        info = win._detail._info
-        for w, h in self.TAILLES:
-            win.resize(w, h)
-            mise_en_page_stable(win)
-            win._detail.set_game(self._jeu_le_plus_charge(win))
-            mise_en_page_stable(win)
-            besoin = info._tags_layout.heightForWidth(info._tags_container.width())
-            assert info._tags_container.height() >= besoin, (
-                f"tags coupés en {w}x{h} : {info._tags_container.height()} < {besoin}")
-
-    def test_flow_layout_mesure_un_widget_cache(self, qtbot):
-        """`QWidgetItem.sizeHint()` vaut (0,0) tant que le widget est caché —
-        c'est ce qui écrasait la hauteur des tags pendant le cross-fade."""
-        from PyQt6.QtWidgets import QLabel, QWidget
-
-        from src.ui.flow_layout import FlowLayout
-
-        host = QWidget()
-        qtbot.addWidget(host)
-        flow = FlowLayout(host, spacing=8)
-        for _ in range(4):
-            lbl = QLabel("TAG ASSEZ LONG")
-            lbl.setFixedSize(120, 28)
-            flow.addWidget(lbl)
-        # host jamais montré → les items sont « cachés »
-        assert flow.heightForWidth(300) > 0
 
 
 class TestBandesAnnonces:

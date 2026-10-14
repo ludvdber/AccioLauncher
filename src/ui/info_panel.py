@@ -1,21 +1,19 @@
-"""Panneau d'informations du jeu — titre, metadata, description, tags, version."""
+"""Panneau d'informations du jeu — titre, metadata, description, version."""
 
 from html import escape
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QLabel, QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout, QWidget,
+    QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.clickable_label import ClickableLabel
-from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.theme import current as current_theme, themed
-from src.ui.utils import clear_layout
 from src.core.formatting import format_size
 
 # Largeurs de CONFORT, toujours rabotées à la place réelle : figées, elles
@@ -228,14 +226,6 @@ class InfoPanel(QWidget):
         lay.addWidget(self._title)
         lay.addSpacing(10)
 
-        # Tags sous le titre : ensemble, l'identité du jeu.
-        self._tags_container = QWidget()
-        self._tags_container.setStyleSheet("background: transparent;")
-        self._tags_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        self._tags_layout = FlowLayout(self._tags_container, spacing=8)
-        lay.addWidget(self._tags_container)
-        lay.addSpacing(10)
-
         # Ligne méta UNIQUE (année, studio, poids, téléchargements) : un seul
         # libellé qui se replie comme une phrase. La version et ses nouveautés
         # sont descendues sous le bouton (piste A, 2026-10-09).
@@ -326,12 +316,10 @@ class InfoPanel(QWidget):
         self._title.setMaximumWidth(min(_TITLE_MAX_W, avail))
         self._desc.setMaximumWidth(min(_DESC_MAX_W, avail))
         self._indices.setMaximumWidth(avail)
-        self._tags_container.setMaximumWidth(avail)
         self._meta.setMaximumWidth(avail)
         self._fit_height(self._title)
         self._fit_height(self._desc)
         self._fit_height(self._indices)
-        self._relayout_tags(avail)
         self._fit_height(self._meta)
 
     def _apply_margins(self) -> None:
@@ -387,19 +375,6 @@ class InfoPanel(QWidget):
         # à zéro d'abord, sinon le titre ne rétrécit plus jamais.
         label.setMinimumHeight(0)
         label.setMinimumHeight(label.heightForWidth(width))
-
-    def _relayout_tags(self, avail: int | None = None) -> None:
-        """Donne au conteneur de tags la hauteur exacte dont le flow a besoin."""
-        self._relayout_flow(self._tags_container, self._tags_layout, avail)
-
-    def _relayout_flow(self, container: QWidget, flow: FlowLayout,
-                       avail: int | None = None) -> None:
-        """Hauteur exacte d'un conteneur en FlowLayout, sinon sa dernière ligne
-        se fait couper — un plafond fixe ne survit pas au rétrécissement."""
-        if avail is None:
-            avail = self.available_width()
-        needed = flow.heightForWidth(avail) if flow.count() else 0
-        container.setFixedHeight(max(0, needed))
 
     # ──────────────────── API publique ────────────────────
 
@@ -459,9 +434,6 @@ class InfoPanel(QWidget):
 
         # Description
         self._set_desc_text(game.description)
-
-        # Tags
-        self._refresh_tags(game)
 
         # Remesurer : un libellé gardait la hauteur du jeu PRÉCÉDENT (161 px
         # d'une description dépliée pour une courte).
@@ -524,19 +496,3 @@ class InfoPanel(QWidget):
         self._indices.setText(point.join(morceaux))
         self._indices.setToolTip(game.controller_note if manette else "")
 
-    # ──────────────────── Tags ────────────────────
-
-    def _refresh_tags(self, game: GameData) -> None:
-        clear_layout(self._tags_layout)
-        for tag in game.tags:
-            badge = QLabel(tag.upper())
-            badge.setFont(cinzel(10, bold=True))
-            badge.setStyleSheet(themed(
-                "QLabel { background: rgba(214, 167, 44, 0.05); color: #d6a72c;"
-                " border: 1px solid rgba(214, 167, 44, 0.3); border-radius: 12px;"
-                " padding: 4px 14px; letter-spacing: 2px; }"
-            ))
-            self._tags_layout.addWidget(badge)
-        self._tags_container.updateGeometry()
-        # Sinon la dernière ligne de pastilles reste coupée.
-        self._relayout_tags()

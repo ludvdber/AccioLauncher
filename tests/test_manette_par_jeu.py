@@ -52,15 +52,11 @@ class TestPastille:
         return p
 
     # Depuis la piste A (2026-10-09), la manette n'est plus une pastille parmi
-    # les genres : elle ouvre la ligne d'indices sous le bouton.
-    @staticmethod
-    def _pastilles(panneau):
-        lay = panneau._tags_layout
-        return [lay.itemAt(i).widget().text() for i in range(lay.count())]
+    # les genres : elle ouvre la ligne d'indices sous le bouton. Les genres
+    # eux-mêmes ne s'affichent plus depuis le 2026-10-14.
 
     def _montrer(self, panneau, **champs):
         jeu = GameData.from_dict(dict(BASE, tags=["Aventure"], **champs))
-        panneau._refresh_tags(jeu)
         panneau._refresh_indices(jeu)
         return panneau._indices.text()
 
@@ -73,10 +69,6 @@ class TestPastille:
     def test_chaque_niveau_a_son_libelle(self, panneau, niveau, texte):
         # En petites capitales depuis le 2026-10-14.
         assert self._montrer(panneau, controller=niveau).startswith(texte.upper())
-
-    def test_plus_de_pastille_parmi_les_genres(self, panneau):
-        self._montrer(panneau, controller="yes")
-        assert self._pastilles(panneau) == ["AVENTURE"]
 
     def test_la_note_est_en_infobulle(self, panneau):
         self._montrer(panneau, controller="partial", controller_note="Souris au démarrage")

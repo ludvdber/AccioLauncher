@@ -29,7 +29,7 @@ from src.ui.desinstallation_dialog import desinstaller
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
-from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, PARAMETRES, TitleBar
+from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, HAUTEUR as HAUTEUR_BARRE, PARAMETRES, TitleBar
 from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
@@ -662,7 +662,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._particles.setGeometry(self.centralWidget().geometry())
+        self._particles.setGeometry(self.centralWidget().geometry().adjusted(0, HAUTEUR_BARRE, 0, 0))
         self._particles.raise_()
         self._toast.reposition()
         # Fenêtre basse : le carrousel se compacte pour rendre sa hauteur à la
