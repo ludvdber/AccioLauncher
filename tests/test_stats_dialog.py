@@ -71,20 +71,28 @@ class TestLeSqueletteNeBougePas:
         assert len(frises[0]._entrees) == len(manager.get_games()) == 8
         assert len(frises[0].findChildren(_Ligne)) == 8
 
-    def test_la_frise_n_est_pas_dans_la_zone_defilante(self, qtbot, manager):
-        """C'est le squelette : il ne doit jamais partir sous la ligne de
-        flottaison quand le journal s'allonge."""
-        _remplir(manager, jours=40)
+    def test_a_la_taille_d_un_portable_tout_reste_atteignable(self, qtbot, manager):
+        """Devenue une PAGE de hauteur fixe, la page gardait le relevé hors de la
+        zone défilante : à 980 × 600 (portable 1366 × 768), la zone des
+        sauvegardes tombait à 1 px et le relevé recevait 590 px pour 634, d'où
+        « À …rs » (2026-10-14). Toute la page défile ; la saga passe dessous."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QBoxLayout
+        _remplir(manager, jours=14)
         dlg = StatsDialog(manager)
+        dlg.setWindowFlags(Qt.WindowType.Widget)
+        dlg.setMinimumSize(0, 0)
         qtbot.addWidget(dlg)
-        frise = dlg.findChildren(_Releve)[0]
-        assert not frise.findChildren(QScrollArea)
-        parents = []
-        w = frise.parentWidget()
-        while w is not None:
-            parents.append(type(w).__name__)
-            w = w.parentWidget()
-        assert "QScrollArea" not in parents
+        dlg.resize(980, 600)
+        dlg.show()
+        qtbot.waitUntil(lambda: dlg._haut.direction() == QBoxLayout.Direction.TopToBottom,
+                        timeout=1000)
+        dlg.layout().activate()
+        releve = dlg.findChildren(_Releve)[0]
+        assert releve.width() >= releve.minimumSizeHint().width()
+        assert dlg._fiche is not None
+        barre = dlg._zone.verticalScrollBar()
+        assert barre.maximum() > 0, "la fiche des sauvegardes doit être atteignable"
 
 
 class TestEtatVide:
@@ -104,7 +112,6 @@ class TestEtatVide:
     def test_premier_lancement_la_page_s_arrete_ou_le_contenu_s_arrete(
             self, qtbot, manager):
         vide = self._ouvrir(qtbot, manager)
-        assert not vide.findChildren(QScrollArea)
         assert vide.height() < 720, f"{vide.height()} px pour un releve et une phrase"
         _remplir(manager, jours=30)
         pleine = self._ouvrir(qtbot, manager)
@@ -504,6 +511,23 @@ def test_le_temps_joue_sans_sauvegarder_est_dit(qtbot, manager):
     dlg = StatsDialog(manager)
     qtbot.addWidget(dlg)
     assert "Dont 25 min jouées sans sauvegarder." in _labels(dlg)
+
+
+class TestCouleursDeLaMaison:
+    def test_aucun_chiffre_ne_reste_en_or_poudlard(self, qtbot, manager):
+        """« Au total », « dernière jouée » et le temps d'une sauvegarde étaient
+        en `#d6a72c` écrit en dur (vérification du 2026-10-14)."""
+        from src.ui.theme import set_theme
+        set_theme("gryffondor")
+        try:
+            _remplir(manager)
+            dlg = StatsDialog(manager)
+            qtbot.addWidget(dlg)
+            restes = [lbl.text() for lbl in dlg.findChildren(QLabel)
+                      if "#d6a72c" in lbl.styleSheet().lower()]
+            assert not restes, restes
+        finally:
+            set_theme("poudlard")
 
 
 class TestPhraseDEntete:

@@ -68,6 +68,13 @@ class Pages(QStackedWidget):
         self._barre.set_onglet(cle or BIBLIOTHEQUE)
         self.ouverte.emit(cle)
 
+    def affiche(self, cle: str) -> bool:
+        """L'onglet `cle` est-il déjà ce qu'on voit ? Le recliquer décochait
+        son onglet, et rebâtissait la page (rubrique perdue, scan relancé)."""
+        if self.page is None:
+            return cle == BIBLIOTHEQUE
+        return bool(self.cle) and cle == self.cle
+
     def fermer(self) -> None:
         page = self.page
         if page is not None:

@@ -12,7 +12,7 @@ from src.core.liens import DISCORD_URL, KOFI_URL
 from src.ui import dialogues_fenetre, game_detail_handlers, verification_forcee
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
-from src.ui.clavier_global import touche_globale
+from src.ui.clavier_global import EVENEMENTS_FILTRES, touche_globale
 from src.ui.download_bar import DownloadBar
 from src.ui.retrait_differe import RetraitDiffere
 from src.ui.suivi_barre import SuiviBarre
@@ -38,10 +38,6 @@ from src.ui.window_chrome import WindowChrome, geometrie_d_ouverture
 from src.ui.utils import icone_application, open_url
 
 log = logging.getLogger(__name__)
-
-# Ce que `eventFilter` traite (souris pour la fiche et les bords, clavier global).
-_EVENEMENTS_FILTRES = frozenset((QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress,
-                                 QEvent.Type.Leave, QEvent.Type.KeyPress))
 
 
 def mise_a_jour_installee(precedente: str) -> bool:
@@ -448,8 +444,9 @@ class MainWindow(QMainWindow):
     def resume_all_effects(self) -> None:
         """Reprend tous les timers et animations."""
         Ticker.instance().resume()
-        self._particles.resume()
-        self._detail.resume()
+        if self._pages.page is None:   # derrière une page : `Pages` les relance en la fermant
+            self._particles.resume()
+            self._detail.resume()
         self._carousel.resume()
         log.debug("Tous les effets sont repris")
 
@@ -654,7 +651,9 @@ class MainWindow(QMainWindow):
 
     def _on_onglet(self, cle: str) -> None:
         """Bibliothèque ferme la page ouverte ; les deux autres ouvrent la leur."""
-        if cle == BIBLIOTHEQUE:
+        if self._pages.affiche(cle):
+            self._title_bar.set_onglet(cle)   # le clic l'avait seulement décoché
+        elif cle == BIBLIOTHEQUE:
             self._pages.fermer()
         elif cle == ANNEES:
             self._on_stats()
@@ -675,8 +674,7 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event) -> bool:
         # Filtre posé sur QApplication : il voit les MouseMove de TOUS les widgets
         # enfants (un mouseMoveEvent ne tirerait que sur la surface nue).
-        # Et TOUS les autres : 14 000 en bâtissant les Paramètres. Sortie au plus tôt.
-        if event.type() not in _EVENEMENTS_FILTRES:
+        if event.type() not in EVENEMENTS_FILTRES:
             return False
         try:
             if event.type() == QEvent.Type.MouseMove:
@@ -756,5 +754,7 @@ class MainWindow(QMainWindow):
         match event.key():
             case Qt.Key.Key_Return | Qt.Key.Key_Enter if self._pages.page is None:
                 self._detail.trigger_primary_action()
+            case Qt.Key.Key_Escape if self._pages.page is not None:
+                self._pages.fermer()   # focus sur un onglet du haut : hors de la page
             case _:
                 super().keyPressEvent(event)

@@ -116,13 +116,21 @@ class AudioBar(QWidget):
         self._btn_cinema.clicked.connect(self.cinema_toggled.emit)
         layout.addWidget(self._btn_cinema)
 
-    def set_mode_fin(self, fin: bool) -> None:
+    def set_mode_fin(self, fin: bool, a_lire: bool = False) -> None:
         """Bascule entre la barre complète et la pastille « revoir ».
 
         À la fin d'une bande-annonce il n'y a plus rien à mettre en pause
         ni à régler : ne garder que le bouton utile, et se rétrécir pour ne
         pas laisser une barre de commandes inertes au-dessus du carrousel.
+
+        `a_lire` : la même pastille AVANT la lecture, quand la lecture
+        automatique est coupée. Sans elle, la fiche n'offrait plus aucun moyen
+        de voir la bande-annonce (Ludo, 2026-10-14).
         """
+        self._btn_replay.set_icone("play" if a_lire else "replay")
+        self._btn_replay.setAccessibleName(
+            tr("Lire la bande-annonce") if a_lire else tr("Revoir la bande-annonce"))
+        self._btn_replay.setToolTip(self._btn_replay.accessibleName())
         self._btn_play.setVisible(not fin)
         self._btn_mute.setVisible(not fin)
         self._btn_cinema.setVisible(not fin)

@@ -914,6 +914,8 @@
     "Jaquette": "Portada",
     "Fond d'écran": "Fondo",
     "Jaquette : {jl} × {jh} px. Fond : {fl} × {fh} px. Sous licence CC BY 4.0, sans logo de Warner ou d'EA ni visage d'acteur.": "Portada: {jl} × {jh} px. Fondo: {fl} × {fh} px. Con licencia CC BY 4.0, sin logotipo de Warner ni de EA ni cara de actor.",
-    "En parler sur le Discord": "Hablarlo en el Discord"
+    "En parler sur le Discord": "Hablarlo en el Discord",
+    "Lire la bande-annonce": "Ver el tráiler",
+    "Le launcher prend déjà les couleurs de {maison}. Vous pourrez en changer dans les Paramètres.": "El launcher ya lleva los colores de {maison}. Podrás cambiarlos en Ajustes."
   }
 }

@@ -25,6 +25,7 @@ from datetime import date
 from PyQt6.QtCore import QLocale, QSize, Qt
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
+    QBoxLayout,
     QDialog,
     QFrame,
     QGridLayout,
@@ -71,6 +72,9 @@ from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
 # Colonne de droite (saga, douze mois) : à 250 px, les noms des mois
 # s'élidaient en « n… d… j… ».
 _COLONNE_DROITE = 310
+# En dessous, la colonne de la saga passe sous le relevé : relevé (634 px au
+# minimum) + écart + colonne + marges + barre de défilement.
+_LARGEUR_DEUX_COLONNES = 1060
 
 
 class StatsDialog(QDialog):
@@ -97,6 +101,7 @@ class StatsDialog(QDialog):
         # timbres. Pas de plancher en HAUTEUR : la page se rétrécit à son
         # contenu.
         self.setMinimumWidth(1080)
+        self._haut: QBoxLayout | None = None
         self._zone: QScrollArea | None = None
         self._contenu: QWidget | None = None
         self._releve: _Releve | None = None
@@ -173,9 +178,9 @@ class StatsDialog(QDialog):
     # ──────────────────── Construction ────────────────────
 
     def _build(self) -> None:
-        root = QVBoxLayout(self)
-        root.setContentsMargins(26, 18, 26, 16)
-        root.setSpacing(12)
+        cadre = QVBoxLayout(self)
+        cadre.setContentsMargins(26, 18, 16, 0)
+        cadre.setSpacing(8)
 
         # Une PAGE depuis le 2026-10-09 (`pages.py`) : le retour dit où il mène,
         # comme dans les Paramètres. Le « Fermer » en or plein pesait plus que
@@ -187,7 +192,23 @@ class StatsDialog(QDialog):
         retour.setIconSize(QSize(16, 16))
         retour.setCursor(Qt.CursorShape.PointingHandCursor)
         retour.clicked.connect(self.accept)
-        root.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
+        cadre.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # TOUTE la page défile sous le retour (règle 52). Le relevé restait hors
+        # de la zone défilante, conçu pour une FENÊTRE qui prenait la hauteur de
+        # son contenu ; devenue une page de hauteur fixe, à 980 × 660 (un
+        # portable 1366 × 768) la zone des sauvegardes tombait à 1 px.
+        contenu = QWidget()
+        root = QVBoxLayout(contenu)
+        root.setContentsMargins(0, 0, 10, 16)
+        root.setSpacing(12)
+        zone = QScrollArea()
+        zone.setWidgetResizable(True)
+        zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        zone.setWidget(contenu)
+        zone.setMinimumHeight(1)
+        cadre.addWidget(zone, 1)
+        self._zone, self._contenu = zone, contenu
 
         tete = QVBoxLayout()
         tete.setSpacing(6)
@@ -213,13 +234,15 @@ class StatsDialog(QDialog):
             root.addWidget(_texte(ouverture, 13, _SECONDAIRE))
 
         possibles = self._selectionnables()
-        # Le relevé est HORS de la zone défilante : c'est le squelette de la
-        # page, il ne doit jamais partir sous la ligne de flottaison.
         self._releve = _Releve(self._entrees, self._temps, self._parties, self._dernieres,
                                self._legendes(), possibles, self._choix_initial(possibles))
         self._releve.choisi.connect(self._montrer_jeu)
-        haut = QHBoxLayout()
+        # Côte à côte quand la largeur le permet ; sinon la saga passe SOUS le
+        # relevé (`resizeEvent`) : à 980 px, elle lui laissait 590 px pour 634,
+        # et les noms tombaient à « À …rs », « La…ts ».
+        haut = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         haut.setSpacing(28)
+        self._haut = haut
         gauche = QVBoxLayout()
         gauche.setSpacing(10)
         # Plus de « Vous êtes en 7ᵉ année » ni de compte des années sous le
@@ -249,28 +272,20 @@ class StatsDialog(QDialog):
         root.addLayout(haut)
 
         if possibles:
-            # Dessous, les sauvegardes du jeu choisi : seule partie qui défile.
-            contenu = QWidget()
-            corps = QVBoxLayout(contenu)
-            corps.setContentsMargins(0, 4, 8, 4)
-            corps.setSpacing(12)
+            # Dessous, les sauvegardes du jeu choisi.
             self._fiche_hote = QVBoxLayout()
-            self._fiche_hote.setContentsMargins(0, 0, 0, 0)
-            corps.addLayout(self._fiche_hote)
+            self._fiche_hote.setContentsMargins(0, 4, 0, 0)
+            root.addLayout(self._fiche_hote)
             if self._releve.choix is not None:
                 self._montrer_jeu(self._releve.choix)
-            corps.addStretch(1)
+        root.addStretch(1)
 
-            zone = QScrollArea()
-            zone.setWidgetResizable(True)
-            zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            zone.setWidget(contenu)
-            # Sous son `minimumSizeHint` (~70 px), la zone ne descendait pas :
-            # une fiche courte laissait 15 px de vide au bas de la page. Un
-            # minimum EXPLICITE le remplace ; la hauteur vient d'_ajuster_hauteur.
-            zone.setMinimumHeight(1)
-            root.addWidget(zone, 1)
-            self._zone, self._contenu = zone, contenu
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        sens = (QBoxLayout.Direction.LeftToRight if self.width() >= _LARGEUR_DEUX_COLONNES
+                else QBoxLayout.Direction.TopToBottom)
+        if self._haut.direction() != sens:
+            self._haut.setDirection(sens)
 
 
     def _ouverture(self) -> str:
@@ -335,7 +350,7 @@ class StatsDialog(QDialog):
             ligne.addWidget(_texte(libelle, 12, _SECONDAIRE))
             ligne.addStretch(1)
             ligne.addWidget(_chiffre(_duree(secondes), taille,
-                                     "#d6a72c" if taille > 13 else "#ffffff"))
+                                     theme_courant().accent if taille > 13 else "#ffffff"))
             couche.addLayout(ligne)
 
         if herite:
@@ -434,9 +449,5 @@ class StatsDialog(QDialog):
         """
         self.setMinimumHeight(0)
         self.layout().activate()
-        if self._zone is not None and self._contenu is not None:
-            ecart = (self._contenu.sizeHint().height()
-                     - self._zone.viewport().height())
-        else:
-            ecart = self.sizeHint().height() - self.height()
+        ecart = self._contenu.sizeHint().height() - self._zone.viewport().height()
         self.resize(self.width(), min(self.height() + ecart, _hauteur_max(self)))

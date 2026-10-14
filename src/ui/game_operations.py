@@ -81,6 +81,10 @@ class GameOperations(QObject):
         # (read réseau bloquant) — gardés vivants jusqu'à leur fin réelle.
         self._zombies: list[Downloader] = []
         self._phase = ""  # phase courante (dédupliquée avant émission)
+        # Les derniers chiffres émis de l'opération en cours : la carte de la
+        # fiche, rebâtie en route (retour sur ce jeu), repartait à 0 % pendant
+        # que la barre du bas disait 57 %, et perdait « partie 2 sur 3 ».
+        self.derniere_progression: dict[str, tuple] = {}
 
     def _set_phase(self, phase: str) -> None:
         if phase != self._phase:
@@ -173,6 +177,7 @@ class GameOperations(QObject):
         # APRÈS l'existence du fil : `is_busy` doit déjà être vrai pour qui
         # écoute. Émis avant, la barre du bas lisait « rien en cours » et restait
         # cachée pendant tout le téléchargement (parcours du 2026-09-30).
+        self.derniere_progression = {}
         self.state_changed.emit()
         self._set_phase("download")
         self._downloader.start()
@@ -355,11 +360,10 @@ class GameOperations(QObject):
         self._speed_tracker.update(downloaded)
         if not self._speed_tracker.should_update_ui():
             return
-        self.download_progress.emit(
-            downloaded, total,
-            self._speed_tracker.speed,
-            self._speed_tracker.eta(downloaded, total),
-        )
+        chiffres = (downloaded, total, self._speed_tracker.speed,
+                    self._speed_tracker.eta(downloaded, total))
+        self.derniere_progression["telechargement"] = chiffres
+        self.download_progress.emit(*chiffres)
 
     def _on_download_finished(self, archive_path_str: str) -> None:
         self._liberer_downloader()
@@ -402,6 +406,7 @@ class GameOperations(QObject):
         self._target_version = None
         self._uninstall_first = False
         self._phase = ""
+        self.derniere_progression = {}
         return game, version
 
     def _on_download_error(self, message: str, echec: Echec | None = None) -> None:
@@ -423,11 +428,13 @@ class GameOperations(QObject):
         )
 
     def _on_part_info(self, current: int, total: int) -> None:
+        self.derniere_progression["parties"] = (current, total)
         self.part_info.emit(current, total)
 
     # ──────────────────── Callbacks installation ────────────────────
 
     def _on_install_progress(self, pct: int) -> None:
+        self.derniere_progression["installation"] = (pct,)
         self.install_progress.emit(pct)
 
     def _on_finalizing(self) -> None:

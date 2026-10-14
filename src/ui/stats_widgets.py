@@ -15,7 +15,7 @@ from src.core import sauvegardes
 from src.core.formatting import format_duree_compacte
 from src.core.i18n import get_language, tr
 from src.ui.fonts import cinzel
-from src.ui.theme import accent_qcolor
+from src.ui.theme import accent_qcolor, current as current_theme
 
 _SECONDAIRE = "#b0b0c8"
 _DISCRET = "#8a8aa6"
@@ -257,10 +257,10 @@ class _CarteSauvegarde(QFrame):
             # Celle qu'on reprendra : c'est la question qu'on se pose en
             # ouvrant un jeu à quatre emplacements, et les dates seules
             # obligent à les comparer de tête.
-            haut.addWidget(_texte(tr("dernière jouée"), 11, "#d6a72c"))
+            haut.addWidget(_texte(tr("dernière jouée"), 11, current_theme().accent))
         haut.addStretch(1)
         if vue.temps:
-            haut.addWidget(_chiffre(_duree(vue.temps), 14, "#d6a72c"))
+            haut.addWidget(_chiffre(_duree(vue.temps), 14, current_theme().accent))
         couche.addLayout(haut)
         if vue.temps:
             # Une jauge vide sur quatre cartes n'est pas une information, c'est

@@ -914,6 +914,8 @@
     "Jaquette": "Cover",
     "Fond d'écran": "Background",
     "Jaquette : {jl} × {jh} px. Fond : {fl} × {fh} px. Sous licence CC BY 4.0, sans logo de Warner ou d'EA ni visage d'acteur.": "Cover: {jl} × {jh} px. Background: {fl} × {fh} px. Under the CC BY 4.0 licence, with no Warner or EA logo and no actor's face.",
-    "En parler sur le Discord": "Talk about it on the Discord"
+    "En parler sur le Discord": "Talk about it on the Discord",
+    "Lire la bande-annonce": "Play the trailer",
+    "Le launcher prend déjà les couleurs de {maison}. Vous pourrez en changer dans les Paramètres.": "The launcher already wears {maison}'s colours. You can change them in Settings."
   }
 }

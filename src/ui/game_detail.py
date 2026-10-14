@@ -132,6 +132,7 @@ class GameDetailView(QWidget):
         self._ops.part_info.connect(self._action_panel.update_part_info)
         self._ops.phase_changed.connect(self._action_panel.set_phase)
         self._action_panel.phase_courante = lambda: self._ops.phase
+        self._action_panel.progression_courante = lambda: self._ops.derniere_progression
         self._ops.operation_finished.connect(self._on_operation_finished)
         self._ops.operation_error.connect(self._deferred_warning)
         self._ops.state_changed.connect(self._on_ops_state_changed)
@@ -354,6 +355,9 @@ class GameDetailView(QWidget):
         self._pending_video_id = game_id
         if not self.manager.config.autoplay_videos:
             self._video_timer.stop()
+            # Pas de lecture automatique : la pastille « Lire » reste le moyen
+            # de la voir. Sans elle, plus aucune commande sur la fiche.
+            self._proposer_pastille(a_lire=True)
             return
         # `start()` sur un minuteur armé REPART de zéro.
         self._video_timer.start()
@@ -399,9 +403,13 @@ class GameDetailView(QWidget):
         # EndOfMedia → relâcher la source pour libérer le décodeur…
         self._stop_video()
         # …mais laisser le bouton « revoir », seule commande encore utile.
+        self._proposer_pastille(a_lire=False)
+
+    def _proposer_pastille(self, a_lire: bool) -> None:
+        """La pastille seule (« Lire » ou « Revoir »), si le jeu a sa bande-annonce."""
         if self.game is not None and trailers.chemin_a_jouer(
                 self.game.id, self.manager.trailers()) is not None:
-            self._audio_bar.set_mode_fin(True)
+            self._audio_bar.set_mode_fin(True, a_lire=a_lire)
             self._position_audio_bar()
             self._audio_bar.show()
 
