@@ -72,6 +72,11 @@ def moyenne(y):
 haut, couture, bas = moyenne(frontiere - 2), moyenne(frontiere - 1), moyenne(frontiere)
 ecart = couture - (haut + bas) / 2
 print("DPR=%%.2f FRONTIERE=%%d ECART=%%.4f" %% (dpr, frontiere, ecart))
+# Sortie franche, comme le launcher (`os._exit`) : laisser Python détruire la
+# fenêtre et ses threads à l'arrêt de l'interpréteur a planté une fois sous
+# 3.12 en CI (0xC0000005) APRÈS une mesure réussie.
+sys.stdout.flush()
+os._exit(0)
 ''' % {"racine": str(RACINE)}
 
 

@@ -13,6 +13,19 @@
           "role": "Creación, desarrollo, catálogo"
         }
       }
+    },
+    {
+      "name": "Sara",
+      "role": "Relecture de l'espagnol (site et launcher)",
+      "url": "https://sarabalbalu.github.io/Sara/",
+      "i18n": {
+        "en": {
+          "role": "Spanish proofreading (website and launcher)"
+        },
+        "es": {
+          "role": "Revisión del español (web y launcher)"
+        }
+      }
     }
   ],
   "catalog_url": "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json",
