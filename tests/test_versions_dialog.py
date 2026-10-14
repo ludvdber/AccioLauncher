@@ -1,9 +1,11 @@
-"""Tests pour le helper de tri date utilisé par versions_dialog.
+"""Page des versions d'un jeu : tri, dates, et ce que chaque version propose.
 
-Le helper est gardé hors classe pour rester testable sans Qt.
+Les helpers de date sont gardés hors classe pour rester testables sans Qt.
 """
 
-from src.ui.versions_dialog import _date_sort_key
+import pytest
+
+from src.ui.versions_dialog import _date_sort_key, date_courte
 
 
 class TestDateSortKey:
@@ -30,9 +32,36 @@ class TestDateSortKey:
         assert sorted_dates[-1] == "2025-12-31"
 
 
+class TestDates:
+    def test_date_courte(self):
+        assert date_courte("2026-10-01") == "01/10/2026"
+
+    def test_une_date_illisible_reste_telle_quelle(self):
+        assert date_courte("bientôt") == "bientôt"
+        assert date_courte("2026-02-30") == "2026-02-30"
+
+    def test_date_longue_en_francais(self, qtbot):
+        from src.core.i18n import set_language
+        from src.ui.versions_dialog import date_longue
+        set_language("fr")
+        assert date_longue("2026-10-01") == "1er octobre 2026"
+        assert date_longue("2026-09-28") == "28 septembre 2026"
+
+    @pytest.mark.parametrize("langue, attendu", [("en", "October 1, 2026"),
+                                                 ("es", "1 de octubre de 2026")])
+    def test_date_longue_dans_l_ordre_de_chaque_langue(self, qtbot, langue, attendu):
+        from src.core.i18n import set_language
+        from src.ui.versions_dialog import date_longue
+        set_language(langue)
+        try:
+            assert date_longue("2026-10-01") == attendu
+        finally:
+            set_language("fr")
+
+
 # ─── La fenêtre elle-même (M-15 / ACT-020 : 12 % couverte) ──────────────────
 
-import pytest  # noqa: E402
+
 
 pytest.importorskip("pytestqt")
 
@@ -64,8 +93,10 @@ def _dialogue(qtbot, installee):
     return dlg
 
 
-def _boutons(dlg):
-    return [b.text() for b in dlg.findChildren(QPushButton) if b.text() != "Fermer"]
+def _actions(dlg):
+    """Le bouton de chaque page de version, par numéro ; None s'il n'y en a pas."""
+    return {v.version: (b.text() if (b := dlg.action(v.version)) else None)
+            for v in dlg.game.versions}
 
 
 class _FausseConfirmation:
@@ -92,16 +123,60 @@ class _FausseConfirmation:
         return lambda *a, **k: None
 
 
-class TestFenetreDesVersions:
+class TestPageDesVersions:
     def test_les_boutons_disent_ce_qui_va_arriver(self, qtbot):
         dlg = _dialogue(qtbot, "1.1")
         # 1.1 installée : rien pour elle ; 1.3 sans archive : « Pas encore en ligne ».
-        assert sorted(_boutons(dlg)) == ["Mettre à jour vers v1.2", "Revenir à v1.0"]
+        assert _actions(dlg) == {"1.0": "Revenir à v1.0", "1.1": None,
+                                 "1.2": "Mettre à jour vers v1.2", "1.3": None}
         assert any(lbl.text() == "Pas encore en ligne" for lbl in dlg.findChildren(QLabel))
+        assert any(lbl.text() == "C'est la version installée" for lbl in dlg.findChildren(QLabel))
 
     def test_sans_version_installee_on_propose_d_installer(self, qtbot):
         dlg = _dialogue(qtbot, None)
-        assert sorted(_boutons(dlg)) == ["Installer v1.0", "Installer v1.1", "Installer v1.2"]
+        assert _actions(dlg) == {"1.0": "Installer v1.0", "1.1": "Installer v1.1",
+                                 "1.2": "Installer v1.2", "1.3": None}
+        assert not any(lbl.text() == "Vos sauvegardes restent." for lbl in dlg.findChildren(QLabel)), \
+            "rien à garder quand rien n'est installé"
+
+    def test_s_ouvre_sur_la_version_installee(self, qtbot):
+        dlg = _dialogue(qtbot, "1.1")
+        assert dlg._lignes["1.1"].isChecked()
+        assert dlg._details.currentIndex() == dlg._index["1.1"]
+
+    def test_sans_installation_s_ouvre_sur_la_recommandee(self, qtbot):
+        dlg = _dialogue(qtbot, None)
+        assert dlg._lignes["1.2"].isChecked()
+
+    def test_choisir_une_version_montre_sa_page(self, qtbot):
+        dlg = _dialogue(qtbot, "1.1")
+        dlg._lignes["1.0"].click()
+        assert dlg._details.currentIndex() == dlg._index["1.0"]
+        assert not dlg._lignes["1.1"].isChecked()
+
+    def test_les_plus_recentes_en_haut_du_rail(self, qtbot):
+        dlg = _dialogue(qtbot, "1.1")
+        assert list(dlg._lignes) == ["1.3", "1.2", "1.1", "1.0"]
+
+    def test_le_rail_dit_installee_et_recommandee(self, qtbot):
+        dlg = _dialogue(qtbot, "1.1")
+        assert "Installée" in dlg._lignes["1.1"].accessibleName()
+        assert "Recommandée" in dlg._lignes["1.2"].accessibleName()
+        assert "Installée" not in dlg._lignes["1.0"].accessibleName()
+
+    def test_ne_promet_pas_les_reglages(self, qtbot):
+        """Changer de version supprime le dossier du jeu, et l'ini du correctif avec."""
+        dlg = _dialogue(qtbot, "1.1")
+        textes = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
+        assert "sauvegardes" in textes
+        assert "réglages" not in textes
+
+    def test_le_retour_ferme_la_page(self, qtbot):
+        dlg = _dialogue(qtbot, "1.1")
+        fermee = []
+        dlg.finished.connect(fermee.append)
+        next(b for b in dlg.findChildren(QPushButton) if b.text() == "Bibliothèque").click()
+        assert fermee
 
     def test_un_changelog_venu_du_catalogue_est_echappe(self, qtbot):
         dlg = _dialogue(qtbot, None)

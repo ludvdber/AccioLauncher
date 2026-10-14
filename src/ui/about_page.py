@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 from src.core import diagnostic
 from src.core.config import APP_VERSION, ASSETS_DIR, LOG_DIR
 from src.core.i18n import tr, translator_credits
+from src.core import nouveautes
 from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, NOTES_VERSIONS_URL, SITE_URL
 from src.ui import appel_artistes
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, texte
@@ -43,6 +44,8 @@ _LOGO = ASSETS_DIR / "accio_logo_horizontal.png"
 _LARGEUR_LOGO = 300
 _LARGEUR_TUILE = 160
 _TAILLE_ICONE = 24
+# Le lien du numéro de version vers la page des nouveautés (pas une adresse).
+_NOUVEAUTES = "nouveautes"
 
 
 def _capitales(contenu: str, px: int, encre: str, espacement: float = 2.0) -> QLabel:
@@ -391,8 +394,13 @@ def _depannage(manager) -> QFrame:
     return cadre
 
 
-def construire(contributeurs, manager=None) -> QWidget:
-    """La page complète, prête à entrer dans le QStackedWidget des Paramètres."""
+def construire(contributeurs, manager=None, ouvrir_nouveautes=None) -> QWidget:
+    """La page complète, prête à entrer dans le QStackedWidget des Paramètres.
+
+    `ouvrir_nouveautes` : rappel sans argument. Fourni, et la version courante
+    ayant ses nouveautés, le numéro de version ouvre leur page plutôt que la
+    liste des versions sur GitHub.
+    """
     page = QWidget()
     page.setStyleSheet(themed(_STYLE_TUILES))
     lay = QVBoxLayout(page)
@@ -404,7 +412,9 @@ def construire(contributeurs, manager=None) -> QWidget:
     # Le SEUL endroit où le launcher dit sa version (Ludo, 2026-10-14 : elle
     # était aussi au pied de la colonne des Paramètres). Le numéro mène à ce
     # qu'il contient, comme « Version 1.3 » sur la fiche d'un jeu.
-    numeros = (f'<a href="{NOTES_VERSIONS_URL}" style="color:{current_theme().accent};'
+    vers_page = ouvrir_nouveautes is not None and nouveautes.charger() is not None
+    cible = _NOUVEAUTES if vers_page else NOTES_VERSIONS_URL
+    numeros = (f'<a href="{cible}" style="color:{current_theme().accent};'
                ' text-decoration:none;">'
                + escape(tr("Version {}").format(APP_VERSION).upper(), quote=False) + "</a>")
     if manager is not None:
@@ -415,8 +425,10 @@ def construire(contributeurs, manager=None) -> QWidget:
     version.setText(numeros)
     version.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
                                     | Qt.TextInteractionFlag.LinksAccessibleByKeyboard)
-    version.linkActivated.connect(open_url)
-    version.setToolTip(tr("Ce que contient chaque version"))
+    version.linkActivated.connect(
+        lambda url: ouvrir_nouveautes() if url == _NOUVEAUTES else open_url(url))
+    version.setToolTip(tr("Les nouveautés de cette version") if vers_page
+                       else tr("Ce que contient chaque version"))
     version.setObjectName("versions")
     version.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lay.addWidget(version)

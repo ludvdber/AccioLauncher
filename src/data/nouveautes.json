@@ -1,0 +1,123 @@
+{
+  "versions": [
+    {
+      "version": "1.2.0",
+      "depuis": "1.1.5",
+      "points_forts": [
+        {
+          "icone": "ecran",
+          "titre": {
+            "fr": "Une barre en haut",
+            "en": "A bar at the top",
+            "es": "Una barra arriba"
+          },
+          "texte": {
+            "fr": "Bibliothèque, Mes années et Paramètres s'ouvrent dans la fenêtre, comme des pages.",
+            "en": "Library, My years and Settings open inside the window, like pages.",
+            "es": "Biblioteca, Mis años y Ajustes se abren dentro de la ventana, como páginas."
+          }
+        },
+        {
+          "icone": "drapeau",
+          "titre": {
+            "fr": "Un premier lancement refait",
+            "en": "A new first launch",
+            "es": "Un primer inicio renovado"
+          },
+          "texte": {
+            "fr": "Le Choixpeau pose une question à la fois. Les jeux déjà dans votre dossier sont repris tout seuls.",
+            "en": "The Sorting Hat asks one question at a time. Games already in your folder are picked up on their own.",
+            "es": "El Sombrero Seleccionador hace una pregunta a la vez. Los juegos que ya están en tu carpeta se recuperan solos."
+          }
+        },
+        {
+          "icone": "jauge",
+          "titre": {
+            "fr": "Les réglages de chaque jeu",
+            "en": "Each game's settings",
+            "es": "Los ajustes de cada juego"
+          },
+          "texte": {
+            "fr": "Tous les effets d'image d'un coup d'œil, avec ce qu'ils demandent à la machine.",
+            "en": "Every image effect at a glance, with what it asks of your computer.",
+            "es": "Todos los efectos de imagen de un vistazo, con lo que le piden al equipo."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Mes années devient un relevé de scolarité, année par année.",
+            "en": "My years becomes a school report, year by year.",
+            "es": "Mis años se convierte en un boletín escolar, año por año."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Chaque jeu a sa page de versions : ce qui change, et un bouton pour passer de l'une à l'autre.",
+            "en": "Each game has its own versions page: what changes, and a button to switch between them.",
+            "es": "Cada juego tiene su página de versiones: qué cambia y un botón para pasar de una a otra."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "« Désinstaller Accio Launcher » dans Paramètres, qui peut garder vos jeux.",
+            "en": "“Uninstall Accio Launcher” in Settings, which can keep your games.",
+            "es": "«Desinstalar Accio Launcher» en Ajustes, que puede conservar tus juegos."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Pendant un téléchargement : l'étape, la vitesse et le temps restant.",
+            "en": "During a download: the current step, the speed and the time left.",
+            "es": "Durante una descarga: la etapa, la velocidad y el tiempo restante."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les messages d'erreur disent ce qui est conservé.",
+            "en": "Error messages say what has been kept.",
+            "es": "Los mensajes de error dicen lo que se conserva."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Un fichier manquant est nommé, avec la marche à suivre si l'antivirus l'a pris.",
+            "en": "A missing file is named, with what to do if your antivirus removed it.",
+            "es": "Un archivo que falta aparece por su nombre, con los pasos a seguir si el antivirus se lo llevó."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "« Actualiser le catalogue » ne revient plus à une version plus ancienne du catalogue.",
+            "en": "“Refresh catalog” no longer rolls back to an older catalog.",
+            "es": "«Actualizar el catálogo» ya no vuelve a una versión anterior del catálogo."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Plus de fenêtres vides qui clignotaient à l'ouverture.",
+            "en": "No more empty windows flashing at startup.",
+            "es": "Se acabaron las ventanas vacías que parpadeaban al abrir."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Les jaquettes carrées ne sont plus déformées.",
+            "en": "Square covers are no longer distorted.",
+            "es": "Las portadas cuadradas ya no se deforman."
+          }
+        }
+      ]
+    }
+  ]
+}

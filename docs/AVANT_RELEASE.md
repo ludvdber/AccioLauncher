@@ -6,7 +6,7 @@ Les tests automatiques ne lancent aucun vrai jeu. Cet essai, si : il joue chaque
 
 - **Le « oui » de Ludo pour la session.** L'essai prend la souris et le clavier : le PC doit être libre pendant environ 15 minutes pour les six jeux. Le pilote refuse de partir sans `ACCIO_OUI=1`.
 - **HP7 et HP8 seulement si Ludo les demande** (HP8 s'est figé sur tous les cœurs le 2026-09-25). Le pilote les sait depuis le 2026-10-09 (`hp7a`, `hp7b` : démarrage, image qui bouge, processeur sous 50 %, Alt+Tab, fermeture) ; ce jour-là, à sa demande, 10/10 chacun, aucun figeage.
-- **Une étiquette par jeu** (`v1.1.6-hp2`…) : les preuves d'une même étiquette s'écrasent d'un jeu à l'autre.
+- **Une étiquette par jeu** (`v1.2.0-hp2`…) : les preuves d'une même étiquette s'écrasent d'un jeu à l'autre.
 - Le son du jeu est coupé tout seul (`son.py`). Après un plantage du pilote : `python son.py retablir`, jeu relancé.
 
 ## Les six lancements
@@ -15,8 +15,8 @@ Le pilote vit dans l'atelier, hors dépôt : `C:\Users\User\Tools\accio_fix_atel
 
 ```text
 set ACCIO_OUI=1
-python essai_avant_release.py hp1 v1.1.6
-python essai_avant_release.py hp2 v1.1.6
+python essai_avant_release.py hp1 v1.2.0
+python essai_avant_release.py hp2 v1.2.0
 ... jusqu'à hp6
 ```
 

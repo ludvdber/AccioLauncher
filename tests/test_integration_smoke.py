@@ -176,6 +176,36 @@ class TestKeyboardNav:
         assert win._handle_global_key(ev) is False
 
 
+class TestNouveautesAuDemarrage:
+    """La page des nouveautés, une fois, au premier lancement d'une version plus récente."""
+
+    def test_s_ouvre_apres_une_mise_a_jour(self, make_window):
+        from src.ui.nouveautes_page import NouveautesPage
+        win = make_window(version_lancee="1.1.5")
+        assert isinstance(win._pages.page, NouveautesPage)
+        win._pages.fermer()
+        assert win._pages.page is None
+
+    def test_pas_au_premier_lancement(self, make_window):
+        win = make_window()   # config neuve : elle porte déjà la version courante
+        assert win._pages.page is None
+
+    def test_pas_deux_fois(self, make_window):
+        win = make_window(version_lancee="1.1.5")
+        win._pages.fermer()
+        win._maybe_thank_milestone()   # note la version lancée, comme au démarrage
+        assert win.config.version_lancee == APP_VERSION
+        from src.core import nouveautes
+        assert not nouveautes.a_montrer(win.config.version_lancee)
+
+    def test_a_propos_la_rouvre(self, make_window):
+        from src.ui.nouveautes_page import NouveautesPage
+        win = make_window()
+        win._on_settings()
+        win._pages.page.nouveautes_demandees.emit()
+        assert isinstance(win._pages.page, NouveautesPage)
+
+
 class TestKofiMilestone:
     """Le merci unique vient à la première mise à jour du launcher installée
     (ACT-072, 2026-10-09), plus au cap des 2 h de jeu : on remercie pour le
@@ -2014,6 +2044,21 @@ class TestEngrenageReglagesDuJeu:
         # Une page à la place de la fiche, plus une fenêtre (2026-10-09).
         assert isinstance(win._pages.page, GameSettingsDialog)
         win._pages.fermer()
+        assert win._pages.page is None
+
+    def test_les_versions_s_ouvrent_en_page(self, make_window_multilingue):
+        """Plus une boîte de 550 × 500 posée sur la fiche (2026-10-14)."""
+        from src.core.game_manager import GameState
+        from src.ui import game_detail_handlers as gdh
+        from src.ui.versions_dialog import VersionsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        gdh.on_versions_clicked(win._detail)
+        page = win._pages.page
+        assert isinstance(page, VersionsDialog)
+        assert not page.isWindow()
+        page.reject()   # Échap
         assert win._pages.page is None
 
 

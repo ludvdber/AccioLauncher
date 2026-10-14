@@ -574,7 +574,11 @@ def on_versions_clicked(view: "GameDetailView") -> None:
         return
     dlg = VersionsDialog(view.game, view.manager, view)
     dlg.switch_to_version.connect(lambda gid, ver: on_switch_version(view, gid, ver))
-    dlg.exec()
+    # Une PAGE à la place de la fiche (2026-10-14), comme les réglages du jeu.
+    if view.receivers(view.page_demandee):
+        view.page_demandee.emit(dlg)
+    else:
+        dlg.exec()
 
 
 def on_repair(view: "GameDetailView") -> None:

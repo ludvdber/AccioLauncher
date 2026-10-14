@@ -137,6 +137,7 @@ class SettingsDialog(QDialog):
     restart_requested = pyqtSignal()       # « Redémarrer maintenant » (thème/langue)
     # « Désinstaller et fermer » : (garder les jeux, garder les copies).
     desinstallation_demandee = pyqtSignal(bool, bool)
+    nouveautes_demandees = pyqtSignal()   # le numéro de version d'À propos
 
     def __init__(self, config: Config, manager: GameManager, parent=None,
                  store=None) -> None:
@@ -241,7 +242,8 @@ class SettingsDialog(QDialog):
         self._apropos_construit = True
         vide = self._pages.widget(rang)
         page = zone_defilable(self._marges(about_page.construire(
-            self.manager.catalog.contributors, manager=self.manager)))
+            self.manager.catalog.contributors, manager=self.manager,
+            ouvrir_nouveautes=self.nouveautes_demandees.emit)))
         self._pages.insertWidget(rang, page)
         self._pages.removeWidget(vide)
         vide.deleteLater()

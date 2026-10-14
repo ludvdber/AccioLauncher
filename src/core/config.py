@@ -48,6 +48,7 @@ else:
 # --- Chemins des ressources embarquées ---
 GAMES_JSON_PATH = _BUNDLE_DIR / "data" / "games.json"
 I18N_DIR = _BUNDLE_DIR / "data" / "i18n"
+NOUVEAUTES_PATH = _BUNDLE_DIR / "data" / "nouveautes.json"
 
 # Langue proposee quand rien n'est encore choisi. Volontairement l'anglais
 # et non le francais : le launcher vise un public international, et le
@@ -91,7 +92,7 @@ def cache_pour(install_path: Path) -> Path:
 # embarquees : permet a un traducteur de tester son fichier sans release.
 USER_I18N_DIR = LAUNCHER_DATA_PATH / "i18n"
 
-APP_VERSION = "1.1.6"
+APP_VERSION = "1.2.0"
 
 
 def _as_str(value: object, default: str) -> str:

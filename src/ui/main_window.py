@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QEvent, QPointF, QTimer
 from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
-from src.core import compat, manette
+from src.core import compat, manette, nouveautes
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -22,7 +22,7 @@ from src.ui.game_session import GameSession
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
 from src.core.season import resolve as resolve_season
-from src.core.version_utils import compare_versions
+from src.ui.nouveautes_page import NouveautesPage
 from src.ui.pages import Pages
 from src.ui.settings_panel import SettingsDialog
 from src.ui.desinstallation_dialog import desinstaller
@@ -38,16 +38,6 @@ from src.ui.window_chrome import WindowChrome, geometrie_d_ouverture
 from src.ui.utils import icone_application, open_url
 
 log = logging.getLogger(__name__)
-
-
-def mise_a_jour_installee(precedente: str) -> bool:
-    """La version lancée la dernière fois est-elle plus ancienne que celle-ci ?
-
-    Vide : la config a été écrite par une version d'avant la 1.1.6, qui ne
-    notait pas encore sa version. C'est donc aussi une mise à jour. Un premier
-    lancement, lui, part de `Config()`, qui porte déjà la version courante.
-    """
-    return not precedente or compare_versions(APP_VERSION, precedente) > 0
 
 
 class MainWindow(QMainWindow):
@@ -202,6 +192,9 @@ class MainWindow(QMainWindow):
                 self._carousel.select(idx)  # émet game_selected → set_game
             else:
                 self._detail.set_game(games[0])
+        # Premier lancement d'une version plus récente : ce qu'elle apporte.
+        if nouveautes.a_montrer(self.config.version_lancee):
+            self._ouvrir_nouveautes(apres_mise_a_jour=True)
 
         # Notification VISIBLE des mises à jour de jeux (recompte local, différé
         # après le fade-in). La status bar seule passait inaperçue — retour Ludo.
@@ -560,7 +553,7 @@ class MainWindow(QMainWindow):
         cfg = self.config
         if cfg.version_lancee == APP_VERSION:
             return
-        merci = not cfg.kofi_milestone_thanked and mise_a_jour_installee(cfg.version_lancee)
+        merci = not cfg.kofi_milestone_thanked and nouveautes.mise_a_jour_installee(cfg.version_lancee)
         cfg.version_lancee = APP_VERSION
         cfg.kofi_milestone_thanked = cfg.kofi_milestone_thanked or merci
         cfg.save()
@@ -610,9 +603,15 @@ class MainWindow(QMainWindow):
         dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
         dlg.season_changed.connect(self._particles.apply_season)
         dlg.restart_requested.connect(lambda: self._restart_launcher(dlg))
+        dlg.nouveautes_demandees.connect(self._ouvrir_nouveautes)
         dlg.desinstallation_demandee.connect(
             lambda jeux, copies: desinstaller(self, dlg, jeux, copies))
         self._pages.ouvrir(dlg, PARAMETRES)
+
+    def _ouvrir_nouveautes(self, apres_mise_a_jour: bool = False) -> None:
+        contenu = nouveautes.charger()
+        if contenu is not None:
+            self._pages.ouvrir(NouveautesPage(contenu, apres_mise_a_jour, self))
 
     def _on_stats(self) -> None:
         """Page de statistiques — lecture seule, aucun réglage, donc rien à recâbler."""
