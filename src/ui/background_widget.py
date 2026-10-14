@@ -48,6 +48,9 @@ _DEBORD_PX = 2
 # revanche, coûterait 8 %.
 _VOILE_ALPHA = 38
 
+# Fonds déjà décodés, par chemin (voir `BackgroundWidget.set_image`).
+_FONDS_DECODES: dict[str, QPixmap | None] = {}
+
 # Voile gauche : (position sur la largeur, alpha). C'est LUI qui protège
 # réellement le texte — le voile plein ci-dessus assombrit uniformément, mais
 # le panneau d'infos occupe `min(650, 50 %)` de la largeur, et l'ancien profil
@@ -261,10 +264,13 @@ class BackgroundWidget(QWidget):
         self.update()
 
     def set_image(self, path: Path | None) -> None:
-        if path and path.exists():
-            self._pixmap = QPixmap(str(path))
-        else:
-            self._pixmap = None
+        # Décodées UNE fois par session : le JPEG était relu et décodé à chaque
+        # changement de jeu, 12 ms sur les ~60 du clic (mesuré le 2026-10-14).
+        # Huit fonds au plus, de 1 à 5 Mo chacun une fois décodés.
+        cle = str(path) if path else ""
+        if cle not in _FONDS_DECODES:
+            _FONDS_DECODES[cle] = (QPixmap(cle) if path and path.exists() else None)
+        self._pixmap = _FONDS_DECODES[cle]
         self._prepared = None
         self._prepared_for = (0, 0)
         self.update()

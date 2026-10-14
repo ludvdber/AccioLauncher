@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QLabel, QWidget
 
-from src.core import compat, composants_windows
+from src.core import compat, composants_windows, fichiers_essentiels
 from src.core.formatting import format_size
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
@@ -36,7 +36,11 @@ from src.ui.utils import open_url
 # par `themed()` deviendrait vert chez Serpentard et bleu chez Serdaigle, où il
 # ne se distinguerait plus de la décoration.
 WARN = "#e8955a"
-LIEN = '<a href="{}" style="color:{}; text-decoration: underline;">{}</a>'
+# Le lien en ambre, appuyé et sans soulignement : souligné, il faisait un
+# trait orange sous la moitié de la ligne.
+LIEN = '<a href="{}" style="color:{}; font-weight:600; text-decoration:none;">{}</a>'
+# Le corps du message : un blanc chaud, lisible sur toutes les illustrations.
+_TEXTE = "#e6dccd"
 
 # Plafond du bandeau, en lignes. Mesuré sur la plateforme native, vraies
 # polices : les bandeaux qui tiennent à 980×660 font 33 px (une ligne) ou 54 px
@@ -102,9 +106,12 @@ class AlertBanner(QLabel):
             # Pas de fond plein : la bande s'étirait sur toute la largeur du
             # panneau et laissait un grand rectangle ambre vide à droite du
             # texte. Le filet vertical suffit à marquer l'avertissement.
-            f"QLabel {{ color: {WARN}; background: transparent;"
-            f" border-left: 3px solid {WARN};"
-            " padding: 2px 0px 2px 11px; }"
+            # Le texte en clair, l'ambre réservé au filet et au lien : tout en
+            # orange, la phrase criait plus fort que le bouton (audit UI,
+            # 2026-10-14).
+            f"QLabel {{ color: {_TEXTE}; background: transparent;"
+            f" border-left: 2px solid {WARN};"
+            " padding: 1px 0px 1px 12px; }"
         )
         self.linkActivated.connect(self._on_lien)
         self.hide()
@@ -207,12 +214,18 @@ class AlertBanner(QLabel):
                 )
         # Dernier rang : la mise en garde que le CATALOGUE attache à ce jeu.
         # Elle cède le pas à tout ce qui précède, qui est bloquant ici et
-        # maintenant, mais elle survit aux deux états qui comptent — avant le
-        # téléchargement (prévenir) et une fois installé (expliquer un jeu qui
-        # refuse de démarrer). Le texte vient du catalogue et non d'un `tr()` :
-        # il se met à jour à distance, sans republier l'exécutable, et voyage
-        # déjà traduit dans le bloc `i18n` du jeu.
-        if state in (GameState.NOT_INSTALLED, GameState.INSTALLED):
+        # maintenant, mais elle survit aux deux moments qui comptent : avant le
+        # téléchargement (prévenir) et une fois installé SI un fichier
+        # essentiel a disparu (expliquer un jeu qui refuse de démarrer). Sur un
+        # jeu installé et entier, elle parlait d'une installation finie depuis
+        # longtemps, sous le bouton JOUER, à chaque visite (Ludo, 2026-10-14 :
+        # « le Que faire ? est moche sur HP8 »). Le texte vient du catalogue
+        # et non d'un `tr()` : il se met à jour à distance, sans republier
+        # l'exécutable, et voyage déjà traduit dans le bloc `i18n` du jeu.
+        if state == GameState.NOT_INSTALLED:
+            return self._catalogue(game)
+        if state == GameState.INSTALLED and fichiers_essentiels.manquants(
+                game, Path(self._manager.config.install_path)):
             return self._catalogue(game)
         return ""
 

@@ -81,6 +81,12 @@ _FICHIERS = {
     "attention": "phosphor/warning-bold.svg",
     "corbeille": "phosphor/trash-bold.svg",
     "sortie": "phosphor/sign-out-bold.svg",
+    # Barre de titre : les caractères ─ □ ✕ prenaient la police de repli de
+    # Windows, et le carré d'agrandissement y était minuscule (audit UI, 2026-10-14).
+    "reduire": "phosphor/minus-bold.svg",
+    "agrandir": "phosphor/square-bold.svg",
+    "restaurer": "phosphor/copy-bold.svg",
+    "fermer": "phosphor/x-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

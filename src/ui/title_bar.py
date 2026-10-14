@@ -1,6 +1,6 @@
 """Barre de titre custom pour fenêtre sans cadre."""
 
-from PyQt6.QtCore import Qt, QPoint, QRectF, QSize, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, QPoint, QRectF, QSize, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QIcon, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
@@ -100,6 +100,38 @@ class _PastilleDiscord(QPushButton):
         super().leaveEvent(event)
 
 
+class _BoutonFenetre(QPushButton):
+    """Réduire / agrandir / fermer : un pictogramme gris qui blanchit au survol.
+
+    Deux icônes et non une couleur de feuille de style : un `color:` ne
+    teinte pas une QIcon. 18 px, le plancher du Bold de Phosphor (règle 51).
+    """
+
+    _TAILLE = 18
+
+    def __init__(self, icone: str) -> None:
+        super().__init__()
+        self.setIconSize(QSize(self._TAILLE, self._TAILLE))
+        self.regler_icone(icone)
+
+    def regler_icone(self, icone: str) -> None:
+        self._icone = icone
+        self._repos = QIcon(pixmap_icone(icone, self._TAILLE, QColor("#8a8aaa")))
+        self._survol = QIcon(pixmap_icone(icone, self._TAILLE, QColor("#f2f2f4")))
+        self.setIcon(self._survol if self.underMouse() else self._repos)
+
+    def icone(self) -> str:
+        return self._icone
+
+    def enterEvent(self, event) -> None:
+        self.setIcon(self._survol)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self.setIcon(self._repos)
+        super().leaveEvent(event)
+
+
 class TitleBar(QWidget):
     """Barre du haut : nom, écu, onglets, Discord et boutons de fenêtre."""
 
@@ -168,13 +200,17 @@ class TitleBar(QWidget):
         layout.addWidget(filet, alignment=Qt.AlignmentFlag.AlignVCenter)
         layout.addSpacing(6)
 
-        # Boutons minimalistes
-        for text, slot, hover_bg, label in (
-            ("\u2500", self._on_minimize, "rgba(255,255,255,0.08)", tr("Réduire")),
-            ("\u25a1", self._on_maximize, "rgba(255,255,255,0.08)", tr("Agrandir")),
-            ("\u2715", self._on_close, "#c0392b", tr("Fermer")),
+        # Réduire, agrandir, fermer : pictogrammes Phosphor, comme le reste de
+        # l'interface (règle 59 : plus de ─ □ ✕ en caractères).
+        self._agrandir = None
+        for icone, slot, hover_bg, label in (
+            ("reduire", self._on_minimize, "rgba(255,255,255,0.08)", tr("Réduire")),
+            ("agrandir", self._on_maximize, "rgba(255,255,255,0.08)", tr("Agrandir")),
+            ("fermer", self._on_close, "#c0392b", tr("Fermer")),
         ):
-            btn = QPushButton(text)
+            btn = _BoutonFenetre(icone)
+            if icone == "agrandir":
+                self._agrandir = btn
             btn.setAccessibleName(label)
             btn.setToolTip(label)
             btn.setFixedSize(44, 38)
@@ -187,12 +223,27 @@ class TitleBar(QWidget):
             # launcher ne revient pas »).
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             btn.setStyleSheet(
-                f"QPushButton {{ background: transparent; color: #8a8aaa; border: none;"
-                f" font-size: 13px; }}"
-                f"QPushButton:hover {{ background: {hover_bg}; color: #eaeaea; }}"
+                "QPushButton { background: transparent; border: none; }"
+                f"QPushButton:hover {{ background: {hover_bg}; }}"
             )
             btn.clicked.connect(slot)
             layout.addWidget(btn)
+        # Agrandie, la fenêtre se RESTAURE : le pictogramme le dit, comme Windows.
+        # Suivi sur l'état réel (Win+↑, double-clic, aimantation au bord).
+        self._window.installEventFilter(self)
+        self._suivre_agrandissement()
+
+    def eventFilter(self, obj, event) -> bool:
+        if obj is self._window and event.type() == QEvent.Type.WindowStateChange:
+            self._suivre_agrandissement()
+        return False
+
+    def _suivre_agrandissement(self) -> None:
+        agrandie = self._window.isMaximized()
+        self._agrandir.regler_icone("restaurer" if agrandie else "agrandir")
+        libelle = tr("Restaurer") if agrandie else tr("Agrandir")
+        self._agrandir.setAccessibleName(libelle)
+        self._agrandir.setToolTip(libelle)
 
     def set_onglet(self, cle: str) -> None:
         """Souligne l'onglet ouvert. Mes années et Paramètres sont des fenêtres

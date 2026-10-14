@@ -19,17 +19,17 @@ from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
 
-from PyQt6.QtCore import QMimeData, QPointF, QSize, QStandardPaths, Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPixmap, QPolygonF
+from PyQt6.QtCore import QMimeData, QSize, QStandardPaths, Qt, QTimer, QUrl
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPixmap
 from PyQt6.QtWidgets import (
-    QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
+    QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
     QVBoxLayout, QWidget,
 )
 
 from src.core import diagnostic
 from src.core.config import APP_VERSION, ASSETS_DIR, LOG_DIR
 from src.core.i18n import tr, translator_credits
-from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, SITE_URL
+from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, NOTES_VERSIONS_URL, SITE_URL
 from src.ui import appel_artistes
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, texte
 from src.ui.fonts import cinzel
@@ -163,24 +163,6 @@ def _tuiles() -> QHBoxLayout:
     return rangee
 
 
-class _Losange(QWidget):
-    """Le petit losange entre un rôle et un nom. Peint : un ◆ dans le texte
-    serait un pictogramme Unicode, rendu au hasard des polices (règle 59)."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.setFixedSize(22, 12)
-
-    def paintEvent(self, _event) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(accent_qcolor(120))
-        cx, cy = self.width() / 2, self.height() / 2
-        p.drawPolygon(QPolygonF([QPointF(cx, cy - 3.5), QPointF(cx + 3.5, cy),
-                                 QPointF(cx, cy + 3.5), QPointF(cx - 3.5, cy)]))
-        p.end()
-
 
 def _filet() -> QFrame:
     trait = QFrame()
@@ -218,17 +200,26 @@ def _generique(contributeurs) -> QWidget | None:
     se met à jour à distance : remercier quelqu'un n'attend pas une release.
     Rien à afficher : pas de rubrique (un titre au-dessus de rien annoncerait
     une liste qui n'existe pas).
+
+    Regroupé PAR PERSONNE (Ludo, 2026-10-14) : une ligne par rôle répétait
+    « ASTeam » trois fois, pour la création, l'anglais et l'espagnol. Le nom
+    paraît une fois, avec son lien, et ses rôles en dessous.
     """
-    lignes: list[tuple[QLabel, QLabel]] = []
+    personnes: dict[str, tuple[QLabel, list[str]]] = {}
     for c in contributeurs:
-        # Le rôle en PlainText : jamais interprété, sans rien à échapper.
-        lignes.append((texte(c.role, 14, ENCRE_DOUCE), _nom_contributeur(c)))
+        if c.name not in personnes:
+            personnes[c.name] = (_nom_contributeur(c), [])
+        if c.role:
+            personnes[c.name][1].append(c.role)
     for langue, gens in translator_credits():
-        # PlainText aussi : un fichier de langue vient de l'extérieur.
-        nom = _capitales(", ".join(gens), 13, ENCRE, 1.5)
-        nom.setText(", ".join(gens))
-        lignes.append((texte(f"{tr('Traductions')} · {langue}", 14, ENCRE_DOUCE), nom))
-    if not lignes:
+        for nom in gens:
+            if nom not in personnes:
+                # PlainText : un fichier de langue vient de l'extérieur.
+                lbl = _capitales(nom, 13, ENCRE, 1.5)
+                lbl.setText(nom)
+                personnes[nom] = (lbl, [])
+            personnes[nom][1].append(f"{tr('Traductions')} · {langue}")
+    if not personnes:
         return None
 
     bloc = QWidget()
@@ -241,23 +232,22 @@ def _generique(contributeurs) -> QWidget | None:
     titre.addWidget(_capitales(tr("Générique"), 11, "#d6a72c", 4))
     titre.addWidget(_filet(), stretch=1)
     lay.addLayout(titre)
-    grille = QGridLayout()
-    grille.setHorizontalSpacing(0)
-    grille.setVerticalSpacing(8)
-    grille.setColumnStretch(0, 1)
-    grille.setColumnStretch(2, 1)
-    for rang, (role, nom) in enumerate(lignes):
-        role.setFont(police(14))
-        f = role.font()
-        f.setItalic(True)
-        role.setFont(f)
-        role.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        role.setWordWrap(True)
-        nom.setWordWrap(True)
-        grille.addWidget(role, rang, 0)
-        grille.addWidget(_Losange(), rang, 1, Qt.AlignmentFlag.AlignVCenter)
-        grille.addWidget(nom, rang, 2)
-    lay.addLayout(grille)
+    for nom, roles in personnes.values():
+        fiche = QVBoxLayout()
+        fiche.setSpacing(3)
+        nom.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        fiche.addWidget(nom)
+        for role in roles:
+            # Le rôle en PlainText : jamais interprété, sans rien à échapper.
+            ligne = texte(role, 14, ENCRE_DOUCE)
+            f = police(14)
+            f.setItalic(True)
+            ligne.setFont(f)
+            ligne.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            ligne.setWordWrap(True)
+            fiche.addWidget(ligne)
+        lay.addSpacing(4)
+        lay.addLayout(fiche)
     return bloc
 
 
@@ -411,10 +401,22 @@ def construire(contributeurs, manager=None) -> QWidget:
 
     lay.addWidget(_logo())
     lay.addSpacing(10)
-    numeros = tr("Version {}").format(APP_VERSION)
+    # Le SEUL endroit où le launcher dit sa version (Ludo, 2026-10-14 : elle
+    # était aussi au pied de la colonne des Paramètres). Le numéro mène à ce
+    # qu'il contient, comme « Version 1.3 » sur la fiche d'un jeu.
+    numeros = (f'<a href="{NOTES_VERSIONS_URL}" style="color:{current_theme().accent};'
+               ' text-decoration:none;">'
+               + escape(tr("Version {}").format(APP_VERSION).upper(), quote=False) + "</a>")
     if manager is not None:
-        numeros += "  ·  " + tr("Catalogue {}").format(manager.catalog.catalog_version)
-    version = _capitales(numeros, 12, "#a9a7c4", 3)
+        numeros += "&nbsp;&nbsp;·&nbsp;&nbsp;" + escape(
+            tr("Catalogue {}").format(manager.catalog.catalog_version).upper(), quote=False)
+    version = _capitales("", 12, "#a9a7c4", 3)
+    version.setTextFormat(Qt.TextFormat.RichText)
+    version.setText(numeros)
+    version.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
+                                    | Qt.TextInteractionFlag.LinksAccessibleByKeyboard)
+    version.linkActivated.connect(open_url)
+    version.setToolTip(tr("Ce que contient chaque version"))
     version.setObjectName("versions")
     version.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lay.addWidget(version)

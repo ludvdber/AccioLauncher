@@ -71,7 +71,8 @@ class TestPastille:
         ("yes", "Jouable à la manette"), ("partial", "Manette en partie"),
         ("no", "Sans manette")])
     def test_chaque_niveau_a_son_libelle(self, panneau, niveau, texte):
-        assert self._montrer(panneau, controller=niveau).startswith(texte)
+        # En petites capitales depuis le 2026-10-14.
+        assert self._montrer(panneau, controller=niveau).startswith(texte.upper())
 
     def test_plus_de_pastille_parmi_les_genres(self, panneau):
         self._montrer(panneau, controller="yes")

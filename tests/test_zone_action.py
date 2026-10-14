@@ -28,6 +28,7 @@ import pytest
 pytest.importorskip("pytestqt")
 
 from src.core.game_data import load_catalog  # noqa: E402
+from src.ui.glow_button import GlowButton  # noqa: E402
 
 _CATALOG = load_catalog()
 # Mise en garde RETIRÉE : ce fichier mesure des hauteurs, et le bandeau du
@@ -203,10 +204,11 @@ class TestLibelleDuBouton:
                     for i in range(layout.count())
                     if layout.itemAt(i).widget() is not None
                     and hasattr(layout.itemAt(i).widget(), "text")]
-        bouton = [x for x in libelles if "TÉLÉCHARGER" in x]
-        assert bouton, f"bouton de téléchargement introuvable dans {libelles}"
-        assert "≈" not in bouton[0], f"durée estimée encore présente : {bouton[0]!r}"
-        assert "Mo" in bouton[0] or "Go" in bouton[0], bouton[0]
+        assert "INSTALLER" in libelles, f"bouton d'installation introuvable dans {libelles}"
+        # Le poids est le DÉTAIL du bouton (2026-10-14), et rien d'autre.
+        bouton = win._detail._action_panel.findChild(GlowButton, "btnDownload")
+        assert "≈" not in bouton.detail(), f"durée estimée encore présente : {bouton.detail()!r}"
+        assert "Mo" in bouton.detail() or "Go" in bouton.detail(), bouton.detail()
 
     def test_plus_aucune_estimation_de_duree_dans_le_code(self):
         """Les deux helpers ont été retirés : pas de code mort qui traîne."""

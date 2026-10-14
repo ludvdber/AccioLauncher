@@ -195,7 +195,14 @@ def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
                         anomalies.append(
                             "%s : %s tronque (%d px requis, %d accordes) — %r"
                             % (ctx, nom, besoin, w.width(), texte[:48]))
+    # Fermer ET détruire : sans `deleteLater`, chaque lot laissait sa fenêtre
+    # complète en mémoire (~55 Mo, ses minuteurs et ses fils), et le passage
+    # des trois langues s'arrêtait net au 7e lot sur 0xC0000409 (2026-10-14).
     win.close()
+    win.deleteLater()
+    from PyQt6.QtCore import QCoreApplication, QEvent
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    pompe()
     return anomalies
 
 

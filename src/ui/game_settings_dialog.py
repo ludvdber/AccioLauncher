@@ -21,7 +21,7 @@ droite. Ce qu'elle corrige de l'ancienne boîte à onglets :
   rangé en retrait sous lui ;
 - « Rétablir les réglages d'origine » en lien gris, qu'on croyait
   désactivé, et un bouton Fermer alors que tout s'enregistre au fil des
-  clics : un vrai bouton au pied, « Retour à la fiche » en haut du rail.
+  clics : un vrai bouton au pied, « Bibliothèque » en haut du rail.
 """
 
 import html
@@ -237,12 +237,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(4)
 
-        # Le chemin du retour dit OÙ il mène : la fiche, pas « Fermer ».
-        retour = QPushButton(tr("Retour à la fiche"))
+        # Le chemin du retour dit OÙ il mène, avec le même mot que Paramètres et
+        # Mes années : la fiche vit dans la bibliothèque (audit UI, 2026-10-14).
+        retour = QPushButton(tr("Bibliothèque"))
         retour.setObjectName("retour")
         retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 18, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(18, 18))
+        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
+        retour.setIconSize(QSize(16, 16))
         retour.setCursor(Qt.CursorShape.PointingHandCursor)
         retour.setAutoDefault(False)
         retour.clicked.connect(self.accept)

@@ -3,8 +3,9 @@
 from html import escape
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QLabel, QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout, QWidget,
 )
 
 from src.core.game_data import GameData
@@ -28,6 +29,9 @@ _TITRE_MIN_PX = 24
 _SCROLLBAR_W = 6
 # Sous-estimer de 2 px fait apparaître une barre de défilement pour rien.
 _HAUTEUR_SLACK = 8
+# Écart entre le bouton principal et la ligne « JOUABLE À LA MANETTE · VERSION 1.3 ».
+_ECART_INDICES = 12
+_HAUTEUR_ECART_PLEIN = 760
 
 
 def _insecable(texte: str) -> str:
@@ -162,7 +166,12 @@ class InfoPanel(QWidget):
         largeur = self.available_width()
         premier = True
         for i in range(self._action_slot.count()):
-            widget = self._action_slot.itemAt(i).widget()
+            item = self._action_slot.itemAt(i)
+            if item.spacerItem() is not None:
+                # L'écart sous le bouton : le layout le pose toujours.
+                total += item.spacerItem().sizeHint().height()
+                continue
+            widget = item.widget()
             # Caché = sans place (statistiques d'un jeu jamais lancé).
             if widget is None or widget.isHidden():
                 continue
@@ -252,7 +261,13 @@ class InfoPanel(QWidget):
         # ligne méta ; ici, ce sont des faits sur CE qu'on lance.
         self._indices = QLabel()
         self._indices.setObjectName("indicesJeu")
-        self._indices.setFont(body_font(12))
+        self._ecart_indices = QSpacerItem(0, _ECART_INDICES)
+        # En petites capitales espacées, comme « TEMPS DE JEU » à côté du
+        # bouton d'un jeu installé : des faits sur le jeu, pas une phrase.
+        police_indices = cinzel(8, bold=True)
+        police_indices.setPixelSize(12)
+        police_indices.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.6)
+        self._indices.setFont(police_indices)
         self._indices.setWordWrap(True)
         self._indices.setTextFormat(Qt.TextFormat.RichText)
         self._indices.setTextInteractionFlags(
@@ -260,7 +275,7 @@ class InfoPanel(QWidget):
             | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
         self._indices.setStyleSheet(
-            "QLabel { color: #a3a1bf; background: transparent; }")
+            "QLabel { color: #8f8db0; background: transparent; }")
         self._indices.linkActivated.connect(self._on_meta_link)
 
         # Description
@@ -321,6 +336,13 @@ class InfoPanel(QWidget):
 
     def _apply_margins(self) -> None:
         """Marges resserrées sur panneau étroit (80 px sur 550, c'est 15 %)."""
+        # L'écart sous le bouton rend sa place sur une fenêtre basse : à
+        # 980×660, en espagnol, les 12 px faisaient défiler HP7 de 7 px
+        # (audit de géométrie, 2026-10-14).
+        ecart = _ECART_INDICES if self.window().height() >= _HAUTEUR_ECART_PLEIN else 4
+        if self._ecart_indices.sizeHint().height() != ecart:
+            self._ecart_indices.changeSize(0, ecart)
+            self._action_slot.invalidate()
         wide = self.width() >= 620
         left, right = (50, 30) if wide else (32, 22)
         if self._layout.contentsMargins().left() != left:
@@ -449,6 +471,9 @@ class InfoPanel(QWidget):
         """Épingle un widget sous la zone défilante, suivi de la ligne
         d'indices : elle parle de ce que le bouton lance."""
         self._action_slot.addWidget(widget)
+        # De l'air sous le bouton : collée à lui, la ligne avait l'air d'en
+        # faire partie (Ludo, 2026-10-14).
+        self._action_slot.addSpacerItem(self._ecart_indices)
         self._action_slot.addWidget(self._indices)
 
     def add_stretch(self) -> None:
@@ -487,14 +512,15 @@ class InfoPanel(QWidget):
         manette = {"yes": tr("Jouable à la manette"), "partial": tr("Manette en partie"),
                    "no": tr("Sans manette")}.get(game.controller)
         if manette:
-            morceaux.append(escape(manette, quote=False))
+            morceaux.append(escape(manette.upper(), quote=False))
         version = self._manager.installed_version(game.id) or game.recommended_version
         # La version EST le lien vers ses changements (Ludo, 2026-10-14) : un
         # « Nouveautés » à côté redisait la même chose en plus long.
         morceaux.append(f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
-                        + _insecable(escape(tr("Version {}").format(version), quote=False))
+                        + _insecable(escape(tr("Version {}").format(version).upper(),
+                                            quote=False))
                         + '</a>')
-        point = '<span style="color:#4c4a68;">&nbsp;·&nbsp;</span>'
+        point = '<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
         self._indices.setToolTip(game.controller_note if manette else "")
 

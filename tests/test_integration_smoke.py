@@ -1400,7 +1400,7 @@ class TestSelecteurDeLangue:
         assert indices.count("href=") == 1
         # Et ce lien, c'est la version elle-même (Ludo, 2026-10-14).
         assert "Nouveautés" not in indices
-        assert indices.split('href="changelog"')[1].split("</a>")[0].count("Version") == 1
+        assert indices.split('href="changelog"')[1].split("</a>")[0].upper().count("VERSION") == 1
 
     def test_le_choix_est_bien_retenu(self, make_window_multilingue):
         """Le réglage vit toujours — il ne s'AFFICHE simplement plus sur la fiche."""

@@ -8,18 +8,66 @@ Règle commune : un téléchargement de jeu en cours a la priorité. Son statut
 n'est jamais écrasé par un message d'ambiance ou de bandes-annonces.
 """
 
-from PyQt6.QtWidgets import QStatusBar
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtWidgets import QLabel, QSizePolicy, QStatusBar
 
 from src.core import almanach
 from src.core.i18n import tr
+from src.ui.fonts import body_font
 
 
 class BarreDeStatut(QStatusBar):
+    """Le message est un VRAI libellé, et non le texte que peint QStatusBar.
+
+    Le message natif se peint à 6 px du bord, dans la police de la feuille de
+    style globale : à côté du reste, il faisait barre d'état de débogage, et
+    sa première lettre touchait le bord de la fenêtre (audit UI, 2026-10-14).
+    Le libellé prend la police du launcher, une marge de lecture, et s'élide
+    au lieu d'élargir la fenêtre.
+    """
+
     def __init__(self, config, ops, parent=None) -> None:
         super().__init__(parent)
         self._config = config
         self._ops = ops
+        self._message = ""
+        self._libelle = QLabel(self)
+        self._libelle.setObjectName("messageStatut")
+        self._libelle.setTextFormat(Qt.TextFormat.PlainText)
+        self._libelle.setFont(body_font(10))
+        self._libelle.setStyleSheet(
+            "QLabel { color: #8f8db0; background: transparent; padding-left: 14px; }")
+        # Ignored : un message long s'élide, il ne pousse pas la fenêtre.
+        self._libelle.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.addWidget(self._libelle, 1)
+        self._libelle.installEventFilter(self)
         self.showMessage(self.au_repos())
+
+    # L'interface de QStatusBar, sur le libellé.
+    def showMessage(self, message: str, timeout: int = 0) -> None:  # noqa: N802
+        self._message = message
+        self._elider()
+
+    def currentMessage(self) -> str:  # noqa: N802
+        return self._message
+
+    def clearMessage(self) -> None:  # noqa: N802
+        self.showMessage("")
+
+    def eventFilter(self, obj, event) -> bool:
+        # La largeur du LIBELLÉ, connue après la passe de mise en page.
+        if obj is self._libelle and event.type() == QEvent.Type.Resize:
+            self._elider()
+        return False
+
+    def _elider(self) -> None:
+        largeur = self._libelle.width() - 14
+        texte = self._message
+        if largeur > 0:
+            texte = self._libelle.fontMetrics().elidedText(
+                texte, Qt.TextElideMode.ElideRight, largeur)
+        self._libelle.setText(texte)
+        self._libelle.setToolTip(self._message if texte != self._message else "")
 
     def au_repos(self) -> str:
         """Ce que dit la barre quand il n'y a RIEN à signaler.
