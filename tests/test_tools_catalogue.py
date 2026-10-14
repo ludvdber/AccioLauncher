@@ -20,7 +20,6 @@ NOM_FR = "Harry Potter à l'École des Sorciers"
 def _catalogue(**jeu) -> dict:
     base = {
         "id": "hp1", "name": NOM_FR, "description": "Texte sans traduction connue.",
-        "tags": ["Aventure", "Énigmes"],
         "versions": [{"version": "1.0", "changes": ["Version originale du jeu"]}],
     }
     base.update(jeu)
@@ -52,8 +51,7 @@ class TestApplyCatalogI18n:
         outil.main(["x", str(chemin)])
         texte = chemin.read_text(encoding="utf-8")
         assert "\\u00" not in texte
-        assert "Énigmes" in texte and "Exploración" not in texte  # rien d'inventé
-        assert "Puzles" in texte
+        assert "École" in texte and "Exploración" not in texte  # rien d'inventé
 
     def test_une_langue_inconnue_de_l_outil_est_conservee(self, tmp_path):
         chemin = tmp_path / "games.json"

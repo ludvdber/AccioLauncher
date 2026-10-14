@@ -16,14 +16,6 @@ from src.core.i18n import SOURCE_LANGUAGE, get_language
 log = logging.getLogger(__name__)
 
 
-def _tags_valides(tags) -> tuple:
-    """Tags du catalogue, réduits à une liste de chaînes (un dict affichait
-    ses CLÉS en pastilles : mieux vaut pas de tag qu'un tag inventé)."""
-    if not isinstance(tags, (list, tuple)):
-        return ()
-    return tuple(t for t in tags if isinstance(t, str))
-
-
 def _https_ou_rien(url):
     """Écarte au PARSING toute URL de téléchargement non-https.
 

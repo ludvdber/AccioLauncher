@@ -1811,7 +1811,6 @@ class TestBalisageDuCatalogueJamaisInterprete:
                 name="Jeu " + marque,
                 description="Description " + marque + " et la suite du texte.",
                 developer="Studio " + marque,
-                tags=("Tag " + marque,),
                 warning="Avertissement " + marque,
             )
             return dataclasses.replace(cat, games=tuple(jeux))

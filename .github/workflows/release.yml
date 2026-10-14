@@ -318,11 +318,19 @@ jobs:
           sha_exe=$(sha256sum "$exe" | cut -d' ' -f1)
           sha_appimage=$(sha256sum "$appimage" | cut -d' ' -f1)
           notes="$RUNNER_TEMP/notes.md"
+          # Le nom de la version, s'il y en a un (src/data/nouveautes.json, en français).
+          nom=$(python3 -c 'import json, sys
+          v = sys.argv[1]
+          data = json.load(open("src/data/nouveautes.json", encoding="utf-8"))
+          e = next((e for e in data["versions"] if e.get("version") == v), {})
+          n = e.get("nom", "")
+          print(n.get("fr", "") if isinstance(n, dict) else n)' "${TAG#v}")
+          titre="🪄 Accio Launcher ${TAG#v}${nom:+ « $nom »}"
           sed -e "s/{SHA256}/$sha_exe/g" -e "s/{SHA256_LINUX}/$sha_appimage/g" \
               -e "s/{TAG}/$TAG/g" .github/release-notes.md > "$notes"
           # --target : le tag naîtra sur le commit CONSTRUIT, à la publication.
           gh release create "$TAG" \
             "$exe" "$exe.sigstore.json" "$appimage" "$appimage.sigstore.json" \
             --draft --target "$GITHUB_SHA" \
-            --title "🪄 Accio Launcher ${TAG#v}" \
+            --title "$titre" \
             --notes-file "$notes"

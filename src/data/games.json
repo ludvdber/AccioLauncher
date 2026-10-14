@@ -101,12 +101,6 @@
         "vcredist2010_x86"
       ],
       "cover_image": "hp1_cover.jpg",
-      "tags": [
-        "Aventure",
-        "Action",
-        "Plateforme",
-        "Énigmes"
-      ],
       "latest_version": "1.3",
       "recommended_version": "1.3",
       "versions": [
@@ -369,23 +363,11 @@
       "i18n": {
         "en": {
           "name": "Harry Potter and the Philosopher's Stone",
-          "description": "Step into Harry Potter's shoes and discover the magical world of Hogwarts for the very first time. Explore the castle corridors, learn spells, brew potions and uncover secret passages as you follow the story of the first book. Take part in frantic Quidditch matches and face magical creatures in this unforgettable adventure.",
-          "tags": [
-            "Adventure",
-            "Action",
-            "Platformer",
-            "Puzzles"
-          ]
+          "description": "Step into Harry Potter's shoes and discover the magical world of Hogwarts for the very first time. Explore the castle corridors, learn spells, brew potions and uncover secret passages as you follow the story of the first book. Take part in frantic Quidditch matches and face magical creatures in this unforgettable adventure."
         },
         "es": {
           "name": "Harry Potter y la piedra filosofal",
-          "description": "Ponte en la piel de Harry Potter y descubre el mundo mágico de Hogwarts por primera vez. Explora los pasillos del castillo, aprende hechizos, prepara pociones y encuentra pasadizos secretos mientras sigues la trama del primer libro. Participa en frenéticos partidos de quidditch y enfréntate a criaturas mágicas en esta aventura inolvidable.",
-          "tags": [
-            "Aventura",
-            "Acción",
-            "Plataformas",
-            "Puzles"
-          ]
+          "description": "Ponte en la piel de Harry Potter y descubre el mundo mágico de Hogwarts por primera vez. Explora los pasillos del castillo, aprende hechizos, prepara pociones y encuentra pasadizos secretos mientras sigues la trama del primer libro. Participa en frenéticos partidos de quidditch y enfréntate a criaturas mágicas en esta aventura inolvidable."
         }
       },
       "saves": {
@@ -484,12 +466,6 @@
         "vcredist2010_x86"
       ],
       "cover_image": "hp2_cover.jpg",
-      "tags": [
-        "Aventure",
-        "Action",
-        "Exploration",
-        "Énigmes"
-      ],
       "latest_version": "1.2",
       "recommended_version": "1.2",
       "versions": [
@@ -776,23 +752,11 @@
         "en": {
           "name": "Harry Potter and the Chamber of Secrets",
           "description": "Dive back into the wizarding world with a Hogwarts more open and richer to explore than ever. Learn new spells such as Expelliarmus and Lumos to solve puzzles and defeat your enemies. Between Quidditch matches, sneaking around under the Invisibility Cloak and exploring the Forbidden Forest, every corner of the castle is packed with secrets to uncover.",
-          "tags": [
-            "Adventure",
-            "Action",
-            "Exploration",
-            "Puzzles"
-          ],
           "controller_note": "The game is playable with a controller, but its start window (before the game) needs the mouse."
         },
         "es": {
           "name": "Harry Potter y la cámara secreta",
           "description": "Vuelve al mundo mágico con un Hogwarts más abierto y rico de explorar que nunca. Aprende nuevos hechizos como Expelliarmus y Lumos para resolver enigmas y derrotar a tus enemigos. Entre partidos de quidditch, infiltraciones bajo la capa invisible y expediciones al Bosque Prohibido, cada rincón del castillo esconde secretos por descubrir.",
-          "tags": [
-            "Aventura",
-            "Acción",
-            "Exploración",
-            "Puzles"
-          ],
           "controller_note": "El juego se juega con mando, pero su ventana de inicio (antes de la partida) requiere el ratón."
         }
       },
@@ -857,12 +821,6 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "tags": [
-        "Aventure",
-        "Action",
-        "Plateforme",
-        "Multi-personnages"
-      ],
       "latest_version": "1.3",
       "recommended_version": "1.3",
       "versions": [
@@ -1119,23 +1077,11 @@
       "i18n": {
         "en": {
           "name": "Harry Potter and the Prisoner of Azkaban",
-          "description": "For the first time, play not only as Harry but also as Ron and Hermione, each with their own abilities and spells. Roam Hogwarts and its grounds freely, solve puzzles by switching between the three characters and take to the skies on a Hippogriff. With its side quests and magical duels, this adventure offers a rich and varied experience.",
-          "tags": [
-            "Adventure",
-            "Action",
-            "Platformer",
-            "Multi-character"
-          ]
+          "description": "For the first time, play not only as Harry but also as Ron and Hermione, each with their own abilities and spells. Roam Hogwarts and its grounds freely, solve puzzles by switching between the three characters and take to the skies on a Hippogriff. With its side quests and magical duels, this adventure offers a rich and varied experience."
         },
         "es": {
           "name": "Harry Potter y el prisionero de Azkaban",
-          "description": "Por primera vez no solo controlas a Harry, sino también a Ron y Hermione, cada uno con habilidades y hechizos propios. Recorre Hogwarts y sus alrededores con libertad, resuelve enigmas alternando entre los tres personajes y surca el cielo a lomos de un hipogrifo. Con sus misiones secundarias y sus combates mágicos, esta aventura ofrece una experiencia rica y variada.",
-          "tags": [
-            "Aventura",
-            "Acción",
-            "Plataformas",
-            "Multipersonaje"
-          ]
+          "description": "Por primera vez no solo controlas a Harry, sino también a Ron y Hermione, cada uno con habilidades y hechizos propios. Recorre Hogwarts y sus alrededores con libertad, resuelve enigmas alternando entre los tres personajes y surca el cielo a lomos de un hipogrifo. Con sus misiones secundarias y sus combates mágicos, esta aventura ofrece una experiencia rica y variada."
         }
       },
       "saves": {
@@ -1211,12 +1157,6 @@
         "slots": "hp4"
       },
       "cover_image": "hp4_cover.jpg",
-      "tags": [
-        "Action",
-        "Coopératif",
-        "Combat",
-        "Aventure"
-      ],
       "latest_version": "1.2",
       "recommended_version": "1.2",
       "versions": [
@@ -1324,23 +1264,11 @@
       "i18n": {
         "en": {
           "name": "Harry Potter and the Goblet of Fire",
-          "description": "Take on the Triwizard Tournament as Harry, Ron or Hermione in this co-operative action adventure. Cast powerful spells, fight fearsome creatures and face the tournament's three deadly tasks all the way to the final confrontation with Lord Voldemort. Play co-operatively with up to two friends for the first time in the series.",
-          "tags": [
-            "Action",
-            "Co-op",
-            "Combat",
-            "Adventure"
-          ]
+          "description": "Take on the Triwizard Tournament as Harry, Ron or Hermione in this co-operative action adventure. Cast powerful spells, fight fearsome creatures and face the tournament's three deadly tasks all the way to the final confrontation with Lord Voldemort. Play co-operatively with up to two friends for the first time in the series."
         },
         "es": {
           "name": "Harry Potter y el cáliz de fuego",
-          "description": "Afronta las pruebas del Torneo de los Tres Magos encarnando a Harry, Ron o Hermione en esta aventura de acción cooperativa. Lanza hechizos poderosos, combate criaturas temibles y supera las tres pruebas mortales del torneo hasta el enfrentamiento final con lord Voldemort. Juega en cooperativo con hasta dos amigos por primera vez en la saga.",
-          "tags": [
-            "Acción",
-            "Cooperativo",
-            "Combate",
-            "Aventura"
-          ]
+          "description": "Afronta las pruebas del Torneo de los Tres Magos encarnando a Harry, Ron o Hermione en esta aventura de acción cooperativa. Lanza hechizos poderosos, combate criaturas temibles y supera las tres pruebas mortales del torneo hasta el enfrentamiento final con lord Voldemort. Juega en cooperativo con hasta dos amigos por primera vez en la saga."
         }
       },
       "controller": "yes"
@@ -1404,12 +1332,6 @@
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "tags": [
-        "Monde ouvert",
-        "Aventure",
-        "Duel",
-        "Exploration"
-      ],
       "latest_version": "1.3",
       "recommended_version": "1.3",
       "versions": [
@@ -1560,23 +1482,11 @@
       "i18n": {
         "en": {
           "name": "Harry Potter and the Order of the Phoenix",
-          "description": "Explore a complete and detailed recreation of Hogwarts as an open world, with no loading screens at all, in the most immersive adventure of the series. Recruit members for Dumbledore's Army, face Slytherins in wizard duels and interact with the whole castle through your spells. Discover every corner of the school while carrying out missions inspired by the book and the film.",
-          "tags": [
-            "Open world",
-            "Adventure",
-            "Duels",
-            "Exploration"
-          ]
+          "description": "Explore a complete and detailed recreation of Hogwarts as an open world, with no loading screens at all, in the most immersive adventure of the series. Recruit members for Dumbledore's Army, face Slytherins in wizard duels and interact with the whole castle through your spells. Discover every corner of the school while carrying out missions inspired by the book and the film."
         },
         "es": {
           "name": "Harry Potter y la Orden del Fénix",
-          "description": "Explora una recreación completa y detallada de Hogwarts en mundo abierto, sin una sola pantalla de carga, en la aventura más inmersiva de la saga. Recluta miembros para el Ejército de Dumbledore, enfréntate a los Slytherin en duelos de magos e interactúa con todo el castillo gracias a tus hechizos. Descubre cada rincón del colegio mientras cumples las misiones inspiradas en el libro y la película.",
-          "tags": [
-            "Mundo abierto",
-            "Aventura",
-            "Duelos",
-            "Exploración"
-          ]
+          "description": "Explora una recreación completa y detallada de Hogwarts en mundo abierto, sin una sola pantalla de carga, en la aventura más inmersiva de la saga. Recluta miembros para el Ejército de Dumbledore, enfréntate a los Slytherin en duelos de magos e interactúa con todo el castillo gracias a tus hechizos. Descubre cada rincón del colegio mientras cumples las misiones inspiradas en el libro y la película."
         }
       },
       "saves": {
@@ -1649,12 +1559,6 @@
         "xinput1_3"
       ],
       "cover_image": "hp6_cover.jpg",
-      "tags": [
-        "Monde ouvert",
-        "Duel",
-        "Potions",
-        "Quidditch"
-      ],
       "latest_version": "1.2",
       "recommended_version": "1.2",
       "versions": [
@@ -1771,23 +1675,11 @@
       "i18n": {
         "en": {
           "name": "Harry Potter and the Half-Blood Prince",
-          "description": "Walk the corridors of Hogwarts once more in this action adventure built around wizard duels, potion brewing and Quidditch. Face your opponents in intense magical fights, hone your skills as a potioneer and lead the Gryffindor team to victory. Explore the castle at different times of day and unravel the mystery surrounding the Half-Blood Prince.",
-          "tags": [
-            "Open world",
-            "Duels",
-            "Potions",
-            "Quidditch"
-          ]
+          "description": "Walk the corridors of Hogwarts once more in this action adventure built around wizard duels, potion brewing and Quidditch. Face your opponents in intense magical fights, hone your skills as a potioneer and lead the Gryffindor team to victory. Explore the castle at different times of day and unravel the mystery surrounding the Half-Blood Prince."
         },
         "es": {
           "name": "Harry Potter y el misterio del príncipe",
-          "description": "Recorre una vez más los pasillos de Hogwarts en esta aventura de acción centrada en los duelos de magos, la preparación de pociones y el quidditch. Enfréntate a tus rivales en intensos combates mágicos, perfecciona tu talento con el caldero y lleva al equipo de Gryffindor a la victoria. Explora el castillo a distintas horas del día y desvela los misterios que rodean al Príncipe Mestizo.",
-          "tags": [
-            "Mundo abierto",
-            "Duelos",
-            "Pociones",
-            "Quidditch"
-          ]
+          "description": "Recorre una vez más los pasillos de Hogwarts en esta aventura de acción centrada en los duelos de magos, la preparación de pociones y el quidditch. Enfréntate a tus rivales en intensos combates mágicos, perfecciona tu talento con el caldero y lleva al equipo de Gryffindor a la victoria. Explora el castillo a distintas horas del día y desvela los misterios que rodean al Príncipe Mestizo."
         }
       },
       "saves": {
@@ -1833,12 +1725,6 @@
         "vibrations"
       ],
       "cover_image": "hp7a_cover.jpg",
-      "tags": [
-        "Action",
-        "TPS",
-        "Infiltration",
-        "Combat"
-      ],
       "latest_version": "1.1",
       "recommended_version": "1.1",
       "versions": [
@@ -1981,23 +1867,11 @@
       "i18n": {
         "en": {
           "name": "Harry Potter and the Deathly Hallows — Part 1",
-          "description": "Step into the darkest chapter of the saga. Harry, Ron and Hermione have left Hogwarts to hunt down and destroy Voldemort's Horcruxes. Fight Snatchers and Death Eaters in intense third-person combat, infiltrate the Ministry of Magic and survive in hostile territory. With its action-driven gameplay and stealth missions, this game puts you at the heart of a war where every spell counts.",
-          "tags": [
-            "Action",
-            "Third-person",
-            "Stealth",
-            "Combat"
-          ]
+          "description": "Step into the darkest chapter of the saga. Harry, Ron and Hermione have left Hogwarts to hunt down and destroy Voldemort's Horcruxes. Fight Snatchers and Death Eaters in intense third-person combat, infiltrate the Ministry of Magic and survive in hostile territory. With its action-driven gameplay and stealth missions, this game puts you at the heart of a war where every spell counts."
         },
         "es": {
           "name": "Harry Potter y las reliquias de la Muerte — Parte 1",
-          "description": "Adéntrate en el capítulo más oscuro de la saga. Harry, Ron y Hermione han dejado Hogwarts para buscar y destruir los Horrocruxes de Voldemort. Combate contra carroñeros y mortífagos en intensos enfrentamientos en tercera persona, infíltrate en el Ministerio de Magia y sobrevive en territorio hostil. Con su jugabilidad orientada a la acción y sus misiones de sigilo, este juego te sitúa en el corazón de una guerra donde cada hechizo cuenta.",
-          "tags": [
-            "Acción",
-            "Tercera persona",
-            "Sigilo",
-            "Combate"
-          ]
+          "description": "Adéntrate en el capítulo más oscuro de la saga. Harry, Ron y Hermione han dejado Hogwarts para buscar y destruir los Horrocruxes de Voldemort. Combate contra carroñeros y mortífagos en intensos enfrentamientos en tercera persona, infíltrate en el Ministerio de Magia y sobrevive en territorio hostil. Con su jugabilidad orientada a la acción y sus misiones de sigilo, este juego te sitúa en el corazón de una guerra donde cada hechizo cuenta."
         }
       },
       "dpi_aware": true,
@@ -2051,12 +1925,6 @@
         "vibrations"
       ],
       "cover_image": "hp7b_cover.jpg",
-      "tags": [
-        "Action",
-        "TPS",
-        "Combat",
-        "Bataille"
-      ],
       "latest_version": "1.2",
       "recommended_version": "1.2",
       "versions": [
@@ -2226,23 +2094,11 @@
         "en": {
           "name": "Harry Potter and the Deathly Hallows — Part 2",
           "description": "The final battle for Hogwarts. Play as Harry and his allies in an explosive action game centred on the Battle of Hogwarts. Chain offensive and defensive spells in spectacular clashes, defend the castle against Voldemort's forces and lead the last stand. With its cover-based combat, intense wand duels and cinematic set pieces, this epic conclusion closes the Harry Potter game saga.",
-          "tags": [
-            "Action",
-            "Third-person",
-            "Combat",
-            "Battle"
-          ],
           "warning": "Your antivirus may delete Paul.dll during installation."
         },
         "es": {
           "name": "Harry Potter y las reliquias de la Muerte — Parte 2",
           "description": "La batalla final por Hogwarts. Encarna a Harry y a sus aliados en un explosivo juego de acción centrado en la Batalla de Hogwarts. Encadena hechizos ofensivos y defensivos en enfrentamientos espectaculares, protege el castillo de las fuerzas de Voldemort y lidera el combate final. Con sus coberturas, sus intensos duelos de varitas y sus momentos cinematográficos, esta conclusión épica pone el punto final a la saga de videojuegos de Harry Potter.",
-          "tags": [
-            "Acción",
-            "Tercera persona",
-            "Combate",
-            "Batalla"
-          ],
           "warning": "Su antivirus puede eliminar Paul.dll durante la instalación."
         }
       },

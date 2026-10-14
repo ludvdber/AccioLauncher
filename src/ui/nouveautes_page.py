@@ -142,6 +142,13 @@ class NouveautesPage(QDialog):
         titre.setFont(cinzel_decorative(24))
         titre.setStyleSheet("color: #f4f2f8; background: transparent;")
         gauche.addWidget(titre)
+        if self.nouveautes.nom:
+            nom = QLabel(self.nouveautes.nom)
+            nom.setObjectName("nomVersion")
+            nom.setTextFormat(Qt.TextFormat.PlainText)
+            nom.setFont(cinzel(15, bold=True))
+            nom.setStyleSheet(f"color: {current_theme().accent}; background: transparent;")
+            gauche.addWidget(nom)
         phrases = []
         if self.nouveautes.depuis:
             phrases.append(tr("Ce qui change depuis la {}.").format(self.nouveautes.depuis))

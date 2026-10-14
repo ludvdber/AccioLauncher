@@ -56,7 +56,7 @@ class TestPastille:
     # eux-mêmes ne s'affichent plus depuis le 2026-10-14.
 
     def _montrer(self, panneau, **champs):
-        jeu = GameData.from_dict(dict(BASE, tags=["Aventure"], **champs))
+        jeu = GameData.from_dict(dict(BASE, **champs))
         panneau._refresh_indices(jeu)
         return panneau._indices.text()
 

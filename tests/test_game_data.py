@@ -21,7 +21,6 @@ MINIMAL_GAME = {
 
 FULL_GAME = {
     **MINIMAL_GAME,
-    "tags": ["Action", "Aventure"],
     "latest_version": "1.1",
     "recommended_version": "1.1",
     "versions": [
@@ -107,13 +106,11 @@ class TestGameData:
     def test_from_dict_minimal(self):
         g = GameData.from_dict(MINIMAL_GAME)
         assert g.id == "hp_test"
-        assert g.tags == ()
         assert g.pre_launch is None
 
     def test_from_dict_full(self):
         g = GameData.from_dict(FULL_GAME)
         assert len(g.versions) == 2
-        assert len(g.tags) == 2
         assert g.pre_launch is not None
         assert len(g.pre_launch.ini_patches) == 1
         assert g.pre_launch.ini_patches[0].fallback == "D3DDrv.D3DRenderDevice"
@@ -242,7 +239,6 @@ class TestCatalogueTraduit:
 
     GAME = {
         **MINIMAL_GAME,
-        "tags": ["Aventure", "Énigmes"],
         "recommended_version": "1.0",
         "versions": [{
             "version": "1.0", "date": "2026-01-01",
@@ -251,8 +247,7 @@ class TestCatalogueTraduit:
             "i18n": {"en": {"changes": ["Original game release"]}},
         }],
         "i18n": {
-            "en": {"name": "HP Test EN", "description": "Test game EN",
-                   "tags": ["Adventure", "Puzzles"]},
+            "en": {"name": "HP Test EN", "description": "Test game EN"},
         },
     }
 
@@ -267,49 +262,45 @@ class TestCatalogueTraduit:
     def test_francais_est_la_source(self):
         game = self._parse("fr")
         assert game.name == "HP Test"
-        assert game.tags == ("Aventure", "Énigmes")
         assert game.versions[0].changes == ("Version originale du jeu",)
 
     def test_anglais_resolu_au_parsing(self):
         game = self._parse("en")
         assert game.name == "HP Test EN"
         assert game.description == "Test game EN"
-        assert game.tags == ("Adventure", "Puzzles")
         assert game.versions[0].changes == ("Original game release",)
 
     def test_langue_absente_retombe_sur_le_francais(self):
         """L'espagnol n'est pas fourni pour ce jeu : le français doit rester."""
         game = self._parse("es")
         assert game.name == "HP Test"
-        assert game.tags == ("Aventure", "Énigmes")
+        assert game.description == "Test game"
 
     def test_repli_par_champ(self):
-        """Un bloc partiel (nom traduit, tags non) reste utilisable tel quel."""
-        data = {**MINIMAL_GAME, "tags": ["Aventure"],
-                "i18n": {"en": {"name": "Partial EN"}}}
+        """Un bloc partiel (nom traduit, description non) reste utilisable tel quel."""
+        data = {**MINIMAL_GAME, "i18n": {"en": {"name": "Partial EN"}}}
         set_language("en")
         try:
             game = GameData.from_dict(data)
         finally:
             set_language("fr")
         assert game.name == "Partial EN"
-        assert game.tags == ("Aventure",), "le champ non traduit garde le français"
+        assert game.description == "Test game", "le champ non traduit garde le français"
 
     def test_bloc_i18n_mal_type_est_ignore(self):
         """Un catalogue distant trafiqué ne doit pas changer le TYPE d'un champ.
 
-        `tags` doit rester une liste : une chaîne ici ferait exploser le
-        `tuple()` en caractères isolés, et l'InfoPanel afficherait 8 pastilles.
+        `changes` doit rester une liste : une chaîne ici ferait exploser le
+        `tuple()` en caractères isolés, une ligne de changelog par lettre.
         """
-        data = {**MINIMAL_GAME, "tags": ["Aventure"],
-                "i18n": {"en": {"name": 42, "tags": "Adventure"}}}
+        data = {**MINIMAL_GAME, "i18n": {"en": {"name": 42, "description": ["liste"]}}}
         set_language("en")
         try:
             game = GameData.from_dict(data)
         finally:
             set_language("fr")
         assert game.name == "HP Test"
-        assert game.tags == ("Aventure",)
+        assert game.description == "Test game"
 
     def test_i18n_non_dict_est_ignore(self):
         data = {**MINIMAL_GAME, "i18n": "n'importe quoi"}

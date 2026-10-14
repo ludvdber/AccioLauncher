@@ -52,6 +52,9 @@ class Nouveautes:
     depuis: str
     points_forts: tuple[PointFort, ...]
     changements: tuple[Changement, ...]
+    # Le nom de la version (« Revelio · Folio Magi ») : un numéro seul ne dit
+    # rien à personne. Vide : la page ne montre que le numéro.
+    nom: str = ""
 
 
 def mise_a_jour_installee(precedente: str) -> bool:
@@ -111,7 +114,8 @@ def charger(version: str = APP_VERSION, langue: str | None = None,
                                key=lambda c: GENRES.index(c.genre)))
     if not points and not changements:
         return None
-    return Nouveautes(version, str(entree.get("depuis", "")), points, changements)
+    return Nouveautes(version, str(entree.get("depuis", "")), points, changements,
+                      _texte(entree.get("nom"), langue))
 
 
 def a_montrer(precedente: str) -> bool:

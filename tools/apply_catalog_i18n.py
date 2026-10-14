@@ -47,25 +47,6 @@ NAMES = {
         "es": "Harry Potter y las reliquias de la Muerte — Parte 2"},
 }
 
-# ── Tags : vocabulaire fermé ─────────────────────────────────────────────────
-TAGS = {
-    "Action": {"en": "Action", "es": "Acción"},
-    "Aventure": {"en": "Adventure", "es": "Aventura"},
-    "Bataille": {"en": "Battle", "es": "Batalla"},
-    "Combat": {"en": "Combat", "es": "Combate"},
-    "Coopératif": {"en": "Co-op", "es": "Cooperativo"},
-    "Duel": {"en": "Duels", "es": "Duelos"},
-    "Exploration": {"en": "Exploration", "es": "Exploración"},
-    "Infiltration": {"en": "Stealth", "es": "Sigilo"},
-    "Monde ouvert": {"en": "Open world", "es": "Mundo abierto"},
-    "Multi-personnages": {"en": "Multi-character", "es": "Multipersonaje"},
-    "Plateforme": {"en": "Platformer", "es": "Plataformas"},
-    "Potions": {"en": "Potions", "es": "Pociones"},
-    "Quidditch": {"en": "Quidditch", "es": "Quidditch"},
-    "TPS": {"en": "Third-person", "es": "Tercera persona"},
-    "Énigmes": {"en": "Puzzles", "es": "Puzles"},
-}
-
 # ── Lignes de changelog ──────────────────────────────────────────────────────
 CHANGES = {
     "Anti-aliasing 4x, filtrage anisotrope 8x": {
@@ -347,10 +328,6 @@ def apply(catalog: dict) -> list[str]:
             desc = lookup(DESCRIPTIONS, game.get("description", ""))
             if desc:
                 _merge(game, lang, "description", desc[lang])
-            tags = game.get("tags", [])
-            translated = [lookup(TAGS, t) for t in tags]
-            if tags and all(t is not None for t in translated):
-                _merge(game, lang, "tags", [t[lang] for t in translated])
         for version in game.get("versions", []):
             changes = version.get("changes", [])
             translated = [lookup(CHANGES, c) for c in changes]

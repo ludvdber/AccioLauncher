@@ -165,23 +165,6 @@ class TestAProposALaVisite:
         assert dlg._pages.count() == dlg._nav.count()
 
 
-class TestSansPastillesDeGenre:
-    def test_les_genres_du_catalogue_ne_s_affichent_plus(self, qtbot, tmp_path, monkeypatch):
-        """Quatre cadres dorés au-dessus du titre, pour huit jeux d'une même
-        série : ils ne servaient pas à choisir et disputaient l'or au bouton."""
-        from src.core.config import Config
-        from src.core.game_manager import GameManager
-        from src.ui.info_panel import InfoPanel
-        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "c.json")
-        manager = GameManager(Config(install_path=tmp_path / "g", cache_path=tmp_path / "c"))
-        jeu = dataclasses.replace(manager.get_games()[0].game, tags=("Aventure", "Énigmes"))
-        panneau = InfoPanel(manager)
-        qtbot.addWidget(panneau)
-        panneau.apply_game(jeu)
-        textes = [lbl.text().upper() for lbl in panneau.findChildren(QLabel)]
-        assert not [t for t in textes if t in ("AVENTURE", "ÉNIGMES")], textes
-
-
 class TestMiseEnGardeDuCatalogue:
     """« Votre antivirus peut supprimer Paul.dll pendant l'installation »,
     sous JOUER, à chaque visite d'un jeu installé et entier."""

@@ -18,7 +18,7 @@ from src.core.scolarite import ANNEES, Statut, annee_courante, annees
 
 _MODELE = GameData(
     id="modele", name="Modèle", year=2001, description="", developer="",
-    executable="X/x.exe", cover_image="", tags=(), latest_version="1.0",
+    executable="X/x.exe", cover_image="", latest_version="1.0",
     recommended_version="1.0", versions=(),
 )
 

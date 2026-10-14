@@ -84,6 +84,14 @@ class TestLecture:
             "changements": [{"genre": "nouveau", "texte": "n"}]})
         assert nouveautes.charger("9.0", "fr", chemin).points_forts == ()
 
+    def test_le_nom_de_la_version(self, tmp_path):
+        """Un nom commun à toutes les langues, ou traduit ; absent : vide."""
+        entree = {"version": "9.0", "changements": [{"genre": "nouveau", "texte": "n"}]}
+        assert nouveautes.charger("9.0", "en", _fichier(tmp_path, {**entree, "nom": "Lumos"})).nom == "Lumos"
+        traduit = {**entree, "nom": {"fr": "Le Terrier", "en": "The Burrow"}}
+        assert nouveautes.charger("9.0", "en", _fichier(tmp_path, traduit)).nom == "The Burrow"
+        assert nouveautes.charger("9.0", "fr", _fichier(tmp_path, entree)).nom == ""
+
 
 class TestQuandMontrer:
     def test_apres_une_mise_a_jour(self):
@@ -126,6 +134,11 @@ class TestPage:
         textes = self._textes(self._page(qtbot, apres=False))
         assert "NOUVEAUTÉS" in textes
         assert not any("vos jeux et vos réglages" in t for t in textes)
+
+    def test_le_nom_de_la_version_sous_le_numero(self, qtbot):
+        from PyQt6.QtWidgets import QLabel
+        page = self._page(qtbot)
+        assert page.findChild(QLabel, "nomVersion").text() == "Revelio · Folio Magi"
 
     def test_chaque_changement_a_sa_ligne(self, qtbot):
         from src.ui.nouveautes_page import _LigneChangement

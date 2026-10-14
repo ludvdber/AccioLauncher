@@ -10,7 +10,6 @@ from pathlib import Path
 from src.core.config import GAMES_JSON_PATH
 from src.core.chemins import refus_de_chemin
 from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
-    _tags_valides,
     _https_ou_rien,
     _sha256_valide,
     _taille_mo,
@@ -133,7 +132,6 @@ class GameData:
     latest_version: str
     recommended_version: str
     versions: tuple[GameVersion, ...] = ()
-    tags: tuple[str, ...] = ()
     post_install: PostInstall = field(default_factory=PostInstall)
     pre_launch: PreLaunch | None = None
     # Runtimes exigés par le jeu, en plus du socle commun. Déclaré par le
@@ -357,7 +355,6 @@ class GameData:
             latest_version=data.get("latest_version", "1.0"),
             recommended_version=data.get("recommended_version", "1.0"),
             versions=versions,
-            tags=_tags_valides(_loc(data, "tags", [])),
             requires=tuple(r for r in data.get("requires", []) or ()
                            if isinstance(r, str)),
             warning=_loc(data, "warning", ""),
