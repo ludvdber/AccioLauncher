@@ -74,14 +74,19 @@ QUESTIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
 # départage mieux que trois situations. Elle rend aussi les égalités rares.
 _POIDS = (1, 1, 1, 2)
 
-_VERDICTS = {
-    GRYFFONDOR: "Du cran, du nerf, et le goût de passer la porte en premier. "
-                "GRYFFONDOR !",
-    SERPENTARD: "De l'ambition, et la patience qu'il faut pour la servir. "
-                "SERPENTARD !",
-    SERDAIGLE: "Un esprit qui veut comprendre avant d'agir. SERDAIGLE !",
-    POUFSOUFFLE: "De la loyauté, et le courage plus rare de rester. "
-                 "POUFSOUFFLE !",
+# Le verdict en deux temps, comme à l'écran : la devise, puis le cri. Séparés
+# parce que le cri s'affiche en grand, et qu'en espagnol il s'ouvre par « ¡ ».
+_DEVISES = {
+    GRYFFONDOR: "Du cran, du nerf, et le goût de passer la porte en premier.",
+    SERPENTARD: "De l'ambition, et la patience qu'il faut pour la servir.",
+    SERDAIGLE: "Un esprit qui veut comprendre avant d'agir.",
+    POUFSOUFFLE: "De la loyauté, et le courage plus rare de rester.",
+}
+_CRIS = {
+    GRYFFONDOR: "GRYFFONDOR !",
+    SERPENTARD: "SERPENTARD !",
+    SERDAIGLE: "SERDAIGLE !",
+    POUFSOUFFLE: "POUFSOUFFLE !",
 }
 
 
@@ -95,9 +100,9 @@ def reponses(index: int) -> tuple[str, ...]:
     return tuple(tr(texte) for texte, _ in QUESTIONS[index][1])
 
 
-def verdict(maison: str) -> str:
-    """Ce que le Choixpeau annonce à voix haute."""
-    return tr(_VERDICTS[maison])
+def verdict(maison: str) -> tuple[str, str]:
+    """Ce que le Choixpeau annonce à voix haute : (devise, cri)."""
+    return tr(_DEVISES[maison]), tr(_CRIS[maison])
 
 
 def repartir(choix: Sequence[int]) -> str:

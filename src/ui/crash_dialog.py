@@ -78,65 +78,105 @@ def construire_dialogue(report: str):
     faire du launcher. Les cinq boutons sur une seule rangée élargissaient le
     dialogue bien au-delà de sa largeur minimale.
     """
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QColor
     from PyQt6.QtWidgets import (
-        QApplication, QDialog, QHBoxLayout, QLabel, QPlainTextEdit,
-        QPushButton, QVBoxLayout,
+        QApplication, QDialog, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout,
     )
 
     from src.core.i18n import tr
     from src.core.liens import DISCORD_URL
+    from src.ui.composants import feuille_de_style, police, texte
+    from src.ui.fenetre_message import cadre_conserve
+    from src.ui.icon_button import pixmap_icone
     from src.ui.theme import themed
     from src.ui.utils import open_url
 
+    # Refait le 2026-10-09 sur les composants : le titre dit ce qui s'est passé,
+    # une ligne verte ce qui ne risque rien, puis le rapport et les boutons.
     dlg = QDialog()
     dlg.setWindowTitle(tr("Accio Launcher — Erreur inattendue"))
-    dlg.setMinimumSize(560, 420)
+    dlg.setMinimumSize(560, 460)
     dlg.setStyleSheet(themed(
         "QDialog { background: #0d0d1a; }"
-        "QLabel { color: #eaeaea; font-size: 13px; }"
         "QPlainTextEdit { background: #060611; color: #b0b0c8; border: 1px solid #1a2744;"
-        " border-radius: 6px; font-family: Consolas, monospace; font-size: 11px; }"
-        "QPushButton { background: #16213e; color: #eaeaea; border: 1px solid #2c3e6b;"
-        " border-radius: 6px; padding: 8px 16px; font-size: 13px; }"
-        "QPushButton:hover { border-color: #d6a72c; color: #e8c547; }"
-    ))
+        " border-radius: 8px; font-family: Consolas, monospace; font-size: 11px; padding: 6px; }"
+        # Le bouton Discord garde son nom (les tests le cherchent) : style secondaire.
+        "QPushButton#crashDiscord { min-height: 34px; max-height: 34px; padding: 0 16px;"
+        " border-radius: 7px; color: #d9d6e8; background: rgba(255, 255, 255, 0.03);"
+        " border: 1px solid rgba(255, 255, 255, 0.14); }"
+        "QPushButton#crashDiscord:hover { border-color: #d6a72c; }"
+        "QPushButton#crashDiscord[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 0 15px; }"
+    ) + feuille_de_style())
     layout = QVBoxLayout(dlg)
+    layout.setContentsMargins(28, 24, 28, 22)
+    layout.setSpacing(0)
 
-    intro = QLabel(tr("Une erreur inattendue s'est produite. Copiez le rapport et "
-                      "collez-le sur le Discord pour obtenir de l'aide, ou ouvrez une "
-                      "issue GitHub pré-remplie."))
-    intro.setWordWrap(True)
-    layout.addWidget(intro)
+    tete = QHBoxLayout()
+    tete.setSpacing(14)
+    icone = QLabel()
+    icone.setStyleSheet("background: transparent;")
+    icone.setPixmap(pixmap_icone("attention", 26, QColor("#e0584f")))
+    tete.addWidget(icone)
+    titre = texte(tr("Le launcher a rencontré une erreur"), 17, "#f4f2f8", retour=True)
+    titre.setFont(police(17, gras=True))
+    tete.addWidget(titre, stretch=1)
+    layout.addLayout(tete)
+    layout.addSpacing(12)
+    layout.addWidget(texte(tr(
+        "Copiez le rapport et collez-le sur le Discord pour obtenir de l'aide, "
+        "ou ouvrez une issue GitHub pré-remplie."), 14, "#d9d6e8", retour=True))
+    layout.addSpacing(14)
+
+    layout.addWidget(cadre_conserve(tr("Vos jeux et vos sauvegardes ne sont pas touchés.")))
+
+    layout.addSpacing(14)
 
     text = QPlainTextEdit(report)
     text.setReadOnly(True)
     layout.addWidget(text, stretch=1)
+    layout.addSpacing(16)
 
+    def _bouton(libelle: str, nom: str = "secondaire") -> QPushButton:
+        btn = QPushButton(libelle)
+        btn.setObjectName(nom)
+        btn.setFont(police(13, gras=True))
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setAutoDefault(False)
+        return btn
+
+    # Rangée 1 : obtenir de l'aide.
     aide = QHBoxLayout()
-    btn_copy = QPushButton(tr("Copier le rapport"))
+    aide.setSpacing(10)
+    btn_copy = _bouton(tr("Copier le rapport"), "principal")
 
     def _copy() -> None:
         QApplication.clipboard().setText(report)
-        btn_copy.setText(tr("Copié ✓"))
+        btn_copy.setText(tr("Rapport copié"))
 
     btn_copy.clicked.connect(_copy)
     aide.addWidget(btn_copy)
 
-    btn_discord = QPushButton(tr("Ouvrir le Discord"))
-    btn_discord.setObjectName("crashDiscord")
+    btn_discord = _bouton(tr("Ouvrir le Discord"), "crashDiscord")
     btn_discord.clicked.connect(lambda: open_url(DISCORD_URL))
     aide.addWidget(btn_discord)
 
-    btn_issue = QPushButton(tr("Ouvrir une issue GitHub"))
+    btn_issue = _bouton(tr("Ouvrir une issue GitHub"))
     btn_issue.clicked.connect(lambda: open_url(github_issue_url(report)))
     aide.addWidget(btn_issue)
     aide.addStretch()
     layout.addLayout(aide)
+    layout.addSpacing(10)
 
+    # Rangée 2 : que faire du launcher.
     buttons = QHBoxLayout()
+    buttons.setSpacing(10)
     buttons.addStretch()
+    btn_close = _bouton(tr("Fermer"))
+    btn_close.clicked.connect(dlg.accept)
+    buttons.addWidget(btn_close)
 
-    btn_restart = QPushButton(tr("Redémarrer le launcher"))
+    btn_restart = _bouton(tr("Redémarrer le launcher"))
 
     def _restart() -> None:
         from src.core.self_update import relaunch_after_exit
@@ -150,10 +190,6 @@ def construire_dialogue(report: str):
 
     btn_restart.clicked.connect(_restart)
     buttons.addWidget(btn_restart)
-
-    btn_close = QPushButton(tr("Fermer"))
-    btn_close.clicked.connect(dlg.accept)
-    buttons.addWidget(btn_close)
     layout.addLayout(buttons)
     return dlg
 

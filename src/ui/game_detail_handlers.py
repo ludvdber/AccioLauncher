@@ -30,6 +30,7 @@ from src.core.system_checks import (
 )
 from src.ui.about_page import enregistrer_rapport, presse_papiers, texte_diagnostic
 from src.ui.preparateur_wine import noms_des_verbes
+from src.ui.fenetre_message import message
 from src.ui.utils import open_local_path, open_url
 from src.ui.copies_dialog import CopiesDialog
 from src.ui.fichiers_manquants import (
@@ -43,8 +44,9 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0) -> int:
-    """QMessageBox en texte BRUT et aux boutons NOMMÉS.
+def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0,
+           conserve: str = "") -> int:
+    """Fenêtre de message (`fenetre_message`) en texte BRUT et aux boutons NOMMÉS.
 
     Deux règles tenues au même endroit, parce qu'elles se sont toutes les deux
     payées ici.
@@ -73,24 +75,7 @@ def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0) -> in
     qui reviendrait à consentir à la place de quelqu'un qui n'a rien répondu.
     Sans `choix`, la boîte est un simple constat et ne porte qu'un congé.
     """
-    boite = QMessageBox(view)
-    boite.setIcon(icone)
-    boite.setWindowTitle(titre)
-    boite.setTextFormat(Qt.TextFormat.PlainText)
-    boite.setText(texte)
-    if not choix:
-        boite.addButton(tr("Fermer"), QMessageBox.ButtonRole.AcceptRole)
-        boite.exec()
-        return -1
-    boutons = [
-        boite.addButton(libelle, QMessageBox.ButtonRole.AcceptRole if i == 0
-                        else QMessageBox.ButtonRole.RejectRole)
-        for i, libelle in enumerate(choix)
-    ]
-    boite.setDefaultButton(boutons[defaut])
-    boite.exec()
-    clique = boite.clickedButton()
-    return next((i for i, b in enumerate(boutons) if b is clique), -1)
+    return message(view, icone, titre, texte, choix, defaut, conserve)
 
 
 def confirmer_registre(view: "GameDetailView", nom_jeu: str, au_lancement: bool = False):
@@ -895,7 +880,12 @@ def on_game_settings(view: "GameDetailView") -> None:
         actions=_actions_fichiers(view, game),
         parent=view,
         appliquer_manette=lambda oui: _appliquer_manette(view, game, oui))
-    dlg.exec()
+    # Une PAGE à la place de la fiche depuis le 2026-10-09 (`pages.py`) ; sans
+    # fenêtre pour l'accueillir (fiche seule, dans un test), une fenêtre.
+    if view.receivers(view.page_demandee):
+        view.page_demandee.emit(dlg)
+    else:
+        dlg.exec()
 
 
 def _appliquer_manette(view: "GameDetailView", game: GameData, oui: bool) -> bool:

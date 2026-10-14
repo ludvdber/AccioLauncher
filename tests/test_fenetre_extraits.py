@@ -379,9 +379,9 @@ def boite(monkeypatch):
     """Faux posé sur le MODULE, jamais sur la classe Qt (règle 12)."""
     from src.ui import dialogues_fenetre
     _FausseBoite.vues = []
-    _FausseBoite.Icon = dialogues_fenetre.QMessageBox.Icon
-    _FausseBoite.ButtonRole = dialogues_fenetre.QMessageBox.ButtonRole
-    monkeypatch.setattr(dialogues_fenetre, "QMessageBox", _FausseBoite)
+    _FausseBoite.Icon = dialogues_fenetre.FenetreMessage.Icon
+    _FausseBoite.ButtonRole = dialogues_fenetre.FenetreMessage.ButtonRole
+    monkeypatch.setattr(dialogues_fenetre, "FenetreMessage", _FausseBoite)
     return _FausseBoite
 
 

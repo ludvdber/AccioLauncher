@@ -38,6 +38,9 @@ IDENTIQUES_TOLEREES = {
     "Textures",
     # Éditeur de touches de HP4 : « Pause » en anglais, « Fin » (la touche) en espagnol.
     "Pause", "Fin",
+    # Carte de progression de la fiche : « Installation » en anglais, et « 42 % »
+    # garde son espace en espagnol comme en français.
+    "Installation", "{} %",
     # Noms de produits Microsoft : ils ne se traduisent pas.
     "Visual C++ x86", "Visual C++ 2005 x86", "Visual C++ 2008 x86", "Visual C++ 2010 x86",
     "DirectX 9 ({})", "DirectX ({})",
@@ -347,8 +350,6 @@ class TestAucunTexteVisibleHorsTr:
     EXCEPTIONS = {
         ("settings_panel.py", "Accio Launcher "): "la marque et son numéro",
         ("onboarding.py", "Langue · Language · Idioma"):
-            "trilingue exprès : la langue n'est pas encore choisie",
-        ("onboarding.py", "Vous pourrez en changer dans les Paramètres."):
             "trilingue exprès : la langue n'est pas encore choisie",
         ("installer.py", "Erreur d'installation :"):
             "va au journal ; la boîte dit la cause traduite (ACT-003)",

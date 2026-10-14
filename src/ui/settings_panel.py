@@ -13,7 +13,6 @@ maintenant ») ; la saison des particules s'applique EN DIRECT (signal
 """
 
 import logging
-import shutil
 from pathlib import Path
 
 
@@ -41,8 +40,8 @@ from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, tr
 from src.ui.composants import (
-    ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, feuille_de_style,
-    police, surtitre, texte,
+    ENCRE_DISCRETE, ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
+    espace_du_volume, feuille_de_style, police, surtitre, texte,
 )
 from src.ui.fonts import cinzel_decorative
 from src.ui import about_page, manette_nav
@@ -85,23 +84,8 @@ _COMBO_STYLE = (
 )
 
 
-def _disque(path: Path) -> tuple[int, int]:
-    """(octets libres, octets au total) du volume ; (0, 0) si illisible.
-
-    Le dossier n'existe pas forcément encore (rien d'installé) : c'est son
-    plus proche parent existant qui dit sur quel volume il tombera.
-    """
-    while not path.exists() and path.parent != path:
-        path = path.parent
-    try:
-        usage = shutil.disk_usage(path)
-    except OSError:
-        return 0, 0
-    return usage.free, usage.total
-
-
 def _texte_disque(path: Path) -> str:
-    libre, total = _disque(path)
+    libre, total = espace_du_volume(path)
     if not total:
         return tr("Espace libre inconnu")
     return tr("{libre} libres sur {total}").format(
@@ -143,60 +127,6 @@ class _BarreDisque(QWidget):
         p.end()
 
 
-class _Pastille(QWidget):
-    """Le petit carré de couleur d'une légende."""
-
-    def __init__(self, couleur: QColor) -> None:
-        super().__init__()
-        self._couleur = couleur
-        self.setFixedSize(9, 9)
-
-    def paintEvent(self, _event) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(self._couleur)
-        p.drawRoundedRect(QRectF(self.rect()), 2, 2)
-        p.end()
-
-
-class _Chemin(QLabel):
-    """Le chemin du dossier, coupé AU MILIEU s'il ne tient pas.
-
-    Il se cassait juste après « C: » en retour à la ligne (maquette « avant »).
-    Coupé au milieu, on garde le lecteur ET le nom du dossier ; le chemin
-    complet reste dans l'infobulle.
-    """
-
-    def __init__(self, chemin: str) -> None:
-        super().__init__()
-        self.setTextFormat(Qt.TextFormat.PlainText)
-        self.setFont(police(14))
-        self.setStyleSheet("color: #f2f2f4; background: transparent;")
-        self.setMinimumWidth(1)
-        self.definir(chemin)
-
-    def definir(self, chemin: str) -> None:
-        self._chemin = chemin
-        self.setToolTip(chemin)
-        self._couper()
-
-    def text(self) -> str:  # le chemin ENTIER, pas sa forme coupée
-        return self._chemin
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self._couper()
-
-    def _couper(self) -> None:
-        super().setText(self.fontMetrics().elidedText(
-            self._chemin, Qt.TextElideMode.ElideMiddle, max(1, self.width())))
-
-    def sizeHint(self) -> QSize:
-        return QSize(self.fontMetrics().horizontalAdvance(self._chemin),
-                     super().sizeHint().height())
-
-
 class SettingsDialog(QDialog):
     """Panneau de paramètres Accio Launcher."""
 
@@ -205,6 +135,8 @@ class SettingsDialog(QDialog):
     force_launcher_check = pyqtSignal()    # demande une vérif forcée du launcher
     season_changed = pyqtSignal(str)       # saison RÉSOLUE, appliquée en direct
     restart_requested = pyqtSignal()       # « Redémarrer maintenant » (thème/langue)
+    # « Désinstaller et fermer » : (garder les jeux, garder les copies).
+    desinstallation_demandee = pyqtSignal(bool, bool)
 
     def __init__(self, config: Config, manager: GameManager, parent=None,
                  store=None) -> None:
@@ -414,7 +346,7 @@ class SettingsDialog(QDialog):
 
     def _page_general(self) -> QWidget:
         dossier = Carte()
-        self._path_label = _Chemin(str(self.config.install_path))
+        self._path_label = Chemin(str(self.config.install_path))
         btn_open = bouton(tr("Ouvrir"))
         btn_open.clicked.connect(self._on_open_install_folder)
         btn_change = bouton(tr("Changer…"), principal=True)
@@ -437,11 +369,11 @@ class SettingsDialog(QDialog):
         lay_disque.addWidget(self._barre_disque)
         legende = QHBoxLayout()
         legende.setSpacing(7)
-        legende.addWidget(_Pastille(accent_qcolor(255)))
+        legende.addWidget(Pastille(accent_qcolor(255)))
         self._legende_jeux = texte(tr("Vos jeux"), 12, ENCRE_DOUCE)
         legende.addWidget(self._legende_jeux)
         legende.addSpacing(16)
-        legende.addWidget(_Pastille(QColor(255, 255, 255, 56)))
+        legende.addWidget(Pastille(QColor(255, 255, 255, 56)))
         legende.addWidget(texte(tr("Le reste du disque"), 12, ENCRE_DOUCE))
         legende.addStretch()
         self._free_label = texte(_texte_disque(self.config.install_path), 12, "#d9d6e8")
@@ -490,11 +422,26 @@ class SettingsDialog(QDialog):
             tr("Revenir à une copie"),
             tr("Depuis les réglages de chaque jeu, rubrique Fichiers du jeu.")))
 
+        fin = Carte()
+        desinstaller = bouton(tr("Désinstaller…"))
+        desinstaller.clicked.connect(self._on_desinstaller)
+        fin.ajouter(LigneReglage(
+            tr("Désinstaller Accio Launcher"),
+            tr("Vos jeux peuvent rester : un launcher réinstallé les retrouve tout seul."),
+            desinstaller))
+
         return self._page((tr("Dossier des jeux"), dossier), (tr("Langue"), langue),
-                          (tr("Sauvegardes"), sauvegardes))
+                          (tr("Sauvegardes"), sauvegardes), (tr("Désinstaller"), fin))
+
+    def _on_desinstaller(self) -> None:
+        from src.ui.desinstallation_dialog import DesinstallationDialog
+        a_des_jeux = any(e.state == GameState.INSTALLED for e in self.manager.get_games())
+        dlg = DesinstallationDialog(self.config.install_path, self._octets_jeux, a_des_jeux, self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.desinstallation_demandee.emit(dlg.garder_jeux, dlg.garder_copies)
 
     def _regler_disque(self) -> None:
-        libre, total = _disque(self.config.install_path)
+        libre, total = espace_du_volume(self.config.install_path)
         self._barre_disque.regler(self._octets_jeux, libre, total)
         self._free_label.setText(_texte_disque(self.config.install_path))
 

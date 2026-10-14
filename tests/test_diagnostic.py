@@ -22,7 +22,8 @@ def _faux_manager(install_path: Path):
     return SimpleNamespace(
         config=SimpleNamespace(install_path=install_path, langue="fr", theme="poudlard"),
         catalog=SimpleNamespace(catalog_version="0.24",
-                                games=[SimpleNamespace(id="hp1"), SimpleNamespace(id="hp2")]),
+                                games=[SimpleNamespace(id="hp1", name="HP1", cover_image="hp1_cover.jpg"),
+                                       SimpleNamespace(id="hp2", name="HP2", cover_image="hp2_cover.jpg")]),
         get_state=lambda gid: etats[gid],
         installed_version=lambda gid: "1.1" if gid == "hp1" else None,
         get_playtime=lambda gid: 3600 if gid == "hp1" else 0,

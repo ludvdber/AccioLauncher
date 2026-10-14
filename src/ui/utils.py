@@ -5,7 +5,6 @@ from PyQt6.QtGui import QDesktopServices, QIcon
 from PyQt6.QtWidgets import QComboBox, QLayout, QListView, QMessageBox, QScrollArea, QWidget
 
 from src.core.config import ASSETS_DIR
-from src.core.i18n import tr
 from src.ui.theme import themed
 
 _ICONE = ASSETS_DIR / "accio_launcher.ico"
@@ -29,7 +28,7 @@ def icone_application() -> QIcon:
     return QIcon(str(_ICONE if _ICONE.exists() else _ICONE_REPLI))
 
 
-def avertir(parent, titre: str, texte: str) -> None:
+def avertir(parent, titre: str, texte: str, conserve: str = "") -> None:
     """Constat sans question : un message, un bouton pour le congédier.
 
     Remplace `QMessageBox.warning(...)`, qu'aucun widget ne doit appeler
@@ -44,13 +43,10 @@ def avertir(parent, titre: str, texte: str) -> None:
     ② Il est en `AutoText`, alors que ces messages interpolent des noms de jeu
     et des chemins — Qt bascule en rich text dès que le contenu y ressemble.
     """
-    boite = QMessageBox(parent)
-    boite.setIcon(QMessageBox.Icon.Warning)
-    boite.setWindowTitle(titre)
-    boite.setTextFormat(Qt.TextFormat.PlainText)
-    boite.setText(texte)
-    boite.addButton(tr("Fermer"), QMessageBox.ButtonRole.AcceptRole)
-    boite.exec()
+    # Ici et pas en tête : `fenetre_message` passe par `composants`, qui
+    # n'a pas à charger tout `utils` pour exister.
+    from src.ui.fenetre_message import message
+    message(parent, QMessageBox.Icon.Warning, titre, texte, conserve=conserve)
 
 
 def clear_layout(layout: QLayout) -> None:

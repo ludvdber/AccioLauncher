@@ -469,7 +469,6 @@ class TestSettingsRestart:
 
 class TestOnboardingImport:
     def test_perform_imports_moves_game(self, qtbot, tmp_path, monkeypatch):
-        from PyQt6.QtWidgets import QListWidgetItem
         from src.ui.onboarding import OnboardingDialog, detect_installed_games
         from pathlib import Path
 
@@ -485,18 +484,19 @@ class TestOnboardingImport:
         found = detect_installed_games(src_root, list(_CATALOG.games))
         assert [g.id for g, _ in found] == [game.id]
 
+        (tmp_path / "launcher_games").mkdir()
         dlg = OnboardingDialog()
         qtbot.addWidget(dlg)
-        dlg._detected = found
-        for g, src in found:
-            item = QListWidgetItem(f"{g.name} - {src}")
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Checked)
-            dlg._import_list.addItem(item)
+        dlg.install_path = tmp_path / "launcher_games"
+        dlg.choisir_langue("fr")
+        dlg._quitter_la_langue()
+        # « Chercher ailleurs… » sans la boîte de dialogue du système.
+        dlg._dossier_cherche = src_root
+        dlg._regler_jeux()
+        assert [g.id for g, _ in dlg.checked_imports()] == [game.id]
 
         config = Config(install_path=tmp_path / "launcher_games",
                         cache_path=tmp_path / "launcher_games" / ".cache")
-        (tmp_path / "launcher_games").mkdir()
         dlg.perform_imports(config)
 
         assert (tmp_path / "launcher_games" / Path(*parts)).exists()  # déplacé
@@ -1824,11 +1824,11 @@ class TestEngrenageReglagesDuJeu:
 
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.INSTALLED)
-        ouvertes = []
-        monkeypatch.setattr(GameSettingsDialog, "exec",
-                            lambda self: ouvertes.append(self) or 0)
         gdh.on_game_settings(win._detail)
-        assert len(ouvertes) == 1
+        # Une page à la place de la fiche, plus une fenêtre (2026-10-09).
+        assert isinstance(win._pages.page, GameSettingsDialog)
+        win._pages.fermer()
+        assert win._pages.page is None
 
 
     def test_la_rubrique_fichiers_expose_le_clic_droit(self, make_window_multilingue):
@@ -2206,14 +2206,15 @@ class TestConfirmationAvantDeFermer:
     def _repond(libelle, vu):
         """Clique le bouton `libelle` de la boite modale des qu'elle parait."""
         from PyQt6.QtCore import QTimer
-        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from PyQt6.QtWidgets import QApplication
 
+        from src.ui.fenetre_message import FenetreMessage
         minuteur = QTimer()
         minuteur.setInterval(10)
 
         def _essayer():
             for w in QApplication.topLevelWidgets():
-                if isinstance(w, QMessageBox) and w.isVisible():
+                if isinstance(w, FenetreMessage) and w.isVisible():
                     vu["texte"], vu["detail"] = w.text(), w.informativeText()
                     for b in w.buttons():
                         if b.text() == libelle:

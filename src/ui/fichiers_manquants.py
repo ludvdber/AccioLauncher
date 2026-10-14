@@ -61,9 +61,10 @@ def signaler_fichiers_manquants(view: "GameDetailView", game: GameData) -> bool:
            "Le plus souvent, c'est l'antivirus qui les a mis en quarantaine. Restaurez-les "
            "depuis son historique, puis ajoutez le dossier des jeux à ses exclusions : "
            "sinon il les retirera encore.\n\n"
-           "« Retélécharger le jeu » réinstalle tous ses fichiers par-dessus. "
-           "Les sauvegardes ne sont pas touchées.").format("\n".join(noms)),
+           "« Retélécharger le jeu » réinstalle tous ses fichiers par-dessus.").format(
+               "\n".join(noms)),
         (tr("Retélécharger le jeu"), tr("Ouvrir le dossier du jeu"), tr("Fermer")), 2,
+        conserve=tr("Vos sauvegardes ne sont pas touchées, même si vous retéléchargez le jeu."),
     )
     if choix == 0:
         # Re-gardé : la boîte a pu rester ouverte pendant qu'autre chose démarrait.
