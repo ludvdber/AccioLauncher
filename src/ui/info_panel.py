@@ -1,5 +1,6 @@
 """Panneau d'informations du jeu — titre, metadata, description, version."""
 
+from datetime import datetime
 from html import escape
 from pathlib import Path
 
@@ -76,6 +77,9 @@ class InfoPanel(QWidget):
         self._game: GameData | None = None
         self._resume: folio.Resume | None = None
         self._a_propos = False
+        # Sans folio, l'avancement que le jeu écrit (HP5 : « 14 % ») : une
+        # ligne au-dessus de la description, qui reste (Ludo, 2026-10-15).
+        self._avancee: sauvegardes.Etat | None = None
 
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(50, 0, 30, 0)
@@ -442,6 +446,7 @@ class InfoPanel(QWidget):
         self._game = game
         if nouveau:
             self._resume = None
+            self._avancee = None
             self._a_propos = False
             self._appliquer_partie()
 
@@ -528,6 +533,7 @@ class InfoPanel(QWidget):
         if game is not None:
             self._game = game
             self._resume = self._lire_partie(game)
+            self._avancee = None if self._resume is not None else self._lire_avancee(game)
             self._appliquer_partie()
             self._refresh_indices(game)
 
@@ -550,6 +556,11 @@ class InfoPanel(QWidget):
         return folio.resume_hp1(sauvegardes.fichiers(game.sauvegardes), system,
                                 get_language())
 
+    def _lire_avancee(self, game: GameData) -> sauvegardes.Etat | None:
+        if not self._manager.is_installed(game.id):
+            return None
+        return sauvegardes.derniere_avancee(game.sauvegardes)
+
     def _appliquer_partie(self) -> None:
         resume, game = self._resume, self._game
         description = self.description_montree()
@@ -558,8 +569,14 @@ class InfoPanel(QWidget):
             self._btn_expand.setVisible(description)
         else:
             self._apply_desc_truncation()
-        self._derniere.setVisible(resume is not None and not self._a_propos)
+        avancee = self._avancee
+        self._derniere.setVisible((resume is not None and not self._a_propos)
+                                  or (resume is None and avancee is not None))
         self._bloc_hote.setVisible(resume is not None)
+        if resume is None and avancee is not None and avancee.avancement is not None:
+            self._derniere.setText(phrase_derniere_partie(
+                datetime.fromtimestamp(avancee.modifie),
+                tr("{} % terminé").format(avancee.avancement)))
         if resume is not None and game is not None:
             self._derniere.setText(phrase_derniere_partie(resume.releve.modifie, resume.lieu))
             system = self._manager.config.install_path / Path(game.executable).parent

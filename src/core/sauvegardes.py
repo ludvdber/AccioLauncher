@@ -218,6 +218,15 @@ def releve(spec: Sauvegardes | None) -> dict[str, Etat]:
     return etats
 
 
+def derniere_avancee(spec: Sauvegardes | None) -> Etat | None:
+    """La partie écrite en dernier parmi celles dont le JEU dit l'avancement
+    (HP5 : « 14 % »), ou None. L'en-tête seul est lu."""
+    if spec is None or not spec.emplacements:
+        return None
+    avec = [e for e in releve(spec).values() if e.avancement is not None]
+    return max(avec, key=lambda e: e.modifie, default=None)
+
+
 # ─── Emplacements rangés dans un fichier ───
 
 # Assez pour les trois fiches de HP5 (0x488) ; celles de HP4 s'arrêtent à 0x220.

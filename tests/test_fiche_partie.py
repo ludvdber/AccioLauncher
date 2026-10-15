@@ -113,6 +113,53 @@ class TestDeuxEtats:
         assert panel.partie_affichee()
 
 
+class TestAvancementSansFolio:
+    """HP5 dit son avancement (« 14 % ») sans folio : la ligne « Dernière
+    partie » s'ajoute, la description reste (Ludo, 2026-10-15)."""
+
+    @pytest.fixture
+    def hp5(self, fiche, tmp_path, monkeypatch):
+        from src.core import sauvegardes
+        from src.core.game_data import GameData
+        from tests.test_sauvegardes import HPOOTP, _hpootp
+        panel, montrer, _, _, _, installes = fiche
+        monkeypatch.setattr(sauvegardes, "racines",
+                            lambda: {"documents": tmp_path / "Docs", "localappdata": tmp_path / "App"})
+        installes.add("hp5")
+        jeu = GameData.from_dict({
+            "id": "hp5", "name": "L'Ordre du Phénix", "year": 2007, "developer": "EA UK",
+            "cover_image": "c.jpg", "description": "Dumbledore's Army.",
+            "executable": "HP5/hp.exe",
+            "saves": {"root": "localappdata",
+                      "folders": ["Electronic Arts/Harry Potter*Ph*nix/HPOOTP"],
+                      "files": "HPOOTP", "first": 1, "slots": "hp5"}})
+        chemin = tmp_path / "App" / HPOOTP
+        chemin.parent.mkdir(parents=True)
+        return panel, montrer, jeu, chemin, _hpootp, installes
+
+    def test_la_derniere_partie_et_son_pourcentage(self, hp5):
+        panel, montrer, jeu, chemin, hpootp, _ = hp5
+        chemin.write_bytes(hpootp(("Frontend", datetime(2026, 4, 29, 21, 5, 13), 1),
+                                  ("Hogwarts", datetime(2026, 10, 1, 16, 8, 24), 14)))
+        montrer(jeu)
+        assert _visibles(panel) == (True, True, False), "la description reste, sans bloc"
+        assert "14 % terminé" in panel._derniere.text(), "la plus récente, pas la première"
+        assert not panel.partie_affichee(), "les statistiques restent dans le panneau d'actions"
+        assert 'href="a-propos"' not in panel._indices.text()
+
+    def test_sans_sauvegarde_rien_de_plus(self, hp5):
+        panel, montrer, jeu, _, _, _ = hp5
+        montrer(jeu)
+        assert _visibles(panel) == (True, False, False)
+
+    def test_desinstalle_la_ligne_s_en_va(self, hp5):
+        panel, montrer, jeu, chemin, hpootp, installes = hp5
+        chemin.write_bytes(hpootp(("Hogwarts", datetime(2026, 10, 1), 14)))
+        installes.discard("hp5")
+        montrer(jeu)
+        assert _visibles(panel) == (True, False, False)
+
+
 class TestAProposDuJeu:
     def test_la_description_se_relit_puis_se_range(self, fiche):
         panel, montrer, hp1, _, saves, _ = fiche

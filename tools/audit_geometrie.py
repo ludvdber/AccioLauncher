@@ -102,7 +102,17 @@ def _partie_hp1(tmp: Path) -> None:
                       ("esp", "Terrenos de Hogwarts")):
         (system / f"HPMenu.{ext}").write_bytes(
             f"[Menu]\r\ntitle_lev2_hogfront={lieu}\r\n".encode("cp1252"))
-    sauvegardes.racines = lambda: {"documents": tmp / "Documents"}
+    # HP5 : sa ligne « Dernière partie … · 14 % terminé » au-dessus de la description.
+    hpootp = bytearray(0x500)
+    hpootp[0:4] = b"20CM"
+    hpootp[0x20:0x28] = b"Hogwarts"
+    for i, v in enumerate((2026, 10, 4, 1, 16, 8, 24)):
+        hpootp[0x60 + 4 * i:0x64 + 4 * i] = v.to_bytes(4, "little")
+    hpootp[0x90:0x94] = (14).to_bytes(4, "little")
+    dossier_hp5 = tmp / "AppData" / "Electronic Arts" / "Harry Potter and the Order of the Phoenix" / "HPOOTP"
+    dossier_hp5.mkdir(parents=True)
+    (dossier_hp5 / "HPOOTP").write_bytes(bytes(hpootp))
+    sauvegardes.racines = lambda: {"documents": tmp / "Documents", "localappdata": tmp / "AppData"}
 
 
 def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
