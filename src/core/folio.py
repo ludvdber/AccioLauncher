@@ -47,8 +47,9 @@ import struct
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import lru_cache
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 if TYPE_CHECKING:
     from src.core import textures_ue1
@@ -59,8 +60,12 @@ GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE = (
     "gryffondor", "serpentard", "serdaigle", "poufsouffle")
 MAISONS = (GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE)
 
-# Les jeux dont le folio sait lire les sauvegardes, par id du catalogue.
-JEUX = ("hp1",)
+# Les jeux dont le folio sait lire les sauvegardes, par id du catalogue : ils
+# ont leur PAGE (`ui/folio_jeux.page_folio`). Ceux de `RESUMES` montrent en
+# plus la partie sur leur fiche, à la place de la description (cartes : HP1,
+# HP3) ; HP5 et HP6 gardent la leur (pas d'éventail de cartes à montrer).
+JEUX = ("hp1", "hp3", "hp5", "hp6")
+RESUMES = ("hp1", "hp3")
 
 # Le folio du jeu, emplacement par emplacement : `WizardCards[i]` de la
 # sauvegarde est la carte i + 1 de cette liste. Relevé le 2026-10-14 dans le
@@ -257,18 +262,34 @@ def le_plus_avance(releves: list[Releve]) -> Releve | None:
     return max(lus, key=lambda r: r.avancement)
 
 
-def la_derniere_jouee(releves: list[Releve]) -> Releve | None:
+class PartieLue(Protocol):
+    """Ce qu'ont en commun les relevés de tous les jeux (HP1, HP3…)."""
+
+    @property
+    def emplacement(self) -> int: ...
+    @property
+    def modifie(self) -> datetime: ...
+    @property
+    def lu(self) -> bool: ...
+
+
+_P = TypeVar("_P", bound=PartieLue)
+
+
+def la_derniere_jouee(releves: Sequence[_P]) -> _P | None:
     """Celui que le jeu a écrit en dernier : la partie qu'on reprend. Parmi les
     lisibles d'abord, sinon un emplacement illisible ouvrirait sur du vide."""
-    candidats = [r for r in releves if r.lu] or releves
+    candidats = [r for r in releves if r.lu] or list(releves)
     return max(candidats, key=lambda r: r.modifie, default=None)
 
 
 @dataclass(frozen=True)
 class Resume:
     """Ce que la fiche du jeu montre à la place de sa description."""
-    releve: Releve
+    releve: PartieLue   # `Releve` pour HP1, `folio_hp3.Releve` pour HP3
     lieu: str        # vide si le jeu n'est pas installé ou ne nomme pas le niveau
+    trouvees: int = 0     # cartes trouvées…
+    total: int = 0        # … sur tant
 
 
 def resume_hp1(fichiers: dict[str, Path], system: Path, langue: str) -> Resume | None:
@@ -283,7 +304,7 @@ def resume_hp1(fichiers: dict[str, Path], system: Path, langue: str) -> Resume |
     if releve is None:
         return None
     _, titres = textes_hp1(fichier_textes(system, langue))
-    return Resume(releve, lieu(titres, releve.niveau))
+    return Resume(releve, lieu(titres, releve.niveau), len(releve.cartes), CARTES_HP1)
 
 
 # ── Les textes du jeu installé ──

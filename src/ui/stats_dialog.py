@@ -127,11 +127,11 @@ class StatsDialog(QDialog):
 
     def ouvrir_folio(self, game_id: str) -> None:
         """Le folio du jeu ; son retour rouvre Mes années."""
-        from src.ui.folio_page import FolioPage
+        from src.ui.folio_jeux import page_folio
         jeu = next(e.game for e in self._entrees if e.game.id == game_id)
         hote, ouvrir, manager = self.parentWidget(), self._ouvrir_page, self.manager
-        ouvrir(FolioPage(jeu, manager.config.install_path, hote,
-                         revenir=lambda: ouvrir(StatsDialog(manager, hote, ouvrir), ANNEES)))
+        ouvrir(page_folio(jeu, manager.config.install_path, hote,
+                          revenir=lambda: ouvrir(StatsDialog(manager, hote, ouvrir), ANNEES)))
 
     def ouvrir_galerie(self) -> None:
         from src.ui.galerie_page import GaleriePage
@@ -428,7 +428,7 @@ class StatsDialog(QDialog):
         if self._ouvrir_page is not None and game_id in folio.JEUX:
             ouvrir = bouton(tr("Ouvrir le folio"), principal=True)
             ouvrir.setAutoDefault(False)
-            ouvrir.setToolTip(tr("Cartes, dragées et points des maisons, lus dans vos sauvegardes"))
+            ouvrir.setToolTip(tr("Ce que vos sauvegardes disent de la partie"))
             ouvrir.clicked.connect(lambda _c=False, g=game_id: self.ouvrir_folio(g))
             couche.addWidget(ouvrir, alignment=Qt.AlignmentFlag.AlignLeft)
 

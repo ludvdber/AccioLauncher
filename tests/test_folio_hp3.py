@@ -2,6 +2,7 @@
 de Ludo (relevé le 2026-10-15), aucune donnée du jeu."""
 
 import os
+from datetime import datetime
 import struct
 
 from src.core import folio_hp3, textures_ue1
@@ -158,10 +159,14 @@ class TestNomsDesCartes:
         """`HGame.u` avec deux classes de cartes et leur `dialogId`, et le texte."""
         p = _Paquet()
         dialog = p.n("dialogId")
+        carte = p.n("CardID")
         noms = p.noms + ["WC_ZouYen", "wc_ThaddeusThurkell"]
         p.noms = noms
-        corps = {"WC_ZouYen": b"\x06\x00\xff" + dialog + b"\x22" + struct.pack("<i", 142) + b"\x00",
-                 "wc_ThaddeusThurkell": dialog + b"\x22" + struct.pack("<i", 150)}
+        # Comme dans HGame.u : `dialogId` (entier), puis `CardID` (chaîne « BE14 »).
+        corps = {"WC_ZouYen": b"\x06\x00\xff" + dialog + b"\x22" + struct.pack("<i", 142)
+                 + carte + b"\x5d\x06\x05BE14\x00" + b"\x00",
+                 "wc_ThaddeusThurkell": dialog + b"\x22" + struct.pack("<i", 150)
+                 + carte + b"\x5d\x06\x05WZ09\x00"}
         d = bytearray(b"\x00" * 36)
         positions = []
         for c in corps.values():
@@ -194,6 +199,47 @@ class TestNomsDesCartes:
 
     def test_jeu_absent(self, tmp_path):
         assert folio_hp3.noms_cartes(tmp_path / "rien", "fr") == {}
+        assert folio_hp3.catalogue(tmp_path / "rien", "fr") == folio_hp3.Catalogue()
+
+    def test_series_dans_l_ordre_du_jeu_et_descriptions(self, tmp_path):
+        system = self._jeu(tmp_path, (
+            "[All]\r\nWizardName_142=Dzou Yen\r\nWizardName_150=Thadée Thurkell\r\n"
+            "wizarddesc_142=Dzou Yen (an 300 environ) - Sorcier chinois.\r\n"
+            "WizardDesc_150=Sans dates, rien à couper\r\n"
+            "wizardmenu_104=Cartes des sorciers célèbres\r\nwizardmenu_112=Cartes des monstres\r\n"
+            "achievemntsmenu_2=Défi du Carpe Retractum\r\n"))
+        cat = folio_hp3.catalogue(system, "fr")
+        assert [(s.code, s.titre, [c.code for c in s.cartes]) for s in cat.series] == [
+            ("WZ", "Cartes des sorciers célèbres", ["WZ09"]),
+            ("BE", "Cartes des monstres", ["BE14"])]
+        dzou = cat.cartes[1]
+        assert (dzou.classe, dzou.dates, dzou.texte) == ("wc_zouyen", "an 300 environ", "Sorcier chinois.")
+        assert cat.cartes[0].dates == "" and cat.cartes[0].texte == "Sans dates, rien à couper"
+        assert cat.defis == {"cr": "Défi du Carpe Retractum"}
+
+    def test_l_image_sans_le_jeu(self, tmp_path):
+        assert folio_hp3.image_carte(tmp_path / "system", "VP05") is None
+        assert folio_hp3.image_carte(tmp_path / "system", "../x") is None
+
+
+class TestDefis:
+    def test_les_deux_cartes_d_un_defi_reunies(self, tmp_path):
+        r = folio_hp3.Releve(
+            1, tmp_path / "Save0.usa", datetime(2026, 9, 20), True,
+            etoiles=(folio_hp3.Niveau("CR", 6, 6), folio_hp3.Niveau("crb", 4, 4)),
+            secrets=(folio_hp3.Niveau("CR", 3, 3), folio_hp3.Niveau("adv1", 0, 0)))
+        (defi,) = folio_hp3.defis(r, {"cr": "Défi du Carpe Retractum", "gl": "Défi du Glacius"})
+        assert defi == folio_hp3.Defi("Défi du Carpe Retractum", 10, 10, 3, 3)
+
+    def test_resume_la_derniere_lisible(self, tmp_path):
+        (tmp_path / "Save0.usa").write_bytes(_partie())
+        vide = _Paquet()
+        vide.objet("hgame", vide.nom("CurrentGameState", "GSTATE000"))
+        (tmp_path / "Save1.usa").write_bytes(vide.octets())
+        os.utime(tmp_path / "Save0.usa", (1_700_000_000, 1_700_000_000))
+        resume = folio_hp3.resume({p.name: p for p in tmp_path.iterdir()}, tmp_path, "fr")
+        assert resume.releve.emplacement == 1, "un début de jeu plus récent ne compte pas"
+        assert (resume.trouvees, resume.total) == (2, 3)
 
     def test_le_lecteur_de_paquet_rend_les_structures(self):
         paquet = textures_ue1.Paquet(_partie())

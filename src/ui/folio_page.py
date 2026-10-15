@@ -14,6 +14,7 @@ La carte choisie s'affiche dans une colonne FIXE à droite (Ludo, 2026-10-14) :
 sous la grille, sa fiche tombait hors de l'écran et l'on cliquait sans rien voir.
 """
 
+from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QRectF, QSize, Qt
@@ -187,27 +188,31 @@ class _CarteSorcier(QPushButton):
         p.end()
 
 
+def nom_emplacement(releve) -> str:
+    """« Sauvegarde rapide » ou « Emplacement 2 » (HP1, HP3)."""
+    return (tr("Sauvegarde rapide") if releve.rapide
+            else tr("Emplacement {}").format(releve.emplacement))
+
+
 class _LigneEmplacement(QPushButton):
-    def __init__(self, releve: folio.Releve, lieu: str, plus_avance: bool) -> None:
+    def __init__(self, nom: str, quand: datetime | None, lieu: str, plus_avance: bool) -> None:
         super().__init__()
         self.setObjectName("emplacement")
         self.setCheckable(True)
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.releve = releve
         v = QVBoxLayout(self)
         v.setContentsMargins(12, 9, 12, 9)
         v.setSpacing(3)
         haut = QHBoxLayout()
         haut.setSpacing(8)
-        nom = (tr("Sauvegarde rapide") if releve.rapide
-               else tr("Emplacement {}").format(releve.emplacement))
         titre = texte(nom, 15, ENCRE)
         titre.setFont(police(15, gras=True))
         haut.addWidget(titre)
         haut.addStretch()
-        from src.ui.versions_dialog import date_longue
-        haut.addWidget(texte(date_longue(releve.modifie.strftime("%Y-%m-%d")), 12, ENCRE_DOUCE))
+        if quand is not None:
+            from src.ui.versions_dialog import date_longue
+            haut.addWidget(texte(date_longue(quand.strftime("%Y-%m-%d")), 12, ENCRE_DOUCE))
         v.addLayout(haut)
         if lieu:
             v.addWidget(texte(lieu, 13, "#c9c7da"))
@@ -223,7 +228,13 @@ class _LigneEmplacement(QPushButton):
 
 
 class FolioPage(QDialog):
-    """Ce que les sauvegardes de HP1 disent de la partie."""
+    """Ce que les sauvegardes de HP1 disent de la partie.
+
+    Les autres jeux (`ui/folio_jeux.py`) en héritent le rail des parties et
+    la mise en page, et remplacent `_charger`, `_entree` et `_construire`."""
+
+    _colonnes = _COLONNES
+    _case_min = _CASE_MIN
 
     def __init__(self, game, install_path: Path, parent: QWidget | None = None,
                  revenir=None) -> None:
@@ -234,13 +245,12 @@ class FolioPage(QDialog):
         self.setWindowTitle(tr("Folio"))
         self.setMinimumSize(900, 560)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
-        self.releves = folio.emplacements_hp1(sauvegardes.fichiers(game.sauvegardes))
-        system = install_path / Path(game.executable).parent
-        self.cartes, self._titres = folio.textes_hp1(folio.fichier_textes(system, get_language()))
-        self._paquet = folio.paquet_menu(system) if system.is_dir() else None
+        self._system = install_path / Path(game.executable).parent
         self._cases: list[_CarteSorcier] = []
-        self._plus = folio.le_plus_avance(self.releves)
-        self.releve: folio.Releve | None = None
+        self._plus = None
+        self.releves: list = []
+        self._charger()
+        self.releve = None
         self._lignes: dict[int, _LigneEmplacement] = {}
 
         racine = QHBoxLayout(self)
@@ -253,11 +263,26 @@ class FolioPage(QDialog):
         corps.setLayout(self._hote)
         racine.addWidget(corps, stretch=1)
         self._corps: QWidget | None = None
-        depart = folio.la_derniere_jouee(self.releves)
+        depart = self._depart()
         if depart is not None:
             self.choisir(depart.emplacement)
         else:
             self._afficher(None)
+
+    def _charger(self) -> None:
+        self.releves = folio.emplacements_hp1(sauvegardes.fichiers(self.game.sauvegardes))
+        self.cartes, self._titres = folio.textes_hp1(
+            folio.fichier_textes(self._system, get_language()))
+        self._paquet = folio.paquet_menu(self._system) if self._system.is_dir() else None
+        self._plus = folio.le_plus_avance(self.releves)
+
+    def _depart(self):
+        """La partie montrée à l'ouverture."""
+        return folio.la_derniere_jouee(self.releves)
+
+    def _entree(self, releve) -> tuple[str, datetime | None, str]:
+        """Ce que le rail montre d'une partie : nom, date, lieu."""
+        return nom_emplacement(releve), releve.modifie, folio.lieu(self._titres, releve.niveau)
 
     # ── Rail ──
 
@@ -292,7 +317,7 @@ class FolioPage(QDialog):
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
         for r in self.releves:
-            ligne = _LigneEmplacement(r, folio.lieu(self._titres, r.niveau), r is self._plus)
+            ligne = _LigneEmplacement(*self._entree(r), r is self._plus)
             ligne.toggled.connect(lambda oui, rel=r: oui and self._afficher(rel))
             self._groupe.addButton(ligne)
             self._lignes[r.emplacement] = ligne
@@ -443,8 +468,8 @@ class FolioPage(QDialog):
             return
         marges = self._zone.widget().layout().contentsMargins()
         dispo = self._zone.viewport().width() - marges.left() - marges.right()
-        cote = (dispo - (_COLONNES - 1) * _ECART_CASES) // _COLONNES
-        cote = max(_CASE_MIN, min(_CASE_MAX, cote))
+        cote = (dispo - (self._colonnes - 1) * _ECART_CASES) // self._colonnes
+        cote = max(self._case_min, min(_CASE_MAX, cote))
         for case in self._cases:
             if case.width() != cote:
                 case.setFixedSize(cote, cote)

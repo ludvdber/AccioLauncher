@@ -241,9 +241,9 @@ class GameDetailView(QWidget):
 
     def ouvrir_folio(self) -> None:
         """Le folio du jeu affiché ; son retour ramène à la bibliothèque."""
-        from src.ui.folio_page import FolioPage
-        self.page_demandee.emit(FolioPage(self.game, self.manager.config.install_path,
-                                          self.window()))
+        from src.ui.folio_jeux import page_folio
+        self.page_demandee.emit(page_folio(self.game, self.manager.config.install_path,
+                                           self.window()))
 
     # ──────────────────── Mode cinéma ────────────────────
 

@@ -5,8 +5,8 @@ Relevé le 2026-10-15 sur les sauvegardes de Ludo, en LECTURE seule
 un paquet Unreal 2 (version 129) dont quelques objets portent la partie :
 
     JellybeanCollection.iNumItems        dragées (813)
-    PumpkinPastyCollection.iNumItems     pasties du chaudron… (23)
-    CauldronCakeCollection.iNumItems     gâteaux du chaudron (5)
+    PumpkinPastyCollection.iNumItems     patacitrouilles (23)
+    CauldronCakeCollection.iNumItems     fondants du chaudron (5)
     WizardCardManager.Cards[80]          CardClass (WC_…), Status (5 = possédée)
     ChallengeStarManager.FoundStatus[]   LevelID, NumInLevel, Found[0..9]
     SecretManager.FoundStatus[]          LevelID, NumFound, NumInLevel
@@ -21,6 +21,8 @@ Les noms des cartes viennent du JEU INSTALLÉ : la classe `WC_ZouYen` porte son
 numéro dans ses propriétés par défaut (`dialogId`, `HGame.u`), et ce numéro
 mène au nom (`WizardName_142=Dzou Yen`, `HpMenu.<langue>`, UTF-16). Rien n'est
 deviné d'après le nom de la classe : il ne correspond pas toujours (« Dzou »).
+Son code (`CardID` « VP05 ») donne sa série et son image (`LVP05`,
+`textures/HP3_Menu.utx`, 256 couleurs, lue par `textures_ue1`).
 """
 
 from __future__ import annotations
@@ -33,10 +35,11 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import textures_ue1
+from src.core import folio, textures_ue1
 
 log = logging.getLogger(__name__)
 
+CARTES = 80          # les classes `WC_` du jeu, toutes séries
 POSSEDEE = 5         # EWizardCardStatus.WCS_OwnedByPlayer (lu dans HGame.u)
 _TAILLE_MAX = 32 * 1024 * 1024      # une sauvegarde HP3 pèse 4 à 9 Mo
 _EMPLACEMENT_RAPIDE = 10            # Save9.usa, la sauvegarde rapide (F5)
@@ -45,7 +48,7 @@ _EXTENSIONS = {"fr": "fre", "es": "esp", "de": "det", "it": "itt", "en": "int"}
 
 @dataclass(frozen=True)
 class Niveau:
-    ident: str          # « CR », tel que le jeu le range (pas encore nommé)
+    ident: str          # « CR » : l'`ID` du LevelInfo de la carte (nommé par `defis`)
     trouves: int
     total: int
 
@@ -206,24 +209,35 @@ def _fichier(system: Path, base: str, langue: str) -> Path | None:
 
 def numeros_cartes(hgame: Path) -> dict[str, int]:
     """Classe `WC_…` → son numéro de texte (`dialogId` dans ses propriétés par
-    défaut). Le motif cherché est l'étiquette entière : index du nom
-    `dialogId` dans CE paquet, octet « entier sur 4 octets », valeur."""
+    défaut)."""
+    return _proprietes_cartes(hgame)[0]
+
+
+def _proprietes_cartes(hgame: Path) -> tuple[dict[str, int], dict[str, str]]:
+    """Classe `WC_…` → (numéro de texte, code de carte), lus dans les
+    propriétés par défaut de chaque classe. Le motif cherché est l'étiquette
+    entière : index du nom dans CE paquet, octet de type, valeur ; `dialogId`
+    est un entier sur 4 octets, `CardID` une chaîne de 5 (« VP05 » et son zéro)."""
     try:
         p = textures_ue1.Paquet(hgame.read_bytes())
     except (OSError, ValueError, IndexError, struct.error):
         log.warning("Folio HP3 : %s illisible", hgame, exc_info=True)
-        return {}
-    indice = p.indice_nom("dialogId")
-    if indice is None:
-        return {}
-    etiquette = re.escape(_compact(indice) + b"\x22")
-    motif = re.compile(etiquette + b"(....)", re.S)
-    numeros = {}
+        return {}, {}
+    dialog, carte = p.indice_nom("dialogId"), p.indice_nom("CardID")
+    if dialog is None:
+        return {}, {}
+    motif = re.compile(re.escape(_compact(dialog) + b"\x22") + b"(....)", re.S)
+    motif_code = (re.compile(re.escape(_compact(carte)) + rb"\x5d\x06\x05([A-Z]{2}[0-9]{2})\x00")
+                  if carte is not None else None)
+    numeros, codes = {}, {}
     for classe, octets in p.classes("WC_").items():
         trouve = motif.search(octets)
         if trouve is not None:
             numeros[classe] = int.from_bytes(trouve.group(1), "little")
-    return numeros
+        code = motif_code.search(octets) if motif_code is not None else None
+        if code is not None:
+            codes[classe] = code.group(1).decode("ascii")
+    return numeros, codes
 
 
 def _compact(v: int) -> bytes:
@@ -242,20 +256,149 @@ def _compact(v: int) -> bytes:
 def noms_cartes(system: Path, langue: str) -> dict[str, str]:
     """Classe `WC_…` EN MINUSCULES → nom de la carte dans la langue du jeu ;
     vide sans le jeu."""
-    hgame = next((p for p in _lister(system) if p.name.lower() == "hgame.u"), None)
+    return {c.classe: c.nom for c in catalogue(system, langue).cartes}
+
+
+def _menu(system: Path, langue: str) -> dict[str, str]:
+    """`HpMenu.<langue>` (UTF-16) : clé EN MINUSCULES → texte (la casse des clés
+    varie dans le fichier : `WizardDesc_1`, `wizarddesc_12`)."""
     menu = _fichier(system, "HpMenu", langue)
-    if hgame is None or menu is None:
+    if menu is None:
         return {}
     try:
         texte = menu.read_bytes().decode("utf-16")
     except (OSError, UnicodeDecodeError):
         log.warning("Folio HP3 : %s illisible", menu, exc_info=True)
         return {}
-    noms = {int(n): nom.strip() for n, nom in
-            re.findall(r"^WizardName_(\d+)=(.*?)\r?$", texte, re.M | re.I) if nom.strip()}
-    # Clés en minuscules : la sauvegarde et le paquet n'écrivent pas toujours
-    # une classe avec la même casse (`wc_ThaddeusThurkell`), Unreal l'ignore.
-    return {classe.lower(): noms[n] for classe, n in numeros_cartes(hgame).items() if n in noms}
+    return {cle.lower(): valeur.strip() for cle, valeur in
+            re.findall(r"^([A-Za-z_]+_\d+)=(.*?)\r?$", texte, re.M) if valeur.strip()}
+
+
+# Les séries du folio du jeu, dans l'ordre de son menu : le code de série
+# d'une carte (`CardID` « VP05 » → « VP ») → la clé de son titre dans
+# `HpMenu` (« Cartes des vampires célèbres »). Relevé le 2026-10-15 : VP05 est
+# Vlad Dracula, QU04 Roderick Plumpton, et chaque série compte 5 ou 15 cartes.
+_SERIES = (("WZ", 104), ("WI", 105), ("QU", 106), ("VP", 107), ("GB", 108),
+           ("HG", 109), ("DR", 110), ("GI", 111), ("BE", 112), ("BO", 113))
+
+# Les trois défis de sortilège : le `LevelID` de leurs deux cartes (`ID` du
+# `LevelInfo` de HP3_Ch1CarpeRetractum.unr = « cr », de …B.unr = « crb »)
+# → la clé de leur nom dans `HpMenu` (« Défi du Carpe Retractum »).
+_DEFIS = (("cr", 2), ("dl", 3), ("gl", 4))
+
+
+@dataclass(frozen=True)
+class CarteHP3:
+    classe: str          # en minuscules, comme `Releve.cartes`
+    code: str            # « VP05 » : série et rang, nom de son image (`LVP05`)
+    serie: str           # « VP »
+    nom: str
+    dates: str           # « 1812 - 1904 », vide si le texte n'en porte pas
+    texte: str
+
+
+@dataclass(frozen=True)
+class Serie:
+    code: str
+    titre: str
+    cartes: tuple[CarteHP3, ...]
+
+
+@dataclass(frozen=True)
+class Catalogue:
+    cartes: tuple[CarteHP3, ...] = ()
+    series: tuple[Serie, ...] = ()
+    defis: dict[str, str] = field(default_factory=dict)   # « cr » → « Défi du Carpe Retractum »
+
+
+def _description(brut: str, nom: str) -> tuple[str, str]:
+    """« Comte Vlad Dracula (apparu en 1390) - Célèbre vampire… » → (dates, texte)."""
+    trouve = re.match(r"^(.*?)\s*\(([^)]*)\)\s*-\s*(.*)$", brut, re.S)
+    if trouve is None:
+        return "", brut
+    return trouve.group(2).strip(), trouve.group(3).strip()
+
+
+def catalogue(system: Path, langue: str) -> Catalogue:
+    """Les 80 cartes rangées par série, et les noms des défis ; vide sans le jeu."""
+    return _catalogue(str(system), langue)
+
+
+@lru_cache(maxsize=4)
+def _catalogue(system_txt: str, langue: str) -> Catalogue:
+    system = Path(system_txt)
+    hgame = next((p for p in _lister(system) if p.name.lower() == "hgame.u"), None)
+    textes = _menu(system, langue)
+    if hgame is None or not textes:
+        return Catalogue()
+    numeros, codes = _proprietes_cartes(hgame)
+    cartes = []
+    for classe, numero in numeros.items():
+        nom = textes.get(f"wizardname_{numero}")
+        if not nom:
+            continue
+        code = codes.get(classe, "")
+        dates, texte = _description(textes.get(f"wizarddesc_{numero}", ""), nom)
+        cartes.append(CarteHP3(classe.lower(), code, code[:2].upper(), nom, dates, texte))
+    rang = {code: i for i, (code, _) in enumerate(_SERIES)}
+    cartes.sort(key=lambda c: (rang.get(c.serie, len(rang)), c.code, c.nom))
+    series = []
+    for code, cle in _SERIES:
+        membres = tuple(c for c in cartes if c.serie == code)
+        if membres:
+            series.append(Serie(code, textes.get(f"wizardmenu_{cle}", code), membres))
+    defis = {ident: textes[f"achievemntsmenu_{cle}"] for ident, cle in _DEFIS
+             if f"achievemntsmenu_{cle}" in textes}
+    return Catalogue(tuple(cartes), tuple(series), defis)
+
+
+def image_carte(system: Path, code: str,
+                grande: bool = True) -> textures_ue1.TexturePaletee | None:
+    """La carte telle que le jeu la dessine : `LVP05` (256 px) ou `SVP05`
+    (128 px) dans `textures/HP3_Menu.utx`. None sans le jeu ou sans code."""
+    if not re.fullmatch(r"[A-Z]{2}\d{2}", code):
+        return None
+    paquet = next((p for p in _lister(system.parent / "textures")
+                   if p.name.lower() == "hp3_menu.utx"), None)
+    if paquet is None:
+        return None
+    return textures_ue1.texture(paquet, ("L" if grande else "S") + code)
+
+
+# ── Les défis, nommés ──
+
+@dataclass(frozen=True)
+class Defi:
+    nom: str
+    boucliers: int
+    boucliers_total: int
+    secrets: int
+    secrets_total: int
+
+
+def defis(releve: Releve, noms: dict[str, str]) -> list[Defi]:
+    """Les défis de sortilège vus dans la partie, leurs deux cartes réunies
+    (« cr » + « crb » : 6 + 4 = les 10 boucliers que le jeu annonce)."""
+    def defi(ident: str) -> str:
+        ident = ident.lower()
+        return ident[:-1] if len(ident) == 3 and ident.endswith("b") else ident
+
+    sortie = []
+    for ident, nom in noms.items():
+        b = [n for n in releve.etoiles if defi(n.ident) == ident]
+        s = [n for n in releve.secrets if defi(n.ident) == ident]
+        if b or s:
+            sortie.append(Defi(nom, sum(n.trouves for n in b), sum(n.total for n in b),
+                               sum(n.trouves for n in s), sum(n.total for n in s)))
+    return sortie
+
+
+def resume(fichiers: dict[str, Path], system: Path, langue: str) -> folio.Resume | None:
+    """La partie à reprendre pour la fiche (`folio.resume_hp1`, même règle)."""
+    releve = folio.la_derniere_jouee([r for r in emplacements(fichiers) if r.lu])
+    if releve is None:
+        return None
+    return folio.Resume(releve, "", len(releve.cartes), releve.total_cartes or CARTES)
 
 
 def _lister(system: Path) -> list[Path]:

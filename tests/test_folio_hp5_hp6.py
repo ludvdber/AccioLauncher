@@ -40,19 +40,28 @@ class TestHP5:
 
 
 def _hphbp0(ecussons: int = 7, jauge: int = 372, quand=datetime(2026, 10, 1, 18, 42, 44)) -> bytes:
-    """En-tête `20CM`, date à 0x20, corps `HPHB2.00WN32`, deux sections."""
-    d = bytearray(0x600)   # 125 écussons de 8 octets à partir de 0x130
+    """En-tête `20CM`, date à 0x20, corps `HPHB2.00WN32` à 0x54 ; sections en
+    paires (clé, valeur), décalages depuis le corps, comme chez Ludo."""
+    h = folio_hp6.hachage
+    sections = [
+        ("Minicrestometer", [(h("MiniCrestsCollected"), jauge)]),
+        ("CrestsCollected", [(124 - i, 0x08CC_F721 + i if 124 - i < ecussons else 0)
+                             for i in range(125)]),
+        ("CurrentChapterId", [(0x6F4, 2)]),
+        ("MissionId", [(h("SpellUnlock_Stupefy"), 5), (h("SpellUnlock_Lumos"), 5),
+                       (h("SpellUnlock_Accio"), 0), (h("Chapter_BurrowIntro"), 15)]),
+        ("Badges", [(h("COM_BEGINNERSLUCK"), 1), (h("COM_PACIFIST"), 0)]),
+    ]
+    d = bytearray(0x100)
     d[0:4] = b"20CM"
     struct.pack_into("<7I", d, 0x20, quand.year, quand.month, 4, quand.day,
                      quand.hour, quand.minute, quand.second)
     d[0x54:0x60] = b"HPHB2.00WN32"
-    struct.pack_into(">I", d, 0x60, 2)
-    struct.pack_into(">III", d, 0x64, folio_hp6.hachage("CrestsCollected"), 0xD8, 125)
-    struct.pack_into(">III", d, 0x70, folio_hp6.hachage("Minicrestometer"), 0xD0, 1)
-    struct.pack_into(">I", d, 0x58 + 0xD0, jauge)
-    for i in range(125):
-        cle = 0x08CD_0000 + i if i < ecussons else 0
-        struct.pack_into(">II", d, 0x58 + 0xD8 + 8 * i, cle, 124 - i)
+    struct.pack_into(">I", d, 0x60, len(sections))
+    for k, (nom, paires) in enumerate(sections):
+        struct.pack_into(">III", d, 0x64 + 12 * k, h(nom), len(d) - 0x54, len(paires))
+        for cle, valeur in paires:
+            d += struct.pack(">II", cle, valeur)
     return bytes(d)
 
 
@@ -66,6 +75,20 @@ class TestHP6:
         partie = folio_hp6.lire(_hphbp0())
         assert (partie.ecussons, partie.mini_ecussons) == (7, 372)
         assert partie.ecrite == datetime(2026, 10, 1, 18, 42, 44)
+
+    def test_chapitre_sorts_et_badges(self):
+        """Un sort à 0 n'est pas appris ; ordre de `SORTS`, pas du fichier."""
+        partie = folio_hp6.lire(_hphbp0())
+        assert partie.chapitre == 2
+        assert partie.sorts == ("Stupefy", "Lumos")
+        assert (partie.badges, partie.badges_total) == (1, 2)
+
+    def test_les_decalages_partent_du_corps(self):
+        """Lue depuis 0x58, la jauge serait la clé suivante : rien ne doit
+        sortir d'un fichier décalé de 4 octets."""
+        d = bytearray(_hphbp0())
+        struct.pack_into(">I", d, 0x64 + 4, struct.unpack_from(">I", d, 0x64 + 4)[0] - 4)
+        assert folio_hp6.lire(bytes(d)).mini_ecussons == 0
 
     def test_une_date_illisible_garde_le_reste(self):
         partie = folio_hp6.lire(_hphbp0(quand=datetime(2026, 10, 1)).replace(

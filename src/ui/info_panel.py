@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
-from src.core import folio, sauvegardes
+from src.core import folio, folio_hp3, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
@@ -550,11 +550,11 @@ class InfoPanel(QWidget):
     def _lire_partie(self, game: GameData) -> folio.Resume | None:
         """Seulement un jeu INSTALLÉ que le folio sait lire : désinstallé, la
         fiche redevient une invitation, la description revient."""
-        if game.id not in folio.JEUX or not self._manager.is_installed(game.id):
+        if game.id not in folio.RESUMES or not self._manager.is_installed(game.id):
             return None
         system = self._manager.config.install_path / Path(game.executable).parent
-        return folio.resume_hp1(sauvegardes.fichiers(game.sauvegardes), system,
-                                get_language())
+        lire = folio_hp3.resume if game.id == "hp3" else folio.resume_hp1
+        return lire(sauvegardes.fichiers(game.sauvegardes), system, get_language())
 
     def _lire_avancee(self, game: GameData) -> sauvegardes.Etat | None:
         if not self._manager.is_installed(game.id):
@@ -580,9 +580,8 @@ class InfoPanel(QWidget):
         if resume is not None and game is not None:
             self._derniere.setText(phrase_derniere_partie(resume.releve.modifie, resume.lieu))
             system = self._manager.config.install_path / Path(game.executable).parent
-            paquet = folio.paquet_menu(system) if system.is_dir() else None
-            self._bloc.montrer(resume.releve,
-                               cartes_eventail(paquet, resume.releve, self.devicePixelRatioF()),
+            self._bloc.montrer(resume, cartes_eventail(game.id, system, resume.releve,
+                                                       self.devicePixelRatioF()),
                                self._manager.get_playtime(game.id))
         self._apply_available_width()
 

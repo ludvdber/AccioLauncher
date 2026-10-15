@@ -2,7 +2,7 @@
 
 La description cède sa place dès qu'il y a mieux à montrer (Ludo, 2026-10-15) :
 qui a déjà joué l'a lue, et veut savoir où il en était. Un jeu dont on ne lit
-rien garde sa description (HP2 à HP8 aujourd'hui, `folio.JEUX`).
+rien garde sa description (`folio.RESUMES` : HP1 et HP3 aujourd'hui).
 
 Maquette H du canevas « fiche » : la ligne « Dernière partie » sous le titre,
 puis le bouton, puis ce bloc (éventail des cartes, compte, barre, maisons et
@@ -11,14 +11,15 @@ temps de jeu). Le bloc entier ouvre le folio.
 
 from datetime import date, datetime
 from html import escape
+from pathlib import Path
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import folio
+from src.core import folio, folio_hp3
 from src.core.formatting import format_duree_compacte, format_relative_date
-from src.core.i18n import tr
+from src.core.i18n import get_language, tr
 from src.ui.fonts import body_font
 from src.ui.theme import accent_qcolor, themed
 
@@ -66,9 +67,9 @@ def maison_en_tete(releve: folio.Releve) -> str:
     return tr("{} mène").format(nom_maison(tete[0]))
 
 
-def phrase_cartes(trouvees: int) -> str:
+def phrase_cartes(trouvees: int, total: int = folio.CARTES_HP1) -> str:
     cle = "{} carte sur {}" if trouvees == 1 else "{} cartes sur {}"
-    return tr(cle).format(trouvees, folio.CARTES_HP1)
+    return tr(cle).format(trouvees, total)
 
 
 class _Eventail(QWidget):
@@ -172,12 +173,14 @@ class BlocFolio(QFrame):
         colonne.addWidget(self._detail)
         rang.addLayout(colonne, 1)
 
-    def montrer(self, releve: folio.Releve, cartes: list[QPixmap], secondes: int) -> None:
-        trouvees = len(releve.cartes)
-        self._compte.setText(phrase_cartes(trouvees))
-        self._barre.regler(trouvees / folio.CARTES_HP1)
+    def montrer(self, resume: folio.Resume, cartes: list[QPixmap], secondes: int) -> None:
+        self._compte.setText(phrase_cartes(resume.trouvees, resume.total))
+        self._barre.regler(resume.trouvees / resume.total if resume.total else 0.0)
         self._eventail.regler(cartes)
-        morceaux = [m for m in (maison_en_tete(releve),
+        # Les maisons : HP1 seulement (HP3 n'écrit pas leurs points).
+        maisons = (maison_en_tete(resume.releve)
+                   if isinstance(resume.releve, folio.Releve) else "")
+        morceaux = [m for m in (maisons,
                                 tr("{} en tout").format(format_duree_compacte(secondes))
                                 if secondes > 0 else "") if m]
         self._detail.setText(" · ".join(morceaux))
@@ -207,14 +210,20 @@ class BlocFolio(QFrame):
         return self._compte.text()
 
 
-def cartes_eventail(paquet, releve: folio.Releve, dpr: float) -> list[QPixmap]:
+def cartes_eventail(game_id: str, system: Path, releve, dpr: float) -> list[QPixmap]:
     """Les trois premières cartes trouvées, en petit ; vide sans le jeu installé."""
-    if paquet is None:
-        return []
     from src.ui.folio_page import pixmap_texture
-    pixmaps = []
-    for numero in sorted(releve.cartes)[:len(_EVENTAIL)]:
-        tex = folio.image_carte_hp1(paquet, numero, grande=False)
-        if tex is not None:
-            pixmaps.append(pixmap_texture(tex, _CARTE_H, dpr))
-    return pixmaps
+    if not system.is_dir():
+        return []
+    textures = []
+    if game_id == "hp1":
+        paquet = folio.paquet_menu(system)
+        if paquet is None:
+            return []
+        textures = [folio.image_carte_hp1(paquet, n, grande=False)
+                    for n in sorted(releve.cartes)[:len(_EVENTAIL)]]
+    elif game_id == "hp3":
+        cat = folio_hp3.catalogue(system, get_language())
+        trouvees = [c for c in cat.cartes if c.classe in releve.cartes][:len(_EVENTAIL)]
+        textures = [folio_hp3.image_carte(system, c.code, grande=False) for c in trouvees]
+    return [pixmap_texture(t, _CARTE_H, dpr) for t in textures if t is not None]
