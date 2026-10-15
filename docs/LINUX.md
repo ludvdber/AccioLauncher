@@ -154,8 +154,8 @@ livre et ce que Wine fournit en interne (liste relevée dans le
 
 | Jeu | DLL livrées (hors DLL propres au moteur) | En collision avec Wine 9.0 | `dll_overrides` proposé |
 |---|---|---|---|
-| hp1 | `d3d11drv.dll` (renderer UE1 de Kentie), `Effects11.dll` | aucune | — |
-| hp2 | `d3d11drv.dll`, `Effects11.dll`, `OpenAL32.dll`, `ogg`/`vorbis*` | aucune (`openal32` absent de Wine 9.0) | — |
+| hp1 | `d3d11drv.dll` (renderer UE1 de Kentie), `Effects11.dll` ; `winmm.dll` (correctif, depuis le 2026-10-07) | `winmm` | `["winmm"]` (catalogue 0.43) |
+| hp2 | `d3d11drv.dll`, `Effects11.dll`, `OpenAL32.dll`, `ogg`/`vorbis*` ; `winmm.dll` (correctif) | `winmm` (`openal32` absent de Wine 9.0) | `["winmm"]` (catalogue 0.43) |
 | hp3 | dgVoodoo 2 : `D3D8.dll`, `D3D9.dll`, `DDraw.dll`, `D3DImm.dll` + `dgVoodoo.conf` ; `msvcr70.dll`, `binkw32.dll` | `d3d8`, `d3d9`, `ddraw`, `msvcr70` | `["msvcr70"]` — **dgVoodoo laissé de côté** : sous Proton il plante au démarrage (`UD3DRenderDevice::SetRes`, General protection fault), alors que le d3d8/d3d9 de Proton (DXVK) rend le jeu (menu, nouvelle partie, cinématique : vu le 2026-10-01). Le plafond de 60 images/s que tenait dgVoodoo passe par `"max_fps": 60` → `DXVK_FRAME_RATE=60` |
 | hp4 | `d3d9.dll` (wrapper ThirteenAG : FPS, fenêtré forcé, FOV) + `d3d9.ini`, `MSVCR71.DLL`, `GofInput.dll` | `d3d9`, `msvcr71` | `["d3d9", "msvcr71"]` |
 | hp5 | `d3d9.dll` (wrapper étendu : FXAA, SSAO, DPIAware…) chaîné à `d3d9_original.dll`, `fps.dll`, `hpexhdlr.dll`, `xinput1_3.dll` (correctif) | `d3d9`, `xinput1_3` | `["d3d9", "xinput1_3"]` |

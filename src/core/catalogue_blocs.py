@@ -564,7 +564,7 @@ class Sauvegardes:
 # Formats d'emplacements que ce launcher sait lire (`sauvegardes._EMPLACEMENTS`).
 # Un format inconnu est ignoré, pas le bloc : un launcher plus ancien que son
 # catalogue voit alors le fichier comme une seule sauvegarde, ce qui reste vrai.
-FORMATS_EMPLACEMENTS = ("hp4",)
+FORMATS_EMPLACEMENTS = ("hp4", "hp5")
 
 
 def _motif_sur(motif: object) -> TypeGuard[str]:

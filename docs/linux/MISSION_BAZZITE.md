@@ -9,77 +9,89 @@ Réponds à Ludo **en français**. Lis d'abord `CLAUDE.md` (toutes les règles d
 
 ## Troisième passage (2026-10-15) : HP1 et HP2, le `winmm.dll` du correctif
 
-Rédigé par la session Windows après l'audit de la doc. **À faire en premier, avant tout le reste de ce fichier.**
+Rédigé par la session Windows. **À faire en premier, avant tout le reste de ce fichier.**
 Les deux passages précédents sont plus bas ; lis `docs/linux/RETOUR_BAZZITE.md` pour savoir où ils se sont arrêtés.
 
-**Ce qui a changé depuis le deuxième passage** : launcher **1.2.0** publié (2026-10-14), catalogue **0.42**.
-Depuis le 2026-10-07, HP1 et HP2 livrent un `winmm.dll` du correctif (`HP1/System/winmm.dll`,
-`HP2/system/winmm.dll`, fichiers essentiels au catalogue). Sous Windows, il fait trois choses, VUES en jeu :
-plein écran sans cadre (`FillScreen`), assistant « première configuration » de HP1 sauté (`SkipSetup`),
-et pour HP2 la manette DS4 (Share/Options → Tab/Échap, Alt+Entrée avalé).
+**Ce qui a changé depuis le deuxième passage** : launcher **1.2.0** publié (2026-10-14). Depuis le 2026-10-07,
+HP1 et HP2 livrent un `winmm.dll` du correctif (`HP1/System/winmm.dll`, `HP2/system/winmm.dll`, fichiers
+essentiels au catalogue). Sous Windows, il fait trois choses, VUES en jeu : plein écran sans cadre
+(`FillScreen`), assistant « première configuration » de HP1 sauté (`SkipSetup`), et pour HP2 la manette DS4
+(Share/Options → Tab/Échap, Alt+Entrée avalé).
 
-**Le défaut soupçonné** : au catalogue 0.42, hp1 et hp2 n'ont **aucun** `dll_overrides`, alors que hp3 à hp7b
-déclarent les leurs. Sous Wine, `winmm` est une DLL que Wine fournit lui-même : sans surcharge `winmm=n,b`,
-c'est probablement la sienne qui est chargée et celle du correctif est ignorée. Rien de tout cela n'a été
-vérifié sous Linux. **Et le menu de HP2 « sans fond ni boutons » du deuxième passage a été vu AVANT que ce
-`winmm.dll` existe** : il faut le revoir avec.
+**Ce que la session Windows a préparé (2026-10-15, rien de vu sous Linux)** :
+- **Catalogue 0.43** (embarqué ET distant, même contenu) : `"dll_overrides": ["winmm"]` pour hp1 et hp2. Au 0.42
+  ils n'en avaient aucune : sous Wine, c'est probablement le `winmm` de Wine qui était chargé et celui du correctif
+  ignoré.
+- **Un nouveau `winmm.dll`** (pas encore dans les archives publiées) : sous Wine SEULEMENT et pour HP2 seulement
+  (`WineLauncherFix=1` dans son `winmm.ini`), il retire en mémoire les deux `SetWindowPos` qui rendent le lanceur
+  de HP2 noir avec seulement « Quitter » (cause signalée par Federico Dossena ; aucun fichier du jeu modifié sur
+  le disque). Détail : `Harry-Potter-PC-Fix/notes/HP2.md`, « Le menu de démarrage noir sous Wine ».
 
 ### Ce que Ludo autorise pour ce passage
 
-- Lancer **HP1 et HP2 seulement**, par le launcher. Pas HP7a ni HP7b dans ce passage.
-- Modifier le catalogue **embarqué** (`src/data/games.json`) du dépôt, pour l'essai. **Jamais** le catalogue
-  distant (`accio-launcher-games`) : la session Windows changera les deux catalogues ensemble, avec ton rapport.
+- Lancer **HP1 et HP2 seulement**, par le launcher. Pas HP7a ni HP7b.
+- Remplacer, pour l'essai, `winmm.dll` et `winmm.ini` dans les dossiers des jeux (copie de l'ancien d'abord).
 - Tout le reste de « Ce que tu as le droit de faire, et pas » (plus bas) reste valable : sauvegarde du préfixe
   d'abord, son coupé, pas de commit, rien d'installé sur le système.
 
 ### Mise en place
 
-1. Ludo met le dépôt à jour (il passe par l'interface GitHub). Vérifie : `grep APP_VERSION src/core/config.py`
-   doit dire `1.2.0`, et `grep catalog_version src/data/games.json` doit dire `0.42`.
+1. Ludo met le dépôt à jour (il passe par l'interface GitHub). Vérifie : `grep catalog_version src/data/games.json`
+   doit dire `0.43`, et `grep -A1 dll_overrides src/data/games.json | grep winmm` doit sortir deux lignes.
 2. Ferme toute AppImage qui tourne (instance unique). Lance depuis les sources (`.venv/bin/python main.py`,
    voir « Mise en place » plus bas ; recrée le venv si `requirements.txt` a changé).
-3. Sauvegarde le préfixe (commande plus bas), et copie à part `HP1/System/*.ini`, `HP2/system/*.ini` et
-   les configs de Documents du préfixe (`Harry Potter/`, `Harry Potter II/`).
+3. Sauvegarde le préfixe (commande plus bas), et copie à part `HP1/System/*.ini`, `HP2/system/*.ini`,
+   `HP1/System/winmm.dll`, `HP2/system/winmm.dll` et les configs de Documents du préfixe (`Harry Potter/`,
+   `Harry Potter II/`).
 4. Si HP1 ou HP2 a été installé avant le 2026-10-07, son dossier n'a pas `winmm.dll` :
    « Vérifier / réparer » le remet. Vérifie sa présence (`ls -l ~/Games/AccioLauncher/HP2/system/winmm.dll`).
+5. Ludo t'apporte le NOUVEAU `winmm.dll` (construit sous Windows, `Harry-Potter-PC-Fix/data/winmm.dll`, ou
+   l'artefact `d3d9-win32` de l'action « Build » une fois le dépôt poussé) et `Harry-Potter-PC-Fix/data/HP2/winmm.ini`.
+   Ne les pose qu'à l'étape B. **Ne lance pas « Vérifier / réparer » après les avoir posés** : il pourrait remettre
+   celui de l'archive.
 
 ### Essai, dans cet ordre, pour HP2 puis HP1
 
-**A. Tel quel (catalogue 0.42, sans surcharge).**
+**A. Catalogue 0.43, `winmm.dll` de l'archive (l'ancien).**
 1. Lance par JOUER. Dans `_Launcher/logs/accio_launcher.log`, recopie la ligne
-   `Lancement sous … surcharges …` : elle dit quelles surcharges sont passées.
+   `Lancement sous … surcharges …` : elle doit contenir `winmm`.
 2. Pendant que le jeu tourne, regarde QUEL `winmm.dll` est chargé :
    `grep -i winmm /proc/$(pgrep -f -i 'system.Game.exe' | head -1)/maps` (HP2 ; pour HP1 : `'System.HP.exe'`)
    (si rien ne sort, relève le nom avec `ps aux | grep -i exe`). Un chemin dans `HP2/system` = celui du
-   correctif ; un chemin dans les fichiers de Proton/Wine = celui de Wine.
+   correctif ; un chemin dans les fichiers de Proton/Wine = celui de Wine. `HP2/system/winmm_accio.log`
+   existe seulement si celui du correctif s'est chargé : recopie ses premières lignes.
 3. Note : le menu (fond, quatre boutons, ou seulement « Quitter » comme au deuxième passage) ; la fenêtre
    (cadre ou pas, plein écran ou pas) ; pour HP1, l'assistant « première configuration » s'ouvre-t-il ?
 4. Quitte proprement par le menu du jeu.
 
-**B. Avec la surcharge.** Dans `src/data/games.json` (embarqué seulement), ajoute à hp2 (puis hp1) :
-`"dll_overrides": ["winmm"]`, au même niveau que `essential_files`. Relance le launcher, vérifie dans le journal
-que `surcharges` contient maintenant `winmm`, puis refais les points 2 à 4 de A.
+**B. Le nouveau `winmm.dll`** (HP2 : avec son nouveau `winmm.ini` ; HP1 : la DLL seule, son `winmm.ini` ne change
+pas). Refais 1 à 4. Pour HP2, `winmm_accio.log` doit dire `WineLauncherFix=1` puis
+`Launcher: two SetWindowPos taken out at …` ; recopie la ligne `Launcher:` quelle qu'elle soit. Le lanceur doit
+montrer son fond et ses quatre boutons ; essaie « Nouvelle partie » (ou « Charger partie ») jusqu'en jeu, puis
+quitte. Pour HP1 la ligne doit être absente (la correction est éteinte pour lui) et rien ne doit changer par
+rapport à A.
 
 **C. Si le `winmm` du correctif se charge** : manette DS4 dans HP2 si Ludo en branche une (Options → Échap,
 Share → Tab), et Alt+Entrée (doit être avalé, pas de menu cassé). Pour HP1 : Alt+Entrée deux fois, puis Alt+Tab,
 le jeu doit continuer (sous Windows : D3D11 gardé, `GameRenderDevice` non réécrit en `D3DDrv`).
 Relève `GameRenderDevice` dans `HP.ini` / `Game.ini` avant et après.
 
-**D. Si le menu de HP2 reste vide même avec le `winmm` du correctif** : ne cherche pas plus loin que de relever
-`_Launcher/logs/wine-hp2.log` (les 80 dernières lignes) et `HP2/system/*.log` ; c'est une autre cause
-(ses boutons sont dessinés par la fenêtre de démarrage, Window.dll/GDI, pas par D3D11).
+**D. Si le lanceur de HP2 reste noir avec le nouveau `winmm.dll`** : ne cherche pas plus loin que de relever
+`winmm_accio.log`, `_Launcher/logs/wine-hp2.log` (les 80 dernières lignes) et `HP2/system/*.log`.
 
-**À la fin** : remets `src/data/games.json` comme avant (`git diff src/data/games.json` doit être vide) ; c'est
-la session Windows qui posera la surcharge dans les deux catalogues. Remets les `.ini` copiés si un essai les a
-changés, et confirme que les sauvegardes des jeux sont intactes (`diff -r` avec la copie).
+**À la fin** : remets les `winmm.dll` et `.ini` copiés à l'étape 3, et confirme que les sauvegardes des jeux sont
+intactes (`diff -r` avec la copie). `git status` doit être propre.
+
+**En passant, si HP5 a des sauvegardes sur ce PC** (sans lancer HP5) : la page Mes années → statistiques de HP5
+doit montrer trois cartes « Emplacement 1/2/3 » avec « Avancement N % » (catalogue 0.43, `slots: "hp5"`).
 
 ### Rapport de ce passage
 
 Dans `docs/linux/RETOUR_BAZZITE.md`, sous un titre « Troisième passage (2026-10-15) », en haut du fichier,
-sans effacer le reste. Pour HP2 puis HP1, un tableau à deux colonnes A (sans surcharge) / B (avec) :
-ligne `surcharges` du journal, chemin du `winmm.dll` chargé, menu, fenêtre, assistant (HP1), Alt+Entrée,
-manette (si essayée). Puis une phrase de conclusion : « la surcharge est nécessaire » ou « inutile », et ce
-qui reste du menu vide de HP2.
+sans effacer le reste. Pour HP2 puis HP1, un tableau à deux colonnes A (ancien `winmm.dll`) / B (nouveau) :
+ligne `surcharges` du journal, chemin du `winmm.dll` chargé, ligne `Launcher:` du `winmm_accio.log`, menu,
+fenêtre, assistant (HP1), Alt+Entrée, manette (si essayée). Puis une phrase de conclusion : « le lanceur de HP2
+est réparé » ou non, et ce qui reste.
 
 ## Deuxième passage (2026-10-01) : chaque jeu, un par un
 

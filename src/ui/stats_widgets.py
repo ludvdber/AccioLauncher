@@ -278,6 +278,9 @@ class _CarteSauvegarde(QFrame):
         else:
             lignes = [(tr("Commencée"), _date(vue.commencee)),
                       (tr("Dernière fois"), _date(vue.derniere))]
+        if vue.avancement is not None:
+            # Le pourcentage du jeu lui-même (HP5 : « 14 % TERMINÉ »).
+            lignes.insert(0, (tr("Avancement"), tr("{} %").format(vue.avancement)))
         lignes.append((tr("Parties"), str(vue.parties) if vue.parties else ""))
         rang = 0
         for libelle, valeur in lignes:

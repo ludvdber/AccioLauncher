@@ -251,8 +251,8 @@ class TestEmplacementsDansUnFichier:
     def test_les_emplacements_occupes_seulement(self):
         lus = sauvegardes.emplacements_hp4(
             _hpgof(datetime(2026, 9, 28, 12, 23, 58), datetime(2026, 9, 30, 18, 54, 30), None))
-        assert lus == [(1, datetime(2026, 9, 28, 12, 23, 58).timestamp()),
-                       (2, datetime(2026, 9, 30, 18, 54, 30).timestamp())]
+        assert lus == [(1, datetime(2026, 9, 28, 12, 23, 58).timestamp(), None),
+                       (2, datetime(2026, 9, 30, 18, 54, 30).timestamp(), None)]
 
     def test_un_fichier_etranger_ne_rend_rien(self):
         assert sauvegardes.emplacements_hp4(b"PK\x03\x04" + b"\0" * 0x300) == []
@@ -261,7 +261,7 @@ class TestEmplacementsDansUnFichier:
     def test_une_date_illisible_garde_l_emplacement(self):
         entete = bytearray(_hpgof(datetime(2026, 9, 28, 12, 0, 0)))
         entete[0x7C:0x86] = b"31/31/2026"
-        assert sauvegardes.emplacements_hp4(bytes(entete)) == [(1, None)]
+        assert sauvegardes.emplacements_hp4(bytes(entete)) == [(1, None, None)]
 
     def test_le_releve_en_fait_des_sauvegardes_distinctes(self, appdata):
         _poser(appdata, RANGEE, datetime(2026, 9, 30, 18, 54, 30),
@@ -291,8 +291,90 @@ class TestEmplacementsDansUnFichier:
         assert vues[0].derniere == date(2026, 9, 30)
 
     def test_le_catalogue_declare_le_format(self):
+        assert _parse_sauvegardes({"root": "localappdata", "folders": ["X/HPOOTP"],
+                                   "files": "HPOOTP", "slots": "hp5"}).emplacements == "hp5"
+
+    def test_le_format_de_hp4_seul(self):
         bloc = {"root": "localappdata", "folders": ["Electronic Arts/X/HPGOF"],
                 "files": "HPGOF", "slots": "hp4"}
         assert _parse_sauvegardes(bloc).emplacements == "hp4"
         # Un format que ce launcher ne connaît pas : le fichier reste UNE sauvegarde.
         assert _parse_sauvegardes({**bloc, "slots": "hp9"}).emplacements == ""
+
+HP5 = Sauvegardes(racine="localappdata",
+                  dossiers=("Electronic Arts/Harry Potter*Ph*nix/HPOOTP",),
+                  fichiers="HPOOTP", premier=1, emplacements="hp5")
+HPOOTP = "Electronic Arts/Harry Potter and the Order of the Phoenix/HPOOTP/HPOOTP"
+
+
+def _hpootp(*parties: tuple[str, datetime, int] | None) -> bytes:
+    """L'en-tête de `HPOOTP`, FABRIQUÉ sur le relevé du 2026-10-15 : `20CM`,
+    trois fiches de 0x178 octets à partir de 0x20 (lieu, puis à +0x40 année,
+    mois, jour de la semaine, jour, heure, minute, seconde ; pourcentage à +0x70)."""
+    d = bytearray(0x1084)
+    d[0:4] = b"20CM"
+    for k, partie in enumerate(parties):
+        if partie is None:
+            continue
+        lieu, quand, pourcent = partie
+        base = 0x20 + k * 0x178
+        d[base:base + len(lieu)] = lieu.encode()
+        champs = (quand.year, quand.month, (quand.weekday() + 1) % 7, quand.day,
+                  quand.hour, quand.minute, quand.second)
+        for i, v in enumerate(champs):
+            d[base + 0x40 + 4 * i:base + 0x44 + 4 * i] = v.to_bytes(4, "little")
+        d[base + 0x70:base + 0x74] = pourcent.to_bytes(4, "little")
+    return bytes(d)
+
+
+class TestTroisPartiesDeHP5:
+    """HP5 range trois parties dans `HPOOTP`, avec le pourcentage que montre
+    l'écran « Continuer aventure » (VU le 2026-10-15 : 14 %, 6 %, 1 %)."""
+
+    LUDO = (("Frontend", datetime(2026, 10, 1, 16, 8, 24), 14),
+            ("Hogwarts", datetime(2026, 5, 3, 15, 59, 52), 6),
+            ("GrimmauldPlace", datetime(2026, 4, 29, 21, 5, 13), 1))
+
+    def test_les_trois_parties_comme_l_ecran(self):
+        lus = sauvegardes.emplacements_hp5(_hpootp(*self.LUDO)[:0x500])
+        assert lus == [(k + 1, quand.timestamp(), pourcent)
+                       for k, (_, quand, pourcent) in enumerate(self.LUDO)]
+
+    def test_une_fiche_vide_est_sautee(self):
+        lus = sauvegardes.emplacements_hp5(_hpootp(None, self.LUDO[1], None)[:0x500])
+        assert [n for n, _, _ in lus] == [2]
+
+    def test_une_date_impossible_n_est_pas_une_partie(self):
+        lus = sauvegardes.emplacements_hp5(
+            _hpootp(("Hogwarts", datetime(2026, 5, 3), 6))[:0x500].replace(
+                (2026).to_bytes(4, "little"), (1).to_bytes(4, "little"), 1))
+        assert lus == []
+
+    def test_un_pourcentage_absurde_n_est_pas_affiche(self):
+        (lu,) = sauvegardes.emplacements_hp5(
+            _hpootp(("Hogwarts", datetime(2026, 5, 3), 250))[:0x500])
+        assert lu[2] is None, "la partie reste, sans pourcentage inventé"
+
+    @pytest.mark.parametrize("brut", [b"", b"20CM", b"PK\x03\x04" + bytes(0x500)])
+    def test_un_fichier_etranger_ne_rend_rien(self, brut):
+        assert sauvegardes.emplacements_hp5(brut) == []
+
+    def test_les_cartes_portent_leur_avancement(self, appdata):
+        _poser(appdata, HPOOTP, datetime(2026, 10, 1, 16, 8, 24), _hpootp(*self.LUDO))
+        vues = sauvegardes.vues("hp5", HP5, stock={})
+        assert [(v.fichier, v.numero, v.avancement) for v in vues] == [
+            ("HPOOTP#1", 1, 14), ("HPOOTP#2", 2, 6), ("HPOOTP#3", 3, 1)]
+        assert vues[1].derniere == date(2026, 5, 3), "la date écrite par le jeu, pas celle du fichier"
+
+    def test_la_carte_dit_l_avancement(self, appdata, qtbot):
+        pytest.importorskip("pytestqt")
+        from PyQt6.QtWidgets import QLabel
+        from src.core.i18n import set_language
+        from src.ui.stats_widgets import _CarteSauvegarde
+        set_language("fr")
+        _poser(appdata, HPOOTP, datetime(2026, 10, 1, 16, 8, 24), _hpootp(*self.LUDO))
+        vue = sauvegardes.vues("hp5", HP5, stock={})[0]
+        carte = _CarteSauvegarde(vue, 0)
+        qtbot.addWidget(carte)
+        textes = [lbl.text() for lbl in carte.findChildren(QLabel)]
+        assert "Avancement" in textes and "14 %" in textes, textes

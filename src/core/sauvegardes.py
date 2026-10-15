@@ -65,6 +65,7 @@ class Etat:
 
     modifie: float      # horodatage de la dernière écriture
     cree: float | None  # horodatage de création, None si le système l'ignore
+    avancement: int | None = None   # pourcentage écrit par le jeu (HP5), sinon None
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +80,7 @@ class Vue:
     temps: int | None           # None : aucune partie observée, on ne sait pas
     modifie: float = 0.0        # horodatage exact : départage deux « derniere » du même jour
     rapide: bool = False        # la sauvegarde rapide (F5), hors des emplacements
+    avancement: int | None = None   # « 14 % » tel que le jeu l'affiche (HP5)
 
 
 # ─── Où chercher ───
@@ -206,10 +208,11 @@ def releve(spec: Sauvegardes | None) -> dict[str, Etat]:
             if lire is None:
                 etats[rel] = Etat(modifie=st.st_mtime, cree=cree)
                 continue
-            for n, ecrit in lire(_entete(chemin)):
+            for n, ecrit, avancement in lire(_entete(chemin)):
                 # Sans date lisible, celle du fichier : l'emplacement existe,
                 # et c'est le mieux qu'on sache de lui.
-                etats[f"{rel}#{n}"] = Etat(modifie=ecrit or st.st_mtime, cree=None)
+                etats[f"{rel}#{n}"] = Etat(modifie=ecrit or st.st_mtime, cree=None,
+                                           avancement=avancement)
     except (OSError, ValueError) as exc:
         log.debug("Relevé des sauvegardes impossible : %s", exc)
     return etats
@@ -217,7 +220,9 @@ def releve(spec: Sauvegardes | None) -> dict[str, Etat]:
 
 # ─── Emplacements rangés dans un fichier ───
 
-_TAILLE_ENTETE = 0x220
+# Assez pour les trois fiches de HP5 (0x488) ; celles de HP4 s'arrêtent à 0x220.
+_TAILLE_ENTETE = 0x500
+_ENTETE_HP4 = 0x220
 
 
 def _entete(chemin: Path) -> bytes:
@@ -233,7 +238,10 @@ def _texte(entete: bytes, debut: int, taille: int) -> str:
     return entete[debut:debut + taille].split(b"\0", 1)[0].decode("ascii", "replace")
 
 
-def emplacements_hp4(entete: bytes) -> list[tuple[int, float | None]]:
+Emplacement = tuple[int, "float | None", "int | None"]   # numéro, date écrite, avancement
+
+
+def emplacements_hp4(entete: bytes) -> list[Emplacement]:
     """HP4 : (numéro, horodatage écrit par le jeu) de chaque emplacement OCCUPÉ.
 
     Relevé sur une vraie sauvegarde (2026-09-30) : magie `20CM`, puis trois
@@ -243,9 +251,9 @@ def emplacements_hp4(entete: bytes) -> list[tuple[int, float | None]]:
     (« Vide »). Tout écart de format rend une liste vide, jamais une exception :
     le jeu se lance quand même, les statistiques n'affichent rien de faux.
     """
-    if len(entete) < _TAILLE_ENTETE or entete[:4] != b"20CM":
+    if len(entete) < _ENTETE_HP4 or entete[:4] != b"20CM":
         return []
-    trouves = []
+    trouves: list[Emplacement] = []
     for k in range(3):
         base = 0x10 + k * 0xAC
         classement = int.from_bytes(entete[base + 0xAC:base + 0xB0], "little", signed=True)
@@ -257,11 +265,43 @@ def emplacements_hp4(entete: bytes) -> list[tuple[int, float | None]]:
             ecrit = datetime.strptime(f"{jour} {heure}", "%d/%m/%Y %H:%M:%S").timestamp()
         except (ValueError, OverflowError, OSError):
             ecrit = None
-        trouves.append((k + 1, ecrit))
+        trouves.append((k + 1, ecrit, None))
     return trouves
 
 
-_EMPLACEMENTS = {"hp4": emplacements_hp4}
+def emplacements_hp5(entete: bytes) -> list[Emplacement]:
+    """HP5 : (numéro, horodatage écrit par le jeu, pourcentage) de chaque partie.
+
+    Relevé sur la sauvegarde de Ludo le 2026-10-15 et VU contre l'écran
+    « Continuer aventure » (14 % le 01/10/26 à 16:08, 6 %, 1 %) : magie
+    `20CM`, puis trois fiches de 0x178 octets à partir de 0x20. Dans chacune,
+    le nom interne du lieu (« Hogwarts »), puis à +0x40 des entiers 32 bits :
+    année, mois, jour de la semaine, jour, heure, minute, seconde ; le
+    pourcentage à +0x70. Une fiche sans lieu ou sans date plausible n'est pas
+    une partie (l'emplacement vide n'a pas encore été vu) : elle est sautée.
+    """
+    if len(entete) < 0x20 + 3 * 0x178 or entete[:4] != b"20CM":
+        return []
+    trouves: list[Emplacement] = []
+    for k in range(3):
+        base = 0x20 + k * 0x178
+        if not re.fullmatch(r"[A-Za-z0-9_]+", _texte(entete, base, 0x40)):
+            continue
+        champs = [int.from_bytes(entete[base + 0x40 + 4 * i:base + 0x44 + 4 * i], "little")
+                  for i in range(7)]
+        annee, mois, _, jour, heure, minute, seconde = champs
+        try:
+            ecrit = datetime(annee, mois, jour, heure, minute, seconde).timestamp()
+        except (ValueError, OverflowError, OSError):
+            continue
+        if not 2000 <= annee <= 2100:
+            continue
+        pourcent = int.from_bytes(entete[base + 0x70:base + 0x74], "little")
+        trouves.append((k + 1, ecrit, pourcent if pourcent <= 100 else None))
+    return trouves
+
+
+_EMPLACEMENTS = {"hp4": emplacements_hp4, "hp5": emplacements_hp5}
 
 
 def modifiee(avant: dict[str, Etat], apres: dict[str, Etat]) -> str | None:
@@ -472,6 +512,7 @@ def vues(jeu: str, spec: Sauvegardes | None,
             temps=sum(d for _, d in parties) if parties else None,
             modifie=etat.modifie,
             rapide=est_rapide(jeu, rel),
+            avancement=etat.avancement,
         ))
     resultat.sort(key=lambda v: (v.numero is None, v.numero or 0, v.fichier))
     return resultat

@@ -608,7 +608,9 @@ class TestLeCatalogueEmbarqueDeclareLesSurcharges:
     un `d3d9` manquant ici et Wine remplace le wrapper du jeu en silence."""
 
     ATTENDU = {
-        "hp1": (), "hp2": (),
+        # winmm : la DLL du correctif (FillScreen, SkipSetup, manette, lanceur de HP2 sous Wine),
+        # que Wine remplacerait par la sienne. Relevé le 2026-10-15, catalogue 0.43.
+        "hp1": ("winmm",), "hp2": ("winmm",),
         # dgVoodoo (d3d8, d3d9, ddraw) plante sous Proton : `UD3DRenderDevice::SetRes`,
         # General protection fault ; DXVK seul rend le jeu (HP3, 2026-10-01).
         "hp3": ("msvcr70",),
