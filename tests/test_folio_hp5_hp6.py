@@ -19,7 +19,46 @@ class TestHP5:
             corps = 0x484 + k * 0x400
             d[corps:corps + 8] = b"PTOO30.1"
             d[corps + 0x108:corps + 0x10C] = points.to_bytes(4, "little")
+            # Le répertoire des morceaux, comme chez Ludo (GLOB, DISC, SCRI).
+            d[corps + 0x18:corps + 0x3C] = struct.pack(
+                "<4sII4sII4sII", b"BOLG", 0xCC, 0x3C, b"CSID", 0x34, 0x108, b"IRCS", 0x3C, 0x13C)
         return bytes(d)
+
+    @staticmethod
+    def _poser(fichier: bytes, partie: int, *drapeaux: int) -> bytes:
+        d = bytearray(fichier)
+        glob = 0x484 + (partie - 1) * 0x400 + 0x3C
+        for n in drapeaux:
+            d[glob + (n >> 3)] |= 1 << (n & 7)
+        return bytes(d)
+
+    def test_l_ecran_informations_sur_le_jeu(self):
+        """Les drapeaux de la partie 1 de Ludo pour les lignes non nulles de son écran."""
+        personnages = (38, 39, 54, *range(62, 72), 73, 74, 75, 78, 84, 85)
+        fichier = self._poser(self._fichier(330, 0), 1, 16, 26, 235, 106, *personnages, 376,
+                              128, 243, *range(464, 469), 449, 450,
+                              103, 302, 583)   # voisins hors des lignes : ignorés
+        un, deux = folio_hp5.lire(fichier)
+        valeurs = dict(zip((c.libelle for c in folio_hp5.COMPTEURS), un.compteurs, strict=True))
+        assert valeurs == {
+            "Mots de passe de portraits": 2, "Fantômes": 1, "Créatures volantes": 1,
+            "Personnages rencontrés": 19, "Joueurs d'échecs battus": 1,
+            "Joueurs de bataille explosive battus": 0, "Joueurs de Bavboules battus": 0,
+            "Affaires de Luna": 0, "Paquets de Fred et George": 0,
+            "Statues de pièces d'échiquier": 1, "Plaques de sorcier": 0, "Traces d'animaux": 0,
+            "Insignes de Poudlard": 1, "Poudlard rangé": 5,
+            "Sorts défensifs en une rencontre": 2, "Quêtes de professeurs": 0,
+            "Meilleure note dans chaque matière": 0}
+        assert deux.compteurs == (0,) * len(folio_hp5.COMPTEURS)
+
+    def test_les_bornes_tombent_dans_le_morceau(self):
+        assert max(c.premier + c.total for c in folio_hp5.COMPTEURS) <= 0xCC * 8
+
+    def test_sans_le_morceau_des_drapeaux_pas_de_compteurs(self):
+        d = bytearray(self._fichier(330))
+        d[0x484 + 0x18:0x484 + 0x1C] = b"XXXX"
+        (partie,) = folio_hp5.lire(bytes(d))
+        assert partie.decouverte == 330 and partie.compteurs is None
 
     def test_les_points_de_decouverte_par_partie(self):
         parties = folio_hp5.lire(self._fichier(330, 75, 0))
@@ -75,6 +114,15 @@ class TestHP6:
         partie = folio_hp6.lire(_hphbp0())
         assert (partie.ecussons, partie.mini_ecussons) == (7, 372)
         assert partie.ecrite == datetime(2026, 10, 1, 18, 42, 44)
+        # « 3 / 25 (372) » à l'écran ; la barre va de 300 à 450.
+        assert folio_hp6.palier(372) == (3, 0.48)
+
+    def test_paliers_aux_bords(self):
+        assert folio_hp6.palier(0) == (0, 0.0)
+        assert folio_hp6.palier(50) == (0, 0.5)
+        assert folio_hp6.palier(100) == (1, 0.0)
+        assert folio_hp6.palier(25000) == (25, 1.0)
+        assert folio_hp6.palier(99999) == (25, 1.0)
 
     def test_chapitre_sorts_et_badges(self):
         """Un sort à 0 n'est pas appris ; ordre de `SORTS`, pas du fichier."""

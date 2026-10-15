@@ -295,13 +295,35 @@ class FolioPageHP5(FolioPage):
                     f"{partie.decouverte} / {folio_hp5.DECOUVERTE_MAX:,}".replace(",", " "),
                     tr("Points de découverte"), partie.decouverte / folio_hp5.DECOUVERTE_MAX))
             lay.addLayout(_rangee(*tuiles))
-            lay.addSpacing(18)
-            lay.addWidget(texte(tr("Le jeu les détaille dans « Informations sur le jeu » : "
-                                   "fantômes, statues d'échiquier, insignes… Ce détail "
-                                   "arrivera ici quand il aura été relevé dans les "
-                                   "sauvegardes."), 13, ENCRE_DOUCE, retour=True))
+            if partie.compteurs is not None:
+                lay.addSpacing(12)
+                lay.addWidget(self._informations(partie.compteurs))
 
         return _page(contenu)[0]
+
+    @staticmethod
+    def _informations(compteurs: tuple[int, ...]) -> QFrame:
+        """L'écran « Informations sur le jeu », en deux colonnes."""
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        g = QGridLayout(cadre)
+        g.setContentsMargins(20, 14, 20, 16)
+        g.setHorizontalSpacing(16)
+        g.setVerticalSpacing(8)
+        g.addWidget(surtitre(tr("Informations sur le jeu")), 0, 0, 1, 5)
+        or_clair = current_theme().accent_light
+        moitie = (len(compteurs) + 1) // 2
+        for k, (c, n) in enumerate(zip(folio_hp5.COMPTEURS, compteurs, strict=True)):
+            rang, col = 1 + k % moitie, 3 * (k // moitie)
+            valeur = (f"{n * 100 // c.total} %" if c.en_pourcentage else f"{n} / {c.total}")
+            g.addWidget(texte(tr(c.libelle), 13, ENCRE if n else ENCRE_DOUCE, retour=True),
+                        rang, col)
+            g.addWidget(texte(valeur, 13, or_clair if n else ENCRE_DOUCE), rang, col + 1,
+                        Qt.AlignmentFlag.AlignRight)
+        g.setColumnStretch(0, 1)
+        g.setColumnStretch(3, 1)
+        g.setColumnMinimumWidth(2, 24)
+        return cadre
 
 
 # ── HP6 ──
@@ -335,12 +357,19 @@ class FolioPageHP6(FolioPage):
             return super()._construire(None)
 
         def contenu(lay: QVBoxLayout) -> None:
+            # Le « 3 / 25 (372) » du menu de pause ; la jauge va du palier
+            # atteint au suivant, comme celle du jeu.
+            atteints, vers_suivant = folio_hp6.palier(partie.mini_ecussons)
+            if atteints < len(folio_hp6.PALIERS):
+                detail = tr("{} ramassés, prochain palier à {}").format(
+                    partie.mini_ecussons, folio_hp6.PALIERS[atteints])
+            else:
+                detail = tr("{} ramassés").format(partie.mini_ecussons)
             tuiles = [
                 _tuile(f"{partie.ecussons} / {folio_hp6.ECUSSONS}", tr("Écussons de Poudlard"),
                        partie.ecussons / folio_hp6.ECUSSONS),
-                # Pas de jauge : le « 3 / 25 » du menu de pause ne se déduit pas
-                # encore de ce total (Ludo : ils finissent par donner un écusson).
-                _tuile(str(partie.mini_ecussons), tr("Mini-écussons ramassés"))]
+                _tuile(f"{atteints} / {len(folio_hp6.PALIERS)}",
+                       tr("Paliers de mini-écussons") + "\n" + detail, vers_suivant)]
             if partie.badges_total:
                 tuiles.append(_tuile(f"{partie.badges} / {partie.badges_total}", tr("Badges")))
             lay.addLayout(_rangee(*tuiles))

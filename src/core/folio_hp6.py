@@ -45,6 +45,22 @@ _TAILLE_MAX = 1024 * 1024  # 20 Ko chez Ludo
 SORTS = ("Expelliarmus", "Stupefy", "Lumos", "Reparo", "Leviosa", "Accio", "Incendio",
          "Protego", "Petrificus", "LeviCorpus", "Depulso")
 
+# Les paliers du « Minicrestometer », LUS dans `hp6.exe` (table à 0x8748F0,
+# 2026-10-15) : le jeu affiche le nombre de seuils atteints sur 25 (« 3 / 25 »
+# pour 372 chez Ludo, VU) et remplit sa barre du palier atteint au suivant
+# (fonction à 0x45AD20).
+PALIERS = (100, 200, 300, 450, 600, 800, 1000, 1250, 1500, 2000, 2500, 3250, 4000, 5000,
+           6250, 7500, 9000, 10500, 12250, 14000, 16000, 18000, 20250, 22500, 25000)
+
+
+def palier(mini_ecussons: int) -> tuple[int, float]:
+    """(paliers atteints, part du chemin vers le suivant ; 1.0 une fois tout atteint)."""
+    atteints = sum(1 for s in PALIERS if mini_ecussons >= s)
+    if atteints == len(PALIERS):
+        return atteints, 1.0
+    bas = PALIERS[atteints - 1] if atteints else 0
+    return atteints, (mini_ecussons - bas) / (PALIERS[atteints] - bas)
+
 
 def hachage(nom: str) -> int:
     """Le hachage ELF (PJW) du nom en minuscules, comme le jeu l'écrit."""

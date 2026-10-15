@@ -75,6 +75,9 @@ class TestHP5:
         assert isinstance(page, FolioPageHP5)
         assert len(page._lignes) == 3
         assert page.releve.decouverte == 330
+        from PyQt6.QtWidgets import QLabel
+        textes = {lab.text() for lab in page.findChildren(QLabel)}
+        assert {"Personnages rencontrés", "0 / 58", "0 %"} <= textes
 
 
 class TestHP6:
