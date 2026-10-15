@@ -356,10 +356,13 @@ class GameDetailView(QWidget):
         Règle 40 : un changement d'état reconstruit la zone d'action (~50 px
         de plus en téléchargement), sinon la fiche défile tout le téléchargement.
         """
+        # Installé ou non : la partie en cours, le lien « Folio » et la version
+        # en dépendent. AVANT le panneau d'actions, qui range ses statistiques
+        # dans le bloc de la partie quand il y en a un.
+        self._info.rafraichir_indices(self.game)
+        self._action_panel.partie_dans_la_fiche = self._info.partie_affichee()
         self._action_panel.set_game(self.game)
         self._action_panel.refresh()
-        # Installé ou non : le lien « Folio » et la version en dépendent.
-        self._info.rafraichir_indices(self.game)
         self._position_info()
 
     # ──────────────────── Parallaxe ────────────────────

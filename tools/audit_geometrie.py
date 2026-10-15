@@ -79,6 +79,32 @@ _AVERTISSEMENT = {
 }
 
 
+def _partie_hp1(tmp: Path) -> None:
+    """Une partie de HP1 en cours, FABRIQUÉE, pour que la fiche « partie en
+    cours » (`resume_partie.py`) soit mesurée partout : sinon elle ne l'était
+    que chez qui a des sauvegardes de HP1, et lues dans SES Documents.
+    Serpentard en tête de 18 points : la phrase la plus longue du bloc."""
+    from src.core import sauvegardes
+    saves = tmp / "Documents" / "Harry Potter" / "Save"
+    saves.mkdir(parents=True)
+    (saves / "Save0.usa").write_bytes(
+        b"\x00" * 64 + b"Class=HarryPotter.Harry Name=Harry0\r\n{\r\n"
+        b"numHousePointsHarry=155\r\nnumHousePointsGryffindor=155\r\n"
+        b"numHousePointsSlytherin=173\r\nnumBeans=112\r\n"
+        b"WizardCards[0]=(bHasCard=True)\r\nWizardCards[3]=(bHasCard=True)\r\n}\r\n")
+    niveau = b"LEV2_HOGFRONT"
+    (saves / "GameSaveInfo0").write_bytes(
+        b"~" + b"\x00" * 7 + b"\x9b\x00\x00\x00\xff\xff\xff\xff"
+        + bytes([len(niveau) + 1]) + niveau + b"\x00")
+    system = tmp / "games" / "HP1" / "System"
+    system.mkdir(parents=True)
+    for ext, lieu in (("int", "Hogwarts Grounds"), ("fre", "Parc de Poudlard"),
+                      ("esp", "Terrenos de Hogwarts")):
+        (system / f"HPMenu.{ext}").write_bytes(
+            f"[Menu]\r\ntitle_lev2_hogfront={lieu}\r\n".encode("cp1252"))
+    sauvegardes.racines = lambda: {"documents": tmp / "Documents"}
+
+
 def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
     """Contrôle une langue. Retourne la liste des anomalies (vide si tout va bien).
 
@@ -140,8 +166,10 @@ def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
     from src.ui.main_window import MainWindow
 
     MainWindow._start_update_check = lambda self: None
+    _partie_hp1(tmp)
     Config(install_path=tmp / "games", cache_path=tmp / "games" / ".cache",
-           langue=langue, autoplay_videos=False).save()
+           langue=langue, autoplay_videos=False,
+           playtime_seconds={"hp1": 10 * 3600 + 22 * 60}).save()
 
     app = QApplication.instance() or QApplication([])
     win = MainWindow()

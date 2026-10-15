@@ -995,6 +995,14 @@
     "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cromos, grageas y puntos de las casas, leídos de tus partidas",
     "Changer de version garde vos sauvegardes et vos réglages.": "Cambiar de versión conserva tus partidas y tus ajustes.",
     "Vos sauvegardes et vos réglages restent.": "Tus partidas y tus ajustes se quedan.",
-    "Ouvrir {}": "Abrir {}"
+    "Ouvrir {}": "Abrir {}",
+    "Dernière partie {}": "Última partida {}",
+    "Dernière partie le {}": "Última partida el {}",
+    "{} carte sur {}": "{} carta de {}",
+    "{} cartes sur {}": "{} cartas de {}",
+    "{} en tout": "{} en total",
+    "À propos du jeu": "Acerca del juego",
+    "Ma partie": "Mi partida",
+    "{} mène": "{} va en cabeza"
   }
 }

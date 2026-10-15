@@ -1,6 +1,7 @@
 """Panneau d'informations du jeu — titre, metadata, description, version."""
 
 from html import escape
+from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -8,12 +9,13 @@ from PyQt6.QtWidgets import (
     QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
-from src.core import folio
+from src.core import folio, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
-from src.core.i18n import tr
+from src.core.i18n import get_language, tr
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
+from src.ui.resume_partie import BlocFolio, cartes_eventail, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
 from src.core.formatting import format_size
 
@@ -68,6 +70,12 @@ class InfoPanel(QWidget):
         # Dernier levier du rattrapage, après la description (cf. squeeze_title).
         self._title_squeeze: int = 0
         self._height_budget: int = 10_000   # posé par GameDetailView
+        # La partie en cours, quand on sait la lire : elle remplace la
+        # description (resume_partie.py). `_a_propos` : la personne a demandé
+        # à relire la description malgré tout.
+        self._game: GameData | None = None
+        self._resume: folio.Resume | None = None
+        self._a_propos = False
 
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(50, 0, 30, 0)
@@ -125,7 +133,7 @@ class InfoPanel(QWidget):
 
     def squeeze_description(self) -> bool:
         """Descend d'un palier de troncature. False s'il n'y a plus de marge."""
-        if self._desc_expanded or not self._full_desc:
+        if self._desc_expanded or not self._full_desc or not self.description_montree():
             return False
         avant = self._desc_budget()
         self._desc_squeeze += 1
@@ -141,7 +149,7 @@ class InfoPanel(QWidget):
         if len(self._full_desc) > limite:
             self._desc.setText(self._full_desc[:limite].rstrip() + "…")
             self._btn_expand.setText(tr("Lire la suite…"))
-            self._btn_expand.setVisible(True)
+            self._btn_expand.setVisible(self.description_montree())
         else:
             self._desc.setText(self._full_desc)
             self._btn_expand.setVisible(False)
@@ -250,6 +258,27 @@ class InfoPanel(QWidget):
         lay.addWidget(self._meta)
         lay.addSpacing(16)
 
+        # « Dernière partie hier · Parc de Poudlard », à la place de la
+        # description quand une sauvegarde se lit. Le lieu vient du jeu :
+        # RichText échappé (règle 58).
+        self._derniere = QLabel()
+        self._derniere.setObjectName("derniere_partie")
+        self._derniere.setFont(body_font(15))
+        self._derniere.setWordWrap(True)
+        self._derniere.setTextFormat(Qt.TextFormat.RichText)
+        self._derniere.setStyleSheet("QLabel { color: #f2f2f4; background: transparent; }")
+        self._derniere.hide()
+        lay.addWidget(self._derniere)
+
+        # Le bloc du folio, épinglé sous le bouton (add_bottom_widget).
+        self._bloc = BlocFolio()
+        self._bloc.clicked.connect(self.folio_clicked)
+        self._bloc_hote = QWidget()
+        hote = QVBoxLayout(self._bloc_hote)
+        hote.setContentsMargins(0, 12, 0, 0)
+        hote.addWidget(self._bloc, 0, Qt.AlignmentFlag.AlignLeft)
+        self._bloc_hote.hide()
+
         # Ligne d'indices, épinglée sous le bouton (add_bottom_widget) :
         # « Jouable à la manette · Version 1.3 · Nouveautés ». La manette
         # était une pastille parmi les genres, la version un lien dans la
@@ -322,8 +351,10 @@ class InfoPanel(QWidget):
         self._desc.setMaximumWidth(min(_DESC_MAX_W, avail))
         self._indices.setMaximumWidth(avail)
         self._meta.setMaximumWidth(avail)
+        self._derniere.setMaximumWidth(min(_DESC_MAX_W, avail))
         self._fit_height(self._title)
         self._fit_height(self._desc)
+        self._fit_height(self._derniere)
         self._fit_height(self._indices)
         self._fit_height(self._meta)
 
@@ -394,6 +425,8 @@ class InfoPanel(QWidget):
             self.language_clicked.emit()
         elif href == "folio":
             self.folio_clicked.emit()
+        elif href == "a-propos":
+            self._basculer_a_propos()
         else:
             self.versions_clicked.emit()
 
@@ -403,6 +436,14 @@ class InfoPanel(QWidget):
         # espagnol le plus long restait sinon sur les sept autres.
         self._title_squeeze = 0
         self._title.setText(game.name)
+        # La partie se relit dans `rafraichir_indices`, que le parent appelle
+        # juste après : la lire ici aussi coûterait deux lectures par jeu.
+        nouveau = self._game is None or self._game.id != game.id
+        self._game = game
+        if nouveau:
+            self._resume = None
+            self._a_propos = False
+            self._appliquer_partie()
 
         # Metadata
         gold = current_theme().accent
@@ -450,6 +491,7 @@ class InfoPanel(QWidget):
         """Épingle un widget sous la zone défilante, suivi de la ligne
         d'indices : elle parle de ce que le bouton lance."""
         self._action_slot.addWidget(widget)
+        self._action_slot.addWidget(self._bloc_hote)
         # De l'air sous le bouton : collée à lui, la ligne avait l'air d'en
         # faire partie (Ludo, 2026-10-14).
         self._action_slot.addSpacerItem(self._ecart_indices)
@@ -481,9 +523,60 @@ class InfoPanel(QWidget):
     # ──────────────────── Indices ────────────────────
 
     def rafraichir_indices(self, game: GameData | None) -> None:
-        """Après un changement d'état du jeu (installé, désinstallé)."""
+        """Après un changement d'état du jeu (installé, désinstallé, retour
+        de partie) : la partie en cours se relit, puis la ligne d'indices."""
         if game is not None:
+            self._game = game
+            self._resume = self._lire_partie(game)
+            self._appliquer_partie()
             self._refresh_indices(game)
+
+    # ──────────────────── Partie en cours ────────────────────
+
+    def partie_affichee(self) -> bool:
+        """Vrai quand la fiche montre la partie plutôt que la description :
+        le panneau d'actions range alors ses statistiques dans le bloc."""
+        return self._resume is not None
+
+    def description_montree(self) -> bool:
+        return self._resume is None or self._a_propos
+
+    def _lire_partie(self, game: GameData) -> folio.Resume | None:
+        """Seulement un jeu INSTALLÉ que le folio sait lire : désinstallé, la
+        fiche redevient une invitation, la description revient."""
+        if game.id not in folio.JEUX or not self._manager.is_installed(game.id):
+            return None
+        system = self._manager.config.install_path / Path(game.executable).parent
+        return folio.resume_hp1(sauvegardes.fichiers(game.sauvegardes), system,
+                                get_language())
+
+    def _appliquer_partie(self) -> None:
+        resume, game = self._resume, self._game
+        description = self.description_montree()
+        self._desc.setVisible(description)
+        if self._desc_expanded:
+            self._btn_expand.setVisible(description)
+        else:
+            self._apply_desc_truncation()
+        self._derniere.setVisible(resume is not None and not self._a_propos)
+        self._bloc_hote.setVisible(resume is not None)
+        if resume is not None and game is not None:
+            self._derniere.setText(phrase_derniere_partie(resume.releve.modifie, resume.lieu))
+            system = self._manager.config.install_path / Path(game.executable).parent
+            paquet = folio.paquet_menu(system) if system.is_dir() else None
+            self._bloc.montrer(resume.releve,
+                               cartes_eventail(paquet, resume.releve, self.devicePixelRatioF()),
+                               self._manager.get_playtime(game.id))
+        self._apply_available_width()
+
+    def _basculer_a_propos(self) -> None:
+        """« À propos du jeu » remet la description, « Ma partie » la retire."""
+        self._a_propos = not self._a_propos
+        self._appliquer_partie()
+        if self._game is not None:
+            self._refresh_indices(self._game)
+        self._apply_available_width()
+        self.content_changed.emit()
 
     def _refresh_indices(self, game: GameData) -> None:
         """« Jouable à la manette · Version 1.3 · Nouveautés ».
@@ -504,7 +597,12 @@ class InfoPanel(QWidget):
                         + _insecable(escape(tr("Version {}").format(version).upper(),
                                             quote=False))
                         + '</a>')
-        if game.id in folio.JEUX and self._manager.is_installed(game.id):
+        if self._resume is not None:
+            # Le bloc porte déjà « Folio › » : ici, la description rangée.
+            libelle = tr("Ma partie") if self._a_propos else tr("À propos du jeu")
+            morceaux.append(f'<a href="a-propos" style="color:{gold}; text-decoration:none;">'
+                            + _insecable(escape(libelle.upper(), quote=False)) + '</a>')
+        elif game.id in folio.JEUX and self._manager.is_installed(game.id):
             morceaux.append(f'<a href="folio" style="color:{gold}; text-decoration:none;">'
                             + _insecable(escape(tr("Folio").upper(), quote=False)) + '</a>')
         point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'

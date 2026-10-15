@@ -138,6 +138,9 @@ class TestHauteurZoneAction:
                 info, info._action_slot.itemAt(i).widget().rect().topLeft()).y()
             for i in range(info._action_slot.count())
             if info._action_slot.itemAt(i).widget() is not None
+            # Caché = sans place (le bloc du folio d'un jeu sans partie lue) :
+            # sa position n'est jamais posée et valait 0.
+            and not info._action_slot.itemAt(i).widget().isHidden()
         )
         return info.height() - premier_widget + marges.top() + marges.bottom()
 

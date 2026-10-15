@@ -995,6 +995,14 @@
     "Cartes, dragées et points des maisons, lus dans vos sauvegardes": "Cards, beans and house points, read from your saves",
     "Changer de version garde vos sauvegardes et vos réglages.": "Switching versions keeps your saves and your settings.",
     "Vos sauvegardes et vos réglages restent.": "Your saves and settings stay.",
-    "Ouvrir {}": "Open {}"
+    "Ouvrir {}": "Open {}",
+    "Dernière partie {}": "Last played {}",
+    "Dernière partie le {}": "Last played on {}",
+    "{} carte sur {}": "{} card out of {}",
+    "{} cartes sur {}": "{} cards out of {}",
+    "{} en tout": "{} in total",
+    "À propos du jeu": "About the game",
+    "Ma partie": "My game",
+    "{} mène": "{} leads"
   }
 }

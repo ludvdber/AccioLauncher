@@ -120,6 +120,43 @@ class TestTextesDuJeu:
         assert folio.textes_hp1(folio.fichier_textes(tmp_path / "rien", "fr")) == ({}, {})
 
 
+class TestResumeDeLaFiche:
+    """Ce qui remplace la description : la dernière partie LISIBLE, et son lieu."""
+
+    @staticmethod
+    def _system(tmp_path: Path) -> Path:
+        system = tmp_path / "System"
+        system.mkdir()
+        (system / "HPmenu.fre").write_bytes(MENU.encode("cp1252"))
+        return system
+
+    def test_la_derniere_lisible_et_son_lieu(self, tmp_path):
+        saves = tmp_path / "Save"
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        _save(saves, 1, b"rien", b"Lev_Tut1", datetime(2026, 10, 1))
+        fichiers = {p.name: p for p in saves.glob("Save*.usa")}
+        resume = folio.resume_hp1(fichiers, self._system(tmp_path), "fr")
+        assert resume is not None
+        assert resume.releve.emplacement == 1, "un début de jeu plus récent ne compte pas"
+        assert resume.lieu == "Parc de Poudlard"
+
+    def test_rien_de_lisible_la_description_reste(self, tmp_path):
+        saves = tmp_path / "Save"
+        _save(saves, 0, b"rien", b"Lev_Tut1", datetime(2026, 10, 1))
+        fichiers = {p.name: p for p in saves.glob("Save*.usa")}
+        assert folio.resume_hp1(fichiers, self._system(tmp_path), "fr") is None
+
+    def test_sans_sauvegarde(self, tmp_path):
+        assert folio.resume_hp1({}, self._system(tmp_path), "fr") is None
+
+    def test_sans_les_textes_du_jeu_pas_de_lieu(self, tmp_path):
+        saves = tmp_path / "Save"
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        fichiers = {p.name: p for p in saves.glob("Save*.usa")}
+        resume = folio.resume_hp1(fichiers, tmp_path / "absent", "fr")
+        assert resume is not None and resume.lieu == ""
+
+
 pytest.importorskip("pytestqt")
 
 

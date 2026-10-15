@@ -203,6 +203,28 @@ def la_derniere_jouee(releves: list[Releve]) -> Releve | None:
     return max(candidats, key=lambda r: r.modifie, default=None)
 
 
+@dataclass(frozen=True)
+class Resume:
+    """Ce que la fiche du jeu montre à la place de sa description."""
+    releve: Releve
+    lieu: str        # vide si le jeu n'est pas installé ou ne nomme pas le niveau
+
+
+def resume_hp1(fichiers: dict[str, Path], system: Path, langue: str) -> Resume | None:
+    """La partie à reprendre, ou None : la fiche garde alors sa description.
+
+    Les LISIBLES seulement, contrairement au folio : un emplacement du tout
+    début du jeu n'a rien à montrer de plus que la description (Ludo,
+    2026-10-15 : « tant qu'on a rien on laisse la description »).
+    """
+    lisibles = [r for r in emplacements_hp1(fichiers) if r.lu]
+    releve = la_derniere_jouee(lisibles)
+    if releve is None:
+        return None
+    _, titres = textes_hp1(fichier_textes(system, langue))
+    return Resume(releve, lieu(titres, releve.niveau))
+
+
 # ── Les textes du jeu installé ──
 
 def _decoder(brut: bytes) -> str:

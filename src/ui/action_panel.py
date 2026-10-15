@@ -155,6 +155,10 @@ class ActionPanel(QWidget):
         # Note « bientôt disponible » : sa hauteur se recalcule à chaque
         # redimensionnement, donc on garde la référence (cf. _fit_coming_soon_note).
         self._coming_soon_note: QLabel | None = None
+        # La fiche montre la partie en cours (InfoPanel.partie_affichee) : le
+        # temps de jeu est dans son bloc, la date dans sa ligne, et la
+        # sauvegarde suffit à dire « Reprendre ». Posé par GameDetailView.
+        self.partie_dans_la_fiche = False
 
     def set_game(self, game: GameData | None) -> None:
         self._game = game
@@ -425,7 +429,8 @@ class ActionPanel(QWidget):
         # « REPRENDRE » quand le jeu a déjà été lancé : le même clic, mais
         # l'écran reconnaît un joueur qui revient au lieu de le traiter en
         # nouveau venu à chaque ouverture.
-        deja_joue = self._manager.get_playtime(self._game.id) > 0
+        deja_joue = (self.partie_dans_la_fiche
+                     or self._manager.get_playtime(self._game.id) > 0)
         libelle = tr("Reprendre") if deja_joue else tr("Jouer")
         # Vert MAT : le `#2ecc71` vif d'avant était l'autre moitié du code des
         # faux boutons. 4,2 de contraste avec le blanc (gras 15 pt : seuil 3).
@@ -489,7 +494,7 @@ class ActionPanel(QWidget):
     def _construire_stats(self) -> None:
         """Les deux colonnes, seulement pour un jeu déjà joué (règle 107)."""
         secondes = self._manager.get_playtime(self._game.id)
-        if secondes <= 0:
+        if secondes <= 0 or self.partie_dans_la_fiche:
             return
         stats = QWidget()
         stats.setObjectName("statsJeu")
