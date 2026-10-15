@@ -682,12 +682,20 @@ def _repli_graphique(view: "GameDetailView", game: GameData, arret):
         Path(view.manager.config.install_path) / Path(game.executable).parent)
     if not reglages_graphiques.disponible(conf):
         return None
-    repli = reglages_graphiques.repli_apres_echec(conf)
-    return None if repli is None else (conf, *repli)
+    from src.core import diagnostic
+    intel = diagnostic.puce_intel()
+    repli = reglages_graphiques.repli_apres_echec(conf, intel)
+    return None if repli is None else (conf, *repli, intel)
 
 
-def _proposition_de_repli(reglage, apres) -> tuple[str, str]:
+def _proposition_de_repli(reglage, apres, intel: bool = False) -> tuple[str, str]:
     """Le paragraphe qui dit le cran proposé, et le libellé de son bouton."""
+    if intel and reglage.ident == "graph_textures_rendu":
+        return (tr("Cet ordinateur a une puce graphique Intel. Sur ces puces, le jeu s'arrête "
+                   "souvent tant que les ombres et reflets sont lissés, et c'est ce réglage "
+                   "qui a réglé le problème chez un autre joueur. Le launcher peut l'éteindre "
+                   "et relancer le jeu."),
+                tr("Réessayer avec les ombres d'origine"))
     if reglage.ident == "graph_antialiasing" and apres != "off":
         return (tr("Certaines puces graphiques, Intel notamment, refusent un anticrénelage "
                    "aussi fort. Le launcher peut le passer à {} et relancer le jeu.").format(apres),
@@ -718,8 +726,8 @@ def signaler_arret(view: "GameDetailView", game: GameData, arret) -> None:
     repli = _repli_graphique(view, game, arret)
     choix: tuple[str, ...] = (tr("Copier le rapport"), tr("Fermer"))
     if repli is not None:
-        conf, reglage, _avant, apres = repli
-        paragraphe, bouton = _proposition_de_repli(reglage, apres)
+        conf, reglage, _avant, apres, intel = repli
+        paragraphe, bouton = _proposition_de_repli(reglage, apres, intel)
         texte += "\n\n" + paragraphe + " " + tr(
             "« Rétablir les réglages d'origine », dans l'engrenage du jeu, remet tout comme avant.")
         choix = (bouton, *choix)

@@ -325,8 +325,8 @@ def modifiee(avant: dict[str, Etat], apres: dict[str, Etat]) -> str | None:
 
 # La sauvegarde rapide (F5) par jeu : un fichier à part, que le menu du jeu ne
 # range dans aucun emplacement. HP1 l'écrit dans `Save9.usa` (relevé en jeu le
-# 2026-10-15) ; sans ce nom, elle s'affichait « Emplacement 10 ».
-_RAPIDES = {"hp1": "save9.usa"}
+# 2026-10-15), HP3 aussi (essai Q4, même jour) ; sans ce nom, elle s'affichait « Emplacement 10 ».
+_RAPIDES = {"hp1": "save9.usa", "hp3": "save9.usa"}
 
 
 def est_rapide(jeu: str, rel: str) -> bool:

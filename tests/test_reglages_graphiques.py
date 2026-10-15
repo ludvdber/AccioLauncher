@@ -124,6 +124,21 @@ class TestRepliApresEchec:
     def test_fichier_illisible_rien_a_proposer(self, tmp_path):
         assert rg.repli_apres_echec(tmp_path / "absent.conf") is None
 
+    def test_sur_intel_les_ombres_puis_l_anticrenelage(self, conf):
+        reglage, avant, apres = rg.repli_apres_echec(conf, intel=True)
+        assert (reglage.ident, avant, apres) == ("graph_textures_rendu", True, False)
+        rg.ecrire(conf, reglage, apres)
+        assert rg.repli_apres_echec(conf, intel=True)[1:] == ("8x", "4x")
+
+
+class TestPuceIntel:
+    def test_une_puce_intel_parmi_d_autres(self):
+        from src.core import diagnostic
+        assert diagnostic.puce_intel(["NVIDIA GeForce RTX 4070 · pilote 581.57",
+                                      "Intel(R) UHD Graphics 770 · pilote 31.0.101.5186"])
+        assert not diagnostic.puce_intel(["AMD Radeon RX 7800 XT · pilote 25.8.1"])
+        assert not diagnostic.puce_intel([])
+
 
 class TestDisponible:
     def test_windows_seulement(self, conf, monkeypatch):

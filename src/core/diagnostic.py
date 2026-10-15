@@ -286,6 +286,16 @@ def _cartes_graphiques() -> list[str]:
     return cartes
 
 
+def puce_intel(cartes: list[str] | None = None) -> bool:
+    """Vrai si une puce graphique Intel est présente (registre, lecture seule).
+
+    Un portable à deux puces (Intel + NVIDIA) répond oui aussi : c'est vrai,
+    et le jeu peut tourner sur l'une comme sur l'autre.
+    """
+    lignes = _cartes_graphiques() if cartes is None else cartes
+    return any("intel" in ligne.lower() for ligne in lignes)
+
+
 def carte_graphique(v: dict) -> str:
     """Met en forme une entrée du registre (pure, testable hors Windows)."""
     fournisseur = f"{v.get('ProviderName', '')} {v.get('DriverDesc', '')}"

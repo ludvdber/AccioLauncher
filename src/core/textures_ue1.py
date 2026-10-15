@@ -1,5 +1,11 @@
 """Lire une texture dans un paquet Unreal 1 du jeu INSTALLÉ (HP1 à HP3).
 
+Et les propriétés d'un objet de sauvegarde (`proprietes`) : l'acteur Harry de
+HP1, les gestionnaires de HP3 (paquet Unreal 2, version 129). Dans un paquet
+Unreal 2, les structures et les tableaux de structures sont eux-mêmes des
+propriétés étiquetées, imbriquées : `proprietes(..., decoder=True)` les rend
+en valeurs Python (relevé le 2026-10-15 sur les sauvegardes HP3 de Ludo).
+
 Premier usage : les cartes de sorciers du folio HP1 (`folio.py`), qui vivent
 dans `System/HPMenu.u` sous les noms `WizCard<Nom>BigTexture` (256 × 256) et
 `WizCard<Nom>SmallTexture` (128 × 128), en 256 couleurs avec palette. Relevé
@@ -34,11 +40,16 @@ _COTE_MAX = 2048
 # Taille des données d'une propriété selon son code (bits 4 à 6 de l'octet d'info).
 _TAILLES = (1, 2, 4, 12, 16)
 _STRUCT, _BOOL, _OBJET, _OCTET = 10, 3, 5, 1
+_OCTET_, _ENTIER, _REEL, _NOM, _CLASSE, _TABLEAU, _CHAINE = 1, 2, 4, 6, 8, 9, 13
+_PROFONDEUR_MAX = 8   # structures dans des tableaux dans des structures…
 # Drapeau d'objet : un cadre d'état (script en cours) précède ses propriétés.
 # Les acteurs d'une sauvegarde le portent, jamais une texture.
 _RF_HAS_STACK = 0x02000000
 
 Propriete = tuple[str, int, "bytes | bool"]   # nom, indice de tableau, valeur brute
+# nom, indice, valeur décodée : int, float, str, bool, liste de propriétés
+# (structure), liste de listes (tableau de structures), ou bytes si inconnue.
+ProprieteLue = tuple[str, int, object]
 
 
 @dataclass(frozen=True)
@@ -143,7 +154,11 @@ class Paquet:
 
     def _etiquettes(self, lec: _Lecteur, fin: int) -> list[Propriete]:
         """Les propriétés étiquetées jusqu'au nom `None`, dans l'ordre écrit."""
-        props: list[Propriete] = []
+        return [(nom, indice, valeur) for nom, indice, _, valeur in self._brutes(lec, fin)]
+
+    def _brutes(self, lec: _Lecteur, fin: int) -> list[tuple[str, int, int, bytes | bool]]:
+        """(nom, indice, genre, valeur brute), jusqu'au nom `None`."""
+        props: list[tuple[str, int, int, bytes | bool]] = []
         while lec.p < fin:
             nom = self.noms[lec.index()]
             if nom == "None":
@@ -166,7 +181,7 @@ class Paquet:
                 raise ValueError("taille de propriété négative")
             if genre == _BOOL:
                 # La valeur est le bit « tableau » ; pas d'octets (taille 0, relevé).
-                props.append((nom, 0, bool(tableau)))
+                props.append((nom, 0, genre, bool(tableau)))
                 lec.p += taille
                 continue
             indice = 0
@@ -181,9 +196,57 @@ class Paquet:
                 else:
                     indice = int.from_bytes(lec.d[lec.p:lec.p + 4], "big") & 0x3FFFFFFF
                     lec.p += 4
-            props.append((nom, indice, lec.d[lec.p:lec.p + taille]))
+            props.append((nom, indice, genre, lec.d[lec.p:lec.p + taille]))
             lec.p += taille
         raise ValueError("propriétés sans fin")
+
+    def _lues(self, brut: bytes, debut: int, profondeur: int) -> tuple[list[ProprieteLue], int]:
+        """Des propriétés imbriquées dans `brut` ; (liste, position après `None`)."""
+        if profondeur > _PROFONDEUR_MAX:
+            raise ValueError("imbrication trop profonde")
+        lec = _Lecteur(brut, debut)
+        brutes = self._brutes(lec, len(brut))   # laisse `lec` juste après le `None`
+        return [(nom, indice, self._valeur(genre, valeur, profondeur + 1))
+                for nom, indice, genre, valeur in brutes], lec.p
+
+    def _valeur(self, genre: int, brut: bytes | bool, profondeur: int) -> object:
+        if isinstance(brut, bool):
+            return brut
+        try:
+            if genre == _ENTIER and len(brut) == 4:
+                return int.from_bytes(brut, "little", signed=True)
+            if genre == _OCTET_ and len(brut) == 1:
+                return brut[0]
+            if genre == _REEL and len(brut) == 4:
+                return struct.unpack("<f", brut)[0]
+            if genre == _NOM:
+                return self.noms[_Lecteur(brut).index()]
+            if genre in (_OBJET, _CLASSE):
+                return self._classe(_Lecteur(brut).index())
+            if genre == _CHAINE:
+                lec = _Lecteur(brut)
+                n = lec.index()
+                if n < 0:
+                    return brut[lec.p:lec.p - 2 * n].decode("utf-16-le").rstrip("\0")
+                return brut[lec.p:lec.p + n].decode("latin-1").rstrip("\0")
+            if genre == _STRUCT:
+                props, fin = self._lues(brut, 0, profondeur)
+                return props if fin == len(brut) else brut
+            if genre == _TABLEAU:
+                lec = _Lecteur(brut)
+                nombre = lec.index()
+                if not 0 <= nombre <= len(brut):
+                    return brut
+                elements, pos = [], lec.p
+                for _ in range(nombre):
+                    props, pos = self._lues(brut, pos, profondeur)
+                    elements.append(props)
+                return elements if pos == len(brut) else brut
+        except (ValueError, IndexError, struct.error, UnicodeDecodeError):
+            # Un tableau d'entiers (pas de structures) ou un format non relevé :
+            # la valeur brute, jamais une lecture inventée.
+            return brut
+        return brut
 
     def proprietes(self, classe: str) -> list[Propriete] | None:
         """Les propriétés du premier objet de classe `classe`, indices de
@@ -192,6 +255,36 @@ class Paquet:
         Unreal n'écrit que ce qui diffère de la valeur par défaut : une
         propriété absente de la liste vaut son défaut.
         """
+        debut = self._debut_objet(classe)
+        if debut is None:
+            return None
+        return self._etiquettes(_Lecteur(self._d, debut[0]), debut[1])
+
+    def lues(self, classe: str) -> list[ProprieteLue] | None:
+        """Comme `proprietes`, valeurs décodées (structures et tableaux de
+        structures d'un paquet Unreal 2 compris)."""
+        debut = self._debut_objet(classe)
+        if debut is None:
+            return None
+        return [(nom, indice, self._valeur(genre, valeur, 0))
+                for nom, indice, genre, valeur in self._brutes(_Lecteur(self._d, debut[0]), debut[1])]
+
+    def classes(self, prefixe: str) -> dict[str, bytes]:
+        """Les classes définies dans ce paquet dont le nom commence par
+        `prefixe`, avec leurs octets (propriétés par défaut comprises)."""
+        return {nom: self._d[position:position + taille]
+                for genre, nom, taille, position, _ in self._exports
+                # Unreal ignore la casse des noms : `wc_ThaddeusThurkell` est une carte.
+                if genre == 0 and nom.lower().startswith(prefixe.lower()) and taille > 0}
+
+    def indice_nom(self, nom: str) -> int | None:
+        try:
+            return self.noms.index(nom)
+        except ValueError:
+            return None
+
+    def _debut_objet(self, classe: str) -> tuple[int, int] | None:
+        """(début des propriétés, fin de l'objet) du premier objet de `classe`."""
         for genre, _, taille, position, drapeaux in self._exports:
             if taille <= 0 or self._classe(genre) != classe:
                 continue
@@ -204,7 +297,7 @@ class Paquet:
                 lec.p += 12
                 if noeud:
                     lec.index()
-            return self._etiquettes(lec, position + taille)
+            return lec.p, position + taille
         return None
 
     def texture(self, nom: str) -> TexturePaletee | None:

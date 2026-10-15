@@ -186,15 +186,21 @@ def ecrire(conf: Path, reglage: Reglage, valeur: str | bool) -> None:
 _ANTIALIASING_PLUS_BAS = {"8x": "4x", "4x": "off", "2x": "off"}
 
 
-def repli_apres_echec(conf: Path) -> tuple[Reglage, object, object] | None:
+def repli_apres_echec(conf: Path, intel: bool = False) -> tuple[Reglage, object, object] | None:
     """Le prochain cran à descendre : (réglage, valeur actuelle, valeur proposée).
 
     None quand il n'y a plus rien à baisser, ou que le fichier est illisible :
     proposer de réessayer sans rien changer serait promettre pour rien (règle 108).
+
+    `intel` : une puce Intel est présente. Les ombres et reflets passent alors
+    EN PREMIER : sur Intel UHD, c'est ce réglage qui a fait cesser le plantage
+    au lancement, pas l'anticrénelage (cas signalé, Ludo, 2026-10-15).
     """
     aa = REGLAGES["graph_antialiasing"]
     rendu = REGLAGES["graph_textures_rendu"]
     try:
+        if intel and lire(conf, rendu).valeur:
+            return rendu, True, False
         actuel = lire(conf, aa).valeur
         if actuel in _ANTIALIASING_PLUS_BAS:
             return aa, actuel, _ANTIALIASING_PLUS_BAS[actuel]

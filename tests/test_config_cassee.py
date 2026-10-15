@@ -292,7 +292,25 @@ class TestBoiteDArret:
                          b"\r\n[DirectXExt]\r\nRTTexturesForceScaleAndMSAA         = true\r\n")
         # Hors Windows aussi : c'est la boîte qu'on vérifie, pas la plateforme.
         monkeypatch.setattr(handlers.reglages_graphiques, "disponible", lambda c: c.is_file())
+        # Pas la puce de la machine qui lance les tests : sans Intel par défaut.
+        from src.core import diagnostic
+        monkeypatch.setattr(diagnostic, "puce_intel", lambda: False)
         return game, conf
+
+    def test_hp3_sur_intel_les_ombres_d_abord(self, handlers, monkeypatch, hp3, tmp_path):
+        """Sur Intel UHD, c'est ce réglage qui a fait cesser le plantage (2026-10-15)."""
+        from src.core import diagnostic
+        game, conf = hp3
+        monkeypatch.setattr(diagnostic, "puce_intel", lambda: True)
+        boites = self._repondre(monkeypatch, handlers, 0)
+        monkeypatch.setattr(handlers, "on_play", lambda _v: None)
+        vue, _ = self._vue(tmp_path / "Jeux", game)
+        handlers.signaler_arret(vue, game, config_cassee.arret_fatal(HP3_INTEL))
+        texte, boutons = boites[0]
+        assert "puce graphique Intel" in texte
+        assert boutons[0] == "Réessayer avec les ombres d'origine"
+        contenu = conf.read_bytes()
+        assert b"= false" in contenu and b"= 8x" in contenu, "l'anticrénelage n'est pas touché"
 
     def test_hp3_reessaie_un_cran_plus_bas(self, handlers, monkeypatch, hp3, tmp_path):
         game, conf = hp3

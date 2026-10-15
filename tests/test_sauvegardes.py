@@ -117,7 +117,8 @@ class TestSauvegardeRapide:
         assert sauvegardes.est_rapide("hp1", "Save9.usa")
         assert sauvegardes.est_rapide("hp1", "save9.USA")
         assert not sauvegardes.est_rapide("hp1", "Save0.usa")
-        assert not sauvegardes.est_rapide("hp3", "Save9.usa"), "relevé sur HP1 seulement"
+        assert sauvegardes.est_rapide("hp3", "Save9.usa"), "F5 dans HP3, VU le 2026-10-15"
+        assert not sauvegardes.est_rapide("hp4", "Save9.usa")
 
     def test_ni_numero_ni_emplacement_10(self, docs):
         _poser(docs, "Harry Potter/Save/Save0.usa", datetime(2026, 3, 8))
