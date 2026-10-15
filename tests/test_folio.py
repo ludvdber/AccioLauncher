@@ -143,7 +143,16 @@ def hp1(tmp_path, monkeypatch):
 
 
 class TestPage:
-    def test_ouvre_sur_la_plus_avancee(self, qtbot, hp1):
+    def test_ouvre_sur_la_derniere_jouee(self, qtbot, hp1):
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        _save(saves, 1, BLOC.replace(b"numBeans=3", b"numBeans=1"), b"Lev_Tut1", datetime(2026, 10, 1))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        assert page.releve.emplacement == 2, "la plus récente, pas la plus avancée"
+
+    def test_une_derniere_illisible_cede_a_une_lisible(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage
         jeu, install, saves = hp1
         _save(saves, 0, b"rien", b"Lev_Tut1", datetime(2026, 10, 1))

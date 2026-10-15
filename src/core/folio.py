@@ -196,6 +196,13 @@ def le_plus_avance(releves: list[Releve]) -> Releve | None:
     return max(lus, key=lambda r: r.avancement)
 
 
+def la_derniere_jouee(releves: list[Releve]) -> Releve | None:
+    """Celui que le jeu a écrit en dernier : la partie qu'on reprend. Parmi les
+    lisibles d'abord, sinon un emplacement illisible ouvrirait sur du vide."""
+    candidats = [r for r in releves if r.lu] or releves
+    return max(candidats, key=lambda r: r.modifie, default=None)
+
+
 # ── Les textes du jeu installé ──
 
 def _decoder(brut: bytes) -> str:

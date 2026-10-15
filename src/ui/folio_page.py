@@ -251,7 +251,7 @@ class FolioPage(QDialog):
         corps.setLayout(self._hote)
         racine.addWidget(corps, stretch=1)
         self._corps: QWidget | None = None
-        depart = self._plus or (self.releves[0] if self.releves else None)
+        depart = folio.la_derniere_jouee(self.releves)
         if depart is not None:
             self.choisir(depart.emplacement)
         else:
