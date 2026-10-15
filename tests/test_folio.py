@@ -5,6 +5,7 @@ Les sauvegardes sont FABRIQUÉES sur le modèle relevé chez Ludo le 2026-10-14
 """
 
 import os
+import struct
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import pytest
 
 from src.core import folio
 from src.core.i18n import set_language
+from tests.test_textures_ue1 import _compact
 
 BLOC = (b"\x00\x01\x07Player\x00u\nClass=HarryPotter.Harry Name=Harry0\r\n{\r\n"
         b"numHousePointsHarry=155\r\nnumHousePointsGryffindor=155\r\n"
@@ -157,6 +159,99 @@ class TestResumeDeLaFiche:
         assert resume is not None and resume.lieu == ""
 
 
+def _paquet_harry(props: dict[str, int], cartes: dict[int, bool] = {},
+                  pile: bool = False, texte: bytes = b"") -> bytes:
+    """Une sauvegarde FABRIQUÉE sur le modèle de `SaveN.usa` (relevé le
+    2026-10-15) : un paquet Unreal dont l'export de classe `Harry` porte ses
+    propriétés binaires. `texte` : le bloc de voyage, posé après le paquet."""
+    noms = ["None", "HarryPotter", "Class", "Harry", "Harry0", "WizardCards",
+            "WizardList", *props]
+    n = {nom: i for i, nom in enumerate(noms)}
+    corps = b""
+    if pile:   # cadre d'état : nœud, nœud d'état, masque, action latente
+        corps += _compact(0) + _compact(0) + b"\x00" * 12
+    for nom, valeur in props.items():
+        corps += _compact(n[nom]) + bytes([0x22]) + struct.pack("<i", valeur)
+    for indice, eue in cartes.items():
+        # Structure (genre 10), taille sur un octet, bit « tableau » si indice > 0.
+        info = 0x5A | (0x80 if indice else 0)
+        corps += (_compact(n["WizardCards"]) + bytes([info]) + _compact(n["WizardList"])
+                  + bytes([5]) + (bytes([indice]) if indice else b"")
+                  + struct.pack("<i", 100 + indice) + bytes([eue]))
+    corps += _compact(n["None"])
+
+    d = bytearray(b"\x00" * 36)
+    pos_objet = len(d)
+    d += corps
+    pos_noms = len(d)
+    for nom in noms:
+        d += _compact(len(nom) + 1) + nom.encode() + b"\x00" + struct.pack("<I", 0)
+    pos_imports = len(d)
+    d += (_compact(n["HarryPotter"]) + _compact(n["Class"]) + struct.pack("<i", 0)
+          + _compact(n["Harry"]))
+    pos_exports = len(d)
+    d += (_compact(-1) + _compact(0) + struct.pack("<i", 0) + _compact(n["Harry0"])
+          + struct.pack("<I", 0x02000000 if pile else 0) + _compact(len(corps))
+          + _compact(pos_objet))
+    d[0:36] = struct.pack("<IIIIIIIII", 0x9E2A83C1, 69, 1, len(noms), pos_noms,
+                          1, pos_exports, 1, pos_imports)
+    return bytes(d) + texte
+
+
+class TestActeurHarry:
+    """Le bloc texte est écrit au dernier changement de niveau : 112 dragées
+    quand le jeu en compte 126 (partie de Ludo, 2026-10-15). L'acteur, lui, est
+    l'état au moment de la sauvegarde."""
+
+    VALEURS = {"numHousePointsHarry": 155, "numHousePointsGryffindor": 155,
+               "numHousePointsSlytherin": 173, "numHousePointsHufflepuff": 93,
+               "numHousePointsRavenclaw": 111, "numBeans": 126}
+
+    def test_l_acteur_l_emporte_sur_le_bloc_en_retard(self, tmp_path):
+        chemin = tmp_path / "Save0.usa"
+        chemin.write_bytes(_paquet_harry(self.VALEURS, {0: True, 3: True, 5: False},
+                                         texte=BLOC))
+        releve = folio.releve_hp1(chemin)
+        assert releve.lu and releve.dragees == 126, "pas les 112 du bloc de voyage"
+        assert releve.points == {"gryffondor": 155, "serpentard": 173,
+                                 "serdaigle": 111, "poufsouffle": 93}
+        assert releve.points_harry == 155
+        assert releve.cartes == frozenset({1, 4}), "bHasCard faux : pas trouvée"
+
+    def test_avec_un_cadre_d_etat(self):
+        bloc = folio.lire_harry_hp1(_paquet_harry({"numBeans": 7}, pile=True))
+        assert bloc["dragees"] == 7
+
+    def test_au_tout_debut_du_jeu_rien_a_lire(self, tmp_path):
+        """Save1 et Save2 de Ludo : l'acteur existe, sans aucune propriété."""
+        chemin = tmp_path / "Save1.usa"
+        chemin.write_bytes(_paquet_harry({}))
+        assert folio.lire_harry_hp1(chemin.read_bytes()) is None
+        assert not folio.releve_hp1(chemin).lu
+
+    def test_acteur_illisible_le_bloc_en_repli(self, tmp_path):
+        chemin = tmp_path / "Save0.usa"
+        chemin.write_bytes(_paquet_harry(self.VALEURS)[:60] + BLOC)
+        assert folio.lire_harry_hp1(chemin.read_bytes()) is None
+        assert folio.releve_hp1(chemin).dragees == 112
+
+    def test_la_sauvegarde_rapide(self, tmp_path):
+        chemin = tmp_path / "Save9.usa"
+        chemin.write_bytes(_paquet_harry({"numBeans": 1}))
+        releve = folio.releve_hp1(chemin)
+        assert releve.rapide and releve.emplacement == 10
+        assert not folio.releve_hp1(_save(tmp_path, 0, BLOC, b"X", datetime(2026, 3, 8))).rapide
+
+    def test_relu_quand_le_fichier_change(self, tmp_path):
+        chemin = tmp_path / "Save0.usa"
+        chemin.write_bytes(_paquet_harry({"numBeans": 1}))
+        os.utime(chemin, (1_700_000_000, 1_700_000_000))
+        assert folio.releve_hp1(chemin).dragees == 1
+        chemin.write_bytes(_paquet_harry({"numBeans": 2}))
+        os.utime(chemin, (1_700_000_100, 1_700_000_100))
+        assert folio.releve_hp1(chemin).dragees == 2
+
+
 pytest.importorskip("pytestqt")
 
 
@@ -188,6 +283,17 @@ class TestPage:
         page = FolioPage(jeu, install)
         qtbot.addWidget(page)
         assert page.releve.emplacement == 2, "la plus récente, pas la plus avancée"
+
+    def test_la_sauvegarde_rapide_porte_son_nom(self, qtbot, hp1):
+        """`Save9.usa` (F5) : pas « Emplacement 10 », que le jeu n'a pas."""
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        _save(saves, 9, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 9))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        noms = [ligne.accessibleName().split(",")[0] for ligne in page._lignes.values()]
+        assert noms == ["Emplacement 1", "Sauvegarde rapide"]
 
     def test_une_derniere_illisible_cede_a_une_lisible(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage

@@ -110,6 +110,23 @@ class TestNumeros:
         assert sauvegardes.numero("auto.sav", unique, 1) is None
 
 
+class TestSauvegardeRapide:
+    """F5 dans HP1 écrit `Save9.usa`, hors des emplacements du menu du jeu."""
+
+    def test_hp1_seulement(self):
+        assert sauvegardes.est_rapide("hp1", "Save9.usa")
+        assert sauvegardes.est_rapide("hp1", "save9.USA")
+        assert not sauvegardes.est_rapide("hp1", "Save0.usa")
+        assert not sauvegardes.est_rapide("hp3", "Save9.usa"), "relevé sur HP1 seulement"
+
+    def test_ni_numero_ni_emplacement_10(self, docs):
+        _poser(docs, "Harry Potter/Save/Save0.usa", datetime(2026, 3, 8))
+        _poser(docs, "Harry Potter/Save/Save9.usa", datetime(2026, 3, 9))
+        vues = sauvegardes.vues("hp1", HP1, stock={})
+        assert [(v.fichier, v.numero, v.rapide) for v in vues] == [
+            ("Save0.usa", 1, False), ("Save9.usa", None, True)]
+
+
 class TestAttribution:
     def test_la_partie_va_a_la_sauvegarde_ecrite(self, docs, tmp_path):
         s0 = _poser(docs, "Harry Potter/Save/Save0.usa", datetime(2026, 3, 8))

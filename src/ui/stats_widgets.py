@@ -247,7 +247,8 @@ class _CarteSauvegarde(QFrame):
         couche.setSpacing(8)
 
         haut = QHBoxLayout()
-        nom = (tr("Emplacement {}").format(vue.numero) if vue.numero is not None
+        nom = (tr("Sauvegarde rapide") if vue.rapide
+               else tr("Emplacement {}").format(vue.numero) if vue.numero is not None
                else tr("Sauvegarde"))
         lbl_nom = QLabel(nom)
         lbl_nom.setFont(cinzel(11, bold=True))

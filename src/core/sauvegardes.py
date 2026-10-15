@@ -78,6 +78,7 @@ class Vue:
     parties: int
     temps: int | None           # None : aucune partie observée, on ne sait pas
     modifie: float = 0.0        # horodatage exact : départage deux « derniere » du même jour
+    rapide: bool = False        # la sauvegarde rapide (F5), hors des emplacements
 
 
 # ─── Où chercher ───
@@ -273,6 +274,16 @@ def modifiee(avant: dict[str, Etat], apres: dict[str, Etat]) -> str | None:
     return max(changees)[1] if changees else None
 
 
+# La sauvegarde rapide (F5) par jeu : un fichier à part, que le menu du jeu ne
+# range dans aucun emplacement. HP1 l'écrit dans `Save9.usa` (relevé en jeu le
+# 2026-10-15) ; sans ce nom, elle s'affichait « Emplacement 10 ».
+_RAPIDES = {"hp1": "save9.usa"}
+
+
+def est_rapide(jeu: str, rel: str) -> bool:
+    return _RAPIDES.get(jeu) == rel.rsplit("/", 1)[-1].lower()
+
+
 def numero(rel: str, spec: Sauvegardes, nb_fichiers: int) -> int | None:
     """L'emplacement, compté à partir de 1, d'après le PREMIER nombre du nom.
 
@@ -454,12 +465,13 @@ def vues(jeu: str, spec: Sauvegardes | None,
             commencee = derniere        # une copie de fichier « crée » après coup
         resultat.append(Vue(
             fichier=rel,
-            numero=numero(rel, spec, len(etats)),
+            numero=None if est_rapide(jeu, rel) else numero(rel, spec, len(etats)),
             commencee=commencee,
             derniere=derniere,
             parties=len(parties),
             temps=sum(d for _, d in parties) if parties else None,
             modifie=etat.modifie,
+            rapide=est_rapide(jeu, rel),
         ))
     resultat.sort(key=lambda v: (v.numero is None, v.numero or 0, v.fichier))
     return resultat

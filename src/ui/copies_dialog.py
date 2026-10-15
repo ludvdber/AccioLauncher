@@ -131,7 +131,10 @@ class CopiesDialog(QDialog):
         """« Emplacement 2 », ou le nom du fichier ; « (effacée) » si elle n'existe plus."""
         spec = self.game.sauvegardes
         n = sauvegardes.numero(rel, spec, len(self._versions)) if spec is not None else None
-        nom = tr("Emplacement {}").format(n) if n else rel.rsplit("/", 1)[-1]
+        if sauvegardes.est_rapide(self.game.id, rel):
+            nom = tr("Sauvegarde rapide")
+        else:
+            nom = tr("Emplacement {}").format(n) if n else rel.rsplit("/", 1)[-1]
         if rel not in presents:
             nom = tr("{} (effacée)").format(nom)
         return nom

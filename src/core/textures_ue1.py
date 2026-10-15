@@ -34,6 +34,11 @@ _COTE_MAX = 2048
 # Taille des données d'une propriété selon son code (bits 4 à 6 de l'octet d'info).
 _TAILLES = (1, 2, 4, 12, 16)
 _STRUCT, _BOOL, _OBJET, _OCTET = 10, 3, 5, 1
+# Drapeau d'objet : un cadre d'état (script en cours) précède ses propriétés.
+# Les acteurs d'une sauvegarde le portent, jamais une texture.
+_RF_HAS_STACK = 0x02000000
+
+Propriete = tuple[str, int, "bytes | bool"]   # nom, indice de tableau, valeur brute
 
 
 @dataclass(frozen=True)
@@ -109,7 +114,8 @@ class Paquet:
             lec.index()
             lec.i32()
             self._imports.append(self.noms[lec.index()])
-        self._exports: list[tuple[int, str, int, int]] = []   # classe, nom, taille, position
+        # classe, nom, taille, position, drapeaux
+        self._exports: list[tuple[int, str, int, int, int]] = []
         self._par_nom: dict[str, int] = {}
         lec.p = pos_exports
         for _ in range(nb_exports):
@@ -117,11 +123,11 @@ class Paquet:
             lec.index()
             lec.i32()
             nom = self.noms[lec.index()]
-            lec.i32()
+            drapeaux = lec.i32() & 0xFFFFFFFF
             taille = lec.index()
             position = lec.index() if taille > 0 else 0
             self._par_nom.setdefault(nom, len(self._exports))
-            self._exports.append((classe, nom, taille, position))
+            self._exports.append((classe, nom, taille, position, drapeaux))
 
     def _classe(self, ref: int) -> str:
         if ref < 0:
@@ -129,7 +135,15 @@ class Paquet:
         return self._exports[ref - 1][1] if ref > 0 else ""
 
     def _proprietes(self, lec: _Lecteur, fin: int) -> dict[str, bytes | bool]:
+        """Par nom ; d'un tableau, le premier élément écrit seulement."""
         props: dict[str, bytes | bool] = {}
+        for nom, _, valeur in self._etiquettes(lec, fin):
+            props.setdefault(nom, valeur)
+        return props
+
+    def _etiquettes(self, lec: _Lecteur, fin: int) -> list[Propriete]:
+        """Les propriétés étiquetées jusqu'au nom `None`, dans l'ordre écrit."""
+        props: list[Propriete] = []
         while lec.p < fin:
             nom = self.noms[lec.index()]
             if nom == "None":
@@ -152,21 +166,52 @@ class Paquet:
                 raise ValueError("taille de propriété négative")
             if genre == _BOOL:
                 # La valeur est le bit « tableau » ; pas d'octets (taille 0, relevé).
-                props[nom] = bool(tableau)
+                props.append((nom, 0, bool(tableau)))
                 lec.p += taille
                 continue
+            indice = 0
             if tableau:
+                # Indice sur 1, 2 ou 4 octets, poids fort d'abord, marqué par
+                # ses deux bits hauts.
                 b = lec.d[lec.p]
-                lec.p += 1 if b & 0x80 == 0 else 2 if b & 0xC0 == 0x80 else 4
-            props.setdefault(nom, lec.d[lec.p:lec.p + taille])
+                if b & 0x80 == 0:
+                    indice, lec.p = b, lec.p + 1
+                elif b & 0xC0 == 0x80:
+                    indice, lec.p = ((b & 0x3F) << 8) | lec.d[lec.p + 1], lec.p + 2
+                else:
+                    indice = int.from_bytes(lec.d[lec.p:lec.p + 4], "big") & 0x3FFFFFFF
+                    lec.p += 4
+            props.append((nom, indice, lec.d[lec.p:lec.p + taille]))
             lec.p += taille
         raise ValueError("propriétés sans fin")
+
+    def proprietes(self, classe: str) -> list[Propriete] | None:
+        """Les propriétés du premier objet de classe `classe`, indices de
+        tableau compris ; None s'il n'y en a pas.
+
+        Unreal n'écrit que ce qui diffère de la valeur par défaut : une
+        propriété absente de la liste vaut son défaut.
+        """
+        for genre, _, taille, position, drapeaux in self._exports:
+            if taille <= 0 or self._classe(genre) != classe:
+                continue
+            lec = _Lecteur(self._d, position)
+            if drapeaux & _RF_HAS_STACK:
+                # Nœud, nœud d'état, masque (8 octets), action latente (4),
+                # puis la position dans le code si un nœud est en cours.
+                noeud = lec.index()
+                lec.index()
+                lec.p += 12
+                if noeud:
+                    lec.index()
+            return self._etiquettes(lec, position + taille)
+        return None
 
     def texture(self, nom: str) -> TexturePaletee | None:
         rang = self._par_nom.get(nom)
         if rang is None:
             return None
-        classe, _, taille, position = self._exports[rang]
+        classe, _, taille, position, _ = self._exports[rang]
         if self._classe(classe) != "Texture" or taille <= 0:
             return None
         fin = position + taille
@@ -197,7 +242,7 @@ class Paquet:
         rang = _Lecteur(ref).index()
         if rang <= 0 or rang > len(self._exports):
             return None
-        classe, _, taille, position = self._exports[rang - 1]
+        classe, _, taille, position, _ = self._exports[rang - 1]
         if self._classe(classe) != "Palette":
             return None
         lec = _Lecteur(self._d, position)

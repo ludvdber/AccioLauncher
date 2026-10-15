@@ -5,8 +5,11 @@ jeu lu : HP1. Les autres arriveront jeu par jeu, chacun avec son lecteur
 (`LECTEURS`), quand leur format aura été relevé.
 
 **HP1** (relevé le 2026-10-14 sur les sauvegardes de Ludo, en LECTURE seule) :
-`Documents/Harry Potter/Save/SaveN.usa` porte, en texte clair, le bloc
-d'Harry tel qu'Unreal l'exporte :
+`Documents/Harry Potter/Save/SaveN.usa` est un paquet Unreal. L'acteur Harry
+(classe `Harry`) y porte ses propriétés binaires : c'est l'état au moment de
+la sauvegarde, et c'est lui qu'on lit (`textures_ue1.Paquet.proprietes`).
+
+Le même fichier porte aussi, en texte clair, un bloc d'Harry :
 
     Class=HarryPotter.Harry Name=Harry0
     {
@@ -19,10 +22,18 @@ d'Harry tel qu'Unreal l'exporte :
     …
     }
 
+Mais ce bloc est la « chaîne de voyage » d'Unreal, écrite au DERNIER
+CHANGEMENT DE NIVEAU : sur la partie de Ludo, 112 dragées quand l'acteur et
+le jeu en comptent 126 (relevé le 2026-10-15). Il ne sert plus qu'en repli,
+si l'acteur ne se lit pas.
+
 Unreal n'écrit que les propriétés qui diffèrent de leur valeur par défaut :
-une propriété absente vaut 0. Une sauvegarde du tout début du jeu n'a pas de
-bloc du tout ; le folio dit alors qu'il n'y a rien encore à lire, il n'invente
-pas de zéros. `GameSaveInfoN` donne le niveau où l'on a sauvegardé.
+une propriété absente vaut 0. Au tout début du jeu, Harry n'a encore rien
+(ni bloc, ni propriété) ; le folio dit alors qu'il n'y a rien encore à lire,
+il n'invente pas de zéros. `GameSaveInfoN` donne le niveau où l'on a sauvegardé.
+
+`Save9.usa` est la sauvegarde rapide (F5), que le menu du jeu ne range dans
+aucun emplacement (`sauvegardes.est_rapide`).
 
 Les noms des cartes et des lieux viennent du JEU INSTALLÉ (`HPMenu.int`,
 `HPmenu.fre`…), dans sa langue : aucun texte du jeu n'est recopié ici.
@@ -32,8 +43,10 @@ from __future__ import annotations
 
 import logging
 import re
+import struct
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -78,6 +91,9 @@ _PROPRIETES_HP1 = {
 }
 _BLOC_HARRY = re.compile(rb"Class=HarryPotter\.Harry Name=\w+\r?\n\{\r?\n(.*?)\r?\n\}", re.S)
 _CARTE = re.compile(r"WizardCards\[(\d+)\]=\(bHasCard=True\)")
+_LUES = {*_PROPRIETES_HP1.values(), "numHousePointsHarry", "numBeans"}
+# `Save9.usa`, rangé après les emplacements du menu.
+_EMPLACEMENT_RAPIDE = 10
 # Plafond de lecture : une sauvegarde HP1 pèse 1,5 à 2,4 Mo.
 _TAILLE_MAX = 16 * 1024 * 1024
 
@@ -108,6 +124,11 @@ class Releve:
     points_harry: int = 0
 
     @property
+    def rapide(self) -> bool:
+        """La sauvegarde rapide (F5), hors des emplacements du menu."""
+        return self.emplacement == _EMPLACEMENT_RAPIDE
+
+    @property
     def avancement(self) -> tuple[int, int, int]:
         return (len(self.cartes), self.points_harry, self.dragees)
 
@@ -123,8 +144,36 @@ class Releve:
 
 # ── Lecture d'une sauvegarde ──
 
+def lire_harry_hp1(contenu: bytes) -> dict[str, Any] | None:
+    """Les valeurs de l'acteur Harry, au moment de la sauvegarde ; None sans
+    acteur lisible ou sans rien d'écrit (tout début du jeu)."""
+    from src.core import textures_ue1
+    try:
+        props = textures_ue1.Paquet(contenu).proprietes("Harry")
+    except (ValueError, IndexError, struct.error):
+        log.warning("Folio : acteur d'Harry illisible", exc_info=True)
+        return None
+    if props is None:
+        return None
+    valeurs: dict[str, int] = {}
+    cartes: set[int] = set()
+    for nom, indice, valeur in props:
+        if not isinstance(valeur, bytes):
+            continue
+        if nom == "WizardCards":
+            # Structure `WizardList` : l'ID de collection (4 octets), puis bHasCard.
+            if len(valeur) == 5 and valeur[4] and 0 <= indice < CARTES_HP1:
+                cartes.add(indice + 1)
+        elif indice == 0 and len(valeur) == 4:
+            valeurs.setdefault(nom, struct.unpack("<i", valeur)[0])
+    if not cartes and not valeurs.keys() & _LUES:
+        return None
+    return _valeurs(valeurs, frozenset(cartes))
+
+
 def lire_bloc_hp1(contenu: bytes) -> dict[str, Any] | None:
-    """Les valeurs du bloc d'Harry ; None s'il n'y en a pas."""
+    """Les valeurs du bloc texte d'Harry ; None s'il n'y en a pas. EN RETARD
+    sur la sauvegarde (voir l'en-tête) : en repli seulement."""
     trouve = _BLOC_HARRY.search(contenu)
     if trouve is None:
         return None
@@ -136,6 +185,10 @@ def lire_bloc_hp1(contenu: bytes) -> dict[str, Any] | None:
             valeurs[cle] = int(valeur)
     cartes = frozenset(int(n) + 1 for n in _CARTE.findall(texte)
                        if 0 <= int(n) < CARTES_HP1)
+    return _valeurs(valeurs, cartes)
+
+
+def _valeurs(valeurs: dict[str, int], cartes: frozenset[int]) -> dict[str, Any]:
     return {
         "points": {m: max(0, valeurs.get(p, 0)) for m, p in _PROPRIETES_HP1.items()},
         "points_harry": max(0, valeurs.get("numHousePointsHarry", 0)),
@@ -166,19 +219,27 @@ def releve_hp1(chemin: Path) -> Releve | None:
     if numero is None:
         return None
     try:
-        if chemin.stat().st_size > _TAILLE_MAX:
+        infos = chemin.stat()
+        if infos.st_size > _TAILLE_MAX:
             return None
-        contenu = chemin.read_bytes()
-        modifie = datetime.fromtimestamp(chemin.stat().st_mtime)
+        modifie = datetime.fromtimestamp(infos.st_mtime)
+        bloc = _valeurs_hp1(str(chemin), infos.st_mtime_ns, infos.st_size)
     except OSError:
         log.warning("Folio : %s illisible", chemin, exc_info=True)
         return None
     n = int(numero.group(1))
     niveau = niveau_hp1(chemin.with_name(f"GameSaveInfo{n}"))
-    bloc = lire_bloc_hp1(contenu)
     if bloc is None:
         return Releve(n + 1, chemin, modifie, niveau)
     return Releve(n + 1, chemin, modifie, niveau, True, **bloc)
+
+
+@lru_cache(maxsize=16)
+def _valeurs_hp1(chemin: str, _mtime_ns: int, _taille: int) -> dict[str, Any] | None:
+    """Lu une fois tant que le fichier ne change pas : la fiche relit les
+    sauvegardes à chaque retour, et l'acteur coûte 6 à 12 ms par fichier."""
+    contenu = Path(chemin).read_bytes()
+    return lire_harry_hp1(contenu) or lire_bloc_hp1(contenu)
 
 
 def emplacements_hp1(fichiers: dict[str, Path]) -> list[Releve]:

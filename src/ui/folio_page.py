@@ -200,7 +200,9 @@ class _LigneEmplacement(QPushButton):
         v.setSpacing(3)
         haut = QHBoxLayout()
         haut.setSpacing(8)
-        titre = texte(tr("Emplacement {}").format(releve.emplacement), 15, ENCRE)
+        nom = (tr("Sauvegarde rapide") if releve.rapide
+               else tr("Emplacement {}").format(releve.emplacement))
+        titre = texte(nom, 15, ENCRE)
         titre.setFont(police(15, gras=True))
         haut.addWidget(titre)
         haut.addStretch()
@@ -211,7 +213,7 @@ class _LigneEmplacement(QPushButton):
             v.addWidget(texte(lieu, 13, "#c9c7da"))
         if plus_avance:
             v.addWidget(texte(tr("La plus avancée"), 12, current_theme().accent_light))
-        etats = [tr("Emplacement {}").format(releve.emplacement), lieu,
+        etats = [nom, lieu,
                  tr("La plus avancée") if plus_avance else ""]
         self.setAccessibleName(", ".join(e for e in etats if e))
         for enfant in self.findChildren(QLabel):
