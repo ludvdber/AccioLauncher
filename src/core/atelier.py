@@ -25,6 +25,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from src.core.config import ATELIER_PATH
 from src.core.i18n import SOURCE_LANGUAGE, get_language
@@ -66,7 +67,7 @@ class Metier:
         return sum(1 for b in self.besoins if b.etat == CHERCHE)
 
 
-def _texte(valeur, langue: str) -> str:
+def _texte(valeur: object, langue: str) -> str:
     """Le texte dans `langue`, sinon en français ; "" si rien d'utilisable."""
     if isinstance(valeur, str):
         return valeur.strip()
@@ -79,7 +80,7 @@ def _texte(valeur, langue: str) -> str:
     return ""
 
 
-def _liste(valeur) -> list:
+def _liste(valeur: object) -> list[Any]:
     return valeur if isinstance(valeur, list) else []
 
 

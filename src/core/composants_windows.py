@@ -31,9 +31,10 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core import system_checks
 from src.core.formatting import format_bytes
@@ -93,7 +94,7 @@ PAQUET_DU_PREREQUIS = {
 }
 
 
-def paquets_pour(manquants) -> list[Paquet]:
+def paquets_pour(manquants: Iterable[str]) -> list[Paquet]:
     """Les installeurs qui couvrent ces prérequis, une fois chacun, dans l'ordre
     de `PAQUETS`. Un identifiant inconnu est ignoré. Pure."""
     voulus = {PAQUET_DU_PREREQUIS[m] for m in manquants if m in PAQUET_DU_PREREQUIS}
@@ -110,7 +111,7 @@ def disponible() -> bool:
 FICHIER_RESULTATS = "resultats.txt"
 
 
-def script_d_installation(paquets) -> str:
+def script_d_installation(paquets: Iterable[Paquet]) -> str:
     """Corps du `.bat` qui installe tout, d'une traite, derrière UNE invite. Pure.
 
     AUCUN chemin dans le corps (règle 79) : les installeurs sont à côté du
@@ -195,7 +196,7 @@ _ERREUR_ANNULEE = 1223   # ERROR_CANCELLED : l'invite UAC a été refusée
 ABANDON = -1   # le launcher se ferme : on cesse d'attendre les installeurs
 
 
-def executer_eleve(script: Path, abandonner=lambda: False) -> int | None:
+def executer_eleve(script: Path, abandonner: Callable[[], bool] = lambda: False) -> int | None:
     """Exécute le script derrière une invite administrateur et ATTEND sa fin.
 
     None : l'invite a été refusée (ou l'élévation est impossible). `ABANDON` :
@@ -269,7 +270,7 @@ class InstallationComposants(QThread):
     # (réussie, raison) — nommé, jamais `finished` (règle 7)
     installation_terminee = pyqtSignal(bool, str)
 
-    def __init__(self, prerequis, parent=None) -> None:
+    def __init__(self, prerequis: Iterable[str], parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._prerequis = tuple(prerequis)
         self._paquets = paquets_pour(self._prerequis)

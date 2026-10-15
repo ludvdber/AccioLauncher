@@ -31,6 +31,7 @@ import os
 import struct
 import sys
 import threading
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -72,7 +73,7 @@ def fusionner(etats: list[Etat]) -> Etat:
     if len(etats) == 1:
         return etats[0]
 
-    def plus_fort(valeurs):
+    def plus_fort(valeurs: Iterable[float]) -> float:
         return max(valeurs, key=abs)
     return Etat(
         appuis=frozenset().union(*(e.appuis for e in etats)),
@@ -347,7 +348,7 @@ class LecteurLinux:
         try:
             import fcntl
             carte = bytearray(0x40)
-            fcntl.ioctl(fd, JSIOCGAXMAP, carte)
+            fcntl.ioctl(fd, JSIOCGAXMAP, carte)  # type: ignore[attr-defined]  # Linux seul
             axes = {rang: code for rang, code in enumerate(carte)}
         except (OSError, ImportError):
             axes = {0: ABS_X, 1: ABS_Y}         # sans la carte, le stick gauche suffit
@@ -405,7 +406,7 @@ class LecteurMuet:
         return Etat()
 
 
-def lecteur():
+def lecteur() -> LecteurWindows | LecteurLinux | LecteurMuet:
     """Le lecteur de la plateforme. Ne lève jamais."""
     try:
         if sys.platform == "win32":

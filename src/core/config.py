@@ -7,6 +7,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ def _as_str(value: object, default: str) -> str:
     return value if isinstance(value, str) else default
 
 
-def _as_dict(value: object) -> dict:
+def _as_dict(value: object) -> dict[str, Any]:
     """Coerce une valeur JSON en dict, sinon un dict vide (config trafiquée à la main)."""
     return value if isinstance(value, dict) else {}
 
@@ -118,7 +119,7 @@ def _as_liste(value: object) -> list[str]:
     return [v for v in value if isinstance(v, str)]
 
 
-def _as_map(value: object, type_valeur: type) -> dict:
+def _as_map(value: object, type_valeur: type) -> dict[str, Any]:
     """Dict dont on ne garde QUE les paires (str → type_valeur) exploitables.
 
     `_as_dict` ne validait que le conteneur. Une VALEUR mal typée traversait

@@ -51,6 +51,8 @@ jobs:
         run: pip install --require-hashes -r .github/requirements/tests.txt
       - name: Lint (jeu de regles fige dans pyproject.toml)
         run: python -m ruff check .
+      - name: Types (mypy sur src/core, regle dans pyproject.toml)
+        run: python -m mypy
       # Un plantage natif (violation d'accès dans Qt) ne laisse dans le journal
       # que la pile PYTHON — « cannot get C stack on this system ». Payé le
       # 2026-09-18 : deux runs rouges, jamais reproduits en local, et rien pour

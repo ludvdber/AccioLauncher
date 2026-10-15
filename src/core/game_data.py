@@ -60,6 +60,13 @@ log = logging.getLogger(__name__)
 NIVEAUX_MANETTE = ("yes", "partial", "no")
 
 
+def _jetons_surs(brut: object) -> tuple[str, ...]:
+    """Les jetons sûrs d'une liste du catalogue ; tout le reste est ignoré."""
+    if not isinstance(brut, list):
+        return ()
+    return tuple(r for r in brut if isinstance(r, str) and _JETON_SUR.match(r))
+
+
 def _niveau_manette(valeur: object) -> str:
     """`yes` / `partial` / `no`, sinon vide. Jamais une valeur devinée."""
     if isinstance(valeur, str) and valeur in NIVEAUX_MANETTE:
@@ -378,8 +385,7 @@ class GameData:
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),
             max_fps=_ips_max_valide(data.get("max_fps")),
-            fix_settings=tuple(r for r in (data.get("fix_settings") if isinstance(data.get("fix_settings"), list) else ())
-                               if isinstance(r, str) and _JETON_SUR.match(r)),
+            fix_settings=_jetons_surs(data.get("fix_settings")),
             noms=_tous_les_noms(data),
             touche_capture=_touche_capture(data.get("screenshots")),
             captures=_motifs_captures(data.get("screenshots")),
@@ -412,8 +418,8 @@ def _parse_catalog(raw: dict | list) -> Catalog:
     if isinstance(raw, list):
         entries = raw
         version, url = "0", ""
-        trailers = ()
-        contributors = ()
+        trailers: tuple[Trailer, ...] = ()
+        contributors: tuple[Contributor, ...] = ()
     elif isinstance(raw, dict):
         entries = raw.get("games", [])
         version = raw.get("catalog_version", "0")

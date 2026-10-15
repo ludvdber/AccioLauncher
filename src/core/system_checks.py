@@ -3,6 +3,7 @@
 import functools
 import os
 import sys
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from src.core.win_utils import noms_commencant_par
@@ -189,7 +190,7 @@ _VERBES_VC14 = frozenset({"vcrun2015", "vcrun2017", "vcrun2019", "vcrun2022"})
 _CLE_VC14_X86 = r"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86"
 
 
-def _dans_le_prefixe(verbes, test) -> bool:
+def _dans_le_prefixe(verbes: Iterable[str], test: Callable[[Path], bool]) -> bool:
     """Un prérequis est-il présent dans le préfixe Wine ?
 
     Sans lanceur : oui (c'est l'absence de Wine qu'on signale, une fois).
@@ -226,20 +227,7 @@ def check_vcredist_2008_x86() -> bool:
     return crt_x86_present(_winsxs(), "vc90")
 
 
-# Prérequis déclarables par le catalogue : identifiant → (test, page d'aide).
-# Un identifiant inconnu est ignoré : un catalogue en avance ne bloque jamais
-# un launcher plus ancien.
-PREREQUIS = {
-    "vcredist_x86": (lambda: check_vcredist_x86(), VCREDIST_URL),
-    "vcredist2005_x86": (lambda: check_vcredist_2005_x86(), VCREDIST_2005_URL),
-    "vcredist2008_x86": (lambda: check_vcredist_2008_x86(), VCREDIST_2008_URL),
-    "vcredist2010_x86": (lambda: check_vcredist_2010_x86(), VCREDIST_2010_URL),
-    **{nom: (lambda nom=nom: check_directx9(nom), DIRECTX9_URL) for nom in DLL_DIRECTX9},
-    **{nom: (lambda nom=nom: check_dll_native(nom), DIRECTX9_URL) for nom in DLL_COMPILATEUR},
-}
-
-
-def prerequis_manquants(requis) -> list[str]:
+def prerequis_manquants(requis: Iterable[str]) -> list[str]:
     """Identifiants des prérequis déclarés qui ne sont PAS satisfaits."""
     return [nom for nom in requis
             if nom in PREREQUIS and not PREREQUIS[nom][0]()]
@@ -280,6 +268,29 @@ def check_vcredist_x86() -> bool:
         except OSError:
             continue
     return False
+
+
+def _plus_tard_directx9(nom: str) -> Callable[[], bool]:
+    """Le test de `nom`, cherché à l'APPEL : un test qui remplace `check_directx9`
+    doit être vu ici aussi."""
+    return lambda: check_directx9(nom)
+
+
+def _plus_tard_dll_native(nom: str) -> Callable[[], bool]:
+    return lambda: check_dll_native(nom)
+
+
+# Prérequis déclarables par le catalogue : identifiant → (test, page d'aide).
+# Un identifiant inconnu est ignoré : un catalogue en avance ne bloque jamais
+# un launcher plus ancien.
+PREREQUIS: dict[str, tuple[Callable[[], bool], str]] = {
+    "vcredist_x86": (lambda: check_vcredist_x86(), VCREDIST_URL),
+    "vcredist2005_x86": (lambda: check_vcredist_2005_x86(), VCREDIST_2005_URL),
+    "vcredist2008_x86": (lambda: check_vcredist_2008_x86(), VCREDIST_2008_URL),
+    "vcredist2010_x86": (lambda: check_vcredist_2010_x86(), VCREDIST_2010_URL),
+    **{nom: (_plus_tard_directx9(nom), DIRECTX9_URL) for nom in DLL_DIRECTX9},
+    **{nom: (_plus_tard_dll_native(nom), DIRECTX9_URL) for nom in DLL_COMPILATEUR},
+}
 
 
 @functools.cache

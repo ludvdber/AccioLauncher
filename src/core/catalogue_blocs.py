@@ -8,6 +8,7 @@ validateurs qui le séparent de la machine : le catalogue est DISTANT.
 import logging
 import re
 from dataclasses import dataclass
+from typing import TypeGuard
 
 from src.core import game_registry as registre
 from src.core.chemins import chemin_relatif_sur
@@ -200,6 +201,14 @@ _INI_INTERDIT_NOM = re.compile(r"[\x00-\x1f\x7f\[\]=]")
 _INI_INTERDIT_VALEUR = re.compile(r"[\x00-\x1f\x7f]")
 
 
+def _chaines(data: dict, cles: tuple[str, ...], *, strip: bool = False) -> list[str] | None:
+    """Les valeurs de `cles`, dans l'ordre, si TOUTES sont des chaînes non vides
+    (non blanches avec `strip`) ; sinon None. Tout ou rien."""
+    valeurs = [data.get(k) for k in cles]
+    chaines = [v for v in valeurs if isinstance(v, str) and (v.strip() if strip else v)]
+    return chaines if len(chaines) == len(cles) else None
+
+
 def _parse_language_files(data) -> "LanguageFiles | None":
     """Lit le bloc `language_files`, ou None s'il est absent ou douteux.
 
@@ -222,8 +231,8 @@ def _parse_language_files(data) -> "LanguageFiles | None":
         for p in patches:
             if not isinstance(p, dict):
                 return None
-            champs = [p.get(k) for k in ("file", "section", "key", "value")]
-            if not all(isinstance(c, str) and c for c in champs):
+            champs = _chaines(p, ("file", "section", "key", "value"))
+            if champs is None:
                 return None
             fichier, section, cle, valeur = champs
             if not fichier.startswith(("%DOCUMENTS%", "%INSTALL_DIR%")) \
@@ -280,7 +289,8 @@ def _parse_manette_registre(data) -> "ManetteRegistre | None":
         log.warning("Bloc controller_registry ignoré (%s) : %r", raison, cle)
         return None
     nom, on, off = data.get("value"), data.get("on"), data.get("off")
-    if any(isinstance(v, bool) or not isinstance(v, int) for v in (on, off)) or on == off:
+    if (not isinstance(nom, str) or not isinstance(on, int) or not isinstance(off, int)
+            or isinstance(on, bool) or isinstance(off, bool) or on == off):
         return None
     for v in (on, off):
         raison = registre.refus_de_valeur(nom, v)
@@ -382,8 +392,8 @@ def _parse_resolution(data) -> "Resolution | None":
     """
     if not isinstance(data, dict):
         return None
-    champs = [data.get(k) for k in ("file", "section", "width", "height")]
-    if not all(isinstance(c, str) and c.strip() for c in champs):
+    champs = _chaines(data, ("file", "section", "width", "height"), strip=True)
+    if champs is None:
         return None
     fichier, section, largeur, hauteur = champs
     if _INI_INTERDIT_VALEUR.search(fichier) or largeur == hauteur or any(
@@ -557,7 +567,7 @@ class Sauvegardes:
 FORMATS_EMPLACEMENTS = ("hp4",)
 
 
-def _motif_sur(motif) -> bool:
+def _motif_sur(motif: object) -> TypeGuard[str]:
     """Un motif de catalogue ne sert qu'à LIRE des dates de fichier, mais il
     compose un chemin sur le disque de l'utilisateur : mêmes refus que
     `executable` (`chemins.refus_de_chemin`), plus « ** » (un motif récursif

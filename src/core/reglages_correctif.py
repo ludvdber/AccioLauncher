@@ -268,7 +268,8 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
     if reglage.ident == "touches_zqsd":
         preregle = touches_preregle()
         actives = {cle: _valeur(lignes, reglage.section, cle) for cle, _ in preregle}
-        if all(actives[cle] is not None and actives[cle].lower() == v.lower() for cle, v in preregle):
+        if all((actuel := actives[cle]) is not None and actuel.lower() == v.lower()
+               for cle, v in preregle):
             return Etat(True)
         return Etat(False, personnalise=any(v is not None for v in actives.values()))
     if reglage.ident == "panneau_perfs":
@@ -284,8 +285,8 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
     brut = _valeur(lignes, reglage.section, reglage.cle)
     if reglage.noms_choix:
         # Le correctif compare sans tenir compte de la casse.
-        v = brut.lower() if brut else reglage.choix[0]
-        return Etat(v, personnalise=v not in reglage.choix)
+        choisi = brut.lower() if brut else reglage.choix[0]
+        return Etat(choisi, personnalise=choisi not in reglage.choix)
     if reglage.choix:
         # Un facteur peut être décimal (SSAAFactor=1.5) ; un entier reste un int.
         try:

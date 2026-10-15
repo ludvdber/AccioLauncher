@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -172,7 +173,7 @@ def touches(ini: Path) -> dict[str, tuple[str, ...]]:
     return _touches_de(lignes)
 
 
-def _touches_de(lignes) -> dict[str, tuple[str, ...]]:
+def _touches_de(lignes: list[str]) -> dict[str, tuple[str, ...]]:
     choisies = {}
     for action in ACTIONS:
         brut = rc._valeur(lignes, SECTION, action.cle)
@@ -225,7 +226,7 @@ def attribuer(ini: Path, action: str, nom: str) -> tuple[str, ...]:
     return tuple(perdues)
 
 
-def rendre(ini: Path, actions=None) -> None:
+def rendre(ini: Path, actions: Iterable[str] | None = None) -> None:
     """Rend à ces actions (toutes par défaut) la touche d'origine du jeu : lignes commentées."""
     lignes, fin = rc._lire(ini)
     rc._garder_origine(ini)

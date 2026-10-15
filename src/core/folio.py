@@ -35,6 +35,10 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from src.core import textures_ue1
 
 log = logging.getLogger(__name__)
 
@@ -119,7 +123,7 @@ class Releve:
 
 # ── Lecture d'une sauvegarde ──
 
-def lire_bloc_hp1(contenu: bytes) -> dict | None:
+def lire_bloc_hp1(contenu: bytes) -> dict[str, Any] | None:
     """Les valeurs du bloc d'Harry ; None s'il n'y en a pas."""
     trouve = _BLOC_HARRY.search(contenu)
     if trouve is None:
@@ -270,7 +274,8 @@ def paquet_menu(system: Path) -> Path | None:
         return None
 
 
-def image_carte_hp1(paquet: Path | None, numero: int, grande: bool = True):
+def image_carte_hp1(paquet: Path | None, numero: int,
+                    grande: bool = True) -> textures_ue1.TexturePaletee | None:
     """La carte de l'emplacement `numero` telle que le jeu la dessine
     (`textures_ue1.TexturePaletee`), ou None. Noms de texture du jeu,
     orthographe comprise (« Salizar », « Uric »)."""

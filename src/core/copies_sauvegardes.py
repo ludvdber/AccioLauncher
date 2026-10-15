@@ -44,12 +44,12 @@ import re
 import shutil
 import tempfile
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from src.core import config as config_module
 from src.core import sauvegardes
-from src.core.game_data import Sauvegardes
+from src.core.catalogue_blocs import Sauvegardes
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +90,8 @@ def _date_du_nom(nom: str) -> datetime | None:
     if m is None:
         return None
     try:
-        return datetime(*(int(g) for g in m.groups()))
+        annee, mois, jour, heure, minute, seconde = map(int, m.groups())
+        return datetime(annee, mois, jour, heure, minute, seconde)
     except ValueError:
         return None
 
@@ -177,9 +178,9 @@ def a_garder(dates: list[datetime], maintenant: datetime) -> set[datetime]:
     """
     triees = sorted(set(dates), reverse=True)
     garde = set(triees[:DERNIERES])
-    vus_jour: set = set()
-    vus_mois: set = set()
-    vus_an: set = set()
+    vus_jour: set[date] = set()
+    vus_mois: set[tuple[int, int]] = set()
+    vus_an: set[int] = set()
     for d in triees:                       # du plus récent au plus ancien
         age = (maintenant - d).days
         jour, mois, an = d.date(), (d.year, d.month), d.year
@@ -235,17 +236,18 @@ def versions(jeu: str) -> dict[str, list[Version]]:
     if not base.is_dir():
         return resultat
     try:
-        copies = [p for p in base.rglob("*.gz") if _date_du_nom(p.name) is not None]
+        copies = [(p, quand) for p in base.rglob("*.gz")
+                  if (quand := _date_du_nom(p.name)) is not None]
     except OSError:
         return resultat
-    for p in copies:
+    for p, quand in copies:
         rel = p.parent.relative_to(base).as_posix()
         try:
             taille = p.stat().st_size
         except OSError:
             continue
         resultat.setdefault(rel, []).append(
-            Version(rel=rel, quand=_date_du_nom(p.name), chemin=p, taille=taille))
+            Version(rel=rel, quand=quand, chemin=p, taille=taille))
     for liste in resultat.values():
         liste.sort(key=lambda v: v.quand, reverse=True)
     return resultat

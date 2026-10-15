@@ -5,7 +5,7 @@ import shutil
 import threading
 from pathlib import Path
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core.echecs import cause_installation
 from src.core.extractors import extract_7z, extract_zip
@@ -54,7 +54,7 @@ class Installer(QThread):
         game_dir: str | None = None,
         delete_archive: bool = False,
         sous_dossier: str = "",
-        parent=None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self.archive_path = archive_path

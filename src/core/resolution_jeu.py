@@ -44,7 +44,8 @@ import sys
 from pathlib import Path
 
 from src.core.config import Config
-from src.core.game_data import GameData, IniPatch
+from src.core.catalogue_blocs import IniPatch
+from src.core.game_data import GameData
 from src.core.pre_launch import ecrire_cle_ini
 
 log = logging.getLogger(__name__)

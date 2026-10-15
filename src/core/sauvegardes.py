@@ -286,8 +286,8 @@ def numero(rel: str, spec: Sauvegardes, nb_fichiers: int) -> int | None:
     même seul.
     """
     if "#" in rel:
-        n = rel.rsplit("#", 1)[1]
-        return int(n) if n.isdigit() and int(n) >= 1 else None
+        chiffres = rel.rsplit("#", 1)[1]
+        return int(chiffres) if chiffres.isdigit() and int(chiffres) >= 1 else None
     if nb_fichiers <= 1 and "*" not in spec.fichiers:
         return None
     trouve = re.search(r"\d+", rel)
@@ -438,6 +438,8 @@ def vues(jeu: str, spec: Sauvegardes | None,
     Une sauvegarde supprimée n'est pas montrée — sa trace reste dans le
     fichier, et le temps de jeu, lui, n'a jamais dépendu d'elle.
     """
+    if spec is None:
+        return []
     etats = releve(spec)
     if not etats:
         return []

@@ -12,7 +12,8 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from src.core.config import Config, get_documents_dir
-from src.core.game_data import GameData, IniPatch
+from src.core.catalogue_blocs import IniPatch
+from src.core.game_data import GameData
 from src.core.post_install import apply_config_files, destination_config
 from src.core.system_checks import check_d3d11_feature_level
 from src.core.win_utils import remove_zone_identifier

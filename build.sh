@@ -52,8 +52,9 @@ echo
 echo "[1/6] Vérification de l'icône..."
 "$PY" build/create_icon.py || echec "icône manquante ou illisible."
 
-echo "[2/6] Lint..."
+echo "[2/6] Lint et types..."
 "$PY" -m ruff check . || echec "lint échoué - build interrompu."
+"$PY" -m mypy || echec "types de src/core en échec - build interrompu."
 
 echo "[3/6] Tests..."
 "$PY" -m pytest -q || echec "tests en échec - build interrompu."

@@ -18,6 +18,7 @@ dev = [
     "pytest>=9.1",
     "pytest-qt>=4.5",
     "ruff>=0.17.0",      # utilisé depuis toujours, mais n'était pas déclaré
+    "mypy>=2.4",         # types de src/core, réglé par [tool.mypy] plus bas
 ]
 
 [project.scripts]
@@ -54,6 +55,44 @@ select = ["E4", "E7", "E9", "F", "W"]
 #   UP   modernisations de syntaxe (15)
 #   B    pièges bugbear (1) · SIM (5) · C4 (2) · RET (1)
 # À traiter en une passe dédiée, après la mise en ligne.
+
+# mypy sur la logique pure (`src/core`), en mode STRICT : tout module neuf y
+# naît strict. L'interface (`src/ui`) n'est pas vérifiée : l'essentiel de ce que
+# mypy y dit est du bruit de PyQt (un `parentWidget()` que Qt dit pouvoir être
+# None) et des classes de mélange, pas des défauts.
+[tool.mypy]
+python_version = "3.12"
+# Fixée : sinon un poste Linux et un poste Windows ne vérifieraient pas les
+# mêmes branches `sys.platform`, et la CI pourrait rougir selon sa machine.
+platform = "win32"
+files = ["src/core"]
+strict = true
+
+# Modules d'avant mypy, typés en mode NORMAL seulement (aucune erreur), pas
+# encore en strict. À resserrer au fil des passages : retirer un module de
+# cette liste dès qu'il passe `--strict`. N'Y AJOUTER AUCUN MODULE NEUF.
+[[tool.mypy.overrides]]
+module = [
+    "src.core.catalogue_blocs",
+    "src.core.compat",
+    "src.core.diagnostic",
+    "src.core.discord_presence",
+    "src.core.game_data",
+    "src.core.game_language",
+    "src.core.game_manager",
+    "src.core.game_registry",
+    "src.core.reglages_correctif",
+    "src.core.sauvegardes",
+    "src.core.stats",
+    "src.core.trailers",
+    "src.core.updater",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+warn_return_any = false
+no_implicit_reexport = false
 
 [tool.ruff.lint.per-file-ignores]
 # Les tests widget importent APRÈS `pytest.importorskip("pytestqt")` : sans ça

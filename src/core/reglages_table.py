@@ -60,6 +60,10 @@ _PANNEAU = ("ShowFrameTime", "ShowGraph", "ShowCPU", "ShowGPU", "ShowVRAM", "Sho
 _RESOLUTION = ("Width", "Height")
 
 
+# Une valeur proposée : texte (« 1280x720 »), entier (60) ou réel (1.15).
+type ValeurChoix = str | int | float
+
+
 @dataclass(frozen=True)
 class Reglage:
     ident: str
@@ -75,7 +79,7 @@ class Reglage:
     # Des choix TEXTUELS (une langue) portent leur libellé : `noms_choix`,
     # (valeur, libellé) ; le premier vaut pour une clé absente et s'affiche
     # `zero`.
-    choix: tuple = ()
+    choix: tuple[ValeurChoix, ...] = ()
     zero: str = ""
     format_choix: str = "{}"
     noms_choix: tuple[tuple[str, str], ...] = ()

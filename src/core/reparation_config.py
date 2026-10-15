@@ -46,7 +46,8 @@ def _dossier_du_jeu(game: GameData) -> str | None:
 
 
 def _modele(game: GameData, install_path: Path, source: str) -> Path:
-    base = install_path / _dossier_du_jeu(game) if _dossier_du_jeu(game) else install_path
+    dossier = _dossier_du_jeu(game)
+    base = install_path / dossier if dossier else install_path
     return base / source
 
 
@@ -86,7 +87,8 @@ def remettre(game: GameData, install_path: Path, maintenant: datetime | None = N
     paires = [(cf.source, cf.destination) for cf in pi.config_files]
     apply_config_files(install_path, _dossier_du_jeu(game), paires)
 
-    remis, echoues = [], []
+    remis: list[Path] = []
+    echoues: list[str] = []
     for cf in pi.config_files:
         dest = destination_config(cf.destination)
         modele = _modele(game, install_path, cf.source)
@@ -94,7 +96,10 @@ def remettre(game: GameData, install_path: Path, maintenant: datetime | None = N
             egal = modele.read_bytes() == dest.read_bytes()
         except OSError:
             egal = False
-        (remis if egal else echoues).append(dest if egal else str(dest))
+        if egal:
+            remis.append(dest)
+        else:
+            echoues.append(str(dest))
     log.info("Configuration de %s remise : %d fichier(s), %d échec(s), anciens dans %s",
              game.id, len(remis), len(echoues), gardes if a_garder else "—")
     return Resultat(tuple(remis), tuple(echoues), gardes if a_garder else None)

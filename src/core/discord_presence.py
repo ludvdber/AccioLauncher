@@ -33,6 +33,7 @@ import sys
 import threading
 import time
 import uuid
+from typing import Any
 
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, SITE_URL
@@ -137,7 +138,7 @@ class DiscordPresence:
         composée par l'appelant : la maison vit dans le thème, donc côté `ui`.
         Vide, elle est omise plutôt qu'envoyée blanche.
         """
-        activite = {
+        activite: dict[str, Any] = {
             "details": tr("Joue à {}").format(game_name),
             "timestamps": {"start": int(time.time())},
             "assets": {"small_image": _ASSET_LOGO, "small_text": "Accio Launcher"},

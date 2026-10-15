@@ -30,7 +30,7 @@ progression]]), `annee_courante` en tiendra compte sans que l'affichage change.
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 from src.core.game_data import GameData
 
@@ -63,7 +63,7 @@ class Annee:
         return not self.jeux
 
 
-def _statut(jeux: Sequence[GameData], installe, secondes: int) -> Statut:
+def _statut(jeux: Sequence[GameData], installe: Callable[[str], bool], secondes: int) -> Statut:
     if secondes > 0:
         return Statut.COMMENCEE
     if any(installe(j.id) for j in jeux):
@@ -71,7 +71,8 @@ def _statut(jeux: Sequence[GameData], installe, secondes: int) -> Statut:
     return Statut.ABSENTE
 
 
-def annees(games: Iterable[GameData], installe, temps) -> list[Annee]:
+def annees(games: Iterable[GameData], installe: Callable[[str], bool],
+           temps: Callable[[str], int]) -> list[Annee]:
     """Les sept années, dans l'ordre, remplies par le catalogue.
 
     `installe(game_id) -> bool` et `temps(game_id) -> int` (secondes) sont

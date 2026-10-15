@@ -105,7 +105,7 @@ def du_onglet(onglet: str) -> tuple[Reglage, ...]:
     return tuple(r for r in REGLAGES.values() if r.onglet == onglet)
 
 
-def _motif(cle: str) -> re.Pattern:
+def _motif(cle: str) -> re.Pattern[str]:
     # Le préfixe (clé, alignement, « = » et l'espace qui suit) est gardé tel quel.
     return re.compile(r"^(\s*" + re.escape(cle) + r"\s*=[ \t]*)(.*?)\s*$", re.IGNORECASE)
 
@@ -149,7 +149,7 @@ def lire(conf: Path, reglage: Reglage) -> Etat:
         if brut is None:
             return Etat(reglage.defaut)
         return Etat(brut.strip().lower() == "true")
-    v = (brut or reglage.choix[0]).strip().lower()
+    v = (brut or str(reglage.choix[0])).strip().lower()
     return Etat(v, personnalise=v not in reglage.choix)
 
 
@@ -161,13 +161,13 @@ def a_une_origine(conf: Path) -> bool:
     return chemin_origine(conf).is_file()
 
 
-def ecrire(conf: Path, reglage: Reglage, valeur) -> None:
+def ecrire(conf: Path, reglage: Reglage, valeur: str | bool) -> None:
     """Écrit un réglage. OSError si le fichier ne peut pas l'être, ValueError
     si la valeur n'est pas proposée (jamais plus de 60 images/s, par exemple)."""
     if reglage.choix and valeur not in reglage.choix:
         raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
     lignes, fin = _lire(conf)
-    texte = valeur if reglage.choix else ("true" if valeur else "false")
+    texte = str(valeur) if reglage.choix else ("true" if valeur else "false")
     _poser(lignes, reglage.section, reglage.cle, texte)
     copie = chemin_origine(conf)
     if not copie.exists():

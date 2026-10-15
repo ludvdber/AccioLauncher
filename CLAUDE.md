@@ -21,6 +21,7 @@ pip install -r requirements.txt && python main.py     # lancer depuis les source
 python -m pytest                                      # toute la suite
 python -m pytest tests/test_config.py::TestConfig::test_defaults
 python -m ruff check .                                # jeu de règles FIGÉ dans pyproject.toml
+python -m mypy                                        # src/core en strict, réglé dans pyproject.toml
 pip install -r requirements-dev.txt && build.bat      # → dist/AccioLauncher.exe
 ./build.sh                                            # Linux → dist/AccioLauncher-x86_64.AppImage
 ```
@@ -59,6 +60,7 @@ Un module absent de ces deux fichiers n'est pas documenté : l'y ajouter en le c
 ## Key Conventions
 
 - Type hints 3.10+ (`str | Path`) ; `pathlib.Path` partout.
+- **mypy (2026-10-15)** : `src/core` est vérifié en **strict** par `build.bat`, `build.sh` et la CI ; tout module neuf y naît strict. 13 anciens modules sont dans la liste d'exception de `[tool.mypy.overrides]` (typés en mode normal, sans erreur) : en retirer un dès qu'il passe, n'y en ajouter aucun. Typer aussi ce qu'on touche dans `src/ui` quand c'est simple. Pas de `assert` pour rassurer mypy (retiré par `-O`, signalé par Bandit) : un vrai test (`if x is None: return`) ou un `TypeGuard`. Le typage ne coûte rien à l'exécution.
 - Le travail threadé utilise des `QThread` avec `progress` / `error` + **un signal de fin NOMMÉ** (`download_finished`, `install_finished`, `result`) — jamais `finished`, qui masquerait le natif. Déconnecter symétriquement (try/except `TypeError`) avant de mettre à None.
 - Annuler un `QThread` : `cancel()` puis `wait(3000)` avant de relâcher la référence ; au timeout, le garer dans `GameOperations._zombies` et le récolter via `finished`. **Ne jamais laisser un nouveau téléchargement rouvrir un `.part` qu'un vieux thread tient encore** (verrou Windows).
 - Tous les callbacks qui mutent l'état vivent sur l'orchestrateur ; les widgets sont des consommateurs bêtes.

@@ -27,7 +27,8 @@ import json
 import logging
 import os
 import sys
-from typing import NamedTuple
+from pathlib import Path
+from typing import Any, NamedTuple
 
 from src.core.config import DEFAULT_LANGUAGE, I18N_DIR, USER_I18N_DIR
 
@@ -61,7 +62,7 @@ _strings: dict[str, dict[str, str]] = {}
 _catalogue: dict[str, LanguageInfo] | None = None
 
 
-def _read_pack(path) -> tuple[dict[str, str], dict]:
+def _read_pack(path: Path) -> tuple[dict[str, str], dict[str, Any]]:
     """Lit un fichier de langue. Retourne ({} , {}) si illisible ou aberrant.
 
     Un fichier de traduction peut venir d'une contribution extérieure ou du

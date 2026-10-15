@@ -8,6 +8,11 @@ Linux) ou si l'init COM échoue.
 
 import logging
 import sys
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import ctypes
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +39,7 @@ class TaskbarProgress:
 
     def __init__(self, hwnd: int) -> None:
         self._hwnd = hwnd
-        self._iface = None
+        self._iface: ctypes.c_void_p | None = None
         if sys.platform != "win32" or not hwnd:
             return
         try:
@@ -77,8 +82,10 @@ class TaskbarProgress:
         if hr != 0:
             raise OSError(f"ITaskbarList3.HrInit → HRESULT {hr:#010x}")
 
-    def _method(self, index: int, *argtypes):
+    def _method(self, index: int, *argtypes: type) -> Callable[..., int]:
         """Résout la méthode `index` de la vtable COM en callable ctypes."""
+        if self._iface is None:
+            raise OSError("ITaskbarList3 non initialisée")
         import ctypes
 
         vtable = ctypes.cast(

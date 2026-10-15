@@ -78,10 +78,16 @@ if errorlevel 1 (
 
 :: Un build ne doit pas partir d'un arbre casse : le lint et les tests sont
 :: rapides (~20 s) au regard d'un exe publie avec une regression dedans.
-echo [2/5] Lint...
+echo [2/5] Lint et types...
 %PY% -m ruff check .
 if errorlevel 1 (
     echo ERREUR : Lint echoue - build interrompu.
+    %PAUSE%
+    exit /b 1
+)
+%PY% -m mypy
+if errorlevel 1 (
+    echo ERREUR : Types de src/core en echec - build interrompu.
     %PAUSE%
     exit /b 1
 )

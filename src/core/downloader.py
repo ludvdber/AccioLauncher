@@ -4,14 +4,17 @@ import re
 import threading
 import time
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 from urllib.parse import urlparse
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core.echecs import Echec, EmpreinteInvalide, TailleDepassee, cause_de
 from src.core.formatting import format_bytes
 from src.core.i18n import tr
+
+if TYPE_CHECKING:
+    import httpx
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +55,7 @@ def _validate_url(url: str) -> None:
         raise ValueError(f"URL invalide (pas de hostname) : {url!r}")
 
 
-def _ensure_response_https(response) -> None:
+def _ensure_response_https(response: httpx.Response) -> None:
     """Rejette une réponse dont l'URL FINALE n'est pas https.
 
     `follow_redirects=True` suit un 3xx https→http silencieusement (attaque de
@@ -102,7 +105,7 @@ class Downloader(QThread):
         expected_size_mb: int = 0,
         expected_sha256: str | None = None,
         expected_sha256_parts: list[str] | None = None,
-        parent=None,
+        parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self.url = url
@@ -180,9 +183,9 @@ class Downloader(QThread):
     def run(self) -> None:
         try:
             if self.parts:
-                self._run_multipart()
+                self._run_multipart(self.parts)
             elif self.url:
-                self._run_single()
+                self._run_single(self.url)
             else:
                 self.error.emit(tr("Aucune URL de téléchargement."), Echec())
         except Exception as exc:
@@ -194,11 +197,11 @@ class Downloader(QThread):
 
     # ─── Téléchargement simple (fichier unique) ───
 
-    def _run_single(self) -> None:
+    def _run_single(self, url: str) -> None:
         import httpx  # import différé (thread) — voir en-tête de module
 
         try:
-            _validate_url(self.url)
+            _validate_url(url)
         except ValueError as exc:
             self.error.emit(str(exc), Echec())
             return
@@ -228,7 +231,7 @@ class Downloader(QThread):
                 return
             try:
                 digest = self._download_stream(
-                    self.url, part_path,
+                    url, part_path,
                     compute_sha256=bool(self.expected_sha256),
                 )
                 if self._cancelled:
@@ -293,23 +296,23 @@ class Downloader(QThread):
         except OSError as exc:
             log.warning("Impossible de supprimer %s : %s", heritee, exc)
 
-    def _run_multipart(self) -> None:
+    def _run_multipart(self, parts: list[str]) -> None:
         import httpx  # import différé (thread) — voir en-tête de module
 
-        for url in self.parts:
+        for url in parts:
             try:
                 _validate_url(url)
             except ValueError as exc:
                 self.error.emit(str(exc), Echec())
                 return
 
-        total_parts = len(self.parts)
+        total_parts = len(parts)
         part_paths: list[Path] = []
         cache_dir = self.destination.parent
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Étape 1 : télécharger chaque part
-        for i, url in enumerate(self.parts):
+        for i, url in enumerate(parts):
             if self._cancelled:
                 return
 
@@ -419,8 +422,8 @@ class Downloader(QThread):
                 f"({self._max_total_bytes} octets)"
             )
 
-    def _ecrire_chunks(self, response, part_path: Path, mode: str,
-                       downloaded: int, total: int, hasher) -> bool:
+    def _ecrire_chunks(self, response: httpx.Response, part_path: Path, mode: str,
+                       downloaded: int, total: int, hasher: hashlib._Hash | None) -> bool:
         """Écrit le corps de la réponse par blocs. False = annulé en cours.
 
         SOURCE UNIQUE de la boucle de téléchargement. Elle existait en DEUX

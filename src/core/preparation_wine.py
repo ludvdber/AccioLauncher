@@ -24,9 +24,10 @@ import signal
 import subprocess
 import time
 from datetime import datetime
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core import compat
 
@@ -85,8 +86,8 @@ class PreparationWine(QThread):
     # La dernière ligne du journal, quand elle change (au plus une fois par seconde).
     avancement = pyqtSignal(str)
 
-    def __init__(self, lanceur: compat.Lanceur, prefixe: Path, verbes,
-                 journal: Path, parent=None) -> None:
+    def __init__(self, lanceur: compat.Lanceur, prefixe: Path, verbes: Iterable[str],
+                 journal: Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._lanceur = lanceur
         self._prefixe = prefixe
@@ -150,7 +151,7 @@ class PreparationWine(QThread):
             return False, COMPOSANTS
         return True, ""
 
-    def _attendre(self, condition, delai_s: float) -> bool:
+    def _attendre(self, condition: Callable[[], object], delai_s: float) -> bool:
         limite = time.monotonic() + delai_s
         while time.monotonic() < limite:
             if condition():
@@ -158,7 +159,7 @@ class PreparationWine(QThread):
             if self.isInterruptionRequested():
                 return False
             time.sleep(_PAS_S)
-        return condition()
+        return bool(condition())
 
     def _executer(self, commande: list[str], env: dict[str, str]) -> int | None:
         """Exécute une commande, sortie au journal. None si interrompue.
@@ -192,11 +193,11 @@ class PreparationWine(QThread):
                         self.avancement.emit(ligne)
 
     @staticmethod
-    def _arreter(proc: subprocess.Popen) -> None:
+    def _arreter(proc: subprocess.Popen[bytes]) -> None:
         """SIGTERM au groupe, puis SIGKILL s'il traîne."""
         for sig in (signal.SIGTERM, getattr(signal, "SIGKILL", signal.SIGTERM)):
             try:
-                os.killpg(proc.pid, sig)
+                os.killpg(proc.pid, sig)  # type: ignore[attr-defined]  # Unix seul
             except (OSError, AttributeError):
                 proc.kill()
             try:

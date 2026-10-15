@@ -56,7 +56,7 @@ class _Lecteur:
         return v
 
     def i32(self) -> int:
-        v = struct.unpack_from("<i", self.d, self.p)[0]
+        v: int = struct.unpack_from("<i", self.d, self.p)[0]
         self.p += 4
         return v
 
@@ -208,7 +208,8 @@ class Paquet:
         brut = self._d[lec.p:lec.p + 4 * nombre]
         if len(brut) != 4 * nombre:
             return None
-        couleurs = [tuple(brut[i:i + 4]) for i in range(0, len(brut), 4)]
+        couleurs = [(brut[i], brut[i + 1], brut[i + 2], brut[i + 3])
+                    for i in range(0, len(brut), 4)]
         couleurs += [(0, 0, 0, 255)] * (256 - nombre)
         return tuple(couleurs)
 

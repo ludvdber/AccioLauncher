@@ -19,6 +19,7 @@ None : la page ne s'ouvre pas, rien d'autre ne change.
 from __future__ import annotations
 
 import json
+from typing import Any
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,11 +68,11 @@ def mise_a_jour_installee(precedente: str) -> bool:
     return not precedente or compare_versions(APP_VERSION, precedente) > 0
 
 
-def _liste(valeur) -> list:
+def _liste(valeur: object) -> list[Any]:
     return valeur if isinstance(valeur, list) else []
 
 
-def _texte(valeur, langue: str) -> str:
+def _texte(valeur: object, langue: str) -> str:
     """Le texte dans `langue`, sinon en français ; "" si rien d'utilisable."""
     if isinstance(valeur, str):
         return valeur.strip()
@@ -105,7 +106,7 @@ def charger(version: str = APP_VERSION, langue: str | None = None,
                   _texte(p.get("texte"), langue))
         for p in _liste(entree.get("points_forts")) if isinstance(p, dict))
     changements = tuple(
-        Changement(c.get("genre"), _texte(c.get("texte"), langue))
+        Changement(str(c.get("genre")), _texte(c.get("texte"), langue))
         for c in _liste(entree.get("changements"))
         if isinstance(c, dict) and c.get("genre") in GENRES)
     # Un texte vide ne s'affiche pas : une carte sans titre, une ligne sans phrase.

@@ -301,7 +301,7 @@ def _nom_unix() -> str:
     """Le nom que Wine donne au profil : celui de l'utilisateur Unix."""
     try:
         import pwd
-        return pwd.getpwuid(os.getuid()).pw_name
+        return pwd.getpwuid(os.getuid()).pw_name  # type: ignore[attr-defined]  # Unix seul
     except (ImportError, KeyError, AttributeError):
         return os.environ.get("USER") or "user"
 

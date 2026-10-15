@@ -219,6 +219,8 @@ def _detecter_fichiers(game: GameData, config) -> str | None:
     décide), et un fichier sur deux ne fait pas une langue. La casse n'est pas
     comparée : le moteur écrit « fre », un joueur peut avoir écrit « FRE ».
     """
+    if game.language_files is None:
+        return None
     for langue in game.language_files.languages:
         valeurs = [lire_cle_ini(p, game, config) for p in langue.ini]
         if all(v is not None and v.casefold() == p.value.casefold()
@@ -237,7 +239,7 @@ def _appliquer_fichiers(game: GameData, config, code: str | None) -> bool:
     jamais écrasée, et seule une clé qui DIFFÈRE est réécrite.
     """
     code = code or resoudre(game, config)
-    langue = game.language_files.get(code) if code else None
+    langue = game.language_files.get(code) if code and game.language_files else None
     if langue is None:
         return True
     racine = config.install_path.resolve()

@@ -18,7 +18,7 @@ import sys
 import zipfile
 from collections import deque
 from pathlib import Path
-from typing import Callable, Iterable, Iterator
+from typing import IO, Any, Callable, Iterable, Iterator
 
 from src.core.chemins import chemin_relatif_sur
 
@@ -140,7 +140,7 @@ def _find_7z_linux(base: Path) -> str | None:
 _RETOURS_DE_7Z = re.compile(rb"[\r\n\x08]+")
 
 
-def _segments_de_progression(flux) -> Iterator[str]:
+def _segments_de_progression(flux: IO[str]) -> Iterator[str]:
     """Le flux de 7-Zip découpé à chaque retour — ligne, chariot OU arrière.
 
     Lu sur le descripteur brut, par blocs : `os.read` rend ce qui est déjà
@@ -168,7 +168,7 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
     chiffrés ferait attendre 7z.exe sur une invite invisible, et le thread
     d'installation resterait bloqué pour toujours.
     """
-    kwargs: dict = {}
+    kwargs: dict[str, Any] = {}
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
     # `exe` est un chemin absolu (`find_7z_exe`), l'archive est la nôtre ;
@@ -282,7 +282,7 @@ def extract_7z_subprocess(
     # -snl- : ne jamais matérialiser de lien symbolique (un lien extrait pourrait
     # pointer hors du dossier d'installation et servir de relais d'écriture).
     cmd = [exe, "x", str(archive), f"-o{destination}", "-y", "-bsp1", "-snl-"]
-    kwargs: dict = {}
+    kwargs: dict[str, Any] = {}
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
@@ -302,7 +302,10 @@ def extract_7z_subprocess(
 
     # Sous Windows, le flux tel qu'il a toujours été lu. Ailleurs, découpé
     # aussi aux retours arrière (cf. `_RETOURS_DE_7Z`).
-    lignes = proc.stdout if sys.platform == "win32" else _segments_de_progression(proc.stdout)
+    sortie = proc.stdout
+    if sortie is None:      # stdout=PIPE ci-dessus : seul le typage en doute
+        raise OSError("7-Zip sans sortie lisible")
+    lignes = sortie if sys.platform == "win32" else _segments_de_progression(sortie)
     # Les dernières lignes qui ne sont PAS de la progression : c'est là que
     # 7-Zip dit pourquoi il échoue (« Data Error », « Unexpected end of
     # archive », « Cannot open output file »…).
