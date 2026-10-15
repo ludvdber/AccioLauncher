@@ -36,9 +36,10 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 - **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics.
 - **À la taille de votre écran** : *l'École des Sorciers* et *la Chambre des Secrets* s'ouvrent à la résolution de votre écran, 1440p et 4K compris, ou à celle que vous choisissez dans leurs réglages.
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
-- **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme un relevé de scolarité — sept jeux, sept années, celle où vous en êtes et celle qui vous attend.
+- **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme un relevé de scolarité, année par année (les deux parties des *Reliques de la Mort* partagent la septième).
 - **Le folio de *l'École des Sorciers*** : vos cartes de sorciers célèbres, vos dragées et les points des maisons, lus directement dans vos sauvegardes.
 - **Une galerie de vos captures**, rangées par jeu dans vos Images (plus perdues à la désinstallation), à copier en un clic pour Discord.
+- **Un atelier ouvert aux artistes** : le bouton « Contribuer » liste les jaquettes, fonds, bandes-annonces, cartes, écrans de chargement et vidéos qui cherchent quelqu'un pour les refaire. Vous dessinez, montez ou animez ? Tout ce qu'il faut savoir est dedans.
 - **Les réglages lisibles** : chaque réglage d'un jeu dit ce qu'il change et ce qu'il demande à la machine, et survit à une mise à jour ou à une réparation.
 - **Vos jeux déjà installés sont repris** : au premier lancement, le launcher retrouve ceux qui sont déjà sur le disque.
 - **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres de Poudlard en septembre, les braises en octobre, la neige en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond, facultatives. Tout est désactivable.
@@ -67,7 +68,7 @@ commencer si la place manque.
 1. Téléchargez **AccioLauncher.exe** depuis la [dernière version](https://github.com/ludvdber/AccioLauncher/releases/latest).
 2. Lancez-le. Aucune installation n'est nécessaire.
 3. Choisissez votre langue et le dossier des jeux. Le launcher repère ceux que vous avez déjà.
-4. Choisissez un jeu et cliquez sur **Télécharger**.
+4. Choisissez un jeu et cliquez sur **Installer**.
 
 ### « Windows a protégé votre ordinateur »
 

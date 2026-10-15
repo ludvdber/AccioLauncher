@@ -727,7 +727,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if isinstance(widget, QComboBox):
             index = widget.findData(etat.valeur)
             if index < 0:
-                widget.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+                widget.addItem(tr("{} (réglé à la main)").format(
+                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
                 index = widget.count() - 1
             widget.setCurrentIndex(index)
         else:
@@ -830,7 +831,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if etat.personnalise:
                 # Une valeur posée à la main dans l'ini : la montrer telle
                 # quelle plutôt que d'afficher un choix qui n'est pas le sien.
-                choix.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+                choix.addItem(tr("{} (réglé à la main)").format(
+                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
             choix.setCurrentIndex(max(0, choix.findData(etat.valeur)))
             choix.currentIndexChanged.connect(
                 lambda _i, c=choix, r=reglage: self._on_reglage(r, c.currentData(), c))

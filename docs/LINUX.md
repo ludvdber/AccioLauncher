@@ -31,7 +31,9 @@ Documents, sauvegardes, registre, prérequis) doit viser le préfixe.
 
 ## 2. Audit : ce qui suppose Windows
 
-Emplacements relevés sur `main` au 2026-09-24 (`fichier:ligne`). La colonne
+Emplacements relevés sur `main` au 2026-09-24, donnés par fichier et fonction (les
+numéros de ligne d'origine dérivaient à chaque modification : remplacés le 2026-10-15 par
+la fonction qui les contenait ce jour-là). La colonne
 « Aujourd'hui sous Linux » dit ce qui se passe **sans** portage ; « Phase » dit
 quelle pull request le traite.
 
@@ -39,63 +41,63 @@ quelle pull request le traite.
 
 | Emplacement | Ce qui suppose Windows | Aujourd'hui sous Linux | Traitement | Phase |
 |---|---|---|---|---|
-| `src/core/game_manager.py:335` | `Popen([exe])` : le `.exe` est exécuté directement | `OSError: Exec format error` — aucun jeu ne démarre | Passer par le lanceur de compatibilité (`umu-run <exe>` / `wine <exe>`) | 2 |
-| `src/core/game_manager.py:321-326` | Drapeaux `DETACHED_PROCESS` / `CREATE_NEW_PROCESS_GROUP` | Déjà gardés (`start_new_session`) | Conservé ; sorties du lanceur vers un journal par jeu | 2 |
-| `src/core/game_manager.py:283` + `src/core/system_checks.py:83-97, 139-156` | Prérequis VC++ testés dans WinSxS et le registre Windows | Les trois tests rendent `True` : **rien n'est vérifié**, un préfixe sans runtime passe | Tester le **préfixe** ; installer par winetricks | 2 |
-| `src/core/system_checks.py:78-79` | `C:\Windows` en repli de `%SystemRoot%` | Chemin inexistant (jamais atteint, les tests sont gardés) | Inchangé (gardé) | — |
-| `src/core/system_checks.py:159-193` | `check_d3d11_feature_level` crée un device D3D11 par ctypes | Rend `False` : **tout `fallback` d'INI s'activerait**, vers un renderer que HP1/HP2 ne livrent pas (cf. CLAUDE.md) | Rendre `True` hors Windows : sous Wine, D3D11 vient de DXVK / wined3d, pas du pilote | 2 |
-| `src/core/pre_launch.py:34` | `_INI_ENCODING = "mbcs"` sous Windows, `utf-8` ailleurs | Les INI du moteur sont écrits par le jeu **sous Wine**, donc dans la page ANSI du préfixe, pas en UTF-8 | Lire la page ANSI du préfixe (`Nls\Codepage\ACP` dans `system.reg`) | 2 |
-| `src/core/pre_launch.py:94-111` (`substitute_vars`) | Les VALEURS d'INI (`SavePath=%DOCUMENTS%\Harry Potter\Save`) deviennent des chemins de l'hôte | Le jeu lirait `SavePath=/home/…/Documents/…` : un chemin Unix dans un INI Windows, qui ne tombe juste que si le lecteur courant est `Z:` | Distinguer le chemin du FICHIER (hôte) de la VALEUR écrite (chemin Windows : `C:\users\steamuser\Documents\…`, `Z:\home\…`) | 2 |
-| `src/core/pre_launch.py:304-330` (`env_de_lancement`) | `__COMPAT_LAYER=HighDpiAware`, couche de compatibilité Windows | Rend déjà `None` hors Windows | Ignoré proprement sous Wine (aucune notion équivalente) ; l'environnement Wine est composé à part | 2 |
-| `src/core/config.py:14-32` (`get_documents_dir`) | `SHGetFolderPathW`, puis `~/Documents` hors Windows | Pointe le Documents **de l'hôte** : HP1-HP3 y trouveraient leurs INI patchés… que le jeu, sous Wine, ne lit pas | Documents **du préfixe** (`drive_c/users/<profil>/Documents`) | 2 |
-| `src/core/post_install.py:33` | « Saved Games » sous le dossier personnel | Idem : hors du préfixe | Racines du préfixe | 2 |
-| `src/core/post_install.py:122-132` (`destination_config`) | `~/Documents/…` du catalogue → Documents de l'hôte | Config livrée copiée au mauvais endroit | Suit `get_documents_dir` (préfixe) | 2 |
-| `src/core/sauvegardes.py:77-96` (`racines`) | `LOCALAPPDATA` | `None` : HP5-HP7b n'ont **aucune** sauvegarde relevée ; Documents de l'hôte pour HP1-HP3 | Documents et `AppData/Local` du préfixe — le module l'annonçait déjà comme « le SEUL endroit à changer » | 2 |
-| `src/core/game_registry.py:52-65` (`disponible`) | Registre = `winreg` | `False` : sélecteur de langue éteint, **`Install Dir` jamais écrit** — or HP7a/HP7b ne démarrent pas sans lui | `True` quand un lanceur et un préfixe existent | 2 |
-| `src/core/game_registry.py:182-206` (`lire_valeurs`) | `winreg.OpenKey` | Rend `{}` | Lire `system.reg` / `user.reg` du préfixe (texte, sans lancer Wine) | 2 |
-| `src/core/game_registry.py:239-286` (`_ecrire_direct`, `_ecrire_eleve`) | `winreg` puis `ShellExecuteW("runas", "regedit.exe")` + UAC | Jamais atteint (`ecrire_valeurs:323` rend `False`) | `_ecrire_eleve` = import du `.reg` par `regedit /S` **dans le préfixe**, via le lanceur ; pas d'UAC, mais la prévenance reste | 2 |
-| `src/core/game_language.py:105, 182` | Portes `disponible()` | Aucune langue, aucune écriture | Rien à changer : elles s'ouvrent quand `disponible()` dit vrai | 2 |
-| `src/ui/process_monitor.py:68` | Nom d'exe pris dans `process.args[0]` | Sous Linux ce serait `umu-run` ou `wine` | Chercher l'argument en `.exe` | 2 |
-| `src/ui/process_monitor.py:84-100` (`_is_exe_running`) | `tasklist.exe` pour suivre la relance UE1 | Rend `False` : la relance de HP1/HP2 au chargement d'une sauvegarde **terminerait la session** au bout de 10 s | Équivalent `/proc` (processus Wine de même nom, même utilisateur, même préfixe), même grâce de 10 s | 2 |
-| `src/core/win_utils.py:11-24` | `System32`, `C:\Windows` | Gardé | Inchangé | — |
-| `src/ui/game_detail_handlers.py:117-130` | « registre de **Windows** », invite UAC | Jamais affiché | Texte Linux : registre **du préfixe Wine**, sans UAC ; même prévenance | 2 |
-| `src/ui/game_detail_handlers.py:221-236` | « Composant **Windows** manquant » → page Microsoft ; « Sécurité Windows » pour Documents | Jamais atteint | Proposer l'installation dans le préfixe ; message Documents propre à Linux | 2 |
-| `src/ui/game_detail_handlers.py:535-537` | « autorisation administrateur » | Jamais atteint | Texte Linux | 2 |
-| `src/ui/alert_banner.py:52-54, 155-162, 310-316` | Bandeau « Visual C++ manquant » → page Microsoft | Jamais affiché (tests à `True`) | Lien « Installer » qui prépare le préfixe ; bandeau « Wine introuvable » | 2 |
+| `src/core/game_manager.py` (`GameManager.launch_game`) | `Popen([exe])` : le `.exe` est exécuté directement | `OSError: Exec format error` — aucun jeu ne démarre | Passer par le lanceur de compatibilité (`umu-run <exe>` / `wine <exe>`) | 2 |
+| `src/core/game_manager.py` (`GameManager.launch_game`) | Drapeaux `DETACHED_PROCESS` / `CREATE_NEW_PROCESS_GROUP` | Déjà gardés (`start_new_session`) | Conservé ; sorties du lanceur vers un journal par jeu | 2 |
+| `src/core/game_manager.py` (`GameManager.launch_game`) + `src/core/system_checks.py` (`crt_x86_reel`, `_dans_le_prefixe`) | Prérequis VC++ testés dans WinSxS et le registre Windows | Les trois tests rendent `True` : **rien n'est vérifié**, un préfixe sans runtime passe | Tester le **préfixe** ; installer par winetricks | 2 |
+| `src/core/system_checks.py` (`crt_x86_reel`) | `C:\Windows` en repli de `%SystemRoot%` | Chemin inexistant (jamais atteint, les tests sont gardés) | Inchangé (gardé) | — |
+| `src/core/system_checks.py` (`check_vcredist_2008_x86`) | `check_d3d11_feature_level` crée un device D3D11 par ctypes | Rend `False` : **tout `fallback` d'INI s'activerait**, vers un renderer que HP1/HP2 ne livrent pas (cf. CLAUDE.md) | Rendre `True` hors Windows : sous Wine, D3D11 vient de DXVK / wined3d, pas du pilote | 2 |
+| `src/core/pre_launch.py` (niveau du module) | `_INI_ENCODING = "mbcs"` sous Windows, `utf-8` ailleurs | Les INI du moteur sont écrits par le jeu **sous Wine**, donc dans la page ANSI du préfixe, pas en UTF-8 | Lire la page ANSI du préfixe (`Nls\Codepage\ACP` dans `system.reg`) | 2 |
+| `src/core/pre_launch.py` (`substitute_vars`) | Les VALEURS d'INI (`SavePath=%DOCUMENTS%\Harry Potter\Save`) deviennent des chemins de l'hôte | Le jeu lirait `SavePath=/home/…/Documents/…` : un chemin Unix dans un INI Windows, qui ne tombe juste que si le lecteur courant est `Z:` | Distinguer le chemin du FICHIER (hôte) de la VALEUR écrite (chemin Windows : `C:\users\steamuser\Documents\…`, `Z:\home\…`) | 2 |
+| `src/core/pre_launch.py` (`env_de_lancement`) | `__COMPAT_LAYER=HighDpiAware`, couche de compatibilité Windows | Rend déjà `None` hors Windows | Ignoré proprement sous Wine (aucune notion équivalente) ; l'environnement Wine est composé à part | 2 |
+| `src/core/config.py` (`get_documents_dir`) | `SHGetFolderPathW`, puis `~/Documents` hors Windows | Pointe le Documents **de l'hôte** : HP1-HP3 y trouveraient leurs INI patchés… que le jeu, sous Wine, ne lit pas | Documents **du préfixe** (`drive_c/users/<profil>/Documents`) | 2 |
+| `src/core/post_install.py` (`allowed_config_roots`) | « Saved Games » sous le dossier personnel | Idem : hors du préfixe | Racines du préfixe | 2 |
+| `src/core/post_install.py` (`destination_config`) | `~/Documents/…` du catalogue → Documents de l'hôte | Config livrée copiée au mauvais endroit | Suit `get_documents_dir` (préfixe) | 2 |
+| `src/core/sauvegardes.py` (`racines`) | `LOCALAPPDATA` | `None` : HP5-HP7b n'ont **aucune** sauvegarde relevée ; Documents de l'hôte pour HP1-HP3 | Documents et `AppData/Local` du préfixe — le module l'annonçait déjà comme « le SEUL endroit à changer » | 2 |
+| `src/core/game_registry.py` (`disponible`) | Registre = `winreg` | `False` : sélecteur de langue éteint, **`Install Dir` jamais écrit** — or HP7a/HP7b ne démarrent pas sans lui | `True` quand un lanceur et un préfixe existent | 2 |
+| `src/core/game_registry.py` (`lire_valeurs`) | `winreg.OpenKey` | Rend `{}` | Lire `system.reg` / `user.reg` du préfixe (texte, sans lancer Wine) | 2 |
+| `src/core/game_registry.py` (`comparer`) (`_ecrire_direct`, `_ecrire_eleve`) | `winreg` puis `ShellExecuteW("runas", "regedit.exe")` + UAC | Jamais atteint (`ecrire_valeurs:323` rend `False`) | `_ecrire_eleve` = import du `.reg` par `regedit /S` **dans le préfixe**, via le lanceur ; pas d'UAC, mais la prévenance reste | 2 |
+| `src/core/game_language.py` (`resoudre`, `appliquer`) | Portes `disponible()` | Aucune langue, aucune écriture | Rien à changer : elles s'ouvrent quand `disponible()` dit vrai | 2 |
+| `src/ui/process_monitor.py` (`ProcessMonitor.start`) | Nom d'exe pris dans `process.args[0]` | Sous Linux ce serait `umu-run` ou `wine` | Chercher l'argument en `.exe` | 2 |
+| `src/ui/process_monitor.py` (`_is_exe_running`) | `tasklist.exe` pour suivre la relance UE1 | Rend `False` : la relance de HP1/HP2 au chargement d'une sauvegarde **terminerait la session** au bout de 10 s | Équivalent `/proc` (processus Wine de même nom, même utilisateur, même préfixe), même grâce de 10 s | 2 |
+| `src/core/win_utils.py` (`dossier_systeme`) | `System32`, `C:\Windows` | Gardé | Inchangé | — |
+| `src/ui/game_detail_handlers.py` (`confirmer_registre.demander`) | « registre de **Windows** », invite UAC | Jamais affiché | Texte Linux : registre **du préfixe Wine**, sans UAC ; même prévenance | 2 |
+| `src/ui/game_detail_handlers.py` (`on_play`) | « Composant **Windows** manquant » → page Microsoft ; « Sécurité Windows » pour Documents | Jamais atteint | Proposer l'installation dans le préfixe ; message Documents propre à Linux | 2 |
+| `src/ui/game_detail_handlers.py` (`on_game_settings`) | « autorisation administrateur » | Jamais atteint | Texte Linux | 2 |
+| `src/ui/alert_banner.py` (niveau du module, `AlertBanner._message`, `AlertBanner._largeur_utile`) | Bandeau « Visual C++ manquant » → page Microsoft | Jamais affiché (tests à `True`) | Lien « Installer » qui prépare le préfixe ; bandeau « Wine introuvable » | 2 |
 | `src/core/game_data.py` | Aucune notion de surcharge de DLL | Wine charge **son** `d3d9` au lieu de celui livré (vérifié, §3) | Champ de catalogue `dll_overrides`, validé au parsing | 2 |
 
 ### 2.2 Installation, extraction
 
 | Emplacement | Ce qui suppose Windows | Aujourd'hui sous Linux | Traitement | Phase |
 |---|---|---|---|---|
-| `src/core/extractors.py:77-102` (`find_7z_exe`) | `7z.exe` embarqué, puis `C:\Program Files\7-Zip` | Repli sur `shutil.which("7z")` : dépend de ce que l'utilisateur a installé ; sur Bazzite, rien de garanti | Embarquer le **7-Zip officiel Linux** (`7zz`), repli `7zz`/`7z` du système (jamais py7zr, règle 92) | 3 |
-| `src/core/extractors.py:114-115, 198-199` | `CREATE_NO_WINDOW` | Déjà gardé | Inchangé | — |
-| `src/core/post_install.py:101` + `src/core/win_utils.py:48-67` | `Zone.Identifier` (flux NTFS) | No-op, sans objet sous Linux | Inchangé | — |
+| `src/core/extractors.py` (`find_7z_exe`) | `7z.exe` embarqué, puis `C:\Program Files\7-Zip` | Repli sur `shutil.which("7z")` : dépend de ce que l'utilisateur a installé ; sur Bazzite, rien de garanti | Embarquer le **7-Zip officiel Linux** (`7zz`), repli `7zz`/`7z` du système (jamais py7zr, règle 92) | 3 |
+| `src/core/extractors.py` (`_find_7z_linux`, `verify_archive_entries`) | `CREATE_NO_WINDOW` | Déjà gardé | Inchangé | — |
+| `src/core/post_install.py` (`ranger_dans_sous_dossier`) + `src/core/win_utils.py` (`remove_zone_identifier`) | `Zone.Identifier` (flux NTFS) | No-op, sans objet sous Linux | Inchangé | — |
 | `accio_launcher.spec:83-88, 212-236` | Onefile Windows, ressource de version, `.ico`, `7z.exe` embarqué partout | Un build Linux embarquerait 7z.exe/7z.dll pour rien | Spec par plateforme : onedir Linux, sans binaires Windows | 4 |
 
 ### 2.3 Mise à jour du launcher
 
 | Emplacement | Ce qui suppose Windows | Aujourd'hui sous Linux | Traitement | Phase |
 |---|---|---|---|---|
-| `src/core/self_update.py:20-22` (`can_self_update`) | Exe gelé **Windows** | `False` : la mise à jour ouvre la page de release | AppImage : remplacer `$APPIMAGE` | 3 |
-| `src/core/self_update.py:57-129` | `.bat` qui attend la mort du processus | — | Script `/bin/sh` détaché, chemins par l'environnement (même principe que les `%ACCIO_*%`) | 3 |
-| `src/core/self_update.py:178-185` (`relaunch_after_exit`) | Hors Windows : `Popen([sys.executable, *argv])` **immédiat** | Deux défauts : la nouvelle instance démarre avant la mort de l'ancienne et bute sur l'instance unique ; dans une AppImage, `sys.executable` vit dans un montage qui disparaît avec le processus | Attendre la mort du PID puis relancer `$APPIMAGE` | 3 |
-| `src/core/updater.py:485` | Asset de mise à jour = le premier `.exe` | Un launcher Linux téléchargerait l'exe Windows | Choisir l'asset de SA plateforme (`.AppImage`) | 3 |
-| `src/ui/update_dispatcher.py:234` | Fichier téléchargé nommé `AccioLauncher_v….exe` | — | Nom selon la plateforme | 3 |
-| `src/core/self_update.py:25-41` (`_clean_pyinstaller_env`) | Purge les `_PYI_*` | Sous Linux, le chargeur de PyInstaller **modifie `LD_LIBRARY_PATH`** : tout processus enfant (umu, wine, xdg-open, le navigateur) chargerait les bibliothèques embarquées | Restaurer `LD_LIBRARY_PATH` d'origine au démarrage (mode gelé Linux) | 3 |
+| `src/core/self_update.py` (`can_self_update`) | Exe gelé **Windows** | `False` : la mise à jour ouvre la page de release | AppImage : remplacer `$APPIMAGE` | 3 |
+| `src/core/self_update.py` (`nom_du_telechargement`) | `.bat` qui attend la mort du processus | — | Script `/bin/sh` détaché, chemins par l'environnement (même principe que les `%ACCIO_*%`) | 3 |
+| `src/core/self_update.py` (`relaunch_after_exit`) | Hors Windows : `Popen([sys.executable, *argv])` **immédiat** | Deux défauts : la nouvelle instance démarre avant la mort de l'ancienne et bute sur l'instance unique ; dans une AppImage, `sys.executable` vit dans un montage qui disparaît avec le processus | Attendre la mort du PID puis relancer `$APPIMAGE` | 3 |
+| `src/core/updater.py` (`UpdateChecker._check_catalog`) | Asset de mise à jour = le premier `.exe` | Un launcher Linux téléchargerait l'exe Windows | Choisir l'asset de SA plateforme (`.AppImage`) | 3 |
+| `src/ui/update_dispatcher.py` (`UpdateDispatcher.download`) | Fichier téléchargé nommé `AccioLauncher_v….exe` | — | Nom selon la plateforme | 3 |
+| `src/core/self_update.py` (`_clean_pyinstaller_env`) | Purge les `_PYI_*` | Sous Linux, le chargeur de PyInstaller **modifie `LD_LIBRARY_PATH`** : tout processus enfant (umu, wine, xdg-open, le navigateur) chargerait les bibliothèques embarquées | Restaurer `LD_LIBRARY_PATH` d'origine au démarrage (mode gelé Linux) | 3 |
 
 ### 2.4 Intégrations et confort
 
 | Emplacement | Ce qui suppose Windows | Aujourd'hui sous Linux | Traitement | Phase |
 |---|---|---|---|---|
-| `src/core/discord_presence.py:58-80` (`_open_ipc`) | Tube nommé Windows ; socket Unix dans `$XDG_RUNTIME_DIR` | Discord **Flatpak** (fréquent sur Bazzite) n'est pas trouvé : son socket est sous `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/` | Ajouter les emplacements Flatpak (et Snap) | 3 |
+| `src/core/discord_presence.py` (`_open_ipc`) | Tube nommé Windows ; socket Unix dans `$XDG_RUNTIME_DIR` | Discord **Flatpak** (fréquent sur Bazzite) n'est pas trouvé : son socket est sous `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/` | Ajouter les emplacements Flatpak (et Snap) | 3 |
 | `main.py:96-101` | `SetCurrentProcessExplicitAppUserModelID` | Gardé | Équivalent Linux : `setDesktopFileName` — sous Wayland, c'est lui qui relie la fenêtre à son icône et à son `.desktop` | 3 |
-| `src/ui/main_window.py:524-529` (`_minimize_to_tray`) | Suppose une zone de notification | Sans zone de notification (GNOME sans extension AppIndicator, certains compositeurs Wayland), la fenêtre **disparaît** sans icône pour la rappeler | Réduire au lieu de cacher quand `isSystemTrayAvailable()` est faux | 3 |
+| `src/ui/main_window.py` (`_minimize_to_tray`) | Suppose une zone de notification | Sans zone de notification (GNOME sans extension AppIndicator, certains compositeurs Wayland), la fenêtre **disparaît** sans icône pour la rappeler | Réduire au lieu de cacher quand `isSystemTrayAvailable()` est faux | 3 |
 | `src/core/win_taskbar.py` | `ITaskbarList3` | No-op | Inchangé (piste : `com.canonical.Unity.LauncherEntry`) | — |
-| `src/core/diagnostic.py:48-56` (`systeme`) | `win32_ver` | « Linux 6.x » : ni Bazzite ni sa version | `/etc/os-release` (`PRETTY_NAME`) | 3 |
-| `src/core/diagnostic.py:103-183` | Processeur, mémoire, cartes graphiques lus dans le registre / `GlobalMemoryStatusEx` | Mémoire et cartes vides | `/proc/meminfo`, `/sys/class/drm` ; plus une ligne « Compatibilité » (lanceur, Proton, préfixe) | 3 |
+| `src/core/diagnostic.py` (`systeme`) | `win32_ver` | « Linux 6.x » : ni Bazzite ni sa version | `/etc/os-release` (`PRETTY_NAME`) | 3 |
+| `src/core/diagnostic.py` (`identite`) | Processeur, mémoire, cartes graphiques lus dans le registre / `GlobalMemoryStatusEx` | Mémoire et cartes vides | `/proc/meminfo`, `/sys/class/drm` ; plus une ligne « Compatibilité » (lanceur, Proton, préfixe) | 3 |
 | `src/core/i18n.py:163-178` | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |
-| `src/ui/utils.py:10-27` | Icône `.ico` | Qt lit le `.ico` sous Linux (greffon `qico`) | Inchangé ; PNG 256 px pour le `.desktop` | 4 |
+| `src/ui/utils.py` (niveau du module) | Icône `.ico` | Qt lit le `.ico` sous Linux (greffon `qico`) | Inchangé ; PNG 256 px pour le `.desktop` | 4 |
 | `src/ui/fonts.py` | — | Polices embarquées (Gelasio remplace Georgia depuis longtemps) | Inchangé | — |
 | `src/ui/single_instance.py` | — | `QLocalServer` : socket Unix, fonctionne | Inchangé | — |
 

@@ -125,6 +125,17 @@ def _nombre(valeur) -> str:
     return f"{valeur:g}" if isinstance(valeur, float) else str(valeur)
 
 
+def texte_valeur(valeur) -> str:
+    """Une valeur lue dans le fichier, écrite pour la personne : « 0,28 » en français.
+
+    Sert à la valeur « réglée à la main » qu'aucun choix de la liste ne porte :
+    affichée brute, elle gardait le point de l'ini (« 0.28 »), une faute dans
+    une interface française.
+    """
+    return _nombre(valeur).replace(".", decimal_separator()) if isinstance(valeur, float) \
+        else str(valeur)
+
+
 def textes(reglage: Reglage) -> tuple[str, str]:
     """(libellé, aide) traduits, avec les lettres du clavier de ce poste."""
     if reglage.ident != "touches_zqsd":

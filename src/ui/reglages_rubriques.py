@@ -342,7 +342,8 @@ class RubriquesDuJeu:
                 controle.addItem(tr(reglage.zero) if valeur == reglage.choix[0]
                                  else tr(noms[valeur]), valeur)
             if etat.personnalise:
-                controle.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+                controle.addItem(tr("{} (réglé à la main)").format(
+                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
             controle.setCurrentIndex(max(0, controle.findData(etat.valeur)))
             controle.currentIndexChanged.connect(
                 lambda _i, c=controle, r=reglage: self._on_graph(r, c.currentData(), c))
@@ -363,7 +364,8 @@ class RubriquesDuJeu:
         if isinstance(controle, QComboBox):
             index = controle.findData(etat.valeur)
             if index < 0:
-                controle.addItem(tr("{} (réglé à la main)").format(etat.valeur), etat.valeur)
+                controle.addItem(tr("{} (réglé à la main)").format(
+                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
                 index = controle.count() - 1
             controle.setCurrentIndex(index)
         else:

@@ -582,6 +582,20 @@ class TestEffetsDImage:
         assert {0.2, 0.3} <= set(rc.REGLAGES["contraste"].choix)
         assert 16 in rc.REGLAGES["filtrage"].choix
 
+    def test_une_valeur_reglee_a_la_main_suit_la_virgule_de_la_langue(self):
+        """« 0.28 (réglé à la main) » s'affichait avec le point de l'ini (2026-10-15)."""
+        from src.core import i18n
+        ancienne = i18n.get_language()
+        try:
+            i18n.set_language("fr")
+            assert rc.texte_valeur(0.28) == "0,28"
+            assert rc.texte_valeur(2.0) == "2"
+            assert rc.texte_valeur(16) == "16"
+            i18n.set_language("en")
+            assert rc.texte_valeur(0.28) == "0.28"
+        finally:
+            i18n.set_language(ancienne)
+
     def test_chaque_effet_est_dans_l_onglet_image(self):
         for ident in ("filtrage", "occlusion", "halo", "rayons", "couleurs", "vivacite", "contraste"):
             assert rc.REGLAGES[ident].onglet == "image", ident
