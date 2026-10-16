@@ -42,6 +42,7 @@ def _hpgof(rang: int = 4, boucliers: int = 3) -> bytes:
     globales = []
     for k, champs in enumerate(quetes):
         globales += [(0x63 + 5 * k + j, _i(v)) for j, v in enumerate(champs)]
+    globales.append((0x52, _i(501)))
     corps = (struct.pack("<III", 0x722, 0x18, 0) + b"evaslvl_003_DragonWoods\0"
              + _entite("GlobalData", globales)
              + _entite("MagicMastery", [(i, _f(v)) for i, v in enumerate(maitrise)]))
@@ -57,6 +58,10 @@ class TestSauvegarde:
         assert (p.emplacement, p.niveau, p.rang, p.boucliers) == (1, "lvl_003_DragonWoods", 4, 3)
         assert p.ecrite == datetime(2026, 9, 28, 12, 23, 58)
         assert p.nom_rang == (110, "Compétent(e)")
+
+    def test_les_dragees_du_compteur(self):
+        """`GlobalData` 0x52 : les 501 du compteur des pages de cartes (VU)."""
+        assert folio_hp4.lire(_hpgof())[0].dragees == 501
 
     def test_les_jauges_valeur_sur_maximum(self):
         """Wingardium 110/250, Bullitor 4,2/20 : les longueurs mesurées à l'écran."""

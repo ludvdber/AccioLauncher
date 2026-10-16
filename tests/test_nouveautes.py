@@ -138,7 +138,9 @@ class TestPage:
     def test_le_nom_de_la_version_sous_le_numero(self, qtbot):
         from PyQt6.QtWidgets import QLabel
         page = self._page(qtbot)
-        assert page.findChild(QLabel, "nomVersion").text() == "Revelio · Folio Magi"
+        # Le nom de la version COURANTE (« Revelio · Folio Magi » en 1.2.0) : écrit
+        # en dur, le test cassait à chaque release.
+        assert page.findChild(QLabel, "nomVersion").text() == nouveautes.charger().nom
 
     def test_chaque_changement_a_sa_ligne(self, qtbot):
         from src.ui.nouveautes_page import _LigneChangement

@@ -13,7 +13,8 @@ Un corps est une suite de morceaux RenderWare (type, taille, version). Une
 entité (type 0x705) est une suite d'enregistrements [longueur][indice][charge] :
 0x40000000 = GUID, 0x80000000 = nom sur 32 octets (bourrage NON nettoyé), puis
 les attributs. `MagicMastery` porte les 16 jauges de maîtrise, `GlobalData`
-la table des quêtes (attributs 0x63 à 0xC6, cinq par quête).
+la table des quêtes (attributs 0x63 à 0xC6, cinq par quête) et les dragées
+(attribut 0x52 : 501, le compteur des pages de cartes, VU le 2026-10-16).
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ log = logging.getLogger(__name__)
 
 _TAILLE = 0x220 + 3 * 0x2800
 _ENTITE = 0x705
+_DRAGEES = 0x52           # attribut de `GlobalData`
 BOUCLIERS = 38            # l'armoire à trophées de la pensine : « 3/38 », VU
 
 # Un nom : (indice dans la table de textes du jeu, nom français). La table du
@@ -92,6 +94,7 @@ class Partie:
     boucliers: int
     maitrise: tuple[float, ...] = ()  # les 16 jauges, valeurs brutes
     quetes: tuple[Quete, ...] = ()
+    dragees: int = 0
 
     @property
     def nom_rang(self) -> Nom | None:
@@ -181,11 +184,12 @@ def lire(contenu: bytes) -> list[Partie]:
             log.warning("Folio HP4 : emplacement %d illisible", k + 1, exc_info=True)
             entites = {}
         maitrise = entites.get("MagicMastery", {})
+        globales = entites.get("GlobalData", {})
         parties.append(Partie(
             k + 1, ecrite, _texte(contenu, fiche + 0x0C, 0x40), rang,
             max(0, min(boucliers, BOUCLIERS)),
             tuple(_flottant(maitrise, i) for i in range(16)) if maitrise else (),
-            _quetes(entites.get("GlobalData", {}))))
+            _quetes(globales), max(0, _entier(globales, _DRAGEES))))
     return parties
 
 

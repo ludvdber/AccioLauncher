@@ -1,6 +1,65 @@
 {
   "versions": [
     {
+      "version": "1.2.1",
+      "nom": "Revelio · Quinque Folia",
+      "depuis": "1.2.0",
+      "points_forts": [
+        {
+          "icone": "folio",
+          "titre": {
+            "fr": "Un folio pour cinq jeux",
+            "en": "A folio for five games",
+            "es": "Un folio para cinco juegos"
+          },
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban, la Coupe de feu, l'Ordre du Phénix et le Prince de sang-mêlé ont aussi leur folio, lu dans vos sauvegardes.",
+            "en": "Prisoner of Azkaban, Goblet of Fire, Order of the Phoenix and Half-Blood Prince get their folio too, read from your saves.",
+            "es": "El prisionero de Azkaban, El cáliz de fuego, La Orden del Fénix y El misterio del príncipe también tienen su folio, leído de tus partidas."
+          }
+        },
+        {
+          "icone": "play",
+          "titre": {
+            "fr": "Reprendre",
+            "en": "Resume",
+            "es": "Continuar"
+          },
+          "texte": {
+            "fr": "Dès qu'une partie existe, le bouton dit « Reprendre » et la fiche rappelle où vous en êtes.",
+            "en": "Once a save exists, the button says “Resume” and the page reminds you where you are.",
+            "es": "En cuanto existe una partida, el botón dice «Continuar» y la ficha recuerda dónde vas."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "La sauvegarde rapide (F5) porte son nom dans le folio, les copies et les statistiques.",
+            "en": "The quick save (F5) shows under its own name in the folio, backups and statistics.",
+            "es": "El guardado rápido (F5) aparece con su nombre en el folio, las copias y las estadísticas."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "L'Ordre du Phénix affiche l'avancement de votre dernière partie, comme le jeu.",
+            "en": "Order of the Phoenix shows your last game's progress, as the game does.",
+            "es": "La Orden del Fénix muestra el avance de tu última partida, como el juego."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "L'École des Sorciers : le folio comptait parfois moins de dragées que le jeu.",
+            "en": "Philosopher's Stone: the folio sometimes counted fewer beans than the game.",
+            "es": "La piedra filosofal: el folio a veces contaba menos grageas que el juego."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2.0",
       "nom": "Revelio · Folio Magi",
       "depuis": "1.1.5",

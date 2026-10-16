@@ -304,6 +304,7 @@ class FolioPageHP4(FolioPage):
                              partie.boucliers / folio_hp4.BOUCLIERS)]
             if rang:
                 tuiles.insert(0, _tuile(self._nom(rang), self._nom(folio_hp4.TITRES["classement"])))
+            tuiles.append(_tuile(str(partie.dragees), tr("Dragées surprises")))
             lay.addLayout(_rangee(*tuiles))
             if partie.maitrise:
                 lay.addSpacing(12)
