@@ -235,6 +235,48 @@ class _Jauge(QWidget):
         p.end()
 
 
+class _GrilleSauvegardes(QWidget):
+    """Les cartes des sauvegardes, autant par rangée que la largeur le permet
+    (entre 300 et 460 px chacune, quatre au plus) : deux colonnes fixes en
+    faisaient des bandeaux de 980 px en plein écran (capture de Ludo,
+    2026-10-16)."""
+
+    LARGEUR_MIN, LARGEUR_MAX, ECART = 300, 460, 12
+
+    def __init__(self, cartes: list[QWidget], parent=None) -> None:
+        super().__init__(parent)
+        self._cartes = cartes
+        self._colonnes = 0
+        self._grille = QGridLayout(self)
+        self._grille.setContentsMargins(0, 0, 0, 0)
+        self._grille.setSpacing(self.ECART)
+        for carte in cartes:
+            carte.setMaximumWidth(self.LARGEUR_MAX)
+        self._placer(2)
+
+    @classmethod
+    def colonnes(cls, largeur: int, nombre: int) -> int:
+        voulu = (largeur + cls.ECART) // (cls.LARGEUR_MIN + cls.ECART)
+        return max(1, min(4, nombre, voulu))
+
+    def _placer(self, colonnes: int) -> None:
+        if colonnes == self._colonnes:
+            return
+        self._colonnes = colonnes
+        for carte in self._cartes:
+            self._grille.removeWidget(carte)
+        for i, carte in enumerate(self._cartes):
+            self._grille.addWidget(carte, i // colonnes, i % colonnes)
+        for c in range(self._grille.columnCount()):
+            self._grille.setColumnStretch(c, 1 if c < colonnes else 0)
+        # Ce qui reste à droite des cartes plafonnées reste vide, à droite.
+        self._grille.setColumnStretch(colonnes, 0)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._placer(self.colonnes(self.width(), len(self._cartes)))
+
+
 class _CarteSauvegarde(QFrame):
     """Une sauvegarde : son nom, son temps, et ce que le disque sait d'elle."""
 
@@ -251,14 +293,14 @@ class _CarteSauvegarde(QFrame):
                else tr("Emplacement {}").format(vue.numero) if vue.numero is not None
                else tr("Sauvegarde"))
         lbl_nom = QLabel(nom)
-        lbl_nom.setFont(cinzel(11, bold=True))
+        lbl_nom.setFont(cinzel(12, bold=True))
         lbl_nom.setStyleSheet("background: transparent;")
         haut.addWidget(lbl_nom)
         if recente:
             # Celle qu'on reprendra : c'est la question qu'on se pose en
             # ouvrant un jeu à quatre emplacements, et les dates seules
             # obligent à les comparer de tête.
-            haut.addWidget(_texte(tr("dernière jouée"), 11, current_theme().accent))
+            haut.addWidget(_texte(tr("dernière jouée"), 12, current_theme().accent))
         haut.addStretch(1)
         if vue.temps:
             haut.addWidget(_chiffre(_duree(vue.temps), 14, current_theme().accent))
@@ -286,8 +328,8 @@ class _CarteSauvegarde(QFrame):
         for libelle, valeur in lignes:
             if not valeur:
                 continue            # aucun zéro, aucune case vide
-            grille.addWidget(_texte(libelle, 12, _DISCRET), rang, 0)
-            v = _texte(valeur, 12, _SECONDAIRE)
+            grille.addWidget(_texte(libelle, 13, _DISCRET), rang, 0)
+            v = _texte(valeur, 13, _SECONDAIRE)
             v.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             grille.addWidget(v, rang, 1)
             rang += 1

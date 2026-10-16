@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
-from src.core import folio, folio_hp3, sauvegardes
+from src.core import folio, folio_hp2, folio_hp3, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
@@ -553,6 +553,9 @@ class InfoPanel(QWidget):
         if game.id not in folio.RESUMES or not self._manager.is_installed(game.id):
             return None
         system = self._manager.config.install_path / Path(game.executable).parent
+        if game.id == "hp2":
+            # HP2 numérote ses emplacements par dossier (`Slot1/Save0.usa`).
+            return folio_hp2.resume(game.sauvegardes, system, get_language())
         lire = folio_hp3.resume if game.id == "hp3" else folio.resume_hp1
         return lire(sauvegardes.fichiers(game.sauvegardes), system, get_language())
 

@@ -28,7 +28,6 @@ from PyQt6.QtWidgets import (
     QBoxLayout,
     QDialog,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -67,6 +66,7 @@ from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _Mois,
     _Jauge,
     _CarteSauvegarde,
+    _GrilleSauvegardes,
 )
 
 
@@ -143,7 +143,7 @@ class StatsDialog(QDialog):
         QDialog { background-color: #0d0d1a; color: #ffffff; }
         QLabel { color: #ffffff; background: transparent; }
         QLabel#titreSection {
-            font-size: 11px; font-weight: bold; color: #d6a72c;
+            font-size: 12px; font-weight: bold; color: #d6a72c;
             letter-spacing: 1px;
         }
         QFrame#carteSave {
@@ -444,18 +444,12 @@ class StatsDialog(QDialog):
                 # fois pour la section, pas une fois par carte.
                 couche.addWidget(_Paragraphe(
                     tr("Le temps par sauvegarde se compte à partir de votre "
-                       "prochaine partie."), taille=11))
-            grille = QGridLayout()
-            grille.setSpacing(12)
+                       "prochaine partie."), taille=13))
             temps_max = max((v.temps or 0 for v in vues), default=0)
             recente = (max(vues, key=lambda v: v.modifie).fichier
                        if len(vues) > 1 else None)
-            for i, vue in enumerate(vues):
-                grille.addWidget(_CarteSauvegarde(vue, temps_max, vue.fichier == recente),
-                                 i // 2, i % 2)
-            grille.setColumnStretch(0, 1)
-            grille.setColumnStretch(1, 1)
-            couche.addLayout(grille)
+            couche.addWidget(_GrilleSauvegardes(
+                [_CarteSauvegarde(vue, temps_max, vue.fichier == recente) for vue in vues]))
         sans = self._sans_sauvegarde.get(game_id, 0)
         if sans >= 60:
             # Sans cette ligne, la somme des cartes est inférieure au temps du
@@ -463,7 +457,7 @@ class StatsDialog(QDialog):
             # écriture y entrent — jamais celles d'avant le relevé.
             couche.addWidget(_Paragraphe(
                 tr("Dont {} jouées sans sauvegarder.").format(
-                    _duree(sans)), taille=11))
+                    _duree(sans)), taille=13))
         couche.addStretch(1)
         return fiche
 

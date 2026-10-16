@@ -1,4 +1,4 @@
-"""Le folio de HP3, HP4, HP5 et HP6, en PAGE, sur le modèle de celui de HP1.
+"""Le folio de HP2 à HP6, en PAGE, sur le modèle de celui de HP1.
 
 Maquettes du canevas « Folios HP3, HP5, HP6 » (2026-10-15), validées par Ludo
 (« pour le moment les maquettes vont bien »). Même rail des parties à gauche
@@ -18,17 +18,27 @@ from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainter
+from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QLabel,
     QVBoxLayout,
     QWidget,
 )
 
-from src.core import folio_hp3, folio_hp4, folio_hp5, folio_hp6, sauvegardes
+from src.core import (
+    folio,
+    folio_hp2,
+    folio_hp3,
+    folio_hp4,
+    folio_hp5,
+    folio_hp6,
+    folio_hp7,
+    sauvegardes,
+)
 from src.core.i18n import get_language, tr
 from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
 from src.ui.folio_page import (
@@ -48,7 +58,8 @@ _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
 
 def page_folio(game, install_path: Path, parent: QWidget | None = None, revenir=None) -> FolioPage:
     """La page du folio qui va avec le jeu (`folio.JEUX`)."""
-    classe = {"hp3": FolioPageHP3, "hp4": FolioPageHP4, "hp5": FolioPageHP5,
+    classe = {"hp2": FolioPageHP2, "hp3": FolioPageHP3, "hp4": FolioPageHP4, "hp5": FolioPageHP5,
+              "hp7a": FolioPageHP7, "hp7b": FolioPageHP7,
               "hp6": FolioPageHP6}.get(game.id, FolioPage)
     return classe(game, install_path, parent, revenir=revenir)
 
@@ -75,14 +86,24 @@ class _Jauge(QWidget):
         p.end()
 
 
-def _tuile(chiffre: str, libelle: str, part: float | None = None) -> QFrame:
-    """Le chiffre en or, son libellé, et sa jauge s'il a un total."""
+def _tuile(chiffre: str, libelle: str, part: float | None = None,
+           icone: QPixmap | None = None) -> QFrame:
+    """Le chiffre en or, son libellé, et sa jauge s'il a un total ; à droite,
+    l'icône du jeu s'il en a une (HP2 : dragées, étoiles, folio)."""
     tuile = QFrame()
     tuile.setObjectName("tuile")
     tuile.setMinimumWidth(140)
-    v = QVBoxLayout(tuile)
-    v.setContentsMargins(18, 14, 18, 14)
+    h = QHBoxLayout(tuile)
+    h.setContentsMargins(18, 14, 14, 14)
+    h.setSpacing(10)
+    v = QVBoxLayout()
     v.setSpacing(4)
+    h.addLayout(v, stretch=1)
+    if icone is not None:
+        image = QLabel()
+        image.setStyleSheet("background: transparent;")
+        image.setPixmap(icone)
+        h.addWidget(image, alignment=Qt.AlignmentFlag.AlignVCenter)
     nombre = texte(chiffre, 26, current_theme().accent_light)
     nombre.setFont(police(26, gras=True))
     v.addWidget(nombre)
@@ -266,6 +287,135 @@ class FolioPageHP3(FolioPage):
             self._fiche_texte.setText(tr("Elle se cache quelque part dans le château, ou chez "
                                          "un marchand. Le folio ne dit pas où, pour ne rien "
                                          "gâcher."))
+        self.carte_montree = numero
+
+
+# ── HP2 ──
+
+class FolioPageHP2(FolioPage):
+    """Les 101 cartes par catégorie (bronze, argent, or), les dragées, la Coupe
+    des quatre maisons de HP1 ; le niveau nommé dans la langue du jeu."""
+
+    _colonnes = 10
+    _case_min = 32
+
+    def _charger(self) -> None:
+        self.releves = folio_hp2.emplacements(self.game.sauvegardes)
+        self._cat = folio_hp2.catalogue(self._system, get_language())
+        self._plus = folio.le_plus_avance(self.releves)
+        self._blasons = {m: folio_hp2.image_menu(self._system, nom)
+                         for m, nom in folio_hp2.BLASONS.items()}
+
+    def _icone(self, cle: str, cote: int = 40) -> QPixmap | None:
+        tex = folio_hp2.image_menu(self._system, folio_hp2.ICONES[cle])
+        return (pixmap_texture(tex, cote, self.devicePixelRatioF(), rogner=True)
+                if tex is not None else None)
+
+    def _entree(self, releve) -> tuple[str, datetime | None, str]:
+        return (nom_emplacement(releve), releve.modifie,
+                folio_hp2.lieu(self._system, get_language(), releve.titre))
+
+    def _construire(self, releve) -> QWidget:
+        if releve is None or not releve.lu:
+            return super()._construire(releve)
+        corps = QWidget()
+        h = QHBoxLayout(corps)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0)
+        page = QWidget()
+        page.setStyleSheet("background: transparent;")
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(36, 30, 36, 28)
+        lay.setSpacing(0)
+        self._zone = zone_defilable(page)
+        self._zone.viewport().installEventFilter(self)
+        h.addWidget(self._zone, stretch=1)
+        self._cases = []
+
+        tuiles = [_tuile(f"{len(releve.cartes)} / {folio_hp2.CARTES}", tr("Cartes trouvées"),
+                         len(releve.cartes) / folio_hp2.CARTES, self._icone("cartes")),
+                  _tuile(str(releve.dragees), tr("Dragées surprises"), None,
+                         self._icone("dragees"))]
+        if releve.etoiles is not None:
+            tuiles.append(_tuile(str(releve.etoiles), tr("Étoiles des défis"), None,
+                                 self._icone("etoiles")))
+        lay.addLayout(_rangee(*tuiles))
+        lay.addSpacing(12)
+        lay.addWidget(self._coupe(releve))
+        lay.addSpacing(26)
+
+        if not self._cat:
+            lay.addWidget(texte(tr("Les noms et les images des cartes se lisent dans le jeu "
+                                   "installé."), 14, "#c9c7da", retour=True))
+            lay.addStretch()
+            return corps
+        lay.addWidget(texte(tr("Pointillés : pas encore trouvée"), 12, ENCRE_DOUCE))
+        lay.addSpacing(10)
+        self._groupe_cartes = QButtonGroup(corps)
+        self._groupe_cartes.setExclusive(True)
+        titres = {folio_hp2.BRONZE: tr("Cartes de bronze"),
+                  folio_hp2.ARGENT: tr("Cartes d'argent"),
+                  folio_hp2.OR: tr("Cartes d'or")}
+        for categorie in folio_hp2.CATEGORIES:
+            cartes = sorted((c for c in self._cat.values() if c.categorie == categorie),
+                            key=lambda c: c.numero)
+            trouvees = sum(1 for c in cartes if c.numero in releve.cartes)
+            entete = QHBoxLayout()
+            entete.setSpacing(8)
+            pochette = self._icone(categorie, 26)
+            if pochette is not None:
+                image = QLabel()
+                image.setStyleSheet("background: transparent;")
+                image.setPixmap(pochette)
+                entete.addWidget(image)
+            entete.addWidget(surtitre(titres[categorie]))
+            entete.addStretch()
+            entete.addWidget(texte(f"{trouvees} / {len(cartes)}", 12, ENCRE_DOUCE))
+            lay.addLayout(entete)
+            lay.addSpacing(8)
+            grille = QGridLayout()
+            grille.setSpacing(_ECART_CASES)
+            for k, carte in enumerate(cartes):
+                trouvee = carte.numero in releve.cartes
+                vignette = folio_hp2.image_carte(self._system, carte) if trouvee else None
+                case = _CarteSorcier(carte.numero, carte, trouvee, vignette)
+                case.toggled.connect(lambda oui, n=carte.numero: oui and self._montrer_carte(n))
+                self._groupe_cartes.addButton(case)
+                grille.addWidget(case, k // self._colonnes, k % self._colonnes)
+                self._cases.append(case)
+            grille.setColumnStretch(self._colonnes, 1)
+            lay.addLayout(grille)
+            lay.addSpacing(20)
+        lay.addStretch()
+        h.addWidget(self._colonne_fiche())
+        par_numero = {c.numero: c for c in self._cases}
+        premiere = min((n for n in releve.cartes if n in par_numero), default=min(par_numero))
+        par_numero[premiere].setChecked(True)
+        self._ajuster_cases()
+        return corps
+
+    def _montrer_carte(self, numero: int) -> None:
+        carte = self._cat.get(numero)
+        trouvee = self.releve is not None and numero in self.releve.cartes
+        # Une carte pas trouvée ne montre pas son image : ce serait la dévoiler.
+        image = folio_hp2.image_carte(self._system, carte) if trouvee and carte else None
+        self._fiche_image.setVisible(image is not None)
+        if image is not None:
+            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE)
+            self._fiche_image.setFixedHeight(cote)
+            self._fiche_image.setPixmap(pixmap_texture(image, cote, self.devicePixelRatioF()))
+        if trouvee and carte is not None:
+            self._fiche_nom.setText(carte.nom)
+            self._fiche_dates.setText(carte.dates)
+            self._fiche_texte.setText(carte.texte)
+        else:
+            self._fiche_nom.setText(tr("Pas encore trouvée"))
+            self._fiche_dates.setText("")
+            en_vente = self.releve is not None and numero in self.releve.marchands
+            self._fiche_texte.setText(
+                tr("Un marchand la propose : elle s'achète avec des dragées.") if en_vente
+                else tr("Elle se cache quelque part dans le château, ou chez un marchand. "
+                        "Le folio ne dit pas où, pour ne rien gâcher."))
         self.carte_montree = numero
 
 
@@ -518,3 +668,63 @@ class FolioPageHP6(FolioPage):
 
 _PUCE = """QLabel { color: #f2f2f4; background: rgba(214, 167, 44, 0.08);
     border: 1px solid rgba(214, 167, 44, 0.45); border-radius: 12px; padding: 5px 14px; }"""
+
+
+# ── HP7 et HP8 ──
+
+class FolioPageHP7(FolioPage):
+    """`auto.sav` des deux Reliques de la Mort : missions annexes, niveau et,
+    pour la partie 1, les combats."""
+
+    def _charger(self) -> None:
+        self.releves = [p for p in (folio_hp7.releve(c) for c in
+                                    sauvegardes.fichiers(self.game.sauvegardes).values())
+                        if p is not None]
+
+    def _entree(self, partie) -> tuple[str, datetime | None, str]:
+        return tr("Partie"), partie.ecrite, ""
+
+    def _depart(self):
+        return max(self.releves, key=lambda p: p.ecrite or datetime.min, default=None)
+
+    def _construire(self, partie) -> QWidget:
+        if partie is None or not partie.lu:
+            # Sans table de noms : le message « rien à lire encore » de HP1.
+            return super()._construire(partie)
+
+        def contenu(lay: QVBoxLayout) -> None:
+            tuiles = []
+            if partie.missions:
+                total = len(partie.missions)
+                tuiles.append(_tuile(f"{partie.missions_terminees} / {total}",
+                                     tr("Missions annexes terminées"),
+                                     partie.missions_terminees / total))
+            niveau = partie.entier("PlayerLevel")
+            if niveau:
+                tuiles.append(_tuile(str(niveau), tr("Niveau")))
+            if tuiles:
+                lay.addLayout(_rangee(*tuiles))
+            combats = [(libelle, partie.entier(nom)) for nom, libelle in folio_hp7.COMBATS
+                       if partie.entier(nom) is not None]
+            if combats:
+                lay.addSpacing(12)
+                lay.addWidget(self._combats(combats))
+
+        return _page(contenu)[0]
+
+    @staticmethod
+    def _combats(combats: list[tuple[str, int | None]]) -> QFrame:
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        g = QGridLayout(cadre)
+        g.setContentsMargins(20, 14, 20, 16)
+        g.setHorizontalSpacing(16)
+        g.setVerticalSpacing(8)
+        g.addWidget(surtitre(tr("Combats")), 0, 0, 1, 2)
+        or_clair = current_theme().accent_light
+        for rang, (libelle, n) in enumerate(combats, 1):
+            g.addWidget(texte(tr(libelle), 13, ENCRE if n else ENCRE_DOUCE, retour=True), rang, 0)
+            g.addWidget(texte(str(n or 0), 13, or_clair if n else ENCRE_DOUCE), rang, 1,
+                        Qt.AlignmentFlag.AlignRight)
+        g.setColumnStretch(0, 1)
+        return cadre

@@ -17,7 +17,7 @@ from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import folio, folio_hp3
+from src.core import folio, folio_hp2, folio_hp3
 from src.core.formatting import format_duree_compacte, format_relative_date
 from src.core.i18n import get_language, tr
 from src.ui.fonts import body_font
@@ -222,6 +222,10 @@ def cartes_eventail(game_id: str, system: Path, releve, dpr: float) -> list[QPix
             return []
         textures = [folio.image_carte_hp1(paquet, n, grande=False)
                     for n in sorted(releve.cartes)[:len(_EVENTAIL)]]
+    elif game_id == "hp2":
+        cat2 = folio_hp2.catalogue(system, get_language())
+        textures = [folio_hp2.image_carte(system, cat2[n])
+                    for n in sorted(releve.cartes)[:len(_EVENTAIL)] if n in cat2]
     elif game_id == "hp3":
         cat = folio_hp3.catalogue(system, get_language())
         trouvees = [c for c in cat.cartes if c.classe in releve.cartes][:len(_EVENTAIL)]

@@ -366,6 +366,27 @@ class TestPage:
         retour.click()
         assert revenu == [1]
 
+    @pytest.mark.parametrize(("dispo", "colonnes"), [
+        (500, 5), (1100, 5), (1250, 7), (1800, 9), (4000, 13)])
+    def test_les_colonnes_suivent_la_largeur(self, dispo, colonnes):
+        """Grand écran : la grille prend la place (capture de Ludo, un tiers
+        vide à droite), en rangées équilibrées."""
+        from src.ui.folio_page import colonnes_hp1
+        assert colonnes_hp1(dispo) == colonnes
+
+    def test_la_grille_se_replace_en_grand(self, qtbot, hp1):
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"X", datetime(2026, 3, 8))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        page.resize(2600, 1000)
+        page.show()
+        qtbot.waitUntil(lambda: page._colonnes_hp1 > 5)
+        grille = page._grille_hp1
+        lignes = {grille.getItemPosition(grille.indexOf(c))[0] for c in page._cases}
+        assert len(lignes) < 5 and len(page._cases) == 25
+
     def test_rien_n_est_ecrit_dans_les_sauvegardes(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage
         jeu, install, saves = hp1

@@ -12,7 +12,6 @@ pytest.importorskip("pytestqt")
 
 from PyQt6.QtCore import Qt  # noqa: E402
 
-from src.core import folio  # noqa: E402
 from src.core.i18n import set_language  # noqa: E402
 from tests.test_folio import BLOC, MENU, _save  # noqa: E402
 
@@ -95,13 +94,12 @@ class TestDeuxEtats:
         assert _visibles(panel) == (True, False, False)
 
     def test_un_jeu_dont_on_ne_lit_rien_garde_sa_description(self, fiche):
-        """HP2 à HP8 tant que leurs sauvegardes ne se lisent pas."""
+        """Un jeu sans sauvegarde lisible (ici HP2, aucune partie écrite)."""
         panel, montrer, hp1, hp2, saves, installes = fiche
         installes.add("hp2")
         _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
         montrer(hp1)
         montrer(hp2)
-        assert "hp2" not in folio.JEUX
         assert _visibles(panel) == (True, False, False)
 
     def test_la_premiere_sauvegarde_bascule_au_retour_de_partie(self, fiche):

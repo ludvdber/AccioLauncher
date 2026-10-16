@@ -1,8 +1,8 @@
 """Le folio : ce qu'une sauvegarde dit de la partie (cartes, dragées, points des maisons).
 
 Maquette « Folio HP1, quatre maisons » validée par Ludo le 2026-10-14. Premier
-jeu lu : HP1. Les autres arriveront jeu par jeu, chacun avec son lecteur
-(`LECTEURS`), quand leur format aura été relevé.
+jeu lu : HP1 ; les huit le sont depuis le 2026-10-16, chacun avec son module
+(`folio_hp2` … `folio_hp7`, ce dernier pour les deux Reliques de la Mort).
 
 **HP1** (relevé le 2026-10-14 sur les sauvegardes de Ludo, en LECTURE seule) :
 `Documents/Harry Potter/Save/SaveN.usa` est un paquet Unreal. L'acteur Harry
@@ -64,8 +64,8 @@ MAISONS = (GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE)
 # ont leur PAGE (`ui/folio_jeux.page_folio`). Ceux de `RESUMES` montrent en
 # plus la partie sur leur fiche, à la place de la description (cartes : HP1,
 # HP3) ; HP4, HP5 et HP6 gardent la leur (pas d'éventail de cartes à montrer).
-JEUX = ("hp1", "hp3", "hp4", "hp5", "hp6")
-RESUMES = ("hp1", "hp3")
+JEUX = ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b")
+RESUMES = ("hp1", "hp2", "hp3")
 
 # Le folio du jeu, emplacement par emplacement : `WizardCards[i]` de la
 # sauvegarde est la carte i + 1 de cette liste. Relevé le 2026-10-14 dans le
@@ -383,6 +383,19 @@ def paquet_menu(system: Path) -> Path | None:
         return next((p for p in system.iterdir() if p.name.lower() == "hpmenu.u"), None)
     except OSError:
         return None
+
+
+# Les blasons de la Coupe, dans `HPMenu.u` (128 px, relevés le 2026-10-16).
+BLASONS_HP1 = {GRYFFONDOR: "FEGrifLogoMed", SERPENTARD: "FESlytLogoMed",
+               SERDAIGLE: "FERaveLogoMed", POUFSOUFFLE: "FEHuffLogoMed"}
+
+
+def image_menu_hp1(paquet: Path | None, nom: str) -> textures_ue1.TexturePaletee | None:
+    """Une image du menu du jeu (`BLASONS_HP1`), ou None sans le jeu."""
+    if paquet is None:
+        return None
+    from src.core import textures_ue1
+    return textures_ue1.texture(paquet, nom)
 
 
 def image_carte_hp1(paquet: Path | None, numero: int,

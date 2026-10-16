@@ -128,10 +128,11 @@ class Paquet:
         # classe, nom, taille, position, drapeaux
         self._exports: list[tuple[int, str, int, int, int]] = []
         self._par_nom: dict[str, int] = {}
+        self._parents: list[int] = []   # la classe parente (super) de chaque export
         lec.p = pos_exports
         for _ in range(nb_exports):
             classe = lec.index()
-            lec.index()
+            self._parents.append(lec.index())
             lec.i32()
             nom = self.noms[lec.index()]
             drapeaux = lec.i32() & 0xFFFFFFFF
@@ -276,6 +277,12 @@ class Paquet:
                 for genre, nom, taille, position, _ in self._exports
                 # Unreal ignore la casse des noms : `wc_ThaddeusThurkell` est une carte.
                 if genre == 0 and nom.lower().startswith(prefixe.lower()) and taille > 0}
+
+    def parent(self, nom: str) -> str:
+        """La classe dont hérite l'export `nom` (`WCStarkey` → `BronzeCards`) ;
+        vide s'il n'y en a pas."""
+        rang = self._par_nom.get(nom)
+        return self._classe(self._parents[rang]) if rang is not None else ""
 
     def indice_nom(self, nom: str) -> int | None:
         try:

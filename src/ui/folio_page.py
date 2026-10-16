@@ -48,11 +48,15 @@ _MARGE_LIGNE = 12     # marges latérales d'une ligne de partie
 _LARGEUR_FICHE = (236, 420)   # suit la fenêtre : 30 % de ce qui reste après le rail
 _MARGE_FICHE = 24
 _IMAGE_FICHE = 220        # la carte du jeu fait 256 : jamais agrandie
-_COLONNES = 5             # 25 cartes : cinq rangées de cinq
+_COLONNES = 5             # 25 cartes : cinq rangées de cinq, au moins
 _ECART_CASES = 8
 # Plafonds relevés le 2026-10-14 (108 et 290 px) : en plein écran, la grille
 # restait minuscule à gauche d'un grand vide (capture de Ludo, 2552 px).
 _CASE_MIN, _CASE_MAX = 56, 160
+# HP1 seul : au-delà de cinq colonnes, la grille en prend autant que la place
+# le permet (capture de Ludo, 2026-10-16 : un tiers vide à droite), et des
+# cases jusqu'à 200 px (la grande texture fait 256).
+_CASE_MAX_HP1 = 200
 
 # Les couleurs des maisons (maquette) : le haut du sablier, puis le bas.
 _COULEURS = {
@@ -125,12 +129,35 @@ class _Sablier(QWidget):
         p.end()
 
 
-def pixmap_texture(tex, cote: int, dpr: float) -> QPixmap:
-    """Une texture du jeu (256 couleurs) en pixmap de `cote` px logiques."""
+def cadre_visible(tex) -> tuple[int, int, int, int] | None:
+    """(x, y, largeur, hauteur) de ce qui n'est pas transparent dans une
+    texture masquée ; None si rien à rogner. Les icônes du menu de HP2 n'occupent
+    que le centre de leur texture de 128 px : sans ce cadre, un blason
+    s'affichait à 40 % de sa taille."""
+    if not tex.masquee:
+        return None
+    lignes = [y for y in range(tex.hauteur)
+              if tex.indices[y * tex.largeur:(y + 1) * tex.largeur].strip(b"\x00")]
+    if not lignes:
+        return None
+    gauche, droite = tex.largeur, 0
+    for y in lignes:
+        ligne = tex.indices[y * tex.largeur:(y + 1) * tex.largeur]
+        gauche = min(gauche, len(ligne) - len(ligne.lstrip(b"\x00")))
+        droite = max(droite, len(ligne.rstrip(b"\x00")))
+    return gauche, lignes[0], droite - gauche, lignes[-1] - lignes[0] + 1
+
+
+def pixmap_texture(tex, cote: int, dpr: float, rogner: bool = False) -> QPixmap:
+    """Une texture du jeu (256 couleurs) en pixmap de `cote` px logiques ;
+    `rogner` : seulement sa partie visible (icônes du menu)."""
     image = QImage(tex.indices, tex.largeur, tex.hauteur, tex.largeur,
                    QImage.Format.Format_Indexed8)
     image.setColorTable([qRgba(r, v, b, 0 if tex.masquee and i == 0 else 255)
                          for i, (r, v, b, _a) in enumerate(tex.palette)])
+    cadre = cadre_visible(tex) if rogner else None
+    if cadre is not None:
+        image = image.copy(*cadre)
     physique = max(1, round(cote * dpr))
     pix = QPixmap.fromImage(
         image.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied).scaled(
@@ -238,6 +265,16 @@ class _LigneEmplacement(QPushButton):
         self.setMinimumHeight(v.sizeHint().height())
 
 
+def colonnes_hp1(dispo: int) -> int:
+    """Le nombre de colonnes des 25 cartes de HP1 pour `dispo` px : le moins
+    possible sans dépasser 200 px par case, cinq au minimum, et des rangées
+    équilibrées (7 colonnes : 7-7-7-4, plutôt que 8 : 8-8-8-1)."""
+    n = folio.CARTES_HP1
+    voulu = max(_COLONNES, -(-(dispo + _ECART_CASES) // (_CASE_MAX_HP1 + _ECART_CASES)))
+    rangees = -(-n // min(voulu, n))
+    return max(_COLONNES, -(-n // rangees))
+
+
 class FolioPage(QDialog):
     """Ce que les sauvegardes de HP1 disent de la partie.
 
@@ -246,6 +283,7 @@ class FolioPage(QDialog):
 
     _colonnes = _COLONNES
     _case_min = _CASE_MIN
+    _case_max = _CASE_MAX
 
     def __init__(self, game, install_path: Path, parent: QWidget | None = None,
                  revenir=None) -> None:
@@ -258,8 +296,11 @@ class FolioPage(QDialog):
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
         self._system = install_path / Path(game.executable).parent
         self._cases: list[_CarteSorcier] = []
+        self._grille_hp1: QGridLayout | None = None
+        self._colonnes_hp1 = 0
         self._plus = None
         self.releves: list = []
+        self._blasons: dict = {}      # maison → texture du jeu (`_charger`)
         self._charger()
         self.releve = None
         self._lignes: dict[int, _LigneEmplacement] = {}
@@ -286,6 +327,8 @@ class FolioPage(QDialog):
             folio.fichier_textes(self._system, get_language()))
         self._paquet = folio.paquet_menu(self._system) if self._system.is_dir() else None
         self._plus = folio.le_plus_avance(self.releves)
+        self._blasons = {m: folio.image_menu_hp1(self._paquet, nom)
+                         for m, nom in folio.BLASONS_HP1.items()}
 
     def _depart(self):
         """La partie montrée à l'ouverture."""
@@ -334,7 +377,7 @@ class FolioPage(QDialog):
             self._lignes[r.emplacement] = ligne
             lay.addWidget(ligne)
         lay.addStretch()
-        lay.addWidget(texte(tr("Lue sans être modifiée. Les autres années arriveront jeu par jeu."),
+        lay.addWidget(texte(tr("Lue sans être modifiée."),
                             12, ENCRE_DOUCE, retour=True))
         return rail
 
@@ -374,6 +417,7 @@ class FolioPage(QDialog):
         self._zone.viewport().installEventFilter(self)
         h.addWidget(self._zone, stretch=1)
         self._cases = []
+        self._grille_hp1 = None
 
         if releve is None or not releve.lu:
             message = (tr("Aucune sauvegarde trouvée pour ce jeu.") if releve is None else
@@ -409,6 +453,7 @@ class FolioPage(QDialog):
         grille = QGridLayout()
         grille.setHorizontalSpacing(_ECART_CASES)
         grille.setVerticalSpacing(_ECART_CASES)
+        self._grille_hp1 = grille
         self._groupe_cartes = QButtonGroup(corps)
         self._groupe_cartes.setExclusive(True)
         for numero in range(1, folio.CARTES_HP1 + 1):
@@ -417,9 +462,8 @@ class FolioPage(QDialog):
             case = _CarteSorcier(numero, self.cartes.get(numero), trouvee, vignette)
             case.toggled.connect(lambda oui, n=numero: oui and self._montrer_carte(n))
             self._groupe_cartes.addButton(case)
-            grille.addWidget(case, (numero - 1) // _COLONNES, (numero - 1) % _COLONNES)
             self._cases.append(case)
-        grille.setColumnStretch(_COLONNES, 1)
+        self._colonnes_hp1 = 0
         lay.addLayout(grille)
         lay.addStretch()
         h.addWidget(self._colonne_fiche())
@@ -479,11 +523,27 @@ class FolioPage(QDialog):
             return
         marges = self._zone.widget().layout().contentsMargins()
         dispo = self._zone.viewport().width() - marges.left() - marges.right()
-        cote = (dispo - (self._colonnes - 1) * _ECART_CASES) // self._colonnes
-        cote = max(self._case_min, min(_CASE_MAX, cote))
+        colonnes, plafond = self._colonnes, self._case_max
+        if self._grille_hp1 is not None:
+            colonnes, plafond = colonnes_hp1(dispo), _CASE_MAX_HP1
+            self._placer_hp1(colonnes)
+        cote = (dispo - (colonnes - 1) * _ECART_CASES) // colonnes
+        cote = max(self._case_min, min(plafond, cote))
         for case in self._cases:
             if case.width() != cote:
                 case.setFixedSize(cote, cote)
+
+    def _placer_hp1(self, colonnes: int) -> None:
+        if colonnes == self._colonnes_hp1 or self._grille_hp1 is None:
+            return
+        self._colonnes_hp1 = colonnes
+        grille = self._grille_hp1
+        for case in self._cases:
+            grille.removeWidget(case)
+        for k, case in enumerate(self._cases):
+            grille.addWidget(case, k // colonnes, k % colonnes)
+        for c in range(grille.columnCount()):
+            grille.setColumnStretch(c, 1 if c == colonnes else 0)
 
     def _tuile(self, chiffre: str, libelle: str) -> QFrame:
         tuile = QFrame()
@@ -519,6 +579,13 @@ class FolioPage(QDialog):
             points = releve.points.get(maison, 0)
             col = QVBoxLayout()
             col.setSpacing(6)
+            blason = self._blasons.get(maison)
+            if blason is not None:
+                # Le blason du jeu au-dessus du sable (HPMenu.u, HP2_Menu.utx).
+                image = QLabel()
+                image.setStyleSheet("background: transparent;")
+                image.setPixmap(pixmap_texture(blason, 44, self.devicePixelRatioF(), rogner=True))
+                col.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
             chiffre = texte(str(points), 15, ENCRE)
             chiffre.setFont(police(15, gras=True))
             col.addWidget(chiffre, alignment=Qt.AlignmentFlag.AlignHCenter)

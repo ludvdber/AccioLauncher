@@ -946,7 +946,9 @@ def _actions_fichiers(view: "GameDetailView", game: GameData):
     # Même désinstallé : les copies vivent hors du dossier du jeu, et c'est
     # peut-être justement pour les récupérer qu'on revient.
     if game.sauvegardes is not None and copies_sauvegardes.versions(game.id):
-        actions.append((tr("Revenir à une version précédente des sauvegardes"),
+        # Court : le rail fait 218 px, l'ancien libellé y était coupé
+        # (capture de Ludo, 2026-10-16).
+        actions.append((tr("Restaurer une sauvegarde"),
                         lambda: _ouvrir_copies(view, game)))
     return actions
 

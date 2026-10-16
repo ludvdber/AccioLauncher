@@ -554,3 +554,25 @@ class TestPhraseDEntete:
         assert "commencée" not in textes
         assert "Vous êtes en" not in textes
         assert "vous attend" not in textes
+
+
+class TestGrilleSauvegardes:
+    """Plein écran : quatre cartes côte à côte, plafonnées, au lieu de deux
+    bandeaux de 980 px (capture de Ludo, 2026-10-16)."""
+
+    @pytest.mark.parametrize(("largeur", "nombre", "colonnes"), [
+        (500, 4, 1), (700, 4, 2), (1000, 4, 3), (1960, 4, 4), (1960, 3, 3), (1960, 9, 4)])
+    def test_les_colonnes_suivent_la_largeur(self, largeur, nombre, colonnes):
+        from src.ui.stats_widgets import _GrilleSauvegardes
+        assert _GrilleSauvegardes.colonnes(largeur, nombre) == colonnes
+
+    def test_une_carte_ne_s_etire_plus(self, qtbot):
+        from PyQt6.QtWidgets import QFrame
+        from src.ui.stats_widgets import _GrilleSauvegardes
+        cartes = [QFrame() for _ in range(3)]
+        grille = _GrilleSauvegardes(cartes)
+        qtbot.addWidget(grille)
+        grille.resize(1960, 200)
+        grille.show()
+        qtbot.waitUntil(lambda: grille._colonnes == 3)
+        assert all(c.width() <= _GrilleSauvegardes.LARGEUR_MAX for c in cartes)
