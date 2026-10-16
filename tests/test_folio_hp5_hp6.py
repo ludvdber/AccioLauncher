@@ -94,7 +94,8 @@ def _hphbp0(ecussons: int = 7, jauge: int = 372, quand=datetime(2026, 10, 1, 18,
         ("CurrentChapterId", [(0x6F4, 2)]),
         ("MissionId", [(h("SpellUnlock_Stupefy"), 5), (h("SpellUnlock_Lumos"), 5),
                        (h("SpellUnlock_Accio"), 0), (h("Chapter_BurrowIntro"), 15)]),
-        ("Badges", [(h("COM_BEGINNERSLUCK"), 1), (h("COM_PACIFIST"), 0)]),
+        ("Badges", [(h("COM_BEGINNERSLUCK"), 1), (h("COM_PACIFIST"), 0),
+                    (h("NOT_ACQUIRED"), 0)]),
     ]
     d = bytearray(0x100)
     d[0:4] = b"20CM"
@@ -130,7 +131,8 @@ class TestHP6:
         assert folio_hp6.palier(99999) == (25, 1.0)
 
     def test_chapitre_sorts_et_badges(self):
-        """Un sort à 0 n'est pas appris ; ordre de `SORTS`, pas du fichier."""
+        """Un sort à 0 n'est pas appris ; ordre de `SORTS`, pas du fichier.
+        `NOT_ACQUIRED` n'est pas un badge : 30 à l'écran du jeu, pas 31."""
         partie = folio_hp6.lire(_hphbp0())
         assert partie.chapitre == 2
         assert partie.sorts == ("Stupefy", "Lumos")

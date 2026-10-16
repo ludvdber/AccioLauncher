@@ -254,6 +254,9 @@ def lire(contenu: bytes) -> Partie | None:
     missions = sections.get(hachage("MissionId"), {})
     chapitre = sections.get(hachage("CurrentChapterId"), {})
     badges = sections.get(hachage("Badges"), {})
+    # 31 clés pour 30 badges : `NOT_ACQUIRED` est un témoin, absent de l'écran
+    # « Badges » du jeu (6 séries de 5, VU le 2026-10-16).
+    badges.pop(hachage("NOT_ACQUIRED"), None)
     sorts = tuple(s for s in SORTS if missions.get(hachage(f"SpellUnlock_{s}")))
     return Partie(
         _date(contenu),
