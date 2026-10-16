@@ -66,33 +66,10 @@ python_version = "3.12"
 # mêmes branches `sys.platform`, et la CI pourrait rougir selon sa machine.
 platform = "win32"
 files = ["src/core"]
+# TOUT `src/core` est strict depuis le 2026-10-16 : la liste d'exception des
+# 13 modules d'avant mypy est vide et a disparu. Ne pas la recréer.
 strict = true
 
-# Modules d'avant mypy, typés en mode NORMAL seulement (aucune erreur), pas
-# encore en strict. À resserrer au fil des passages : retirer un module de
-# cette liste dès qu'il passe `--strict`. N'Y AJOUTER AUCUN MODULE NEUF.
-[[tool.mypy.overrides]]
-module = [
-    "src.core.catalogue_blocs",
-    "src.core.compat",
-    "src.core.diagnostic",
-    "src.core.discord_presence",
-    "src.core.game_data",
-    "src.core.game_language",
-    "src.core.game_manager",
-    "src.core.game_registry",
-    "src.core.reglages_correctif",
-    "src.core.sauvegardes",
-    "src.core.stats",
-    "src.core.trailers",
-    "src.core.updater",
-]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disallow_untyped_calls = false
-disallow_any_generics = false
-warn_return_any = false
-no_implicit_reexport = false
 
 [tool.ruff.lint.per-file-ignores]
 # Les tests widget importent APRÈS `pytest.importorskip("pytestqt")` : sans ça

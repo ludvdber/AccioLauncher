@@ -24,8 +24,13 @@ import re
 import shutil
 import sys
 import time
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+# `shutil.which` ou son remplaçant de test : nom → chemin, ou None.
+Which = Callable[[str], str | None]
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +84,7 @@ def dossiers_programmes() -> list[Path]:
     return [Path.home() / ".local" / "bin", Path("/usr/local/bin"), Path("/usr/bin")]
 
 
-def _trouver(nom: str, which=shutil.which, dossiers: list[Path] | None = None) -> str:
+def _trouver(nom: str, which: Which = shutil.which, dossiers: list[Path] | None = None) -> str:
     """Chemin ABSOLU d'un programme, ou chaîne vide — jamais le nom seul
     (règle 1 de CLAUDE.md)."""
     trouve = which(nom)
@@ -110,7 +115,7 @@ def dossiers_proton() -> list[Path]:
     ]
 
 
-def _cle_version(nom: str) -> list:
+def _cle_version(nom: str) -> list[int | str]:
     """« GE-Proton10-15 » après « GE-Proton9-27 » : ordre NUMÉRIQUE. Pure."""
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", nom)]
 
@@ -138,7 +143,8 @@ def proton_installe(dossiers: list[Path] | None = None) -> str:
     return ""
 
 
-def detecter(env=None, which=shutil.which, programmes: list[Path] | None = None,
+def detecter(env: Mapping[str, str] | None = None, which: Which = shutil.which,
+             programmes: list[Path] | None = None,
              protons: list[Path] | None = None) -> Lanceur | None:
     """umu-run d'abord, wine ensuite ; None si aucun des deux n'est là.
 
@@ -301,7 +307,8 @@ def _nom_unix() -> str:
     """Le nom que Wine donne au profil : celui de l'utilisateur Unix."""
     try:
         import pwd
-        return pwd.getpwuid(os.getuid()).pw_name  # type: ignore[attr-defined]  # Unix seul
+        nom: str = pwd.getpwuid(os.getuid()).pw_name  # type: ignore[attr-defined]  # Unix seul
+        return nom
     except (ImportError, KeyError, AttributeError):
         return os.environ.get("USER") or "user"
 
@@ -419,7 +426,7 @@ def _chaine_entre_guillemets(texte: str, debut: int) -> tuple[str, int] | None:
     return None
 
 
-def _valeur(brute: str):
+def _valeur(brute: str) -> str | int | None:
     """Valeur d'une ligne de `.reg` de Wine : chaîne, DWORD, ou None (ignorée)."""
     if brute.startswith('"'):
         lu = _chaine_entre_guillemets(brute, 0)
@@ -434,7 +441,7 @@ def _valeur(brute: str):
     return None      # hex(…), listes : rien dont le launcher ait besoin
 
 
-def lire_cle(texte: str, cle: str) -> dict:
+def lire_cle(texte: str, cle: str) -> dict[str, Any]:
     """Valeurs nommées d'une clé dans le TEXTE d'un `system.reg` / `user.reg`.
 
     Pure. `cle` est relative à la racine du fichier (« Software\\…  »), comparée
@@ -442,7 +449,7 @@ def lire_cle(texte: str, cle: str) -> dict:
     `{}` : ce n'est pas une erreur, c'est « rien à comparer ».
     """
     cible = cle.replace("/", "\\").strip("\\").lower()
-    trouve: dict = {}
+    trouve: dict[str, Any] = {}
     dedans = False
     for ligne in texte.splitlines():
         if ligne.startswith("["):
@@ -499,7 +506,8 @@ def vue_effective(pfx: Path, ruche: str, vue: int) -> int:
     return 64
 
 
-def lire_valeurs(pfx: Path, ruche: str, cle: str, noms, vue: int = 32) -> dict:
+def lire_valeurs(pfx: Path, ruche: str, cle: str, noms: Iterable[str],
+                 vue: int = 32) -> dict[str, Any]:
     """Valeurs nommées en place dans le registre du préfixe. Aucun processus lancé.
 
     Les noms de valeur ne tiennent pas compte de la casse (Windows non plus) ;
@@ -571,7 +579,7 @@ def verbes_installes(pfx: Path | None = None) -> set[str]:
 
 # ─── Surcharges de DLL ───
 
-def composer_surcharges(existant: str, noms) -> str:
+def composer_surcharges(existant: str, noms: Iterable[str]) -> str:
     """`WINEDLLOVERRIDES` complété par nos DLL, en `n,b` (native d'abord).
 
     Pure. Une DLL que l'utilisateur surcharge déjà n'est pas touchée : son
@@ -599,7 +607,7 @@ def _dans_le_dossier(chemin: str, dossier: str) -> bool:
     return chemin.rstrip("/") == racine or chemin.startswith(racine + "/")
 
 
-def environnement_hote(base=None, gele: bool | None = None,
+def environnement_hote(base: Mapping[str, str] | None = None, gele: bool | None = None,
                        embarque: str | None = None) -> dict[str, str]:
     """L'environnement d'origine, débarrassé de ce que PyInstaller y a mis.
 
@@ -645,7 +653,8 @@ def assainir_environnement() -> None:
             os.environ.pop(cle, None)
 
 
-def environnement(trouve: Lanceur, pfx: Path, surcharges=(), base=None, *,
+def environnement(trouve: Lanceur, pfx: Path, surcharges: Iterable[str] = (),
+                  base: Mapping[str, str] | None = None, *,
                   mise_a_jour_runtime: bool = True, ips_max: int = 0) -> dict[str, str]:
     """Environnement d'un processus lancé dans le préfixe.
 
@@ -688,7 +697,8 @@ def commande_creation(trouve: Lanceur) -> list[str]:
     return [trouve.executable, "wineboot", "--init"]
 
 
-def commande_winetricks(trouve: Lanceur, verbes) -> list[str] | None:
+def commande_winetricks(trouve: Lanceur, verbes: Iterable[str]) -> list[str] | None:
+
     """Installe des verbes winetricks ; None si winetricks est introuvable.
 
     `umu-run winetricks` ajoute lui-même `-q` (non interactif) ; le winetricks

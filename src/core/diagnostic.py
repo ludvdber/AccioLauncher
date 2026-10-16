@@ -26,9 +26,16 @@ import platform
 import re
 import shutil
 import sys
+from collections.abc import Iterable, Mapping
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from src.core.config import APP_VERSION, get_documents_dir
+
+if TYPE_CHECKING:     # le gestionnaire importe ce module : pas d'import à l'exécution
+    from src.core.compat import Lanceur
+    from src.core.game_manager import GameManager
+    from src.core.stats import Tentative
 
 log = logging.getLogger(__name__)
 
@@ -115,14 +122,14 @@ def systeme() -> str:
     return f"{nom} ({platform.machine()})"
 
 
-def distribution(os_release: dict) -> str:
+def distribution(os_release: Mapping[str, str]) -> str:
     """« Bazzite 42 (FROM Fedora Kinoite) » — le nom que la personne connaît."""
     nom = os_release.get("PRETTY_NAME") or " ".join(
         x for x in (os_release.get("NAME", ""), os_release.get("VERSION_ID", "")) if x)
     return " ".join(nom.split()) or "Linux"
 
 
-def session_graphique(env) -> str:
+def session_graphique(env: Mapping[str, str]) -> str:
     """« KDE · Wayland », « Gamescope » (mode Jeu de Bazzite / Steam Deck)."""
     if env.get("GAMESCOPE_WAYLAND_DISPLAY") or "gamescope" in env.get(
             "XDG_CURRENT_DESKTOP", "").lower():
@@ -296,7 +303,7 @@ def puce_intel(cartes: list[str] | None = None) -> bool:
     return any("intel" in ligne.lower() for ligne in lignes)
 
 
-def carte_graphique(v: dict) -> str:
+def carte_graphique(v: Mapping[str, str]) -> str:
     """Met en forme une entrée du registre (pure, testable hors Windows)."""
     fournisseur = f"{v.get('ProviderName', '')} {v.get('DriverDesc', '')}"
     version = version_pilote_publique(fournisseur, str(v.get("DriverVersion", "?")),
@@ -324,7 +331,7 @@ _PCI_IDS = (Path("/usr/share/hwdata/pci.ids"), Path("/usr/share/misc/pci.ids"),
 
 
 def cartes_graphiques_linux(drm: Path = Path("/sys/class/drm"),
-                            bases=_PCI_IDS,
+                            bases: Iterable[Path] = _PCI_IDS,
                             nvidia: Path = Path("/proc/driver/nvidia/version")) -> list[str]:
     """Une ligne par carte vue par le noyau (`/sys/class/drm/cardN`).
 
@@ -399,7 +406,7 @@ def nom_pci(fabricant: str, modele: str, pci_ids: str) -> str:
 _FABRICANTS = {"1002": "AMD", "10de": "NVIDIA", "8086": "Intel"}
 
 
-def ligne_compatibilite(trouve=None, pfx: Path | None = None) -> str:
+def ligne_compatibilite(trouve: Lanceur | None = None, pfx: Path | None = None) -> str:
     """Le lanceur, le Proton choisi et l'état du préfixe (Linux).
 
     Sous Linux, ce sont les réponses à « ça ne se lance pas » : quel lanceur,
@@ -458,8 +465,8 @@ def _espace_libre(dossier: Path) -> str:
         return "espace libre inconnu"
 
 
-def rapport(manager, ecrans: list[str] | None = None, journal: str = "",
-            tentatives=None, prerequis: dict[str, bool] | None = None,
+def rapport(manager: GameManager, ecrans: list[str] | None = None, journal: str = "",
+            tentatives: Iterable[Tentative] | None = None, prerequis: dict[str, bool] | None = None,
             machine: list[str] | None = None, documents: str | None = None,
             compatibilite: str | None = None) -> str:
     """Le bloc à coller sur le Discord.
@@ -575,7 +582,8 @@ def lire_la_fin(chemin: Path, n: int = JOURNAL_MAX) -> str:
     return texte
 
 
-def journaux_des_jeux(manager) -> list[tuple[str, Path]]:
+def journaux_des_jeux(manager: GameManager) -> list[tuple[str, Path]]:
+
     """Les `.log` des jeux installés : à côté de l'exe (correctif, manette,
     dgVoodoo) et dans leur dossier de Documents (HP1-HP3 : `HP.log`…)."""
     from src.core import sauvegardes

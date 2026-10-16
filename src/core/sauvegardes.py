@@ -36,11 +36,12 @@ import os
 import re
 import sys
 import tempfile
+from typing import Any
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
-from src.core.game_data import Sauvegardes
+from src.core.catalogue_blocs import Sauvegardes
 
 log = logging.getLogger(__name__)
 
@@ -365,7 +366,7 @@ def chemin_fichier() -> Path:
     return CONFIG_FILE_PATH.parent / FICHIER
 
 
-def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict]:
+def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]:
     """{(jeu, fichier): {"commencee": date | None, "parties": [(debut, duree)]}}.
 
     Un fichier illisible est mis de côté, jamais écrasé, comme le journal.
@@ -382,7 +383,7 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict]:
         except OSError:
             pass
         return {}
-    stock: dict[tuple[str, str], dict] = {}
+    stock: dict[tuple[str, str], dict[str, Any]] = {}
     entrees = data.get("sauvegardes") if isinstance(data, dict) else None
     for e in entrees if isinstance(entrees, list) else ():
         if not isinstance(e, dict):
@@ -408,14 +409,14 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict]:
     return stock
 
 
-def _date(brut) -> date | None:
+def _date(brut: object) -> date | None:
     try:
         return date.fromisoformat(str(brut)) if brut else None
     except ValueError:
         return None
 
 
-def _ecrire(stock: dict[tuple[str, str], dict], chemin: Path) -> None:
+def _ecrire(stock: dict[tuple[str, str], dict[str, Any]], chemin: Path) -> None:
     """Écriture atomique (tmp + rename), même contrat que le journal."""
     data = {"version": 1, "sauvegardes": [
         {"jeu": jeu, "fichier": fichier,
@@ -485,14 +486,14 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
 
 # ─── Pour l'affichage ───
 
-def temps_sans_sauvegarde(jeu: str, stock: dict[tuple[str, str], dict] | None = None) -> int:
+def temps_sans_sauvegarde(jeu: str, stock: dict[tuple[str, str], dict[str, Any]] | None = None) -> int:
     """Secondes jouées, depuis le relevé, sans qu'aucune sauvegarde soit écrite."""
     stock = charger() if stock is None else stock
     return sum(d for _, d in stock.get((jeu, SANS_SAUVEGARDE), {}).get("parties", ()))
 
 
 def vues(jeu: str, spec: Sauvegardes | None,
-         stock: dict[tuple[str, str], dict] | None = None) -> list[Vue]:
+         stock: dict[tuple[str, str], dict[str, Any]] | None = None) -> list[Vue]:
     """Les sauvegardes PRÉSENTES sur le disque, avec ce qu'on sait d'elles.
 
     Une sauvegarde supprimée n'est pas montrée — sa trace reste dans le

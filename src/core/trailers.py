@@ -12,10 +12,11 @@ dans `src/ui/trailer_store.py`.
 
 import logging
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 from src.core.config import ASSETS_DIR, LAUNCHER_DATA_PATH
-from src.core.game_data import Trailer
+from src.core.catalogue_blocs import Trailer
 
 log = logging.getLogger(__name__)
 
@@ -65,17 +66,17 @@ def present(trailer: Trailer) -> bool:
         return False
 
 
-def manquantes(trailers) -> list[Trailer]:
+def manquantes(trailers: Iterable[Trailer]) -> list[Trailer]:
     """Celles qu'il faut encore télécharger, dans l'ordre du catalogue."""
     return [t for t in trailers if not present(t)]
 
 
-def poids_a_telecharger(trailers) -> int:
+def poids_a_telecharger(trailers: Iterable[Trailer]) -> int:
     """Mo à télécharger pour compléter la collection (0 si tout est là)."""
     return sum(t.size_mb for t in manquantes(trailers))
 
 
-def chemin_a_jouer(game_id: str, trailers) -> Path | None:
+def chemin_a_jouer(game_id: str, trailers: Iterable[Trailer]) -> Path | None:
     """Vidéo à jouer pour ce jeu, ou None s'il n'y en a pas sur le disque.
 
     Deux emplacements, dans cet ordre :
@@ -136,12 +137,12 @@ def poids_disque() -> int:
     return total
 
 
-def nombre_present(trailers) -> int:
+def nombre_present(trailers: Iterable[Trailer]) -> int:
     """Combien de bandes-annonces du catalogue sont sur le disque."""
     return sum(1 for t in trailers if present(t))
 
 
-def fichiers_perimes(trailers) -> list[Path]:
+def fichiers_perimes(trailers: Iterable[Trailer]) -> list[Path]:
     """Fichiers à supprimer : anciennes versions et jeux disparus du catalogue.
 
     C'est le pendant obligatoire du nom de fichier versionné. Sans ce ménage,
@@ -158,7 +159,7 @@ def fichiers_perimes(trailers) -> list[Path]:
     return perimes
 
 
-def supprimer(chemins) -> tuple[int, int]:
+def supprimer(chemins: Iterable[Path]) -> tuple[int, int]:
     """Supprime les fichiers donnés. Retourne (supprimés, octets libérés)."""
     n, octets = 0, 0
     for f in chemins:

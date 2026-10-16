@@ -1,16 +1,19 @@
-"""Le folio de HP3, HP5 et HP6, en PAGE, sur le modèle de celui de HP1.
+"""Le folio de HP3, HP4, HP5 et HP6, en PAGE, sur le modèle de celui de HP1.
 
 Maquettes du canevas « Folios HP3, HP5, HP6 » (2026-10-15), validées par Ludo
 (« pour le moment les maquettes vont bien »). Même rail des parties à gauche
 (`FolioPage`), le corps change par jeu ; tout est LU dans les sauvegardes
-(`core/folio_hp3.py`, `folio_hp5.py`, `folio_hp6.py`) et dans le jeu installé
-(noms, descriptions et images des cartes de HP3), rien n'est recopié.
+(`core/folio_hp3.py`, `folio_hp4.py`, `folio_hp5.py`, `folio_hp6.py`) et dans le jeu installé
+(noms, descriptions et images des cartes de HP3, noms des sorts et des quêtes de
+HP4), rien n'est recopié. La page HP4 n'a pas de maquette validée : elle reprend
+les tuiles et les cadres des autres.
 
 HP3 range ses 80 cartes par série, comme le folio du jeu : une série de 15
 prend une rangée entière (10 + 5), deux séries de 5 se partagent une rangée,
 et toutes les cases restent alignées sur dix colonnes.
 """
 
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -25,7 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import folio_hp3, folio_hp5, folio_hp6, sauvegardes
+from src.core import folio_hp3, folio_hp4, folio_hp5, folio_hp6, sauvegardes
 from src.core.i18n import get_language, tr
 from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
 from src.ui.folio_page import (
@@ -45,7 +48,8 @@ _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
 
 def page_folio(game, install_path: Path, parent: QWidget | None = None, revenir=None) -> FolioPage:
     """La page du folio qui va avec le jeu (`folio.JEUX`)."""
-    classe = {"hp3": FolioPageHP3, "hp5": FolioPageHP5, "hp6": FolioPageHP6}.get(game.id, FolioPage)
+    classe = {"hp3": FolioPageHP3, "hp4": FolioPageHP4, "hp5": FolioPageHP5,
+              "hp6": FolioPageHP6}.get(game.id, FolioPage)
     return classe(game, install_path, parent, revenir=revenir)
 
 
@@ -265,6 +269,94 @@ class FolioPageHP3(FolioPage):
         self.carte_montree = numero
 
 
+# ── HP4 ──
+
+class FolioPageHP4(FolioPage):
+    """Les trois emplacements de `HPGOF` : rang, boucliers, maîtrise, quêtes.
+
+    Les mêmes écrans que la pensine (touche I) ; les noms viennent du jeu
+    installé dans la langue du launcher, sinon du français par `tr()`."""
+
+    def _charger(self) -> None:
+        self.releves = [p for chemin in sauvegardes.fichiers(self.game.sauvegardes).values()
+                        for p in folio_hp4.releve(chemin)]
+        self._table = folio_hp4.textes(self._system, get_language())
+
+    def _nom(self, ref: folio_hp4.Nom) -> str:
+        return folio_hp4.nom(self._table, ref) or tr(ref[1])
+
+    def _entree(self, partie) -> tuple[str, datetime | None, str]:
+        rang = partie.nom_rang
+        return (tr("Emplacement {}").format(partie.emplacement), partie.ecrite,
+                self._nom(rang) if rang else "")
+
+    def _depart(self):
+        return max(self.releves, key=lambda p: p.ecrite or datetime.min, default=None)
+
+    def _construire(self, partie) -> QWidget:
+        if partie is None:
+            return super()._construire(None)
+
+        def contenu(lay: QVBoxLayout) -> None:
+            rang = partie.nom_rang
+            tuiles = [_tuile(f"{partie.boucliers} / {folio_hp4.BOUCLIERS}",
+                             self._nom(folio_hp4.TITRES["boucliers"]),
+                             partie.boucliers / folio_hp4.BOUCLIERS)]
+            if rang:
+                tuiles.insert(0, _tuile(self._nom(rang), self._nom(folio_hp4.TITRES["classement"])))
+            lay.addLayout(_rangee(*tuiles))
+            if partie.maitrise:
+                lay.addSpacing(12)
+                lay.addLayout(_rangee(
+                    self._jauges(folio_hp4.TITRES["sortileges"], folio_hp4.SORTILEGES, partie),
+                    self._jauges(folio_hp4.TITRES["sorts"], folio_hp4.SORTS, partie)))
+            if partie.quetes:
+                lay.addSpacing(12)
+                lay.addWidget(self._quetes(partie.quetes))
+
+        return _page(contenu)[0]
+
+    def _jauges(self, titre: folio_hp4.Nom, jauges, partie) -> QFrame:
+        """Une jauge par sort, comme la page de la pensine."""
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        g = QGridLayout(cadre)
+        g.setContentsMargins(20, 14, 20, 16)
+        g.setHorizontalSpacing(14)
+        g.setVerticalSpacing(8)
+        g.addWidget(surtitre(self._nom(titre)), 0, 0, 1, 2)
+        for rang, (indice, ref, maximum) in enumerate(jauges, 1):
+            part = folio_hp4.part(partie, indice, maximum)
+            g.addWidget(texte(self._nom(ref), 13, ENCRE if part else ENCRE_DOUCE), rang, 0)
+            g.addWidget(_Jauge(part), rang, 1, Qt.AlignmentFlag.AlignVCenter)
+        g.setColumnStretch(1, 1)
+        g.setRowStretch(len(jauges) + 1, 1)   # deux cadres côte à côte : le court reste en haut
+        return cadre
+
+    def _quetes(self, quetes: tuple[folio_hp4.Quete, ...]) -> QFrame:
+        """Les objets à trouver, toutes les quêtes d'une même sorte additionnées."""
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        g = QGridLayout(cadre)
+        g.setContentsMargins(20, 14, 20, 16)
+        g.setHorizontalSpacing(16)
+        g.setVerticalSpacing(8)
+        g.addWidget(surtitre(self._nom(folio_hp4.TITRES["quetes"])), 0, 0, 1, 5)
+        or_clair = current_theme().accent_light
+        moitie = (len(quetes) + 1) // 2
+        for k, q in enumerate(quetes):
+            rang, col = 1 + k % moitie, 3 * (k // moitie)
+            couleur = ENCRE if q.trouves else ENCRE_DOUCE
+            g.addWidget(texte(self._nom(q.nom), 13, couleur, retour=True), rang, col)
+            g.addWidget(texte(f"{q.trouves} / {q.total}", 13,
+                              or_clair if q.trouves == q.total else couleur),
+                        rang, col + 1, Qt.AlignmentFlag.AlignRight)
+        g.setColumnStretch(0, 1)
+        g.setColumnStretch(3, 1)
+        g.setColumnMinimumWidth(2, 24)
+        return cadre
+
+
 # ── HP5 ──
 
 class FolioPageHP5(FolioPage):
@@ -389,8 +481,38 @@ class FolioPageHP6(FolioPage):
                     rang.addStretch()
                     lay.addLayout(rang)
                     lay.addSpacing(8)
+            lay.addSpacing(18)
+            lay.addWidget(self._lieux(folio_hp6.par_lieu(partie.trouves)))
 
         return _page(contenu)[0]
+
+    @staticmethod
+    def _lieux(lieux: list[folio_hp6.Lieu]) -> QFrame:
+        """Les écussons lieu par lieu, en deux colonnes : où chercher encore."""
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        g = QGridLayout(cadre)
+        g.setContentsMargins(20, 14, 20, 16)
+        g.setHorizontalSpacing(16)
+        g.setVerticalSpacing(6)
+        g.addWidget(surtitre(tr("Écussons par lieu")), 0, 0, 1, 5)
+        or_clair = current_theme().accent_light
+        # Par ordre alphabétique dans la langue affichée, accents ignorés
+        # (« Écussons » ne doit pas tomber après « Volière »).
+        noms = sorted(((tr(lieu.libelle), lieu) for lieu in lieux),
+                      key=lambda paire: unicodedata.normalize("NFKD", paire[0]).casefold())
+        moitie = (len(noms) + 1) // 2
+        for k, (nom, lieu) in enumerate(noms):
+            rang, col = 1 + k % moitie, 3 * (k // moitie)
+            couleur = ENCRE if lieu.trouves else ENCRE_DOUCE
+            g.addWidget(texte(nom, 13, couleur, retour=True), rang, col)
+            g.addWidget(texte(f"{lieu.trouves} / {lieu.total}", 13,
+                              or_clair if lieu.trouves == lieu.total else couleur),
+                        rang, col + 1, Qt.AlignmentFlag.AlignRight)
+        g.setColumnStretch(0, 1)
+        g.setColumnStretch(3, 1)
+        g.setColumnMinimumWidth(2, 24)
+        return cadre
 
 
 _PUCE = """QLabel { color: #f2f2f4; background: rgba(214, 167, 44, 0.08);

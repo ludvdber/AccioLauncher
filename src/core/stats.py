@@ -35,8 +35,11 @@ import logging
 import os
 import tempfile
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
+from pathlib import Path
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -142,13 +145,13 @@ class Historique:
 
 # ─── Fichier ───
 
-def chemin_journal():
+def chemin_journal() -> Path:
     """Résolu à l'appel, jamais à l'import — voir l'en-tête du module."""
     from src.core.config import CONFIG_FILE_PATH
     return CONFIG_FILE_PATH.parent / JOURNAL_NAME
 
 
-def _lire_brut(chemin) -> dict:
+def _lire_brut(chemin: Path) -> dict[str, Any]:
     if not chemin.exists():
         return {}
     try:
@@ -167,7 +170,7 @@ def _lire_brut(chemin) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _parse_session(brut) -> Session | None:
+def _parse_session(brut: Any) -> Session | None:
     """Une entrée fautive est ignorée, jamais fatale — le reste de l'historique
     vaut mieux que rien."""
     if not isinstance(brut, dict):
@@ -185,7 +188,7 @@ def _parse_session(brut) -> Session | None:
     return Session(jeu=jeu, debut=debut, duree=duree)
 
 
-def _parse_tentative(brut) -> "Tentative | None":
+def _parse_tentative(brut: Any) -> "Tentative | None":
     """Une tentative fautive est ignorée, jamais fatale — comme une session."""
     if not isinstance(brut, dict):
         return None
@@ -205,7 +208,7 @@ def _parse_tentative(brut) -> "Tentative | None":
     return Tentative(jeu=jeu, debut=debut, duree=duree, code=code)
 
 
-def charger(chemin=None) -> Historique:
+def charger(chemin: Path | None = None) -> Historique:
     """Lit le journal. Un fichier absent, vide ou fautif rend un historique vide."""
     data = _lire_brut(chemin or chemin_journal())
     brutes = data.get("sessions")
@@ -229,7 +232,7 @@ def charger(chemin=None) -> Historique:
             tentatives.append(t)
     tentatives.sort(key=lambda t: t.debut)
 
-    def _entier(cle) -> int:
+    def _entier(cle: str) -> int:
         v = data.get(cle)
         return max(0, v) if isinstance(v, int) and not isinstance(v, bool) else 0
 
@@ -238,7 +241,7 @@ def charger(chemin=None) -> Historique:
                       tuple(tentatives))
 
 
-def _ecrire_donnees(data: dict, chemin) -> None:
+def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
     """Écriture atomique (tmp + rename), même contrat que `Config.save`.
 
     Prend le dictionnaire déjà formé plutôt qu'un `Historique` : incrémenter
@@ -260,7 +263,7 @@ def _ecrire_donnees(data: dict, chemin) -> None:
         raise
 
 
-def _ecrire(hist: Historique, chemin) -> None:
+def _ecrire(hist: Historique, chemin: Path) -> None:
     """Sérialise l'historique complet, sessions comprises."""
     _ecrire_donnees(
         {
@@ -283,7 +286,7 @@ def _ecrire(hist: Historique, chemin) -> None:
     )
 
 
-def amorcer(playtime_seconds: dict[str, int], chemin=None) -> bool:
+def amorcer(playtime_seconds: dict[str, int], chemin: Path | None = None) -> bool:
     """Crée le journal s'il n'existe pas, en y gelant les cumuls déjà connus.
 
     Idempotente : une fois le fichier créé, elle ne touche plus à `herite` —
@@ -305,7 +308,7 @@ def amorcer(playtime_seconds: dict[str, int], chemin=None) -> bool:
     return True
 
 
-def _muter(chemin, transformer) -> None:
+def _muter(chemin: Path | None, transformer: Callable[[Historique], Historique]) -> None:
     """Lit, applique `transformer`, réécrit. Un échec d'écriture ne remonte
     jamais : perdre une statistique n'est pas une raison d'interrompre une
     partie qui vient de se terminer."""
@@ -316,7 +319,7 @@ def _muter(chemin, transformer) -> None:
         log.warning("Journal de sessions non mis à jour : %s", exc)
 
 
-def _muter_compteur(chemin, cle: str, delta: int) -> None:
+def _muter_compteur(chemin: Path | None, cle: str, delta: int) -> None:
     """Incrémente un des deux compteurs SANS matérialiser l'historique.
 
     `demarrages` et `octets_telecharges` sont les seuls entiers du journal :
@@ -346,7 +349,7 @@ def _muter_compteur(chemin, cle: str, delta: int) -> None:
         log.warning("Journal de sessions non mis à jour : %s", exc)
 
 
-def enregistrer_session(jeu: str, debut: datetime, duree: int, chemin=None) -> None:
+def enregistrer_session(jeu: str, debut: datetime, duree: int, chemin: Path | None = None) -> None:
     """Ajoute une partie au journal."""
     if not jeu or duree < DUREE_MINIMALE:
         return
@@ -357,12 +360,12 @@ def enregistrer_session(jeu: str, debut: datetime, duree: int, chemin=None) -> N
     _muter(chemin, lambda h: replace(h, sessions=h.sessions + (session,)))
 
 
-def enregistrer_demarrage(chemin=None) -> None:
+def enregistrer_demarrage(chemin: Path | None = None) -> None:
     """Un démarrage du launcher de plus."""
     _muter_compteur(chemin, "demarrages", 1)
 
 
-def enregistrer_telechargement(octets: int, chemin=None) -> None:
+def enregistrer_telechargement(octets: int, chemin: Path | None = None) -> None:
     """Cumule ce que le launcher a réellement rapatrié."""
     if octets <= 0:
         return
@@ -370,7 +373,7 @@ def enregistrer_telechargement(octets: int, chemin=None) -> None:
 
 
 def enregistrer_tentative(jeu: str, debut: datetime, duree: int,
-                          code: int | None = None, chemin=None) -> None:
+                          code: int | None = None, chemin: Path | None = None) -> None:
     """Consigne un lancement qui n'a pas donné de partie.
 
     Rien ne l'affiche aujourd'hui, et c'est volontaire : ce qui n'est pas
@@ -386,18 +389,18 @@ def enregistrer_tentative(jeu: str, debut: datetime, duree: int,
 
 # ─── Partie en cours ───
 
-def chemin_en_cours():
+def chemin_en_cours() -> Path:
     """Résolu à l'appel, comme `chemin_journal` — même garde de test."""
     from src.core.config import CONFIG_FILE_PATH
     return CONFIG_FILE_PATH.parent / EN_COURS_NAME
 
 
-def ouvrir_session(jeu: str, debut: datetime, chemin=None) -> None:
+def ouvrir_session(jeu: str, debut: datetime, chemin: Path | None = None) -> None:
     """Note qu'une partie commence. À appeler AU LANCEMENT."""
     _ecrire_en_cours(jeu, debut, debut, chemin)
 
 
-def battre_session(vu_a: datetime, chemin=None) -> None:
+def battre_session(vu_a: datetime, chemin: Path | None = None) -> None:
     """Rafraîchit « dernière fois où on a vu le jeu tourner ».
 
     Appelée périodiquement pendant la partie. C'est ce battement, et lui seul,
@@ -414,7 +417,7 @@ def battre_session(vu_a: datetime, chemin=None) -> None:
         return
 
 
-def fermer_session(chemin=None) -> None:
+def fermer_session(chemin: Path | None = None) -> None:
     """La partie s'est terminée normalement : plus rien à récupérer."""
     chemin = chemin or chemin_en_cours()
     try:
@@ -423,7 +426,7 @@ def fermer_session(chemin=None) -> None:
         log.warning("Partie en cours non effacée : %s", exc)
 
 
-def recuperer_session_interrompue(chemin=None) -> Session | None:
+def recuperer_session_interrompue(chemin: Path | None = None) -> Session | None:
     """Rattrape une partie que le launcher n'a pas vue se terminer.
 
     La durée retenue est `vu_a - debut`, c'est-à-dire ce qu'on a réellement
@@ -453,7 +456,7 @@ def recuperer_session_interrompue(chemin=None) -> Session | None:
     return Session(jeu=jeu, debut=debut, duree=duree)
 
 
-def _ecrire_en_cours(jeu: str, debut: datetime, vu_a: datetime, chemin) -> None:
+def _ecrire_en_cours(jeu: str, debut: datetime, vu_a: datetime, chemin: Path | None) -> None:
     chemin = chemin or chemin_en_cours()
     try:
         _ecrire_donnees({"jeu": jeu,
@@ -501,7 +504,8 @@ def par_mois(hist: Historique) -> dict[tuple[int, int], int]:
     Une partie se rattache à son DÉBUT : commencée le 31 à 23 h, elle compte pour
     le mois où on l'a lancée. Le temps hérité n'a pas de date, il n'entre pas.
     """
-    mois: Counter = Counter()
+    mois: Counter[tuple[int, int]] = Counter()
+
     for s in hist.sessions:
         mois[(s.debut.year, s.debut.month)] += s.duree
     return dict(mois)

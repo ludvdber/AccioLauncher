@@ -33,12 +33,25 @@ import sys
 import threading
 import time
 import uuid
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, Protocol
 
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, SITE_URL
 
+
+class _Tuyau(Protocol):
+    """Le pipe Windows (`FileIO`) ou le socket Unix (`SocketIO`), sans tampon."""
+
+    def read(self, n: int, /) -> bytes | None: ...
+
+    def write(self, data: bytes, /) -> int | None: ...
+
+    def close(self) -> None: ...
+
+
 log = logging.getLogger(__name__)
+
 
 DISCORD_CLIENT_ID = "1524077874087330007"
 
@@ -57,7 +70,7 @@ _OP_HANDSHAKE = 0
 _OP_FRAME = 1
 
 
-def _open_ipc():
+def _open_ipc() -> _Tuyau | None:
     """Ouvre la connexion IPC Discord (pipe Windows ou socket Unix). None si absent."""
     if sys.platform == "win32":
         for i in range(10):
@@ -80,7 +93,7 @@ def _open_ipc():
     return None
 
 
-def dossiers_ipc(env=None) -> list[str]:
+def dossiers_ipc(env: Mapping[str, str] | None = None) -> list[str]:
     """Où chercher le socket de Discord sous Linux, dans l'ordre. Pure.
 
     Discord installé en paquet le pose dans `$XDG_RUNTIME_DIR`. Mais sur
@@ -115,7 +128,7 @@ class DiscordPresence:
 
     def __init__(self, client_id: str = DISCORD_CLIENT_ID) -> None:
         self._client_id = client_id
-        self._queue: queue.Queue[tuple[str, dict | None]] = queue.Queue()
+        self._queue: queue.Queue[tuple[str, dict[str, Any] | None]] = queue.Queue()
         self._thread: threading.Thread | None = None
 
     @property
@@ -168,7 +181,7 @@ class DiscordPresence:
         if self._thread is not None and self._thread.is_alive():
             self._queue.put(("quit", None))
 
-    def _post(self, cmd: tuple[str, dict | None]) -> None:
+    def _post(self, cmd: tuple[str, dict[str, Any] | None]) -> None:
         if not self.is_configured:
             return
         if self._thread is None or not self._thread.is_alive():
@@ -203,7 +216,7 @@ class DiscordPresence:
         finally:
             self._close(ipc)
 
-    def _connect(self):
+    def _connect(self) -> _Tuyau | None:
         ipc = _open_ipc()
         if ipc is None:
             log.debug("Discord non détecté (pas de pipe IPC)")
@@ -220,7 +233,7 @@ class DiscordPresence:
         self._close(ipc)
         return None
 
-    def _send_activity(self, ipc, activity: dict | None) -> None:
+    def _send_activity(self, ipc: _Tuyau, activity: dict[str, Any] | None) -> None:
         """Envoie l'activité déjà composée (cf. set_playing), ou l'efface."""
         self._write(ipc, _OP_FRAME, {
             "cmd": "SET_ACTIVITY",
@@ -231,12 +244,12 @@ class DiscordPresence:
         self._read(ipc)
 
     @staticmethod
-    def _write(ipc, op: int, payload: dict) -> None:
+    def _write(ipc: _Tuyau, op: int, payload: dict[str, Any]) -> None:
         data = json.dumps(payload).encode("utf-8")
         ipc.write(struct.pack("<II", op, len(data)) + data)
 
     @staticmethod
-    def _read_exact(ipc, n: int) -> bytes:
+    def _read_exact(ipc: _Tuyau, n: int) -> bytes:
         """Lit EXACTEMENT n octets. Un pipe/socket en buffering=0 peut servir le
         message en plusieurs morceaux (surtout le READY de Discord, ~100+ octets) ;
         `read(n)` renvoie alors moins que n — sans cette boucle, on prenait ça pour
@@ -250,7 +263,7 @@ class DiscordPresence:
         return bytes(buf)
 
     @classmethod
-    def _read(cls, ipc) -> tuple[int, dict]:
+    def _read(cls, ipc: _Tuyau) -> tuple[int, dict[str, Any]]:
         op, length = struct.unpack("<II", cls._read_exact(ipc, 8))
         raw = cls._read_exact(ipc, length) if length else b"{}"
         try:
@@ -259,7 +272,8 @@ class DiscordPresence:
             return op, {}
 
     @staticmethod
-    def _close(ipc) -> None:
+    def _close(ipc: _Tuyau | None) -> None:
+
         if ipc is not None:
             try:
                 ipc.close()

@@ -80,6 +80,27 @@ class TestHP5:
         assert {"Personnages rencontrés", "0 / 58", "0 %"} <= textes
 
 
+class TestHP4:
+    def test_l_emplacement(self, qtbot, racines):
+        from PyQt6.QtWidgets import QLabel
+
+        from src.ui.folio_jeux import FolioPageHP4, page_folio
+        from tests.test_folio_hp4 import _hpgof
+        dossier = racines / "Local" / "EA" / "HPGOF"
+        dossier.mkdir(parents=True)
+        (dossier / "HPGOF").write_bytes(_hpgof())
+        jeu = _jeu("hp4", "HP4/gof_f.exe", {"root": "localappdata", "folders": ["EA/HPGOF"],
+                                             "files": "HPGOF", "first": 1, "slots": "hp4"})
+        page = page_folio(jeu, racines / "Jeux")
+        qtbot.addWidget(page)
+        assert isinstance(page, FolioPageHP4)
+        assert page.releve.emplacement == 1
+        # Sans le jeu installé, les noms français passent par `tr()`.
+        textes = {lab.text() for lab in page.findChildren(QLabel)}
+        assert {"Compétent(e)", "3 / 38", "Wingardium Leviosa", "Gargouilles", "0 / 6",
+                "SORTS", "QUÊTES"} <= textes
+
+
 class TestHP6:
     def test_la_partie(self, qtbot, racines):
         from src.ui.folio_jeux import FolioPageHP6, page_folio
@@ -94,6 +115,14 @@ class TestHP6:
         assert isinstance(page, FolioPageHP6)
         assert page.releve.ecrite == datetime(2026, 10, 1, 18, 42, 44)
         assert page.releve.sorts == ("Stupefy", "Lumos")
+        # Les écussons lieu par lieu, par ordre alphabétique : « Bibliothèque »
+        # en tête de la première colonne, et les trois du chemin de la forêt.
+        from PyQt6.QtWidgets import QLabel
+        textes = [lab.text() for lab in page.findChildren(QLabel)]
+        assert "ÉCUSSONS PAR LIEU" in textes     # `surtitre` met en capitales
+        assert {"Chemin de la forêt", "3 / 3", "Bibliothèque", "0 / 3"} <= set(textes)
+        lieux = [t for t in textes if t in {"Bibliothèque", "Volière", "Cachots"}]
+        assert lieux == ["Bibliothèque", "Cachots", "Volière"]
 
     def test_sans_sauvegarde(self, qtbot, racines):
         from src.ui.folio_jeux import page_folio

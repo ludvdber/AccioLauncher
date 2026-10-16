@@ -5,8 +5,10 @@ import logging
 import platform
 import re
 import sys
+from collections.abc import Iterable, Iterator
+from typing import Any
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
 from src.core.game_data import _parse_catalog
@@ -30,7 +32,7 @@ _SHA256_PREFIX = "sha256:"
 _CATALOG_MAX_BYTES = 4 * 1024 * 1024
 
 
-def _assets_publies(releases: list[dict]):
+def _assets_publies(releases: list[dict[str, Any]]) -> Iterator[tuple[str, dict[str, Any]]]:
     """Parcourt les assets exploitables des releases : (url, asset).
 
     Les trois extracteurs qui suivent (empreintes, tailles, compteurs) lisaient
@@ -68,7 +70,7 @@ _LIEN_MD = re.compile(r"\[([^\]]+)\]\([^)]*\)")
 _BALISE_HTML = re.compile(r"<[^>]+>")
 
 
-def extract_release_notes(data: dict, max_lignes: int = 12) -> str:
+def extract_release_notes(data: dict[str, Any], max_lignes: int = 12) -> str:
     """Les notes de release, mises au propre pour une boîte de dialogue.
 
     GitHub renvoie déjà le corps de la release dans la MÊME réponse que le
@@ -156,7 +158,7 @@ def _sans_balisage(ligne: str) -> str:
     return _BALISE_HTML.sub("", ligne).strip()
 
 
-def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
+def extract_asset_digests(releases: list[dict[str, Any]]) -> dict[str, str]:
     """URL d'asset → empreinte SHA-256 (hex), depuis les releases GitHub.
 
     GitHub calcule et publie lui-même l'empreinte de chaque asset (champ
@@ -183,7 +185,7 @@ def extract_asset_digests(releases: list[dict]) -> dict[str, str]:
     return digests
 
 
-def extract_asset_sizes(releases: list[dict]) -> dict[str, int]:
+def extract_asset_sizes(releases: list[dict[str, Any]]) -> dict[str, int]:
     """URL d'asset → taille RÉELLE en octets, depuis les releases GitHub. Pure.
 
     Le catalogue déclare un `size_mb` qui s'est révélé être la taille du jeu
@@ -210,7 +212,7 @@ def extract_asset_sizes(releases: list[dict]) -> dict[str, int]:
 
 
 def aggregate_download_counts(
-    releases: list[dict], games_asset_urls: dict[str, list[list[str]]],
+    releases: list[dict[str, Any]], games_asset_urls: dict[str, list[list[str]]],
 ) -> dict[str, int]:
     """Compte les téléchargements GitHub par jeu, TOUTES versions confondues.
 
@@ -262,8 +264,8 @@ _ARCHITECTURES = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64",
                   "arm64": "aarch64", "armhf": "armv7l", "i686": "i686", "i386": "i686"}
 
 
-def asset_de_la_plateforme(assets, plateforme: str | None = None,
-                           machine: str | None = None) -> dict | None:
+def asset_de_la_plateforme(assets: Iterable[dict[str, Any]], plateforme: str | None = None,
+                           machine: str | None = None) -> dict[str, Any] | None:
     """L'asset de mise à jour qui convient à CETTE plateforme, ou None. Pure.
 
     Une release porte désormais l'exe Windows ET l'AppImage Linux, plus leurs
@@ -322,7 +324,8 @@ class UpdateChecker(QThread):
     def __init__(self, catalog_url: str, current_catalog_version: str,
                  installed_versions: dict[str, str],
                  games_asset_urls: dict[str, list[list[str]]] | None = None,
-                 parent=None, force: bool = False) -> None:
+                 parent: QObject | None = None, force: bool = False) -> None:
+
         super().__init__(parent)
         self._catalog_url = catalog_url
         self._current_version = current_catalog_version

@@ -63,8 +63,8 @@ MAISONS = (GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE)
 # Les jeux dont le folio sait lire les sauvegardes, par id du catalogue : ils
 # ont leur PAGE (`ui/folio_jeux.page_folio`). Ceux de `RESUMES` montrent en
 # plus la partie sur leur fiche, à la place de la description (cartes : HP1,
-# HP3) ; HP5 et HP6 gardent la leur (pas d'éventail de cartes à montrer).
-JEUX = ("hp1", "hp3", "hp5", "hp6")
+# HP3) ; HP4, HP5 et HP6 gardent la leur (pas d'éventail de cartes à montrer).
+JEUX = ("hp1", "hp3", "hp4", "hp5", "hp6")
 RESUMES = ("hp1", "hp3")
 
 # Le folio du jeu, emplacement par emplacement : `WizardCards[i]` de la

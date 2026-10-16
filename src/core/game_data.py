@@ -5,6 +5,7 @@ Les blocs secondaires et leurs validateurs vivent dans `catalogue_blocs`.
 import json
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 from pathlib import Path
 
 from src.core.config import GAMES_JSON_PATH
@@ -109,12 +110,17 @@ class GameVersion:
         return bool(self.download_url or self.download_parts)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "GameVersion":
+    def from_dict(cls, data: dict[str, Any]) -> "GameVersion":
+        # Chacun sa forme : une liste en `download_url` ou une chaîne en
+        # `download_parts` (dont on itérerait les caractères) est écartée.
+        url = _https_ou_rien(data.get("download_url"))
+        parts = _https_ou_rien(data.get("download_parts"))
         return cls(
             version=data.get("version", "1.0"),
             date=data.get("date", ""),
-            download_url=_https_ou_rien(data.get("download_url")),
-            download_parts=_https_ou_rien(data.get("download_parts")),
+            download_url=url if isinstance(url, str) else None,
+            download_parts=parts if isinstance(parts, list) else None,
+
             size_mb=_taille_mo(data.get("size_mb", 0)),
             changes=tuple(_loc(data, "changes", [])),
             sha256=_sha256_valide(data.get("sha256")),
@@ -311,7 +317,7 @@ class GameData:
         return None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "GameData":
+    def from_dict(cls, data: dict[str, Any]) -> "GameData":
         """Crée un GameData depuis un dictionnaire JSON."""
         required = ("id", "name", "year", "description", "developer",
                      "executable", "cover_image")
@@ -408,7 +414,7 @@ class Catalog:
     contributors: tuple[Contributor, ...] = ()
 
 
-def _parse_catalog(raw: dict | list) -> Catalog:
+def _parse_catalog(raw: dict[str, Any] | list[Any]) -> Catalog:
     """Parse un JSON brut en Catalog. Accepte l'ancien format (liste) et le nouveau (dict).
 
     Tolère un JSON mal typé (cache trafiqué / tronqué) : un jeu invalide est

@@ -43,6 +43,8 @@ from src.ui.theme import current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
+_MARGE_RAIL = 18      # marges latérales du rail
+_MARGE_LIGNE = 12     # marges latérales d'une ligne de partie
 _LARGEUR_FICHE = (236, 420)   # suit la fenêtre : 30 % de ce qui reste après le rail
 _MARGE_FICHE = 24
 _IMAGE_FICHE = 220        # la carte du jeu fait 256 : jamais agrandie
@@ -202,18 +204,27 @@ class _LigneEmplacement(QPushButton):
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         v = QVBoxLayout(self)
-        v.setContentsMargins(12, 9, 12, 9)
+        v.setContentsMargins(_MARGE_LIGNE, 9, _MARGE_LIGNE, 9)
         v.setSpacing(3)
         haut = QHBoxLayout()
         haut.setSpacing(8)
         titre = texte(nom, 15, ENCRE)
         titre.setFont(police(15, gras=True))
+        titre.setMinimumWidth(titre.sizeHint().width())
         haut.addWidget(titre)
         haut.addStretch()
+        v.addLayout(haut)
         if quand is not None:
             from src.ui.versions_dialog import date_longue
-            haut.addWidget(texte(date_longue(quand.strftime("%Y-%m-%d")), 12, ENCRE_DOUCE))
-        v.addLayout(haut)
+            date = texte(date_longue(quand.strftime("%Y-%m-%d")), 12, ENCRE_DOUCE)
+            # « Emplacement 1 » et « 28 septembre 2026 » ne tiennent pas côte à
+            # côte dans le rail : la date passe dessous plutôt que de rogner le
+            # nom (mesuré avec la police réelle, pas un nombre écrit à la main).
+            place = _LARGEUR_RAIL - 2 * (_MARGE_RAIL + _MARGE_LIGNE) - 2
+            if titre.sizeHint().width() + haut.spacing() + date.sizeHint().width() <= place:
+                haut.addWidget(date)
+            else:
+                v.addWidget(date)
         if lieu:
             v.addWidget(texte(lieu, 13, "#c9c7da"))
         if plus_avance:
@@ -291,7 +302,7 @@ class FolioPage(QDialog):
         rail.setObjectName("rail")
         rail.setFixedWidth(_LARGEUR_RAIL)
         lay = QVBoxLayout(rail)
-        lay.setContentsMargins(18, 22, 18, 20)
+        lay.setContentsMargins(_MARGE_RAIL, 22, _MARGE_RAIL, 20)
         lay.setSpacing(6)
         retour = QPushButton(tr("Mes années") if self._revenir else tr("Bibliothèque"))
         retour.setObjectName("retour")

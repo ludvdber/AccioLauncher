@@ -53,6 +53,104 @@ PALIERS = (100, 200, 300, 450, 600, 800, 1000, 1250, 1500, 2000, 2500, 3250, 400
            6250, 7500, 9000, 10500, 12250, 14000, 16000, 18000, 20250, 22500, 25000)
 
 
+# Où sont les 125 écussons, lieu par lieu (2026-10-16, lecture des archives du
+# jeu, notes HP6 « Les 125 écussons nommés »). L'identifiant que la sauvegarde
+# range dans `CrestsCollected` est le hachage ELF du nom de l'ENTITÉ de
+# l'écusson : vérifié sur les 93 écussons posés dans les niveaux (instances de
+# la même classe, chacune suivie de son nom) et sur les 7 de la partie de Ludo.
+# Les 22 écussons de défi (potions, feux d'artifice, brutes, grilles) portent
+# « .CrestMain » et les 10 à reconstituer leur nom nu : même règle, pas encore
+# vue dans une sauvegarde. 93 + 22 + 10 = 125, le total du menu de pause.
+# Les libellés sont ceux du château (« Volière », « Pont suspendu », « Couloir
+# des cachots » sont les mots du jeu) ; ils passent par `tr()` à l'affichage.
+LIEUX: tuple[tuple[str, str], ...] = (
+    ("Escalier et couloir de Slughorn",
+     "Armour_Crest_01.CrestMain Slughorn_Stairs_Crest_01 Slughorns_Corridor_Crest_01"),
+    ("Entrée de la tour d'astronomie",
+     "Astronomy_Entrance_Crest_01.CrestMain Astronomy_Entrance_Crest_Behind_Grate_01.CrestMain"),
+    ("Marches du hangar à bateaux",
+     "Boathouse_Steps_Crest_01 Boathouse_Steps_Crest_02 Boathouse_Steps_Crest_03"),
+    ("Chemin du hangar à bateaux",
+     "Boathouse_Path_Crest_01.CrestMain Boathouse_Path_Crest_BurnablePlant_01.CrestMain "
+     "Boathouse_Path_Firework_Crest_01.CrestMain"),
+    ("Hangar à bateaux", "Boathouse_Crest_01.CrestMain Boathouse_Crest_02.CrestMain"),
+    ("Dortoir des garçons", "Boys_Dorm_Crest_01"),
+    ("Chemin de la grotte", "Cave_Path_Crest_01.CrestMain Cave_Path_Crest_02"),
+    ("Salle d'enchantements", "Charms_Class_Crest_01 Charms_Class_Crest_02.CrestMain"),
+    ("Cour de la tour de l'horloge",
+     "Clocktower_Courtyard_Crest_01 Clocktower_Courtyard_Crest_02 "
+     "Clocktower_Courtyard_Crest_BurnablePlant_01.CrestMain Clocktower_Courtyard_Firework_Crest_01.CrestMain"),
+    ("Tour de l'horloge", "Clocktower_Pendulum_Crest_01.CrestMain Clocktower_Potions_01.CrestMain"),
+    ("Salle commune de Gryffondor", "Common_Room_Crest_01.CrestMain Common_Room_Crest_02.CrestMain"),
+    ("Pont couvert", "Covered_Bridge_Crest_2"),
+    ("Escalier de défense contre les forces du Mal", "DADA_Staircase_Crest01"),
+    ("Couloir de défense contre les forces du Mal",
+     "DADA_CorridorA_Mounted_Crest01.CrestMain DADA_Corridor_B_Crest_01.CrestMain "
+     "DADA_Corridor_Potions_01.CrestMain"),
+    ("Tunnel des cachots", "Dungeon_Tunnel_Crest_01.CrestMain Dungeon_Tunnel_Crest_02"),
+    ("Cachots",
+     "Dungeon_Corridor_Crest_01 Dungeon_Corridor_Crest_02.CrestMain "
+     "Dungeon_Corridor_Crest_Behind_Grate_01.CrestMain Dungeon_Corridor_Crest_Cobweb_01.Crest "
+     "Entrance_Dungeon_Crest_01.CrestMain"),
+    ("Cour d'entrée",
+     "Entrance_Courtyard_Bully_01.CrestMain Entrance_Courtyard_Crest_01.CrestMain "
+     "Entrance_Courtyard_Crest_02.CrestMain"),
+    ("Passerelle extérieure",
+     "Exterior_Walkway_Crest_01 Exterior_Walkway_Crest_02 Exterior_Walkway_Crest_BurnablePlant_01.CrestMain"),
+    ("Couloir du 1er étage", "Floor1_Corridor_Crest_01.CrestMain HW_Corridor_Armour_Crest_01.CrestMain"),
+    ("Couloir et escalier du 2e étage",
+     "Floor2_Corridor_Crest_01 Floor2_Corridor_Mounted_Crest_01.CrestMain Floor2_Stairs_Crest_01.CrestMain"),
+    ("Escalier du 3e étage", "Floor3_Staircase_Crest_Behind_Grate_01.CrestMain"),
+    ("Couloir du 5e étage", "Floor5_Corridor_Crest_01.CrestMain"),
+    ("Chemin de la forêt", "Forest_Path_Crest_01 Forest_Path_Crest_02 Forest_Path_Crest_03"),
+    ("Grand escalier",
+     "Grand_Staircase_Crest_01.CrestMain Grand_Staircase_Crest_02 Grand_Staircase_Crest_03 "
+     "Grand_Staircase_Crest_04"),
+    ("Cabane de Hagrid",
+     "Hagrids_Hut_Bully_01.CrestMain Hagrids_Hut_Crest_01.CrestMain Hagrids_Hut_Crest_02 "
+     "Hagrids_Hut_Crest_03 Hagrids_Hut_Crest_BurnableBush_01.CrestMain"),
+    ("Couloir de botanique",
+     "Herbology_Corridor_Crest_01 Herbology_Corridor_Crest_02 Herbology_Corridor_Crest_03 "
+     "Herbology_Corridor_Potions_01.CrestMain"),
+    ("Serres de botanique",
+     "Herbology_Crest_01 Herbology_Crest_02 Herbology_Crest_03.CrestMain Herbology_Crest_04"),
+    ("Couloir de l'infirmerie", "Hospital_Corridor_Bully_01.CrestMain Hospital_Corridor_Crest_01.CrestMain"),
+    ("Bibliothèque",
+     "Library_Crest_01 Library_Crest_Behind_Grate_01.CrestMain Library_Potions_01.CrestMain"),
+    ("Couloir de Mimi Geignarde", "Moaning_Myrtles_Corridor_Crest_01.CrestMain"),
+    ("Volière",
+     "Owlery_Crest_01 Owlery_Crest_02.CrestMain Owlery_Crest_03.CrestMain "
+     "Owlery_Crest_Behind_Grate_01.CrestMain Owlery_Crest_Crest_01 Owlery_Crest_Crest_02 "
+     "Owlery_Firework_Crest_01.CrestMain"),
+    ("Cour pavée",
+     "Paved_Courtyard_Crest_01 Paved_Courtyard_Crest_BurnablePlant_01.CrestMain "
+     "Paved_Courtyard_Firework_Crest_01.CrestMain"),
+    ("Couloir des préfets", "Prefects_Corridor_Crest_01 Prefects_Corridor_Crest_02"),
+    ("Porte du terrain de Quidditch", "Quidditch_Gate_Crest_01"),
+    ("Couloir de la Salle sur Demande",
+     "ROR_CorridorA_Crest_02.CrestMain ROR_CorridorA_Crest_04 ROR_Corridor_Crest_01.CrestMain "
+     "ROR_Corridor_Crest_03"),
+    ("Pont de pierre", "Stone_Bridge_Crest_01.CrestMain Stone_Bridge_Crest_02"),
+    ("Cercle de pierres", "Stone_Circle_Crest_02.CrestMain Stone_Circle_Crest_BurnableBush_01.CrestMain"),
+    ("Pont suspendu", "Suspension_Bridge_Bully_01.CrestMain Suspension_Bridge_Crest_01.CrestMain"),
+    ("Couloir de la tapisserie",
+     "Tapestry_Corridor_Crest_01.CrestMain Tapestry_Corridor_Crest_02 Tapestry_Corridor_Crest_Cobweb_02.Crest"),
+    ("Terrain d'entraînement",
+     "Training_Ground_A_Bully_01.CrestMain Training_Ground_A_Crest_Behind_Grate_01.CrestMain "
+     "Training_Ground_A_Crest_Behind_Grate_02.CrestMain Training_Ground_A_Crest_Cobweb_01.Crest "
+     "Training_Ground_Crest_01.CrestMain Training_Ground_Crest_02.CrestMain Training_Ground_Crest_03 "
+     "Training_Ground_Crest_04 Training_Ground_Crest_05.CrestMain Training_Ground_Crest_06 "
+     "Training_Ground_Crest_BurnableBush_01.CrestMain Training_Ground_Crest_BurnablePlant_01.CrestMain "
+     "Training_Ground_Firework_Crest_01.CrestMain"),
+    ("Salle de métamorphose", "Transfig_Class_Crest_01.CrestMain"),
+    ("Cour de métamorphose",
+     "Transfig_Courtyard_Crest_01.CrestMain Transfig_Courtyard_Crest_02.CrestMain "
+     "Transfig_Courtyard_Crest_03 Transfig_Courtyard_Crest_04 Transfig_Courtyard_Potions_01.CrestMain"),
+    ("Entrée du viaduc",
+     "Viaduct_Entrance_Crest_01.CrestMain Viaduct_Entrance_Crest_02 Viaduct_Entrance_Crest_03.CrestMain"),
+)
+
+
 def palier(mini_ecussons: int) -> tuple[int, float]:
     """(paliers atteints, part du chemin vers le suivant ; 1.0 une fois tout atteint)."""
     atteints = sum(1 for s in PALIERS if mini_ecussons >= s)
@@ -74,6 +172,32 @@ def hachage(nom: str) -> int:
     return h
 
 
+# identifiant d'écusson → rang du lieu dans LIEUX
+_LIEU_DE: dict[int, int] = {hachage(nom): k for k, (_, noms) in enumerate(LIEUX)
+                            for nom in noms.split()}
+
+
+@dataclass(frozen=True)
+class Lieu:
+    libelle: str      # en français : `tr()` à l'affichage
+    trouves: int
+    total: int
+
+
+def par_lieu(trouves: frozenset[int]) -> list[Lieu]:
+    """Écussons trouvés sur le total, lieu par lieu, dans l'ordre de LIEUX.
+
+    On compte, on ne nomme pas l'écusson qui manque : le folio dit OÙ chercher,
+    pas quoi, comme celui de HP3 ne montre pas une carte pas encore trouvée."""
+    comptes = [0] * len(LIEUX)
+    for ident in trouves:
+        k = _LIEU_DE.get(ident)
+        if k is not None:
+            comptes[k] += 1
+    return [Lieu(libelle, n, len(noms.split()))
+            for (libelle, noms), n in zip(LIEUX, comptes, strict=True)]
+
+
 @dataclass(frozen=True)
 class Partie:
     ecrite: datetime | None
@@ -83,6 +207,7 @@ class Partie:
     sorts: tuple[str, ...] = ()   # appris, dans l'ordre de SORTS
     badges: int = 0
     badges_total: int = 0
+    trouves: frozenset[int] = frozenset()   # identifiants des écussons trouvés
 
     @property
     def emplacement(self) -> int:
@@ -136,7 +261,8 @@ def lire(contenu: bytes) -> Partie | None:
         jauge.get(hachage("MiniCrestsCollected"), 0),
         next(iter(chapitre.values()), 0),
         sorts,
-        sum(1 for v in badges.values() if v), len(badges))
+        sum(1 for v in badges.values() if v), len(badges),
+        frozenset(v for v in ecussons.values() if v))
 
 
 def releve(chemin: Path) -> Partie | None:

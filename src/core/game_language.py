@@ -22,9 +22,13 @@ délèguent — aucun appelant ne change.
 
 import logging
 import shutil
+from typing import Any
 
 from src.core import game_registry as registre
+from src.core.catalogue_blocs import GameLanguage, LangueFichiers
+from src.core.config import Config
 from src.core.game_data import GameData
+from src.core.game_registry import Confirmer
 from src.core.i18n import get_language
 from src.core.pre_launch import ecrire_cle_ini, lire_cle_ini, substituer_pour_le_jeu
 
@@ -38,7 +42,7 @@ log = logging.getLogger(__name__)
 # deux, et bifurquent seulement pour lire et écrire.
 
 
-def langues_disponibles(game: GameData, config) -> tuple:
+def langues_disponibles(game: GameData, config: Config) -> tuple[GameLanguage | LangueFichiers, ...]:
     """Langues que CETTE installation sait réellement faire.
 
     Le registre ne fait que SÉLECTIONNER une langue ; les fichiers, eux,
@@ -72,7 +76,7 @@ def langues_disponibles(game: GameData, config) -> tuple:
     return tuple(gardees)
 
 
-def detecter(game: GameData, config=None) -> str | None:
+def detecter(game: GameData, config: Config | None = None) -> str | None:
     """Langue actuellement POSÉE (registre ou fichiers), None si indéterminable.
 
     La lecture est gratuite (aucun privilège) et c'est la seule source qui dise
@@ -97,7 +101,7 @@ def detecter(game: GameData, config=None) -> str | None:
     return None
 
 
-def resoudre(game: GameData, config) -> str | None:
+def resoudre(game: GameData, config: Config) -> str | None:
     """Code de la langue de CE jeu, None s'il n'en propose pas.
 
     Trois sources, dans l'ordre :
@@ -126,7 +130,7 @@ def resoudre(game: GameData, config) -> str | None:
     # ne sont pas là — mieux vaut dire la vérité que la masquer. Seul le DÉFAUT
     # se restreint à ce que l'installation sait faire.
     choisi = config.game_language.get(game.id)
-    if choisi and lr.get(choisi) is not None:
+    if isinstance(choisi, str) and choisi and lr.get(choisi) is not None:
         return choisi
     detecte = detecter(game, config)
     if detecte is not None:
@@ -138,7 +142,7 @@ def resoudre(game: GameData, config) -> str | None:
     return possibles[0].code
 
 
-def memoriser(game: GameData | None, code: str, config) -> None:
+def memoriser(game: GameData | None, code: str, config: Config) -> None:
     """Enregistre le choix de langue d'un jeu (persisté en config)."""
     if game is None or game.langues is None:
         return
@@ -151,7 +155,7 @@ def memoriser(game: GameData | None, code: str, config) -> None:
     log.info("Langue de %s : %s", game.id, code)
 
 
-def valeurs_registre(game: GameData, config, code: str | None = None) -> dict:
+def valeurs_registre(game: GameData, config: Config, code: str | None = None) -> dict[str, Any]:
     """Tout ce qui doit être posé dans la clé du jeu, langue comprise.
 
     Les valeurs communes (« Install Dir ») et celles de la langue vont dans la
@@ -173,8 +177,8 @@ def valeurs_registre(game: GameData, config, code: str | None = None) -> dict:
     return valeurs
 
 
-def appliquer(game: GameData, config, code: str | None = None,
-              confirmer=None) -> bool:
+def appliquer(game: GameData, config: Config, code: str | None = None,
+              confirmer: Confirmer | None = None) -> bool:
     """Écrit une langue dans le registre. True s'il n'y a rien à faire.
 
     `code` permet d'appliquer AVANT de persister : si l'écriture échoue (UAC
@@ -211,7 +215,7 @@ def appliquer(game: GameData, config, code: str | None = None,
 
 # ─── Langue portée par des fichiers (HP1) ───
 
-def _detecter_fichiers(game: GameData, config) -> str | None:
+def _detecter_fichiers(game: GameData, config: Config) -> str | None:
     """La langue dont TOUTES les clés INI portent déjà la valeur, sinon None.
 
     Toutes, et pas la première : sur HP1, `HP.ini` et `Default.ini` doivent
@@ -229,7 +233,8 @@ def _detecter_fichiers(game: GameData, config) -> str | None:
     return None
 
 
-def _appliquer_fichiers(game: GameData, config, code: str | None) -> bool:
+def _appliquer_fichiers(game: GameData, config: Config, code: str | None) -> bool:
+
     """Pose une langue dans les fichiers du jeu. True si elle y est.
 
     Les COPIES d'abord (l'écran de démarrage anglais de HP1) : si l'une manque,

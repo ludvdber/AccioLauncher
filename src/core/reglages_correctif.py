@@ -24,8 +24,10 @@ import logging
 import re
 import shutil
 import sys
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from src.core.i18n import decimal_separator, tr
 
@@ -49,6 +51,12 @@ from src.core.reglages_table import (  # noqa: F401  (réexportés)
     REGLAGES,
     PREREGLAGES,
 )
+from src.core.reglages_table import ValeurChoix
+
+# La valeur d'un réglage : un interrupteur (bool) ou l'un de ses choix.
+type Valeur = ValeurChoix | bool
+# Un préréglage : identifiant, nom, texte, {réglage : valeur}.
+Prereglage = tuple[str, str, str, dict[str, Any]]
 
 log = logging.getLogger(__name__)
 
@@ -81,19 +89,19 @@ def touches_preregle() -> tuple[tuple[str, str], ...]:
     return tuple((action, _lettre(scan, us)) for action, scan, us in _POSITIONS) + _SOURIS
 
 
-def allume(reglage: Reglage, valeur) -> bool:
+def allume(reglage: Reglage, valeur: object) -> bool:
     """Le réglage agit-il ? Un interrupteur coché, ou un choix autre que le premier (l'« éteint »)."""
     if reglage.choix:
-        return valeur != reglage.choix[0]
+        return bool(valeur != reglage.choix[0])
     return bool(valeur)
 
 
-def eteint(reglage: Reglage):
+def eteint(reglage: Reglage) -> Valeur:
     """La valeur qui l'éteint."""
     return reglage.choix[0] if reglage.choix else False
 
 
-def bloque_par(reglage: Reglage, valeurs: dict) -> Reglage | None:
+def bloque_par(reglage: Reglage, valeurs: Mapping[str, object]) -> Reglage | None:
     """Le réglage ÉTEINT dont dépend celui-ci (directement ou non), ou None s'il agit.
 
     `valeurs` : identifiant → valeur, pour les réglages présents dans la fenêtre.
@@ -107,7 +115,7 @@ def bloque_par(reglage: Reglage, valeurs: dict) -> Reglage | None:
     return None
 
 
-def libelle_choix(reglage: Reglage, valeur) -> str:
+def libelle_choix(reglage: Reglage, valeur: Any) -> str:
     """Ce que la liste déroulante affiche pour une valeur."""
     if reglage.noms_choix:
         if valeur == reglage.choix[0]:
@@ -120,12 +128,12 @@ def libelle_choix(reglage: Reglage, valeur) -> str:
     return reglage.format_choix.format(_nombre(valeur).replace(".", decimal_separator()))
 
 
-def _nombre(valeur) -> str:
+def _nombre(valeur: object) -> str:
     """1.5 → « 1.5 », 2.0 → « 2 » : ce que lit le correctif, sans décimale inutile."""
     return f"{valeur:g}" if isinstance(valeur, float) else str(valeur)
 
 
-def texte_valeur(valeur) -> str:
+def texte_valeur(valeur: object) -> str:
     """Une valeur lue dans le fichier, écrite pour la personne : « 0,28 » en français.
 
     Sert à la valeur « réglée à la main » qu'aucun choix de la liste ne porte :
@@ -145,13 +153,13 @@ def textes(reglage: Reglage) -> tuple[str, str]:
     return (tr(reglage.libelle).format(deplacement),
             tr(reglage.aide).format(deplacement, t["Accio"], t["Extremos"], t["MoveDown"]))
 
-def reglages_du_jeu(idents) -> tuple[Reglage, ...]:
+def reglages_du_jeu(idents: Iterable[str] | None) -> tuple[Reglage, ...]:
     """Les réglages déclarés par le catalogue, connus de CE lanceur, dans l'ordre d'affichage."""
     voulus = set(idents or ())
     return tuple(r for r in REGLAGES.values() if r.ident in voulus)
 
 
-def prereglages_du_jeu(reglages) -> tuple[tuple[str, str, str, dict], ...]:
+def prereglages_du_jeu(reglages: Iterable[Reglage]) -> tuple[Prereglage, ...]:
     """Les préréglages réduits aux réglages que CE jeu déclare ; () s'il y en a trop peu.
 
     Moins de trois réglages en commun, un préréglage ne résumerait rien : le
@@ -163,7 +171,7 @@ def prereglages_du_jeu(reglages) -> tuple[tuple[str, str, str, dict], ...]:
     return reduits if len(reduits[0][3]) >= 3 else ()
 
 
-def prereglage_courant(prereglages, valeurs: dict) -> str:
+def prereglage_courant(prereglages: Iterable[Prereglage], valeurs: Mapping[str, object]) -> str:
     """L'identifiant du préréglage que portent `valeurs` (identifiant → valeur), "" sinon."""
     for ident, _nom, _texte, voulues in prereglages:
         if all(k in valeurs and valeurs[k] == v for k, v in voulues.items()):
@@ -208,7 +216,7 @@ def _bornes(lignes: list[str], section: str) -> tuple[int, int] | None:
     return (debut, len(lignes)) if debut is not None else None
 
 
-def _motif_cle(cle: str, commentee: bool) -> re.Pattern:
+def _motif_cle(cle: str, commentee: bool) -> re.Pattern[str]:
     prefixe = r"\s*;\s*" if commentee else r"\s*"
     return re.compile(prefixe + re.escape(cle) + r"\s*=(.*)$", re.IGNORECASE)
 
@@ -397,7 +405,7 @@ def _cles(reglage: Reglage) -> tuple[str, ...]:
 _PLAFOND = ("Accio.Game", "FrameRateCap")
 
 
-def _relever_plafond(lignes: list[str], limite) -> None:
+def _relever_plafond(lignes: list[str], limite: Valeur | None) -> None:
     actuel = _valeur(lignes, *_PLAFOND)
     if actuel is None or not limite:
         return
@@ -413,7 +421,7 @@ def a_une_origine(ini: Path) -> bool:
     return chemin_origine(ini).is_file()
 
 
-def remettre_origine(ini: Path, reglages) -> None:
+def remettre_origine(ini: Path, reglages: Iterable[Reglage]) -> None:
     """Remet les clés de CES réglages telles que les portait l'ini d'origine.
 
     Seulement les clés que le lanceur règle : le reste du fichier (touches
@@ -432,7 +440,8 @@ def remettre_origine(ini: Path, reglages) -> None:
     log.info("Correctif : réglages d'origine remis dans %s", ini)
 
 
-def ecrire(ini: Path, reglage: Reglage, valeur) -> None:
+def ecrire(ini: Path, reglage: Reglage, valeur: Any) -> None:
+
     """Écrit un réglage. Lève OSError si le fichier ne peut pas être écrit,
     ValueError si la valeur n'est pas de celles que l'interface propose."""
     lignes, fin = _lire(ini)

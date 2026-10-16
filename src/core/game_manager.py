@@ -8,14 +8,17 @@ import sys
 import threading
 from datetime import date, datetime, timedelta
 from enum import StrEnum, auto
+from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from src.core import captures, compat, demarrage, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, resolution_jeu, stats
+from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config
+from src.core.game_registry import Confirmer
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 from src.core.pre_launch import (
     besoin_de_documents,
@@ -219,8 +222,9 @@ class GameManager:
         self._states[game_id] = state
         log.info("État de %s → %s", game_id, state)
 
-    def launch_game(self, game_id: str, confirmer=None, avertir=None,
-                    ignorer_prerequis: bool = False) -> subprocess.Popen | None:
+    def launch_game(self, game_id: str, confirmer: Confirmer | None = None,
+                    avertir: Callable[[], object] | None = None,
+                    ignorer_prerequis: bool = False) -> subprocess.Popen[bytes] | None:
         """Lance le .exe du jeu en processus détaché.
 
         Sous Linux, par umu-run ou wine dans le préfixe partagé (`compat.py`).
@@ -320,7 +324,7 @@ class GameManager:
                              name=f"copies-{game.id}").start()
 
         log.info("Lancement de %s (%s)", game.name, exe_path)
-        popen_kwargs: dict = {"cwd": str(exe_path.parent)}
+        popen_kwargs: dict[str, Any] = {"cwd": str(exe_path.parent)}
         if sys.platform != "win32":
             return self._lancer_sous_wine(game, exe_path, lanceur, popen_kwargs)
         popen_kwargs["creationflags"] = (
@@ -340,8 +344,8 @@ class GameManager:
             raise
 
     @staticmethod
-    def _lancer_sous_wine(game: GameData, exe_path: Path, lanceur,
-                          popen_kwargs: dict) -> subprocess.Popen:
+    def _lancer_sous_wine(game: GameData, exe_path: Path, lanceur: compat.Lanceur,
+                          popen_kwargs: dict[str, Any]) -> subprocess.Popen[bytes]:
         """Lance le jeu par umu-run ou wine, dans le préfixe partagé.
 
         `dpi_aware` est ignoré (couche Windows). `dll_overrides` part en
@@ -379,7 +383,7 @@ class GameManager:
     # ──────────────────── Langue de jeu ────────────────────
     # Façades : les règles vivent dans `core/game_language.py`.
 
-    def langues_disponibles(self, game: GameData) -> tuple:
+    def langues_disponibles(self, game: GameData) -> tuple[GameLanguage | LangueFichiers, ...]:
         """Langues que cette installation sait réellement faire (fichiers présents)."""
         return langue.langues_disponibles(game, self.config)
 
@@ -392,12 +396,12 @@ class GameManager:
         """Enregistre le choix de langue d'un jeu (persisté en config)."""
         langue.memoriser(self._index.get(game_id), code, self.config)
 
-    def valeurs_registre(self, game: GameData, code: str | None = None) -> dict:
+    def valeurs_registre(self, game: GameData, code: str | None = None) -> dict[str, Any]:
         """Tout ce qui doit être posé dans la clé du jeu, langue comprise."""
         return langue.valeurs_registre(game, self.config, code)
 
     def apply_game_language(self, game: GameData, code: str | None = None,
-                            confirmer=None) -> bool:
+                            confirmer: Confirmer | None = None) -> bool:
         """Écrit la langue dans le registre. True s'il n'y a rien à faire."""
         return langue.appliquer(game, self.config, code, confirmer)
 
@@ -608,18 +612,18 @@ class GameManager:
 
     # ──────────────────── Bandes-annonces ────────────────────
 
-    def trailers(self) -> tuple:
+    def trailers(self) -> tuple[Trailer, ...]:
         """Bandes-annonces déclarées par le catalogue (vide s'il n'en déclare pas)."""
         return self._catalog.trailers
 
-    def trailer_hash(self, trailer) -> str | None:
+    def trailer_hash(self, trailer: Trailer) -> str | None:
         """Empreinte à vérifier pour cette bande-annonce, ou None.
 
         Mêmes sources et même ordre que `expected_hashes`.
         """
         return trailer.sha256 or self._digest_for(trailer.url) or None
 
-    def trailer_size_mb(self, trailer) -> int:
+    def trailer_size_mb(self, trailer: Trailer) -> int:
         """Poids réel de la bande-annonce en Mo, sinon celui du catalogue.
 
         Même chiffre pour le garde-fou du téléchargeur et le libellé du bouton.
@@ -665,7 +669,9 @@ class GameManager:
 
         log.info("Désinstallation de %s — suppression de : %s", game.name, game_path)
         try:
-            def _force_remove_readonly(_func, path, _exc_info):
+            def _force_remove_readonly(_func: Callable[[str], object], path: str,
+                                       _exc_info: BaseException) -> None:
+
                 """Retire le flag read-only et réessaie la suppression."""
                 Path(path).chmod(stat.S_IWRITE)
                 _func(path)

@@ -26,7 +26,7 @@ import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from src.core import game_registry as registre
 from src.core import reglages_correctif
@@ -334,7 +334,7 @@ def activee(game: GameData) -> bool | None:
     return bool(registre.lire_valeurs(r.root, r.key, [r.value], r.view).get(r.value) == r.on)
 
 
-def activer(game: GameData, oui: bool, confirmer: Callable[[], bool] | None = None) -> bool:
+def activer(game: GameData, oui: bool, confirmer: registre.Confirmer | None = None) -> bool:
     """Pose le choix ; `confirmer(ruche, cle, valeurs, ecarts)` est appelé juste
     avant d'écrire, et seulement s'il y a quelque chose à changer. True si le
     registre porte bien le choix (relu), False sinon — refus compris."""

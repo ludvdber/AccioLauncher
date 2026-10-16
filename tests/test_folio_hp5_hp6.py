@@ -78,14 +78,19 @@ class TestHP5:
         assert folio_hp5.lire(b"PK\x03\x04" + bytes(0x1000)) == []
 
 
+# Les identifiants des 7 écussons de la partie de Ludo, dans l'ordre du fichier.
+_ECUSSONS_LUDO = (0x08CCF721, 0x08CCF722, 0x06CABEC1, 0x010033B4, 0x0B7B53AE, 0x0EFB3422,
+                  0x08CCF723)
+
+
 def _hphbp0(ecussons: int = 7, jauge: int = 372, quand=datetime(2026, 10, 1, 18, 42, 44)) -> bytes:
     """En-tête `20CM`, date à 0x20, corps `HPHB2.00WN32` à 0x54 ; sections en
     paires (clé, valeur), décalages depuis le corps, comme chez Ludo."""
     h = folio_hp6.hachage
     sections = [
         ("Minicrestometer", [(h("MiniCrestsCollected"), jauge)]),
-        ("CrestsCollected", [(124 - i, 0x08CC_F721 + i if 124 - i < ecussons else 0)
-                             for i in range(125)]),
+        ("CrestsCollected", [(k, _ECUSSONS_LUDO[k] if k < ecussons else 0)
+                             for k in range(125)]),
         ("CurrentChapterId", [(0x6F4, 2)]),
         ("MissionId", [(h("SpellUnlock_Stupefy"), 5), (h("SpellUnlock_Lumos"), 5),
                        (h("SpellUnlock_Accio"), 0), (h("Chapter_BurrowIntro"), 15)]),
@@ -151,3 +156,33 @@ class TestHP6:
         d = bytearray(_hphbp0())
         struct.pack_into(">I", d, 0x60, 0xFFFF)
         assert folio_hp6.lire(bytes(d)) is None
+
+
+class TestEcussonsParLieu:
+    def test_125_ecussons_sans_doublon(self):
+        """Le « / 125 » du menu de pause, et deux noms ne tombent jamais sur le
+        même identifiant."""
+        noms = [n for _, groupe in folio_hp6.LIEUX for n in groupe.split()]
+        assert len(noms) == folio_hp6.ECUSSONS
+        assert len({folio_hp6.hachage(n) for n in noms}) == folio_hp6.ECUSSONS
+
+    def test_les_identifiants_releves_dans_les_niveaux(self):
+        """Hachage du nom d'entité = identifiant de la sauvegarde (vu dans
+        les archives du jeu pour « Forest_Path_Crest_01 » et un « .CrestMain »)."""
+        assert folio_hp6.hachage("Forest_Path_Crest_01") == 0x08CCF721
+        assert folio_hp6.hachage("Viaduct_Entrance_Crest_03.CrestMain") == 0x0B7B53AE
+
+    def test_la_partie_de_ludo_lieu_par_lieu(self):
+        partie = folio_hp6.lire(_hphbp0())
+        lieux = {x.libelle: (x.trouves, x.total) for x in folio_hp6.par_lieu(partie.trouves)}
+        assert lieux["Chemin de la forêt"] == (3, 3)
+        assert lieux["Grand escalier"] == (1, 4)
+        assert lieux["Dortoir des garçons"] == (1, 1)
+        assert lieux["Entrée du viaduc"] == (1, 3)
+        assert lieux["Pont couvert"] == (1, 1)
+        assert sum(t for t, _ in lieux.values()) == 7
+        assert sum(n for _, n in lieux.values()) == 125
+
+    def test_un_identifiant_inconnu_n_est_compte_nulle_part(self):
+        lieux = folio_hp6.par_lieu(frozenset({0x12345678}))
+        assert sum(x.trouves for x in lieux) == 0

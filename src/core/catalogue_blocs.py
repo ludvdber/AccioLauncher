@@ -8,7 +8,7 @@ validateurs qui le séparent de la machine : le catalogue est DISTANT.
 import logging
 import re
 from dataclasses import dataclass
-from typing import TypeGuard
+from typing import Any, TypeGuard
 
 from src.core import game_registry as registre
 from src.core.chemins import chemin_relatif_sur
@@ -17,7 +17,7 @@ from src.core.i18n import SOURCE_LANGUAGE, get_language
 log = logging.getLogger(__name__)
 
 
-def _https_ou_rien(url):
+def _https_ou_rien(url: object) -> str | list[str] | None:
     """Écarte au PARSING toute URL de téléchargement non-https.
 
     Le téléchargeur refuse déjà tout sauf https ; ceci avance le MOMENT du
@@ -29,11 +29,11 @@ def _https_ou_rien(url):
     if isinstance(url, (list, tuple)):
         gardees = [u for u in url if isinstance(u, str) and u.startswith("https://")]
         # Tout ou rien : une liste de parts trouée décalerait les empreintes.
-        return list(url) if len(gardees) == len(url) and gardees else None
+        return gardees if len(gardees) == len(url) and gardees else None
     return None
 
 
-def _sha256_valide(value) -> str | None:
+def _sha256_valide(value: object) -> str | None:
     """Empreinte hexadécimale de 64 caractères, ou None (une coquille du
     catalogue faisait planter le comparateur sur `.lower()`)."""
     if not isinstance(value, str):
@@ -46,17 +46,17 @@ def _sha256_valide(value) -> str | None:
     return None
 
 
-def _taille_mo(value) -> int:
+def _taille_mo(value: Any) -> int:
     """Taille annoncée en Mo, jamais négative : négative, elle passait la
     vérification d'espace et DÉSACTIVAIT le plafond du téléchargeur."""
     try:
-        taille = int(value)
+        taille: int = int(value)
     except (TypeError, ValueError):
         return 0
     return max(0, taille)
 
 
-def _loc(data: dict, key: str, default):
+def _loc(data: dict[str, Any], key: str, default: Any) -> Any:
     """Valeur du champ `key` dans la langue active, sinon en français.
 
     Traductions DANS le catalogue (bloc `i18n`, règle 55) : un jeu ajouté
@@ -87,7 +87,7 @@ class ConfigFile:
     destination: str   # chemin avec ~ (ex: "~/Documents/MonJeu/hppoa.ini")
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ConfigFile":
+    def from_dict(cls, data: dict[str, Any]) -> "ConfigFile":
         return cls(source=data["source"], destination=data["destination"])
 
 
@@ -101,7 +101,7 @@ class IniPatch:
     fallback: str | None = None  # valeur de repli si la valeur principale échoue
 
     @classmethod
-    def from_dict(cls, data: dict) -> "IniPatch":
+    def from_dict(cls, data: dict[str, Any]) -> "IniPatch":
         return cls(file=data["file"], section=data["section"],
                    key=data["key"], value=data["value"],
                    fallback=data.get("fallback"))
@@ -118,7 +118,7 @@ class GameLanguage:
     requires_file: str = ""
 
     @property
-    def as_dict(self) -> dict:
+    def as_dict(self) -> dict[str, Any]:
         return dict(self.values)
 
 
@@ -201,7 +201,7 @@ _INI_INTERDIT_NOM = re.compile(r"[\x00-\x1f\x7f\[\]=]")
 _INI_INTERDIT_VALEUR = re.compile(r"[\x00-\x1f\x7f]")
 
 
-def _chaines(data: dict, cles: tuple[str, ...], *, strip: bool = False) -> list[str] | None:
+def _chaines(data: dict[str, Any], cles: tuple[str, ...], *, strip: bool = False) -> list[str] | None:
     """Les valeurs de `cles`, dans l'ordre, si TOUTES sont des chaînes non vides
     (non blanches avec `strip`) ; sinon None. Tout ou rien."""
     valeurs = [data.get(k) for k in cles]
@@ -209,7 +209,7 @@ def _chaines(data: dict, cles: tuple[str, ...], *, strip: bool = False) -> list[
     return chaines if len(chaines) == len(cles) else None
 
 
-def _parse_language_files(data) -> "LanguageFiles | None":
+def _parse_language_files(data: Any) -> "LanguageFiles | None":
     """Lit le bloc `language_files`, ou None s'il est absent ou douteux.
 
     Tout ou rien, comme `language_registry` : une langue à moitié posée donne
@@ -267,7 +267,7 @@ def _parse_language_files(data) -> "LanguageFiles | None":
     return LanguageFiles(languages=tuple(langues))
 
 
-def _parse_manette_registre(data) -> "ManetteRegistre | None":
+def _parse_manette_registre(data: Any) -> "ManetteRegistre | None":
     """Lit le bloc `controller_registry`, ou None s'il est absent ou douteux.
 
     Mêmes barrières que `language_registry` (clé et valeur passent par
@@ -300,7 +300,7 @@ def _parse_manette_registre(data) -> "ManetteRegistre | None":
     return ManetteRegistre(root=root, key=cle, view=view, value=nom, on=on, off=off)
 
 
-def _parse_language_registry(data) -> "LanguageRegistry | None":
+def _parse_language_registry(data: Any) -> "LanguageRegistry | None":
     """Lit le bloc `language_registry`, ou None s'il est absent ou douteux.
 
     TOUT ou RIEN : jamais la moitié des valeurs dans le registre de quelqu'un.
@@ -382,7 +382,7 @@ class Resolution:
     height: str     # clé de la hauteur
 
 
-def _parse_resolution(data) -> "Resolution | None":
+def _parse_resolution(data: Any) -> "Resolution | None":
     """Lit le bloc `resolution`, ou None s'il est absent ou douteux.
 
     Mêmes barrières que les patchs de `language_files` : rien qui puisse
@@ -420,7 +420,7 @@ class PostInstall:
     sous_dossier: str = ""
 
 
-def _annee_valide(brut) -> int:
+def _annee_valide(brut: Any) -> int:
     """Année de scolarité déclarée par le catalogue : 1 à 7, sinon 0 (« hors
     programme », légitime). Booléens refusés : `True` vaudrait « 1ʳᵉ année »."""
     if isinstance(brut, bool) or not isinstance(brut, int):
@@ -428,7 +428,7 @@ def _annee_valide(brut) -> int:
     return brut if 1 <= brut <= 7 else 0
 
 
-def _ips_max_valide(brut) -> int:
+def _ips_max_valide(brut: Any) -> int:
     """Plafond d'images/s déclaré par le catalogue : 1 à 1000, sinon 0 (aucun).
 
     Booléens refusés comme pour `annee` : `true` vaudrait « 1 image/s ».
@@ -438,7 +438,7 @@ def _ips_max_valide(brut) -> int:
     return brut if 1 <= brut <= 1000 else 0
 
 
-def _url_aide_valide(brut) -> str:
+def _url_aide_valide(brut: Any) -> str:
     """URL d'aide du catalogue, ou chaîne vide si elle n'est pas acceptable.
 
     HTTPS seul, jamais d'exception : cette chaîne finit dans `openUrl`. Mal
@@ -456,7 +456,7 @@ def _url_aide_valide(brut) -> str:
     return "https://" + url[len("https://"):]
 
 
-def _sous_dossier_valide(brut) -> str:
+def _sous_dossier_valide(brut: Any) -> str:
     """Nom du sous-dossier de rangement, ou chaîne vide s'il n'est pas sûr.
 
     On y DÉPLACE tout un jeu : un seul composant, jamais un chemin
@@ -476,7 +476,7 @@ def _sous_dossier_valide(brut) -> str:
 _MAX_SURCHARGES_DLL = 16
 
 
-def _surcharges_dll_valides(brut) -> tuple[str, ...]:
+def _surcharges_dll_valides(brut: Any) -> tuple[str, ...]:
     """DLL livrées avec le jeu que Wine doit charger AVANT les siennes.
 
     Finissent dans `WINEDLLOVERRIDES`, où `=`, `,` et `;` réécriraient le
@@ -509,7 +509,7 @@ def _surcharges_dll_valides(brut) -> tuple[str, ...]:
 _MAX_FICHIERS_ESSENTIELS = 64
 
 
-def _fichiers_essentiels_valides(brut) -> tuple[str, ...]:
+def _fichiers_essentiels_valides(brut: Any) -> tuple[str, ...]:
     """Fichiers dont l'absence empêche le jeu de démarrer, relatifs au dossier des jeux.
 
     Seulement LUS (« ce fichier est-il là ? ») par `fichiers_essentiels`, mais
@@ -575,7 +575,7 @@ def _motif_sur(motif: object) -> TypeGuard[str]:
     return isinstance(motif, str) and chemin_relatif_sur(motif) and "**" not in motif
 
 
-def _tous_les_noms(data: dict) -> tuple[str, ...]:
+def _tous_les_noms(data: dict[str, Any]) -> tuple[str, ...]:
     """Le nom du jeu dans chaque langue du catalogue, français d'abord, sans doublon."""
     noms = [data.get("name")]
     bloc = data.get("i18n")
@@ -588,7 +588,7 @@ def _tous_les_noms(data: dict) -> tuple[str, ...]:
     return tuple(vus)
 
 
-def _touche_capture(data) -> str:
+def _touche_capture(data: Any) -> str:
     """Nom de touche affiché tel quel (« F12 », « Impr. écran ») : court, sur une ligne."""
     touche = data.get("key") if isinstance(data, dict) else None
     if not isinstance(touche, str) or not 0 < len(touche.strip()) <= 24 \
@@ -597,7 +597,7 @@ def _touche_capture(data) -> str:
     return touche.strip()
 
 
-def _motifs_captures(data) -> tuple[str, ...]:
+def _motifs_captures(data: Any) -> tuple[str, ...]:
     """Motifs `screenshots.collect` : tout ou rien, au plus 8, chacun sous un dossier de jeu.
 
     Un motif sans « / » viserait la RACINE des jeux ; ce qu'il attraperait
@@ -612,7 +612,7 @@ def _motifs_captures(data) -> tuple[str, ...]:
     return tuple(m.replace("\\", "/") for m in data)
 
 
-def _parse_sauvegardes(data) -> "Sauvegardes | None":
+def _parse_sauvegardes(data: Any) -> "Sauvegardes | None":
     """Tout ou rien, comme `language_registry` : un bloc douteux est ignoré en
     entier, et le jeu n'a simplement pas de sauvegardes affichées."""
     if not isinstance(data, dict):
@@ -669,7 +669,7 @@ class Trailer:
         return f"{self.game_id}_video_v{self.version}.mp4"
 
 
-def _parse_trailers(raw) -> tuple[Trailer, ...]:
+def _parse_trailers(raw: Any) -> tuple[Trailer, ...]:
     """Lit le bloc `trailers` du catalogue. Une entrée douteuse est IGNORÉE.
 
     Jamais d'exception : une bande-annonce est un ornement, et un catalogue
@@ -685,7 +685,9 @@ def _parse_trailers(raw) -> tuple[Trailer, ...]:
             continue
         version = entree.get("version")
         url = _https_ou_rien(entree.get("url"))
-        if not isinstance(version, str) or url is None:
+        # Une bande-annonce est UN fichier : une liste de parts n'a pas de sens ici.
+        if not isinstance(version, str) or not isinstance(url, str):
+
             log.warning("Bande-annonce ignorée (%s) : version ou url absente/non-https", game_id)
             continue
         if not _JETON_SUR.match(str(game_id)) or not _JETON_SUR.match(version):
@@ -715,7 +717,8 @@ class Contributor:
     url: str = ""
 
 
-def _parse_contributors(raw) -> tuple[Contributor, ...]:
+def _parse_contributors(raw: Any) -> tuple[Contributor, ...]:
+
     """Bloc `contributors` du catalogue. Tolérant : une entrée fautive est sautée."""
     if not isinstance(raw, list):
         if raw is not None:

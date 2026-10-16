@@ -36,7 +36,14 @@ import subprocess
 import sys
 import tempfile
 import unicodedata
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
+from typing import Any
+
+# Les valeurs d'une clé : nom → chaîne ou DWORD, telles que le catalogue les déclare.
+Valeurs = Mapping[str, Any]
+# `confirmer(ruche, cle, valeurs, ecarts)` : True pour écrire, False pour renoncer.
+Confirmer = Callable[[str, str, Valeurs, dict[str, Any]], bool]
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +135,7 @@ def refus_de_cle(ruche: str, cle: str) -> str | None:
     return None
 
 
-def refus_de_valeur(nom: str, valeur) -> str | None:
+def refus_de_valeur(nom: str, valeur: object) -> str | None:
     """Raison de refuser cette valeur nommée, ou None. Pure.
 
     La valeur PAR DÉFAUT d'une clé est refusée exprès : c'est précisément ce que
@@ -155,7 +162,7 @@ def _echappe_reg(texte: str) -> str:
     return texte.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def construire_reg(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> str:
+def construire_reg(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32) -> str:
     """Contenu d'un fichier .reg posant `valeurs` sous cette clé. Pure.
 
     La vue 32 bits ne s'exprime pas par un drapeau dans un .reg : elle s'écrit
@@ -193,7 +200,7 @@ def construire_reg(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> str:
     return "\r\n".join(lignes)
 
 
-def lire_valeurs(ruche: str, cle: str, noms, vue: int = 32) -> dict:
+def lire_valeurs(ruche: str, cle: str, noms: Iterable[str], vue: int = 32) -> dict[str, Any]:
     """Valeurs nommées actuellement en place. Lire ne demande AUCUN privilège.
 
     Retourne les seules valeurs trouvées : une clé absente n'est pas une erreur,
@@ -210,7 +217,7 @@ def lire_valeurs(ruche: str, cle: str, noms, vue: int = 32) -> dict:
 
     ruches = {"HKCU": winreg.HKEY_CURRENT_USER, "HKLM": winreg.HKEY_LOCAL_MACHINE}
     acces = winreg.KEY_WOW64_32KEY if vue == 32 else winreg.KEY_WOW64_64KEY
-    trouve: dict = {}
+    trouve: dict[str, Any] = {}
     try:
         with winreg.OpenKey(ruches[ruche], cle, 0, winreg.KEY_READ | acces) as k:
             for nom in noms:
@@ -223,7 +230,7 @@ def lire_valeurs(ruche: str, cle: str, noms, vue: int = 32) -> dict:
     return trouve
 
 
-def comparer(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> dict:
+def comparer(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32) -> dict[str, Any]:
     """Ce qui DIFFÈRE entre le registre et ce qu'on veut y poser.
 
     Rend `{nom: (actuel, voulu)}`, limité aux valeurs qui ne concordent pas ;
@@ -244,7 +251,7 @@ def comparer(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> dict:
             if actuel.get(nom) != voulu}
 
 
-def deja_a_jour(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> bool:
+def deja_a_jour(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32) -> bool:
     """True si le registre porte DÉJÀ exactement ces valeurs.
 
     C'est ce qui évite une demande d'élévation à chaque lancement : le cas
@@ -253,7 +260,7 @@ def deja_a_jour(ruche: str, cle: str, valeurs: dict, vue: int = 32) -> bool:
     return not comparer(ruche, cle, valeurs, vue)
 
 
-def _ecrire_direct(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
+def _ecrire_direct(ruche: str, cle: str, valeurs: Valeurs, vue: int) -> bool:
     """Écriture sans élévation. Suffit pour HKCU, et pour HKLM si déjà élevé.
 
     Sous Linux, il n'y a pas d'accès direct au registre d'un préfixe : Wine
@@ -277,7 +284,7 @@ def _ecrire_direct(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
         return False
 
 
-def _ecrire_eleve(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
+def _ecrire_eleve(ruche: str, cle: str, valeurs: Valeurs, vue: int) -> bool:
     """Écriture élevée : .reg + « regedit /s » derrière une invite UAC.
 
     Le fichier est en UTF-16 avec BOM, seul encodage que regedit accepte pour le
@@ -324,7 +331,7 @@ def _ecrire_eleve(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
 _DELAI_REGEDIT_WINE_S = 120
 
 
-def _ecrire_par_wine(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
+def _ecrire_par_wine(ruche: str, cle: str, valeurs: Valeurs, vue: int) -> bool:
     r"""Importe le `.reg` dans le registre du préfixe, par `regedit /S`.
 
     Vérifié sur un préfixe Wine 9.0 (2026-09-24) : l'import prend 0,5 s, et
@@ -367,7 +374,7 @@ def _ecrire_par_wine(ruche: str, cle: str, valeurs: dict, vue: int) -> bool:
 # Dossiers temporaires à retirer une fois regedit passé. On ne les supprime pas
 # tout de suite : `regedit /s` rend la main AVANT d'avoir lu le fichier, et
 # l'effacer trop tôt ferait échouer l'import sans un mot.
-_dossiers_a_nettoyer: list = []
+_dossiers_a_nettoyer: list[Path] = []
 
 
 def _nettoyer_reg() -> None:
@@ -378,8 +385,9 @@ def _nettoyer_reg() -> None:
         shutil.rmtree(_dossiers_a_nettoyer.pop(), ignore_errors=True)
 
 
-def ecrire_valeurs(ruche: str, cle: str, valeurs: dict, vue: int = 32,
-                   attente_s: float | None = None, confirmer=None) -> bool:
+def ecrire_valeurs(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32,
+                   attente_s: float | None = None, confirmer: Confirmer | None = None) -> bool:
+
     """Pose les valeurs et VÉRIFIE qu'elles y sont. False si ça n'a pas pris.
 
     Ne fait rien — et surtout ne demande aucune élévation — si le registre porte
