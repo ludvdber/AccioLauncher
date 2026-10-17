@@ -32,7 +32,9 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-log = logging.getLogger(__name__)
+from src.core import images_ea
+
+log =logging.getLogger(__name__)
 
 _SIGNATURE = 0x9E2A83C1
 _TAILLE_MAX = 64 * 1024 * 1024
@@ -45,6 +47,9 @@ _PROFONDEUR_MAX = 8   # structures dans des tableaux dans des structures…
 # Drapeau d'objet : un cadre d'état (script en cours) précède ses propriétés.
 # Les acteurs d'une sauvegarde le portent, jamais une texture.
 _RF_HAS_STACK = 0x02000000
+# `ETextureFormat` d'Unreal 2 lus par `texture_32` → octets par bloc de 4 × 4.
+_DXT1, _RGBA8, _DXT5 = 3, 5, 8
+_FORMATS_32 = {_DXT1: 8, _RGBA8: 64, _DXT5: 16}
 
 Propriete = tuple[str, int, "bytes | bool"]   # nom, indice de tableau, valeur brute
 # nom, indice, valeur décodée : int, float, str, bool, liste de propriétés
@@ -337,29 +342,39 @@ class Paquet:
                               props.get("bMasked") is True)
 
     def texture_32(self, nom: str) -> tuple[int, int, bytes] | None:
-        """Une texture en 32 bits par pixel (`Format` 5, RGBA8 d'Unreal 2,
-        rangé B V R A) : (largeur, hauteur, pixels). Les boucliers et les
-        étoiles de défi du menu de HP3 (relevé le 2026-10-17)."""
-        rang = self._par_nom.get(nom)
-        if rang is None:
+        """Une texture d'Unreal 2 en (largeur, hauteur, pixels B V R A) :
+        `Format` 5 (RGBA8, rangé B V R A), 3 (DXT1) ou 8 (DXT5). Les boucliers
+        et les étoiles de défi du menu de HP3 sont en RGBA8, les icônes des
+        friandises (`Beans`, `PumpkinPasties`…) en DXT5 (relevé le 2026-10-17).
+        Un même nom peut porter deux textures : la première lisible l'emporte."""
+        if nom not in self._par_nom:
             return None
-        classe, _, taille, position, _ = self._exports[rang]
-        if self._classe(classe) != "Texture" or taille <= 0:
-            return None
-        fin = position + taille
+        for classe, nom_, taille, position, _ in self._exports[self._par_nom[nom]:]:
+            if nom_ == nom and taille > 0 and self._classe(classe) == "Texture":
+                image = self._texture_32(position, position + taille)
+                if image is not None:
+                    return image
+        return None
+
+    def _texture_32(self, position: int, fin: int) -> tuple[int, int, bytes] | None:
         lec = _Lecteur(self._d, position)
         format_ = self._proprietes(lec, fin).get("Format")
-        if not (isinstance(format_, bytes) and format_[:1] == b"\x05") or lec.octet() < 1:
+        code = format_[0] if isinstance(format_, bytes) and format_ else None
+        if code not in _FORMATS_32 or lec.octet() < 1:
             return None
         lec.i32()
         octets = lec.index()
-        pixels = self._d[lec.p:lec.p + octets]
+        donnees = self._d[lec.p:lec.p + octets]
         lec.p += octets
         largeur, hauteur = lec.i32(), lec.i32()
-        if not (0 < largeur <= _COTE_MAX and 0 < hauteur <= _COTE_MAX
-                and len(pixels) == 4 * largeur * hauteur and lec.p <= fin):
+        if not (0 < largeur <= _COTE_MAX and 0 < hauteur <= _COTE_MAX and lec.p <= fin):
             return None
-        return largeur, hauteur, bytes(pixels)
+        if code == _RGBA8:
+            return (largeur, hauteur, bytes(donnees)) if len(donnees) == 4 * largeur * hauteur else None
+        if largeur % 4 or hauteur % 4 or len(donnees) != _FORMATS_32[code] * largeur * hauteur // 16:
+            return None
+        decode = images_ea.dxt1 if code == _DXT1 else images_ea.dxt5
+        return largeur, hauteur, decode(bytes(donnees), largeur, hauteur)
 
     def _palette(self, ref: object) -> tuple[tuple[int, int, int, int], ...] | None:
         if not isinstance(ref, bytes) or not ref:

@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap
+from PyQt6.QtGui import QImage, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -49,10 +49,14 @@ from src.ui.folio_page import (
     _MARGE_FICHE,
     FolioPage,
     _CarteSorcier,
+    _Jauge,
+    _tuile,
+    en_tete,
+    image_bgra,
     nom_emplacement,
     pixmap_texture,
 )
-from src.ui.theme import accent_qcolor, current as current_theme, themed
+from src.ui.theme import current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
@@ -64,56 +68,6 @@ def page_folio(game, install_path: Path, parent: QWidget | None = None, revenir=
               "hp7a": FolioPageHP7, "hp7b": FolioPageHP7,
               "hp6": FolioPageHP6}.get(game.id, FolioPage)
     return classe(game, install_path, parent, revenir=revenir)
-
-
-class _Jauge(QWidget):
-    """Une part sur un total, en or sur un rail discret."""
-
-    def __init__(self, part: float) -> None:
-        super().__init__()
-        self.setFixedHeight(5)
-        self._part = max(0.0, min(1.0, part))
-
-    def paintEvent(self, _event) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(255, 255, 255, 30))
-        p.drawRoundedRect(self.rect().toRectF(), 2.5, 2.5)
-        if self._part > 0:
-            plein = self.rect().toRectF()
-            plein.setWidth(max(5.0, plein.width() * self._part))
-            p.setBrush(accent_qcolor())
-            p.drawRoundedRect(plein, 2.5, 2.5)
-        p.end()
-
-
-def _tuile(chiffre: str, libelle: str, part: float | None = None,
-           icone: QPixmap | None = None) -> QFrame:
-    """Le chiffre en or, son libellé, et sa jauge s'il a un total ; à droite,
-    l'icône du jeu s'il en a une (HP2 : dragées, étoiles, folio)."""
-    tuile = QFrame()
-    tuile.setObjectName("tuile")
-    tuile.setMinimumWidth(140)
-    h = QHBoxLayout(tuile)
-    h.setContentsMargins(18, 14, 14, 14)
-    h.setSpacing(10)
-    v = QVBoxLayout()
-    v.setSpacing(4)
-    h.addLayout(v, stretch=1)
-    if icone is not None:
-        image = QLabel()
-        image.setStyleSheet("background: transparent;")
-        image.setPixmap(icone)
-        h.addWidget(image, alignment=Qt.AlignmentFlag.AlignVCenter)
-    nombre = texte(chiffre, 26, current_theme().accent_light)
-    nombre.setFont(police(26, gras=True))
-    v.addWidget(nombre)
-    v.addWidget(texte(libelle, 13, ENCRE_DOUCE, retour=True))
-    if part is not None:
-        v.addSpacing(4)
-        v.addWidget(_Jauge(part))
-    return tuile
 
 
 def _pastille(nom: str, glyphe: QPixmap | None, appris: bool) -> QFrame:
@@ -160,20 +114,31 @@ def _objet(nom: str, nombre: int, icone: QPixmap | None) -> QFrame:
     return cadre
 
 
-def image_bgra(image: tuple[int, int, bytes] | None, cote: int, dpr: float) -> QPixmap | None:
-    """Une image du jeu en B V R A (HP4) à `cote` px logiques, ou None."""
-    if image is None:
-        return None
-    largeur, hauteur, pixels = image
-    brute = QImage(pixels, largeur, hauteur, largeur * 4, QImage.Format.Format_ARGB32)
-    physique = max(1, round(cote * dpr))
-    pix = QPixmap.fromImage(brute.scaled(physique, physique, Qt.AspectRatioMode.KeepAspectRatio,
-                                         Qt.TransformationMode.SmoothTransformation))
-    pix.setDevicePixelRatio(dpr)
-    return pix
-
-
 _MEDAILLE = 48
+
+
+def _rond(image: tuple[int, int, bytes] | None, cote: int, dpr: float,
+          acquis: bool = True) -> QPixmap | None:
+    """Une image de badge de HP6 dans un disque, en gris s'il reste à remporter."""
+    pix = image_bgra(image, cote, dpr)
+    if pix is None:
+        return None
+    rond = QPixmap(round(cote * dpr), round(cote * dpr))
+    rond.setDevicePixelRatio(dpr)
+    rond.fill(Qt.GlobalColor.transparent)
+    if not acquis:
+        gris = pix.toImage().convertToFormat(QImage.Format.Format_Grayscale8)
+        pix = QPixmap.fromImage(gris)
+        pix.setDevicePixelRatio(dpr)
+    p = QPainter(rond)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    chemin = QPainterPath()
+    chemin.addEllipse(QRectF(0.5, 0.5, cote - 1, cote - 1))
+    p.setClipPath(chemin)
+    p.setOpacity(1.0 if acquis else 0.35)
+    p.drawPixmap(0, 0, pix)
+    p.end()
+    return rond
 
 
 def _medaille(image: tuple[int, int, bytes], acquis: bool, textes: tuple[str, str] | None,
@@ -181,23 +146,11 @@ def _medaille(image: tuple[int, int, bytes], acquis: bool, textes: tuple[str, st
     """Un badge de HP6 : son image ronde, en gris s'il reste à remporter
     (« Les badges grisés n'ont pas encore été remportés », dit le jeu), et
     son nom avec la façon de l'obtenir au survol."""
-    pix = image_bgra(image, _MEDAILLE, dpr)
-    rond = QPixmap(round(_MEDAILLE * dpr), round(_MEDAILLE * dpr))
-    rond.setDevicePixelRatio(dpr)
-    rond.fill(Qt.GlobalColor.transparent)
-    if pix is not None:
-        if not acquis:
-            gris = pix.toImage().convertToFormat(QImage.Format.Format_Grayscale8)
-            pix = QPixmap.fromImage(gris)
-            pix.setDevicePixelRatio(dpr)
-        p = QPainter(rond)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        chemin = QPainterPath()
-        chemin.addEllipse(QRectF(0.5, 0.5, _MEDAILLE - 1, _MEDAILLE - 1))
-        p.setClipPath(chemin)
-        p.setOpacity(1.0 if acquis else 0.35)
-        p.drawPixmap(0, 0, pix)
-        p.end()
+    rond = _rond(image, _MEDAILLE, dpr, acquis)
+    if rond is None:
+        rond = QPixmap(round(_MEDAILLE * dpr), round(_MEDAILLE * dpr))
+        rond.setDevicePixelRatio(dpr)
+        rond.fill(Qt.GlobalColor.transparent)
     medaille = QLabel()
     medaille.setFixedSize(_MEDAILLE, _MEDAILLE)
     medaille.setStyleSheet("background: transparent;")
@@ -254,6 +207,11 @@ class FolioPageHP3(FolioPage):
     def _entree(self, releve) -> tuple[str, datetime | None, str]:
         return nom_emplacement(releve), releve.modifie, ""
 
+    def _icone(self, nom: str, cote: int = 40) -> QPixmap | None:
+        """Une image de `HP3_Menu.utx`, rognée à sa partie visible."""
+        return image_bgra(folio_hp3.image_menu(self._system, nom), cote,
+                          self.devicePixelRatioF(), rogner=True)
+
     def _construire(self, releve) -> QWidget:
         if releve is None or not releve.lu:
             return super()._construire(releve)
@@ -274,10 +232,13 @@ class FolioPageHP3(FolioPage):
         total = len(self._cat.cartes) or releve.total_cartes or folio_hp3.CARTES
         lay.addLayout(_rangee(
             _tuile(f"{len(releve.cartes)} / {total}", tr("Cartes trouvées"),
-                   len(releve.cartes) / total),
-            _tuile(str(releve.dragees), tr("Dragées surprises")),
-            _tuile(str(releve.pasties), tr("Patacitrouilles")),
-            _tuile(str(releve.gateaux), tr("Fondants du chaudron"))))
+                   len(releve.cartes) / total, self._icone(folio_hp3.ICONES["cartes"])),
+            _tuile(str(releve.dragees), tr("Dragées surprises"), None,
+                   self._icone(folio_hp3.ICONES["dragees"])),
+            _tuile(str(releve.pasties), tr("Patacitrouilles"), None,
+                   self._icone(folio_hp3.ICONES["pasties"])),
+            _tuile(str(releve.gateaux), tr("Fondants du chaudron"), None,
+                   self._icone(folio_hp3.ICONES["gateaux"]))))
         defis = folio_hp3.defis(releve, self._cat.defis)
         if defis:
             lay.addSpacing(12)
@@ -343,11 +304,9 @@ class FolioPageHP3(FolioPage):
             bloc = QVBoxLayout()
             bloc.setSpacing(8)
             trouvees = sum(1 for c in serie.cartes if c.classe in releve.cartes)
-            entete = QHBoxLayout()
-            entete.addWidget(surtitre(serie.titre))
-            entete.addStretch()
-            entete.addWidget(texte(f"{trouvees} / {len(serie.cartes)}", 12, ENCRE_DOUCE))
-            bloc.addLayout(entete)
+            # Le pentagone de la série, celui des onglets du folio du jeu.
+            bloc.addLayout(en_tete(serie.titre, self._icone(f"Card{serie.code}", 24),
+                                   f"{trouvees} / {len(serie.cartes)}"))
             cases = QGridLayout()
             cases.setSpacing(_ECART_CASES)
             largeur = 10 if pleine else _SERIE_PLEINE
@@ -504,18 +463,8 @@ class FolioPageHP2(FolioPage):
             cartes = sorted((c for c in self._cat.values() if c.categorie == categorie),
                             key=lambda c: c.numero)
             trouvees = sum(1 for c in cartes if c.numero in releve.cartes)
-            entete = QHBoxLayout()
-            entete.setSpacing(8)
-            pochette = self._icone(categorie, 26)
-            if pochette is not None:
-                image = QLabel()
-                image.setStyleSheet("background: transparent;")
-                image.setPixmap(pochette)
-                entete.addWidget(image)
-            entete.addWidget(surtitre(titres[categorie]))
-            entete.addStretch()
-            entete.addWidget(texte(f"{trouvees} / {len(cartes)}", 12, ENCRE_DOUCE))
-            lay.addLayout(entete)
+            lay.addLayout(en_tete(titres[categorie], self._icone(categorie, 26),
+                                  f"{trouvees} / {len(cartes)}"))
             lay.addSpacing(8)
             grille = QGridLayout()
             grille.setSpacing(_ECART_CASES)
@@ -575,8 +524,13 @@ class FolioPageHP4(FolioPage):
                         for p in folio_hp4.releve(chemin)]
         self._table = folio_hp4.textes(self._system, get_language())
         self._table_jeu = folio_hp4.textes_jeu(self._system, get_language())
-        self._dragee = image_bgra(folio_hp4.image_dragee(self._system), 36,
-                                  self.devicePixelRatioF())
+        dpr = self.devicePixelRatioF()
+        self._dragee = image_bgra(folio_hp4.image_dragee(self._system), 36, dpr, rogner=True)
+        # Les objets de la pensine sans leurs volutes : la bande du milieu.
+        self._bouclier = image_bgra(folio_hp4.image_menu(self._system, "boucliers"), 40, dpr,
+                                    rogner=True, colonnes=(0.27, 0.73))
+        self._carte = image_bgra(folio_hp4.image_menu(self._system, "cartes"), 30, dpr,
+                                 rogner=True, colonnes=(0.27, 0.73))
 
     def _nom(self, ref: folio_hp4.Nom) -> str:
         return folio_hp4.nom(self._table, ref) or tr(ref[1])
@@ -600,7 +554,7 @@ class FolioPageHP4(FolioPage):
             rang = partie.nom_rang
             tuiles = [_tuile(f"{partie.boucliers} / {folio_hp4.BOUCLIERS}",
                              self._nom(folio_hp4.TITRES["boucliers"]),
-                             partie.boucliers / folio_hp4.BOUCLIERS)]
+                             partie.boucliers / folio_hp4.BOUCLIERS, self._bouclier)]
             if rang:
                 tuiles.insert(0, _tuile(self._nom(rang), self._nom(folio_hp4.TITRES["classement"])))
             tuiles.append(_tuile(str(partie.dragees), tr("Dragées surprises"), None,
@@ -608,9 +562,13 @@ class FolioPageHP4(FolioPage):
             lay.addLayout(_rangee(*tuiles))
             if partie.maitrise:
                 lay.addSpacing(12)
-                lay.addLayout(_rangee(
-                    self._jauges(folio_hp4.TITRES["sortileges"], folio_hp4.SORTILEGES, partie),
-                    self._jauges(folio_hp4.TITRES["sorts"], folio_hp4.SORTS, partie)))
+                rangee = QHBoxLayout()
+                rangee.setSpacing(12)
+                rangee.addWidget(self._jauges(folio_hp4.TITRES["sortileges"],
+                                              folio_hp4.SORTILEGES, partie), stretch=1)
+                rangee.addWidget(self._jauges(folio_hp4.TITRES["sorts"], folio_hp4.SORTS,
+                                              partie, colonnes=2), stretch=2)
+                lay.addLayout(rangee)
             if partie.quetes:
                 lay.addSpacing(12)
                 lay.addWidget(self._quetes(partie.quetes))
@@ -627,7 +585,12 @@ class FolioPageHP4(FolioPage):
         g.setContentsMargins(20, 14, 20, 16)
         g.setHorizontalSpacing(16)
         g.setVerticalSpacing(10)
-        g.addWidget(surtitre(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"])), 0, 0, 1, 3)
+        # Le compte de ce qui est affiché dessous, personnages et créatures.
+        total = (sum(folio_hp4.compte(cartes, plage) for _, plage, _ in folio_hp4.PERSONNAGES)
+                 + folio_hp4.compte(cartes, folio_hp4.CREATURES))
+        g.addLayout(en_tete(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"]), self._carte,
+                            (tr("{} carte") if total == 1 else tr("{} cartes")).format(total)),
+                    0, 0, 1, 3)
         or_clair = current_theme().accent_light
         for rang, (perso, plage, familles) in enumerate(folio_hp4.PERSONNAGES, 1):
             n = folio_hp4.compte(cartes, plage)
@@ -648,21 +611,30 @@ class FolioPageHP4(FolioPage):
         g.setColumnStretch(2, 1)
         return cadre
 
-    def _jauges(self, titre: folio_hp4.Nom, jauges, partie) -> QFrame:
-        """Une jauge par sort, comme la page de la pensine."""
+    def _jauges(self, titre: folio_hp4.Nom, jauges, partie, colonnes: int = 1) -> QFrame:
+        """Une jauge par sort, comme la page de la pensine ; les dix sorts sur
+        deux colonnes, à côté des quatre sortilèges (une seule laissait un
+        cadre de sortilèges à moitié vide)."""
         cadre = QFrame()
         cadre.setObjectName("coupe")
         g = QGridLayout(cadre)
         g.setContentsMargins(20, 14, 20, 16)
         g.setHorizontalSpacing(14)
         g.setVerticalSpacing(8)
-        g.addWidget(surtitre(self._nom(titre)), 0, 0, 1, 2)
-        for rang, (indice, ref, maximum) in enumerate(jauges, 1):
+        g.addWidget(surtitre(self._nom(titre)), 0, 0, 1, 3 * colonnes - 1)
+        hauteur = -(-len(jauges) // colonnes)
+        for k, (indice, ref, maximum) in enumerate(jauges):
+            rang, col = 1 + k % hauteur, 3 * (k // hauteur)
             part = folio_hp4.part(partie, indice, maximum)
-            g.addWidget(texte(self._nom(ref), 13, ENCRE if part else ENCRE_DOUCE), rang, 0)
-            g.addWidget(_Jauge(part), rang, 1, Qt.AlignmentFlag.AlignVCenter)
-        g.setColumnStretch(1, 1)
-        g.setRowStretch(len(jauges) + 1, 1)   # deux cadres côte à côte : le court reste en haut
+            g.addWidget(texte(self._nom(ref), 13, ENCRE if part else ENCRE_DOUCE), rang, col)
+            g.addWidget(_Jauge(part), rang, col + 1, Qt.AlignmentFlag.AlignVCenter)
+            g.setColumnStretch(col + 1, 1)
+        for c in range(1, colonnes):
+            g.setColumnMinimumWidth(3 * c - 1, 12)
+        # Deux cadres côte à côte : le court reste en haut. Pas d'étirement de
+        # rangée : il rendait la grille extensible, et les deux cadres prenaient
+        # tout le bas de la page.
+        g.setAlignment(Qt.AlignmentFlag.AlignTop)
         return cadre
 
     def _quetes(self, quetes: tuple[folio_hp4.Quete, ...]) -> QFrame:
@@ -725,7 +697,9 @@ class FolioPageHP5(FolioPage):
             if partie.decouverte is not None:
                 tuiles.append(_tuile(
                     f"{partie.decouverte} / {folio_hp5.DECOUVERTE_MAX:,}".replace(",", " "),
-                    tr("Points de découverte"), partie.decouverte / folio_hp5.DECOUVERTE_MAX))
+                    tr("Points de découverte"), partie.decouverte / folio_hp5.DECOUVERTE_MAX,
+                    image_bgra(folio_hp5.image_decouverte(self._system), 36,
+                               self.devicePixelRatioF())))
             lay.addLayout(_rangee(*tuiles))
             if partie.compteurs is not None:
                 lay.addSpacing(12)
@@ -797,13 +771,22 @@ class FolioPageHP6(FolioPage):
                     partie.mini_ecussons, folio_hp6.PALIERS[atteints])
             else:
                 detail = tr("{} ramassés").format(partie.mini_ecussons)
+            dpr = self.devicePixelRatioF()
             tuiles = [
                 _tuile(f"{partie.ecussons} / {folio_hp6.ECUSSONS}", tr("Écussons de Poudlard"),
-                       partie.ecussons / folio_hp6.ECUSSONS),
+                       partie.ecussons / folio_hp6.ECUSSONS,
+                       image_bgra(folio_hp6.image_menu(self._system, "ecussons"), 44, dpr)),
                 _tuile(f"{atteints} / {len(folio_hp6.PALIERS)}",
-                       tr("Paliers de mini-écussons") + "\n" + detail, vers_suivant)]
+                       tr("Paliers de mini-écussons") + "\n" + detail, vers_suivant,
+                       image_bgra(folio_hp6.image_menu(self._system, "mini"), 44, dpr))]
             if partie.badges_total:
-                tuiles.append(_tuile(f"{partie.badges} / {partie.badges_total}", tr("Badges")))
+                # Le dernier badge remporté, dans l'ordre de l'écran du jeu.
+                gagne = next((cle for cle, _, _ in reversed(folio_hp6.BADGES)
+                              if cle in partie.acquis), None)
+                images = folio_hp6.images_badges(self._system) if gagne else {}
+                tuiles.append(_tuile(f"{partie.badges} / {partie.badges_total}", tr("Badges"),
+                                     partie.badges / partie.badges_total,
+                                     _rond(images.get(gagne), 40, dpr) if gagne else None))
             lay.addLayout(_rangee(*tuiles))
             if partie.sorts:
                 lay.addSpacing(26)

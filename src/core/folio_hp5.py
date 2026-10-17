@@ -163,3 +163,32 @@ def _images_chapitres(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
     except (OSError, struct.error):
         log.warning("Folio HP5 : vignettes des chapitres illisibles", exc_info=True)
     return images
+
+
+# L'icône des points de découverte (« discovery », DXT5 32 × 32) vit dans le flux
+# de chaque langue, `game/localised/fr-fr.str` chez Ludo (relevé le 2026-10-17) :
+# la version française ne livre que fr, de et it ; les autres codes pour les autres.
+_LANGUES = ("fr-fr", "en-gb", "en-us", "es-es", "de-de", "it-it", "nl-nl", "sv-se", "da-dk",
+            "no-no", "fi-fi", "pl-pl", "pt-pt", "pt-br", "cs-cz", "hu-hu", "ru-ru")
+
+
+def image_decouverte(system: Path) -> tuple[int, int, bytes] | None:
+    """L'icône des points de découverte du jeu installé (B V R A), ou None."""
+    return _image_decouverte(str(system))
+
+
+@lru_cache(maxsize=2)
+def _image_decouverte(system_txt: str) -> tuple[int, int, bytes] | None:
+    try:
+        for archive in ("data.big", "data2.big", "data3.big", "data4.big"):
+            chemin = Path(system_txt) / archive
+            if not chemin.is_file():
+                continue
+            for langue in _LANGUES:
+                flux = images_ea.entree_big(chemin, f"game/localised/{langue}.str")
+                q = images_ea.images_nommees(flux).get("discovery") if flux else None
+                if q is not None:
+                    return images_ea.image(flux, q)
+    except (OSError, struct.error):
+        log.warning("Folio HP5 : icône des points de découverte illisible", exc_info=True)
+    return None

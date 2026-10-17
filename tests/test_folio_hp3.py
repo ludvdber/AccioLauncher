@@ -251,3 +251,30 @@ def test_bouclier_sans_le_jeu_ou_sans_defi(tmp_path):
     """Pas de jeu installé, ou un défi sans bouclier relevé : rien d'inventé."""
     assert folio_hp3.image_bouclier(tmp_path / "system", "cr") is None
     assert folio_hp3.image_bouclier(tmp_path / "system", "adv1") is None
+
+
+class TestIconesDuMenu:
+    """Les icônes des tuiles et des séries, lues dans `textures/HP3_Menu.utx`."""
+
+    def _menu(self, tmp_path, contenu: bytes):
+        (tmp_path / "textures").mkdir()
+        (tmp_path / "textures" / "HP3_Menu.utx").write_bytes(contenu)
+        return tmp_path / "system"
+
+    def test_une_friandise_en_32_bits(self, tmp_path):
+        from tests.test_textures_ue1 import paquet
+        pixels = bytes(range(16))
+        system = self._menu(tmp_path, paquet("Beans", format_=5, pixels=pixels))
+        assert folio_hp3.image_menu(system, "Beans") == (2, 2, pixels)
+
+    def test_un_pentagone_de_serie_en_256_couleurs(self, tmp_path):
+        """`CardWZ` et les autres sont à palette : rendus en B V R A, l'indice 0
+        transparent quand la texture est masquée."""
+        from tests.test_textures_ue1 import paquet
+        system = self._menu(tmp_path, paquet("CardWZ"))
+        largeur, hauteur, pixels = folio_hp3.image_menu(system, "CardWZ")
+        assert (largeur, hauteur) == (2, 2)
+        assert pixels == bytes([30, 20, 10, 0, 0, 0, 255, 255, 0, 255, 0, 255, 255, 0, 0, 255])
+
+    def test_sans_le_jeu(self, tmp_path):
+        assert folio_hp3.image_menu(tmp_path / "system", "Beans") is None

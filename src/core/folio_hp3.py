@@ -376,11 +376,42 @@ _BOUCLIERS = {"cr": "ShieldCR", "dl": "ShieldDR", "gl": "ShieldGL"}
 def image_bouclier(system: Path, ident: str) -> tuple[int, int, bytes] | None:
     """Le bouclier du défi (B V R A) dans le jeu installé, ou None."""
     nom = _BOUCLIERS.get(ident)
+    return image_menu(system, nom) if nom is not None else None
+
+
+# Les icônes du menu (relevées le 2026-10-17) : les friandises en DXT5 128 px,
+# le pentagone étoilé des cartes, et celui de chaque série (`Card` + son code).
+ICONES = {"cartes": "CardTiny_In", "dragees": "Beans", "pasties": "PumpkinPasties",
+          "gateaux": "CauldronCakes"}
+
+
+def image_menu(system: Path, nom: str) -> tuple[int, int, bytes] | None:
+    """Une image de `textures/HP3_Menu.utx` (B V R A), ou None sans le jeu."""
     paquet = next((p for p in _lister(system.parent / "textures")
                    if p.name.lower() == "hp3_menu.utx"), None)
-    if nom is None or paquet is None:
+    try:
+        date = paquet.stat().st_mtime_ns if paquet is not None else None
+    except OSError:
+        date = None
+    return _image_menu(str(paquet), date, nom) if paquet is not None and date else None
+
+
+@lru_cache(maxsize=32)
+def _image_menu(paquet: str, _date: int, nom: str) -> tuple[int, int, bytes] | None:
+    # Gardée tant que le fichier ne change pas : le DXT5 se décode en Python,
+    # sinon à chaque partie choisie dans le rail. Les pentagones des séries
+    # (`CardWZ`…) sont en 256 couleurs : rendus ici en B V R A comme les autres.
+    image = textures_ue1.texture_32(Path(paquet), nom)
+    if image is not None:
+        return image
+    tex = textures_ue1.texture(Path(paquet), nom)
+    if tex is None:
         return None
-    return textures_ue1.texture_32(paquet, nom)
+    teintes = [bytes((b, v, r, 0 if tex.masquee and i == 0 else 255))
+               for i, (r, v, b, _a) in enumerate(tex.palette)]
+    if max(tex.indices, default=0) >= len(teintes):
+        return None
+    return tex.largeur, tex.hauteur, b"".join(teintes[i] for i in tex.indices)
 
 @dataclass(frozen=True)
 class Defi:

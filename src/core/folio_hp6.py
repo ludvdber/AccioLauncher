@@ -418,3 +418,28 @@ def _images_badges(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
     except (OSError, struct.error):
         log.warning("Folio HP6 : images des badges illisibles", exc_info=True)
         return {}
+
+
+# Les écussons du menu de pause (DXT 64 × 64 dans `game.str`, relevés le 2026-10-17).
+ICONES = {"ecussons": "PT_Crest_ALL", "mini": "PT_Mini_Crest_ALL"}
+
+
+def image_menu(system: Path, cle: str) -> tuple[int, int, bytes] | None:
+    """Une icône `ICONES` du jeu installé (B V R A), ou None."""
+    return _images_menu(str(system)).get(cle)
+
+
+@lru_cache(maxsize=2)
+def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
+    images: dict[str, tuple[int, int, bytes]] = {}
+    try:
+        flux = _archive(Path(system_txt), "game.str")
+        positions = images_ea.images_nommees(flux)
+        for cle, nom in ICONES.items():
+            q = positions.get(nom)
+            image = images_ea.image(flux, q) if q is not None else None
+            if image is not None:
+                images[cle] = image
+    except (OSError, struct.error):
+        log.warning("Folio HP6 : icônes du menu illisibles", exc_info=True)
+    return images

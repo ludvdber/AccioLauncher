@@ -22,8 +22,10 @@ def _compact(v: int) -> bytes:
 
 
 def paquet(nom_texture: str = "Tex0", format_: int | None = None, masquee: bool = True,
-           signature: int = 0x9E2A83C1, pixels: bytes = bytes([0, 1, 2, 3])) -> bytes:
-    """Un paquet à deux objets : une palette de 4 couleurs et une texture 2 × 2."""
+           signature: int = 0x9E2A83C1, pixels: bytes = bytes([0, 1, 2, 3]),
+           cote: int = 2) -> bytes:
+    """Un paquet à deux objets : une palette de 4 couleurs et une texture
+    `cote` × `cote` (2 × 2 par défaut)."""
     noms = ["None", "Core", "Class", "Texture", "Palette", "bMasked", "Pal0", nom_texture, "Format"]
     n = {nom: i for i, nom in reversed(list(enumerate(noms)))}
 
@@ -36,7 +38,7 @@ def paquet(nom_texture: str = "Tex0", format_: int | None = None, masquee: bool 
         props += _compact(n["Format"]) + bytes([0x01, format_])     # octet
     props += _compact(n["Palette"]) + bytes([0x05]) + _compact(1)   # objet : export 1
     texture = (props + _compact(n["None"]) + bytes([1]) + struct.pack("<i", 0)
-               + _compact(len(pixels)) + pixels + struct.pack("<ii", 2, 2) + bytes([1, 1]))
+               + _compact(len(pixels)) + pixels + struct.pack("<ii", cote, cote) + bytes([1, 1]))
 
     corps = bytearray(b"\x00" * 36)
     pos_palette = len(corps)
@@ -86,6 +88,22 @@ class TestTexture:
         chemin.write_bytes(paquet(format_=5, pixels=pixels))
         assert textures_ue1.texture_32(chemin, "Tex0") == (2, 2, pixels)
         assert textures_ue1.texture(chemin, "Tex0") is None, "pas une texture à palette"
+
+    @pytest.mark.parametrize("format_, bloc", [
+        (3, struct.pack("<HHI", 0xF800, 0, 0)),                             # DXT1
+        (8, bytes([255, 0]) + bytes(6) + struct.pack("<HHI", 0xF800, 0, 0)),  # DXT5
+    ])
+    def test_le_dxt_des_friandises_de_hp3(self, tmp_path, format_, bloc):
+        """Format 3 et 8 (les dragées, patacitrouilles et fondants de HP3) :
+        un bloc 4 × 4 tout rouge, opaque, rendu en B V R A."""
+        chemin = tmp_path / "Menu.utx"
+        chemin.write_bytes(paquet(format_=format_, pixels=bloc, cote=4))
+        assert textures_ue1.texture_32(chemin, "Tex0") == (4, 4, bytes([0, 0, 255, 255]) * 16)
+
+    def test_un_dxt_tronque_ne_rend_rien(self, tmp_path):
+        chemin = tmp_path / "Menu.utx"
+        chemin.write_bytes(paquet(format_=8, pixels=bytes(8), cote=4))
+        assert textures_ue1.texture_32(chemin, "Tex0") is None
 
     def test_32_bits_seulement_au_format_5(self, tmp_path):
         chemin = tmp_path / "Menu.utx"

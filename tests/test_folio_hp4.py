@@ -225,3 +225,7 @@ class TestImagesDuMenu:
 
     def test_sans_le_jeu(self, tmp_path):
         assert folio_hp4.image_dragee(tmp_path / "absent") is None
+
+
+def test_icones_de_la_pensine_sans_le_jeu(tmp_path):
+    assert folio_hp4.image_menu(tmp_path / "absent", "boucliers") is None

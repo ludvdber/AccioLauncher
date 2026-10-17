@@ -459,6 +459,11 @@ def paquet_menu(system: Path) -> Path | None:
 # Les blasons de la Coupe, dans `HPMenu.u` (128 px, relevés le 2026-10-16).
 BLASONS_HP1 = {GRYFFONDOR: "FEGrifLogoMed", SERPENTARD: "FESlytLogoMed",
                SERDAIGLE: "FERaveLogoMed", POUFSOUFFLE: "FEHuffLogoMed"}
+# Les icônes des tuiles (relevées le 2026-10-17) : la petite carte de Dumbledore,
+# la première du folio, et les trois dragées du compteur du jeu. Les insignes
+# du rapport de fin d'année (`CardBadgeTexture`) posent l'objet sur un ruban :
+# rognés, ils restaient plats et petits.
+ICONES_HP1 = {"cartes": "WizCardDumbledoreSmallTexture", "dragees": "beans1"}
 
 
 def image_menu_hp1(paquet: Path | None, nom: str) -> textures_ue1.TexturePaletee | None:

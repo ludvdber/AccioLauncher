@@ -42,7 +42,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
@@ -177,6 +177,104 @@ def pixmap_texture(tex, cote: int, dpr: float, rogner: bool = False) -> QPixmap:
             Qt.TransformationMode.SmoothTransformation))
     pix.setDevicePixelRatio(dpr)
     return pix
+
+
+def image_bgra(image: tuple[int, int, bytes] | None, cote: int, dpr: float,
+               rogner: bool = False, colonnes: tuple[float, float] = (0.0, 1.0)) -> QPixmap | None:
+    """Une image du jeu en B V R A (HP3 à HP6) à `cote` px logiques, ou None.
+    `colonnes` : la bande verticale gardée (les objets de la pensine de HP4 ont
+    une volute de chaque côté) ; `rogner` : puis seulement sa partie visible."""
+    if image is None:
+        return None
+    largeur, hauteur, pixels = image
+    brute = QImage(pixels, largeur, hauteur, largeur * 4, QImage.Format.Format_ARGB32)
+    gauche, droite = round(largeur * colonnes[0]), round(largeur * colonnes[1])
+    x, y, w, h = gauche, 0, max(1, droite - gauche), hauteur
+    if rogner:
+        opaques = [(i % largeur, i // largeur) for i in range(largeur * hauteur)
+                   if pixels[4 * i + 3] > 16 and gauche <= i % largeur < droite]
+        if opaques:
+            xs, ys = [p[0] for p in opaques], [p[1] for p in opaques]
+            x, y, w, h = min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+    physique = max(1, round(cote * dpr))
+    pix = QPixmap.fromImage(brute.copy(x, y, w, h).scaled(
+        physique, physique, Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation))
+    pix.setDevicePixelRatio(dpr)
+    return pix
+
+
+class _Jauge(QWidget):
+    """Une part sur un total, en or sur un rail discret."""
+
+    def __init__(self, part: float) -> None:
+        super().__init__()
+        self.setFixedHeight(5)
+        self._part = max(0.0, min(1.0, part))
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(255, 255, 255, 30))
+        p.drawRoundedRect(self.rect().toRectF(), 2.5, 2.5)
+        if self._part > 0:
+            plein = self.rect().toRectF()
+            plein.setWidth(max(5.0, plein.width() * self._part))
+            p.setBrush(accent_qcolor())
+            p.drawRoundedRect(plein, 2.5, 2.5)
+        p.end()
+
+
+_ICONE_TUILE = 44
+
+
+def _tuile(chiffre: str, libelle: str, part: float | None = None,
+           icone: QPixmap | None = None) -> QFrame:
+    """Le chiffre en or, son libellé, et sa jauge s'il a un total ; à droite,
+    l'icône du jeu (dragées, cartes, écussons…), dans une place de même largeur
+    pour toutes : les chiffres d'une rangée restent alignés."""
+    tuile = QFrame()
+    tuile.setObjectName("tuile")
+    tuile.setMinimumWidth(140)
+    h = QHBoxLayout(tuile)
+    h.setContentsMargins(18, 14, 14, 14)
+    h.setSpacing(10)
+    v = QVBoxLayout()
+    v.setSpacing(4)
+    h.addLayout(v, stretch=1)
+    if icone is not None:
+        image = QLabel()
+        image.setStyleSheet("background: transparent;")
+        image.setPixmap(icone)
+        image.setFixedWidth(_ICONE_TUILE)
+        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        h.addWidget(image, alignment=Qt.AlignmentFlag.AlignVCenter)
+    nombre = texte(chiffre, 26, current_theme().accent_light)
+    nombre.setFont(police(26, gras=True))
+    v.addWidget(nombre)
+    v.addWidget(texte(libelle, 13, ENCRE_DOUCE, retour=True))
+    if part is not None:
+        v.addSpacing(4)
+        v.addWidget(_Jauge(part))
+    return tuile
+
+
+def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBoxLayout:
+    """Le titre d'une section : son icône du jeu s'il y en a une, le surtitre,
+    et à droite un compte (« 4 / 15 »)."""
+    ligne = QHBoxLayout()
+    ligne.setSpacing(8)
+    if icone is not None:
+        image = QLabel()
+        image.setStyleSheet("background: transparent;")
+        image.setPixmap(icone)
+        ligne.addWidget(image)
+    ligne.addWidget(surtitre(titre))
+    ligne.addStretch()
+    if compte:
+        ligne.addWidget(texte(compte, 12, ENCRE_DOUCE))
+    return ligne
 
 
 class _CarteSorcier(QPushButton):
@@ -495,9 +593,11 @@ class FolioPage(QDialog):
         # laissaient que 380 px aux sabliers et aux cartes.
         tuiles = QHBoxLayout()
         tuiles.setSpacing(12)
-        tuiles.addWidget(self._tuile(f"{len(releve.cartes)} / {folio.CARTES_HP1}",
-                                     tr("Cartes trouvées")), stretch=1)
-        tuiles.addWidget(self._tuile(str(releve.dragees), tr("Dragées surprises")), stretch=1)
+        tuiles.addWidget(_tuile(f"{len(releve.cartes)} / {folio.CARTES_HP1}", tr("Cartes trouvées"),
+                                len(releve.cartes) / folio.CARTES_HP1, self._icone("cartes")),
+                         stretch=1)
+        tuiles.addWidget(_tuile(str(releve.dragees), tr("Dragées surprises"), None,
+                                self._icone("dragees")), stretch=1)
         lay.addLayout(tuiles)
         lay.addSpacing(12)
         lay.addWidget(self._coupe(releve))
@@ -618,18 +718,11 @@ class FolioPage(QDialog):
         for c in range(grille.columnCount()):
             grille.setColumnStretch(c, 1 if c == colonnes else 0)
 
-    def _tuile(self, chiffre: str, libelle: str) -> QFrame:
-        tuile = QFrame()
-        tuile.setObjectName("tuile")
-        tuile.setMinimumWidth(150)
-        v = QVBoxLayout(tuile)
-        v.setContentsMargins(18, 14, 18, 14)
-        v.setSpacing(2)
-        nombre = texte(chiffre, 28, current_theme().accent_light)
-        nombre.setFont(police(28, gras=True))
-        v.addWidget(nombre)
-        v.addWidget(texte(libelle, 13, ENCRE_DOUCE))
-        return tuile
+    def _icone(self, cle: str) -> QPixmap | None:
+        """Une icône des tuiles (`folio.ICONES_HP1`), rognée à sa partie visible."""
+        tex = folio.image_menu_hp1(self._paquet, folio.ICONES_HP1[cle])
+        return (pixmap_texture(tex, 40, self.devicePixelRatioF(), rogner=True)
+                if tex is not None else None)
 
     def _coupe(self, releve: folio.Releve) -> QFrame:
         coupe = QFrame()

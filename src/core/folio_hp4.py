@@ -27,6 +27,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from src.core.images_ea import entree_big as _entree_big
+from src.core.images_ea import images_nommees
 
 log = logging.getLogger(__name__)
 
@@ -377,6 +378,39 @@ def _image_dragee(system_txt: str) -> tuple[int, int, bytes] | None:
     except (OSError, struct.error):
         log.warning("Folio HP4 : images du menu illisibles", exc_info=True)
     return None
+
+
+# Les objets à collectionner de la pensine, même flux, en 0x7B 128 × 64 (relevé le
+# 2026-10-17) : l'objet au centre, une volute de chaque côté.
+ICONES = {"boucliers": "collect_tw_shield", "cartes": "collect_vanishing_card"}
+
+
+def image_menu(system: Path, cle: str) -> tuple[int, int, bytes] | None:
+    """Une icône `ICONES` du menu du jeu installé (B V R A), ou None."""
+    return _images_menu(str(system)).get(cle)
+
+
+@lru_cache(maxsize=2)
+def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
+    images: dict[str, tuple[int, int, bytes]] = {}
+    try:
+        big = next((p for p in Path(system_txt).iterdir() if p.name.lower() == "data.big"), None)
+        if big is None:
+            return images
+        for dossier in _DOSSIERS_IMAGES:
+            flux = _entree_big(big, f"{dossier}/{_FRONT}")
+            if not flux:
+                continue
+            positions = images_nommees(flux)
+            for cle, nom in ICONES.items():
+                q = positions.get(nom)
+                image = _image_7b(flux, q) if q is not None else None
+                if image is not None:
+                    images[cle] = image
+            break
+    except (OSError, struct.error):
+        log.warning("Folio HP4 : icônes du menu illisibles", exc_info=True)
+    return images
 
 
 def nom(table: tuple[str, ...], ref: Nom) -> str | None:

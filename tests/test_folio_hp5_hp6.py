@@ -234,3 +234,9 @@ class TestBadges:
     def test_sans_le_jeu_rien(self, tmp_path):
         assert folio_hp6.images_badges(tmp_path) == {}
         assert folio_hp6.textes_badges(tmp_path, "fr") == {}
+
+
+def test_icones_sans_le_jeu(tmp_path):
+    """Points de découverte de HP5, écussons de HP6 : rien sans le jeu installé."""
+    assert folio_hp5.image_decouverte(tmp_path) is None
+    assert folio_hp6.image_menu(tmp_path, "ecussons") is None
