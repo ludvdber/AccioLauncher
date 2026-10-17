@@ -14,11 +14,12 @@ et toutes les cases restent alignées sur dix colonnes.
 """
 
 import unicodedata
+from html import escape
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QImage, QPainter, QPixmap
+from PyQt6.QtCore import QRectF, Qt
+from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -172,6 +173,45 @@ def image_bgra(image: tuple[int, int, bytes] | None, cote: int, dpr: float) -> Q
     return pix
 
 
+_MEDAILLE = 48
+
+
+def _medaille(image: tuple[int, int, bytes], acquis: bool, textes: tuple[str, str] | None,
+              dpr: float) -> QLabel:
+    """Un badge de HP6 : son image ronde, en gris s'il reste à remporter
+    (« Les badges grisés n'ont pas encore été remportés », dit le jeu), et
+    son nom avec la façon de l'obtenir au survol."""
+    pix = image_bgra(image, _MEDAILLE, dpr)
+    rond = QPixmap(round(_MEDAILLE * dpr), round(_MEDAILLE * dpr))
+    rond.setDevicePixelRatio(dpr)
+    rond.fill(Qt.GlobalColor.transparent)
+    if pix is not None:
+        if not acquis:
+            gris = pix.toImage().convertToFormat(QImage.Format.Format_Grayscale8)
+            pix = QPixmap.fromImage(gris)
+            pix.setDevicePixelRatio(dpr)
+        p = QPainter(rond)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        chemin = QPainterPath()
+        chemin.addEllipse(QRectF(0.5, 0.5, _MEDAILLE - 1, _MEDAILLE - 1))
+        p.setClipPath(chemin)
+        p.setOpacity(1.0 if acquis else 0.35)
+        p.drawPixmap(0, 0, pix)
+        p.end()
+    medaille = QLabel()
+    medaille.setFixedSize(_MEDAILLE, _MEDAILLE)
+    medaille.setStyleSheet("background: transparent;")
+    medaille.setPixmap(rond)
+    etat = tr("remporté") if acquis else tr("pas encore remporté")
+    if textes is not None:
+        nom, comment = textes
+        medaille.setToolTip(f"<b>{escape(nom)}</b><br>{escape(comment)}<br><i>{escape(etat)}</i>")
+        medaille.setAccessibleName(f"{nom}, {etat}")
+    else:
+        medaille.setAccessibleName(etat)
+    return medaille
+
+
 def _rangee(*tuiles: QFrame) -> QHBoxLayout:
     rang = QHBoxLayout()
     rang.setSpacing(12)
@@ -268,16 +308,24 @@ class FolioPageHP3(FolioPage):
         g.setContentsMargins(20, 14, 20, 16)
         g.setHorizontalSpacing(24)
         g.setVerticalSpacing(8)
-        g.addWidget(surtitre(tr("Défis de sortilège")), 0, 0, 1, 3)
+        g.addWidget(surtitre(tr("Défis de sortilège")), 0, 0, 1, 4)
         or_clair = current_theme().accent_light
         for rang, d in enumerate(defis, 1):
-            g.addWidget(texte(d.nom, 14, ENCRE), rang, 0)
+            # Le bouclier du défi, tel que le menu du jeu le dessine.
+            bouclier = image_bgra(folio_hp3.image_bouclier(self._system, d.ident), 40,
+                                  self.devicePixelRatioF())
+            if bouclier is not None:
+                image = QLabel()
+                image.setStyleSheet("background: transparent;")
+                image.setPixmap(bouclier)
+                g.addWidget(image, rang, 0)
+            g.addWidget(texte(d.nom, 14, ENCRE), rang, 1)
             g.addWidget(texte(tr("Boucliers {} / {}").format(d.boucliers, d.boucliers_total),
-                              13, or_clair), rang, 1)
+                              13, or_clair), rang, 2)
             if d.secrets_total:
                 g.addWidget(texte(tr("Zones secrètes {} / {}").format(d.secrets, d.secrets_total),
-                                  13, or_clair), rang, 2)
-        g.setColumnStretch(0, 1)
+                                  13, or_clair), rang, 3)
+        g.setColumnStretch(1, 1)
         return cadre
 
     def _series(self, releve) -> QGridLayout:
@@ -624,6 +672,14 @@ class FolioPageHP5(FolioPage):
     def _depart(self):
         return max(self.releves, key=lambda p: p.ecrite or datetime.min, default=None)
 
+    def _image(self, partie) -> QImage | None:
+        """La vignette du chapitre, celle de l'écran « Continuer aventure »."""
+        image = folio_hp5.image_chapitre(self._system, partie.chapitre)
+        if image is None:
+            return None
+        largeur, hauteur, pixels = image
+        return QImage(pixels, largeur, hauteur, largeur * 4, QImage.Format.Format_ARGB32).copy()
+
     def _construire(self, partie) -> QWidget:
         if partie is None:
             return super()._construire(None)
@@ -732,10 +788,34 @@ class FolioPageHP6(FolioPage):
                     rang.addStretch()
                     lay.addLayout(rang)
                     lay.addSpacing(8)
+            self._badges(lay, partie)
             lay.addSpacing(18)
             lay.addWidget(self._lieux(folio_hp6.par_lieu(partie.trouves)))
 
         return _page(contenu)[0]
+
+    def _badges(self, lay: QVBoxLayout, partie) -> None:
+        """Les trente badges en trois séries, comme l'écran « Badges » du jeu,
+        avec ses images, ses noms et ses explications ; rien sans le jeu."""
+        images = folio_hp6.images_badges(self._system)
+        if not images:
+            return
+        textes = folio_hp6.textes_badges(self._system, get_language())
+        dpr = self.devicePixelRatioF()
+        lay.addSpacing(26)
+        lay.addWidget(surtitre(tr("Badges")))
+        for prefixe, serie in folio_hp6.SERIES:
+            cles = [cle for cle, _, _ in folio_hp6.BADGES if cle.startswith(prefixe)]
+            lay.addSpacing(10)
+            gagnes = sum(1 for cle in cles if cle in partie.acquis)
+            lay.addWidget(texte(f"{tr(serie)}  ·  {gagnes} / {len(cles)}", 13, ENCRE_DOUCE))
+            lay.addSpacing(6)
+            ligne = FlowLayout(spacing=6)
+            for cle in cles:
+                if cle in images:
+                    ligne.addWidget(_medaille(images[cle], cle in partie.acquis,
+                                              textes.get(cle), dpr))
+            lay.addLayout(ligne)
 
     @staticmethod
     def _lieux(lieux: list[folio_hp6.Lieu]) -> QFrame:

@@ -32,6 +32,23 @@ class TestHP5:
             d[glob + (n >> 3)] |= 1 << (n & 7)
         return bytes(d)
 
+    def test_le_chapitre_de_chaque_partie(self):
+        """L'entier à +0x6C de la fiche choisit la vignette de « Continuer
+        aventure » : 4 / 3 / 2 chez Ludo, VU deux silhouettes, Dumbledore,
+        Sirius. Hors de la table du jeu : pas de chapitre."""
+        d = bytearray(self._fichier(330, 75, 0))
+        for k, chapitre in enumerate((4, 3, 99)):
+            fiche = 0x20 + k * 0x178 + 0x6C
+            d[fiche:fiche + 4] = chapitre.to_bytes(4, "little")
+        parties = folio_hp5.lire(bytes(d))
+        assert [p.chapitre for p in parties] == [4, 3, None]
+        assert folio_hp5.CHAPITRES[4] == "Room_of_Requirement"
+        assert folio_hp5.CHAPITRES[3] == "Hogwarts"
+
+    def test_sans_le_jeu_pas_de_vignette(self, tmp_path):
+        assert folio_hp5.image_chapitre(tmp_path, 3) is None
+        assert folio_hp5.image_chapitre(tmp_path, None) is None
+
     def test_l_ecran_informations_sur_le_jeu(self):
         """Les drapeaux de la partie 1 de Ludo pour les lignes non nulles de son écran."""
         personnages = (38, 39, 54, *range(62, 72), 73, 74, 75, 78, 84, 85)
@@ -188,3 +205,32 @@ class TestEcussonsParLieu:
     def test_un_identifiant_inconnu_n_est_compte_nulle_part(self):
         lieux = folio_hp6.par_lieu(frozenset({0x12345678}))
         assert sum(x.trouves for x in lieux) == 0
+
+
+class TestBadges:
+    def test_trente_badges_en_trois_series(self):
+        cles = [cle for cle, _, _ in folio_hp6.BADGES]
+        assert len(cles) == len(set(cles)) == 30
+        for prefixe, _ in folio_hp6.SERIES:
+            assert sum(c.startswith(prefixe) for c in cles) == 10
+
+    def test_les_badges_remportes(self):
+        partie = folio_hp6.lire(_hphbp0())
+        assert partie.acquis == frozenset({"COM_BEGINNERSLUCK"})
+
+    def test_la_cle_des_textes_du_jeu(self):
+        """« Badge star du club de potions » est rangé sous 0x03ababec."""
+        assert folio_hp6.fnv1("GUI_POTIONS_BADGES_CLUB_STAR") == 0x03ABABEC
+
+    def test_la_table_de_textes(self):
+        def entree(cle: int, texte: str) -> bytes:
+            brut = (texte + "\0").encode("utf-16-le")
+            brut += b"*" * (-len(brut) % 4)
+            return struct.pack("<II", cle, len(brut)) + brut + struct.pack("<II", 0, 0)
+
+        flux = b"xx" + b"TX  " + struct.pack("<I", 1) + entree(7, "Badge") + entree(9, "Été")
+        assert folio_hp6.table_textes(flux + b"\xff" * 8) == {7: "Badge", 9: "Été"}
+
+    def test_sans_le_jeu_rien(self, tmp_path):
+        assert folio_hp6.images_badges(tmp_path) == {}
+        assert folio_hp6.textes_badges(tmp_path, "fr") == {}

@@ -336,6 +336,31 @@ class Paquet:
         return TexturePaletee(largeur, hauteur, bytes(indices), palette,
                               props.get("bMasked") is True)
 
+    def texture_32(self, nom: str) -> tuple[int, int, bytes] | None:
+        """Une texture en 32 bits par pixel (`Format` 5, RGBA8 d'Unreal 2,
+        rangé B V R A) : (largeur, hauteur, pixels). Les boucliers et les
+        étoiles de défi du menu de HP3 (relevé le 2026-10-17)."""
+        rang = self._par_nom.get(nom)
+        if rang is None:
+            return None
+        classe, _, taille, position, _ = self._exports[rang]
+        if self._classe(classe) != "Texture" or taille <= 0:
+            return None
+        fin = position + taille
+        lec = _Lecteur(self._d, position)
+        format_ = self._proprietes(lec, fin).get("Format")
+        if not (isinstance(format_, bytes) and format_[:1] == b"\x05") or lec.octet() < 1:
+            return None
+        lec.i32()
+        octets = lec.index()
+        pixels = self._d[lec.p:lec.p + octets]
+        lec.p += octets
+        largeur, hauteur = lec.i32(), lec.i32()
+        if not (0 < largeur <= _COTE_MAX and 0 < hauteur <= _COTE_MAX
+                and len(pixels) == 4 * largeur * hauteur and lec.p <= fin):
+            return None
+        return largeur, hauteur, bytes(pixels)
+
     def _palette(self, ref: object) -> tuple[tuple[int, int, int, int], ...] | None:
         if not isinstance(ref, bytes) or not ref:
             return None
@@ -386,6 +411,18 @@ def texture(chemin: Path, nom: str) -> TexturePaletee | None:
         return None
     try:
         return p.texture(nom)
+    except (ValueError, IndexError, struct.error):
+        log.warning("Texture %s illisible dans %s", nom, chemin, exc_info=True)
+        return None
+
+
+def texture_32(chemin: Path, nom: str) -> tuple[int, int, bytes] | None:
+    """La texture 32 bits `nom` du paquet (B V R A) ; None si absente ou autre."""
+    p = paquet(chemin)
+    if p is None:
+        return None
+    try:
+        return p.texture_32(nom)
     except (ValueError, IndexError, struct.error):
         log.warning("Texture %s illisible dans %s", nom, chemin, exc_info=True)
         return None

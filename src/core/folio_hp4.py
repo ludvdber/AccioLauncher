@@ -26,6 +26,8 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from src.core.images_ea import entree_big as _entree_big
+
 log = logging.getLogger(__name__)
 
 _TAILLE = 0x220 + 3 * 0x2800
@@ -206,29 +208,6 @@ _LANGUES = {"fr": "French", "es": "Spanish", "de": "German", "it": "Italian",
             "pt": "Portuguese_Portugal"}
 _FRONT = "{1025472C-AB8F-438C-87FB-E0AA3DFE4007}.str"
 _REPERE = (149, "Wingardium Leviosa")
-
-
-def _entree_big(chemin: Path, nom: str) -> bytes:
-    """Le contenu d'une entrée d'une archive EA « BIGF » ; b"" si absente."""
-    with open(chemin, "rb") as f:
-        tete = f.read(16)
-        if tete[:4] not in (b"BIGF", b"BIG4"):
-            return b""
-        nombre, taille_tete = struct.unpack(">II", tete[8:16])
-        brut = f.read(max(0, taille_tete - 16))
-        p, cible = 0, nom.lower().encode("latin-1")
-        for _ in range(nombre):
-            if p + 8 > len(brut):
-                break
-            debut, taille = struct.unpack_from(">II", brut, p)
-            fin = brut.find(b"\0", p + 8)
-            if fin < 0:
-                break
-            if brut[p + 8:fin].lower() == cible:
-                f.seek(debut)
-                return f.read(taille)
-            p = fin + 1
-    return b""
 
 
 def _table_loc(flux: bytes) -> tuple[str, ...]:

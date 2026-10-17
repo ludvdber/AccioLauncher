@@ -26,9 +26,10 @@ import logging
 import struct
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 
-from src.core import sauvegardes
+from src.core import images_ea, sauvegardes
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +39,18 @@ _TAILLE_CORPS = 0x400
 _DECOUVERTE = 0x108
 _TAILLE_MAX = 1024 * 1024    # 4 Ko chez Ludo
 _GLOB = (b"BOLG", 0xCC)       # étiquette et taille du morceau des drapeaux
+_FICHE, _TAILLE_FICHE, _CHAPITRE = 0x20, 0x178, 0x6C
+
+# La vignette de l'écran « Continuer aventure » : le jeu la choisit d'après le
+# numéro de chapitre de la fiche (entier à +0x6C, 4 / 3 / 2 chez Ludo), par la
+# fonction à 0x5F1C00 de `hp.exe` (relevé le 2026-10-17) ; image
+# `tf_chapter_<nom>` de `game.str`, 64 × 64. VU le 2026-10-15 sans le savoir :
+# deux silhouettes (4, Salle sur Demande), Dumbledore (3, Poudlard), Sirius
+# (2, square Grimmaurd).
+CHAPITRES = ("LittleWhinging", "LittleWhinging", "GrimmauldPlace", "Hogwarts",
+             "Room_of_Requirement", "Occlumency", "GrimmauldPlaceXmas",
+             "Dumbledores_last_days", "UmbridgesHogwarts", "MM_Hall_of_Prophecy",
+             "MM_Atrium", "MM_Atrium")
 
 
 @dataclass(frozen=True)
@@ -77,6 +90,7 @@ class Partie:
     pourcentage: int | None
     decouverte: int | None    # None : corps absent ou pas comme relevé
     compteurs: tuple[int, ...] | None = None   # un par ligne de COMPTEURS
+    chapitre: int | None = None                # rang dans CHAPITRES
 
 
 def _drapeaux(corps: bytes) -> bytes | None:
@@ -106,8 +120,11 @@ def lire(contenu: bytes) -> list[Partie]:
             drapeaux = _drapeaux(corps)
             if drapeaux is not None:
                 compteurs = _compter(drapeaux)
+        fiche = _FICHE + (numero - 1) * _TAILLE_FICHE + _CHAPITRE
+        chapitre = int.from_bytes(contenu[fiche:fiche + 4], "little")
         parties.append(Partie(numero, datetime.fromtimestamp(ecrite) if ecrite else None,
-                              pourcent, decouverte, compteurs))
+                              pourcent, decouverte, compteurs,
+                              chapitre if chapitre < len(CHAPITRES) else None))
     return parties
 
 
@@ -119,3 +136,30 @@ def releve(chemin: Path) -> list[Partie]:
     except OSError:
         log.warning("Folio HP5 : %s illisible", chemin, exc_info=True)
         return []
+
+
+def image_chapitre(system: Path, chapitre: int | None) -> tuple[int, int, bytes] | None:
+    """La vignette du chapitre (64 × 64, B V R A) dans le jeu installé, ou None."""
+    if chapitre is None or not 0 <= chapitre < len(CHAPITRES):
+        return None
+    return _images_chapitres(str(system)).get(CHAPITRES[chapitre].lower())
+
+
+@lru_cache(maxsize=2)
+def _images_chapitres(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
+    images: dict[str, tuple[int, int, bytes]] = {}
+    try:
+        for archive in ("data.big", "data2.big", "data3.big", "data4.big"):
+            chemin = Path(system_txt) / archive
+            flux = images_ea.entree_big(chemin, "game.str") if chemin.is_file() else b""
+            if flux:
+                break
+        # « Room_Of_Requirement » dans l'archive, « Room_of_Requirement » dans le code
+        for nom, q in images_ea.images_nommees(flux).items():
+            if nom.lower().startswith("tf_chapter_"):
+                image = images_ea.image(flux, q)
+                if image is not None:
+                    images[nom.lower().removeprefix("tf_chapter_")] = image
+    except (OSError, struct.error):
+        log.warning("Folio HP5 : vignettes des chapitres illisibles", exc_info=True)
+    return images

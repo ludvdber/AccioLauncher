@@ -229,7 +229,7 @@ class TestDefis:
             etoiles=(folio_hp3.Niveau("CR", 6, 6), folio_hp3.Niveau("crb", 4, 4)),
             secrets=(folio_hp3.Niveau("CR", 3, 3), folio_hp3.Niveau("adv1", 0, 0)))
         (defi,) = folio_hp3.defis(r, {"cr": "Défi du Carpe Retractum", "gl": "Défi du Glacius"})
-        assert defi == folio_hp3.Defi("Défi du Carpe Retractum", 10, 10, 3, 3)
+        assert defi == folio_hp3.Defi("Défi du Carpe Retractum", 10, 10, 3, 3, "cr")
 
     def test_resume_la_derniere_lisible(self, tmp_path):
         (tmp_path / "Save0.usa").write_bytes(_partie())
@@ -245,3 +245,9 @@ class TestDefis:
         paquet = textures_ue1.Paquet(_partie())
         cartes = dict((n, v) for n, _, v in paquet.lues("WizardCardManager"))["Cards"]
         assert cartes[0] == [("CardClass", 0, "WC_ZouYen"), ("Status", 0, 5)]
+
+
+def test_bouclier_sans_le_jeu_ou_sans_defi(tmp_path):
+    """Pas de jeu installé, ou un défi sans bouclier relevé : rien d'inventé."""
+    assert folio_hp3.image_bouclier(tmp_path / "system", "cr") is None
+    assert folio_hp3.image_bouclier(tmp_path / "system", "adv1") is None

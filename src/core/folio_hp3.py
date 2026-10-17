@@ -367,6 +367,21 @@ def image_carte(system: Path, code: str,
 
 # ── Les défis, nommés ──
 
+# Le bouclier de chaque défi dans `textures/HP3_Menu.utx` (32 bits, 128 × 128,
+# relevé le 2026-10-17) : écusson aux quatre couleurs des maisons et motif du
+# sort. Le « DR » de Draconifors ; `ShieldLP` existe aussi, sans défi relevé.
+_BOUCLIERS = {"cr": "ShieldCR", "dl": "ShieldDR", "gl": "ShieldGL"}
+
+
+def image_bouclier(system: Path, ident: str) -> tuple[int, int, bytes] | None:
+    """Le bouclier du défi (B V R A) dans le jeu installé, ou None."""
+    nom = _BOUCLIERS.get(ident)
+    paquet = next((p for p in _lister(system.parent / "textures")
+                   if p.name.lower() == "hp3_menu.utx"), None)
+    if nom is None or paquet is None:
+        return None
+    return textures_ue1.texture_32(paquet, nom)
+
 @dataclass(frozen=True)
 class Defi:
     nom: str
@@ -374,6 +389,7 @@ class Defi:
     boucliers_total: int
     secrets: int
     secrets_total: int
+    ident: str = ""     # « cr », « dl », « gl »
 
 
 def defis(releve: Releve, noms: dict[str, str]) -> list[Defi]:
@@ -389,7 +405,7 @@ def defis(releve: Releve, noms: dict[str, str]) -> list[Defi]:
         s = [n for n in releve.secrets if defi(n.ident) == ident]
         if b or s:
             sortie.append(Defi(nom, sum(n.trouves for n in b), sum(n.total for n in b),
-                               sum(n.trouves for n in s), sum(n.total for n in s)))
+                               sum(n.trouves for n in s), sum(n.total for n in s), ident))
     return sortie
 
 

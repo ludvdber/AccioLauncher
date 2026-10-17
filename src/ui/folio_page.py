@@ -235,12 +235,12 @@ def nom_emplacement(releve) -> str:
             else tr("Emplacement {}").format(releve.emplacement))
 
 
-def vignette_sauvegarde(image: Path | None, dpr: float) -> QPixmap | None:
-    """L'image d'une sauvegarde (BMP du jeu) à `_VIGNETTE` px de haut, coins
-    arrondis ; None sans image lisible."""
+def vignette_sauvegarde(image: Path | QImage | None, dpr: float) -> QPixmap | None:
+    """L'image d'une sauvegarde (BMP du jeu, ou image déjà décodée) à
+    `_VIGNETTE` px de haut, coins arrondis ; None sans image lisible."""
     if image is None:
         return None
-    source = QImage(str(image))
+    source = image if isinstance(image, QImage) else QImage(str(image))
     if source.isNull():
         return None
     haut = round(_VIGNETTE * dpr)
@@ -390,7 +390,7 @@ class FolioPage(QDialog):
         """Ce que le rail montre d'une partie : nom, date, lieu."""
         return nom_emplacement(releve), releve.modifie, folio.lieu(self._titres, releve.niveau)
 
-    def _image(self, releve) -> Path | None:
+    def _image(self, releve) -> Path | QImage | None:
         """L'image de la partie dans le rail ; None : la ligne n'en a pas. Les
         pages des autres jeux héritent de celle-ci : seul HP1 a ces images."""
         if self.game.id != "hp1":

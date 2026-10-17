@@ -1136,6 +1136,10 @@
     "Écorce de sorbier": "Wiggentree Bark",
     "Poudre de corne de bicorne": "Powdered Bicorn Horn",
     "Peau de serpent d'arbre du Cap": "Boomslang Skin",
-    "Morceau de Goyle": "Bit of Goyle"
+    "Morceau de Goyle": "Bit of Goyle",
+    "remporté": "earned",
+    "pas encore remporté": "not earned yet",
+    "Quidditch": "Quidditch",
+    "Duel": "Duelling"
   }
 }

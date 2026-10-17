@@ -30,7 +30,10 @@ import logging
 import struct
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
+
+from src.core import images_ea
 
 log = logging.getLogger(__name__)
 
@@ -151,6 +154,57 @@ LIEUX: tuple[tuple[str, str], ...] = (
 )
 
 
+# Les 30 badges, dans l'ordre de l'écran « Badges » du jeu : potions, Quidditch,
+# duel (table `EG_PRE_BADGE_01` à `_30` de `chapters/frontend.str`, relevée le
+# 2026-10-17). Par badge : sa clé dans la section `Badges` de la sauvegarde,
+# puis les clés de son NOM et de la façon de l'OBTENIR dans les textes du jeu
+# (`hp6.exe` les range par paires, l'explication puis le nom, dans l'ordre
+# des clés de sauvegarde). L'image est `PT_BDG_<clé>_CM`, sauf une : le jeu
+# montre `COM_BORNSURVIVOR` pour `COM_KEENDUELLIST` (case 27 de la table).
+BADGES: tuple[tuple[str, str, str], ...] = tuple(
+    (f"{cle}_{badge}", f"GUI_{gui}_BADGES_{nom}", f"GUI_{gui}_BADGES_{comment}")
+    for cle, gui, serie in (
+        ("POT", "POTIONS", (
+            ("BEGINNERSLUCK", "BEGINNERS_LUCK", "FIRST_POTION"),
+            ("ENDURANCE", "ENDURANCE", "SUCCESSFUL_POTIONS"),
+            ("SMOKEYBREW", "SMOKY_BREWER", "SMOKY_POTIONS"),
+            ("MESSIEST", "MESSIEST_MIXER", "LIQUID_ON_TABLE"),
+            ("LASTGASP", "LAST_GASP", "RECOVER"),
+            ("SPEEDBREW", "SPEEDY_BREWER", "SECONDS"),
+            ("CLUBSTAR", "CLUB_STAR", "TOP_GRADE"),
+            ("CLUBVET", "CLUB_VETERAN", "ALL_POTIONS"),
+            ("CLUBMEMBER", "CLUB_MEMBER", "JOINED"),
+            ("MASTERPOTIONEER", "MASTER_POTIONEER", "TOP_GRADE_ALL"))),
+        ("QUID", "QUIDDITCH", (
+            ("BEGINNERSLUCK", "BEGINNERS_LUCK", "CAUGHT_SNITCH"),
+            ("ENDURANCE", "ENDURANCE", "FLOWN"),
+            ("PRECISIONFLYER", "PRECISION", "HIT_GATES"),
+            ("GROUNDED", "GROUNDED", "HARD_COLLISIONS"),
+            ("BROOMRAGE", "BROOM_RAGE", "BUMPED_RIVAL"),
+            ("PERSISTENCE", "PERSISTENCE", "REPLAYS"),
+            ("DODGER", "DODGER", "NO_HARD_COLLISIONS"),
+            ("COMBOFLYER", "COMBO_FLYER", "COMPLETE_CHAIN"),
+            ("KEENFLYER", "KEEN_FLYER", "ALL_CLUBS"),
+            ("MASTEROFFLYING", "MASTER_FLYING", "TOP_GRADE"))),
+        ("COM", "COMBAT", (
+            ("BEGINNERSLUCK", "BEGINNERS_LUCK", "JOINED_GRYFFINDOR"),
+            ("NINELIVES", "NIVE_LIVES", "SUCCESSFULLY_RESIST"),
+            ("REFLEX", "REFLEX_BADGE", "NO_HIT"),
+            ("CROSSFIRE", "CROSSFIRE", "DESTROY_COVER"),
+            ("PERSISTENCE", "PERSISTENCE", "LOST"),
+            ("CLUBCHAMPION", "CLUB_CHAMPION", "BECOME_CHAMPION"),
+            ("KEENDUELLIST", "KEEN_DUELLIST", "DUELLING_CLUBS"),
+            ("DUELLINGVETERAN", "VETERAN_BADGE", "TOP_GRADE"),
+            ("PACIFIST", "PACIFIST", "WON_DUEL"),
+            ("MASTERDUELLIST", "MASTER_DUELLIST", "CHAMPION"))))
+    for badge, nom, comment in serie)
+SERIES = (("POT_", "Potions"), ("QUID_", "Quidditch"), ("COM_", "Duel"))
+_IMAGE_A_PART = {"COM_KEENDUELLIST": "COM_BORNSURVIVOR"}
+_LANGUES = {"fr": "fr-fr", "en": "en-gb", "es": "es-es", "de": "de-de", "it": "it-it",
+            "nl": "nl-nl", "pl": "pl-pl", "pt": "pt-pt", "ru": "ru-ru"}
+_ARCHIVES = ("data.big", "data2.big", "data3.big", "data4.big")
+
+
 def palier(mini_ecussons: int) -> tuple[int, float]:
     """(paliers atteints, part du chemin vers le suivant ; 1.0 une fois tout atteint)."""
     atteints = sum(1 for s in PALIERS if mini_ecussons >= s)
@@ -208,6 +262,7 @@ class Partie:
     badges: int = 0
     badges_total: int = 0
     trouves: frozenset[int] = frozenset()   # identifiants des écussons trouvés
+    acquis: frozenset[str] = frozenset()    # clés des badges remportés (BADGES)
 
     @property
     def emplacement(self) -> int:
@@ -257,6 +312,7 @@ def lire(contenu: bytes) -> Partie | None:
     # 31 clés pour 30 badges : `NOT_ACQUIRED` est un témoin, absent de l'écran
     # « Badges » du jeu (6 séries de 5, VU le 2026-10-16).
     badges.pop(hachage("NOT_ACQUIRED"), None)
+    acquis = frozenset(cle for cle, _, _ in BADGES if badges.get(hachage(cle)))
     sorts = tuple(s for s in SORTS if missions.get(hachage(f"SpellUnlock_{s}")))
     return Partie(
         _date(contenu),
@@ -265,7 +321,7 @@ def lire(contenu: bytes) -> Partie | None:
         next(iter(chapitre.values()), 0),
         sorts,
         sum(1 for v in badges.values() if v), len(badges),
-        frozenset(v for v in ecussons.values() if v))
+        frozenset(v for v in ecussons.values() if v), acquis)
 
 
 def releve(chemin: Path) -> Partie | None:
@@ -276,3 +332,89 @@ def releve(chemin: Path) -> Partie | None:
     except OSError:
         log.warning("Folio HP6 : %s illisible", chemin, exc_info=True)
         return None
+
+
+# ── Ce que le jeu installé montre des badges ──
+
+def fnv1(nom: str) -> int:
+    """Le hachage FNV-1 du nom en minuscules : clés des textes du jeu
+    (« GUI_POTIONS_BADGES_CLUB_STAR »), relevé le 2026-10-17."""
+    h = 0x811C9DC5
+    for c in nom.lower().encode("ascii"):
+        h = ((h * 0x01000193) & 0xFFFFFFFF) ^ c
+    return h
+
+
+def table_textes(flux: bytes) -> dict[int, str]:
+    """Les tables « TX » d'un flux de textes : clé → texte.
+
+    Une table : « TX  », version 1, puis par texte sa clé, sa taille en octets,
+    le texte UTF-16 LE terminé par un zéro (complété à 4 octets), et deux
+    entiers que le folio n'emploie pas."""
+    textes: dict[int, str] = {}
+    p = flux.find(b"TX  \x01\x00\x00\x00")
+    while p >= 0:
+        q = p + 8
+        while q + 8 <= len(flux):
+            cle, taille = struct.unpack_from("<II", flux, q)
+            if not (2 <= taille <= 8192 and taille % 2 == 0) or q + 8 + taille > len(flux):
+                break
+            brut = flux[q + 8:q + 8 + taille]
+            fin = next((i for i in range(0, taille - 1, 2) if brut[i:i + 2] == b"\0\0"), taille)
+            textes[cle] = brut[:fin].decode("utf-16-le", "replace")
+            q += 16 + taille
+        p = flux.find(b"TX  \x01\x00\x00\x00", p + 8)
+    return textes
+
+
+def _archive(system: Path, nom: str) -> bytes:
+    """Une entrée des archives du jeu, cherchée dans chacune ; b"" sinon."""
+    for archive in _ARCHIVES:
+        chemin = system / archive
+        if chemin.is_file():
+            flux = images_ea.entree_big(chemin, nom)
+            if flux:
+                return flux
+    return b""
+
+
+def textes_badges(system: Path, langue: str) -> dict[str, tuple[str, str]]:
+    """Clé de badge → (nom, façon de l'obtenir), dans la langue du launcher
+    (l'anglais du jeu sinon) ; vide sans le jeu."""
+    return _textes_badges(str(system), _LANGUES.get(langue, "en-gb"))
+
+
+@lru_cache(maxsize=4)
+def _textes_badges(system_txt: str, code: str) -> dict[str, tuple[str, str]]:
+    try:
+        flux = _archive(Path(system_txt), f"game/localised/{code}.str")
+        textes = table_textes(flux)
+    except (OSError, struct.error):
+        log.warning("Folio HP6 : textes du jeu illisibles", exc_info=True)
+        return {}
+    return {cle: (textes[fnv1(nom)], textes.get(fnv1(comment), ""))
+            for cle, nom, comment in BADGES if fnv1(nom) in textes}
+
+
+def images_badges(system: Path) -> dict[str, tuple[int, int, bytes]]:
+    """Clé de badge → son image du jeu (128 × 128, B V R A) ; vide sans le jeu.
+
+    Décodées une fois par session : 0,3 s pour les trente."""
+    return _images_badges(str(system))
+
+
+@lru_cache(maxsize=2)
+def _images_badges(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
+    try:
+        flux = _archive(Path(system_txt), "chapters/frontend.str")
+        positions = images_ea.images_nommees(flux)
+        images = {}
+        for cle, _, _ in BADGES:
+            q = positions.get(f"PT_BDG_{_IMAGE_A_PART.get(cle, cle)}_CM")
+            image = images_ea.image(flux, q) if q is not None else None
+            if image is not None:
+                images[cle] = image
+        return images
+    except (OSError, struct.error):
+        log.warning("Folio HP6 : images des badges illisibles", exc_info=True)
+        return {}
