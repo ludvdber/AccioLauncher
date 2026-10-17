@@ -115,3 +115,47 @@ def test_les_bandes_annonces_se_lisent(catalogue):
     declares = catalogue.get("trailers", {})
     assert declares, "le catalogue embarqué ne déclare aucune bande-annonce"
     assert len(_parse_trailers(declares)) == len(declares)
+
+
+def _jeu(catalogue: dict, ident: str) -> dict:
+    return next(j for j in catalogue["games"] if j["id"] == ident)
+
+
+def _cles(noeud: object):
+    """Toutes les paires (clé, valeur) d'ini_patches, où qu'elles soient."""
+    if isinstance(noeud, dict):
+        if "key" in noeud and "value" in noeud:
+            yield str(noeud["key"]), str(noeud["value"])
+        for v in noeud.values():
+            yield from _cles(v)
+    elif isinstance(noeud, list):
+        for v in noeud:
+            yield from _cles(v)
+
+
+class TestCeQuiCasseUnJeuSansBruit:
+    """Les cinq garde-fous de CLAUDE.md (détail : CATALOGUE_ET_JEUX.md).
+    Chacun a été payé par un jeu cassé SANS message ; un catalogue repris
+    du RAW qui en perdrait un ne ferait rougir aucun autre test."""
+
+    @pytest.mark.parametrize("ident", ["hp1", "hp2"])
+    def test_running_ini_reste_cree(self, catalogue, ident):
+        fichiers = _jeu(catalogue, ident)["pre_launch"]["create_files"]
+        assert any(f.endswith("\Running.ini") for f in fichiers), ident
+
+    def test_jamais_startup_fullscreen_true(self, catalogue):
+        for jeu in catalogue["games"]:
+            for cle, valeur in _cles(jeu):
+                assert not (cle.lower() == "startupfullscreen" and valeur.lower() == "true"), jeu["id"]
+
+    @pytest.mark.parametrize("ident", ["hp7a", "hp7b"])
+    def test_hp7_dans_son_sous_dossier_pc(self, catalogue, ident):
+        assert _jeu(catalogue, ident)["post_install"]["sous_dossier"] == "pc"
+
+    @pytest.mark.parametrize("ident", ["hp1", "hp2", "hp3"])
+    def test_le_menu_video_reste_verrouille(self, catalogue, ident):
+        """Un `.int` sans sa DLL : le menu vidéo la propose, le jeu ne redémarre plus."""
+        assert _jeu(catalogue, ident).get("display_locked") is True, ident
+
+    def test_hp3_jamais_au_dela_de_60_images(self, catalogue):
+        assert 0 < _jeu(catalogue, "hp3").get("max_fps", 0) <= 60
