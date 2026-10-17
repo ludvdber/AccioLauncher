@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainter, QPixmap
+from PyQt6.QtGui import QColor, QImage, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -41,6 +41,7 @@ from src.core import (
 )
 from src.core.i18n import get_language, tr
 from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
+from src.ui.flow_layout import FlowLayout
 from src.ui.folio_page import (
     _ECART_CASES,
     _IMAGE_FICHE,
@@ -112,6 +113,63 @@ def _tuile(chiffre: str, libelle: str, part: float | None = None,
         v.addSpacing(4)
         v.addWidget(_Jauge(part))
     return tuile
+
+
+def _pastille(nom: str, glyphe: QPixmap | None, appris: bool) -> QFrame:
+    """Un sort : son glyphe (la forme tracée en jeu) et son nom ; en
+    pointillés s'il reste à apprendre (même style que les sorts de HP1)."""
+    cadre = QFrame()
+    cadre.setObjectName("sortAppris" if appris else "sortAVenir")
+    cadre.setFixedHeight(34)          # avec ou sans glyphe, la même ligne
+    h = QHBoxLayout(cadre)
+    h.setContentsMargins(0, 0, 0, 0)
+    h.setSpacing(6)
+    if glyphe is not None and appris:
+        image = QLabel()
+        image.setStyleSheet("background: transparent; border: none; padding: 0;")
+        image.setPixmap(glyphe)
+        h.addWidget(image)
+    nom_ = texte(nom, 14, "#f2e6c4" if appris else "#7d7b96")
+    nom_.setFont(police(14, gras=appris))
+    nom_.setStyleSheet(nom_.styleSheet() + " border: none; padding: 0;")
+    h.addWidget(nom_)
+    cadre.setAccessibleName(nom + ", " + (tr("appris") if appris else tr("pas encore appris")))
+    return cadre
+
+
+def _objet(nom: str, nombre: int, icone: QPixmap | None) -> QFrame:
+    """Un objet de l'inventaire : icône du jeu, nombre, nom."""
+    cadre = QFrame()
+    cadre.setObjectName("objet")
+    h = QHBoxLayout(cadre)
+    h.setContentsMargins(12, 8, 16, 8)
+    h.setSpacing(10)
+    if icone is not None:
+        image = QLabel()
+        image.setStyleSheet("background: transparent;")
+        image.setPixmap(icone)
+        h.addWidget(image)
+    v = QVBoxLayout()
+    v.setSpacing(0)
+    chiffre = texte(str(nombre), 18, current_theme().accent_light)
+    chiffre.setFont(police(18, gras=True))
+    v.addWidget(chiffre)
+    v.addWidget(texte(nom, 12, ENCRE_DOUCE))
+    h.addLayout(v)
+    return cadre
+
+
+def image_bgra(image: tuple[int, int, bytes] | None, cote: int, dpr: float) -> QPixmap | None:
+    """Une image du jeu en B V R A (HP4) à `cote` px logiques, ou None."""
+    if image is None:
+        return None
+    largeur, hauteur, pixels = image
+    brute = QImage(pixels, largeur, hauteur, largeur * 4, QImage.Format.Format_ARGB32)
+    physique = max(1, round(cote * dpr))
+    pix = QPixmap.fromImage(brute.scaled(physique, physique, Qt.AspectRatioMode.KeepAspectRatio,
+                                         Qt.TransformationMode.SmoothTransformation))
+    pix.setDevicePixelRatio(dpr)
+    return pix
 
 
 def _rangee(*tuiles: QFrame) -> QHBoxLayout:
@@ -306,14 +364,43 @@ class FolioPageHP2(FolioPage):
         self._blasons = {m: folio_hp2.image_menu(self._system, nom)
                          for m, nom in folio_hp2.BLASONS.items()}
 
-    def _icone(self, cle: str, cote: int = 40) -> QPixmap | None:
-        tex = folio_hp2.image_menu(self._system, folio_hp2.ICONES[cle])
+    def _icone(self, cle: str, cote: int = 40, paquet: str = "hp2_menu.utx") -> QPixmap | None:
+        """Une icône du jeu : une clé de `ICONES`, ou un nom de texture."""
+        tex = folio_hp2.image_menu(self._system, folio_hp2.ICONES.get(cle, cle), paquet)
         return (pixmap_texture(tex, cote, self.devicePixelRatioF(), rogner=True)
                 if tex is not None else None)
+
+    def _sorts_et_objets(self, lay: QVBoxLayout, releve) -> None:
+        """Les sorts du livre (glyphes du jeu), puis la potion et les ingrédients
+        que la sauvegarde suit, avec leurs noms dans la langue du launcher."""
+        lay.addWidget(surtitre(tr("Sorts appris")))
+        lay.addSpacing(10)
+        ligne = FlowLayout(spacing=8)
+        for classes, nom, glyphe in folio_hp2.SORTS:
+            appris = any(c in releve.sorts for c in classes)
+            ligne.addWidget(_pastille(nom, self._icone(glyphe, 22, "spellshapes.utx") if appris
+                                      else None, appris))
+        lay.addLayout(ligne)
+        lay.addSpacing(26)
+        if not releve.objets:
+            return
+        noms = folio_hp2.noms_objets(self._system, get_language())
+        lay.addWidget(surtitre(tr("Potion et ingrédients")))
+        lay.addSpacing(10)
+        ligne = FlowLayout(spacing=8)
+        for item, _cle, repli, icone in folio_hp2.OBJETS:
+            if item in releve.objets:
+                ligne.addWidget(_objet(noms.get(item) or tr(repli), releve.objets[item],
+                                       self._icone(icone, 32)))
+        lay.addLayout(ligne)
+        lay.addSpacing(26)
 
     def _entree(self, releve) -> tuple[str, datetime | None, str]:
         return (nom_emplacement(releve), releve.modifie,
                 folio_hp2.lieu(self._system, get_language(), releve.titre))
+
+    def _image(self, releve) -> Path | None:
+        return folio_hp2.image_sauvegarde(releve.chemin)
 
     def _construire(self, releve) -> QWidget:
         if releve is None or not releve.lu:
@@ -339,10 +426,20 @@ class FolioPageHP2(FolioPage):
         if releve.etoiles is not None:
             tuiles.append(_tuile(str(releve.etoiles), tr("Étoiles des défis"), None,
                                  self._icone("etoiles")))
+        if releve.defis is not None:
+            haut, plafond = releve.defis
+            # Le plafond dans le libellé : « 300 / 500 » ne tenait pas dans une
+            # tuile sur quatre à 1400 px.
+            tuiles.append(_tuile(str(haut), tr("Points aux défis, sur {}").format(plafond),
+                                 haut / plafond, self._icone("defis")))
+        if releve.duel:
+            tuiles.append(_tuile(str(releve.duel), tr("Rang au club de duel"), None,
+                                 self._icone("duel")))
         lay.addLayout(_rangee(*tuiles))
         lay.addSpacing(12)
         lay.addWidget(self._coupe(releve))
         lay.addSpacing(26)
+        self._sorts_et_objets(lay, releve)
 
         if not self._cat:
             lay.addWidget(texte(tr("Les noms et les images des cartes se lisent dans le jeu "
@@ -431,6 +528,8 @@ class FolioPageHP4(FolioPage):
         self.releves = [p for chemin in sauvegardes.fichiers(self.game.sauvegardes).values()
                         for p in folio_hp4.releve(chemin)]
         self._table = folio_hp4.textes(self._system, get_language())
+        self._dragee = image_bgra(folio_hp4.image_dragee(self._system), 36,
+                                  self.devicePixelRatioF())
 
     def _nom(self, ref: folio_hp4.Nom) -> str:
         return folio_hp4.nom(self._table, ref) or tr(ref[1])
@@ -454,7 +553,8 @@ class FolioPageHP4(FolioPage):
                              partie.boucliers / folio_hp4.BOUCLIERS)]
             if rang:
                 tuiles.insert(0, _tuile(self._nom(rang), self._nom(folio_hp4.TITRES["classement"])))
-            tuiles.append(_tuile(str(partie.dragees), tr("Dragées surprises")))
+            tuiles.append(_tuile(str(partie.dragees), tr("Dragées surprises"), None,
+                                 self._dragee))
             lay.addLayout(_rangee(*tuiles))
             if partie.maitrise:
                 lay.addSpacing(12)

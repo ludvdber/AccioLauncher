@@ -1124,6 +1124,18 @@
     "Éliminations discrètes": "Stealth takedowns",
     "Sorts renvoyés par Protego": "Spells deflected with Protego",
     "Acromantules vaincues": "Acromantulas defeated",
-    "Détraqueurs repoussés": "Dementors repelled"
+    "Détraqueurs repoussés": "Dementors repelled",
+    "Le jeu ne les écrit pas : ils se déduisent du niveau de la sauvegarde, une leçon réussie après l'autre.": "The game doesn't write them down: they follow from the save's level, one lesson passed after another.",
+    "appris": "learned",
+    "pas encore appris": "not learned yet",
+    "Potion et ingrédients": "Potion and ingredients",
+    "Points aux défis, sur {}": "Challenge points, out of {}",
+    "Rang au club de duel": "Duelling Club rank",
+    "Potion Wiggenweld": "Wiggenweld Potion",
+    "Mucus de véracrasse": "Flobberworm Mucus",
+    "Écorce de sorbier": "Wiggentree Bark",
+    "Poudre de corne de bicorne": "Powdered Bicorn Horn",
+    "Peau de serpent d'arbre du Cap": "Boomslang Skin",
+    "Morceau de Goyle": "Bit of Goyle"
   }
 }

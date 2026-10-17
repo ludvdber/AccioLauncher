@@ -278,6 +278,72 @@ def _textes(system_txt: str, langue: str) -> tuple[str, ...]:
     return table
 
 
+# Les images du menu sont dans le même flux, en blocs EA « SHPI » : six
+# dragées 32 × 32 nommées « BEAN » (contour, bleue, verte, orange, violette,
+# rouge), relevées le 2026-10-17. Le format 0x7B : un octet par pixel, puis un
+# bloc attaché 0x2A qui porte la palette en B, V, R, A.
+_DRAGEE = 5          # la rouge
+_DOSSIERS_IMAGES = ("French", "English", "Spanish", "German", "Italian", "Portuguese_Portugal")
+
+
+def images_shpi(flux: bytes, nom: bytes) -> list[tuple[int, int, bytes]]:
+    """Les images 0x7B des blocs SHPI à image unique nommée `nom`, dans
+    l'ordre du flux : (largeur, hauteur, pixels B V R A)."""
+    trouvees = []
+    p = flux.find(b"SHPI")
+    while 0 <= p <= len(flux) - 24:
+        if struct.unpack_from("<I", flux, p + 8)[0] == 1 and flux[p + 16:p + 20] == nom:
+            image = _image_7b(flux, p + struct.unpack_from("<I", flux, p + 20)[0])
+            if image is not None:
+                trouvees.append(image)
+        p = flux.find(b"SHPI", p + 4)
+    return trouvees
+
+
+def _image_7b(flux: bytes, q: int) -> tuple[int, int, bytes] | None:
+    if q + 16 > len(flux) or flux[q] & 0x7F != 0x7B:
+        return None
+    largeur, hauteur = struct.unpack_from("<HH", flux, q + 4)
+    if not (0 < largeur <= 512 and 0 < hauteur <= 512):
+        return None
+    indices = flux[q + 16:q + 16 + largeur * hauteur]
+    saut, r = int.from_bytes(flux[q + 1:q + 4], "little"), q
+    while saut and r + saut + 16 <= len(flux):
+        r += saut
+        if flux[r] & 0x7F == 0x2A:
+            nombre = struct.unpack_from("<H", flux, r + 4)[0]
+            palette = flux[r + 16:r + 16 + 4 * nombre]
+            if len(indices) < largeur * hauteur or len(palette) < 4 * nombre or \
+                    max(indices) >= nombre:
+                return None
+            pixels = b"".join(palette[4 * i:4 * i + 4] for i in indices)
+            return largeur, hauteur, pixels
+        saut = int.from_bytes(flux[r + 1:r + 4], "little")
+    return None
+
+
+def image_dragee(system: Path) -> tuple[int, int, bytes] | None:
+    """La dragée du menu du jeu installé (32 × 32, B V R A), ou None."""
+    return _image_dragee(str(system))
+
+
+@lru_cache(maxsize=2)
+def _image_dragee(system_txt: str) -> tuple[int, int, bytes] | None:
+    system = Path(system_txt)
+    try:
+        big = next((p for p in system.iterdir() if p.name.lower() == "data.big"), None)
+        if big is None:
+            return None
+        for dossier in _DOSSIERS_IMAGES:
+            flux = _entree_big(big, f"{dossier}/{_FRONT}")
+            if flux:
+                dragees = images_shpi(flux, b"BEAN")
+                return dragees[_DRAGEE] if len(dragees) > _DRAGEE else None
+    except (OSError, struct.error):
+        log.warning("Folio HP4 : images du menu illisibles", exc_info=True)
+    return None
+
+
 def nom(table: tuple[str, ...], ref: Nom) -> str | None:
     """Le texte du jeu pour ce nom, None s'il faut le nom français (par `tr()`)."""
     indice, _ = ref

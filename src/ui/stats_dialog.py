@@ -378,7 +378,7 @@ class StatsDialog(QDialog):
             if not secondes:
                 continue
             ligne = QHBoxLayout()
-            ligne.addWidget(_texte(libelle, 12, _SECONDAIRE))
+            ligne.addWidget(_texte(libelle, 13, _SECONDAIRE))
             ligne.addStretch(1)
             ligne.addWidget(_chiffre(_duree(secondes), taille,
                                      theme_courant().accent if taille > 13 else "#ffffff"))
@@ -390,7 +390,7 @@ class StatsDialog(QDialog):
             couche.addWidget(_Paragraphe(
                 tr("Dont {} jouées avant la mise en service du journal, sans "
                    "date.").format(_duree(herite)),
-                taille=11))
+                taille=12))
 
         longue = stats.plus_longue(self._hist)
         if longue is not None:

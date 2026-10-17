@@ -70,11 +70,55 @@ class TestLecture:
         info.write_bytes(b"\x00" * 12 + b"\xff\xff\xff\xff\x09Lev_Tut1\x00")
         assert folio.niveau_hp1(info) == "Lev_Tut1"
 
+    def test_un_point_de_sauvegarde_garde_son_niveau(self, tmp_path):
+        """`savePointID` vaut -1 hors d'un point : ses quatre FF ne sont pas un
+        marqueur, et un point à 2 ne doit pas effacer le niveau."""
+        info = tmp_path / "GameSaveInfo0"
+        info.write_bytes(b"\x00" * 12 + b"\x02\x00\x00\x00\x0eLEV2_HOGFRONT\x00")
+        assert folio.info_hp1(info) == ("LEV2_HOGFRONT", 2)
+        info.write_bytes(_info(b"Lev_Tut1"))
+        assert folio.info_hp1(info) == ("Lev_Tut1", -1)
+
     @pytest.mark.parametrize("brut", [b"", b"\xff\xff\xff\xff", b"\xff\xff\xff\xff\x05a/b\x00x"])
     def test_un_info_fautif_rend_vide(self, tmp_path, brut):
         info = tmp_path / "GameSaveInfo0"
         info.write_bytes(brut)
         assert folio.niveau_hp1(info) == ""
+
+    def test_l_image_du_menu_de_chargement(self, tmp_path):
+        """`FESlotPage.uc` : niveau ET point, puis le niveau, puis l'image par
+        défaut ; casse ignorée, comme le jeu."""
+        jeu = tmp_path / "HP1"
+        (jeu / "System").mkdir(parents=True)
+        images = jeu / "save"
+        images.mkdir()
+        for nom in ("SGS lev2_hogfront.bmp", "SGS lev2_hogfront2.bmp", "DefaultGameSnap.bmp"):
+            (images / nom).write_bytes(b"BM")
+        docs = tmp_path / "Save"
+        docs.mkdir()
+        save = docs / "Save0.usa"
+        save.write_bytes(b"")
+        info = docs / "GameSaveInfo0"
+        info.write_bytes(_info(b"LEV2_HOGFRONT"))
+        assert folio.image_sauvegarde_hp1(jeu / "System", save).name == "SGS lev2_hogfront.bmp"
+        info.write_bytes(b"\x00" * 12 + b"\x02\x00\x00\x00\x0eLEV2_HOGFRONT\x00")
+        assert folio.image_sauvegarde_hp1(jeu / "System", save).name == "SGS lev2_hogfront2.bmp"
+        info.write_bytes(_info(b"Lev5_Final"))
+        assert folio.image_sauvegarde_hp1(jeu / "System", save).name == "DefaultGameSnap.bmp"
+        assert folio.image_sauvegarde_hp1(tmp_path / "absent" / "System", save) is None
+
+    def test_les_sorts_suivent_l_histoire(self):
+        """Ludo est au parc (après les leçons de Flipendo, Alohomora et
+        Wingardium Leviosa, avant celle d'Incendio)."""
+        assert folio.sorts_hp1("LEV2_HOGFRONT") == [
+            ("Flipendo", True), ("Alohomora", True), ("Wingardium Leviosa", True),
+            ("Incendio", False), ("Lumos", False)]
+
+    def test_pendant_la_lecon_le_sort_n_est_pas_affirme(self):
+        assert folio.sorts_hp1("Lev_Tut1") == [(n, False) for n, _ in folio.SORTS_HP1]
+        assert all(appris for _, appris in folio.sorts_hp1("Lev5_Final"))
+        assert folio.sorts_hp1("Lev3_Intro")[-1] == ("Lumos", False)
+        assert folio.sorts_hp1("") is None and folio.sorts_hp1("Entry") is None
 
     def test_emplacements_dans_l_ordre_du_menu(self, tmp_path):
         d = tmp_path / "Save"

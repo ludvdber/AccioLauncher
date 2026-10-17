@@ -42,6 +42,37 @@ def geometrie_d_ouverture(dispo: QRect) -> QRect:
                  dispo.y() + (dispo.height() - hauteur) // 2, largeur, hauteur)
 
 
+# Liseré d'un pixel autour de la fenêtre (2026-10-17, demande de Ludo) : sur un
+# fond presque noir, le bord d'une fenêtre sans cadre se perdait dans le bureau.
+# Le fond de QMainWindow (couleur de bordure du thème, `MAIN_STYLE`) se voit
+# dans cette marge, comme le trait clair de Discord en mode sombre.
+LISERE = 1
+
+
+def marge_lisere(agrandie: bool) -> int:
+    """Agrandie ou plein écran, la fenêtre n'a plus de bord à montrer. Pure."""
+    return 0 if agrandie else LISERE
+
+
+def poser_lisere(fenetre) -> None:
+    m = marge_lisere(fenetre.isMaximized() or fenetre.isFullScreen())
+    fenetre.setContentsMargins(m, m, m, m)
+
+
+def habiller(fenetre) -> bool:
+    """Windows 11 : coins arrondis et trait natifs (`win_utils.habiller_fenetre`).
+
+    Seulement sur la vraie plateforme `windows` : sous `offscreen` (tests,
+    audit), `winId()` n'est pas une fenêtre du système.
+    """
+    if QGuiApplication.platformName() != "windows":
+        return False
+    from src.core.win_utils import habiller_fenetre
+    from src.ui.theme import current
+    h = current().border.lstrip("#")
+    return habiller_fenetre(int(fenetre.winId()), (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)))
+
+
 def bords_a(x: int, y: int, largeur: int, hauteur: int,
             marge: int = MARGE_BORD) -> Qt.Edge:
     """Bords touchés par le point (x, y) dans une fenêtre `largeur`×`hauteur`.
@@ -100,6 +131,12 @@ class WindowChrome:
         self._fenetre = fenetre
         self._marge = marge
         self._curseur_pose = False
+        poser_lisere(fenetre)
+        habiller(fenetre)
+
+    def etat_change(self) -> None:
+        """Fenêtre agrandie, restaurée ou en plein écran : le liseré suit."""
+        poser_lisere(self._fenetre)
 
     @property
     def curseur_pose(self) -> bool:

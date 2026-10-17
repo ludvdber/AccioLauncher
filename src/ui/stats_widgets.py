@@ -334,3 +334,7 @@ class _CarteSauvegarde(QFrame):
             grille.addWidget(v, rang, 1)
             rang += 1
         couche.addLayout(grille)
+        # Les cartes d'une rangée ont la hauteur de la plus haute : sans ressort,
+        # la place en trop s'étalait entre les lignes et les titres voisins ne
+        # tombaient plus à la même hauteur (3 px d'écart, capture du 2026-10-17).
+        couche.addStretch(1)

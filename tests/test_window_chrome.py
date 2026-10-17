@@ -139,3 +139,21 @@ class TestSaisie:
         qtbot.addWidget(w)
         assert w.windowHandle() is None
         assert WindowChrome(w).saisir(QPoint(2, 2)) is False
+
+
+class TestLisere:
+    """Le trait d'un pixel qui dessine le bord d'une fenêtre sans cadre."""
+
+    def test_un_pixel_fenetre_restauree_aucun_agrandie(self):
+        from src.ui.window_chrome import LISERE, marge_lisere
+        assert marge_lisere(False) == LISERE == 1
+        assert marge_lisere(True) == 0
+
+    def test_la_fenetre_porte_la_marge_et_la_rend_agrandie(self, qtbot):
+        w = QWidget()
+        qtbot.addWidget(w)
+        chrome = WindowChrome(w)
+        assert w.contentsMargins().left() == 1
+        w.isMaximized = lambda: True
+        chrome.etat_change()
+        assert w.contentsMargins().left() == 0

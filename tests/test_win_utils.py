@@ -76,3 +76,16 @@ class TestNomsCommencantPar:
         from src.core.win_utils import noms_commencant_par
         (tmp_path / "abc").mkdir()
         assert noms_commencant_par(tmp_path, "a*") == []
+
+
+class TestHabillerFenetre:
+    """Coins arrondis et trait natifs de Windows 11 (fenêtre sans cadre)."""
+
+    def test_colorref_est_bgr(self):
+        from src.core.win_utils import couleur_dwm
+        assert couleur_dwm(0x1A, 0x27, 0x44) == 0x44271A
+
+    def test_hors_windows_rien(self, monkeypatch):
+        import src.core.win_utils as wu
+        monkeypatch.setattr(wu.sys, "platform", "linux")
+        assert wu.habiller_fenetre(1234, (0, 0, 0)) is False

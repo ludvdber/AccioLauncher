@@ -189,3 +189,37 @@ def couches_de_compatibilite(exe: Path) -> dict[str, list[str]]:
 def exige_l_administrateur(couches: dict[str, list[str]]) -> list[str]:
     """Les ruches où la case « administrateur » est cochée (pure)."""
     return [ruche for ruche, liste in couches.items() if "RUNASADMIN" in liste]
+
+
+# DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DWMWA_BORDER_COLOR (dwmapi.h).
+_DWM_COINS, _DWM_ROND, _DWM_BORDURE = 33, 2, 34
+
+
+def couleur_dwm(r: int, g: int, b: int) -> int:
+    """Un COLORREF : 0x00BBGGRR. Pure."""
+    return (b << 16) | (g << 8) | r
+
+
+def habiller_fenetre(hwnd: int, bordure: tuple[int, int, int]) -> bool:
+    """Coins arrondis et trait de bord natifs de Windows 11 sur une fenêtre sans cadre.
+
+    Une fenêtre sans cadre perd l'arrondi de Windows 11 : elle tombait en
+    angles vifs à côté de toutes les autres. Le trait d'un pixel du launcher
+    (`window_chrome.poser_lisere`) reste dessiné par Qt, pour Windows 10 et
+    Linux ; ici, DWM dessine le sien de la même couleur, qui suit l'arrondi.
+    Windows 10 refuse ces deux attributs : rien ne change, False.
+    """
+    if sys.platform != "win32":
+        return False
+    import ctypes
+    try:
+        dwm = ctypes.WinDLL("dwmapi")
+        coins = ctypes.c_int(_DWM_ROND)
+        couleur = ctypes.c_uint(couleur_dwm(*bordure))
+        rc1 = dwm.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), _DWM_COINS,
+                                        ctypes.byref(coins), ctypes.sizeof(coins))
+        rc2 = dwm.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), _DWM_BORDURE,
+                                        ctypes.byref(couleur), ctypes.sizeof(couleur))
+    except (OSError, AttributeError):
+        return False
+    return bool(rc1 == 0 and rc2 == 0)

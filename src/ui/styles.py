@@ -49,7 +49,7 @@ QRadioButton::indicator:checked {
 
 MAIN_STYLE = f"""
 QMainWindow {{
-    background-color: {COLOR_BG_PRIMARY};
+    background-color: #1a2744;
 }}
 
 QWidget#centralContainer {{

@@ -202,20 +202,91 @@ def _valeurs(valeurs: dict[str, int], cartes: frozenset[int]) -> dict[str, Any]:
     }
 
 
-def niveau_hp1(info: Path) -> str:
-    """Le code du niveau dans `GameSaveInfoN` : une chaîne Unreal après le marqueur -1."""
+def info_hp1(info: Path) -> tuple[str, int]:
+    """(code du niveau, point de sauvegarde) de `GameSaveInfoN` ; ("", -1) illisible.
+
+    `GameSaveInfo.uc` : dragées, étoiles, points (3 × 4 octets), `savePointID`
+    (4), puis le niveau en chaîne Unreal (longueur sur un octet). Le point vaut
+    -1 hors d'un point de sauvegarde : l'ancienne lecture prenait ses quatre
+    `FF` pour un marqueur, et perdait le niveau dès qu'il valait autre chose.
+    """
     try:
         brut = info.read_bytes()[:512]
     except OSError:
-        return ""
-    debut = brut.find(b"\xff\xff\xff\xff")
-    if debut < 0 or debut + 5 > len(brut):
-        return ""
-    taille = brut[debut + 4]
-    if not 1 < taille < 64:
-        return ""
-    chaine = brut[debut + 5:debut + 5 + taille].rstrip(b"\x00")
-    return chaine.decode("ascii", "ignore") if re.fullmatch(rb"[A-Za-z0-9_]+", chaine) else ""
+        return "", -1
+    if len(brut) < 18:
+        return "", -1
+    point = struct.unpack_from("<i", brut, 12)[0]
+    taille = brut[16]
+    chaine = brut[17:17 + taille].rstrip(b"\x00")
+    if not 1 < taille < 64 or not re.fullmatch(rb"[A-Za-z0-9_]+", chaine):
+        return "", -1
+    return chaine.decode("ascii"), point
+
+
+def niveau_hp1(info: Path) -> str:
+    """Le code du niveau dans `GameSaveInfoN` (`info_hp1`)."""
+    return info_hp1(info)[0]
+
+
+# Les niveaux de l'histoire dans l'ordre où le jeu les enchaîne : chaque
+# carte nomme la suivante (relevé le 2026-10-17 dans `Maps/*.unr`). Après
+# `Lev3_Intro`, tout le reste (Lev3 à Lev5, bureau de Rogue, matchs) vient plus tard.
+_ORDRE_HP1 = ("lev_tut1", "lev_tut1b", "lev_tut2", "lev_tut3", "lev_tut3b",
+              "lev2_hogfront", "lev2_inc_a", "lev2_inc_b", "lev2_hogfront_2",
+              "lev2_remchase", "lev2_hogfront_3", "lev2_fire2", "lev2_fire1",
+              "lev2_quid1", "lev3_intro")
+_APRES_HP1 = re.compile(r"lev[345]_\w+|snapes_office|quid_\w+")
+
+# Chaque sort et le niveau de sa leçon (`SpellLearnTrigger.Spell` des cartes).
+SORTS_HP1 = (("Flipendo", "lev_tut1"), ("Alohomora", "lev_tut3"),
+             ("Wingardium Leviosa", "lev_tut3"), ("Incendio", "lev2_inc_a"),
+             ("Lumos", "lev3_intro"))
+
+
+def _rang_hp1(niveau: str) -> int | None:
+    n = niveau.lower()
+    if n in _ORDRE_HP1:
+        return _ORDRE_HP1.index(n)
+    return len(_ORDRE_HP1) if _APRES_HP1.fullmatch(n) else None
+
+
+def sorts_hp1(niveau: str) -> list[tuple[str, bool]] | None:
+    """Les cinq sorts et s'ils sont appris, au niveau `niveau` ; None si le
+    niveau est inconnu.
+
+    La sauvegarde ne les écrit pas (la baguette y est vide, relevé sur les
+    trois de Ludo) : le jeu les rend selon l'avancée dans l'histoire. Un sort
+    compte comme appris APRÈS le niveau de sa leçon : sauvegardé pendant la
+    leçon, on ne sait pas si elle est réussie, et on ne l'affirme pas.
+    """
+    rang = _rang_hp1(niveau)
+    if rang is None:
+        return None
+    return [(nom, rang > _ORDRE_HP1.index(lecon)) for nom, lecon in SORTS_HP1]
+
+
+def image_sauvegarde_hp1(system: Path, sauvegarde: Path) -> Path | None:
+    """L'image que le menu de chargement du jeu montre pour `SaveN.usa`.
+
+    `FESlotPage.uc` : `save/SGS <niveau><point>.bmp`, sinon `SGS <niveau>.bmp`,
+    sinon `DefaultGameSnap.bmp`, dans le dossier `save` du jeu INSTALLÉ (des
+    images livrées avec le jeu, 128 px, une par niveau). Le système de fichiers
+    du jeu ignore la casse (« SGS lev2_hogfront.bmp » pour LEV2_HOGFRONT).
+    """
+    numero = re.fullmatch(r"Save(\d+)\.usa", sauvegarde.name, re.I)
+    if numero is None:
+        return None
+    niveau, point = info_hp1(sauvegarde.with_name(f"GameSaveInfo{numero.group(1)}"))
+    try:
+        dossier = next((d for d in system.parent.iterdir()
+                        if d.is_dir() and d.name.lower() == "save"), None)
+        images = {f.name.lower(): f for f in dossier.iterdir()} if dossier else {}
+    except OSError:
+        return None
+    noms = ([f"sgs {niveau}{point}.bmp"] if niveau and point >= 0 else []) + \
+        ([f"sgs {niveau}.bmp"] if niveau else []) + ["defaultgamesnap.bmp"]
+    return next((images[n.lower()] for n in noms if n.lower() in images), None)
 
 
 def releve_hp1(chemin: Path) -> Releve | None:

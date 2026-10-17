@@ -5,9 +5,14 @@ du jeu), en LECTURE seule (`Harry-Potter-PC-Fix/notes/HP2.md`). Le fichier est
 un paquet Unreal 1 ; l'acteur `harry` porte la partie :
 
     StatusSave[0..n]      StatusSaveData : classe du groupe, classe de l'objet,
-                          puis trois entiers (nCount, nCurrCountPotential,
-                          nMaxCount). `StatusItemJellybeans` = dragées,
+                          puis trois entiers (nPotential, nCount, nMaxCount :
+                          l'ordre de la chaîne des champs dans hgame.u, celui
+                          où Unreal les écrit, relevé le 2026-10-17).
+                          `StatusItemJellybeans` = dragées,
                           `StatusItemGryffindorPts` = points de Gryffondor…
+    SpellBook[i]          les sorts appris, par classe (`spellLumos`)
+    ChallengeScores[0..3] ChallengeScoreType : nHighScore, nMaxScore
+    curWizardDuelRank     rang au club de duel
     BronzeCardSave[i]     WCardSaveData : Id de la carte, propriétaire
     SilverCardSave[i]     (ECardOwner, lu dans hgame.u : 0 personne,
     GoldCardSave[i]       1 Harry, 2 un marchand)
@@ -59,6 +64,33 @@ _MAISONS = {
 _DRAGEES = "StatusItemJellybeans"
 _ETOILES = "StatusItemStars"
 
+# Les sorts du livre (`SpellBook`) dans l'ordre de la page : classe, nom
+# latin (le même dans toutes les langues), glyphe que le joueur trace
+# (`Textures/SpellShapes.utx`). Rictusempra existe en sort et en sort de duel.
+SORTS = (
+    (("spellFlipendo",), "Flipendo", "SPSflipendo"),
+    (("spellLumos",), "Lumos", "SPSlumos"),
+    (("spellAlohomora",), "Alohomora", "SPSalohomora"),
+    (("spellRictusempra", "spellDuelRictusempra"), "Rictusempra", "SPSrictusempra"),
+    (("spellSkurge",), "Skurge", "SPSskurge"),
+    (("spellDiffindo",), "Diffindo", "SPSdiffindo"),
+    (("spellSpongify",), "Spongify", "SPSspongify"),
+    (("spellDuelExpelliarmus",), "Expelliarmus", "SPSexpelliarmus"),
+    (("spellDuelMimblewimble",), "Mimblewimble", "SPSmimble"),
+)
+
+# Potion et ingrédients : objet de `StatusSave`, clé de son nom dans
+# `HPMenu.<langue>` (« InGameMenu_0020=Potion Wiggenweld »), nom de repli
+# (passé à `tr()`), icône de `HP2_Menu.utx`.
+OBJETS = (
+    ("StatusItemWiggenwell", "ingamemenu_0020", "Potion Wiggenweld", "HP2WiggenwellPotion"),
+    ("StatusItemFlobberMucus", "ingamemenu_0008", "Mucus de véracrasse", "HP2FlobberwormMucus"),
+    ("StatusItemWiggenBark", "ingamemenu_0019", "Écorce de sorbier", "HP2WiggentreeBark"),
+    ("StatusItemBicorn", "ingamemenu_0005", "Poudre de corne de bicorne", "HP2Bicorn"),
+    ("StatusItemBoomslang", "ingamemenu_0007", "Peau de serpent d'arbre du Cap", "HP2boomslang"),
+    ("StatusItemBitOGoyle", "ingamemenu_0006", "Morceau de Goyle", "HP2BitOGoyle"),
+)
+
 # Le nom, les dates, puis le texte. Français : « Dorcas Bienaimée (1812 - 1904).
 # Fonda… » ; anglais : « Dorcas Wellbeloved 1812-1904 Founder… ».
 _AVEC_PARENTHESES = re.compile(r"^(.*?)\s*\(([^)]*)\)\s*[.,]?\s*(.*)$", re.S)
@@ -86,6 +118,10 @@ class Releve(folio.Releve):
     titre: str = ""                       # « Whomping Willow », tel qu'écrit
     etoiles: int | None = None            # None : le jeu n'en a rien écrit
     marchands: frozenset[int] = field(default_factory=frozenset)   # en vente
+    sorts: frozenset[str] = field(default_factory=frozenset)       # classes du livre
+    objets: dict[str, int] = field(default_factory=dict)           # ceux qu'il suit
+    defis: tuple[int, int] | None = None  # meilleurs scores, et le maximum
+    duel: int = 0                         # rang au club de duel ; 0 : pas commencé
 
     @property
     def avancement(self) -> tuple[int, int, int]:
@@ -101,6 +137,10 @@ class _Partie:
     etoiles: int | None
     histoire: str
     titre: str
+    sorts: frozenset[str] = frozenset()
+    objets: dict[str, int] = field(default_factory=dict)
+    defis: tuple[int, int] | None = None
+    duel: int = 0
 
 
 def lire(contenu: bytes) -> _Partie | None:
@@ -117,6 +157,9 @@ def lire(contenu: bytes) -> _Partie | None:
     compteurs: dict[str, int] = {}
     cartes: set[int] = set()
     marchands: set[int] = set()
+    sorts: set[str] = set()
+    meilleurs, maxima = 0, 0
+    duel = 0
     histoire = ""
     for nom, _, valeur in harry:
         if not isinstance(valeur, bytes):
@@ -128,8 +171,8 @@ def lire(contenu: bytes) -> _Partie | None:
                 objet = p._classe(lec.index())
             except (IndexError, ValueError):
                 continue
-            if len(valeur) - lec.p >= 4:
-                compteurs.setdefault(objet, max(0, struct.unpack_from("<i", valeur, lec.p)[0]))
+            if len(valeur) - lec.p >= 8:     # nPotential, puis nCount
+                compteurs.setdefault(objet, max(0, struct.unpack_from("<i", valeur, lec.p + 4)[0]))
         elif nom in _LISTES and len(valeur) == 8:
             ident, proprietaire = struct.unpack("<ii", valeur)
             if 1 <= ident <= CARTES:
@@ -139,13 +182,26 @@ def lire(contenu: bytes) -> _Partie | None:
                     marchands.add(ident)
         elif nom == "CurrentGameState":
             histoire = _chaine(p, valeur)
+        elif nom == "SpellBook":
+            try:
+                sorts.add(p._classe(textures_ue1._Lecteur(valeur).index()))
+            except (IndexError, ValueError):
+                continue
+        elif nom == "ChallengeScores" and len(valeur) == 8:
+            haut, plafond = struct.unpack("<ii", valeur)
+            meilleurs += max(0, haut)
+            maxima += max(0, plafond)
+        elif nom == "curWizardDuelRank" and len(valeur) == 4:
+            duel = max(0, struct.unpack("<i", valeur)[0])
     if not compteurs and not cartes:
         return None
     titre = next((v for n, _, v in niveau or () if n == "Title" and isinstance(v, str)), "")
     return _Partie(
         frozenset(cartes), frozenset(marchands), compteurs.get(_DRAGEES, 0),
         {m: compteurs.get(item, 0) for item, m in _MAISONS.items()},
-        compteurs.get(_ETOILES), histoire, titre)
+        compteurs.get(_ETOILES), histoire, titre, frozenset(sorts),
+        {o[0]: compteurs[o[0]] for o in OBJETS if o[0] in compteurs},
+        (meilleurs, maxima) if maxima else None, duel)
 
 
 def _chaine(p: textures_ue1.Paquet, brut: bytes) -> str:
@@ -172,7 +228,8 @@ def releve(chemin: Path, emplacement: int) -> Releve | None:
     if v is None:
         return Releve(emplacement, chemin, modifie)
     return Releve(emplacement, chemin, modifie, "", True, v.cartes, v.dragees, v.points, 0,
-                  v.histoire, v.titre, v.etoiles, v.marchands)
+                  v.histoire, v.titre, v.etoiles, v.marchands, v.sorts, v.objets, v.defis,
+                  v.duel)
 
 
 def emplacements(spec: Sauvegardes | None) -> list[Releve]:
@@ -326,18 +383,34 @@ def image_carte(system: Path, carte: CarteHP2) -> textures_ue1.TexturePaletee | 
 BLASONS = {folio.GRYFFONDOR: "HP2GriffindorCrest", folio.SERPENTARD: "HP2SlytherinCrest",
            folio.SERDAIGLE: "HP2RavenclawCrest", folio.POUFSOUFFLE: "HP2HufflepuffCrest"}
 ICONES = {"cartes": "HP2CardFolio", "dragees": "HP2MenuJellybeans", "etoiles": "HP2starcounter",
+          "defis": "HP2MenuChallenges", "duel": "HP2MenuWizardDuel",
           BRONZE: "HP2FolioBronzeNormal", ARGENT: "HP2FolioSilverNormal", OR: "HP2FolioGoldNormal"}
 
 
-def image_menu(system: Path, nom: str) -> textures_ue1.TexturePaletee | None:
-    """Une image de `HP2_Menu.utx` (`BLASONS`, `ICONES`), ou None sans le jeu."""
+def image_menu(system: Path, nom: str,
+               paquet: str = "hp2_menu.utx") -> textures_ue1.TexturePaletee | None:
+    """Une image de `HP2_Menu.utx` (`BLASONS`, `ICONES`, `OBJETS`), ou d'un
+    autre paquet de `Textures` (`SpellShapes.utx` : `SORTS`) ; None sans le jeu."""
     try:
         dossier = next((p for p in system.parent.iterdir() if p.name.lower() == "textures"), None)
-        menu = (next((p for p in dossier.iterdir() if p.name.lower() == "hp2_menu.utx"), None)
+        menu = (next((p for p in dossier.iterdir() if p.name.lower() == paquet), None)
                 if dossier is not None else None)
     except OSError:
         return None
     return textures_ue1.texture(menu, nom) if menu is not None else None
+
+
+def noms_objets(system: Path, langue: str) -> dict[str, str]:
+    """Objet de `OBJETS` → son nom dans `HPMenu.<langue>` (ceux que le jeu nomme)."""
+    textes = _textes(system, langue)
+    return {item: textes[cle] for item, cle, _, _ in OBJETS if textes.get(cle)}
+
+
+def image_sauvegarde(sauvegarde: Path) -> Path | None:
+    """La capture que le jeu prend en sauvegardant : `Slot1/Save0.bmp`, à côté
+    de `Save0.usa` (120 × 90, 256 couleurs, relevé le 2026-10-17)."""
+    image = sauvegarde.with_suffix(".bmp")
+    return image if image.is_file() else None
 
 
 def lieu(system: Path, langue: str, titre: str) -> str:

@@ -147,3 +147,28 @@ class TestTextesDuJeu:
     def test_sans_le_jeu(self, tmp_path):
         folio_hp4._textes.cache_clear()
         assert folio_hp4.textes(tmp_path / "absent", "fr") == ()
+
+
+class TestImagesDuMenu:
+    """Les blocs SHPI du flux de menu : image 0x7B et sa palette attachée 0x2A."""
+
+    @staticmethod
+    def _shpi(nom: bytes, indices: bytes, palette: list[bytes]) -> bytes:
+        image = bytes([0x7B]) + (16 + len(indices)).to_bytes(3, "little") \
+            + struct.pack("<HH", 2, 2) + bytes(8) + indices
+        pal = bytes([0x2A, 0, 0, 0]) + struct.pack("<H", len(palette)) + bytes(10) + b"".join(palette)
+        return b"SHPI" + bytes(4) + struct.pack("<I", 1) + b"G264" + nom + struct.pack("<I", 24) \
+            + image + pal
+
+    def test_une_dragee(self):
+        rouge, bleu = b"\x00\x00\xff\xff", b"\xff\x00\x00\xff"
+        flux = b"xx" + self._shpi(b"BEAN", bytes([0, 1, 1, 0]), [rouge, bleu]) \
+            + self._shpi(b"PLAY", bytes([1, 1, 1, 1]), [rouge, bleu])
+        assert folio_hp4.images_shpi(flux, b"BEAN") == [(2, 2, rouge + bleu + bleu + rouge)]
+
+    def test_un_indice_hors_palette_est_refuse(self):
+        flux = self._shpi(b"BEAN", bytes([0, 5, 0, 0]), [b"\x00\x00\x00\xff"])
+        assert folio_hp4.images_shpi(flux, b"BEAN") == []
+
+    def test_sans_le_jeu(self, tmp_path):
+        assert folio_hp4.image_dragee(tmp_path / "absent") is None

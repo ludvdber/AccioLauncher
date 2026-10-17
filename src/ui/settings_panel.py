@@ -233,8 +233,13 @@ class SettingsDialog(QDialog):
         # redémarrage, et la page le dit à leur ligne (règle 108).
         pied = texte(tr("Chaque changement est enregistré tout de suite. Échap pour revenir."),
                      12, ENCRE_DISCRETE)
-        pied.setContentsMargins(48, 8, 48, 14)
-        droite.addWidget(pied)
+        # Même colonne que les cartes (`_marges`) : collé à gauche, le pied
+        # tombait 110 px avant elles sur un écran large.
+        pied.setMaximumWidth(760)
+        ligne_pied = QHBoxLayout()
+        ligne_pied.setContentsMargins(48, 8, 48, 14)
+        ligne_pied.addWidget(pied, stretch=1)
+        droite.addLayout(ligne_pied)
         root.addLayout(droite, stretch=1)
 
         self._nav.currentRowChanged.connect(self._pages.setCurrentIndex)

@@ -79,10 +79,14 @@ def _chaine(texte: str) -> bytes:
 
 
 def sauvegarde(cartes=(), marchands=(), dragees=0, points=None, etoiles=None,
-               titre="Whomping Willow") -> bytes:
-    """`harry` et `LevelInfo0`, comme une sauvegarde du jeu."""
+               titre="Whomping Willow", sorts=(), objets=None, defis=(), duel=0,
+               potentiel=None) -> bytes:
+    """`harry` et `LevelInfo0`, comme une sauvegarde du jeu. `potentiel` : la
+    valeur vers laquelle un compteur monte, écrite AVANT le compte."""
     p = _Paquet()
     statuts = [("StatusGroupJellybeans", "StatusItemJellybeans", dragees)]
+    for item, valeur in (objets or {}).items():
+        statuts.append(("StatusGroupPotionIngr", item, valeur))
     for item, valeur in (points or {}).items():
         statuts.append(("StatusGroupHousePoints", item, valeur))
     if etoiles is not None:
@@ -90,12 +94,19 @@ def sauvegarde(cartes=(), marchands=(), dragees=0, points=None, etoiles=None,
     props = b""
     for i, (groupe, item, valeur) in enumerate(statuts):
         brut = (_compact(p.importer(groupe)) + _compact(p.importer(item))
-                + struct.pack("<iii", valeur, valeur, 600))
+                + struct.pack("<iii", valeur if potentiel is None else potentiel, valeur, 600))
         props += p.prop("StatusSave", 10, brut.ljust(16, b"\x00")[:16], i, "StatusSaveData")
     liste = [(n, folio_hp2.HARRY) for n in cartes] + [(n, 2) for n in marchands]
     for i, (n, proprietaire) in enumerate(liste):
         props += p.prop("BronzeCardSave", 10, struct.pack("<ii", n, proprietaire), i,
                         "WCardSaveData")
+    for i, classe in enumerate(sorts):
+        props += p.prop("SpellBook", 5, _compact(p.importer(classe)), i)
+    for i, (haut, plafond) in enumerate(defis):
+        props += p.prop("ChallengeScores", 10, struct.pack("<ii", haut, plafond), i,
+                        "ChallengeScoreType")
+    if duel:
+        props += p.prop("curWizardDuelRank", 2, struct.pack("<i", duel))
     props += p.prop("CurrentGameState", 13, _chaine("GSTATE040"))
     p.exporter(p.importer("harry"), "harry0", props + p.fin())
     p.exporter(p.importer("LevelInfo"), "LevelInfo0",
@@ -184,6 +195,25 @@ class TestLire:
 
     def test_pas_un_paquet(self):
         assert folio_hp2.lire(b"\x00" * 64) is None
+
+    def test_le_compte_et_non_le_potentiel(self):
+        """`StatusSaveData` s'écrit nPotential, nCount, nMaxCount (chaîne des
+        champs dans hgame.u) : le compte est le DEUXIÈME entier."""
+        assert folio_hp2.lire(sauvegarde(dragees=40, potentiel=55)).dragees == 40
+
+    def test_sorts_objets_defis_duel(self):
+        """La sauvegarde de Ludo : Alohomora, Lumos, Flipendo, trois objets à 0."""
+        v = folio_hp2.lire(sauvegarde(
+            sorts=("spellAlohomora", "spellLumos", "spellFlipendo"),
+            objets={"StatusItemWiggenwell": 2, "StatusItemFlobberMucus": 0},
+            defis=((300, 500), (120, 400)), duel=3))
+        assert v.sorts == {"spellAlohomora", "spellLumos", "spellFlipendo"}
+        assert v.objets == {"StatusItemWiggenwell": 2, "StatusItemFlobberMucus": 0}
+        assert v.defis == (420, 900) and v.duel == 3
+
+    def test_sans_defi_ni_duel_rien_n_est_invente(self):
+        v = folio_hp2.lire(sauvegarde())
+        assert v.defis is None and v.duel == 0 and v.sorts == frozenset()
 
 
 class TestCatalogue:

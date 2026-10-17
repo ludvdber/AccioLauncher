@@ -53,14 +53,10 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(980, 660)
         self._apply_default_geometry()
         self.setWindowIcon(icone_application())
-
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
         self.setMouseTracking(True)
-        # Bords saisissables d'une fenêtre sans cadre — curseur et
-        # redimensionnement natif. Voir `src/ui/window_chrome.py`.
-        self._chrome = WindowChrome(self)
 
         load_fonts()
 
@@ -71,6 +67,9 @@ class MainWindow(QMainWindow):
         set_language(self.config.langue)
         set_theme(self.config.theme)
         self.setStyleSheet(themed(MAIN_STYLE))
+        # Bords saisissables d'une fenêtre sans cadre (curseur, redimensionnement
+        # natif) et liseré d'un pixel, APRÈS le thème : `src/ui/window_chrome.py`.
+        self._chrome = WindowChrome(self)
         self.manager = GameManager(self.config)
 
         # Tout ce qui concerne les vérifications de mise à jour vit dans le
@@ -453,6 +452,7 @@ class MainWindow(QMainWindow):
         """
         if event.type() == QEvent.Type.WindowStateChange:
             self._detail.set_reduite(self.isMinimized())
+            self._chrome.etat_change()
         if event.type() == QEvent.Type.ActivationChange:
             if self.isActiveWindow():
                 Ticker.instance().resume()

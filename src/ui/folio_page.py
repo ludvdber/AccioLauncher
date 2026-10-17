@@ -18,7 +18,9 @@ from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QIcon, QImage, QLinearGradient, QPainter, QPen, QPixmap, qRgba
+from PyQt6.QtGui import (
+    QColor, QIcon, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, qRgba,
+)
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -35,6 +37,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.i18n import get_language, tr
 from src.ui.composants import ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte
+from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.icon_button import pixmap_icone
@@ -43,6 +46,7 @@ from src.ui.theme import current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
+_VIGNETTE = 56        # hauteur de l'image d'une sauvegarde dans le rail
 _MARGE_RAIL = 18      # marges latérales du rail
 _MARGE_LIGNE = 12     # marges latérales d'une ligne de partie
 _LARGEUR_FICHE = (236, 420)   # suit la fenêtre : 30 % de ce qui reste après le rail
@@ -75,8 +79,16 @@ QPushButton#emplacement:checked {
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
 }
 QPushButton#emplacement[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QFrame#tuile, QFrame#coupe {
+QFrame#tuile, QFrame#coupe, QFrame#objet {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
+}
+#sortAppris {
+    color: #f2e6c4; background: rgba(214, 167, 44, 0.12);
+    border: 1px solid rgba(214, 167, 44, 0.55); border-radius: 15px; padding: 5px 14px;
+}
+#sortAVenir {
+    color: #7d7b96; background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 15px; padding: 5px 14px;
 }
 QFrame#fiche {
     background: #0a0a16; border: none; border-left: 1px solid rgba(214, 167, 44, 0.16);
@@ -223,16 +235,56 @@ def nom_emplacement(releve) -> str:
             else tr("Emplacement {}").format(releve.emplacement))
 
 
+def vignette_sauvegarde(image: Path | None, dpr: float) -> QPixmap | None:
+    """L'image d'une sauvegarde (BMP du jeu) à `_VIGNETTE` px de haut, coins
+    arrondis ; None sans image lisible."""
+    if image is None:
+        return None
+    source = QImage(str(image))
+    if source.isNull():
+        return None
+    haut = round(_VIGNETTE * dpr)
+    large = max(1, round(haut * source.width() / max(1, source.height())))
+    pix = QPixmap(large, haut)
+    pix.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    chemin = QPainterPath()
+    chemin.addRoundedRect(QRectF(0, 0, large, haut), 5 * dpr, 5 * dpr)
+    p.setClipPath(chemin)
+    p.drawImage(QRectF(0, 0, large, haut), source)
+    p.end()
+    pix.setDevicePixelRatio(dpr)
+    return pix
+
+
 class _LigneEmplacement(QPushButton):
-    def __init__(self, nom: str, quand: datetime | None, lieu: str, plus_avance: bool) -> None:
+    def __init__(self, nom: str, quand: datetime | None, lieu: str, plus_avance: bool,
+                 vignette: QPixmap | None = None) -> None:
         super().__init__()
         self.setObjectName("emplacement")
         self.setCheckable(True)
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        v = QVBoxLayout(self)
-        v.setContentsMargins(_MARGE_LIGNE, 9, _MARGE_LIGNE, 9)
+        # L'image de la sauvegarde à gauche (HP1 : celle du menu de chargement
+        # du jeu ; HP2 : la capture prise en sauvegardant). Le rail devient
+        # coloré, et l'endroit se reconnaît avant de lire son nom.
+        dehors = QHBoxLayout(self)
+        dehors.setContentsMargins(_MARGE_LIGNE, 9, _MARGE_LIGNE, 9)
+        dehors.setSpacing(10)
+        place_image = 0
+        if vignette is not None:
+            image = QLabel()
+            image.setPixmap(vignette)
+            image.setFixedSize(vignette.deviceIndependentSize().toSize())
+            image.setStyleSheet("background: transparent;")
+            dehors.addWidget(image, alignment=Qt.AlignmentFlag.AlignTop)
+            place_image = image.width() + dehors.spacing()
+        v = QVBoxLayout()
+        v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(3)
+        dehors.addLayout(v, stretch=1)
         haut = QHBoxLayout()
         haut.setSpacing(8)
         titre = texte(nom, 15, ENCRE)
@@ -247,13 +299,13 @@ class _LigneEmplacement(QPushButton):
             # « Emplacement 1 » et « 28 septembre 2026 » ne tiennent pas côte à
             # côte dans le rail : la date passe dessous plutôt que de rogner le
             # nom (mesuré avec la police réelle, pas un nombre écrit à la main).
-            place = _LARGEUR_RAIL - 2 * (_MARGE_RAIL + _MARGE_LIGNE) - 2
+            place = _LARGEUR_RAIL - 2 * (_MARGE_RAIL + _MARGE_LIGNE) - 2 - place_image
             if titre.sizeHint().width() + haut.spacing() + date.sizeHint().width() <= place:
                 haut.addWidget(date)
             else:
                 v.addWidget(date)
         if lieu:
-            v.addWidget(texte(lieu, 13, "#c9c7da"))
+            v.addWidget(texte(lieu, 13, "#c9c7da", retour=place_image > 0))
         if plus_avance:
             v.addWidget(texte(tr("La plus avancée"), 12, current_theme().accent_light))
         etats = [nom, lieu,
@@ -262,7 +314,7 @@ class _LigneEmplacement(QPushButton):
         for enfant in self.findChildren(QLabel):
             enfant.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         # La hauteur de son CONTENU : un QPushButton ne la tire pas de son layout.
-        self.setMinimumHeight(v.sizeHint().height())
+        self.setMinimumHeight(dehors.sizeHint().height())
 
 
 def colonnes_hp1(dispo: int) -> int:
@@ -338,6 +390,13 @@ class FolioPage(QDialog):
         """Ce que le rail montre d'une partie : nom, date, lieu."""
         return nom_emplacement(releve), releve.modifie, folio.lieu(self._titres, releve.niveau)
 
+    def _image(self, releve) -> Path | None:
+        """L'image de la partie dans le rail ; None : la ligne n'en a pas. Les
+        pages des autres jeux héritent de celle-ci : seul HP1 a ces images."""
+        if self.game.id != "hp1":
+            return None
+        return folio.image_sauvegarde_hp1(self._system, releve.chemin)
+
     # ── Rail ──
 
     def _rail(self) -> QFrame:
@@ -371,7 +430,8 @@ class FolioPage(QDialog):
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
         for r in self.releves:
-            ligne = _LigneEmplacement(*self._entree(r), r is self._plus)
+            ligne = _LigneEmplacement(*self._entree(r), r is self._plus,
+                                      vignette_sauvegarde(self._image(r), self.devicePixelRatioF()))
             ligne.toggled.connect(lambda oui, rel=r: oui and self._afficher(rel))
             self._groupe.addButton(ligne)
             self._lignes[r.emplacement] = ligne
@@ -443,6 +503,24 @@ class FolioPage(QDialog):
         lay.addSpacing(12)
         lay.addWidget(self._coupe(releve))
         lay.addSpacing(26)
+        sorts = folio.sorts_hp1(releve.niveau)
+        if sorts is not None:
+            lay.addWidget(surtitre(tr("Sorts appris")))
+            lay.addSpacing(4)
+            lay.addWidget(texte(tr("Le jeu ne les écrit pas : ils se déduisent du niveau "
+                                   "de la sauvegarde, une leçon réussie après l'autre."),
+                                12, ENCRE_DOUCE, retour=True))
+            lay.addSpacing(10)
+            ligne = FlowLayout(spacing=8)
+            for nom, appris in sorts:
+                pastille = QLabel(nom)    # nom latin du sort : le même dans toutes les langues
+                pastille.setObjectName("sortAppris" if appris else "sortAVenir")
+                pastille.setFont(police(14, gras=appris))
+                pastille.setAccessibleName(nom + (", " + tr("appris") if appris
+                                                  else ", " + tr("pas encore appris")))
+                ligne.addWidget(pastille)
+            lay.addLayout(ligne)
+            lay.addSpacing(26)
 
         # L'un SOUS l'autre : côte à côte, ils imposaient 470 px à la colonne
         # et la faisaient déborder sous la fiche de la carte à 980 px.
