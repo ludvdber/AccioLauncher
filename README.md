@@ -37,7 +37,7 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 - **À la taille de votre écran** : *l'École des Sorciers* et *la Chambre des Secrets* s'ouvrent à la résolution de votre écran, 1440p et 4K compris, ou à celle que vous choisissez dans leurs réglages.
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
 - **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme un relevé de scolarité, année par année (les deux parties des *Reliques de la Mort* partagent la septième).
-- **Le folio de *l'École des Sorciers*** : vos cartes de sorciers célèbres, vos dragées et les points des maisons, lus directement dans vos sauvegardes.
+- **Un folio pour les huit jeux** : cartes de sorciers, dragées, points des maisons, sorts, boucliers, écussons et badges, lus directement dans vos sauvegardes et montrés avec les images et les icônes du jeu.
 - **Une galerie de vos captures**, rangées par jeu dans vos Images (plus perdues à la désinstallation), à copier en un clic pour Discord.
 - **Un atelier ouvert aux artistes** : le bouton « Contribuer » liste les jaquettes, fonds, bandes-annonces, cartes, écrans de chargement et vidéos qui cherchent quelqu'un pour les refaire. Vous dessinez, montez ou animez ? Tout ce qu'il faut savoir est dedans.
 - **Les réglages lisibles** : chaque réglage d'un jeu dit ce qu'il change et ce qu'il demande à la machine, et survit à une mise à jour ou à une réparation.
@@ -264,8 +264,8 @@ est fourni « tel quel », sans garantie.
 away: download, install and play, on Windows 10 and 11. Downloads resume after
 a dropped connection and every file is checked on arrival. Game updates,
 repair and rollback to an earlier version are built in, along with your
-playtime and a log of your sessions, a folio of famous wizard cards read from
-your saves, a gallery of your screenshots, house themes, seasonal effects,
+playtime and a log of your sessions, a folio for every game read from your
+saves (cards, beans, house points, shields, crests and badges), a gallery of your screenshots, house themes, seasonal effects,
 optional trailers, and a launcher that updates itself. The interface is available in
 English, French and Spanish.
 
