@@ -80,6 +80,38 @@ QUETES: tuple[tuple[Nom, tuple[int, ...]], ...] = (
     ((-1, "Feux d'artifice du Dr Flibuste"), (11,)))
 
 
+# Les cartes de collection (Folio Universitas). L'exe range ses 203 cartes dans
+# une table de noms (0x725950 : 0 NONE, 1 HARRY_STAMINA_PLUS10_1…) ; la
+# sauvegarde garde un bit par carte POSSÉDÉE dans les attributs 0x22 à 0x28 de
+# `GlobalData` (bit n du mot 0x22 + n // 32). VU le 2026-10-17 : l'emplacement 1
+# porte les bits 1, 8, 9 (Harry : une carte Endurance, deux cartes Sort),
+# exactement la page « Jeu 1 » de la pensine (1 Endurance, 2 Sort obtenues).
+_CARTES = 0x22
+_MOTS_CARTES = 7
+_NB_CARTES = 0xCB
+
+# Les familles que la pensine nomme, par leur titre dans la table de textes EN
+# JEU (`_JEU`) : même indice dans toutes les langues (VU fr, es, de, it).
+FAMILLES: dict[str, Nom] = {
+    "endurance": (50, "Endurance"), "sort": (47, "Sort"), "accio": (41, "Accio"),
+    "magicus": (49, "Magicus Extremos"), "metamorphose": (51, "Métamorphose"),
+    "style": (48, "Style de sort")}
+# Les plages de la table de l'exe, dans le même ordre pour les trois :
+# endurance (7), sort (7), [Ron : JINX_LUCKY], accio (7), magicus (8), deux ou
+# trois cartes mixtes, métamorphose (4), style de sort (4), puis les autres.
+PERSONNAGES: tuple[tuple[str, tuple[int, int], dict[str, tuple[int, int]]], ...] = (
+    ("Harry", (1, 49), {"endurance": (1, 7), "sort": (8, 14), "accio": (15, 21),
+                        "magicus": (22, 29), "metamorphose": (33, 36), "style": (37, 40)}),
+    ("Ron", (50, 98), {"endurance": (50, 56), "sort": (57, 63), "accio": (65, 71),
+                       "magicus": (72, 79), "metamorphose": (82, 85), "style": (86, 89)}),
+    ("Hermione", (99, 147), {"endurance": (99, 105), "sort": (106, 112), "accio": (113, 119),
+                             "magicus": (120, 127), "metamorphose": (130, 133),
+                             "style": (134, 137)}))
+CREATURES = (151, 180)    # cinq créatures, six cartes chacune, communes aux trois
+TITRES_CARTES: dict[str, Nom] = {"folio": (618, "Folio Universitas"),
+                                 "creatures": (605, "Créatures")}
+
+
 @dataclass(frozen=True)
 class Quete:
     nom: Nom
@@ -97,10 +129,23 @@ class Partie:
     maitrise: tuple[float, ...] = ()  # les 16 jauges, valeurs brutes
     quetes: tuple[Quete, ...] = ()
     dragees: int = 0
+    cartes: frozenset[int] = frozenset()   # indices de la table de l'exe
 
     @property
     def nom_rang(self) -> Nom | None:
         return RANGS.get(self.rang)
+
+
+def compte(cartes: frozenset[int], plage: tuple[int, int]) -> int:
+    """Les cartes possédées dans cette plage (bornes comprises)."""
+    debut, fin = plage
+    return sum(1 for c in cartes if debut <= c <= fin)
+
+
+def _cartes(globales: dict[int, bytes]) -> frozenset[int]:
+    mots = [_entier(globales, _CARTES + k) & 0xFFFFFFFF for k in range(_MOTS_CARTES)]
+    return frozenset(32 * k + b for k, m in enumerate(mots) for b in range(32)
+                     if m >> b & 1 and 0 < 32 * k + b < _NB_CARTES)
 
 
 def _texte(d: bytes, debut: int, taille: int) -> str:
@@ -191,7 +236,7 @@ def lire(contenu: bytes) -> list[Partie]:
             k + 1, ecrite, _texte(contenu, fiche + 0x0C, 0x40), rang,
             max(0, min(boucliers, BOUCLIERS)),
             tuple(_flottant(maitrise, i) for i in range(16)) if maitrise else (),
-            _quetes(globales), max(0, _entier(globales, _DRAGEES))))
+            _quetes(globales), max(0, _entier(globales, _DRAGEES)), _cartes(globales)))
     return parties
 
 
@@ -232,13 +277,24 @@ def _table_loc(flux: bytes) -> tuple[str, ...]:
     return meilleure
 
 
+# La table EN JEU (pensine, Folio Universitas) : 2 763 textes, un autre flux
+# que le front-end ; repère identique dans les quatre langues relevées.
+_JEU = "{3932FD6C-38F4-4867-BC66-CE9355A07CF5}.str"
+_REPERE_JEU = (49, "Magicus Extremos")
+
+
 def textes(system: Path, langue: str) -> tuple[str, ...]:
     """Les textes du front-end du jeu installé dans cette langue ; () sinon."""
-    return _textes(str(system), langue)
+    return _textes(str(system), langue, _FRONT, _REPERE)
+
+
+def textes_jeu(system: Path, langue: str) -> tuple[str, ...]:
+    """Les textes de la pensine du jeu installé dans cette langue ; () sinon."""
+    return _textes(str(system), langue, _JEU, _REPERE_JEU)
 
 
 @lru_cache(maxsize=4)
-def _textes(system_txt: str, langue: str) -> tuple[str, ...]:
+def _textes(system_txt: str, langue: str, flux: str, repere: Nom) -> tuple[str, ...]:
     dossier = _LANGUES.get(langue)
     system = Path(system_txt)
     if dossier is None or not system.is_dir():
@@ -247,12 +303,12 @@ def _textes(system_txt: str, langue: str) -> tuple[str, ...]:
     if big is None:
         return ()
     try:
-        table = _table_loc(_entree_big(big, f"{dossier}/{_FRONT}"))
+        table = _table_loc(_entree_big(big, f"{dossier}/{flux}"))
     except (OSError, struct.error):
         log.warning("Folio HP4 : textes du jeu illisibles", exc_info=True)
         return ()
     # Une autre version du jeu rangerait autrement : alors on se tait.
-    if len(table) <= _REPERE[0] or table[_REPERE[0]] != _REPERE[1]:
+    if len(table) <= repere[0] or table[repere[0]] != repere[1]:
         return ()
     return table
 

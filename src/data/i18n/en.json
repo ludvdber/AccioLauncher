@@ -1140,6 +1140,13 @@
     "remporté": "earned",
     "pas encore remporté": "not earned yet",
     "Quidditch": "Quidditch",
-    "Duel": "Duelling"
+    "Duel": "Duelling",
+    "Endurance": "Stamina",
+    "Sort": "Jinx",
+    "Métamorphose": "Transfiguration",
+    "Style de sort": "Jinx style",
+    "Créatures": "Creatures",
+    "{} carte": "{} card",
+    "{} cartes": "{} cards"
   }
 }

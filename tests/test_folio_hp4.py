@@ -24,7 +24,19 @@ def _i(x: int) -> bytes:
     return struct.pack("<i", x)
 
 
-def _hpgof(rang: int = 4, boucliers: int = 3) -> bytes:
+def _mots_cartes(cartes: list[int]) -> list[tuple[int, bytes]]:
+    """Les sept mots de `GlobalData` 0x22-0x28 : un bit par carte possédée."""
+    mots = [0] * 7
+    for c in cartes:
+        mots[c // 32] |= 1 << (c % 32)
+    return [(0x22 + k, struct.pack("<I", m)) for k, m in enumerate(mots)]
+
+
+# L'emplacement 1 de Ludo (VU) : Harry 1, 8, 9 ; Hermione 120 ; seize cartes de créature.
+_CARTES_LUDO = [1, 8, 9, 120, *range(151, 156), *range(157, 161), *range(163, 168), 169, 171]
+
+
+def _hpgof(rang: int = 4, boucliers: int = 3, cartes: list[int] = _CARTES_LUDO) -> bytes:
     """Emplacement 1 occupé (Forêt des dragons, 28/09/2026), 2 et 3 vides."""
     d = bytearray(0x220 + 3 * 0x2800)
     d[0:4] = b"20CM"
@@ -43,6 +55,7 @@ def _hpgof(rang: int = 4, boucliers: int = 3) -> bytes:
     for k, champs in enumerate(quetes):
         globales += [(0x63 + 5 * k + j, _i(v)) for j, v in enumerate(champs)]
     globales.append((0x52, _i(501)))
+    globales += _mots_cartes(cartes)
     corps = (struct.pack("<III", 0x722, 0x18, 0) + b"evaslvl_003_DragonWoods\0"
              + _entite("GlobalData", globales)
              + _entite("MagicMastery", [(i, _f(v)) for i, v in enumerate(maitrise)]))
@@ -82,6 +95,29 @@ class TestSauvegarde:
         assert quetes == {"Détecteurs de magie noire": (1, 5), "Gargouilles": (0, 6),
                           "Statues de dragon": (2, 10)}
 
+    def test_les_cartes_comme_le_folio_universitas(self):
+        """Page « Jeu 1 » de la pensine (VU) : Harry a 1 carte Endurance et 2 cartes Sort."""
+        cartes = folio_hp4.lire(_hpgof())[0].cartes
+        assert cartes == frozenset(_CARTES_LUDO)
+        harry, ron, hermione = folio_hp4.PERSONNAGES
+        assert folio_hp4.compte(cartes, harry[1]) == 3
+        assert folio_hp4.compte(cartes, harry[2]["endurance"]) == 1
+        assert folio_hp4.compte(cartes, harry[2]["sort"]) == 2
+        assert folio_hp4.compte(cartes, ron[1]) == 0
+        assert folio_hp4.compte(cartes, hermione[2]["magicus"]) == 1
+        assert folio_hp4.compte(cartes, folio_hp4.CREATURES) == 16
+
+    def test_les_bits_hors_de_la_table_sont_ignores(self):
+        """Bit 0 (NONE) et au-delà des 203 cartes de l'exe : pas des cartes."""
+        assert folio_hp4.lire(_hpgof(cartes=[0, 5, 203, 223]))[0].cartes == frozenset({5})
+
+    def test_les_familles_ne_se_chevauchent_pas(self):
+        for _, (debut, fin), familles in folio_hp4.PERSONNAGES:
+            plages = sorted(familles.values())
+            assert all(debut <= a <= b <= fin for a, b in plages)
+            assert all(b1 < a2 for (_, b1), (a2, _) in zip(plages, plages[1:]))
+            assert set(familles) == set(folio_hp4.FAMILLES)
+
     def test_un_rang_jamais_vu_n_a_pas_de_nom(self):
         assert folio_hp4.lire(_hpgof(rang=7))[0].nom_rang is None
 
@@ -99,8 +135,9 @@ class TestSauvegarde:
         assert p.rang == 4 and p.maitrise == () and p.quetes == ()
 
 
-def _data_big(textes: list[str], dossier: str = "French") -> bytes:
-    """Une archive BIGF d'une entrée : le flux du front-end avec sa table LOCH/LOCL."""
+def _data_big(textes: list[str], dossier: str = "French",
+              flux_nom: str = "{1025472C-AB8F-438C-87FB-E0AA3DFE4007}.str") -> bytes:
+    """Une archive BIGF d'une entrée : un flux de textes (le front-end par défaut) avec sa table LOCH/LOCL."""
     chaines = [t.encode("utf-16-le") + b"\0\0" for t in textes]
     entete = 16 + 4 * len(chaines)
     offs, corps = [], b""
@@ -110,7 +147,7 @@ def _data_big(textes: list[str], dossier: str = "French") -> bytes:
     locl = b"LOCL" + struct.pack("<III", entete + len(corps), 0, len(chaines))
     locl += struct.pack(f"<{len(offs)}I", *offs) + corps
     flux = b"\x1c\x07\0\0" + bytes(60) + b"LOCH" + struct.pack("<IIII", 0x14, 0, 1, 0x14) + locl
-    nom = f"{dossier}/{{1025472C-AB8F-438C-87FB-E0AA3DFE4007}}.str".encode() + b"\0"
+    nom = f"{dossier}/{flux_nom}".encode() + b"\0"
     taille_tete = 16 + 8 + len(nom)
     return (b"BIGF" + struct.pack("<I", 0) + struct.pack(">II", 1, taille_tete)
             + struct.pack(">II", taille_tete, len(flux)) + nom + flux)
@@ -147,6 +184,22 @@ class TestTextesDuJeu:
     def test_sans_le_jeu(self, tmp_path):
         folio_hp4._textes.cache_clear()
         assert folio_hp4.textes(tmp_path / "absent", "fr") == ()
+
+    def test_la_table_de_la_pensine(self, tmp_path):
+        """Un autre flux, un autre repère (49 = Magicus Extremos dans toutes les langues)."""
+        textes = [f"t{i}" for i in range(700)]
+        textes[49], textes[50], textes[618] = "Magicus Extremos", "Resistencia", "Folio Universitas"
+        (tmp_path / "data.big").write_bytes(
+            _data_big(textes, "Spanish", "{3932FD6C-38F4-4867-BC66-CE9355A07CF5}.str"))
+        folio_hp4._textes.cache_clear()
+        table = folio_hp4.textes_jeu(tmp_path, "es")
+        assert folio_hp4.nom(table, folio_hp4.FAMILLES["endurance"]) == "Resistencia"
+        assert folio_hp4.textes(tmp_path, "es") == (), "le flux du front-end n'est pas là"
+        textes[49] = "Autre chose"
+        (tmp_path / "data.big").write_bytes(
+            _data_big(textes, "Spanish", "{3932FD6C-38F4-4867-BC66-CE9355A07CF5}.str"))
+        folio_hp4._textes.cache_clear()
+        assert folio_hp4.textes_jeu(tmp_path, "es") == ()
 
 
 class TestImagesDuMenu:

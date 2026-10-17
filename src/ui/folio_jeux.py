@@ -576,11 +576,15 @@ class FolioPageHP4(FolioPage):
         self.releves = [p for chemin in sauvegardes.fichiers(self.game.sauvegardes).values()
                         for p in folio_hp4.releve(chemin)]
         self._table = folio_hp4.textes(self._system, get_language())
+        self._table_jeu = folio_hp4.textes_jeu(self._system, get_language())
         self._dragee = image_bgra(folio_hp4.image_dragee(self._system), 36,
                                   self.devicePixelRatioF())
 
     def _nom(self, ref: folio_hp4.Nom) -> str:
         return folio_hp4.nom(self._table, ref) or tr(ref[1])
+
+    def _nom_jeu(self, ref: folio_hp4.Nom) -> str:
+        return folio_hp4.nom(self._table_jeu, ref) or tr(ref[1])
 
     def _entree(self, partie) -> tuple[str, datetime | None, str]:
         rang = partie.nom_rang
@@ -612,8 +616,39 @@ class FolioPageHP4(FolioPage):
             if partie.quetes:
                 lay.addSpacing(12)
                 lay.addWidget(self._quetes(partie.quetes))
+            lay.addSpacing(12)
+            lay.addWidget(self._cartes(partie.cartes))
 
         return _page(contenu)[0]
+
+    def _cartes(self, cartes: frozenset[int]) -> QFrame:
+        """Le Folio Universitas : les cartes possédées par personnage, par famille."""
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        g = QGridLayout(cadre)
+        g.setContentsMargins(20, 14, 20, 16)
+        g.setHorizontalSpacing(16)
+        g.setVerticalSpacing(10)
+        g.addWidget(surtitre(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"])), 0, 0, 1, 3)
+        or_clair = current_theme().accent_light
+        for rang, (perso, plage, familles) in enumerate(folio_hp4.PERSONNAGES, 1):
+            n = folio_hp4.compte(cartes, plage)
+            g.addWidget(texte(perso, 14, ENCRE if n else ENCRE_DOUCE), rang, 0)
+            g.addWidget(texte((tr("{} carte") if n == 1 else tr("{} cartes")).format(n), 13,
+                              or_clair if n else ENCRE_DOUCE), rang, 1)
+            detail = [f"{self._nom_jeu(folio_hp4.FAMILLES[f])} {k}"
+                      for f, p in familles.items() if (k := folio_hp4.compte(cartes, p))]
+            g.addWidget(texte(" · ".join(detail), 13, ENCRE_DOUCE, retour=True), rang, 2)
+        debut, fin = folio_hp4.CREATURES
+        n = folio_hp4.compte(cartes, folio_hp4.CREATURES)
+        rang = len(folio_hp4.PERSONNAGES) + 1
+        g.addWidget(texte(self._nom_jeu(folio_hp4.TITRES_CARTES["creatures"]), 14,
+                          ENCRE if n else ENCRE_DOUCE), rang, 0)
+        g.addWidget(texte(f"{n} / {fin - debut + 1}", 13,
+                          or_clair if n == fin - debut + 1 else ENCRE if n else ENCRE_DOUCE),
+                    rang, 1)
+        g.setColumnStretch(2, 1)
+        return cadre
 
     def _jauges(self, titre: folio_hp4.Nom, jauges, partie) -> QFrame:
         """Une jauge par sort, comme la page de la pensine."""
