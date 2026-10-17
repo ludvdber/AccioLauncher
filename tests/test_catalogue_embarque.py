@@ -141,7 +141,7 @@ class TestCeQuiCasseUnJeuSansBruit:
     @pytest.mark.parametrize("ident", ["hp1", "hp2"])
     def test_running_ini_reste_cree(self, catalogue, ident):
         fichiers = _jeu(catalogue, ident)["pre_launch"]["create_files"]
-        assert any(f.endswith("\Running.ini") for f in fichiers), ident
+        assert any(f.endswith(r"\Running.ini") for f in fichiers), ident
 
     def test_jamais_startup_fullscreen_true(self, catalogue):
         for jeu in catalogue["games"]:

@@ -689,7 +689,7 @@ class FolioPage(QDialog):
             self._fiche_nom.setText(carte.nom if carte else tr("Carte {}").format(numero))
             self._fiche_dates.setText(carte.dates if carte else "")
             self._fiche_texte.setText(carte.texte if carte else
-                                      tr("Le texte de la carte se lit dans le jeu installé."))
+                                      tr("Installez le jeu pour lire le texte de la carte."))
         else:
             self._fiche_nom.setText(tr("Pas encore trouvée"))
             self._fiche_dates.setText("")

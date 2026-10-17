@@ -1,6 +1,81 @@
 {
   "versions": [
     {
+      "version": "1.2.2",
+      "nom": "Revelio · Octo Folia",
+      "depuis": "1.2.1",
+      "points_forts": [
+        {
+          "icone": "folio",
+          "titre": {
+            "fr": "Un folio pour les huit jeux",
+            "en": "A folio for all eight games",
+            "es": "Un folio para los ocho juegos"
+          },
+          "texte": {
+            "fr": "La Chambre des Secrets et les deux parties des Reliques de la Mort rejoignent le folio. Cartes, écussons et badges s'affichent avec leurs images du jeu.",
+            "en": "Chamber of Secrets and both parts of Deathly Hallows join the folio. Cards, crests and badges show with their in-game pictures.",
+            "es": "La cámara secreta y las dos partes de Las reliquias de la muerte se suman al folio. Cromos, escudos e insignias se muestran con sus imágenes del juego."
+          }
+        },
+        {
+          "icone": "stats",
+          "titre": {
+            "fr": "Une nouvelle aventure",
+            "en": "A new adventure",
+            "es": "Una nueva aventura"
+          },
+          "texte": {
+            "fr": "Recommencer le jeu dans le même emplacement ouvre une nouvelle aventure dans Mes années. L'ancienne reste comptée.",
+            "en": "Starting the game over in the same slot opens a new adventure in My years. The previous one still counts.",
+            "es": "Volver a empezar el juego en la misma ranura abre una nueva aventura en Mis años. La anterior sigue contando."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "La Coupe de feu : le folio montre les cartes que vous possédez, par personnage et par famille.",
+            "en": "Goblet of Fire: the folio shows the cards you own, by character and by family.",
+            "es": "El cáliz de fuego: el folio muestra los cromos que tienes, por personaje y por familia."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le Prince de sang-mêlé : les trente badges, avec leur nom et leur explication.",
+            "en": "Half-Blood Prince: all thirty badges, with their name and explanation.",
+            "es": "El misterio del príncipe: las treinta insignias, con su nombre y su explicación."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "La Chambre des Secrets : sorts, potions, ingrédients, défis et duels.",
+            "en": "Chamber of Secrets: spells, potions, ingredients, challenges and duels.",
+            "es": "La cámara secreta: hechizos, pociones, ingredientes, desafíos y duelos."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "L'École des Sorciers : les sorts appris. L'Ordre du Phénix : l'image du chapitre de chaque partie.",
+            "en": "Philosopher's Stone: the spells learnt. Order of the Phoenix: each game's chapter picture.",
+            "es": "La piedra filosofal: los hechizos aprendidos. La Orden del Fénix: la imagen del capítulo de cada partida."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Sous Windows 11, la fenêtre prend des coins arrondis et un liseré fin.",
+            "en": "On Windows 11, the window gets rounded corners and a thin border.",
+            "es": "En Windows 11, la ventana tiene esquinas redondeadas y un borde fino."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2.1",
       "nom": "Revelio · Quinque Folia",
       "depuis": "1.2.0",

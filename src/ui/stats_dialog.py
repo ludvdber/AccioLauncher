@@ -388,8 +388,7 @@ class StatsDialog(QDialog):
             # Sans cette ligne, l'année et le mois ne se raccordent pas au
             # total, et quelqu'un qui le remarque cesse de croire la page.
             couche.addWidget(_Paragraphe(
-                tr("Dont {} jouées avant la mise en service du journal, sans "
-                   "date.").format(_duree(herite)),
+                tr("Dont {} sans date.").format(_duree(herite)),
                 taille=12))
 
         longue = stats.plus_longue(self._hist)
@@ -443,8 +442,8 @@ class StatsDialog(QDialog):
                 # relevé : on dit pourquoi il manque et quand il viendra — une
                 # fois pour la section, pas une fois par carte.
                 couche.addWidget(_Paragraphe(
-                    tr("Le temps par sauvegarde se compte à partir de votre "
-                       "prochaine partie."), taille=13))
+                    tr("Le temps par sauvegarde s'affichera dès votre prochaine "
+                       "partie."), taille=13))
             temps_max = max((v.temps or 0 for v in vues), default=0)
             recente = (max(vues, key=lambda v: v.modifie).fichier
                        if len(vues) > 1 else None)

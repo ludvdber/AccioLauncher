@@ -228,7 +228,7 @@ class TestSaga:
         dlg = StatsDialog(GameManager(conf))
         qtbot.addWidget(dlg)
         rendu = _labels(dlg)
-        assert "avant la mise en service du journal" in rendu
+        assert "sans date" in rendu
         assert "6 h" in rendu
 
     def test_les_douze_mois_n_apparaissent_qu_avec_des_parties(self, qtbot, manager):
@@ -285,7 +285,7 @@ class TestSauvegardesAffichees:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         rendu = _labels(dlg)
-        assert rendu.count("se compte à partir de votre prochaine partie") == 1
+        assert rendu.count("s'affichera dès votre prochaine partie") == 1
         assert "Vos sauvegardes sont là" in rendu
 
     def test_un_jeu_sans_sauvegarde_n_a_pas_de_section(self, qtbot, manager):
