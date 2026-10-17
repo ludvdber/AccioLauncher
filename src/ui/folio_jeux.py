@@ -48,6 +48,7 @@ from src.ui.folio_page import (
     _IMAGE_FICHE,
     _MARGE_FICHE,
     FolioPage,
+    Rangee,
     _CarteSorcier,
     _Jauge,
     _tuile,
@@ -167,9 +168,8 @@ def _medaille(image: tuple[int, int, bytes], acquis: bool, textes: tuple[str, st
 
 def _rangee(*tuiles: QFrame) -> QHBoxLayout:
     rang = QHBoxLayout()
-    rang.setSpacing(12)
-    for t in tuiles:
-        rang.addWidget(t, stretch=1)
+    rang.setContentsMargins(0, 0, 0, 0)
+    rang.addWidget(Rangee(*tuiles))
     return rang
 
 
@@ -195,7 +195,7 @@ class FolioPageHP3(FolioPage):
     """Cartes par série, friandises, défis de sortilège."""
 
     _colonnes = 10
-    _case_min = 32     # dix colonnes : à 980 px, 56 px par case débordaient
+    _case_min = 30     # dix colonnes : à 980 px, 56 puis 32 px par case débordaient
 
     def _charger(self) -> None:
         self.releves = folio_hp3.emplacements(sauvegardes.fichiers(self.game.sauvegardes))
@@ -269,7 +269,7 @@ class FolioPageHP3(FolioPage):
         g.setContentsMargins(20, 14, 20, 16)
         g.setHorizontalSpacing(24)
         g.setVerticalSpacing(8)
-        g.addWidget(surtitre(tr("Défis de sortilège")), 0, 0, 1, 4)
+        g.addWidget(surtitre(tr("Défis de sortilège")), 0, 0, 1, 3)
         or_clair = current_theme().accent_light
         for rang, d in enumerate(defis, 1):
             # Le bouclier du défi, tel que le menu du jeu le dessine.
@@ -280,12 +280,17 @@ class FolioPageHP3(FolioPage):
                 image.setStyleSheet("background: transparent;")
                 image.setPixmap(bouclier)
                 g.addWidget(image, rang, 0)
-            g.addWidget(texte(d.nom, 14, ENCRE), rang, 1)
-            g.addWidget(texte(tr("Boucliers {} / {}").format(d.boucliers, d.boucliers_total),
-                              13, or_clair), rang, 2)
+            g.addWidget(texte(d.nom, 14, ENCRE, retour=True), rang, 1)
+            # Les deux comptes l'un sous l'autre : sur une ligne, le cadre
+            # imposait 528 px à une fenêtre de 980 (2026-10-17).
+            comptes = QVBoxLayout()
+            comptes.setSpacing(2)
+            comptes.addWidget(texte(tr("Boucliers {} / {}").format(d.boucliers, d.boucliers_total),
+                                    13, or_clair))
             if d.secrets_total:
-                g.addWidget(texte(tr("Zones secrètes {} / {}").format(d.secrets, d.secrets_total),
-                                  13, or_clair), rang, 3)
+                comptes.addWidget(texte(
+                    tr("Zones secrètes {} / {}").format(d.secrets, d.secrets_total), 13, or_clair))
+            g.addLayout(comptes, rang, 2)
         g.setColumnStretch(1, 1)
         return cadre
 
@@ -339,7 +344,7 @@ class FolioPageHP3(FolioPage):
         image = folio_hp3.image_carte(self._system, carte.code) if trouvee else None
         self._fiche_image.setVisible(image is not None)
         if image is not None:
-            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE)
+            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE - 1)   # 1 : le liseré
             self._fiche_image.setFixedHeight(cote)
             self._fiche_image.setPixmap(pixmap_texture(image, cote, self.devicePixelRatioF()))
         if trouvee:
@@ -361,7 +366,7 @@ class FolioPageHP2(FolioPage):
     des quatre maisons de HP1 ; le niveau nommé dans la langue du jeu."""
 
     _colonnes = 10
-    _case_min = 32
+    _case_min = 30
 
     def _charger(self) -> None:
         self.releves = folio_hp2.emplacements(self.game.sauvegardes)
@@ -494,7 +499,7 @@ class FolioPageHP2(FolioPage):
         image = folio_hp2.image_carte(self._system, carte) if trouvee and carte else None
         self._fiche_image.setVisible(image is not None)
         if image is not None:
-            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE)
+            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE - 1)   # 1 : le liseré
             self._fiche_image.setFixedHeight(cote)
             self._fiche_image.setPixmap(pixmap_texture(image, cote, self.devicePixelRatioF()))
         if trouvee and carte is not None:

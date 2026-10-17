@@ -236,7 +236,8 @@ def _tuile(chiffre: str, libelle: str, part: float | None = None,
     pour toutes : les chiffres d'une rangée restent alignés."""
     tuile = QFrame()
     tuile.setObjectName("tuile")
-    tuile.setMinimumWidth(140)
+    # Pas de largeur minimale imposée : elle passait sous celle du chiffre, et
+    # « 6 / 80 » de HP3 se coupait à droite (capture de Ludo, 2026-10-17).
     h = QHBoxLayout(tuile)
     h.setContentsMargins(18, 14, 14, 14)
     h.setSpacing(10)
@@ -260,6 +261,52 @@ def _tuile(chiffre: str, libelle: str, part: float | None = None,
     return tuile
 
 
+class Rangee(QWidget):
+    """Les tuiles d'une page, de même largeur : sur une ligne quand elles y
+    tiennent, sinon sur autant de lignes qu'il faut (4 tuiles → 2 × 2)."""
+
+    def __init__(self, *tuiles: QFrame) -> None:
+        super().__init__()
+        self.setStyleSheet("background: transparent;")
+        self._tuiles = tuiles
+        self._grille = QGridLayout(self)
+        self._grille.setContentsMargins(0, 0, 0, 0)
+        self._grille.setSpacing(12)
+        self._colonnes = 0
+        self._placer(len(tuiles))
+
+    def _placer(self, colonnes: int) -> None:
+        colonnes = max(1, min(len(self._tuiles), colonnes))
+        if colonnes == self._colonnes:
+            return
+        self._colonnes = colonnes
+        for t in self._tuiles:
+            self._grille.removeWidget(t)
+        for c in range(self._grille.columnCount()):
+            self._grille.setColumnStretch(c, 0)
+        for i, t in enumerate(self._tuiles):
+            self._grille.addWidget(t, i // colonnes, i % colonnes)
+        for c in range(colonnes):
+            self._grille.setColumnStretch(c, 1)
+
+    def _colonnes_pour(self, largeur: int) -> int:
+        tuile = max((t.minimumSizeHint().width() for t in self._tuiles), default=0)
+        tiennent = max(1, (largeur + 12) // (tuile + 12))
+        if tiennent >= len(self._tuiles):
+            return len(self._tuiles)
+        lignes = -(-len(self._tuiles) // tiennent)
+        return -(-len(self._tuiles) // lignes)       # des lignes équilibrées
+
+    def minimumSizeHint(self) -> QSize:
+        # UNE tuile : la page peut se rétrécir, les tuiles passeront à la ligne.
+        tuile = max((t.minimumSizeHint().width() for t in self._tuiles), default=0)
+        return QSize(tuile, super().minimumSizeHint().height())
+
+    def resizeEvent(self, event) -> None:
+        self._placer(self._colonnes_pour(event.size().width()))
+        super().resizeEvent(event)
+
+
 def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBoxLayout:
     """Le titre d'une section : son icône du jeu s'il y en a une, le surtitre,
     et à droite un compte (« 4 / 15 »)."""
@@ -269,11 +316,14 @@ def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBox
         image = QLabel()
         image.setStyleSheet("background: transparent;")
         image.setPixmap(icone)
-        ligne.addWidget(image)
-    ligne.addWidget(surtitre(titre))
-    ligne.addStretch()
+        ligne.addWidget(image, alignment=Qt.AlignmentFlag.AlignTop)
+    # Le titre passe à la ligne : sur une seule, deux séries côte à côte de
+    # HP3 imposaient 729 px à une zone qui en avait 680 (2026-10-17).
+    nom = surtitre(titre)
+    nom.setWordWrap(True)
+    ligne.addWidget(nom, stretch=1)
     if compte:
-        ligne.addWidget(texte(compte, 12, ENCRE_DOUCE))
+        ligne.addWidget(texte(compte, 12, ENCRE_DOUCE), alignment=Qt.AlignmentFlag.AlignTop)
     return ligne
 
 
@@ -591,14 +641,10 @@ class FolioPage(QDialog):
 
         # Tout dans UNE colonne : à 980 px, rail, coupe et fiche côte à côte ne
         # laissaient que 380 px aux sabliers et aux cartes.
-        tuiles = QHBoxLayout()
-        tuiles.setSpacing(12)
-        tuiles.addWidget(_tuile(f"{len(releve.cartes)} / {folio.CARTES_HP1}", tr("Cartes trouvées"),
-                                len(releve.cartes) / folio.CARTES_HP1, self._icone("cartes")),
-                         stretch=1)
-        tuiles.addWidget(_tuile(str(releve.dragees), tr("Dragées surprises"), None,
-                                self._icone("dragees")), stretch=1)
-        lay.addLayout(tuiles)
+        lay.addWidget(Rangee(
+            _tuile(f"{len(releve.cartes)} / {folio.CARTES_HP1}", tr("Cartes trouvées"),
+                   len(releve.cartes) / folio.CARTES_HP1, self._icone("cartes")),
+            _tuile(str(releve.dragees), tr("Dragées surprises"), None, self._icone("dragees"))))
         lay.addSpacing(12)
         lay.addWidget(self._coupe(releve))
         lay.addSpacing(26)
@@ -775,7 +821,7 @@ class FolioPage(QDialog):
         image = folio.image_carte_hp1(self._paquet, numero) if trouvee else None
         self._fiche_image.setVisible(image is not None)
         if image is not None:
-            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE)
+            cote = min(_IMAGE_FICHE, self._fiche.width() - 2 * _MARGE_FICHE - 1)   # 1 : le liseré
             self._fiche_image.setFixedHeight(cote)
             self._fiche_image.setPixmap(pixmap_texture(image, cote, self.devicePixelRatioF()))
         if trouvee:

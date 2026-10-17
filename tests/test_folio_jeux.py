@@ -145,3 +145,35 @@ def test_le_bloc_de_la_fiche_pour_hp3(qtbot, tmp_path):
     bloc.montrer(folio.Resume(releve, "", 2, 80), [], 0)
     assert bloc.texte_compte() == "2 cartes sur 80"
     assert bloc.texte_detail() == ""
+
+
+class TestRangee:
+    """Les tuiles passent à la ligne au lieu de se couper : à 980 px, « 6 / 80 »
+    de HP3 sortait de sa tuile (capture de Ludo, 2026-10-17)."""
+
+    def _rangee(self, qtbot, largeur: int):
+        from src.ui.folio_page import Rangee, _tuile
+        tuiles = [_tuile(f"{n} / 80", "Cartes trouvées") for n in range(4)]
+        rangee = Rangee(*tuiles)
+        qtbot.addWidget(rangee)
+        rangee.resize(largeur, 300)
+        rangee.show()
+        qtbot.waitExposed(rangee)
+        return rangee, tuiles
+
+    def test_large_une_ligne(self, qtbot):
+        _, tuiles = self._rangee(qtbot, 1600)
+        assert len({t.y() for t in tuiles}) == 1
+
+    def test_etroite_deux_lignes_de_deux(self, qtbot):
+        rangee, tuiles = self._rangee(qtbot, 2 * tuiles_min(qtbot) + 40)
+        qtbot.waitUntil(lambda: len({t.y() for t in tuiles}) == 2)
+        assert all(t.width() >= t.minimumSizeHint().width() for t in tuiles)
+        assert rangee.minimumSizeHint().width() < 2 * tuiles[0].minimumSizeHint().width()
+
+
+def tuiles_min(qtbot) -> int:
+    from src.ui.folio_page import _tuile
+    t = _tuile("6 / 80", "Cartes trouvées")
+    qtbot.addWidget(t)
+    return t.minimumSizeHint().width()
