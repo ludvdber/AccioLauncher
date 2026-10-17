@@ -153,8 +153,6 @@ class NouveautesPage(QDialog):
         phrases = []
         if self.nouveautes.depuis:
             phrases.append(tr("Ce qui change depuis la {}.").format(self.nouveautes.depuis))
-        if apres_mise_a_jour:
-            phrases.append(tr("Rien à faire de votre côté : vos jeux et vos réglages sont là."))
         if phrases:
             gauche.addWidget(texte(" ".join(phrases), 15, "#a9a7c4", retour=True))
         tete.addLayout(gauche, stretch=1)

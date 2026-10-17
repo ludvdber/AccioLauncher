@@ -35,8 +35,7 @@ def proposer_mise_a_jour(parent, version: str, notes: str, auto: bool) -> bool:
     """
     mecanique = (
         tr("La mise à jour est téléchargée et installée automatiquement ; "
-           "le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne "
-           "sont pas touchés.")
+           "le launcher redémarre ensuite.")
         if auto else
         tr("La page de téléchargement va s'ouvrir dans votre navigateur."))
     notes = notes.strip()

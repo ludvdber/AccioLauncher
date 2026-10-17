@@ -128,7 +128,7 @@ class TestPage:
     def test_apres_une_mise_a_jour_elle_le_dit(self, qtbot):
         textes = self._textes(self._page(qtbot))
         assert "MISE À JOUR INSTALLÉE" in textes
-        assert any("vos jeux et vos réglages sont là" in t for t in textes)
+        assert not any("vos jeux et vos réglages sont là" in t for t in textes), "un état normal ne se dit pas"
 
     def test_rouverte_depuis_a_propos_elle_ne_le_redit_pas(self, qtbot):
         textes = self._textes(self._page(qtbot, apres=False))

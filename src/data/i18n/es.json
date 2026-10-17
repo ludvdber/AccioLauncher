@@ -217,7 +217,6 @@
     "Téléchargement déjà en cours pour {} — un seul à la fois.": "Ya se está descargando {} — solo uno a la vez.",
     "NOUVEAU": "NUEVO",
     "BIENTÔT": "PRONTO",
-    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne sont pas touchés.": "La actualización se descarga e instala automáticamente y el launcher se reinicia. Tus juegos y partidas guardadas no se ven afectados.",
     "La page de téléchargement va s'ouvrir dans votre navigateur.": "La página de descarga se abrirá en tu navegador.",
     "Mettre à jour maintenant": "Actualizar ahora",
     "Plus tard": "Más tarde",
@@ -920,7 +919,6 @@
     "Mise à jour installée": "Actualización instalada",
     "Accio Launcher {}": "Accio Launcher {}",
     "Ce qui change depuis la {}.": "Lo que cambia desde la {}.",
-    "Rien à faire de votre côté : vos jeux et vos réglages sont là.": "No tienes que hacer nada: tus juegos y tus ajustes siguen aquí.",
     "Toutes les versions": "Todas las versiones",
     "Nouveau": "Nuevo",
     "Amélioré": "Mejorado",
@@ -969,7 +967,6 @@
     "Ouvrir le dossier": "Abrir la carpeta",
     "Vitrine": "Escaparate",
     "Les plus belles images partagées sur le Discord pourront être choisies pour le site acciolauncher.be et pour présenter le launcher, avec votre pseudo en crédit.": "Las mejores imágenes compartidas en Discord podrán elegirse para la web acciolauncher.be y para presentar el launcher, con tu apodo en los créditos.",
-    "Aucun compte à relier, rien n'est envoyé par le launcher : c'est vous qui collez l'image.": "Ninguna cuenta que vincular, el launcher no envía nada: eres tú quien pega la imagen.",
     "Cette image ne se lit pas : ouvrez le dossier pour la copier.": "Esta imagen no se puede leer: abre la carpeta para copiarla.",
     "La copie n'a pas pris : ouvrez le dossier pour la copier.": "La copia no ha funcionado: abre la carpeta para copiarla.",
     "Image copiée.": "Imagen copiada.",
@@ -982,7 +979,6 @@
     "Carte pas encore trouvée": "Cromo aún no encontrado",
     "La plus avancée": "La más avanzada",
     "Sauvegarde lue": "Partida leída",
-    "Lue sans être modifiée.": "Leída sin modificarla.",
     "Aucune sauvegarde trouvée pour ce jeu.": "No se ha encontrado ninguna partida de este juego.",
     "Partie tout juste commencée : pas encore de carte ni de points.": "Partida recién empezada: todavía sin cromos ni puntos.",
     "Cartes trouvées": "Cromos encontrados",
@@ -996,7 +992,6 @@
     "Pas encore trouvée": "Aún no encontrado",
     "Elle se cache quelque part dans le château.": "Se esconde en algún lugar del castillo.",
     "Ouvrir le folio": "Abrir el folio",
-    "Changer de version garde vos sauvegardes et vos réglages.": "Cambiar de versión conserva tus partidas y tus ajustes.",
     "Vos sauvegardes et vos réglages restent.": "Tus partidas y tus ajustes se quedan.",
     "Ouvrir {}": "Abrir {}",
     "Dernière partie {}": "Última partida {}",
@@ -1150,6 +1145,7 @@
     "{} cartes": "{} cromos",
     "Nouvelle aventure": "Nueva aventura",
     "Aventure précédente": "Aventura anterior",
-    "Aventures précédentes": "Aventuras anteriores"
+    "Aventures précédentes": "Aventuras anteriores",
+    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "La actualización se descarga e instala automáticamente y el launcher se reinicia."
   }
 }

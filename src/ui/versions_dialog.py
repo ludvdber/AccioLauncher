@@ -258,8 +258,6 @@ class VersionsDialog(QDialog):
             self._lignes[ver.version] = ligne
             lay.addWidget(ligne)
         lay.addStretch()
-        lay.addWidget(texte(tr("Changer de version garde vos sauvegardes et vos réglages."), 12,
-                            ENCRE_DOUCE, retour=True))
         return rail
 
     def _detail(self, ver: GameVersion) -> QWidget:

@@ -412,9 +412,6 @@ class GaleriePage(QDialog):
                              "choisies pour le site acciolauncher.be et pour présenter le "
                              "launcher, avec votre pseudo en crédit."), 13, "#c4c2da", retour=True))
         lay.addWidget(vitrine)
-        lay.addSpacing(10)
-        lay.addWidget(texte(tr("Aucun compte à relier, rien n'est envoyé par le launcher : "
-                               "c'est vous qui collez l'image."), 12, ENCRE_DOUCE, retour=True))
         return cote
 
     # ── Chargement des vignettes ──

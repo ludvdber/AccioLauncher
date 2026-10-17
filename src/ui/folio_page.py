@@ -585,8 +585,6 @@ class FolioPage(QDialog):
             self._lignes[r.emplacement] = ligne
             lay.addWidget(ligne)
         lay.addStretch()
-        lay.addWidget(texte(tr("Lue sans être modifiée."),
-                            12, ENCRE_DOUCE, retour=True))
         return rail
 
     def _retour(self) -> None:

@@ -217,7 +217,6 @@
     "Téléchargement déjà en cours pour {} — un seul à la fois.": "Already downloading {} — one at a time.",
     "NOUVEAU": "NEW",
     "BIENTÔT": "SOON",
-    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite. Vos jeux et vos sauvegardes ne sont pas touchés.": "The update is downloaded and installed automatically, then the launcher restarts. Your games and saves are left untouched.",
     "La page de téléchargement va s'ouvrir dans votre navigateur.": "The download page will open in your browser.",
     "Mettre à jour maintenant": "Update now",
     "Plus tard": "Later",
@@ -920,7 +919,6 @@
     "Mise à jour installée": "Update installed",
     "Accio Launcher {}": "Accio Launcher {}",
     "Ce qui change depuis la {}.": "What has changed since {}.",
-    "Rien à faire de votre côté : vos jeux et vos réglages sont là.": "Nothing to do on your side: your games and settings are all here.",
     "Toutes les versions": "All versions",
     "Nouveau": "New",
     "Amélioré": "Improved",
@@ -969,7 +967,6 @@
     "Ouvrir le dossier": "Open folder",
     "Vitrine": "Showcase",
     "Les plus belles images partagées sur le Discord pourront être choisies pour le site acciolauncher.be et pour présenter le launcher, avec votre pseudo en crédit.": "The best images shared on Discord may be picked for the acciolauncher.be website and to present the launcher, credited with your username.",
-    "Aucun compte à relier, rien n'est envoyé par le launcher : c'est vous qui collez l'image.": "No account to link, the launcher sends nothing: you are the one who pastes the image.",
     "Cette image ne se lit pas : ouvrez le dossier pour la copier.": "This image cannot be read: open the folder to copy it.",
     "La copie n'a pas pris : ouvrez le dossier pour la copier.": "The copy did not work: open the folder to copy it.",
     "Image copiée.": "Image copied.",
@@ -982,7 +979,6 @@
     "Carte pas encore trouvée": "Card not found yet",
     "La plus avancée": "Furthest along",
     "Sauvegarde lue": "Save read",
-    "Lue sans être modifiée.": "Read without being changed.",
     "Aucune sauvegarde trouvée pour ce jeu.": "No save found for this game.",
     "Partie tout juste commencée : pas encore de carte ni de points.": "A game that has only just begun: no cards or points yet.",
     "Cartes trouvées": "Cards found",
@@ -996,7 +992,6 @@
     "Pas encore trouvée": "Not found yet",
     "Elle se cache quelque part dans le château.": "It is hiding somewhere in the castle.",
     "Ouvrir le folio": "Open the folio",
-    "Changer de version garde vos sauvegardes et vos réglages.": "Switching versions keeps your saves and your settings.",
     "Vos sauvegardes et vos réglages restent.": "Your saves and settings stay.",
     "Ouvrir {}": "Open {}",
     "Dernière partie {}": "Last played {}",
@@ -1149,6 +1144,7 @@
     "{} cartes": "{} cards",
     "Nouvelle aventure": "New adventure",
     "Aventure précédente": "Previous adventure",
-    "Aventures précédentes": "Previous adventures"
+    "Aventures précédentes": "Previous adventures",
+    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "The update is downloaded and installed automatically, then the launcher restarts."
   }
 }
