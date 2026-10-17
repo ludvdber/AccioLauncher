@@ -68,6 +68,14 @@
         {
           "genre": "ameliore",
           "texte": {
+            "fr": "Le folio prend les icônes des jeux : dragées, friandises, boucliers, écussons et points de découverte.",
+            "en": "The folio uses the games' own icons: beans, sweets, shields, crests and discovery points.",
+            "es": "El folio usa los iconos de los juegos: grageas, golosinas, escudos, emblemas y puntos de descubrimiento."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
             "fr": "Sous Windows 11, la fenêtre prend des coins arrondis et un liseré fin.",
             "en": "On Windows 11, the window gets rounded corners and a thin border.",
             "es": "En Windows 11, la ventana tiene esquinas redondeadas y un borde fino."
