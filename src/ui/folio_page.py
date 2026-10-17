@@ -481,8 +481,7 @@ class FolioPage(QDialog):
 
         if releve is None or not releve.lu:
             message = (tr("Aucune sauvegarde trouvée pour ce jeu.") if releve is None else
-                       tr("Rien à lire encore dans cette sauvegarde : elle date du tout début "
-                          "du jeu, avant la première carte et les premiers points."))
+                       tr("Partie tout juste commencée : pas encore de carte ni de points."))
             titre = QLabel(tr("Folio"))
             titre.setFont(cinzel_decorative(22))
             titre.setStyleSheet("color: #f4f2f8; background: transparent;")
@@ -506,10 +505,6 @@ class FolioPage(QDialog):
         sorts = folio.sorts_hp1(releve.niveau)
         if sorts is not None:
             lay.addWidget(surtitre(tr("Sorts appris")))
-            lay.addSpacing(4)
-            lay.addWidget(texte(tr("Le jeu ne les écrit pas : ils se déduisent du niveau "
-                                   "de la sauvegarde, une leçon réussie après l'autre."),
-                                12, ENCRE_DOUCE, retour=True))
             lay.addSpacing(10)
             ligne = FlowLayout(spacing=8)
             for nom, appris in sorts:
@@ -698,6 +693,5 @@ class FolioPage(QDialog):
         else:
             self._fiche_nom.setText(tr("Pas encore trouvée"))
             self._fiche_dates.setText("")
-            self._fiche_texte.setText(tr("Elle se cache quelque part dans le château. Le folio "
-                                         "ne dit pas où, pour ne rien gâcher."))
+            self._fiche_texte.setText(tr("Elle se cache quelque part dans le château."))
         self.carte_montree = numero

@@ -388,7 +388,7 @@ class TestPage:
         page = FolioPage(jeu, install)
         qtbot.addWidget(page)
         textes = " ".join(lbl.text() for lbl in page.findChildren(QLabel))
-        assert "tout début du jeu" in textes and "Hall" not in textes
+        assert "tout juste commencée" in textes and "Hall" not in textes
 
     def test_sans_sauvegarde(self, qtbot, hp1):
         from PyQt6.QtWidgets import QLabel

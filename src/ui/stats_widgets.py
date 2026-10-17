@@ -314,16 +314,23 @@ class _CarteSauvegarde(QFrame):
         grille.setHorizontalSpacing(12)
         grille.setVerticalSpacing(2)
         grille.setColumnStretch(1, 1)
+        # Un emplacement RECOMMENCÉ (`progression`) : la carte suit l'aventure
+        # en cours, celles d'avant tiennent en une ligne, jamais effacées.
+        debut = tr("Nouvelle aventure") if vue.nouvelle else tr("Commencée")
         if vue.commencee == vue.derniere:
             # « Commencée le 4, dernière fois le 4 » : une date, dite une fois.
-            lignes = [(tr("Jouée le"), _date(vue.derniere))]
+            lignes = [(debut if vue.nouvelle else tr("Jouée le"), _date(vue.derniere))]
         else:
-            lignes = [(tr("Commencée"), _date(vue.commencee)),
+            lignes = [(debut, _date(vue.commencee)),
                       (tr("Dernière fois"), _date(vue.derniere))]
         if vue.avancement is not None:
             # Le pourcentage du jeu lui-même (HP5 : « 14 % TERMINÉ »).
             lignes.insert(0, (tr("Avancement"), tr("{} %").format(vue.avancement)))
         lignes.append((tr("Parties"), str(vue.parties) if vue.parties else ""))
+        if vue.precedentes and vue.temps_precedent:
+            avant = _duree(vue.temps_precedent)
+            lignes.append((tr("Aventure précédente"), avant) if vue.precedentes == 1
+                          else (tr("Aventures précédentes"), f"{vue.precedentes} · {avant}"))
         rang = 0
         for libelle, valeur in lignes:
             if not valeur:

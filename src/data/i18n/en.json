@@ -984,7 +984,7 @@
     "Sauvegarde lue": "Save read",
     "Lue sans être modifiée.": "Read without being changed.",
     "Aucune sauvegarde trouvée pour ce jeu.": "No save found for this game.",
-    "Rien à lire encore dans cette sauvegarde : elle date du tout début du jeu, avant la première carte et les premiers points.": "Nothing to read yet in this save: it dates from the very start of the game, before the first card and the first points.",
+    "Partie tout juste commencée : pas encore de carte ni de points.": "A game that has only just begun: no cards or points yet.",
     "Cartes trouvées": "Cards found",
     "Dragées surprises": "Every Flavour Beans",
     "Cartes des sorcières et sorciers célèbres": "Famous Witches and Wizards cards",
@@ -994,7 +994,7 @@
     "Votre maison": "Your house",
     "Le texte de la carte se lit dans le jeu installé.": "The card's text is read from the installed game.",
     "Pas encore trouvée": "Not found yet",
-    "Elle se cache quelque part dans le château. Le folio ne dit pas où, pour ne rien gâcher.": "It is hiding somewhere in the castle. The folio won't say where, so as not to spoil anything.",
+    "Elle se cache quelque part dans le château.": "It is hiding somewhere in the castle.",
     "Ouvrir le folio": "Open the folio",
     "Changer de version garde vos sauvegardes et vos réglages.": "Switching versions keeps your saves and your settings.",
     "Vos sauvegardes et vos réglages restent.": "Your saves and settings stay.",
@@ -1013,7 +1013,7 @@
     "Boucliers {} / {}": "Shields {} / {}",
     "Zones secrètes {} / {}": "Secret areas {} / {}",
     "Les noms et les images des cartes se lisent dans le jeu installé.": "Card names and pictures are read from the installed game.",
-    "Elle se cache quelque part dans le château, ou chez un marchand. Le folio ne dit pas où, pour ne rien gâcher.": "It is hidden somewhere in the castle, or sold by a vendor. The folio won't say where, so as not to spoil anything.",
+    "Elle se cache quelque part dans le château, ou chez un marchand.": "It is hidden somewhere in the castle, or sold by a vendor.",
     "Partie {}": "Game {}",
     "Partie": "Game",
     "de l'histoire terminée": "of the story completed",
@@ -1125,7 +1125,6 @@
     "Sorts renvoyés par Protego": "Spells deflected with Protego",
     "Acromantules vaincues": "Acromantulas defeated",
     "Détraqueurs repoussés": "Dementors repelled",
-    "Le jeu ne les écrit pas : ils se déduisent du niveau de la sauvegarde, une leçon réussie après l'autre.": "The game doesn't write them down: they follow from the save's level, one lesson passed after another.",
     "appris": "learned",
     "pas encore appris": "not learned yet",
     "Potion et ingrédients": "Potion and ingredients",
@@ -1147,6 +1146,9 @@
     "Style de sort": "Jinx style",
     "Créatures": "Creatures",
     "{} carte": "{} card",
-    "{} cartes": "{} cards"
+    "{} cartes": "{} cards",
+    "Nouvelle aventure": "New adventure",
+    "Aventure précédente": "Previous adventure",
+    "Aventures précédentes": "Previous adventures"
   }
 }

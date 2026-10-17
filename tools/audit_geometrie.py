@@ -37,6 +37,7 @@ Usage :
 Sortie : code 0 si tout va bien, 1 sinon (et la liste des cas fautifs).
 """
 
+import logging
 import os
 import sys
 import tempfile
@@ -85,6 +86,11 @@ def _partie_hp1(tmp: Path) -> None:
     que chez qui a des sauvegardes de HP1, et lues dans SES Documents.
     Serpentard en tête de 18 points : la phrase la plus longue du bloc."""
     from src.core import sauvegardes
+    # Ce fichier n'est que le bloc texte, sans le paquet Unreal autour : la
+    # lecture de l'acteur échoue, se replie sur le bloc, et le notait par une
+    # trace complète à chaque passe (neuf fois par build). Chez un joueur,
+    # cette trace reste utile : seul l'audit la tait.
+    logging.getLogger("src.core.folio").setLevel(logging.ERROR)
     saves = tmp / "Documents" / "Harry Potter" / "Save"
     saves.mkdir(parents=True)
     (saves / "Save0.usa").write_bytes(

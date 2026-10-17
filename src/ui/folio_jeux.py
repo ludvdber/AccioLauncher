@@ -391,8 +391,7 @@ class FolioPageHP3(FolioPage):
             self._fiche_nom.setText(tr("Pas encore trouvée"))
             self._fiche_dates.setText("")
             self._fiche_texte.setText(tr("Elle se cache quelque part dans le château, ou chez "
-                                         "un marchand. Le folio ne dit pas où, pour ne rien "
-                                         "gâcher."))
+                                         "un marchand."))
         self.carte_montree = numero
 
 
@@ -559,8 +558,7 @@ class FolioPageHP2(FolioPage):
             en_vente = self.releve is not None and numero in self.releve.marchands
             self._fiche_texte.setText(
                 tr("Un marchand la propose : elle s'achète avec des dragées.") if en_vente
-                else tr("Elle se cache quelque part dans le château, ou chez un marchand. "
-                        "Le folio ne dit pas où, pour ne rien gâcher."))
+                else tr("Elle se cache quelque part dans le château, ou chez un marchand."))
         self.carte_montree = numero
 
 

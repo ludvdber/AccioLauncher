@@ -984,7 +984,7 @@
     "Sauvegarde lue": "Partida leída",
     "Lue sans être modifiée.": "Leída sin modificarla.",
     "Aucune sauvegarde trouvée pour ce jeu.": "No se ha encontrado ninguna partida de este juego.",
-    "Rien à lire encore dans cette sauvegarde : elle date du tout début du jeu, avant la première carte et les premiers points.": "Todavía no hay nada que leer en esta partida: es del principio del juego, antes del primer cromo y de los primeros puntos.",
+    "Partie tout juste commencée : pas encore de carte ni de points.": "Partida recién empezada: todavía sin cromos ni puntos.",
     "Cartes trouvées": "Cromos encontrados",
     "Dragées surprises": "Grageas de todos los sabores",
     "Cartes des sorcières et sorciers célèbres": "Cromos de brujas y magos famosos",
@@ -994,7 +994,7 @@
     "Votre maison": "Tu casa",
     "Le texte de la carte se lit dans le jeu installé.": "El texto del cromo se lee del juego instalado.",
     "Pas encore trouvée": "Aún no encontrado",
-    "Elle se cache quelque part dans le château. Le folio ne dit pas où, pour ne rien gâcher.": "Se esconde en algún lugar del castillo. El folio no dice dónde, para no estropear nada.",
+    "Elle se cache quelque part dans le château.": "Se esconde en algún lugar del castillo.",
     "Ouvrir le folio": "Abrir el folio",
     "Changer de version garde vos sauvegardes et vos réglages.": "Cambiar de versión conserva tus partidas y tus ajustes.",
     "Vos sauvegardes et vos réglages restent.": "Tus partidas y tus ajustes se quedan.",
@@ -1013,7 +1013,7 @@
     "Boucliers {} / {}": "Escudos {} / {}",
     "Zones secrètes {} / {}": "Zonas secretas {} / {}",
     "Les noms et les images des cartes se lisent dans le jeu installé.": "Los nombres y las imágenes de los cromos se leen en el juego instalado.",
-    "Elle se cache quelque part dans le château, ou chez un marchand. Le folio ne dit pas où, pour ne rien gâcher.": "Se esconde en algún lugar del castillo, o la vende un comerciante. El folio no dice dónde, para no estropear nada.",
+    "Elle se cache quelque part dans le château, ou chez un marchand.": "Se esconde en algún lugar del castillo, o la vende un comerciante.",
     "Partie {}": "Partida {}",
     "Partie": "Partida",
     "de l'histoire terminée": "de la historia completada",
@@ -1125,7 +1125,6 @@
     "Sorts renvoyés par Protego": "Hechizos desviados con Protego",
     "Acromantules vaincues": "Acromántulas derrotadas",
     "Détraqueurs repoussés": "Dementores repelidos",
-    "Le jeu ne les écrit pas : ils se déduisent du niveau de la sauvegarde, une leçon réussie après l'autre.": "El juego no los guarda: se deducen del nivel de la partida, una lección superada tras otra.",
     "appris": "aprendido",
     "pas encore appris": "aún no aprendido",
     "Potion et ingrédients": "Poción e ingredientes",
@@ -1148,6 +1147,9 @@
     "Style de sort": "Estilo de hechizo",
     "Créatures": "Criaturas",
     "{} carte": "{} cromo",
-    "{} cartes": "{} cromos"
+    "{} cartes": "{} cromos",
+    "Nouvelle aventure": "Nueva aventura",
+    "Aventure précédente": "Aventura anterior",
+    "Aventures précédentes": "Aventuras anteriores"
   }
 }

@@ -27,6 +27,13 @@ parties. Elle affiche « — », jamais une estimation.
 Si plusieurs sauvegardes changent pendant une même partie (on en a chargé
 une autre en route), la partie va à la plus RÉCEMMENT écrite : c'est là que
 le joueur s'est arrêté, donc là qu'il reprendra.
+
+**Une nouvelle aventure dans un même emplacement** : à chaque attribution,
+on note où en est la sauvegarde (`progression.mesure` : cartes, étape de
+l'histoire…). Si ces compteurs ont BAISSÉ depuis la fois précédente, ce n'est
+plus la même aventure : la date est ajoutée à `nouvelles`, et la carte de
+l'emplacement ne montre plus que ce qui la suit. Rien n'est effacé : les
+parties d'avant restent dans le fichier et sont résumées en une ligne.
 """
 
 import fnmatch
@@ -36,6 +43,7 @@ import os
 import re
 import sys
 import tempfile
+from collections.abc import Callable
 from typing import Any
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -82,6 +90,9 @@ class Vue:
     modifie: float = 0.0        # horodatage exact : départage deux « derniere » du même jour
     rapide: bool = False        # la sauvegarde rapide (F5), hors des emplacements
     avancement: int | None = None   # « 14 % » tel que le jeu l'affiche (HP5)
+    nouvelle: date | None = None    # l'aventure en cours a été commencée ce jour-là
+    precedentes: int = 0            # aventures d'avant, dans le même emplacement
+    temps_precedent: int | None = None   # leur temps ; None : aucune partie observée
 
 
 # ─── Où chercher ───
@@ -367,7 +378,8 @@ def chemin_fichier() -> Path:
 
 
 def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]:
-    """{(jeu, fichier): {"commencee": date | None, "parties": [(debut, duree)]}}.
+    """{(jeu, fichier): {"commencee": date | None, "parties": [(debut, duree)],
+    "mesure": tuple[int, ...] | None, "nouvelles": [datetime]}}.
 
     Un fichier illisible est mis de côté, jamais écrasé, comme le journal.
     """
@@ -404,9 +416,26 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]
             except (ValueError, TypeError):
                 continue
             parties.append((debut, duree))
+        mesure = e.get("mesure")
+        if not (isinstance(mesure, list) and mesure
+                and all(isinstance(m, int) and not isinstance(m, bool) for m in mesure)):
+            mesure = None
+        nouvelles = []
+        for brut in e.get("nouvelles") or ():
+            try:
+                nouvelles.append(datetime.fromisoformat(str(brut)))
+            except (ValueError, TypeError):
+                continue
         stock[(jeu, fichier)] = {"commencee": commencee,
-                                 "parties": parties[-_MAX_PARTIES:]}
+                                 "parties": parties[-_MAX_PARTIES:],
+                                 "mesure": tuple(mesure) if mesure else None,
+                                 "nouvelles": sorted(nouvelles)}
     return stock
+
+
+def _entree(stock: dict[tuple[str, str], dict[str, Any]], cle: tuple[str, str]) -> dict[str, Any]:
+    return stock.setdefault(cle, {"commencee": None, "parties": [], "mesure": None,
+                                  "nouvelles": []})
 
 
 def _date(brut: object) -> date | None:
@@ -418,13 +447,21 @@ def _date(brut: object) -> date | None:
 
 def _ecrire(stock: dict[tuple[str, str], dict[str, Any]], chemin: Path) -> None:
     """Écriture atomique (tmp + rename), même contrat que le journal."""
+    def ligne(jeu: str, fichier: str, v: dict[str, Any]) -> dict[str, Any]:
+        e: dict[str, Any] = {
+            "jeu": jeu, "fichier": fichier,
+            "commencee": v["commencee"].isoformat() if v["commencee"] else None,
+            "parties": [{"debut": d.isoformat(timespec="seconds"), "duree": s}
+                        for d, s in v["parties"][-_MAX_PARTIES:]]}
+        # Absents tant qu'ils sont vides : un fichier d'avant reste identique.
+        if v.get("mesure"):
+            e["mesure"] = list(v["mesure"])
+        if v.get("nouvelles"):
+            e["nouvelles"] = [d.isoformat(timespec="seconds") for d in v["nouvelles"]]
+        return e
+
     data = {"version": 1, "sauvegardes": [
-        {"jeu": jeu, "fichier": fichier,
-         "commencee": v["commencee"].isoformat() if v["commencee"] else None,
-         "parties": [{"debut": d.isoformat(timespec="seconds"), "duree": s}
-                     for d, s in v["parties"][-_MAX_PARTIES:]]}
-        for (jeu, fichier), v in sorted(stock.items())
-    ]}
+        ligne(jeu, fichier, v) for (jeu, fichier), v in sorted(stock.items())]}
     chemin.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=".tmp")
     try:
@@ -449,13 +486,19 @@ def _jour(horodatage: float | None) -> date | None:
 
 
 def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
-              debut: datetime, duree: int, chemin: Path | None = None) -> str | None:
+              debut: datetime, duree: int, chemin: Path | None = None,
+              mesurer: Callable[[str], tuple[int, ...] | None] | None = None) -> str | None:
     """Donne la partie qui vient de finir à la sauvegarde qu'elle a écrite.
 
     Rend le fichier retenu, ou None si aucune sauvegarde n'a bougé : on a joué
     sans sauvegarder, et la partie est notée sous `SANS_SAUVEGARDE` pour que
     la page puisse le dire. Un échec d'écriture ne remonte jamais — même règle
     que le journal.
+
+    `mesurer(rel)` dit où en est la sauvegarde (`progression.mesure`) : si
+    elle a reculé depuis l'attribution précédente, cette partie ouvre une
+    nouvelle aventure dans l'emplacement. La sauvegarde rapide n'en ouvre
+    jamais : elle prend ce qu'on vient de charger, d'où qu'il vienne.
     """
     if duree <= 0:
         return None
@@ -463,20 +506,29 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
     chemin = chemin or chemin_fichier()
     stock = charger(chemin)
     if rel is None:
-        stock.setdefault((jeu, SANS_SAUVEGARDE), {"commencee": None, "parties": []})[
-            "parties"].append((debut, int(duree)))
+        _entree(stock, (jeu, SANS_SAUVEGARDE))["parties"].append((debut, int(duree)))
         try:
             _ecrire(stock, chemin)
         except OSError as exc:
             log.warning("Relevé des sauvegardes non mis à jour : %s", exc)
         return None
-    entree = stock.setdefault((jeu, rel), {"commencee": None, "parties": []})
+    entree = _entree(stock, (jeu, rel))
     # Une sauvegarde CRÉÉE pendant cette partie a commencé avec elle ; sinon
     # le disque sait mieux que nous quand elle est née.
     nee = debut.date() if rel not in avant else _jour(apres[rel].cree)
     if nee is not None and (entree["commencee"] is None or nee < entree["commencee"]):
         entree["commencee"] = nee
     entree["parties"].append((debut, int(duree)))
+    if mesurer is not None and not est_rapide(jeu, rel):
+        from src.core import progression
+        maintenant = mesurer(rel)
+        # Sans partie déjà comptée ici, il n'y a pas d'aventure d'avant à séparer.
+        if len(entree["parties"]) > 1 and progression.recommencee(entree["mesure"], maintenant):
+            entree["nouvelles"] = [*entree["nouvelles"], debut]
+            log.info("Sauvegardes : nouvelle aventure dans %s (%s), %s → %s",
+                     rel, jeu, entree["mesure"], maintenant)
+        if maintenant is not None:
+            entree["mesure"] = maintenant
     try:
         _ecrire(stock, chemin)
     except OSError as exc:
@@ -509,7 +561,14 @@ def vues(jeu: str, spec: Sauvegardes | None,
     for rel, etat in etats.items():
         connu = stock.get((jeu, rel), {"commencee": None, "parties": []})
         parties = connu["parties"]
-        commencee = connu["commencee"] or _jour(etat.cree)
+        nouvelles = connu.get("nouvelles") or []
+        avant: list[tuple[datetime, int]] = []
+        if nouvelles:
+            # Ce qui précède la dernière nouvelle aventure est résumé, pas montré.
+            avant = [p for p in parties if p[0] < nouvelles[-1]]
+            parties = [p for p in parties if p[0] >= nouvelles[-1]]
+        commencee = (nouvelles[-1].date() if nouvelles
+                     else connu["commencee"] or _jour(etat.cree))
         derniere = _jour(etat.modifie)
         if commencee and derniere and commencee > derniere:
             commencee = derniere        # une copie de fichier « crée » après coup
@@ -523,6 +582,9 @@ def vues(jeu: str, spec: Sauvegardes | None,
             modifie=etat.modifie,
             rapide=est_rapide(jeu, rel),
             avancement=etat.avancement,
+            nouvelle=nouvelles[-1].date() if nouvelles else None,
+            precedentes=len(nouvelles),
+            temps_precedent=sum(d for _, d in avant) if avant else None,
         ))
     resultat.sort(key=lambda v: (v.numero is None, v.numero or 0, v.fichier))
     return resultat

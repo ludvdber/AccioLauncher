@@ -33,6 +33,7 @@ from src.core import (
     captures,
     config_cassee,
     diagnostic_plantage,
+    progression,
     reparation_config,
     sauvegardes,
     scolarite,
@@ -166,9 +167,11 @@ class GameSession(QObject):
             # Sans emplacement déclaré, on ne regarde rien : noter la
             # partie « sans sauvegarde » serait affirmer ce qu'on n'a pas vu.
             if partie and self._debut is not None and spec is not None:
+                jeu = self._game_id
                 sauvegardes.attribuer(
-                    self._game_id, self._avant, sauvegardes.releve(spec),
-                    self._debut, int(duree))
+                    jeu, self._avant, sauvegardes.releve(spec),
+                    self._debut, int(duree),
+                    mesurer=lambda rel: progression.mesure(jeu, spec, rel))
             # Les captures que le jeu a posées chez lui rejoignent son dossier,
             # hors de ce qu'une désinstallation emporterait.
             if game is not None:
