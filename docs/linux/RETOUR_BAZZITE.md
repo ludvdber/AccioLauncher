@@ -1,4 +1,43 @@
-# Quatrième passage (2026-10-20) — en cours (rapport d'étape mis à jour à 17 h 15, après la reprise)
+# Cinquième passage : HP2 relais (2026-10-20, 17 h 50 – 17 h 56)
+
+Pour : Ludo et la session Windows. Demande : essayer sous Wine la `winmm.dll` du relais (`transfert/HP2_relais/` de
+l'atelier, SHA-256 commençant par `8AEB017689C5C324`) avec le `winmm.ini` de HP2, puis la release dès qu'elle sort.
+
+**L'atelier n'a pas pu être récupéré** : `Atelier-acciolauncher` n'est pas cloné sur ce portable et GitHub demande
+une identification (dépôt privé, aucun identifiant ici ; mes premiers essais ont pu ouvrir une fenêtre de mot de
+passe `ksshaskpass` sur l'écran de Ludo). Aucune DLL en `8AEB0176…` sur la machine. J'ai donc surveillé les
+releases, et **la v2.1.1 est sortie à 17 h 46** : essai fait avec elle. Sa `winmm.dll` n'est PAS celle du relais
+(SHA-256 `6d8b4309aa25ead7…`, version « 2.1.1 », compilée par GitHub Actions depuis `a039c1f`) ; elle porte les
+messages attendus. Empreintes de la release vérifiées (`sha256sum -c`) ; `winmm.ini` du zip HP2 : `7fa7bf0e…`,
+`WineLauncherFix=1`.
+
+**Mise en place** : `winmm.dll` et `winmm.ini` d'origine de `HP2/system` (2.0.1 des archives, `cdc62e04…` et
+`39ff0467…`) copiés dans `~/AccioSauvegardes/2026-10-20_HP2-relais/`, remplacés par ceux de la 2.1.1. Lancement
+par JOUER, son coupé, surcharge inchangée (journal : `surcharges winmm`).
+
+| À vérifier | Résultat |
+|---|---|
+| Au chargement : « Launcher: the exe's SetWindowPos calls go through the fix » | **oui** : `Launcher: the exe's SetWindowPos calls go through the fix (WineLauncherFix, under Wine)` |
+| À l'ouverture du lanceur : « SetWindowPos 717,257 486x566 centring a child window on the screen ignored » | **oui**, mot pour mot, suivi de `(WineLauncherFix)` |
+| L'ancienne ligne « two SetWindowPos taken out » | **absente** |
+| Le lanceur avec son fond et ses trois boutons | **VU** : logo, fond nuit, « Nouvelle partie », « Charger partie », « Options », plus « Quitter » et le texte d'aide (fenêtre « Menu principal » 480×556) |
+| « Nouvelle partie » et « Charger partie » réagissent au clic | **VU** : « Charger partie » ouvre les six emplacements (tous « Vide ») ; « <Retour » revient ; « Nouvelle partie » ouvre les six emplacements de création |
+| Une partie se lance jusqu'au jeu | **VU** : emplacement 1 → `Game.exe PrivetDr.unr -SAVESLOT=1`, introduction de Privet Drive (« Harry Potter vivait au 4, Privet Drive… »), environ 32 images/s. Le launcher suit la relance de `Game.exe` et compte la partie (+95 s) |
+
+Le contournement `Game.exe -LOADGAME=0 -SAVESLOT=1` n'a pas servi. Journal complet du correctif :
+`~/Accio-essais/hp2-relais-2.1.1-winmm_accio.log`.
+
+**Remise en état** : `winmm.dll` et `winmm.ini` 2.0.1 remis (`cmp` identique) ; Documents de HP2 remis depuis la
+copie (`diff -r` identique ; l'état après la partie, avec `Save/Slot1/cache` et `Running.ini`, est gardé dans
+`cree-par-essai/`).
+
+**Conclusion** : avec la 2.1.1, **HP2 se joue par le launcher sous Linux**. Il reste à republier l'archive de HP2
+avec ce correctif (elle porte toujours la 2.0.1, dont le lanceur est noir sous Wine). La DLL du relais
+(`8AEB0176…`) n'a pas été essayée ; si elle diffère de la release, c'est la release qui est validée ici.
+
+---
+
+# Quatrième passage (2026-10-20) — terminé à 18 h 05
 
 Portable Bazzite, launcher **depuis les sources** (commit `4f758f9`, catalogue 0.43), jeux lancés par JOUER sauf mention « manuel ». Les essais à l'écran se font dans un **gamescope headless** (`--backend headless`, Xwayland `:1`, captures `gamescopectl screenshot`, entrées `xdotool`) : le verrouillage d'écran de KDE a coupé les deux passages précédents et Ludo n'était pas là pour le désactiver. Captures, journaux et notes par jeu : `~/Accio-essais/` (`notes-HP1.md` … `notes-HP6.md`, `notes-bloc3.md`).
 
@@ -9,16 +48,20 @@ Portable Bazzite, launcher **depuis les sources** (commit `4f758f9`, catalogue 0
 | 0. Mise en place | fait | venv recréé, contrôles verts (ci-dessous), préfixe et config copiés avant tout jeu. Tous les jeux **mis à jour ou installés** par le launcher (HP1 1.3, HP2 1.2, HP3 1.3, HP4 1.2, HP5 1.3, HP6 1.2, HP7b 1.2 ; **HP7a 1.1 installé seulement à la reprise**, 16:11 : il manquait). |
 | 1. `winmm` HP1/HP2 (0.43) | **fait** | **La surcharge prend** : `surcharges winmm` au journal, `HP2\system\WINMM.dll : native`, `winmm_accio.log` écrit, pour HP1 comme HP2, avec la DLL de l'archive (2.0.1) comme avec la 2.1.0. **Mais le lanceur de HP2 reste noir avec la 2.1.0** : la paire retirée par `WineLauncherFix` n'est pas celle qui s'exécute (détail et proposition plus bas). HP1 : assistant sauté, Alt+Entrée ×2 et fenêtre devant sans dégât, `GameRenderDevice` conservé. |
 | 2. Six jeux avec la 1.2.2 | en partie | HP1, HP2, HP3, HP4, HP5 lancés (tableaux plus bas). **HP5 démarre sans `vcrun2005`**. **HP6 fait : 10 min sans effondrement (31,8 à 45,4 images/s), ombres ×4 = −16 % (35,5 contre 42,3) sur la même scène.** Mais **l'incrustation du correctif (F10/F11) fait planter le GPU Intel** et fige le jeu pour toujours (détail plus bas). |
-| 3. Folio, Mes années, galerie, versions | en partie | Audit de géométrie : **OK, 0 défaut** (sur la session réelle, `xvfb-run` n'existe pas sur Bazzite). Galerie : F12 dans HP4 écrit directement dans `~/Images/Accio Launcher/<jeu>/`. Folio : **s'ouvre pour les 8 jeux, sauvegardes trouvées dans le préfixe** (HP1 « Hall d'entrée de Poudlard » avec l'image, HP6 écussons/badges/chapitre). Mes années : cartes et statistiques OK. Restauration sur copie, galerie (affichage), versions, tailles : pas encore. |
+| 3. Folio, Mes années, galerie, versions | **fait** | Audit de géométrie OK (session réelle, puis dans `build.sh`). Folio : s'ouvre pour les 8 jeux. **Restauration sur copie VU** (HP6, version de 16:15 remise, le jeu la charge, original remis, `diff -r` identique). **Galerie VU** (capture F12 de HP4, 2880×1620). **Versions VU** (HP1 1.3 → 1.2 → 1.3, dossier identique fichier par fichier, sauvegardes et réglages intacts). Tailles 980×660 et 1920×1080 : rien de coupé dans les folios. Trois petits défauts d'affichage (plus bas). |
 | 4. HP3 à 60 images/s | fait (constat) | Inchangé : HP3 tourne sur le `d3d8` de wined3d (maps), `DXVK_FRAME_RATE=60` sans effet, dgVoodoo écarté. Rien de nouveau prouvé. |
-| 5. Launcher sous Linux | en partie | Retour en zone de notification et retour à la fin de partie : vu 5 fois. Préparation de Wine : `vcrun2005` posé par le bandeau « Installer » en **12 s**, JOUER débloqué. Annuler (à faire sur `vcrun2008`, HP7b), double clic JOUER, fenêtre KWin, désinstallation, AppImage : à faire. |
-| 6. HP7a/HP7b | en partie | Installés par le launcher : HP7b « 104 élément(s) rangé(s) dans pc/ », HP7a « 134 élément(s) rangé(s) dans pc/ » (16:11:33). `Install Dir`/`Locale` pas encore dans `system.reg` (écrits au lancement). Lancement : accordé par Ludo (« fais également hp7 et 8 que tu testeras à la fin »), pas encore fait. |
+| 5. Launcher sous Linux | fait, sauf 5.3/5.5 | Zone de notification : vu à chaque partie. `vcrun2005` 12 s, `vcrun2008` 10 s. **Annuler et les refus croisés : pas testables à la main** (préparation et installations plus rapides que les clics). **Double clic JOUER : un seul lancement (VU).** **Désinstaller/réinstaller HP3 : sauvegardes et `_Launcher/` intacts (VU).** **AppImage : `build.sh` vert en 3 min 00, 64 Mo, fenêtre en moins d'une seconde, HP1 joué avec elle (VU).** 5.3 (KWin) et 5.5 (barre lumineuse) : il faut Ludo. |
+| 6. HP7a/HP7b | **fait, défaut trouvé et corrigé** | **Sous umu, HP7a et HP7b quittaient en 3 s (code 0)** : le launcher écrivait `Install Dir=Z:\home\…` alors que Proton lance l'exe en `X:\Games\…` (`x:` = dossier personnel). **Corrigé dans `compat.chemin_windows`** (test ajouté). Ensuite : HP7a en jeu, 59,9 images/s, 35 à 87 % d'UN cœur ; HP7b en jeu, 27,9 à 29,9 images/s, 0,5 à 2 cœurs. **Aucun gel, jamais tous les cœurs.** |
 
 ## Machine
 
 Bazzite, noyau `7.2.7-ogc1.1.fc44.x86_64`, KDE Wayland (essais dans gamescope headless 1920×1080), umu-launcher 1.4.4, **GE-Proton10-34** (`~/.local/share/Steam/compatibilitytools.d`), Python 3.14.7 (venv du dépôt), dépôt AccioLauncher `4f758f9` (2026-10-20), dépôt Harry-Potter-PC-Fix `259ec54` (v2.1.0). Manette **DualShock 4 USB** (`054c:09cc`, `/dev/hidraw1` accessible, `js0`) branchée par Ludo à 11:20. Son coupé à 11:45 (`wpctl` : 0.40 [MUTED], à remettre : `wpctl set-mute @DEFAULT_AUDIO_SINK@ 0`).
 
-## Tests et contrôles (avant toute modification ; aucune modification de code depuis)
+## Tests et contrôles
+
+- **Après la correction de `compat.chemin_windows` (18 h)** : `pytest -q` **3325 réussis, 38 sautés, 0 échec** (2 tests neufs) ; `ruff check .` propre ; `mypy` propre (68 fichiers). `./build.sh` complet vert juste avant (3323 tests, audit de géométrie OK).
+
+Avant toute modification :
 
 - `pytest -q` : **3323 réussis, 38 sautés, 0 échec** (7 min 15). Les 38 sautés = 32 réservés à Windows + 6 `test_fonts.py` (Georgia).
 - `ruff check .` : propre. `mypy` : propre (68 fichiers).
@@ -93,30 +136,49 @@ HP6 au 2e passage : voir plus bas. Cadence : un outil `~/Accio-essais/fps_from_l
 - **Fiche, jeu ouvert au démarrage** : relancé à 16:38, le launcher s'ouvre sur **HP1** alors que HP6 est le dernier joué. `GameManager.last_played_game_id` compare des DATES (`last_played` au jour près) : à égalité, c'est l'ordre du dictionnaire qui gagne. Proposition : prendre le `debut` le plus récent de `sessions.json`. Non codé.
 - **Outil de clic** : dans gamescope, la fenêtre est mise à l'échelle SANS déformation (bandes noires) ; mon `vclic2.sh` supposait un étirement, d'où des clics « sans effet » sur les liens et tuiles plus tôt dans ce passage. Corrigé à 17:10 : liens, boutons et lignes répondent. Pas un défaut du launcher.
 - **5.4** zone de notification : le launcher s'y range à chaque lancement et revient à la fin (« Retour de … partie terminée », temps de jeu mis à jour) : vu sur HP1, HP2, HP3, HP4.
-- **5.1/5.2/5.3/5.5/5.6/5.7** : à faire. 5.5 : la barre lumineuse n'a pas été observée (pas d'yeux sur la manette) ; `xinput_accio.log` de HP5 dit `LightBar=left alone` en lancement manuel (le launcher pose `LightBar=255,110,0` dans le `d3d9.ini` de HP6).
+- **5.5** : la barre lumineuse n'a pas été observée (pas d'yeux sur la manette) ; `xinput_accio.log` de HP5 dit `LightBar=left alone` en lancement manuel (le launcher pose `LightBar=255,110,0` dans le `d3d9.ini` de HP6). Le launcher, lui, journalise « Manette : barre lumineuse aux couleurs de « serdaigle » ».
 - **5.1** : bandeau « Visual C++ 2005 x86 manquant dans Wine — requis pour lancer ce jeu. Installer » sur HP6 → boîte « Préparer Wine » (une seule ligne : Visual C++ 2005) → barre du bas « Installation de Visual C++ 2005 » avec Annuler → « Wine est prêt. » en 12 s (installeur déjà dans le cache de winetricks), aucun processus restant. HP7a ne montre plus de bandeau ensuite ; HP7b demande Visual C++ 2008 : Annuler s'y testera.
 - **6** : HP7a installé à la reprise (16:09 → 16:11:33, 31 Mo/s, 3 parties, « 134 élément(s) rangé(s) dans pc/ ») ; lancement à faire en dernier (accord écrit de Ludo dans la conversation).
 
+**Reprise de 17 h 15 à 18 h 05**
+
+- **3.1 Restaurer une sauvegarde (VU)** : HP6, réglages du jeu → « Restaurer une sauvegarde » → « Versions des sauvegardes » (16:43 la plus récente, 16:15) → « Remettre cette version » → confirmation qui dit que l'état actuel est copié d'abord → « Sauvegarde remise ». Le fichier `HPHBP0` est alors celui de la copie de 16:15 (empreinte identique), le jeu propose « Continuer » et reprend au Terrier. Original remis depuis `~/AccioSauvegardes/2026-10-20_restauration-HP6/` : `diff -r` identique, copies du launcher identiques. **Petit écart** : le fichier remis a les droits `rw-------` au lieu de `rw-r--r--` (fichier temporaire renommé) ; sans effet pour Wine, à aligner si l'on veut un retour à l'octet près.
+- **3.4 Galerie (VU)** : la capture F12 de HP4 s'affiche (« 20 octobre 2026, 12:04 · 2880 × 1620 », boutons Discord, ouvrir, copier, dossier).
+- **3.5 Versions (VU)** : HP1 « Gérer les versions » liste 1.3 (installée), 1.2, 1.1, 1.0 ; « Revenir à v1.2 » → « Ceci va supprimer la version actuelle » → 1.2 installée en 6 s ; retour par « Mise à jour disponible : v1.2 → v1.3 ». Après l'aller-retour, le dossier HP1 est **identique fichier par fichier** (365 fichiers, hors journaux), Documents et `config.json` aussi. Le journal dit « Config du joueur gardée » pour `HP.ini` et `User.ini`.
+- **3.6 Tailles** : 980×660 puis 1920×1080 (forcée par `xdotool` : le gamescope sans écran n'agrandit pas) sur les folios HP1, HP3, HP6 et sur Mes années : rien de coupé à droite, les noms longs de HP6 passent sur deux lignes, comptes alignés. **Trois petits défauts d'affichage**, non corrigés : (1) dans le graphe des douze mois, l'étiquette de septembre s'affiche « 14… » à TOUTES les tailles (`stats_widgets` coupe la valeur à la largeur d'une barre, ≈ 20 px ; proposition : laisser déborder sur les colonnes voisines vides, ou écrire « 14′ ») ; (2) « Sang-Mêlé » perd son circonflexe dans les titres en Cinzel des petites capitales (titre du dialogue des versions, colonne des réglages, folio, Mes années), l'aigu de « Melé » reste : à regarder sous Windows avec la vraie police ; (3) la boîte de désinstallation ne dit pas que les sauvegardes restent (un toast le dit ensuite, en s'effaçant).
+- **5.1 Annuler et refus croisés** : pas prouvés. `vcrun2008` s'est posé en 10 s ; et deux fois, l'installation en cours (HP1 1.2 puis 1.3, 6 s chacune) s'est terminée avant que le clic « préparer » n'arrive : le journal montre `Installation terminée` 2 s AVANT `Préparation de Wine`. Il faudrait un composant lent ou un réseau bridé.
+- **5.2 Double clic JOUER (VU)** : deux clics à 120 ms sur « Reprendre » de HP1 → une seule ligne `Lancement de`, un seul `HP.exe`.
+- **5.6 Désinstaller puis réinstaller HP3 (VU)** : 774 Mo retirés, parties de HP3 (Documents du préfixe) et copies du launcher intactes ; réinstallé en 15 s (336 Mo à 43 Mo/s). `_Launcher/` hors préfixe et journaux : seuls `config.json` (même contenu, ordre des clés) et `sessions.json` (compteur d'octets, deux sessions d'essai) bougent.
+- **5.7 AppImage (VU)** : `./build.sh` complet en 3 min 00 (lint, 3323 tests, audit de géométrie, PyInstaller, 48 bibliothèques laissées à la machine), `dist/AccioLauncher-x86_64.AppImage` de **64 Mo** (66 812 408 octets, sha `99da5646…`). Lancée en X11 sur l'affichage d'essai : fenêtre en **moins d'une seconde**, journal `Accio Launcher 1.2.2 (AppImage)`, HP1 lancé avec `surcharges winmm`, launcher revenu à la fin (+23 s comptées). **Piège d'essai** : lancée sans `WAYLAND_DISPLAY`, l'AppImage s'est ouverte sur le VRAI bureau de Ludo (Qt prend `wayland-0` par défaut) ; fermée aussitôt. Et j'avais d'abord passé `QT_QPA_PLATFORM=xcb` à `build.sh` : `conftest.py` ne fait qu'un `setdefault`, la suite ouvrait ses fenêtres ; arrêtée et relancée sans.
+- **6. HP7a/HP7b** : premier JOUER sur HP7a → prévenance correcte (« registre de Wine », `Install Dir`, `Locale = fr_FR`, pas d'administrateur), registre écrit sous `Wow6432Node`, puis **sortie code 0 en 3 s**, sans fenêtre de jeu ; le launcher le range en « lancement sans partie ». Même chose sans le `d3d9.dll` du correctif. Trace `+loaddll,+process` : `hp7.exe` charge tout (correctif, DXVK, `d3dx9_37`, `MSVCR80`, `winex11`) puis `NtTerminateProcess(0)`, aucune exception : le chemin « insérez le disque » de `CATALOGUE_ET_JEUX.md`. Cause : `dosdevices` a `x: → ~` (dossier personnel) (créé par Proton), l'exe tourne donc en `X:\Games\AccioLauncher\HP7\pc\`, alors que `Install Dir` dit `Z:\home\<nom>\…`. Preuve : lancé par `Z:\…\pc\hp7.exe`, le jeu ne quitte plus. **Correction** (`src/core/compat.py`, `_lecteur_le_plus_proche`) : `chemin_windows` prend le lecteur que Wine donne au chemin (racine la plus profonde de `dosdevices`), `Z:` sinon. Test `test_le_lecteur_que_wine_donne_au_dossier_personnel` (échoue sans la correction). Au JOUER suivant, la prévenance montre « `X:\Games\AccioLauncher\HP7\` remplace `Z:\home\…` », et **HP7a démarre** : écran des sauvegardes automatiques, titre, menu en français, nouvelle partie « Facile », cinématique puis première scène jouable (« Appuie sur Bouton souris gauche »), **59,9 images/s**, 35 à 47 % d'un cœur au menu, 82 à 95 % en jeu. **HP7b** : prévenance `X:\…\HP8\` + `Locale = fr`, titre, menu « Mode Histoire », chargement puis scène du tombeau, **27,9 à 29,9 images/s** (bridé à 30, normal), 2 cœurs au chargement, 0,5 en jeu. Chien de garde (`~/Accio-essais/garde-hp7.sh`, tue au-delà de 900 % pendant 30 s) jamais déclenché. Journaux : `garde-hp7.exe.log`, `garde-hp8.exe.log`, `hp7a-trace.log`. Sauvegardes neuves créées par ces parties (`auto.sav` des deux jeux) déplacées dans `~/AccioSauvegardes/2026-10-20_HP7/cree-par-essai/` : le dossier EA est identique à avant (`diff -r`). Les clés de registre restent (le launcher les réécrirait).
+- **Écran blanc par le chemin `Z:`** (curiosité, pas un défaut du launcher) : lancé à la main par `Z:\…\hp7.exe`, HP7a restait sur une fenêtre blanche sans aucune image pendant 4 min, alors que par le launcher corrigé il affiche tout de suite. Proton dit dans ce cas « Executable is inside wine prefix, launching normally » au lieu de « /unix » : lancement différent, non creusé.
+
 ## Pour la session Windows
 
-1. **HP2, `WineLauncherFix` (correctif)** : neutraliser aussi la seconde paire `SetWindowPos` (`0x1091301D`/`0x10913036`, motif ci-dessus, même `add esp,1Ch` + nops), ou, plus robuste, dérouter le slot IAT `0x1099007C` vers un relais qui ignore un `SetWindowPos` sur une fenêtre `WS_CHILD` dont (x,y,cx,cy) centre à l'écran. Vérifier sous Windows ce que reçoit `[ebp-14h]+4` dans ce chemin (sans doute une fenêtre de premier niveau, d'où aucun dégât là-bas). Tant que ce n'est pas fait, HP2 est injouable par le launcher sous Linux.
-2. **Archives** : HP1 1.3, HP2 1.2, HP3 1.3 portent le correctif 2.0.1 ; HP2 n'a pas `WineLauncherFix` dans son ini. À republier avec la 2.1.0 quand 1. est corrigé.
+1. **HP2, `WineLauncherFix` (correctif)** : **réglé par la 2.1.1** (cinquième passage, en tête de ce fichier) : lanceur avec fond et boutons, partie lancée. Ancienne analyse (2.1.0, paire `0x1091301D`/`0x10913036`) gardée dans le bloc 1 pour mémoire.
+2. **Archives** : HP1 1.3, HP2 1.2, HP3 1.3 portent le correctif 2.0.1 ; HP2 n'a pas `WineLauncherFix` dans son ini. **À republier avec la 2.1.1** : tant que l'archive de HP2 porte la 2.0.1, son lanceur reste noir sous Linux.
 3. **README du correctif / `xinput.cpp`** : « none of this runs on Linux » est faux depuis le catalogue 0.35 : sous Wine la DLL native lit la DS4 par hidraw (`pad 09CC: opened … given to the game`). Corriger le texte.
 4. **Catalogue distant** : rien à modifier d'après ce passage. (`dinput8` se charge natif sans surcharge sous GE-Proton10-34 ; l'ajouter en `n,b` serait sans danger mais non prouvé nécessaire.)
 5. **`requires` `vcredist2005_x86` (hp5, hp6, hp7a) et `vcredist2008_x86` (hp7b)** : sous Linux le launcher **refuse JOUER** tant que winetricks n'a pas posé `vcrun2005`/`vcrun2008`, alors que HP5 (ce passage) et HP6 (2e passage) tournent avec les DLL de Wine. Proposition : hors Windows, répondre « présent » pour ces deux-là comme pour `vcredist2010_x86` (ou n'exiger le verbe que si le jeu échoue), ce qui épargne aux joueurs Linux un téléchargement Microsoft de plusieurs minutes. À décider par Ludo ; non codé.
 6. **Incrustation du correctif sous Linux (HP4 à HP7, `overlay.cpp`)** : F10/F11 plantent le GPU Intel (Mesa ANV) et figent le jeu, 4 fois sur 4, archive comme 2.1.0 (détail au bloc 2). À chercher sous Windows avec le code : quel appel du dessin fait planter (essayer sans le texte, puis sans le panneau ; un `D3DRS_*` laissé à une valeur que DXVK traduit mal ; `BeginScene` propre « own scene 1 » juste avant `Present`). En attendant, sous Wine, ne pas dessiner l'incrustation (ou la désactiver par défaut et le dire dans l'ini), puisqu'un joueur qui presse F10 perd sa partie.
-7. **`docs/LINUX.md` § 3** : « `n,b` et jamais `n` » n'est vrai que pour la famille wine : sous Proton, `d3d9=n` est ajouté APRÈS la chaîne du launcher et Wine garde le dernier réglage (sans dégât, DXVK est natif). § 4.5 et § 7 à rafraîchir (verbes prouvés, catalogue 0.43). Non modifié ici.
+7. **`docs/LINUX.md`** : corrigé dans ce passage (§ 3 HP3 et `n,b`, § 4.3 lecteur, § 4.5 winetricks, § 7 catalogue, § 9 `build.sh` sur Bazzite et tableau « Vérifié sur Bazzite »).
+8. **`compat.chemin_windows` (launcher, NOUVEAU)** : la correction du lecteur (bloc 6) ne touche que Linux (`chemin_windows` n'est appelé que sous Wine) ; à relire. Effet de bord voulu : `ScreenshotFolder` et les `%INSTALL_DIR%` des INI passent aussi en `X:\…` quand le jeu est sous le dossier personnel (même dossier pour Wine). Un jeu installé sur un disque externe prendrait le lecteur `v:` (`/run/media`), comme Wine.
+9. **HP5 par JOUER** : `vcrun2005` est maintenant posé, HP5 n'a été lancé qu'à la main dans ce passage. À refaire par le launcher au prochain essai.
 
 ## Sauvegardes et remise en état
 
 - Copie avant le premier jeu : `~/AccioSauvegardes/2026-10-20_1115/` (préfixe entier 723 Mo, `config.json`, `sessions.json`, plus `HP1-archive-1.3/`, `HP2-archive-1.2/`, `HP3-archive-1.3/` = DLL et ini du correctif tels que livrés).
 - `diff -r` préfixe (Documents) copie ↔ actuel : seuls diffèrent `HP.ini`/`User.ini`/`HP.log`/`Game.ini`/`Game.log` (réécrits par les moteurs à chaque partie), `Running.ini` (effacé par la sortie propre de HP1) et `Harry Potter/Save/` (nouveau : `Save0.usa` + `GameSaveInfo0` de la partie HP1). HP3 `Save0/Save1.usa` inchangés ; AppData : aucune différence.
 - Remis à l'identique : `winmm.dll`/`winmm.ini` 2.0.1 de HP1 et HP2 (sha vérifiés). Rien d'autre n'a été remplacé. Son : encore coupé (à remettre à 0.40). HP6 : copie `~/AccioSauvegardes/2026-10-20_1600-HP6/` (dossiers EA, vides avant la partie) et `~/AccioSauvegardes/2026-10-20_1115/HP6-archive-1.2/` (DLL et ini livrés) ; tout est remis, ini identique, sha `bf74b6bd…`.
-- Dépôt : `git status` ne contient que ce fichier (et `CLAUDE.md` pour le compte de tests Linux). **Aucune modification de code ni de catalogue embarqué** à ce stade.
+- Copies de la reprise : `~/AccioSauvegardes/2026-10-20_restauration-HP6/`, `…_versions-HP1/` (Documents, `config`, `save`, `System/*.ini`, `config.json`, manifestes avant/après), `…_desinstall-HP3/`, `…_HP7/` (`system.reg`, `user.reg`, dossier EA avant, `cree-par-essai/` = les deux `auto.sav` de HP7), `…_HP2-relais/` (`winmm.dll`/`winmm.ini` 2.0.1 d'origine, Documents de HP2, et `cree-par-essai/` = l'état après la partie). Tout est remis et prouvé par `diff -r` ou `cmp`.
+- Dépôt : `src/core/compat.py`, `tests/test_compat.py`, `docs/LINUX.md`, `docs/claude/ARCHITECTURE_CORE.md`, `docs/claude/CATALOGUE_ET_JEUX.md` et ce fichier.
 
 ## Restes (dans l'ordre prévu à la reprise)
 
-Bloc 5.1 (Annuler sur `vcrun2008` de HP7b, préparer pendant un téléchargement), bloc 3 (restauration sur copie, galerie, versions, tailles 980×660 / plein écran), 5.2/5.6/5.7 (double clic JOUER, désinstallation HP3, AppImage), HP7a (vérifier `rangé(s) dans pc/` et `Install Dir`/`Locale` dans `system.reg`) puis HP7a/HP7b en jeu avec surveillance CPU, relecture de `docs/LINUX.md`. Suppression des copies `~/Accio-essais/pfx-*` : en attente de l'accord de Ludo. 5.3 (fenêtre KWin) : avec Ludo.
+- 5.3 (fenêtre du launcher sous KWin) et 5.5 (barre lumineuse) : avec Ludo devant l'écran et la manette.
+- 5.1 « Annuler » et les refus croisés : il faut une opération plus lente que le clic.
+- HP5 par JOUER (maintenant que `vcrun2005` est posé).
+- Suppression des copies `~/Accio-essais/pfx-*` (≈ 700 Mo chacune) : en attente de l'accord de Ludo.
 
 ---
 
