@@ -156,7 +156,7 @@ livre et ce que Wine fournit en interne (liste relevée dans le
 |---|---|---|---|
 | hp1 | `d3d11drv.dll` (renderer UE1 de Kentie), `Effects11.dll` ; `winmm.dll` (correctif, depuis le 2026-10-07) | `winmm` | `["winmm"]` (catalogue 0.43) |
 | hp2 | `d3d11drv.dll`, `Effects11.dll`, `OpenAL32.dll`, `ogg`/`vorbis*` ; `winmm.dll` (correctif) | `winmm` (`openal32` absent de Wine 9.0) | `["winmm"]` (catalogue 0.43) |
-| hp3 | dgVoodoo 2 : `D3D8.dll`, `D3D9.dll`, `DDraw.dll`, `D3DImm.dll` + `dgVoodoo.conf` ; `msvcr70.dll`, `binkw32.dll` | `d3d8`, `d3d9`, `ddraw`, `msvcr70` | `["msvcr70"]` — **dgVoodoo laissé de côté** : sous Proton il plante au démarrage (`UD3DRenderDevice::SetRes`, General protection fault), alors que le d3d8/d3d9 de Proton (DXVK) rend le jeu (menu, nouvelle partie, cinématique : vu le 2026-10-01). Le plafond de 60 images/s que tenait dgVoodoo passe par `"max_fps": 60` → `DXVK_FRAME_RATE=60` |
+| hp3 | dgVoodoo 2 : `D3D8.dll`, `D3D9.dll`, `DDraw.dll`, `D3DImm.dll` + `dgVoodoo.conf` ; `msvcr70.dll`, `binkw32.dll` | `d3d8`, `d3d9`, `ddraw`, `msvcr70` | `["msvcr70"]` — **dgVoodoo laissé de côté** : sous Proton il plante au démarrage (`UD3DRenderDevice::SetRes`, General protection fault), alors que le d3d8/d3d9 de Proton (DXVK) rend le jeu (menu, nouvelle partie, cinématique : vu le 2026-10-01). Le plafond de 60 images/s que tenait dgVoodoo devait passer par `"max_fps": 60` → `DXVK_FRAME_RATE=60` : **sans effet** (Bazzite, 2026-10-01 puis 10-20) — HP3 rend par le `d3d8` de wined3d, pas par DXVK ; le plafond reste à trouver |
 | hp4 | `d3d9.dll` (wrapper ThirteenAG : FPS, fenêtré forcé, FOV) + `d3d9.ini`, `MSVCR71.DLL`, `GofInput.dll` | `d3d9`, `msvcr71` | `["d3d9", "msvcr71"]` |
 | hp5 | `d3d9.dll` (wrapper étendu : FXAA, SSAO, DPIAware…) chaîné à `d3d9_original.dll`, `fps.dll`, `hpexhdlr.dll`, `xinput1_3.dll` (correctif) | `d3d9`, `xinput1_3` | `["d3d9", "xinput1_3"]` |
 | hp6 | `d3d9.dll` (wrapper) + `d3d9.ini`, `fps.dll`, `xinput1_3.dll` | `d3d9`, `xinput1_3` | `["d3d9", "xinput1_3"]` |
@@ -167,7 +167,10 @@ Remarques :
 
 - **`n,b` et jamais `n`** : si la DLL livrée manque (quarantaine d'antivirus
   pour `paul.dll`, fichier supprimé), le jeu retombe sur celle de Wine au lieu
-  de ne plus démarrer.
+  de ne plus démarrer. Vrai pour la famille wine ; sous Proton, `d3d9=n` est
+  ajouté APRÈS la chaîne du launcher et Wine garde le dernier réglage (sans
+  dégât : DXVK est natif). Vérifié sur Bazzite pour `winmm` (HP1, HP2),
+  `d3d9` et `xinput1_3` (HP4 à HP7b) : DLL du dossier chargée en `native`.
 - Les wrappers `d3d9` chargent ensuite le « vrai » `d3d9` depuis
   `system32` : sous Proton c'est celui de **DXVK**, sous Wine celui de wined3d.
   C'est la chaîne voulue.
@@ -250,8 +253,12 @@ sur le même.
   préfixe** (chemins hôte : c'est là que Python lit et écrit).
 - Ce que le JEU lit (valeur d'INI, `Install Dir` du registre) est converti en
   chemin **Windows** : `C:\users\steamuser\Documents\…` pour ce qui est dans
-  `drive_c`, `Z:\home\…\Games\AccioLauncher\HP7\` pour le reste (Wine et Proton
-  relient `Z:` à `/`).
+  `drive_c`, et pour le reste **le lecteur que Wine donne lui-même au chemin**
+  (`dosdevices`, la racine la plus profonde gagne), sinon `Z:\…` (relié à `/`).
+  Proton relie aussi `x:` au dossier personnel : l'exe lancé par son chemin
+  Unix tourne en `X:\Games\AccioLauncher\HP7\pc\hp7.exe`. HP7 compare son
+  dossier à `Install Dir` et quitte en silence (code 0, 3 s) si la valeur dit
+  `Z:\home\…` : défaut trouvé et corrigé sur Bazzite le 2026-10-20.
 - Les INI sont lus et réécrits dans la **page de codes ANSI du préfixe**
   (`HKLM\System\CurrentControlSet\Control\Nls\Codepage`, valeur `ACP`, lue dans
   `system.reg` — `1252` vérifié sur un préfixe neuf). Même contrat qu'`mbcs`
@@ -297,7 +304,8 @@ VC90** (`…_none_deadbeef`), remplis des DLL internes de Wine, marquées
 un Visual C++ installé. La détection Linux écarte ces DLL par leur marque.
 
 L'installation passe par `umu-run winetricks …` (winetricks est livré avec
-UMU-Proton et GE-Proton) ou par le `winetricks` du système avec `wine`. Elle
+UMU-Proton et GE-Proton : sur Bazzite, c'est `GE-Proton10-34/protonfixes/winetricks -q`
+qui tourne ; `vcrun2005` posé en 12 s, `vcrun2008` en 10 s, installeurs déjà en cache) ou par le `winetricks` du système avec `wine`. Elle
 télécharge les installeurs **depuis Microsoft** : on le dit avant, et on ne le
 fait que sur un clic.
 
@@ -392,9 +400,8 @@ Ce qui est en place (voir aussi `CLAUDE.md`, modules `compat`,
   Windows (`C:\…`, `Z:\…`) pour les valeurs lues par le jeu ; page ANSI du
   préfixe pour les INI.
 - **Surveillance** : `/proc`, même grâce de 10 s.
-- **Catalogue** : `catalog_version` 0.29 = 0.28 + `dll_overrides`. **À reporter
-  à l'identique dans `accio-launcher-games`** avant sa prochaine version, sinon
-  un catalogue distant plus récent sans ce champ l'effacerait.
+- **Catalogue** : `dll_overrides` depuis le 0.29 ; au 0.43, `winmm` pour hp1 et
+  hp2 (correctif 2.x). Embarqué et distant identiques (vérifié le 2026-10-20).
 
 ### Vérifié dans l'environnement de travail (Wine 9.0 64 bits, 2026-09-24)
 
@@ -468,7 +475,10 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 
 - **`./build.sh`** : icône → lint → tests → géométrie (vraies polices, Xvfb
   sans session graphique) → PyInstaller (dossier) → AppImage, arrêt au premier
-  échec. Hors d'un environnement virtuel, il crée `.venv-build`.
+  échec. Hors d'un environnement virtuel, il crée `.venv-build`. Bazzite n'a
+  pas `xvfb-run` : l'audit passe par la session (`DISPLAY`). **Ne pas exporter
+  `QT_QPA_PLATFORM`** en l'appelant : `conftest.py` ne fait qu'un `setdefault`,
+  et la suite ouvrirait alors ses fenêtres sur l'affichage.
 - **`build/linux/appimage.py`** assemble l'AppDir (`AppRun`, `.desktop`
   `be.acciolauncher.AccioLauncher`, icônes extraites des sept tailles de
   l'`.ico`, licence et avis tiers) et appelle appimagetool 1.9.1 avec le
@@ -495,6 +505,24 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 | L'AppImage lancée sous Xvfb (plateforme `xcb`) | démarre, affiche l'assistant, journal « (AppImage) », `WM_CLASS` = `AccioLauncher` |
 | Chargeur PyInstaller (onedir) et `LD_LIBRARY_PATH` | `_internal` placé en tête ; un enfant du launcher gelé reçoit la valeur d'ORIGINE (absente, ou `/opt/x`) |
 | `.desktop` | `desktop-file-validate` sans remarque |
+
+### Vérifié sur Bazzite (portable, 2026-10-20)
+
+Bazzite, noyau 7.2.7, KDE Wayland, umu-launcher 1.4.4, GE-Proton10-34, Intel UHD
+(Mesa 26.2.2). Détail : `docs/linux/RETOUR_BAZZITE.md`.
+
+| Vérification | Résultat |
+|---|---|
+| `./build.sh` de bout en bout (Python 3.14.7, audit sur la session) | 3323 tests, audit OK, 48 bibliothèques laissées à la machine, AppImage de 64 Mo, en 3 min 00 |
+| L'AppImage lancée (xcb) | fenêtre en moins d'une seconde, journal « (AppImage) », HP1 lancé, launcher revenu à la fin |
+| Les jeux par JOUER (umu, préfixe partagé) | HP1, HP3, HP4, HP6 jouables ; HP7a/HP7b depuis la correction du lecteur (§ 4.3) ; HP2 jusqu'à la partie avec le correctif 2.1.1 (lanceur noir avec le 2.0.1 des archives) ; HP5 lancé à la main seulement |
+| Préparation de Wine depuis le bandeau | `vcrun2005` 12 s, `vcrun2008` 10 s ; « Annuler » non testable à la main (trop rapide) |
+| Registre de HP7a/HP7b | `Install Dir` et `Locale` sous `Wow6432Node`, prévenance « registre de Wine » sans mention d'administrateur |
+| Zone de notification | le launcher s'y range au lancement et revient à la fin de partie (grâce de 10 s pour UE1) |
+
+**Piège d'essai** : sans `WAYLAND_DISPLAY`, Qt (plateforme `wayland`) se connecte
+quand même à `wayland-0`. Pour un essai sur un autre affichage, passer
+`QT_QPA_PLATFORM=xcb` et `DISPLAY` au launcher lui-même.
 
 ### Build d'essai du workflow (`ubuntu-22.04`, run 36058062239)
 
