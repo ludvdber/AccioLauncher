@@ -347,10 +347,41 @@ def appdata_local(pfx: Path | None = None) -> Path:
     return base / "AppData" / "Local"
 
 
+def _lecteur_le_plus_proche(chemin: Path, pfx: Path) -> str | None:
+    r"""Le lecteur que WINE donne à ce chemin, s'il en a un plus proche que `Z:`.
+
+    Wine remonte le chemin et prend le premier dossier qui est la racine d'un
+    lecteur de `dosdevices`. Proton relie `x:` au dossier personnel : l'exe
+    lancé par son chemin Unix y devient `X:\Games\…\hp7.exe`. HP7 compare
+    son dossier à `Install Dir` et, s'ils diffèrent, part en silence par le
+    chemin « insérez le disque » (code 0, essai Bazzite du 2026-10-20) : la
+    valeur écrite doit donc nommer le même lecteur.
+    """
+    try:
+        entrees = list((pfx / "dosdevices").iterdir())
+    except OSError:
+        return None
+    resolu = Path(os.path.realpath(chemin))
+    meilleur: tuple[int, str] | None = None
+    for entree in entrees:
+        nom = entree.name.lower()
+        if len(nom) != 2 or nom[1] != ":" or not "a" <= nom[0] <= "y":
+            continue
+        try:
+            racine = Path(os.path.realpath(entree))
+            relatif = resolu.relative_to(racine)
+        except (OSError, ValueError):
+            continue
+        if meilleur is None or len(racine.parts) > meilleur[0]:
+            meilleur = (len(racine.parts), nom[0].upper() + ":\\" + "\\".join(relatif.parts))
+    return meilleur[1] if meilleur is not None else None
+
+
 def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
     r"""Le chemin tel que le JEU le lit, sous Wine.
 
-    Dans `drive_c` : `C:\…` ; ailleurs : `Z:\…` (relié à `/`). Comparaison
+    Dans `drive_c` : `C:\…` ; ailleurs : le lecteur que Wine lui donne
+    (`_lecteur_le_plus_proche`), sinon `Z:\…` (relié à `/`). Comparaison
     LEXICALE d'abord : Documents peut être un lien, et c'est `C:\users\…`
     que le jeu connaît.
     """
@@ -365,7 +396,8 @@ def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
         try:
             relatif = Path(os.path.realpath(chemin)).relative_to(os.path.realpath(lecteur_c))
         except ValueError:
-            return "Z:" + str(chemin).replace("/", "\\")
+            return (_lecteur_le_plus_proche(chemin, pfx)
+                    or "Z:" + str(chemin).replace("/", "\\"))
     return "C:\\" + "\\".join(relatif.parts)
 
 

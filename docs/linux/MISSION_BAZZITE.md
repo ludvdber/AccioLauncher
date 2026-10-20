@@ -1,5 +1,8 @@
 # Mission : essais Linux sur Bazzite
 
+> **Remplacé le 2026-10-20 par [`MISSION_PORTABLE.md`](MISSION_PORTABLE.md)** (quatrième passage, qui reprend le
+> troisième, jamais fait). Ce fichier reste pour l'historique des trois premiers passages.
+
 Pour : Claude Code sur le portable Linux de Ludo (Bazzite, KDE Wayland, i3-1220P, Intel UHD).
 Rédigé le 2026-09-30 par la session Windows. Tu travailles **seul, en autonomie** ; Ludo reviendra
 lire ton rapport puis le rapportera à la session Windows.

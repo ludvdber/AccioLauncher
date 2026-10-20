@@ -221,6 +221,29 @@ class TestCheminWindows:
             "C:" + B + B.join(["users", "steamuser", "Documents"]))
 
 
+    def test_le_lecteur_que_wine_donne_au_dossier_personnel(self, tmp_path):
+        """Proton relie `x:` au dossier personnel : l'exe lancé par son chemin
+        Unix devient `X:\\Games\\…`, et HP7 quitte en silence si `Install Dir`
+        nomme `Z:\\home\\…` (Bazzite, 2026-10-20). Le plus proche gagne."""
+        maison = tmp_path / "home" / "ludo"
+        (maison / "Games" / "AccioLauncher" / "HP7").mkdir(parents=True)
+        pfx = maison / "umu"
+        (pfx / "dosdevices").mkdir(parents=True)
+        (pfx / "dosdevices" / "z:").symlink_to("/")
+        (pfx / "dosdevices" / "u:").symlink_to(tmp_path / "home")
+        (pfx / "dosdevices" / "x:").symlink_to(maison)
+        (pfx / "dosdevices" / "com1").symlink_to("/dev/null")
+        assert compat.chemin_windows(maison / "Games" / "AccioLauncher" / "HP7", pfx) == (
+            "X:" + B + B.join(["Games", "AccioLauncher", "HP7"]))
+
+    def test_sans_lecteur_plus_proche_reste_en_z(self, tmp_path):
+        pfx = tmp_path / "umu"
+        (pfx / "dosdevices").mkdir(parents=True)
+        (pfx / "dosdevices" / "z:").symlink_to("/")
+        chemin = Path("/home/ludo/Games/AccioLauncher/HP7")
+        assert compat.chemin_windows(chemin, pfx) == (
+            "Z:" + B + B.join(["home", "ludo", "Games", "AccioLauncher", "HP7"]))
+
 # Échantillon RELEVÉ dans le system.reg d'un préfixe Wine 9.0, après import par
 # `regedit /S` d'un .reg construit par `construire_reg` (2026-09-24).
 SYSTEM_REG = (
