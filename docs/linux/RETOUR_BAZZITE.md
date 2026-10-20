@@ -1,3 +1,111 @@
+# Quatrième passage (2026-10-20) — en cours, rapport d'étape à la pause demandée par Ludo
+
+Portable Bazzite, launcher **depuis les sources** (commit `4f758f9`, catalogue 0.43), jeux lancés par JOUER sauf mention « manuel ». Les essais à l'écran se font dans un **gamescope headless** (`--backend headless`, Xwayland `:1`, captures `gamescopectl screenshot`, entrées `xdotool`) : le verrouillage d'écran de KDE a coupé les deux passages précédents et Ludo n'était pas là pour le désactiver. Captures, journaux et notes par jeu : `~/Accio-essais/` (`notes-HP1.md` … `notes-HP5.md`, `notes-bloc3.md`).
+
+## En bref
+
+| Bloc | État | Conclusion |
+|---|---|---|
+| 0. Mise en place | fait | venv recréé, contrôles verts (ci-dessous), préfixe et config copiés avant tout jeu. Tous les jeux **mis à jour ou installés** par le launcher (HP1 1.3, HP2 1.2, HP3 1.3, HP4 1.2, HP5 1.3, HP6 1.2, HP7a 1.1, HP7b 1.2). |
+| 1. `winmm` HP1/HP2 (0.43) | **fait** | **La surcharge prend** : `surcharges winmm` au journal, `HP2\system\WINMM.dll : native`, `winmm_accio.log` écrit, pour HP1 comme HP2, avec la DLL de l'archive (2.0.1) comme avec la 2.1.0. **Mais le lanceur de HP2 reste noir avec la 2.1.0** : la paire retirée par `WineLauncherFix` n'est pas celle qui s'exécute (détail et proposition plus bas). HP1 : assistant sauté, Alt+Entrée ×2 et fenêtre devant sans dégât, `GameRenderDevice` conservé. |
+| 2. Six jeux avec la 1.2.2 | en partie | HP1, HP2, HP3, HP4, HP5 lancés (tableaux plus bas). **HP5 démarre sans `vcrun2005`**. HP6 (10 min, ombres) pas encore fait. |
+| 3. Folio, Mes années, galerie, versions | en partie | Audit de géométrie : **OK, 0 défaut** (sur la session réelle, `xvfb-run` n'existe pas sur Bazzite). Galerie : F12 dans HP4 écrit directement dans `~/Images/Accio Launcher/<jeu>/`. Folio / Mes années / versions : pas encore ouverts. |
+| 4. HP3 à 60 images/s | fait (constat) | Inchangé : HP3 tourne sur le `d3d8` de wined3d (maps), `DXVK_FRAME_RATE=60` sans effet, dgVoodoo écarté. Rien de nouveau prouvé. |
+| 5. Launcher sous Linux | en partie | Retour en zone de notification et retour à la fin de partie : vu 5 fois. Préparation de Wine, Annuler, double clic JOUER, fenêtre KWin, désinstallation, AppImage : à faire. |
+| 6. HP7a/HP7b | en partie | Installés par le launcher (HP7a : rangement `pc/` à vérifier au journal, voir « restes »). Lancement : accordé par Ludo (« fais également hp7 et 8 que tu testeras à la fin »), pas encore fait. |
+
+## Machine
+
+Bazzite, noyau `7.2.7-ogc1.1.fc44.x86_64`, KDE Wayland (essais dans gamescope headless 1920×1080), umu-launcher 1.4.4, **GE-Proton10-34** (`~/.local/share/Steam/compatibilitytools.d`), Python 3.14.7 (venv du dépôt), dépôt AccioLauncher `4f758f9` (2026-10-20), dépôt Harry-Potter-PC-Fix `259ec54` (v2.1.0). Manette **DualShock 4 USB** (`054c:09cc`, `/dev/hidraw1` accessible, `js0`) branchée par Ludo à 11:20. Son coupé à 11:45 (`wpctl` : 0.40 [MUTED], à remettre : `wpctl set-mute @DEFAULT_AUDIO_SINK@ 0`).
+
+## Tests et contrôles (avant toute modification ; aucune modification de code depuis)
+
+- `pytest -q` : **3323 réussis, 38 sautés, 0 échec** (7 min 15). Les 38 sautés = 32 réservés à Windows + 6 `test_fonts.py` (Georgia).
+- `ruff check .` : propre. `mypy` : propre (68 fichiers).
+- `tools/verifier_wine.py` : famille umu, `/usr/bin/umu-run`, Proton GE-Proton10-34 ; préfixe `_Launcher/prefixes/umu` prêt, win64, ANSI cp1252, Documents `drive_c/users/steamuser/Documents` (`C:\users\steamuser\Documents`) ; winetricks : `d3dcompiler_43, d3dx11_43, vcrun2022` ; composants : `vcredist_x86` présent, **`vcredist2005_x86` MANQUANT, `vcredist2008_x86` MANQUANT**, `vcredist2010_x86`/`d3dx9_43`/`d3dx9_37`/`xinput1_3`/`d3dx11_43`/`d3dcompiler_43` présents ; registre disponible.
+- Correctif 2.1.0 : les 12 fichiers de la release téléchargés dans `~/Accio-essais/correctif-2.1.0/`, **SHA-256 tous conformes** au tableau de la release (`sha256sum -c`).
+
+## Bloc 1 — `winmm` (HP2 puis HP1)
+
+**Ce qu'installent les archives** (relevé après mise à jour par le launcher) : HP1 1.3 et HP2 1.2 livrent `winmm.dll` **2.0.1** (sha `ce7f2576…` HP1, `cdc62e04…` HP2), pas la 2.1.0 (`b56e0ab3…`). Le `winmm.ini` de HP1 est identique à celui de la release ; celui de HP2 **n'a pas la clé `WineLauncherFix`** (6 lignes de moins). HP3 1.3 livre `dinput8.dll` 2.0.1 ; HP4/HP5/HP6/HP7b livrent un `d3d9.dll` sans numéro (`bf74b6bd…`, antérieur à 2.1.0, mais qui lit déjà `TextureDetail`, `FitToScreen`, `AudioStreamGuard`).
+
+| HP2 | A : archive (2.0.1) | B : release 2.1.0 |
+|---|---|---|
+| sha256 `winmm.dll` | `cdc62e04…` | `b56e0ab3…` |
+| ligne `Lancement sous …` | `surcharges winmm, plafond aucun` | idem |
+| `winmm.dll` chargée (maps + `+loaddll`) | `HP2\system\WINMM.dll : native` + `winmm.dll` de Proton (chargée par le proxy, `179 of 193 functions`, 14 exports absents chez Wine) | idem |
+| `winmm_accio.log` | `Accio Launcher PC fix 2.0.1 (winmm.dll)` ; `Settings: … BlockAltEnter=1 FillScreen=1 SkipSetup=0` ; pas de `Launcher:` | `… 2.1.0 (winmm.dll)` ; `Settings: … WineLauncherFix=1` ; **`Launcher: two SetWindowPos taken out at 10902583 (WineLauncherFix, under Wine)`** |
+| lanceur « Menu principal » | **noir, seul « Quitter »** | **noir, seul « Quitter »** (Tab, Alt+N, clics aux positions des boutons : rien) |
+| fenêtre | 480×556, cadre Wine | idem |
+| Alt+Entrée, manette | injouable derrière le lanceur | idem |
+| sortie | Quitter → code 0 | Quitter → code 0 |
+
+**Pourquoi le lanceur reste noir avec la 2.1.0** (`WINEDEBUG=+win,+dialog` puis relais `user32.SetWindowPos` ; journaux `~/Accio-essais/hp2-B-windebug.log`, `hp2-B-relay.log`) :
+- Le dialogue « Menu principal » (0x200d2, 480×556 à 720,262) contient un cadre `Static` 1061 (479×410) ; la **page** « MainMenu » (gabarit DIALOGEX 320×265, `WS_CHILD|WS_VISIBLE`) est un dialogue **enfant de ce cadre**, avec `&New Game` 3021, `&Load Game` 3020, `&Options` 3019 et le titre 1150. Créée à (0,0), `GetWindowRect` = (720,262)-(1200,693) : à sa place.
+- Puis Game.exe appelle `SetWindowPos(page, HWND_TOPMOST, 717, 257, 486, 566, SWP_FRAMECHANGED)` (retour `0x10913023`) et `SetWindowPos(page, HWND_NOTOPMOST, 0,0,0,0, NOSIZE|NOMOVE)` (retour `0x1091303c`). 717,257 = centrage ÉCRAN d'une fenêtre 486×566 ; appliqué à une fenêtre **enfant**, c'est relatif au cadre : la page part en (1437,519)-(1923,1085), hors du dialogue, donc fond et trois boutons coupés (« Quitter » est un bouton du dialogue parent, pas de la page).
+- La paire que retire `launcher.h` est à **`0x1090258C`/`0x109025A5`** (poignée globale `[0x109807a4]`) : ce n'est pas celle-ci. Celle qui s'exécute est la **seconde paire** que le commentaire de `launcher.h` écarte volontairement, à **`0x1091301D`/`0x10913036`** (même slot IAT `0x1099007C`), poignée lue par `mov edx,[ebp-14h] ; mov eax,[edx+4] ; push eax` : `6A FF 8B 55 EC 8B 42 04 50 FF 15 7C 00 99 10` puis `6A 03 6A 00 6A 00 6A 00 6A 00 6A FE 8B 4D EC 8B 51 04 52 FF 15 7C 00 99 10`.
+
+| HP1 | A : archive (2.0.1) | B : release 2.1.0 |
+|---|---|---|
+| sha256 | `ce7f2576…` | `b56e0ab3…` |
+| `surcharges` | `winmm` | `winmm` |
+| chargée | `HP1\System\WINMM.dll : native` | idem |
+| `winmm_accio.log` | `2.0.1 (winmm.dll)`, `Settings: … BlockAltEnter=0 FillScreen=1 SkipSetup=1`, **`Setup: skipped at 1090C8D4 (SkipSetup): no wizard, no renderer test`**, `Fill the screen: watched`, **`Pad 0: 054C:09CC "Wine joystick driver", 14 buttons, 6 axes, caps 0x3F -> PlayStation layout`** | idem avec `2.1.0` et `WineLauncherFix=0`, pas de `Launcher:` (attendu) |
+| assistant « première configuration » | **ne s'ouvre pas** ; `HP.log` : `Bound to D3D11Drv.dll`, pas de `Detecting D3DDrv` ; `Running.ini` présent en partie, **effacé par le jeu à la sortie propre** | idem |
+| fenêtre | 1904×1041 (viewport du HP.ini), image 4:3 centrée ; FillScreen sans effet (image plus petite que l'écran : documenté) | idem |
+| Alt+Entrée ×2 (A) | **le jeu continue** ; fenêtre → 1920×1080, `winmm_accio.log` : `Window 1920x1080: frame taken off, now on the screen at 0,0 (FillScreen)` ; `HP.ini` : `WindowedViewportX/Y=1920/1080`, **`GameRenderDevice=D3D11Drv.D3D11RenderDevice` conservé** (relevé avant, après chaque Alt+Entrée, après la fenêtre devant, après la sortie : seuls `Reconfig` et `RunCount` changent) | non refait |
+| fenêtre devant 8 s puis retour | le jeu continue | — |
+| manette | vue par winmm (ligne `Pad 0`) et par le moteur (`Detected joysticks: 16`, `Joy1 … AltFire`) ; boutons non pressés (personne devant la manette) | — |
+| partie | nouvelle partie, livre d'introduction, hall de Poudlard (`Lev_Tut1.unr`), **`Save0.usa` créé** ; Quitter partie → Oui → Quitter → Oui : code 0, 4362 s | menu, Quitter → Oui : code 0 |
+
+**Phrase du bloc** : le lanceur de HP2 **n'est pas réparé sous Linux** par la 2.1.0 (la surcharge et la DLL marchent, le motif retiré n'est pas le bon). Fichiers d'origine (2.0.1) **remis** dans HP1/System et HP2/system à la fin du bloc.
+
+## Bloc 2 — jeu par jeu
+
+| | HP1 | HP2 | HP3 | HP4 | HP5 (manuel) |
+|---|---|---|---|---|---|
+| démarre | oui, 4 s (menu ~30 s) | oui, 6 s (lanceur noir) | oui, 4 s (menu ~30 s) | oui, 27 s (device D3D) | oui, 4 s |
+| `surcharges` | `winmm` | `winmm` | `msvcr70, plafond 60 ips` | `d3d9,msvcr71` | manuel : `d3d9=n,b;xinput1_3=n,b` |
+| DLL du correctif chargées | `winmm.dll` native | `winmm.dll` native | **`dinput8.dll` native SANS surcharge** (Wine ne la préfère pas interne, contrairement à d3d8/d3d9/winmm/xinput1_3) ; `d3d8.dll` de dgVoodoo **écarté** (builtin) | `d3d9.dll`, `MSVCR71.DLL` natives ; `syswow64/d3d9.dll` = DXVK | `d3d9.dll`, `xinput1_3.dll`, `hpexhdlr.dll` natives ; `MSVCR80/MSVCP80` **de Wine (winsxs builtin)** |
+| journal du correctif | `winmm_accio.log` (ci-dessus) | idem | `dinput8_accio.log` : `5 of 6 functions` (`GetdfDIJoystick` absent chez Wine), `CreateDevice: watched`, `GetDeviceState: watched`, **`Pad: 054C:09CC "Wireless Controller", 14 buttons, 6 axes, 1 hats -> PlayStation layout`, dead zone 15 %** | `d3d9_accio.log` : `Game: Goblet of Fire`, `sound stream guard set`, `PlayStation controllers offered` ; F12 → `Screenshot saved: Z:\home\…\Images\Accio Launcher\Harry Potter et la Coupe de Feu\2026-10-20_12-04-42.png` | `d3d9_accio.log` : `DPI awareness: on`, **`Game: detail level 2 when the game has none saved set`**, `MSAA 16` ; **`xinput_accio.log` : `pad 09CC: opened, input 64 bytes, output 32 bytes`, `first reports: 1 pad(s) heard in 2 ms`, `slot 0: PlayStation pad 09CC given to the game`** |
+| en jeu | nouvelle partie, hall, déplacement, Alt+Entrée ×2, fenêtre devant : OK | injouable (lanceur) | sauvegarde 1 chargée (train), déplacement OK ; Échap n'interrompt pas la cinématique | langue, invite sauvegarde auto « Oui » **1/1 sans plantage** (10/10 au 2e passage), personnage (touche Sort = X), camp des Weasley, déplacements, F12, fenêtre devant 8 s (`another program in front … back in front, the pointer shown while away is hidden again`), menu pause | langues → vidéo → titre → Nouvelle aventure → emplacement 1 → **Paramètres vidéo : « Niveau de détail : Haut »** (TextureDetail=2 d'une installation neuve : VU) ; « Appliquer » → `device Reset hr=0x0`, DLL survit |
+| sortie | menu → Quitter → Oui : code 0 | Quitter : code 0 | pas d'entrée « Quitter » trouvée dans le menu Échap (parchemin) ; `pkill` pour la pause | menu principal → Quitter → Oui : code 0 (2 fois) | clavier perdu après le Reset (non élucidé) ; `pkill` |
+| ce qui casse | — | lanceur noir (bloc 1) | plafond 60 sans effet (wined3d) | DirectInput sous Wine **rate une touche tapée** (xdotool `key`) : il faut la maintenir (0,15–1 s) ; ZQSD non représentatif (gamescope expose xkb `us`, l'hôte est `fr-nodeadkeys`) | — |
+| verbes winetricks prouvés | d3dx11_43, d3dcompiler_43 (2e passage) | idem | aucun | aucun | **aucun : vcrun2005 PAS nécessaire** (Wine 10 fournit msvcr80/msvcp80) |
+
+HP6 : non refait (10 min + ombres à faire). Cadence : un outil `~/Accio-essais/fps_from_log.py` déduit les images/s des paires `[ms] … (frame N)` du `d3d9_accio.log` (HP4 : 46 images/s de moyenne sur 327 s, 29-38 en jeu, Intel UHD, SSAA 1,5).
+
+## Blocs 3 à 6 (état)
+
+- **3.6 Audit de géométrie** : `tools/audit_geometrie.py` sur le Xwayland de gamescope (vraies polices, 3 langues × 8 jeux × 4 états × 4 tailles × 3 scénarios) : « Aucune troncature, aucun débordement, aucune barre de défilement », exit 0. `xvfb-run` n'est pas installé sur Bazzite : la mission et `build.sh` le supposent.
+- **3.4 Galerie** : F12 dans HP4 écrit **directement** dans `~/Images/Accio Launcher/Harry Potter et la Coupe de Feu/` (`ScreenshotFolder=Z:\home\…` posé par le launcher dans `d3d9.ini`, accents intacts) ; rien dans `HP4/screenshots/`. L'affichage dans la galerie n'a pas encore été regardé.
+- **3.1/3.2/3.3/3.5** : pas encore (il y a maintenant des sauvegardes HP1 `Save0.usa` et HP3 `Save0/Save1.usa` ; HP4/HP5 n'en ont pas créé).
+- **5.4** zone de notification : le launcher s'y range à chaque lancement et revient à la fin (« Retour de … partie terminée », temps de jeu mis à jour) : vu sur HP1, HP2, HP3, HP4.
+- **5.1/5.2/5.3/5.5/5.6/5.7** : à faire. 5.5 : la barre lumineuse n'a pas été observée (pas d'yeux sur la manette) ; `xinput_accio.log` de HP5 dit `LightBar=left alone` en lancement manuel (le launcher pose `LightBar=255,110,0` dans le `d3d9.ini` de HP6).
+- **6** : HP7a et HP7b installés par le launcher ; lancement à faire en dernier (accord écrit de Ludo dans la conversation).
+
+## Pour la session Windows
+
+1. **HP2, `WineLauncherFix` (correctif)** : neutraliser aussi la seconde paire `SetWindowPos` (`0x1091301D`/`0x10913036`, motif ci-dessus, même `add esp,1Ch` + nops), ou, plus robuste, dérouter le slot IAT `0x1099007C` vers un relais qui ignore un `SetWindowPos` sur une fenêtre `WS_CHILD` dont (x,y,cx,cy) centre à l'écran. Vérifier sous Windows ce que reçoit `[ebp-14h]+4` dans ce chemin (sans doute une fenêtre de premier niveau, d'où aucun dégât là-bas). Tant que ce n'est pas fait, HP2 est injouable par le launcher sous Linux.
+2. **Archives** : HP1 1.3, HP2 1.2, HP3 1.3 portent le correctif 2.0.1 ; HP2 n'a pas `WineLauncherFix` dans son ini. À republier avec la 2.1.0 quand 1. est corrigé.
+3. **README du correctif / `xinput.cpp`** : « none of this runs on Linux » est faux depuis le catalogue 0.35 : sous Wine la DLL native lit la DS4 par hidraw (`pad 09CC: opened … given to the game`). Corriger le texte.
+4. **Catalogue distant** : rien à modifier d'après ce passage. (`dinput8` se charge natif sans surcharge sous GE-Proton10-34 ; l'ajouter en `n,b` serait sans danger mais non prouvé nécessaire.)
+5. **`requires` `vcredist2005_x86` (hp5, hp6, hp7a) et `vcredist2008_x86` (hp7b)** : sous Linux le launcher **refuse JOUER** tant que winetricks n'a pas posé `vcrun2005`/`vcrun2008`, alors que HP5 (ce passage) et HP6 (2e passage) tournent avec les DLL de Wine. Proposition : hors Windows, répondre « présent » pour ces deux-là comme pour `vcredist2010_x86` (ou n'exiger le verbe que si le jeu échoue), ce qui épargne aux joueurs Linux un téléchargement Microsoft de plusieurs minutes. À décider par Ludo ; non codé.
+6. **`docs/LINUX.md` § 3** : « `n,b` et jamais `n` » n'est vrai que pour la famille wine : sous Proton, `d3d9=n` est ajouté APRÈS la chaîne du launcher et Wine garde le dernier réglage (sans dégât, DXVK est natif). § 4.5 et § 7 à rafraîchir (verbes prouvés, catalogue 0.43). Non modifié ici.
+
+## Sauvegardes et remise en état
+
+- Copie avant le premier jeu : `~/AccioSauvegardes/2026-10-20_1115/` (préfixe entier 723 Mo, `config.json`, `sessions.json`, plus `HP1-archive-1.3/`, `HP2-archive-1.2/`, `HP3-archive-1.3/` = DLL et ini du correctif tels que livrés).
+- `diff -r` préfixe (Documents) copie ↔ actuel : seuls diffèrent `HP.ini`/`User.ini`/`HP.log`/`Game.ini`/`Game.log` (réécrits par les moteurs à chaque partie), `Running.ini` (effacé par la sortie propre de HP1) et `Harry Potter/Save/` (nouveau : `Save0.usa` + `GameSaveInfo0` de la partie HP1). HP3 `Save0/Save1.usa` inchangés ; AppData : aucune différence.
+- Remis à l'identique : `winmm.dll`/`winmm.ini` 2.0.1 de HP1 et HP2 (sha vérifiés). Rien d'autre n'a été remplacé. Son : encore coupé (à remettre à 0.40).
+- Dépôt : `git status` ne contient que ce fichier (et `CLAUDE.md` pour le compte de tests Linux). **Aucune modification de code ni de catalogue embarqué** à ce stade.
+
+## Restes (dans l'ordre prévu à la reprise)
+
+HP6 (10 min, ombres ×4/×1 avec `fps_from_log.py` ou `ShowFPS`), bloc 5.1 (préparer `vcrun2005`+`vcrun2008` par le launcher, Annuler, préparer pendant un téléchargement), bloc 3 (folio, Mes années, restauration sur copie, galerie, versions), 5.2/5.6/5.7 (double clic JOUER, désinstallation HP3, AppImage), HP7a (vérifier `rangé(s) dans pc/` et `Install Dir`/`Locale` dans `system.reg`) puis HP7a/HP7b en jeu avec surveillance CPU, relecture de `docs/LINUX.md`. Suppression des copies `~/Accio-essais/pfx-*` : en attente de l'accord de Ludo. 5.3 (fenêtre KWin) : avec Ludo.
+
+---
+
 # Retour : essais Linux sur Bazzite (2026-09-30, 12 h – 12 h 45)
 
 Pour : Ludo et la session Windows. Exécution de `docs/linux/MISSION_BAZZITE.md`, interrompue à la
