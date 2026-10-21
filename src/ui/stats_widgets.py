@@ -183,10 +183,12 @@ class _Mois(QWidget):
                 barre = QRectF(col.left(), sol - h, col.width(), h)
                 p.fillRect(barre, accent_qcolor(255 if actuel else 175))
                 p.setPen(QColor("#ffffff") if actuel else QColor(_SECONDAIRE))
-                valeur = fm.elidedText(_duree_courte(secondes),
-                                       Qt.TextElideMode.ElideRight, int(col.width()))
-                p.drawText(QRectF(col.left(), barre.top() - haut_texte,
-                                  col.width(), haut_texte),
+                gauche, droite = self._place_valeur(i)
+                texte = _duree_courte(secondes)
+                largeur = min(float(fm.horizontalAdvance(texte)), droite - gauche)
+                x = min(max(col.center().x() - largeur / 2, gauche), droite - largeur)
+                valeur = fm.elidedText(texte, Qt.TextElideMode.ElideRight, int(largeur))
+                p.drawText(QRectF(x, barre.top() - haut_texte, largeur, haut_texte),
                            int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom),
                            valeur)
             else:
@@ -197,6 +199,21 @@ class _Mois(QWidget):
                        int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop),
                        noms[i])
         p.end()
+
+    def _place_valeur(self, i: int) -> tuple[float, float]:
+        """Bornes gauche et droite du chiffre posé au-dessus de la barre `i`.
+
+        La barre seule (≈ 20 px) coupait « 14 h » en « 14… » à toutes les
+        tailles (Bazzite, 2026-10-20). Le chiffre prend aussi l'écart, et la
+        moitié d'une voisine sans partie, qui n'a pas de chiffre à elle.
+        """
+        col = self._colonne(i)
+        gauche, droite = col.left() - 3.0, col.right() + 3.0
+        if i > 0 and not self._cases[i - 1][2]:
+            gauche -= col.width() / 2
+        if i < len(self._cases) - 1 and not self._cases[i + 1][2]:
+            droite += col.width() / 2
+        return max(0.0, gauche), min(float(self.width()), droite)
 
     def _noms(self, fm: QFontMetrics) -> list[str]:
         """« nov. déc. janv. 26 … », ou les initiales si UNE seule ne tient pas.

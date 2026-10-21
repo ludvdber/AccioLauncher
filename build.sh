@@ -69,8 +69,24 @@ if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
 elif command -v xvfb-run >/dev/null 2>&1; then
     xvfb-run -a -s "-screen 0 1920x1080x24" "$PY" tools/audit_geometrie.py \
         || echec "anomalie de mise en page - build interrompu."
+elif command -v Xvfb >/dev/null 2>&1; then
+    # Xvfb sans son script d'appel : on le lance soi-même sur un numéro libre.
+    n=99
+    while [ -e "/tmp/.X11-unix/X$n" ] || [ -e "/tmp/.X$n-lock" ]; do n=$((n + 1)); done
+    Xvfb ":$n" -screen 0 1920x1080x24 -nolisten tcp >/dev/null 2>&1 &
+    xvfb_pid=$!
+    trap 'kill "$xvfb_pid" 2>/dev/null' EXIT
+    sleep 1
+    DISPLAY=":$n" "$PY" tools/audit_geometrie.py \
+        || echec "anomalie de mise en page - build interrompu."
+elif sock=$(ls /tmp/.X11-unix/X* 2>/dev/null | head -n 1) && [ -n "$sock" ]; then
+    # Bazzite n'a pas Xvfb (2026-10-20) ; le Xwayland de gamescope suffit, et
+    # l'audit ne montre rien (WA_DontShowOnScreen).
+    echo "      pas de Xvfb : audit sur l'affichage :${sock##*/X}"
+    DISPLAY=":${sock##*/X}" "$PY" tools/audit_geometrie.py \
+        || echec "anomalie de mise en page - build interrompu."
 else
-    echec "ni session graphique ni xvfb-run : installer Xvfb (paquet xvfb) pour l'audit de géométrie."
+    echec "ni session graphique ni Xvfb : installer Xvfb (paquet xvfb) pour l'audit de géométrie."
 fi
 
 echo "[5/6] Build PyInstaller..."

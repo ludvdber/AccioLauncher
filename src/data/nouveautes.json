@@ -1,6 +1,68 @@
 {
   "versions": [
     {
+      "version": "1.2.3",
+      "nom": "Reparo",
+      "depuis": "1.2.2",
+      "points_forts": [
+        {
+          "icone": "play",
+          "titre": {
+            "fr": "Les Reliques de la Mort sous Linux",
+            "en": "Deathly Hallows on Linux",
+            "es": "Las reliquias de la muerte en Linux"
+          },
+          "texte": {
+            "fr": "Sous Linux, les deux parties des Reliques de la Mort démarrent et se jouent.",
+            "en": "On Linux, both parts of Deathly Hallows start and play.",
+            "es": "En Linux, las dos partes de Las reliquias de la muerte arrancan y se juegan."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "La désinstallation dit, avant que vous confirmiez, ce qui est conservé.",
+            "en": "Uninstalling tells you what is kept before you confirm.",
+            "es": "La desinstalación indica lo que se conserva antes de que confirmes."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Dans le graphique des douze mois, la durée au-dessus d'une barre s'affiche en entier.",
+            "en": "In the twelve-month chart, the time above a bar is shown in full.",
+            "es": "En el gráfico de los doce meses, la duración sobre una barra se muestra entera."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Au démarrage, quand deux jeux ont été joués le même jour, c'est le dernier joué qui s'affiche.",
+            "en": "At startup, when two games were played on the same day, the last one played is shown.",
+            "es": "Al iniciar, si se jugaron dos juegos el mismo día, se muestra el último jugado."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Sous Linux, L'Ordre du Phénix et Le Prince de sang-mêlé ne demandent plus Visual C++ 2005.",
+            "en": "On Linux, Order of the Phoenix and Half-Blood Prince no longer ask for Visual C++ 2005.",
+            "es": "En Linux, La Orden del Fénix y El misterio del príncipe ya no piden Visual C++ 2005."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Sous Linux, une sauvegarde remise à une version précédente garde les droits d'un fichier ordinaire.",
+            "en": "On Linux, a save restored to an earlier version keeps ordinary file permissions.",
+            "es": "En Linux, una partida guardada devuelta a una versión anterior conserva los permisos de un archivo normal."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2.2",
       "nom": "Revelio · Octo Folia",
       "depuis": "1.2.1",

@@ -28,19 +28,24 @@ def _vue(sauvegardes, config_files):
     (object(), (), "Vos sauvegardes sont conservées"),
     (None, ("HP.ini",), "La configuration du jeu dans Mes Documents est conservée."),
 ])
-def test_ce_qui_reste_est_dit(monkeypatch, sauvegardes, config, attendu):
-    monkeypatch.setattr(h, "_boite", lambda *a, **k: 0)
+def test_ce_qui_reste_est_dit_avant_le_clic(monkeypatch, sauvegardes, config, attendu):
+    """Dans la question, pas dans un toast d'après qui s'efface (Bazzite,
+    2026-10-20) : c'est avant le clic que la peur de tout perdre fait hésiter."""
+    questions = []
+    monkeypatch.setattr(h, "_boite", lambda *a, **k: questions.append(a[3]) or 0)
     vue, notes, desinstalles = _vue(sauvegardes, config)
     h.on_uninstall(vue)
-    assert desinstalles == ["hpx"]
-    assert len(notes) == 1 and notes[0].startswith(attendu)
+    assert desinstalles == ["hpx"] and notes == []
+    assert questions[0].split("\n\n")[1].startswith(attendu)
 
 
 def test_sans_rien_de_declare_on_n_affirme_rien(monkeypatch):
-    monkeypatch.setattr(h, "_boite", lambda *a, **k: 0)
+    questions = []
+    monkeypatch.setattr(h, "_boite", lambda *a, **k: questions.append(a[3]) or 0)
     vue, notes, desinstalles = _vue(None, ())
     h.on_uninstall(vue)
     assert desinstalles == ["hpx"] and notes == []
+    assert "\n\n" not in questions[0]
 
 
 def test_annuler_ne_desinstalle_rien(monkeypatch):

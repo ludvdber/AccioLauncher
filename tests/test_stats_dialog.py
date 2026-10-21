@@ -257,6 +257,29 @@ class TestSaga:
         assert len(noms) == 12
         assert all(fm.horizontalAdvance(n) <= mois._colonne(0).width() for n in noms), noms
 
+    def test_le_chiffre_d_une_barre_n_est_pas_rogne(self, qtbot):
+        """« 14… » au-dessus de septembre à toutes les tailles (Bazzite,
+        2026-10-20) : le chiffre ne disposait que de la largeur de sa barre."""
+        from PyQt6.QtGui import QFont, QFontMetrics
+        from src.ui.stats_dialog import _COLONNE_DROITE
+        cases = [(2026, m, 0) for m in range(1, 13)]
+        cases[8] = (2026, 9, 14 * 3600)
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(_COLONNE_DROITE, mois.height())
+        police = QFont()
+        police.setPointSize(8)
+        gauche, droite = mois._place_valeur(8)
+        assert QFontMetrics(police).horizontalAdvance("14 h") <= droite - gauche
+        assert droite - gauche > mois._colonne(8).width()
+
+    def test_deux_chiffres_voisins_ne_se_chevauchent_pas(self, qtbot):
+        cases = [(2026, m, 3600) for m in range(1, 13)]
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(300, mois.height())
+        assert mois._place_valeur(3)[1] <= mois._place_valeur(4)[0]
+
 
 class TestSauvegardesAffichees:
     @staticmethod

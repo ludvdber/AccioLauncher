@@ -517,30 +517,31 @@ def apres_preparation(view: "GameDetailView", game_id: str, reussie: bool,
 def on_uninstall(view: "GameDetailView") -> None:
     if view.game is None:
         return
+    question = tr("Voulez-vous vraiment désinstaller {} ?").format(view.game.name)
+    if reste := _ce_qui_reste(view.game):
+        question += "\n\n" + reste
     reply = _boite(QMessageBox.Icon.Question,
-        view, tr("Confirmer la désinstallation"),
-        tr("Voulez-vous vraiment désinstaller {} ?").format(view.game.name),
+        view, tr("Confirmer la désinstallation"), question,
         (tr("Désinstaller"), tr("Annuler")), 1,
     )
     if reply != 0:
         return
-    # Ce qui reste se dit d'après le bloc `saves` : aucun des huit jeux ne range
-    # ses sauvegardes dans son dossier. Sans bloc, on ne sait pas : on se tait
-    # plutôt que d'affirmer (règle 108).
-    conservees = view.game.sauvegardes is not None
-    has_config = bool(view.game.post_install.config_files)
     view.manager.uninstall_game(view.game.id)
     view._refresh()
     view.state_changed.emit()
-    if conservees and has_config:
-        view.notify.emit(tr("Vos sauvegardes et la configuration du jeu sont conservées : "
-                            "elles ne sont pas rangées dans le dossier du jeu."))
-    elif conservees:
-        view.notify.emit(tr("Vos sauvegardes sont conservées : elles ne sont pas rangées "
-                            "dans le dossier du jeu."))
-    elif has_config:
-        view.notify.emit(tr("La configuration du jeu dans Mes Documents est conservée."))
     view.status_message.emit(tr("{} désinstallé.").format(view.game.name))
+
+
+def _ce_qui_reste(game: GameData) -> str:
+    """Ce qui reste, dit AVANT le clic (exception voulue par Ludo, test_desinstallation)."""
+    sauv, conf = game.sauvegardes is not None, bool(game.post_install.config_files)
+    if sauv and conf:
+        return tr("Vos sauvegardes et la configuration du jeu sont conservées : "
+                  "elles ne sont pas rangées dans le dossier du jeu.")
+    if sauv:
+        return tr("Vos sauvegardes sont conservées : elles ne sont pas rangées "
+                  "dans le dossier du jeu.")
+    return tr("La configuration du jeu dans Mes Documents est conservée.") if conf else ""
 
 
 def on_update_clicked(view: "GameDetailView") -> None:

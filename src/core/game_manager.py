@@ -635,7 +635,9 @@ class GameManager:
         """Id du jeu joué le plus récemment (None si aucune session enregistrée).
 
         Les dates ISO se comparent lexicographiquement ; les ids absents du
-        catalogue courant sont ignorés (jeu retiré).
+        catalogue courant sont ignorés (jeu retiré). Deux jeux joués le même
+        jour : la config ne garde que la date, le journal départage par l'heure
+        de FIN de la dernière partie (sinon l'ordre du dictionnaire décidait).
         """
         dates = {
             gid: day for gid, day in self.config.last_played.items()
@@ -643,7 +645,13 @@ class GameManager:
         }
         if not dates:
             return None
-        return max(dates.items(), key=lambda kv: kv[1])[0]
+        jour = max(dates.values())
+        ex_aequo = [gid for gid, day in dates.items() if day == jour]
+        if len(ex_aequo) == 1:
+            return ex_aequo[0]
+        fins = {s.jeu: s.debut + timedelta(seconds=s.duree)
+                for s in stats.charger().sessions if s.jeu in ex_aequo}
+        return max(ex_aequo, key=lambda gid: fins.get(gid, datetime.min))
 
     def save_installed_version(self, game_id: str, version: str | None = None) -> None:
         """Sauvegarde la version du jeu installé dans la config."""

@@ -42,6 +42,7 @@ import logging
 import os
 import re
 import shutil
+import stat
 import tempfile
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -279,6 +280,10 @@ def revenir(jeu: str, spec: Sauvegardes, version: Version) -> bool:
         fd, tmp = tempfile.mkstemp(dir=cible.parent, suffix=".accio-tmp")
         with os.fdopen(fd, "wb") as ecrit, gzip.open(version.chemin, "rb") as gz:
             shutil.copyfileobj(gz, ecrit, 1 << 20)
+        # mkstemp crée en 0600 : la sauvegarde remise ressortait en rw-------
+        # (Bazzite, 2026-10-20). Elle reprend les droits de celle qu'elle
+        # remplace, ou ceux d'un fichier ordinaire.
+        os.chmod(tmp, stat.S_IMODE(cible.stat().st_mode) if cible.exists() else 0o644)
         horodatage = version.quand.timestamp()
         os.utime(tmp, (horodatage, horodatage))
         os.replace(tmp, cible)

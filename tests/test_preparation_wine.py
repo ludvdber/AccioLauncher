@@ -307,7 +307,7 @@ def jeu_hp7a():
     return GameData.from_dict({
         "id": "hp7a", "name": "HP7", "year": 2010, "description": "d", "developer": "EA",
         "executable": "HP7/pc/hp7.exe", "cover_image": "c.jpg",
-        "requires": ["vcredist2005_x86"], "versions": []})
+        "requires": ["vcredist2008_x86"], "versions": []})
 
 
 class TestLesDialogues:
@@ -323,8 +323,8 @@ class TestLesDialogues:
         vue = _Vue(jeu_hp7a)
         gdh.proposer_preparation(vue, jeu_hp7a, puis_jouer=True)
         titre, texte, choix = vus[0]
-        assert "Microsoft" in texte and "Visual C++ 2005" in texte
-        assert vue.preparations == [("hp7a", ["vcrun2005"], True)]
+        assert "Microsoft" in texte and "Visual C++ 2008" in texte
+        assert vue.preparations == [("hp7a", ["vcrun2008"], True)]
 
     def test_rien_a_preparer_rien_a_demander(self, monkeypatch, jeu_hp7a):
         from src.ui import game_detail_handlers as gdh

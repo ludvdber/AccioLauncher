@@ -236,6 +236,17 @@ class TestCheminWindows:
         assert compat.chemin_windows(maison / "Games" / "AccioLauncher" / "HP7", pfx) == (
             "X:" + B + B.join(["Games", "AccioLauncher", "HP7"]))
 
+    def test_deux_lettres_sur_le_meme_dossier_la_premiere_gagne(self, tmp_path):
+        """Wine essaie les lecteurs de a: à z: : à profondeur égale, c'est la
+        première lettre, pas l'ordre (quelconque) de lecture du dossier."""
+        maison = tmp_path / "home" / "ludo"
+        (maison / "Games").mkdir(parents=True)
+        pfx = maison / "umu"
+        (pfx / "dosdevices").mkdir(parents=True)
+        for lettre in ("x:", "d:", "m:"):
+            (pfx / "dosdevices" / lettre).symlink_to(maison)
+        assert compat.chemin_windows(maison / "Games", pfx) == "D:" + B + "Games"
+
     def test_sans_lecteur_plus_proche_reste_en_z(self, tmp_path):
         pfx = tmp_path / "umu"
         (pfx / "dosdevices").mkdir(parents=True)

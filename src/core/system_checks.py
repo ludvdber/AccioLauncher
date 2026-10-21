@@ -211,10 +211,14 @@ def _dans_le_prefixe(verbes: Iterable[str], test: Callable[[Path], bool]) -> boo
 
 @functools.cache
 def check_vcredist_2005_x86() -> bool:
-    """Vérifie si le Visual C++ 2005 Redistributable x86 est installé (HP7 partie 1)."""
+    """Vérifie si le Visual C++ 2005 Redistributable x86 est installé (HP5, HP6, HP7 partie 1).
+
+    Sous Linux, oui : HP5 et HP6 tournent avec les DLL de Wine (Bazzite,
+    2026-10-20). Exiger vcrun2005 refusait JOUER le temps d'un téléchargement
+    Microsoft de plusieurs minutes, pour rien.
+    """
     if sys.platform != "win32":
-        return _dans_le_prefixe({"vcrun2005"}, lambda pfx: crt_x86_reel(
-            pfx / "drive_c" / "windows" / "winsxs", "vc80"))
+        return True
     return crt_x86_present(_winsxs(), "vc80")
 
 

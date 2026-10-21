@@ -295,7 +295,7 @@ pas d'autorisation administrateur).
 | Identifiant catalogue | Verbe winetricks | Détection dans le préfixe |
 |---|---|---|
 | `vcredist_x86` (socle, tous les jeux) | `vcrun2022` | clé `Software\Wow6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86`, `Installed=1`, ou verbe dans `winetricks.log` |
-| `vcredist2005_x86` (HP7a) | `vcrun2005` | assembly `x86_microsoft.vc80.crt_1fc8b3b9a1e18e3b_*` **réelle**, ou `winetricks.log` |
+| `vcredist2005_x86` (HP5, HP6, HP7a) | `vcrun2005` | **toujours présent** : les DLL VC80 de Wine suffisent (HP5 et HP6 tournent sans, Bazzite, 2026-10-20 ; HP7a non essayé) |
 | `vcredist2008_x86` (HP7b) | `vcrun2008` | assembly `x86_microsoft.vc90.crt_…` **réelle**, ou `winetricks.log` |
 
 Piège vérifié : **un préfixe Wine neuf contient déjà des dossiers WinSxS VC80 et
@@ -476,7 +476,8 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 - **`./build.sh`** : icône → lint → tests → géométrie (vraies polices, Xvfb
   sans session graphique) → PyInstaller (dossier) → AppImage, arrêt au premier
   échec. Hors d'un environnement virtuel, il crée `.venv-build`. Bazzite n'a
-  pas `xvfb-run` : l'audit passe par la session (`DISPLAY`). **Ne pas exporter
+  pas Xvfb : l'audit passe par la session (`DISPLAY`), ou à défaut par le premier
+  affichage de `/tmp/.X11-unix` (le Xwayland de gamescope). **Ne pas exporter
   `QT_QPA_PLATFORM`** en l'appelant : `conftest.py` ne fait qu'un `setdefault`,
   et la suite ouvrirait alors ses fenêtres sur l'affichage.
 - **`build/linux/appimage.py`** assemble l'AppDir (`AppRun`, `.desktop`

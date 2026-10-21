@@ -26,7 +26,7 @@ CLE = "SOFTWARE" + B + "Electronic Arts" + B + "Harry Potter and the Deathly Hal
 JEU = {
     "id": "hp7a", "name": "HP7", "year": 2010, "description": "d",
     "developer": "EA", "executable": "HP7/pc/hp7.exe", "cover_image": "c.jpg",
-    "dll_overrides": ["d3d9"], "dpi_aware": True, "requires": ["vcredist2005_x86"],
+    "dll_overrides": ["d3d9"], "dpi_aware": True, "requires": ["vcredist2008_x86"],
     "versions": [],
 }
 
@@ -138,7 +138,7 @@ class TestLancementSousWine:
         m = _manager(tmp_path, monkeypatch)
         _sans_prelancement(monkeypatch)
         _popen_espion(monkeypatch)
-        with pytest.raises(RuntimeError, match="prerequis_manquant:vcredist2005_x86"):
+        with pytest.raises(RuntimeError, match="prerequis_manquant:vcredist2008_x86"):
             m.launch_game("hp7a")
 
     def test_lancer_quand_meme(self, tmp_path, monkeypatch):
@@ -301,24 +301,17 @@ class TestPrerequisDansLePrefixe:
         self._vider_winetricks()
         assert system_checks.prerequis_manquants(
             ("vcredist_x86", "vcredist2005_x86", "vcredist2008_x86")) == [
-            "vcredist_x86", "vcredist2005_x86", "vcredist2008_x86"]
+            "vcredist_x86", "vcredist2008_x86"]
 
     def test_un_prefixe_pas_encore_cree_n_a_rien(self):
         (compat.prefixe("wine") / "system.reg").unlink()
         assert system_checks.check_vcredist_x86() is False
 
-    def test_sans_lanceur_l_absence_de_wine_est_signalee_ailleurs(self, sans_lanceur):
-        assert system_checks.check_vcredist_2005_x86() is True
-
-    def test_les_dll_internes_de_wine_ne_comptent_pas(self):
-        """Un préfixe NEUF a déjà un WinSxS VC80 rempli des DLL de Wine."""
+    def test_les_dll_de_wine_suffisent_pour_vc2005(self):
+        """HP5 et HP6 tournent avec les DLL de Wine (Bazzite, 2026-10-20) :
+        JOUER ne réclame plus vcrun2005, même dans un préfixe neuf."""
         self._vider_winetricks()
         _winsxs_vc80(compat.prefixe("wine"), b"Wine builtin DLL")
-        assert system_checks.check_vcredist_2005_x86() is False
-
-    def test_le_vrai_redistribuable_installe_a_la_main(self):
-        self._vider_winetricks()
-        _winsxs_vc80(compat.prefixe("wine"), b"This program cannot be run")
         assert system_checks.check_vcredist_2005_x86() is True
 
     def test_vc14_par_sa_cle_de_registre(self):

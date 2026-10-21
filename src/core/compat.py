@@ -358,7 +358,7 @@ def _lecteur_le_plus_proche(chemin: Path, pfx: Path) -> str | None:
     valeur écrite doit donc nommer le même lecteur.
     """
     try:
-        entrees = list((pfx / "dosdevices").iterdir())
+        entrees = sorted((pfx / "dosdevices").iterdir())  # Wine essaie a: avant b:
     except OSError:
         return None
     resolu = Path(os.path.realpath(chemin))

@@ -1,6 +1,7 @@
 """Tests pour src/core/game_manager.py"""
 
 import sys
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -236,6 +237,21 @@ class TestGameManager:
         mgr.config.last_played["hp_test"] = "2026-06-01"
         mgr.config.last_played["disparu"] = "2026-06-10"  # plus dans le catalogue
         assert mgr.last_played_game_id() == "hp_test"
+
+    def test_meme_jour_la_derniere_partie_finie_l_emporte(self, tmp_path, monkeypatch):
+        """La config ne garde que le JOUR : deux jeux joués le même jour se
+        départagent par l'heure de fin relevée dans le journal."""
+        from src.core import stats
+        monkeypatch.setattr(stats, "chemin_journal", lambda: tmp_path / "sessions.json")
+        autre = GameData.from_dict({**GAME_DICT, "id": "hp_autre", "name": "Autre"})
+        mgr = _make_manager(tmp_path, [GameData.from_dict(GAME_DICT), autre])
+        # hp_autre a commencé plus tard mais fini plus tôt.
+        stats.enregistrer_session("hp_test", datetime(2026, 10, 20, 14, 0), 4 * 3600)
+        stats.enregistrer_session("hp_autre", datetime(2026, 10, 20, 15, 0), 1800)
+        mgr.config.last_played = {"hp_autre": "2026-10-20", "hp_test": "2026-10-20"}
+        assert mgr.last_played_game_id() == "hp_test"
+        stats.enregistrer_session("hp_autre", datetime(2026, 10, 20, 19, 0), 1800)
+        assert mgr.last_played_game_id() == "hp_autre"
 
     def test_new_game_badge_lifecycle(self, tmp_path):
         """is_new/mark_seen : badge posé au reload du catalogue, retiré à la sélection."""

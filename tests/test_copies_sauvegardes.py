@@ -166,6 +166,28 @@ class TestRevenir:
         assert cs.revenir("hp2", HP2, cs.versions("hp2")["Slot1/Save0.usa"][0])
         assert save.read_bytes() == b"seule trace"
 
+    @pytest.mark.skipif(os.name != "posix", reason="droits POSIX")
+    def test_la_sauvegarde_remise_garde_des_droits_ordinaires(self, save_dir):
+        """rw------- après une restauration (Bazzite, 2026-10-20) : le
+        fichier temporaire de mkstemp donnait ses droits à la sauvegarde."""
+        save = save_dir / "Slot1" / "Save0.usa"
+        _ecrire(save, b"hier", T0)
+        os.chmod(save, 0o664)
+        cs.avant_partie("hp2", HP2)
+        assert cs.revenir("hp2", HP2, cs.versions("hp2")["Slot1/Save0.usa"][0])
+        assert save.stat().st_mode & 0o777 == 0o664
+        save.unlink()
+        assert cs.revenir("hp2", HP2, cs.versions("hp2")["Slot1/Save0.usa"][0])
+        assert save.stat().st_mode & 0o777 == 0o644
+
+    def test_la_sauvegarde_remise_reste_modifiable(self, save_dir):
+        save = save_dir / "Slot1" / "Save0.usa"
+        _ecrire(save, b"hier", T0)
+        cs.avant_partie("hp2", HP2)
+        save.unlink()
+        assert cs.revenir("hp2", HP2, cs.versions("hp2")["Slot1/Save0.usa"][0])
+        assert os.access(save, os.W_OK)
+
 
 class TestLancement:
     def test_launch_game_lance_la_copie_avant_le_jeu(self):
