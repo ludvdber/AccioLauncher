@@ -3,7 +3,7 @@
 # source de vérité — ce fichier n'existe que pour l'ergonomie de `pip install -r`.
 -r requirements.txt
 pyinstaller>=6.22
-Pillow>=12.3          # build/create_icon.py + build/create_social_preview.py
+Pillow>=13.0          # build/create_icon.py + build/create_social_preview.py
 pytest>=9.1
 pytest-qt>=4.5
 ruff>=0.17.1

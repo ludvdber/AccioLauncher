@@ -14,7 +14,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pyinstaller>=6.22",  # 6.16 = premier support Python 3.14
-    "Pillow>=12.3",       # build/create_icon.py + create_social_preview.py
+    "Pillow>=13.0",       # build/create_icon.py + create_social_preview.py
     "pytest>=9.1",
     "pytest-qt>=4.5",
     "ruff>=0.17.1",      # utilisé depuis toujours, mais n'était pas déclaré
