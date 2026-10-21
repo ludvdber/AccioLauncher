@@ -132,7 +132,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # et son ini (à côté de l'exécutable, là où le correctif le lit).
         self._reglages = reglages_correctif.reglages_du_jeu(game.fix_settings)
         self._ini: Path | None = (
-            reglages_correctif.chemin_ini(
+            reglages_correctif.ini_du_correctif(
                 manager.config.install_path / Path(game.executable).parent)
             if self._reglages else None)
         # HP3 : pas de correctif, mais le fichier de son traducteur D3D8 (`reglages_graphiques`).

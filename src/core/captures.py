@@ -106,7 +106,7 @@ def preparer(game: GameData, install_path: Path) -> bool:
     dossier créé par le lanceur existe déjà quand on clique « Ouvrir ». Rend True
     si l'ini porte désormais le bon chemin.
     """
-    ini = reglages_correctif.ini_captures(install_path / Path(game.executable).parent)
+    ini = reglages_correctif.ini_du_correctif(install_path / Path(game.executable).parent)
     if not ini.is_file() or not reglages_correctif.est_nouveau_correctif(ini):
         return False
     cible = dossier(game)

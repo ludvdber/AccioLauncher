@@ -509,7 +509,7 @@ class RubriquesDuJeu:
         n = captures.nombre(self.game)
         # La touche du correctif se lit dans SON ini (seul le nouveau en a une) ;
         # celle d'un autre moteur, le catalogue la déclare.
-        ini = reglages_correctif.ini_captures(
+        ini = reglages_correctif.ini_du_correctif(
             self.manager.config.install_path / Path(self.game.executable).parent)
         touche = reglages_correctif.touche_capture(ini) or self.game.touche_capture
         # Un jeu dont le catalogue déclare les captures a sa rubrique même sans

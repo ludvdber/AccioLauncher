@@ -194,6 +194,14 @@ class TestPreparer:
         assert "ScreenshotFolder=" in ini.read_bytes().decode("utf-8")
         assert not (tmp_path / "HP4" / "d3d9.ini").exists()
 
+    def test_un_ancien_ini_ne_masque_pas_le_nouveau(self, tmp_path):
+        from src.core import reglages_correctif
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(b"[MAIN]\r\nForceWindowedMode=1\r\n")
+        (dossier / "winmm.ini").write_bytes(INI_V2.encode("utf-8"))
+        assert reglages_correctif.ini_du_correctif(dossier) == dossier / "winmm.ini"
+
     def test_le_d3d9_ini_passe_en_premier(self, tmp_path):
         ini = self._poser_ini(tmp_path)
         autre = tmp_path / "HP4" / "winmm.ini"
