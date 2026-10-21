@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.43",
+  "catalog_version": "0.44",
   "contributors": [
     {
       "name": "ASTeam",
@@ -821,6 +821,11 @@
         "HP3/system/vorbisfile.dll",
         "HP3/system/Window.dll",
         "HP3/system/WinDrv.dll"
+      ],
+      "launch_videos": [
+        "HP3/Movies/eag_1920.bik",
+        "HP3/Movies/wb_1920.bik",
+        "HP3/Movies/KWLogo.bik"
       ],
       "max_fps": 60,
       "dll_overrides": [

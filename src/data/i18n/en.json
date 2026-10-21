@@ -1145,6 +1145,9 @@
     "Nouvelle aventure": "New adventure",
     "Aventure précédente": "Previous adventure",
     "Aventures précédentes": "Previous adventures",
-    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "The update is downloaded and installed automatically, then the launcher restarts."
+    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "The update is downloaded and installed automatically, then the launcher restarts.",
+    "Passer les vidéos de lancement": "Skip the startup videos",
+    "Le jeu s'ouvre directement sur son menu, sans les logos des studios. Les vidéos sont gardées : il suffit de rallumer pour les revoir.": "The game opens straight on its menu, without the studio logos. The videos are kept: switch this back on to see them again.",
+    "Démarrage": "Startup"
   }
 }

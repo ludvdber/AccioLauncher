@@ -1146,6 +1146,9 @@
     "Nouvelle aventure": "Nueva aventura",
     "Aventure précédente": "Aventura anterior",
     "Aventures précédentes": "Aventuras anteriores",
-    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "La actualización se descarga e instala automáticamente y el launcher se reinicia."
+    "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "La actualización se descarga e instala automáticamente y el launcher se reinicia.",
+    "Passer les vidéos de lancement": "Saltar los vídeos de inicio",
+    "Le jeu s'ouvre directement sur son menu, sans les logos des studios. Les vidéos sont gardées : il suffit de rallumer pour les revoir.": "El juego se abre directamente en su menú, sin los logotipos de los estudios. Los vídeos se conservan: basta con volver a activarlo para verlos de nuevo.",
+    "Démarrage": "Inicio"
   }
 }

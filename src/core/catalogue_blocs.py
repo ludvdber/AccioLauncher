@@ -533,6 +533,23 @@ def _fichiers_essentiels_valides(brut: Any) -> tuple[str, ...]:
     return tuple(chemins)
 
 
+# Ces fichiers-là, le launcher les RENOMME : un catalogue abîmé ne doit pouvoir
+# nommer que des vidéos Bink, jamais une DLL ou une sauvegarde.
+_EXTENSIONS_VIDEO = (".bik", ".bk2")
+
+
+def _videos_de_lancement_valides(brut: Any) -> tuple[str, ...]:
+    """Logos joués au démarrage, que « Passer les vidéos de lancement » renomme.
+
+    Même garde que `essential_files`, tout ou rien, plus l'extension.
+    """
+    chemins = _fichiers_essentiels_valides(brut)
+    if not all(c.lower().endswith(_EXTENSIONS_VIDEO) for c in chemins):
+        log.warning("Bloc launch_videos ignoré : %r", brut)
+        return ()
+    return chemins
+
+
 # Où un jeu range ses sauvegardes. Les racines sont une LISTE FERMÉE : le
 # catalogue distant choisit parmi elles, il n'écrit jamais un chemin absolu.
 RACINES_SAUVEGARDES = ("documents", "localappdata")

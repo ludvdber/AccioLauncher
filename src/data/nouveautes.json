@@ -21,6 +21,14 @@
       ],
       "changements": [
         {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban : un réglage passe les vidéos de lancement, le jeu s'ouvre sur son menu.",
+            "en": "Prisoner of Azkaban: a setting skips the startup videos, the game opens on its menu.",
+            "es": "El prisionero de Azkaban: un ajuste salta los vídeos de inicio, el juego se abre en su menú."
+          }
+        },
+        {
           "genre": "ameliore",
           "texte": {
             "fr": "La désinstallation dit, avant que vous confirmiez, ce qui est conservé.",

@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import captures, manette, reglages_correctif, reglages_graphiques, resolution_jeu
+from src.core import (captures, manette, reglages_correctif, reglages_graphiques, resolution_jeu,
+                      videos_lancement)
 from src.core.i18n import tr
 from src.ui.composants import ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
 from src.ui.editeur_touches import EditeurTouches
@@ -460,6 +461,33 @@ class RubriquesDuJeu:
         self._egaliser(carte)
         self._section(corps, self._titre_rubrique(tr("Manette")), carte)
         return True
+
+    def _section_videos(self, corps: QVBoxLayout) -> bool:
+        """« Passer les vidéos de lancement » (HP3) : les logos que le catalogue nomme."""
+        videos = self.game.videos_lancement
+        dossier = self.manager.config.install_path
+        etat = videos_lancement.passees(dossier, videos) if videos else None
+        if etat is None:
+            return False
+        bascule = ToggleSwitch(etat)
+        bascule.toggled.connect(lambda oui: self._on_videos(bascule, oui))
+        carte = Carte()
+        carte.ajouter(self._ligne(tr("Passer les vidéos de lancement"), bascule, tr(
+            "Le jeu s'ouvre directement sur son menu, sans les logos des studios. "
+            "Les vidéos sont gardées : il suffit de rallumer pour les revoir.")))
+        self._egaliser(carte)
+        self._section(corps, self._titre_rubrique(tr("Démarrage")), carte)
+        return True
+
+    def _on_videos(self, bascule: ToggleSwitch, oui: bool) -> None:
+        dossier = self.manager.config.install_path
+        videos_lancement.passer(dossier, self.game.videos_lancement, oui)
+        # L'interrupteur dit ce que portent VRAIMENT les fichiers (règle 118).
+        vrai = bool(videos_lancement.passees(dossier, self.game.videos_lancement))
+        if vrai != oui:
+            bascule.blockSignals(True)
+            bascule.setChecked(vrai)
+            bascule.blockSignals(False)
 
     def _on_manette(self, oui: bool) -> None:
         if self._appliquer_manette(oui):
