@@ -183,6 +183,24 @@ def chemin_ini(dossier_exe: Path) -> Path:
     return dossier_exe / NOM_INI
 
 
+# Les DLL du correctif de HP1-HP2 (winmm) et HP3 (dinput8) lisent la même
+# section [Accio.Window] (ScreenshotKey, ScreenshotFolder) dans LEUR ini.
+NOMS_INI_CAPTURES = (NOM_INI, "winmm.ini", "dinput8.ini")
+
+
+def ini_captures(dossier_exe: Path) -> Path:
+    """L'ini du correctif qui porte la touche et le dossier des captures.
+
+    Le premier du nouveau correctif trouvé ; à défaut le `d3d9.ini` (absent ou
+    ancien, les appelants le savent déjà écarter).
+    """
+    for nom in NOMS_INI_CAPTURES:
+        ini = dossier_exe / nom
+        if ini.is_file() and est_nouveau_correctif(ini):
+            return ini
+    return chemin_ini(dossier_exe)
+
+
 # ── Lecture et écriture de l'ini, en place ──
 
 _SECTION = re.compile(r"^\s*\[([^\]]+)\]\s*$")
