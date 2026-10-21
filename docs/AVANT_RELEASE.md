@@ -32,7 +32,7 @@ Pour tous : fermeture propre (WM_CLOSE, sans tuer le jeu), le launcher revient �
 
 ## Lire le résultat
 
-Les preuves sont dans `essais_release\<étiquette>\` : `journal.txt` (dernière ligne : `VERDICT HPx : n/m points`), captures, `launcher.log`, bancs F11. Le code de sortie est 1 s'il y a un échec. **Un seul ÉCHEC bloque la release** tant qu'il n'est pas expliqué.
+Les preuves sont dans `captures\release\<étiquette>\` de l'atelier (journaux et copies de travail ignorés par git) : `journal.txt` (dernière ligne : `VERDICT HPx : n/m points`), captures, `launcher.log`, bancs F11. Le code de sortie est 1 s'il y a un échec. **Un seul ÉCHEC bloque la release** tant qu'il n'est pas expliqué.
 
 Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre la main en moins de 6 s, HP1 et HP2 garder leur grâce d'au moins 8 s (`relance` au catalogue). Pour HP2, la grâce sert au CHARGEMENT de la partie (le processus de départ meurt, le jeu relancé prend sa place) : le point passe si la session a survécu à cette relance avec une seule fin, et la fermeture est ensuite vue tout de suite (0,8 s, normal).
 
