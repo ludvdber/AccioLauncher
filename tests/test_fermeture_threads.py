@@ -39,14 +39,20 @@ MODE = sys.argv[2]       # "corrige" | "naif"
 
 
 class Bloque(QThread):
-    """Un read reseau mort : cancel() est pose, mais rien ne le relit."""
+    """Un read reseau mort : cancel() est pose, mais rien ne le relit.
+
+    PAS de run() Python : le run() natif (boucle d'evenements, sourde a
+    cancel() comme a requestInterruption()) tourne sans etat de thread Python.
+    Un run() Python tue par terminate() laisse sa pile inscrite dans
+    l'interpreteur, et le GC de 3.14 la relisait ensuite : 0xC0000005 au
+    hasard en CI (2026-10-22, cas update), un defaut du TEST, pas du launcher,
+    qui sort par os._exit juste apres la fermeture (regle 3).
+    """
     def __init__(self, parent, dest):
         super().__init__(parent)
         self.destination = dest
     def cancel(self):
         pass
-    def run(self):
-        self.sleep(10)
 
 
 def lancer():
