@@ -183,6 +183,27 @@ def chemin_ini(dossier_exe: Path) -> Path:
     return dossier_exe / NOM_INI
 
 
+# Les DLL du correctif de HP1-HP2 (winmm) et HP3 (dinput8) lisent les mêmes
+# sections ([Accio.Window] : captures, FPSLimit ; [Accio.Overlay] : panneau)
+# dans LEUR ini.
+NOMS_INI = (NOM_INI, "winmm.ini", "dinput8.ini")
+
+
+def ini_du_correctif(dossier_exe: Path) -> Path:
+    """L'ini du nouveau correctif de ce jeu, quelle que soit sa DLL.
+
+    Le premier trouvé ; à défaut le `d3d9.ini` (absent ou ancien, les appelants
+    le savent déjà écarter). Déclarer des `fix_settings` à HP1-HP3 n'a de sens
+    qu'avec une archive qui livre la DLL du 2026-10-21 ou plus récente ; pour HP3,
+    ils masqueraient aussi les réglages graphiques (`game_settings_dialog`).
+    """
+    for nom in NOMS_INI:
+        ini = dossier_exe / nom
+        if ini.is_file() and est_nouveau_correctif(ini):
+            return ini
+    return chemin_ini(dossier_exe)
+
+
 # ── Lecture et écriture de l'ini, en place ──
 
 _SECTION = re.compile(r"^\s*\[([^\]]+)\]\s*$")

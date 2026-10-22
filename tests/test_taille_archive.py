@@ -160,10 +160,12 @@ class TestBouton:
 
         panel.set_game(jeu)
         panel.refresh()
-        assert "775 Mo" in self._libelle(panel), "repli attendu sur le catalogue"
+        # La taille du catalogue, lue et non recopiée (règle 78) : elle change à chaque archive.
+        catalogue = f"{jeu.current_download.size_mb} Mo"
+        assert catalogue in self._libelle(panel), "repli attendu sur le catalogue"
 
         manager.set_asset_sizes({jeu.current_download.download_url: 337 * MO})
         panel.refresh()
         libelle = self._libelle(panel)
         assert "337 Mo" in libelle
-        assert "775 Mo" not in libelle
+        assert catalogue not in libelle

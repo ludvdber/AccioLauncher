@@ -15,6 +15,10 @@ affiche le site dans ses boutons.
 
 SITE_URL = "https://acciolauncher.be/"
 DISCORD_URL = "https://discord.gg/TNwDQd7KGe"
+# Salon #accio-medias, où « Partager sur Discord » de la galerie mène tout droit
+# (Ludo, 2026-10-22) : l'invitation ne faisait qu'ouvrir le serveur, et il
+# fallait encore trouver le salon. Serveur ASTeam, identifiant lu sur l'invitation.
+DISCORD_MEDIAS_URL = "https://discord.com/channels/155745867779801090/1560367010008014991"
 KOFI_URL = "https://ko-fi.com/ludovic01"
 # Le dépôt porte le code source ET la licence : la GPL v3 et ses termes
 # additionnels exigent qu'on sache où les trouver (voir ADDITIONAL-TERMS.md).

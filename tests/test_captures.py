@@ -185,6 +185,31 @@ class TestPreparer:
     def test_sans_ini_rien(self, tmp_path):
         assert captures.preparer(_jeu(), tmp_path) is False
 
+    @pytest.mark.parametrize("nom", ["winmm.ini", "dinput8.ini"])
+    def test_hp1_a_hp3_l_ini_de_leur_dll(self, tmp_path, nom):
+        # HP1-HP2 (winmm) et HP3 (dinput8) n'ont pas de d3d9.ini : leurs captures
+        # restaient à côté de l'exe (2026-10-21).
+        ini = self._poser_ini(tmp_path).rename(tmp_path / "HP4" / nom)
+        assert captures.preparer(_jeu(), tmp_path) is True
+        assert "ScreenshotFolder=" in ini.read_bytes().decode("utf-8")
+        assert not (tmp_path / "HP4" / "d3d9.ini").exists()
+
+    def test_un_ancien_ini_ne_masque_pas_le_nouveau(self, tmp_path):
+        from src.core import reglages_correctif
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(b"[MAIN]\r\nForceWindowedMode=1\r\n")
+        (dossier / "winmm.ini").write_bytes(INI_V2.encode("utf-8"))
+        assert reglages_correctif.ini_du_correctif(dossier) == dossier / "winmm.ini"
+
+    def test_le_d3d9_ini_passe_en_premier(self, tmp_path):
+        ini = self._poser_ini(tmp_path)
+        autre = tmp_path / "HP4" / "winmm.ini"
+        autre.write_bytes(INI_V2.encode("utf-8"))
+        captures.preparer(_jeu(), tmp_path)
+        assert "ScreenshotFolder=" in ini.read_text(encoding="utf-8")
+        assert autre.read_bytes() == INI_V2.encode("utf-8")
+
     def test_sous_wine_le_chemin_que_lit_le_jeu(self, tmp_path, monkeypatch):
         self._poser_ini(tmp_path)
         monkeypatch.setattr(captures.sys, "platform", "linux")

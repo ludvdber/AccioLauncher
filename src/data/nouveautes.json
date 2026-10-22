@@ -37,6 +37,14 @@
           }
         },
         {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Galerie : « Partager sur Discord » ouvre directement le salon #accio-medias.",
+            "en": "Gallery: \"Share on Discord\" opens the #accio-medias channel directly.",
+            "es": "Galería: «Compartir en Discord» abre directamente el canal #accio-medias."
+          }
+        },
+        {
           "genre": "corrige",
           "texte": {
             "fr": "Dans le graphique des douze mois, la durée au-dessus d'une barre s'affiche en entier.",

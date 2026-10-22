@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.44",
+  "catalog_version": "0.45",
   "contributors": [
     {
       "name": "ASTeam",
@@ -104,9 +104,36 @@
         "winmm"
       ],
       "cover_image": "hp1_cover.jpg",
-      "latest_version": "1.3",
-      "recommended_version": "1.3",
+      "latest_version": "1.4",
+      "recommended_version": "1.4",
       "versions": [
+        {
+          "version": "1.4",
+          "date": "2026-10-22",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.4/hp1.7z",
+          "size_mb": 431,
+          "changes": [
+            "F12 : capture d'écran rangée dans Images",
+            "F10 : images par seconde à l'écran",
+            "F11 : mesure des performances"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "F12: screenshot saved to Pictures",
+                "F10: frame rate on screen",
+                "F11: performance benchmark"
+              ]
+            },
+            "es": {
+              "changes": [
+                "F12: captura de pantalla guardada en Imágenes",
+                "F10: imágenes por segundo en pantalla",
+                "F11: medición del rendimiento"
+              ]
+            }
+          }
+        },
         {
           "version": "1.3",
           "date": "2026-10-08",
@@ -472,9 +499,39 @@
         "winmm"
       ],
       "cover_image": "hp2_cover.jpg",
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-22",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.3/hp2.7z",
+          "size_mb": 464,
+          "changes": [
+            "Lumos efface en douceur les murs qui cachent un passage",
+            "F12 : capture d'écran rangée dans Images",
+            "F10 : images par seconde à l'écran",
+            "F11 : mesure des performances"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Lumos gently fades the walls that hide a passage",
+                "F12: screenshot saved to Pictures",
+                "F10: frame rate on screen",
+                "F11: performance benchmark"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Lumos difumina suavemente los muros que ocultan un pasaje",
+                "F12: captura de pantalla guardada en Imágenes",
+                "F10: imágenes por segundo en pantalla",
+                "F11: medición del rendimiento"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-10-08",
@@ -832,9 +889,39 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "latest_version": "1.3",
-      "recommended_version": "1.3",
+      "latest_version": "1.4",
+      "recommended_version": "1.4",
       "versions": [
+        {
+          "version": "1.4",
+          "date": "2026-10-22",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.4/hp3.7z",
+          "size_mb": 772,
+          "changes": [
+            "Texte français une fois et demie plus grand",
+            "F12 : capture d'écran rangée dans Images",
+            "F10 : images par seconde à l'écran",
+            "F11 : mesure des performances"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "French text one and a half times larger",
+                "F12: screenshot saved to Pictures",
+                "F10: frame rate on screen",
+                "F11: performance benchmark"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Texto en francés una vez y media más grande",
+                "F12: captura de pantalla guardada en Imágenes",
+                "F10: imágenes por segundo en pantalla",
+                "F11: medición del rendimiento"
+              ]
+            }
+          }
+        },
         {
           "version": "1.3",
           "date": "2026-10-08",
@@ -1343,9 +1430,37 @@
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "latest_version": "1.3",
-      "recommended_version": "1.3",
+      "latest_version": "1.4",
+      "recommended_version": "1.4",
       "versions": [
+        {
+          "version": "1.4",
+          "date": "2026-10-22",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.4/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.4/hp5.7z.002"
+          ],
+          "size_mb": 4705,
+          "changes": [
+            "Ombres plus nettes",
+            "Correctif mis à jour (cartes graphiques modestes)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Sharper shadows",
+                "Fix updated (modest graphics cards)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Sombras más nítidas",
+                "Corrección actualizada (tarjetas gráficas modestas)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.3",
           "date": "2026-10-01",
