@@ -135,13 +135,13 @@ class TestPage:
 
     def test_partager_copie_puis_ouvre_le_discord(self, qtbot, monkeypatch):
         from PyQt6.QtGui import QGuiApplication
-        from src.core.liens import DISCORD_URL
+        from src.core.liens import DISCORD_MEDIAS_URL
         ouverts = []
         monkeypatch.setattr("src.ui.galerie_page.open_url", ouverts.append)
         _capture(HP4, "a.png", datetime(2026, 9, 3))
         page = self._page(qtbot)
         page._partager.click()
-        assert ouverts == [DISCORD_URL]
+        assert ouverts == [DISCORD_MEDIAS_URL], "le salon des captures, pas l'invitation"
         assert QGuiApplication.clipboard().image().width() == 64
         assert "Ctrl+V" in page._confirmation.text() and not page._confirmation.isHidden()
 

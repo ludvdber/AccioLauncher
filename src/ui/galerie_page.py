@@ -6,9 +6,10 @@ premiers jeux (pour éviter des signalements inutiles), et que les plus belles
 images partagées pourront aller sur le site et servir à présenter le launcher.
 
 « Partager sur Discord » ne publie rien : le launcher n'a aucun compte relié.
-Il copie l'image dans le presse-papiers et ouvre le Discord ; c'est le joueur
-qui la colle où il veut. La page le dit, pour qu'on ne cherche pas où elle est
-partie.
+Il copie l'image dans le presse-papiers et ouvre le salon #accio-medias
+(`DISCORD_MEDIAS_URL`, 2026-10-22 : l'invitation seule laissait chercher le
+salon) ; c'est le joueur qui la colle. La page le dit, pour qu'on ne cherche
+pas où elle est partie.
 
 Contenu : `src/core/galerie.py`. Les vignettes se décodent sur un fil à part
 après l'ouverture et se rangent dans `_Launcher/cache/vignettes`
@@ -36,7 +37,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import galerie
 from src.core.i18n import get_language, tr
-from src.core.liens import DISCORD_URL
+from src.core.liens import DISCORD_MEDIAS_URL
 from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -557,11 +558,12 @@ class GaleriePage(QDialog):
         return True
 
     def partager(self) -> None:
-        """Copie, puis ouvre le Discord : c'est le joueur qui colle l'image."""
+        """Copie, puis ouvre le salon des captures : c'est le joueur qui colle l'image."""
         if self.copier():
-            self._dire(tr("Image copiée, Discord s'ouvre. Dans le salon de votre choix, "
-                          "collez-la avec Ctrl+V."), True)
-            open_url(DISCORD_URL)
+            self._dire(tr("Image copiée, le salon #accio-medias s'ouvre : collez-la avec Ctrl+V. "
+                          "Pas encore sur le serveur ? Le bouton Discord en haut de la fenêtre "
+                          "vous y invite."), True)
+            open_url(DISCORD_MEDIAS_URL)
 
     def _dire(self, phrase: str, reussi: bool) -> None:
         self._confirmation.setText(phrase)
