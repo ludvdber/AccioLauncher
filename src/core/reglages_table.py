@@ -351,6 +351,27 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "démarrer en anglais.",
             choix=tuple(v for v, _ in LANGUES_MENU), zero="Celle de Windows",
             noms_choix=LANGUES_MENU),
+    # HP6, mode difficile demandé par Ludo le 2026-10-23 (« activable à n'importe
+    # quel moment ») : [Accio.Hardcore] de source/hardcore.cpp du correctif,
+    # relu dans la seconde qui suit l'écriture, partie en cours comprise. Le
+    # premier choix (1) est le jeu tel que livré, comme pour une clé absente.
+    # À VOIR EN JEU (un combat) avant de publier le catalogue qui les déclare.
+    Reglage("degats_recus", "Accio.Hardcore", "DamageTaken",
+            "Dégâts reçus",
+            "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
+            "jeu le prend en compte dans la seconde.",
+            choix=(1, 1.5, 2, 3), zero="D'origine", format_choix="×{}"),
+    Reglage("degats_infliges", "Accio.Hardcore", "DamageDealt",
+            "Dégâts de vos sorts",
+            "Multiplie les dégâts des sorts de Harry : à ×0,5, les ennemis tiennent deux "
+            "fois plus longtemps. Se change aussi pendant la partie.",
+            choix=(1, 0.75, 0.5, 0.33), zero="D'origine", format_choix="×{}"),
+    Reglage("reaction_ennemis", "Accio.Hardcore", "EnemyReaction",
+            "Réaction des ennemis",
+            "Les ennemis attendent moins entre deux attaques, esquivent et lancent Protego "
+            "plus souvent. Vaut pour les ennemis rencontrés après le changement.",
+            choix=(1, 1.5, 2, 3), zero="D'origine",
+            etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables"))),
 )}
 
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,

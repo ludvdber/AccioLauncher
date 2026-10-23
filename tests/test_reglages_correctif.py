@@ -276,6 +276,40 @@ class TestBrouillard:
         assert rc.lire(ini, self.R) == rc.Etat(True)
 
 
+class TestModeDifficile:
+    """HP6 : [Accio.Hardcore], trois facteurs dont l'« éteint » vaut 1, le jeu tel que livré
+    (source/hardcore.cpp du correctif lit 1 pour une clé absente)."""
+
+    IDENTS = ("degats_recus", "degats_infliges", "reaction_ennemis")
+
+    @pytest.fixture
+    def ini_dur(self, ini):
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Hardcore]\r\nDamageTaken=1\r\n")
+        return ini
+
+    def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
+        for ident in self.IDENTS:
+            assert rc.lire(ini_dur, rc.REGLAGES[ident]) == rc.Etat(1)
+            assert rc.libelle_choix(rc.REGLAGES[ident], 1) == tr("D'origine")
+
+    def test_aller_retour_avec_decimales(self, ini_dur):
+        rc.ecrire(ini_dur, rc.REGLAGES["degats_recus"], 3)
+        rc.ecrire(ini_dur, rc.REGLAGES["degats_infliges"], 0.33)
+        rc.ecrire(ini_dur, rc.REGLAGES["reaction_ennemis"], 1.5)
+        lignes = ini_dur.read_bytes().decode().split("\r\n")
+        assert {"DamageTaken=3", "DamageDealt=0.33", "EnemyReaction=1.5"} <= set(lignes)
+        assert lignes.index("[Accio.Hardcore]") < lignes.index("DamageDealt=0.33")
+        assert rc.lire(ini_dur, rc.REGLAGES["degats_infliges"]) == rc.Etat(0.33)
+        assert rc.libelle_choix(rc.REGLAGES["reaction_ennemis"], 3) == tr("Redoutables")
+
+    def test_sans_la_section_rien_n_est_ecrit(self, ini):
+        """Un correctif sans le mode difficile ne lit pas ces clés : l'écriture le dit."""
+        avant = ini.read_bytes()
+        with pytest.raises(ValueError):
+            rc.ecrire(ini, rc.REGLAGES["degats_recus"], 2)
+        assert ini.read_bytes() == avant
+
+
 class TestLangueAuDemarrage:
     """HP6 : un réglage à choix TEXTUELS (la clé Language du correctif)."""
 
