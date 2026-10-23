@@ -1,3 +1,42 @@
+# Sixième passage : archives du 2026-10-22 (2026-10-23, 19 h 38 – 19 h 58)
+
+Pour : Ludo. Demande : vérifier vite en jeu les nouvelles archives (catalogue 0.45 : HP1 1.4, HP2 1.3, HP3 1.4,
+HP5 1.4), HP5 en dernier (il se téléchargeait, installé par le launcher à 19 h 38).
+
+**Comment** : le launcher de Ludo (AppImage) était ouvert, l'instance unique empêchait d'en lancer un second.
+Les jeux ont donc été lancés **à la main comme le launcher les lance** (umu, GE-Proton10-34, préfixe partagé, mêmes
+surcharges que le catalogue : `winmm` pour HP1/HP2, `msvcr70` pour HP3, `d3d9` et `xinput1_3` pour HP5), dans le
+gamescope headless, son coupé. Avant chaque jeu, le dossier des captures a été posé par **le code du launcher**
+(`captures.preparer`), et le réglage des vidéos de HP3 par `videos_lancement.passer` : ce sont les fonctions
+qu'appellent le lancement et la case des réglages. Tous les correctifs se déclarent **2.1.1** dans leur journal.
+
+| Jeu | En jeu | F12 (capture) | F10 (compteur) | F11 (mesure) | Nouveauté de l'archive |
+|---|---|---|---|---|---|
+| HP1 1.4 | **VU** : menu, partie chargée, arrivée à Poudlard | **VU** : rangée dans `Images/Accio Launcher/Harry Potter à l'École des Sorciers` (accents corrects) | **VU** : images/s, ms, 1 % bas | **VU** : « avg 47 FPS, 1% low 30 » à l'écran, CSV écrit | — |
+| HP2 1.3 | **VU** : le lanceur s'affiche (fond, 3 boutons), Nouvelle partie → emplacement 1 → Privet Drive | **VU** | **VU** | **VU** : « avg 29 FPS » | **Le lanceur noir sous Wine est réglé par l'archive elle-même** (`WineLauncherFix=1`, les deux lignes attendues au journal). Lumos : branché (`DrawComplexSurface goes through the fix`), pas vu à l'écran (pas de passage caché cherché) |
+| HP3 1.4 | **VU** : partie chargée, cinématique du train, sous-titres français | **VU** | non affiché, **voulu** : « Overlay: not drawn under Wine » | **VU** : « avg 60 FPS, 1% low 55 » (le plafond de 60 tient) | **Vidéos passées VU** : aucun logo, fond du menu à 8 s, boutons à 20 s ; remises ensuite (empreintes identiques). Texte français : sous-titres d'environ 19 px de haut en 1080p, **pas de capture d'avant pour comparer** |
+| HP5 1.4 | **VU** : menu, nouvelle aventure, emplacement 1, cinématique de Dudley | **VU** | non affiché, voulu (`DrawUnderWine=0`) ; donc pas de risque de plantage du GPU Intel | non essayé | **Ombres plus nettes VU au journal** : `shadow textures 512 pixels a side (128 as shipped)`. Démarre sans Visual C++ 2005 |
+
+**Le correctif de HP3 (`dinput8.dll`) se charge sans surcharge** : le catalogue ne surcharge que `msvcr70`, mais
+`dinput8_accio.log` est écrit et le correctif se trouve en place. Rien à ajouter au catalogue.
+
+**Un piège dans HP5, sans lien avec l'archive** : appuyer sur Échap pendant que le journal arrive (entre l'écran
+titre et le menu) bloque le jeu. Le journal reste vide, sans texte, et rien ne répond, ni Entrée ni les flèches
+(image identique pendant 2 min). Relancé sans toucher à rien, le menu s'affiche normalement. Je ne sais pas si la
+version 1.3 faisait pareil.
+
+**Remise en état** : les Documents de HP1, HP2 et HP3, `HP1/save` et les sauvegardes de HP5 sont remis depuis
+`~/AccioSauvegardes/2026-10-23_HP1-3/` et `2026-10-23_HP5/` (`diff -r` identique ; l'état après les essais est
+dans `cree-par-essai/`). `winmm.ini` ×2, `dinput8.ini` et `d3d9.ini` sont remis (`cmp` identique) : le launcher
+y réécrira `ScreenshotFolder` au prochain lancement. Les dossiers `benchmarks` créés par F11 sont déplacés dans
+la sauvegarde. Les captures restent dans `Images/Accio Launcher` (2 pour HP1, 1 pour HP2, 2 pour HP3, 1 pour HP5),
+pour la galerie. Le son est resté coupé (0.00, comme Ludo l'avait laissé).
+
+**Pas fait (Ludo voulait éteindre)** : les écrans du launcher 1.2.3 (boîte de désinstallation, graphique des
+douze mois), Lumos à l'écran, HP4, HP6 et HP7 (archives inchangées).
+
+---
+
 # Cinquième passage : HP2 relais (2026-10-20, 17 h 50 – 17 h 56)
 
 Pour : Ludo et la session Windows. Demande : essayer sous Wine la `winmm.dll` du relais (`transfert/HP2_relais/` de
