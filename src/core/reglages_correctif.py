@@ -120,7 +120,9 @@ def libelle_choix(reglage: Reglage, valeur: Any) -> str:
     if reglage.noms_choix:
         if valeur == reglage.choix[0]:
             return tr(reglage.zero)
-        return dict(reglage.noms_choix).get(valeur, str(valeur))
+        # tr() comme les réglages graphiques : un nom propre (« English ») ou une
+        # taille (« 1280×720 ») n'a pas d'entrée et revient tel quel.
+        return tr(dict(reglage.noms_choix).get(valeur, str(valeur)))
     if valeur == reglage.choix[0]:
         return tr(reglage.zero)
     if reglage.etiquettes:

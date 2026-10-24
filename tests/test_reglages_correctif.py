@@ -1,5 +1,6 @@
 """Réglages du correctif PC (HP4-HP6) : lecture, écriture en place, fenêtre de réglages."""
 
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,6 +10,7 @@ import pytest
 from src.core import reglages_correctif as rc
 from src.core.game_data import GameData
 from src.core.i18n import tr
+from src.core.reglages_table import SORTS_RETIRES
 
 # Extrait fidèle de l'ini du NOUVEAU correctif (tools/make_ini.py), en CRLF.
 INI_V2 = "\r\n".join([
@@ -301,6 +303,47 @@ class TestModeDifficile:
         assert lignes.index("[Accio.Hardcore]") < lignes.index("DamageDealt=0.33")
         assert rc.lire(ini_dur, rc.REGLAGES["degats_infliges"]) == rc.Etat(0.33)
         assert rc.libelle_choix(rc.REGLAGES["reaction_ennemis"], 3) == tr("Redoutables")
+
+    def test_sorts_retires_aucun_quand_la_cle_manque_ou_est_vide(self, ini_dur):
+        r = rc.REGLAGES["sorts_retires"]
+        assert rc.lire(ini_dur, r) == rc.Etat("")
+        assert rc.libelle_choix(r, "") == tr("Aucun")
+        ini_dur.write_bytes(ini_dur.read_bytes() + b"RemovedSpells=\r\n")
+        assert rc.lire(ini_dur, r) == rc.Etat("")
+
+    def test_sorts_retires_aller_retour_et_retour_a_aucun(self, ini_dur):
+        """Les noms que hardcore.cpp connaît, séparés par des virgules ; « Aucun » écrit une ligne vide."""
+        r = rc.REGLAGES["sorts_retires"]
+        rc.ecrire(ini_dur, r, "protego,expelliarmus")
+        assert "RemovedSpells=protego,expelliarmus" in ini_dur.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini_dur, r) == rc.Etat("protego,expelliarmus")
+        assert rc.libelle_choix(r, "protego,expelliarmus") == tr("Protego et Expelliarmus")
+        rc.ecrire(ini_dur, r, "")
+        assert "RemovedSpells=" in ini_dur.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini_dur, r) == rc.Etat("")
+
+    def test_sorts_retires_a_la_main_se_montre(self, ini_dur):
+        ini_dur.write_bytes(ini_dur.read_bytes() + b"RemovedSpells=Protego, Stupefy\r\n")
+        assert rc.lire(ini_dur, rc.REGLAGES["sorts_retires"]) == rc.Etat("protego, stupefy", personnalise=True)
+
+    def test_sorts_retires_seulement_des_noms_du_correctif(self):
+        """hardcore.cpp (kSpells) saute un nom inconnu : une faute de frappe ici ne retirerait rien."""
+        connus = {"protego", "expelliarmus", "petrificus", "levicorpus"}
+        for valeur in rc.REGLAGES["sorts_retires"].choix[1:]:
+            assert set(valeur.split(",")) <= connus
+
+    def test_chaque_texte_de_la_table_est_traduit(self):
+        """Libellés, aides, premiers choix et étiquettes passent par tr() dynamiquement : le test
+        d'i18n, qui lit les tr("…") littéraux, ne les voit pas. Les noms de choix ne sont vérifiés
+        que pour les sorts : ailleurs ce sont des noms de langue ou des tailles, gardés tels quels
+        (« Protego » seul aussi : le nom du sort ne se traduit pas)."""
+        textes = {n for _v, n in SORTS_RETIRES if " " in n}
+        for r in rc.REGLAGES.values():
+            textes |= {r.libelle, r.aide, r.zero} | {str(n) for _v, n in r.etiquettes}
+        for code in ("en", "es"):
+            cles = json.loads(Path(f"src/data/i18n/{code}.json").read_text(encoding="utf-8"))["strings"]
+            manquants = sorted(t for t in textes if t and t not in cles and not t[0].isdigit())
+            assert not manquants, (code, manquants)
 
     def test_sans_la_section_rien_n_est_ecrit(self, ini):
         """Un correctif sans le mode difficile ne lit pas ces clés : l'écriture le dit."""

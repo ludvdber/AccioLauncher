@@ -34,6 +34,12 @@ FORMATS = (("0", ""), ("16:9", "16:9"), ("16:10", "16:10"), ("21:9", "21:9"), ("
 # propre langue comme dans le menu du jeu : un nom de langue ne se traduit pas
 # pour celui qui la cherche. « auto » (le défaut du correctif) est la langue de
 # Windows ramenée à la variante que le jeu connaît.
+# RemovedSpells du correctif (HP6) : les noms qu'il connaît, séparés par des virgules.
+SORTS_RETIRES = (
+    ("", ""), ("protego", "Protego"), ("protego,expelliarmus", "Protego et Expelliarmus"),
+    ("protego,expelliarmus,petrificus,levicorpus", "Stupéfix seul en duel"),
+)
+
 LANGUES_MENU = (
     ("auto", ""), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("de", "Deutsch"),
     ("it", "Italiano"), ("nl", "Nederlands"), ("pt", "Português"), ("pt-br", "Português (Brasil)"),
@@ -372,6 +378,18 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "plus souvent. Vaut pour les ennemis rencontrés après le changement.",
             choix=(1, 1.5, 2, 3), zero="D'origine",
             etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables"))),
+    # RemovedSpells (2026-10-24) : le correctif répond « non » quand le jeu demande
+    # si Harry connaît ces sorts ; les drapeaux SpellUnlock_* de la sauvegarde ne
+    # bougent pas, donc revenir au premier choix rend tout. Seulement des sorts de
+    # duel : sans Stupéfix ni les sorts d'énigme (Leviosa, Reparo…), une partie
+    # pourrait ne plus avancer. Valeurs en minuscules : `lire` compare ainsi.
+    Reglage("sorts_retires", "Accio.Hardcore", "RemovedSpells",
+            "Sorts retirés",
+            "Harry ne peut plus lancer ces sorts de duel, même appris : il faut gagner sans "
+            "eux. Votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt. Une "
+            "leçon qui demande un sort retiré ne peut pas se réussir : rendez-le le temps de "
+            "la leçon, sans quitter la partie.",
+            choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES),
 )}
 
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,
