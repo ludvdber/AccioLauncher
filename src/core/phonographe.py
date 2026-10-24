@@ -17,8 +17,11 @@ Relevé sur les jeux (atelier, `notes/PHONOGRAPHE_PROJECTION_TRADUCTIONS.md`) :
   flux d'au moins `SEUIL_MORCEAU` octets (≈ 16 s) sont des morceaux ; ceux des
   `sfx` et `amb` sont des ambiances, laissés de côté. Un flux recopié dans le
   cache est un `.asf` qu'FFmpeg lit tel quel.
-- **HP5 et HP6** : même rangement, mais en EALayer3, qu'FFmpeg ne lit pas :
-  pas encore ici.
+- **HP5 et HP6** : même rangement (`hog_music_stream.mus`, 53 morceaux ;
+  `hbpmusic.mus`, 114), mais en EALayer3, qu'FFmpeg ne lit pas : le flux
+  recopié est converti en WAV par `vgmstream`. Sans vgmstream, ces jeux
+  n'ont pas de morceaux. Les WAV du cache d'un jeu ne dépassent pas
+  `_PLAFOND_WAV` : les plus anciens écoutés partent d'abord.
 
 Aucune fonction ne lève : un paquet abîmé ou d'un autre format est sauté.
 """
@@ -32,7 +35,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import archives_ea
+from src.core import archives_ea, vgmstream
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +46,10 @@ _SOURCES: dict[str, tuple[str, str]] = {
     "hp3": ("music", "*.ogg"),
 }
 # Les jeux dont la musique vit dans une archive EA (`archives_ea`).
-_ARCHIVES: dict[str, str] = {"hp4": "music.big"}
+_ARCHIVES: dict[str, str] = {"hp4": "music.big", "hp5": "music.big", "hp6": "music.big"}
+# Ceux dont le flux doit passer par vgmstream avant d'être lu.
+_A_CONVERTIR = frozenset({"hp5", "hp6"})
+_PLAFOND_WAV = 400 << 20
 SEUIL_MORCEAU = 700 << 10
 _MAGIC_UE1 = 0x9E2A83C1
 # Formats que le lecteur sait ouvrir une fois le flux sorti du paquet.
@@ -96,6 +102,8 @@ def _dossier_musique(dossier_jeu: Path, nom: str) -> Path | None:
 def pistes(jeu: str, dossier_jeu: Path | None) -> list[Piste]:
     """Les morceaux d'un jeu installé, triés par nom ; vide si rien à lire."""
     if dossier_jeu is not None and jeu in _ARCHIVES:
+        if jeu in _A_CONVERTIR and not vgmstream.disponible():
+            return []
         archive = dossier_jeu / _ARCHIVES[jeu]
         try:
             st = archive.stat()
@@ -121,7 +129,9 @@ def _pistes_archive(jeu: str, archive: Path, _taille: int, _modifie: float) -> t
     trouvees: list[Piste] = []
     for entree in archives_ea.lister(archive):
         nom = entree.nom.lower()
-        if not nom.endswith("stream.mus") or "sfx" in nom or "amb" in nom:
+        # HP4 range aussi des banques (`*_mem0.mus`) ; HP6 nomme son flux `hbpmusic.mus`.
+        suffixe = "stream.mus" if jeu == "hp4" else ".mus"
+        if not nom.endswith(suffixe) or "sfx" in nom or "amb" in nom:
             continue
         base = Path(entree.nom).stem
         longs = [f for f in archives_ea.flux_schl(archive, entree) if f[1] >= SEUIL_MORCEAU]
@@ -262,6 +272,20 @@ def exporter(source: Path, titre_affiche: str, dossier: Path) -> Path | None:
     return cible
 
 
+def _elaguer(dossier: Path, garde: Path) -> None:
+    """Retire les WAV les plus anciens du dossier au-delà de `_PLAFOND_WAV` (jamais `garde`)."""
+    try:
+        wavs = sorted(((f.stat().st_mtime, f.stat().st_size, f) for f in dossier.glob("*.wav")),
+                      reverse=True)
+        total = 0
+        for _date, taille, fichier in wavs:
+            total += taille
+            if total > _PLAFOND_WAV and fichier != garde:
+                fichier.unlink()             # notre propre conversion, refaite à la demande
+    except OSError as exc:
+        log.debug("Phonographe, élagage de %s : %s", dossier, exc)
+
+
 def fichier_lisible(piste: Piste, cache: Path) -> Path | None:
     """Le fichier que le lecteur ouvrira : la source, ou le flux sorti du paquet.
 
@@ -272,7 +296,17 @@ def fichier_lisible(piste: Piste, cache: Path) -> Path | None:
         return piste.source if piste.source.is_file() else None
     if piste.taille:
         cible = cache / "phonographe" / piste.jeu / f"{piste.cle}.asf"
-        return archives_ea.extraire(piste.source, piste.debut, piste.taille, cible)
+        extrait = archives_ea.extraire(piste.source, piste.debut, piste.taille, cible)
+        if extrait is None or piste.jeu not in _A_CONVERTIR:
+            return extrait
+        wav = vgmstream.convertir(extrait, extrait.with_suffix(".wav"))
+        if wav is not None:
+            try:
+                os.utime(wav)                # écouté maintenant : le dernier à partir
+            except OSError:
+                pass
+            _elaguer(wav.parent, wav)
+        return wav
     dossier = cache / "phonographe" / piste.jeu
     try:
         existants = list(dossier.glob(piste.source.stem + ".*")) if dossier.is_dir() else []

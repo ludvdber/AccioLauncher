@@ -67,7 +67,7 @@ class TestPistes:
         assert pistes("hp1", tmp_path) == []
 
     def test_les_jeux_couverts(self):
-        assert phonographe.jeux_couverts() == ("hp1", "hp2", "hp3", "hp4")
+        assert phonographe.jeux_couverts() == ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6")
 
 
 class TestTitre:

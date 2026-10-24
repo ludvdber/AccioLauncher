@@ -169,6 +169,11 @@ def fenetre_avec_jeux(make_window, monkeypatch, tmp_path):
     monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in {"hp2", "hp3"})
     monkeypatch.setattr(GameManager, "get_game_path", lambda self, j: jeux / j)
     monkeypatch.setattr("src.core.discographie.avancement", lambda jeu, spec: None)
+    # Collection fabriquée (règle 78) : un clip ouvert d'office, un au seuil de 93 %.
+    collection = cinematiques.Collection("Movies", ".bik", False, (
+        cinematiques.Cinematique("SiriusPhoto", "La photo de Sirius", 0),
+        cinematiques.Cinematique("LupinWolf", "Lupin", 93)))
+    monkeypatch.setattr(cinematiques, "charger", lambda chemin=None: {"hp3": collection})
     return make_window()
 
 
