@@ -182,6 +182,10 @@ class Config:
     # Un seul remerciement Ko-fi dans la vie du launcher, à la première mise à
     # jour installée (le nom date du cap des 2 h de jeu, remplacé par ACT-072).
     kofi_milestone_thanked: bool = False
+    # Visite guidée de l'interface déjà montrée (`src/ui/visite_guidee.py`).
+    # Faux sur une config neuve ET sur une config d'avant la visite : elle
+    # vient une fois après l'assistant, et une fois après la mise à jour.
+    visite_vue: bool = False
     # Version du launcher lancée la dernière fois : c'est en la voyant monter
     # qu'on sait qu'une mise à jour vient d'être installée. Une config neuve
     # porte la version courante ; une config d'avant la 1.1.6 se charge VIDE.
@@ -241,6 +245,7 @@ class Config:
                         data.get("dismissed_launcher_version"), ""),
                     kofi_milestone_thanked=_as_bool(
                         data.get("kofi_milestone_thanked"), False),
+                    visite_vue=_as_bool(data.get("visite_vue"), False),
                     version_lancee=_as_str(data.get("version_lancee"), ""),
                     etapes_assistant=_as_liste(data.get("etapes_assistant")),
                     installed_versions=_as_map(data.get("installed_versions"), str),
@@ -285,6 +290,7 @@ class Config:
                 "discord_presence": self.discord_presence,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,
+                "visite_vue": self.visite_vue,
                 "version_lancee": self.version_lancee,
                 "etapes_assistant": self.etapes_assistant,
                 "installed_versions": self.installed_versions,

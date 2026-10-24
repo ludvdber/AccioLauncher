@@ -1217,6 +1217,26 @@
     "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "The update is downloaded and installed automatically, then the launcher restarts.",
     "Passer les vidéos de lancement": "Skip the startup videos",
     "Le jeu s'ouvre directement sur son menu, sans les logos des studios. Les vidéos sont gardées : il suffit de rallumer pour les revoir.": "The game opens straight on its menu, without the studio logos. The videos are kept: switch this back on to see them again.",
-    "Démarrage": "Startup"
+    "Démarrage": "Startup",
+    "Vos huit jeux": "Your eight games",
+    "Choisissez un jeu ici, à la souris, avec les flèches du clavier ou à la manette.": "Pick a game here, with the mouse, the arrow keys or a controller.",
+    "Le bouton principal installe le jeu, puis le lance. Pour les trois premiers jeux, il rouvre directement votre dernière partie.": "The main button installs the game, then launches it. For the first three games, it reopens your latest save directly.",
+    "Les réglages du jeu": "Game settings",
+    "Image, réglages graphiques, touches, manette, langue : tout ce qui concerne ce jeu est derrière l'engrenage.": "Picture, graphics settings, keys, controller, language: everything about this game is behind the gear.",
+    "Votre partie": "Your save",
+    "Votre avancement, lu dans vos sauvegardes. Un clic ouvre le folio : cartes, dragées, points de maison.": "Your progress, read from your saves. One click opens the folio: cards, beans, house points.",
+    "Votre temps de jeu, votre scolarité année par année et vos succès.": "Your playtime, your schooling year by year and your achievements.",
+    "La galerie": "The gallery",
+    "En jeu, F12 prend une capture. Elles sont toutes ici, rangées par jeu, prêtes à partager.": "In game, F12 takes a screenshot. They are all here, sorted by game, ready to share.",
+    "Vous dessinez, traduisez ou modélisez ? L'atelier dit comment aider le projet.": "Do you draw, translate or model? The workshop explains how to help the project.",
+    "Langue, dossier des jeux, ambiances, copies de vos sauvegardes. Cette visite s'y relance, dans Général.": "Language, games folder, ambiences, copies of your saves. This tour can be replayed there, under General.",
+    "Visite guidée du launcher": "Launcher guided tour",
+    "Passer la visite": "Skip the tour",
+    "Précédent": "Previous",
+    "Étape {} sur {}": "Step {} of {}",
+    "Revoir la visite": "Replay the tour",
+    "Visite guidée": "Guided tour",
+    "Où trouver le folio, Mes années, la galerie et les réglages de chaque jeu.": "Where to find the folio, My years, the gallery and each game's settings.",
+    "Découvrir": "Discover"
   }
 }

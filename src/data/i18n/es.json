@@ -1218,6 +1218,26 @@
     "La mise à jour est téléchargée et installée automatiquement ; le launcher redémarre ensuite.": "La actualización se descarga e instala automáticamente y el launcher se reinicia.",
     "Passer les vidéos de lancement": "Saltar los vídeos de inicio",
     "Le jeu s'ouvre directement sur son menu, sans les logos des studios. Les vidéos sont gardées : il suffit de rallumer pour les revoir.": "El juego se abre directamente en su menú, sin los logotipos de los estudios. Los vídeos se conservan: basta con volver a activarlo para verlos de nuevo.",
-    "Démarrage": "Inicio"
+    "Démarrage": "Inicio",
+    "Vos huit jeux": "Tus ocho juegos",
+    "Choisissez un jeu ici, à la souris, avec les flèches du clavier ou à la manette.": "Elige un juego aquí, con el ratón, las flechas del teclado o un mando.",
+    "Le bouton principal installe le jeu, puis le lance. Pour les trois premiers jeux, il rouvre directement votre dernière partie.": "El botón principal instala el juego y luego lo inicia. En los tres primeros juegos, abre directamente tu última partida.",
+    "Les réglages du jeu": "Ajustes del juego",
+    "Image, réglages graphiques, touches, manette, langue : tout ce qui concerne ce jeu est derrière l'engrenage.": "Imagen, ajustes gráficos, teclas, mando, idioma: todo lo de este juego está detrás del engranaje.",
+    "Votre partie": "Tu partida",
+    "Votre avancement, lu dans vos sauvegardes. Un clic ouvre le folio : cartes, dragées, points de maison.": "Tu progreso, leído de tus partidas guardadas. Un clic abre el folio: cromos, grageas, puntos de casa.",
+    "Votre temps de jeu, votre scolarité année par année et vos succès.": "Tu tiempo de juego, tu escolaridad año por año y tus logros.",
+    "La galerie": "La galería",
+    "En jeu, F12 prend une capture. Elles sont toutes ici, rangées par jeu, prêtes à partager.": "En el juego, F12 hace una captura. Están todas aquí, ordenadas por juego, listas para compartir.",
+    "Vous dessinez, traduisez ou modélisez ? L'atelier dit comment aider le projet.": "¿Dibujas, traduces o modelas? El taller explica cómo ayudar al proyecto.",
+    "Langue, dossier des jeux, ambiances, copies de vos sauvegardes. Cette visite s'y relance, dans Général.": "Idioma, carpeta de juegos, ambientes, copias de tus partidas. Este recorrido se repite allí, en General.",
+    "Visite guidée du launcher": "Recorrido guiado del launcher",
+    "Passer la visite": "Saltar el recorrido",
+    "Précédent": "Anterior",
+    "Étape {} sur {}": "Paso {} de {}",
+    "Revoir la visite": "Repetir el recorrido",
+    "Visite guidée": "Recorrido guiado",
+    "Où trouver le folio, Mes années, la galerie et les réglages de chaque jeu.": "Dónde encontrar el folio, Mis años, la galería y los ajustes de cada juego.",
+    "Découvrir": "Descubrir"
   }
 }

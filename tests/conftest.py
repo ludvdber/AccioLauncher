@@ -46,6 +46,15 @@ def _config_hors_du_vrai_dossier(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _visite_jamais_spontanee(monkeypatch):
+    """La visite guidée part seule 1,5 s après l'ouverture d'une config qui ne
+    l'a pas vue, et son voile prend alors le clavier : une fenêtre de test qui
+    attend un peu verrait Entrée et les flèches avalées. Ses tests l'appellent
+    directement (`tests/test_visite_guidee.py`)."""
+    monkeypatch.setattr("src.ui.visite_guidee.DELAI_MS", 10 ** 9)
+
+
+@pytest.fixture(autouse=True)
 def _sauvegardes_hors_du_vrai_disque(tmp_path, monkeypatch):
     """Aucun test ne lit les VRAIES sauvegardes de la machine.
 

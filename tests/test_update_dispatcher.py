@@ -377,7 +377,15 @@ class TestFenetreAllegee:
         # deux questions, verification forcee, touches globales, geometrie
         # d'ouverture et bords de fenetre sortis dans leurs modules, testes
         # sans construire la fenetre.
+        # 760 -> 766 le 2026-10-24 : la visite guidee (idee de Ludo). Tout ce
+        # qui pouvait descendre est dans `src/ui/visite_guidee.py` : le
+        # minuteur, l'attente d'une page, l'enregistrement, et meme l'ecoute
+        # de l'affichage et du redimensionnement (filtre d'evenements pose
+        # par `PiloteVisite` sur la fenetre). Restent l'import, la
+        # construction, le bouton des Parametres, et le clavier donne a la
+        # visite AVANT les touches globales : c'est la fenetre qui distribue
+        # le clavier, Entree lancait sinon le jeu cache sous le voile.
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 760, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 766, f"main_window.py a regrossi : {lignes} lignes"

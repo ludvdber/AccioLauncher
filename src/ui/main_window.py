@@ -37,6 +37,7 @@ from src.ui.tray_manager import TrayManager
 from src.ui.update_dispatcher import UpdateDispatcher
 from src.ui.window_chrome import WindowChrome, geometrie_d_ouverture
 from src.ui.utils import icone_application, open_url
+from src.ui.visite_guidee import PiloteVisite
 
 log = logging.getLogger(__name__)
 
@@ -172,6 +173,8 @@ class MainWindow(QMainWindow):
         # Pages, atelier et Discord vivent dans la barre du haut (refonte du 2026-10-09).
         self._title_bar.onglet_demande.connect(self._on_onglet)
         self._pages.brancher(self._particles, self._title_bar)
+        self._visite = PiloteVisite(self, self.config, self._pages, self._carousel, self._detail,
+                                    self._title_bar, lambda: bool(self._session.nom_en_cours))
         self._detail.page_demandee.connect(self._pages.ouvrir)
         self._title_bar.discord_demande.connect(lambda: open_url(DISCORD_URL))
         self._title_bar.contribuer_demande.connect(self._detail.ouvrir_atelier)
@@ -606,6 +609,7 @@ class MainWindow(QMainWindow):
         dlg.season_changed.connect(self._particles.apply_season)
         dlg.restart_requested.connect(lambda: self._restart_launcher(dlg))
         dlg.nouveautes_demandees.connect(self._ouvrir_nouveautes)
+        dlg.visite_demandee.connect(self._visite.revoir)
         dlg.desinstallation_demandee.connect(
             lambda jeux, copies: desinstaller(self, dlg, jeux, copies))
         self._pages.ouvrir(dlg, PARAMETRES)
@@ -703,7 +707,9 @@ class MainWindow(QMainWindow):
             not actif and self._download_bar.current_game is not None)
 
     def _handle_global_key(self, event) -> bool:
-        """←/→ et Échap avant les widgets : voir `clavier_global.touche_globale`."""
+        """←/→ et Échap avant les widgets : voir `clavier_global.touche_globale`. La visite d'abord."""
+        if self._visite.active:
+            return self._visite.touche(event)
         return touche_globale(event, self._carousel, self._detail, self.isActiveWindow(),
                               page_ouverte=self._pages.page is not None)
 

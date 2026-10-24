@@ -139,6 +139,7 @@ class SettingsDialog(QDialog):
     # « Désinstaller et fermer » : (garder les jeux, garder les copies).
     desinstallation_demandee = pyqtSignal(bool, bool)
     nouveautes_demandees = pyqtSignal()   # le numéro de version d'À propos
+    visite_demandee = pyqtSignal()        # « Revoir la visite » (`visite_guidee.py`)
 
     def __init__(self, config: Config, manager: GameManager, parent=None,
                  store=None) -> None:
@@ -473,6 +474,14 @@ class SettingsDialog(QDialog):
             tr("Revenir à une copie"),
             tr("Depuis les réglages de chaque jeu, rubrique Fichiers du jeu.")))
 
+        decouvrir = Carte()
+        revoir = bouton(tr("Revoir la visite"))
+        revoir.clicked.connect(self.visite_demandee.emit)
+        decouvrir.ajouter(LigneReglage(
+            tr("Visite guidée"),
+            tr("Où trouver le folio, Mes années, la galerie et les réglages de chaque jeu."),
+            revoir))
+
         fin = Carte()
         desinstaller = bouton(tr("Désinstaller…"))
         desinstaller.clicked.connect(self._on_desinstaller)
@@ -482,7 +491,8 @@ class SettingsDialog(QDialog):
             desinstaller))
 
         return self._page((tr("Dossier des jeux"), dossier), (tr("Langue"), langue),
-                          (tr("Sauvegardes"), sauvegardes), (tr("Désinstaller"), fin))
+                          (tr("Sauvegardes"), sauvegardes), (tr("Découvrir"), decouvrir),
+                          (tr("Désinstaller"), fin))
 
     def _on_desinstaller(self) -> None:
         from src.ui.desinstallation_dialog import DesinstallationDialog
