@@ -56,6 +56,21 @@ class TestCarnet:
         assert page._folio is not avant and page._folio.game.id == jeux[1]
         assert page._pile.indexOf(avant) == -1
 
+    def test_changer_de_jeu_apres_le_releve_montre_le_folio(self, fenetre_carnet):
+        """Bug vu par Ludo le 2026-10-24 : retirer l'ancien folio faisait passer
+        la pile sur le Relevé, et la page croyait alors être dans le Relevé."""
+        from src.ui.carnet_page import FOLIO, RELEVE
+        from src.ui.folio_page import FolioPage
+        from src.ui.title_bar import CARNET
+        win, jeux = fenetre_carnet
+        win._on_onglet(CARNET)
+        page = win._pages.page
+        page.rubrique(RELEVE)
+        page.rubrique(FOLIO)
+        page._boutons[jeux[1]].click()
+        assert isinstance(page._pile.currentWidget(), FolioPage)
+        assert page._pile.currentWidget().game.id == jeux[1]
+
     def test_le_lien_de_la_fiche_souligne_l_onglet(self, fenetre_carnet):
         from src.ui.carnet_page import CarnetPage
         from src.ui.title_bar import CARNET

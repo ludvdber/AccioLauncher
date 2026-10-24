@@ -108,3 +108,31 @@ class TestCinematiquesArchive:
         assert cinematiques.lisible(voix_fr, tmp_path / "cache", "hp4").read_bytes() == b"SCHl-fr"
         voix_es = cinematiques.voix(collection, jeu, "AVcamp", "es")
         assert cinematiques.lisible(voix_es, tmp_path / "cache", "hp4").read_bytes() == b"SCHl-en"
+
+
+class TestBanqueDeVoix:
+    """HP5 : un flux par cinématique dans une banque `_s.sdt`, sans en-tête."""
+
+    def _jeu(self, tmp_path, nombre):
+        jeu = tmp_path / "HP5"
+        jeu.mkdir()
+        banque = b"".join(_flux(100 + 10 * i) for i in range(nombre))
+        (jeu / "movies.big").write_bytes(_bigf({"events/ct/fr-fr_s.sdt": banque}))
+        return jeu, cinematiques.Collection(
+            "movies/neutral", ".vp6", True, (), "movies.big", {},
+            cinematiques.Banque("movies.big", {"fr": "events/ct/fr-fr_s.sdt"}, ("aa01", "bb02", "cc03")))
+
+    def test_le_flux_de_la_cinematique(self, tmp_path, monkeypatch):
+        from src.core import vgmstream
+        jeu, collection = self._jeu(tmp_path, 3)
+        source = cinematiques.voix(collection, jeu, "bb02", "es")     # espagnol absent : la banque présente
+        assert source is not None and source.convertir
+        monkeypatch.setattr(vgmstream, "convertir", lambda src, cible: src)
+        extrait = cinematiques.lisible(source, tmp_path / "cache", "hp5")
+        assert extrait is not None and extrait.read_bytes()[:4] == b"SCHl"
+        assert len(extrait.read_bytes()) == len(_flux(110))
+        assert cinematiques.voix(collection, jeu, "zz99", "fr") is None
+
+    def test_un_decalage_ne_donne_aucune_voix(self, tmp_path):
+        jeu, collection = self._jeu(tmp_path, 2)
+        assert cinematiques.voix(collection, jeu, "aa01", "fr") is None

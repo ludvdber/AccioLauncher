@@ -1,5 +1,5 @@
 {
- "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
+ "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). banque = les voix rangées dans une banque _s.sdt, un flux par cinématique dans l'ordre donné (HP5). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
  "jeux": {
   "hp3": {
    "dossier": "Movies",
@@ -166,6 +166,28 @@
    "dossier": "movies/neutral",
    "ext": ".vp6",
    "sans_son": true,
+   "banque": {
+    "archive": "movies.big",
+    "fichiers": {
+     "fr": "events/chapter_transition/fr-fr_s.sdt",
+     "de": "events/chapter_transition/de-de_s.sdt",
+     "it": "events/chapter_transition/it-it_s.sdt"
+    },
+    "ordre": [
+     "dl03",
+     "gp01",
+     "gp04",
+     "gp05",
+     "lw_loadgame",
+     "lw_newgame",
+     "mom03",
+     "mom4",
+     "oc01",
+     "rr01",
+     "rr26",
+     "uh13"
+    ]
+   },
    "clips": [
     {
      "f": "occ_hogsmead",

@@ -792,7 +792,7 @@ class _VueCinematiques(QWidget):
         self._video = VideoPlayer(self)
         self._video.set_plein_debit(True)
         self._video.video_frame.connect(lambda image: self._ecran.poser(image))
-        self._video.playback_ended.connect(self.arreter)
+        self._video.playback_ended.connect(self._video_finie)
         # La voix de HP4 est un fichier à part : un second lecteur, lancé avec la vidéo.
         self._voix: QMediaPlayer | None = None
         self._voix_sortie: QAudioOutput | None = None
@@ -917,6 +917,7 @@ class _VueCinematiques(QWidget):
             self._voix = QMediaPlayer(self)
             self._voix.setAudioOutput(self._voix_sortie)
             self._voix.setSource(QUrl.fromLocalFile(str(voix)))
+            self._voix.mediaStatusChanged.connect(self._statut_voix)
             self._voix.play()
         self._courante = fichier
         self._titre.setText(titre)
@@ -936,6 +937,17 @@ class _VueCinematiques(QWidget):
             if self._voix is not None:
                 self._voix.pause()
         self._etat_commandes()
+
+    def _video_finie(self) -> None:
+        """La narration des transitions de HP5 dure plus que leur image (85 s de
+        voix pour 64 s de vidéo sur DL03) : elle finit sa phrase, puis tout s'arrête."""
+        if self._voix is not None and self._voix.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            return
+        self.arreter()
+
+    def _statut_voix(self, statut) -> None:
+        if statut == QMediaPlayer.MediaStatus.EndOfMedia and not self._video.is_playing:
+            self.arreter()
 
     def _arreter_voix(self) -> None:
         if self._voix is not None:

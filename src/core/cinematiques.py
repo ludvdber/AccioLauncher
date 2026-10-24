@@ -11,7 +11,14 @@ sur les jeux installés (atelier, fiches `HPx.md`, « Musique et cinématiques �
 - **HP4** les range dans `movies.big` (`archives_ea`) : la vidéo VP6 sans son
   dans `Movies/English`, et la VOIX à part, une `.asf` par langue
   (`Movies/French/…`). Les deux se jouent ensemble.
-- **HP5 et HP6** : VP6 dans `movies.big`, sans piste son lisible.
+- **HP5 et HP6** : VP6 dans `movies.big`, image seule (blocs MV0K/MV0F, aucun
+  bloc son). HP5 range la narration de ses douze transitions de chapitre
+  dans `movies.big` : `events/chapter_transition/<langue>_s.sdt`, douze flux
+  SCHl (EALayer3) bout à bout, dans l'ordre ALPHABÉTIQUE des noms que liste
+  `data.big › events/chapter_transition.str` (DL03, GP01… UH13). Vérifié par
+  les durées : chaque fiche du `.str` porte celle de son son en millisecondes
+  (85 179, 40 190…), égales à celles que mesure vgmstream. C'est la
+  `Banque` ; converti en WAV par `vgmstream`.
 - **HP7 et HP8** (`hp7a`, `hp7b`) : VP6 1280 × 720 dans `pc/`, sans piste son
   (le son est dans des paquets Wwise).
 
@@ -41,6 +48,14 @@ class Cinematique:
 
 
 @dataclass(frozen=True, slots=True)
+class Banque:
+    """Les voix rangées dans une banque `_s.sdt` : un flux par cinématique (HP5)."""
+    archive: str
+    fichiers: dict[str, str]     # langue → chemin de la banque dans l'archive
+    ordre: tuple[str, ...]       # les cinématiques, dans l'ordre des flux
+
+
+@dataclass(frozen=True, slots=True)
 class Collection:
     dossier: str      # sous-dossier du jeu (ou chemin dans l'archive), casse ignorée
     extension: str    # « .bik », « .vp6 »
@@ -48,6 +63,7 @@ class Collection:
     clips: tuple[Cinematique, ...]
     archive: str = ""                                 # « movies.big » : vidéos dans l'archive
     voix: dict[str, str] = field(default_factory=dict)  # langue → dossier des .asf (HP4)
+    banque: Banque | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +71,7 @@ class Source:
     """Où est une vidéo (ou une voix) : un fichier, ou une entrée d'archive."""
     chemin: Path
     entree: archives_ea.Entree | None = None
+    convertir: bool = False      # EALayer3 : passe par vgmstream avant d'être lu
 
 
 def charger(chemin: Path | None = None) -> dict[str, Collection]:
@@ -84,8 +101,19 @@ def charger(chemin: Path | None = None) -> dict[str, Collection]:
         resultat[str(jeu)] = Collection(
             bloc["dossier"], bloc["ext"].lower(), bloc.get("sans_son") is True, clips,
             bloc["archive"] if isinstance(bloc.get("archive"), str) else "",
-            {str(k): v for k, v in voix.items() if isinstance(v, str)} if isinstance(voix, dict) else {})
+            {str(k): v for k, v in voix.items() if isinstance(v, str)} if isinstance(voix, dict) else {},
+            _banque(bloc.get("banque")))
     return resultat
+
+
+def _banque(bloc: object) -> Banque | None:
+    if not isinstance(bloc, dict):
+        return None
+    archive, fichiers, ordre = bloc.get("archive"), bloc.get("fichiers"), bloc.get("ordre")
+    if not (isinstance(archive, str) and isinstance(fichiers, dict) and isinstance(ordre, list)):
+        return None
+    return Banque(archive, {str(k): v for k, v in fichiers.items() if isinstance(v, str)},
+                  tuple(o for o in ordre if isinstance(o, str)))
 
 
 def _dossier(dossier_jeu: Path, nom: str) -> Path | None:
@@ -143,8 +171,13 @@ def presentes(collection: Collection, dossier_jeu: Path | None,
 
 def voix(collection: Collection, dossier_jeu: Path | None, fichier: str,
          langue: str = "fr") -> Source | None:
-    """La piste de voix séparée d'une cinématique (HP4), dans la langue voulue sinon en anglais."""
-    if dossier_jeu is None or not collection.archive or not collection.voix:
+    """La piste de voix séparée d'une cinématique : une `.asf` par langue (HP4),
+    sinon son flux dans la `Banque` (HP5). La langue voulue, sinon l'anglais."""
+    if dossier_jeu is None:
+        return None
+    if collection.banque is not None:
+        return _voix_banque(collection.banque, dossier_jeu, fichier, langue)
+    if not collection.archive or not collection.voix:
         return None
     archive, index = _index_archive(collection, dossier_jeu)
     for dossier in (collection.voix.get(langue), collection.voix.get("en")):
@@ -155,10 +188,41 @@ def voix(collection: Collection, dossier_jeu: Path | None, fichier: str,
     return None
 
 
+def _voix_banque(banque: Banque, dossier_jeu: Path, fichier: str, langue: str) -> Source | None:
+    """Le flux de `fichier` dans la banque de la langue (sinon anglaise, sinon la
+    première présente). Rien si la banque n'a pas un flux par cinématique : un
+    décalage donnerait à une vidéo la voix d'une autre."""
+    cle = fichier.lower()
+    ordre = [o.lower() for o in banque.ordre]
+    if cle not in ordre:
+        return None
+    archive = dossier_jeu / banque.archive
+    noms = [banque.fichiers[k] for k in (langue, "en") if k in banque.fichiers]
+    noms += [n for n in banque.fichiers.values() if n not in noms]
+    for nom in noms:
+        entree = archives_ea.trouver(archive, nom)
+        if entree is None:
+            continue
+        flux = archives_ea.flux_schl(archive, entree, en_tete=0)
+        if len(flux) != len(ordre):
+            log.warning("Banque %s : %d flux pour %d cinématiques", nom, len(flux), len(ordre))
+            return None
+        debut, taille = flux[ordre.index(cle)]
+        sous = archives_ea.Entree(f"{Path(nom).parent}/{Path(nom).stem}_{cle}.asf", debut, taille)
+        return Source(archive, sous, convertir=True)
+    return None
+
+
 def lisible(source: Source, cache: Path, jeu: str) -> Path | None:
-    """Le fichier que le lecteur ouvrira : tel quel, ou recopié une fois dans le cache."""
+    """Le fichier que le lecteur ouvrira : tel quel, ou recopié une fois dans le
+    cache (et converti en WAV par vgmstream pour une voix de banque)."""
     if source.entree is None:
         return source.chemin if source.chemin.is_file() else None
     langue = Path(source.entree.nom).parent.name
     cible = cache / "cinematiques" / jeu / langue / Path(source.entree.nom).name
-    return archives_ea.extraire(source.chemin, source.entree.debut, source.entree.taille, cible)
+    extrait = archives_ea.extraire(source.chemin, source.entree.debut, source.entree.taille, cible)
+    if extrait is None or not source.convertir:
+        return extrait
+    from src.core import vgmstream
+    return vgmstream.convertir(extrait, extrait.with_suffix(".wav"))
+

@@ -122,11 +122,12 @@ def _flux(f: BinaryIO, debut: int, fin: int) -> list[tuple[int, int]]:
     return flux
 
 
-def flux_schl(chemin: Path, entree: Entree) -> list[tuple[int, int]]:
-    """(début absolu, taille) de chaque flux SCHl…SCEl d'une entrée `.mus`."""
+def flux_schl(chemin: Path, entree: Entree, en_tete: int = _EN_TETE_MUS) -> list[tuple[int, int]]:
+    """(début absolu, taille) de chaque flux SCHl…SCEl d'une entrée : un `.mus`
+    (256 octets d'en-tête) ou, avec `en_tete=0`, une banque `_s.sdt` (HP5)."""
     try:
         with chemin.open("rb") as f:
-            return _flux(f, entree.debut + _EN_TETE_MUS, entree.debut + entree.taille)
+            return _flux(f, entree.debut + en_tete, entree.debut + entree.taille)
     except (OSError, struct.error) as exc:
         log.debug("Flux de %s illisibles : %s", entree.nom, exc)
         return []
