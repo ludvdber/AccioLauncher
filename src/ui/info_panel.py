@@ -4,10 +4,10 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QIcon
 from PyQt6.QtWidgets import (
-    QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
+    QHBoxLayout, QLabel, QPushButton, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
 from src.core import folio, folio_hp2, folio_hp3, sauvegardes
@@ -16,6 +16,7 @@ from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
+from src.ui.icon_button import pixmap_icone
 from src.ui.resume_partie import BlocFolio, cartes_eventail, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
 from src.core.formatting import format_size
@@ -280,9 +281,29 @@ class InfoPanel(QWidget):
         self._bloc = BlocFolio()
         self._bloc.clicked.connect(self.folio_clicked)
         self._bloc_hote = QWidget()
-        hote = QVBoxLayout(self._bloc_hote)
+        hote = QHBoxLayout(self._bloc_hote)
         hote.setContentsMargins(0, 12, 0, 0)
-        hote.addWidget(self._bloc, 0, Qt.AlignmentFlag.AlignLeft)
+        hote.setSpacing(10)
+        hote.addWidget(self._bloc, 0, Qt.AlignmentFlag.AlignVCenter)
+        # La musique et les cinématiques du jeu : un galet à côté du folio
+        # (Ludo, 2026-10-24 : un lien dans la ligne méta « fait trop long »).
+        self._medias = QPushButton()
+        self._medias.setObjectName("boutonMedias")
+        self._medias.setFixedSize(40, 40)
+        self._medias.setIcon(QIcon(pixmap_icone("musique", 20, QColor("#e6e4f0"))))
+        self._medias.setIconSize(QSize(20, 20))
+        self._medias.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._medias.setToolTip(tr("La musique et les cinématiques du jeu"))
+        self._medias.setAccessibleName(tr("La musique et les cinématiques du jeu"))
+        self._medias.setStyleSheet(themed(
+            "QPushButton#boutonMedias { background: rgba(255, 255, 255, 0.03);"
+            " border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; }"
+            "QPushButton#boutonMedias:hover, QPushButton#boutonMedias:focus {"
+            " border-color: #d6a72c; background: rgba(214, 167, 44, 0.08); }"))
+        self._medias.clicked.connect(self.mediatheque_clicked)
+        self._medias.hide()
+        hote.addWidget(self._medias, 0, Qt.AlignmentFlag.AlignVCenter)
+        hote.addStretch()
         self._bloc_hote.hide()
 
         # Ligne d'indices, épinglée sous le bouton (add_bottom_widget) :
@@ -433,8 +454,6 @@ class InfoPanel(QWidget):
             self.folio_clicked.emit()
         elif href == "a-propos":
             self._basculer_a_propos()
-        elif href == "musique":
-            self.mediatheque_clicked.emit()
         else:
             self.versions_clicked.emit()
 
@@ -580,6 +599,8 @@ class InfoPanel(QWidget):
         self._derniere.setVisible((resume is not None and not self._a_propos)
                                   or (resume is None and avancee is not None))
         self._bloc_hote.setVisible(resume is not None)
+        from src.ui.mediatheque import a_des_medias
+        self._medias.setVisible(game is not None and a_des_medias(game.id))
         if resume is None and avancee is not None and avancee.avancement is not None:
             self._derniere.setText(phrase_derniere_partie(
                 datetime.fromtimestamp(avancee.modifie),
@@ -628,10 +649,6 @@ class InfoPanel(QWidget):
         elif game.id in folio.JEUX and self._manager.is_installed(game.id):
             morceaux.append(f'<a href="folio" style="color:{gold}; text-decoration:none;">'
                             + _insecable(escape(tr("Folio").upper(), quote=False)) + '</a>')
-        from src.ui.mediatheque import a_des_medias
-        if a_des_medias(game.id) and self._manager.is_installed(game.id):
-            morceaux.append(f'<a href="musique" style="color:{gold}; text-decoration:none;">'
-                            + _insecable(escape(tr("Musique").upper(), quote=False)) + '</a>')
         point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
         self._indices.setToolTip(game.controller_note if manette else "")

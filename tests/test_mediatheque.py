@@ -205,6 +205,8 @@ class TestPage:
         assert not win._mediatheque.nouveaux("hp2", "musique")
         assert win._mediatheque.nouveaux("hp3", "cinematiques") == {"SiriusPhoto"}
         page.rubrique("cinematiques")
+        assert page.jeu == "hp2", "le jeu choisi en haut vaut pour les deux rubriques"
+        page.montrer("hp3")
         assert not win._mediatheque.nouveaux("hp3", "cinematiques")
         win._mediatheque.ouvrir("musique", "hp3")
         assert not onglet.pastille, "tout a été vu : le point or s'éteint"
@@ -224,7 +226,26 @@ class TestPage:
         win = fenetre_avec_jeux
         win._detail.mediatheque_demandee.emit("hp2")
         page = win._pages.page
-        assert page._musique._jeu == "hp2"
+        assert page.jeu == "hp2"
+
+    def test_couper_le_son_apres_la_page_ne_plante_pas(self, fenetre_avec_jeux):
+        """La page fermée restait branchée au lecteur : couper le son repeignait un disque détruit."""
+        import gc
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp2")
+        win._pages.page.accept()
+        gc.collect()
+        win._mediatheque.mini._son.click()
+        win._mediatheque.mini._son.click()
+
+    def test_quitter_la_page_rend_le_fond_sonore(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        fond = win._mediatheque.fond
+        fond.choisir_fond("hp2/" + discographie.charger()["hp2"][0].fichier)
+        win._mediatheque.ouvrir("musique", "hp2")
+        fond.ecouter("hp2/" + discographie.charger()["hp2"][1].fichier)
+        win._pages.page.accept()
+        assert fond.morceau == fond.fond
 
     def test_le_haut_parleur_coupe_tout(self, fenetre_avec_jeux):
         win = fenetre_avec_jeux

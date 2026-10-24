@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
+from PyQt6.QtCore import QElapsedTimer, QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import (
     QBrush,
     QColor,
@@ -111,6 +111,7 @@ class Disque(QWidget):
         self._jeu = ""
         self._jaquette: Path | None = None
         self._angle = 0.0
+        self._horloge = QElapsedTimer()
         self._tourne = False
         self._abonne = False
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -137,6 +138,7 @@ class Disque(QWidget):
         if oui and not self._abonne:
             Ticker.instance().tick.connect(self._battement)
             self._abonne = True
+            self._horloge.start()
         elif not oui and self._abonne:
             Ticker.detach(self._battement)
             self._abonne = False
@@ -152,7 +154,8 @@ class Disque(QWidget):
     def _battement(self) -> None:
         if not self.isVisible():
             return
-        self._angle = (self._angle + 360.0 / (_TOUR_S * 30.0)) % 360.0
+        ecoule = self._horloge.restart() / 1000.0
+        self._angle = (self._angle + 360.0 * min(ecoule, 0.25) / _TOUR_S) % 360.0
         self.update()
 
     def paintEvent(self, _event) -> None:  # noqa: N802 (Qt)

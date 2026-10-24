@@ -254,7 +254,13 @@ class FondSonore(QObject):
             self._lecteur = QMediaPlayer(self)
             self._lecteur.setAudioOutput(self._sortie)
             self._lecteur.setLoops(QMediaPlayer.Loops.Infinite)
+            # `play()` est asynchrone : l'état lu juste après valait encore
+            # « arrêté », et le disque de la page ne tournait pas (Ludo, 2026-10-24).
+            self._lecteur.playbackStateChanged.connect(self._etat_change)
         return self._lecteur
+
+    def _etat_change(self, _etat) -> None:
+        self.change.emit()
 
     def arreter(self) -> None:
         """Fermeture du launcher : le lecteur s'arrête et lâche son fichier."""

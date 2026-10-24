@@ -87,13 +87,14 @@ def construire_dialogue(report: str):
     from src.core.i18n import tr
     from src.core.liens import DISCORD_URL
     from src.ui.composants import feuille_de_style, police, texte
-    from src.ui.fenetre_message import cadre_conserve
     from src.ui.icon_button import pixmap_icone
     from src.ui.theme import themed
     from src.ui.utils import open_url
 
     # Refait le 2026-10-09 sur les composants : le titre dit ce qui s'est passé,
-    # une ligne verte ce qui ne risque rien, puis le rapport et les boutons.
+    # puis le rapport et les boutons. L'encadré vert « Vos jeux et vos
+    # sauvegardes ne sont pas touchés » a été retiré le 2026-10-24 (Ludo : « ça
+    # n'a pas de sens ») : il disait un état normal, ce que le launcher s'interdit.
     dlg = QDialog()
     dlg.setWindowTitle(tr("Accio Launcher — Erreur inattendue"))
     dlg.setMinimumSize(560, 460)
@@ -126,10 +127,6 @@ def construire_dialogue(report: str):
     layout.addWidget(texte(tr(
         "Copiez le rapport et collez-le sur le Discord pour obtenir de l'aide, "
         "ou ouvrez une issue GitHub pré-remplie."), 14, "#d9d6e8", retour=True))
-    layout.addSpacing(14)
-
-    layout.addWidget(cadre_conserve(tr("Vos jeux et vos sauvegardes ne sont pas touchés.")))
-
     layout.addSpacing(14)
 
     text = QPlainTextEdit(report)

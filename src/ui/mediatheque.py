@@ -74,6 +74,7 @@ class Mediatheque(QObject):
         self._credits = discographie.charger_credits()
         self._cines = cinematiques.charger()
         self._avances: dict[str, int | None] = {}
+        self._vus = discographie.charger_vus()
         self._presentes: dict[str, dict[str, Path]] = {}
 
         self.mini = MiniLecteur(self)
@@ -122,6 +123,11 @@ class Mediatheque(QObject):
                     if e.game.id in self._morceaux and self._manager.is_installed(e.game.id)]
         return [e.game for e in self._manager.get_games() if self._presentes.get(e.game.id)]
 
+    def jeux_tous(self) -> list[str]:
+        """Les jeux qui ont de la musique OU des cinématiques, dans l'ordre du catalogue."""
+        avec = {g.id for r in (MUSIQUE, CINEMATIQUES) for g in self.jeux(r)}
+        return [e.game.id for e in self._manager.get_games() if e.game.id in avec]
+
     def nom(self, jeu: str) -> str:
         from src.ui.galerie_page import nom_court
         game = self._manager.get_game_by_id(jeu)
@@ -164,16 +170,18 @@ class Mediatheque(QObject):
                 if c.fichier in presentes and self.ouvert(jeu, c.seuil)}
 
     def nouveaux(self, jeu: str, rubrique: str) -> set[str]:
-        return discographie.nouveaux(_cle_vus(jeu, rubrique), self._ouverts(jeu, rubrique),
-                                     discographie.charger_vus())
+        return discographie.nouveaux(_cle_vus(jeu, rubrique), self._ouverts(jeu, rubrique), self._vus)
 
     def marquer_vus(self, jeu: str, rubrique: str) -> None:
-        discographie.marquer_vus(_cle_vus(jeu, rubrique), self._ouverts(jeu, rubrique))
+        cle_vus, ouverts = _cle_vus(jeu, rubrique), self._ouverts(jeu, rubrique)
+        if ouverts <= self._vus.get(cle_vus, set()):
+            return
+        discographie.marquer_vus(cle_vus, ouverts)
+        self._vus.setdefault(cle_vus, set()).update(ouverts)
         self._barre_titre.set_pastille(MEDIATHEQUE, self.a_des_nouveautes())
 
     def a_des_nouveautes(self) -> bool:
-        vus = discographie.charger_vus()
-        return any(discographie.nouveaux(_cle_vus(g.id, r), self._ouverts(g.id, r), vus)
+        return any(discographie.nouveaux(_cle_vus(g.id, r), self._ouverts(g.id, r), self._vus)
                    for r in (MUSIQUE, CINEMATIQUES) for g in self.jeux(r))
 
     def enregistrer(self, cle_morceau: str) -> Path | None:

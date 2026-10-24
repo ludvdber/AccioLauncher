@@ -9,7 +9,7 @@ showEvent/hideEvent (ou pause/resume) et gardent leur check `isVisible()`.
 """
 
 from PyQt6 import sip
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 
 TICK_MS = 33  # ~30 FPS
 
@@ -25,6 +25,7 @@ class Ticker(QObject):
         super().__init__()
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_MS)
+        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._timer.timeout.connect(self.tick)
         self._timer.start()
 
