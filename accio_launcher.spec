@@ -93,6 +93,7 @@ a = Analysis(
         (os.path.join(ROOT, "src", "data", "i18n"), os.path.join("data", "i18n")),
         (os.path.join(ROOT, "src", "data", "nouveautes.json"), os.path.join("data")),
         (os.path.join(ROOT, "src", "data", "atelier.json"), os.path.join("data")),
+        (os.path.join(ROOT, "src", "data", "discographie.json"), os.path.join("data")),
         (os.path.join(ROOT, "assets"), "assets"),
         (os.path.join(ROOT, "assets", "7z"), os.path.join("assets", "7z")),
     ],

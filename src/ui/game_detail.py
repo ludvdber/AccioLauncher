@@ -59,6 +59,8 @@ class GameDetailView(QWidget):
     cinema_toggled = pyqtSignal(bool)
     # Les réglages du jeu, à ouvrir en PAGE par la fenêtre (`pages.py`).
     page_demandee = pyqtSignal(object)
+    # La bande-annonce s'entend (ou plus) : la musique de fond lui laisse la place.
+    son_bande_annonce = pyqtSignal(bool)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -67,6 +69,7 @@ class GameDetailView(QWidget):
         # Nom du jeu qui tourne (ou démarre), "" sinon — fourni par la fenêtre,
         # qui possède la session. Seul, sans fenêtre : rien ne tourne.
         self.partie_en_cours = lambda: ""
+        self._son_emis = False   # dernier état annoncé par `son_bande_annonce`
 
         # Sous-systèmes
         self._video = VideoPlayer(self)
@@ -406,7 +409,7 @@ class GameDetailView(QWidget):
         if video_path is None:
             self._audio_bar.hide()
             return
-        muted = self.manager.config.mute_videos
+        muted = self._muette()
         if self._video.play(str(video_path), muted=muted, volume=self._audio_bar.volume() / 100.0):
             self._audio_bar.set_muted_icon(muted)
             self._audio_bar.set_paused_icon(False)
@@ -415,6 +418,18 @@ class GameDetailView(QWidget):
             self._audio_bar.show()
         else:
             self._audio_bar.hide()
+        self._signaler_son()
+
+    def _muette(self) -> bool:
+        config = self.manager.config
+        return config.mute_videos or config.son_coupe
+
+    def _signaler_son(self) -> None:
+        """Dit à la musique de fond si une bande-annonce s'entend, à chaque changement."""
+        sonore = self._video.is_playing and not self._video.muted and not self._video.paused
+        if sonore != self._son_emis:
+            self._son_emis = sonore
+            self.son_bande_annonce.emit(sonore)
 
     def _stop_video(self) -> None:
         # Sortir du mode cinéma d'abord, sinon une fenêtre vide sans issue.
@@ -427,6 +442,7 @@ class GameDetailView(QWidget):
         self._video.stop()
         self._bg.clear_video()
         self._audio_bar.hide()
+        self._signaler_son()
 
     def _on_video_ended(self) -> None:
         # EndOfMedia → relâcher la source pour libérer le décodeur…
@@ -451,6 +467,7 @@ class GameDetailView(QWidget):
 
     def _on_mute_clicked(self) -> None:
         self._audio_bar.set_muted_icon(self._video.toggle_mute())
+        self._signaler_son()
 
     def _on_play_clicked(self) -> None:
         if self._video.paused:
@@ -458,11 +475,13 @@ class GameDetailView(QWidget):
         else:
             self._video.pause()
         self._audio_bar.set_paused_icon(self._video.paused)
+        self._signaler_son()
 
     def _on_volume_changed(self, value: int) -> None:
         self._video.set_volume(value)
         if not self._video.muted:
             self._audio_bar.set_muted_icon(False)
+        self._signaler_son()
 
     # ──────────────────── API publique ────────────────────
 
@@ -557,10 +576,12 @@ class GameDetailView(QWidget):
         self._position_info()
 
     def apply_audio_config(self) -> None:
-        """Applique « Couper le son des vidéos » à la vidéo EN COURS (réglage live)."""
-        muted = self.manager.config.mute_videos
+        """Applique « Couper le son des vidéos », ou le son coupé de la barre du
+        bas, à la vidéo EN COURS (réglage live)."""
+        muted = self._muette()
         self._video.set_muted(muted)
         self._audio_bar.set_muted_icon(muted)
+        self._signaler_son()
 
     @property
     def ops(self) -> GameOperations:

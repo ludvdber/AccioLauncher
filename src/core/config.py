@@ -51,6 +51,7 @@ GAMES_JSON_PATH = _BUNDLE_DIR / "data" / "games.json"
 I18N_DIR = _BUNDLE_DIR / "data" / "i18n"
 NOUVEAUTES_PATH = _BUNDLE_DIR / "data" / "nouveautes.json"
 ATELIER_PATH = _BUNDLE_DIR / "data" / "atelier.json"
+DISCOGRAPHIE_PATH = _BUNDLE_DIR / "data" / "discographie.json"
 
 # Langue proposee quand rien n'est encore choisi. Volontairement l'anglais
 # et non le francais : le launcher vise un public international, et le
@@ -110,6 +111,13 @@ def _as_dict(value: object) -> dict[str, Any]:
 def _as_bool(value: object, default: bool) -> bool:
     """Coerce une valeur JSON en bool, sinon le défaut."""
     return value if isinstance(value, bool) else default
+
+
+def _as_volume(value: object) -> int:
+    """Un volume de 0 à 100 ; 35 si absent ou mal typé (un bool n'est pas un volume)."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 35
+    return max(0, min(100, value))
 
 
 def _as_liste(value: object) -> list[str]:
@@ -186,6 +194,14 @@ class Config:
     # Faux sur une config neuve ET sur une config d'avant la visite : elle
     # vient une fois après l'assistant, et une fois après la mise à jour.
     visite_vue: bool = False
+    # Musique de fond du launcher (`src/ui/fond_sonore.py`) : « hp1/Common_Room »,
+    # vide = aucune. Choisie dans la page Musique, jamais d'office.
+    musique_fond: str = ""
+    volume_musique: int = 35
+    # Le haut-parleur de la barre du bas : tout le son du launcher, musique et
+    # bandes-annonces, coupé d'un clic. Distinct de `mute_videos`, qui ne règle
+    # que les bandes-annonces et revient tel quel quand on rallume.
+    son_coupe: bool = False
     # Version du launcher lancée la dernière fois : c'est en la voyant monter
     # qu'on sait qu'une mise à jour vient d'être installée. Une config neuve
     # porte la version courante ; une config d'avant la 1.1.6 se charge VIDE.
@@ -246,6 +262,9 @@ class Config:
                     kofi_milestone_thanked=_as_bool(
                         data.get("kofi_milestone_thanked"), False),
                     visite_vue=_as_bool(data.get("visite_vue"), False),
+                    musique_fond=_as_str(data.get("musique_fond"), ""),
+                    volume_musique=_as_volume(data.get("volume_musique")),
+                    son_coupe=_as_bool(data.get("son_coupe"), False),
                     version_lancee=_as_str(data.get("version_lancee"), ""),
                     etapes_assistant=_as_liste(data.get("etapes_assistant")),
                     installed_versions=_as_map(data.get("installed_versions"), str),
@@ -291,6 +310,9 @@ class Config:
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,
                 "visite_vue": self.visite_vue,
+                "musique_fond": self.musique_fond,
+                "volume_musique": self.volume_musique,
+                "son_coupe": self.son_coupe,
                 "version_lancee": self.version_lancee,
                 "etapes_assistant": self.etapes_assistant,
                 "installed_versions": self.installed_versions,

@@ -1,0 +1,1931 @@
+{
+ "_note": "Généré depuis l'artefact Discographie (titres et seuils validés par Ludo). s = seuil d'avancement en % ; tout le jeu s'ouvre à 75 %.",
+ "jeux": {
+  "hp1": [
+   {
+    "f": "Common_Room",
+    "t": "Common Room",
+    "s": 16
+   },
+   {
+    "f": "Crabbe_Goyle1",
+    "t": "Crabbe Goyle1",
+    "s": 16
+   },
+   {
+    "f": "Crabbe_Goyle2",
+    "t": "Crabbe Goyle2",
+    "s": 16
+   },
+   {
+    "f": "Crabbe_Goyle3",
+    "t": "Crabbe Goyle3",
+    "s": 16
+   },
+   {
+    "f": "Fluffy_Flute_2_v4",
+    "t": "Fluffy Flute 2 v4",
+    "s": 64
+   },
+   {
+    "f": "Fluffy_Flute_3_v4",
+    "t": "Fluffy Flute 3 v4",
+    "s": 64
+   },
+   {
+    "f": "Fluffy_Flute_4_v4",
+    "t": "Fluffy Flute 4 v4",
+    "s": 64
+   },
+   {
+    "f": "Fluffy_Flute_5_v4",
+    "t": "Fluffy Flute 5 v4",
+    "s": 64
+   },
+   {
+    "f": "gargoyle",
+    "t": "gargoyle",
+    "s": 75
+   },
+   {
+    "f": "Green_Cauldron_mx",
+    "t": "Green Cauldron",
+    "s": 19
+   },
+   {
+    "f": "happy_hogwarts_mxlp1",
+    "t": "happy hogwarts mxlp1",
+    "s": 32
+   },
+   {
+    "f": "hogwarts_neutral_mxlp1",
+    "t": "hogwarts neutral mxlp1",
+    "s": 32
+   },
+   {
+    "f": "hogwarts_neutralgood_mxlp1",
+    "t": "hogwarts neutralgood mxlp1",
+    "s": 32
+   },
+   {
+    "f": "Hooded_Figure",
+    "t": "Hooded Figure",
+    "s": 75
+   },
+   {
+    "f": "Invisible",
+    "t": "Invisible",
+    "s": 75
+   },
+   {
+    "f": "JS_Chess",
+    "t": "JS Chess",
+    "s": 71
+   },
+   {
+    "f": "JS_Chess_end_mx",
+    "t": "JS Chess end",
+    "s": 71
+   },
+   {
+    "f": "JS_Chess_v3_mx",
+    "t": "JS Chess v3",
+    "s": 71
+   },
+   {
+    "f": "JS_dark_hogwarts_mx",
+    "t": "JS dark hogwarts",
+    "s": 32
+   },
+   {
+    "f": "JS_Devils_Snare_end_mx",
+    "t": "JS Devils Snare end",
+    "s": 68
+   },
+   {
+    "f": "JS_Devils_Snare_mx",
+    "t": "JS Devils Snare",
+    "s": 68
+   },
+   {
+    "f": "JS_Fireseeds_no_loop_v2_mx",
+    "t": "JS Fireseeds no loop v2",
+    "s": 35
+   },
+   {
+    "f": "JS_Fireseeds_v2_mx",
+    "t": "JS Fireseeds v2",
+    "s": 35
+   },
+   {
+    "f": "JS_Flying_Key_v3_mx",
+    "t": "JS Flying Key v3",
+    "s": 10
+   },
+   {
+    "f": "JS_flying_keys",
+    "t": "JS flying keys",
+    "s": 10
+   },
+   {
+    "f": "JS_Free_Hedwig_mx",
+    "t": "JS Free Hedwig",
+    "s": 0
+   },
+   {
+    "f": "JS_GreenCauldron-24",
+    "t": "JS GreenCauldron 24",
+    "s": 19
+   },
+   {
+    "f": "JS_GreenCauldron_08",
+    "t": "JS GreenCauldron 08",
+    "s": 19
+   },
+   {
+    "f": "JS_GreenCauldron_24",
+    "t": "JS GreenCauldron 24",
+    "s": 19
+   },
+   {
+    "f": "JS_Hagrid's_Hut_Nobert_Hatch_mx",
+    "t": "JS Hagrid's Hut Nobert Hatch",
+    "s": 58
+   },
+   {
+    "f": "JS_Hagrid's_Hut_Quidditch_book_mx",
+    "t": "JS Hagrid's Hut Quidditch book",
+    "s": 39
+   },
+   {
+    "f": "JS_Hagrids_Hut_Nobert_Hatch_mx",
+    "t": "JS Hagrids Hut Nobert Hatch",
+    "s": 58
+   },
+   {
+    "f": "JS_Hagrids_Hut_Quidditch_book_mx",
+    "t": "JS Hagrids Hut Quidditch book",
+    "s": 39
+   },
+   {
+    "f": "JS_Harry_Dies_mx",
+    "t": "JS Harry Dies",
+    "s": 75
+   },
+   {
+    "f": "JS_HogwartsDark_07",
+    "t": "JS HogwartsDark 07",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsDark_17",
+    "t": "JS HogwartsDark 17",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsDark_18",
+    "t": "JS HogwartsDark 18",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsDark_23",
+    "t": "JS HogwartsDark 23",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsDark_28",
+    "t": "JS HogwartsDark 28",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsHappy_05",
+    "t": "JS HogwartsHappy 05",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsHappy_12",
+    "t": "JS HogwartsHappy 12",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsHappy_19",
+    "t": "JS HogwartsHappy 19",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsHappy_20",
+    "t": "JS HogwartsHappy 20",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsNeutral_07",
+    "t": "JS HogwartsNeutral 07",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsNeutral_09",
+    "t": "JS HogwartsNeutral 09",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsNeutral_14",
+    "t": "JS HogwartsNeutral 14",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsNeutral_17",
+    "t": "JS HogwartsNeutral 17",
+    "s": 32
+   },
+   {
+    "f": "JS_HogwartsNeutral_28",
+    "t": "JS HogwartsNeutral 28",
+    "s": 32
+   },
+   {
+    "f": "JS_HP_Title_Screen_v2",
+    "t": "JS HP Title Screen v2",
+    "s": 0
+   },
+   {
+    "f": "JS_Invisible_mx",
+    "t": "JS Invisible",
+    "s": 75
+   },
+   {
+    "f": "JS_main_title_mx",
+    "t": "JS main title",
+    "s": 0
+   },
+   {
+    "f": "JS_malfoy1",
+    "t": "JS malfoy1",
+    "s": 3
+   },
+   {
+    "f": "JS_Malfoy_end_mx",
+    "t": "JS Malfoy end",
+    "s": 3
+   },
+   {
+    "f": "JS_malfoy_fight_v3_mx",
+    "t": "JS malfoy fight v3",
+    "s": 3
+   },
+   {
+    "f": "JS_Opening_Castle_Fly_Through_mx",
+    "t": "JS Opening Castle Fly Through",
+    "s": 0
+   },
+   {
+    "f": "JS_Peeves_chase_end_mx",
+    "t": "JS Peeves chase end",
+    "s": 6
+   },
+   {
+    "f": "JS_Peeves_chase_v2_mx",
+    "t": "JS Peeves chase v2",
+    "s": 6
+   },
+   {
+    "f": "JS_quidditch_fanfare",
+    "t": "JS quidditch fanfare",
+    "s": 39
+   },
+   {
+    "f": "JS_quidditch_theme",
+    "t": "JS quidditch theme",
+    "s": 39
+   },
+   {
+    "f": "JS_Quidditch_v2_mx",
+    "t": "JS Quidditch v2",
+    "s": 39
+   },
+   {
+    "f": "JS_quidditch_win",
+    "t": "JS quidditch win",
+    "s": 39
+   },
+   {
+    "f": "JS_Quirell_Stage_2_end_mx",
+    "t": "JS Quirell Stage 2 end",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell1",
+    "t": "JS Quirrell1",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell1_mx",
+    "t": "JS Quirrell1",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell2",
+    "t": "JS Quirrell2",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell2_08",
+    "t": "JS Quirrell2 08",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell2_09",
+    "t": "JS Quirrell2 09",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell2_18",
+    "t": "JS Quirrell2 18",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell2_20",
+    "t": "JS Quirrell2 20",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell2_mx",
+    "t": "JS Quirrell2",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell3",
+    "t": "JS Quirrell3",
+    "s": 13
+   },
+   {
+    "f": "JS_Quirrell3_mx",
+    "t": "JS Quirrell3",
+    "s": 13
+   },
+   {
+    "f": "JS_Remeberall_Chase_end_mx",
+    "t": "JS Remeberall Chase end",
+    "s": 0
+   },
+   {
+    "f": "JS_Rememberall_Chase_mx",
+    "t": "JS Rememberall Chase",
+    "s": 0
+   },
+   {
+    "f": "JS_StoryBook_v2_mx",
+    "t": "JS StoryBook v2",
+    "s": 0
+   },
+   {
+    "f": "JS_Troll_Asleep",
+    "t": "JS Troll Asleep",
+    "s": 42
+   },
+   {
+    "f": "JS_Troll_Awake_v3_mx",
+    "t": "JS Troll Awake v3",
+    "s": 42
+   },
+   {
+    "f": "JS_Troll_chase_v3_mx",
+    "t": "JS Troll chase v3",
+    "s": 42
+   },
+   {
+    "f": "JS_troll_run_loop",
+    "t": "JS troll run",
+    "s": 42
+   },
+   {
+    "f": "JS_Voldemort_and_Unicorn_mx",
+    "t": "JS Voldemort and Unicorn",
+    "s": 13
+   },
+   {
+    "f": "Phoenix",
+    "t": "Phoenix",
+    "s": 75
+   },
+   {
+    "f": "Pickup22",
+    "t": "Pickup22",
+    "s": 75
+   },
+   {
+    "f": "Protect_Ron",
+    "t": "Protect Ron",
+    "s": 75
+   },
+   {
+    "f": "quidcatch",
+    "t": "quidcatch",
+    "s": 39
+   },
+   {
+    "f": "Reward",
+    "t": "Reward",
+    "s": 75
+   },
+   {
+    "f": "SecretCauldron",
+    "t": "SecretCauldron",
+    "s": 19
+   },
+   {
+    "f": "shock",
+    "t": "shock",
+    "s": 75
+   },
+   {
+    "f": "Troll_asleep",
+    "t": "Troll asleep",
+    "s": 42
+   },
+   {
+    "f": "Troll_awake",
+    "t": "Troll awake",
+    "s": 42
+   },
+   {
+    "f": "Troll_chase",
+    "t": "Troll chase",
+    "s": 42
+   },
+   {
+    "f": "Voldemort_Pillar",
+    "t": "Voldemort Pillar",
+    "s": 13
+   }
+  ],
+  "hp2": [
+   {
+    "f": "Adv11a_endroom_action_edit",
+    "t": "Adv11a endroom action",
+    "s": 16
+   },
+   {
+    "f": "Adv12Chamber_Hallway_edit",
+    "t": "Adv12Chamber Hallway",
+    "s": 16
+   },
+   {
+    "f": "Adv12Chamber_StartHall_edit",
+    "t": "Adv12Chamber StartHall",
+    "s": 16
+   },
+   {
+    "f": "Adv4Greenhouse_Music",
+    "t": "Adv4Greenhouse",
+    "s": 31
+   },
+   {
+    "f": "Adv8Forest_battle_music_edit",
+    "t": "Adv8Forest battle",
+    "s": 62
+   },
+   {
+    "f": "Basil_cutscene_Pt1",
+    "t": "Basil cutscene Pt1",
+    "s": 0
+   },
+   {
+    "f": "Basil_cutscene_Pt2",
+    "t": "Basil cutscene Pt2",
+    "s": 0
+   },
+   {
+    "f": "Basil_cutscene_Pt3_Fawkes_eye_poke",
+    "t": "Basil cutscene Pt3 Fawkes eye poke",
+    "s": 0
+   },
+   {
+    "f": "Basil_cutscene_Pt4_dead",
+    "t": "Basil cutscene Pt4 dead",
+    "s": 0
+   },
+   {
+    "f": "Basil_fight_phase1",
+    "t": "Basil fight phase1",
+    "s": 0
+   },
+   {
+    "f": "Basil_fight_phase2",
+    "t": "Basil fight phase2",
+    "s": 0
+   },
+   {
+    "f": "cutscene_dumbledore_expelled",
+    "t": "cutscene dumbledore expelled",
+    "s": 4
+   },
+   {
+    "f": "cutscene_HCC_second_place_suspense",
+    "t": "cutscene HCC second place suspense",
+    "s": 75
+   },
+   {
+    "f": "cutscene_HouseCupCeremony_finale_loop",
+    "t": "cutscene HouseCupCeremony finale",
+    "s": 75
+   },
+   {
+    "f": "cutscene_HouseCupCeremony_intro_loop",
+    "t": "cutscene HouseCupCeremony intro",
+    "s": 75
+   },
+   {
+    "f": "cutscene_music_Turn_into_Goyle",
+    "t": "cutscene music Turn into Goyle",
+    "s": 43
+   },
+   {
+    "f": "Cutscene_Quid_Practice_Slyth_Invasion",
+    "t": "Cutscene Quid Practice Slyth Invasion",
+    "s": 55
+   },
+   {
+    "f": "dark_hogwarts_mx",
+    "t": "dark hogwarts",
+    "s": 4
+   },
+   {
+    "f": "DescentToCoS",
+    "t": "DescentToCoS",
+    "s": 0
+   },
+   {
+    "f": "DuelingBeginning_Music",
+    "t": "DuelingBeginning",
+    "s": 51
+   },
+   {
+    "f": "Enter-Basilisk",
+    "t": "Enter Basilisk",
+    "s": 0
+   },
+   {
+    "f": "EntryHall_DungeonHall_music",
+    "t": "EntryHall DungeonHall",
+    "s": 23
+   },
+   {
+    "f": "fireseeds_loop_mx",
+    "t": "fireseeds",
+    "s": 75
+   },
+   {
+    "f": "Front_End_Music",
+    "t": "Front End",
+    "s": 0
+   },
+   {
+    "f": "Happy_Hogwarts",
+    "t": "Happy Hogwarts",
+    "s": 0
+   },
+   {
+    "f": "happy_hogwarts_mx",
+    "t": "happy hogwarts",
+    "s": 0
+   },
+   {
+    "f": "Harry_As_Goyle",
+    "t": "Harry As Goyle",
+    "s": 43
+   },
+   {
+    "f": "hogwarts_neutral_mx",
+    "t": "hogwarts neutral",
+    "s": 0
+   },
+   {
+    "f": "HousePointsCeremony_Music",
+    "t": "HousePointsCeremony",
+    "s": 75
+   },
+   {
+    "f": "Infirmary_Music_Loop",
+    "t": "Infirmary",
+    "s": 75
+   },
+   {
+    "f": "Intro_Movie_Music_Edit",
+    "t": "Intro Movie",
+    "s": 0
+   },
+   {
+    "f": "Knockturn_Alley",
+    "t": "Knockturn Alley",
+    "s": 0
+   },
+   {
+    "f": "Music_devils_snare",
+    "t": "Music devils snare",
+    "s": 75
+   },
+   {
+    "f": "Music_Green_Cauldron",
+    "t": "Music Green Cauldron",
+    "s": 75
+   },
+   {
+    "f": "Music_Opening_Castle_Fly-through",
+    "t": "Music Opening Castle Fly through",
+    "s": 0
+   },
+   {
+    "f": "Music_StoryBook_v2",
+    "t": "Music StoryBook v2",
+    "s": 0
+   },
+   {
+    "f": "Narration_Music_Edit",
+    "t": "Narration",
+    "s": 75
+   },
+   {
+    "f": "Narration_Music_Edit2",
+    "t": "Narration Music Edit2",
+    "s": 75
+   },
+   {
+    "f": "Narration_Music_Edit3",
+    "t": "Narration Music Edit3",
+    "s": 75
+   },
+   {
+    "f": "Narration_Music_Edit4",
+    "t": "Narration Music Edit4",
+    "s": 75
+   },
+   {
+    "f": "Opening_Castle_Fly-through_Edit",
+    "t": "Opening Castle Fly through",
+    "s": 0
+   },
+   {
+    "f": "Opening_Castle_Fly_Through_mx",
+    "t": "Opening Castle Fly Through",
+    "s": 0
+   },
+   {
+    "f": "Peeves_chase_v2 _mx",
+    "t": "Peeves chase v2 ",
+    "s": 75
+   },
+   {
+    "f": "PrivetDrive2_late2school",
+    "t": "PrivetDrive2 late2school",
+    "s": 8
+   },
+   {
+    "f": "Quidditch_v2_mx",
+    "t": "Quidditch v2",
+    "s": 39
+   },
+   {
+    "f": "SM_ARA_AragogBossOrch_01",
+    "t": "SM ARA AragogBossOrch 01",
+    "s": 66
+   },
+   {
+    "f": "sm_bur_playful_01_loopedit",
+    "t": "sm bur playful 01 loopedit",
+    "s": 75
+   },
+   {
+    "f": "sm_bur_playful_01V2",
+    "t": "sm bur playful 01V2",
+    "s": 75
+   },
+   {
+    "f": "sm_bur_PlayfulFail_01",
+    "t": "sm bur PlayfulFail 01",
+    "s": 75
+   },
+   {
+    "f": "sm_bur_PlayfulFinish_01",
+    "t": "sm bur PlayfulFinish 01",
+    "s": 75
+   },
+   {
+    "f": "sm_bur_PlayfulReward_01",
+    "t": "sm bur PlayfulReward 01",
+    "s": 75
+   },
+   {
+    "f": "sm_bur_skurgeActionEdit_01_ogg",
+    "t": "sm bur skurgeActionEdit 01 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_bur_washing_02_V4",
+    "t": "sm bur washing 02 V4",
+    "s": 75
+   },
+   {
+    "f": "sm_cch_CharmsFireCrabs_01",
+    "t": "sm cch CharmsFireCrabs 01",
+    "s": 75
+   },
+   {
+    "f": "sm_cch_CharmSpellAtmos_01",
+    "t": "sm cch CharmSpellAtmos 01",
+    "s": 75
+   },
+   {
+    "f": "sm_cch_charmsSpellbook_01",
+    "t": "sm cch charmsSpellbook 01",
+    "s": 75
+   },
+   {
+    "f": "sm_cch_charmsTense_01",
+    "t": "sm cch charmsTense 01",
+    "s": 75
+   },
+   {
+    "f": "sm_cda_dada_cautiousEdit_01_v2",
+    "t": "sm cda dada cautiousEdit 01 v2",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_DADAAction_01",
+    "t": "SM CDA DADAAction 01",
+    "s": 75
+   },
+   {
+    "f": "sm_CDA_DADABuildr",
+    "t": "sm CDA DADABuildr",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_DADACaudrons_01",
+    "t": "SM CDA DADACaudrons 01",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_DADACauldrons_01",
+    "t": "SM CDA DADACauldrons 01",
+    "s": 75
+   },
+   {
+    "f": "sm_cda_dadaShaft-S_02",
+    "t": "sm cda dadaShaft S 02",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_DADATrapped_01",
+    "t": "SM CDA DADATrapped 01",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_ShaftHitsA_01",
+    "t": "SM CDA ShaftHitsA 01",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_ShaftHitsB_01",
+    "t": "SM CDA ShaftHitsB 01",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_ShaftHitsC_01",
+    "t": "SM CDA ShaftHitsC 01",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_ShaftHitsD_01",
+    "t": "SM CDA ShaftHitsD 01",
+    "s": 75
+   },
+   {
+    "f": "sm_cda_skurgeActionEdit_02_ogg",
+    "t": "sm cda skurgeActionEdit 02 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_cda_skurgeBlockedEdit_01_ogg",
+    "t": "sm cda skurgeBlockedEdit 01 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_cda_skurgeIntroEdit_03_ogg",
+    "t": "sm cda skurgeIntroEdit 03 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_cda_skurgeOpenEdit_01_ogg",
+    "t": "sm cda skurgeOpenEdit 01 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_Challenge_Complete",
+    "t": "sm Challenge Complete",
+    "s": 75
+   },
+   {
+    "f": "SM_COS_Basilisk01Orch_01",
+    "t": "SM COS Basilisk01Orch 01",
+    "s": 0
+   },
+   {
+    "f": "SM_COS_Basilisk1-S_01",
+    "t": "SM COS Basilisk1 S 01",
+    "s": 0
+   },
+   {
+    "f": "sm_ctr_GhostChamber_LP",
+    "t": "sm ctr GhostChamber LP",
+    "s": 0
+   },
+   {
+    "f": "sm_dia_Ambient02_01",
+    "t": "sm dia Ambient02 01",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_AmbientLoop_01",
+    "t": "sm dia AmbientLoop 01",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_DiagonFail_01",
+    "t": "sm dia DiagonFail 01",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_diagonfalling",
+    "t": "sm dia diagonfalling",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_diagonPlayful_01",
+    "t": "sm dia diagonPlayful 01",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_diagonPlayfulLoop_01",
+    "t": "sm dia diagonPlayfulLoop 01",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_DiagonReward_01",
+    "t": "sm dia DiagonReward 01",
+    "s": 75
+   },
+   {
+    "f": "sm_dia_GambolJapesLoop_01",
+    "t": "sm dia GambolJapesLoop 01",
+    "s": 75
+   },
+   {
+    "f": "SM_DIA_Knockturn_01",
+    "t": "SM DIA Knockturn 01",
+    "s": 0
+   },
+   {
+    "f": "sm_DRC_DRACO_Theme_LP",
+    "t": "sm DRC DRACO Theme LP",
+    "s": 75
+   },
+   {
+    "f": "sm_dueling_lose",
+    "t": "sm dueling lose",
+    "s": 51
+   },
+   {
+    "f": "sm_dueling_win",
+    "t": "sm dueling win",
+    "s": 51
+   },
+   {
+    "f": "sm_ent_HousePointBad_01",
+    "t": "sm ent HousePointBad 01",
+    "s": 75
+   },
+   {
+    "f": "sm_ent_HousePointGood_01",
+    "t": "sm ent HousePointGood 01",
+    "s": 75
+   },
+   {
+    "f": "sm_ent_HousePointNeural_01",
+    "t": "sm ent HousePointNeural 01",
+    "s": 75
+   },
+   {
+    "f": "SM_ENT_HousePointTheme_01",
+    "t": "SM ENT HousePointTheme 01",
+    "s": 75
+   },
+   {
+    "f": "SM_FEM_AltThemeOrch_01",
+    "t": "SM FEM AltThemeOrch 01",
+    "s": 75
+   },
+   {
+    "f": "sm_fem_COSE3Theme_03Mx",
+    "t": "sm fem COSE3Theme 03Mx",
+    "s": 75
+   },
+   {
+    "f": "sm_gst_DeathDay_01_LP",
+    "t": "sm gst DeathDay 01 LP",
+    "s": 75
+   },
+   {
+    "f": "sm_hex_dayPursuit_02",
+    "t": "sm hex dayPursuit 02",
+    "s": 75
+   },
+   {
+    "f": "sm_hex_flying_02",
+    "t": "sm hex flying 02",
+    "s": 75
+   },
+   {
+    "f": "sm_hex_flying_action_edit",
+    "t": "sm hex flying action",
+    "s": 75
+   },
+   {
+    "f": "sm_hex_GroundsNightHub_edit",
+    "t": "sm hex GroundsNightHub",
+    "s": 75
+   },
+   {
+    "f": "sm_hex_night002-060_01",
+    "t": "sm hex night002 060 01",
+    "s": 75
+   },
+   {
+    "f": "SM_HRY_Duelling_01",
+    "t": "SM HRY Duelling 01",
+    "s": 51
+   },
+   {
+    "f": "sm_Ingredient_Success_Music",
+    "t": "sm Ingredient Success",
+    "s": 75
+   },
+   {
+    "f": "sm_lib_LibraryEnter_01",
+    "t": "sm lib LibraryEnter 01",
+    "s": 75
+   },
+   {
+    "f": "sm_myr_MyrtleTheme",
+    "t": "sm myr MyrtleTheme",
+    "s": 75
+   },
+   {
+    "f": "SM_PRV_CoSStoryBook_01",
+    "t": "SM PRV CoSStoryBook 01",
+    "s": 0
+   },
+   {
+    "f": "SM_QUD_Boost_01",
+    "t": "SM QUD Boost 01",
+    "s": 75
+   },
+   {
+    "f": "sm_qud_draco",
+    "t": "sm qud draco",
+    "s": 75
+   },
+   {
+    "f": "sm_qud_dracor",
+    "t": "sm qud dracor",
+    "s": 75
+   },
+   {
+    "f": "sm_qud_Snitch01",
+    "t": "sm qud Snitch01",
+    "s": 75
+   },
+   {
+    "f": "sm_qud_snitchhorn_01",
+    "t": "sm qud snitchhorn 01",
+    "s": 75
+   },
+   {
+    "f": "sm_scl_DayFollow_01_loop",
+    "t": "sm scl DayFollow 01",
+    "s": 75
+   },
+   {
+    "f": "sm_scl_DayWander_01",
+    "t": "sm scl DayWander 01",
+    "s": 75
+   },
+   {
+    "f": "sm_SCL_neutralhwo-1-29_01",
+    "t": "sm SCL neutralhwo 1 29 01",
+    "s": 75
+   },
+   {
+    "f": "sm_scl_RescueNeville_01",
+    "t": "sm scl RescueNeville 01",
+    "s": 75
+   },
+   {
+    "f": "sm_scl_StealthCaught_01",
+    "t": "sm scl StealthCaught 01",
+    "s": 75
+   },
+   {
+    "f": "sm_scl_StealthGoyle_01_loop",
+    "t": "sm scl StealthGoyle 01",
+    "s": 43
+   },
+   {
+    "f": "SM_SCL_StealthPOrch_01",
+    "t": "SM SCL StealthPOrch 01",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_stealthPursuitLoop",
+    "t": "SM SCL stealthPursuitLoop",
+    "s": 75
+   },
+   {
+    "f": "sm_scl_StealthSearch_01",
+    "t": "sm scl StealthSearch 01",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_StealthSneak_01_mx",
+    "t": "SM SCL StealthSneak 01",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_StealthSneak_01A",
+    "t": "SM SCL StealthSneak 01A",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_StealthSneak_01B",
+    "t": "SM SCL StealthSneak 01B",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_StealthSneak_01C",
+    "t": "SM SCL StealthSneak 01C",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_StealthSneak_01D",
+    "t": "SM SCL StealthSneak 01D",
+    "s": 75
+   },
+   {
+    "f": "SM_SCL_StealthSneak_01E",
+    "t": "SM SCL StealthSneak 01E",
+    "s": 75
+   },
+   {
+    "f": "SM_SLG_SlugChase_LP_v2",
+    "t": "SM SLG SlugChase LP v2",
+    "s": 75
+   },
+   {
+    "f": "SM_SLY_DuellingOrch_01",
+    "t": "SM SLY DuellingOrch 01",
+    "s": 51
+   },
+   {
+    "f": "sm_spb_spellbookcollect_02",
+    "t": "sm spb spellbookcollect 02",
+    "s": 75
+   },
+   {
+    "f": "sm_wwa_level2p_01",
+    "t": "sm wwa level2p 01",
+    "s": 75
+   },
+   {
+    "f": "sm_wwa_skurgeExploreEdit_01_ogg",
+    "t": "sm wwa skurgeExploreEdit 01 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_wwa_skurgeStarEdit_01_ogg",
+    "t": "sm wwa skurgeStarEdit 01 ogg",
+    "s": 27
+   },
+   {
+    "f": "sm_wwa_willow1hit_02",
+    "t": "sm wwa willow1hit 02",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowBoss_01",
+    "t": "sm wwa willowBoss 01",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel1p_01",
+    "t": "sm wwa willowLevel1p 01",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel1p_01_part1",
+    "t": "sm wwa willowLevel1p 01 part1",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel1p_01_part2",
+    "t": "sm wwa willowLevel1p 01 part2",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel1Stab_01",
+    "t": "sm wwa willowLevel1Stab 01",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel2hitp_01",
+    "t": "sm wwa willowLevel2hitp 01",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel3_02",
+    "t": "sm wwa willowLevel3 02",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel3hitp_01",
+    "t": "sm wwa willowLevel3hitp 01",
+    "s": 16
+   },
+   {
+    "f": "sm_wwa_willowLevel3Transp_01",
+    "t": "sm wwa willowLevel3Transp 01",
+    "s": 16
+   }
+  ],
+  "hp3": [
+   {
+    "f": "beanbonus",
+    "t": "beanbonus",
+    "s": 75
+   },
+   {
+    "f": "beanbonus_introcutscene",
+    "t": "beanbonus introcutscene",
+    "s": 75
+   },
+   {
+    "f": "buckyexecuted_SM_WWA_WillowBossOrch_01_edit",
+    "t": "buckyexecuted SM WWA WillowBossOrch 01",
+    "s": 62
+   },
+   {
+    "f": "buckyexecuted_SM_WWA_WillowLevel1_01",
+    "t": "buckyexecuted SM WWA WillowLevel1 01",
+    "s": 62
+   },
+   {
+    "f": "buckyexecuted_SM_WWA_WillowLevel2Orch_01_edit",
+    "t": "buckyexecuted SM WWA WillowLevel2Orch 01",
+    "s": 62
+   },
+   {
+    "f": "buckyexecuted_SM_WWA_WillowLevel3Hit_01",
+    "t": "buckyexecuted SM WWA WillowLevel3Hit 01",
+    "s": 62
+   },
+   {
+    "f": "carpe_Cue16_SM_PoA_GlaciusHermioneNormal_Orch",
+    "t": "carpe Cue16 SM PoA GlaciusHermioneNormal Orch",
+    "s": 0
+   },
+   {
+    "f": "carpe_SM_2001_ChessMatch-Orch_01_edit",
+    "t": "carpe SM 2001 ChessMatch Orch 01",
+    "s": 0
+   },
+   {
+    "f": "carpe_SM_2001_DevilsSnare_01",
+    "t": "carpe SM 2001 DevilsSnare 01",
+    "s": 0
+   },
+   {
+    "f": "carpe_SM_2001_DevilsSnareIntro_01",
+    "t": "carpe SM 2001 DevilsSnareIntro 01",
+    "s": 0
+   },
+   {
+    "f": "carpe_temp",
+    "t": "carpe temp",
+    "s": 0
+   },
+   {
+    "f": "challenge_cue_18",
+    "t": "challenge cue 18",
+    "s": 75
+   },
+   {
+    "f": "challenge_cue_18_long",
+    "t": "challenge cue 18 long",
+    "s": 75
+   },
+   {
+    "f": "challenge_cue_21a",
+    "t": "challenge cue 21a",
+    "s": 75
+   },
+   {
+    "f": "challenge_cue_39",
+    "t": "challenge cue 39",
+    "s": 75
+   },
+   {
+    "f": "challenge_cue_39_short",
+    "t": "challenge cue 39 short",
+    "s": 75
+   },
+   {
+    "f": "comc_Cue 37_SM_PoA_BuckBeakArrive_01",
+    "t": "comc Cue 37 SM PoA BuckBeakArrive 01",
+    "s": 8
+   },
+   {
+    "f": "comc_Cue37_SM_PoA_BuckBeakArrive_01",
+    "t": "comc Cue37 SM PoA BuckBeakArrive 01",
+    "s": 8
+   },
+   {
+    "f": "comc_sm_hex_dayPursuit_02",
+    "t": "comc sm hex dayPursuit 02",
+    "s": 8
+   },
+   {
+    "f": "comc_SM_SCL_RescueNeville_01_edit",
+    "t": "comc SM SCL RescueNeville 01",
+    "s": 8
+   },
+   {
+    "f": "crab_intro",
+    "t": "crab intro",
+    "s": 0
+   },
+   {
+    "f": "crab_SM_2001_DevilsSnareEnd_01",
+    "t": "crab SM 2001 DevilsSnareEnd 01",
+    "s": 0
+   },
+   {
+    "f": "crab_SM_CCH_CharmsFirecrabs_01",
+    "t": "crab SM CCH CharmsFirecrabs 01",
+    "s": 0
+   },
+   {
+    "f": "creaturecar_spooky",
+    "t": "creaturecar spooky",
+    "s": 8
+   },
+   {
+    "f": "Cue10_SM_PoA_DementorPatronus_Orch_edit",
+    "t": "Cue10 SM PoA DementorPatronus Orch",
+    "s": 49
+   },
+   {
+    "f": "Cue29_withloop",
+    "t": "Cue29",
+    "s": 75
+   },
+   {
+    "f": "Cue2_SM_PoA_DementorAmbA_03",
+    "t": "Cue2 SM PoA DementorAmbA 03",
+    "s": 70
+   },
+   {
+    "f": "Cue3_SM_PoA_DementorAmbS_01",
+    "t": "Cue3 SM PoA DementorAmbS 01",
+    "s": 70
+   },
+   {
+    "f": "Cue4_SM_PoA_DementorRetreat_01",
+    "t": "Cue4 SM PoA DementorRetreat 01",
+    "s": 70
+   },
+   {
+    "f": "CUE5_hogwarts_intro",
+    "t": "CUE5 hogwarts intro",
+    "s": 0
+   },
+   {
+    "f": "CUE5_hogwarts_intro_11_sec",
+    "t": "CUE5 hogwarts intro 11 sec",
+    "s": 0
+   },
+   {
+    "f": "CUE5_ver2_combined",
+    "t": "CUE5 ver2 combined",
+    "s": 0
+   },
+   {
+    "f": "Cue74_SM_PoA_ExtFollowSnow_01",
+    "t": "Cue74 SM PoA ExtFollowSnow 01",
+    "s": 75
+   },
+   {
+    "f": "Cue88_SM_PoA_PreSupremePatronus_Orch",
+    "t": "Cue88 SM PoA PreSupremePatronus Orch",
+    "s": 49
+   },
+   {
+    "f": "cue_39_shortest",
+    "t": "cue 39 shortest",
+    "s": 75
+   },
+   {
+    "f": "dem_Cue10_Patronus_at_the_Shack",
+    "t": "dem Cue10 Patronus at the Shack",
+    "s": 45
+   },
+   {
+    "f": "dem_Cue3_SM_PoA_DementorAmbS_01",
+    "t": "dem Cue3 SM PoA DementorAmbS 01",
+    "s": 70
+   },
+   {
+    "f": "dem_Cue54_Patronus_on_the_Boggart",
+    "t": "dem Cue54 Patronus on the Boggart",
+    "s": 0
+   },
+   {
+    "f": "Dementor_Action",
+    "t": "Dementor Action",
+    "s": 70
+   },
+   {
+    "f": "dementor_battle",
+    "t": "dementor battle",
+    "s": 70
+   },
+   {
+    "f": "dementor_prepatronus",
+    "t": "dementor prepatronus",
+    "s": 49
+   },
+   {
+    "f": "Dementor_Threat",
+    "t": "Dementor Threat",
+    "s": 70
+   },
+   {
+    "f": "dementorbattle",
+    "t": "dementorbattle",
+    "s": 70
+   },
+   {
+    "f": "drac_cue_27",
+    "t": "drac cue 27",
+    "s": 4
+   },
+   {
+    "f": "drac_cue_28",
+    "t": "drac cue 28",
+    "s": 4
+   },
+   {
+    "f": "drac_fluffy_harp",
+    "t": "drac fluffy harp",
+    "s": 4
+   },
+   {
+    "f": "drac_SM_BUR_WashingOrch_01_edit",
+    "t": "drac SM BUR WashingOrch 01",
+    "s": 4
+   },
+   {
+    "f": "drac_SM_SLG_SlugChaseBroomLesson_01_edit",
+    "t": "drac SM SLG SlugChaseBroomLesson 01",
+    "s": 4
+   },
+   {
+    "f": "dungeon_SM_2001_DarkHogwarts_01",
+    "t": "dungeon SM 2001 DarkHogwarts 01",
+    "s": 0
+   },
+   {
+    "f": "EntryHall_DungeonHall_music",
+    "t": "EntryHall DungeonHall",
+    "s": 0
+   },
+   {
+    "f": "expecto_Cue54_SM_PoA_PatronusBogart_Orch",
+    "t": "expecto Cue54 SM PoA PatronusBogart Orch",
+    "s": 0
+   },
+   {
+    "f": "expecto_Cue71_SM_PoA_ExtWanderRain_01",
+    "t": "expecto Cue71 SM PoA ExtWanderRain 01",
+    "s": 12
+   },
+   {
+    "f": "expecto_patronum",
+    "t": "expecto patronum",
+    "s": 12
+   },
+   {
+    "f": "expecto_SM_ENT_HousePointGood_01",
+    "t": "expecto SM ENT HousePointGood 01",
+    "s": 12
+   },
+   {
+    "f": "expecto_sm_myr_MyrtleTheme",
+    "t": "expecto sm myr MyrtleTheme",
+    "s": 12
+   },
+   {
+    "f": "fa_ron_SM_2001_Quirrell2_01",
+    "t": "fa ron SM 2001 Quirrell2 01",
+    "s": 49
+   },
+   {
+    "f": "fireseeds_loop_mx",
+    "t": "fireseeds",
+    "s": 75
+   },
+   {
+    "f": "glac_Cue64",
+    "t": "glac Cue64",
+    "s": 75
+   },
+   {
+    "f": "glac_Cue90_SM_CCH_CharmsTension_Orch",
+    "t": "glac Cue90 SM CCH CharmsTension Orch",
+    "s": 75
+   },
+   {
+    "f": "glac_SM_AN1_AngliaFlying_01",
+    "t": "glac SM AN1 AngliaFlying 01",
+    "s": 75
+   },
+   {
+    "f": "glac_SM_CCH_CharmsTension_01",
+    "t": "glac SM CCH CharmsTension 01",
+    "s": 75
+   },
+   {
+    "f": "grand_patronus",
+    "t": "grand patronus",
+    "s": 49
+   },
+   {
+    "f": "grounds_hub",
+    "t": "grounds hub",
+    "s": 75
+   },
+   {
+    "f": "Happy_Hogwarts",
+    "t": "Happy Hogwarts",
+    "s": 75
+   },
+   {
+    "f": "he_intro",
+    "t": "he intro",
+    "s": 75
+   },
+   {
+    "f": "he_intro02",
+    "t": "he intro02",
+    "s": 75
+   },
+   {
+    "f": "he_malfoy_intro",
+    "t": "he malfoy intro",
+    "s": 75
+   },
+   {
+    "f": "he_SM_2001_MalfoyFightEnd_01",
+    "t": "he SM 2001 MalfoyFightEnd 01",
+    "s": 75
+   },
+   {
+    "f": "he_SM_QUD_DracoOrch_01_edit",
+    "t": "he SM QUD DracoOrch 01",
+    "s": 4
+   },
+   {
+    "f": "hogwarts_intro",
+    "t": "hogwarts intro",
+    "s": 0
+   },
+   {
+    "f": "hogwarts_neutral_mx",
+    "t": "hogwarts neutral",
+    "s": 75
+   },
+   {
+    "f": "hub_SM_2001_HappyHogwartsOrch_01",
+    "t": "hub SM 2001 HappyHogwartsOrch 01",
+    "s": 75
+   },
+   {
+    "f": "hub_SM_GRC_FredGeorge_01",
+    "t": "hub SM GRC FredGeorge 01",
+    "s": 75
+   },
+   {
+    "f": "hub_SM_SCL_DayFollowOrch_01",
+    "t": "hub SM SCL DayFollowOrch 01",
+    "s": 75
+   },
+   {
+    "f": "hub_SM_SCL_DayWanderOrch_01",
+    "t": "hub SM SCL DayWanderOrch 01",
+    "s": 75
+   },
+   {
+    "f": "hub_SM_SCL_DayWanderOrch_01_edit",
+    "t": "hub SM SCL DayWanderOrch 01",
+    "s": 75
+   },
+   {
+    "f": "hub_SM_SCL_StealthSearch_01_edit",
+    "t": "hub SM SCL StealthSearch 01",
+    "s": 75
+   },
+   {
+    "f": "hud_music",
+    "t": "hud",
+    "s": 75
+   },
+   {
+    "f": "hud_music_ingame",
+    "t": "hud music ingame",
+    "s": 75
+   },
+   {
+    "f": "imp_cue35a_edit",
+    "t": "imp cue35a",
+    "s": 75
+   },
+   {
+    "f": "imp_cue35a_edit_short",
+    "t": "imp cue35a edit short",
+    "s": 75
+   },
+   {
+    "f": "imp_SM_CDA_CauldronsOrch_01_edit",
+    "t": "imp SM CDA CauldronsOrch 01",
+    "s": 49
+   },
+   {
+    "f": "indoor_hub",
+    "t": "indoor hub",
+    "s": 75
+   },
+   {
+    "f": "JS_malfoy_1",
+    "t": "JS malfoy 1",
+    "s": 75
+   },
+   {
+    "f": "JS_Malfoy_end_mx",
+    "t": "JS Malfoy end",
+    "s": 75
+   },
+   {
+    "f": "JS_malfoy_fight_v3_mx",
+    "t": "JS malfoy fight v3",
+    "s": 75
+   },
+   {
+    "f": "lib_imp_surprise",
+    "t": "lib imp surprise",
+    "s": 75
+   },
+   {
+    "f": "lib_SM_DIA_Ambient02_01",
+    "t": "lib SM DIA Ambient02 01",
+    "s": 75
+   },
+   {
+    "f": "lib_SM_HRY_Spellbook_01",
+    "t": "lib SM HRY Spellbook 01",
+    "s": 75
+   },
+   {
+    "f": "lib_SM_PoA_MaraudersMainLoop_01",
+    "t": "lib SM PoA MaraudersMainLoop 01",
+    "s": 75
+   },
+   {
+    "f": "lib_SM_PRV_StorybookOrch_01",
+    "t": "lib SM PRV StorybookOrch 01",
+    "s": 75
+   },
+   {
+    "f": "lib_SM_SPB_SpellBookCollect_01",
+    "t": "lib SM SPB SpellBookCollect 01",
+    "s": 75
+   },
+   {
+    "f": "library_intro",
+    "t": "library intro",
+    "s": 25
+   },
+   {
+    "f": "lumos_cabinet_discovery",
+    "t": "lumos cabinet discovery",
+    "s": 75
+   },
+   {
+    "f": "lupin_as_werewolf",
+    "t": "lupin as werewolf",
+    "s": 75
+   },
+   {
+    "f": "magic_book_battle",
+    "t": "magic book battle",
+    "s": 75
+   },
+   {
+    "f": "malfoy_intro",
+    "t": "malfoy intro",
+    "s": 75
+   },
+   {
+    "f": "mbom_battle01",
+    "t": "mbom battle01",
+    "s": 75
+   },
+   {
+    "f": "mbom_battle02",
+    "t": "mbom battle02",
+    "s": 75
+   },
+   {
+    "f": "mbom_intro_anticipation",
+    "t": "mbom intro anticipation",
+    "s": 75
+   },
+   {
+    "f": "Music_StoryBook_v2",
+    "t": "Music StoryBook v2",
+    "s": 75
+   },
+   {
+    "f": "paddock_Cue22_SM_PoA_MaraudersWormtail_Orch_edit",
+    "t": "paddock Cue22 SM PoA MaraudersWormtail Orch",
+    "s": 58
+   },
+   {
+    "f": "paddock_Cue34_SM_PoA_CarpeEnter_Orch",
+    "t": "paddock Cue34 SM PoA CarpeEnter Orch",
+    "s": 0
+   },
+   {
+    "f": "paddock_Cue38_SM_PoA_FlyingHedwigA_Orch_edit",
+    "t": "paddock Cue38 SM PoA FlyingHedwigA Orch",
+    "s": 58
+   },
+   {
+    "f": "peeves_SM_2001_PeevesChase_01",
+    "t": "peeves SM 2001 PeevesChase 01",
+    "s": 75
+   },
+   {
+    "f": "peeves_SM_2001_PeevesChaseEnd_01",
+    "t": "peeves SM 2001 PeevesChaseEnd 01",
+    "s": 75
+   },
+   {
+    "f": "peeves_SM_BUR_PlayfulFailedOrch_01",
+    "t": "peeves SM BUR PlayfulFailedOrch 01",
+    "s": 75
+   },
+   {
+    "f": "pix_Cue_06v3_S",
+    "t": "pix Cue 06v3 S",
+    "s": 75
+   },
+   {
+    "f": "quid_cue2_dementor_ambA_edit",
+    "t": "quid cue2 dementor ambA",
+    "s": 70
+   },
+   {
+    "f": "quid_Cue3_SM_PoA_DementorAmbS_01",
+    "t": "quid Cue3 SM PoA DementorAmbS 01",
+    "s": 70
+   },
+   {
+    "f": "rescue_Cue86_SM_PoA_BuckbeakNightFlightS_Orch",
+    "t": "rescue Cue86 SM PoA BuckbeakNightFlightS Orch",
+    "s": 75
+   },
+   {
+    "f": "rescue_Cue86_SM_PoA_BuckbeakNightFlightS_Orch_edit",
+    "t": "rescue Cue86 SM PoA BuckbeakNightFlightS Orch",
+    "s": 75
+   },
+   {
+    "f": "rescue_sirius",
+    "t": "rescue sirius",
+    "s": 75
+   },
+   {
+    "f": "shack_Cue20_21_Moony_and_Amb",
+    "t": "shack Cue20 21 Moony and Amb",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue31_SM_PoA_ShriekingShack_Orch",
+    "t": "shack Cue31 SM PoA ShriekingShack Orch",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue_20",
+    "t": "shack Cue 20",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue_21",
+    "t": "shack Cue 21",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue_23",
+    "t": "shack Cue 23",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue_23_short",
+    "t": "shack Cue 23 short",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue_24",
+    "t": "shack Cue 24",
+    "s": 45
+   },
+   {
+    "f": "shack_Cue_26",
+    "t": "shack Cue 26",
+    "s": 45
+   },
+   {
+    "f": "Shack_Cue_35_SM_PoA_CarpeKnightBoss_01",
+    "t": "Shack Cue 35 SM PoA CarpeKnightBoss 01",
+    "s": 0
+   },
+   {
+    "f": "shack_Cue_35a_SM_PoA_CarpeKnightEnd_01",
+    "t": "shack Cue 35a SM PoA CarpeKnightEnd 01",
+    "s": 0
+   },
+   {
+    "f": "shack_Cue_36_SM_PoA_CarpeLiftShock_01",
+    "t": "shack Cue 36 SM PoA CarpeLiftShock 01",
+    "s": 0
+   },
+   {
+    "f": "shack_POAM22",
+    "t": "shack POAM22",
+    "s": 45
+   },
+   {
+    "f": "shack_SM_ARA_SpiderDrop_01_edit",
+    "t": "shack SM ARA SpiderDrop 01",
+    "s": 45
+   },
+   {
+    "f": "SM_2001_FlyingKeys_01",
+    "t": "SM 2001 FlyingKeys 01",
+    "s": 75
+   },
+   {
+    "f": "SM_2001_HogwartsNeutralOrch_01",
+    "t": "SM 2001 HogwartsNeutralOrch 01",
+    "s": 75
+   },
+   {
+    "f": "SM_BUR_Washing_02_V4_NOLOOP",
+    "t": "SM BUR Washing 02 V4 NOLOOP",
+    "s": 75
+   },
+   {
+    "f": "SM_CDA_DADAActionOrch_01",
+    "t": "SM CDA DADAActionOrch 01",
+    "s": 37
+   },
+   {
+    "f": "sm_dia_AmbientLoop_01",
+    "t": "sm dia AmbientLoop 01",
+    "s": 75
+   },
+   {
+    "f": "SM_DIA_diagonPlayfulLoop_01",
+    "t": "SM DIA diagonPlayfulLoop 01",
+    "s": 75
+   },
+   {
+    "f": "SM_DIA_DiagonPlayfulOrch_01",
+    "t": "SM DIA DiagonPlayfulOrch 01",
+    "s": 75
+   },
+   {
+    "f": "SM_DIA_DiagonReward_01",
+    "t": "SM DIA DiagonReward 01",
+    "s": 75
+   },
+   {
+    "f": "SM_PoA_LightActionHarry",
+    "t": "SM PoA LightActionHarry",
+    "s": 75
+   },
+   {
+    "f": "SM_PoA_LightActionHarry_exam",
+    "t": "SM PoA LightActionHarry exam",
+    "s": 75
+   },
+   {
+    "f": "SM_QUD_BoostOrch_01",
+    "t": "SM QUD BoostOrch 01",
+    "s": 75
+   },
+   {
+    "f": "SM_QUD_SnitchOrch_01",
+    "t": "SM QUD SnitchOrch 01",
+    "s": 75
+   },
+   {
+    "f": "spooky_music",
+    "t": "spooky",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense01",
+    "t": "stab suspense01",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense02",
+    "t": "stab suspense02",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense03",
+    "t": "stab suspense03",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense04",
+    "t": "stab suspense04",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense05",
+    "t": "stab suspense05",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense06",
+    "t": "stab suspense06",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense07",
+    "t": "stab suspense07",
+    "s": 75
+   },
+   {
+    "f": "stab_suspense08",
+    "t": "stab suspense08",
+    "s": 75
+   },
+   {
+    "f": "Story_Book",
+    "t": "Story Book",
+    "s": 75
+   },
+   {
+    "f": "Story_Book_edit",
+    "t": "Story Book",
+    "s": 75
+   },
+   {
+    "f": "success_Cue34a_Orch",
+    "t": "success Cue34a Orch",
+    "s": 75
+   },
+   {
+    "f": "success_Cue6a_Orch",
+    "t": "success Cue6a Orch",
+    "s": 75
+   },
+   {
+    "f": "success_cue6b_orch",
+    "t": "success cue6b orch",
+    "s": 75
+   }
+  ]
+ }
+}
