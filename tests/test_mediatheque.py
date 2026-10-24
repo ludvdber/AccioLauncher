@@ -1,0 +1,236 @@
+"""La Médiathèque : cinématiques, crédits, enregistrement d'un morceau, page et barre du bas."""
+
+import json
+
+import pytest
+
+from src.core import cinematiques, discographie, phonographe
+
+
+# ─── Cœur ───
+
+class TestCinematiques:
+    def test_lit_le_fichier_et_ignore_les_entrees_abimees(self, tmp_path):
+        chemin = tmp_path / "c.json"
+        chemin.write_text(json.dumps({"jeux": {
+            "hp3": {"dossier": "Movies", "ext": ".BIK", "clips": [
+                {"f": "LupinWolf", "t": "Lupin", "s": 93}, {"f": 3, "t": "x", "s": 0}]},
+            "hp7": {"dossier": "pc", "ext": ".vp6", "sans_son": True, "clips": []},
+            "casse": {"ext": ".bik", "clips": []},
+        }}), encoding="utf-8")
+        lu = cinematiques.charger(chemin)
+        assert set(lu) == {"hp3", "hp7"}
+        assert lu["hp3"].extension == ".bik"
+        assert lu["hp3"].clips == (cinematiques.Cinematique("LupinWolf", "Lupin", 93),)
+        assert lu["hp7"].sans_son and not lu["hp3"].sans_son
+
+    def test_illisible_rend_vide(self, tmp_path):
+        assert cinematiques.charger(tmp_path / "absent.json") == {}
+
+    def test_presentes_casse_ignoree_et_logos_passes(self, tmp_path):
+        """« Passer les logos » renomme en `.bik.off` : la cinématique reste là."""
+        films = tmp_path / "movies"
+        films.mkdir()
+        (films / "LUPINWOLF.bik").write_bytes(b"BIKi")
+        (films / "KWLogo.bik.off").write_bytes(b"BIKi")
+        collection = cinematiques.Collection("Movies", ".bik", False, (
+            cinematiques.Cinematique("LupinWolf", "Lupin", 0),
+            cinematiques.Cinematique("KWLogo", "Logo", 0),
+            cinematiques.Cinematique("Absente", "Rien", 0)))
+        trouvees = cinematiques.presentes(collection, tmp_path)
+        assert set(trouvees) == {"LupinWolf", "KWLogo"}
+        assert cinematiques.presentes(collection, None) == {}
+
+    def test_donnees_embarquees(self):
+        """Le fichier livré : HP3, HP7 et HP8, et rien pour HP1 et HP2 (moteur seul)."""
+        lu = cinematiques.charger()
+        assert {"hp3", "hp7", "hp8"} <= set(lu)
+        assert "hp1" not in lu and "hp2" not in lu
+        assert lu["hp7"].sans_son and lu["hp8"].sans_son
+        assert all(c.titre for col in lu.values() for c in col.clips)
+
+
+class TestCredits:
+    def test_jeremy_soule_sur_les_trois_premiers_jeux(self):
+        credits = discographie.charger_credits()
+        assert {j: (c.compositeur, c.annee) for j, c in credits.items()} == {
+            "hp1": ("Jeremy Soule", 2001), "hp2": ("Jeremy Soule", 2002),
+            "hp3": ("Jeremy Soule", 2004)}
+
+    def test_illisible_rend_vide(self, tmp_path):
+        assert discographie.charger_credits(tmp_path / "absent.json") == {}
+
+
+class TestSeuil:
+    def test_une_sauvegarde_au_seuil_suffit(self):
+        assert discographie.ouvert_au_seuil(0, None)
+        assert not discographie.ouvert_au_seuil(30, None)
+        assert discographie.ouvert_au_seuil(30, 30)
+        assert not discographie.ouvert_au_seuil(93, 74)
+        assert discographie.ouvert_au_seuil(93, 75)
+
+
+class TestEnregistrer:
+    def test_nom_de_fichier(self):
+        assert phonographe.nom_de_fichier('Crabbe: "Goyle"?') == "Crabbe- -Goyle--"
+        assert phonographe.nom_de_fichier("  ...  ") == "Morceau"
+
+    def test_copie_sous_le_titre(self, tmp_path):
+        source = tmp_path / "Common_Room.mp2"
+        source.write_bytes(b"x" * 10)
+        cible = phonographe.exporter(source, "Common Room", tmp_path / "Musique" / "HP1")
+        assert cible == tmp_path / "Musique" / "HP1" / "Common Room.mp2"
+        assert cible.read_bytes() == b"x" * 10
+
+    def test_deja_enregistre_ne_double_pas(self, tmp_path):
+        source = tmp_path / "a.ogg"
+        source.write_bytes(b"abc")
+        dossier = tmp_path / "out"
+        premier = phonographe.exporter(source, "A", dossier)
+        assert phonographe.exporter(source, "A", dossier) == premier
+        assert len(list(dossier.iterdir())) == 1
+
+    def test_n_ecrase_jamais_un_autre_fichier(self, tmp_path):
+        dossier = tmp_path / "out"
+        dossier.mkdir()
+        (dossier / "A.ogg").write_bytes(b"autre chose, plus long")
+        source = tmp_path / "a.ogg"
+        source.write_bytes(b"abc")
+        cible = phonographe.exporter(source, "A", dossier)
+        assert cible == dossier / "A (2).ogg"
+        assert (dossier / "A.ogg").read_bytes() == b"autre chose, plus long"
+
+    def test_source_absente_rend_none(self, tmp_path):
+        assert phonographe.exporter(tmp_path / "absent.ogg", "A", tmp_path / "out") is None
+
+
+# ─── Le lecteur de fond (sans rien jouer : aucun fichier n'est trouvé) ───
+
+@pytest.fixture
+def fond(qtbot, tmp_path):
+    from PyQt6.QtWidgets import QWidget
+    from src.core.config import Config
+    from src.ui.fond_sonore import FondSonore
+    fenetre = QWidget()
+    qtbot.addWidget(fenetre)
+    config = Config(install_path=tmp_path, musique_fond="hp2/Greenhouse")
+    return FondSonore(config, lambda _jeu: None, lambda: tmp_path, fenetre)
+
+
+class TestFondSonore:
+    def test_la_platine_montre_le_fond_puis_l_ecoute(self, fond):
+        assert fond.morceau == "hp2/Greenhouse"
+        fond.ecouter("hp1/Common_Room")
+        assert fond.morceau == "hp1/Common_Room"
+        fond.arreter_ecoute()
+        assert fond.morceau == "hp2/Greenhouse"
+
+    def test_pause_sur_place(self, fond):
+        fond.ecouter("hp1/Common_Room")
+        fond.basculer_pause()
+        assert fond.en_pause and fond._voulu() == ""
+        fond.basculer_pause()
+        assert not fond.en_pause and fond._voulu() == "hp1/Common_Room"
+
+    def test_une_cinematique_fait_taire_meme_l_ecoute(self, fond):
+        from src.ui.fond_sonore import CINEMATIQUE
+        fond.ecouter("hp1/Common_Room")
+        fond.suspendre(CINEMATIQUE)
+        assert fond._voulu() == ""
+        fond.reprendre(CINEMATIQUE)
+        assert fond._voulu() == "hp1/Common_Room"
+
+    def test_le_volume_ne_s_ecrit_qu_au_lacher(self, fond):
+        from src.core import config
+        fichier = config.CONFIG_FILE_PATH       # redirigé par la garde de conftest
+        fond.regler_volume(60, enregistrer=False)
+        assert fond._config.volume_musique == 60 and not fichier.exists()
+        fond.regler_volume(150)
+        assert fond._config.volume_musique == 100
+        assert json.loads(fichier.read_text(encoding="utf-8"))["volume_musique"] == 100
+
+
+# ─── La page et la barre du bas, dans une vraie fenêtre ───
+
+@pytest.fixture
+def fenetre_avec_jeux(make_window, monkeypatch, tmp_path):
+    """HP2 installé avec deux morceaux, HP3 avec deux cinématiques ; aucune partie."""
+    from src.core.game_manager import GameManager
+    jeux = tmp_path / "copies"
+    (jeux / "hp2" / "Music").mkdir(parents=True)
+    morceaux = discographie.charger()["hp2"]
+    for m in morceaux[:2]:
+        (jeux / "hp2" / "Music" / f"{m.fichier}.ogg").write_bytes(b"OggS")
+    (jeux / "hp3" / "Movies").mkdir(parents=True)
+    (jeux / "hp3" / "Movies" / "SiriusPhoto.bik").write_bytes(b"BIKi")
+    (jeux / "hp3" / "Movies" / "LupinWolf.bik").write_bytes(b"BIKi")
+    monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in {"hp2", "hp3"})
+    monkeypatch.setattr(GameManager, "get_game_path", lambda self, j: jeux / j)
+    monkeypatch.setattr("src.core.discographie.avancement", lambda jeu, spec: None)
+    return make_window()
+
+
+class TestPage:
+    def test_onglet_et_mini_lecteur(self, make_window):
+        from src.ui.title_bar import MEDIATHEQUE
+        win = make_window()
+        assert win._title_bar.onglet(MEDIATHEQUE).isVisibleTo(win._title_bar)
+        assert win._mediatheque.mini.parent() is not None
+
+    def test_ouverte_sans_jeu_installe(self, make_window):
+        from src.ui.mediatheque_page import MediathequePage
+        from src.ui.title_bar import MEDIATHEQUE
+        win = make_window()
+        win._on_onglet(MEDIATHEQUE)
+        page = win._pages.page
+        assert isinstance(page, MediathequePage)
+        assert win._title_bar.onglet(MEDIATHEQUE).isChecked()
+        page.accept()
+        assert win._pages.page is None
+
+    def test_morceaux_ouverts_fermes_et_nouveaux(self, fenetre_avec_jeux):
+        from src.ui.mediatheque_page import _LigneMorceau
+        from src.ui.title_bar import MEDIATHEQUE
+        win = fenetre_avec_jeux
+        onglet = win._title_bar.onglet(MEDIATHEQUE)
+        assert onglet.pastille, "des morceaux ouverts jamais vus : le point or"
+        win._mediatheque.ouvrir("musique", "hp2")
+        page = win._pages.page
+        lignes = page.findChildren(_LigneMorceau)
+        hp2 = discographie.charger()["hp2"]
+        assert len(lignes) == len(hp2)
+        ouvertes = [ligne for ligne in lignes if ligne._ecouter is not None]
+        assert len(ouvertes) == sum(m.seuil == 0 for m in hp2)
+        # Montrés une fois : vus. Les cinématiques, bâties mais pas regardées, restent nouvelles.
+        assert not win._mediatheque.nouveaux("hp2", "musique")
+        assert win._mediatheque.nouveaux("hp3", "cinematiques") == {"SiriusPhoto"}
+        page.rubrique("cinematiques")
+        assert not win._mediatheque.nouveaux("hp3", "cinematiques")
+        win._mediatheque.ouvrir("musique", "hp3")
+        assert not onglet.pastille, "tout a été vu : le point or s'éteint"
+
+    def test_cinematiques_et_seuils(self, fenetre_avec_jeux):
+        from src.ui.mediatheque_page import _LigneCine
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        page = win._pages.page
+        assert page.rubrique_courante == "cinematiques"
+        lignes = {ligne.fichier: ligne for ligne in page.findChildren(_LigneCine)}
+        assert set(lignes) == {"SiriusPhoto", "LupinWolf"}
+        assert lignes["SiriusPhoto"]._voir is not None     # seuil 0
+        assert lignes["LupinWolf"]._voir is None           # la fin de l'histoire, sans partie lue
+
+    def test_le_lien_de_la_fiche_ouvre_le_jeu(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        win._detail.mediatheque_demandee.emit("hp2")
+        page = win._pages.page
+        assert page._musique._jeu == "hp2"
+
+    def test_le_haut_parleur_coupe_tout(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        mini = win._mediatheque.mini
+        assert not win.config.son_coupe
+        mini._son.click()
+        assert win.config.son_coupe and mini._son.property("coupe")
+        mini._son.click()
+        assert not win.config.son_coupe

@@ -52,6 +52,7 @@ I18N_DIR = _BUNDLE_DIR / "data" / "i18n"
 NOUVEAUTES_PATH = _BUNDLE_DIR / "data" / "nouveautes.json"
 ATELIER_PATH = _BUNDLE_DIR / "data" / "atelier.json"
 DISCOGRAPHIE_PATH = _BUNDLE_DIR / "data" / "discographie.json"
+CINEMATIQUES_PATH = _BUNDLE_DIR / "data" / "cinematiques.json"
 
 # Langue proposee quand rien n'est encore choisi. Volontairement l'anglais
 # et non le francais : le launcher vise un public international, et le

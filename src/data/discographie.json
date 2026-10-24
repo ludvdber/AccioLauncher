@@ -1,5 +1,22 @@
 {
  "_note": "Généré depuis l'artefact Discographie (titres et seuils validés par Ludo). s = seuil d'avancement en % ; tout le jeu s'ouvre à 75 %.",
+ "credits": {
+  "hp1": {
+   "compositeur": "Jeremy Soule",
+   "annee": 2001,
+   "editeur": "Electronic Arts Inc."
+  },
+  "hp2": {
+   "compositeur": "Jeremy Soule",
+   "annee": 2002,
+   "editeur": "Electronic Arts Inc."
+  },
+  "hp3": {
+   "compositeur": "Jeremy Soule",
+   "annee": 2004,
+   "editeur": "Electronic Arts Inc."
+  }
+ },
  "jeux": {
   "hp1": [
    {

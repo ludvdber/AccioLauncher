@@ -90,6 +90,32 @@ def charger(chemin: Path | None = None) -> dict[str, tuple[Morceau, ...]]:
     return resultat
 
 
+@dataclass(frozen=True, slots=True)
+class Credit:
+    """Qui a écrit la musique d'un jeu : affiché sous chaque morceau (Ludo, 2026-10-24)."""
+    compositeur: str
+    annee: int
+    editeur: str
+
+
+def charger_credits(chemin: Path | None = None) -> dict[str, Credit]:
+    """Le crédit de chaque jeu ; vide si illisible (la page n'affiche alors rien)."""
+    if chemin is None:
+        from src.core.config import DISCOGRAPHIE_PATH
+        chemin = DISCOGRAPHIE_PATH
+    try:
+        data = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    credits = data.get("credits") if isinstance(data, dict) else None
+    if not isinstance(credits, dict):
+        return {}
+    return {str(jeu): Credit(c["compositeur"], c["annee"], c["editeur"])
+            for jeu, c in credits.items()
+            if isinstance(c, dict) and isinstance(c.get("compositeur"), str)
+            and isinstance(c.get("annee"), int) and isinstance(c.get("editeur"), str)}
+
+
 def _rang(valeur: str, ordre: tuple[str, ...]) -> int | None:
     v = valeur.strip().upper() if ordre is not NIVEAUX_HP1 else valeur.strip().lower()
     return ordre.index(v) if v in ordre else None
@@ -125,13 +151,19 @@ def avancement(jeu: str, spec: Sauvegardes | None) -> int | None:
     return max(lus) if lus else None
 
 
-def debloque(morceau: Morceau, avance: int | None) -> bool:
-    """Ouvert dès le début (seuil 0), à son seuil, ou avec tout le jeu à 75 %."""
-    if morceau.seuil <= 0:
+def ouvert_au_seuil(seuil: int, avance: int | None) -> bool:
+    """La règle commune aux morceaux et aux cinématiques : ouvert dès le début
+    (seuil 0), dès qu'UNE sauvegarde atteint le seuil, ou tout le jeu, générique
+    compris, à 75 % (« tout débloquer d'un jeu après le 75 % », Ludo)."""
+    if seuil <= 0:
         return True
     if avance is None:
         return False
-    return avance >= TOUT_A or avance >= morceau.seuil
+    return avance >= TOUT_A or avance >= seuil
+
+
+def debloque(morceau: Morceau, avance: int | None) -> bool:
+    return ouvert_au_seuil(morceau.seuil, avance)
 
 
 # ─── Morceaux vus ───

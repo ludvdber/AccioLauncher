@@ -58,6 +58,8 @@ class InfoPanel(QWidget):
     # les sauvegardes. Bouton près de l'engrenage jusqu'au 2026-10-14 : il
     # faisait passer le temps de jeu sous la rangée (Ludo).
     folio_clicked = pyqtSignal()
+    # « Musique » de la ligne méta : la Médiathèque ouverte sur ce jeu.
+    mediatheque_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -431,6 +433,8 @@ class InfoPanel(QWidget):
             self.folio_clicked.emit()
         elif href == "a-propos":
             self._basculer_a_propos()
+        elif href == "musique":
+            self.mediatheque_clicked.emit()
         else:
             self.versions_clicked.emit()
 
@@ -624,6 +628,10 @@ class InfoPanel(QWidget):
         elif game.id in folio.JEUX and self._manager.is_installed(game.id):
             morceaux.append(f'<a href="folio" style="color:{gold}; text-decoration:none;">'
                             + _insecable(escape(tr("Folio").upper(), quote=False)) + '</a>')
+        from src.ui.mediatheque import a_des_medias
+        if a_des_medias(game.id) and self._manager.is_installed(game.id):
+            morceaux.append(f'<a href="musique" style="color:{gold}; text-decoration:none;">'
+                            + _insecable(escape(tr("Musique").upper(), quote=False)) + '</a>')
         point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
         self._indices.setToolTip(game.controller_note if manette else "")

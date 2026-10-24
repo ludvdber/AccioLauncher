@@ -61,6 +61,8 @@ class GameDetailView(QWidget):
     page_demandee = pyqtSignal(object)
     # La bande-annonce s'entend (ou plus) : la musique de fond lui laisse la place.
     son_bande_annonce = pyqtSignal(bool)
+    # Le lien « Musique » de la fiche : la Médiathèque sur ce jeu.
+    mediatheque_demandee = pyqtSignal(str)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -165,6 +167,8 @@ class GameDetailView(QWidget):
         self._action_panel.game_settings_clicked.connect(
             lambda: handlers.on_game_settings(self))
         self._info.folio_clicked.connect(self.ouvrir_folio)
+        self._info.mediatheque_clicked.connect(
+            lambda: self.game is not None and self.mediatheque_demandee.emit(self.game.id))
         self._info.content_changed.connect(self._position_info)
 
         # Menu contextuel

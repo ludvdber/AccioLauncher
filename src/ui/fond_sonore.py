@@ -7,10 +7,13 @@ sonore, le faire cohabiter avec les bandes-annonces, et pouvoir couper le son
 **Un seul lecteur, des raisons de se taire.** La musique joue quand un morceau
 est choisi, que le son n'est pas coupé et qu'AUCUNE raison ne la suspend :
 `BANDE_ANNONCE` (une bande-annonce joue avec le son), `JEU` (une partie est en
-cours), `FENETRE` (le launcher est caché dans la zone de notification). Chaque
+cours), `FENETRE` (le launcher est caché dans la zone de notification),
+`CINEMATIQUE` (une cinématique de la Médiathèque joue). Chaque
 raison se pose et se retire seule ; la musique reprend quand il n'en reste
-aucune. Une écoute depuis la page Musique (`ecouter`) passe devant le fond et
-le rend à la sortie de la page (`fin_ecoute`).
+aucune. Une écoute depuis la Médiathèque (`ecouter`) passe devant le fond, se met
+en pause sur place (`basculer_pause`) et continue hors de la page : le
+mini-lecteur de la barre du bas la montre. Elle rend la main au fond quand
+on l'arrête (`arreter_ecoute`).
 
 **Le son coupé** (`Config.son_coupe`) vaut pour tout le launcher : la fenêtre
 l'applique aussi aux bandes-annonces (`son_coupe_change`).
@@ -44,6 +47,7 @@ log = logging.getLogger(__name__)
 BANDE_ANNONCE = "bande_annonce"
 JEU = "jeu"
 FENETRE = "fenetre"
+CINEMATIQUE = "cinematique"
 
 
 def cle(jeu: str, fichier: str) -> str:
@@ -69,6 +73,7 @@ class FondSonore(QObject):
         self._cache = cache
         self._raisons: set[str] = set()
         self._ecoute = ""              # morceau écouté depuis la page, devant le fond
+        self._en_pause = False         # l'écoute arrêtée sur place, prête à reprendre
         self._courant = ""             # morceau chargé dans le lecteur
         self._titres = {cle(j, m.fichier): m.titre
                         for j, morceaux in discographie.charger().items() for m in morceaux}
@@ -94,6 +99,15 @@ class FondSonore(QObject):
     def ecoute(self) -> str:
         return self._ecoute
 
+    @property
+    def en_pause(self) -> bool:
+        return bool(self._ecoute) and self._en_pause
+
+    @property
+    def morceau(self) -> str:
+        """Ce que la platine montre : l'écoute de la page, sinon le fond."""
+        return self._ecoute or self._config.musique_fond
+
     def titre(self, cle_morceau: str) -> str:
         return self._titres.get(cle_morceau, "")
 
@@ -105,6 +119,10 @@ class FondSonore(QObject):
 
     # ── Ce que la page et la barre demandent ──
 
+    def demarrer(self) -> None:
+        """Ouverture du launcher : le fond choisi la dernière fois reprend."""
+        self._appliquer()
+
     def choisir_fond(self, cle_morceau: str) -> None:
         """Ce morceau devient le fond (vide = aucun), enregistré aussitôt."""
         self._config.musique_fond = cle_morceau
@@ -115,7 +133,24 @@ class FondSonore(QObject):
         """Une écoute depuis la page : passe devant le fond, même son coupé
         (un clic sur « écouter » est une demande explicite de son)."""
         self._ecoute = cle_morceau
+        self._en_pause = False
         if self._config.son_coupe:
+            self._config.son_coupe = False
+            self._config.save()
+            self.son_coupe_change.emit(False)
+        self._appliquer()
+
+    def basculer_pause(self) -> None:
+        """Pause ou reprise de ce que montre la platine. Sans écoute, le fond
+        devient l'écoute : en lecture il se met en pause, muet il repart."""
+        if not self._ecoute:
+            if not self._config.musique_fond:
+                return
+            self._en_pause = self.en_lecture
+            self._ecoute = self._config.musique_fond
+        else:
+            self._en_pause = not self._en_pause
+        if not self._en_pause and self._config.son_coupe:
             self._config.son_coupe = False
             self._config.save()
             self.son_coupe_change.emit(False)
@@ -123,12 +158,8 @@ class FondSonore(QObject):
 
     def arreter_ecoute(self) -> None:
         self._ecoute = ""
+        self._en_pause = False
         self._appliquer()
-
-    def fin_ecoute(self) -> None:
-        """La page se ferme : le fond reprend sa place."""
-        if self._ecoute:
-            self.arreter_ecoute()
 
     def basculer_son(self) -> None:
         self._config.son_coupe = not self._config.son_coupe
@@ -136,9 +167,11 @@ class FondSonore(QObject):
         self.son_coupe_change.emit(self._config.son_coupe)
         self._appliquer()
 
-    def regler_volume(self, valeur: int) -> None:
+    def regler_volume(self, valeur: int, enregistrer: bool = True) -> None:
+        """`enregistrer=False` pendant qu'on glisse le curseur : une écriture au lâcher."""
         self._config.volume_musique = max(0, min(100, valeur))
-        self._config.save()
+        if enregistrer:
+            self._config.save()
         if self._sortie is not None:
             self._sortie.setVolume(self._config.volume_musique / 100.0)
 
@@ -170,13 +203,17 @@ class FondSonore(QObject):
     def _voulu(self) -> str:
         """Le morceau qui devrait jouer maintenant, vide pour le silence."""
         if self._ecoute:
-            # L'écoute de la page ne cède qu'à une partie lancée ou à la fenêtre cachée.
-            return "" if self._raisons & {JEU, FENETRE} else self._ecoute
+            # L'écoute de la page ne cède qu'à sa pause, à une partie lancée, à la
+            # fenêtre cachée ou à une cinématique.
+            if self._en_pause or self._raisons & {JEU, FENETRE, CINEMATIQUE}:
+                return ""
+            return self._ecoute
         if self._config.son_coupe or self._raisons:
             return ""
         return self._config.musique_fond
 
-    def _fichier(self, cle_morceau: str) -> Path | None:
+    def fichier(self, cle_morceau: str) -> Path | None:
+        """Le fichier lisible d'un morceau (HP1 : extrait dans le cache), ou None."""
         morceau = decouper(cle_morceau)
         if morceau is None:
             return None
@@ -194,7 +231,7 @@ class FondSonore(QObject):
             self.change.emit()
             return
         if voulu != self._courant:
-            chemin = self._fichier(voulu)
+            chemin = self.fichier(voulu)
             if chemin is None:
                 log.info("Musique de fond introuvable : %s", voulu)
                 if self._lecteur is not None:

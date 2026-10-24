@@ -1,0 +1,455 @@
+{
+ "_note": "Brouillon du 2026-10-24, d'après les fichiers des jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 : estimé d'après l'histoire ; HP7 et HP8 n'ont pas encore de lecteur de sauvegardes, tout y est ouvert). Les .vp6 de HP7 et HP8 n'ont pas de piste son : le son est ailleurs, à retrouver.",
+ "jeux": {
+  "hp3": {
+   "dossier": "Movies",
+   "ext": ".bik",
+   "clips": [
+    {
+     "f": "SiriusPhoto",
+     "t": "La photo de Sirius dans la Gazette",
+     "s": 0
+    },
+    {
+     "f": "PinkLady",
+     "t": "Le portrait de la Grosse Dame",
+     "s": 0
+    },
+    {
+     "f": "McGonaCat",
+     "t": "McGonagall se change en chat",
+     "s": 7
+    },
+    {
+     "f": "PettiScab",
+     "t": "Croûtard redevient Pettigrow",
+     "s": 87
+    },
+    {
+     "f": "SiriusDog",
+     "t": "Sirius se change en chien",
+     "s": 87
+    },
+    {
+     "f": "DogSirius",
+     "t": "Le chien redevient Sirius",
+     "s": 87
+    },
+    {
+     "f": "LupinWolf",
+     "t": "Lupin se transforme",
+     "s": 93
+    },
+    {
+     "f": "HourGlassBac",
+     "t": "Le sablier des maisons",
+     "s": 0
+    },
+    {
+     "f": "LoadLevel",
+     "t": "L'écran de chargement",
+     "s": 0
+    },
+    {
+     "f": "eag_1920",
+     "t": "Logo Electronic Arts",
+     "s": 0
+    },
+    {
+     "f": "wb_1920",
+     "t": "Logo Warner Bros.",
+     "s": 0
+    },
+    {
+     "f": "KWLogo",
+     "t": "Logo KnowWonder",
+     "s": 0
+    }
+   ]
+  },
+  "hp7": {
+   "dossier": "pc",
+   "ext": ".vp6",
+   "sans_son": true,
+   "clips": [
+    {
+     "f": "APTH1_1",
+     "t": "Cinématique 1",
+     "s": 0
+    },
+    {
+     "f": "APTH2_1",
+     "t": "Cinématique 2",
+     "s": 0
+    },
+    {
+     "f": "DLA1_0",
+     "t": "Cinématique 3",
+     "s": 0
+    },
+    {
+     "f": "GH1_4",
+     "t": "Cinématique 4",
+     "s": 0
+    },
+    {
+     "f": "GH2_0",
+     "t": "Cinématique 5",
+     "s": 0
+    },
+    {
+     "f": "GH2_1_A",
+     "t": "Cinématique 6",
+     "s": 0
+    },
+    {
+     "f": "GH2_1_B",
+     "t": "Cinématique 7",
+     "s": 0
+    },
+    {
+     "f": "GH2_1_C",
+     "t": "Cinématique 8",
+     "s": 0
+    },
+    {
+     "f": "GH2_1_D",
+     "t": "Cinématique 9",
+     "s": 0
+    },
+    {
+     "f": "GH2_2",
+     "t": "Cinématique 10",
+     "s": 0
+    },
+    {
+     "f": "KT1_0",
+     "t": "Cinématique 11",
+     "s": 0
+    },
+    {
+     "f": "KT2_4",
+     "t": "Cinématique 12",
+     "s": 0
+    },
+    {
+     "f": "KT2_5",
+     "t": "Cinématique 13",
+     "s": 0
+    },
+    {
+     "f": "KT5_4",
+     "t": "Cinématique 14",
+     "s": 0
+    },
+    {
+     "f": "MIM1_0",
+     "t": "Cinématique 15",
+     "s": 0
+    },
+    {
+     "f": "MIM4_1",
+     "t": "Cinématique 16",
+     "s": 0
+    },
+    {
+     "f": "MIM5_1",
+     "t": "Cinématique 17",
+     "s": 0
+    },
+    {
+     "f": "MIM6_10",
+     "t": "Cinématique 18",
+     "s": 0
+    },
+    {
+     "f": "MIM_1_11_pt1",
+     "t": "Cinématique 19",
+     "s": 0
+    },
+    {
+     "f": "MIM_1_11_pt2",
+     "t": "Cinématique 20",
+     "s": 0
+    },
+    {
+     "f": "SD1_0",
+     "t": "Cinématique 21",
+     "s": 0
+    },
+    {
+     "f": "SD2_4",
+     "t": "Cinématique 22",
+     "s": 0
+    },
+    {
+     "f": "SD3_2",
+     "t": "Cinématique 23",
+     "s": 0
+    },
+    {
+     "f": "SD3_5",
+     "t": "Cinématique 24",
+     "s": 0
+    },
+    {
+     "f": "TGR1_1",
+     "t": "Cinématique 25",
+     "s": 0
+    },
+    {
+     "f": "TGR1_11",
+     "t": "Cinématique 26",
+     "s": 0
+    },
+    {
+     "f": "TSP1_0",
+     "t": "Cinématique 27",
+     "s": 0
+    },
+    {
+     "f": "TSP2_3",
+     "t": "Cinématique 28",
+     "s": 0
+    },
+    {
+     "f": "TSP2_6",
+     "t": "Cinématique 29",
+     "s": 0
+    },
+    {
+     "f": "TSP2_10",
+     "t": "Cinématique 30",
+     "s": 0
+    },
+    {
+     "f": "TSP2_12_01",
+     "t": "Cinématique 31",
+     "s": 0
+    },
+    {
+     "f": "TSP2_12_02",
+     "t": "Cinématique 32",
+     "s": 0
+    },
+    {
+     "f": "TW1_1",
+     "t": "Cinématique 33",
+     "s": 0
+    },
+    {
+     "f": "TW3_2",
+     "t": "Cinématique 34",
+     "s": 0
+    },
+    {
+     "f": "XL2_0_Combined",
+     "t": "Cinématique 35",
+     "s": 0
+    },
+    {
+     "f": "XL4_3",
+     "t": "Cinématique 36",
+     "s": 0
+    },
+    {
+     "f": "XL4_4",
+     "t": "Cinématique 37",
+     "s": 0
+    },
+    {
+     "f": "XL4_5",
+     "t": "Cinématique 38",
+     "s": 0
+    },
+    {
+     "f": "XL4_7",
+     "t": "Cinématique 39",
+     "s": 0
+    },
+    {
+     "f": "XL4_8",
+     "t": "Cinématique 40",
+     "s": 0
+    },
+    {
+     "f": "XL4_11",
+     "t": "Cinématique 41",
+     "s": 0
+    },
+    {
+     "f": "XL4_13",
+     "t": "Cinématique 42",
+     "s": 0
+    },
+    {
+     "f": "XL4_14",
+     "t": "Cinématique 43",
+     "s": 0
+    },
+    {
+     "f": "01_TO_SKULL",
+     "t": "Menu animé 1",
+     "s": 0
+    },
+    {
+     "f": "02_SKULL_LOOP",
+     "t": "Menu animé 2",
+     "s": 0
+    },
+    {
+     "f": "03_FROM_SKULL_TO_CLOUD",
+     "t": "Menu animé 3",
+     "s": 0
+    },
+    {
+     "f": "04_CLOUD_LOOP",
+     "t": "Menu animé 4",
+     "s": 0
+    },
+    {
+     "f": "05_FROM_CLOUD_TO_SKULL",
+     "t": "Menu animé 5",
+     "s": 0
+    },
+    {
+     "f": "06_FROM_SKULL_TO_DEATHEATER",
+     "t": "Menu animé 6",
+     "s": 0
+    }
+   ]
+  },
+  "hp8": {
+   "dossier": "pc",
+   "ext": ".vp6",
+   "sans_son": true,
+   "clips": [
+    {
+     "f": "CS01",
+     "t": "Cinématique 1",
+     "s": 0
+    },
+    {
+     "f": "CS02",
+     "t": "Cinématique 2",
+     "s": 0
+    },
+    {
+     "f": "cs03_a",
+     "t": "Cinématique 3, partie 1",
+     "s": 0
+    },
+    {
+     "f": "cs03_b",
+     "t": "Cinématique 3, partie 2",
+     "s": 0
+    },
+    {
+     "f": "CS04",
+     "t": "Cinématique 4",
+     "s": 0
+    },
+    {
+     "f": "CS05",
+     "t": "Cinématique 5",
+     "s": 0
+    },
+    {
+     "f": "CS06",
+     "t": "Cinématique 6",
+     "s": 0
+    },
+    {
+     "f": "CS07_a",
+     "t": "Cinématique 7, partie 1",
+     "s": 0
+    },
+    {
+     "f": "CS07_b",
+     "t": "Cinématique 7, partie 2",
+     "s": 0
+    },
+    {
+     "f": "CS08",
+     "t": "Cinématique 8",
+     "s": 0
+    },
+    {
+     "f": "CS09",
+     "t": "Cinématique 9",
+     "s": 0
+    },
+    {
+     "f": "CS10",
+     "t": "Cinématique 10",
+     "s": 0
+    },
+    {
+     "f": "CS11",
+     "t": "Cinématique 11",
+     "s": 0
+    },
+    {
+     "f": "CS12",
+     "t": "Cinématique 12",
+     "s": 0
+    },
+    {
+     "f": "CS13",
+     "t": "Cinématique 13",
+     "s": 0
+    },
+    {
+     "f": "CS14",
+     "t": "Cinématique 14",
+     "s": 0
+    },
+    {
+     "f": "CS15",
+     "t": "Cinématique 15",
+     "s": 0
+    },
+    {
+     "f": "CS16",
+     "t": "Cinématique 16",
+     "s": 0
+    },
+    {
+     "f": "CS17",
+     "t": "Cinématique 17",
+     "s": 0
+    },
+    {
+     "f": "CS18",
+     "t": "Cinématique 18",
+     "s": 0
+    },
+    {
+     "f": "CS19",
+     "t": "Cinématique 19",
+     "s": 0
+    },
+    {
+     "f": "CS21",
+     "t": "Cinématique 21",
+     "s": 0
+    },
+    {
+     "f": "cs21_voldemorts_death_animatic",
+     "t": "Cinématique 21, animatique",
+     "s": 0
+    },
+    {
+     "f": "CharacterHistory",
+     "t": "L'histoire des personnages",
+     "s": 0
+    },
+    {
+     "f": "Logopt1",
+     "t": "Logos d'ouverture",
+     "s": 0
+    }
+   ]
+  }
+ }
+}

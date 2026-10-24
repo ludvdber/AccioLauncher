@@ -1,8 +1,8 @@
 """Le phonographe : les musiques des jeux, lues dans la copie du joueur.
 
 Idée validée par Ludo le 2026-10-24. Rien n'est distribué : les morceaux
-viennent du dossier du jeu INSTALLÉ, et la page qui les jouera n'existe pas
-encore (son emplacement dans le launcher reste à décider).
+viennent du dossier du jeu INSTALLÉ, et la Médiathèque les joue
+(`ui/mediatheque.py`).
 
 Relevé sur les jeux (atelier, `notes/PHONOGRAPHE_PROJECTION_TRADUCTIONS.md`) :
 
@@ -168,6 +168,55 @@ def flux_umx(d: bytes) -> tuple[str, bytes] | None:
     except (IndexError, ValueError):
         return None
     return None
+
+
+_INTERDITS = '<>:"/\\|?*'
+
+
+def nom_de_fichier(titre_affiche: str) -> str:
+    """Un titre en nom de fichier valable partout (Windows est le plus strict)."""
+    propre = "".join("-" if c in _INTERDITS or ord(c) < 32 else c for c in titre_affiche)
+    propre = propre.strip().rstrip(". ")
+    return propre[:120] or "Morceau"
+
+
+def exporter(source: Path, titre_affiche: str, dossier: Path) -> Path | None:
+    """Copie un morceau lisible dans `dossier` sous son titre, et rend le chemin.
+
+    Demandé par Ludo le 2026-10-24 (« récupérer la musique si les gens la
+    veulent ») : le fichier d'origine, sans perte, tiré de la copie du joueur.
+    Un fichier du même nom et de la même taille est déjà ce morceau ; un autre
+    fichier du même nom n'est jamais écrasé (« Titre (2) »). None si la copie
+    échoue.
+    """
+    base = nom_de_fichier(titre_affiche)
+    suffixe = source.suffix.lower()
+    try:
+        taille = source.stat().st_size
+        dossier.mkdir(parents=True, exist_ok=True)
+        for n in range(1, 100):
+            cible = dossier / (f"{base}{suffixe}" if n == 1 else f"{base} ({n}){suffixe}")
+            if not cible.exists():
+                break
+            if cible.stat().st_size == taille:
+                return cible
+        else:
+            return None
+        fd, tmp = tempfile.mkstemp(dir=dossier, suffix=".accio-tmp")
+        try:
+            with os.fdopen(fd, "wb") as ecrit:
+                ecrit.write(source.read_bytes())
+            os.replace(tmp, cible)
+        except OSError:
+            try:
+                os.remove(tmp)               # notre propre fichier temporaire
+            except OSError:
+                pass
+            raise
+    except OSError as exc:
+        log.warning("Phonographe, enregistrement de %s échoué : %s", source, exc)
+        return None
+    return cible
 
 
 def fichier_lisible(piste: Piste, cache: Path) -> Path | None:

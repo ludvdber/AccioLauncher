@@ -385,7 +385,13 @@ class TestFenetreAllegee:
         # construction, le bouton des Parametres, et le clavier donne a la
         # visite AVANT les touches globales : c'est la fenetre qui distribue
         # le clavier, Entree lancait sinon le jeu cache sous le voile.
+        # 766 -> 769 le 2026-10-24 : la Mediatheque (musique et cinematiques,
+        # idee de Ludo). Le lecteur de fond, le mini-lecteur de la barre du
+        # bas, l'avancement, les nouveautes et TOUT le cablage (bandes-annonces,
+        # parties, son coupe, fermeture) vivent dans `src/ui/mediatheque.py`.
+        # Restent l'import et la construction ; l'onglet passe par l'aiguillage
+        # existant de `_on_onglet`, sans ligne de plus.
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 766, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 769, f"main_window.py a regrossi : {lignes} lignes"

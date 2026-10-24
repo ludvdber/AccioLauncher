@@ -30,7 +30,7 @@ from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
 from src.ui.galerie_page import GaleriePage
-from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, GALERIE, HAUTEUR as HAUTEUR_BARRE, PARAMETRES, TitleBar
+from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, GALERIE, HAUTEUR as HAUTEUR_BARRE, MEDIATHEQUE, PARAMETRES, TitleBar
 from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
@@ -38,6 +38,7 @@ from src.ui.update_dispatcher import UpdateDispatcher
 from src.ui.window_chrome import WindowChrome, geometrie_d_ouverture
 from src.ui.utils import icone_application, open_url
 from src.ui.visite_guidee import PiloteVisite
+from src.ui.mediatheque import Mediatheque
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +183,7 @@ class MainWindow(QMainWindow):
         self._btn_stats = self._title_bar.onglet(ANNEES)
         self._btn_discord = self._title_bar.discord
         # Ce que le mode cinéma escamote.
-        self._commandes = (self._btn_settings, self._btn_stats, self._title_bar.onglet(GALERIE),
+        self._commandes = (self._btn_settings, self._btn_stats, self._title_bar.onglet(GALERIE), self._title_bar.onglet(MEDIATHEQUE),
                            self._btn_discord, self._title_bar.contribuer)
 
         # Event filter on QApplication for global mouse tracking
@@ -243,6 +244,8 @@ class MainWindow(QMainWindow):
         self._session.configuration_cassee.connect(self._on_configuration_cassee)
         self._session.arret_fatal.connect(self._on_arret_fatal)
         self._session.diagnostic.connect(self._on_diagnostic)
+        self._mediatheque = Mediatheque(self, self.manager, self._pages, self._detail, self._status_bar,
+                                        self._session, self._title_bar)
 
     # ──────────────────── Update checker ────────────────────
 
@@ -661,7 +664,7 @@ class MainWindow(QMainWindow):
         elif cle == BIBLIOTHEQUE:
             self._pages.fermer()
         else:
-            {ANNEES: self._on_stats, GALERIE: lambda: self._pages.ouvrir(GaleriePage(
+            {ANNEES: self._on_stats, MEDIATHEQUE: self._mediatheque.ouvrir, GALERIE: lambda: self._pages.ouvrir(GaleriePage(
                 [e.game for e in self.manager.get_games()], self), GALERIE)}.get(cle, self._on_settings)()
 
     def resizeEvent(self, event) -> None:

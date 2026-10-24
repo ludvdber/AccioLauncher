@@ -24,6 +24,9 @@ ANNEES = "annees"
 # La galerie n'était qu'un bouton de Mes années, et on ne l'y trouvait pas
 # (Ludo, 2026-10-14) : elle a son onglet.
 GALERIE = "galerie"
+# La musique et les cinématiques des jeux, en un seul onglet (Ludo, 2026-10-24 :
+# « un menu pour les deux, on n'a pas assez de place »).
+MEDIATHEQUE = "mediatheque"
 PARAMETRES = "parametres"
 
 _TAILLE_LOGO = 16
@@ -55,7 +58,39 @@ class _Onglet(QPushButton):
             f"QPushButton:hover {{ color: {palette.accent_light}; }}"
             f"QPushButton:checked {{ color: #f2eee2; border-bottom-color: {palette.accent}; }}"
             f"QPushButton:focus {{ color: {palette.accent_light}; }}"
+            'QPushButton[serre="true"] { padding: 0 7px; }'
         )
+        self.pastille = False
+
+    def serrer(self, oui: bool) -> None:
+        """Marges réduites de 10 à 7 px : le dernier recours à 980 px, en français
+        avec un écu, une fois Contribuer et Discord réduits (onglet Médias)."""
+        if bool(self.property("serre")) != oui:
+            self.setProperty("serre", oui)
+            self.style().unpolish(self)
+            self.style().polish(self)
+            self.updateGeometry()
+
+    def poser_pastille(self, oui: bool) -> None:
+        """Le point or « quelque chose de nouveau ici » ; dit aussi aux aides techniques."""
+        if oui != self.pastille:
+            self.pastille = oui
+            libelle = self.accessibleName().split(" · ")[0]
+            self.setAccessibleName(f"{libelle} · {tr('nouveau')}" if oui else libelle)
+            self.update()
+
+    def paintEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().paintEvent(event)
+        if not self.pastille:
+            return
+        largeur = self.fontMetrics().horizontalAdvance(self.text())
+        x = (self.width() + largeur) / 2 + 3
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(theme.accent_qcolor())
+        p.drawEllipse(QRectF(x, self.height() / 2 - 9, 6, 6))
+        p.end()
 
 
 def _logo_espace(couleur: QColor, icone: str = "discord") -> QIcon:
@@ -84,15 +119,34 @@ class _PastilleDiscord(QPushButton):
         self.setFont(body_font(10))
         self.setFixedHeight(26)
         self.setIconSize(QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
-        self._blanc = _logo_espace(QColor("#ffffff"))
-        self._survol = _logo_espace(BLURPLE)
+        self._blancs = (_logo_espace(QColor("#ffffff")),
+                        QIcon(pixmap_icone("discord", _TAILLE_LOGO, QColor("#ffffff"))))
+        self._survols = (_logo_espace(BLURPLE), QIcon(pixmap_icone("discord", _TAILLE_LOGO, BLURPLE)))
+        self._blanc, self._survol = self._blancs[0], self._survols[0]
         self.setIcon(self._blanc)
+        self.compact = False
         self.setStyleSheet(
             "QPushButton { background: transparent; color: #d9d6e8; padding: 0 12px 0 10px;"
             " border: 1px solid rgba(255,255,255,0.12); border-radius: 13px; }"
             "QPushButton:hover, QPushButton:focus { border-color: rgba(88,101,242,0.6);"
             " background: rgba(88,101,242,0.12); }"
         )
+        self.largeur_complete = self.sizeHint().width()
+        self.compacter(True)
+        self.largeur_compacte = self.sizeHint().width()
+        self.compacter(False)
+
+    def compacter(self, oui: bool) -> None:
+        """Le logo seul, quand même Contribuer réduit ne suffit plus (l'onglet
+        Médias, 2026-10-24) ; « Discord » reste dans l'infobulle."""
+        if oui == self.compact:
+            return
+        self.compact = oui
+        self.setText("" if oui else "Discord")
+        self._blanc, self._survol = self._blancs[oui], self._survols[oui]
+        self.setIcon(self._survol if self.underMouse() else self._blanc)
+        self.setIconSize(QSize(_TAILLE_LOGO, _TAILLE_LOGO) if oui
+                         else QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
 
     def enterEvent(self, event) -> None:
         self.setIcon(self._survol)
@@ -132,6 +186,9 @@ class _Contribuer(QPushButton):
             " border-color: rgba(214,167,44,0.35); }"
         )
         self.largeur_complete = self.sizeHint().width()
+        self.compacter(True)
+        self.largeur_compacte = self.sizeHint().width()
+        self.compacter(False)
 
     def compacter(self, oui: bool) -> None:
         """Le pinceau seul quand la fenêtre est étroite ; le nom reste dans
@@ -226,6 +283,7 @@ class TitleBar(QWidget):
         for cle, libelle in ((BIBLIOTHEQUE, tr("Bibliothèque")),
                              (ANNEES, tr("Mes années")),
                              (GALERIE, tr("Galerie")),
+                             (MEDIATHEQUE, tr("Médias")),
                              (PARAMETRES, tr("Paramètres"))):
             onglet = _Onglet(libelle, palette, self)
             onglet.clicked.connect(lambda _=False, c=cle: self.onglet_demande.emit(c))
@@ -293,14 +351,18 @@ class TitleBar(QWidget):
         self._ajuster_contribuer()
 
     def _ajuster_contribuer(self) -> None:
-        lay = self.layout()
-        bouton = self._contribuer
-        if bouton.compact:
-            gain = bouton.largeur_complete - bouton.sizeHint().width()
-            besoin = lay.minimumSize().width() + gain
-        else:
-            besoin = lay.minimumSize().width()
-        bouton.compacter(besoin > self.width())
+        """Contribuer se réduit d'abord ; Discord ensuite, s'il manque encore de la place."""
+        contribuer, discord = self._contribuer, self._discord
+        complet = self.layout().minimumSize().width() + sum(
+            b.largeur_complete - b.largeur_compacte for b in (contribuer, discord) if b.compact)
+        gains = [b.largeur_complete - b.largeur_compacte for b in (contribuer, discord)]
+        contribuer.compacter(complet > self.width())
+        discord.compacter(complet - gains[0] > self.width())
+        # Les onglets serrés : 6 px chacun, mesurés à leur largeur pleine.
+        onglets = list(self._onglets.values())
+        serres = sum(6 for o in onglets if o.property("serre"))
+        for onglet in onglets:
+            onglet.serrer(complet - sum(gains) + serres > self.width())
 
     def eventFilter(self, obj, event) -> bool:
         if obj is self._window and event.type() == QEvent.Type.WindowStateChange:
@@ -322,6 +384,9 @@ class TitleBar(QWidget):
 
     def onglet(self, cle: str) -> QPushButton:
         return self._onglets[cle]
+
+    def set_pastille(self, cle: str, oui: bool) -> None:
+        self._onglets[cle].poser_pastille(oui)
 
     @property
     def discord(self) -> QPushButton:

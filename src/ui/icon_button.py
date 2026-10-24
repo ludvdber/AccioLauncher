@@ -93,6 +93,12 @@ _FICHIERS = {
     "appareil": "phosphor/camera-bold.svg",
     # Folio, depuis la fiche du jeu (2026-10-14).
     "folio": "phosphor/book-open-text-bold.svg",
+    # Médiathèque (2026-10-24).
+    "musique": "phosphor/music-notes-bold.svg",
+    "precedent": "phosphor/skip-back-fill.svg",
+    "suivant": "phosphor/skip-forward-fill.svg",
+    "cadenas": "phosphor/lock-simple-bold.svg",
+    "film": "phosphor/film-strip-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }
