@@ -1270,9 +1270,6 @@
     "{} nouveaux": "{} nuevos",
     "nouveau": "nuevo",
     "Fond sonore": "Música de fondo",
-    "Fond sonore du launcher": "Música de fondo del launcher",
-    "Retirer du fond": "Quitar del fondo",
-    "Mettre en fond sonore": "Poner como música de fondo",
     "Aucune partie lue pour l'instant": "Aún no se ha leído ninguna partida",
     "Votre sauvegarde la plus avancée : {} %": "Tu partida más avanzada: {} %",
     "{n} morceaux sur {total}": "{n} pistas de {total}",
@@ -1284,6 +1281,14 @@
     "Installez L'École des sorciers, La Chambre des secrets ou Le Prisonnier d'Azkaban pour écouter leur musique ici.": "Instala La piedra filosofal, La cámara secreta o El prisionero de Azkaban para escuchar su música aquí.",
     "Aucun jeu installé n'a de cinématique à montrer ici pour l'instant. Les trois premiers jeux jouent les leurs dans le moteur, sans fichier vidéo.": "Ningún juego instalado tiene cinemáticas que mostrar aquí por ahora. Los tres primeros juegos reproducen las suyas en el motor, sin archivos de vídeo.",
     "Sans le son pour l'instant : il est rangé ailleurs dans le jeu.": "Sin sonido por ahora: está guardado en otra parte del juego.",
-    "Médias": "Medios"
+    "Médias": "Medios",
+    "Enregistrer": "Guardar",
+    "La musique de ce jeu n'est pas encore lue par le launcher.": "El launcher aún no lee la música de este juego.",
+    "Retirer ce morceau du fond sonore": "Quitar esta pista de la música de fondo",
+    "Mettre ce morceau en fond sonore du launcher": "Usar esta pista como música de fondo del launcher",
+    "Ce jeu joue ses cinématiques dans son moteur : il n'a pas de fichier vidéo à montrer ici.": "Este juego reproduce sus cinemáticas en su motor: no tiene archivos de vídeo que mostrar aquí.",
+    "Les cinématiques de ce jeu ne sont pas encore lues par le launcher.": "El launcher aún no lee las cinemáticas de este juego.",
+    "Fond sonore du launcher : {}": "Música de fondo del launcher: {}",
+    "La musique et les cinématiques du jeu": "La música y las cinemáticas del juego"
   }
 }

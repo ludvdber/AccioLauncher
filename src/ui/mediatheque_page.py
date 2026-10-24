@@ -26,7 +26,7 @@ Le modèle est `mediatheque.Mediatheque` : la page ne lit rien elle-même.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QRectF, QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -143,6 +143,40 @@ def _vider(pile: QVBoxLayout) -> None:
         item = pile.takeAt(0)
         if item.widget() is not None:
             item.widget().deleteLater()
+
+
+class _Paquets:
+    """Bâtit une longue liste par paquets, au fil de la boucle d'événements.
+
+    152 rangées d'un coup figeaient l'ouverture de la page 0,4 s (HP3, mesuré
+    le 2026-10-24) : les 30 premières se posent tout de suite, le reste suit
+    sans bloquer. Minuteur POSSÉDÉ (règle 102) : un nouveau jeu l'arrête.
+    """
+
+    TAILLE = 30
+
+    def __init__(self, parent: QWidget, pile: QVBoxLayout) -> None:
+        self._pile = pile
+        self._attente: list = []
+        self._minuteur = QTimer(parent)
+        self._minuteur.setInterval(0)
+        self._minuteur.timeout.connect(self._suite)
+
+    def remplir(self, fabriques: list) -> None:
+        self._minuteur.stop()
+        _vider(self._pile)
+        self._attente = list(fabriques)
+        self._suite()
+
+    def _suite(self) -> None:
+        paquet, self._attente = self._attente[:self.TAILLE], self._attente[self.TAILLE:]
+        for fabrique in paquet:
+            self._pile.addWidget(fabrique())
+        if self._attente:
+            self._minuteur.start()
+        else:
+            self._minuteur.stop()
+            self._pile.addStretch()
 
 
 class _Elide(QLabel):
@@ -319,7 +353,7 @@ class _LigneMorceau(QFrame):
             lay.addWidget(texte(_texte_seuil(morceau.seuil), 13, ENCRE_DOUCE))
 
     def marquer(self, courante: bool, fond: bool) -> None:
-        if self.property("courante") != courante:
+        if bool(self.property("courante")) != courante:
             self.setProperty("courante", courante)
             _repolir(self)
             if self._ecouter is not None:
@@ -517,6 +551,7 @@ class _VueMusique(QWidget):
         self._pile = QVBoxLayout(self._morceaux)
         self._pile.setContentsMargins(0, 0, 0, 12)
         self._pile.setSpacing(0)
+        self._paquets = _Paquets(self, self._pile)
         self._zone = zone_defilable(self._morceaux)
         lay.addWidget(self._zone, stretch=1)
         self._credit_jeu = texte("", 12, ENCRE_DISCRETE, retour=True)
@@ -537,22 +572,28 @@ class _VueMusique(QWidget):
             w.setVisible(a_de_la_musique)
         self._vide.setVisible(not a_de_la_musique)
         self._stretch_vide.setVisible(not a_de_la_musique)
-        _vider(self._pile)
         self._lignes = []
         if not a_de_la_musique:
-            self._vide.setText(tr("La musique de ce jeu n'est pas encore lue par le launcher."))
+            self._paquets.remplir([])
+            self._vide.setText(
+                tr("La musique de ce jeu n'est pas encore lue par le launcher.") if jeu
+                else tr("Installez L'École des sorciers, La Chambre des secrets ou Le Prisonnier "
+                        "d'Azkaban pour écouter leur musique ici."))
             self._rafraichir()
             return
         nouveaux = media.nouveaux(jeu, MUSIQUE)
         avance = media.avance(jeu)
-        ouverts = 0
-        for i, m in enumerate(morceaux, 1):
-            ouvert = media.ouvert(jeu, m.seuil)
-            ouverts += ouvert
-            ligne = _LigneMorceau(self, jeu, i, m, ouvert, m.fichier in nouveaux)
-            self._pile.addWidget(ligne)
-            self._lignes.append(ligne)
-        self._pile.addStretch()
+        ouverts = sum(media.ouvert(jeu, m.seuil) for m in morceaux)
+
+        def fabrique(i: int, m: discographie.Morceau):
+            def faire() -> QWidget:
+                ligne = _LigneMorceau(self, jeu, i, m, media.ouvert(jeu, m.seuil), m.fichier in nouveaux)
+                ligne.marquer(ligne.cle == self._fond.morceau, ligne.cle == self._fond.fond)
+                self._lignes.append(ligne)
+                return ligne
+            return faire
+
+        self._paquets.remplir([fabrique(i, m) for i, m in enumerate(morceaux, 1)])
         self._nom_jeu.setText(media.nom(jeu))
         self._compte.setText(tr("{n} morceaux sur {total}").format(n=ouverts, total=len(morceaux)))
         self._barre.pct = avance or 0
@@ -644,11 +685,11 @@ class _VueMusique(QWidget):
         self._bouton_fond.setChecked(est_fond)
         self._bouton_fond.setToolTip(tr("Retirer ce morceau du fond sonore") if est_fond
                                      else tr("Mettre ce morceau en fond sonore du launcher"))
+        # Sans fond sonore, rien à dire (un état normal ne s'affiche pas).
+        self._fond_texte.setVisible(bool(fond.fond))
         if fond.fond:
             self._fond_texte.setText(tr("Fond sonore du launcher : {}").format(
                 f"{fond.titre(fond.fond)} · {fond.fond.split('/')[0].upper()}"))
-        else:
-            self._fond_texte.setText(tr("Pas de fond sonore : le launcher reste silencieux."))
         for ligne in self._lignes:
             ligne.marquer(ligne.cle == morceau, ligne.cle == fond.fond)
 
@@ -718,7 +759,7 @@ class _LigneCine(QFrame):
             lay.addWidget(texte(_texte_seuil(seuil), 13, ENCRE_DOUCE))
 
     def marquer(self, courante: bool) -> None:
-        if self.property("courante") != courante:
+        if bool(self.property("courante")) != courante:
             self.setProperty("courante", courante)
             _repolir(self)
             if self._voir is not None:
@@ -755,6 +796,7 @@ class _VueCinematiques(QWidget):
         self._pile = QVBoxLayout(self._liste)
         self._pile.setContentsMargins(0, 0, 0, 12)
         self._pile.setSpacing(0)
+        self._paquets = _Paquets(self, self._pile)
         self._zone = zone_defilable(self._liste)
         c.addWidget(self._zone, stretch=1)
         self._stretch_vide = QWidget()
@@ -798,26 +840,36 @@ class _VueCinematiques(QWidget):
     def montrer(self, jeu: str) -> None:
         self._jeu = jeu
         media = self._media
-        _vider(self._pile)
         self._lignes = []
         presentes = [c for c in media.cinematiques(jeu) if media.chemin_cinematique(jeu, c.fichier)]
         self._zone.setVisible(bool(presentes))
         self._vide.setVisible(not presentes)
         self._stretch_vide.setVisible(not presentes)
         if not presentes:
-            self._vide.setText(
-                tr("Ce jeu joue ses cinématiques dans son moteur : il n'a pas de fichier vidéo "
-                   "à montrer ici.") if jeu in ("hp1", "hp2")
-                else tr("Les cinématiques de ce jeu ne sont pas encore lues par le launcher."))
+            self._paquets.remplir([])
+            if not jeu:
+                texte_vide = tr("Aucun jeu installé n'a de cinématique à montrer ici pour "
+                                "l'instant. Les trois premiers jeux jouent les leurs dans le "
+                                "moteur, sans fichier vidéo.")
+            elif jeu in ("hp1", "hp2"):
+                texte_vide = tr("Ce jeu joue ses cinématiques dans son moteur : il n'a pas de "
+                                "fichier vidéo à montrer ici.")
+            else:
+                texte_vide = tr("Les cinématiques de ce jeu ne sont pas encore lues par le launcher.")
+            self._vide.setText(texte_vide)
             return
         nouveaux = media.nouveaux(jeu, CINEMATIQUES)
-        for num, clip in enumerate(presentes, 1):
-            ligne = _LigneCine(self, jeu, num, clip.titre, clip.seuil, media.ouvert(jeu, clip.seuil),
-                               clip.fichier in nouveaux, clip.fichier)
-            ligne.marquer(clip.fichier == self._courante)
-            self._pile.addWidget(ligne)
-            self._lignes.append(ligne)
-        self._pile.addStretch()
+
+        def fabrique(num: int, clip):
+            def faire() -> QWidget:
+                ligne = _LigneCine(self, jeu, num, clip.titre, clip.seuil, media.ouvert(jeu, clip.seuil),
+                                   clip.fichier in nouveaux, clip.fichier)
+                ligne.marquer(clip.fichier == self._courante)
+                self._lignes.append(ligne)
+                return ligne
+            return faire
+
+        self._paquets.remplir([fabrique(num, clip) for num, clip in enumerate(presentes, 1)])
         self._marquer_vus()
 
     def afficher(self, oui: bool) -> None:

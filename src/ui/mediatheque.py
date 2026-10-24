@@ -22,7 +22,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, QSize, QStandardPaths, Qt
+from PyQt6.QtCore import QObject, QSize, QStandardPaths, Qt, QTimer
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QWidget
 
@@ -87,13 +87,23 @@ class Mediatheque(QObject):
         session.demarree.connect(lambda _nom: self.fond.suspendre(JEU))
         session.terminee.connect(self._retour_de_partie)
         QApplication.instance().aboutToQuit.connect(self.fond.arreter)
-        self.actualiser()
+        # Lire les sauvegardes des trois premiers jeux coûtait 0,3 s au lancement
+        # (mesuré le 2026-10-24) : c'est fait juste après l'ouverture de la fenêtre,
+        # par un minuteur POSSÉDÉ (règle 102). Une page ouverte avant relit d'elle-même.
+        self._lecture = QTimer(self)
+        self._lecture.setSingleShot(True)
+        self._lecture.timeout.connect(self.actualiser)
+        self._lecture.start(1200)
+        self.mini.actualiser()
         self.fond.demarrer()
 
     # ── Ouverture ──
 
     def ouvrir(self, rubrique: str = MUSIQUE, jeu: str = "") -> None:
         from src.ui.mediatheque_page import MediathequePage
+        if self._lecture.isActive():
+            self._lecture.stop()
+            self.actualiser()
         self._pages.ouvrir(MediathequePage(self, rubrique, jeu), MEDIATHEQUE)
 
     def _retour_de_partie(self, *_args) -> None:

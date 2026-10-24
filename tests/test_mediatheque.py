@@ -188,17 +188,20 @@ class TestPage:
         page.accept()
         assert win._pages.page is None
 
-    def test_morceaux_ouverts_fermes_et_nouveaux(self, fenetre_avec_jeux):
+    def test_morceaux_ouverts_fermes_et_nouveaux(self, fenetre_avec_jeux, qtbot):
         from src.ui.mediatheque_page import _LigneMorceau
         from src.ui.title_bar import MEDIATHEQUE
         win = fenetre_avec_jeux
         onglet = win._title_bar.onglet(MEDIATHEQUE)
-        assert onglet.pastille, "des morceaux ouverts jamais vus : le point or"
+        # Les sauvegardes se lisent juste après l'ouverture de la fenêtre.
+        qtbot.waitUntil(lambda: onglet.pastille, timeout=5000)
         win._mediatheque.ouvrir("musique", "hp2")
         page = win._pages.page
-        lignes = page.findChildren(_LigneMorceau)
         hp2 = discographie.charger()["hp2"]
-        assert len(lignes) == len(hp2)
+        # Bâtie par paquets : les premières rangées tout de suite, le reste ensuite.
+        assert 0 < len(page.findChildren(_LigneMorceau)) < len(hp2)
+        qtbot.waitUntil(lambda: len(page.findChildren(_LigneMorceau)) == len(hp2), timeout=5000)
+        lignes = page.findChildren(_LigneMorceau)
         ouvertes = [ligne for ligne in lignes if ligne._ecouter is not None]
         assert len(ouvertes) == sum(m.seuil == 0 for m in hp2)
         # Montrés une fois : vus. Les cinématiques, bâties mais pas regardées, restent nouvelles.
@@ -211,12 +214,13 @@ class TestPage:
         win._mediatheque.ouvrir("musique", "hp3")
         assert not onglet.pastille, "tout a été vu : le point or s'éteint"
 
-    def test_cinematiques_et_seuils(self, fenetre_avec_jeux):
+    def test_cinematiques_et_seuils(self, fenetre_avec_jeux, qtbot):
         from src.ui.mediatheque_page import _LigneCine
         win = fenetre_avec_jeux
         win._mediatheque.ouvrir("cinematiques", "hp3")
         page = win._pages.page
         assert page.rubrique_courante == "cinematiques"
+        qtbot.waitUntil(lambda: len(page.findChildren(_LigneCine)) == 2, timeout=5000)
         lignes = {ligne.fichier: ligne for ligne in page.findChildren(_LigneCine)}
         assert set(lignes) == {"SiriusPhoto", "LupinWolf"}
         assert lignes["SiriusPhoto"]._voir is not None     # seuil 0

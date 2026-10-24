@@ -1269,9 +1269,6 @@
     "{} nouveaux": "{} new",
     "nouveau": "new",
     "Fond sonore": "Background music",
-    "Fond sonore du launcher": "Launcher background music",
-    "Retirer du fond": "Remove from background",
-    "Mettre en fond sonore": "Set as background music",
     "Aucune partie lue pour l'instant": "No save read yet",
     "Votre sauvegarde la plus avancée : {} %": "Your furthest save: {}%",
     "{n} morceaux sur {total}": "{n} of {total} tracks",
@@ -1283,6 +1280,14 @@
     "Installez L'École des sorciers, La Chambre des secrets ou Le Prisonnier d'Azkaban pour écouter leur musique ici.": "Install Philosopher's Stone, Chamber of Secrets or Prisoner of Azkaban to listen to their music here.",
     "Aucun jeu installé n'a de cinématique à montrer ici pour l'instant. Les trois premiers jeux jouent les leurs dans le moteur, sans fichier vidéo.": "No installed game has a cutscene to show here yet. The first three games play theirs in the engine, without video files.",
     "Sans le son pour l'instant : il est rangé ailleurs dans le jeu.": "No sound for now: it is stored elsewhere in the game.",
-    "Médias": "Media"
+    "Médias": "Media",
+    "Enregistrer": "Save",
+    "La musique de ce jeu n'est pas encore lue par le launcher.": "The launcher does not read this game's music yet.",
+    "Retirer ce morceau du fond sonore": "Remove this track from the background music",
+    "Mettre ce morceau en fond sonore du launcher": "Use this track as the launcher's background music",
+    "Ce jeu joue ses cinématiques dans son moteur : il n'a pas de fichier vidéo à montrer ici.": "This game plays its cutscenes in its engine: it has no video file to show here.",
+    "Les cinématiques de ce jeu ne sont pas encore lues par le launcher.": "The launcher does not read this game's cutscenes yet.",
+    "Fond sonore du launcher : {}": "Launcher background music: {}",
+    "La musique et les cinématiques du jeu": "The game's music and cutscenes"
   }
 }
