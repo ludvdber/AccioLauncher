@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import folio, sauvegardes, stats
+from src.core import folio, sauvegardes, stats, succes
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.ecu import emaux
@@ -99,6 +99,7 @@ class StatsDialog(QDialog):
                                  for e in self._entrees}
         self._vues = {e.game.id: sauvegardes.vues(e.game.id, e.game.sauvegardes, stock)
                       for e in self._entrees}
+        self._specs = {e.game.id: e.game.sauvegardes for e in self._entrees}
         self.setWindowTitle(tr("Mes années à Poudlard"))
         # Assez LARGE pour que huit jaquettes restent des images et non des
         # timbres. Pas de plancher en HAUTEUR : la page se rétrécit à son
@@ -457,6 +458,11 @@ class StatsDialog(QDialog):
             couche.addWidget(_Paragraphe(
                 tr("Dont {} jouées sans sauvegarder.").format(
                     _duree(sans)), taille=13))
+        # Ce que les sauvegardes présentes prouvent, et ce qu'on a vu tomber.
+        if succes.du_jeu(game_id) and vues:
+            from src.ui.succes_widgets import SectionSucces
+            couche.addSpacing(4)
+            couche.addWidget(SectionSucces(game_id, [v.fichier for v in vues], self._specs.get(game_id)))
         couche.addStretch(1)
         return fiche
 

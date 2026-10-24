@@ -9,7 +9,7 @@ from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.ui import dialogues_fenetre, game_detail_handlers, verification_forcee
+from src.ui import dialogues_fenetre, game_detail_handlers, succes_widgets, verification_forcee
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
 from src.ui.clavier_global import EVENEMENTS_FILTRES, touche_globale
@@ -513,9 +513,9 @@ class MainWindow(QMainWindow):
         # sans transition) : le temps de cette partie vient d'être enregistré.
         if self._detail.game is not None:
             self._detail.set_game(self._detail.game)
-        # Un remerciement juste avant une boîte d'erreur serait déplacé : il
-        # attendra le prochain retour sans accroc.
-        if not arret:
+        # Le merci attend un retour sans boîte d'erreur ni succès annoncé (un toast à la fois).
+        obtenus = partie and self._session.succes_obtenus
+        if not arret and not succes_widgets.annoncer_succes(self._toast, game_name, obtenus, self._on_stats):
             self._maybe_thank_milestone()
 
     def _aide_apres_echec(self) -> None:

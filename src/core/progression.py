@@ -103,18 +103,26 @@ _LECTEURS = {"hp1": _hp1, "hp2": _hp2, "hp3": _hp3, "hp4": _hp4, "hp5": _hp5, "h
 
 def mesure(jeu: str, spec: Sauvegardes | None, rel: str) -> Mesure | None:
     """Les compteurs de la sauvegarde `rel` (clé de `sauvegardes.releve`)."""
-    from src.core import sauvegardes
     lire = _LECTEURS.get(jeu)
-    racine = sauvegardes.dossier(spec) if spec is not None and lire is not None else None
-    if lire is None or racine is None or spec is None:
+    ou = cible(spec, rel) if lire is not None else None
+    if lire is None or ou is None:
+        return None
+    try:
+        return lire(*ou)
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def cible(spec: Sauvegardes | None, rel: str) -> tuple[Path, int] | None:
+    """Le fichier et l'emplacement que désigne `rel` (« HPGOF#2 », « Save1.usa »)."""
+    from src.core import sauvegardes
+    racine = sauvegardes.dossier(spec) if spec is not None else None
+    if racine is None or spec is None:
         return None
     fichier, _, emplacement = rel.partition("#")
     n = int(emplacement) if emplacement.isdigit() else (
         sauvegardes.numero(fichier, spec, 2) or 1)
-    try:
-        return lire(racine / fichier, n)
-    except (OSError, ValueError, IndexError):
-        return None
+    return racine / fichier, n
 
 
 def recommencee(avant: Mesure | None, apres: Mesure | None) -> bool:

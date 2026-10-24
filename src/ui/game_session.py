@@ -38,6 +38,7 @@ from src.core import (
     sauvegardes,
     scolarite,
     stats,
+    succes,
 )
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
@@ -92,6 +93,9 @@ class GameSession(QObject):
         # Les sauvegardes telles qu'elles étaient AU LANCEMENT : comparées à
         # celles de la fermeture, elles disent dans laquelle on a joué.
         self._avant: dict[str, sauvegardes.Etat] = {}
+        # Les succès que la partie qui vient de finir a fait tomber
+        # (`succes.constater`), posés AVANT `terminee` : la fenêtre les annonce.
+        self.succes_obtenus: list[succes.Succes] = []
 
     @property
     def nom_en_cours(self) -> str:
@@ -154,6 +158,7 @@ class GameSession(QObject):
         arret: config_cassee.Arret | None = None
         game_id = self._game_id
         a_diagnostiquer: tuple | None = None
+        self.succes_obtenus = []
         if self._game_id:
             game = self._manager.get_game_by_id(self._game_id)
             # Lu AVANT de compter : la boîte « Critical Error » garde le jeu en
@@ -168,10 +173,13 @@ class GameSession(QObject):
             # partie « sans sauvegarde » serait affirmer ce qu'on n'a pas vu.
             if partie and self._debut is not None and spec is not None:
                 jeu = self._game_id
-                sauvegardes.attribuer(
+                rel = sauvegardes.attribuer(
                     jeu, self._avant, sauvegardes.releve(spec),
                     self._debut, int(duree),
                     mesurer=lambda rel: progression.mesure(jeu, spec, rel))
+                if rel is not None:
+                    self.succes_obtenus = succes.constater(
+                        jeu, spec, rel, datetime.now(), nee=rel not in self._avant)
             # Les captures que le jeu a posées chez lui rejoignent son dossier,
             # hors de ce qu'une désinstallation emporterait.
             if game is not None:
