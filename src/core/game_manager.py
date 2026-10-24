@@ -15,7 +15,7 @@ from typing import Any, NamedTuple
 from src.core import captures, compat, demarrage, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
-from src.core import copies_sauvegardes, resolution_jeu, stats
+from src.core import copies_sauvegardes, reprise, resolution_jeu, stats
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config
 from src.core.game_registry import Confirmer
@@ -323,10 +323,12 @@ class GameManager:
                              args=(game.id, game.sauvegardes), daemon=True,
                              name=f"copies-{game.id}").start()
 
-        log.info("Lancement de %s (%s)", game.name, exe_path)
+        # Reprendre en un clic (HP1 à HP3) : la dernière partie, sans le menu du jeu.
+        arguments = reprise.arguments(game) if self.config.reprise_directe else ()
+        log.info("Lancement de %s (%s) %s", game.name, exe_path, " ".join(arguments))
         popen_kwargs: dict[str, Any] = {"cwd": str(exe_path.parent)}
         if sys.platform != "win32":
-            return self._lancer_sous_wine(game, exe_path, lanceur, popen_kwargs)
+            return self._lancer_sous_wine(game, exe_path, lanceur, popen_kwargs, arguments)
         popen_kwargs["creationflags"] = (
             subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
         )
@@ -335,7 +337,7 @@ class GameManager:
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
         # Chemin absolu validé au parsing du catalogue. Aucun shell.
         try:
-            return subprocess.Popen([str(exe_path)], **popen_kwargs)  # nosec B603
+            return subprocess.Popen([str(exe_path), *arguments], **popen_kwargs)  # nosec B603
         except OSError as exc:
             # 740 : « Exécuter en tant qu'administrateur » coché sur l'exe.
             # Le dire, pas « Impossible de lancer ».
@@ -345,7 +347,8 @@ class GameManager:
 
     @staticmethod
     def _lancer_sous_wine(game: GameData, exe_path: Path, lanceur: compat.Lanceur,
-                          popen_kwargs: dict[str, Any]) -> subprocess.Popen[bytes]:
+                          popen_kwargs: dict[str, Any],
+                          arguments: tuple[str, ...] = ()) -> subprocess.Popen[bytes]:
         """Lance le jeu par umu-run ou wine, dans le préfixe partagé.
 
         `dpi_aware` est ignoré (couche Windows). `dll_overrides` part en
@@ -356,7 +359,7 @@ class GameManager:
         popen_kwargs["start_new_session"] = True
         popen_kwargs["env"] = compat.environnement(lanceur, pfx, game.dll_overrides,
                                                    ips_max=game.max_fps)
-        commande = compat.commande_jeu(lanceur, exe_path)
+        commande = compat.commande_jeu(lanceur, exe_path, arguments)
         journal = compat.journal_du_jeu(game.id)
         log.info("Lancement sous %s (%s) : préfixe %s, surcharges %s, plafond %s, journal %s",
                  lanceur.famille, lanceur.executable, pfx,

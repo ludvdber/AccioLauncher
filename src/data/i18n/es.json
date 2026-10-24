@@ -719,6 +719,8 @@
     "Avant chaque partie, le lanceur garde une copie de chaque sauvegarde qui a changé. Les dates sont celles où le jeu a écrit chaque version.": "Antes de cada partida, el lanzador guarda una copia de cada partida guardada que ha cambiado. Las fechas son las del momento en que el juego escribió cada versión.",
     "Celle de l'écran": "La de la pantalla",
     "Copier les sauvegardes avant chaque partie": "Copiar las partidas guardadas antes de cada partida",
+    "Reprendre ouvre la dernière partie": "Continuar abre la última partida",
+    "De la première à la troisième année, sans passer par le menu du jeu.": "De primer a tercer año, sin pasar por el menú del juego.",
     "Fermez {} avant de remettre une sauvegarde : il la réécrirait en quittant.": "Cierra {} antes de restaurar una partida guardada: la sobrescribiría al salir.",
     "Ko": "KB",
     "La sauvegarde": "La partida guardada",

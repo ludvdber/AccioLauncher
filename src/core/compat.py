@@ -24,7 +24,7 @@ import re
 import shutil
 import sys
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -718,8 +718,8 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges: Iterable[str] = (),
     return env
 
 
-def commande_jeu(trouve: Lanceur, exe: Path) -> list[str]:
-    return [trouve.executable, str(exe)]
+def commande_jeu(trouve: Lanceur, exe: Path, arguments: Sequence[str] = ()) -> list[str]:
+    return [trouve.executable, str(exe), *arguments]
 
 
 def commande_creation(trouve: Lanceur) -> list[str]:

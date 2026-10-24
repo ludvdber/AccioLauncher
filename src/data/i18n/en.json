@@ -719,6 +719,8 @@
     "Avant chaque partie, le lanceur garde une copie de chaque sauvegarde qui a changé. Les dates sont celles où le jeu a écrit chaque version.": "Before each session, the launcher keeps a copy of every save that has changed. The dates are when the game wrote each version.",
     "Celle de l'écran": "Same as the screen",
     "Copier les sauvegardes avant chaque partie": "Copy saves before each session",
+    "Reprendre ouvre la dernière partie": "Resume opens your last game",
+    "De la première à la troisième année, sans passer par le menu du jeu.": "From first to third year, without going through the game's menu.",
     "Fermez {} avant de remettre une sauvegarde : il la réécrirait en quittant.": "Close {} before restoring a save: it would overwrite it when quitting.",
     "Ko": "KB",
     "La sauvegarde": "The save",

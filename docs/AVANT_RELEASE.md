@@ -24,7 +24,7 @@ python essai_avant_release.py hp2 v1.2.0
 | Jeu | Ce que le pilote fait | Ce qui est vérifié |
 |---|---|---|
 | HP1 | attend le menu, Alt+Entrée ×2, Alt+Tab | fenêtre en moins de 60 s, le jeu survit à Alt+Tab, grâce de relance gardée |
-| HP2 | boîte de démarrage, « Charger partie », emplacement 1, Alt+Entrée ×2, Alt+Tab | idem, et la relance de l'assistant ne ferme pas la session |
+| HP2 | reprise directe (`-LOADGAME=0 -SAVESLOT=K`, réglage « Reprendre ouvre la dernière partie ») ; sans elle, boîte de démarrage, « Charger partie », emplacement 1 ; puis Alt+Entrée ×2, Alt+Tab | idem, et la relance de l'assistant ne ferme pas la session |
 | HP3 | menu pendant 45 s, Alt+Tab | fenêtre, survie à Alt+Tab, retour sans attendre 10 s |
 | HP4, HP5, HP6 | menus scriptés, F8 (avant/après du correctif), banc F11 de 30 s, Alt+Tab | fenêtre, survie à Alt+Tab, retour sans attendre 10 s |
 
@@ -34,6 +34,6 @@ Pour tous : fermeture propre (WM_CLOSE, sans tuer le jeu), le launcher revient �
 
 Les preuves sont dans `captures\release\<étiquette>\` de l'atelier (journaux et copies de travail ignorés par git) : `journal.txt` (dernière ligne : `VERDICT HPx : n/m points`), captures, `launcher.log`, bancs F11. Le code de sortie est 1 s'il y a un échec. **Un seul ÉCHEC bloque la release** tant qu'il n'est pas expliqué.
 
-Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre la main en moins de 6 s, HP1 et HP2 garder leur grâce d'au moins 8 s (`relance` au catalogue). Pour HP2, la grâce sert au CHARGEMENT de la partie (le processus de départ meurt, le jeu relancé prend sa place) : le point passe si la session a survécu à cette relance avec une seule fin, et la fermeture est ensuite vue tout de suite (0,8 s, normal).
+Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre la main en moins de 6 s, HP1 et HP2 garder leur grâce d'au moins 8 s (`relance` au catalogue). Depuis la reprise directe (2026-10-24), HP1 à HP3 s'ouvrent sur la dernière partie, sans menu : un seul processus au départ, et la grâce reste pour une partie chargée depuis le jeu. Pour HP2, la grâce sert au CHARGEMENT de la partie (le processus de départ meurt, le jeu relancé prend sa place) : le point passe si la session a survécu à cette relance avec une seule fin, et la fermeture est ensuite vue tout de suite (0,8 s, normal).
 
 **Points déjà connus, non bloquants** (phase 6 de l'audit, revus le 2026-10-09) : HP3 n'a plus de fenêtre après l'Alt+Tab du pilote (il est minimisé, et le pilote n'a pas le premier plan pour le remettre ; un second Alt+Tab de joueur le rend) et ignore `WM_CLOSE` (tué après 25 s, tâche ACT-046). HP3 finit donc à 6/8.

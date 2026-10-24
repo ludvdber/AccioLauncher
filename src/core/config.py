@@ -160,6 +160,9 @@ class Config:
     # (`src/core/copies_sauvegardes.py`). Oui par défaut : c'est le seul filet
     # contre une sauvegarde abîmée par un plantage, et il coûte quelques Mo.
     copies_sauvegardes: bool = True
+    # « Reprendre » ouvre la dernière partie de HP1 à HP3 sans le menu du jeu
+    # (`src/core/reprise.py`). Non : le menu du jeu revient, pour une autre partie.
+    reprise_directe: bool = True
     delete_archives: bool = True
     autoplay_videos: bool = True
     # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
@@ -228,6 +231,7 @@ class Config:
                     couleur_manette=_as_bool(data.get("couleur_manette"), True),
                     navigation_manette=_as_bool(data.get("navigation_manette"), True),
                     copies_sauvegardes=_as_bool(data.get("copies_sauvegardes"), True),
+                    reprise_directe=_as_bool(data.get("reprise_directe"), True),
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
@@ -273,6 +277,7 @@ class Config:
                 "couleur_manette": self.couleur_manette,
                 "navigation_manette": self.navigation_manette,
                 "copies_sauvegardes": self.copies_sauvegardes,
+                "reprise_directe": self.reprise_directe,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,

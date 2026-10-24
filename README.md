@@ -38,6 +38,8 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
 - **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme un relevé de scolarité, année par année (les deux parties des *Reliques de la Mort* partagent la septième).
 - **Un folio pour les huit jeux** : cartes de sorciers, dragées, points des maisons, sorts, boucliers, écussons et badges, lus directement dans vos sauvegardes et montrés avec les images et les icônes du jeu.
+- **Des succès tirés de vos sauvegardes**, de *l'École des Sorciers* au *Prince de Sang-Mêlé* : folio complet, armoire à trophées pleine, tous les écussons… Chacun repose sur ce que la sauvegarde prouve, il est daté à la partie où il tombe et annoncé au retour du jeu.
+- **Reprendre en un clic** : pour les trois premiers jeux, « Reprendre » ouvre votre dernière partie sans passer par les logos ni le menu (un réglage rend le menu du jeu).
 - **Une galerie de vos captures**, rangées par jeu dans vos Images (plus perdues à la désinstallation), à copier en un clic pour Discord.
 - **Un atelier ouvert aux artistes** : le bouton « Contribuer » liste les jaquettes, fonds, bandes-annonces, cartes, écrans de chargement et vidéos qui cherchent quelqu'un pour les refaire. Vous dessinez, montez ou animez ? Tout ce qu'il faut savoir est dedans.
 - **Les réglages lisibles** : chaque réglage d'un jeu dit ce qu'il change et ce qu'il demande à la machine, et survit à une mise à jour ou à une réparation.
@@ -168,9 +170,9 @@ Un bug précis, une idée ? Ouvrez une [issue](https://github.com/ludvdber/Accio
 ## Soutenir le projet
 
 Le launcher est gratuit et le restera, sans publicité. Un soutien sur
-[ko-fi.com/ludovic01](https://ko-fi.com/ludovic01) finance le développement du
-**launcher et des correctifs** (temps de travail, matériel d'essai) ; il ne
-donne accès à aucun jeu et ne paie aucun jeu.
+[ko-fi.com/ludovic01](https://ko-fi.com/ludovic01) aide à payer ce que coûtent
+le **launcher et les correctifs** : noms de domaine, hébergement, sauvegardes et
+outils de développement. Il ne donne accès à aucun jeu et ne paie aucun jeu.
 
 ## Traduire le launcher
 
@@ -265,7 +267,8 @@ away: download, install and play, on Windows 10 and 11. Downloads resume after
 a dropped connection and every file is checked on arrival. Game updates,
 repair and rollback to an earlier version are built in, along with your
 playtime and a log of your sessions, a folio for every game read from your
-saves (cards, beans, house points, shields, crests and badges), a gallery of your screenshots, house themes, seasonal effects,
+saves (cards, beans, house points, shields, crests and badges), achievements
+drawn from what your saves prove, one-click Resume straight into your last game (first three games), a gallery of your screenshots, house themes, seasonal effects,
 optional trailers, and a launcher that updates itself. The interface is available in
 English, French and Spanish.
 
@@ -275,8 +278,8 @@ run it, pick your language and games folder, then choose a game and click
 Download. Windows SmartScreen will warn you because the launcher is not
 code-signed: click *More info*, then *Run anyway*.
 
-**Support:** a coffee on [Ko-fi](https://ko-fi.com/ludovic01) funds the development of the
-launcher and the fixes; it gives access to no game and pays for no game.
+**Support:** a coffee on [Ko-fi](https://ko-fi.com/ludovic01) helps pay for what the launcher and
+the fixes cost: domain names, hosting, backups and development tools. It gives access to no game and pays for no game.
 
 **Takedown requests:** if you hold rights to a file made available by this project, open an
 [issue](https://github.com/ludvdber/accio-launcher-games/issues) naming it: it is removed within 48 hours.

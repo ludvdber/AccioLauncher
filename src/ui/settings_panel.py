@@ -465,6 +465,10 @@ class SettingsDialog(QDialog):
             tr("Copier les sauvegardes avant chaque partie"), "copies_sauvegardes",
             tr("Une copie de chaque sauvegarde qui a changé, rangée à part."))
         sauvegardes.ajouter(ligne)
+        ligne, self._tgl_reprise = self._reglage(
+            tr("Reprendre ouvre la dernière partie"), "reprise_directe",
+            tr("De la première à la troisième année, sans passer par le menu du jeu."))
+        sauvegardes.ajouter(ligne)
         sauvegardes.ajouter(LigneReglage(
             tr("Revenir à une copie"),
             tr("Depuis les réglages de chaque jeu, rubrique Fichiers du jeu.")))
