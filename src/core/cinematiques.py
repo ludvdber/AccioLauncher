@@ -1,28 +1,34 @@
 """Les cinématiques : les vidéos livrées avec les jeux, lues dans la copie du joueur.
 
 Demandé par Ludo le 2026-10-24, avec la musique, dans la Médiathèque. Relevé
-sur les jeux installés :
+sur les jeux installés (atelier, fiches `HPx.md`, « Musique et cinématiques ») :
 
 - **HP1 et HP2** n'ont AUCUN fichier vidéo : leurs cinématiques sont jouées
   par le moteur (scripts), rien à lister.
 - **HP3** livre douze Bink dans `Movies/` : trois logos, deux fonds de menu et
-  sept petites animations (256 × 256) que le moteur pose en texture dans ses
-  cinématiques. L'option « Passer les logos » les renomme en `.bik.off` : le
-  nom renommé compte aussi.
-- **HP7 et HP8** livrent leurs vraies cinématiques en VP6 dans `pc/`, en
-  1280 × 720 et SANS piste son (le son est rangé ailleurs, pas encore retrouvé).
-- **HP4 à HP6** : dans les archives du jeu, pas encore ici.
+  sept petites animations (256 × 256). L'option « Passer les logos » les
+  renomme en `.bik.off` : le nom renommé compte aussi.
+- **HP4** les range dans `movies.big` (`archives_ea`) : la vidéo VP6 sans son
+  dans `Movies/English`, et la VOIX à part, une `.asf` par langue
+  (`Movies/French/…`). Les deux se jouent ensemble.
+- **HP5 et HP6** : VP6 dans `movies.big`, sans piste son lisible.
+- **HP7 et HP8** (`hp7a`, `hp7b`) : VP6 1280 × 720 dans `pc/`, sans piste son
+  (le son est dans des paquets Wwise).
 
-Titres et seuils : `src/data/cinematiques.json`, embarqué. Le seuil suit la
-règle des morceaux (`discographie.debloque`). Aucune fonction ne lève.
+Une vidéo d'archive est recopiée une fois dans le cache avant d'être jouée
+(`lisible`). Titres et seuils : `src/data/cinematiques.json`, embarqué. Le
+seuil suit la règle des morceaux (`discographie.ouvert_au_seuil`). Aucune
+fonction ne lève.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
+from src.core import archives_ea
 
 log = logging.getLogger(__name__)
 
@@ -36,10 +42,19 @@ class Cinematique:
 
 @dataclass(frozen=True, slots=True)
 class Collection:
-    dossier: str      # sous-dossier du jeu, casse ignorée
+    dossier: str      # sous-dossier du jeu (ou chemin dans l'archive), casse ignorée
     extension: str    # « .bik », « .vp6 »
     sans_son: bool
     clips: tuple[Cinematique, ...]
+    archive: str = ""                                 # « movies.big » : vidéos dans l'archive
+    voix: dict[str, str] = field(default_factory=dict)  # langue → dossier des .asf (HP4)
+
+
+@dataclass(frozen=True, slots=True)
+class Source:
+    """Où est une vidéo (ou une voix) : un fichier, ou une entrée d'archive."""
+    chemin: Path
+    entree: archives_ea.Entree | None = None
 
 
 def charger(chemin: Path | None = None) -> dict[str, Collection]:
@@ -65,8 +80,11 @@ def charger(chemin: Path | None = None) -> dict[str, Collection]:
             for c in bloc["clips"]
             if isinstance(c, dict) and isinstance(c.get("f"), str) and isinstance(c.get("t"), str)
             and isinstance(c.get("s"), int))
-        resultat[str(jeu)] = Collection(bloc["dossier"], bloc["ext"].lower(),
-                                        bloc.get("sans_son") is True, clips)
+        voix = bloc.get("voix")
+        resultat[str(jeu)] = Collection(
+            bloc["dossier"], bloc["ext"].lower(), bloc.get("sans_son") is True, clips,
+            bloc["archive"] if isinstance(bloc.get("archive"), str) else "",
+            {str(k): v for k, v in voix.items() if isinstance(v, str)} if isinstance(voix, dict) else {})
     return resultat
 
 
@@ -80,10 +98,34 @@ def _dossier(dossier_jeu: Path, nom: str) -> Path | None:
     return None
 
 
-def presentes(collection: Collection, dossier_jeu: Path | None) -> dict[str, Path]:
-    """Le chemin de chaque cinématique trouvée dans le jeu installé, par nom de fichier."""
+def _index_archive(collection: Collection, dossier_jeu: Path) -> tuple[Path, dict[str, archives_ea.Entree]]:
+    archive = dossier_jeu / collection.archive
+    return archive, {e.nom.lower(): e for e in archives_ea.lister(archive)}
+
+
+def _dans(dossier: str, nom: str) -> str:
+    return f"{dossier}/{nom}".lower() if dossier else nom.lower()
+
+
+def presentes(collection: Collection, dossier_jeu: Path | None,
+              langue: str = "fr") -> dict[str, Source]:
+    """La vidéo de chaque cinématique trouvée dans le jeu installé, par nom de fichier.
+
+    HP4 : la version de la langue d'abord (ses logos y sont), sinon l'anglaise.
+    """
     if dossier_jeu is None:
         return {}
+    trouvees: dict[str, Source] = {}
+    if collection.archive:
+        archive, index = _index_archive(collection, dossier_jeu)
+        dossiers = [collection.voix.get(langue, ""), collection.dossier, *collection.voix.values()]
+        for clip in collection.clips:
+            nom = clip.fichier + collection.extension
+            entree = next((index[_dans(d, nom)] for d in dossiers
+                           if d is not None and _dans(d, nom) in index), None)
+            if entree is not None:
+                trouvees[clip.fichier] = Source(archive, entree)
+        return trouvees
     dossier = _dossier(dossier_jeu, collection.dossier)
     if dossier is None:
         return {}
@@ -91,10 +133,32 @@ def presentes(collection: Collection, dossier_jeu: Path | None) -> dict[str, Pat
         par_nom = {p.name.lower(): p for p in dossier.iterdir() if p.is_file()}
     except OSError:
         return {}
-    trouvees: dict[str, Path] = {}
     for clip in collection.clips:
         nom = (clip.fichier + collection.extension).lower()
         chemin = par_nom.get(nom) or par_nom.get(nom + ".off")
         if chemin is not None:
-            trouvees[clip.fichier] = chemin
+            trouvees[clip.fichier] = Source(chemin)
     return trouvees
+
+
+def voix(collection: Collection, dossier_jeu: Path | None, fichier: str,
+         langue: str = "fr") -> Source | None:
+    """La piste de voix séparée d'une cinématique (HP4), dans la langue voulue sinon en anglais."""
+    if dossier_jeu is None or not collection.archive or not collection.voix:
+        return None
+    archive, index = _index_archive(collection, dossier_jeu)
+    for dossier in (collection.voix.get(langue), collection.voix.get("en")):
+        if dossier is not None:
+            entree = index.get(_dans(dossier, fichier + ".asf"))
+            if entree is not None:
+                return Source(archive, entree)
+    return None
+
+
+def lisible(source: Source, cache: Path, jeu: str) -> Path | None:
+    """Le fichier que le lecteur ouvrira : tel quel, ou recopié une fois dans le cache."""
+    if source.entree is None:
+        return source.chemin if source.chemin.is_file() else None
+    langue = Path(source.entree.nom).parent.name
+    cible = cache / "cinematiques" / jeu / langue / Path(source.entree.nom).name
+    return archives_ea.extraire(source.chemin, source.entree.debut, source.entree.taille, cible)

@@ -1,5 +1,5 @@
 {
- "_note": "Brouillon du 2026-10-24, d'après les fichiers des jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 : estimé d'après l'histoire ; HP7 et HP8 n'ont pas encore de lecteur de sauvegardes, tout y est ouvert). Les .vp6 de HP7 et HP8 n'ont pas de piste son : le son est ailleurs, à retrouver.",
+ "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
  "jeux": {
   "hp3": {
    "dossier": "Movies",
@@ -67,7 +67,517 @@
     }
    ]
   },
-  "hp7": {
+  "hp4": {
+   "archive": "movies.big",
+   "dossier": "Movies/English",
+   "ext": ".vp6",
+   "voix": {
+    "fr": "Movies/French",
+    "en": "Movies/English",
+    "es": "Movies/Spanish",
+    "de": "Movies/German",
+    "it": "Movies/Italian"
+   },
+   "clips": [
+    {
+     "f": "AVcampsiteIntro",
+     "t": "Le camping de la Coupe du monde, début",
+     "s": 0
+    },
+    {
+     "f": "AVcampsiteOutro",
+     "t": "Le camping de la Coupe du monde, fin",
+     "s": 0
+    },
+    {
+     "f": "AVdadaIntro",
+     "t": "Défense contre les forces du mal, début",
+     "s": 0
+    },
+    {
+     "f": "AVdadaOutro",
+     "t": "Défense contre les forces du mal, fin",
+     "s": 0
+    },
+    {
+     "f": "AVherbologyIntro",
+     "t": "Botanique, début",
+     "s": 0
+    },
+    {
+     "f": "AVdwIntro",
+     "t": "Niveau « dw », début",
+     "s": 0
+    },
+    {
+     "f": "AVdwOutro",
+     "t": "Niveau « dw », fin",
+     "s": 0
+    },
+    {
+     "f": "AVprefectsIntro",
+     "t": "La salle de bain des préfets, début",
+     "s": 0
+    },
+    {
+     "f": "AVTriwizard1Intro",
+     "t": "Première tâche, début",
+     "s": 0
+    },
+    {
+     "f": "AVTriwizard1Outro",
+     "t": "Première tâche, fin",
+     "s": 0
+    },
+    {
+     "f": "AVTriwizard2Intro",
+     "t": "Deuxième tâche, début",
+     "s": 0
+    },
+    {
+     "f": "AVTriwizard3Intro",
+     "t": "Troisième tâche, début",
+     "s": 0
+    },
+    {
+     "f": "AVvoldemortOutro",
+     "t": "Le retour de Voldemort",
+     "s": 0
+    },
+    {
+     "f": "AVHarry",
+     "t": "Harry",
+     "s": 0
+    },
+    {
+     "f": "AVHermione",
+     "t": "Hermione",
+     "s": 0
+    },
+    {
+     "f": "AVRon",
+     "t": "Ron",
+     "s": 0
+    },
+    {
+     "f": "AVReward",
+     "t": "La récompense",
+     "s": 0
+    },
+    {
+     "f": "AVAttract",
+     "t": "Bande-annonce",
+     "s": 0
+    },
+    {
+     "f": "AVGofLogo",
+     "t": "Logo du jeu",
+     "s": 0
+    },
+    {
+     "f": "AVea",
+     "t": "Logo Electronic Arts",
+     "s": 0
+    },
+    {
+     "f": "AVwbie",
+     "t": "Logo Warner Bros.",
+     "s": 0
+    }
+   ]
+  },
+  "hp5": {
+   "archive": "movies.big",
+   "dossier": "movies/neutral",
+   "ext": ".vp6",
+   "sans_son": true,
+   "clips": [
+    {
+     "f": "occ_hogsmead",
+     "t": "Pré-au-Lard",
+     "s": 15
+    },
+    {
+     "f": "occ_dada",
+     "t": "Défense contre les forces du mal",
+     "s": 20
+    },
+    {
+     "f": "occ_friends",
+     "t": "Les amis",
+     "s": 25
+    },
+    {
+     "f": "the_da",
+     "t": "L'armée de Dumbledore",
+     "s": 35
+    },
+    {
+     "f": "occ_cho_kiss",
+     "t": "Le baiser de Cho",
+     "s": 45
+    },
+    {
+     "f": "occ_arthur_biten",
+     "t": "Arthur Weasley attaqué",
+     "s": 50
+    },
+    {
+     "f": "occ_umbridge_cho_ror",
+     "t": "Ombrage, Cho et la Salle sur demande",
+     "s": 60
+    },
+    {
+     "f": "occ_grawp",
+     "t": "Graup",
+     "s": 70
+    },
+    {
+     "f": "occ_courtyard_swamp",
+     "t": "Le marécage de la cour",
+     "s": 75
+    },
+    {
+     "f": "occ_prophecy",
+     "t": "La prophétie",
+     "s": 90
+    },
+    {
+     "f": "occ_sirius_blasted",
+     "t": "Sirius frappé",
+     "s": 92
+    },
+    {
+     "f": "occ_belltrix_kill",
+     "t": "Bellatrix",
+     "s": 92
+    },
+    {
+     "f": "occ_goodbye_sirius",
+     "t": "Adieu, Sirius",
+     "s": 95
+    },
+    {
+     "f": "harrys_friends",
+     "t": "Les amis de Harry",
+     "s": 0
+    },
+    {
+     "f": "bad_boys",
+     "t": "Les méchants",
+     "s": 0
+    },
+    {
+     "f": "authentic_characters",
+     "t": "Les personnages",
+     "s": 0
+    },
+    {
+     "f": "authentic_hogwarts",
+     "t": "Poudlard",
+     "s": 0
+    },
+    {
+     "f": "soundofhog",
+     "t": "Les sons de Poudlard",
+     "s": 0
+    },
+    {
+     "f": "attract",
+     "t": "Bande-annonce",
+     "s": 0
+    },
+    {
+     "f": "dh02_cs01_go_to_dada",
+     "t": "Cinématique « dh02_cs01_go_to_dada »",
+     "s": 0
+    },
+    {
+     "f": "dh03",
+     "t": "Cinématique « dh03 »",
+     "s": 0
+    },
+    {
+     "f": "dh04",
+     "t": "Cinématique « dh04 »",
+     "s": 0
+    },
+    {
+     "f": "dh04_cs03",
+     "t": "Cinématique « dh04_cs03 »",
+     "s": 0
+    },
+    {
+     "f": "dl03",
+     "t": "Cinématique « dl03 »",
+     "s": 0
+    },
+    {
+     "f": "dl03_cs01",
+     "t": "Cinématique « dl03_cs01 »",
+     "s": 0
+    },
+    {
+     "f": "gp01",
+     "t": "Cinématique « gp01 »",
+     "s": 0
+    },
+    {
+     "f": "gp04",
+     "t": "Cinématique « gp04 »",
+     "s": 0
+    },
+    {
+     "f": "gp05",
+     "t": "Cinématique « gp05 »",
+     "s": 0
+    },
+    {
+     "f": "mom01",
+     "t": "Cinématique « mom01 »",
+     "s": 0
+    },
+    {
+     "f": "mom01_cs01",
+     "t": "Cinématique « mom01_cs01 »",
+     "s": 0
+    },
+    {
+     "f": "mom03",
+     "t": "Cinématique « mom03 »",
+     "s": 0
+    },
+    {
+     "f": "mom4",
+     "t": "Cinématique « mom4 »",
+     "s": 0
+    },
+    {
+     "f": "mom_02_cs02_shotc",
+     "t": "Cinématique « mom_02_cs02_shotc »",
+     "s": 0
+    },
+    {
+     "f": "oc01",
+     "t": "Cinématique « oc01 »",
+     "s": 0
+    },
+    {
+     "f": "oc01_cs01",
+     "t": "Cinématique « oc01_cs01 »",
+     "s": 0
+    },
+    {
+     "f": "rr01",
+     "t": "Cinématique « rr01 »",
+     "s": 0
+    },
+    {
+     "f": "rr26",
+     "t": "Cinématique « rr26 »",
+     "s": 0
+    },
+    {
+     "f": "uh11",
+     "t": "Cinématique « uh11 »",
+     "s": 0
+    },
+    {
+     "f": "uh13",
+     "t": "Cinématique « uh13 »",
+     "s": 0
+    },
+    {
+     "f": "reward_07",
+     "t": "Récompense 7",
+     "s": 0
+    },
+    {
+     "f": "reward_08",
+     "t": "Récompense 8",
+     "s": 0
+    },
+    {
+     "f": "reward_09",
+     "t": "Récompense 9",
+     "s": 0
+    },
+    {
+     "f": "reward_10",
+     "t": "Récompense 10",
+     "s": 0
+    },
+    {
+     "f": "reward_11",
+     "t": "Récompense 11",
+     "s": 0
+    },
+    {
+     "f": "reward_12",
+     "t": "Récompense 12",
+     "s": 0
+    },
+    {
+     "f": "reward_13",
+     "t": "Récompense 13",
+     "s": 0
+    },
+    {
+     "f": "reward_14",
+     "t": "Récompense 14",
+     "s": 0
+    },
+    {
+     "f": "lw_loadgame",
+     "t": "Transition de menu 1",
+     "s": 0
+    },
+    {
+     "f": "lw_n01_f",
+     "t": "Transition de menu 2",
+     "s": 0
+    },
+    {
+     "f": "lw_newgame",
+     "t": "Transition de menu 3",
+     "s": 0
+    },
+    {
+     "f": "main_menu_newgame",
+     "t": "Transition de menu 4",
+     "s": 0
+    },
+    {
+     "f": "newgame_2_mainmenu",
+     "t": "Transition de menu 5",
+     "s": 0
+    },
+    {
+     "f": "newgame_2_options",
+     "t": "Transition de menu 6",
+     "s": 0
+    },
+    {
+     "f": "options_2_newgame",
+     "t": "Transition de menu 7",
+     "s": 0
+    },
+    {
+     "f": "packshot_2_mainmenu",
+     "t": "Transition de menu 8",
+     "s": 0
+    }
+   ]
+  },
+  "hp6": {
+   "archive": "movies.big",
+   "dossier": "movies/neutral",
+   "ext": ".vp6",
+   "sans_son": true,
+   "clips": [
+    {
+     "f": "ns01",
+     "t": "Transition de chapitre 1",
+     "s": 0
+    },
+    {
+     "f": "ns02",
+     "t": "Transition de chapitre 2",
+     "s": 0
+    },
+    {
+     "f": "ns03",
+     "t": "Transition de chapitre 3",
+     "s": 0
+    },
+    {
+     "f": "ns04",
+     "t": "Transition de chapitre 4",
+     "s": 0
+    },
+    {
+     "f": "ns05",
+     "t": "Transition de chapitre 5",
+     "s": 0
+    },
+    {
+     "f": "ns07",
+     "t": "Transition de chapitre 7",
+     "s": 0
+    },
+    {
+     "f": "ns08",
+     "t": "Transition de chapitre 8",
+     "s": 0
+    },
+    {
+     "f": "ns09",
+     "t": "Transition de chapitre 9",
+     "s": 0
+    },
+    {
+     "f": "ns10",
+     "t": "Transition de chapitre 10",
+     "s": 0
+    },
+    {
+     "f": "ns11",
+     "t": "Transition de chapitre 11",
+     "s": 0
+    },
+    {
+     "f": "ns12",
+     "t": "Transition de chapitre 12",
+     "s": 0
+    },
+    {
+     "f": "ns13",
+     "t": "Transition de chapitre 13",
+     "s": 0
+    },
+    {
+     "f": "ns14",
+     "t": "Transition de chapitre 14",
+     "s": 0
+    },
+    {
+     "f": "ns15",
+     "t": "Transition de chapitre 15",
+     "s": 0
+    },
+    {
+     "f": "ns16",
+     "t": "Transition de chapitre 16",
+     "s": 0
+    },
+    {
+     "f": "pensieve",
+     "t": "La Pensine",
+     "s": 0
+    },
+    {
+     "f": "night2day",
+     "t": "De la nuit au jour",
+     "s": 0
+    },
+    {
+     "f": "creditsback",
+     "t": "Le fond du générique",
+     "s": 0
+    },
+    {
+     "f": "attract",
+     "t": "Bande-annonce",
+     "s": 0
+    },
+    {
+     "f": "attractnotext",
+     "t": "Bande-annonce, sans texte",
+     "s": 0
+    }
+   ]
+  },
+  "hp7a": {
    "dossier": "pc",
    "ext": ".vp6",
    "sans_son": true,
@@ -319,7 +829,7 @@
     }
    ]
   },
-  "hp8": {
+  "hp7b": {
    "dossier": "pc",
    "ext": ".vp6",
    "sans_son": true,

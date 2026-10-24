@@ -15,6 +15,31 @@
    "compositeur": "Jeremy Soule",
    "annee": 2004,
    "editeur": "Electronic Arts Inc."
+  },
+  "hp4": {
+   "compositeur": "Jeremy Soule",
+   "annee": 2005,
+   "editeur": "Electronic Arts Inc."
+  },
+  "hp5": {
+   "compositeur": "James Hannigan",
+   "annee": 2007,
+   "editeur": "Electronic Arts Inc."
+  },
+  "hp6": {
+   "compositeur": "James Hannigan",
+   "annee": 2009,
+   "editeur": "Electronic Arts Inc."
+  },
+  "hp7a": {
+   "compositeur": "James Hannigan",
+   "annee": 2010,
+   "editeur": "Electronic Arts Inc."
+  },
+  "hp7b": {
+   "compositeur": "James Hannigan",
+   "annee": 2011,
+   "editeur": "Electronic Arts Inc."
   }
  },
  "jeux": {
@@ -1942,6 +1967,553 @@
     "f": "success_cue6b_orch",
     "t": "success cue6b orch",
     "s": 75
+   }
+  ],
+  "hp4": [
+   {
+    "f": "bathroom_music_stream-1",
+    "t": "La salle de bain des préfets, 1",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-2",
+    "t": "La salle de bain des préfets, 2",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-3",
+    "t": "La salle de bain des préfets, 3",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-4",
+    "t": "La salle de bain des préfets, 4",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-5",
+    "t": "La salle de bain des préfets, 5",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-6",
+    "t": "La salle de bain des préfets, 6",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-7",
+    "t": "La salle de bain des préfets, 7",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-8",
+    "t": "La salle de bain des préfets, 8",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-9",
+    "t": "La salle de bain des préfets, 9",
+    "s": 0
+   },
+   {
+    "f": "bathroom_music_stream-10",
+    "t": "La salle de bain des préfets, 10",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-1",
+    "t": "Le camping de la Coupe du monde, 1",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-2",
+    "t": "Le camping de la Coupe du monde, 2",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-3",
+    "t": "Le camping de la Coupe du monde, 3",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-4",
+    "t": "Le camping de la Coupe du monde, 4",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-5",
+    "t": "Le camping de la Coupe du monde, 5",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-6",
+    "t": "Le camping de la Coupe du monde, 6",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-7",
+    "t": "Le camping de la Coupe du monde, 7",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-8",
+    "t": "Le camping de la Coupe du monde, 8",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-9",
+    "t": "Le camping de la Coupe du monde, 9",
+    "s": 0
+   },
+   {
+    "f": "camp_stream-10",
+    "t": "Le camping de la Coupe du monde, 10",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-1",
+    "t": "Défense contre les forces du mal, 1",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-2",
+    "t": "Défense contre les forces du mal, 2",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-3",
+    "t": "Défense contre les forces du mal, 3",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-4",
+    "t": "Défense contre les forces du mal, 4",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-5",
+    "t": "Défense contre les forces du mal, 5",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-6",
+    "t": "Défense contre les forces du mal, 6",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-7",
+    "t": "Défense contre les forces du mal, 7",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-8",
+    "t": "Défense contre les forces du mal, 8",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-9",
+    "t": "Défense contre les forces du mal, 9",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-10",
+    "t": "Défense contre les forces du mal, 10",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-11",
+    "t": "Défense contre les forces du mal, 11",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-12",
+    "t": "Défense contre les forces du mal, 12",
+    "s": 0
+   },
+   {
+    "f": "dada_music_stream-13",
+    "t": "Défense contre les forces du mal, 13",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-1",
+    "t": "Niveau « dw », 1",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-2",
+    "t": "Niveau « dw », 2",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-3",
+    "t": "Niveau « dw », 3",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-4",
+    "t": "Niveau « dw », 4",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-5",
+    "t": "Niveau « dw », 5",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-6",
+    "t": "Niveau « dw », 6",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-7",
+    "t": "Niveau « dw », 7",
+    "s": 0
+   },
+   {
+    "f": "dw_music_stream-8",
+    "t": "Niveau « dw », 8",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-1",
+    "t": "Les menus, 1",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-2",
+    "t": "Les menus, 2",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-3",
+    "t": "Les menus, 3",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-4",
+    "t": "Les menus, 4",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-5",
+    "t": "Les menus, 5",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-6",
+    "t": "Les menus, 6",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-7",
+    "t": "Les menus, 7",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-8",
+    "t": "Les menus, 8",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-9",
+    "t": "Les menus, 9",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-10",
+    "t": "Les menus, 10",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-11",
+    "t": "Les menus, 11",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-12",
+    "t": "Les menus, 12",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-13",
+    "t": "Les menus, 13",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-14",
+    "t": "Les menus, 14",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-15",
+    "t": "Les menus, 15",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-16",
+    "t": "Les menus, 16",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-17",
+    "t": "Les menus, 17",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-18",
+    "t": "Les menus, 18",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-19",
+    "t": "Les menus, 19",
+    "s": 0
+   },
+   {
+    "f": "fe_music_stream-20",
+    "t": "Les menus, 20",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-1",
+    "t": "Botanique, 1",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-2",
+    "t": "Botanique, 2",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-3",
+    "t": "Botanique, 3",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-4",
+    "t": "Botanique, 4",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-5",
+    "t": "Botanique, 5",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-6",
+    "t": "Botanique, 6",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-7",
+    "t": "Botanique, 7",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-8",
+    "t": "Botanique, 8",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-9",
+    "t": "Botanique, 9",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-10",
+    "t": "Botanique, 10",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-11",
+    "t": "Botanique, 11",
+    "s": 0
+   },
+   {
+    "f": "herbmusic_stream-12",
+    "t": "Botanique, 12",
+    "s": 0
+   },
+   {
+    "f": "maze_music_stream-1",
+    "t": "Le labyrinthe, 1",
+    "s": 0
+   },
+   {
+    "f": "maze_music_stream-2",
+    "t": "Le labyrinthe, 2",
+    "s": 0
+   },
+   {
+    "f": "maze_music_stream-3",
+    "t": "Le labyrinthe, 3",
+    "s": 0
+   },
+   {
+    "f": "maze_music_stream-4",
+    "t": "Le labyrinthe, 4",
+    "s": 0
+   },
+   {
+    "f": "maze_music_stream-5",
+    "t": "Le labyrinthe, 5",
+    "s": 0
+   },
+   {
+    "f": "maze_music_stream-6",
+    "t": "Le labyrinthe, 6",
+    "s": 0
+   },
+   {
+    "f": "moody_music_stream-1",
+    "t": "Maugrey Fol Œil, 1",
+    "s": 0
+   },
+   {
+    "f": "moody_music_stream-2",
+    "t": "Maugrey Fol Œil, 2",
+    "s": 0
+   },
+   {
+    "f": "moody_music_stream-3",
+    "t": "Maugrey Fol Œil, 3",
+    "s": 0
+   },
+   {
+    "f": "moody_music_stream-4",
+    "t": "Maugrey Fol Œil, 4",
+    "s": 0
+   },
+   {
+    "f": "moody_music_stream-5",
+    "t": "Maugrey Fol Œil, 5",
+    "s": 0
+   },
+   {
+    "f": "moody_music_stream-6",
+    "t": "Maugrey Fol Œil, 6",
+    "s": 0
+   },
+   {
+    "f": "tri1_stream-1",
+    "t": "Première tâche, 1",
+    "s": 0
+   },
+   {
+    "f": "tri1_stream-2",
+    "t": "Première tâche, 2",
+    "s": 0
+   },
+   {
+    "f": "tri1_stream-3",
+    "t": "Première tâche, 3",
+    "s": 0
+   },
+   {
+    "f": "tri1_stream-4",
+    "t": "Première tâche, 4",
+    "s": 0
+   },
+   {
+    "f": "tri1_stream-5",
+    "t": "Première tâche, 5",
+    "s": 0
+   },
+   {
+    "f": "tri1_stream-6",
+    "t": "Première tâche, 6",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-1",
+    "t": "Deuxième tâche, 1",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-2",
+    "t": "Deuxième tâche, 2",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-3",
+    "t": "Deuxième tâche, 3",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-4",
+    "t": "Deuxième tâche, 4",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-5",
+    "t": "Deuxième tâche, 5",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-6",
+    "t": "Deuxième tâche, 6",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-7",
+    "t": "Deuxième tâche, 7",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-8",
+    "t": "Deuxième tâche, 8",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-9",
+    "t": "Deuxième tâche, 9",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-10",
+    "t": "Deuxième tâche, 10",
+    "s": 0
+   },
+   {
+    "f": "tw2_mus_stream-11",
+    "t": "Deuxième tâche, 11",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-1",
+    "t": "Voldemort, 1",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-2",
+    "t": "Voldemort, 2",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-3",
+    "t": "Voldemort, 3",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-4",
+    "t": "Voldemort, 4",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-5",
+    "t": "Voldemort, 5",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-6",
+    "t": "Voldemort, 6",
+    "s": 0
+   },
+   {
+    "f": "voldemort_music_stream-7",
+    "t": "Voldemort, 7",
+    "s": 0
    }
   ]
  }

@@ -219,7 +219,7 @@ class FondSonore(QObject):
             return None
         jeu, fichier = morceau
         for piste in phonographe.pistes(jeu, self._dossier_jeu(jeu)):
-            if piste.source.stem == fichier:
+            if piste.identifiant == fichier:
                 return phonographe.fichier_lisible(piste, self._cache())
         return None
 

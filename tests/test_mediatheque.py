@@ -42,20 +42,22 @@ class TestCinematiques:
         assert cinematiques.presentes(collection, None) == {}
 
     def test_donnees_embarquees(self):
-        """Le fichier livré : HP3, HP7 et HP8, et rien pour HP1 et HP2 (moteur seul)."""
+        """Le fichier livré : HP3 à HP8 (hp7a, hp7b), et rien pour HP1 et HP2 (moteur seul)."""
         lu = cinematiques.charger()
-        assert {"hp3", "hp7", "hp8"} <= set(lu)
+        assert {"hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b"} <= set(lu)
         assert "hp1" not in lu and "hp2" not in lu
-        assert lu["hp7"].sans_son and lu["hp8"].sans_son
+        assert lu["hp7a"].sans_son and lu["hp7b"].sans_son and lu["hp4"].voix
         assert all(c.titre for col in lu.values() for c in col.clips)
 
 
 class TestCredits:
-    def test_jeremy_soule_sur_les_trois_premiers_jeux(self):
+    def test_un_credit_par_jeu(self):
         credits = discographie.charger_credits()
         assert {j: (c.compositeur, c.annee) for j, c in credits.items()} == {
             "hp1": ("Jeremy Soule", 2001), "hp2": ("Jeremy Soule", 2002),
-            "hp3": ("Jeremy Soule", 2004)}
+            "hp3": ("Jeremy Soule", 2004), "hp4": ("Jeremy Soule", 2005),
+            "hp5": ("James Hannigan", 2007), "hp6": ("James Hannigan", 2009),
+            "hp7a": ("James Hannigan", 2010), "hp7b": ("James Hannigan", 2011)}
 
     def test_illisible_rend_vide(self, tmp_path):
         assert discographie.charger_credits(tmp_path / "absent.json") == {}

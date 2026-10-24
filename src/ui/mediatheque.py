@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QWid
 
 from src.core import cinematiques, discographie, phonographe
 from src.core.config import ASSETS_DIR, cache_pour
-from src.core.i18n import tr
+from src.core.i18n import get_language, tr
 from src.ui.disque import Disque
 from src.ui.fond_sonore import JEU, FondSonore, decouper
 from src.ui.fonts import body_font
@@ -75,7 +75,7 @@ class Mediatheque(QObject):
         self._cines = cinematiques.charger()
         self._avances: dict[str, int | None] = {}
         self._vus = discographie.charger_vus()
-        self._presentes: dict[str, dict[str, Path]] = {}
+        self._presentes: dict[str, dict[str, cinematiques.Source]] = {}
 
         self.mini = MiniLecteur(self)
         barre_statut.addPermanentWidget(self.mini)
@@ -119,7 +119,8 @@ class Mediatheque(QObject):
             self._avances[jeu] = (discographie.avancement(jeu, game.sauvegardes)
                                   if installe else None)
             collection = self._cines.get(jeu)
-            self._presentes[jeu] = (cinematiques.presentes(collection, self._manager.get_game_path(jeu))
+            self._presentes[jeu] = (cinematiques.presentes(collection, self._manager.get_game_path(jeu),
+                                                           get_language())
                                     if installe and collection is not None else {})
         self._barre_titre.set_pastille(MEDIATHEQUE, self.a_des_nouveautes())
         self.mini.actualiser()
@@ -212,8 +213,24 @@ class Mediatheque(QObject):
         collection = self._cines.get(jeu)
         return collection.clips if collection is not None else ()
 
-    def chemin_cinematique(self, jeu: str, fichier: str) -> Path | None:
-        return self._presentes.get(jeu, {}).get(fichier)
+    def a_la_cinematique(self, jeu: str, fichier: str) -> bool:
+        return fichier in self._presentes.get(jeu, {})
+
+    def _cache(self) -> Path:
+        return cache_pour(self._manager.config.install_path)
+
+    def video(self, jeu: str, fichier: str) -> Path | None:
+        """Le fichier de la vidéo, recopié depuis l'archive du jeu au premier visionnage."""
+        source = self._presentes.get(jeu, {}).get(fichier)
+        return cinematiques.lisible(source, self._cache(), jeu) if source is not None else None
+
+    def voix(self, jeu: str, fichier: str) -> Path | None:
+        """La voix séparée de la cinématique (HP4), dans la langue du launcher sinon en anglais."""
+        collection = self._cines.get(jeu)
+        if collection is None:
+            return None
+        source = cinematiques.voix(collection, self._manager.get_game_path(jeu), fichier, get_language())
+        return cinematiques.lisible(source, self._cache(), jeu) if source is not None else None
 
     def sans_son(self, jeu: str) -> bool:
         collection = self._cines.get(jeu)

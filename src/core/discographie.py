@@ -143,7 +143,10 @@ def avancement(jeu: str, spec: Sauvegardes | None) -> int | None:
         elif jeu == "hp3":
             valeurs = [r.histoire for r in folio_hp3.emplacements(sauvegardes.fichiers(spec))]
         else:
-            return None
+            # Les jeux qui écrivent eux-mêmes leur pourcentage (HP5 : « 14 % »).
+            ecrits = [e.avancement for e in sauvegardes.releve(spec).values()
+                      if e.avancement is not None]
+            return max(ecrits) if ecrits else None
     except (OSError, ValueError) as exc:
         log.debug("Avancement de %s illisible : %s", jeu, exc)
         return None

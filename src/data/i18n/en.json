@@ -1288,6 +1288,7 @@
     "Ce jeu joue ses cinématiques dans son moteur : il n'a pas de fichier vidéo à montrer ici.": "This game plays its cutscenes in its engine: it has no video file to show here.",
     "Les cinématiques de ce jeu ne sont pas encore lues par le launcher.": "The launcher does not read this game's cutscenes yet.",
     "Fond sonore du launcher : {}": "Launcher background music: {}",
-    "La musique et les cinématiques du jeu": "The game's music and cutscenes"
+    "La musique et les cinématiques du jeu": "The game's music and cutscenes",
+    "Cette cinématique n'a pas pu être lue.": "This cutscene could not be played."
   }
 }

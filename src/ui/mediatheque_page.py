@@ -26,7 +26,7 @@ Le modèle est `mediatheque.Mediatheque` : la page ne lit rien elle-même.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -47,7 +47,7 @@ from src.core.i18n import tr
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.disque import Disque
 from src.ui.flow_layout import FlowLayout
-from src.ui.fond_sonore import CINEMATIQUE, cle, decouper
+from src.ui.fond_sonore import CINEMATIQUE, MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer, cle, decouper
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.mediatheque import CINEMATIQUES, MUSIQUE, Mediatheque
@@ -539,11 +539,13 @@ class _VueMusique(QWidget):
         c.addLayout(haut)
         self._barre = _Barre()
         c.addWidget(self._barre)
-        bas = QHBoxLayout()
+        self._bas = _transparent(QWidget())
+        bas = QHBoxLayout(self._bas)
+        bas.setContentsMargins(0, 0, 0, 0)
         self._avance = texte("", 12, ENCRE_DOUCE)
         bas.addWidget(self._avance, stretch=1)
         bas.addWidget(texte(tr("{} % : tout s'ouvre").format(discographie.TOUT_A), 12, ENCRE_DOUCE))
-        c.addLayout(bas)
+        c.addWidget(self._bas)
         lay.addWidget(self._carte)
         lay.addSpacing(10)
 
@@ -598,6 +600,10 @@ class _VueMusique(QWidget):
         self._compte.setText(tr("{n} morceaux sur {total}").format(n=ouverts, total=len(morceaux)))
         self._barre.pct = avance or 0
         self._barre.update()
+        # Un jeu dont tout est ouvert d'office (HP4) n'a pas d'avancement à montrer.
+        a_des_seuils = any(m.seuil > 0 for m in morceaux)
+        self._barre.setVisible(a_des_seuils)
+        self._bas.setVisible(a_des_seuils)
         self._avance.setText(tr("Votre sauvegarde la plus avancée : {} %").format(avance)
                              if avance is not None else tr("Aucune partie lue pour l'instant"))
         credit = media.credit(jeu)
@@ -781,6 +787,9 @@ class _VueCinematiques(QWidget):
         self._video.set_plein_debit(True)
         self._video.video_frame.connect(lambda image: self._ecran.poser(image))
         self._video.playback_ended.connect(self.arreter)
+        # La voix de HP4 est un fichier à part : un second lecteur, lancé avec la vidéo.
+        self._voix: QMediaPlayer | None = None
+        self._voix_sortie: QAudioOutput | None = None
 
         racine = QHBoxLayout(self)
         racine.setContentsMargins(40, 18, 40, 0)
@@ -841,7 +850,7 @@ class _VueCinematiques(QWidget):
         self._jeu = jeu
         media = self._media
         self._lignes = []
-        presentes = [c for c in media.cinematiques(jeu) if media.chemin_cinematique(jeu, c.fichier)]
+        presentes = [c for c in media.cinematiques(jeu) if media.a_la_cinematique(jeu, c.fichier)]
         self._zone.setVisible(bool(presentes))
         self._vide.setVisible(not presentes)
         self._stretch_vide.setVisible(not presentes)
@@ -883,19 +892,30 @@ class _VueCinematiques(QWidget):
             self._media.marquer_vus(self._jeu, CINEMATIQUES)
 
     def jouer(self, jeu: str, fichier: str, titre: str) -> None:
-        chemin = self._media.chemin_cinematique(jeu, fichier)
+        self._arreter_voix()
+        chemin = self._media.video(jeu, fichier)
         if chemin is None:
+            self._note.setText(tr("Cette cinématique n'a pas pu être lue."))
             return
         fond = self._media.fond
         fond.suspendre(CINEMATIQUE)
-        if not self._video.play(str(chemin), muted=fond.son_coupe,
-                                volume=self._media.fond_volume() / 100.0):
+        volume = self._media.fond_volume() / 100.0
+        if not self._video.play(str(chemin), muted=fond.son_coupe, volume=volume):
             fond.reprendre(CINEMATIQUE)
             return
+        voix = self._media.voix(jeu, fichier)
+        if voix is not None and MULTIMEDIA_DISPONIBLE:
+            self._voix_sortie = QAudioOutput(self)
+            self._voix_sortie.setVolume(volume)
+            self._voix_sortie.setMuted(fond.son_coupe)
+            self._voix = QMediaPlayer(self)
+            self._voix.setAudioOutput(self._voix_sortie)
+            self._voix.setSource(QUrl.fromLocalFile(str(voix)))
+            self._voix.play()
         self._courante = fichier
         self._titre.setText(titre)
         self._note.setText(tr("Sans le son pour l'instant : il est rangé ailleurs dans le jeu.")
-                           if self._media.sans_son(jeu) else self._media.nom(jeu))
+                           if self._media.sans_son(jeu) and voix is None else self._media.nom(jeu))
         for ligne in self._lignes:
             ligne.marquer(ligne.fichier == fichier)
         self._etat_commandes()
@@ -903,13 +923,28 @@ class _VueCinematiques(QWidget):
     def _basculer_pause(self) -> None:
         if self._video.paused:
             self._video.resume()
+            if self._voix is not None:
+                self._voix.play()
         else:
             self._video.pause()
+            if self._voix is not None:
+                self._voix.pause()
         self._etat_commandes()
+
+    def _arreter_voix(self) -> None:
+        if self._voix is not None:
+            self._voix.stop()
+            self._voix.setSource(QUrl())
+            self._voix.deleteLater()
+            self._voix = None
+        if self._voix_sortie is not None:
+            self._voix_sortie.deleteLater()
+            self._voix_sortie = None
 
     def arreter(self) -> None:
         """Fin, bouton Arrêter, rubrique quittée ou page fermée : l'écran se vide, la musique revient."""
         self._video.stop()
+        self._arreter_voix()
         self._courante = ""
         self._ecran.poser(None)
         self._titre.setText("")

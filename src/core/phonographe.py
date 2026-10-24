@@ -12,8 +12,13 @@ Relevé sur les jeux (atelier, `notes/PHONOGRAPHE_PROJECTION_TRADUCTIONS.md`) :
   `Music` par paquet, dont le format est NOMMÉ dans la table des noms du
   paquet : `mp2` sur les 91 (MPEG-2 couche II). Le flux est recopié octet pour
   octet dans le cache, puis lu comme un fichier ordinaire.
-- **HP4 à HP6** : musique interactive d'EA (blocs `SCHl` dans `music.big`),
-  à découper en morceaux ; pas encore ici.
+- **HP4** : musique interactive d'EA dans `music.big` (`archives_ea`) : chaque
+  `*_stream.mus` met bout à bout des flux SCHl, morceaux et transitions. Les
+  flux d'au moins `SEUIL_MORCEAU` octets (≈ 16 s) sont des morceaux ; ceux des
+  `sfx` et `amb` sont des ambiances, laissés de côté. Un flux recopié dans le
+  cache est un `.asf` qu'FFmpeg lit tel quel.
+- **HP5 et HP6** : même rangement, mais en EALayer3, qu'FFmpeg ne lit pas :
+  pas encore ici.
 
 Aucune fonction ne lève : un paquet abîmé ou d'un autre format est sauté.
 """
@@ -24,7 +29,10 @@ import logging
 import os
 import tempfile
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
+
+from src.core import archives_ea
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +42,9 @@ _SOURCES: dict[str, tuple[str, str]] = {
     "hp2": ("music", "*.ogg"),
     "hp3": ("music", "*.ogg"),
 }
+# Les jeux dont la musique vit dans une archive EA (`archives_ea`).
+_ARCHIVES: dict[str, str] = {"hp4": "music.big"}
+SEUIL_MORCEAU = 700 << 10
 _MAGIC_UE1 = 0x9E2A83C1
 # Formats que le lecteur sait ouvrir une fois le flux sorti du paquet.
 _FORMATS_LISIBLES = frozenset({"mp2", "mp3", "ogg", "wav"})
@@ -46,12 +57,21 @@ class Piste:
     jeu: str
     titre: str
     source: Path
-    # Vrai quand le flux doit d'abord sortir d'un paquet du moteur (HP1).
+    # Vrai quand le flux doit d'abord sortir d'un paquet ou d'une archive.
     empaquetee: bool
+    # Dans une archive EA (HP4) : la clé « <flux>-<n> » et la plage du flux.
+    cle: str = ""
+    debut: int = 0
+    taille: int = 0
+
+    @property
+    def identifiant(self) -> str:
+        """Ce que la discographie appelle `f` : la clé, sinon le nom du fichier."""
+        return self.cle or self.source.stem
 
 
 def jeux_couverts() -> tuple[str, ...]:
-    return tuple(_SOURCES)
+    return tuple(_SOURCES) + tuple(_ARCHIVES)
 
 
 def titre(nom: str) -> str:
@@ -75,6 +95,13 @@ def _dossier_musique(dossier_jeu: Path, nom: str) -> Path | None:
 
 def pistes(jeu: str, dossier_jeu: Path | None) -> list[Piste]:
     """Les morceaux d'un jeu installé, triés par nom ; vide si rien à lire."""
+    if dossier_jeu is not None and jeu in _ARCHIVES:
+        archive = dossier_jeu / _ARCHIVES[jeu]
+        try:
+            st = archive.stat()
+        except OSError:
+            return []
+        return list(_pistes_archive(jeu, archive, st.st_size, st.st_mtime))
     source = _SOURCES.get(jeu)
     if source is None or dossier_jeu is None:
         return []
@@ -86,6 +113,22 @@ def pistes(jeu: str, dossier_jeu: Path | None) -> list[Piste]:
     except OSError:
         return []
     return [Piste(jeu, titre(p.stem), p, p.suffix.lower() == ".umx") for p in fichiers]
+
+
+@lru_cache(maxsize=4)
+def _pistes_archive(jeu: str, archive: Path, _taille: int, _modifie: float) -> tuple[Piste, ...]:
+    """Les morceaux d'une `music.big` (0,3 s pour HP4) : gardés tant qu'elle ne change pas."""
+    trouvees: list[Piste] = []
+    for entree in archives_ea.lister(archive):
+        nom = entree.nom.lower()
+        if not nom.endswith("stream.mus") or "sfx" in nom or "amb" in nom:
+            continue
+        base = Path(entree.nom).stem
+        longs = [f for f in archives_ea.flux_schl(archive, entree) if f[1] >= SEUIL_MORCEAU]
+        for n, (debut, taille) in enumerate(longs, 1):
+            cle = f"{base}-{n}"
+            trouvees.append(Piste(jeu, cle, archive, True, cle, debut, taille))
+    return tuple(trouvees)
 
 
 # ─── Paquets Unreal 1 ───
@@ -227,6 +270,9 @@ def fichier_lisible(piste: Piste, cache: Path) -> Path | None:
     """
     if not piste.empaquetee:
         return piste.source if piste.source.is_file() else None
+    if piste.taille:
+        cible = cache / "phonographe" / piste.jeu / f"{piste.cle}.asf"
+        return archives_ea.extraire(piste.source, piste.debut, piste.taille, cible)
     dossier = cache / "phonographe" / piste.jeu
     try:
         existants = list(dossier.glob(piste.source.stem + ".*")) if dossier.is_dir() else []
