@@ -93,6 +93,7 @@ class TestEngrenageReglagesDuJeu:
         from src.ui.icon_button import IconButton
         from src.core import folio
         from src.core.game_manager import GameState
+        from src.ui.carnet_page import CarnetPage
         from src.ui.folio_page import FolioPage
         win, jeu = make_window_multilingue()
         autre = win.manager.get_games()[1].game
@@ -104,7 +105,8 @@ class TestEngrenageReglagesDuJeu:
         assert panneau.findChild(IconButton, "btnFolio") is None, "plus de bouton dans la rangée"
         assert 'href="folio"' in win._detail._info._indices.text()
         win._detail._info._on_meta_link("folio")
-        assert isinstance(win._pages.page, FolioPage) and win._pages.page.game is jeu
+        assert isinstance(win._pages.page, CarnetPage) and win._pages.page.jeu == jeu.id
+        assert isinstance(win._pages.page._folio, FolioPage)
 
     def test_pas_de_folio_sur_un_jeu_non_installe(self, make_window_multilingue, monkeypatch):
         from src.core import folio

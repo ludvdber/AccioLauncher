@@ -64,7 +64,7 @@ def etapes_launcher(carrousel: QWidget, fiche: QWidget, barre: QWidget,
                     onglet: Callable[[str], QWidget], contribuer: QWidget) -> list[Etape]:
     """Les étapes, dans l'ordre où l'œil parcourt la fenêtre : bas, centre, haut."""
     from src.ui.resume_partie import BlocFolio
-    from src.ui.title_bar import ANNEES, GALERIE, PARAMETRES
+    from src.ui.title_bar import CARNET, COLLECTIONS, PARAMETRES
 
     return [
         Etape(tr("Vos huit jeux"),
@@ -84,13 +84,14 @@ def etapes_launcher(carrousel: QWidget, fiche: QWidget, barre: QWidget,
               tr("Votre avancement, lu dans vos sauvegardes. Un clic ouvre le folio : cartes, "
                  "dragées, points de maison."),
               lambda: fiche.findChild(BlocFolio)),
-        Etape(tr("Mes années à Poudlard"),
-              tr("Votre temps de jeu, votre scolarité année par année et vos succès."),
-              lambda: onglet(ANNEES)),
-        Etape(tr("La galerie"),
-              tr("En jeu, F12 prend une capture. Elles sont toutes ici, rangées par jeu, "
-                 "prêtes à partager."),
-              lambda: onglet(GALERIE)),
+        Etape(tr("Carnet"),
+              tr("Le folio de chaque jeu, puis votre temps de jeu, votre scolarité année "
+                 "par année et vos succès."),
+              lambda: onglet(CARNET)),
+        Etape(tr("Collections"),
+              tr("La musique et les cinématiques des jeux, et vos captures : en jeu, F12 en "
+                 "prend une, prête à partager."),
+              lambda: onglet(COLLECTIONS)),
         Etape(tr("Contribuer"),
               tr("Vous dessinez, traduisez ou modélisez ? L'atelier dit comment aider le projet."),
               lambda: contribuer),

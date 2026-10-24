@@ -63,12 +63,13 @@ from src.ui.utils import zone_defilable
 _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
 
 
-def page_folio(game, install_path: Path, parent: QWidget | None = None, revenir=None) -> FolioPage:
+def page_folio(game, install_path: Path, parent: QWidget | None = None,
+               integree: bool = False) -> FolioPage:
     """La page du folio qui va avec le jeu (`folio.JEUX`)."""
     classe = {"hp2": FolioPageHP2, "hp3": FolioPageHP3, "hp4": FolioPageHP4, "hp5": FolioPageHP5,
               "hp7a": FolioPageHP7, "hp7b": FolioPageHP7,
               "hp6": FolioPageHP6}.get(game.id, FolioPage)
-    return classe(game, install_path, parent, revenir=revenir)
+    return classe(game, install_path, parent, integree=integree)
 
 
 def _pastille(nom: str, glyphe: QPixmap | None, appris: bool) -> QFrame:
@@ -537,6 +538,9 @@ class FolioPageHP4(FolioPage):
         self._carte = image_bgra(folio_hp4.image_menu(self._system, "cartes"), 30, dpr,
                                  rogner=True, colonnes=(0.27, 0.73))
 
+    def _chemin(self, partie) -> Path | None:
+        return None      # un fichier, plusieurs emplacements : pas de temps par partie
+
     def _nom(self, ref: folio_hp4.Nom) -> str:
         return folio_hp4.nom(self._table, ref) or tr(ref[1])
 
@@ -675,6 +679,9 @@ class FolioPageHP5(FolioPage):
         self.releves = [p for chemin in sauvegardes.fichiers(self.game.sauvegardes).values()
                         for p in folio_hp5.releve(chemin)]
 
+    def _chemin(self, partie) -> Path | None:
+        return None      # les trois parties de `HPOOTP` partagent un fichier
+
     def _entree(self, partie) -> tuple[str, datetime | None, str]:
         lieu = tr("{} % terminé").format(partie.pourcentage) if partie.pourcentage is not None else ""
         return tr("Partie {}").format(partie.emplacement), partie.ecrite, lieu
@@ -751,10 +758,16 @@ class FolioPageHP6(FolioPage):
 
     def _charger(self) -> None:
         self.releves = []
+        # Une partie par fichier, mais la partie ne porte pas son chemin.
+        self._chemins: dict[int, Path] = {}
         for chemin in sauvegardes.fichiers(self.game.sauvegardes).values():
             partie = folio_hp6.releve(chemin)
             if partie is not None:
                 self.releves.append(partie)
+                self._chemins[id(partie)] = chemin
+
+    def _chemin(self, partie) -> Path | None:
+        return self._chemins.get(id(partie))
 
     def _entree(self, partie) -> tuple[str, datetime | None, str]:
         lieu = tr("Chapitre {}").format(partie.chapitre) if partie.chapitre else ""

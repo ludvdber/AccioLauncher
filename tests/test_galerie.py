@@ -167,32 +167,17 @@ class TestPage:
         assert "ne se lit pas" in page._confirmation.text()
 
 
-class TestDepuisMesAnnees:
-    def test_le_bouton_ouvre_la_galerie(self, qtbot, tmp_path, monkeypatch):
-        from src.core.config import Config
-        from src.core.game_manager import GameManager
-        from src.ui.galerie_page import GaleriePage
-        from src.ui.stats_dialog import StatsDialog
-        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "c.json")
-        manager = GameManager(Config(install_path=tmp_path / "g", cache_path=tmp_path / "c"))
-        ouvertes = []
-        dlg = StatsDialog(manager, ouvrir_page=lambda page, cle="": ouvertes.append((page, cle)))
-        qtbot.addWidget(dlg)
-        dlg.ouvrir_galerie()
-        assert len(ouvertes) == 1 and isinstance(ouvertes[0][0], GaleriePage)
-        assert ouvertes[0][1] == "galerie", "l'onglet Galerie se souligne, même venue de Mes années"
-        qtbot.addWidget(ouvertes[0][0])
-
-    def test_sans_hote_pas_de_bouton(self, qtbot, tmp_path, monkeypatch):
+class TestDansCollections:
+    def test_integree_sans_retour_ni_titre(self, qtbot):
+        """Rubrique Captures des Collections : la page porte déjà le retour et le titre."""
         from PyQt6.QtWidgets import QPushButton
-        from src.core.config import Config
-        from src.core.game_manager import GameManager
-        from src.ui.stats_dialog import StatsDialog
-        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "c.json")
-        manager = GameManager(Config(install_path=tmp_path / "g", cache_path=tmp_path / "c"))
-        dlg = StatsDialog(manager)
-        qtbot.addWidget(dlg)
-        assert not [b for b in dlg.findChildren(QPushButton) if b.text().startswith("Galerie")]
+        from src.ui.galerie_page import GaleriePage
+        page = GaleriePage([], integree=True)
+        qtbot.addWidget(page)
+        assert not [b for b in page.findChildren(QPushButton) if b.objectName() == "retour"]
+        seule = GaleriePage([])
+        qtbot.addWidget(seule)
+        assert [b for b in seule.findChildren(QPushButton) if b.objectName() == "retour"]
 
 
 class TestVignettesEnCache:

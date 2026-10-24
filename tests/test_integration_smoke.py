@@ -440,11 +440,11 @@ class TestOngletsDuHaut:
         win._pages.fermer()
 
     def test_echap_depuis_un_onglet_ferme_la_page(self, make_window, qtbot):
-        from src.ui.title_bar import ANNEES
+        from src.ui.title_bar import CARNET
         win = make_window()
         win.show()
         qtbot.waitExposed(win)
-        onglet = win._title_bar.onglet(ANNEES)
+        onglet = win._title_bar.onglet(CARNET)
         qtbot.mouseClick(onglet, Qt.MouseButton.LeftButton)
         assert win._pages.page is not None
         qtbot.keyClick(onglet, Qt.Key.Key_Escape)

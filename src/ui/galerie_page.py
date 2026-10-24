@@ -205,9 +205,13 @@ class _Vignette(QPushButton):
 class GaleriePage(QDialog):
     """Les captures de tous les jeux ; à droite, la choisie et ce qu'on peut en faire."""
 
-    def __init__(self, jeux, parent: QWidget | None = None, jeu: str = "") -> None:
+    def __init__(self, jeux, parent: QWidget | None = None, jeu: str = "",
+                 integree: bool = False) -> None:
         super().__init__(parent)
         self.setObjectName("galerie")
+        # Rubrique « Captures » de Collections (`mediatheque_page.py`), qui porte
+        # le retour et le titre.
+        self._integree = integree
         self.setWindowTitle(tr("Galerie"))
         self.setMinimumSize(900, 560)
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
@@ -259,23 +263,24 @@ class GaleriePage(QDialog):
         lay.setContentsMargins(40, 22, 40, 28)
         lay.setSpacing(0)
 
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self.accept)
-        lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-        lay.addSpacing(16)
-        lay.addWidget(surtitre(tr("Vos captures")))
-        lay.addSpacing(4)
-        titre = QLabel(tr("Galerie"))
-        titre.setFont(cinzel_decorative(22))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        lay.addWidget(titre)
-        lay.addSpacing(16)
+        if not self._integree:
+            retour = QPushButton(tr("Bibliothèque"))
+            retour.setObjectName("retour")
+            retour.setFont(police(13))
+            retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
+            retour.setIconSize(QSize(16, 16))
+            retour.setCursor(Qt.CursorShape.PointingHandCursor)
+            retour.setAutoDefault(False)
+            retour.clicked.connect(self.accept)
+            lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
+            lay.addSpacing(16)
+            lay.addWidget(surtitre(tr("Vos captures")))
+            lay.addSpacing(4)
+            titre = QLabel(tr("Galerie"))
+            titre.setFont(cinzel_decorative(22))
+            titre.setStyleSheet("color: #f4f2f8; background: transparent;")
+            lay.addWidget(titre)
+            lay.addSpacing(16)
 
         compte = galerie.compte_par_jeu(self.captures)
         filtres = QWidget()
@@ -283,15 +288,22 @@ class GaleriePage(QDialog):
         flux.setContentsMargins(0, 0, 0, 0)
         self._groupe_filtres = QButtonGroup(self)
         self._groupe_filtres.setExclusive(True)
+        from src.ui.choix_jeux import numeros, pastille
+        etiquettes = numeros(self._jeux)
+        jeux = {g.id: g for g in self._jeux}
         for cle, nom, n in (("", tr("Tous"), len(self.captures)),
-                            *((g.id, self._noms[g.id], compte.get(g.id, 0)) for g in self._jeux)):
-            filtre = QPushButton(f"{nom}  {n}")
-            filtre.setObjectName("filtre")
+                            *((g.id, etiquettes[g.id], compte.get(g.id, 0)) for g in self._jeux)):
+            if cle:
+                # Jaquette et année, comme au Carnet et aux Collections (2026-10-24).
+                filtre = pastille(jeux[cle], f"{nom}  {n}")
+            else:
+                filtre = QPushButton(f"{nom}  {n}")
+                filtre.setObjectName("filtre")
+                filtre.setCheckable(True)
+                filtre.setAutoDefault(False)
+                filtre.setFont(police(13))
+                filtre.setCursor(Qt.CursorShape.PointingHandCursor)
             filtre.setProperty("vide", n == 0)
-            filtre.setCheckable(True)
-            filtre.setAutoDefault(False)
-            filtre.setFont(police(13))
-            filtre.setCursor(Qt.CursorShape.PointingHandCursor)
             filtre.clicked.connect(lambda _c=False, c=cle: self.filtrer(c))
             self._groupe_filtres.addButton(filtre)
             self._filtres[cle] = filtre

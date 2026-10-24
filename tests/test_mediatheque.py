@@ -179,27 +179,27 @@ def fenetre_avec_jeux(make_window, monkeypatch, tmp_path):
 
 class TestPage:
     def test_onglet_et_mini_lecteur(self, make_window):
-        from src.ui.title_bar import MEDIATHEQUE
+        from src.ui.title_bar import COLLECTIONS
         win = make_window()
-        assert win._title_bar.onglet(MEDIATHEQUE).isVisibleTo(win._title_bar)
+        assert win._title_bar.onglet(COLLECTIONS).isVisibleTo(win._title_bar)
         assert win._mediatheque.mini.parent() is not None
 
     def test_ouverte_sans_jeu_installe(self, make_window):
         from src.ui.mediatheque_page import MediathequePage
-        from src.ui.title_bar import MEDIATHEQUE
+        from src.ui.title_bar import COLLECTIONS
         win = make_window()
-        win._on_onglet(MEDIATHEQUE)
+        win._on_onglet(COLLECTIONS)
         page = win._pages.page
         assert isinstance(page, MediathequePage)
-        assert win._title_bar.onglet(MEDIATHEQUE).isChecked()
+        assert win._title_bar.onglet(COLLECTIONS).isChecked()
         page.accept()
         assert win._pages.page is None
 
     def test_morceaux_ouverts_fermes_et_nouveaux(self, fenetre_avec_jeux, qtbot):
         from src.ui.mediatheque_page import _LigneMorceau
-        from src.ui.title_bar import MEDIATHEQUE
+        from src.ui.title_bar import COLLECTIONS
         win = fenetre_avec_jeux
-        onglet = win._title_bar.onglet(MEDIATHEQUE)
+        onglet = win._title_bar.onglet(COLLECTIONS)
         # Les sauvegardes se lisent juste après l'ouverture de la fenêtre.
         qtbot.waitUntil(lambda: onglet.pastille, timeout=5000)
         win._mediatheque.ouvrir("musique", "hp2")

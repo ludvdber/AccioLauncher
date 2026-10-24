@@ -19,14 +19,14 @@ _DEBORD_PX = 2.0
 HAUTEUR = 38
 
 # Les onglets, par clé (le libellé est traduit, la clé non).
+# Quatre onglets, et plus un de plus (Ludo, 2026-10-24 : « on ne peut pas avoir
+# des onglets à l'infini »). Une idée nouvelle devient une RUBRIQUE : ce qui se
+# lit dans les sauvegardes va au Carnet (l'ancien « Mes années », qui « ne
+# signifie plus rien »), ce que les jeux contiennent va aux Collections (Galerie
+# et Médias réunis).
 BIBLIOTHEQUE = "bibliotheque"
-ANNEES = "annees"
-# La galerie n'était qu'un bouton de Mes années, et on ne l'y trouvait pas
-# (Ludo, 2026-10-14) : elle a son onglet.
-GALERIE = "galerie"
-# La musique et les cinématiques des jeux, en un seul onglet (Ludo, 2026-10-24 :
-# « un menu pour les deux, on n'a pas assez de place »).
-MEDIATHEQUE = "mediatheque"
+CARNET = "carnet"
+COLLECTIONS = "collections"
 PARAMETRES = "parametres"
 
 _TAILLE_LOGO = 16
@@ -281,9 +281,8 @@ class TitleBar(QWidget):
         layout.addSpacing(18)
         self._onglets: dict[str, QPushButton] = {}
         for cle, libelle in ((BIBLIOTHEQUE, tr("Bibliothèque")),
-                             (ANNEES, tr("Mes années")),
-                             (GALERIE, tr("Galerie")),
-                             (MEDIATHEQUE, tr("Médias")),
+                             (CARNET, tr("Carnet")),
+                             (COLLECTIONS, tr("Collections")),
                              (PARAMETRES, tr("Paramètres"))):
             onglet = _Onglet(libelle, palette, self)
             onglet.clicked.connect(lambda _=False, c=cle: self.onglet_demande.emit(c))

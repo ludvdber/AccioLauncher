@@ -189,6 +189,7 @@ class _Ligne(QWidget):
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._releve.choisir(self.game_id)
+            self._releve.ouvrir(self.game_id)
         super().mousePressEvent(event)
 
     def paintEvent(self, event) -> None:
@@ -220,6 +221,9 @@ class _Releve(QWidget):
     """Les jeux, rangés par année de scolarité, dont on choisit un."""
 
     choisi = pyqtSignal(str)
+    # Un clic, ou Entrée sur la ligne choisie : le Carnet ouvre le folio du jeu.
+    # Les flèches ne font que déplacer le choix.
+    ouvert = pyqtSignal(str)
 
     def __init__(self, entrees, temps: dict[str, int], parties: dict[str, int],
                  dernieres: dict[str, date], legendes: dict[str, str],
@@ -376,6 +380,10 @@ class _Releve(QWidget):
                 ligne.update()
             self.choisi.emit(game_id)
 
+    def ouvrir(self, game_id: str) -> None:
+        if game_id in self._selectionnables:
+            self.ouvert.emit(game_id)
+
     def _ordre(self) -> list[str]:
         """L'ordre d'AFFICHAGE (par année), pas celui du catalogue."""
         return [ligne.game_id for ligne in self._lignes
@@ -396,6 +404,9 @@ class _Releve(QWidget):
             cible = ordre[0]
         elif touche == Qt.Key.Key_End:
             cible = ordre[-1]
+        elif touche in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self._choix is not None:
+            self.ouvrir(self._choix)
+            return
         else:
             super().keyPressEvent(event)
             return

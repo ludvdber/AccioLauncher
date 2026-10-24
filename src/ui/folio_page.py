@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -42,6 +43,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
+from src.ui.stats_widgets import _duree
 from src.ui.theme import accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
@@ -409,7 +411,7 @@ def vignette_sauvegarde(image: Path | QImage | None, dpr: float) -> QPixmap | No
 
 class _LigneEmplacement(QPushButton):
     def __init__(self, nom: str, quand: datetime | None, lieu: str, plus_avance: bool,
-                 vignette: QPixmap | None = None) -> None:
+                 vignette: QPixmap | None = None, temps: str = "") -> None:
         super().__init__()
         self.setObjectName("emplacement")
         self.setCheckable(True)
@@ -456,8 +458,12 @@ class _LigneEmplacement(QPushButton):
             v.addWidget(texte(lieu, 13, "#c9c7da", retour=place_image > 0))
         if plus_avance:
             v.addWidget(texte(tr("La plus avancée"), 12, current_theme().accent_light))
+        # Le temps passé sur cette sauvegarde (il vivait dans le Relevé, 2026-10-24).
+        temps_jeu = tr("{} de jeu").format(temps) if temps else ""
+        if temps_jeu:
+            v.addWidget(texte(temps_jeu, 12, ENCRE_DOUCE))
         etats = [nom, lieu,
-                 tr("La plus avancée") if plus_avance else ""]
+                 tr("La plus avancée") if plus_avance else "", temps_jeu]
         self.setAccessibleName(", ".join(e for e in etats if e))
         for enfant in self.findChildren(QLabel):
             enfant.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -486,11 +492,12 @@ class FolioPage(QDialog):
     _case_max = _CASE_MAX
 
     def __init__(self, game, install_path: Path, parent: QWidget | None = None,
-                 revenir=None) -> None:
+                 integree: bool = False) -> None:
         super().__init__(parent)
         self.setObjectName("folio")
         self.game = game
-        self._revenir = revenir
+        # Dans le Carnet (`carnet_page.py`), qui porte le retour et le choix du jeu.
+        self._integree = integree
         self.setWindowTitle(tr("Folio"))
         self.setMinimumSize(900, 560)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
@@ -502,6 +509,10 @@ class FolioPage(QDialog):
         self.releves: list = []
         self._blasons: dict = {}      # maison → texture du jeu (`_charger`)
         self._charger()
+        # Ce que le launcher a relevé de chaque fichier (temps de jeu) : la ligne
+        # du rail le dit, les succès s'en servent.
+        self._vues = {v.fichier: v for v in sauvegardes.vues(game.id, game.sauvegardes)}
+        self._racine = sauvegardes.dossier(game.sauvegardes)
         self.releve = None
         self._lignes: dict[int, _LigneEmplacement] = {}
 
@@ -554,16 +565,17 @@ class FolioPage(QDialog):
         lay = QVBoxLayout(rail)
         lay.setContentsMargins(_MARGE_RAIL, 22, _MARGE_RAIL, 20)
         lay.setSpacing(6)
-        retour = QPushButton(tr("Mes années") if self._revenir else tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self._retour)
-        lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-        lay.addSpacing(16)
+        if not self._integree:
+            retour = QPushButton(tr("Bibliothèque"))
+            retour.setObjectName("retour")
+            retour.setFont(police(13))
+            retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
+            retour.setIconSize(QSize(16, 16))
+            retour.setCursor(Qt.CursorShape.PointingHandCursor)
+            retour.setAutoDefault(False)
+            retour.clicked.connect(self.accept)
+            lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
+            lay.addSpacing(16)
         lay.addWidget(surtitre(tr("Folio")))
         nom = QLabel(nom_court(self.game.name))
         nom.setTextFormat(Qt.TextFormat.PlainText)   # le nom vient du CATALOGUE
@@ -579,18 +591,14 @@ class FolioPage(QDialog):
         self._groupe.setExclusive(True)
         for r in self.releves:
             ligne = _LigneEmplacement(*self._entree(r), r is self._plus,
-                                      vignette_sauvegarde(self._image(r), self.devicePixelRatioF()))
+                                      vignette_sauvegarde(self._image(r), self.devicePixelRatioF()),
+                                      self._temps(r))
             ligne.toggled.connect(lambda oui, rel=r: oui and self._afficher(rel))
             self._groupe.addButton(ligne)
             self._lignes[r.emplacement] = ligne
             lay.addWidget(ligne)
         lay.addStretch()
         return rail
-
-    def _retour(self) -> None:
-        self.accept()
-        if self._revenir is not None:
-            self._revenir()
 
     def choisir(self, emplacement: int) -> None:
         ligne = self._lignes.get(emplacement)
@@ -605,7 +613,48 @@ class FolioPage(QDialog):
             self._corps.hide()
             self._corps.deleteLater()
         self._corps = self._construire(releve)
+        if releve is not None:
+            self._ajouter_succes(self._corps)
         self._hote.addWidget(self._corps)
+
+    # ── Temps et succès (venus du Relevé, 2026-10-24) ──
+
+    def _chemin(self, releve) -> Path | None:
+        """Le fichier de la sauvegarde lue ; None quand un fichier porte
+        plusieurs parties (HP4, HP5) : son temps n'est pas celui d'UNE partie."""
+        return releve.chemin
+
+    def _temps(self, releve) -> str:
+        chemin = self._chemin(releve)
+        if chemin is None or self._racine is None:
+            return ""
+        try:
+            vue = self._vues.get(chemin.relative_to(self._racine).as_posix())
+        except ValueError:
+            return ""
+        return _duree(vue.temps) if vue is not None and vue.temps else ""
+
+    def _ajouter_succes(self, corps: QWidget) -> None:
+        """Les succès du jeu, au bas de la colonne qui défile, avant son ressort.
+
+        Ceux de TOUTES les sauvegardes du jeu, comme dans le Relevé d'avant : un
+        succès appartient au jeu, pas à l'emplacement lu.
+        """
+        from src.core import succes
+        from src.ui.succes_widgets import SectionSucces
+        if not succes.du_jeu(self.game.id) or not self._vues:
+            return
+        zone = corps.findChild(QScrollArea)      # la colonne principale, créée la première
+        page = zone.widget() if zone is not None else None
+        lay = page.layout() if page is not None else None
+        if not isinstance(lay, QVBoxLayout):
+            return
+        section = SectionSucces(self.game.id, list(self._vues), self.game.sauvegardes)
+        rang = lay.count()
+        if rang and lay.itemAt(rang - 1).spacerItem() is not None:
+            rang -= 1
+        lay.insertSpacing(rang, 26)
+        lay.insertWidget(rang + 1, section)
 
     def _construire(self, releve: folio.Releve | None) -> QWidget:
         corps = QWidget()

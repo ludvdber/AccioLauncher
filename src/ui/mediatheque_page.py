@@ -26,6 +26,8 @@ Le modèle est `mediatheque.Mediatheque` : la page ne lit rien elle-même.
 
 from __future__ import annotations
 
+from html import escape
+
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter
 from PyQt6.QtWidgets import (
@@ -45,12 +47,13 @@ from PyQt6.QtWidgets import (
 from src.core import discographie
 from src.core.i18n import tr
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
+from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.disque import Disque
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import CINEMATIQUE, MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer, cle, decouper
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
-from src.ui.mediatheque import CINEMATIQUES, MUSIQUE, Mediatheque
+from src.ui.mediatheque import CAPTURES, CINEMATIQUES, MUSIQUE, Mediatheque
 from src.ui.theme import accent_qcolor, themed
 from src.ui.utils import open_local_path, zone_defilable
 from src.ui.video_player import VideoPlayer
@@ -277,13 +280,11 @@ class _Jeux(QWidget):
         flux.setContentsMargins(0, 0, 0, 0)
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
-        for jeu in media.jeux_tous():
-            b = QPushButton()
-            b.setObjectName("filtre")
-            b.setCheckable(True)
-            b.setAutoDefault(False)
-            b.setFont(police(13))
-            b.setCursor(Qt.CursorShape.PointingHandCursor)
+        jeux = [g for g in (media.game(j) for j in media.jeux_tous()) if g is not None]
+        self._etiquettes = numeros(jeux)
+        for game in jeux:
+            jeu = game.id
+            b = pastille(game, self._etiquettes[jeu])
             b.clicked.connect(lambda _c=False, j=jeu: self.choisi.emit(j))
             groupe.addButton(b)
             flux.addWidget(b)
@@ -303,8 +304,13 @@ class _Jeux(QWidget):
         if b is None:
             return
         n = len(self._media.nouveaux(jeu, MUSIQUE)) + len(self._media.nouveaux(jeu, CINEMATIQUES))
-        nom = self._media.nom(jeu)
-        b.setText(f"{nom}  ·  {_nouveaux(n)}" if n else nom)
+        nom = self._etiquettes.get(jeu, self._media.nom(jeu))
+        # Le chiffre seul sur la pastille : « 130 nouveaux » sur chacune faisait
+        # passer les jeux sur deux lignes ; le mot est dans l'infobulle.
+        b.setText(f"{nom}  ·  {n}" if n else nom)
+        infobulle = escape(self._media.nom(jeu))
+        b.setToolTip(f"{infobulle} · {escape(_nouveaux(n))}" if n else infobulle)
+        b.setAccessibleName(f"{self._media.nom(jeu)}, {_nouveaux(n)}" if n else self._media.nom(jeu))
 
 
 class _LigneMorceau(QFrame):
@@ -964,11 +970,11 @@ class _VueCinematiques(QWidget):
 class MediathequePage(QDialog):
     """La Médiathèque, en page : les jeux en haut, Musique et Cinématiques dessous."""
 
-    def __init__(self, media: Mediatheque, rubrique: str = MUSIQUE, jeu: str = "",
+    def __init__(self, media: Mediatheque, rubrique: str = CAPTURES, jeu: str = "",
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("mediatheque")
-        self.setWindowTitle(tr("Médiathèque"))
+        self.setWindowTitle(tr("Collections"))
         self.setMinimumSize(900, 560)
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self._media = media
@@ -990,34 +996,36 @@ class MediathequePage(QDialog):
         retour.clicked.connect(self.accept)
         e.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         e.addSpacing(8)
+        e.addWidget(surtitre(tr("Ce que les jeux contiennent")))
+        e.addSpacing(4)
+        # Les rubriques juste après le titre, comme au Carnet (audit du 2026-10-24).
         ligne = QHBoxLayout()
-        ligne.setSpacing(24)
-        titres = QVBoxLayout()
-        titres.setSpacing(4)
-        titres.addWidget(surtitre(tr("La musique et les cinématiques des jeux")))
-        titre = QLabel(tr("Médiathèque"))
+        ligne.setSpacing(10)
+        titre = QLabel(tr("Collections"))
         titre.setFont(cinzel_decorative(22))
         titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        titres.addWidget(titre)
-        ligne.addLayout(titres)
-        ligne.addStretch()
+        ligne.addWidget(titre, alignment=Qt.AlignmentFlag.AlignVCenter)
+        ligne.addSpacing(22)
         self._rubriques: dict[str, QPushButton] = {}
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
-        for cle_rubrique, libelle, icone in ((MUSIQUE, tr("Musique"), "musique"),
+        for cle_rubrique, libelle, icone in ((CAPTURES, tr("Captures"), "appareil"),
+                                             (MUSIQUE, tr("Musique"), "musique"),
                                              (CINEMATIQUES, tr("Cinématiques"), "film")):
             b = QPushButton(libelle)
             b.setObjectName("rubrique")
             b.setCheckable(True)
             b.setAutoDefault(False)
             b.setFont(police(14))
-            b.setIcon(_icone(icone, 18))
-            b.setIconSize(QSize(18, 18))
+            pictogramme, taille = espacee(pixmap_icone(icone, 18, QColor("#e6e4f0")), QSize(18, 18))
+            b.setIcon(pictogramme)
+            b.setIconSize(taille)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.clicked.connect(lambda _c=False, r=cle_rubrique: self.rubrique(r))
             groupe.addButton(b)
-            ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignBottom)
+            ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignVCenter)
             self._rubriques[cle_rubrique] = b
+        ligne.addStretch()
         e.addLayout(ligne)
         e.addSpacing(14)
         self._jeux = _Jeux(media)
@@ -1031,16 +1039,19 @@ class MediathequePage(QDialog):
         self._cinematiques = _VueCinematiques(media)
         self._pile.addWidget(self._musique)
         self._pile.addWidget(self._cinematiques)
+        # Les captures : la Galerie d'avant, bâtie à la première visite (elle
+        # décode ses vignettes sur un fil à part).
+        self._captures: QDialog | None = None
         racine.addWidget(self._pile, stretch=1)
         if not self._jeux.ids:
             self._musique.montrer("")
             self._cinematiques.montrer("")
-        self.rubrique(rubrique if rubrique in self._rubriques else MUSIQUE)
+        self.rubrique(rubrique if rubrique in self._rubriques else CAPTURES)
 
         jeux = self._jeux.ids
         if jeu not in jeux:
             courant = decouper(media.fond.morceau)
-            premier = next((g.id for g in media.jeux(rubrique)), jeux[0] if jeux else "")
+            premier = next((g.id for g in media.jeux(MUSIQUE if rubrique == CAPTURES else rubrique)), jeux[0] if jeux else "")
             jeu = courant[0] if courant is not None and courant[0] in jeux else premier
         if jeu:
             self.montrer(jeu)
@@ -1057,18 +1068,46 @@ class MediathequePage(QDialog):
 
     def rubrique(self, cle_rubrique: str) -> None:
         self._rubriques[cle_rubrique].setChecked(True)
-        musique = cle_rubrique == MUSIQUE
-        self._pile.setCurrentWidget(self._musique if musique else self._cinematiques)
-        self._cinematiques.afficher(not musique)
+        musique, captures = cle_rubrique == MUSIQUE, cle_rubrique == CAPTURES
+        # La Galerie a ses propres filtres par jeu (« Tous » compris).
+        self._jeux.setVisible(not captures)
+        if captures:
+            self._pile.setCurrentWidget(self._galerie())
+        else:
+            self._pile.setCurrentWidget(self._musique if musique else self._cinematiques)
+        self._cinematiques.afficher(cle_rubrique == CINEMATIQUES)
         self._musique.afficher(musique)
         if self.jeu:
             self._jeux.compter(self.jeu)
 
+    def _galerie(self) -> QDialog:
+        if self._captures is None:
+            from src.ui.galerie_page import GaleriePage
+            galerie = GaleriePage(self._media.catalogue(), self, integree=True)
+            galerie.setWindowFlags(Qt.WindowType.Widget)
+            galerie.setMinimumSize(0, 0)
+            galerie.finished.connect(self._galerie_fermee)    # son Échap ferme la page
+            self._pile.addWidget(galerie)
+            self._captures = galerie
+        return self._captures
+
+    def _galerie_fermee(self, resultat: int) -> None:
+        self.done(resultat)
+
     @property
     def rubrique_courante(self) -> str:
-        return MUSIQUE if self._pile.currentWidget() is self._musique else CINEMATIQUES
+        courante = self._pile.currentWidget()
+        if courante is self._musique:
+            return MUSIQUE
+        return CAPTURES if courante is not None and courante is self._captures else CINEMATIQUES
 
     def done(self, resultat: int) -> None:
+        # La Galerie arrête de décoder ses vignettes (son `done`), sans relancer
+        # la fermeture de la page par son signal.
+        if self._captures is not None:
+            self._captures.finished.disconnect(self._galerie_fermee)
+            self._captures.done(resultat)
+            self._captures = None
         # La page quittée ne laisse pas une cinématique jouer pour personne, et
         # une écoute lancée ici rend la place au fond sonore choisi.
         self._cinematiques.arreter()

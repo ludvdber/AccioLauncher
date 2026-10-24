@@ -25,8 +25,8 @@ from PyQt6.QtWidgets import QLabel, QScrollArea  # noqa: E402
 from src.core import stats  # noqa: E402
 from src.core.config import Config  # noqa: E402
 from src.core.game_manager import GameManager  # noqa: E402
-from src.ui.stats_dialog import (  # noqa: E402
-    _CarteSauvegarde, _Mois, _Paragraphe, StatsDialog)
+from src.ui.stats_dialog import _Mois, _Paragraphe, StatsDialog  # noqa: E402
+from src.ui.stats_widgets import _CarteSauvegarde  # noqa: E402
 from src.ui.stats_releve import _Ligne, _Nom, _Releve  # noqa: E402
 
 
@@ -90,9 +90,6 @@ class TestLeSqueletteNeBougePas:
         dlg.layout().activate()
         releve = dlg.findChildren(_Releve)[0]
         assert releve.width() >= releve.minimumSizeHint().width()
-        assert dlg._fiche is not None
-        barre = dlg._zone.verticalScrollBar()
-        assert barre.maximum() > 0, "la fiche des sauvegardes doit être atteignable"
 
 
 class TestEtatVide:
@@ -115,7 +112,9 @@ class TestEtatVide:
         assert vide.height() < 720, f"{vide.height()} px pour un releve et une phrase"
         _remplir(manager, jours=30)
         pleine = self._ouvrir(qtbot, manager)
-        assert pleine.height() > vide.height()
+        # Sans les cartes de sauvegarde (parties dans le folio), la page pleine
+        # tient aussi sous la hauteur d'un portable.
+        assert pleine.height() < 720, f"{pleine.height()} px pour le relevé et la saga"
 
     def test_le_premier_jour_la_page_n_a_pas_l_air_cassee(self, qtbot, manager):
         dlg = StatsDialog(manager)
@@ -163,16 +162,20 @@ class TestReleve:
         etagere.choisir(ids[5])
         assert etagere.choix == ids[0]
 
-    def test_choisir_un_jeu_change_la_fiche(self, qtbot, manager):
+    def test_une_ligne_ouverte_mene_au_folio(self, qtbot, manager):
+        """Sauvegardes et succès vivent dans le folio (2026-10-24) : un clic ou
+        Entrée y mène, les flèches ne font que déplacer le choix."""
         ids = _remplir(manager, jours=4, jeux=2)
-        dlg = StatsDialog(manager)
+        demandes = []
+        dlg = StatsDialog(manager, folio=demandes.append)
         qtbot.addWidget(dlg)
-        noms = {e.game.id: e.game.name for e in manager.get_games()}
         etagere = dlg.findChildren(_Releve)[0]
         autre = ids[0] if etagere.choix == ids[1] else ids[1]
         etagere.choisir(autre)
-        visibles = [lbl.text() for lbl in dlg._fiche.findChildren(QLabel)]
-        assert noms[autre] in visibles
+        assert demandes == []
+        from PyQt6.QtCore import Qt
+        qtbot.keyClick(etagere, Qt.Key.Key_Return)
+        assert demandes == [autre]
 
     def test_les_fleches_parcourent_les_jeux_choisissables(self, qtbot, manager):
         from PyQt6.QtCore import Qt
@@ -292,24 +295,14 @@ class TestSauvegardesAffichees:
         chemin.write_bytes(b"x")
         os.utime(chemin, (quand.timestamp(), quand.timestamp()))
 
-    def test_une_carte_par_sauvegarde(self, qtbot, manager):
+    def test_les_sauvegardes_vivent_dans_le_folio(self, qtbot, manager):
         self._save("Save0.usa", datetime(2026, 3, 8))
         self._save("Save1.usa", datetime(2026, 4, 3))
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         assert dlg.findChildren(_Releve)[0].choix == "hp1"
-        assert len(dlg.findChildren(_CarteSauvegarde)) == 2
-        rendu = _labels(dlg)
-        assert "Emplacement 1" in rendu and "Emplacement 2" in rendu
-        assert "03/04/2026" in rendu
-
-    def test_le_temps_non_observe_n_est_pas_devine(self, qtbot, manager):
-        self._save("Save0.usa", datetime(2026, 3, 8))
-        dlg = StatsDialog(manager)
-        qtbot.addWidget(dlg)
-        rendu = _labels(dlg)
-        assert rendu.count("s'affichera dès votre prochaine partie") == 1
-        assert "Vos sauvegardes sont là" in rendu
+        assert not dlg.findChildren(_CarteSauvegarde)
+        assert "Vos sauvegardes sont là" in _labels(dlg)
 
     def test_un_jeu_sans_sauvegarde_n_a_pas_de_section(self, qtbot, manager):
         _remplir(manager, jours=2, jeux=1)
@@ -476,16 +469,6 @@ class TestRetoursDuDixNeufSeptembre:
         legendes = dlg.findChildren(_Releve)[0]._legendes
         assert legendes["hp1"] == "—"
 
-    def test_la_sauvegarde_la_plus_recente_est_designee(self, qtbot, manager):
-        TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
-        TestSauvegardesAffichees._save("Save1.usa", datetime(2026, 4, 3))
-        dlg = StatsDialog(manager)
-        qtbot.addWidget(dlg)
-        cartes = dlg.findChildren(_CarteSauvegarde)
-        marquees = [c for c in cartes
-                    if "dernière jouée" in [lbl.text() for lbl in c.findChildren(QLabel)]]
-        assert len(marquees) == 1
-        assert "Emplacement 2" in [lbl.text() for lbl in marquees[0].findChildren(QLabel)]
 
     @staticmethod
     def _carte(qtbot, commencee, derniere):
@@ -523,17 +506,6 @@ def test_la_barre_du_mois_et_la_colonne_disent_le_meme_chiffre():
     """38,5 min : 38 sur la barre (arrondi au pair), 39 dans la colonne."""
     from src.ui.stats_dialog import _duree_courte, _minutes
     assert _duree_courte(2310) == "39 min" and _minutes(2310) == 39
-
-
-def test_le_temps_joue_sans_sauvegarder_est_dit(qtbot, manager):
-    from src.core import sauvegardes
-    TestSauvegardesAffichees._save("Save0.usa", datetime(2026, 3, 8))
-    stats.enregistrer_session("hp1", datetime(2026, 9, 19, 21, 0), 1500)
-    etat = sauvegardes.releve(manager.get_game_by_id("hp1").sauvegardes)
-    sauvegardes.attribuer("hp1", etat, etat, datetime(2026, 9, 19, 21, 0), 1500)
-    dlg = StatsDialog(manager)
-    qtbot.addWidget(dlg)
-    assert "Dont 25 min jouées sans sauvegarder." in _labels(dlg)
 
 
 class TestCouleursDeLaMaison:

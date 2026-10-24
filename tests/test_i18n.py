@@ -25,7 +25,7 @@ IDENTIQUES_TOLEREES = {
     # « Halloween » s'écrit pareil dans les trois langues (la citrouille qui
     # accompagnait la clé a été retirée : U+1F383 sortait en emoji couleur).
     "Discord", "Version {}", "Catalogue {}", "Menus", "Versions — {}", "Versions", "Halloween",
-    "Accio Launcher {}", "Folio", "Folio de {}", "Badges",
+    "Accio Launcher {}", "Folio", "Folio de {}", "Badges", "Collections",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",

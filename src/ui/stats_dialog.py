@@ -36,16 +36,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import folio, sauvegardes, stats, succes
+from src.core import sauvegardes, stats
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.ecu import emaux
 from src.ui.stats_releve import _Releve
-from src.ui.composants import bouton, feuille_de_style, police
+from src.ui.composants import feuille_de_style, police
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current as theme_courant, themed
-from src.ui.title_bar import ANNEES
 from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _SECONDAIRE,
     _DISCRET,
@@ -65,8 +64,6 @@ from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _Paragraphe,
     _Mois,
     _Jauge,
-    _CarteSauvegarde,
-    _GrilleSauvegardes,
 )
 
 
@@ -79,14 +76,16 @@ _LARGEUR_DEUX_COLONNES = 1060
 
 
 class StatsDialog(QDialog):
-    """La saga : l'étagère, la fiche du jeu choisi, la saga, les mois."""
+    """Le Relevé : les huit jeux par année, la saga, les mois ; une ligne ouverte mène au folio."""
 
-    def __init__(self, manager: GameManager, parent=None, ouvrir_page=None) -> None:
+    def __init__(self, manager: GameManager, parent=None, folio=None, integree: bool = False) -> None:
         super().__init__(parent)
         self.manager = manager
-        # Pour la galerie des captures : `Pages.ouvrir`, fourni par la fenêtre.
-        # Sans lui (tests, page seule), pas de bouton qui ne mènerait nulle part.
-        self._ouvrir_page = ouvrir_page
+        # Le Relevé, rubrique du Carnet (`carnet_page.py`) : `folio(game_id)` y
+        # passe au folio du jeu. Sans lui (tests, page seule), pas de bouton qui
+        # ne mènerait nulle part. `integree` : le Carnet porte déjà le retour.
+        self._folio = folio
+        self._integree = integree
         self._hist = stats.charger()
         # Les dérivées dont vit toute la page, calculées UNE fois.
         self._entrees = manager.get_games()
@@ -95,12 +94,9 @@ class StatsDialog(QDialog):
         self._parties = stats.parties_par_jeu(self._hist)
         self._dernieres = stats.derniere_par_jeu(self._hist)
         stock = sauvegardes.charger()
-        self._sans_sauvegarde = {e.game.id: sauvegardes.temps_sans_sauvegarde(e.game.id, stock)
-                                 for e in self._entrees}
         self._vues = {e.game.id: sauvegardes.vues(e.game.id, e.game.sauvegardes, stock)
                       for e in self._entrees}
-        self._specs = {e.game.id: e.game.sauvegardes for e in self._entrees}
-        self.setWindowTitle(tr("Mes années à Poudlard"))
+        self.setWindowTitle(tr("Carnet"))
         # Assez LARGE pour que huit jaquettes restent des images et non des
         # timbres. Pas de plancher en HAUTEUR : la page se rétrécit à son
         # contenu.
@@ -109,35 +105,15 @@ class StatsDialog(QDialog):
         self._zone: QScrollArea | None = None
         self._contenu: QWidget | None = None
         self._releve: _Releve | None = None
-        self._fiche_hote: QVBoxLayout | None = None
-        self._fiche: QWidget | None = None
         self._ajuste = False
         self.resize(1200, 760)
         self.setStyleSheet(themed(self._style()) + feuille_de_style())
         self._build()
 
-    def _bouton_galerie(self) -> QPushButton:
-        """Les captures de tous les jeux, en page (`galerie_page.py`)."""
-        from src.core import galerie
-        n = len(galerie.lister([e.game for e in self._entrees]))
-        btn = bouton(tr("Galerie · {}").format(n) if n else tr("Galerie"))
-        btn.setAutoDefault(False)
-        btn.setToolTip(tr("Vos captures d'écran, de tous les jeux"))
-        btn.clicked.connect(self.ouvrir_galerie)
-        return btn
-
     def ouvrir_folio(self, game_id: str) -> None:
-        """Le folio du jeu ; son retour rouvre Mes années."""
-        from src.ui.folio_jeux import page_folio
-        jeu = next(e.game for e in self._entrees if e.game.id == game_id)
-        hote, ouvrir, manager = self.parentWidget(), self._ouvrir_page, self.manager
-        ouvrir(page_folio(jeu, manager.config.install_path, hote,
-                          revenir=lambda: ouvrir(StatsDialog(manager, hote, ouvrir), ANNEES)))
-
-    def ouvrir_galerie(self) -> None:
-        from src.ui.galerie_page import GaleriePage
-        from src.ui.title_bar import GALERIE
-        self._ouvrir_page(GaleriePage([e.game for e in self._entrees], self.parentWidget()), GALERIE)
+        """Le folio du jeu, dans le Carnet."""
+        if self._folio is not None:
+            self._folio(game_id)
 
     def _style(self) -> str:
         return """
@@ -220,6 +196,7 @@ class StatsDialog(QDialog):
         retour.setCursor(Qt.CursorShape.PointingHandCursor)
         retour.clicked.connect(self.accept)
         cadre.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
+        retour.setVisible(not self._integree)
 
         # TOUTE la page défile sous le retour (règle 52). Le relevé restait hors
         # de la zone défilante, conçu pour une FENÊTRE qui prenait la hauteur de
@@ -239,12 +216,9 @@ class StatsDialog(QDialog):
 
         tete = QVBoxLayout()
         tete.setSpacing(6)
-        surtitre = QLabel(tr("Relevé de scolarité").upper())
-        surtitre.setFont(cinzel(8, bold=True))
-        surtitre.setStyleSheet(f"color: {theme_courant().accent}; letter-spacing: 4px;")
-        tete.addWidget(surtitre)
-        titre = QLabel(tr("Mes années à Poudlard"))
-        titre.setFont(cinzel(18, bold=True))
+        # Le Carnet porte le grand titre : ici, seulement le nom de la rubrique.
+        titre = QLabel(tr("Relevé de scolarité"))
+        titre.setFont(cinzel(16, bold=True))
         tete.addWidget(titre)
         # Sous le titre : la maison (refonte du 2026-10-09). La phrase vivait
         # dans la barre du haut, où elle ne tenait plus à côté des onglets.
@@ -254,8 +228,6 @@ class StatsDialog(QDialog):
         haut = QHBoxLayout()
         haut.setSpacing(16)
         haut.addLayout(tete, stretch=1)
-        if self._ouvrir_page is not None:
-            haut.addWidget(self._bouton_galerie(), alignment=Qt.AlignmentFlag.AlignBottom)
         root.addLayout(haut)
         # Le résumé ne s'écrit en tête que lorsque la page n'a RIEN d'autre à
         # dire : dès qu'il y a du temps, la colonne de la saga porte le même
@@ -268,7 +240,9 @@ class StatsDialog(QDialog):
         possibles = self._selectionnables()
         self._releve = _Releve(self._entrees, self._temps, self._parties, self._dernieres,
                                self._legendes(), possibles, self._choix_initial(possibles))
-        self._releve.choisi.connect(self._montrer_jeu)
+        # Les sauvegardes et les succès d'un jeu sont dans son folio (2026-10-24) :
+        # une ligne ouverte y mène.
+        self._releve.ouvert.connect(self.ouvrir_folio)
         # Côte à côte quand la largeur le permet ; sinon la saga passe SOUS le
         # relevé (`resizeEvent`) : à 980 px, elle lui laissait 590 px pour 634,
         # et les noms tombaient à « À …rs », « La…ts ».
@@ -302,14 +276,6 @@ class StatsDialog(QDialog):
             droite.addStretch(1)
             haut.addLayout(droite)
         root.addLayout(haut)
-
-        if possibles:
-            # Dessous, les sauvegardes du jeu choisi.
-            self._fiche_hote = QVBoxLayout()
-            self._fiche_hote.setContentsMargins(0, 4, 0, 0)
-            root.addLayout(self._fiche_hote)
-            if self._releve.choix is not None:
-                self._montrer_jeu(self._releve.choix)
         root.addStretch(1)
 
     def resizeEvent(self, event) -> None:
@@ -402,69 +368,6 @@ class StatsDialog(QDialog):
                 self._noms.get(longue.jeu, longue.jeu),
                 longue.debut.strftime("%d/%m/%Y"))))
         return cadre
-
-    def _montrer_jeu(self, game_id: str) -> None:
-        """Remplace la fiche. La fenêtre ne change PAS de taille : une fenêtre
-        qui saute à chaque clic sur une jaquette se lit comme un défaut ; le
-        corps défile."""
-        if self._fiche_hote is None:
-            return
-        if self._fiche is not None:
-            self._fiche.hide()
-            self._fiche.deleteLater()
-        self._fiche = self._construire_fiche(game_id)
-        self._fiche_hote.addWidget(self._fiche)
-
-    def _construire_fiche(self, game_id: str) -> QWidget:
-        fiche = QWidget()
-        couche = QVBoxLayout(fiche)
-        couche.setContentsMargins(0, 0, 0, 0)
-        couche.setSpacing(12)
-        nom = QLabel(self._noms.get(game_id, game_id))
-        nom.setTextFormat(Qt.TextFormat.PlainText)
-        nom.setFont(cinzel(14, bold=True))
-        nom.setWordWrap(True)
-        couche.addWidget(nom)
-        if self._ouvrir_page is not None and game_id in folio.JEUX:
-            ouvrir = bouton(tr("Ouvrir le folio"), principal=True)
-            ouvrir.setAutoDefault(False)
-            ouvrir.setToolTip(tr("Ce que vos sauvegardes disent de la partie"))
-            ouvrir.clicked.connect(lambda _c=False, g=game_id: self.ouvrir_folio(g))
-            couche.addWidget(ouvrir, alignment=Qt.AlignmentFlag.AlignLeft)
-
-        # Temps, parties et dernière fois sont sur la ligne du relevé : la
-        # fiche ne garde que ce que le relevé ne peut pas montrer.
-        vues = self._vues.get(game_id) or []
-        if vues:
-            couche.addSpacing(4)
-            couche.addWidget(_titre_section(tr("Sauvegardes")))
-            if any(v.temps is None for v in vues):
-                # On ne DEVINE pas le temps d'une sauvegarde née avant le
-                # relevé : on dit pourquoi il manque et quand il viendra — une
-                # fois pour la section, pas une fois par carte.
-                couche.addWidget(_Paragraphe(
-                    tr("Le temps par sauvegarde s'affichera dès votre prochaine "
-                       "partie."), taille=13))
-            temps_max = max((v.temps or 0 for v in vues), default=0)
-            recente = (max(vues, key=lambda v: v.modifie).fichier
-                       if len(vues) > 1 else None)
-            couche.addWidget(_GrilleSauvegardes(
-                [_CarteSauvegarde(vue, temps_max, vue.fichier == recente) for vue in vues]))
-        sans = self._sans_sauvegarde.get(game_id, 0)
-        if sans >= 60:
-            # Sans cette ligne, la somme des cartes est inférieure au temps du
-            # jeu et rien ne dit pourquoi. Seules les parties OBSERVÉES sans
-            # écriture y entrent — jamais celles d'avant le relevé.
-            couche.addWidget(_Paragraphe(
-                tr("Dont {} jouées sans sauvegarder.").format(
-                    _duree(sans)), taille=13))
-        # Ce que les sauvegardes présentes prouvent, et ce qu'on a vu tomber.
-        if succes.du_jeu(game_id) and vues:
-            from src.ui.succes_widgets import SectionSucces
-            couche.addSpacing(4)
-            couche.addWidget(SectionSucces(game_id, [v.fichier for v in vues], self._specs.get(game_id)))
-        couche.addStretch(1)
-        return fiche
 
     # ──────────────────── Hauteur ────────────────────
 

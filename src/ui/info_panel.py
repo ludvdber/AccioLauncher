@@ -5,7 +5,7 @@ from html import escape
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QIcon
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
@@ -15,6 +15,7 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.clickable_label import ClickableLabel
+from src.ui.composants import police
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.resume_partie import BlocFolio, cartes_eventail, phrase_derniere_partie
@@ -287,17 +288,19 @@ class InfoPanel(QWidget):
         hote.addWidget(self._bloc, 0, Qt.AlignmentFlag.AlignVCenter)
         # La musique et les cinématiques du jeu : un galet à côté du folio
         # (Ludo, 2026-10-24 : un lien dans la ligne méta « fait trop long »).
+        # Avec son NOM depuis l'audit du 2026-10-24 : la note seule, ronde, ne
+        # disait pas ce qu'elle ouvrait (Ludo : « les nouveautés sont pas très
+        # visibles »). Largeur au contenu, hauteur fixe (règles 37 et 49).
         self._medias = QPushButton()
         self._medias.setObjectName("boutonMedias")
-        self._medias.setFixedSize(40, 40)
-        self._medias.setIcon(QIcon(pixmap_icone("musique", 20, QColor("#e6e4f0"))))
-        self._medias.setIconSize(QSize(20, 20))
+        self._medias.setFixedHeight(40)
+        self._medias.setFont(police(14))
         self._medias.setCursor(Qt.CursorShape.PointingHandCursor)
         self._medias.setToolTip(tr("La musique et les cinématiques du jeu"))
         self._medias.setAccessibleName(tr("La musique et les cinématiques du jeu"))
         self._medias.setStyleSheet(themed(
-            "QPushButton#boutonMedias { background: rgba(255, 255, 255, 0.03);"
-            " border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; }"
+            "QPushButton#boutonMedias { background: rgba(255, 255, 255, 0.03); color: #e6e4f0;"
+            " border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; padding: 0 16px; }"
             "QPushButton#boutonMedias:hover, QPushButton#boutonMedias:focus {"
             " border-color: #d6a72c; background: rgba(214, 167, 44, 0.08); }"))
         self._medias.clicked.connect(self.mediatheque_clicked)
@@ -599,8 +602,16 @@ class InfoPanel(QWidget):
         self._derniere.setVisible((resume is not None and not self._a_propos)
                                   or (resume is None and avancee is not None))
         self._bloc_hote.setVisible(resume is not None)
-        from src.ui.mediatheque import a_des_medias
+        from src.ui.choix_jeux import espacee
+        from src.ui.mediatheque import a_de_la_musique, a_des_medias
         self._medias.setVisible(game is not None and a_des_medias(game.id))
+        if game is not None and a_des_medias(game.id):
+            musique = a_de_la_musique(game.id)
+            self._medias.setText(tr("Musique") if musique else tr("Cinématiques"))
+            icone, taille = espacee(pixmap_icone("musique" if musique else "film", 18, QColor("#e6e4f0")),
+                                    QSize(18, 18))
+            self._medias.setIcon(icone)
+            self._medias.setIconSize(taille)
         if resume is None and avancee is not None and avancee.avancement is not None:
             self._derniere.setText(phrase_derniere_partie(
                 datetime.fromtimestamp(avancee.modifie),

@@ -119,10 +119,10 @@ class TestBarreDeTitre:
     @pytest.mark.parametrize("langue", [i.code for i in available_languages()])
     @pytest.mark.parametrize("maison", sorted(EMAUX))
     def test_rien_n_est_rogne_a_la_plus_petite_fenetre(self, qtbot, maison, langue):
-        # 980 px = la largeur minimale de la fenêtre : nom, écu, cinq onglets,
+        # 980 px = la largeur minimale de la fenêtre : nom, écu, quatre onglets,
         # Discord et boutons de fenêtre doivent tous y tenir entiers.
         from src.ui.fonts import load_fonts
-        from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, GALERIE, MEDIATHEQUE, PARAMETRES
+        from src.ui.title_bar import BIBLIOTHEQUE, CARNET, COLLECTIONS, PARAMETRES
         load_fonts()  # sous offscreen, sans elles, Qt substitue une police 22 % plus large
         set_language(langue)
         set_theme(maison)
@@ -133,8 +133,8 @@ class TestBarreDeTitre:
         barre.setGeometry(0, 0, 980, 38)
         hote.show()
         barre.layout().activate()
-        for w in (barre.onglet(BIBLIOTHEQUE), barre.onglet(ANNEES), barre.onglet(GALERIE),
-                  barre.onglet(MEDIATHEQUE), barre.onglet(PARAMETRES), barre.discord,
+        for w in (barre.onglet(BIBLIOTHEQUE), barre.onglet(CARNET), barre.onglet(COLLECTIONS),
+                  barre.onglet(PARAMETRES), barre.discord,
                   barre.contribuer, barre._title):
             assert w.width() >= w.sizeHint().width(), w.text()
         assert barre.layout().minimumSize().width() <= 980

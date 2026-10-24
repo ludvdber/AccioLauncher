@@ -49,7 +49,10 @@ class Pages(QStackedWidget):
         return courante if isinstance(courante, QDialog) else None
 
     def ouvrir(self, dlg: QDialog, cle: str = "") -> None:
-        """Pose `dlg` à la place de la bibliothèque. `cle` : l'onglet à souligner."""
+        """Pose `dlg` à la place de la bibliothèque. `cle` : l'onglet à souligner,
+        sinon celui que la page déclare (propriété Qt « onglet » : le Carnet ouvert
+        depuis la fiche souligne son onglet)."""
+        cle = cle or str(dlg.property("onglet") or "")
         self.fermer()
         dlg.setParent(self)
         dlg.setWindowFlags(Qt.WindowType.Widget)

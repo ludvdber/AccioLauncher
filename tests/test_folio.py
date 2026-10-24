@@ -4,6 +4,7 @@ Les sauvegardes sont FABRIQUÉES sur le modèle relevé chez Ludo le 2026-10-14
 (bloc texte d'Harry au milieu d'un binaire, `GameSaveInfoN` à côté).
 """
 
+from dataclasses import replace
 import os
 import struct
 from datetime import datetime
@@ -318,6 +319,35 @@ def hp1(tmp_path, monkeypatch):
     return jeu, tmp_path / "Jeux", tmp_path / "Docs" / "Harry Potter" / "Save"
 
 
+class TestVenusDuReleve:
+    """Le temps de chaque sauvegarde et les succès, passés du Relevé au folio (2026-10-24)."""
+
+    def test_les_succes_sous_la_partie(self, qtbot, hp1):
+        from src.ui.folio_page import FolioPage
+        from src.ui.succes_widgets import SectionSucces
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        assert len(page.findChildren(SectionSucces)) == 1
+
+    def test_le_temps_de_la_sauvegarde_sur_sa_ligne(self, qtbot, hp1, monkeypatch):
+        from PyQt6.QtWidgets import QLabel
+        from src.core import sauvegardes
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        vraies = sauvegardes.vues
+
+        def avec_temps(*args, **kwargs):
+            return [replace(v, temps=2 * 3600 + 5 * 60) for v in vraies(*args, **kwargs)]
+        monkeypatch.setattr(sauvegardes, "vues", avec_temps)
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        textes = [lbl.text() for ligne in page._lignes.values() for lbl in ligne.findChildren(QLabel)]
+        assert any(t.endswith("de jeu") for t in textes), textes
+
+
 class TestPage:
     def test_ouvre_sur_la_derniere_jouee(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage
@@ -398,17 +428,14 @@ class TestPage:
         qtbot.addWidget(page)
         assert any("Aucune sauvegarde" in lbl.text() for lbl in page.findChildren(QLabel))
 
-    def test_le_retour_rouvre_mes_annees(self, qtbot, hp1):
+    def test_integree_sans_retour(self, qtbot, hp1):
+        """Dans le Carnet, qui porte le retour : le rail n'en a pas."""
         from PyQt6.QtWidgets import QPushButton
         from src.ui.folio_page import FolioPage
         jeu, install, _saves = hp1
-        revenu = []
-        page = FolioPage(jeu, install, revenir=lambda: revenu.append(1))
+        page = FolioPage(jeu, install, integree=True)
         qtbot.addWidget(page)
-        retour = page.findChild(QPushButton, "retour")
-        assert retour.text() == "Mes années"
-        retour.click()
-        assert revenu == [1]
+        assert page.findChild(QPushButton, "retour") is None
 
     @pytest.mark.parametrize(("dispo", "colonnes"), [
         (500, 5), (1100, 5), (1250, 7), (1800, 9), (4000, 13)])
@@ -441,20 +468,18 @@ class TestPage:
         assert (chemin.read_bytes(), chemin.stat().st_mtime) == avant
 
 
-class TestDepuisMesAnnees:
-    def test_le_bouton_du_folio_ouvre_la_page(self, qtbot, tmp_path, monkeypatch):
+class TestDepuisLeReleve:
+    def test_le_bouton_du_folio_passe_au_folio(self, qtbot, tmp_path, monkeypatch):
         from src.core.config import Config
         from src.core.game_manager import GameManager
-        from src.ui.folio_page import FolioPage
         from src.ui.stats_dialog import StatsDialog
         monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "c.json")
         manager = GameManager(Config(install_path=tmp_path / "g", cache_path=tmp_path / "c"))
         jeux = [e.game.id for e in manager.get_games() if e.game.id in folio.JEUX]
         if not jeux:
             pytest.skip("aucun jeu du folio dans ce catalogue")
-        ouvertes = []
-        dlg = StatsDialog(manager, ouvrir_page=lambda page, *_cle: ouvertes.append(page))
+        demandes = []
+        dlg = StatsDialog(manager, folio=demandes.append)
         qtbot.addWidget(dlg)
         dlg.ouvrir_folio(jeux[0])
-        assert len(ouvertes) == 1 and isinstance(ouvertes[0], FolioPage)
-        qtbot.addWidget(ouvertes[0])
+        assert demandes == [jeux[0]]

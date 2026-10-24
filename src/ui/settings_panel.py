@@ -479,7 +479,7 @@ class SettingsDialog(QDialog):
         revoir.clicked.connect(self.visite_demandee.emit)
         decouvrir.ajouter(LigneReglage(
             tr("Visite guidée"),
-            tr("Où trouver le folio, Mes années, la galerie et les réglages de chaque jeu."),
+            tr("Où trouver le Carnet, les Collections et les réglages de chaque jeu."),
             revoir))
 
         fin = Carte()

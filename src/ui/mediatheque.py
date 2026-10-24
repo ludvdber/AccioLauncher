@@ -34,12 +34,15 @@ from src.ui.fond_sonore import JEU, FondSonore, decouper
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import accent_qcolor, themed
-from src.ui.title_bar import MEDIATHEQUE
+from src.ui.title_bar import COLLECTIONS
 
 log = logging.getLogger(__name__)
 
 MUSIQUE = "musique"
 CINEMATIQUES = "cinematiques"
+# Les captures d'écran (`galerie_page.py`) : troisième rubrique de l'onglet
+# Collections depuis le 2026-10-24, la Galerie n'a plus d'onglet à elle.
+CAPTURES = "captures"
 _LARGEUR_TITRE_MINI = 220
 
 
@@ -51,6 +54,16 @@ def _jeux_avec_medias() -> frozenset[str]:
 def a_des_medias(jeu: str) -> bool:
     """Ce jeu a-t-il des morceaux ou des cinématiques ? (le lien de la fiche)"""
     return jeu in _jeux_avec_medias()
+
+
+@lru_cache(maxsize=1)
+def _jeux_avec_musique() -> frozenset[str]:
+    return frozenset(discographie.charger())
+
+
+def a_de_la_musique(jeu: str) -> bool:
+    """Le bouton de la fiche dit « Musique », sinon « Cinématiques » (HP7, HP8)."""
+    return jeu in _jeux_avec_musique()
 
 
 def _cle_vus(jeu: str, rubrique: str) -> str:
@@ -83,7 +96,8 @@ class Mediatheque(QObject):
         # la barre du bas fait taire la bande-annonce.
         detail.son_bande_annonce.connect(self.fond.bande_annonce_sonore)
         self.fond.son_coupe_change.connect(lambda _coupe: detail.apply_audio_config())
-        detail.mediatheque_demandee.connect(lambda jeu: self.ouvrir(MUSIQUE, jeu))
+        detail.mediatheque_demandee.connect(
+            lambda jeu: self.ouvrir(MUSIQUE if a_de_la_musique(jeu) else CINEMATIQUES, jeu))
         session.demarree.connect(lambda _nom: self.fond.suspendre(JEU))
         session.terminee.connect(self._retour_de_partie)
         QApplication.instance().aboutToQuit.connect(self.fond.arreter)
@@ -99,12 +113,14 @@ class Mediatheque(QObject):
 
     # ── Ouverture ──
 
-    def ouvrir(self, rubrique: str = MUSIQUE, jeu: str = "") -> None:
+    def ouvrir(self, rubrique: str = CAPTURES, jeu: str = "") -> None:
+        """L'onglet ouvre sur les captures (Ludo, 2026-10-24) ; la note de la fiche et
+        le mini-lecteur demandent la musique."""
         from src.ui.mediatheque_page import MediathequePage
         if self._lecture.isActive():
             self._lecture.stop()
             self.actualiser()
-        self._pages.ouvrir(MediathequePage(self, rubrique, jeu), MEDIATHEQUE)
+        self._pages.ouvrir(MediathequePage(self, rubrique, jeu), COLLECTIONS)
 
     def _retour_de_partie(self, *_args) -> None:
         """Une partie finie a pu ouvrir des morceaux : on relit, puis la musique reprend."""
@@ -122,7 +138,7 @@ class Mediatheque(QObject):
             self._presentes[jeu] = (cinematiques.presentes(collection, self._manager.get_game_path(jeu),
                                                            get_language())
                                     if installe and collection is not None else {})
-        self._barre_titre.set_pastille(MEDIATHEQUE, self.a_des_nouveautes())
+        self._barre_titre.set_pastille(COLLECTIONS, self.a_des_nouveautes())
         self.mini.actualiser()
 
     # ── Jeux ──
@@ -133,6 +149,14 @@ class Mediatheque(QObject):
             return [e.game for e in self._manager.get_games()
                     if e.game.id in self._morceaux and self._manager.is_installed(e.game.id)]
         return [e.game for e in self._manager.get_games() if self._presentes.get(e.game.id)]
+
+    def game(self, jeu: str):
+        """Le jeu du catalogue (jaquette et année des pastilles, `choix_jeux`)."""
+        return self._manager.get_game_by_id(jeu)
+
+    def catalogue(self) -> list:
+        """Tous les jeux du catalogue : la rubrique Captures les filtre elle-même."""
+        return [e.game for e in self._manager.get_games()]
 
     def jeux_tous(self) -> list[str]:
         """Les jeux qui ont de la musique OU des cinématiques, dans l'ordre du catalogue."""
@@ -189,7 +213,7 @@ class Mediatheque(QObject):
             return
         discographie.marquer_vus(cle_vus, ouverts)
         self._vus.setdefault(cle_vus, set()).update(ouverts)
-        self._barre_titre.set_pastille(MEDIATHEQUE, self.a_des_nouveautes())
+        self._barre_titre.set_pastille(COLLECTIONS, self.a_des_nouveautes())
 
     def a_des_nouveautes(self) -> bool:
         return any(discographie.nouveaux(_cle_vus(g.id, r), self._ouverts(g.id, r), self._vus)
@@ -299,10 +323,10 @@ class MiniLecteur(QWidget):
             jeu = morceau[0]
             self._disque.poser(jeu, self._media.jaquette(jeu))
             texte = f"{fond.titre(fond.morceau)} · {jeu.upper()}"
-            libelle = tr("Médiathèque, morceau : {}").format(texte)
+            libelle = tr("Collections, morceau : {}").format(texte)
         else:
             texte = tr("Musique")
-            libelle = tr("Ouvrir la Médiathèque")
+            libelle = tr("Ouvrir les Collections")
         self._disque.setVisible(morceau is not None)
         self._note.setVisible(morceau is None)
         self._disque.set_tourne(fond.en_lecture)

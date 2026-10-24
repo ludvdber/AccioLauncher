@@ -29,8 +29,7 @@ from src.ui.desinstallation_dialog import desinstaller
 from src.ui.styles import MAIN_STYLE
 from src.ui.theme import set_theme, themed
 from src.ui.ticker import Ticker
-from src.ui.galerie_page import GaleriePage
-from src.ui.title_bar import ANNEES, BIBLIOTHEQUE, GALERIE, HAUTEUR as HAUTEUR_BARRE, MEDIATHEQUE, PARAMETRES, TitleBar
+from src.ui.title_bar import BIBLIOTHEQUE, CARNET, COLLECTIONS, HAUTEUR as HAUTEUR_BARRE, PARAMETRES, TitleBar
 from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
@@ -180,10 +179,10 @@ class MainWindow(QMainWindow):
         self._title_bar.discord_demande.connect(lambda: open_url(DISCORD_URL))
         self._title_bar.contribuer_demande.connect(self._detail.ouvrir_atelier)
         self._btn_settings = self._title_bar.onglet(PARAMETRES)
-        self._btn_stats = self._title_bar.onglet(ANNEES)
+        self._btn_stats = self._title_bar.onglet(CARNET)
         self._btn_discord = self._title_bar.discord
         # Ce que le mode cinéma escamote.
-        self._commandes = (self._btn_settings, self._btn_stats, self._title_bar.onglet(GALERIE), self._title_bar.onglet(MEDIATHEQUE),
+        self._commandes = (self._btn_settings, self._btn_stats, self._title_bar.onglet(COLLECTIONS),
                            self._btn_discord, self._title_bar.contribuer)
 
         # Event filter on QApplication for global mouse tracking
@@ -622,10 +621,11 @@ class MainWindow(QMainWindow):
         if contenu is not None:
             self._pages.ouvrir(NouveautesPage(contenu, apres_mise_a_jour, self))
 
-    def _on_stats(self) -> None:
-        """Page de statistiques — lecture seule, aucun réglage, donc rien à recâbler."""
-        from src.ui.stats_dialog import StatsDialog
-        self._pages.ouvrir(StatsDialog(self.manager, self, self._pages.ouvrir), ANNEES)
+    def _on_stats(self, rubrique: str = "releve") -> None:
+        """Le Carnet (`carnet_page.py`) — lecture seule, rien à recâbler. Le
+        toast des succès l'ouvre sur le Relevé, l'onglet sur le Folio."""
+        from src.ui.carnet_page import CarnetPage
+        self._pages.ouvrir(CarnetPage(self.manager, self, rubrique), CARNET)
 
     def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
         """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre.
@@ -664,8 +664,7 @@ class MainWindow(QMainWindow):
         elif cle == BIBLIOTHEQUE:
             self._pages.fermer()
         else:
-            {ANNEES: self._on_stats, MEDIATHEQUE: self._mediatheque.ouvrir, GALERIE: lambda: self._pages.ouvrir(GaleriePage(
-                [e.game for e in self.manager.get_games()], self), GALERIE)}.get(cle, self._on_settings)()
+            {CARNET: lambda: self._on_stats("folio"), COLLECTIONS: self._mediatheque.ouvrir}.get(cle, self._on_settings)()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

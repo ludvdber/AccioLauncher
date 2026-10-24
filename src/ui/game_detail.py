@@ -247,10 +247,9 @@ class GameDetailView(QWidget):
         self.page_demandee.emit(AtelierPage(self.manager.catalog.games, self.window(), metier))
 
     def ouvrir_folio(self) -> None:
-        """Le folio du jeu affiché ; son retour ramène à la bibliothèque."""
-        from src.ui.folio_jeux import page_folio
-        self.page_demandee.emit(page_folio(self.game, self.manager.config.install_path,
-                                           self.window()))
+        """Le folio du jeu affiché, dans le Carnet (qui souligne son onglet)."""
+        from src.ui.carnet_page import CarnetPage
+        self.page_demandee.emit(CarnetPage(self.manager, self.window(), jeu=self.game.id))
 
     # ──────────────────── Mode cinéma ────────────────────
 
