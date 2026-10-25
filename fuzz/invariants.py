@@ -185,3 +185,18 @@ def meme_verdict(nom: str) -> None:
         assert sur, nom
     elif sur and nom.strip():
         assert not [c for c in nom.replace("\\", "/").split("/") if c not in ("", ".")], nom
+
+
+def archive_ea(fichier: Path) -> None:
+    """Une archive EA quelconque (fichier de jeu abîmé ou retouché par un mod)
+    se lit sans lever : chaque entrée tient dans le fichier, chaque flux SCHl
+    dans son entrée, et la recherche des flux s'arrête."""
+    from src.core import archives_ea
+    archives_ea._entrees_en_cache.cache_clear()   # même nom, même taille : relire
+    taille = fichier.stat().st_size
+    for e in archives_ea.lister(fichier):
+        assert 0 <= e.debut and e.debut + e.taille <= taille, e
+        for en_tete in (0, 256):
+            for debut, longueur in archives_ea.flux_schl(fichier, e, en_tete):
+                assert e.debut + en_tete <= debut, (e, debut)
+                assert 8 <= longueur and debut + longueur <= e.debut + e.taille, (e, debut, longueur)

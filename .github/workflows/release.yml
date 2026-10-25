@@ -108,6 +108,14 @@ jobs:
         with:
           python-version: "3.14"
 
+      # L'exe embarque les paquets que la CI a testés, vérifiés par empreinte.
+      # Sans cette étape, build.bat installait requirements-dev.txt, qui ne
+      # donne que des planchers : l'exe prenait ce que PyPI servait le jour du
+      # build, version piégée comprise. Le `pip install` de build.bat trouve
+      # ensuite tout déjà satisfait et n'y touche plus.
+      - name: Paquets figés (empreintes vérifiées)
+        run: python -m pip install --require-hashes -r .github/requirements/tests.txt
+
       # build.bat enchaîne icône, lint, tests, géométrie avec les vraies polices
       # et PyInstaller, et s'arrête au premier échec : le même chemin que sur
       # un poste. PATH réduit au système et au Python du workflow, parce que
@@ -230,6 +238,10 @@ jobs:
             libwayland-client0 libwayland-cursor0 libwayland-egl1 \
             libpulse0 libgssapi-krb5-2 \
             xvfb xauth fontconfig fonts-dejavu-core fonts-liberation
+
+      # Mêmes paquets figés que l'exe Windows (voir plus haut).
+      - name: Paquets figés (empreintes vérifiées)
+        run: python -m pip install --require-hashes -r .github/requirements/tests.txt
 
       # Même règle que build.bat : icône, lint, tests, géométrie, PyInstaller,
       # AppImage, arrêt au premier échec.

@@ -18,10 +18,11 @@ même chose en deux endroits ; le relevé le dit une fois, avec les chiffres.
 """
 
 from datetime import date
+from functools import lru_cache
 from html import escape
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QImageReader, QLinearGradient, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QImage, QImageReader, QLinearGradient, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from src.core.config import ASSETS_DIR
@@ -47,9 +48,16 @@ _ECART = 14
 _GRIS = "#8f8db0"
 
 
-def _jaquette(nom_fichier: str) -> QPixmap | None:
+@lru_cache(maxsize=16)
+def _jaquette_decodee(nom_fichier: str) -> QImage | None:
     """Réduite par le DÉCODEUR, comme le carrousel : décoder une jaquette de
-    1024 px pour l'afficher à 42 coûterait l'ouverture de la page."""
+    1024 px pour l'afficher à 42 coûterait l'ouverture de la page.
+
+    Gardée une fois décodée : les jaquettes sont embarquées et ne changent pas,
+    et le Relevé comme les pastilles des Collections les redemandaient à chaque
+    visite (16 lectures, 33 ms par ouverture des Collections, mesuré le
+    2026-10-25). Une QImage et non une QPixmap : elle peut survivre à
+    l'application sans dommage."""
     chemin = ASSETS_DIR / "covers" / nom_fichier
     if not chemin.exists():
         return None
@@ -60,7 +68,12 @@ def _jaquette(nom_fichier: str) -> QPixmap | None:
         if facteur < 1.0:
             lecteur.setScaledSize(source * facteur)
     image = lecteur.read()
-    return None if image.isNull() else QPixmap.fromImage(image)
+    return None if image.isNull() else image
+
+
+def _jaquette(nom_fichier: str) -> QPixmap | None:
+    image = _jaquette_decodee(nom_fichier)
+    return None if image is None else QPixmap.fromImage(image)
 
 
 class _Jaquette(QWidget):

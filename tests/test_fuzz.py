@@ -162,3 +162,37 @@ class TestCheminUnique:
         for exe in (".", "./", ".\\"):
             with pytest.raises(ValueError):
                 GameData.from_dict({**invariants._JEU_MINIMAL, "executable": exe})
+
+
+def _bigf(corps: bytes, entrees: list[tuple[int, int, bytes]], nombre: int | None = None) -> bytes:
+    import struct
+    taille_tete = 16 + sum(8 + len(nom) + 1 for _, _, nom in entrees)
+    tete = b"BIGF" + struct.pack("<I", taille_tete + len(corps))
+    tete += struct.pack(">II", len(entrees) if nombre is None else nombre, taille_tete)
+    tete += b"".join(struct.pack(">II", taille_tete + d, t) + nom + b"\0" for d, t, nom in entrees)
+    return tete + corps
+
+
+class TestArchiveEA:
+    """Les archives EA (HP4 à HP6) viennent du dossier du jeu, qu'un mod peut avoir changé."""
+
+    @pytest.mark.parametrize("octets", [
+        b"", b"BIGF", b"BIGF" + b"\xff" * 12, b"\0" * 64,
+        _bigf(b"", [], nombre=2**31),                       # nombre d'entrées absurde
+        _bigf(b"x" * 16, [(0, 10**9, b"loin.mus")]),        # entrée qui dépasse le fichier
+        _bigf(b"SCHl\xff\xff\xff\xff" + b"\0" * 24, [(0, 32, b"a.mus")]),   # taille de bloc géante
+        _bigf(b"SCHl\x00\x00\x00\x00" + b"\0" * 24, [(0, 32, b"a.mus")]),   # bloc de taille nulle
+    ])
+    def test_archives_abimees(self, tmp_path, octets):
+        fichier = tmp_path / "music.big"
+        fichier.write_bytes(octets)
+        invariants.archive_ea(fichier)
+
+    def test_un_flux_entier_est_trouve(self, tmp_path):
+        from src.core import archives_ea
+        flux = b"SCHl\x10\x00\x00\x00" + b"\0" * 8 + b"SCDl\x0c\x00\x00\x00" + b"\0" * 4 + b"SCEl\x08\x00\x00\x00"
+        fichier = tmp_path / "music.big"
+        fichier.write_bytes(_bigf(b"\0" * 5 + flux, [(0, 5 + len(flux), b"a.mus")]))
+        invariants.archive_ea(fichier)
+        entree = archives_ea.lister(fichier)[0]
+        assert archives_ea.flux_schl(fichier, entree, en_tete=0) == [(entree.debut + 5, len(flux))]

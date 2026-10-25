@@ -597,3 +597,19 @@ class TestGrilleSauvegardes:
         grille.show()
         qtbot.waitUntil(lambda: grille._colonnes == 3)
         assert all(c.width() <= _GrilleSauvegardes.LARGEUR_MAX for c in cartes)
+
+
+class TestJaquettes:
+    def test_une_jaquette_n_est_decodee_qu_une_fois(self, qtbot):
+        """Le Relevé et les pastilles des Collections la redemandaient à chaque visite."""
+        from src.ui import stats_releve
+        stats_releve._jaquette_decodee.cache_clear()
+        premiere = stats_releve._jaquette("hp1_cover.jpg")
+        seconde = stats_releve._jaquette("hp1_cover.jpg")
+        assert premiere is not None and not premiere.isNull()
+        assert seconde.size() == premiere.size() and seconde.height() <= 84
+        assert stats_releve._jaquette_decodee.cache_info().hits == 1
+
+    def test_une_jaquette_absente_ne_plante_pas(self, qtbot):
+        from src.ui import stats_releve
+        assert stats_releve._jaquette("personne.jpg") is None

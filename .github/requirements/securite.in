@@ -3,3 +3,4 @@
 # Outils du job security.yml.
 bandit
 pip-audit
+zizmor

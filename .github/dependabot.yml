@@ -6,6 +6,10 @@
 #   .github/workflows (empreinte ET commentaire de version).
 # - pip : les planchers de pyproject.toml et des requirements. Les alertes
 #   de sécurité, elles, arrivent sans attendre le lundi.
+#
+# `cooldown` : une version neuve attend 7 jours avant d'être proposée, le temps
+# qu'une version piégée soit retirée de PyPI ou de la place de marché. Les mises
+# à jour de sécurité ne sont pas retenues.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -13,6 +17,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
@@ -24,6 +30,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     groups:
       python:
         patterns: ["*"]
@@ -37,6 +45,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     groups:
       ci:
         patterns: ["*"]

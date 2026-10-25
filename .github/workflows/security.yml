@@ -48,3 +48,21 @@ jobs:
       # vert ne disait rien du launcher (constaté le 2026-09-18).
       - name: Audit Python dependencies
         run: pip-audit -r requirements.txt -r requirements-dev.txt
+
+      # Les planchers ci-dessus se résolvent au plus récent ; ce qui s'installe
+      # VRAIMENT (CI et exécutables publiés) est figé dans .github/requirements.
+      # Le 2026-10-25, ces fichiers portaient setuptools 84.0.0 et filelock
+      # 4.2.0, vulnérables, alors que l'audit des planchers restait vert.
+      - name: Audit des paquets figés
+        run: |
+          pip-audit --require-hashes --disable-pip -r .github/requirements/tests.txt
+          pip-audit --require-hashes --disable-pip -r .github/requirements/securite.txt
+          pip-audit --require-hashes --disable-pip -r .github/requirements/fuzz.txt
+
+      # Les workflows eux-mêmes : action non épinglée, injection dans un `run:`,
+      # identifiants laissés au checkout, Dependabot sans délai. Le jeton (lecture
+      # seule) sert à reconnaître une action dont la version connue est vulnérable.
+      - name: Audit des workflows (zizmor)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --no-progress .github
