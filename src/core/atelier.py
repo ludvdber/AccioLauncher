@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from src.core.config import ATELIER_PATH
-from src.core.i18n import SOURCE_LANGUAGE, get_language
+from src.core.i18n import get_language, texte_dans
 from src.core.images_a_refaire import jaquette_a_refaire, fond_a_refaire
 
 log = logging.getLogger(__name__)
@@ -63,19 +63,6 @@ class Metier:
     def ouverts(self) -> int:
         """Ce qui attend encore quelqu'un (ni pris, ni fait)."""
         return sum(1 for b in self.besoins if b.etat == CHERCHE)
-
-
-def _texte(valeur: object, langue: str) -> str:
-    """Le texte dans `langue`, sinon en français ; "" si rien d'utilisable."""
-    if isinstance(valeur, str):
-        return valeur.strip()
-    if not isinstance(valeur, dict):
-        return ""
-    for code in (langue, SOURCE_LANGUAGE):
-        texte = valeur.get(code)
-        if isinstance(texte, str) and texte.strip():
-            return texte.strip()
-    return ""
 
 
 def _liste(valeur: object) -> list[Any]:
@@ -137,18 +124,18 @@ def charger(mesures: list[Besoin] | None = None, langue: str | None = None,
             besoins = tuple(mesures or ())
         else:
             besoins = tuple(
-                Besoin(str(b.get("jeu", "")), _texte(b.get("quoi"), langue),
-                       _texte(b.get("detail"), langue), b.get("etat", CHERCHE))
+                Besoin(str(b.get("jeu", "")), texte_dans(b.get("quoi"), langue),
+                       texte_dans(b.get("detail"), langue), b.get("etat", CHERCHE))
                 for b in _liste(brut.get("besoins"))
                 if isinstance(b, dict) and b.get("etat", CHERCHE) in ETATS
-                and _texte(b.get("quoi"), langue))
-        nom = _texte(brut.get("nom"), langue)
+                and texte_dans(b.get("quoi"), langue))
+        nom = texte_dans(brut.get("nom"), langue)
         if not nom or not besoins:
             continue
         metiers.append(Metier(
-            str(brut.get("id", "")), nom, _texte(brut.get("ou"), langue),
-            _texte(brut.get("texte"), langue),
-            tuple(t for t in (_texte(f, langue) for f in _liste(brut.get("formats"))) if t),
+            str(brut.get("id", "")), nom, texte_dans(brut.get("ou"), langue),
+            texte_dans(brut.get("texte"), langue),
+            tuple(t for t in (texte_dans(f, langue) for f in _liste(brut.get("formats"))) if t),
             besoins))
     return metiers
 

@@ -12,6 +12,7 @@ import sys
 import traceback
 import urllib.parse
 
+from src.core import liens
 from src.core.config import APP_VERSION
 # `scrub_user_paths` vit désormais dans `diagnostic` (le bouton « Copier les
 # informations de diagnostic » en a besoin aussi) ; réexporté ici pour les
@@ -20,7 +21,7 @@ from src.core.diagnostic import identite, scrub_user_paths
 
 log = logging.getLogger(__name__)
 
-_ISSUES_URL = "https://github.com/ludvdber/AccioLauncher/issues/new"
+_ISSUES_URL = liens.SIGNALER_URL
 _LOG_TAIL_LINES = 40
 # Les URLs ont une longueur max pratique (~2000) — le corps d'issue est tronqué,
 # le rapport complet passe par « Copier le rapport ».
@@ -76,7 +77,7 @@ def construire_dialogue(report: str):
     dialogue bien au-delà de sa largeur minimale.
     """
     from PyQt6.QtCore import Qt
-    from PyQt6.QtGui import QColor
+    from PyQt6.QtGui import QColor, QFontDatabase
     from PyQt6.QtWidgets import (
         QApplication, QDialog, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout,
     )
@@ -98,7 +99,7 @@ def construire_dialogue(report: str):
     dlg.setStyleSheet(themed(
         "QDialog { background: #0d0d1a; }"
         "QPlainTextEdit { background: #060611; color: #b0b0c8; border: 1px solid #1a2744;"
-        " border-radius: 8px; font-family: Consolas, monospace; font-size: 11px; padding: 6px; }"
+        " border-radius: 8px; font-size: 11px; padding: 6px; }"
         # Le bouton Discord garde son nom (les tests le cherchent) : style secondaire.
         "QPushButton#crashDiscord { min-height: 34px; max-height: 34px; padding: 0 16px;"
         " border-radius: 7px; color: #d9d6e8; background: rgba(255, 255, 255, 0.03);"
@@ -128,6 +129,12 @@ def construire_dialogue(report: str):
 
     text = QPlainTextEdit(report)
     text.setReadOnly(True)
+    # Consolas si elle est là, sinon la chasse fixe que déclare le système (règle 89) :
+    # nommée seule, Consolas n'existe pas sous Linux. Le système seul donnait Courier
+    # New sous Windows, plus terne. La taille vient de la feuille de style.
+    chasse_fixe = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+    chasse_fixe.setFamilies(["Consolas", chasse_fixe.family()])
+    text.setFont(chasse_fixe)
     layout.addWidget(text, stretch=1)
     layout.addSpacing(16)
 

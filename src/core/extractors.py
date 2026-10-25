@@ -25,6 +25,9 @@ from src.core.chemins import chemin_relatif_sur
 
 log = logging.getLogger(__name__)
 
+# Règle 6 : nommée à l'import et sous garde, la constante n'existe que sous Windows.
+_SANS_FENETRE = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
 
 class ExtractionEchouee(RuntimeError):
     """7-Zip a rendu un code d'échec. `sortie` garde ses dernières lignes.
@@ -178,7 +181,7 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
     """
     kwargs: dict[str, Any] = {}
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        kwargs["creationflags"] = _SANS_FENETRE
     # `exe` est un chemin absolu (`find_7z_exe`), l'archive est la nôtre ;
     # liste d'arguments, aucun shell.
     proc = subprocess.run(  # nosec B603
@@ -292,7 +295,7 @@ def extract_7z_subprocess(
     cmd = [exe, "x", str(archive), f"-o{destination}", "-y", "-bsp1", "-snl-", *_SORTIE_UTF8]
     kwargs: dict[str, Any] = {}
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        kwargs["creationflags"] = _SANS_FENETRE
 
     # Même 7z.exe absolu que ci-dessus, liste d'arguments, aucun shell.
     proc = subprocess.Popen(  # nosec B603

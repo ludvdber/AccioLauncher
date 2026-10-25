@@ -300,7 +300,7 @@ def _propriete(p: textures_ue1.Paquet, octets: bytes, nom: str, genre: int) -> b
     indice = p.indice_nom(nom)
     if indice is None:
         return None
-    etiquette = _compact(indice)
+    etiquette = folio.index_compact(indice)
     debut = octets.find(etiquette)
     while debut >= 0:
         try:
@@ -311,19 +311,6 @@ def _propriete(p: textures_ue1.Paquet, octets: bytes, nom: str, genre: int) -> b
             return lues[0][3]
         debut = octets.find(etiquette, debut + 1)
     return None
-
-
-def _compact(v: int) -> bytes:
-    a = abs(v)
-    octets = bytearray([(0x80 if v < 0 else 0) | (a & 0x3F)])
-    a >>= 6
-    if a:
-        octets[0] |= 0x40
-    while a:
-        b = a & 0x7F
-        a >>= 7
-        octets.append(b | (0x80 if a else 0))
-    return bytes(octets)
 
 
 def catalogue(system: Path, langue: str) -> dict[int, CarteHP2]:

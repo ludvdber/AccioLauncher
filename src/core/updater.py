@@ -10,7 +10,7 @@ from typing import Any
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
-from src.core import reseau
+from src.core import liens, reseau
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
 from src.core.game_data import _parse_catalog
 from src.core.version_utils import compare_versions, update_disponible
@@ -523,10 +523,10 @@ class UpdateChecker(QThread):
                 return
 
             if compare_versions(tag, APP_VERSION) > 0:
-                html_url = data.get("html_url", "https://github.com/ludvdber/AccioLauncher/releases/latest")
+                html_url = data.get("html_url", liens.DERNIERE_VERSION_URL)
                 if not isinstance(html_url, str) or not html_url.startswith("https://github.com/"):
                     log.warning("URL de release suspecte ignorée : %s", html_url)
-                    html_url = "https://github.com/ludvdber/AccioLauncher/releases/latest"
+                    html_url = liens.DERNIERE_VERSION_URL
                 # Asset de SA plateforme pour l'auto-update — l'exe sous Windows,
                 # l'AppImage sous Linux (vide si introuvable → page de release).
                 asset_url = ""

@@ -99,8 +99,8 @@ class TestBandeAnnonceNeRepartPasTouteSeule:
     @staticmethod
     def _espionner(vue, monkeypatch):
         joues = []
-        monkeypatch.setattr(type(vue), "_try_play_video",
-                            lambda self, gid: joues.append(gid))
+        # Sur l'INSTANCE (règle 12), jamais sur la classe d'un QWidget.
+        monkeypatch.setattr(vue, "_try_play_video", lambda gid: joues.append(gid))
         return joues
 
     def test_stop_annule_le_demarrage_en_attente(self, make_window, monkeypatch):
@@ -332,8 +332,7 @@ class TestRevoirLaBandeAnnonce:
         self._avec_bande_annonce(monkeypatch)
         vue._on_video_ended()
         assert vue._audio_bar._volume_slider.isHidden()
-        monkeypatch.setattr(type(vue._video), "play",
-                            lambda self, chemin, **kw: True)
+        monkeypatch.setattr(vue._video, "play", lambda chemin, **kw: True)
         vue._on_replay_clicked()
         bar = vue._audio_bar
         assert not bar._volume_slider.isHidden()

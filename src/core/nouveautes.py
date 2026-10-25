@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.core.config import APP_VERSION, NOUVEAUTES_PATH
-from src.core.i18n import SOURCE_LANGUAGE, get_language
+from src.core.i18n import get_language, texte_dans
 from src.core.version_utils import compare_versions
 
 log = logging.getLogger(__name__)
@@ -70,19 +70,6 @@ def _liste(valeur: object) -> list[Any]:
     return valeur if isinstance(valeur, list) else []
 
 
-def _texte(valeur: object, langue: str) -> str:
-    """Le texte dans `langue`, sinon en français ; "" si rien d'utilisable."""
-    if isinstance(valeur, str):
-        return valeur.strip()
-    if not isinstance(valeur, dict):
-        return ""
-    for code in (langue, SOURCE_LANGUAGE):
-        texte = valeur.get(code)
-        if isinstance(texte, str) and texte.strip():
-            return texte.strip()
-    return ""
-
-
 def charger(version: str = APP_VERSION, langue: str | None = None,
             chemin: Path = NOUVEAUTES_PATH) -> Nouveautes | None:
     """Les nouveautés de `version` dans `langue` ; None s'il n'y en a pas."""
@@ -100,11 +87,11 @@ def charger(version: str = APP_VERSION, langue: str | None = None,
     if entree is None:
         return None
     points = tuple(
-        PointFort(str(p.get("icone", "")), _texte(p.get("titre"), langue),
-                  _texte(p.get("texte"), langue))
+        PointFort(str(p.get("icone", "")), texte_dans(p.get("titre"), langue),
+                  texte_dans(p.get("texte"), langue))
         for p in _liste(entree.get("points_forts")) if isinstance(p, dict))
     changements = tuple(
-        Changement(str(c.get("genre")), _texte(c.get("texte"), langue))
+        Changement(str(c.get("genre")), texte_dans(c.get("texte"), langue))
         for c in _liste(entree.get("changements"))
         if isinstance(c, dict) and c.get("genre") in GENRES)
     # Un texte vide ne s'affiche pas : une carte sans titre, une ligne sans phrase.
@@ -114,7 +101,7 @@ def charger(version: str = APP_VERSION, langue: str | None = None,
     if not points and not changements:
         return None
     return Nouveautes(version, str(entree.get("depuis", "")), points, changements,
-                      _texte(entree.get("nom"), langue))
+                      texte_dans(entree.get("nom"), langue))
 
 
 def a_montrer(precedente: str) -> bool:

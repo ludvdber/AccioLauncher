@@ -23,14 +23,19 @@ KOFI_URL = "https://ko-fi.com/ludovic01"
 # Le dépôt porte le code source ET la licence : la GPL v3 et ses termes
 # additionnels exigent qu'on sache où les trouver (voir ADDITIONAL-TERMS.md).
 DEPOT_URL = "https://github.com/ludvdber/AccioLauncher"
-# Section « Linux / Bazzite » du README : quoi installer quand ni umu-run ni
-# wine ne sont trouvés. Une ancre de titre GitHub : « Linux / Bazzite » donne
-# `linux--bazzite` (minuscules, espaces en tirets, barre oblique retirée).
 # Notes de chaque version du launcher, ouvertes par le numéro de version dans
 # À propos. La LISTE et non le tag courant : un exe lancé avant la publication
 # de sa release (essais, build locale) mènerait sinon à une page 404.
-NOTES_VERSIONS_URL = "https://github.com/ludvdber/AccioLauncher/releases"
-GUIDE_LINUX_URL = "https://github.com/ludvdber/AccioLauncher#linux--bazzite"
+NOTES_VERSIONS_URL = f"{DEPOT_URL}/releases"
+# Dernière version publiée : repli de l'avis de mise à jour quand la réponse de
+# GitHub ne porte pas d'adresse sûre (`updater`).
+DERNIERE_VERSION_URL = f"{DEPOT_URL}/releases/latest"
+# Nouveau signalement, pré-rempli par le dialogue de plantage.
+SIGNALER_URL = f"{DEPOT_URL}/issues/new"
+# Section « Linux / Bazzite » du README : quoi installer quand ni umu-run ni
+# wine ne sont trouvés. Une ancre de titre GitHub : « Linux / Bazzite » donne
+# `linux--bazzite` (minuscules, espaces en tirets, barre oblique retirée).
+GUIDE_LINUX_URL = f"{DEPOT_URL}#linux--bazzite"
 # « Protection contre les virus et menaces » de Sécurité Windows, ouverte par
 # l'aide antivirus de la fiche (Windows seulement : le bouton n'existe pas ailleurs).
 SECURITE_WINDOWS_URL = "windowsdefender://threatsettings/"

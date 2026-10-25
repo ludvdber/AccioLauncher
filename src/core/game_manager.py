@@ -35,6 +35,10 @@ from src.core.version_utils import update_disponible
 
 log = logging.getLogger(__name__)
 
+# Règle 6 : nommée à l'import et sous garde, la constante n'existe que sous Windows.
+_DETACHE = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            if sys.platform == "win32" else 0)
+
 # ERROR_ELEVATION_REQUIRED : CreateProcess refuse un exe qui exige l'administrateur.
 ERREUR_ELEVATION = 740
 
@@ -329,9 +333,7 @@ class GameManager:
         popen_kwargs: dict[str, Any] = {"cwd": str(exe_path.parent)}
         if sys.platform != "win32":
             return self._lancer_sous_wine(game, exe_path, lanceur, popen_kwargs, arguments)
-        popen_kwargs["creationflags"] = (
-            subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-        )
+        popen_kwargs["creationflags"] = _DETACHE
         # Couche DPI (règle 104) : sans elle, HP7 s'ouvrait en 3200×1800 sur
         # un écran 2560×1440 à l'échelle. None : le jeu hérite du nôtre.
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)

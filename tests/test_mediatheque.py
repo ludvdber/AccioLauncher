@@ -340,7 +340,9 @@ class TestLectureCinematique:
         page._voix = VoixQuiParle()
         page._video_finie()
         assert page._courante == "SiriusPhoto", "la voix parle encore : on attend"
-        monkeypatch.setattr(type(page._video), "is_playing", property(lambda self: False))
+        # L'image est finie : `is_playing` lit `_player`. Posé sur l'INSTANCE, jamais
+        # une property sur la classe d'un QObject (règle 12).
+        monkeypatch.setattr(page._video, "_player", None)
         page._statut_voix(QMediaPlayer.MediaStatus.EndOfMedia)
         assert not page._courante
         assert "cinematique" not in win._mediatheque.fond._raisons

@@ -33,6 +33,9 @@ from src.core.win_utils import commande_systeme
 
 log = logging.getLogger(__name__)
 
+# Règle 6 : nommée à l'import et sous garde, la constante n'existe que sous Windows.
+_SANS_FENETRE = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
 _POLL_MS = 2000
 _GRACE_S = 10.0  # délai avant de chercher l'exe par nom (le temps que UE1 redémarre)
 # Un battement par minute : assez fin pour qu'une partie interrompue ne perde
@@ -126,7 +129,7 @@ class ProcessMonitor(QObject):
                 [commande_systeme("tasklist.exe"), "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
                 # Page OEM de la console, nommée : implicite, l'encodage change en 3.15 (UTF-8).
                 capture_output=True, encoding="oem", errors="replace", timeout=5,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                creationflags=_SANS_FENETRE,
             )
             return exe_name.lower() in result.stdout.lower()
         except (OSError, subprocess.TimeoutExpired):

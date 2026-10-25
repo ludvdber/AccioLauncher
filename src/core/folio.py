@@ -344,6 +344,24 @@ class PartieLue(Protocol):
     def lu(self) -> bool: ...
 
 
+def index_compact(v: int) -> bytes:
+    """Un entier en index compact d'Unreal 1 (`FCompactIndex`), tel que HP2 et HP3
+    l'écrivent dans leurs sauvegardes : signe et 6 bits, puis 7 bits par octet.
+
+    Recopiée à l'identique dans `folio_hp2` et `folio_hp3` jusqu'au 2026-10-25.
+    """
+    a = abs(v)
+    octets = bytearray([(0x80 if v < 0 else 0) | (a & 0x3F)])
+    a >>= 6
+    if a:
+        octets[0] |= 0x40
+    while a:
+        b = a & 0x7F
+        a >>= 7
+        octets.append(b | (0x80 if a else 0))
+    return bytes(octets)
+
+
 def la_derniere_jouee[P: PartieLue](releves: Sequence[P]) -> P | None:
     """Celui que le jeu a écrit en dernier : la partie qu'on reprend. Parmi les
     lisibles d'abord, sinon un emplacement illisible ouvrirait sur du vide."""

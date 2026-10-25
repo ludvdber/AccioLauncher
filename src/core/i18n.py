@@ -188,6 +188,23 @@ def get_language() -> str:
     return _lang
 
 
+def texte_dans(valeur: object, langue: str) -> str:
+    """Un texte de catalogue (chaîne, ou `{code: texte}`) dans `langue`, sinon dans
+    la langue source ; "" si rien d'utilisable. Pure.
+
+    Recopiée à l'identique dans `atelier` et `nouveautes` jusqu'au 2026-10-25.
+    """
+    if isinstance(valeur, str):
+        return valeur.strip()
+    if not isinstance(valeur, dict):
+        return ""
+    for code in (langue, SOURCE_LANGUAGE):
+        texte = valeur.get(code)
+        if isinstance(texte, str) and texte.strip():
+            return texte.strip()
+    return ""
+
+
 def tr(text: str) -> str:
     """Traduit une chaîne source française vers la langue active.
 

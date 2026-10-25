@@ -224,8 +224,8 @@ def _proprietes_cartes(hgame: Path) -> tuple[dict[str, int], dict[str, str]]:
     dialog, carte = p.indice_nom("dialogId"), p.indice_nom("CardID")
     if dialog is None:
         return {}, {}
-    motif = re.compile(re.escape(_compact(dialog) + b"\x22") + b"(....)", re.DOTALL)
-    motif_code = (re.compile(re.escape(_compact(carte)) + rb"\x5d\x06\x05([A-Z]{2}[0-9]{2})\x00")
+    motif = re.compile(re.escape(folio.index_compact(dialog) + b"\x22") + b"(....)", re.DOTALL)
+    motif_code = (re.compile(re.escape(folio.index_compact(carte)) + rb"\x5d\x06\x05([A-Z]{2}[0-9]{2})\x00")
                   if carte is not None else None)
     numeros, codes = {}, {}
     for classe, octets in p.classes("WC_").items():
@@ -236,19 +236,6 @@ def _proprietes_cartes(hgame: Path) -> tuple[dict[str, int], dict[str, str]]:
         if code is not None:
             codes[classe] = code.group(1).decode("ascii")
     return numeros, codes
-
-
-def _compact(v: int) -> bytes:
-    a = abs(v)
-    octets = bytearray([(0x80 if v < 0 else 0) | (a & 0x3F)])
-    a >>= 6
-    if a:
-        octets[0] |= 0x40
-    while a:
-        b = a & 0x7F
-        a >>= 7
-        octets.append(b | (0x80 if a else 0))
-    return bytes(octets)
 
 
 def noms_cartes(system: Path, langue: str) -> dict[str, str]:
