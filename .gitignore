@@ -116,3 +116,7 @@ sessions.json
 *.7z
 *.7z.[0-9][0-9][0-9]
 *.part
+
+# Images sources des médailles (ChatGPT, 1024 px, 18 Mo) : seules les versions
+# 256 px préparées par tools/preparer_medailles.py vont dans assets/medailles.
+Accio_Medailles/

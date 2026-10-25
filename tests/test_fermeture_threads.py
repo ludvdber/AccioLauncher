@@ -5,10 +5,10 @@ processus** (`0xC0000409` sous Windows, SIGABRT ailleurs). Un test ordinaire
 emporterait pytest avec lui, et le rapport ne dirait même pas quel test a fauté.
 D'où le sous-processus, comme pour `test_rendu_dpi.py`.
 
-Le programme rejoue la séquence EXACTE de `main.py` — `app.exec()`, fermeture,
-puis sortie de la fonction, moment où la fenêtre est réellement détruite. C'est
-cette dernière étape qui compte : `window.close()` seul ne détruit rien, et une
-sonde qui s'arrêtait là concluait à tort que tout allait bien.
+Le programme rejoue la séquence de `main.py` — `app.exec()`, fermeture, sortie
+par `os._exit` — et détruit en plus la fenêtre, explicitement, avant de sortir.
+C'est cette destruction qui compte : `window.close()` seul ne détruit rien, et
+une sonde qui s'arrêtait là concluait à tort que tout allait bien.
 
 Le cas « naif » rejoue l'ancien code (attente dont on jette le résultat) et doit
 ÉCHOUER : sans lui, ce fichier ne prouverait pas qu'il sait détecter le défaut.
@@ -26,11 +26,12 @@ pytest.importorskip("pytestqt")
 RACINE = Path(__file__).resolve().parent.parent
 
 PROGRAMME = r'''
-import os, sys, tempfile
+import faulthandler, os, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, %(racine)r)
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
+from PyQt6 import sip
 from PyQt6.QtCore import QThread, QTimer
 from PyQt6.QtWidgets import QApplication
 
@@ -121,12 +122,22 @@ def lancer():
     QTimer.singleShot(300, app.quit)
     app.exec()
     del faux
+    # La fenetre est detruite ICI, explicitement, AVANT l'application. Laissee
+    # a la mort de la frame, Python liberait `app` (premiere variable locale)
+    # avant `window` : une QApplication detruite sous une fenetre vivante,
+    # 0xC0000005 au hasard en CI (2026-10-25, 3.15.1, cas jeu, aucune sortie).
+    # C'est cette destruction qui abandonne le processus si le thread tourne
+    # encore (qFatal) : le cas « naif » doit donc mourir sur cette ligne.
+    sip.delete(window)
     return 0
 
 
-code = lancer()   # la frame meurt ici : la fenetre est detruite, comme main.py
+faulthandler.enable()
+code = lancer()
 print("FERMETURE PROPRE", flush=True)
-sys.exit(code)
+# Comme main.py : pas de finalisation de l'interpreteur (sip y detruit le reste
+# dans un ordre qu'il ne maitrise pas).
+os._exit(code)
 '''
 
 
