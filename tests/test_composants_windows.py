@@ -96,6 +96,25 @@ class TestSignature:
         assert lus[-1][0] in ("NotSigned", "UnknownError")
 
 
+    def test_powershell_7_ne_lui_passe_pas_ses_modules(self, monkeypatch, tmp_path):
+        """Hérité d'un terminal PowerShell 7, PSModulePath fait échouer Windows
+        PowerShell sans un mot : la CI était rouge, et un joueur lancé depuis ce
+        terminal se voyait refuser les installeurs Microsoft."""
+        import subprocess
+        monkeypatch.setattr(cw.sys, "platform", "win32")
+        monkeypatch.setattr("src.core.win_utils.dossier_systeme", lambda: r"C:\Windows\System32")
+        monkeypatch.setenv("PSModulePath", r"C:\Program Files\PowerShell\7\Modules")
+        vus = {}
+
+        def run(args, **k):
+            vus.update(k["env"])
+            return subprocess.CompletedProcess(args, 0, b"Valid|" + self.SUJET.encode(), b"")
+        monkeypatch.setattr(cw.subprocess, "run", run)
+        assert cw.signature_microsoft(tmp_path / "vc.exe")
+        assert not any(c.upper() == "PSMODULEPATH" for c in vus)
+        assert vus["ACCIO_FICHIER"] == str(tmp_path / "vc.exe")
+
+
 class _Fil(cw.InstallationComposants):
     """Le vrai fil, réseau et signature bouchonnés."""
 

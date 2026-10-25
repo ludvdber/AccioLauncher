@@ -317,7 +317,11 @@ class TestLectureCinematique:
 
     def test_la_narration_finit_sa_phrase(self, vue, monkeypatch):
         """DL03 : 85 s de voix pour 64 s d'image. La fin de l'image n'arrête pas la voix."""
-        from PyQt6.QtMultimedia import QMediaPlayer
+        from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QMediaPlayer
+        if not MULTIMEDIA_DISPONIBLE:
+            # Runner Ubuntu sans libpulse : QtMultimedia ne se charge pas, la page
+            # ne crée alors aucune voix, il n'y a rien à attendre.
+            pytest.skip("QtMultimedia absent de cette machine")
         win, page, _ordre = vue
         page.jouer("hp3", "SiriusPhoto", "x")
 

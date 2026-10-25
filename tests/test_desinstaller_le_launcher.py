@@ -103,12 +103,17 @@ class TestScriptLinux:
         """Le vrai script, sur des dossiers jetables : il attend la mort du
         processus, efface les cibles, et ne retire « V: » que vide."""
         import subprocess
+        import threading
         cible = tmp_path / "_Launcher"
         (cible / "logs").mkdir(parents=True)
         vide, plein = tmp_path / "vide", tmp_path / "plein"
         vide.mkdir()
         (plein / "HP1").mkdir(parents=True)
         dormeur = subprocess.Popen(["sleep", "1"])
+        # Récolté PENDANT l'attente du script : un enfant mort et pas encore attendu
+        # reste un zombie, `kill -0` le croit vivant et le script tourne jusqu'au
+        # délai (rouge en CI le 2026-10-25). Le vrai launcher n'est pas notre enfant.
+        threading.Thread(target=dormeur.wait, daemon=True).start()
         subprocess.run(["/bin/sh", "-c", d._SCRIPT_SH, "test", str(cible), f"V:{vide}", f"V:{plein}"],
                        env={"ACCIO_PID": str(dormeur.pid), "PATH": "/usr/bin:/bin"}, timeout=30)
         dormeur.wait()

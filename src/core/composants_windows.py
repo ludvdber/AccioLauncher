@@ -171,7 +171,11 @@ def signature_microsoft(fichier: Path) -> bool:
 
     powershell = Path(dossier_systeme()) / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     commande = base64.b64encode(_SCRIPT_SIGNATURE.encode("utf-16-le")).decode("ascii")
-    env = {**os.environ, "ACCIO_FICHIER": str(fichier)}
+    # Sans PSModulePath : lancé depuis un terminal PowerShell 7 (ou la CI, dont c'est le shell),
+    # il en hérite, Windows PowerShell charge alors le module de sécurité de PowerShell 7,
+    # échoue, et ne répond RIEN (vu le 2026-10-25). Absent, il reprend ses propres modules.
+    env = {k: v for k, v in os.environ.items() if k.upper() != "PSMODULEPATH"}
+    env["ACCIO_FICHIER"] = str(fichier)
     try:
         # PowerShell par chemin système ABSOLU (règle 1), liste d'arguments, aucun shell ; le script
         # est une constante d'ici, et le fichier arrive par l'environnement, jamais dans la commande.
