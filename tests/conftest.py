@@ -29,6 +29,12 @@ os.chdir(Path(__file__).resolve().parents[1])
 from PyQt6 import QtNetwork  # noqa: F401,E402
 import pytest  # noqa: E402
 
+# Les tests tournent comme le launcher : modules `src.*` chargés à leur premier
+# usage sous Python 3.15 (`main.main` fait le même appel).
+from src.ui.imports_paresseux import activer as _activer_imports_paresseux  # noqa: E402
+
+_activer_imports_paresseux()
+
 
 @pytest.fixture(autouse=True)
 def _config_hors_du_vrai_dossier(tmp_path, monkeypatch):

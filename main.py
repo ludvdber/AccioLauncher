@@ -84,6 +84,12 @@ def _create_splash(faits_du_jour: bool):
 
 
 def main():
+    # Tout premier : les modules du launcher importés ensuite se chargent à leur
+    # premier usage (Python 3.15), et les modules d'extension Qt sont créés
+    # maintenant, avant tout objet Qt (règle 5).
+    from src.ui.imports_paresseux import activer as activer_imports_paresseux
+    _paresseux = activer_imports_paresseux()
+
     # AVANT le logging : le journal s'ouvre dans `_Launcher/logs/`, et un
     # `RotatingFileHandler` qui tient l'ancien fichier ouvert empêcherait de le
     # déplacer. Avant `Config.exists()` aussi, sinon un `config.json` resté à
@@ -101,6 +107,7 @@ def main():
         print(f"Impossible d'initialiser le logging : {exc}", file=sys.stderr)
 
     log = logging.getLogger(__name__)
+    log.info("Imports paresseux : %s", "actifs" if _paresseux else "absents de cet interpréteur")
     if _deplaces:
         log.info("Arborescence rangée dans %s : %s",
                  LOG_DIR.parent.name, ", ".join(_deplaces))
