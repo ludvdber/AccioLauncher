@@ -1,6 +1,86 @@
 {
   "versions": [
     {
+      "version": "1.2.4",
+      "nom": "Sonorus",
+      "depuis": "1.2.3",
+      "points_forts": [
+        {
+          "icone": "film",
+          "titre": {
+            "fr": "Les cinématiques retrouvent leur son",
+            "en": "Cutscenes get their sound back",
+            "es": "Las cinemáticas recuperan su sonido"
+          },
+          "texte": {
+            "fr": "Le nouvel onglet Collections réunit vos captures, la musique et les cinématiques de vos jeux installés. Du Prisonnier d'Azkaban au Prince de sang-mêlé, les cinématiques se regardent avec leur son, s'avancent, se reculent et s'enregistrent.",
+            "en": "The new Collections tab gathers your screenshots, the music and the cutscenes of your installed games. From Prisoner of Azkaban to Half-Blood Prince, cutscenes play with their sound, can be skipped forward or back, and saved.",
+            "es": "La nueva pestaña Colecciones reúne tus capturas, la música y las cinemáticas de tus juegos instalados. De El prisionero de Azkaban a El misterio del príncipe, las cinemáticas se ven con su sonido, se adelantan, se retroceden y se guardan."
+          }
+        },
+        {
+          "icone": "folio",
+          "titre": {
+            "fr": "Le Carnet et vos succès",
+            "en": "The Notebook and your achievements",
+            "es": "El Cuaderno y tus logros"
+          },
+          "texte": {
+            "fr": "Mes années devient le Carnet, qui s'ouvre sur le Folio de chaque jeu. Les succès que prouvent vos sauvegardes y sont rangés, et un succès obtenu s'annonce au retour de la partie.",
+            "en": "My Years becomes the Notebook, which opens on each game's Folio. The achievements your saves prove are listed there, and a new one is announced when you come back from the game.",
+            "es": "Mis años pasa a ser el Cuaderno, que se abre en el Folio de cada juego. Ahí están los logros que demuestran tus partidas, y uno nuevo se anuncia al volver del juego."
+          }
+        },
+        {
+          "icone": "play",
+          "titre": {
+            "fr": "Reprendre en un clic",
+            "en": "One-click Resume",
+            "es": "Continuar en un clic"
+          },
+          "texte": {
+            "fr": "Dans L'École des Sorciers, La Chambre des Secrets et Le Prisonnier d'Azkaban, Reprendre ouvre directement votre dernière partie, sans logos ni menu. Se désactive dans Paramètres › Sauvegardes.",
+            "en": "In Philosopher's Stone, Chamber of Secrets and Prisoner of Azkaban, Resume opens your last game directly, with no logos or menu. It can be turned off in Settings › Saves.",
+            "es": "En La piedra filosofal, La cámara secreta y El prisionero de Azkaban, Continuar abre directamente tu última partida, sin logotipos ni menú. Se desactiva en Ajustes › Partidas guardadas."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Un morceau des jeux peut devenir la musique de fond du launcher, et un haut-parleur coupe tout le son d'un clic.",
+            "en": "A track from the games can become the launcher's background music, and a speaker button mutes all sound in one click.",
+            "es": "Una pista de los juegos puede ser la música de fondo del launcher, y un altavoz silencia todo el sonido con un clic."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Une visite guidée présente le launcher au premier lancement ; elle se revoit depuis les Paramètres.",
+            "en": "A guided tour shows the launcher on first start; it can be replayed from Settings.",
+            "es": "Un recorrido guiado presenta el launcher en el primer inicio; se puede volver a ver desde Ajustes."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Toutes les connexions passent par le magasin de certificats de Windows, et les outils que le launcher télécharge sont vérifiés par leur empreinte.",
+            "en": "Every connection goes through the Windows certificate store, and the tools the launcher downloads are checked by their fingerprint.",
+            "es": "Todas las conexiones pasan por el almacén de certificados de Windows, y las herramientas que descarga el launcher se verifican por su huella."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "La Chambre des Secrets : une sauvegarde remise à une version précédente ne mélange plus deux parties. Les copies gardent maintenant la partie entière.",
+            "en": "Chamber of Secrets: a save restored to an earlier version no longer mixes two games. Copies now keep the whole game.",
+            "es": "La cámara secreta: una partida devuelta a una versión anterior ya no mezcla dos partidas. Las copias guardan ahora la partida entera."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.2.3",
       "nom": "Reparo",
       "depuis": "1.2.2",

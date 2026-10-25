@@ -303,6 +303,22 @@ def est_nouveau_correctif(ini: Path) -> bool:
     return _bornes(lignes, _MARQUE_V2) is not None
 
 
+def portes_par(ini: Path | None, reglages: tuple[Reglage, ...]) -> tuple[Reglage, ...]:
+    """Les réglages dont l'ini du nouveau correctif porte la section.
+
+    Une section que la DLL installée ne connaît pas encore ([Accio.Hardcore]
+    avant le correctif 2.2.0) ne s'affiche pas : son écriture échouerait. Sans
+    ini lisible ou avec l'ancien correctif, tout reste, et la page dit pourquoi.
+    """
+    if ini is None or not est_nouveau_correctif(ini):
+        return reglages
+    try:
+        lignes, _ = _lire(ini)
+    except OSError:
+        return reglages
+    return tuple(r for r in reglages if _bornes(lignes, r.section) is not None)
+
+
 def lire(ini: Path, reglage: Reglage) -> Etat:
     lignes, _ = _lire(ini)
     if reglage.ident == "touches_zqsd":

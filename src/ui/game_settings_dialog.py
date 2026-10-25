@@ -131,11 +131,10 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._boutons: dict[str, QRadioButton] = {}
         # Réglages du correctif que le catalogue déclare confirmés pour ce jeu,
         # et son ini (à côté de l'exécutable, là où le correctif le lit).
-        self._reglages = reglages_correctif.reglages_du_jeu(game.fix_settings)
-        self._ini: Path | None = (
-            reglages_correctif.ini_du_correctif(
-                manager.config.install_path / Path(game.executable).parent)
-            if self._reglages else None)
+        declares = reglages_correctif.reglages_du_jeu(game.fix_settings)
+        self._ini: Path | None = (reglages_correctif.ini_du_correctif(
+            manager.config.install_path / Path(game.executable).parent) if declares else None)
+        self._reglages = reglages_correctif.portes_par(self._ini, declares)
         # HP3 : pas de correctif, mais le fichier de son traducteur D3D8 (`reglages_graphiques`).
         conf = reglages_graphiques.chemin(manager.config.install_path / Path(game.executable).parent)
         self._conf_graph: Path | None = (

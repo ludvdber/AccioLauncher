@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.46",
+  "catalog_version": "0.47",
   "contributors": [
     {
       "name": "ASTeam",
@@ -1425,7 +1425,9 @@
         "vibrations",
         "nettete",
         "textures_lointaines",
-        "ombres_nettes"
+        "ombres_nettes",
+        "degats_recus",
+        "degats_infliges"
       ],
       "dll_overrides": [
         "d3d9",
@@ -1682,7 +1684,11 @@
         "manette_playstation",
         "vibrations",
         "nettete",
-        "ombres_nettes"
+        "ombres_nettes",
+        "degats_recus",
+        "degats_infliges",
+        "reaction_ennemis",
+        "sorts_retires"
       ],
       "dll_overrides": [
         "d3d9",

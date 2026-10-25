@@ -358,6 +358,21 @@ class TestModeDifficile:
             rc.ecrire(ini, rc.REGLAGES["degats_recus"], 2)
         assert ini.read_bytes() == avant
 
+    def test_cache_tant_que_le_correctif_ne_porte_pas_la_section(self, ini, tmp_path):
+        """Le catalogue le déclare avant le correctif 2.2.0 : la v2.1.1 publiée n'a pas la section."""
+        declares = rc.reglages_du_jeu(["arriere_plan", *self.IDENTS])
+        assert [r.ident for r in rc.portes_par(ini, declares)] == ["arriere_plan"]
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Hardcore]\r\n")
+        assert rc.portes_par(ini, declares) == declares
+
+    def test_sans_ini_ou_avec_l_ancien_correctif_tout_reste(self, tmp_path):
+        declares = rc.reglages_du_jeu(["arriere_plan", "degats_recus"])
+        assert rc.portes_par(None, declares) == declares
+        assert rc.portes_par(tmp_path / "absent.ini", declares) == declares
+        ancien = tmp_path / "d3d9.ini"
+        ancien.write_bytes(INI_ANCIEN.encode("ascii"))
+        assert rc.portes_par(ancien, declares) == declares
+
 
 class TestLangueAuDemarrage:
     """HP6 : un réglage à choix TEXTUELS (la clé Language du correctif)."""
@@ -468,6 +483,14 @@ class TestFenetre:
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["arriere_plan"]), _manager(tmp_path))
         assert tr("Ces réglages arrivent avec la prochaine version du correctif "
                   "de ce jeu.") in _textes(dlg)
+
+    def test_le_mode_difficile_n_apparait_qu_avec_sa_section(self, qtbot, tmp_path):
+        from src.ui.toggle_switch import ToggleSwitch
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        dlg = _dialogue(qtbot, _jeu(tmp_path, ["arriere_plan", "degats_recus"]), _manager(tmp_path))
+        assert [r.ident for r in dlg._reglages] == ["arriere_plan"]
+        assert len(dlg.findChildren(ToggleSwitch)) == 1
 
     def test_un_interrupteur_ecrit_aussitot(self, qtbot, tmp_path):
         from src.ui.toggle_switch import ToggleSwitch
