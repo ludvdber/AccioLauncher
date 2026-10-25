@@ -68,7 +68,7 @@ def convertir(source: Path, cible: Path) -> Path | None:
         # Chemin absolu de l'exécutable, liste d'arguments, aucun shell.
         proc = subprocess.run(  # nosec B603
             [str(exe), "-o", tmp, str(source)],
-            capture_output=True, text=True, errors="replace", stdin=subprocess.DEVNULL,
+            capture_output=True, encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL,
             timeout=_DELAI_S, creationflags=_SANS_FENETRE,
         )
         if proc.returncode != 0 or os.path.getsize(tmp) <= 44:

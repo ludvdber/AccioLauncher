@@ -59,7 +59,7 @@ Un module absent de ces deux fichiers n'est pas documenté : l'y ajouter en le c
 
 ## Key Conventions
 
-- Type hints 3.10+ (`str | Path`) ; `pathlib.Path` partout.
+- Syntaxe Python 3.14 : `str | Path`, génériques `def f[T: Base]`, f-strings, aucun `from __future__ import annotations` (3.14 diffère les annotations) ; `pathlib.Path` partout. Toute sortie de programme lue en texte nomme son encodage (`tests/test_encodages_explicites.py`).
 - **mypy (2026-10-16)** : TOUT `src/core` est vérifié en **strict** par `build.bat`, `build.sh` et la CI ; la liste d'exception `[tool.mypy.overrides]` a été vidée puis retirée : ne pas la recréer, tout module neuf naît strict. Typer aussi ce qu'on touche dans `src/ui` quand c'est simple. Pas de `assert` pour rassurer mypy (retiré par `-O`, signalé par Bandit) : un vrai test (`if x is None: return`) ou un `TypeGuard`. Le typage ne coûte rien à l'exécution.
 - Le travail threadé utilise des `QThread` avec `progress` / `error` + **un signal de fin NOMMÉ** (`download_finished`, `install_finished`, `result`) — jamais `finished`, qui masquerait le natif. Déconnecter symétriquement (try/except `TypeError`) avant de mettre à None.
 - Annuler un `QThread` : `cancel()` puis `wait(3000)` avant de relâcher la référence ; au timeout, le garer dans `GameOperations._zombies` et le récolter via `finished`. **Ne jamais laisser un nouveau téléchargement rouvrir un `.part` qu'un vieux thread tient encore** (verrou Windows).

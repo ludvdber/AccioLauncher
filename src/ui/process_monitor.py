@@ -124,7 +124,8 @@ class ProcessMonitor(QObject):
             # vient d'un `executable` validé au parsing du catalogue.
             result = subprocess.run(  # nosec B603
                 [commande_systeme("tasklist.exe"), "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
-                capture_output=True, text=True, timeout=5,
+                # Page OEM de la console, nommée : implicite, l'encodage change en 3.15 (UTF-8).
+                capture_output=True, encoding="oem", errors="replace", timeout=5,
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
             return exe_name.lower() in result.stdout.lower()

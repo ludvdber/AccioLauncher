@@ -161,6 +161,13 @@ def _segments_de_progression(flux: IO[str]) -> Iterator[str]:
         yield reste.decode("utf-8", "replace")
 
 
+# 7z.exe écrit sur une console dans la page OEM (cp850) ; lue comme ANSI, la liste
+# rendait « Ph‚nix » pour « Phénix » et perdait le tiret long : la barrière Zip Slip
+# contrôlait d'autres noms que ceux écrits sur le disque (mesuré le 2026-10-25).
+# Sous Linux, 7zz écrit déjà en UTF-8 et un 7z système ancien ne connaît pas -scc.
+_SORTIE_UTF8 = ("-sccUTF-8",) if sys.platform == "win32" else ()
+
+
 def list_7z_entries(archive: Path, exe: str) -> list[str]:
     """Noms des entrées d'une archive 7z, via `7z l -slt`.
 
@@ -175,8 +182,8 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
     # `exe` est un chemin absolu (`find_7z_exe`), l'archive est la nôtre ;
     # liste d'arguments, aucun shell.
     proc = subprocess.run(  # nosec B603
-        [exe, "l", "-slt", "-ba", "-p", str(archive)],
-        capture_output=True, text=True, errors="replace",
+        [exe, "l", "-slt", "-ba", "-p", *_SORTIE_UTF8, str(archive)],
+        capture_output=True, encoding="utf-8", errors="replace",
         timeout=_LIST_TIMEOUT_S, **kwargs,
     )
     if proc.returncode != 0:
@@ -282,7 +289,7 @@ def extract_7z_subprocess(
     log.info("Extraction via %s : %s → %s", outil, archive, destination)
     # -snl- : ne jamais matérialiser de lien symbolique (un lien extrait pourrait
     # pointer hors du dossier d'installation et servir de relais d'écriture).
-    cmd = [exe, "x", str(archive), f"-o{destination}", "-y", "-bsp1", "-snl-"]
+    cmd = [exe, "x", str(archive), f"-o{destination}", "-y", "-bsp1", "-snl-", *_SORTIE_UTF8]
     kwargs: dict[str, Any] = {}
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
@@ -298,7 +305,7 @@ def extract_7z_subprocess(
         # la ligne, donc `cancelled()` n'est plus jamais testé. Vérifié : avec
         # DEVNULL, 7z rend la main immédiatement (code 255) au lieu d'attendre.
         stdin=subprocess.DEVNULL,
-        text=True, **kwargs,
+        encoding="utf-8", errors="replace", **kwargs,
     )
 
     # Sous Windows, le flux tel qu'il a toujours été lu. Ailleurs, découpé

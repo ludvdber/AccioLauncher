@@ -157,6 +157,24 @@ class TestSeptZip:
         monkeypatch.setattr(extractors, "Path", _PathSansEmbarque)
         assert extractors.find_7z_exe() is None
 
+    def test_la_barriere_lit_les_vrais_noms_accentues(self, tmp_path):
+        """Le vrai 7-Zip : lue dans la page de la console, la liste rendait
+        « Ph‚nix » pour « Phénix », et la barrière contrôlait d'autres noms
+        que ceux écrits sur le disque."""
+        import subprocess
+        exe = extractors.find_7z_exe()
+        if exe is None:
+            pytest.skip("aucun 7-Zip sur cette machine")
+        nom = "L'Ordre du Phénix — Édition"
+        (tmp_path / "src" / nom).mkdir(parents=True)
+        (tmp_path / "src" / nom / "Système.ini").write_text("x", encoding="utf-8")
+        archive = tmp_path / "essai.7z"
+        subprocess.run([exe, "a", str(archive), str(tmp_path / "src" / nom)],
+                       capture_output=True, check=True, timeout=60)
+        entrees = extractors.list_7z_entries(archive, exe)
+        assert extractors.premiers_niveaux(entrees) == {nom}
+        assert any(e.endswith("Système.ini") for e in entrees)
+
 
 class _PathSansEmbarque(type(Path())):
     """Un `Path` pour lequel aucun 7z.exe n'existe, ni embarqué ni installé."""

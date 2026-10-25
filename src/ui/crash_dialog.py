@@ -58,11 +58,8 @@ def github_issue_url(report: str) -> str:
     if len(report) > _MAX_ISSUE_BODY:
         body += "\n\n[rapport tronqué — coller la version complète depuis le presse-papiers]"
     title = f"[Crash] Accio Launcher v{APP_VERSION}"
-    # Pas de backslash dans une f-string : SyntaxError en Python 3.10/3.11
-    # (le projet garde la compat 3.10+ dans ses conventions).
-    fenced = "```\n" + body + "\n```"
     return (f"{_ISSUES_URL}?title={urllib.parse.quote(title)}"
-            f"&body={urllib.parse.quote(fenced)}")
+            f"&body={urllib.parse.quote(f'```\n{body}\n```')}")
 
 
 def construire_dialogue(report: str):
