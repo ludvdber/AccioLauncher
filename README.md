@@ -142,11 +142,11 @@ environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
 <table>
   <tr>
     <td width="50%"><img src="docs/screen_installed.jpg" alt="Un jeu installé, avec le temps de jeu"></td>
-    <td width="50%"><img src="docs/screen_stats.jpg" alt="Mes années à Poudlard : temps de jeu, sauvegardes et douze derniers mois"></td>
+    <td width="50%"><img src="docs/screen_stats.jpg" alt="Le relevé de scolarité du Carnet : temps de jeu, parties et douze derniers mois"></td>
   </tr>
   <tr>
     <td align="center"><sub>Un jeu installé et votre temps de jeu</sub></td>
-    <td align="center"><sub>Mes années à Poudlard : vos parties et vos sauvegardes</sub></td>
+    <td align="center"><sub>Le Carnet : votre temps de jeu, année par année</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screen_reglages.jpg" alt="Les réglages d'image d'un jeu"></td>
@@ -155,6 +155,14 @@ environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
   <tr>
     <td align="center"><sub>Les réglages de chaque jeu, avec leur coût</sub></td>
     <td align="center"><sub>Versions et nouveautés : on change en un clic, sans jamais rester sans jeu</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screen_folio.jpg" alt="Le folio d'une partie : cartes de Chocogrenouille, Coupe des Quatre Maisons et sorts appris"></td>
+    <td width="50%"><img src="docs/screen_cinematiques.jpg" alt="Les Collections : une cinématique du Prince de Sang-Mêlé avec sa barre de lecture"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Le folio de chaque partie, lu dans votre sauvegarde</sub></td>
+    <td align="center"><sub>Les Collections : musiques et cinématiques des jeux, avec leur son</sub></td>
   </tr>
 </table>
 

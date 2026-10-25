@@ -40,6 +40,18 @@ class TestVraieLecture:
         assert couleur.red() > 180 and couleur.green() < 80, couleur.name()
         assert not lecteur.is_playing, "la fin rend les ressources"
 
+    def test_la_duree_et_la_position_pour_la_barre_de_lecture(self, lecteur, qtbot):
+        durees = []
+        lecteur.duration_changed.connect(durees.append)
+        with qtbot.waitSignal(lecteur.position_changed, timeout=10000):
+            assert lecteur.play(str(VIDEO), muted=True)
+        qtbot.waitUntil(lambda: any(d > 0 for d in durees), timeout=10000)
+        assert 400 <= max(durees) <= 800              # 0,6 s
+        lecteur.pause()
+        lecteur.seek(300)
+        qtbot.waitUntil(lambda: lecteur.position >= 250, timeout=5000)
+        assert lecteur.duration == max(durees)
+
     def test_relancer_remplace_la_lecture_en_cours(self, lecteur, qtbot):
         assert lecteur.play(str(VIDEO), muted=True)
         premier = lecteur._player

@@ -137,8 +137,10 @@ class VideoPlayer(QObject):
         self._player.setVideoOutput(self._sink)
         self._player.setAudioOutput(self._audio)
         self._player.mediaStatusChanged.connect(self._on_media_status)
-        self._player.positionChanged.connect(self.position_changed)
-        self._player.durationChanged.connect(self.duration_changed)
+        # Relayés par des méthodes : un signal qint64 ne se branche pas sur un
+        # signal int (« connect() failed », vu au premier vrai lancement).
+        self._player.positionChanged.connect(self._sur_position)
+        self._player.durationChanged.connect(self._sur_duree)
         self._position_en_attente = debut_ms if debut_ms > 0 else -1
 
         self._player.setSource(QUrl.fromLocalFile(video_path))
@@ -154,8 +156,8 @@ class VideoPlayer(QObject):
             self._player.stop()
             self._player.setSource(QUrl())
             self._player.mediaStatusChanged.disconnect(self._on_media_status)
-            self._player.positionChanged.disconnect(self.position_changed)
-            self._player.durationChanged.disconnect(self.duration_changed)
+            self._player.positionChanged.disconnect(self._sur_position)
+            self._player.durationChanged.disconnect(self._sur_duree)
             self._sink.videoFrameChanged.disconnect(self._on_frame)
             self._player.deleteLater()
             self._sink.deleteLater()
@@ -211,6 +213,12 @@ class VideoPlayer(QObject):
                 self._image_vide_signalee = True
                 log.warning("Vidéo : image reçue mais non convertible (format %s, support %s)",
                             frame.pixelFormat(), frame.handleType())
+
+    def _sur_position(self, ms: int) -> None:
+        self.position_changed.emit(int(ms))
+
+    def _sur_duree(self, ms: int) -> None:
+        self.duration_changed.emit(int(ms))
 
     def _on_media_status(self, status) -> None:
         if self._position_en_attente >= 0 and status in (
