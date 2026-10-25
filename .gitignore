@@ -51,7 +51,8 @@ docs/social_preview.png
 # cache) ne quittaient jamais la machine où elles avaient été écrites. Un clone
 # frais repartait sans elles, donc reproduisait les mêmes défauts.
 # `.claudeignore` est suivi pour la même raison : il évite à quiconque ouvre ce
-# dépôt de faire lire 74 Mo de binaires à son assistant.
+# dépôt de faire lire ses binaires à son assistant (21,5 Mo suivis, relevé le
+# 2026-10-25 : 7-Zip, vgmstream, images, polices).
 
 # OS
 Thumbs.db
