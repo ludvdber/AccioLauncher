@@ -289,6 +289,12 @@ class TestModeDifficile:
         ini.write_bytes(ini.read_bytes() + b"[Accio.Hardcore]\r\nDamageTaken=1\r\n")
         return ini
 
+    def test_tout_le_mode_difficile_est_en_beta(self):
+        hardcore = {r.ident for r in rc.REGLAGES.values() if r.section == "Accio.Hardcore"}
+        assert hardcore == {*self.IDENTS, "sorts_retires"}
+        assert all(rc.REGLAGES[i].beta for i in hardcore)
+        assert not any(r.beta for r in rc.REGLAGES.values() if r.ident not in hardcore)
+
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:
             assert rc.lire(ini_dur, rc.REGLAGES[ident]) == rc.Etat(1)

@@ -107,6 +107,9 @@ class Reglage:
     # `exclut` — l'allumer éteint l'autre, dans l'ini comme à l'écran.
     depend_de: str = ""
     exclut: str = ""
+    # Encore en essai (Ludo, 2026-10-25 : « proposer avec un BETA ») : une
+    # étiquette « Bêta » à côté du nom, et la fiche du « ? » le dit.
+    beta: bool = False
 
 
 # L'ordre est celui de l'affichage. L'aide est une description COMPLÈTE : elle
@@ -365,18 +368,19 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Dégâts reçus",
             "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
             "jeu le prend en compte dans la seconde.",
-            choix=(1, 1.5, 2, 3), zero="D'origine", format_choix="×{}"),
+            choix=(1, 1.5, 2, 3), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("degats_infliges", "Accio.Hardcore", "DamageDealt",
             "Dégâts de vos sorts",
             "Multiplie les dégâts des sorts de Harry : à ×0,5, les ennemis tiennent deux "
             "fois plus longtemps. Se change aussi pendant la partie.",
-            choix=(1, 0.75, 0.5, 0.33), zero="D'origine", format_choix="×{}"),
+            choix=(1, 0.75, 0.5, 0.33), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("reaction_ennemis", "Accio.Hardcore", "EnemyReaction",
             "Réaction des ennemis",
             "Les ennemis attendent moins entre deux attaques, esquivent et lancent Protego "
             "plus souvent. Vaut pour les ennemis rencontrés après le changement.",
             choix=(1, 1.5, 2, 3), zero="D'origine",
-            etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables"))),
+            etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables")),
+            beta=True),
     # RemovedSpells (2026-10-24) : le correctif répond « non » quand le jeu demande
     # si Harry connaît ces sorts ; les drapeaux SpellUnlock_* de la sauvegarde ne
     # bougent pas, donc revenir au premier choix rend tout. Seulement des sorts de
@@ -388,7 +392,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "eux. Votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt. Une "
             "leçon qui demande un sort retiré ne peut pas se réussir : rendez-le le temps de "
             "la leçon, sans quitter la partie.",
-            choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES),
+            choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES,
+            beta=True),
 )}
 
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,

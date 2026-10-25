@@ -189,6 +189,90 @@ class TestRevenir:
         assert os.access(save, os.W_OK)
 
 
+HP2_AVEC = Sauvegardes(racine="documents", dossiers=("Harry Potter II/Save",),
+                       fichiers="Slot*/Save0.usa", premier=1,
+                       compagnons=("*_pa.usa", "Save0.bmp"))
+HP1_AVEC = Sauvegardes(racine="documents", dossiers=("Harry Potter/Save",),
+                       fichiers="Save*.usa", compagnons=("GameSaveInfo{n}",))
+
+
+class TestCompagnons:
+    """Les états de zone de HP2 et le `GameSaveInfoN` de HP1 vont avec leur sauvegarde."""
+
+    def test_copies_et_remis_avec_la_sauvegarde(self, save_dir):
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"partie A", T0)
+        _ecrire(slot / "Grounds_pa.usa", b"zone A", T0 - timedelta(minutes=5))
+        assert cs.avant_partie("hp2", HP2_AVEC) == 1
+        # La partie continue : la zone change, une autre zone apparaît.
+        _ecrire(slot / "Save0.usa", b"partie B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Grounds_pa.usa", b"zone B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Willow_pa.usa", b"zone neuve", T0 + timedelta(hours=1))
+        avant = cs.versions("hp2")["Slot1/Save0.usa"][-1]
+        assert cs.revenir("hp2", HP2_AVEC, avant)
+        assert (slot / "Save0.usa").read_bytes() == b"partie A"
+        assert (slot / "Grounds_pa.usa").read_bytes() == b"zone A"
+        assert not (slot / "Willow_pa.usa").exists()     # visitée après cette version
+        # Le présent est revenu en entier.
+        present = cs.versions("hp2")["Slot1/Save0.usa"][0]
+        assert cs.revenir("hp2", HP2_AVEC, present)
+        assert (slot / "Grounds_pa.usa").read_bytes() == b"zone B"
+        assert (slot / "Willow_pa.usa").read_bytes() == b"zone neuve"
+
+    def test_la_version_prend_la_date_du_plus_recent(self, save_dir):
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"A", T0)
+        _ecrire(slot / "Grounds_pa.usa", b"z", T0 + timedelta(seconds=40))
+        cs.avant_partie("hp2", HP2_AVEC)
+        assert [v.quand for v in cs.versions("hp2")["Slot1/Save0.usa"]] == \
+            [T0 + timedelta(seconds=40)]
+
+    def test_une_version_d_avant_les_compagnons_les_recoit(self, save_dir):
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"A", T0)
+        _ecrire(slot / "Grounds_pa.usa", b"z", T0)
+        cs.avant_partie("hp2", HP2)                      # launcher d'avant
+        assert cs.avant_partie("hp2", HP2_AVEC) == 1     # complétée, pas doublée
+        versions = cs.versions("hp2")["Slot1/Save0.usa"]
+        assert len(versions) == 1
+        assert (versions[0].chemin.parent / "2026-10-01_201500" / "Grounds_pa.usa.gz").is_file()
+
+    def test_une_version_d_avant_ne_retire_rien(self, save_dir):
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"A", T0)
+        cs.avant_partie("hp2", HP2)
+        _ecrire(slot / "Save0.usa", b"B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Grounds_pa.usa", b"z", T0 + timedelta(hours=1))
+        assert cs.revenir("hp2", HP2_AVEC, cs.versions("hp2")["Slot1/Save0.usa"][-1])
+        assert (slot / "Save0.usa").read_bytes() == b"A"
+        assert (slot / "Grounds_pa.usa").read_bytes() == b"z"
+
+    def test_le_numero_choisit_le_compagnon(self, tmp_path):
+        save = tmp_path / "Save2.usa"
+        for nom in ("Save2.usa", "GameSaveInfo2", "GameSaveInfo0", "Save0.usa"):
+            (tmp_path / nom).write_bytes(b"x")
+        assert [p.name for p in cs.compagnons(save, HP1_AVEC)] == ["GameSaveInfo2"]
+
+    def test_eclaircir_emporte_les_compagnons(self, tmp_path):
+        maintenant = datetime(2026, 10, 3, 12, 0, 0)
+        for i in range(8):
+            stamp = (maintenant - timedelta(minutes=i)).strftime(cs._FORMAT)
+            (tmp_path / f"{stamp}.gz").write_bytes(b"x")
+            (tmp_path / stamp).mkdir()
+            (tmp_path / stamp / "Grounds_pa.usa.gz").write_bytes(b"x")
+        assert cs.eclaircir(tmp_path, maintenant, original_present=True) == 3
+        assert len(list(tmp_path.glob("*.gz"))) == len([p for p in tmp_path.iterdir() if p.is_dir()])
+
+    def test_taille_compte_les_compagnons(self, save_dir):
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"A", T0)
+        cs.avant_partie("hp2", HP2)
+        seule = cs.versions("hp2")["Slot1/Save0.usa"][0].taille
+        _ecrire(slot / "Grounds_pa.usa", os.urandom(4000), T0)
+        cs.avant_partie("hp2", HP2_AVEC)
+        assert cs.versions("hp2")["Slot1/Save0.usa"][0].taille > seule + 3000
+
+
 class TestLancement:
     def test_launch_game_lance_la_copie_avant_le_jeu(self):
         """Câblage : la copie part AVANT le processus du jeu, et suit le réglage."""

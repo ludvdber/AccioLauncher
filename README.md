@@ -9,6 +9,7 @@
 [![Version](https://img.shields.io/badge/version-1.2.3-d6a72c?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases/latest)
 [![Téléchargements](https://img.shields.io/github/downloads/ludvdber/AccioLauncher/total?style=for-the-badge&label=t%C3%A9l%C3%A9chargements&color=d6a72c&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases)
 [![Windows 10 et 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?style=for-the-badge&labelColor=0d0d1a)](https://github.com/ludvdber/AccioLauncher/releases/latest)
+[![Python 3.15](https://img.shields.io/badge/Python-3.15-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=0d0d1a)](https://www.python.org/downloads/)
 [![Discord](https://img.shields.io/badge/Discord-rejoindre-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=0d0d1a)](https://discord.gg/TNwDQd7KGe)
 
 **Les huit jeux Harry Potter PC, téléchargés, installés et lancés en un clic.**
@@ -186,7 +187,12 @@ proposer. Tout est expliqué dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
 <br>
 
-Python 3.15, PyQt6, httpx, truststore. Windows 10 et 11, et Linux : tout
+**Python 3.15 est obligatoire** pour lancer le launcher depuis ses sources, le
+tester ou le construire : `pyproject.toml` refuse toute version plus ancienne,
+et `build.bat` s'arrête sans elle. L'exécutable et l'AppImage embarquent leur propre Python : les joueurs n'ont
+rien à installer.
+
+PyQt6, httpx, truststore. Windows 10 et 11, et Linux : tout
 appel propre à Windows est isolé derrière `sys.platform`, et les jeux y passent
 par Proton ou Wine (`src/core/compat.py`, [docs/LINUX.md](docs/LINUX.md)).
 
@@ -289,6 +295,10 @@ the fixes cost: domain names, hosting, backups and development tools. It gives a
 
 **Translators welcome:** a language is one text file, no code involved — see
 [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
+
+**Developers:** running from source, testing or building requires
+**Python 3.15** (`pyproject.toml` refuses older versions). The `.exe` and the
+AppImage bring their own Python: players install nothing.
 
 **License:** GNU GPL v3 only, with [additional terms](ADDITIONAL-TERMS.md)
 (versions up to 1.0.6 remain MIT). The Accio Launcher name and logo are not

@@ -100,6 +100,22 @@ _MARGES_PAGE = (40, 28, 40, 28)
 # préréglages) et la carte des effets.
 _SEUIL_IMAGE = 860
 
+def _texte_beta() -> str:
+    return tr("Bêta : ce réglage est encore en essai. Ce qui ne va pas se signale "
+              "sur le Discord du projet.")
+
+
+def _etiquette_beta() -> QLabel:
+    """« BÊTA » à côté du nom d'un réglage encore en essai."""
+    etiquette = QLabel(tr("Bêta"))
+    etiquette.setFont(police(11))
+    etiquette.setToolTip(_texte_beta())
+    etiquette.setStyleSheet(themed(
+        "color: #d6a72c; background: transparent; border: 1px solid rgba(214, 167, 44, 0.55);"
+        " border-radius: 8px; padding: 1px 7px;"))
+    return etiquette
+
+
 class GameSettingsDialog(RubriquesDuJeu, QDialog):
     """Fenêtre de réglages d'un jeu. Tout choix s'écrit AUSSITÔT.
 
@@ -506,6 +522,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if reglage.se_voit:
                 paragraphes.append(f'<span style="color:{_COULEUR_SE_VOIT}">'
                                    f"{e(tr('Se voit nettement à l’écran.'))}</span>")
+            if reglage.beta:
+                paragraphes.append(e(_texte_beta()))
             declares = {r.ident for r in self._reglages}
 
             def deja_dit(autre) -> bool:
@@ -761,6 +779,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         libelle.setFont(police(14))
         libelle.setStyleSheet("color: #ecebf3; background: transparent;")
         h.addWidget(libelle, stretch=1)
+        if reglage is not None and reglage.beta:
+            h.addWidget(_etiquette_beta(), alignment=Qt.AlignmentFlag.AlignVCenter)
         aide = BoutonAide(libelle_txt, self._fiche(aide_txt, reglage))
         h.addWidget(aide, alignment=Qt.AlignmentFlag.AlignVCenter)
         self._aides[reglage.ident if reglage is not None else libelle_txt] = aide

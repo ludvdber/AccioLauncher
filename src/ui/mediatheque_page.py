@@ -24,13 +24,17 @@ du bouton de lecture (invisible, 2026-10-24) et des badges. D'où `#transparent`
 Le modèle est `mediatheque.Mediatheque` : la page ne lit rien elle-même.
 """
 
+import logging
+import shutil
 from html import escape
+from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -55,6 +59,8 @@ from src.ui.mediatheque import CAPTURES, CINEMATIQUES, MUSIQUE, Mediatheque
 from src.ui.theme import accent_qcolor, themed
 from src.ui.utils import clear_layout, open_local_path, zone_defilable
 from src.ui.video_player import VideoPlayer
+
+log = logging.getLogger(__name__)
 
 _LARGEUR_PLATINE = 340
 _DISQUE = 220
@@ -770,8 +776,25 @@ class _LigneCine(QFrame):
                 _repolir(self._voir)
 
 
+def _minutes(ms: int) -> str:
+    """« 1:05 » : une durée de cinématique, en minutes et secondes."""
+    minutes, secondes = divmod(max(0, ms) // 1000, 60)
+    return f"{minutes}:{secondes:02d}"
+
+
+def _nom_de_fichier(texte_libre: str) -> str:
+    """Un titre de cinématique en nom de fichier sûr partout (Windows et Linux)."""
+    nom = "".join("_" if c in '<>:"/\\|?*' or ord(c) < 32 else c for c in texte_libre)
+    return nom.strip(" .") or "cinematique"
+
+
 class _VueCinematiques(QWidget):
-    """La liste des cinématiques du jeu choisi à gauche, l'écran à droite."""
+    """La liste des cinématiques du jeu choisi à gauche, l'écran à droite.
+
+    Une barre de lecture (Ludo, 2026-10-25 : « comme un vrai lecteur où on peut
+    avancer ») : sa longueur est celle du plus long de l'image et de la voix
+    (une narration déborde souvent de sa vidéo), et la déplacer déplace les deux.
+    """
 
     def __init__(self, media: Mediatheque) -> None:
         super().__init__()
@@ -784,9 +807,15 @@ class _VueCinematiques(QWidget):
         self._video.set_plein_debit(True)
         self._video.video_frame.connect(lambda image: self._ecran.poser(image))
         self._video.playback_ended.connect(self._video_finie)
+        self._video.position_changed.connect(self._avancer)
+        self._video.duration_changed.connect(self._allonger)
         # La voix de HP4 est un fichier à part : un second lecteur, lancé avec la vidéo.
         self._voix: QMediaPlayer | None = None
         self._voix_sortie: QAudioOutput | None = None
+        self._chemin_video: Path | None = None
+        self._chemin_voix: Path | None = None
+        self._duree_video = 0
+        self._duree = 0
 
         racine = QHBoxLayout(self)
         racine.setContentsMargins(40, 18, 40, 0)
@@ -826,7 +855,25 @@ class _VueCinematiques(QWidget):
         d.addSpacing(4)
         self._note = texte("", 13, ENCRE_DOUCE, retour=True)
         d.addWidget(self._note)
-        d.addSpacing(12)
+        d.addSpacing(10)
+        barre = QHBoxLayout()
+        barre.setSpacing(10)
+        self._position = QSlider(Qt.Orientation.Horizontal)
+        self._position.setRange(0, 0)
+        self._position.setAccessibleName(tr("Position dans la cinématique"))
+        self._position.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._position.sliderMoved.connect(self._montrer_temps)
+        self._position.sliderReleased.connect(lambda: self._aller_a(self._position.value()))
+        # Un clic ou une flèche (sans glisser) déplace aussi la lecture ; nos
+        # propres mises à jour passent signaux bloqués.
+        self._position.valueChanged.connect(self._valeur_barre)
+        barre.addWidget(self._position, stretch=1)
+        self._temps = texte("", 12, ENCRE_DISCRETE)
+        self._temps.setMinimumWidth(80)
+        self._temps.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        barre.addWidget(self._temps)
+        d.addLayout(barre)
+        d.addSpacing(10)
         commandes = QHBoxLayout()
         commandes.setSpacing(10)
         self._pause = bouton(tr("Pause"))
@@ -838,6 +885,11 @@ class _VueCinematiques(QWidget):
         self._stop.clicked.connect(self.arreter)
         commandes.addWidget(self._stop)
         commandes.addStretch()
+        self._enregistrer = bouton(tr("Enregistrer…"))
+        self._enregistrer.setAutoDefault(False)
+        self._enregistrer.setToolTip(tr("Garder une copie de cette cinématique sur votre ordinateur."))
+        self._enregistrer.clicked.connect(self._enregistrer_copie)
+        commandes.addWidget(self._enregistrer)
         d.addLayout(commandes)
         d.addStretch()
         racine.addWidget(cote, stretch=3)
@@ -900,9 +952,12 @@ class _VueCinematiques(QWidget):
         fond = self._media.fond
         fond.suspendre(CINEMATIQUE)
         volume = self._media.fond_volume() / 100.0
+        self._duree_video = self._duree = 0
+        self._position.setRange(0, 0)
         if not self._video.play(str(chemin), muted=fond.son_coupe, volume=volume):
             fond.reprendre(CINEMATIQUE)
             return
+        self._chemin_video, self._chemin_voix = chemin, voix
         if voix is not None and MULTIMEDIA_DISPONIBLE:
             self._voix_sortie = QAudioOutput(self)
             self._voix_sortie.setVolume(volume)
@@ -911,10 +966,12 @@ class _VueCinematiques(QWidget):
             self._voix.setAudioOutput(self._voix_sortie)
             self._voix.setSource(QUrl.fromLocalFile(str(voix)))
             self._voix.mediaStatusChanged.connect(self._statut_voix)
+            self._voix.positionChanged.connect(self._avancer)
+            self._voix.durationChanged.connect(self._allonger_voix)
             self._voix.play()
         self._courante = fichier
         self._titre.setText(titre)
-        self._note.setText(tr("Sans le son pour l'instant : il est rangé ailleurs dans le jeu.")
+        self._note.setText(tr("Le son de cette cinématique est encore en cours de déchiffrement.")
                            if self._media.sans_son(jeu) and voix is None else self._media.nom(jeu))
         for ligne in self._lignes:
             ligne.marquer(ligne.fichier == fichier)
@@ -930,6 +987,89 @@ class _VueCinematiques(QWidget):
             if self._voix is not None:
                 self._voix.pause()
         self._etat_commandes()
+
+    # ── Barre de lecture ──
+
+    def _allonger(self, ms: int) -> None:
+        self._duree_video = ms
+        self._allonger_voix(ms)
+
+    def _allonger_voix(self, ms: int) -> None:
+        if ms > self._duree:
+            self._duree = ms
+            self._position.setRange(0, ms)
+            self._position.setPageStep(max(1000, ms // 10))
+            self._montrer_temps(self._position.value())
+
+    def _avancer(self, _ms: int) -> None:
+        """La plus avancée des deux pistes : quand l'image est finie, la voix continue."""
+        if self._position.isSliderDown():
+            return
+        voix = self._voix.position() if self._voix is not None else 0
+        image = self._video.position if self._video.is_playing else 0
+        self._position.blockSignals(True)
+        self._position.setValue(max(voix, image))
+        self._position.blockSignals(False)
+        self._montrer_temps(self._position.value())
+
+    def _montrer_temps(self, ms: int) -> None:
+        self._temps.setText(f"{_minutes(ms)} / {_minutes(self._duree)}" if self._duree else "")
+
+    def _valeur_barre(self, ms: int) -> None:
+        if not self._position.isSliderDown():             # le glisser se pose au relâché
+            self._aller_a(ms)
+
+    def _aller_a(self, ms: int) -> None:
+        """Les deux pistes à `ms`. Une image déjà finie repart si on revient en arrière."""
+        if not self._courante:
+            return
+        if self._voix is not None:
+            self._voix.setPosition(ms)
+            if not self._video.paused and self._voix.playbackState() != QMediaPlayer.PlaybackState.PlayingState:
+                self._voix.play()
+        if self._video.is_playing:
+            if self._duree_video and ms >= self._duree_video:
+                self._video.stop()                     # au-delà de l'image : la voix seule
+            else:
+                self._video.seek(ms)
+        elif self._chemin_video is not None and ms < self._duree_video:
+            fond = self._media.fond
+            pause = self._video.paused
+            self._video.play(str(self._chemin_video), muted=fond.son_coupe,
+                             volume=self._media.fond_volume() / 100.0, debut_ms=ms)
+            if pause:
+                self._video.pause()
+        self._montrer_temps(ms)
+
+    def _enregistrer_copie(self) -> None:
+        """Une copie de la vidéo, et de sa voix quand elle est à part : le même nom,
+        deux fichiers côte à côte (la vidéo du jeu n'a pas de piste son)."""
+        if self._chemin_video is None or not self._courante:
+            return
+        base = _nom_de_fichier(f"{self._media.nom(self._jeu)} - {self._titre.text()}")
+        dossier = Path.home() / "Videos"
+        depart = str((dossier if dossier.is_dir() else Path.home()) / (base + self._chemin_video.suffix))
+        cible, _filtre = QFileDialog.getSaveFileName(self, tr("Enregistrer la cinématique"), depart)
+        if not cible:
+            return
+        video = Path(cible)
+        if video.suffix.lower() != self._chemin_video.suffix.lower():
+            video = video.with_name(video.name + self._chemin_video.suffix)
+        copies = [(self._chemin_video, video)]
+        if self._chemin_voix is not None:
+            copies.append((self._chemin_voix, video.with_suffix(self._chemin_voix.suffix)))
+        try:
+            for source, arrivee in copies:
+                shutil.copyfile(source, arrivee)
+        except OSError as exc:
+            log.warning("Copie de la cinématique impossible : %s", exc)
+            self._note.setText(tr("La cinématique n'a pas pu être enregistrée à cet endroit."))
+            return
+        if len(copies) == 2:
+            self._note.setText(tr("Enregistrée : « {} », et sa voix à côté, « {} ».").format(
+                copies[0][1].name, copies[1][1].name))
+        else:
+            self._note.setText(tr("Enregistrée : « {} ».").format(copies[0][1].name))
 
     def _video_finie(self) -> None:
         """La narration des transitions de HP5 dure plus que leur image (85 s de
@@ -957,6 +1097,10 @@ class _VueCinematiques(QWidget):
         self._video.stop()
         self._arreter_voix()
         self._courante = ""
+        self._chemin_video = self._chemin_voix = None
+        self._duree_video = self._duree = 0
+        self._position.setRange(0, 0)
+        self._temps.setText("")
         self._ecran.poser(None)
         self._titre.setText("")
         self._note.setText("")
@@ -969,6 +1113,8 @@ class _VueCinematiques(QWidget):
         actif = bool(self._courante)
         self._pause.setEnabled(actif)
         self._stop.setEnabled(actif)
+        self._position.setEnabled(actif)
+        self._enregistrer.setEnabled(actif)
         self._pause.setText(tr("Reprendre") if actif and self._video.paused else tr("Pause"))
 
 

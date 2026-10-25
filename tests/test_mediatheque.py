@@ -365,6 +365,70 @@ class TestLectureCinematique:
         assert not page._courante
         assert "cinematique" not in win._mediatheque.fond._raisons
 
+    def test_la_barre_prend_la_plus_longue_des_deux_pistes(self, vue):
+        _win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+        assert not page._position.maximum()
+        page._allonger(26_490)                     # l'image de ns11
+        page._allonger_voix(33_000)                # sa voix, plus longue
+        page._allonger(26_490)
+        assert page._position.maximum() == 33_000
+        assert page._temps.text() == "0:00 / 0:33"
+        page.arreter()
+        assert not page._position.maximum() and not page._temps.text()
+        assert not page._position.isEnabled()
+
+    def test_revenir_en_arriere_relance_l_image_finie(self, vue, monkeypatch):
+        _win, page, ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._allonger(20_000)
+        relances = []
+        monkeypatch.setattr(page._video, "play",
+                            lambda chemin, muted, volume, debut_ms=0: relances.append(debut_ms) or True)
+        page._aller_a(5_000)                       # l'image n'est plus là (`_player` vide)
+        assert relances == [5_000]
+        page._aller_a(25_000)                      # au-delà de l'image : rien à relancer
+        assert relances == [5_000]
+
+    def test_enregistrer_copie_la_video_et_sa_voix(self, vue, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QFileDialog
+        win, page, _ordre = vue
+        voix = tmp_path / "voix.wav"
+        voix.write_bytes(b"RIFF")
+        monkeypatch.setattr(win._mediatheque, "voix", lambda j, f: voix)
+        page.jouer("hp3", "SiriusPhoto", "La photo : Sirius ?")
+        sortie = tmp_path / "sortie"
+        sortie.mkdir()
+        demande = []
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(
+            lambda _p, _t, depart: demande.append(depart) or (str(sortie / "Sirius"), "")))
+        page._enregistrer_copie()
+        assert ":" not in demande[0].split("\\")[-1].split("/")[-1].replace("Sirius ?", "")
+        assert (sortie / "Sirius.bik").read_bytes() == b"BIKi"
+        assert (sortie / "Sirius.wav").read_bytes() == b"RIFF"
+        assert "Sirius.wav" in page._note.text()
+
+    def test_enregistrer_annule_ne_copie_rien(self, vue, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QFileDialog
+        _win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *_a: ("", "")))
+        page._enregistrer_copie()
+        assert page._note.text() != "" and "Enregistrée" not in page._note.text()
+
+
+class TestAidesDuLecteur:
+    def test_minutes(self):
+        from src.ui.mediatheque_page import _minutes
+        assert _minutes(0) == "0:00"
+        assert _minutes(65_400) == "1:05"
+        assert _minutes(-5) == "0:00"
+
+    def test_nom_de_fichier_sur(self):
+        from src.ui.mediatheque_page import _nom_de_fichier
+        assert _nom_de_fichier('HP6 - Le vrai souvenir : les Horcruxes?') == "HP6 - Le vrai souvenir _ les Horcruxes_"
+        assert _nom_de_fichier(" ... ") == "cinematique"
+
 
 class TestCommandesMusique:
     @pytest.fixture

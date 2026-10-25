@@ -1,5 +1,5 @@
 {
- "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). banque = les voix rangées dans une banque _s.sdt, un flux par nom dans l'ordre donné (HP5, HP6 ; HP6 y range aussi cinq séquences E3 sans vidéo, gardées pour le compte des flux). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
+ "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). banque = les voix rangées dans une banque _s.sdt, un flux par nom dans l'ordre donné (HP5, HP6 ; HP6 y range aussi cinq séquences E3 sans vidéo, gardées pour le compte des flux). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). chapitres = les sons rangés dans la banque d'un chapitre, retrouvés par le hachage que porte leur fiche (HP6) ; {code} = le code de langue tiré du nom de fichier de la banque. Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
  "jeux": {
   "hp3": {
    "dossier": "Movies",
@@ -286,6 +286,51 @@
      "rr01",
      "rr26",
      "uh13"
+    ],
+    "chapitres": [
+     {
+      "archives": [
+       "data.big",
+       "data2.big",
+       "data3.big",
+       "data4.big"
+      ],
+      "index": "chapters/hogwarts/{code}.str",
+      "banque": "chapters/hogwarts/{code}_s.sdt",
+      "flux": {
+       "the_da": "8833F8C0",
+       "occ_goodbye_sirius": "F096F246",
+       "harrys_friends": "3796A3F6",
+       "bad_boys": "5BCEA038",
+       "authentic_characters": "EE65F1ED",
+       "authentic_hogwarts": "EDCC0B82",
+       "soundofhog": "90540841",
+       "reward_07": "78356218",
+       "reward_08": "629EDF32",
+       "reward_09": "78356218",
+       "reward_10": "629EDF32",
+       "reward_11": "78356218",
+       "reward_12": "629EDF32",
+       "reward_13": "A5E296F3",
+       "reward_14": "860A53E8"
+      }
+     },
+     {
+      "archives": [
+       "data.big",
+       "data2.big",
+       "data3.big",
+       "data4.big"
+      ],
+      "index": "chapters/frontend/{code}.str",
+      "banque": "chapters/frontend/{code}_s.sdt",
+      "flux": {
+       "attract": "EB7F9C7C",
+       "newgame_2_options": "2CD57963",
+       "options_2_newgame": "B98E84F7",
+       "packshot_2_mainmenu": "0B2F4D95"
+      }
+     }
     ]
    },
    "clips": [
@@ -826,141 +871,180 @@
      "e3potions1",
      "e3potions2",
      "e3quidditch"
+    ],
+    "chapitres": [
+     {
+      "archives": [
+       "data.big",
+       "data2.big",
+       "data3.big",
+       "data4.big"
+      ],
+      "index": "chapters/hogwarts/{code}.str",
+      "banque": "chapters/hogwarts/{code}_s.sdt",
+      "flux": {
+       "ns03": "19CD6F76",
+       "ns04": "E638C82B",
+       "ns05": "E9A77BA4",
+       "ns07": "550EE47A",
+       "ns10": "C5D1C786",
+       "ns11": "CB6309CD",
+       "ns12": "B94EC520",
+       "ns13": "3CE3DA47",
+       "ns16": "C1EAE5F4",
+       "night2day": "A8585EF8",
+       "creditsback": "8DB99947"
+      }
+     },
+     {
+      "archives": [
+       "data.big",
+       "data2.big",
+       "data3.big",
+       "data4.big"
+      ],
+      "index": "chapters/frontend/{code}.str",
+      "banque": "chapters/frontend/{code}_s.sdt",
+      "flux": {
+       "attract": "2CFBD9E3",
+       "attractnotext": "2CFBD9E3"
+      }
+     }
     ]
    },
    "clips": [
     {
      "f": "ns01",
      "t": {
-      "fr": "Transition de chapitre 1",
-      "en": "Chapter transition 1",
-      "es": "Transición de capítulo 1"
+      "fr": "Transition 1",
+      "en": "Transition 1",
+      "es": "Transición 1"
      },
      "s": 0
     },
     {
      "f": "ns02",
      "t": {
-      "fr": "Transition de chapitre 2",
-      "en": "Chapter transition 2",
-      "es": "Transición de capítulo 2"
+      "fr": "Transition 2",
+      "en": "Transition 2",
+      "es": "Transición 2"
      },
      "s": 0
     },
     {
      "f": "ns03",
      "t": {
-      "fr": "Transition de chapitre 3",
-      "en": "Chapter transition 3",
-      "es": "Transición de capítulo 3"
+      "fr": "Le discours de rentrée de Dumbledore",
+      "en": "Dumbledore's start-of-term speech",
+      "es": "El discurso de inicio de curso de Dumbledore"
      },
      "s": 0
     },
     {
      "f": "ns04",
      "t": {
-      "fr": "Transition de chapitre 4",
-      "en": "Chapter transition 4",
-      "es": "Transición de capítulo 4"
+      "fr": "Le souvenir de l'orphelinat",
+      "en": "The orphanage memory",
+      "es": "El recuerdo del orfanato"
      },
      "s": 0
     },
     {
      "f": "ns05",
      "t": {
-      "fr": "Transition de chapitre 5",
-      "en": "Chapter transition 5",
-      "es": "Transición de capítulo 5"
+      "fr": "Katie Bell et le collier ensorcelé",
+      "en": "Katie Bell and the cursed necklace",
+      "es": "Katie Bell y el collar maldito"
      },
      "s": 0
     },
     {
      "f": "ns07",
      "t": {
-      "fr": "Transition de chapitre 7",
-      "en": "Chapter transition 7",
-      "es": "Transición de capítulo 7"
+      "fr": "Transition 3",
+      "en": "Transition 3",
+      "es": "Transición 3"
      },
      "s": 0
     },
     {
      "f": "ns08",
      "t": {
-      "fr": "Transition de chapitre 8",
-      "en": "Chapter transition 8",
-      "es": "Transición de capítulo 8"
+      "fr": "Transition 4",
+      "en": "Transition 4",
+      "es": "Transición 4"
      },
      "s": 0
     },
     {
      "f": "ns09",
      "t": {
-      "fr": "Transition de chapitre 9",
-      "en": "Chapter transition 9",
-      "es": "Transición de capítulo 9"
+      "fr": "Transition 5",
+      "en": "Transition 5",
+      "es": "Transición 5"
      },
      "s": 0
     },
     {
      "f": "ns10",
      "t": {
-      "fr": "Transition de chapitre 10",
-      "en": "Chapter transition 10",
-      "es": "Transición de capítulo 10"
+      "fr": "Le souvenir trafiqué de Slughorn",
+      "en": "Slughorn's tampered memory",
+      "es": "El recuerdo alterado de Slughorn"
      },
      "s": 0
     },
     {
      "f": "ns11",
      "t": {
-      "fr": "Transition de chapitre 11",
-      "en": "Chapter transition 11",
-      "es": "Transición de capítulo 11"
+      "fr": "Malefoy disparaît de la carte",
+      "en": "Malfoy vanishes from the map",
+      "es": "Malfoy desaparece del mapa"
      },
      "s": 0
     },
     {
      "f": "ns12",
      "t": {
-      "fr": "Transition de chapitre 12",
-      "en": "Chapter transition 12",
-      "es": "Transición de capítulo 12"
+      "fr": "Un secret caché dans la Salle sur Demande",
+      "en": "A secret hidden in the Room of Requirement",
+      "es": "Un secreto escondido en la Sala de los Menesteres"
      },
      "s": 0
     },
     {
      "f": "ns13",
      "t": {
-      "fr": "Transition de chapitre 13",
-      "en": "Chapter transition 13",
-      "es": "Transición de capítulo 13"
+      "fr": "Le vrai souvenir : les Horcruxes",
+      "en": "The true memory: Horcruxes",
+      "es": "El verdadero recuerdo: los Horrocruxes"
      },
      "s": 0
     },
     {
      "f": "ns14",
      "t": {
-      "fr": "Transition de chapitre 14",
-      "en": "Chapter transition 14",
-      "es": "Transición de capítulo 14"
+      "fr": "Transition 6",
+      "en": "Transition 6",
+      "es": "Transición 6"
      },
      "s": 0
     },
     {
      "f": "ns15",
      "t": {
-      "fr": "Transition de chapitre 15",
-      "en": "Chapter transition 15",
-      "es": "Transición de capítulo 15"
+      "fr": "Transition 7",
+      "en": "Transition 7",
+      "es": "Transición 7"
      },
      "s": 0
     },
     {
      "f": "ns16",
      "t": {
-      "fr": "Transition de chapitre 16",
-      "en": "Chapter transition 16",
-      "es": "Transición de capítulo 16"
+      "fr": "Après la mort de Dumbledore",
+      "en": "After Dumbledore's death",
+      "es": "Tras la muerte de Dumbledore"
      },
      "s": 0
     },

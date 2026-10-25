@@ -86,7 +86,7 @@ def trouver(chemin: Path, nom: str) -> Entree | None:
     return next((e for e in lister(chemin) if e.nom.lower() == cherche), None)
 
 
-def _flux(f: BinaryIO, debut: int, fin: int) -> list[tuple[int, int]]:
+def _flux(f: BinaryIO, debut: int, fin: int, premier: bool = False) -> list[tuple[int, int]]:
     flux: list[tuple[int, int]] = []
     pos, ouvert = debut, None
     while pos + 8 <= fin:
@@ -119,6 +119,8 @@ def _flux(f: BinaryIO, debut: int, fin: int) -> list[tuple[int, int]]:
         if etiquette == b"SCEl" and ouvert is not None:
             flux.append((ouvert, pos - ouvert))
             ouvert = None
+            if premier:
+                break
     return flux
 
 
@@ -131,6 +133,54 @@ def flux_schl(chemin: Path, entree: Entree, en_tete: int = _EN_TETE_MUS) -> list
     except (OSError, struct.error) as exc:
         log.debug("Flux de %s illisibles : %s", entree.nom, exc)
         return []
+
+
+def flux_a(chemin: Path, entree: Entree, decalage: int) -> tuple[int, int] | None:
+    """(début absolu, taille) du flux SCHl qui commence à `decalage` dans
+    l'entrée ; None sinon. Une banque de chapitre de HP6 en range 1 531 : on
+    n'en lit qu'un.
+
+    Dans ces banques, chaque son est précédé d'un en-tête « ADAT » (sa taille
+    à +8, ses sous-titres « SUB3 » en UTF-16), puis de zéros jusqu'au SCHl :
+    vu à 0x40 pour un en-tête de 0x10 octets.
+    """
+    if not 0 <= decalage < entree.taille:
+        return None
+    try:
+        with chemin.open("rb") as f:
+            debut = entree.debut + decalage
+            f.seek(debut)
+            tete = f.read(12)
+            if tete[:4] == b"ADAT" and len(tete) == 12:
+                fenetre = struct.unpack_from("<I", tete, 8)[0] + 0x200
+                if fenetre > 1 << 20:
+                    return None
+                f.seek(debut)
+                k = f.read(fenetre).find(b"SCHl")
+                if k < 0:
+                    return None
+                debut += k
+            elif tete[:4] != b"SCHl":
+                return None
+            flux = _flux(f, debut, entree.debut + entree.taille, premier=True)
+    except (OSError, struct.error) as exc:
+        log.debug("Flux de %s illisible : %s", entree.nom, exc)
+        return None
+    return flux[0] if flux and flux[0][0] == debut else None
+
+
+def lire(chemin: Path, entree: Entree, plafond: int = 1 << 20) -> bytes | None:
+    """Le contenu d'une PETITE entrée (un index de banque) ; None au-delà du plafond."""
+    if entree.taille > plafond:
+        return None
+    try:
+        with chemin.open("rb") as f:
+            f.seek(entree.debut)
+            brut = f.read(entree.taille)
+    except OSError as exc:
+        log.debug("Lecture de %s impossible : %s", entree.nom, exc)
+        return None
+    return brut if len(brut) == entree.taille else None
 
 
 def extraire(chemin: Path, debut: int, taille: int, cible: Path) -> Path | None:

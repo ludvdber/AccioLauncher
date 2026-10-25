@@ -576,6 +576,11 @@ class Sauvegardes:
     # Les emplacements rangés DANS un seul fichier (« slots » au catalogue) :
     # HP4 garde ses trois parties dans `HPGOF`. Vide : un fichier = une sauvegarde.
     emplacements: str = ""
+    # Les fichiers qui vont AVEC chaque sauvegarde (« with » au catalogue),
+    # motifs dans le même dossier qu'elle, « {n} » pour son numéro : les états
+    # de zone `*_pa.usa` de HP2, `GameSaveInfo{n}` de HP1. Copiés et remis avec
+    # elle : un vieux `Save0.usa` à côté d'états de zone récents mélange deux parties.
+    compagnons: tuple[str, ...] = ()
 
 
 # Formats d'emplacements que ce launcher sait lire (`sauvegardes._EMPLACEMENTS`).
@@ -657,11 +662,16 @@ def _parse_sauvegardes(data: Any) -> Sauvegardes | None:
     emplacements = data.get("slots", "")
     if emplacements not in FORMATS_EMPLACEMENTS:
         emplacements = ""
+    compagnons = data.get("with", [])
+    if (not isinstance(compagnons, list) or len(compagnons) > 8
+            or not all(_motif_sur(c) and "/" not in c.replace("\\", "/") for c in compagnons)):
+        log.warning("Bloc saves ignoré (with) : %r", compagnons)
+        return None
     return Sauvegardes(racine=racine,
                        dossiers=tuple(d.replace("\\", "/") for d in dossiers),
                        fichiers=fichiers.replace("\\", "/"),
                        exclure=tuple(exclure), premier=premier,
-                       emplacements=emplacements)
+                       emplacements=emplacements, compagnons=tuple(compagnons))
 
 
 # Pour tout ce qui finit dans un NOM DE FICHIER (identifiant, version) :

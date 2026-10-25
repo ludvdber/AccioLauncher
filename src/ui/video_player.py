@@ -44,6 +44,10 @@ class VideoPlayer(QObject):
 
     video_frame = pyqtSignal(object)  # QImage
     playback_ended = pyqtSignal()
+    # Millisecondes, pour une barre de lecture (Médiathèque) : une cinématique
+    # dure au plus quelques minutes, loin de la limite d'un int (règle 32).
+    position_changed = pyqtSignal(int)
+    duration_changed = pyqtSignal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -60,6 +64,9 @@ class VideoPlayer(QObject):
         # Mise en pause par la fenêtre réduite, pas par l'utilisateur : seule
         # celle-là reprend d'elle-même au retour.
         self._pause_reduite = False
+        # Une position demandée avant que la vidéo soit chargée (relance depuis
+        # la barre de lecture) : posée dès que le média l'accepte.
+        self._position_en_attente = -1
 
     def set_plein_debit(self, oui: bool) -> None:
         self._plein_debit = oui
@@ -96,7 +103,22 @@ class VideoPlayer(QObject):
             self._player.play()
             self._paused = False
 
-    def play(self, video_path: str, *, muted: bool = False, volume: float = 0.25) -> bool:
+    @property
+    def position(self) -> int:
+        """Où en est la vidéo, en millisecondes (0 sans vidéo)."""
+        return self._player.position() if self._player is not None else 0
+
+    @property
+    def duration(self) -> int:
+        return self._player.duration() if self._player is not None else 0
+
+    def seek(self, ms: int) -> None:
+        """Va à `ms` dans la vidéo, en pause comme en lecture."""
+        if self._player is not None:
+            self._player.setPosition(max(0, ms))
+
+    def play(self, video_path: str, *, muted: bool = False, volume: float = 0.25,
+             debut_ms: int = 0) -> bool:
         """Lance la lecture d'une vidéo. Retourne False si Multimedia non disponible."""
         self.stop()
         if not MULTIMEDIA_DISPONIBLE:
@@ -115,6 +137,9 @@ class VideoPlayer(QObject):
         self._player.setVideoOutput(self._sink)
         self._player.setAudioOutput(self._audio)
         self._player.mediaStatusChanged.connect(self._on_media_status)
+        self._player.positionChanged.connect(self.position_changed)
+        self._player.durationChanged.connect(self.duration_changed)
+        self._position_en_attente = debut_ms if debut_ms > 0 else -1
 
         self._player.setSource(QUrl.fromLocalFile(video_path))
         self._player.play()
@@ -129,6 +154,8 @@ class VideoPlayer(QObject):
             self._player.stop()
             self._player.setSource(QUrl())
             self._player.mediaStatusChanged.disconnect(self._on_media_status)
+            self._player.positionChanged.disconnect(self.position_changed)
+            self._player.durationChanged.disconnect(self.duration_changed)
             self._sink.videoFrameChanged.disconnect(self._on_frame)
             self._player.deleteLater()
             self._sink.deleteLater()
@@ -186,6 +213,10 @@ class VideoPlayer(QObject):
                             frame.pixelFormat(), frame.handleType())
 
     def _on_media_status(self, status) -> None:
+        if self._position_en_attente >= 0 and status in (
+                QMediaPlayer.MediaStatus.LoadedMedia, QMediaPlayer.MediaStatus.BufferedMedia):
+            self._player.setPosition(self._position_en_attente)
+            self._position_en_attente = -1
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             self.stop()
             self.playback_ended.emit()

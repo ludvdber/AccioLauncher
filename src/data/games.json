@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.45",
+  "catalog_version": "0.46",
   "contributors": [
     {
       "name": "ASTeam",
@@ -406,7 +406,8 @@
           "Harry Potter/Save"
         ],
         "files": "Save*.usa",
-        "first": 0
+        "first": 0,
+        "with": ["GameSaveInfo{n}"]
       },
       "language_files": {
         "languages": {
@@ -829,7 +830,8 @@
           "Harry Potter II/Save"
         ],
         "files": "Slot*/Save0.usa",
-        "first": 1
+        "first": 1,
+        "with": ["*_pa.usa", "Save0.bmp"]
       },
       "display_locked": true,
       "relance": true,

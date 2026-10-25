@@ -216,6 +216,92 @@ class TestDonneesLivrees:
                              if o.lower() not in noms and o not in col.banque.sans_video]
                 assert not manquants, f"{jeu} : la banque nomme des vidéos absentes {manquants}"
                 assert len(set(col.banque.ordre)) == len(col.banque.ordre)
+                for chapitre in col.banque.chapitres:
+                    absents = [n for n in chapitre.flux if n not in noms]
+                    assert not absents, f"{jeu} : un chapitre nomme des vidéos absentes {absents}"
+                    assert not set(chapitre.flux) & {o.lower() for o in col.banque.ordre}
+
+    def test_hp5_et_hp6_relies_aux_chapitres(self):
+        """Relevé le 2026-10-25 : les 20 vidéos de HP6 ont un son, 31 des 55 de HP5."""
+        collections = cinematiques.charger()
+        for jeu, attendu in (("hp6", 20), ("hp5", 31)):
+            banque = collections[jeu].banque
+            assert banque is not None
+            relies = {o.lower() for o in banque.ordre} - set(banque.sans_video)
+            relies |= {n for c in banque.chapitres for n in c.flux}
+            assert len(relies) == attendu, jeu
+
+
+def _index_langue(entrees: list[tuple[int, int, int]]) -> bytes:
+    """Un index de langue HP6 : un bloc ATAD qui finit par (compte, positions, durées, hachages)."""
+    tableau = struct.pack("<I", len(entrees)) + b"".join(struct.pack("<III", *e) for e in entrees)
+    atad = _bloc(b"ATAD", b"\0" * 12 + tableau)
+    return _bloc(b"MRTS", _bloc(b"PRGA", b"autre chose") + atad)
+
+
+def _son_de_chapitre(octets_de_son: int, sous_titres: bytes = b"") -> bytes:
+    """Un son de banque de chapitre : en-tête ADAT (sous-titres), zéros, puis le flux."""
+    tete = b"ADAT" + struct.pack("<II", 2, 16 + len(sous_titres)) + b"SUB3" + sous_titres
+    return tete + b"\0" * (0x40 - len(tete) % 0x40) + _flux(octets_de_son)
+
+
+class TestBanqueDeChapitre:
+    """HP6 : le son d'une cinématique dans la banque d'un chapitre, trouvé par son hachage."""
+
+    def test_positions_lues_dans_l_index(self):
+        brut = _index_langue([(0, 1000, 0xAAAA), (0x200, 2000, 0x19CD6F76)])
+        assert cinematiques.positions_index(brut) == {0xAAAA: 0, 0x19CD6F76: 0x200}
+        assert cinematiques.positions_index(b"ATAD\xff\xff\xff\xff") == {}
+        assert cinematiques.positions_index(b"") == {}
+
+    def test_flux_a_saute_l_en_tete_adat(self, tmp_path):
+        premier = _son_de_chapitre(100, "Comme vous le savez".encode("utf-16-le"))
+        archive = tmp_path / "d.big"
+        archive.write_bytes(_bigf({"b_s.sdt": premier + _son_de_chapitre(300)}))
+        e = archives_ea.lister(archive)[0]
+        debut, taille = archives_ea.flux_a(archive, e, len(premier))
+        assert taille == len(_flux(300))
+        assert archive.read_bytes()[debut:debut + 4] == b"SCHl"
+        assert archives_ea.flux_a(archive, e, 3) is None          # pas un début de son
+        assert archives_ea.flux_a(archive, e, e.taille + 5) is None
+
+    def _jeu(self, tmp_path):
+        jeu = tmp_path / "HP6"
+        jeu.mkdir()
+        sons = [_son_de_chapitre(100), _son_de_chapitre(200), _son_de_chapitre(300)]
+        positions = [0, len(sons[0]), len(sons[0]) + len(sons[1])]
+        en = [_son_de_chapitre(111), _son_de_chapitre(222)]
+        # La langue et sa banque ne sont pas dans la même archive, comme dans HP6.
+        (jeu / "data.big").write_bytes(_bigf({
+            "chapters/hogwarts/fr-fr.str": _index_langue(
+                [(positions[0], 1, 0x1), (positions[2], 3, 0x19CD6F76), (positions[1], 2, 0x2)]),
+            "chapters/hogwarts/en-gb.str": _index_langue([(0, 1, 0x1), (len(en[0]), 2, 0x19CD6F76)])}))
+        (jeu / "data2.big").write_bytes(_bigf({
+            "chapters/hogwarts/fr-fr_s.sdt": b"".join(sons),
+            "chapters/hogwarts/en-gb_s.sdt": b"".join(en)}))
+        chapitre = cinematiques.Chapitre(("data.big", "data2.big"), "chapters/hogwarts/{code}.str",
+                                         "chapters/hogwarts/{code}_s.sdt", {"ns03": 0x19CD6F76})
+        banque = cinematiques.Banque("movies.big", {"fr": "ct/fr-fr_s.sdt", "en": "ct/en-gb_s.sdt"},
+                                     ("ns01",), chapitres=(chapitre,))
+        return jeu, cinematiques.Collection("movies/neutral", ".vp6", True, (), "movies.big", {}, banque)
+
+    def test_le_son_de_la_cinematique_dans_sa_langue(self, tmp_path):
+        jeu, collection = self._jeu(tmp_path)
+        fr = cinematiques.voix(collection, jeu, "NS03", "fr")
+        assert fr is not None and fr.convertir and fr.entree.taille == len(_flux(300))
+        assert fr.entree.nom == "chapters/hogwarts/fr-fr_s_ns03.asf"
+        en = cinematiques.voix(collection, jeu, "ns03", "en")
+        assert en is not None and en.entree.taille == len(_flux(222))
+        assert cinematiques.voix(collection, jeu, "ns04", "fr") is None
+
+    def test_le_bloc_du_fichier(self):
+        bloc = {"archive": "movies.big", "fichiers": {"fr": "x/fr-fr_s.sdt"}, "ordre": ["a"],
+                "chapitres": [{"archives": ["data.big"], "index": "c/{code}.str",
+                               "banque": "c/{code}_s.sdt", "flux": {"NS03": "19CD6F76", "x": "pas hexa"}},
+                              {"archives": "data.big"}]}
+        banque = cinematiques._banque(bloc)
+        assert banque is not None and len(banque.chapitres) == 1
+        assert banque.chapitres[0].flux == {"ns03": 0x19CD6F76}
 
     def test_discographie_coherente(self):
         from src.core import discographie

@@ -188,6 +188,7 @@ class TestCatalogue:
         jeux = {g.id: g for g in load_catalog().games}
         assert jeux["hp1"].sauvegardes is not None
         assert jeux["hp3"].sauvegardes.exclure == ("Save1??.usa",)
+        assert jeux["hp2"].sauvegardes.compagnons == ("*_pa.usa", "Save0.bmp")
 
     @pytest.mark.parametrize("bloc", [
         {"root": "C:/", "folders": ["x"], "files": "a"},
@@ -198,6 +199,9 @@ class TestCatalogue:
         {"root": "documents", "folders": ["x"], "files": "HP.exe:flux"},
         {"root": "documents", "folders": [], "files": "a"},
         {"root": "documents", "folders": ["x"], "files": "a", "first": "0"},
+        {"root": "documents", "folders": ["x"], "files": "a", "with": ["../x"]},
+        {"root": "documents", "folders": ["x"], "files": "a", "with": ["sous/x"]},
+        {"root": "documents", "folders": ["x"], "files": "a", "with": "x"},
     ])
     def test_un_bloc_douteux_est_ignore_en_entier(self, bloc):
         assert _parse_sauvegardes(bloc) is None
