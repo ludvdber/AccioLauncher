@@ -365,12 +365,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # HP6, vu en jeu le 2026-10-22 : notre retenue du vert (GreenRestraint=1)
     # éteint la brume menthe du ciel mais grise aussi les collines. Cette part
     # n'en garde qu'une fraction sur le relief ; le ciel garde toute la retenue.
-    # Le premier choix (1) est l'ini livré, comme une clé absente.
+    # Le premier choix (1) vaut pour une clé absente ; l'ini livré porte 0,4,
+    # choisi par Ludo sur paires avant/après (2026-10-25).
     Reglage("vert_relief", "Accio.Graphics", "GreenRestraintTerrain",
             "Vert des montagnes",
             "Le correctif retire au ciel du jeu sa teinte vert menthe ; ce filtre grise aussi "
-            "les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel. "
-            "« Gris » est le jeu tel que livré par le correctif.",
+            "les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel.",
             choix=(1, 0.6, 0.4, 0.2, 0), zero="Gris",
             etiquettes=((0.6, "Légèrement vert"), (0.4, "Vert"), (0.2, "Très vert"),
                         (0, "Vert du jeu")),
