@@ -17,19 +17,19 @@ echec() {
     exit 1
 }
 
-# Python 3.14 seul, comme pyproject (>=3.14) : l'AppImage embarque son interpréteur.
+# Python 3.15 seul, comme pyproject (>=3.15) : l'AppImage embarque son interpréteur.
 if [ -n "${ACCIO_PY:-}" ]; then
     PY="$ACCIO_PY"
 else
     PY=""
-    for candidat in python3.14 python3; do
+    for candidat in python3.15 python3; do
         if command -v "$candidat" >/dev/null 2>&1 \
-            && "$candidat" -c 'import sys; sys.exit(sys.version_info < (3, 14))' 2>/dev/null; then
+            && "$candidat" -c 'import sys; sys.exit(sys.version_info < (3, 15))' 2>/dev/null; then
             PY="$candidat"
             break
         fi
     done
-    [ -n "$PY" ] || echec "Python 3.14 introuvable."
+    [ -n "$PY" ] || echec "Python 3.15 introuvable (uv python install 3.15)."
     if ! "$PY" -c 'import sys; sys.exit(sys.prefix == sys.base_prefix)'; then
         if [ ! -x .venv-build/bin/python ]; then
             echo "Création de l'environnement de build (.venv-build)..."

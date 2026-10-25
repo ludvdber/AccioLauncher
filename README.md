@@ -30,7 +30,7 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 
 - **Les huit jeux de la saga**, de *l'École des Sorciers* (2001) aux deux parties des *Reliques de la Mort* (2011), prêts à jouer sur un PC récent.
 - **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
-- **Tout se gère au même endroit**, depuis une barre en haut (Bibliothèque, Mes années, Galerie, Paramètres) : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
+- **Tout se gère au même endroit**, depuis une barre en haut (Bibliothèque, Carnet, Collections, Paramètres) : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
 - **Un plantage expliqué** : quand un jeu s'arrête brutalement, le launcher lit ce que Windows a noté et dit où chercher (pilote graphique, programme qui s'incruste, fichier du jeu, fichier retiré par l'antivirus), avec un détail à copier pour demander de l'aide.
 - **Les réglages graphiques de *Prisonnier d'Azkaban*** dans l'engrenage du jeu : anticrénelage, résolution de rendu, filtrage, synchronisation et limite d'images (jamais au-delà de 60), sans ouvrir un fichier au Bloc-notes.
 - **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics.
@@ -133,7 +133,7 @@ notes de sa release (`sha256sum AccioLauncher-x86_64.AppImage`), et le fichier
 porte une attestation de provenance :
 `gh attestation verify AccioLauncher-x86_64.AppImage --repo ludvdber/AccioLauncher`.
 
-**Construire soi-même** : `./build.sh` (Python 3.14 ; il crée son propre
+**Construire soi-même** : `./build.sh` (Python 3.15 ; il crée son propre
 environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
 
 ## Aperçu
@@ -186,7 +186,7 @@ proposer. Tout est expliqué dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
 <br>
 
-Python 3.14, PyQt6, httpx. Windows 10 et 11, et Linux : tout
+Python 3.15, PyQt6, httpx, truststore. Windows 10 et 11, et Linux : tout
 appel propre à Windows est isolé derrière `sys.platform`, et les jeux y passent
 par Proton ou Wine (`src/core/compat.py`, [docs/LINUX.md](docs/LINUX.md)).
 
@@ -201,7 +201,7 @@ Tests et lint :
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest        # plus de 3 100 tests, sans écran (offscreen)
+python -m pytest        # plus de 3 600 tests, sans écran (offscreen)
 python -m ruff check .
 ```
 

@@ -27,6 +27,8 @@ jobs:
         with:
           # La version du build (build.bat) et de tests.yml : c'est sous elle
           # que les dépendances sont résolues, donc elle que l'audit doit voir.
+          # 3.14 et non 3.15 : PyYAML (requis par bandit) n'a pas de paquet 3.15, et
+          # un paquet construit sur place échappe au contrôle des empreintes.
           python-version: "3.14"
 
       # Versions ET empreintes figées (.github/requirements/securite.txt) : un

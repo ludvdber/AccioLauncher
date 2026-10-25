@@ -110,9 +110,15 @@ a = Analysis(
     # py7zr, retiré du projet, restait installé sur le poste de build. L'exe
     # construit ici le portait, celui de la CI non : le contenu d'un build ne
     # doit pas dépendre de ce qui traîne sur la machine. httpx s'en passe (gzip).
+    # requests et urllib3 : `truststore.inject_into_ssl` (jamais appelée, on passe
+    # par `reseau.contexte_tls`) les importe s'ils sont installés, et ils tirent
+    # `cryptography`. Absents de la CI, présents sur un poste de dev : l'exe y
+    # passait de 50,6 à 56,0 Mo (mesuré le 2026-10-25), un build qui dépendait
+    # de la machine.
     excludes=[
         "numpy", "PIL", "rich", "pygments", "markdown_it", "mdurl",
         "click", "tkinter", "_tkinter", "brotli", "_brotli",
+        "requests", "urllib3", "cryptography",
     ],
     cipher=block_cipher,
     noarchive=False,

@@ -36,7 +36,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
-from src.core import system_checks
+from src.core import reseau, system_checks
 from src.core.formatting import format_bytes
 from src.core.i18n import tr
 
@@ -337,7 +337,7 @@ class InstallationComposants(QThread):
         import httpx
 
         try:
-            with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(30.0)) as client:
+            with reseau.client(httpx.Timeout(30.0)) as client:
                 with client.stream("GET", paquet.url) as reponse:
                     reponse.raise_for_status()
                     total = int(reponse.headers.get("Content-Length") or 0)

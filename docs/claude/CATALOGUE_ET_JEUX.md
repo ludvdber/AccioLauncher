@@ -43,7 +43,7 @@ Quatre règles payées ailleurs : **n'y déclarer que ce qui EXISTE** (huit vid�
   "key": "SOFTWARE\\Electronic Arts\\Harry Potter and the Deathly Hallows Part 1",
   "values": { "Install Dir": "%INSTALL_DIR%\\" },
   "languages": { "fr": { "label": "Français", "values": { "Locale": "fr_FR" },
-                         "requires_file": "HP7/DH1_French.pck" } }
+                         "requires_file": "HP7/pc/DH1_French.pck" } }
 }
 ```
 

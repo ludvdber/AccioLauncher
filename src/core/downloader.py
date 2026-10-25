@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
+from src.core import reseau
 from src.core.echecs import Echec, EmpreinteInvalide, TailleDepassee, cause_de
 from src.core.formatting import format_bytes
 from src.core.i18n import tr
@@ -484,7 +485,7 @@ class Downloader(QThread):
             hasher = hashlib.sha256()
 
         needs_retry = False
-        with httpx.Client(follow_redirects=True, timeout=timeout) as client:
+        with reseau.client(timeout) as client:
             with client.stream("GET", url, headers=headers) as response:
                 try:
                     response.raise_for_status()
@@ -525,7 +526,7 @@ class Downloader(QThread):
 
         # Retry une seule fois après HTTP 416 (sans Range)
         hasher = hashlib.sha256() if compute_sha256 else None
-        with httpx.Client(follow_redirects=True, timeout=timeout) as client:
+        with reseau.client(timeout) as client:
             with client.stream("GET", url) as response:
                 response.raise_for_status()
                 _ensure_response_https(response)

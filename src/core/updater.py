@@ -10,6 +10,7 @@ from typing import Any
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
+from src.core import reseau
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
 from src.core.game_data import _parse_catalog
 from src.core.version_utils import compare_versions, update_disponible
@@ -394,7 +395,7 @@ class UpdateChecker(QThread):
         if not self._games_asset_urls:
             return
         try:
-            with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
+            with reseau.client(httpx.Timeout(**_TIMEOUT_KW)) as client:
                 resp = client.get(_releases_api_from_catalog_url(self._catalog_url))
                 self._contact = True
                 if resp.status_code == 403:
@@ -433,7 +434,7 @@ class UpdateChecker(QThread):
         if not self._catalog_url or not self._catalog_url.startswith("https://"):
             return
         try:
-            with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
+            with reseau.client(httpx.Timeout(**_TIMEOUT_KW)) as client:
                 # En streaming, avec un plafond : le téléchargeur d'archives en
                 # a un (SIZE_OVERHEAD_FACTOR), la récupération du catalogue n'en
                 # avait aucun. `client.get()` charge en mémoire tout ce que le
@@ -498,7 +499,7 @@ class UpdateChecker(QThread):
         import httpx  # import différé (thread) — voir en-tête de module
 
         try:
-            with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(**_TIMEOUT_KW)) as client:
+            with reseau.client(httpx.Timeout(**_TIMEOUT_KW)) as client:
                 resp = client.get(_LAUNCHER_API)
                 self._contact = True
                 if resp.status_code == 403:

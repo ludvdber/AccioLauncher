@@ -6,7 +6,7 @@
 # l'action, une empreinte non. Dependabot tient les deux à jour ensemble.
 #
 # Même principe pour les paquets Python : .github/requirements/tests.txt fige
-# versions et empreintes (Windows et Linux, Python 3.14, dans un seul fichier).
+# versions et empreintes (Windows et Linux, Python 3.15, dans un seul fichier).
 # Les planchers de requirements*.txt restent la source de vérité ; ce fichier
 # en est la résolution, et la commande pour le refaire est dans son en-tête.
 name: tests
@@ -37,7 +37,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.14"
+          python-version: "3.15"
           cache: pip
       - name: Installer les dépendances
         run: pip install --require-hashes -r .github/requirements/tests.txt
@@ -100,7 +100,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.14"
+          python-version: "3.15"
           cache: pip
       - name: Bibliothèques système Qt (plateforme offscreen)
         run: |

@@ -25,7 +25,7 @@ AccioLauncher.exe {TAG} is a free, open-source (GNU GPL v3) launcher that downlo
 - Website: https://acciolauncher.be/
 - SHA-256: {SHA256}
 - Built by GitHub Actions from the public source (workflow release.yml), never on a personal machine. The release carries a signed build provenance attestation (Sigstore): gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
-- PyInstaller onefile (Python 3.14, PyQt6), no UPX. Bundles 7-Zip (7z.exe).
+- PyInstaller onefile (Python 3.15, PyQt6), no UPX. Bundles 7-Zip (7z.exe).
 
 Expected behaviour an analyst may observe:
 - HTTPS only, to github.com, api.github.com and raw.githubusercontent.com (catalogue, updates, downloads); every downloaded file is checked against its SHA-256.

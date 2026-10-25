@@ -106,7 +106,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         id: python
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       # L'exe embarque les paquets que la CI a testés, vérifiés par empreinte.
       # Sans cette étape, build.bat installait requirements-dev.txt, qui ne
@@ -218,7 +218,7 @@ jobs:
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       # PyInstaller n'embarque que ce qu'il VOIT sur la machine de build : sans
       # les bibliothèques du greffon xcb (libxcb-cursor0 & co.), l'AppImage

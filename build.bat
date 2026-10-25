@@ -12,12 +12,12 @@ if defined ACCIO_PY (
     goto :python_choisi
 )
 
-:: Python 3.14 seul, comme pyproject (>=3.14) et la CI : l'exe embarque son
+:: Python 3.15 seul, comme pyproject (>=3.15) et la CI : l'exe embarque son
 :: interpreteur, la version n'a donc aucun effet chez les joueurs.
-set PY=py -3.14
+set PY=py -3.15
 %PY% --version >nul 2>&1
 if errorlevel 1 (
-    echo ERREUR : Python 3.14 introuvable.
+    echo ERREUR : Python 3.15 introuvable.
     echo Installe-le depuis https://python.org/downloads/
     %PAUSE%
     exit /b 1

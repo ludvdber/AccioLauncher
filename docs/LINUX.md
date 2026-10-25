@@ -568,10 +568,10 @@ suivantes :
 
 ## À tester sur Bazzite par Ludo (phase 2)
 
-Depuis les sources de la branche de la phase 2 (Python 3.14 est dans l'image) :
+Depuis les sources de la branche de la phase 2 (l'image fournit Python 3.14 : installer la 3.15 à côté, `uv python install 3.15`) :
 
 ```sh
-python3 -m venv ~/accio-venv && ~/accio-venv/bin/pip install -r requirements.txt
+uv venv --python 3.15 ~/accio-venv && uv pip install --python ~/accio-venv/bin/python -r requirements.txt
 ~/accio-venv/bin/python main.py
 ```
 
