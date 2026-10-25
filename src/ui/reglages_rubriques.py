@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import (captures, manette, reglages_correctif, reglages_graphiques, resolution_jeu,
-                      videos_lancement)
+                      texte_ue1, videos_lancement)
 from src.core.i18n import tr
 from src.ui.composants import ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
 from src.ui.editeur_touches import EditeurTouches
@@ -228,6 +228,8 @@ class RubriquesDuJeu:
         carte = Carte()
         if reglable:
             self._ligne_resolution(carte)
+            if texte_ue1.gere(self.game.id):
+                self._ligne_texte(carte)
         # Sous une rubrique active, des choix grisés sans « BIENTÔT » auraient
         # l'air de réglages cassés (règle 119) : on ne les annonce plus ici.
         for nom in (() if reglable else _A_VENIR):
@@ -299,6 +301,39 @@ class RubriquesDuJeu:
             resolutions[self.game.id] = valeur
         else:
             resolutions.pop(self.game.id, None)
+        self.manager.config.save()
+
+    def _ligne_texte(self, carte: Carte) -> None:
+        """La taille du texte de HP1/HP2 : automatique, ou plus petite ou plus grande.
+
+        Une liste et non un curseur : à la manette, ← → réglaient le curseur
+        sans pouvoir en sortir (`manette_nav`). Posée au lancement (`texte_ue1`).
+        """
+        choix = self._liste()
+        place = resolution_jeu.place_pour(self.game, self.manager.config)
+        taille = resolution_jeu.voulue(self.manager.config.resolution_jeu.get(self.game.id, ""), place)
+        auto = texte_ue1.facteur(taille[1], "") if taille is not None else None
+        choix.addItem(tr("Automatique (× {})").format(reglages_correctif.texte_valeur(auto))
+                      if auto else tr("Automatique"), "")
+        for cle, libelle in (("petit", tr("Plus petit")), ("grand", tr("Plus grand")),
+                             ("tres_grand", tr("Très grand")),
+                             (texte_ue1.ORIGINE, tr("D'origine (texte de 2001)"))):
+            choix.addItem(libelle, cle)
+        courant = self.manager.config.taille_texte.get(self.game.id, "")
+        choix.setCurrentIndex(max(0, choix.findData(courant)))
+        choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_taille_texte(c.currentData()))
+        carte.ajouter(self._ligne(tr("Taille du texte"), choix, tr(
+            "Le jeu agrandit ses menus avec l'écran, mais garde le texte de 2001, minuscule en "
+            "haute définition. Le lanceur redessine ses lettres à la taille de l'image : "
+            "automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut "
+            "déborder de certains cadres. Appliqué au prochain lancement.")))
+
+    def _on_taille_texte(self, valeur: str) -> None:
+        tailles = self.manager.config.taille_texte
+        if valeur:
+            tailles[self.game.id] = valeur
+        else:
+            tailles.pop(self.game.id, None)
         self.manager.config.save()
 
     def _liste(self) -> QComboBox:

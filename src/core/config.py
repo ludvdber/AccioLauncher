@@ -225,6 +225,9 @@ class Config:
     # Taille de fenêtre choisie POUR CHAQUE JEU (id → « 2560x1440 »). Absent :
     # celle de l'écran, recalculée à chaque lancement (`resolution_jeu`).
     resolution_jeu: dict[str, str] = field(default_factory=dict)
+    # Taille du texte de HP1/HP2 (id → « petit », « grand », « tres_grand »,
+    # « origine »). Absent : automatique, d'après la hauteur de l'image (`texte_ue1`).
+    taille_texte: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -274,6 +277,7 @@ class Config:
                     last_played=_as_map(data.get("last_played"), str),
                     game_language=_as_map(data.get("game_language"), str),
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
+                    taille_texte=_as_map(data.get("taille_texte"), str),
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 log.warning("Config corrompue, valeurs par défaut : %s", exc)
@@ -322,6 +326,7 @@ class Config:
                 "last_played": self.last_played,
                 "game_language": self.game_language,
                 "resolution_jeu": self.resolution_jeu,
+                "taille_texte": self.taille_texte,
             },
             indent=4,
             ensure_ascii=False,
