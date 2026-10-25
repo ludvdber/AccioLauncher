@@ -6,7 +6,7 @@
 # l'action, une empreinte non. Dependabot tient les deux à jour ensemble.
 #
 # Même principe pour les paquets Python : .github/requirements/tests.txt fige
-# versions et empreintes (Windows 3.12/3.14 et Linux dans un seul fichier).
+# versions et empreintes (Windows et Linux, Python 3.14, dans un seul fichier).
 # Les planchers de requirements*.txt restent la source de vérité ; ce fichier
 # en est la résolution, et la commande pour le refaire est dans son en-tête.
 name: tests
@@ -31,21 +31,13 @@ jobs:
     # Un test bloqué (invite UAC, exec() modal) ne doit pas brûler les six
     # heures par défaut d'un runner.
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        # 3.12 est le plancher déclaré par pyproject, 3.14 celle du build. 3.12
-        # n'avait jamais été testé : `Path.read_text(newline=…)`, apparu en
-        # 3.13, y cassait tools/sync_trailers.py sans que rien le voie
-        # (2026-09-19).
-        python: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.14"
           cache: pip
       - name: Installer les dépendances
         run: pip install --require-hashes -r .github/requirements/tests.txt
@@ -78,16 +70,14 @@ jobs:
       # sur la plateforme native, avec les vraies polices de Windows. Il ne
       # tournait que dans build.bat, donc sur la machine qui publie, au moment
       # de publier : une régression de mise en page rougit maintenant la PR
-      # (117 s mesurées). Une seule version de Python suffit, c'est la mise en
-      # page qu'on mesure.
+      # (117 s mesurées).
       - name: Geometrie avec les vraies polices
-        if: matrix.python == '3.14'
         run: python tools/audit_geometrie.py
       - name: Joindre les vidages de plantage
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: vidages-plantage-windows-py${{ matrix.python }}
+          name: vidages-plantage-windows
           path: ${{ runner.temp }}/vidages
           if-no-files-found: ignore
           retention-days: 7

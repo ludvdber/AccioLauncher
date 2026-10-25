@@ -17,19 +17,19 @@ echec() {
     exit 1
 }
 
-# Préfère 3.14, puis 3.13, puis 3.12 — le plancher réel (pyproject >=3.12).
+# Python 3.14 seul, comme pyproject (>=3.14) : l'AppImage embarque son interpréteur.
 if [ -n "${ACCIO_PY:-}" ]; then
     PY="$ACCIO_PY"
 else
     PY=""
-    for candidat in python3.14 python3.13 python3.12 python3; do
+    for candidat in python3.14 python3; do
         if command -v "$candidat" >/dev/null 2>&1 \
-            && "$candidat" -c 'import sys; sys.exit(sys.version_info < (3, 12))' 2>/dev/null; then
+            && "$candidat" -c 'import sys; sys.exit(sys.version_info < (3, 14))' 2>/dev/null; then
             PY="$candidat"
             break
         fi
     done
-    [ -n "$PY" ] || echec "aucun Python 3.12+ trouvé."
+    [ -n "$PY" ] || echec "Python 3.14 introuvable."
     if ! "$PY" -c 'import sys; sys.exit(sys.prefix == sys.base_prefix)'; then
         if [ ! -x .venv-build/bin/python ]; then
             echo "Création de l'environnement de build (.venv-build)..."

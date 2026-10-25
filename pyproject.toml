@@ -2,10 +2,10 @@
 name = "accio-launcher"
 version = "1.2.3"
 description = "Launcher pour les jeux Harry Potter sur PC"
-# 3.12 et non 3.10 : `enum.StrEnum` (src/core/game_manager.py) n'existe qu'à
-# partir de 3.11, et build.bat comme la CI ciblent 3.12+. Annoncer 3.10 laissait
-# pip installer le paquet sur un interpréteur où il plante dès l'import.
-requires-python = ">=3.12"
+# 3.14 seule (2026-10-25), la version que la CI teste et que l'exe embarque. Une
+# borne plus basse laisse pip installer le paquet là où rien ne l'a vérifié :
+# l'ancien `>=3.10` plantait dès l'import (`enum.StrEnum`, 3.11).
+requires-python = ">=3.14"
 dependencies = [
     "PyQt6>=6.11",
     "httpx>=0.28",
@@ -41,7 +41,7 @@ include = ["src*"]
 # fait apparaître 119 signalements du jour au lendemain, sans qu'une seule ligne
 # de code ait changé — une CI ne doit pas pouvoir rougir toute seule.
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 110
 extend-exclude = [".venv", "venv", "build/accio_launcher", "dist"]
 
@@ -61,7 +61,7 @@ select = ["E4", "E7", "E9", "F", "W"]
 # mypy y dit est du bruit de PyQt (un `parentWidget()` que Qt dit pouvoir être
 # None) et des classes de mélange, pas des défauts.
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 # Fixée : sinon un poste Linux et un poste Windows ne vérifieraient pas les
 # mêmes branches `sys.platform`, et la CI pourrait rougir selon sa machine.
 platform = "win32"

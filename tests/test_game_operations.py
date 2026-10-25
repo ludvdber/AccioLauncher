@@ -12,7 +12,6 @@ la valeur : la fin du téléchargement, la fin de l'installation, et l'annulatio
 """
 
 import errno
-import time
 
 import pytest
 
@@ -65,11 +64,6 @@ def _en_cours_de_telechargement(ops_tuple):
     manager.set_game_state(jeu.id, GameState.DOWNLOADING)
     operations._speed_tracker.reset()
     operations._speed_tracker.update(0)
-    # Jusqu'à Python 3.12, `time.monotonic()` n'avance sous Windows que par pas
-    # de 15,6 ms : deux relevés consécutifs tombaient sur le même instant, et
-    # la vitesse (octets / durée nulle) valait 0. Un vrai téléchargement dure
-    # des secondes ; il faut ici laisser passer au moins un pas d'horloge.
-    time.sleep(0.05)
     operations._speed_tracker.update(20_000_000)
     return jeu
 

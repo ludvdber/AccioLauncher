@@ -12,23 +12,15 @@ if defined ACCIO_PY (
     goto :python_choisi
 )
 
-:: Prefere 3.14 (supporte depuis PyQt6 6.10.2 / PyInstaller 6.16), fallback 3.13 puis 3.12.
-:: 3.12 est le plancher reel : `enum.StrEnum` exige 3.11, et pyproject declare >=3.12.
+:: Python 3.14 seul, comme pyproject (>=3.14) et la CI : l'exe embarque son
+:: interpreteur, la version n'a donc aucun effet chez les joueurs.
 set PY=py -3.14
 %PY% --version >nul 2>&1
 if errorlevel 1 (
-    set PY=py -3.13
-    %PY% --version >nul 2>&1
-    if errorlevel 1 (
-        set PY=py -3.12
-        %PY% --version >nul 2>&1
-        if errorlevel 1 (
-            echo ERREUR : aucun Python 3.12+ trouve.
-            echo Installe-le depuis https://python.org/downloads/
-            %PAUSE%
-            exit /b 1
-        )
-    )
+    echo ERREUR : Python 3.14 introuvable.
+    echo Installe-le depuis https://python.org/downloads/
+    %PAUSE%
+    exit /b 1
 )
 
 :python_choisi
@@ -99,32 +91,6 @@ if errorlevel 1 (
     %PAUSE%
     exit /b 1
 )
-
-:: 3.12 est le plancher declare, mais le build tourne en 3.14 : une API
-:: apparue en 3.13 passerait ici sans bruit (vecu en CI le 2026-09-19 avec
-:: `read_text(newline=...)`). Si 3.12 est installe, la suite y est rejouee ;
-:: sinon une ligne le dit. En CI, la matrice de tests.yml couvre deja 3.12.
-if defined ACCIO_PY goto :fin_312
-if "%PY%"=="py -3.12" goto :fin_312
-py -3.12 --version >nul 2>&1
-if errorlevel 1 (
-    echo      Python 3.12 absent : suite non rejouee sur le plancher declare.
-    goto :fin_312
-)
-echo [3/5] Tests sous Python 3.12, le plancher declare...
-py -3.12 -m pip install -r requirements-dev.txt --quiet
-if errorlevel 1 (
-    echo ERREUR : Installation des dependances sous 3.12 echouee.
-    %PAUSE%
-    exit /b 1
-)
-py -3.12 -m pytest -q
-if errorlevel 1 (
-    echo ERREUR : Tests en echec sous Python 3.12 - build interrompu.
-    %PAUSE%
-    exit /b 1
-)
-:fin_312
 
 :: La suite de tests tourne en offscreen, ou QFontDatabase ne voit AUCUNE
 :: police systeme : Georgia (police de corps) et Segoe UI n'existent pas et Qt

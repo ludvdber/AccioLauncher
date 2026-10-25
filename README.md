@@ -133,7 +133,7 @@ notes de sa release (`sha256sum AccioLauncher-x86_64.AppImage`), et le fichier
 porte une attestation de provenance :
 `gh attestation verify AccioLauncher-x86_64.AppImage --repo ludvdber/AccioLauncher`.
 
-**Construire soi-même** : `./build.sh` (Python 3.12+ ; il crée son propre
+**Construire soi-même** : `./build.sh` (Python 3.14 ; il crée son propre
 environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
 
 ## Aperçu
@@ -186,7 +186,7 @@ proposer. Tout est expliqué dans [docs/TRANSLATORS.md](docs/TRANSLATORS.md).
 
 <br>
 
-Python 3.12 ou plus récent, PyQt6, httpx. Windows 10 et 11, et Linux : tout
+Python 3.14, PyQt6, httpx. Windows 10 et 11, et Linux : tout
 appel propre à Windows est isolé derrière `sys.platform`, et les jeux y passent
 par Proton ou Wine (`src/core/compat.py`, [docs/LINUX.md](docs/LINUX.md)).
 

@@ -568,7 +568,7 @@ suivantes :
 
 ## À tester sur Bazzite par Ludo (phase 2)
 
-Depuis les sources de la branche de la phase 2 (Python 3.12+ est dans l'image) :
+Depuis les sources de la branche de la phase 2 (Python 3.14 est dans l'image) :
 
 ```sh
 python3 -m venv ~/accio-venv && ~/accio-venv/bin/pip install -r requirements.txt
