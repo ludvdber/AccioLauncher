@@ -24,6 +24,7 @@ from src.core.i18n import tr
 from src.ui.composants import ENCRE_DOUCE, petit_titre, police
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT
+from src.ui.theme import themed
 
 _JAQUETTE = QSize(58, 80)
 
@@ -74,6 +75,28 @@ QPushButton#prereglage[focusClavier="true"]:focus,
 QPushButton#choix[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
 QPushButton#choix:disabled { border-color: rgba(255, 255, 255, 0.05); }
 """
+
+
+def _texte_beta() -> str:
+    return tr("Bêta : ce réglage est encore en essai. Ce qui ne va pas se signale "
+              "sur le Discord du projet.")
+
+
+def _etiquette_beta() -> QLabel:
+    """« BÊTA » à côté du nom d'un réglage encore en essai."""
+    etiquette = QLabel(tr("Bêta"))
+    etiquette.setFont(police(11))
+    etiquette.setToolTip(_texte_beta())
+    etiquette.setStyleSheet(themed(
+        "color: #d6a72c; background: transparent; border: 1px solid rgba(214, 167, 44, 0.55);"
+        " border-radius: 8px; padding: 1px 7px;"))
+    return etiquette
+
+
+def _poser_beta(rangee: QHBoxLayout, reglage) -> None:
+    """L'étiquette, à côté du nom, si ce réglage est encore en essai."""
+    if reglage is not None and reglage.beta:
+        rangee.addWidget(_etiquette_beta(), alignment=Qt.AlignmentFlag.AlignVCenter)
 
 
 class _Jaquette(QWidget):

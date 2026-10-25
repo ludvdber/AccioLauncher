@@ -300,6 +300,8 @@ class _FauxMedia:
     def __init__(self) -> None:
         self.mediaStatusChanged = self._Signal()
         self.videoFrameChanged = self._Signal()
+        self.positionChanged = self._Signal()
+        self.durationChanged = self._Signal()
 
     def stop(self) -> None:
         pass
