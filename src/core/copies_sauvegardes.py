@@ -35,8 +35,6 @@ du jeu, qu'une désinstallation emporte, et hors de Documents, que le jeu gère.
 Aucune fonction ne lève.
 """
 
-from __future__ import annotations
-
 import gzip
 import logging
 import os

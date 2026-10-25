@@ -15,7 +15,7 @@ def compare_versions(a: str, b: str) -> int:
         pa.append(0)
     while len(pb) < len(pa):
         pb.append(0)
-    for x, y in zip(pa, pb):
+    for x, y in zip(pa, pb, strict=True):
         if x != y:
             return x - y
     return 0

@@ -18,8 +18,6 @@ Rien de personnel n'en sort : le dossier personnel est remplacé par « ~ »
 plantage.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import platform

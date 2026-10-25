@@ -14,8 +14,6 @@ Pas de Qt ici : la traduction d'un appui en nom de touche vit dans l'interface
 (`ui/editeur_touches.py`), le reste se teste sans fenêtre.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import sys
@@ -68,9 +66,9 @@ _NOMMEES: dict[str, tuple[int, str | None]] = {
     "Insert": (0xD2, "Inser"), "Delete": (0xD3, "Suppr"), "Home": (0xC7, "Début"), "End": (0xCF, "Fin"),
     "PageUp": (0xC9, "Page précédente"), "PageDown": (0xD1, "Page suivante"),
     "NumEnter": (0x9C, "Entrée du pavé"),
-    **{f"F{n}": (c, None) for n, c in zip(range(1, 13), (*range(0x3B, 0x45), 0x57, 0x58))},
+    **{f"F{n}": (c, None) for n, c in zip(range(1, 13), (*range(0x3B, 0x45), 0x57, 0x58), strict=True)},
     **{f"Num{n}": (c, None) for n, c in zip(
-        range(10), (0x52, 0x4F, 0x50, 0x51, 0x4B, 0x4C, 0x4D, 0x47, 0x48, 0x49))},
+        range(10), (0x52, 0x4F, 0x50, 0x51, 0x4B, 0x4C, 0x4D, 0x47, 0x48, 0x49), strict=True)},
 }
 # « Return » est un alias de « Enter » pour le correctif.
 _ALIAS = {"return": "Enter"}

@@ -211,12 +211,11 @@ def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
                 win._detail.set_game(entry.game)
                 win._detail._refresh()
                 pompe()
-                ctx = "%s[%s] %dx%d %s %s" % (langue, scenario, taille[0],
-                                              taille[1], entry.game.id, etat.name)
+                ctx = f"{langue}[{scenario}] {taille[0]}x{taille[1]} {entry.game.id} {etat.name}"
                 reste = info._scroll.verticalScrollBar().maximum()
                 if reste > 0:
                     anomalies.append(
-                        "%s : le panneau d'infos defile (%d px de trop)" % (ctx, reste))
+                        f"{ctx} : le panneau d'infos defile ({reste} px de trop)")
                 for w in win.findChildren((QLabel, QPushButton)):
                     if not w.isVisible() or not w.text():
                         continue
@@ -230,15 +229,15 @@ def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
                         if besoin > w.height() + 1 and cle not in vus:
                             vus.add(cle)
                             anomalies.append(
-                                "%s : %s coupe en bas (%d px requis, %d accordes) — %r"
-                                % (ctx, nom, besoin, w.height(), texte[:48]))
+                                f"{ctx} : {nom} coupe en bas ({besoin} px requis, "
+                                f"{w.height()} accordes) — {texte[:48]!r}")
                         continue
                     besoin = w.sizeHint().width()
                     if besoin > w.width() + 1 and cle not in vus:
                         vus.add(cle)
                         anomalies.append(
-                            "%s : %s tronque (%d px requis, %d accordes) — %r"
-                            % (ctx, nom, besoin, w.width(), texte[:48]))
+                            f"{ctx} : {nom} tronque ({besoin} px requis, "
+                            f"{w.width()} accordes) — {texte[:48]!r}")
     # Fermer ET détruire : sans `deleteLater`, chaque lot laissait sa fenêtre
     # complète en mémoire (~55 Mo, ses minuteurs et ses fils), et le passage
     # des trois langues s'arrêtait net au 7e lot sur 0xC0000409 (2026-10-14).
@@ -256,8 +255,7 @@ def main() -> int:
 
     app = QApplication([])
     familles = len(QFontDatabase.families())
-    print("Plateforme Qt : %s — %d familles de polices"
-          % (app.platformName(), familles))
+    print(f"Plateforme Qt : {app.platformName()} — {familles} familles de polices")
     if familles == 0:
         print("ERREUR : aucune police systeme visible. Ce controle n'a de sens")
         print("         que sur la plateforme native (pas offscreen).")
@@ -269,9 +267,9 @@ def main() -> int:
     codes = [info.code for info in available_languages()]
     if demandees:
         codes = [c for c in codes if c in demandees]
-    print("Langues controlees : %s" % ", ".join(codes))
-    print("Combinaisons par langue : %d jeux x 4 etats x %d tailles x %d scenarios"
-          % (8, len(TAILLES), len(SCENARIOS)))
+    print(f"Langues controlees : {', '.join(codes)}")
+    print(f"Combinaisons par langue : 8 jeux x 4 etats x {len(TAILLES)} tailles "
+          f"x {len(SCENARIOS)} scenarios")
     print()
 
     total = 0
@@ -279,16 +277,16 @@ def main() -> int:
         for code in codes:
             anomalies = _mesure(code, scenario)
             total += len(anomalies)
-            etat = "OK" if not anomalies else "%d ANOMALIE(S)" % len(anomalies)
-            print("  %-4s %-8s %s" % (code, scenario, etat))
+            etat = "OK" if not anomalies else f"{len(anomalies)} ANOMALIE(S)"
+            print(f"  {code:<4} {scenario:<8} {etat}")
             for a in anomalies[:12]:
-                print("       - %s" % a)
+                print(f"       - {a}")
             if len(anomalies) > 12:
-                print("       - ... et %d autres" % (len(anomalies) - 12))
+                print(f"       - ... et {len(anomalies) - 12} autres")
 
     print()
     if total:
-        print("ECHEC : %d anomalie(s) de mise en page avec les vraies polices." % total)
+        print(f"ECHEC : {total} anomalie(s) de mise en page avec les vraies polices.")
         return 1
     print("Aucune troncature, aucun debordement, aucune barre de defilement.")
     return 0

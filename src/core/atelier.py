@@ -18,8 +18,6 @@ aussi de ne plus dépendre des images de Warner, donc même une image nette peut
 « prioritaires » : elles seules allument la pastille de la fiche.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import re

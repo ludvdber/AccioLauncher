@@ -122,7 +122,7 @@ class TestAucunePoliceDansUnPseudoEtat:
         import re
 
         # Les commentaires d'abord : ils CITENT des pseudo-états pour expliquer.
-        style = re.sub(r"/\*.*?\*/", "", MAIN_STYLE, flags=re.S)
+        style = re.sub(r"/\*.*?\*/", "", MAIN_STYLE, flags=re.DOTALL)
         fautes = []
         for selecteur, corps in re.findall(r"([^{}]+)\{\{?([^{}]*)\}", style):
             if ":" not in selecteur.split("::")[0]:

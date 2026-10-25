@@ -31,8 +31,6 @@ Lecture seule, Windows seulement (Wine n'a pas ces journaux), ne lève jamais.
 `wevtutil` coûte ~105 ms : l'appelant le fait hors du fil de l'interface.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import subprocess
@@ -45,7 +43,7 @@ import sys
 # ajouterait une dépendance à l'exécutable pour un risque absent.
 import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PureWindowsPath
 
 from src.core.i18n import tr
@@ -108,7 +106,7 @@ def _temps_xpath(quand: datetime) -> str:
     """Horodatage UTC au format qu'attend le filtre XPath du journal."""
     if quand.tzinfo is None:
         quand = quand.astimezone()          # heure locale, comme `datetime.now()`
-    return quand.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return quand.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def _evenements(canal: str, requete: str, combien: int) -> list[dict[str, str]]:

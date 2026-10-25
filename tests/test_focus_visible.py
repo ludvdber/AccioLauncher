@@ -41,7 +41,7 @@ class TestRaisonDuFocus:
         qtbot.addWidget(btn)
         _focus(btn, raison)
         assert btn.property(PROPRIETE) is False, (
-            "l'anneau serait visible pour un focus non clavier (%s)" % raison)
+            f"l'anneau serait visible pour un focus non clavier ({raison})")
 
     @pytest.mark.parametrize("raison", [
         Qt.FocusReason.TabFocusReason,
@@ -54,7 +54,7 @@ class TestRaisonDuFocus:
         qtbot.addWidget(btn)
         _focus(btn, raison)
         assert btn.property(PROPRIETE) is True, (
-            "un utilisateur au clavier ne verrait plus où il est (%s)" % raison)
+            f"un utilisateur au clavier ne verrait plus où il est ({raison})")
 
     def test_l_anneau_part_avec_le_focus(self, qtbot, filtre_pose):
         btn = QPushButton("x")

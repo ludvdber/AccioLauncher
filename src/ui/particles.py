@@ -157,7 +157,7 @@ class ParticleOverlay(QWidget):
             self._particles.append(_Particle(w, h, self._profil))
 
     @staticmethod
-    def _zone(pt: "_Particle") -> QRect:
+    def _zone(pt: _Particle) -> QRect:
         """Rectangle sale d'une particule : sa taille, son halo, et une marge.
 
         La marge couvre l'antialiasing et le déplacement d'un tick (moins de

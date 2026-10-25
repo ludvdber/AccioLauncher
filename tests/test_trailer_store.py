@@ -26,7 +26,7 @@ class FauxDownloader(QObject):
     error = pyqtSignal(str)
     finished = pyqtSignal()
 
-    crees: list["FauxDownloader"] = []
+    crees: list[FauxDownloader] = []
 
     def __init__(self, url=None, destination=None, parent=None, **_kw):
         super().__init__(parent)

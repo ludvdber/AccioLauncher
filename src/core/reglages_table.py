@@ -1,6 +1,5 @@
 """La table des réglages du correctif : les choix proposés, la classe `Reglage`, la table `REGLAGES` (ordre d'affichage) et les `PREREGLAGES`. Pure donnée ; la lecture et l'écriture du `d3d9.ini` restent dans `reglages_correctif`, qui réexporte tout. Sortie le 2026-10-03.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 
 # Choix proposés pour la limite d'images. 0 = aucune.

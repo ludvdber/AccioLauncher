@@ -29,7 +29,7 @@ def _degrade() -> Image.Image:
     for y in range(HAUTEUR):
         t = y / HAUTEUR
         trait.line([(0, y), (LARGEUR, y)],
-                   fill=tuple(int(a + (b - a) * t) for a, b in zip(FOND_HAUT, FOND_BAS)))
+                   fill=tuple(int(a + (b - a) * t) for a, b in zip(FOND_HAUT, FOND_BAS, strict=True)))
     return img
 
 

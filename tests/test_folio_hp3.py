@@ -77,7 +77,7 @@ class _Paquet:
             d += (_compact(self.noms.index("HGame")) + _compact(self.noms.index("Class"))
                   + struct.pack("<i", 0) + _compact(self.noms.index(nom)))
         pos_exports = len(d)
-        for (classe, corps), pos in zip(self.objets, positions):
+        for (classe, corps), pos in zip(self.objets, positions, strict=False):
             d += (_compact(-(imports.index(classe) + 1)) + _compact(0) + struct.pack("<i", 0)
                   + _compact(self.noms.index("Objet")) + struct.pack("<I", 0)
                   + _compact(len(corps)) + _compact(pos))
@@ -176,7 +176,7 @@ class TestNomsDesCartes:
         for nom in noms:
             d += _compact(len(nom) + 1) + nom.encode() + b"\x00" + struct.pack("<I", 0)
         pos_exports = len(d)
-        for (classe, c), pos in zip(corps.items(), positions):
+        for (classe, c), pos in zip(corps.items(), positions, strict=False):
             d += (_compact(0) + _compact(0) + struct.pack("<i", 0) + _compact(noms.index(classe))
                   + struct.pack("<I", 0) + _compact(len(c)) + _compact(pos))
         d[0:36] = struct.pack("<IIIIIIIII", 0x9E2A83C1, 129, 1, len(noms), pos_noms,

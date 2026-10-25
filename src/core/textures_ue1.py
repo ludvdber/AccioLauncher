@@ -24,8 +24,6 @@ ses niveaux de détail (le premier est le plein format), une palette ses
 couleurs en RVBA.
 """
 
-from __future__ import annotations
-
 import logging
 import struct
 from dataclasses import dataclass

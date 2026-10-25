@@ -14,8 +14,6 @@ sur le disque. Module pur : aucun Qt, httpx importé paresseusement (jamais au
 niveau du module, cf. `tests/test_imports_qt.py` et l'en-tête du téléchargeur).
 """
 
-from __future__ import annotations
-
 import errno
 from dataclasses import dataclass
 

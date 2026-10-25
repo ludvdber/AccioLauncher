@@ -133,4 +133,4 @@ def recommencee(avant: Mesure | None, apres: Mesure | None) -> bool:
     """
     if avant is None or apres is None or len(avant) != len(apres):
         return False
-    return any(b < a for a, b in zip(avant, apres))
+    return any(b < a for a, b in zip(avant, apres, strict=True))

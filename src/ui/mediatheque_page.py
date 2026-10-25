@@ -24,8 +24,6 @@ du bouton de lecture (invisible, 2026-10-24) et des badges. D'où `#transparent`
 Le modèle est `mediatheque.Mediatheque` : la page ne lit rien elle-même.
 """
 
-from __future__ import annotations
-
 from html import escape
 
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal

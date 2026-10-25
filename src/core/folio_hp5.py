@@ -20,8 +20,6 @@ celles du code ; les noms des drapeaux viennent de la table de `hp.exe`
 17 lignes concordent (19 personnages, 1 fantôme, 1 statue, 5 / 66 rangés…).
 """
 
-from __future__ import annotations
-
 import logging
 import struct
 from dataclasses import dataclass

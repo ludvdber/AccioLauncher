@@ -387,7 +387,7 @@ class TestDiagnosticReseau:
 
             def raise_for_status(self):
                 if status >= 400:
-                    raise HTTPError("HTTP %d" % status)
+                    raise HTTPError(f"HTTP {status}")
 
             def json(self):
                 return {}

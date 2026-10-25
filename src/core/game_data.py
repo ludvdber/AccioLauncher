@@ -111,7 +111,7 @@ class GameVersion:
         return bool(self.download_url or self.download_parts)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "GameVersion":
+    def from_dict(cls, data: dict[str, Any]) -> GameVersion:
         # Chacun sa forme : une liste en `download_url` ou une chaîne en
         # `download_parts` (dont on itérerait les caractères) est écartée.
         url = _https_ou_rien(data.get("download_url"))
@@ -284,7 +284,7 @@ class GameData:
     videos_lancement: tuple[str, ...] = ()
 
     @property
-    def langues(self) -> "LanguageRegistry | LanguageFiles | None":
+    def langues(self) -> LanguageRegistry | LanguageFiles | None:
         """Le bloc de langues du jeu, registre ou fichiers : ce que voit l'UI."""
         return self.language_registry or self.language_files
 
@@ -321,7 +321,7 @@ class GameData:
         return None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "GameData":
+    def from_dict(cls, data: dict[str, Any]) -> GameData:
         """Crée un GameData depuis un dictionnaire JSON."""
         required = ("id", "name", "year", "description", "developer",
                      "executable", "cover_image")

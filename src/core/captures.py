@@ -19,8 +19,6 @@ il est créé ; ensuite on le retrouve sous n'importe lequel de ses noms
 (`GameData.noms`) : changer de langue ne coupe pas une collection en deux.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import sys

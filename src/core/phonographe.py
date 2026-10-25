@@ -26,8 +26,6 @@ Relevé sur les jeux (atelier, `notes/PHONOGRAPHE_PROJECTION_TRADUCTIONS.md`) :
 Aucune fonction ne lève : un paquet abîmé ou d'un autre format est sauté.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import tempfile

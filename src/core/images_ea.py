@@ -18,8 +18,6 @@ Codes lus ici : 0x60 = DXT1, 0x62 = DXT5. Les pixels rendus sont en B, V, R, A,
 l'ordre de `QImage.Format_ARGB32` en mémoire.
 """
 
-from __future__ import annotations
-
 import struct
 from pathlib import Path
 

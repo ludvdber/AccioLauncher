@@ -65,7 +65,7 @@ class TestSplash:
         for etape in demarrage.ETAPES:
             s.etape(etape)
             rendus.append(s.pixmap().toImage())
-        for avant, apres in zip(rendus, rendus[1:]):
+        for avant, apres in zip(rendus, rendus[1:], strict=False):
             assert avant != apres, "le splash ne reflète pas le changement d'étape"
 
     def test_la_ligne_avance_avec_les_etapes(self, qtbot):

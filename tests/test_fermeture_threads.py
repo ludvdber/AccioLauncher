@@ -206,7 +206,7 @@ class TestArretBorne:
         conséquence : le processus s'en va aussitôt.
         """
         programme = (
-            "import sys; sys.path.insert(0, %r)\n"
+            f"import sys; sys.path.insert(0, {str(RACINE)!r})\n"
             "from PyQt6.QtCore import QThread\n"
             "from PyQt6.QtWidgets import QApplication\n"
             "from src.core.thread_utils import arreter_a_la_fermeture\n"
@@ -219,7 +219,7 @@ class TestArretBorne:
             "ok = arreter_a_la_fermeture(th, 'sourd') and not th.isRunning()\n"
             "print('ARRETE' if ok else 'VIVANT', flush=True)\n"
             "import os; os._exit(0)\n"
-        ) % str(RACINE)
+        )
         r = subprocess.run([sys.executable, "-c", programme], capture_output=True,
                            text=True, timeout=60, cwd=str(RACINE))
         assert "ARRETE" in r.stdout, f"{r.returncode} {r.stdout} {r.stderr}"

@@ -42,7 +42,6 @@ import logging
 import os
 import re
 import sys
-import tempfile
 from collections.abc import Callable
 from typing import Any
 from dataclasses import dataclass
@@ -50,6 +49,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from src.core.catalogue_blocs import Sauvegardes
+from src.core.ecriture_atomique import ecrire_atomique
 
 log = logging.getLogger(__name__)
 
@@ -463,17 +463,7 @@ def _ecrire(stock: dict[tuple[str, str], dict[str, Any]], chemin: Path) -> None:
     data = {"version": 1, "sauvegardes": [
         ligne(jeu, fichier, v) for (jeu, fichier), v in sorted(stock.items())]}
     chemin.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(json.dumps(data, indent=1, ensure_ascii=False))
-        os.replace(tmp, chemin)
-    except OSError:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    ecrire_atomique(chemin, json.dumps(data, indent=1, ensure_ascii=False))
 
 
 def _jour(horodatage: float | None) -> date | None:

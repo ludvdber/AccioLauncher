@@ -33,13 +33,14 @@ garde — or elle existe parce que des statistiques de jeu réelles ont déjà �
 import json
 import logging
 import os
-import tempfile
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+
+from src.core.ecriture_atomique import ecrire_atomique
 
 log = logging.getLogger(__name__)
 
@@ -188,7 +189,7 @@ def _parse_session(brut: Any) -> Session | None:
     return Session(jeu=jeu, debut=debut, duree=duree)
 
 
-def _parse_tentative(brut: Any) -> "Tentative | None":
+def _parse_tentative(brut: Any) -> Tentative | None:
     """Une tentative fautive est ignorée, jamais fatale — comme une session."""
     if not isinstance(brut, dict):
         return None
@@ -250,17 +251,7 @@ def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
     """
     chemin.parent.mkdir(parents=True, exist_ok=True)
     texte = json.dumps(data, indent=1, ensure_ascii=False)
-    fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(texte)
-        os.replace(tmp, chemin)
-    except OSError:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    ecrire_atomique(chemin, texte)
 
 
 def _ecrire(hist: Historique, chemin: Path) -> None:

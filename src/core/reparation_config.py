@@ -17,8 +17,6 @@ retrouver. Les patchs du catalogue (`ini_patches`) repassent au lancement
 suivant, comme toujours.
 """
 
-from __future__ import annotations
-
 import logging
 import shutil
 from dataclasses import dataclass

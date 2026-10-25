@@ -19,7 +19,7 @@ class Ticker(QObject):
 
     tick = pyqtSignal()
 
-    _instance: "Ticker | None" = None
+    _instance: Ticker | None = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -30,7 +30,7 @@ class Ticker(QObject):
         self._timer.start()
 
     @classmethod
-    def instance(cls) -> "Ticker":
+    def instance(cls) -> Ticker:
         # `sip.isdeleted` : à l'extinction de l'application, Qt détruit l'objet
         # C++ mais l'enveloppe Python survit dans `_instance`. La rendre telle
         # quelle ferait lever RuntimeError au premier accès à `tick`.

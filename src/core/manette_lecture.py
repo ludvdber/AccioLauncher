@@ -23,8 +23,6 @@ A 1, B 2, LB 5, RB 6. Toute autre manette suit la disposition Xbox : le bouton 1
 valide, le 2 revient.
 """
 
-from __future__ import annotations
-
 import ctypes
 import logging
 import os

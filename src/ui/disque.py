@@ -10,8 +10,6 @@ Une seule image par jeu et par taille, peinte une fois (`_cache`) ; chaque
 battement du `Ticker` (règle 18) ne fait que la tourner.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from PyQt6.QtCore import QElapsedTimer, QPointF, QRectF, QSize, Qt

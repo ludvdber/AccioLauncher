@@ -87,7 +87,7 @@ class ConfigFile:
     destination: str   # chemin avec ~ (ex: "~/Documents/MonJeu/hppoa.ini")
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ConfigFile":
+    def from_dict(cls, data: dict[str, Any]) -> ConfigFile:
         return cls(source=data["source"], destination=data["destination"])
 
 
@@ -101,7 +101,7 @@ class IniPatch:
     fallback: str | None = None  # valeur de repli si la valeur principale échoue
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "IniPatch":
+    def from_dict(cls, data: dict[str, Any]) -> IniPatch:
         return cls(file=data["file"], section=data["section"],
                    key=data["key"], value=data["value"],
                    fallback=data.get("fallback"))
@@ -209,7 +209,7 @@ def _chaines(data: dict[str, Any], cles: tuple[str, ...], *, strip: bool = False
     return chaines if len(chaines) == len(cles) else None
 
 
-def _parse_language_files(data: Any) -> "LanguageFiles | None":
+def _parse_language_files(data: Any) -> LanguageFiles | None:
     """Lit le bloc `language_files`, ou None s'il est absent ou douteux.
 
     Tout ou rien, comme `language_registry` : une langue à moitié posée donne
@@ -267,7 +267,7 @@ def _parse_language_files(data: Any) -> "LanguageFiles | None":
     return LanguageFiles(languages=tuple(langues))
 
 
-def _parse_manette_registre(data: Any) -> "ManetteRegistre | None":
+def _parse_manette_registre(data: Any) -> ManetteRegistre | None:
     """Lit le bloc `controller_registry`, ou None s'il est absent ou douteux.
 
     Mêmes barrières que `language_registry` (clé et valeur passent par
@@ -300,7 +300,7 @@ def _parse_manette_registre(data: Any) -> "ManetteRegistre | None":
     return ManetteRegistre(root=root, key=cle, view=view, value=nom, on=on, off=off)
 
 
-def _parse_language_registry(data: Any) -> "LanguageRegistry | None":
+def _parse_language_registry(data: Any) -> LanguageRegistry | None:
     """Lit le bloc `language_registry`, ou None s'il est absent ou douteux.
 
     TOUT ou RIEN : jamais la moitié des valeurs dans le registre de quelqu'un.
@@ -382,7 +382,7 @@ class Resolution:
     height: str     # clé de la hauteur
 
 
-def _parse_resolution(data: Any) -> "Resolution | None":
+def _parse_resolution(data: Any) -> Resolution | None:
     """Lit le bloc `resolution`, ou None s'il est absent ou douteux.
 
     Mêmes barrières que les patchs de `language_files` : rien qui puisse
@@ -629,7 +629,7 @@ def _motifs_captures(data: Any) -> tuple[str, ...]:
     return tuple(m.replace("\\", "/") for m in data)
 
 
-def _parse_sauvegardes(data: Any) -> "Sauvegardes | None":
+def _parse_sauvegardes(data: Any) -> Sauvegardes | None:
     """Tout ou rien, comme `language_registry` : un bloc douteux est ignoré en
     entier, et le jeu n'a simplement pas de sauvegardes affichées."""
     if not isinstance(data, dict):

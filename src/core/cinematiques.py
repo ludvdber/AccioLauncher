@@ -28,8 +28,6 @@ seuil suit la règle des morceaux (`discographie.ouvert_au_seuil`). Aucune
 fonction ne lève.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from dataclasses import dataclass, field

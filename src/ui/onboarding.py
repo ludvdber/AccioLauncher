@@ -680,7 +680,7 @@ class OnboardingDialog(QDialog):
         self._compte.setText(tr("Question {n} sur {total}").format(n=q + 1, total=len(QUESTIONS)))
         self._intitule.setText(question(q))
         self._groupe_reponses.setExclusive(False)
-        for i, (carte, contenu) in enumerate(zip(self._cartes_reponse, reponses(q))):
+        for i, (carte, contenu) in enumerate(zip(self._cartes_reponse, reponses(q), strict=False)):
             carte.dire(contenu)
             carte.setChecked(self._reponses[q] == i)
         self._groupe_reponses.setExclusive(True)

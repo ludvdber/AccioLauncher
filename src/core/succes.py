@@ -25,7 +25,6 @@ obtenu l'a été.
 import json
 import logging
 import os
-import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -33,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from src.core.catalogue_blocs import Sauvegardes
+from src.core.ecriture_atomique import ecrire_atomique
 
 log = logging.getLogger(__name__)
 
@@ -273,18 +273,8 @@ def _ecrire(stock: dict[tuple[str, str], dict[str, datetime | None]], chemin: Pa
               for ident, quand in sorted(lignes_jeu.items())]
     regardees = [{"jeu": jeu, "sauvegarde": rel} for (jeu, rel), vus in sorted(stock.items()) if not vus]
     chemin.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(json.dumps({"version": 1, "regardees": regardees, "obtenus": lignes},
-                               indent=1, ensure_ascii=False))
-        os.replace(tmp, chemin)
-    except OSError:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    ecrire_atomique(chemin, json.dumps({"version": 1, "regardees": regardees, "obtenus": lignes},
+                                       indent=1, ensure_ascii=False))
 
 
 # ─── Au retour de partie ───

@@ -113,7 +113,7 @@ def refus_de_cle(ruche: str, cle: str) -> str | None:
     c'est la seule barrière entre un catalogue distant et le registre système.
     """
     if ruche not in RUCHES:
-        return "ruche non supportée (%r)" % (ruche,)
+        return f"ruche non supportée ({ruche!r})"
     if not isinstance(cle, str) or not cle.strip():
         return "chemin vide"
     if _controle(cle):
@@ -131,7 +131,7 @@ def refus_de_cle(ruche: str, cle: str) -> str | None:
         return "chemin trop court (Software\\Editeur\\Jeu attendu)"
     for s in segments[1:]:
         if s.lower() in _SEGMENTS_INTERDITS:
-            return "segment interdit (%r)" % (s,)
+            return f"segment interdit ({s!r})"
     return None
 
 
@@ -145,11 +145,11 @@ def refus_de_valeur(nom: str, valeur: object) -> str | None:
     if not isinstance(nom, str) or not nom.strip():
         return "nom de valeur vide (la valeur par défaut n'est pas supportée)"
     if nom.lower() in _NOMS_INTERDITS:
-        return "nom de valeur interdit (%r)" % (nom,)
+        return f"nom de valeur interdit ({nom!r})"
     if _controle(nom):
         return "caractère de contrôle dans le nom"
     if isinstance(valeur, bool) or not isinstance(valeur, (str, int)):
-        return "type non supporté (%s)" % type(valeur).__name__
+        return f"type non supporté ({type(valeur).__name__})"
     if isinstance(valeur, str) and _controle(valeur):
         return "caractère de contrôle dans la valeur (injection .reg)"
     if isinstance(valeur, int) and not 0 <= valeur <= 0xFFFFFFFF:
@@ -177,11 +177,11 @@ def construire_reg(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32) -> str
     """
     raison = refus_de_cle(ruche, cle)
     if raison is not None:
-        raise ValueError("clé de registre refusée (%s) : %r" % (raison, cle))
+        raise ValueError(f"clé de registre refusée ({raison}) : {cle!r}")
     for nom, valeur in valeurs.items():
         raison = refus_de_valeur(nom, valeur)
         if raison is not None:
-            raise ValueError("valeur de registre refusée (%s) : %r" % (raison, nom))
+            raise ValueError(f"valeur de registre refusée ({raison}) : {nom!r}")
     segments = [s for s in cle.replace("/", "\\").split("\\") if s]
     # Ne pas doubler WOW6432Node si le catalogue l'a déjà écrit dans le chemin :
     # on créerait « SOFTWARE\WOW6432Node\WOW6432Node\… », une clé fantôme que le
@@ -190,12 +190,12 @@ def construire_reg(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32) -> str
     if vue == 32 and not deja_redirige:
         segments = [segments[0], "WOW6432Node", *segments[1:]]
     lignes = ["Windows Registry Editor Version 5.00", "",
-              "[%s\\%s]" % (_RUCHES_LONGUES[ruche], "\\".join(segments))]
+              "[{}\\{}]".format(_RUCHES_LONGUES[ruche], "\\".join(segments))]
     for nom, valeur in valeurs.items():
         if isinstance(valeur, int):
-            lignes.append('"%s"=dword:%08x' % (_echappe_reg(nom), valeur))
+            lignes.append(f'"{_echappe_reg(nom)}"=dword:{valeur:08x}')
         else:
-            lignes.append('"%s"="%s"' % (_echappe_reg(nom), _echappe_reg(valeur)))
+            lignes.append(f'"{_echappe_reg(nom)}"="{_echappe_reg(valeur)}"')
     lignes.append("")
     return "\r\n".join(lignes)
 
@@ -315,7 +315,7 @@ def _ecrire_eleve(ruche: str, cle: str, valeurs: Valeurs, vue: int) -> bool:
         from src.core.win_utils import dossier_windows
         regedit = str(Path(dossier_windows()) / "regedit.exe")
         rc = ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", regedit, '/s "%s"' % fichier, None, 0)
+            None, "runas", regedit, f'/s "{fichier}"', None, 0)
         if rc <= 32:
             # 5 = SE_ERR_ACCESSDENIED : l'utilisateur a refusé l'invite UAC.
             log.info("Élévation refusée ou impossible (ShellExecuteW=%d)", rc)

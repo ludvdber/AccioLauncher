@@ -4,10 +4,11 @@ import json
 import logging
 import os
 import sys
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from src.core.ecriture_atomique import ecrire_atomique
 
 log = logging.getLogger(__name__)
 
@@ -231,7 +232,7 @@ class Config:
         return CONFIG_FILE_PATH.exists()
 
     @classmethod
-    def load(cls) -> "Config":
+    def load(cls) -> Config:
         """Charge la configuration depuis le fichier JSON."""
         if CONFIG_FILE_PATH.exists():
             try:
@@ -325,21 +326,7 @@ class Config:
             indent=4,
             ensure_ascii=False,
         )
-        # Écriture atomique : tmp + rename pour éviter la corruption
-        fd, tmp_path = tempfile.mkstemp(
-            dir=CONFIG_FILE_PATH.parent, suffix=".tmp",
-        )
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(data)
-            os.replace(tmp_path, CONFIG_FILE_PATH)
-        except OSError:
-            # Nettoyage si le replace échoue
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-            raise
+        ecrire_atomique(CONFIG_FILE_PATH, data)
 
 
 # --- Migration de l'ancienne arborescence (avant le 2026-08-26) ---

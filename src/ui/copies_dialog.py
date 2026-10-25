@@ -7,8 +7,6 @@ une confirmation qui dit ce qui se passe pour l'état actuel : il est copié
 d'abord, on peut donc y revenir de la même façon.
 """
 
-from __future__ import annotations
-
 from PyQt6.QtCore import QDate, QLocale, Qt, QTime
 from PyQt6.QtWidgets import (
     QDialog,
@@ -54,9 +52,7 @@ def _quand(moment) -> str:
     devient une date sans heure, et deux versions du même soir se confondaient.
     """
     locale = QLocale(get_language())
-    return "{}, {}".format(
-        locale.toString(QDate(moment.year, moment.month, moment.day), QLocale.FormatType.LongFormat),
-        locale.toString(QTime(moment.hour, moment.minute), QLocale.FormatType.ShortFormat))
+    return f"{locale.toString(QDate(moment.year, moment.month, moment.day), QLocale.FormatType.LongFormat)}, {locale.toString(QTime(moment.hour, moment.minute), QLocale.FormatType.ShortFormat)}"
 
 
 class CopiesDialog(QDialog):

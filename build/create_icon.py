@@ -37,12 +37,11 @@ def main() -> int:
     with Image.open(ICONE) as im:
         tailles = {w for w, _ in im.info.get("sizes", [])}
     manquantes = TAILLES_ATTENDUES - tailles
-    print("Icone : %s (%d octets), tailles %s"
-          % (ICONE.name, ICONE.stat().st_size,
-             ", ".join(str(t) for t in sorted(tailles))))
+    print(f"Icone : {ICONE.name} ({ICONE.stat().st_size} octets), "
+          f"tailles {', '.join(str(t) for t in sorted(tailles))}")
     if manquantes:
-        print("ATTENTION : tailles manquantes %s — l'icone sera floue a ces"
-              " dimensions." % ", ".join(str(t) for t in sorted(manquantes)))
+        print("ATTENTION : tailles manquantes {} — l'icone sera floue a ces"
+              " dimensions.".format(", ".join(str(t) for t in sorted(manquantes))))
     return 0
 
 

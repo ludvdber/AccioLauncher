@@ -39,8 +39,6 @@ Les noms des cartes et des lieux viennent du JEU INSTALLÉ (`HPMenu.int`,
 `HPmenu.fre`…), dans sa langue : aucun texte du jeu n'est recopié ici.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import struct
@@ -49,7 +47,7 @@ from datetime import datetime
 from functools import lru_cache
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from src.core import textures_ue1
@@ -94,7 +92,7 @@ _PROPRIETES_HP1 = {
     SERDAIGLE: "numHousePointsRavenclaw",
     POUFSOUFFLE: "numHousePointsHufflepuff",
 }
-_BLOC_HARRY = re.compile(rb"Class=HarryPotter\.Harry Name=\w+\r?\n\{\r?\n(.*?)\r?\n\}", re.S)
+_BLOC_HARRY = re.compile(rb"Class=HarryPotter\.Harry Name=\w+\r?\n\{\r?\n(.*?)\r?\n\}", re.DOTALL)
 _CARTE = re.compile(r"WizardCards\[(\d+)\]=\(bHasCard=True\)")
 _LUES = {*_PROPRIETES_HP1.values(), "numHousePointsHarry", "numBeans"}
 # `Save9.usa`, rangé après les emplacements du menu.
@@ -274,7 +272,7 @@ def image_sauvegarde_hp1(system: Path, sauvegarde: Path) -> Path | None:
     images livrées avec le jeu, 128 px, une par niveau). Le système de fichiers
     du jeu ignore la casse (« SGS lev2_hogfront.bmp » pour LEV2_HOGFRONT).
     """
-    numero = re.fullmatch(r"Save(\d+)\.usa", sauvegarde.name, re.I)
+    numero = re.fullmatch(r"Save(\d+)\.usa", sauvegarde.name, re.IGNORECASE)
     if numero is None:
         return None
     niveau, point = info_hp1(sauvegarde.with_name(f"GameSaveInfo{numero.group(1)}"))
@@ -291,7 +289,7 @@ def image_sauvegarde_hp1(system: Path, sauvegarde: Path) -> Path | None:
 
 def releve_hp1(chemin: Path) -> Releve | None:
     """Le relevé de `SaveN.usa` ; None si le fichier ne se lit pas."""
-    numero = re.fullmatch(r"Save(\d+)\.usa", chemin.name, re.I)
+    numero = re.fullmatch(r"Save(\d+)\.usa", chemin.name, re.IGNORECASE)
     if numero is None:
         return None
     try:
@@ -346,10 +344,7 @@ class PartieLue(Protocol):
     def lu(self) -> bool: ...
 
 
-_P = TypeVar("_P", bound=PartieLue)
-
-
-def la_derniere_jouee(releves: Sequence[_P]) -> _P | None:
+def la_derniere_jouee[P: PartieLue](releves: Sequence[P]) -> P | None:
     """Celui que le jeu a écrit en dernier : la partie qu'on reprend. Parmi les
     lisibles d'abord, sinon un emplacement illisible ouvrirait sur du vide."""
     candidats = [r for r in releves if r.lu] or list(releves)

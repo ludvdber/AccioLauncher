@@ -824,4 +824,4 @@ class TestBalisageDuCatalogueJamaisInterprete:
                     and fonc.value.id == "QMessageBox"
                     and fonc.attr in {"question", "warning", "information", "critical"}):
                 fautifs.append(fonc.attr)
-        assert not fautifs, "appels statiques a QMessageBox (AutoText) : %s" % fautifs
+        assert not fautifs, f"appels statiques a QMessageBox (AutoText) : {fautifs}"

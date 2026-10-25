@@ -5,7 +5,7 @@ leurs valeurs sont celles relevées sur le poste de Ludo le 2026-10-03
 (`hp8.exe` c0000409 à +2 s dans un AUTRE processus, `d3d9.dll` 1.2.0.0 du
 correctif, `paul.dll` mis en quarantaine dans `HP8\\pc`).
 """
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -87,7 +87,7 @@ class TestNotreProcessus:
         assert p == dp.Plantage(C0000005)
         canal, q = vu[0]
         assert canal == "Application" and "EventID=1000" in q
-        utc = (debut - timedelta(seconds=5)).astimezone(dp.timezone.utc)
+        utc = (debut - timedelta(seconds=5)).astimezone(UTC)
         assert utc.strftime("@SystemTime>='%Y-%m-%dT%H:%M:%S.000Z'") in q
 
 

@@ -325,7 +325,7 @@ class CarouselItem(QWidget):
 
         p.end()
 
-    def _geometrie(self) -> "_Geo":
+    def _geometrie(self) -> _Geo:
         """Où la jaquette se pose, et à quelle opacité.
 
         Calculée UNE fois et passée à chaque couche : c'est ce qui empêche
@@ -344,7 +344,7 @@ class CarouselItem(QWidget):
 
     # ── Les couches, du fond vers la surface ────────────────────────────
 
-    def _peindre_ombre_portee(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_ombre_portee(self, p: QPainter, geo: _Geo) -> None:
         """Quatre halos noirs de plus en plus larges sous la vignette choisie."""
         p.save()
         p.setOpacity(0.4)
@@ -361,7 +361,7 @@ class CarouselItem(QWidget):
         p.restore()
         p.setOpacity(geo.opacite)
 
-    def _peindre_jaquette(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_jaquette(self, p: QPainter, geo: _Geo) -> None:
         """L'illustration, ou son remplacement quand elle manque."""
         if self._pixmap:
             clip = QPainterPath()
@@ -393,7 +393,7 @@ class CarouselItem(QWidget):
                    Qt.AlignmentFlag.AlignCenter, _game_roman(self.game.id))
         p.setOpacity(geo.opacite)
 
-    def _peindre_halo_selection(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_halo_selection(self, p: QPainter, geo: _Geo) -> None:
         """Le halo doré et le filet de la vignette choisie."""
         p.setOpacity(1.0)
         for i in range(3):
@@ -409,7 +409,7 @@ class CarouselItem(QWidget):
         p.drawRoundedRect(geo.x + 1, geo.y + 1, geo.w - 2, geo.h - 2,
                           geo.radius, geo.radius)
 
-    def _peindre_reflet(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_reflet(self, p: QPainter, geo: _Geo) -> None:
         """La jaquette retournée sous la vignette, fondue vers le fond.
 
         Le reflet est mis en cache à une taille : la changer sans l'invalider
@@ -440,7 +440,7 @@ class CarouselItem(QWidget):
         fade.setColorAt(1, theme.bg_qcolor(255))
         p.fillRect(geo.x, ref_y, geo.w, ref_h, fade)
 
-    def _peindre_pastille_installe(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_pastille_installe(self, p: QPainter, geo: _Geo) -> None:
         """Le point vert, et le numéro de version s'il est connu."""
         p.setOpacity(1.0)
         p.setPen(Qt.PenStyle.NoPen)
@@ -463,7 +463,7 @@ class CarouselItem(QWidget):
         p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th),
                    Qt.AlignmentFlag.AlignCenter, ver_text)
 
-    def _peindre_badge_maj(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_badge_maj(self, p: QPainter, geo: _Geo) -> None:
         """La pastille « ↑ » d'une mise à jour disponible."""
         p.setOpacity(1.0)
         badge_size = 18
@@ -477,7 +477,7 @@ class CarouselItem(QWidget):
         p.drawText(QRectF(bx, by, badge_size, badge_size),
                    Qt.AlignmentFlag.AlignCenter, "↑")
 
-    def _peindre_ruban_nouveau(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_ruban_nouveau(self, p: QPainter, geo: _Geo) -> None:
         """Ruban « NOUVEAU » (jeu apparu via une mise à jour du catalogue)."""
         p.setOpacity(1.0)
         police, text = _badge_texte(tr("NOUVEAU"), geo.w - 6)
@@ -492,7 +492,7 @@ class CarouselItem(QWidget):
         p.drawText(QRectF(bx, by, tw + _BADGE_PADDING, fm.height() + 3),
                    Qt.AlignmentFlag.AlignCenter, text)
 
-    def _peindre_voile_bientot(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_voile_bientot(self, p: QPainter, geo: _Geo) -> None:
         """Voile sombre + mention discrète : la vignette reste lisible et
         attractive (c'est un jeu à venir, pas une erreur), mais on ne laisse
         pas croire qu'elle est jouable."""
@@ -511,7 +511,7 @@ class CarouselItem(QWidget):
         p.setPen(QColor(200, 200, 220, 230))
         p.drawText(QRectF(bx, by, bw, bh), Qt.AlignmentFlag.AlignCenter, text)
 
-    def _peindre_filet_reprise(self, p: QPainter, geo: "_Geo") -> None:
+    def _peindre_filet_reprise(self, p: QPainter, geo: _Geo) -> None:
         """Téléchargement interrompu : un filet au bas de la jaquette, rempli
         à hauteur de ce qui est déjà reçu.
 

@@ -48,13 +48,12 @@ extend-exclude = [".venv", "venv", "build/accio_launcher", "dist"]
 [tool.ruff.lint]
 # Ce que le code respecte AUJOURD'HUI, donc ce qui est exigible sans réécriture.
 #   E4/E7/E9 : erreurs pycodestyle réelles · F : pyflakes · W : espaces parasites
-select = ["E4", "E7", "E9", "F", "W"]
-# Adoptions candidates, volontairement laissées de côté à la veille d'un
-# déploiement : elles ne corrigent aucun bug et noieraient les vrais diffs.
-#   I    tri des imports (34 fichiers touchés)
-#   UP   modernisations de syntaxe (15)
-#   B    pièges bugbear (1) · SIM (5) · C4 (2) · RET (1)
-# À traiter en une passe dédiée, après la mise en ligne.
+#   UP : syntaxe de la version cible (f-strings, `X | None`, génériques PEP 695)
+#   B  : pièges bugbear (`zip` sans `strict=`, défaut mutable, `raise` sans `from`)
+# UP et B adoptés le 2026-10-25, avec le passage à Python 3.14 seul.
+select = ["E4", "E7", "E9", "F", "W", "UP", "B"]
+# Écarté : I (tri des imports), 158 déplacements pour un gain seulement visuel ;
+# les imports différés de main.py suivent l'ordre du démarrage, pas l'alphabet.
 
 # mypy sur la logique pure (`src/core`), en mode STRICT : tout module neuf y
 # naît strict. L'interface (`src/ui`) n'est pas vérifiée : l'essentiel de ce que

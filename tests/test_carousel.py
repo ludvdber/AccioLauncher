@@ -183,7 +183,7 @@ class TestVignettesTiennentDansLaBande:
                 if item.geometry().bottom() > c.height() or item.geometry().top() < 0]
 
     def _carousel(self, qtbot, compact):
-        jeux = [_make_game("hp%d" % n) for n in range(1, 9)]
+        jeux = [_make_game(f"hp{n}") for n in range(1, 9)]
         c = Carousel(jeux, _FakeManager())
         qtbot.addWidget(c)
         c.set_compact(compact)
@@ -233,7 +233,7 @@ class TestVignettePour:
             _, h = vignette_pour(dispo, SCALE_SELECTED)
             haut = int(h * SCALE_SELECTED)
             total = haut + int(haut * REFLECTION_RATIO) + _MARGE_V
-            assert total <= dispo, "dispo=%d -> item de %d px" % (dispo, total)
+            assert total <= dispo, f"dispo={dispo} -> item de {total} px"
 
     def test_le_rapport_de_la_jaquette_est_tenu(self):
         from src.ui.carousel import SCALE_SELECTED

@@ -18,8 +18,6 @@ Trois règles :
   encodage restent ceux du fichier : seule la ligne de la clé change.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import shutil
@@ -480,7 +478,7 @@ def ecrire(ini: Path, reglage: Reglage, valeur: Any) -> None:
     elif reglage.ident == "resolution":
         if valeur not in reglage.choix:
             raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
-        for cle, nombre in zip(_RESOLUTION, valeur.split("x")):
+        for cle, nombre in zip(_RESOLUTION, valeur.split("x"), strict=True):
             if not _poser(lignes, reglage.section, cle, nombre):
                 raise ValueError(f"section [{reglage.section}] absente")
     elif reglage.choix:

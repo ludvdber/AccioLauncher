@@ -18,8 +18,6 @@ Seul le rapport USB de la DualShock 4 a été VU (manette de Ludo, `054C:09CC`,
 2026-09-27). DualSense et Bluetooth : écrits d'après leur format public, pas vus.
 """
 
-from __future__ import annotations
-
 import ctypes
 import logging
 import sys
@@ -198,7 +196,7 @@ def _ecrire_windows(manette: Manette, donnees: bytes) -> bool:
 
 # Taille du rapport de sortie par modèle : hidraw ne la donne pas sans analyser
 # le descripteur, et elle ne dépend que du modèle et du bus.
-_SORTIE_USB = {**{pid: 32 for pid in DUALSHOCK4}, **{pid: 48 for pid in DUALSENSE}}
+_SORTIE_USB = {**dict.fromkeys(DUALSHOCK4, 32), **dict.fromkeys(DUALSENSE, 48)}
 
 
 def _manettes_linux(racine: Path = Path("/sys/class/hidraw")) -> list[Manette]:

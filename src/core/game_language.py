@@ -228,7 +228,7 @@ def _detecter_fichiers(game: GameData, config: Config) -> str | None:
     for langue in game.language_files.languages:
         valeurs = [lire_cle_ini(p, game, config) for p in langue.ini]
         if all(v is not None and v.casefold() == p.value.casefold()
-               for v, p in zip(valeurs, langue.ini)):
+               for v, p in zip(valeurs, langue.ini, strict=True)):
             return langue.code
     return None
 

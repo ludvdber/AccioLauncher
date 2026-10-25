@@ -30,7 +30,7 @@ progression]]), `annee_courante` en tiendra compte sans que l'affichage change.
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from src.core.game_data import GameData
 

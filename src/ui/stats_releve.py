@@ -191,7 +191,7 @@ class _Ligne(QWidget):
     """Une ligne du relevé. Peinte : le fond de la ligne choisie et le trait
     qui relie la partie 2 de l'année VII à la partie 1."""
 
-    def __init__(self, releve: "_Releve", game_id: str, *, rattachee: bool) -> None:
+    def __init__(self, releve: _Releve, game_id: str, *, rattachee: bool) -> None:
         super().__init__(releve)
         self._releve = releve
         self.game_id = game_id
@@ -259,7 +259,7 @@ class _Releve(QWidget):
 
         temps_max = max(temps.values(), default=0)
         self._courts = dict(zip((e.game.id for e in self._entrees),
-                                noms_courts([e.game.name for e in self._entrees])))
+                                noms_courts([e.game.name for e in self._entrees]), strict=True))
         scolaires = sorted((e for e in self._entrees if 1 <= e.game.annee <= ANNEES),
                            key=lambda e: e.game.annee)
         hors = [e for e in self._entrees if not 1 <= e.game.annee <= ANNEES]

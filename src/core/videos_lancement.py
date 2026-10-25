@@ -10,8 +10,6 @@ toute façon. Seuls les fichiers déclarés, et leur `.off`, sont touchés.
 Aucune fonction ne lève.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 from pathlib import Path

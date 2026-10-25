@@ -204,7 +204,7 @@ class TestResumeDeLaFiche:
         assert resume is not None and resume.lieu == ""
 
 
-def _paquet_harry(props: dict[str, int], cartes: dict[int, bool] = {},
+def _paquet_harry(props: dict[str, int], cartes: dict[int, bool] | None = None,
                   pile: bool = False, texte: bytes = b"") -> bytes:
     """Une sauvegarde FABRIQUÉE sur le modèle de `SaveN.usa` (relevé le
     2026-10-15) : un paquet Unreal dont l'export de classe `Harry` porte ses
@@ -217,7 +217,7 @@ def _paquet_harry(props: dict[str, int], cartes: dict[int, bool] = {},
         corps += _compact(0) + _compact(0) + b"\x00" * 12
     for nom, valeur in props.items():
         corps += _compact(n[nom]) + bytes([0x22]) + struct.pack("<i", valeur)
-    for indice, eue in cartes.items():
+    for indice, eue in (cartes or {}).items():
         # Structure (genre 10), taille sur un octet, bit « tableau » si indice > 0.
         info = 0x5A | (0x80 if indice else 0)
         corps += (_compact(n["WizardCards"]) + bytes([info]) + _compact(n["WizardList"])

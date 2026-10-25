@@ -89,8 +89,8 @@ PAQUET_DU_PREREQUIS = {
     "vcredist2005_x86": "vc2005",
     "vcredist2008_x86": "vc2008",
     "vcredist2010_x86": "vc2010",
-    **{nom: "directx" for nom in system_checks.DLL_DIRECTX9},
-    **{nom: "directx" for nom in system_checks.DLL_COMPILATEUR},
+    **dict.fromkeys(system_checks.DLL_DIRECTX9, "directx"),
+    **dict.fromkeys(system_checks.DLL_COMPILATEUR, "directx"),
 }
 
 

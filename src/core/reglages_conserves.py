@@ -19,8 +19,6 @@ Les configurations rangées dans Documents (HP1 à HP3) ne sont pas concernées 
 l'installation ne les écrase plus (`post_install.apply_config_files`).
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import shutil

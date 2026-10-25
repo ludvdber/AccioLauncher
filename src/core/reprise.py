@@ -16,8 +16,6 @@ un emplacement que le folio ne lit pas, on passe par le menu plutôt que
 d'ouvrir une autre partie que celle annoncée.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 from collections.abc import Sequence
@@ -34,10 +32,10 @@ JEUX = frozenset(folio.RESUMES)
 def arguments_pour(jeu: str, chemin: Path) -> tuple[str, ...]:
     """Les arguments qui ouvrent ce fichier de sauvegarde ; () s'il n'a pas la forme attendue."""
     if jeu in ("hp1", "hp3"):
-        n = re.fullmatch(r"save(\d+)\.usa", chemin.name, re.I)
+        n = re.fullmatch(r"save(\d+)\.usa", chemin.name, re.IGNORECASE)
         return (f"?load={int(n.group(1))}",) if n else ()
     if jeu == "hp2":
-        k = re.fullmatch(r"slot(\d+)", chemin.parent.name, re.I)
+        k = re.fullmatch(r"slot(\d+)", chemin.parent.name, re.IGNORECASE)
         if k and chemin.name.lower() == "save0.usa":
             return ("-LOADGAME=0", f"-SAVESLOT={int(k.group(1))}")
     return ()

@@ -187,7 +187,7 @@ class _Mois(QWidget):
         haut_texte = fm.height() + 4
         zone_h = self.height() - 2 * haut_texte
         noms = self._noms(fm)
-        for i, (annee, mois, secondes) in enumerate(self._cases):
+        for i in range(len(self._cases)):
             col = self._colonne(i)
             actuel = i == len(self._cases) - 1
             sol = haut_texte + zone_h

@@ -62,7 +62,7 @@ class TestDefinitions:
         from src.core import folio_hp5
         lignes = [s for s in succes.du_jeu("hp5") if s.ident.startswith("complet_")]
         assert len(lignes) == len(folio_hp5.COMPTEURS)
-        fantomes = next(s for s, c in zip(lignes, folio_hp5.COMPTEURS) if c.libelle == "Fantômes")
+        fantomes = next(s for s, c in zip(lignes, folio_hp5.COMPTEURS, strict=False) if c.libelle == "Fantômes")
         compteurs = [0] * len(folio_hp5.COMPTEURS)
         compteurs[[c.libelle for c in folio_hp5.COMPTEURS].index("Fantômes")] = 4
         assert fantomes.obtenu(SimpleNamespace(compteurs=tuple(compteurs)))

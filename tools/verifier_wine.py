@@ -28,8 +28,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core import compat, game_registry, system_checks  # noqa: E402
-from src.core.preparation_wine import PreparationWine  # noqa: E402
+from src.core import compat, game_registry, system_checks
+from src.core.preparation_wine import PreparationWine
 
 CLE_ESSAI = r"Software\AccioLauncher\Verification"
 

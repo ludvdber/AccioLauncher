@@ -10,7 +10,6 @@ jamais vues, une fois.
 les porte toutes ; une config d'avant la 1.1.6 se charge sans la clé, donc
 vide, et c'est ce qui la désigne.
 """
-from __future__ import annotations
 
 from collections.abc import Iterable
 

@@ -199,8 +199,7 @@ def _nom_contributeur(c) -> QWidget:
     if not c.url:
         return lbl
     site = urlparse(c.url).hostname or c.url
-    if site.startswith("www."):
-        site = site[4:]
+    site = site.removeprefix("www.")
     lbl.setToolTip(tr("Ouvrir {}").format(site))
     ligne = QWidget()
     ligne.setStyleSheet("background: transparent;")

@@ -31,8 +31,6 @@ Unreal n'écrit que ce qui diffère du défaut : une carte absente des listes
 n'est à personne, un compteur absent vaut zéro.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import struct
@@ -93,11 +91,11 @@ OBJETS = (
 
 # Le nom, les dates, puis le texte. Français : « Dorcas Bienaimée (1812 - 1904).
 # Fonda… » ; anglais : « Dorcas Wellbeloved 1812-1904 Founder… ».
-_AVEC_PARENTHESES = re.compile(r"^(.*?)\s*\(([^)]*)\)\s*[.,]?\s*(.*)$", re.S)
+_AVEC_PARENTHESES = re.compile(r"^(.*?)\s*\(([^)]*)\)\s*[.,]?\s*(.*)$", re.DOTALL)
 _DATES_ANGLAISES = re.compile(
     r"^(.*?)\s+((?:\d{3,4}|\?{4})\s*-\s*(?:\d{3,4}|present|unknown)"
-    r"|Medieval, dates unknown|Ancient Greek|[\w-]+ [Cc]entury)\.?\s+(.*)$", re.S)
-_SANS_DATES = re.compile(r"^([^.]{2,60})\.\s+(.*)$", re.S)     # « Harry Potter. Le Survivant. »
+    r"|Medieval, dates unknown|Ancient Greek|[\w-]+ [Cc]entury)\.?\s+(.*)$", re.DOTALL)
+_SANS_DATES = re.compile(r"^([^.]{2,60})\.\s+(.*)$", re.DOTALL)     # « Harry Potter. Le Survivant. »
 
 
 @dataclass(frozen=True)
@@ -274,7 +272,7 @@ def _textes(system: Path, langue: str) -> dict[str, str]:
     except OSError:
         return {}
     return {cle.lower(): valeur.strip() for cle, valeur in
-            re.findall(r"^([A-Za-z_0-9]+)=(.*?)\r?$", folio._decoder(brut), re.M)}
+            re.findall(r"^([A-Za-z_0-9]+)=(.*?)\r?$", folio._decoder(brut), re.MULTILINE)}
 
 
 def decouper(brut: str, classe: str) -> tuple[str, str, str]:
@@ -288,7 +286,7 @@ def decouper(brut: str, classe: str) -> tuple[str, str, str]:
         return trouve.group(1).strip(), "", trouve.group(2).strip()
     # Anglais sans dates ni point : « Queen Maeve Legendary witch… ». Le nom
     # finit sur celui de la classe (`WCMaeve`).
-    fin = re.search(rf"\b{re.escape(classe[2:])}\b", brut, re.I)
+    fin = re.search(rf"\b{re.escape(classe[2:])}\b", brut, re.IGNORECASE)
     if fin is not None and fin.end() < len(brut):
         return brut[:fin.end()].strip(), "", brut[fin.end():].strip()
     return brut, "", ""

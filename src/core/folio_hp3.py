@@ -25,8 +25,6 @@ Son code (`CardID` « VP05 ») donne sa série et son image (`LVP05`,
 `textures/HP3_Menu.utx`, 256 couleurs, lue par `textures_ue1`).
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import struct
@@ -166,7 +164,7 @@ def _valeurs(chemin: str, _mtime_ns: int, _taille: int) -> _Partie | None:
 
 
 def releve(chemin: Path) -> Releve | None:
-    numero = re.fullmatch(r"Save(\d+)\.usa", chemin.name, re.I)
+    numero = re.fullmatch(r"Save(\d+)\.usa", chemin.name, re.IGNORECASE)
     if numero is None:
         return None
     try:
@@ -226,7 +224,7 @@ def _proprietes_cartes(hgame: Path) -> tuple[dict[str, int], dict[str, str]]:
     dialog, carte = p.indice_nom("dialogId"), p.indice_nom("CardID")
     if dialog is None:
         return {}, {}
-    motif = re.compile(re.escape(_compact(dialog) + b"\x22") + b"(....)", re.S)
+    motif = re.compile(re.escape(_compact(dialog) + b"\x22") + b"(....)", re.DOTALL)
     motif_code = (re.compile(re.escape(_compact(carte)) + rb"\x5d\x06\x05([A-Z]{2}[0-9]{2})\x00")
                   if carte is not None else None)
     numeros, codes = {}, {}
@@ -271,7 +269,7 @@ def _menu(system: Path, langue: str) -> dict[str, str]:
         log.warning("Folio HP3 : %s illisible", menu, exc_info=True)
         return {}
     return {cle.lower(): valeur.strip() for cle, valeur in
-            re.findall(r"^([A-Za-z_]+_\d+)=(.*?)\r?$", texte, re.M) if valeur.strip()}
+            re.findall(r"^([A-Za-z_]+_\d+)=(.*?)\r?$", texte, re.MULTILINE) if valeur.strip()}
 
 
 # Les séries du folio du jeu, dans l'ordre de son menu : le code de série
@@ -313,7 +311,7 @@ class Catalogue:
 
 def _description(brut: str, nom: str) -> tuple[str, str]:
     """« Comte Vlad Dracula (apparu en 1390) - Célèbre vampire… » → (dates, texte)."""
-    trouve = re.match(r"^(.*?)\s*\(([^)]*)\)\s*-\s*(.*)$", brut, re.S)
+    trouve = re.match(r"^(.*?)\s*\(([^)]*)\)\s*-\s*(.*)$", brut, re.DOTALL)
     if trouve is None:
         return "", brut
     return trouve.group(2).strip(), trouve.group(3).strip()

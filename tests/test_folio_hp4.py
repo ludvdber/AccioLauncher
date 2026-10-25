@@ -115,7 +115,7 @@ class TestSauvegarde:
         for _, (debut, fin), familles in folio_hp4.PERSONNAGES:
             plages = sorted(familles.values())
             assert all(debut <= a <= b <= fin for a, b in plages)
-            assert all(b1 < a2 for (_, b1), (a2, _) in zip(plages, plages[1:]))
+            assert all(b1 < a2 for (_, b1), (a2, _) in zip(plages, plages[1:], strict=False))
             assert set(familles) == set(folio_hp4.FAMILLES)
 
     def test_un_rang_jamais_vu_n_a_pas_de_nom(self):

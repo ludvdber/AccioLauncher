@@ -16,7 +16,7 @@ from src.core.config import APP_VERSION
 # `scrub_user_paths` vit désormais dans `diagnostic` (le bouton « Copier les
 # informations de diagnostic » en a besoin aussi) ; réexporté ici pour les
 # appelants existants.
-from src.core.diagnostic import identite, scrub_user_paths  # noqa: F401
+from src.core.diagnostic import identite, scrub_user_paths
 
 log = logging.getLogger(__name__)
 

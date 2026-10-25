@@ -4,7 +4,7 @@ Une seule instance par fenêtre, réutilisée : un nouveau message remplace
 l'ancien et relance le timer. Fade-in/out via QGraphicsOpacityEffect.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QWidget

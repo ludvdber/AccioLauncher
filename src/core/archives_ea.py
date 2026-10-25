@@ -16,8 +16,6 @@ L'archive n'est jamais écrite : on lit, et on recopie vers le cache. Aucune
 fonction ne lève ; une archive illisible donne une liste vide.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import struct

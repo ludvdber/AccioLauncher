@@ -8,8 +8,6 @@ Relevé ; le nom complet est dans l'infobulle et le nom accessible. Les deux
 parties des Reliques partagent la septième année : « VII · 1 » et « VII · 2 ».
 """
 
-from __future__ import annotations
-
 from html import escape
 
 from PyQt6.QtCore import QSize, Qt

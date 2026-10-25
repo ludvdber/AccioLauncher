@@ -16,7 +16,6 @@ du dossier d'installation ; un dossier de données que s'il s'appelle
 `_Launcher`. Le dossier d'installation lui-même n'est retiré que VIDE
 (`rmdir` sans récursion) : un fichier à vous qui y traîne le garde en vie.
 """
-from __future__ import annotations
 
 import logging
 import os

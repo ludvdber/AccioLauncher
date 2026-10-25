@@ -427,7 +427,7 @@ class InfoPanel(QWidget):
             self._title_size = size
             self._title.setStyleSheet(
                 "QLabel#gameTitle { color: #f2f2f4; background: transparent;"
-                " font-size: %dpx; }" % size)
+                f" font-size: {size}px; }}")
 
     def squeeze_medias(self) -> bool:
         """Retire le galet « Collections » quand il occupe SEUL une rangée

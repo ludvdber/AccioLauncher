@@ -14,8 +14,6 @@ Sous Linux, rien n'est embarqué : le `vgmstream-cli` du système s'il existe.
 Aucune fonction ne lève : sans vgmstream ou sur un échec, None.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import shutil

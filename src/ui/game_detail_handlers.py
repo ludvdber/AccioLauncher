@@ -4,8 +4,6 @@ Extraits dans un module séparé pour garder la vue sous 300 lignes. Chaque fonc
 prend la vue en premier argument et utilise ses signaux + sous-systèmes.
 """
 
-from __future__ import annotations
-
 import logging
 import sys
 from pathlib import Path
@@ -78,7 +76,7 @@ def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0,
     return message(view, icone, titre, texte, choix, defaut, conserve)
 
 
-def confirmer_registre(view: "GameDetailView", nom_jeu: str, au_lancement: bool = False):
+def confirmer_registre(view: GameDetailView, nom_jeu: str, au_lancement: bool = False):
     """Fabrique le rappel de prévenance affiché avant une écriture registre.
 
     On ne touche pas au registre de quelqu'un sans le lui dire, et on lui dit
@@ -168,7 +166,7 @@ def texte_preparation_en_cours() -> str:
     return tr("Préparation de Wine en cours — patientez un instant.")
 
 
-def _preparation_bloque(view: "GameDetailView") -> bool:
+def _preparation_bloque(view: GameDetailView) -> bool:
     """Refuse, d'un toast, tant que Wine se prépare. True si c'est refusé.
 
     Toute porte qui lance une opération de jeu passe par ici, AVANT sa question
@@ -183,7 +181,7 @@ def _preparation_bloque(view: "GameDetailView") -> bool:
     return True
 
 
-def on_download(view: "GameDetailView", version: GameVersion | None = None) -> None:
+def on_download(view: GameDetailView, version: GameVersion | None = None) -> None:
     if view.game is None or _preparation_bloque(view):
         return
     if view._ops.is_busy:
@@ -225,12 +223,12 @@ def on_download(view: "GameDetailView", version: GameVersion | None = None) -> N
     view._refresh()
 
 
-def on_cancel_download(view: "GameDetailView") -> None:
+def on_cancel_download(view: GameDetailView) -> None:
     view._ops.cancel_download()
     view._refresh()
 
 
-def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
+def on_play(view: GameDetailView, ignorer_prerequis: bool = False) -> None:
     if view.game is None:
         return
     # Deux winetricks dans le même préfixe se marcheraient dessus, et le
@@ -316,7 +314,7 @@ def on_play(view: "GameDetailView", ignorer_prerequis: bool = False) -> None:
         view.status_message.emit(tr("Impossible de lancer le jeu."))
 
 
-def signaler_elevation(view: "GameDetailView", exe: Path) -> None:
+def signaler_elevation(view: GameDetailView, exe: Path) -> None:
     """Windows exige l'administrateur pour l'exe : dire quelle case décocher.
 
     Aucun des huit jeux ne le demande de lui-même (aucun manifeste : relevé
@@ -343,7 +341,7 @@ def signaler_elevation(view: "GameDetailView", exe: Path) -> None:
         open_local_path(str(exe.parent))
 
 
-def signaler_compat_absent(view: "GameDetailView") -> None:
+def signaler_compat_absent(view: GameDetailView) -> None:
     """Ni umu-run ni wine : dire QUOI installer, jamais un échec muet.
 
     Sur Bazzite, umu-launcher fait partie de l'image (relevé dans son
@@ -366,7 +364,7 @@ def signaler_compat_absent(view: "GameDetailView") -> None:
         open_url(GUIDE_LINUX_URL)
 
 
-def proposer_preparation(view: "GameDetailView", game: GameData | None,
+def proposer_preparation(view: GameDetailView, game: GameData | None,
                          puis_jouer: bool) -> None:
     """Propose de préparer Wine pour ce jeu : préfixe, puis composants.
 
@@ -401,7 +399,7 @@ def proposer_preparation(view: "GameDetailView", game: GameData | None,
         view.preparer_wine(game, verbes, puis_jouer)
 
 
-def _proposer_composants(view: "GameDetailView", game: GameData, manquants,
+def _proposer_composants(view: GameDetailView, game: GameData, manquants,
                          puis_jouer: bool) -> None:
     """Windows : TOUS les composants manquants, en un clic (ACT-054).
 
@@ -434,7 +432,7 @@ def _proposer_composants(view: "GameDetailView", game: GameData, manquants,
         open_url(PREREQUIS.get(manquants[0], (None, VCREDIST_URL))[1])
 
 
-def _apres_composants(view: "GameDetailView", game: GameData, reussie: bool,
+def _apres_composants(view: GameDetailView, game: GameData, reussie: bool,
                       raison: str, puis_jouer: bool, affiche: bool) -> None:
     """Windows : la suite de l'installation des composants."""
     if reussie:
@@ -468,7 +466,7 @@ def _apres_composants(view: "GameDetailView", game: GameData, reussie: bool,
         open_url(page)
 
 
-def apres_preparation(view: "GameDetailView", game_id: str, reussie: bool,
+def apres_preparation(view: GameDetailView, game_id: str, reussie: bool,
                       raison: str, puis_jouer: bool) -> None:
     """La préparation est finie : lancer, prévenir, ou expliquer l'échec.
 
@@ -514,7 +512,7 @@ def apres_preparation(view: "GameDetailView", game_id: str, reussie: bool,
         on_play(view, ignorer_prerequis=True)
 
 
-def on_uninstall(view: "GameDetailView") -> None:
+def on_uninstall(view: GameDetailView) -> None:
     if view.game is None:
         return
     question = tr("Voulez-vous vraiment désinstaller {} ?").format(view.game.name)
@@ -544,7 +542,7 @@ def _ce_qui_reste(game: GameData) -> str:
     return tr("La configuration du jeu dans Mes Documents est conservée.") if conf else ""
 
 
-def on_update_clicked(view: "GameDetailView") -> None:
+def on_update_clicked(view: GameDetailView) -> None:
     if view.game is None or _preparation_bloque(view):
         return
     ver = view.game.get_version(view.game.recommended_version)
@@ -562,7 +560,7 @@ def on_update_clicked(view: "GameDetailView") -> None:
         view._ops.switch_version(view.game, ver)
 
 
-def on_switch_version(view: "GameDetailView", game_id: str, version: str) -> None:
+def on_switch_version(view: GameDetailView, game_id: str, version: str) -> None:
     if view.game is None or view.game.id != game_id or _preparation_bloque(view):
         return
     ver = view.game.get_version(version)
@@ -570,7 +568,7 @@ def on_switch_version(view: "GameDetailView", game_id: str, version: str) -> Non
         view._ops.switch_version(view.game, ver)
 
 
-def on_versions_clicked(view: "GameDetailView") -> None:
+def on_versions_clicked(view: GameDetailView) -> None:
     if view.game is None:
         return
     dlg = VersionsDialog(view.game, view.manager, view)
@@ -582,7 +580,7 @@ def on_versions_clicked(view: "GameDetailView") -> None:
         dlg.exec()
 
 
-def on_repair(view: "GameDetailView") -> None:
+def on_repair(view: GameDetailView) -> None:
     """Vérifie / répare un jeu installé : re-téléchargement (SHA-256 si dispo) + réinstallation.
 
     Un jeu dont la configuration vit dans Documents (HP1-HP3) se voit d'abord
@@ -609,7 +607,7 @@ def on_repair(view: "GameDetailView") -> None:
         view._refresh()
 
 
-def _proposer_la_configuration(view: "GameDetailView", constat: str = "") -> None:
+def _proposer_la_configuration(view: GameDetailView, constat: str = "") -> None:
     game = view.game
     noms = "\n".join(f"• {f.name}" for f in reparation_config.fichiers(game))
     choix = _boite(QMessageBox.Icon.Question,
@@ -632,7 +630,7 @@ def _proposer_la_configuration(view: "GameDetailView", constat: str = "") -> Non
         view._refresh()
 
 
-def _remettre_la_configuration(view: "GameDetailView", game: GameData) -> None:
+def _remettre_la_configuration(view: GameDetailView, game: GameData) -> None:
     en_cours = view.partie_en_cours()
     if en_cours:
         # Le jeu réécrit sa configuration en quittant : elle écraserait la nôtre.
@@ -647,7 +645,7 @@ def _remettre_la_configuration(view: "GameDetailView", game: GameData) -> None:
         view.notify.emit(tr("Configuration de {} remise.").format(game.name))
 
 
-def proposer_apres_plantage(view: "GameDetailView", game: GameData, ligne: str) -> None:
+def proposer_apres_plantage(view: GameDetailView, game: GameData, ligne: str) -> None:
     """Le jeu vient de s'arrêter sur une erreur d'affichage (`config_cassee`).
 
     Une QUESTION, donc une boîte et pas un toast (règle 115) : la réponse
@@ -671,7 +669,7 @@ def proposer_apres_plantage(view: "GameDetailView", game: GameData, ligne: str) 
         _remettre_la_configuration(view, game)
 
 
-def _repli_graphique(view: "GameDetailView", game: GameData, arret):
+def _repli_graphique(view: GameDetailView, game: GameData, arret):
     """(fichier, réglage, avant, après) si un cran plus bas peut aider, None sinon.
 
     Seulement pour un arrêt PENDANT le dessin d'une image, et un jeu dont les
@@ -710,7 +708,7 @@ def _proposition_de_repli(reglage, apres, intel: bool = False) -> tuple[str, str
             tr("Réessayer avec les ombres d'origine"))
 
 
-def signaler_arret(view: "GameDetailView", game: GameData, arret) -> None:
+def signaler_arret(view: GameDetailView, game: GameData, arret) -> None:
     """Le jeu a écrit un arrêt fatal dans son journal (`config_cassee`).
 
     Une boîte et pas un toast (règle 115). La ligne est montrée telle que le
@@ -746,7 +744,7 @@ def signaler_arret(view: "GameDetailView", game: GameData, arret) -> None:
         copier_le_rapport(view)
 
 
-def _reessayer_plus_bas(view: "GameDetailView", game: GameData, conf: Path, reglage, apres) -> None:
+def _reessayer_plus_bas(view: GameDetailView, game: GameData, conf: Path, reglage, apres) -> None:
     try:
         reglages_graphiques.ecrire(conf, reglage, apres)
     except (OSError, ValueError):
@@ -762,7 +760,7 @@ def _reessayer_plus_bas(view: "GameDetailView", game: GameData, conf: Path, regl
         view.notify.emit(tr("Réglage changé : relancez {}.").format(game.name))
 
 
-def copier_le_rapport(view: "GameDetailView", en_tete: str = "") -> None:
+def copier_le_rapport(view: GameDetailView, en_tete: str = "") -> None:
     """Le même rapport que Paramètres → À propos : le fichier, et le résumé en texte.
 
     Offert partout où un joueur en a besoin (ACT-068) : boîte d'arrêt, boîte de
@@ -777,7 +775,7 @@ def copier_le_rapport(view: "GameDetailView", en_tete: str = "") -> None:
     view.notify.emit(tr("Copié — Ctrl+V sur le Discord joint le rapport"))
 
 
-def signaler_plantage(view: "GameDetailView", game: GameData, constat) -> None:
+def signaler_plantage(view: GameDetailView, game: GameData, constat) -> None:
     """Ce que Windows a noté d'un lancement raté (`diagnostic_plantage`).
 
     Une boîte et pas un toast (règle 115) : c'est une ERREUR, et le joueur doit
@@ -823,7 +821,7 @@ def find_import_error(game: GameData, source: Path, install_path: Path) -> str |
     return None
 
 
-def on_import_existing(view: "GameDetailView") -> None:
+def on_import_existing(view: GameDetailView) -> None:
     """« J'ai déjà ce jeu » — déplace une installation existante dans le launcher."""
     if view.game is None or view._ops.is_busy:
         return
@@ -862,7 +860,7 @@ def on_import_existing(view: "GameDetailView") -> None:
     log.info("Installation importée : %s → %s", source, dest)
 
 
-def on_install_local(view: "GameDetailView") -> None:
+def on_install_local(view: GameDetailView) -> None:
     if view.game is None or view._ops.is_busy or _preparation_bloque(view):
         return
     path, _ = QFileDialog.getOpenFileName(
@@ -875,7 +873,7 @@ def on_install_local(view: "GameDetailView") -> None:
     view._refresh()
 
 
-def on_game_settings(view: "GameDetailView") -> None:
+def on_game_settings(view: GameDetailView) -> None:
     """Ouvre la fenêtre de réglages du jeu (engrenage à côté des boutons).
 
     Une FENÊTRE et pas un menu : les réglages d'un jeu vont s'étoffer
@@ -901,7 +899,7 @@ def on_game_settings(view: "GameDetailView") -> None:
         dlg.exec()
 
 
-def _appliquer_manette(view: "GameDetailView", game: GameData, oui: bool) -> bool:
+def _appliquer_manette(view: GameDetailView, game: GameData, oui: bool) -> bool:
     """Pose « jouer à la manette » dans le registre du jeu, APRÈS l'avoir dit.
 
     Même prévenance que la langue (règle 69) : la clé, la valeur actuelle et la
@@ -926,7 +924,7 @@ def _appliquer_manette(view: "GameDetailView", game: GameData, oui: bool) -> boo
     return pose
 
 
-def _actions_fichiers(view: "GameDetailView", game: GameData):
+def _actions_fichiers(view: GameDetailView, game: GameData):
     """Ce que la fenêtre de réglages propose sous « Fichiers du jeu ».
 
     « Gérer les versions » et « Vérifier / réparer » n'étaient atteignables
@@ -954,11 +952,11 @@ def _actions_fichiers(view: "GameDetailView", game: GameData):
     return actions
 
 
-def _ouvrir_copies(view: "GameDetailView", game: GameData) -> None:
+def _ouvrir_copies(view: GameDetailView, game: GameData) -> None:
     CopiesDialog(game, partie_en_cours=view.partie_en_cours, parent=view).exec()
 
 
-def on_language_clicked(view: "GameDetailView") -> None:
+def on_language_clicked(view: GameDetailView) -> None:
     """Menu de choix de la langue du jeu, posé sous le segment de la ligne méta.
 
     Le choix est écrit dans le registre TOUT DE SUITE, pas au prochain
@@ -990,7 +988,7 @@ def on_language_clicked(view: "GameDetailView") -> None:
     menu.exec(view.ancre_langue() or QCursor.pos())
 
 
-def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
+def _appliquer_langue(view: GameDetailView, code: str) -> bool:
     """Enregistre le choix, l'écrit dans le registre, rafraîchit la fiche.
 
     Rend True si le registre porte RÉELLEMENT la nouvelle langue. La fenêtre
@@ -1064,7 +1062,7 @@ def _appliquer_langue(view: "GameDetailView", code: str) -> bool:
     return False
 
 
-def show_context_menu(view: "GameDetailView", pos) -> None:
+def show_context_menu(view: GameDetailView, pos) -> None:
     if view.game is None:
         return
     menu = QMenu(view)
@@ -1090,7 +1088,7 @@ def show_context_menu(view: "GameDetailView", pos) -> None:
     menu.exec(view.mapToGlobal(pos))
 
 
-def trigger_primary_action(view: "GameDetailView") -> None:
+def trigger_primary_action(view: GameDetailView) -> None:
     if view.game is None:
         return
     match view.manager.get_state(view.game.id):

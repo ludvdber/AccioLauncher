@@ -1,12 +1,11 @@
-from __future__ import annotations
-
 import hashlib
 import logging
 import re
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
@@ -393,7 +392,7 @@ class Downloader(QThread):
 
     # ─── Streaming avec reprise ───
 
-    def _hash_existing(self, part_path: Path, size: int) -> "hashlib._Hash | None":
+    def _hash_existing(self, part_path: Path, size: int) -> hashlib._Hash | None:
         """Hache le préfixe déjà téléchargé avant une reprise (lecture disque rapide).
 
         Retourne None si annulé en cours de lecture.

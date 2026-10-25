@@ -12,8 +12,6 @@ touche — le préréglage l'avait prévu en lui donnant R ; un joueur qui compo
 les siennes doit le voir avant de lancer le jeu.
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 

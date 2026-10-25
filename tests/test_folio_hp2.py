@@ -65,7 +65,7 @@ class _Paquet:
             corps += (_compact(self.nom("Core")) + _compact(self.nom("Class"))
                       + struct.pack("<i", 0) + _compact(self.nom(nom)))
         pos_exports = len(corps)
-        for (classe, parent, nom, contenu), pos in zip(self.exports, positions):
+        for (classe, parent, nom, contenu), pos in zip(self.exports, positions, strict=False):
             corps += (_compact(classe) + _compact(parent) + struct.pack("<i", 0)
                       + _compact(self.nom(nom)) + struct.pack("<I", 0)
                       + _compact(len(contenu)) + _compact(pos))

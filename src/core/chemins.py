@@ -17,8 +17,8 @@ l'appelle. Pure, sans Qt ni disque.
 # pas un fichier — quel que soit le dossier et quelle que soit l'extension.
 _PERIPHERIQUES = frozenset(
     ["con", "prn", "aux", "nul"]
-    + ["com%d" % i for i in range(1, 10)]
-    + ["lpt%d" % i for i in range(1, 10)]
+    + [f"com{i}" for i in range(1, 10)]
+    + [f"lpt{i}" for i in range(1, 10)]
 )
 
 # Au-delà, l'API Windows classique échoue de toute façon plus loin : autant

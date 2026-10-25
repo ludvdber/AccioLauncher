@@ -13,8 +13,6 @@ retour, le titre, les rubriques et le choix du jeu. Chacune est bâtie à la
 première visite ; le folio est rebâti quand le jeu change.
 """
 
-from __future__ import annotations
-
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (

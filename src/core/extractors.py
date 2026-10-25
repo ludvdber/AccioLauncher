@@ -18,7 +18,8 @@ import sys
 import zipfile
 from collections import deque
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, Iterator
+from typing import IO, Any
+from collections.abc import Callable, Iterable, Iterator
 
 from src.core.chemins import chemin_relatif_sur
 
@@ -341,11 +342,11 @@ def extract_7z_subprocess(
         progress(100)
         verify_extracted_paths(destination, premiers_niveaux(entries))
         log.info("Extraction %s terminée", "7z.exe" if sys.platform == "win32" else Path(exe).name)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         log.error("7z.exe ne rend pas la main après la fin de son flux, kill du processus")
         proc.kill()
         proc.wait(timeout=10)
-        raise RuntimeError("7z.exe ne s'est pas terminé après la fin de l'extraction")
+        raise RuntimeError("7z.exe ne s'est pas terminé après la fin de l'extraction") from exc
     finally:
         if proc.stdout:
             proc.stdout.close()

@@ -6,8 +6,6 @@ dans `src.core.fichiers_essentiels`, ici seulement la boîte. Appelé par
 de lancer : un mod qui remplace un fichier ne doit rien bloquer.
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -38,7 +36,7 @@ def constat_complet(game: GameData) -> str:
     return tr("Les fichiers essentiels de {} sont tous là.").format(game.name) + "\n\n"
 
 
-def signaler_fichiers_manquants(view: "GameDetailView", game: GameData) -> bool:
+def signaler_fichiers_manquants(view: GameDetailView, game: GameData) -> bool:
     """Dit quels fichiers essentiels manquent, et propose d'y remédier.
 
     Rend True si une boîte a été montrée (il en manquait), False sinon : à
@@ -76,7 +74,7 @@ def signaler_fichiers_manquants(view: "GameDetailView", game: GameData) -> bool:
     return True
 
 
-def ouvrir_dossier_du_jeu(view: "GameDetailView", game: GameData) -> None:
+def ouvrir_dossier_du_jeu(view: GameDetailView, game: GameData) -> None:
     """Ouvre le dossier où le jeu est RÉELLEMENT installé.
 
     Le dossier de l'exécutable, pas la racine d'installation : depuis que HP7

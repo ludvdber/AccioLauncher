@@ -311,7 +311,7 @@ class TestDansLaVraieFenetre:
     """
 
     @pytest.fixture
-    def fenetre_reelle(self, make_window, qtbot, nav):  # noqa: F811  (fixture importée)
+    def fenetre_reelle(self, make_window, qtbot, nav):
         win = make_window()
         win.show()
         win.activateWindow()

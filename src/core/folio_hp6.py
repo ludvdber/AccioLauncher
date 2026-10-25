@@ -24,8 +24,6 @@ une valeur d'état vaut 15 (fini), 5 (en cours ou acquis) ou 0. Dans
 son identifiant d'objet, 0 s'il reste à trouver. Une seule partie par fichier.
 """
 
-from __future__ import annotations
-
 import logging
 import struct
 from dataclasses import dataclass

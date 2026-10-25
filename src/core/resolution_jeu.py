@@ -36,8 +36,6 @@ alors sur la place disponible, sans effacer le choix — il revaudra sur le
 grand écran.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import sys

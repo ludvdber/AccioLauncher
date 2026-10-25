@@ -81,7 +81,7 @@ def _oublie(noeud, emetteur: str) -> bool:
                 and noeud.value.value is None:
             return True
         if isinstance(cible, ast.Tuple) and isinstance(noeud.value, ast.Tuple):
-            for c, v in zip(cible.elts, noeud.value.elts):
+            for c, v in zip(cible.elts, noeud.value.elts, strict=False):
                 if _attr_de_self(c) == emetteur and isinstance(v, ast.Constant) \
                         and v.value is None:
                     return True

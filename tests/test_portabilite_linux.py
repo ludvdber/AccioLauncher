@@ -172,7 +172,7 @@ class TestRegistreHorsWindows:
             for sous in ast.walk(noeud):
                 if isinstance(sous, ast.Attribute) and sous.attr == "windll":
                     fautifs.append(noeud.name)
-        assert not fautifs, "windll nomme hors de _ecrire_eleve : %s" % fautifs
+        assert not fautifs, f"windll nomme hors de _ecrire_eleve : {fautifs}"
 
     def test_le_module_s_importe_et_degrade(self, monkeypatch, sans_lanceur):
         """Sans Wine ni umu : rien ne lève, tout dégrade."""

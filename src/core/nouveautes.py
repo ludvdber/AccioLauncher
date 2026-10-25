@@ -16,8 +16,6 @@ Un fichier absent, illisible ou sans entrée pour la version courante rend
 None : la page ne s'ouvre pas, rien d'autre ne change.
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 import logging

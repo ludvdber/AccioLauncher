@@ -12,7 +12,6 @@ est une fonction PURE de ses réponses.
 Les textes passent par `tr()` À L'APPEL et non à l'import : la langue est
 choisie à l'écran 1 de l'assistant, donc APRÈS le chargement de ce module.
 """
-from __future__ import annotations
 
 from collections.abc import Sequence
 

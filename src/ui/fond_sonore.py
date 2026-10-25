@@ -22,8 +22,6 @@ Les morceaux se trouvent par `phonographe` (copie du joueur, HP1 extrait dans
 le cache) ; un morceau introuvable (jeu désinstallé) se tait sans erreur.
 """
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Callable
 from pathlib import Path

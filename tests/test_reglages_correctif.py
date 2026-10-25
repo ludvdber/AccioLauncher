@@ -106,7 +106,7 @@ class TestEcritureEnPlace:
         avant = ini.read_bytes().split(b"\r\n")
         rc.ecrire(ini, rc.REGLAGES["arriere_plan"], False)
         apres = ini.read_bytes().split(b"\r\n")
-        differences = [(a, b) for a, b in zip(avant, apres) if a != b]
+        differences = [(a, b) for a, b in zip(avant, apres, strict=False) if a != b]
         assert differences == [(b"KeepRunningInBackground=1", b"KeepRunningInBackground=0")]
         assert len(avant) == len(apres)
 

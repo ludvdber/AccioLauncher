@@ -22,16 +22,13 @@ qui n'y est pas encore est NOUVEAU ; la page Musique le note vu quand elle
 montre le jeu. Aucune fonction ne lève.
 """
 
-from __future__ import annotations
-
 import json
 import logging
-import os
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from src.core.catalogue_blocs import Sauvegardes
+from src.core.ecriture_atomique import ecrire_atomique
 
 log = logging.getLogger(__name__)
 
@@ -200,19 +197,9 @@ def marquer_vus(jeu: str, fichiers: set[str], chemin: Path | None = None) -> Non
     if fichiers <= avant:
         return
     vus[jeu] = avant | fichiers
-    tmp: str | None = None
     try:
         chemin.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=".accio-tmp")
-        with os.fdopen(fd, "w", encoding="utf-8") as ecrit:
-            json.dump({j: sorted(v) for j, v in sorted(vus.items())}, ecrit, ensure_ascii=False, indent=1)
-        os.replace(tmp, chemin)
-        tmp = None
+        ecrire_atomique(chemin, json.dumps({j: sorted(v) for j, v in sorted(vus.items())},
+                                           ensure_ascii=False, indent=1), ".accio-tmp")
     except OSError as exc:
         log.warning("Morceaux vus non enregistrés : %s", exc)
-    finally:
-        if tmp is not None:
-            try:
-                os.remove(tmp)               # notre propre fichier temporaire
-            except OSError:
-                pass

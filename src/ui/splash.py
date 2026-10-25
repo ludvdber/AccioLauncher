@@ -279,7 +279,7 @@ class AccioSplash(QWidget):
         en_cours = demarrage.ETAPES.index(self._etape) if self._etape else -1
         y = ligne.bottom() + self._h * 0.019
         x = ligne.x()
-        for i, (etape, larg) in enumerate(zip(demarrage.ETAPES, largeurs)):
+        for i, (etape, larg) in enumerate(zip(demarrage.ETAPES, largeurs, strict=True)):
             couleur = (_ETAPE_EN_COURS if i == en_cours
                        else _ETAPE_FAITE if i < en_cours else _ETAPE_A_VENIR)
             p.setPen(QColor(couleur))

@@ -20,8 +20,6 @@ rien. Noms communs aux deux parties : `Completed_ns01` … `Completed_ns27`
 non nulles sont à revoir sur une partie avancée.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import struct

@@ -16,8 +16,6 @@ Les raccourcis : l'onglet du haut (pastille or quand quelque chose s'est
 ouvert), le mini-lecteur, et le lien « Musique » de la fiche d'un jeu.
 """
 
-from __future__ import annotations
-
 import logging
 from functools import lru_cache
 from pathlib import Path

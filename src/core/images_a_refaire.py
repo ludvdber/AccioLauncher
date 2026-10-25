@@ -10,7 +10,6 @@ fonds », qui se met donc à jour tout seul à mesure que les images arrivent.
 Les cibles sont celles du cahier des charges envoyé aux artistes : jaquette
 1080 × 1500 (le rapport 18:25 des vignettes du carrousel), fond 3840 × 2160.
 """
-from __future__ import annotations
 
 JAQUETTE = (1080, 1500)
 FOND = (3840, 2160)

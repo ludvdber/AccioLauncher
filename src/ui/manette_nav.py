@@ -22,8 +22,6 @@ lecture). Au retour, ce qu'on tenait encore n'agit pas (`Repetition.reprendre`).
 Réglage : `config.navigation_manette`, page Intégrations.
 """
 
-from __future__ import annotations
-
 import logging
 import threading
 import time

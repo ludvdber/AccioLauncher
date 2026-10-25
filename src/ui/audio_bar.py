@@ -61,8 +61,8 @@ class AudioBar(QWidget):
         # fiche — sans lui la barre flotte sans appartenir à rien.
         self.setStyleSheet(themed(
             "AudioBar { background: rgba(6,6,17,0.72);"
-            " border: %dpx solid rgba(214,167,44,0.22);" % _BORDURE +
-            " border-radius: %dpx; }" % (_HAUTEUR // 2)))
+            f" border: {_BORDURE}px solid rgba(214,167,44,0.22);"
+            f" border-radius: {_HAUTEUR // 2}px; }}"))
         self.setFixedSize(_LARGEUR, _HAUTEUR)
         self.hide()
 

@@ -9,8 +9,6 @@ Rien n'est copié ni indexé : la galerie relit les dossiers à chaque ouverture
 Une capture effacée à la main dans l'Explorateur disparaît donc d'elle-même.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path

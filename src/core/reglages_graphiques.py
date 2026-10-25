@@ -24,8 +24,6 @@ Windows seulement : sous Linux, Proton rend HP3 sans ce traducteur (2026-10-01),
 et ces clés ne seraient lues par personne.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 import shutil

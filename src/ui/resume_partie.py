@@ -92,7 +92,7 @@ class _Eventail(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        for pix, (x, y, angle) in zip(self._cartes, _EVENTAIL):
+        for pix, (x, y, angle) in zip(self._cartes, _EVENTAIL, strict=False):
             ratio = pix.devicePixelRatio() or 1.0
             larg, haut = pix.width() / ratio, pix.height() / ratio
             p.save()

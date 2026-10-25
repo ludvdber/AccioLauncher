@@ -65,7 +65,7 @@ from src.ui.icon_button import pixmap_icone
 from src.ui.theme import accent_qcolor, current as current_theme, themed
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import zone_defilable
-from src.ui.reglages_widgets import (  # noqa: F401  (réexportés)
+from src.ui.reglages_widgets import (  # réexportés
     _STYLE,
     _CarteEffets,
     _CartePrereglage,

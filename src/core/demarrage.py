@@ -13,8 +13,6 @@ téléchargent APRÈS l'ouverture, en arrière-plan, et c'est la barre du bas qu
 le dit. Les annoncer au démarrage serait dire un travail qui n'a pas lieu.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 
 CATALOGUE = "catalogue"

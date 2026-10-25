@@ -17,8 +17,6 @@ la table des quêtes (attributs 0x63 à 0xC6, cinq par quête) et les dragées
 (attribut 0x52 : 501, le compteur des pages de cartes, VU le 2026-10-16).
 """
 
-from __future__ import annotations
-
 import logging
 import struct
 from dataclasses import dataclass

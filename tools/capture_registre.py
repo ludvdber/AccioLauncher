@@ -92,7 +92,7 @@ def _parcours(ruche, hkey, vue_nom, acces, chemin, motif, profondeur, sortie):
         if motif in chemin.lower():
             vals = _valeurs(cle)
             if vals:
-                sortie[r"%s[%s]\%s" % (ruche, vue_nom, chemin)] = vals
+                sortie[rf"{ruche}[{vue_nom}]\{chemin}"] = vals
         if profondeur >= PROFONDEUR_MAX:
             return
         i = 0
@@ -116,7 +116,7 @@ def capture(motif: str, cle_precise: str | None) -> dict:
                                         winreg.KEY_READ | acces) as c:
                         vals = _valeurs(c)
                         if vals:
-                            sortie[r"%s[%s]\%s" % (ruche, vue_nom, cle_precise)] = vals
+                            sortie[rf"{ruche}[{vue_nom}]\{cle_precise}"] = vals
                 except OSError:
                     pass
             else:
@@ -136,9 +136,9 @@ def diff(avant: dict, apres: dict) -> int:
             if va == vb:
                 continue
             change += 1
-            print("  %s" % cle)
-            print("      valeur  : %r" % nom)
-            print("      type    : %s" % ((vb or va)["type"]))
+            print(f"  {cle}")
+            print(f"      valeur  : {nom!r}")
+            print("      type    : {}".format((vb or va)["type"]))
             print("      avant   : %r" % (va["valeur"] if va else "(absente)"))
             print("      apres   : %r" % (vb["valeur"] if vb else "(absente)"))
             print()
@@ -146,7 +146,7 @@ def diff(avant: dict, apres: dict) -> int:
         print("  Aucune difference. Le jeu n'a peut-etre rien reecrit, ou la cle")
         print("  est hors du motif cherche : reessayer avec --motif ou --cle.")
     else:
-        print("  %d valeur(s) modifiee(s)." % change)
+        print(f"  {change} valeur(s) modifiee(s).")
     return 0
 
 
@@ -167,7 +167,7 @@ def main() -> int:
         data = capture(args.motif, args.cle)
         Path(args.fichier).write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        print("%d cle(s) avec des valeurs -> %s" % (len(data), args.fichier))
+        print(f"{len(data)} cle(s) avec des valeurs -> {args.fichier}")
         for cle in list(data)[:20]:
             print("   ", cle)
         if not data:

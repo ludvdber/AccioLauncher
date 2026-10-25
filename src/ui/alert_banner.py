@@ -339,7 +339,7 @@ class AlertBanner(QLabel):
                     bas = milieu
                 else:
                     haut = milieu - 1
-            return rendu(bas if bas else 1)
+            return rendu(bas or 1)
         finally:
             self.setMinimumHeight(0)
             self.setText(avant)
