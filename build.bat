@@ -84,7 +84,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: vgmstream (musique de HP5 et HP6) n'est plus suivi par git : la release
+:: officielle r2117 est telechargee et verifiee par empreinte. Avant les tests,
+:: qui exigent l'executable.
 echo [3/5] Tests...
+%PY% "build\vgmstream.py"
+if errorlevel 1 (
+    echo ERREUR : vgmstream absent ou empreinte fausse - build interrompu.
+    %PAUSE%
+    exit /b 1
+)
 %PY% -m pytest -q
 if errorlevel 1 (
     echo ERREUR : Tests en echec - build interrompu.

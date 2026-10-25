@@ -37,7 +37,7 @@ assets/covers/
 assets/videos/
 assets/fonts/
 assets/7z/
-# vgmstream (2026-10-24) : six DLL et un exe, 9 Mo.
+# vgmstream : onze DLL et un exe, 11 Mo, posés par build/vgmstream.py.
 assets/vgmstream/
 assets/*.png
 assets/*.ico

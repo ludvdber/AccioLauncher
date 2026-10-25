@@ -39,8 +39,23 @@ class TestExecutable:
     @pytest.mark.skipif(sys.platform != "win32", reason="l'exécutable n'est embarqué que sous Windows")
     def test_embarque_sous_windows(self):
         exe = vgmstream.executable()
-        assert exe is not None and exe.name == "vgmstream-cli.exe"
+        assert exe is not None and exe.name == "vgmstream-cli.exe", (
+            "vgmstream absent : lancer `python build/vgmstream.py` (binaires non suivis par git)")
         assert (exe.parent / "License.txt").is_file()
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="l'exécutable n'est embarqué que sous Windows")
+    def test_les_binaires_poses_sont_ceux_de_la_release(self):
+        """Les octets embarqués sont ceux de la release r2117, pas une copie locale."""
+        import importlib.util
+        from pathlib import Path
+
+        chemin = Path(__file__).resolve().parent.parent / "build" / "vgmstream.py"
+        spec = importlib.util.spec_from_file_location("pose_vgmstream", chemin)
+        assert spec is not None and spec.loader is not None
+        pose = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pose)
+        assert pose._a_poser() == []
+        assert {p.name for p in pose.DOSSIER.glob("*.*")} - {"License.txt"} == set(pose.FICHIERS)
 
     def test_linux_prend_celui_du_systeme(self, monkeypatch):
         monkeypatch.setattr(vgmstream.sys, "platform", "linux")

@@ -45,6 +45,10 @@ jobs:
         run: python -m ruff check .
       - name: Types (mypy sur src/core, regle dans pyproject.toml)
         run: python -m mypy
+      # Binaires non suivis par git (Scorecard) : release officielle r2117,
+      # empreinte du zip et de chaque fichier vérifiées.
+      - name: vgmstream (release officielle, empreintes vérifiées)
+        run: python build/vgmstream.py
       # Un plantage natif (violation d'accès dans Qt) ne laisse dans le journal
       # que la pile PYTHON — « cannot get C stack on this system ». Payé le
       # 2026-09-18 : deux runs rouges, jamais reproduits en local, et rien pour

@@ -220,8 +220,8 @@ def _keep(entry):
         return _sys.platform != "win32"
     if chemin in ("assets/7z/7z.exe", "assets/7z/7z.dll"):
         return _sys.platform == "win32"
-    # vgmstream (musique de HP5 et HP6) : un build Windows, 11 Mo, inutile
-    # sous Linux, qui prend le `vgmstream-cli` du système.
+    # vgmstream (musique de HP5 et HP6) : un build Windows, 11 Mo, posé par
+    # build/vgmstream.py, inutile sous Linux, qui prend le `vgmstream-cli` du système.
     if chemin.startswith("assets/vgmstream/") and chemin.endswith((".exe", ".dll")):
         return _sys.platform == "win32"
     if chemin.startswith("pyqt6/qt6/translations"):
