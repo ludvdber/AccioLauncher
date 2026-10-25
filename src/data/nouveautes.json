@@ -63,6 +63,14 @@
           }
         },
         {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "L'Ordre du Phénix et Le Prince de sang-mêlé : un mode difficile dans les réglages du jeu. Les dégâts reçus et infligés se règlent ; dans Le Prince de sang-mêlé, les ennemis réagissent plus vite et des sorts peuvent être retirés.",
+            "en": "Order of the Phoenix and Half-Blood Prince: a hard mode in the game's settings. Damage taken and dealt can be adjusted; in Half-Blood Prince, enemies react faster and spells can be removed.",
+            "es": "La Orden del Fénix y El misterio del príncipe: un modo difícil en los ajustes del juego. El daño recibido e infligido se ajusta; en El misterio del príncipe, los enemigos reaccionan más rápido y se pueden quitar hechizos."
+          }
+        },
+        {
           "genre": "ameliore",
           "texte": {
             "fr": "Toutes les connexions passent par le magasin de certificats de Windows, et les outils que le launcher télécharge sont vérifiés par leur empreinte.",

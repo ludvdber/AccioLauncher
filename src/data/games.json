@@ -1241,7 +1241,8 @@
         "synchro_verticale",
         "manette_playstation_hp4",
         "nettete",
-        "feuillage_lointain"
+        "feuillage_lointain",
+        "particules_lointaines"
       ],
       "dll_overrides": [
         "d3d9",
@@ -1427,7 +1428,8 @@
         "textures_lointaines",
         "ombres_nettes",
         "degats_recus",
-        "degats_infliges"
+        "degats_infliges",
+        "ombres_douces"
       ],
       "dll_overrides": [
         "d3d9",
@@ -1688,7 +1690,10 @@
         "degats_recus",
         "degats_infliges",
         "reaction_ennemis",
-        "sorts_retires"
+        "sorts_retires",
+        "feuillage_lointain",
+        "mipmaps_fins",
+        "vert_relief"
       ],
       "dll_overrides": [
         "d3d9",

@@ -284,6 +284,15 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Feuilles, cheveux et grilles gardent leur densité au loin, au lieu de "
             "s'éclaircir puis de disparaître. Surtout visible dans les forêts.",
             defaut=False, onglet="image", cout=(("GPU", 1),)),
+    # HP6, vu en jeu le 2026-10-22 avec le feuillage dense : la ligne de forêt sur
+    # la montagne et le grand pin du cercle de pierres s'épaississent, 120 images/s
+    # des deux côtés (notes/HP6.md du correctif).
+    Reglage("mipmaps_fins", "Accio.Graphics", "MipmapFilter",
+            "Arbres lointains plus fournis",
+            "Les copies réduites des textures que le jeu affiche au loin sont faites plus "
+            "fines : forêts et arbres lointains gardent leur feuillage au lieu de fondre dans "
+            "la pente.",
+            defaut=False, onglet="image", cout=(("GPU", 1),)),
     Reglage("occlusion", "Accio.Graphics", "SSAO",
             "Ombres de contact",
             "Assombrit les recoins, le pied des murs et le contact des objets : le décor "
@@ -299,6 +308,24 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "sur les personnages dehors quand la caméra tourne.",
             choix=(1, 2, 4), zero="D'origine", format_choix="×{}",
             onglet="image", cout=(("GPU", 2), ("RAM", 1))),
+    # HP5, vu en jeu le 2026-10-22 depuis la DLL seule : bords des ombres de Harry
+    # et Ron adoucis, forme gardée. Pas HP6 tant que ses ombres tachent quand la
+    # caméra tourne.
+    Reglage("ombres_douces", "Accio.Graphics", "SoftShadows",
+            "Ombres douces",
+            "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme "
+            "une vraie ombre au soleil. Leur forme ne change pas.",
+            defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+    # HP4, vu en jeu le 2026-10-22 au camping de la Coupe du monde : plus de
+    # braises et d'escarbilles autour du feu, rien de cassé. 20 = livré.
+    Reglage("particules_lointaines", "Accio.Graphics", "ParticleCullDistance",
+            "Braises et étincelles plus loin",
+            "Le jeu ne dessine les petites particules (braises, étincelles, poussière) que "
+            "tout près de la caméra. Ce réglage les montre plus loin : il en vole davantage "
+            "autour des feux et des sorts.",
+            choix=(0, 60, 100), zero="D'origine",
+            etiquettes=((60, "Trois fois plus loin"), (100, "Cinq fois plus loin")),
+            onglet="image", cout=(("GPU", 1),)),
     Reglage("halo", "Accio.Graphics", "Bloom",
             "Halo lumineux",
             "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour "
@@ -335,6 +362,19 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et "
             "paysages nets et contrastés, la scène un peu plus sombre.",
             onglet="image", se_voit=True),
+    # HP6, vu en jeu le 2026-10-22 : notre retenue du vert (GreenRestraint=1)
+    # éteint la brume menthe du ciel mais grise aussi les collines. Cette part
+    # n'en garde qu'une fraction sur le relief ; le ciel garde toute la retenue.
+    # Le premier choix (1) est l'ini livré, comme une clé absente.
+    Reglage("vert_relief", "Accio.Graphics", "GreenRestraintTerrain",
+            "Vert des montagnes",
+            "Le correctif retire au ciel du jeu sa teinte vert menthe ; ce filtre grise aussi "
+            "les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel. "
+            "« Gris » est le jeu tel que livré par le correctif.",
+            choix=(1, 0.6, 0.4, 0.2, 0), zero="Gris",
+            etiquettes=((0.6, "Légèrement vert"), (0.4, "Vert"), (0.2, "Très vert"),
+                        (0, "Vert du jeu")),
+            onglet="image", se_voit=True, depend_de="couleurs"),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "

@@ -27,6 +27,8 @@ IDENTIQUES_TOLEREES = {
     "Discord", "Version {}", "Catalogue {}", "Menus", "Versions — {}", "Versions", "Halloween",
     "Accio Launcher {}", "Folio", "Folio de {}", "Badges", "Collections",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
+    # « Gris » (vert des montagnes) s'écrit pareil en espagnol.
+    "Gris",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.

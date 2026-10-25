@@ -1296,6 +1296,21 @@
     "Où trouver le Carnet, les Collections et les réglages de chaque jeu.": "Where to find the Notebook, the Collections and each game's settings.",
     "Relevé": "Record",
     "Vos parties, lues dans vos sauvegardes": "Your playthroughs, read from your saves",
-    "{} de jeu": "{} played"
+    "{} de jeu": "{} played",
+    "Arbres lointains plus fournis": "Fuller distant trees",
+    "Les copies réduites des textures que le jeu affiche au loin sont faites plus fines : forêts et arbres lointains gardent leur feuillage au lieu de fondre dans la pente.": "The smaller texture copies the game shows in the distance are made sharper: forests and distant trees keep their foliage instead of melting into the slope.",
+    "Ombres douces": "Soft shadows",
+    "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme une vraie ombre au soleil. Leur forme ne change pas.": "Softens the edge of cast shadows, jagged in the shipped game, like a real shadow in the sun. Their shape does not change.",
+    "Braises et étincelles plus loin": "Embers and sparks farther away",
+    "Le jeu ne dessine les petites particules (braises, étincelles, poussière) que tout près de la caméra. Ce réglage les montre plus loin : il en vole davantage autour des feux et des sorts.": "The game only draws small particles (embers, sparks, dust) right next to the camera. This setting shows them farther away: more of them fly around fires and spells.",
+    "Trois fois plus loin": "Three times farther",
+    "Cinq fois plus loin": "Five times farther",
+    "Vert des montagnes": "Green mountains",
+    "Le correctif retire au ciel du jeu sa teinte vert menthe ; ce filtre grise aussi les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel. « Gris » est le jeu tel que livré par le correctif.": "The fix takes the mint-green tint out of the game's sky; that filter also turns the hills grey. This setting gives the mountains their grass back without touching the sky. \"Grey\" is the game as the fix ships it.",
+    "Gris": "Grey",
+    "Légèrement vert": "Slightly green",
+    "Vert": "Green",
+    "Très vert": "Very green",
+    "Vert du jeu": "The game's green"
   }
 }

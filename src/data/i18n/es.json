@@ -1297,6 +1297,21 @@
     "Où trouver le Carnet, les Collections et les réglages de chaque jeu.": "Dónde encontrar el Cuaderno, las Colecciones y los ajustes de cada juego.",
     "Relevé": "Expediente",
     "Vos parties, lues dans vos sauvegardes": "Tus partidas, leídas en tus guardados",
-    "{} de jeu": "{} de juego"
+    "{} de jeu": "{} de juego",
+    "Arbres lointains plus fournis": "Árboles lejanos más frondosos",
+    "Les copies réduites des textures que le jeu affiche au loin sont faites plus fines : forêts et arbres lointains gardent leur feuillage au lieu de fondre dans la pente.": "Las copias reducidas de las texturas que el juego muestra a lo lejos son más finas: los bosques y árboles lejanos conservan su follaje en vez de fundirse con la ladera.",
+    "Ombres douces": "Sombras suaves",
+    "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme une vraie ombre au soleil. Leur forme ne change pas.": "Suaviza el borde de las sombras proyectadas, escalonado en el juego original, como una sombra real al sol. Su forma no cambia.",
+    "Braises et étincelles plus loin": "Brasas y chispas más lejos",
+    "Le jeu ne dessine les petites particules (braises, étincelles, poussière) que tout près de la caméra. Ce réglage les montre plus loin : il en vole davantage autour des feux et des sorts.": "El juego solo dibuja las partículas pequeñas (brasas, chispas, polvo) muy cerca de la cámara. Este ajuste las muestra más lejos: vuelan más alrededor de los fuegos y hechizos.",
+    "Trois fois plus loin": "Tres veces más lejos",
+    "Cinq fois plus loin": "Cinco veces más lejos",
+    "Vert des montagnes": "Verde de las montañas",
+    "Le correctif retire au ciel du jeu sa teinte vert menthe ; ce filtre grise aussi les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel. « Gris » est le jeu tel que livré par le correctif.": "El parche quita al cielo del juego su tono verde menta; ese filtro también vuelve grises las colinas. Este ajuste devuelve la hierba a las montañas sin tocar el cielo. «Gris» es el juego tal como lo entrega el parche.",
+    "Gris": "Gris",
+    "Légèrement vert": "Ligeramente verde",
+    "Vert": "Verde",
+    "Très vert": "Muy verde",
+    "Vert du jeu": "Verde del juego"
   }
 }
