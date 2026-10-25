@@ -362,7 +362,13 @@ class GaleriePage(QDialog):
         cote.setObjectName("cote")
         cote.setFixedWidth(_LARGEUR_COTE)
         self._cote_cadre = cote
-        lay = QVBoxLayout(cote)
+        # La colonne défile (règle 52) : à 1100 × 700 en espagnol, le titre
+        # passait sur l'aperçu et la vitrine était coupée (rendu du 2026-10-25).
+        contenu = QWidget()
+        cadre = QVBoxLayout(cote)
+        cadre.setContentsMargins(0, 0, 0, 0)
+        cadre.addWidget(zone_defilable(contenu))
+        lay = QVBoxLayout(contenu)
         lay.setContentsMargins(24, 28, 24, 22)
         lay.setSpacing(0)
 

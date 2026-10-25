@@ -27,6 +27,27 @@ class TestCharger:
     def test_le_fichier_embarque_se_lit(self):
         assert set(discographie.charger()) >= {"hp1", "hp2", "hp3"}
 
+    def test_titre_traduit_suit_la_langue(self, tmp_path, monkeypatch):
+        """Un titre {fr, en, es} se lit dans la langue du moment, sans recharger."""
+        from src.core import i18n
+        chemin = _fichier(tmp_path, {"hp6": [
+            {"f": "a", "t": {"fr": "Poudlard, 1", "en": "Hogwarts, 1"}, "s": 0},
+            {"f": "b", "t": {"en": "sans français"}, "s": 0}]})
+        morceaux = discographie.charger(chemin)["hp6"]
+        assert [m.fichier for m in morceaux] == ["a"]     # la langue source est exigée
+        monkeypatch.setattr(i18n, "_lang", "en")
+        assert morceaux[0].titre == "Hogwarts, 1"
+        monkeypatch.setattr(i18n, "_lang", "es")         # absente : le français
+        assert morceaux[0].titre == "Poudlard, 1"
+
+    def test_aucun_titre_francais_sans_traduction(self):
+        """HP4 à HP6 : chaque titre a son anglais et son espagnol (les titres de
+        HP1 à HP3 sont les noms des fichiers du jeu, neutres)."""
+        for jeu in ("hp4", "hp5", "hp6"):
+            for m in discographie.charger()[jeu]:
+                assert isinstance(m.titres, tuple), f"{jeu} {m.fichier} : titre non traduit"
+                assert {"fr", "en", "es"} <= dict(m.titres).keys()
+
 
 class TestPourcentage:
     def test_etapes_de_hp2_de_0_a_100(self):

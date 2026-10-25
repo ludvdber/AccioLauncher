@@ -29,6 +29,7 @@ from pathlib import Path
 
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.ecriture_atomique import ecrire_atomique
+from src.core.i18n import TexteTraduit, dans_la_langue, texte_traduit
 
 log = logging.getLogger(__name__)
 
@@ -58,8 +59,12 @@ NIVEAUX_HP1 = ("lev_tut1", "lev_tut1b", "lev_tut2", "lev_tut3", "lev_tut3b",
 @dataclass(frozen=True, slots=True)
 class Morceau:
     fichier: str      # nom du fichier sans extension, comme dans le jeu
-    titre: str
+    titres: TexteTraduit   # « t » : une chaîne, ou {fr, en, es}
     seuil: int        # pourcentage d'avancement qui l'ouvre
+
+    @property
+    def titre(self) -> str:
+        return dans_la_langue(self.titres)
 
 
 def charger(chemin: Path | None = None) -> dict[str, tuple[Morceau, ...]]:
@@ -80,10 +85,10 @@ def charger(chemin: Path | None = None) -> dict[str, tuple[Morceau, ...]]:
         if not isinstance(pistes, list):
             continue
         resultat[str(jeu)] = tuple(
-            Morceau(p["f"], p["t"], max(0, min(100, int(p["s"]))))
+            Morceau(p["f"], titres, max(0, min(100, int(p["s"]))))
             for p in pistes
-            if isinstance(p, dict) and isinstance(p.get("f"), str) and isinstance(p.get("t"), str)
-            and isinstance(p.get("s"), int))
+            if isinstance(p, dict) and isinstance(p.get("f"), str)
+            and (titres := texte_traduit(p.get("t"))) is not None and isinstance(p.get("s"), int))
     return resultat
 
 

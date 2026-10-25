@@ -205,6 +205,28 @@ def texte_dans(valeur: object, langue: str) -> str:
     return ""
 
 
+# Texte de données embarquées gardé dans un objet figé : la chaîne seule, ou les
+# paires (code, texte) triées (hachable, contrairement à un dict).
+TexteTraduit = str | tuple[tuple[str, str], ...]
+
+
+def texte_traduit(valeur: object) -> TexteTraduit | None:
+    """Chaîne ou `{code: texte}` (avec la langue source) lu d'un JSON embarqué ;
+    None si inutilisable. Pure."""
+    if isinstance(valeur, str):
+        return valeur
+    if (isinstance(valeur, dict) and isinstance(valeur.get(SOURCE_LANGUAGE), str)
+            and all(isinstance(k, str) and isinstance(v, str) for k, v in valeur.items())):
+        return tuple(sorted(valeur.items()))
+    return None
+
+
+def dans_la_langue(texte: TexteTraduit) -> str:
+    """`texte` dans la langue courante, lue à chaque appel : un objet gardé depuis
+    le démarrage suit le changement de langue (règle 67)."""
+    return texte_dans(texte if isinstance(texte, str) else dict(texte), _lang)
+
+
 def tr(text: str) -> str:
     """Traduit une chaîne source française vers la langue active.
 

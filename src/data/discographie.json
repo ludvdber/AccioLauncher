@@ -1972,1386 +1972,2490 @@
   "hp4": [
    {
     "f": "bathroom_music_stream-1",
-    "t": "La salle de bain des préfets, 1",
+    "t": {
+     "fr": "La salle de bain des préfets, 1",
+     "en": "The Prefects' Bathroom, 1",
+     "es": "El baño de los prefectos, 1"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-2",
-    "t": "La salle de bain des préfets, 2",
+    "t": {
+     "fr": "La salle de bain des préfets, 2",
+     "en": "The Prefects' Bathroom, 2",
+     "es": "El baño de los prefectos, 2"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-3",
-    "t": "La salle de bain des préfets, 3",
+    "t": {
+     "fr": "La salle de bain des préfets, 3",
+     "en": "The Prefects' Bathroom, 3",
+     "es": "El baño de los prefectos, 3"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-4",
-    "t": "La salle de bain des préfets, 4",
+    "t": {
+     "fr": "La salle de bain des préfets, 4",
+     "en": "The Prefects' Bathroom, 4",
+     "es": "El baño de los prefectos, 4"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-5",
-    "t": "La salle de bain des préfets, 5",
+    "t": {
+     "fr": "La salle de bain des préfets, 5",
+     "en": "The Prefects' Bathroom, 5",
+     "es": "El baño de los prefectos, 5"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-6",
-    "t": "La salle de bain des préfets, 6",
+    "t": {
+     "fr": "La salle de bain des préfets, 6",
+     "en": "The Prefects' Bathroom, 6",
+     "es": "El baño de los prefectos, 6"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-7",
-    "t": "La salle de bain des préfets, 7",
+    "t": {
+     "fr": "La salle de bain des préfets, 7",
+     "en": "The Prefects' Bathroom, 7",
+     "es": "El baño de los prefectos, 7"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-8",
-    "t": "La salle de bain des préfets, 8",
+    "t": {
+     "fr": "La salle de bain des préfets, 8",
+     "en": "The Prefects' Bathroom, 8",
+     "es": "El baño de los prefectos, 8"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-9",
-    "t": "La salle de bain des préfets, 9",
+    "t": {
+     "fr": "La salle de bain des préfets, 9",
+     "en": "The Prefects' Bathroom, 9",
+     "es": "El baño de los prefectos, 9"
+    },
     "s": 0
    },
    {
     "f": "bathroom_music_stream-10",
-    "t": "La salle de bain des préfets, 10",
+    "t": {
+     "fr": "La salle de bain des préfets, 10",
+     "en": "The Prefects' Bathroom, 10",
+     "es": "El baño de los prefectos, 10"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-1",
-    "t": "Le camping de la Coupe du monde, 1",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 1",
+     "en": "The World Cup campsite, 1",
+     "es": "El campamento de los Mundiales, 1"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-2",
-    "t": "Le camping de la Coupe du monde, 2",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 2",
+     "en": "The World Cup campsite, 2",
+     "es": "El campamento de los Mundiales, 2"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-3",
-    "t": "Le camping de la Coupe du monde, 3",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 3",
+     "en": "The World Cup campsite, 3",
+     "es": "El campamento de los Mundiales, 3"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-4",
-    "t": "Le camping de la Coupe du monde, 4",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 4",
+     "en": "The World Cup campsite, 4",
+     "es": "El campamento de los Mundiales, 4"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-5",
-    "t": "Le camping de la Coupe du monde, 5",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 5",
+     "en": "The World Cup campsite, 5",
+     "es": "El campamento de los Mundiales, 5"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-6",
-    "t": "Le camping de la Coupe du monde, 6",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 6",
+     "en": "The World Cup campsite, 6",
+     "es": "El campamento de los Mundiales, 6"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-7",
-    "t": "Le camping de la Coupe du monde, 7",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 7",
+     "en": "The World Cup campsite, 7",
+     "es": "El campamento de los Mundiales, 7"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-8",
-    "t": "Le camping de la Coupe du monde, 8",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 8",
+     "en": "The World Cup campsite, 8",
+     "es": "El campamento de los Mundiales, 8"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-9",
-    "t": "Le camping de la Coupe du monde, 9",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 9",
+     "en": "The World Cup campsite, 9",
+     "es": "El campamento de los Mundiales, 9"
+    },
     "s": 0
    },
    {
     "f": "camp_stream-10",
-    "t": "Le camping de la Coupe du monde, 10",
+    "t": {
+     "fr": "Le camping de la Coupe du monde, 10",
+     "en": "The World Cup campsite, 10",
+     "es": "El campamento de los Mundiales, 10"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-1",
-    "t": "Défense contre les forces du mal, 1",
+    "t": {
+     "fr": "Défense contre les forces du mal, 1",
+     "en": "Defence Against the Dark Arts, 1",
+     "es": "Defensa Contra las Artes Oscuras, 1"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-2",
-    "t": "Défense contre les forces du mal, 2",
+    "t": {
+     "fr": "Défense contre les forces du mal, 2",
+     "en": "Defence Against the Dark Arts, 2",
+     "es": "Defensa Contra las Artes Oscuras, 2"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-3",
-    "t": "Défense contre les forces du mal, 3",
+    "t": {
+     "fr": "Défense contre les forces du mal, 3",
+     "en": "Defence Against the Dark Arts, 3",
+     "es": "Defensa Contra las Artes Oscuras, 3"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-4",
-    "t": "Défense contre les forces du mal, 4",
+    "t": {
+     "fr": "Défense contre les forces du mal, 4",
+     "en": "Defence Against the Dark Arts, 4",
+     "es": "Defensa Contra las Artes Oscuras, 4"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-5",
-    "t": "Défense contre les forces du mal, 5",
+    "t": {
+     "fr": "Défense contre les forces du mal, 5",
+     "en": "Defence Against the Dark Arts, 5",
+     "es": "Defensa Contra las Artes Oscuras, 5"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-6",
-    "t": "Défense contre les forces du mal, 6",
+    "t": {
+     "fr": "Défense contre les forces du mal, 6",
+     "en": "Defence Against the Dark Arts, 6",
+     "es": "Defensa Contra las Artes Oscuras, 6"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-7",
-    "t": "Défense contre les forces du mal, 7",
+    "t": {
+     "fr": "Défense contre les forces du mal, 7",
+     "en": "Defence Against the Dark Arts, 7",
+     "es": "Defensa Contra las Artes Oscuras, 7"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-8",
-    "t": "Défense contre les forces du mal, 8",
+    "t": {
+     "fr": "Défense contre les forces du mal, 8",
+     "en": "Defence Against the Dark Arts, 8",
+     "es": "Defensa Contra las Artes Oscuras, 8"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-9",
-    "t": "Défense contre les forces du mal, 9",
+    "t": {
+     "fr": "Défense contre les forces du mal, 9",
+     "en": "Defence Against the Dark Arts, 9",
+     "es": "Defensa Contra las Artes Oscuras, 9"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-10",
-    "t": "Défense contre les forces du mal, 10",
+    "t": {
+     "fr": "Défense contre les forces du mal, 10",
+     "en": "Defence Against the Dark Arts, 10",
+     "es": "Defensa Contra las Artes Oscuras, 10"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-11",
-    "t": "Défense contre les forces du mal, 11",
+    "t": {
+     "fr": "Défense contre les forces du mal, 11",
+     "en": "Defence Against the Dark Arts, 11",
+     "es": "Defensa Contra las Artes Oscuras, 11"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-12",
-    "t": "Défense contre les forces du mal, 12",
+    "t": {
+     "fr": "Défense contre les forces du mal, 12",
+     "en": "Defence Against the Dark Arts, 12",
+     "es": "Defensa Contra las Artes Oscuras, 12"
+    },
     "s": 0
    },
    {
     "f": "dada_music_stream-13",
-    "t": "Défense contre les forces du mal, 13",
+    "t": {
+     "fr": "Défense contre les forces du mal, 13",
+     "en": "Defence Against the Dark Arts, 13",
+     "es": "Defensa Contra las Artes Oscuras, 13"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-1",
-    "t": "Niveau « dw », 1",
+    "t": {
+     "fr": "Niveau « dw », 1",
+     "en": "Level “dw”, 1",
+     "es": "Nivel «dw», 1"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-2",
-    "t": "Niveau « dw », 2",
+    "t": {
+     "fr": "Niveau « dw », 2",
+     "en": "Level “dw”, 2",
+     "es": "Nivel «dw», 2"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-3",
-    "t": "Niveau « dw », 3",
+    "t": {
+     "fr": "Niveau « dw », 3",
+     "en": "Level “dw”, 3",
+     "es": "Nivel «dw», 3"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-4",
-    "t": "Niveau « dw », 4",
+    "t": {
+     "fr": "Niveau « dw », 4",
+     "en": "Level “dw”, 4",
+     "es": "Nivel «dw», 4"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-5",
-    "t": "Niveau « dw », 5",
+    "t": {
+     "fr": "Niveau « dw », 5",
+     "en": "Level “dw”, 5",
+     "es": "Nivel «dw», 5"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-6",
-    "t": "Niveau « dw », 6",
+    "t": {
+     "fr": "Niveau « dw », 6",
+     "en": "Level “dw”, 6",
+     "es": "Nivel «dw», 6"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-7",
-    "t": "Niveau « dw », 7",
+    "t": {
+     "fr": "Niveau « dw », 7",
+     "en": "Level “dw”, 7",
+     "es": "Nivel «dw», 7"
+    },
     "s": 0
    },
    {
     "f": "dw_music_stream-8",
-    "t": "Niveau « dw », 8",
+    "t": {
+     "fr": "Niveau « dw », 8",
+     "en": "Level “dw”, 8",
+     "es": "Nivel «dw», 8"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-1",
-    "t": "Les menus, 1",
+    "t": {
+     "fr": "Les menus, 1",
+     "en": "Menus, 1",
+     "es": "Menús, 1"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-2",
-    "t": "Les menus, 2",
+    "t": {
+     "fr": "Les menus, 2",
+     "en": "Menus, 2",
+     "es": "Menús, 2"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-3",
-    "t": "Les menus, 3",
+    "t": {
+     "fr": "Les menus, 3",
+     "en": "Menus, 3",
+     "es": "Menús, 3"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-4",
-    "t": "Les menus, 4",
+    "t": {
+     "fr": "Les menus, 4",
+     "en": "Menus, 4",
+     "es": "Menús, 4"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-5",
-    "t": "Les menus, 5",
+    "t": {
+     "fr": "Les menus, 5",
+     "en": "Menus, 5",
+     "es": "Menús, 5"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-6",
-    "t": "Les menus, 6",
+    "t": {
+     "fr": "Les menus, 6",
+     "en": "Menus, 6",
+     "es": "Menús, 6"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-7",
-    "t": "Les menus, 7",
+    "t": {
+     "fr": "Les menus, 7",
+     "en": "Menus, 7",
+     "es": "Menús, 7"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-8",
-    "t": "Les menus, 8",
+    "t": {
+     "fr": "Les menus, 8",
+     "en": "Menus, 8",
+     "es": "Menús, 8"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-9",
-    "t": "Les menus, 9",
+    "t": {
+     "fr": "Les menus, 9",
+     "en": "Menus, 9",
+     "es": "Menús, 9"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-10",
-    "t": "Les menus, 10",
+    "t": {
+     "fr": "Les menus, 10",
+     "en": "Menus, 10",
+     "es": "Menús, 10"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-11",
-    "t": "Les menus, 11",
+    "t": {
+     "fr": "Les menus, 11",
+     "en": "Menus, 11",
+     "es": "Menús, 11"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-12",
-    "t": "Les menus, 12",
+    "t": {
+     "fr": "Les menus, 12",
+     "en": "Menus, 12",
+     "es": "Menús, 12"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-13",
-    "t": "Les menus, 13",
+    "t": {
+     "fr": "Les menus, 13",
+     "en": "Menus, 13",
+     "es": "Menús, 13"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-14",
-    "t": "Les menus, 14",
+    "t": {
+     "fr": "Les menus, 14",
+     "en": "Menus, 14",
+     "es": "Menús, 14"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-15",
-    "t": "Les menus, 15",
+    "t": {
+     "fr": "Les menus, 15",
+     "en": "Menus, 15",
+     "es": "Menús, 15"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-16",
-    "t": "Les menus, 16",
+    "t": {
+     "fr": "Les menus, 16",
+     "en": "Menus, 16",
+     "es": "Menús, 16"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-17",
-    "t": "Les menus, 17",
+    "t": {
+     "fr": "Les menus, 17",
+     "en": "Menus, 17",
+     "es": "Menús, 17"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-18",
-    "t": "Les menus, 18",
+    "t": {
+     "fr": "Les menus, 18",
+     "en": "Menus, 18",
+     "es": "Menús, 18"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-19",
-    "t": "Les menus, 19",
+    "t": {
+     "fr": "Les menus, 19",
+     "en": "Menus, 19",
+     "es": "Menús, 19"
+    },
     "s": 0
    },
    {
     "f": "fe_music_stream-20",
-    "t": "Les menus, 20",
+    "t": {
+     "fr": "Les menus, 20",
+     "en": "Menus, 20",
+     "es": "Menús, 20"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-1",
-    "t": "Botanique, 1",
+    "t": {
+     "fr": "Botanique, 1",
+     "en": "Herbology, 1",
+     "es": "Herbología, 1"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-2",
-    "t": "Botanique, 2",
+    "t": {
+     "fr": "Botanique, 2",
+     "en": "Herbology, 2",
+     "es": "Herbología, 2"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-3",
-    "t": "Botanique, 3",
+    "t": {
+     "fr": "Botanique, 3",
+     "en": "Herbology, 3",
+     "es": "Herbología, 3"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-4",
-    "t": "Botanique, 4",
+    "t": {
+     "fr": "Botanique, 4",
+     "en": "Herbology, 4",
+     "es": "Herbología, 4"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-5",
-    "t": "Botanique, 5",
+    "t": {
+     "fr": "Botanique, 5",
+     "en": "Herbology, 5",
+     "es": "Herbología, 5"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-6",
-    "t": "Botanique, 6",
+    "t": {
+     "fr": "Botanique, 6",
+     "en": "Herbology, 6",
+     "es": "Herbología, 6"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-7",
-    "t": "Botanique, 7",
+    "t": {
+     "fr": "Botanique, 7",
+     "en": "Herbology, 7",
+     "es": "Herbología, 7"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-8",
-    "t": "Botanique, 8",
+    "t": {
+     "fr": "Botanique, 8",
+     "en": "Herbology, 8",
+     "es": "Herbología, 8"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-9",
-    "t": "Botanique, 9",
+    "t": {
+     "fr": "Botanique, 9",
+     "en": "Herbology, 9",
+     "es": "Herbología, 9"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-10",
-    "t": "Botanique, 10",
+    "t": {
+     "fr": "Botanique, 10",
+     "en": "Herbology, 10",
+     "es": "Herbología, 10"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-11",
-    "t": "Botanique, 11",
+    "t": {
+     "fr": "Botanique, 11",
+     "en": "Herbology, 11",
+     "es": "Herbología, 11"
+    },
     "s": 0
    },
    {
     "f": "herbmusic_stream-12",
-    "t": "Botanique, 12",
+    "t": {
+     "fr": "Botanique, 12",
+     "en": "Herbology, 12",
+     "es": "Herbología, 12"
+    },
     "s": 0
    },
    {
     "f": "maze_music_stream-1",
-    "t": "Le labyrinthe, 1",
+    "t": {
+     "fr": "Le labyrinthe, 1",
+     "en": "The maze, 1",
+     "es": "El laberinto, 1"
+    },
     "s": 0
    },
    {
     "f": "maze_music_stream-2",
-    "t": "Le labyrinthe, 2",
+    "t": {
+     "fr": "Le labyrinthe, 2",
+     "en": "The maze, 2",
+     "es": "El laberinto, 2"
+    },
     "s": 0
    },
    {
     "f": "maze_music_stream-3",
-    "t": "Le labyrinthe, 3",
+    "t": {
+     "fr": "Le labyrinthe, 3",
+     "en": "The maze, 3",
+     "es": "El laberinto, 3"
+    },
     "s": 0
    },
    {
     "f": "maze_music_stream-4",
-    "t": "Le labyrinthe, 4",
+    "t": {
+     "fr": "Le labyrinthe, 4",
+     "en": "The maze, 4",
+     "es": "El laberinto, 4"
+    },
     "s": 0
    },
    {
     "f": "maze_music_stream-5",
-    "t": "Le labyrinthe, 5",
+    "t": {
+     "fr": "Le labyrinthe, 5",
+     "en": "The maze, 5",
+     "es": "El laberinto, 5"
+    },
     "s": 0
    },
    {
     "f": "maze_music_stream-6",
-    "t": "Le labyrinthe, 6",
+    "t": {
+     "fr": "Le labyrinthe, 6",
+     "en": "The maze, 6",
+     "es": "El laberinto, 6"
+    },
     "s": 0
    },
    {
     "f": "moody_music_stream-1",
-    "t": "Maugrey Fol Œil, 1",
+    "t": {
+     "fr": "Maugrey Fol Œil, 1",
+     "en": "Mad-Eye Moody, 1",
+     "es": "Ojoloco Moody, 1"
+    },
     "s": 0
    },
    {
     "f": "moody_music_stream-2",
-    "t": "Maugrey Fol Œil, 2",
+    "t": {
+     "fr": "Maugrey Fol Œil, 2",
+     "en": "Mad-Eye Moody, 2",
+     "es": "Ojoloco Moody, 2"
+    },
     "s": 0
    },
    {
     "f": "moody_music_stream-3",
-    "t": "Maugrey Fol Œil, 3",
+    "t": {
+     "fr": "Maugrey Fol Œil, 3",
+     "en": "Mad-Eye Moody, 3",
+     "es": "Ojoloco Moody, 3"
+    },
     "s": 0
    },
    {
     "f": "moody_music_stream-4",
-    "t": "Maugrey Fol Œil, 4",
+    "t": {
+     "fr": "Maugrey Fol Œil, 4",
+     "en": "Mad-Eye Moody, 4",
+     "es": "Ojoloco Moody, 4"
+    },
     "s": 0
    },
    {
     "f": "moody_music_stream-5",
-    "t": "Maugrey Fol Œil, 5",
+    "t": {
+     "fr": "Maugrey Fol Œil, 5",
+     "en": "Mad-Eye Moody, 5",
+     "es": "Ojoloco Moody, 5"
+    },
     "s": 0
    },
    {
     "f": "moody_music_stream-6",
-    "t": "Maugrey Fol Œil, 6",
+    "t": {
+     "fr": "Maugrey Fol Œil, 6",
+     "en": "Mad-Eye Moody, 6",
+     "es": "Ojoloco Moody, 6"
+    },
     "s": 0
    },
    {
     "f": "tri1_stream-1",
-    "t": "Première tâche, 1",
+    "t": {
+     "fr": "Première tâche, 1",
+     "en": "First Task, 1",
+     "es": "Primera prueba, 1"
+    },
     "s": 0
    },
    {
     "f": "tri1_stream-2",
-    "t": "Première tâche, 2",
+    "t": {
+     "fr": "Première tâche, 2",
+     "en": "First Task, 2",
+     "es": "Primera prueba, 2"
+    },
     "s": 0
    },
    {
     "f": "tri1_stream-3",
-    "t": "Première tâche, 3",
+    "t": {
+     "fr": "Première tâche, 3",
+     "en": "First Task, 3",
+     "es": "Primera prueba, 3"
+    },
     "s": 0
    },
    {
     "f": "tri1_stream-4",
-    "t": "Première tâche, 4",
+    "t": {
+     "fr": "Première tâche, 4",
+     "en": "First Task, 4",
+     "es": "Primera prueba, 4"
+    },
     "s": 0
    },
    {
     "f": "tri1_stream-5",
-    "t": "Première tâche, 5",
+    "t": {
+     "fr": "Première tâche, 5",
+     "en": "First Task, 5",
+     "es": "Primera prueba, 5"
+    },
     "s": 0
    },
    {
     "f": "tri1_stream-6",
-    "t": "Première tâche, 6",
+    "t": {
+     "fr": "Première tâche, 6",
+     "en": "First Task, 6",
+     "es": "Primera prueba, 6"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-1",
-    "t": "Deuxième tâche, 1",
+    "t": {
+     "fr": "Deuxième tâche, 1",
+     "en": "Second Task, 1",
+     "es": "Segunda prueba, 1"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-2",
-    "t": "Deuxième tâche, 2",
+    "t": {
+     "fr": "Deuxième tâche, 2",
+     "en": "Second Task, 2",
+     "es": "Segunda prueba, 2"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-3",
-    "t": "Deuxième tâche, 3",
+    "t": {
+     "fr": "Deuxième tâche, 3",
+     "en": "Second Task, 3",
+     "es": "Segunda prueba, 3"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-4",
-    "t": "Deuxième tâche, 4",
+    "t": {
+     "fr": "Deuxième tâche, 4",
+     "en": "Second Task, 4",
+     "es": "Segunda prueba, 4"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-5",
-    "t": "Deuxième tâche, 5",
+    "t": {
+     "fr": "Deuxième tâche, 5",
+     "en": "Second Task, 5",
+     "es": "Segunda prueba, 5"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-6",
-    "t": "Deuxième tâche, 6",
+    "t": {
+     "fr": "Deuxième tâche, 6",
+     "en": "Second Task, 6",
+     "es": "Segunda prueba, 6"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-7",
-    "t": "Deuxième tâche, 7",
+    "t": {
+     "fr": "Deuxième tâche, 7",
+     "en": "Second Task, 7",
+     "es": "Segunda prueba, 7"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-8",
-    "t": "Deuxième tâche, 8",
+    "t": {
+     "fr": "Deuxième tâche, 8",
+     "en": "Second Task, 8",
+     "es": "Segunda prueba, 8"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-9",
-    "t": "Deuxième tâche, 9",
+    "t": {
+     "fr": "Deuxième tâche, 9",
+     "en": "Second Task, 9",
+     "es": "Segunda prueba, 9"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-10",
-    "t": "Deuxième tâche, 10",
+    "t": {
+     "fr": "Deuxième tâche, 10",
+     "en": "Second Task, 10",
+     "es": "Segunda prueba, 10"
+    },
     "s": 0
    },
    {
     "f": "tw2_mus_stream-11",
-    "t": "Deuxième tâche, 11",
+    "t": {
+     "fr": "Deuxième tâche, 11",
+     "en": "Second Task, 11",
+     "es": "Segunda prueba, 11"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-1",
-    "t": "Voldemort, 1",
+    "t": {
+     "fr": "Voldemort, 1",
+     "en": "Voldemort, 1",
+     "es": "Voldemort, 1"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-2",
-    "t": "Voldemort, 2",
+    "t": {
+     "fr": "Voldemort, 2",
+     "en": "Voldemort, 2",
+     "es": "Voldemort, 2"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-3",
-    "t": "Voldemort, 3",
+    "t": {
+     "fr": "Voldemort, 3",
+     "en": "Voldemort, 3",
+     "es": "Voldemort, 3"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-4",
-    "t": "Voldemort, 4",
+    "t": {
+     "fr": "Voldemort, 4",
+     "en": "Voldemort, 4",
+     "es": "Voldemort, 4"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-5",
-    "t": "Voldemort, 5",
+    "t": {
+     "fr": "Voldemort, 5",
+     "en": "Voldemort, 5",
+     "es": "Voldemort, 5"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-6",
-    "t": "Voldemort, 6",
+    "t": {
+     "fr": "Voldemort, 6",
+     "en": "Voldemort, 6",
+     "es": "Voldemort, 6"
+    },
     "s": 0
    },
    {
     "f": "voldemort_music_stream-7",
-    "t": "Voldemort, 7",
+    "t": {
+     "fr": "Voldemort, 7",
+     "en": "Voldemort, 7",
+     "es": "Voldemort, 7"
+    },
     "s": 0
    }
   ],
   "hp5": [
    {
     "f": "hog_music_stream-1",
-    "t": "Poudlard, 1",
+    "t": {
+     "fr": "Poudlard, 1",
+     "en": "Hogwarts, 1",
+     "es": "Hogwarts, 1"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-2",
-    "t": "Poudlard, 2",
+    "t": {
+     "fr": "Poudlard, 2",
+     "en": "Hogwarts, 2",
+     "es": "Hogwarts, 2"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-3",
-    "t": "Poudlard, 3",
+    "t": {
+     "fr": "Poudlard, 3",
+     "en": "Hogwarts, 3",
+     "es": "Hogwarts, 3"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-4",
-    "t": "Poudlard, 4",
+    "t": {
+     "fr": "Poudlard, 4",
+     "en": "Hogwarts, 4",
+     "es": "Hogwarts, 4"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-5",
-    "t": "Poudlard, 5",
+    "t": {
+     "fr": "Poudlard, 5",
+     "en": "Hogwarts, 5",
+     "es": "Hogwarts, 5"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-6",
-    "t": "Poudlard, 6",
+    "t": {
+     "fr": "Poudlard, 6",
+     "en": "Hogwarts, 6",
+     "es": "Hogwarts, 6"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-7",
-    "t": "Poudlard, 7",
+    "t": {
+     "fr": "Poudlard, 7",
+     "en": "Hogwarts, 7",
+     "es": "Hogwarts, 7"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-8",
-    "t": "Poudlard, 8",
+    "t": {
+     "fr": "Poudlard, 8",
+     "en": "Hogwarts, 8",
+     "es": "Hogwarts, 8"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-9",
-    "t": "Poudlard, 9",
+    "t": {
+     "fr": "Poudlard, 9",
+     "en": "Hogwarts, 9",
+     "es": "Hogwarts, 9"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-10",
-    "t": "Poudlard, 10",
+    "t": {
+     "fr": "Poudlard, 10",
+     "en": "Hogwarts, 10",
+     "es": "Hogwarts, 10"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-11",
-    "t": "Poudlard, 11",
+    "t": {
+     "fr": "Poudlard, 11",
+     "en": "Hogwarts, 11",
+     "es": "Hogwarts, 11"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-12",
-    "t": "Poudlard, 12",
+    "t": {
+     "fr": "Poudlard, 12",
+     "en": "Hogwarts, 12",
+     "es": "Hogwarts, 12"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-13",
-    "t": "Poudlard, 13",
+    "t": {
+     "fr": "Poudlard, 13",
+     "en": "Hogwarts, 13",
+     "es": "Hogwarts, 13"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-14",
-    "t": "Poudlard, 14",
+    "t": {
+     "fr": "Poudlard, 14",
+     "en": "Hogwarts, 14",
+     "es": "Hogwarts, 14"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-15",
-    "t": "Poudlard, 15",
+    "t": {
+     "fr": "Poudlard, 15",
+     "en": "Hogwarts, 15",
+     "es": "Hogwarts, 15"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-16",
-    "t": "Poudlard, 16",
+    "t": {
+     "fr": "Poudlard, 16",
+     "en": "Hogwarts, 16",
+     "es": "Hogwarts, 16"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-17",
-    "t": "Poudlard, 17",
+    "t": {
+     "fr": "Poudlard, 17",
+     "en": "Hogwarts, 17",
+     "es": "Hogwarts, 17"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-18",
-    "t": "Poudlard, 18",
+    "t": {
+     "fr": "Poudlard, 18",
+     "en": "Hogwarts, 18",
+     "es": "Hogwarts, 18"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-19",
-    "t": "Poudlard, 19",
+    "t": {
+     "fr": "Poudlard, 19",
+     "en": "Hogwarts, 19",
+     "es": "Hogwarts, 19"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-20",
-    "t": "Poudlard, 20",
+    "t": {
+     "fr": "Poudlard, 20",
+     "en": "Hogwarts, 20",
+     "es": "Hogwarts, 20"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-21",
-    "t": "Poudlard, 21",
+    "t": {
+     "fr": "Poudlard, 21",
+     "en": "Hogwarts, 21",
+     "es": "Hogwarts, 21"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-22",
-    "t": "Poudlard, 22",
+    "t": {
+     "fr": "Poudlard, 22",
+     "en": "Hogwarts, 22",
+     "es": "Hogwarts, 22"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-23",
-    "t": "Poudlard, 23",
+    "t": {
+     "fr": "Poudlard, 23",
+     "en": "Hogwarts, 23",
+     "es": "Hogwarts, 23"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-24",
-    "t": "Poudlard, 24",
+    "t": {
+     "fr": "Poudlard, 24",
+     "en": "Hogwarts, 24",
+     "es": "Hogwarts, 24"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-25",
-    "t": "Poudlard, 25",
+    "t": {
+     "fr": "Poudlard, 25",
+     "en": "Hogwarts, 25",
+     "es": "Hogwarts, 25"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-26",
-    "t": "Poudlard, 26",
+    "t": {
+     "fr": "Poudlard, 26",
+     "en": "Hogwarts, 26",
+     "es": "Hogwarts, 26"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-27",
-    "t": "Poudlard, 27",
+    "t": {
+     "fr": "Poudlard, 27",
+     "en": "Hogwarts, 27",
+     "es": "Hogwarts, 27"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-28",
-    "t": "Poudlard, 28",
+    "t": {
+     "fr": "Poudlard, 28",
+     "en": "Hogwarts, 28",
+     "es": "Hogwarts, 28"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-29",
-    "t": "Poudlard, 29",
+    "t": {
+     "fr": "Poudlard, 29",
+     "en": "Hogwarts, 29",
+     "es": "Hogwarts, 29"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-30",
-    "t": "Poudlard, 30",
+    "t": {
+     "fr": "Poudlard, 30",
+     "en": "Hogwarts, 30",
+     "es": "Hogwarts, 30"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-31",
-    "t": "Poudlard, 31",
+    "t": {
+     "fr": "Poudlard, 31",
+     "en": "Hogwarts, 31",
+     "es": "Hogwarts, 31"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-32",
-    "t": "Poudlard, 32",
+    "t": {
+     "fr": "Poudlard, 32",
+     "en": "Hogwarts, 32",
+     "es": "Hogwarts, 32"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-33",
-    "t": "Poudlard, 33",
+    "t": {
+     "fr": "Poudlard, 33",
+     "en": "Hogwarts, 33",
+     "es": "Hogwarts, 33"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-34",
-    "t": "Poudlard, 34",
+    "t": {
+     "fr": "Poudlard, 34",
+     "en": "Hogwarts, 34",
+     "es": "Hogwarts, 34"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-35",
-    "t": "Poudlard, 35",
+    "t": {
+     "fr": "Poudlard, 35",
+     "en": "Hogwarts, 35",
+     "es": "Hogwarts, 35"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-36",
-    "t": "Poudlard, 36",
+    "t": {
+     "fr": "Poudlard, 36",
+     "en": "Hogwarts, 36",
+     "es": "Hogwarts, 36"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-37",
-    "t": "Poudlard, 37",
+    "t": {
+     "fr": "Poudlard, 37",
+     "en": "Hogwarts, 37",
+     "es": "Hogwarts, 37"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-38",
-    "t": "Poudlard, 38",
+    "t": {
+     "fr": "Poudlard, 38",
+     "en": "Hogwarts, 38",
+     "es": "Hogwarts, 38"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-39",
-    "t": "Poudlard, 39",
+    "t": {
+     "fr": "Poudlard, 39",
+     "en": "Hogwarts, 39",
+     "es": "Hogwarts, 39"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-40",
-    "t": "Poudlard, 40",
+    "t": {
+     "fr": "Poudlard, 40",
+     "en": "Hogwarts, 40",
+     "es": "Hogwarts, 40"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-41",
-    "t": "Poudlard, 41",
+    "t": {
+     "fr": "Poudlard, 41",
+     "en": "Hogwarts, 41",
+     "es": "Hogwarts, 41"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-42",
-    "t": "Poudlard, 42",
+    "t": {
+     "fr": "Poudlard, 42",
+     "en": "Hogwarts, 42",
+     "es": "Hogwarts, 42"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-43",
-    "t": "Poudlard, 43",
+    "t": {
+     "fr": "Poudlard, 43",
+     "en": "Hogwarts, 43",
+     "es": "Hogwarts, 43"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-44",
-    "t": "Poudlard, 44",
+    "t": {
+     "fr": "Poudlard, 44",
+     "en": "Hogwarts, 44",
+     "es": "Hogwarts, 44"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-45",
-    "t": "Poudlard, 45",
+    "t": {
+     "fr": "Poudlard, 45",
+     "en": "Hogwarts, 45",
+     "es": "Hogwarts, 45"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-46",
-    "t": "Poudlard, 46",
+    "t": {
+     "fr": "Poudlard, 46",
+     "en": "Hogwarts, 46",
+     "es": "Hogwarts, 46"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-47",
-    "t": "Poudlard, 47",
+    "t": {
+     "fr": "Poudlard, 47",
+     "en": "Hogwarts, 47",
+     "es": "Hogwarts, 47"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-48",
-    "t": "Poudlard, 48",
+    "t": {
+     "fr": "Poudlard, 48",
+     "en": "Hogwarts, 48",
+     "es": "Hogwarts, 48"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-49",
-    "t": "Poudlard, 49",
+    "t": {
+     "fr": "Poudlard, 49",
+     "en": "Hogwarts, 49",
+     "es": "Hogwarts, 49"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-50",
-    "t": "Poudlard, 50",
+    "t": {
+     "fr": "Poudlard, 50",
+     "en": "Hogwarts, 50",
+     "es": "Hogwarts, 50"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-51",
-    "t": "Poudlard, 51",
+    "t": {
+     "fr": "Poudlard, 51",
+     "en": "Hogwarts, 51",
+     "es": "Hogwarts, 51"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-52",
-    "t": "Poudlard, 52",
+    "t": {
+     "fr": "Poudlard, 52",
+     "en": "Hogwarts, 52",
+     "es": "Hogwarts, 52"
+    },
     "s": 0
    },
    {
     "f": "hog_music_stream-53",
-    "t": "Poudlard, 53",
+    "t": {
+     "fr": "Poudlard, 53",
+     "en": "Hogwarts, 53",
+     "es": "Hogwarts, 53"
+    },
     "s": 0
    }
   ],
   "hp6": [
    {
     "f": "hbpmusic-1",
-    "t": "Le Prince de sang-mêlé, 1",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 1",
+     "en": "Half-Blood Prince, 1",
+     "es": "El misterio del príncipe, 1"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-2",
-    "t": "Le Prince de sang-mêlé, 2",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 2",
+     "en": "Half-Blood Prince, 2",
+     "es": "El misterio del príncipe, 2"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-3",
-    "t": "Le Prince de sang-mêlé, 3",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 3",
+     "en": "Half-Blood Prince, 3",
+     "es": "El misterio del príncipe, 3"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-4",
-    "t": "Le Prince de sang-mêlé, 4",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 4",
+     "en": "Half-Blood Prince, 4",
+     "es": "El misterio del príncipe, 4"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-5",
-    "t": "Le Prince de sang-mêlé, 5",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 5",
+     "en": "Half-Blood Prince, 5",
+     "es": "El misterio del príncipe, 5"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-6",
-    "t": "Le Prince de sang-mêlé, 6",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 6",
+     "en": "Half-Blood Prince, 6",
+     "es": "El misterio del príncipe, 6"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-7",
-    "t": "Le Prince de sang-mêlé, 7",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 7",
+     "en": "Half-Blood Prince, 7",
+     "es": "El misterio del príncipe, 7"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-8",
-    "t": "Le Prince de sang-mêlé, 8",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 8",
+     "en": "Half-Blood Prince, 8",
+     "es": "El misterio del príncipe, 8"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-9",
-    "t": "Le Prince de sang-mêlé, 9",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 9",
+     "en": "Half-Blood Prince, 9",
+     "es": "El misterio del príncipe, 9"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-10",
-    "t": "Le Prince de sang-mêlé, 10",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 10",
+     "en": "Half-Blood Prince, 10",
+     "es": "El misterio del príncipe, 10"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-11",
-    "t": "Le Prince de sang-mêlé, 11",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 11",
+     "en": "Half-Blood Prince, 11",
+     "es": "El misterio del príncipe, 11"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-12",
-    "t": "Le Prince de sang-mêlé, 12",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 12",
+     "en": "Half-Blood Prince, 12",
+     "es": "El misterio del príncipe, 12"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-13",
-    "t": "Le Prince de sang-mêlé, 13",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 13",
+     "en": "Half-Blood Prince, 13",
+     "es": "El misterio del príncipe, 13"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-14",
-    "t": "Le Prince de sang-mêlé, 14",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 14",
+     "en": "Half-Blood Prince, 14",
+     "es": "El misterio del príncipe, 14"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-15",
-    "t": "Le Prince de sang-mêlé, 15",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 15",
+     "en": "Half-Blood Prince, 15",
+     "es": "El misterio del príncipe, 15"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-16",
-    "t": "Le Prince de sang-mêlé, 16",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 16",
+     "en": "Half-Blood Prince, 16",
+     "es": "El misterio del príncipe, 16"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-17",
-    "t": "Le Prince de sang-mêlé, 17",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 17",
+     "en": "Half-Blood Prince, 17",
+     "es": "El misterio del príncipe, 17"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-18",
-    "t": "Le Prince de sang-mêlé, 18",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 18",
+     "en": "Half-Blood Prince, 18",
+     "es": "El misterio del príncipe, 18"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-19",
-    "t": "Le Prince de sang-mêlé, 19",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 19",
+     "en": "Half-Blood Prince, 19",
+     "es": "El misterio del príncipe, 19"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-20",
-    "t": "Le Prince de sang-mêlé, 20",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 20",
+     "en": "Half-Blood Prince, 20",
+     "es": "El misterio del príncipe, 20"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-21",
-    "t": "Le Prince de sang-mêlé, 21",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 21",
+     "en": "Half-Blood Prince, 21",
+     "es": "El misterio del príncipe, 21"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-22",
-    "t": "Le Prince de sang-mêlé, 22",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 22",
+     "en": "Half-Blood Prince, 22",
+     "es": "El misterio del príncipe, 22"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-23",
-    "t": "Le Prince de sang-mêlé, 23",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 23",
+     "en": "Half-Blood Prince, 23",
+     "es": "El misterio del príncipe, 23"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-24",
-    "t": "Le Prince de sang-mêlé, 24",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 24",
+     "en": "Half-Blood Prince, 24",
+     "es": "El misterio del príncipe, 24"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-25",
-    "t": "Le Prince de sang-mêlé, 25",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 25",
+     "en": "Half-Blood Prince, 25",
+     "es": "El misterio del príncipe, 25"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-26",
-    "t": "Le Prince de sang-mêlé, 26",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 26",
+     "en": "Half-Blood Prince, 26",
+     "es": "El misterio del príncipe, 26"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-27",
-    "t": "Le Prince de sang-mêlé, 27",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 27",
+     "en": "Half-Blood Prince, 27",
+     "es": "El misterio del príncipe, 27"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-28",
-    "t": "Le Prince de sang-mêlé, 28",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 28",
+     "en": "Half-Blood Prince, 28",
+     "es": "El misterio del príncipe, 28"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-29",
-    "t": "Le Prince de sang-mêlé, 29",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 29",
+     "en": "Half-Blood Prince, 29",
+     "es": "El misterio del príncipe, 29"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-30",
-    "t": "Le Prince de sang-mêlé, 30",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 30",
+     "en": "Half-Blood Prince, 30",
+     "es": "El misterio del príncipe, 30"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-31",
-    "t": "Le Prince de sang-mêlé, 31",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 31",
+     "en": "Half-Blood Prince, 31",
+     "es": "El misterio del príncipe, 31"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-32",
-    "t": "Le Prince de sang-mêlé, 32",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 32",
+     "en": "Half-Blood Prince, 32",
+     "es": "El misterio del príncipe, 32"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-33",
-    "t": "Le Prince de sang-mêlé, 33",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 33",
+     "en": "Half-Blood Prince, 33",
+     "es": "El misterio del príncipe, 33"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-34",
-    "t": "Le Prince de sang-mêlé, 34",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 34",
+     "en": "Half-Blood Prince, 34",
+     "es": "El misterio del príncipe, 34"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-35",
-    "t": "Le Prince de sang-mêlé, 35",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 35",
+     "en": "Half-Blood Prince, 35",
+     "es": "El misterio del príncipe, 35"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-36",
-    "t": "Le Prince de sang-mêlé, 36",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 36",
+     "en": "Half-Blood Prince, 36",
+     "es": "El misterio del príncipe, 36"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-37",
-    "t": "Le Prince de sang-mêlé, 37",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 37",
+     "en": "Half-Blood Prince, 37",
+     "es": "El misterio del príncipe, 37"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-38",
-    "t": "Le Prince de sang-mêlé, 38",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 38",
+     "en": "Half-Blood Prince, 38",
+     "es": "El misterio del príncipe, 38"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-39",
-    "t": "Le Prince de sang-mêlé, 39",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 39",
+     "en": "Half-Blood Prince, 39",
+     "es": "El misterio del príncipe, 39"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-40",
-    "t": "Le Prince de sang-mêlé, 40",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 40",
+     "en": "Half-Blood Prince, 40",
+     "es": "El misterio del príncipe, 40"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-41",
-    "t": "Le Prince de sang-mêlé, 41",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 41",
+     "en": "Half-Blood Prince, 41",
+     "es": "El misterio del príncipe, 41"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-42",
-    "t": "Le Prince de sang-mêlé, 42",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 42",
+     "en": "Half-Blood Prince, 42",
+     "es": "El misterio del príncipe, 42"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-43",
-    "t": "Le Prince de sang-mêlé, 43",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 43",
+     "en": "Half-Blood Prince, 43",
+     "es": "El misterio del príncipe, 43"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-44",
-    "t": "Le Prince de sang-mêlé, 44",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 44",
+     "en": "Half-Blood Prince, 44",
+     "es": "El misterio del príncipe, 44"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-45",
-    "t": "Le Prince de sang-mêlé, 45",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 45",
+     "en": "Half-Blood Prince, 45",
+     "es": "El misterio del príncipe, 45"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-46",
-    "t": "Le Prince de sang-mêlé, 46",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 46",
+     "en": "Half-Blood Prince, 46",
+     "es": "El misterio del príncipe, 46"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-47",
-    "t": "Le Prince de sang-mêlé, 47",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 47",
+     "en": "Half-Blood Prince, 47",
+     "es": "El misterio del príncipe, 47"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-48",
-    "t": "Le Prince de sang-mêlé, 48",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 48",
+     "en": "Half-Blood Prince, 48",
+     "es": "El misterio del príncipe, 48"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-49",
-    "t": "Le Prince de sang-mêlé, 49",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 49",
+     "en": "Half-Blood Prince, 49",
+     "es": "El misterio del príncipe, 49"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-50",
-    "t": "Le Prince de sang-mêlé, 50",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 50",
+     "en": "Half-Blood Prince, 50",
+     "es": "El misterio del príncipe, 50"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-51",
-    "t": "Le Prince de sang-mêlé, 51",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 51",
+     "en": "Half-Blood Prince, 51",
+     "es": "El misterio del príncipe, 51"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-52",
-    "t": "Le Prince de sang-mêlé, 52",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 52",
+     "en": "Half-Blood Prince, 52",
+     "es": "El misterio del príncipe, 52"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-53",
-    "t": "Le Prince de sang-mêlé, 53",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 53",
+     "en": "Half-Blood Prince, 53",
+     "es": "El misterio del príncipe, 53"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-54",
-    "t": "Le Prince de sang-mêlé, 54",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 54",
+     "en": "Half-Blood Prince, 54",
+     "es": "El misterio del príncipe, 54"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-55",
-    "t": "Le Prince de sang-mêlé, 55",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 55",
+     "en": "Half-Blood Prince, 55",
+     "es": "El misterio del príncipe, 55"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-56",
-    "t": "Le Prince de sang-mêlé, 56",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 56",
+     "en": "Half-Blood Prince, 56",
+     "es": "El misterio del príncipe, 56"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-57",
-    "t": "Le Prince de sang-mêlé, 57",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 57",
+     "en": "Half-Blood Prince, 57",
+     "es": "El misterio del príncipe, 57"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-58",
-    "t": "Le Prince de sang-mêlé, 58",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 58",
+     "en": "Half-Blood Prince, 58",
+     "es": "El misterio del príncipe, 58"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-59",
-    "t": "Le Prince de sang-mêlé, 59",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 59",
+     "en": "Half-Blood Prince, 59",
+     "es": "El misterio del príncipe, 59"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-60",
-    "t": "Le Prince de sang-mêlé, 60",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 60",
+     "en": "Half-Blood Prince, 60",
+     "es": "El misterio del príncipe, 60"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-61",
-    "t": "Le Prince de sang-mêlé, 61",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 61",
+     "en": "Half-Blood Prince, 61",
+     "es": "El misterio del príncipe, 61"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-62",
-    "t": "Le Prince de sang-mêlé, 62",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 62",
+     "en": "Half-Blood Prince, 62",
+     "es": "El misterio del príncipe, 62"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-63",
-    "t": "Le Prince de sang-mêlé, 63",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 63",
+     "en": "Half-Blood Prince, 63",
+     "es": "El misterio del príncipe, 63"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-64",
-    "t": "Le Prince de sang-mêlé, 64",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 64",
+     "en": "Half-Blood Prince, 64",
+     "es": "El misterio del príncipe, 64"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-65",
-    "t": "Le Prince de sang-mêlé, 65",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 65",
+     "en": "Half-Blood Prince, 65",
+     "es": "El misterio del príncipe, 65"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-66",
-    "t": "Le Prince de sang-mêlé, 66",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 66",
+     "en": "Half-Blood Prince, 66",
+     "es": "El misterio del príncipe, 66"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-67",
-    "t": "Le Prince de sang-mêlé, 67",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 67",
+     "en": "Half-Blood Prince, 67",
+     "es": "El misterio del príncipe, 67"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-68",
-    "t": "Le Prince de sang-mêlé, 68",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 68",
+     "en": "Half-Blood Prince, 68",
+     "es": "El misterio del príncipe, 68"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-69",
-    "t": "Le Prince de sang-mêlé, 69",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 69",
+     "en": "Half-Blood Prince, 69",
+     "es": "El misterio del príncipe, 69"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-70",
-    "t": "Le Prince de sang-mêlé, 70",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 70",
+     "en": "Half-Blood Prince, 70",
+     "es": "El misterio del príncipe, 70"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-71",
-    "t": "Le Prince de sang-mêlé, 71",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 71",
+     "en": "Half-Blood Prince, 71",
+     "es": "El misterio del príncipe, 71"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-72",
-    "t": "Le Prince de sang-mêlé, 72",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 72",
+     "en": "Half-Blood Prince, 72",
+     "es": "El misterio del príncipe, 72"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-73",
-    "t": "Le Prince de sang-mêlé, 73",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 73",
+     "en": "Half-Blood Prince, 73",
+     "es": "El misterio del príncipe, 73"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-74",
-    "t": "Le Prince de sang-mêlé, 74",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 74",
+     "en": "Half-Blood Prince, 74",
+     "es": "El misterio del príncipe, 74"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-75",
-    "t": "Le Prince de sang-mêlé, 75",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 75",
+     "en": "Half-Blood Prince, 75",
+     "es": "El misterio del príncipe, 75"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-76",
-    "t": "Le Prince de sang-mêlé, 76",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 76",
+     "en": "Half-Blood Prince, 76",
+     "es": "El misterio del príncipe, 76"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-77",
-    "t": "Le Prince de sang-mêlé, 77",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 77",
+     "en": "Half-Blood Prince, 77",
+     "es": "El misterio del príncipe, 77"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-78",
-    "t": "Le Prince de sang-mêlé, 78",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 78",
+     "en": "Half-Blood Prince, 78",
+     "es": "El misterio del príncipe, 78"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-79",
-    "t": "Le Prince de sang-mêlé, 79",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 79",
+     "en": "Half-Blood Prince, 79",
+     "es": "El misterio del príncipe, 79"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-80",
-    "t": "Le Prince de sang-mêlé, 80",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 80",
+     "en": "Half-Blood Prince, 80",
+     "es": "El misterio del príncipe, 80"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-81",
-    "t": "Le Prince de sang-mêlé, 81",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 81",
+     "en": "Half-Blood Prince, 81",
+     "es": "El misterio del príncipe, 81"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-82",
-    "t": "Le Prince de sang-mêlé, 82",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 82",
+     "en": "Half-Blood Prince, 82",
+     "es": "El misterio del príncipe, 82"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-83",
-    "t": "Le Prince de sang-mêlé, 83",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 83",
+     "en": "Half-Blood Prince, 83",
+     "es": "El misterio del príncipe, 83"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-84",
-    "t": "Le Prince de sang-mêlé, 84",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 84",
+     "en": "Half-Blood Prince, 84",
+     "es": "El misterio del príncipe, 84"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-85",
-    "t": "Le Prince de sang-mêlé, 85",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 85",
+     "en": "Half-Blood Prince, 85",
+     "es": "El misterio del príncipe, 85"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-86",
-    "t": "Le Prince de sang-mêlé, 86",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 86",
+     "en": "Half-Blood Prince, 86",
+     "es": "El misterio del príncipe, 86"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-87",
-    "t": "Le Prince de sang-mêlé, 87",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 87",
+     "en": "Half-Blood Prince, 87",
+     "es": "El misterio del príncipe, 87"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-88",
-    "t": "Le Prince de sang-mêlé, 88",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 88",
+     "en": "Half-Blood Prince, 88",
+     "es": "El misterio del príncipe, 88"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-89",
-    "t": "Le Prince de sang-mêlé, 89",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 89",
+     "en": "Half-Blood Prince, 89",
+     "es": "El misterio del príncipe, 89"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-90",
-    "t": "Le Prince de sang-mêlé, 90",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 90",
+     "en": "Half-Blood Prince, 90",
+     "es": "El misterio del príncipe, 90"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-91",
-    "t": "Le Prince de sang-mêlé, 91",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 91",
+     "en": "Half-Blood Prince, 91",
+     "es": "El misterio del príncipe, 91"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-92",
-    "t": "Le Prince de sang-mêlé, 92",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 92",
+     "en": "Half-Blood Prince, 92",
+     "es": "El misterio del príncipe, 92"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-93",
-    "t": "Le Prince de sang-mêlé, 93",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 93",
+     "en": "Half-Blood Prince, 93",
+     "es": "El misterio del príncipe, 93"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-94",
-    "t": "Le Prince de sang-mêlé, 94",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 94",
+     "en": "Half-Blood Prince, 94",
+     "es": "El misterio del príncipe, 94"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-95",
-    "t": "Le Prince de sang-mêlé, 95",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 95",
+     "en": "Half-Blood Prince, 95",
+     "es": "El misterio del príncipe, 95"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-96",
-    "t": "Le Prince de sang-mêlé, 96",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 96",
+     "en": "Half-Blood Prince, 96",
+     "es": "El misterio del príncipe, 96"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-97",
-    "t": "Le Prince de sang-mêlé, 97",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 97",
+     "en": "Half-Blood Prince, 97",
+     "es": "El misterio del príncipe, 97"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-98",
-    "t": "Le Prince de sang-mêlé, 98",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 98",
+     "en": "Half-Blood Prince, 98",
+     "es": "El misterio del príncipe, 98"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-99",
-    "t": "Le Prince de sang-mêlé, 99",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 99",
+     "en": "Half-Blood Prince, 99",
+     "es": "El misterio del príncipe, 99"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-100",
-    "t": "Le Prince de sang-mêlé, 100",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 100",
+     "en": "Half-Blood Prince, 100",
+     "es": "El misterio del príncipe, 100"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-101",
-    "t": "Le Prince de sang-mêlé, 101",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 101",
+     "en": "Half-Blood Prince, 101",
+     "es": "El misterio del príncipe, 101"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-102",
-    "t": "Le Prince de sang-mêlé, 102",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 102",
+     "en": "Half-Blood Prince, 102",
+     "es": "El misterio del príncipe, 102"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-103",
-    "t": "Le Prince de sang-mêlé, 103",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 103",
+     "en": "Half-Blood Prince, 103",
+     "es": "El misterio del príncipe, 103"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-104",
-    "t": "Le Prince de sang-mêlé, 104",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 104",
+     "en": "Half-Blood Prince, 104",
+     "es": "El misterio del príncipe, 104"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-105",
-    "t": "Le Prince de sang-mêlé, 105",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 105",
+     "en": "Half-Blood Prince, 105",
+     "es": "El misterio del príncipe, 105"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-106",
-    "t": "Le Prince de sang-mêlé, 106",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 106",
+     "en": "Half-Blood Prince, 106",
+     "es": "El misterio del príncipe, 106"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-107",
-    "t": "Le Prince de sang-mêlé, 107",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 107",
+     "en": "Half-Blood Prince, 107",
+     "es": "El misterio del príncipe, 107"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-108",
-    "t": "Le Prince de sang-mêlé, 108",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 108",
+     "en": "Half-Blood Prince, 108",
+     "es": "El misterio del príncipe, 108"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-109",
-    "t": "Le Prince de sang-mêlé, 109",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 109",
+     "en": "Half-Blood Prince, 109",
+     "es": "El misterio del príncipe, 109"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-110",
-    "t": "Le Prince de sang-mêlé, 110",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 110",
+     "en": "Half-Blood Prince, 110",
+     "es": "El misterio del príncipe, 110"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-111",
-    "t": "Le Prince de sang-mêlé, 111",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 111",
+     "en": "Half-Blood Prince, 111",
+     "es": "El misterio del príncipe, 111"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-112",
-    "t": "Le Prince de sang-mêlé, 112",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 112",
+     "en": "Half-Blood Prince, 112",
+     "es": "El misterio del príncipe, 112"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-113",
-    "t": "Le Prince de sang-mêlé, 113",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 113",
+     "en": "Half-Blood Prince, 113",
+     "es": "El misterio del príncipe, 113"
+    },
     "s": 0
    },
    {
     "f": "hbpmusic-114",
-    "t": "Le Prince de sang-mêlé, 114",
+    "t": {
+     "fr": "Le Prince de sang-mêlé, 114",
+     "en": "Half-Blood Prince, 114",
+     "es": "El misterio del príncipe, 114"
+    },
     "s": 0
    }
   ]

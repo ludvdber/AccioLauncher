@@ -18,7 +18,12 @@ sur les jeux installés (atelier, fiches `HPx.md`, « Musique et cinématiques �
   `data.big › events/chapter_transition.str` (DL03, GP01… UH13). Vérifié par
   les durées : chaque fiche du `.str` porte celle de son son en millisecondes
   (85 179, 40 190…), égales à celles que mesure vgmstream. C'est la
-  `Banque` ; converti en WAV par `vgmstream`.
+  `Banque` ; converti en WAV par `vgmstream`. HP6 a la même banque (16
+  langues, 12 flux) : cinq séquences E3 sans vidéo, puis ns01, ns02, ns08,
+  ns09, ns14, ns15 et pensieve, durées vérifiées contre les en-têtes VP6
+  (2026-10-25). Le son des autres cinématiques de HP5 et HP6 vit dans les
+  banques de chapitre (`chapters/hogwarts/<langue>_s.sdt`, des milliers de
+  flux sans nom) : pas encore relié.
 - **HP7 et HP8** (`hp7a`, `hp7b`) : VP6 1280 × 720 dans `pc/`, sans piste son
   (le son est dans des paquets Wwise).
 
@@ -34,6 +39,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from src.core import archives_ea
+from src.core.i18n import TexteTraduit, dans_la_langue, texte_traduit
 
 log = logging.getLogger(__name__)
 
@@ -41,16 +47,21 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class Cinematique:
     fichier: str      # nom du fichier sans extension, comme dans le jeu
-    titre: str
+    titres: TexteTraduit   # « t » : une chaîne, ou {fr, en, es}
     seuil: int
+
+    @property
+    def titre(self) -> str:
+        return dans_la_langue(self.titres)
 
 
 @dataclass(frozen=True, slots=True)
 class Banque:
-    """Les voix rangées dans une banque `_s.sdt` : un flux par cinématique (HP5)."""
+    """Les voix rangées dans une banque `_s.sdt` : un flux par nom de l'ordre (HP5, HP6)."""
     archive: str
     fichiers: dict[str, str]     # langue → chemin de la banque dans l'archive
     ordre: tuple[str, ...]       # les cinématiques, dans l'ordre des flux
+    sans_video: tuple[str, ...] = ()   # noms de l'ordre qui n'ont pas de vidéo (HP6 : E3)
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,10 +102,10 @@ def charger(chemin: Path | None = None) -> dict[str, Collection]:
                 and isinstance(bloc.get("ext"), str) and isinstance(bloc.get("clips"), list)):
             continue
         clips = tuple(
-            Cinematique(c["f"], c["t"], max(0, min(100, c["s"])))
+            Cinematique(c["f"], titres, max(0, min(100, c["s"])))
             for c in bloc["clips"]
-            if isinstance(c, dict) and isinstance(c.get("f"), str) and isinstance(c.get("t"), str)
-            and isinstance(c.get("s"), int))
+            if isinstance(c, dict) and isinstance(c.get("f"), str)
+            and (titres := texte_traduit(c.get("t"))) is not None and isinstance(c.get("s"), int))
         voix = bloc.get("voix")
         resultat[str(jeu)] = Collection(
             bloc["dossier"], bloc["ext"].lower(), bloc.get("sans_son") is True, clips,
@@ -110,8 +121,10 @@ def _banque(bloc: object) -> Banque | None:
     archive, fichiers, ordre = bloc.get("archive"), bloc.get("fichiers"), bloc.get("ordre")
     if not (isinstance(archive, str) and isinstance(fichiers, dict) and isinstance(ordre, list)):
         return None
+    sans_video = bloc.get("sans_video")
     return Banque(archive, {str(k): v for k, v in fichiers.items() if isinstance(v, str)},
-                  tuple(o for o in ordre if isinstance(o, str)))
+                  tuple(o for o in ordre if isinstance(o, str)),
+                  tuple(o for o in sans_video if isinstance(o, str)) if isinstance(sans_video, list) else ())
 
 
 def _dossier(dossier_jeu: Path, nom: str) -> Path | None:

@@ -212,7 +212,8 @@ class TestDonneesLivrees:
             assert len(noms) == len(set(noms)), f"{jeu} : cinématique en double"
             assert all(c.titre.strip() for c in col.clips), f"{jeu} : titre vide"
             if col.banque is not None:
-                manquants = [o for o in col.banque.ordre if o.lower() not in noms]
+                manquants = [o for o in col.banque.ordre
+                             if o.lower() not in noms and o not in col.banque.sans_video]
                 assert not manquants, f"{jeu} : la banque nomme des vidéos absentes {manquants}"
                 assert len(set(col.banque.ordre)) == len(col.banque.ordre)
 

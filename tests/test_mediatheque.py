@@ -47,7 +47,18 @@ class TestCinematiques:
         assert {"hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b"} <= set(lu)
         assert "hp1" not in lu and "hp2" not in lu
         assert lu["hp7a"].sans_son and lu["hp7b"].sans_son and lu["hp4"].voix
+        # HP5 et HP6 : la banque compte un nom par flux (12 chacune, relevé sur les jeux).
+        for jeu in ("hp5", "hp6"):
+            banque = lu[jeu].banque
+            assert banque is not None and len(banque.ordre) == 12 and "fr" in banque.fichiers
+        assert {"ns01", "ns02", "ns08", "ns09", "ns14", "ns15", "pensieve"} <= set(lu["hp6"].banque.ordre)
         assert all(c.titre for col in lu.values() for c in col.clips)
+        # Hors HP3 et HP4 (logos, prénoms), chaque titre a son anglais et son espagnol.
+        neutres = {"Bellatrix", "Harry", "Hermione", "Ron"}
+        for col in lu.values():
+            for c in col.clips:
+                if c.titres not in neutres:
+                    assert isinstance(c.titres, tuple) and {"fr", "en", "es"} <= dict(c.titres).keys(), c.fichier
 
 
 class TestCredits:

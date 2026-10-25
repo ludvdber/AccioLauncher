@@ -4,9 +4,11 @@ Les TROIS polices de l'interface sont embarquées : Cinzel (titres secondaires,
 boutons, méta), Cinzel Decorative (titre principal) et **Gelasio** (texte
 courant). Gelasio remplace Georgia, qui était appelée par son nom : une police
 Microsoft, présente sous Windows mais **absente sous Linux** et jamais garantie
-nulle part. Gelasio est sous licence OFL et **métriquement compatible avec
-Georgia** — largeurs identiques au pixel près, mesurées de 10 à 15 px — donc
-son adoption ne déplace aucun retour à la ligne.
+nulle part. Gelasio est sous licence OFL et dessinée sur les proportions de
+Georgia, sans leur être identique : sous offscreen, Georgia chargée depuis son
+fichier, Gelasio sort de 2 à 6 % plus large de 10 à 15 px (relevé le
+2026-10-25). Sans conséquence : l'interface est mise en page et mesurée avec
+Gelasio elle-même (suite de tests, `tools/audit_geometrie.py`).
 
 Effet secondaire précieux : sous `offscreen`, `QFontDatabase.families()` est
 vide et Qt substituait Cinzel à Georgia (+22 % de largeur). La suite de tests

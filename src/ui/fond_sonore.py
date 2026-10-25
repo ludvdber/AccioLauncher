@@ -73,8 +73,9 @@ class FondSonore(QObject):
         self._ecoute = ""              # morceau écouté depuis la page, devant le fond
         self._en_pause = False         # l'écoute arrêtée sur place, prête à reprendre
         self._courant = ""             # morceau chargé dans le lecteur
-        self._titres = {cle(j, m.fichier): m.titre
-                        for j, morceaux in discographie.charger().items() for m in morceaux}
+        # Les morceaux, pas leurs titres : le titre se lit dans la langue du moment.
+        self._morceaux = {cle(j, m.fichier): m
+                          for j, morceaux in discographie.charger().items() for m in morceaux}
         self._lecteur: QMediaPlayer | None = None
         self._sortie: QAudioOutput | None = None
         fenetre.installEventFilter(self)
@@ -107,7 +108,8 @@ class FondSonore(QObject):
         return self._ecoute or self._config.musique_fond
 
     def titre(self, cle_morceau: str) -> str:
-        return self._titres.get(cle_morceau, "")
+        morceau = self._morceaux.get(cle_morceau)
+        return morceau.titre if morceau is not None else ""
 
     @property
     def en_lecture(self) -> bool:

@@ -1,5 +1,5 @@
 {
- "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). banque = les voix rangées dans une banque _s.sdt, un flux par cinématique dans l'ordre donné (HP5). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
+ "_note": "Généré le 2026-10-24 d'après les jeux installés. f = nom du fichier sans extension ; s = seuil d'avancement en % (HP3 et HP5 estimés d'après l'histoire ; HP4, HP6, HP7 et HP8 n'écrivent pas d'avancement lisible, tout y est ouvert). banque = les voix rangées dans une banque _s.sdt, un flux par nom dans l'ordre donné (HP5, HP6 ; HP6 y range aussi cinq séquences E3 sans vidéo, gardées pour le compte des flux). archive = les vidéos sont dans cette archive EA du jeu ; voix = la piste de voix séparée, par langue (HP4). Les vidéos de HP5 à HP8 n'ont pas de piste son lisible : le son est ailleurs.",
  "jeux": {
   "hp3": {
    "dossier": "Movies",
@@ -7,37 +7,65 @@
    "clips": [
     {
      "f": "SiriusPhoto",
-     "t": "La photo de Sirius dans la Gazette",
+     "t": {
+      "fr": "La photo de Sirius dans la Gazette",
+      "en": "Sirius's photo in the Daily Prophet",
+      "es": "La foto de Sirius en El Profeta"
+     },
      "s": 0
     },
     {
      "f": "PinkLady",
-     "t": "Le portrait de la Grosse Dame",
+     "t": {
+      "fr": "Le portrait de la Grosse Dame",
+      "en": "The Fat Lady's portrait",
+      "es": "El retrato de la Señora Gorda"
+     },
      "s": 0
     },
     {
      "f": "HourGlassBac",
-     "t": "Le sablier des maisons",
+     "t": {
+      "fr": "Le sablier des maisons",
+      "en": "The house points hourglasses",
+      "es": "Los relojes de arena de las casas"
+     },
      "s": 0
     },
     {
      "f": "LoadLevel",
-     "t": "L'écran de chargement",
+     "t": {
+      "fr": "L'écran de chargement",
+      "en": "The loading screen",
+      "es": "La pantalla de carga"
+     },
      "s": 0
     },
     {
      "f": "eag_1920",
-     "t": "Logo Electronic Arts",
+     "t": {
+      "fr": "Logo Electronic Arts",
+      "en": "Electronic Arts logo",
+      "es": "Logotipo de Electronic Arts"
+     },
      "s": 0
     },
     {
      "f": "wb_1920",
-     "t": "Logo Warner Bros.",
+     "t": {
+      "fr": "Logo Warner Bros.",
+      "en": "Warner Bros. logo",
+      "es": "Logotipo de Warner Bros."
+     },
      "s": 0
     },
     {
      "f": "KWLogo",
-     "t": "Logo KnowWonder",
+     "t": {
+      "fr": "Logo KnowWonder",
+      "en": "KnowWonder logo",
+      "es": "Logotipo de KnowWonder"
+     },
      "s": 0
     }
    ]
@@ -56,67 +84,119 @@
    "clips": [
     {
      "f": "AVcampsiteIntro",
-     "t": "Le camping de la Coupe du monde, début",
+     "t": {
+      "fr": "Le camping de la Coupe du monde, début",
+      "en": "The World Cup campsite, start",
+      "es": "El campamento de los Mundiales, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVcampsiteOutro",
-     "t": "Le camping de la Coupe du monde, fin",
+     "t": {
+      "fr": "Le camping de la Coupe du monde, fin",
+      "en": "The World Cup campsite, end",
+      "es": "El campamento de los Mundiales, final"
+     },
      "s": 0
     },
     {
      "f": "AVdadaIntro",
-     "t": "Défense contre les forces du mal, début",
+     "t": {
+      "fr": "Défense contre les forces du mal, début",
+      "en": "Defence Against the Dark Arts, start",
+      "es": "Defensa Contra las Artes Oscuras, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVdadaOutro",
-     "t": "Défense contre les forces du mal, fin",
+     "t": {
+      "fr": "Défense contre les forces du mal, fin",
+      "en": "Defence Against the Dark Arts, end",
+      "es": "Defensa Contra las Artes Oscuras, final"
+     },
      "s": 0
     },
     {
      "f": "AVherbologyIntro",
-     "t": "Botanique, début",
+     "t": {
+      "fr": "Botanique, début",
+      "en": "Herbology, start",
+      "es": "Herbología, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVdwIntro",
-     "t": "Niveau « dw », début",
+     "t": {
+      "fr": "Niveau « dw », début",
+      "en": "Level “dw”, start",
+      "es": "Nivel «dw», inicio"
+     },
      "s": 0
     },
     {
      "f": "AVdwOutro",
-     "t": "Niveau « dw », fin",
+     "t": {
+      "fr": "Niveau « dw », fin",
+      "en": "Level “dw”, end",
+      "es": "Nivel «dw», final"
+     },
      "s": 0
     },
     {
      "f": "AVprefectsIntro",
-     "t": "La salle de bain des préfets, début",
+     "t": {
+      "fr": "La salle de bain des préfets, début",
+      "en": "The Prefects' Bathroom, start",
+      "es": "El baño de los prefectos, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVTriwizard1Intro",
-     "t": "Première tâche, début",
+     "t": {
+      "fr": "Première tâche, début",
+      "en": "First Task, start",
+      "es": "Primera prueba, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVTriwizard1Outro",
-     "t": "Première tâche, fin",
+     "t": {
+      "fr": "Première tâche, fin",
+      "en": "First Task, end",
+      "es": "Primera prueba, final"
+     },
      "s": 0
     },
     {
      "f": "AVTriwizard2Intro",
-     "t": "Deuxième tâche, début",
+     "t": {
+      "fr": "Deuxième tâche, début",
+      "en": "Second Task, start",
+      "es": "Segunda prueba, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVTriwizard3Intro",
-     "t": "Troisième tâche, début",
+     "t": {
+      "fr": "Troisième tâche, début",
+      "en": "Third Task, start",
+      "es": "Tercera prueba, inicio"
+     },
      "s": 0
     },
     {
      "f": "AVvoldemortOutro",
-     "t": "Le retour de Voldemort",
+     "t": {
+      "fr": "Le retour de Voldemort",
+      "en": "The return of Voldemort",
+      "es": "El regreso de Voldemort"
+     },
      "s": 0
     },
     {
@@ -136,27 +216,47 @@
     },
     {
      "f": "AVReward",
-     "t": "La récompense",
+     "t": {
+      "fr": "La récompense",
+      "en": "The reward",
+      "es": "La recompensa"
+     },
      "s": 0
     },
     {
      "f": "AVAttract",
-     "t": "Bande-annonce",
+     "t": {
+      "fr": "Bande-annonce",
+      "en": "Trailer",
+      "es": "Tráiler"
+     },
      "s": 0
     },
     {
      "f": "AVGofLogo",
-     "t": "Logo du jeu",
+     "t": {
+      "fr": "Logo du jeu",
+      "en": "Game logo",
+      "es": "Logotipo del juego"
+     },
      "s": 0
     },
     {
      "f": "AVea",
-     "t": "Logo Electronic Arts",
+     "t": {
+      "fr": "Logo Electronic Arts",
+      "en": "Electronic Arts logo",
+      "es": "Logotipo de Electronic Arts"
+     },
      "s": 0
     },
     {
      "f": "AVwbie",
-     "t": "Logo Warner Bros.",
+     "t": {
+      "fr": "Logo Warner Bros.",
+      "en": "Warner Bros. logo",
+      "es": "Logotipo de Warner Bros."
+     },
      "s": 0
     }
    ]
@@ -191,57 +291,101 @@
    "clips": [
     {
      "f": "occ_hogsmead",
-     "t": "Pré-au-Lard",
+     "t": {
+      "fr": "Pré-au-Lard",
+      "en": "Hogsmeade",
+      "es": "Hogsmeade"
+     },
      "s": 15
     },
     {
      "f": "occ_dada",
-     "t": "Défense contre les forces du mal",
+     "t": {
+      "fr": "Défense contre les forces du mal",
+      "en": "Defence Against the Dark Arts",
+      "es": "Defensa Contra las Artes Oscuras"
+     },
      "s": 20
     },
     {
      "f": "occ_friends",
-     "t": "Les amis",
+     "t": {
+      "fr": "Les amis",
+      "en": "The friends",
+      "es": "Los amigos"
+     },
      "s": 25
     },
     {
      "f": "the_da",
-     "t": "L'armée de Dumbledore",
+     "t": {
+      "fr": "L'armée de Dumbledore",
+      "en": "Dumbledore's Army",
+      "es": "El Ejército de Dumbledore"
+     },
      "s": 35
     },
     {
      "f": "occ_cho_kiss",
-     "t": "Le baiser de Cho",
+     "t": {
+      "fr": "Le baiser de Cho",
+      "en": "Cho's kiss",
+      "es": "El beso de Cho"
+     },
      "s": 45
     },
     {
      "f": "occ_arthur_biten",
-     "t": "Arthur Weasley attaqué",
+     "t": {
+      "fr": "Arthur Weasley attaqué",
+      "en": "Arthur Weasley attacked",
+      "es": "El ataque a Arthur Weasley"
+     },
      "s": 50
     },
     {
      "f": "occ_umbridge_cho_ror",
-     "t": "Ombrage, Cho et la Salle sur demande",
+     "t": {
+      "fr": "Ombrage, Cho et la Salle sur demande",
+      "en": "Umbridge, Cho and the Room of Requirement",
+      "es": "Umbridge, Cho y la Sala de los Menesteres"
+     },
      "s": 60
     },
     {
      "f": "occ_grawp",
-     "t": "Graup",
+     "t": {
+      "fr": "Graup",
+      "en": "Grawp",
+      "es": "Grawp"
+     },
      "s": 70
     },
     {
      "f": "occ_courtyard_swamp",
-     "t": "Le marécage de la cour",
+     "t": {
+      "fr": "Le marécage de la cour",
+      "en": "The courtyard swamp",
+      "es": "El pantano del patio"
+     },
      "s": 75
     },
     {
      "f": "occ_prophecy",
-     "t": "La prophétie",
+     "t": {
+      "fr": "La prophétie",
+      "en": "The prophecy",
+      "es": "La profecía"
+     },
      "s": 90
     },
     {
      "f": "occ_sirius_blasted",
-     "t": "Sirius frappé",
+     "t": {
+      "fr": "Sirius frappé",
+      "en": "Sirius struck down",
+      "es": "Sirius abatido"
+     },
      "s": 92
     },
     {
@@ -251,217 +395,389 @@
     },
     {
      "f": "occ_goodbye_sirius",
-     "t": "Adieu, Sirius",
+     "t": {
+      "fr": "Adieu, Sirius",
+      "en": "Goodbye, Sirius",
+      "es": "Adiós, Sirius"
+     },
      "s": 95
     },
     {
      "f": "harrys_friends",
-     "t": "Les amis de Harry",
+     "t": {
+      "fr": "Les amis de Harry",
+      "en": "Harry's friends",
+      "es": "Los amigos de Harry"
+     },
      "s": 0
     },
     {
      "f": "bad_boys",
-     "t": "Les méchants",
+     "t": {
+      "fr": "Les méchants",
+      "en": "The villains",
+      "es": "Los villanos"
+     },
      "s": 0
     },
     {
      "f": "authentic_characters",
-     "t": "Les personnages",
+     "t": {
+      "fr": "Les personnages",
+      "en": "The characters",
+      "es": "Los personajes"
+     },
      "s": 0
     },
     {
      "f": "authentic_hogwarts",
-     "t": "Poudlard",
+     "t": {
+      "fr": "Poudlard",
+      "en": "Hogwarts",
+      "es": "Hogwarts"
+     },
      "s": 0
     },
     {
      "f": "soundofhog",
-     "t": "Les sons de Poudlard",
+     "t": {
+      "fr": "Les sons de Poudlard",
+      "en": "The sounds of Hogwarts",
+      "es": "Los sonidos de Hogwarts"
+     },
      "s": 0
     },
     {
      "f": "attract",
-     "t": "Bande-annonce",
+     "t": {
+      "fr": "Bande-annonce",
+      "en": "Trailer",
+      "es": "Tráiler"
+     },
      "s": 0
     },
     {
      "f": "dh02_cs01_go_to_dada",
-     "t": "Cinématique « dh02_cs01_go_to_dada »",
+     "t": {
+      "fr": "Cinématique « dh02_cs01_go_to_dada »",
+      "en": "Cutscene “dh02_cs01_go_to_dada”",
+      "es": "Cinemática «dh02_cs01_go_to_dada»"
+     },
      "s": 0
     },
     {
      "f": "dh03",
-     "t": "Cinématique « dh03 »",
+     "t": {
+      "fr": "Cinématique « dh03 »",
+      "en": "Cutscene “dh03”",
+      "es": "Cinemática «dh03»"
+     },
      "s": 0
     },
     {
      "f": "dh04",
-     "t": "Cinématique « dh04 »",
+     "t": {
+      "fr": "Cinématique « dh04 »",
+      "en": "Cutscene “dh04”",
+      "es": "Cinemática «dh04»"
+     },
      "s": 0
     },
     {
      "f": "dh04_cs03",
-     "t": "Cinématique « dh04_cs03 »",
+     "t": {
+      "fr": "Cinématique « dh04_cs03 »",
+      "en": "Cutscene “dh04_cs03”",
+      "es": "Cinemática «dh04_cs03»"
+     },
      "s": 0
     },
     {
      "f": "dl03",
-     "t": "Cinématique « dl03 »",
+     "t": {
+      "fr": "Cinématique « dl03 »",
+      "en": "Cutscene “dl03”",
+      "es": "Cinemática «dl03»"
+     },
      "s": 0
     },
     {
      "f": "dl03_cs01",
-     "t": "Cinématique « dl03_cs01 »",
+     "t": {
+      "fr": "Cinématique « dl03_cs01 »",
+      "en": "Cutscene “dl03_cs01”",
+      "es": "Cinemática «dl03_cs01»"
+     },
      "s": 0
     },
     {
      "f": "gp01",
-     "t": "Cinématique « gp01 »",
+     "t": {
+      "fr": "Cinématique « gp01 »",
+      "en": "Cutscene “gp01”",
+      "es": "Cinemática «gp01»"
+     },
      "s": 0
     },
     {
      "f": "gp04",
-     "t": "Cinématique « gp04 »",
+     "t": {
+      "fr": "Cinématique « gp04 »",
+      "en": "Cutscene “gp04”",
+      "es": "Cinemática «gp04»"
+     },
      "s": 0
     },
     {
      "f": "gp05",
-     "t": "Cinématique « gp05 »",
+     "t": {
+      "fr": "Cinématique « gp05 »",
+      "en": "Cutscene “gp05”",
+      "es": "Cinemática «gp05»"
+     },
      "s": 0
     },
     {
      "f": "mom01",
-     "t": "Cinématique « mom01 »",
+     "t": {
+      "fr": "Cinématique « mom01 »",
+      "en": "Cutscene “mom01”",
+      "es": "Cinemática «mom01»"
+     },
      "s": 0
     },
     {
      "f": "mom01_cs01",
-     "t": "Cinématique « mom01_cs01 »",
+     "t": {
+      "fr": "Cinématique « mom01_cs01 »",
+      "en": "Cutscene “mom01_cs01”",
+      "es": "Cinemática «mom01_cs01»"
+     },
      "s": 0
     },
     {
      "f": "mom03",
-     "t": "Cinématique « mom03 »",
+     "t": {
+      "fr": "Cinématique « mom03 »",
+      "en": "Cutscene “mom03”",
+      "es": "Cinemática «mom03»"
+     },
      "s": 0
     },
     {
      "f": "mom4",
-     "t": "Cinématique « mom4 »",
+     "t": {
+      "fr": "Cinématique « mom4 »",
+      "en": "Cutscene “mom4”",
+      "es": "Cinemática «mom4»"
+     },
      "s": 0
     },
     {
      "f": "mom_02_cs02_shotc",
-     "t": "Cinématique « mom_02_cs02_shotc »",
+     "t": {
+      "fr": "Cinématique « mom_02_cs02_shotc »",
+      "en": "Cutscene “mom_02_cs02_shotc”",
+      "es": "Cinemática «mom_02_cs02_shotc»"
+     },
      "s": 0
     },
     {
      "f": "oc01",
-     "t": "Cinématique « oc01 »",
+     "t": {
+      "fr": "Cinématique « oc01 »",
+      "en": "Cutscene “oc01”",
+      "es": "Cinemática «oc01»"
+     },
      "s": 0
     },
     {
      "f": "oc01_cs01",
-     "t": "Cinématique « oc01_cs01 »",
+     "t": {
+      "fr": "Cinématique « oc01_cs01 »",
+      "en": "Cutscene “oc01_cs01”",
+      "es": "Cinemática «oc01_cs01»"
+     },
      "s": 0
     },
     {
      "f": "rr01",
-     "t": "Cinématique « rr01 »",
+     "t": {
+      "fr": "Cinématique « rr01 »",
+      "en": "Cutscene “rr01”",
+      "es": "Cinemática «rr01»"
+     },
      "s": 0
     },
     {
      "f": "rr26",
-     "t": "Cinématique « rr26 »",
+     "t": {
+      "fr": "Cinématique « rr26 »",
+      "en": "Cutscene “rr26”",
+      "es": "Cinemática «rr26»"
+     },
      "s": 0
     },
     {
      "f": "uh11",
-     "t": "Cinématique « uh11 »",
+     "t": {
+      "fr": "Cinématique « uh11 »",
+      "en": "Cutscene “uh11”",
+      "es": "Cinemática «uh11»"
+     },
      "s": 0
     },
     {
      "f": "uh13",
-     "t": "Cinématique « uh13 »",
+     "t": {
+      "fr": "Cinématique « uh13 »",
+      "en": "Cutscene “uh13”",
+      "es": "Cinemática «uh13»"
+     },
      "s": 0
     },
     {
      "f": "reward_07",
-     "t": "Récompense 7",
+     "t": {
+      "fr": "Récompense 7",
+      "en": "Reward 7",
+      "es": "Recompensa 7"
+     },
      "s": 0
     },
     {
      "f": "reward_08",
-     "t": "Récompense 8",
+     "t": {
+      "fr": "Récompense 8",
+      "en": "Reward 8",
+      "es": "Recompensa 8"
+     },
      "s": 0
     },
     {
      "f": "reward_09",
-     "t": "Récompense 9",
+     "t": {
+      "fr": "Récompense 9",
+      "en": "Reward 9",
+      "es": "Recompensa 9"
+     },
      "s": 0
     },
     {
      "f": "reward_10",
-     "t": "Récompense 10",
+     "t": {
+      "fr": "Récompense 10",
+      "en": "Reward 10",
+      "es": "Recompensa 10"
+     },
      "s": 0
     },
     {
      "f": "reward_11",
-     "t": "Récompense 11",
+     "t": {
+      "fr": "Récompense 11",
+      "en": "Reward 11",
+      "es": "Recompensa 11"
+     },
      "s": 0
     },
     {
      "f": "reward_12",
-     "t": "Récompense 12",
+     "t": {
+      "fr": "Récompense 12",
+      "en": "Reward 12",
+      "es": "Recompensa 12"
+     },
      "s": 0
     },
     {
      "f": "reward_13",
-     "t": "Récompense 13",
+     "t": {
+      "fr": "Récompense 13",
+      "en": "Reward 13",
+      "es": "Recompensa 13"
+     },
      "s": 0
     },
     {
      "f": "reward_14",
-     "t": "Récompense 14",
+     "t": {
+      "fr": "Récompense 14",
+      "en": "Reward 14",
+      "es": "Recompensa 14"
+     },
      "s": 0
     },
     {
      "f": "lw_loadgame",
-     "t": "Transition de menu 1",
+     "t": {
+      "fr": "Transition de menu 1",
+      "en": "Menu transition 1",
+      "es": "Transición de menú 1"
+     },
      "s": 0
     },
     {
      "f": "lw_n01_f",
-     "t": "Transition de menu 2",
+     "t": {
+      "fr": "Transition de menu 2",
+      "en": "Menu transition 2",
+      "es": "Transición de menú 2"
+     },
      "s": 0
     },
     {
      "f": "lw_newgame",
-     "t": "Transition de menu 3",
+     "t": {
+      "fr": "Transition de menu 3",
+      "en": "Menu transition 3",
+      "es": "Transición de menú 3"
+     },
      "s": 0
     },
     {
      "f": "main_menu_newgame",
-     "t": "Transition de menu 4",
+     "t": {
+      "fr": "Transition de menu 4",
+      "en": "Menu transition 4",
+      "es": "Transición de menú 4"
+     },
      "s": 0
     },
     {
      "f": "newgame_2_mainmenu",
-     "t": "Transition de menu 5",
+     "t": {
+      "fr": "Transition de menu 5",
+      "en": "Menu transition 5",
+      "es": "Transición de menú 5"
+     },
      "s": 0
     },
     {
      "f": "newgame_2_options",
-     "t": "Transition de menu 6",
+     "t": {
+      "fr": "Transition de menu 6",
+      "en": "Menu transition 6",
+      "es": "Transición de menú 6"
+     },
      "s": 0
     },
     {
      "f": "options_2_newgame",
-     "t": "Transition de menu 7",
+     "t": {
+      "fr": "Transition de menu 7",
+      "en": "Menu transition 7",
+      "es": "Transición de menú 7"
+     },
      "s": 0
     },
     {
      "f": "packshot_2_mainmenu",
-     "t": "Transition de menu 8",
+     "t": {
+      "fr": "Transition de menu 8",
+      "en": "Menu transition 8",
+      "es": "Transición de menú 8"
+     },
      "s": 0
     }
    ]
@@ -471,105 +787,226 @@
    "dossier": "movies/neutral",
    "ext": ".vp6",
    "sans_son": true,
+   "banque": {
+    "archive": "movies.big",
+    "fichiers": {
+     "fr": "events/chapter_transition/fr-fr_s.sdt",
+     "en": "events/chapter_transition/en-gb_s.sdt",
+     "es": "events/chapter_transition/es-es_s.sdt",
+     "de": "events/chapter_transition/de-de_s.sdt",
+     "it": "events/chapter_transition/it-it_s.sdt",
+     "nl": "events/chapter_transition/nl-nl_s.sdt",
+     "pl": "events/chapter_transition/pl-pl_s.sdt",
+     "pt": "events/chapter_transition/pt-pt_s.sdt",
+     "ru": "events/chapter_transition/ru-ru_s.sdt",
+     "sv": "events/chapter_transition/sv-se_s.sdt",
+     "da": "events/chapter_transition/da-dk_s.sdt",
+     "fi": "events/chapter_transition/fi-fi_s.sdt",
+     "no": "events/chapter_transition/no-no_s.sdt",
+     "cs": "events/chapter_transition/cs-cz_s.sdt",
+     "hu": "events/chapter_transition/hu-hu_s.sdt"
+    },
+    "ordre": [
+     "e3duelling1",
+     "e3duelling2",
+     "e3potions1",
+     "e3potions2",
+     "e3quidditch",
+     "ns01",
+     "ns02",
+     "ns08",
+     "ns09",
+     "ns14",
+     "ns15",
+     "pensieve"
+    ],
+    "sans_video": [
+     "e3duelling1",
+     "e3duelling2",
+     "e3potions1",
+     "e3potions2",
+     "e3quidditch"
+    ]
+   },
    "clips": [
     {
      "f": "ns01",
-     "t": "Transition de chapitre 1",
+     "t": {
+      "fr": "Transition de chapitre 1",
+      "en": "Chapter transition 1",
+      "es": "Transición de capítulo 1"
+     },
      "s": 0
     },
     {
      "f": "ns02",
-     "t": "Transition de chapitre 2",
+     "t": {
+      "fr": "Transition de chapitre 2",
+      "en": "Chapter transition 2",
+      "es": "Transición de capítulo 2"
+     },
      "s": 0
     },
     {
      "f": "ns03",
-     "t": "Transition de chapitre 3",
+     "t": {
+      "fr": "Transition de chapitre 3",
+      "en": "Chapter transition 3",
+      "es": "Transición de capítulo 3"
+     },
      "s": 0
     },
     {
      "f": "ns04",
-     "t": "Transition de chapitre 4",
+     "t": {
+      "fr": "Transition de chapitre 4",
+      "en": "Chapter transition 4",
+      "es": "Transición de capítulo 4"
+     },
      "s": 0
     },
     {
      "f": "ns05",
-     "t": "Transition de chapitre 5",
+     "t": {
+      "fr": "Transition de chapitre 5",
+      "en": "Chapter transition 5",
+      "es": "Transición de capítulo 5"
+     },
      "s": 0
     },
     {
      "f": "ns07",
-     "t": "Transition de chapitre 7",
+     "t": {
+      "fr": "Transition de chapitre 7",
+      "en": "Chapter transition 7",
+      "es": "Transición de capítulo 7"
+     },
      "s": 0
     },
     {
      "f": "ns08",
-     "t": "Transition de chapitre 8",
+     "t": {
+      "fr": "Transition de chapitre 8",
+      "en": "Chapter transition 8",
+      "es": "Transición de capítulo 8"
+     },
      "s": 0
     },
     {
      "f": "ns09",
-     "t": "Transition de chapitre 9",
+     "t": {
+      "fr": "Transition de chapitre 9",
+      "en": "Chapter transition 9",
+      "es": "Transición de capítulo 9"
+     },
      "s": 0
     },
     {
      "f": "ns10",
-     "t": "Transition de chapitre 10",
+     "t": {
+      "fr": "Transition de chapitre 10",
+      "en": "Chapter transition 10",
+      "es": "Transición de capítulo 10"
+     },
      "s": 0
     },
     {
      "f": "ns11",
-     "t": "Transition de chapitre 11",
+     "t": {
+      "fr": "Transition de chapitre 11",
+      "en": "Chapter transition 11",
+      "es": "Transición de capítulo 11"
+     },
      "s": 0
     },
     {
      "f": "ns12",
-     "t": "Transition de chapitre 12",
+     "t": {
+      "fr": "Transition de chapitre 12",
+      "en": "Chapter transition 12",
+      "es": "Transición de capítulo 12"
+     },
      "s": 0
     },
     {
      "f": "ns13",
-     "t": "Transition de chapitre 13",
+     "t": {
+      "fr": "Transition de chapitre 13",
+      "en": "Chapter transition 13",
+      "es": "Transición de capítulo 13"
+     },
      "s": 0
     },
     {
      "f": "ns14",
-     "t": "Transition de chapitre 14",
+     "t": {
+      "fr": "Transition de chapitre 14",
+      "en": "Chapter transition 14",
+      "es": "Transición de capítulo 14"
+     },
      "s": 0
     },
     {
      "f": "ns15",
-     "t": "Transition de chapitre 15",
+     "t": {
+      "fr": "Transition de chapitre 15",
+      "en": "Chapter transition 15",
+      "es": "Transición de capítulo 15"
+     },
      "s": 0
     },
     {
      "f": "ns16",
-     "t": "Transition de chapitre 16",
+     "t": {
+      "fr": "Transition de chapitre 16",
+      "en": "Chapter transition 16",
+      "es": "Transición de capítulo 16"
+     },
      "s": 0
     },
     {
      "f": "pensieve",
-     "t": "La Pensine",
+     "t": {
+      "fr": "La Pensine",
+      "en": "The Pensieve",
+      "es": "El pensadero"
+     },
      "s": 0
     },
     {
      "f": "night2day",
-     "t": "De la nuit au jour",
+     "t": {
+      "fr": "De la nuit au jour",
+      "en": "From night to day",
+      "es": "De la noche al día"
+     },
      "s": 0
     },
     {
      "f": "creditsback",
-     "t": "Le fond du générique",
+     "t": {
+      "fr": "Le fond du générique",
+      "en": "The credits background",
+      "es": "El fondo de los créditos"
+     },
      "s": 0
     },
     {
      "f": "attract",
-     "t": "Bande-annonce",
+     "t": {
+      "fr": "Bande-annonce",
+      "en": "Trailer",
+      "es": "Tráiler"
+     },
      "s": 0
     },
     {
      "f": "attractnotext",
-     "t": "Bande-annonce, sans texte",
+     "t": {
+      "fr": "Bande-annonce, sans texte",
+      "en": "Trailer, without text",
+      "es": "Tráiler, sin texto"
+     },
      "s": 0
     }
    ]
@@ -581,247 +1018,443 @@
    "clips": [
     {
      "f": "APTH1_1",
-     "t": "Cinématique 1",
+     "t": {
+      "fr": "Cinématique 1",
+      "en": "Cutscene 1",
+      "es": "Cinemática 1"
+     },
      "s": 0
     },
     {
      "f": "APTH2_1",
-     "t": "Cinématique 2",
+     "t": {
+      "fr": "Cinématique 2",
+      "en": "Cutscene 2",
+      "es": "Cinemática 2"
+     },
      "s": 0
     },
     {
      "f": "DLA1_0",
-     "t": "Cinématique 3",
+     "t": {
+      "fr": "Cinématique 3",
+      "en": "Cutscene 3",
+      "es": "Cinemática 3"
+     },
      "s": 0
     },
     {
      "f": "GH1_4",
-     "t": "Cinématique 4",
+     "t": {
+      "fr": "Cinématique 4",
+      "en": "Cutscene 4",
+      "es": "Cinemática 4"
+     },
      "s": 0
     },
     {
      "f": "GH2_0",
-     "t": "Cinématique 5",
+     "t": {
+      "fr": "Cinématique 5",
+      "en": "Cutscene 5",
+      "es": "Cinemática 5"
+     },
      "s": 0
     },
     {
      "f": "GH2_1_A",
-     "t": "Cinématique 6",
+     "t": {
+      "fr": "Cinématique 6",
+      "en": "Cutscene 6",
+      "es": "Cinemática 6"
+     },
      "s": 0
     },
     {
      "f": "GH2_1_B",
-     "t": "Cinématique 7",
+     "t": {
+      "fr": "Cinématique 7",
+      "en": "Cutscene 7",
+      "es": "Cinemática 7"
+     },
      "s": 0
     },
     {
      "f": "GH2_1_C",
-     "t": "Cinématique 8",
+     "t": {
+      "fr": "Cinématique 8",
+      "en": "Cutscene 8",
+      "es": "Cinemática 8"
+     },
      "s": 0
     },
     {
      "f": "GH2_1_D",
-     "t": "Cinématique 9",
+     "t": {
+      "fr": "Cinématique 9",
+      "en": "Cutscene 9",
+      "es": "Cinemática 9"
+     },
      "s": 0
     },
     {
      "f": "GH2_2",
-     "t": "Cinématique 10",
+     "t": {
+      "fr": "Cinématique 10",
+      "en": "Cutscene 10",
+      "es": "Cinemática 10"
+     },
      "s": 0
     },
     {
      "f": "KT1_0",
-     "t": "Cinématique 11",
+     "t": {
+      "fr": "Cinématique 11",
+      "en": "Cutscene 11",
+      "es": "Cinemática 11"
+     },
      "s": 0
     },
     {
      "f": "KT2_4",
-     "t": "Cinématique 12",
+     "t": {
+      "fr": "Cinématique 12",
+      "en": "Cutscene 12",
+      "es": "Cinemática 12"
+     },
      "s": 0
     },
     {
      "f": "KT2_5",
-     "t": "Cinématique 13",
+     "t": {
+      "fr": "Cinématique 13",
+      "en": "Cutscene 13",
+      "es": "Cinemática 13"
+     },
      "s": 0
     },
     {
      "f": "KT5_4",
-     "t": "Cinématique 14",
+     "t": {
+      "fr": "Cinématique 14",
+      "en": "Cutscene 14",
+      "es": "Cinemática 14"
+     },
      "s": 0
     },
     {
      "f": "MIM1_0",
-     "t": "Cinématique 15",
+     "t": {
+      "fr": "Cinématique 15",
+      "en": "Cutscene 15",
+      "es": "Cinemática 15"
+     },
      "s": 0
     },
     {
      "f": "MIM4_1",
-     "t": "Cinématique 16",
+     "t": {
+      "fr": "Cinématique 16",
+      "en": "Cutscene 16",
+      "es": "Cinemática 16"
+     },
      "s": 0
     },
     {
      "f": "MIM5_1",
-     "t": "Cinématique 17",
+     "t": {
+      "fr": "Cinématique 17",
+      "en": "Cutscene 17",
+      "es": "Cinemática 17"
+     },
      "s": 0
     },
     {
      "f": "MIM6_10",
-     "t": "Cinématique 18",
+     "t": {
+      "fr": "Cinématique 18",
+      "en": "Cutscene 18",
+      "es": "Cinemática 18"
+     },
      "s": 0
     },
     {
      "f": "MIM_1_11_pt1",
-     "t": "Cinématique 19",
+     "t": {
+      "fr": "Cinématique 19",
+      "en": "Cutscene 19",
+      "es": "Cinemática 19"
+     },
      "s": 0
     },
     {
      "f": "MIM_1_11_pt2",
-     "t": "Cinématique 20",
+     "t": {
+      "fr": "Cinématique 20",
+      "en": "Cutscene 20",
+      "es": "Cinemática 20"
+     },
      "s": 0
     },
     {
      "f": "SD1_0",
-     "t": "Cinématique 21",
+     "t": {
+      "fr": "Cinématique 21",
+      "en": "Cutscene 21",
+      "es": "Cinemática 21"
+     },
      "s": 0
     },
     {
      "f": "SD2_4",
-     "t": "Cinématique 22",
+     "t": {
+      "fr": "Cinématique 22",
+      "en": "Cutscene 22",
+      "es": "Cinemática 22"
+     },
      "s": 0
     },
     {
      "f": "SD3_2",
-     "t": "Cinématique 23",
+     "t": {
+      "fr": "Cinématique 23",
+      "en": "Cutscene 23",
+      "es": "Cinemática 23"
+     },
      "s": 0
     },
     {
      "f": "SD3_5",
-     "t": "Cinématique 24",
+     "t": {
+      "fr": "Cinématique 24",
+      "en": "Cutscene 24",
+      "es": "Cinemática 24"
+     },
      "s": 0
     },
     {
      "f": "TGR1_1",
-     "t": "Cinématique 25",
+     "t": {
+      "fr": "Cinématique 25",
+      "en": "Cutscene 25",
+      "es": "Cinemática 25"
+     },
      "s": 0
     },
     {
      "f": "TGR1_11",
-     "t": "Cinématique 26",
+     "t": {
+      "fr": "Cinématique 26",
+      "en": "Cutscene 26",
+      "es": "Cinemática 26"
+     },
      "s": 0
     },
     {
      "f": "TSP1_0",
-     "t": "Cinématique 27",
+     "t": {
+      "fr": "Cinématique 27",
+      "en": "Cutscene 27",
+      "es": "Cinemática 27"
+     },
      "s": 0
     },
     {
      "f": "TSP2_3",
-     "t": "Cinématique 28",
+     "t": {
+      "fr": "Cinématique 28",
+      "en": "Cutscene 28",
+      "es": "Cinemática 28"
+     },
      "s": 0
     },
     {
      "f": "TSP2_6",
-     "t": "Cinématique 29",
+     "t": {
+      "fr": "Cinématique 29",
+      "en": "Cutscene 29",
+      "es": "Cinemática 29"
+     },
      "s": 0
     },
     {
      "f": "TSP2_10",
-     "t": "Cinématique 30",
+     "t": {
+      "fr": "Cinématique 30",
+      "en": "Cutscene 30",
+      "es": "Cinemática 30"
+     },
      "s": 0
     },
     {
      "f": "TSP2_12_01",
-     "t": "Cinématique 31",
+     "t": {
+      "fr": "Cinématique 31",
+      "en": "Cutscene 31",
+      "es": "Cinemática 31"
+     },
      "s": 0
     },
     {
      "f": "TSP2_12_02",
-     "t": "Cinématique 32",
+     "t": {
+      "fr": "Cinématique 32",
+      "en": "Cutscene 32",
+      "es": "Cinemática 32"
+     },
      "s": 0
     },
     {
      "f": "TW1_1",
-     "t": "Cinématique 33",
+     "t": {
+      "fr": "Cinématique 33",
+      "en": "Cutscene 33",
+      "es": "Cinemática 33"
+     },
      "s": 0
     },
     {
      "f": "TW3_2",
-     "t": "Cinématique 34",
+     "t": {
+      "fr": "Cinématique 34",
+      "en": "Cutscene 34",
+      "es": "Cinemática 34"
+     },
      "s": 0
     },
     {
      "f": "XL2_0_Combined",
-     "t": "Cinématique 35",
+     "t": {
+      "fr": "Cinématique 35",
+      "en": "Cutscene 35",
+      "es": "Cinemática 35"
+     },
      "s": 0
     },
     {
      "f": "XL4_3",
-     "t": "Cinématique 36",
+     "t": {
+      "fr": "Cinématique 36",
+      "en": "Cutscene 36",
+      "es": "Cinemática 36"
+     },
      "s": 0
     },
     {
      "f": "XL4_4",
-     "t": "Cinématique 37",
+     "t": {
+      "fr": "Cinématique 37",
+      "en": "Cutscene 37",
+      "es": "Cinemática 37"
+     },
      "s": 0
     },
     {
      "f": "XL4_5",
-     "t": "Cinématique 38",
+     "t": {
+      "fr": "Cinématique 38",
+      "en": "Cutscene 38",
+      "es": "Cinemática 38"
+     },
      "s": 0
     },
     {
      "f": "XL4_7",
-     "t": "Cinématique 39",
+     "t": {
+      "fr": "Cinématique 39",
+      "en": "Cutscene 39",
+      "es": "Cinemática 39"
+     },
      "s": 0
     },
     {
      "f": "XL4_8",
-     "t": "Cinématique 40",
+     "t": {
+      "fr": "Cinématique 40",
+      "en": "Cutscene 40",
+      "es": "Cinemática 40"
+     },
      "s": 0
     },
     {
      "f": "XL4_11",
-     "t": "Cinématique 41",
+     "t": {
+      "fr": "Cinématique 41",
+      "en": "Cutscene 41",
+      "es": "Cinemática 41"
+     },
      "s": 0
     },
     {
      "f": "XL4_13",
-     "t": "Cinématique 42",
+     "t": {
+      "fr": "Cinématique 42",
+      "en": "Cutscene 42",
+      "es": "Cinemática 42"
+     },
      "s": 0
     },
     {
      "f": "XL4_14",
-     "t": "Cinématique 43",
+     "t": {
+      "fr": "Cinématique 43",
+      "en": "Cutscene 43",
+      "es": "Cinemática 43"
+     },
      "s": 0
     },
     {
      "f": "01_TO_SKULL",
-     "t": "Menu animé 1",
+     "t": {
+      "fr": "Menu animé 1",
+      "en": "Animated menu 1",
+      "es": "Menú animado 1"
+     },
      "s": 0
     },
     {
      "f": "02_SKULL_LOOP",
-     "t": "Menu animé 2",
+     "t": {
+      "fr": "Menu animé 2",
+      "en": "Animated menu 2",
+      "es": "Menú animado 2"
+     },
      "s": 0
     },
     {
      "f": "03_FROM_SKULL_TO_CLOUD",
-     "t": "Menu animé 3",
+     "t": {
+      "fr": "Menu animé 3",
+      "en": "Animated menu 3",
+      "es": "Menú animado 3"
+     },
      "s": 0
     },
     {
      "f": "04_CLOUD_LOOP",
-     "t": "Menu animé 4",
+     "t": {
+      "fr": "Menu animé 4",
+      "en": "Animated menu 4",
+      "es": "Menú animado 4"
+     },
      "s": 0
     },
     {
      "f": "05_FROM_CLOUD_TO_SKULL",
-     "t": "Menu animé 5",
+     "t": {
+      "fr": "Menu animé 5",
+      "en": "Animated menu 5",
+      "es": "Menú animado 5"
+     },
      "s": 0
     },
     {
      "f": "06_FROM_SKULL_TO_DEATHEATER",
-     "t": "Menu animé 6",
+     "t": {
+      "fr": "Menu animé 6",
+      "en": "Animated menu 6",
+      "es": "Menú animado 6"
+     },
      "s": 0
     }
    ]
@@ -833,127 +1466,227 @@
    "clips": [
     {
      "f": "CS01",
-     "t": "Cinématique 1",
+     "t": {
+      "fr": "Cinématique 1",
+      "en": "Cutscene 1",
+      "es": "Cinemática 1"
+     },
      "s": 0
     },
     {
      "f": "CS02",
-     "t": "Cinématique 2",
+     "t": {
+      "fr": "Cinématique 2",
+      "en": "Cutscene 2",
+      "es": "Cinemática 2"
+     },
      "s": 0
     },
     {
      "f": "cs03_a",
-     "t": "Cinématique 3, partie 1",
+     "t": {
+      "fr": "Cinématique 3, partie 1",
+      "en": "Cutscene 3, part 1",
+      "es": "Cinemática 3, parte 1"
+     },
      "s": 0
     },
     {
      "f": "cs03_b",
-     "t": "Cinématique 3, partie 2",
+     "t": {
+      "fr": "Cinématique 3, partie 2",
+      "en": "Cutscene 3, part 2",
+      "es": "Cinemática 3, parte 2"
+     },
      "s": 0
     },
     {
      "f": "CS04",
-     "t": "Cinématique 4",
+     "t": {
+      "fr": "Cinématique 4",
+      "en": "Cutscene 4",
+      "es": "Cinemática 4"
+     },
      "s": 0
     },
     {
      "f": "CS05",
-     "t": "Cinématique 5",
+     "t": {
+      "fr": "Cinématique 5",
+      "en": "Cutscene 5",
+      "es": "Cinemática 5"
+     },
      "s": 0
     },
     {
      "f": "CS06",
-     "t": "Cinématique 6",
+     "t": {
+      "fr": "Cinématique 6",
+      "en": "Cutscene 6",
+      "es": "Cinemática 6"
+     },
      "s": 0
     },
     {
      "f": "CS07_a",
-     "t": "Cinématique 7, partie 1",
+     "t": {
+      "fr": "Cinématique 7, partie 1",
+      "en": "Cutscene 7, part 1",
+      "es": "Cinemática 7, parte 1"
+     },
      "s": 0
     },
     {
      "f": "CS07_b",
-     "t": "Cinématique 7, partie 2",
+     "t": {
+      "fr": "Cinématique 7, partie 2",
+      "en": "Cutscene 7, part 2",
+      "es": "Cinemática 7, parte 2"
+     },
      "s": 0
     },
     {
      "f": "CS08",
-     "t": "Cinématique 8",
+     "t": {
+      "fr": "Cinématique 8",
+      "en": "Cutscene 8",
+      "es": "Cinemática 8"
+     },
      "s": 0
     },
     {
      "f": "CS09",
-     "t": "Cinématique 9",
+     "t": {
+      "fr": "Cinématique 9",
+      "en": "Cutscene 9",
+      "es": "Cinemática 9"
+     },
      "s": 0
     },
     {
      "f": "CS10",
-     "t": "Cinématique 10",
+     "t": {
+      "fr": "Cinématique 10",
+      "en": "Cutscene 10",
+      "es": "Cinemática 10"
+     },
      "s": 0
     },
     {
      "f": "CS11",
-     "t": "Cinématique 11",
+     "t": {
+      "fr": "Cinématique 11",
+      "en": "Cutscene 11",
+      "es": "Cinemática 11"
+     },
      "s": 0
     },
     {
      "f": "CS12",
-     "t": "Cinématique 12",
+     "t": {
+      "fr": "Cinématique 12",
+      "en": "Cutscene 12",
+      "es": "Cinemática 12"
+     },
      "s": 0
     },
     {
      "f": "CS13",
-     "t": "Cinématique 13",
+     "t": {
+      "fr": "Cinématique 13",
+      "en": "Cutscene 13",
+      "es": "Cinemática 13"
+     },
      "s": 0
     },
     {
      "f": "CS14",
-     "t": "Cinématique 14",
+     "t": {
+      "fr": "Cinématique 14",
+      "en": "Cutscene 14",
+      "es": "Cinemática 14"
+     },
      "s": 0
     },
     {
      "f": "CS15",
-     "t": "Cinématique 15",
+     "t": {
+      "fr": "Cinématique 15",
+      "en": "Cutscene 15",
+      "es": "Cinemática 15"
+     },
      "s": 0
     },
     {
      "f": "CS16",
-     "t": "Cinématique 16",
+     "t": {
+      "fr": "Cinématique 16",
+      "en": "Cutscene 16",
+      "es": "Cinemática 16"
+     },
      "s": 0
     },
     {
      "f": "CS17",
-     "t": "Cinématique 17",
+     "t": {
+      "fr": "Cinématique 17",
+      "en": "Cutscene 17",
+      "es": "Cinemática 17"
+     },
      "s": 0
     },
     {
      "f": "CS18",
-     "t": "Cinématique 18",
+     "t": {
+      "fr": "Cinématique 18",
+      "en": "Cutscene 18",
+      "es": "Cinemática 18"
+     },
      "s": 0
     },
     {
      "f": "CS19",
-     "t": "Cinématique 19",
+     "t": {
+      "fr": "Cinématique 19",
+      "en": "Cutscene 19",
+      "es": "Cinemática 19"
+     },
      "s": 0
     },
     {
      "f": "CS21",
-     "t": "Cinématique 21",
+     "t": {
+      "fr": "Cinématique 21",
+      "en": "Cutscene 21",
+      "es": "Cinemática 21"
+     },
      "s": 0
     },
     {
      "f": "cs21_voldemorts_death_animatic",
-     "t": "Cinématique 21, animatique",
+     "t": {
+      "fr": "Cinématique 21, animatique",
+      "en": "Cutscene 21, animatic",
+      "es": "Cinemática 21, animática"
+     },
      "s": 0
     },
     {
      "f": "CharacterHistory",
-     "t": "L'histoire des personnages",
+     "t": {
+      "fr": "L'histoire des personnages",
+      "en": "The characters' story",
+      "es": "La historia de los personajes"
+     },
      "s": 0
     },
     {
      "f": "Logopt1",
-     "t": "Logos d'ouverture",
+     "t": {
+      "fr": "Logos d'ouverture",
+      "en": "Opening logos",
+      "es": "Logotipos de apertura"
+     },
      "s": 0
     }
    ]

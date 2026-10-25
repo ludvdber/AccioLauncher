@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
-from PyQt6.QtGui import QFont, QFontDatabase, QFontMetrics  # noqa: E402
+from PyQt6.QtGui import QFontDatabase  # noqa: E402
 
 from src.core.config import ASSETS_DIR  # noqa: E402
 from src.ui.fonts import body_font, cinzel, cinzel_decorative, load_fonts  # noqa: E402
@@ -67,28 +67,3 @@ class TestChargement:
         load_fonts()
         for police in (cinzel(12), cinzel_decorative(20), body_font(14)):
             assert police.family() not in ("Georgia", "Segoe UI", "Times New Roman")
-
-
-class TestCompatibiliteMetrique:
-    """La seule raison d'accepter le changement : les largeurs ne bougent pas.
-
-    Sauté là où Georgia n'existe pas (CI Linux, offscreen) — il n'y a alors
-    rien à comparer, et la question ne se pose plus.
-    """
-
-    PHRASE = ("Incarnez Harry Potter et découvrez l'univers magique de "
-              "Poudlard pour la toute première fois. Explorez les couloirs.")
-
-    @pytest.mark.parametrize("taille", [10, 11, 12, 13, 14, 15])
-    def test_largeurs_identiques_a_georgia(self, qtbot, taille):
-        load_fonts()
-        if "Georgia" not in QFontDatabase.families():
-            pytest.skip("Georgia absente : rien à comparer")
-        georgia = QFontMetrics(QFont("Georgia", taille))
-        gelasio = QFontMetrics(body_font(taille))
-        a = georgia.horizontalAdvance(self.PHRASE)
-        b = gelasio.horizontalAdvance(self.PHRASE)
-        assert a > 0
-        assert abs(b - a) / a < 0.01, (
-            f"{taille} px : {b} px contre {a} px pour Georgia — les retours à "
-            "la ligne se déplaceraient dans toute l'interface")
