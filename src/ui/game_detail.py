@@ -228,9 +228,11 @@ class GameDetailView(QWidget):
                                        min(dispo, self._info.height() + trop))
                 QTimer.singleShot(0, self._fit_info_height)
                 return
-        # Plus de place : raccourcir la description, puis le titre (le plus
-        # visible) seulement s'il reste du débordement.
-        if self._info.squeeze_description() or self._info.squeeze_title():
+        # Plus de place : raccourcir la description, retirer le galet
+        # Collections s'il est seul sur sa rangée (l'onglet reste en haut), puis
+        # le titre (le plus visible) seulement s'il reste du débordement.
+        if (self._info.squeeze_description() or self._info.squeeze_medias()
+                or self._info.squeeze_title()):
             QTimer.singleShot(0, self._fit_info_height)
 
     def _position_audio_bar(self) -> None:

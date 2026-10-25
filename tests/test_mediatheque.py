@@ -266,3 +266,172 @@ class TestPage:
         assert win.config.son_coupe and mini._son.property("coupe")
         mini._son.click()
         assert not win.config.son_coupe
+
+
+class TestLectureCinematique:
+    """Le parcours d'une cinématique dans la vraie page : la musique se tait,
+    la voix est prête AVANT l'image, la narration finit sa phrase, la musique revient."""
+
+    @pytest.fixture
+    def vue(self, fenetre_avec_jeux, qtbot, monkeypatch, tmp_path):
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        vue = win._pages.page._cinematiques
+        ordre = []
+        video = tmp_path / "v.bik"
+        video.write_bytes(b"BIKi")
+        monkeypatch.setattr(win._mediatheque, "video", lambda j, f: ordre.append("video") or video)
+        monkeypatch.setattr(win._mediatheque, "voix",
+                            lambda j, f: ordre.append("voix") or None)
+        monkeypatch.setattr(vue._video, "play",
+                            lambda chemin, muted, volume: ordre.append("play") or True)
+        return win, vue, ordre
+
+    def test_la_voix_est_prete_avant_l_image(self, vue):
+        win, page, ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "La photo de Sirius")
+        assert ordre.index("voix") < ordre.index("play")
+        assert "cinematique" in win._mediatheque.fond._raisons, "la musique se tait"
+        assert page._courante == "SiriusPhoto" and page._stop.isEnabled()
+
+    def test_arreter_rend_la_musique(self, vue):
+        win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "La photo de Sirius")
+        page.arreter()
+        assert "cinematique" not in win._mediatheque.fond._raisons
+        assert not page._courante and not page._stop.isEnabled()
+
+    def test_une_video_illisible_le_dit_et_ne_coupe_rien(self, vue, monkeypatch):
+        win, page, _ordre = vue
+        monkeypatch.setattr(win._mediatheque, "video", lambda j, f: None)
+        page.jouer("hp3", "SiriusPhoto", "x")
+        assert "n'a pas pu être lue" in page._note.text()
+        assert "cinematique" not in win._mediatheque.fond._raisons
+
+    def test_un_lecteur_qui_refuse_rend_la_musique(self, vue, monkeypatch):
+        win, page, _ordre = vue
+        monkeypatch.setattr(page._video, "play", lambda chemin, muted, volume: False)
+        page.jouer("hp3", "SiriusPhoto", "x")
+        assert "cinematique" not in win._mediatheque.fond._raisons
+        assert not page._courante
+
+    def test_la_narration_finit_sa_phrase(self, vue, monkeypatch):
+        """DL03 : 85 s de voix pour 64 s d'image. La fin de l'image n'arrête pas la voix."""
+        from PyQt6.QtMultimedia import QMediaPlayer
+        win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+
+        class VoixQuiParle:
+            def playbackState(self):
+                return QMediaPlayer.PlaybackState.PlayingState
+
+            def stop(self):
+                pass
+
+            def setSource(self, _s):
+                pass
+
+            def deleteLater(self):
+                pass
+        page._voix = VoixQuiParle()
+        page._video_finie()
+        assert page._courante == "SiriusPhoto", "la voix parle encore : on attend"
+        monkeypatch.setattr(type(page._video), "is_playing", property(lambda self: False))
+        page._statut_voix(QMediaPlayer.MediaStatus.EndOfMedia)
+        assert not page._courante
+        assert "cinematique" not in win._mediatheque.fond._raisons
+
+    def test_quitter_la_rubrique_arrete_tout(self, vue):
+        win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+        win._pages.page.rubrique("musique")
+        assert not page._courante
+        assert "cinematique" not in win._mediatheque.fond._raisons
+
+
+class TestCommandesMusique:
+    @pytest.fixture
+    def vue(self, fenetre_avec_jeux, monkeypatch):
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp2")
+        monkeypatch.setattr(win._mediatheque, "ouvert", lambda jeu, seuil: True)
+        cles = [f"hp2/{m.fichier}" for m in discographie.charger()["hp2"]]
+        return win, win._pages.page._musique, win._mediatheque.fond, cles
+
+    def test_suivant_et_precedent_font_le_tour(self, vue):
+        _win, page, fond, cles = vue
+        page._sauter(1)
+        assert fond.morceau == cles[0], "rien en cours : suivant = le premier"
+        page._sauter(-1)
+        assert fond.morceau == cles[-1], "précédent depuis le premier : le dernier"
+        page._sauter(1)
+        assert fond.morceau == cles[0]
+
+    def test_le_bouton_fond_pose_puis_retire(self, vue):
+        _win, page, fond, cles = vue
+        page._basculer_fond()
+        assert fond.fond == "", "rien en cours : rien à poser"
+        fond.ecouter(cles[1])
+        page._basculer_fond()
+        assert fond.fond == cles[1]
+        page._basculer_fond()
+        assert fond.fond == ""
+
+    def test_enregistrer_dit_ou_ou_dit_l_echec(self, vue, monkeypatch, tmp_path):
+        win, page, _fond, cles = vue
+        monkeypatch.setattr(win._mediatheque, "enregistrer", lambda c: tmp_path / "HP2" / "a.ogg")
+        page.enregistrer(cles[0])
+        assert str(tmp_path / "HP2") in page._confirmation.text()
+        assert page._ouvrir_dossier.isVisibleTo(page)
+        monkeypatch.setattr(win._mediatheque, "enregistrer", lambda c: None)
+        page.enregistrer(cles[0])
+        assert "n'a pas pu" in page._confirmation.text()
+        assert not page._ouvrir_dossier.isVisibleTo(page)
+
+
+class TestChangerDeJeuViteNeMelangeRien:
+    def test_les_rangees_du_jeu_precedent_ne_restent_pas_peintes(self, fenetre_avec_jeux, qtbot):
+        """Vu à l'audit du 2026-10-24 : les listes de trois jeux peintes les
+        unes sur les autres, les anciennes rangées encore visibles en attendant
+        leur destruction différée."""
+        from src.ui.mediatheque_page import _LigneMorceau
+        win = fenetre_avec_jeux
+        win.show()
+        qtbot.waitExposed(win)
+        win._mediatheque.ouvrir("musique", "hp2")
+        page = win._pages.page
+        anciennes = page.findChildren(_LigneMorceau)
+        assert anciennes
+        page.montrer("hp3")
+        assert all(not ligne.isVisible() for ligne in anciennes)
+
+
+class TestBoutonCollectionsDeLaFiche:
+    """Le galet de la fiche. Il vivait dans l'hôte du bloc « Reprendre » : de
+    HP4 à HP8, sans « Reprendre », il n'apparaissait jamais (audit 2026-10-24)."""
+
+    def _montrer(self, win, jeu):
+        game = next(e.game for e in win.manager.get_games() if e.game.id == jeu)
+        win._detail.set_game(game)
+        return win._detail._info._medias
+
+    def test_visible_sans_reprendre_et_nomme_collections(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        bouton = self._montrer(win, "hp3")
+        assert bouton.isVisibleTo(win._detail)
+        assert bouton.text() == "Collections"
+
+    def test_ouvre_la_rubrique_des_nouveautes(self, fenetre_avec_jeux, qtbot):
+        win = fenetre_avec_jeux
+        qtbot.waitUntil(lambda: win._title_bar.onglet("collections").pastille, timeout=5000)
+        media = win._mediatheque
+        media.marquer_vus("hp3", "musique")
+        assert media.nouveaux("hp3", "cinematiques")
+        assert media.rubrique_pour("hp3") == "cinematiques", "la musique déjà vue : les cinématiques"
+        self._montrer(win, "hp3").click()
+        assert win._pages.page.rubrique_courante == "cinematiques" and win._pages.page.jeu == "hp3"
+        win._pages.page.accept()
+        media.marquer_vus("hp3", "cinematiques")
+        assert media.rubrique_pour("hp3") == "musique", "rien de neuf : sa musique"
+        self._montrer(win, "hp3").click()
+        assert win._pages.page.rubrique_courante == "musique"

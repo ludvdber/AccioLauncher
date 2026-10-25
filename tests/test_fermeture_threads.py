@@ -223,3 +223,31 @@ class TestArretBorne:
         r = subprocess.run([sys.executable, "-c", programme], capture_output=True,
                            text=True, timeout=60, cwd=str(RACINE))
         assert "ARRETE" in r.stdout, f"{r.returncode} {r.stdout} {r.stderr}"
+
+
+class TestLiberationDifferee:
+    def test_un_thread_encore_vivant_n_est_detruit_qu_a_sa_vraie_fin(self, qtbot, monkeypatch):
+        """Le plafond d'attente dépassé : pas de destruction tant qu'il tourne
+        (qFatal), mais à son `finished` natif. Aucun `terminate()` (règle 3)."""
+        import threading
+
+        from PyQt6.QtCore import QThread
+
+        from src.core import thread_utils
+        monkeypatch.setattr(thread_utils, "DELAI_FIN_MS", 20)
+        verrou = threading.Event()
+
+        class Retenu(QThread):
+            def run(self):
+                verrou.wait(10)
+
+        th = Retenu()
+        detruit = []
+        th.destroyed.connect(lambda: detruit.append(True))
+        th.start()
+        qtbot.waitUntil(th.isRunning, timeout=2000)
+        thread_utils.liberer_apres_fin(th)
+        qtbot.wait(50)
+        assert not detruit, "détruit pendant qu'il tournait encore"
+        verrou.set()
+        qtbot.waitUntil(lambda: bool(detruit), timeout=5000)

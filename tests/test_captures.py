@@ -144,6 +144,61 @@ class TestRamasser:
         assert captures.ramasser(_jeu(), tmp_path) == 0
         assert not captures.dossier(_jeu()).exists()
 
+    def _png_du_jeu(self, tmp_path):
+        jeux = tmp_path / "jeux"
+        source = jeux / "HP4" / "screenshots" / "a.png"
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b"\x89PNG intact")
+        return jeux, source, _jeu(screenshots={"key": "F12", "collect": ["HP4/screenshots/*.png"]})
+
+    def test_autre_volume_copie_puis_retire(self, tmp_path, monkeypatch):
+        """Images sur D:, jeux sur C: : `replace` refuse, on copie puis on retire."""
+        jeux, source, jeu = self._png_du_jeu(tmp_path)
+
+        def refuse(self, cible):
+            raise OSError(18, "Invalid cross-device link")
+        monkeypatch.setattr(Path, "replace", refuse)
+        assert captures.ramasser(jeu, jeux) == 1
+        assert not source.exists()
+        (copie,) = captures.images(captures.dossier(jeu))
+        assert copie.read_bytes() == b"\x89PNG intact"
+
+    def test_une_copie_ratee_ne_perd_jamais_la_capture(self, tmp_path, monkeypatch):
+        jeux, source, jeu = self._png_du_jeu(tmp_path)
+
+        def refuse(self, *_a, **_k):
+            raise OSError(28, "No space left on device")
+        monkeypatch.setattr(Path, "replace", refuse)
+        monkeypatch.setattr(Path, "write_bytes", refuse)
+        assert captures.ramasser(jeu, jeux) == 0
+        assert source.read_bytes() == b"\x89PNG intact", "la capture reste dans le jeu"
+        assert captures.images(captures.dossier(jeu)) == [], "aucune copie à moitié écrite"
+
+    def test_dossier_des_captures_impossible_a_creer(self, tmp_path, monkeypatch):
+        jeux, source, jeu = self._png_du_jeu(tmp_path)
+
+        def refuse(self, *_a, **_k):
+            raise OSError(13, "Accès refusé")
+        monkeypatch.setattr(Path, "mkdir", refuse)
+        assert captures.ramasser(jeu, jeux) == 0
+        assert source.exists()
+
+    def test_bmp_converti_mais_source_verrouillee(self, tmp_path, monkeypatch):
+        """La copie PNG est écrite : on préfère un doublon au passage suivant
+        qu'une capture perdue."""
+        jeux = tmp_path / "jeux"
+        source = _bmp(jeux / "HP1" / "System" / "Shot0000.bmp")
+        vraie = Path.unlink
+
+        def verrou(self, *a, **k):
+            if self == source:
+                raise PermissionError(32, "utilisé par un autre processus")
+            return vraie(self, *a, **k)
+        monkeypatch.setattr(Path, "unlink", verrou)
+        assert captures.ramasser(self._jeu_ue1(), jeux) == 1
+        assert source.exists()
+        assert [p.suffix for p in captures.images(captures.dossier(self._jeu_ue1()))] == [".png"]
+
 
 class TestPreparer:
     def _poser_ini(self, tmp_path, texte=INI_V2) -> Path:

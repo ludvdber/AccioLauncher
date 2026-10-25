@@ -57,7 +57,7 @@ def fiche(qtbot, tmp_path, monkeypatch):
 
 def _visibles(panel):
     return (panel._desc.isVisibleTo(panel), panel._derniere.isVisibleTo(panel),
-            panel._bloc_hote.isVisibleTo(panel))
+            panel._bloc.isVisibleTo(panel))
 
 
 class TestDeuxEtats:
@@ -210,7 +210,16 @@ class TestPhrases:
         from src.ui.resume_partie import phrase_derniere_partie
         set_language("fr")
         texte = phrase_derniere_partie(datetime(2026, 3, 8), "", today=date(2026, 10, 15))
-        assert "Dernière partie le 08/03/2026" in texte
+        assert "Dernière partie le 8 mars 2026" in texte
+
+    def test_au_dela_d_un_mois_la_date_suit_la_langue(self):
+        from src.ui.resume_partie import phrase_derniere_partie
+        set_language("en")
+        try:
+            texte = phrase_derniere_partie(datetime(2026, 3, 8), "", today=date(2026, 10, 15))
+        finally:
+            set_language("fr")
+        assert "08/03/2026" not in texte and "2026" in texte
 
     def test_une_seule_carte(self):
         from src.ui.resume_partie import phrase_cartes

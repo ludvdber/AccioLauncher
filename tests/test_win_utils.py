@@ -1,6 +1,8 @@
 """Tests pour src/core/win_utils.py"""
 
 import sys
+
+import pytest
 from unittest.mock import patch
 
 from src.core.win_utils import remove_zone_identifier
@@ -89,3 +91,16 @@ class TestHabillerFenetre:
         import src.core.win_utils as wu
         monkeypatch.setattr(wu.sys, "platform", "linux")
         assert wu.habiller_fenetre(1234, (0, 0, 0)) is False
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="registre et DWM : Windows seulement")
+class TestAppelsReelsWindows:
+    """Lecture seule : ces appels n'avaient jamais été exécutés par la suite."""
+
+    def test_couches_d_un_exe_inconnu(self, tmp_path):
+        from src.core import win_utils
+        assert win_utils.couches_de_compatibilite(tmp_path / "personne.exe") == {}
+
+    def test_habiller_une_fenetre_inexistante_rend_faux(self):
+        from src.core import win_utils
+        assert win_utils.habiller_fenetre(0, (214, 167, 44)) is False

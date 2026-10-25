@@ -443,14 +443,18 @@ class _LigneEmplacement(QPushButton):
         haut.addWidget(titre)
         haut.addStretch()
         v.addLayout(haut)
+        date_texte = ""
         if quand is not None:
             from src.ui.versions_dialog import date_longue
-            date = texte(date_longue(quand.strftime("%Y-%m-%d")), 12, ENCRE_DOUCE)
+            date_texte = date_longue(quand.strftime("%Y-%m-%d"))
+            date = texte(date_texte, 12, ENCRE_DOUCE)
             # « Emplacement 1 » et « 28 septembre 2026 » ne tiennent pas côte à
             # côte dans le rail : la date passe dessous plutôt que de rogner le
             # nom (mesuré avec la police réelle, pas un nombre écrit à la main).
+            # Avec une vignette, toujours dessous : selon la longueur de chaque
+            # date, une ligne sur trois montait à côté du titre (HP5, 2026-10-24).
             place = _LARGEUR_RAIL - 2 * (_MARGE_RAIL + _MARGE_LIGNE) - 2 - place_image
-            if titre.sizeHint().width() + haut.spacing() + date.sizeHint().width() <= place:
+            if not place_image and titre.sizeHint().width() + haut.spacing() + date.sizeHint().width() <= place:
                 haut.addWidget(date)
             else:
                 v.addWidget(date)
@@ -462,7 +466,7 @@ class _LigneEmplacement(QPushButton):
         temps_jeu = tr("{} de jeu").format(temps) if temps else ""
         if temps_jeu:
             v.addWidget(texte(temps_jeu, 12, ENCRE_DOUCE))
-        etats = [nom, lieu,
+        etats = [nom, date_texte, lieu,
                  tr("La plus avancée") if plus_avance else "", temps_jeu]
         self.setAccessibleName(", ".join(e for e in etats if e))
         for enfant in self.findChildren(QLabel):

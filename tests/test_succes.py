@@ -152,7 +152,7 @@ class TestPage:
         assert len(section.lignes) == len(succes.du_jeu("hp1"))
         from PyQt6.QtWidgets import QLabel
         textes = [lbl.text() for lbl in section.findChildren(QLabel)]
-        assert "24/10/2026" in textes and "1 sur 5" not in textes and "2 sur 5" in textes
+        assert "24 octobre 2026" in textes and "1 sur 5" not in textes and "2 sur 5" in textes
 
 
 class TestToast:
@@ -207,3 +207,17 @@ class TestSession:
         session.terminee.connect(lambda *a: vus.append(list(session.succes_obtenus)))
         session._on_game_exited(jeu.name, 0, 600.0)
         assert appels == [("HPHBP0", True)] and vus == [["ecusson"]]
+
+
+class TestToastOuvreLeFolio:
+    def test_le_clic_ouvre_le_folio_ou_vivent_les_succes(self, make_window, monkeypatch, qtbot):
+        """Les succès ont rejoint le Folio (2026-10-24) : le toast menait
+        encore au Relevé, où il n'y en a plus."""
+        fenetre = make_window()
+        ouverts = []
+        monkeypatch.setattr(fenetre, "_on_stats", lambda rubrique="releve": ouverts.append(rubrique))
+        fenetre._session.succes_obtenus = [s for s in succes.du_jeu("hp6") if s.ident == "ecusson"]
+        fenetre._on_game_exited("Harry Potter 6", partie=True)
+        from PyQt6.QtCore import Qt
+        qtbot.mouseClick(fenetre._toast, Qt.MouseButton.LeftButton)
+        assert ouverts == ["folio"]

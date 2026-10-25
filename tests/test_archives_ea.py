@@ -68,6 +68,39 @@ class TestFlux:
             assert donnees[debut + taille - 8:debut + taille - 4] == b"SCEl"
 
 
+    def test_un_flux_a_cheval_sur_deux_pas_de_recherche(self, tmp_path):
+        """65 535 octets de remplissage : le « SCHl » suivant commence 2 octets
+        avant la fin du premier pas de recherche (64 Kio). Les pas ne se
+        recouvraient pas : le morceau disparaissait sans bruit."""
+        archive = tmp_path / "music.big"
+        mus = _mus(_flux(100), _flux(300), remplissage=(1 << 16) - 1)
+        archive.write_bytes(_bigf({"audio/music/x/x_stream.mus": mus}))
+        assert len(archives_ea.flux_schl(archive, archives_ea.lister(archive)[0])) == 2
+
+    def test_toutes_les_coupures_possibles(self, tmp_path):
+        archive = tmp_path / "music.big"
+        for decalage in range(-6, 3):
+            mus = _mus(_flux(10), _flux(20), remplissage=(1 << 16) + decalage)
+            archive.write_bytes(_bigf({"m.mus": mus}))
+            archives_ea._entrees_en_cache.cache_clear()
+            entree = archives_ea.lister(archive)[0]
+            assert len(archives_ea.flux_schl(archive, entree)) == 2, decalage
+
+    def test_une_archive_tronquee_ne_rend_que_les_flux_entiers(self, tmp_path):
+        archive = tmp_path / "music.big"
+        mus = _mus(_flux(100), _flux(300))
+        archive.write_bytes(_bigf({"m.mus": mus[:-20]}))
+        assert len(archives_ea.flux_schl(archive, archives_ea.lister(archive)[0])) == 1
+
+    def test_extraire_d_une_archive_trop_courte_ne_laisse_rien(self, tmp_path):
+        archive = tmp_path / "a.big"
+        archive.write_bytes(_bigf({"f.vp6": b"0123456789"}))
+        e = archives_ea.lister(archive)[0]
+        cible = tmp_path / "cache" / "f.vp6"
+        assert archives_ea.extraire(archive, e.debut, e.taille + 50, cible) is None
+        assert not cible.exists() and not list(cible.parent.glob("*.accio-tmp"))
+
+
 class TestPhonographeHp4:
     def test_les_longs_flux_sont_des_morceaux_les_ambiances_non(self, tmp_path, monkeypatch):
         monkeypatch.setattr(phonographe, "SEUIL_MORCEAU", 200)
@@ -136,3 +169,56 @@ class TestBanqueDeVoix:
     def test_un_decalage_ne_donne_aucune_voix(self, tmp_path):
         jeu, collection = self._jeu(tmp_path, 2)
         assert cinematiques.voix(collection, jeu, "aa01", "fr") is None
+
+
+class TestBanqueChoixDeLangue:
+    def _jeu(self, tmp_path):
+        jeu = tmp_path / "HP5"
+        jeu.mkdir()
+        fr = b"".join(_flux(100) for _ in range(2))
+        de = b"".join(_flux(200) for _ in range(2))
+        (jeu / "movies.big").write_bytes(_bigf({"ct/fr-fr_s.sdt": fr, "ct/de-de_s.sdt": de}))
+        return jeu, cinematiques.Collection(
+            "movies/neutral", ".vp6", True, (), "movies.big", {},
+            cinematiques.Banque("movies.big", {"fr": "ct/fr-fr_s.sdt", "de": "ct/de-de_s.sdt"}, ("a", "b")))
+
+    def test_la_langue_demandee_d_abord(self, tmp_path):
+        jeu, collection = self._jeu(tmp_path)
+        assert cinematiques.voix(collection, jeu, "B", "de").entree.taille == len(_flux(200))
+        assert cinematiques.voix(collection, jeu, "b", "fr").entree.taille == len(_flux(100))
+
+    def test_sans_la_langue_ni_l_anglais_la_premiere_presente(self, tmp_path):
+        jeu, collection = self._jeu(tmp_path)
+        assert cinematiques.voix(collection, jeu, "a", "it").entree.taille == len(_flux(100))
+
+    def test_une_banque_absente_de_l_archive_passe_a_la_suivante(self, tmp_path):
+        jeu = tmp_path / "HP5"
+        jeu.mkdir()
+        (jeu / "movies.big").write_bytes(_bigf({"ct/de-de_s.sdt": _flux(50) + _flux(60)}))
+        collection = cinematiques.Collection(
+            "m", ".vp6", True, (), "movies.big", {},
+            cinematiques.Banque("movies.big", {"fr": "ct/fr-fr_s.sdt", "de": "ct/de-de_s.sdt"}, ("a", "b")))
+        assert cinematiques.voix(collection, jeu, "b", "fr").entree.taille == len(_flux(60))
+        assert cinematiques.voix(collection, None, "b", "fr") is None
+
+
+class TestDonneesLivrees:
+    """Les deux fichiers générés que le launcher embarque : une faute de
+    génération y passerait sans bruit (une vidéo sans voix, un morceau fantôme)."""
+
+    def test_cinematiques_coherentes(self):
+        for jeu, col in cinematiques.charger().items():
+            noms = [c.fichier.lower() for c in col.clips]
+            assert len(noms) == len(set(noms)), f"{jeu} : cinématique en double"
+            assert all(c.titre.strip() for c in col.clips), f"{jeu} : titre vide"
+            if col.banque is not None:
+                manquants = [o for o in col.banque.ordre if o.lower() not in noms]
+                assert not manquants, f"{jeu} : la banque nomme des vidéos absentes {manquants}"
+                assert len(set(col.banque.ordre)) == len(col.banque.ordre)
+
+    def test_discographie_coherente(self):
+        from src.core import discographie
+        for jeu, morceaux in discographie.charger().items():
+            noms = [m.fichier.lower() for m in morceaux]
+            assert len(noms) == len(set(noms)), f"{jeu} : morceau en double"
+            assert all(m.titre.strip() for m in morceaux), f"{jeu} : titre vide"

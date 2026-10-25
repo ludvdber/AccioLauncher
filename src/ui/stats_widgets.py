@@ -2,7 +2,7 @@
 """
 from datetime import date
 from PyQt6.QtCore import QLocale, QRectF, Qt
-from PyQt6.QtGui import QColor, QFontMetrics, QPainter
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -163,31 +163,40 @@ class _Mois(QWidget):
                 return
         self.setToolTip("")
 
+    def _police(self) -> QFont:
+        police = QFont(self.font())
+        police.setPointSize(8)
+        return police
+
+    def _haut_barre(self, i: int) -> float | None:
+        """Le haut de la barre `i` (son chiffre s'y pose), None sans partie."""
+        secondes = self._cases[i][2]
+        if not secondes:
+            return None
+        haut_texte = QFontMetrics(self._police()).height() + 4
+        zone_h = self.height() - 2 * haut_texte
+        maxi = max((s for _, _, s in self._cases), default=0) or 1
+        return haut_texte + zone_h - max(4.0, zone_h * secondes / maxi)
+
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        police = p.font()
-        police.setPointSize(8)
+        police = self._police()
         p.setFont(police)
         fm = QFontMetrics(police)
         haut_texte = fm.height() + 4
-        maxi = max((s for _, _, s in self._cases), default=0) or 1
         zone_h = self.height() - 2 * haut_texte
         noms = self._noms(fm)
         for i, (annee, mois, secondes) in enumerate(self._cases):
             col = self._colonne(i)
             actuel = i == len(self._cases) - 1
             sol = haut_texte + zone_h
-            if secondes:
-                h = max(4.0, zone_h * secondes / maxi)
-                barre = QRectF(col.left(), sol - h, col.width(), h)
+            haut = self._haut_barre(i)
+            if haut is not None:
+                barre = QRectF(col.left(), haut, col.width(), sol - haut)
                 p.fillRect(barre, accent_qcolor(255 if actuel else 175))
                 p.setPen(QColor("#ffffff") if actuel else QColor(_SECONDAIRE))
-                gauche, droite = self._place_valeur(i)
-                texte = _duree_courte(secondes)
-                largeur = min(float(fm.horizontalAdvance(texte)), droite - gauche)
-                x = min(max(col.center().x() - largeur / 2, gauche), droite - largeur)
-                valeur = fm.elidedText(texte, Qt.TextElideMode.ElideRight, int(largeur))
+                x, largeur, valeur = self._valeur(i, fm)
                 p.drawText(QRectF(x, barre.top() - haut_texte, largeur, haut_texte),
                            int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom),
                            valeur)
@@ -200,6 +209,19 @@ class _Mois(QWidget):
                        noms[i])
         p.end()
 
+    def _valeur(self, i: int, fm: QFontMetrics) -> tuple[float, float, str]:
+        """(x, largeur, texte) du chiffre au-dessus de la barre `i`.
+
+        Rogné d'après la place DISPONIBLE, jamais d'après sa propre largeur :
+        arrondie à l'entier, elle coupait « 3 h » en « 3… » à 125 % (15 px
+        mesurés, un peu plus dessinés ; Relevé de Ludo, 2026-10-24).
+        """
+        gauche, droite = self._place_valeur(i)
+        texte = _duree_courte(self._cases[i][2])
+        largeur = min(fm.horizontalAdvance(texte) + 4.0, droite - gauche)
+        x = min(max(self._colonne(i).center().x() - largeur / 2, gauche), droite - largeur)
+        return x, largeur, fm.elidedText(texte, Qt.TextElideMode.ElideRight, int(largeur))
+
     def _place_valeur(self, i: int) -> tuple[float, float]:
         """Bornes gauche et droite du chiffre posé au-dessus de la barre `i`.
 
@@ -209,11 +231,21 @@ class _Mois(QWidget):
         """
         col = self._colonne(i)
         gauche, droite = col.left() - 3.0, col.right() + 3.0
-        if i > 0 and not self._cases[i - 1][2]:
+        if i > 0 and self._voisine_libre(i, i - 1):
             gauche -= col.width() / 2
-        if i < len(self._cases) - 1 and not self._cases[i + 1][2]:
+        if i < len(self._cases) - 1 and self._voisine_libre(i, i + 1):
             droite += col.width() / 2
         return max(0.0, gauche), min(float(self.width()), droite)
+
+    def _voisine_libre(self, i: int, j: int) -> bool:
+        """La voisine `j` prête la moitié de sa colonne : sans partie, ou son
+        chiffre à une autre HAUTEUR que celui de `i`. Octobre, dernier et collé
+        au bord, lisait « 3… » à côté d'un septembre plus bas (2026-10-24)."""
+        haut_j = self._haut_barre(j)
+        haut_i = self._haut_barre(i)
+        if haut_j is None or haut_i is None:
+            return True
+        return abs(haut_i - haut_j) >= QFontMetrics(self._police()).height() + 4
 
     def _noms(self, fm: QFontMetrics) -> list[str]:
         """« nov. déc. janv. 26 … », ou les initiales si UNE seule ne tient pas.

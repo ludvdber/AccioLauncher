@@ -80,12 +80,17 @@ class FlowLayout(QLayout):
         for item in self._items:
             hint = item.sizeHint()
             widget = item.widget()
+            if widget is not None and widget.isHidden() and widget.testAttribute(
+                    Qt.WidgetAttribute.WA_WState_ExplicitShowHide):
+                # Caché EXPRÈS (le filtre par jeu de la Galerie) : il ne garde
+                # pas sa place. Le lui rendre laissait des trous noirs entre
+                # les captures restantes (Ludo, 2026-10-24).
+                continue
             if widget is not None and (hint.isEmpty() or hint.height() == 0):
-                # QWidgetItem.sizeHint() vaut (0, 0) tant que son widget est
-                # caché — c'est le cas des pastilles de tags pendant le
-                # cross-fade du panneau d'info. Le widget, lui, sait déjà
-                # quelle taille il veut : sans ce repli, heightForWidth()
-                # renvoyait 0 et le conteneur écrasait toutes ses lignes.
+                # QWidgetItem.sizeHint() vaut (0, 0) tant que le widget n'a
+                # jamais été affiché (parent pas encore montré). Le widget,
+                # lui, sait déjà quelle taille il veut : sans ce repli,
+                # heightForWidth() renvoyait 0 et le conteneur écrasait ses lignes.
                 hint = widget.sizeHint()
             w = hint.width()
             h = hint.height()

@@ -70,6 +70,52 @@ class TestScriptWindows:
         assert f'rmdir "%{cle}%"' in corps and f'rmdir /s /q "%{cle}%"' not in corps
 
 
+
+class TestScriptLinux:
+    def test_les_cibles_dans_l_ordre_et_le_si_vide_marque(self, poste, monkeypatch):
+        """Les chemins arrivent en arguments, jamais dans le script ; « V: »
+        marque ce qui ne part que vide."""
+        import sys
+        lances = []
+        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(d.subprocess, "Popen", lambda args, **k: lances.append((args, k)))
+        inv = d.Inventaire((poste / "_Launcher",), poste / "Accio.AppImage", (poste,),
+                           (poste / "_Launcher" / "config.json",))
+        assert d.programmer(inv)
+        args, options = lances[0]
+        assert args[:4] == ["/bin/sh", "-c", d._SCRIPT_SH, "accio-desinstallation"]
+        assert args[4:] == [str(poste / "_Launcher"), str(poste / "_Launcher" / "config.json"),
+                            str(poste / "Accio.AppImage"), f"V:{poste}"]
+        assert str(poste) not in d._SCRIPT_SH
+        assert options["env"]["ACCIO_PID"]
+
+    def test_un_echec_au_lancement_ne_promet_rien(self, poste, monkeypatch):
+        import sys
+        monkeypatch.setattr(sys, "platform", "linux")
+
+        def refuse(*_a, **_k):
+            raise OSError("pas de /bin/sh")
+        monkeypatch.setattr(d.subprocess, "Popen", refuse)
+        assert not d.programmer(d.Inventaire((poste / "_Launcher",), None))
+
+    @pytest.mark.skipif(not __import__("sys").platform.startswith("linux"), reason="/bin/sh : Linux")
+    def test_bout_en_bout_efface_apres_la_fin_et_garde_un_dossier_non_vide(self, tmp_path):
+        """Le vrai script, sur des dossiers jetables : il attend la mort du
+        processus, efface les cibles, et ne retire « V: » que vide."""
+        import subprocess
+        cible = tmp_path / "_Launcher"
+        (cible / "logs").mkdir(parents=True)
+        vide, plein = tmp_path / "vide", tmp_path / "plein"
+        vide.mkdir()
+        (plein / "HP1").mkdir(parents=True)
+        dormeur = subprocess.Popen(["sleep", "1"])
+        subprocess.run(["/bin/sh", "-c", d._SCRIPT_SH, "test", str(cible), f"V:{vide}", f"V:{plein}"],
+                       env={"ACCIO_PID": str(dormeur.pid), "PATH": "/usr/bin:/bin"}, timeout=30)
+        dormeur.wait()
+        assert not cible.exists() and not vide.exists()
+        assert (plein / "HP1").is_dir(), "un dossier qui contient un jeu reste"
+
+
 def test_programmer_passe_par_le_script_detache(poste, monkeypatch):
     import sys
     appels = []

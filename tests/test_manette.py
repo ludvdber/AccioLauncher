@@ -5,6 +5,7 @@ neutralise l'énumération et le fil d'arrière-plan. Ici, on exerce le rapport
 (pur), la lecture de /sys/class/hidraw sur un faux arbre, et `colorer` avec des
 manettes et des écritures simulées.
 """
+import sys
 from pathlib import Path
 
 import pytest
@@ -379,3 +380,18 @@ class TestFenetreDeReglages:
     def test_pas_de_rubrique_sans_rappel_ni_bloc(self, qtbot, monkeypatch, tmp_path):
         dlg = self._dialogue(qtbot, monkeypatch, tmp_path, {"CurrentSelection": 4}, None)
         assert dlg._bascule_manette is None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="HID par setupapi : Windows seulement")
+class TestEnumerationWindows:
+    """Les signatures ctypes (setupapi, hid) n'avaient jamais été appelées par
+    la suite. Lecture seule : aucune écriture vers une manette."""
+
+    def test_l_enumeration_reelle_ne_leve_pas(self):
+        trouvees = manette._manettes_windows()
+        assert isinstance(trouvees, list)
+        assert all(m.pid in manette.DUALSHOCK4 | manette.DUALSENSE for m in trouvees)
+
+    def test_ecrire_vers_un_chemin_absent_rend_faux(self):
+        absente = manette.Manette(r"\?\hid#vid_054c&pid_09cc#absente", 0x09CC, 32)
+        assert manette._ecrire_windows(absente, b"\x05" + b"\0" * 31) is False

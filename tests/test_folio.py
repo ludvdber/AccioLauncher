@@ -483,3 +483,29 @@ class TestDepuisLeReleve:
         qtbot.addWidget(dlg)
         dlg.ouvrir_folio(jeux[0])
         assert demandes == [jeux[0]]
+
+
+class TestLigneEmplacement:
+    def _ligne(self, qtbot, nom, quand, vignette=None, temps=""):
+        from src.ui.folio_page import _LigneEmplacement
+        ligne = _LigneEmplacement(nom, quand, "Poudlard", False, vignette, temps)
+        qtbot.addWidget(ligne)
+        return ligne
+
+    def test_le_lecteur_d_ecran_entend_la_date_et_le_temps(self, qtbot):
+        ligne = self._ligne(qtbot, "Partie 2", datetime(2026, 10, 21), temps="3 h 10")
+        nom = ligne.accessibleName()
+        assert "Partie 2" in nom and "21 octobre 2026" in nom and "3 h 10 de jeu" in nom
+
+    def test_avec_vignette_la_date_toujours_sous_le_titre(self, qtbot):
+        """Une ligne sur trois montait la date à côté du titre selon sa longueur."""
+        from PyQt6.QtGui import QPixmap
+        from PyQt6.QtWidgets import QLabel
+        vignette = QPixmap(64, 64)
+        for jour in (1, 21, 23):
+            ligne = self._ligne(qtbot, f"Partie {jour}", datetime(2026, 10, jour), vignette)
+            ligne.resize(300, ligne.minimumHeight())
+            ligne.show()
+            titre = next(lbl for lbl in ligne.findChildren(QLabel) if lbl.text().startswith("Partie"))
+            date = next(lbl for lbl in ligne.findChildren(QLabel) if "octobre" in lbl.text())
+            assert date.y() > titre.y(), jour

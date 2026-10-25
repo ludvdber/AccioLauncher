@@ -122,6 +122,22 @@ class TestPage:
         page.filtrer("")
         assert len([v for v in page._vignettes if not v.isHidden()]) == 2
 
+    def test_le_filtre_resserre_les_vignettes(self, qtbot, mise_en_page_stable):
+        """Captures de deux jeux mêlées dans un mois : filtrer ne laisse aucun
+        trou noir à la place des cachées (Ludo, 2026-10-24)."""
+        for i, jeu in enumerate((HP4, HP5, HP4, HP5, HP4)):
+            _capture(jeu, f"{i}.png", datetime(2026, 10, 1 + i))
+        page = self._page(qtbot)
+        page.resize(1400, 900)
+        page.show()
+        qtbot.waitExposed(page)
+        page.filtrer("hp4")
+        mise_en_page_stable(page)
+        visibles = sorted((v for v in page._vignettes if not v.isHidden()), key=lambda v: v.x())
+        assert len(visibles) == 3
+        assert {v.y() for v in visibles} == {visibles[0].y()}, "les trois sur la même rangée"
+        assert visibles[1].x() == visibles[0].x() + visibles[0].width() + 10
+
     def test_ouverte_sur_un_jeu(self, qtbot):
         _capture(HP4, "a.png", datetime(2026, 9, 3))
         _capture(HP5, "b.png", datetime(2026, 10, 14))

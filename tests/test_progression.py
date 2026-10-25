@@ -56,6 +56,77 @@ class TestMesure:
         assert progression.mesure("hp1", None, "Save0.usa") is None
 
 
+
+class TestLecteursParJeu:
+    """Ce que chaque jeu compte, sur des relevés FABRIQUÉS : l'ordre des
+    compteurs ne doit jamais changer pour un même jeu (sinon deux mesures ne
+    se comparent plus)."""
+
+    @pytest.fixture
+    def ici(self, monkeypatch, tmp_path):
+        from src.core import sauvegardes as s
+        monkeypatch.setattr(s, "dossier", lambda spec: tmp_path)
+        return tmp_path
+
+    def test_hp2_etape_puis_cartes(self, ici, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp2
+        vus = []
+
+        def releve(chemin, n):
+            vus.append((chemin.name, n))
+            return N(lu=True, histoire="GSTATE070", cartes=[1, 2, 3])
+        monkeypatch.setattr(folio_hp2, "releve", releve)
+        assert progression.mesure("hp2", object(), "Slot.sav#2") == (70, 3)
+        assert vus == [("Slot.sav", 2)]
+
+    def test_hp2_illisible(self, ici, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp2
+        monkeypatch.setattr(folio_hp2, "releve", lambda c, n: N(lu=False, histoire="", cartes=[]))
+        assert progression.mesure("hp2", object(), "Slot.sav#1") is None
+
+    def test_hp3_etape_cartes_et_tout_debut(self, ici, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp3
+        monkeypatch.setattr(folio_hp3, "releve", lambda c: N(lu=True, histoire="GState120", cartes=[4]))
+        assert progression.mesure("hp3", object(), "a.sav#1") == (120, 1)
+        monkeypatch.setattr(folio_hp3, "releve", lambda c: None)
+        assert progression.mesure("hp3", object(), "a.sav#1") is None
+
+    def test_hp5_pourcentage_puis_decouverte(self, ici, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp5
+        monkeypatch.setattr(folio_hp5, "releve", lambda c: [
+            N(emplacement=1, pourcentage=None, decouverte=None),
+            N(emplacement=2, pourcentage=14, decouverte=None)])
+        assert progression.mesure("hp5", object(), "HPOOTP#2") == (14, 0)
+        assert progression.mesure("hp5", object(), "HPOOTP#1") is None, "emplacement vide"
+
+    def test_hp6_chapitre_ecussons_sorts(self, ici, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp6
+        monkeypatch.setattr(folio_hp6, "releve", lambda c: N(chapitre=4, ecussons=9, sorts=("a", "b")))
+        assert progression.mesure("hp6", object(), "Save1#1") == (4, 9, 2)
+
+    def test_une_lecture_qui_casse_ne_conclut_rien(self, ici, monkeypatch):
+        from src.core import folio_hp6
+
+        def casse(c):
+            raise ValueError("tronqué")
+        monkeypatch.setattr(folio_hp6, "releve", casse)
+        assert progression.mesure("hp6", object(), "Save1#1") is None
+
+    def test_etape_illisible_vaut_zero(self):
+        assert progression._etape("GSTATE") == 0
+        assert progression._etape("GState010") == 10
+
+
 @pytest.fixture
 def docs():
     return sauvegardes.racines()["documents"]

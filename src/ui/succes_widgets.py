@@ -34,7 +34,7 @@ def annonce_succes(nom_du_jeu: str, obtenus: list[succes.Succes]) -> str:
 def annoncer_succes(toast: Toast, nom_du_jeu: str, obtenus: list[succes.Succes] | bool,
                     ouvrir: Callable[[], None]) -> bool:
     """Le toast des succès de la partie qui vient de finir ; vrai s'il y en avait.
-    Un clic ouvre Mes années, ouverte sur le dernier jeu joué : celui-ci. La
+    Un clic ouvre le Folio du Carnet sur le dernier jeu joué : celui-ci. La
     fenêtre passe `partie and succes_obtenus` : faux quand le jeu n'a pas démarré."""
     if not obtenus or obtenus is True:
         return False
@@ -43,7 +43,12 @@ def annoncer_succes(toast: Toast, nom_du_jeu: str, obtenus: list[succes.Succes] 
 
 
 def _jour(quand: datetime | None) -> str:
-    return quand.strftime("%d/%m/%Y") if quand else ""
+    """En toutes lettres, dans la langue de l'interface (« 24/10/2026 »
+    imposait l'ordre français)."""
+    if quand is None:
+        return ""
+    from src.ui.versions_dialog import date_longue
+    return date_longue(quand.strftime("%Y-%m-%d"))
 
 
 class SectionSucces(QWidget):

@@ -55,7 +55,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.mediatheque import CAPTURES, CINEMATIQUES, MUSIQUE, Mediatheque
 from src.ui.theme import accent_qcolor, themed
-from src.ui.utils import open_local_path, zone_defilable
+from src.ui.utils import clear_layout, open_local_path, zone_defilable
 from src.ui.video_player import VideoPlayer
 
 _LARGEUR_PLATINE = 340
@@ -141,13 +141,6 @@ def _repolir(widget: QWidget) -> None:
     widget.style().polish(widget)
 
 
-def _vider(pile: QVBoxLayout) -> None:
-    while pile.count():
-        item = pile.takeAt(0)
-        if item.widget() is not None:
-            item.widget().deleteLater()
-
-
 class _Paquets:
     """Bâtit une longue liste par paquets, au fil de la boucle d'événements.
 
@@ -167,7 +160,7 @@ class _Paquets:
 
     def remplir(self, fabriques: list) -> None:
         self._minuteur.stop()
-        _vider(self._pile)
+        clear_layout(self._pile)
         self._attente = list(fabriques)
         self._suite()
 
@@ -903,13 +896,15 @@ class _VueCinematiques(QWidget):
         if chemin is None:
             self._note.setText(tr("Cette cinématique n'a pas pu être lue."))
             return
+        # La voix AVANT l'image : celle de HP5 se convertit au premier
+        # visionnage, et l'image aurait pris cette avance sur la parole.
+        voix = self._media.voix(jeu, fichier)
         fond = self._media.fond
         fond.suspendre(CINEMATIQUE)
         volume = self._media.fond_volume() / 100.0
         if not self._video.play(str(chemin), muted=fond.son_coupe, volume=volume):
             fond.reprendre(CINEMATIQUE)
             return
-        voix = self._media.voix(jeu, fichier)
         if voix is not None and MULTIMEDIA_DISPONIBLE:
             self._voix_sortie = QAudioOutput(self)
             self._voix_sortie.setVolume(volume)

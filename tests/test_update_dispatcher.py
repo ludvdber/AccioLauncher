@@ -395,3 +395,79 @@ class TestFenetreAllegee:
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
         assert lignes <= 769, f"main_window.py a regrossi : {lignes} lignes"
+
+
+class _FauxChecker(QObject):
+    """Mêmes signaux que `UpdateChecker`, aucun réseau."""
+    catalog_updated = pyqtSignal(object)
+    launcher_update = pyqtSignal(str, str, str, str, str)
+    update_counts = pyqtSignal(int)
+    download_counts = pyqtSignal(object)
+    asset_digests = pyqtSignal(object)
+    asset_sizes = pyqtSignal(object)
+    network_status = pyqtSignal(bool)
+    finished = pyqtSignal()
+
+    def __init__(self, en_cours=False, s_arrete=True):
+        super().__init__()
+        self.demarre = False
+        self._en_cours = en_cours
+        self._s_arrete = s_arrete
+        self.interrompu = False
+
+    def start(self):
+        self.demarre = True
+
+    def isRunning(self):
+        return self._en_cours
+
+    def requestInterruption(self):
+        self.interrompu = True
+
+    def wait(self, _ms):
+        return self._s_arrete
+
+
+class TestDemarrage:
+    """`start()` câble sept signaux : aucun test ne l'appelait (le réseau est
+    coupé par ailleurs). Un signal oublié, c'est une information qui n'arrive jamais."""
+
+    def test_chaque_signal_arrive(self, qtbot, manager, monkeypatch):
+        dispatcher = UpdateDispatcher(manager)
+        faux = _FauxChecker()
+        monkeypatch.setattr(dispatcher, "_new_checker", lambda forced: faux)
+        recus = {}
+        dispatcher.network_status.connect(lambda ok: recus.setdefault("reseau", ok))
+        dispatcher.update_counts.connect(lambda n: recus.setdefault("maj", n))
+        dispatcher.launcher_update.connect(lambda *a: recus.setdefault("launcher", a[0]))
+        dispatcher.catalog_updated.connect(lambda c: recus.setdefault("catalogue", c))
+        dispatcher.start()
+        assert faux.demarre
+        faux.network_status.emit(False)
+        faux.update_counts.emit(3)
+        faux.launcher_update.emit("1.3.0", "u", "a", "s", "n")
+        faux.catalog_updated.emit("cat")
+        faux.asset_sizes.emit({"https://x/a.7z": 123})
+        faux.asset_digests.emit({"https://x/a.7z": "ab" * 32})
+        faux.download_counts.emit({"hp1": 5})
+        assert recus == {"reseau": False, "maj": 3, "launcher": "1.3.0", "catalogue": "cat"}
+        assert manager._asset_digests == {"https://x/a.7z": "ab" * 32}
+        assert manager.download_count("hp1") == 5
+
+    def test_relancer_arrete_l_ancien(self, qtbot, manager, monkeypatch):
+        dispatcher = UpdateDispatcher(manager)
+        ancien = _FauxChecker(en_cours=True)
+        monkeypatch.setattr(dispatcher, "_new_checker", lambda forced: ancien)
+        dispatcher.start()
+        monkeypatch.setattr(dispatcher, "_new_checker", lambda forced: _FauxChecker())
+        dispatcher.start()
+        assert ancien.interrompu
+
+    def test_un_checker_sourd_survit_a_la_fenetre(self, qtbot, manager):
+        """Bloqué sur une requête : déparenté et gardé, récolté à sa vraie fin."""
+        from src.ui import update_dispatcher as mod
+        sourd = _FauxChecker(en_cours=True, s_arrete=False)
+        UpdateDispatcher.shutdown_checker(sourd)
+        assert sourd in mod._orphaned_checkers and sourd.parent() is None
+        sourd.finished.emit()
+        assert sourd not in mod._orphaned_checkers

@@ -391,3 +391,47 @@ class TestRemplacementSousVerrou:
         que le verrou ne verrouille rien."""
         ancien = 'move /y "%ACCIO_NOUVEL_EXE%" "%ACCIO_EXE%" >nul\r\n'
         assert _remplacement_sous_verrou(tmp_path, ancien) == "ancien"
+
+
+class TestProgrammationWindows:
+    """Ce que reçoit le .bat détaché sous Windows : jamais de chemin dans le
+    corps (règle 79), les deux exe par l'environnement, la boucle de réessai."""
+
+    @pytest.fixture
+    def lances(self, monkeypatch):
+        recus = []
+        monkeypatch.setattr(self_update.sys, "platform", "win32")
+        monkeypatch.setattr(self_update, "_spawn_after_exit_bat",
+                            lambda corps, prefix, variables=None: recus.append((corps, prefix, variables)) or True)
+        return recus
+
+    def test_mise_a_jour(self, lances, monkeypatch, tmp_path):
+        monkeypatch.setattr(self_update, "can_self_update", lambda: True)
+        nouvel = tmp_path / "Accio Launcher été.exe"
+        assert self_update.apply_update_and_restart(nouvel) is True
+        corps, prefixe, variables = lances[0]
+        assert prefixe == "accio_update_"
+        assert variables["ACCIO_NOUVEL_EXE"] == str(nouvel)
+        assert variables["ACCIO_EXE"] == str(Path(sys.executable).resolve())
+        assert ":remplace" in corps and "geq 30" in corps and corps.endswith('start "" "%ACCIO_EXE%"\r\n')
+        assert str(tmp_path) not in corps, "aucun chemin dans le corps"
+        corps.encode("ascii")
+
+    def test_mise_a_jour_impossible_rien_n_est_programme(self, lances, monkeypatch, tmp_path):
+        monkeypatch.setattr(self_update, "can_self_update", lambda: False)
+        assert self_update.apply_update_and_restart(tmp_path / "x.exe") is False
+        assert not lances
+
+    def test_relance_depuis_les_sources(self, lances, monkeypatch):
+        monkeypatch.setattr(self_update.sys, "frozen", False, raising=False)
+        assert self_update.relaunch_after_exit() is True
+        corps, prefixe, variables = lances[0]
+        assert prefixe == "accio_relaunch_"
+        assert Path(variables["ACCIO_MAIN"]) == _REPO_ROOT / "main.py"
+        assert "%ACCIO_MAIN%" in corps
+
+    def test_relance_de_l_exe(self, lances, monkeypatch):
+        monkeypatch.setattr(self_update.sys, "frozen", True, raising=False)
+        assert self_update.relaunch_after_exit() is True
+        corps, _prefixe, variables = lances[0]
+        assert "ACCIO_MAIN" not in variables and corps == 'start "" "%ACCIO_EXE%"\r\n'

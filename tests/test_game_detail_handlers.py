@@ -240,3 +240,197 @@ class TestRegistreQuiNePrendPas:
         vue = _vue(tmp_path)
         h._ouvrir_dossier_du_jeu(vue, vue.game)
         assert vue.notify.recus == ["Dossier introuvable — le jeu a peut-être été déplacé."]
+
+
+class TestTelechargerRefuse:
+    """Les cinq raisons de ne PAS lancer un téléchargement, et ce qui est dit."""
+
+    def _version(self, disponible=True):
+        return SimpleNamespace(is_available=disponible, size_mb=900)
+
+    def _vue_dl(self, tmp_path, **ops):
+        lances = []
+        vue = _vue(tmp_path, _jeu(current_download=self._version()), archive_size_mb=lambda v: 700)
+        vue._ops = SimpleNamespace(is_busy=False, active_game=None, check_disk_space=lambda v: None,
+                                   download=lambda g, v: lances.append((g.id, v)))
+        for nom, valeur in ops.items():
+            setattr(vue._ops, nom, valeur)
+        return vue, lances
+
+    def test_un_autre_jeu_en_cours_un_toast_qui_le_nomme(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path, is_busy=True, active_game=SimpleNamespace(id="hp2", name="HP2"))
+        h.on_download(vue)
+        assert not lances and "HP2" in vue.notify.recus[0]
+
+    def test_ce_jeu_deja_en_cours(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path, is_busy=True, active_game=SimpleNamespace(id="hpx", name="HPX"))
+        h.on_download(vue)
+        assert not lances and vue.status_message.recus and not vue.notify.recus
+
+    def test_sans_version(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path)
+        vue.game.current_download = None
+        h.on_download(vue)
+        assert not lances and vue.status_message.recus
+
+    def test_pas_encore_publie_ne_parle_pas_de_connexion(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path)
+        h.on_download(vue, self._version(disponible=False))
+        assert not lances
+        assert "connexion" not in vue.status_message.recus[0].lower()
+
+    def test_place_insuffisante_dit_les_deux_tailles(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path, check_disk_space=lambda v: 300)
+        h.on_download(vue)
+        assert not lances
+        assert "300" in vue.notify.recus[0]
+
+    def test_tout_va_bien_le_telechargement_part(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path)
+        h.on_download(vue)
+        assert lances == [("hpx", vue.game.current_download)]
+
+    def test_pendant_la_preparation_de_wine_rien_ne_part(self, tmp_path):
+        vue, lances = self._vue_dl(tmp_path)
+        vue.preparation_en_cours = True
+        h.on_download(vue)
+        assert not lances and vue.notify.recus
+
+
+class TestMiseAJourDuJeu:
+    def _vue_maj(self, tmp_path):
+        changes = []
+        ver = SimpleNamespace(version="1.2", changes=["Textures HD", "Correctif son"])
+        jeu = _jeu(recommended_version="1.2", get_version=lambda v: ver if v == "1.2" else None)
+        vue = _vue(tmp_path, jeu, installed_version=lambda _id: "1.1")
+        vue._ops = SimpleNamespace(is_busy=False, switch_version=lambda g, v: changes.append(v.version))
+        return vue, changes
+
+    def test_la_question_dit_ce_qui_change(self, tmp_path, boites):
+        vue, changes = self._vue_maj(tmp_path)
+        boites.repondre(1)
+        h.on_update_clicked(vue)
+        titre, texte = boites[0]
+        assert "v1.1" in texte and "v1.2" in texte and "• Textures HD" in texte
+        assert not changes, "« Plus tard » ne change rien"
+
+    def test_accepter_change_de_version(self, tmp_path, boites):
+        vue, changes = self._vue_maj(tmp_path)
+        boites.repondre(0)
+        h.on_update_clicked(vue)
+        assert changes == ["1.2"]
+
+    def test_changer_de_version_seulement_pour_le_jeu_affiche(self, tmp_path):
+        vue, changes = self._vue_maj(tmp_path)
+        h.on_switch_version(vue, "autre", "1.2")
+        h.on_switch_version(vue, "hpx", "9.9")
+        assert not changes
+        h.on_switch_version(vue, "hpx", "1.2")
+        assert changes == ["1.2"]
+
+
+class TestDesinstaller:
+    def test_ce_qui_reste_est_dit_avant_le_clic(self, tmp_path, boites):
+        retires = []
+        jeu = _jeu(sauvegardes=object(), post_install=SimpleNamespace(config_files=["a.ini"]))
+        vue = _vue(tmp_path, jeu, uninstall_game=retires.append)
+        boites.repondre(1)
+        h.on_uninstall(vue)
+        assert "sauvegardes et la configuration" in boites[0][1]
+        assert not retires
+        boites.repondre(0)
+        h.on_uninstall(vue)
+        assert retires == ["hpx"] and vue.status_message.recus
+
+    @pytest.mark.parametrize("sauv, conf, attendu", [
+        (True, False, "sauvegardes sont conservées"),
+        (False, True, "configuration du jeu dans Mes Documents"),
+        (False, False, ""),
+    ])
+    def test_chaque_cas(self, sauv, conf, attendu):
+        jeu = _jeu(sauvegardes=object() if sauv else None,
+                   post_install=SimpleNamespace(config_files=["a"] if conf else []))
+        reste = h._ce_qui_reste(jeu)
+        assert (attendu in reste) if attendu else reste == ""
+
+
+class TestApresPreparationWine:
+    """Linux : ce qui suit la préparation de Wine, sans composants Windows."""
+
+    @pytest.fixture
+    def linux(self, monkeypatch):
+        from src.core import composants_windows
+        monkeypatch.setattr(composants_windows, "disponible", lambda: False)
+
+    def _vue_wine(self, tmp_path, joues):
+        jeu = _jeu()
+        vue = _vue(tmp_path, jeu, get_game_by_id=lambda i: jeu if i == "hpx" else None)
+        vue.journal_preparation = tmp_path / "wine.log"
+        return vue
+
+    def test_reussie_puis_jouer(self, tmp_path, linux, monkeypatch):
+        joues = []
+        monkeypatch.setattr(h, "on_play", lambda vue, **k: joues.append(k))
+        h.apres_preparation(self._vue_wine(tmp_path, joues), "hpx", True, "", puis_jouer=True)
+        assert joues == [{}]
+
+    def test_reussie_sans_jouer_un_toast(self, tmp_path, linux):
+        vue = self._vue_wine(tmp_path, [])
+        h.apres_preparation(vue, "hpx", True, "", puis_jouer=False)
+        assert "Wine est prêt" in vue.notify.recus[0]
+
+    def test_prefixe_impossible_donne_le_journal(self, tmp_path, linux, boites):
+        from src.core import preparation_wine
+        vue = self._vue_wine(tmp_path, [])
+        h.apres_preparation(vue, "hpx", False, preparation_wine.PREFIXE, puis_jouer=True)
+        assert str(tmp_path / "wine.log") in boites[0][1]
+
+    def test_winetricks_absent_propose_de_lancer_quand_meme(self, tmp_path, linux, boites, monkeypatch):
+        from src.core import preparation_wine
+        joues = []
+        monkeypatch.setattr(h, "on_play", lambda vue, **k: joues.append(k))
+        boites.repondre(0)
+        h.apres_preparation(self._vue_wine(tmp_path, joues), "hpx", False,
+                            preparation_wine.WINETRICKS_ABSENT, puis_jouer=True)
+        assert "winetricks" in boites[0][1]
+        assert joues == [{"ignorer_prerequis": True}]
+
+    def test_annulee_ne_dit_rien(self, tmp_path, linux, boites):
+        from src.core import preparation_wine
+        vue = self._vue_wine(tmp_path, [])
+        h.apres_preparation(vue, "hpx", False, preparation_wine.ANNULEE, puis_jouer=True)
+        assert not boites and not vue.notify.recus
+
+
+class TestLangueEtActionPrincipale:
+    def test_langue_posee_est_enregistree_et_annoncee(self, tmp_path, boites, qapp):
+        jeu = _jeu(langues={"en": SimpleNamespace(label="English")})
+        enregistres = []
+        vue = _vue(tmp_path, jeu=jeu, game_language=lambda _g: "fr",
+                   apply_game_language=lambda *_a, **_k: True,
+                   set_game_language=lambda *a: enregistres.append(a))
+        assert h._appliquer_langue(vue, "en") is True
+        assert enregistres == [("hpx", "en")]
+        assert vue.notify.recus == ["Langue du jeu : English"] and not boites
+
+    def test_meme_langue_rien(self, tmp_path, qapp):
+        jeu = _jeu(langues={"fr": SimpleNamespace(label="Français")})
+        vue = _vue(tmp_path, jeu=jeu, game_language=lambda _g: "fr")
+        assert h._appliquer_langue(vue, "fr") is False
+
+    def test_une_seule_langue_installee_pas_de_menu(self, tmp_path):
+        jeu = _jeu(langues={"fr": SimpleNamespace(label="Français", code="fr")})
+        vue = _vue(tmp_path, jeu=jeu, game_language=lambda _g: "fr",
+                   langues_disponibles=lambda _g: [jeu.langues["fr"]])
+        h.on_language_clicked(vue)
+        assert "une seule langue" in vue.notify.recus[0]
+
+    @pytest.mark.parametrize("etat, attendu", [("NOT_INSTALLED", "download"), ("INSTALLED", "play")])
+    def test_entree_fait_l_action_du_bouton(self, tmp_path, monkeypatch, etat, attendu):
+        from src.core.game_manager import GameState
+        faits = []
+        monkeypatch.setattr(h, "on_download", lambda v: faits.append("download"))
+        monkeypatch.setattr(h, "on_play", lambda v: faits.append("play"))
+        vue = _vue(tmp_path, get_state=lambda _id: GameState[etat])
+        h.trigger_primary_action(vue)
+        assert faits == [attendu]

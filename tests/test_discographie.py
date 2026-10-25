@@ -77,3 +77,69 @@ class TestVus:
 
     def test_le_chemin_suit_la_config(self, tmp_path):
         assert discographie.chemin_vus().name == "musiques_vues.json"
+
+
+class TestAvancement:
+    """La partie la plus avancée décide de ce qui s'ouvre : chaque jeu lit la sienne."""
+
+    SPEC = object()
+
+    def test_sans_dossier_de_sauvegardes_rien(self):
+        assert discographie.avancement("hp2", None) is None
+
+    def test_hp1_prend_le_niveau_le_plus_loin(self, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio, sauvegardes
+        monkeypatch.setattr(sauvegardes, "fichiers", lambda spec: {})
+        monkeypatch.setattr(folio, "emplacements_hp1", lambda f: [
+            N(niveau="Lev_Tut1"), N(niveau="LEV5_FINAL"), N(niveau="inconnu")])
+        assert discographie.avancement("hp1", self.SPEC) == 100
+
+    def test_hp2_et_hp3_lisent_l_etape(self, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp2, folio_hp3, sauvegardes
+        monkeypatch.setattr(folio_hp2, "emplacements", lambda spec: [N(histoire="GSTATE000")])
+        assert discographie.avancement("hp2", self.SPEC) == 0
+        monkeypatch.setattr(sauvegardes, "fichiers", lambda spec: {})
+        monkeypatch.setattr(folio_hp3, "emplacements", lambda f: [])
+        assert discographie.avancement("hp3", self.SPEC) is None, "aucune partie : rien d'ouvert"
+
+    def test_hp5_prend_le_pourcentage_ecrit_par_le_jeu(self, monkeypatch):
+        from types import SimpleNamespace as N
+
+        from src.core import sauvegardes
+        monkeypatch.setattr(sauvegardes, "releve", lambda spec: {
+            "a": N(avancement=14), "b": N(avancement=None), "c": N(avancement=62)})
+        assert discographie.avancement("hp5", self.SPEC) == 62
+        monkeypatch.setattr(sauvegardes, "releve", lambda spec: {"a": N(avancement=None)})
+        assert discographie.avancement("hp5", self.SPEC) is None
+
+    def test_une_sauvegarde_illisible_ne_fait_pas_tomber_la_page(self, monkeypatch):
+        from src.core import folio_hp2
+
+        def casse(spec):
+            raise OSError("verrouillé")
+        monkeypatch.setattr(folio_hp2, "emplacements", casse)
+        assert discographie.avancement("hp2", self.SPEC) is None
+
+
+class TestCredits:
+    def test_lit_les_credits_bien_formes(self, tmp_path):
+        chemin = tmp_path / "d.json"
+        chemin.write_text(json.dumps({"credits": {
+            "hp1": {"compositeur": "Jeremy Soule", "annee": 2001, "editeur": "EA"},
+            "hp2": {"compositeur": "X"}}}), encoding="utf-8")
+        assert discographie.charger_credits(chemin) == {
+            "hp1": discographie.Credit("Jeremy Soule", 2001, "EA")}
+
+    def test_illisible_ou_absent(self, tmp_path):
+        assert discographie.charger_credits(tmp_path / "absent.json") == {}
+        (tmp_path / "liste.json").write_text("[]", encoding="utf-8")
+        assert discographie.charger_credits(tmp_path / "liste.json") == {}
+
+    def test_le_fichier_embarque_credite_chaque_jeu_qui_a_des_morceaux(self):
+        credits = discographie.charger_credits()
+        sans = [j for j, m in discographie.charger().items() if m and j not in credits]
+        assert not sans, f"morceaux sans crédit : {sans}"

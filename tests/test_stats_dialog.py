@@ -276,6 +276,32 @@ class TestSaga:
         assert QFontMetrics(police).horizontalAdvance("14 h") <= droite - gauche
         assert droite - gauche > mois._colonne(8).width()
 
+    def test_le_dernier_mois_au_bord_n_est_pas_rogne(self, qtbot):
+        """Octobre (2 h 53, la plus haute) collé au bord droit, septembre (1 h)
+        à côté : « 3… » au Relevé de Ludo le 2026-10-24."""
+        from PyQt6.QtGui import QFont, QFontMetrics
+        from src.ui.stats_dialog import _COLONNE_DROITE
+        cases = [(2025 + (m + 10) // 12, (m + 10) % 12 + 1, 0) for m in range(12)]
+        cases[10] = (2026, 9, 3600)
+        cases[11] = (2026, 10, 2 * 3600 + 53 * 60)
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(_COLONNE_DROITE, mois.height())
+        police = QFont()
+        police.setPointSize(8)
+        gauche, droite = mois._place_valeur(11)
+        assert QFontMetrics(police).horizontalAdvance("3 h") <= droite - gauche
+
+        class ArrondiA125:
+            """La mesure arrondie (15) sous-estime le dessin (15,4) : ce qui
+            se passait avec Gelasio à 125 %, et pas avec la police d'offscreen."""
+            def horizontalAdvance(self, texte):
+                return 15
+
+            def elidedText(self, texte, _mode, largeur):
+                return texte if largeur >= 15.4 else texte[0] + "…"
+        assert mois._valeur(11, ArrondiA125())[2] == "3 h"
+
     def test_deux_chiffres_voisins_ne_se_chevauchent_pas(self, qtbot):
         cases = [(2026, m, 3600) for m in range(1, 13)]
         mois = _Mois(cases)

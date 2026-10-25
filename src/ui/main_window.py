@@ -520,7 +520,8 @@ class MainWindow(QMainWindow):
             self._detail.set_game(self._detail.game)
         # Le merci attend un retour sans boîte d'erreur ni succès annoncé (un toast à la fois).
         obtenus = partie and self._session.succes_obtenus
-        if not arret and not succes_widgets.annoncer_succes(self._toast, game_name, obtenus, self._on_stats):
+        if not arret and not succes_widgets.annoncer_succes(self._toast, game_name, obtenus,
+                                                            lambda: self._on_stats("folio")):
             self._maybe_thank_milestone()
 
     def _aide_apres_echec(self) -> None:
@@ -622,8 +623,8 @@ class MainWindow(QMainWindow):
             self._pages.ouvrir(NouveautesPage(contenu, apres_mise_a_jour, self))
 
     def _on_stats(self, rubrique: str = "releve") -> None:
-        """Le Carnet (`carnet_page.py`) — lecture seule, rien à recâbler. Le
-        toast des succès l'ouvre sur le Relevé, l'onglet sur le Folio."""
+        """Le Carnet (`carnet_page.py`) — lecture seule, rien à recâbler.
+        L'onglet et le toast des succès l'ouvrent sur le Folio du dernier joué."""
         from src.ui.carnet_page import CarnetPage
         self._pages.ouvrir(CarnetPage(self.manager, self, rubrique), CARNET)
 

@@ -116,6 +116,19 @@ class TestDescriptionEntreJeux:
                 f"alors que tronqué={tronque}")
 
 
+
+def _reste_a_defiler(qtbot, win, timeout: int = 1000) -> int:
+    """Ce qui défile ENCORE une fois la mise en page finie. Une attente fixe
+    (20 ms) mesurait au milieu des passes de `_fit_info_height`, qui se
+    réarment : chaque étape d'ajustement ajoutée rendait le test faux."""
+    from pytestqt.exceptions import TimeoutError as Delai
+    barre = win._detail._info._scroll.verticalScrollBar()
+    try:
+        qtbot.waitUntil(lambda: barre.maximum() == 0, timeout=timeout)
+    except Delai:
+        pass
+    return barre.maximum()
+
 class TestBandeauSansScrollbar:
     """« Pas de scroll si on a pas ouvert la suite d'une description » (Ludo).
 
@@ -139,8 +152,7 @@ class TestBandeauSansScrollbar:
         deborde = []
         for entry in win.manager.get_games():
             win._detail.set_game(entry.game)
-            qtbot.wait(20)
-            trop = win._detail._info._scroll.verticalScrollBar().maximum()
+            trop = _reste_a_defiler(qtbot, win)
             if trop > 0:
                 deborde.append((entry.game.id, trop))
         return deborde
@@ -246,6 +258,25 @@ class TestBandeauSansScrollbar:
             qtbot.wait(20)
             assert win._detail._action_panel.alert_height() > 0
             assert "quarantaine" in win._detail._action_panel._alert.text()
+
+    def test_le_galet_collections_cede_sa_rangee_puis_revient(self, make_window, qtbot, monkeypatch):
+        """Seul sur sa rangée (pas de bloc du folio), le galet part avant que le
+        titre ne rétrécisse ; une fenêtre plus grande le rend (règle 43)."""
+        self._disque(monkeypatch, 900_000)
+        self._catalogue_avec_avertissement(monkeypatch)
+        win = make_window()
+        win.show()
+        win.resize(980, 660)
+        info = win._detail._info
+        hp7a = next(e.game for e in win.manager.get_games() if e.game.id == "hp7a")
+        win._detail.set_game(hp7a)
+        assert _reste_a_defiler(qtbot, win) == 0
+        if not info._medias_retire:
+            pytest.skip("la fiche tient sans retirer le galet à cette taille")
+        assert not info._medias.isVisibleTo(info)
+        win.resize(1500, 950)
+        win._detail.set_game(hp7a)
+        qtbot.waitUntil(lambda: info._medias.isVisibleTo(info), timeout=2000)
 
     def test_le_bandeau_n_affiche_qu_un_message(self, make_window, qtbot, monkeypatch):
         """Hors ligne ET disque plein : le hors-ligne prime, le disque attend
@@ -601,8 +632,7 @@ class TestPasDeScrollDansLeCasNominal:
         trop = []
         for entry in win.manager.get_games():
             win._detail.set_game(entry.game)
-            qtbot.wait(20)
-            reste = win._detail._info._scroll.verticalScrollBar().maximum()
+            reste = _reste_a_defiler(qtbot, win)
             if reste > 0:
                 trop.append((entry.game.id, reste))
         return trop
@@ -638,8 +668,7 @@ class TestPasDeScrollDansLeCasNominal:
             qtbot.wait(20)
             win.manager.set_game_state(entry.game.id, GameState.DOWNLOADING)
             win._detail.ops.state_changed.emit()
-            qtbot.wait(30)
-            reste = win._detail._info._scroll.verticalScrollBar().maximum()
+            reste = _reste_a_defiler(qtbot, win)
             if reste > 0:
                 trop.append((entry.game.id, reste))
             win.manager.set_game_state(entry.game.id, GameState.NOT_INSTALLED)

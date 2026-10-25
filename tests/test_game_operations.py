@@ -364,3 +364,76 @@ class TestReglagesGardesAuChangementDeVersion:
         operations._on_install_finished("")
         texte = (systeme / "d3d9.ini").read_text()
         assert "Windowed=1" in texte and "Nouvelle=1" in texte
+
+
+class TestPlaceSurLeDisque:
+    def test_disque_muet_ne_bloque_pas(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr(GameManager, "free_space_mb", lambda self: None)
+        assert operations.check_disk_space(manager.get_games()[0].game.current_download) is None
+
+    def test_trop_peu_rend_ce_qui_reste(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr(GameManager, "free_space_mb", lambda self: 1)
+        assert operations.check_disk_space(manager.get_games()[0].game.current_download) == 1
+
+    def test_assez(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr(GameManager, "free_space_mb", lambda self: 10_000_000)
+        assert operations.check_disk_space(manager.get_games()[0].game.current_download) is None
+
+
+class TestUnSeulAlaFois:
+    def test_un_second_telechargement_est_refuse(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _FauxDownloader)
+        jeu = manager.get_games()[0].game
+        operations.download(jeu, jeu.current_download)
+        premier = operations._downloader
+        messages = []
+        operations.status_message.connect(messages.append)
+        operations.download(jeu, jeu.current_download)
+        assert operations._downloader is premier
+        assert messages and "déjà en cours" in messages[0]
+
+
+class _DownloaderSourd(_FauxDownloader):
+    """Bloqué sur un read réseau : `wait(3000)` échoue."""
+    finished = pyqtSignal()
+
+    def cancel(self):
+        pass
+
+    def wait(self, _ms):
+        return False
+
+    def deleteLater(self):
+        self.detruit = True
+
+
+class TestAnnulationDUnFilSourd:
+    def test_gare_puis_recolte_a_sa_vraie_fin(self, ops, monkeypatch):
+        """Le fil sourd se gare dans `_zombies` au lieu d'être détruit vivant,
+        et n'est récolté qu'à son `finished` ; la place se libère tout de suite."""
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _DownloaderSourd)
+        jeu = manager.get_games()[0].game
+        operations.download(jeu, jeu.current_download)
+        sourd = operations._downloader
+        operations.cancel_download()
+        assert operations._zombies == [sourd] and not operations.is_busy
+        assert not getattr(sourd, "detruit", False)
+        sourd.finished.emit()
+        assert operations._zombies == [] and sourd.detruit
+
+    def test_les_residus_sont_retires(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _DownloaderSourd)
+        jeu = manager.get_games()[0].game
+        operations.download(jeu, jeu.current_download)
+        dest = operations._downloader.destination
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        for suffixe in (".part", ".001", ".002.part"):
+            (dest.parent / (dest.name + suffixe)).write_bytes(b"x")
+        operations.cancel_download()
+        assert not list(dest.parent.glob(dest.name + ".*"))

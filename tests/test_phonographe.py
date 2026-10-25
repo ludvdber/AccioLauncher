@@ -104,3 +104,64 @@ class TestFichierLisible:
         source = tmp_path / "a.ogg"
         source.write_bytes(b"OggS")
         assert fichier_lisible(Piste("hp2", "a", source, False), tmp_path) == source
+
+
+class TestConversionHp5Hp6:
+    """HP5 et HP6 : le flux sort de `music.big` puis passe en WAV ; les WAV
+    sont plafonnés, l'écouté en dernier n'est jamais retiré."""
+
+    def test_extrait_converti_et_marque_ecoute(self, tmp_path, monkeypatch):
+        from src.core import vgmstream
+        archive = tmp_path / "music.big"
+        archive.write_bytes(b"\0" * 64 + b"SCHl" + b"\x55" * 60)
+
+        def convertir(src, cible):
+            cible.write_bytes(b"RIFF" + src.read_bytes())
+            return cible
+        monkeypatch.setattr(vgmstream, "convertir", convertir)
+        piste = Piste("hp5", "hog-1", archive, True, "hog_music_stream-1", 64, 64)
+        wav = fichier_lisible(piste, tmp_path / "cache")
+        assert wav is not None and wav.suffix == ".wav" and wav.read_bytes()[:8] == b"RIFFSCHl"
+
+    def test_sans_vgmstream_rien_ne_s_affiche_pour_hp5(self, tmp_path, monkeypatch):
+        from src.core import vgmstream
+        monkeypatch.setattr(vgmstream, "disponible", lambda: False)
+        (tmp_path / "music.big").write_bytes(b"BIGF")
+        assert pistes("hp5", tmp_path) == []
+
+    def test_conversion_ratee(self, tmp_path, monkeypatch):
+        from src.core import vgmstream
+        archive = tmp_path / "music.big"
+        archive.write_bytes(b"\0" * 128)
+        monkeypatch.setattr(vgmstream, "convertir", lambda src, cible: None)
+        assert fichier_lisible(Piste("hp6", "x", archive, True, "x-1", 0, 128), tmp_path / "c") is None
+
+    def test_elaguer_retire_les_plus_anciens_au_dela_du_plafond(self, tmp_path, monkeypatch):
+        import os
+        monkeypatch.setattr(phonographe, "_PLAFOND_WAV", 250)
+        fichiers = []
+        for i in range(5):
+            f = tmp_path / f"{i}.wav"
+            f.write_bytes(b"\0" * 100)
+            os.utime(f, (1_000_000 + i, 1_000_000 + i))
+            fichiers.append(f)
+        phonographe._elaguer(tmp_path, fichiers[0])
+        restants = sorted(p.name for p in tmp_path.glob("*.wav"))
+        assert restants == ["0.wav", "3.wav", "4.wav"], "les deux plus récents, plus celui qu'on écoute"
+
+
+class TestExporter:
+    def test_meme_nom_autre_contenu_jamais_ecrase(self, tmp_path):
+        source = tmp_path / "a.ogg"
+        source.write_bytes(b"version longue")
+        dossier = tmp_path / "Musique"
+        dossier.mkdir()
+        (dossier / "Titre.ogg").write_bytes(b"autre")
+        cible = phonographe.exporter(source, "Titre", dossier)
+        assert cible == dossier / "Titre (2).ogg" and cible.read_bytes() == b"version longue"
+        assert (dossier / "Titre.ogg").read_bytes() == b"autre"
+        assert phonographe.exporter(source, "Titre", dossier) == cible, "déjà là : pas de doublon"
+
+    def test_source_disparue(self, tmp_path):
+        assert phonographe.exporter(tmp_path / "absente.ogg", "Titre", tmp_path / "M") is None
+        assert not list((tmp_path / "M").glob("*.accio-tmp")) if (tmp_path / "M").exists() else True

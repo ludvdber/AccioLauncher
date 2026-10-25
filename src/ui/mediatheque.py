@@ -96,8 +96,7 @@ class Mediatheque(QObject):
         # la barre du bas fait taire la bande-annonce.
         detail.son_bande_annonce.connect(self.fond.bande_annonce_sonore)
         self.fond.son_coupe_change.connect(lambda _coupe: detail.apply_audio_config())
-        detail.mediatheque_demandee.connect(
-            lambda jeu: self.ouvrir(MUSIQUE if a_de_la_musique(jeu) else CINEMATIQUES, jeu))
+        detail.mediatheque_demandee.connect(lambda jeu: self.ouvrir(self.rubrique_pour(jeu), jeu))
         session.demarree.connect(lambda _nom: self.fond.suspendre(JEU))
         session.terminee.connect(self._retour_de_partie)
         QApplication.instance().aboutToQuit.connect(self.fond.arreter)
@@ -121,6 +120,14 @@ class Mediatheque(QObject):
             self._lecture.stop()
             self.actualiser()
         self._pages.ouvrir(MediathequePage(self, rubrique, jeu), COLLECTIONS)
+
+    def rubrique_pour(self, jeu: str) -> str:
+        """Où mène le bouton Collections de la fiche : la rubrique qui a du
+        NOUVEAU pour ce jeu, sinon sa musique, sinon ses cinématiques."""
+        for rubrique in (MUSIQUE, CINEMATIQUES):
+            if self.nouveaux(jeu, rubrique):
+                return rubrique
+        return MUSIQUE if a_de_la_musique(jeu) else CINEMATIQUES
 
     def _retour_de_partie(self, *_args) -> None:
         """Une partie finie a pu ouvrir des morceaux : on relit, puis la musique reprend."""

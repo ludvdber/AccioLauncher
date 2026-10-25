@@ -65,26 +65,30 @@ class TestInvalidation:
             lay.addWidget(QLabel(t, hote))
         assert lay.heightForWidth(200) > avant, "cache non invalidé à l'ajout"
 
-    def test_le_cross_fade_ne_perime_pas_le_cache(self, flow, qtbot, mise_en_page_stable):
-        """Les pastilles sont CACHÉES pendant le fondu du panneau d'info.
-
-        `QWidgetItem.sizeHint()` vaut (0, 0) tant que son widget est caché —
-        c'est le défaut que `_do_layout` compense en retombant sur
-        `widget.sizeHint()`. Un cache rempli pendant le fondu et relu après
-        aurait rouvert exactement ce trou, avec une hauteur figée à la valeur
-        d'un panneau invisible.
-        """
+    def test_un_widget_cache_expres_ne_garde_pas_sa_place(self, flow, mise_en_page_stable):
+        """Le filtre par jeu de la Galerie cache des vignettes : les restantes
+        doivent se resserrer. Sans cela, des trous noirs restaient entre elles
+        (Ludo, 2026-10-24)."""
         conteneur, lay, labels = flow
-        visible = lay.heightForWidth(300)
-        for lbl in labels:
+        for lbl in labels[1:-1]:
             lbl.hide()
         mise_en_page_stable(conteneur)
-        pendant = lay.heightForWidth(300)
+        assert labels[-1].x() == labels[0].x() + labels[0].width() + 8, (
+            "la dernière pastille devait venir juste après la première")
         for lbl in labels:
             lbl.show()
         mise_en_page_stable(conteneur)
-        assert pendant == visible, "la hauteur s'est effondrée pendant le fondu"
-        assert lay.heightForWidth(300) == visible, "cache périmé après le fondu"
+        assert lay.heightForWidth(300) == _direct(lay, 300), "cache périmé après le retour"
+
+    def test_un_widget_jamais_affiche_compte(self, qtbot):
+        """Avant le premier affichage du parent, `QWidgetItem.sizeHint()` vaut
+        (0, 0) : la hauteur ne doit pas s'effondrer pour autant."""
+        hote = QWidget()
+        qtbot.addWidget(hote)
+        lay = FlowLayout(hote, spacing=8)
+        for t in TAGS:
+            lay.addWidget(QLabel(t, hote))
+        assert lay.heightForWidth(300) > 0
 
     def test_changer_le_texte_d_une_pastille_invalide(self, flow, qtbot, mise_en_page_stable):
         """Une fiche à l'autre, les tags changent de LIBELLÉ sans changer de

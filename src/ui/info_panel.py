@@ -71,6 +71,9 @@ class InfoPanel(QWidget):
         # Crans de troncature demandés par le parent quand le panneau déborde
         # alors qu'il ne peut plus grandir.
         self._desc_squeeze: int = 0
+        # Retiré par `squeeze_medias` quand la fiche manque de place (seul sur
+        # sa rangée) ; rendu à chaque jeu et à chaque taille (règle 43).
+        self._medias_retire = False
         self._title_size: int = 0    # px, posé par _apply_title_size
         # Dernier levier du rattrapage, après la description (cf. squeeze_title).
         self._title_squeeze: int = 0
@@ -119,6 +122,7 @@ class InfoPanel(QWidget):
             # Nouvelle taille : repartir du nominal (règle 43).
             self._desc_squeeze = 0
             self._title_squeeze = 0
+            self._medias_retire = False
             if not self._desc_expanded and self._full_desc:
                 self._apply_desc_truncation()
 
@@ -296,8 +300,14 @@ class InfoPanel(QWidget):
         self._medias.setFixedHeight(40)
         self._medias.setFont(police(14))
         self._medias.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._medias.setToolTip(tr("La musique et les cinématiques du jeu"))
-        self._medias.setAccessibleName(tr("La musique et les cinématiques du jeu"))
+        self._medias.setToolTip(tr("La musique, les cinématiques et les captures du jeu"))
+        self._medias.setAccessibleName(tr("Collections : la musique, les cinématiques et les "
+                                          "captures du jeu"))
+        self._medias.setText(tr("Collections"))
+        from src.ui.choix_jeux import espacee
+        icone, taille = espacee(pixmap_icone("images", 18, QColor("#e6e4f0")), QSize(18, 18))
+        self._medias.setIcon(icone)
+        self._medias.setIconSize(taille)
         self._medias.setStyleSheet(themed(
             "QPushButton#boutonMedias { background: rgba(255, 255, 255, 0.03); color: #e6e4f0;"
             " border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; padding: 0 16px; }"
@@ -419,6 +429,17 @@ class InfoPanel(QWidget):
                 "QLabel#gameTitle { color: #f2f2f4; background: transparent;"
                 " font-size: %dpx; }" % size)
 
+    def squeeze_medias(self) -> bool:
+        """Retire le galet « Collections » quand il occupe SEUL une rangée
+        (HP4 à HP8, sans bloc du folio). L'onglet Collections reste en haut ;
+        un titre rogné se verrait davantage. False s'il n'y a rien à gagner."""
+        if self._medias_retire or not self._medias.isVisibleTo(self) or self._bloc.isVisibleTo(self):
+            return False
+        self._medias_retire = True
+        self._medias.hide()
+        self._bloc_hote.hide()
+        return True
+
     def squeeze_title(self) -> bool:
         """Descend le titre d'un cran (dernier levier : c'est le plus gros
         bloc du panneau). False s'il n'y a plus de marge."""
@@ -465,6 +486,7 @@ class InfoPanel(QWidget):
         # Titre PLEIN à chaque jeu (règle 43) : un cran pris par le titre
         # espagnol le plus long restait sinon sur les sept autres.
         self._title_squeeze = 0
+        self._medias_retire = False
         self._title.setText(game.name)
         # La partie se relit dans `rafraichir_indices`, que le parent appelle
         # juste après : la lire ici aussi coûterait deux lectures par jeu.
@@ -601,17 +623,16 @@ class InfoPanel(QWidget):
         avancee = self._avancee
         self._derniere.setVisible((resume is not None and not self._a_propos)
                                   or (resume is None and avancee is not None))
-        self._bloc_hote.setVisible(resume is not None)
-        from src.ui.choix_jeux import espacee
-        from src.ui.mediatheque import a_de_la_musique, a_des_medias
-        self._medias.setVisible(game is not None and a_des_medias(game.id))
-        if game is not None and a_des_medias(game.id):
-            musique = a_de_la_musique(game.id)
-            self._medias.setText(tr("Musique") if musique else tr("Cinématiques"))
-            icone, taille = espacee(pixmap_icone("musique" if musique else "film", 18, QColor("#e6e4f0")),
-                                    QSize(18, 18))
-            self._medias.setIcon(icone)
-            self._medias.setIconSize(taille)
+        from src.ui.mediatheque import a_des_medias
+        medias = game is not None and a_des_medias(game.id)
+        # « Collections », comme l'onglet : « Musique » ne disait pas les
+        # cinématiques ni les captures (Ludo, 2026-10-24). Le galet vivait dans
+        # l'hôte du bloc du folio, montré seulement avec un « Reprendre » : de
+        # HP4 à HP8, il n'apparaissait jamais.
+        self._bloc.setVisible(resume is not None)
+        medias = medias and (resume is not None or not self._medias_retire)
+        self._medias.setVisible(medias)
+        self._bloc_hote.setVisible(resume is not None or medias)
         if resume is None and avancee is not None and avancee.avancement is not None:
             self._derniere.setText(phrase_derniere_partie(
                 datetime.fromtimestamp(avancee.modifie),

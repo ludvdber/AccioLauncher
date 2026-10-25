@@ -108,9 +108,11 @@ def _flux(f: BinaryIO, debut: int, fin: int) -> list[tuple[int, int]]:
             morceau = f.read(min(_PAS_RECHERCHE, fin - pos - 1))
             k = morceau.find(b"SCHl")
             if k < 0:
-                if not morceau:
+                if len(morceau) < 4:
                     break
-                pos += len(morceau)
+                # Les pas se recouvrent de 3 octets : un « SCHl » coupé entre
+                # deux pas était sauté, et son morceau avec.
+                pos += len(morceau) - 3
                 continue
             pos += 1 + k
             ouvert = None

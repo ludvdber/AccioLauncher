@@ -47,7 +47,10 @@ def phrase_derniere_partie(modifie: datetime, lieu: str, today: date | None = No
     """
     today = today or date.today()
     if (today - modifie.date()).days > 30:
-        debut = tr("Dernière partie le {}").format(modifie.strftime("%d/%m/%Y"))
+        # En toutes lettres et dans la langue de l'interface, comme au Folio :
+        # « 20/09/2026 » imposait l'ordre français même en anglais.
+        from src.ui.versions_dialog import date_longue
+        debut = tr("Dernière partie le {}").format(date_longue(modifie.strftime("%Y-%m-%d")))
     else:
         debut = tr("Dernière partie {}").format(
             format_relative_date(modifie.isoformat(), today))

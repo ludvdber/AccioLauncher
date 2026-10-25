@@ -159,3 +159,13 @@ class TestCeQuiCasseUnJeuSansBruit:
 
     def test_hp3_jamais_au_dela_de_60_images(self, catalogue):
         assert 0 < _jeu(catalogue, "hp3").get("max_fps", 0) <= 60
+
+
+class TestMediatheque:
+    def test_les_jeux_de_la_mediatheque_existent_dans_la_copie_embarquee(self, catalogue):
+        """La discographie et les cinématiques sont rangées par id de jeu : un id
+        absent du catalogue embarqué ne s'afficherait jamais."""
+        from src.core import cinematiques, discographie
+        ids = {g["id"] for g in catalogue["games"]}
+        assert set(cinematiques.charger()) <= ids
+        assert set(discographie.charger()) <= ids

@@ -74,6 +74,27 @@ class TestSignature:
     def test_tout_le_reste_est_refuse(self, statut, sujet):
         assert not cw.est_signe_par_microsoft(statut, sujet)
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Authenticode : Windows seulement")
+    def test_la_vraie_lecture_par_powershell(self, monkeypatch, tmp_path):
+        """Le script encodé, le fichier passé par l'environnement, la sortie
+        « statut|sujet » : jamais exécutés pour de vrai avant le 2026-10-24.
+        Lecture seule, aucune invite. explorer.exe est signé par catalogue au nom
+        de « Microsoft Windows » : lu Valid, puis refusé (un installeur Visual C++
+        est signé « Microsoft Corporation »)."""
+        import os
+        from pathlib import Path
+        lus = []
+        vraie = cw.est_signe_par_microsoft
+        monkeypatch.setattr(cw, "est_signe_par_microsoft",
+                            lambda statut, sujet: lus.append((statut, sujet)) or vraie(statut, sujet))
+        explorer = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "explorer.exe")
+        assert not cw.signature_microsoft(Path(explorer))
+        assert lus[-1][0] == "Valid" and "O=Microsoft Corporation" in lus[-1][1]
+        nu = tmp_path / "nu.exe"
+        nu.write_bytes(b"MZ" + b"\0" * 64)
+        assert not cw.signature_microsoft(nu)
+        assert lus[-1][0] in ("NotSigned", "UnknownError")
+
 
 class _Fil(cw.InstallationComposants):
     """Le vrai fil, réseau et signature bouchonnés."""
