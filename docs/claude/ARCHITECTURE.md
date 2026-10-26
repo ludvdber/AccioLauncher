@@ -18,6 +18,22 @@ Deux couches sous `src/`, reliées par un orchestrateur (`game_operations`) et u
 - [ARCHITECTURE_CORE.md](ARCHITECTURE_CORE.md) — `src/core/`, la logique métier ;
 - [ARCHITECTURE_UI.md](ARCHITECTURE_UI.md) — `src/ui/`, les widgets.
 
+### Python 3.15, Linux et build
+
+Déplacé tel quel depuis `CLAUDE.md` le 2026-10-26.
+
+**Python 3.15 seul** (pyproject, tests, `build.bat`, `build.sh`, release), depuis le 2026-10-25 ; la 3.12 puis la 3.14 abandonnées le même jour. L'exe et l'AppImage embarquent leur interpréteur : la version ne touche aucun joueur. **Exception : `fuzz.yml` et `security.yml` restent en 3.14** (Atheris 3.1.0 et PyYAML n'ont pas de paquet 3.15) : le code doit donc rester LISIBLE par la 3.14, pas de syntaxe `lazy import` (PEP 810) avant qu'ils suivent. **Les imports paresseux passent par l'API** (`sys.set_lazy_imports`, absente en 3.14) : `ui/imports_paresseux.activer()`, appelée en tête de `main.main` et par `conftest`.
+
+**Passage à la 3.15 vérifié le 2026-10-25** : suite verte, ruff et mypy en cible 3.15 propres, exe construit par PyInstaller 6.22.3 et démarré. L'ancien interdit tenait à un PyInstaller en retard ; il la suit depuis la 6.21 (juin 2026). Performance mesurée (banc muet, démarrages alternés, 3.15.1 officielle) : la version seule ne change rien (761 ms contre 771 en 3.14) ; ce qui gagne, ce sont les imports paresseux : **711 ms, 51,5 Mo de mémoire privée au lieu de 56,2**.
+
+**Linux est un objectif déclaré** : tout appel win32 derrière `sys.platform == "win32"` avec un repli sensé (patron : `self_update.can_self_update`, `win_utils`, `system_checks`, `game_registry.disponible`). Jamais de lettre de lecteur hors code gardé.
+
+**Le registre sous Linux** : il n'y en a pas, mais le jeu tournera sous **Wine, qui a le sien**. Le travail n'est pas à supprimer, il est à rebrancher sur `wine regedit`. Tout passe par `game_registry.disponible()` — un seul point à changer, plus `_ecrire_eleve`.
+
+**Portage Linux : `docs/LINUX.md` fait foi** (audit par fichier et fonction, contenu RELEVÉ des archives, décisions : umu puis wine, préfixe partagé, chemins du préfixe, surcharges de DLL, AppImage).
+
+`build.bat` enchaîne icône → lint → tests → géométrie (vraies polices) → PyInstaller, et **s'ARRÊTE au premier échec** : un exe publié avec une régression coûte plus cher que 20 s d'attente. `build.sh` fait de même sous Linux, plus l'AppImage (6 étapes) ; hors d'un venv il crée `.venv-build` (le Python d'un système atomique ne s'installe pas), et sans session graphique l'audit passe par `xvfb-run` — il PASSE sous Linux avec les vraies polices (xcb, 78 s).
+
 ### Journal, sortie et CI
 
 **`main.py`** configure le logging rotatif, l'exception de haut niveau, `install_excepthook()` et le splash avant `MainWindow`. Fichier en **INFO dans l'exe**, DEBUG depuis les sources, `ACCIO_JOURNAL=debug` pour rendre le détail à l'exe. Sous Linux : `assainir_environnement()` avant `QApplication`, et **`setDesktopFileName(DESKTOP_ID)`** (`be.acciolauncher.AccioLauncher`) — l'équivalent de l'AppUserModelID : sous Wayland, `setWindowIcon` est ignoré, c'est cet `app_id` qui relie la fenêtre à son `.desktop`, donc à son icône.
