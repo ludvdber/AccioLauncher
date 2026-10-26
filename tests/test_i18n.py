@@ -29,6 +29,8 @@ IDENTIQUES_TOLEREES = {
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « Gris » (vert des montagnes) s'écrit pareil en espagnol.
     "Gris",
+    # Couleurs du ciel de HP6 qui s'écrivent pareil en anglais.
+    "Orange", "Mauve", "Turquoise",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.

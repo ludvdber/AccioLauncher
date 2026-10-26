@@ -374,6 +374,38 @@ class TestModeDifficile:
         assert rc.portes_par(ancien, declares) == declares
 
 
+class TestCielHp6:
+    """HP6 : SkyMode, SkyHour (nombre à virgule) et SkyColor (texte RRGGBB, lu sans la casse) du correctif."""
+
+    @pytest.fixture
+    def ini_ciel(self, ini):
+        ini.write_bytes(ini.read_bytes().replace(
+            b"[Accio.Graphics]\r\n", b"[Accio.Graphics]\r\nSkyMode=1\r\nSkyHour=12.0\r\nSkyColor=5A9EEF\r\n", 1))
+        return ini
+
+    def test_l_ini_livre_se_lit(self, ini_ciel):
+        assert rc.lire(ini_ciel, rc.REGLAGES["ciel"]) == rc.Etat(1)
+        assert rc.lire(ini_ciel, rc.REGLAGES["ciel_heure"]) == rc.Etat(12)
+        assert rc.lire(ini_ciel, rc.REGLAGES["ciel_couleur"]) == rc.Etat("5a9eef")
+
+    def test_heure_a_virgule_ecrite_avec_un_point(self, ini_ciel):
+        """Le correctif lit SkyHour avec atof : « 20.5 », jamais « 20,5 »."""
+        rc.ecrire(ini_ciel, rc.REGLAGES["ciel_heure"], 20.5)
+        assert "SkyHour=20.5" in ini_ciel.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini_ciel, rc.REGLAGES["ciel_heure"]) == rc.Etat(20.5)
+
+    def test_couleur_et_mode(self, ini_ciel):
+        rc.ecrire(ini_ciel, rc.REGLAGES["ciel"], 4)
+        rc.ecrire(ini_ciel, rc.REGLAGES["ciel_couleur"], "ff9a5a")
+        lignes = ini_ciel.read_bytes().decode().split("\r\n")
+        assert "SkyMode=4" in lignes and "SkyColor=ff9a5a" in lignes
+        assert rc.libelle_choix(rc.REGLAGES["ciel_couleur"], "ff9a5a") == tr("Orange")
+
+    def test_heure_et_couleur_dependent_du_ciel(self):
+        assert rc.REGLAGES["ciel_heure"].depend_de == "ciel"
+        assert rc.REGLAGES["ciel_couleur"].depend_de == "ciel"
+
+
 class TestLangueAuDemarrage:
     """HP6 : un réglage à choix TEXTUELS (la clé Language du correctif)."""
 

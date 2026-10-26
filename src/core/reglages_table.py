@@ -39,6 +39,11 @@ SORTS_RETIRES = (
     ("protego,expelliarmus,petrificus,levicorpus", "Stupéfix seul en duel"),
 )
 
+# SkyColor du correctif (RRGGBB, en minuscules : la lecture des choix textuels ignore
+# la casse) : quelques teintes nommées ; la première est la
+# valeur par défaut du correctif.
+COULEURS_CIEL = (("5a9eef", ""), ("ff9a5a", "Orange"), ("f2c14e", "Doré"), ("b48ce6", "Mauve"),
+                 ("e07a8f", "Rose"), ("7fd6c2", "Turquoise"), ("c9ced6", "Gris"))
 LANGUES_MENU = (
     ("auto", ""), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("de", "Deutsch"),
     ("it", "Italiano"), ("nl", "Nederlands"), ("pt", "Português"), ("pt-br", "Português (Brasil)"),
@@ -375,6 +380,31 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             etiquettes=((0.6, "Légèrement vert"), (0.4, "Vert"), (0.2, "Très vert"),
                         (0, "Vert du jeu")),
             onglet="image", se_voit=True, depend_de="couleurs"),
+    # HP6, le ciel ([Accio.Graphics] SkyMode, SkyHour, SkyColor de source/sky.h du
+    # correctif), vu en jeu le 2026-10-26 ; relu dans la seconde, partie en cours
+    # comprise. L'ini livré porte SkyMode=1 (bleu) : le premier choix (0) vaut pour
+    # une clé absente, comme vert_relief. La lumière au sol ne suit pas l'heure.
+    Reglage("ciel", "Accio.Graphics", "SkyMode",
+            "Ciel",
+            "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure "
+            "réelle » suit l'horloge de l'ordinateur, de l'aube à la nuit ; le paysage garde "
+            "sa lumière de jour. Se change aussi pendant la partie.",
+            choix=(0, 1, 2, 3, 4), zero="D'origine",
+            etiquettes=((1, "Bleu"), (2, "Heure réelle"), (3, "Heure choisie"),
+                        (4, "Couleur choisie")),
+            onglet="image", se_voit=True),
+    Reglage("ciel_heure", "Accio.Graphics", "SkyHour",
+            "Heure du ciel",
+            "Le moment de la journée que montre le ciel avec « Heure choisie ».",
+            choix=(12, 6.5, 9, 16, 19, 20.5, 23, 2), zero="Midi",
+            etiquettes=((6.5, "Aube"), (9, "Matin"), (16, "Après-midi"), (19, "Couchant"),
+                        (20.5, "Crépuscule"), (23, "Nuit"), (2, "Cœur de la nuit")),
+            onglet="image", se_voit=True, depend_de="ciel"),
+    Reglage("ciel_couleur", "Accio.Graphics", "SkyColor",
+            "Couleur du ciel",
+            "La teinte du ciel avec « Couleur choisie », plus claire vers l'horizon.",
+            choix=tuple(v for v, _ in COULEURS_CIEL), zero="Bleu", noms_choix=COULEURS_CIEL,
+            onglet="image", se_voit=True, depend_de="ciel"),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "
