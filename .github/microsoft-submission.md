@@ -18,24 +18,26 @@
 **Additional information** :
 
 ```text
-AccioLauncher.exe {TAG} is a free, open-source (GNU GPL v3) launcher that downloads, installs and starts classic PC games on Windows 10/11. Publisher: ASTeam. It is flagged by SmartScreen only because it is new and not code-signed; it contains no malware.
+AccioLauncher.exe {TAG} is a free, open-source (GNU GPL v3) launcher that downloads, installs and starts classic PC games on Windows 10/11. Publisher: ASTeam. SmartScreen flags it only because it is new and unsigned; it contains no malware.
 
-- Source code: https://github.com/ludvdber/AccioLauncher
-- URL where the warning appears: https://github.com/ludvdber/AccioLauncher/releases/download/{TAG}/AccioLauncher.exe
+- Source: https://github.com/ludvdber/AccioLauncher
+- Warning URL: https://github.com/ludvdber/AccioLauncher/releases/download/{TAG}/AccioLauncher.exe
 - Website: https://acciolauncher.be/
 - SHA-256: {SHA256}
-- Built by GitHub Actions from the public source (workflow release.yml), never on a personal machine. The release carries a signed build provenance attestation (Sigstore): gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
-- PyInstaller onefile (Python 3.15, PyQt6), no UPX. Bundles 7-Zip (7z.exe).
+- Built by GitHub Actions from the public source (release.yml), with a Sigstore build provenance attestation: gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
+- PyInstaller onefile (Python 3.15, PyQt6), no UPX. Bundles 7-Zip and vgmstream-cli (ISC).
 
-Expected behaviour an analyst may observe:
-- HTTPS only, to github.com, api.github.com and raw.githubusercontent.com (catalogue, updates, downloads); every downloaded file is checked against its SHA-256.
-- Self-update: a small .bat waits for the exit, swaps the exe and restarts it.
-- Removes Zone.Identifier from extracted game files so old games can load their DLLs.
-- For two games only, and after asking the user, writes their language and install path under HKLM\SOFTWARE\WOW6432Node\Electronic Arts\... through an elevated regedit import (UAC prompt).
-- Optional Discord Rich Presence via the local named pipe.
-- After a game crash only: System32\wevtutil.exe qe (read-only) on the Application log, to name the crashed module.
-- Reads the game controller via winmm joyGetPosEx.
-- Before each session, gzips copies of the game's saves into its data folder.
-- Reads game saves (read-only) to show progress; lists WinSxS for the VC++ 2005/2008 runtimes.
-- Moves game screenshots to Pictures\Accio Launcher (BMP to PNG).
+Expected behaviour:
+- HTTPS only, to github.com, api.github.com, raw.githubusercontent.com; Windows certificate store; every download checked against its SHA-256.
+- Before launching a 32-bit game, sets LARGE_ADDRESS_AWARE in that game's exe header (PE checksum fixed) so it can use 4 GB.
+- Runs vgmstream-cli (no window) to convert game music to WAV in its cache.
+- Self-update: a .bat waits for exit, swaps the exe, restarts it.
+- Removes Zone.Identifier from extracted game files.
+- Two games only, after asking: writes language and install path under HKLM\SOFTWARE\WOW6432Node\Electronic Arts\... via elevated regedit import (UAC).
+- Optional Discord Rich Presence (local named pipe).
+- After a game crash only: wevtutil.exe qe (read-only) on the Application log.
+- Reads the controller via winmm joyGetPosEx.
+- Gzips copies of game saves before each session; exports/imports saves as .zip on request.
+- Reads saves (read-only) for progress; lists WinSxS for VC++ 2005/2008.
+- Moves screenshots to Pictures\Accio Launcher (BMP to PNG); saves music to Music\Accio on request.
 ```
