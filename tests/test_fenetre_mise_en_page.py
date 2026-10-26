@@ -460,22 +460,18 @@ class TestSelecteurDeLangue:
         win._detail.set_game(autre)
         assert 'href="langue"' not in win._detail._info._meta.text()
 
-    def test_le_changelog_reste_le_seul_lien(self, make_window_multilingue):
+    def test_la_version_a_quitte_la_fiche(self, make_window_multilingue):
         """L'AIGUILLAGE lui-même est testé sur un panneau isolé
         (`TestAiguillageLigneMeta`) : sur une vraie fenêtre, `versions_clicked`
         est câblé au dialogue des versions, dont le `exec()` bloque la suite de
         tests indéfiniment."""
         win, jeu = make_window_multilingue()
         win._detail.set_game(jeu)
-        # Le changelog est descendu sous le bouton (piste A, 2026-10-09) :
-        # la ligne méta n'a plus AUCUN lien, la ligne d'indices un seul.
+        # La ligne méta n'a AUCUN lien ; la version est partie dans l'engrenage
+        # (« Gérer les versions », maquette « Plan du launcher v2 », 2026-10-26).
         assert "href=" not in win._detail._info._meta.text()
         indices = win._detail._info._indices.text()
-        assert 'href="changelog"' in indices
-        assert indices.count("href=") == 1
-        # Et ce lien, c'est la version elle-même (Ludo, 2026-10-14).
-        assert "Nouveautés" not in indices
-        assert indices.split('href="changelog"')[1].split("</a>")[0].upper().count("VERSION") == 1
+        assert 'href="changelog"' not in indices and "VERSION" not in indices.upper()
 
     def test_le_choix_est_bien_retenu(self, make_window_multilingue):
         """Le réglage vit toujours — il ne s'AFFICHE simplement plus sur la fiche."""

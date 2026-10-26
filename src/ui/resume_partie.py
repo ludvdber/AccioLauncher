@@ -2,7 +2,9 @@
 
 La description cède sa place dès qu'il y a mieux à montrer (Ludo, 2026-10-15) :
 qui a déjà joué l'a lue, et veut savoir où il en était. Un jeu dont on ne lit
-rien garde sa description (`folio.RESUMES` : HP1 et HP3 aujourd'hui).
+rien garde sa description (`folio.FICHES` : les cartes de HP1 à HP3, et
+depuis le 2026-10-26 les boucliers de HP4, la découverte de HP5, les
+écussons de HP6, chacun avec l'icône que le jeu lui donne).
 
 Maquette H du canevas « fiche » : la ligne « Dernière partie » sous le titre,
 puis le bouton, puis ce bloc (éventail des cartes, compte, barre, maisons et
@@ -17,7 +19,7 @@ from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import folio, folio_hp2, folio_hp3
+from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6
 from src.core.formatting import format_duree_compacte, format_relative_date
 from src.core.i18n import get_language, tr
 from src.ui.fonts import body_font
@@ -75,6 +77,40 @@ def phrase_cartes(trouvees: int, total: int = folio.CARTES_HP1) -> str:
     return tr(cle).format(trouvees, total)
 
 
+def _nombre(n: int) -> str:
+    """« 4 360 » : l'espace fine insécable des milliers, comme l'écran du jeu."""
+    return f"{n:,}".replace(",", "\u202f")
+
+
+# (singulier, pluriel) de la phrase du bloc, par ce qu'on compte.
+_PHRASES = {
+    "boucliers": ("{} bouclier sur {}", "{} boucliers sur {}"),
+    "ecussons": ("{} écusson sur {}", "{} écussons sur {}"),
+}
+
+
+def phrase_resume(resume: folio.Resume) -> str:
+    """« 9 cartes sur 25 », « 12 boucliers sur 38 », « 4 % terminé »."""
+    if resume.unite == "pourcent":
+        return tr("{} % terminé").format(resume.trouvees)
+    formes = _PHRASES.get(resume.unite)
+    if formes is None:
+        return phrase_cartes(resume.trouvees, resume.total)
+    cle = formes[0] if resume.trouvees == 1 else formes[1]
+    return tr(cle).format(_nombre(resume.trouvees), _nombre(resume.total))
+
+
+def lieu_resume(resume: folio.Resume) -> str:
+    """Ce qui suit « Dernière partie… » : le lieu que le jeu nomme, ou pour
+    HP6 son chapitre (l'avancement de HP5 est déjà dans le bloc)."""
+    if resume.lieu:
+        return resume.lieu
+    partie = resume.releve
+    if isinstance(partie, folio_hp6.Partie) and partie.chapitre:
+        return tr("Chapitre {}").format(partie.chapitre)
+    return ""
+
+
 class _Eventail(QWidget):
     """Trois cartes trouvées, en éventail, telles que le jeu les dessine."""
 
@@ -92,6 +128,15 @@ class _Eventail(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if len(self._cartes) == 1:
+            # Une icône seule (HP4 à HP6) : droite et centrée, pas penchée en carte.
+            pix = self._cartes[0]
+            ratio = pix.devicePixelRatio() or 1.0
+            larg, haut = pix.width() / ratio, pix.height() / ratio
+            p.drawPixmap(QRectF((self.width() - larg) / 2, (self.height() - haut) / 2, larg, haut),
+                         pix, QRectF(pix.rect()))
+            p.end()
+            return
         for pix, (x, y, angle) in zip(self._cartes, _EVENTAIL, strict=False):
             ratio = pix.devicePixelRatio() or 1.0
             larg, haut = pix.width() / ratio, pix.height() / ratio
@@ -177,12 +222,14 @@ class BlocFolio(QFrame):
         rang.addLayout(colonne, 1)
 
     def montrer(self, resume: folio.Resume, cartes: list[QPixmap], secondes: int) -> None:
-        self._compte.setText(phrase_cartes(resume.trouvees, resume.total))
+        self._compte.setText(phrase_resume(resume))
         self._barre.regler(resume.trouvees / resume.total if resume.total else 0.0)
         self._eventail.regler(cartes)
         # Les maisons : HP1 seulement (HP3 n'écrit pas leurs points).
         maisons = (maison_en_tete(resume.releve)
                    if isinstance(resume.releve, folio.Releve) else "")
+        if isinstance(resume.releve, folio_hp5.Partie) and resume.releve.decouverte:
+            maisons = tr("{} points de découverte").format(_nombre(resume.releve.decouverte))
         morceaux = [m for m in (maisons,
                                 tr("{} en tout").format(format_duree_compacte(secondes))
                                 if secondes > 0 else "") if m]
@@ -213,6 +260,15 @@ class BlocFolio(QFrame):
         return self._compte.text()
 
 
+# L'icône du bloc quand le jeu ne compte pas des cartes (les mêmes qu'au folio).
+# HP5 : la vignette du chapitre, celle de l'écran « Continuer aventure ».
+_ICONES = {
+    "hp4": lambda system, _partie: folio_hp4.image_menu(system, "boucliers"),
+    "hp5": lambda system, partie: folio_hp5.image_chapitre(system, partie.chapitre),
+    "hp6": lambda system, _partie: folio_hp6.image_menu(system, "ecussons"),
+}
+
+
 def cartes_eventail(game_id: str, system: Path, releve, dpr: float) -> list[QPixmap]:
     """Les trois premières cartes trouvées, en petit ; vide sans le jeu installé."""
     from src.ui.folio_page import pixmap_texture
@@ -233,4 +289,10 @@ def cartes_eventail(game_id: str, system: Path, releve, dpr: float) -> list[QPix
         cat = folio_hp3.catalogue(system, get_language())
         trouvees = [c for c in cat.cartes if c.classe in releve.cartes][:len(_EVENTAIL)]
         textures = [folio_hp3.image_carte(system, c.code, grande=False) for c in trouvees]
+    elif game_id in _ICONES:
+        # Pas de cartes : l'icône que le jeu donne à ce qu'on compte, seule.
+        from src.ui.folio_page import image_bgra
+        icone = image_bgra(_ICONES[game_id](system, releve), _CARTE_H + 4, dpr, rogner=True,
+                           colonnes=(0.27, 0.73) if game_id == "hp4" else (0.0, 1.0))
+        return [icone] if icone is not None else []
     return [pixmap_texture(t, _CARTE_H, dpr) for t in textures if t is not None]

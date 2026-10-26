@@ -47,18 +47,21 @@ class TestPastille:
     @pytest.fixture
     def panneau(self, qtbot):
         from src.ui.info_panel import InfoPanel
-        p = InfoPanel(MagicMock())
+        manager = MagicMock()
+        manager.download_count.return_value = 0
+        manager.is_installed.return_value = False
+        p = InfoPanel(manager)
         qtbot.addWidget(p)
         return p
 
     # Depuis la piste A (2026-10-09), la manette n'est plus une pastille parmi
-    # les genres : elle ouvre la ligne d'indices sous le bouton. Les genres
-    # eux-mêmes ne s'affichent plus depuis le 2026-10-14.
+    # les genres ; depuis la maquette « Plan du launcher v2 » (2026-10-26), elle
+    # est un fait du jeu dans la ligne méta, à côté de l'année et du poids.
 
     def _montrer(self, panneau, **champs):
         jeu = GameData.from_dict(dict(BASE, **champs))
-        panneau._refresh_indices(jeu)
-        return panneau._indices.text()
+        panneau.apply_game(jeu)
+        return panneau._meta.text()
 
     def test_rien_tant_que_le_jeu_n_est_pas_essaye(self, panneau):
         assert "manette" not in self._montrer(panneau).lower()
@@ -67,12 +70,15 @@ class TestPastille:
         ("yes", "Jouable à la manette"), ("partial", "Manette en partie"),
         ("no", "Sans manette")])
     def test_chaque_niveau_a_son_libelle(self, panneau, niveau, texte):
-        # En petites capitales depuis le 2026-10-14.
-        assert self._montrer(panneau, controller=niveau).startswith(texte.upper())
+        ligne = self._montrer(panneau, controller=niveau)
+        # Un pictogramme depuis la maquette « Plan du launcher v2 » : le libellé
+        # est en infobulle ; « sans manette » reste écrit.
+        assert panneau._meta.toolTip().startswith(texte)
+        assert ("<img" in ligne) == (niveau != "no")
 
     def test_la_note_est_en_infobulle(self, panneau):
         self._montrer(panneau, controller="partial", controller_note="Souris au démarrage")
-        assert panneau._indices.toolTip() == "Souris au démarrage"
+        assert panneau._meta.toolTip() == "Manette en partie : Souris au démarrage"
 
     def test_changer_de_jeu_efface_la_manette(self, panneau):
         self._montrer(panneau, controller="yes")

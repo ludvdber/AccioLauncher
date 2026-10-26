@@ -15,7 +15,7 @@ from typing import Any, NamedTuple
 from src.core import captures, compat, demarrage, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
-from src.core import copies_sauvegardes, reprise, resolution_jeu, stats, texte_ue1
+from src.core import copies_sauvegardes, memoire_4go, reprise, resolution_jeu, stats, texte_ue1
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config
 from src.core.game_registry import Confirmer
@@ -306,6 +306,8 @@ class GameManager:
         taille = resolution_jeu.appliquer(game, self.config, resolution_jeu.place_pour(game, self.config))
         # Les polices de HP1/HP2 à la hauteur de cette image (rien si elle n'a pas changé).
         texte_ue1.appliquer(game, self.config, taille[1] if taille is not None else None)
+        # 4 Go d'adresses au lieu de 2 pour l'exe 32 bits (`memoire_4go`).
+        memoire_4go.appliquer(game.id, exe_path)
         # Langue par FICHIERS (HP1) APRÈS la restauration, qui recopierait un
         # HP.ini français par-dessus.
         if game.langue_par_fichiers \

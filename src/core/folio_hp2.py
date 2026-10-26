@@ -250,7 +250,8 @@ def resume(spec: Sauvegardes | None, system: Path, langue: str) -> folio.Resume 
     releve_ = folio.la_derniere_jouee([r for r in emplacements(spec) if r.lu])
     if releve_ is None:
         return None
-    return folio.Resume(releve_, lieu(system, langue, releve_.titre), len(releve_.cartes), CARTES)
+    return folio.Resume(releve_, lieu(system, langue, releve_.titre), len(releve_.cartes), CARTES,
+                        releve_.modifie)
 
 
 # ── Le catalogue, dans le jeu installé ──

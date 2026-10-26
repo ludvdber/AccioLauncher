@@ -24,6 +24,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from src.core import folio
 from src.core.images_ea import entree_big as _entree_big
 from src.core.images_ea import images_nommees
 
@@ -427,3 +428,19 @@ def releve(chemin: Path) -> list[Partie]:
     except OSError:
         log.warning("Folio HP4 : %s illisible", chemin, exc_info=True)
         return []
+
+
+def resume(fichiers: dict[str, Path], system: Path, langue: str) -> folio.Resume | None:
+    """La partie à montrer sur la fiche : les boucliers de l'armoire à trophées,
+    et le rang en guise de lieu. Rien tant que la partie n'a rien gagné (Ludo,
+    2026-10-15 : « tant qu'on a rien on laisse la description »)."""
+    parties = [(p, chemin) for chemin in fichiers.values() for p in releve(chemin)]
+    if not parties:
+        return None
+    partie, chemin = max(parties, key=lambda pc: pc[0].ecrite or datetime.min)
+    if partie.boucliers <= 0 and partie.rang <= 0:
+        return None
+    rang = partie.nom_rang
+    lieu = (nom(textes(system, langue), rang) or "") if rang is not None else ""
+    quand = partie.ecrite or datetime.fromtimestamp(chemin.stat().st_mtime)
+    return folio.Resume(partie, lieu, partie.boucliers, BOUCLIERS, quand, "boucliers")

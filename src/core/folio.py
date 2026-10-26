@@ -59,11 +59,15 @@ GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE = (
 MAISONS = (GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE)
 
 # Les jeux dont le folio sait lire les sauvegardes, par id du catalogue : ils
-# ont leur PAGE (`ui/folio_jeux.page_folio`). Ceux de `RESUMES` montrent en
-# plus la partie sur leur fiche, à la place de la description (cartes : HP1,
-# HP3) ; HP4, HP5 et HP6 gardent la leur (pas d'éventail de cartes à montrer).
+# ont leur PAGE (`ui/folio_jeux.page_folio`). Ceux de `FICHES` montrent en
+# plus la partie sur leur fiche, à la place de la description : les cartes de
+# HP1 à HP3, puis depuis le 2026-10-26 (maquette « Plan du launcher v2 », Ludo :
+# « on doit afficher le folio des cartes ou autre s'il y a quelque chose ») les
+# boucliers de HP4, la découverte de HP5 et les écussons de HP6. `RESUMES`
+# reste aux trois premiers : c'est aussi la liste de « Reprendre en un clic ».
 JEUX = ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b")
 RESUMES = ("hp1", "hp2", "hp3")
+FICHES = (*RESUMES, "hp4", "hp5", "hp6")
 
 # Le folio du jeu, emplacement par emplacement : `WizardCards[i]` de la
 # sauvegarde est la carte i + 1 de cette liste. Relevé le 2026-10-14 dans le
@@ -372,10 +376,12 @@ def la_derniere_jouee[P: PartieLue](releves: Sequence[P]) -> P | None:
 @dataclass(frozen=True)
 class Resume:
     """Ce que la fiche du jeu montre à la place de sa description."""
-    releve: PartieLue   # `Releve` pour HP1, `folio_hp3.Releve` pour HP3
+    releve: object   # `Releve` (HP1), `folio_hp3.Releve`… ; `Partie` de HP4 à HP6
     lieu: str        # vide si le jeu n'est pas installé ou ne nomme pas le niveau
-    trouvees: int = 0     # cartes trouvées…
+    trouvees: int = 0     # cartes (boucliers, points, écussons) trouvées…
     total: int = 0        # … sur tant
+    quand: datetime | None = None    # la date que le JEU a écrite
+    unite: str = "cartes"            # « cartes », « boucliers », « pourcent », « ecussons »
 
 
 def resume_hp1(fichiers: dict[str, Path], system: Path, langue: str) -> Resume | None:
@@ -390,7 +396,8 @@ def resume_hp1(fichiers: dict[str, Path], system: Path, langue: str) -> Resume |
     if releve is None:
         return None
     _, titres = textes_hp1(fichier_textes(system, langue))
-    return Resume(releve, lieu(titres, releve.niveau), len(releve.cartes), CARTES_HP1)
+    return Resume(releve, lieu(titres, releve.niveau), len(releve.cartes), CARTES_HP1,
+                  releve.modifie)
 
 
 # ── Les textes du jeu installé ──

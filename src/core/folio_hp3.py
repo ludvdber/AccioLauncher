@@ -430,7 +430,8 @@ def resume(fichiers: dict[str, Path], system: Path, langue: str) -> folio.Resume
     releve = folio.la_derniere_jouee([r for r in emplacements(fichiers) if r.lu])
     if releve is None:
         return None
-    return folio.Resume(releve, "", len(releve.cartes), releve.total_cartes or CARTES)
+    return folio.Resume(releve, "", len(releve.cartes), releve.total_cartes or CARTES,
+                        releve.modifie)
 
 
 def _lister(system: Path) -> list[Path]:

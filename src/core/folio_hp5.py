@@ -27,7 +27,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import images_ea, sauvegardes
+from src.core import folio, images_ea, sauvegardes
 
 log = logging.getLogger(__name__)
 
@@ -190,3 +190,16 @@ def _image_decouverte(system_txt: str) -> tuple[int, int, bytes] | None:
     except (OSError, struct.error):
         log.warning("Folio HP5 : icône des points de découverte illisible", exc_info=True)
     return None
+
+
+def resume(fichiers: dict[str, Path]) -> folio.Resume | None:
+    """La partie écrite en dernier et l'avancement que le jeu affiche (« 4 % »),
+    sur 100. Les points de découverte restent à 0 tant qu'on n'a pas exploré :
+    l'avancement dit mieux où en est une partie qui commence."""
+    parties = [(p, chemin) for chemin in fichiers.values() for p in releve(chemin)]
+    parties = [(p, c) for p, c in parties if p.pourcentage is not None]
+    if not parties:
+        return None
+    partie, chemin = max(parties, key=lambda pc: pc[0].ecrite or datetime.min)
+    quand = partie.ecrite or datetime.fromtimestamp(chemin.stat().st_mtime)
+    return folio.Resume(partie, "", partie.pourcentage or 0, 100, quand, "pourcent")

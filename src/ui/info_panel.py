@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
-from src.core import folio, folio_hp2, folio_hp3, sauvegardes
+from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
@@ -18,7 +18,7 @@ from src.ui.clickable_label import ClickableLabel
 from src.ui.composants import police
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.icon_button import pixmap_icone
-from src.ui.resume_partie import BlocFolio, cartes_eventail, phrase_derniere_partie
+from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
 from src.core.formatting import format_size
 
@@ -42,6 +42,33 @@ def _insecable(texte: str) -> str:
     """Rend un segment de la ligne méta insécable : elle ne peut se replier
     qu'au séparateur ◆, jamais au milieu d'une information (règle 64)."""
     return texte.replace(" ", " ")
+
+
+def _manette(game: GameData) -> str:
+    """Dite seulement si le jeu a été essayé (`controller` vide : rien, règle 108)."""
+    return {"yes": tr("Jouable à la manette"), "partial": tr("Manette en partie"),
+            "no": tr("Sans manette")}.get(game.controller, "")
+
+
+_PICTO = 18     # px logiques : au-dessous, le pictogramme ne se lit plus (règle 51)
+_pictos: dict[tuple[str, float], str] = {}
+
+
+def _image_en_ligne(couleur: str, ratio: float) -> str:
+    """Le pictogramme de la manette en `data:` pour la ligne méta (RichText) :
+    rendu à la taille PHYSIQUE, posé à la taille logique, net à 125 %."""
+    cle = (couleur, ratio)
+    if cle not in _pictos:
+        import base64
+        from PyQt6.QtCore import QBuffer, QByteArray, QIODevice
+        pix = pixmap_icone("manette", _PICTO, QColor(couleur))
+        octets = QByteArray()
+        tampon = QBuffer(octets)
+        tampon.open(QIODevice.OpenModeFlag.WriteOnly)
+        pix.save(tampon, "PNG")
+        _pictos[cle] = base64.b64encode(bytes(octets)).decode("ascii")
+    return (f'<img src="data:image/png;base64,{_pictos[cle]}" width="{_PICTO}" '
+            f'height="{_PICTO}" style="vertical-align: middle;">')
 
 
 class InfoPanel(QWidget):
@@ -509,6 +536,12 @@ class InfoPanel(QWidget):
                     _insecable(escape(game.developer, quote=False)),
                     _insecable(escape(size_str, quote=False))]
 
+        # La manette, fait sur le jeu, rejoint ses faits (maquette « Plan du
+        # launcher v2 », 2026-10-26) ; sa nuance passe en infobulle.
+        manette = _manette(game)
+        if manette:
+            morceaux.append(self._fait_manette(game))
+
         # PAS de langue du jeu ici : « FRANÇAIS » est un état normal (règle 107).
         # Le réglage vit dans l'engrenage (GameSettingsDialog, rubrique « Langue »).
 
@@ -521,10 +554,12 @@ class InfoPanel(QWidget):
             # En doré : la preuve sociale ressort du gris de la ligne.
             morceaux.append(f'<span style="color:{gold};">'
                             + _insecable(tr(key).format(pretty)) + '</span>')
-            self._meta.setToolTip(
-                tr("Téléchargements cumulés de toutes les versions (GitHub)"))
+            bulles = [tr("Téléchargements cumulés de toutes les versions (GitHub)")]
         else:
-            self._meta.setToolTip("")
+            bulles = []
+        if manette:
+            bulles.insert(0, manette + (f" : {game.controller_note}" if game.controller_note else ""))
+        self._meta.setToolTip("\n".join(bulles))
 
         self._meta.setText(
             '<span style="text-transform:uppercase; letter-spacing:2px;">'
@@ -598,9 +633,15 @@ class InfoPanel(QWidget):
     def _lire_partie(self, game: GameData) -> folio.Resume | None:
         """Seulement un jeu INSTALLÉ que le folio sait lire : désinstallé, la
         fiche redevient une invitation, la description revient."""
-        if game.id not in folio.RESUMES or not self._manager.is_installed(game.id):
+        if game.id not in folio.FICHES or not self._manager.is_installed(game.id):
             return None
         system = self._manager.config.install_path / Path(game.executable).parent
+        if game.id == "hp4":
+            return folio_hp4.resume(sauvegardes.fichiers(game.sauvegardes), system, get_language())
+        if game.id == "hp5":
+            return folio_hp5.resume(sauvegardes.fichiers(game.sauvegardes))
+        if game.id == "hp6":
+            return folio_hp6.resume(sauvegardes.fichiers(game.sauvegardes))
         if game.id == "hp2":
             # HP2 numérote ses emplacements par dossier (`Slot1/Save0.usa`).
             return folio_hp2.resume(game.sauvegardes, system, get_language())
@@ -638,7 +679,8 @@ class InfoPanel(QWidget):
                 datetime.fromtimestamp(avancee.modifie),
                 tr("{} % terminé").format(avancee.avancement)))
         if resume is not None and game is not None:
-            self._derniere.setText(phrase_derniere_partie(resume.releve.modifie, resume.lieu))
+            self._derniere.setText(phrase_derniere_partie(resume.quand or datetime.now(),
+                                                          lieu_resume(resume)))
             system = self._manager.config.install_path / Path(game.executable).parent
             self._bloc.montrer(resume, cartes_eventail(game.id, system, resume.releve,
                                                        self.devicePixelRatioF()),
@@ -654,25 +696,28 @@ class InfoPanel(QWidget):
         self._apply_available_width()
         self.content_changed.emit()
 
-    def _refresh_indices(self, game: GameData) -> None:
-        """« Jouable à la manette · Version 1.3 · Nouveautés ».
+    def _fait_manette(self, game: GameData) -> str:
+        """La manette en pictogramme (maquette « Plan du launcher v2 », Ludo
+        2026-10-26 : « parfait ») ; « en partie » s'écrit à côté, « sans
+        manette » en toutes lettres. Le libellé complet est en infobulle."""
+        if game.controller == "no":
+            return _insecable(escape(tr("Sans manette"), quote=False))
+        image = _image_en_ligne("#b4b4d0", self.devicePixelRatioF())
+        if game.controller == "partial":
+            return image + "&nbsp;" + _insecable(escape(tr("en partie"), quote=False))
+        return image
 
-        La manette n'est dite que si le jeu a été essayé (`controller` vide :
-        rien, règle 108) ; sa nuance est en infobulle (`controller_note`).
+    def _refresh_indices(self, game: GameData) -> None:
+        """Sous le bouton, le seul lien vers la partie : « À propos du jeu »
+        quand le bloc du folio cache la description, sinon « Folio ».
+
+        Maquette « Plan du launcher v2 » (Ludo, 2026-10-26) : la manette est
+        montée dans la ligne méta, la version est partie dans l'engrenage
+        (« Gérer les versions ») ; une ligne qui mêlait une information, une
+        action de dépannage et un lien ne se lisait pas.
         """
         gold = current_theme().accent
         morceaux = []
-        manette = {"yes": tr("Jouable à la manette"), "partial": tr("Manette en partie"),
-                   "no": tr("Sans manette")}.get(game.controller)
-        if manette:
-            morceaux.append(escape(manette.upper(), quote=False))
-        version = self._manager.installed_version(game.id) or game.recommended_version
-        # La version EST le lien vers ses changements (Ludo, 2026-10-14) : un
-        # « Nouveautés » à côté redisait la même chose en plus long.
-        morceaux.append(f'<a href="changelog" style="color:{gold}; text-decoration:none;">'
-                        + _insecable(escape(tr("Version {}").format(version).upper(),
-                                            quote=False))
-                        + '</a>')
         if self._resume is not None:
             # Le bloc porte déjà « Folio › » : ici, la description rangée.
             libelle = tr("Ma partie") if self._a_propos else tr("À propos du jeu")
@@ -683,5 +728,5 @@ class InfoPanel(QWidget):
                             + _insecable(escape(tr("Folio").upper(), quote=False)) + '</a>')
         point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
-        self._indices.setToolTip(game.controller_note if manette else "")
+        self._indices.setVisible(bool(morceaux))
 

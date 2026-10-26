@@ -30,3 +30,16 @@ def ecrire_atomique(chemin: Path, texte: str, suffixe: str = ".tmp") -> None:
         with contextlib.suppress(OSError):
             os.unlink(tmp)
         raise
+
+
+def ecrire_octets_atomique(chemin: Path, octets: bytes, suffixe: str = ".tmp") -> None:
+    """Comme `ecrire_atomique`, pour des octets (un exécutable, `memoire_4go`)."""
+    fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=suffixe)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(octets)
+        os.replace(tmp, chemin)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise

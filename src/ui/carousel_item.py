@@ -7,7 +7,7 @@ from PyQt6.QtCore import (
     Qt, pyqtSignal, QRect, QRectF, QPropertyAnimation, QEasingCurve, pyqtProperty,
 )
 from PyQt6.QtGui import (
-    QColor, QFont, QFontMetrics, QImageReader, QLinearGradient, QPainter,
+    QColor, QFont, QFontMetrics, QImage, QImageReader, QLinearGradient, QPainter,
     QPainterPath, QPen, QPixmap, QTransform,
 )
 from PyQt6.QtWidgets import QWidget
@@ -140,6 +140,7 @@ class CarouselItem(QWidget):
         self._selected = False
         self._hovered = False
         self._pixmap: QPixmap | None = None
+        self._gris: QPixmap | None = None     # la jaquette en niveaux de gris, pour un jeu absent
         self._anim_scale = 0.9
         self._anim_opacity = 0.45
         # Taille de base de la jaquette. Ce n'est plus la constante du module :
@@ -152,7 +153,6 @@ class CarouselItem(QWidget):
         self._reflection_cache_size: tuple[int, int] = (0, 0)
         self._cached_installed: bool = False
         self._cached_has_update: bool = False
-        self._cached_version: str = ""
         self._cached_is_new: bool = False
         self._cached_coming_soon: bool = False
         self._cached_reprise: float = 0.0   # part déjà reçue, 0 = rien en attente
@@ -192,10 +192,9 @@ class CarouselItem(QWidget):
     anim_opacity = pyqtProperty(float, _get_anim_opacity, _set_anim_opacity)
 
     def refresh_state(self) -> None:
-        """Recharge les indicateurs (installé, update, version, nouveau) depuis le manager."""
+        """Recharge les indicateurs (installé, mise à jour, nouveau) depuis le manager."""
         self._cached_installed = self.manager.is_installed(self.game.id)
         self._cached_has_update = self.manager.has_update(self.game.id)
-        self._cached_version = self.manager.installed_version(self.game.id) or ""
         self._cached_is_new = self.manager.is_new(self.game.id)
         # Jeu annoncé dont aucune archive n'est publiée : signalé dans la
         # vignette pour que l'utilisateur le sache AVANT de cliquer.
@@ -233,7 +232,11 @@ class CarouselItem(QWidget):
             return
         # Aux proportions EXACTES de la vignette : peinte ensuite dans un
         # rectangle 18:25, une jaquette carrée y était étirée (`images.py`).
-        self._pixmap = QPixmap.fromImage(images.jaquette(image, cible_w, cible_h))
+        jaquette = images.jaquette(image, cible_w, cible_h)
+        self._pixmap = QPixmap.fromImage(jaquette)
+        self._gris = QPixmap.fromImage(
+            jaquette.convertToFormat(QImage.Format.Format_Grayscale8)
+            .convertToFormat(QImage.Format.Format_ARGB32_Premultiplied))
 
     def set_taille_vignette(self, largeur: int, hauteur: int) -> None:
         """Impose la taille de base de la jaquette (décidée par le carrousel)."""
@@ -312,8 +315,8 @@ class CarouselItem(QWidget):
             self._peindre_halo_selection(p, geo)
         if self._pixmap:
             self._peindre_reflet(p, geo)
-        if self._cached_installed:
-            self._peindre_pastille_installe(p, geo)
+        if not self._cached_installed and not self._cached_coming_soon:
+            self._peindre_voile_absent(p, geo)
         if self._cached_has_update:
             self._peindre_badge_maj(p, geo)
         if self._cached_is_new and not self._cached_installed:
@@ -440,42 +443,38 @@ class CarouselItem(QWidget):
         fade.setColorAt(1, theme.bg_qcolor(255))
         p.fillRect(geo.x, ref_y, geo.w, ref_h, fade)
 
-    def _peindre_pastille_installe(self, p: QPainter, geo: _Geo) -> None:
-        """Le point vert, et le numéro de version s'il est connu."""
+    def _peindre_voile_absent(self, p: QPainter, geo: _Geo) -> None:
+        """Jeu pas installé : jaquette légèrement grisée (maquette « Plan du
+        launcher v2 », Ludo 2026-10-26). Ce qui est installé se reconnaît à sa
+        couleur ; le point vert et le numéro de version, huit fois la même
+        information, sont partis (la version vit dans l'engrenage)."""
+        clip = QPainterPath()
+        clip.addRoundedRect(float(geo.x), float(geo.y), float(geo.w),
+                            float(geo.h), geo.radius, geo.radius)
+        p.save()
+        p.setClipPath(clip)
+        if self._gris is not None:
+            p.setOpacity(geo.opacite * 0.7)
+            p.drawPixmap(geo.x, geo.y, geo.w, geo.h, self._gris)
         p.setOpacity(1.0)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor("#2ecc71"))
-        p.drawEllipse(geo.x + geo.w - 14, geo.y + geo.h - 14, 10, 10)
-
-        ver_text = f"v{self._cached_version}" if self._cached_version else ""
-        if not ver_text:
-            return
-        p.setFont(cinzel(9))
-        fm = p.fontMetrics()
-        tw = fm.horizontalAdvance(ver_text)
-        th = fm.height()
-        pad_x, pad_y = 4, 2
-        bx = geo.x + 3
-        by = geo.y + geo.h - th - pad_y * 2 - 3
-        p.setBrush(QColor(0, 0, 0, 153))
-        p.drawRoundedRect(QRectF(bx, by, tw + pad_x * 2, th + pad_y * 2), 3, 3)
-        p.setPen(QColor(220, 220, 240, 200))
-        p.drawText(QRectF(bx + pad_x, by + pad_y, tw, th),
-                   Qt.AlignmentFlag.AlignCenter, ver_text)
+        p.fillRect(geo.x, geo.y, geo.w, geo.h, theme.bg_qcolor(70))
+        p.restore()
+        p.setOpacity(geo.opacite)
 
     def _peindre_badge_maj(self, p: QPainter, geo: _Geo) -> None:
-        """La pastille « ↑ » d'une mise à jour disponible."""
+        """La marque « MAJ » d'une mise à jour disponible, en haut à droite :
+        la seule chose que la vignette dit encore de la version."""
         p.setOpacity(1.0)
-        badge_size = 18
-        bx = geo.x + geo.w - badge_size - 2
-        by = geo.y + 2
+        police, text = _badge_texte(tr("MAJ"), geo.w - 6)
+        p.setFont(police)
+        fm = p.fontMetrics()
+        bw, bh = fm.horizontalAdvance(text) + _BADGE_PADDING, fm.height() + 3
+        bx, by = geo.x + geo.w - bw - 3, geo.y + 3
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(accent_qcolor(220))
-        p.drawRoundedRect(QRectF(bx, by, badge_size, badge_size), 4, 4)
-        p.setPen(QColor(255, 255, 255, 240))
-        p.setFont(cinzel(10, bold=True))
-        p.drawText(QRectF(bx, by, badge_size, badge_size),
-                   Qt.AlignmentFlag.AlignCenter, "↑")
+        p.setBrush(accent_qcolor(235))
+        p.drawRoundedRect(QRectF(bx, by, bw, bh), 3, 3)
+        p.setPen(theme.bg_qcolor(255))
+        p.drawText(QRectF(bx, by, bw, bh), Qt.AlignmentFlag.AlignCenter, text)
 
     def _peindre_ruban_nouveau(self, p: QPainter, geo: _Geo) -> None:
         """Ruban « NOUVEAU » (jeu apparu via une mise à jour du catalogue)."""

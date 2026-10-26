@@ -112,8 +112,10 @@ class TestDeuxEtats:
 
 
 class TestAvancementSansFolio:
-    """HP5 dit son avancement (« 14 % ») sans folio : la ligne « Dernière
-    partie » s'ajoute, la description reste (Ludo, 2026-10-15)."""
+    """HP5 dit son avancement (« 14 % ») : depuis le 2026-10-26 (maquette « Plan
+    du launcher v2 », Ludo : « on doit afficher le folio des cartes ou autre
+    s'il y a quelque chose »), il a son bloc comme HP1 à HP3, et la description
+    passe derrière « À propos du jeu ». Elle restait jusque-là (2026-10-15)."""
 
     @pytest.fixture
     def hp5(self, fiche, tmp_path, monkeypatch):
@@ -140,10 +142,10 @@ class TestAvancementSansFolio:
         chemin.write_bytes(hpootp(("Frontend", datetime(2026, 4, 29, 21, 5, 13), 1),
                                   ("Hogwarts", datetime(2026, 10, 1, 16, 8, 24), 14)))
         montrer(jeu)
-        assert _visibles(panel) == (True, True, False), "la description reste, sans bloc"
-        assert "14 % terminé" in panel._derniere.text(), "la plus récente, pas la première"
-        assert not panel.partie_affichee(), "les statistiques restent dans le panneau d'actions"
-        assert 'href="a-propos"' not in panel._indices.text()
+        assert _visibles(panel) == (False, True, True), "le bloc, la description rangée"
+        assert panel._bloc._compte.text() == "14 % terminé", "la plus récente, pas la première"
+        assert panel.partie_affichee(), "les statistiques passent dans le bloc"
+        assert 'href="a-propos"' in panel._indices.text()
 
     def test_sans_sauvegarde_rien_de_plus(self, hp5):
         panel, montrer, jeu, _, _, _ = hp5

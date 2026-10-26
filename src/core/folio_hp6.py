@@ -31,7 +31,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import images_ea
+from src.core import folio, images_ea
 
 log = logging.getLogger(__name__)
 
@@ -441,3 +441,17 @@ def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
     except (OSError, struct.error):
         log.warning("Folio HP6 : icônes du menu illisibles", exc_info=True)
     return images
+
+
+def resume(fichiers: dict[str, Path]) -> folio.Resume | None:
+    """L'unique partie écrite en dernier : ses écussons sur 125. Rien tant
+    qu'aucun n'est trouvé : la description dit mieux le début du jeu."""
+    parties = [(p, chemin) for chemin in fichiers.values()
+               if (p := releve(chemin)) is not None]
+    if not parties:
+        return None
+    partie, chemin = max(parties, key=lambda pc: pc[0].ecrite or datetime.min)
+    if partie.ecussons <= 0:
+        return None
+    quand = partie.ecrite or datetime.fromtimestamp(chemin.stat().st_mtime)
+    return folio.Resume(partie, "", partie.ecussons, ECUSSONS, quand, "ecussons")
