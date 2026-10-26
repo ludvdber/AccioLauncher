@@ -11,6 +11,10 @@ Les deux rubriques sont les pages d'avant (`folio_jeux.page_folio`,
 `stats_dialog.StatsDialog`), posées en mode intégré : le Carnet porte le
 retour, le titre, les rubriques et le choix du jeu. Chacune est bâtie à la
 première visite ; le folio est rebâti quand le jeu change.
+
+Les Défis (2026-10-26) : les succès en médailles (`defis_page.py`), entre les
+deux, sur le jeu choisi comme le Folio. Bâtis à la visite, oubliés quand le
+jeu change.
 """
 
 from PyQt6.QtCore import QSize, Qt
@@ -32,6 +36,9 @@ from src.ui.title_bar import CARNET
 
 FOLIO = "folio"
 RELEVE = "releve"
+DEFIS = "defis"
+# Les rubriques qui suivent le jeu choisi en haut.
+_PAR_JEU = (FOLIO, DEFIS)
 
 _STYLE = """
 QDialog#carnet { background: #070712; }
@@ -60,7 +67,7 @@ def _transparent(widget: QWidget) -> QWidget:
 
 
 class CarnetPage(QDialog):
-    """Le Carnet, en page : Folio et Relevé, le jeu choisi en haut pour le Folio."""
+    """Le Carnet, en page : Folio, Défis et Relevé ; le jeu choisi en haut pour les deux premiers."""
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None,
                  rubrique: str = FOLIO, jeu: str = "") -> None:
@@ -76,6 +83,7 @@ class CarnetPage(QDialog):
                       if e.game.id in folio.JEUX and manager.is_installed(e.game.id)]
         self._folio: QDialog | None = None
         self._releve: QDialog | None = None
+        self._defis: QWidget | None = None
         self.jeu = ""
         # La rubrique affichée, tenue ici : la DÉDUIRE de la pile se trompait.
         # Retirer l'ancien folio fait passer la pile sur le Relevé, et changer
@@ -138,7 +146,8 @@ class CarnetPage(QDialog):
         self._rubriques: dict[str, QPushButton] = {}
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
-        for cle, libelle, icone in ((FOLIO, tr("Folio"), "folio"), (RELEVE, tr("Relevé"), "stats")):
+        for cle, libelle, icone in ((FOLIO, tr("Folio"), "folio"), (DEFIS, tr("Défis"), "medaille"),
+                                    (RELEVE, tr("Relevé"), "stats")):
             b = QPushButton(libelle)
             b.setObjectName("rubrique")
             b.setCheckable(True)
@@ -199,9 +208,30 @@ class CarnetPage(QDialog):
                 self._pile.removeWidget(ancien)
                 ancien.deleteLater()
             self.jeu = jeu
+            self._retirer_defis()
         self._boutons[jeu].setChecked(True)
         if self._rubrique == FOLIO:
             self._pile.setCurrentWidget(self._folio)
+        elif self._rubrique == DEFIS:
+            self._montrer_defis()
+
+    def _retirer_defis(self) -> None:
+        """Les défis d'un autre jeu : rebâtis à la prochaine visite."""
+        if self._defis is not None:
+            self._pile.removeWidget(self._defis)
+            self._defis.deleteLater()
+            self._defis = None
+
+    def _montrer_defis(self) -> None:
+        game = next((g for g in self._jeux if g.id == self.jeu), None)
+        if game is None:
+            self._pile.setCurrentWidget(self._vide)
+            return
+        if self._defis is None:
+            from src.ui.defis_page import DefisPage
+            self._defis = DefisPage(game)
+            self._pile.addWidget(self._defis)
+        self._pile.setCurrentWidget(self._defis)
 
     def _depuis_le_releve(self, jeu: str) -> None:
         self.montrer(jeu)
@@ -210,13 +240,15 @@ class CarnetPage(QDialog):
     def rubrique(self, cle: str) -> None:
         self._rubrique = cle
         self._rubriques[cle].setChecked(True)
-        self._choix.setVisible(cle == FOLIO and bool(self._jeux))
+        self._choix.setVisible(cle in _PAR_JEU and bool(self._jeux))
         if cle == RELEVE:
             if self._releve is None:
                 from src.ui.stats_dialog import StatsDialog
                 self._releve = self._poser(StatsDialog(self.manager, self, folio=self._depuis_le_releve,
                                                        integree=True))
             self._pile.setCurrentWidget(self._releve)
+        elif cle == DEFIS:
+            self._montrer_defis()
         else:
             self._pile.setCurrentWidget(self._folio if self._folio is not None else self._vide)
 

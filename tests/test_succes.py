@@ -152,7 +152,9 @@ class TestPage:
         assert len(section.lignes) == len(succes.du_jeu("hp1"))
         from PyQt6.QtWidgets import QLabel
         textes = [lbl.text() for lbl in section.findChildren(QLabel)]
-        assert "24 octobre 2026" in textes and "1 sur 5" not in textes and "2 sur 5" in textes
+        assert "1 sur 5" not in textes and "2 sur 5" in textes
+        assert section.bulles[1].endswith("24 octobre 2026")
+        assert not section.bulles[0].endswith("2026"), "date inconnue : rien de deviné"
 
 
 class TestToast:

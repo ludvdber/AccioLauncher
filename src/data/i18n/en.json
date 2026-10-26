@@ -1311,6 +1311,16 @@
     "Légèrement vert": "Slightly green",
     "Vert": "Green",
     "Très vert": "Very green",
-    "Vert du jeu": "The game's green"
+    "Vert du jeu": "The game's green",
+    "Taille du texte": "Text size",
+    "Automatique (× {})": "Automatic (× {})",
+    "Automatique": "Automatic",
+    "Plus petit": "Smaller",
+    "Plus grand": "Larger",
+    "Très grand": "Very large",
+    "D'origine (texte de 2001)": "Original (2001 text)",
+    "Le jeu agrandit ses menus avec l'écran, mais garde le texte de 2001, minuscule en haute définition. Le lanceur redessine ses lettres à la taille de l'image : automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut déborder de certains cadres. Appliqué au prochain lancement.": "The game enlarges its menus with the screen but keeps its 2001 text, tiny in high definition. The launcher redraws its letters to fit the picture: on automatic, the text regains its original place inside the frames. Larger may overflow some frames. Applied at the next launch.",
+    "Défis": "Challenges",
+    "Ce jeu n'a pas encore de défis.": "This game has no challenges yet."
   }
 }

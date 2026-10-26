@@ -1,22 +1,24 @@
-"""La section « Succès » de la fiche d'un jeu, dans Mes années (`stats_dialog.py`).
+"""La section « Succès » au bas du folio (`folio_page.py`), et le toast du retour de partie.
 
-Ceux qu'on a obtenus d'abord, dans l'ordre du jeu, avec la date de la partie
-où ils sont tombés quand on l'a vue ; puis ceux qui restent, en retrait. Une
-date inconnue (déjà là au premier regard, `succes.py`) ne s'affiche pas :
-rien n'est deviné.
+Une rangée de médailles (`medailles.py`) : celles qu'on a obtenues d'abord,
+dans l'ordre du jeu, puis celles qui restent, en creux. Le nom, ce qu'elle
+demande et la date de la partie où elle est tombée passent en bulle ; une date
+inconnue (déjà là au premier regard, `succes.py`) ne s'affiche pas : rien
+n'est deviné. Le détail vit dans les Défis du Carnet (`defis_page.py`).
 """
 
 from collections.abc import Callable
 from datetime import datetime
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QGridLayout, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from src.core import succes
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.i18n import tr
-from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte, _titre_section
+from src.ui.stats_widgets import _Paragraphe, _titre_section
 from src.ui.toast import Toast
+
+_PETITE = 44
 
 
 def annonce_succes(nom_du_jeu: str, obtenus: list[succes.Succes]) -> str:
@@ -52,11 +54,17 @@ def _jour(quand: datetime | None) -> str:
 
 
 class SectionSucces(QWidget):
-    """Titre, compte, puis une ligne par succès : nom, ce qu'il demande, date."""
+    """Titre, compte, puis une rangée de médailles : obtenues d'abord.
+
+    Le détail (ce que chacune demande) vit dans la rubrique Défis du Carnet
+    (`defis_page.py`, 2026-10-26) ; ici, le nom et la date passent en bulle.
+    """
 
     def __init__(self, jeu: str, sauvegardes: list[str], spec: Sauvegardes | None,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        from src.ui.flow_layout import FlowLayout
+        from src.ui.medailles import pixmap_medaille
         definitions = succes.du_jeu(jeu)
         self.obtenus = succes.obtenus(jeu, sauvegardes, spec)
         couche = QVBoxLayout(self)
@@ -65,24 +73,25 @@ class SectionSucces(QWidget):
         couche.addWidget(_titre_section(tr("Succès")))
         couche.addWidget(_Paragraphe(
             tr("{} sur {}").format(len(self.obtenus), len(definitions)), taille=13))
-        grille = QGridLayout()
-        grille.setContentsMargins(0, 4, 0, 0)
-        grille.setHorizontalSpacing(16)
-        grille.setVerticalSpacing(10)
-        grille.setColumnStretch(0, 1)
+        rangee = QWidget()
+        flux = FlowLayout(rangee, spacing=6)
+        flux.setContentsMargins(0, 4, 0, 0)
         ordre = ([s for s in definitions if s.ident in self.obtenus]
                  + [s for s in definitions if s.ident not in self.obtenus])
         self.lignes: list[str] = []
-        for rang, s in enumerate(ordre):
+        self.bulles: list[str] = []
+        for s in ordre:
             obtenu = self.obtenus.get(s.ident)
-            texte = QWidget()
-            pile = QVBoxLayout(texte)
-            pile.setContentsMargins(0, 0, 0, 0)
-            pile.setSpacing(2)
-            pile.addWidget(_texte(tr(s.titre), 14, "#ffffff" if obtenu else _DISCRET, gras=obtenu is not None))
-            pile.addWidget(_Paragraphe(tr(s.description), taille=12))
-            grille.addWidget(texte, rang, 0)
-            date = _texte(_jour(obtenu.date) if obtenu else "", 12, _DISCRET)
-            grille.addWidget(date, rang, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+            image = QLabel()
+            image.setFixedSize(_PETITE, _PETITE)
+            image.setPixmap(pixmap_medaille(jeu, s.ident, obtenu is not None, _PETITE,
+                                            self.devicePixelRatioF()))
+            bulle = tr(s.titre) + "\n" + tr(s.description)
+            quand = _jour(obtenu.date) if obtenu is not None else ""
+            if quand:
+                bulle += "\n" + quand
+            image.setToolTip(bulle)
+            flux.addWidget(image)
             self.lignes.append(s.ident)
-        couche.addLayout(grille)
+            self.bulles.append(bulle)
+        couche.addWidget(rangee)

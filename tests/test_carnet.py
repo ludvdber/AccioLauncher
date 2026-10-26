@@ -115,3 +115,21 @@ class TestCaptures:
         assert win._title_bar.onglet(COLLECTIONS).isChecked()
         page.accept()
         assert win._pages.page is None
+
+
+class TestDefis:
+    def test_la_rubrique_suit_le_jeu_choisi(self, fenetre_carnet):
+        from src.ui.carnet_page import DEFIS
+        from src.ui.defis_page import DefisPage
+        from src.ui.title_bar import CARNET
+        win, jeux = fenetre_carnet
+        win._on_onglet(CARNET)
+        page = win._pages.page
+        page.rubrique(DEFIS)
+        assert isinstance(page._pile.currentWidget(), DefisPage)
+        assert not page._choix.isHidden(), "les défis se lisent jeu par jeu"
+        avant = page._defis
+        page._boutons[jeux[1]].click()
+        assert page.rubrique_courante == DEFIS
+        assert page._pile.currentWidget() is page._defis and page._defis is not avant
+        assert page._defis.game.id == jeux[1] and page._pile.indexOf(avant) == -1
