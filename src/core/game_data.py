@@ -280,7 +280,7 @@ class GameData:
     # échec, jamais au lancement : un mod qui en remplace un ne bloque rien.
     fichiers_essentiels: tuple[str, ...] = ()
     # Logos joués au démarrage (HP3), relatifs au dossier des jeux : la rubrique
-    # « Passer les vidéos de lancement » les renomme (`videos_lancement.py`).
+    # « Passer les logos » les renomme (`videos_lancement.py`).
     videos_lancement: tuple[str, ...] = ()
 
     @property

@@ -293,6 +293,21 @@ class TestLigneDeProfil:
         s = self._session(tmp_path, "serpentard", annee=1)
         s._monitor.start = lambda proc, nom, *, relance: None
         envois = []
-        s._presence.set_playing = lambda *args: envois.append(args)
+        s._presence.set_playing = lambda *args, **kw: envois.append(args)
         s.demarrer(_FauxProcess(), "HP1", "hp1")
         assert envois == [("HP1", "hp1", "Serpentard · 1ʳᵉ année")]
+
+    def test_la_carte_est_reposee_quand_le_jeu_sauvegarde(self, tmp_path, qtbot, monkeypatch):
+        """Le lieu et l'avancement suivent la partie : relus au battement d'après une sauvegarde."""
+        s = self._session(tmp_path, "serpentard", annee=1)
+        s._monitor.start = lambda proc, nom, *, relance: None
+        s._presence.set_playing = lambda *args, **kw: None
+        relues = []
+        monkeypatch.setattr(s, "_presence_partie", lambda nom, jeu: relues.append(jeu))
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        assert relues == ["hp1"]
+        s._on_battement()
+        assert relues == ["hp1"]                       # rien n'a changé
+        monkeypatch.setattr("src.ui.game_session.sauvegardes.releve", lambda spec: {"Save0.usa": object()})
+        s._on_battement()
+        assert relues == ["hp1", "hp1"]

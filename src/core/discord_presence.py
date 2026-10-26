@@ -61,6 +61,11 @@ _ASSET_LOGO = "logo"
 _CLE_SURE = re.compile(r"[a-z0-9_]{1,32}")
 
 
+def _borne(texte: str) -> str:
+    """Discord refuse TOUTE l'activité, en silence, dès qu'un texte dépasse 128 caractères."""
+    return texte if len(texte) <= 128 else texte[:127] + "…"
+
+
 def _cle_asset(game_id: str) -> str:
     """L'id du jeu comme clé d'image, ou "" s'il n'en a pas la forme."""
     cle = (game_id or "").lower()
@@ -137,7 +142,8 @@ class DiscordPresence:
 
     # ── API publique (thread-safe, jamais bloquante) ──
 
-    def set_playing(self, game_name: str, game_id: str = "", ligne: str = "") -> None:
+    def set_playing(self, game_name: str, game_id: str = "", ligne: str = "", partie: str = "",
+                    debut: float | None = None) -> None:
         """Affiche « Joue à <game_name> » avec le bouton vers le site.
 
         L'activité est composée ICI, sur le thread appelant, et non dans le
@@ -150,10 +156,20 @@ class DiscordPresence:
         `ligne` est la seconde ligne de la carte (« Serdaigle · 6ᵉ année »),
         composée par l'appelant : la maison vit dans le thème, donc côté `ui`.
         Vide, elle est omise plutôt qu'envoyée blanche.
+
+        `partie` (2026-10-26, Ludo : « tu peux améliorer les choses ? ») : où en
+        est la partie, lu dans la sauvegarde comme sur la fiche (« Parc de
+        Poudlard · 9 cartes sur 25 »). Elle prend la seconde ligne ; la maison
+        et l'année passent alors au survol de la jaquette. `debut` garde le
+        chrono de la partie quand la carte est reposée après une sauvegarde.
         """
+        if partie:
+            ligne, survol = partie, ligne
+        else:
+            survol = ""
         activite: dict[str, Any] = {
-            "details": tr("Joue à {}").format(game_name),
-            "timestamps": {"start": int(time.time())},
+            "details": _borne(tr("Joue à {}").format(game_name)),
+            "timestamps": {"start": int(debut if debut is not None else time.time())},
             "assets": {"small_image": _ASSET_LOGO, "small_text": "Accio Launcher"},
             # Deux boutons, le maximum de Discord. Ils ne sont vus que des
             # AUTRES : c'est le seul endroit où les amis d'un joueur croisent
@@ -164,12 +180,13 @@ class DiscordPresence:
             ],
         }
         if ligne:
-            activite["state"] = ligne
+            activite["state"] = _borne(ligne)
         # La jaquette en grande image, le logo en pastille : sans image, la
         # carte d'activité n'était qu'une ligne de texte grise.
         cle = _cle_asset(game_id)
         if cle:
-            activite["assets"].update(large_image=cle, large_text=game_name)
+            activite["assets"].update(large_image=cle,
+                                      large_text=_borne(f"{game_name} · {survol}" if survol else game_name))
         self._post(("set", activite))
 
     def clear(self) -> None:

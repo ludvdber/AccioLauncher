@@ -100,6 +100,33 @@ def phrase_resume(resume: folio.Resume) -> str:
     return tr(cle).format(_nombre(resume.trouvees), _nombre(resume.total))
 
 
+def lire_resume(game, system: Path, langue: str) -> folio.Resume | None:
+    """Où en est la dernière partie d'un jeu de `folio.FICHES`, lu dans ses sauvegardes.
+
+    Partagé par la fiche et la carte Discord (`GameSession`). Pur : se lit
+    aussi hors du fil de l'interface.
+    """
+    from src.core import sauvegardes
+    if game.id == "hp4":
+        return folio_hp4.resume(sauvegardes.fichiers(game.sauvegardes), system, langue)
+    if game.id == "hp5":
+        return folio_hp5.resume(sauvegardes.fichiers(game.sauvegardes))
+    if game.id == "hp6":
+        return folio_hp6.resume(sauvegardes.fichiers(game.sauvegardes))
+    if game.id == "hp2":
+        # HP2 numérote ses emplacements par dossier (`Slot1/Save0.usa`).
+        return folio_hp2.resume(game.sauvegardes, system, langue)
+    if game.id in ("hp1", "hp3"):
+        lire = folio_hp3.resume if game.id == "hp3" else folio.resume_hp1
+        return lire(sauvegardes.fichiers(game.sauvegardes), system, langue)
+    return None
+
+
+def ligne_discord(resume: folio.Resume) -> str:
+    """« Parc de Poudlard · 9 cartes sur 25 » : la partie, sur la carte Discord."""
+    return " · ".join(p for p in (lieu_resume(resume), phrase_resume(resume)) if p)
+
+
 def lieu_resume(resume: folio.Resume) -> str:
     """Ce qui suit « Dernière partie… » : le lieu que le jeu nomme, ou pour
     HP6 son chapitre (l'avancement de HP5 est déjà dans le bloc)."""

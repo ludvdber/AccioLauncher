@@ -498,7 +498,7 @@ class RubriquesDuJeu:
         return True
 
     def _section_videos(self, corps: QVBoxLayout) -> bool:
-        """« Passer les vidéos de lancement » (HP3) : les logos que le catalogue nomme."""
+        """« Passer les logos » (HP3) : les logos que le catalogue nomme."""
         videos = self.game.videos_lancement
         dossier = self.manager.config.install_path
         etat = videos_lancement.passees(dossier, videos) if videos else None
@@ -507,7 +507,7 @@ class RubriquesDuJeu:
         bascule = ToggleSwitch(etat)
         bascule.toggled.connect(lambda oui: self._on_videos(bascule, oui))
         carte = Carte()
-        carte.ajouter(self._ligne(tr("Passer les vidéos de lancement"), bascule, tr(
+        carte.ajouter(self._ligne(tr("Passer les logos"), bascule, tr(
             "Le jeu s'ouvre directement sur son menu, sans les logos des studios. "
             "Les vidéos sont gardées : il suffit de rallumer pour les revoir.")))
         self._egaliser(carte)

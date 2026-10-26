@@ -24,6 +24,7 @@ rattrapée après une coupure est OBSERVÉE et non devinée.
 import logging
 import subprocess
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -33,6 +34,7 @@ from src.core import (
     captures,
     config_cassee,
     diagnostic_plantage,
+    folio,
     progression,
     reparation_config,
     sauvegardes,
@@ -42,7 +44,8 @@ from src.core import (
 )
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
-from src.core.i18n import tr
+from src.core.i18n import get_language, tr
+from src.ui import resume_partie
 from src.ui.process_monitor import ProcessMonitor
 from src.ui.theme import THEMES
 
@@ -90,6 +93,9 @@ class GameSession(QObject):
         # Le processus lancé : c'est SON plantage qu'on cherche au journal de
         # Windows, pas celui d'un autre (`diagnostic_plantage`).
         self._pid: int | None = None
+        # La carte Discord : son chrono, et les sauvegardes telles qu'à sa dernière pose.
+        self._presence_debut: float | None = None
+        self._presence_releve: dict[str, sauvegardes.Etat] = {}
         # Les sauvegardes telles qu'elles étaient AU LANCEMENT : comparées à
         # celles de la fermeture, elles disent dans laquelle on a joué.
         self._avant: dict[str, sauvegardes.Etat] = {}
@@ -112,9 +118,37 @@ class GameSession(QObject):
         self._avant = sauvegardes.releve(self._spec(game_id))
         jeu = self._manager.get_game_by_id(game_id)
         self._monitor.start(process, game_name, relance=jeu is not None and jeu.relance)
+        self._presence_debut = time.time()
+        self._presence_releve = dict(self._avant)
         if self._manager.config.discord_presence:
-            self._presence.set_playing(game_name, game_id, self.ligne_profil(game_id))
+            self._presence.set_playing(game_name, game_id, self.ligne_profil(game_id),
+                                       debut=self._presence_debut)
+            self._presence_partie(game_name, game_id)
         self.demarree.emit(game_name)
+
+    def _presence_partie(self, game_name: str, game_id: str) -> None:
+        """Repose la carte Discord avec où en est la partie (lieu, avancement).
+
+        Lue dans les sauvegardes comme la fiche (`resume_partie.lire_resume`),
+        dans un fil à part : un paquet UE1 se lit en quelques dizaines de ms.
+        Rien de lisible : la carte reste celle posée au lancement.
+        """
+        game = self._manager.get_game_by_id(game_id)
+        if game is None or game.id not in folio.FICHES:
+            return
+        system = self._manager.config.install_path / Path(game.executable).parent
+        ligne, debut, langue = self.ligne_profil(game_id), self._presence_debut, get_language()
+
+        def lire() -> None:
+            try:
+                resume = resume_partie.lire_resume(game, system, langue)
+                partie = resume_partie.ligne_discord(resume) if resume is not None else ""
+            except Exception:   # une sauvegarde illisible ne coûte que la ligne de la carte
+                log.debug("Carte Discord : partie de %s illisible", game_id, exc_info=True)
+                return
+            if partie and self._game_id == game_id:
+                self._presence.set_playing(game_name, game_id, ligne, partie, debut)
+        threading.Thread(target=lire, name="discord-partie", daemon=True).start()
 
     def ligne_profil(self, game_id: str) -> str:
         """« Serdaigle · 6ᵉ année » : la seconde ligne de la carte Discord.
@@ -144,8 +178,15 @@ class GameSession(QObject):
         return game.sauvegardes if game is not None else None
 
     def _on_battement(self) -> None:
-        """Le jeu tourne encore : on rafraîchit le filet de reprise."""
+        """Le jeu tourne encore : on rafraîchit le filet de reprise, et la carte
+        Discord si le jeu vient de sauvegarder (une minute au plus de retard)."""
         stats.battre_session(datetime.now())
+        if not self._manager.config.discord_presence or not self._game_id:
+            return
+        releve = sauvegardes.releve(self._spec(self._game_id))
+        if releve != self._presence_releve:
+            self._presence_releve = releve
+            self._presence_partie(self._monitor.game_name, self._game_id)
 
     def _on_game_exited(self, game_name: str, code: object, duree: float) -> None:
         """Fin du jeu. `duree` est le temps OBSERVÉ, grâce exclue ; ce qui compte

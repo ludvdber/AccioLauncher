@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
-from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6, sauvegardes
+from src.core import folio, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
@@ -18,7 +18,7 @@ from src.ui.clickable_label import ClickableLabel
 from src.ui.composants import police
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.icon_button import pixmap_icone
-from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, phrase_derniere_partie
+from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, lire_resume, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
 from src.core.formatting import format_size
 
@@ -636,17 +636,7 @@ class InfoPanel(QWidget):
         if game.id not in folio.FICHES or not self._manager.is_installed(game.id):
             return None
         system = self._manager.config.install_path / Path(game.executable).parent
-        if game.id == "hp4":
-            return folio_hp4.resume(sauvegardes.fichiers(game.sauvegardes), system, get_language())
-        if game.id == "hp5":
-            return folio_hp5.resume(sauvegardes.fichiers(game.sauvegardes))
-        if game.id == "hp6":
-            return folio_hp6.resume(sauvegardes.fichiers(game.sauvegardes))
-        if game.id == "hp2":
-            # HP2 numérote ses emplacements par dossier (`Slot1/Save0.usa`).
-            return folio_hp2.resume(game.sauvegardes, system, get_language())
-        lire = folio_hp3.resume if game.id == "hp3" else folio.resume_hp1
-        return lire(sauvegardes.fichiers(game.sauvegardes), system, get_language())
+        return lire_resume(game, system, get_language())
 
     def _lire_avancee(self, game: GameData) -> sauvegardes.Etat | None:
         if not self._manager.is_installed(game.id):

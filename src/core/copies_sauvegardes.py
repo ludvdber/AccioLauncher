@@ -314,6 +314,18 @@ def dossier_du_jeu(jeu: str) -> Path:
     return racine() / jeu
 
 
+def mettre_a_l_abri(jeu: str, spec: Sauvegardes, rel: str) -> bool:
+    """Copie l'état actuel de `rel` s'il ne l'est pas déjà (avant de le remplacer).
+
+    True si une copie existe désormais, False si elle n'a pas pu être faite.
+    """
+    base = sauvegardes.dossier(spec)
+    dossier = _dossier_de(jeu, rel)
+    if base is None or dossier is None:
+        return False
+    return _copier(base / rel, dossier, spec)[0] is not None
+
+
 def revenir(jeu: str, spec: Sauvegardes, version: Version) -> bool:
     """Remet cette version à la place de la sauvegarde. True si c'est fait.
 

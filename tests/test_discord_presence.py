@@ -51,11 +51,12 @@ class _FakeDiscord:
         pass
 
 
-def _run_flow(monkeypatch, partial: bool, ligne: str = "") -> _FakeDiscord:
+def _run_flow(monkeypatch, partial: bool, ligne: str = "", partie: str = "",
+              debut: float | None = None) -> _FakeDiscord:
     fake = _FakeDiscord(partial_reads=partial)
     monkeypatch.setattr("src.core.discord_presence._open_ipc", lambda: fake)
     p = DiscordPresence(client_id="123456789012345678")
-    p.set_playing("Harry Potter à l'école des sorciers", "hp1", ligne)
+    p.set_playing("Harry Potter à l'école des sorciers", "hp1", ligne, partie, debut)
     time.sleep(0.3)
     p.clear()
     time.sleep(0.2)
@@ -100,6 +101,18 @@ class TestCarte:
     def test_la_ligne_maison_annee_devient_le_state(self, monkeypatch):
         fake = _run_flow(monkeypatch, partial=False, ligne="Serdaigle · 6ᵉ année")
         assert fake.received[1][1]["args"]["activity"]["state"] == "Serdaigle · 6ᵉ année"
+
+    def test_la_partie_prend_la_ligne_la_maison_passe_au_survol(self, monkeypatch):
+        fake = _run_flow(monkeypatch, partial=False, ligne="Serdaigle · 6ᵉ année",
+                         partie="Serre · 9 cartes sur 25", debut=1_790_000_000)
+        activite = fake.received[1][1]["args"]["activity"]
+        assert activite["state"] == "Serre · 9 cartes sur 25"
+        assert activite["assets"]["large_text"] == "Harry Potter à l'école des sorciers · Serdaigle · 6ᵉ année"
+        assert activite["timestamps"]["start"] == 1_790_000_000   # le chrono continue
+
+    def test_un_texte_trop_long_est_coupe_plutot_que_refuse(self, monkeypatch):
+        fake = _run_flow(monkeypatch, partial=False, partie="x" * 300)
+        assert len(fake.received[1][1]["args"]["activity"]["state"]) == 128
 
     def test_sans_ligne_aucun_state_blanc(self, monkeypatch):
         fake = _run_flow(monkeypatch, partial=False)

@@ -539,7 +539,7 @@ _EXTENSIONS_VIDEO = (".bik", ".bk2")
 
 
 def _videos_de_lancement_valides(brut: Any) -> tuple[str, ...]:
-    """Logos joués au démarrage, que « Passer les vidéos de lancement » renomme.
+    """Logos joués au démarrage, que « Passer les logos » renomme.
 
     Même garde que `essential_files`, tout ou rien, plus l'extension.
     """

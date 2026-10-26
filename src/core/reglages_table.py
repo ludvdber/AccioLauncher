@@ -383,12 +383,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # HP6, le ciel ([Accio.Graphics] SkyMode, SkyHour, SkyColor de source/sky.h du
     # correctif), vu en jeu le 2026-10-26 ; relu dans la seconde, partie en cours
     # comprise. L'ini livré porte SkyMode=1 (bleu) : le premier choix (0) vaut pour
-    # une clé absente, comme vert_relief. La lumière au sol ne suit pas l'heure.
+    # une clé absente, comme vert_relief. En heure réelle ou choisie, le jeu passe
+    # à son propre moment (timeofday.cpp du correctif) : lumière, brume, personnages.
     Reglage("ciel", "Accio.Graphics", "SkyMode",
             "Ciel",
             "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure "
-            "réelle » suit l'horloge de l'ordinateur, de l'aube à la nuit ; le paysage garde "
-            "sa lumière de jour. Se change aussi pendant la partie.",
+            "réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son "
+            "matin, son midi ou son coucher, lumière et personnages compris. Se change aussi "
+            "pendant la partie.",
             choix=(0, 1, 2, 3, 4), zero="D'origine",
             etiquettes=((1, "Bleu"), (2, "Heure réelle"), (3, "Heure choisie"),
                         (4, "Couleur choisie")),

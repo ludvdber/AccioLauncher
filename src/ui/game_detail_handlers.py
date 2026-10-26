@@ -944,10 +944,12 @@ def _actions_fichiers(view: GameDetailView, game: GameData):
         actions.append((tr("Désinstaller le jeu"), lambda: on_uninstall(view)))
     # Même désinstallé : les copies vivent hors du dossier du jeu, et c'est
     # peut-être justement pour les récupérer qu'on revient.
-    if game.sauvegardes is not None and copies_sauvegardes.versions(game.id):
+    # Installé sans copie encore : on peut déjà y importer une partie (2026-10-26).
+    if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id)
+                                         or view.manager.get_state(game.id) == GameState.INSTALLED):
         # Court : le rail fait 218 px, l'ancien libellé y était coupé
-        # (capture de Ludo, 2026-10-16).
-        actions.append((tr("Restaurer une sauvegarde"),
+        # (capture de Ludo, 2026-10-16). Versions, export et import.
+        actions.append((tr("Sauvegardes"),
                         lambda: _ouvrir_copies(view, game)))
     return actions
 

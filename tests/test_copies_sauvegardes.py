@@ -298,11 +298,14 @@ class TestFenetre:
                         latest_version="1.0", recommended_version="1.0", sauvegardes=HP2)
         dlg = cd.CopiesDialog(game)
         qtbot.addWidget(dlg)
-        assert dlg._liste.count() == 2
-        assert dlg._liste.item(0).text().endswith("(la plus récente)")
+        # En tête, la sauvegarde telle qu'elle est : elle s'exporte, ne se « remet » pas.
+        assert dlg._liste.count() == 3
+        assert dlg._liste.item(0).text().startswith("Telle qu'elle est maintenant")
+        assert not dlg._bouton.isEnabled() and dlg._exporter_bouton.isEnabled()
+        assert dlg._liste.item(1).text().endswith("(la plus récente)")
         questions = []
-        monkeypatch.setattr(dlg, "_boite", lambda *a: questions.append(a[1:3]) or 0)
-        dlg._liste.setCurrentRow(1)
+        monkeypatch.setattr(dlg, "_boite", lambda *a, **k: questions.append(a[1:3]) or 0)
+        dlg._liste.setCurrentRow(2)
         dlg._remettre()
         assert save.read_bytes() == b"hier"
         titre, texte = questions[0]
@@ -324,7 +327,49 @@ class TestFenetre:
         dlg = cd.CopiesDialog(game, partie_en_cours=lambda: "Harry Potter II")
         qtbot.addWidget(dlg)
         titres = []
-        monkeypatch.setattr(dlg, "_boite", lambda *a: titres.append(a[1]) or 0)
+        monkeypatch.setattr(dlg, "_boite", lambda *a, **k: titres.append(a[1]) or 0)
+        dlg._liste.setCurrentRow(1)
         dlg._remettre()
-        assert titres == ["Partie en cours"]
+        dlg._importer()
+        assert titres == ["Partie en cours", "Partie en cours"]
         assert save.read_bytes() == b"en cours"
+
+    def _jeu(self):
+        from src.core.game_data import GameData
+        return GameData(id="hp2", name="Harry Potter II", year=2002, description="",
+                        developer="", executable="HP2/system/Game.exe", cover_image="",
+                        latest_version="1.0", recommended_version="1.0", sauvegardes=HP2)
+
+    def test_exporter_puis_importer_dans_un_emplacement_libre(self, qtbot, save_dir, monkeypatch, tmp_path):
+        from src.ui import copies_dialog as cd
+        _ecrire(save_dir / "Slot1" / "Save0.usa", b"partie", T0)
+        dlg = cd.CopiesDialog(self._jeu())
+        qtbot.addWidget(dlg)
+        titres = []
+        monkeypatch.setattr(dlg, "_boite", lambda *a, **k: titres.append(a[1]) or 1)
+        zip_ = tmp_path / "partage.zip"
+        monkeypatch.setattr(cd.QFileDialog, "getSaveFileName", lambda *a: (str(zip_), ""))
+        dlg._exporter()
+        assert zip_.is_file() and titres == ["Sauvegarde exportée"]
+        # Import : un emplacement libre est proposé d'abord, sans question.
+        monkeypatch.setattr(cd.QFileDialog, "getOpenFileName", lambda *a: (str(zip_), ""))
+        monkeypatch.setattr(cd._ChoixEmplacement, "exec", lambda self: cd.QDialog.DialogCode.Accepted)
+        dlg._importer()
+        assert (save_dir / "Slot2" / "Save0.usa").read_bytes() == b"partie"
+        assert titres[-1] == "Sauvegarde importée"
+
+    def test_importer_le_fichier_d_un_autre_jeu(self, qtbot, save_dir, monkeypatch, tmp_path):
+        import json
+        import zipfile
+        from src.ui import copies_dialog as cd
+        with zipfile.ZipFile(tmp_path / "hp1.zip", "w") as z:
+            z.writestr("accio.json", json.dumps({"jeu": "hp1", "sauvegarde": "Save0.usa"}))
+            z.writestr("Save0.usa", b"hp1")
+        dlg = cd.CopiesDialog(self._jeu())
+        qtbot.addWidget(dlg)
+        textes = []
+        monkeypatch.setattr(dlg, "_boite", lambda *a, **k: textes.append(a[2]) or 1)
+        monkeypatch.setattr(cd.QFileDialog, "getOpenFileName", lambda *a: (str(tmp_path / "hp1.zip"), ""))
+        dlg._importer()
+        assert textes == ["Cette sauvegarde vient d'un autre jeu."]
+        assert not (save_dir / "Slot1").exists()

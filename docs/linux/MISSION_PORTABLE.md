@@ -29,7 +29,7 @@ Dans cet ordre, en entier :
 - **Launcher 1.2.2** publié (2026-10-17). Nouveautés qui touchent Linux et n'ont **jamais** été vues sous Linux :
   - le **folio** des huit jeux : il lit les sauvegardes dans le préfixe (`drive_c/users/steamuser/Documents/…`)
     et des images dans les paquets des jeux installés (`HPMenu.u`, `HP3_Menu.utx`, `data.big`, `.str`…) ;
-  - **Mes années** : cartes des sauvegardes, statistiques par partie, « Restaurer une sauvegarde » ;
+  - **Mes années** : cartes des sauvegardes, statistiques par partie, « Sauvegardes » ;
   - la **galerie** des captures (F12 en jeu, HP4 à HP7b), rangées dans `Images › Accio Launcher` ;
   - les **versions** d'un jeu (changer de version garde sauvegardes et réglages) ;
   - le liseré et les coins de fenêtre (Windows 11 seulement, rien à voir sous Linux sauf l'absence d'erreur).
@@ -205,7 +205,7 @@ Rien de tout ceci n'a jamais tourné sous Linux. Avec les jeux installés et au 
    ou un chiffre faux : relève le chemin cherché (journal en `debug`) et le contenu réel du dossier.
 2. **Fiche du jeu** : pour HP1 et HP3 avec une sauvegarde, le bloc « Dernière partie … » remplace la description.
 3. **Mes années** : les cartes des sauvegardes (images HP1 et HP2 comprises), les statistiques, et
-   « Restaurer une sauvegarde » sur une **copie** : restaure une copie, vérifie que le jeu la charge, puis remets
+   « Sauvegardes » sur une **copie** : restaure une copie, vérifie que le jeu la charge, puis remets
    l'état d'origine depuis ta sauvegarde.
 4. **Galerie** : F12 dans HP4, HP5 ou HP6 ; la capture apparaît-elle dans la galerie ? Où le jeu l'écrit-il
    dans le préfixe, et où le launcher la range-t-il sur l'hôte (`~/Images/Accio Launcher` ou `~/Pictures/…`) ?
