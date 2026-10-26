@@ -97,14 +97,6 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "Le Prisonnier d'Azkaban peut s'ouvrir directement sur son menu, sans les logos des studios.",
-            "en": "Prisoner of Azkaban can open straight on its menu, without the studio logos.",
-            "es": "El prisionero de Azkaban puede abrirse directamente en su menú, sin los logotipos de los estudios."
-          }
-        },
-        {
-          "genre": "nouveau",
-          "texte": {
             "fr": "Un morceau des jeux peut devenir la musique de fond du launcher, et un haut-parleur coupe tout le son d'un clic.",
             "en": "A track from the games can become the launcher's background music, and a speaker button mutes all sound in one click.",
             "es": "Una pista de los juegos puede ser la música de fondo del launcher, y un altavoz silencia todo el sonido con un clic."

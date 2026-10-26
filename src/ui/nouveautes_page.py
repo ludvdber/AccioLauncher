@@ -171,10 +171,10 @@ class NouveautesPage(QDialog):
             cartes = [_CartePointFort(p) for p in self.nouveautes.points_forts]
             rangee = Rangee(cartes, len(cartes), seuil=720, ecart=18)
             # La hauteur de leur texte, pas celle de la fenêtre : en plein
-            # écran, les cartes prenaient 300 px de vide (Ludo, 2026-10-14).
-            # Seule la rangée est bornée : bornées elles aussi, les cartes
-            # restaient à la hauteur de leur `sizeHint`, calculée pour une
-            # autre largeur, et coupaient leur dernière ligne (2026-10-26).
+            # écran, les cartes prenaient 300 px de vide (Ludo, 2026-10-14) :
+            # le `addStretch` de la page garde ce vide sous la liste. Aucune
+            # borne de taille : bornées à leur `sizeHint`, calculée pour une
+            # autre largeur, les cartes coupaient leur dernière ligne (2026-10-26).
             lay.addWidget(rangee)
         if self.nouveautes.changements:
             lay.addSpacing(26)
