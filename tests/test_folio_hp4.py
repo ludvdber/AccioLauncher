@@ -229,3 +229,29 @@ class TestImagesDuMenu:
 
 def test_icones_de_la_pensine_sans_le_jeu(tmp_path):
     assert folio_hp4.image_menu(tmp_path / "absent", "boucliers") is None
+
+
+class TestJeuxDeCartes:
+    """La composition des jeux de la boutique, relevée dans l'exe (2026-10-26)."""
+
+    def test_chaque_carte_dans_un_seul_jeu(self):
+        cartes = [c for _, groupe in folio_hp4.GROUPES_CARTES for j in groupe for c in j.cartes]
+        assert len(cartes) == len(set(cartes)) == 18 * 7 + 3 * 6 + 5 * 6
+        assert all(0 < c < 203 for c in cartes)
+
+    def test_les_jeux_d_un_personnage_restent_les_siens(self):
+        """Harry 1-49 (et 202), Ron 50-98, Hermione 99-147 : les plages de la table."""
+        groupes = dict(folio_hp4.GROUPES_CARTES)
+        for perso, (debut, fin), _ in folio_hp4.PERSONNAGES:
+            for jeu in groupes[perso]:
+                assert all(debut <= c <= fin or c == 202 for c in jeu.cartes), jeu.image
+
+    def test_le_premier_jeu_de_harry_comme_ses_images(self):
+        """VU : trois Endurance +10, deux Sort +10, un Accio +10, puis la carte sans image."""
+        jeu = dict(folio_hp4.GROUPES_CARTES)["Harry"][0]
+        assert (jeu.image, jeu.cartes, jeu.images) == ("wc_hry_set1", (1, 2, 3, 8, 9, 15, 29), 6)
+
+    def test_pas_d_image_sans_le_jeu_ni_au_dela_des_illustrees(self, tmp_path):
+        jeu = dict(folio_hp4.GROUPES_CARTES)["Ron"][0]
+        assert folio_hp4.image_carte(tmp_path / "absent", jeu, 0) is None
+        assert folio_hp4.image_carte(tmp_path, jeu, jeu.images) is None

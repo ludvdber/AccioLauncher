@@ -24,7 +24,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import folio
+from src.core import folio, images_ea
 from src.core.images_ea import entree_big as _entree_big
 from src.core.images_ea import images_nommees
 
@@ -110,6 +110,79 @@ PERSONNAGES: tuple[tuple[str, tuple[int, int], dict[str, tuple[int, int]]], ...]
 CREATURES = (151, 180)    # cinq créatures, six cartes chacune, communes aux trois
 TITRES_CARTES: dict[str, Nom] = {"folio": (618, "Folio Universitas"),
                                  "creatures": (605, "Créatures")}
+
+
+# Les jeux de cartes de la boutique (relevés le 2026-10-26, `notes/HP4.md`) :
+# l'exe en garde la composition à 0x770E40, huit entiers par jeu de personnage
+# (sept cartes et un 0), sept par jeu de quête ou de créature ; `data.big`
+# nomme le flux de chaque jeu dans son index (« Harry_1 » → {363C1EAD-…}.str),
+# et ce flux porte ses illustrations `wc_hry_set1_01`… dans l'ordre de la
+# liste. VU sur Harry 1 et 2, Ron 1 et 6 : l'icône et la valeur imprimées sur
+# chaque image sont celles de la carte de même rang. La dernière carte d'un
+# jeu n'a pas d'illustration, ni la carte de la créature elle-même (sa
+# cinquième image est une maquette « Dugbog 05 3D ») : `images` compte celles
+# qui en ont. Les feux d'artifice (186-190, 201) n'ont pas de jeu dans la
+# boutique du PC.
+#
+# Les titres sont ceux de la boutique, dans la table EN JEU (`textes_jeu`) :
+# « Jeu 1 » à « Jeu 6 » (612-617) pour un personnage, « Jeu 1 » à « Jeu 3 »
+# (607-609) pour les quêtes, le nom de la créature. Le repli français « Jeu {} »
+# se complète du numéro du jeu.
+@dataclass(frozen=True)
+class JeuCartes:
+    titre: Nom
+    image: str                  # préfixe des illustrations : « wc_hry_set1 »
+    flux: str                   # GUID de l'entrée `.str` de data.big
+    cartes: tuple[int, ...]     # indices de la table de l'exe, dans l'ordre des images
+    images: int                 # les premières cartes qui ont une illustration
+
+
+def _jeux_perso(prefixe: str, flux: tuple[str, ...],
+                cartes: tuple[tuple[int, ...], ...]) -> tuple[JeuCartes, ...]:
+    return tuple(JeuCartes((612 + k, "Jeu {}"), f"wc_{prefixe}_set{k + 1}", f, c, 6)
+                 for k, (f, c) in enumerate(zip(flux, cartes, strict=True)))
+
+
+GROUPES_CARTES: tuple[tuple[Nom | str, tuple[JeuCartes, ...]], ...] = (
+    ("Harry", _jeux_perso("hry", (
+        "363C1EAD-12D1-4553-8756-7711F5893584", "4C452D7C-3A24-48E1-98F4-87D530ED7091",
+        "A642D35A-D373-431D-8D26-B11C5EE5BBEA", "CFB3EF28-BB34-407B-AF5D-D8BB79B7A502",
+        "5B3CFE57-6FA1-4E2E-9642-D651B615E6F4", "530C3FA0-673B-471F-9B9A-4E0049BECA19"), (
+        (1, 2, 3, 8, 9, 15, 29), (4, 5, 10, 11, 16, 37, 7), (6, 12, 17, 39, 22, 41, 14),
+        (13, 18, 38, 23, 33, 24, 47), (19, 40, 25, 44, 20, 26, 21), (30, 34, 202, 27, 32, 36, 28)))),
+    ("Ron", _jeux_perso("ron", (
+        "C8E5E838-E9E6-4034-A474-717187CF665F", "9CDFA275-1E74-4F92-8F97-0F0AF8B0EA41",
+        "F69933C2-DD8A-4594-88CE-283E209B1B55", "94E071B2-8246-4C1D-AB85-AB9C34BE1E42",
+        "734620E0-A008-44B3-B75F-85998EC55716", "677CE73E-C37B-4728-9893-FFE64E37C883"), (
+        (57, 58, 59, 90, 83, 86, 96), (60, 61, 82, 93, 89, 50, 79), (62, 85, 87, 51, 72, 65, 63),
+        (94, 88, 52, 73, 66, 74, 56), (80, 53, 75, 67, 81, 76, 78), (54, 68, 69, 77, 55, 70, 71)))),
+    ("Hermione", _jeux_perso("hermione", (
+        "8945393A-39D9-4651-9C0C-1808E59B8FD1", "5E306C0E-0600-4D1A-8AE5-37D5014D198B",
+        "2899CA56-D2C2-4C86-B238-2BD83599FAB5", "CDBA9833-0E78-4449-A501-E7E28910F40C",
+        "4C6A54D5-1C7F-4B87-AED5-532339A7C07A", "DCF10E48-D649-4081-A250-6D6C9FD134BA"), (
+        (120, 121, 122, 113, 114, 138, 127), (123, 124, 115, 116, 141, 99, 126),
+        (125, 117, 130, 100, 106, 134, 119), (118, 131, 101, 107, 137, 108, 112),
+        (142, 102, 109, 135, 133, 110, 145), (103, 136, 128, 111, 104, 129, 105)))),
+    # Un personnage garde son nom. Les jeux de quêtes suivent leurs images :
+    # objets des niveaux, statues de dragon, cartes éphémères.
+    ((606, "Quêtes"), (
+        JeuCartes((607, "Jeu {}"), "wc_quests_set1", "05C7D38B-5A5C-4DBB-A3AF-1799186FC9DF",
+                  (191, 192, 193, 194, 195, 149), 5),
+        JeuCartes((608, "Jeu {}"), "wc_quests_set2", "976162D3-07DA-4D3A-8BA5-47DE05AF63F8",
+                  (196, 197, 198, 199, 200, 150), 5),
+        JeuCartes((609, "Jeu {}"), "wc_quests_set3", "243A020A-32F5-4FB6-A0BF-511AE7A54AA2",
+                  (181, 182, 183, 184, 185, 148), 5))),
+    ((605, "Créatures"), (
+        JeuCartes((345, "Fangieux"), "wc_dugbog", "138851E3-044A-446E-8659-C23456EC245A",
+                  (152, 154, 155, 153, 151, 156), 4),
+        JeuCartes((585, "Salamandre"), "wc_salamander", "A6800F40-6335-4AA0-AF3A-08C6C406769B",
+                  (158, 160, 161, 159, 157, 162), 4),
+        JeuCartes((351, "Erkling"), "wc_erkling", "BC3D8AC8-FF71-4C2C-BCE6-FCB9873FCDF7",
+                  (164, 166, 167, 165, 163, 168), 4),
+        JeuCartes((591, "Scroutt à pétard"), "wc_skrewt", "B33214FF-7BCD-4133-BB1D-4C78FF3B3777",
+                  (170, 172, 173, 171, 169, 174), 4),
+        JeuCartes((516, "Vampirmite"), "wc_vampyr", "EA84238A-63FD-4F32-9886-689614A499FC",
+                  (176, 178, 179, 177, 175, 180), 4))))
 
 
 @dataclass(frozen=True)
@@ -410,6 +483,39 @@ def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
     except (OSError, struct.error):
         log.warning("Folio HP4 : icônes du menu illisibles", exc_info=True)
     return images
+
+
+def image_carte(system: Path, jeu: JeuCartes, rang: int) -> tuple[int, int, bytes] | None:
+    """L'illustration de la carte de rang `rang` (0 en premier) d'un jeu, telle
+    que la boutique du jeu installé la montre : 512 × 256 pour un personnage,
+    256 × 256 sinon (B V R A). None sans illustration ou sans le jeu.
+
+    Environ 0,08 s à décoder : à appeler hors du fil de l'interface."""
+    if not 0 <= rang < jeu.images:
+        return None
+    return _image_carte(str(system), jeu.flux, f"{jeu.image}_{rang + 1:02d}")
+
+
+@lru_cache(maxsize=8)
+def _image_carte(system_txt: str, flux: str, nom_image: str) -> tuple[int, int, bytes] | None:
+    try:
+        donnees, positions = _flux_cartes(system_txt, flux)
+        q = positions.get(nom_image)
+        return images_ea.image(donnees, q, cote_max=512) if q is not None else None
+    except (OSError, struct.error):
+        log.warning("Folio HP4 : carte %s illisible", nom_image, exc_info=True)
+        return None
+
+
+@lru_cache(maxsize=2)
+def _flux_cartes(system_txt: str, flux: str) -> tuple[bytes, dict[str, int]]:
+    """Le flux d'un jeu de cartes (1,2 Mo) et ses images : les cartes d'un même
+    jeu se lisent à la suite, le flux ne se relit pas pour chacune."""
+    big = next((p for p in Path(system_txt).iterdir() if p.name.lower() == "data.big"), None)
+    if big is None:
+        return b"", {}
+    donnees = _entree_big(big, "{" + flux + "}.str")
+    return donnees, images_nommees(donnees)
 
 
 def nom(table: tuple[str, ...], ref: Nom) -> str | None:

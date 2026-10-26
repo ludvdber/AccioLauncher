@@ -389,8 +389,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Ciel",
             "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure "
             "réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son "
-            "matin, son midi ou son coucher, lumière et personnages compris. Se change aussi "
-            "pendant la partie.",
+            "matin, son midi ou son coucher, lumière et personnages compris. Attention : une "
+            "quête qui attend un autre moment de la journée peut ne pas se déclencher ; revenir "
+            "à « Bleu » rend au jeu son heure. Se change aussi pendant la partie.",
             choix=(0, 1, 2, 3, 4), zero="D'origine",
             etiquettes=((1, "Bleu"), (2, "Heure réelle"), (3, "Heure choisie"),
                         (4, "Couleur choisie")),

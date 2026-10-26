@@ -14,18 +14,20 @@ et toutes les cases restent alignées sur dix colonnes.
 """
 
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from html import escape
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QImage, QPainter, QPainterPath, QPixmap
+from PyQt6.QtCore import QRectF, QSize, Qt, QTimer
+from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -41,6 +43,7 @@ from src.core import (
     sauvegardes,
 )
 from src.core.i18n import get_language, tr
+from src.ui.carte_3d import Carte3D
 from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.folio_page import (
@@ -57,7 +60,7 @@ from src.ui.folio_page import (
     nom_emplacement,
     pixmap_texture,
 )
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
@@ -519,6 +522,76 @@ class FolioPageHP2(FolioPage):
 
 # ── HP4 ──
 
+_VIGNETTE_HP4 = 30                      # hauteur d'une case ; une carte de personnage est deux fois plus large
+_GRANDE_CARTE = QSize(420, 230)         # la carte de personnage fait 512 × 256 : jamais agrandie
+
+
+def _illustration(system: Path, jeu: folio_hp4.JeuCartes, rang: int,
+                  taille: QSize | None) -> QImage | None:
+    """L'illustration d'une carte, réduite à `taille` (px physiques) ou entière.
+    Appelée sur le fil de décodage : une QImage, jamais une QPixmap."""
+    image = folio_hp4.image_carte(system, jeu, rang)
+    if image is None:
+        return None
+    largeur, hauteur, pixels = image
+    brute = QImage(pixels, largeur, hauteur, largeur * 4, QImage.Format.Format_ARGB32)
+    if taille is None:
+        return brute.copy()          # la copie garde ses pixels : `pixels` peut s'en aller
+    return brute.scaled(taille, Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation)
+
+
+class _VignetteHP4(QPushButton):
+    """Une carte d'un jeu de la boutique : son illustration si elle est
+    possédée, une carte vide bordée d'or si le jeu ne l'illustre pas, des
+    pointillés si elle reste à obtenir (la montrer serait la dévoiler)."""
+
+    def __init__(self, jeu: folio_hp4.JeuCartes, rang: int, possedee: bool, taille: QSize,
+                 titre_jeu: str) -> None:
+        super().__init__()
+        self.jeu, self.rang, self.possedee, self.titre_jeu = jeu, rang, possedee, titre_jeu
+        self._image: QImage | None = None
+        self._pix: QPixmap | None = None
+        self.setCheckable(True)
+        self.setAutoDefault(False)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedSize(taille)
+        self.setAccessibleName(f"{titre_jeu}, " + (tr("Obtenue") if possedee
+                                                   else tr("Pas encore obtenue")))
+
+    def poser(self, image: QImage | None) -> None:
+        self._image, self._pix = image, None
+        self.update()
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        cadre = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        choisie = self.isChecked()
+        or_vif = accent_qcolor(255)
+        if self._image is not None:
+            if self._pix is None:
+                self._pix = QPixmap.fromImage(self._image)
+                self._pix.setDevicePixelRatio(self.devicePixelRatioF())
+            chemin = QPainterPath()
+            chemin.addRoundedRect(cadre, 3, 3)
+            p.setClipPath(chemin)
+            p.drawPixmap(cadre, self._pix, QRectF(self._pix.rect()))
+            p.setClipping(False)
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(or_vif, 2) if choisie else Qt.PenStyle.NoPen)
+        elif self.possedee:
+            p.setBrush(bg_qcolor(255))
+            p.setPen(QPen(or_vif if choisie else accent_qcolor(150), 2 if choisie else 1))
+        else:
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            stylo = QPen(or_vif if choisie else QColor(255, 255, 255, 46), 2 if choisie else 1)
+            stylo.setStyle(Qt.PenStyle.DashLine)
+            p.setPen(stylo)
+        p.drawRoundedRect(cadre, 3, 3)
+        p.end()
+
+
 class FolioPageHP4(FolioPage):
     """Les trois emplacements de `HPGOF` : rang, boucliers, maîtrise, quêtes.
 
@@ -537,6 +610,15 @@ class FolioPageHP4(FolioPage):
                                     rogner=True, colonnes=(0.27, 0.73))
         self._carte = image_bgra(folio_hp4.image_menu(self._system, "cartes"), 30, dpr,
                                  rogner=True, colonnes=(0.27, 0.73))
+        # Les illustrations des cartes, 0,08 s chacune : décodées sur un fil à
+        # part et posées au fil de l'eau, comme les vignettes de la galerie.
+        self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="folio_hp4")
+        self._attendues: list = []
+        self._grande_attendue = None
+        self._carte_montree_hp4 = None
+        self._chargeur = QTimer(self)
+        self._chargeur.setInterval(30)
+        self._chargeur.timeout.connect(self._poser_pretes)
 
     def _chemin(self, partie) -> Path | None:
         return None      # un fichier, plusieurs emplacements : pas de temps par partie
@@ -587,38 +669,135 @@ class FolioPageHP4(FolioPage):
         return _page(contenu)[0]
 
     def _cartes(self, cartes: frozenset[int]) -> QFrame:
-        """Le Folio Universitas : les cartes possédées par personnage, par famille."""
+        """Le Folio Universitas : les jeux de la boutique, chaque carte possédée
+        avec son illustration, et la carte choisie en grand, qui s'incline sous
+        la souris comme dans le jeu."""
+        self._attendues = []           # les vignettes d'une autre partie ne se posent plus
         cadre = QFrame()
         cadre.setObjectName("coupe")
-        g = QGridLayout(cadre)
-        g.setContentsMargins(20, 14, 20, 16)
-        g.setHorizontalSpacing(16)
-        g.setVerticalSpacing(10)
-        # Le compte de ce qui est affiché dessous, personnages et créatures.
-        total = (sum(folio_hp4.compte(cartes, plage) for _, plage, _ in folio_hp4.PERSONNAGES)
-                 + folio_hp4.compte(cartes, folio_hp4.CREATURES))
-        g.addLayout(en_tete(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"]), self._carte,
-                            (tr("{} carte") if total == 1 else tr("{} cartes")).format(total)),
-                    0, 0, 1, 3)
+        lay = QVBoxLayout(cadre)
+        lay.setContentsMargins(20, 14, 20, 18)
+        lay.setSpacing(10)
+        jeux = [j for _, groupe in folio_hp4.GROUPES_CARTES for j in groupe]
+        total = sum(1 for j in jeux for c in j.cartes if c in cartes)
+        lay.addLayout(en_tete(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"]), self._carte,
+                              (tr("{} carte") if total == 1 else tr("{} cartes")).format(total)))
+
+        # La carte choisie : grande à gauche, ce qu'on en sait à droite.
+        haut = QHBoxLayout()
+        haut.setSpacing(20)
+        self._grande = Carte3D()
+        self._grande.setFixedSize(_GRANDE_CARTE)
+        haut.addWidget(self._grande)
+        fiche = QVBoxLayout()
+        fiche.setSpacing(4)
+        fiche.addStretch()
+        self._carte_jeu = surtitre("")
+        self._carte_etat = texte("", 14, ENCRE, retour=True)
+        fiche.addWidget(self._carte_jeu)
+        fiche.addWidget(self._carte_etat)
+        fiche.addStretch()
+        haut.addLayout(fiche, stretch=1)
+        lay.addLayout(haut)
+
+        self._groupe_cartes = QButtonGroup(cadre)
+        self._groupe_cartes.setExclusive(True)
+        self._vignettes: list[_VignetteHP4] = []
         or_clair = current_theme().accent_light
-        for rang, (perso, plage, familles) in enumerate(folio_hp4.PERSONNAGES, 1):
-            n = folio_hp4.compte(cartes, plage)
-            g.addWidget(texte(perso, 14, ENCRE if n else ENCRE_DOUCE), rang, 0)
-            g.addWidget(texte((tr("{} carte") if n == 1 else tr("{} cartes")).format(n), 13,
-                              or_clair if n else ENCRE_DOUCE), rang, 1)
-            detail = [f"{self._nom_jeu(folio_hp4.FAMILLES[f])} {k}"
-                      for f, p in familles.items() if (k := folio_hp4.compte(cartes, p))]
-            g.addWidget(texte(" · ".join(detail), 13, ENCRE_DOUCE, retour=True), rang, 2)
-        debut, fin = folio_hp4.CREATURES
-        n = folio_hp4.compte(cartes, folio_hp4.CREATURES)
-        rang = len(folio_hp4.PERSONNAGES) + 1
-        g.addWidget(texte(self._nom_jeu(folio_hp4.TITRES_CARTES["creatures"]), 14,
-                          ENCRE if n else ENCRE_DOUCE), rang, 0)
-        g.addWidget(texte(f"{n} / {fin - debut + 1}", 13,
-                          or_clair if n == fin - debut + 1 else ENCRE if n else ENCRE_DOUCE),
-                    rang, 1)
-        g.setColumnStretch(2, 1)
+        dpr = self.devicePixelRatioF()
+        for titre, groupe in folio_hp4.GROUPES_CARTES:
+            nom_groupe = titre if isinstance(titre, str) else self._nom_jeu(titre)
+            dans = sum(1 for j in groupe for c in j.cartes if c in cartes)
+            sur = sum(len(j.cartes) for j in groupe)
+            lay.addSpacing(8)
+            ligne = QHBoxLayout()
+            ligne.setSpacing(10)
+            ligne.addWidget(texte(nom_groupe, 15, ENCRE if dans else ENCRE_DOUCE))
+            ligne.addWidget(texte(f"{dans} / {sur}", 13,
+                                  or_clair if dans == sur else ENCRE if dans else ENCRE_DOUCE))
+            ligne.addStretch()
+            lay.addLayout(ligne)
+            jeux_du_groupe = FlowLayout(spacing=16)
+            for k, jeu in enumerate(groupe, 1):
+                jeux_du_groupe.addWidget(self._jeu(nom_groupe, jeu, k, cartes, dpr))
+            lay.addLayout(jeux_du_groupe)
+
+        possedees = [v for v in self._vignettes if v.possedee and v.rang < v.jeu.images]
+        (possedees or self._vignettes)[0].setChecked(True)
+        if self._attendues:
+            self._chargeur.start()
         return cadre
+
+    def _jeu(self, nom_groupe: str, jeu: folio_hp4.JeuCartes, numero: int,
+             cartes: frozenset[int], dpr: float) -> QWidget:
+        """Un jeu de la boutique : son titre, son compte, ses cartes en ligne."""
+        bloc = QWidget()
+        bloc.setStyleSheet("background: transparent;")
+        v = QVBoxLayout(bloc)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(6)
+        titre = self._nom_jeu(jeu.titre).format(numero)
+        dans = sum(1 for c in jeu.cartes if c in cartes)
+        v.addWidget(texte(f"{titre} · {dans} / {len(jeu.cartes)}", 12, ENCRE_DOUCE))
+        rangee = QHBoxLayout()
+        rangee.setSpacing(4)
+        paysage = jeu.image.startswith(("wc_hry", "wc_ron", "wc_hermione"))
+        taille = QSize(_VIGNETTE_HP4 * (2 if paysage else 1), _VIGNETTE_HP4)
+        for rang, carte in enumerate(jeu.cartes):
+            vignette = _VignetteHP4(jeu, rang, carte in cartes, taille, f"{nom_groupe} · {titre}")
+            vignette.toggled.connect(lambda oui, vi=vignette: oui and self._montrer_carte_hp4(vi))
+            self._groupe_cartes.addButton(vignette)
+            self._vignettes.append(vignette)
+            rangee.addWidget(vignette)
+            if vignette.possedee and rang < jeu.images:
+                physique = QSize(round(taille.width() * dpr), round(taille.height() * dpr))
+                self._attendues.append((vignette, self._fil.submit(
+                    _illustration, self._system, jeu, rang, physique)))
+        rangee.addStretch()
+        v.addLayout(rangee)
+        return bloc
+
+    def _montrer_carte_hp4(self, vignette: _VignetteHP4) -> None:
+        """La carte choisie en grand, décodée hors du fil de l'interface."""
+        self._carte_montree_hp4 = vignette
+        self._carte_jeu.setText(vignette.titre_jeu.upper())
+        illustree = vignette.rang < vignette.jeu.images
+        if not vignette.possedee:
+            etat = tr("Pas encore obtenue")
+        elif illustree:
+            etat = tr("Obtenue")
+        else:
+            etat = tr("Obtenue, sans illustration dans le jeu")
+        self._carte_etat.setText(etat)
+        self._grande.poser(None)
+        self._grande_attendue = None
+        if vignette.possedee and illustree:
+            self._grande_attendue = (vignette, self._fil.submit(
+                _illustration, self._system, vignette.jeu, vignette.rang, None))
+            self._chargeur.start()
+
+    def _poser_pretes(self) -> None:
+        restantes = []
+        for vignette, futur in self._attendues:
+            if not futur.done():
+                restantes.append((vignette, futur))
+            elif not futur.cancelled() and futur.exception() is None:
+                vignette.poser(futur.result())
+        self._attendues = restantes
+        if self._grande_attendue is not None and self._grande_attendue[1].done():
+            vignette, futur = self._grande_attendue
+            self._grande_attendue = None
+            if (vignette is self._carte_montree_hp4 and not futur.cancelled()
+                    and futur.exception() is None):
+                self._grande.poser(futur.result())
+        if not self._attendues and self._grande_attendue is None:
+            self._chargeur.stop()
+
+    def done(self, resultat: int) -> None:
+        """La page se ferme : plus rien à décoder pour elle."""
+        self._chargeur.stop()
+        self._fil.shutdown(wait=False, cancel_futures=True)
+        super().done(resultat)
 
     def _jauges(self, titre: folio_hp4.Nom, jauges, partie, colonnes: int = 1) -> QFrame:
         """Une jauge par sort, comme la page de la pensine ; les dix sorts sur

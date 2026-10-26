@@ -100,6 +100,29 @@ class TestHP4:
         assert {"Compétent(e)", "3 / 38", "Wingardium Leviosa", "Gargouilles", "0 / 6",
                 "SORTS", "QUÊTES"} <= textes
 
+    def test_les_jeux_de_cartes_et_la_carte_choisie(self, qtbot, racines):
+        """Une case par carte des 26 jeux ; à l'ouverture, la première carte
+        possédée qui a une illustration est montrée en grand."""
+        from src.ui.folio_jeux import page_folio
+        from tests.test_folio_hp4 import _hpgof
+        dossier = racines / "Local" / "EA" / "HPGOF"
+        dossier.mkdir(parents=True)
+        (dossier / "HPGOF").write_bytes(_hpgof(cartes=[1, 7, 151]))
+        jeu = _jeu("hp4", "HP4/gof_f.exe", {"root": "localappdata", "folders": ["EA/HPGOF"],
+                                             "files": "HPGOF", "first": 1, "slots": "hp4"})
+        page = page_folio(jeu, racines / "Jeux")
+        qtbot.addWidget(page)
+        assert len(page._vignettes) == 18 * 7 + 3 * 6 + 5 * 6
+        assert sum(v.possedee for v in page._vignettes) == 3
+        montree = page._carte_montree_hp4
+        assert (montree.jeu.image, montree.rang) == ("wc_hry_set1", 0)
+        assert page._carte_etat.text() == "Obtenue"
+        # La carte de la créature elle-même n'a pas d'illustration dans le jeu.
+        fangieux = next(v for v in page._vignettes if v.jeu.image == "wc_dugbog" and v.rang == 4)
+        fangieux.click()
+        assert page._carte_etat.text() == "Obtenue, sans illustration dans le jeu"
+        page.done(0)
+
 
 class TestHP6:
     def test_la_partie(self, qtbot, racines):

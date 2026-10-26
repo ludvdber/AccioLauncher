@@ -934,23 +934,24 @@ def _actions_fichiers(view: GameDetailView, game: GameData):
     une erreur de plus à expliquer.
     """
     actions = [(tr("Gérer les versions"), lambda: on_versions_clicked(view))]
-    if view.manager.get_state(game.id) == GameState.INSTALLED:
+    installe = view.manager.get_state(game.id) == GameState.INSTALLED
+    if installe:
         actions.append((tr("Vérifier / réparer les fichiers"),
                         lambda: on_repair(view)))
         actions.append((tr("Ouvrir le dossier du jeu"),
                         lambda: _ouvrir_dossier_du_jeu(view, game)))
-        # Ici depuis ACT-055 : un bouton de la fiche, plus visible que
-        # l'engrenage, pour une action qu'on fait une fois. En dernier.
-        actions.append((tr("Désinstaller le jeu"), lambda: on_uninstall(view)))
     # Même désinstallé : les copies vivent hors du dossier du jeu, et c'est
     # peut-être justement pour les récupérer qu'on revient.
     # Installé sans copie encore : on peut déjà y importer une partie (2026-10-26).
-    if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id)
-                                         or view.manager.get_state(game.id) == GameState.INSTALLED):
+    if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id) or installe):
         # Court : le rail fait 218 px, l'ancien libellé y était coupé
         # (capture de Ludo, 2026-10-16). Versions, export et import.
         actions.append((tr("Sauvegardes"),
                         lambda: _ouvrir_copies(view, game)))
+    if installe:
+        # Ici depuis ACT-055 : un bouton de la fiche, plus visible que
+        # l'engrenage, pour une action qu'on fait une fois. En dernier.
+        actions.append((tr("Désinstaller le jeu"), lambda: on_uninstall(view)))
     return actions
 
 
