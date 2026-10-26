@@ -68,4 +68,4 @@ Suite de [ARCHITECTURE.md](ARCHITECTURE.md), déplacée telle quelle le 2026-10-
 
 - **`speed_tracker.py`** — `SpeedTracker` : vitesse moyenne GLISSANTE sur 5 s (`SPEED_WINDOW`) et temps restant ; `eta` rend -1 quand il ne sait pas (vitesse nulle, ou fini). `should_update_ui` limite l'interface à 2 rafraîchissements par seconde (`UI_UPDATE_INTERVAL`). Le temps restant n'apparaît jamais sur le bouton (règles 121 et 122).
 
-**Modules de `src/core/` décrits ailleurs** (chercher leur nom là) : dans [ARCHITECTURE_UI.md](ARCHITECTURE_UI.md), `atelier`, `demarrage`, `desinstallation`, `encyclopedie`, `folio`, `galerie`, `images_a_refaire`, `nouveautes`, `reglages_conserves`, `textures_ue1` (décrits avec leur page) ; `liens` dans [REGLES.md](REGLES.md) (règle 63).
+**Modules de `src/core/` décrits ailleurs** (chercher leur nom là) : dans [ARCHITECTURE_UI.md](ARCHITECTURE_UI.md), `atelier`, `demarrage`, `desinstallation`, `encyclopedie`, `folio`, `galerie`, `images_a_refaire`, `maillages_ue1`, `nouveautes`, `reglages_conserves`, `textures_ue1` (décrits avec leur page) ; `liens` dans [REGLES.md](REGLES.md) (règle 63).

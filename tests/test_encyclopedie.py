@@ -107,3 +107,34 @@ class TestVue:
         qtbot.addWidget(f1)
         qtbot.addWidget(f2)
         assert f2.sizeHint().height() > f1.sizeHint().height() + 60
+
+
+class TestModeles:
+    def test_hp1_et_hp2_ont_un_modele_par_fiche(self):
+        for rubrique in (encyclopedie.PERSONNAGES, encyclopedie.BESTIAIRE):
+            for jeu in ("hp1", "hp2"):
+                for f in encyclopedie.fiches(rubrique, jeu):
+                    assert f.modele is not None, (rubrique, jeu, f.cle)
+                    assert f.modele.fichier.startswith("System/")
+            for jeu in ("hp3", "hp4", "hp5", "hp6"):
+                assert all(f.modele is None for f in encyclopedie.fiches(rubrique, jeu))
+
+    def test_la_fiche_choisie_montre_son_modele(self, qtbot, tmp_path, monkeypatch):
+        from src.core import maillages_ue1
+        from src.ui.encyclopedie_page import VueEncyclopedie
+        triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+                                          (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
+                                          (maillages_ue1.Materiau("", 0),))
+        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche: (triangle, {}))
+        monkeypatch.setattr(encyclopedie, "image", lambda dossier, fiche: None)
+        vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
+        qtbot.addWidget(vue)
+        vue.montrer("hp1")
+        qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=5000)
+        assert vue.scene is not None and vue.scene.modele.modele is triangle
+        assert vue.fiches[0].property("choisie") is True
+        # Une fiche sans image a reçu la vignette de son modèle.
+        assert all(f.a_une_vignette for f in vue.fiches)
+        vue.choisir(vue.fiches[3])
+        assert vue.fiches[3].property("choisie") and not vue.fiches[0].property("choisie")
+        vue.fermer()

@@ -88,6 +88,8 @@ QFrame#platine { background: #08081a; border: none; border-right: 1px solid rgba
 QFrame#carteJeu {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.14); border-radius: 10px;
 }
+QFrame#carteJeu[modele="true"]:hover { border-color: rgba(214, 167, 44, 0.35); }
+QFrame#carteJeu[choisie="true"] { border-color: rgba(214, 167, 44, 0.6); }
 QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }

@@ -293,6 +293,23 @@ class Paquet:
         except ValueError:
             return None
 
+    def nom_objet(self, ref: int) -> str:
+        """Le nom d'un objet référencé (export si positif, import si négatif)."""
+        return self._classe(ref)
+
+    def objet(self, nom: str, classe: str) -> tuple[_Lecteur, int] | None:
+        """Un lecteur posé après les propriétés de l'export `nom` de `classe`,
+        et la fin de l'objet ; None s'il n'y en a pas."""
+        rang = self._par_nom.get(nom)
+        if rang is None:
+            return None
+        genre, _, taille, position, _ = self._exports[rang]
+        if taille <= 0 or self._classe(genre) != classe:
+            return None
+        lec = _Lecteur(self._d, position)
+        self._brutes(lec, position + taille)
+        return lec, position + taille
+
     def _debut_objet(self, classe: str) -> tuple[int, int] | None:
         """(début des propriétés, fin de l'objet) du premier objet de `classe`."""
         for genre, _, taille, position, drapeaux in self._exports:

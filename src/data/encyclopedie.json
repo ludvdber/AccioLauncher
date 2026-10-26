@@ -29,6 +29,10 @@
       236,
       236
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skharryMesh"
     }
    },
    {
@@ -58,6 +62,10 @@
       150,
       150
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skronMesh"
     }
    },
    {
@@ -77,7 +85,11 @@
      "en": "A brilliant Muggle-born student who knows her books by heart and ends up becoming Harry and Ron's friend.",
      "es": "Alumna brillante de padres muggles que se sabe los libros de memoria y acaba siendo amiga de Harry y Ron."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skhermioneMesh"
+    }
    },
    {
     "cle": "dumbledore",
@@ -106,6 +118,10 @@
       160,
       160
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skdumbledoreMesh"
     }
    },
    {
@@ -135,6 +151,10 @@
       150,
       150
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skhagridMesh"
     }
    },
    {
@@ -164,6 +184,10 @@
       150,
       150
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skmcgonagallMesh"
     }
    },
    {
@@ -183,7 +207,11 @@
      "en": "A cold-eyed Potions master, he seems to hate Harry, who suspects him of being after the Stone.",
      "es": "Maestro de Pociones de mirada fría, parece detestar a Harry, que sospecha que busca la piedra."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "sksnapeMesh"
+    }
    },
    {
     "cle": "quirrell",
@@ -202,7 +230,11 @@
      "en": "A shy, stammering teacher in a turban, he hides his true nature until the very last room.",
      "es": "Profesor tímido y tartamudo con turbante, oculta bien su juego hasta la última sala."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skquirrellMesh"
+    }
    },
    {
     "cle": "flitwick",
@@ -221,7 +253,11 @@
      "en": "A cheerful little wizard who teaches charms, he introduces Harry to his first spells.",
      "es": "Pequeño mago alegre que enseña los encantamientos y hace descubrir a Harry sus primeros hechizos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skflitwickMesh"
+    }
    },
    {
     "cle": "chourave",
@@ -240,7 +276,11 @@
      "en": "She teaches in the castle greenhouses, among magical plants that are sometimes dangerous.",
      "es": "Da sus clases en los invernaderos del castillo, entre plantas mágicas a veces peligrosas."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "sksproutMesh"
+    }
    },
    {
     "cle": "bibine",
@@ -259,7 +299,11 @@
      "en": "She teaches first-years to stay on a broom and referees the Quidditch matches.",
      "es": "Enseña a los alumnos de primero a sostenerse en una escoba y arbitra los partidos de quidditch."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skbroomhoochMesh"
+    }
    },
    {
     "cle": "rusard",
@@ -278,7 +322,11 @@
      "en": "A grumpy caretaker who patrols at night with his cat, Mrs Norris, looking for students out of bed.",
      "es": "Conserje gruñón que patrulla de noche con su gata, la Señora Norris, en busca de alumnos fuera del dormitorio."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skfilchMesh"
+    }
    },
    {
     "cle": "malefoy",
@@ -307,6 +355,10 @@
       58,
       66
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skdracoMesh"
     }
    },
    {
@@ -326,7 +378,11 @@
      "en": "A clumsy, forgetful boy, he gets a Remembrall from his grandmother and shows more courage than expected.",
      "es": "Chico torpe y olvidadizo, recibe una recordadora de su abuela y demuestra más valor del que parece."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "sknevilleMesh"
+    }
    },
    {
     "cle": "percy",
@@ -345,7 +401,11 @@
      "en": "Ron's older brother, a prefect very proud of his badge, he guides the new students through the castle.",
      "es": "Hermano mayor de Ron, prefecto muy orgulloso de su insignia, guía a los nuevos alumnos por el castillo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skpercyMesh"
+    }
    },
    {
     "cle": "fred",
@@ -364,7 +424,11 @@
      "en": "George's prankster twin, he plays Beater on the Gryffindor Quidditch team.",
      "es": "Gemelo bromista de George, juega de golpeador en el equipo de quidditch de Gryffindor."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skfredMesh"
+    }
    },
    {
     "cle": "george",
@@ -383,7 +447,11 @@
      "en": "Fred's twin and just as much of a joker, he shields Harry from the Bludgers during matches.",
      "es": "Gemelo de Fred, igual de bromista, protege a Harry de las bludgers durante los partidos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skgeorgeMesh"
+    }
    },
    {
     "cle": "crabbe",
@@ -402,7 +470,11 @@
      "en": "A big Slytherin who follows Draco everywhere and looms behind him.",
      "es": "Alumno corpulento de Slytherin que sigue a Draco a todas partes y hace de muro detrás de él."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skcrabbeMesh"
+    }
    },
    {
     "cle": "goyle",
@@ -421,7 +493,11 @@
      "en": "Inseparable from Crabbe, he acts as Draco Malfoy's bodyguard.",
      "es": "Inseparable de Crabbe, hace de guardaespaldas de Draco Malfoy."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skgoyleMesh"
+    }
    },
    {
     "cle": "nick",
@@ -440,7 +516,11 @@
      "en": "The courteous ghost of Gryffindor Tower, badly beheaded centuries ago, happy to give advice.",
      "es": "Fantasma cortés de la torre de Gryffindor, mal decapitado hace siglos, da consejos de buena gana."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skNHNickMesh"
+    }
    },
    {
     "cle": "peeves",
@@ -469,6 +549,10 @@
       64,
       64
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skpeevesMesh"
     }
    },
    {
@@ -498,6 +582,10 @@
       58,
       66
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skvoldemortMesh"
     }
    },
    {
@@ -527,6 +615,10 @@
       40,
       40
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skfluffyMesh"
     }
    },
    {
@@ -556,6 +648,10 @@
       48,
       48
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skmountaintrollMesh"
     }
    },
    {
@@ -585,6 +681,10 @@
       200,
       200
      ]
+    },
+    "modele": {
+     "fichier": "System/HProps.u",
+     "nom": "GHallSortHatMesh"
     }
    },
    {
@@ -614,6 +714,10 @@
       120,
       120
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skvernonMesh"
     }
    },
    {
@@ -643,6 +747,10 @@
       110,
       110
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skpetuniaMesh"
     }
    },
    {
@@ -672,6 +780,10 @@
       150,
       150
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skdudleyMesh"
     }
    }
   ],
@@ -703,6 +815,10 @@
       72,
       72
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skharryMesh"
     }
    },
    {
@@ -722,7 +838,11 @@
      "en": "He fetches Harry from the Dursleys in his father's flying car and goes with him all the way to the Chamber.",
      "es": "Va a buscar a Harry a casa de los Dursley en el coche volador de su padre y lo acompaña hasta la Cámara."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skronMesh"
+    }
    },
    {
     "cle": "hermione",
@@ -741,7 +861,11 @@
      "en": "She brews Polyjuice Potion in secret and works out what the monster is before being petrified.",
      "es": "Prepara poción multijugos a escondidas y adivina la naturaleza del monstruo antes de quedar petrificada."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skhermioneMesh"
+    }
    },
    {
     "cle": "ginny",
@@ -760,7 +884,11 @@
      "en": "Ron's little sister, a first-year, she falls under the spell of a mysterious diary.",
      "es": "Hermana pequeña de Ron, en primer curso, cae bajo el dominio de un misterioso diario."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skGinnyMesh"
+    }
    },
    {
     "cle": "dumbledore",
@@ -789,6 +917,10 @@
       120,
       120
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skProfDumbledoreMesh"
     }
    },
    {
@@ -812,6 +944,10 @@
      "fichier": "Textures/HP_Portraits2.utx",
      "nom": "LockH_portrait_01",
      "bits": 8
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skProfLockhartMesh"
     }
    },
    {
@@ -831,7 +967,11 @@
      "en": "As cold as ever with Harry, he runs the Duelling Club alongside Lockhart.",
      "es": "Tan frío como siempre con Harry, dirige el club de duelo junto a Lockhart."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skProfSnapeMesh"
+    }
    },
    {
     "cle": "mcgonagall",
@@ -850,7 +990,11 @@
      "en": "Transfiguration teacher, she takes charge when students are petrified.",
      "es": "Profesora de Transformaciones, toma las riendas cuando los alumnos quedan petrificados."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skProfMcGonagallMesh"
+    }
    },
    {
     "cle": "chourave",
@@ -869,7 +1013,11 @@
      "en": "She has the second-years repot Mandrakes, the plants that will cure the petrified victims.",
      "es": "Hace trasplantar mandrágoras a los alumnos de segundo, plantas que curarán a las víctimas petrificadas."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skProfSproutMesh"
+    }
    },
    {
     "cle": "flitwick",
@@ -888,7 +1036,11 @@
      "en": "The little professor teaches new charms that Harry must master in his challenges.",
      "es": "El pequeño profesor enseña nuevos hechizos que Harry deberá dominar en sus desafíos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skProfFlitwickMesh"
+    }
    },
    {
     "cle": "pomfresh",
@@ -907,7 +1059,11 @@
      "en": "The school nurse, she treats the injured and watches over the petrified students.",
      "es": "Enfermera del colegio, cura a los heridos y cuida de los alumnos petrificados."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skmadamepomfreyMesh"
+    }
    },
    {
     "cle": "rusard",
@@ -926,7 +1082,11 @@
      "en": "The caretaker suspects Harry when his cat, Mrs Norris, is found petrified.",
      "es": "El conserje sospecha de Harry cuando su gata, la Señora Norris, aparece petrificada."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skFilchMesh"
+    }
    },
    {
     "cle": "hagrid",
@@ -945,7 +1105,11 @@
      "en": "Wrongly accused of opening the Chamber long ago, he puts Harry on the spiders' trail before being taken away.",
      "es": "Acusado injustamente de haber abierto la Cámara en el pasado, pone a Harry tras la pista de las arañas antes de que se lo lleven."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skHagridMesh"
+    }
    },
    {
     "cle": "crabbe",
@@ -964,7 +1128,11 @@
      "en": "The Slytherin whose appearance Harry takes with Polyjuice Potion.",
      "es": "Alumno de Slytherin cuya apariencia toma Harry gracias a la poción multijugos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skCrabbeMesh"
+    }
    },
    {
     "cle": "goyle",
@@ -983,7 +1151,11 @@
      "en": "Crabbe's companion, he too serves as a Polyjuice model to get into the Slytherin common room.",
      "es": "Compañero de Crabbe, también sirve de modelo para la multijugos y entrar en la sala común de Slytherin."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skGoyleMesh"
+    }
    },
    {
     "cle": "lucius",
@@ -1002,7 +1174,11 @@
      "en": "An influential, scornful wizard, he secretly slips Riddle's diary among Ginny's things.",
      "es": "Mago influyente y despectivo, desliza en secreto el diario de Ryddle entre las cosas de Ginny."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skLuciousMalfoyMesh"
+    }
    },
    {
     "cle": "dobby",
@@ -1021,7 +1197,11 @@
      "en": "A house-elf serving the Malfoys, he tries everything to stop Harry from returning to Hogwarts.",
      "es": "Elfo doméstico al servicio de los Malfoy, intenta por todos los medios impedir que Harry vuelva a Hogwarts."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skdobbyMesh"
+    }
    },
    {
     "cle": "jedusor",
@@ -1040,7 +1220,11 @@
      "en": "The memory of a former student trapped in a diary, he waits for Harry deep in the Chamber of Secrets.",
      "es": "Recuerdo de un antiguo alumno encerrado en un diario, espera a Harry en el fondo de la Cámara de los Secretos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skTomRiddleMesh"
+    }
    },
    {
     "cle": "mimi",
@@ -1059,7 +1243,11 @@
      "en": "The ghost of a student haunting the first-floor girls' bathroom, where the entrance to the Chamber is hidden.",
      "es": "Fantasma de una alumna que ronda el baño de chicas del primer piso, donde se oculta la entrada de la Cámara."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skmoaningmyrtleMesh"
+    }
    },
    {
     "cle": "nick",
@@ -1078,7 +1266,11 @@
      "en": "The Gryffindor ghost celebrates his deathday before being petrified himself.",
      "es": "El fantasma de Gryffindor celebra su cumpleaños de muerte antes de quedar también petrificado."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skNHNickMesh"
+    }
    },
    {
     "cle": "moine_gras",
@@ -1097,7 +1289,11 @@
      "en": "The jolly ghost of Hufflepuff house, always ready to forgive.",
      "es": "Fantasma jovial de la casa Hufflepuff, siempre dispuesto a perdonar."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skfatfriarMesh"
+    }
    },
    {
     "cle": "grosse_dame",
@@ -1116,7 +1312,11 @@
      "en": "A lady in a pink dress whose painting guards the entrance to Gryffindor Tower and asks for the password.",
      "es": "Dama con vestido rosa cuyo cuadro guarda la entrada de la torre de Gryffindor y pide la contraseña."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skpinkladyMesh"
+    }
    },
    {
     "cle": "peeves",
@@ -1145,6 +1345,10 @@
       104,
       78
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skpeevesMesh"
     }
    },
    {
@@ -1164,7 +1368,11 @@
      "en": "A prankster twin, he helps pull Harry out of his barred room on Privet Drive.",
      "es": "Gemelo bromista, ayuda a sacar a Harry de su cuarto enrejado de Privet Drive."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skFredWeasleyMesh"
+    }
    },
    {
     "cle": "george",
@@ -1183,7 +1391,11 @@
      "en": "Fred's twin, he runs a little shop of jokes and sweets with him in the castle.",
      "es": "Gemelo de Fred, lleva con él una pequeña tienda de bromas y golosinas en el castillo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skGeorgeWeasleyMesh"
+    }
    },
    {
     "cle": "percy",
@@ -1202,7 +1414,11 @@
      "en": "Ron's older brother, a serious prefect, he spends a lot of time apart for a reason he keeps secret.",
      "es": "Hermano mayor de Ron, prefecto serio, pasa mucho tiempo apartado por un motivo que guarda en secreto."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skPercyMesh"
+    }
    },
    {
     "cle": "dubois",
@@ -1221,7 +1437,11 @@
      "en": "The passionate captain of the Gryffindor team, he trains Harry relentlessly before matches.",
      "es": "Apasionado capitán del equipo de Gryffindor, entrena a Harry sin descanso antes de los partidos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skOliverWoodMesh"
+    }
    },
    {
     "cle": "aragog",
@@ -1250,6 +1470,10 @@
       112,
       78
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skAragogMesh"
     }
    },
    {
@@ -1279,6 +1503,10 @@
       90,
       78
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skbasiliskMesh"
     }
    }
   ],
@@ -2979,7 +3207,11 @@
      "en": "Stocky little pest of the gardens and corridors. It pops up to bother Harry and is pushed back with a Flipendo.",
      "es": "Pequeño y rechoncho habitante de jardines y pasillos. Aparece para molestar a Harry y se aparta con un Flipendo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skgnomeMesh"
+    }
    },
    {
     "cle": "krokante",
@@ -2998,7 +3230,11 @@
      "en": "Small winged creature with a dark body, quick and aggressive. It swoops on Harry with a buzz.",
      "es": "Pequeña criatura alada de cuerpo oscuro, rápida y agresiva. Se lanza sobre Harry zumbando."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skdoxyMesh"
+    }
    },
    {
     "cle": "crabe_de_feu",
@@ -3017,7 +3253,11 @@
      "en": "Crustacean whose shell is set with coloured stones. It shoots flames from its rear when approached.",
      "es": "Crustáceo con el caparazón incrustado de piedras de colores. Escupe llamas por detrás cuando alguien se acerca."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skfirecrabMesh"
+    }
    },
    {
     "cle": "escargot_orange",
@@ -3036,7 +3276,11 @@
      "en": "Large snail with a spiral shell. Its slime trail burns anyone who steps on it.",
      "es": "Gran caracol de concha en espiral. Su rastro de baba quema a quien lo pisa."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skorangesnailMesh"
+    }
    },
    {
     "cle": "tentacula",
@@ -3055,7 +3299,11 @@
      "en": "Carnivorous plant with thorny vines. It lashes at anything within reach and fears fire.",
      "es": "Planta carnívora de lianas espinosas. Azota todo lo que pasa a su alcance y teme al fuego."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skvenomous1Mesh"
+    }
    },
    {
     "cle": "filet_du_diable",
@@ -3074,7 +3322,11 @@
      "en": "Creeping plant that binds the legs of anyone who brushes against it. Light and heat make it recoil.",
      "es": "Planta trepadora que atrapa las piernas de quien la roza. La luz y el calor la hacen retroceder."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skdevilplantMesh"
+    }
    },
    {
     "cle": "troll",
@@ -3093,7 +3345,11 @@
      "en": "Clumsy giant armed with a club, let into the castle on Halloween night. Strong but slow, it can be outrun.",
      "es": "Gigante torpe armado con un garrote que entró en el castillo la noche de Halloween. Fuerte pero lento, se le puede dejar atrás."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skmountaintrollMesh"
+    }
    },
    {
     "cle": "touffu",
@@ -3122,6 +3378,10 @@
       40,
       40
      ]
+    },
+    "modele": {
+     "fichier": "System/HarryPotter.u",
+     "nom": "skfluffyMesh"
     }
    },
    {
@@ -3141,7 +3401,11 @@
      "en": "Baby Norwegian Ridgeback hatched at Hagrid's. Harry has to sneak him to the top of the tower.",
      "es": "Cría de ridgeback noruego nacida en casa de Hagrid. Harry debe llevarla a escondidas a lo alto de la torre."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "sknorbertMesh"
+    }
    }
   ],
   "hp2": [
@@ -3162,7 +3426,11 @@
      "en": "Garden raider that runs off with Harry's beans. Flipped over with a Flipendo, it drops its loot.",
      "es": "Saqueador de jardines que corre a robar las grageas de Harry. Volteado con un Flipendo, suelta el botín."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skgnomeMesh"
+    }
    },
    {
     "cle": "lutin_de_cornouailles",
@@ -3181,7 +3449,11 @@
      "en": "Little electric-blue imp that flies everywhere and bites. A Rictusempra stuns it.",
      "es": "Diablillo azul eléctrico que vuela en todas direcciones y muerde. Un Rictusempra lo aturde."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skcornishpixieMesh"
+    }
    },
    {
     "cle": "korrigan",
@@ -3200,7 +3472,11 @@
      "en": "Squat creature with a nasty grin, a cousin of the gnome. Knock it over, then throw it into its burrow.",
      "es": "Criatura rechoncha de sonrisa malvada, prima del gnomo. Se la derriba y luego se la arroja a su madriguera."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skimpMesh"
+    }
    },
    {
     "cle": "crabe_de_feu",
@@ -3219,7 +3495,11 @@
      "en": "Hard shell and fiery breath. The big ones also throw bouncing fireballs.",
      "es": "Caparazón duro y aliento de fuego. Los ejemplares grandes también lanzan bolas de fuego que rebotan."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skfirecrabMesh"
+    }
    },
    {
     "cle": "escargot_orange",
@@ -3238,7 +3518,11 @@
      "en": "Very large snail whose acid slime burns. Better to walk around its trails.",
      "es": "Caracol de gran tamaño cuya baba ácida quema. Mejor rodear sus rastros."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skorangesnailMesh"
+    }
    },
    {
     "cle": "champignome",
@@ -3257,7 +3541,11 @@
      "en": "Fleshy mushroom on a stalk. It spits a toxic cloud until it is cut down with a Diffindo.",
      "es": "Hongo carnoso sobre un tallo. Escupe una nube tóxica mientras no se le corta con un Diffindo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skhorklumpsMesh"
+    }
    },
    {
     "cle": "botruc",
@@ -3276,7 +3564,11 @@
      "en": "Tree guardian made of twigs, very shy. It protects the trees that give Wiggentree bark.",
      "es": "Guardián de árboles hecho de ramitas, muy discreto. Protege los árboles de los que se saca la corteza de Wiggentree."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skBowtruckleMesh"
+    }
    },
    {
     "cle": "tentacula",
@@ -3295,7 +3587,11 @@
      "en": "Biting plant with long vines. A Diffindo stuns it and cuts its stems.",
      "es": "Planta mordedora de largas lianas. Un Diffindo la aturde y le corta los tallos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skvenomous1Mesh"
+    }
    },
    {
     "cle": "araignees",
@@ -3314,7 +3610,11 @@
      "en": "Small ones are crushed underfoot; big ones, with a venomous bite, calm down with a Rictusempra.",
      "es": "Las pequeñas se aplastan con la suela; las grandes, de mordedura venenosa, se calman con un Rictusempra."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skSpiderLargeMesh"
+    }
    },
    {
     "cle": "aragog",
@@ -3343,6 +3643,10 @@
       128,
       78
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skAragogMesh"
     }
    },
    {
@@ -3372,6 +3676,10 @@
       128,
       78
      ]
+    },
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skbasiliskMesh"
     }
    },
    {
@@ -3391,7 +3699,11 @@
      "en": "Dumbledore's phoenix with fiery plumage. It brings Harry the Sorting Hat at the worst moment.",
      "es": "Fénix de Dumbledore de plumaje de fuego. Trae el Sombrero Seleccionador a Harry en el peor momento."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skFawkesMesh"
+    }
    },
    {
     "cle": "saule_cogneur",
@@ -3410,7 +3722,11 @@
      "en": "Violent tree that strikes anything nearby with its branches. Its roots hurt on the ground too.",
      "es": "Árbol violento que golpea con sus ramas todo lo que se acerca. Sus raíces también hieren en el suelo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "System/HPModels.u",
+     "nom": "skWhompingWIllowMesh"
+    }
    }
   ],
   "hp3": [

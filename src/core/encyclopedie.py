@@ -45,12 +45,19 @@ class ImageJeu:
 
 
 @dataclass(frozen=True)
+class ModeleJeu:
+    fichier: str                          # paquet relatif au dossier du jeu (« System/HarryPotter.u »)
+    nom: str                              # le `SkeletalMesh` (« skharryMesh »)
+
+
+@dataclass(frozen=True)
 class Fiche:
     cle: str
     nom: TexteTraduit
     sous_titre: TexteTraduit              # le rôle d'un personnage, le lieu d'une créature
     texte: TexteTraduit
     image: ImageJeu | None
+    modele: ModeleJeu | None = None       # son modèle 3D (HP1, HP2)
 
 
 def _image(brute: object) -> ImageJeu | None:
@@ -69,7 +76,11 @@ def _fiche(brute: dict[str, object], champ: str) -> Fiche | None:
     nom, sous_titre, texte = (texte_traduit(brute.get(k)) for k in ("nom", champ, "texte"))
     if nom is None or sous_titre is None or texte is None or not isinstance(brute.get("cle"), str):
         return None
-    return Fiche(str(brute["cle"]), nom, sous_titre, texte, _image(brute.get("image")))
+    modele = brute.get("modele")
+    modele_jeu = None
+    if isinstance(modele, dict) and isinstance(modele.get("fichier"), str) and isinstance(modele.get("nom"), str):
+        modele_jeu = ModeleJeu(modele["fichier"], modele["nom"])
+    return Fiche(str(brute["cle"]), nom, sous_titre, texte, _image(brute.get("image")), modele_jeu)
 
 
 @lru_cache(maxsize=1)
@@ -114,9 +125,9 @@ def _trouver(dossier: Path, relatif: str) -> Path | None:
     return courant
 
 
-def chemin_image(dossier_exe: Path, image: ImageJeu) -> Path | None:
-    """Le fichier qui porte l'image : à côté de l'exe (HP4), ou depuis la racine
-    du jeu, dossier parent de `System` (HP1-HP3)."""
+def chemin_image(dossier_exe: Path, image: ImageJeu | ModeleJeu) -> Path | None:
+    """Le fichier qui porte l'image ou le modèle : à côté de l'exe (HP4), ou
+    depuis la racine du jeu, dossier parent de `System` (HP1-HP3)."""
     return _trouver(dossier_exe, image.fichier) or _trouver(dossier_exe.parent, image.fichier)
 
 

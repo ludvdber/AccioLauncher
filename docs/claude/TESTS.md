@@ -4,7 +4,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-26 (le fichier, chargé à chaq
 
 ## Compte et tests sautés
 
-**Compte au dernier point (2026-10-25, Windows, Python 3.15.1) : 3669 réussis, 29 sautés** (la CI exige 83 % et coupe un test à 60 s) (**3325 réussis + 38 sautés sous Linux**, portable Bazzite, Python 3.14.7, 2026-10-20). Les 29 sont des tests Linux qui exigent le système (chemins POSIX du préfixe, liens symboliques, bit exécutable, sockets Unix, `/bin/sh`, 7-Zip Linux, script de désinstallation du launcher) : le job Linux de la CI les exécute. Les 6 de `tests/test_fonts.py` (Gelasio contre Georgia) se sautaient PARTOUT et ont été retirés le 2026-10-25. Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. Tout nouveau module → au moins un test sentinelle.
+**Compte au dernier point (2026-10-26, Windows, Python 3.15.1) : 3780 réussis, 30 sautés** (la CI exige 83 % et coupe un test à 60 s) (**3325 réussis + 38 sautés sous Linux**, portable Bazzite, Python 3.14.7, 2026-10-20). Les 30 sont des tests Linux qui exigent le système (chemins POSIX du préfixe, liens symboliques, bit exécutable, sockets Unix, `/bin/sh`, 7-Zip Linux, script de désinstallation du launcher) : le job Linux de la CI les exécute. Les 6 de `tests/test_fonts.py` (Gelasio contre Georgia) se sautaient PARTOUT et ont été retirés le 2026-10-25. Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. Tout nouveau module → au moins un test sentinelle.
 
 ## Tests de bout en bout
 

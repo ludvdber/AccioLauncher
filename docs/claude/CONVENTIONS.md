@@ -18,7 +18,14 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-26 (le fichier, chargé à chaq
 
 ## Versions
 
-Versions : `0.0.x` bugfix · `0.x.0` jeu ajouté · `x.0.0` tous les jeux livrés. Le numéro vit à TROIS endroits — `pyproject.toml`, `config.APP_VERSION`, badge README — accord tenu par `tests/test_config.py`. `release.yml` DÉDUIT le tag d'`APP_VERSION` (aucun tag saisi à la main) et refuse une version qui a déjà sa release ou son tag, ou un lancement hors de `main`.
+Versions (revu le 2026-10-26 : la règle « `0.x.0` = jeu ajouté » ne correspondait plus, la 1.2 n'a ajouté aucun jeu) :
+
+- **`x.y.Z`** : corrections seulement (1.2.3 « Reparo »).
+- **`x.Y.0`** : nouvelles fonctions visibles (1.2.0 le folio, 1.3.0 les Collections et le Carnet).
+- **`X.0.0`** : un changement d'ampleur, décidé par Ludo (les huit jeux jouables partout, la version légale).
+- Un numéro jamais publié se REPREND sans perte : la 1.2.4 « Sonorus », restée dans le dépôt, est devenue la 1.3.0 avant sa release.
+
+Le numéro vit à QUATRE endroits, accord tenu par les tests : `pyproject.toml` (`version`), `src/core/config.py` (`APP_VERSION`), le badge du `README.md` (`tests/test_config.py`) et l'entrée en tête de `src/data/nouveautes.json` (`version`, `depuis` = dernière version PUBLIÉE ; `test_la_version_courante_a_ses_nouveautes`). Monter la version, c'est changer ces quatre-là dans un même commit, puis compléter l'entrée des nouveautés (fr, en, es). Le tag et la release ne se créent PAS à la main : `release.yml` (lancé à la main depuis l'onglet Actions, sur `main`) DÉDUIT le tag d'`APP_VERSION`, refuse une version qui a déjà sa release ou son tag, construit, puis laisse un BROUILLON de release ; c'est sa publication qui crée le tag. Avant de lancer : [AVANT_RELEASE.md](../AVANT_RELEASE.md) si la release touche au lancement, au catalogue ou aux DLL.
 
 ## Ko-fi sans nag
 
