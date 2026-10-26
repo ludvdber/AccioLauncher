@@ -1340,7 +1340,7 @@
     "Très vert": "Muy verde",
     "Vert du jeu": "Verde del juego",
     "Ciel": "Cielo",
-    "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son matin, son midi ou son coucher, lumière et personnages compris. Attention : une quête qui attend un autre moment de la journée peut ne pas se déclencher ; revenir à « Bleu » rend au jeu son heure. Se change aussi pendant la partie.": "«Azul» sustituye la bruma verde menta del día por un cielo azul. «Hora real» sigue el reloj del ordenador: el juego pasa a su propia noche, mañana, mediodía o atardecer, con su luz y sus personajes. Atención: una misión que espera otro momento del día puede no activarse; volver a «Azul» devuelve al juego su hora. También se cambia durante la partida.",
+    "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son matin, son midi ou son coucher, lumière et personnages compris. Si une quête semble bloquée, revenir à « Bleu » rend au jeu son heure. Se change aussi pendant la partie.": "«Azul» sustituye la bruma verde menta del día por un cielo azul. «Hora real» sigue el reloj del ordenador: el juego pasa a su propia noche, mañana, mediodía o atardecer, con su luz y sus personajes. Si una misión parece bloqueada, volver a «Azul» devuelve al juego su hora. También se cambia durante la partida.",
     "Bleu": "Azul",
     "Heure réelle": "Hora real",
     "Heure choisie": "Hora elegida",
@@ -1385,6 +1385,13 @@
     "Jeu {}": "Juego {}",
     "Fangieux": "Dugbog",
     "Salamandre": "Salamandra",
-    "Scroutt à pétard": "Escreguto de cola explosiva"
+    "Scroutt à pétard": "Escreguto de cola explosiva",
+    "Personnages": "Personajes",
+    "Bestiaire": "Bestiario",
+    "Aucune fiche pour ce jeu.": "No hay fichas para este juego.",
+    "{} personnage": "{} personaje",
+    "{} personnages": "{} personajes",
+    "{} créature": "{} criatura",
+    "{} créatures": "{} criaturas"
   }
 }

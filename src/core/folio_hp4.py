@@ -401,14 +401,14 @@ def images_shpi(flux: bytes, nom: bytes) -> list[tuple[int, int, bytes]]:
     p = flux.find(b"SHPI")
     while 0 <= p <= len(flux) - 24:
         if struct.unpack_from("<I", flux, p + 8)[0] == 1 and flux[p + 16:p + 20] == nom:
-            image = _image_7b(flux, p + struct.unpack_from("<I", flux, p + 20)[0])
+            image = image_7b(flux, p + struct.unpack_from("<I", flux, p + 20)[0])
             if image is not None:
                 trouvees.append(image)
         p = flux.find(b"SHPI", p + 4)
     return trouvees
 
 
-def _image_7b(flux: bytes, q: int) -> tuple[int, int, bytes] | None:
+def image_7b(flux: bytes, q: int) -> tuple[int, int, bytes] | None:
     if q + 16 > len(flux) or flux[q] & 0x7F != 0x7B:
         return None
     largeur, hauteur = struct.unpack_from("<HH", flux, q + 4)
@@ -476,13 +476,85 @@ def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
             positions = images_nommees(flux)
             for cle, nom in ICONES.items():
                 q = positions.get(nom)
-                image = _image_7b(flux, q) if q is not None else None
+                image = image_7b(flux, q) if q is not None else None
                 if image is not None:
                     images[cle] = image
             break
     except (OSError, struct.error):
         log.warning("Folio HP4 : icônes du menu illisibles", exc_info=True)
     return images
+
+
+# Le nom et la description d'une carte (relevés le 2026-10-26, `notes/HP4.md`).
+# L'exe donne à chaque carte une clé de texte (fonction 0x4E4C30 : « HARRY_10 »
+# pour HARRY_JINX_PLUS10_1), lue par l'interface en `$GUI_CARD_NAME_<clé>` et
+# `$GUI_CARD_DESCRIPTION_<clé>`. La table EN JEU est triée par clé, donc les
+# clés d'une famille se suivent dans l'ordre de leur numéro : `_NOMS_CARTES`
+# donne l'indice de « _01 ». Les descriptions des personnages se suivent
+# aussi ; celles d'une créature alternent avec la façon d'obtenir la carte
+# (« Assommez un Fangieux et lancez-lui un Orchideus »). VU : Amitié, Peau de
+# dragon, sac de dragées de Harry ; Amitié de Ron et d'Hermione ; Fangieux,
+# Vampirmite, Salamandre. Les descriptions des quêtes s'entremêlent avec
+# d'autres clés : seules celles qui ont été vérifiées sont données. 0 : la
+# carte n'a pas de clé (la version d'argent ou d'or d'une carte ne compte pas).
+_CLES_CARTES: dict[str, tuple[int, tuple[int, ...]]] = {
+    "HARRY": (1, (1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28,
+                  29, 30, 31, 32, 33, 34, 0, 59, 60, 42, 46, 47, 48, 49, 55, 56, 58, 57, 37, 38, 39,
+                  40, 41, 52, 61, 50, 51)),
+    "RON": (50, (1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 0, 19, 20, 21, 22, 23, 24, 25, 28,
+                 29, 30, 31, 32, 33, 34, 43, 59, 60, 46, 47, 48, 49, 55, 56, 58, 57, 37, 38, 39, 41,
+                 42, 52, 61, 50, 51)),
+    "HERMIONE": (99, (1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25,
+                      28, 29, 30, 31, 32, 33, 34, 43, 59, 60, 46, 47, 48, 49, 55, 56, 58, 57, 37,
+                      38, 39, 41, 42, 52, 0, 61, 50, 51)),
+    "GROUP": (148, (14, 21, 28)),
+    "GROUP ": (181, (2, 4, 1, 6, 3, 9, 11, 8, 13, 10, 16, 18, 15, 20, 17, 23, 25, 22, 27, 24)),
+    "DUGBOG": (151, (1, 2, 5, 3, 4, 6)),
+    "SALAMANDER": (157, (1, 2, 5, 3, 4, 6)),
+    "ERKLING": (163, (1, 2, 5, 3, 4, 6)),
+    "SKREWT": (169, (1, 2, 5, 3, 4, 6)),
+    "MOSP": (175, (1, 2, 5, 3, 4, 6)),
+}
+_NOMS_CARTES = {"DUGBOG": 345, "ERKLING": 351, "GROUP": 362, "HARRY": 390, "HERMIONE": 453,
+                "MOSP": 516, "RON": 522, "SALAMANDER": 585, "SKREWT": 591}
+_DESCRIPTIONS_PERSOS = {"HARRY": 118, "HERMIONE": 181, "RON": 255}
+_DESCRIPTIONS_CREATURES = {"DUGBOG": 64, "ERKLING": 75, "MOSP": 244, "SALAMANDER": 318,
+                           "SKREWT": 329}
+# Quêtes : 01-07 à la suite depuis 91, puis 14, puis 15-21 (les feux d'artifice,
+# 08-13, n'ont pas de description) ; les statues (22-28) restent sans.
+_DESCRIPTIONS_QUETES = {**{n: 90 + n for n in range(1, 8)}, 14: 98,
+                        **{n: 84 + n for n in range(15, 22)}}
+
+
+def cle_carte(carte: int) -> tuple[str, int] | None:
+    """La clé de texte d'une carte : (famille, numéro), ou None."""
+    for famille, (premiere, numeros) in _CLES_CARTES.items():
+        if premiere <= carte < premiere + len(numeros):
+            numero = numeros[carte - premiere]
+            return (famille.strip(), numero) if numero else None
+    return None
+
+
+def texte_carte(table: tuple[str, ...], carte: int) -> tuple[str, str]:
+    """Le nom et la description d'une carte dans la table EN JEU (`textes_jeu`) ;
+    une chaîne vide quand le jeu n'est pas là ou que le texte n'est pas connu."""
+    cle = cle_carte(carte)
+    if cle is None or not table:
+        return "", ""
+    famille, n = cle
+    nom_carte = _texte_table(table, _NOMS_CARTES[famille] + n - 1)
+    if famille in _DESCRIPTIONS_PERSOS:
+        indice: int | None = _DESCRIPTIONS_PERSOS[famille] + n - 1
+    elif famille in _DESCRIPTIONS_CREATURES:
+        indice = _DESCRIPTIONS_CREATURES[famille] + (0 if n == 1 else 2 * n - 3)
+    else:
+        indice = _DESCRIPTIONS_QUETES.get(n)
+    return nom_carte, _texte_table(table, indice) if indice is not None else ""
+
+
+def _texte_table(table: tuple[str, ...], indice: int) -> str:
+    texte = table[indice].strip() if 0 <= indice < len(table) else ""
+    return "" if texte == "Do not translate" else texte.replace("\xa0", " ")
 
 
 def image_carte(system: Path, jeu: JeuCartes, rang: int) -> tuple[int, int, bytes] | None:

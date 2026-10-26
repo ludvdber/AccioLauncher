@@ -173,6 +173,13 @@ class Mediatheque(QObject):
         game = self._manager.get_game_by_id(jeu)
         return nom_court(game.name) if game is not None else jeu.upper()
 
+    def dossier_exe(self, jeu: str) -> Path | None:
+        """Le dossier de l'exe du jeu installé (images des Personnages et du Bestiaire)."""
+        game = self._manager.get_game_by_id(jeu)
+        if game is None or not self._manager.is_installed(jeu):
+            return None
+        return self._manager.config.install_path / Path(game.executable).parent
+
     def jaquette(self, jeu: str) -> Path | None:
         game = self._manager.get_game_by_id(jeu)
         if game is None or not game.cover_image:

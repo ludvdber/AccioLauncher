@@ -940,9 +940,8 @@ def _actions_fichiers(view: GameDetailView, game: GameData):
                         lambda: on_repair(view)))
         actions.append((tr("Ouvrir le dossier du jeu"),
                         lambda: _ouvrir_dossier_du_jeu(view, game)))
-    # Même désinstallé : les copies vivent hors du dossier du jeu, et c'est
-    # peut-être justement pour les récupérer qu'on revient.
-    # Installé sans copie encore : on peut déjà y importer une partie (2026-10-26).
+    # Même désinstallé : les copies vivent hors du dossier du jeu (on revient
+    # peut-être pour elles) ; installé sans copie : on peut y importer une partie.
     if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id) or installe):
         # Court : le rail fait 218 px, l'ancien libellé y était coupé
         # (capture de Ludo, 2026-10-16). Versions, export et import.

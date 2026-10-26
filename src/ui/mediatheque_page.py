@@ -46,11 +46,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import discographie
+from src.core import discographie, encyclopedie
 from src.core.i18n import tr
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.disque import Disque
+from src.ui.encyclopedie_page import VueEncyclopedie
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import CINEMATIQUE, MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer, cle, decouper
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -1162,7 +1163,9 @@ class MediathequePage(QDialog):
         groupe.setExclusive(True)
         for cle_rubrique, libelle, icone in ((CAPTURES, tr("Captures"), "appareil"),
                                              (MUSIQUE, tr("Musique"), "musique"),
-                                             (CINEMATIQUES, tr("Cinématiques"), "film")):
+                                             (CINEMATIQUES, tr("Cinématiques"), "film"),
+                                             (encyclopedie.PERSONNAGES, tr("Personnages"), "personnages"),
+                                             (encyclopedie.BESTIAIRE, tr("Bestiaire"), "patte")):
             b = QPushButton(libelle)
             b.setObjectName("rubrique")
             b.setCheckable(True)
@@ -1190,6 +1193,12 @@ class MediathequePage(QDialog):
         self._cinematiques = _VueCinematiques(media)
         self._pile.addWidget(self._musique)
         self._pile.addWidget(self._cinematiques)
+        # Personnages et Bestiaire (2026-10-26) : bâtis pour le jeu choisi
+        # seulement quand on les regarde.
+        self._encyclo = {r: VueEncyclopedie(media, r)
+                         for r in (encyclopedie.PERSONNAGES, encyclopedie.BESTIAIRE)}
+        for vue in self._encyclo.values():
+            self._pile.addWidget(vue)
         # Les captures : la Galerie d'avant, bâtie à la première visite (elle
         # décode ses vignettes sur un fil à part).
         self._captures: QDialog | None = None
@@ -1211,6 +1220,9 @@ class MediathequePage(QDialog):
         self._jeux.cocher(jeu)
         self._musique.montrer(jeu)
         self._cinematiques.montrer(jeu)
+        vue = self._encyclo.get(self.rubrique_courante)
+        if vue is not None:
+            vue.montrer(jeu)
         self._jeux.compter(jeu)
 
     @property
@@ -1224,6 +1236,10 @@ class MediathequePage(QDialog):
         self._jeux.setVisible(not captures)
         if captures:
             self._pile.setCurrentWidget(self._galerie())
+        elif cle_rubrique in self._encyclo:
+            self._pile.setCurrentWidget(self._encyclo[cle_rubrique])
+            if self.jeu:
+                self._encyclo[cle_rubrique].montrer(self.jeu)
         else:
             self._pile.setCurrentWidget(self._musique if musique else self._cinematiques)
         self._cinematiques.afficher(cle_rubrique == CINEMATIQUES)
@@ -1250,11 +1266,15 @@ class MediathequePage(QDialog):
         courante = self._pile.currentWidget()
         if courante is self._musique:
             return MUSIQUE
+        if isinstance(courante, VueEncyclopedie):
+            return courante.rubrique
         return CAPTURES if courante is not None and courante is self._captures else CINEMATIQUES
 
     def done(self, resultat: int) -> None:
         # La Galerie arrête de décoder ses vignettes (son `done`), sans relancer
         # la fermeture de la page par son signal.
+        for vue in self._encyclo.values():
+            vue.fermer()
         if self._captures is not None:
             self._captures.finished.disconnect(self._galerie_fermee)
             self._captures.done(resultat)

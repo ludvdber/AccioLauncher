@@ -101,6 +101,9 @@ _FICHIERS = {
     "suivant": "phosphor/skip-forward-fill.svg",
     "cadenas": "phosphor/lock-simple-bold.svg",
     "film": "phosphor/film-strip-bold.svg",
+    # Personnages et Bestiaire des Collections (2026-10-26).
+    "personnages": "phosphor/users-three-bold.svg",
+    "patte": "phosphor/paw-print-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

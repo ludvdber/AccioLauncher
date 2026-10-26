@@ -1,0 +1,3945 @@
+{
+ "_note": "Personnages et Bestiaire des Collections (2026-10-26). Textes écrits pour le launcher ; noms officiels ; images LUES dans la copie du joueur, jamais livrées.",
+ "personnages": {
+  "hp1": [
+   {
+    "cle": "harry",
+    "nom": {
+     "fr": "Harry Potter",
+     "en": "Harry Potter",
+     "es": "Harry Potter"
+    },
+    "role": {
+     "fr": "Héros, élève de première année",
+     "en": "Hero, first-year student",
+     "es": "Héroe, alumno de primer curso"
+    },
+    "texte": {
+     "fr": "Orphelin élevé chez son oncle et sa tante, il apprend à onze ans qu'il est sorcier et entre à Poudlard.",
+     "en": "An orphan raised by his aunt and uncle, he learns at eleven that he is a wizard and goes to Hogwarts.",
+     "es": "Huérfano criado por sus tíos, descubre a los once años que es mago y entra en Hogwarts."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "6_8_001",
+     "bits": 8,
+     "recadrage": [
+      20,
+      20,
+      236,
+      236
+     ]
+    }
+   },
+   {
+    "cle": "ron",
+    "nom": {
+     "fr": "Ron Weasley",
+     "en": "Ron Weasley",
+     "es": "Ron Weasley"
+    },
+    "role": {
+     "fr": "Meilleur ami de Harry",
+     "en": "Harry's best friend",
+     "es": "Mejor amigo de Harry"
+    },
+    "texte": {
+     "fr": "Sixième enfant d'une grande famille de sorciers, il partage le compartiment de Harry dans le Poudlard Express.",
+     "en": "Sixth child of a large wizarding family, he shares Harry's compartment on the Hogwarts Express.",
+     "es": "Sexto hijo de una gran familia de magos, comparte compartimento con Harry en el Expreso de Hogwarts."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "6_4_002",
+     "bits": 8,
+     "recadrage": [
+      0,
+      30,
+      150,
+      150
+     ]
+    }
+   },
+   {
+    "cle": "hermione",
+    "nom": {
+     "fr": "Hermione Granger",
+     "en": "Hermione Granger",
+     "es": "Hermione Granger"
+    },
+    "role": {
+     "fr": "Camarade de Gryffondor",
+     "en": "Gryffindor classmate",
+     "es": "Compañera de Gryffindor"
+    },
+    "texte": {
+     "fr": "Élève brillante née de parents moldus, elle connaît ses livres par cœur et finit par devenir l'amie de Harry et Ron.",
+     "en": "A brilliant Muggle-born student who knows her books by heart and ends up becoming Harry and Ron's friend.",
+     "es": "Alumna brillante de padres muggles que se sabe los libros de memoria y acaba siendo amiga de Harry y Ron."
+    },
+    "image": null
+   },
+   {
+    "cle": "dumbledore",
+    "nom": {
+     "fr": "Albus Dumbledore",
+     "en": "Albus Dumbledore",
+     "es": "Albus Dumbledore"
+    },
+    "role": {
+     "fr": "Directeur de Poudlard",
+     "en": "Headmaster of Hogwarts",
+     "es": "Director de Hogwarts"
+    },
+    "texte": {
+     "fr": "Directeur bienveillant et un peu excentrique, il veille sur Harry de loin et lui confie la cape de son père.",
+     "en": "A kind and slightly eccentric headmaster, he watches over Harry from afar and gives him his father's cloak.",
+     "es": "Director bondadoso y algo excéntrico, vela por Harry desde lejos y le confía la capa de su padre."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "6_6_001",
+     "bits": 8,
+     "recadrage": [
+      40,
+      20,
+      160,
+      160
+     ]
+    }
+   },
+   {
+    "cle": "hagrid",
+    "nom": {
+     "fr": "Rubeus Hagrid",
+     "en": "Rubeus Hagrid",
+     "es": "Rubeus Hagrid"
+    },
+    "role": {
+     "fr": "Gardien des clés et des lieux",
+     "en": "Keeper of Keys and Grounds",
+     "es": "Guardián de las llaves y terrenos"
+    },
+    "texte": {
+     "fr": "Demi-géant au grand cœur, il apporte à Harry sa lettre de Poudlard et cache un œuf de dragon dans sa cabane.",
+     "en": "A big-hearted half-giant, he brings Harry his Hogwarts letter and hides a dragon egg in his hut.",
+     "es": "Semigigante de gran corazón, lleva a Harry su carta de Hogwarts y esconde un huevo de dragón en su cabaña."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "3_2_001",
+     "bits": 8,
+     "recadrage": [
+      60,
+      20,
+      150,
+      150
+     ]
+    }
+   },
+   {
+    "cle": "mcgonagall",
+    "nom": {
+     "fr": "Minerva McGonagall",
+     "en": "Minerva McGonagall",
+     "es": "Minerva McGonagall"
+    },
+    "role": {
+     "fr": "Directrice de Gryffondor",
+     "en": "Head of Gryffindor",
+     "es": "Jefa de Gryffindor"
+    },
+    "texte": {
+     "fr": "Professeur de métamorphose, sévère mais juste, elle accueille les nouveaux élèves avant la cérémonie de répartition.",
+     "en": "Transfiguration teacher, strict but fair, she welcomes the new students before the Sorting ceremony.",
+     "es": "Profesora de Transformaciones, severa pero justa, recibe a los nuevos alumnos antes de la Selección."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "3_7_001",
+     "bits": 8,
+     "recadrage": [
+      50,
+      60,
+      150,
+      150
+     ]
+    }
+   },
+   {
+    "cle": "rogue",
+    "nom": {
+     "fr": "Severus Rogue",
+     "en": "Severus Snape",
+     "es": "Severus Snape"
+    },
+    "role": {
+     "fr": "Professeur de potions",
+     "en": "Potions teacher",
+     "es": "Profesor de Pociones"
+    },
+    "texte": {
+     "fr": "Maître des potions au regard froid, il semble détester Harry, qui le soupçonne de convoiter la pierre.",
+     "en": "A cold-eyed Potions master, he seems to hate Harry, who suspects him of being after the Stone.",
+     "es": "Maestro de Pociones de mirada fría, parece detestar a Harry, que sospecha que busca la piedra."
+    },
+    "image": null
+   },
+   {
+    "cle": "quirrell",
+    "nom": {
+     "fr": "Quirinus Quirrell",
+     "en": "Quirinus Quirrell",
+     "es": "Quirinus Quirrell"
+    },
+    "role": {
+     "fr": "Professeur de défense contre les forces du Mal",
+     "en": "Defence Against the Dark Arts teacher",
+     "es": "Profesor de Defensa Contra las Artes Oscuras"
+    },
+    "texte": {
+     "fr": "Professeur timide et bégayant coiffé d'un turban, il cache bien son jeu jusqu'à la dernière salle.",
+     "en": "A shy, stammering teacher in a turban, he hides his true nature until the very last room.",
+     "es": "Profesor tímido y tartamudo con turbante, oculta bien su juego hasta la última sala."
+    },
+    "image": null
+   },
+   {
+    "cle": "flitwick",
+    "nom": {
+     "fr": "Filius Flitwick",
+     "en": "Filius Flitwick",
+     "es": "Filius Flitwick"
+    },
+    "role": {
+     "fr": "Professeur d'enchantements",
+     "en": "Charms teacher",
+     "es": "Profesor de Encantamientos"
+    },
+    "texte": {
+     "fr": "Petit sorcier enjoué qui enseigne les sortilèges, il fait découvrir à Harry ses premiers sorts.",
+     "en": "A cheerful little wizard who teaches charms, he introduces Harry to his first spells.",
+     "es": "Pequeño mago alegre que enseña los encantamientos y hace descubrir a Harry sus primeros hechizos."
+    },
+    "image": null
+   },
+   {
+    "cle": "chourave",
+    "nom": {
+     "fr": "Pomona Chourave",
+     "en": "Pomona Sprout",
+     "es": "Pomona Sprout"
+    },
+    "role": {
+     "fr": "Professeur de botanique",
+     "en": "Herbology teacher",
+     "es": "Profesora de Herbología"
+    },
+    "texte": {
+     "fr": "Elle donne ses cours dans les serres du château, au milieu des plantes magiques parfois dangereuses.",
+     "en": "She teaches in the castle greenhouses, among magical plants that are sometimes dangerous.",
+     "es": "Da sus clases en los invernaderos del castillo, entre plantas mágicas a veces peligrosas."
+    },
+    "image": null
+   },
+   {
+    "cle": "bibine",
+    "nom": {
+     "fr": "Madame Bibine",
+     "en": "Madam Hooch",
+     "es": "Señora Hooch"
+    },
+    "role": {
+     "fr": "Professeur de vol",
+     "en": "Flying teacher",
+     "es": "Profesora de vuelo"
+    },
+    "texte": {
+     "fr": "Elle apprend aux élèves de première année à tenir sur un balai et arbitre les matchs de Quidditch.",
+     "en": "She teaches first-years to stay on a broom and referees the Quidditch matches.",
+     "es": "Enseña a los alumnos de primero a sostenerse en una escoba y arbitra los partidos de quidditch."
+    },
+    "image": null
+   },
+   {
+    "cle": "rusard",
+    "nom": {
+     "fr": "Argus Rusard",
+     "en": "Argus Filch",
+     "es": "Argus Filch"
+    },
+    "role": {
+     "fr": "Concierge de Poudlard",
+     "en": "Hogwarts caretaker",
+     "es": "Conserje de Hogwarts"
+    },
+    "texte": {
+     "fr": "Concierge grincheux qui patrouille la nuit avec sa chatte, Miss Teigne, à la recherche d'élèves hors du dortoir.",
+     "en": "A grumpy caretaker who patrols at night with his cat, Mrs Norris, looking for students out of bed.",
+     "es": "Conserje gruñón que patrulla de noche con su gata, la Señora Norris, en busca de alumnos fuera del dormitorio."
+    },
+    "image": null
+   },
+   {
+    "cle": "malefoy",
+    "nom": {
+     "fr": "Drago Malefoy",
+     "en": "Draco Malfoy",
+     "es": "Draco Malfoy"
+    },
+    "role": {
+     "fr": "Rival de Serpentard",
+     "en": "Slytherin rival",
+     "es": "Rival de Slytherin"
+    },
+    "texte": {
+     "fr": "Élève arrogant de Serpentard, il vole le Rapeltout de Neville et défie Harry dans les airs.",
+     "en": "An arrogant Slytherin, he steals Neville's Remembrall and challenges Harry in the air.",
+     "es": "Alumno arrogante de Slytherin, roba la recordadora de Neville y desafía a Harry en el aire."
+    },
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "MalfoyHead",
+     "bits": 8,
+     "recadrage": [
+      42,
+      94,
+      58,
+      66
+     ]
+    }
+   },
+   {
+    "cle": "neville",
+    "nom": {
+     "fr": "Neville Londubat",
+     "en": "Neville Longbottom",
+     "es": "Neville Longbottom"
+    },
+    "role": {
+     "fr": "Camarade de Gryffondor",
+     "en": "Gryffindor classmate",
+     "es": "Compañero de Gryffindor"
+    },
+    "texte": {
+     "fr": "Garçon maladroit et oublieux, il reçoit un Rapeltout de sa grand-mère et montre plus de courage qu'on ne le croit.",
+     "en": "A clumsy, forgetful boy, he gets a Remembrall from his grandmother and shows more courage than expected.",
+     "es": "Chico torpe y olvidadizo, recibe una recordadora de su abuela y demuestra más valor del que parece."
+    },
+    "image": null
+   },
+   {
+    "cle": "percy",
+    "nom": {
+     "fr": "Percy Weasley",
+     "en": "Percy Weasley",
+     "es": "Percy Weasley"
+    },
+    "role": {
+     "fr": "Préfet de Gryffondor",
+     "en": "Gryffindor prefect",
+     "es": "Prefecto de Gryffindor"
+    },
+    "texte": {
+     "fr": "Frère aîné de Ron, préfet très fier de son insigne, il guide les nouveaux élèves dans le château.",
+     "en": "Ron's older brother, a prefect very proud of his badge, he guides the new students through the castle.",
+     "es": "Hermano mayor de Ron, prefecto muy orgulloso de su insignia, guía a los nuevos alumnos por el castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "fred",
+    "nom": {
+     "fr": "Fred Weasley",
+     "en": "Fred Weasley",
+     "es": "Fred Weasley"
+    },
+    "role": {
+     "fr": "Frère de Ron, batteur",
+     "en": "Ron's brother, Beater",
+     "es": "Hermano de Ron, golpeador"
+    },
+    "texte": {
+     "fr": "Jumeau farceur de George, il joue batteur dans l'équipe de Quidditch de Gryffondor.",
+     "en": "George's prankster twin, he plays Beater on the Gryffindor Quidditch team.",
+     "es": "Gemelo bromista de George, juega de golpeador en el equipo de quidditch de Gryffindor."
+    },
+    "image": null
+   },
+   {
+    "cle": "george",
+    "nom": {
+     "fr": "George Weasley",
+     "en": "George Weasley",
+     "es": "George Weasley"
+    },
+    "role": {
+     "fr": "Frère de Ron, batteur",
+     "en": "Ron's brother, Beater",
+     "es": "Hermano de Ron, golpeador"
+    },
+    "texte": {
+     "fr": "Jumeau de Fred, aussi blagueur que lui, il protège Harry des Cognards pendant les matchs.",
+     "en": "Fred's twin and just as much of a joker, he shields Harry from the Bludgers during matches.",
+     "es": "Gemelo de Fred, igual de bromista, protege a Harry de las bludgers durante los partidos."
+    },
+    "image": null
+   },
+   {
+    "cle": "crabbe",
+    "nom": {
+     "fr": "Vincent Crabbe",
+     "en": "Vincent Crabbe",
+     "es": "Vincent Crabbe"
+    },
+    "role": {
+     "fr": "Acolyte de Malefoy",
+     "en": "Malfoy's sidekick",
+     "es": "Secuaz de Malfoy"
+    },
+    "texte": {
+     "fr": "Grand élève de Serpentard qui suit Drago partout et fait le gros dos derrière lui.",
+     "en": "A big Slytherin who follows Draco everywhere and looms behind him.",
+     "es": "Alumno corpulento de Slytherin que sigue a Draco a todas partes y hace de muro detrás de él."
+    },
+    "image": null
+   },
+   {
+    "cle": "goyle",
+    "nom": {
+     "fr": "Gregory Goyle",
+     "en": "Gregory Goyle",
+     "es": "Gregory Goyle"
+    },
+    "role": {
+     "fr": "Acolyte de Malefoy",
+     "en": "Malfoy's sidekick",
+     "es": "Secuaz de Malfoy"
+    },
+    "texte": {
+     "fr": "Inséparable de Crabbe, il sert de garde du corps à Drago Malefoy.",
+     "en": "Inseparable from Crabbe, he acts as Draco Malfoy's bodyguard.",
+     "es": "Inseparable de Crabbe, hace de guardaespaldas de Draco Malfoy."
+    },
+    "image": null
+   },
+   {
+    "cle": "nick",
+    "nom": {
+     "fr": "Nick Quasi-Sans-Tête",
+     "en": "Nearly Headless Nick",
+     "es": "Nick Casi Decapitado"
+    },
+    "role": {
+     "fr": "Fantôme de Gryffondor",
+     "en": "Gryffindor ghost",
+     "es": "Fantasma de Gryffindor"
+    },
+    "texte": {
+     "fr": "Fantôme courtois de la tour de Gryffondor, mal décapité il y a des siècles, il donne volontiers des conseils.",
+     "en": "The courteous ghost of Gryffindor Tower, badly beheaded centuries ago, happy to give advice.",
+     "es": "Fantasma cortés de la torre de Gryffindor, mal decapitado hace siglos, da consejos de buena gana."
+    },
+    "image": null
+   },
+   {
+    "cle": "peeves",
+    "nom": {
+     "fr": "Peeves",
+     "en": "Peeves",
+     "es": "Peeves"
+    },
+    "role": {
+     "fr": "Esprit frappeur",
+     "en": "Poltergeist",
+     "es": "Poltergeist"
+    },
+    "texte": {
+     "fr": "Esprit farceur qui hante les couloirs, il jette des objets sur les élèves et se moque de tout le monde.",
+     "en": "A mischievous spirit haunting the corridors, he throws things at students and mocks everyone.",
+     "es": "Espíritu travieso que ronda los pasillos, lanza objetos a los alumnos y se burla de todo el mundo."
+    },
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "PeevesHead",
+     "bits": 8,
+     "recadrage": [
+      32,
+      96,
+      64,
+      64
+     ]
+    }
+   },
+   {
+    "cle": "voldemort",
+    "nom": {
+     "fr": "Lord Voldemort",
+     "en": "Lord Voldemort",
+     "es": "Lord Voldemort"
+    },
+    "role": {
+     "fr": "Adversaire final",
+     "en": "Final adversary",
+     "es": "Adversario final"
+    },
+    "texte": {
+     "fr": "Le mage noir qui a tué les parents de Harry cherche à retrouver un corps grâce à la pierre philosophale.",
+     "en": "The dark wizard who killed Harry's parents seeks to regain a body through the Philosopher's Stone.",
+     "es": "El mago tenebroso que mató a los padres de Harry busca recuperar un cuerpo gracias a la piedra filosofal."
+    },
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "VoldemortHead",
+     "bits": 8,
+     "recadrage": [
+      42,
+      94,
+      58,
+      66
+     ]
+    }
+   },
+   {
+    "cle": "touffu",
+    "nom": {
+     "fr": "Touffu",
+     "en": "Fluffy",
+     "es": "Fluffy"
+    },
+    "role": {
+     "fr": "Gardien du couloir interdit",
+     "en": "Guardian of the forbidden corridor",
+     "es": "Guardián del pasillo prohibido"
+    },
+    "texte": {
+     "fr": "Chien géant à trois têtes appartenant à Hagrid, il garde la trappe et s'endort au son de la musique.",
+     "en": "Hagrid's giant three-headed dog, he guards the trapdoor and falls asleep to music.",
+     "es": "Perro gigante de tres cabezas de Hagrid, guarda la trampilla y se duerme con la música."
+    },
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "FluffyHeadMAwake",
+     "bits": 8,
+     "recadrage": [
+      0,
+      46,
+      40,
+      40
+     ]
+    }
+   },
+   {
+    "cle": "troll",
+    "nom": {
+     "fr": "Le troll",
+     "en": "The troll",
+     "es": "El trol"
+    },
+    "role": {
+     "fr": "Monstre d'Halloween",
+     "en": "Halloween monster",
+     "es": "Monstruo de Halloween"
+    },
+    "texte": {
+     "fr": "Troll des montagnes lâché dans le château le soir d'Halloween ; Harry et Ron l'affrontent pour sauver Hermione.",
+     "en": "A mountain troll let loose in the castle on Halloween night; Harry and Ron face it to save Hermione.",
+     "es": "Trol de montaña suelto en el castillo la noche de Halloween; Harry y Ron se enfrentan a él para salvar a Hermione."
+    },
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "EnemyHead1",
+     "bits": 8,
+     "recadrage": [
+      12,
+      8,
+      48,
+      48
+     ]
+    }
+   },
+   {
+    "cle": "choixpeau",
+    "nom": {
+     "fr": "Le Choixpeau magique",
+     "en": "The Sorting Hat",
+     "es": "El Sombrero Seleccionador"
+    },
+    "role": {
+     "fr": "Répartition des élèves",
+     "en": "Sorting of students",
+     "es": "Selección de los alumnos"
+    },
+    "texte": {
+     "fr": "Vieux chapeau rapiécé qui lit dans les têtes et envoie chaque nouvel élève dans sa maison.",
+     "en": "A patched old hat that reads minds and sends each new student to their house.",
+     "es": "Viejo sombrero remendado que lee las mentes y envía a cada alumno nuevo a su casa."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "3_7_002",
+     "bits": 8,
+     "recadrage": [
+      0,
+      0,
+      200,
+      200
+     ]
+    }
+   },
+   {
+    "cle": "vernon",
+    "nom": {
+     "fr": "Vernon Dursley",
+     "en": "Vernon Dursley",
+     "es": "Vernon Dursley"
+    },
+    "role": {
+     "fr": "Oncle de Harry",
+     "en": "Harry's uncle",
+     "es": "Tío de Harry"
+    },
+    "texte": {
+     "fr": "Oncle moldu de Harry, colérique et borné, il tente d'empêcher les lettres de Poudlard d'arriver.",
+     "en": "Harry's Muggle uncle, short-tempered and narrow-minded, he tries to stop the Hogwarts letters from arriving.",
+     "es": "Tío muggle de Harry, colérico y obtuso, intenta impedir que lleguen las cartas de Hogwarts."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "3_4_001",
+     "bits": 8,
+     "recadrage": [
+      110,
+      20,
+      120,
+      120
+     ]
+    }
+   },
+   {
+    "cle": "petunia",
+    "nom": {
+     "fr": "Pétunia Dursley",
+     "en": "Petunia Dursley",
+     "es": "Petunia Dursley"
+    },
+    "role": {
+     "fr": "Tante de Harry",
+     "en": "Harry's aunt",
+     "es": "Tía de Harry"
+    },
+    "texte": {
+     "fr": "Sœur de la mère de Harry, elle a toujours refusé d'admettre que la magie existe.",
+     "en": "Harry's mother's sister, she has always refused to admit that magic exists.",
+     "es": "Hermana de la madre de Harry, siempre se ha negado a admitir que la magia existe."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "3_4_001",
+     "bits": 8,
+     "recadrage": [
+      20,
+      30,
+      110,
+      110
+     ]
+    }
+   },
+   {
+    "cle": "dudley",
+    "nom": {
+     "fr": "Dudley Dursley",
+     "en": "Dudley Dursley",
+     "es": "Dudley Dursley"
+    },
+    "role": {
+     "fr": "Cousin de Harry",
+     "en": "Harry's cousin",
+     "es": "Primo de Harry"
+    },
+    "texte": {
+     "fr": "Cousin gâté de Harry, il passe son temps à le tourmenter avec sa bande.",
+     "en": "Harry's spoiled cousin, he spends his time tormenting him with his gang.",
+     "es": "Primo mimado de Harry, se pasa el tiempo atormentándolo con su pandilla."
+    },
+    "image": {
+     "fichier": "Textures/StoryBookTest.utx",
+     "nom": "3_4_002",
+     "bits": 8,
+     "recadrage": [
+      10,
+      40,
+      150,
+      150
+     ]
+    }
+   }
+  ],
+  "hp2": [
+   {
+    "cle": "harry",
+    "nom": {
+     "fr": "Harry Potter",
+     "en": "Harry Potter",
+     "es": "Harry Potter"
+    },
+    "role": {
+     "fr": "Héros, élève de deuxième année",
+     "en": "Hero, second-year student",
+     "es": "Héroe, alumno de segundo curso"
+    },
+    "texte": {
+     "fr": "De retour à Poudlard pour sa deuxième année, il découvre qu'il parle aux serpents et cherche la Chambre des secrets.",
+     "en": "Back at Hogwarts for his second year, he finds he can talk to snakes and searches for the Chamber of Secrets.",
+     "es": "De vuelta en Hogwarts para su segundo curso, descubre que habla con las serpientes y busca la Cámara de los Secretos."
+    },
+    "image": {
+     "fichier": "System/hgame.u",
+     "nom": "WizCardHarryBigTextureLayer1",
+     "bits": 8,
+     "recadrage": [
+      80,
+      50,
+      72,
+      72
+     ]
+    }
+   },
+   {
+    "cle": "ron",
+    "nom": {
+     "fr": "Ron Weasley",
+     "en": "Ron Weasley",
+     "es": "Ron Weasley"
+    },
+    "role": {
+     "fr": "Meilleur ami de Harry",
+     "en": "Harry's best friend",
+     "es": "Mejor amigo de Harry"
+    },
+    "texte": {
+     "fr": "Il vient chercher Harry chez les Dursley dans la voiture volante de son père et l'accompagne jusqu'à la Chambre.",
+     "en": "He fetches Harry from the Dursleys in his father's flying car and goes with him all the way to the Chamber.",
+     "es": "Va a buscar a Harry a casa de los Dursley en el coche volador de su padre y lo acompaña hasta la Cámara."
+    },
+    "image": null
+   },
+   {
+    "cle": "hermione",
+    "nom": {
+     "fr": "Hermione Granger",
+     "en": "Hermione Granger",
+     "es": "Hermione Granger"
+    },
+    "role": {
+     "fr": "Amie de Harry",
+     "en": "Harry's friend",
+     "es": "Amiga de Harry"
+    },
+    "texte": {
+     "fr": "Elle prépare du Polynectar en cachette et devine la nature du monstre avant d'être pétrifiée.",
+     "en": "She brews Polyjuice Potion in secret and works out what the monster is before being petrified.",
+     "es": "Prepara poción multijugos a escondidas y adivina la naturaleza del monstruo antes de quedar petrificada."
+    },
+    "image": null
+   },
+   {
+    "cle": "ginny",
+    "nom": {
+     "fr": "Ginny Weasley",
+     "en": "Ginny Weasley",
+     "es": "Ginny Weasley"
+    },
+    "role": {
+     "fr": "Sœur de Ron",
+     "en": "Ron's sister",
+     "es": "Hermana de Ron"
+    },
+    "texte": {
+     "fr": "Petite sœur de Ron, en première année, elle tombe sous l'emprise d'un mystérieux journal intime.",
+     "en": "Ron's little sister, a first-year, she falls under the spell of a mysterious diary.",
+     "es": "Hermana pequeña de Ron, en primer curso, cae bajo el dominio de un misterioso diario."
+    },
+    "image": null
+   },
+   {
+    "cle": "dumbledore",
+    "nom": {
+     "fr": "Albus Dumbledore",
+     "en": "Albus Dumbledore",
+     "es": "Albus Dumbledore"
+    },
+    "role": {
+     "fr": "Directeur de Poudlard",
+     "en": "Headmaster of Hogwarts",
+     "es": "Director de Hogwarts"
+    },
+    "texte": {
+     "fr": "Le directeur reste calme face aux attaques, jusqu'à ce que le conseil d'administration le suspende.",
+     "en": "The headmaster stays calm in the face of the attacks, until the board of governors suspends him.",
+     "es": "El director mantiene la calma ante los ataques, hasta que el consejo escolar lo suspende."
+    },
+    "image": {
+     "fichier": "Textures/Wizard.utx",
+     "nom": "AlbusdumbledoreE3",
+     "bits": 8,
+     "recadrage": [
+      70,
+      10,
+      120,
+      120
+     ]
+    }
+   },
+   {
+    "cle": "lockhart",
+    "nom": {
+     "fr": "Gilderoy Lockhart",
+     "en": "Gilderoy Lockhart",
+     "es": "Gilderoy Lockhart"
+    },
+    "role": {
+     "fr": "Professeur de défense contre les forces du Mal",
+     "en": "Defence Against the Dark Arts teacher",
+     "es": "Profesor de Defensa Contra las Artes Oscuras"
+    },
+    "texte": {
+     "fr": "Auteur à succès vaniteux, il couvre son bureau de ses propres portraits et se révèle un piètre sorcier.",
+     "en": "A vain best-selling author, he covers his office with his own portraits and turns out to be a poor wizard.",
+     "es": "Autor de éxito y vanidoso, llena su despacho de retratos suyos y resulta ser un mago mediocre."
+    },
+    "image": {
+     "fichier": "Textures/HP_Portraits2.utx",
+     "nom": "LockH_portrait_01",
+     "bits": 8
+    }
+   },
+   {
+    "cle": "rogue",
+    "nom": {
+     "fr": "Severus Rogue",
+     "en": "Severus Snape",
+     "es": "Severus Snape"
+    },
+    "role": {
+     "fr": "Professeur de potions",
+     "en": "Potions teacher",
+     "es": "Profesor de Pociones"
+    },
+    "texte": {
+     "fr": "Toujours aussi froid avec Harry, il dirige le club de duel aux côtés de Lockhart.",
+     "en": "As cold as ever with Harry, he runs the Duelling Club alongside Lockhart.",
+     "es": "Tan frío como siempre con Harry, dirige el club de duelo junto a Lockhart."
+    },
+    "image": null
+   },
+   {
+    "cle": "mcgonagall",
+    "nom": {
+     "fr": "Minerva McGonagall",
+     "en": "Minerva McGonagall",
+     "es": "Minerva McGonagall"
+    },
+    "role": {
+     "fr": "Directrice de Gryffondor",
+     "en": "Head of Gryffindor",
+     "es": "Jefa de Gryffindor"
+    },
+    "texte": {
+     "fr": "Professeur de métamorphose, elle prend les choses en main quand les élèves sont pétrifiés.",
+     "en": "Transfiguration teacher, she takes charge when students are petrified.",
+     "es": "Profesora de Transformaciones, toma las riendas cuando los alumnos quedan petrificados."
+    },
+    "image": null
+   },
+   {
+    "cle": "chourave",
+    "nom": {
+     "fr": "Pomona Chourave",
+     "en": "Pomona Sprout",
+     "es": "Pomona Sprout"
+    },
+    "role": {
+     "fr": "Professeur de botanique",
+     "en": "Herbology teacher",
+     "es": "Profesora de Herbología"
+    },
+    "texte": {
+     "fr": "Elle fait rempoter des mandragores aux élèves de deuxième année, plantes qui guériront les victimes pétrifiées.",
+     "en": "She has the second-years repot Mandrakes, the plants that will cure the petrified victims.",
+     "es": "Hace trasplantar mandrágoras a los alumnos de segundo, plantas que curarán a las víctimas petrificadas."
+    },
+    "image": null
+   },
+   {
+    "cle": "flitwick",
+    "nom": {
+     "fr": "Filius Flitwick",
+     "en": "Filius Flitwick",
+     "es": "Filius Flitwick"
+    },
+    "role": {
+     "fr": "Professeur d'enchantements",
+     "en": "Charms teacher",
+     "es": "Profesor de Encantamientos"
+    },
+    "texte": {
+     "fr": "Le petit professeur enseigne de nouveaux sortilèges que Harry devra maîtriser dans ses défis.",
+     "en": "The little professor teaches new charms that Harry must master in his challenges.",
+     "es": "El pequeño profesor enseña nuevos hechizos que Harry deberá dominar en sus desafíos."
+    },
+    "image": null
+   },
+   {
+    "cle": "pomfresh",
+    "nom": {
+     "fr": "Madame Pomfresh",
+     "en": "Madam Pomfrey",
+     "es": "Señora Pomfrey"
+    },
+    "role": {
+     "fr": "Infirmière",
+     "en": "Matron",
+     "es": "Enfermera"
+    },
+    "texte": {
+     "fr": "Infirmière de l'école, elle soigne les blessés et veille sur les élèves pétrifiés.",
+     "en": "The school nurse, she treats the injured and watches over the petrified students.",
+     "es": "Enfermera del colegio, cura a los heridos y cuida de los alumnos petrificados."
+    },
+    "image": null
+   },
+   {
+    "cle": "rusard",
+    "nom": {
+     "fr": "Argus Rusard",
+     "en": "Argus Filch",
+     "es": "Argus Filch"
+    },
+    "role": {
+     "fr": "Concierge de Poudlard",
+     "en": "Hogwarts caretaker",
+     "es": "Conserje de Hogwarts"
+    },
+    "texte": {
+     "fr": "Le concierge soupçonne Harry quand sa chatte, Miss Teigne, est retrouvée pétrifiée.",
+     "en": "The caretaker suspects Harry when his cat, Mrs Norris, is found petrified.",
+     "es": "El conserje sospecha de Harry cuando su gata, la Señora Norris, aparece petrificada."
+    },
+    "image": null
+   },
+   {
+    "cle": "hagrid",
+    "nom": {
+     "fr": "Rubeus Hagrid",
+     "en": "Rubeus Hagrid",
+     "es": "Rubeus Hagrid"
+    },
+    "role": {
+     "fr": "Gardien des clés et des lieux",
+     "en": "Keeper of Keys and Grounds",
+     "es": "Guardián de las llaves y terrenos"
+    },
+    "texte": {
+     "fr": "Accusé à tort d'avoir ouvert la Chambre autrefois, il met Harry sur la piste des araignées avant d'être emmené.",
+     "en": "Wrongly accused of opening the Chamber long ago, he puts Harry on the spiders' trail before being taken away.",
+     "es": "Acusado injustamente de haber abierto la Cámara en el pasado, pone a Harry tras la pista de las arañas antes de que se lo lleven."
+    },
+    "image": null
+   },
+   {
+    "cle": "crabbe",
+    "nom": {
+     "fr": "Vincent Crabbe",
+     "en": "Vincent Crabbe",
+     "es": "Vincent Crabbe"
+    },
+    "role": {
+     "fr": "Acolyte de Malefoy",
+     "en": "Malfoy's sidekick",
+     "es": "Secuaz de Malfoy"
+    },
+    "texte": {
+     "fr": "Élève de Serpentard dont Harry prend l'apparence grâce au Polynectar.",
+     "en": "The Slytherin whose appearance Harry takes with Polyjuice Potion.",
+     "es": "Alumno de Slytherin cuya apariencia toma Harry gracias a la poción multijugos."
+    },
+    "image": null
+   },
+   {
+    "cle": "goyle",
+    "nom": {
+     "fr": "Gregory Goyle",
+     "en": "Gregory Goyle",
+     "es": "Gregory Goyle"
+    },
+    "role": {
+     "fr": "Acolyte de Malefoy",
+     "en": "Malfoy's sidekick",
+     "es": "Secuaz de Malfoy"
+    },
+    "texte": {
+     "fr": "Compagnon de Crabbe, il sert lui aussi de modèle au Polynectar pour entrer dans la salle commune de Serpentard.",
+     "en": "Crabbe's companion, he too serves as a Polyjuice model to get into the Slytherin common room.",
+     "es": "Compañero de Crabbe, también sirve de modelo para la multijugos y entrar en la sala común de Slytherin."
+    },
+    "image": null
+   },
+   {
+    "cle": "lucius",
+    "nom": {
+     "fr": "Lucius Malefoy",
+     "en": "Lucius Malfoy",
+     "es": "Lucius Malfoy"
+    },
+    "role": {
+     "fr": "Père de Drago",
+     "en": "Draco's father",
+     "es": "Padre de Draco"
+    },
+    "texte": {
+     "fr": "Sorcier influent et méprisant, il glisse en secret le journal de Jedusor parmi les affaires de Ginny.",
+     "en": "An influential, scornful wizard, he secretly slips Riddle's diary among Ginny's things.",
+     "es": "Mago influyente y despectivo, desliza en secreto el diario de Ryddle entre las cosas de Ginny."
+    },
+    "image": null
+   },
+   {
+    "cle": "dobby",
+    "nom": {
+     "fr": "Dobby",
+     "en": "Dobby",
+     "es": "Dobby"
+    },
+    "role": {
+     "fr": "Elfe de maison",
+     "en": "House-elf",
+     "es": "Elfo doméstico"
+    },
+    "texte": {
+     "fr": "Elfe de maison au service des Malefoy, il tente par tous les moyens d'empêcher Harry de retourner à Poudlard.",
+     "en": "A house-elf serving the Malfoys, he tries everything to stop Harry from returning to Hogwarts.",
+     "es": "Elfo doméstico al servicio de los Malfoy, intenta por todos los medios impedir que Harry vuelva a Hogwarts."
+    },
+    "image": null
+   },
+   {
+    "cle": "jedusor",
+    "nom": {
+     "fr": "Tom Jedusor",
+     "en": "Tom Riddle",
+     "es": "Tom Riddle"
+    },
+    "role": {
+     "fr": "Souvenir du journal",
+     "en": "Memory in the diary",
+     "es": "Recuerdo del diario"
+    },
+    "texte": {
+     "fr": "Souvenir d'un ancien élève enfermé dans un journal intime, il attend Harry au fond de la Chambre des secrets.",
+     "en": "The memory of a former student trapped in a diary, he waits for Harry deep in the Chamber of Secrets.",
+     "es": "Recuerdo de un antiguo alumno encerrado en un diario, espera a Harry en el fondo de la Cámara de los Secretos."
+    },
+    "image": null
+   },
+   {
+    "cle": "mimi",
+    "nom": {
+     "fr": "Mimi Geignarde",
+     "en": "Moaning Myrtle",
+     "es": "Myrtle la Llorona"
+    },
+    "role": {
+     "fr": "Fantôme des toilettes",
+     "en": "Bathroom ghost",
+     "es": "Fantasma de los baños"
+    },
+    "texte": {
+     "fr": "Fantôme d'une élève qui hante les toilettes des filles du premier étage, là où se cache l'entrée de la Chambre.",
+     "en": "The ghost of a student haunting the first-floor girls' bathroom, where the entrance to the Chamber is hidden.",
+     "es": "Fantasma de una alumna que ronda el baño de chicas del primer piso, donde se oculta la entrada de la Cámara."
+    },
+    "image": null
+   },
+   {
+    "cle": "nick",
+    "nom": {
+     "fr": "Nick Quasi-Sans-Tête",
+     "en": "Nearly Headless Nick",
+     "es": "Nick Casi Decapitado"
+    },
+    "role": {
+     "fr": "Fantôme de Gryffondor",
+     "en": "Gryffindor ghost",
+     "es": "Fantasma de Gryffindor"
+    },
+    "texte": {
+     "fr": "Le fantôme de Gryffondor fête son anniversaire de mort avant d'être lui aussi pétrifié.",
+     "en": "The Gryffindor ghost celebrates his deathday before being petrified himself.",
+     "es": "El fantasma de Gryffindor celebra su cumpleaños de muerte antes de quedar también petrificado."
+    },
+    "image": null
+   },
+   {
+    "cle": "moine_gras",
+    "nom": {
+     "fr": "Le Moine Gras",
+     "en": "The Fat Friar",
+     "es": "El Fraile Gordo"
+    },
+    "role": {
+     "fr": "Fantôme de Poufsouffle",
+     "en": "Hufflepuff ghost",
+     "es": "Fantasma de Hufflepuff"
+    },
+    "texte": {
+     "fr": "Fantôme jovial de la maison Poufsouffle, toujours prêt à pardonner.",
+     "en": "The jolly ghost of Hufflepuff house, always ready to forgive.",
+     "es": "Fantasma jovial de la casa Hufflepuff, siempre dispuesto a perdonar."
+    },
+    "image": null
+   },
+   {
+    "cle": "grosse_dame",
+    "nom": {
+     "fr": "La Grosse Dame",
+     "en": "The Fat Lady",
+     "es": "La Señora Gorda"
+    },
+    "role": {
+     "fr": "Portrait gardien de Gryffondor",
+     "en": "Portrait guarding Gryffindor",
+     "es": "Retrato guardián de Gryffindor"
+    },
+    "texte": {
+     "fr": "Dame en robe rose dont le tableau garde l'entrée de la tour de Gryffondor et réclame le mot de passe.",
+     "en": "A lady in a pink dress whose painting guards the entrance to Gryffindor Tower and asks for the password.",
+     "es": "Dama con vestido rosa cuyo cuadro guarda la entrada de la torre de Gryffindor y pide la contraseña."
+    },
+    "image": null
+   },
+   {
+    "cle": "peeves",
+    "nom": {
+     "fr": "Peeves",
+     "en": "Peeves",
+     "es": "Peeves"
+    },
+    "role": {
+     "fr": "Esprit frappeur",
+     "en": "Poltergeist",
+     "es": "Poltergeist"
+    },
+    "texte": {
+     "fr": "L'esprit frappeur sème le désordre dans les couloirs et provoque Harry en duel.",
+     "en": "The poltergeist causes chaos in the corridors and challenges Harry to a duel.",
+     "es": "El poltergeist siembra el desorden en los pasillos y reta a Harry a un duelo."
+    },
+    "image": {
+     "fichier": "Textures/HP2_Menu.utx",
+     "nom": "HP2EnemyHealthPeeves",
+     "bits": 8,
+     "recadrage": [
+      0,
+      0,
+      104,
+      78
+     ]
+    }
+   },
+   {
+    "cle": "fred",
+    "nom": {
+     "fr": "Fred Weasley",
+     "en": "Fred Weasley",
+     "es": "Fred Weasley"
+    },
+    "role": {
+     "fr": "Frère de Ron",
+     "en": "Ron's brother",
+     "es": "Hermano de Ron"
+    },
+    "texte": {
+     "fr": "Jumeau farceur, il aide à arracher Harry à la chambre grillagée de Privet Drive.",
+     "en": "A prankster twin, he helps pull Harry out of his barred room on Privet Drive.",
+     "es": "Gemelo bromista, ayuda a sacar a Harry de su cuarto enrejado de Privet Drive."
+    },
+    "image": null
+   },
+   {
+    "cle": "george",
+    "nom": {
+     "fr": "George Weasley",
+     "en": "George Weasley",
+     "es": "George Weasley"
+    },
+    "role": {
+     "fr": "Frère de Ron",
+     "en": "Ron's brother",
+     "es": "Hermano de Ron"
+    },
+    "texte": {
+     "fr": "Jumeau de Fred, il tient avec lui une petite boutique de farces et de friandises dans le château.",
+     "en": "Fred's twin, he runs a little shop of jokes and sweets with him in the castle.",
+     "es": "Gemelo de Fred, lleva con él una pequeña tienda de bromas y golosinas en el castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "percy",
+    "nom": {
+     "fr": "Percy Weasley",
+     "en": "Percy Weasley",
+     "es": "Percy Weasley"
+    },
+    "role": {
+     "fr": "Préfet de Gryffondor",
+     "en": "Gryffindor prefect",
+     "es": "Prefecto de Gryffindor"
+    },
+    "texte": {
+     "fr": "Frère aîné de Ron, préfet sérieux, il passe beaucoup de temps à l'écart pour une raison qu'il garde secrète.",
+     "en": "Ron's older brother, a serious prefect, he spends a lot of time apart for a reason he keeps secret.",
+     "es": "Hermano mayor de Ron, prefecto serio, pasa mucho tiempo apartado por un motivo que guarda en secreto."
+    },
+    "image": null
+   },
+   {
+    "cle": "dubois",
+    "nom": {
+     "fr": "Olivier Dubois",
+     "en": "Oliver Wood",
+     "es": "Oliver Wood"
+    },
+    "role": {
+     "fr": "Capitaine de Quidditch",
+     "en": "Quidditch captain",
+     "es": "Capitán de quidditch"
+    },
+    "texte": {
+     "fr": "Capitaine passionné de l'équipe de Gryffondor, il entraîne Harry sans relâche avant les matchs.",
+     "en": "The passionate captain of the Gryffindor team, he trains Harry relentlessly before matches.",
+     "es": "Apasionado capitán del equipo de Gryffindor, entrena a Harry sin descanso antes de los partidos."
+    },
+    "image": null
+   },
+   {
+    "cle": "aragog",
+    "nom": {
+     "fr": "Aragog",
+     "en": "Aragog",
+     "es": "Aragog"
+    },
+    "role": {
+     "fr": "Acromentule de la forêt",
+     "en": "Acromantula of the forest",
+     "es": "Acromántula del bosque"
+    },
+    "texte": {
+     "fr": "Araignée géante élevée par Hagrid, elle vit au cœur de la forêt interdite avec sa nombreuse descendance.",
+     "en": "A giant spider raised by Hagrid, it lives deep in the Forbidden Forest with its many descendants.",
+     "es": "Araña gigante criada por Hagrid, vive en el corazón del Bosque Prohibido con su numerosa descendencia."
+    },
+    "image": {
+     "fichier": "Textures/HP2_Menu.utx",
+     "nom": "HP2EnemyHealthAragog",
+     "bits": 8,
+     "recadrage": [
+      8,
+      0,
+      112,
+      78
+     ]
+    }
+   },
+   {
+    "cle": "basilic",
+    "nom": {
+     "fr": "Le Basilic",
+     "en": "The Basilisk",
+     "es": "El Basilisco"
+    },
+    "role": {
+     "fr": "Monstre de la Chambre",
+     "en": "Monster of the Chamber",
+     "es": "Monstruo de la Cámara"
+    },
+    "texte": {
+     "fr": "Serpent gigantesque dont le regard pétrifie, il obéit à l'héritier de Serpentard.",
+     "en": "A gigantic serpent whose gaze petrifies, it obeys the heir of Slytherin.",
+     "es": "Serpiente gigantesca cuya mirada petrifica, obedece al heredero de Slytherin."
+    },
+    "image": {
+     "fichier": "Textures/HP2_Menu.utx",
+     "nom": "HP2EnemyHealthBasilisk",
+     "bits": 8,
+     "recadrage": [
+      0,
+      0,
+      90,
+      78
+     ]
+    }
+   }
+  ],
+  "hp3": [
+   {
+    "cle": "harry",
+    "nom": {
+     "fr": "Harry Potter",
+     "en": "Harry Potter",
+     "es": "Harry Potter"
+    },
+    "role": {
+     "fr": "Héros, élève de troisième année",
+     "en": "Hero, third-year student",
+     "es": "Héroe, alumno de tercer curso"
+    },
+    "texte": {
+     "fr": "Pour sa troisième année, Harry apprend à repousser les Détraqueurs et découvre la vérité sur Sirius Black.",
+     "en": "In his third year, Harry learns to repel the Dementors and discovers the truth about Sirius Black.",
+     "es": "En su tercer curso, Harry aprende a repeler a los dementores y descubre la verdad sobre Sirius Black."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_HP",
+     "bits": 32,
+     "recadrage": [
+      14,
+      0,
+      100,
+      92
+     ]
+    }
+   },
+   {
+    "cle": "ron",
+    "nom": {
+     "fr": "Ron Weasley",
+     "en": "Ron Weasley",
+     "es": "Ron Weasley"
+    },
+    "role": {
+     "fr": "Ami de Harry, personnage jouable",
+     "en": "Harry's friend, playable character",
+     "es": "Amigo de Harry, personaje jugable"
+    },
+    "texte": {
+     "fr": "Il se dispute avec Hermione au sujet de son rat Croûtard et de son chat Pattenrond.",
+     "en": "He quarrels with Hermione over his rat Scabbers and her cat Crookshanks.",
+     "es": "Discute con Hermione por su rata Scabbers y el gato de ella, Crookshanks."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_RW",
+     "bits": 32,
+     "recadrage": [
+      14,
+      0,
+      100,
+      92
+     ]
+    }
+   },
+   {
+    "cle": "hermione",
+    "nom": {
+     "fr": "Hermione Granger",
+     "en": "Hermione Granger",
+     "es": "Hermione Granger"
+    },
+    "role": {
+     "fr": "Amie de Harry, personnage jouable",
+     "en": "Harry's friend, playable character",
+     "es": "Amiga de Harry, personaje jugable"
+    },
+    "texte": {
+     "fr": "Elle suit plus de cours que l'emploi du temps ne le permet et garde un secret jusqu'à la fin de l'année.",
+     "en": "She takes more classes than the timetable allows and keeps a secret until the end of the year.",
+     "es": "Asiste a más clases de las que permite el horario y guarda un secreto hasta final de curso."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_HG",
+     "bits": 32,
+     "recadrage": [
+      14,
+      0,
+      100,
+      92
+     ]
+    }
+   },
+   {
+    "cle": "dumbledore",
+    "nom": {
+     "fr": "Albus Dumbledore",
+     "en": "Albus Dumbledore",
+     "es": "Albus Dumbledore"
+    },
+    "role": {
+     "fr": "Directeur de Poudlard",
+     "en": "Headmaster of Hogwarts",
+     "es": "Director de Hogwarts"
+    },
+    "texte": {
+     "fr": "Le directeur tolère à contrecœur les Détraqueurs autour du château et accorde sa confiance à Lupin.",
+     "en": "The headmaster reluctantly tolerates the Dementors around the castle and places his trust in Lupin.",
+     "es": "El director tolera a regañadientes a los dementores alrededor del castillo y confía en Lupin."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "LBO05",
+     "bits": 8
+    }
+   },
+   {
+    "cle": "sirius",
+    "nom": {
+     "fr": "Sirius Black",
+     "en": "Sirius Black",
+     "es": "Sirius Black"
+    },
+    "role": {
+     "fr": "Évadé d'Azkaban",
+     "en": "Escaped from Azkaban",
+     "es": "Fugado de Azkaban"
+    },
+    "texte": {
+     "fr": "Prisonnier évadé que tout le monde croit dangereux, il se révèle être le parrain de Harry.",
+     "en": "An escaped prisoner everyone believes dangerous, he turns out to be Harry's godfather.",
+     "es": "Preso fugado al que todos creen peligroso, resulta ser el padrino de Harry."
+    },
+    "image": {
+     "fichier": "textures/HPCharTextures.utx",
+     "nom": "HP3DailyProphet",
+     "bits": 8,
+     "recadrage": [
+      128,
+      116,
+      82,
+      90
+     ]
+    }
+   },
+   {
+    "cle": "lupin",
+    "nom": {
+     "fr": "Remus Lupin",
+     "en": "Remus Lupin",
+     "es": "Remus Lupin"
+    },
+    "role": {
+     "fr": "Professeur de défense contre les forces du Mal",
+     "en": "Defence Against the Dark Arts teacher",
+     "es": "Profesor de Defensa Contra las Artes Oscuras"
+    },
+    "texte": {
+     "fr": "Professeur attentionné et fatigué, il apprend à Harry le sortilège du Patronus et cache un secret lié à la pleine lune.",
+     "en": "A caring, tired teacher, he teaches Harry the Patronus Charm and hides a secret linked to the full moon.",
+     "es": "Profesor atento y cansado, enseña a Harry el encantamiento patronus y oculta un secreto ligado a la luna llena."
+    },
+    "image": null
+   },
+   {
+    "cle": "hagrid",
+    "nom": {
+     "fr": "Rubeus Hagrid",
+     "en": "Rubeus Hagrid",
+     "es": "Rubeus Hagrid"
+    },
+    "role": {
+     "fr": "Professeur de soins aux créatures magiques",
+     "en": "Care of Magical Creatures teacher",
+     "es": "Profesor de Cuidado de Criaturas Mágicas"
+    },
+    "texte": {
+     "fr": "Nouveau professeur, il présente l'hippogriffe Buck à ses élèves, ce qui tourne mal.",
+     "en": "A new teacher, he introduces the hippogriff Buckbeak to his students, and it goes wrong.",
+     "es": "Nuevo profesor, presenta el hipogrifo Buckbeak a sus alumnos, y la cosa sale mal."
+    },
+    "image": null
+   },
+   {
+    "cle": "mcgonagall",
+    "nom": {
+     "fr": "Minerva McGonagall",
+     "en": "Minerva McGonagall",
+     "es": "Minerva McGonagall"
+    },
+    "role": {
+     "fr": "Directrice de Gryffondor",
+     "en": "Head of Gryffindor",
+     "es": "Jefa de Gryffindor"
+    },
+    "texte": {
+     "fr": "Animagus capable de se changer en chat, elle encadre les élèves de Gryffondor et leurs sorties.",
+     "en": "An Animagus who can turn into a cat, she looks after the Gryffindor students and their outings.",
+     "es": "Animaga capaz de convertirse en gato, se ocupa de los alumnos de Gryffindor y de sus salidas."
+    },
+    "image": null
+   },
+   {
+    "cle": "pettigrew",
+    "nom": {
+     "fr": "Peter Pettigrow",
+     "en": "Peter Pettigrew",
+     "es": "Peter Pettigrew"
+    },
+    "role": {
+     "fr": "Ancien ami des Potter",
+     "en": "Former friend of the Potters",
+     "es": "Antiguo amigo de los Potter"
+    },
+    "texte": {
+     "fr": "Sorcier que l'on croyait mort depuis douze ans, il se cachait sous la forme d'un rat.",
+     "en": "A wizard believed dead for twelve years, he was hiding in the form of a rat.",
+     "es": "Mago al que se creía muerto desde hacía doce años, se escondía bajo la forma de una rata."
+    },
+    "image": null
+   },
+   {
+    "cle": "peeves",
+    "nom": {
+     "fr": "Peeves",
+     "en": "Peeves",
+     "es": "Peeves"
+    },
+    "role": {
+     "fr": "Esprit frappeur",
+     "en": "Poltergeist",
+     "es": "Poltergeist"
+    },
+    "texte": {
+     "fr": "L'esprit frappeur bloque des passages du château et nargue les élèves.",
+     "en": "The poltergeist blocks passages in the castle and taunts the students.",
+     "es": "El poltergeist bloquea pasadizos del castillo y se burla de los alumnos."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_Peeves",
+     "bits": 32,
+     "recadrage": [
+      160,
+      0,
+      96,
+      90
+     ]
+    }
+   },
+   {
+    "cle": "detraqueurs",
+    "nom": {
+     "fr": "Les Détraqueurs",
+     "en": "The Dementors",
+     "es": "Los Dementores"
+    },
+    "role": {
+     "fr": "Gardiens d'Azkaban",
+     "en": "Guards of Azkaban",
+     "es": "Guardianes de Azkaban"
+    },
+    "texte": {
+     "fr": "Créatures encapuchonnées qui aspirent la joie, postées autour de Poudlard pour retrouver Sirius Black.",
+     "en": "Hooded creatures that drain all joy, posted around Hogwarts to find Sirius Black.",
+     "es": "Criaturas encapuchadas que absorben la alegría, apostadas alrededor de Hogwarts para encontrar a Sirius Black."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_Dementor",
+     "bits": 32,
+     "recadrage": [
+      120,
+      0,
+      96,
+      96
+     ]
+    }
+   },
+   {
+    "cle": "buck",
+    "nom": {
+     "fr": "Buck",
+     "en": "Buckbeak",
+     "es": "Buckbeak"
+    },
+    "role": {
+     "fr": "Hippogriffe de Hagrid",
+     "en": "Hagrid's hippogriff",
+     "es": "Hipogrifo de Hagrid"
+    },
+    "texte": {
+     "fr": "Hippogriffe fier qu'il faut saluer avant de l'approcher ; condamné à tort, il s'envole avec Sirius.",
+     "en": "A proud hippogriff you must bow to before approaching; wrongly condemned, he flies away with Sirius.",
+     "es": "Hipogrifo orgulloso al que hay que saludar antes de acercarse; condenado injustamente, huye volando con Sirius."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "Hippogriff",
+     "bits": 32
+    }
+   },
+   {
+    "cle": "livre_monstres",
+    "nom": {
+     "fr": "Le Monstrueux Livre des Monstres",
+     "en": "The Monster Book of Monsters",
+     "es": "El monstruoso libro de los monstruos"
+    },
+    "role": {
+     "fr": "Manuel qui mord",
+     "en": "A textbook that bites",
+     "es": "Un manual que muerde"
+    },
+    "texte": {
+     "fr": "Manuel de soins aux créatures magiques qui mord quiconque l'ouvre sans le caresser.",
+     "en": "A Care of Magical Creatures textbook that bites anyone who opens it without stroking it.",
+     "es": "Manual de Cuidado de Criaturas Mágicas que muerde a quien lo abre sin acariciarlo."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_MBOM",
+     "bits": 32,
+     "recadrage": [
+      160,
+      0,
+      96,
+      96
+     ]
+    }
+   },
+   {
+    "cle": "drago",
+    "nom": {
+     "fr": "Drago Malefoy",
+     "en": "Draco Malfoy",
+     "es": "Draco Malfoy"
+    },
+    "role": {
+     "fr": "Rival de Serpentard",
+     "en": "Slytherin rival",
+     "es": "Rival de Slytherin"
+    },
+    "texte": {
+     "fr": "Blessé par Buck après l'avoir insulté, il en profite pour faire condamner l'hippogriffe.",
+     "en": "Injured by Buckbeak after insulting him, he uses it to have the hippogriff condemned.",
+     "es": "Herido por Buckbeak tras insultarlo, aprovecha para que condenen al hipogrifo."
+    },
+    "image": null
+   },
+   {
+    "cle": "neville",
+    "nom": {
+     "fr": "Neville Londubat",
+     "en": "Neville Longbottom",
+     "es": "Neville Longbottom"
+    },
+    "role": {
+     "fr": "Camarade de Gryffondor",
+     "en": "Gryffindor classmate",
+     "es": "Compañero de Gryffindor"
+    },
+    "texte": {
+     "fr": "Il note les mots de passe de la tour sur un bout de papier, ce qui ne plaît pas à la Grosse Dame.",
+     "en": "He writes the tower passwords on a scrap of paper, which the Fat Lady does not like at all.",
+     "es": "Apunta las contraseñas de la torre en un trozo de papel, cosa que no le gusta nada a la Señora Gorda."
+    },
+    "image": null
+   }
+  ],
+  "hp4": [
+   {
+    "cle": "harry",
+    "nom": {
+     "fr": "Harry Potter",
+     "en": "Harry Potter",
+     "es": "Harry Potter"
+    },
+    "role": {
+     "fr": "Héros, quatrième champion",
+     "en": "Hero, fourth champion",
+     "es": "Héroe, cuarto campeón"
+    },
+    "texte": {
+     "fr": "Choisi par la Coupe de Feu alors qu'il n'a pas l'âge, il affronte les trois tâches du Tournoi des Trois Sorciers.",
+     "en": "Chosen by the Goblet of Fire though he is underage, he faces the three tasks of the Triwizard Tournament.",
+     "es": "Elegido por el Cáliz de Fuego sin tener la edad, se enfrenta a las tres pruebas del Torneo de los Tres Magos."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6294160
+    }
+   },
+   {
+    "cle": "ron",
+    "nom": {
+     "fr": "Ron Weasley",
+     "en": "Ron Weasley",
+     "es": "Ron Weasley"
+    },
+    "role": {
+     "fr": "Ami de Harry, personnage jouable",
+     "en": "Harry's friend, playable character",
+     "es": "Amigo de Harry, personaje jugable"
+    },
+    "texte": {
+     "fr": "Il accompagne Harry dans les épreuves, malgré une brouille au début du tournoi.",
+     "en": "He stands by Harry through the tasks, despite a falling-out at the start of the Tournament.",
+     "es": "Acompaña a Harry en las pruebas, pese a un enfado al principio del torneo."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6734080
+    }
+   },
+   {
+    "cle": "hermione",
+    "nom": {
+     "fr": "Hermione Granger",
+     "en": "Hermione Granger",
+     "es": "Hermione Granger"
+    },
+    "role": {
+     "fr": "Amie de Harry, personnage jouable",
+     "en": "Harry's friend, playable character",
+     "es": "Amiga de Harry, personaje jugable"
+    },
+    "texte": {
+     "fr": "Toujours prête à aider, elle prépare Harry aux tâches à coups de sortilèges et de recherches.",
+     "en": "Always ready to help, she prepares Harry for the tasks with spells and research.",
+     "es": "Siempre dispuesta a ayudar, prepara a Harry para las pruebas a base de hechizos e investigación."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6463360
+    }
+   },
+   {
+    "cle": "cedric",
+    "nom": {
+     "fr": "Cedric Diggory",
+     "en": "Cedric Diggory",
+     "es": "Cedric Diggory"
+    },
+    "role": {
+     "fr": "Champion de Poudlard",
+     "en": "Hogwarts champion",
+     "es": "Campeón de Hogwarts"
+    },
+    "texte": {
+     "fr": "Élève loyal de Poufsouffle choisi par la Coupe ; Harry le délivre de la haie du labyrinthe.",
+     "en": "A loyal Hufflepuff chosen by the Goblet; Harry frees him from the hedge in the maze.",
+     "es": "Leal alumno de Hufflepuff elegido por el Cáliz; Harry lo libera del seto del laberinto."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6395680
+    }
+   },
+   {
+    "cle": "krum",
+    "nom": {
+     "fr": "Viktor Krum",
+     "en": "Viktor Krum",
+     "es": "Viktor Krum"
+    },
+    "role": {
+     "fr": "Champion de Durmstrang",
+     "en": "Durmstrang champion",
+     "es": "Campeón de Durmstrang"
+    },
+    "texte": {
+     "fr": "Attrapeur vedette de l'équipe de Bulgarie, il représente l'institut Durmstrang dans le tournoi.",
+     "en": "Star Seeker of the Bulgarian team, he represents the Durmstrang Institute in the Tournament.",
+     "es": "Buscador estrella de la selección búlgara, representa al Instituto Durmstrang en el torneo."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6598720
+    }
+   },
+   {
+    "cle": "fleur",
+    "nom": {
+     "fr": "Fleur Delacour",
+     "en": "Fleur Delacour",
+     "es": "Fleur Delacour"
+    },
+    "role": {
+     "fr": "Championne de Beauxbâtons",
+     "en": "Beauxbatons champion",
+     "es": "Campeona de Beauxbatons"
+    },
+    "texte": {
+     "fr": "Élève élégante de l'académie de Beauxbâtons, elle concourt pour l'école française.",
+     "en": "An elegant student from the Beauxbatons Academy, she competes for the French school.",
+     "es": "Elegante alumna de la Academia Beauxbatons, compite por la escuela francesa."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6801760
+    }
+   },
+   {
+    "cle": "maugrey",
+    "nom": {
+     "fr": "Alastor Maugrey",
+     "en": "Alastor Moody",
+     "es": "Alastor Moody"
+    },
+    "role": {
+     "fr": "Professeur de défense contre les forces du Mal",
+     "en": "Defence Against the Dark Arts teacher",
+     "es": "Profesor de Defensa Contra las Artes Oscuras"
+    },
+    "texte": {
+     "fr": "Ancien chasseur de mages noirs à l'œil magique, il propose ses défis d'entraînement aux élèves.",
+     "en": "A former Dark wizard catcher with a magical eye, he sets training challenges for the students.",
+     "es": "Antiguo cazador de magos tenebrosos con un ojo mágico, propone sus desafíos de entrenamiento a los alumnos."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6497200
+    }
+   },
+   {
+    "cle": "hagrid",
+    "nom": {
+     "fr": "Rubeus Hagrid",
+     "en": "Rubeus Hagrid",
+     "es": "Rubeus Hagrid"
+    },
+    "role": {
+     "fr": "Professeur de soins aux créatures magiques",
+     "en": "Care of Magical Creatures teacher",
+     "es": "Profesor de Cuidado de Criaturas Mágicas"
+    },
+    "texte": {
+     "fr": "Il élève des Scroutts à pétard et montre en secret à Harry les dragons de la première tâche.",
+     "en": "He breeds Blast-Ended Skrewts and secretly shows Harry the dragons of the first task.",
+     "es": "Cría escregutos de cola explosiva y enseña en secreto a Harry los dragones de la primera prueba."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6564880
+    }
+   },
+   {
+    "cle": "voldemort",
+    "nom": {
+     "fr": "Lord Voldemort",
+     "en": "Lord Voldemort",
+     "es": "Lord Voldemort"
+    },
+    "role": {
+     "fr": "Adversaire final",
+     "en": "Final adversary",
+     "es": "Adversario final"
+    },
+    "texte": {
+     "fr": "Revenu à la vie dans le cimetière, il affronte Harry à la fin du jeu.",
+     "en": "Brought back to life in the graveyard, he faces Harry at the end of the game.",
+     "es": "Devuelto a la vida en el cementerio, se enfrenta a Harry al final del juego."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6429520
+    }
+   },
+   {
+    "cle": "mangemort",
+    "nom": {
+     "fr": "Mangemort",
+     "en": "Death Eater",
+     "es": "Mortífago"
+    },
+    "role": {
+     "fr": "Partisans de Voldemort",
+     "en": "Voldemort's followers",
+     "es": "Seguidores de Voldemort"
+    },
+    "texte": {
+     "fr": "Sorciers masqués fidèles à Voldemort, ils sèment le chaos au camping de la Coupe du monde de Quidditch.",
+     "en": "Masked wizards loyal to Voldemort, they wreak havoc at the Quidditch World Cup campsite.",
+     "es": "Magos enmascarados fieles a Voldemort, siembran el caos en el campamento de los Mundiales de quidditch."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6835600
+    }
+   },
+   {
+    "cle": "magyar",
+    "nom": {
+     "fr": "Le Magyar à pointes",
+     "en": "The Hungarian Horntail",
+     "es": "El Colacuerno Húngaro"
+    },
+    "role": {
+     "fr": "Dragon de la première tâche",
+     "en": "Dragon of the first task",
+     "es": "Dragón de la primera prueba"
+    },
+    "texte": {
+     "fr": "Le plus féroce des dragons du tournoi, il poursuit Harry pendant la première tâche.",
+     "en": "The fiercest dragon of the Tournament, it chases Harry during the first task.",
+     "es": "El más feroz de los dragones del torneo, persigue a Harry durante la primera prueba."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6937120
+    }
+   },
+   {
+    "cle": "strangulot",
+    "nom": {
+     "fr": "Strangulot",
+     "en": "Grindylow",
+     "es": "Grindylow"
+    },
+    "role": {
+     "fr": "Créature du lac",
+     "en": "Lake creature",
+     "es": "Criatura del lago"
+    },
+    "texte": {
+     "fr": "Petit démon aquatique aux longs doigts qui harcèle les champions dans le lac pendant la deuxième tâche.",
+     "en": "A small water demon with long fingers that harasses the champions in the lake during the second task.",
+     "es": "Pequeño demonio acuático de largos dedos que acosa a los campeones en el lago durante la segunda prueba."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6767920
+    }
+   },
+   {
+    "cle": "sirene",
+    "nom": {
+     "fr": "Sirène",
+     "en": "Merperson",
+     "es": "Sirena"
+    },
+    "role": {
+     "fr": "Peuple du lac",
+     "en": "Lake people",
+     "es": "Pueblo del lago"
+    },
+    "texte": {
+     "fr": "Habitants du fond du lac de Poudlard, ils gardent les otages de la deuxième tâche.",
+     "en": "Dwellers of the Hogwarts lake bed, they guard the hostages of the second task.",
+     "es": "Habitantes del fondo del lago de Hogwarts, custodian a los rehenes de la segunda prueba."
+    },
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6531040
+    }
+   }
+  ],
+  "hp5": [
+   {
+    "cle": "harry",
+    "nom": {
+     "fr": "Harry Potter",
+     "en": "Harry Potter",
+     "es": "Harry Potter"
+    },
+    "role": {
+     "fr": "Héros, élève de cinquième année",
+     "en": "Hero, fifth-year student",
+     "es": "Héroe, alumno de quinto curso"
+    },
+    "texte": {
+     "fr": "Mis à l'écart par le ministère, il fonde en secret l'Armée de Dumbledore pour apprendre la défense à ses camarades.",
+     "en": "Sidelined by the Ministry, he secretly founds Dumbledore's Army to teach his classmates defence.",
+     "es": "Apartado por el Ministerio, funda en secreto el Ejército de Dumbledore para enseñar defensa a sus compañeros."
+    },
+    "image": null
+   },
+   {
+    "cle": "ron",
+    "nom": {
+     "fr": "Ron Weasley",
+     "en": "Ron Weasley",
+     "es": "Ron Weasley"
+    },
+    "role": {
+     "fr": "Ami de Harry, préfet",
+     "en": "Harry's friend, prefect",
+     "es": "Amigo de Harry, prefecto"
+    },
+    "texte": {
+     "fr": "Nommé préfet à sa grande surprise, il reste aux côtés de Harry jusqu'au ministère.",
+     "en": "Made a prefect to his own surprise, he stays at Harry's side all the way to the Ministry.",
+     "es": "Nombrado prefecto para su sorpresa, sigue al lado de Harry hasta el Ministerio."
+    },
+    "image": null
+   },
+   {
+    "cle": "hermione",
+    "nom": {
+     "fr": "Hermione Granger",
+     "en": "Hermione Granger",
+     "es": "Hermione Granger"
+    },
+    "role": {
+     "fr": "Amie de Harry, préfète",
+     "en": "Harry's friend, prefect",
+     "es": "Amiga de Harry, prefecta"
+    },
+    "texte": {
+     "fr": "C'est elle qui pousse Harry à enseigner la défense en cachette d'Ombrage.",
+     "en": "She is the one who pushes Harry to teach defence behind Umbridge's back.",
+     "es": "Es ella quien anima a Harry a enseñar defensa a espaldas de Umbridge."
+    },
+    "image": null
+   },
+   {
+    "cle": "dumbledore",
+    "nom": {
+     "fr": "Albus Dumbledore",
+     "en": "Albus Dumbledore",
+     "es": "Albus Dumbledore"
+    },
+    "role": {
+     "fr": "Directeur de Poudlard",
+     "en": "Headmaster of Hogwarts",
+     "es": "Director de Hogwarts"
+    },
+    "texte": {
+     "fr": "Le directeur garde ses distances avec Harry toute l'année avant de devoir quitter l'école.",
+     "en": "The headmaster keeps his distance from Harry all year before having to leave the school.",
+     "es": "El director se mantiene a distancia de Harry todo el curso antes de tener que dejar el colegio."
+    },
+    "image": null
+   },
+   {
+    "cle": "ombrage",
+    "nom": {
+     "fr": "Dolores Ombrage",
+     "en": "Dolores Umbridge",
+     "es": "Dolores Umbridge"
+    },
+    "role": {
+     "fr": "Envoyée du ministère",
+     "en": "Ministry envoy",
+     "es": "Enviada del Ministerio"
+    },
+    "texte": {
+     "fr": "Professeur tout en rose et en décrets, elle prend peu à peu le contrôle de Poudlard.",
+     "en": "A teacher all pink and decrees, she gradually takes control of Hogwarts.",
+     "es": "Profesora toda de rosa y a golpe de decretos, se va haciendo con el control de Hogwarts."
+    },
+    "image": null
+   },
+   {
+    "cle": "sirius",
+    "nom": {
+     "fr": "Sirius Black",
+     "en": "Sirius Black",
+     "es": "Sirius Black"
+    },
+    "role": {
+     "fr": "Parrain de Harry",
+     "en": "Harry's godfather",
+     "es": "Padrino de Harry"
+    },
+    "texte": {
+     "fr": "Toujours recherché, il prête la maison de sa famille, square Grimmaurd, à l'Ordre du Phénix.",
+     "en": "Still wanted, he lends his family's house at Grimmauld Place to the Order of the Phoenix.",
+     "es": "Aún buscado, presta la casa de su familia, en Grimmauld Place, a la Orden del Fénix."
+    },
+    "image": null
+   },
+   {
+    "cle": "kreattur",
+    "nom": {
+     "fr": "Kreattur",
+     "en": "Kreacher",
+     "es": "Kreacher"
+    },
+    "role": {
+     "fr": "Elfe de maison des Black",
+     "en": "House-elf of the Blacks",
+     "es": "Elfo doméstico de los Black"
+    },
+    "texte": {
+     "fr": "Vieil elfe aigri qui marmonne des insultes et reste fidèle aux anciens maîtres de la maison.",
+     "en": "A bitter old elf who mutters insults and stays loyal to the former masters of the house.",
+     "es": "Viejo elfo amargado que masculla insultos y sigue fiel a los antiguos amos de la casa."
+    },
+    "image": null
+   },
+   {
+    "cle": "bellatrix",
+    "nom": {
+     "fr": "Bellatrix Lestrange",
+     "en": "Bellatrix Lestrange",
+     "es": "Bellatrix Lestrange"
+    },
+    "role": {
+     "fr": "Mangemort évadée",
+     "en": "Escaped Death Eater",
+     "es": "Mortífaga fugada"
+    },
+    "texte": {
+     "fr": "Cousine de Sirius évadée d'Azkaban, elle combat l'Ordre au département des Mystères.",
+     "en": "Sirius's cousin, escaped from Azkaban, she fights the Order in the Department of Mysteries.",
+     "es": "Prima de Sirius fugada de Azkaban, combate a la Orden en el Departamento de Misterios."
+    },
+    "image": null
+   },
+   {
+    "cle": "voldemort",
+    "nom": {
+     "fr": "Lord Voldemort",
+     "en": "Lord Voldemort",
+     "es": "Lord Voldemort"
+    },
+    "role": {
+     "fr": "Adversaire",
+     "en": "Adversary",
+     "es": "Adversario"
+    },
+    "texte": {
+     "fr": "Il attire Harry au ministère par des visions pour s'emparer d'une prophétie.",
+     "en": "He lures Harry to the Ministry through visions to seize a prophecy.",
+     "es": "Atrae a Harry al Ministerio mediante visiones para apoderarse de una profecía."
+    },
+    "image": null
+   },
+   {
+    "cle": "ginny",
+    "nom": {
+     "fr": "Ginny Weasley",
+     "en": "Ginny Weasley",
+     "es": "Ginny Weasley"
+    },
+    "role": {
+     "fr": "Membre de l'Armée de Dumbledore",
+     "en": "Member of Dumbledore's Army",
+     "es": "Miembro del Ejército de Dumbledore"
+    },
+    "texte": {
+     "fr": "Sœur de Ron, plus sûre d'elle qu'avant, elle rejoint l'Armée de Dumbledore.",
+     "en": "Ron's sister, more confident than before, she joins Dumbledore's Army.",
+     "es": "Hermana de Ron, más segura de sí misma que antes, se une al Ejército de Dumbledore."
+    },
+    "image": null
+   },
+   {
+    "cle": "luna",
+    "nom": {
+     "fr": "Luna Lovegood",
+     "en": "Luna Lovegood",
+     "es": "Luna Lovegood"
+    },
+    "role": {
+     "fr": "Élève de Serdaigle",
+     "en": "Ravenclaw student",
+     "es": "Alumna de Ravenclaw"
+    },
+    "texte": {
+     "fr": "Élève rêveuse qui croit aux créatures les plus improbables, elle a perdu ses affaires dans tout le château.",
+     "en": "A dreamy student who believes in the most unlikely creatures, she has lost her things all over the castle.",
+     "es": "Alumna soñadora que cree en las criaturas más improbables, ha perdido sus cosas por todo el castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "neville",
+    "nom": {
+     "fr": "Neville Londubat",
+     "en": "Neville Longbottom",
+     "es": "Neville Longbottom"
+    },
+    "role": {
+     "fr": "Membre de l'Armée de Dumbledore",
+     "en": "Member of Dumbledore's Army",
+     "es": "Miembro del Ejército de Dumbledore"
+    },
+    "texte": {
+     "fr": "Il progresse beaucoup aux réunions de l'Armée et suit Harry jusqu'au département des Mystères.",
+     "en": "He makes great progress at the Army's meetings and follows Harry to the Department of Mysteries.",
+     "es": "Progresa mucho en las reuniones del Ejército y sigue a Harry hasta el Departamento de Misterios."
+    },
+    "image": null
+   },
+   {
+    "cle": "fred",
+    "nom": {
+     "fr": "Fred Weasley",
+     "en": "Fred Weasley",
+     "es": "Fred Weasley"
+    },
+    "role": {
+     "fr": "Frère de Ron",
+     "en": "Ron's brother",
+     "es": "Hermano de Ron"
+    },
+    "texte": {
+     "fr": "Il vend ses farces aux élèves et quitte l'école avec éclat pour narguer Ombrage.",
+     "en": "He sells his jokes to students and leaves school in style to taunt Umbridge.",
+     "es": "Vende sus artículos de broma a los alumnos y deja el colegio a lo grande para burlarse de Umbridge."
+    },
+    "image": null
+   },
+   {
+    "cle": "george",
+    "nom": {
+     "fr": "George Weasley",
+     "en": "George Weasley",
+     "es": "George Weasley"
+    },
+    "role": {
+     "fr": "Frère de Ron",
+     "en": "Ron's brother",
+     "es": "Hermano de Ron"
+    },
+    "texte": {
+     "fr": "Complice de Fred dans toutes les farces, il cache des paquets à retrouver dans le château.",
+     "en": "Fred's partner in every prank, he hides packages to be found around the castle.",
+     "es": "Cómplice de Fred en todas las bromas, esconde paquetes que hay que encontrar por el castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "cho",
+    "nom": {
+     "fr": "Cho Chang",
+     "en": "Cho Chang",
+     "es": "Cho Chang"
+    },
+    "role": {
+     "fr": "Élève de Serdaigle",
+     "en": "Ravenclaw student",
+     "es": "Alumna de Ravenclaw"
+    },
+    "texte": {
+     "fr": "Attrapeuse de Serdaigle qui plaît à Harry, encore marquée par la mort de Cedric.",
+     "en": "The Ravenclaw Seeker Harry likes, still shaken by Cedric's death.",
+     "es": "Buscadora de Ravenclaw que le gusta a Harry, aún afectada por la muerte de Cedric."
+    },
+    "image": null
+   },
+   {
+    "cle": "rogue",
+    "nom": {
+     "fr": "Severus Rogue",
+     "en": "Severus Snape",
+     "es": "Severus Snape"
+    },
+    "role": {
+     "fr": "Professeur de potions",
+     "en": "Potions teacher",
+     "es": "Profesor de Pociones"
+    },
+    "texte": {
+     "fr": "Chargé d'enseigner l'occlumancie à Harry, il ne cache pas son mépris pendant ces leçons.",
+     "en": "Tasked with teaching Harry Occlumency, he makes no secret of his contempt during the lessons.",
+     "es": "Encargado de enseñar Oclumancia a Harry, no oculta su desprecio durante las clases."
+    },
+    "image": null
+   },
+   {
+    "cle": "mcgonagall",
+    "nom": {
+     "fr": "Minerva McGonagall",
+     "en": "Minerva McGonagall",
+     "es": "Minerva McGonagall"
+    },
+    "role": {
+     "fr": "Directrice de Gryffondor",
+     "en": "Head of Gryffindor",
+     "es": "Jefa de Gryffindor"
+    },
+    "texte": {
+     "fr": "Elle tient tête à Ombrage et défend ses élèves comme elle peut.",
+     "en": "She stands up to Umbridge and defends her students as best she can.",
+     "es": "Planta cara a Umbridge y defiende a sus alumnos como puede."
+    },
+    "image": null
+   },
+   {
+    "cle": "hagrid",
+    "nom": {
+     "fr": "Rubeus Hagrid",
+     "en": "Rubeus Hagrid",
+     "es": "Rubeus Hagrid"
+    },
+    "role": {
+     "fr": "Professeur de soins aux créatures magiques",
+     "en": "Care of Magical Creatures teacher",
+     "es": "Profesor de Cuidado de Criaturas Mágicas"
+    },
+    "texte": {
+     "fr": "Revenu tard d'une mission chez les géants, il cache son demi-frère Graup dans la forêt.",
+     "en": "Back late from a mission to the giants, he hides his half-brother Grawp in the forest.",
+     "es": "De vuelta tarde de una misión con los gigantes, esconde a su medio hermano Grawp en el bosque."
+    },
+    "image": null
+   },
+   {
+    "cle": "lupin",
+    "nom": {
+     "fr": "Remus Lupin",
+     "en": "Remus Lupin",
+     "es": "Remus Lupin"
+    },
+    "role": {
+     "fr": "Membre de l'Ordre du Phénix",
+     "en": "Member of the Order of the Phoenix",
+     "es": "Miembro de la Orden del Fénix"
+    },
+    "texte": {
+     "fr": "Ancien professeur, il fait partie de l'escorte qui conduit Harry square Grimmaurd.",
+     "en": "A former teacher, he is part of the guard that takes Harry to Grimmauld Place.",
+     "es": "Antiguo profesor, forma parte de la escolta que lleva a Harry a Grimmauld Place."
+    },
+    "image": null
+   },
+   {
+    "cle": "tonks",
+    "nom": {
+     "fr": "Nymphadora Tonks",
+     "en": "Nymphadora Tonks",
+     "es": "Nymphadora Tonks"
+    },
+    "role": {
+     "fr": "Membre de l'Ordre du Phénix",
+     "en": "Member of the Order of the Phoenix",
+     "es": "Miembro de la Orden del Fénix"
+    },
+    "texte": {
+     "fr": "Auror maladroite et joyeuse qui change de couleur de cheveux à volonté.",
+     "en": "A clumsy, cheerful Auror who changes her hair colour at will.",
+     "es": "Auror torpe y alegre que cambia el color de su pelo a voluntad."
+    },
+    "image": null
+   },
+   {
+    "cle": "maugrey",
+    "nom": {
+     "fr": "Alastor Maugrey",
+     "en": "Alastor Moody",
+     "es": "Alastor Moody"
+    },
+    "role": {
+     "fr": "Membre de l'Ordre du Phénix",
+     "en": "Member of the Order of the Phoenix",
+     "es": "Miembro de la Orden del Fénix"
+    },
+    "texte": {
+     "fr": "Le véritable Fol Œil, méfiant envers tout, mène l'escorte de Harry et combat au ministère.",
+     "en": "The real Mad-Eye, suspicious of everything, leads Harry's guard and fights at the Ministry.",
+     "es": "El verdadero Ojoloco, desconfiado de todo, dirige la escolta de Harry y combate en el Ministerio."
+    },
+    "image": null
+   },
+   {
+    "cle": "kingsley",
+    "nom": {
+     "fr": "Kingsley Shacklebolt",
+     "en": "Kingsley Shacklebolt",
+     "es": "Kingsley Shacklebolt"
+    },
+    "role": {
+     "fr": "Membre de l'Ordre du Phénix",
+     "en": "Member of the Order of the Phoenix",
+     "es": "Miembro de la Orden del Fénix"
+    },
+    "texte": {
+     "fr": "Auror calme à la voix grave, il renseigne l'Ordre depuis l'intérieur du ministère.",
+     "en": "A calm Auror with a deep voice, he informs the Order from inside the Ministry.",
+     "es": "Auror tranquilo de voz grave, informa a la Orden desde dentro del Ministerio."
+    },
+    "image": null
+   },
+   {
+    "cle": "lucius",
+    "nom": {
+     "fr": "Lucius Malefoy",
+     "en": "Lucius Malfoy",
+     "es": "Lucius Malfoy"
+    },
+    "role": {
+     "fr": "Chef des Mangemorts au ministère",
+     "en": "Leader of the Death Eaters at the Ministry",
+     "es": "Jefe de los mortífagos en el Ministerio"
+    },
+    "texte": {
+     "fr": "Il mène les Mangemorts venus prendre la prophétie au département des Mystères.",
+     "en": "He leads the Death Eaters who come to take the prophecy in the Department of Mysteries.",
+     "es": "Dirige a los mortífagos que van a por la profecía al Departamento de Misterios."
+    },
+    "image": null
+   },
+   {
+    "cle": "drago",
+    "nom": {
+     "fr": "Drago Malefoy",
+     "en": "Draco Malfoy",
+     "es": "Draco Malfoy"
+    },
+    "role": {
+     "fr": "Rival de Serpentard",
+     "en": "Slytherin rival",
+     "es": "Rival de Slytherin"
+    },
+    "texte": {
+     "fr": "Membre zélé de la brigade inquisitoriale d'Ombrage, il traque les élèves rebelles.",
+     "en": "A zealous member of Umbridge's Inquisitorial Squad, he hunts down rebel students.",
+     "es": "Miembro entusiasta de la Brigada Inquisitorial de Umbridge, persigue a los alumnos rebeldes."
+    },
+    "image": null
+   },
+   {
+    "cle": "rusard",
+    "nom": {
+     "fr": "Argus Rusard",
+     "en": "Argus Filch",
+     "es": "Argus Filch"
+    },
+    "role": {
+     "fr": "Concierge de Poudlard",
+     "en": "Hogwarts caretaker",
+     "es": "Conserje de Hogwarts"
+    },
+    "texte": {
+     "fr": "Ravi des nouveaux décrets d'Ombrage, il espère enfin pouvoir punir les élèves à l'ancienne.",
+     "en": "Delighted by Umbridge's new decrees, he hopes at last to punish students the old way.",
+     "es": "Encantado con los nuevos decretos de Umbridge, espera poder castigar por fin a los alumnos a la antigua."
+    },
+    "image": null
+   },
+   {
+    "cle": "flitwick",
+    "nom": {
+     "fr": "Filius Flitwick",
+     "en": "Filius Flitwick",
+     "es": "Filius Flitwick"
+    },
+    "role": {
+     "fr": "Professeur d'enchantements",
+     "en": "Charms teacher",
+     "es": "Profesor de Encantamientos"
+    },
+    "texte": {
+     "fr": "Le professeur d'enchantements confie à Harry quelques tâches à accomplir dans le château.",
+     "en": "The Charms teacher gives Harry a few tasks to carry out around the castle.",
+     "es": "El profesor de Encantamientos le encarga a Harry algunas tareas por el castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "chourave",
+    "nom": {
+     "fr": "Pomona Chourave",
+     "en": "Pomona Sprout",
+     "es": "Pomona Sprout"
+    },
+    "role": {
+     "fr": "Professeur de botanique",
+     "en": "Herbology teacher",
+     "es": "Profesora de Herbología"
+    },
+    "texte": {
+     "fr": "Directrice de Poufsouffle, elle confie elle aussi une quête à Harry.",
+     "en": "Head of Hufflepuff, she too gives Harry a quest.",
+     "es": "Jefa de Hufflepuff, también le encarga una misión a Harry."
+    },
+    "image": null
+   },
+   {
+    "cle": "trelawney",
+    "nom": {
+     "fr": "Sibylle Trelawney",
+     "en": "Sybill Trelawney",
+     "es": "Sybill Trelawney"
+    },
+    "role": {
+     "fr": "Professeur de divination",
+     "en": "Divination teacher",
+     "es": "Profesora de Adivinación"
+    },
+    "texte": {
+     "fr": "Mise à l'épreuve puis renvoyée par Ombrage, elle est sauvée in extremis par Dumbledore.",
+     "en": "Put on probation and then dismissed by Umbridge, she is saved at the last moment by Dumbledore.",
+     "es": "Puesta a prueba y luego despedida por Umbridge, Dumbledore la salva en el último momento."
+    },
+    "image": null
+   },
+   {
+    "cle": "mimi",
+    "nom": {
+     "fr": "Mimi Geignarde",
+     "en": "Moaning Myrtle",
+     "es": "Myrtle la Llorona"
+    },
+    "role": {
+     "fr": "Fantôme des toilettes",
+     "en": "Bathroom ghost",
+     "es": "Fantasma de los baños"
+    },
+    "texte": {
+     "fr": "Le fantôme pleurnichard hante toujours ses toilettes et ne demande qu'à bavarder.",
+     "en": "The weepy ghost still haunts her bathroom and wants nothing more than a chat.",
+     "es": "La fantasma llorona sigue rondando sus baños y solo quiere charlar."
+    },
+    "image": null
+   },
+   {
+    "cle": "arthur",
+    "nom": {
+     "fr": "Arthur Weasley",
+     "en": "Arthur Weasley",
+     "es": "Arthur Weasley"
+    },
+    "role": {
+     "fr": "Père de Ron",
+     "en": "Ron's father",
+     "es": "Padre de Ron"
+    },
+    "texte": {
+     "fr": "Employé du ministère et membre de l'Ordre, il est attaqué par un serpent alors qu'il monte la garde.",
+     "en": "A Ministry employee and member of the Order, he is attacked by a snake while on guard.",
+     "es": "Empleado del Ministerio y miembro de la Orden, una serpiente lo ataca mientras hace guardia."
+    },
+    "image": null
+   },
+   {
+    "cle": "dudley",
+    "nom": {
+     "fr": "Dudley Dursley",
+     "en": "Dudley Dursley",
+     "es": "Dudley Dursley"
+    },
+    "role": {
+     "fr": "Cousin de Harry",
+     "en": "Harry's cousin",
+     "es": "Primo de Harry"
+    },
+    "texte": {
+     "fr": "Attaqué avec Harry par deux Détraqueurs dans une ruelle de Little Whinging.",
+     "en": "Attacked with Harry by two Dementors in an alley of Little Whinging.",
+     "es": "Atacado junto a Harry por dos dementores en un callejón de Little Whinging."
+    },
+    "image": null
+   }
+  ],
+  "hp6": [
+   {
+    "cle": "harry",
+    "nom": {
+     "fr": "Harry Potter",
+     "en": "Harry Potter",
+     "es": "Harry Potter"
+    },
+    "role": {
+     "fr": "Héros, élève de sixième année",
+     "en": "Hero, sixth-year student",
+     "es": "Héroe, alumno de sexto curso"
+    },
+    "texte": {
+     "fr": "Il découvre un vieux manuel annoté par le Prince de sang-mêlé et aide Dumbledore à percer le passé de Voldemort.",
+     "en": "He finds an old textbook annotated by the Half-Blood Prince and helps Dumbledore uncover Voldemort's past.",
+     "es": "Descubre un viejo manual anotado por el Príncipe Mestizo y ayuda a Dumbledore a desentrañar el pasado de Voldemort."
+    },
+    "image": null
+   },
+   {
+    "cle": "ron",
+    "nom": {
+     "fr": "Ron Weasley",
+     "en": "Ron Weasley",
+     "es": "Ron Weasley"
+    },
+    "role": {
+     "fr": "Ami de Harry, gardien de Quidditch",
+     "en": "Harry's friend, Quidditch Keeper",
+     "es": "Amigo de Harry, guardián de quidditch"
+    },
+    "texte": {
+     "fr": "Devenu gardien de l'équipe de Gryffondor, il vit une année agitée entre matchs et histoires de cœur.",
+     "en": "Now Keeper of the Gryffindor team, he has an eventful year between matches and romance.",
+     "es": "Convertido en guardián del equipo de Gryffindor, vive un curso agitado entre partidos y amoríos."
+    },
+    "image": null
+   },
+   {
+    "cle": "hermione",
+    "nom": {
+     "fr": "Hermione Granger",
+     "en": "Hermione Granger",
+     "es": "Hermione Granger"
+    },
+    "role": {
+     "fr": "Amie de Harry",
+     "en": "Harry's friend",
+     "es": "Amiga de Harry"
+    },
+    "texte": {
+     "fr": "Elle se méfie du livre du Prince et reste la meilleure élève de la classe de potions sans tricher.",
+     "en": "She distrusts the Prince's book and stays the best student in the Potions class without cheating.",
+     "es": "Desconfía del libro del Príncipe y sigue siendo la mejor alumna de Pociones sin hacer trampas."
+    },
+    "image": null
+   },
+   {
+    "cle": "dumbledore",
+    "nom": {
+     "fr": "Albus Dumbledore",
+     "en": "Albus Dumbledore",
+     "es": "Albus Dumbledore"
+    },
+    "role": {
+     "fr": "Directeur de Poudlard",
+     "en": "Headmaster of Hogwarts",
+     "es": "Director de Hogwarts"
+    },
+    "texte": {
+     "fr": "Il donne à Harry des leçons particulières à travers la Pensine et l'emmène dans une caverne au bord de la mer.",
+     "en": "He gives Harry private lessons through the Pensieve and takes him to a cave by the sea.",
+     "es": "Da a Harry clases particulares a través del pensadero y lo lleva a una cueva junto al mar."
+    },
+    "image": null
+   },
+   {
+    "cle": "slughorn",
+    "nom": {
+     "fr": "Horace Slughorn",
+     "en": "Horace Slughorn",
+     "es": "Horace Slughorn"
+    },
+    "role": {
+     "fr": "Professeur de potions",
+     "en": "Potions teacher",
+     "es": "Profesor de Pociones"
+    },
+    "texte": {
+     "fr": "Ancien professeur revenu enseigner, il collectionne les élèves prometteurs dans son club et garde un souvenir caché.",
+     "en": "A former teacher back at the school, he collects promising students in his club and keeps a hidden memory.",
+     "es": "Antiguo profesor que vuelve a enseñar, colecciona alumnos prometedores en su club y guarda un recuerdo oculto."
+    },
+    "image": null
+   },
+   {
+    "cle": "rogue",
+    "nom": {
+     "fr": "Severus Rogue",
+     "en": "Severus Snape",
+     "es": "Severus Snape"
+    },
+    "role": {
+     "fr": "Professeur de défense contre les forces du Mal",
+     "en": "Defence Against the Dark Arts teacher",
+     "es": "Profesor de Defensa Contra las Artes Oscuras"
+    },
+    "texte": {
+     "fr": "Il obtient enfin le poste qu'il convoitait et a fait une promesse à la mère de Drago.",
+     "en": "He finally gets the post he coveted, and has made a promise to Draco's mother.",
+     "es": "Consigue por fin el puesto que ansiaba y le ha hecho una promesa a la madre de Draco."
+    },
+    "image": null
+   },
+   {
+    "cle": "drago",
+    "nom": {
+     "fr": "Drago Malefoy",
+     "en": "Draco Malfoy",
+     "es": "Draco Malfoy"
+    },
+    "role": {
+     "fr": "Élève de Serpentard",
+     "en": "Slytherin student",
+     "es": "Alumno de Slytherin"
+    },
+    "texte": {
+     "fr": "Chargé d'une mission secrète par Voldemort, il disparaît souvent dans la Salle sur Demande.",
+     "en": "Given a secret mission by Voldemort, he often disappears into the Room of Requirement.",
+     "es": "Con una misión secreta de Voldemort, desaparece a menudo en la Sala de los Menesteres."
+    },
+    "image": null
+   },
+   {
+    "cle": "ginny",
+    "nom": {
+     "fr": "Ginny Weasley",
+     "en": "Ginny Weasley",
+     "es": "Ginny Weasley"
+    },
+    "role": {
+     "fr": "Sœur de Ron, joueuse de Quidditch",
+     "en": "Ron's sister, Quidditch player",
+     "es": "Hermana de Ron, jugadora de quidditch"
+    },
+    "texte": {
+     "fr": "Poursuiveuse de l'équipe de Gryffondor, elle se rapproche de Harry au fil de l'année.",
+     "en": "A Chaser on the Gryffindor team, she grows closer to Harry over the year.",
+     "es": "Cazadora del equipo de Gryffindor, se acerca a Harry a lo largo del curso."
+    },
+    "image": null
+   },
+   {
+    "cle": "luna",
+    "nom": {
+     "fr": "Luna Lovegood",
+     "en": "Luna Lovegood",
+     "es": "Luna Lovegood"
+    },
+    "role": {
+     "fr": "Élève de Serdaigle",
+     "en": "Ravenclaw student",
+     "es": "Alumna de Ravenclaw"
+    },
+    "texte": {
+     "fr": "Toujours aussi lunaire, elle raccompagne Harry au château après le voyage en train.",
+     "en": "As dreamy as ever, she walks Harry back to the castle after the train journey.",
+     "es": "Tan soñadora como siempre, acompaña a Harry al castillo después del viaje en tren."
+    },
+    "image": null
+   },
+   {
+    "cle": "hagrid",
+    "nom": {
+     "fr": "Rubeus Hagrid",
+     "en": "Rubeus Hagrid",
+     "es": "Rubeus Hagrid"
+    },
+    "role": {
+     "fr": "Gardien des clés et des lieux",
+     "en": "Keeper of Keys and Grounds",
+     "es": "Guardián de las llaves y terrenos"
+    },
+    "texte": {
+     "fr": "Il pleure son araignée Aragog et en offre une fiole de venin à Slughorn.",
+     "en": "He mourns his spider Aragog and gives Slughorn a phial of its venom.",
+     "es": "Llora a su araña Aragog y regala a Slughorn un frasco de su veneno."
+    },
+    "image": null
+   },
+   {
+    "cle": "mcgonagall",
+    "nom": {
+     "fr": "Minerva McGonagall",
+     "en": "Minerva McGonagall",
+     "es": "Minerva McGonagall"
+    },
+    "role": {
+     "fr": "Directrice adjointe",
+     "en": "Deputy Headmistress",
+     "es": "Subdirectora"
+    },
+    "texte": {
+     "fr": "Directrice de Gryffondor, elle garde un œil sur les élèves dans un château devenu plus sûr qu'avant.",
+     "en": "Head of Gryffindor, she keeps an eye on the students in a castle now more secure than before.",
+     "es": "Jefa de Gryffindor, vigila a los alumnos en un castillo más protegido que antes."
+    },
+    "image": null
+   },
+   {
+    "cle": "flitwick",
+    "nom": {
+     "fr": "Filius Flitwick",
+     "en": "Filius Flitwick",
+     "es": "Filius Flitwick"
+    },
+    "role": {
+     "fr": "Professeur d'enchantements",
+     "en": "Charms teacher",
+     "es": "Profesor de Encantamientos"
+    },
+    "texte": {
+     "fr": "Maître du club de duel, il entraîne les élèves à se battre à la baguette.",
+     "en": "Master of the Duelling Club, he trains the students to fight with their wands.",
+     "es": "Al frente del club de duelo, entrena a los alumnos a luchar con la varita."
+    },
+    "image": null
+   },
+   {
+    "cle": "cormac",
+    "nom": {
+     "fr": "Cormac McLaggen",
+     "en": "Cormac McLaggen",
+     "es": "Cormac McLaggen"
+    },
+    "role": {
+     "fr": "Rival de Ron au Quidditch",
+     "en": "Ron's Quidditch rival",
+     "es": "Rival de Ron en el quidditch"
+    },
+    "texte": {
+     "fr": "Élève sûr de lui qui dispute à Ron la place de gardien de l'équipe.",
+     "en": "A self-assured student who competes with Ron for the Keeper's place on the team.",
+     "es": "Alumno muy seguro de sí mismo que le disputa a Ron el puesto de guardián del equipo."
+    },
+    "image": null
+   },
+   {
+    "cle": "katie",
+    "nom": {
+     "fr": "Katie Bell",
+     "en": "Katie Bell",
+     "es": "Katie Bell"
+    },
+    "role": {
+     "fr": "Poursuiveuse de Gryffondor",
+     "en": "Gryffindor Chaser",
+     "es": "Cazadora de Gryffindor"
+    },
+    "texte": {
+     "fr": "Coéquipière de Harry, elle est victime d'un collier maudit au retour de Pré-au-Lard.",
+     "en": "Harry's teammate, she falls victim to a cursed necklace on the way back from Hogsmeade.",
+     "es": "Compañera de equipo de Harry, es víctima de un collar maldito al volver de Hogsmeade."
+    },
+    "image": null
+   },
+   {
+    "cle": "lavande",
+    "nom": {
+     "fr": "Lavande Brown",
+     "en": "Lavender Brown",
+     "es": "Lavender Brown"
+    },
+    "role": {
+     "fr": "Élève de Gryffondor",
+     "en": "Gryffindor student",
+     "es": "Alumna de Gryffindor"
+    },
+    "texte": {
+     "fr": "Camarade de Gryffondor qui s'entiche de Ron, au grand agacement d'Hermione.",
+     "en": "A Gryffindor classmate who falls for Ron, much to Hermione's annoyance.",
+     "es": "Compañera de Gryffindor que se encapricha de Ron, para gran fastidio de Hermione."
+    },
+    "image": null
+   },
+   {
+    "cle": "cho",
+    "nom": {
+     "fr": "Cho Chang",
+     "en": "Cho Chang",
+     "es": "Cho Chang"
+    },
+    "role": {
+     "fr": "Élève de Serdaigle",
+     "en": "Ravenclaw student",
+     "es": "Alumna de Ravenclaw"
+    },
+    "texte": {
+     "fr": "Ancienne amie de Harry, elle fait partie des adversaires possibles du club de duel.",
+     "en": "Harry's former friend, she is one of the possible opponents in the Duelling Club.",
+     "es": "Antigua amiga de Harry, es una de las posibles rivales del club de duelo."
+    },
+    "image": null
+   },
+   {
+    "cle": "crabbe",
+    "nom": {
+     "fr": "Vincent Crabbe",
+     "en": "Vincent Crabbe",
+     "es": "Vincent Crabbe"
+    },
+    "role": {
+     "fr": "Acolyte de Drago",
+     "en": "Draco's sidekick",
+     "es": "Secuaz de Draco"
+    },
+    "texte": {
+     "fr": "Il fait le guet pour Drago, parfois sous l'apparence d'une petite fille grâce au Polynectar.",
+     "en": "He keeps watch for Draco, sometimes disguised as a little girl thanks to Polyjuice Potion.",
+     "es": "Vigila para Draco, a veces con la apariencia de una niña gracias a la poción multijugos."
+    },
+    "image": null
+   },
+   {
+    "cle": "goyle",
+    "nom": {
+     "fr": "Gregory Goyle",
+     "en": "Gregory Goyle",
+     "es": "Gregory Goyle"
+    },
+    "role": {
+     "fr": "Acolyte de Drago",
+     "en": "Draco's sidekick",
+     "es": "Secuaz de Draco"
+    },
+    "texte": {
+     "fr": "Comme Crabbe, il couvre les allées et venues de Drago au septième étage.",
+     "en": "Like Crabbe, he covers Draco's comings and goings on the seventh floor.",
+     "es": "Como Crabbe, encubre las idas y venidas de Draco en el séptimo piso."
+    },
+    "image": null
+   },
+   {
+    "cle": "bellatrix",
+    "nom": {
+     "fr": "Bellatrix Lestrange",
+     "en": "Bellatrix Lestrange",
+     "es": "Bellatrix Lestrange"
+    },
+    "role": {
+     "fr": "Mangemort",
+     "en": "Death Eater",
+     "es": "Mortífaga"
+    },
+    "texte": {
+     "fr": "Fidèle de Voldemort, elle met le feu au Terrier avant de rejoindre l'attaque de Poudlard.",
+     "en": "A loyal follower of Voldemort, she sets fire to the Burrow before joining the attack on Hogwarts.",
+     "es": "Fiel a Voldemort, incendia La Madriguera antes de unirse al ataque contra Hogwarts."
+    },
+    "image": null
+   },
+   {
+    "cle": "greyback",
+    "nom": {
+     "fr": "Fenrir Greyback",
+     "en": "Fenrir Greyback",
+     "es": "Fenrir Greyback"
+    },
+    "role": {
+     "fr": "Loup-garou, allié des Mangemorts",
+     "en": "Werewolf, ally of the Death Eaters",
+     "es": "Hombre lobo, aliado de los mortífagos"
+    },
+    "texte": {
+     "fr": "Loup-garou brutal qui attaque le Terrier aux côtés de Bellatrix.",
+     "en": "A brutal werewolf who attacks the Burrow alongside Bellatrix.",
+     "es": "Hombre lobo brutal que ataca La Madriguera junto a Bellatrix."
+    },
+    "image": null
+   },
+   {
+    "cle": "nick",
+    "nom": {
+     "fr": "Nick Quasi-Sans-Tête",
+     "en": "Nearly Headless Nick",
+     "es": "Nick Casi Decapitado"
+    },
+    "role": {
+     "fr": "Fantôme de Gryffondor",
+     "en": "Gryffindor ghost",
+     "es": "Fantasma de Gryffindor"
+    },
+    "texte": {
+     "fr": "Le fantôme de Gryffondor croise Harry dans les couloirs du château.",
+     "en": "The Gryffindor ghost crosses Harry's path in the castle corridors.",
+     "es": "El fantasma de Gryffindor se cruza con Harry por los pasillos del castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "inferi",
+    "nom": {
+     "fr": "Les Inferi",
+     "en": "The Inferi",
+     "es": "Los Inferi"
+    },
+    "role": {
+     "fr": "Gardiens de la caverne",
+     "en": "Guardians of the cave",
+     "es": "Guardianes de la cueva"
+    },
+    "texte": {
+     "fr": "Cadavres animés par magie noire qui surgissent du lac souterrain pour protéger le médaillon.",
+     "en": "Corpses animated by dark magic that rise from the underground lake to protect the locket.",
+     "es": "Cadáveres animados por magia oscura que surgen del lago subterráneo para proteger el guardapelo."
+    },
+    "image": null
+   }
+  ]
+ },
+ "bestiaire": {
+  "hp1": [
+   {
+    "cle": "gnome",
+    "nom": {
+     "fr": "Gnome",
+     "en": "Gnome",
+     "es": "gnomo"
+    },
+    "lieu": {
+     "fr": "Exercice de Flipendo, parc de Poudlard, cours de botanique, cachots, tour d'astronomie",
+     "en": "Flipendo lesson, Hogwarts grounds, Herbology class, dungeons, Astronomy Tower",
+     "es": "Lección de Flipendo, terrenos de Hogwarts, clase de Herbología, mazmorras, torre de Astronomía"
+    },
+    "texte": {
+     "fr": "Petit habitant trapu des jardins et des couloirs. Il surgit pour gêner Harry et se laisse repousser d'un Flipendo.",
+     "en": "Stocky little pest of the gardens and corridors. It pops up to bother Harry and is pushed back with a Flipendo.",
+     "es": "Pequeño y rechoncho habitante de jardines y pasillos. Aparece para molestar a Harry y se aparta con un Flipendo."
+    },
+    "image": null
+   },
+   {
+    "cle": "krokante",
+    "nom": {
+     "fr": "Krokante",
+     "en": "Doxy",
+     "es": "doxy"
+    },
+    "lieu": {
+     "fr": "Cabane de Hagrid, lisière de la Forêt, cours de botanique, cours de Lumos, couloir du troll",
+     "en": "Hagrid's hut, edge of the Forest, Herbology class, Lumos lesson, troll corridor",
+     "es": "Cabaña de Hagrid, linde del bosque, clase de Herbología, lección de Lumos, pasillo del trol"
+    },
+    "texte": {
+     "fr": "Petite créature ailée au corps sombre, vive et agressive. Elle fond sur Harry en bourdonnant.",
+     "en": "Small winged creature with a dark body, quick and aggressive. It swoops on Harry with a buzz.",
+     "es": "Pequeña criatura alada de cuerpo oscuro, rápida y agresiva. Se lanza sobre Harry zumbando."
+    },
+    "image": null
+   },
+   {
+    "cle": "crabe_de_feu",
+    "nom": {
+     "fr": "Crabe de feu",
+     "en": "Fire Crab",
+     "es": "cangrejo de fuego"
+    },
+    "lieu": {
+     "fr": "Cabane de Hagrid, lisière de la Forêt, couloir menant aux toilettes des filles",
+     "en": "Hagrid's hut, edge of the Forest, corridor to the girls' bathroom",
+     "es": "Cabaña de Hagrid, linde del bosque, pasillo hacia el baño de las chicas"
+    },
+    "texte": {
+     "fr": "Crustacé à carapace incrustée de pierres colorées. Il crache des flammes par l'arrière quand on l'approche.",
+     "en": "Crustacean whose shell is set with coloured stones. It shoots flames from its rear when approached.",
+     "es": "Crustáceo con el caparazón incrustado de piedras de colores. Escupe llamas por detrás cuando alguien se acerca."
+    },
+    "image": null
+   },
+   {
+    "cle": "escargot_orange",
+    "nom": {
+     "fr": "Escargot orange",
+     "en": "Orange Snail",
+     "es": "caracol naranja"
+    },
+    "lieu": {
+     "fr": "Parc de Poudlard, cabane de Hagrid, lisière de la Forêt, couloir du troll",
+     "en": "Hogwarts grounds, Hagrid's hut, edge of the Forest, troll corridor",
+     "es": "Terrenos de Hogwarts, cabaña de Hagrid, linde del bosque, pasillo del trol"
+    },
+    "texte": {
+     "fr": "Gros escargot à coquille spiralée. Sa traînée de bave brûle quiconque marche dessus.",
+     "en": "Large snail with a spiral shell. Its slime trail burns anyone who steps on it.",
+     "es": "Gran caracol de concha en espiral. Su rastro de baba quema a quien lo pisa."
+    },
+    "image": null
+   },
+   {
+    "cle": "tentacula",
+    "nom": {
+     "fr": "Tentacula vénéneuse",
+     "en": "Venomous Tentacula",
+     "es": "tentácula venenosa"
+    },
+    "lieu": {
+     "fr": "Parc de Poudlard, cours de botanique, exercice d'Incendio, abords de la cabane de Hagrid",
+     "en": "Hogwarts grounds, Herbology class, Incendio lesson, around Hagrid's hut",
+     "es": "Terrenos de Hogwarts, clase de Herbología, lección de Incendio, alrededores de la cabaña de Hagrid"
+    },
+    "texte": {
+     "fr": "Plante carnivore aux lianes épineuses. Elle fouette ce qui passe à sa portée et craint le feu.",
+     "en": "Carnivorous plant with thorny vines. It lashes at anything within reach and fears fire.",
+     "es": "Planta carnívora de lianas espinosas. Azota todo lo que pasa a su alcance y teme al fuego."
+    },
+    "image": null
+   },
+   {
+    "cle": "filet_du_diable",
+    "nom": {
+     "fr": "Filet du Diable",
+     "en": "Devil's Snare",
+     "es": "lazo del diablo"
+    },
+    "lieu": {
+     "fr": "Cours de botanique, puis la salle du Filet du Diable sous la trappe",
+     "en": "Herbology class, then the Devil's Snare room under the trapdoor",
+     "es": "Clase de Herbología, después la sala del lazo del diablo bajo la trampilla"
+    },
+    "texte": {
+     "fr": "Plante grimpante qui enserre les jambes de ceux qui la frôlent. La lumière et la chaleur la font reculer.",
+     "en": "Creeping plant that binds the legs of anyone who brushes against it. Light and heat make it recoil.",
+     "es": "Planta trepadora que atrapa las piernas de quien la roza. La luz y el calor la hacen retroceder."
+    },
+    "image": null
+   },
+   {
+    "cle": "troll",
+    "nom": {
+     "fr": "Troll",
+     "en": "Troll",
+     "es": "trol"
+    },
+    "lieu": {
+     "fr": "Couloir menant aux toilettes des filles (poursuite puis combat)",
+     "en": "Corridor to the girls' bathroom (chase, then fight)",
+     "es": "Pasillo hacia el baño de las chicas (persecución y combate)"
+    },
+    "texte": {
+     "fr": "Géant lourdaud armé d'une massue, entré au château le soir d'Halloween. Fort mais lent, il se laisse distancer.",
+     "en": "Clumsy giant armed with a club, let into the castle on Halloween night. Strong but slow, it can be outrun.",
+     "es": "Gigante torpe armado con un garrote que entró en el castillo la noche de Halloween. Fuerte pero lento, se le puede dejar atrás."
+    },
+    "image": null
+   },
+   {
+    "cle": "touffu",
+    "nom": {
+     "fr": "Touffu",
+     "en": "Fluffy",
+     "es": "Fluffy"
+    },
+    "lieu": {
+     "fr": "Le Couloir interdit, au troisième étage",
+     "en": "The forbidden corridor, on the third floor",
+     "es": "El pasillo prohibido, en el tercer piso"
+    },
+    "texte": {
+     "fr": "Chien colossal à trois têtes qui garde la trappe. Une mélodie jouée à la flûte endort ses têtes une à une.",
+     "en": "Huge three-headed dog guarding the trapdoor. A tune played on the flute puts its heads to sleep one by one.",
+     "es": "Perro colosal de tres cabezas que guarda la trampilla. Una melodía de flauta duerme sus cabezas una a una."
+    },
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "FluffyHeadMAwake",
+     "bits": 8,
+     "recadrage": [
+      0,
+      44,
+      40,
+      40
+     ]
+    }
+   },
+   {
+    "cle": "norbert",
+    "nom": {
+     "fr": "Norbert",
+     "en": "Norbert",
+     "es": "Norberto"
+    },
+    "lieu": {
+     "fr": "La cabane de Hagrid (éclosion), puis la tour d'astronomie",
+     "en": "Hagrid's hut (hatching), then the Astronomy Tower",
+     "es": "La cabaña de Hagrid (eclosión), después la torre de Astronomía"
+    },
+    "texte": {
+     "fr": "Bébé dragon Norvégien à crête éclos chez Hagrid. Harry doit l'emmener en cachette au sommet de la tour.",
+     "en": "Baby Norwegian Ridgeback hatched at Hagrid's. Harry has to sneak him to the top of the tower.",
+     "es": "Cría de ridgeback noruego nacida en casa de Hagrid. Harry debe llevarla a escondidas a lo alto de la torre."
+    },
+    "image": null
+   }
+  ],
+  "hp2": [
+   {
+    "cle": "gnome",
+    "nom": {
+     "fr": "Gnome",
+     "en": "Gnome",
+     "es": "gnomo"
+    },
+    "lieu": {
+     "fr": "Parc de Poudlard et presque tous les défis de sorts (Rictusempra, Skurge, Diffindo, Spongify…)",
+     "en": "Hogwarts grounds and nearly every spell challenge (Rictusempra, Skurge, Diffindo, Spongify…)",
+     "es": "Terrenos de Hogwarts y casi todos los desafíos de hechizos (Rictusempra, Skurge, Diffindo, Spongify…)"
+    },
+    "texte": {
+     "fr": "Pilleur des jardins qui court voler les dragées de Harry. Retourné d'un Flipendo, il lâche son butin.",
+     "en": "Garden raider that runs off with Harry's beans. Flipped over with a Flipendo, it drops its loot.",
+     "es": "Saqueador de jardines que corre a robar las grageas de Harry. Volteado con un Flipendo, suelta el botín."
+    },
+    "image": null
+   },
+   {
+    "cle": "lutin_de_cornouailles",
+    "nom": {
+     "fr": "Lutin de Cornouailles",
+     "en": "Cornish pixie",
+     "es": "duendecillo de Cornualles"
+    },
+    "lieu": {
+     "fr": "Défis de Skurge, Diffindo et Spongify, cachots, salle commune de Serpentard, Forêt interdite",
+     "en": "Skurge, Diffindo and Spongify challenges, dungeons, Slytherin common room, Forbidden Forest",
+     "es": "Desafíos de Skurge, Diffindo y Spongify, mazmorras, sala común de Slytherin, Bosque Prohibido"
+    },
+    "texte": {
+     "fr": "Petit diablotin bleu électrique qui vole en tous sens et mord. Un Rictusempra l'étourdit.",
+     "en": "Little electric-blue imp that flies everywhere and bites. A Rictusempra stuns it.",
+     "es": "Diablillo azul eléctrico que vuela en todas direcciones y muerde. Un Rictusempra lo aturde."
+    },
+    "image": null
+   },
+   {
+    "cle": "korrigan",
+    "nom": {
+     "fr": "Korrigan",
+     "en": "Imp",
+     "es": "diablillo"
+    },
+    "lieu": {
+     "fr": "Défi de Spongify, couloirs du deuxième étage, Forêt interdite",
+     "en": "Spongify challenge, second-floor corridors, Forbidden Forest",
+     "es": "Desafío de Spongify, pasillos del segundo piso, Bosque Prohibido"
+    },
+    "texte": {
+     "fr": "Créature trapue au sourire mauvais, cousine du gnome. On la renverse puis on la jette dans son terrier.",
+     "en": "Squat creature with a nasty grin, a cousin of the gnome. Knock it over, then throw it into its burrow.",
+     "es": "Criatura rechoncha de sonrisa malvada, prima del gnomo. Se la derriba y luego se la arroja a su madriguera."
+    },
+    "image": null
+   },
+   {
+    "cle": "crabe_de_feu",
+    "nom": {
+     "fr": "Crabe de feu",
+     "en": "Fire Crab",
+     "es": "cangrejo de fuego"
+    },
+    "lieu": {
+     "fr": "Presque partout : défis de sorts, cachots, serre, couloirs ; les grands dans les dernières aventures",
+     "en": "Almost everywhere: spell challenges, dungeons, greenhouse, corridors; the big ones in the last adventures",
+     "es": "Casi en todas partes: desafíos de hechizos, mazmorras, invernadero, pasillos; los grandes en las últimas aventuras"
+    },
+    "texte": {
+     "fr": "Carapace dure et souffle de feu. Les gros spécimens lancent aussi des boules de flammes rebondissantes.",
+     "en": "Hard shell and fiery breath. The big ones also throw bouncing fireballs.",
+     "es": "Caparazón duro y aliento de fuego. Los ejemplares grandes también lanzan bolas de fuego que rebotan."
+    },
+    "image": null
+   },
+   {
+    "cle": "escargot_orange",
+    "nom": {
+     "fr": "Escargot orange géant",
+     "en": "Giant Orange Snail",
+     "es": "caracol naranja gigante"
+    },
+    "lieu": {
+     "fr": "Défis de Rictusempra, Skurge et Diffindo, cachots",
+     "en": "Rictusempra, Skurge and Diffindo challenges, dungeons",
+     "es": "Desafíos de Rictusempra, Skurge y Diffindo, mazmorras"
+    },
+    "texte": {
+     "fr": "Escargot de grande taille dont la bave acide brûle. Mieux vaut contourner ses traînées.",
+     "en": "Very large snail whose acid slime burns. Better to walk around its trails.",
+     "es": "Caracol de gran tamaño cuya baba ácida quema. Mejor rodear sus rastros."
+    },
+    "image": null
+   },
+   {
+    "cle": "champignome",
+    "nom": {
+     "fr": "Champignome",
+     "en": "Horklump",
+     "es": "horklump"
+    },
+    "lieu": {
+     "fr": "Parc de Poudlard, défi de Diffindo, serre, Forêt interdite",
+     "en": "Hogwarts grounds, Diffindo challenge, greenhouse, Forbidden Forest",
+     "es": "Terrenos de Hogwarts, desafío de Diffindo, invernadero, Bosque Prohibido"
+    },
+    "texte": {
+     "fr": "Champignon charnu planté sur une tige. Il crache un nuage toxique tant qu'on ne l'a pas tranché d'un Diffindo.",
+     "en": "Fleshy mushroom on a stalk. It spits a toxic cloud until it is cut down with a Diffindo.",
+     "es": "Hongo carnoso sobre un tallo. Escupe una nube tóxica mientras no se le corta con un Diffindo."
+    },
+    "image": null
+   },
+   {
+    "cle": "botruc",
+    "nom": {
+     "fr": "Botruc",
+     "en": "Bowtruckle",
+     "es": "bowtruckle"
+    },
+    "lieu": {
+     "fr": "Défi de Diffindo, serre, Forêt interdite",
+     "en": "Diffindo challenge, greenhouse, Forbidden Forest",
+     "es": "Desafío de Diffindo, invernadero, Bosque Prohibido"
+    },
+    "texte": {
+     "fr": "Gardien d'arbre fait de brindilles, très discret. Il protège les arbres dont on tire l'écorce de Wiggentree.",
+     "en": "Tree guardian made of twigs, very shy. It protects the trees that give Wiggentree bark.",
+     "es": "Guardián de árboles hecho de ramitas, muy discreto. Protege los árboles de los que se saca la corteza de Wiggentree."
+    },
+    "image": null
+   },
+   {
+    "cle": "tentacula",
+    "nom": {
+     "fr": "Tentacula vénéneuse",
+     "en": "Venomous Tentacula",
+     "es": "tentácula venenosa"
+    },
+    "lieu": {
+     "fr": "Défi de Diffindo, serre, Forêt interdite",
+     "en": "Diffindo challenge, greenhouse, Forbidden Forest",
+     "es": "Desafío de Diffindo, invernadero, Bosque Prohibido"
+    },
+    "texte": {
+     "fr": "Plante mordeuse aux longues lianes. Un Diffindo l'étourdit et coupe ses tiges.",
+     "en": "Biting plant with long vines. A Diffindo stuns it and cuts its stems.",
+     "es": "Planta mordedora de largas lianas. Un Diffindo la aturde y le corta los tallos."
+    },
+    "image": null
+   },
+   {
+    "cle": "araignees",
+    "nom": {
+     "fr": "Araignées",
+     "en": "Spiders",
+     "es": "arañas"
+    },
+    "lieu": {
+     "fr": "Défi de Diffindo, serre, salle commune de Serpentard, Forêt interdite, repaire d'Aragog",
+     "en": "Diffindo challenge, greenhouse, Slytherin common room, Forbidden Forest, Aragog's lair",
+     "es": "Desafío de Diffindo, invernadero, sala común de Slytherin, Bosque Prohibido, guarida de Aragog"
+    },
+    "texte": {
+     "fr": "Les petites s'écrasent sous la semelle ; les grandes, à la morsure venimeuse, se calment d'un Rictusempra.",
+     "en": "Small ones are crushed underfoot; big ones, with a venomous bite, calm down with a Rictusempra.",
+     "es": "Las pequeñas se aplastan con la suela; las grandes, de mordedura venenosa, se calman con un Rictusempra."
+    },
+    "image": null
+   },
+   {
+    "cle": "aragog",
+    "nom": {
+     "fr": "Aragog",
+     "en": "Aragog",
+     "es": "Aragog"
+    },
+    "lieu": {
+     "fr": "Son repaire au cœur de la Forêt interdite",
+     "en": "Its lair deep in the Forbidden Forest",
+     "es": "Su guarida en el corazón del Bosque Prohibido"
+    },
+    "texte": {
+     "fr": "Araignée géante et très âgée, amie de Hagrid. Elle tisse des toiles collantes et lâche ses enfants sur Harry.",
+     "en": "Giant, very old spider and friend of Hagrid. It spins sticky webs and sets its children on Harry.",
+     "es": "Araña gigante y muy anciana, amiga de Hagrid. Teje telas pegajosas y lanza a sus crías contra Harry."
+    },
+    "image": {
+     "fichier": "Textures/HP2_Menu.utx",
+     "nom": "HP2EnemyHealthAragog",
+     "bits": 8,
+     "recadrage": [
+      0,
+      0,
+      128,
+      78
+     ]
+    }
+   },
+   {
+    "cle": "basilic",
+    "nom": {
+     "fr": "Basilic",
+     "en": "Basilisk",
+     "es": "basilisco"
+    },
+    "lieu": {
+     "fr": "La Chambre des secrets",
+     "en": "The Chamber of Secrets",
+     "es": "La Cámara de los Secretos"
+    },
+    "texte": {
+     "fr": "Serpent gigantesque au regard mortel, terré sous l'école. Les araignées le fuient ; le chant du coq le tue.",
+     "en": "Gigantic serpent with a deadly gaze, hidden beneath the school. Spiders flee it; a rooster's crow kills it.",
+     "es": "Serpiente gigantesca de mirada mortal, oculta bajo la escuela. Las arañas huyen de ella; el canto del gallo la mata."
+    },
+    "image": {
+     "fichier": "Textures/HP2_Menu.utx",
+     "nom": "HP2EnemyHealthBasilisk",
+     "bits": 8,
+     "recadrage": [
+      0,
+      0,
+      128,
+      78
+     ]
+    }
+   },
+   {
+    "cle": "fumseck",
+    "nom": {
+     "fr": "Fumseck",
+     "en": "Fawkes",
+     "es": "Fawkes"
+    },
+    "lieu": {
+     "fr": "La Chambre des secrets (cinématique avant le combat contre le Basilic)",
+     "en": "The Chamber of Secrets (cutscene before the Basilisk fight)",
+     "es": "La Cámara de los Secretos (cinemática antes del combate contra el basilisco)"
+    },
+    "texte": {
+     "fr": "Phénix de Dumbledore au plumage de feu. Il apporte le Choixpeau à Harry au pire moment.",
+     "en": "Dumbledore's phoenix with fiery plumage. It brings Harry the Sorting Hat at the worst moment.",
+     "es": "Fénix de Dumbledore de plumaje de fuego. Trae el Sombrero Seleccionador a Harry en el peor momento."
+    },
+    "image": null
+   },
+   {
+    "cle": "saule_cogneur",
+    "nom": {
+     "fr": "Saule cogneur",
+     "en": "Whomping Willow",
+     "es": "sauce boxeador"
+    },
+    "lieu": {
+     "fr": "Parc de Poudlard, à l'arrivée en voiture volante",
+     "en": "Hogwarts grounds, on arrival in the flying car",
+     "es": "Terrenos de Hogwarts, a la llegada en el coche volador"
+    },
+    "texte": {
+     "fr": "Arbre violent qui frappe tout ce qui l'approche de ses branches. Ses racines blessent aussi au sol.",
+     "en": "Violent tree that strikes anything nearby with its branches. Its roots hurt on the ground too.",
+     "es": "Árbol violento que golpea con sus ramas todo lo que se acerca. Sus raíces también hieren en el suelo."
+    },
+    "image": null
+   }
+  ],
+  "hp3": [
+   {
+    "cle": "hippogriffe",
+    "nom": {
+     "fr": "Hippogriffe (Buck)",
+     "en": "Hippogriff (Buckbeak)",
+     "es": "hipogrifo (Buckbeak)"
+    },
+    "lieu": {
+     "fr": "Cours de soins aux créatures magiques, enclos, tour, mini-jeu de vol",
+     "en": "Care of Magical Creatures class, paddock, tower, flying mini-game",
+     "es": "Clase de Cuidado de Criaturas Mágicas, cercado, torre, minijuego de vuelo"
+    },
+    "texte": {
+     "fr": "Mi-aigle, mi-cheval, fier et susceptible. Il faut le saluer avant de l'approcher, puis on le monte en vol.",
+     "en": "Half eagle, half horse, proud and touchy. You must bow before approaching it, then you ride it in flight.",
+     "es": "Mitad águila, mitad caballo, orgulloso y susceptible. Hay que saludarlo antes de acercarse y luego montarlo en vuelo."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "Hippogriff",
+     "bits": 32
+    }
+   },
+   {
+    "cle": "detraqueur",
+    "nom": {
+     "fr": "Détraqueur",
+     "en": "Dementor",
+     "es": "dementor"
+    },
+    "lieu": {
+     "fr": "Poudlard Express, match de Quidditch, cours anti-Détraqueurs, rive du lac",
+     "en": "Hogwarts Express, Quidditch match, anti-Dementor lessons, lakeshore",
+     "es": "Expreso de Hogwarts, partido de quidditch, clases contra dementores, orilla del lago"
+    },
+    "texte": {
+     "fr": "Gardien d'Azkaban drapé de noir qui aspire la joie. Seul un Patronus le repousse.",
+     "en": "Azkaban guard draped in black that drains all joy. Only a Patronus drives it away.",
+     "es": "Guardián de Azkaban envuelto en negro que absorbe la alegría. Solo un patronus lo repele."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "A_Health_Dementor",
+     "bits": 32,
+     "recadrage": [
+      120,
+      0,
+      96,
+      96
+     ]
+    }
+   },
+   {
+    "cle": "lutin_de_cornouailles",
+    "nom": {
+     "fr": "Lutin de Cornouailles",
+     "en": "Pixie",
+     "es": "duendecillo de Cornualles"
+    },
+    "lieu": {
+     "fr": "Parc, cachots, défis de Carpe Retractum et de Glacius, enclos ; mini-jeu des lutins",
+     "en": "Grounds, dungeons, Carpe Retractum and Glacius challenges, paddock; pixie mini-game",
+     "es": "Terrenos, mazmorras, desafíos de Carpe Retractum y Glacius, cercado; minijuego de los duendecillos"
+    },
+    "texte": {
+     "fr": "Petit farceur ailé et rieur qui fond sur les élèves en groupe. Il se fatigue vite sous les sorts.",
+     "en": "Little winged, giggling prankster that swoops on students in groups. It tires quickly under spells.",
+     "es": "Pequeño bromista alado y risueño que se lanza en grupo sobre los alumnos. Se cansa enseguida bajo los hechizos."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "Pixie",
+     "bits": 32
+    }
+   },
+   {
+    "cle": "korrigan",
+    "nom": {
+     "fr": "Korrigan",
+     "en": "Imp",
+     "es": "diablillo"
+    },
+    "lieu": {
+     "fr": "Bibliothèque, défis de Carpe Retractum, Draconifors et Glacius, parc, examen de Ron",
+     "en": "Library, Carpe Retractum, Draconifors and Glacius challenges, grounds, Ron's exam",
+     "es": "Biblioteca, desafíos de Carpe Retractum, Draconifors y Glacius, terrenos, examen de Ron"
+    },
+    "texte": {
+     "fr": "Créature farceuse qui aime faire trébucher les passants. Elle surgit en bande et explose comme un pétard.",
+     "en": "Mischievous creature that loves tripping people up. It shows up in gangs and pops like a firecracker.",
+     "es": "Criatura traviesa a la que le encanta hacer tropezar a los transeúntes. Aparece en grupo y estalla como un petardo."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "LBE01",
+     "bits": 8
+    }
+   },
+   {
+    "cle": "bundimun",
+    "nom": {
+     "fr": "Bundimun",
+     "en": "Bundimun",
+     "es": "bundimun"
+    },
+    "lieu": {
+     "fr": "Défi de Draconifors, examen final de Hermione",
+     "en": "Draconifors challenge, Hermione's final exam",
+     "es": "Desafío de Draconifors, examen final de Hermione"
+    },
+    "texte": {
+     "fr": "Masse verdâtre et visqueuse à l'odeur infecte. Elle ronge le bois et les pierres qu'elle recouvre.",
+     "en": "Greenish, slimy mass with a foul smell. It eats away the wood and stone it covers.",
+     "es": "Masa verdosa y viscosa de olor infecto. Carcome la madera y la piedra que cubre."
+    },
+    "image": null
+   },
+   {
+    "cle": "crabe_de_feu",
+    "nom": {
+     "fr": "Crabe de feu",
+     "en": "Fire crab",
+     "es": "cangrejo de fuego"
+    },
+    "lieu": {
+     "fr": "Cachots, défi de Carpe Retractum, examens finaux de Ron et de Harry",
+     "en": "Dungeons, Carpe Retractum challenge, Ron's and Harry's final exams",
+     "es": "Mazmorras, desafío de Carpe Retractum, exámenes finales de Ron y de Harry"
+    },
+    "texte": {
+     "fr": "Carapace sertie de pierres et queue qui crache le feu. Il charge ce qui l'approche.",
+     "en": "Gem-studded shell and a tail that shoots fire. It charges whatever comes near.",
+     "es": "Caparazón engastado de piedras y cola que escupe fuego. Embiste a quien se le acerca."
+    },
+    "image": null
+   },
+   {
+    "cle": "salamandre",
+    "nom": {
+     "fr": "Salamandre d'Amazonie",
+     "en": "Amazonian salamander",
+     "es": "salamandra del Amazonas"
+    },
+    "lieu": {
+     "fr": "Défi de Glacius, cabane hurlante, examen final de Harry",
+     "en": "Glacius challenge, Shrieking Shack, Harry's final exam",
+     "es": "Desafío de Glacius, Casa de los Gritos, examen final de Harry"
+    },
+    "texte": {
+     "fr": "Lézard de feu qui naît dans les flammes. Un Glacius la fige dans la glace.",
+     "en": "Fire lizard born in flames. A Glacius freezes it in ice.",
+     "es": "Lagarto de fuego que nace en las llamas. Un Glacius la congela."
+    },
+    "image": null
+   },
+   {
+    "cle": "monstrueux_livre",
+    "nom": {
+     "fr": "Le Monstrueux Livre des Monstres",
+     "en": "The Monster Book of Monsters",
+     "es": "El monstruoso libro de los monstruos"
+    },
+    "lieu": {
+     "fr": "Poudlard Express, couloirs du château, mini-jeu du Monstrueux Livre",
+     "en": "Hogwarts Express, castle corridors, Monster Book mini-game",
+     "es": "Expreso de Hogwarts, pasillos del castillo, minijuego del libro monstruoso"
+    },
+    "texte": {
+     "fr": "Manuel de soins aux créatures doté de crocs. Il mord, sautille et ne se calme qu'avec une caresse sur le dos.",
+     "en": "Care of Magical Creatures textbook with fangs. It bites and hops about, and only calms down when stroked on the spine.",
+     "es": "Manual de Cuidado de Criaturas Mágicas con colmillos. Muerde, da saltos y solo se calma con una caricia en el lomo."
+    },
+    "image": {
+     "fichier": "textures/HP3_Menu.utx",
+     "nom": "MBOMPage",
+     "bits": 32
+    }
+   },
+   {
+    "cle": "loup_garou",
+    "nom": {
+     "fr": "Loup-garou",
+     "en": "Werewolf",
+     "es": "hombre lobo"
+    },
+    "lieu": {
+     "fr": "Près du Saule cogneur, la nuit de pleine lune",
+     "en": "Near the Whomping Willow, on the night of the full moon",
+     "es": "Cerca del sauce boxeador, la noche de luna llena"
+    },
+    "texte": {
+     "fr": "Sorcier changé en bête par la pleine lune. Lupin perd la raison sous cette forme.",
+     "en": "Wizard turned into a beast by the full moon. Lupin loses his mind in this form.",
+     "es": "Mago convertido en bestia por la luna llena. Lupin pierde la razón bajo esta forma."
+    },
+    "image": null
+   }
+  ],
+  "hp4": [
+   {
+    "cle": "fangieux",
+    "nom": {
+     "fr": "Fangieux",
+     "en": "Dugbog",
+     "es": "dugbog"
+    },
+    "lieu": {
+     "fr": "Bois du camping de la Coupe du monde, défis de Maugrey",
+     "en": "Woods of the World Cup campsite, Moody's challenges",
+     "es": "Bosque del campamento de los Mundiales, desafíos de Moody"
+    },
+    "texte": {
+     "fr": "Créature des marais qui ressemble à une souche moussue. Elle se jette sur les chevilles des passants.",
+     "en": "Marsh creature that looks like a mossy stump. It lunges at passers-by's ankles.",
+     "es": "Criatura de los pantanos que parece un tocón musgoso. Se lanza a los tobillos de los transeúntes."
+    },
+    "image": null
+   },
+   {
+    "cle": "erkling",
+    "nom": {
+     "fr": "Erkling",
+     "en": "Erkling",
+     "es": "erkling"
+    },
+    "lieu": {
+     "fr": "Forêt interdite, défis de Maugrey",
+     "en": "Forbidden Forest, Moody's challenges",
+     "es": "Bosque Prohibido, desafíos de Moody"
+    },
+    "texte": {
+     "fr": "Petit être de la forêt au rire perçant, armé d'une sarbacane. Il attire les enfants pour les croquer.",
+     "en": "Small forest being with a piercing cackle, armed with a blowpipe. It lures children to eat them.",
+     "es": "Pequeño ser del bosque de risa aguda, armado con una cerbatana. Atrae a los niños para comérselos."
+    },
+    "image": null
+   },
+   {
+    "cle": "salamandre",
+    "nom": {
+     "fr": "Salamandre",
+     "en": "Salamander",
+     "es": "salamandra"
+    },
+    "lieu": {
+     "fr": "Défense contre les forces du Mal, défis de Maugrey",
+     "en": "Defence Against the Dark Arts, Moody's challenges",
+     "es": "Defensa Contra las Artes Oscuras, desafíos de Moody"
+    },
+    "texte": {
+     "fr": "Lézard brûlant qui sort des braises. On l'éteint avant de pouvoir l'ensorceler.",
+     "en": "Burning lizard that comes out of the embers. You must put it out before you can bewitch it.",
+     "es": "Lagarto ardiente que sale de las brasas. Hay que apagarlo antes de poder hechizarlo."
+    },
+    "image": null
+   },
+   {
+    "cle": "scroutt",
+    "nom": {
+     "fr": "Scroutt à pétard",
+     "en": "Blast-Ended Skrewt",
+     "es": "escreguto de cola explosiva"
+    },
+    "lieu": {
+     "fr": "Soins aux créatures magiques, labyrinthe de la troisième tâche",
+     "en": "Care of Magical Creatures, maze of the third task",
+     "es": "Cuidado de Criaturas Mágicas, laberinto de la tercera prueba"
+    },
+    "texte": {
+     "fr": "Croisement raté de Hagrid, cuirassé et sans tête visible. Sa queue explose et le propulse en avant.",
+     "en": "One of Hagrid's failed crossbreeds, armoured and with no visible head. Its tail explodes and shoots it forward.",
+     "es": "Cruce fallido de Hagrid, acorazado y sin cabeza visible. Su cola explota y lo impulsa hacia delante."
+    },
+    "image": null
+   },
+   {
+    "cle": "vampirmite",
+    "nom": {
+     "fr": "Vampirmite",
+     "en": "Mosp",
+     "es": "polispa vampiro"
+    },
+    "lieu": {
+     "fr": "Botanique",
+     "en": "Herbology",
+     "es": "Herbología"
+    },
+    "texte": {
+     "fr": "Insecte volant suceur de sang, attiré par certaines plantes. Il pique dès qu'on lui tourne le dos.",
+     "en": "Blood-sucking flying insect drawn to certain plants. It stings as soon as you turn your back.",
+     "es": "Insecto volador chupasangre atraído por ciertas plantas. Pica en cuanto le das la espalda."
+    },
+    "image": null
+   },
+   {
+    "cle": "strangulot",
+    "nom": {
+     "fr": "Strangulot",
+     "en": "Grindylow",
+     "es": "grindylow"
+    },
+    "lieu": {
+     "fr": "Lac, deuxième tâche du Tournoi",
+     "en": "Lake, second task of the Tournament",
+     "es": "Lago, segunda prueba del Torneo"
+    },
+    "texte": {
+     "fr": "Démon des eaux aux longs doigts griffus. Il s'en prend aux nageurs qui approchent de son territoire.",
+     "en": "Water demon with long clawed fingers. It goes after swimmers who come near its territory.",
+     "es": "Demonio del agua de largos dedos con garras. Ataca a los nadadores que se acercan a su territorio."
+    },
+    "image": null
+   },
+   {
+    "cle": "etre_de_l_eau",
+    "nom": {
+     "fr": "Sirène (être de l'eau)",
+     "en": "Merperson",
+     "es": "sirena"
+    },
+    "lieu": {
+     "fr": "Lac, deuxième tâche du Tournoi",
+     "en": "Lake, second task of the Tournament",
+     "es": "Lago, segunda prueba del Torneo"
+    },
+    "texte": {
+     "fr": "Habitant du fond du lac à queue de poisson et peau verdâtre. Il garde les otages de la deuxième tâche.",
+     "en": "Dweller of the lake bed with a fish tail and greenish skin. It guards the hostages of the second task.",
+     "es": "Habitante del fondo del lago con cola de pez y piel verdosa. Custodia a los rehenes de la segunda prueba."
+    },
+    "image": null
+   },
+   {
+    "cle": "magyar_a_pointes",
+    "nom": {
+     "fr": "Magyar à pointes",
+     "en": "Hungarian Horntail",
+     "es": "colacuerno húngaro"
+    },
+    "lieu": {
+     "fr": "Première tâche du Tournoi",
+     "en": "First task of the Tournament",
+     "es": "Primera prueba del Torneo"
+    },
+    "texte": {
+     "fr": "Le plus féroce des dragons du Tournoi, à la queue hérissée de piques. Harry doit lui échapper sur son balai.",
+     "en": "The fiercest dragon of the Tournament, its tail bristling with spikes. Harry has to escape it on his broom.",
+     "es": "El más feroz de los dragones del Torneo, de cola erizada de púas. Harry debe escapar de él en su escoba."
+    },
+    "image": null
+   },
+   {
+    "cle": "niffleur",
+    "nom": {
+     "fr": "Niffleur",
+     "en": "Niffler",
+     "es": "escarbato"
+    },
+    "lieu": {
+     "fr": "Caché dans les niveaux ; il déniche des bonus une fois entraîné (cartes du Folio Universitas)",
+     "en": "Hidden in the levels; once trained, it digs up bonuses (Folio Universitas cards)",
+     "es": "Escondido en los niveles; una vez entrenado, desentierra bonificaciones (cartas del Folio Universitas)"
+    },
+    "texte": {
+     "fr": "Petite boule de poils noirs au museau plat, fascinée par tout ce qui brille. Il fouille le sol pour son maître.",
+     "en": "Small ball of black fur with a flat snout, fascinated by anything shiny. It digs the ground for its master.",
+     "es": "Pequeña bola de pelo negro de hocico plano, fascinada por todo lo que brilla. Escarba el suelo para su amo."
+    },
+    "image": null
+   }
+  ],
+  "hp5": [
+   {
+    "cle": "detraqueur",
+    "nom": {
+     "fr": "Détraqueur",
+     "en": "Dementor",
+     "es": "dementor"
+    },
+    "lieu": {
+     "fr": "Little Whinging, au début du jeu",
+     "en": "Little Whinging, at the start of the game",
+     "es": "Little Whinging, al comienzo del juego"
+    },
+    "texte": {
+     "fr": "Spectre encapuchonné qui se nourrit du bonheur des vivants. Deux d'entre eux attaquent Harry et Dudley.",
+     "en": "Hooded spectre that feeds on the happiness of the living. Two of them attack Harry and Dudley.",
+     "es": "Espectro encapuchado que se alimenta de la felicidad de los vivos. Dos de ellos atacan a Harry y a Dudley."
+    },
+    "image": null
+   },
+   {
+    "cle": "lutin_de_cornouailles",
+    "nom": {
+     "fr": "Lutin de Cornouailles",
+     "en": "Cornish pixie",
+     "es": "duendecillo de Cornualles"
+    },
+    "lieu": {
+     "fr": "Classe de défense contre les forces du Mal ; l'une des cinq créatures volantes à trouver",
+     "en": "Defence Against the Dark Arts classroom; one of the five flying creatures to find",
+     "es": "Aula de Defensa Contra las Artes Oscuras; una de las cinco criaturas voladoras que encontrar"
+    },
+    "texte": {
+     "fr": "Petit diablotin bleu qui s'échappe des cages au moindre prétexte. Il compte parmi les créatures volantes du château.",
+     "en": "Little blue imp that escapes its cage at the slightest excuse. It is one of the castle's flying creatures.",
+     "es": "Diablillo azul que se escapa de las jaulas a la menor ocasión. Es una de las criaturas voladoras del castillo."
+    },
+    "image": null
+   },
+   {
+    "cle": "sombral",
+    "nom": {
+     "fr": "Sombral",
+     "en": "Thestral",
+     "es": "thestral"
+    },
+    "lieu": {
+     "fr": "Enclos des Sombrals, mission de Luna",
+     "en": "Thestral paddock, Luna's mission",
+     "es": "Cercado de los thestrals, misión de Luna"
+    },
+    "texte": {
+     "fr": "Cheval squelettique à ailes de chauve-souris. Seuls ceux qui ont vu mourir quelqu'un peuvent le voir.",
+     "en": "Skeletal horse with bat wings. Only those who have seen someone die can see it.",
+     "es": "Caballo esquelético con alas de murciélago. Solo pueden verlo quienes han visto morir a alguien."
+    },
+    "image": null
+   },
+   {
+    "cle": "centaure",
+    "nom": {
+     "fr": "Centaure",
+     "en": "Centaur",
+     "es": "centauro"
+    },
+    "lieu": {
+     "fr": "Forêt de Graup ; ses empreintes près de la cabane de Hagrid",
+     "en": "Grawp's forest; its hoofprints near Hagrid's hut",
+     "es": "Bosque de Grawp; sus huellas cerca de la cabaña de Hagrid"
+    },
+    "texte": {
+     "fr": "Être mi-homme mi-cheval, fier et méfiant envers les sorciers. Il veille sur la Forêt interdite.",
+     "en": "Half man, half horse, proud and wary of wizards. It watches over the Forbidden Forest.",
+     "es": "Ser mitad hombre, mitad caballo, orgulloso y desconfiado con los magos. Vela por el Bosque Prohibido."
+    },
+    "image": null
+   },
+   {
+    "cle": "graup",
+    "nom": {
+     "fr": "Graup",
+     "en": "Grawp",
+     "es": "Grawp"
+    },
+    "lieu": {
+     "fr": "Forêt interdite, clairière où Hagrid le cache",
+     "en": "Forbidden Forest, the clearing where Hagrid hides him",
+     "es": "Bosque Prohibido, el claro donde Hagrid lo esconde"
+    },
+    "texte": {
+     "fr": "Demi-frère géant de Hagrid, ramené des montagnes. Il comprend mal sa force et ne parle presque pas.",
+     "en": "Hagrid's giant half-brother, brought back from the mountains. He hardly knows his own strength and barely speaks.",
+     "es": "Medio hermano gigante de Hagrid, traído de las montañas. No mide su fuerza y apenas habla."
+    },
+    "image": null
+   },
+   {
+    "cle": "monstrueux_livre",
+    "nom": {
+     "fr": "Le Monstrueux Livre des Monstres",
+     "en": "The Monster Book of Monsters",
+     "es": "El monstruoso libro de los monstruos"
+    },
+    "lieu": {
+     "fr": "Bibliothèque",
+     "en": "Library",
+     "es": "Biblioteca"
+    },
+    "texte": {
+     "fr": "Manuel à crocs qui mord ses lecteurs. Il traîne encore dans les rayons de la bibliothèque.",
+     "en": "Fanged textbook that bites its readers. It still lurks on the library shelves.",
+     "es": "Manual con colmillos que muerde a sus lectores. Todavía anda por los estantes de la biblioteca."
+    },
+    "image": null
+   }
+  ],
+  "hp6": [
+   {
+    "cle": "inferi",
+    "nom": {
+     "fr": "Inferi",
+     "en": "Inferi",
+     "es": "inferi"
+    },
+    "lieu": {
+     "fr": "La caverne du médaillon, avec Dumbledore",
+     "en": "The locket cave, with Dumbledore",
+     "es": "La cueva del guardapelo, con Dumbledore"
+    },
+    "texte": {
+     "fr": "Cadavres animés par magie noire qui sortent du lac de la caverne. Le feu les tient à distance.",
+     "en": "Corpses animated by dark magic that rise from the cave's lake. Fire keeps them at bay.",
+     "es": "Cadáveres animados por magia oscura que salen del lago de la cueva. El fuego los mantiene a distancia."
+    },
+    "image": null
+   },
+   {
+    "cle": "loup_garou",
+    "nom": {
+     "fr": "Loup-garou (Fenrir Greyback)",
+     "en": "Werewolf (Fenrir Greyback)",
+     "es": "hombre lobo (Fenrir Greyback)"
+    },
+    "lieu": {
+     "fr": "Poudlard, la nuit de l'attaque des Mangemorts",
+     "en": "Hogwarts, on the night of the Death Eaters' attack",
+     "es": "Hogwarts, la noche del ataque de los mortífagos"
+    },
+    "texte": {
+     "fr": "Loup-garou sauvage rallié aux Mangemorts, qui garde ses instincts même sous forme humaine.",
+     "en": "Savage werewolf allied with the Death Eaters, who keeps his instincts even in human form.",
+     "es": "Hombre lobo salvaje aliado de los mortífagos, que conserva sus instintos incluso en forma humana."
+    },
+    "image": null
+   }
+  ]
+ }
+}

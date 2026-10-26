@@ -255,3 +255,36 @@ class TestJeuxDeCartes:
         jeu = dict(folio_hp4.GROUPES_CARTES)["Ron"][0]
         assert folio_hp4.image_carte(tmp_path / "absent", jeu, 0) is None
         assert folio_hp4.image_carte(tmp_path, jeu, jeu.images) is None
+
+
+class TestTextesDesCartes:
+    """La clé de texte d'une carte (fonction 0x4E4C30 de l'exe) mène à son nom et sa description."""
+
+    @staticmethod
+    def _table() -> tuple[str, ...]:
+        t = [""] * 700
+        t[118 + 9], t[390 + 9] = "Renforce les sorts de Harry (+\xa010).", "Sort"      # HARRY_10
+        t[255 + 36], t[522 + 36] = "Quand Ron se trouve à côté d'un ami…", "Amitié"     # RON_37
+        t[64 + 7], t[345 + 4] = "Le joueur peut ensorceler un Fangieux…", "Fangieux (Orbis)"
+        t[91], t[362] = "Récupérez la carte éphémère dans la forêt interdite.", "Forêt interdite"
+        return tuple(t)
+
+    def test_un_sort_de_harry(self):
+        assert folio_hp4.cle_carte(8) == ("HARRY", 10)          # HARRY_JINX_PLUS10_1
+        assert folio_hp4.texte_carte(self._table(), 8) == ("Sort", "Renforce les sorts de Harry (+ 10).")
+
+    def test_l_amitie_de_ron(self):
+        assert folio_hp4.texte_carte(self._table(), 90)[0] == "Amitié"
+
+    def test_une_creature_saute_la_facon_de_l_obtenir(self):
+        """CHARM du Fangieux = DUGBOG_05 : description à 64 + 2 × 5 - 3."""
+        assert folio_hp4.texte_carte(self._table(), 153) == (
+            "Fangieux (Orbis)", "Le joueur peut ensorceler un Fangieux…")
+
+    def test_une_carte_ephemere(self):
+        assert folio_hp4.texte_carte(self._table(), 183) == (
+            "Forêt interdite", "Récupérez la carte éphémère dans la forêt interdite.")
+
+    def test_sans_cle_ni_table(self):
+        assert folio_hp4.texte_carte(self._table(), 29) == ("", "")
+        assert folio_hp4.texte_carte((), 8) == ("", "")

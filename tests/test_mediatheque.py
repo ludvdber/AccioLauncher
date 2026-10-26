@@ -516,3 +516,15 @@ class TestBoutonCollectionsDeLaFiche:
         assert media.rubrique_pour("hp3") == "musique", "rien de neuf : sa musique"
         self._montrer(win, "hp3").click()
         assert win._pages.page.rubrique_courante == "musique"
+
+
+def test_la_page_des_collections_a_les_deux_rubriques(fenetre_avec_jeux):
+    from src.core import encyclopedie as _encyclo
+    win = fenetre_avec_jeux
+    win._mediatheque.ouvrir(_encyclo.BESTIAIRE, "hp2")
+    page = win._pages.page
+    assert page.rubrique_courante == _encyclo.BESTIAIRE
+    vue = page._encyclo[_encyclo.BESTIAIRE]
+    assert [f.fiche.cle for f in vue.fiches][:2] == ["gnome", "lutin_de_cornouailles"]
+    page.rubrique(_encyclo.PERSONNAGES)
+    assert page._encyclo[_encyclo.PERSONNAGES].fiches

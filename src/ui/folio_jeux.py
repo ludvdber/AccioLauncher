@@ -46,6 +46,7 @@ from src.core.i18n import get_language, tr
 from src.ui.carte_3d import Carte3D
 from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
+from src.ui.fonts import cinzel
 from src.ui.folio_page import (
     _ECART_CASES,
     _IMAGE_FICHE,
@@ -693,8 +694,15 @@ class FolioPageHP4(FolioPage):
         fiche.setSpacing(4)
         fiche.addStretch()
         self._carte_jeu = surtitre("")
-        self._carte_etat = texte("", 14, ENCRE, retour=True)
+        self._carte_nom = texte("", 18, ENCRE, retour=True)
+        self._carte_nom.setFont(cinzel(13, bold=True))
+        self._carte_texte = texte("", 14, "#c9c7da", retour=True)
+        self._carte_etat = texte("", 13, current_theme().accent_light, retour=True)
         fiche.addWidget(self._carte_jeu)
+        fiche.addSpacing(4)
+        fiche.addWidget(self._carte_nom)
+        fiche.addWidget(self._carte_texte)
+        fiche.addSpacing(6)
         fiche.addWidget(self._carte_etat)
         fiche.addStretch()
         haut.addLayout(fiche, stretch=1)
@@ -761,6 +769,14 @@ class FolioPageHP4(FolioPage):
         """La carte choisie en grand, décodée hors du fil de l'interface."""
         self._carte_montree_hp4 = vignette
         self._carte_jeu.setText(vignette.titre_jeu.upper())
+        # Nom et description : la boutique du jeu les montre avant l'achat ;
+        # l'illustration, elle, reste réservée aux cartes obtenues.
+        nom_carte, description = folio_hp4.texte_carte(self._table_jeu,
+                                                        vignette.jeu.cartes[vignette.rang])
+        self._carte_nom.setText(nom_carte)
+        self._carte_nom.setVisible(bool(nom_carte))
+        self._carte_texte.setText(description)
+        self._carte_texte.setVisible(bool(description))
         illustree = vignette.rang < vignette.jeu.images
         if not vignette.possedee:
             etat = tr("Pas encore obtenue")

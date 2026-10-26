@@ -1339,7 +1339,7 @@
     "Très vert": "Very green",
     "Vert du jeu": "The game's green",
     "Ciel": "Sky",
-    "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son matin, son midi ou son coucher, lumière et personnages compris. Attention : une quête qui attend un autre moment de la journée peut ne pas se déclencher ; revenir à « Bleu » rend au jeu son heure. Se change aussi pendant la partie.": "“Blue” replaces the mint-green haze of the day with a blue sky. “Real time” follows the computer's clock: the game moves to its own night, morning, noon or sunset, light and characters included. Beware: a quest waiting for another time of day may not start; going back to “Blue” gives the game its own time again. Can also be changed during play.",
+    "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son matin, son midi ou son coucher, lumière et personnages compris. Si une quête semble bloquée, revenir à « Bleu » rend au jeu son heure. Se change aussi pendant la partie.": "“Blue” replaces the mint-green haze of the day with a blue sky. “Real time” follows the computer's clock: the game moves to its own night, morning, noon or sunset, light and characters included. If a quest seems stuck, going back to “Blue” gives the game its own time again. Can also be changed during play.",
     "Bleu": "Blue",
     "Heure réelle": "Real time",
     "Heure choisie": "Chosen time",
@@ -1384,6 +1384,13 @@
     "Jeu {}": "Set {}",
     "Fangieux": "Dugbog",
     "Salamandre": "Salamander",
-    "Scroutt à pétard": "Blast-Ended Skrewt"
+    "Scroutt à pétard": "Blast-Ended Skrewt",
+    "Personnages": "Characters",
+    "Bestiaire": "Bestiary",
+    "Aucune fiche pour ce jeu.": "No entries for this game.",
+    "{} personnage": "{} character",
+    "{} personnages": "{} characters",
+    "{} créature": "{} creature",
+    "{} créatures": "{} creatures"
   }
 }
