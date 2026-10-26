@@ -136,7 +136,8 @@ class TestDownloadCounts:
         win = make_window()
         meta = win._detail._info._meta
         assert "téléchargement" not in meta.text()
-        assert not meta.toolTip()
+        # L'infobulle peut dire la manette (pictogramme), jamais un compte inconnu.
+        assert "GitHub" not in meta.toolTip()
 
     def test_position_stable_entre_les_jeux(self, make_window):
         """Le compteur ne doit jamais changer de ligne d'un jeu à l'autre."""

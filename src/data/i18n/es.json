@@ -1322,6 +1322,13 @@
     "D'origine (texte de 2001)": "Original (texto de 2001)",
     "Le jeu agrandit ses menus avec l'écran, mais garde le texte de 2001, minuscule en haute définition. Le lanceur redessine ses lettres à la taille de l'image : automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut déborder de certains cadres. Appliqué au prochain lancement.": "El juego agranda sus menús con la pantalla, pero conserva el texto de 2001, diminuto en alta definición. El lanzador vuelve a dibujar sus letras al tamaño de la imagen: en automático, el texto recupera su lugar original dentro de los marcos. Más grande puede desbordar algunos marcos. Se aplica en el próximo inicio.",
     "Défis": "Desafíos",
-    "Ce jeu n'a pas encore de défis.": "Este juego aún no tiene desafíos."
+    "Ce jeu n'a pas encore de défis.": "Este juego aún no tiene desafíos.",
+    "MAJ": "ACT.",
+    "en partie": "en parte",
+    "{} points de découverte": "{} puntos de descubrimiento",
+    "{} bouclier sur {}": "{} escudo de {}",
+    "{} boucliers sur {}": "{} escudos de {}",
+    "{} écusson sur {}": "{} escudo de {}",
+    "{} écussons sur {}": "{} escudos de {}"
   }
 }
