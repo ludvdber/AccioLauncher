@@ -142,6 +142,21 @@ class TestPage:
         # en dur, le test cassait à chaque release.
         assert page.findChild(QLabel, "nomVersion").text() == nouveautes.charger().nom
 
+    @pytest.mark.parametrize("largeur", [1000, 1280, 1920])
+    def test_les_cartes_montrent_tout_leur_texte(self, qtbot, largeur):
+        # Bornées à leur `sizeHint`, calculée pour une autre largeur, les cartes
+        # coupaient leur dernière ligne (2026-10-26).
+        from PyQt6.QtWidgets import QLabel
+        from src.ui.nouveautes_page import _CartePointFort
+        page = self._page(qtbot)
+        page.resize(largeur, 900)
+        page.show()
+        qtbot.waitExposed(page)
+        for carte in page.findChildren(_CartePointFort):
+            for lbl in carte.findChildren(QLabel):
+                if lbl.wordWrap():
+                    assert lbl.height() >= lbl.heightForWidth(lbl.width()), lbl.text()[:40]
+
     def test_chaque_changement_a_sa_ligne(self, qtbot):
         from src.ui.nouveautes_page import _LigneChangement
         page = self._page(qtbot)

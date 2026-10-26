@@ -2,50 +2,106 @@
   "versions": [
     {
       "version": "1.3.0",
-      "nom": "Sonorus",
+      "nom": "Wingardium Leviosa",
       "depuis": "1.2.3",
       "points_forts": [
         {
           "icone": "film",
           "titre": {
-            "fr": "Les cinématiques retrouvent leur son",
-            "en": "Cutscenes get their sound back",
-            "es": "Las cinemáticas recuperan su sonido"
+            "fr": "Les Collections",
+            "en": "The Collections",
+            "es": "Las Colecciones"
           },
           "texte": {
-            "fr": "Le nouvel onglet Collections réunit vos captures, la musique et les cinématiques de vos jeux installés. Du Prisonnier d'Azkaban au Prince de sang-mêlé, les cinématiques se regardent avec leur son, s'avancent, se reculent et s'enregistrent.",
-            "en": "The new Collections tab gathers your screenshots, the music and the cutscenes of your installed games. From Prisoner of Azkaban to Half-Blood Prince, cutscenes play with their sound, can be skipped forward or back, and saved.",
-            "es": "La nueva pestaña Colecciones reúne tus capturas, la música y las cinemáticas de tus juegos instalados. De El prisionero de Azkaban a El misterio del príncipe, las cinemáticas se ven con su sonido, se adelantan, se retroceden y se guardan."
+            "fr": "Un nouvel onglet réunit vos captures, la musique et les cinématiques de vos jeux installés. Du Prisonnier d'Azkaban au Prince de sang-mêlé, les cinématiques se regardent avec leur son, s'avancent, se reculent et s'enregistrent.",
+            "en": "A new tab gathers your screenshots, the music and the cutscenes of your installed games. From Prisoner of Azkaban to Half-Blood Prince, cutscenes play with their sound, can be skipped forward or back, and saved.",
+            "es": "Una nueva pestaña reúne tus capturas, la música y las cinemáticas de tus juegos instalados. De El prisionero de Azkaban a El misterio del príncipe, las cinemáticas se ven con su sonido, se adelantan, se retroceden y se guardan."
+          }
+        },
+        {
+          "icone": "personnages",
+          "titre": {
+            "fr": "Personnages et Bestiaire",
+            "en": "Characters and Bestiary",
+            "es": "Personajes y Bestiario"
+          },
+          "texte": {
+            "fr": "186 fiches, des élèves aux créatures, dans les Collections. Pour L'École des Sorciers et La Chambre des Secrets, chaque personnage apparaît en 3D, tel qu'il est dans votre jeu : il se tourne à la souris et se zoome à la molette.",
+            "en": "186 entries, from pupils to creatures, in the Collections. For Philosopher's Stone and Chamber of Secrets, each character appears in 3D, just as in your game: turn it with the mouse and zoom with the wheel.",
+            "es": "186 fichas, de los alumnos a las criaturas, en las Colecciones. En La piedra filosofal y La cámara secreta, cada personaje aparece en 3D, tal como está en tu juego: se gira con el ratón y se acerca con la rueda."
           }
         },
         {
           "icone": "folio",
           "titre": {
-            "fr": "Le Carnet et vos succès",
-            "en": "The Notebook and your achievements",
-            "es": "El Cuaderno y tus logros"
+            "fr": "Le Carnet et vos médailles",
+            "en": "The Notebook and your medals",
+            "es": "El Cuaderno y tus medallas"
           },
           "texte": {
-            "fr": "Mes années devient le Carnet, qui s'ouvre sur le Folio de chaque jeu. Les succès que prouvent vos sauvegardes y sont rangés, et un succès obtenu s'annonce au retour de la partie.",
-            "en": "My Years becomes the Notebook, which opens on each game's Folio. The achievements your saves prove are listed there, and a new one is announced when you come back from the game.",
-            "es": "Mis años pasa a ser el Cuaderno, que se abre en el Folio de cada juego. Ahí están los logros que demuestran tus partidas, y uno nuevo se anuncia al volver del juego."
-          }
-        },
-        {
-          "icone": "play",
-          "titre": {
-            "fr": "Reprendre en un clic",
-            "en": "One-click Resume",
-            "es": "Continuar en un clic"
-          },
-          "texte": {
-            "fr": "Dans L'École des Sorciers, La Chambre des Secrets et Le Prisonnier d'Azkaban, Reprendre ouvre directement votre dernière partie, sans logos ni menu. Se désactive dans Paramètres › Sauvegardes.",
-            "en": "In Philosopher's Stone, Chamber of Secrets and Prisoner of Azkaban, Resume opens your last game directly, with no logos or menu. It can be turned off in Settings › Saves.",
-            "es": "En La piedra filosofal, La cámara secreta y El prisionero de Azkaban, Continuar abre directamente tu última partida, sin logotipos ni menú. Se desactiva en Ajustes › Partidas guardadas."
+            "fr": "Mes années devient le Carnet. Le Folio de chaque jeu range ce que prouvent vos sauvegardes, les cartes de La Coupe de Feu y tournent en relief, et l'onglet Défis transforme vos succès en médailles. Un succès obtenu s'annonce au retour de la partie.",
+            "en": "My Years becomes the Notebook. Each game's Folio lists what your saves prove, the Goblet of Fire cards turn in relief, and the Challenges tab turns your achievements into medals. A new achievement is announced when you come back from the game.",
+            "es": "Mis años pasa a ser el Cuaderno. El Folio de cada juego reúne lo que demuestran tus partidas, las cartas de El cáliz de fuego giran en relieve y la pestaña Desafíos convierte tus logros en medallas. Un logro nuevo se anuncia al volver del juego."
           }
         }
       ],
       "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Reprendre en un clic : dans L'École des Sorciers, La Chambre des Secrets et Le Prisonnier d'Azkaban, Reprendre ouvre directement votre dernière partie, sans logos ni menu. Se désactive dans Paramètres › Sauvegardes.",
+            "en": "One-click Resume: in Philosopher's Stone, Chamber of Secrets and Prisoner of Azkaban, Resume opens your last game directly, with no logos or menu. It can be turned off in Settings › Saves.",
+            "es": "Continuar en un clic: en La piedra filosofal, La cámara secreta y El prisionero de Azkaban, Continuar abre directamente tu última partida, sin logotipos ni menú. Se desactiva en Ajustes › Partidas guardadas."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Une sauvegarde s'exporte en .zip pour la garder ou la partager, et s'importe sur ce PC ou un autre. La partie remplacée est copiée d'abord et revient en un clic.",
+            "en": "A save can be exported as a .zip to keep or share it, and imported on this PC or another. The replaced game is copied first and comes back in one click.",
+            "es": "Una partida se exporta en .zip para guardarla o compartirla, y se importa en este PC o en otro. La partida reemplazada se copia antes y vuelve con un clic."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le Prince de sang-mêlé : un ciel bleu à la place de la brume vert menthe, ou un ciel qui suit l'heure de votre ordinateur, de l'aube à la nuit. Se change aussi pendant la partie.",
+            "en": "Half-Blood Prince: a blue sky instead of the mint-green haze, or a sky that follows your computer's clock, from dawn to night. Can also be changed during play.",
+            "es": "El misterio del príncipe: un cielo azul en lugar de la bruma verde menta, o un cielo que sigue la hora de tu ordenador, del amanecer a la noche. También se cambia durante la partida."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "L'École des Sorciers et La Chambre des Secrets : le texte du jeu, minuscule en haute définition, est redessiné à la taille de l'image. Réglage Taille du texte.",
+            "en": "Philosopher's Stone and Chamber of Secrets: the game's text, tiny in high definition, is redrawn to fit the picture. Text size setting.",
+            "es": "La piedra filosofal y La cámara secreta: el texto del juego, diminuto en alta definición, se redibuja al tamaño de la imagen. Ajuste Tamaño del texto."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "De nouveaux réglages graphiques : braises et étincelles plus loin (La Coupe de Feu), ombres douces (L'Ordre du Phénix), arbres lointains plus fournis et vert des montagnes (Le Prince de sang-mêlé).",
+            "en": "New graphics settings: embers and sparks farther away (Goblet of Fire), soft shadows (Order of the Phoenix), fuller distant trees and green mountains (Half-Blood Prince).",
+            "es": "Nuevos ajustes gráficos: brasas y chispas más lejos (El cáliz de fuego), sombras suaves (La Orden del Fénix), árboles lejanos más frondosos y verde de las montañas (El misterio del príncipe)."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "L'Ordre du Phénix et Le Prince de sang-mêlé : un mode difficile dans les réglages du jeu. Les dégâts reçus et infligés se règlent ; dans Le Prince de sang-mêlé, les ennemis réagissent plus vite et des sorts peuvent être retirés.",
+            "en": "Order of the Phoenix and Half-Blood Prince: a hard mode in the game's settings. Damage taken and dealt can be adjusted; in Half-Blood Prince, enemies react faster and spells can be removed.",
+            "es": "La Orden del Fénix y El misterio del príncipe: un modo difícil en los ajustes del juego. El daño recibido e infligido se ajusta; en El misterio del príncipe, los enemigos reaccionan más rápido y se pueden quitar hechizos."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban peut s'ouvrir directement sur son menu, sans les logos des studios.",
+            "en": "Prisoner of Azkaban can open straight on its menu, without the studio logos.",
+            "es": "El prisionero de Azkaban puede abrirse directamente en su menú, sin los logotipos de los estudios."
+          }
+        },
         {
           "genre": "nouveau",
           "texte": {
@@ -63,11 +119,19 @@
           }
         },
         {
-          "genre": "nouveau",
+          "genre": "ameliore",
           "texte": {
-            "fr": "L'Ordre du Phénix et Le Prince de sang-mêlé : un mode difficile dans les réglages du jeu. Les dégâts reçus et infligés se règlent ; dans Le Prince de sang-mêlé, les ennemis réagissent plus vite et des sorts peuvent être retirés.",
-            "en": "Order of the Phoenix and Half-Blood Prince: a hard mode in the game's settings. Damage taken and dealt can be adjusted; in Half-Blood Prince, enemies react faster and spells can be removed.",
-            "es": "La Orden del Fénix y El misterio del príncipe: un modo difícil en los ajustes del juego. El daño recibido e infligido se ajusta; en El misterio del príncipe, los enemigos reaccionan más rápido y se pueden quitar hechizos."
+            "fr": "La fiche de La Coupe de Feu, de L'Ordre du Phénix et du Prince de sang-mêlé montre où en est votre partie, et Discord affiche aussi l'endroit où vous jouez.",
+            "en": "The Goblet of Fire, Order of the Phoenix and Half-Blood Prince pages show how far your game has come, and Discord also shows where you are playing.",
+            "es": "La ficha de El cáliz de fuego, La Orden del Fénix y El misterio del príncipe muestra cómo va tu partida, y Discord muestra también dónde estás jugando."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les jeux peuvent utiliser 4 Go de mémoire au lieu de 2 : de la marge pour les packs HD.",
+            "en": "The games can use 4 GB of memory instead of 2: headroom for the HD packs.",
+            "es": "Los juegos pueden usar 4 GB de memoria en lugar de 2: margen para los packs HD."
           }
         },
         {

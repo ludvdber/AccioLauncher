@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -173,8 +172,9 @@ class NouveautesPage(QDialog):
             rangee = Rangee(cartes, len(cartes), seuil=720, ecart=18)
             # La hauteur de leur texte, pas celle de la fenêtre : en plein
             # écran, les cartes prenaient 300 px de vide (Ludo, 2026-10-14).
-            for bloc in (rangee, *cartes):
-                bloc.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+            # Seule la rangée est bornée : bornées elles aussi, les cartes
+            # restaient à la hauteur de leur `sizeHint`, calculée pour une
+            # autre largeur, et coupaient leur dernière ligne (2026-10-26).
             lay.addWidget(rangee)
         if self.nouveautes.changements:
             lay.addSpacing(26)
