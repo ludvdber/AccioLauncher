@@ -17,6 +17,10 @@ fait tourner (`modele_3d`), et une fiche sans image reçoit le rendu de son
 modèle en vignette, une par tour de minuteur pour ne pas figer la page. En
 haut de la liste jusqu'au 2026-10-27 : il fallait descendre choisir une fiche
 puis remonter la voir (Ludo, comme le Folio Universitas).
+
+Les fiches s'ouvrent avec l'histoire, comme la musique (Ludo, 2026-10-27) :
+une fiche fermée garde sa place, sans nom ni image ni modèle, avec le
+pourcentage qui l'ouvre ; à 75 % tout le jeu est ouvert.
 """
 
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -25,7 +29,7 @@ from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QMouseEvent, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import encyclopedie, maillages_ue1
+from src.core import discographie, encyclopedie, maillages_ue1
 from src.core.i18n import dans_la_langue, tr
 from src.ui.composants import ENCRE, ENCRE_DOUCE, texte
 from src.ui.flow_layout import FlowLayout
@@ -53,8 +57,9 @@ def _images(textures: dict[str, encyclopedie.ImageBgra]) -> dict[str, QImage]:
             for nom, (w, h, px) in textures.items()}
 
 
-def embleme(rubrique: str, taille: QSize, dpr: float) -> QPixmap:
-    """Le cercle doré et le pictogramme de la rubrique, pour une fiche sans image."""
+def embleme(rubrique: str, taille: QSize, dpr: float, icone_nom: str = "") -> QPixmap:
+    """Le cercle doré et le pictogramme de la rubrique (ou `icone_nom`), pour
+    une fiche sans image."""
     pix = QPixmap(round(taille.width() * dpr), round(taille.height() * dpr))
     pix.setDevicePixelRatio(dpr)
     pix.fill(Qt.GlobalColor.transparent)
@@ -67,9 +72,15 @@ def embleme(rubrique: str, taille: QSize, dpr: float) -> QPixmap:
     p.drawEllipse(cercle)
     icone = round(cote * 0.45)
     p.drawPixmap(round(cercle.center().x() - icone / 2), round(cercle.center().y() - icone / 2),
-                 pixmap_icone(_ICONE[rubrique], icone, accent_qcolor(200)))
+                 pixmap_icone(icone_nom or _ICONE[rubrique], icone, accent_qcolor(200)))
     p.end()
     return pix
+
+
+def _texte_seuil(seuil: int) -> str:
+    if seuil >= discographie.TOUT_A:
+        return tr("S'ouvre à {} % de l'histoire").format(discographie.TOUT_A)
+    return tr("S'ouvre vers {} % de l'histoire").format(seuil)
 
 
 class _Fiche(QFrame):
@@ -78,11 +89,12 @@ class _Fiche(QFrame):
 
     choisie = pyqtSignal(object)
 
-    def __init__(self, rubrique: str, fiche: encyclopedie.Fiche) -> None:
+    def __init__(self, rubrique: str, fiche: encyclopedie.Fiche, ouverte: bool = True) -> None:
         super().__init__()
         self.setObjectName("carteJeu")      # le cadre des cartes de la page (`mediatheque_page._STYLE`)
         self.fiche = fiche
-        self.setProperty("modele", fiche.modele is not None)
+        self.ouverte = ouverte
+        self.setProperty("modele", ouverte and fiche.modele is not None)
         self.setFixedWidth(_LARGEUR_FICHE)
         h = QHBoxLayout(self)
         h.setContentsMargins(14, 14, 16, 14)
@@ -91,10 +103,20 @@ class _Fiche(QFrame):
         self._image.setFixedSize(_IMAGE)
         self._image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._image.setStyleSheet("background: transparent;")
-        self._image.setPixmap(embleme(rubrique, _IMAGE, self.devicePixelRatioF()))
+        self._image.setPixmap(embleme(rubrique, _IMAGE, self.devicePixelRatioF(),
+                                      "" if ouverte else "cadenas"))
         h.addWidget(self._image, alignment=Qt.AlignmentFlag.AlignTop)
         v = QVBoxLayout()
         v.setSpacing(3)
+        if not ouverte:
+            nom = texte(tr("À découvrir"), 15, ENCRE_DOUCE, retour=True)
+            nom.setFont(cinzel(12, bold=True))
+            v.addWidget(nom)
+            v.addWidget(texte(_texte_seuil(fiche.seuil), 12, ENCRE_DOUCE, retour=True))
+            v.addStretch()
+            h.addLayout(v, stretch=1)
+            self.setAccessibleName(tr("À découvrir"))
+            return
         nom = texte(dans_la_langue(fiche.nom), 15, ENCRE, retour=True)
         nom.setFont(cinzel(12, bold=True))
         v.addWidget(nom)
@@ -241,18 +263,19 @@ class VueEncyclopedie(QWidget):
             if self.rubrique == encyclopedie.PERSONNAGES else \
             (tr("{} créature") if len(fiches) == 1 else tr("{} créatures"))
         dossier = self._media.dossier_exe(jeu)
-        if dossier is not None and any(f.modele is not None for f in fiches):
+        if dossier is not None and any(f.modele is not None and self._media.ouvert(jeu, f.seuil)
+                                       for f in fiches):
             self.scene = _Scene()
             self.scene.hide()               # jusqu'au premier modèle lu
             self._racine.addWidget(self.scene, stretch=1)
         self._lay.addWidget(texte(compte.format(len(fiches)), 13, ENCRE_DOUCE))
         flux = FlowLayout(spacing=14)
         for fiche in fiches:
-            vue = _Fiche(self.rubrique, fiche)
+            vue = _Fiche(self.rubrique, fiche, self._media.ouvert(jeu, fiche.seuil))
             vue.choisie.connect(self.choisir)
             flux.addWidget(vue)
             self.fiches.append(vue)
-            if dossier is None:
+            if dossier is None or not vue.ouverte:
                 continue
             if fiche.image is not None:
                 self._attendues.append((vue, self._fil.submit(encyclopedie.image, dossier, fiche)))

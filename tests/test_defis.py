@@ -54,6 +54,22 @@ class TestPage:
         assert [d.ident for d in page.defis] == [s.ident for s in succes.du_jeu("hp1")]
         assert [d.ident for d in page.defis if d.obtenu] == ["points_100"]
 
+    def test_recommencer_apres_confirmation_seulement(self, qtbot, porte, monkeypatch):
+        from src.ui import defis_page
+        porte["Save0.usa"] = {"points_100"}
+        page = defis_page.DefisPage(SimpleNamespace(id="hp1", name="HP1", sauvegardes=None))
+        qtbot.addWidget(page)
+        remis = []
+        monkeypatch.setattr(succes, "recommencer", lambda jeu, quand: remis.append(jeu))
+        monkeypatch.setattr(defis_page, "message", lambda *a, **k: 1)
+        page.bouton_recommencer.click()
+        assert remis == [], "Annuler ne touche à rien"
+        monkeypatch.setattr(defis_page, "message", lambda *a, **k: 0)
+        porte.clear()
+        page.bouton_recommencer.click()
+        assert remis == ["hp1"]
+        assert not any(d.obtenu for d in page.defis), "la page est redessinée"
+
     def test_un_jeu_sans_defis_le_dit(self, qtbot, porte):
         from PyQt6.QtWidgets import QLabel
         from src.ui.defis_page import DefisPage

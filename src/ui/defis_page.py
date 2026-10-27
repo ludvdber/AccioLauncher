@@ -7,14 +7,23 @@ non obtenue montre son emblème en creux, avec ce qu'elle demande.
 
 Ce qui compte est ce que `succes.obtenus` rend : les sauvegardes de TOUT le
 jeu, et la première date observée. Une date inconnue ne s'affiche pas.
+
+« Recommencer les défis » (2026-10-27) remet un jeu à zéro (`succes.recommencer`),
+ce que Steam ne permet pas ; une partie déjà avancée les redonne dès qu'on y
+rejoue, la confirmation le dit.
 """
 
+from datetime import datetime
+
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QFrame, QGridLayout, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QVBoxLayout, QWidget,
+)
 
 from src.core import sauvegardes, succes
 from src.core.i18n import tr
-from src.ui.composants import feuille_de_style
+from src.ui.composants import bouton, feuille_de_style
+from src.ui.fenetre_message import message
 from src.ui.medailles import pixmap_medaille
 from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
 from src.ui.succes_widgets import _jour
@@ -70,13 +79,19 @@ class DefisPage(QWidget):
         self.setObjectName("defis")
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self.game = game
+        self.defis: list[_Defi] = []
+        self._racine = QVBoxLayout(self)
+        self._racine.setContentsMargins(0, 0, 0, 0)
+        self._remplir()
+
+    def _remplir(self) -> None:
+        game = self.game
         definitions = succes.du_jeu(game.id)
         presentes = [v.fichier for v in sauvegardes.vues(game.id, game.sauvegardes)] if definitions else []
         obtenus = succes.obtenus(game.id, presentes, game.sauvegardes) if definitions else {}
-        self.defis: list[_Defi] = []
+        self.defis = []
 
-        racine = QVBoxLayout(self)
-        racine.setContentsMargins(0, 0, 0, 0)
+        racine = self._racine
         zone = QScrollArea()
         zone.setWidgetResizable(True)
         zone.setFrameShape(QFrame.Shape.NoFrame)
@@ -105,4 +120,27 @@ class DefisPage(QWidget):
             grille.addWidget(carte, rang // _COLONNES, rang % _COLONNES)
             self.defis.append(carte)
         lay.addLayout(grille)
+        if obtenus:
+            lay.addSpacing(18)
+            self.bouton_recommencer = bouton(tr("Recommencer les défis"))
+            self.bouton_recommencer.clicked.connect(self.recommencer)
+            lay.addWidget(self.bouton_recommencer, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addStretch()
+
+    def recommencer(self) -> None:
+        """Après confirmation, remet les défis du jeu à zéro et redessine la page."""
+        choix = message(
+            self, QMessageBox.Icon.Question, tr("Recommencer les défis"),
+            tr("Les défis de {} repartent de zéro.").format(self.game.name) + "\n\n"
+            + tr("Vos parties déjà avancées les redonnent dès que vous y rejouez : pour repartir "
+                 "vraiment de zéro, commencez une nouvelle partie ou supprimez les anciennes "
+                 "dans le jeu."),
+            choix=(tr("Recommencer"), tr("Annuler")), defaut=1)
+        if choix != 0:
+            return
+        succes.recommencer(self.game.id, datetime.now())
+        ancienne = self._racine.takeAt(0)
+        if ancienne is not None and (w := ancienne.widget()) is not None:
+            w.hide()
+            w.deleteLater()
+        self._remplir()

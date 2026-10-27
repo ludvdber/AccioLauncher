@@ -1396,6 +1396,22 @@
     "{} personnage": "{} personaje",
     "{} personnages": "{} personajes",
     "{} créature": "{} criatura",
-    "{} créatures": "{} criaturas"
+    "{} créatures": "{} criaturas",
+    "Reprendre votre partie": "Continuar tu partida",
+    "La prochaine fois, « Reprendre » peut ouvrir directement votre dernière partie de {}, sans passer par le menu du jeu.": "La próxima vez, «Continuar» puede abrir directamente tu última partida de {}, sin pasar por el menú del juego.",
+    "Vous pourrez changer d'avis dans Paramètres.": "Podrás cambiar de opinión en Ajustes.",
+    "Ouvrir directement": "Abrir directamente",
+    "Garder le menu du jeu": "Mantener el menú del juego",
+    "Recommencer les défis": "Reiniciar los desafíos",
+    "Recommencer": "Reiniciar",
+    "Les défis de {} repartent de zéro.": "Los desafíos de {} empiezan de cero.",
+    "Vos parties déjà avancées les redonnent dès que vous y rejouez : pour repartir vraiment de zéro, commencez une nouvelle partie ou supprimez les anciennes dans le jeu.": "Las partidas ya avanzadas los devuelven en cuanto vuelves a jugarlas: para empezar de verdad de cero, empieza una partida nueva o borra las antiguas en el juego.",
+    "À découvrir": "Por descubrir",
+    "S'ouvre vers {} % de l'histoire": "Se abre hacia el {} % de la historia",
+    "S'ouvre à {} % de l'histoire": "Se abre al {} % de la historia",
+    "Plein écran": "Pantalla completa",
+    "Échap pour revenir": "Esc para volver",
+    "Cinématique": "Cinemática",
+    "Échap pour revenir · Espace pour la pause · ← → dix secondes": "Esc para volver · Espacio para pausar · ← → diez segundos"
   }
 }

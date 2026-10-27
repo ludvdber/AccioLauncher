@@ -393,7 +393,10 @@ class InfoPanel(QWidget):
         self._btn_expand.setVisible(False)
         self._btn_expand.clicked.connect(self._toggle_desc)
         lay.addWidget(self._btn_expand)
-        lay.addSpacing(12)
+        # L'air sous la description ; sans elle (partie lue), il creusait un
+        # vide entre « Dernière partie » et le folio (Ludo, 2026-10-27).
+        self._ecart_bas = QSpacerItem(0, 12)
+        lay.addSpacerItem(self._ecart_bas)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -660,6 +663,8 @@ class InfoPanel(QWidget):
         self._bloc_hote.setVisible(resume is not None or secondes > 0)
         # L'air sous « Dernière partie » ne sert qu'avant une description.
         self._derniere.setContentsMargins(0, 0, 0, 10 if description else 0)
+        self._ecart_bas.changeSize(0, 12 if description else 0)
+        self._layout.invalidate()
         if resume is None and avancee is not None and avancee.avancement is not None:
             self._derniere.setText(phrase_derniere_partie(
                 datetime.fromtimestamp(avancee.modifie),

@@ -284,6 +284,7 @@
    },
    {
     "cle": "bibine",
+    "s": 32,
     "nom": {
      "fr": "Madame Bibine",
      "en": "Madam Hooch",
@@ -307,6 +308,7 @@
    },
    {
     "cle": "rusard",
+    "s": 68,
     "nom": {
      "fr": "Argus Rusard",
      "en": "Argus Filch",
@@ -330,6 +332,7 @@
    },
    {
     "cle": "malefoy",
+    "s": 3,
     "nom": {
      "fr": "Drago Malefoy",
      "en": "Draco Malfoy",
@@ -409,6 +412,7 @@
    },
    {
     "cle": "fred",
+    "s": 39,
     "nom": {
      "fr": "Fred Weasley",
      "en": "Fred Weasley",
@@ -432,6 +436,7 @@
    },
    {
     "cle": "george",
+    "s": 39,
     "nom": {
      "fr": "George Weasley",
      "en": "George Weasley",
@@ -455,6 +460,7 @@
    },
    {
     "cle": "crabbe",
+    "s": 16,
     "nom": {
      "fr": "Vincent Crabbe",
      "en": "Vincent Crabbe",
@@ -478,6 +484,7 @@
    },
    {
     "cle": "goyle",
+    "s": 16,
     "nom": {
      "fr": "Gregory Goyle",
      "en": "Gregory Goyle",
@@ -524,6 +531,7 @@
    },
    {
     "cle": "peeves",
+    "s": 6,
     "nom": {
      "fr": "Peeves",
      "en": "Peeves",
@@ -557,6 +565,7 @@
    },
    {
     "cle": "voldemort",
+    "s": 71,
     "nom": {
      "fr": "Lord Voldemort",
      "en": "Lord Voldemort",
@@ -859,6 +868,7 @@
    },
    {
     "cle": "lockhart",
+    "s": 8,
     "nom": {
      "fr": "Gilderoy Lockhart",
      "en": "Gilderoy Lockhart",
@@ -932,6 +942,7 @@
    },
    {
     "cle": "chourave",
+    "s": 31,
     "nom": {
      "fr": "Pomona Chourave",
      "en": "Pomona Sprout",
@@ -978,6 +989,7 @@
    },
    {
     "cle": "pomfresh",
+    "s": 51,
     "nom": {
      "fr": "Madame Pomfresh",
      "en": "Madam Pomfrey",
@@ -1093,6 +1105,7 @@
    },
    {
     "cle": "lucius",
+    "s": 75,
     "nom": {
      "fr": "Lucius Malefoy",
      "en": "Lucius Malfoy",
@@ -1139,6 +1152,7 @@
    },
    {
     "cle": "jedusor",
+    "s": 75,
     "nom": {
      "fr": "Tom Jedusor",
      "en": "Tom Riddle",
@@ -1162,6 +1176,7 @@
    },
    {
     "cle": "mimi",
+    "s": 43,
     "nom": {
      "fr": "Mimi Geignarde",
      "en": "Moaning Myrtle",
@@ -1356,6 +1371,7 @@
    },
    {
     "cle": "dubois",
+    "s": 39,
     "nom": {
      "fr": "Olivier Dubois",
      "en": "Oliver Wood",
@@ -1577,6 +1593,7 @@
    },
    {
     "cle": "pettigrew",
+    "s": 45,
     "nom": {
      "fr": "Peter Pettigrow",
      "en": "Peter Pettigrew",
@@ -1625,6 +1642,7 @@
    },
    {
     "cle": "drago",
+    "s": 4,
     "nom": {
      "fr": "Drago Malefoy",
      "en": "Draco Malfoy",
@@ -1644,6 +1662,7 @@
    },
    {
     "cle": "neville",
+    "s": 8,
     "nom": {
      "fr": "Neville Londubat",
      "en": "Neville Longbottom",
@@ -2030,6 +2049,7 @@
    },
    {
     "cle": "bellatrix",
+    "s": 75,
     "nom": {
      "fr": "Bellatrix Lestrange",
      "en": "Bellatrix Lestrange",
@@ -2049,6 +2069,7 @@
    },
    {
     "cle": "voldemort",
+    "s": 75,
     "nom": {
      "fr": "Lord Voldemort",
      "en": "Lord Voldemort",
@@ -2163,6 +2184,7 @@
    },
    {
     "cle": "cho",
+    "s": 25,
     "nom": {
      "fr": "Cho Chang",
      "en": "Cho Chang",
@@ -2220,6 +2242,7 @@
    },
    {
     "cle": "hagrid",
+    "s": 45,
     "nom": {
      "fr": "Rubeus Hagrid",
      "en": "Rubeus Hagrid",
@@ -2315,6 +2338,7 @@
    },
    {
     "cle": "lucius",
+    "s": 75,
     "nom": {
      "fr": "Lucius Malefoy",
      "en": "Lucius Malfoy",
@@ -2410,6 +2434,7 @@
    },
    {
     "cle": "trelawney",
+    "s": 20,
     "nom": {
      "fr": "Sibylle Trelawney",
      "en": "Sybill Trelawney",
@@ -2448,6 +2473,7 @@
    },
    {
     "cle": "arthur",
+    "s": 50,
     "nom": {
      "fr": "Arthur Weasley",
      "en": "Arthur Weasley",
@@ -2914,6 +2940,7 @@
    },
    {
     "cle": "krokante",
+    "s": 10,
     "nom": {
      "fr": "Krokante",
      "en": "Doxy",
@@ -2937,6 +2964,7 @@
    },
    {
     "cle": "crabe_de_feu",
+    "s": 10,
     "nom": {
      "fr": "Crabe de feu",
      "en": "Fire Crab",
@@ -2960,6 +2988,7 @@
    },
    {
     "cle": "escargot_orange",
+    "s": 10,
     "nom": {
      "fr": "Escargot orange",
      "en": "Orange Snail",
@@ -2983,6 +3012,7 @@
    },
    {
     "cle": "tentacula",
+    "s": 19,
     "nom": {
      "fr": "Tentacula vénéneuse",
      "en": "Venomous Tentacula",
@@ -3006,6 +3036,7 @@
    },
    {
     "cle": "filet_du_diable",
+    "s": 19,
     "nom": {
      "fr": "Filet du Diable",
      "en": "Devil's Snare",
@@ -3029,6 +3060,7 @@
    },
    {
     "cle": "troll",
+    "s": 42,
     "nom": {
      "fr": "Troll",
      "en": "Troll",
@@ -3062,6 +3094,7 @@
    },
    {
     "cle": "touffu",
+    "s": 64,
     "nom": {
      "fr": "Touffu",
      "en": "Fluffy",
@@ -3095,6 +3128,7 @@
    },
    {
     "cle": "norbert",
+    "s": 58,
     "nom": {
      "fr": "Norbert",
      "en": "Norbert",
@@ -3143,6 +3177,7 @@
    },
    {
     "cle": "lutin_de_cornouailles",
+    "s": 27,
     "nom": {
      "fr": "Lutin de Cornouailles",
      "en": "Cornish pixie",
@@ -3166,6 +3201,7 @@
    },
    {
     "cle": "korrigan",
+    "s": 35,
     "nom": {
      "fr": "Korrigan",
      "en": "Imp",
@@ -3212,6 +3248,7 @@
    },
    {
     "cle": "escargot_orange",
+    "s": 12,
     "nom": {
      "fr": "Escargot orange géant",
      "en": "Giant Orange Snail",
@@ -3258,6 +3295,7 @@
    },
    {
     "cle": "botruc",
+    "s": 31,
     "nom": {
      "fr": "Botruc",
      "en": "Bowtruckle",
@@ -3281,6 +3319,7 @@
    },
    {
     "cle": "tentacula",
+    "s": 31,
     "nom": {
      "fr": "Tentacula vénéneuse",
      "en": "Venomous Tentacula",
@@ -3304,6 +3343,7 @@
    },
    {
     "cle": "araignees",
+    "s": 62,
     "nom": {
      "fr": "Araignées",
      "en": "Spiders",
@@ -3327,6 +3367,7 @@
    },
    {
     "cle": "aragog",
+    "s": 66,
     "nom": {
      "fr": "Aragog",
      "en": "Aragog",
@@ -3360,6 +3401,7 @@
    },
    {
     "cle": "basilic",
+    "s": 75,
     "nom": {
      "fr": "Basilic",
      "en": "Basilisk",
@@ -3393,6 +3435,7 @@
    },
    {
     "cle": "fumseck",
+    "s": 75,
     "nom": {
      "fr": "Fumseck",
      "en": "Fawkes",
@@ -3416,6 +3459,7 @@
    },
    {
     "cle": "saule_cogneur",
+    "s": 16,
     "nom": {
      "fr": "Saule cogneur",
      "en": "Whomping Willow",
@@ -3441,6 +3485,7 @@
   "hp3": [
    {
     "cle": "hippogriffe",
+    "s": 8,
     "nom": {
      "fr": "Hippogriffe (Buck)",
      "en": "Hippogriff (Buckbeak)",
@@ -3493,6 +3538,7 @@
    },
    {
     "cle": "lutin_de_cornouailles",
+    "s": 4,
     "nom": {
      "fr": "Lutin de Cornouailles",
      "en": "Pixie",
@@ -3516,6 +3562,7 @@
    },
    {
     "cle": "korrigan",
+    "s": 12,
     "nom": {
      "fr": "Korrigan",
      "en": "Imp",
@@ -3539,6 +3586,7 @@
    },
    {
     "cle": "bundimun",
+    "s": 25,
     "nom": {
      "fr": "Bundimun",
      "en": "Bundimun",
@@ -3558,6 +3606,7 @@
    },
    {
     "cle": "crabe_de_feu",
+    "s": 4,
     "nom": {
      "fr": "Crabe de feu",
      "en": "Fire crab",
@@ -3577,6 +3626,7 @@
    },
    {
     "cle": "salamandre",
+    "s": 37,
     "nom": {
      "fr": "Salamandre d'Amazonie",
      "en": "Amazonian salamander",
@@ -3619,6 +3669,7 @@
    },
    {
     "cle": "loup_garou",
+    "s": 45,
     "nom": {
      "fr": "Loup-garou",
      "en": "Werewolf",
@@ -3844,6 +3895,7 @@
    },
    {
     "cle": "lutin_de_cornouailles",
+    "s": 20,
     "nom": {
      "fr": "Lutin de Cornouailles",
      "en": "Cornish pixie",
@@ -3863,6 +3915,7 @@
    },
    {
     "cle": "sombral",
+    "s": 25,
     "nom": {
      "fr": "Sombral",
      "en": "Thestral",
@@ -3882,6 +3935,7 @@
    },
    {
     "cle": "centaure",
+    "s": 70,
     "nom": {
      "fr": "Centaure",
      "en": "Centaur",
@@ -3901,6 +3955,7 @@
    },
    {
     "cle": "graup",
+    "s": 70,
     "nom": {
      "fr": "Graup",
      "en": "Grawp",

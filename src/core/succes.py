@@ -265,16 +265,54 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, datet
     return stock
 
 
-def _ecrire(stock: dict[tuple[str, str], dict[str, datetime | None]], chemin: Path) -> None:
-    """Écriture atomique (tmp + rename), même contrat que `sauvegardes.json`."""
+def remises(chemin: Path | None = None) -> dict[str, datetime]:
+    """{jeu: moment où ses défis ont été remis à zéro} (`recommencer`)."""
+    chemin = chemin or chemin_fichier()
+    try:
+        data = json.loads(chemin.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return {}
+    brut = data.get("remises") if isinstance(data, dict) else None
+    sortie: dict[str, datetime] = {}
+    for jeu, quand in (brut.items() if isinstance(brut, dict) else ()):
+        try:
+            sortie[str(jeu)] = datetime.fromisoformat(str(quand))
+        except ValueError:
+            continue
+    return sortie
+
+
+def recommencer(jeu: str, quand: datetime, chemin: Path | None = None) -> None:
+    """Remet les défis d'un jeu à zéro (Ludo, 2026-10-27 : « pour ceux qui
+    veulent recommencer de zéro », ce que Steam ne permet pas).
+
+    Ce qui était noté pour ce jeu est oublié, et ses sauvegardes écrites AVANT
+    ce moment ne comptent plus (`obtenus`) : une partie déjà avancée redonne
+    ses défis seulement quand on y rejoue.
+    """
+    chemin = chemin or chemin_fichier()
+    stock = {cle: v for cle, v in charger(chemin).items() if cle[0] != jeu}
+    toutes = remises(chemin)
+    toutes[jeu] = quand
+    _ecrire(stock, chemin, toutes)
+
+
+def _ecrire(stock: dict[tuple[str, str], dict[str, datetime | None]], chemin: Path,
+            dates_remise: dict[str, datetime] | None = None) -> None:
+    """Écriture atomique (tmp + rename), même contrat que `sauvegardes.json`.
+    Les remises à zéro déjà notées sont gardées."""
+    if dates_remise is None:
+        dates_remise = remises(chemin)
     lignes = [{"jeu": jeu, "sauvegarde": rel, "succes": ident,
                "date": quand.isoformat(timespec="seconds") if quand else None}
               for (jeu, rel), lignes_jeu in sorted(stock.items())
               for ident, quand in sorted(lignes_jeu.items())]
     regardees = [{"jeu": jeu, "sauvegarde": rel} for (jeu, rel), vus in sorted(stock.items()) if not vus]
     chemin.parent.mkdir(parents=True, exist_ok=True)
-    ecrire_atomique(chemin, json.dumps({"version": 1, "regardees": regardees, "obtenus": lignes},
-                                       indent=1, ensure_ascii=False))
+    ecrire_atomique(chemin, json.dumps(
+        {"version": 1, "regardees": regardees, "obtenus": lignes,
+         "remises": {jeu: q.isoformat(timespec="seconds") for jeu, q in sorted(dates_remise.items())}},
+        indent=1, ensure_ascii=False))
 
 
 # ─── Au retour de partie ───
@@ -324,6 +362,7 @@ def obtenus(jeu: str, sauvegardes_presentes: list[str], spec: Sauvegardes | None
     if not definitions:
         return {}
     stock = charger() if stock is None else stock
+    remise = remises().get(jeu)
     vus: dict[str, Obtenu] = {}
 
     def garder(ident: str, rel: str, quand: datetime | None) -> None:
@@ -340,6 +379,19 @@ def obtenus(jeu: str, sauvegardes_presentes: list[str], spec: Sauvegardes | None
             for ident, quand in lignes.items():
                 garder(ident, rel, quand)
     for rel in sauvegardes_presentes:
+        if remise is not None and not _ecrite_apres(spec, rel, remise):
+            continue        # une partie d'avant la remise à zéro : il faut y rejouer
         for ident in evaluer(jeu, spec, rel) or ():
             garder(ident, rel, None)
     return vus
+
+
+def _ecrite_apres(spec: Sauvegardes | None, rel: str, moment: datetime) -> bool:
+    from src.core import progression
+    ou = progression.cible(spec, rel)
+    if ou is None:
+        return False
+    try:
+        return datetime.fromtimestamp(ou[0].stat().st_mtime) > moment
+    except OSError:
+        return False

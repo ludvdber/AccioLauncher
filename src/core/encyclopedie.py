@@ -58,6 +58,7 @@ class Fiche:
     texte: TexteTraduit
     image: ImageJeu | None
     modele: ModeleJeu | None = None       # son modèle 3D (HP1, HP2)
+    seuil: int = 0                        # % de l'histoire qui l'ouvre (`discographie.ouvert_au_seuil`)
 
 
 def _image(brute: object) -> ImageJeu | None:
@@ -80,7 +81,9 @@ def _fiche(brute: dict[str, object], champ: str) -> Fiche | None:
     modele_jeu = None
     if isinstance(modele, dict) and isinstance(modele.get("fichier"), str) and isinstance(modele.get("nom"), str):
         modele_jeu = ModeleJeu(modele["fichier"], modele["nom"])
-    return Fiche(str(brute["cle"]), nom, sous_titre, texte, _image(brute.get("image")), modele_jeu)
+    seuil = brute.get("s")
+    return Fiche(str(brute["cle"]), nom, sous_titre, texte, _image(brute.get("image")), modele_jeu,
+                 seuil if isinstance(seuil, int) else 0)
 
 
 @lru_cache(maxsize=1)

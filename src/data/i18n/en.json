@@ -1395,6 +1395,22 @@
     "{} personnage": "{} character",
     "{} personnages": "{} characters",
     "{} créature": "{} creature",
-    "{} créatures": "{} creatures"
+    "{} créatures": "{} creatures",
+    "Reprendre votre partie": "Resume your game",
+    "La prochaine fois, « Reprendre » peut ouvrir directement votre dernière partie de {}, sans passer par le menu du jeu.": "Next time, “Resume” can open your last game of {} directly, without going through the game's menu.",
+    "Vous pourrez changer d'avis dans Paramètres.": "You can change your mind in Settings.",
+    "Ouvrir directement": "Open directly",
+    "Garder le menu du jeu": "Keep the game's menu",
+    "Recommencer les défis": "Start the challenges over",
+    "Recommencer": "Start over",
+    "Les défis de {} repartent de zéro.": "The challenges of {} start over from scratch.",
+    "Vos parties déjà avancées les redonnent dès que vous y rejouez : pour repartir vraiment de zéro, commencez une nouvelle partie ou supprimez les anciennes dans le jeu.": "Games you have already progressed in give them back as soon as you play them again: to truly start from scratch, begin a new game or delete the old ones in the game.",
+    "À découvrir": "To discover",
+    "S'ouvre vers {} % de l'histoire": "Opens around {}% of the story",
+    "S'ouvre à {} % de l'histoire": "Opens at {}% of the story",
+    "Plein écran": "Full screen",
+    "Échap pour revenir": "Esc to go back",
+    "Cinématique": "Cutscene",
+    "Échap pour revenir · Espace pour la pause · ← → dix secondes": "Esc to go back · Space to pause · ← → ten seconds"
   }
 }

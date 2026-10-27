@@ -141,6 +141,38 @@ class TestObtenus:
         assert succes.obtenus("hp1", [], None, {("hp1", "Save0.usa"): {"disparu": FIN}}) == {}
 
 
+class TestRecommencer:
+    """« Recommencer les défis » (Ludo, 2026-10-27) : un jeu repart de zéro."""
+
+    def test_oublie_ce_jeu_seulement_et_garde_la_date(self, porte, fichier):
+        porte["Save0.usa"] = {"carte"}
+        succes.constater("hp1", None, "Save0.usa", FIN, nee=True, chemin=fichier)
+        porte["Slot1/Save0.usa"] = {"carte"}
+        succes.constater("hp2", None, "Slot1/Save0.usa", FIN, nee=True, chemin=fichier)
+        succes.recommencer("hp1", datetime(2026, 10, 27, 12), chemin=fichier)
+        assert set(succes.charger(fichier)) == {("hp2", "Slot1/Save0.usa")}
+        assert succes.remises(fichier) == {"hp1": datetime(2026, 10, 27, 12)}
+        # Une écriture suivante garde la remise.
+        porte["Slot2/Save0.usa"] = {"carte"}
+        succes.constater("hp2", None, "Slot2/Save0.usa", FIN, nee=True, chemin=fichier)
+        assert "hp1" in succes.remises(fichier)
+
+    def test_une_partie_d_avant_la_remise_ne_redonne_rien(self, porte, monkeypatch, tmp_path):
+        import os
+        vieille, neuve = tmp_path / "Save0.usa", tmp_path / "Save1.usa"
+        for f in (vieille, neuve):
+            f.write_bytes(b"x")
+        os.utime(vieille, (datetime(2026, 10, 1).timestamp(),) * 2)
+        os.utime(neuve, (datetime(2026, 10, 28).timestamp(),) * 2)
+        from src.core import progression
+        monkeypatch.setattr(progression, "cible", lambda spec, rel: (tmp_path / rel, 1))
+        monkeypatch.setattr(succes, "remises", lambda chemin=None: {"hp1": datetime(2026, 10, 27)})
+        porte["Save0.usa"] = {"carte"}
+        porte["Save1.usa"] = {"points_100"}
+        vus = succes.obtenus("hp1", ["Save0.usa", "Save1.usa"], None, {})
+        assert set(vus) == {"points_100"}
+
+
 class TestToast:
     def test_un_succes_au_retour_passe_devant_le_merci(self, make_window, monkeypatch):
         fenetre = make_window()

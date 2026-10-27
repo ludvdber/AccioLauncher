@@ -50,6 +50,7 @@ from src.core import discographie, encyclopedie
 from src.core.i18n import tr
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.choix_jeux import espacee, numeros, pastille
+from src.ui.cinema_plein_ecran import PleinEcran
 from src.ui.disque import Disque
 from src.ui.encyclopedie_page import VueEncyclopedie
 from src.ui.flow_layout import FlowLayout
@@ -707,7 +708,10 @@ class _VueMusique(QWidget):
 
 
 class _Ecran(QWidget):
-    """L'image de la cinématique, dans son format, sur fond noir."""
+    """L'image de la cinématique, dans son format, sur fond noir. Un
+    double-clic la passe en plein écran."""
+
+    double_clic = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -727,6 +731,14 @@ class _Ecran(QWidget):
         self._image = image
         self._invite.setVisible(image is None)
         self.update()
+
+    @property
+    def image(self) -> QImage | None:
+        return self._image
+
+    def mouseDoubleClickEvent(self, _event) -> None:  # noqa: N802 (Qt)
+        if self._image is not None:
+            self.double_clic.emit()
 
     def paintEvent(self, _event) -> None:  # noqa: N802 (Qt)
         p = QPainter(self)
@@ -819,6 +831,7 @@ class _VueCinematiques(QWidget):
         self._chemin_voix: Path | None = None
         self._duree_video = 0
         self._duree = 0
+        self._plein_ecran: PleinEcran | None = None
 
         racine = QHBoxLayout(self)
         racine.setContentsMargins(40, 18, 40, 0)
@@ -847,6 +860,7 @@ class _VueCinematiques(QWidget):
         d.setContentsMargins(0, 0, 0, 0)
         d.setSpacing(0)
         self._ecran = _Ecran()
+        self._ecran.double_clic.connect(self.plein_ecran)
         d.addWidget(self._ecran)
         d.addSpacing(12)
         self._titre = QLabel()
@@ -887,6 +901,11 @@ class _VueCinematiques(QWidget):
         self._stop.setAutoDefault(False)
         self._stop.clicked.connect(self.arreter)
         commandes.addWidget(self._stop)
+        self._plein = bouton(tr("Plein écran"))
+        self._plein.setAutoDefault(False)
+        self._plein.setToolTip(tr("Échap pour revenir"))
+        self._plein.clicked.connect(self.plein_ecran)
+        commandes.addWidget(self._plein)
         commandes.addStretch()
         self._enregistrer = bouton(tr("Enregistrer…"))
         self._enregistrer.setAutoDefault(False)
@@ -979,6 +998,29 @@ class _VueCinematiques(QWidget):
         for ligne in self._lignes:
             ligne.marquer(ligne.fichier == fichier)
         self._etat_commandes()
+
+    def plein_ecran(self) -> None:
+        """La cinématique en cours sur tout l'écran ; le lecteur reste celui-ci."""
+        if not self._courante or self._plein_ecran is not None:
+            return
+        plein = PleinEcran(self._ecran.image)
+        self._video.video_frame.connect(plein.poser)
+        plein.pause_demandee.connect(self._basculer_pause)
+        plein.saut_demande.connect(lambda ms: self._aller_a(max(0, self._position.value() + ms)))
+        plein.fermee.connect(self._plein_ecran_ferme)
+        self._plein_ecran = plein
+        plein.ouvrir(self.window())
+
+    def _plein_ecran_ferme(self) -> None:
+        plein, self._plein_ecran = self._plein_ecran, None
+        if plein is not None:
+            try:
+                self._video.video_frame.disconnect(plein.poser)
+            except TypeError:
+                pass
+        fenetre = self.window()
+        if fenetre is not None:
+            fenetre.activateWindow()
 
     def _basculer_pause(self) -> None:
         if self._video.paused:
@@ -1097,6 +1139,8 @@ class _VueCinematiques(QWidget):
 
     def arreter(self) -> None:
         """Fin, bouton Arrêter, rubrique quittée ou page fermée : l'écran se vide, la musique revient."""
+        if self._plein_ecran is not None:
+            self._plein_ecran.close()
         self._video.stop()
         self._arreter_voix()
         self._courante = ""
@@ -1116,6 +1160,7 @@ class _VueCinematiques(QWidget):
         actif = bool(self._courante)
         self._pause.setEnabled(actif)
         self._stop.setEnabled(actif)
+        self._plein.setEnabled(actif)
         self._position.setEnabled(actif)
         self._enregistrer.setEnabled(actif)
         self._pause.setText(tr("Reprendre") if actif and self._video.paused else tr("Pause"))

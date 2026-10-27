@@ -77,11 +77,16 @@ pytest.importorskip("pytestqt")
 
 
 class _Media:
-    def __init__(self, dossier=None):
+    def __init__(self, dossier=None, avance=100):
         self._dossier = dossier
+        self._avance = avance
 
     def dossier_exe(self, jeu):
         return self._dossier
+
+    def ouvert(self, jeu, seuil):
+        from src.core import discographie
+        return discographie.ouvert_au_seuil(seuil, self._avance)
 
 
 class TestVue:
@@ -125,6 +130,34 @@ class TestVue:
         vue.montrer("hp1")
         qtbot.waitUntil(lambda: len(montrees()) == len(vue.fiches), timeout=2000)
         vue.fermer()
+
+    def test_une_fiche_s_ouvre_avec_l_histoire(self, qtbot):
+        """Comme la musique (Ludo, 2026-10-27) : fermée sans nom ni modèle
+        avant son seuil, ouverte après, et tout le jeu à 75 %."""
+        from PyQt6.QtWidgets import QLabel
+
+        from src.ui.encyclopedie_page import VueEncyclopedie
+
+        def fermees(avance):
+            vue = VueEncyclopedie(_Media(avance=avance), encyclopedie.BESTIAIRE)
+            qtbot.addWidget(vue)
+            vue.montrer("hp1")
+            noms = {lab.text() for f in vue.fiches if not f.ouverte for lab in f.findChildren(QLabel)}
+            vue.fermer()
+            return {f.fiche.cle for f in vue.fiches if not f.ouverte}, noms
+        cles, noms = fermees(None)
+        assert {"troll", "touffu", "norbert"} <= cles and "gnome" not in cles
+        assert "Touffu" not in noms and "À découvrir" in noms
+        assert "troll" not in fermees(50)[0] and "touffu" in fermees(50)[0]
+        assert fermees(75)[0] == set()
+
+    def test_chaque_seuil_est_un_pourcentage(self):
+        for rubrique in (encyclopedie.PERSONNAGES, encyclopedie.BESTIAIRE):
+            for jeu in JEUX:
+                for f in encyclopedie.fiches(rubrique, jeu):
+                    assert 0 <= f.seuil <= 75, (jeu, f.cle)
+                    if jeu in ("hp4", "hp6"):      # l'avancement ne s'y lit pas
+                        assert f.seuil == 0, (jeu, f.cle)
 
     def test_le_texte_replie_tient_dans_la_fiche(self, qtbot):
         """La hauteur souhaitée suit le texte replié : une longue description

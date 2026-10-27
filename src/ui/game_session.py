@@ -89,6 +89,7 @@ class GameSession(QObject):
         self._monitor.game_exited.connect(self._on_game_exited)
         self._monitor.battement.connect(self._on_battement)
         self._game_id: str = ""
+        self.jeu_termine: str = ""
         self._debut: datetime | None = None
         # Le processus lancé : c'est SON plantage qu'on cherche au journal de
         # Windows, pas celui d'un autre (`diagnostic_plantage`).
@@ -237,6 +238,8 @@ class GameSession(QObject):
                     a_diagnostiquer = (
                         self._manager.get_game_path(game_id), Path(game.executable).name,
                         self._pid, code, self._debut, partie)
+        # Le jeu qui vient de finir, pour qui écoute `terminee` (`question_reprise`).
+        self.jeu_termine = game_id
         self._game_id = ""
         self._debut = None
         self._pid = None

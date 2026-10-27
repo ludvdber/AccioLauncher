@@ -220,8 +220,9 @@ def main():
             logging.shutdown()
             os._exit(0)
         guard.activate_requested.connect(window.bring_to_front)
-        from src.ui import raccourci_jouer
+        from src.ui import question_reprise, raccourci_jouer
         raccourci_jouer.brancher(window, guard)
+        question_reprise.brancher(window)
 
         # `window.show()` déclenche la première mise en page ET le premier rendu
         # complet de l'interface : 304 ms mesurées, la deuxième étape la plus

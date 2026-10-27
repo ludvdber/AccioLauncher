@@ -114,11 +114,58 @@ class TestLancement:
 
 
 def test_reglage_survit_au_redemarrage(tmp_path):
-    """Oui par défaut ; un « non » survit à save() puis load() (règle 99)."""
+    """Non par défaut ; un « oui » choisi survit à save() puis load() (règle 99)."""
     fichier = tmp_path / "config.json"
     with patch("src.core.config.CONFIG_FILE_PATH", fichier):
         c = Config(install_path=tmp_path, cache_path=tmp_path / ".cache")
-        assert c.reprise_directe is True
-        c.reprise_directe = False
+        assert c.reprise_directe is False and c.reprise_demandee is False
+        c.reprise_directe = c.reprise_demandee = True
         c.save()
-        assert Config.load().reprise_directe is False
+        assert Config.load().reprise_directe is True
+
+
+def test_un_oui_jamais_choisi_redevient_non(tmp_path):
+    """Avant la question (2026-10-27), le « oui » n'était que le défaut : il ne
+    vaut plus tant que la personne n'a pas répondu."""
+    fichier = tmp_path / "config.json"
+    with patch("src.core.config.CONFIG_FILE_PATH", fichier):
+        fichier.write_text('{"reprise_directe": true}', encoding="utf-8")
+        c = Config.load()
+        assert c.reprise_directe is False and c.reprise_demandee is False
+
+
+class TestQuestion:
+    """La question d'après la première partie (`ui/question_reprise.py`)."""
+
+    def _fenetre(self, make_window, monkeypatch, sauvegarde=True):
+        win = make_window()
+        monkeypatch.setattr(reprise, "arguments", lambda game: ("?load=1",) if sauvegarde else ())
+        return win
+
+    def test_posee_une_fois_puis_retenue(self, make_window, monkeypatch):
+        from src.ui import question_reprise
+        win = self._fenetre(make_window, monkeypatch)
+        vues = []
+        monkeypatch.setattr(question_reprise, "message", lambda *a, **k: vues.append(a) or 0)
+        assert question_reprise.a_demander(win, "hp1", True, False)
+        question_reprise.demander(win, "hp1", True, False)
+        assert len(vues) == 1
+        assert win.manager.config.reprise_directe and win.manager.config.reprise_demandee
+        question_reprise.demander(win, "hp2", True, False)
+        assert len(vues) == 1, "une seule fois"
+
+    def test_garder_le_menu(self, make_window, monkeypatch):
+        from src.ui import question_reprise
+        win = self._fenetre(make_window, monkeypatch)
+        monkeypatch.setattr(question_reprise, "message", lambda *a, **k: 1)
+        question_reprise.demander(win, "hp3", True, False)
+        assert not win.manager.config.reprise_directe and win.manager.config.reprise_demandee
+
+    def test_pas_de_question_sans_raison(self, make_window, monkeypatch):
+        from src.ui import question_reprise
+        win = self._fenetre(make_window, monkeypatch)
+        assert not question_reprise.a_demander(win, "hp4", True, False), "HP4 ne sait pas reprendre"
+        assert not question_reprise.a_demander(win, "hp1", False, False), "pas une partie"
+        assert not question_reprise.a_demander(win, "hp1", True, True), "arrêt fatal"
+        sans = self._fenetre(make_window, monkeypatch, sauvegarde=False)
+        assert not question_reprise.a_demander(sans, "hp1", True, False), "rien à rouvrir"

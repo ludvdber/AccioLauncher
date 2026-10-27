@@ -367,6 +367,40 @@ class TestLectureCinematique:
         assert not page._courante
         assert "cinematique" not in win._mediatheque.fond._raisons
 
+    def test_le_plein_ecran_suit_le_lecteur_et_se_ferme_a_la_fin(self, vue, qtbot, monkeypatch):
+        """Demandé par Ludo le 2026-10-27 : la même lecture sur tout l'écran,
+        Espace pour la pause, Échap pour revenir, refermé quand tout s'arrête."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QImage
+
+        from src.ui import cinema_plein_ecran
+        from src.ui.cinema_plein_ecran import SAUT_MS
+        _win, page, _ordre = vue
+        assert not page._plein.isEnabled(), "rien à montrer sans cinématique"
+        page.jouer("hp3", "SiriusPhoto", "x")
+        assert page._plein.isEnabled()
+        # Pas de vrai plein écran dans un test : une fenêtre ordinaire suffit.
+        monkeypatch.setattr(cinema_plein_ecran.PleinEcran, "ouvrir", lambda self, voisin: self.show())
+        page._plein.click()
+        plein = page._plein_ecran
+        assert plein is not None
+        image = QImage(32, 18, QImage.Format.Format_RGB32)
+        page._video.video_frame.emit(image)
+        assert plein._image is image, "les images du lecteur arrivent au plein écran"
+        pauses, sauts = [], []
+        monkeypatch.setattr(page, "_aller_a", sauts.append)
+        plein.pause_demandee.disconnect()
+        plein.pause_demandee.connect(lambda: pauses.append(1))
+        qtbot.keyClick(plein, Qt.Key.Key_Space)
+        qtbot.keyClick(plein, Qt.Key.Key_Right)
+        assert pauses == [1] and sauts == [SAUT_MS]
+        qtbot.keyClick(plein, Qt.Key.Key_Escape)
+        assert page._plein_ecran is None
+        page._plein.click()
+        assert page._plein_ecran is not None
+        page.arreter()
+        assert page._plein_ecran is None, "la fin de la cinématique ramène à la page"
+
     def test_la_barre_prend_la_plus_longue_des_deux_pistes(self, vue):
         _win, page, _ordre = vue
         page.jouer("hp3", "SiriusPhoto", "x")

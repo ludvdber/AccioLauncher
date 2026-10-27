@@ -173,7 +173,12 @@ class Config:
     copies_sauvegardes: bool = True
     # « Reprendre » ouvre la dernière partie de HP1 à HP3 sans le menu du jeu
     # (`src/core/reprise.py`). Non : le menu du jeu revient, pour une autre partie.
-    reprise_directe: bool = True
+    # NON par défaut depuis le 2026-10-27 (Ludo : « si quelqu'un voulait lancer
+    # une autre sauvegarde ou une nouvelle partie ? ») : la question est posée
+    # après la première partie (`ui/question_reprise.py`), `reprise_demandee`
+    # retient qu'elle l'a été.
+    reprise_directe: bool = False
+    reprise_demandee: bool = False
     delete_archives: bool = True
     autoplay_videos: bool = True
     # Muet par DÉFAUT : un logiciel qui fait du bruit dès sa première
@@ -257,7 +262,11 @@ class Config:
                     couleur_manette=_as_bool(data.get("couleur_manette"), True),
                     navigation_manette=_as_bool(data.get("navigation_manette"), True),
                     copies_sauvegardes=_as_bool(data.get("copies_sauvegardes"), True),
-                    reprise_directe=_as_bool(data.get("reprise_directe"), True),
+                    # Un « oui » d'avant la question n'était qu'un défaut : il ne vaut
+                    # que s'il a été choisi.
+                    reprise_directe=(_as_bool(data.get("reprise_directe"), False)
+                                     and _as_bool(data.get("reprise_demandee"), False)),
+                    reprise_demandee=_as_bool(data.get("reprise_demandee"), False),
                     delete_archives=_as_bool(data.get("delete_archives"), True),
                     autoplay_videos=_as_bool(data.get("autoplay_videos"), True),
                     mute_videos=_as_bool(data.get("mute_videos"), True),
@@ -309,6 +318,7 @@ class Config:
                 "navigation_manette": self.navigation_manette,
                 "copies_sauvegardes": self.copies_sauvegardes,
                 "reprise_directe": self.reprise_directe,
+                "reprise_demandee": self.reprise_demandee,
                 "delete_archives": self.delete_archives,
                 "autoplay_videos": self.autoplay_videos,
                 "mute_videos": self.mute_videos,
