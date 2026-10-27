@@ -176,8 +176,11 @@ def main():
 
         # Instance unique : un second lancement active la fenêtre existante et quitte.
         from src.ui.single_instance import SingleInstance
+        from src.core import liste_saut
+        # « Jouer à … » de l'icône Windows : le jeu demandé, relayé s'il y a déjà une fenêtre.
+        jouer = liste_saut.id_demande(sys.argv)
         guard = SingleInstance()
-        if not guard.try_acquire():
+        if not guard.try_acquire(jouer=jouer):
             sys.exit(0)
 
         splash = _create_splash(_Config.load().faits_du_jour if _Config.exists() else True)
@@ -217,6 +220,8 @@ def main():
             logging.shutdown()
             os._exit(0)
         guard.activate_requested.connect(window.bring_to_front)
+        from src.ui import raccourci_jouer
+        raccourci_jouer.brancher(window, guard)
 
         # `window.show()` déclenche la première mise en page ET le premier rendu
         # complet de l'interface : 304 ms mesurées, la deuxième étape la plus
@@ -232,6 +237,9 @@ def main():
         from src.core import stats as _stats
         _stats.enregistrer_demarrage()
         splash.finish(window)
+        if jouer:
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(0, lambda: raccourci_jouer.jouer_demande(window, jouer))
         code = app.exec()
         # Sortie SANS finalisation de l'interpréteur. Pendant celle-ci, sip détruit
         # les objets C++ restants dans un ordre qu'il ne maîtrise pas : mesuré le

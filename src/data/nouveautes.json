@@ -57,6 +57,14 @@
         {
           "genre": "nouveau",
           "texte": {
+            "fr": "Un clic droit sur l'icône du launcher dans la barre des tâches propose vos derniers jeux : un clic, et la partie se lance.",
+            "en": "Right-click the launcher's taskbar icon to see your latest games: one click and the game starts.",
+            "es": "Con un clic derecho en el icono del launcher en la barra de tareas aparecen tus últimos juegos: un clic y la partida empieza."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
             "fr": "Une sauvegarde s'exporte en .zip pour la garder ou la partager, et s'importe sur ce PC ou un autre. La partie remplacée est copiée d'abord et revient en un clic.",
             "en": "A save can be exported as a .zip to keep or share it, and imported on this PC or another. The replaced game is copied first and comes back in one click.",
             "es": "Una partida se exporta en .zip para guardarla o compartirla, y se importa en este PC o en otro. La partida reemplazada se copia antes y vuelve con un clic."
@@ -97,9 +105,25 @@
         {
           "genre": "nouveau",
           "texte": {
+            "fr": "L'École des Sorciers et La Chambre des Secrets : un Quidditch plus difficile, en deux niveaux. Le vif d'or s'échappe plus vite, les coups et les chocs font plus mal.",
+            "en": "Philosopher's Stone and Chamber of Secrets: harder Quidditch, in two levels. The Snitch slips away faster, kicks and crashes hurt more.",
+            "es": "La piedra filosofal y La cámara secreta: un quidditch más difícil, en dos niveles. La snitch escapa más rápido, los golpes y los choques duelen más."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
             "fr": "Un morceau des jeux peut devenir la musique de fond du launcher, et un haut-parleur coupe tout le son d'un clic.",
             "en": "A track from the games can become the launcher's background music, and a speaker button mutes all sound in one click.",
             "es": "Una pista de los juegos puede ser la música de fondo del launcher, y un altavoz silencia todo el sonido con un clic."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le son d'un jeu peut se couper quand vous passez à une autre fenêtre, et revient dès que vous y retournez. Dans les réglages du jeu.",
+            "en": "A game's sound can be muted while you switch to another window, and comes back as soon as you return. In the game's settings.",
+            "es": "El sonido de un juego puede silenciarse cuando pasas a otra ventana, y vuelve en cuanto regresas. En los ajustes del juego."
           }
         },
         {

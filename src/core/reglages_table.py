@@ -168,6 +168,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Continuer à tourner après un Alt+Tab",
             "Le jeu ne se fige plus quand une autre fenêtre passe devant, et reprend le "
             "clavier dès qu'on revient."),
+    # MuteInBackground (source/mute.h du correctif, 2026-10-27), dans les trois DLL :
+    # le mélangeur de Windows coupe la session du jeu. Lu au démarrage du jeu.
+    Reglage("son_arriere_plan", "Accio.Window", "MuteInBackground",
+            "Couper le son quand le jeu est derrière",
+            "Le son du jeu se coupe quand une autre fenêtre passe devant et revient avec le "
+            "jeu. Un son que vous avez coupé vous-même dans le mélangeur de Windows le reste. "
+            "Compte au prochain lancement du jeu.",
+            defaut=False),
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
             "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins"
@@ -467,6 +475,15 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "la leçon, sans quitter la partie.",
             choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES,
             beta=True),
+    # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
+    # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
+    # correctif), lu au démarrage du jeu seulement. À VOIR EN JEU (un match).
+    Reglage("quidditch", "Accio.Game", "QuidditchDifficulty",
+            "Difficulté du Quidditch",
+            "La barre du Vif d'or monte moins vite et redescend plus vite : il faut le "
+            "suivre de plus près. Les coups font plus mal. Compte au prochain lancement du jeu.",
+            choix=(0, 1, 2), zero="D'origine",
+            etiquettes=((1, "Difficile"), (2, "Expert")), beta=True),
 )}
 
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,

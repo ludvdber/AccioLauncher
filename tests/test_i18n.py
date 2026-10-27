@@ -31,6 +31,8 @@ IDENTIQUES_TOLEREES = {
     "Gris",
     # Couleurs du ciel de HP6 qui s'écrivent pareil en anglais.
     "Orange", "Mauve", "Turquoise",
+    # Difficulté du Quidditch de HP1/HP2 : « Expert » s'écrit pareil en anglais.
+    "Expert",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.

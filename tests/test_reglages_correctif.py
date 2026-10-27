@@ -293,7 +293,8 @@ class TestModeDifficile:
         hardcore = {r.ident for r in rc.REGLAGES.values() if r.section == "Accio.Hardcore"}
         assert hardcore == {*self.IDENTS, "sorts_retires"}
         assert all(rc.REGLAGES[i].beta for i in hardcore)
-        assert not any(r.beta for r in rc.REGLAGES.values() if r.ident not in hardcore)
+        # Seul autre réglage en essai : le Quidditch de HP1/HP2, pas encore vu en match.
+        assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {"quidditch"}
 
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:
@@ -404,6 +405,37 @@ class TestCielHp6:
     def test_heure_et_couleur_dependent_du_ciel(self):
         assert rc.REGLAGES["ciel_heure"].depend_de == "ciel"
         assert rc.REGLAGES["ciel_couleur"].depend_de == "ciel"
+
+
+class TestQuidditchHp12:
+    """HP1/HP2 : QuidditchDifficulty de la section [Accio.Game] du winmm.ini (correctif 2.2.0)."""
+
+    ANCIEN = "[Accio.Window]\r\nLog=1\r\n\r\n[Accio.Controller]\r\nXboxLayout=1\r\n"
+
+    def test_absent_de_l_ancien_winmm_ini(self, tmp_path):
+        ini = tmp_path / "winmm.ini"
+        ini.write_bytes(self.ANCIEN.encode("ascii"))
+        assert rc.REGLAGES["quidditch"] not in rc.portes_par(ini, (rc.REGLAGES["quidditch"],))
+
+    def test_ecrit_et_relu(self, tmp_path):
+        ini = tmp_path / "winmm.ini"
+        ini.write_bytes((self.ANCIEN + "\r\n[Accio.Game]\r\nQuidditchDifficulty=0\r\n").encode("ascii"))
+        assert rc.portes_par(ini, (rc.REGLAGES["quidditch"],)) == (rc.REGLAGES["quidditch"],)
+        assert rc.lire(ini, rc.REGLAGES["quidditch"]) == rc.Etat(0)
+        rc.ecrire(ini, rc.REGLAGES["quidditch"], 2)
+        assert "QuidditchDifficulty=2" in ini.read_bytes().decode().split("\r\n")
+        assert rc.libelle_choix(rc.REGLAGES["quidditch"], 2) == tr("Expert")
+
+
+class TestSonArrierePlan:
+    """MuteInBackground : éteint quand la clé manque, comme le correctif."""
+
+    def test_eteint_par_defaut_puis_allume(self, ini):
+        r = rc.REGLAGES["son_arriere_plan"]
+        assert rc.lire(ini, r) == rc.Etat(False)
+        rc.ecrire(ini, r, True)
+        assert "MuteInBackground=1" in ini.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini, r) == rc.Etat(True)
 
 
 class TestLangueAuDemarrage:

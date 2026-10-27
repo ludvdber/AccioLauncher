@@ -341,7 +341,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if onglet == "image":
             if self._section_graphiques(corps, "image"):
                 return True
-            if not self._reglages:
+            # HP1/HP2 : la résolution est au launcher, leurs réglages du correctif ne la retirent pas.
+            if not self._reglages or self.game.resolution is not None:
                 self._section_affichage(corps)
                 return True
             return self._page_image(corps)

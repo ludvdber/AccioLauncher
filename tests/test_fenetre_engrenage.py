@@ -176,6 +176,30 @@ class TestEngrenageReglagesDuJeu:
         assert dlg._choix_resolution is not None and dlg._choix_resolution.count() >= 1
         assert not [b for b in dlg.findChildren(QRadioButton) if not b.isEnabled()]
 
+    def test_les_reglages_du_correctif_ne_retirent_pas_la_resolution(self, make_window_multilingue):
+        """HP1/HP2 avec le correctif 2.2.0 : le Quidditch et le son se règlent,
+        la résolution (écrite par le launcher) reste dans la page Image."""
+        from dataclasses import replace
+        from pathlib import Path
+        from src.core import reglages_correctif
+        from src.core.catalogue_blocs import Resolution
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        avec = replace(jeu, fix_settings=("quidditch", "son_arriere_plan"), resolution=Resolution(
+            "%DOCUMENTS%\\Harry Potter\\HP.ini", "WinDrv.WindowsClient",
+            "WindowedViewportX", "WindowedViewportY"))
+        dossier = win.manager.config.install_path / Path(avec.executable).parent
+        dossier.mkdir(parents=True, exist_ok=True)
+        (dossier / "winmm.ini").write_bytes(
+            f"[{reglages_correctif._MARQUE_V2}]\r\n\r\n[Accio.Window]\r\nMuteInBackground=0\r\n\r\n"
+            "[Accio.Game]\r\nQuidditchDifficulty=0\r\n".encode("ascii"))
+        dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
+        assert dlg._choix_resolution is not None and dlg._choix_resolution.count() >= 1
+        assert {"quidditch", "son_arriere_plan"} <= set(dlg._controles)
+
     def test_la_rubrique_affichage_previent_du_piege_du_menu_du_jeu(
             self, make_window_multilingue):
         """HP1 a HP3 ne livrent qu'UNE carte de rendu (`d3d11drv.dll` ; ni
