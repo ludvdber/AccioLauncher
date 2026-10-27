@@ -93,6 +93,16 @@ class StatsDialog(QDialog):
         self._temps = stats.temps_par_jeu(self._hist)
         self._parties = stats.parties_par_jeu(self._hist)
         self._dernieres = stats.derniere_par_jeu(self._hist)
+        # Le temps hérité d'avant le journal n'a pas de date : la dernière
+        # session que la fiche connaît comble le trou (colonne vide pour
+        # tous les jeux chez Ludo, 2026-10-27, alors que la fiche la disait).
+        for e in self._entrees:
+            iso = manager.last_played(e.game.id)
+            if e.game.id not in self._dernieres and iso:
+                try:
+                    self._dernieres[e.game.id] = date.fromisoformat(iso[:10])
+                except ValueError:
+                    pass
         stock = sauvegardes.charger()
         self._vues = {e.game.id: sauvegardes.vues(e.game.id, e.game.sauvegardes, stock)
                       for e in self._entrees}

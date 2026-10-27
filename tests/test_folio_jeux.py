@@ -165,7 +165,7 @@ def test_le_bloc_de_la_fiche_pour_hp3(qtbot, tmp_path):
                               cartes=frozenset({"wc_a", "wc_b"}), total_cartes=80)
     bloc = BlocFolio()
     qtbot.addWidget(bloc)
-    bloc.montrer(folio.Resume(releve, "", 2, 80), [], 0)
+    bloc.montrer(folio.Resume(releve, "", 2, 80), [])
     assert bloc.texte_compte() == "2 cartes sur 80"
     assert bloc.texte_detail() == ""
 

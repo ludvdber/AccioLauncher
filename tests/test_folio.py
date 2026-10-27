@@ -322,14 +322,16 @@ def hp1(tmp_path, monkeypatch):
 class TestVenusDuReleve:
     """Le temps de chaque sauvegarde et les succès, passés du Relevé au folio (2026-10-24)."""
 
-    def test_les_succes_sous_la_partie(self, qtbot, hp1):
+    def test_plus_de_succes_au_folio(self, qtbot, hp1):
+        """Ils sont dans la rubrique Défis du Carnet ; en bas du folio, ils
+        faisaient double emploi (Ludo, 2026-10-27)."""
+        from PyQt6.QtWidgets import QLabel
         from src.ui.folio_page import FolioPage
-        from src.ui.succes_widgets import SectionSucces
         jeu, install, saves = hp1
         _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
         page = FolioPage(jeu, install)
         qtbot.addWidget(page)
-        assert len(page.findChildren(SectionSucces)) == 1
+        assert "Succès" not in {lbl.text() for lbl in page.findChildren(QLabel)}
 
     def test_le_temps_de_la_sauvegarde_sur_sa_ligne(self, qtbot, hp1, monkeypatch):
         from PyQt6.QtWidgets import QLabel
@@ -497,11 +499,13 @@ class TestLigneEmplacement:
         nom = ligne.accessibleName()
         assert "Partie 2" in nom and "21 octobre 2026" in nom and "3 h 10 de jeu" in nom
 
-    def test_avec_vignette_la_date_toujours_sous_le_titre(self, qtbot):
-        """Une ligne sur trois montait la date à côté du titre selon sa longueur."""
+    @pytest.mark.parametrize("avec_vignette", [True, False])
+    def test_la_date_toujours_sous_le_titre(self, qtbot, avec_vignette):
+        """Une ligne sur trois montait la date à côté du titre selon sa longueur ;
+        sans vignette (HP7), toujours à côté (Ludo, 2026-10-27)."""
         from PyQt6.QtGui import QPixmap
         from PyQt6.QtWidgets import QLabel
-        vignette = QPixmap(64, 64)
+        vignette = QPixmap(64, 64) if avec_vignette else None
         for jour in (1, 21, 23):
             ligne = self._ligne(qtbot, f"Partie {jour}", datetime(2026, 10, jour), vignette)
             ligne.resize(300, ligne.minimumHeight())

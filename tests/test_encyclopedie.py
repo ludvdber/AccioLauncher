@@ -28,6 +28,14 @@ class TestFiches:
                 cles = [f.cle for f in encyclopedie.fiches(rubrique, jeu)]
                 assert len(cles) == len(set(cles)), (rubrique, jeu)
 
+    def test_une_creature_ne_vit_qu_au_bestiaire(self):
+        """Touffu en double dans les deux rubriques « n'a pas de sens » (Ludo, 2026-10-27)."""
+        for jeu in JEUX:
+            personnages = {f.modele or f.cle for f in encyclopedie.fiches(encyclopedie.PERSONNAGES, jeu)}
+            betes = {f.modele or f.cle for f in encyclopedie.fiches(encyclopedie.BESTIAIRE, jeu)}
+            assert not personnages & betes, jeu
+        assert "touffu" not in {f.cle for f in encyclopedie.fiches(encyclopedie.PERSONNAGES, "hp1")}
+
     def test_pas_d_image_pour_hp5_et_hp6(self):
         """Option 1 : leurs seules images sont des visages photographiés dépliés."""
         for rubrique in (encyclopedie.PERSONNAGES, encyclopedie.BESTIAIRE):
@@ -95,6 +103,27 @@ class TestVue:
         vue.montrer("hp7a")
         assert vue.fiches == []
         assert "Aucune fiche pour ce jeu." in {lab.text() for lab in vue.findChildren(QLabel)}
+        vue.fermer()
+
+    def test_changer_de_jeu_ne_laisse_aucune_ancienne_fiche(self, qtbot):
+        """Les fiches de HP6 restaient à l'écran sous « Aucune fiche » de HP7
+        (Ludo, 2026-10-27) : le flux retiré gardait ses widgets."""
+        from PyQt6.QtWidgets import QFrame
+
+        from src.ui.encyclopedie_page import VueEncyclopedie
+        vue = VueEncyclopedie(_Media(), encyclopedie.BESTIAIRE)
+        qtbot.addWidget(vue)
+        vue.show()
+
+        def montrees():
+            # Par le nom d'objet : une fiche dont l'enveloppe Python est
+            # perdue revient en QFrame, `findChildren(_Fiche)` ne la voit plus.
+            return [f for f in vue.findChildren(QFrame, "carteJeu") if f.isVisible()]
+        vue.montrer("hp6")
+        vue.montrer("hp7b")
+        assert montrees() == []
+        vue.montrer("hp1")
+        qtbot.waitUntil(lambda: len(montrees()) == len(vue.fiches), timeout=2000)
         vue.fermer()
 
     def test_le_texte_replie_tient_dans_la_fiche(self, qtbot):

@@ -168,7 +168,7 @@ class TestFondSonore:
 @pytest.fixture
 def fenetre_avec_jeux(make_window, monkeypatch, tmp_path):
     """HP2 installé avec deux morceaux, HP3 avec deux cinématiques ; aucune partie."""
-    from src.core.game_manager import GameManager
+    from src.core.game_manager import GameManager, GameState
     jeux = tmp_path / "copies"
     (jeux / "hp2" / "Music").mkdir(parents=True)
     morceaux = discographie.charger()["hp2"]
@@ -178,6 +178,8 @@ def fenetre_avec_jeux(make_window, monkeypatch, tmp_path):
     (jeux / "hp3" / "Movies" / "SiriusPhoto.bik").write_bytes(b"BIKi")
     (jeux / "hp3" / "Movies" / "LupinWolf.bik").write_bytes(b"BIKi")
     monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in {"hp2", "hp3"})
+    monkeypatch.setattr(GameManager, "get_state", lambda self, j: GameState.INSTALLED
+                        if j in {"hp2", "hp3"} else GameState.NOT_INSTALLED)
     monkeypatch.setattr(GameManager, "get_game_path", lambda self, j: jeux / j)
     monkeypatch.setattr("src.core.discographie.avancement", lambda jeu, spec: None)
     # Collection fabriquée (règle 78) : un clip ouvert d'office, un au seuil de 93 %.
@@ -488,19 +490,22 @@ class TestChangerDeJeuViteNeMelangeRien:
 
 
 class TestBoutonCollectionsDeLaFiche:
-    """Le galet de la fiche. Il vivait dans l'hôte du bloc « Reprendre » : de
-    HP4 à HP8, sans « Reprendre », il n'apparaissait jamais (audit 2026-10-24)."""
+    """Les deux pictogrammes à côté de l'engrenage (Ludo, 2026-10-27 : « plus
+    petit, une icône musique et images »), sur tout jeu installé qui a des médias."""
 
     def _montrer(self, win, jeu):
+        from src.ui.icon_button import IconButton
         game = next(e.game for e in win.manager.get_games() if e.game.id == jeu)
         win._detail.set_game(game)
-        return win._detail._info._medias
+        return win._detail._action_panel.findChild(IconButton, "boutonMedias")
 
-    def test_visible_sans_reprendre_et_nomme_collections(self, fenetre_avec_jeux):
+    def test_a_cote_de_l_engrenage_en_pictogrammes(self, fenetre_avec_jeux):
         win = fenetre_avec_jeux
         bouton = self._montrer(win, "hp3")
-        assert bouton.isVisibleTo(win._detail)
-        assert bouton.text() == "Collections"
+        assert bouton is not None and bouton.isVisibleTo(win._detail)
+        assert bouton.icone() == "musique" and bouton.width() > bouton.height()
+        rangee = win._detail._action_panel._action_layout
+        assert rangee.indexOf(bouton) == rangee.indexOf(win._detail._action_panel._btn_reglages) + 1
 
     def test_ouvre_la_rubrique_des_nouveautes(self, fenetre_avec_jeux, qtbot):
         win = fenetre_avec_jeux

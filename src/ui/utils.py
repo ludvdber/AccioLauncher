@@ -53,12 +53,17 @@ def avertir(parent, titre: str, texte: str, conserve: str = "") -> None:
 
 
 def clear_layout(layout: QLayout) -> None:
-    """Retire et détruit tous les widgets d'un layout."""
+    """Retire et détruit tous les widgets d'un layout, ceux de ses sous-layouts
+    compris : retirer un sous-layout laissait ses widgets à l'écran, enfants de
+    la page, à leur dernière place (fiches d'un autre jeu au Bestiaire, Ludo,
+    2026-10-27)."""
     while layout.count():
         item = layout.takeAt(0)
         if (w := item.widget()) is not None:
             w.hide()
             w.deleteLater()
+        elif (sous := item.layout()) is not None:
+            clear_layout(sous)
 
 
 def open_url(url: str) -> None:

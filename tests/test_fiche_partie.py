@@ -68,7 +68,7 @@ class TestDeuxEtats:
         assert _visibles(panel) == (False, True, True)
         assert "Parc de Poudlard" in panel._derniere.text()
         assert panel._bloc.texte_compte() == "3 cartes sur 25", "WizardCards[25] est hors du folio"
-        assert panel._bloc.texte_detail() == "Serpentard mène · 10 min en tout"
+        assert panel._bloc.texte_detail() == "Serpentard mène", "le temps de jeu est près de l'engrenage"
         assert panel.partie_affichee()
         # « Folio › » est dans le bloc : la ligne d'indices porte la description rangée.
         assert 'href="a-propos"' in panel._indices.text()

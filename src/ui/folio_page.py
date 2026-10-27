@@ -29,7 +29,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -447,17 +446,11 @@ class _LigneEmplacement(QPushButton):
         if quand is not None:
             from src.ui.versions_dialog import date_longue
             date_texte = date_longue(quand.strftime("%Y-%m-%d"))
-            date = texte(date_texte, 12, ENCRE_DOUCE)
-            # « Emplacement 1 » et « 28 septembre 2026 » ne tiennent pas côte à
-            # côte dans le rail : la date passe dessous plutôt que de rogner le
-            # nom (mesuré avec la police réelle, pas un nombre écrit à la main).
-            # Avec une vignette, toujours dessous : selon la longueur de chaque
-            # date, une ligne sur trois montait à côté du titre (HP5, 2026-10-24).
-            place = _LARGEUR_RAIL - 2 * (_MARGE_RAIL + _MARGE_LIGNE) - 2 - place_image
-            if not place_image and titre.sizeHint().width() + haut.spacing() + date.sizeHint().width() <= place:
-                haut.addWidget(date)
-            else:
-                v.addWidget(date)
+            # TOUJOURS sous le titre : « Partie » de HP7 la prenait à côté, et
+            # son rail ne ressemblait pas à celui des autres jeux (Ludo,
+            # 2026-10-27) ; avec une vignette, une ligne sur trois montait déjà
+            # à côté selon la longueur de la date (HP5, 2026-10-24).
+            v.addWidget(texte(date_texte, 12, ENCRE_DOUCE))
         if lieu:
             v.addWidget(texte(lieu, 13, "#c9c7da", retour=place_image > 0))
         if plus_avance:
@@ -617,11 +610,10 @@ class FolioPage(QDialog):
             self._corps.hide()
             self._corps.deleteLater()
         self._corps = self._construire(releve)
-        if releve is not None:
-            self._ajouter_succes(self._corps)
         self._hote.addWidget(self._corps)
 
-    # ── Temps et succès (venus du Relevé, 2026-10-24) ──
+    # ── Temps (venu du Relevé, 2026-10-24). Les succès, venus avec lui, sont
+    # partis le 2026-10-27 : la rubrique Défis du Carnet les montre (Ludo). ──
 
     def _chemin(self, releve) -> Path | None:
         """Le fichier de la sauvegarde lue ; None quand un fichier porte
@@ -637,28 +629,6 @@ class FolioPage(QDialog):
         except ValueError:
             return ""
         return _duree(vue.temps) if vue is not None and vue.temps else ""
-
-    def _ajouter_succes(self, corps: QWidget) -> None:
-        """Les succès du jeu, au bas de la colonne qui défile, avant son ressort.
-
-        Ceux de TOUTES les sauvegardes du jeu, comme dans le Relevé d'avant : un
-        succès appartient au jeu, pas à l'emplacement lu.
-        """
-        from src.core import succes
-        from src.ui.succes_widgets import SectionSucces
-        if not succes.du_jeu(self.game.id) or not self._vues:
-            return
-        zone = corps.findChild(QScrollArea)      # la colonne principale, créée la première
-        page = zone.widget() if zone is not None else None
-        lay = page.layout() if page is not None else None
-        if not isinstance(lay, QVBoxLayout):
-            return
-        section = SectionSucces(self.game.id, list(self._vues), self.game.sauvegardes)
-        rang = lay.count()
-        if rang and lay.itemAt(rang - 1).spacerItem() is not None:
-            rang -= 1
-        lay.insertSpacing(rang, 26)
-        lay.insertWidget(rang + 1, section)
 
     def _construire(self, releve: folio.Releve | None) -> QWidget:
         corps = QWidget()

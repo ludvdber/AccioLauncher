@@ -37,7 +37,7 @@ class TestDefinitions:
         assert succes.du_jeu("hp7a") == () and succes.du_jeu("inconnu") == ()
 
     def test_chaque_texte_est_traduit(self):
-        textes = {"Succès", "{} sur {}", "Succès dans {} : {}", "{} succès dans {} :", "et {} autres"}
+        textes = {"{} sur {}", "Succès dans {} : {}", "{} succès dans {} :", "et {} autres"}
         for jeu in JEUX:
             textes |= {t for s in succes.du_jeu(jeu) for t in (s.titre, s.description)}
         for code in ("en", "es"):
@@ -139,22 +139,6 @@ class TestObtenus:
 
     def test_un_succes_retire_d_une_version_est_ignore(self, porte):
         assert succes.obtenus("hp1", [], None, {("hp1", "Save0.usa"): {"disparu": FIN}}) == {}
-
-
-class TestPage:
-    def test_obtenus_d_abord_puis_les_autres_et_la_date_seulement_si_connue(self, qtbot, porte, monkeypatch):
-        from src.ui.succes_widgets import SectionSucces
-        monkeypatch.setattr(succes, "charger", lambda chemin=None: {("hp1", "Save0.usa"): {"points_100": FIN}})
-        porte["Save0.usa"] = {"carte", "points_100"}
-        section = SectionSucces("hp1", ["Save0.usa"], None)
-        qtbot.addWidget(section)
-        assert section.lignes[:2] == ["carte", "points_100"]
-        assert len(section.lignes) == len(succes.du_jeu("hp1"))
-        from PyQt6.QtWidgets import QLabel
-        textes = [lbl.text() for lbl in section.findChildren(QLabel)]
-        assert "1 sur 5" not in textes and "2 sur 5" in textes
-        assert section.bulles[1].endswith("24 octobre 2026")
-        assert not section.bulles[0].endswith("2026"), "date inconnue : rien de deviné"
 
 
 class TestToast:

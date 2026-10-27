@@ -20,7 +20,7 @@ from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6
-from src.core.formatting import format_duree_compacte, format_relative_date
+from src.core.formatting import format_relative_date
 from src.core.i18n import get_language, tr
 from src.ui.fonts import body_font
 from src.ui.theme import accent_qcolor, themed
@@ -242,13 +242,13 @@ class BlocFolio(QFrame):
         self._detail.setFont(body_font(12))
         # Opaque (règle 65), même gris que la ligne méta.
         self._detail.setStyleSheet("color: #b4b4d0; background: transparent;")
-        # Une seule ligne, courte (« Serpentard mène · 10 min en tout ») : en
-        # deux, la hauteur du bloc ne suivait pas et la seconde était coupée.
-        # L'écart de points est dans le folio.
+        # Une seule ligne, courte (« Serpentard mène ») : en deux, la hauteur
+        # du bloc ne suivait pas et la seconde était coupée. L'écart de points
+        # est dans le folio ; le temps de jeu, à droite de l'engrenage.
         colonne.addWidget(self._detail)
         rang.addLayout(colonne, 1)
 
-    def montrer(self, resume: folio.Resume, cartes: list[QPixmap], secondes: int) -> None:
+    def montrer(self, resume: folio.Resume, cartes: list[QPixmap]) -> None:
         self._compte.setText(phrase_resume(resume))
         self._barre.regler(resume.trouvees / resume.total if resume.total else 0.0)
         self._eventail.regler(cartes)
@@ -257,11 +257,8 @@ class BlocFolio(QFrame):
                    if isinstance(resume.releve, folio.Releve) else "")
         if isinstance(resume.releve, folio_hp5.Partie) and resume.releve.decouverte:
             maisons = tr("{} points de découverte").format(_nombre(resume.releve.decouverte))
-        morceaux = [m for m in (maisons,
-                                tr("{} en tout").format(format_duree_compacte(secondes))
-                                if secondes > 0 else "") if m]
-        self._detail.setText(" · ".join(morceaux))
-        self._detail.setVisible(bool(morceaux))
+        self._detail.setText(maisons)
+        self._detail.setVisible(bool(maisons))
 
     def heightForWidth(self, largeur: int) -> int:
         # Le panneau demande à SA largeur ; le bloc s'arrête à LARGEUR_MAX.

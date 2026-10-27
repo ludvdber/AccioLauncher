@@ -16,7 +16,7 @@ from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import ECART_DETAIL, GlowButton, TAILLE_ICONE, ECART_ICONE
 from src.ui.icon_button import IconButton
 from src.core.formatting import (
-    format_duree_compacte, format_relative_date, format_size,
+    format_duree_compacte, format_size,
 )
 from src.ui.theme import current as palette_courante, themed
 from src.ui.utils import clear_layout
@@ -81,6 +81,11 @@ class ActionPanel(QWidget):
     # d'entrée des réglages graphiques à venir — d'où un menu, et non un
     # second sélecteur de langue.
     game_settings_clicked = pyqtSignal()
+    # Les Collections du jeu (musique, cinématiques, captures) : deux
+    # pictogrammes à côté de l'engrenage. Un galet « Collections » sous le
+    # bouton jusqu'au 2026-10-27 (Ludo : « plus petit, une icône musique et
+    # images serait top »).
+    medias_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -472,6 +477,7 @@ class ActionPanel(QWidget):
         btn_reglages.clicked.connect(self.game_settings_clicked)
         self._action_layout.addWidget(btn_reglages)
         self._btn_reglages = btn_reglages
+        self._ajouter_medias()
         self._construire_stats()
 
         if self._manager.has_update(self._game.id):
@@ -491,10 +497,27 @@ class ActionPanel(QWidget):
             self._update_row_layout.addWidget(link)
             self._update_row.show()
 
+    def _ajouter_medias(self) -> None:
+        from src.ui.mediatheque import a_de_la_musique, a_des_medias
+        if not a_des_medias(self._game.id):
+            return
+        # HP7 et HP8 n'ont que des cinématiques : la pellicule, pas la note.
+        premier = "musique" if a_de_la_musique(self._game.id) else "film"
+        btn = IconButton(premier, taille=_HAUTEUR_JOUER, cadre="#8a8aaa", second="images")
+        btn.setObjectName("boutonMedias")
+        btn.setToolTip(tr("La musique, les cinématiques et les captures du jeu"))
+        btn.setAccessibleName(tr("Collections : la musique, les cinématiques et les "
+                                 "captures du jeu"))
+        btn.clicked.connect(self.medias_clicked)
+        self._action_layout.addWidget(btn)
+
     def _construire_stats(self) -> None:
-        """Les deux colonnes, seulement pour un jeu déjà joué (règle 107)."""
+        """Le temps de jeu, seulement pour un jeu déjà joué (règle 107), à
+        droite de l'engrenage pour TOUS les jeux (Ludo, 2026-10-27). La date de
+        la dernière session n'est plus une colonne ici : elle est dans la ligne
+        « Dernière partie » de la fiche (`InfoPanel`), une seule fois."""
         secondes = self._manager.get_playtime(self._game.id)
-        if secondes <= 0 or self.partie_dans_la_fiche:
+        if secondes <= 0:
             return
         stats = QWidget()
         stats.setObjectName("statsJeu")
@@ -503,10 +526,6 @@ class ActionPanel(QWidget):
         rang.setContentsMargins(0, 0, 0, 0)
         rang.setSpacing(26)
         rang.addWidget(_colonne_stat(tr("Temps de jeu"), format_duree_compacte(secondes)))
-        derniere = self._manager.last_played(self._game.id)
-        if derniere:
-            quand = format_relative_date(derniere)
-            rang.addWidget(_colonne_stat(tr("Dernière session"), quand[:1].upper() + quand[1:]))
         self._separateur = QWidget()
         self._separateur.setFixedSize(1, 40)
         self._separateur.setStyleSheet("background: rgba(255,255,255,0.14);")

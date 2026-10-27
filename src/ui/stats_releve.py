@@ -255,7 +255,10 @@ class _Releve(QWidget):
         couche = QVBoxLayout(self)
         couche.setContentsMargins(0, 0, 0, 0)
         couche.setSpacing(0)
-        couche.addWidget(self._entete())
+        # Sans aucune partie comptée (temps hérité d'avant le journal), la
+        # colonne ne serait qu'une rangée de cases vides.
+        self._avec_parties = any(parties.values())
+        couche.addWidget(self._entete(self._avec_parties))
 
         temps_max = max(temps.values(), default=0)
         self._courts = dict(zip((e.game.id for e in self._entrees),
@@ -280,7 +283,7 @@ class _Releve(QWidget):
     # ──────────────────── Construction ────────────────────
 
     @staticmethod
-    def _entete() -> QWidget:
+    def _entete(avec_parties: bool = True) -> QWidget:
         entete = QWidget()
         rang = QHBoxLayout(entete)
         rang.setContentsMargins(0, 0, 0, 8)
@@ -291,6 +294,8 @@ class _Releve(QWidget):
                                        (tr("Temps de jeu"), _COL_TEMPS, False),
                                        (tr("Parties"), _COL_PARTIES, True),
                                        (tr("Dernière session"), _COL_DERNIERE, True)):
+            if texte == tr("Parties") and not avec_parties:
+                continue
             lbl = QLabel(texte.upper())
             lbl.setTextFormat(Qt.TextFormat.PlainText)
             lbl.setFont(cinzel(8, bold=True))
@@ -373,7 +378,8 @@ class _Releve(QWidget):
                                     couleur=_GRIS, italique=True))
 
         n = parties.get(gid, 0)
-        rang.addWidget(_cellule(str(n) if n else "", _COL_PARTIES, droite=True))
+        if self._avec_parties:
+            rang.addWidget(_cellule(str(n) if n else "", _COL_PARTIES, droite=True))
         jour = dernieres.get(gid)
         rang.addWidget(_cellule(_quand(jour) if jour else "", _COL_DERNIERE, droite=True,
                                 couleur="#a9a7c4"))

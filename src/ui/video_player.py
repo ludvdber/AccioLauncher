@@ -1,9 +1,13 @@
 """Lecteur vidéo basé sur QVideoSink — frames peintes via BackgroundWidget."""
 
 import logging
+import tempfile
+from pathlib import Path
 
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject
 from PyQt6.QtWidgets import QWidget
+
+from src.core import vp6_ea
 
 # Import AU CHARGEMENT DU MODULE, pas au premier trailer.
 #
@@ -33,6 +37,11 @@ log = logging.getLogger(__name__)
 # une image sur deux suffit. 25 ms et non 33 : une source à 30 ou 25 images/s
 # garde toutes les siennes malgré la gigue des horodatages.
 ECART_FOND_US = 25_000
+
+# Vitesse de l'avance rapide invisible qui rattrape le point voulu après un
+# saut dans une cinématique d'EA (`vp6_ea`) : 4 s d'écart au pire chez HP5 et
+# HP6, rattrapées en une demi-seconde (mesuré le 2026-10-27).
+_RATTRAPAGE = 8.0
 
 
 class VideoPlayer(QObject):
@@ -67,6 +76,16 @@ class VideoPlayer(QObject):
         # Une position demandée avant que la vidéo soit chargée (relance depuis
         # la barre de lecture) : posée dès que le média l'accepte.
         self._position_en_attente = -1
+        # Cinématique d'EA : on n'y saute pas, on rejoue une copie qui part
+        # de l'image complète d'avant (`vp6_ea`), décalée de `_decalage` ms,
+        # en avance rapide sans rien montrer jusqu'à `_cible`.
+        self._volume = 0.25
+        self._source = ""
+        self._index: vp6_ea.Index | None = None
+        self._decalage = 0
+        self._cible = -1
+        self._pause_apres_saut = False
+        self._copies = 0
 
     def set_plein_debit(self, oui: bool) -> None:
         self._plein_debit = oui
@@ -106,16 +125,47 @@ class VideoPlayer(QObject):
     @property
     def position(self) -> int:
         """Où en est la vidéo, en millisecondes (0 sans vidéo)."""
-        return self._player.position() if self._player is not None else 0
+        if self._player is None:
+            return 0
+        return self._cible if self._cible >= 0 else self._player.position() + self._decalage
 
     @property
     def duration(self) -> int:
+        if self._index is not None:
+            return self._index.duree_ms
         return self._player.duration() if self._player is not None else 0
 
     def seek(self, ms: int) -> None:
         """Va à `ms` dans la vidéo, en pause comme en lecture."""
-        if self._player is not None:
+        if self._player is None:
+            return
+        if self._index is not None:
+            self._sauter(self._index, max(0, ms), self._paused)
+        else:
             self._player.setPosition(max(0, ms))
+
+    def _sauter(self, index: vp6_ea.Index, ms: int, pause: bool) -> bool:
+        """Rejoue la cinématique d'EA depuis son image complète d'avant `ms`.
+        Un saut direct décodait des pavés de couleur jusqu'à la fin (Ludo,
+        2026-10-27, HP6)."""
+        copie = Path(tempfile.gettempdir()) / f"accio_cinematique_{self._copies % 2}.vp6"
+        self._copies += 1
+        try:
+            copie.unlink(missing_ok=True)
+            debut = vp6_ea.copie_depuis(self._source, index, ms, copie)
+        except OSError as e:
+            log.warning("Cinématique : copie pour le saut impossible (%s)", e)
+            return False
+        self._liberer()
+        self._ouvrir(str(copie), self._muted, self._volume)
+        self._decalage = debut
+        self._cible = ms if ms - debut > 40 else -1
+        self._pause_apres_saut = pause
+        if self._cible >= 0:
+            self._player.setPlaybackRate(_RATTRAPAGE)
+        elif pause:
+            self.pause()
+        return True
 
     def play(self, video_path: str, *, muted: bool = False, volume: float = 0.25,
              debut_ms: int = 0) -> bool:
@@ -124,7 +174,17 @@ class VideoPlayer(QObject):
         if not MULTIMEDIA_DISPONIBLE:
             log.debug("PyQt6-Multimedia non disponible")
             return False
+        self._source = video_path
+        self._muted, self._volume = muted, volume
+        if video_path.lower().endswith(".vp6"):
+            self._index = vp6_ea.indexer(video_path)
+            if self._index is not None and debut_ms > 0 and self._sauter(self._index, debut_ms, False):
+                return True
+        self._ouvrir(video_path, muted, volume)
+        self._position_en_attente = debut_ms if debut_ms > 0 else -1
+        return True
 
+    def _ouvrir(self, video_path: str, muted: bool, volume: float) -> None:
         parent_widget = self.parent()
 
         self._sink = QVideoSink(parent_widget)
@@ -133,6 +193,7 @@ class VideoPlayer(QObject):
         self._audio.setVolume(volume)
         self._audio.setMuted(muted)
         self._muted = muted
+        self._volume = volume
         self._player = QMediaPlayer(parent_widget)
         self._player.setVideoOutput(self._sink)
         self._player.setAudioOutput(self._audio)
@@ -141,17 +202,20 @@ class VideoPlayer(QObject):
         # signal int (« connect() failed », vu au premier vrai lancement).
         self._player.positionChanged.connect(self._sur_position)
         self._player.durationChanged.connect(self._sur_duree)
-        self._position_en_attente = debut_ms if debut_ms > 0 else -1
 
         self._player.setSource(QUrl.fromLocalFile(video_path))
         self._player.play()
         self._paused = False
         self._pause_reduite = False
         self._derniere_us = -1
-        return True
 
     def stop(self) -> None:
         """Arrête la lecture et libère toutes les ressources média."""
+        self._liberer()
+        self._source, self._index = "", None
+        self._decalage, self._cible = 0, -1
+
+    def _liberer(self) -> None:
         if self._player is not None:
             self._player.stop()
             self._player.setSource(QUrl())
@@ -203,6 +267,14 @@ class VideoPlayer(QObject):
         return True
 
     def _on_frame(self, frame) -> None:
+        if self._cible >= 0 and frame.isValid():
+            # Avance rapide après un saut : rien à montrer avant le point voulu.
+            if frame.startTime() // 1000 + self._decalage < self._cible:
+                return
+            self._cible = -1
+            self._player.setPlaybackRate(1.0)
+            if self._pause_apres_saut:
+                self.pause()
         if frame.isValid() and self.a_monter(frame.startTime()):
             image = frame.toImage()
             if not image.isNull():
@@ -215,10 +287,11 @@ class VideoPlayer(QObject):
                             frame.pixelFormat(), frame.handleType())
 
     def _sur_position(self, ms: int) -> None:
-        self.position_changed.emit(int(ms))
+        if self._cible < 0:
+            self.position_changed.emit(int(ms) + self._decalage)
 
     def _sur_duree(self, ms: int) -> None:
-        self.duration_changed.emit(int(ms))
+        self.duration_changed.emit(self._index.duree_ms if self._index is not None else int(ms))
 
     def _on_media_status(self, status) -> None:
         if self._position_en_attente >= 0 and status in (

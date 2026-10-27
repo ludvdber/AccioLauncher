@@ -589,72 +589,6 @@
     }
    },
    {
-    "cle": "touffu",
-    "nom": {
-     "fr": "Touffu",
-     "en": "Fluffy",
-     "es": "Fluffy"
-    },
-    "role": {
-     "fr": "Gardien du couloir interdit",
-     "en": "Guardian of the forbidden corridor",
-     "es": "Guardián del pasillo prohibido"
-    },
-    "texte": {
-     "fr": "Chien géant à trois têtes appartenant à Hagrid, il garde la trappe et s'endort au son de la musique.",
-     "en": "Hagrid's giant three-headed dog, he guards the trapdoor and falls asleep to music.",
-     "es": "Perro gigante de tres cabezas de Hagrid, guarda la trampilla y se duerme con la música."
-    },
-    "image": {
-     "fichier": "System/HPMenu.u",
-     "nom": "FluffyHeadMAwake",
-     "bits": 8,
-     "recadrage": [
-      0,
-      46,
-      40,
-      40
-     ]
-    },
-    "modele": {
-     "fichier": "System/HarryPotter.u",
-     "nom": "skfluffyMesh"
-    }
-   },
-   {
-    "cle": "troll",
-    "nom": {
-     "fr": "Le troll",
-     "en": "The troll",
-     "es": "El trol"
-    },
-    "role": {
-     "fr": "Monstre d'Halloween",
-     "en": "Halloween monster",
-     "es": "Monstruo de Halloween"
-    },
-    "texte": {
-     "fr": "Troll des montagnes lâché dans le château le soir d'Halloween ; Harry et Ron l'affrontent pour sauver Hermione.",
-     "en": "A mountain troll let loose in the castle on Halloween night; Harry and Ron face it to save Hermione.",
-     "es": "Trol de montaña suelto en el castillo la noche de Halloween; Harry y Ron se enfrentan a él para salvar a Hermione."
-    },
-    "image": {
-     "fichier": "System/HPMenu.u",
-     "nom": "EnemyHead1",
-     "bits": 8,
-     "recadrage": [
-      12,
-      8,
-      48,
-      48
-     ]
-    },
-    "modele": {
-     "fichier": "System/HPModels.u",
-     "nom": "skmountaintrollMesh"
-    }
-   },
-   {
     "cle": "choixpeau",
     "nom": {
      "fr": "Le Choixpeau magique",
@@ -1442,72 +1376,6 @@
      "fichier": "System/HPModels.u",
      "nom": "skOliverWoodMesh"
     }
-   },
-   {
-    "cle": "aragog",
-    "nom": {
-     "fr": "Aragog",
-     "en": "Aragog",
-     "es": "Aragog"
-    },
-    "role": {
-     "fr": "Acromentule de la forêt",
-     "en": "Acromantula of the forest",
-     "es": "Acromántula del bosque"
-    },
-    "texte": {
-     "fr": "Araignée géante élevée par Hagrid, elle vit au cœur de la forêt interdite avec sa nombreuse descendance.",
-     "en": "A giant spider raised by Hagrid, it lives deep in the Forbidden Forest with its many descendants.",
-     "es": "Araña gigante criada por Hagrid, vive en el corazón del Bosque Prohibido con su numerosa descendencia."
-    },
-    "image": {
-     "fichier": "Textures/HP2_Menu.utx",
-     "nom": "HP2EnemyHealthAragog",
-     "bits": 8,
-     "recadrage": [
-      8,
-      0,
-      112,
-      78
-     ]
-    },
-    "modele": {
-     "fichier": "System/HPModels.u",
-     "nom": "skAragogMesh"
-    }
-   },
-   {
-    "cle": "basilic",
-    "nom": {
-     "fr": "Le Basilic",
-     "en": "The Basilisk",
-     "es": "El Basilisco"
-    },
-    "role": {
-     "fr": "Monstre de la Chambre",
-     "en": "Monster of the Chamber",
-     "es": "Monstruo de la Cámara"
-    },
-    "texte": {
-     "fr": "Serpent gigantesque dont le regard pétrifie, il obéit à l'héritier de Serpentard.",
-     "en": "A gigantic serpent whose gaze petrifies, it obeys the heir of Slytherin.",
-     "es": "Serpiente gigantesca cuya mirada petrifica, obedece al heredero de Slytherin."
-    },
-    "image": {
-     "fichier": "Textures/HP2_Menu.utx",
-     "nom": "HP2EnemyHealthBasilisk",
-     "bits": 8,
-     "recadrage": [
-      0,
-      0,
-      90,
-      78
-     ]
-    },
-    "modele": {
-     "fichier": "System/HPModels.u",
-     "nom": "skbasiliskMesh"
-    }
    }
   ],
   "hp3": [
@@ -1752,87 +1620,6 @@
       0,
       96,
       90
-     ]
-    }
-   },
-   {
-    "cle": "detraqueurs",
-    "nom": {
-     "fr": "Les Détraqueurs",
-     "en": "The Dementors",
-     "es": "Los Dementores"
-    },
-    "role": {
-     "fr": "Gardiens d'Azkaban",
-     "en": "Guards of Azkaban",
-     "es": "Guardianes de Azkaban"
-    },
-    "texte": {
-     "fr": "Créatures encapuchonnées qui aspirent la joie, postées autour de Poudlard pour retrouver Sirius Black.",
-     "en": "Hooded creatures that drain all joy, posted around Hogwarts to find Sirius Black.",
-     "es": "Criaturas encapuchadas que absorben la alegría, apostadas alrededor de Hogwarts para encontrar a Sirius Black."
-    },
-    "image": {
-     "fichier": "textures/HP3_Menu.utx",
-     "nom": "A_Health_Dementor",
-     "bits": 32,
-     "recadrage": [
-      120,
-      0,
-      96,
-      96
-     ]
-    }
-   },
-   {
-    "cle": "buck",
-    "nom": {
-     "fr": "Buck",
-     "en": "Buckbeak",
-     "es": "Buckbeak"
-    },
-    "role": {
-     "fr": "Hippogriffe de Hagrid",
-     "en": "Hagrid's hippogriff",
-     "es": "Hipogrifo de Hagrid"
-    },
-    "texte": {
-     "fr": "Hippogriffe fier qu'il faut saluer avant de l'approcher ; condamné à tort, il s'envole avec Sirius.",
-     "en": "A proud hippogriff you must bow to before approaching; wrongly condemned, he flies away with Sirius.",
-     "es": "Hipogrifo orgulloso al que hay que saludar antes de acercarse; condenado injustamente, huye volando con Sirius."
-    },
-    "image": {
-     "fichier": "textures/HP3_Menu.utx",
-     "nom": "Hippogriff",
-     "bits": 32
-    }
-   },
-   {
-    "cle": "livre_monstres",
-    "nom": {
-     "fr": "Le Monstrueux Livre des Monstres",
-     "en": "The Monster Book of Monsters",
-     "es": "El monstruoso libro de los monstruos"
-    },
-    "role": {
-     "fr": "Manuel qui mord",
-     "en": "A textbook that bites",
-     "es": "Un manual que muerde"
-    },
-    "texte": {
-     "fr": "Manuel de soins aux créatures magiques qui mord quiconque l'ouvre sans le caresser.",
-     "en": "A Care of Magical Creatures textbook that bites anyone who opens it without stroking it.",
-     "es": "Manual de Cuidado de Criaturas Mágicas que muerde a quien lo abre sin acariciarlo."
-    },
-    "image": {
-     "fichier": "textures/HP3_Menu.utx",
-     "nom": "A_Health_MBOM",
-     "bits": 32,
-     "recadrage": [
-      160,
-      0,
-      96,
-      96
      ]
     }
    },
@@ -2104,75 +1891,6 @@
      "fichier": "data.big",
      "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
      "position": 6835600
-    }
-   },
-   {
-    "cle": "magyar",
-    "nom": {
-     "fr": "Le Magyar à pointes",
-     "en": "The Hungarian Horntail",
-     "es": "El Colacuerno Húngaro"
-    },
-    "role": {
-     "fr": "Dragon de la première tâche",
-     "en": "Dragon of the first task",
-     "es": "Dragón de la primera prueba"
-    },
-    "texte": {
-     "fr": "Le plus féroce des dragons du tournoi, il poursuit Harry pendant la première tâche.",
-     "en": "The fiercest dragon of the Tournament, it chases Harry during the first task.",
-     "es": "El más feroz de los dragones del torneo, persigue a Harry durante la primera prueba."
-    },
-    "image": {
-     "fichier": "data.big",
-     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
-     "position": 6937120
-    }
-   },
-   {
-    "cle": "strangulot",
-    "nom": {
-     "fr": "Strangulot",
-     "en": "Grindylow",
-     "es": "Grindylow"
-    },
-    "role": {
-     "fr": "Créature du lac",
-     "en": "Lake creature",
-     "es": "Criatura del lago"
-    },
-    "texte": {
-     "fr": "Petit démon aquatique aux longs doigts qui harcèle les champions dans le lac pendant la deuxième tâche.",
-     "en": "A small water demon with long fingers that harasses the champions in the lake during the second task.",
-     "es": "Pequeño demonio acuático de largos dedos que acosa a los campeones en el lago durante la segunda prueba."
-    },
-    "image": {
-     "fichier": "data.big",
-     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
-     "position": 6767920
-    }
-   },
-   {
-    "cle": "sirene",
-    "nom": {
-     "fr": "Sirène",
-     "en": "Merperson",
-     "es": "Sirena"
-    },
-    "role": {
-     "fr": "Peuple du lac",
-     "en": "Lake people",
-     "es": "Pueblo del lago"
-    },
-    "texte": {
-     "fr": "Habitants du fond du lac de Poudlard, ils gardent les otages de la deuxième tâche.",
-     "en": "Dwellers of the Hogwarts lake bed, they guard the hostages of the second task.",
-     "es": "Habitantes del fondo del lago de Hogwarts, custodian a los rehenes de la segunda prueba."
-    },
-    "image": {
-     "fichier": "data.big",
-     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
-     "position": 6531040
     }
    }
   ],
@@ -3166,25 +2884,6 @@
      "es": "El fantasma de Gryffindor se cruza con Harry por los pasillos del castillo."
     },
     "image": null
-   },
-   {
-    "cle": "inferi",
-    "nom": {
-     "fr": "Les Inferi",
-     "en": "The Inferi",
-     "es": "Los Inferi"
-    },
-    "role": {
-     "fr": "Gardiens de la caverne",
-     "en": "Guardians of the cave",
-     "es": "Guardianes de la cueva"
-    },
-    "texte": {
-     "fr": "Cadavres animés par magie noire qui surgissent du lac souterrain pour protéger le médaillon.",
-     "en": "Corpses animated by dark magic that rise from the underground lake to protect the locket.",
-     "es": "Cadáveres animados por magia oscura que surgen del lago subterráneo para proteger el guardapelo."
-    },
-    "image": null
    }
   ]
  },
@@ -3345,7 +3044,17 @@
      "en": "Clumsy giant armed with a club, let into the castle on Halloween night. Strong but slow, it can be outrun.",
      "es": "Gigante torpe armado con un garrote que entró en el castillo la noche de Halloween. Fuerte pero lento, se le puede dejar atrás."
     },
-    "image": null,
+    "image": {
+     "fichier": "System/HPMenu.u",
+     "nom": "EnemyHead1",
+     "bits": 8,
+     "recadrage": [
+      12,
+      8,
+      48,
+      48
+     ]
+    },
     "modele": {
      "fichier": "System/HPModels.u",
      "nom": "skmountaintrollMesh"
@@ -4041,7 +3750,11 @@
      "en": "Water demon with long clawed fingers. It goes after swimmers who come near its territory.",
      "es": "Demonio del agua de largos dedos con garras. Ataca a los nadadores que se acercan a su territorio."
     },
-    "image": null
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6767920
+    }
    },
    {
     "cle": "etre_de_l_eau",
@@ -4060,7 +3773,11 @@
      "en": "Dweller of the lake bed with a fish tail and greenish skin. It guards the hostages of the second task.",
      "es": "Habitante del fondo del lago con cola de pez y piel verdosa. Custodia a los rehenes de la segunda prueba."
     },
-    "image": null
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6531040
+    }
    },
    {
     "cle": "magyar_a_pointes",
@@ -4079,7 +3796,11 @@
      "en": "The fiercest dragon of the Tournament, its tail bristling with spikes. Harry has to escape it on his broom.",
      "es": "El más feroz de los dragones del Torneo, de cola erizada de púas. Harry debe escapar de él en su escoba."
     },
-    "image": null
+    "image": {
+     "fichier": "data.big",
+     "entree": "{2C4DCA3C-9A49-41E8-A5C0-35DFA119D99B}.str",
+     "position": 6937120
+    }
    },
    {
     "cle": "niffleur",
@@ -4234,25 +3955,6 @@
      "fr": "Cadavres animés par magie noire qui sortent du lac de la caverne. Le feu les tient à distance.",
      "en": "Corpses animated by dark magic that rise from the cave's lake. Fire keeps them at bay.",
      "es": "Cadáveres animados por magia oscura que salen del lago de la cueva. El fuego los mantiene a distancia."
-    },
-    "image": null
-   },
-   {
-    "cle": "loup_garou",
-    "nom": {
-     "fr": "Loup-garou (Fenrir Greyback)",
-     "en": "Werewolf (Fenrir Greyback)",
-     "es": "hombre lobo (Fenrir Greyback)"
-    },
-    "lieu": {
-     "fr": "Poudlard, la nuit de l'attaque des Mangemorts",
-     "en": "Hogwarts, on the night of the Death Eaters' attack",
-     "es": "Hogwarts, la noche del ataque de los mortífagos"
-    },
-    "texte": {
-     "fr": "Loup-garou sauvage rallié aux Mangemorts, qui garde ses instincts même sous forme humaine.",
-     "en": "Savage werewolf allied with the Death Eaters, who keeps his instincts even in human form.",
-     "es": "Hombre lobo salvaje aliado de los mortífagos, que conserva sus instintos incluso en forma humana."
     },
     "image": null
    }

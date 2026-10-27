@@ -4,10 +4,10 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLabel, QPushButton, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
+    QHBoxLayout, QLabel, QScrollArea, QSpacerItem, QVBoxLayout, QWidget,
 )
 
 from src.core import folio, sauvegardes
@@ -15,7 +15,6 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.clickable_label import ClickableLabel
-from src.ui.composants import police
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, lire_resume, phrase_derniere_partie
@@ -87,8 +86,6 @@ class InfoPanel(QWidget):
     # les sauvegardes. Bouton près de l'engrenage jusqu'au 2026-10-14 : il
     # faisait passer le temps de jeu sous la rangée (Ludo).
     folio_clicked = pyqtSignal()
-    # « Musique » de la ligne méta : la Médiathèque ouverte sur ce jeu.
-    mediatheque_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -98,9 +95,6 @@ class InfoPanel(QWidget):
         # Crans de troncature demandés par le parent quand le panneau déborde
         # alors qu'il ne peut plus grandir.
         self._desc_squeeze: int = 0
-        # Retiré par `squeeze_medias` quand la fiche manque de place (seul sur
-        # sa rangée) ; rendu à chaque jeu et à chaque taille (règle 43).
-        self._medias_retire = False
         self._title_size: int = 0    # px, posé par _apply_title_size
         # Dernier levier du rattrapage, après la description (cf. squeeze_title).
         self._title_squeeze: int = 0
@@ -149,7 +143,6 @@ class InfoPanel(QWidget):
             # Nouvelle taille : repartir du nominal (règle 43).
             self._desc_squeeze = 0
             self._title_squeeze = 0
-            self._medias_retire = False
             if not self._desc_expanded and self._full_desc:
                 self._apply_desc_truncation()
 
@@ -306,43 +299,23 @@ class InfoPanel(QWidget):
         self._derniere.setWordWrap(True)
         self._derniere.setTextFormat(Qt.TextFormat.RichText)
         self._derniere.setStyleSheet("QLabel { color: #f2f2f4; background: transparent; }")
+        # De l'air avant la description qui peut suivre (HP4 à HP8) : collée,
+        # elle se lisait comme la suite de la phrase.
+        self._derniere.setContentsMargins(0, 0, 0, 10)
         self._derniere.hide()
         lay.addWidget(self._derniere)
 
-        # Le bloc du folio, épinglé sous le bouton (add_bottom_widget).
+        # Le bloc du folio, épinglé AU-DESSUS du bouton (add_bottom_widget) :
+        # la partie d'abord, puis ce qui la reprend (Ludo, 2026-10-27). Le
+        # galet « Collections » qui le suivait est devenu un bouton à côté de
+        # l'engrenage (`ActionPanel.medias_clicked`).
         self._bloc = BlocFolio()
         self._bloc.clicked.connect(self.folio_clicked)
         self._bloc_hote = QWidget()
         hote = QHBoxLayout(self._bloc_hote)
-        hote.setContentsMargins(0, 12, 0, 0)
+        hote.setContentsMargins(0, 0, 0, 12)
         hote.setSpacing(10)
         hote.addWidget(self._bloc, 0, Qt.AlignmentFlag.AlignVCenter)
-        # La musique et les cinématiques du jeu : un galet à côté du folio
-        # (Ludo, 2026-10-24 : un lien dans la ligne méta « fait trop long »).
-        # Avec son NOM depuis l'audit du 2026-10-24 : la note seule, ronde, ne
-        # disait pas ce qu'elle ouvrait (Ludo : « les nouveautés sont pas très
-        # visibles »). Largeur au contenu, hauteur fixe (règles 37 et 49).
-        self._medias = QPushButton()
-        self._medias.setObjectName("boutonMedias")
-        self._medias.setFixedHeight(40)
-        self._medias.setFont(police(14))
-        self._medias.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._medias.setToolTip(tr("La musique, les cinématiques et les captures du jeu"))
-        self._medias.setAccessibleName(tr("Collections : la musique, les cinématiques et les "
-                                          "captures du jeu"))
-        self._medias.setText(tr("Collections"))
-        from src.ui.choix_jeux import espacee
-        icone, taille = espacee(pixmap_icone("images", 18, QColor("#e6e4f0")), QSize(18, 18))
-        self._medias.setIcon(icone)
-        self._medias.setIconSize(taille)
-        self._medias.setStyleSheet(themed(
-            "QPushButton#boutonMedias { background: rgba(255, 255, 255, 0.03); color: #e6e4f0;"
-            " border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 20px; padding: 0 16px; }"
-            "QPushButton#boutonMedias:hover, QPushButton#boutonMedias:focus {"
-            " border-color: #d6a72c; background: rgba(214, 167, 44, 0.08); }"))
-        self._medias.clicked.connect(self.mediatheque_clicked)
-        self._medias.hide()
-        hote.addWidget(self._medias, 0, Qt.AlignmentFlag.AlignVCenter)
         hote.addStretch()
         self._bloc_hote.hide()
 
@@ -456,17 +429,6 @@ class InfoPanel(QWidget):
                 "QLabel#gameTitle { color: #f2f2f4; background: transparent;"
                 f" font-size: {size}px; }}")
 
-    def squeeze_medias(self) -> bool:
-        """Retire le galet « Collections » quand il occupe SEUL une rangée
-        (HP4 à HP8, sans bloc du folio). L'onglet Collections reste en haut ;
-        un titre rogné se verrait davantage. False s'il n'y a rien à gagner."""
-        if self._medias_retire or not self._medias.isVisibleTo(self) or self._bloc.isVisibleTo(self):
-            return False
-        self._medias_retire = True
-        self._medias.hide()
-        self._bloc_hote.hide()
-        return True
-
     def squeeze_title(self) -> bool:
         """Descend le titre d'un cran (dernier levier : c'est le plus gros
         bloc du panneau). False s'il n'y a plus de marge."""
@@ -513,7 +475,6 @@ class InfoPanel(QWidget):
         # Titre PLEIN à chaque jeu (règle 43) : un cran pris par le titre
         # espagnol le plus long restait sinon sur les sept autres.
         self._title_squeeze = 0
-        self._medias_retire = False
         self._title.setText(game.name)
         # La partie se relit dans `rafraichir_indices`, que le parent appelle
         # juste après : la lire ici aussi coûterait deux lectures par jeu.
@@ -576,10 +537,10 @@ class InfoPanel(QWidget):
         self._apply_available_width()
 
     def add_bottom_widget(self, widget: QWidget) -> None:
-        """Épingle un widget sous la zone défilante, suivi de la ligne
-        d'indices : elle parle de ce que le bouton lance."""
-        self._action_slot.addWidget(widget)
+        """Épingle un widget sous la zone défilante : le bloc du folio
+        au-dessus, la ligne d'indices (« À propos du jeu ») juste dessous."""
         self._action_slot.addWidget(self._bloc_hote)
+        self._action_slot.addWidget(widget)
         # De l'air sous le bouton : collée à lui, la ligne avait l'air d'en
         # faire partie (Ludo, 2026-10-14).
         self._action_slot.addSpacerItem(self._ecart_indices)
@@ -652,18 +613,19 @@ class InfoPanel(QWidget):
         else:
             self._apply_desc_truncation()
         avancee = self._avancee
+        # Sans partie lue, la dernière session du launcher : la date a UNE
+        # place pour tous les jeux, au-dessus du bouton (Ludo, 2026-10-27 :
+        # pas d'information en double). Elle était aussi en colonne à côté
+        # du temps de jeu pour HP4 à HP8.
+        session = self._derniere_session() if resume is None and (
+            avancee is None or avancee.avancement is None) else None
         self._derniere.setVisible((resume is not None and not self._a_propos)
-                                  or (resume is None and avancee is not None))
-        from src.ui.mediatheque import a_des_medias
-        medias = game is not None and a_des_medias(game.id)
-        # « Collections », comme l'onglet : « Musique » ne disait pas les
-        # cinématiques ni les captures (Ludo, 2026-10-24). Le galet vivait dans
-        # l'hôte du bloc du folio, montré seulement avec un « Reprendre » : de
-        # HP4 à HP8, il n'apparaissait jamais.
-        self._bloc.setVisible(resume is not None)
-        medias = medias and (resume is not None or not self._medias_retire)
-        self._medias.setVisible(medias)
-        self._bloc_hote.setVisible(resume is not None or medias)
+                                  or (resume is None and avancee is not None
+                                      and avancee.avancement is not None)
+                                  or session is not None)
+        if session is not None:
+            self._derniere.setText(phrase_derniere_partie(session, ""))
+        self._bloc_hote.setVisible(resume is not None)
         if resume is None and avancee is not None and avancee.avancement is not None:
             self._derniere.setText(phrase_derniere_partie(
                 datetime.fromtimestamp(avancee.modifie),
@@ -673,9 +635,18 @@ class InfoPanel(QWidget):
                                                           lieu_resume(resume)))
             system = self._manager.config.install_path / Path(game.executable).parent
             self._bloc.montrer(resume, cartes_eventail(game.id, system, resume.releve,
-                                                       self.devicePixelRatioF()),
-                               self._manager.get_playtime(game.id))
+                                                       self.devicePixelRatioF()))
         self._apply_available_width()
+
+    def _derniere_session(self) -> datetime | None:
+        game = self._game
+        if game is None or not self._manager.is_installed(game.id):
+            return None
+        iso = self._manager.last_played(game.id)
+        try:
+            return datetime.fromisoformat(iso) if iso else None
+        except ValueError:
+            return None
 
     def _basculer_a_propos(self) -> None:
         """« À propos du jeu » remet la description, « Ma partie » la retire."""

@@ -167,7 +167,7 @@ class GameDetailView(QWidget):
         self._action_panel.game_settings_clicked.connect(
             lambda: handlers.on_game_settings(self))
         self._info.folio_clicked.connect(self.ouvrir_folio)
-        self._info.mediatheque_clicked.connect(
+        self._action_panel.medias_clicked.connect(
             lambda: self.game is not None and self.mediatheque_demandee.emit(self.game.id))
         self._info.content_changed.connect(self._position_info)
 
@@ -228,11 +228,9 @@ class GameDetailView(QWidget):
                                        min(dispo, self._info.height() + trop))
                 QTimer.singleShot(0, self._fit_info_height)
                 return
-        # Plus de place : raccourcir la description, retirer le galet
-        # Collections s'il est seul sur sa rangée (l'onglet reste en haut), puis
-        # le titre (le plus visible) seulement s'il reste du débordement.
-        if (self._info.squeeze_description() or self._info.squeeze_medias()
-                or self._info.squeeze_title()):
+        # Plus de place : raccourcir la description, puis le titre (le plus
+        # visible) seulement s'il reste du débordement.
+        if self._info.squeeze_description() or self._info.squeeze_title():
             QTimer.singleShot(0, self._fit_info_height)
 
     def _position_audio_bar(self) -> None:

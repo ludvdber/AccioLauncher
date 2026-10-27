@@ -12,9 +12,11 @@ ne rend que des octets B V R A : la QImage se fait ici, dans le fil de
 l'interface.
 
 Les fiches de HP1 et HP2 ont aussi leur modèle 3D (`maillages_ue1`) : la fiche
-choisie s'affiche en grand en haut de la page, dans une visionneuse qu'on fait
-tourner (`modele_3d`), et une fiche sans image reçoit le rendu de son modèle
-en vignette, une par tour de minuteur pour ne pas figer la page.
+choisie s'affiche dans une colonne FIXE à droite, dans une visionneuse qu'on
+fait tourner (`modele_3d`), et une fiche sans image reçoit le rendu de son
+modèle en vignette, une par tour de minuteur pour ne pas figer la page. En
+haut de la liste jusqu'au 2026-10-27 : il fallait descendre choisir une fiche
+puis remonter la voir (Ludo, comme le Folio Universitas).
 """
 
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -30,13 +32,14 @@ from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.modele_3d import Modele3D
-from src.ui.theme import accent_qcolor, current as current_theme
+from src.ui.theme import accent_qcolor, current as current_theme, themed
 from src.ui.utils import clear_layout, zone_defilable
 
 _LARGEUR_FICHE = 400
 _IMAGE = QSize(96, 120)          # une carte de HP4 est deux fois plus haute que large
 _ICONE = {encyclopedie.PERSONNAGES: "personnages", encyclopedie.BESTIAIRE: "patte"}
-_SCENE = QSize(340, 420)
+_SCENE = QSize(340, 400)
+_MARGE_SCENE = 24
 
 ModeleLu = tuple[maillages_ue1.Maillage, dict[str, QImage]]
 
@@ -136,25 +139,29 @@ class _Fiche(QFrame):
 
 
 class _Scene(QFrame):
-    """La fiche choisie en grand : son modèle qu'on fait tourner, son texte."""
+    """La fiche choisie en grand, dans la colonne de droite : son modèle qu'on
+    fait tourner, son texte dessous."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.setObjectName("carteJeu")
-        h = QHBoxLayout(self)
-        h.setContentsMargins(18, 14, 24, 14)
-        h.setSpacing(24)
+        self.setObjectName("sceneFiche")
+        self.setStyleSheet(themed(
+            "QFrame#sceneFiche { background: transparent; border: none;"
+            " border-left: 1px solid rgba(214, 167, 44, 0.16); }"))
+        self.setFixedWidth(_SCENE.width() + 2 * _MARGE_SCENE)
+        contenu = QWidget()
+        contenu.setObjectName("transparent")
+        v = QVBoxLayout(contenu)
+        v.setContentsMargins(_MARGE_SCENE, 22, _MARGE_SCENE, 24)
+        v.setSpacing(6)
         self.modele = Modele3D()
         self.modele.setFixedSize(_SCENE)
-        h.addWidget(self.modele)
-        v = QVBoxLayout()
-        v.setSpacing(6)
-        v.addStretch()
+        v.addWidget(self.modele)
+        v.addSpacing(8)
         self._nom = texte("", 18, ENCRE, retour=True)
         self._nom.setFont(cinzel(17, bold=True))
         self._sous_titre = texte("", 13, current_theme().accent_light, retour=True)
         self._texte = texte("", 14, "#c9c7da", retour=True)
-        self._texte.setMaximumWidth(520)
         v.addWidget(self._nom)
         v.addWidget(self._sous_titre)
         v.addSpacing(6)
@@ -163,7 +170,9 @@ class _Scene(QFrame):
         v.addWidget(texte(tr("Glisser pour tourner · molette pour zoomer · double-clic pour revenir"),
                           12, ENCRE_DOUCE, retour=True))
         v.addStretch()
-        h.addLayout(v, stretch=1)
+        racine = QVBoxLayout(self)
+        racine.setContentsMargins(0, 0, 0, 0)
+        racine.addWidget(zone_defilable(contenu))
 
     def montrer(self, fiche: encyclopedie.Fiche, modele: ModeleLu | None) -> None:
         self._nom.setText(dans_la_langue(fiche.nom))
@@ -190,9 +199,11 @@ class VueEncyclopedie(QWidget):
         self._lay = QVBoxLayout(page)
         self._lay.setContentsMargins(40, 22, 40, 28)
         self._lay.setSpacing(14)
-        racine = QVBoxLayout(self)
-        racine.setContentsMargins(0, 0, 0, 0)
-        racine.addWidget(zone_defilable(page))
+        # La liste défile à gauche, la fiche choisie reste à droite.
+        self._racine = QHBoxLayout(self)
+        self._racine.setContentsMargins(0, 0, 0, 0)
+        self._racine.setSpacing(0)
+        self._racine.addWidget(zone_defilable(page), stretch=1)
         self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="encyclopedie")
         self._attendues: list[tuple[_Fiche, Future]] = []
         self._modeles_attendus: list[tuple[_Fiche, Future]] = []
@@ -217,6 +228,8 @@ class VueEncyclopedie(QWidget):
         self._choisie = None
         if self.scene is not None:
             self.scene.modele.poser(None)
+            self.scene.hide()
+            self.scene.deleteLater()
         self.scene = None
         self.fiches = []
         clear_layout(self._lay)
@@ -232,7 +245,7 @@ class VueEncyclopedie(QWidget):
         if dossier is not None and any(f.modele is not None for f in fiches):
             self.scene = _Scene()
             self.scene.hide()               # jusqu'au premier modèle lu
-            self._lay.addWidget(self.scene)
+            self._racine.addWidget(self.scene)
         self._lay.addWidget(texte(compte.format(len(fiches)), 13, ENCRE_DOUCE))
         flux = FlowLayout(spacing=14)
         for fiche in fiches:

@@ -259,25 +259,6 @@ class TestBandeauSansScrollbar:
             assert win._detail._action_panel.alert_height() > 0
             assert "quarantaine" in win._detail._action_panel._alert.text()
 
-    def test_le_galet_collections_cede_sa_rangee_puis_revient(self, make_window, qtbot, monkeypatch):
-        """Seul sur sa rangée (pas de bloc du folio), le galet part avant que le
-        titre ne rétrécisse ; une fenêtre plus grande le rend (règle 43)."""
-        self._disque(monkeypatch, 900_000)
-        self._catalogue_avec_avertissement(monkeypatch)
-        win = make_window()
-        win.show()
-        win.resize(980, 660)
-        info = win._detail._info
-        hp7a = next(e.game for e in win.manager.get_games() if e.game.id == "hp7a")
-        win._detail.set_game(hp7a)
-        assert _reste_a_defiler(qtbot, win) == 0
-        if not info._medias_retire:
-            pytest.skip("la fiche tient sans retirer le galet à cette taille")
-        assert not info._medias.isVisibleTo(info)
-        win.resize(1500, 950)
-        win._detail.set_game(hp7a)
-        qtbot.waitUntil(lambda: info._medias.isVisibleTo(info), timeout=2000)
-
     def test_le_bandeau_n_affiche_qu_un_message(self, make_window, qtbot, monkeypatch):
         """Hors ligne ET disque plein : le hors-ligne prime, le disque attend
         d'être actionnable (hors ligne, rien ne s'écrit sur le disque)."""

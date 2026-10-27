@@ -50,6 +50,7 @@ from src.ui.fonts import cinzel
 from src.ui.folio_page import (
     _ECART_CASES,
     _IMAGE_FICHE,
+    _LARGEUR_RAIL,
     _MARGE_FICHE,
     FolioPage,
     Rangee,
@@ -178,8 +179,9 @@ def _rangee(*tuiles: QFrame) -> QHBoxLayout:
     return rang
 
 
-def _page(construire) -> tuple[QWidget, QVBoxLayout]:
-    """Le corps d'une page sans grille : une colonne qui défile."""
+def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QVBoxLayout]:
+    """Le corps d'une page sans grille : une colonne qui défile, et `droite`
+    fixe à côté (la carte choisie de HP4, comme la fiche de HP1)."""
     corps = QWidget()
     h = QHBoxLayout(corps)
     h.setContentsMargins(0, 0, 0, 0)
@@ -191,6 +193,8 @@ def _page(construire) -> tuple[QWidget, QVBoxLayout]:
     construire(lay)
     lay.addStretch()
     h.addWidget(zone_defilable(page), stretch=1)
+    if droite is not None:
+        h.addWidget(droite)
     return corps, lay
 
 
@@ -525,6 +529,7 @@ class FolioPageHP2(FolioPage):
 
 _VIGNETTE_HP4 = 30                      # hauteur d'une case ; une carte de personnage est deux fois plus large
 _GRANDE_CARTE = QSize(420, 230)         # la carte de personnage fait 512 × 256 : jamais agrandie
+_PETITE_CARTE = 260                     # largeur de la carte choisie sur une fenêtre étroite
 
 
 def _illustration(system: Path, jeu: folio_hp4.JeuCartes, rang: int,
@@ -642,6 +647,10 @@ class FolioPageHP4(FolioPage):
         if partie is None:
             return super()._construire(None)
 
+        # La carte choisie, FIXE à droite : sous la grille, il fallait
+        # descendre la choisir puis remonter la voir (Ludo, 2026-10-27).
+        colonne = self._colonne_carte()
+
         def contenu(lay: QVBoxLayout) -> None:
             rang = partie.nom_rang
             tuiles = [_tuile(f"{partie.boucliers} / {folio_hp4.BOUCLIERS}",
@@ -667,32 +676,34 @@ class FolioPageHP4(FolioPage):
             lay.addSpacing(12)
             lay.addWidget(self._cartes(partie.cartes))
 
-        return _page(contenu)[0]
+        return _page(contenu, colonne)[0]
 
-    def _cartes(self, cartes: frozenset[int]) -> QFrame:
-        """Le Folio Universitas : les jeux de la boutique, chaque carte possédée
-        avec son illustration, et la carte choisie en grand, qui s'incline sous
-        la souris comme dans le jeu."""
-        self._attendues = []           # les vignettes d'une autre partie ne se posent plus
-        cadre = QFrame()
-        cadre.setObjectName("coupe")
-        lay = QVBoxLayout(cadre)
-        lay.setContentsMargins(20, 14, 20, 18)
-        lay.setSpacing(10)
-        jeux = [j for _, groupe in folio_hp4.GROUPES_CARTES for j in groupe]
-        total = sum(1 for j in jeux for c in j.cartes if c in cartes)
-        lay.addLayout(en_tete(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"]), self._carte,
-                              (tr("{} carte") if total == 1 else tr("{} cartes")).format(total)))
+    def _largeur_colonne(self) -> int:
+        return max(_PETITE_CARTE, min(_GRANDE_CARTE.width(),
+                                      int((self.width() - _LARGEUR_RAIL) * 0.36))) + 2 * _MARGE_FICHE
 
-        # La carte choisie : grande à gauche, ce qu'on en sait à droite.
-        haut = QHBoxLayout()
-        haut.setSpacing(20)
-        self._grande = Carte3D()
-        self._grande.setFixedSize(_GRANDE_CARTE)
-        haut.addWidget(self._grande)
-        fiche = QVBoxLayout()
+    def _taille_carte(self, colonne: int) -> QSize:
+        largeur = colonne - 2 * _MARGE_FICHE
+        # Presque carrée : une carte de créature est en hauteur, celle d'un
+        # personnage deux fois plus large que haute ; les deux y tiennent.
+        return QSize(largeur, round(largeur * 0.85))
+
+    def _colonne_carte(self) -> QFrame:
+        """La carte choisie en grand, qui s'incline sous la souris comme dans
+        le jeu, et ce qu'on en sait dessous."""
+        self._colonne_hp4 = QFrame()
+        self._colonne_hp4.setObjectName("fiche")
+        largeur = self._largeur_colonne()
+        self._colonne_hp4.setFixedWidth(largeur)
+        contenu = QWidget()
+        contenu.setStyleSheet("background: transparent;")
+        fiche = QVBoxLayout(contenu)
+        fiche.setContentsMargins(_MARGE_FICHE, 30, _MARGE_FICHE, 24)
         fiche.setSpacing(4)
-        fiche.addStretch()
+        self._grande = Carte3D()
+        self._grande.setFixedSize(self._taille_carte(largeur))
+        fiche.addWidget(self._grande)
+        fiche.addSpacing(10)
         self._carte_jeu = surtitre("")
         self._carte_nom = texte("", 18, ENCRE, retour=True)
         self._carte_nom.setFont(cinzel(13, bold=True))
@@ -705,8 +716,34 @@ class FolioPageHP4(FolioPage):
         fiche.addSpacing(6)
         fiche.addWidget(self._carte_etat)
         fiche.addStretch()
-        haut.addLayout(fiche, stretch=1)
-        lay.addLayout(haut)
+        v = QVBoxLayout(self._colonne_hp4)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.addWidget(zone_defilable(contenu))
+        return self._colonne_hp4
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        colonne = getattr(self, "_colonne_hp4", None)
+        try:
+            if colonne is not None and colonne.width() != self._largeur_colonne():
+                colonne.setFixedWidth(self._largeur_colonne())
+                self._grande.setFixedSize(self._taille_carte(self._largeur_colonne()))
+        except RuntimeError:            # colonne d'une autre partie, déjà détruite
+            self._colonne_hp4 = None
+
+    def _cartes(self, cartes: frozenset[int]) -> QFrame:
+        """Le Folio Universitas : les jeux de la boutique, chaque carte possédée
+        avec son illustration ; la carte choisie est dans la colonne de droite."""
+        self._attendues = []           # les vignettes d'une autre partie ne se posent plus
+        cadre = QFrame()
+        cadre.setObjectName("coupe")
+        lay = QVBoxLayout(cadre)
+        lay.setContentsMargins(20, 14, 20, 18)
+        lay.setSpacing(10)
+        jeux = [j for _, groupe in folio_hp4.GROUPES_CARTES for j in groupe]
+        total = sum(1 for j in jeux for c in j.cartes if c in cartes)
+        lay.addLayout(en_tete(self._nom_jeu(folio_hp4.TITRES_CARTES["folio"]), self._carte,
+                              (tr("{} carte") if total == 1 else tr("{} cartes")).format(total)))
 
         self._groupe_cartes = QButtonGroup(cadre)
         self._groupe_cartes.setExclusive(True)

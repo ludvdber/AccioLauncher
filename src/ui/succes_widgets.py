@@ -1,24 +1,15 @@
-"""La section « Succès » au bas du folio (`folio_page.py`), et le toast du retour de partie.
+"""Le toast du retour de partie, et la date en toutes lettres des Défis.
 
-Une rangée de médailles (`medailles.py`) : celles qu'on a obtenues d'abord,
-dans l'ordre du jeu, puis celles qui restent, en creux. Le nom, ce qu'elle
-demande et la date de la partie où elle est tombée passent en bulle ; une date
-inconnue (déjà là au premier regard, `succes.py`) ne s'affiche pas : rien
-n'est deviné. Le détail vit dans les Défis du Carnet (`defis_page.py`).
+La section « Succès » au bas du folio a vécu ici du 2026-10-24 au 2026-10-27 :
+les Défis du Carnet (`defis_page.py`) la montraient déjà, en médailles.
 """
 
 from collections.abc import Callable
 from datetime import datetime
 
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
-
 from src.core import succes
-from src.core.catalogue_blocs import Sauvegardes
 from src.core.i18n import tr
-from src.ui.stats_widgets import _Paragraphe, _titre_section
 from src.ui.toast import Toast
-
-_PETITE = 44
 
 
 def annonce_succes(nom_du_jeu: str, obtenus: list[succes.Succes]) -> str:
@@ -51,47 +42,3 @@ def _jour(quand: datetime | None) -> str:
         return ""
     from src.ui.versions_dialog import date_longue
     return date_longue(quand.strftime("%Y-%m-%d"))
-
-
-class SectionSucces(QWidget):
-    """Titre, compte, puis une rangée de médailles : obtenues d'abord.
-
-    Le détail (ce que chacune demande) vit dans la rubrique Défis du Carnet
-    (`defis_page.py`, 2026-10-26) ; ici, le nom et la date passent en bulle.
-    """
-
-    def __init__(self, jeu: str, sauvegardes: list[str], spec: Sauvegardes | None,
-                 parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        from src.ui.flow_layout import FlowLayout
-        from src.ui.medailles import pixmap_medaille
-        definitions = succes.du_jeu(jeu)
-        self.obtenus = succes.obtenus(jeu, sauvegardes, spec)
-        couche = QVBoxLayout(self)
-        couche.setContentsMargins(0, 0, 0, 0)
-        couche.setSpacing(8)
-        couche.addWidget(_titre_section(tr("Succès")))
-        couche.addWidget(_Paragraphe(
-            tr("{} sur {}").format(len(self.obtenus), len(definitions)), taille=13))
-        rangee = QWidget()
-        flux = FlowLayout(rangee, spacing=6)
-        flux.setContentsMargins(0, 4, 0, 0)
-        ordre = ([s for s in definitions if s.ident in self.obtenus]
-                 + [s for s in definitions if s.ident not in self.obtenus])
-        self.lignes: list[str] = []
-        self.bulles: list[str] = []
-        for s in ordre:
-            obtenu = self.obtenus.get(s.ident)
-            image = QLabel()
-            image.setFixedSize(_PETITE, _PETITE)
-            image.setPixmap(pixmap_medaille(jeu, s.ident, obtenu is not None, _PETITE,
-                                            self.devicePixelRatioF()))
-            bulle = tr(s.titre) + "\n" + tr(s.description)
-            quand = _jour(obtenu.date) if obtenu is not None else ""
-            if quand:
-                bulle += "\n" + quand
-            image.setToolTip(bulle)
-            flux.addWidget(image)
-            self.lignes.append(s.ident)
-            self.bulles.append(bulle)
-        couche.addWidget(rangee)

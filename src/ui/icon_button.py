@@ -188,7 +188,8 @@ class IconButton(QAbstractButton):
 
     def __init__(self, icone: str, taille: int = 26,
                  parent: QWidget | None = None, *,
-                 cadre: str | None = None, galet: bool = False) -> None:
+                 cadre: str | None = None, galet: bool = False,
+                 second: str | None = None) -> None:
         """Trois habillages, selon ce qu'il y a derrière le bouton.
 
         `cadre` — couleur du contour, ou None pour un bouton nu. Encadré dans
@@ -204,15 +205,21 @@ class IconButton(QAbstractButton):
         ont pas besoin, `AudioBar` peint déjà le sien.
 
         Ni l'un ni l'autre — le bouton nu, sur un support qui le porte déjà.
+
+        `second` — un deuxième pictogramme à droite du premier, dans un bouton
+        plus large : la musique et les images des Collections, à la place du
+        libellé (Ludo, 2026-10-27).
         """
         super().__init__(parent)
-        if icone not in ICONES:
-            raise ValueError(f"icône inconnue : {icone!r}")
+        for nom in (icone, second):
+            if nom is not None and nom not in ICONES:
+                raise ValueError(f"icône inconnue : {nom!r}")
         self._icone = icone
+        self._second = second
         self._survol = False
         self._cadre = QColor(cadre) if cadre else None
         self._galet = galet
-        self.setFixedSize(taille, taille)
+        self.setFixedSize(round(taille * 1.6) if second else taille, taille)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -300,6 +307,17 @@ class IconButton(QAbstractButton):
                 p.drawEllipse(anneau)
 
         ratio = self.devicePixelRatioF()
+        if self._second is not None:
+            # Deux pictogrammes plus petits, côte à côte et centrés ensemble.
+            cote = round(self.height() * 0.5)
+            ecart = round(cote * 0.25)
+            gauche = (self.width() - 2 * cote - ecart) / 2.0
+            y = round((self.height() - cote) / 2.0 * ratio) / ratio
+            for i, nom in enumerate((self._icone, self._second)):
+                x = round((gauche + i * (cote + ecart)) * ratio) / ratio
+                p.drawImage(QPointF(x, y), _image(nom, cote, self._encre(actif), ratio))
+            p.end()
+            return
         cote = round(min(self.width(), self.height()) * _PROPORTION)
         img = _image(self._icone, cote, self._encre(actif), ratio)
         # Origine calée sur la grille des pixels PHYSIQUES : posée sur un
