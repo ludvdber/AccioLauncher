@@ -122,10 +122,12 @@ def libelle_choix(reglage: Reglage, valeur: Any) -> str:
         # taille (« 1280×720 ») n'a pas d'entrée et revient tel quel.
         return tr(dict(reglage.noms_choix).get(valeur, str(valeur)))
     if valeur == reglage.choix[0]:
-        return tr(reglage.zero)
-    if reglage.etiquettes:
-        return tr(dict(reglage.etiquettes).get(valeur, _nombre(valeur)))
-    return reglage.format_choix.format(_nombre(valeur).replace(".", decimal_separator()))
+        nom = tr(reglage.zero)
+    elif reglage.etiquettes:
+        nom = tr(dict(reglage.etiquettes).get(valeur, _nombre(valeur)))
+    else:
+        return reglage.format_choix.format(_nombre(valeur).replace(".", decimal_separator()))
+    return f"{nom} ({texte_valeur(valeur)})" if reglage.chiffre else nom
 
 
 def _nombre(valeur: object) -> str:
@@ -140,8 +142,26 @@ def texte_valeur(valeur: object) -> str:
     affichée brute, elle gardait le point de l'ini (« 0.28 »), une faute dans
     une interface française.
     """
-    return _nombre(valeur).replace(".", decimal_separator()) if isinstance(valeur, float) \
-        else str(valeur)
+    if isinstance(valeur, bool) or not isinstance(valeur, (int, float)):
+        return str(valeur)
+    # Le vrai signe moins, pas le trait d'union de l'ini (« −0,5 »).
+    return _nombre(valeur).replace(".", decimal_separator()).replace("-", "−")
+
+
+def rang_a_la_main(reglage: Reglage, valeur: object) -> int:
+    """Où ranger dans la liste une valeur réglée à la main : entre les deux crans qui
+    l'encadrent quand les choix sont des nombres en ordre, sinon à la fin."""
+    fin = len(reglage.choix)
+    nombres = [c for c in reglage.choix if isinstance(c, (int, float)) and not isinstance(c, bool)]
+    if fin < 2 or len(nombres) != fin or isinstance(valeur, bool) \
+            or not isinstance(valeur, (int, float)):
+        return fin
+    paires = list(zip(nombres, nombres[1:], strict=False))
+    if all(a < b for a, b in paires):
+        return next((i for i, c in enumerate(nombres) if valeur < c), fin)
+    if all(a > b for a, b in paires):
+        return next((i for i, c in enumerate(nombres) if valeur > c), fin)
+    return fin
 
 
 def textes(reglage: Reglage) -> tuple[str, str]:

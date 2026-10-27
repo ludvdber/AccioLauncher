@@ -217,7 +217,7 @@ class TestAnticrenelage:
         """Le premier choix (0, ou « auto ») se lit par une clé traduite ; aucun réglage à choix n'oublie ce libellé."""
         for r in rc.REGLAGES.values():
             if r.choix:
-                assert r.zero and tr(r.zero) and rc.libelle_choix(r, r.choix[0]) == tr(r.zero)
+                assert r.zero and tr(r.zero) and rc.libelle_choix(r, r.choix[0]).startswith(tr(r.zero))
                 assert all(rc.libelle_choix(r, v) for v in r.choix)
         assert self.R.format_choix.format(8) == "8×"
         assert rc.libelle_choix(self.R, 8) == "8×"
@@ -743,8 +743,19 @@ class TestEffetsDImage:
         reglage = rc.REGLAGES["vivacite"]
         etat = rc.lire(ini, reglage)
         assert etat == rc.Etat(0.3)
-        assert rc.libelle_choix(reglage, etat.valeur) == tr("Moyenne")
-        assert rc.libelle_choix(reglage, 0) == tr("Aucune")
+        # Le cran porte son chiffre : une valeur réglée à la main se situe parmi eux.
+        assert rc.libelle_choix(reglage, etat.valeur) == tr("Moyenne") + " (0,3)"
+        assert rc.libelle_choix(reglage, 0) == tr("Aucune") + " (0)"
+
+    def test_les_netetes_lointaines_portent_un_vrai_signe_moins(self):
+        assert rc.libelle_choix(rc.REGLAGES["textures_lointaines"], -0.5) \
+            == tr("Un peu plus nettes") + " (−0,5)"
+
+    def test_une_valeur_a_la_main_se_range_entre_ses_voisins(self):
+        assert rc.rang_a_la_main(rc.REGLAGES["vivacite"], 0.35) == 3      # après Moyenne (0,3)
+        assert rc.rang_a_la_main(rc.REGLAGES["vert_relief"], 0.5) == 2    # 1, 0.6 | 0.5 | 0.4
+        assert rc.rang_a_la_main(rc.REGLAGES["vivacite"], 0.9) == 5       # au-delà du plus fort
+        assert rc.rang_a_la_main(rc.REGLAGES["ciel_heure"], 14) == 8      # crans sans ordre : à la fin
 
     def test_les_valeurs_livrees_sont_des_crans(self):
         """HP4/HP6 livrent 0.30 et 0.20, HP5 0.60 et 0.30 : aucun « réglé à la main »."""
@@ -992,6 +1003,26 @@ class TestFenetreQualite:
         assert familles == noms
         for ident in self.IDENTS:
             assert carte.isAncestorOf(dlg._controles[ident]) and not dlg._blocs[ident].isHidden()
+
+    def test_ce_qui_change_le_style_est_dans_ambiance_hors_des_effets(self, qtbot, tmp_path):
+        """Ciel, brouillard et couleurs MODIFIENT l'image d'origine (Ludo, 2026-10-27) :
+        une rubrique à part, sous les préréglages, et la colonne des effets s'allège."""
+        from PyQt6.QtWidgets import QLabel
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
+        ambiance = ["brouillard", "ciel", "couleurs", "vivacite"]
+        dlg = _dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ambiance + ["resolution"]),
+                        _manager(tmp_path))
+        effets = dlg._carte_des_effets
+        for ident in ambiance:
+            assert not effets.isAncestorOf(dlg._controles[ident])
+        textes = [lb.text() for lb in dlg.findChildren(QLabel)]
+        assert tr("Ambiance").upper() in textes
+        # Le ciel ouvre sa famille, avant le brouillard qui le suit dans la table.
+        carte = dlg._blocs["ciel"].parentWidget()
+        rang = {i: carte.layout().indexOf(dlg._blocs[i]) for i in ("ciel", "brouillard")}
+        assert 0 <= rang["ciel"] < rang["brouillard"]
 
     def test_un_effet_qui_depend_d_un_autre_est_en_retrait_sous_lui(self, qtbot, tmp_path):
         dlg, _ini = self._fenetre(qtbot, tmp_path)

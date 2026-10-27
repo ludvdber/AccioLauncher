@@ -105,6 +105,9 @@ class Reglage:
     # Libellés de choix NUMÉRIQUES (clés tr()) : (valeur, libellé). Le premier
     # s'affiche quand même `zero`. Vide : `format_choix`.
     etiquettes: tuple[tuple[object, str], ...] = ()
+    # Le nom d'un cran porte aussi son chiffre (« Moyenne (0,3) ») : une valeur
+    # « réglée à la main » (0,35) se situe alors parmi les autres (Ludo, 2026-10-27).
+    chiffre: bool = False
     # Ce que le correctif fait VRAIMENT de ces clés (Ludo, 2026-09-28 : « si un
     # paramètre désactive d'autres paramètres, il faut que ça se voie dans le
     # launcher ») :
@@ -233,7 +236,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Netteté",
             "Rend du piqué à l'image que le lissage (FXAA) adoucit : contours et textures "
             "plus nets. Trop fort, un liseré clair apparaît autour des contours.",
-            choix=tuple(v for v, _ in NETTETES), zero="Aucune", etiquettes=NETTETES,
+            choix=tuple(v for v, _ in NETTETES), zero="Aucune", etiquettes=NETTETES, chiffre=True,
             onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
     # HP4) avec le correctif qui multi-échantillonne la cible de scène du jeu
@@ -291,7 +294,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             " lieu de flouter avec la distance. Un réglage fort peut faire scintiller "
             "certaines surfaces.",
             choix=tuple(v for v, _ in NETTETES_LOINTAINES), zero="D'origine",
-            etiquettes=NETTETES_LOINTAINES, onglet="image", cout=(("GPU", 1),)),
+            etiquettes=NETTETES_LOINTAINES, chiffre=True, onglet="image", cout=(("GPU", 1),)),
     Reglage("feuillage_lointain", "Accio.Graphics", "MipmapCoverage",
             "Feuillage dense au loin",
             "Feuilles, cheveux et grilles gardent leur densité au loin, au lieu de "
@@ -358,14 +361,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Vivacité des couleurs",
             "Ravive les couleurs ternes sans saturer celles qui le sont déjà. Seulement avec "
             "« Couleurs retravaillées ».",
-            choix=tuple(v for v, _ in VIVACITES), zero="Aucune", etiquettes=VIVACITES,
+            choix=tuple(v for v, _ in VIVACITES), zero="Aucune", etiquettes=VIVACITES, chiffre=True,
             onglet="image", se_voit=True, depend_de="couleurs"),
     Reglage("contraste", "Accio.Graphics", "Contrast",
             "Contraste",
             "Creuse l'écart entre zones claires et sombres. Seulement avec « Couleurs "
             "retravaillées ».",
             choix=tuple(v for v, _ in CONTRASTES), zero="D'origine", etiquettes=CONTRASTES,
-            onglet="image", se_voit=True, depend_de="couleurs"),
+            chiffre=True, onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
     # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
     # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
@@ -386,7 +389,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel.",
             choix=(1, 0.6, 0.4, 0.2, 0), zero="Gris",
             etiquettes=((0.6, "Légèrement vert"), (0.4, "Vert"), (0.2, "Très vert"),
-                        (0, "Vert du jeu")),
+                        (0, "Vert du jeu")), chiffre=True,
             onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, le ciel ([Accio.Graphics] SkyMode, SkyHour, SkyColor de source/sky.h du
     # correctif), vu en jeu le 2026-10-26 ; relu dans la seconde, partie en cours

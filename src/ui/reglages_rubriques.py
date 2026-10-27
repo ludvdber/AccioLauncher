@@ -85,8 +85,14 @@ _GROUPES_EFFETS = (
     ("Contours", ("lissage", "nettete", "anticrenelage", "anticrenelage_transparence",
                   "surechantillonnage")),
     ("Textures", ("filtrage", "textures_lointaines", "feuillage_lointain")),
-    ("Lumière et ombres", ("occlusion", "ombres_nettes", "halo", "rayons", "brouillard")),
-    ("Couleurs", ("couleurs", "vivacite", "contraste")),
+    ("Lumière et ombres", ("occlusion", "ombres_nettes", "halo", "rayons")),
+)
+# « Ambiance » : ce qui CHANGE le style d'origine au lieu de l'affiner (Ludo,
+# 2026-10-27 : « ça n'améliore plus l'existant, ça le modifie »). Rubrique à
+# part sous les préréglages, qui n'y touchent pas.
+_GROUPES_AMBIANCE = (
+    ("Ciel et brouillard", ("ciel", "ciel_heure", "ciel_couleur", "brouillard")),
+    ("Couleurs", ("couleurs", "vivacite", "contraste", "vert_relief")),
 )
 _RESSOURCES = {"GPU": "Carte graphique (GPU)", "CPU": "Processeur (CPU)", "RAM": "Mémoire (RAM)"}
 _NIVEAUX = {1: "faible", 2: "moyenne", 3: "extrême"}
@@ -124,6 +130,57 @@ class RubriquesDuJeu:
             h.addWidget(badge)
         h.addStretch()
         return ligne
+
+    def _entete_ambiance(self) -> QWidget:
+        """Le surtitre, et ce qui distingue ces réglages des effets."""
+        entete = QWidget()
+        entete.setStyleSheet("background: transparent;")
+        v = QVBoxLayout(entete)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(4)
+        v.addWidget(surtitre(tr("Ambiance")))
+        explication = self._petit(tr("Change le style d'origine du jeu au lieu de l'affiner."))
+        explication.setWordWrap(True)
+        v.addWidget(explication)
+        return entete
+
+    def _effets_par_familles(self, reglages, groupes) -> QWidget:
+        """Une carte d'effets rangés par familles nommées (« Chaque effet », « Ambiance »)."""
+        # Ici : reglages_widgets importe déjà ce module.
+        from src.ui.reglages_widgets import _CarteEffets
+        carte = _CarteEffets()
+        restants = list(reglages)
+        familles = []
+        for nom, idents in groupes:
+            # Dans l'ordre de la famille : le ciel avant le brouillard.
+            membres = sorted((r for r in restants if r.ident in idents),
+                             key=lambda r, i=idents: i.index(r.ident))
+            if membres:
+                familles.append((nom, membres))
+                restants = [r for r in restants if r not in membres]
+        if restants:
+            # Un réglage d'image qu'aucune famille ne nomme encore n'est jamais perdu.
+            familles.append(("Autres", restants))
+        for nom, membres in familles:
+            carte.famille(tr(nom))
+            presents = {r.ident for r in membres}
+            for reglage in membres:
+                # Rangé en retrait sous le réglage dont il dépend, s'il est là.
+                self._controle(carte, self._ini, reglage, retrait=reglage.depend_de in presents)
+        self._egaliser(carte)
+        return carte
+
+    @staticmethod
+    def _ajouter_a_la_main(liste: QComboBox, reglage, valeur) -> int:
+        """La valeur posée à la main dans l'ini, rangée entre les crans qui l'encadrent."""
+        # Une ancienne valeur à la main ne reste pas dans la liste à côté de la nouvelle.
+        for i in reversed(range(liste.count())):
+            if liste.itemData(i) not in reglage.choix:
+                liste.removeItem(i)
+        rang = reglages_correctif.rang_a_la_main(reglage, valeur)
+        liste.insertItem(rang, tr("{} (réglé à la main)").format(
+            reglages_correctif.texte_valeur(valeur)), valeur)
+        return rang
 
     @staticmethod
     def _section(corps: QVBoxLayout, entete: QWidget | None, contenu: QWidget) -> None:

@@ -83,6 +83,7 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     _COULEUR_NOTE,
     _LIEN_STYLE,
     _GROUPES_EFFETS,
+    _GROUPES_AMBIANCE,
     _RESSOURCES,
     _NIVEAUX,
     _A_VENIR,
@@ -387,7 +388,10 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         colonne.setContentsMargins(0, 0, 0, 0)
         colonne.setSpacing(0)
         self._section_correctif(colonne, "affichage", titre=tr("Affichage"))
-        qualite = [r for r in self._reglages if r.onglet == "image"]
+        image = [r for r in self._reglages if r.onglet == "image"]
+        idents_ambiance = {i for _nom, idents in _GROUPES_AMBIANCE for i in idents}
+        ambiance = [r for r in image if r.ident in idents_ambiance]
+        qualite = [r for r in image if r.ident not in idents_ambiance]
         droite = None
         if qualite:
             self._prereglages = reglages_correctif.prereglages_du_jeu(qualite)
@@ -398,10 +402,14 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             v = QVBoxLayout(droite)
             v.setContentsMargins(0, 0, 0, 0)
             v.setSpacing(0)
-            carte = self._effets_par_familles(qualite)
+            carte = self._effets_par_familles(qualite, _GROUPES_EFFETS)
             self._section(v, self._entete_effets(tr("Chaque effet")), carte)
             v.addStretch()
             self._carte_des_effets = carte
+        if ambiance:
+            self._section(colonne, self._entete_ambiance(),
+                          self._effets_par_familles(ambiance, _GROUPES_AMBIANCE))
+        if image:
             self._maj_dependances()
             self._maj_prereglage()
         colonne.addStretch()
@@ -450,27 +458,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
     def _carte_effets(self) -> _CarteEffets:
         return _CarteEffets()
-
-    def _effets_par_familles(self, qualite) -> _CarteEffets:
-        carte = _CarteEffets()
-        restants = list(qualite)
-        familles = []
-        for nom, idents in _GROUPES_EFFETS:
-            membres = [r for r in restants if r.ident in idents]
-            if membres:
-                familles.append((nom, membres))
-                restants = [r for r in restants if r not in membres]
-        if restants:
-            # Un réglage d'image qu'aucune famille ne nomme encore n'est jamais perdu.
-            familles.append(("Autres", restants))
-        for nom, membres in familles:
-            carte.famille(tr(nom))
-            presents = {r.ident for r in membres}
-            for reglage in membres:
-                # Rangé en retrait sous le réglage dont il dépend, s'il est là.
-                self._controle(carte, self._ini, reglage, retrait=reglage.depend_de in presents)
-        self._egaliser(carte)
-        return carte
 
     def _cartes_prereglages(self) -> QWidget:
         """Légère · Équilibrée · Maximale · Sur mesure, en cartes de deux sur deux."""
@@ -730,9 +717,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if isinstance(widget, QComboBox):
             index = widget.findData(etat.valeur)
             if index < 0:
-                widget.addItem(tr("{} (réglé à la main)").format(
-                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
-                index = widget.count() - 1
+                index = self._ajouter_a_la_main(widget, reglage, etat.valeur)
             widget.setCurrentIndex(index)
         else:
             widget.setChecked(bool(etat.valeur))
@@ -835,8 +820,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if etat.personnalise:
                 # Une valeur posée à la main dans l'ini : la montrer telle
                 # quelle plutôt que d'afficher un choix qui n'est pas le sien.
-                choix.addItem(tr("{} (réglé à la main)").format(
-                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
+                self._ajouter_a_la_main(choix, reglage, etat.valeur)
             choix.setCurrentIndex(max(0, choix.findData(etat.valeur)))
             choix.currentIndexChanged.connect(
                 lambda _i, c=choix, r=reglage: self._on_reglage(r, c.currentData(), c))
