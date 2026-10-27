@@ -67,8 +67,12 @@ jobs:
       # --cov : couverture visible à chaque run (85 % mesurés le 2026-10-08),
       # plancher bas à 83 % : il arrête une chute, pas un écart de quelques
       # lignes (ACT-016).
+      # -n 4 --dist loadfile : les 4 cœurs du runner, chaque fichier de tests
+      # entier sur un même cœur (l'état partagé d'un module reste dans son
+      # processus). Mesuré en local le 2026-10-27 : toute la suite en 90 s,
+      # 5 min sur un cœur en CI.
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short --timeout=60 --cov=src --cov=main --cov-report=term --cov-fail-under=83
+        run: python -m pytest -v --tb=short --timeout=60 -n 4 --dist loadfile --cov=src --cov=main --cov-report=term --cov-fail-under=83
       # Les tests tournent en offscreen, où Qt ne voit aucune police système et
       # mesure tout en Cinzel. tools/audit_geometrie.py rejoue la mise en page
       # sur la plateforme native, avec les vraies polices de Windows. Il ne
@@ -106,11 +110,15 @@ jobs:
         with:
           python-version: "3.15"
           cache: pip
-      - name: Bibliothèques système Qt (plateforme offscreen)
+      # libpulse0 et libgssapi-krb5-2 : sans elles, QtMultimedia ne se charge
+      # pas et les tests de vraie lecture vidéo sont sautés ici alors que le
+      # job linux de release.yml les installe et les joue. Release #22 du
+      # 2026-10-27 figée sur un test que ce job n'avait jamais lancé.
+      - name: Bibliothèques système Qt (plateforme offscreen, audio)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libdbus-1-3
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libdbus-1-3 libpulse0 libgssapi-krb5-2
       - name: Installer les dépendances
         run: pip install --require-hashes -r .github/requirements/tests.txt
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short --timeout=60
+        run: python -m pytest -v --tb=short --timeout=60 -n 4 --dist loadfile

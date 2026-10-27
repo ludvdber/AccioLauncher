@@ -6,3 +6,5 @@
 # chaque run, et un test bloqué qui meurt en 60 s au lieu de 30 min.
 pytest-cov>=7.1
 pytest-timeout>=2.4
+# Tests répartis sur les 4 cœurs des runners, un fichier de tests par cœur.
+pytest-xdist>=3.8

@@ -126,6 +126,12 @@ jobs:
         env:
           ACCIO_PY: python
           PYTHON_EXE: ${{ steps.python.outputs.python-path }}
+          # Lu par pytest-timeout : un test bloqué meurt en 60 s, sa pile au
+          # journal, au lieu de geler le job jusqu'à son délai (release #22,
+          # le 2026-10-27 : Linux figé à 97 % des tests).
+          PYTEST_TIMEOUT: "60"
+          # Les 4 cœurs du runner pour les tests de build.bat (voir tests.yml).
+          PYTEST_ADDOPTS: "-n 4 --dist loadfile"
         run: |
           $py = Split-Path $env:PYTHON_EXE
           $sys = $env:SystemRoot
@@ -251,6 +257,8 @@ jobs:
       - name: Construire (build.sh)
         env:
           ACCIO_PY: python
+          PYTEST_TIMEOUT: "60"  # voir le job windows
+          PYTEST_ADDOPTS: "-n 4 --dist loadfile"
         run: ./build.sh
 
       # Plafond de taille (ACT-017). Mesuré le 2026-10-07 : 64,54 Mo ; 71 Mo
