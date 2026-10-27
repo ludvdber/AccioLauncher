@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.47",
+  "catalog_version": "0.48",
   "contributors": [
     {
       "name": "ASTeam",
@@ -24,6 +24,18 @@
         },
         "es": {
           "role": "Revisión del español (web y launcher)"
+        }
+      }
+    },
+    {
+      "name": "Homeless",
+      "role": "Soutien du projet",
+      "i18n": {
+        "en": {
+          "role": "Project supporter"
+        },
+        "es": {
+          "role": "Apoyo al proyecto"
         }
       }
     }
