@@ -193,6 +193,25 @@ class TestFenetre:
         assert conf.read_bytes() == CONF.encode()
         assert dlg._controles_graph["graph_vsync"].isChecked()
 
+    def test_avec_un_reglage_du_correctif_l_image_reste(self, qtbot, conf, tmp_path, monkeypatch):
+        """HP3 déclare `son_arriere_plan_hp3` (dinput8.ini) : la page Image garde ses
+        réglages graphiques, et la coupure du son a sa ligne dans « Jeu »."""
+        from src.ui.game_settings_dialog import GameSettingsDialog
+        monkeypatch.setattr(rg.sys, "platform", "win32")
+        (conf.parent / "dinput8.ini").write_bytes(b"[Accio.Window]\r\nMuteInBackground=0\r\n")
+        jeu = GameData.from_dict({
+            "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "d",
+            "executable": "HP3/system/hppoa.exe", "cover_image": "c.jpg",
+            "fix_settings": ["son_arriere_plan_hp3"]})
+        manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
+                                  config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}))
+        d = GameSettingsDialog(jeu, manager, lambda code: True)
+        qtbot.addWidget(d)
+        assert set(d._controles_graph) == set(R)
+        assert "son_arriere_plan_hp3" in d._controles
+        qtbot.mouseClick(d._controles["son_arriere_plan_hp3"], Qt.MouseButton.LeftButton)
+        assert b"MuteInBackground=1\r\n" in (conf.parent / "dinput8.ini").read_bytes()
+
     def test_fichier_en_lecture_seule(self, dlg, conf, monkeypatch):
         def refus(*_a):
             raise OSError("verrouillé")

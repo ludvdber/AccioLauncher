@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.48",
+  "catalog_version": "0.49",
   "contributors": [
     {
       "name": "ASTeam",
@@ -1297,7 +1297,10 @@
         "first": 0
       },
       "display_locked": true,
-      "controller": "yes"
+      "controller": "yes",
+      "fix_settings": [
+        "son_arriere_plan_hp3"
+      ]
     },
     {
       "id": "hp4",

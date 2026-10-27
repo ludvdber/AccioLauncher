@@ -31,6 +31,7 @@ from src.ui.disque import Disque
 from src.ui.fond_sonore import JEU, FondSonore, decouper
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
+from src.ui.telechargement_vgmstream import TelechargementVgmstream
 from src.ui.theme import accent_qcolor, themed
 from src.ui.title_bar import COLLECTIONS
 
@@ -88,6 +89,8 @@ class Mediatheque(QObject):
         self._vus = discographie.charger_vus()
         self._presentes: dict[str, dict[str, cinematiques.Source]] = {}
 
+        # vgmstream, téléchargé à la première écoute de HP5 ou HP6 : la page ne fait que l'écouter.
+        self.vgmstream = TelechargementVgmstream(self)
         self.mini = MiniLecteur(self)
         barre_statut.addPermanentWidget(self.mini)
         # La bande-annonce qui s'entend fait taire la musique ; le son coupé de
@@ -202,6 +205,10 @@ class Mediatheque(QObject):
             compositeur=c.compositeur, annee=c.annee, editeur=c.editeur)
 
     # ── Morceaux ──
+
+    def attend_vgmstream(self, jeu: str) -> bool:
+        """HP5, HP6 sous Windows tant que vgmstream n'est pas téléchargé."""
+        return phonographe.attend_vgmstream(jeu)
 
     def morceaux(self, jeu: str) -> tuple[discographie.Morceau, ...]:
         return self._morceaux.get(jeu, ())

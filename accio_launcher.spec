@@ -221,10 +221,15 @@ def _keep(entry):
         return _sys.platform != "win32"
     if chemin in ("assets/7z/7z.exe", "assets/7z/7z.dll"):
         return _sys.platform == "win32"
-    # vgmstream (musique de HP5 et HP6) : un build Windows, 11 Mo, posé par
-    # build/vgmstream.py, inutile sous Linux, qui prend le `vgmstream-cli` du système.
-    if chemin.startswith("assets/vgmstream/") and chemin.endswith((".exe", ".dll")):
-        return _sys.platform == "win32"
+    # vgmstream (musique de HP5 et HP6) : plus dans l'exe depuis la 1.3.1, le
+    # launcher le télécharge à la première écoute (4,3 Mo compressés gagnés,
+    # src/core/vgmstream.py). Le dossier ne sert qu'aux sources et aux tests.
+    # L'analyse des dépendances en ramenait trois (avcodec, avformat, avutil) à la
+    # RACINE, sous leur seul nom : c'est le chemin SOURCE qui les trahit (mesuré le
+    # 2026-10-28 : 51,2 Mo au lieu des 48,6 attendus).
+    source = str(entry[1]).lower().replace("\\", "/") if len(entry) > 1 else ""
+    if chemin.startswith("assets/vgmstream/") or "/assets/vgmstream/" in source:
+        return False
     if chemin.startswith("pyqt6/qt6/translations"):
         return False
     if "qt6pdf" in chemin:

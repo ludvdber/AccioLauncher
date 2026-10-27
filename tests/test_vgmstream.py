@@ -55,7 +55,7 @@ class TestExecutable:
         pose = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(pose)
         assert pose._a_poser() == []
-        assert {p.name for p in pose.DOSSIER.glob("*.*")} - {"License.txt"} == set(pose.FICHIERS)
+        assert {p.name for p in pose.DOSSIER.glob("*.*")} == set(pose.POSES)
 
     def test_linux_prend_celui_du_systeme(self, monkeypatch):
         monkeypatch.setattr(vgmstream.sys, "platform", "linux")
@@ -135,3 +135,82 @@ class TestMusiqueHp5:
             os.utime(f, (1000 + i, 1000 + i))
         phonographe._elaguer(dossier, dossier / "neuf.wav")
         assert sorted(p.stem for p in dossier.glob("*.wav")) == ["moyen", "neuf"]
+
+
+class TestTelechargement:
+    """Depuis la 1.3.1, vgmstream n'est plus dans l'exe : le zip officiel est posé à la première écoute."""
+
+    @pytest.fixture
+    def faux_zip(self, tmp_path, monkeypatch):
+        import hashlib
+        import io
+        import zipfile
+        contenus = {"vgmstream-cli.exe": b"exe", "libspeex-1.dll": b"dll", "COPYING": b"ISC"}
+        tampon = io.BytesIO()
+        with zipfile.ZipFile(tampon, "w") as zf:
+            for nom, octets in contenus.items():
+                zf.writestr(nom, octets)
+        archive = tmp_path / "vgmstream-win64.zip"
+        archive.write_bytes(tampon.getvalue())
+
+        def h(b: bytes) -> str:
+            return hashlib.sha256(b).hexdigest()
+        monkeypatch.setattr(vgmstream, "FICHIERS", {
+            "vgmstream-cli.exe": ("vgmstream-cli.exe", h(b"exe")),
+            "libspeex-1.dll": ("libspeex-1.dll", h(b"dll")),
+            "COPYING": ("License.txt", h(b"ISC")),
+        })
+        monkeypatch.setattr(vgmstream, "EMPREINTE_ZIP", h(tampon.getvalue()))
+        dossier = tmp_path / "_Launcher" / "outils" / "vgmstream-r2117"
+        monkeypatch.setattr(vgmstream, "dossier_installe", lambda: dossier)
+        return archive, dossier
+
+    def test_pose_verifiee_avec_sa_licence(self, faux_zip):
+        archive, dossier = faux_zip
+        assert vgmstream.installer(archive)
+        assert sorted(p.name for p in dossier.iterdir()) == ["License.txt", "libspeex-1.dll", "vgmstream-cli.exe"]
+        assert (dossier / "License.txt").read_bytes() == b"ISC"
+        assert not dossier.with_name(dossier.name + ".accio-tmp").exists()
+
+    def test_zip_altere_rien_n_est_pose(self, faux_zip, monkeypatch):
+        archive, dossier = faux_zip
+        monkeypatch.setattr(vgmstream, "EMPREINTE_ZIP", "0" * 64)
+        assert not vgmstream.installer(archive)
+        assert not dossier.exists()
+
+    def test_fichier_altere_rien_n_est_pose(self, faux_zip, monkeypatch):
+        archive, dossier = faux_zip
+        fichiers = dict(vgmstream.FICHIERS)
+        fichiers["libspeex-1.dll"] = ("libspeex-1.dll", "0" * 64)
+        monkeypatch.setattr(vgmstream, "FICHIERS", fichiers)
+        assert not vgmstream.installer(archive)
+        assert not dossier.exists()
+
+    def test_une_pose_remplace_la_precedente(self, faux_zip):
+        archive, dossier = faux_zip
+        dossier.mkdir(parents=True)
+        (dossier / "ancien.dll").write_bytes(b"x")
+        assert vgmstream.installer(archive)
+        assert not (dossier / "ancien.dll").exists()
+
+    def test_le_telecharge_passe_avant_les_sources(self, faux_zip, monkeypatch):
+        archive, dossier = faux_zip
+        monkeypatch.setattr(vgmstream.sys, "platform", "win32")
+        assert vgmstream.installer(archive)
+        assert vgmstream.executable() == dossier / "vgmstream-cli.exe"
+        assert not vgmstream.a_telecharger()
+
+    def test_sans_rien_hp5_attend_le_telechargement(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(vgmstream.sys, "platform", "win32")
+        monkeypatch.setattr(vgmstream, "dossier_installe", lambda: tmp_path / "rien")
+        monkeypatch.setattr(vgmstream, "_base", lambda: tmp_path)
+        assert vgmstream.a_telecharger()
+        assert phonographe.attend_vgmstream("hp5") and phonographe.attend_vgmstream("hp6")
+        assert not phonographe.attend_vgmstream("hp4")
+
+    def test_les_empreintes_du_module_sont_celles_de_la_release(self):
+        """La source unique : le script des sources pose ce que le launcher télécharge."""
+        assert len(vgmstream.FICHIERS) == 13
+        assert vgmstream.FICHIERS["COPYING"][0] == "License.txt"
+        assert vgmstream.URL.endswith("/r2117/vgmstream-win64.zip")
+        assert 4_000_000 < vgmstream.TAILLE_ZIP < 5_000_000

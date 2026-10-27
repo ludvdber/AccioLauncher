@@ -518,6 +518,32 @@ class TestCommandesMusique:
         assert not page._ouvrir_dossier.isVisibleTo(page)
 
 
+class TestVgmstreamALaDemande:
+    """1.3.1 : HP5 et HP6 sans vgmstream montrent son poids et un bouton, pas une liste muette."""
+
+    def test_le_bouton_dit_le_poids_puis_la_liste_revient(self, fenetre_avec_jeux, monkeypatch):
+        from src.core.i18n import tr
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp2")
+        page = win._pages.page._musique
+        attend = {"oui": True}
+        monkeypatch.setattr(win._mediatheque, "attend_vgmstream", lambda jeu: attend["oui"])
+        lances = []
+        monkeypatch.setattr(win._mediatheque.vgmstream, "lancer", lambda: lances.append(1))
+        page.montrer("hp2")
+        assert page._bouton_lecteur.isVisibleTo(page) and not page._carte.isVisibleTo(page)
+        assert page._bouton_lecteur.text() == tr("Télécharger ({})").format("4,3 " + tr("Mo"))
+        page._bouton_lecteur.click()
+        assert lances == [1] and not page._bouton_lecteur.isEnabled()
+        win._mediatheque.vgmstream.progression.emit(42)
+        assert "42" in page._bouton_lecteur.text()
+        win._mediatheque.vgmstream.termine.emit(False)
+        assert page._bouton_lecteur.isEnabled() and "connexion" in page._vide.text()
+        attend["oui"] = False
+        win._mediatheque.vgmstream.termine.emit(True)
+        assert not page._bouton_lecteur.isVisibleTo(page) and page._carte.isVisibleTo(page)
+
+
 class TestChangerDeJeuViteNeMelangeRien:
     def test_les_rangees_du_jeu_precedent_ne_restent_pas_peintes(self, fenetre_avec_jeux, qtbot):
         """Vu à l'audit du 2026-10-24 : les listes de trois jeux peintes les

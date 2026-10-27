@@ -179,6 +179,15 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "jeu. Un son que vous avez coupé vous-même dans le mélangeur de Windows le reste. "
             "Compte au prochain lancement du jeu.",
             defaut=False),
+    # Le même pour HP3 (dinput8.ini), sous un AUTRE identifiant : un launcher 1.3.0
+    # masquait toute la page Image de HP3 dès qu'un réglage du correctif y était
+    # déclaré. Il ignore un identifiant qu'il ne connaît pas (2026-10-28).
+    Reglage("son_arriere_plan_hp3", "Accio.Window", "MuteInBackground",
+            "Couper le son quand le jeu est derrière",
+            "Le son du jeu se coupe quand une autre fenêtre passe devant et revient avec le "
+            "jeu. Un son que vous avez coupé vous-même dans le mélangeur de Windows le reste. "
+            "Compte au prochain lancement du jeu.",
+            defaut=False),
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
             "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins"

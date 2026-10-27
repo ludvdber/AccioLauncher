@@ -136,10 +136,11 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._ini: Path | None = (reglages_correctif.ini_du_correctif(
             manager.config.install_path / Path(game.executable).parent) if declares else None)
         self._reglages = reglages_correctif.portes_par(self._ini, declares)
-        # HP3 : pas de correctif, mais le fichier de son traducteur D3D8 (`reglages_graphiques`).
+        # HP3 : l'image passe par son traducteur D3D8 (`reglages_graphiques`), le
+        # reste par son correctif (dinput8.ini) ; les deux cohabitent depuis le
+        # 2026-10-28 (déclarer `son_arriere_plan` masquait toute la page Image).
         conf = reglages_graphiques.chemin(manager.config.install_path / Path(game.executable).parent)
-        self._conf_graph: Path | None = (
-            conf if not self._reglages and reglages_graphiques.disponible(conf) else None)
+        self._conf_graph: Path | None = conf if reglages_graphiques.disponible(conf) else None
         self._controles_graph: dict[str, QWidget] = {}
         self._erreur: QLabel | None = None
         self._compte_captures: QLabel | None = None

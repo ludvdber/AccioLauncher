@@ -146,6 +146,8 @@ jobs:
       # Relevé à 56 Mo pour la 1.3.0 (2026-10-27) : 43,09 Mo en 1.2.3, 52,90 Mo en 1.3.0. Voulu :
       # vgmstream, la musique de HP5 et HP6 (4,3 Mo compressés), médailles, polices et données des
       # Collections (1,8 Mo), le reste : code neuf, Python 3.15, truststore. Environ +6 % de marge.
+      # 1.3.1 : vgmstream sort de l'exe (téléchargé à la première écoute) : 48,40 Mo mesurés en local
+      # le 2026-10-28. Le plafond reste à 56 jusqu'à la mesure du build de la CI.
       - name: Plafond de taille de l'exécutable
         shell: pwsh
         run: |

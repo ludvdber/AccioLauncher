@@ -245,6 +245,14 @@ def _message(contenu: str) -> QLabel:
     return texte(contenu, 15, "#c9c7da", retour=True)
 
 
+def _poids_vgmstream() -> str:
+    """« 4,3 Mo » : le poids du zip annoncé avant de le télécharger (même unité que les jeux)."""
+    from src.core import vgmstream
+    from src.core.i18n import decimal_separator
+    mo = f"{vgmstream.TAILLE_ZIP / (1024 * 1024):.1f}".replace(".", decimal_separator())
+    return f"{mo} {tr('Mo')}"
+
+
 class _Barre(QWidget):
     """L'avancement du jeu, avec le repère des 75 % où tout s'ouvre."""
 
@@ -397,13 +405,36 @@ class _VueMusique(QWidget):
         # après l'avoir quittée, 2026-10-24). `detacher` coupe aussi, à la fermeture.
         self._fond.change.connect(self._rafraichir)
         self._fond.son_coupe_change.connect(self._sur_son_coupe)
+        media.vgmstream.progression.connect(self._sur_progression_lecteur)
+        media.vgmstream.termine.connect(self._sur_lecteur_pose)
 
     def _sur_son_coupe(self, _coupe: bool) -> None:
         self._rafraichir()
 
+    # ── vgmstream, téléchargé à la première écoute de HP5 ou HP6 ──
+
+    def _telecharger_lecteur(self) -> None:
+        self._bouton_lecteur.setEnabled(False)
+        self._media.vgmstream.lancer()
+
+    def _sur_progression_lecteur(self, pct: int) -> None:
+        self._bouton_lecteur.setEnabled(False)
+        self._bouton_lecteur.setText(tr("Téléchargement… {} %").format(pct))
+
+    def _sur_lecteur_pose(self, ok: bool) -> None:
+        if ok:
+            self.montrer(self._jeu)
+            return
+        self._bouton_lecteur.setEnabled(True)
+        self._bouton_lecteur.setText(tr("Réessayer ({})").format(_poids_vgmstream()))
+        self._vide.setText(tr("Le téléchargement n'a pas abouti. Vérifiez votre connexion, "
+                              "puis réessayez."))
+
     def detacher(self) -> None:
         for signal, slot in ((self._fond.change, self._rafraichir),
-                             (self._fond.son_coupe_change, self._sur_son_coupe)):
+                             (self._fond.son_coupe_change, self._sur_son_coupe),
+                             (self._media.vgmstream.progression, self._sur_progression_lecteur),
+                             (self._media.vgmstream.termine, self._sur_lecteur_pose)):
             try:
                 signal.disconnect(slot)
             except TypeError:
@@ -529,6 +560,10 @@ class _VueMusique(QWidget):
         self._vide = _message("")
         self._vide.hide()
         lay.addWidget(self._vide)
+        self._bouton_lecteur = bouton("", principal=True)
+        self._bouton_lecteur.clicked.connect(self._telecharger_lecteur)
+        self._bouton_lecteur.hide()
+        lay.addWidget(self._bouton_lecteur, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self._carte = QFrame()
         self._carte.setObjectName("carteJeu")
@@ -577,11 +612,25 @@ class _VueMusique(QWidget):
         media = self._media
         morceaux = media.morceaux(jeu)
         a_de_la_musique = jeu in {g.id for g in media.jeux(MUSIQUE)}
+        attend = a_de_la_musique and media.attend_vgmstream(jeu)
         for w in (self._carte, self._zone, self._credit_jeu):
-            w.setVisible(a_de_la_musique)
-        self._vide.setVisible(not a_de_la_musique)
-        self._stretch_vide.setVisible(not a_de_la_musique)
+            w.setVisible(a_de_la_musique and not attend)
+        self._vide.setVisible(not a_de_la_musique or attend)
+        self._stretch_vide.setVisible(not a_de_la_musique or attend)
+        self._bouton_lecteur.setVisible(attend)
         self._lignes = []
+        if attend:
+            # Un téléchargement à la demande dit son poids (règle du « coché d'avance ») ;
+            # celui déjà en cours, ouvert depuis une autre page, garde son bouton éteint.
+            self._paquets.remplir([])
+            self._vide.setText(tr("La musique de {} se lit avec vgmstream, un petit outil libre "
+                                  "à télécharger une seule fois.").format(media.nom(jeu)))
+            en_cours = media.vgmstream.en_cours
+            self._bouton_lecteur.setEnabled(not en_cours)
+            self._bouton_lecteur.setText(tr("Téléchargement…") if en_cours else
+                                         tr("Télécharger ({})").format(_poids_vgmstream()))
+            self._rafraichir()
+            return
         if not a_de_la_musique:
             self._paquets.remplir([])
             self._vide.setText(
@@ -998,8 +1047,15 @@ class _VueCinematiques(QWidget):
             self._voix.play()
         self._courante = fichier
         self._titre.setText(titre)
-        self._note.setText(tr("Le son de cette cinématique est encore en cours de déchiffrement.")
-                           if self._media.sans_son(jeu) and voix is None else self._media.nom(jeu))
+        if voix is None and self._media.attend_vgmstream(jeu):
+            # HP5, HP6 : le son est là, c'est vgmstream qui manque (1.3.1).
+            note = tr("Le son de cette cinématique se lit avec vgmstream : téléchargez-le une fois "
+                      "depuis la Musique de ce jeu.")
+        elif voix is None and self._media.sans_son(jeu):
+            note = tr("Le son de cette cinématique est encore en cours de déchiffrement.")
+        else:
+            note = self._media.nom(jeu)
+        self._note.setText(note)
         for ligne in self._lignes:
             ligne.marquer(ligne.fichier == fichier)
         self._etat_commandes()

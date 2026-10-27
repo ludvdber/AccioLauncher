@@ -97,6 +97,11 @@ def _dossier_musique(dossier_jeu: Path, nom: str) -> Path | None:
     return None
 
 
+def attend_vgmstream(jeu: str) -> bool:
+    """La musique de ce jeu (HP5, HP6) ne se lit qu'une fois vgmstream téléchargé."""
+    return jeu in _A_CONVERTIR and vgmstream.a_telecharger()
+
+
 def pistes(jeu: str, dossier_jeu: Path | None) -> list[Piste]:
     """Les morceaux d'un jeu installé, triés par nom ; vide si rien à lire."""
     if dossier_jeu is not None and jeu in _ARCHIVES:
