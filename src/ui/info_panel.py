@@ -19,7 +19,7 @@ from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, lire_resume, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
-from src.core.formatting import format_size
+from src.core.formatting import format_duree_compacte, format_size
 
 # Largeurs de CONFORT, toujours rabotées à la place réelle : figées, elles
 # débordaient sous ~1100 px de fenêtre.
@@ -35,6 +35,24 @@ _HAUTEUR_SLACK = 8
 # Écart entre le bouton principal et la ligne « JOUABLE À LA MANETTE · VERSION 1.3 ».
 _ECART_INDICES = 12
 _HAUTEUR_ECART_PLEIN = 760
+
+
+def _colonne_stat(libelle: str, valeur: QLabel) -> QWidget:
+    """« TEMPS DE JEU » au-dessus de « 14 h 22 » : le libellé petit et gris,
+    la valeur lisible."""
+    col = QWidget()
+    col.setStyleSheet("background: transparent;")
+    boite = QVBoxLayout(col)
+    boite.setContentsMargins(0, 0, 0, 0)
+    boite.setSpacing(3)
+    haut = QLabel(libelle.upper())
+    haut.setFont(cinzel(8, bold=True))
+    haut.setStyleSheet("color: #8f8db0; letter-spacing: 2px;")
+    valeur.setFont(body_font(15))
+    valeur.setStyleSheet("color: #f2f2f4;")
+    boite.addWidget(haut)
+    boite.addWidget(valeur)
+    return col
 
 
 def _insecable(texte: str) -> str:
@@ -299,23 +317,30 @@ class InfoPanel(QWidget):
         self._derniere.setWordWrap(True)
         self._derniere.setTextFormat(Qt.TextFormat.RichText)
         self._derniere.setStyleSheet("QLabel { color: #f2f2f4; background: transparent; }")
-        # De l'air avant la description qui peut suivre (HP4 à HP8) : collée,
-        # elle se lisait comme la suite de la phrase.
-        self._derniere.setContentsMargins(0, 0, 0, 10)
         self._derniere.hide()
         lay.addWidget(self._derniere)
 
-        # Le bloc du folio, épinglé AU-DESSUS du bouton (add_bottom_widget) :
-        # la partie d'abord, puis ce qui la reprend (Ludo, 2026-10-27). Le
-        # galet « Collections » qui le suivait est devenu un bouton à côté de
-        # l'engrenage (`ActionPanel.medias_clicked`).
+        # Le bloc du folio et le temps de jeu à sa droite, épinglés AU-DESSUS
+        # du bouton (add_bottom_widget) : la partie d'abord, puis ce qui la
+        # reprend, en pyramide inversée (Ludo, 2026-10-27). Le temps de jeu
+        # était à droite des boutons, où il passait dessous faute de place ;
+        # le galet « Collections » est devenu un bouton à côté de l'engrenage
+        # (`ActionPanel.medias_clicked`).
         self._bloc = BlocFolio()
         self._bloc.clicked.connect(self.folio_clicked)
         self._bloc_hote = QWidget()
         hote = QHBoxLayout(self._bloc_hote)
         hote.setContentsMargins(0, 0, 0, 12)
-        hote.setSpacing(10)
+        hote.setSpacing(18)
         hote.addWidget(self._bloc, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._filet_temps = QWidget()
+        self._filet_temps.setFixedSize(1, 40)
+        self._filet_temps.setStyleSheet("background: rgba(255,255,255,0.14);")
+        hote.addWidget(self._filet_temps, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._temps_jeu = QLabel()
+        self._temps = _colonne_stat(tr("Temps de jeu"), self._temps_jeu)
+        self._temps.setObjectName("statsJeu")
+        hote.addWidget(self._temps, 0, Qt.AlignmentFlag.AlignVCenter)
         hote.addStretch()
         self._bloc_hote.hide()
 
@@ -625,7 +650,16 @@ class InfoPanel(QWidget):
                                   or session is not None)
         if session is not None:
             self._derniere.setText(phrase_derniere_partie(session, ""))
-        self._bloc_hote.setVisible(resume is not None)
+        secondes = (self._manager.get_playtime(game.id)
+                    if game is not None and self._manager.is_installed(game.id) else 0)
+        self._bloc.setVisible(resume is not None)
+        self._temps.setVisible(secondes > 0)
+        self._filet_temps.setVisible(resume is not None and secondes > 0)
+        if secondes > 0:
+            self._temps_jeu.setText(format_duree_compacte(secondes))
+        self._bloc_hote.setVisible(resume is not None or secondes > 0)
+        # L'air sous « Dernière partie » ne sert qu'avant une description.
+        self._derniere.setContentsMargins(0, 0, 0, 10 if description else 0)
         if resume is None and avancee is not None and avancee.avancement is not None:
             self._derniere.setText(phrase_derniere_partie(
                 datetime.fromtimestamp(avancee.modifie),
@@ -663,10 +697,10 @@ class InfoPanel(QWidget):
         manette » en toutes lettres. Le libellé complet est en infobulle."""
         if game.controller == "no":
             return _insecable(escape(tr("Sans manette"), quote=False))
-        image = _image_en_ligne("#b4b4d0", self.devicePixelRatioF())
-        if game.controller == "partial":
-            return image + "&nbsp;" + _insecable(escape(tr("en partie"), quote=False))
-        return image
+        # « En partie » (HP2) n'est plus écrit à côté : il alourdissait la
+        # ligne pour un détail de la fenêtre de démarrage (Ludo, 2026-10-27).
+        # La nuance et sa raison restent dans l'infobulle.
+        return _image_en_ligne("#b4b4d0", self.devicePixelRatioF())
 
     def _refresh_indices(self, game: GameData) -> None:
         """Sous le bouton, le seul lien vers la partie : « À propos du jeu »

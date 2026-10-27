@@ -1140,16 +1140,8 @@ class MediathequePage(QDialog):
         e = QVBoxLayout(entete)
         e.setContentsMargins(40, 18, 40, 14)
         e.setSpacing(0)
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self.accept)
-        e.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-        e.addSpacing(8)
+        # Pas de « ← Bibliothèque » : l'onglet du haut le dit déjà, et Échap
+        # ferme la page (Ludo, 2026-10-27 : « retire le bibliothèque répété »).
         e.addWidget(surtitre(tr("Ce que les jeux contiennent")))
         e.addSpacing(4)
         # Les rubriques juste après le titre, comme au Carnet (audit du 2026-10-24).

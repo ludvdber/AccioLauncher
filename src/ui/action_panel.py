@@ -16,7 +16,7 @@ from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import ECART_DETAIL, GlowButton, TAILLE_ICONE, ECART_ICONE
 from src.ui.icon_button import IconButton
 from src.core.formatting import (
-    format_duree_compacte, format_size,
+    format_size,
 )
 from src.ui.theme import current as palette_courante, themed
 from src.ui.utils import clear_layout
@@ -44,25 +44,6 @@ def _police_action():
     police = body_font(15)
     police.setBold(True)
     return police
-
-
-def _colonne_stat(libelle: str, valeur: str) -> QWidget:
-    """« TEMPS DE JEU » au-dessus de « 14 h 22 » : le libellé petit et gris,
-    la valeur lisible. Une colonne par fait, posées côte à côte."""
-    col = QWidget()
-    col.setStyleSheet("background: transparent;")
-    boite = QVBoxLayout(col)
-    boite.setContentsMargins(0, 0, 0, 0)
-    boite.setSpacing(3)
-    haut = QLabel(libelle.upper())
-    haut.setFont(cinzel(8, bold=True))
-    haut.setStyleSheet("color: #8f8db0; letter-spacing: 2px;")
-    bas = QLabel(valeur)
-    bas.setFont(body_font(15))
-    bas.setStyleSheet("color: #f2f2f4;")
-    boite.addWidget(haut)
-    boite.addWidget(bas)
-    return col
 
 
 class ActionPanel(QWidget):
@@ -125,20 +106,6 @@ class ActionPanel(QWidget):
         self._action_layout.setSpacing(14)
         self._action_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._layout.addWidget(self._action_container)
-
-        # Temps de jeu et dernière session, À DROITE des boutons quand la place
-        # le permet (maquette piste A), sinon sur leur propre ligne en dessous.
-        # Recréées à chaque `refresh`, déplacées sans être détruites au
-        # redimensionnement (_placer_stats).
-        self._stats: QWidget | None = None
-        self._separateur: QWidget | None = None
-        self._stats_dessous = QWidget()
-        self._stats_dessous.setStyleSheet("background: transparent;")
-        self._stats_dessous_layout = QHBoxLayout(self._stats_dessous)
-        self._stats_dessous_layout.setContentsMargins(0, 2, 0, 0)
-        self._stats_dessous_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._stats_dessous.hide()
-        self._layout.addWidget(self._stats_dessous)
 
         # Ligne de mise à jour
         self._update_row = QWidget()
@@ -206,20 +173,11 @@ class ActionPanel(QWidget):
         if self._alert.isVisible():
             self._alert.ajuster_hauteur()
         self._fit_coming_soon_note()
-        self._placer_stats()
 
     def refresh(self) -> None:
         """Reconstruit le panneau selon l'état courant du jeu."""
         self._clear_layout(self._action_layout)
-        # Séparateur hors de tout layout quand les stats sont dessous : le
-        # vider des layouts ne le détruirait pas.
-        if self._separateur is not None and self._action_layout.indexOf(self._separateur) < 0:
-            self._separateur.deleteLater()
         self._clear_layout(self._update_row_layout)
-        self._clear_layout(self._stats_dessous_layout)
-        self._stats_dessous.hide()
-        self._stats = None
-        self._separateur = None
         self._update_row.hide()
         self._carte = None
         self._coming_soon_note = None
@@ -478,7 +436,6 @@ class ActionPanel(QWidget):
         self._action_layout.addWidget(btn_reglages)
         self._btn_reglages = btn_reglages
         self._ajouter_medias()
-        self._construire_stats()
 
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"
@@ -510,61 +467,6 @@ class ActionPanel(QWidget):
                                  "captures du jeu"))
         btn.clicked.connect(self.medias_clicked)
         self._action_layout.addWidget(btn)
-
-    def _construire_stats(self) -> None:
-        """Le temps de jeu, seulement pour un jeu déjà joué (règle 107), à
-        droite de l'engrenage pour TOUS les jeux (Ludo, 2026-10-27). La date de
-        la dernière session n'est plus une colonne ici : elle est dans la ligne
-        « Dernière partie » de la fiche (`InfoPanel`), une seule fois."""
-        secondes = self._manager.get_playtime(self._game.id)
-        if secondes <= 0:
-            return
-        stats = QWidget()
-        stats.setObjectName("statsJeu")
-        stats.setStyleSheet("background: transparent;")
-        rang = QHBoxLayout(stats)
-        rang.setContentsMargins(0, 0, 0, 0)
-        rang.setSpacing(26)
-        rang.addWidget(_colonne_stat(tr("Temps de jeu"), format_duree_compacte(secondes)))
-        self._separateur = QWidget()
-        self._separateur.setFixedSize(1, 40)
-        self._separateur.setStyleSheet("background: rgba(255,255,255,0.14);")
-        self._stats = stats
-        self._placer_stats()
-
-    def _placer_stats(self) -> None:
-        """À droite des boutons si la rangée tient dans la largeur, dessous sinon.
-
-        Déplacées, pas reconstruites : un `refresh` à chaque redimensionnement
-        rebâtirait les boutons et volerait le focus de la manette.
-        """
-        if self._stats is None or self._separateur is None:
-            return
-        rangee = self._action_layout
-        a_droite = rangee.indexOf(self._stats) >= 0
-        largeur = self.width()
-        boutons = sum(rangee.itemAt(i).widget().width()
-                      for i in range(rangee.count())
-                      if rangee.itemAt(i).widget() not in (self._stats, self._separateur))
-        besoin = (boutons + self._stats.sizeHint().width() + self._separateur.width()
-                  + 4 * rangee.spacing())
-        veut_droite = largeur <= 0 or besoin <= largeur
-        dessous = self._stats_dessous_layout.indexOf(self._stats) >= 0
-        if (veut_droite and a_droite) or (not veut_droite and dessous):
-            return
-        rangee.removeWidget(self._separateur)
-        rangee.removeWidget(self._stats)
-        self._stats_dessous_layout.removeWidget(self._stats)
-        if veut_droite:
-            rangee.addWidget(self._separateur, 0, Qt.AlignmentFlag.AlignVCenter)
-            rangee.addWidget(self._stats, 0, Qt.AlignmentFlag.AlignVCenter)
-            self._separateur.show()
-            self._stats_dessous.hide()
-        else:
-            self._separateur.hide()
-            self._stats_dessous_layout.addWidget(self._stats)
-            self._stats_dessous.show()
-        self._stats.show()
 
     @staticmethod
     def _clear_layout(layout) -> None:

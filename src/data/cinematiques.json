@@ -24,24 +24,6 @@
      "s": 0
     },
     {
-     "f": "HourGlassBac",
-     "t": {
-      "fr": "Le sablier des maisons",
-      "en": "The house points hourglasses",
-      "es": "Los relojes de arena de las casas"
-     },
-     "s": 0
-    },
-    {
-     "f": "LoadLevel",
-     "t": {
-      "fr": "L'écran de chargement",
-      "en": "The loading screen",
-      "es": "La pantalla de carga"
-     },
-     "s": 0
-    },
-    {
      "f": "eag_1920",
      "t": {
       "fr": "Logo Electronic Arts",

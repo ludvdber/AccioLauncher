@@ -16,7 +16,7 @@ from src.core import sauvegardes, succes
 from src.core.i18n import tr
 from src.ui.composants import feuille_de_style
 from src.ui.medailles import pixmap_medaille
-from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte, _titre_section
+from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
 from src.ui.succes_widgets import _jour
 from src.ui.theme import themed
 
@@ -88,7 +88,7 @@ class DefisPage(QWidget):
         zone.setWidget(corps)
         racine.addWidget(zone)
 
-        lay.addWidget(_titre_section(tr("Défis")))
+        # Pas de titre « Défis » : la rubrique choisie en haut le dit déjà.
         if not definitions:
             lay.addWidget(_Paragraphe(tr("Ce jeu n'a pas encore de défis."), taille=14))
             lay.addStretch()

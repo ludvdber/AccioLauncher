@@ -41,12 +41,10 @@ class TestDialogue:
     def test_cinq_rubriques_et_cinq_pages(self, dialogue):
         assert dialogue._nav.count() == dialogue._pages.count() == 5
 
-    def test_bibliotheque_ferme_le_dialogue(self, dialogue, qtbot):
+    def test_pas_de_retour_en_double(self, dialogue, qtbot):
+        """L'onglet Bibliothèque du haut ferme la page : pas de second bouton."""
         from PyQt6.QtWidgets import QPushButton
-        dialogue.show()
-        retour = dialogue.findChild(QPushButton, "retour")
-        with qtbot.waitSignal(dialogue.accepted, timeout=1000):
-            retour.click()
+        assert dialogue.findChild(QPushButton, "retour") is None
 
     def test_le_scan_remplit_la_ligne_et_la_legende(self, dialogue):
         dialogue._on_scan_done(3, 9_800_000_000)

@@ -99,6 +99,11 @@ class Modele3D(QWidget):
         self._face: maillages_ue1.Quat | None = None
         self._minuteur = QTimer(self)
         self._minuteur.setInterval(16)
+        # PRÉCIS : le minuteur grossier de Windows tombe sur sa grille de
+        # 15,6 ms, et une image sur deux arrivait 31 ms après la précédente.
+        # Le modèle tournait par saccades (Ludo, 2026-10-27 : « encore pas
+        # fluide »), comme le minuteur commun des particules (`ticker.py`).
+        self._minuteur.setTimerType(Qt.TimerType.PreciseTimer)
         self._minuteur.timeout.connect(self._avancer)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
 
@@ -226,7 +231,9 @@ class Modele3D(QWidget):
         # Respiration : le modèle monte et descend d'un rien.
         souffle = 0.008 * math.sin(self._phase)
         distance = _DISTANCE
-        focale = min(self.width(), self.height() * 0.9) * distance * 0.95 * self.zoom
+        # 0,82 de la hauteur : dans la grande visionneuse (plus large que haute),
+        # les pieds du gnome touchaient le bord (2026-10-27).
+        focale = min(self.width(), self.height() * 0.82) * distance * 0.95 * self.zoom
         ox, oy = self.width() / 2, self.height() * 0.52
         sortie = []
         for x, y, z in self.points_du_moment():

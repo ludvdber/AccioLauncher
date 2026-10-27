@@ -12,7 +12,7 @@ mouvement.
 
 import math
 
-from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
+from PyQt6.QtCore import QElapsedTimer, QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import (
     QColor,
     QImage,
@@ -43,6 +43,12 @@ class Carte3D(QWidget):
         self._cible = (0.0, 0.0)
         self._minuteur = QTimer(self)
         self._minuteur.setInterval(16)
+        # PRÉCIS : le minuteur grossier de Windows tombe sur sa grille de
+        # 15,6 ms, et une image sur deux arrivait 31 ms après la précédente.
+        # La carte avançait par saccades (Ludo, 2026-10-27 : « encore pas
+        # fluide »), comme le minuteur commun des particules (`ticker.py`).
+        self._minuteur.setTimerType(Qt.TimerType.PreciseTimer)
+        self._horloge = QElapsedTimer()
         self._minuteur.timeout.connect(self._avancer)
 
     def poser(self, image: QImage | None) -> None:
@@ -77,7 +83,12 @@ class Carte3D(QWidget):
         ny = max(-1.0, min(1.0, (point.y() - r.center().y()) / (r.height() / 2)))
         # Le bord sous le pointeur s'enfonce, comme une carte qu'on presse du doigt.
         self._cible = (nx * INCLINAISON, -ny * INCLINAISON)
-        self._minuteur.start()
+        self._demarrer()
+
+    def _demarrer(self) -> None:
+        if not self._minuteur.isActive():
+            self._horloge.start()
+            self._minuteur.start()
 
     def mouseMoveEvent(self, event) -> None:
         self.viser(event.position())
@@ -85,13 +96,17 @@ class Carte3D(QWidget):
 
     def leaveEvent(self, event) -> None:
         self._cible = (0.0, 0.0)
-        self._minuteur.start()
+        self._demarrer()
         super().leaveEvent(event)
 
     def _avancer(self) -> None:
         (ay, ax), (cy, cx) = self.angle, self._cible
-        ay += (cy - ay) * _LISSAGE
-        ax += (cx - ax) * _LISSAGE
+        # Le lissage suit le TEMPS écoulé, pas le nombre de tours : une image
+        # en retard rattrape son retard au lieu de figer la carte.
+        ecoule = self._horloge.restart() if self._horloge.isValid() else 16
+        part = 1.0 - (1.0 - _LISSAGE) ** (max(16, min(ecoule, 100)) / 16.0)
+        ay += (cy - ay) * part
+        ax += (cx - ax) * part
         if abs(cy - ay) < 0.05 and abs(cx - ax) < 0.05:
             ay, ax = cy, cx
             self._minuteur.stop()

@@ -38,8 +38,12 @@ from src.ui.utils import clear_layout, zone_defilable
 _LARGEUR_FICHE = 400
 _IMAGE = QSize(96, 120)          # une carte de HP4 est deux fois plus haute que large
 _ICONE = {encyclopedie.PERSONNAGES: "personnages", encyclopedie.BESTIAIRE: "patte"}
-_SCENE = QSize(340, 400)
-_MARGE_SCENE = 24
+_SCENE_MIN = QSize(320, 320)
+_MARGE_SCENE = 32
+# Avec une visionneuse, la liste tient sur UNE colonne à gauche et le modèle
+# prend toute la place qui reste (Ludo, 2026-10-27 : « plus agréable pour
+# zoomer et apprécier le modèle »).
+_LARGEUR_LISTE = _LARGEUR_FICHE + 80 + 8
 
 ModeleLu = tuple[maillages_ue1.Maillage, dict[str, QImage]]
 
@@ -139,8 +143,8 @@ class _Fiche(QFrame):
 
 
 class _Scene(QFrame):
-    """La fiche choisie en grand, dans la colonne de droite : son modèle qu'on
-    fait tourner, son texte dessous."""
+    """La fiche choisie en grand, dans toute la place à droite de la liste :
+    son modèle qu'on fait tourner, son texte dessous."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -148,15 +152,12 @@ class _Scene(QFrame):
         self.setStyleSheet(themed(
             "QFrame#sceneFiche { background: transparent; border: none;"
             " border-left: 1px solid rgba(214, 167, 44, 0.16); }"))
-        self.setFixedWidth(_SCENE.width() + 2 * _MARGE_SCENE)
-        contenu = QWidget()
-        contenu.setObjectName("transparent")
-        v = QVBoxLayout(contenu)
+        v = QVBoxLayout(self)
         v.setContentsMargins(_MARGE_SCENE, 22, _MARGE_SCENE, 24)
         v.setSpacing(6)
         self.modele = Modele3D()
-        self.modele.setFixedSize(_SCENE)
-        v.addWidget(self.modele)
+        self.modele.setMinimumSize(_SCENE_MIN)
+        v.addWidget(self.modele, stretch=1)
         v.addSpacing(8)
         self._nom = texte("", 18, ENCRE, retour=True)
         self._nom.setFont(cinzel(17, bold=True))
@@ -169,10 +170,6 @@ class _Scene(QFrame):
         v.addSpacing(14)
         v.addWidget(texte(tr("Glisser pour tourner · molette pour zoomer · double-clic pour revenir"),
                           12, ENCRE_DOUCE, retour=True))
-        v.addStretch()
-        racine = QVBoxLayout(self)
-        racine.setContentsMargins(0, 0, 0, 0)
-        racine.addWidget(zone_defilable(contenu))
 
     def montrer(self, fiche: encyclopedie.Fiche, modele: ModeleLu | None) -> None:
         self._nom.setText(dans_la_langue(fiche.nom))
@@ -203,7 +200,8 @@ class VueEncyclopedie(QWidget):
         self._racine = QHBoxLayout(self)
         self._racine.setContentsMargins(0, 0, 0, 0)
         self._racine.setSpacing(0)
-        self._racine.addWidget(zone_defilable(page), stretch=1)
+        self._liste = zone_defilable(page)
+        self._racine.addWidget(self._liste, stretch=1)
         self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="encyclopedie")
         self._attendues: list[tuple[_Fiche, Future]] = []
         self._modeles_attendus: list[tuple[_Fiche, Future]] = []
@@ -231,6 +229,7 @@ class VueEncyclopedie(QWidget):
             self.scene.hide()
             self.scene.deleteLater()
         self.scene = None
+        self._liste_etroite(False)
         self.fiches = []
         clear_layout(self._lay)
         fiches = encyclopedie.fiches(self.rubrique, jeu)
@@ -245,7 +244,7 @@ class VueEncyclopedie(QWidget):
         if dossier is not None and any(f.modele is not None for f in fiches):
             self.scene = _Scene()
             self.scene.hide()               # jusqu'au premier modèle lu
-            self._racine.addWidget(self.scene)
+            self._racine.addWidget(self.scene, stretch=1)
         self._lay.addWidget(texte(compte.format(len(fiches)), 13, ENCRE_DOUCE))
         flux = FlowLayout(spacing=14)
         for fiche in fiches:
@@ -265,10 +264,19 @@ class VueEncyclopedie(QWidget):
         if self._attendues or self._modeles_attendus:
             self._chargeur.start()
 
+    def _liste_etroite(self, oui: bool) -> None:
+        """Une colonne quand la visionneuse est là, toute la largeur sinon."""
+        if oui:
+            self._liste.setFixedWidth(_LARGEUR_LISTE)
+        else:
+            self._liste.setMinimumWidth(0)
+            self._liste.setMaximumWidth(16777215)
+
     def choisir(self, vue: _Fiche) -> None:
         """Montre la fiche en grand, avec son modèle s'il est déjà lu."""
         if self.scene is None:
             return
+        self._liste_etroite(True)
         if self._choisie is not None:
             self._choisie.marquer(False)
         self._choisie = vue

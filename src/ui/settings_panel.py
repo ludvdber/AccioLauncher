@@ -279,16 +279,8 @@ class SettingsDialog(QDialog):
         lay.setContentsMargins(18, 22, 18, 18)
         lay.setSpacing(4)
 
-        # Le chemin du retour dit OÙ il mène : la bibliothèque, pas « Fermer ».
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor(_ENCRE_RUBRIQUE))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.clicked.connect(self.accept)
-        lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-        lay.addSpacing(12)
+        # Pas de « ← Bibliothèque » : l'onglet du haut le dit déjà, et Échap
+        # ferme la page (Ludo, 2026-10-27 : « retire le bibliothèque répété »).
 
         # Sans « Segoe UI » appelée par son NOM : elle n'existe pas sous Linux,
         # et sous `offscreen` Qt lui substitue Cinzel, 22 % plus large.

@@ -144,23 +144,22 @@ class TestHauteurZoneAction:
         )
         return info.height() - premier_widget + marges.top() + marges.bottom()
 
-    def test_les_stats_a_cote_du_bouton_comptent_juste(self, fenetre, qtbot):
-        """Déjà joué et installé : les deux colonnes de statistiques sont à
-        droite du bouton, et la mesure suit la place RÉELLEMENT occupée."""
+    def test_le_temps_de_jeu_au_dessus_du_bouton_compte_juste(self, fenetre, qtbot):
+        """Déjà joué et installé : le temps de jeu est dans la rangée du folio,
+        au-dessus du bouton (Ludo, 2026-10-27), et la mesure suit la place
+        RÉELLEMENT occupée."""
         win = fenetre(temps_de_jeu=70, installe=True)
         info = win._detail._info
-        panneau = win._detail._action_panel
-        assert panneau._stats is not None and panneau._stats.isVisible()
-        assert panneau._action_layout.indexOf(panneau._stats) >= 0, (
-            "à 1250 px, les statistiques tiennent à droite du bouton")
+        qtbot.waitUntil(lambda: info._temps.isVisible(), timeout=2000)
+        assert info._temps_jeu.text() == "1 min"
+        assert info._bloc_hote.y() < win._detail._action_panel.y()
         assert abs(info._hauteur_zone_action() - self._reel(info)) <= 4
 
-    def test_jamais_joue_pas_de_stats(self, fenetre, qtbot):
-        """Jamais joué : aucune colonne, et la mesure colle toujours."""
+    def test_jamais_joue_pas_de_temps(self, fenetre, qtbot):
+        """Jamais joué : rien au-dessus du bouton, et la mesure colle toujours."""
         win = fenetre(installe=True)
         info = win._detail._info
-        assert win._detail._action_panel._stats is None
-        assert not win._detail._action_panel._stats_dessous.isVisible()
+        assert not info._bloc_hote.isVisible()
         assert abs(info._hauteur_zone_action() - self._reel(info)) <= 4
 
 
