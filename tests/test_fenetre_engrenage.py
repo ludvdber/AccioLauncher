@@ -149,8 +149,9 @@ class TestEngrenageReglagesDuJeu:
 
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.INSTALLED)
-        # Un jeu dont le catalogue ne dit pas où écrire la résolution.
-        sans = replace(jeu, resolution=None)
+        # Un jeu dont le catalogue ne dit pas où écrire la résolution, et sans
+        # réglage du correctif (HP1 en déclare depuis le catalogue du 2026-10-27).
+        sans = replace(jeu, resolution=None, fix_settings=())
         dlg = GameSettingsDialog(sans, win.manager, lambda code: True, parent=win)
         desactives = [b.text() for b in dlg.findChildren(QRadioButton)
                       if not b.isEnabled()]

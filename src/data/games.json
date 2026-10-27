@@ -104,9 +104,33 @@
         "winmm"
       ],
       "cover_image": "hp1_cover.jpg",
-      "latest_version": "1.4",
-      "recommended_version": "1.4",
+      "latest_version": "1.5",
+      "recommended_version": "1.5",
       "versions": [
+        {
+          "version": "1.5",
+          "date": "2026-10-27",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.5/hp1.7z",
+          "size_mb": 431,
+          "changes": [
+            "Quidditch plus difficile (au choix)",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Harder Quidditch (optional)",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Quidditch más difícil (opcional)",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.4",
           "date": "2026-10-22",
@@ -463,7 +487,11 @@
         "width": "WindowedViewportX",
         "height": "WindowedViewportY"
       },
-      "controller": "yes"
+      "controller": "yes",
+      "fix_settings": [
+        "son_arriere_plan",
+        "quidditch"
+      ]
     },
     {
       "id": "hp2",
@@ -500,9 +528,33 @@
         "winmm"
       ],
       "cover_image": "hp2_cover.jpg",
-      "latest_version": "1.3",
-      "recommended_version": "1.3",
+      "latest_version": "1.4",
+      "recommended_version": "1.4",
       "versions": [
+        {
+          "version": "1.4",
+          "date": "2026-10-27",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.4/hp2.7z",
+          "size_mb": 465,
+          "changes": [
+            "Quidditch plus difficile (au choix)",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Harder Quidditch (optional)",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Quidditch más difícil (opcional)",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.3",
           "date": "2026-10-22",
@@ -842,7 +894,11 @@
         "height": "WindowedViewportY"
       },
       "controller": "partial",
-      "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris."
+      "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris.",
+      "fix_settings": [
+        "son_arriere_plan",
+        "quidditch"
+      ]
     },
     {
       "id": "hp3",
@@ -891,9 +947,30 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "latest_version": "1.4",
-      "recommended_version": "1.4",
+      "latest_version": "1.5",
+      "recommended_version": "1.5",
       "versions": [
+        {
+          "version": "1.5",
+          "date": "2026-10-27",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.5/hp3.7z",
+          "size_mb": 772,
+          "changes": [
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.4",
           "date": "2026-10-22",
@@ -1254,7 +1331,8 @@
         "manette_playstation_hp4",
         "nettete",
         "feuillage_lointain",
-        "particules_lointaines"
+        "particules_lointaines",
+        "son_arriere_plan"
       ],
       "dll_overrides": [
         "d3d9",
@@ -1270,9 +1348,36 @@
         "slots": "hp4"
       },
       "cover_image": "hp4_cover.jpg",
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-27",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.3/hp4.7z",
+          "size_mb": 1649,
+          "changes": [
+            "Effets visibles de plus loin",
+            "Correctif mis à jour (cartes graphiques modestes)",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Effects visible farther away",
+                "Fix updated (modest graphics cards)",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Efectos visibles desde más lejos",
+                "Corrección actualizada (tarjetas gráficas modestas)",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-10-01",
@@ -1441,16 +1546,48 @@
         "ombres_nettes",
         "degats_recus",
         "degats_infliges",
-        "ombres_douces"
+        "ombres_douces",
+        "son_arriere_plan"
       ],
       "dll_overrides": [
         "d3d9",
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "latest_version": "1.4",
-      "recommended_version": "1.4",
+      "latest_version": "1.5",
+      "recommended_version": "1.5",
       "versions": [
+        {
+          "version": "1.5",
+          "date": "2026-10-27",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.5/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.5/hp5.7z.002"
+          ],
+          "size_mb": 4705,
+          "changes": [
+            "Ombres douces",
+            "Mode difficile (bêta)",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Soft shadows",
+                "Hard mode (beta)",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Sombras suaves",
+                "Modo difícil (beta)",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.4",
           "date": "2026-10-22",
@@ -1705,16 +1842,54 @@
         "sorts_retires",
         "feuillage_lointain",
         "mipmaps_fins",
-        "vert_relief"
+        "vert_relief",
+        "son_arriere_plan",
+        "ciel",
+        "ciel_heure",
+        "ciel_couleur"
       ],
       "dll_overrides": [
         "d3d9",
         "xinput1_3"
       ],
       "cover_image": "hp6_cover.jpg",
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-27",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.3/hp6.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.3/hp6.7z.002"
+          ],
+          "size_mb": 4416,
+          "changes": [
+            "Ciel bleu, collines vertes",
+            "Mode difficile (bêta)",
+            "Double contour autour de Harry corrigé",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Blue sky, green hills",
+                "Hard mode (beta)",
+                "Double outline around Harry fixed",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Cielo azul, colinas verdes",
+                "Modo difícil (beta)",
+                "Doble contorno alrededor de Harry corregido",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-10-01",
@@ -1875,12 +2050,42 @@
         "ecran_principal",
         "premier_plan",
         "manette_playstation",
-        "vibrations"
+        "vibrations",
+        "son_arriere_plan"
       ],
       "cover_image": "hp7a_cover.jpg",
-      "latest_version": "1.1",
-      "recommended_version": "1.1",
+      "latest_version": "1.2",
+      "recommended_version": "1.2",
       "versions": [
+        {
+          "version": "1.2",
+          "date": "2026-10-27",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.2/hp7.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.2/hp7.7z.002",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.2/hp7.7z.003"
+          ],
+          "size_mb": 4565,
+          "changes": [
+            "Correctif mis à jour (cartes graphiques modestes)",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Fix updated (modest graphics cards)",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Corrección actualizada (tarjetas gráficas modestas)",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.1",
           "date": "2026-10-01",
@@ -2075,12 +2280,43 @@
         "ecran_principal",
         "premier_plan",
         "manette_playstation",
-        "vibrations"
+        "vibrations",
+        "son_arriere_plan"
       ],
       "cover_image": "hp7b_cover.jpg",
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-10-27",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.3/hp8.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.3/hp8.7z.002",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.3/hp8.7z.003",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp8-v1.3/hp8.7z.004"
+          ],
+          "size_mb": 7701,
+          "changes": [
+            "Correctif mis à jour (cartes graphiques modestes)",
+            "Son coupé en arrière-plan (au choix)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Fix updated (modest graphics cards)",
+                "Sound muted in the background (optional)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Corrección actualizada (tarjetas gráficas modestas)",
+                "Sonido silenciado en segundo plano (opcional)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-10-01",
