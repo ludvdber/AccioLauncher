@@ -54,14 +54,14 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 
 | Jeu | Année | Téléchargement | Espace installé |
 |-----|:-----:|:--------------:|:---------------:|
-| Harry Potter à l'École des Sorciers | 2001 | 243 Mo | 431 Mo |
-| Harry Potter et la Chambre des Secrets | 2002 | 247 Mo | 463 Mo |
-| Harry Potter et le Prisonnier d'Azkaban | 2004 | 337 Mo | 775 Mo |
-| Harry Potter et la Coupe de Feu | 2005 | 847 Mo | 1,7 Go |
-| Harry Potter et l'Ordre du Phénix | 2007 | 2,5 Go | 4,6 Go |
-| Harry Potter et le Prince de Sang-Mêlé | 2009 | 2,1 Go | 4,4 Go |
-| Harry Potter et les Reliques de la Mort, partie 1 | 2010 | 4,4 Go | 4,4 Go |
-| Harry Potter et les Reliques de la Mort, partie 2 | 2011 | 7,5 Go | 7,5 Go |
+| Harry Potter à l'École des Sorciers | 2001 | 242 Mo | 431 Mo |
+| Harry Potter et la Chambre des Secrets | 2002 | 248 Mo | 465 Mo |
+| Harry Potter et le Prisonnier d'Azkaban | 2004 | 336 Mo | 772 Mo |
+| Harry Potter et la Coupe de Feu | 2005 | 848 Mo | 1,6 Go |
+| Harry Potter et l'Ordre du Phénix | 2007 | 2,4 Go | 4,6 Go |
+| Harry Potter et le Prince de Sang-Mêlé | 2009 | 2,0 Go | 4,3 Go |
+| Harry Potter et les Reliques de la Mort, partie 1 | 2010 | 4,3 Go | 4,5 Go |
+| Harry Potter et les Reliques de la Mort, partie 2 | 2011 | 7,3 Go | 7,5 Go |
 
 Pendant l'installation, l'archive et le jeu cohabitent un moment : prévoyez la
 somme des deux colonnes. Le launcher fait le calcul et vous prévient avant de
