@@ -208,19 +208,27 @@ class TestSocketSousLinux:
         assert dossiers_ipc({}).count("/tmp") == 1
 
     @pytest.mark.skipif(not hasattr(__import__("socket"), "AF_UNIX"), reason="sockets Unix")
-    def test_le_socket_du_flatpak_est_trouve(self, tmp_path, monkeypatch):
+    def test_le_socket_du_flatpak_est_trouve(self, monkeypatch):
+        import shutil
         import socket
         import sys as _sys
-        dossier = tmp_path / "app" / "com.discordapp.Discord"
+        import tempfile
+        from pathlib import Path
+        # Pas tmp_path : un chemin de socket Unix tient en 108 octets, et sous
+        # pytest-xdist (popen-gw0/…) celui de tmp_path les dépassait (CI du
+        # 2026-10-27, « AF_UNIX path too long »).
+        racine = Path(tempfile.mkdtemp(prefix="ipc"))
+        dossier = racine / "app" / "com.discordapp.Discord"
         dossier.mkdir(parents=True)
         serveur = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         serveur.bind(str(dossier / "discord-ipc-0"))
         serveur.listen(1)
         try:
             monkeypatch.setattr(_sys, "platform", "linux")
-            monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+            monkeypatch.setenv("XDG_RUNTIME_DIR", str(racine))
             flux = _OPEN_IPC_REEL()
             assert flux is not None, "le socket du Flatpak n'a pas été trouvé"
             flux.close()
         finally:
             serveur.close()
+            shutil.rmtree(racine, ignore_errors=True)
