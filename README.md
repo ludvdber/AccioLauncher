@@ -16,7 +16,7 @@
 
 ### [Télécharger Accio Launcher](https://github.com/ludvdber/AccioLauncher/releases/latest)
 
-Gratuit · Windows 10 et 11 · [Site](https://acciolauncher.be/) · [Discord](https://discord.gg/TNwDQd7KGe)
+Gratuit · Windows 10 et 11 · [Linux](#linux--bazzite) · [Site](https://acciolauncher.be/) · [Discord](https://discord.gg/TNwDQd7KGe)
 
 *Les jeux restent la propriété de Warner Bros. et d'Electronic Arts : pour y jouer
 légalement, il faut en posséder une copie originale (CD, DVD ou achat numérique).*
@@ -34,18 +34,19 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 - **Tout se gère au même endroit**, depuis une barre en haut (Bibliothèque, Carnet, Collections, Paramètres) : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
 - **Un plantage expliqué** : quand un jeu s'arrête brutalement, le launcher lit ce que Windows a noté et dit où chercher (pilote graphique, programme qui s'incruste, fichier du jeu, fichier retiré par l'antivirus), avec un détail à copier pour demander de l'aide.
 - **Les réglages graphiques de *Prisonnier d'Azkaban*** dans l'engrenage du jeu : anticrénelage, résolution de rendu, filtrage, synchronisation et limite d'images (jamais au-delà de 60), sans ouvrir un fichier au Bloc-notes.
-- **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics.
+- **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics. Une sauvegarde s'exporte aussi en .zip, pour la garder ou la reprendre sur un autre PC.
+- **Plus que le jeu d'origine**, réglable dans l'engrenage de chaque jeu : le texte de *l'École des Sorciers* et de *la Chambre des Secrets* redessiné à la taille de l'image, un ciel bleu ou à l'heure de votre ordinateur dans *le Prince de Sang-Mêlé*, et, en bêta, un mode difficile pour *l'Ordre du Phénix* et *le Prince de Sang-Mêlé* et un Quidditch plus difficile pour les deux premiers jeux.
 - **À la taille de votre écran** : *l'École des Sorciers* et *la Chambre des Secrets* s'ouvrent à la résolution de votre écran, 1440p et 4K compris, ou à celle que vous choisissez dans leurs réglages.
 - **Depuis le canapé** : le launcher se pilote entièrement à la manette — changer de jeu, lancer, régler, sans se lever pour la souris.
 - **Vos années à Poudlard** : le temps passé sur chaque jeu, le journal de vos parties, et la saga lue comme un relevé de scolarité, année par année (les deux parties des *Reliques de la Mort* partagent la septième).
 - **Un folio pour les huit jeux** : cartes de sorciers, dragées, points des maisons, sorts, boucliers, écussons et badges, lus directement dans vos sauvegardes et montrés avec les images et les icônes du jeu.
-- **Des succès tirés de vos sauvegardes**, de *l'École des Sorciers* au *Prince de Sang-Mêlé* : folio complet, armoire à trophées pleine, tous les écussons… Chacun repose sur ce que la sauvegarde prouve, il est daté à la partie où il tombe et annoncé au retour du jeu.
-- **Reprendre en un clic** : pour les trois premiers jeux, « Reprendre » ouvre votre dernière partie sans passer par les logos ni le menu (un réglage rend le menu du jeu).
-- **Une galerie de vos captures**, rangées par jeu dans vos Images (plus perdues à la désinstallation), à copier en un clic pour Discord.
+- **Des médailles tirées de vos sauvegardes**, dans l'onglet Défis du Carnet, de *l'École des Sorciers* au *Prince de Sang-Mêlé* : folio complet, armoire à trophées pleine, tous les écussons… Chacune repose sur ce que la sauvegarde prouve, elle est datée à la partie où elle tombe et annoncée au retour du jeu.
+- **Reprendre en un clic** : pour les trois premiers jeux, « Reprendre » ouvre votre dernière partie sans passer par les logos ni le menu (un réglage rend le menu du jeu). Un clic droit sur l'icône du launcher dans la barre des tâches lance vos derniers jeux.
+- **Les Collections** : vos captures, rangées par jeu dans vos Images et copiées en un clic pour Discord ; la musique et les cinématiques de vos jeux, avec leur son ; 186 fiches de personnages et de créatures, débloquées au fil de l'histoire, et ceux des deux premiers jeux en 3D, tels qu'ils sont dans votre jeu.
 - **Un atelier ouvert aux artistes** : le bouton « Contribuer » liste les jaquettes, fonds, bandes-annonces, cartes, écrans de chargement et vidéos qui cherchent quelqu'un pour les refaire. Vous dessinez, montez ou animez ? Tout ce qu'il faut savoir est dedans.
 - **Les réglages lisibles** : chaque réglage d'un jeu dit ce qu'il change et ce qu'il demande à la machine, et survit à une mise à jour ou à une réparation.
 - **Vos jeux déjà installés sont repris** : au premier lancement, le launcher retrouve ceux qui sont déjà sur le disque.
-- **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres de Poudlard en septembre, les braises en octobre, la neige en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond, facultatives. Tout est désactivable.
+- **Une ambiance soignée** : le Choixpeau vous répartit au premier lancement et propose le thème de votre maison ; l'**Almanach de Poudlard** habille le launcher au fil des mois — les lettres de Poudlard en septembre, les braises en octobre, la neige en décembre, les bougies en juillet — et glisse chaque jour un fait dans un coin. Bandes-annonces en fond et musique des jeux, facultatives. Tout est désactivable.
 - **En français, en anglais et en espagnol**, et la langue des *Reliques de la Mort* se choisit jeu par jeu.
 - **Le launcher se met à jour tout seul**, en un clic, sans rien réinstaller.
 
@@ -163,6 +164,14 @@ environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
   <tr>
     <td align="center"><sub>Le folio de chaque partie, lu dans votre sauvegarde</sub></td>
     <td align="center"><sub>Les Collections : musiques et cinématiques des jeux, avec leur son</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screen_personnages.jpg" alt="Les personnages de l'École des Sorciers, avec Harry en 3D"></td>
+    <td width="50%"><img src="docs/screen_defis.jpg" alt="Les Défis du Carnet : les médailles du Prince de Sang-Mêlé"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Personnages et Bestiaire, en 3D pour les deux premiers jeux</sub></td>
+    <td align="center"><sub>Défis : vos succès en médailles</sub></td>
   </tr>
 </table>
 
