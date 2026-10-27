@@ -832,6 +832,8 @@ class _VueCinematiques(QWidget):
         self._duree_video = 0
         self._duree = 0
         self._plein_ecran: PleinEcran | None = None
+        # Le haut-parleur de la barre du bas vaut aussi pendant la lecture.
+        media.fond.son_coupe_change.connect(self._sur_son_coupe)
 
         racine = QHBoxLayout(self)
         racine.setContentsMargins(40, 18, 40, 0)
@@ -972,7 +974,10 @@ class _VueCinematiques(QWidget):
         # visionnage, et l'image aurait pris cette avance sur la parole.
         voix = self._media.voix(jeu, fichier)
         fond = self._media.fond
+        # Lancer une cinématique demande le son, comme une écoute : le son coupé
+        # du launcher la rendait muette (Ludo, 2026-10-27).
         fond.suspendre(CINEMATIQUE)
+        fond.rendre_le_son()
         volume = self._media.fond_volume() / 100.0
         self._duree_video = self._duree = 0
         self._position.setRange(0, 0)
@@ -998,6 +1003,17 @@ class _VueCinematiques(QWidget):
         for ligne in self._lignes:
             ligne.marquer(ligne.fichier == fichier)
         self._etat_commandes()
+
+    def _sur_son_coupe(self, coupe: bool) -> None:
+        self._video.set_muted(coupe)
+        if self._voix_sortie is not None:
+            self._voix_sortie.setMuted(coupe)
+
+    def detacher(self) -> None:
+        try:
+            self._media.fond.son_coupe_change.disconnect(self._sur_son_coupe)
+        except TypeError:
+            pass
 
     def plein_ecran(self) -> None:
         """La cinématique en cours sur tout l'écran ; le lecteur reste celui-ci."""
@@ -1321,6 +1337,7 @@ class MediathequePage(QDialog):
         # La page quittée ne laisse pas une cinématique jouer pour personne, et
         # une écoute lancée ici rend la place au fond sonore choisi.
         self._cinematiques.arreter()
+        self._cinematiques.detacher()
         self._musique.detacher()
         self._media.fond.arreter_ecoute()
         super().done(resultat)

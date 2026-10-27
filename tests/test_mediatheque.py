@@ -307,6 +307,18 @@ class TestLectureCinematique:
         assert "cinematique" in win._mediatheque.fond._raisons, "la musique se tait"
         assert page._courante == "SiriusPhoto" and page._stop.isEnabled()
 
+    def test_une_cinematique_rend_le_son_et_suit_le_haut_parleur(self, vue):
+        """Le son coupé du launcher rendait la cinématique muette (Ludo, 2026-10-27)."""
+        win, page, _ordre = vue
+        win._mediatheque.fond.basculer_son()
+        assert win.config.son_coupe
+        page.jouer("hp3", "SiriusPhoto", "La photo de Sirius")
+        assert not win.config.son_coupe
+        win._mediatheque.mini._son.click()
+        assert page._video.muted, "couper pendant la lecture coupe la cinématique"
+        win._mediatheque.mini._son.click()
+        assert not page._video.muted
+
     def test_arreter_rend_la_musique(self, vue):
         win, page, _ordre = vue
         page.jouer("hp3", "SiriusPhoto", "La photo de Sirius")

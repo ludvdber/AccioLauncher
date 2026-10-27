@@ -134,11 +134,15 @@ class FondSonore(QObject):
         (un clic sur « écouter » est une demande explicite de son)."""
         self._ecoute = cle_morceau
         self._en_pause = False
+        self.rendre_le_son()
+        self._appliquer()
+
+    def rendre_le_son(self) -> None:
+        """Une demande explicite de son (écoute, cinématique) lève le son coupé."""
         if self._config.son_coupe:
             self._config.son_coupe = False
             self._config.save()
             self.son_coupe_change.emit(False)
-        self._appliquer()
 
     def basculer_pause(self) -> None:
         """Pause ou reprise de ce que montre la platine. Sans écoute, le fond
@@ -150,10 +154,8 @@ class FondSonore(QObject):
             self._ecoute = self._config.musique_fond
         else:
             self._en_pause = not self._en_pause
-        if not self._en_pause and self._config.son_coupe:
-            self._config.son_coupe = False
-            self._config.save()
-            self.son_coupe_change.emit(False)
+        if not self._en_pause:
+            self.rendre_le_son()
         self._appliquer()
 
     def arreter_ecoute(self) -> None:

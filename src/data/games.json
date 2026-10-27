@@ -1159,6 +1159,18 @@
             "section": "SDLDrv.SDLClient",
             "key": "UseJoystick",
             "value": "True"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+            "section": "WinDrv.WindowsClient",
+            "key": "FullscreenViewportX",
+            "value": "1920"
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+            "section": "WinDrv.WindowsClient",
+            "key": "FullscreenViewportY",
+            "value": "1080"
           }
         ]
       },
