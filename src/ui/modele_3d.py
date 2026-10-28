@@ -17,9 +17,15 @@ partout (Windows, Linux, plateforme `offscreen` des tests).
 Glisser : tourner. Molette : zoom. Double-clic : vue de face. Lâché, le modèle
 garde un peu d'élan ; au repos il tourne lentement et respire. Le minuteur ne
 vit que si le widget est visible.
+
+Les mouvements du jeu (`maillages_ue1.Animation`, demande de Ludo du
+2026-10-27 : « un bouton pour animer les modèles ») se rejouent en boucle par
+`animer(nom)` ; les bras baissés et la respiration ne valent que pour la pose
+de référence.
 """
 
 import math
+import time
 
 from PyQt6.QtCore import QPointF, QSize, Qt, QTimer
 from PyQt6.QtGui import (
@@ -40,9 +46,11 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QWidget
 
 from src.core import maillages_ue1
-from src.core.maillages_ue1 import Maillage
+from src.core.maillages_ue1 import Animation, Maillage, Mouvement
 
 LACET_DEPART = 20.0      # degrés : trois quarts, le relief se voit tout de suite
+# Le mouvement montré d'abord : une attente qui boucle bien, par ordre de préférence.
+_REPOS = ("breath", "idle", "stand", "fidget", "look", "wait", "hover", "fly", "walk")
 TANGAGE_MAX = 35.0       # degrés, vers le haut comme vers le bas
 _ZOOM = (0.6, 2.5)
 _ROTATION_REPOS = 0.35   # degrés par image quand personne ne touche au modèle
@@ -81,6 +89,20 @@ def transformation_affine(source: tuple[QPointF, QPointF, QPointF],
     return QTransform(a11, a21, a12, a22, dx, dy)
 
 
+def mouvement_de_repos(animation: Animation) -> str | None:
+    """Le mouvement à montrer d'abord : une attente (« breath », « Idle »…),
+    sinon le premier qui dure plus d'une image, sinon le premier ; None sans
+    mouvement."""
+    noms = [m.nom for m in animation.mouvements]
+    if not noms:
+        return None
+    for prefixe in _REPOS:
+        for nom in noms:
+            if nom.lower().startswith(prefixe):
+                return nom
+    return next((m.nom for m in animation.mouvements if m.images > 1), noms[0])
+
+
 class Modele3D(QWidget):
     """Un modèle posé, vu de face au départ, qu'on fait tourner."""
 
@@ -97,6 +119,9 @@ class Modele3D(QWidget):
         self._prise: QPointF | None = None
         self._bras = False
         self._face: maillages_ue1.Quat | None = None
+        self._animation: Animation | None = None
+        self._mouvement: Mouvement | None = None
+        self._depart = 0.0              # `time.monotonic()` au lancement du mouvement
         self._minuteur = QTimer(self)
         self._minuteur.setInterval(16)
         # PRÉCIS : le minuteur grossier de Windows tombe sur sa grille de
@@ -111,11 +136,14 @@ class Modele3D(QWidget):
     def modele(self) -> Maillage | None:
         return self._modele
 
-    def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None) -> None:
+    def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None,
+              animation: Animation | None = None) -> None:
         self._modele = modele
         self._pix = {nom: QPixmap.fromImage(img) for nom, img in (textures or {}).items()}
         self._bras = modele is not None and bool(maillages_ue1.bras_baisses(modele))
         self._face = maillages_ue1.face(modele) if modele is not None else None
+        self._animation = animation if modele is not None else None
+        self._mouvement = None
         points = self.points_du_moment()
         if points:
             # Cadré sur la pose montrée, pas sur la croix : sinon les bras tendus
@@ -133,6 +161,39 @@ class Modele3D(QWidget):
         self._elan = (0.0, 0.0)
         self._repos = 0
         self.update()
+
+    # --- Mouvements du jeu ---------------------------------------------------------
+
+    def mouvements(self) -> list[str]:
+        """Les mouvements que le modèle posé sait jouer, dans l'ordre du jeu."""
+        return [m.nom for m in self._animation.mouvements] if self._animation is not None else []
+
+    @property
+    def mouvement(self) -> str | None:
+        """Le mouvement en cours, None quand le modèle est en pose de référence."""
+        return self._mouvement.nom if self._mouvement is not None else None
+
+    def animer(self, nom: str | None) -> bool:
+        """Rejoue `nom` en boucle depuis son début ; None rend la pose de
+        référence. Faux si le modèle ne connaît pas ce mouvement."""
+        if nom is None:
+            self._mouvement = None
+            self.update()
+            return True
+        if self._animation is None:
+            return False
+        mouvement = next((m for m in self._animation.mouvements if m.nom == nom), None)
+        if mouvement is None:
+            return False
+        self._mouvement = mouvement
+        self._depart = time.monotonic()
+        self._repos = 0
+        self.update()
+        return True
+
+    def instant(self) -> float:
+        """Secondes écoulées depuis le lancement du mouvement."""
+        return time.monotonic() - self._depart
 
     # --- Animation -------------------------------------------------------------
 
@@ -211,6 +272,11 @@ class Modele3D(QWidget):
         if m is None:
             return ()
         points = m.points
+        if self._mouvement is not None:
+            # La clé de la racine porte déjà l'orientation du personnage : la
+            # correction `face` (déduite du squelette de référence) s'y
+            # ajouterait et montrerait Rogue, Malefoy ou le troll de profil.
+            return maillages_ue1.pose(m, self._mouvement, self.instant())
         if self._bras:
             retouches = maillages_ue1.bras_baisses(m, _BRAS + 2.5 * math.sin(self._phase))
             points = maillages_ue1.poser(m, retouches)

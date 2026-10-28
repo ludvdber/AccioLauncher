@@ -27,15 +27,15 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QMouseEvent, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import discographie, encyclopedie, maillages_ue1
 from src.core.i18n import dans_la_langue, tr
-from src.ui.composants import ENCRE, ENCRE_DOUCE, texte
+from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.modele_3d import Modele3D
+from src.ui.modele_3d import Modele3D, mouvement_de_repos
 from src.ui.theme import accent_qcolor, current as current_theme, themed
 from src.ui.utils import clear_layout, zone_defilable
 
@@ -49,7 +49,19 @@ _MARGE_SCENE = 32
 # zoomer et apprécier le modèle »).
 _LARGEUR_LISTE = _LARGEUR_FICHE + 80 + 8
 
-ModeleLu = tuple[maillages_ue1.Maillage, dict[str, QImage]]
+ModeleLu = tuple[maillages_ue1.Maillage, dict[str, QImage], maillages_ue1.Animation | None]
+
+# La liste des mouvements sous le modèle : la même que les listes des réglages,
+# en plus discret (fond bleu nuit, filet clair, or au survol).
+_LISTE_STYLE = (
+    "QComboBox { background: #15152a; color: #e4e2ef; border: 1px solid rgba(255,255,255,0.13);"
+    " border-radius: 6px; padding: 3px 10px; min-height: 22px; }"
+    "QComboBox:hover { border-color: rgba(214,167,44,0.55); }"
+    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 2px 9px; }"
+    "QComboBox::drop-down { border: none; width: 18px; }"
+    "QComboBox QAbstractItemView { background: #15152a; color: #e4e2ef; outline: none;"
+    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
+)
 
 
 def _images(textures: dict[str, encyclopedie.ImageBgra]) -> dict[str, QImage]:
@@ -180,6 +192,24 @@ class _Scene(QFrame):
         self.modele = Modele3D()
         self.modele.setMinimumSize(_SCENE_MIN)
         v.addWidget(self.modele, stretch=1)
+        # Les mouvements du jeu : la liste et le bouton qui les lance ou les arrête
+        # (Ludo, 2026-10-27 : « un bouton pour animer les modèles »).
+        self._commandes = QWidget()
+        self._commandes.setObjectName("transparent")
+        rang = QHBoxLayout(self._commandes)
+        rang.setContentsMargins(0, 6, 0, 0)
+        rang.setSpacing(10)
+        self.mouvements = QComboBox()
+        self.mouvements.setStyleSheet(themed(_LISTE_STYLE))
+        self.mouvements.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.mouvements.setToolTip(tr("Un mouvement du jeu, tel que ses fichiers le nomment"))
+        self.mouvements.currentTextChanged.connect(self._mouvement_choisi)
+        self.bouton_animer = bouton(tr("Animer"))
+        self.bouton_animer.clicked.connect(self.basculer_animation)
+        rang.addWidget(self.mouvements, stretch=1)
+        rang.addWidget(self.bouton_animer)
+        self._commandes.hide()
+        v.addWidget(self._commandes)
         v.addSpacing(8)
         self._nom = texte("", 18, ENCRE, retour=True)
         self._nom.setFont(cinzel(17, bold=True))
@@ -201,6 +231,29 @@ class _Scene(QFrame):
             self.modele.poser(None)
         else:
             self.modele.poser(*modele)
+        noms = self.modele.mouvements()
+        self.mouvements.blockSignals(True)
+        self.mouvements.clear()
+        self.mouvements.addItems(noms)
+        if modele is not None and modele[2] is not None:
+            repos = mouvement_de_repos(modele[2])
+            if repos is not None:
+                self.mouvements.setCurrentText(repos)
+        self.mouvements.blockSignals(False)
+        self.bouton_animer.setText(tr("Animer"))
+        self._commandes.setVisible(bool(noms))
+
+    def basculer_animation(self) -> None:
+        """Lance le mouvement choisi, ou rend la pose de référence."""
+        if self.modele.mouvement is not None:
+            self.modele.animer(None)
+            self.bouton_animer.setText(tr("Animer"))
+        elif self.modele.animer(self.mouvements.currentText()):
+            self.bouton_animer.setText(tr("Figer"))
+
+    def _mouvement_choisi(self, nom: str) -> None:
+        if self.modele.mouvement is not None and nom:
+            self.modele.animer(nom)
 
 
 class VueEncyclopedie(QWidget):
@@ -320,8 +373,8 @@ class VueEncyclopedie(QWidget):
             if not futur.done():
                 modeles.append((vue, futur))
             elif not futur.cancelled() and futur.exception() is None and futur.result() is not None:
-                maillage, textures = futur.result()
-                self._modeles[vue.fiche.cle] = (maillage, _images(textures))
+                maillage, textures, animation = futur.result()
+                self._modeles[vue.fiche.cle] = (maillage, _images(textures), animation)
                 self._vignettes.append(vue)
                 if self._choisie is None or self._choisie is vue:
                     self.choisir(vue)

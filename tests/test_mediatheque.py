@@ -605,3 +605,61 @@ def test_la_page_des_collections_a_les_deux_rubriques(fenetre_avec_jeux):
     assert [f.fiche.cle for f in vue.fiches][:2] == ["gnome", "lutin_de_cornouailles"]
     page.rubrique(_encyclo.PERSONNAGES)
     assert page._encyclo[_encyclo.PERSONNAGES].fiches
+
+
+class TestUnSeulSonCoupe:
+    """Le haut-parleur de la bande-annonce, celui de la barre du bas et les
+    Paramètres disent la même chose (Ludo, 2026-10-27 : « Même le son coupé
+    n'est pas dans les paramètres »)."""
+
+    def test_rallumer_la_bande_annonce_rend_le_son_du_launcher(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        fond, detail = win._mediatheque.fond, win._detail
+        fond.basculer_son()
+        assert detail._video.muted
+        detail._on_mute_clicked()
+        assert not win.config.son_coupe, "la barre du bas ne dit plus « coupé »"
+        assert not win._mediatheque.mini._son.property("coupe")
+        assert not detail._video.muted
+
+    def test_le_haut_parleur_du_bas_coupe_quand_meme(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        detail = win._detail
+        win.config.mute_videos = True
+        detail.apply_audio_config()
+        assert detail._video.muted
+        detail._on_mute_clicked()
+        assert not detail._video.muted, "le geste vaut malgré « Couper le son des vidéos »"
+        win._mediatheque.mini._son.click()
+        assert detail._video.muted
+        win._mediatheque.mini._son.click()
+        assert not detail._video.muted, "le choix de la session revient"
+
+    def test_le_reglage_change_reprend_la_main(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        detail = win._detail
+        win.config.mute_videos = True
+        detail.apply_audio_config()
+        assert detail._video.muted
+        detail._on_mute_clicked()
+        win.config.mute_videos = False
+        detail.apply_audio_config()
+        win.config.mute_videos = True
+        detail.apply_audio_config()
+        assert detail._video.muted
+
+    def test_l_interrupteur_des_parametres_suit_le_haut_parleur(self, fenetre_avec_jeux, qtbot):
+        from src.ui.settings_panel import SettingsDialog
+        win = fenetre_avec_jeux
+        fond = win._mediatheque.fond
+        dlg = SettingsDialog(win.config, win.manager, win, fond=fond)
+        qtbot.addWidget(dlg)
+        dlg.construire_rubrique(1)
+        assert not dlg._tgl_son.isChecked()
+        dlg._tgl_son._basculer()
+        assert win.config.son_coupe and win._mediatheque.mini._son.property("coupe")
+        win._mediatheque.mini._son.click()
+        assert not dlg._tgl_son.isChecked()
+        dlg.reject()
+        win._mediatheque.mini._son.click()   # le dialogue fermé n'écoute plus
+        assert win.config.son_coupe

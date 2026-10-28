@@ -142,10 +142,14 @@ class SettingsDialog(QDialog):
     visite_demandee = pyqtSignal()        # « Revoir la visite » (`visite_guidee.py`)
 
     def __init__(self, config: Config, manager: GameManager, parent=None,
-                 store=None) -> None:
+                 store=None, fond=None) -> None:
         super().__init__(parent)
         self.config = config
         self.manager = manager
+        # Le son du launcher (src.ui.fond_sonore.FondSonore) : l'interrupteur
+        # « Couper tout le son » est le haut-parleur de la barre du bas.
+        self._fond = fond
+        self._tgl_son = None
         # Magasin de bandes-annonces (src.ui.trailer_store.TrailerStore).
         # Optionnel : les tests ouvrent le dialogue sans, et la ligne se cache.
         self._store = store
@@ -503,6 +507,14 @@ class SettingsDialog(QDialog):
 
     def _page_display(self) -> QWidget:
         videos = Carte()
+        if self._fond is not None:
+            ligne, self._tgl_son = self._interrupteur(
+                tr("Couper tout le son"), self._fond.son_coupe,
+                tr("Musique, bandes-annonces et cinématiques. "
+                   "Le haut-parleur en bas à droite fait de même."))
+            self._tgl_son.toggled.connect(self._sur_interrupteur_son)
+            self._fond.son_coupe_change.connect(self._sur_son_coupe)
+            videos.ajouter(ligne)
         ligne, self._tgl_autoplay = self._reglage(
             tr("Lecture automatique des vidéos"), "autoplay_videos")
         videos.ajouter(ligne)
@@ -552,7 +564,7 @@ class SettingsDialog(QDialog):
             tr("Fait du jour dans la barre de statut"), "faits_du_jour")
         ambiance.ajouter(ligne)
 
-        return self._page((tr("Vidéos"), videos), (tr("Thème"), theme),
+        return self._page((tr("Son et vidéos"), videos), (tr("Thème"), theme),
                           (tr("Almanach"), ambiance))
 
     # ── Bandes-annonces ──
@@ -777,6 +789,15 @@ class SettingsDialog(QDialog):
         self._save()
         self.season_changed.emit(resolve_season(self.config.season))
 
+    def _sur_interrupteur_son(self, coupe: bool) -> None:
+        if coupe != self._fond.son_coupe:
+            self._fond.basculer_son()
+
+    def _sur_son_coupe(self, coupe: bool) -> None:
+        """Le haut-parleur de la barre du bas, ou une écoute qui rend le son."""
+        if self._tgl_son is not None:
+            self._tgl_son.setChecked(coupe)   # n'émet pas `toggled`
+
     def done(self, result: int) -> None:
         """Arrête le scan disque sur TOUS les chemins de fermeture.
 
@@ -786,6 +807,11 @@ class SettingsDialog(QDialog):
         dialog alors qu'il tourne encore → crash.
         """
         self._shutdown_scan()
+        if self._fond is not None:
+            try:
+                self._fond.son_coupe_change.disconnect(self._sur_son_coupe)
+            except TypeError:
+                pass
         super().done(result)
 
     def _shutdown_scan(self) -> None:

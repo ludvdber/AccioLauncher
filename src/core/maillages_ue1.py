@@ -7,18 +7,33 @@ les personnages vivent dans `System/HarryPotter.u` (`skharryMesh`,
 La lecture de `skharryMesh` tombe pile sur la fin de l'objet (41 218 octets) :
 509 points, 774 coins texturés, 988 faces, 4 matériaux, 92 os.
 
-Seule la pose de référence est rendue (les `Points`, déjà placés) : pas
-d'animation, donc pas de pondération par les os.
+La pose de référence (les `Points`, déjà placés) se rend telle quelle ; les
+mouvements du jeu (`Animation`, l'objet nommé par `DefaultAnimation` du
+maillage) se rejouent par les os : `pose(modele, mouvement, t)`.
 
 Format (`USkeletalMesh` d'Unreal 1, version 76) : propriétés, puis les données
 de `UMesh` (boîtes, tableaux « paresseux » vides précédés de leur position de
 fin, liste des textures, échelle et origine), celles de `ULodMesh` (faces,
 coins avec UV sur un octet, matériaux) et enfin celles du squelette.
 
+Format d'un `Animation` (relevé le 2026-10-28 sur HP1 et HP2, 54 + 368
+objets lus jusqu'au dernier octet) : os de référence (nom, drapeaux, parent),
+mouvements (vitesse racine, durée, os de départ, drapeaux, indices d'os, puis
+PAR PISTE seulement des en-têtes : drapeaux, nombre de rotations, de positions
+et de temps, échelle des positions, pas de 1/30 s), séquences (nom, groupe,
+première image, nombre d'images, notifications, cadence), puis TROIS tableaux
+plats que les pistes consomment dans l'ordre : rotations en 3 × int16 (chaque
+composante = sin(entier × π/2/32767), w = √(1 − x² − y² − z²) ≥ 0, c'est
+`FAnimVec::Quat` d'Engine.dll), positions en 3 × int16 × échelle/32767, temps
+en un octet = images depuis la clé d'avant. Les temps sont toujours aussi
+nombreux que les rotations ; une piste a une position (fixe) ou autant que de
+rotations.
+
 Lecture SEULE et bornée, comme `textures_ue1` : un compte absurde, un indice
 hors tableau ou une lecture qui ne finit pas sur la fin de l'objet rend None.
 """
 
+import bisect
 import logging
 import math
 import struct
@@ -31,6 +46,9 @@ from src.core.textures_ue1 import Paquet, _Lecteur
 log = logging.getLogger(__name__)
 
 _COMPTE_MAX = 65536
+_CLES_MAX = 1 << 24   # clés d'animation d'un objet (Harry en a 80 686)
+_K_ANIM = math.pi / 2 / 32767   # `FAnimVec` : composante = sin(entier × _K_ANIM)
+_IMAGES_PAR_S = 30.0
 _BRAS_BAISSE = 60.0   # degrés sous l'horizontale au-delà desquels un bras est laissé tel quel
 # Drapeaux de polygone d'un matériau (`EPolyFlags` d'Unreal 1).
 PF_DEUX_FACES, PF_TRANSLUCIDE, PF_MASQUE = 0x100, 0x4, 0x2
@@ -78,11 +96,42 @@ class Maillage:
     influences: tuple[Influence, ...] = ()
     origine: Point = (0.0, 0.0, 0.0)
     echelle: Point = (1.0, 1.0, 1.0)
+    animation: str = ""             # l'objet `Animation` par défaut du maillage, vide sans
 
 
-def _compte(lec: _Lecteur, taille: int, fin: int) -> int:
+@dataclass(frozen=True)
+class Piste:
+    """Les clés d'un os dans un mouvement, dans le repère du parent et la
+    convention du squelette de référence (rotations prises conjuguées)."""
+    rotations: tuple[Quat, ...]
+    positions: tuple[Point, ...]    # une seule (fixe) ou autant que de rotations
+    temps: tuple[float, ...]        # secondes depuis le début, croissants, une par rotation
+
+
+@dataclass(frozen=True)
+class Mouvement:
+    nom: str                        # tel que le jeu le nomme (« walk », « breath »)
+    groupe: str
+    duree: float                    # secondes
+    images: int
+    os: tuple[str, ...]             # le nom de l'os de chaque piste, dans l'ordre de l'animation
+    pistes: tuple[Piste, ...]
+
+    def piste(self, nom_os: str) -> Piste | None:
+        """La première piste de l'os `nom_os` (noms sans casse, comme le moteur)."""
+        voulu = nom_os.lower()
+        return next((p for n, p in zip(self.os, self.pistes, strict=True) if n.lower() == voulu), None)
+
+
+@dataclass(frozen=True)
+class Animation:
+    nom: str
+    mouvements: tuple[Mouvement, ...]
+
+
+def _compte(lec: _Lecteur, taille: int, fin: int, maxi: int = _COMPTE_MAX) -> int:
     n = lec.index()
-    if not 0 <= n <= _COMPTE_MAX or lec.p + n * taille > fin:
+    if not 0 <= n <= maxi or lec.p + n * taille > fin:
         raise ValueError("tableau hors de l'objet")
     return n
 
@@ -177,7 +226,7 @@ def lire(p: Paquet, nom: str) -> Maillage | None:
     nl = _compte(lec, 12, fin)                                               # LocalPoints
     locaux = struct.unpack_from(f"<{3 * nl}f", lec.d, lec.p)
     lec.p += 12 * nl + 4
-    lec.index()                            # DefaultAnimation
+    ref_animation = lec.index()            # DefaultAnimation
     lec.p += 4 + 48                        # WeaponBoneIndex, WeaponAdjust
     if lec.p != fin:
         raise ValueError("fin de modèle inattendue")
@@ -197,8 +246,151 @@ def lire(p: Paquet, nom: str) -> Maillage | None:
                     raise ValueError("poids hors des tableaux")
                 influences.append(Influence(poids[k][0], rang_os, poids[k][1] / 65535,
                                             (locaux[3 * k], locaux[3 * k + 1], locaux[3 * k + 2])))
+    animation = p.nom_objet(ref_animation) if ref_animation else ""
     return Maillage(points, tuple(faces), tuple(materiaux), tuple(squelette), tuple(influences),
-                    (origine[0], origine[1], origine[2]), (echelle[0], echelle[1], echelle[2]))
+                    (origine[0], origine[1], origine[2]), (echelle[0], echelle[1], echelle[2]),
+                    "" if animation == "None" else animation)
+
+
+def _quat_de(a: int, b: int, c: int) -> Quat:
+    """Un quaternion `FAnimVec` : trois sinus, w positif."""
+    x, y, z = math.sin(a * _K_ANIM), math.sin(b * _K_ANIM), math.sin(c * _K_ANIM)
+    return x, y, z, math.sqrt(max(0.0, 1.0 - x * x - y * y - z * z))
+
+
+def lire_animation(p: Paquet, nom: str) -> Animation | None:
+    """L'objet `Animation` `nom` du paquet, toutes clés décodées ; None s'il
+    n'y est pas. Lecture bornée : tout écart au format relevé lève ValueError."""
+    objet = p.objet(nom, "Animation")
+    if objet is None:
+        return None
+    lec, fin = objet
+    os_ = []
+    for _ in range(_compte(lec, 9, fin)):   # RefBones : nom, drapeaux, parent
+        os_.append(p.noms[lec.index()])
+        lec.p += 8
+    en_tetes = []                             # par mouvement : durée, os, pistes
+    for _ in range(_compte(lec, 25, fin)):   # Moves
+        lec.p += 12                           # RootSpeed3D
+        duree = _reels(lec, 1)[0]
+        lec.p += 8                            # StartBone, Flags
+        indices = []
+        for _ in range(_compte(lec, 4, fin)):
+            indices.append(lec.i32())
+        pistes = []
+        for _ in range(_compte(lec, 15, fin)):
+            lec.p += 4                        # drapeaux, toujours 0
+            nq, npos, nt = lec.index(), lec.index(), lec.index()
+            echelle, pas = _reels(lec, 2)
+            if nt != nq or npos not in (1, nq) or min(nq, npos, nt) < 0:
+                raise ValueError("piste hors du format relevé")
+            pistes.append((nq, npos, echelle, pas))
+        if not indices:                       # sans table : une piste par os, dans l'ordre
+            indices = list(range(len(pistes)))
+        if len(pistes) != len(indices) or any(not 0 <= i < len(os_) for i in indices):
+            raise ValueError("pistes et os ne se répondent pas")
+        en_tetes.append((duree, indices, pistes))
+    sequences = []
+    for _ in range(_compte(lec, 11, fin)):   # AnimSeqs
+        nom_seq, groupe = p.noms[lec.index()], p.noms[lec.index()]
+        lec.p += 4                            # StartFrame
+        images = lec.i32()
+        for _ in range(_compte(lec, 5, fin)):   # Notifys : temps, fonction
+            lec.p += 4
+            lec.index()
+        lec.p += 4                            # Rate
+        sequences.append((nom_seq, groupe, images))
+    if len(sequences) != len(en_tetes):
+        raise ValueError("séquences et mouvements ne se répondent pas")
+    nq_total = _compte(lec, 6, fin, _CLES_MAX)
+    quats = struct.unpack_from(f"<{3 * nq_total}h", lec.d, lec.p)
+    lec.p += 6 * nq_total
+    npos_total = _compte(lec, 6, fin, _CLES_MAX)
+    positions = struct.unpack_from(f"<{3 * npos_total}h", lec.d, lec.p)
+    lec.p += 6 * npos_total
+    nt_total = _compte(lec, 1, fin, _CLES_MAX)
+    temps = lec.d[lec.p:lec.p + nt_total]
+    lec.p += nt_total
+    if lec.p != fin:
+        raise ValueError("fin d'animation inattendue")
+    iq = ip = it = 0
+    mouvements = []
+    for (duree, indices, pistes), (nom_seq, groupe, images) in zip(en_tetes, sequences, strict=True):
+        noms_os: list[str] = []
+        lues: list[Piste] = []
+        for rang_os, (nq, npos, echelle, pas) in zip(indices, pistes, strict=True):
+            if iq + nq > nq_total or ip + npos > npos_total or it + nq > nt_total:
+                raise ValueError("plus de clés annoncées que rangées")
+            rotations = tuple(_quat_de(quats[3 * k], quats[3 * k + 1], quats[3 * k + 2])
+                              for k in range(iq, iq + nq))
+            k_pos = echelle / 32767
+            pos = tuple((positions[3 * k] * k_pos, positions[3 * k + 1] * k_pos, positions[3 * k + 2] * k_pos)
+                        for k in range(ip, ip + npos))
+            instants, t = [], 0.0
+            for delta in temps[it:it + nq]:
+                t += delta * pas
+                instants.append(t)
+            noms_os.append(os_[rang_os])
+            lues.append(Piste(rotations, pos, tuple(instants)))
+            iq, ip, it = iq + nq, ip + npos, it + nq
+        mouvements.append(Mouvement(nom_seq, groupe, duree, images, tuple(noms_os), tuple(lues)))
+    if (iq, ip, it) != (nq_total, npos_total, nt_total):
+        raise ValueError("clés rangées sans piste")
+    return Animation(nom, tuple(mouvements))
+
+
+def _lerp(a: Point, b: Point, k: float) -> Point:
+    return a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k
+
+
+def _nlerp(a: Quat, b: Quat, k: float) -> Quat:
+    """Entre deux rotations proches : le mélange normalisé, par le chemin court."""
+    if a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] < 0:
+        b = (-b[0], -b[1], -b[2], -b[3])
+    x, y, z, w = (a[i] + (b[i] - a[i]) * k for i in range(4))
+    n = math.sqrt(x * x + y * y + z * z + w * w) or 1.0
+    return x / n, y / n, z / n, w / n
+
+
+def _cle(piste: Piste, t: float) -> tuple[Quat, Point]:
+    """La rotation et la position de la piste à l'instant `t` (interpolées)."""
+    temps = piste.temps
+    if t <= temps[0] or len(temps) == 1:
+        rang, k = 0, 0.0
+    elif t >= temps[-1]:
+        rang, k = len(temps) - 1, 0.0
+    else:
+        rang = bisect.bisect_right(temps, t) - 1
+        ecart = temps[rang + 1] - temps[rang]
+        k = (t - temps[rang]) / ecart if ecart > 0 else 0.0
+    suivant = min(rang + 1, len(temps) - 1)
+    q = _nlerp(piste.rotations[rang], piste.rotations[suivant], k) if k else piste.rotations[rang]
+    if len(piste.positions) == 1:
+        v = piste.positions[0]
+    else:
+        v = _lerp(piste.positions[rang], piste.positions[suivant], k) if k else piste.positions[rang]
+    return q, v
+
+
+def pose(modele: Maillage, mouvement: Mouvement, t: float) -> tuple[Point, ...]:
+    """Les points du modèle à l'instant `t` du mouvement, rejoué en boucle ;
+    un os sans piste garde sa pose de référence."""
+    if not modele.influences or not mouvement.pistes:
+        return modele.points
+    if mouvement.duree > 0:
+        t %= mouvement.duree
+    # Les os se nomment sans casse et un squelette peut porter deux fois le même
+    # nom (le Rogue de HP2 : 121 os, 111 pistes) : chaque piste va au premier os
+    # de son nom encore libre, dans l'ordre, comme le moteur apparie les siens.
+    libres: dict[str, list[int]] = {}
+    for rang, o in enumerate(modele.squelette):
+        libres.setdefault(o.nom.lower(), []).append(rang)
+    locaux: dict[int, tuple[Quat, Point]] = {}
+    for nom_os, piste in zip(mouvement.os, mouvement.pistes, strict=True):
+        rangs = libres.get(nom_os.lower())
+        if rangs and piste.rotations:
+            locaux[rangs.pop(0)] = _cle(piste, t)
+    return _peau(modele, os_monde(modele, locaux=locaux))
 
 
 def _qmul(a: Quat, b: Quat) -> Quat:
@@ -228,9 +420,11 @@ def rotation_entre(de: Point, vers: Point) -> Quat:
     return c[0] / n, c[1] / n, c[2] / n, w / n
 
 
-def os_monde(modele: Maillage, retouches: dict[int, Quat] | None = None) -> list[tuple[Quat, Point]]:
+def os_monde(modele: Maillage, retouches: dict[int, Quat] | None = None,
+             locaux: dict[int, tuple[Quat, Point]] | None = None) -> list[tuple[Quat, Point]]:
     """(rotation, position) de chaque os dans le repère du modèle. Une retouche
-    tourne l'os sur place, ses enfants avec lui.
+    tourne l'os sur place, ses enfants avec lui ; `locaux` remplace la rotation
+    et la position d'un os par rapport à son parent (les clés d'un mouvement).
 
     Toutes les rotations se prennent conjuguées, racine comprise : ainsi
     recalculés, les points des 79 modèles des fiches de HP1 et HP2 retombent
@@ -238,14 +432,15 @@ def os_monde(modele: Maillage, retouches: dict[int, Quat] | None = None) -> list
     racine de Harry vaut l'identité et ne tranchait pas, celle de McGonagall
     si)."""
     retouches = retouches or {}
+    locaux = locaux or {}
     monde: list[tuple[Quat, Point]] = []
     for rang, o in enumerate(modele.squelette):
-        x, y, z, w = o.rotation
+        (x, y, z, w), position = locaux.get(rang, (o.rotation, o.position))
         if rang == 0:
-            q, v = (-x, -y, -z, w), o.position
+            q, v = (-x, -y, -z, w), position
         else:
             pq, pv = monde[o.parent]
-            t = _qrot(pq, o.position)
+            t = _qrot(pq, position)
             q, v = _qmul(pq, (-x, -y, -z, w)), (pv[0] + t[0], pv[1] + t[1], pv[2] + t[2])
         if rang in retouches:
             q = _qmul(retouches[rang], q)
@@ -257,7 +452,11 @@ def poser(modele: Maillage, retouches: dict[int, Quat] | None = None) -> tuple[P
     """Les points recalculés par les os retouchés, dans le repère de `points`."""
     if not modele.influences:
         return modele.points
-    monde = os_monde(modele, retouches)
+    return _peau(modele, os_monde(modele, retouches))
+
+
+def _peau(modele: Maillage, monde: list[tuple[Quat, Point]]) -> tuple[Point, ...]:
+    """Les points pondérés par les os posés dans le repère du modèle."""
     somme = [[0.0, 0.0, 0.0] for _ in modele.points]
     for inf in modele.influences:
         q, v = monde[inf.os]
@@ -338,16 +537,33 @@ def textures(chemin: Path, modele: Maillage) -> dict[str, tuple[int, int, bytes]
 
 
 def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche
-                ) -> tuple[Maillage, dict[str, tuple[int, int, bytes]]] | None:
-    """Le modèle d'une fiche des Personnages ou du Bestiaire et ses textures,
-    lus dans le jeu installé ; None sans modèle ou sans le jeu."""
+                ) -> tuple[Maillage, dict[str, tuple[int, int, bytes]], Animation | None] | None:
+    """Le modèle d'une fiche des Personnages ou du Bestiaire, ses textures et
+    ses mouvements, lus dans le jeu installé ; None sans modèle ou sans le jeu."""
     if fiche.modele is None:
         return None
     chemin = encyclopedie.chemin_image(dossier_exe, fiche.modele)
     if chemin is None:
         return None
     modele = maillage(chemin, fiche.modele.nom)
-    return (modele, textures(chemin, modele)) if modele is not None else None
+    if modele is None:
+        return None
+    return modele, textures(chemin, modele), animation(chemin, modele.animation)
+
+
+def animation(chemin: Path, nom: str) -> Animation | None:
+    """Les mouvements `nom` du paquet du jeu ; None sans nom, s'ils sont
+    absents ou pas comme relevé."""
+    if not nom:
+        return None
+    p = textures_ue1.paquet(chemin)
+    if p is None:
+        return None
+    try:
+        return lire_animation(p, nom)
+    except (ValueError, IndexError, struct.error):
+        log.warning("Animation %s illisible dans %s", nom, chemin, exc_info=True)
+        return None
 
 
 def maillage(chemin: Path, nom: str) -> Maillage | None:

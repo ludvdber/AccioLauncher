@@ -8,7 +8,9 @@ from PyQt6.QtCore import QPointF, QSize  # noqa: E402
 from PyQt6.QtGui import QColor, QImage  # noqa: E402
 
 from src.core import maillages_ue1 as mu  # noqa: E402
-from src.ui.modele_3d import LACET_DEPART, TANGAGE_MAX, Modele3D, transformation_affine  # noqa: E402
+from src.ui.modele_3d import (  # noqa: E402
+    LACET_DEPART, TANGAGE_MAX, Modele3D, mouvement_de_repos, transformation_affine,
+)
 
 
 def _carre() -> mu.Maillage:
@@ -55,6 +57,33 @@ def test_sans_modele_rien_ne_tourne(qtbot):
     assert v._minuteur.isActive()
     v.hide()
     assert not v._minuteur.isActive()
+
+
+def test_animer_rejoue_un_mouvement_du_jeu(qtbot):
+    from tests.test_maillages_ue1 import _Paquet, animation_brute, modele_brut
+    p = _Paquet(modele_brut(), animation_brute())
+    m, a = mu.lire(p, "x"), mu.lire_animation(p, "x")
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.poser(m, {}, a)
+    assert v.mouvements() == ["walk"] and v.mouvement is None
+    assert not v.animer("inconnu") and v.mouvement is None
+    assert v.animer("walk") and v.mouvement == "walk"
+    v._depart -= 0.1                                 # trois images plus tard : le quart de tour
+    assert v.points_du_moment()[2] == pytest.approx((0, -10, 0), abs=1e-3)
+    assert v.animer(None) and v.mouvement is None
+    assert v.points_du_moment()[2] == pytest.approx(m.points[2])
+    v.poser(_carre())                                # un modèle sans mouvement
+    assert v.mouvements() == [] and not v.animer("walk")
+
+
+def test_mouvement_de_repos():
+    def mouvement(nom: str, images: int) -> mu.Mouvement:
+        return mu.Mouvement(nom, "None", images / 30, images, (), ())
+    assert mouvement_de_repos(mu.Animation("a", ())) is None
+    assert mouvement_de_repos(mu.Animation("a", (mouvement("Jump", 9), mouvement("Idle", 90)))) == "Idle"
+    assert mouvement_de_repos(mu.Animation("a", (mouvement("eye_pos", 1), mouvement("roar", 20)))) == "roar"
+    assert mouvement_de_repos(mu.Animation("a", (mouvement("eye_pos", 1),))) == "eye_pos"
 
 
 def test_tourner_borne_le_tangage_et_double_clic_revient(qtbot):

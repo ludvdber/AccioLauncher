@@ -61,6 +61,9 @@ class GameDetailView(QWidget):
     page_demandee = pyqtSignal(object)
     # La bande-annonce s'entend (ou plus) : la musique de fond lui laisse la place.
     son_bande_annonce = pyqtSignal(bool)
+    # Le son de la bande-annonce rallumé alors que tout le launcher est muet :
+    # la barre du bas doit le savoir, sinon elle dit « coupé » sur un son qui s'entend.
+    son_demande = pyqtSignal()
     # Le lien « Musique » de la fiche : la Médiathèque sur ce jeu.
     mediatheque_demandee = pyqtSignal(str)
 
@@ -72,6 +75,10 @@ class GameDetailView(QWidget):
         # qui possède la session. Seul, sans fenêtre : rien ne tourne.
         self.partie_en_cours = lambda: ""
         self._son_emis = False   # dernier état annoncé par `son_bande_annonce`
+        # Le haut-parleur de la bande-annonce, cliqué : vaut pour la session,
+        # jusqu'à ce que « Couper le son des vidéos » change dans les Paramètres.
+        self._choix_son: bool | None = None
+        self._mute_videos_vu = manager.config.mute_videos
 
         # Sous-systèmes
         self._video = VideoPlayer(self)
@@ -425,7 +432,20 @@ class GameDetailView(QWidget):
 
     def _muette(self) -> bool:
         config = self.manager.config
-        return config.mute_videos or config.son_coupe
+        if config.mute_videos != self._mute_videos_vu:   # le réglage reprend la main
+            self._mute_videos_vu = config.mute_videos
+            self._choix_son = None
+        if config.son_coupe:
+            return True
+        return config.mute_videos if self._choix_son is None else self._choix_son
+
+    def _choisir_son(self, muette: bool) -> None:
+        """Un geste sur la barre de la bande-annonce : il fait foi, et rallume
+        le son du launcher s'il était coupé."""
+        self._choix_son = muette
+        if not muette and self.manager.config.son_coupe:
+            self.son_demande.emit()
+        self.apply_audio_config()
 
     def _signaler_son(self) -> None:
         """Dit à la musique de fond si une bande-annonce s'entend, à chaque changement."""
@@ -469,8 +489,7 @@ class GameDetailView(QWidget):
         self._try_play_video(self.game.id)
 
     def _on_mute_clicked(self) -> None:
-        self._audio_bar.set_muted_icon(self._video.toggle_mute())
-        self._signaler_son()
+        self._choisir_son(not self._video.muted)
 
     def _on_play_clicked(self) -> None:
         if self._video.paused:
@@ -481,9 +500,12 @@ class GameDetailView(QWidget):
         self._signaler_son()
 
     def _on_volume_changed(self, value: int) -> None:
+        # Toucher au volume rallume le son de la bande-annonce (`set_volume`).
+        muette = self._video.muted
         self._video.set_volume(value)
-        if not self._video.muted:
-            self._audio_bar.set_muted_icon(False)
+        if muette and not self._video.muted:
+            self._choisir_son(False)
+            return
         self._signaler_son()
 
     # ──────────────────── API publique ────────────────────

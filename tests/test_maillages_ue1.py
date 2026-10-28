@@ -58,14 +58,40 @@ def modele_brut(fin_coupee: bool = False) -> bytes:
     return bytes(d[:-1] if fin_coupee else d)
 
 
-class _Paquet:
-    noms = ["None", "Racine", "Bras"]
+def animation_brute(fin_coupee: bool = False) -> bytes:
+    """Un mouvement « walk » de 4 images pour les deux os du triangle : la racine
+    fait un quart de tour autour de Z entre l'image 0 et l'image 3 (position fixe),
+    le bras ne bouge pas. Format relevé dans `maillages_ue1`."""
+    d = bytearray()
+    d += _tab(2, bytes([1]) + b"\0" * 8 + bytes([2]) + b"\0" * 8)   # RefBones : nom, drapeaux, parent
+    d += _tab(1)                                                    # Moves
+    d += struct.pack("<3ff2i", 0, 0, 0, 4 / 30, 0, 0)                # RootSpeed3D, TrackTime, StartBone, Flags
+    d += _tab(2, struct.pack("<2i", 0, 1))                          # BoneIndices
 
-    def __init__(self, data: bytes) -> None:
+    def piste(nq: int, npos: int, echelle: float) -> bytes:
+        return struct.pack("<I", 0) + bytes([nq, npos, nq]) + struct.pack("<2f", echelle, 1 / 30)
+
+    d += _tab(2, piste(2, 1, 5.0) + piste(1, 1, 10.0))
+    d += _tab(1, bytes([3, 0]) + struct.pack("<2i", 0, 4) + _tab(0) + struct.pack("<f", 30))   # AnimSeqs
+    d += _tab(3, struct.pack("<9h", 0, 0, 0, 0, 0, 16384, 0, 0, 0))   # rotations : identité, 90° Z, identité
+    d += _tab(2, struct.pack("<6h", 0, 0, 32767, 32767, 0, 0))        # positions : (0, 0, 5), (10, 0, 0)
+    d += _tab(3, bytes([0, 3, 0]))                                   # temps : images 0 et 3, image 0
+    return bytes(d[:-1] if fin_coupee else d)
+
+
+class _Paquet:
+    noms = ["None", "Racine", "Bras", "walk"]
+
+    def __init__(self, data: bytes, animation: bytes = b"") -> None:
         self.data = data
+        self.animation = animation
 
     def objet(self, nom: str, classe: str):
-        return (_Lecteur(self.data), len(self.data)) if classe == "SkeletalMesh" else None
+        if classe == "SkeletalMesh":
+            return _Lecteur(self.data), len(self.data)
+        if classe == "Animation" and self.animation:
+            return _Lecteur(self.animation), len(self.animation)
+        return None
 
     def nom_objet(self, ref: int) -> str:
         return {7: "Peau"}.get(ref, "None")
@@ -80,6 +106,7 @@ class TestLecture:
         assert m.materiaux == (mu.Materiau("Peau", mu.PF_MASQUE),)
         assert [o.nom for o in m.squelette] == ["Racine", "Bras"]
         assert len(m.influences) == 3
+        assert m.animation == ""                                      # DefaultAnimation = None
 
     def test_une_fin_inattendue_se_refuse(self):
         with pytest.raises(ValueError):
@@ -144,3 +171,53 @@ class TestPose:
         assert q is not None
         assert mu.tourner_point(q, (0, -1, 0)) == pytest.approx((0, 1, 0))
         assert mu.face(mu.Maillage((), (), ())) is None          # sans os
+
+
+class TestAnimation:
+    """Les mouvements du jeu : lecture de l'objet `Animation`, pose à un instant."""
+
+    def test_les_composantes_sont_des_sinus(self):
+        x, y, z, w = mu._quat_de(16384, 0, 0)                   # asin(√2/2) = π/4 = 16 384 pas
+        assert (x, y, z) == pytest.approx((math.sqrt(0.5), 0, 0), abs=1e-4)
+        assert w == pytest.approx(math.sqrt(0.5), abs=1e-4)
+        assert mu._quat_de(32767, 0, 0)[3] == 0                 # demi-tour : w nul, jamais négatif
+
+    def test_lecture(self):
+        a = mu.lire_animation(_Paquet(modele_brut(), animation_brute()), "x")
+        assert a is not None and a.nom == "x"
+        (walk,) = a.mouvements
+        assert (walk.nom, walk.groupe, walk.images) == ("walk", "None", 4)
+        assert walk.duree == pytest.approx(4 / 30)
+        assert walk.os == ("Racine", "Bras")
+        racine, bras = walk.piste("racine"), walk.piste("Bras")   # noms sans casse
+        assert walk.piste("Jambe") is None
+        assert racine.temps == pytest.approx((0, 0.1))          # 3 images après la première clé
+        assert racine.positions == ((0, 0, 5),)
+        assert racine.rotations[1] == pytest.approx((0, 0, math.sqrt(0.5), math.sqrt(0.5)), abs=1e-4)
+        assert len(bras.positions) == 1 and bras.positions[0] == pytest.approx((10, 0, 0))
+
+    def test_une_fin_inattendue_se_refuse(self):
+        with pytest.raises(ValueError):
+            mu.lire_animation(_Paquet(modele_brut(), animation_brute(fin_coupee=True)), "x")
+        assert mu.lire_animation(_Paquet(modele_brut()), "x") is None
+
+    def test_la_pose_suit_le_mouvement_et_boucle(self):
+        p = _Paquet(modele_brut(), animation_brute())
+        m, (walk,) = mu.lire(p, "x"), mu.lire_animation(p, "x").mouvements
+
+        def memes(a, b) -> bool:
+            return all(pa == pytest.approx(pb, abs=1e-6) for pa, pb in zip(a, b, strict=True))
+
+        assert memes(mu.pose(m, walk, 0), m.points)
+        # Image 3 : la racine a tourné d'un quart de tour (rotation prise conjuguée,
+        # comme celles du squelette) et emporte le bras.
+        fin = mu.pose(m, walk, 0.1)
+        assert fin[1] == pytest.approx((1, 0, 0), abs=1e-3)
+        assert fin[2] == pytest.approx((0, -10, 0), abs=1e-3)
+        milieu = mu.pose(m, walk, 0.05)                          # à mi-chemin : 45°
+        assert milieu[2] == pytest.approx((10 * math.sqrt(0.5), -10 * math.sqrt(0.5), 0), abs=1e-3)
+        assert memes(mu.pose(m, walk, walk.duree + 0.05), milieu)   # en boucle
+
+    def test_sans_fichier_ni_nom(self, tmp_path):
+        assert mu.animation(tmp_path / "absent.u", "skharryAnims") is None
+        assert mu.animation(tmp_path / "absent.u", "") is None

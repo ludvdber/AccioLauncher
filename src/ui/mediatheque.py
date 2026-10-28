@@ -94,9 +94,10 @@ class Mediatheque(QObject):
         self.mini = MiniLecteur(self)
         barre_statut.addPermanentWidget(self.mini)
         # La bande-annonce qui s'entend fait taire la musique ; le son coupé de
-        # la barre du bas fait taire la bande-annonce.
+        # la barre du bas fait taire la bande-annonce ; la rallumer rend le son du launcher.
         detail.son_bande_annonce.connect(self.fond.bande_annonce_sonore)
         self.fond.son_coupe_change.connect(lambda _coupe: detail.apply_audio_config())
+        detail.son_demande.connect(self.fond.rendre_le_son)
         detail.mediatheque_demandee.connect(lambda jeu: self.ouvrir(self.rubrique_pour(jeu), jeu))
         session.demarree.connect(lambda _nom: self.fond.suspendre(JEU))
         session.terminee.connect(self._retour_de_partie)

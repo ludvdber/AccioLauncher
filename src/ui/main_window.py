@@ -605,7 +605,7 @@ class MainWindow(QMainWindow):
         self._carousel.refresh_indicators()
 
     def _on_settings(self) -> None:
-        dlg = SettingsDialog(self.config, self.manager, self, store=self._trailers)
+        dlg = SettingsDialog(self.config, self.manager, self, store=self._trailers, fond=self._mediatheque.fond)
         dlg.config_changed.connect(self._on_config_changed)
         dlg.force_catalog_refresh.connect(lambda: self._force_update_check(dlg, catalog_only=True))
         dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))

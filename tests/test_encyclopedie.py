@@ -187,7 +187,7 @@ class TestModeles:
         triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
                                           (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
                                           (maillages_ue1.Materiau("", 0),))
-        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche: (triangle, {}))
+        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche: (triangle, {}, None))
         monkeypatch.setattr(encyclopedie, "image", lambda dossier, fiche: None)
         vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
         qtbot.addWidget(vue)
@@ -199,4 +199,35 @@ class TestModeles:
         assert all(f.a_une_vignette for f in vue.fiches)
         vue.choisir(vue.fiches[3])
         assert vue.fiches[3].property("choisie") and not vue.fiches[0].property("choisie")
+        assert vue.scene._commandes.isHidden()                  # sans mouvement, pas de bouton
+        vue.fermer()
+
+    def test_le_bouton_animer_lance_et_fige_le_mouvement(self, qtbot, tmp_path, monkeypatch):
+        from src.core import maillages_ue1
+        from src.ui.encyclopedie_page import VueEncyclopedie
+        triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+                                          (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
+                                          (maillages_ue1.Materiau("", 0),))
+        mouvements = (maillages_ue1.Mouvement("Jump", "None", 0.3, 9, (), ()),
+                      maillages_ue1.Mouvement("breath", "None", 2.0, 60, (), ()))
+        animation = maillages_ue1.Animation("skAnims", mouvements)
+        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche: (triangle, {}, animation))
+        monkeypatch.setattr(encyclopedie, "image", lambda dossier, fiche: None)
+        vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
+        qtbot.addWidget(vue)
+        vue.montrer("hp1")
+        qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=5000)
+        scene = vue.scene
+        assert scene is not None and not scene._commandes.isHidden()
+        assert [scene.mouvements.itemText(i) for i in range(scene.mouvements.count())] == ["Jump", "breath"]
+        assert scene.mouvements.currentText() == "breath"      # l'attente d'abord
+        assert scene.modele.mouvement is None
+        scene.bouton_animer.click()
+        assert scene.modele.mouvement == "breath" and scene.bouton_animer.text() == "Figer"
+        scene.mouvements.setCurrentText("Jump")                 # changer en cours de route
+        assert scene.modele.mouvement == "Jump"
+        scene.bouton_animer.click()
+        assert scene.modele.mouvement is None and scene.bouton_animer.text() == "Animer"
+        vue.choisir(vue.fiches[1])                              # une autre fiche : tout repart figé
+        assert scene.modele.mouvement is None and scene.bouton_animer.text() == "Animer"
         vue.fermer()
