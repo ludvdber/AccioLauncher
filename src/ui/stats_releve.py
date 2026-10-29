@@ -29,6 +29,7 @@ from src.core.config import ASSETS_DIR
 from src.core.formatting import format_relative_date
 from src.core.i18n import tr
 from src.core.scolarite import ANNEES
+from src.ui.composants import ENCRE_DISCRETE
 from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
 from src.ui.fonts import body_font, cinzel
 from src.ui.theme import accent_qcolor, current as theme_courant
@@ -325,7 +326,7 @@ class _Releve(QWidget):
         rang.addWidget(filet, 1)
         note = QLabel(tr("ne compte pas dans les sept années"))
         note.setFont(body_font(12))
-        note.setStyleSheet("color: #6f6d8e; font-style: italic;")
+        note.setStyleSheet(f"color: {ENCRE_DISCRETE}; font-style: italic;")
         rang.addWidget(note)
         return bloc
 

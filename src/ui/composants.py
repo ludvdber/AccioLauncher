@@ -24,7 +24,9 @@ from src.ui.theme import themed
 # Encres des pages, du plus lu au plus discret.
 ENCRE = "#f2f2f4"
 ENCRE_DOUCE = "#8f8db0"
-ENCRE_DISCRETE = "#6f6d8e"
+# Remontée le 2026-10-29 (audit, choix de Ludo) : #6f6d8e faisait 3,05 sur
+# `bg_card`, sous le seuil AA de 4,5. `test_contraste` tient le seuil.
+ENCRE_DISCRETE = "#8c8aa5"
 
 _STYLE = """
 QFrame#carte {

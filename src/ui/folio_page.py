@@ -89,7 +89,7 @@ QFrame#tuile, QFrame#coupe, QFrame#objet {
     border: 1px solid rgba(214, 167, 44, 0.55); border-radius: 15px; padding: 5px 14px;
 }
 #sortAVenir {
-    color: #7d7b96; background: transparent;
+    color: #8c8aa5; background: transparent;
     border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 15px; padding: 5px 14px;
 }
 QFrame#fiche {

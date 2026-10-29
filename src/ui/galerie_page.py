@@ -69,7 +69,7 @@ QPushButton#filtre {
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px;
     color: #a9a7c4; padding: 5px 12px;
 }
-QPushButton#filtre[vide="true"] { color: #5d5b72; }
+QPushButton#filtre[vide="true"] { color: #8c8aa5; }
 QPushButton#filtre:hover { color: #f2f2f4; }
 QPushButton#filtre:checked {
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
