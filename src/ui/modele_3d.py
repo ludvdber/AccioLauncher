@@ -29,6 +29,7 @@ import time
 
 from PyQt6.QtCore import QPointF, QSize, Qt, QTimer
 from PyQt6.QtGui import (
+    QGuiApplication,
     QBrush,
     QColor,
     QImage,
@@ -103,6 +104,10 @@ def mouvement_de_repos(animation: Animation) -> str | None:
     return next((m.nom for m in animation.mouvements if m.images > 1), noms[0])
 
 
+def _application_active() -> bool:
+    return QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationActive
+
+
 class Modele3D(QWidget):
     """Un modèle posé, vu de face au départ, qu'on fait tourner."""
 
@@ -130,6 +135,13 @@ class Modele3D(QWidget):
         # fluide »), comme le minuteur commun des particules (`ticker.py`).
         self._minuteur.setTimerType(Qt.TimerType.PreciseTimer)
         self._minuteur.timeout.connect(self._avancer)
+        # Le launcher passé derrière une autre fenêtre : plus rien ne tourne.
+        # Sans cela, la rotation au repos occupait un cœur entier (98 % mesurés)
+        # tant que l'Encyclopédie restait ouverte (audit du 2026-10-29) ; le
+        # Ticker des particules se met en pause de la même façon.
+        app = QGuiApplication.instance()
+        if isinstance(app, QGuiApplication):
+            app.applicationStateChanged.connect(self._sur_etat_application)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
 
     @property
@@ -198,10 +210,13 @@ class Modele3D(QWidget):
     # --- Animation -------------------------------------------------------------
 
     def _mettre_en_route(self) -> None:
-        if self._modele is not None and self.isVisible():
+        if self._modele is not None and self.isVisible() and _application_active():
             self._minuteur.start()
         else:
             self._minuteur.stop()
+
+    def _sur_etat_application(self, _etat: Qt.ApplicationState) -> None:
+        self._mettre_en_route()
 
     def showEvent(self, event: QShowEvent | None) -> None:
         super().showEvent(event)

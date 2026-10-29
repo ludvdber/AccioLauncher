@@ -419,3 +419,21 @@ class TestAucunTexteVisibleHorsTr:
         assert self._nom(ast.parse('w.setText("x")').body[0].value) == "setText"
         assert list(self._textes(ast.parse('"a" if c else "Texte visible"').body[0].value)) \
             == ["a", "Texte visible"]
+
+
+class TestLesTextesDesCartesDePrereglage:
+    """Audit du 2026-10-29 : « Se choisit tout seul dès qu'un effet change. »
+    passait par `tr(texte)` sur une variable, angle mort de `TestCouverture`,
+    et restait en français en anglais et en espagnol."""
+
+    def test_sur_mesure_est_traduite_partout(self):
+        import json
+        from pathlib import Path
+        cle = "Se choisit tout seul dès qu'un effet change."
+        source = Path("src/ui/game_settings_dialog.py").read_text(encoding="utf-8")
+        assert cle in source, "la carte a changé de texte : mettre ce test à jour"
+        for fichier in Path("src/data/i18n").glob("*.json"):
+            if fichier.stem == "fr":
+                continue
+            chaines = json.loads(fichier.read_text(encoding="utf-8"))["strings"]
+            assert cle in chaines, fichier.name

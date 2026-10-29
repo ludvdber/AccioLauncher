@@ -456,3 +456,24 @@ class TestAucuneOperationPendantUnePreparation:
                 sans_garde.append(fonction.name)
         assert len(portes) >= 5, f"le balayage ne voit plus les portes : {portes}"
         assert not sans_garde
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="groupe de processus POSIX")
+class TestArretSousLeDelaiDeLaFermeture:
+    """Audit du 2026-10-29 : 3 s d'attente par signal, autant que le délai de
+    grâce de la fermeture. Un groupe qui traînait sur SIGTERM voyait le fil
+    `terminate()` avant le SIGKILL : umu ou winetricks survivaient au launcher."""
+
+    def test_un_groupe_sourd_a_sigterm_meurt_avant_le_delai(self):
+        import time
+
+        from src.core.thread_utils import DELAI_GRACE_MS
+        proc = subprocess.Popen(["/bin/sh", "-c", "trap '' TERM; sleep 30"],
+                                start_new_session=True)
+        time.sleep(0.2)                       # le piège est posé
+        debut = time.monotonic()
+        prep.PreparationWine._arreter(proc)
+        duree = time.monotonic() - debut
+        assert proc.poll() is not None, "le groupe a survécu"
+        # Un pas de sondage s'ajoute avant `_arreter` dans le vrai fil.
+        assert duree + prep._PAS_S < DELAI_GRACE_MS / 1000

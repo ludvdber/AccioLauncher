@@ -529,6 +529,10 @@ class FolioPage(QDialog):
         else:
             self._afficher(None)
 
+    def arreter(self) -> None:
+        """Ce que la page fait tourner s'arrête (HP4 décode sur un fil). Appelé
+        par le Carnet quand il remplace ou ferme la page sans passer par `done`."""
+
     def _charger(self) -> None:
         self.releves = folio.emplacements_hp1(sauvegardes.fichiers(self.game.sauvegardes))
         self.cartes, self._titres = folio.textes_hp1(

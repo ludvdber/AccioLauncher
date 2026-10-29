@@ -183,6 +183,12 @@ class CarnetPage(QDialog):
     def _interne_fermee(self, resultat: int) -> None:
         self.done(resultat)
 
+    def done(self, resultat: int) -> None:
+        """Le Carnet se ferme : le folio posé dedans aussi (audit du 2026-10-29)."""
+        if self._folio is not None:
+            self._folio.arreter()
+        super().done(resultat)
+
     # ── Rubriques ──
 
     def montrer(self, jeu: str) -> None:
@@ -197,6 +203,9 @@ class CarnetPage(QDialog):
                                                  integree=True))
             if ancien is not None:
                 ancien.finished.disconnect(self._interne_fermee)
+                # Son `done` n'est jamais appelé ici : le fil de HP4 décodait
+                # encore toutes les illustrations d'une page détruite.
+                ancien.arreter()
                 self._pile.removeWidget(ancien)
                 ancien.deleteLater()
             self.jeu = jeu

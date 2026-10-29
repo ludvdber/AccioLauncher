@@ -75,8 +75,10 @@ complétera.
 Déposez votre fichier dans :
 
 ```
-%USERPROFILE%\Games\AccioLauncher\i18n\de.json
+%USERPROFILE%\Games\AccioLauncher\_Launcher\i18n\de.json
 ```
+
+(sous Linux : `~/Games/AccioLauncher/_Launcher/i18n/de.json`)
 
 Relancez le launcher : votre langue apparaît dans **Paramètres → Langue**.
 Le dossier utilisateur est fusionné **par-dessus** les traductions embarquées,

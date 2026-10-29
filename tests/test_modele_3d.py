@@ -47,7 +47,10 @@ def test_le_modele_se_dessine_texture(qtbot):
     assert image.pixelColor(0, 0).alpha() == 0                                  # fond transparent
 
 
-def test_sans_modele_rien_ne_tourne(qtbot):
+def test_sans_modele_rien_ne_tourne(qtbot, monkeypatch):
+    from src.ui import modele_3d
+    # Offscreen, l'application n'est pas toujours déjà « active » au premier show.
+    monkeypatch.setattr(modele_3d, "_application_active", lambda: True)
     v = Modele3D()
     qtbot.addWidget(v)
     v.show()
@@ -95,3 +98,24 @@ def test_tourner_borne_le_tangage_et_double_clic_revient(qtbot):
     assert v.tangage == TANGAGE_MAX
     v.mouseDoubleClickEvent(None)
     assert (v.tangage, v.zoom) == (8.0, 1.0)
+
+
+def test_rien_ne_tourne_quand_le_launcher_n_est_plus_actif(qtbot, monkeypatch):
+    """Audit du 2026-10-29 : un QTimer de 16 ms tournait tant que la page était
+    visible, launcher passé derrière une autre fenêtre compris (98 % d'un cœur).
+    L'état est simulé dans le MODULE, jamais sur la classe Qt (règle 12)."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QGuiApplication
+
+    from src.ui import modele_3d
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.show()
+    v.poser(_carre())
+    assert v._minuteur.isActive()
+    monkeypatch.setattr(modele_3d, "_application_active", lambda: False)
+    QGuiApplication.instance().applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)
+    assert not v._minuteur.isActive()
+    monkeypatch.setattr(modele_3d, "_application_active", lambda: True)
+    QGuiApplication.instance().applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    assert v._minuteur.isActive()
