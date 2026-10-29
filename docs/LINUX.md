@@ -106,7 +106,7 @@ quelle pull request le traite.
 | Emplacement | Constat | Traitement | Phase |
 |---|---|---|---|
 | `build.bat` | Windows uniquement (et doit le rester) | `build.sh` équivalent : lint → tests → PyInstaller → AppImage, arrêt au premier échec | 4 |
-| `.github/workflows/release.yml` | Un seul job, `windows-latest` | Job Linux en parallèle (`ubuntu-22.04` pour la glibc), même tag, AppImage + SHA-256 + attestation jointes au **même** brouillon | 4 |
+| `.github/workflows/release.yml` | Un seul job, `windows-latest` | Job Linux en parallèle (runner `ubuntu-latest`, build dans un conteneur `ubuntu:22.04` pour la glibc 2.35, prouvée par `glibc_exigee.py`), même tag, AppImage + SHA-256 + attestation jointes au **même** brouillon | 4 |
 | `.github/release-notes.md` | Instructions Windows | Section Linux, après le trait (hors de la boîte de mise à jour) | 4 |
 | `.github/workflows/tests.yml` | `linux-smoke` bloquant, offscreen | Inchangé ; la suite Linux couvre désormais le lanceur de compatibilité | — |
 | `README.md` | Installation Windows | Section « Linux / Bazzite » | 4 |
@@ -332,7 +332,8 @@ l'environnement est lisible — dont le `WINEPREFIX` est le nôtre. Même grâce
   Lever** (Flathub ; absent de la liste préinstallée de Bazzite au 2026-09-24). Surtout : **pas de bac à sable**, donc le
   launcher peut lancer `umu-run` / `wine` de l'hôte et écrire dans
   `~/Games`. Construite par PyInstaller (mode `onedir`) puis `appimagetool`,
-  sur `ubuntu-22.04` pour une glibc assez ancienne.
+  dans un conteneur `ubuntu:22.04` (glibc 2.35 : Mint 21, Debian 12, Bazzite,
+  Steam Deck), sur un runner `ubuntu-latest`.
 - **Flatpak, piste future** : le bac à sable complique précisément ce dont le
   launcher a besoin — lancer Wine/Proton (il faudrait `flatpak-spawn --host`,
   donc la permission `org.freedesktop.Flatpak`, qui annule l'intérêt du bac à
@@ -490,7 +491,7 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
   élagué (la pile GTK du greffon `libqgtk3`, 23 bibliothèques), et un dossier
   dont une dépendance manquerait est REFUSÉ avant emballage.
 - **`release.yml`** : job `version` (tag déduit une fois), builds Windows et
-  Linux (`ubuntu-22.04`) en parallèle, puis UN brouillon portant l'exe,
+  Linux (conteneur `ubuntu:22.04` sur `ubuntu-latest`) en parallèle, puis UN brouillon portant l'exe,
   l'AppImage et leurs deux attestations — seulement si les deux builds ont
   réussi. Rien n'est publié automatiquement ; case décochée, les deux
   fichiers sont joints au run (7 jours).
