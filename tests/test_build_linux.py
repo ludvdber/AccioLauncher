@@ -346,6 +346,9 @@ class TestWorkflowDeRelease:
         assert "glibc_exigee.py dist/AccioLauncher-x86_64.AppImage 2.35" in linux
         assert "sudo" not in linux, "root dans le conteneur, et sudo n'y est pas"
         assert linux.index("run: ./build.sh") < linux.index("glibc_exigee.py")
+        # Le Python de setup-python pour 22.04 la suppose : sans elle, mypy
+        # (étape 2/6 de build.sh) meurt sur `import sqlite3`.
+        assert "libsqlite3-0" in linux
 
 
 glibc = _module("glibc_exigee")
