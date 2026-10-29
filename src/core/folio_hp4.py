@@ -366,6 +366,53 @@ def textes_jeu(system: Path, langue: str) -> tuple[str, ...]:
     return _textes(str(system), langue, _JEU, _REPERE_JEU)
 
 
+# Le jeu ne cherche pas ses textes par rang : son résolveur (0x44C440, relevé
+# le 2026-10-29, `notes/HP4.md`) hache la clé sans « $ » (h = 0xFFFFFFFF, puis
+# h × 33 + octet SIGNÉ) et cherche le hachage dans un bloc de paires (hachage,
+# rang) qui précède la table LOCH/LOCL : « 19 05 04 20 », compte, paires.
+_BLOC_HACHAGES = b"\x19\x05\x04\x20"
+
+
+def hachage_cle(cle: str) -> int:
+    """Le hachage d'une clé de texte, tel que l'exe le calcule."""
+    h = 0xFFFFFFFF
+    for octet in cle.encode("latin-1"):
+        h = (h * 33 + (octet - 256 if octet > 127 else octet)) & 0xFFFFFFFF
+    return h
+
+
+def index_hachages(flux: bytes) -> dict[int, int]:
+    """Hachage de clé → rang dans la table LOCL ; {} sans le bloc."""
+    p = flux.find(_BLOC_HACHAGES)
+    if p < 0 or p + 8 > len(flux):
+        return {}
+    n = struct.unpack_from("<I", flux, p + 4)[0]
+    if p + 8 + 8 * n > len(flux):
+        return {}
+    return dict(struct.iter_unpack("<II", flux[p + 8:p + 8 + 8 * n]))
+
+
+def index_jeu(system: Path, langue: str) -> dict[int, int]:
+    """L'index des textes de la pensine du jeu installé ; {} sinon."""
+    return _index(str(system), langue)
+
+
+@lru_cache(maxsize=4)
+def _index(system_txt: str, langue: str) -> dict[int, int]:
+    dossier = _LANGUES.get(langue)
+    system = Path(system_txt)
+    if dossier is None or not system.is_dir():
+        return {}
+    big = next((p for p in system.iterdir() if p.name.lower() == "data.big"), None)
+    if big is None:
+        return {}
+    try:
+        return index_hachages(_entree_big(big, f"{dossier}/{_JEU}"))
+    except (OSError, struct.error):
+        log.warning("Folio HP4 : index des textes illisible", exc_info=True)
+        return {}
+
+
 @lru_cache(maxsize=4)
 def _textes(system_txt: str, langue: str, flux: str, repere: Nom) -> tuple[str, ...]:
     dossier = _LANGUES.get(langue)
@@ -535,13 +582,28 @@ def cle_carte(carte: int) -> tuple[str, int] | None:
     return None
 
 
-def texte_carte(table: tuple[str, ...], carte: int) -> tuple[str, str]:
+def texte_carte(table: tuple[str, ...], carte: int,
+                index: dict[int, int] | None = None) -> tuple[str, str]:
     """Le nom et la description d'une carte dans la table EN JEU (`textes_jeu`) ;
-    une chaîne vide quand le jeu n'est pas là ou que le texte n'est pas connu."""
+    une chaîne vide quand le jeu n'est pas là ou que le texte n'est pas connu.
+
+    Avec l'index du jeu (`index_jeu`), les textes sont cherchés comme le jeu
+    les cherche : `$GUI_CARD_NAME_<clé>` et `$GUI_CARD_DESCRIPTION_<clé>`. La
+    description d'une créature dit comment obtenir la carte ; son effet, qui
+    la suit dans la table, vient en premier."""
     cle = cle_carte(carte)
     if cle is None or not table:
         return "", ""
     famille, n = cle
+    if index:
+        cle_txt = f"{famille}_{n:02d}"
+        nom_carte = _texte_cle(table, index, f"GUI_CARD_NAME_{cle_txt}")
+        description = _texte_cle(table, index, f"GUI_CARD_DESCRIPTION_{cle_txt}")
+        if famille in _DESCRIPTIONS_CREATURES and n > 1:
+            effet = _texte_table(table, _DESCRIPTIONS_CREATURES[famille] + 2 * n - 3)
+            if effet and effet != description:
+                description = f"{effet}\n{description}" if description else effet
+        return nom_carte, description
     nom_carte = _texte_table(table, _NOMS_CARTES[famille] + n - 1)
     if famille in _DESCRIPTIONS_PERSOS:
         indice: int | None = _DESCRIPTIONS_PERSOS[famille] + n - 1
@@ -550,6 +612,11 @@ def texte_carte(table: tuple[str, ...], carte: int) -> tuple[str, str]:
     else:
         indice = _DESCRIPTIONS_QUETES.get(n)
     return nom_carte, _texte_table(table, indice) if indice is not None else ""
+
+
+def _texte_cle(table: tuple[str, ...], index: dict[int, int], cle: str) -> str:
+    rang = index.get(hachage_cle(cle))
+    return _texte_table(table, rang).replace("\n", " ") if rang is not None else ""
 
 
 def _texte_table(table: tuple[str, ...], indice: int) -> str:

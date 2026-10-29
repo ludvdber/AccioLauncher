@@ -19,7 +19,7 @@ from html import escape
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QRectF, QSize, Qt, QTimer
+from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -41,11 +41,14 @@ from src.core import (
     folio_hp6,
     folio_hp7,
     sauvegardes,
+    sons_cartes_hp4,
 )
+from src.core.config import cache_pour
 from src.core.i18n import get_language, tr
 from src.ui.carte_3d import Carte3D
 from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
+from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
 from src.ui.folio_page import (
     _ECART_CASES,
@@ -69,12 +72,14 @@ _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
 
 
 def page_folio(game, install_path: Path, parent: QWidget | None = None,
-               integree: bool = False) -> FolioPage:
+               integree: bool = False, config=None) -> FolioPage:
     """La page du folio qui va avec le jeu (`folio.JEUX`)."""
     classe = {"hp2": FolioPageHP2, "hp3": FolioPageHP3, "hp4": FolioPageHP4, "hp5": FolioPageHP5,
               "hp7a": FolioPageHP7, "hp7b": FolioPageHP7,
               "hp6": FolioPageHP6}.get(game.id, FolioPage)
-    return classe(game, install_path, parent, integree=integree)
+    page = classe(game, install_path, parent, integree=integree)
+    page.config = config
+    return page
 
 
 def _pastille(nom: str, glyphe: QPixmap | None, appris: bool) -> QFrame:
@@ -609,6 +614,7 @@ class FolioPageHP4(FolioPage):
                         for p in folio_hp4.releve(chemin)]
         self._table = folio_hp4.textes(self._system, get_language())
         self._table_jeu = folio_hp4.textes_jeu(self._system, get_language())
+        self._index_jeu = folio_hp4.index_jeu(self._system, get_language()) if self._table_jeu else {}
         dpr = self.devicePixelRatioF()
         self._dragee = image_bgra(folio_hp4.image_dragee(self._system), 36, dpr, rogner=True)
         # Les objets de la pensine sans leurs volutes : la bande du milieu.
@@ -621,6 +627,8 @@ class FolioPageHP4(FolioPage):
         self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="folio_hp4")
         self._attendues: list = []
         self._grande_attendue = None
+        self._son_attendu = None
+        self._lecteur_son = None
         self._carte_montree_hp4 = None
         self._chargeur = QTimer(self)
         self._chargeur.setInterval(30)
@@ -814,7 +822,8 @@ class FolioPageHP4(FolioPage):
         # Nom et description : la boutique du jeu les montre avant l'achat ;
         # l'illustration, elle, reste réservée aux cartes obtenues.
         nom_carte, description = folio_hp4.texte_carte(self._table_jeu,
-                                                        vignette.jeu.cartes[vignette.rang])
+                                                        vignette.jeu.cartes[vignette.rang],
+                                                        self._index_jeu)
         self._carte_nom.setText(nom_carte)
         self._carte_nom.setVisible(bool(nom_carte))
         self._carte_texte.setText(description)
@@ -833,6 +842,13 @@ class FolioPageHP4(FolioPage):
             self._grande_attendue = (vignette, self._fil.submit(
                 _illustration, self._system, vignette.jeu, vignette.rang, None))
             self._chargeur.start()
+        # Le son de la scène, comme la boutique du jeu à l'ouverture d'une carte
+        # (créatures, éternuement de Ron…) ; seize jeux n'en ont pas.
+        self._arreter_son()
+        if vignette.possedee and self.config is not None and not self.config.son_coupe:
+            self._son_attendu = (vignette, self._fil.submit(
+                sons_cartes_hp4.son_carte, self._system, vignette.jeu.flux))
+            self._chargeur.start()
 
     def _poser_pretes(self) -> None:
         restantes = []
@@ -848,11 +864,48 @@ class FolioPageHP4(FolioPage):
             if (vignette is self._carte_montree_hp4 and not futur.cancelled()
                     and futur.exception() is None):
                 self._grande.poser(futur.result())
-        if not self._attendues and self._grande_attendue is None:
+        if self._son_attendu is not None and self._son_attendu[1].done():
+            vignette, futur = self._son_attendu
+            self._son_attendu = None
+            if (vignette is self._carte_montree_hp4 and not futur.cancelled()
+                    and futur.exception() is None and futur.result()):
+                self._jouer_son(vignette.jeu.flux, futur.result())
+        if not self._attendues and self._grande_attendue is None and self._son_attendu is None:
             self._chargeur.stop()
 
+    def _jouer_son(self, flux: str, donnees: bytes) -> None:
+        """Le WAV décodé, écrit une fois dans le cache puis lu au volume de la musique."""
+        if not MULTIMEDIA_DISPONIBLE or self.config is None or self.config.son_coupe:
+            return
+        chemin = cache_pour(self.config.install_path) / "sons_cartes_hp4" / f"{flux}.wav"
+        try:
+            if not chemin.is_file():
+                chemin.parent.mkdir(parents=True, exist_ok=True)
+                chemin.write_bytes(donnees)
+        except OSError:
+            return
+        sortie = QAudioOutput(self)
+        sortie.setVolume(self.config.volume_musique / 100.0)
+        lecteur = QMediaPlayer(self)
+        lecteur.setAudioOutput(sortie)
+        lecteur.setSource(QUrl.fromLocalFile(str(chemin)))
+        lecteur.play()
+        self._lecteur_son = (lecteur, sortie)
+
+    def _arreter_son(self) -> None:
+        self._son_attendu = None
+        if self._lecteur_son is not None:
+            lecteur, sortie = self._lecteur_son
+            self._lecteur_son = None
+            lecteur.stop()
+            lecteur.deleteLater()
+            sortie.deleteLater()
+
     def arreter(self) -> None:
-        """Plus rien à décoder pour cette page (fermée, ou remplacée au Carnet)."""
+        """Plus rien à décoder ni à jouer pour cette page (fermée, ou remplacée au
+        Carnet) : le son d'une carte se tait d'abord, sinon il continuait quand
+        le Carnet changeait de jeu."""
+        self._arreter_son()
         self._chargeur.stop()
         self._fil.shutdown(wait=False, cancel_futures=True)
 
