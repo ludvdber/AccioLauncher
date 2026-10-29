@@ -81,6 +81,32 @@ class TestHP5:
 
 
 class TestHP4:
+    def test_arreter_coupe_d_abord_le_son_de_la_carte(self, qtbot, racines):
+        """Le Carnet qui change de jeu appelle `arreter()` sans `done()` : sans
+        `_arreter_son`, le son d'une carte continuait (fusion du 2026-10-29)."""
+        from PyQt6.QtCore import QObject
+
+        from src.ui.folio_jeux import page_folio
+        from tests.test_folio_hp4 import _hpgof
+        dossier = racines / "Local" / "EA" / "HPGOF"
+        dossier.mkdir(parents=True)
+        (dossier / "HPGOF").write_bytes(_hpgof())
+        jeu = _jeu("hp4", "HP4/gof_f.exe", {"root": "localappdata", "folders": ["EA/HPGOF"],
+                                             "files": "HPGOF", "first": 1, "slots": "hp4"})
+        page = page_folio(jeu, racines / "Jeux")
+        qtbot.addWidget(page)
+
+        class _Lecteur(QObject):
+            arrete = False
+
+            def stop(self):
+                self.arrete = True
+        lecteur, sortie = _Lecteur(), QObject()
+        page._lecteur_son = (lecteur, sortie)
+        page.arreter()
+        assert lecteur.arrete and page._lecteur_son is None
+        assert page._fil._shutdown, "le décodage s'arrête aussi"
+
     def test_l_emplacement(self, qtbot, racines):
         from PyQt6.QtWidgets import QLabel
 

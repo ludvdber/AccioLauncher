@@ -28,13 +28,65 @@ def _appels_texte_sans_encodage(source: str) -> list[int]:
     return lignes
 
 
+def _fichiers_texte_sans_encodage(source: str) -> list[int]:
+    """`open()` en mode texte, `read_text`, `write_text` sans `encoding=`.
+
+    L'audit du 2026-10-29 a trouvé le dépôt propre, mais rien ne le gardait :
+    le test ne surveillait que les sorties de programme."""
+    lignes = []
+    for noeud in ast.walk(ast.parse(source)):
+        if not isinstance(noeud, ast.Call):
+            continue
+        nom = noeud.func.attr if isinstance(noeud.func, ast.Attribute) else getattr(noeud.func, "id", "")
+        mots = {k.arg for k in noeud.keywords}
+        if "encoding" in mots:
+            continue
+        if nom in ("read_text", "write_text"):
+            lignes.append(noeud.lineno)
+        elif nom == "open":
+            # `open(chemin, mode)` / `Path.open(mode)` : le mode est le 2e argument
+            # de la fonction, le 1er de la méthode.
+            positionnels = noeud.args[1:] if isinstance(noeud.func, ast.Name) else noeud.args
+            mode = next((k.value for k in noeud.keywords if k.arg == "mode"),
+                        positionnels[0] if positionnels else None)
+            if mode is None or (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
+                                and "b" not in mode.value):
+                lignes.append(noeud.lineno)
+    return lignes
+
+
+def _sources():
+    # build/ et fuzz/ aussi : un outil de build qui décode au hasard publie
+    # un exe faux (audit du 2026-10-29 : `build/linux/dependances.py`).
+    return [*RACINE.joinpath("src").rglob("*.py"), RACINE / "main.py",
+            *RACINE.joinpath("tools").rglob("*.py"), *RACINE.joinpath("build").rglob("*.py"),
+            *RACINE.joinpath("fuzz").rglob("*.py")]
+
+
 def test_aucune_sortie_de_programme_decodee_au_hasard():
     fautifs = []
-    for fichier in [*RACINE.joinpath("src").rglob("*.py"), RACINE / "main.py",
-                    *RACINE.joinpath("tools").rglob("*.py")]:
+    for fichier in _sources():
         for ligne in _appels_texte_sans_encodage(fichier.read_text(encoding="utf-8")):
             fautifs.append(f"{fichier.relative_to(RACINE)}:{ligne}")
     assert fautifs == [], fautifs
+
+
+def test_aucun_fichier_texte_ouvert_au_hasard():
+    fautifs = []
+    for fichier in _sources():
+        for ligne in _fichiers_texte_sans_encodage(fichier.read_text(encoding="utf-8")):
+            fautifs.append(f"{fichier.relative_to(RACINE)}:{ligne}")
+    assert fautifs == [], fautifs
+
+
+def test_le_garde_fou_voit_un_fichier_fautif():
+    assert _fichiers_texte_sans_encodage("open(p)") == [1]
+    assert _fichiers_texte_sans_encodage("open(p, 'w')") == [1]
+    assert _fichiers_texte_sans_encodage("open(p, 'rb')") == []
+    assert _fichiers_texte_sans_encodage("p.open('rb')") == []
+    assert _fichiers_texte_sans_encodage("p.open()") == [1]
+    assert _fichiers_texte_sans_encodage("p.read_text()") == [1]
+    assert _fichiers_texte_sans_encodage("p.write_text(t, encoding='utf-8')") == []
 
 
 def test_le_garde_fou_voit_un_appel_fautif():

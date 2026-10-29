@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from src.core.config import Config, get_documents_dir
+from src.core.ecriture_atomique import ecrire_octets_atomique
 from src.core.catalogue_blocs import IniPatch
 from src.core.game_data import GameData
 from src.core.post_install import apply_config_files, destination_config
@@ -274,10 +275,12 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
                     lines.append("\n")
                 lines.append(f"[{patch.section}]\n")
             lines.append(f"{patch.key}={value}\n")
-        # Encodage du MOTEUR : en UTF-8, UE1 lisait « FrÃ©dÃ©ric ».
-        with ini_path.open("w", encoding=encodage, errors=_INI_ERRORS,
-                           newline=_INI_NEWLINE) as f:
-            f.write("".join(lines))
+        # Encodage du MOTEUR : en UTF-8, UE1 lisait « FrÃ©dÃ©ric ». Encodé
+        # AVANT de toucher au fichier, puis posé d'un seul coup : un « w » le
+        # vidait d'abord, et une valeur hors de la page ANSI ou un disque plein
+        # laissaient le HP.ini du joueur à 0 octet (audit du 2026-10-29).
+        octets = "".join(lines).replace("\n", _INI_NEWLINE).encode(encodage, _INI_ERRORS)
+        ecrire_octets_atomique(ini_path, octets)
         log.info("Patch INI appliqué : [%s] %s=%s dans %s",
                  patch.section, patch.key, value, ini_path)
         return True

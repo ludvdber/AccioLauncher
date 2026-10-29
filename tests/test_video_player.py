@@ -91,3 +91,15 @@ class TestSon:
         assert not lecteur.muted and not lecteur._audio.isMuted()
         assert lecteur._audio.volume() == pytest.approx(0.4)
         assert lecteur.toggle_mute() is True and lecteur._audio.isMuted()
+
+
+def test_la_copie_d_un_saut_n_est_plus_dans_le_tmp_partage(tmp_path):
+    """Audit du 2026-10-29 : `/tmp/accio_cinematique_{0,1}.vp6`, nom fixe dans
+    un dossier partagé. Les copies vivent désormais dans les données du
+    launcher (redirigées vers `tmp_path` par conftest)."""
+    import tempfile
+
+    from src.ui.video_player import dossier_des_copies
+    dossier = dossier_des_copies()
+    assert dossier.is_relative_to(tmp_path)
+    assert dossier.parent != Path(tempfile.gettempdir())

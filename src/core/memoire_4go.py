@@ -107,5 +107,7 @@ def poser(exe: Path, oui: bool = True) -> bool:
 
 def appliquer(jeu: str, exe: Path) -> None:
     """Avant un lancement : le drapeau pour les jeux vus avec."""
-    if jeu in JEUX:
+    # L'en-tête d'abord (4 Ko) : `poser` relit tout l'exe, 18 Mo pour rien à
+    # chaque lancement une fois le drapeau en place (audit du 2026-10-29).
+    if jeu in JEUX and a_le_drapeau(exe) is False:
         poser(exe)

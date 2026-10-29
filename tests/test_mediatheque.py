@@ -663,3 +663,17 @@ class TestUnSeulSonCoupe:
         dlg.reject()
         win._mediatheque.mini._son.click()   # le dialogue fermé n'écoute plus
         assert win.config.son_coupe
+
+
+def test_la_croix_de_la_manette_met_le_plein_ecran_en_pause(qtbot):
+    """Audit du 2026-10-29 : sans bouton au focus, la manette envoie Entrée,
+    que le plein écran ignorait ; seule Espace mettait en pause."""
+    from PyQt6.QtCore import Qt
+
+    from src.ui.cinema_plein_ecran import PleinEcran
+    plein = PleinEcran()
+    qtbot.addWidget(plein)
+    pauses = []
+    plein.pause_demandee.connect(lambda: pauses.append(1))
+    qtbot.keyClick(plein, Qt.Key.Key_Return)
+    assert pauses == [1]

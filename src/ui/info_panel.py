@@ -548,7 +548,11 @@ class InfoPanel(QWidget):
             bulles = []
         if manette:
             bulles.insert(0, manette + (f" : {game.controller_note}" if game.controller_note else ""))
-        self._meta.setToolTip("\n".join(bulles))
+        # Une infobulle est en AutoText : la note du catalogue DISTANT y était
+        # interprétée comme du balisage (règle 57, audit du 2026-10-29). Riche
+        # d'office (`<qt>`), chaque ligne échappée.
+        self._meta.setToolTip(
+            "<qt>" + "<br>".join(escape(b, quote=False) for b in bulles) + "</qt>" if bulles else "")
 
         self._meta.setText(
             '<span style="text-transform:uppercase; letter-spacing:2px;">'

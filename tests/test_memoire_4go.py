@@ -64,3 +64,19 @@ class TestDrapeau:
         assert m.a_le_drapeau(exe) is False
         m.appliquer("essaye", exe)
         assert m.a_le_drapeau(exe) is True
+
+
+class TestPasDeRelectureInutile:
+    def test_un_exe_qui_a_deja_le_drapeau_n_est_pas_relu(self, tmp_path, monkeypatch):
+        """Audit du 2026-10-29 : `poser` lisait l'exe entier à chaque lancement,
+        même quand le drapeau était déjà là."""
+        from pathlib import Path
+        exe = tmp_path / "hp.exe"
+        exe.write_bytes(_exe())
+        m.poser(exe)
+
+        def interdit(self):
+            raise AssertionError("exe relu en entier")
+        monkeypatch.setattr(Path, "read_bytes", interdit)
+        m.appliquer("hp1", exe)
+        assert m.a_le_drapeau(exe) is True

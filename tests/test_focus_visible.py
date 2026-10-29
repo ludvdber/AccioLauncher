@@ -79,3 +79,20 @@ class TestStylesheet:
         from src.ui.styles import COLOR_ACCENT_GOLD, MAIN_STYLE
         assert "outline: 2px solid" in MAIN_STYLE
         assert COLOR_ACCENT_GOLD in MAIN_STYLE
+
+
+def test_aucun_selecteur_focus_non_conditionne():
+    """Règle 16 : un `:focus` nu cercle aussi le bouton que Qt met au focus à
+    l'ouverture, ou après un clic. Seize sélecteurs étaient retombés dedans
+    (Collections, Carnet, barre du haut, aide antivirus ; audit du 2026-10-29).
+    Les mentions entre accents graves (documentation) ne comptent pas."""
+    import re
+    from pathlib import Path
+    fautifs = []
+    for fichier in sorted(Path("src/ui").glob("*.py")):
+        for numero, ligne in enumerate(fichier.read_text(encoding="utf-8").splitlines(), 1):
+            if "`" in ligne:
+                continue
+            if re.search(r"[\w)]:focus\b", ligne):
+                fautifs.append(f"{fichier.name}:{numero}")
+    assert fautifs == []

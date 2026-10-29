@@ -57,7 +57,7 @@ class _Onglet(QPushButton):
             " border-bottom: 2px solid transparent; }"
             f"QPushButton:hover {{ color: {palette.accent_light}; }}"
             f"QPushButton:checked {{ color: #f2eee2; border-bottom-color: {palette.accent}; }}"
-            f"QPushButton:focus {{ color: {palette.accent_light}; }}"
+            f"QPushButton[focusClavier=\"true\"]:focus {{ color: {palette.accent_light}; }}"
             'QPushButton[serre="true"] { padding: 0 7px; }'
         )
         self.pastille = False
@@ -128,7 +128,7 @@ class _PastilleDiscord(QPushButton):
         self.setStyleSheet(
             "QPushButton { background: transparent; color: #d9d6e8; padding: 0 12px 0 10px;"
             " border: 1px solid rgba(255,255,255,0.12); border-radius: 13px; }"
-            "QPushButton:hover, QPushButton:focus { border-color: rgba(88,101,242,0.6);"
+            "QPushButton:hover, QPushButton[focusClavier=\"true\"]:focus { border-color: rgba(88,101,242,0.6);"
             " background: rgba(88,101,242,0.12); }"
         )
         self.largeur_complete = self.sizeHint().width()
@@ -182,7 +182,7 @@ class _Contribuer(QPushButton):
         self.setStyleSheet(
             "QPushButton { background: transparent; color: #c9c7da; padding: 0 6px;"
             " border: 1px solid transparent; border-radius: 13px; }"
-            f"QPushButton:hover, QPushButton:focus {{ color: {palette.accent_light};"
+            f"QPushButton:hover, QPushButton[focusClavier=\"true\"]:focus {{ color: {palette.accent_light};"
             " border-color: rgba(214,167,44,0.35); }"
         )
         self.largeur_complete = self.sizeHint().width()

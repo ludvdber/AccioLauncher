@@ -742,7 +742,12 @@ class FolioPageHP4(FolioPage):
     def _cartes(self, cartes: frozenset[int]) -> QFrame:
         """Le Folio Universitas : les jeux de la boutique, chaque carte possédée
         avec son illustration ; la carte choisie est dans la colonne de droite."""
-        self._attendues = []           # les vignettes d'une autre partie ne se posent plus
+        # Les vignettes d'une autre partie ne se posent plus, et ne se décodent
+        # plus : laissées au fil, elles occupaient le décodeur pour rien (audit
+        # du 2026-10-29).
+        for _, futur in self._attendues:
+            futur.cancel()
+        self._attendues = []
         cadre = QFrame()
         cadre.setObjectName("coupe")
         lay = QVBoxLayout(cadre)
@@ -896,11 +901,16 @@ class FolioPageHP4(FolioPage):
             lecteur.deleteLater()
             sortie.deleteLater()
 
-    def done(self, resultat: int) -> None:
-        """La page se ferme : plus rien à décoder pour elle."""
+    def arreter(self) -> None:
+        """Plus rien à décoder ni à jouer pour cette page (fermée, ou remplacée au
+        Carnet) : le son d'une carte se tait d'abord, sinon il continuait quand
+        le Carnet changeait de jeu."""
         self._arreter_son()
         self._chargeur.stop()
         self._fil.shutdown(wait=False, cancel_futures=True)
+
+    def done(self, resultat: int) -> None:
+        self.arreter()
         super().done(resultat)
 
     def _jauges(self, titre: folio_hp4.Nom, jauges, partie, colonnes: int = 1) -> QFrame:

@@ -445,8 +445,17 @@ class GameManager:
             self.config.playtime_seconds.get(game_id, 0) + int(seconds)
         )
         self.config.last_played[game_id] = date.today().isoformat()
-        self.config.save()
+        # Le journal D'ABORD, puis la config sans lever : `fermer_session` a
+        # déjà effacé le filet de reprise, et un disque plein (juste après une
+        # installation de 7 Go) faisait sortir l'exception avant le journal.
+        # La partie était perdue des deux côtés, et `GameSession` n'émettait
+        # jamais `terminee` (audit du 2026-10-29). Le cumul reste en mémoire :
+        # la sauvegarde suivante le réécrit.
         stats.enregistrer_session(game_id, debut, int(seconds))
+        try:
+            self.config.save()
+        except OSError:
+            log.warning("Temps de jeu de %s non écrit dans la config", game_id, exc_info=True)
         log.info("Temps de jeu de %s : +%d s (total %d s)",
                  game_id, seconds, self.config.playtime_seconds[game_id])
         return True

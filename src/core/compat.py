@@ -415,6 +415,12 @@ def desechapper(texte: str) -> str:
     hexadécimaux (quatre si le suivant pourrait en être un). Lire jusqu'à
     quatre est exact, comme `parse_strW`. Contrôles en `\n` ou en octal.
     """
+    # Chemin rapide : presque toutes les clés d'un `system.reg` n'ont pour
+    # échappement que « \\ ». La boucle caractère par caractère sur les
+    # 27 000 en-têtes coûtait 124 ms avant le splash (audit du 2026-10-29) ;
+    # le résultat est identique (`TestDesechapperRapide`).
+    if "\\" not in texte.replace("\\\\", ""):
+        return texte.replace("\\\\", "\\")
     sortie: list[str] = []
     i, n = 0, len(texte)
     while i < n:
@@ -509,8 +515,17 @@ def _lire(fichier: Path) -> str:
 
 
 def architecture(pfx: Path) -> str:
-    """« win64 » ou « win32 », lu dans l'en-tête de `system.reg`."""
-    for ligne in _lire(pfx / "system.reg").splitlines()[:8]:
+    """« win64 » ou « win32 », lu dans l'en-tête de `system.reg`.
+
+    L'en-tête seul : le fichier fait plusieurs Mo, et la ligne de
+    compatibilité du journal le lisait en entier avant le premier pixel.
+    """
+    try:
+        with open(pfx / "system.reg", encoding="utf-8", errors="replace") as f:
+            entete = f.read(4096)
+    except OSError:
+        entete = ""
+    for ligne in entete.splitlines()[:8]:
         if ligne.startswith("#arch="):
             return ligne[6:].strip()
     return "win64"

@@ -113,7 +113,7 @@ class TestConstater:
     def test_un_fichier_illisible_est_mis_de_cote(self, fichier):
         fichier.write_text("{pas du json", encoding="utf-8")
         assert succes.charger(fichier) == {}
-        assert fichier.with_suffix(".corrompu").exists()
+        assert list(fichier.parent.glob(fichier.stem + ".*.corrompu"))
 
     def test_aller_retour_du_fichier(self, porte, fichier):
         porte["HPGOF#2"] = {"carte"}

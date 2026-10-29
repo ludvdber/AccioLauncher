@@ -188,6 +188,6 @@ class TestLienVisible:
         qtbot.addWidget(page)
         nom = next(lbl for lbl in _labels(page) if "Sara" in lbl.text())
         assert "text-decoration:underline" in nom.text()
-        assert nom.toolTip() == "Ouvrir example.org"
+        assert nom.toolTip() == "<qt>Ouvrir example.org</qt>"   # riche et échappée, règle 57
         voisins = nom.parentWidget().findChildren(QLabel)
         assert any(not v.pixmap().isNull() for v in voisins if v is not nom)

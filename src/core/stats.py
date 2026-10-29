@@ -32,7 +32,6 @@ garde — or elle existe parce que des statistiques de jeu réelles ont déjà �
 
 import json
 import logging
-import os
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -40,7 +39,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, marquer_illisible, mettre_de_cote, ne_pas_ecraser
 
 log = logging.getLogger(__name__)
 
@@ -118,6 +117,11 @@ class Session:
     jeu: str
     debut: datetime
     duree: int  # secondes
+    # Ce qu'une version plus récente a noté sur la partie et que celle-ci ne
+    # lit pas (le préréglage de difficulté de la 1.4, par exemple), gardé tel
+    # quel à la réécriture. Hors comparaison : deux parties restent les mêmes.
+    # Couture posée le 2026-10-29.
+    autres: tuple[tuple[str, Any], ...] = field(default=(), compare=False)
 
     @property
     def jour(self) -> date:
@@ -137,6 +141,8 @@ class Historique:
     demarrages: int = 0
     octets_telecharges: int = 0
     tentatives: tuple[Tentative, ...] = ()
+    # Clés du fichier que cette version ne connaît pas, réécrites telles quelles.
+    inconnus: dict[str, Any] = field(default_factory=dict)
 
     @property
     def vide(self) -> bool:
@@ -145,6 +151,12 @@ class Historique:
 
 
 # ─── Fichier ───
+
+# Ce que cette version lit ; le reste est gardé tel quel (`inconnus`, `autres`).
+_CLES_JOURNAL = frozenset({"version", "herite", "demarrages", "octets_telecharges",
+                           "sessions", "tentatives"})
+_CLES_SESSION = frozenset({"jeu", "debut", "duree"})
+
 
 def chemin_journal() -> Path:
     """Résolu à l'appel, jamais à l'import — voir l'en-tête du module."""
@@ -156,17 +168,23 @@ def _lire_brut(chemin: Path) -> dict[str, Any]:
     if not chemin.exists():
         return {}
     try:
-        data = json.loads(chemin.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+        texte = chemin.read_text(encoding="utf-8")
+    except OSError as exc:
+        # Pas ouvert (verrou), donc pas corrompu : ni mis de côté, ni écrasé
+        # par un journal repartant de vide (audit du 2026-10-29).
+        log.warning("Journal de sessions non lu (%s) — rien ne sera écrit par-dessus", exc)
+        marquer_illisible(chemin)
+        return {}
+    marquer_illisible(chemin, False)
+    try:
+        data = json.loads(texte)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         # Un journal illisible ne doit ni faire planter le launcher ni
         # disparaître en silence sous la prochaine écriture : on le met de côté
         # sous un autre nom. C'est un historique personnel, il ne se reconstruit
         # pas.
         log.warning("Journal de sessions illisible (%s) — mis de côté", exc)
-        try:
-            os.replace(chemin, chemin.with_suffix(".corrompu"))
-        except OSError:
-            pass
+        mettre_de_cote(chemin)
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -186,7 +204,8 @@ def _parse_session(brut: Any) -> Session | None:
         debut = datetime.fromisoformat(str(brut.get("debut")))
     except (ValueError, TypeError):
         return None
-    return Session(jeu=jeu, debut=debut, duree=duree)
+    autres = tuple((k, v) for k, v in brut.items() if k not in _CLES_SESSION)
+    return Session(jeu=jeu, debut=debut, duree=duree, autres=autres)
 
 
 def _parse_tentative(brut: Any) -> Tentative | None:
@@ -221,13 +240,18 @@ def charger(chemin: Path | None = None) -> Historique:
                 sessions.append(s)
     sessions.sort(key=lambda s: s.debut)
 
+    # Types vérifiés et non `or {}` : un JSON VALIDE d'un mauvais type
+    # (`"herite": 5`) levait à chaque retour de partie, sans jamais être mis
+    # de côté (audit du 2026-10-29).
+    herite_brut = data.get("herite")
     herite = {}
-    for gid, secondes in (data.get("herite") or {}).items():
+    for gid, secondes in (herite_brut.items() if isinstance(herite_brut, dict) else ()):
         if isinstance(gid, str) and isinstance(secondes, int) and not isinstance(secondes, bool):
             herite[gid] = max(0, secondes)
 
     tentatives: list[Tentative] = []
-    for entree in (data.get("tentatives") or [])[-_MAX_SESSIONS:]:
+    tentatives_brutes = data.get("tentatives")
+    for entree in (tentatives_brutes if isinstance(tentatives_brutes, list) else [])[-_MAX_SESSIONS:]:
         t = _parse_tentative(entree)
         if t is not None:
             tentatives.append(t)
@@ -239,7 +263,8 @@ def charger(chemin: Path | None = None) -> Historique:
 
     return Historique(tuple(sessions), herite,
                       _entier("demarrages"), _entier("octets_telecharges"),
-                      tuple(tentatives))
+                      tuple(tentatives),
+                      {k: v for k, v in data.items() if k not in _CLES_JOURNAL})
 
 
 def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
@@ -249,6 +274,8 @@ def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
     un compteur n'a pas à matérialiser les sessions pour les resérialiser
     aussitôt (voir `_muter_compteur`).
     """
+    if ne_pas_ecraser(chemin):
+        raise PermissionError(f"journal non lu cette session, non écrasé : {chemin}")
     chemin.parent.mkdir(parents=True, exist_ok=True)
     texte = json.dumps(data, indent=1, ensure_ascii=False)
     ecrire_atomique(chemin, texte)
@@ -257,14 +284,14 @@ def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
 def _ecrire(hist: Historique, chemin: Path) -> None:
     """Sérialise l'historique complet, sessions comprises."""
     _ecrire_donnees(
-        {
+        hist.inconnus | {
             "version": 1,
             "herite": hist.herite,
             "demarrages": hist.demarrages,
             "octets_telecharges": hist.octets_telecharges,
             "sessions": [
-                {"jeu": s.jeu, "debut": s.debut.isoformat(timespec="seconds"),
-                 "duree": s.duree}
+                dict(s.autres) | {"jeu": s.jeu, "debut": s.debut.isoformat(timespec="seconds"),
+                                  "duree": s.duree}
                 for s in hist.sessions[-_MAX_SESSIONS:]
             ],
             "tentatives": [

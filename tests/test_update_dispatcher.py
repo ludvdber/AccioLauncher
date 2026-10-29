@@ -463,6 +463,40 @@ class TestDemarrage:
         dispatcher.start()
         assert ancien.interrompu
 
+    def test_l_ancien_checker_fini_est_debranche_et_detruit(self, qtbot, manager, monkeypatch):
+        """Audit du 2026-10-29 : hors ligne, la relance toutes les 45 s laissait
+        chaque ancien checker enfant du dispatcher et branché (25 après 20
+        relances)."""
+        from PyQt6.QtCore import QCoreApplication, QEvent
+        dispatcher = UpdateDispatcher(manager)
+        ancien = _FauxChecker()
+        ancien.setParent(dispatcher)
+        monkeypatch.setattr(dispatcher, "_new_checker", lambda forced: ancien)
+        dispatcher.start()
+        monkeypatch.setattr(dispatcher, "_new_checker", lambda forced: _FauxChecker())
+        dispatcher.start()
+        recus = []
+        dispatcher.network_status.connect(recus.append)
+        ancien.network_status.emit(False)
+        assert recus == [], "l'ancien checker parle encore"
+        detruit = []
+        ancien.destroyed.connect(lambda: detruit.append(True))
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        assert detruit
+
+    def test_un_checker_force_fini_est_detruit(self, qtbot, manager, monkeypatch):
+        from PyQt6.QtCore import QCoreApplication, QEvent
+
+        from src.core.updater import UpdateChecker
+        monkeypatch.setattr(UpdateChecker, "start", lambda self: None)
+        dispatcher = UpdateDispatcher(manager)
+        checker = dispatcher.forced_checker()
+        detruit = []
+        checker.destroyed.connect(lambda: detruit.append(True))
+        dispatcher._forget(checker)
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        assert detruit
+
     def test_un_checker_sourd_survit_a_la_fenetre(self, qtbot, manager):
         """Bloqué sur une requête : déparenté et gardé, récolté à sa vraie fin."""
         from src.ui import update_dispatcher as mod

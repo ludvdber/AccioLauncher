@@ -245,3 +245,28 @@ class TestRattrapageApresCatalogue:
         magasin.rattraper_apres_catalogue(FauxConfig(optin=True))
         magasin.rattraper_apres_catalogue(FauxConfig(optin=True))
         assert len(faux_dl.crees) == 1
+
+
+class TestJamaisSurLePartDUnZombie:
+    """Même défaut que `GameOperations` (audit du 2026-10-29) : annuler puis
+    relancer depuis les Paramètres démarrait un second fil sur le `.part`
+    qu'un fil sourd tenait encore. La vidéo abîmée gardait la bonne taille, et
+    `present()` ne la retéléchargeait jamais."""
+
+    def test_la_relance_attend_la_fin_du_zombie(self, qtbot, dossier, faux_dl):
+        liste = [_t("hp1")]
+        s = TrailerStore(FauxManager(liste), FauxOps())
+        s.start(liste)
+        sourd = faux_dl.crees[0]
+        sourd.wait = lambda _ms=0: False     # bloqué sur un read réseau
+        s.cancel()
+        assert s._zombies == [sourd]
+
+        s.start(liste)
+        assert len(faux_dl.crees) == 1, "un second fil sur le même .part"
+        assert s._attente.isActive()
+
+        sourd.finished.emit()
+        s._attente.stop()
+        s._suivante()
+        assert len(faux_dl.crees) == 2

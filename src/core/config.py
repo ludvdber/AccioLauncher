@@ -4,11 +4,11 @@ import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, marquer_illisible, mettre_de_cote, ne_pas_ecraser
 
 log = logging.getLogger(__name__)
 
@@ -234,6 +234,11 @@ class Config:
     # Taille du texte de HP1/HP2 (id → « petit », « grand », « tres_grand »,
     # « origine »). Absent : automatique, d'après la hauteur de l'image (`texte_ue1`).
     taille_texte: dict[str, str] = field(default_factory=dict)
+    # Les clés que CETTE version ne connaît pas, recopiées telles quelles à la
+    # sauvegarde. Sans elles, revenir d'une version plus récente (essai, retour
+    # en arrière) effaçait en silence ce qu'elle avait ajouté : préréglages de
+    # difficulté de la 1.4, par exemple. Couture posée le 2026-10-29.
+    inconnus: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -246,6 +251,7 @@ class Config:
         if CONFIG_FILE_PATH.exists():
             try:
                 data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
+                marquer_illisible(CONFIG_FILE_PATH, False)
                 if not isinstance(data, dict):
                     raise ValueError(f"racine JSON de type {type(data).__name__}, attendu objet")
                 return cls(
@@ -288,6 +294,7 @@ class Config:
                     game_language=_as_map(data.get("game_language"), str),
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                     taille_texte=_as_map(data.get("taille_texte"), str),
+                    inconnus={k: v for k, v in data.items() if k not in _CLES_CONNUES},
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 log.warning("Config corrompue, valeurs par défaut : %s", exc)
@@ -296,18 +303,23 @@ class Config:
                 # versions installées, qui restent récupérables à la main. Un
                 # fichier simplement illisible (verrouillé) n'est pas corrompu.
                 if not isinstance(exc, OSError):
-                    try:
-                        os.replace(CONFIG_FILE_PATH, CONFIG_FILE_PATH.with_suffix(".corrompu"))
-                    except OSError:
-                        pass
+                    mettre_de_cote(CONFIG_FILE_PATH)
+                else:
+                    # Verrouillé, pas corrompu : la session tourne sur les
+                    # défauts, mais `save()` ne l'écrasera pas.
+                    marquer_illisible(CONFIG_FILE_PATH)
                 return cls()
         return cls()
 
     def save(self) -> None:
         """Sauvegarde la configuration dans le fichier JSON (écriture atomique)."""
+        if ne_pas_ecraser(CONFIG_FILE_PATH):
+            log.warning("Config illisible au démarrage : non écrasée par les défauts de la session")
+            return
         CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
         data = json.dumps(
-            {
+            # Les inconnues d'abord : une clé connue l'emporte toujours.
+            self.inconnus | {
                 "install_path": str(self.install_path),
                 "cache_path": str(self.cache_path),
                 "langue": self.langue,
@@ -343,6 +355,10 @@ class Config:
             ensure_ascii=False,
         )
         ecrire_atomique(CONFIG_FILE_PATH, data)
+
+
+# Les clés du JSON que cette version lit : les noms des champs, `inconnus` à part.
+_CLES_CONNUES = frozenset(f.name for f in fields(Config)) - {"inconnus"}
 
 
 # --- Migration de l'ancienne arborescence (avant le 2026-08-26) ---
@@ -426,14 +442,21 @@ def _corriger_cache_path(fichier: Path, racine: Path) -> None:
         data = json.loads(fichier.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return
+    # Tourne AVANT le journal et la QApplication (`main.py` n'y rattrape que
+    # OSError) : une racine qui n'est pas un objet, ou un `install_path` qui
+    # n'est pas une chaîne, sortait en trace brute (audit du 2026-10-29).
+    if not isinstance(data, dict):
+        return
     ancien = data.get("cache_path")
     if not isinstance(ancien, str):
         return
     if Path(ancien) != racine / ".cache":
         return
-    data["cache_path"] = str(cache_pour(Path(data.get("install_path", racine))))
+    install = data.get("install_path", str(racine))
+    if not isinstance(install, str):
+        return
+    data["cache_path"] = str(cache_pour(Path(install)))
     try:
-        fichier.write_text(json.dumps(data, indent=4, ensure_ascii=False),
-                           encoding="utf-8")
+        ecrire_atomique(fichier, json.dumps(data, indent=4, ensure_ascii=False))
     except OSError as exc:
         log.warning("cache_path non corrige : %s", exc)

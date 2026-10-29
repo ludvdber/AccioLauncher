@@ -180,7 +180,7 @@ class TestAttribution:
         chemin.parent.mkdir(parents=True, exist_ok=True)
         chemin.write_text("{pas du json", encoding="utf-8")
         assert sauvegardes.charger() == {}
-        assert chemin.with_suffix(".corrompu").exists()
+        assert list(chemin.parent.glob(chemin.stem + ".*.corrompu"))
 
 
 class TestCatalogue:
@@ -383,3 +383,16 @@ class TestTroisPartiesDeHP5:
         qtbot.addWidget(carte)
         textes = [lbl.text() for lbl in carte.findChildren(QLabel)]
         assert "Avancement" in textes and "14 %" in textes, textes
+
+
+class TestUnJsonValideDUnMauvaisType:
+    """Même défaut que le journal des sessions (audit du 2026-10-29)."""
+
+    @pytest.mark.parametrize("champ", ["parties", "nouvelles", "mesure"])
+    @pytest.mark.parametrize("valeur", [5, True, "x", {"a": 1}])
+    def test_charger_ne_leve_jamais(self, tmp_path, champ, valeur):
+        import json
+        chemin = tmp_path / "sauvegardes.json"
+        chemin.write_text(json.dumps({"sauvegardes": [
+            {"jeu": "hp1", "fichier": "Save/Save1.usa", champ: valeur}]}), encoding="utf-8")
+        assert ("hp1", "Save/Save1.usa") in sauvegardes.charger(chemin)

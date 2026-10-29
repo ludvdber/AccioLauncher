@@ -77,3 +77,11 @@ class TestPage:
         qtbot.addWidget(page)
         assert page.defis == []
         assert "Ce jeu n'a pas encore de défis." in [lbl.text() for lbl in page.findChildren(QLabel)]
+
+
+def test_la_zone_des_defis_a_un_anneau_de_focus():
+    """Audit du 2026-10-29 : la zone défilante des Défis est le seul arrêt de
+    Tab de la rubrique, et rien ne dessinait son focus (règle 15)."""
+    from pathlib import Path
+    source = Path("src/ui/defis_page.py").read_text(encoding="utf-8")
+    assert 'QScrollArea#zoneDefis[focusClavier="true"]:focus' in source

@@ -396,6 +396,35 @@ class TestProgressionDu7ZipLinux:
         assert valeurs[-1] == 100
 
 
+class TestUneVraieArchiveAbimee:
+    """Audit du 2026-10-29 : le code d'échec de 7-Zip n'était exercé qu'à
+    travers des faux. Une vraie archive dont 100 octets sont altérés doit
+    lever `ExtractionEchouee` avec la sortie de 7-Zip, que `echecs` lit pour
+    dire « archive abîmée »."""
+
+    @pytest.mark.skipif(sys.platform == "win32" or find_7z_exe() is None,
+                        reason="7-Zip officiel pour Linux")
+    def test_le_code_d_echec_remonte_avec_sa_sortie(self, tmp_path):
+        from src.core import echecs
+        from src.core.extractors import ExtractionEchouee
+        src = tmp_path / "src" / "Game"
+        src.mkdir(parents=True)
+        (src / "f.bin").write_bytes(os.urandom(300_000))
+        archive = tmp_path / "a.7z"
+        subprocess.run([find_7z_exe(), "a", "-mx1", str(archive), "Game"],
+                       cwd=str(tmp_path / "src"), capture_output=True, check=True, timeout=120)
+        brut = bytearray(archive.read_bytes())
+        milieu = len(brut) // 2
+        brut[milieu:milieu + 100] = bytes(100)
+        archive.write_bytes(bytes(brut))
+        dest = tmp_path / "out"
+        dest.mkdir()
+        with pytest.raises(ExtractionEchouee) as exc:
+            extract_7z(archive, dest, lambda _v: None, lambda: False)
+        assert exc.value.sortie, "la sortie de 7-Zip est gardée pour la boîte d'échec"
+        assert echecs.cause_installation(exc.value, 10 ** 12) == "archive"
+
+
 class TestVerificationApresExtraction:
     """La destination est le dossier des jeux : il contient aussi `_Launcher/`,
     et sous Linux le préfixe Wine, dont `dosdevices/z:` pointe LÉGITIMEMENT

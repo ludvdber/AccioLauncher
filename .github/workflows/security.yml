@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           # La version du build (build.bat) et de tests.yml : c'est sous elle
           # que les dépendances sont résolues, donc elle que l'audit doit voir.
@@ -60,6 +60,7 @@ jobs:
           pip-audit --require-hashes --disable-pip -r .github/requirements/tests.txt
           pip-audit --require-hashes --disable-pip -r .github/requirements/securite.txt
           pip-audit --require-hashes --disable-pip -r .github/requirements/fuzz.txt
+          pip-audit --require-hashes --disable-pip -r .github/requirements/preversion.txt
 
       # Les workflows eux-mêmes : action non épinglée, injection dans un `run:`,
       # identifiants laissés au checkout, Dependabot sans délai. Le jeton (lecture

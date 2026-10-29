@@ -84,13 +84,14 @@ QPushButton#rubrique:hover, QPushButton#filtre:hover { color: #f2f2f4; }
 QPushButton#rubrique:checked, QPushButton#filtre:checked {
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
 }
-QPushButton#rubrique:focus, QPushButton#filtre:focus { border-color: #d6a72c; }
+QPushButton#rubrique[focusClavier="true"]:focus, QPushButton#filtre[focusClavier="true"]:focus { border-color: #d6a72c; }
 QFrame#platine { background: #08081a; border: none; border-right: 1px solid rgba(214, 167, 44, 0.12); }
 QFrame#carteJeu {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.14); border-radius: 10px;
 }
 QFrame#carteJeu[modele="true"]:hover { border-color: rgba(214, 167, 44, 0.35); }
 QFrame#carteJeu[choisie="true"] { border-color: rgba(214, 167, 44, 0.6); }
+QFrame#carteJeu[modele="true"][focusClavier="true"]:focus { border-color: #f0d060; }
 QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }
@@ -98,17 +99,17 @@ QFrame#ligne:hover { background: rgba(214, 167, 44, 0.05); }
 QPushButton#rond {
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 19px;
 }
-QPushButton#rond:hover, QPushButton#rond:focus { border-color: #d6a72c; }
+QPushButton#rond:hover, QPushButton#rond[focusClavier="true"]:focus { border-color: #d6a72c; }
 QPushButton#lecture { background: #d6a72c; border: none; border-radius: 25px; }
-QPushButton#lecture:hover, QPushButton#lecture:focus { background: #e8bd4a; }
+QPushButton#lecture:hover, QPushButton#lecture[focusClavier="true"]:focus { background: #e8bd4a; }
 QPushButton#lecture:disabled { background: rgba(214, 167, 44, 0.35); }
 QPushButton#petit {
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 16px;
 }
 QPushButton#petit[courante="true"] { border-color: #d6a72c; }
-QPushButton#petit:hover, QPushButton#petit:focus { border-color: #d6a72c; }
+QPushButton#petit:hover, QPushButton#petit[focusClavier="true"]:focus { border-color: #d6a72c; }
 QPushButton#discret { background: transparent; border: none; border-radius: 16px; }
-QPushButton#discret:hover, QPushButton#discret:focus { background: rgba(255, 255, 255, 0.06); }
+QPushButton#discret:hover, QPushButton#discret[focusClavier="true"]:focus { background: rgba(255, 255, 255, 0.06); }
 QPushButton#secondaire:checked {
     color: #f2e6c4; background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6);
 }

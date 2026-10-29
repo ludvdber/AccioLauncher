@@ -219,6 +219,26 @@ class TestGameManager:
         mgr.add_playtime("hp_test", 0)  # durée nulle ignorée
         assert mgr.get_playtime("hp_test") == 180
 
+    def test_un_disque_plein_ne_perd_pas_la_partie(self, tmp_path, monkeypatch):
+        """Audit du 2026-10-29 : `config.save()` levait avant le journal, donc
+        la partie disparaissait des deux côtés et `GameSession` n'émettait
+        jamais `terminee` (fenêtre jamais rendue, Discord jamais effacé)."""
+        import errno
+
+        from src.core import stats
+        mgr = _make_manager(tmp_path)
+
+        def plein(_self):
+            raise OSError(errno.ENOSPC, "disque plein")
+        from src.core.config import Config
+        monkeypatch.setattr(Config, "save", plein)   # dataclass pure, pas un objet Qt
+        journal = tmp_path / "sessions.json"
+        monkeypatch.setattr(stats, "chemin_journal", lambda: journal)
+
+        assert mgr.add_playtime("hp_test", 600) is True
+        assert mgr.get_playtime("hp_test") == 600
+        assert [s.jeu for s in stats.charger(journal).sessions] == ["hp_test"]
+
     def test_un_arret_fatal_ne_compte_que_passe_dix_minutes(self, tmp_path):
         """La boîte « Critical Error » d'UE1 garde le jeu en vie : 2 min devant
         elle ne sont pas une partie (P1-001). 20 min, si : le plantage est venu

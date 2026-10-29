@@ -15,6 +15,7 @@ import re
 import unicodedata
 from pathlib import Path
 
+from src.core.config import LAUNCHER_DIR_NAME
 from src.core import game_registry as registre
 from src.core.chemins import chemin_relatif_sur as _est_relatif_sur
 from src.core.extractors import check_path_traversal, is_unsafe_entry
@@ -174,7 +175,9 @@ def meme_verdict(nom: str) -> None:
     refuse en plus un exécutable qui ne nomme aucun fichier (« . »), et un
     champ BLANC (« \\n », « \\u3000 ») : c'est la règle « chaîne non vide »
     de tous ses champs, pas une affaire de chemin (trouvé par le fuzzing en
-    CI le 2026-10-09, entrée « =\\n »)."""
+    CI le 2026-10-09, entrée « =\\n »). Et depuis le 2026-10-29, un exécutable
+    rangé dans les données du launcher (`_Launcher/…`, toute casse) : son
+    premier composant est ce que « Désinstaller » efface."""
     sur = not is_unsafe_entry(nom)
     try:
         GameData.from_dict({**_JEU_MINIMAL, "executable": nom})
@@ -184,7 +187,8 @@ def meme_verdict(nom: str) -> None:
     if exe_accepte:
         assert sur, nom
     elif sur and nom.strip():
-        assert not [c for c in nom.replace("\\", "/").split("/") if c not in ("", ".")], nom
+        composants = [c for c in nom.replace("\\", "/").split("/") if c not in ("", ".")]
+        assert not composants or composants[0].casefold() == LAUNCHER_DIR_NAME.casefold(), nom
 
 
 def archive_ea(fichier: Path) -> None:

@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.core.config import Config, cache_pour
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, ecrire_octets_atomique
 from src.core.game_data import GameData
 
 log = logging.getLogger(__name__)
@@ -550,9 +550,9 @@ def _poser(cible: Path, source: Path, spec: PaquetPolices, f: float,
     sortie = d if f == 1.0 else regraver(d, spec.polices, f, SERIF if spec.serif else SANS)
     if sortie is None:
         return None
-    temporaire = cible.with_name(cible.name + ".accio")
-    temporaire.write_bytes(sortie)
-    temporaire.replace(cible)
+    # Temporaire effacé sur un échec : un paquet de plusieurs Mo restait sinon
+    # à côté de l'original (audit du 2026-10-29).
+    ecrire_octets_atomique(cible, sortie, suffixe=".accio")
     etat[spec.chemin] = {"source": _md5(d), "sortie": _md5(sortie), "facteur": f}
     log.info("Texte : %s posé à %.2f×", spec.chemin, f)
     return f

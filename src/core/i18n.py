@@ -14,7 +14,7 @@ Repli en cascade : langue active → anglais → clé française. Une traduction
 partielle reste donc utilisable telle quelle, ce qui permet d'accepter une
 contribution à 60 % sans jamais afficher de trou.
 
-Un fichier déposé dans `~/Games/AccioLauncher/i18n/<code>.json` est fusionné
+Un fichier déposé dans `~/Games/AccioLauncher/_Launcher/i18n/<code>.json` est fusionné
 par-dessus celui embarqué : un traducteur voit son travail dans le vrai
 launcher, sans attendre ni merge ni release.
 

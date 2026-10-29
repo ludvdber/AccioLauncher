@@ -373,3 +373,29 @@ class TestUnEchecNEstPasUnePerte:
         }
         assert any("Échec du téléchargement" in t for t in traduits), (
             "les messages d'échec ne passent plus par tr()")
+
+
+class TestAnnuleAvantLesEnTetes:
+    """Audit du 2026-10-29 : un fil annulé pendant l'attente des en-têtes
+    ouvrait encore le `.part` en « wb » (réponse 200), ce qui le TRONQUAIT
+    alors qu'une relance pouvait déjà l'écrire. Annulé, il n'y touche plus."""
+
+    def test_le_part_n_est_pas_tronque(self, tmp_path, fake_httpx):
+        fake_httpx(honor_range=False)
+        dest = tmp_path / "a.7z"
+        part = tmp_path / "a.7z.part"
+        part.write_bytes(b"deja la" * 100)
+        dl = Downloader(url="https://x.test/a.7z", destination=dest)
+        dl.cancel()
+        assert dl._download_stream("https://x.test/a.7z", part) is None
+        assert part.read_bytes() == b"deja la" * 100
+
+    def test_un_416_n_efface_pas_le_part(self, tmp_path, fake_httpx):
+        fake_httpx(range_416=True)
+        part = tmp_path / "a.7z.part"
+        contenu = b"z" * (len(PAYLOAD) + 4096)
+        part.write_bytes(contenu)
+        dl = Downloader(url="https://x.test/a.7z", destination=tmp_path / "a.7z")
+        dl.cancel()
+        assert dl._download_stream("https://x.test/a.7z", part) is None
+        assert part.read_bytes() == contenu

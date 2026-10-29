@@ -132,7 +132,7 @@ class UpdateDispatcher(QObject):
         SHA-256 qui vérifient ses téléchargements.
         """
         if self._checker is not None:
-            self.shutdown_checker(self._checker)
+            self._retirer(self._checker)
         self._checker = self._new_checker(forced=False)
         self._checker.catalog_updated.connect(self.catalog_updated)
         self._checker.launcher_update.connect(self.launcher_update)
@@ -198,6 +198,34 @@ class UpdateDispatcher(QObject):
     def _forget(self, checker: UpdateChecker) -> None:
         if checker in self._extra_checkers:
             self._extra_checkers.remove(checker)
+            # Retiré de la liste, il restait enfant du dispatcher jusqu'à la
+            # fermeture : un par clic sur « Vérifier » (audit du 2026-10-29).
+            # Appelé depuis son `finished` : il vit peut-être encore (règle 133).
+            liberer_apres_fin(checker)
+
+    def _retirer(self, checker: UpdateChecker) -> None:
+        """Remplace le checker de fond : l'ancien est arrêté, débranché, détruit.
+
+        Hors ligne, `_offline_retry` relance `start()` toutes les 45 s, et
+        chaque ancien checker restait enfant du dispatcher, branché, jusqu'à la
+        fermeture : 25 après 20 relances (audit du 2026-10-29).
+        """
+        self.shutdown_checker(checker)
+        for signal, slot in ((checker.catalog_updated, self.catalog_updated),
+                             (checker.launcher_update, self.launcher_update),
+                             (checker.update_counts, self.update_counts),
+                             (checker.download_counts, self._on_download_counts),
+                             (checker.asset_digests, self._on_asset_digests),
+                             (checker.asset_sizes, self._on_asset_sizes),
+                             (checker.network_status, self.network_status)):
+            try:
+                signal.disconnect(slot)
+            except TypeError:
+                pass
+        # Déparenté par `shutdown_checker` s'il tourne encore : son `finished`
+        # natif s'en charge. Sinon, il a fini et part tout de suite.
+        if not checker.isRunning():
+            checker.deleteLater()
 
     def schedule_retry(self, online: bool) -> None:
         """Re-teste le réseau tant que rien ne répond. Voir le module."""

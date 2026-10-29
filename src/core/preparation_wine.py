@@ -44,7 +44,11 @@ COMPOSANTS = "composants"
 _ATTENTE_PREFIXE_S = 90
 _ATTENTE_APRES_ERREUR_S = 10
 _PAS_S = 0.5
-_ARRET_S = 3
+# Par signal. Le tout (un pas de sondage + SIGTERM + SIGKILL) doit tenir sous le
+# délai de grâce de la fermeture (`thread_utils.DELAI_GRACE_MS`, 3 s) : à 3 s
+# par signal, le fil était `terminate()` pendant l'attente du SIGTERM, et le
+# SIGKILL ne partait jamais (umu ou winetricks survivaient, audit du 2026-10-29).
+_ARRET_S = 1
 # Ce qu'on relit de la fin du journal pour dire où en est winetricks.
 _QUEUE_OCTETS = 4096
 _LIGNE_MAX = 110

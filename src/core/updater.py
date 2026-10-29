@@ -12,6 +12,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core import liens, reseau
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
+from src.core.ecriture_atomique import ecrire_atomique
 from src.core.game_data import _parse_catalog
 from src.core.version_utils import compare_versions, update_disponible
 
@@ -466,9 +467,10 @@ class UpdateChecker(QThread):
                 # Sauvegarder localement
                 try:
                     _LOCAL_CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-                    _LOCAL_CATALOG_PATH.write_text(
-                        json.dumps(raw, indent=2, ensure_ascii=False), encoding="utf-8"
-                    )
+                    # Atomique : une coupure en pleine écriture laissait un
+                    # cache tronqué (audit du 2026-10-29).
+                    ecrire_atomique(_LOCAL_CATALOG_PATH,
+                                    json.dumps(raw, indent=2, ensure_ascii=False))
                 except OSError as exc:
                     log.warning("Impossible de sauvegarder le catalogue local : %s", exc)
 

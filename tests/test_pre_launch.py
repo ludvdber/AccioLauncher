@@ -98,6 +98,25 @@ class TestIniEcritParLeMoteur:
         assert _INI_ENCODING == "mbcs"
 
 
+class TestUnEchecNeVidePasLIni:
+    """Audit du 2026-10-29 : le fichier était ouvert en « w » (donc vidé) AVANT
+    d'encoder le texte. Une valeur hors de la page ANSI (« Łukasz » sous
+    cp1252) ou un disque plein levait APRÈS la troncature : HP.ini à 0 octet,
+    toute la configuration du joueur perdue, et le journal ne disait que
+    « patch non appliqué »."""
+
+    def test_valeur_hors_de_la_page_ansi(self, ini_ansi):
+        chemin, tmp_path = ini_ansi
+        avant = chemin.read_bytes()
+        jeu = dict(JEU)
+        jeu["pre_launch"] = {"ini_patches": [
+            {"file": "%DOCUMENTS%" + B + "Harry Potter" + B + "HP.ini",
+             "section": "Core.System", "key": "Profil", "value": "Łukasz"},
+        ]}
+        apply_ini_patches(GameData.from_dict(jeu), Config(install_path=tmp_path / "jeux"))
+        assert chemin.read_bytes() == avant
+
+
 class TestCoucheDpi:
     """La couche de compatibilité DPI donnée au jeu qu'on lance.
 

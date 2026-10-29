@@ -139,15 +139,6 @@ class BackgroundWidget(QWidget):
 
     bg_opacity = pyqtProperty(float, _get_bg_opacity, _set_bg_opacity)
 
-    def _get_zoom(self) -> float:
-        return self._zoom
-
-    def _set_zoom(self, value: float) -> None:
-        self._zoom = value
-        self.update()
-
-    zoom_factor = pyqtProperty(float, _get_zoom, _set_zoom)
-
     def start_zoom_loop(self) -> None:
         self._zoom = _ZOOM_MIN
         self._zoom_phase = 0.0

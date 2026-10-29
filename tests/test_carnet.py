@@ -56,6 +56,22 @@ class TestCarnet:
         assert page._folio is not avant and page._folio.game.id == jeux[1]
         assert page._pile.indexOf(avant) == -1
 
+    def test_le_folio_remplace_ou_ferme_arrete_son_travail(self, fenetre_carnet):
+        """Audit du 2026-10-29 : le `done` du folio n'était jamais appelé depuis
+        le Carnet, et le fil de HP4 décodait les illustrations d'une page
+        détruite. Le faux est posé sur l'INSTANCE (règle 12)."""
+        from src.ui.title_bar import CARNET
+        win, jeux = fenetre_carnet
+        win._on_onglet(CARNET)
+        page = win._pages.page
+        page.montrer(jeux[0])
+        appels = []
+        page._folio.arreter = lambda: appels.append("remplace")
+        page.montrer(jeux[1])
+        page._folio.arreter = lambda: appels.append("ferme")
+        page.done(0)
+        assert appels == ["remplace", "ferme"]
+
     def test_changer_de_jeu_apres_le_releve_montre_le_folio(self, fenetre_carnet):
         """Bug vu par Ludo le 2026-10-24 : retirer l'ancien folio faisait passer
         la pile sur le Relevé, et la page croyait alors être dans le Relevé."""

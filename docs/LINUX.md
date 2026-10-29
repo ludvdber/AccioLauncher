@@ -544,6 +544,36 @@ certificat (refusé ici par le proxy du conteneur, pas par le launcher).
 Gear Lever, le mode Jeu, et l'auto-mise à jour d'une AppImage — elle ne se
 testera qu'à la release SUIVANT la première qui porte une AppImage.
 
+### Revérifié dans un conteneur Ubuntu 24.04 (audit du 2026-10-29)
+
+Python 3.15.2 (python-build-standalone, installé par `uv`), paquets de
+`.github/requirements/tests.txt`, bibliothèques Qt du job `linux-smoke`, Xvfb,
+Wine 9.0 **avec le support 32 bits** (`wine32:i386`) et winetricks 20240105.
+Suite lancée sous un utilisateur NORMAL (`useradd`), comme le recommande
+`docs/claude/ARCHITECTURE.md`.
+
+| Vérification | Résultat |
+|---|---|
+| `pytest -n 4 --dist loadfile`, utilisateur normal | **3838 réussis, 39 sautés** (tous Windows seulement), 78 s |
+| La même suite en root | 3837 réussis, 1 échec attendu (`test_l_attribut_de_l_archive_est_conserve` : root écrit dans un fichier en lecture seule) |
+| Les 29 tests sautés sous Windows | TOUS joués ici : chemins POSIX du préfixe (10), chemins de l'hôte (7), liens symboliques (3 + 1), 7-Zip Linux (2), `/bin/sh` (2), socket Unix, droits POSIX, bit exécutable, `.DirIcon` |
+| ruff, mypy (plateforme `win32` fixée) | propres |
+| `./build.sh` de bout en bout (`ACCIO_PY`, `PYTEST_ADDOPTS` de la release) | code 0 : audit de géométrie OK (fr/en/es × 3 scénarios), 50 bibliothèques laissées à la machine, **AppImage de 67 Mo** |
+| L'AppImage sous Xvfb, `APPIMAGE_EXTRACT_AND_RUN=1` | assistant de premier lancement, puis fenêtre principale avec une config posée ; journal « (AppImage) », `WM_CLASS` = `AccioLauncher` |
+| L'AppImage montée par FUSE (sans extraction) | en root : montée et lancée, sans libfuse2 (runtime statique). Utilisateur normal : refusé, `/dev/fuse` du conteneur est en `crw-------` (limite du conteneur, pas de l'AppImage) |
+| Préfixe par `tools/verifier_wine.py --preparer` | préfixe `win64` créé en ~18 s, page ANSI cp1252, Documents `C:\users\<nom>\Documents` |
+| Composants par winetricks | échec : le proxy du conteneur refuse `aka.ms` (réseau, pas le launcher). VC++ 2005/2010, `d3dx9_43`, `d3dx9_37`, `xinput1_3` répondent « présent » d'office, comme prévu |
+| `--registre` (le vrai `_ecrire_par_wine`) | HKCU écrit puis relu, OK en 3,0 s |
+
+**Taille de l'AppImage** : 67 Mo ici contre 62 sur la machine de build d'Ubuntu
+22.04. Écart venu du PYTHON, pas du code : la `libpython3.15.so` de
+python-build-standalone pèse 21 Mo une fois épurée (dépendances liées en
+statique), celle d'`actions/setup-python` 7 Mo. Le build de release reste la
+référence ; un build local fait par `uv` n'est pas comparable au Mo près.
+
+`libQt6Quick` et `libQt6Qml` (14 Mo) restent nécessaires : c'est le greffon
+FFmpeg de QtMultimedia (`libffmpegmediaplugin.so`) qui les réclame.
+
 ## 10. Limites de l'audit (phase 1)
 
 Vérifié dans l'environnement de travail (Ubuntu 24.04, Wine 9.0 64 bits, sans

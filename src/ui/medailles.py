@@ -71,10 +71,6 @@ def medaille(jeu: str, ident: str) -> tuple[str, str]:
     return ("cartes-sorcier", BRONZE)
 
 
-def metal(jeu: str, ident: str) -> str:
-    return medaille(jeu, ident)[1]
-
-
 def pixmap_medaille(jeu: str, ident: str, obtenue: bool, taille: int, ratio: float = 1.0) -> QPixmap:
     """La médaille composée, carrée, `taille` px logiques. Non obtenue : le fond
     verrouillé et l'emblème en creux, pour qu'on sache ce qu'on vise."""

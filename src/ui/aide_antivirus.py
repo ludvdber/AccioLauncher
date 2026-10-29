@@ -62,10 +62,10 @@ class AideAntivirus(QDialog):
             " border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 10px; }"
             "QPushButton { color: #ecdcb0; background: rgba(255,255,255,0.05);"
             " border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 6px 12px; }"
-            "QPushButton:hover, QPushButton:focus { border-color: #ecdcb0; }"
+            "QPushButton:hover, QPushButton[focusClavier=\"true\"]:focus { border-color: #ecdcb0; }"
             f"QPushButton#ouvrirSecurite {{ color: #1a1206; background: {WARN}; border: none;"
             " font-weight: bold; padding: 8px 16px; }"
-            "QPushButton#ouvrirSecurite:hover, QPushButton#ouvrirSecurite:focus"
+            "QPushButton#ouvrirSecurite:hover, QPushButton#ouvrirSecurite[focusClavier=\"true\"]:focus"
             " { background: #f0ad7a; }"
         )
         self._dossier = str(dossier)

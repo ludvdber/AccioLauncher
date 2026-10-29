@@ -22,6 +22,14 @@ def _francais():
     set_language("fr")
 
 
+
+def _bulle(panneau) -> str:
+    """Le texte LU de l'infobulle (riche et échappée depuis le 2026-10-29)."""
+    import html
+    import re
+    brut = panneau._meta.toolTip()
+    return html.unescape(re.sub(r"<br>", "\n", re.sub(r"</?qt>", "", brut)))
+
 class TestChamp:
     @pytest.mark.parametrize("niveau", NIVEAUX_MANETTE)
     def test_les_trois_niveaux_sont_lus(self, niveau):
@@ -73,12 +81,12 @@ class TestPastille:
         ligne = self._montrer(panneau, controller=niveau)
         # Un pictogramme depuis la maquette « Plan du launcher v2 » : le libellé
         # est en infobulle ; « sans manette » reste écrit.
-        assert panneau._meta.toolTip().startswith(texte)
+        assert _bulle(panneau).startswith(texte)
         assert ("<img" in ligne) == (niveau != "no")
 
     def test_la_note_est_en_infobulle(self, panneau):
         self._montrer(panneau, controller="partial", controller_note="Souris au démarrage")
-        assert panneau._meta.toolTip() == "Manette en partie : Souris au démarrage"
+        assert _bulle(panneau) == "Manette en partie : Souris au démarrage"
 
     def test_changer_de_jeu_efface_la_manette(self, panneau):
         self._montrer(panneau, controller="yes")

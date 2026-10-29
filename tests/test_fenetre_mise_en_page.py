@@ -727,6 +727,8 @@ class TestBalisageDuCatalogueJamaisInterprete:
                 description="Description " + marque + " et la suite du texte.",
                 developer="Studio " + marque,
                 warning="Avertissement " + marque,
+                controller="yes",
+                controller_note="Note " + marque,
             )
             return dataclasses.replace(cat, games=tuple(jeux))
 
@@ -758,6 +760,20 @@ class TestBalisageDuCatalogueJamaisInterprete:
         win._detail.set_game(jeu)
         qtbot.wait(60)
         assert self._labels_dangereux(win) == []
+
+    def test_aucune_infobulle_n_interprete_le_catalogue(self, fenetre_injectee, qtbot):
+        """Une infobulle est un `QLabel` en AutoText : elle échappe au balayage
+        des labels. La note « manette » du catalogue y passait brute (audit du
+        2026-10-29, règle 57)."""
+        from PyQt6.QtWidgets import QWidget
+
+        win, jeu = fenetre_injectee
+        win._detail.set_game(jeu)
+        qtbot.wait(40)
+        porteurs = [w for w in win.findChildren(QWidget) if "INJECTE" in w.toolTip()]
+        assert porteurs, "la note du catalogue n'atteint aucune infobulle"
+        assert [w.objectName() or type(w).__name__ for w in porteurs
+                if self._MARQUEUR in w.toolTip()] == []
 
     def test_le_marqueur_atteint_bien_l_ecran(self, fenetre_injectee, qtbot):
         """Garde-fou : sans lui, le test ci-dessus passerait a vide si le texte
