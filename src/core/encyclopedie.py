@@ -116,7 +116,7 @@ def jeux(rubrique: str) -> tuple[str, ...]:
 
 # ── Les images, lues dans le jeu installé ──
 
-def _trouver(dossier: Path, relatif: str) -> Path | None:
+def trouver(dossier: Path, relatif: str) -> Path | None:
     """`relatif` sous `dossier`, sans tenir compte de la casse (HP3 écrit
     « textures », HP1 « Textures », et Linux ne pardonne pas)."""
     courant = dossier
@@ -131,7 +131,7 @@ def _trouver(dossier: Path, relatif: str) -> Path | None:
 def chemin_image(dossier_exe: Path, image: ImageJeu | ModeleJeu) -> Path | None:
     """Le fichier qui porte l'image ou le modèle : à côté de l'exe (HP4), ou
     depuis la racine du jeu, dossier parent de `System` (HP1-HP3)."""
-    return _trouver(dossier_exe, image.fichier) or _trouver(dossier_exe.parent, image.fichier)
+    return trouver(dossier_exe, image.fichier) or trouver(dossier_exe.parent, image.fichier)
 
 
 def image(dossier_exe: Path, fiche: Fiche) -> ImageBgra | None:

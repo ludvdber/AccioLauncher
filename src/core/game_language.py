@@ -20,8 +20,11 @@ fabriquée pour le cas qu'on veut. `GameManager` garde des méthodes qui y
 délèguent — aucun appelant ne change.
 """
 
+import filecmp
 import logging
 import shutil
+import time
+from pathlib import Path
 from typing import Any
 
 from src.core import game_registry as registre
@@ -213,6 +216,15 @@ def appliquer(game: GameData, config: Config, code: str | None = None,
                                    confirmer=confirmer)
 
 
+_COPIES_GARDEES = 5      # par fichier remplacé, les plus récentes
+
+
+def dossier_remplacees(game: GameData, langue: str) -> Path:
+    """Où va un fichier qu'une partie plus récente vient de remplacer."""
+    from src.core import config
+    return config.LAUNCHER_DATA_PATH / "sauvegardes_remplacees" / game.id / langue
+
+
 def porter_sauvegardes(game: GameData, config: Config) -> list[str]:
     """Recopie la partie et les réglages vers le dossier de la langue POSÉE.
 
@@ -220,8 +232,12 @@ def porter_sauvegardes(game: GameData, config: Config) -> list[str]:
     titre traduit : passé du français à l'anglais, il démarrait sans la partie
     et en 720p, l'image dans un coin (VU par Ludo le 2026-10-29). On copie
     chaque fichier du dossier où l'on a joué en DERNIER (`sauvegardes.dossier`)
-    vers celui de la langue posée, et seulement là où il manque : rien n'est
-    jamais écrasé, une partie déjà faite dans cette langue reste la sienne.
+    vers celui de la langue posée.
+
+    **La plus récente gagne** (choix du 2026-10-29) : sans quoi revenir au
+    français après une soirée en anglais rendait la vieille partie française.
+    Un fichier n'est remplacé que s'il est plus ANCIEN et différent, et il part
+    d'abord dans `dossier_remplacees` (les `_COPIES_GARDEES` dernières).
 
     Rend les noms copiés (vide le plus souvent). Une erreur de fichier n'empêche
     jamais le lancement.
@@ -246,10 +262,16 @@ def porter_sauvegardes(game: GameData, config: Config) -> list[str]:
         if cible.resolve() == source.resolve():
             return []
         for fichier in sorted(source.iterdir()):
-            if not fichier.is_file() or fichier.is_symlink() or (cible / fichier.name).exists():
+            if not fichier.is_file() or fichier.is_symlink():
                 continue
+            existant = cible / fichier.name
+            if existant.exists():
+                if (existant.is_symlink() or existant.stat().st_mtime >= fichier.stat().st_mtime
+                        or filecmp.cmp(existant, fichier, shallow=False)):
+                    continue
+                _mettre_de_cote(existant, dossier_remplacees(game, code or ""))
             cible.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(fichier, cible / fichier.name)
+            shutil.copy2(fichier, existant)
             copies.append(fichier.name)
     except OSError as e:
         log.warning("Sauvegardes de %s non recopiées vers %s : %s", game.id, cible, e)
@@ -257,6 +279,17 @@ def porter_sauvegardes(game: GameData, config: Config) -> list[str]:
         log.info("Langue de %s : %s recopiés de « %s » vers « %s »",
                  game.id, ", ".join(copies), source.name, cible.name)
     return copies
+
+
+def _mettre_de_cote(fichier: Path, dossier: Path) -> None:
+    """Copie datée de `fichier` avant qu'on le remplace ; lève OSError si elle
+    échoue, et rien n'est alors remplacé."""
+    dossier.mkdir(parents=True, exist_ok=True)
+    date = time.strftime("%Y%m%d-%H%M%S", time.localtime(fichier.stat().st_mtime))
+    shutil.copy2(fichier, dossier / f"{fichier.stem}-{date}{fichier.suffix}")
+    anciennes = sorted(dossier.glob(f"{fichier.stem}-*{fichier.suffix}"), reverse=True)
+    for vieille in anciennes[_COPIES_GARDEES:]:
+        vieille.unlink(missing_ok=True)
 
 
 # ─── Langue portée par des fichiers (HP1) ───

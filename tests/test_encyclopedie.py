@@ -172,13 +172,13 @@ class TestVue:
 
 
 class TestModeles:
-    def test_hp1_et_hp2_ont_un_modele_par_fiche(self):
+    def test_hp1_a_hp3_ont_un_modele_par_fiche(self):
         for rubrique in (encyclopedie.PERSONNAGES, encyclopedie.BESTIAIRE):
-            for jeu in ("hp1", "hp2"):
+            for jeu, dossier in (("hp1", "System/"), ("hp2", "System/"), ("hp3", "Animations/")):
                 for f in encyclopedie.fiches(rubrique, jeu):
                     assert f.modele is not None, (rubrique, jeu, f.cle)
-                    assert f.modele.fichier.startswith("System/")
-            for jeu in ("hp3", "hp4", "hp5", "hp6"):
+                    assert f.modele.fichier.startswith(dossier)
+            for jeu in ("hp4", "hp5", "hp6"):
                 assert all(f.modele is None for f in encyclopedie.fiches(rubrique, jeu))
 
     def test_la_fiche_choisie_montre_son_modele(self, qtbot, tmp_path, monkeypatch):

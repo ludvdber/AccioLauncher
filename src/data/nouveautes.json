@@ -149,6 +149,14 @@
             "en": "Characters and the Bestiary open three times faster and no longer freeze the window.",
             "es": "Los Personajes y el Bestiario se abren tres veces más rápido y ya no congelan la ventana."
           }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban rejoint la 3D : ses 12 personnages et ses 9 créatures se tournent à la souris et s'animent avec les mouvements du jeu, dans Personnages et Bestiaire.",
+            "en": "Prisoner of Azkaban joins the 3D view: its 12 characters and 9 creatures turn with the mouse and play the game's movements, in Characters and Bestiary.",
+            "es": "El prisionero de Azkaban se suma al 3D: sus 12 personajes y 9 criaturas giran con el ratón y se animan con los movimientos del juego, en Personajes y Bestiario."
+          }
         }
       ]
     },

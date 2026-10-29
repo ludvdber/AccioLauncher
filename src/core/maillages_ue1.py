@@ -52,6 +52,8 @@ _CLES_MAX = 1 << 24   # clés d'animation d'un objet (Harry en a 80 686)
 _K_ANIM = math.pi / 2 / 32767   # `FAnimVec` : composante = sin(entier × _K_ANIM)
 _IMAGES_PAR_S = 30.0
 _BRAS_BAISSE = 60.0   # degrés sous l'horizontale au-delà desquels un bras est laissé tel quel
+# L'os du haut du bras (fin de son nom) et le mot de l'os du coude, son enfant.
+_BRAS_PAR_JEU = ((("l upperarm", "r upperarm"), "forearm"), (("lshoulder", "rshoulder"), "elbow"))
 # Drapeaux de polygone d'un matériau (`EPolyFlags` d'Unreal 1).
 PF_DEUX_FACES, PF_TRANSLUCIDE, PF_MASQUE = 0x100, 0x4, 0x2
 
@@ -522,15 +524,18 @@ def bras_baisses(modele: Maillage, angle: float = 72.0) -> dict[int, Quat]:
     """Les retouches qui baissent les bras d'un modèle posé en croix,
     `angle` degrés sous l'horizontale ; rien pour un bras déjà baissé de plus
     de 60° (les bras de Dumbledore, Quirrell et Voldemort dans HP1 partent à
-    50°, écartés par leurs manches : ils sont baissés eux aussi)."""
+    50°, écartés par leurs manches : ils sont baissés eux aussi). Les os du
+    bras se nomment `L UpperArm` / `L Forearm` dans HP1 et HP2,
+    `Body_lShoulder` / `Body_lElbow` dans HP3."""
     monde = os_monde(modele)
     retouches: dict[int, Quat] = {}
     noms = [o.nom.lower() for o in modele.squelette]
     for rang, nom in enumerate(noms):
-        if not nom.endswith(("l upperarm", "r upperarm")):
+        coude = next((c for fins, c in _BRAS_PAR_JEU if nom.endswith(fins)), None)
+        if coude is None:
             continue
         enfant = next((k for k, o in enumerate(modele.squelette)
-                       if o.parent == rang and k != rang and "forearm" in noms[k]), None)
+                       if o.parent == rang and k != rang and coude in noms[k]), None)
         if enfant is None:
             continue
         d = tuple(monde[enfant][1][i] - monde[rang][1][i] for i in range(3))
@@ -567,6 +572,9 @@ def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche
     chemin = encyclopedie.chemin_image(dossier_exe, fiche.modele)
     if chemin is None:
         return None
+    if chemin.suffix.lower() == ".ukx":   # HP3, Unreal 2
+        from src.core import maillages_ue2
+        return maillages_ue2.de_la_fiche(chemin, fiche.modele.nom)
     modele = maillage(chemin, fiche.modele.nom)
     if modele is None:
         return None
