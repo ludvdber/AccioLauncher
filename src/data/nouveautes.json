@@ -1,6 +1,102 @@
 {
   "versions": [
     {
+      "version": "1.3.1",
+      "nom": "Sonorus",
+      "depuis": "1.3.0",
+      "points_forts": [
+        {
+          "icone": "musique",
+          "titre": {
+            "fr": "La musique de L'Ordre du Phénix et du Prince de sang-mêlé",
+            "en": "The music of Order of the Phoenix and Half-Blood Prince",
+            "es": "La música de La Orden del Fénix y El misterio del príncipe"
+          },
+          "texte": {
+            "fr": "Les Collections lisent maintenant la musique de ces deux jeux, et le son de leurs cinématiques. Il suffit de télécharger une fois vgmstream, un petit outil libre.",
+            "en": "The Collections now play the music of these two games, and the sound of their cutscenes. Just download vgmstream once, a small free tool.",
+            "es": "Las Colecciones ya reproducen la música de estos dos juegos y el sonido de sus cinemáticas. Basta con descargar una vez vgmstream, una pequeña herramienta libre."
+          }
+        },
+        {
+          "icone": "personnages",
+          "titre": {
+            "fr": "Les personnages bougent",
+            "en": "The characters move",
+            "es": "Los personajes se mueven"
+          },
+          "texte": {
+            "fr": "Dans Personnages et Bestiaire, les modèles 3D de L'École des Sorciers et de La Chambre des Secrets s'animent avec les mouvements de votre jeu, choisis par leur nom.",
+            "en": "In Characters and Bestiary, the 3D models of Philosopher's Stone and Chamber of Secrets play the movements of your game, picked by name.",
+            "es": "En Personajes y Bestiario, los modelos 3D de La piedra filosofal y La cámara secreta se animan con los movimientos de tu juego, elegidos por su nombre."
+          }
+        },
+        {
+          "icone": "pinceau",
+          "titre": {
+            "fr": "Ambiance",
+            "en": "Ambience",
+            "es": "Ambiente"
+          },
+          "texte": {
+            "fr": "Une rubrique à part, dans les effets d'un jeu, réunit ce qui change son style d'origine au lieu de l'affiner : le ciel, le brouillard, les couleurs. Les préréglages n'y touchent pas.",
+            "en": "A section of its own, in a game's effects, gathers what changes its original style instead of refining it: the sky, the fog, the colours. Presets leave it alone.",
+            "es": "Una sección aparte, en los efectos de un juego, reúne lo que cambia su estilo original en lugar de pulirlo: el cielo, la niebla, los colores. Los preajustes no la tocan."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Dans le Folio, les cartes de La Coupe de Feu ont toutes leur texte, statues et quêtes comprises, et jouent le son que le jeu leur donne.",
+            "en": "In the Folio, every Goblet of Fire card has its text, statues and quests included, and plays the sound the game gives it.",
+            "es": "En el Folio, todas las cartas de El cáliz de fuego tienen su texto, estatuas y misiones incluidas, y reproducen el sonido que el juego les da."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban : le son peut se couper quand le jeu passe en arrière-plan, au choix dans ses réglages.",
+            "en": "Prisoner of Azkaban: sound can be muted when the game goes to the background, an option in its settings.",
+            "es": "El prisionero de Azkaban: el sonido puede silenciarse cuando el juego pasa a segundo plano, a elegir en sus ajustes."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Un seul réglage, « Couper tout le son », coupe la musique, les bandes-annonces et les cinématiques, comme le haut-parleur en bas à droite.",
+            "en": "A single setting, \"Mute all sound\", mutes music, trailers and cutscenes, like the speaker at the bottom right.",
+            "es": "Un solo ajuste, «Silenciar todo el sonido», silencia la música, los tráileres y las cinemáticas, como el altavoz de abajo a la derecha."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Un fichier verrouillé par un antivirus ou une synchronisation n'écrase plus vos réglages ni votre journal de parties, et un fichier abîmé n'efface plus la copie du précédent.",
+            "en": "A file locked by an antivirus or a sync tool no longer overwrites your settings or your play log, and a damaged file no longer erases the copy of the previous one.",
+            "es": "Un archivo bloqueado por un antivirus o una sincronización ya no sobrescribe tus ajustes ni tu registro de partidas, y un archivo dañado ya no borra la copia del anterior."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Un téléchargement relancé juste après une annulation ne donne plus une archive refusée.",
+            "en": "A download restarted right after a cancel no longer ends in a rejected archive.",
+            "es": "Una descarga reanudada justo después de cancelarla ya no termina en un archivo rechazado."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Un disque plein ne laisse plus vide le fichier de réglages des trois premiers jeux.",
+            "en": "A full disk no longer leaves the settings file of the first three games empty.",
+            "es": "Un disco lleno ya no deja vacío el archivo de ajustes de los tres primeros juegos."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.0",
       "nom": "Wingardium Leviosa",
       "depuis": "1.2.3",
