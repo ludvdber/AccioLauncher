@@ -194,7 +194,7 @@ class CarnetPage(QDialog):
             from src.ui.folio_jeux import page_folio
             ancien = self._folio
             self._folio = self._poser(page_folio(game, self.manager.config.install_path, self,
-                                                 integree=True))
+                                                 integree=True, config=self.manager.config))
             if ancien is not None:
                 ancien.finished.disconnect(self._interne_fermee)
                 self._pile.removeWidget(ancien)

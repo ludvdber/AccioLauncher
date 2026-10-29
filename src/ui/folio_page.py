@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import folio, sauvegardes
+from src.core.config import Config
 from src.core.i18n import get_language, tr
 from src.ui.composants import ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
@@ -486,6 +487,8 @@ class FolioPage(QDialog):
 
     _colonnes = _COLONNES
     _case_min = _CASE_MIN
+    # Posée par `page_folio` : le son coupé du launcher (cartes de HP4).
+    config: Config | None = None
     _case_max = _CASE_MAX
 
     def __init__(self, game, install_path: Path, parent: QWidget | None = None,

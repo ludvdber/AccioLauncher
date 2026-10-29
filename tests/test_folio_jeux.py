@@ -123,6 +123,34 @@ class TestHP4:
         assert page._carte_etat.text() == "Obtenue, sans illustration dans le jeu"
         page.done(0)
 
+    def test_le_son_de_la_carte_suit_le_son_coupe(self, qtbot, racines, monkeypatch):
+        """Une carte possédée demande le son de sa scène ; le son coupé du launcher l'interdit."""
+        from types import SimpleNamespace
+
+        from src.core import sons_cartes_hp4
+        from src.ui.folio_jeux import page_folio
+        from tests.test_folio_hp4 import _hpgof
+        dossier = racines / "Local" / "EA" / "HPGOF"
+        dossier.mkdir(parents=True)
+        (dossier / "HPGOF").write_bytes(_hpgof(cartes=[1, 151]))
+        jeu = _jeu("hp4", "HP4/gof_f.exe", {"root": "localappdata", "folders": ["EA/HPGOF"],
+                                             "files": "HPGOF", "first": 1, "slots": "hp4"})
+        demandes = []
+        monkeypatch.setattr(sons_cartes_hp4, "son_carte", lambda system, flux: demandes.append(flux))
+        config = SimpleNamespace(son_coupe=True, volume_musique=50, install_path=racines / "Jeux")
+        page = page_folio(jeu, racines / "Jeux", config=config)
+        qtbot.addWidget(page)
+        fangieux = next(v for v in page._vignettes if v.jeu.image == "wc_dugbog" and v.rang == 4)
+        fangieux.click()
+        qtbot.wait(50)
+        assert demandes == []
+        config.son_coupe = False
+        harry = next(v for v in page._vignettes if v.jeu.image == "wc_hry_set1" and v.rang == 0)
+        harry.click()
+        fangieux.click()
+        qtbot.waitUntil(lambda: demandes[-1:] == [fangieux.jeu.flux], timeout=2000)
+        page.done(0)
+
 
 class TestHP6:
     def test_la_partie(self, qtbot, racines):
