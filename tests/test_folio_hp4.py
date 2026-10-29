@@ -2,6 +2,7 @@
 
 import struct
 from datetime import datetime
+from pathlib import Path
 
 from src.core import folio_hp4
 
@@ -288,3 +289,38 @@ class TestTextesDesCartes:
     def test_sans_cle_ni_table(self):
         assert folio_hp4.texte_carte(self._table(), 29) == ("", "")
         assert folio_hp4.texte_carte((), 8) == ("", "")
+
+
+class TestIndexDesTextes:
+    """Le résolveur de l'exe (0x44C440) : hachage × 33 sur octets signés, puis bloc (hachage, rang)."""
+
+    def test_hachage_octets_signes(self):
+        assert folio_hp4.hachage_cle("") == 0xFFFFFFFF
+        assert folio_hp4.hachage_cle("A") == (0xFFFFFFFF * 33 + 65) & 0xFFFFFFFF
+        assert folio_hp4.hachage_cle("é") == (0xFFFFFFFF * 33 + 0xE9 - 256) & 0xFFFFFFFF
+
+    @staticmethod
+    def _flux(paires: dict[str, int]) -> bytes:
+        corps = b"".join(struct.pack("<II", folio_hp4.hachage_cle(k), v) for k, v in paires.items())
+        return b"LOC?" + b"\x19\x05\x04\x20" + struct.pack("<I", len(paires)) + corps + b"LOCH"
+
+    def test_index_et_texte_par_cle(self):
+        flux = self._flux({"GUI_CARD_NAME_GROUP_23": 1, "GUI_CARD_DESCRIPTION_GROUP_23": 2,
+                           "GUI_CARD_NAME_DUGBOG_05": 3, "GUI_CARD_DESCRIPTION_DUGBOG_05": 4})
+        index = folio_hp4.index_hachages(flux)
+        assert len(index) == 4
+        table = ("", "Extérieur de Poudlard", "Lancez un sort sur toutes les statues…",
+                 "Fangieux (Orbis)", "Soulevez un Fangieux et lancez-lui un Orbis.")
+        assert folio_hp4.texte_carte(table, 196, index) == (
+            "Extérieur de Poudlard", "Lancez un sort sur toutes les statues…")
+        # Une créature : son effet (rang 64 + 2 × 5 - 3) puis la façon de l'obtenir.
+        table_creature = list(table) + [""] * 70
+        table_creature[71] = "Le joueur peut ensorceler un Fangieux…"
+        assert folio_hp4.texte_carte(tuple(table_creature), 153, index) == (
+            "Fangieux (Orbis)",
+            "Le joueur peut ensorceler un Fangieux…\nSoulevez un Fangieux et lancez-lui un Orbis.")
+
+    def test_sans_bloc_ou_tronque(self):
+        assert folio_hp4.index_hachages(b"rien") == {}
+        assert folio_hp4.index_hachages(b"\x19\x05\x04\x20" + struct.pack("<I", 9)) == {}
+        assert folio_hp4.index_jeu(Path("absent"), "fr") == {}

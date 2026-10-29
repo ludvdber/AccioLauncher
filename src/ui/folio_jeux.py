@@ -609,6 +609,7 @@ class FolioPageHP4(FolioPage):
                         for p in folio_hp4.releve(chemin)]
         self._table = folio_hp4.textes(self._system, get_language())
         self._table_jeu = folio_hp4.textes_jeu(self._system, get_language())
+        self._index_jeu = folio_hp4.index_jeu(self._system, get_language()) if self._table_jeu else {}
         dpr = self.devicePixelRatioF()
         self._dragee = image_bgra(folio_hp4.image_dragee(self._system), 36, dpr, rogner=True)
         # Les objets de la pensine sans leurs volutes : la bande du milieu.
@@ -809,7 +810,8 @@ class FolioPageHP4(FolioPage):
         # Nom et description : la boutique du jeu les montre avant l'achat ;
         # l'illustration, elle, reste réservée aux cartes obtenues.
         nom_carte, description = folio_hp4.texte_carte(self._table_jeu,
-                                                        vignette.jeu.cartes[vignette.rang])
+                                                        vignette.jeu.cartes[vignette.rang],
+                                                        self._index_jeu)
         self._carte_nom.setText(nom_carte)
         self._carte_nom.setVisible(bool(nom_carte))
         self._carte_texte.setText(description)
