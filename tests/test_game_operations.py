@@ -457,3 +457,55 @@ class TestJamaisSurLePartDUnZombie:
         sourd.finished.emit()   # le zombie sort enfin : la place est libre
         operations.download(jeu, jeu.current_download)
         assert operations._downloader is not None
+
+
+class TestChangerDeVersionEtReparer:
+    """`switch_version` et `repair` n'étaient exécutés sur une vraie
+    `GameOperations` par AUCUN test (audit du 2026-10-29, règle 10 : tout
+    chemin de l'orchestrateur vient avec le sien)."""
+
+    def _installe(self, ops_tuple):
+        operations, manager = ops_tuple
+        jeu = manager.get_games()[0].game
+        exe = manager.config.install_path / jeu.executable
+        exe.parent.mkdir(parents=True)
+        exe.write_bytes(b"MZ")
+        manager.save_installed_version(jeu.id, "1.0")
+        manager.refresh_states()
+        assert manager.is_installed(jeu.id)
+        return jeu, exe
+
+    def test_changer_de_version_telecharge_d_abord(self, ops, monkeypatch):
+        """Règle 96 : rien n'est désinstallé avant que la nouvelle version soit là."""
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _FauxDownloader)
+        jeu, exe = self._installe(ops)
+        operations.switch_version(jeu, jeu.current_download)
+        assert operations._downloader is not None and operations._uninstall_first
+        assert exe.exists(), "l'installation actuelle doit rester jusqu'au bout"
+        assert operations._downloader.destination == manager.chemin_archive(jeu.id, jeu.current_download)
+
+    def test_reparer_retelecharge_la_version_installee(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _FauxDownloader)
+        jeu, exe = self._installe(ops)
+        messages = []
+        operations.status_message.connect(messages.append)
+        operations.repair(jeu)
+        assert operations._target_version.version == "1.0"
+        assert not operations._uninstall_first, "réparer réinstalle PAR-DESSUS"
+        assert exe.exists()
+        assert any("Vérification" in m for m in messages)
+
+    def test_reparer_pendant_une_operation_est_refuse(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _FauxDownloader)
+        jeu, _exe = self._installe(ops)
+        operations.repair(jeu)
+        premier = operations._downloader
+        messages = []
+        operations.status_message.connect(messages.append)
+        operations.repair(jeu)
+        operations.switch_version(jeu, jeu.current_download)
+        assert operations._downloader is premier
+        assert len(messages) == 2 and all("déjà en cours" in m for m in messages)
