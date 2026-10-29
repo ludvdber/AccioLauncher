@@ -897,7 +897,7 @@ class FolioPageHP4(FolioPage):
         if self._lecteur_son is not None:
             lecteur, sortie = self._lecteur_son
             self._lecteur_son = None
-            lecteur.stop()
+            lecteur.setSource(QUrl())                     # pas `stop()` : règle 135
             lecteur.deleteLater()
             sortie.deleteLater()
 

@@ -99,8 +99,11 @@ class TestHP4:
         class _Lecteur(QObject):
             arrete = False
 
+            def setSource(self, source):
+                self.arrete = source.isEmpty()
+
             def stop(self):
-                self.arrete = True
+                raise AssertionError("stop() garde le GIL (règle 135)")
         lecteur, sortie = _Lecteur(), QObject()
         page._lecteur_son = (lecteur, sortie)
         page.arreter()

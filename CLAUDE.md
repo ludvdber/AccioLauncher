@@ -67,4 +67,4 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 
 ## Index des règles à ne pas réintroduire
 
-134 règles, numérotées et classées dans [docs/claude/REGLES.md](docs/claude/REGLES.md), chacune avec sa mesure. **Ouvrir la règle avant de toucher au sujet qu'elle nomme.** Catégories : processus, threads, sortie · Qt : peinture, focus, widgets · mise en page et mesure · texte, i18n, contenu distant · catalogue, registre, sécurité · fichiers, encodage, build · orchestration et états · ce que l'interface a le droit de dire · produit : ce qui a été tranché · Linux et AppImage · pièges de test récurrents.
+135 règles, numérotées et classées dans [docs/claude/REGLES.md](docs/claude/REGLES.md), chacune avec sa mesure. **Ouvrir la règle avant de toucher au sujet qu'elle nomme.** Catégories : processus, threads, sortie · Qt : peinture, focus, widgets · mise en page et mesure · texte, i18n, contenu distant · catalogue, registre, sécurité · fichiers, encodage, build · orchestration et états · ce que l'interface a le droit de dire · produit : ce qui a été tranché · Linux et AppImage · pièges de test récurrents.

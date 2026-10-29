@@ -1203,8 +1203,7 @@ class _VueCinematiques(QWidget):
 
     def _arreter_voix(self) -> None:
         if self._voix is not None:
-            self._voix.stop()
-            self._voix.setSource(QUrl())
+            self._voix.setSource(QUrl())                  # arrête aussi (règle 135)
             self._voix.deleteLater()
             self._voix = None
         if self._voix_sortie is not None:

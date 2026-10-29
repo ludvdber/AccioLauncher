@@ -231,7 +231,8 @@ class VideoPlayer(QObject):
 
     def _liberer(self) -> None:
         if self._player is not None:
-            self._player.stop()
+            # Jamais `stop()` : il garde le GIL ; `setSource(QUrl())` arrête
+            # aussi, et le relâche (règle 135).
             self._player.setSource(QUrl())
             self._player.mediaStatusChanged.disconnect(self._on_media_status)
             self._player.positionChanged.disconnect(self._sur_position)

@@ -237,7 +237,7 @@ class FondSonore(QObject):
             if chemin is None:
                 log.info("Musique de fond introuvable : %s", voulu)
                 if self._lecteur is not None:
-                    self._lecteur.stop()
+                    self._lecteur.setSource(QUrl())       # pas `stop()` : règle 135
                 self._courant = ""
                 self.change.emit()
                 return
@@ -267,6 +267,5 @@ class FondSonore(QObject):
     def arreter(self) -> None:
         """Fermeture du launcher : le lecteur s'arrête et lâche son fichier."""
         if self._lecteur is not None:
-            self._lecteur.stop()
-            self._lecteur.setSource(QUrl())
+            self._lecteur.setSource(QUrl())               # arrête aussi (règle 135)
         self._courant = ""

@@ -62,3 +62,32 @@ def test_regle_63_adresses_du_projet_seulement_dans_liens():
                     a in n.value for a in ADRESSES):
                 fautifs.append(f"{f.relative_to(RACINE)}:{n.lineno}")
     assert fautifs == [], fautifs
+
+
+LECTEURS_MEDIA = {"player", "_player", "lecteur", "_lecteur", "voix", "_voix"}
+
+
+def _stop_sur_un_lecteur(source: str) -> list[int]:
+    lignes = []
+    for n in ast.walk(ast.parse(source)):
+        if (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "stop"
+                and not n.args):
+            cible = n.func.value
+            nom = cible.attr if isinstance(cible, ast.Attribute) else getattr(cible, "id", "")
+            if nom in LECTEURS_MEDIA:
+                lignes.append(n.lineno)
+    return lignes
+
+
+def test_regle_135_aucun_stop_sur_un_qmediaplayer():
+    """`QMediaPlayer.stop()` garde le GIL et peut figer contre le fil audio de
+    FFmpeg : `setSource(QUrl())` arrête aussi, et relâche le GIL."""
+    fautifs = [f"{f.relative_to(RACINE)}:{n}" for f in SOURCES
+               if "QMediaPlayer" in (texte := f.read_text(encoding="utf-8"))
+               for n in _stop_sur_un_lecteur(texte)]
+    assert fautifs == [], fautifs
+
+
+def test_regle_135_le_garde_fou_voit_un_stop():
+    assert _stop_sur_un_lecteur("self._player.stop()\nlecteur.stop()\n") == [1, 2]
+    assert _stop_sur_un_lecteur("self._chargeur.stop()\nself.stop()\n") == []
