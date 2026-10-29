@@ -1,5 +1,6 @@
 """Tests pour src/core/game_manager.py"""
 
+import os
 import sys
 from datetime import datetime
 from unittest.mock import patch
@@ -1022,13 +1023,18 @@ class TestLeLancementPasseLaCoucheDpi:
             "facteur d'echelle de l'ecran (mesure : 3200x1800 pour 2560x1440)")
 
     def test_un_jeu_qui_ne_le_declare_pas_part_comme_avant(self, tmp_path, monkeypatch):
-        """Les six autres jeux : aucune couche DPI. Depuis la marque
-        `ACCIO_LAUNCH` (2026-10-29), l'environnement est toujours passé sous
-        Windows : il porte la marque, et rien d'autre de neuf. Sous Linux,
-        c'est celui du lanceur de compatibilité, sans couche Windows."""
+        """Les six autres jeux : sous Windows, l'environnement du launcher plus
+        la seule marque `ACCIO_LAUNCH` (le correctif refuse de démarrer sans),
+        jamais la couche DPI. Sous Linux, l'environnement est celui du lanceur
+        de compatibilité, et la couche Windows n'y figure jamais."""
         kwargs = self._lancer(tmp_path, monkeypatch, dpi_aware=False)
-        assert "__COMPAT_LAYER" not in kwargs["env"]
-        assert kwargs["env"].get("ACCIO_LAUNCH") == "1"
+        env = kwargs["env"]
+        if sys.platform == "win32":
+            assert env.get("ACCIO_LAUNCH") == "1"
+            attendu = {**os.environ, "ACCIO_LAUNCH": "1"}
+            assert env == attendu, "seule la marque s'ajoute à l'environnement hérité"
+        else:
+            assert "__COMPAT_LAYER" not in env
 
     @pytest.mark.skipif(sys.platform != "win32", reason="couche Windows")
     def test_le_jeu_garde_le_reste_de_l_environnement(self, tmp_path, monkeypatch):
