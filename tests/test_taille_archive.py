@@ -145,8 +145,12 @@ class TestBouton:
     def _libelle(self, panel):
         # Le poids est le DÉTAIL du bouton « INSTALLER » (2026-10-14).
         from src.ui.glow_button import GlowButton
-        bouton = panel.findChild(GlowButton, "btnDownload")
-        return f"{bouton.text()} {bouton.detail()}" if bouton is not None else ""
+        # `refresh()` CACHE l'ancien bouton et le confie à `deleteLater` : il
+        # reste enfant du panneau jusqu'au tour de boucle suivant. `findChild`
+        # seul le rendait sous PyQt6 6.12 (vu le 2026-10-29), d'où le libellé
+        # d'AVANT. Le bouton que l'utilisateur lit est celui qui n'est pas caché.
+        boutons = [b for b in panel.findChildren(GlowButton, "btnDownload") if not b.isHidden()]
+        return f"{boutons[0].text()} {boutons[0].detail()}" if boutons else ""
 
     def test_le_poids_reel_remplace_celui_du_catalogue(self, manager, qtbot):
         from src.core.i18n import set_language
