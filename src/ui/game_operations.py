@@ -141,7 +141,7 @@ class GameOperations(QObject):
             # du message d'erreur générique qui accuse la connexion réseau.
             log.warning("Version %s de %s sans source de téléchargement", version.version, game.id)
             self.status_message.emit(
-                tr("{} n'est pas encore téléchargeable — les fichiers arrivent bientôt.")
+                tr("{} n'est pas encore téléchargeable : les fichiers arrivent bientôt.")
                 .format(game.name)
             )
             return

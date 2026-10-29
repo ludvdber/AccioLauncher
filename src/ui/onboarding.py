@@ -874,7 +874,7 @@ class OnboardingDialog(QDialog):
         if ecran == DOSSIER:
             if not is_writable_dir(self.install_path):
                 avertir(self, tr("Dossier non inscriptible"),
-                        tr("Impossible d'écrire dans :\n{}").format(self.install_path))
+                        tr("Ce dossier refuse l'écriture. Choisissez-en un autre :\n{}").format(self.install_path))
                 return
             self._afficher(JEUX)
         elif ecran == JEUX:

@@ -279,7 +279,7 @@ def extract_7z_subprocess(
     exe = find_7z_exe()
     if exe is None:
         raise SeptZipIntrouvable(
-            "7z.exe introuvable — l'extraction de cette archive a échoué.\n"
+            "7z.exe introuvable : l'extraction de cette archive a échoué.\n"
             "Réinstallez Accio Launcher ou installez 7-Zip depuis https://7-zip.org."
         )
 

@@ -162,8 +162,8 @@ def nom_prerequis(identifiant: str) -> str:
 def texte_preparation_en_cours() -> str:
     """Le toast qui fait patienter, selon ce qui se prépare sur ce système."""
     if composants_windows.disponible():
-        return tr("Installation des composants Windows en cours — patientez un instant.")
-    return tr("Préparation de Wine en cours — patientez un instant.")
+        return tr("Installation des composants Windows en cours, patientez un instant.")
+    return tr("Préparation de Wine en cours, patientez un instant.")
 
 
 def _preparation_bloque(view: GameDetailView) -> bool:
@@ -190,7 +190,7 @@ def on_download(view: GameDetailView, version: GameVersion | None = None) -> Non
             # Toast et non dialogue : il n'y a aucune décision à prendre, et la
             # barre de téléchargement en bas montre déjà ce qui occupe le poste.
             view.notify.emit(
-                tr("Téléchargement déjà en cours pour {} — un seul à la fois.")
+                tr("Téléchargement déjà en cours pour {} : un seul à la fois.")
                 .format(active.name))
         else:
             view.status_message.emit(tr("Téléchargement déjà en cours pour ce jeu."))
@@ -204,7 +204,7 @@ def on_download(view: GameDetailView, version: GameVersion | None = None) -> Non
         # disponible », mais la touche Entrée et le menu contextuel passent ici
         # aussi. Sans ça, l'utilisateur recevait « Vérifiez votre connexion ».
         view.status_message.emit(
-            tr("{} n'est pas encore téléchargeable — les fichiers arrivent bientôt.")
+            tr("{} n'est pas encore téléchargeable : les fichiers arrivent bientôt.")
             .format(view.game.name)
         )
         return
@@ -257,8 +257,7 @@ def on_play(view: GameDetailView, ignorer_prerequis: bool = False) -> None:
         # personne ne fera le lien entre l'invite et le jeu qui se ferme.
         if accepte:
             view.notify.emit(
-                tr("Le réglage n'a pas pu être écrit — le jeu démarre "
-                   "avec sa configuration actuelle."))
+                tr("Le réglage n'a pas pu être écrit : le jeu démarre avec sa configuration actuelle."))
 
     # Passé seulement quand il sert : les tests remplacent `launch_game`
     # par des doublures qui ne connaissent pas ce paramètre.
@@ -301,17 +300,17 @@ def on_play(view: GameDetailView, ignorer_prerequis: bool = False) -> None:
                    tr("Ce jeu enregistre sa configuration et ses sauvegardes dans :\n\n{}\n\nWindows refuse d'y écrire, donc le jeu ne peut pas démarrer.\n\nC'est en général une protection : dans Sécurité Windows → Protection contre les rançongiciels, désactivez « Accès contrôlé aux dossiers » ou autorisez Accio Launcher. Un antivirus tiers peut faire la même chose. Si ce dossier a été déplacé ou supprimé, rétablissez-le par clic droit sur Documents → Propriétés → Emplacement.").format(str(exc).split(":", 1)[1]))
         else:
             log.error("Erreur au lancement : %s", exc)
-            view.status_message.emit(tr("Impossible de lancer le jeu."))
+            view.status_message.emit(tr("Le jeu n'a pas démarré. Le journal du launcher dit pourquoi."))
         return
     except OSError as exc:
         log.error("Impossible de lancer %s : %s", view.game.name, exc)
-        view.status_message.emit(tr("Impossible de lancer le jeu."))
+        view.status_message.emit(tr("Le jeu n'a pas démarré. Le journal du launcher dit pourquoi."))
         return
     if proc is not None:
         view.status_message.emit(tr("Lancement de {}…").format(view.game.name))
         view.game_launched.emit(proc, view.game.name, view.game.id)
     else:
-        view.status_message.emit(tr("Impossible de lancer le jeu."))
+        view.status_message.emit(tr("Le jeu n'a pas démarré. Le journal du launcher dit pourquoi."))
 
 
 def signaler_elevation(view: GameDetailView, exe: Path) -> None:
@@ -459,7 +458,7 @@ def _apres_composants(view: GameDetailView, game: GameData, reussie: bool,
         texte = tr("Les installeurs de Microsoft ont tourné, mais il manque encore :\n\n"
                    "{}\n\nRedémarrer Windows suffit parfois. Sinon, installez-le depuis "
                    "la page de Microsoft.").format(
-                       "\n".join(f"• {nom_prerequis(m)}" for m in restants) or "—")
+                       "\n".join(f"• {nom_prerequis(m)}" for m in restants))
     reponse = _boite(QMessageBox.Icon.Warning, view, tr("Composants Windows"), texte,
                      (tr("Ouvrir la page Microsoft"), tr("Fermer")), 1)
     if reponse == 0:
@@ -772,7 +771,7 @@ def copier_le_rapport(view: GameDetailView, en_tete: str = "") -> None:
         resume = en_tete + "\n\n" + resume
     QApplication.clipboard().setMimeData(
         presse_papiers(resume, enregistrer_rapport(view.manager, resume)))
-    view.notify.emit(tr("Copié — Ctrl+V sur le Discord joint le rapport"))
+    view.notify.emit(tr("Copié : Ctrl+V sur le Discord joint le rapport"))
 
 
 def signaler_plantage(view: GameDetailView, game: GameData, constat) -> None:
@@ -798,7 +797,7 @@ def signaler_plantage(view: GameDetailView, game: GameData, constat) -> None:
         (tr("Copier le rapport"), tr("Fermer")), 1,
     )
     if choix == 0:
-        copier_le_rapport(view, f"{game.name} — {constat.detail}")
+        copier_le_rapport(view, f"{game.name} : {constat.detail}")
 
 
 def find_import_error(game: GameData, source: Path, install_path: Path) -> str | None:
@@ -834,12 +833,13 @@ def on_import_existing(view: GameDetailView) -> None:
     source = Path(chosen)
     error = find_import_error(game, source, view.manager.config.install_path)
     if error is not None:
-        _boite(QMessageBox.Icon.Warning, view, tr("Import impossible"), error)
+        _boite(QMessageBox.Icon.Warning, view, tr("Rien n'a été importé"), error)
         return
     dest = view.manager.config.install_path / Path(game.executable).parts[0]
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Importer ce jeu"),
-        tr("Le dossier va être déplacé :\n\n{}\n→ {}\n\nLe jeu sera marqué en version {} (version réelle inconnue — utilisez « Vérifier / réparer » en cas de doute).\n\nContinuer ?").format(
+        tr("Le dossier va être déplacé :\n\n{}\n→ {}\n\nLe jeu sera marqué en version {} (version réelle "
+           "inconnue : utilisez « Vérifier / réparer » en cas de doute).\n\nContinuer ?").format(
             source, dest, game.recommended_version),
         (tr("Déplacer et importer"), tr("Annuler")), 1,
     )
@@ -850,7 +850,7 @@ def on_import_existing(view: GameDetailView) -> None:
         source.rename(dest)  # même disque (validé) → rename instantané
     except OSError as exc:
         log.error("Import de %s impossible : %s", source, exc)
-        _boite(QMessageBox.Icon.Warning, view, tr("Import impossible"), tr("Déplacement impossible :\n{}").format(exc))
+        _boite(QMessageBox.Icon.Warning, view, tr("Rien n'a été importé"), tr("Le dossier n'a pas été déplacé :\n{}").format(exc))
         return
     view.manager.redetect_state(game.id)
     view.manager.save_installed_version(game.id)
@@ -1076,7 +1076,7 @@ def show_context_menu(view: GameDetailView, pos) -> None:
         act_local = QAction(tr("Installer depuis un fichier local…"), view)
         act_local.triggered.connect(lambda: on_install_local(view))
         menu.addAction(act_local)
-        act_import = QAction(tr("J'ai déjà ce jeu — localiser l'installation…"), view)
+        act_import = QAction(tr("J'ai déjà ce jeu : localiser l'installation…"), view)
         act_import.triggered.connect(lambda: on_import_existing(view))
         menu.addAction(act_import)
     elif state == GameState.INSTALLED:

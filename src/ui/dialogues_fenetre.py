@@ -61,8 +61,8 @@ def confirmer_fermeture(parent, nom_du_jeu: str | None, phase: str) -> bool:
     boite = _boite(
         parent, tr("Opération en cours"),
         tr("« {} » est en cours.").format(nom_du_jeu or tr("un jeu")),
-        tr("Le téléchargement reprendra où il s'est arrêté au prochain "
-           "démarrage — rien n'est perdu.")
+        tr("Le téléchargement reprendra où il s'est arrêté au prochain démarrage : rien "
+           "n'est perdu.")
         if phase == "download" else
         tr("L'installation devra être refaite depuis le début. L'archive "
            "déjà téléchargée est conservée : il n'y aura rien à "

@@ -484,7 +484,7 @@ def rapport(manager: GameManager, ecrans: list[str] | None = None, journal: str 
         log.warning("Matériel illisible pour le diagnostic : %s", exc)
     if ecrans:
         lignes.append("Écrans : " + " ; ".join(ecrans))
-    lignes.append(f"Dossier des jeux : {config.install_path} — "
+    lignes.append(f"Dossier des jeux : {config.install_path} · "
                   f"{_espace_libre(Path(config.install_path))}")
     # Documents est le seul autre endroit où des jeux écrivent (HP1, HP2, HP3).
     # Chez l'utilisateur du 2026-09-20 il était inaccessible, et il a fallu le
@@ -492,7 +492,7 @@ def rapport(manager: GameManager, ecrans: list[str] | None = None, journal: str 
     if documents is None:
         from src.core.pre_launch import documents_inutilisable
         casse = documents_inutilisable() is not None
-        documents = f"{get_documents_dir()}" + (" — INACCESSIBLE" if casse else "")
+        documents = f"{get_documents_dir()}" + (" · INACCESSIBLE" if casse else "")
     lignes.append(f"Documents : {documents}")
 
     if compatibilite is None and sys.platform != "win32":
@@ -523,7 +523,7 @@ def rapport(manager: GameManager, ecrans: list[str] | None = None, journal: str 
             continue
         version = manager.installed_version(g.id) or "?"
         minutes = manager.get_playtime(g.id) // 60
-        installes.append(f"  {g.id} v{version} — {etat} — {minutes} min de jeu")
+        installes.append(f"  {g.id} v{version} · {etat} · {minutes} min de jeu")
     lignes.append("Jeux installés :" if installes else "Jeux installés : aucun")
     lignes += installes
 
@@ -536,7 +536,7 @@ def rapport(manager: GameManager, ecrans: list[str] | None = None, journal: str 
     recentes = sorted(tentatives, key=lambda t: t.debut)[-_TENTATIVES:]
     if recentes:
         lignes.append("Lancements qui n'ont pas démarré :")
-        lignes += [f"  {t.jeu} le {t.debut:%Y-%m-%d %H:%M} — {t.duree} s, code {t.code}"
+        lignes += [f"  {t.jeu} le {t.debut:%Y-%m-%d %H:%M} · {t.duree} s, code {t.code}"
                    for t in recentes]
 
     notables = lignes_notables(journal)

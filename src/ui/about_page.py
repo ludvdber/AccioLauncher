@@ -147,7 +147,8 @@ def _tuiles() -> QHBoxLayout:
     # « Discord » et « Ko-fi » ne passent PAS par tr() : ce sont des noms
     # propres, identiques dans toutes les langues.
     kofi = Tuile("Ko-fi", tr("Offrir un café au projet"), "kofi", KOFI_URL, vedette=True)
-    kofi.setToolTip(tr("Le launcher est gratuit — un café finance son développement et celui des correctifs."))
+    kofi.setToolTip(tr("Le launcher est gratuit. Un café finance son développement et celui des "
+                       "correctifs."))
     tuiles = (Tuile(tr("Site web"), domaine, "site", SITE_URL),
               Tuile("Discord", tr("Questions, soucis et nouvelles du projet"),
                     "discord", DISCORD_URL),

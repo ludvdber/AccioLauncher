@@ -252,7 +252,7 @@ class CopiesDialog(QDialog):
             except OSError:
                 pass
         for rang, v in enumerate(self._versions.get(rel, [])):
-            texte = f"{_quand(v.quand)} — {_taille(v.taille)}"
+            texte = f"{_quand(v.quand)} · {_taille(v.taille)}"
             if rang == 0:
                 texte = tr("{} (la plus récente)").format(texte)
             item = QListWidgetItem(texte)

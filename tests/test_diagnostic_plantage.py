@@ -223,4 +223,4 @@ class TestSessionEtFenetre:
             assert "La cause." in texte and "hp8.exe · 0xc0000005" in texte
             assert vues[0][4] == boutons
             # Le rapport complet, et en tête ce que la boîte vient de montrer.
-            assert copies == ["HP8 — hp8.exe · 0xc0000005"]
+            assert copies == ["HP8 : hp8.exe · 0xc0000005"]

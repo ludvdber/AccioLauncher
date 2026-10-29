@@ -34,7 +34,7 @@ def test_les_chiffres_sont_ceux_de_la_barre_du_bas(carte):
     c.regler_telechargement(1_240_000_000, 2_900_000_000, 18_500_000, 90)
     ligne = format_progress_line(1_240_000_000, 2_900_000_000, 18_500_000, 90)
     assert c.pourcentage.text() == "42 %" and ligne.startswith("42%")
-    for morceau in ligne.split(" — ")[1:]:
+    for morceau in ligne.split(" · ")[1:]:
         for mot in morceau.split(" / "):
             assert mot in c.detail.text(), mot
 

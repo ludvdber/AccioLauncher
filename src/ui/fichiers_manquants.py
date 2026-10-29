@@ -85,6 +85,6 @@ def ouvrir_dossier_du_jeu(view: GameDetailView, game: GameData) -> None:
     dossier = (view.manager.config.install_path
                / Path(game.executable.replace(chr(92), "/")).parent)
     if not dossier.is_dir():
-        view.notify.emit(tr("Dossier introuvable — le jeu a peut-être été déplacé."))
+        view.notify.emit(tr("Dossier introuvable : le jeu a peut-être été déplacé."))
         return
     open_local_path(str(dossier))

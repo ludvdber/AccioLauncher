@@ -370,8 +370,8 @@ class _Releve(QWidget):
             bloc_rang.addWidget(valeur, 1)
             rang.addWidget(bloc)
         elif self._legendes.get(gid):
-            # Des sauvegardes, aucun temps chronométré : la même convention que
-            # le reste de la page, un tiret, jamais une estimation.
+            # Des sauvegardes, aucun temps chronométré : « Non chronométré »,
+            # jamais une estimation.
             rang.addWidget(_cellule(self._legendes[gid], _COL_TEMPS, couleur=_GRIS))
         else:
             rang.addWidget(_cellule(tr("Pas encore lancé"), _COL_TEMPS,

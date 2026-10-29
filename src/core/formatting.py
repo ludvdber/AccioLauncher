@@ -70,7 +70,7 @@ def format_progress_line(downloaded: int, total: int, speed: float,
     parts = [head, f"{recu} / {attendu}", vitesse]
     if eta:
         parts.append(eta)
-    return " — ".join(parts)
+    return " · ".join(parts)
 
 
 def morceaux_de_progression(downloaded: int, total: int, speed: float,
@@ -87,9 +87,9 @@ def morceaux_de_progression(downloaded: int, total: int, speed: float,
 
 
 def append_part_info(line: str, current: int, total: int) -> str:
-    """Ajoute (ou remplace) le suffixe ' — partie X/Y' à une ligne de statut."""
-    template = tr(" — partie {}/{}")
-    marker = template.split("{}")[0]  # ' — partie ' / ' — part '
+    """Ajoute (ou remplace) le suffixe ' (partie X/Y)' à une ligne de statut."""
+    template = tr(" (partie {}/{})")
+    marker = template.split("{}")[0]  # ' (partie ' / ' (part '
     base = line.split(marker)[0]
     return base + template.format(current, total)
 

@@ -162,7 +162,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._boutons_prereglage: dict[str, QPushButton] = {}
         self._carte_des_effets: QWidget | None = None
 
-        self.setWindowTitle(tr("Réglages — {}").format(game.name))
+        self.setWindowTitle(tr("Réglages de {}").format(game.name))
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self._build_ui()
         self._taille_de_depart()

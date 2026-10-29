@@ -167,7 +167,8 @@ class TestCheminsDErreurDeLaMiseAJour:
         assert self.occupe == [True]
         _FauxTelechargement.crees[0].error.emit("coupé", Echec("connexion"))
         assert self.occupe == [True, False]
-        assert self.messages[-1] == "Échec du téléchargement — ouverture de la page de release"
+        assert self.messages[-1] == ("Le téléchargement a échoué : la page de la release "
+                                     "s'ouvre pour l'installer à la main.")
         assert self.ouvertes == ["https://exemple/release"]
         assert dispatcher._download is None
 

@@ -183,7 +183,7 @@ class VersionsDialog(QDialog):
         self._lignes: dict[str, _LigneVersion] = {}
         self._actions: dict[str, QPushButton] = {}
 
-        self.setWindowTitle(tr("Versions — {}").format(game.name))
+        self.setWindowTitle(tr("Versions de {}").format(game.name))
         self.setMinimumSize(900, 560)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
         self._build_ui()

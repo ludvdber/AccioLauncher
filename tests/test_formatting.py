@@ -90,11 +90,11 @@ class TestFormatRelativeDate:
 
 class TestAppendPartInfo:
     def test_appends_suffix(self):
-        assert append_part_info("42%", 2, 3) == "42% — partie 2/3"
+        assert append_part_info("42%", 2, 3) == "42% (partie 2/3)"
 
     def test_replaces_existing_suffix(self):
-        line = append_part_info("42% — partie 1/3", 2, 3)
-        assert line == "42% — partie 2/3"
+        line = append_part_info("42% (partie 1/3)", 2, 3)
+        assert line == "42% (partie 2/3)"
 
 
 class TestFormatProgressLine:

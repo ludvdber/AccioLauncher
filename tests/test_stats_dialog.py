@@ -493,7 +493,7 @@ class TestRetoursDuDixNeufSeptembre:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         legendes = dlg.findChildren(_Releve)[0]._legendes
-        assert legendes["hp1"] == "—"
+        assert legendes["hp1"] == "Non chronométré"
 
 
     @staticmethod

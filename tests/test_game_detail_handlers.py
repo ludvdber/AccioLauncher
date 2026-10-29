@@ -87,7 +87,7 @@ class TestImportDUnJeuExistant:
         dialogue.choisi = str(tmp_path / "vide")
         (tmp_path / "vide").mkdir()
         h.on_import_existing(_vue(tmp_path))
-        assert boites and boites[0][0] == "Import impossible"
+        assert boites and boites[0][0] == "Rien n'a été importé"
         assert "introuvable" in boites[0][1]
 
     def test_annuler_ne_deplace_rien(self, tmp_path, boites, dialogue):
@@ -106,8 +106,8 @@ class TestImportDUnJeuExistant:
         monkeypatch.setattr(Path, "rename", refuser)
         vue = _vue(tmp_path)
         h.on_import_existing(vue)
-        assert boites[-1][0] == "Import impossible"
-        assert "Déplacement impossible" in boites[-1][1]
+        assert boites[-1][0] == "Rien n'a été importé"
+        assert "n'a pas été déplacé" in boites[-1][1]
         assert vue.status_message.recus == [], "rien ne doit s'annoncer importé"
 
     def test_l_import_reussi_deplace_et_l_annonce(self, tmp_path, boites, dialogue):
@@ -177,13 +177,13 @@ class TestLancementQuiEchoue:
     def test_une_erreur_systeme_est_dite(self, tmp_path, boites):
         vue = self._vue_qui_leve(tmp_path, OSError("exe introuvable"))
         h.on_play(vue)
-        assert vue.status_message.recus == ["Impossible de lancer le jeu."]
+        assert vue.status_message.recus == ["Le jeu n'a pas démarré. Le journal du launcher dit pourquoi."]
         assert vue.game_launched.recus == []
 
     def test_une_erreur_inconnue_est_dite(self, tmp_path, boites):
         vue = self._vue_qui_leve(tmp_path, RuntimeError("autre chose"))
         h.on_play(vue)
-        assert vue.status_message.recus == ["Impossible de lancer le jeu."]
+        assert vue.status_message.recus == ["Le jeu n'a pas démarré. Le journal du launcher dit pourquoi."]
 
     def test_documents_inaccessible_explique_la_protection(self, tmp_path, boites, monkeypatch):
         monkeypatch.setattr(h.sys, "platform", "win32")
@@ -195,7 +195,7 @@ class TestLancementQuiEchoue:
     def test_aucun_processus_rendu(self, tmp_path, boites):
         vue = _vue(tmp_path, launch_game=lambda *_a, **_k: None)
         h.on_play(vue)
-        assert vue.status_message.recus == ["Impossible de lancer le jeu."]
+        assert vue.status_message.recus == ["Le jeu n'a pas démarré. Le journal du launcher dit pourquoi."]
 
     def test_une_partie_deja_en_cours_ne_relance_rien(self, tmp_path, boites):
         appels = []
@@ -239,7 +239,7 @@ class TestRegistreQuiNePrendPas:
     def test_dossier_du_jeu_introuvable(self, tmp_path):
         vue = _vue(tmp_path)
         h._ouvrir_dossier_du_jeu(vue, vue.game)
-        assert vue.notify.recus == ["Dossier introuvable — le jeu a peut-être été déplacé."]
+        assert vue.notify.recus == ["Dossier introuvable : le jeu a peut-être été déplacé."]
 
 
 class TestTelechargerRefuse:

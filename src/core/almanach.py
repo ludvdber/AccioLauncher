@@ -100,7 +100,7 @@ FAITS: tuple[Fait, ...] = (
          "anniversaire"),
     # — Bataille (mai) —
     Fait("Les statues du château se sont battues aux côtés des élèves.", "bataille"),
-    Fait("« Toujours. » — la réponse de Rogue à Dumbledore.", "bataille"),
+    Fait("La réponse de Rogue à Dumbledore : « Toujours. »", "bataille"),
     # — Toute l'année —
     Fait("Poudlard compte quatre maisons et sept années d'études."),
     Fait("Il existe trois Sortilèges Impardonnables."),

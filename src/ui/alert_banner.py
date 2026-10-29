@@ -171,7 +171,7 @@ class AlertBanner(QLabel):
             dl = game.current_download
             if dl is not None and dl.is_available:
                 if not online:
-                    return tr("Hors ligne — connexion requise pour télécharger.")
+                    return tr("Hors ligne : une connexion est nécessaire pour télécharger.")
                 manque = self._disque(dl)
                 if manque:
                     return manque
@@ -191,7 +191,7 @@ class AlertBanner(QLabel):
                 # Dans le PRÉFIXE, et installé par le launcher : le lien ne
                 # mène pas à Microsoft mais à la préparation de Wine.
                 return (
-                    tr("{} manquant dans Wine — requis pour lancer ce jeu.").format(
+                    tr("{} manquant dans Wine, requis pour lancer ce jeu.").format(
                         _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
                     + " " + LIEN.format("preparer", WARN, tr("Installer"))
                 )
@@ -201,13 +201,13 @@ class AlertBanner(QLabel):
                 # (ACT-054) : le bandeau ne nommait que le premier, et chaque
                 # composant coûtait un aller-retour par la page de Microsoft.
                 return (
-                    tr("{} composants Windows manquants — requis pour lancer ce jeu.").format(
+                    tr("{} composants Windows manquants, requis pour lancer ce jeu.").format(
                         len(paquets))
                     + " " + LIEN.format("preparer", WARN, tr("Tout installer"))
                 )
             if manquants:
                 return (
-                    tr("{} manquant — requis pour lancer ce jeu.").format(
+                    tr("{} manquant, requis pour lancer ce jeu.").format(
                         _NOMS_COURTS.get(manquants[0], tr("Composant Windows")))
                     + " " + LIEN.format("preparer" if paquets else manquants[0], WARN,
                                         tr("Installer"))
@@ -235,7 +235,7 @@ class AlertBanner(QLabel):
 
     @staticmethod
     def _message_sans_lanceur() -> str:
-        return (tr("Wine introuvable — requis pour lancer ce jeu.")
+        return (tr("Wine introuvable, requis pour lancer ce jeu.")
                 + " " + LIEN.format("guide_linux", WARN, tr("En savoir plus")))
 
     def _disque(self, version) -> str:
