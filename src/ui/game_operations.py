@@ -146,6 +146,16 @@ class GameOperations(QObject):
             )
             return
 
+        dest = self._manager.chemin_archive(game.id, version)
+        # Un fil annulé mais sourd (garé dans `_zombies`) tient encore ce
+        # `.part` : sa réponse peut arriver après la relance, ouvrir le fichier
+        # en « wb » et y creuser un trou que l'empreinte, calculée sur le FLUX,
+        # ne voit pas. On attend qu'il soit vraiment fini (règle de CLAUDE.md).
+        if any(z.destination == dest for z in self._zombies):
+            log.warning("Téléchargement annulé de %s encore actif — relance refusée", game.id)
+            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            return
+
         self._target_version = version
         self._active_game = game
         self._uninstall_first = uninstall_first
@@ -153,7 +163,6 @@ class GameOperations(QObject):
         self._speed_tracker.reset()
         self.status_message.emit(tr("Téléchargement de {} v{}…").format(game.name, version.version))
 
-        dest = self._manager.chemin_archive(game.id, version)
         # Empreintes : celles du catalogue si renseignées, sinon celles publiées
         # par GitHub (récupérées sans requête dédiée). Vide → vérification sautée.
         sha256, sha256_parts = self._manager.expected_hashes(version)

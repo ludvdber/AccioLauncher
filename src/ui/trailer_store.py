@@ -171,6 +171,12 @@ class TrailerStore(QObject):
             self._attente.start(_ATTENTE_MS)
             return
 
+        # Même garde que `GameOperations.download` : une bande-annonce annulée
+        # dont le fil n'est pas encore sorti tient son `.part`.
+        if any(z.destination == store.chemin_local(self._file[0]) for z in self._zombies):
+            self._attente.start(_ATTENTE_MS)
+            return
+
         trailer = self._file.pop(0)
         self._courante = trailer
         dest = store.chemin_local(trailer)

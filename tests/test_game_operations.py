@@ -431,3 +431,29 @@ class TestAnnulationDUnFilSourd:
             (dest.parent / (dest.name + suffixe)).write_bytes(b"x")
         operations.cancel_download()
         assert not list(dest.parent.glob(dest.name + ".*"))
+
+
+class TestJamaisSurLePartDUnZombie:
+    """Audit du 2026-10-29 : un fil annulé mais sourd est garé dans `_zombies`
+    et tient encore le `.part`. Une relance immédiate du même jeu démarrait un
+    second téléchargement sur le même fichier ; la réponse tardive du zombie
+    l'ouvrait en « wb » et creusait un trou de zéros que l'empreinte, calculée
+    sur le flux, ne voyait pas (archive acceptée puis refusée par 7-Zip)."""
+
+    def test_la_relance_attend_la_fin_du_zombie(self, ops, monkeypatch):
+        operations, manager = ops
+        monkeypatch.setattr("src.ui.game_operations.Downloader", _DownloaderSourd)
+        jeu = manager.get_games()[0].game
+        operations.download(jeu, jeu.current_download)
+        sourd = operations._downloader
+        operations.cancel_download()
+        messages = []
+        operations.status_message.connect(messages.append)
+
+        operations.download(jeu, jeu.current_download)
+        assert operations._downloader is None and not operations.is_busy
+        assert messages and "déjà en cours" in messages[0]
+
+        sourd.finished.emit()   # le zombie sort enfin : la place est libre
+        operations.download(jeu, jeu.current_download)
+        assert operations._downloader is not None

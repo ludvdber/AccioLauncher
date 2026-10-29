@@ -49,6 +49,10 @@ class TestConfigEnLectureSeule:
         assert dest.read_text() == "v2"
         assert dest.with_suffix(".ini.bak").read_text() == "v1"
 
+    # En root, un fichier en lecture seule reste inscriptible : `os.access` ment
+    # et le test échouait pour rien (conteneurs, ARCHITECTURE.md).
+    @pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0,
+                        reason="root écrit dans un fichier en lecture seule")
     def test_l_attribut_de_l_archive_est_conserve(self, jeu):
         install, source, dest = jeu
         source.write_text("v1")

@@ -437,6 +437,10 @@ class Downloader(QThread):
         Le plafond est re-testé PENDANT le stream et pas seulement sur
         l'en-tête : un `Content-Length` peut manquer, ou mentir.
         """
+        # Annulé pendant l'attente des en-têtes : ne pas OUVRIR le `.part`, un
+        # « wb » le tronquerait alors qu'une relance l'écrit peut-être déjà.
+        if self._cancelled:
+            return False
         with open(part_path, mode) as f:
             for chunk in response.iter_bytes(CHUNK_SIZE):
                 if self._cancelled:
@@ -491,6 +495,8 @@ class Downloader(QThread):
                     response.raise_for_status()
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code == 416 and downloaded > 0:
+                        if self._cancelled:
+                            return None
                         log.warning("HTTP 416 : fichier .part corrompu, suppression et reprise")
                         part_path.unlink(missing_ok=True)
                         needs_retry = True
