@@ -187,6 +187,56 @@ class TestLeRenduSaitPeindreCeQueLaTableDecrit:
             assert zone.contains(int(pt.x), int(pt.y))
         overlay.pause()
 
+    def test_le_halo_est_peint_une_fois_et_rend_le_degrade(self, qtbot):
+        """Halos prépeints (2026-10-29) : le dégradé radial refait à chaque image
+        coûtait 1,5 ms pour 50 halos. L'image posée doit rendre le même halo."""
+        from PyQt6.QtCore import QPoint, QRectF, Qt
+        from PyQt6.QtGui import QColor, QImage, QPainter, QRadialGradient, QRegion
+        from PyQt6.QtWidgets import QWidget
+        from src.ui.particles import ParticleOverlay
+
+        overlay = ParticleOverlay()
+        qtbot.addWidget(overlay)
+        overlay.resize(80, 80)
+        overlay.apply_season("aucune")
+        overlay._ensure_particles()
+        overlay.pause()
+        pt = overlay._particles[0]
+        overlay._particles[:] = [pt]
+        pt.x, pt.y, pt.size, pt.color_rgb = 40.3, 39.6, 0.0, (240, 200, 90)
+        pt.has_glow, pt.glow_size = True, 12.4
+        pt.base_opacity, pt.opacity_variation = 0.5, 0.0
+        alpha = max(int(int(0.5 * 255) * 0.30), 3)
+
+        def peindre():
+            image = QImage(80, 80, QImage.Format.Format_ARGB32_Premultiplied)
+            image.fill(QColor(12, 14, 30))
+            peintre = QPainter(image)
+            overlay.render(peintre, QPoint(), QRegion(overlay.rect()),
+                           QWidget.RenderFlag.DrawChildren)
+            peintre.end()
+            return image
+        image = peindre()
+        halo = pt.halo
+        peindre()
+        assert halo is not None and pt.halo is halo, "le halo n'est peint qu'une fois"
+
+        attendu = QImage(80, 80, QImage.Format.Format_ARGB32_Premultiplied)
+        attendu.fill(QColor(12, 14, 30))
+        peintre = QPainter(attendu)
+        peintre.setRenderHint(QPainter.RenderHint.Antialiasing)
+        grad = QRadialGradient(pt.x, pt.y, pt.glow_size)
+        grad.setColorAt(0, QColor(240, 200, 90, alpha))
+        grad.setColorAt(1, QColor(240, 200, 90, 0))
+        peintre.setPen(Qt.PenStyle.NoPen)
+        peintre.setBrush(grad)
+        g = pt.glow_size
+        peintre.drawEllipse(QRectF(pt.x - g, pt.y - g, g * 2, g * 2))
+        peintre.end()
+        ecart = max(abs(a - b) for a, b in zip(image.constBits().asarray(image.sizeInBytes()),
+                                               attendu.constBits().asarray(attendu.sizeInBytes()), strict=True))
+        assert ecart <= 3, f"le halo posé s'écarte du dégradé de {ecart} niveaux"
+
     @pytest.mark.parametrize("ambiance", [s for s in SEASONS if s != "auto"])
     def test_chaque_ambiance_se_peint_sans_erreur(self, qtbot, ambiance):
         """Peindre pour de vrai : un `QPainterPath` mal formé ou une couleur
