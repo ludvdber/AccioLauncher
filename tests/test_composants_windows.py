@@ -70,11 +70,17 @@ class TestScript:
         """Une apostrophe dans le nom du compte se double, rien ne s'interprète."""
         assert "'C:\\Users\\Frédéric O''Brien" in self._script().replace("/", "\\")
 
-    def test_le_code_est_note(self):
-        corps = self._script(("vcredist_x86",))
-        assert "$resultats += ('vc2022 ' + $proc.ExitCode)" in corps
-        assert f"$resultats += 'vc2022 {cw.CODE_REFUSE}'" in corps
-        assert "Set-Content -LiteralPath (Join-Path $source 'resultats.txt')" in corps
+    def test_rien_n_est_ecrit_dans_le_dossier_de_l_utilisateur(self):
+        """Le processus élevé écrivait son bilan dans `source` : une jonction ou
+        un lien posé là par un programme sans privilège redirige une écriture
+        ADMINISTRATEUR vers n'importe quel fichier du système. Le bilan revient
+        par le code de sortie de PowerShell."""
+        corps = self._script(("vcredist2005_x86", "vcredist_x86"))
+        for ecriture in ("Set-Content", "Out-File", "Add-Content", "resultats"):
+            assert ecriture not in corps, ecriture
+        assert corps.rstrip().endswith(f"exit ($bilan + {cw.MARQUE_BILAN})")
+        # Trois bits par paquet, dans l'ordre : vc2005 au rang 0, vc2022 au rang 1.
+        assert "$bilan += $n * 1" in corps and "$bilan += $n * 8" in corps
 
     def test_le_script_voyage_dans_la_ligne_de_commande(self):
         import base64
@@ -104,9 +110,16 @@ class TestScript:
                 env={k: v for k, v in __import__("os").environ.items() if k.upper() != "PSMODULEPATH"})
             assert sortie.stdout.decode("utf-8", "replace").strip() == "0", sortie.stderr
 
-    def test_lire_les_resultats(self):
-        assert cw.lire_resultats("vc2005 0\r\nvc2022 3010\r\nbruit\r\nvc2008 x\r\n") == {
-            "vc2005": 0, "vc2022": 3010}
+    def test_lire_le_bilan(self):
+        paquets = cw.paquets_pour(("vcredist2005_x86", "vcredist_x86"))
+        code = cw.MARQUE_BILAN + 1 * 1 + 2 * 8
+        assert cw.lire_bilan(code, paquets) == {"vc2005": "réussi", "vc2022": "redémarrage demandé"}
+        assert cw.lire_bilan(cw.MARQUE_BILAN + 4 + 5 * 8, paquets) == {
+            "vc2005": "copie refusée", "vc2022": "échec"}
+        # PowerShell arrêté par une exception : code 1, pas un bilan.
+        assert cw.lire_bilan(1, paquets) == {}
+        assert cw.lire_bilan(cw.MARQUE_BILAN, paquets) == {
+            "vc2005": "non lancé", "vc2022": "non lancé"}
 
 
 class TestSignature:

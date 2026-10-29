@@ -459,10 +459,12 @@ def ecrire_valeurs(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32,
     try:
         if not _ecrire_eleve(ruche, cle, valeurs, vue):
             return False
-        # regedit rend la main avant d'avoir fini : on relit jusqu'à ce que ce
-        # soit vrai, plutôt que de dormir un temps arbitraire et d'espérer.
-        # Sous Wine, chaque relecture reparse un `system.reg` de plusieurs Mo :
-        # un pas plus long, pour une attente qui l'est aussi.
+        # L'import est fini quand on arrive ici : `executer_eleve` attend la
+        # fin de PowerShell, qui attend regedit (`-Wait`). La relecture reste
+        # comme filet, parce que `regedit /s` ne signale aucun échec. Sous Wine,
+        # le registre n'arrive sur le disque qu'à l'arrêt du wineserver, et
+        # chaque relecture reparse un `system.reg` de plusieurs Mo : un pas
+        # plus long, pour une attente qui l'est aussi.
         import time
         pas = 0.15 if sys.platform == "win32" else 0.5
         limite = time.monotonic() + attente_s

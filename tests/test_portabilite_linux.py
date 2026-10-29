@@ -131,6 +131,17 @@ class TestWorkflowCI:
         assert "linux-smoke:" in workflow
         assert "ubuntu-latest" in workflow
 
+    def test_un_blocage_dans_le_code_c_meurt_en_60_s(self):
+        """Sous Linux, le délai par défaut de pytest-timeout est un signal, que
+        Python ne traite qu'entre deux instructions : un fil principal bloqué
+        dans Qt ne le voit pas (job figé 20 min, 2026-10-29). Sous Windows, le
+        fil de garde est déjà la méthode par défaut."""
+        workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
+        linux = workflow[workflow.index("  linux-smoke:"):]
+        lignes = [ligne for ligne in linux.splitlines() if "python -m pytest" in ligne]
+        assert len(lignes) == 2
+        assert all("--timeout-method=thread" in ligne for ligne in lignes)
+
 
 @pytest.mark.parametrize("nom", ["libegl1", "libgl1", "libxkbcommon0", "libdbus-1-3"])
 def test_les_bibliotheques_qt_restent_installees_par_la_ci(nom):

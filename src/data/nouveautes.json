@@ -93,6 +93,46 @@
             "en": "A full disk no longer leaves the settings file of the first three games empty.",
             "es": "Un disco lleno ya no deja vacío el archivo de ajustes de los tres primeros juegos."
           }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les messages du launcher sont plus clairs : quand quelque chose bloque, ils disent ce qui se passe et quoi faire.",
+            "en": "The launcher's messages are clearer: when something gets stuck, they say what is happening and what to do.",
+            "es": "Los mensajes del launcher son más claros: cuando algo se bloquea, dicen qué pasa y qué hacer."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les textes discrets (mentions, crédits, notes) se lisent mieux, dans les cinq thèmes.",
+            "en": "Subtle texts (notices, credits, notes) are easier to read, in all five themes.",
+            "es": "Los textos discretos (avisos, créditos, notas) se leen mejor, en los cinco temas."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Sécurité renforcée pour l'installation des composants Windows, le catalogue des jeux et la décompression des archives.",
+            "en": "Stronger security for installing Windows components, the game catalogue and unpacking archives.",
+            "es": "Seguridad reforzada para instalar los componentes de Windows, el catálogo de juegos y la descompresión de archivos."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Les nombres au singulier s'accordent : « 1 point », « et 1 autre ».",
+            "en": "Singular numbers now read right: \"1 point\", \"and 1 more\".",
+            "es": "Los números en singular concuerdan: «1 punto», «y 1 más»."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Une durée de jeu s'arrondit de la même façon sur la fiche d'un jeu et dans le Carnet.",
+            "en": "A play time is rounded the same way on a game's page and in the Notebook.",
+            "es": "Un tiempo de juego se redondea igual en la ficha de un juego y en el Cuaderno."
+          }
         }
       ]
     },
