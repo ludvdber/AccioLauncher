@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
@@ -234,6 +234,11 @@ class Config:
     # Taille du texte de HP1/HP2 (id → « petit », « grand », « tres_grand »,
     # « origine »). Absent : automatique, d'après la hauteur de l'image (`texte_ue1`).
     taille_texte: dict[str, str] = field(default_factory=dict)
+    # Les clés que CETTE version ne connaît pas, recopiées telles quelles à la
+    # sauvegarde. Sans elles, revenir d'une version plus récente (essai, retour
+    # en arrière) effaçait en silence ce qu'elle avait ajouté : préréglages de
+    # difficulté de la 1.4, par exemple. Couture posée le 2026-10-29.
+    inconnus: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def exists(cls) -> bool:
@@ -289,6 +294,7 @@ class Config:
                     game_language=_as_map(data.get("game_language"), str),
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                     taille_texte=_as_map(data.get("taille_texte"), str),
+                    inconnus={k: v for k, v in data.items() if k not in _CLES_CONNUES},
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
                 log.warning("Config corrompue, valeurs par défaut : %s", exc)
@@ -312,7 +318,8 @@ class Config:
             return
         CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
         data = json.dumps(
-            {
+            # Les inconnues d'abord : une clé connue l'emporte toujours.
+            self.inconnus | {
                 "install_path": str(self.install_path),
                 "cache_path": str(self.cache_path),
                 "langue": self.langue,
@@ -348,6 +355,10 @@ class Config:
             ensure_ascii=False,
         )
         ecrire_atomique(CONFIG_FILE_PATH, data)
+
+
+# Les clés du JSON que cette version lit : les noms des champs, `inconnus` à part.
+_CLES_CONNUES = frozenset(f.name for f in fields(Config)) - {"inconnus"}
 
 
 # --- Migration de l'ancienne arborescence (avant le 2026-08-26) ---

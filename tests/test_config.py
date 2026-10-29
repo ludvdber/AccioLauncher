@@ -257,3 +257,29 @@ class TestChaqueReglageEstReellementPersiste:
         assert not perdus, (
             "réglage(s) non persisté(s) — ajoute-les à Config.save ET "
             f"Config.load : {perdus}")
+
+
+class TestCoutureVersionsFutures:
+    """Couture du 2026-10-29 (préparer la 1.4) : une clé que cette version ne
+    connaît pas survit à `load()` puis `save()`. Avant, revenir d'une version
+    plus récente effaçait en silence ce qu'elle avait ajouté."""
+
+    def test_une_cle_inconnue_fait_l_aller_retour(self, tmp_path):
+        import json
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps({
+            "langue": "fr", "difficulte": {"hp1": {"preset": "hardcore"}}}), encoding="utf-8")
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            c = Config.load()
+            c.theme = "serdaigle"
+            c.save()
+        relu = json.loads(config_file.read_text(encoding="utf-8"))
+        assert relu["difficulte"] == {"hp1": {"preset": "hardcore"}}
+        assert relu["theme"] == "serdaigle" and relu["langue"] == "fr"
+
+    def test_une_cle_connue_l_emporte_toujours(self, tmp_path):
+        from src.core.config import Config as C
+        c = C(install_path=tmp_path, cache_path=tmp_path, inconnus={"langue": "xx"})
+        with patch("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json"):
+            c.save()
+            assert C.load().langue == c.langue

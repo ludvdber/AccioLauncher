@@ -427,3 +427,23 @@ class TestUnJournalVerrouilleNEstPasEcrase:
             journal.write_text("{tronqué", encoding="utf-8")
             stats.charger(journal)
         assert len(list(tmp_path.glob("sessions.*.corrompu"))) == 2
+
+
+class TestCoutureVersionsFutures:
+    """Couture du 2026-10-29 (préparer les statistiques par préréglage de la
+    1.4) : ce qu'une version plus récente a noté sur une partie, ou à la racine
+    du journal, survit à la réécriture par celle-ci."""
+
+    def test_les_champs_inconnus_survivent(self, tmp_path):
+        journal = tmp_path / "sessions.json"
+        journal.write_text(json.dumps({
+            "version": 2, "records": {"hp1": 3},
+            "sessions": [{"jeu": "hp1", "debut": "2026-10-01T20:00:00", "duree": 600,
+                          "preset": "hardcore"}]}), encoding="utf-8")
+        stats.enregistrer_session("hp2", datetime(2026, 10, 2, 20), 600, journal)
+        relu = json.loads(journal.read_text(encoding="utf-8"))
+        assert relu["records"] == {"hp1": 3}
+        premiere = next(s for s in relu["sessions"] if s["jeu"] == "hp1")
+        assert premiere["preset"] == "hardcore"
+        assert stats.charger(journal).sessions[0] == stats.Session(
+            "hp1", datetime(2026, 10, 1, 20), 600)

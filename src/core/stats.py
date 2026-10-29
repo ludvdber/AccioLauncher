@@ -117,6 +117,11 @@ class Session:
     jeu: str
     debut: datetime
     duree: int  # secondes
+    # Ce qu'une version plus récente a noté sur la partie et que celle-ci ne
+    # lit pas (le préréglage de difficulté de la 1.4, par exemple), gardé tel
+    # quel à la réécriture. Hors comparaison : deux parties restent les mêmes.
+    # Couture posée le 2026-10-29.
+    autres: tuple[tuple[str, Any], ...] = field(default=(), compare=False)
 
     @property
     def jour(self) -> date:
@@ -136,6 +141,8 @@ class Historique:
     demarrages: int = 0
     octets_telecharges: int = 0
     tentatives: tuple[Tentative, ...] = ()
+    # Clés du fichier que cette version ne connaît pas, réécrites telles quelles.
+    inconnus: dict[str, Any] = field(default_factory=dict)
 
     @property
     def vide(self) -> bool:
@@ -144,6 +151,12 @@ class Historique:
 
 
 # ─── Fichier ───
+
+# Ce que cette version lit ; le reste est gardé tel quel (`inconnus`, `autres`).
+_CLES_JOURNAL = frozenset({"version", "herite", "demarrages", "octets_telecharges",
+                           "sessions", "tentatives"})
+_CLES_SESSION = frozenset({"jeu", "debut", "duree"})
+
 
 def chemin_journal() -> Path:
     """Résolu à l'appel, jamais à l'import — voir l'en-tête du module."""
@@ -191,7 +204,8 @@ def _parse_session(brut: Any) -> Session | None:
         debut = datetime.fromisoformat(str(brut.get("debut")))
     except (ValueError, TypeError):
         return None
-    return Session(jeu=jeu, debut=debut, duree=duree)
+    autres = tuple((k, v) for k, v in brut.items() if k not in _CLES_SESSION)
+    return Session(jeu=jeu, debut=debut, duree=duree, autres=autres)
 
 
 def _parse_tentative(brut: Any) -> Tentative | None:
@@ -249,7 +263,8 @@ def charger(chemin: Path | None = None) -> Historique:
 
     return Historique(tuple(sessions), herite,
                       _entier("demarrages"), _entier("octets_telecharges"),
-                      tuple(tentatives))
+                      tuple(tentatives),
+                      {k: v for k, v in data.items() if k not in _CLES_JOURNAL})
 
 
 def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
@@ -269,14 +284,14 @@ def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
 def _ecrire(hist: Historique, chemin: Path) -> None:
     """Sérialise l'historique complet, sessions comprises."""
     _ecrire_donnees(
-        {
+        hist.inconnus | {
             "version": 1,
             "herite": hist.herite,
             "demarrages": hist.demarrages,
             "octets_telecharges": hist.octets_telecharges,
             "sessions": [
-                {"jeu": s.jeu, "debut": s.debut.isoformat(timespec="seconds"),
-                 "duree": s.duree}
+                dict(s.autres) | {"jeu": s.jeu, "debut": s.debut.isoformat(timespec="seconds"),
+                                  "duree": s.duree}
                 for s in hist.sessions[-_MAX_SESSIONS:]
             ],
             "tentatives": [
