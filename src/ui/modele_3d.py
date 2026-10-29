@@ -375,7 +375,9 @@ class Modele3D(QWidget):
             p.setPen(QPen(brosse, 0.9))
             p.setBrush(brosse)
             p.drawPolygon(poly)
-            ombre = self._ombre(a, b, c)
+            # Pas d'ombre sur un matériau masqué : posée sur tout le triangle,
+            # elle grisait ses parties transparentes (les mèches de HP3).
+            ombre = 0 if mat.drapeaux & maillages_ue1.PF_MASQUE else self._ombre(a, b, c)
             if ombre > 0:
                 p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(QColor(0, 0, 0, ombre))

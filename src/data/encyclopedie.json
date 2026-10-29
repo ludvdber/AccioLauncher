@@ -1422,6 +1422,10 @@
       100,
       92
      ]
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "harry"
     }
    },
    {
@@ -1451,6 +1455,10 @@
       100,
       92
      ]
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Ron"
     }
    },
    {
@@ -1480,6 +1488,10 @@
       100,
       92
      ]
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters_16.ukx",
+     "nom": "Hermione"
     }
    },
    {
@@ -1503,6 +1515,10 @@
      "fichier": "textures/HP3_Menu.utx",
      "nom": "LBO05",
      "bits": 8
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Dumbledore"
     }
    },
    {
@@ -1532,6 +1548,10 @@
       82,
       90
      ]
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "SiriusBlack"
     }
    },
    {
@@ -1551,7 +1571,11 @@
      "en": "A caring, tired teacher, he teaches Harry the Patronus Charm and hides a secret linked to the full moon.",
      "es": "Profesor atento y cansado, enseña a Harry el encantamiento patronus y oculta un secreto ligado a la luna llena."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Lupin"
+    }
    },
    {
     "cle": "hagrid",
@@ -1570,7 +1594,11 @@
      "en": "A new teacher, he introduces the hippogriff Buckbeak to his students, and it goes wrong.",
      "es": "Nuevo profesor, presenta el hipogrifo Buckbeak a sus alumnos, y la cosa sale mal."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Hagrid"
+    }
    },
    {
     "cle": "mcgonagall",
@@ -1589,7 +1617,11 @@
      "en": "An Animagus who can turn into a cat, she looks after the Gryffindor students and their outings.",
      "es": "Animaga capaz de convertirse en gato, se ocupa de los alumnos de Gryffindor y de sus salidas."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Mcgonagall"
+    }
    },
    {
     "cle": "pettigrew",
@@ -1609,7 +1641,11 @@
      "en": "A wizard believed dead for twelve years, he was hiding in the form of a rat.",
      "es": "Mago al que se creía muerto desde hacía doce años, se escondía bajo la forma de una rata."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Pettigrew"
+    }
    },
    {
     "cle": "peeves",
@@ -1638,6 +1674,10 @@
       96,
       90
      ]
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Peeves"
     }
    },
    {
@@ -1658,7 +1698,11 @@
      "en": "Injured by Buckbeak after insulting him, he uses it to have the hippogriff condemned.",
      "es": "Herido por Buckbeak tras insultarlo, aprovecha para que condenen al hipogrifo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "DracoMalfoy"
+    }
    },
    {
     "cle": "neville",
@@ -1678,7 +1722,11 @@
      "en": "He writes the tower passwords on a scrap of paper, which the Fat Lady does not like at all.",
      "es": "Apunta las contraseñas de la torre en un trozo de papel, cosa que no le gusta nada a la Señora Gorda."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Neville"
+    }
    }
   ],
   "hp4": [
@@ -3505,6 +3553,10 @@
      "fichier": "textures/HP3_Menu.utx",
      "nom": "Hippogriff",
      "bits": 32
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "Buckbeak"
     }
    },
    {
@@ -3534,6 +3586,10 @@
       96,
       96
      ]
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "Dementor"
     }
    },
    {
@@ -3558,6 +3614,10 @@
      "fichier": "textures/HP3_Menu.utx",
      "nom": "Pixie",
      "bits": 32
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "Pixie"
     }
    },
    {
@@ -3582,6 +3642,10 @@
      "fichier": "textures/HP3_Menu.utx",
      "nom": "LBE01",
      "bits": 8
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "Imp"
     }
    },
    {
@@ -3602,7 +3666,11 @@
      "en": "Greenish, slimy mass with a foul smell. It eats away the wood and stone it covers.",
      "es": "Masa verdosa y viscosa de olor infecto. Carcome la madera y la piedra que cubre."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "GreaterBundimun"
+    }
    },
    {
     "cle": "crabe_de_feu",
@@ -3622,7 +3690,11 @@
      "en": "Gem-studded shell and a tail that shoots fire. It charges whatever comes near.",
      "es": "Caparazón engastado de piedras y cola que escupe fuego. Embiste a quien se le acerca."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "firecrab"
+    }
    },
    {
     "cle": "salamandre",
@@ -3642,7 +3714,11 @@
      "en": "Fire lizard born in flames. A Glacius freezes it in ice.",
      "es": "Lagarto de fuego que nace en las llamas. Un Glacius la congela."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "Salamander"
+    }
    },
    {
     "cle": "monstrueux_livre",
@@ -3665,6 +3741,10 @@
      "fichier": "textures/HP3_Menu.utx",
      "nom": "MBOMPage",
      "bits": 32
+    },
+    "modele": {
+     "fichier": "Animations/HPCharacters.ukx",
+     "nom": "MBOM"
     }
    },
    {
@@ -3685,7 +3765,11 @@
      "en": "Wizard turned into a beast by the full moon. Lupin loses his mind in this form.",
      "es": "Mago convertido en bestia por la luna llena. Lupin pierde la razón bajo esta forma."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "Animations/HPCharacters_32.ukx",
+     "nom": "Werewolf"
+    }
    }
   ],
   "hp4": [

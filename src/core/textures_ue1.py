@@ -122,11 +122,12 @@ class Paquet:
             self.noms.append(data[lec.p:lec.p + taille].rstrip(b"\0").decode("latin-1"))
             lec.p += taille + 4
         self._imports: list[str] = []
+        self._dans: list[int] = []      # l'objet qui contient chaque import (son paquet…)
         lec.p = pos_imports
         for _ in range(nb_imports):
             lec.index()
             lec.index()
-            lec.i32()
+            self._dans.append(lec.i32())
             self._imports.append(self.noms[lec.index()])
         # classe, nom, taille, position, drapeaux
         self._exports: list[tuple[int, str, int, int, int]] = []
@@ -297,18 +298,49 @@ class Paquet:
         """Le nom d'un objet référencé (export si positif, import si négatif)."""
         return self._classe(ref)
 
+    def paquet_de(self, ref: int) -> str:
+        """Le paquet d'où vient un import (« HPCharTextures » pour un matériau
+        des modèles de HP3) ; vide pour un export ou une référence hors table."""
+        if not -len(self._imports) <= ref < 0:
+            return ""
+        rang = -ref - 1
+        for _ in range(_PROFONDEUR_MAX):
+            dans = self._dans[rang]
+            if not -len(self._imports) <= dans < 0:
+                return self._imports[rang]
+            rang = -dans - 1
+        return ""
+
+    def _rang(self, nom: str, classe: str) -> int | None:
+        """Le premier export `nom` de `classe` : HP3 donne le même nom à un
+        modèle et à ses mouvements (`Imp`, `harry`)."""
+        premier = self._par_nom.get(nom)
+        if premier is None:
+            return None
+        return next((r for r in range(premier, len(self._exports))
+                     if self._exports[r][1] == nom and self._exports[r][2] > 0
+                     and self._classe(self._exports[r][0]) == classe), None)
+
     def objet(self, nom: str, classe: str) -> tuple[_Lecteur, int] | None:
         """Un lecteur posé après les propriétés de l'export `nom` de `classe`,
         et la fin de l'objet ; None s'il n'y en a pas."""
-        rang = self._par_nom.get(nom)
+        rang = self._rang(nom, classe)
         if rang is None:
             return None
-        genre, _, taille, position, _ = self._exports[rang]
-        if taille <= 0 or self._classe(genre) != classe:
-            return None
+        _, _, taille, position, _ = self._exports[rang]
         lec = _Lecteur(self._d, position)
         self._brutes(lec, position + taille)
         return lec, position + taille
+
+    def proprietes_de(self, nom: str) -> tuple[str, dict[str, bytes | bool]] | None:
+        """(classe, propriétés brutes) du premier export `nom` qui a des données."""
+        premier = self._par_nom.get(nom)
+        if premier is None:
+            return None
+        for genre, nom_, taille, position, _ in self._exports[premier:]:
+            if nom_ == nom and taille > 0:
+                return self._classe(genre), self._proprietes(_Lecteur(self._d, position), position + taille)
+        return None
 
     def _debut_objet(self, classe: str) -> tuple[int, int] | None:
         """(début des propriétés, fin de l'objet) du premier objet de `classe`."""
