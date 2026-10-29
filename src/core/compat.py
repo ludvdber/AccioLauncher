@@ -713,6 +713,9 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges: Iterable[str] = (),
     """
     env = environnement_hote(base)
     env["WINEPREFIX"] = str(pfx)
+    # Marque cherchée par le correctif du jeu : sans elle, il arrête le jeu.
+    # Posée au lancement (le pendant Windows est dans `pre_launch`).
+    env["ACCIO_LAUNCH"] = "1"
     if trouve.famille == "umu":
         # umu met `umu-default` de lui-même ; le poser le rend visible au
         # journal, et une valeur de l'utilisateur reste la sienne.

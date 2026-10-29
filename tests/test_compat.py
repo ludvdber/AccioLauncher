@@ -461,6 +461,11 @@ class TestEnvironnement:
         assert env["WINE"] == "/usr/bin/wine"     # le winetricks du système l'utilise
         assert "WINEDLLOVERRIDES" not in env
 
+    def test_la_marque_du_launcher_est_posee(self, tmp_path):
+        """Sous Wine aussi, le correctif du jeu ne démarre qu'avec `ACCIO_LAUNCH`."""
+        umu = Lanceur("umu", "/usr/bin/umu-run", proton="/p/GE")
+        assert compat.environnement(umu, tmp_path, base={})["ACCIO_LAUNCH"] == "1"
+
     def test_plafond_d_images_par_dxvk(self, tmp_path):
         """HP3 sous Linux : dgVoodoo n'est plus là pour tenir les 60 images/s."""
         umu = Lanceur("umu", "/usr/bin/umu-run", proton="/p/GE")

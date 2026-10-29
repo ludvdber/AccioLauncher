@@ -133,14 +133,16 @@ class TestCoucheDpi:
 
     def test_la_couche_est_posee_sur_un_environnement_vide(self, monkeypatch):
         monkeypatch.setattr(sys, "platform", "win32")
-        assert env_de_lancement(True, {}) == {"__COMPAT_LAYER": "HighDpiAware"}
+        assert env_de_lancement(True, {}) == {
+            "ACCIO_LAUNCH": "1", "__COMPAT_LAYER": "HighDpiAware"}
 
-    def test_un_jeu_qui_ne_le_declare_pas_ne_recoit_rien(self, monkeypatch):
-        """La garde demandée par Ludo (2026-08-30) : seules les deux parties de
-        HP7 posaient problème, et les six autres jeux ne doivent pas changer de
-        comportement. None = `Popen` hérite, exactement comme avant."""
+    def test_la_marque_est_posee_meme_sans_couche(self, monkeypatch):
+        """La couche DPI ne concerne que les parties de HP7 (garde du
+        2026-08-30), mais la marque `ACCIO_LAUNCH` part sur CHAQUE jeu : le
+        correctif ne démarre qu'avec elle, et sans couche rien d'autre ne
+        change."""
         monkeypatch.setattr(sys, "platform", "win32")
-        assert env_de_lancement(False, {}) is None
+        assert env_de_lancement(False, {}) == {"ACCIO_LAUNCH": "1"}
 
     def test_une_couche_existante_est_conservee(self, monkeypatch):
         """`__COMPAT_LAYER` est une LISTE séparée par des espaces : quelqu'un
