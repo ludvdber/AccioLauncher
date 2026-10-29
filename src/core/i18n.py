@@ -246,6 +246,18 @@ def tr(text: str) -> str:
     return text
 
 
+def trn(n: int, un: str, plusieurs: str) -> str:
+    """Le gabarit traduit qui s'accorde avec `n` ; l'appelant le formate.
+
+    « 1 points », « et 1 autres » : les pluriels étaient écrits pour le cas
+    courant, et le cas 1 arrivait tôt ou tard (audit du 2026-10-29). Deux
+    CLÉS françaises, chacune traduite. En français, 0 et 1 prennent le
+    singulier ; en anglais et en espagnol, 1 seul.
+    """
+    singulier = n in (0, 1) if _lang == SOURCE_LANGUAGE else n == 1
+    return tr(un if singulier else plusieurs)
+
+
 def translator_credits() -> tuple[tuple[str, tuple[str, ...]], ...]:
     """(nom de langue, traducteurs) pour l'écran « À propos ».
 

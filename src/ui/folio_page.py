@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import folio, sauvegardes
 from src.core.config import Config
-from src.core.i18n import get_language, tr
+from src.core.i18n import get_language, tr, trn
 from src.ui.composants import ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -111,7 +111,7 @@ def phrase_coupe(releve: folio.Releve) -> str:
     maison, ecart = tete
     if maison == folio.GRYFFONDOR:
         return tr("Gryffondor mène")
-    return tr("{} mène de {} points").format(nom_maison(maison), ecart)
+    return trn(ecart, "{} mène de {} point", "{} mène de {} points").format(nom_maison(maison), ecart)
 
 
 class _Sablier(QWidget):

@@ -14,7 +14,7 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from src.core import trailers as store
 from src.core.downloader import Downloader
 from src.core.game_data import Trailer
-from src.core.i18n import tr
+from src.core.i18n import tr, trn
 from src.core.thread_utils import arreter_a_la_fermeture, liberer_apres_fin
 
 log = logging.getLogger(__name__)
@@ -243,8 +243,9 @@ class TrailerStore(QObject):
             return
         if self._echecs:
             self.status_message.emit(
-                tr("Bandes-annonces : {ok} téléchargées, {echecs} indisponibles.")
-                .format(ok=self._faites, echecs=self._echecs))
+                tr("Bandes-annonces : {ok}, {echecs}.").format(
+                    ok=trn(self._faites, "{} téléchargée", "{} téléchargées").format(self._faites),
+                    echecs=trn(self._echecs, "{} indisponible", "{} indisponibles").format(self._echecs)))
         else:
             self.status_message.emit(tr("Bandes-annonces téléchargées."))
 

@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6
 from src.core.formatting import format_relative_date
-from src.core.i18n import get_language, tr
+from src.core.i18n import get_language, tr, trn
 from src.ui.fonts import body_font
 from src.ui.theme import accent_qcolor, themed
 
@@ -256,7 +256,8 @@ class BlocFolio(QFrame):
         maisons = (maison_en_tete(resume.releve)
                    if isinstance(resume.releve, folio.Releve) else "")
         if isinstance(resume.releve, folio_hp5.Partie) and resume.releve.decouverte:
-            maisons = tr("{} points de découverte").format(_nombre(resume.releve.decouverte))
+            maisons = trn(resume.releve.decouverte, "{} point de découverte",
+                          "{} points de découverte").format(_nombre(resume.releve.decouverte))
         self._detail.setText(maisons)
         self._detail.setVisible(bool(maisons))
 

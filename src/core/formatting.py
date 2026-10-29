@@ -5,7 +5,7 @@ Toutes les chaînes visibles passent par tr() (i18n FR/EN).
 
 from datetime import date, datetime
 
-from src.core.i18n import decimal_separator, tr
+from src.core.i18n import decimal_separator, tr, trn
 
 
 def _nombre(valeur: float, decimales: int = 1) -> str:
@@ -48,10 +48,10 @@ def format_eta(seconds: float) -> str:
     if seconds < 0 or seconds > 86400:
         return ""
     if seconds < 60:
-        return tr("~{}s restantes").format(int(seconds))
+        return trn(int(seconds), "~{}s restante", "~{}s restantes").format(int(seconds))
     minutes = seconds / 60
     if minutes < 60:
-        return tr("~{} min restantes").format(int(minutes))
+        return trn(int(minutes), "~{} min restante", "~{} min restantes").format(int(minutes))
     hours = minutes / 60
     return tr("~{}h restantes").format(_nombre(hours))
 

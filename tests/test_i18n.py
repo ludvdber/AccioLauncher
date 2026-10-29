@@ -72,7 +72,7 @@ LANG_FILES = sorted(Path(p) for p in glob.glob(str(I18N_DIR / "*.json")))
 def _tr_literals(path: str) -> list[str]:
     """Arguments littéraux de tous les appels `tr("…")` d'un fichier."""
     tree = ast.parse(Path(path).read_text(encoding="utf-8"))
-    return [
+    sortie = [
         node.args[0].value
         for node in ast.walk(tree)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
@@ -80,6 +80,15 @@ def _tr_literals(path: str) -> list[str]:
         and isinstance(node.args[0], ast.Constant)
         and isinstance(node.args[0].value, str)
     ]
+    # `trn(n, un, plusieurs)` (2026-10-29) : ses DEUX gabarits sont des clés.
+    sortie += [
+        arg.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "trn"
+        for arg in node.args[1:3]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+    ]
+    return sortie
 
 
 def _source_files() -> list[str]:
