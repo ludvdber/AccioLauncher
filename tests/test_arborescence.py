@@ -12,6 +12,8 @@ de plusieurs gigaoctets.
 
 import json
 
+import pytest
+
 from src.core.config import (
     LAUNCHER_DIR_NAME, cache_pour, migrer_arborescence,
 )
@@ -221,3 +223,20 @@ class TestContributeurs:
         rendu = "".join(lbl.text() for lbl in dlg.findChildren(QLabel))
         assert "<img" not in rendu
         assert "&lt;img" in rendu
+
+
+class TestCorrectionDuCacheSurUneConfigEtrange:
+    """Audit du 2026-10-29 : la correction tourne AVANT le journal et la
+    QApplication, où `main.py` ne rattrape qu'`OSError`. Une config JSON valide
+    mais d'une autre forme sortait en trace brute, launcher fermé."""
+
+    @pytest.mark.parametrize("contenu", ['[]', '"x"', '5',
+                                         '{"cache_path": "%CACHE%", "install_path": 5}'])
+    def test_ne_leve_jamais(self, tmp_path, contenu):
+        import json as _json
+
+        from src.core.config import _corriger_cache_path
+        fichier = tmp_path / "config.json"
+        fichier.write_text(contenu.replace("%CACHE%", _json.dumps(str(tmp_path / ".cache"))[1:-1]),
+                           encoding="utf-8")
+        _corriger_cache_path(fichier, tmp_path)

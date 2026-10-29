@@ -381,3 +381,16 @@ class TestParMois:
                    stats.Session("hp1", datetime(2026, 1, 1, 21, 0), 200),
                    stats.Session("hp2", datetime(2026, 5, 1, 21, 0), 300)])
         assert stats.temps_annee(h, 2026) == 500
+
+
+class TestUnJsonValideDUnMauvaisType:
+    """Audit du 2026-10-29 : un journal VALIDE dont un champ a un autre type
+    (`"herite": 5`, `"tentatives": 3`) levait à chaque retour de partie, et,
+    n'étant pas illisible, n'était jamais mis de côté."""
+
+    @pytest.mark.parametrize("champ", ["herite", "tentatives", "sessions"])
+    @pytest.mark.parametrize("valeur", [5, True, "x", {"a": 1}, [1, 2]])
+    def test_charger_ne_leve_jamais(self, tmp_path, champ, valeur):
+        chemin = tmp_path / "sessions.json"
+        chemin.write_text(json.dumps({"version": 1, champ: valeur}), encoding="utf-8")
+        stats.charger(chemin)

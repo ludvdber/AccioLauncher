@@ -200,7 +200,8 @@ def _nom_contributeur(c) -> QWidget:
         return lbl
     site = urlparse(c.url).hostname or c.url
     site = site.removeprefix("www.")
-    lbl.setToolTip(tr("Ouvrir {}").format(site))
+    # Le nom d'hôte vient du catalogue : une infobulle l'interpréterait (règle 57).
+    lbl.setToolTip("<qt>" + escape(tr("Ouvrir {}").format(site), quote=False) + "</qt>")
     ligne = QWidget()
     ligne.setStyleSheet("background: transparent;")
     h = QHBoxLayout(ligne)

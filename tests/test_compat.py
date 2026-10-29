@@ -591,3 +591,57 @@ class TestProcessusDuJeu:
     def test_proc_absent(self, tmp_path):
         assert not compat.processus_du_jeu("hp.exe", proc=tmp_path / "rien")
         assert not compat.processus_du_jeu("", proc=tmp_path)
+
+
+class TestLectureDuRegistreRapide:
+    """Audit du 2026-10-29 : la ligne de compatibilité du journal, écrite
+    avant le splash, lisait tout `system.reg` (plusieurs Mo) pour l'en-tête, et
+    `desechapper` parcourait chaque en-tête de clé caractère par caractère
+    (164 ms mesurées sur un préfixe de 27 000 clés)."""
+
+    def test_l_architecture_ne_lit_que_l_en_tete(self, tmp_path, monkeypatch):
+        (tmp_path / "system.reg").write_text(
+            "WINE REGISTRY Version 2\n;; All keys relative to \\\\Machine\n\n#arch=win32\n"
+            + "[Software\\\\X] 1\n" * 50_000, encoding="utf-8")
+
+        def interdit(self, *a, **k):
+            raise AssertionError("lecture du fichier entier")
+        monkeypatch.setattr(Path, "read_text", interdit)
+        assert compat.architecture(tmp_path) == "win32"
+
+    @pytest.mark.parametrize("texte", [
+        "", "abc", "Software\\\\Wine\\\\DllOverrides", "fin\\\\", "seul\\",
+        "fr\\x00e9d\\xe9ric", "a\\\\\\\\b", "a\\\\\\x41", "tab\\tici", "oct\\101", "\\\\\\\\\\\\",
+    ])
+    def test_desechapper_rend_la_meme_chose(self, texte):
+        attendu = _desechapper_lent(texte)
+        assert compat.desechapper(texte) == attendu
+
+
+def _desechapper_lent(texte: str) -> str:
+    """La boucle de référence, sans chemin rapide."""
+    sortie = []
+    i, n = 0, len(texte)
+    while i < n:
+        c = texte[i]
+        if c != "\\" or i + 1 >= n:
+            sortie.append(c)
+            i += 1
+            continue
+        s = texte[i + 1]
+        if s == "x":
+            j = i + 2
+            while j < n and j - (i + 2) < 4 and texte[j] in "0123456789abcdefABCDEF":
+                j += 1
+            sortie.append(chr(int(texte[i + 2:j], 16)) if j > i + 2 else "x")
+            i = j
+        elif s in "01234567":
+            j = i + 1
+            while j < n and j - (i + 1) < 3 and texte[j] in "01234567":
+                j += 1
+            sortie.append(chr(int(texte[i + 1:j], 8)))
+            i = j
+        else:
+            sortie.append(compat._ECHAPPEMENTS.get(s, s))
+            i += 2
+    return "".join(sortie)

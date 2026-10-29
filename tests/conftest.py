@@ -52,6 +52,22 @@ def _config_hors_du_vrai_dossier(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _catalogue_hors_du_vrai_cache(tmp_path, monkeypatch):
+    """Aucun test ne lit ni n'écrit le `catalog_cache.json` RÉEL.
+
+    `load_catalog()` préfère ce cache dès qu'il est plus récent que la copie
+    embarquée : sur un poste où le launcher est installé, toute fenêtre de
+    test tournait sur le catalogue DISTANT, et la CI sur l'embarqué (règle 78
+    contournée par la porte de derrière, audit du 2026-10-29). Et
+    `UpdateChecker` y écrit.
+    """
+    cache = tmp_path / "catalog_cache_test.json"
+    monkeypatch.setattr("src.core.config.LOCAL_CATALOG_PATH", cache)
+    monkeypatch.setattr("src.core.updater._LOCAL_CATALOG_PATH", cache)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _visite_jamais_spontanee(monkeypatch):
     """La visite guidée part seule 1,5 s après l'ouverture d'une config qui ne
     l'a pas vue, et son voile prend alors le clavier : une fenêtre de test qui

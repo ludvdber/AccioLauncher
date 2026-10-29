@@ -221,13 +221,18 @@ def charger(chemin: Path | None = None) -> Historique:
                 sessions.append(s)
     sessions.sort(key=lambda s: s.debut)
 
+    # Types vérifiés et non `or {}` : un JSON VALIDE d'un mauvais type
+    # (`"herite": 5`) levait à chaque retour de partie, sans jamais être mis
+    # de côté (audit du 2026-10-29).
+    herite_brut = data.get("herite")
     herite = {}
-    for gid, secondes in (data.get("herite") or {}).items():
+    for gid, secondes in (herite_brut.items() if isinstance(herite_brut, dict) else ()):
         if isinstance(gid, str) and isinstance(secondes, int) and not isinstance(secondes, bool):
             herite[gid] = max(0, secondes)
 
     tentatives: list[Tentative] = []
-    for entree in (data.get("tentatives") or [])[-_MAX_SESSIONS:]:
+    tentatives_brutes = data.get("tentatives")
+    for entree in (tentatives_brutes if isinstance(tentatives_brutes, list) else [])[-_MAX_SESSIONS:]:
         t = _parse_tentative(entree)
         if t is not None:
             tentatives.append(t)

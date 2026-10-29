@@ -426,14 +426,21 @@ def _corriger_cache_path(fichier: Path, racine: Path) -> None:
         data = json.loads(fichier.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return
+    # Tourne AVANT le journal et la QApplication (`main.py` n'y rattrape que
+    # OSError) : une racine qui n'est pas un objet, ou un `install_path` qui
+    # n'est pas une chaîne, sortait en trace brute (audit du 2026-10-29).
+    if not isinstance(data, dict):
+        return
     ancien = data.get("cache_path")
     if not isinstance(ancien, str):
         return
     if Path(ancien) != racine / ".cache":
         return
-    data["cache_path"] = str(cache_pour(Path(data.get("install_path", racine))))
+    install = data.get("install_path", str(racine))
+    if not isinstance(install, str):
+        return
+    data["cache_path"] = str(cache_pour(Path(install)))
     try:
-        fichier.write_text(json.dumps(data, indent=4, ensure_ascii=False),
-                           encoding="utf-8")
+        ecrire_atomique(fichier, json.dumps(data, indent=4, ensure_ascii=False))
     except OSError as exc:
         log.warning("cache_path non corrige : %s", exc)

@@ -133,6 +133,33 @@ class TestGameData:
         assert g.get_version("9.9") is None
 
 
+class TestCeQuiFinitDansUnNomDeFichier:
+    """Audit du 2026-10-29 : `id` et `version` du catalogue DISTANT deviennent
+    des noms de fichiers (`chemin_archive`, copies de sauvegardes), et le
+    premier composant d'`executable` est ce que « Désinstaller » efface."""
+
+    @pytest.mark.parametrize("version", ["../../../../tmp/pwn", "1.0/../x", "", ".1", 1.5])
+    def test_une_version_qui_sortirait_du_cache_est_refusee(self, version):
+        jeu = dict(FULL_GAME, versions=[{"version": version, "download_url": "https://x.test/a.7z"}])
+        with pytest.raises(ValueError):
+            GameData.from_dict(jeu)
+
+    @pytest.mark.parametrize("ident", ["../evil", "a/b", "a\\b", ".cache"])
+    def test_un_identifiant_qui_sortirait_du_cache_est_refuse(self, ident):
+        with pytest.raises(ValueError):
+            GameData.from_dict(dict(MINIMAL_GAME, id=ident))
+
+    @pytest.mark.parametrize("exe", ["_Launcher/x.exe", "_launcher\\System\\x.exe"])
+    def test_un_executable_dans_les_donnees_du_launcher_est_refuse(self, exe):
+        with pytest.raises(ValueError):
+            GameData.from_dict(dict(MINIMAL_GAME, executable=exe))
+
+    def test_le_jeu_fautif_est_ignore_pas_le_catalogue(self):
+        raw = {"catalog_version": "1", "games": [
+            dict(MINIMAL_GAME, id="hp_ok"), dict(MINIMAL_GAME, id="../evil")]}
+        assert [g.id for g in _parse_catalog(raw).games] == ["hp_ok"]
+
+
 class TestParseCatalog:
     def test_dict_format(self):
         raw = {

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from pathlib import Path
 
-from src.core.config import GAMES_JSON_PATH
+from src.core.config import GAMES_JSON_PATH, LAUNCHER_DIR_NAME
 from src.core.chemins import refus_de_chemin
 from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
     _https_ou_rien,
@@ -116,8 +116,14 @@ class GameVersion:
         # `download_parts` (dont on itérerait les caractères) est écartée.
         url = _https_ou_rien(data.get("download_url"))
         parts = _https_ou_rien(data.get("download_parts"))
+        # La version finit dans un NOM DE FICHIER (`chemin_archive` :
+        # `<id>_v<version>.7z`) : « ../../x » écrivait l'archive hors du cache
+        # (audit du 2026-10-29). Même jeton que les bandes-annonces.
+        version = data.get("version", "1.0")
+        if not isinstance(version, str) or not _JETON_SUR.match(version):
+            raise ValueError(f"version non sûre : {str(version)[:40]!r}")
         return cls(
-            version=data.get("version", "1.0"),
+            version=version,
             date=data.get("date", ""),
             download_url=url if isinstance(url, str) else None,
             download_parts=parts if isinstance(parts, list) else None,
@@ -347,8 +353,17 @@ class GameData:
             raise ValueError(f"executable non sûr ({raison}) : {executable[:60]!r}")
         # Le manager en tire le dossier du jeu (son premier composant) :
         # « . » ou « ./ » passeraient la barrière sans nommer aucun fichier.
-        if not [c for c in executable.replace("\\", "/").split("/") if c not in ("", ".")]:
+        composants = [c for c in executable.replace("\\", "/").split("/") if c not in ("", ".")]
+        if not composants:
             raise ValueError(f"executable sans nom de fichier : {executable!r}")
+        # Ce premier composant est ce que « Désinstaller » efface : jamais les
+        # données du launcher (config, journaux, copies de sauvegardes).
+        if composants[0].casefold() == LAUNCHER_DIR_NAME.casefold():
+            raise ValueError(f"executable dans {LAUNCHER_DIR_NAME} : {executable!r}")
+        # L'identifiant finit lui aussi dans des noms de fichiers (archive,
+        # copies de sauvegardes, cache du texte) : même jeton que la version.
+        if not _JETON_SUR.match(data["id"]):
+            raise ValueError(f"identifiant non sûr : {data['id'][:40]!r}")
         pi = data.get("post_install", {})
         pl = data.get("pre_launch")
         versions = tuple(
