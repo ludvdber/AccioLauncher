@@ -109,10 +109,14 @@ def disponible() -> bool:
 
 # ──────────────────── Script élevé ────────────────────
 
-FICHIER_RESULTATS = "resultats.txt"
-# Code noté pour un installeur dont la COPIE ne passe pas la vérification
-# élevée (empreinte ou signature) : il n'est jamais lancé.
-CODE_REFUSE = -2
+# Le bilan revient par le CODE DE SORTIE de PowerShell, jamais par un fichier :
+# un processus élevé qui écrit dans un dossier de l'utilisateur peut être
+# redirigé (jonction, lien) vers n'importe quel fichier du système. Trois bits
+# par paquet, dans l'ordre ; la marque distingue ce bilan du code 1 d'un script
+# arrêté par une exception. Il ne sert qu'au journal : la relecture fait foi.
+MARQUE_BILAN = 1 << 16
+_ISSUES = {0: "non lancé", 1: "réussi", 2: "redémarrage demandé", 3: "déjà installé",
+           4: "copie refusée", 5: "échec"}
 
 
 def _ps(texte: str) -> str:
@@ -138,14 +142,14 @@ def script_d_installation(paquets: Iterable[Paquet], source: Path,
     """
     lignes = [
         "$ErrorActionPreference = 'Stop'",
+        "$bilan = 0",
         f"$source = {_ps(str(source))}",
         "$win = [Environment]::GetFolderPath('Windows')",
         "$d = Join-Path $win ('Temp\\accio_composants_' + [guid]::NewGuid().ToString('N'))",
         "New-Item -ItemType Directory -Path $d | Out-Null",
-        "$resultats = @()",
         "try {",
     ]
-    for p in paquets:
+    for rang, p in enumerate(paquets):
         lignes += [
             f"  $cible = Join-Path $d {_ps(p.cle + '.exe')}",
             f"  Copy-Item -LiteralPath (Join-Path $source {_ps(p.cle + '.exe')}) -Destination $cible",
@@ -153,34 +157,35 @@ def script_d_installation(paquets: Iterable[Paquet], source: Path,
             "  $s = Get-AuthenticodeSignature -LiteralPath $cible",
             f"  if ($h -ne {_ps(empreintes[p.cle])} -or [string]$s.Status -ne 'Valid' -or "
             "[string]$s.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {",
-            f"    $resultats += {_ps(p.cle + ' ' + str(CODE_REFUSE))}",
+            "    $n = 4",
             "  } else {",
             f"    $proc = Start-Process -FilePath $cible -ArgumentList {_ps(p.arguments)} "
             "-Wait -PassThru -WindowStyle Hidden",
-            f"    $resultats += ({_ps(p.cle + ' ')} + $proc.ExitCode)",
+            "    $c = $proc.ExitCode",
+            "    $n = if ($c -eq 0) { 1 } elseif ($c -eq 3010 -or $c -eq 1641) { 2 } "
+            "elseif ($c -eq 1638) { 3 } else { 5 }",
             "  }",
+            f"  $bilan += $n * {8 ** rang}",
         ]
     lignes += [
         "} finally {",
         "  Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue",
-        f"  Set-Content -LiteralPath (Join-Path $source {_ps(FICHIER_RESULTATS)}) -Value $resultats "
-        "-Encoding Ascii",
         "}",
+        f"exit ($bilan + {MARQUE_BILAN})",
     ]
     return "\n".join(lignes) + "\n"
 
 
-def lire_resultats(texte: str) -> dict[str, int]:
-    """« vc2005 0 » ligne par ligne → {"vc2005": 0}. Pure ; ignore le reste."""
-    resultats = {}
-    for ligne in texte.splitlines():
-        morceaux = ligne.split()
-        if len(morceaux) == 2 and morceaux[0] in PAQUETS:
-            try:
-                resultats[morceaux[0]] = int(morceaux[1])
-            except ValueError:
-                continue
-    return resultats
+def lire_bilan(code: int, paquets: Iterable[Paquet]) -> dict[str, str]:
+    """Le code de sortie du script élevé → {"vc2005": "réussi", ...}. Pure.
+
+    Vide si ce n'est pas un bilan (script arrêté par une exception, code 1).
+    """
+    if not MARQUE_BILAN <= code < 2 * MARQUE_BILAN:
+        return {}
+    bilan = code - MARQUE_BILAN
+    return {p.cle: _ISSUES.get((bilan >> (3 * rang)) & 7, "échec")
+            for rang, p in enumerate(paquets)}
 
 
 # ──────────────────── Signature ────────────────────
@@ -379,12 +384,7 @@ class InstallationComposants(QThread):
             return False, REFUSEE
         if code == ABANDON:
             return False, ANNULEE
-        try:
-            resultats = lire_resultats(
-                (dossier / FICHIER_RESULTATS).read_text(encoding="ascii", errors="replace"))
-        except OSError:
-            resultats = {}
-        log.info("Codes des installeurs : %s", resultats or "aucun relevé")
+        log.info("Installeurs : %s", lire_bilan(code, self._paquets) or f"aucun bilan (code {code})")
         # La relecture fait foi, pas les codes (3010, 1638… ne disent pas tout).
         system_checks.invalidate_vcredist_cache()
         restants = system_checks.prerequis_manquants(self._prerequis)
