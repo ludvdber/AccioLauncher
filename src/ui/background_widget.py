@@ -4,7 +4,7 @@ import math
 from collections import OrderedDict
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QRectF, pyqtProperty
+from PyQt6.QtCore import QRect, QRectF, Qt, pyqtProperty
 from PyQt6.QtGui import (
     QColor, QImage, QLinearGradient, QPainter, QPixmap, QRadialGradient,
 )
@@ -100,6 +100,11 @@ class BackgroundWidget(QWidget):
         # Mode cinéma : la bande-annonce seule, sans voile ni dégradés. Il n'y a
         # plus un seul texte par-dessus, donc plus rien à rendre lisible.
         self._cinema = False
+        # Le fond déjà composé (illustration, voile, dégradés), tant qu'il ne
+        # bouge pas : voir `paintEvent`.
+        self._compose: QPixmap | None = None
+        self._compose_cle: tuple | None = None
+        self._cle_precedente: tuple | None = None
 
         # Zoom cinématique continu (1.0 → 1.05 → 1.0, cycle 16 s), cadencé par
         # le Ticker partagé. Il tournait avant sur une QPropertyAnimation, donc
@@ -221,6 +226,7 @@ class BackgroundWidget(QWidget):
         self._overlay_cache = None
         self._overlay_for = (0, 0)
         self._old_frame = None  # un resize pendant un cross-fade invaliderait le snapshot
+        self._compose = self._compose_cle = None
 
     def begin_crossfade(self) -> None:
         """Capture le rendu actuel (image OU frame vidéo) comme sous-couche.
@@ -293,12 +299,46 @@ class BackgroundWidget(QWidget):
         )
         self._prepared_for = (w, h)
 
+    def _cle_fixe(self, w: int, h: int) -> tuple | None:
+        """Tout ce dont dépend le fond composé, ou None s'il change à chaque
+        image (vidéo, fondu enchaîné)."""
+        if self._video_frame is not None or self._old_frame is not None or self._opacity < 1.0:
+            return None
+        return (w, h, self.devicePixelRatioF(), self._zoom, self._parallax_cx,
+                self._parallax_cy, self._cinema, theme.bg_qcolor(255).rgba(),
+                self._pixmap.cacheKey() if self._pixmap is not None else 0,
+                self._overlay_cache.cacheKey() if self._overlay_cache is not None else 0)
+
     def paintEvent(self, event) -> None:
+        # Au repos, les particules font repeindre le fond sous elles 30 fois par
+        # seconde : l'illustration mise à l'échelle avec lissage, le voile, les
+        # dégradés, à chaque fois. Quand deux images de suite ont la même clé,
+        # le fond ne bouge plus : il est composé une fois et posé tel quel.
+        w, h = self.width(), self.height()
+        cle = self._cle_fixe(w, h)
+        if cle is None:
+            self._compose = self._compose_cle = None
+        elif cle != self._compose_cle and cle == self._cle_precedente:
+            dpr = self.devicePixelRatioF()
+            compose = QPixmap(math.ceil(w * dpr), math.ceil(h * dpr))
+            compose.setDevicePixelRatio(dpr)
+            compose.fill(Qt.GlobalColor.transparent)   # bords à demi-pixel : posé par-dessus
+            q = QPainter(compose)
+            self._peindre(q, w, h)
+            q.end()
+            self._compose, self._compose_cle = compose, cle
+        self._cle_precedente = cle
         p = QPainter(self)
+        if self._compose is not None and cle == self._compose_cle:
+            p.drawPixmap(0, 0, self._compose)
+        else:
+            self._peindre(p, w, h)
+        p.end()
+
+    def _peindre(self, p: QPainter, w: int, h: int) -> None:
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        rect = self.rect()
-        w, h = rect.width(), rect.height()
+        rect = QRect(0, 0, w, h)
 
         # Fond de base — teinté par le thème. En dur, il restait bleu nuit sous
         # les voiles verts de Serpentard partout où l'illustration ne couvre pas.
@@ -396,8 +436,6 @@ class BackgroundWidget(QWidget):
         if not self._cinema:
             p.fillRect(QRectF(0, h - _DEBORD_PX, w, _DEBORD_PX * 2),
                        theme.bg_qcolor(255))
-
-        p.end()
 
     def _ensure_overlay(self, w: int, h: int) -> None:
         """(Re)construit le pixmap des overlays statiques si la taille a changé."""
