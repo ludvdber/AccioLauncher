@@ -95,6 +95,11 @@ class DefisPage(QWidget):
         zone = QScrollArea()
         zone.setWidgetResizable(True)
         zone.setFrameShape(QFrame.Shape.NoFrame)
+        # Seul arrêt de Tab de la rubrique (les médailles ne se pressent pas) :
+        # sans anneau, le focus y était invisible (règle 15, audit du 2026-10-29).
+        zone.setObjectName("zoneDefis")
+        zone.setStyleSheet('QScrollArea#zoneDefis[focusClavier="true"]:focus '
+                           "{ border: 2px solid #d6a72c; border-radius: 6px; }")
         corps = QWidget()
         corps.setObjectName("defisCorps")
         lay = QVBoxLayout(corps)

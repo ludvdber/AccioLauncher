@@ -231,3 +231,29 @@ class TestModeles:
         vue.choisir(vue.fiches[1])                              # une autre fiche : tout repart figé
         assert scene.modele.mouvement is None and scene.bouton_animer.text() == "Animer"
         vue.fermer()
+
+
+class TestAuClavier:
+    """Audit du 2026-10-29 : les fiches à modèle se choisissaient au clic
+    seulement (règles 15 et 119)."""
+
+    def test_une_fiche_a_modele_se_choisit_au_clavier(self, qtbot):
+        from PyQt6.QtCore import Qt
+
+        from src.ui.encyclopedie_page import _Fiche
+        fiche = encyclopedie.Fiche("a", "A", "b", "c", None, encyclopedie.ModeleJeu("System/X.u", "m"))
+        carte = _Fiche(encyclopedie.PERSONNAGES, fiche)
+        qtbot.addWidget(carte)
+        assert carte.focusPolicy() == Qt.FocusPolicy.StrongFocus
+        with qtbot.waitSignal(carte.choisie, timeout=1000):
+            qtbot.keyClick(carte, Qt.Key.Key_Return)
+        with qtbot.waitSignal(carte.choisie, timeout=1000):
+            qtbot.keyClick(carte, Qt.Key.Key_Space)
+
+    def test_une_fiche_sans_modele_ne_prend_pas_le_focus(self, qtbot):
+        from PyQt6.QtCore import Qt
+
+        from src.ui.encyclopedie_page import _Fiche
+        carte = _Fiche(encyclopedie.BESTIAIRE, encyclopedie.Fiche("a", "A", "b", "c", None))
+        qtbot.addWidget(carte)
+        assert carte.focusPolicy() == Qt.FocusPolicy.NoFocus

@@ -56,7 +56,7 @@ QPushButton#rubrique:hover, QPushButton#filtre:hover { color: #f2f2f4; }
 QPushButton#rubrique:checked, QPushButton#filtre:checked {
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
 }
-QPushButton#rubrique:focus, QPushButton#filtre:focus { border-color: #d6a72c; }
+QPushButton#rubrique[focusClavier="true"]:focus, QPushButton#filtre[focusClavier="true"]:focus { border-color: #d6a72c; }
 QFrame#filet { background: rgba(214, 167, 44, 0.12); border: none; }
 """
 

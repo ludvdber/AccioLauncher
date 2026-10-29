@@ -26,7 +26,7 @@ pourcentage qui l'ouvre ; à 75 % tout le jeu est ouvert.
 from concurrent.futures import Future, ThreadPoolExecutor
 
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QImage, QMouseEvent, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QImage, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import discographie, encyclopedie, maillages_ue1
@@ -107,6 +107,12 @@ class _Fiche(QFrame):
         self.fiche = fiche
         self.ouverte = ouverte
         self.setProperty("modele", ouverte and fiche.modele is not None)
+        # Une fiche qui se choisit au clic se choisit aussi au clavier et à la
+        # manette (règles 15 et 119) : 26 fiches et aucun widget focalisable
+        # dans la vue, ni choix ni défilement possibles sans souris (audit du
+        # 2026-10-29). L'anneau est dessiné par `mediatheque_page._STYLE`.
+        if self.property("modele"):
+            self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFixedWidth(_LARGEUR_FICHE)
         h = QHBoxLayout(self)
         h.setContentsMargins(14, 14, 16, 14)
@@ -143,6 +149,13 @@ class _Fiche(QFrame):
     def mousePressEvent(self, event: QMouseEvent | None) -> None:
         if self.property("modele") and event is not None and event.button() == Qt.MouseButton.LeftButton:
             self.choisie.emit(self)
+
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+        if (self.property("modele") and event is not None
+                and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space)):
+            self.choisie.emit(self)
+            return
+        super().keyPressEvent(event)
 
     def marquer(self, choisie: bool) -> None:
         self.setProperty("choisie", choisie)

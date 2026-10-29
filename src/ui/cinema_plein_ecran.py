@@ -74,7 +74,9 @@ class PleinEcran(QWidget):
         match event.key():
             case Qt.Key.Key_Escape | Qt.Key.Key_F:
                 self.close()
-            case Qt.Key.Key_Space:
+            # Entrée aussi : la croix (A) de la manette l'envoie quand aucun
+            # bouton n'a le focus, et elle ne faisait rien ici (audit du 2026-10-29).
+            case Qt.Key.Key_Space | Qt.Key.Key_Return | Qt.Key.Key_Enter:
                 self.pause_demandee.emit()
             case Qt.Key.Key_Left:
                 self.saut_demande.emit(-SAUT_MS)
