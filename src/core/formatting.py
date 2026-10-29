@@ -96,13 +96,24 @@ def append_part_info(line: str, current: int, total: int) -> str:
 
 # ─── Stats de jeu ───
 
+def minutes_arrondies(secondes: float) -> int:
+    """LA règle d'arrondi de toute durée affichée : la minute la plus proche,
+    demi-minute vers le haut.
+
+    `round()` arrondit au PAIR (2,5 min → 2) : la fiche disait « 2 min » là où
+    le Carnet, qui avait sa propre règle, disait « 3 min » pour la même partie
+    de 150 s (audit du 2026-10-29). Une seule fonction, partout.
+    """
+    return int(secondes / 60 + 0.5) if secondes > 0 else 0
+
+
 def format_playtime(seconds: int) -> str:
     """Formate un temps de jeu cumulé : « 45 min de jeu », « 14 h de jeu »…
 
     Arrondi à la minute (minimum 1 min — les sessions plus courtes sont
     filtrées en amont).
     """
-    minutes = max(1, round(seconds / 60))
+    minutes = max(1, minutes_arrondies(seconds))
     if minutes < 60:
         return tr("{} min de jeu").format(minutes)
     hours, rem = divmod(minutes, 60)
@@ -143,7 +154,7 @@ def format_duree_compacte(seconds: int) -> str:
     """
     if seconds < 60:
         return tr("moins d'une minute")
-    minutes = round(seconds / 60)
+    minutes = minutes_arrondies(seconds)
     if minutes < 60:
         return tr("{} min").format(minutes)
     heures, reste = divmod(minutes, 60)
