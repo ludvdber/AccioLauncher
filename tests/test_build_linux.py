@@ -349,6 +349,8 @@ class TestWorkflowDeRelease:
         # Le Python de setup-python pour 22.04 la suppose : sans elle, mypy
         # (étape 2/6 de build.sh) meurt sur `import sqlite3`.
         assert "libsqlite3-0" in linux
+        # Le greffon FFmpeg de QtMultimedia : sans elle, ni vidéo ni musique.
+        assert "libxrandr2" in linux
 
 
 glibc = _module("glibc_exigee")
