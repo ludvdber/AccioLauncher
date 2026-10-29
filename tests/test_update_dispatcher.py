@@ -120,6 +120,30 @@ class TestDispatcher:
         assert dispatcher._new_checker(forced=False)._force is False
 
 
+class TestLAdresseDuCatalogueNeSeRelitPas:
+    """Audit du 2026-10-29 : le checker suivait le `catalog_url` du catalogue
+    lui-même, et l'API des empreintes en était déduite. Un catalogue compromis
+    une seule fois aurait gardé tous les launchers sur son adresse."""
+
+    def test_le_checker_vise_la_constante(self, qtbot, manager, monkeypatch):
+        import dataclasses
+
+        from src.core import liens
+        from src.core.updater import UpdateChecker
+        monkeypatch.setattr(UpdateChecker, "start", lambda self: None)
+        manager.reload_catalog(dataclasses.replace(
+            manager.catalog, catalog_url="https://raw.githubusercontent.com/pirate/depot/main/games.json"))
+        dispatcher = UpdateDispatcher(manager)
+        assert dispatcher._new_checker(forced=False)._catalog_url == liens.CATALOGUE_URL
+        assert dispatcher.forced_checker()._catalog_url == liens.CATALOGUE_URL
+
+    def test_les_empreintes_viennent_du_depot_des_jeux(self):
+        from src.core import liens, updater
+        assert updater._GAMES_RELEASES_API == liens.RELEASES_JEUX_API
+        assert "ludvdber/accio-launcher-games" in liens.RELEASES_JEUX_API
+        assert not hasattr(updater, "_releases_api_from_catalog_url")
+
+
 class _FauxTelechargement(QObject):
     """Un téléchargeur de mise à jour qui ne part jamais sur le réseau."""
     progress = pyqtSignal(object, object)

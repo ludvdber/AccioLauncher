@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 # évités au démarrage — partagé avec le Downloader, le premier des deux paie).
 _TIMEOUT_KW = {"connect": 5.0, "read": 5.0, "write": 5.0, "pool": 5.0}
 _LAUNCHER_API = "https://api.github.com/repos/ludvdber/AccioLauncher/releases/latest"
-_GAMES_RELEASES_API = "https://api.github.com/repos/ludvdber/accio-launcher-games/releases?per_page=100"
+_GAMES_RELEASES_API = liens.RELEASES_JEUX_API
 _LOCAL_CATALOG_PATH = LOCAL_CATALOG_PATH
 
 
@@ -304,14 +304,6 @@ def asset_de_la_plateforme(assets: Iterable[dict[str, Any]], plateforme: str | N
     return generiques[0] if generiques else None
 
 
-def _releases_api_from_catalog_url(catalog_url: str) -> str:
-    """Déduit l'API releases du repo des jeux depuis l'URL raw du catalogue."""
-    m = re.search(r"raw\.githubusercontent\.com/([^/]+)/([^/]+)/", catalog_url or "")
-    if m:
-        return f"https://api.github.com/repos/{m.group(1)}/{m.group(2)}/releases?per_page=100"
-    return _GAMES_RELEASES_API
-
-
 class UpdateChecker(QThread):
     """Vérifie les mises à jour du catalogue et du launcher en arrière-plan."""
 
@@ -397,7 +389,7 @@ class UpdateChecker(QThread):
             return
         try:
             with reseau.client(httpx.Timeout(**_TIMEOUT_KW)) as client:
-                resp = client.get(_releases_api_from_catalog_url(self._catalog_url))
+                resp = client.get(_GAMES_RELEASES_API)
                 self._contact = True
                 if resp.status_code == 403:
                     log.warning("GitHub API rate limit atteint (compteurs ⬇)")

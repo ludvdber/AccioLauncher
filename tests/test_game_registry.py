@@ -426,3 +426,33 @@ class TestPrevenanceAvantEcriture:
         assert ecrire_valeurs("HKCU", CLE_RUN, {"X": "y"},
                               confirmer=lambda *a: appels.append(a) or True) is False
         assert appels == []
+
+
+class TestImportEleveSansFichier:
+    """Audit du 2026-10-29 : le `.reg` importé EN ADMINISTRATEUR était écrit dans
+    un `mkdtemp` de l'utilisateur, modifiable par tout programme du même compte
+    pendant l'invite UAC. Il voyage maintenant dans la ligne de commande."""
+
+    def test_aucun_fichier_et_le_contenu_dans_le_script(self, monkeypatch):
+        import base64
+
+        from src.core import composants_windows, game_registry
+
+        def interdit(*_a, **_k):
+            raise AssertionError("un fichier temporaire a été créé côté utilisateur")
+        monkeypatch.setattr(game_registry.tempfile, "mkdtemp", interdit)
+        scripts = []
+        monkeypatch.setattr(composants_windows, "executer_eleve",
+                            lambda script, *_a: scripts.append(script) or 0)
+        contenu = game_registry.construire_reg(
+            "HKLM", r"SOFTWARE\Electronic Arts\Harry Potter", {"Locale": "fr_FR"}, 32)
+        assert game_registry._importer_eleve(contenu) is True
+        (script,) = scripts
+        encode = script.split("FromBase64String('")[1].split("'")[0]
+        assert base64.b64decode(encode).decode("utf-16") == contenu
+        assert "GetFolderPath('Windows')" in script and "SystemRoot" not in script
+
+    def test_une_invite_refusee_ne_compte_pas_comme_une_ecriture(self, monkeypatch):
+        from src.core import composants_windows, game_registry
+        monkeypatch.setattr(composants_windows, "executer_eleve", lambda *_a: None)
+        assert game_registry._importer_eleve("Windows Registry Editor Version 5.00\r\n") is False

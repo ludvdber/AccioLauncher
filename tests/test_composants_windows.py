@@ -4,6 +4,7 @@ Aucun test n'exécute un installeur ni n'ouvre d'invite : `executer_eleve` est
 interdit par `conftest`, le réseau et la signature sont bouchonnés ici.
 """
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -39,20 +40,69 @@ class TestPaquets:
 
 
 class TestScript:
-    def test_aucun_chemin_dans_le_corps_et_fins_crlf(self):
-        """Règles 79 et 80 : relu en page OEM, un chemin accentué casserait ;
-        sans CRLF, cmd se repositionne au mauvais octet."""
-        corps = cw.script_d_installation(cw.paquets_pour(["vcredist2005_x86", "xinput1_3"]))
-        corps.encode("ascii")
-        assert ":\\" not in corps and "Users" not in corps
-        assert corps.count("\r\n") == corps.count("\n")
-        assert 'start "" /wait "%~dp0vc2005.exe" /q' in corps
-        assert 'start "" /wait "%~dp0directx.exe" /Q' in corps
+    """Audit du 2026-10-29 : les installeurs vérifiés côté utilisateur étaient
+    lancés ÉLEVÉS depuis un `mkdtemp` que tout programme du même compte peut
+    modifier pendant l'invite UAC, par un `.bat` posé au même endroit."""
 
-    def test_le_code_est_note_redirection_en_tete(self):
-        """`echo x 0>>f` redirigerait le flux 0 : le code 0 ne serait jamais écrit."""
-        corps = cw.script_d_installation(cw.paquets_pour(["vcredist_x86"]))
-        assert '>>"%~dp0resultats.txt" echo vc2022 %errorlevel%' in corps
+    _SOURCE = Path("C:/Users/Frédéric O'Brien/AppData/Local/Temp/accio_composants_x")
+
+    def _script(self, prerequis=("vcredist2005_x86", "xinput1_3")):
+        paquets = cw.paquets_pour(prerequis)
+        return cw.script_d_installation(paquets, self._SOURCE, {p.cle: p.cle * 8 for p in paquets})
+
+    def test_rien_n_est_lance_depuis_le_dossier_de_l_utilisateur(self):
+        corps = self._script()
+        lances = [ligne for ligne in corps.splitlines() if "Start-Process" in ligne]
+        assert lances and all("-FilePath $cible" in ligne for ligne in lances)
+        assert "$d = Join-Path $win ('Temp\\accio_composants_' + [guid]::NewGuid()" in corps
+        assert "GetFolderPath('Windows')" in corps and "SystemRoot" not in corps
+
+    def test_la_copie_est_verifiee_avant_d_etre_lancee(self):
+        corps = self._script(("vcredist2005_x86",))
+        copie = corps.index("Copy-Item")
+        empreinte = corps.index("Get-FileHash -LiteralPath $cible")
+        signature = corps.index("Get-AuthenticodeSignature -LiteralPath $cible")
+        lancement = corps.index("Start-Process")
+        assert copie < empreinte < lancement and copie < signature < lancement
+        assert "'vc2005vc2005vc2005vc2005vc2005vc2005vc2005vc2005'" in corps
+
+    def test_le_chemin_est_une_chaine_powershell_sure(self):
+        """Une apostrophe dans le nom du compte se double, rien ne s'interprète."""
+        assert "'C:\\Users\\Frédéric O''Brien" in self._script().replace("/", "\\")
+
+    def test_le_code_est_note(self):
+        corps = self._script(("vcredist_x86",))
+        assert "$resultats += ('vc2022 ' + $proc.ExitCode)" in corps
+        assert f"$resultats += 'vc2022 {cw.CODE_REFUSE}'" in corps
+        assert "Set-Content -LiteralPath (Join-Path $source 'resultats.txt')" in corps
+
+    def test_le_script_voyage_dans_la_ligne_de_commande(self):
+        import base64
+        programme, parametres = cw.commande_powershell_elevee("Write-Output 1")
+        assert programme.lower().endswith("powershell.exe")
+        encode = parametres.split("-EncodedCommand ")[1]
+        assert base64.b64decode(encode).decode("utf-16-le") == "Write-Output 1"
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="parseur de Windows PowerShell")
+    def test_windows_powershell_accepte_la_syntaxe(self):
+        """Le script n'est jamais EXÉCUTÉ par la suite (invite UAC) : le parseur
+        de PowerShell en vérifie au moins la syntaxe, sur le job Windows."""
+        import base64
+        import subprocess
+        from src.core import game_registry
+        for script in (self._script(), game_registry.script_registre_eleve("Windows Registry Editor Version 5.00\r\n")):
+            texte = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+            verifie = ("$t = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('" + texte + "')); "
+                       "$e = $null; [void][Management.Automation.Language.Parser]::ParseInput($t, [ref]$null, [ref]$e); "
+                       "[Console]::Out.Write($e.Count)")
+            programme, _ = cw.commande_powershell_elevee("")
+            sortie = subprocess.run(  # nosec B603 : test, chemin système absolu
+                [programme, "-NoProfile", "-NonInteractive", "-EncodedCommand",
+                 base64.b64encode(verifie.encode("utf-16-le")).decode("ascii")],
+                capture_output=True, timeout=60,
+                # Comme `signature_microsoft` : sans le PSModulePath de PowerShell 7 (la CI).
+                env={k: v for k, v in __import__("os").environ.items() if k.upper() != "PSMODULEPATH"})
+            assert sortie.stdout.decode("utf-8", "replace").strip() == "0", sortie.stderr
 
     def test_lire_les_resultats(self):
         assert cw.lire_resultats("vc2005 0\r\nvc2022 3010\r\nbruit\r\nvc2008 x\r\n") == {
@@ -136,7 +186,7 @@ class TestLeFil:
         monkeypatch.setattr(cw, "signature_microsoft", lambda _f: fil._signe)
 
         def eleve(script, _abandon=None):
-            lances.append(script.read_bytes())
+            lances.append(script)
             return code
         monkeypatch.setattr(cw, "executer_eleve", eleve)
         monkeypatch.setattr(system_checks, "prerequis_manquants", lambda _r: list(restants))

@@ -107,10 +107,10 @@ class Installer(QThread):
             match suffix:
                 case ".7z":
                     extract_7z(self.archive_path, self.destination,
-                               self.progress.emit, lambda: self._cancelled)
+                               self.progress.emit, lambda: self._cancelled, self.game_dir)
                 case ".zip":
                     extract_zip(self.archive_path, self.destination,
-                                self.progress.emit, lambda: self._cancelled)
+                                self.progress.emit, lambda: self._cancelled, self.game_dir)
                 case _:
                     self.error.emit(f"Format d'archive non supporté : {suffix}", "archive")
                     return

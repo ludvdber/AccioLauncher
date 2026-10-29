@@ -31,6 +31,7 @@ sous Wine — mais la prévenance (`confirmer`) reste : on ne modifie pas le
 réglage de quelqu'un sans le lui dire, quel que soit le système.
 """
 
+import base64
 import logging
 import subprocess
 import sys
@@ -296,34 +297,54 @@ def _ecrire_eleve(ruche: str, cle: str, valeurs: Valeurs, vue: int) -> bool:
     """
     if sys.platform != "win32":
         return _ecrire_par_wine(ruche, cle, valeurs, vue)
-    import ctypes
-
-    # Dossier temporaire à nom ALÉATOIRE, et non un chemin fixe dans %TEMP%.
-    # Ce fichier est importé par un regedit ÉLEVÉ : sous un nom prévisible, un
-    # programme tournant sous le même compte — donc sans le moindre privilège —
-    # pouvait le remplacer entre l'écriture et l'import, et faire exécuter son
-    # contenu avec les droits administrateur. `mkdtemp` crée le dossier en accès
-    # restreint, sous un nom qui ne se devine pas.
-    dossier = Path(tempfile.mkdtemp(prefix="accio_reg_"))
-    fichier = dossier / "langue.reg"
-    _dossiers_a_nettoyer.append(dossier)
     try:
-        fichier.write_text(construire_reg(ruche, cle, valeurs, vue), encoding="utf-16")
-        # regedit par son chemin ABSOLU (règle 1) : nommé seul, ShellExecute le
-        # cherche d'abord dans le dossier courant — souvent Téléchargements —, et
-        # un `regedit.exe` déposé là serait lancé EN ADMINISTRATEUR.
-        from src.core.win_utils import dossier_windows
-        regedit = str(Path(dossier_windows()) / "regedit.exe")
-        rc = ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", regedit, f'/s "{fichier}"', None, 0)
-        if rc <= 32:
-            # 5 = SE_ERR_ACCESSDENIED : l'utilisateur a refusé l'invite UAC.
-            log.info("Élévation refusée ou impossible (ShellExecuteW=%d)", rc)
-            return False
-        return True
-    except OSError as exc:
-        log.warning("Écriture élevée impossible : %s", exc)
+        contenu = construire_reg(ruche, cle, valeurs, vue)
+    except ValueError as exc:
+        log.warning("Écriture élevée refusée : %s", exc)
         return False
+    return _importer_eleve(contenu)
+
+
+def _importer_eleve(contenu_reg: str) -> bool:
+    """Importe le `.reg` derrière UNE invite UAC, sans fichier chez l'utilisateur."""
+    from src.core.composants_windows import executer_eleve
+
+    code = executer_eleve(script_registre_eleve(contenu_reg))
+    if code is None:
+        log.info("Élévation refusée (invite UAC)")
+        return False
+    return True
+
+
+def script_registre_eleve(contenu_reg: str) -> str:
+    """Le script PowerShell qui importe `contenu_reg`, lancé ÉLEVÉ. Pure.
+
+    Le `.reg` n'existe plus dans un dossier de l'utilisateur : il était écrit
+    dans un `mkdtemp`, qu'un programme sans privilège tournant sous le MÊME
+    compte peut encore modifier pendant l'invite UAC, et regedit l'aurait
+    importé en administrateur (audit du 2026-10-29). Son contenu voyage dans
+    la ligne de commande (`-EncodedCommand`) ; le processus élevé l'écrit
+    dans un dossier neuf de `C:\\Windows\\Temp`, à nom aléatoire et à lui,
+    puis lance regedit par le chemin que donne `GetFolderPath` (jamais
+    `%SystemRoot%`, qu'un utilisateur peut redéfinir). UTF-16 avec BOM : seul
+    encodage que regedit accepte pour « Version 5.00 ».
+    """
+    octets = base64.b64encode(contenu_reg.encode("utf-16")).decode("ascii")
+    return "\n".join([
+        "$ErrorActionPreference = 'Stop'",
+        f"$o = [Convert]::FromBase64String('{octets}')",
+        "$win = [Environment]::GetFolderPath('Windows')",
+        "$d = Join-Path $win ('Temp\\accio_reg_' + [guid]::NewGuid().ToString('N'))",
+        "New-Item -ItemType Directory -Path $d | Out-Null",
+        "try {",
+        "  $f = Join-Path $d 'langue.reg'",
+        "  [IO.File]::WriteAllBytes($f, $o)",
+        "  Start-Process -FilePath (Join-Path $win 'regedit.exe') -ArgumentList '/s', ('\"' + $f + '\"') "
+        "-Wait -WindowStyle Hidden",
+        "} finally {",
+        "  Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue",
+        "}",
+    ]) + "\n"
 
 
 # Délai maximal d'un import par le lanceur de compatibilité. umu démarre le

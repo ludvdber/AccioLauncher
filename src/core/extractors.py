@@ -172,7 +172,21 @@ _SORTIE_UTF8 = ("-sccUTF-8",) if sys.platform == "win32" else ()
 
 
 def list_7z_entries(archive: Path, exe: str) -> list[str]:
-    """Noms des entrées d'une archive 7z, via `7z l -slt`.
+    """Noms des entrées d'une archive 7z, via `7z l -slt`."""
+    return noms_des_entrees(_sortie_slt(archive, exe))
+
+
+def noms_des_entrees(sortie_slt: str) -> list[str]:
+    """Les « Path = » d'une liste `7z l -slt`. Pure."""
+    return [
+        line[len("Path = "):].strip()
+        for line in sortie_slt.splitlines()
+        if line.startswith("Path = ")
+    ]
+
+
+def _sortie_slt(archive: Path, exe: str) -> str:
+    """La liste `7z l -slt` brute d'une archive.
 
     `-ba` supprime l'en-tête (sinon l'archive elle-même apparaît comme entrée),
     `-p` fournit un mot de passe vide : sans lui, une archive à en-têtes
@@ -191,17 +205,69 @@ def list_7z_entries(archive: Path, exe: str) -> list[str]:
     )
     if proc.returncode != 0:
         raise ExtractionEchouee(
-            f"Impossible de lire le contenu de l'archive (7z.exe code {proc.returncode})",
+            f"Contenu de l'archive illisible (7z.exe code {proc.returncode})",
             "\n".join((proc.stdout + "\n" + proc.stderr).strip().splitlines()[-8:]),
         )
-    return [
-        line[len("Path = "):].strip()
-        for line in proc.stdout.splitlines()
-        if line.startswith("Path = ")
-    ]
+    return str(proc.stdout)
 
 
-def verify_archive_entries(archive: Path, exe: str) -> list[str]:
+# Une entrée de type LIEN, dans la liste `-slt` de 7-Zip : « Symbolic Link = »
+# non vide, ou un mode Unix qui commence par « l » (« A_ lrwxrwxrwx »).
+_MODE_LIEN = re.compile(r"(?:^|\s)l[rwxsStT-]{9}(?:\s|$)")
+
+
+def liens_de_l_archive(sortie_slt: str) -> list[str]:
+    """Les entrées qui sont des liens symboliques, d'après `7z l -slt`. Pure."""
+    liens, nom = [], ""
+    for ligne in sortie_slt.splitlines():
+        if ligne.startswith("Path = "):
+            nom = ligne[len("Path = "):].strip()
+        elif ligne.startswith("Symbolic Link = ") and ligne[len("Symbolic Link = "):].strip():
+            liens.append(nom)
+        elif ligne.startswith("Attributes = ") and _MODE_LIEN.search(ligne[len("Attributes = "):]):
+            liens.append(nom)
+    return sorted(set(liens))
+
+
+def refus_d_entree(nom: str, dossier_du_jeu: str | None) -> str | None:
+    """Pourquoi une entrée d'archive est refusée, ou None. Pure.
+
+    La destination est le dossier des JEUX : il contient `_Launcher/` (config,
+    copies de sauvegardes), les autres jeux et, sous Linux, le préfixe Wine.
+    Une entrée doit donc rester DANS le dossier du jeu (le premier composant
+    de son `executable`), pas seulement dans la destination (audit du
+    2026-10-29). Relevé sur les 38 archives publiées, toutes versions : chacune
+    n'a qu'un premier niveau, ce dossier-là.
+    """
+    if is_unsafe_entry(nom):
+        return "chemin hors destination"
+    if dossier_du_jeu is None:
+        return None
+    parties = [x for x in nom.replace("\\", "/").split("/") if x not in ("", ".")]
+    if not parties or parties[0].casefold() != dossier_du_jeu.casefold():
+        return f"hors du dossier {dossier_du_jeu}"
+    return None
+
+
+def liens_sortants(dossier: Path) -> list[Path]:
+    """Les liens (symboliques, jonctions) DÉJÀ présents dans `dossier` qui mènent
+    hors de lui. 7-Zip écrit À TRAVERS un lien existant (prouvé avec `7zzs`) :
+    une extraction par-dessus (réparation) écrirait ailleurs."""
+    if not dossier.exists() and not dossier.is_symlink():
+        return []
+    racine = dossier.resolve()
+    sortants = []
+    candidats = [dossier]
+    for parent, dossiers, fichiers in os.walk(dossier, followlinks=False):
+        candidats += [Path(parent) / n for n in (*dossiers, *fichiers)]
+    for chemin in candidats:
+        est_lien = chemin.is_symlink() or (hasattr(os.path, "isjunction") and os.path.isjunction(chemin))
+        if est_lien and (chemin == dossier or not chemin.resolve().is_relative_to(racine)):
+            sortants.append(chemin)
+    return sortants
+
+
+def verify_archive_entries(archive: Path, exe: str, dossier_du_jeu: str | None = None) -> list[str]:
     """Refuse une archive dont une entrée sortirait du dossier de destination.
 
     Contrôle AVANT extraction : c'est le seul moment où l'on peut encore
@@ -211,10 +277,13 @@ def verify_archive_entries(archive: Path, exe: str) -> list[str]:
     côté, mais c'est un comportement non documenté ici et hors de notre
     contrôle : on le vérifie explicitement.
     """
-    entries = list_7z_entries(archive, exe)
-    unsafe = unsafe_archive_entries(entries)
+    sortie = _sortie_slt(archive, exe)
+    entries = noms_des_entrees(sortie)
+    unsafe = [n for n in entries if refus_d_entree(n, dossier_du_jeu) is not None]
+    # Un lien, même interne, est refusé : une entrée suivante écrirait à travers.
+    unsafe += [n for n in liens_de_l_archive(sortie) if n not in unsafe]
     if unsafe:
-        log.critical("Archive refusée — %d entrée(s) hors destination : %s",
+        log.critical("Archive refusée : %d entrée(s) hors du dossier du jeu ou liens : %s",
                      len(unsafe), unsafe[:5])
         raise ArchiveRefusee(
             f"Archive refusée : {len(unsafe)} entrée(s) tentent de sortir du "
@@ -273,7 +342,7 @@ def verify_extracted_paths(destination: Path, racines: Iterable[str] | None = No
 
 def extract_7z_subprocess(
     archive: Path, destination: Path,
-    progress: ProgressCb, cancelled: CancelledCb,
+    progress: ProgressCb, cancelled: CancelledCb, dossier_du_jeu: str | None = None,
 ) -> None:
     """Extraction via 7z.exe — progression parsée sur stdout (-bsp1), kill sur annulation."""
     exe = find_7z_exe()
@@ -284,7 +353,9 @@ def extract_7z_subprocess(
         )
 
     # Valider le contenu AVANT d'écrire quoi que ce soit sur le disque.
-    entries = verify_archive_entries(archive, exe)
+    entries = verify_archive_entries(archive, exe, dossier_du_jeu)
+    if dossier_du_jeu is not None:
+        _refuser_les_liens_sortants(destination / dossier_du_jeu)
 
     # Sous Linux, CHEMIN compris : embarqué ou celui du système, ce n'est pas
     # le même 7-Zip, et c'est la première chose à savoir d'une extraction ratée.
@@ -365,14 +436,24 @@ def extract_7z_subprocess(
             proc.wait(timeout=10)
 
 
+def _refuser_les_liens_sortants(dossier: Path) -> None:
+    sortants = liens_sortants(dossier)
+    if sortants:
+        log.critical("Extraction refusée : lien(s) hors du dossier du jeu : %s", sortants[:5])
+        raise ArchiveRefusee(
+            f"Extraction refusée : {len(sortants)} lien(s) du dossier du jeu mènent "
+            f"ailleurs (premier : {sortants[0]})")
+
+
 def extract_7z(archive: Path, destination: Path,
-               progress: ProgressCb, cancelled: CancelledCb) -> None:
-    """Extrait une archive .7z (ou multi-volumes .7z.001) via 7z.exe."""
-    extract_7z_subprocess(archive, destination, progress, cancelled)
+               progress: ProgressCb, cancelled: CancelledCb, dossier_du_jeu: str | None = None) -> None:
+    """Extrait une archive .7z (ou multi-volumes .7z.001) via 7z.exe, confinée au
+    dossier du jeu quand il est connu (toujours, depuis l'installeur)."""
+    extract_7z_subprocess(archive, destination, progress, cancelled, dossier_du_jeu)
 
 
 def extract_zip(archive: Path, destination: Path,
-                progress: ProgressCb, cancelled: CancelledCb) -> None:
+                progress: ProgressCb, cancelled: CancelledCb, dossier_du_jeu: str | None = None) -> None:
     """Extrait une archive .zip avec progression et protection Zip Slip."""
     with zipfile.ZipFile(archive, "r") as zf:
         members = zf.infolist()
@@ -382,8 +463,12 @@ def extract_zip(archive: Path, destination: Path,
 
         # Valider TOUTES les entrées avant d'en écrire une seule — même contrat
         # que verify_archive_entries côté 7z.
-        unsafe = [m.filename for m in members if is_unsafe_entry(m.filename)
-                  or not check_path_traversal(destination, m.filename)]
+        unsafe = [m.filename for m in members if refus_d_entree(m.filename, dossier_du_jeu)
+                  or not check_path_traversal(destination, m.filename)
+                  # Le type Unix est dans les 16 bits hauts : 0o12 = lien symbolique.
+                  or (m.external_attr >> 28) == 0o12]
+        if dossier_du_jeu is not None:
+            _refuser_les_liens_sortants(destination / dossier_du_jeu)
         if unsafe:
             log.critical("Archive zip refusée — %d entrée(s) hors destination : %s",
                          len(unsafe), unsafe[:5])

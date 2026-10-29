@@ -23,6 +23,13 @@ KOFI_URL = "https://ko-fi.com/ludovic01"
 # Le dépôt porte le code source ET la licence : la GPL v3 et ses termes
 # additionnels exigent qu'on sache où les trouver (voir ADDITIONAL-TERMS.md).
 DEPOT_URL = "https://github.com/ludvdber/AccioLauncher"
+# Le catalogue des jeux et les releases qui portent leurs archives. Constantes
+# d'ici et JAMAIS relues du catalogue lui-même (audit du 2026-10-29) : un
+# catalogue compromis une seule fois y aurait écrit sa propre adresse, et tous
+# les launchers auraient suivi la sienne pour toujours, empreintes comprises.
+DEPOT_JEUX = "ludvdber/accio-launcher-games"
+CATALOGUE_URL = f"https://raw.githubusercontent.com/{DEPOT_JEUX}/main/games.json"
+RELEASES_JEUX_API = f"https://api.github.com/repos/{DEPOT_JEUX}/releases?per_page=100"
 # Notes de chaque version du launcher, ouvertes par le numéro de version dans
 # À propos. La LISTE et non le tag courant : un exe lancé avant la publication
 # de sa release (essais, build locale) mènerait sinon à une page 404.

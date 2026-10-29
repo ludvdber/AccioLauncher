@@ -321,7 +321,7 @@ class GameOperations(QObject):
             (cf.source, cf.destination)
             for cf in game.post_install.config_files
         ]
-        game_dir = Path(game.executable).parts[0] if game.executable else None
+        game_dir = Path(game.executable.replace(chr(92), "/")).parts[0] if game.executable else None
         self._installer = Installer(
             archive_path, dest,
             config_files=config_files,
