@@ -32,7 +32,6 @@ garde — or elle existe parce que des statistiques de jeu réelles ont déjà �
 
 import json
 import logging
-import os
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -40,7 +39,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, marquer_illisible, mettre_de_cote, ne_pas_ecraser
 
 log = logging.getLogger(__name__)
 
@@ -156,17 +155,23 @@ def _lire_brut(chemin: Path) -> dict[str, Any]:
     if not chemin.exists():
         return {}
     try:
-        data = json.loads(chemin.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+        texte = chemin.read_text(encoding="utf-8")
+    except OSError as exc:
+        # Pas ouvert (verrou), donc pas corrompu : ni mis de côté, ni écrasé
+        # par un journal repartant de vide (audit du 2026-10-29).
+        log.warning("Journal de sessions non lu (%s) — rien ne sera écrit par-dessus", exc)
+        marquer_illisible(chemin)
+        return {}
+    marquer_illisible(chemin, False)
+    try:
+        data = json.loads(texte)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         # Un journal illisible ne doit ni faire planter le launcher ni
         # disparaître en silence sous la prochaine écriture : on le met de côté
         # sous un autre nom. C'est un historique personnel, il ne se reconstruit
         # pas.
         log.warning("Journal de sessions illisible (%s) — mis de côté", exc)
-        try:
-            os.replace(chemin, chemin.with_suffix(".corrompu"))
-        except OSError:
-            pass
+        mettre_de_cote(chemin)
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -254,6 +259,8 @@ def _ecrire_donnees(data: dict[str, Any], chemin: Path) -> None:
     un compteur n'a pas à matérialiser les sessions pour les resérialiser
     aussitôt (voir `_muter_compteur`).
     """
+    if ne_pas_ecraser(chemin):
+        raise PermissionError(f"journal non lu cette session, non écrasé : {chemin}")
     chemin.parent.mkdir(parents=True, exist_ok=True)
     texte = json.dumps(data, indent=1, ensure_ascii=False)
     ecrire_atomique(chemin, texte)

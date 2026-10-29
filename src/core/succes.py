@@ -24,7 +24,6 @@ obtenu l'a été.
 
 import json
 import logging
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -32,7 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from src.core.catalogue_blocs import Sauvegardes
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, mettre_de_cote
 
 log = logging.getLogger(__name__)
 
@@ -237,10 +236,7 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, datet
         data = json.loads(chemin.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
         log.warning("Succès illisibles (%s) — mis de côté", exc)
-        try:
-            os.replace(chemin, chemin.with_suffix(".corrompu"))
-        except OSError:
-            pass
+        mettre_de_cote(chemin)
         return {}
     stock: dict[tuple[str, str], dict[str, datetime | None]] = {}
     # Regardées sans rien porter encore : leur PREMIER succès sera daté.

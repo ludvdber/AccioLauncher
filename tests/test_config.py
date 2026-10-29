@@ -111,7 +111,7 @@ class TestConfig:
         config_file.write_text('{"langue": "fr", "playtime_seconds": {"hp1": 36', encoding="utf-8")
         with patch("src.core.config.CONFIG_FILE_PATH", config_file):
             Config.load().save()
-        mis_de_cote = tmp_path / "config.corrompu"
+        (mis_de_cote,) = tmp_path.glob("config.*.corrompu")      # horodaté depuis le 2026-10-29
         assert mis_de_cote.read_text(encoding="utf-8").startswith('{"langue": "fr"')
 
     def test_config_verrouillee_pas_mise_de_cote(self, tmp_path):
@@ -122,7 +122,23 @@ class TestConfig:
                 patch.object(Path, "read_text", side_effect=PermissionError("verrou")):
             Config.load()
         assert config_file.exists()
-        assert not (tmp_path / "config.corrompu").exists()
+        assert not list(tmp_path.glob("*.corrompu"))
+
+    def test_config_verrouillee_n_est_pas_ecrasee_par_les_defauts(self, tmp_path):
+        """Audit du 2026-10-29 : un verrou passager au démarrage faisait tourner
+        la session sur les défauts, et la première sauvegarde (un réglage, une
+        fin de partie) remplaçait pour de bon la vraie config."""
+        config_file = tmp_path / "config.json"
+        vraie = '{"langue": "fr", "installed_versions": {"hp1": "1.5"}}'
+        config_file.write_text(vraie, encoding="utf-8")
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            with patch.object(Path, "read_text", side_effect=PermissionError("verrou")):
+                c = Config.load()
+            c.save()
+            assert config_file.read_text(encoding="utf-8") == vraie
+            # Une lecture réussie lève l'interdit.
+            Config.load().save()
+        assert '"hp1": "1.5"' in config_file.read_text(encoding="utf-8")
 
     def test_load_type_invalid_json_falls_back(self, tmp_path):
         """Régression d'audit : un JSON valide mais mal typé (config éditée à la

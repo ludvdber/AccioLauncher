@@ -180,7 +180,7 @@ class TestAttribution:
         chemin.parent.mkdir(parents=True, exist_ok=True)
         chemin.write_text("{pas du json", encoding="utf-8")
         assert sauvegardes.charger() == {}
-        assert chemin.with_suffix(".corrompu").exists()
+        assert list(chemin.parent.glob(chemin.stem + ".*.corrompu"))
 
 
 class TestCatalogue:

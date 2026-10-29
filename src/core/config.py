@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, marquer_illisible, mettre_de_cote, ne_pas_ecraser
 
 log = logging.getLogger(__name__)
 
@@ -246,6 +246,7 @@ class Config:
         if CONFIG_FILE_PATH.exists():
             try:
                 data = json.loads(CONFIG_FILE_PATH.read_text(encoding="utf-8"))
+                marquer_illisible(CONFIG_FILE_PATH, False)
                 if not isinstance(data, dict):
                     raise ValueError(f"racine JSON de type {type(data).__name__}, attendu objet")
                 return cls(
@@ -296,15 +297,19 @@ class Config:
                 # versions installées, qui restent récupérables à la main. Un
                 # fichier simplement illisible (verrouillé) n'est pas corrompu.
                 if not isinstance(exc, OSError):
-                    try:
-                        os.replace(CONFIG_FILE_PATH, CONFIG_FILE_PATH.with_suffix(".corrompu"))
-                    except OSError:
-                        pass
+                    mettre_de_cote(CONFIG_FILE_PATH)
+                else:
+                    # Verrouillé, pas corrompu : la session tourne sur les
+                    # défauts, mais `save()` ne l'écrasera pas.
+                    marquer_illisible(CONFIG_FILE_PATH)
                 return cls()
         return cls()
 
     def save(self) -> None:
         """Sauvegarde la configuration dans le fichier JSON (écriture atomique)."""
+        if ne_pas_ecraser(CONFIG_FILE_PATH):
+            log.warning("Config illisible au démarrage : non écrasée par les défauts de la session")
+            return
         CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
         data = json.dumps(
             {

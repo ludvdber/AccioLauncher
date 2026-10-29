@@ -54,7 +54,7 @@ class TestFichier:
         """
         journal.write_text("{ ceci n'est pas du JSON", encoding="utf-8")
         assert stats.charger(journal).vide
-        assert journal.with_suffix(".corrompu").exists()
+        assert list(journal.parent.glob(journal.stem + ".*.corrompu"))
 
     def test_une_entree_fautive_ne_perd_pas_les_autres(self, journal):
         journal.write_text(json.dumps({"sessions": [
@@ -394,3 +394,36 @@ class TestUnJsonValideDUnMauvaisType:
         chemin = tmp_path / "sessions.json"
         chemin.write_text(json.dumps({"version": 1, champ: valeur}), encoding="utf-8")
         stats.charger(chemin)
+
+
+class TestUnJournalVerrouilleNEstPasEcrase:
+    """Audit du 2026-10-29 : un verrou passager faisait repartir le journal de
+    vide, et la première partie le remplaçait (50 sessions → 1, hérité perdu)."""
+
+    def test_rien_n_est_ecrit_par_dessus(self, tmp_path, monkeypatch):
+        from pathlib import Path
+        journal = tmp_path / "sessions.json"
+        stats.amorcer({"hp1": 100_000}, journal)
+        stats.enregistrer_session("hp1", datetime(2026, 10, 1, 20), 600, journal)
+        avant = journal.read_bytes()
+        vrai = Path.read_text
+
+        def verrou(self, *a, **k):
+            if self == journal:
+                raise PermissionError("verrou")
+            return vrai(self, *a, **k)
+        monkeypatch.setattr(Path, "read_text", verrou)
+        stats.enregistrer_session("hp1", datetime(2026, 10, 2, 20), 600, journal)
+        stats.enregistrer_demarrage(journal)
+        assert journal.read_bytes() == avant
+        assert not list(tmp_path.glob("*.corrompu")), "un verrou n'est pas une corruption"
+        monkeypatch.undo()
+        stats.enregistrer_session("hp1", datetime(2026, 10, 3, 20), 600, journal)
+        assert len(stats.charger(journal).sessions) == 2
+
+    def test_deux_corruptions_gardent_deux_copies(self, tmp_path):
+        journal = tmp_path / "sessions.json"
+        for _ in range(2):
+            journal.write_text("{tronqué", encoding="utf-8")
+            stats.charger(journal)
+        assert len(list(tmp_path.glob("sessions.*.corrompu"))) == 2

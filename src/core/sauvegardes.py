@@ -49,7 +49,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from src.core.catalogue_blocs import Sauvegardes
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_atomique, mettre_de_cote
 
 log = logging.getLogger(__name__)
 
@@ -390,10 +390,7 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]
         data = json.loads(chemin.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
         log.warning("Relevé des sauvegardes illisible (%s) — mis de côté", exc)
-        try:
-            os.replace(chemin, chemin.with_suffix(".corrompu"))
-        except OSError:
-            pass
+        mettre_de_cote(chemin)
         return {}
     stock: dict[tuple[str, str], dict[str, Any]] = {}
     entrees = data.get("sauvegardes") if isinstance(data, dict) else None
