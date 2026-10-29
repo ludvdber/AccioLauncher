@@ -296,20 +296,28 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
 # Compatibilité sans rien écrire : la variable ne vit que dans le processus lancé.
 _COMPAT_LAYER = "__COMPAT_LAYER"
 _DPI_AWARE = "HighDpiAware"
+# Marque que le correctif du jeu cherche dans son environnement : lui absent,
+# il affiche « à lancer depuis Accio Launcher » et arrête le jeu. Posée par le
+# seul launcher, à chaque lancement (Windows ici, Wine dans `compat`).
+_MARQUE_LANCEMENT = "ACCIO_LAUNCH"
 
 
 def env_de_lancement(dpi_aware: bool,
                      base: Mapping[str, str] | None = None) -> dict[str, str] | None:
     """Environnement à donner au jeu, ou None pour lui laisser le nôtre.
 
-    Seuls les jeux qui déclarent `dpi_aware` au catalogue reçoivent la
-    couche. None hors Windows. Une couche déjà posée (`WINXPSP3`…) est gardée.
+    Sous Windows il porte toujours `ACCIO_LAUNCH` (le correctif ne démarre
+    qu'avec cette marque) et, pour les jeux qui le déclarent, la couche DPI.
+    Une couche déjà posée (`WINXPSP3`…) est gardée. None hors Windows, où le
+    lancement passe par Wine (`compat.environnement` pose la marque).
     """
-    if not dpi_aware or sys.platform != "win32":
+    if sys.platform != "win32":
         return None
     env = dict(os.environ if base is None else base)
-    couches = env.get(_COMPAT_LAYER, "").split()
-    if not any(c.lower() == _DPI_AWARE.lower() for c in couches):
-        couches.append(_DPI_AWARE)
-    env[_COMPAT_LAYER] = " ".join(couches)
+    env[_MARQUE_LANCEMENT] = "1"
+    if dpi_aware:
+        couches = env.get(_COMPAT_LAYER, "").split()
+        if not any(c.lower() == _DPI_AWARE.lower() for c in couches):
+            couches.append(_DPI_AWARE)
+        env[_COMPAT_LAYER] = " ".join(couches)
     return env
