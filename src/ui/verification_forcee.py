@@ -51,7 +51,7 @@ def verifier(checker, dlg, *, catalog_only: bool, sur_catalogue, sur_launcher,
         # jour : sans ce test on répondait « Catalogue déjà à jour » sans avoir
         # rien vérifié (mesuré le 2026-08-28, les deux cas rendaient la MÊME chaîne).
         if not en_ligne():
-            dlg.show_update_status(tr("Hors ligne — vérification impossible."), success=False)
+            dlg.show_update_status(tr("Hors ligne : vérifiez la connexion, puis réessayez."), success=False)
         elif not etat["catalogue"]:
             dlg.show_update_status(tr("Catalogue déjà à jour"))
         elif not catalog_only and not url_launcher():

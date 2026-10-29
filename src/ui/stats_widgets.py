@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from src.core import sauvegardes
-from src.core.formatting import format_duree_compacte
+from src.core.formatting import format_duree_compacte, minutes_arrondies
 from src.core.i18n import get_language, tr
 from src.ui.fonts import cinzel
 from src.ui.theme import accent_qcolor, current as current_theme
@@ -55,22 +55,14 @@ def _duree_courte(secondes: int) -> str:
 
 
 def _minutes(secondes: int) -> int:
-    """Arrondi à la minute la plus proche, demi-minute vers le haut.
-
-    `round()` arrondit au PAIR (46,5 → 46) : juste pour une moyenne, faux pour
-    un compteur qu'on additionne à la main.
-    """
-    return int(secondes / 60 + 0.5) if secondes > 0 else 0
+    """La règle commune (`formatting.minutes_arrondies`) : demi-minute vers le haut."""
+    return minutes_arrondies(secondes)
 
 
 def _duree(secondes: int) -> str:
-    """Toute durée de la page passe par ici : même arrondi partout.
-
-    `format_duree_compacte` arrondit au PAIR (`round`), `_minutes` à la
-    demi-minute supérieure : mélangés, 38,5 min s'écrivaient 38 sur la barre
-    et 39 dans la colonne.
-    """
-    return format_duree_compacte(60 * _minutes(secondes) if secondes >= 60 else secondes)
+    """Toute durée de la page passe par ici. Même arrondi que la fiche du jeu :
+    `format_duree_compacte` suit `minutes_arrondies` depuis le 2026-10-29."""
+    return format_duree_compacte(secondes)
 
 
 def _date(jour: date | None) -> str:

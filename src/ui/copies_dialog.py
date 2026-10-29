@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 from src.core import copies_sauvegardes, partage_sauvegardes, sauvegardes
 from src.core.config import APP_VERSION
 from src.core.game_data import GameData
-from src.core.i18n import get_language, tr
+from src.core.i18n import get_language, tr, trn
 from src.core.phonographe import nom_de_fichier
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
@@ -233,7 +233,7 @@ class CopiesDialog(QDialog):
         self._choix.setVisible(self._choix.count() > 1)
         total = sum(v.taille for liste in self._versions.values() for v in liste)
         nb = sum(len(liste) for liste in self._versions.values())
-        self._total.setText(tr("{} copie(s), {} en tout.").format(nb, _taille(total)))
+        self._total.setText(trn(nb, "{} copie, {} en tout.", "{} copies, {} en tout.").format(nb, _taille(total)))
         self._importer_bouton.setEnabled(self.game.sauvegardes is not None)
         self._montrer()
 
@@ -252,7 +252,7 @@ class CopiesDialog(QDialog):
             except OSError:
                 pass
         for rang, v in enumerate(self._versions.get(rel, [])):
-            texte = f"{_quand(v.quand)} — {_taille(v.taille)}"
+            texte = f"{_quand(v.quand)} · {_taille(v.taille)}"
             if rang == 0:
                 texte = tr("{} (la plus récente)").format(texte)
             item = QListWidgetItem(texte)

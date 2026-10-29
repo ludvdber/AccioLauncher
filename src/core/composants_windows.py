@@ -23,6 +23,7 @@ dit ce qui s'affiche.
 """
 
 import base64
+import hashlib
 import logging
 import os
 import shutil
@@ -109,24 +110,64 @@ def disponible() -> bool:
 # ──────────────────── Script élevé ────────────────────
 
 FICHIER_RESULTATS = "resultats.txt"
+# Code noté pour un installeur dont la COPIE ne passe pas la vérification
+# élevée (empreinte ou signature) : il n'est jamais lancé.
+CODE_REFUSE = -2
 
 
-def script_d_installation(paquets: Iterable[Paquet]) -> str:
-    """Corps du `.bat` qui installe tout, d'une traite, derrière UNE invite. Pure.
+def _ps(texte: str) -> str:
+    """Chaîne PowerShell entre apostrophes : la seule échappée est l'apostrophe."""
+    return "'" + texte.replace("'", "''") + "'"
 
-    AUCUN chemin dans le corps (règle 79) : les installeurs sont à côté du
-    script, atteints par `%~dp0`, que cmd développe lui-même en Unicode. Un
-    chemin écrit ici serait relu en page OEM, et un dossier temporaire sous
-    « C:\\Users\\Frédéric » ne serait plus trouvé. Le résultat de chaque
-    installeur est noté, la redirection EN TÊTE de ligne : `echo x 0>>f`
-    redirigerait le flux 0 au lieu d'écrire le code.
+
+def script_d_installation(paquets: Iterable[Paquet], source: Path,
+                          empreintes: dict[str, str]) -> str:
+    """Le script PowerShell lancé ÉLEVÉ, derrière UNE invite. Pure.
+
+    Il ne lance RIEN depuis `source`, que l'utilisateur (donc tout programme
+    sans privilège sous son compte) peut encore modifier pendant l'invite UAC
+    (audit du 2026-10-29) : chaque installeur est COPIÉ dans un dossier neuf
+    sous `C:\\Windows\\Temp`, créé par le processus élevé (nom aléatoire,
+    propriétaire Administrateurs), et la copie n'est lancée que si son
+    SHA-256 est celui relevé après la vérification de signature côté
+    utilisateur ET si sa signature Authenticode est encore celle de
+    Microsoft. Le script lui-même voyage dans la ligne de commande
+    (`-EncodedCommand`), qu'aucun fichier ne porte. Le dossier Windows vient
+    de `GetFolderPath`, jamais de `%SystemRoot%`, qu'un utilisateur peut
+    redéfinir dans son environnement.
     """
-    lignes = ["@echo off", "setlocal", 'cd /d "%~dp0"']
+    lignes = [
+        "$ErrorActionPreference = 'Stop'",
+        f"$source = {_ps(str(source))}",
+        "$win = [Environment]::GetFolderPath('Windows')",
+        "$d = Join-Path $win ('Temp\\accio_composants_' + [guid]::NewGuid().ToString('N'))",
+        "New-Item -ItemType Directory -Path $d | Out-Null",
+        "$resultats = @()",
+        "try {",
+    ]
     for p in paquets:
-        lignes.append(f'start "" /wait "%~dp0{p.cle}.exe" {p.arguments}')
-        lignes.append(f'>>"%~dp0{FICHIER_RESULTATS}" echo {p.cle} %errorlevel%')
-    lignes.append("exit /b 0")
-    return "\r\n".join(lignes) + "\r\n"
+        lignes += [
+            f"  $cible = Join-Path $d {_ps(p.cle + '.exe')}",
+            f"  Copy-Item -LiteralPath (Join-Path $source {_ps(p.cle + '.exe')}) -Destination $cible",
+            "  $h = (Get-FileHash -LiteralPath $cible -Algorithm SHA256).Hash",
+            "  $s = Get-AuthenticodeSignature -LiteralPath $cible",
+            f"  if ($h -ne {_ps(empreintes[p.cle])} -or [string]$s.Status -ne 'Valid' -or "
+            "[string]$s.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {",
+            f"    $resultats += {_ps(p.cle + ' ' + str(CODE_REFUSE))}",
+            "  } else {",
+            f"    $proc = Start-Process -FilePath $cible -ArgumentList {_ps(p.arguments)} "
+            "-Wait -PassThru -WindowStyle Hidden",
+            f"    $resultats += ({_ps(p.cle + ' ')} + $proc.ExitCode)",
+            "  }",
+        ]
+    lignes += [
+        "} finally {",
+        "  Remove-Item -LiteralPath $d -Recurse -Force -ErrorAction SilentlyContinue",
+        f"  Set-Content -LiteralPath (Join-Path $source {_ps(FICHIER_RESULTATS)}) -Value $resultats "
+        "-Encoding Ascii",
+        "}",
+    ]
+    return "\n".join(lignes) + "\n"
 
 
 def lire_resultats(texte: str) -> dict[str, int]:
@@ -200,21 +241,38 @@ _ERREUR_ANNULEE = 1223   # ERROR_CANCELLED : l'invite UAC a été refusée
 ABANDON = -1   # le launcher se ferme : on cesse d'attendre les installeurs
 
 
-def executer_eleve(script: Path, abandonner: Callable[[], bool] = lambda: False) -> int | None:
-    """Exécute le script derrière une invite administrateur et ATTEND sa fin.
+def commande_powershell_elevee(script: str) -> tuple[str, str]:
+    """(programme, paramètres) qui exécutent `script` dans un PowerShell élevé.
+
+    Le script est DANS la ligne de commande (`-EncodedCommand`, UTF-16 en
+    base64) : aucun fichier à remplacer entre l'écriture et l'invite UAC.
+    PowerShell par son chemin système ABSOLU (règle 1). Pure hors Windows :
+    le chemin n'est calculé que là.
+    """
+    encode = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    parametres = f"-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {encode}"
+    if sys.platform != "win32":
+        return "powershell.exe", parametres
+    from src.core.win_utils import dossier_systeme
+
+    return str(Path(dossier_systeme()) / "WindowsPowerShell" / "v1.0" / "powershell.exe"), parametres
+
+
+def executer_eleve(script: str, abandonner: Callable[[], bool] = lambda: False) -> int | None:
+    """Exécute le script PowerShell derrière une invite administrateur et ATTEND sa fin.
 
     None : l'invite a été refusée (ou l'élévation est impossible). `ABANDON` :
     `abandonner()` est devenu vrai pendant l'attente — les installeurs de
-    Microsoft vont au bout sans nous, on ne coupe pas un MSI. Sinon, le
-    code de sortie de cmd. `cmd.exe` par son chemin ABSOLU (règle 1) : nommé
-    seul, il serait cherché d'abord dans le dossier courant, et lancé élevé.
+    Microsoft vont au bout sans nous, on ne coupe pas un MSI. Sinon, le code
+    de sortie de PowerShell. Aucun fichier n'est lancé élevé : voir
+    `commande_powershell_elevee` (audit du 2026-10-29).
     """
     if sys.platform != "win32":
         return None
     import ctypes
     from ctypes import wintypes
 
-    from src.core.win_utils import commande_systeme
+    from src.core.win_utils import dossier_windows
 
     class _Info(ctypes.Structure):
         _fields_ = [
@@ -232,9 +290,8 @@ def executer_eleve(script: Path, abandonner: Callable[[], bool] = lambda: False)
     info.cbSize = ctypes.sizeof(_Info)
     info.fMask = see_mask_nocloseprocess | see_mask_noasync
     info.lpVerb = "runas"
-    info.lpFile = commande_systeme("cmd.exe")
-    info.lpParameters = f'/d /c ""{script}""'
-    info.lpDirectory = str(script.parent)
+    info.lpFile, info.lpParameters = commande_powershell_elevee(script)
+    info.lpDirectory = dossier_windows()
     info.nShow = 0
     shell32 = ctypes.WinDLL("shell32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -311,8 +368,11 @@ class InstallationComposants(QThread):
                 return False, SIGNATURE
         if self.isInterruptionRequested():
             return False, ANNULEE
-        script = dossier / "installer.bat"
-        script.write_bytes(script_d_installation(self._paquets).encode("ascii", "strict"))
+        # L'empreinte de ce qui VIENT d'être vérifié : le processus élevé ne
+        # lancera que des copies identiques (voir `script_d_installation`).
+        empreintes = {p.cle: hashlib.sha256((dossier / f"{p.cle}.exe").read_bytes()).hexdigest()
+                      for p in self._paquets}
+        script = script_d_installation(self._paquets, dossier, empreintes)
         self.etape.emit("installation", ", ".join(p.nom for p in self._paquets))
         code = executer_eleve(script, self.isInterruptionRequested)
         if code is None:

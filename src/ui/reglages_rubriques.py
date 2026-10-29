@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 from src.core import (captures, manette, reglages_correctif, reglages_graphiques, resolution_jeu,
                       texte_ue1, videos_lancement)
 from src.core.i18n import tr
-from src.ui.composants import ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
+from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
@@ -119,7 +119,7 @@ class RubriquesDuJeu:
         h.setSpacing(10)
         lbl = surtitre(texte)
         if verrouille:
-            lbl.setStyleSheet("color: #6a6a80; background: transparent;")
+            lbl.setStyleSheet(f"color: {ENCRE_DISCRETE}; background: transparent;")
         h.addWidget(lbl)
         if verrouille:
             badge = QLabel(tr("BIENTÔT"))

@@ -24,7 +24,7 @@ from src.core.i18n import (
 IDENTIQUES_TOLEREES = {
     # « Halloween » s'écrit pareil dans les trois langues (la citrouille qui
     # accompagnait la clé a été retirée : U+1F383 sortait en emoji couleur).
-    "Discord", "Version {}", "Catalogue {}", "Menus", "Versions — {}", "Versions", "Halloween",
+    "Discord", "Version {}", "Catalogue {}", "Menus", "Versions de {}", "Versions", "Halloween",
     "Accio Launcher {}", "Folio", "Folio de {}", "Badges", "Collections",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « Gris » (vert des montagnes) s'écrit pareil en espagnol.
@@ -72,7 +72,7 @@ LANG_FILES = sorted(Path(p) for p in glob.glob(str(I18N_DIR / "*.json")))
 def _tr_literals(path: str) -> list[str]:
     """Arguments littéraux de tous les appels `tr("…")` d'un fichier."""
     tree = ast.parse(Path(path).read_text(encoding="utf-8"))
-    return [
+    sortie = [
         node.args[0].value
         for node in ast.walk(tree)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
@@ -80,6 +80,15 @@ def _tr_literals(path: str) -> list[str]:
         and isinstance(node.args[0], ast.Constant)
         and isinstance(node.args[0].value, str)
     ]
+    # `trn(n, un, plusieurs)` (2026-10-29) : ses DEUX gabarits sont des clés.
+    sortie += [
+        arg.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "trn"
+        for arg in node.args[1:3]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+    ]
+    return sortie
 
 
 def _source_files() -> list[str]:
@@ -437,3 +446,42 @@ class TestLesTextesDesCartesDePrereglage:
                 continue
             chaines = json.loads(fichier.read_text(encoding="utf-8"))["strings"]
             assert cle in chaines, fichier.name
+
+
+class TestCeQueLesTextesNeDisentPlus:
+    """Décision de Ludo du 2026-10-29 (audit) : plus aucun tiret cadratin dans
+    un texte visible, et plus d'« impossible » (ni « unable », « imposible ») :
+    on dit ce qui se passe et quoi faire. Le catalogue (`games.json`) n'est pas
+    balayé : il doit rester identique au dépôt des jeux, et se corrige là-bas."""
+
+    _INTERDITS = ("—", "impossible", "imposible", "unable")
+
+    def test_aucun_fichier_de_langue(self):
+        fautifs = []
+        for fichier in sorted(Path(I18N_DIR).glob("*.json")):
+            chaines = json.loads(fichier.read_text(encoding="utf-8"))["strings"]
+            for cle, valeur in chaines.items():
+                for texte in (cle, valeur):
+                    if any(m in texte.lower() for m in self._INTERDITS):
+                        fautifs.append(f"{fichier.name}: {texte[:60]!r}")
+        assert fautifs == []
+
+    def test_aucun_texte_passe_a_tr_dans_le_code(self):
+        fautifs = []
+        for fichier in [*Path("src").rglob("*.py"), Path("main.py")]:
+            for noeud in ast.walk(ast.parse(fichier.read_text(encoding="utf-8"))):
+                if (isinstance(noeud, ast.Call) and getattr(noeud.func, "id", "") == "tr"
+                        and noeud.args and isinstance(noeud.args[0], ast.Constant)
+                        and isinstance(noeud.args[0].value, str)
+                        and any(m in noeud.args[0].value.lower() for m in self._INTERDITS)):
+                    fautifs.append(f"{fichier}:{noeud.lineno}")
+        assert fautifs == []
+
+    def test_les_donnees_embarquees_affichees(self):
+        """Nouveautés, encyclopédie, atelier, discographie, cinématiques : du texte
+        montré tel quel, en trois langues."""
+        fautifs = []
+        for nom in ("nouveautes", "encyclopedie", "atelier", "discographie", "cinematiques"):
+            texte = Path(f"src/data/{nom}.json").read_text(encoding="utf-8")
+            fautifs += [f"{nom}: {m}" for m in self._INTERDITS if m in texte.lower()]
+        assert fautifs == []

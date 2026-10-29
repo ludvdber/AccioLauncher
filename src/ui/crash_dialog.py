@@ -57,7 +57,7 @@ def github_issue_url(report: str) -> str:
     """URL d'issue GitHub pré-remplie (corps tronqué pour rester une URL valide)."""
     body = report[:_MAX_ISSUE_BODY]
     if len(report) > _MAX_ISSUE_BODY:
-        body += "\n\n[rapport tronqué — coller la version complète depuis le presse-papiers]"
+        body += "\n\n[rapport tronqué : coller la version complète depuis le presse-papiers]"
     title = f"[Crash] Accio Launcher v{APP_VERSION}"
     return (f"{_ISSUES_URL}?title={urllib.parse.quote(title)}"
             f"&body={urllib.parse.quote(f'```\n{body}\n```')}")
@@ -94,7 +94,7 @@ def construire_dialogue(report: str):
     # sauvegardes ne sont pas touchés » a été retiré le 2026-10-24 (Ludo : « ça
     # n'a pas de sens ») : il disait un état normal, ce que le launcher s'interdit.
     dlg = QDialog()
-    dlg.setWindowTitle(tr("Accio Launcher — Erreur inattendue"))
+    dlg.setWindowTitle(tr("Accio Launcher : erreur inattendue"))
     dlg.setMinimumSize(560, 460)
     dlg.setStyleSheet(themed(
         "QDialog { background: #0d0d1a; }"

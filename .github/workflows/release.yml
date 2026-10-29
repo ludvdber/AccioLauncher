@@ -209,13 +209,17 @@ jobs:
           $texte = Get-Content .github/microsoft-submission.md -Raw -Encoding utf8
           $texte.Replace('{SHA256}', $sha).Replace('{TAG}', $env:TAG) >> $env:GITHUB_STEP_SUMMARY
 
-  # Ubuntu 22.04 et non « latest » : une AppImage exige au minimum la glibc de
-  # la machine qui l'a construite. 22.04 (glibc 2.35) couvre Bazzite, le Steam
-  # Deck et toute distribution de bureau encore suivie ; 24.04 fermerait la
-  # porte à tout ce qui est antérieur à 2.39 sans rien apporter.
+  # Le runner est « latest », mais le build tourne DANS un conteneur Ubuntu
+  # 22.04 : une AppImage exige au minimum la glibc de la machine qui l'a
+  # construite, et 22.04 (glibc 2.35) couvre Mint 21, Debian 12, Bazzite et le
+  # Steam Deck. 24.04 fermerait la porte à tout ce qui précède la 2.39 sans
+  # rien apporter. Conteneur plutôt que runner `ubuntu-22.04` : l'image de
+  # runner sera retirée par GitHub, l'image Docker reste (choix de Ludo,
+  # 2026-10-29). L'étape « glibc exigée » le PROUVE à chaque build.
   linux:
     needs: version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
     timeout-minutes: 45
     permissions:
       contents: read
@@ -223,10 +227,25 @@ jobs:
       attestations: write
       artifact-metadata: write
     steps:
+      # Le conteneur nu n'a ni git (checkout le veut pour un vrai dépôt), ni
+      # certificats, ni les outils de base que les étapes suivantes appellent.
+      # libsqlite3-0 : le Python de setup-python la suppose (l'image de runner
+      # l'a) ; sans elle, `import sqlite3` échoue et mypy s'arrête sur une
+      # « INTERNAL ERROR » (relevé au build d'essai du 2026-10-29).
+      # `file` : appimagetool refuse de tourner sans (même relevé).
+      - name: Outils de base du conteneur
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git curl xz-utils \
+            libsqlite3-0 libreadline8 file
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      # setup-python lit /etc/os-release : c'est le Python construit POUR 22.04.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.15"
@@ -236,13 +255,16 @@ jobs:
       # partirait sans elles et ne démarrerait pas sous X11 ni en mode Jeu
       # (XWayland) chez qui ne les a pas. `build/linux/appimage.py` le vérifie
       # et refuse d'emballer un dossier incomplet. Xvfb et fontconfig servent à
-      # l'audit de géométrie (vraies polices, étape 4/6 de build.sh).
+      # l'audit de géométrie (vraies polices, étape 4/6 de build.sh). libxrandr2 :
+      # le greffon FFmpeg de QtMultimedia la réclame ; l'image de runner l'avait,
+      # le conteneur nu non (sans elle, aucune vidéo : build d'essai du 2026-10-29).
       - name: Bibliothèques système (Qt, xcb, Wayland, audio, audit)
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          apt-get install -y --no-install-recommends \
             binutils libegl1 libgl1 libglib2.0-0 libdbus-1-3 libfontconfig1 \
-            libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 \
+            libxkbcommon0 libxkbcommon-x11-0 libx11-xcb1 libxrandr2 \
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-shm0 \
             libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xkb1 \
@@ -260,8 +282,18 @@ jobs:
         env:
           ACCIO_PY: python
           PYTEST_TIMEOUT: "60"  # voir le job windows
-          PYTEST_ADDOPTS: "-n 4 --dist loadfile"
+          # Méthode « thread » : le gel de la release #22 est revenu au build
+          # d'essai du 2026-10-29 (98 %, 30 min), bloqué dans du code C où le
+          # signal de la méthode par défaut n'arrive jamais. Le fil de garde,
+          # lui, vide les piles au journal et arrête le build en 60 s.
+          PYTEST_ADDOPTS: "-n 4 --dist loadfile --timeout-method=thread"
         run: ./build.sh
+
+      # La preuve que le conteneur a tenu sa promesse : aucun binaire de
+      # l'AppImage (Python, Qt, bibliothèques xcb, 7-Zip) ne réclame une glibc
+      # plus récente que celle de 22.04. Le runtime s'extrait sans FUSE.
+      - name: glibc exigée (au plus 2.35)
+        run: python build/linux/glibc_exigee.py dist/AccioLauncher-x86_64.AppImage 2.35 | tee -a "$GITHUB_STEP_SUMMARY"
 
       # Plafond de taille (ACT-017). Mesuré le 2026-10-07 : 64,54 Mo ; 71 Mo
       # = environ +10 %. Le relever en DISANT pourquoi, jamais en silence.

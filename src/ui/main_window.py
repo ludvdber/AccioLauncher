@@ -478,7 +478,7 @@ class MainWindow(QMainWindow):
     def _on_game_launched(self, game_name: str) -> None:
         """Une partie commence : infobulle, puis la fenêtre s'efface — sous Linux
         seulement quand le jeu prend la main (`retrait_differe`)."""
-        self._tray.set_tooltip(tr("Accio Launcher — En jeu : {}").format(game_name))
+        self._tray.set_tooltip(tr("Accio Launcher (en jeu : {})").format(game_name))
         if self._retrait.differer(game_name, self.isActiveWindow()):
             self._status_bar.showMessage(tr(
                 "Démarrage de {}… Wine peut mettre jusqu'à une minute à ouvrir le jeu."
@@ -505,13 +505,13 @@ class MainWindow(QMainWindow):
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
         elif partie:
             self._status_bar.showMessage(
-                tr("Retour de {} — partie terminée.").format(game_name))
+                tr("Retour de {} : partie terminée.").format(game_name))
         else:
             # Toast : l'œil est sur la fiche. On ignore pourquoi, mais on sait
             # qui peut aider. Deux lignes pour tenir à 980 px.
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
             self._toast.show_message(
-                tr("{} s'est fermé aussitôt — le jeu n'a pas démarré.").format(game_name)
+                tr("{} s'est fermé aussitôt : le jeu n'a pas démarré.").format(game_name)
                 + "\n" + tr("Besoin d'aide ? Cliquez : rapport copié, Discord ouvert."),
                 duration_ms=12000, on_click=self._aide_apres_echec)
         # Rafraîchir la ligne stats du jeu affiché (set_game même id = refresh
@@ -643,7 +643,7 @@ class MainWindow(QMainWindow):
                 dlg.accept()
             self._fermer_sans_demander()
         else:
-            self._show_status(tr("Relance automatique impossible — redémarrez manuellement."))
+            self._show_status(tr("Le launcher ne s'est pas relancé : rouvrez-le vous-même."))
 
     def _force_update_check(self, dlg: SettingsDialog, *, catalog_only: bool) -> None:
         """« Vérifier les mises à jour » des Paramètres : voir `verification_forcee`.

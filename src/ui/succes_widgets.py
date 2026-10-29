@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from src.core import succes
-from src.core.i18n import tr
+from src.core.i18n import tr, trn
 from src.ui.toast import Toast
 
 
@@ -20,7 +20,7 @@ def annonce_succes(nom_du_jeu: str, obtenus: list[succes.Succes]) -> str:
                 + "\n" + tr(obtenus[0].description))
     titres = ", ".join(tr(s.titre) for s in obtenus[:3])
     if len(obtenus) > 3:
-        titres += " " + tr("et {} autres").format(len(obtenus) - 3)
+        titres += " " + trn(len(obtenus) - 3, "et {} autre", "et {} autres").format(len(obtenus) - 3)
     return tr("{} succès dans {} :").format(len(obtenus), nom_du_jeu) + "\n" + titres
 
 

@@ -733,7 +733,7 @@ class SettingsDialog(QDialog):
             if not is_writable_dir(Path(chosen)):
                 avertir(
                     self, tr("Dossier non inscriptible"),
-                    tr("Impossible d'écrire dans :\n{}").format(chosen))
+                    tr("Ce dossier refuse l'écriture. Choisissez-en un autre :\n{}").format(chosen))
                 return
             self.config.install_path = Path(chosen)
             self.config.cache_path = cache_pour(Path(chosen))

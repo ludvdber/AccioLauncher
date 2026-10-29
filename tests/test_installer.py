@@ -3,12 +3,15 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
 from src.core.extractors import (
+    ArchiveRefusee,
     check_path_traversal,
     extract_7z,
+    extract_zip,
     find_7z_exe,
     is_unsafe_entry,
     list_7z_entries,
@@ -190,12 +193,109 @@ class TestVerifyArchiveEntries:
         dest = tmp_path / "out"
         dest.mkdir()
         monkeypatch.setattr(
-            "src.core.extractors.list_7z_entries",
-            lambda _archive, _exe: ["Game/data.txt", "../../evil.dll"],
+            "src.core.extractors._sortie_slt",
+            lambda _archive, _exe: "Path = Game/data.txt\nPath = ../../evil.dll\n",
         )
         with pytest.raises(ValueError, match="Archive refusée"):
             extract_7z(archive, dest, lambda _: None, lambda: False)
         assert not (dest / "Game").exists(), "rien ne doit être extrait"
+
+
+def _archive_7z(tmp_path, racine: Path, *noms: str, liens: bool = False) -> Path:
+    """Archive 7z réelle des `noms` (relatifs à `racine`) ; `-snl` garde les liens."""
+    archive = tmp_path / "essai.7z"
+    cmd = [find_7z_exe(), "a", str(archive), *noms, *(["-snl"] if liens else [])]
+    subprocess.run(cmd, cwd=str(racine), capture_output=True, check=True, timeout=60)
+    return archive
+
+
+@pytest.mark.skipif(find_7z_exe() is None, reason="7-Zip embarqué introuvable")
+class TestExtractionConfineeAuDossierDuJeu:
+    """La destination est le dossier des JEUX : `_Launcher/`, les autres jeux,
+    le préfixe Wine. Une archive ne doit écrire QUE dans le dossier de son
+    jeu, sans chemin absolu, sans `..`, sans lien (audit du 2026-10-29)."""
+
+    def test_une_entree_hors_du_dossier_du_jeu_est_refusee(self, tmp_path):
+        src = tmp_path / "src"
+        (src / "HP1").mkdir(parents=True)
+        (src / "HP1" / "a.txt").write_text("x", encoding="utf-8")
+        (src / "_Launcher").mkdir()
+        (src / "_Launcher" / "config.json").write_text("{}", encoding="utf-8")
+        archive = _archive_7z(tmp_path, src, "HP1", "_Launcher")
+        dest = tmp_path / "jeux"
+        dest.mkdir()
+        with pytest.raises(ArchiveRefusee):
+            extract_7z(archive, dest, lambda _: None, lambda: False, "HP1")
+        assert not (dest / "_Launcher").exists()
+        assert not (dest / "HP1").exists(), "rien ne doit être extrait"
+
+    def test_le_dossier_du_jeu_se_compare_sans_la_casse(self, tmp_path):
+        src = tmp_path / "src"
+        (src / "hp1").mkdir(parents=True)
+        (src / "hp1" / "a.txt").write_text("x", encoding="utf-8")
+        dest = tmp_path / "jeux"
+        dest.mkdir()
+        extract_7z(_archive_7z(tmp_path, src, "hp1"), dest, lambda _: None, lambda: False, "HP1")
+        assert (dest / "hp1" / "a.txt").is_file()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="lien symbolique : privilège sous Windows")
+    def test_un_lien_dans_l_archive_est_refuse(self, tmp_path):
+        src = tmp_path / "src"
+        (src / "HP1").mkdir(parents=True)
+        (src / "HP1" / "evasion").symlink_to(tmp_path / "ailleurs")
+        archive = _archive_7z(tmp_path, src, "HP1", liens=True)
+        dest = tmp_path / "jeux"
+        dest.mkdir()
+        with pytest.raises(ArchiveRefusee):
+            extract_7z(archive, dest, lambda _: None, lambda: False, "HP1")
+        assert not (dest / "HP1").exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="lien symbolique : privilège sous Windows")
+    def test_un_lien_deja_present_qui_sort_est_refuse(self, tmp_path):
+        """Une réparation extrait PAR-DESSUS : 7-Zip écrit à travers un lien
+        existant, donc hors du dossier du jeu."""
+        ailleurs = tmp_path / "ailleurs"
+        ailleurs.mkdir()
+        dest = tmp_path / "jeux"
+        (dest / "HP1").mkdir(parents=True)
+        (dest / "HP1" / "System").symlink_to(ailleurs, target_is_directory=True)
+        src = tmp_path / "src"
+        (src / "HP1" / "System").mkdir(parents=True)
+        (src / "HP1" / "System" / "Core.dll").write_text("x", encoding="utf-8")
+        with pytest.raises(ArchiveRefusee):
+            extract_7z(_archive_7z(tmp_path, src, "HP1"), dest,
+                       lambda _: None, lambda: False, "HP1")
+        assert not (ailleurs / "Core.dll").exists()
+
+    def test_zip_hors_du_dossier_du_jeu_refuse(self, tmp_path):
+        dest = tmp_path / "jeux"
+        dest.mkdir()
+        with pytest.raises(ArchiveRefusee):
+            extract_zip(_zip(tmp_path, ["HP1/a.txt", "_Launcher/config.json"]), dest,
+                        lambda _: None, lambda: False, "HP1")
+        assert not (dest / "_Launcher").exists()
+
+    def test_zip_avec_lien_refuse(self, tmp_path):
+        import zipfile
+        archive = tmp_path / "lien.zip"
+        with zipfile.ZipFile(archive, "w") as zf:
+            info = zipfile.ZipInfo("HP1/evasion")
+            info.external_attr = (0o120777 << 16)
+            zf.writestr(info, "/etc")
+        dest = tmp_path / "jeux"
+        dest.mkdir()
+        with pytest.raises(ArchiveRefusee):
+            extract_zip(archive, dest, lambda _: None, lambda: False, "HP1")
+
+    def test_l_installeur_passe_son_dossier_de_jeu(self, tmp_path):
+        from src.core.installer import Installer
+        dest = tmp_path / "jeux"
+        inst = Installer(_zip(tmp_path, ["HP1/a.txt", "HP2/b.txt"]), dest, game_dir="HP1")
+        erreurs = []
+        inst.error.connect(erreurs.append)
+        inst.run()
+        assert erreurs, "l'installeur doit refuser une archive qui écrit dans HP2"
+        assert not (dest / "HP2").exists()
 
 
 class TestDeblocageSurReparation:

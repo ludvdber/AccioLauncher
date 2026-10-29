@@ -97,7 +97,7 @@ class BarreDeStatut(QStatusBar):
         elif not en_ligne:
             # Dire ce qui change vraiment pour l'utilisateur : sa bibliothèque
             # reste jouable, seuls les nouveaux téléchargements attendent.
-            self.showMessage(tr("Hors ligne — les jeux installés restent jouables."))
+            self.showMessage(tr("Hors ligne : les téléchargements attendent la connexion."))
         else:
             self.showMessage(self.au_repos())
 

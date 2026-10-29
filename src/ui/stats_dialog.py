@@ -183,9 +183,9 @@ class StatsDialog(QDialog):
                 legendes[gid] = _duree_courte(self._temps[gid])
             elif self._vues.get(gid):
                 # Des sauvegardes, mais aucune partie chronométrée : le temps
-                # n'est pas connu, et on ne l'invente pas. Le tiret est la
-                # même convention que partout ailleurs sur la page.
-                legendes[gid] = "—"
+                # n'est pas connu, et on ne l'invente pas. Dit en clair : le
+                # tiret cadratin a quitté les textes visibles (2026-10-29).
+                legendes[gid] = tr("Non chronométré")
         return legendes
 
     # ──────────────────── Construction ────────────────────
@@ -304,8 +304,8 @@ class StatsDialog(QDialog):
         if any(self._vues.values()):
             return tr("Vos sauvegardes sont là ; le temps de jeu se comptera "
                       "à partir de votre prochaine partie.")
-        return tr("Aucune partie enregistrée pour l'instant — "
-                  "lancez un jeu, cette page se remplira toute seule.")
+        return tr("Aucune partie enregistrée pour l'instant. Lancez un jeu, cette page se "
+                  "remplira toute seule.")
 
     @staticmethod
     def _phrase_entete(palette) -> str:

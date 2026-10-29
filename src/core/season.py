@@ -199,11 +199,11 @@ SEASONS = ("auto", "aucune", "halloween", "noel",
 SEASON_LABELS: dict[str, str] = {
     "auto": "Automatique (selon la date)",
     "aucune": "Aucune",
-    "halloween": "Octobre — Halloween",
-    "noel": "Décembre — Noël",
-    "rentree": "1ᵉʳ septembre — la rentrée",
-    "anniversaire": "31 juillet — l'anniversaire",
-    "bataille": "2 mai — la bataille de Poudlard",
+    "halloween": "Halloween (octobre)",
+    "noel": "Noël (décembre)",
+    "rentree": "La rentrée (1ᵉʳ septembre)",
+    "anniversaire": "L'anniversaire (31 juillet)",
+    "bataille": "La bataille de Poudlard (2 mai)",
 }
 
 # ── L'Almanach : un MOIS, une ambiance ───────────────────────────────────

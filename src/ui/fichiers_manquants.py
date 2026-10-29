@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from src.core import fichiers_essentiels
 from src.core.game_data import GameData
-from src.core.i18n import tr
+from src.core.i18n import tr, trn
 from src.ui.utils import open_local_path
 
 if TYPE_CHECKING:
@@ -52,7 +52,8 @@ def signaler_fichiers_manquants(view: GameDetailView, game: GameData) -> bool:
     log.warning("%s : fichier(s) essentiel(s) absent(s) : %s", game.id, ", ".join(absents))
     noms = [f"• {Path(f).name}" for f in absents[:_MANQUANTS_AFFICHES]]
     if len(absents) > _MANQUANTS_AFFICHES:
-        noms.append(tr("… et {} autres").format(len(absents) - _MANQUANTS_AFFICHES))
+        reste = len(absents) - _MANQUANTS_AFFICHES
+        noms.append(trn(reste, "… et {} autre", "… et {} autres").format(reste))
     choix = h._boite(QMessageBox.Icon.Warning,
         view, tr("Il manque des fichiers à {}").format(game.name),
         tr("Ces fichiers du jeu ne sont plus dans son dossier :\n{}\n\n"
@@ -85,6 +86,6 @@ def ouvrir_dossier_du_jeu(view: GameDetailView, game: GameData) -> None:
     dossier = (view.manager.config.install_path
                / Path(game.executable.replace(chr(92), "/")).parent)
     if not dossier.is_dir():
-        view.notify.emit(tr("Dossier introuvable — le jeu a peut-être été déplacé."))
+        view.notify.emit(tr("Dossier introuvable : le jeu a peut-être été déplacé."))
         return
     open_local_path(str(dossier))

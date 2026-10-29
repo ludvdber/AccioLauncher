@@ -91,10 +91,9 @@ def explication(echec: Echec, avec_reste: bool = True) -> str:
                            "un autre dossier d'installation dans les Paramètres."),
         "antivirus": tr("Votre antivirus a bloqué le fichier téléchargé.\n"
                         "Consultez sa quarantaine, puis réessayez."),
-        "acces_refuse": tr("Windows a refusé l'accès au fichier téléchargé — le plus "
-                           "souvent un antivirus en train de l'analyser.\nRéessayez "
-                           "dans un instant ; si ça recommence, choisissez un autre "
-                           "dossier dans les Paramètres."),
+        "acces_refuse": tr("Windows a refusé l'accès au fichier téléchargé, le plus souvent parce qu'un "
+                           "antivirus l'analyse.\nRéessayez dans un instant ; si ça recommence, choisissez "
+                           "un autre dossier dans les Paramètres."),
         "empreinte": tr("Le fichier reçu était abîmé, à chaque essai.\nCela vient "
                         "souvent d'un proxy, d'un antivirus qui inspecte les "
                         "téléchargements ou d'une connexion instable. Réessayez plus tard."),
@@ -204,9 +203,9 @@ def explication_installation(cause: str, archive_du_launcher: bool = True) -> st
                            "un autre dossier d'installation dans les Paramètres."),
         "antivirus": tr("Votre antivirus a bloqué un fichier du jeu pendant "
                         "l'installation.\nConsultez sa quarantaine, puis réessayez."),
-        "acces_refuse": tr("Windows a refusé l'écriture dans le dossier d'installation "
-                           "— un antivirus, ou un dossier protégé.\nRéessayez ; si ça "
-                           "recommence, choisissez un autre dossier dans les Paramètres."),
+        "acces_refuse": tr("Windows a refusé l'écriture dans le dossier d'installation (un antivirus, ou "
+                           "un dossier protégé).\nRéessayez ; si ça recommence, choisissez un autre "
+                           "dossier dans les Paramètres."),
         "chemin_long": tr("Le chemin du dossier d'installation est trop long pour "
                           "Windows.\nChoisissez un dossier plus court dans les Paramètres."),
         "refusee": tr("Cette archive a été refusée par sécurité : elle voulait écrire "

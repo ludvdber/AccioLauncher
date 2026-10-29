@@ -284,8 +284,8 @@ class TestHorsLigneBoutEnBout:
         win._on_network_status(False)
         qtbot.wait(20)
         assert "Hors ligne" in win._status_bar.currentMessage()
-        assert "jouables" in win._status_bar.currentMessage(), (
-            "le message doit rassurer sur ce qui MARCHE encore")
+        # Ce qui se passe, pas ce qui reste normal (Ludo, 2026-10-29).
+        assert "téléchargements attendent" in win._status_bar.currentMessage()
 
     def test_une_re_tentative_est_programmee(self, make_window):
         """Sans elle, rebrancher son câble laisserait l'UI grisée jusqu'au

@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import folio, sauvegardes
 from src.core.config import Config
-from src.core.i18n import get_language, tr
+from src.core.i18n import get_language, tr, trn
 from src.ui.composants import ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -89,7 +89,7 @@ QFrame#tuile, QFrame#coupe, QFrame#objet {
     border: 1px solid rgba(214, 167, 44, 0.55); border-radius: 15px; padding: 5px 14px;
 }
 #sortAVenir {
-    color: #7d7b96; background: transparent;
+    color: #8c8aa5; background: transparent;
     border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 15px; padding: 5px 14px;
 }
 QFrame#fiche {
@@ -111,7 +111,7 @@ def phrase_coupe(releve: folio.Releve) -> str:
     maison, ecart = tete
     if maison == folio.GRYFFONDOR:
         return tr("Gryffondor mène")
-    return tr("{} mène de {} points").format(nom_maison(maison), ecart)
+    return trn(ecart, "{} mène de {} point", "{} mène de {} points").format(nom_maison(maison), ecart)
 
 
 class _Sablier(QWidget):

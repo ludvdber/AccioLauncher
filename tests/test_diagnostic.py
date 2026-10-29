@@ -87,7 +87,7 @@ class TestMateriel:
         avertissement du journal que Documents était inaccessible."""
         from tests.test_diagnostic import TestRapport
         texte = TestRapport()._rapport(tentatives=(), machine=[],
-                                       documents=r"D:\Docs — INACCESSIBLE")
+                                       documents=r"D:\Docs · INACCESSIBLE")
         assert "Documents : D:" in texte and "INACCESSIBLE" in texte
 
     def test_le_materiel_se_lit_sans_lever(self):
@@ -117,7 +117,7 @@ class TestRapport:
 
     def test_les_lancements_rates_y_figurent(self):
         t = Tentative(jeu="hp7a", debut=datetime(2026, 9, 17, 18, 0), duree=1, code=0)
-        assert "hp7a le 2026-09-17 18:00 — 1 s, code 0" in self._rapport(tentatives=(t,))
+        assert "hp7a le 2026-09-17 18:00 · 1 s, code 0" in self._rapport(tentatives=(t,))
 
     def test_du_journal_seuls_avertissements_et_erreurs(self):
         journal = ("2026 [x] INFO: tout va bien\n"

@@ -285,7 +285,7 @@ class ActionPanel(QWidget):
             # ferait qu'échanger une explication contre une erreur réseau
             # générique quelques secondes plus tard.
             btn.setEnabled(False)
-            btn.setToolTip(tr("Hors ligne — connexion requise pour télécharger."))
+            btn.setToolTip(tr("Hors ligne : une connexion est nécessaire pour télécharger."))
         self._action_layout.addWidget(btn)
 
     def _largeur_bouton(self, libelle: str, police, detail: str = "",

@@ -51,7 +51,7 @@ class TestBarreDeStatut:
         assert "2 mises à jour" in barre.currentMessage(), "une mise à jour passe avant tout"
         barre.ambiance(0, en_ligne=False)
         assert "Hors ligne" in barre.currentMessage()
-        assert "jouables" in barre.currentMessage(), "dire ce qui reste possible"
+        assert "téléchargements attendent" in barre.currentMessage(), "dire ce qui se passe"
         barre.ambiance(0, en_ligne=True)
         assert barre.currentMessage() == barre.au_repos()
 
@@ -304,7 +304,7 @@ class TestVerificationForcee:
 
     def test_hors_ligne_c_est_un_echec_et_il_le_dit(self):
         dlg, _ = self._verifier(_Checker(), en_ligne=False)
-        assert dlg.statuts == [("Hors ligne — vérification impossible.", False)]
+        assert dlg.statuts == [("Hors ligne : vérifiez la connexion, puis réessayez.", False)]
 
     def test_rien_de_neuf_en_ligne(self):
         dlg, _ = self._verifier(_Checker())

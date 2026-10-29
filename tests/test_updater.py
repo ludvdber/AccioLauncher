@@ -5,7 +5,6 @@ import types
 
 from src.core.updater import (
     UpdateChecker,
-    _releases_api_from_catalog_url,
     aggregate_download_counts,
     extract_asset_digests,
 )
@@ -59,16 +58,6 @@ class TestAggregateDownloadCounts:
     def test_empty_inputs(self):
         assert aggregate_download_counts([], {}) == {}
         assert aggregate_download_counts([{"assets": []}], {"hp1": [[]]}) == {}
-
-
-class TestReleasesApiFromCatalogUrl:
-    def test_derived_from_raw_url(self):
-        url = _releases_api_from_catalog_url(
-            "https://raw.githubusercontent.com/ludvdber/accio-launcher-games/main/games.json")
-        assert url == "https://api.github.com/repos/ludvdber/accio-launcher-games/releases?per_page=100"
-
-    def test_fallback_on_garbage(self):
-        assert "api.github.com/repos/" in _releases_api_from_catalog_url("n'importe quoi")
 
 
 def _stub_checker(interrupt_after: str | None) -> tuple[UpdateChecker, list[str]]:

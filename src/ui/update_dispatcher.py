@@ -28,6 +28,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
+from src.core import liens
 from src.core.downloader import Downloader
 from src.core.formatting import format_progress_line
 from src.core.game_manager import GameManager
@@ -111,7 +112,9 @@ class UpdateDispatcher(QObject):
     def _new_checker(self, *, forced: bool) -> UpdateChecker:
         catalog = self._manager.catalog
         return UpdateChecker(
-            catalog_url=catalog.catalog_url,
+            # L'adresse du catalogue est une constante, jamais celle que porte
+            # le catalogue lui-même (audit du 2026-10-29, `liens.CATALOGUE_URL`).
+            catalog_url=liens.CATALOGUE_URL,
             # Forcé : la même version se recharge, une plus ancienne jamais. Le
             # « 0 » d'avant acceptait tout, et rétrogradait le catalogue.
             current_catalog_version=catalog.catalog_version,
@@ -320,7 +323,8 @@ class UpdateDispatcher(QObject):
         self._liberer_download()
         self.launcher_busy.emit(False)
         self.launcher_message.emit(
-            tr("Échec du téléchargement — ouverture de la page de release"))
+            tr("Le téléchargement a échoué : la page de la release s'ouvre pour l'installer à "
+               "la main."))
         if self.url:
             open_url(self.url)
 

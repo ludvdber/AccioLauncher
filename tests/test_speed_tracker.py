@@ -94,19 +94,19 @@ class TestFormatProgressLine:
 
 class TestAppendPartInfo:
     def test_appends_when_absent(self):
-        result = append_part_info("50% — 50 Mo / 100 Mo", 1, 3)
-        assert result.endswith("partie 1/3")
+        result = append_part_info("50% · 50 Mo / 100 Mo", 1, 3)
+        assert result.endswith("(partie 1/3)")
         assert "50%" in result
 
     def test_replaces_existing(self):
-        line = "50% — 50 Mo / 100 Mo — partie 1/3"
+        line = "50% · 50 Mo / 100 Mo (partie 1/3)"
         result = append_part_info(line, 2, 3)
         assert result.count("partie") == 1
         assert "partie 2/3" in result
 
     def test_empty_line(self):
         result = append_part_info("", 1, 5)
-        assert result == " — partie 1/5"
+        assert result == " (partie 1/5)"
 
 
 class TestSpeedTracker:

@@ -90,11 +90,11 @@ class TestFormatRelativeDate:
 
 class TestAppendPartInfo:
     def test_appends_suffix(self):
-        assert append_part_info("42%", 2, 3) == "42% — partie 2/3"
+        assert append_part_info("42%", 2, 3) == "42% (partie 2/3)"
 
     def test_replaces_existing_suffix(self):
-        line = append_part_info("42% — partie 1/3", 2, 3)
-        assert line == "42% — partie 2/3"
+        line = append_part_info("42% (partie 1/3)", 2, 3)
+        assert line == "42% (partie 2/3)"
 
 
 class TestFormatProgressLine:
@@ -144,3 +144,17 @@ class TestSeparateurDecimal:
         assert LanguageInfo("xx", "X", ()).decimal == ","
         set_language("fr")
         assert decimal_separator() == ","
+
+
+class TestUnSeulArrondi:
+    """Décision de Ludo (audit du 2026-10-29) : la fiche arrondissait au pair
+    (`round`) et le Carnet à la demi-minute supérieure. 150 s s'écrivaient
+    « 2 min » sur la fiche et « 3 min » au Carnet."""
+
+    @pytest.mark.parametrize("secondes, attendu", [
+        (150, "3 min"), (2310, "39 min"), (5430, "1 h 31 min"), (89, "1 min"), (3570, "1 h")])
+    def test_la_fiche_et_le_carnet_disent_la_meme_chose(self, secondes, attendu):
+        from src.core.formatting import format_duree_compacte
+        from src.ui.stats_widgets import _duree
+        assert format_duree_compacte(secondes) == attendu
+        assert _duree(secondes) == attendu

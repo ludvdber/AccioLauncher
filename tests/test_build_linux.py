@@ -337,8 +337,58 @@ class TestWorkflowDeRelease:
         assert f"subject-path: dist/{appimage.SORTIE}" in _job("linux")
 
     def test_la_glibc_la_plus_ancienne_raisonnable(self):
-        """Une AppImage exige la glibc de SA machine de build."""
-        assert "runs-on: ubuntu-22.04" in _job("linux")
+        """Une AppImage exige la glibc de SA machine de build : le runner est
+        « latest », le build tourne dans un conteneur 22.04 (glibc 2.35), et
+        le workflow le PROUVE sur l'AppImage produite."""
+        linux = _job("linux")
+        assert "runs-on: ubuntu-latest" in linux
+        assert "container: ubuntu:22.04" in linux
+        assert "glibc_exigee.py dist/AccioLauncher-x86_64.AppImage 2.35" in linux
+        assert "sudo" not in linux, "root dans le conteneur, et sudo n'y est pas"
+        assert linux.index("run: ./build.sh") < linux.index("glibc_exigee.py")
+        # Le Python de setup-python pour 22.04 la suppose : sans elle, mypy
+        # (étape 2/6 de build.sh) meurt sur `import sqlite3`.
+        assert "libsqlite3-0" in linux
+        # Le greffon FFmpeg de QtMultimedia : sans elle, ni vidéo ni musique.
+        assert "libxrandr2" in linux
+        # appimagetool exige la commande `file`, absente du conteneur nu.
+        assert re.search(r"xz-utils \\\n\s+libsqlite3-0 libreadline8 file\n", linux)
+        # Un gel dans du code C : seul le fil de garde de pytest-timeout l'arrête.
+        assert "--timeout-method=thread" in linux
+
+
+glibc = _module("glibc_exigee")
+
+
+class TestGlibcExigee:
+    _OBJDUMP = (
+        "0000000000000000      DF *UND*  0000000000000000 (GLIBC_2.2.5) free\n"
+        "0000000000000000      DF *UND*  0000000000000000 (GLIBC_2.34) __libc_start_main\n"
+        "0000000000000000  w   DF *UND*  0000000000000000 (GLIBC_2.38) __isoc23_strtol\n"
+        "0000000000000000      DO *UND*  0000000000000000 (GLIBCXX_3.4.30) _ZSt4cout\n"
+    )
+
+    def test_lit_les_versions_sans_confondre_glibcxx(self):
+        assert glibc.versions_glibc(self._OBJDUMP) == {(2, 2, 5), (2, 34), (2, 38)}
+
+    def test_refuse_au_dela_du_plafond(self):
+        exigences = {"usr/lib/a.so": {(2, 17), (2, 38)}, "usr/lib/b.so": {(2, 35)},
+                     "usr/lib/statique": set()}
+        assert glibc.trop_recents(exigences, (2, 35)) == ["usr/lib/a.so : GLIBC_2.38"]
+
+    def test_compare_en_nombres_pas_en_texte(self):
+        """« 2.4 » > « 2.35 » en texte : la comparaison doit être numérique."""
+        assert glibc.trop_recents({"x": {(2, 4)}}, (2, 35)) == []
+        assert glibc.trop_recents({"x": {(2, 36)}}, (2, 35)) == ["x : GLIBC_2.36"]
+
+    @pytest.mark.skipif(sys.platform != "linux", reason="objdump et ELF : Linux")
+    def test_sur_le_python_qui_tourne(self, tmp_path):
+        import shutil
+        if shutil.which("objdump") is None:
+            pytest.skip("binutils absent")
+        (tmp_path / "python").write_bytes(Path(sys.executable).resolve().read_bytes())
+        exigences = glibc.exigences_du_dossier(tmp_path)
+        assert set(exigences) == {"python"}
 
     def test_le_build_linux_passe_par_build_sh(self):
         assert "run: ./build.sh" in _job("linux")

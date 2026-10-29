@@ -47,7 +47,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import discographie, encyclopedie
-from src.core.i18n import tr
+from src.core.i18n import tr, trn
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.cinema_plein_ecran import PleinEcran
@@ -654,7 +654,8 @@ class _VueMusique(QWidget):
 
         self._paquets.remplir([fabrique(i, m) for i, m in enumerate(morceaux, 1)])
         self._nom_jeu.setText(media.nom(jeu))
-        self._compte.setText(tr("{n} morceaux sur {total}").format(n=ouverts, total=len(morceaux)))
+        self._compte.setText(trn(ouverts, "{n} morceau sur {total}", "{n} morceaux sur {total}")
+                             .format(n=ouverts, total=len(morceaux)))
         self._barre.pct = avance or 0
         self._barre.update()
         # Un jeu dont tout est ouvert d'office (HP4) n'a pas d'avancement à montrer.

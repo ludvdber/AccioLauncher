@@ -44,9 +44,9 @@ from src.core import (
     sons_cartes_hp4,
 )
 from src.core.config import cache_pour
-from src.core.i18n import get_language, tr
+from src.core.i18n import get_language, tr, trn
 from src.ui.carte_3d import Carte3D
-from src.ui.composants import ENCRE, ENCRE_DOUCE, police, surtitre, texte
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
@@ -96,7 +96,7 @@ def _pastille(nom: str, glyphe: QPixmap | None, appris: bool) -> QFrame:
         image.setStyleSheet("background: transparent; border: none; padding: 0;")
         image.setPixmap(glyphe)
         h.addWidget(image)
-    nom_ = texte(nom, 14, "#f2e6c4" if appris else "#7d7b96")
+    nom_ = texte(nom, 14, "#f2e6c4" if appris else ENCRE_DISCRETE)
     nom_.setFont(police(14, gras=appris))
     nom_.setStyleSheet(nom_.styleSheet() + " border: none; padding: 0;")
     h.addWidget(nom_)
@@ -1078,10 +1078,11 @@ class FolioPageHP6(FolioPage):
             # atteint au suivant, comme celle du jeu.
             atteints, vers_suivant = folio_hp6.palier(partie.mini_ecussons)
             if atteints < len(folio_hp6.PALIERS):
-                detail = tr("{} ramassés, prochain palier à {}").format(
+                detail = trn(partie.mini_ecussons, "{} ramassé, prochain palier à {}",
+                             "{} ramassés, prochain palier à {}").format(
                     partie.mini_ecussons, folio_hp6.PALIERS[atteints])
             else:
-                detail = tr("{} ramassés").format(partie.mini_ecussons)
+                detail = trn(partie.mini_ecussons, "{} ramassé", "{} ramassés").format(partie.mini_ecussons)
             dpr = self.devicePixelRatioF()
             tuiles = [
                 _tuile(f"{partie.ecussons} / {folio_hp6.ECUSSONS}", tr("Écussons de Poudlard"),

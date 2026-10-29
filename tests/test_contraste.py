@@ -445,3 +445,54 @@ class TestContrasteDesThemes:
         """Contre-épreuve : sans elle, un seuil mal écrit passerait tout."""
         assert _contraste(_hex("#b22222"), _hex("#110607")) < AA
         assert _contraste(_hex("#b22222"), _hex("#3e161c")) < 3.0
+
+
+class TestTextesSecondaires:
+    """Les gris des textes secondaires (mentions, crédits, notes, filtre vide,
+    surtitre verrouillé, sorts à venir) étaient sous le seuil AA : #6f6d8e à
+    3,05 sur `bg_card`, #6a6a80 à 2,85, #5d5b72 à 2,3, #7d7b96 à 3,68 (audit
+    du 2026-10-29, choix de Ludo : remonter ces gris, sans toucher à l'or ni
+    aux surfaces). Balayage de tout `color: #xxxxxx` de `src/ui` sur les trois
+    surfaces où un texte se pose, dans les cinq thèmes."""
+
+    _SURFACES = ("bg", "bg_dialog", "bg_card")
+
+    # Hors de la règle, chacun pour sa raison (WCAG 1.4.3 les exempte).
+    _EXEMPTES = {
+        "#4c4a68": "point séparateur décoratif du bandeau d'indices",
+        "#55556a": "choix désactivé (setEnabled(False)) d'une rubrique à venir",
+    }
+
+    @staticmethod
+    def _pire(couleur: str) -> float:
+        from src.ui.theme import THEMES
+        return min(_contraste(_hex(couleur), _hex(getattr(p, s)))
+                   for p in THEMES.values() for s in TestTextesSecondaires._SURFACES)
+
+    def test_encre_discrete_au_seuil(self):
+        from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE
+        assert self._pire(ENCRE_DISCRETE) >= AA
+        assert self._pire(ENCRE_DOUCE) >= AA
+
+    def test_aucun_gris_de_texte_sous_le_seuil(self):
+        import re
+        from pathlib import Path
+        fautifs = []
+        for fichier in sorted((Path(__file__).parents[1] / "src" / "ui").glob("*.py")):
+            selecteur = ""
+            for n, ligne in enumerate(fichier.read_text(encoding="utf-8").splitlines(), 1):
+                if "{" in ligne:
+                    selecteur = ligne.split("{")[0]
+                # Désactivé : exempté par WCAG. Fond propre (pastille dorée) : autre surface.
+                if ":disabled" in selecteur or re.search(r"background:\s*[#{]", ligne):
+                    continue
+                for m in re.finditer(r"(?<![-\w])color:\s*(#[0-9a-fA-F]{6})\b", ligne):
+                    c = m.group(1).lower()
+                    if c not in self._EXEMPTES and self._pire(c) < AA:
+                        fautifs.append(f"{fichier.name}:{n} {c} ({self._pire(c):.2f})")
+        assert not fautifs, fautifs
+
+    def test_les_anciens_gris_echouaient(self):
+        """Contre-épreuve : le balayage aurait vu les quatre."""
+        for ancien in ("#6f6d8e", "#6a6a80", "#5d5b72", "#7d7b96"):
+            assert self._pire(ancien) < AA

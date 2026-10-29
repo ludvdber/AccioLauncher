@@ -135,7 +135,7 @@ def desinstaller(fenetre, parent: QWidget, garder_jeux: bool, garder_copies: boo
     inv = desinstallation.inventaire(fenetre.config.install_path, dossiers, garder_jeux,
                                      garder_copies, desinstallation.programme_courant())
     if not desinstallation.programmer(inv):
-        avertir(parent, tr("Désinstallation impossible"), tr(
+        avertir(parent, tr("Le launcher n'a pas été désinstallé"), tr(
             "Le script qui efface le launcher n'a pas pu démarrer. "
             "Le détail est dans le journal."))
         return False

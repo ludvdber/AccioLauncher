@@ -169,7 +169,8 @@ n'est pas distribué avec elle. Cité pour la provenance du fichier publié.
 ## Bibliothèques système embarquées dans l'AppImage (Linux)
 
 PyInstaller copie dans l'AppImage les bibliothèques de la machine de build
-(Ubuntu 22.04) dont dépendent Python et Qt, sauf celles que toute machine
+(un conteneur Ubuntu 22.04, `ubuntu:22.04`, depuis le 2026-10-29 ; avant, le
+runner `ubuntu-22.04` : mêmes paquets) dont dépendent Python et Qt, sauf celles que toute machine
 fournit (liste d'exclusion AppImage, `build/linux/dependances.py`). Toutes
 sont utilisées sans modification et liées dynamiquement :
 

@@ -5,7 +5,7 @@ Toutes les chaînes visibles passent par tr() (i18n FR/EN).
 
 from datetime import date, datetime
 
-from src.core.i18n import decimal_separator, tr
+from src.core.i18n import decimal_separator, tr, trn
 
 
 def _nombre(valeur: float, decimales: int = 1) -> str:
@@ -48,10 +48,10 @@ def format_eta(seconds: float) -> str:
     if seconds < 0 or seconds > 86400:
         return ""
     if seconds < 60:
-        return tr("~{}s restantes").format(int(seconds))
+        return trn(int(seconds), "~{}s restante", "~{}s restantes").format(int(seconds))
     minutes = seconds / 60
     if minutes < 60:
-        return tr("~{} min restantes").format(int(minutes))
+        return trn(int(minutes), "~{} min restante", "~{} min restantes").format(int(minutes))
     hours = minutes / 60
     return tr("~{}h restantes").format(_nombre(hours))
 
@@ -70,7 +70,7 @@ def format_progress_line(downloaded: int, total: int, speed: float,
     parts = [head, f"{recu} / {attendu}", vitesse]
     if eta:
         parts.append(eta)
-    return " — ".join(parts)
+    return " · ".join(parts)
 
 
 def morceaux_de_progression(downloaded: int, total: int, speed: float,
@@ -87,14 +87,25 @@ def morceaux_de_progression(downloaded: int, total: int, speed: float,
 
 
 def append_part_info(line: str, current: int, total: int) -> str:
-    """Ajoute (ou remplace) le suffixe ' — partie X/Y' à une ligne de statut."""
-    template = tr(" — partie {}/{}")
-    marker = template.split("{}")[0]  # ' — partie ' / ' — part '
+    """Ajoute (ou remplace) le suffixe ' (partie X/Y)' à une ligne de statut."""
+    template = tr(" (partie {}/{})")
+    marker = template.split("{}")[0]  # ' (partie ' / ' (part '
     base = line.split(marker)[0]
     return base + template.format(current, total)
 
 
 # ─── Stats de jeu ───
+
+def minutes_arrondies(secondes: float) -> int:
+    """LA règle d'arrondi de toute durée affichée : la minute la plus proche,
+    demi-minute vers le haut.
+
+    `round()` arrondit au PAIR (2,5 min → 2) : la fiche disait « 2 min » là où
+    le Carnet, qui avait sa propre règle, disait « 3 min » pour la même partie
+    de 150 s (audit du 2026-10-29). Une seule fonction, partout.
+    """
+    return int(secondes / 60 + 0.5) if secondes > 0 else 0
+
 
 def format_playtime(seconds: int) -> str:
     """Formate un temps de jeu cumulé : « 45 min de jeu », « 14 h de jeu »…
@@ -102,7 +113,7 @@ def format_playtime(seconds: int) -> str:
     Arrondi à la minute (minimum 1 min — les sessions plus courtes sont
     filtrées en amont).
     """
-    minutes = max(1, round(seconds / 60))
+    minutes = max(1, minutes_arrondies(seconds))
     if minutes < 60:
         return tr("{} min de jeu").format(minutes)
     hours, rem = divmod(minutes, 60)
@@ -143,7 +154,7 @@ def format_duree_compacte(seconds: int) -> str:
     """
     if seconds < 60:
         return tr("moins d'une minute")
-    minutes = round(seconds / 60)
+    minutes = minutes_arrondies(seconds)
     if minutes < 60:
         return tr("{} min").format(minutes)
     heures, reste = divmod(minutes, 60)
