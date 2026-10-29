@@ -142,6 +142,9 @@ class TestCheminUnique:
         # Trouvé par le fuzzing en CI (2026-10-09) : un nom BLANC, refusé par
         # le catalogue comme champ vide, pas comme chemin.
         "\n", "\t", "　", "\x85",
+        # Trouvé par le fuzzing en CI (2026-10-29) : le catalogue refuse en plus
+        # un exécutable sous les données du launcher, que « Désinstaller » effacerait.
+        "_launcher", "_Launcher/x.exe",
     ])
     def test_les_trois_gardes_de_chemin_donnent_le_meme_verdict(self, nom):
         invariants.meme_verdict(nom)
