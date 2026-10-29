@@ -37,7 +37,9 @@ import bisect
 import logging
 import math
 import struct
-from dataclasses import dataclass, replace
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
+from functools import cached_property, partial
 from pathlib import Path
 
 from src.core import encyclopedie, textures_ue1
@@ -115,7 +117,15 @@ class Mouvement:
     duree: float                    # secondes
     images: int
     os: tuple[str, ...]             # le nom de l'os de chaque piste, dans l'ordre de l'animation
-    pistes: tuple[Piste, ...]
+    # Les pistes, ou de quoi les décoder au PREMIER usage : décoder les 59
+    # mouvements de chacun des 27 modèles de HP2 prenait 3 s de GIL au fil de
+    # l'onglet Personnages, et la fenêtre se figeait jusqu'à 1,5 s (2026-10-29).
+    # On n'en joue qu'un à la fois.
+    source: tuple[Piste, ...] | Callable[[], tuple[Piste, ...]] = field(default=(), repr=False, compare=False)
+
+    @cached_property
+    def pistes(self) -> tuple[Piste, ...]:
+        return self.source() if callable(self.source) else self.source
 
     def piste(self, nom_os: str) -> Piste | None:
         """La première piste de l'os `nom_os` (noms sans casse, comme le moteur)."""
@@ -313,30 +323,42 @@ def lire_animation(p: Paquet, nom: str) -> Animation | None:
     lec.p += nt_total
     if lec.p != fin:
         raise ValueError("fin d'animation inattendue")
+    # Les bornes se vérifient ICI, pour tous : un format inattendu lève encore
+    # à la lecture. Seul le calcul des clés attend qu'on joue le mouvement.
     iq = ip = it = 0
     mouvements = []
     for (duree, indices, pistes), (nom_seq, groupe, images) in zip(en_tetes, sequences, strict=True):
         noms_os: list[str] = []
-        lues: list[Piste] = []
+        plan: list[tuple[int, int, int, int, int, float, float]] = []
         for rang_os, (nq, npos, echelle, pas) in zip(indices, pistes, strict=True):
             if iq + nq > nq_total or ip + npos > npos_total or it + nq > nt_total:
                 raise ValueError("plus de clés annoncées que rangées")
-            rotations = tuple(_quat_de(quats[3 * k], quats[3 * k + 1], quats[3 * k + 2])
-                              for k in range(iq, iq + nq))
-            k_pos = echelle / 32767
-            pos = tuple((positions[3 * k] * k_pos, positions[3 * k + 1] * k_pos, positions[3 * k + 2] * k_pos)
-                        for k in range(ip, ip + npos))
-            instants, t = [], 0.0
-            for delta in temps[it:it + nq]:
-                t += delta * pas
-                instants.append(t)
             noms_os.append(os_[rang_os])
-            lues.append(Piste(rotations, pos, tuple(instants)))
+            plan.append((iq, ip, it, nq, npos, echelle, pas))
             iq, ip, it = iq + nq, ip + npos, it + nq
-        mouvements.append(Mouvement(nom_seq, groupe, duree, images, tuple(noms_os), tuple(lues)))
+        mouvements.append(Mouvement(nom_seq, groupe, duree, images, tuple(noms_os),
+                                    partial(_pistes, quats, positions, temps, tuple(plan))))
     if (iq, ip, it) != (nq_total, npos_total, nt_total):
         raise ValueError("clés rangées sans piste")
     return Animation(nom, tuple(mouvements))
+
+
+def _pistes(quats: tuple[int, ...], positions: tuple[int, ...], temps: bytes,
+            plan: tuple[tuple[int, int, int, int, int, float, float], ...]) -> tuple[Piste, ...]:
+    """Les clés d'un mouvement, décodées à la demande (bornes déjà vérifiées)."""
+    lues = []
+    for iq, ip, it, nq, npos, echelle, pas in plan:
+        rotations = tuple(_quat_de(quats[3 * k], quats[3 * k + 1], quats[3 * k + 2])
+                          for k in range(iq, iq + nq))
+        k_pos = echelle / 32767
+        pos = tuple((positions[3 * k] * k_pos, positions[3 * k + 1] * k_pos, positions[3 * k + 2] * k_pos)
+                    for k in range(ip, ip + npos))
+        instants, t = [], 0.0
+        for delta in temps[it:it + nq]:
+            t += delta * pas
+            instants.append(t)
+        lues.append(Piste(rotations, pos, tuple(instants)))
+    return tuple(lues)
 
 
 def _lerp(a: Point, b: Point, k: float) -> Point:

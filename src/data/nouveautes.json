@@ -133,6 +133,22 @@
             "en": "A play time is rounded the same way on a game's page and in the Notebook.",
             "es": "Un tiempo de juego se redondea igual en la ficha de un juego y en el Cuaderno."
           }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Les Reliques de la Mort : en changeant la langue du jeu, ta partie et tes réglages graphiques la suivent. Le jeu ne repart plus de zéro, en petit dans un coin.",
+            "en": "Deathly Hallows: when you change the game's language, your save and graphics settings follow it. The game no longer starts over, small in a corner.",
+            "es": "Las Reliquias de la Muerte: al cambiar el idioma del juego, tu partida y tus ajustes gráficos lo siguen. El juego ya no empieza de cero, pequeño en una esquina."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les Personnages et le Bestiaire s'ouvrent trois fois plus vite et ne figent plus la fenêtre.",
+            "en": "Characters and the Bestiary open three times faster and no longer freeze the window.",
+            "es": "Los Personajes y el Bestiario se abren tres veces más rápido y ya no congelan la ventana."
+          }
         }
       ]
     },

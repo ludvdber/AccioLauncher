@@ -168,11 +168,20 @@ def _flux(big: str, entree: str) -> bytes:
 
 
 def bgra_de_palette(tex: textures_ue1.TexturePaletee) -> ImageBgra:
-    """Une texture de 256 couleurs en B V R A ; l'indice 0 transparent si masquée."""
-    couleurs = [bytes((b, v, r, 0 if tex.masquee and i == 0 else 255))
-                for i, (r, v, b, _a) in enumerate(tex.palette)]
-    couleurs += [bytes(4)] * (256 - len(couleurs))
-    return tex.largeur, tex.hauteur, b"".join(couleurs[i] for i in tex.indices)
+    """Une texture de 256 couleurs en B V R A ; l'indice 0 transparent si masquée.
+
+    Une table de conversion par canal (`bytes.translate`, en C) : la jointure
+    pixel par pixel en Python tenait le GIL près d'une seconde pour les modèles
+    de HP2, et la fenêtre se figeait pendant ce temps (2026-10-29).
+    """
+    palette = list(tex.palette)[:256]
+    palette += [(0, 0, 0, 0)] * (256 - len(palette))
+    canaux = (bytes(c[2] for c in palette), bytes(c[1] for c in palette), bytes(c[0] for c in palette),
+              bytes(0 if (tex.masquee and i == 0) or i >= len(tex.palette) else 255 for i in range(256)))
+    pixels = bytearray(4 * len(tex.indices))
+    for decalage, table in enumerate(canaux):
+        pixels[decalage::4] = tex.indices.translate(table)
+    return tex.largeur, tex.hauteur, bytes(pixels)
 
 
 def recadrer(img: ImageBgra, cadre: tuple[int, int, int, int]) -> ImageBgra | None:

@@ -292,6 +292,8 @@ class GameManager:
             log.warning("Langue non appliquée pour %s — lancement quand même", game_id)
             if avertir is not None:
                 avertir()
+        # La partie et les réglages suivent la langue POSÉE (HP7 : un dossier par langue).
+        langue.porter_sauvegardes(game, self.config)
 
         # Pré-lancement (cf. src/core/pre_launch.py)
         unblock_game_dlls(exe_path.parent)

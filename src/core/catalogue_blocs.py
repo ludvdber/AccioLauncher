@@ -116,6 +116,10 @@ class GameLanguage:
     # Fichier dont la PRÉSENCE prouve la langue installée (le registre ne fait
     # que sélectionner, règle 73). Relatif au dossier ; vide = toujours proposée.
     requires_file: str = ""
+    # Dossier de sauvegarde que le jeu crée pour CETTE langue, relatif à la
+    # racine du bloc `saves` (HP7 nomme le sien d'après son titre traduit).
+    # Vide = le jeu n'en change pas avec la langue.
+    saves_folder: str = ""
 
     @property
     def as_dict(self) -> dict[str, Any]:
@@ -347,8 +351,15 @@ def _parse_language_registry(data: Any) -> LanguageRegistry | None:
         if fichier and not chemin_relatif_sur(fichier):
             log.warning("requires_file non sûr, bloc de langue ignoré : %r", fichier)
             return None
+        # Un NOM exact, pas un motif : le launcher y écrit (copie à l'arrivée
+        # d'une nouvelle langue), il ne s'agit plus seulement de lire des dates.
+        dossier = entree.get("saves_folder", "")
+        if not isinstance(dossier, str) or (dossier and (
+                not chemin_relatif_sur(dossier) or any(c in dossier for c in "*?[]"))):
+            log.warning("saves_folder non sûr, bloc de langue ignoré : %r", dossier)
+            return None
         langues.append(GameLanguage(code=code, label=label, values=tuple(paires),
-                                    requires_file=fichier))
+                                    requires_file=fichier, saves_folder=dossier))
 
     # Valeurs communes, tout ou rien. Contrôle du GABARIT ici ; le vrai
     # garde-fou est `ecrire_valeurs`, qui revalide après substitution.

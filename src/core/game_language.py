@@ -213,6 +213,52 @@ def appliquer(game: GameData, config: Config, code: str | None = None,
                                    confirmer=confirmer)
 
 
+def porter_sauvegardes(game: GameData, config: Config) -> list[str]:
+    """Recopie la partie et les réglages vers le dossier de la langue POSÉE.
+
+    HP7 range `auto.sav` et `config.txt` dans un dossier nommé d'après son
+    titre traduit : passé du français à l'anglais, il démarrait sans la partie
+    et en 720p, l'image dans un coin (VU par Ludo le 2026-10-29). On copie
+    chaque fichier du dossier où l'on a joué en DERNIER (`sauvegardes.dossier`)
+    vers celui de la langue posée, et seulement là où il manque : rien n'est
+    jamais écrasé, une partie déjà faite dans cette langue reste la sienne.
+
+    Rend les noms copiés (vide le plus souvent). Une erreur de fichier n'empêche
+    jamais le lancement.
+    """
+    from src.core import sauvegardes
+
+    spec = game.sauvegardes
+    lr = game.language_registry
+    if spec is None or lr is None or not registre.disponible():
+        return []
+    code = detecter(game, config)
+    langue = lr.get(code) if code is not None else None
+    if langue is None or not langue.saves_folder:
+        return []
+    base = sauvegardes.racines().get(spec.racine)
+    source = sauvegardes.dossier(spec)
+    if base is None or source is None:
+        return []
+    cible = base / langue.saves_folder
+    copies: list[str] = []
+    try:
+        if cible.resolve() == source.resolve():
+            return []
+        for fichier in sorted(source.iterdir()):
+            if not fichier.is_file() or fichier.is_symlink() or (cible / fichier.name).exists():
+                continue
+            cible.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(fichier, cible / fichier.name)
+            copies.append(fichier.name)
+    except OSError as e:
+        log.warning("Sauvegardes de %s non recopiées vers %s : %s", game.id, cible, e)
+    if copies:
+        log.info("Langue de %s : %s recopiés de « %s » vers « %s »",
+                 game.id, ", ".join(copies), source.name, cible.name)
+    return copies
+
+
 # ─── Langue portée par des fichiers (HP1) ───
 
 def _detecter_fichiers(game: GameData, config: Config) -> str | None:

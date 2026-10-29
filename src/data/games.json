@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.49",
+  "catalog_version": "0.50",
   "contributors": [
     {
       "name": "ASTeam",
@@ -2188,49 +2188,56 @@
             "values": {
               "Locale": "en_UK"
             },
-            "requires_file": "HP7/pc/DH1_English.pck"
+            "requires_file": "HP7/pc/DH1_English.pck",
+            "saves_folder": "Electronic Arts/Harry Potter and the Deathly Hallows (TM) – Part 1"
           },
           "fr": {
             "label": "Français",
             "values": {
               "Locale": "fr_FR"
             },
-            "requires_file": "HP7/pc/DH1_French.pck"
+            "requires_file": "HP7/pc/DH1_French.pck",
+            "saves_folder": "Electronic Arts/Harry Potter et les Reliques de la Mort (TM) – Première Partie"
           },
           "de": {
             "label": "Deutsch",
             "values": {
               "Locale": "de"
             },
-            "requires_file": "HP7/pc/DH1_German.pck"
+            "requires_file": "HP7/pc/DH1_German.pck",
+            "saves_folder": "Electronic Arts/Harry Potter und die Heiligtümer des Todes (TM) – Teil 1"
           },
           "es": {
             "label": "Español",
             "values": {
               "Locale": "es"
             },
-            "requires_file": "HP7/pc/DH1_Spanish.pck"
+            "requires_file": "HP7/pc/DH1_Spanish.pck",
+            "saves_folder": "Electronic Arts/Harry Potter y las Reliquias de la Muerte (TM) – Parte 1"
           },
           "it": {
             "label": "Italiano",
             "values": {
               "Locale": "it"
             },
-            "requires_file": "HP7/pc/DH1_Italian.pck"
+            "requires_file": "HP7/pc/DH1_Italian.pck",
+            "saves_folder": "Electronic Arts/Harry Potter e i Doni della Morte (TM) – Parte 1"
           },
           "pl": {
             "label": "Polski",
             "values": {
               "Locale": "pl"
             },
-            "requires_file": "HP7/pc/DH1_Polish.pck"
+            "requires_file": "HP7/pc/DH1_Polish.pck",
+            "saves_folder": "Electronic Arts/Harry Potter i Insygnia Śmierci (TM) – część 1"
           },
           "ru": {
             "label": "Русский",
             "values": {
               "Locale": "ru"
             },
-            "requires_file": "HP7/pc/DH1_Russian.pck"
+            "requires_file": "HP7/pc/DH1_Russian.pck",
+            "saves_folder": "Electronic Arts/Гарри Поттер и Дары Смерти (TM) – Часть первая"
           }
         }
       },
@@ -2445,49 +2452,56 @@
             "values": {
               "Locale": "en"
             },
-            "requires_file": "HP8/pc/DH2_English.pck"
+            "requires_file": "HP8/pc/DH2_English.pck",
+            "saves_folder": "Electronic Arts/Harry Potter and the Deathly Hallows (TM) – Part 2"
           },
           "fr": {
             "label": "Français",
             "values": {
               "Locale": "fr"
             },
-            "requires_file": "HP8/pc/DH2_French.pck"
+            "requires_file": "HP8/pc/DH2_French.pck",
+            "saves_folder": "Electronic Arts/Harry Potter et les Reliques de la Mort (TM) – Deuxième Partie"
           },
           "de": {
             "label": "Deutsch",
             "values": {
               "Locale": "de"
             },
-            "requires_file": "HP8/pc/DH2_German.pck"
+            "requires_file": "HP8/pc/DH2_German.pck",
+            "saves_folder": "Electronic Arts/Harry Potter und die Heiligtümer des Todes (TM) – Teil 2"
           },
           "es": {
             "label": "Español",
             "values": {
               "Locale": "es"
             },
-            "requires_file": "HP8/pc/DH2_Spanish.pck"
+            "requires_file": "HP8/pc/DH2_Spanish.pck",
+            "saves_folder": "Electronic Arts/Harry Potter y las Reliquias de la Muerte (TM) – Parte 2"
           },
           "it": {
             "label": "Italiano",
             "values": {
               "Locale": "it"
             },
-            "requires_file": "HP8/pc/DH2_Italian.pck"
+            "requires_file": "HP8/pc/DH2_Italian.pck",
+            "saves_folder": "Electronic Arts/Harry Potter e i Doni della Morte (TM) – Parte 2"
           },
           "pl": {
             "label": "Polski",
             "values": {
               "Locale": "pl"
             },
-            "requires_file": "HP8/pc/DH2_Polish.pck"
+            "requires_file": "HP8/pc/DH2_Polish.pck",
+            "saves_folder": "Electronic Arts/Harry Potter i Insygnia Śmierci (TM) – część 2"
           },
           "ru": {
             "label": "Русский",
             "values": {
               "Locale": "ru"
             },
-            "requires_file": "HP8/pc/DH2_Russian.pck"
+            "requires_file": "HP8/pc/DH2_Russian.pck",
+            "saves_folder": "Electronic Arts/Гарри Поттер и Дары Смерти (TM) – Часть вторая"
           }
         }
       },
