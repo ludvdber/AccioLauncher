@@ -50,6 +50,7 @@ from src.core.reglages_table import (  # noqa: F401  (réexportés)
     PREREGLAGES,
 )
 from src.core.reglages_table import ValeurChoix
+from src.core.ecriture_atomique import ecrire_octets_atomique
 
 # La valeur d'un réglage : un interrupteur (bool) ou l'un de ses choix.
 type Valeur = ValeurChoix | bool
@@ -238,9 +239,9 @@ def _lire(chemin: Path) -> tuple[list[str], str]:
 
 def _ecrire(chemin: Path, lignes: list[str], fin: str) -> None:
     texte = fin.join(lignes)
-    tmp = chemin.with_name(chemin.name + ".tmp")
-    tmp.write_bytes(texte.encode("utf-8", errors="surrogateescape"))
-    tmp.replace(chemin)
+    # Le temporaire est effacé sur un échec (disque plein, fichier verrouillé) :
+    # un `d3d9.ini.tmp` restait sinon dans le dossier du jeu (audit du 2026-10-29).
+    ecrire_octets_atomique(chemin, texte.encode("utf-8", errors="surrogateescape"))
 
 
 def _bornes(lignes: list[str], section: str) -> tuple[int, int] | None:

@@ -1,7 +1,6 @@
 """Lecteur vidéo basé sur QVideoSink — frames peintes via BackgroundWidget."""
 
 import logging
-import tempfile
 from pathlib import Path
 
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject
@@ -42,6 +41,20 @@ ECART_FOND_US = 25_000
 # saut dans une cinématique d'EA (`vp6_ea`) : 4 s d'écart au pire chez HP5 et
 # HP6, rattrapées en une demi-seconde (mesuré le 2026-10-27).
 _RATTRAPAGE = 8.0
+
+
+def dossier_des_copies() -> Path:
+    """Où poser la copie d'une cinématique d'EA pour un saut : dans les données
+    du launcher, résolu À L'APPEL (les tests redirigent la config).
+
+    Plus dans le /tmp partagé sous un nom fixe : sous Linux, un autre compte
+    pouvait y poser le fichier avant nous (saut cassé) ou, sans
+    `fs.protected_symlinks`, un lien vers un fichier de la victime, écrasé
+    entre l'`unlink` et l'`open` (audit du 2026-10-29). Toujours deux noms qui
+    alternent : la place reste bornée.
+    """
+    from src.core.config import CONFIG_FILE_PATH
+    return CONFIG_FILE_PATH.parent / "cache" / "cinematiques_saut"
 
 
 class VideoPlayer(QObject):
@@ -148,9 +161,10 @@ class VideoPlayer(QObject):
         """Rejoue la cinématique d'EA depuis son image complète d'avant `ms`.
         Un saut direct décodait des pavés de couleur jusqu'à la fin (Ludo,
         2026-10-27, HP6)."""
-        copie = Path(tempfile.gettempdir()) / f"accio_cinematique_{self._copies % 2}.vp6"
+        copie = dossier_des_copies() / f"saut_{self._copies % 2}.vp6"
         self._copies += 1
         try:
+            copie.parent.mkdir(parents=True, exist_ok=True)
             copie.unlink(missing_ok=True)
             debut = vp6_ea.copie_depuis(self._source, index, ms, copie)
         except OSError as e:

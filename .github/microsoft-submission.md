@@ -25,19 +25,20 @@ AccioLauncher.exe {TAG} is a free, open-source (GNU GPL v3) launcher that downlo
 - Website: https://acciolauncher.be/
 - SHA-256: {SHA256}
 - Built by GitHub Actions from the public source (release.yml), with a Sigstore build provenance attestation: gh attestation verify AccioLauncher.exe --repo ludvdber/AccioLauncher
-- PyInstaller onefile (Python 3.15, PyQt6), no UPX. Bundles 7-Zip and vgmstream-cli (ISC).
+- PyInstaller onefile (Python 3.15, PyQt6), no UPX. Bundles 7-Zip.
 
 Expected behaviour:
-- HTTPS only, to github.com, api.github.com, raw.githubusercontent.com; Windows certificate store; every download checked against its SHA-256.
-- Before launching a 32-bit game, sets LARGE_ADDRESS_AWARE in that game's exe header (PE checksum fixed) so it can use 4 GB.
-- Runs vgmstream-cli (no window) to convert game music to WAV in its cache.
+- HTTPS only (github.com, raw.githubusercontent.com, download.microsoft.com); Windows certificate store; downloads SHA-256 checked.
+- Before launching a 32-bit game, sets LARGE_ADDRESS_AWARE in its exe header (checksum fixed).
+- On first use, downloads vgmstream-cli (ISC, SHA-256 checked); runs it (no window) to convert game music to WAV.
+- On request: missing VC++/DirectX redistributables from Microsoft, Authenticode-checked (PowerShell), run elevated (UAC).
 - Self-update: a .bat waits for exit, swaps the exe, restarts it.
 - Removes Zone.Identifier from extracted game files.
-- Two games only, after asking: writes language and install path under HKLM\SOFTWARE\WOW6432Node\Electronic Arts\... via elevated regedit import (UAC).
+- Two games, after asking: language/install path under HKLM\SOFTWARE\WOW6432Node\Electronic Arts\... via elevated regedit (UAC).
 - Optional Discord Rich Presence (local named pipe).
-- After a game crash only: wevtutil.exe qe (read-only) on the Application log.
+- After a game crash only: wevtutil.exe qe (read-only).
 - Reads the controller via winmm joyGetPosEx.
-- Gzips copies of game saves before each session; exports/imports saves as .zip on request.
-- Reads saves (read-only) for progress; lists WinSxS for VC++ 2005/2008.
-- Moves screenshots to Pictures\Accio Launcher (BMP to PNG); saves music to Music\Accio on request.
+- Gzips save copies before each session; exports/imports saves as .zip on request.
+- Reads saves for progress; lists WinSxS for VC++ 2005/2008.
+- Moves screenshots to Pictures\Accio Launcher; saves music to Music\Accio on request.
 ```

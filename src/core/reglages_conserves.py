@@ -26,6 +26,7 @@ from pathlib import Path
 
 from src.core import reglages_correctif, reglages_graphiques
 from src.core.game_data import GameData
+from src.core.ecriture_atomique import ecrire_octets_atomique
 
 log = logging.getLogger(__name__)
 
@@ -113,9 +114,7 @@ def reposer(game: GameData, install_path: Path, gardes: dict[Path, bytes]) -> in
                 neuf = chemin.read_bytes().decode("utf-8", errors="surrogateescape")
                 texte, changees = fusionner(neuf, ancien)
                 if changees:
-                    tmp = chemin.with_name(chemin.name + ".tmp")
-                    tmp.write_bytes(texte.encode("utf-8", errors="surrogateescape"))
-                    tmp.replace(chemin)
+                    ecrire_octets_atomique(chemin, texte.encode("utf-8", errors="surrogateescape"))
                 log.info("Réglages repris dans %s : %d clé(s)", chemin.name, changees)
             else:
                 # La nouvelle version ne fournit pas ce fichier : on remet le sien.

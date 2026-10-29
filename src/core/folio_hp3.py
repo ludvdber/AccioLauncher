@@ -205,12 +205,6 @@ def _fichier(system: Path, base: str, langue: str) -> Path | None:
     return None
 
 
-def numeros_cartes(hgame: Path) -> dict[str, int]:
-    """Classe `WC_…` → son numéro de texte (`dialogId` dans ses propriétés par
-    défaut)."""
-    return _proprietes_cartes(hgame)[0]
-
-
 def _proprietes_cartes(hgame: Path) -> tuple[dict[str, int], dict[str, str]]:
     """Classe `WC_…` → (numéro de texte, code de carte), lus dans les
     propriétés par défaut de chaque classe. Le motif cherché est l'étiquette

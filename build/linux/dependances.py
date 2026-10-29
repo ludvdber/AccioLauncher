@@ -71,7 +71,8 @@ def besoins(chemin: str | os.PathLike) -> list[str]:
         raise RuntimeError("objdump introuvable (paquet binutils) : PyInstaller l'exige aussi")
     # Programme trouvé par chemin ABSOLU, fichier du build ; aucun shell.
     sortie = subprocess.run(  # nosec B603
-        [objdump, "-p", str(chemin)], capture_output=True, text=True, check=False)
+        [objdump, "-p", str(chemin)], capture_output=True, text=True,
+        encoding="utf-8", errors="replace", check=False)
     return _NEEDED.findall(sortie.stdout) if sortie.returncode == 0 else []
 
 

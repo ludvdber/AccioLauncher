@@ -102,6 +102,24 @@ class TestQuelCorrectif:
 
 
 class TestEcritureEnPlace:
+    def test_un_echec_ne_laisse_aucun_temporaire(self, ini, monkeypatch):
+        """Audit du 2026-10-29 : sur un échec (fichier verrouillé, disque plein),
+        `d3d9.ini.tmp` restait dans le dossier du jeu, et le fichier d'origine
+        doit rester tel quel."""
+        import errno
+        import os
+        avant = ini.read_bytes()
+
+        def refuse(*_a, **_k):
+            raise OSError(errno.EACCES, "verrouillé")
+        monkeypatch.setattr(os, "replace", refuse)
+        with pytest.raises(OSError):
+            rc.ecrire(ini, rc.REGLAGES["arriere_plan"], False)
+        monkeypatch.undo()
+        # `.origine` est la copie voulue avant la première retouche ; rien d'autre.
+        assert sorted(p.name for p in ini.parent.iterdir()) == ["d3d9.ini", "d3d9.ini.origine"]
+        assert ini.read_bytes() == avant
+
     def test_seule_la_ligne_de_la_cle_change(self, ini):
         avant = ini.read_bytes().split(b"\r\n")
         rc.ecrire(ini, rc.REGLAGES["arriere_plan"], False)
