@@ -354,9 +354,6 @@ class TestLectureCinematique:
             def playbackState(self):
                 return QMediaPlayer.PlaybackState.PlayingState
 
-            def stop(self):
-                pass
-
             def setSource(self, _s):
                 pass
 
@@ -371,6 +368,19 @@ class TestLectureCinematique:
         page._statut_voix(QMediaPlayer.MediaStatus.EndOfMedia)
         assert not page._courante
         assert "cinematique" not in win._mediatheque.fond._raisons
+
+    def test_la_voix_s_arrete_sans_stop(self, vue, monkeypatch):
+        """Règle 135 : `stop()` garde le GIL, `setSource(QUrl())` arrête et le relâche."""
+        from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QMediaPlayer
+        if not MULTIMEDIA_DISPONIBLE:
+            pytest.skip("QtMultimedia absent de cette machine")
+        _win, page, _ordre = vue
+        voix = QMediaPlayer(page)
+        appels = []
+        monkeypatch.setattr(voix, "stop", lambda: appels.append(True))
+        page._voix = voix
+        page._arreter_voix()
+        assert not appels and page._voix is None
 
     def test_quitter_la_rubrique_arrete_tout(self, vue):
         win, page, _ordre = vue

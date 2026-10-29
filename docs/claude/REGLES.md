@@ -5,7 +5,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ## Don't reintroduce these
 
-134 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
+135 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
 
 ### Processus, threads, sortie
 
@@ -23,6 +23,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 12. **Monkeypatcher un attribut de CLASSE Qt dans un test** — remplacer puis « restaurer » `ParticleOverlay.update` laisse le descripteur sip posté en attribut Python, et le process meurt plusieurs FICHIERS plus loin. Vaut aussi pour une `property` posée sur un `QObject`. Chaque fichier passe seul, et `-v` masque le défaut en ralentissant. **Deux leçons d'outillage** : un site de plantage qui CHANGE d'une exécution à l'autre désigne un état corrompu et jamais le code qui peint ; la seule méthode qui tranche est la bissection par fichier. Espionner par une sous-classe, ou poser le faux sur l'INSTANCE.
 
 133. **Détruire un `QThread` depuis le slot de son PROPRE signal de fin nommé** — ces signaux (`download_finished`, `install_finished`, `error`, `preparation_terminee`) partent de `run()` JUSTE AVANT son retour, donc le slot peut tourner pendant que le thread vit encore. `deleteLater()` nu, ou référence oubliée d'un thread resté enfant d'un objet qui meurt ensuite : « QThread: Destroyed while thread is still running », qFatal, code 134 — une exécution sur deux en CI Linux (préparation de Wine, 2026-09-24). **Quatre sites** : `preparateur_wine`, `trailer_store` (exposé même sans mort du parent), `game_operations`, `update_dispatcher`. Passer par `thread_utils.liberer_apres_fin`. Filets : `tests/test_fin_de_thread.py` (sous-processus, `run()` qui émet puis dort 300 ms ; l'ancien code DOIT planter) et `tests/test_garde_fin_de_thread.py` (balayage AST de chaque `.connect` d'un signal de fin, méthodes appelées comprises).
+135. **Arrêter un `QMediaPlayer` par `stop()`** — PyQt l'appelle SANS relâcher le GIL, et le greffon FFmpeg y attend un verrou de Qt (`QObject::disconnect`). Le fil `QFFmpeg::AudioR`, qui tient ce verrou en détruisant ses objets, passe par `sipQAudioOutput::disconnectNotify`, qui prend le GIL : interblocage, le launcher FIGE (pris sous gdb le 2026-10-29 au démontage de `test_video_player.py` ; c'était le linux-smoke coupé à 20 min sur la PR #19, et le build de la release #22). `setSource(QUrl())` arrête AUSSI, lâche le fichier, et relâche le GIL (`/ReleaseGIL/` dans `qmediaplayer.sip`). **Quatre sites** : `VideoPlayer._liberer`, `FondSonore` (`arreter`, morceau introuvable), le son des cartes de `folio_jeux`, la voix de `mediatheque_page`. Mesure : MESURE_A_POSER. `tests/test_arret_sans_gil.py`.
 
 ### Qt : peinture, focus, widgets
 
