@@ -351,6 +351,8 @@ class TestWorkflowDeRelease:
         assert "libsqlite3-0" in linux
         # Le greffon FFmpeg de QtMultimedia : sans elle, ni vidéo ni musique.
         assert "libxrandr2" in linux
+        # Un gel dans du code C : seul le fil de garde de pytest-timeout l'arrête.
+        assert "--timeout-method=thread" in linux
 
 
 glibc = _module("glibc_exigee")

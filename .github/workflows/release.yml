@@ -281,7 +281,11 @@ jobs:
         env:
           ACCIO_PY: python
           PYTEST_TIMEOUT: "60"  # voir le job windows
-          PYTEST_ADDOPTS: "-n 4 --dist loadfile"
+          # Méthode « thread » : le gel de la release #22 est revenu au build
+          # d'essai du 2026-10-29 (98 %, 30 min), bloqué dans du code C où le
+          # signal de la méthode par défaut n'arrive jamais. Le fil de garde,
+          # lui, vide les piles au journal et arrête le build en 60 s.
+          PYTEST_ADDOPTS: "-n 4 --dist loadfile --timeout-method=thread"
         run: ./build.sh
 
       # La preuve que le conteneur a tenu sa promesse : aucun binaire de
