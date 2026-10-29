@@ -21,6 +21,8 @@ python essai_avant_release.py hp2 v1.2.0
 ... jusqu'à hp6
 ```
 
+D'abord un passage à blanc, sans « oui » : `set ACCIO_A_BLANC=1` puis `python essai_avant_release.py hp4 a_blanc`. Le vrai clic JOUER part, mais le jeu est remplacé par un `ping` invisible et le launcher reste hors écran. 6/6 attendu ; un échec vient alors du pilote ou du launcher, pas du jeu.
+
 | Jeu | Ce que le pilote fait | Ce qui est vérifié |
 |---|---|---|
 | HP1 | attend le menu, Alt+Entrée ×2, Alt+Tab | fenêtre en moins de 60 s, le jeu survit à Alt+Tab, grâce de relance gardée |
