@@ -232,13 +232,14 @@ jobs:
       # libsqlite3-0 : le Python de setup-python la suppose (l'image de runner
       # l'a) ; sans elle, `import sqlite3` échoue et mypy s'arrête sur une
       # « INTERNAL ERROR » (relevé au build d'essai du 2026-10-29).
+      # `file` : appimagetool refuse de tourner sans (même relevé).
       - name: Outils de base du conteneur
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates git curl xz-utils \
-            libsqlite3-0 libreadline8
+            libsqlite3-0 libreadline8 file
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -351,6 +351,8 @@ class TestWorkflowDeRelease:
         assert "libsqlite3-0" in linux
         # Le greffon FFmpeg de QtMultimedia : sans elle, ni vidéo ni musique.
         assert "libxrandr2" in linux
+        # appimagetool exige la commande `file`, absente du conteneur nu.
+        assert re.search(r"xz-utils \\\n\s+libsqlite3-0 libreadline8 file\n", linux)
         # Un gel dans du code C : seul le fil de garde de pytest-timeout l'arrête.
         assert "--timeout-method=thread" in linux
 

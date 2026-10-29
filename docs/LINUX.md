@@ -575,6 +575,39 @@ référence ; un build local fait par `uv` n'est pas comparable au Mo près.
 `libQt6Quick` et `libQt6Qml` (14 Mo) restent nécessaires : c'est le greffon
 FFmpeg de QtMultimedia (`libffmpegmediaplugin.so`) qui les réclame.
 
+### Build d'essai dans le conteneur `ubuntu:22.04` (2026-10-29)
+
+`release.yml` passe le job Linux sur `runs-on: ubuntu-latest` avec
+`container: ubuntu:22.04`. Le déclenchement du workflow depuis la session
+d'audit étant refusé (403), le job a été REJOUÉ dans l'image officielle
+`ubuntu:22.04`, avec le Python 3.15.2 que `setup-python` installe pour 22.04
+(même archive `python-versions`), les paquets du workflow et `./build.sh`.
+
+Le conteneur nu manquait de trois choses que l'image de runner fournissait,
+toutes ajoutées au workflow et tenues par `test_build_linux` :
+
+| Manque | Symptôme |
+|---|---|
+| `libsqlite3-0` | mypy (étape 2/6) : « INTERNAL ERROR » sur `import sqlite3` |
+| `libxrandr2` | greffon FFmpeg de QtMultimedia non chargé : aucune vidéo, 2 tests de lecture en échec |
+| `file` | appimagetool refuse de tourner |
+
+| Vérification | Résultat |
+|---|---|
+| Tests (root, `-n 4`) | 3981 réussis, 41 sautés, 66 s |
+| Audit de géométrie (Xvfb, vraies polices) | OK |
+| AppImage | 64 Mo, `verifier_dossier` sans défaut |
+| `glibc_exigee.py … 2.35` | 165 fichiers ELF, glibc exigée **2.35** : accepté |
+| Contre-épreuve `… 2.34` | refusé : `libpython3.15.so.1.0` exige GLIBC_2.35 |
+| `objdump -T` brut sur l'image extraite | versions les plus hautes : 2.33, 2.34, **2.35** |
+
+**Gel intermittent** : une passe sur trois a gelé à 98 % des tests (le
+symptôme de la release #22), sans que `PYTEST_TIMEOUT` ne se déclenche : le
+blocage est dans du code C, où le signal de la méthode par défaut n'arrive
+pas. La release passe donc `--timeout-method=thread` : le fil de garde vide
+les piles au journal et arrête le build en 60 s. La passe suivante, identique,
+était verte.
+
 ## 10. Limites de l'audit (phase 1)
 
 Vérifié dans l'environnement de travail (Ubuntu 24.04, Wine 9.0 64 bits, sans
