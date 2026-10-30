@@ -1,5 +1,7 @@
 """Panneau d'actions dynamique — boutons et barres de progression selon l'état du jeu."""
 
+from pathlib import Path
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
@@ -67,6 +69,9 @@ class ActionPanel(QWidget):
     # bouton jusqu'au 2026-10-27 (Ludo : « plus petit, une icône musique et
     # images serait top »).
     medias_clicked = pyqtSignal()
+    # La page « Difficulté » (1.4, Ludo 2026-10-30) : même place sur les huit
+    # fiches, grisée là où aucun preset ne change encore rien.
+    difficulte_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -436,6 +441,7 @@ class ActionPanel(QWidget):
         self._action_layout.addWidget(btn_reglages)
         self._btn_reglages = btn_reglages
         self._ajouter_medias()
+        self._ajouter_difficulte()
 
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"
@@ -453,6 +459,25 @@ class ActionPanel(QWidget):
             self._update_row_layout.addWidget(lbl)
             self._update_row_layout.addWidget(link)
             self._update_row.show()
+
+    def _ajouter_difficulte(self) -> None:
+        from src.core import difficulte_presets as dp
+        from src.core import reglages_correctif
+        game = self._game
+        ini = (reglages_correctif.ini_du_correctif(
+            self._manager.config.install_path / Path(game.executable).parent)
+            if game.fix_settings else None)
+        idents = dp.idents_du_jeu(game, ini)
+        ouvert = any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal")
+        btn = IconButton("jauge", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
+        btn.setObjectName("boutonDifficulte")
+        btn.setAccessibleName(tr("Difficulté de {}").format(game.name))
+        btn.setToolTip(tr("Difficulté") if ouvert else tr("Difficulté : bientôt pour ce jeu"))
+        btn.setEnabled(ouvert)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor if ouvert else Qt.CursorShape.ArrowCursor)
+        btn.clicked.connect(self.difficulte_clicked)
+        self._action_layout.addWidget(btn)
+        self._btn_difficulte = btn
 
     def _ajouter_medias(self) -> None:
         from src.ui.mediatheque import a_de_la_musique, a_des_medias

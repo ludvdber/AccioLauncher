@@ -113,7 +113,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
     def __init__(self, game: GameData, manager: GameManager,
                  appliquer_langue, actions=(),
-                 parent: QWidget | None = None, appliquer_manette=None) -> None:
+                 parent: QWidget | None = None, appliquer_manette=None, onglet: str = "") -> None:
         super().__init__(parent)
         self.game = game
         self.manager = manager
@@ -165,6 +165,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self.setWindowTitle(tr("Réglages de {}").format(game.name))
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self._build_ui()
+        self.ouvrir_onglet(onglet)   # la page Difficulté ouvre « jeu » ; "" : la première
         self._taille_de_depart()
 
     def _taille_de_depart(self) -> None:
@@ -331,6 +332,11 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         return pied
 
     # ── Les pages ──
+
+    def ouvrir_onglet(self, ident: str) -> None:
+        """Ouvre la rubrique `ident` (« jeu » depuis la page Difficulté) ; absente, rien ne change."""
+        if (btn := self._onglets.get(ident)) is not None:
+            btn.click()
 
     def _correctif_actif(self) -> bool:
         """Le jeu déclare des réglages ET porte le nouveau correctif, qui les lira."""

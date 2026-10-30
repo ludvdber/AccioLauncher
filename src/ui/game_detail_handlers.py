@@ -873,7 +873,7 @@ def on_install_local(view: GameDetailView) -> None:
     view._refresh()
 
 
-def on_game_settings(view: GameDetailView) -> None:
+def on_game_settings(view: GameDetailView, onglet: str = "") -> None:
     """Ouvre la fenêtre de réglages du jeu (engrenage à côté des boutons).
 
     Une FENÊTRE et pas un menu : les réglages d'un jeu vont s'étoffer
@@ -890,7 +890,7 @@ def on_game_settings(view: GameDetailView) -> None:
         appliquer_langue=lambda code: _appliquer_langue(view, code),
         actions=_actions_fichiers(view, game),
         parent=view,
-        appliquer_manette=lambda oui: _appliquer_manette(view, game, oui))
+        appliquer_manette=lambda oui: _appliquer_manette(view, game, oui), onglet=onglet)
     # Une PAGE à la place de la fiche depuis le 2026-10-09 (`pages.py`) ; sans
     # fenêtre pour l'accueillir (fiche seule, dans un test), une fenêtre.
     if view.receivers(view.page_demandee):

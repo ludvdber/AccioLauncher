@@ -461,12 +461,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Dégâts reçus",
             "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
             "jeu le prend en compte dans la seconde.",
-            choix=(1, 1.5, 2, 3), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 0.5, 1.5, 2, 3), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("degats_infliges", "Accio.Hardcore", "DamageDealt",
             "Dégâts de vos sorts",
             "Multiplie les dégâts des sorts de Harry : à ×0,5, les ennemis tiennent deux "
             "fois plus longtemps. Se change aussi pendant la partie.",
-            choix=(1, 0.75, 0.5, 0.33), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 1.5, 0.75, 0.5, 0.33), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("reaction_ennemis", "Accio.Hardcore", "EnemyReaction",
             "Réaction des ennemis",
             "Les ennemis attendent moins entre deux attaques, esquivent et lancent Protego "
@@ -487,7 +487,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "la leçon, sans quitter la partie.",
             choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES,
             beta=True),
-    # HP6, vie et régénération du joueur (correctif 2.3.0, 2026-10-31) : la branche
+    # HP6, vie et régénération du joueur (correctif 2.3.0, 2026-10-30) : la branche
     # « joueur » de la routine de vie (0x594DB0, relevée par Fable), relue dans la
     # seconde. Les adversaires n'y passent jamais. Pas de « vie des ennemis » : les
     # dégâts de vos sorts (`degats_infliges`) font déjà exactement cela. Déclarés au
@@ -496,7 +496,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Vie de Harry",
             "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. "
             "Sa vie du moment garde la même part. Se change aussi pendant la partie.",
-            choix=(1, 0.75, 0.5), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 1.5, 0.75, 0.5), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("regeneration", "Accio.Hardcore", "PlayerRegen",
             "Régénération",
             "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. "
