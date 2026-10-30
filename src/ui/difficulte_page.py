@@ -63,7 +63,7 @@ class _CartePreset(QFrame):
         phrase.setStyleSheet(phrase.styleSheet() + " border: none;")
         lay.addWidget(phrase)
         for libelle, valeur in lignes:
-            ligne = texte(f"{libelle} : {valeur}", 13, "#dcdaea", retour=True)
+            ligne = texte(f"{libelle} : {valeur}" if valeur else libelle, 13, "#dcdaea", retour=True)
             ligne.setObjectName("changement")
             ligne.setStyleSheet(ligne.styleSheet() + " border: none;")
             lay.addWidget(ligne)
@@ -168,8 +168,11 @@ class DifficultePage(QDialog):
         self.cartes = rangees[False] + rangees[True]
         # Même nombre de colonnes aux deux rangées : les cartes s'alignent.
         colonnes = max(len(rangees[False]), len(rangees[True]))
+        # Sous 210 px par carte, elles s'écrasaient (cinq cartes à 1000 px de
+        # large) et « Impardonnable » élargissait sa colonne : on empile.
+        seuil = colonnes * 210
         lay.addSpacing(24)
-        lay.addWidget(Rangee(rangees[False], colonnes, seuil=760, ecart=18))
+        lay.addWidget(Rangee(rangees[False], colonnes, seuil=seuil, ecart=18))
         lay.addSpacing(30)
         lay.addWidget(surtitre(tr("Une seule vie")))
         lay.addSpacing(6)
@@ -177,7 +180,7 @@ class DifficultePage(QDialog):
                                "sauvegarde."), 14, ENCRE_DOUCE, retour=True))
         lay.addSpacing(14)
         lay.addWidget(Rangee(rangees[True] + _cases_vides(colonnes - len(rangees[True])),
-                             colonnes, seuil=760, ecart=18))
+                             colonnes, seuil=seuil, ecart=18))
         lay.addSpacing(22)
         sur_mesure = QHBoxLayout()
         sur_mesure.setSpacing(18)

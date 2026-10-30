@@ -309,7 +309,7 @@ class TestModeDifficile:
 
     def test_tout_le_mode_difficile_est_en_beta(self):
         hardcore = {r.ident for r in rc.REGLAGES.values() if r.section == "Accio.Hardcore"}
-        assert hardcore == {*self.IDENTS, "sorts_retires"}
+        assert hardcore == {*self.IDENTS, "sorts_retires", "invincible"}
         assert all(rc.REGLAGES[i].beta for i in hardcore)
         # Seul autre réglage en essai : le Quidditch de HP1/HP2, pas encore vu en match.
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {"quidditch"}
@@ -340,11 +340,19 @@ class TestModeDifficile:
         assert rc.libelle_choix(rc.REGLAGES["regeneration"], 0) == tr("Jamais")
         assert rc.libelle_choix(rc.REGLAGES["vie_joueur"], 0.5) in ("×0,5", "×0.5")
 
-    def test_vie_et_regeneration_pas_encore_au_catalogue(self):
+    def test_vie_regeneration_invincible_pas_encore_au_catalogue(self):
         """Pas vus en jeu : aucun jeu ne les déclare encore, donc ils ne s'affichent pas."""
         from src.core.game_data import load_catalog
         for jeu in load_catalog().games:
-            assert not {"vie_joueur", "regeneration"} & set(jeu.fix_settings), jeu.id
+            assert not {"vie_joueur", "regeneration", "invincible"} & set(jeu.fix_settings), jeu.id
+
+    def test_invincible_est_une_cle_a_part_eteinte_par_defaut(self, ini_dur):
+        """Pas DamageTaken=0 : une valeur illisible vaut 0 aussi, et ne doit rendre personne immortel."""
+        r = rc.REGLAGES["invincible"]
+        assert rc.lire(ini_dur, r) == rc.Etat(False)
+        rc.ecrire(ini_dur, r, True)
+        assert "Invincible=1" in ini_dur.read_bytes().decode().split("\r\n")
+        assert 0 not in rc.REGLAGES["degats_recus"].choix
 
     def test_sorts_retires_aucun_quand_la_cle_manque_ou_est_vide(self, ini_dur):
         r = rc.REGLAGES["sorts_retires"]

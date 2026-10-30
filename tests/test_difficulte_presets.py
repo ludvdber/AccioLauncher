@@ -14,9 +14,10 @@ from src.core.reglages_table import REGLAGES
 INI = "\r\n".join([
     "; Accio Launcher - PC fix", "[Accio.Window]", "WindowStyle=0", "",
     "[Accio.Hardcore]", "DamageTaken=1", "DamageDealt=1", "EnemyReaction=1", "RemovedSpells=",
-    "PlayerHealth=1", "PlayerRegen=1", "",
+    "PlayerHealth=1", "PlayerRegen=1", "Invincible=0", "",
 ]) + "\r\n"
-HP6 = ("degats_recus", "degats_infliges", "reaction_ennemis", "sorts_retires", "vie_joueur", "regeneration")
+HP6 = ("degats_recus", "degats_infliges", "reaction_ennemis", "sorts_retires", "vie_joueur", "regeneration",
+       "invincible")
 # Ce que les presets règlent : tout sauf les sorts retirés (ils peuvent bloquer la partie).
 HP6_PRESETS = frozenset(HP6) - {"sorts_retires"}
 
@@ -48,17 +49,21 @@ class TestValeurs:
             for ident, valeur in preset.valeurs.items():
                 if ident == dp.NATIVE:
                     assert valeur in (0, 1, 2)
+                elif not REGLAGES[ident].choix:
+                    assert isinstance(valeur, bool), (preset.ident, ident)
                 else:
                     assert valeur in REGLAGES[ident].choix, (preset.ident, ident, valeur)
 
     def test_normal_est_le_jeu_tel_que_livre(self):
         """Le premier choix de chaque réglage est son « d'origine »."""
         for ident, valeur in dp.PAR_IDENT["normal"].valeurs.items():
-            if ident != dp.NATIVE:
-                assert valeur == REGLAGES[ident].choix[0], ident
+            if ident == dp.NATIVE:
+                continue
+            reglage = REGLAGES[ident]
+            assert valeur == (reglage.choix[0] if reglage.choix else reglage.defaut), ident
 
-    def test_six_presets_du_plus_doux_au_plus_dur(self):
-        assert [p.ident for p in dp.PRESETS] == ["detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+    def test_sept_presets_du_plus_doux_au_plus_dur(self):
+        assert [p.ident for p in dp.PRESETS] == ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
 
     def test_chaque_cran_est_plus_dur_que_le_precedent(self):
         """Ludo, 2026-10-30 : Difficile entre la difficulté d'origine et Hardcore, Hardcore bien au-delà."""
@@ -67,6 +72,14 @@ class TestValeurs:
             assert doux["degats_recus"] < dur["degats_recus"]
             assert doux["degats_infliges"] > dur["degats_infliges"]
         assert dp.PAR_IDENT["hardcore"].valeurs["reaction_ennemis"] < max(REGLAGES["reaction_ennemis"].choix),             "le sur mesure va plus loin que Hardcore"
+
+    def test_recit_seulement_la_ou_harry_peut_etre_invincible(self):
+        """Sans invincibilité (correctif 2.2.0, HP1-HP3), Récit ne serait qu'un Détendu mal nommé."""
+        recit = dp.PAR_IDENT["recit"]
+        assert not dp.disponible(recit, "hp6", {"degats_recus", "degats_infliges"})
+        assert dp.disponible(recit, "hp6", {"degats_infliges", "invincible"})
+        idents = {"degats_recus", "degats_infliges"}
+        assert dp.courant({"degats_recus": 1, "degats_infliges": 1.5}, idents) == dp.SUR_MESURE
 
     def test_aucun_preset_ne_retire_de_sort(self):
         """Ludo, 2026-10-30 : un sort retiré peut bloquer la partie, c'est un réglage à part."""
@@ -88,7 +101,7 @@ class TestParJeu:
         idents = dp.idents_du_jeu(_jeu(fix_settings=list(HP6)), ini)
         assert idents == HP6_PRESETS
         assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp6", idents)] == \
-            ["detendu", "normal", "difficile", "hardcore"]
+            ["recit", "detendu", "normal", "difficile", "hardcore"]
 
     def test_une_seule_vie_s_ouvre_jeu_par_jeu(self, monkeypatch):
         """Le jour où le mécanisme existe dans un jeu : Réaliste s'y offre même sans
@@ -163,6 +176,7 @@ class TestLireEtAppliquer:
         assert lignes["Régénération"] == "Jamais"
         assert "Sorts retirés" not in lignes
         assert "Vie de Harry" not in lignes, "Hardcore ne la change pas"
+        assert ("Harry invincible", "") in dp.changements(dp.PAR_IDENT["recit"], idents)
         assert dp.changements(dp.PAR_IDENT["normal"], idents) == ()
 
 
@@ -186,7 +200,7 @@ class TestPage:
 
     def test_une_carte_par_preset_utile_et_une_seule_vie_bientot(self, qtbot, dossier_hp6):
         page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        assert [c.ident for c in page.cartes] == ["detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+        assert [c.ident for c in page.cartes] == ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
         for carte in page.cartes[-2:]:
             assert carte.bouton is None and carte.property("bientot") == "true"
         assert next(c for c in page.cartes if c.ident == "normal").property("actif") == "true", "un ini neuf : Normal"

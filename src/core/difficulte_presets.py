@@ -1,5 +1,6 @@
-"""Les presets de difficulté de la 1.4 : Détendu, Normal, Difficile, Hardcore,
-et deux presets à une seule vie, Réaliste et Impardonnable.
+"""Les presets de difficulté de la 1.4 : Récit (accessibilité, Harry invincible),
+Détendu, Normal, Difficile, Hardcore, et deux presets à une seule vie, Réaliste
+et Impardonnable.
 
 Tranché par Ludo le 2026-10-30 (atelier, `notes/DIFFICULTE_1.4.md` § 4) : des
 presets aux noms clairs, et « Sur mesure » dans des réglages à dérouler. Un
@@ -53,12 +54,15 @@ class Preset:
     phrase: str         # clé tr() : ce que le preset veut dire, tous jeux confondus
     valeurs: Mapping[str, object]
     une_vie: bool = False   # la première mort termine la partie
+    # Le réglage sans lequel le preset n'a pas de sens (Récit sans invincibilité
+    # ne serait qu'un Détendu mal nommé).
+    exige: str = ""
 
 
 # Pas de `sorts_retires` : aucun preset n'y touche, le choix du joueur reste.
 _NORMAL: dict[str, object] = {
     "degats_recus": 1, "degats_infliges": 1, "reaction_ennemis": 1,
-    "vie_joueur": 1, "regeneration": 1, "quidditch": 0, NATIVE: 0,
+    "vie_joueur": 1, "regeneration": 1, "invincible": False, "quidditch": 0, NATIVE: 0,
 }
 # Difficile (Ludo, 2026-10-30) : un cran entre la difficulté d'origine la plus
 # haute et Hardcore.
@@ -76,6 +80,10 @@ _HARDCORE: dict[str, object] = {
 
 # Du plus doux au plus dur, de gauche à droite.
 PRESETS = (
+    # Récit (Ludo, 2026-10-30) : le preset d'accessibilité, nommé positivement.
+    Preset("recit", "Récit",
+           "Pour vivre l'histoire sans échouer : les ennemis ne blessent plus Harry.",
+           {**_NORMAL, "invincible": True, "degats_infliges": 1.5}, exige="invincible"),
     Preset("detendu", "Détendu",
            "Pour profiter de l'histoire : Harry encaisse mieux et ses sorts portent plus.",
            {**_NORMAL, "degats_recus": 0.5, "degats_infliges": 1.5, "vie_joueur": 1.5}),
@@ -118,6 +126,8 @@ def disponible(preset: Preset, game_id: str, idents: Iterable[str]) -> bool:
     if preset.une_vie and game_id not in UNE_VIE_POSSIBLE:
         return False
     idents = frozenset(idents)
+    if preset.exige and preset.exige not in idents:
+        return False
     if preset.une_vie and preset.valeurs == PAR_IDENT["normal"].valeurs:
         return True
     return valeurs_pour(preset, idents) != valeurs_pour(PAR_IDENT["normal"], idents)
@@ -132,7 +142,7 @@ def courant(valeurs: Mapping[str, object], idents: Iterable[str]) -> str:
     idents = frozenset(idents)
     normal = PAR_IDENT["normal"]
     for preset in (normal, *(p for p in PRESETS if p is not normal)):
-        if preset.une_vie:
+        if preset.une_vie or (preset.exige and preset.exige not in idents):
             continue
         voulues = valeurs_pour(preset, idents)
         if voulues and all(valeurs.get(k) == v for k, v in voulues.items()):
@@ -153,6 +163,10 @@ def changements(preset: Preset, idents: Iterable[str]) -> tuple[tuple[str, str],
             lignes.append((tr("Difficulté du jeu"), tr(difficulte_jeu.NIVEAUX[int(str(valeur))])))
             continue
         reglage = REGLAGES[ident]
+        if not reglage.choix:
+            # Un interrupteur allumé se dit par son nom seul (« Harry invincible »).
+            lignes.append((rc.textes(reglage)[0], ""))
+            continue
         lignes.append((rc.textes(reglage)[0], rc.libelle_choix(reglage, valeur)))
     return tuple(lignes)
 

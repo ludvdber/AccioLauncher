@@ -191,7 +191,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
             "Plafonne le nombre d'images calculées : l'ordinateur chauffe moins et fait moins"
-            " de bruit.",
+            " de bruit. Pour un speedrun, restez à 60 au plus, comme le jeu d'origine.",
             choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
     # HP7 partie 1 : au-delà de 60 images/s, ses cinématiques passent en accéléré
     # (Ludo, 2026-10-01). Même clé, choix bornés ; le correctif tient aussi
@@ -508,6 +508,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "« Jamais » : elle ne remonte plus d'elle-même. Se change aussi pendant la partie.",
             choix=(1, 0.5, 0), zero="D'origine",
             etiquettes=((0.5, "Deux fois plus lente"), (0, "Jamais")), beta=True),
+    # Invincible (correctif 2.3.0, 2026-10-30, Ludo : « pour les personnes qui ont
+    # vraiment du mal ») : une clé à part et pas DamageTaken=0, qu'une valeur
+    # illisible donnerait aussi. HP5 et HP6. Au catalogue après un essai en jeu.
+    Reglage("invincible", "Accio.Hardcore", "Invincible",
+            "Harry invincible",
+            "Harry ne reçoit plus aucun dégât des ennemis : pour vivre l'histoire sans échouer. "
+            "« Dégâts reçus » n'a alors plus d'effet. Se change aussi pendant la partie.",
+            defaut=False, beta=True),
     # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
     # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
     # correctif), lu au démarrage du jeu seulement. À VOIR EN JEU (un match).
