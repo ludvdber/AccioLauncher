@@ -153,7 +153,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("champ_vision", "Accio.Game", "FOV",
             "Champ de vision",
             "Élargit l'angle de vue de la caméra : on voit davantage autour du personnage, "
-            "surtout utile sur un écran large. « D'origine » garde la vue du jeu.",
+            "surtout utile sur un écran large. Il vaut partout, course comprise : au-delà de "
+            "×1,15, courir donne une impression de vitesse excessive. « D'origine » garde la "
+            "vue du jeu.",
             choix=(0, 1.15, 1.25, 1.4), zero="D'origine", format_choix="×{}",
             onglet="affichage"),
     Reglage("ecran_principal", "Accio.Window", "UsePrimaryMonitor",
