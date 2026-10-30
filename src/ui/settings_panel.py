@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QFileDialog,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -683,6 +684,13 @@ class SettingsDialog(QDialog):
         ligne, self._tgl_discord = self._reglage(
             tr("Afficher le jeu en cours sur Discord"), "discord_presence")
         discord.ajouter(ligne)
+        self._ligne_discord_partie, self._tgl_discord_partie = self._reglage(
+            tr("Montrer où j'en suis dans ma partie"), "discord_partie",
+            tr("Le lieu et l'avancement de votre partie s'affichent sur votre carte Discord. "
+               "Éteint, seuls le jeu, votre maison et votre année restent."))
+        discord.ajouter(self._ligne_discord_partie)
+        self._tgl_discord.toggled.connect(self._griser_discord_partie)
+        self._griser_discord_partie(self._tgl_discord.isChecked())
 
         manette_carte = Carte()
         ligne, self._tgl_nav_manette = self._reglage(
@@ -748,6 +756,17 @@ class SettingsDialog(QDialog):
             if champ == "reprise_directe" and bascule.isChecked() != self._reprise_initiale:
                 self.config.reprise_demandee = True
         self._save()
+
+    def _griser_discord_partie(self, presence: bool) -> None:
+        """Sans présence Discord, la carte n'existe pas : la case reste visible,
+        grisée (comme les réglages qu'un autre éteint), sa valeur intacte."""
+        self._ligne_discord_partie.setEnabled(presence)
+        if presence:
+            self._ligne_discord_partie.setGraphicsEffect(None)
+        elif self._ligne_discord_partie.graphicsEffect() is None:
+            effet = QGraphicsOpacityEffect(self._ligne_discord_partie)
+            effet.setOpacity(0.42)
+            self._ligne_discord_partie.setGraphicsEffect(effet)
 
     @staticmethod
     def _on_navigation_manette(coche: bool) -> None:

@@ -132,8 +132,11 @@ class GameSession(QObject):
 
         Lue dans les sauvegardes comme la fiche (`resume_partie.lire_resume`),
         dans un fil à part : un paquet UE1 se lit en quelques dizaines de ms.
-        Rien de lisible : la carte reste celle posée au lancement.
+        Rien de lisible : la carte reste celle posée au lancement. Le joueur
+        peut la cacher (`discord_partie`) : alors rien n'est lu ni reposé.
         """
+        if not self._manager.config.discord_partie:
+            return
         game = self._manager.get_game_by_id(game_id)
         if game is None or game.id not in folio.FICHES:
             return
@@ -182,7 +185,8 @@ class GameSession(QObject):
         """Le jeu tourne encore : on rafraîchit le filet de reprise, et la carte
         Discord si le jeu vient de sauvegarder (une minute au plus de retard)."""
         stats.battre_session(datetime.now())
-        if not self._manager.config.discord_presence or not self._game_id:
+        config = self._manager.config
+        if not config.discord_presence or not config.discord_partie or not self._game_id:
             return
         releve = sauvegardes.releve(self._spec(self._game_id))
         if releve != self._presence_releve:

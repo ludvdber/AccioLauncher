@@ -70,6 +70,7 @@ class TestConfig:
             c.season = "noel"
             c.kofi_milestone_thanked = True
             c.discord_presence = False
+            c.discord_partie = False
             c.playtime_seconds = {"hp1": 3600}
             c.last_played = {"hp1": "2026-06-11"}
             c.save()
@@ -79,6 +80,7 @@ class TestConfig:
             assert loaded.season == "noel"
             assert loaded.kofi_milestone_thanked is True
             assert loaded.discord_presence is False
+            assert loaded.discord_partie is False
             assert loaded.playtime_seconds == {"hp1": 3600}
             assert loaded.last_played == {"hp1": "2026-06-11"}
 

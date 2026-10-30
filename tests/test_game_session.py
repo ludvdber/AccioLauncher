@@ -311,3 +311,43 @@ class TestLigneDeProfil:
         monkeypatch.setattr("src.ui.game_session.sauvegardes.releve", lambda spec: {"Save0.usa": object()})
         s._on_battement()
         assert relues == ["hp1", "hp1"]
+
+
+class TestDiscordPartie:
+    """« Montrer où j'en suis dans ma partie » (`discord_partie`, Ludo, 2026-10-30) :
+    le lieu révèle un peu l'intrigue aux amis."""
+
+    @staticmethod
+    def _session(tmp_path, monkeypatch, partie: bool):
+        s = TestLigneDeProfil._session(tmp_path, "serpentard", annee=1)
+        s._manager.config.discord_partie = partie
+        s._monitor.start = lambda proc, nom, *, relance: None
+        envois, lus = [], []
+        s._presence.set_playing = lambda *args, **kw: envois.append(args)
+
+        class _FilImmediat:
+            def __init__(self, target, **_kw):
+                self._target = target
+
+            def start(self):
+                self._target()
+        monkeypatch.setattr("src.ui.game_session.threading.Thread", _FilImmediat)
+        monkeypatch.setattr("src.ui.game_session.resume_partie.lire_resume",
+                            lambda *a: lus.append(a) or object())
+        monkeypatch.setattr("src.ui.game_session.resume_partie.ligne_discord",
+                            lambda resume: "Serre · 9 cartes sur 25")
+        return s, envois, lus
+
+    def test_allumee_la_carte_porte_la_partie(self, tmp_path, qtbot, monkeypatch):
+        s, envois, lus = self._session(tmp_path, monkeypatch, partie=True)
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        assert lus, "la sauvegarde est lue"
+        assert envois[-1][3] == "Serre · 9 cartes sur 25"
+
+    def test_eteinte_rien_n_est_lu_ni_repose(self, tmp_path, qtbot, monkeypatch):
+        s, envois, lus = self._session(tmp_path, monkeypatch, partie=False)
+        s.demarrer(_FauxProcess(), "HP1", "hp1")
+        monkeypatch.setattr("src.ui.game_session.sauvegardes.releve", lambda spec: {"Save0.usa": object()})
+        s._on_battement()
+        assert lus == []
+        assert envois == [("HP1", "hp1", "Serpentard · 1ʳᵉ année")], "seule la carte du lancement"
