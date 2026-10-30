@@ -45,6 +45,8 @@ IDENTIQUES_TOLEREES = {
     "Textures",
     # Éditeur de touches de HP4 : « Pause » en anglais, « Fin » (la touche) en espagnol.
     "Pause", "Fin",
+    # Le surtitre de l'annonce des nouveautés : même mot en anglais.
+    "Important",
     # Carte de progression de la fiche : « Installation » en anglais, et « 42 % »
     # garde son espace en espagnol comme en français.
     "Installation", "{} %",

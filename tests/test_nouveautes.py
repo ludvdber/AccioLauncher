@@ -39,6 +39,22 @@ class TestContenuEmbarque:
                 assert point["titre"].get(langue) and point["texte"].get(langue), point
             for changement in entree["changements"]:
                 assert changement["texte"].get(langue), changement
+            if "annonce" in entree:
+                annonce = entree["annonce"]
+                assert annonce["titre"].get(langue), annonce["titre"]
+                for paragraphe in annonce["paragraphes"]:
+                    assert paragraphe.get(langue), paragraphe
+                if "appel" in annonce:
+                    assert annonce["appel"].get(langue), annonce["appel"]
+
+    def test_la_1_3_1_annonce_la_fin_des_jeux_livres(self):
+        """Ludo, 2026-10-30 : prévenir dès la 1.3.1, et renvoyer vers le Discord.
+        Jamais une source de jeux : seulement de l'aide."""
+        annonce = nouveautes.charger("1.3.1", "fr").annonce
+        assert annonce is not None and annonce.discord and "Discord" in annonce.appel
+        tout = " ".join(annonce.paragraphes + (annonce.appel,))
+        assert "votre copie" in tout and "Discord" in tout
+        assert "télécharg" not in tout.lower()
 
     def test_les_icones_existent(self):
         from src.ui.icon_button import ICONES
@@ -91,6 +107,25 @@ class TestLecture:
         traduit = {**entree, "nom": {"fr": "Le Terrier", "en": "The Burrow"}}
         assert nouveautes.charger("9.0", "en", _fichier(tmp_path, traduit)).nom == "The Burrow"
         assert nouveautes.charger("9.0", "fr", _fichier(tmp_path, entree)).nom == ""
+
+    def test_l_annonce(self, tmp_path):
+        entree = {"version": "9.0", "annonce": {
+            "titre": {"fr": "Titre", "en": "Title"},
+            "paragraphes": [{"fr": "Un", "en": "One"}, {"fr": ""}, "Deux"], "discord": True}}
+        annonce = nouveautes.charger("9.0", "en", _fichier(tmp_path, entree)).annonce
+        assert annonce == nouveautes.Annonce("Title", ("One", "Deux"), True)
+
+    @pytest.mark.parametrize("annonce", [
+        None, "texte", {"titre": "T"}, {"titre": "", "paragraphes": ["p"]},
+        {"titre": "T", "paragraphes": [""]}])
+    def test_une_annonce_incomplete_est_ignoree(self, tmp_path, annonce):
+        entree = {"version": "9.0", "annonce": annonce,
+                  "changements": [{"genre": "nouveau", "texte": "n"}]}
+        assert nouveautes.charger("9.0", "fr", _fichier(tmp_path, entree)).annonce is None
+
+    def test_discord_seulement_si_vrai(self, tmp_path):
+        entree = {"version": "9.0", "annonce": {"titre": "T", "paragraphes": ["p"], "discord": "oui"}}
+        assert not nouveautes.charger("9.0", "fr", _fichier(tmp_path, entree)).annonce.discord
 
 
 class TestQuandMontrer:
@@ -180,6 +215,26 @@ class TestPage:
         lien = page.findChild(QLabel, "toutesLesVersions")
         lien.linkActivated.emit(NOTES_VERSIONS_URL)
         assert ouverts == [NOTES_VERSIONS_URL]
+
+    def test_l_annonce_avant_les_cartes_et_son_bouton_discord(self, qtbot, monkeypatch):
+        from src.core.liens import DISCORD_URL
+        from src.ui.nouveautes_page import _CarteAnnonce, _CartePointFort
+        ouverts = []
+        monkeypatch.setattr("src.ui.nouveautes_page.open_url", ouverts.append)
+        page = self._page(qtbot)
+        page.resize(1280, 900)
+        page.show()
+        qtbot.waitExposed(page)
+        annonce = page.findChild(_CarteAnnonce)
+        assert annonce is not None
+        from PyQt6.QtWidgets import QLabel
+        assert annonce.findChild(QLabel, "appelAnnonce").text() == page.nouveautes.annonce.appel
+        premiere_carte = page.findChildren(_CartePointFort)[0]
+        assert annonce.mapTo(page, annonce.rect().topLeft()).y() < \
+            premiere_carte.mapTo(page, premiere_carte.rect().topLeft()).y()
+        assert annonce.rejoindre.objectName() == "principal"
+        annonce.rejoindre.click()
+        assert ouverts == [DISCORD_URL]
 
 
 class TestAProposOuvreLaPage:

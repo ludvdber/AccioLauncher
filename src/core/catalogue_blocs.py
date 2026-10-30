@@ -420,7 +420,7 @@ class Difficulte:
 
     HP2 (catalogue 0.50, 2026-10-30) : `[Engine.PlayerPawn] Difficulty` de
     `User.ini`, `DifficultyEasy` / `DifficultyMedium` / `DifficultyHard`, que le
-    menu Options du jeu règle aussi (presque personne ne l'y a vu). Les valeurs
+    code du jeu prévoit mais qu'aucun de ses menus ne montre (VU le 2026-10-30). Les valeurs
     vont du plus facile au plus difficile ; le launcher les nomme Facile, Moyen,
     Difficile (`difficulte_jeu.NIVEAUX`).
     """

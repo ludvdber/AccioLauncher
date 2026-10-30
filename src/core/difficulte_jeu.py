@@ -1,9 +1,10 @@
 """La difficulté propre au jeu, réglée depuis le launcher.
 
 Demande de Ludo (2026-10-30), pour la 1.3.1 en bêta : HP2 a une difficulté
-dans son menu Options (Facile / Moyen / Difficile, `User.ini`
-`[Engine.PlayerPawn] Difficulty`), livrée en Facile, et que presque personne
-n'y a vue. Ce qu'elle change, lu dans le code du jeu (atelier,
+(Facile / Moyen / Difficile, `User.ini` `[Engine.PlayerPawn] Difficulty`),
+livrée en Facile. Son code prévoit un choix dans la page Options, mais cette
+page ne le montre pas (VU en jeu le 2026-10-30) : le launcher est le seul moyen
+de la changer. Ce qu'elle change, lu dans le code du jeu (atelier,
 `notes/doc/hp2/SANTE_DEGATS.md` § 7) : dégâts reçus × 1,2 / 2 / 3, sorts
 ennemis × 1 / 2 / 3, Basilic plus dur ; pas VU en jeu.
 

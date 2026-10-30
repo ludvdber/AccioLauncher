@@ -21,8 +21,8 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.i18n import tr
-from src.core.liens import NOTES_VERSIONS_URL
-from src.core.nouveautes import Changement, Nouveautes, PointFort
+from src.core.liens import DISCORD_URL, NOTES_VERSIONS_URL
+from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
 from src.ui.composants import (
     ENCRE_DOUCE,
     Rangee,
@@ -43,6 +43,10 @@ _STYLE = """
 QDialog#nouveautes { background: #060611; }
 QFrame#pointFort {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.22); border-radius: 12px;
+}
+QFrame#annonce {
+    background: rgba(214, 167, 44, 0.08); border: 2px solid rgba(214, 167, 44, 0.75);
+    border-radius: 12px;
 }
 QFrame#filetOr { background: rgba(214, 167, 44, 0.14); border: none; }
 QLabel#toutesLesVersions { color: #a9a7c4; }
@@ -79,6 +83,45 @@ class _CartePointFort(QFrame):
         corps.setStyleSheet(corps.styleSheet() + " border: none;")
         lay.addWidget(corps)
         lay.addStretch()
+
+
+class _CarteAnnonce(QFrame):
+    """L'annonce de la version, bordée d'or plein : à lire avant le reste."""
+
+    def __init__(self, annonce: Annonce) -> None:
+        super().__init__()
+        self.setObjectName("annonce")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(26, 22, 26, 22)
+        lay.setSpacing(10)
+        lay.addWidget(surtitre(tr("Important")))
+        titre = QLabel(annonce.titre)
+        titre.setTextFormat(Qt.TextFormat.PlainText)
+        titre.setWordWrap(True)
+        titre.setFont(cinzel(15, bold=True))
+        titre.setStyleSheet("color: #f4f2f8; background: transparent; border: none;")
+        lay.addWidget(titre)
+        for paragraphe in annonce.paragraphes:
+            corps = texte(paragraphe, 15, "#dcdaea", retour=True)
+            corps.setStyleSheet(corps.styleSheet() + " border: none;")
+            lay.addWidget(corps)
+        if annonce.appel:
+            lay.addSpacing(6)
+            appel = QLabel(annonce.appel)
+            appel.setObjectName("appelAnnonce")
+            appel.setTextFormat(Qt.TextFormat.PlainText)
+            appel.setWordWrap(True)
+            appel.setFont(police(17, gras=True))
+            appel.setStyleSheet(f"color: {current_theme().accent_light}; background: transparent;"
+                                " border: none;")
+            lay.addWidget(appel)
+        if annonce.discord:
+            lay.addSpacing(4)
+            # Son nom d'objet reste « principal » : c'est lui qui le borde d'or.
+            self.rejoindre = bouton(tr("Rejoindre le Discord"), principal=True)
+            self.rejoindre.setAutoDefault(False)
+            self.rejoindre.clicked.connect(lambda: open_url(DISCORD_URL))
+            lay.addWidget(self.rejoindre, alignment=Qt.AlignmentFlag.AlignLeft)
 
 
 class _LigneChangement(QWidget):
@@ -166,6 +209,9 @@ class NouveautesPage(QDialog):
         tete.addWidget(lien, alignment=Qt.AlignmentFlag.AlignBottom)
         lay.addLayout(tete)
 
+        if self.nouveautes.annonce is not None:
+            lay.addSpacing(24)
+            lay.addWidget(_CarteAnnonce(self.nouveautes.annonce))
         if self.nouveautes.points_forts:
             lay.addSpacing(24)
             cartes = [_CartePointFort(p) for p in self.nouveautes.points_forts]

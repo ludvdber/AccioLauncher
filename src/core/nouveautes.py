@@ -46,6 +46,19 @@ class Changement:
 
 
 @dataclass(frozen=True)
+class Annonce:
+    """Un message à faire lire AVANT les nouveautés (1.3.1 : la fin des jeux
+    livrés par le launcher, Ludo 2026-10-30). `discord` ajoute le bouton qui
+    mène à la communauté."""
+    titre: str
+    paragraphes: tuple[str, ...]
+    discord: bool = False
+    # La phrase d'appel, en or au-dessus du bouton (Ludo : « insiste beaucoup
+    # sur le passage sur Discord »). Vide : pas de phrase.
+    appel: str = ""
+
+
+@dataclass(frozen=True)
 class Nouveautes:
     version: str
     depuis: str
@@ -54,6 +67,7 @@ class Nouveautes:
     # Le nom de la version (« Revelio · Folio Magi ») : un numéro seul ne dit
     # rien à personne. Vide : la page ne montre que le numéro.
     nom: str = ""
+    annonce: Annonce | None = None
 
 
 def mise_a_jour_installee(precedente: str) -> bool:
@@ -68,6 +82,19 @@ def mise_a_jour_installee(precedente: str) -> bool:
 
 def _liste(valeur: object) -> list[Any]:
     return valeur if isinstance(valeur, list) else []
+
+
+def _annonce(valeur: object, langue: str) -> Annonce | None:
+    """L'annonce d'une version ; None sans titre ou sans un paragraphe lisible."""
+    if not isinstance(valeur, dict):
+        return None
+    titre = texte_dans(valeur.get("titre"), langue)
+    paragraphes = tuple(p for p in (texte_dans(v, langue) for v in _liste(valeur.get("paragraphes")))
+                        if p)
+    if not titre or not paragraphes:
+        return None
+    return Annonce(titre, paragraphes, valeur.get("discord") is True,
+                   texte_dans(valeur.get("appel"), langue))
 
 
 def charger(version: str = APP_VERSION, langue: str | None = None,
@@ -98,10 +125,11 @@ def charger(version: str = APP_VERSION, langue: str | None = None,
     points = tuple(p for p in points if p.titre and p.texte)
     changements = tuple(sorted((c for c in changements if c.texte),
                                key=lambda c: GENRES.index(c.genre)))
-    if not points and not changements:
+    annonce = _annonce(entree.get("annonce"), langue)
+    if not points and not changements and annonce is None:
         return None
     return Nouveautes(version, str(entree.get("depuis", "")), points, changements,
-                      texte_dans(entree.get("nom"), langue))
+                      texte_dans(entree.get("nom"), langue), annonce)
 
 
 def a_montrer(precedente: str) -> bool:

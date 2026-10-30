@@ -594,7 +594,7 @@ class RubriquesDuJeu:
         choix.setCurrentIndex(rang)
         choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_difficulte(c))
         aide = tr(
-            "La difficulté du jeu lui-même, aussi réglable dans son menu Options. Plus elle "
+            "La difficulté du jeu lui-même, qu'aucun de ses menus ne montre. Plus elle "
             "monte, plus Harry perd de vie à chaque coup (× 1,2 en Facile, × 2 en Moyen, × 3 en "
             "Difficile) et plus les sorts ennemis vont vite ; le Basilic résiste davantage. "
             "À régler jeu fermé ; compte au prochain lancement.")
