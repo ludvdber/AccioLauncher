@@ -461,18 +461,21 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Dégâts reçus",
             "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
             "jeu le prend en compte dans la seconde.",
-            choix=(1, 0.5, 1.5, 2, 3), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 0.5, 1.5, 2, 3, 5), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("degats_infliges", "Accio.Hardcore", "DamageDealt",
             "Dégâts de vos sorts",
             "Multiplie les dégâts des sorts de Harry : à ×0,5, les ennemis tiennent deux "
             "fois plus longtemps. Se change aussi pendant la partie.",
-            choix=(1, 1.5, 0.75, 0.5, 0.33), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 1.5, 0.75, 0.5, 0.33, 0.25), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("reaction_ennemis", "Accio.Hardcore", "EnemyReaction",
             "Réaction des ennemis",
             "Les ennemis attendent moins entre deux attaques, esquivent et lancent Protego "
             "plus souvent. Vaut pour les ennemis rencontrés après le changement.",
-            choix=(1, 1.5, 2, 3), zero="D'origine",
-            etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables")),
+            # ×5 (Hardcore) : 0,4 s entre deux attaques ; ×10, le plus haut que le correctif
+            # accepte : 0,2 s, presque aucune marge.
+            choix=(1, 1.5, 2, 3, 5, 10), zero="D'origine",
+            etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables"),
+                        (5, "Implacables"), (10, "Sans aucun répit")),
             beta=True),
     # RemovedSpells (2026-10-24) : le correctif répond « non » quand le jeu demande
     # si Harry connaît ces sorts ; les drapeaux SpellUnlock_* de la sauvegarde ne
@@ -498,7 +501,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Vie de Harry",
             "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. "
             "Sa vie du moment garde la même part. Se change aussi pendant la partie.",
-            choix=(1, 1.5, 0.75, 0.5), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 1.5, 0.75, 0.5, 0.25), zero="D'origine", format_choix="×{}", beta=True),
     Reglage("regeneration", "Accio.Hardcore", "PlayerRegen",
             "Régénération",
             "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. "

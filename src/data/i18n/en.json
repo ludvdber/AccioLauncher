@@ -1474,12 +1474,15 @@
     "{} téléchargées": "{} downloaded",
     "{} indisponible": "{} unavailable",
     "{} indisponibles": "{} unavailable",
-    "Tout plus dur, pour qui connaît déjà le jeu.": "Everything harder, for those who already know the game.",
     "Le jeu tel qu'il est sorti, mais la première mort termine la partie.": "The game as it was released, but the first death ends the playthrough.",
     "Impardonnable": "Unforgivable",
     "Hardcore, et la première mort termine la partie.": "Hardcore, and the first death ends the playthrough.",
     "Une seule vie": "One life",
     "La première mort termine la partie : pas de retour à la dernière sauvegarde.": "The first death ends the playthrough: no going back to the last save.",
-    "Peut bloquer votre partie : une leçon ou un défi qui demande un sort retiré ne peut plus se réussir. Rendez-le le temps du défi, sans quitter la partie. Harry ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt.": "Can block your playthrough: a lesson or a challenge that asks for a removed spell can no longer be passed. Give it back for the challenge, without leaving the game. Harry can no longer cast these duelling spells, even once learned; your save keeps them, and going back to “None” gives them back at once."
+    "Peut bloquer votre partie : une leçon ou un défi qui demande un sort retiré ne peut plus se réussir. Rendez-le le temps du défi, sans quitter la partie. Harry ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt.": "Can block your playthrough: a lesson or a challenge that asks for a removed spell can no longer be passed. Give it back for the challenge, without leaving the game. Harry can no longer cast these duelling spells, even once learned; your save keeps them, and going back to “None” gives them back at once.",
+    "Implacables": "Relentless",
+    "Sans aucun répit": "No respite at all",
+    "Un vrai défi, pour qui a déjà fini le jeu.": "A real challenge, for those who have already finished the game.",
+    "Pour qui connaît le jeu par cœur : le plus dur qui reste jouable.": "For those who know the game by heart: the hardest it gets while staying playable."
   }
 }

@@ -1475,12 +1475,15 @@
     "{} téléchargées": "{} descargados",
     "{} indisponible": "{} no disponible",
     "{} indisponibles": "{} no disponibles",
-    "Tout plus dur, pour qui connaît déjà le jeu.": "Todo más difícil, para quien ya conoce el juego.",
     "Le jeu tel qu'il est sorti, mais la première mort termine la partie.": "El juego tal como salió, pero la primera muerte termina la partida.",
     "Impardonnable": "Imperdonable",
     "Hardcore, et la première mort termine la partie.": "Hardcore, y la primera muerte termina la partida.",
     "Une seule vie": "Una sola vida",
     "La première mort termine la partie : pas de retour à la dernière sauvegarde.": "La primera muerte termina la partida: no se vuelve a la última partida guardada.",
-    "Peut bloquer votre partie : une leçon ou un défi qui demande un sort retiré ne peut plus se réussir. Rendez-le le temps du défi, sans quitter la partie. Harry ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt.": "Puede bloquear tu partida: una lección o un desafío que pide un hechizo retirado ya no se puede superar. Devuélvelo durante el desafío, sin salir de la partida. Harry ya no puede lanzar estos hechizos de duelo, aunque los haya aprendido; tu partida guardada los conserva, y volver a «Ninguno» los devuelve al instante."
+    "Peut bloquer votre partie : une leçon ou un défi qui demande un sort retiré ne peut plus se réussir. Rendez-le le temps du défi, sans quitter la partie. Harry ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt.": "Puede bloquear tu partida: una lección o un desafío que pide un hechizo retirado ya no se puede superar. Devuélvelo durante el desafío, sin salir de la partida. Harry ya no puede lanzar estos hechizos de duelo, aunque los haya aprendido; tu partida guardada los conserva, y volver a «Ninguno» los devuelve al instante.",
+    "Implacables": "Implacables",
+    "Sans aucun répit": "Sin ningún respiro",
+    "Un vrai défi, pour qui a déjà fini le jeu.": "Un verdadero desafío, para quien ya terminó el juego.",
+    "Pour qui connaît le jeu par cœur : le plus dur qui reste jouable.": "Para quien se sabe el juego de memoria: lo más difícil que sigue siendo jugable."
   }
 }

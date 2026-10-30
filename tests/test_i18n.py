@@ -48,7 +48,7 @@ IDENTIQUES_TOLEREES = {
     # Le surtitre de l'annonce des nouveautés : même mot en anglais.
     "Important",
     # Presets de difficulté de la 1.4 : mêmes mots en anglais et en espagnol.
-    "Normal", "Hardcore",
+    "Normal", "Hardcore", "Implacables",
     # Carte de progression de la fiche : « Installation » en anglais, et « 42 % »
     # garde son espace en espagnol comme en français.
     "Installation", "{} %",

@@ -1,5 +1,5 @@
-"""Les presets de difficulté de la 1.4 : Normal, Détendu, Hardcore, et deux
-presets à une seule vie, Réaliste et Impardonnable.
+"""Les presets de difficulté de la 1.4 : Détendu, Normal, Difficile, Hardcore,
+et deux presets à une seule vie, Réaliste et Impardonnable.
 
 Tranché par Ludo le 2026-10-30 (atelier, `notes/DIFFICULTE_1.4.md` § 4) : des
 presets aux noms clairs, et « Sur mesure » dans des réglages à dérouler. Un
@@ -60,17 +60,29 @@ _NORMAL: dict[str, object] = {
     "degats_recus": 1, "degats_infliges": 1, "reaction_ennemis": 1,
     "vie_joueur": 1, "regeneration": 1, "quidditch": 0, NATIVE: 0,
 }
+# Difficile (Ludo, 2026-10-30) : un cran entre la difficulté d'origine la plus
+# haute et Hardcore.
+_DIFFICILE: dict[str, object] = {
+    **_NORMAL, "degats_recus": 1.5, "degats_infliges": 0.75, "reaction_ennemis": 1.5,
+    "regeneration": 0.5, "quidditch": 1, NATIVE: 2,
+}
+# Hardcore (Ludo, 2026-10-30) : bien au-delà. Réaction ×5 = attentes des ennemis
+# divisées par 5 (0,4 s entre deux attaques au lieu de 2 s) : il reste une marge,
+# minime, pour attaquer. Le sur mesure va encore plus loin (×10, ×5 de dégâts).
 _HARDCORE: dict[str, object] = {
-    **_NORMAL, "degats_recus": 2, "degats_infliges": 0.75, "reaction_ennemis": 2,
+    **_NORMAL, "degats_recus": 3, "degats_infliges": 0.5, "reaction_ennemis": 5,
     "regeneration": 0, "quidditch": 2, NATIVE: 2,
 }
 
+# Du plus doux au plus dur, de gauche à droite.
 PRESETS = (
-    Preset("normal", "Normal", "Le jeu tel qu'il est sorti.", _NORMAL),
     Preset("detendu", "Détendu",
            "Pour profiter de l'histoire : Harry encaisse mieux et ses sorts portent plus.",
            {**_NORMAL, "degats_recus": 0.5, "degats_infliges": 1.5, "vie_joueur": 1.5}),
-    Preset("hardcore", "Hardcore", "Tout plus dur, pour qui connaît déjà le jeu.", _HARDCORE),
+    Preset("normal", "Normal", "Le jeu tel qu'il est sorti.", _NORMAL),
+    Preset("difficile", "Difficile", "Un vrai défi, pour qui a déjà fini le jeu.", _DIFFICILE),
+    Preset("hardcore", "Hardcore",
+           "Pour qui connaît le jeu par cœur : le plus dur qui reste jouable.", _HARDCORE),
     Preset("realiste", "Réaliste",
            "Le jeu tel qu'il est sorti, mais la première mort termine la partie.",
            _NORMAL, une_vie=True),
@@ -115,9 +127,11 @@ def courant(valeurs: Mapping[str, object], idents: Iterable[str]) -> str:
     """Le preset que portent `valeurs` (identifiant → valeur lue), ou SUR_MESURE.
 
     Les presets à une seule vie ont les valeurs de Normal ou de Hardcore : ils se
-    reconnaîtront à leur partie à part, pas aux réglages."""
+    reconnaîtront à leur partie à part, pas aux réglages. Normal passe en premier :
+    là où Détendu ne change rien (HP2), il a les mêmes valeurs que lui."""
     idents = frozenset(idents)
-    for preset in PRESETS:
+    normal = PAR_IDENT["normal"]
+    for preset in (normal, *(p for p in PRESETS if p is not normal)):
         if preset.une_vie:
             continue
         voulues = valeurs_pour(preset, idents)

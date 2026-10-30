@@ -1,5 +1,6 @@
 """Les presets de difficulté de la 1.4 (Normal, Détendu, Hardcore ; Réaliste et Impardonnable à une
 seule vie), tranchés par Ludo le 2026-10-30."""
+import itertools
 from types import SimpleNamespace
 
 import pytest
@@ -56,8 +57,16 @@ class TestValeurs:
             if ident != dp.NATIVE:
                 assert valeur == REGLAGES[ident].choix[0], ident
 
-    def test_cinq_presets_dans_l_ordre_tranche(self):
-        assert [p.ident for p in dp.PRESETS] == ["normal", "detendu", "hardcore", "realiste", "impardonnable"]
+    def test_six_presets_du_plus_doux_au_plus_dur(self):
+        assert [p.ident for p in dp.PRESETS] == ["detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+
+    def test_chaque_cran_est_plus_dur_que_le_precedent(self):
+        """Ludo, 2026-10-30 : Difficile entre la difficulté d'origine et Hardcore, Hardcore bien au-delà."""
+        crans = [dp.PAR_IDENT[i].valeurs for i in ("detendu", "normal", "difficile", "hardcore")]
+        for doux, dur in itertools.pairwise(crans):
+            assert doux["degats_recus"] < dur["degats_recus"]
+            assert doux["degats_infliges"] > dur["degats_infliges"]
+        assert dp.PAR_IDENT["hardcore"].valeurs["reaction_ennemis"] < max(REGLAGES["reaction_ennemis"].choix),             "le sur mesure va plus loin que Hardcore"
 
     def test_aucun_preset_ne_retire_de_sort(self):
         """Ludo, 2026-10-30 : un sort retiré peut bloquer la partie, c'est un réglage à part."""
@@ -79,7 +88,7 @@ class TestParJeu:
         idents = dp.idents_du_jeu(_jeu(fix_settings=list(HP6)), ini)
         assert idents == HP6_PRESETS
         assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp6", idents)] == \
-            ["normal", "detendu", "hardcore"]
+            ["detendu", "normal", "difficile", "hardcore"]
 
     def test_une_seule_vie_s_ouvre_jeu_par_jeu(self, monkeypatch):
         """Le jour où le mécanisme existe dans un jeu : Réaliste s'y offre même sans
@@ -103,6 +112,10 @@ class TestParJeu:
         assert dp.disponible(dp.PAR_IDENT["hardcore"], "hp2", idents)
         assert ("Difficulté du jeu", "Difficile") in dp.changements(dp.PAR_IDENT["hardcore"], idents)
 
+    def test_normal_reconnu_avant_un_preset_qui_ne_change_rien(self):
+        """HP2 : Détendu (premier de la liste) y vaut Normal ; la page disait « Détendu » choisi."""
+        assert dp.courant({dp.NATIVE: 0, "quidditch": 0}, {dp.NATIVE, "quidditch"}) == "normal"
+
     def test_detendu_ne_s_offre_pas_la_ou_il_ne_change_rien(self):
         """HP2 sans réglage du correctif : Détendu vaudrait Normal (la difficulté livrée est déjà Facile)."""
         assert not dp.disponible(dp.PAR_IDENT["detendu"], "hp2", {dp.NATIVE, "quidditch"})
@@ -124,7 +137,7 @@ class TestLireEtAppliquer:
         assert dp.courant(dp.lire(jeu, config, ini, idents), idents) == "normal"
         assert dp.appliquer(dp.PAR_IDENT["hardcore"], jeu, config, ini, idents) == []
         lignes = set(ini.read_bytes().decode().split("\r\n"))
-        assert {"DamageTaken=2", "DamageDealt=0.75", "EnemyReaction=2", "RemovedSpells=",
+        assert {"DamageTaken=3", "DamageDealt=0.5", "EnemyReaction=5", "RemovedSpells=",
                 "PlayerRegen=0"} <= lignes
         assert dp.courant(dp.lire(jeu, config, ini, idents), idents) == "hardcore"
         assert dp.appliquer(dp.PAR_IDENT["normal"], jeu, config, ini, idents) == []
@@ -135,7 +148,7 @@ class TestLireEtAppliquer:
         idents = dp.idents_du_jeu(jeu, ini)
         config = SimpleNamespace(install_path=ini.parent)
         dp.appliquer(dp.PAR_IDENT["hardcore"], jeu, config, ini, idents)
-        rc.ecrire(ini, REGLAGES["degats_recus"], 3)
+        rc.ecrire(ini, REGLAGES["degats_recus"], 5)
         assert dp.courant(dp.lire(jeu, config, ini, idents), idents) == dp.SUR_MESURE
 
     def test_sans_ini_rien_n_est_ecrit_et_tout_est_signale(self):
@@ -173,16 +186,16 @@ class TestPage:
 
     def test_une_carte_par_preset_utile_et_une_seule_vie_bientot(self, qtbot, dossier_hp6):
         page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        assert [c.ident for c in page.cartes] == ["normal", "detendu", "hardcore", "realiste", "impardonnable"]
+        assert [c.ident for c in page.cartes] == ["detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
         for carte in page.cartes[-2:]:
             assert carte.bouton is None and carte.property("bientot") == "true"
-        assert page.cartes[0].property("actif") == "true", "un ini neuf : Normal"
+        assert next(c for c in page.cartes if c.ident == "normal").property("actif") == "true", "un ini neuf : Normal"
 
     def test_choisir_ecrit_et_marque_la_carte(self, qtbot, dossier_hp6):
         page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
         next(c for c in page.cartes if c.ident == "hardcore").bouton.click()
         ini = dossier_hp6.config.install_path / "HP6" / "d3d9.ini"
-        assert "DamageTaken=2" in ini.read_bytes().decode().split("\r\n")
+        assert "DamageTaken=3" in ini.read_bytes().decode().split("\r\n")
         actifs = [c.ident for c in page.cartes if c.property("actif") == "true"]
         assert actifs == ["hardcore"]
         assert not next(c for c in page.cartes if c.ident == "hardcore").bouton.isEnabled()
