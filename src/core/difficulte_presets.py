@@ -26,6 +26,7 @@ choix affichés) : une phrase écrite à la main finirait par mentir.
 """
 
 import logging
+import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -209,3 +210,74 @@ def appliquer(preset: Preset, game: GameData, config: Config, ini: Path | None,
             log.warning("Difficulté : %s non écrit (%s)", ident, exc)
             rates.append(ident)
     return rates
+
+
+# ── Score de défi (logique seule : la jauge attend l'accord de Ludo) ──────────
+
+# Points par cran de difficulté, réglage par réglage. Un cran vaut un DOUBLEMENT
+# du facteur (échelle logarithmique) : ×2 de dégâts reçus pèse autant que ×4
+# vaut deux fois ×2, et ×0,5 compte exactement à l'opposé de ×2. Pour la
+# régénération, la difficulté du jeu et le Quidditch, un cran est un rang.
+_SCORE_NORMAL = 40
+_POIDS = {
+    "degats_recus": 7.0,
+    "degats_infliges": 6.0,
+    "reaction_ennemis": 4.0,
+    "regeneration": 4.0,
+    "vie_joueur": 8.0,
+    "quidditch": 2.0,
+    NATIVE: 3.0,
+}
+# Régénération « jamais » (0) compte comme ×0,25 : deux crans au-dessus de Normal.
+_REGENERATION_MIN = 0.25
+
+
+def _crans(ident: str, valeur: object) -> float:
+    """Combien de crans `valeur` est plus dure que Normal (négatif : plus douce).
+    Une valeur illisible compte comme Normal : 0."""
+    if isinstance(valeur, bool) or not isinstance(valeur, (int, float)):
+        return 0.0
+    v = float(valeur)
+    if ident in ("quidditch", NATIVE):
+        return v
+    if ident == "regeneration":
+        return -math.log2(max(v, _REGENERATION_MIN))
+    if v <= 0:
+        return 0.0
+    if ident in ("degats_infliges", "vie_joueur"):
+        return -math.log2(v)        # moins de dégâts portés, moins de vie : plus dur
+    return math.log2(v)             # degats_recus, reaction_ennemis
+
+
+def score(valeurs: Mapping[str, object], idents: Iterable[str]) -> int:
+    """Le défi que portent ces réglages, de 0 à 100 (Normal = 40).
+
+    Formule : score = 40 + Σ poids(r) × crans(r), borné à [0, 100], sur les
+    seuls réglages `r` que le jeu porte (`idents`) ; un réglage absent ou
+    illisible ne compte pas.
+
+    - `crans` est logarithmique sur les facteurs : log2(facteur) pour ce qui
+      rend plus dur en montant (dégâts reçus, réaction des ennemis),
+      −log2(facteur) pour ce qui rend plus dur en descendant (dégâts infligés,
+      vie de Harry, régénération, « jamais » comptant comme ×0,25). Un rang
+      vaut un cran pour la difficulté propre du jeu et le Quidditch.
+    - `poids` (`_POIDS`) : points par cran, plus lourds pour ce que le joueur
+      sent à chaque coup (vie 8, dégâts reçus 7, sorts 6) que pour la
+      réaction (4), la régénération (4), la difficulté du jeu (3) et le
+      Quidditch (2).
+    - Harry invincible : 0, quoi qu'il arrive.
+
+    Chaque terme ne fait que monter quand un réglage durcit : le score est
+    monotone. Sur tous les réglages : Récit 0, Détendu 25, Normal 40,
+    Difficile 61, Hardcore 84 ; le sur mesure le plus dur (dégâts reçus ×5,
+    sorts ×0,25, réaction ×10, régénération jamais, vie ×0,25) dépasse 100 et
+    s'y arrête. La mort définitive (Réaliste, Impardonnable) n'entre pas dans
+    le score : ces presets ont celui de Normal et de Hardcore.
+    """
+    portes = frozenset(idents)
+    if "invincible" in portes and valeurs.get("invincible") is True:
+        return 0
+    total = _SCORE_NORMAL + sum(
+        poids * _crans(ident, valeurs[ident])
+        for ident, poids in _POIDS.items() if ident in portes and ident in valeurs)
+    return max(0, min(100, round(total)))

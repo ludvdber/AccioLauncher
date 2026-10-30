@@ -180,6 +180,87 @@ class TestLireEtAppliquer:
         assert dp.changements(dp.PAR_IDENT["normal"], idents) == ()
 
 
+
+# Du plus doux au plus dur, écrit ici à la main (et non tiré de la formule) :
+# c'est ce que la monotonie doit respecter.
+_DURCIT = {
+    "degats_recus": sorted(REGLAGES["degats_recus"].choix),
+    "degats_infliges": sorted(REGLAGES["degats_infliges"].choix, reverse=True),
+    "reaction_ennemis": sorted(REGLAGES["reaction_ennemis"].choix),
+    "regeneration": sorted(REGLAGES["regeneration"].choix, reverse=True),
+    "vie_joueur": sorted(REGLAGES["vie_joueur"].choix, reverse=True),
+    "quidditch": sorted(REGLAGES["quidditch"].choix),
+    dp.NATIVE: [0, 1, 2],
+    "invincible": [True, False],
+}
+TOUS = frozenset(_DURCIT)
+SUR_MESURE_LE_PLUS_DUR = {"degats_recus": 5, "degats_infliges": 0.25, "reaction_ennemis": 10,
+                          "regeneration": 0, "vie_joueur": 0.25}
+
+
+class TestScore:
+    """Le score de défi, pour une future jauge (la maquette attend l'accord de Ludo)."""
+
+    def _score(self, ident):
+        return dp.score(dp.PAR_IDENT[ident].valeurs, TOUS)
+
+    def test_les_presets_tombent_dans_l_ordre(self):
+        assert 0 <= self._score("recit") <= 5
+        assert 20 <= self._score("detendu") <= 30
+        assert self._score("normal") == 40
+        assert 55 <= self._score("difficile") <= 65
+        assert 80 <= self._score("hardcore") <= 85
+
+    def test_la_mort_definitive_n_entre_pas_dans_le_score(self):
+        assert self._score("realiste") == self._score("normal")
+        assert self._score("impardonnable") == self._score("hardcore")
+
+    def test_le_sur_mesure_le_plus_dur_atteint_100(self):
+        assert dp.score(SUR_MESURE_LE_PLUS_DUR, TOUS) == 100
+        assert dp.score({**dp.PAR_IDENT["hardcore"].valeurs, **SUR_MESURE_LE_PLUS_DUR}, TOUS) == 100
+
+    def test_invincible_donne_0_quoi_qu_il_arrive(self):
+        assert dp.score({**SUR_MESURE_LE_PLUS_DUR, "quidditch": 2, dp.NATIVE: 2,
+                         "invincible": True}, TOUS) == 0
+
+    def test_un_jeu_sans_reglage_est_normal(self):
+        assert dp.score({}, ()) == 40
+        assert dp.score(dp.PAR_IDENT["hardcore"].valeurs, ()) == 40
+
+    def test_un_reglage_absent_du_jeu_ne_compte_pas(self):
+        """HP2 : seulement la difficulté propre et le Quidditch."""
+        hp2 = {dp.NATIVE, "quidditch"}
+        assert dp.score({**SUR_MESURE_LE_PLUS_DUR, "invincible": True}, hp2) == 40
+        assert dp.score(dp.PAR_IDENT["hardcore"].valeurs, hp2) > 40
+
+    def test_toujours_entre_0_et_100(self):
+        for combinaison in itertools.product(*_DURCIT.values()):
+            assert 0 <= dp.score(dict(zip(_DURCIT, combinaison, strict=True)), TOUS) <= 100
+
+    def test_durcir_un_reglage_ne_fait_jamais_baisser_le_score(self):
+        """Réglage par réglage, de chaque combinaison possible vers le cran
+        plus dur suivant."""
+        idents = list(_DURCIT)
+        for combinaison in itertools.product(*_DURCIT.values()):
+            valeurs = dict(zip(idents, combinaison, strict=True))
+            avant = dp.score(valeurs, TOUS)
+            for ident, crans in _DURCIT.items():
+                rang = crans.index(valeurs[ident])
+                if rang + 1 < len(crans):
+                    plus_dur = dp.score({**valeurs, ident: crans[rang + 1]}, TOUS)
+                    assert plus_dur >= avant, (ident, valeurs)
+
+    def test_chaque_reglage_compte_depuis_normal(self):
+        """Depuis Normal, chaque cran plus dur fait MONTER le score (aucun
+        réglage n'est oublié par la formule), chaque cran plus doux le fait baisser."""
+        normal = dp.PAR_IDENT["normal"].valeurs
+        for ident, crans in _DURCIT.items():
+            if ident == "invincible":
+                continue
+            scores = [dp.score({**normal, ident: v}, TOUS) for v in crans]
+            assert scores == sorted(scores) and len(set(scores)) == len(scores), (ident, scores)
+
+
 pytest.importorskip("pytestqt")
 
 
