@@ -8,6 +8,12 @@
     "decimal": "."
   },
   "strings": {
+    "Vie de Harry": "Harry's health",
+    "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. Sa vie du moment garde la même part. Se change aussi pendant la partie.": "Multiplies Harry's maximum health: at ×0.5, half as many hits are enough. His current health keeps the same share. Can also be changed while playing.",
+    "Régénération": "Regeneration",
+    "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. « Jamais » : elle ne remonte plus d'elle-même. Se change aussi pendant la partie.": "How fast Harry's health comes back by itself after a hit. “Never”: it no longer comes back on its own. Can also be changed while playing.",
+    "Deux fois plus lente": "Half as fast",
+    "Jamais": "Never",
     "Important": "Important",
     "Rejoindre le Discord": "Join the Discord",
     "Difficulté": "Difficulty",

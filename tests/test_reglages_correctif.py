@@ -300,7 +300,7 @@ class TestModeDifficile:
     """HP6 : [Accio.Hardcore], trois facteurs dont l'« éteint » vaut 1, le jeu tel que livré
     (source/hardcore.cpp du correctif lit 1 pour une clé absente)."""
 
-    IDENTS = ("degats_recus", "degats_infliges", "reaction_ennemis")
+    IDENTS = ("degats_recus", "degats_infliges", "reaction_ennemis", "vie_joueur", "regeneration")
 
     @pytest.fixture
     def ini_dur(self, ini):
@@ -328,6 +328,23 @@ class TestModeDifficile:
         assert lignes.index("[Accio.Hardcore]") < lignes.index("DamageDealt=0.33")
         assert rc.lire(ini_dur, rc.REGLAGES["degats_infliges"]) == rc.Etat(0.33)
         assert rc.libelle_choix(rc.REGLAGES["reaction_ennemis"], 3) == tr("Redoutables")
+
+    def test_vie_et_regeneration_du_joueur(self, ini_dur):
+        """PlayerRegen=0 est un vrai choix (« Jamais ») : hardcore.cpp le laisse descendre à 0,
+        alors qu'il borne les autres facteurs à 0,1."""
+        rc.ecrire(ini_dur, rc.REGLAGES["vie_joueur"], 0.5)
+        rc.ecrire(ini_dur, rc.REGLAGES["regeneration"], 0)
+        lignes = ini_dur.read_bytes().decode().split("\r\n")
+        assert {"PlayerHealth=0.5", "PlayerRegen=0"} <= set(lignes)
+        assert rc.lire(ini_dur, rc.REGLAGES["regeneration"]) == rc.Etat(0)
+        assert rc.libelle_choix(rc.REGLAGES["regeneration"], 0) == tr("Jamais")
+        assert rc.libelle_choix(rc.REGLAGES["vie_joueur"], 0.5) in ("×0,5", "×0.5")
+
+    def test_vie_et_regeneration_pas_encore_au_catalogue(self):
+        """Pas vus en jeu : aucun jeu ne les déclare encore, donc ils ne s'affichent pas."""
+        from src.core.game_data import load_catalog
+        for jeu in load_catalog().games:
+            assert not {"vie_joueur", "regeneration"} & set(jeu.fix_settings), jeu.id
 
     def test_sorts_retires_aucun_quand_la_cle_manque_ou_est_vide(self, ini_dur):
         r = rc.REGLAGES["sorts_retires"]

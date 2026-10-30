@@ -18,6 +18,7 @@ dev = [
     "Pillow>=13.0",       # build/create_icon.py + create_social_preview.py
     "pytest>=9.1",
     "pytest-qt>=4.5",
+    "pytest-xdist>=3.8", # la suite répartie sur les cœurs : 6 min → 1 min (2026-10-31)
     "ruff>=0.17.1",      # utilisé depuis toujours, mais n'était pas déclaré
     "mypy>=2.4",         # types de src/core, réglé par [tool.mypy] plus bas
 ]

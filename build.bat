@@ -94,7 +94,7 @@ if errorlevel 1 (
     %PAUSE%
     exit /b 1
 )
-%PY% -m pytest -q
+%PY% -m pytest -q -n auto --dist loadfile
 if errorlevel 1 (
     echo ERREUR : Tests en echec - build interrompu.
     %PAUSE%

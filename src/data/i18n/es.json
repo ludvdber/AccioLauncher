@@ -8,6 +8,12 @@
     "decimal": ","
   },
   "strings": {
+    "Vie de Harry": "Vida de Harry",
+    "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. Sa vie du moment garde la même part. Se change aussi pendant la partie.": "Multiplica la vida máxima de Harry: a ×0,5, basta con la mitad de golpes. Su vida actual conserva la misma proporción. También se cambia durante la partida.",
+    "Régénération": "Regeneración",
+    "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. « Jamais » : elle ne remonte plus d'elle-même. Se change aussi pendant la partie.": "La velocidad a la que la vida de Harry se recupera sola tras un golpe. «Nunca»: ya no se recupera por sí sola. También se cambia durante la partida.",
+    "Deux fois plus lente": "La mitad de rápida",
+    "Jamais": "Nunca",
     "Important": "Importante",
     "Rejoindre le Discord": "Unirse al Discord",
     "Difficulté": "Dificultad",

@@ -57,7 +57,7 @@ echo "[2/6] Lint et types..."
 "$PY" -m mypy || echec "types de src/core en échec - build interrompu."
 
 echo "[3/6] Tests..."
-"$PY" -m pytest -q || echec "tests en échec - build interrompu."
+"$PY" -m pytest -q -n auto --dist loadfile || echec "tests en échec - build interrompu."
 
 # Mêmes contrôles de mise en page que la suite, mais avec les VRAIES polices :
 # sous offscreen, Qt n'en voit aucune (voir tools/audit_geometrie.py). Il faut

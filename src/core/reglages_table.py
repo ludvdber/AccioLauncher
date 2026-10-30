@@ -487,6 +487,22 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "la leçon, sans quitter la partie.",
             choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES,
             beta=True),
+    # HP6, vie et régénération du joueur (correctif 2.3.0, 2026-10-31) : la branche
+    # « joueur » de la routine de vie (0x594DB0, relevée par Fable), relue dans la
+    # seconde. Les adversaires n'y passent jamais. Pas de « vie des ennemis » : les
+    # dégâts de vos sorts (`degats_infliges`) font déjà exactement cela. Déclarés au
+    # catalogue seulement après un essai en jeu : jusque-là, ils ne s'affichent pas.
+    Reglage("vie_joueur", "Accio.Hardcore", "PlayerHealth",
+            "Vie de Harry",
+            "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. "
+            "Sa vie du moment garde la même part. Se change aussi pendant la partie.",
+            choix=(1, 0.75, 0.5), zero="D'origine", format_choix="×{}", beta=True),
+    Reglage("regeneration", "Accio.Hardcore", "PlayerRegen",
+            "Régénération",
+            "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. "
+            "« Jamais » : elle ne remonte plus d'elle-même. Se change aussi pendant la partie.",
+            choix=(1, 0.5, 0), zero="D'origine",
+            etiquettes=((0.5, "Deux fois plus lente"), (0, "Jamais")), beta=True),
     # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
     # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
     # correctif), lu au démarrage du jeu seulement. À VOIR EN JEU (un match).

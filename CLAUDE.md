@@ -13,7 +13,7 @@ Launcher PyQt6 pour 8 jeux Harry Potter PC (Windows 10/11). **Interface et comme
 
 ```bash
 pip install -r requirements.txt && python main.py     # lancer depuis les sources
-python -m pytest                                      # toute la suite
+python -m pytest -n auto --dist loadfile              # toute la suite, ~1 min (6 min sans -n)
 python -m pytest tests/test_config.py::TestConfig::test_defaults
 python -m ruff check .                                # jeu de règles FIGÉ dans pyproject.toml
 python -m mypy                                        # src/core en strict, réglé dans pyproject.toml
@@ -44,7 +44,7 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 ## Testing
 
 - `pytest-qt>=4.5` ; `qtbot` est la façon standard de tester un widget. `tests/conftest.py` force `QT_QPA_PLATFORM=offscreen`. La logique pure (tout `src/core/` sauf les QThread) se teste sans fixture Qt.
-- **Compte au dernier point (2026-10-30, Windows, Python 3.15.1) : 4042 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe.
+- **Compte au dernier point (2026-10-31, Windows, Python 3.15.1) : 4044 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe.
 - Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
 - Ne JAMAIS appeler une police par son nom système (règle 89) : offscreen mesurerait une autre police.
 - Aucun test n'écrit dans le vrai Documents (`conftest._documents_hors_du_vrai_dossier`).
