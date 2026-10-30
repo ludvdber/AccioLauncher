@@ -1,12 +1,13 @@
 """La page « Difficulté » d'un jeu (contenu : `src/core/difficulte_presets.py`).
 
-1.4, tranché par Ludo le 2026-10-30 : quatre presets aux noms clairs (Normal,
-Détendu, Hardcore, Réaliste), « Sur mesure » à part, qui ouvre le détail de
-chaque réglage. Une PAGE à la place de la fiche (`pages.py`), comme les réglages
-du jeu, ouverte par le bouton à jauge de la fiche.
+1.4, tranché par Ludo le 2026-10-30 : des presets aux noms clairs (Normal,
+Détendu, Hardcore ; puis, à une seule vie, Réaliste et Impardonnable), « Sur
+mesure » à part, qui ouvre le détail de chaque réglage. Une PAGE à la place de
+la fiche (`pages.py`), comme les réglages du jeu, ouverte par le bouton à jauge
+de la fiche.
 
 Chaque carte dit ce que le preset change dans CE jeu, calculé depuis les
-réglages ; un preset qui n'y change rien ne s'y montre pas, et Réaliste se
+réglages ; un preset qui n'y change rien ne s'y montre pas, et une seule vie se
 montre « bientôt » tant que son mécanisme n'existe pas. Choisir écrit aussitôt
 (comme l'engrenage) ; rien n'est écrit au lancement.
 """
@@ -81,6 +82,20 @@ class _CartePreset(QFrame):
         lay.addWidget(self.bouton, alignment=Qt.AlignmentFlag.AlignLeft)
 
 
+def _cases_vides(n: int) -> list[QWidget]:
+    """Des cases invisibles qui GARDENT leur place : une colonne vide de la grille
+    perdait son écart, et les cartes du dessous ne s'alignaient plus."""
+    cases = []
+    for _ in range(n):
+        case = QWidget()
+        politique = case.sizePolicy()
+        politique.setRetainSizeWhenHidden(True)
+        case.setSizePolicy(politique)
+        case.hide()
+        cases.append(case)
+    return cases
+
+
 class DifficultePage(QDialog):
     """Les presets de difficulté d'un jeu installé."""
 
@@ -138,17 +153,31 @@ class DifficultePage(QDialog):
         lay.addWidget(texte(quand + " " + tr("Vos sauvegardes ne changent pas. En bêta."),
                             15, "#a9a7c4", retour=True))
         courant = self.courant()
-        cartes = []
+        hardcore = dp.disponible(dp.PAR_IDENT["hardcore"], self.game.id, self.idents)
+        rangees: dict[bool, list[_CartePreset]] = {False: [], True: []}
         for preset in dp.PRESETS:
             disponible = dp.disponible(preset, self.game.id, self.idents)
-            if not disponible and preset.ident != "realiste":
+            # Une seule vie se montre « bientôt » tant que son mécanisme manque ;
+            # Impardonnable, seulement là où Hardcore change quelque chose.
+            visible = disponible or (preset.une_vie and (preset.ident == "realiste" or hardcore))
+            if not visible:
                 continue   # ne change rien ici : pas de carte
             lignes = dp.changements(preset, self.idents) if disponible else ()
-            cartes.append(_CartePreset(preset, lignes, preset.ident == courant, not disponible,
-                                       self._choisir))
-        self.cartes = cartes
+            rangees[preset.une_vie].append(_CartePreset(
+                preset, lignes, preset.ident == courant, not disponible, self._choisir))
+        self.cartes = rangees[False] + rangees[True]
+        # Même nombre de colonnes aux deux rangées : les cartes s'alignent.
+        colonnes = max(len(rangees[False]), len(rangees[True]))
         lay.addSpacing(24)
-        lay.addWidget(Rangee(cartes, len(cartes), seuil=760, ecart=18))
+        lay.addWidget(Rangee(rangees[False], colonnes, seuil=760, ecart=18))
+        lay.addSpacing(30)
+        lay.addWidget(surtitre(tr("Une seule vie")))
+        lay.addSpacing(6)
+        lay.addWidget(texte(tr("La première mort termine la partie : pas de retour à la dernière "
+                               "sauvegarde."), 14, ENCRE_DOUCE, retour=True))
+        lay.addSpacing(14)
+        lay.addWidget(Rangee(rangees[True] + _cases_vides(colonnes - len(rangees[True])),
+                             colonnes, seuil=760, ecart=18))
         lay.addSpacing(22)
         sur_mesure = QHBoxLayout()
         sur_mesure.setSpacing(18)

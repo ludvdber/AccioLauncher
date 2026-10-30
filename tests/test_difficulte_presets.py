@@ -1,4 +1,5 @@
-"""Les presets de difficulté de la 1.4 (Normal, Détendu, Hardcore, Réaliste), tranchés par Ludo le 2026-10-30."""
+"""Les presets de difficulté de la 1.4 (Normal, Détendu, Hardcore ; Réaliste et Impardonnable à une
+seule vie), tranchés par Ludo le 2026-10-30."""
 from types import SimpleNamespace
 
 import pytest
@@ -15,6 +16,8 @@ INI = "\r\n".join([
     "PlayerHealth=1", "PlayerRegen=1", "",
 ]) + "\r\n"
 HP6 = ("degats_recus", "degats_infliges", "reaction_ennemis", "sorts_retires", "vie_joueur", "regeneration")
+# Ce que les presets règlent : tout sauf les sorts retirés (ils peuvent bloquer la partie).
+HP6_PRESETS = frozenset(HP6) - {"sorts_retires"}
 
 
 @pytest.fixture(autouse=True)
@@ -53,8 +56,17 @@ class TestValeurs:
             if ident != dp.NATIVE:
                 assert valeur == REGLAGES[ident].choix[0], ident
 
-    def test_quatre_presets_dans_l_ordre_tranche(self):
-        assert [p.ident for p in dp.PRESETS] == ["normal", "detendu", "hardcore", "realiste"]
+    def test_cinq_presets_dans_l_ordre_tranche(self):
+        assert [p.ident for p in dp.PRESETS] == ["normal", "detendu", "hardcore", "realiste", "impardonnable"]
+
+    def test_aucun_preset_ne_retire_de_sort(self):
+        """Ludo, 2026-10-30 : un sort retiré peut bloquer la partie, c'est un réglage à part."""
+        assert all("sorts_retires" not in p.valeurs for p in dp.PRESETS)
+
+    def test_une_seule_vie_reprend_normal_et_hardcore(self):
+        assert dp.PAR_IDENT["realiste"].valeurs == dp.PAR_IDENT["normal"].valeurs
+        assert dp.PAR_IDENT["impardonnable"].valeurs == dp.PAR_IDENT["hardcore"].valeurs
+        assert [p.ident for p in dp.PRESETS if p.une_vie] == ["realiste", "impardonnable"]
 
 
 class TestParJeu:
@@ -63,11 +75,20 @@ class TestParJeu:
         assert idents == frozenset()
         assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp4", idents)] == ["normal"]
 
-    def test_hp6_tout_sauf_realiste(self, ini):
+    def test_hp6_tout_sauf_une_seule_vie(self, ini):
         idents = dp.idents_du_jeu(_jeu(fix_settings=list(HP6)), ini)
-        assert idents == frozenset(HP6)
+        assert idents == HP6_PRESETS
         assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp6", idents)] == \
             ["normal", "detendu", "hardcore"]
+
+    def test_une_seule_vie_s_ouvre_jeu_par_jeu(self, monkeypatch):
+        """Le jour où le mécanisme existe dans un jeu : Réaliste s'y offre même sans
+        autre réglage, Impardonnable seulement là où Hardcore change quelque chose."""
+        monkeypatch.setattr(dp, "UNE_VIE_POSSIBLE", frozenset({"hp4", "hp6"}))
+        assert dp.disponible(dp.PAR_IDENT["realiste"], "hp4", frozenset())
+        assert not dp.disponible(dp.PAR_IDENT["impardonnable"], "hp4", frozenset())
+        assert dp.disponible(dp.PAR_IDENT["impardonnable"], "hp6", HP6_PRESETS)
+        assert not dp.disponible(dp.PAR_IDENT["realiste"], "hp5", HP6_PRESETS)
 
     def test_une_section_absente_de_l_ini_installe_retire_ses_reglages(self, tmp_path):
         """L'ancien correctif (sans [Accio.Hardcore]) : rien à écrire, rien à proposer."""
@@ -103,7 +124,7 @@ class TestLireEtAppliquer:
         assert dp.courant(dp.lire(jeu, config, ini, idents), idents) == "normal"
         assert dp.appliquer(dp.PAR_IDENT["hardcore"], jeu, config, ini, idents) == []
         lignes = set(ini.read_bytes().decode().split("\r\n"))
-        assert {"DamageTaken=2", "DamageDealt=0.75", "EnemyReaction=2", "RemovedSpells=protego",
+        assert {"DamageTaken=2", "DamageDealt=0.75", "EnemyReaction=2", "RemovedSpells=",
                 "PlayerRegen=0"} <= lignes
         assert dp.courant(dp.lire(jeu, config, ini, idents), idents) == "hardcore"
         assert dp.appliquer(dp.PAR_IDENT["normal"], jeu, config, ini, idents) == []
@@ -127,7 +148,7 @@ class TestLireEtAppliquer:
         idents = dp.idents_du_jeu(_jeu(fix_settings=list(HP6)), ini)
         lignes = dict(dp.changements(dp.PAR_IDENT["hardcore"], idents))
         assert lignes["Régénération"] == "Jamais"
-        assert lignes["Sorts retirés"] == "Protego"
+        assert "Sorts retirés" not in lignes
         assert "Vie de Harry" not in lignes, "Hardcore ne la change pas"
         assert dp.changements(dp.PAR_IDENT["normal"], idents) == ()
 
@@ -150,11 +171,11 @@ class TestPage:
         qtbot.addWidget(page)
         return page, ouverts
 
-    def test_une_carte_par_preset_utile_et_realiste_bientot(self, qtbot, dossier_hp6):
+    def test_une_carte_par_preset_utile_et_une_seule_vie_bientot(self, qtbot, dossier_hp6):
         page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        assert [c.ident for c in page.cartes] == ["normal", "detendu", "hardcore", "realiste"]
-        realiste = page.cartes[-1]
-        assert realiste.bouton is None and realiste.property("bientot") == "true"
+        assert [c.ident for c in page.cartes] == ["normal", "detendu", "hardcore", "realiste", "impardonnable"]
+        for carte in page.cartes[-2:]:
+            assert carte.bouton is None and carte.property("bientot") == "true"
         assert page.cartes[0].property("actif") == "true", "un ini neuf : Normal"
 
     def test_choisir_ecrit_et_marque_la_carte(self, qtbot, dossier_hp6):

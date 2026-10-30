@@ -29,8 +29,6 @@
     "Réaliste": "Realistic",
     "Le jeu tel qu'il est sorti.": "The game as it was released.",
     "Pour profiter de l'histoire : Harry encaisse mieux et ses sorts portent plus.": "To enjoy the story: Harry takes hits better and his spells hit harder.",
-    "Tout plus dur. Les sauvegardes restent permises.": "Everything harder. Saving is still allowed.",
-    "Hardcore d'une seule traite : aucune sauvegarde, une mort et la partie est perdue.": "Hardcore in one sitting: no saving, one death and the game is lost.",
     "Vie de Harry": "Harry's health",
     "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. Sa vie du moment garde la même part. Se change aussi pendant la partie.": "Multiplies Harry's maximum health: at ×0.5, half as many hits are enough. His current health keeps the same share. Can also be changed while playing.",
     "Régénération": "Regeneration",
@@ -544,7 +542,6 @@
     "Difficile": "Hard",
     "Expert": "Expert",
     "Sorts retirés": "Removed spells",
-    "Harry ne peut plus lancer ces sorts de duel, même appris : il faut gagner sans eux. Votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt. Une leçon qui demande un sort retiré ne peut pas se réussir : rendez-le le temps de la leçon, sans quitter la partie.": "Harry can no longer cast these duelling spells, even once learned: you have to win without them. Your save keeps them, and going back to \"None\" gives them back at once. A lesson that asks for a removed spell cannot be passed: give it back for the lesson, without leaving the game.",
     "Protego et Expelliarmus": "Protego and Expelliarmus",
     "Stupéfix seul en duel": "Only Stupefy in duels",
     "{} sur {}": "{} of {}",
@@ -1476,6 +1473,13 @@
     "{} téléchargée": "{} downloaded",
     "{} téléchargées": "{} downloaded",
     "{} indisponible": "{} unavailable",
-    "{} indisponibles": "{} unavailable"
+    "{} indisponibles": "{} unavailable",
+    "Tout plus dur, pour qui connaît déjà le jeu.": "Everything harder, for those who already know the game.",
+    "Le jeu tel qu'il est sorti, mais la première mort termine la partie.": "The game as it was released, but the first death ends the playthrough.",
+    "Impardonnable": "Unforgivable",
+    "Hardcore, et la première mort termine la partie.": "Hardcore, and the first death ends the playthrough.",
+    "Une seule vie": "One life",
+    "La première mort termine la partie : pas de retour à la dernière sauvegarde.": "The first death ends the playthrough: no going back to the last save.",
+    "Peut bloquer votre partie : une leçon ou un défi qui demande un sort retiré ne peut plus se réussir. Rendez-le le temps du défi, sans quitter la partie. Harry ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt.": "Can block your playthrough: a lesson or a challenge that asks for a removed spell can no longer be passed. Give it back for the challenge, without leaving the game. Harry can no longer cast these duelling spells, even once learned; your save keeps them, and going back to “None” gives them back at once."
   }
 }

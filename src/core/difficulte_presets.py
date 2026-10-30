@@ -1,6 +1,7 @@
-"""Les presets de difficulté de la 1.4 : Normal, Détendu, Hardcore, Réaliste.
+"""Les presets de difficulté de la 1.4 : Normal, Détendu, Hardcore, et deux
+presets à une seule vie, Réaliste et Impardonnable.
 
-Tranché par Ludo le 2026-10-30 (atelier, `notes/DIFFICULTE_1.4.md` § 4) : quatre
+Tranché par Ludo le 2026-10-30 (atelier, `notes/DIFFICULTE_1.4.md` § 4) : des
 presets aux noms clairs, et « Sur mesure » dans des réglages à dérouler. Un
 preset n'est qu'un jeu de valeurs pour des réglages qui existent déjà : ceux du
 correctif (`[Accio.Hardcore]`, le Quidditch de HP1/HP2) et la difficulté
@@ -8,12 +9,16 @@ propre du jeu (`difficulte_jeu`, HP2). Rien de neuf n'est écrit ailleurs.
 
 Les valeurs sont COMMUNES à tous les jeux, comme les préréglages d'image :
 chaque jeu n'en garde que les réglages qu'il déclare. Un preset qui ne change
-rien dans un jeu n'y est pas proposé. Les VALEURS de chaque cran sont une
-proposition (2026-10-30), à trancher par Ludo.
+rien dans un jeu n'y est pas proposé.
 
-Réaliste = Hardcore d'une seule traite, sans sauvegarde, une mort et la partie
-est perdue. Ce mécanisme n'existe encore dans aucun jeu : le preset se montre
-« bientôt » tant que `REALISTE_POSSIBLE` est vide.
+AUCUN preset ne retire de sort (Ludo, 2026-10-30) : un sort retiré peut bloquer
+la partie (une leçon, un défi qui le demande). `sorts_retires` reste un réglage
+à part, dans « Sur mesure ».
+
+Une seule vie (Ludo, 2026-10-30) : Réaliste = le jeu de base, Impardonnable =
+Hardcore, et dans les deux la première mort termine la partie. Ce mécanisme
+n'existe encore dans aucun jeu : ces presets se montrent « bientôt » tant que
+`UNE_VIE_POSSIBLE` est vide.
 
 Ce que dit un preset pour un jeu se CALCULE depuis les réglages (libellé et
 choix affichés) : une phrase écrite à la main finirait par mentir.
@@ -37,8 +42,8 @@ log = logging.getLogger(__name__)
 NATIVE = "difficulte_native"
 SUR_MESURE = "sur_mesure"
 
-# Les jeux où le mode Réaliste existe vraiment (aucun en 1.4.0).
-REALISTE_POSSIBLE: frozenset[str] = frozenset()
+# Les jeux où « une seule vie » existe vraiment (aucun en 1.4.0).
+UNE_VIE_POSSIBLE: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -47,15 +52,17 @@ class Preset:
     nom: str            # clé tr()
     phrase: str         # clé tr() : ce que le preset veut dire, tous jeux confondus
     valeurs: Mapping[str, object]
+    une_vie: bool = False   # la première mort termine la partie
 
 
+# Pas de `sorts_retires` : aucun preset n'y touche, le choix du joueur reste.
 _NORMAL: dict[str, object] = {
-    "degats_recus": 1, "degats_infliges": 1, "reaction_ennemis": 1, "sorts_retires": "",
+    "degats_recus": 1, "degats_infliges": 1, "reaction_ennemis": 1,
     "vie_joueur": 1, "regeneration": 1, "quidditch": 0, NATIVE: 0,
 }
 _HARDCORE: dict[str, object] = {
     **_NORMAL, "degats_recus": 2, "degats_infliges": 0.75, "reaction_ennemis": 2,
-    "sorts_retires": "protego", "regeneration": 0, "quidditch": 2, NATIVE: 2,
+    "regeneration": 0, "quidditch": 2, NATIVE: 2,
 }
 
 PRESETS = (
@@ -63,10 +70,12 @@ PRESETS = (
     Preset("detendu", "Détendu",
            "Pour profiter de l'histoire : Harry encaisse mieux et ses sorts portent plus.",
            {**_NORMAL, "degats_recus": 0.5, "degats_infliges": 1.5, "vie_joueur": 1.5}),
-    Preset("hardcore", "Hardcore", "Tout plus dur. Les sauvegardes restent permises.", _HARDCORE),
+    Preset("hardcore", "Hardcore", "Tout plus dur, pour qui connaît déjà le jeu.", _HARDCORE),
     Preset("realiste", "Réaliste",
-           "Hardcore d'une seule traite : aucune sauvegarde, une mort et la partie est perdue.",
-           _HARDCORE),
+           "Le jeu tel qu'il est sorti, mais la première mort termine la partie.",
+           _NORMAL, une_vie=True),
+    Preset("impardonnable", "Impardonnable",
+           "Hardcore, et la première mort termine la partie.", _HARDCORE, une_vie=True),
 )
 PAR_IDENT = {p.ident: p for p in PRESETS}
 
@@ -90,23 +99,26 @@ def valeurs_pour(preset: Preset, idents: Iterable[str]) -> dict[str, object]:
 
 def disponible(preset: Preset, game_id: str, idents: Iterable[str]) -> bool:
     """Normal toujours ; un autre preset seulement s'il change quelque chose ici
-    (et Réaliste seulement là où son mécanisme existe)."""
+    (et une seule vie seulement là où son mécanisme existe : Réaliste n'y change
+    alors que cela)."""
     if preset.ident == "normal":
         return True
-    if preset.ident == "realiste" and game_id not in REALISTE_POSSIBLE:
+    if preset.une_vie and game_id not in UNE_VIE_POSSIBLE:
         return False
     idents = frozenset(idents)
+    if preset.une_vie and preset.valeurs == PAR_IDENT["normal"].valeurs:
+        return True
     return valeurs_pour(preset, idents) != valeurs_pour(PAR_IDENT["normal"], idents)
 
 
 def courant(valeurs: Mapping[str, object], idents: Iterable[str]) -> str:
     """Le preset que portent `valeurs` (identifiant → valeur lue), ou SUR_MESURE.
 
-    Hardcore passe avant Réaliste : ils ont les mêmes valeurs, et Réaliste se
-    reconnaît à son dossier de partie à part, pas aux réglages."""
+    Les presets à une seule vie ont les valeurs de Normal ou de Hardcore : ils se
+    reconnaîtront à leur partie à part, pas aux réglages."""
     idents = frozenset(idents)
     for preset in PRESETS:
-        if preset.ident == "realiste":
+        if preset.une_vie:
             continue
         voulues = valeurs_pour(preset, idents)
         if voulues and all(valeurs.get(k) == v for k, v in voulues.items()):

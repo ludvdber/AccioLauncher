@@ -479,12 +479,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # bougent pas, donc revenir au premier choix rend tout. Seulement des sorts de
     # duel : sans Stupéfix ni les sorts d'énigme (Leviosa, Reparo…), une partie
     # pourrait ne plus avancer. Valeurs en minuscules : `lire` compare ainsi.
+    # Aucun preset de difficulté n'y touche (Ludo, 2026-10-30) : il peut bloquer
+    # la partie, c'est au joueur de le choisir en connaissance de cause.
     Reglage("sorts_retires", "Accio.Hardcore", "RemovedSpells",
             "Sorts retirés",
-            "Harry ne peut plus lancer ces sorts de duel, même appris : il faut gagner sans "
-            "eux. Votre sauvegarde les garde, et revenir à « Aucun » les rend aussitôt. Une "
-            "leçon qui demande un sort retiré ne peut pas se réussir : rendez-le le temps de "
-            "la leçon, sans quitter la partie.",
+            "Peut bloquer votre partie : une leçon ou un défi qui demande un sort retiré ne "
+            "peut plus se réussir. Rendez-le le temps du défi, sans quitter la partie. Harry "
+            "ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, "
+            "et revenir à « Aucun » les rend aussitôt.",
             choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES,
             beta=True),
     # HP6, vie et régénération du joueur (correctif 2.3.0, 2026-10-30) : la branche
