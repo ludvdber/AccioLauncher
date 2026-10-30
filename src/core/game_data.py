@@ -29,6 +29,8 @@ from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
     _parse_language_registry,
     Resolution,
     _parse_resolution,
+    Difficulte,
+    _parse_difficulte,
     PreLaunch,
     PostInstall,
     _annee_valide,
@@ -228,6 +230,9 @@ class GameData:
     # Où écrire la taille de la fenêtre (`catalogue_blocs.Resolution`) ; None :
     # le launcher ne règle pas la résolution de ce jeu.
     resolution: Resolution | None = None
+    # Où le jeu range sa propre difficulté (`catalogue_blocs.Difficulte`) ; None :
+    # le launcher ne la propose pas pour ce jeu.
+    difficulte: Difficulte | None = None
     # Année de scolarité que ce jeu raconte — 1 à 7, ou 0 pour « hors
     # programme ».
     #
@@ -406,6 +411,7 @@ class GameData:
             controller=_niveau_manette(data.get("controller")),
             controller_note=_loc(data, "controller_note", ""),
             resolution=_parse_resolution(data.get("resolution")),
+            difficulte=_parse_difficulte(data.get("difficulty")),
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),
             dll_overrides=_surcharges_dll_valides(data.get("dll_overrides")),

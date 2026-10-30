@@ -8,6 +8,10 @@
     "decimal": ","
   },
   "strings": {
+    "Difficulté": "Dificultad",
+    "Facile": "Fácil",
+    "La difficulté du jeu lui-même, aussi réglable dans son menu Options. Plus elle monte, plus Harry perd de vie à chaque coup (× 1,2 en Facile, × 2 en Moyen, × 3 en Difficile) et plus les sorts ennemis vont vite ; le Basilic résiste davantage. À régler jeu fermé ; compte au prochain lancement.": "La dificultad del propio juego, que también se ajusta en su menú Opciones. Cuanto más alta, más vida pierde Harry con cada golpe (× 1,2 en Fácil, × 2 en Medio, × 3 en Difícil) y más rápido van los hechizos enemigos; el Basilisco aguanta más. Cámbiala con el juego cerrado; se aplica en el próximo inicio.",
+    "Difficulté non enregistrée : le fichier de réglages du jeu n'a pas pu être modifié (fichier absent ou en lecture seule).": "Dificultad no guardada: no se pudo modificar el archivo de ajustes del juego (archivo ausente o de solo lectura).",
     "Position dans la cinématique": "Posición en la cinemática",
     "Enregistrer…": "Guardar…",
     "Garder une copie de cette cinématique sur votre ordinateur.": "Guardar una copia de esta cinemática en tu ordenador.",

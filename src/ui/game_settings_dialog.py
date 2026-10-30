@@ -365,6 +365,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if self.manager.game_language(self.game) is not None:
                 self._section_langue(corps)
                 rempli = True
+            rempli = self._section_difficulte(corps) or rempli
             rempli = self._section_videos(corps) or rempli
             if self._section_correctif(corps, "jeu", titre=tr("Dans le jeu")):
                 rempli = True

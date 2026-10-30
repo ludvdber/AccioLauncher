@@ -905,6 +905,12 @@
         "width": "WindowedViewportX",
         "height": "WindowedViewportY"
       },
+      "difficulty": {
+        "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+        "section": "Engine.PlayerPawn",
+        "key": "Difficulty",
+        "values": ["DifficultyEasy", "DifficultyMedium", "DifficultyHard"]
+      },
       "controller": "partial",
       "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris.",
       "fix_settings": [

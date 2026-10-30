@@ -49,6 +49,14 @@
         {
           "genre": "nouveau",
           "texte": {
+            "fr": "La Chambre des Secrets : sa difficulté (Facile, Moyen, Difficile) se choisit dans ses réglages, onglet Jeu. Le jeu l'avait déjà, cachée dans son menu Options et réglée sur Facile. En bêta.",
+            "en": "Chamber of Secrets: its difficulty (Easy, Medium, Hard) can be chosen in its settings, Game tab. The game already had it, tucked away in its Options menu and set to Easy. In beta.",
+            "es": "La cámara secreta: su dificultad (Fácil, Medio, Difícil) se elige en sus ajustes, pestaña Juego. El juego ya la tenía, escondida en su menú Opciones y en Fácil. En beta."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
             "fr": "Dans le Folio, les cartes de La Coupe de Feu ont toutes leur texte, statues et quêtes comprises, et jouent le son que le jeu leur donne.",
             "en": "In the Folio, every Goblet of Fire card has its text, statues and quests included, and plays the sound the game gives it.",
             "es": "En el Folio, todas las cartas de El cáliz de fuego tienen su texto, estatuas y misiones incluidas, y reproducen el sonido que el juego les da."

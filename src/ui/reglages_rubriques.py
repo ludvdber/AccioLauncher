@@ -24,9 +24,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import (captures, manette, reglages_correctif, reglages_graphiques, resolution_jeu,
-                      texte_ue1, videos_lancement)
+from src.core import (captures, difficulte_jeu, manette, reglages_correctif, reglages_graphiques,
+                      resolution_jeu, texte_ue1, videos_lancement)
 from src.core.i18n import tr
+from src.core.reglages_table import Reglage
 from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font
@@ -580,6 +581,40 @@ class RubriquesDuJeu:
             bascule.blockSignals(True)
             bascule.setChecked(vrai)
             bascule.blockSignals(False)
+
+    def _section_difficulte(self, corps: QVBoxLayout) -> bool:
+        """La difficulté propre au jeu (HP2), lue et écrite dans SON fichier
+        (`difficulte_jeu`) : le menu du jeu et cette liste disent la même chose."""
+        rang = difficulte_jeu.lire(self.game, self.manager.config)
+        if rang is None:
+            return False
+        choix = self._liste()
+        for valeur, nom in enumerate(difficulte_jeu.NIVEAUX):
+            choix.addItem(tr(nom), valeur)
+        choix.setCurrentIndex(rang)
+        choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_difficulte(c))
+        aide = tr(
+            "La difficulté du jeu lui-même, aussi réglable dans son menu Options. Plus elle "
+            "monte, plus Harry perd de vie à chaque coup (× 1,2 en Facile, × 2 en Moyen, × 3 en "
+            "Difficile) et plus les sorts ennemis vont vite ; le Basilic résiste davantage. "
+            "À régler jeu fermé ; compte au prochain lancement.")
+        carte = Carte()
+        carte.ajouter(self._ligne(tr("Difficulté"), choix, aide, reglage=Reglage(
+            "difficulte_jeu", "", "", "Difficulté", aide, onglet="jeu", beta=True)))
+        self._egaliser(carte)
+        self._section(corps, self._titre_rubrique(tr("Difficulté")), carte)
+        return True
+
+    def _on_difficulte(self, choix: QComboBox) -> None:
+        if difficulte_jeu.ecrire(self.game, self.manager.config, choix.currentData()):
+            return
+        # Pas écrit : la liste revient sur ce que porte VRAIMENT le fichier (règle 118).
+        choix.blockSignals(True)
+        choix.setCurrentIndex(difficulte_jeu.lire(self.game, self.manager.config) or 0)
+        choix.blockSignals(False)
+        self._montrer_erreur(tr(
+            "Difficulté non enregistrée : le fichier de réglages du jeu n'a pas pu être "
+            "modifié (fichier absent ou en lecture seule)."))
 
     def _on_manette(self, oui: bool) -> None:
         if self._appliquer_manette(oui):

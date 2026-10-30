@@ -415,6 +415,44 @@ def _parse_resolution(data: Any) -> Resolution | None:
 
 
 @dataclass(frozen=True, slots=True)
+class Difficulte:
+    """Où le jeu range SA difficulté : une clé d'un `.ini`, trois valeurs.
+
+    HP2 (catalogue 0.50, 2026-10-30) : `[Engine.PlayerPawn] Difficulty` de
+    `User.ini`, `DifficultyEasy` / `DifficultyMedium` / `DifficultyHard`, que le
+    menu Options du jeu règle aussi (presque personne ne l'y a vu). Les valeurs
+    vont du plus facile au plus difficile ; le launcher les nomme Facile, Moyen,
+    Difficile (`difficulte_jeu.NIVEAUX`).
+    """
+    file: str                        # chemin avec %DOCUMENTS% / %INSTALL_DIR%, un `.ini`
+    section: str
+    key: str
+    values: tuple[str, str, str]     # facile, moyen, difficile
+
+
+def _parse_difficulte(data: Any) -> Difficulte | None:
+    """Lit le bloc `difficulty`, ou None s'il est absent ou douteux.
+
+    Mêmes barrières que `resolution` ; exactement trois valeurs distinctes,
+    tout ou rien.
+    """
+    if not isinstance(data, dict):
+        return None
+    champs = _chaines(data, ("file", "section", "key"), strip=True)
+    brutes = data.get("values")
+    if champs is None or not isinstance(brutes, list) or len(brutes) != 3:
+        return None
+    valeurs = [v.strip() for v in brutes if isinstance(v, str) and v.strip()]
+    fichier, section, cle = champs
+    if (len(valeurs) != 3 or len(set(valeurs)) != 3 or _INI_INTERDIT_VALEUR.search(fichier)
+            or any(_INI_INTERDIT_NOM.search(c) for c in (section, cle, *valeurs))):
+        log.warning("Bloc difficulty ignoré (douteux) : %r", data)
+        return None
+    return Difficulte(file=fichier, section=section, key=cle,
+                      values=(valeurs[0], valeurs[1], valeurs[2]))
+
+
+@dataclass(frozen=True, slots=True)
 class PreLaunch:
     """Données de pré-lancement d'un jeu."""
     ini_patches: tuple[IniPatch, ...] = ()
