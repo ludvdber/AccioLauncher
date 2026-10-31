@@ -194,6 +194,9 @@ class Config:
     # sans qu'on le lui demande.
     trailers_optin: bool = False
     discord_presence: bool = True
+    # Le lieu et l'avancement lus dans la sauvegarde, en seconde ligne de la
+    # carte Discord (Ludo, 2026-10-30 : le lieu révèle un peu l'intrigue aux amis).
+    discord_partie: bool = True
     dismissed_launcher_version: str = ""
     # Un seul remerciement Ko-fi dans la vie du launcher, à la première mise à
     # jour installée (le nom date du cap des 2 h de jeu, remplacé par ACT-072).
@@ -278,6 +281,7 @@ class Config:
                     mute_videos=_as_bool(data.get("mute_videos"), True),
                     trailers_optin=_as_bool(data.get("trailers_optin"), False),
                     discord_presence=_as_bool(data.get("discord_presence"), True),
+                    discord_partie=_as_bool(data.get("discord_partie"), True),
                     dismissed_launcher_version=_as_str(
                         data.get("dismissed_launcher_version"), ""),
                     kofi_milestone_thanked=_as_bool(
@@ -336,6 +340,7 @@ class Config:
                 "mute_videos": self.mute_videos,
                 "trailers_optin": self.trailers_optin,
                 "discord_presence": self.discord_presence,
+                "discord_partie": self.discord_partie,
                 "dismissed_launcher_version": self.dismissed_launcher_version,
                 "kofi_milestone_thanked": self.kofi_milestone_thanked,
                 "visite_vue": self.visite_vue,
