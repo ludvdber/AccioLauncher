@@ -301,9 +301,10 @@ class TestMiseAJourDuJeu:
     def _vue_maj(self, tmp_path):
         changes = []
         ver = SimpleNamespace(version="1.2", changes=["Textures HD", "Correctif son"])
-        jeu = _jeu(recommended_version="1.2", get_version=lambda v: ver if v == "1.2" else None)
+        jeu = _jeu(recommended_version="1.2", current_download=ver)
         vue = _vue(tmp_path, jeu, installed_version=lambda _id: "1.1")
-        vue._ops = SimpleNamespace(is_busy=False, switch_version=lambda g, v: changes.append(v.version))
+        vue._ops = SimpleNamespace(is_busy=False,
+                                   mettre_a_jour=lambda g: changes.append(g.current_download.version))
         return vue, changes
 
     def test_la_question_dit_ce_qui_change(self, tmp_path, boites):
@@ -314,19 +315,15 @@ class TestMiseAJourDuJeu:
         assert "v1.1" in texte and "v1.2" in texte and "• Textures HD" in texte
         assert not changes, "« Plus tard » ne change rien"
 
-    def test_accepter_change_de_version(self, tmp_path, boites):
+    def test_accepter_met_a_jour_vers_la_recommandee(self, tmp_path, boites):
         vue, changes = self._vue_maj(tmp_path)
         boites.repondre(0)
         h.on_update_clicked(vue)
         assert changes == ["1.2"]
 
-    def test_changer_de_version_seulement_pour_le_jeu_affiche(self, tmp_path):
-        vue, changes = self._vue_maj(tmp_path)
-        h.on_switch_version(vue, "autre", "1.2")
-        h.on_switch_version(vue, "hpx", "9.9")
-        assert not changes
-        h.on_switch_version(vue, "hpx", "1.2")
-        assert changes == ["1.2"]
+    def test_plus_de_retour_a_une_ancienne_archive(self):
+        """Une seule archive par jeu (Ludo, 2026-10-30, correctif 2.3.0)."""
+        assert not hasattr(h, "on_switch_version")
 
 
 class TestDesinstaller:

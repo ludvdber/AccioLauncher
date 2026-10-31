@@ -544,8 +544,8 @@ def _ce_qui_reste(game: GameData) -> str:
 def on_update_clicked(view: GameDetailView) -> None:
     if view.game is None or _preparation_bloque(view):
         return
-    ver = view.game.get_version(view.game.recommended_version)
-    if ver is None:
+    ver = view.game.current_download
+    if ver is None or ver.version != view.game.recommended_version:
         return
     installed = view.manager.installed_version(view.game.id) or "?"
     changes = "\n".join(f"• {c}" for c in ver.changes)
@@ -556,22 +556,15 @@ def on_update_clicked(view: GameDetailView) -> None:
         (tr("Mettre à jour"), tr("Plus tard")), 1,
     )
     if reply == 0:
-        view._ops.switch_version(view.game, ver)
-
-
-def on_switch_version(view: GameDetailView, game_id: str, version: str) -> None:
-    if view.game is None or view.game.id != game_id or _preparation_bloque(view):
-        return
-    ver = view.game.get_version(version)
-    if ver is not None:
-        view._ops.switch_version(view.game, ver)
+        view._ops.mettre_a_jour(view.game)
 
 
 def on_versions_clicked(view: GameDetailView) -> None:
+    """Le journal des changements, en lecture seule : plus de choix d'une
+    ancienne archive depuis le 2026-10-30 (Ludo, correctif 2.3.0)."""
     if view.game is None:
         return
     dlg = VersionsDialog(view.game, view.manager, view)
-    dlg.switch_to_version.connect(lambda gid, ver: on_switch_version(view, gid, ver))
     # Une PAGE à la place de la fiche (2026-10-14), comme les réglages du jeu.
     if view.receivers(view.page_demandee):
         view.page_demandee.emit(dlg)
@@ -927,13 +920,14 @@ def _appliquer_manette(view: GameDetailView, game: GameData, oui: bool) -> bool:
 def _actions_fichiers(view: GameDetailView, game: GameData):
     """Ce que la fenêtre de réglages propose sous « Fichiers du jeu ».
 
-    « Gérer les versions » et « Vérifier / réparer » n'étaient atteignables
+    Le journal des changements et « Vérifier / réparer » n'étaient atteignables
     qu'au CLIC DROIT — le défaut qu'on vient de corriger pour la langue, à
     l'identique. Réparer n'a de sens que sur un jeu installé ; l'ouverture du
     dossier non plus, et proposer d'ouvrir un dossier qui n'existe pas serait
     une erreur de plus à expliquer.
     """
-    actions = [(tr("Gérer les versions"), lambda: on_versions_clicked(view))]
+    # Le journal SEUL : revenir à une ancienne archive n'existe plus (2026-10-30).
+    actions = [(tr("Journal des changements"), lambda: on_versions_clicked(view))]
     installe = view.manager.get_state(game.id) == GameState.INSTALLED
     if installe:
         actions.append((tr("Vérifier / réparer les fichiers"),
@@ -1068,7 +1062,7 @@ def show_context_menu(view: GameDetailView, pos) -> None:
     if view.game is None:
         return
     menu = QMenu(view)
-    act_versions = QAction(tr("Gérer les versions"), view)
+    act_versions = QAction(tr("Journal des changements"), view)
     act_versions.triggered.connect(lambda: on_versions_clicked(view))
     menu.addAction(act_versions)
     state = view.manager.get_state(view.game.id)

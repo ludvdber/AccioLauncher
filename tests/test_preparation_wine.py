@@ -412,17 +412,16 @@ class _OpsInterdites:
 
 class TestAucuneOperationPendantUnePreparation:
     """Revue du 2026-09-30 : la barre du bas montre la préparation jusqu'à sa fin.
-    Seuls TÉLÉCHARGER et JOUER étaient refusés ; mettre à jour, changer de version,
-    réparer ou installer une archive locale écrivaient leur progression dans cette
+    Seuls TÉLÉCHARGER et JOUER étaient refusés ; mettre à jour, changer de version
+    (retiré le 2026-10-30), réparer ou installer une archive locale écrivaient leur progression dans cette
     barre, dont « Annuler » aurait arrêté la préparation et non l'opération."""
 
     @pytest.mark.parametrize("porte", [
         lambda gdh, vue: gdh.on_download(vue),
         lambda gdh, vue: gdh.on_update_clicked(vue),
-        lambda gdh, vue: gdh.on_switch_version(vue, vue.game.id, "1.0"),
         lambda gdh, vue: gdh.on_repair(vue),
         lambda gdh, vue: gdh.on_install_local(vue),
-    ], ids=["telecharger", "mettre_a_jour", "changer_de_version", "reparer", "archive_locale"])
+    ], ids=["telecharger", "mettre_a_jour", "reparer", "archive_locale"])
     def test_refusee_avant_toute_question(self, monkeypatch, jeu_hp7a, porte):
         from src.ui import game_detail_handlers as gdh
         monkeypatch.setattr(gdh, "_boite", lambda *a, **k: pytest.fail("question posée"))
@@ -441,7 +440,7 @@ class TestAucuneOperationPendantUnePreparation:
         from pathlib import Path
         source = Path(__file__).parents[1] / "src" / "ui" / "game_detail_handlers.py"
         arbre = ast.parse(source.read_text(encoding="utf-8"))
-        operations = {"download", "switch_version", "repair", "install"}
+        operations = {"download", "mettre_a_jour", "repair", "install"}
         portes, sans_garde = [], []
         for fonction in arbre.body:
             if not isinstance(fonction, ast.FunctionDef):

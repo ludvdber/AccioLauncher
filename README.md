@@ -31,7 +31,7 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 
 - **Les huit jeux de la saga**, de *l'École des Sorciers* (2001) aux deux parties des *Reliques de la Mort* (2011), prêts à jouer sur un PC récent.
 - **Un clic pour télécharger et installer.** Une connexion qui coupe ? Le téléchargement reprend là où il s'est arrêté, et chaque fichier est vérifié à l'arrivée.
-- **Tout se gère au même endroit**, depuis une barre en haut (Bibliothèque, Carnet, Collections, Paramètres) : mises à jour des jeux, réparation d'une installation abîmée, retour à une version précédente. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
+- **Tout se gère au même endroit**, depuis une barre en haut (Bibliothèque, Carnet, Collections, Paramètres) : mises à jour des jeux, réparation d'une installation abîmée, journal des changements de chaque version. Un jeu qui ne démarre plus après un changement dans ses options graphiques est reconnu à son retour, et retrouve sa configuration en un clic, sans rien retélécharger.
 - **Un plantage expliqué** : quand un jeu s'arrête brutalement, le launcher lit ce que Windows a noté et dit où chercher (pilote graphique, programme qui s'incruste, fichier du jeu, fichier retiré par l'antivirus), avec un détail à copier pour demander de l'aide.
 - **Les réglages graphiques de *Prisonnier d'Azkaban*** dans l'engrenage du jeu : anticrénelage, résolution de rendu, filtrage, synchronisation et limite d'images (jamais au-delà de 60), sans ouvrir un fichier au Bloc-notes.
 - **Vos sauvegardes à l'abri** : avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. Une partie abîmée par un plantage revient à sa version de la veille en deux clics. Une sauvegarde s'exporte aussi en .zip, pour la garder ou la reprendre sur un autre PC.
@@ -151,11 +151,11 @@ environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
   </tr>
   <tr>
     <td width="50%"><img src="docs/screen_reglages.jpg" alt="Les réglages d'image d'un jeu"></td>
-    <td width="50%"><img src="docs/screen_versions.jpg" alt="Les versions d'un jeu et leurs nouveautés"></td>
+    <td width="50%"><img src="docs/screen_versions.jpg" alt="Le journal des changements d'un jeu"></td>
   </tr>
   <tr>
     <td align="center"><sub>Les réglages de chaque jeu, avec leur coût</sub></td>
-    <td align="center"><sub>Versions et nouveautés : on change en un clic, sans jamais rester sans jeu</sub></td>
+    <td align="center"><sub>Le journal des changements de chaque jeu, version par version</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screen_folio.jpg" alt="Le folio d'une partie : cartes de Chocogrenouille, Coupe des Quatre Maisons et sorts appris"></td>

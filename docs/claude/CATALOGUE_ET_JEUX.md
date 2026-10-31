@@ -37,6 +37,8 @@ Quatre règles payées ailleurs : **n'y déclarer que ce qui EXISTE** (huit vid�
 
 **Champ `annee`** (hp1-hp7b) — `"annee": 3`, 1 à 7, absent ou 0 = hors programme. **`hp7a` comme `hp7b` valent 7.** **L'année ne se déduit JAMAIS du rang.** Validé par `_annee_valide` ; **les booléens sont refusés explicitement** — `True` EST un `int`, et `"annee": true` vaudrait « 1ʳᵉ année ».
 
+**Bloc `versions`** (par jeu) — **une seule archive par jeu à partir du correctif 2.3.0** (Ludo, 2026-10-30 : nos ajouts s'activent dans les réglages). Le launcher ne télécharge, ne met à jour et ne répare qu'avec l'entrée `recommended_version` (`GameData.current_download`) ; les entrées passées ne servent plus qu'au journal des changements (`changes`, traduits par `i18n`). On ne revient plus à une ancienne version. Une entrée mal formée est ÉCARTÉE seule, le jeu reste (`game_data._versions`) ; si c'était la recommandée, le jeu n'a plus d'archive et se montre « Bientôt disponible ». Le bloc peut donc rester tel quel dans le catalogue.
+
 **Bloc `contributors`** (racine) — `{ "name", "role", "url"?, "i18n" }`. Dans le CATALOGUE et non le code, parce que **remercier quelqu'un ne doit pas attendre une release** : une traduction rendue un mardi doit pouvoir être créditée le mardi, sinon la personne voit passer trois versions sans son nom et n'en propose pas une deuxième. `url` passe par la MÊME validation https que `warning_url`. Les traducteurs restent dans `_meta.translators` de leur fichier de langue — ils s'y ajoutent dans la même contribution.
 
 **Bloc `language_registry`** (HP7a/HP7b) :

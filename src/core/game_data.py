@@ -140,6 +140,27 @@ class GameVersion:
         )
 
 
+
+def _versions(brut: object, game_id: str) -> tuple[GameVersion, ...]:
+    """Les entrées `versions` du catalogue, une mauvaise ÉCARTÉE seule.
+
+    Une seule archive par jeu depuis le 2026-10-30 (Ludo, correctif 2.3.0) :
+    le launcher ne télécharge que la recommandée (`current_download`), et les
+    autres entrées ne servent plus qu'au journal des changements. Une
+    ancienne entrée mal formée ne doit donc plus faire écarter le jeu entier.
+    """
+    if not isinstance(brut, list):
+        return ()
+    gardees = []
+    for entree in brut:
+        try:
+            if not isinstance(entree, dict):
+                raise ValueError(f"entrée {type(entree).__name__}")
+            gardees.append(GameVersion.from_dict(entree))
+        except (ValueError, TypeError) as exc:
+            log.warning("Catalogue : %s, une version écartée (%s)", game_id, exc)
+    return tuple(gardees)
+
 @dataclass(frozen=True, slots=True)
 class GameData:
     """Données immuables d'un jeu du catalogue."""
@@ -371,9 +392,7 @@ class GameData:
             raise ValueError(f"identifiant non sûr : {data['id'][:40]!r}")
         pi = data.get("post_install", {})
         pl = data.get("pre_launch")
-        versions = tuple(
-            GameVersion.from_dict(v) for v in data.get("versions", [])
-        )
+        versions = _versions(data.get("versions"), data["id"])
         pre_launch: PreLaunch | None = None
         if pl:
             pre_launch = PreLaunch(

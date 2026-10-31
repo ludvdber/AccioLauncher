@@ -1,4 +1,5 @@
-"""Les versions d'un jeu, en PAGE : la liste à gauche, le détail à droite.
+"""Le journal des changements d'un jeu, en PAGE : les versions à gauche, ce
+que chacune a changé à droite.
 
 Refaite le 2026-10-14 d'après la maquette « Versions d'un jeu » validée par
 Ludo. L'ancienne boîte de 550 × 500 empilait toutes les versions, chacune avec
@@ -10,17 +11,17 @@ qui va arriver.
 Le rail reprend celui des réglages du jeu (retour « Bibliothèque », jaquette,
 nom) : deux pages d'un même jeu se reconnaissent.
 
-Ce que la page promet, elle le tient : changer de version SUPPRIME le dossier
-du jeu (`GameOperations.switch_version`), mais les réglages posés à côté de
-l'exécutable sont lus avant et reportés dans la nouvelle version
-(`reglages_conserves`), et les configs de Documents ne sont plus écrasées.
-Les sauvegardes, rangées dans Documents ou AppData, ne bougent pas.
+Lecture seule depuis le 2026-10-30 (Ludo) : une seule archive par jeu à
+partir du correctif 2.3.0, puisque nos ajouts s'activent dans les réglages.
+Revenir à une ancienne version n'est plus proposé ; le catalogue garde ses
+versions passées pour ce journal, et la fiche met à jour vers la
+recommandée (`GameOperations.mettre_a_jour`).
 """
 
 import html
 from datetime import date
 
-from PyQt6.QtCore import QDate, QLocale, QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QDate, QLocale, QSize, Qt
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -39,17 +40,14 @@ from src.core.formatting import format_size
 from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
-from src.core.version_utils import compare_versions
 from src.ui.composants import (
     ENCRE,
     ENCRE_DOUCE,
-    bouton,
     feuille_de_style,
     police,
     surtitre,
     texte,
 )
-from src.ui.fenetre_message import FenetreMessage
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, _Jaquette
@@ -168,10 +166,8 @@ class _LigneVersion(QPushButton):
 
 
 class VersionsDialog(QDialog):
-    """Versions et changelog d'un jeu — permet upgrade et downgrade."""
-
-    # Émis pour demander un swap de version (uninstall current → install target).
-    switch_to_version = pyqtSignal(str, str)  # (game_id, version)
+    """Le journal des changements d'un jeu, version par version. Rien ne s'y
+    installe : on ne revient plus à une ancienne archive (2026-10-30)."""
 
     def __init__(self, game: GameData, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -181,9 +177,8 @@ class VersionsDialog(QDialog):
         # Les plus récentes d'abord (parsing tolérant aux dates cassées).
         self._versions = sorted(game.versions, key=lambda v: _date_sort_key(v.date), reverse=True)
         self._lignes: dict[str, _LigneVersion] = {}
-        self._actions: dict[str, QPushButton] = {}
 
-        self.setWindowTitle(tr("Versions de {}").format(game.name))
+        self.setWindowTitle(tr("Journal des changements de {}").format(game.name))
         self.setMinimumSize(900, 560)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
         self._build_ui()
@@ -243,7 +238,7 @@ class VersionsDialog(QDialog):
         nom.setStyleSheet("color: #f4f2f8; background: transparent;")
         nom.setMinimumWidth(1)
         noms.addWidget(nom)
-        noms.addWidget(surtitre(tr("Versions")))
+        noms.addWidget(surtitre(tr("Journal des changements")))
         identite.addLayout(noms, stretch=1)
         lay.addLayout(identite)
         lay.addSpacing(18)
@@ -307,7 +302,7 @@ class VersionsDialog(QDialog):
         return page
 
     def _etat(self, ver: GameVersion) -> QVBoxLayout:
-        """Ce que cette version est pour le joueur, ou le bouton qui y mène."""
+        """La version installée se dit ; aucune autre ne s'installe d'ici."""
         col = QVBoxLayout()
         col.setSpacing(8)
         col.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
@@ -320,25 +315,6 @@ class VersionsDialog(QDialog):
             ligne.addWidget(coche)
             ligne.addWidget(texte(tr("C'est la version installée"), 15, _VERT))
             col.addLayout(ligne)
-            return col
-        if not ver.is_available:
-            col.addWidget(texte(tr("Pas encore en ligne"), 14, ENCRE_DOUCE),
-                          alignment=Qt.AlignmentFlag.AlignRight)
-            return col
-        if self._installed_version is None:
-            libelle = tr("Installer v{}").format(ver.version)
-        elif compare_versions(ver.version, self._installed_version) > 0:
-            libelle = tr("Mettre à jour vers v{}").format(ver.version)
-        else:
-            libelle = tr("Revenir à v{}").format(ver.version)
-        btn = bouton(libelle, principal=True)
-        btn.setAutoDefault(False)
-        btn.clicked.connect(lambda _c=False, v=ver.version: self._on_install_version(v))
-        self._actions[ver.version] = btn
-        col.addWidget(btn, alignment=Qt.AlignmentFlag.AlignRight)
-        if self._installed_version is not None:
-            col.addWidget(texte(tr("Vos sauvegardes et vos réglages restent."), 13, _VERT),
-                          alignment=Qt.AlignmentFlag.AlignRight)
         return col
 
     # ── Navigation ──
@@ -350,32 +326,3 @@ class VersionsDialog(QDialog):
 
     def _montrer(self, version: str) -> None:
         self._details.setCurrentIndex(self._index[version])
-
-    def action(self, version: str) -> QPushButton | None:
-        """Le bouton de la page de `version` ; None si elle est installée ou pas en ligne."""
-        return self._actions.get(version)
-
-    def _on_install_version(self, version: str) -> None:
-        action = tr("installer")
-        if self._installed_version is not None:
-            action = tr("supprimer la version actuelle et installer")
-
-        # Pas de `QMessageBox.question` : ses boutons Yes/No sont traduits par
-        # les fichiers `qtbase_<langue>.qm` de Qt, que le build écarte — d'où
-        # un « Yes » anglais dans un launcher réglé en français. Et son texte
-        # reste en `AutoText` alors qu'il interpole un numéro de version venu
-        # du catalogue DISTANT, donc de l'extérieur.
-        boite = FenetreMessage(self)
-        boite.setIcon(FenetreMessage.Icon.Question)
-        boite.setWindowTitle(tr("Confirmer"))
-        boite.setText(
-            tr("Ceci va {} la version {}.\nContinuer ?").format(action, version))
-        installer = boite.addButton(tr("Installer cette version"),
-                                    FenetreMessage.ButtonRole.AcceptRole)
-        annuler = boite.addButton(tr("Annuler"),
-                                  FenetreMessage.ButtonRole.RejectRole)
-        boite.setDefaultButton(annuler)
-        boite.exec()
-        if boite.clickedButton() is installer:
-            self.switch_to_version.emit(self.game.id, version)
-            self.accept()

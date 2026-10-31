@@ -460,7 +460,7 @@ class TestJamaisSurLePartDUnZombie:
 
 
 class TestChangerDeVersionEtReparer:
-    """`switch_version` et `repair` n'étaient exécutés sur une vraie
+    """`mettre_a_jour` (ex-`switch_version`) et `repair` n'étaient exécutés sur une vraie
     `GameOperations` par AUCUN test (audit du 2026-10-29, règle 10 : tout
     chemin de l'orchestrateur vient avec le sien)."""
 
@@ -475,12 +475,14 @@ class TestChangerDeVersionEtReparer:
         assert manager.is_installed(jeu.id)
         return jeu, exe
 
-    def test_changer_de_version_telecharge_d_abord(self, ops, monkeypatch):
-        """Règle 96 : rien n'est désinstallé avant que la nouvelle version soit là."""
+    def test_mettre_a_jour_telecharge_d_abord(self, ops, monkeypatch):
+        """Règle 96 : rien n'est désinstallé avant que la nouvelle version soit là.
+        Toujours vers la recommandée : une seule archive par jeu (2026-10-30)."""
         operations, manager = ops
         monkeypatch.setattr("src.ui.game_operations.Downloader", _FauxDownloader)
         jeu, exe = self._installe(ops)
-        operations.switch_version(jeu, jeu.current_download)
+        operations.mettre_a_jour(jeu)
+        assert operations._target_version is jeu.current_download
         assert operations._downloader is not None and operations._uninstall_first
         assert exe.exists(), "l'installation actuelle doit rester jusqu'au bout"
         assert operations._downloader.destination == manager.chemin_archive(jeu.id, jeu.current_download)
@@ -506,6 +508,6 @@ class TestChangerDeVersionEtReparer:
         messages = []
         operations.status_message.connect(messages.append)
         operations.repair(jeu)
-        operations.switch_version(jeu, jeu.current_download)
+        operations.mettre_a_jour(jeu)
         assert operations._downloader is premier
         assert len(messages) == 2 and all("déjà en cours" in m for m in messages)

@@ -140,9 +140,23 @@ class TestCeQuiFinitDansUnNomDeFichier:
 
     @pytest.mark.parametrize("version", ["../../../../tmp/pwn", "1.0/../x", "", ".1", 1.5])
     def test_une_version_qui_sortirait_du_cache_est_refusee(self, version):
+        """Écartée SEULE depuis le 2026-10-30 : le jeu reste, sans cette archive."""
         jeu = dict(FULL_GAME, versions=[{"version": version, "download_url": "https://x.test/a.7z"}])
-        with pytest.raises(ValueError):
-            GameData.from_dict(jeu)
+        g = GameData.from_dict(jeu)
+        assert g.versions == () and not g.is_downloadable
+
+    def test_une_ancienne_version_mal_formee_n_ecarte_pas_le_jeu(self):
+        """Une seule archive par jeu (Ludo, 2026-10-30, correctif 2.3.0) : le
+        catalogue peut encore porter des versions passées, le launcher ne lit
+        que la recommandée et n'en fait pas une erreur."""
+        bonne = {"version": "2.0", "date": "2026-11-01", "download_url": "https://x.test/b.7z",
+                 "size_mb": 5, "changes": ["Nouveau"]}
+        jeu = dict(FULL_GAME, recommended_version="2.0",
+                   versions=["pas un dict", {"version": "../x"}, {"version": 3}, bonne])
+        g = GameData.from_dict(jeu)
+        assert [v.version for v in g.versions] == ["2.0"]
+        assert g.current_download.download_url == "https://x.test/b.7z"
+        assert GameData.from_dict(dict(FULL_GAME, versions="rien")).versions == ()
 
     @pytest.mark.parametrize("ident", ["../evil", "a/b", "a\\b", ".cache"])
     def test_un_identifiant_qui_sortirait_du_cache_est_refuse(self, ident):

@@ -1,4 +1,4 @@
-"""Page des versions d'un jeu : tri, dates, et ce que chaque version propose.
+"""Journal des changements d'un jeu (ex-page des versions) : tri, dates, lecture seule.
 
 Les helpers de date sont gardés hors classe pour rester testables sans Qt.
 """
@@ -69,7 +69,7 @@ pytest.importorskip("pytestqt")
 
 from types import SimpleNamespace  # noqa: E402
 
-from PyQt6.QtWidgets import QLabel, QMessageBox, QPushButton  # noqa: E402
+from PyQt6.QtWidgets import QLabel, QPushButton  # noqa: E402
 
 from src.core.game_data import GameData  # noqa: E402
 
@@ -95,51 +95,29 @@ def _dialogue(qtbot, installee):
     return dlg
 
 
-def _actions(dlg):
-    """Le bouton de chaque page de version, par numéro ; None s'il n'y en a pas."""
-    return {v.version: (b.text() if (b := dlg.action(v.version)) else None)
-            for v in dlg.game.versions}
-
-
-class _FausseConfirmation:
-    """QMessageBox remplacée au niveau du MODULE (règle 12) ; `exec()` ne bloque pas."""
-    Icon = QMessageBox.Icon
-    ButtonRole = QMessageBox.ButtonRole
-    accepter = True
-
-    def __init__(self, _parent=None):
-        self._boutons = []
-        self.texte = ""
-
-    def addButton(self, libelle, _role):
-        self._boutons.append(libelle)
-        return libelle
-
-    def setText(self, t):
-        self.texte = t
-
-    def clickedButton(self):
-        return self._boutons[0] if _FausseConfirmation.accepter else self._boutons[1]
-
-    def __getattr__(self, _nom):       # setIcon, setWindowTitle, exec…
-        return lambda *a, **k: None
-
-
 class TestPageDesVersions:
-    def test_les_boutons_disent_ce_qui_va_arriver(self, qtbot):
-        dlg = _dialogue(qtbot, "1.1")
-        # 1.1 installée : rien pour elle ; 1.3 sans archive : « Pas encore en ligne ».
-        assert _actions(dlg) == {"1.0": "Revenir à v1.0", "1.1": None,
-                                 "1.2": "Mettre à jour vers v1.2", "1.3": None}
-        assert any(lbl.text() == "Pas encore en ligne" for lbl in dlg.findChildren(QLabel))
-        assert any(lbl.text() == "C'est la version installée" for lbl in dlg.findChildren(QLabel))
+    def test_le_journal_n_installe_rien(self, qtbot):
+        """Une seule archive par jeu (Ludo, 2026-10-30, correctif 2.3.0) : la page
+        ne propose plus de revenir à une version, ni d'en installer une."""
+        from src.ui.versions_dialog import VersionsDialog
+        assert not hasattr(VersionsDialog, "switch_to_version")
+        for installee in ("1.1", None):
+            dlg = _dialogue(qtbot, installee)
+            boutons = [b.text() for b in dlg.findChildren(QPushButton)
+                       if b.objectName() != "version"]
+            assert boutons == ["Bibliothèque"], boutons
 
-    def test_sans_version_installee_on_propose_d_installer(self, qtbot):
+    def test_la_version_installee_se_dit(self, qtbot):
+        dlg = _dialogue(qtbot, "1.1")
+        textes = [lbl.text() for lbl in dlg.findChildren(QLabel)]
+        assert textes.count("C'est la version installée") == 1
+
+    def test_le_journal_de_chaque_version_reste_lisible(self, qtbot):
         dlg = _dialogue(qtbot, None)
-        assert _actions(dlg) == {"1.0": "Installer v1.0", "1.1": "Installer v1.1",
-                                 "1.2": "Installer v1.2", "1.3": None}
-        assert not any(lbl.text() == "Vos sauvegardes et vos réglages restent." for lbl in dlg.findChildren(QLabel)), \
-            "rien à garder quand rien n'est installé"
+        assert dlg.windowTitle() == "Journal des changements de HPX"
+        dlg._lignes["1.0"].click()
+        page = dlg._details.currentWidget()
+        assert any("originale" in lbl.text() for lbl in page.findChildren(QLabel))
 
     def test_s_ouvre_sur_la_version_installee(self, qtbot):
         dlg = _dialogue(qtbot, "1.1")
@@ -166,16 +144,12 @@ class TestPageDesVersions:
         assert "Recommandée" in dlg._lignes["1.2"].accessibleName()
         assert "Installée" not in dlg._lignes["1.0"].accessibleName()
 
-    def test_promet_sauvegardes_et_reglages(self, qtbot):
-        """Promesse tenue depuis le 2026-10-14 : les réglages sont lus avant la
-        suppression du dossier et reportés (`reglages_conserves`). Si ce
-        mécanisme disparaît, la promesse doit disparaître avec lui."""
+    def test_la_mise_a_jour_garde_toujours_les_reglages(self):
+        """La mise à jour supprime toujours le dossier du jeu : les réglages
+        posés à côté de l'exécutable restent lus avant et reportés."""
         from src.ui import game_operations
         assert "reglages_conserves.mettre_de_cote" in Path(game_operations.__file__).read_text(
             encoding="utf-8")
-        dlg = _dialogue(qtbot, "1.1")
-        textes = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
-        assert "sauvegardes et vos réglages" in textes
 
     def test_le_retour_ferme_la_page(self, qtbot):
         dlg = _dialogue(qtbot, "1.1")
@@ -188,13 +162,3 @@ class TestPageDesVersions:
         dlg = _dialogue(qtbot, None)
         textes = [lbl.text() for lbl in dlg.findChildren(QLabel)]
         assert any("Version &lt;b&gt;originale&lt;/b&gt;" in t for t in textes)
-
-    @pytest.mark.parametrize("accepter, attendu", [(True, [("hpx", "1.0")]), (False, [])])
-    def test_la_confirmation_decide_du_changement(self, qtbot, monkeypatch, accepter, attendu):
-        monkeypatch.setattr("src.ui.versions_dialog.FenetreMessage", _FausseConfirmation)
-        monkeypatch.setattr(_FausseConfirmation, "accepter", accepter)
-        dlg = _dialogue(qtbot, "1.1")
-        demandes = []
-        dlg.switch_to_version.connect(lambda jeu, v: demandes.append((jeu, v)))
-        dlg._on_install_version("1.0")
-        assert demandes == attendu

@@ -766,7 +766,7 @@ class RubriquesDuJeu:
     def _actions_du_rail(self, colonne: QVBoxLayout) -> None:
         """Actions qui n'étaient atteignables qu'au CLIC DROIT, au bas du rail.
 
-        « Gérer les versions » et « Vérifier / réparer » existaient déjà, mais
+        Le journal des changements et « Vérifier / réparer » existaient déjà, mais
         seulement dans le menu contextuel — exactement le défaut qu'on vient de
         corriger pour la langue : une fonction qu'il faut deviner n'existe pas.
         Elles referment la fenêtre avant d'agir, sinon leur propre dialogue
