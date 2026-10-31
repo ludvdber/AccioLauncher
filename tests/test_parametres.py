@@ -75,6 +75,33 @@ class TestDialogue:
             assert bascule.accessibleName()
 
 
+    def test_la_partie_sur_discord_suit_la_presence(self, dialogue):
+        """« Montrer où j'en suis » n'a de sens qu'avec la carte Discord : grisée
+        sans elle, sa valeur intacte, et enregistrée comme les autres cases."""
+        dialogue.construire_rubrique(3)     # Intégrations, bâtie à l'ouverture
+        ligne, case = dialogue._ligne_discord_partie, dialogue._tgl_discord_partie
+        assert ligne.isEnabled() and case.isChecked()
+        dialogue._tgl_discord._basculer()       # un clic (setChecked n'émet rien)
+        assert not ligne.isEnabled() and ligne.graphicsEffect() is not None
+        assert case.isChecked(), "griser ne change pas le choix"
+        dialogue._tgl_discord._basculer()
+        assert ligne.isEnabled() and ligne.graphicsEffect() is None
+        case._basculer()
+        assert dialogue.config.discord_partie is False
+        assert Config.load().discord_partie is False
+
+    def test_presence_eteinte_a_l_ouverture_la_case_est_grisee(self, qtbot, tmp_path, monkeypatch):
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        cfg = Config(install_path=tmp_path / "jeux", cache_path=tmp_path / "cache", langue="fr",
+                     discord_presence=False)
+        dlg = SettingsDialog(cfg, GameManager(cfg))
+        qtbot.addWidget(dlg)
+        try:
+            dlg.construire_rubrique(3)
+            assert not dlg._ligne_discord_partie.isEnabled()
+        finally:
+            dlg._shutdown_scan()
+
 class TestComposants:
     def test_carte_pose_un_filet_entre_les_lignes(self, qtbot):
         carte = composants.Carte()
