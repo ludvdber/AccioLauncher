@@ -324,7 +324,7 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.INSTALLED)
         libelles = [lib for lib, _ in gdh._actions_fichiers(win._detail, jeu)]
-        assert tr("Gérer les versions") in libelles
+        assert tr("Journal des changements") in libelles
         assert tr("Vérifier / réparer les fichiers") in libelles
         assert tr("Ouvrir le dossier du jeu") in libelles
 
@@ -359,7 +359,7 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.NOT_INSTALLED)
         libelles = [lib for lib, _ in gdh._actions_fichiers(win._detail, jeu)]
-        assert libelles == [tr("Gérer les versions")]
+        assert libelles == [tr("Journal des changements")]
 
     def test_le_dossier_ouvert_est_celui_de_l_executable(self, make_window_multilingue,
                                                         monkeypatch, tmp_path):

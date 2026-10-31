@@ -782,7 +782,7 @@ class InfoPanel(QWidget):
 
         Maquette « Plan du launcher v2 » (Ludo, 2026-10-26) : la manette est
         montée dans la ligne méta, la version est partie dans l'engrenage
-        (« Gérer les versions ») ; une ligne qui mêlait une information, une
+        (le journal des changements) ; une ligne qui mêlait une information, une
         action de dépannage et un lien ne se lisait pas.
         """
         gold = current_theme().accent

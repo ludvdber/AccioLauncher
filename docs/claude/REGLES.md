@@ -129,7 +129,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 ### Orchestration et états
 
 95. **Changer `install_path` sans `manager.refresh_states()`** — des états INSTALLED périmés font échouer « JOUER » en silence.
-96. **Désinstaller avant que le téléchargement de remplacement ne finisse** (`switch_version`) — télécharger d'abord ; les retours passent par `redetect_state`.
+96. **Désinstaller avant que le téléchargement de remplacement ne finisse** (`mettre_a_jour`, ex-`switch_version`) — télécharger d'abord ; les retours passent par `redetect_state`. Depuis le 2026-10-30, une mise à jour va toujours vers la recommandée : revenir à une ancienne archive n'existe plus.
 97. **Ré-implémenter les lignes de progression** — utiliser `format_progress_line` / `append_part_info`.
 98. **Recopier le seuil ou le calcul de reprise** (`REPRISE_SEUIL`, `GameManager.reprise`) — le bouton ET la vignette l'affichent ; deux règles jumelles finissent par diverger. **Le défaut `THUMB_H`/`CAROUSEL_HEIGHT` une seconde fois.**
 99. **Ajouter un champ à `Config` sans toucher à `save()` ET `load()`** — les deux tiennent leur liste À LA MAIN, et rien ne les reliait au dataclass : le réglage s'affiche, se coche, se relit en mémoire, et disparaît à la fermeture. Payé sur `faits_du_jour`, découvert par un test du RÉGLAGE, pas de la config. **Troisième occurrence de « deux listes qu'aucun calcul ne relie ».** Filet : `TestChaqueReglageEstReellementPersiste`.

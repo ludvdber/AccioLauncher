@@ -129,14 +129,14 @@ class GameOperations(QObject):
                  uninstall_first: bool = False) -> None:
         """Lance le téléchargement d'une version de jeu.
 
-        `uninstall_first=True` (switch de version) : la version installée n'est
+        `uninstall_first=True` (mise à jour) : la version installée n'est
         supprimée qu'une fois le téléchargement terminé et vérifié.
         """
         if self.is_busy:
             self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
             return
         if not version.is_available:
-            # Point de passage unique de download / switch_version / repair :
+            # Point de passage unique de download / mettre_a_jour / repair :
             # aucun chemin ne doit lancer un Downloader sans source, sous peine
             # du message d'erreur générique qui accuse la connexion réseau.
             log.warning("Version %s de %s sans source de téléchargement", version.version, game.id)
@@ -338,16 +338,22 @@ class GameOperations(QObject):
         self._set_phase("install")
         self._installer.start()
 
-    # ──────────────────── Version switch ────────────────────
+    # ──────────────────── Mise à jour ────────────────────
 
-    def switch_version(self, game: GameData, version: GameVersion) -> None:
-        """Télécharge la nouvelle version, PUIS désinstalle l'actuelle.
+    def mettre_a_jour(self, game: GameData) -> None:
+        """Télécharge l'archive recommandée, PUIS désinstalle l'actuelle (règle 96).
 
         L'ordre est volontaire : un téléchargement échoué/annulé ne doit jamais
-        laisser l'utilisateur sans aucune version installée.
+        laisser l'utilisateur sans aucune version installée. Une seule archive
+        par jeu depuis le 2026-10-30 (Ludo) : on ne revient plus à une
+        ancienne version, on va toujours vers la recommandée.
         """
         if self.is_busy:
             self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            return
+        version = game.current_download
+        if version is None or not version.is_available:
+            self.status_message.emit(tr("Aucune version disponible."))
             return
         self.download(game, version, uninstall_first=self._manager.is_installed(game.id))
 
