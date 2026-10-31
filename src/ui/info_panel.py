@@ -1,5 +1,7 @@
 """Panneau d'informations du jeu — titre, metadata, description, version."""
 
+import logging
+import threading
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -20,6 +22,8 @@ from src.ui.icon_button import pixmap_icone
 from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, lire_resume, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
 from src.core.formatting import format_duree_compacte, format_size
+
+log = logging.getLogger(__name__)
 
 # Largeurs de CONFORT, toujours rabotées à la place réelle : figées, elles
 # débordaient sous ~1100 px de fenêtre.
@@ -104,6 +108,11 @@ class InfoPanel(QWidget):
     # les sauvegardes. Bouton près de l'engrenage jusqu'au 2026-10-14 : il
     # faisait passer le temps de jeu sous la rangée (Ludo).
     folio_clicked = pyqtSignal()
+    # La partie relue dans un fil vient d'être posée sur la fiche affichée : le
+    # parent range le panneau d'actions et repositionne (règle 40).
+    partie_lue = pyqtSignal()
+    # Interne : (numéro, jeu, résumé, avancée), émis par le fil de lecture.
+    _lecture_finie = pyqtSignal(int, str, object, object)
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -126,6 +135,17 @@ class InfoPanel(QWidget):
         # Sans folio, l'avancement que le jeu écrit (HP5 : « 14 % ») : une
         # ligne au-dessus de la description, qui reste (Ludo, 2026-10-15).
         self._avancee: sauvegardes.Etat | None = None
+        # Les sauvegardes se lisent dans un fil, jamais dans celui de
+        # l'interface (Ludo, 2026-10-31) ; la dernière lecture de chaque jeu
+        # reste ici, pour qu'un retour sur sa fiche ne repasse pas par la
+        # description le temps de relire. `_demandes` : le numéro de la
+        # lecture la plus récente par jeu (une plus ancienne arrive trop tard).
+        self._parties: dict[str, tuple[folio.Resume | None, sauvegardes.Etat | None]] = {}
+        self._demandes: dict[str, int] = {}
+        self._numero = 0
+        self._en_attente = 0
+        self._prelu = False
+        self._lecture_finie.connect(self._poser_lecture)
 
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(50, 0, 30, 0)
@@ -509,8 +529,7 @@ class InfoPanel(QWidget):
         nouveau = self._game is None or self._game.id != game.id
         self._game = game
         if nouveau:
-            self._resume = None
-            self._avancee = None
+            self._resume, self._avancee = self._parties.get(game.id, (None, None))
             self._a_propos = False
             self._appliquer_partie()
 
@@ -606,12 +625,71 @@ class InfoPanel(QWidget):
     def rafraichir_indices(self, game: GameData | None) -> None:
         """Après un changement d'état du jeu (installé, désinstallé, retour
         de partie) : la partie en cours se relit, puis la ligne d'indices."""
-        if game is not None:
-            self._game = game
-            self._resume = self._lire_partie(game)
-            self._avancee = None if self._resume is not None else self._lire_avancee(game)
-            self._appliquer_partie()
-            self._refresh_indices(game)
+        if game is None:
+            return
+        self._game = game
+        if self._manager.is_installed(game.id):
+            self._lire_en_fond([game])
+        else:
+            # Désinstallé, la fiche redevient une invitation : rien à lire.
+            self._parties.pop(game.id, None)
+            self._resume, self._avancee = None, None
+        self._appliquer_partie()
+        self._refresh_indices(game)
+        if not self._prelu:
+            # Une fois : les autres jeux installés d'avance, pour que passer
+            # de fiche en fiche ne montre pas la description un instant.
+            self._prelu = True
+            self._lire_en_fond([e.game for e in self._manager.get_games()
+                                if e.game.id != game.id and self._manager.is_installed(e.game.id)])
+
+    def lecture_en_cours(self) -> bool:
+        """Une lecture de sauvegarde n'est pas encore posée (tests, audit de géométrie)."""
+        return self._en_attente > 0
+
+    def _lire_en_fond(self, jeux: list[GameData]) -> None:
+        """Lit la partie de `jeux` dans un fil ; chaque résultat revient par
+        `_lecture_finie`, donc dans le fil de l'interface."""
+        if not jeux:
+            return
+        langue, install = get_language(), self._manager.config.install_path
+        travail = []
+        for game in jeux:
+            self._numero += 1
+            self._demandes[game.id] = self._numero
+            travail.append((self._numero, game, install / Path(game.executable).parent))
+        self._en_attente += len(travail)
+
+        def lire() -> None:
+            for numero, game, system in travail:
+                resume, avancee = None, None
+                try:
+                    if game.id in folio.FICHES:
+                        resume = lire_resume(game, system, langue)
+                    if resume is None:
+                        avancee = sauvegardes.derniere_avancee(game.sauvegardes)
+                except Exception:   # une sauvegarde illisible : la fiche garde sa description
+                    log.debug("Fiche : partie de %s illisible", game.id, exc_info=True)
+                    resume, avancee = None, None
+                try:
+                    self._lecture_finie.emit(numero, game.id, resume, avancee)
+                except RuntimeError:    # la fiche a été détruite entre-temps
+                    return
+        threading.Thread(target=lire, name="fiche-partie", daemon=True).start()
+
+    def _poser_lecture(self, numero: int, jeu: str, resume: object, avancee: object) -> None:
+        self._en_attente -= 1
+        if numero != self._demandes.get(jeu) or not self._manager.is_installed(jeu):
+            return      # une lecture plus récente suit, ou le jeu n'est plus là
+        partie = (resume if isinstance(resume, folio.Resume) else None,
+                  avancee if isinstance(avancee, sauvegardes.Etat) else None)
+        self._parties[jeu] = partie
+        if self._game is None or self._game.id != jeu:
+            return
+        self._resume, self._avancee = partie
+        self._appliquer_partie()
+        self._refresh_indices(self._game)
+        self.partie_lue.emit()
 
     # ──────────────────── Partie en cours ────────────────────
 
@@ -622,19 +700,6 @@ class InfoPanel(QWidget):
 
     def description_montree(self) -> bool:
         return self._resume is None or self._a_propos
-
-    def _lire_partie(self, game: GameData) -> folio.Resume | None:
-        """Seulement un jeu INSTALLÉ que le folio sait lire : désinstallé, la
-        fiche redevient une invitation, la description revient."""
-        if game.id not in folio.FICHES or not self._manager.is_installed(game.id):
-            return None
-        system = self._manager.config.install_path / Path(game.executable).parent
-        return lire_resume(game, system, get_language())
-
-    def _lire_avancee(self, game: GameData) -> sauvegardes.Etat | None:
-        if not self._manager.is_installed(game.id):
-            return None
-        return sauvegardes.derniere_avancee(game.sauvegardes)
 
     def _appliquer_partie(self) -> None:
         resume, game = self._resume, self._game

@@ -41,6 +41,7 @@ import logging
 import os
 import sys
 import tempfile
+import time
 from collections import namedtuple
 from pathlib import Path
 
@@ -210,6 +211,11 @@ def _mesure(langue: str, scenario: str = "nominal") -> list[str]:
                 win.manager.set_game_state(entry.game.id, etat)
                 win._detail.set_game(entry.game)
                 win._detail._refresh()
+                # La partie se lit dans un fil : mesurer la fiche une fois posée.
+                fin = time.monotonic() + 5
+                while info.lecture_en_cours() and time.monotonic() < fin:
+                    app.processEvents()
+                    time.sleep(0.002)
                 pompe()
                 ctx = f"{langue}[{scenario}] {taille[0]}x{taille[1]} {entry.game.id} {etat.name}"
                 reste = info._scroll.verticalScrollBar().maximum()

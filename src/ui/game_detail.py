@@ -179,6 +179,7 @@ class GameDetailView(QWidget):
         self._action_panel.medias_clicked.connect(
             lambda: self.game is not None and self.mediatheque_demandee.emit(self.game.id))
         self._info.content_changed.connect(self._position_info)
+        self._info.partie_lue.connect(self._sur_partie_lue)
 
         # Menu contextuel
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -378,6 +379,17 @@ class GameDetailView(QWidget):
         self._action_panel.partie_dans_la_fiche = self._info.partie_affichee()
         self._action_panel.set_game(self.game)
         self._action_panel.refresh()
+        self._position_info()
+
+    def _sur_partie_lue(self) -> None:
+        """La sauvegarde, lue dans un fil, a changé la fiche : le panneau
+        d'actions range ses statistiques selon qu'il y a un bloc, puis le
+        panneau d'infos se repositionne (règle 40). Reconstruit seulement si
+        cela change : un JOUER au focus clavier le perdrait sinon."""
+        partie = self._info.partie_affichee()
+        if partie != self._action_panel.partie_dans_la_fiche:
+            self._action_panel.partie_dans_la_fiche = partie
+            self._action_panel.refresh()
         self._position_info()
 
     # ──────────────────── Parallaxe ────────────────────
