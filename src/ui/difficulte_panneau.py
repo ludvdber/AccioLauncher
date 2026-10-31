@@ -333,8 +333,13 @@ class PanneauDifficulte(QWidget):
         colonnes = len(self.cartes_presets)
         # Sous 190 px par carte, elles s'écrasaient : on empile.
         lay.addWidget(Rangee(list(self.cartes_presets), colonnes, seuil=colonnes * 190, ecart=12))
-        lay.addSpacing(30)
-        lay.addWidget(self._tete_sur_mesure())
+        # Là où les presets font déjà chaque combinaison (HP1), ni l'en-tête ni
+        # les réglages un par un : la fenêtre lit `sur_mesure`.
+        self.sur_mesure = dp.sur_mesure_utile(self.idents)
+        self.sceau_sur_mesure: _Sceau | None = None
+        if self.sur_mesure:
+            lay.addSpacing(30)
+            lay.addWidget(self._tete_sur_mesure())
         self.rafraichir(anime=False)
 
     # ── Lire ──────────────────────────────────────────────────────────────
@@ -420,7 +425,8 @@ class PanneauDifficulte(QWidget):
         for carte in self.cartes_presets:
             carte.marquer(carte.ident == courant)
         sur_mesure = courant == dp.SUR_MESURE
-        self.sceau_sur_mesure.setVisible(sur_mesure)
+        if self.sceau_sur_mesure is not None:
+            self.sceau_sur_mesure.setVisible(sur_mesure)
         niveau = dp.niveau(valeurs, self.game.id, self.idents)
         if sur_mesure:
             self.cadran.viser(niveau, tr("Sur mesure"), dp.situer(niveau, self.crans), anime=anime)

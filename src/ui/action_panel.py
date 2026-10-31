@@ -69,8 +69,9 @@ class ActionPanel(QWidget):
     # bouton jusqu'au 2026-10-27 (Ludo : « plus petit, une icône musique et
     # images serait top »).
     medias_clicked = pyqtSignal()
-    # La page « Difficulté » (1.4, Ludo 2026-10-30) : même place sur les huit
-    # fiches, grisée là où aucun preset ne change encore rien.
+    # L'onglet « Difficulté » (1.4, Ludo 2026-10-30), dernier de la rangée.
+    # ABSENT là où aucun preset ne change encore rien : grisé sur HP3, il
+    # passait pour un bouton cassé (Ludo, 2026-10-31 : « l'épée fonctionne pas »).
     difficulte_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
@@ -468,13 +469,13 @@ class ActionPanel(QWidget):
             self._manager.config.install_path / Path(game.executable).parent)
             if game.fix_settings else None)
         idents = dp.idents_du_jeu(game, ini)
-        ouvert = any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal")
+        if not any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal"):
+            return
         btn = IconButton("epee", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
         btn.setObjectName("boutonDifficulte")
         btn.setAccessibleName(tr("Difficulté de {}").format(game.name))
-        btn.setToolTip(tr("Difficulté") if ouvert else tr("Difficulté : bientôt pour ce jeu"))
-        btn.setEnabled(ouvert)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor if ouvert else Qt.CursorShape.ArrowCursor)
+        btn.setToolTip(tr("Difficulté"))
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.difficulte_clicked)
         self._action_layout.addWidget(btn)
         self._btn_difficulte = btn

@@ -178,8 +178,8 @@ class TestEngrenageReglagesDuJeu:
         assert not [b for b in dlg.findChildren(QRadioButton) if not b.isEnabled()]
 
     def test_les_reglages_du_correctif_ne_retirent_pas_la_resolution(self, make_window_multilingue):
-        """HP1/HP2 avec le correctif 2.2.0 : le Quidditch et le son se règlent,
-        la résolution (écrite par le launcher) reste dans la page Image."""
+        """HP1/HP2 avec le correctif 2.2.0 : le son se règle, le Quidditch par
+        les presets, la résolution (écrite par le launcher) reste dans la page Image."""
         from dataclasses import replace
         from pathlib import Path
         from src.core import reglages_correctif
@@ -199,7 +199,9 @@ class TestEngrenageReglagesDuJeu:
             "[Accio.Game]\r\nQuidditchDifficulty=0\r\n".encode("ascii"))
         dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
         assert dlg._choix_resolution is not None and dlg._choix_resolution.count() >= 1
-        assert {"quidditch", "son_arriere_plan"} <= set(dlg._controles)
+        assert "son_arriere_plan" in dlg._controles
+        # Le Quidditch seul : ses trois crans SONT les presets, pas de liste à part.
+        assert "quidditch" not in dlg._controles
 
     def test_la_rubrique_affichage_previent_du_piege_du_menu_du_jeu(
             self, make_window_multilingue):

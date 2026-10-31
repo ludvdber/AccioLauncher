@@ -195,6 +195,12 @@ _DURCIT = {
 HP2 = frozenset({dp.NATIVE, "quidditch"})
 
 
+def test_sur_mesure_seulement_la_ou_les_presets_ne_font_pas_tout():
+    assert not dp.sur_mesure_utile({"quidditch"}), "HP1 : chaque cran est un preset"
+    assert dp.sur_mesure_utile(HP2), "HP2 : neuf combinaisons, trois presets"
+    assert dp.sur_mesure_utile(HP6_PRESETS)
+
+
 class TestNiveau:
     """Le niveau de défi du cadran (maquette validée par Ludo le 2026-10-31)."""
 
@@ -334,6 +340,18 @@ class TestOnglet:
                          pos=QPoint(round(zone.center().x() * k + dx), round(zone.center().y() * k + dy)))
         assert panneau.courant() == "detendu"
 
+    def test_le_quidditch_seul_n_a_pas_de_sur_mesure(self, qtbot, dossier_hp6):
+        """HP1 : les trois crans du Quidditch SONT Normal, Difficile et Hardcore ;
+        la liste les redisait (Ludo, 2026-10-31)."""
+        ini = dossier_hp6.config.install_path / "HP6" / "d3d9.ini"
+        ini.write_bytes((INI + "[Accio.Game]\r\nQuidditchDifficulty=0\r\n").encode("ascii"))
+        dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=["quidditch"])
+        assert [c.ident for c in panneau.cartes_presets] == ["normal", "difficile", "hardcore"]
+        assert not panneau.sur_mesure and panneau.sceau_sur_mesure is None
+        assert "quidditch" not in dlg._controles
+        qtbot.mouseClick(self._carte(panneau, "difficile"), Qt.MouseButton.LeftButton)
+        assert "QuidditchDifficulty=1" in ini.read_bytes().decode()
+
     def test_un_jeu_sans_reglage_n_a_pas_l_onglet(self, qtbot, dossier_hp6):
         dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=["limite_fps"])
         assert panneau is None and "difficulte" not in dlg._onglets
@@ -344,18 +362,21 @@ class TestBoutonDeLaFiche:
         from src.ui.icon_button import IconButton
         game = next(e.game for e in win.manager.get_games() if e.game.id == jeu)
         win._detail.set_game(game)
-        return win._detail._action_panel.findChild(IconButton, "boutonDifficulte")
+        # Le bouton d'une fiche précédente attend encore sa destruction : celui de CE jeu.
+        return next((b for b in win._detail._action_panel.findChildren(IconButton, "boutonDifficulte")
+                     if game.name in b.accessibleName()), None)
 
-    def test_hp2_ouvre_l_onglet_et_hp3_attend(self, make_window, monkeypatch):
+    def test_hp2_ouvre_l_onglet_et_hp3_ne_l_a_pas(self, make_window, monkeypatch):
+        """Grisée sur HP3, l'épée passait pour cassée (Ludo, 2026-10-31) : absente."""
         from src.core.game_manager import GameManager, GameState
         from src.ui.game_settings_dialog import GameSettingsDialog
         monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in {"hp2", "hp3"})
         monkeypatch.setattr(GameManager, "get_state", lambda self, j: GameState.INSTALLED
                             if j in {"hp2", "hp3"} else GameState.NOT_INSTALLED)
         win = make_window()
-        assert not self._bouton(win, "hp3").isEnabled(), "rien à régler dans HP3 : bientôt"
+        assert self._bouton(win, "hp3") is None, "rien à régler dans HP3 : pas d'épée"
         bouton = self._bouton(win, "hp2")
-        assert bouton.isEnabled()
+        assert bouton is not None and bouton.isEnabled()
         bouton.click()
         page = win._pages.page
         assert isinstance(page, GameSettingsDialog)

@@ -615,14 +615,18 @@ class RubriquesDuJeu:
             return False
         self._panneau = panneau
         corps.addWidget(panneau)
-        carte = Carte()
-        choix_jeu = self._ligne_difficulte_jeu(carte)
-        reglages = [r for r in self._reglages if r.onglet == "difficulte"] if self._correctif_actif() else []
-        for reglage in reglages:
-            self._controle(carte, self._ini, reglage)
-        self._egaliser(carte)
-        corps.addSpacing(14)
-        corps.addWidget(carte)
+        choix_jeu, reglages = None, []
+        # HP1 : le Quidditch seul, que les presets règlent déjà cran par cran.
+        if panneau.sur_mesure:
+            carte = Carte()
+            choix_jeu = self._ligne_difficulte_jeu(carte)
+            if self._correctif_actif():
+                reglages = [r for r in self._reglages if r.onglet == "difficulte"]
+            for reglage in reglages:
+                self._controle(carte, self._ini, reglage)
+            self._egaliser(carte)
+            corps.addSpacing(14)
+            corps.addWidget(carte)
         if (une_vie := panneau.bloc_une_seule_vie()) is not None:
             corps.addSpacing(34)
             corps.addWidget(une_vie)

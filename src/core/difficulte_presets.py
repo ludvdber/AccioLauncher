@@ -234,6 +234,26 @@ def _extremes(idents: Iterable[str]) -> tuple[float, float]:
     return doux, dur
 
 
+def sur_mesure_utile(idents: Iterable[str]) -> bool:
+    """Faux quand chaque combinaison que ces réglages permettent est déjà un
+    preset : HP1, son Quidditch seul et ses trois crans (Normal, Difficile,
+    Hardcore). « Sur mesure » n'y redirait que les cartes (Ludo, 2026-10-31)."""
+    idents = frozenset(idents)
+    listes: list[list[tuple[str, object]]] = []
+    for ident in sorted(idents):
+        choix: Iterable[object]
+        if ident == NATIVE:
+            choix = range(len(difficulte_jeu.NIVEAUX))
+        elif REGLAGES[ident].choix:
+            choix = REGLAGES[ident].choix
+        else:
+            choix = (False, True)
+        listes.append([(ident, c) for c in choix])
+    if math.prod(len(liste) for liste in listes) > 512:
+        return True
+    return any(courant(dict(combo), idents) == SUR_MESURE for combo in itertools.product(*listes))
+
+
 def reperes(game_id: str, idents: Iterable[str]) -> tuple[tuple[Preset, float], ...]:
     """Les presets proposés dans ce jeu qui ont un cran sur le cadran, du plus
     doux au plus dur, avec leur cran."""
