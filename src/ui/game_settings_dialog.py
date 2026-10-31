@@ -147,6 +147,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # Le contrôle de chaque réglage du correctif, par identifiant : la remise
         # à l'origine les remet sur ce que porte le fichier, sans rebâtir la page.
         self._controles: dict[str, QWidget] = {}
+        self._panneau = None   # le haut de l'onglet Difficulté
         # Le « ? » de chaque ligne, par identifiant (par libellé hors correctif).
         self._aides: dict[str, BoutonAide] = {}
         # La ligne entière de chaque réglage : grisée quand un autre réglage,
@@ -290,6 +291,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setAutoDefault(False)
             btn.toggled.connect(lambda oui, r=rang: oui and self._defile.setCurrentIndex(r))
+            btn.toggled.connect(lambda oui, i=ident: oui and self._noter_pied(i))
             self._groupe_onglets.addButton(btn)
             self._onglets[ident] = btn
             lay.addWidget(btn)
@@ -371,11 +373,12 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if self.manager.game_language(self.game) is not None:
                 self._section_langue(corps)
                 rempli = True
-            rempli = self._section_difficulte(corps) or rempli
             rempli = self._section_demarrage(corps) or rempli
             if self._section_correctif(corps, "jeu", titre=tr("Dans le jeu")):
                 rempli = True
             return self._section_captures(corps) or rempli
+        if onglet == "difficulte":
+            return self._page_difficulte(corps)
         return (self._section_correctif(corps, "perfs")
                 or self._section_graphiques(corps, "perfs"))
 
@@ -644,6 +647,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         rallumer. La valeur n'est PAS réécrite — rallumer le parent rend l'effet
         tel qu'il était.
         """
+        if self._panneau is not None:
+            self._panneau.rafraichir()
         valeurs = self._valeurs_affichees()
         for ident, bloc in self._blocs.items():
             reglage = reglages_correctif.REGLAGES[ident]

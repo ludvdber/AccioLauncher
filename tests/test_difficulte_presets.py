@@ -259,80 +259,84 @@ from PyQt6.QtCore import QPoint, Qt  # noqa: E402
 def dossier_hp6(tmp_path):
     (tmp_path / "HP6").mkdir()
     (tmp_path / "HP6" / "d3d9.ini").write_bytes(INI.encode("ascii"))
-    return SimpleNamespace(config=SimpleNamespace(install_path=tmp_path))
+    return SimpleNamespace(config=SimpleNamespace(install_path=tmp_path, reprise={}),
+                           game_language=lambda g: None, langues_disponibles=lambda g: ())
 
 
-class TestPage:
-    def _page(self, qtbot, manager, **champs):
-        from src.ui.difficulte_page import DifficultePage
-        ouverts = []
-        page = DifficultePage(_jeu(**champs), manager, ouvrir_detail=lambda: ouverts.append(1))
-        qtbot.addWidget(page)
-        return page, ouverts
+class TestOnglet:
+    """L'onglet Difficulté des réglages du jeu (Ludo, 2026-10-31 : « un seul onglet
+    Difficulté avec tout dedans et pas une autre page »)."""
+
+    def _onglet(self, qtbot, manager, **champs):
+        from src.ui.game_settings_dialog import GameSettingsDialog
+        dlg = GameSettingsDialog(_jeu(**champs), manager, lambda c: True)
+        qtbot.addWidget(dlg)
+        dlg.ouvrir_onglet("difficulte")
+        return dlg, dlg._panneau
 
     @staticmethod
-    def _carte(page, ident):
-        return next(c for c in page.cartes if c.ident == ident)
+    def _carte(panneau, ident):
+        return next(c for c in [*panneau.cartes_presets, *panneau.tuiles] if c.ident == ident)
 
-    def test_une_carte_par_preset_utile_et_une_seule_vie_bientot(self, qtbot, dossier_hp6):
-        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        assert [c.ident for c in page.cartes] == ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
-        for carte in page.cartes[-2:]:
-            assert carte.property("bientot") == "true" and carte.focusPolicy() == Qt.FocusPolicy.NoFocus
-        assert self._carte(page, "normal").property("actif") == "true", "un ini neuf : Normal"
-        assert page.cadran.nom == "Normal" and page.cadran.valeur() == 40
+    def test_cartes_reglages_et_une_seule_vie_dans_le_meme_onglet(self, qtbot, dossier_hp6):
+        dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=list(HP6))
+        assert [c.ident for c in panneau.cartes_presets] == ["recit", "detendu", "normal", "difficile", "hardcore"]
+        assert [t.ident for t in panneau.tuiles] == ["realiste", "impardonnable"]
+        for tuile in panneau.tuiles:
+            assert tuile.property("bientot") == "true" and tuile.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert self._carte(panneau, "normal").property("actif") == "true", "un ini neuf : Normal"
+        assert panneau.cadran.nom == "Normal" and panneau.cadran.valeur() == 40
+        assert set(HP6) <= set(dlg._controles), "chaque réglage, sorts retirés compris, est dans l'onglet"
 
-    def test_un_clic_sur_la_carte_ecrit_et_marque(self, qtbot, dossier_hp6):
-        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        page.show()
-        qtbot.mouseClick(self._carte(page, "hardcore"), Qt.MouseButton.LeftButton)
+    def test_le_jeu_ne_porte_plus_la_difficulte(self, qtbot, dossier_hp6):
+        """Plus de difficulté dans l'onglet Jeu : elle y passait avant « Démarrage »
+        et le Quidditch après, sans ordre (Ludo, 2026-10-31)."""
+        assert all(REGLAGES[i].onglet == "difficulte" for i in (*HP6, "quidditch"))
+
+    def test_un_clic_sur_une_carte_remet_chaque_reglage(self, qtbot, dossier_hp6):
+        dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=list(HP6))
+        dlg.show()
+        qtbot.mouseClick(self._carte(panneau, "hardcore"), Qt.MouseButton.LeftButton)
         ini = dossier_hp6.config.install_path / "HP6" / "d3d9.ini"
         assert "DamageTaken=3" in ini.read_bytes().decode().split("\r\n")
-        assert [c.ident for c in page.cartes if c.property("actif") == "true"] == ["hardcore"]
-        assert self._carte(page, "hardcore").sceau.isVisibleTo(page)
-        assert page.cadran.nom == "Hardcore" and page.cadran.actif == "hardcore"
-        qtbot.waitUntil(lambda: page.cadran.valeur() == 82, timeout=3000)
+        assert dlg._controles["degats_recus"].currentData() == 3, "la liste suit le preset"
+        assert [c.ident for c in panneau.cartes_presets if c.property("actif") == "true"] == ["hardcore"]
+        assert self._carte(panneau, "hardcore").sceau.isVisibleTo(panneau)
+        assert panneau.cadran.nom == "Hardcore" and panneau.cadran.actif == "hardcore"
+        qtbot.waitUntil(lambda: panneau.cadran.valeur() == 82, timeout=3000)
+
+    def test_un_reglage_change_allume_sur_mesure(self, qtbot, dossier_hp6):
+        dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=list(HP6))
+        liste = dlg._controles["degats_recus"]
+        liste.setCurrentIndex(liste.findData(2))
+        assert panneau.sceau_sur_mesure.isVisibleTo(panneau)
+        assert not any(c.property("actif") == "true" for c in panneau.cartes_presets)
+        assert (panneau.cadran.nom, panneau.cadran.sous) == ("Sur mesure", "Entre Normal et Difficile")
 
     def test_au_clavier_fleche_et_espace(self, qtbot, dossier_hp6):
         """Règle 119 : un bloc qui a l'air d'un bouton se choisit aussi au clavier."""
-        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        normal = self._carte(page, "normal")
-        qtbot.keyClick(normal, Qt.Key.Key_Right)
-        assert page.courant() == "difficile"
-        qtbot.keyClick(self._carte(page, "difficile"), Qt.Key.Key_Home)
-        assert page.courant() == "recit"
-        qtbot.keyClick(self._carte(page, "hardcore"), Qt.Key.Key_Space)
-        assert page.courant() == "hardcore"
+        _dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=list(HP6))
+        qtbot.keyClick(self._carte(panneau, "normal"), Qt.Key.Key_Right)
+        assert panneau.courant() == "difficile"
+        qtbot.keyClick(self._carte(panneau, "difficile"), Qt.Key.Key_Home)
+        assert panneau.courant() == "recit"
+        qtbot.keyClick(self._carte(panneau, "hardcore"), Qt.Key.Key_Space)
+        assert panneau.courant() == "hardcore"
 
     def test_un_nom_grave_sur_le_cadran_se_clique(self, qtbot, dossier_hp6):
-        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        page.resize(1200, 900)
-        page.show()
-        page.cadran.grab()          # les zones des noms se posent à la peinture
-        zone = page.cadran._zones["detendu"]
-        k, dx, dy = page.cadran._echelle()
-        qtbot.mouseClick(page.cadran, Qt.MouseButton.LeftButton,
+        dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=list(HP6))
+        dlg.resize(1400, 900)
+        dlg.show()
+        panneau.cadran.grab()          # les zones des noms se posent à la peinture
+        zone = panneau.cadran._zones["detendu"]
+        k, dx, dy = panneau.cadran._echelle()
+        qtbot.mouseClick(panneau.cadran, Qt.MouseButton.LeftButton,
                          pos=QPoint(round(zone.center().x() * k + dx), round(zone.center().y() * k + dy)))
-        assert page.courant() == "detendu"
+        assert panneau.courant() == "detendu"
 
-    def test_sur_mesure_s_allume_et_se_situe(self, qtbot, dossier_hp6):
-        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        page.show()
-        rc.ecrire(page.ini, REGLAGES["degats_recus"], 2)
-        page._rafraichir(anime=False)
-        assert page.cadre_sur_mesure.property("actif") == "true"
-        assert not any(c.property("actif") == "true" for c in page.cartes)
-        assert (page.cadran.nom, page.cadran.sous) == ("Sur mesure", "Entre Normal et Difficile")
-
-    def test_sur_mesure_ouvre_le_detail(self, qtbot, dossier_hp6):
-        from PyQt6.QtWidgets import QPushButton
-        page, ouverts = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        next(b for b in page.findChildren(QPushButton) if b.text() == "Régler chaque paramètre").click()
-        assert ouverts == [1]
-
-    def test_un_jeu_sans_reglage_ne_propose_que_normal(self, qtbot, dossier_hp6):
-        page, _ = self._page(qtbot, dossier_hp6, fix_settings=["limite_fps"])
-        assert [c.ident for c in page.cartes] == ["normal", "realiste"]
+    def test_un_jeu_sans_reglage_n_a_pas_l_onglet(self, qtbot, dossier_hp6):
+        dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=["limite_fps"])
+        assert panneau is None and "difficulte" not in dlg._onglets
 
 
 class TestBoutonDeLaFiche:
@@ -342,9 +346,9 @@ class TestBoutonDeLaFiche:
         win._detail.set_game(game)
         return win._detail._action_panel.findChild(IconButton, "boutonDifficulte")
 
-    def test_hp2_ouvre_la_page_et_hp3_attend(self, make_window, monkeypatch):
+    def test_hp2_ouvre_l_onglet_et_hp3_attend(self, make_window, monkeypatch):
         from src.core.game_manager import GameManager, GameState
-        from src.ui.difficulte_page import DifficultePage
+        from src.ui.game_settings_dialog import GameSettingsDialog
         monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in {"hp2", "hp3"})
         monkeypatch.setattr(GameManager, "get_state", lambda self, j: GameState.INSTALLED
                             if j in {"hp2", "hp3"} else GameState.NOT_INSTALLED)
@@ -353,5 +357,19 @@ class TestBoutonDeLaFiche:
         bouton = self._bouton(win, "hp2")
         assert bouton.isEnabled()
         bouton.click()
-        assert isinstance(win._pages.page, DifficultePage)
-        win._pages.page.accept()
+        page = win._pages.page
+        assert isinstance(page, GameSettingsDialog)
+        assert page._onglets["difficulte"].isChecked(), "ouverte sur l'onglet Difficulté"
+        page.accept()
+
+
+def test_le_pied_dit_quand_hp6_le_prend(qtbot, dossier_hp6):
+    """Sur l'onglet Difficulté de HP6, la partie en cours le prend : le pied ne dit
+    plus « au prochain lancement » (2026-10-31)."""
+    from src.ui.game_settings_dialog import GameSettingsDialog
+    dlg = GameSettingsDialog(_jeu(fix_settings=list(HP6)), dossier_hp6, lambda c: True)
+    qtbot.addWidget(dlg)
+    dlg.ouvrir_onglet("difficulte")
+    assert dlg._pied_notes.text().startswith("Change à tout moment")
+    dlg.ouvrir_onglet("jeu")
+    assert not dlg._pied_notes.text().startswith("Change à tout moment")

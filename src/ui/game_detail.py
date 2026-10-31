@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 from src.ui import game_detail_handlers as handlers
 from src.ui.action_panel import ActionPanel
 from src.ui.audio_bar import AudioBar
-from src.ui.difficulte_page import DifficultePage
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
@@ -174,7 +173,8 @@ class GameDetailView(QWidget):
         self._info.language_clicked.connect(lambda: handlers.on_language_clicked(self))
         self._action_panel.game_settings_clicked.connect(
             lambda: handlers.on_game_settings(self))
-        self._action_panel.difficulte_clicked.connect(lambda: DifficultePage.depuis_la_fiche(self))
+        self._action_panel.difficulte_clicked.connect(
+            lambda: handlers.on_game_settings(self, onglet="difficulte"))
         self._info.folio_clicked.connect(self.ouvrir_folio)
         self._action_panel.medias_clicked.connect(
             lambda: self.game is not None and self.mediatheque_demandee.emit(self.game.id))

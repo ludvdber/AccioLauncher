@@ -463,12 +463,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Dégâts reçus",
             "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
             "jeu le prend en compte dans la seconde.",
-            choix=(1, 0.5, 1.5, 2, 3, 5), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 0.5, 1.5, 2, 3, 5), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("degats_infliges", "Accio.Hardcore", "DamageDealt",
             "Dégâts de vos sorts",
             "Multiplie les dégâts des sorts de Harry : à ×0,5, les ennemis tiennent deux "
             "fois plus longtemps. Se change aussi pendant la partie.",
-            choix=(1, 1.5, 0.75, 0.5, 0.33, 0.25), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 1.5, 0.75, 0.5, 0.33, 0.25), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("reaction_ennemis", "Accio.Hardcore", "EnemyReaction",
             "Réaction des ennemis",
             "Les ennemis attendent moins entre deux attaques, esquivent et lancent Protego "
@@ -478,7 +478,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(1, 1.5, 2, 3, 5, 10), zero="D'origine",
             etiquettes=((1.5, "Plus vifs"), (2, "Bien plus vifs"), (3, "Redoutables"),
                         (5, "Implacables"), (10, "Sans aucun répit")),
-            beta=True),
+            onglet="difficulte", beta=True),
     # RemovedSpells (2026-10-24) : le correctif répond « non » quand le jeu demande
     # si Harry connaît ces sorts ; les drapeaux SpellUnlock_* de la sauvegarde ne
     # bougent pas, donc revenir au premier choix rend tout. Seulement des sorts de
@@ -493,7 +493,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "ne peut plus lancer ces sorts de duel, même appris ; votre sauvegarde les garde, "
             "et revenir à « Aucun » les rend aussitôt.",
             choix=tuple(v for v, _ in SORTS_RETIRES), zero="Aucun", noms_choix=SORTS_RETIRES,
-            beta=True),
+            onglet="difficulte", beta=True),
     # HP6, vie et régénération du joueur (correctif 2.3.0, 2026-10-30) : la branche
     # « joueur » de la routine de vie (0x594DB0, relevée par Fable), relue dans la
     # seconde. Les adversaires n'y passent jamais. Pas de « vie des ennemis » : les
@@ -503,13 +503,13 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Vie de Harry",
             "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. "
             "Sa vie du moment garde la même part. Se change aussi pendant la partie.",
-            choix=(1, 1.5, 0.75, 0.5, 0.25), zero="D'origine", format_choix="×{}", beta=True),
+            choix=(1, 1.5, 0.75, 0.5, 0.25), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("regeneration", "Accio.Hardcore", "PlayerRegen",
             "Régénération",
             "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. "
             "« Jamais » : elle ne remonte plus d'elle-même. Se change aussi pendant la partie.",
             choix=(1, 0.5, 0), zero="D'origine",
-            etiquettes=((0.5, "Deux fois plus lente"), (0, "Jamais")), beta=True),
+            etiquettes=((0.5, "Deux fois plus lente"), (0, "Jamais")), onglet="difficulte", beta=True),
     # Invincible (correctif 2.3.0, 2026-10-30, Ludo : « pour les personnes qui ont
     # vraiment du mal ») : une clé à part et pas DamageTaken=0, qu'une valeur
     # illisible donnerait aussi. HP5 et HP6. Au catalogue après un essai en jeu.
@@ -517,7 +517,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Harry invincible",
             "Harry ne reçoit plus aucun dégât des ennemis : pour vivre l'histoire sans échouer. "
             "« Dégâts reçus » n'a alors plus d'effet. Se change aussi pendant la partie.",
-            defaut=False, beta=True),
+            defaut=False, onglet="difficulte", beta=True),
     # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
     # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
     # correctif), lu au démarrage du jeu seulement. À VOIR EN JEU (un match).
@@ -526,7 +526,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "La barre du Vif d'or monte moins vite et redescend plus vite : il faut le "
             "suivre de plus près. Les coups font plus mal. Compte au prochain lancement du jeu.",
             choix=(0, 1, 2), zero="D'origine",
-            etiquettes=((1, "Difficile"), (2, "Expert")), beta=True),
+            etiquettes=((1, "Difficile"), (2, "Expert")), onglet="difficulte", beta=True),
 )}
 
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,

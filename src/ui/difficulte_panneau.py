@@ -1,50 +1,44 @@
-"""La page « Difficulté » d'un jeu (contenu : `src/core/difficulte_presets.py`).
+"""L'onglet « Difficulté » des réglages d'un jeu : le cadran, les presets, et
+tout le détail en dessous (contenu : `src/core/difficulte_presets.py`).
 
 1.4, tranché par Ludo le 2026-10-30 : des presets aux noms clairs (Récit,
 Détendu, Normal, Difficile, Hardcore ; puis, à une seule vie, Réaliste et
-Impardonnable), « Sur mesure » à part, qui ouvre le détail de chaque réglage.
-Une PAGE à la place de la fiche (`pages.py`), comme les réglages du jeu, ouverte
-par le bouton à jauge de la fiche.
+Impardonnable) et « Sur mesure ». Mise en page de la maquette de l'expert UI/UX,
+validée le 2026-10-31 (atelier, `artefact_difficulte/index.html`) : cadran de
+défi (`cadran_defi.py`), cartes cliquables EN ENTIER, l'active bordée d'or avec
+un sceau « ACTIF », valeurs en or alignées à droite.
 
-Mise en page de la maquette de l'expert UI/UX, validée par Ludo le 2026-10-31
-(atelier, `artefact_difficulte/index.html`) : le cadran de défi en tête
-(`cadran_defi.py`), des cartes qui se cliquent EN ENTIER (plus de bouton
-« Choisir » répété), l'active bordée d'or avec un sceau « ACTIF », les valeurs
-en or alignées à droite ; « Sur mesure » juste sous les presets, allumé quand
-il est actif ; « Une seule vie » en bas, allégée tant qu'elle reste « bientôt ».
-
-Chaque carte dit ce que le preset change dans CE jeu, calculé depuis les
-réglages ; un preset qui n'y change rien ne s'y montre pas. Choisir écrit
-aussitôt (comme l'engrenage) ; rien n'est écrit au lancement.
+UN SEUL ONGLET, plus de page à part (Ludo, 2026-10-31 : « Sur mesure ouvre le
+menu Jeu avec la difficulté tout en haut, puis Démarrage, avant de remettre la
+difficulté du Quidditch : ça n'a aucun sens ; un seul onglet Difficulté avec
+tout dedans »). Ce panneau porte le haut de l'onglet (cadran, presets, en-tête
+« Sur mesure ») ; les réglages un par un sont posés juste dessous par la
+fenêtre des réglages (`reglages_rubriques._page_difficulte`), et choisir un
+preset les remet sur ce que porte le fichier. Choisir écrit aussitôt ; rien
+n'est écrit au lancement.
 """
 
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
+from PyQt6.QtCore import QPointF, QRectF, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPainterPath, QPen, QRadialGradient
-from PyQt6.QtWidgets import (
-    QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
-)
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from src.core import difficulte_presets as dp
-from src.core import reglages_correctif
+from src.core.config import Config
 from src.core.game_data import GameData
-from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.cadran_defi import CadranDefi, teinte
-from src.ui.composants import Rangee, bouton, feuille_de_style, surtitre, texte
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.composants import Rangee, surtitre, texte
+from src.ui.fonts import cinzel
 from src.ui.theme import current as current_theme, themed
-from src.ui.utils import zone_defilable
 
-_MARGES = (64, 30, 64, 28)
 _DOUX = "#a9a7c4"
 _ETEINT = "#6c6a88"
 _OR_CLAIR = "#f0d060"
 
 _STYLE = """
-QDialog#difficulte { background: #060611; }
 QFrame#preset {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #121226, stop:0.6 #0d0d1a);
     border: 1px solid rgba(214, 167, 44, 0.22); border-radius: 14px;
@@ -70,7 +64,6 @@ QFrame#filetSection {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(214, 167, 44, 0.22), stop:1 rgba(214, 167, 44, 0));
     border: none;
 }
-QFrame#filetOr { background: rgba(214, 167, 44, 0.14); border: none; }
 """
 
 # Les jeux UE1 relisent leurs fichiers au lancement ; HP5 et HP6, dans la seconde.
@@ -306,93 +299,64 @@ def _titre_section(contenu: str) -> QWidget:
     return bloc
 
 
-class DifficultePage(QDialog):
-    """Les presets de difficulté d'un jeu installé."""
+class PanneauDifficulte(QWidget):
+    """Le haut de l'onglet Difficulté : à quand ça compte, le cadran, les
+    presets, l'en-tête « Sur mesure ». `choisi` part après l'écriture d'un
+    preset (identifiant, réglages qui n'ont PAS pu l'être)."""
 
-    def __init__(self, game: GameData, manager: GameManager,
-                 ouvrir_detail: Callable[[], None] | None = None,
+    choisi = pyqtSignal(str, list)
+
+    def __init__(self, game: GameData, config: Config, ini: Path | None,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("difficulte")
+        _transparent(self, "panneauDifficulte")
+        self.setStyleSheet(self.styleSheet() + themed(_STYLE))
         self.game = game
-        self.manager = manager
-        self._ouvrir_detail = ouvrir_detail
-        self.setWindowTitle(tr("Difficulté"))
-        self.setStyleSheet(themed(_STYLE) + feuille_de_style())
-        declares = reglages_correctif.reglages_du_jeu(game.fix_settings)
-        self.ini: Path | None = (reglages_correctif.ini_du_correctif(
-            manager.config.install_path / Path(game.executable).parent) if declares else None)
-        self.idents = dp.idents_du_jeu(game, self.ini)
+        self.config = config
+        self.ini = ini
+        self.idents = dp.idents_du_jeu(game, ini)
         self.crans = dp.reperes(game.id, self.idents)
-        self.erreur = ""
-        racine = QVBoxLayout(self)
-        racine.setContentsMargins(0, 0, 0, 0)
-        racine.setSpacing(0)
-        racine.addWidget(zone_defilable(self._contenu()), stretch=1)
-        racine.addWidget(self._pied())
-        self._rafraichir(anime=False)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        lay.addWidget(Rangee([self._entete(), self._bloc_cadran()], 2, seuil=640,
+                             etirements=(1, 1), ecart=28))
+        lay.addSpacing(22)
+        lay.addWidget(_titre_section(tr("Presets")))
+        lay.addSpacing(14)
+        crans = {p.ident: c for p, c in self.crans}
+        presets = [p for p in dp.PRESETS if not p.une_vie and dp.disponible(p, game.id, self.idents)]
+        self.cartes_presets = [_CartePreset(p, dp.changements(p, self.idents), crans.get(p.ident, 40),
+                                            self._choisir) for p in presets]
+        for carte in self.cartes_presets:
+            carte.voisines = self.cartes_presets
+        colonnes = len(self.cartes_presets)
+        # Sous 190 px par carte, elles s'écrasaient : on empile.
+        lay.addWidget(Rangee(list(self.cartes_presets), colonnes, seuil=colonnes * 190, ecart=12))
+        lay.addSpacing(30)
+        lay.addWidget(self._tete_sur_mesure())
+        self.rafraichir(anime=False)
 
+    # ── Lire ──────────────────────────────────────────────────────────────
     def valeurs(self) -> dict[str, object]:
-        return dp.lire(self.game, self.manager.config, self.ini, self.idents)
+        return dp.lire(self.game, self.config, self.ini, self.idents)
 
     def courant(self) -> str:
         return dp.courant(self.valeurs(), self.idents)
 
-    def _contenu(self) -> QWidget:
-        page = QWidget()
-        _transparent(page, "contenuDifficulte")
-        lay = QVBoxLayout(page)
-        lay.setContentsMargins(_MARGES[0], _MARGES[1], _MARGES[2], 0)
-        lay.setSpacing(0)
-        lay.addWidget(Rangee([self._entete(), self._bloc_cadran()], 2, seuil=860,
-                             etirements=(1, 1), ecart=40))
-        lay.addSpacing(28)
-        lay.addWidget(_titre_section(tr("Presets")))
-        lay.addSpacing(14)
-        presets = [p for p in dp.PRESETS if not p.une_vie and dp.disponible(p, self.game.id, self.idents)]
-        crans = {p.ident: c for p, c in self.crans}
-        self.cartes_presets = [
-            _CartePreset(p, dp.changements(p, self.idents), crans.get(p.ident, 40), self._choisir)
-            for p in presets]
-        for carte in self.cartes_presets:
-            carte.voisines = self.cartes_presets
-        colonnes = len(self.cartes_presets)
-        # Sous 210 px par carte, elles s'écrasaient (cinq cartes à 1000 px) : on empile.
-        lay.addWidget(Rangee(list(self.cartes_presets), colonnes, seuil=colonnes * 210, ecart=14))
-        lay.addSpacing(14)
-        lay.addWidget(self._sur_mesure())
-        self.tuiles = self._une_seule_vie(lay)
-        self.cartes: list[QFrame] = [*self.cartes_presets, *self.tuiles]
-        self.ligne_erreur = texte("", 14, "#ff9a8a", retour=True)
-        self.ligne_erreur.setVisible(False)
-        lay.addSpacing(14)
-        lay.addWidget(self.ligne_erreur)
-        lay.addStretch()
-        lay.addSpacing(24)
-        return page
-
+    # ── Construire ────────────────────────────────────────────────────────
     def _entete(self) -> QWidget:
         bloc = QWidget()
         _transparent(bloc, "enteteDifficulte")
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(0)
+        v.setSpacing(10)
         v.addStretch()
-        v.addWidget(surtitre(tr("Difficulté")))
-        v.addSpacing(10)
-        titre = QLabel(self.game.name)
-        titre.setTextFormat(Qt.TextFormat.PlainText)
-        titre.setFont(cinzel_decorative(24))
-        titre.setWordWrap(True)
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        v.addWidget(titre)
-        v.addSpacing(14)
         quand = (tr("Change à tout moment, partie en cours comprise.") if self.game.id in _EN_DIRECT
                  else tr("Compte au prochain lancement du jeu."))
-        v.addWidget(texte(quand + " " + tr("Vos sauvegardes ne changent pas."), 16, _DOUX, retour=True))
-        v.addSpacing(10)
-        beta = _pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
-        v.addWidget(beta, alignment=Qt.AlignmentFlag.AlignLeft)
+        v.addWidget(texte(quand + " " + tr("Vos sauvegardes ne changent pas."), 15, _DOUX, retour=True))
+        v.addWidget(_pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)"),
+                    alignment=Qt.AlignmentFlag.AlignLeft)
         v.addStretch()
         return bloc
 
@@ -401,112 +365,71 @@ class DifficultePage(QDialog):
         self.cadran.poser_crans(tuple((p.ident, tr(p.nom), c) for p, c in self.crans))
         return self.cadran
 
-    def _sur_mesure(self) -> QFrame:
-        self.cadre_sur_mesure = QFrame()
-        self.cadre_sur_mesure.setObjectName("surMesure")
-        self.cadre_sur_mesure.setProperty("actif", "false")
-        h = QHBoxLayout(self.cadre_sur_mesure)
-        h.setContentsMargins(20, 18, 20, 18)
-        h.setSpacing(24)
-        gauche = QVBoxLayout()
-        gauche.setSpacing(4)
+    def _tete_sur_mesure(self) -> QWidget:
+        """Le titre de la section des réglages un par un, allumé quand aucun
+        preset ne correspond : les réglages eux-mêmes suivent, posés par la fenêtre."""
+        bloc = QWidget()
+        _transparent(bloc, "teteSurMesure")
+        v = QVBoxLayout(bloc)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(6)
         tete = QHBoxLayout()
-        tete.setSpacing(12)
-        tete.addWidget(_nom(tr("Sur mesure"), 14, "#f2f2f4"))
+        tete.setSpacing(14)
+        tete.addWidget(surtitre(tr("Sur mesure")))
         self.sceau_sur_mesure = _Sceau()
+        politique = self.sceau_sur_mesure.sizePolicy()
+        politique.setRetainSizeWhenHidden(True)
+        self.sceau_sur_mesure.setSizePolicy(politique)
         self.sceau_sur_mesure.setVisible(False)
         tete.addWidget(self.sceau_sur_mesure, alignment=Qt.AlignmentFlag.AlignVCenter)
-        tete.addStretch()
-        gauche.addLayout(tete)
-        gauche.addWidget(_sans_bord(texte(tr("Chaque réglage à votre goût, un par un."), 14, _DOUX,
-                                          retour=True)))
-        h.addLayout(gauche, stretch=1)
-        if self._ouvrir_detail is not None:
-            detail = bouton(tr("Régler chaque paramètre"), principal=True)
-            detail.setAutoDefault(False)
-            detail.clicked.connect(self._ouvrir_detail)
-            h.addWidget(detail, alignment=Qt.AlignmentFlag.AlignVCenter)
-        return self.cadre_sur_mesure
+        filet = QFrame()
+        filet.setObjectName("filetSection")
+        filet.setFixedHeight(1)
+        tete.addWidget(filet, stretch=1)
+        v.addLayout(tete)
+        v.addWidget(texte(tr("Chaque réglage à votre goût, un par un : un preset les règle tous d'un geste."),
+                          14, _DOUX, retour=True))
+        return bloc
 
-    def _une_seule_vie(self, lay: QVBoxLayout) -> list[_TuileBientot]:
-        """Réaliste, et Impardonnable là où Hardcore change quelque chose."""
+    def bloc_une_seule_vie(self) -> QWidget | None:
+        """Réaliste, et Impardonnable là où Hardcore change quelque chose, en
+        tuiles « Bientôt » : à poser par la fenêtre, sous les réglages."""
         hardcore = dp.disponible(dp.PAR_IDENT["hardcore"], self.game.id, self.idents)
-        tuiles = [_TuileBientot(p) for p in dp.PRESETS
-                  if p.une_vie and (p.ident == "realiste" or hardcore)]
-        if not tuiles:
-            return []
-        lay.addSpacing(34)
-        lay.addWidget(_titre_section(tr("Une seule vie")))
-        lay.addSpacing(14)
+        self.tuiles = [_TuileBientot(p) for p in dp.PRESETS
+                       if p.une_vie and (p.ident == "realiste" or hardcore)]
+        if not self.tuiles:
+            return None
+        bloc = QWidget()
+        _transparent(bloc, "uneSeuleVie")
+        bloc.setStyleSheet(bloc.styleSheet() + themed(_STYLE))
+        v = QVBoxLayout(bloc)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(14)
+        v.addWidget(_titre_section(tr("Une seule vie")))
         explication = texte(tr("La première mort termine la partie : pas de retour à la dernière "
                                "sauvegarde."), 14, _DOUX, retour=True)
-        explication.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        lay.addWidget(Rangee([explication, *tuiles], 1 + len(tuiles), seuil=720,
-                             etirements=(11, *(10,) * len(tuiles)), ecart=14))
-        return tuiles
+        v.addWidget(Rangee([explication, *self.tuiles], 1 + len(self.tuiles), seuil=640,
+                           etirements=(11, *(10,) * len(self.tuiles)), ecart=12))
+        return bloc
 
-    def _pied(self) -> QWidget:
-        pied = QWidget()
-        _transparent(pied, "piedDifficulte")
-        v = QVBoxLayout(pied)
-        v.setContentsMargins(_MARGES[0], 0, _MARGES[2], _MARGES[3])
-        v.setSpacing(18)
-        filet = QFrame()
-        filet.setObjectName("filetOr")
-        filet.setFixedHeight(1)
-        v.addWidget(filet)
-        h = QHBoxLayout()
-        h.addStretch()
-        retour = bouton(tr("Retour à la fiche"), principal=True)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self.accept)
-        h.addWidget(retour)
-        v.addLayout(h)
-        return pied
-
-    @classmethod
-    def depuis_la_fiche(cls, view) -> None:
-        """Ouvre la page depuis le bouton à jauge de la fiche (`GameDetailView`).
-        « Régler chaque paramètre » ouvre les réglages du jeu sur l'onglet Jeu."""
-        from src.ui import game_detail_handlers as handlers
-        if view.game is None:
-            return
-        dlg = cls(view.game, view.manager, parent=view,
-                  ouvrir_detail=lambda: handlers.on_game_settings(view, onglet="jeu"))
-        if view.receivers(view.page_demandee):
-            view.page_demandee.emit(dlg)
-        else:
-            dlg.exec()
-
-    def showEvent(self, event) -> None:  # noqa: N802 (Qt)
-        # Au retour des réglages du jeu (« Régler chaque paramètre »), le choix
-        # a pu changer : l'aiguille suit.
-        super().showEvent(event)
-        self._rafraichir()
-
-    def _rafraichir(self, anime: bool = True) -> None:
+    # ── Réagir ────────────────────────────────────────────────────────────
+    def rafraichir(self, anime: bool = True) -> None:
+        """Marques, sceau et aiguille sur ce que portent les fichiers."""
         valeurs = self.valeurs()
         courant = dp.courant(valeurs, self.idents)
         for carte in self.cartes_presets:
             carte.marquer(carte.ident == courant)
         sur_mesure = courant == dp.SUR_MESURE
-        if self.cadre_sur_mesure.property("actif") != ("true" if sur_mesure else "false"):
-            self.cadre_sur_mesure.setProperty("actif", "true" if sur_mesure else "false")
-            self.cadre_sur_mesure.style().unpolish(self.cadre_sur_mesure)
-            self.cadre_sur_mesure.style().polish(self.cadre_sur_mesure)
         self.sceau_sur_mesure.setVisible(sur_mesure)
         niveau = dp.niveau(valeurs, self.game.id, self.idents)
         if sur_mesure:
             self.cadran.viser(niveau, tr("Sur mesure"), dp.situer(niveau, self.crans), anime=anime)
         else:
             self.cadran.viser(niveau, tr(dp.PAR_IDENT[courant].nom), actif=courant, anime=anime)
-        self.ligne_erreur.setText(self.erreur)
-        self.ligne_erreur.setVisible(bool(self.erreur))
 
     def _choisir(self, ident: str) -> None:
         if ident == self.courant():
             return
-        rates = dp.appliquer(dp.PAR_IDENT[ident], self.game, self.manager.config, self.ini, self.idents)
-        self.erreur = (tr("Certains réglages n'ont pas pu être écrits (fichier absent ou en lecture "
-                          "seule) : le jeu garde les précédents.") if rates else "")
-        self._rafraichir()
+        rates = dp.appliquer(dp.PAR_IDENT[ident], self.game, self.config, self.ini, self.idents)
+        self.rafraichir()
+        self.choisi.emit(ident, rates)

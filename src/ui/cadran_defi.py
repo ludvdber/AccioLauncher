@@ -1,4 +1,4 @@
-"""Le cadran de défi de la page « Difficulté » (`difficulte_page.py`).
+"""Le cadran de défi de l'onglet « Difficulté » des réglages du jeu (`difficulte_panneau.py`).
 
 Maquette de l'expert UI/UX validée par Ludo le 2026-10-31 (atelier,
 `artefact_difficulte/index.html`) : un instrument d'astronome, cousin de

@@ -28,6 +28,7 @@ from src.core import (captures, difficulte_jeu, manette, reglages_correctif, reg
                       reprise, resolution_jeu, texte_ue1, videos_lancement)
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
+from src.ui.difficulte_panneau import PanneauDifficulte
 from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import body_font
@@ -47,6 +48,8 @@ _ONGLETS = (
     ("image", "Image", "ecran"),
     ("commandes", "Commandes", "clavier"),
     ("jeu", "Jeu", "drapeau"),
+    # Tout ce qui règle la difficulté, presets et détail (Ludo, 2026-10-31).
+    ("difficulte", "Difficulté", "epee"),
     ("perfs", "Performances", "jauge"),
 )
 
@@ -600,12 +603,65 @@ class RubriquesDuJeu:
             bascule.setChecked(vrai)
             bascule.blockSignals(False)
 
-    def _section_difficulte(self, corps: QVBoxLayout) -> bool:
+    def _page_difficulte(self, corps: QVBoxLayout) -> bool:
+        """L'onglet Difficulté (Ludo, 2026-10-31 : « un seul onglet Difficulté avec
+        tout dedans et pas une autre page ») : le cadran et les presets en haut
+        (`PanneauDifficulte`), puis chaque réglage, puis « Une seule vie ».
+        Choisir un preset remet chaque contrôle sur le fichier ; changer un
+        réglage déplace l'aiguille (`_maj_dependances`)."""
+        panneau = PanneauDifficulte(self.game, self.manager.config, self._ini)
+        if not panneau.idents:
+            panneau.deleteLater()
+            return False
+        self._panneau = panneau
+        corps.addWidget(panneau)
+        carte = Carte()
+        choix_jeu = self._ligne_difficulte_jeu(carte)
+        reglages = [r for r in self._reglages if r.onglet == "difficulte"] if self._correctif_actif() else []
+        for reglage in reglages:
+            self._controle(carte, self._ini, reglage)
+        self._egaliser(carte)
+        corps.addSpacing(14)
+        corps.addWidget(carte)
+        if (une_vie := panneau.bloc_une_seule_vie()) is not None:
+            corps.addSpacing(34)
+            corps.addWidget(une_vie)
+        panneau.choisi.connect(lambda _ident, rates: self._sur_preset(reglages, choix_jeu, rates))
+        return True
+
+    def _noter_pied(self, onglet: str) -> None:
+        """Le pied dit QUAND c'est pris en compte pour l'onglet affiché : HP5 et
+        HP6 relisent leur difficulté dans la seconde, le reste au prochain lancement."""
+        morceaux = []
+        if onglet == "difficulte" and self.game.id in ("hp5", "hp6"):
+            morceaux.append(tr("Change à tout moment, partie en cours comprise."))
+        elif self._correctif_actif() or self._conf_graph is not None or self.game.resolution is not None:
+            morceaux.append(tr("Pris en compte au prochain lancement du jeu."))
+        morceaux.append(tr("Échap pour revenir à la fiche."))
+        self._pied_notes.setText("  ·  ".join(morceaux))
+
+    def _sur_preset(self, reglages: list, choix_jeu: QComboBox | None, rates: list) -> None:
+        """Un preset vient d'être écrit : chaque contrôle reprend ce que porte le fichier."""
+        for reglage in reglages:
+            if (widget := self._controles.get(reglage.ident)) is not None:
+                self._remettre_controle(widget, reglage)
+        if choix_jeu is not None:
+            choix_jeu.blockSignals(True)
+            choix_jeu.setCurrentIndex(difficulte_jeu.lire(self.game, self.manager.config) or 0)
+            choix_jeu.blockSignals(False)
+        self._maj_dependances()
+        if rates:
+            self._montrer_erreur(tr("Certains réglages n'ont pas pu être écrits (fichier absent ou en "
+                                    "lecture seule) : le jeu garde les précédents."))
+        else:
+            self._apres_ecriture()
+
+    def _ligne_difficulte_jeu(self, carte: Carte) -> QComboBox | None:
         """La difficulté propre au jeu (HP2), lue et écrite dans SON fichier
         (`difficulte_jeu`) : le menu du jeu et cette liste disent la même chose."""
         rang = difficulte_jeu.lire(self.game, self.manager.config)
         if rang is None:
-            return False
+            return None
         choix = self._liste()
         for valeur, nom in enumerate(difficulte_jeu.NIVEAUX):
             choix.addItem(tr(nom), valeur)
@@ -616,15 +672,13 @@ class RubriquesDuJeu:
             "monte, plus Harry perd de vie à chaque coup (× 1,2 en Facile, × 2 en Moyen, × 3 en "
             "Difficile) et plus les sorts ennemis vont vite ; le Basilic résiste davantage. "
             "À régler jeu fermé ; compte au prochain lancement.")
-        carte = Carte()
-        carte.ajouter(self._ligne(tr("Difficulté"), choix, aide, reglage=Reglage(
-            "difficulte_jeu", "", "", "Difficulté", aide, onglet="jeu", beta=True)))
-        self._egaliser(carte)
-        self._section(corps, self._titre_rubrique(tr("Difficulté")), carte)
-        return True
+        carte.ajouter(self._ligne(tr("Difficulté du jeu"), choix, aide, reglage=Reglage(
+            "difficulte_jeu", "", "", "Difficulté du jeu", aide, onglet="difficulte", beta=True)))
+        return choix
 
     def _on_difficulte(self, choix: QComboBox) -> None:
         if difficulte_jeu.ecrire(self.game, self.manager.config, choix.currentData()):
+            self._maj_dependances()
             return
         # Pas écrit : la liste revient sur ce que porte VRAIMENT le fichier (règle 118).
         choix.blockSignals(True)

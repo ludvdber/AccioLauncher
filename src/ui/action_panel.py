@@ -469,7 +469,7 @@ class ActionPanel(QWidget):
             if game.fix_settings else None)
         idents = dp.idents_du_jeu(game, ini)
         ouvert = any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal")
-        btn = IconButton("jauge", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
+        btn = IconButton("epee", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
         btn.setObjectName("boutonDifficulte")
         btn.setAccessibleName(tr("Difficulté de {}").format(game.name))
         btn.setToolTip(tr("Difficulté") if ouvert else tr("Difficulté : bientôt pour ce jeu"))

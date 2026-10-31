@@ -72,6 +72,8 @@ _FICHIERS = {
     "clavier": "phosphor/keyboard-bold.svg",
     "drapeau": "phosphor/flag-bold.svg",
     "jauge": "phosphor/gauge-bold.svg",
+    # La difficulté (onglet des réglages du jeu et bouton de la fiche, 2026-10-31).
+    "epee": "phosphor/sword-bold.svg",
     "manette": "phosphor/game-controller-bold.svg",
     "fleche_haut": "phosphor/arrow-up-bold.svg",
     "fleche_bas": "phosphor/arrow-down-bold.svg",
