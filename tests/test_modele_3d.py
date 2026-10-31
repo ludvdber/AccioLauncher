@@ -119,3 +119,58 @@ def test_rien_ne_tourne_quand_le_launcher_n_est_plus_actif(qtbot, monkeypatch):
     monkeypatch.setattr(modele_3d, "_application_active", lambda: True)
     QGuiApplication.instance().applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
     assert v._minuteur.isActive()
+
+
+# ─── La carte graphique (2026-10-31) ───
+
+def test_offscreen_dessine_sur_le_processeur(qtbot):
+    """Les tests tournent offscreen : pas d'OpenGL, le rendu QPainter, sans erreur."""
+    from src.ui import modele_3d_gpu
+    assert modele_3d_gpu.RenduGPU.creer() is None
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(120, 160)
+    v.poser(_carre(), {"rouge": _rouge()})
+    v.grab()
+    assert v._gpu is None and v._gpu_essaye
+
+
+class _GpuQuiCasse:
+    def __init__(self):
+        self.poses, self.libere = [], False
+
+    def poser(self, modele, textures):
+        self.poses.append(modele)
+
+    def image(self, *args):
+        raise RuntimeError("pilote perdu")
+
+    def liberer(self):
+        self.libere = True
+
+
+def test_une_erreur_de_la_carte_graphique_rend_la_main_au_processeur(qtbot, monkeypatch):
+    from src.ui import modele_3d_gpu
+    gpu = _GpuQuiCasse()
+    monkeypatch.setattr(modele_3d_gpu.RenduGPU, "creer", classmethod(lambda cls: gpu))
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(120, 160)
+    v.poser(_carre(), {"rouge": _rouge()})
+    image = v.grab().toImage()
+    assert gpu.poses and gpu.libere and v._gpu is None, "QPainter pour de bon"
+    assert any(image.pixelColor(x, y).red() > 60 and image.pixelColor(x, y).green() < 40
+               for x in range(0, 120, 4) for y in range(0, 160, 4)), "le modèle est quand même dessiné"
+
+
+def test_la_carte_graphique_recoit_chaque_nouveau_modele(qtbot, monkeypatch):
+    from src.ui import modele_3d_gpu
+    gpu = _GpuQuiCasse()
+    gpu.image = lambda *args: None          # rien à montrer : QPainter dessine
+    monkeypatch.setattr(modele_3d_gpu.RenduGPU, "creer", classmethod(lambda cls: gpu))
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.poser(_carre())
+    v.grab()
+    v.poser(None)
+    assert gpu.poses[-1] is None and v._gpu is gpu

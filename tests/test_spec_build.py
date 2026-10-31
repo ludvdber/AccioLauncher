@@ -76,6 +76,9 @@ class TestCeQuiSertReste:
         r"PyQt6\Qt6\bin\Qt6Svg.dll",
         r"PyQt6\Qt6\bin\Qt6Network.dll",
         r"PyQt6\Qt6\bin\Qt6Multimedia.dll",
+        # Les modèles 3D des Collections sur la carte graphique (2026-10-31).
+        r"PyQt6\Qt6\bin\Qt6OpenGL.dll",
+        r"PyQt6\QtOpenGL.pyd",
         r"PyQt6\Qt6\bin\avcodec-61.dll",
         r"PyQt6\Qt6\plugins\platforms\qwindows.dll",
         r"PyQt6\Qt6\plugins\styles\qmodernwindowsstyle.dll",

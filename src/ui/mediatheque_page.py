@@ -276,8 +276,44 @@ class _Barre(QWidget):
         p.end()
 
 
+class _PointNouveau(QWidget):
+    """Le point or « du nouveau ici », celui de l'onglet Collections, posé dans
+    le coin haut droit d'un bouton. Ludo, 2026-10-31 : « on voit pas où dans
+    Collections il y a du nouveau » ; le point de la barre menait à une page
+    ouverte sur les Captures, sans rien qui dise quelle rubrique ni quel jeu."""
+
+    _COTE = 8
+
+    def __init__(self, bouton: QWidget) -> None:
+        super().__init__(bouton)
+        self.setFixedSize(self._COTE, self._COTE)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        bouton.installEventFilter(self)
+        self.hide()
+        self._placer()
+
+    def _placer(self) -> None:
+        bouton = self.parentWidget()
+        if bouton is not None:
+            self.move(bouton.width() - self._COTE - 5, 4)
+
+    def eventFilter(self, objet, evenement) -> bool:  # noqa: N802 (Qt)
+        if evenement.type() == evenement.Type.Resize:
+            self._placer()
+        return False
+
+    def paintEvent(self, event) -> None:  # noqa: N802 (Qt)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(accent_qcolor())
+        p.drawEllipse(QRectF(0.5, 0.5, self._COTE - 1, self._COTE - 1))
+        p.end()
+
+
 class _Jeux(QWidget):
-    """Les jeux en pastilles, communs aux deux rubriques ; « 2 nouveaux » sur ceux qui en ont."""
+    """Les jeux en pastilles, communs aux deux rubriques ; « 2 nouveaux » et le
+    point or sur ceux qui en ont, dans la rubrique regardée."""
 
     choisi = pyqtSignal(str)
 
@@ -286,6 +322,10 @@ class _Jeux(QWidget):
         _transparent(self)
         self._media = media
         self._boutons: dict[str, QPushButton] = {}
+        self._points: dict[str, _PointNouveau] = {}
+        # Musique ou Cinématiques : le compte d'un jeu ne parle que de la
+        # rubrique ouverte, sinon il annonce ce que la liste ne montre pas.
+        self.rubrique = MUSIQUE
         flux = FlowLayout(self, spacing=8)
         flux.setContentsMargins(0, 0, 0, 0)
         groupe = QButtonGroup(self)
@@ -299,6 +339,7 @@ class _Jeux(QWidget):
             groupe.addButton(b)
             flux.addWidget(b)
             self._boutons[jeu] = b
+            self._points[jeu] = _PointNouveau(b)
             self.compter(jeu)
 
     @property
@@ -309,11 +350,16 @@ class _Jeux(QWidget):
         if jeu in self._boutons:
             self._boutons[jeu].setChecked(True)
 
+    def compter_tous(self) -> None:
+        for jeu in self._boutons:
+            self.compter(jeu)
+
     def compter(self, jeu: str) -> None:
         b = self._boutons.get(jeu)
         if b is None:
             return
-        n = len(self._media.nouveaux(jeu, MUSIQUE)) + len(self._media.nouveaux(jeu, CINEMATIQUES))
+        n = len(self._media.nouveaux(jeu, self.rubrique))
+        self._points[jeu].setVisible(bool(n))
         nom = self._etiquettes.get(jeu, self._media.nom(jeu))
         # Le chiffre seul sur la pastille : « 130 nouveaux » sur chacune faisait
         # passer les jeux sur deux lignes ; le mot est dans l'infobulle.
@@ -1291,6 +1337,7 @@ class MediathequePage(QDialog):
             groupe.addButton(b)
             ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignVCenter)
             self._rubriques[cle_rubrique] = b
+        self._points = {r: _PointNouveau(self._rubriques[r]) for r in (MUSIQUE, CINEMATIQUES)}
         ligne.addStretch()
         e.addLayout(ligne)
         e.addSpacing(14)
@@ -1327,6 +1374,15 @@ class MediathequePage(QDialog):
             jeu = courant[0] if courant is not None and courant[0] in jeux else premier
         if jeu:
             self.montrer(jeu)
+        media.vus_changes.connect(self._rafraichir_points)
+        self._rafraichir_points()
+
+    def _rafraichir_points(self) -> None:
+        """Le point or sur chaque rubrique qui a du nouveau, tous jeux confondus,
+        et sur chaque jeu qui en a dans la rubrique ouverte."""
+        for rubrique, point in self._points.items():
+            point.setVisible(self._media.a_des_nouveautes((rubrique,)))
+        self._jeux.compter_tous()
 
     def montrer(self, jeu: str) -> None:
         self._jeux.cocher(jeu)
@@ -1354,10 +1410,11 @@ class MediathequePage(QDialog):
                 self._encyclo[cle_rubrique].montrer(self.jeu)
         else:
             self._pile.setCurrentWidget(self._musique if musique else self._cinematiques)
+        if cle_rubrique in (MUSIQUE, CINEMATIQUES):
+            self._jeux.rubrique = cle_rubrique
         self._cinematiques.afficher(cle_rubrique == CINEMATIQUES)
         self._musique.afficher(musique)
-        if self.jeu:
-            self._jeux.compter(self.jeu)
+        self._jeux.compter_tous()
 
     def _galerie(self) -> QDialog:
         if self._captures is None:

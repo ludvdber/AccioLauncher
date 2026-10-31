@@ -20,7 +20,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, QSize, QStandardPaths, Qt, QTimer
+from PyQt6.QtCore import QObject, QSize, QStandardPaths, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QWidget
 
@@ -72,6 +72,10 @@ def _cle_vus(jeu: str, rubrique: str) -> str:
 
 class Mediatheque(QObject):
     """Le modèle de la page et de la barre du bas ; les widgets ne font que l'appeler."""
+
+    # Ce qui est nouveau a changé (vu, ou ouvert par une partie relue) : la page
+    # Collections replace ses points or.
+    vus_changes = pyqtSignal()
 
     def __init__(self, fenetre: QWidget, manager, pages, detail, barre_statut, session,
                  barre_titre) -> None:
@@ -148,6 +152,7 @@ class Mediatheque(QObject):
                                                            get_language())
                                     if installe and collection is not None else {})
         self._barre_titre.set_pastille(COLLECTIONS, self.a_des_nouveautes())
+        self.vus_changes.emit()
         self.mini.actualiser()
 
     # ── Jeux ──
@@ -234,10 +239,11 @@ class Mediatheque(QObject):
         discographie.marquer_vus(cle_vus, ouverts)
         self._vus.setdefault(cle_vus, set()).update(ouverts)
         self._barre_titre.set_pastille(COLLECTIONS, self.a_des_nouveautes())
+        self.vus_changes.emit()
 
-    def a_des_nouveautes(self) -> bool:
+    def a_des_nouveautes(self, rubriques: tuple[str, ...] = (MUSIQUE, CINEMATIQUES)) -> bool:
         return any(discographie.nouveaux(_cle_vus(g.id, r), self._ouverts(g.id, r), self._vus)
-                   for r in (MUSIQUE, CINEMATIQUES) for g in self.jeux(r))
+                   for r in rubriques for g in self.jeux(r))
 
     def enregistrer(self, cle_morceau: str) -> Path | None:
         """Copie le morceau dans Musique › Accio › HPx ; le chemin, ou None."""

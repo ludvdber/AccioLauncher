@@ -24,8 +24,11 @@ Les mouvements du jeu (`maillages_ue1.Animation`, demande de Ludo du
 de référence.
 """
 
+import logging
 import math
 import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QPointF, QSize, Qt, QTimer
 from PyQt6.QtGui import (
@@ -49,6 +52,11 @@ from PyQt6.QtWidgets import QWidget
 from src.core import maillages_ue1
 from src.core.maillages_ue1 import Animation, Maillage, Mouvement
 
+if TYPE_CHECKING:
+    from src.ui.modele_3d_gpu import RenduGPU
+
+log = logging.getLogger(__name__)
+
 LACET_DEPART = 20.0      # degrés : trois quarts, le relief se voit tout de suite
 # Le mouvement montré d'abord : une attente qui boucle bien, par ordre de préférence.
 _REPOS = ("breath", "idle", "stand", "fidget", "look", "wait", "hover", "fly", "walk")
@@ -68,6 +76,25 @@ def _norme(v: tuple[float, float, float]) -> tuple[float, float, float]:
 
 
 _L = _norme(_LUMIERE)
+
+
+@dataclass(frozen=True)
+class Camera:
+    """Le placement du modèle à l'écran : lacet et tangage (cosinus, sinus),
+    centre et échelle du modèle, souffle, distance, focale et centre de l'écran
+    en pixels logiques. Le rendu QPainter projette avec, le rendu GPU le passe
+    tel quel à son shader."""
+    cl: float
+    sl: float
+    ct: float
+    st: float
+    centre: tuple[float, float, float]
+    k: float
+    souffle: float
+    distance: float
+    focale: float
+    ox: float
+    oy: float
 
 
 def transformation_affine(source: tuple[QPointF, QPointF, QPointF],
@@ -108,11 +135,13 @@ def _application_active() -> bool:
     return QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationActive
 
 
-class Modele3D(QWidget):
-    """Un modèle posé, vu de face au départ, qu'on fait tourner."""
+class Visionneuse:
+    """Le tronc commun des deux rendus : le modèle posé, la caméra, l'élan, la
+    souris, le minuteur. À placer AVANT la classe Qt (`Modele3D(Visionneuse,
+    QWidget)`) : ses gestionnaires d'événements passent devant ceux de Qt."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
+        super().__init__(parent)  # type: ignore[call-arg]   # la classe Qt qui suit dans le MRO
         self._modele: Maillage | None = None
         self._pix: dict[str, QPixmap] = {}
         self._centre = (0.0, 0.0, 0.0)
@@ -300,22 +329,28 @@ class Modele3D(QWidget):
             points = tuple(maillages_ue1.tourner_point(q, p) for p in points)
         return points
 
+    def camera(self) -> Camera:
+        """Ce qui place le modèle à l'écran, commun aux deux rendus."""
+        # 0,82 de la hauteur : dans la grande visionneuse (plus large que haute),
+        # les pieds du gnome touchaient le bord (2026-10-27).
+        return Camera(
+            cl=math.cos(math.radians(self.lacet)), sl=math.sin(math.radians(self.lacet)),
+            ct=math.cos(math.radians(self.tangage)), st=math.sin(math.radians(self.tangage)),
+            centre=self._centre, k=1.0 / self._taille,
+            # Respiration : le modèle monte et descend d'un rien.
+            souffle=0.008 * math.sin(self._phase), distance=_DISTANCE,
+            focale=min(self.width(), self.height() * 0.82) * _DISTANCE * 0.95 * self.zoom,
+            ox=self.width() / 2, oy=self.height() * 0.52)
+
     def projeter(self) -> list[tuple[float, float, float]]:
         """Chaque point : (x écran, y écran, profondeur vers la caméra)."""
         m = self._modele
         if m is None:
             return []
-        cl, sl = math.cos(math.radians(self.lacet)), math.sin(math.radians(self.lacet))
-        ct, st = math.cos(math.radians(self.tangage)), math.sin(math.radians(self.tangage))
-        cx, cy, cz = self._centre
-        k = 1.0 / self._taille
-        # Respiration : le modèle monte et descend d'un rien.
-        souffle = 0.008 * math.sin(self._phase)
-        distance = _DISTANCE
-        # 0,82 de la hauteur : dans la grande visionneuse (plus large que haute),
-        # les pieds du gnome touchaient le bord (2026-10-27).
-        focale = min(self.width(), self.height() * 0.82) * distance * 0.95 * self.zoom
-        ox, oy = self.width() / 2, self.height() * 0.52
+        c = self.camera()
+        cl, sl, ct, st = c.cl, c.sl, c.ct, c.st
+        cx, cy, cz = c.centre
+        k, souffle, distance, focale, ox, oy = c.k, c.souffle, c.distance, c.focale, c.ox, c.oy
         sortie = []
         for x, y, z in self.points_du_moment():
             x, y, z = (x - cx) * k, (y - cy) * k, (z - cz) * k + souffle
@@ -326,13 +361,6 @@ class Modele3D(QWidget):
             sortie.append((ox + ya * s, oy - za * s, xb))
         return sortie
 
-    def paintEvent(self, event: object) -> None:
-        if self._modele is None:
-            return
-        p = QPainter(self)
-        self._peindre(p)
-        p.end()
-
     def rendu(self, taille: QSize, dpr: float) -> QImage:
         """Une image du modèle sur fond transparent (les vignettes des fiches)."""
         self.resize(taille)
@@ -342,15 +370,19 @@ class Modele3D(QWidget):
         image.fill(Qt.GlobalColor.transparent)
         if self._modele is not None:
             p = QPainter(image)
-            self._peindre(p)
+            self._dessiner(p)
             p.end()
         return image
+
+    def _dessiner(self, p: QPainter) -> None:
+        """Le modèle sur `p` : QPainter ici, la carte graphique dans `Modele3D`."""
+        self._peindre(p)
 
     def _peindre(self, p: QPainter) -> None:
         m = self._modele
         if m is None:
             return
-        self._ombre_au_sol(p)
+        self.ombre_au_sol(p)
         ecran = self.projeter()
         faces = []
         for f in m.faces:
@@ -412,7 +444,7 @@ class Modele3D(QWidget):
         eclairage = abs(n[0] * _L[1] * -1 + n[1] * _L[2] + n[2] * _L[0])
         return int(150 * (1 - min(1.0, 0.35 + 0.75 * eclairage)))
 
-    def _ombre_au_sol(self, p: QPainter) -> None:
+    def ombre_au_sol(self, p: QPainter) -> None:
         cx, cy = self.width() / 2, self.height() * 0.52 + self.height() * 0.30 * self.zoom
         r = self.width() * 0.22 * self.zoom
         g = QRadialGradient(QPointF(cx, cy), r)
@@ -426,3 +458,62 @@ class Modele3D(QWidget):
         p.setBrush(g)
         p.drawEllipse(QPointF(cx, cy), r, r)
         p.restore()
+
+
+class Modele3D(Visionneuse, QWidget):
+    """La visionneuse : dessinée par la carte graphique (`modele_3d_gpu`)
+    quand OpenGL s'ouvre, sinon par QPainter sur le processeur (plateforme
+    `offscreen` des tests, machine sans pilote, toute erreur de dessin). Les
+    vignettes des fiches (`rendu`) restent à QPainter : une image chacune."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._gpu: RenduGPU | None = None
+        self._gpu_essaye = False
+        self._textures_gpu: dict[str, QImage] = {}
+
+    def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None,
+              animation: Animation | None = None) -> None:
+        self._textures_gpu = dict(textures or {})
+        if self._gpu is not None:
+            self._gpu.poser(modele, self._textures_gpu)
+        super().poser(modele, textures, animation)
+
+    def _rendu_gpu(self) -> RenduGPU | None:
+        if not self._gpu_essaye:
+            self._gpu_essaye = True
+            try:
+                from src.ui.modele_3d_gpu import RenduGPU
+                self._gpu = RenduGPU.creer()
+            except ImportError:
+                self._gpu = None
+            if self._gpu is not None:
+                self._gpu.poser(self._modele, self._textures_gpu)
+                self.destroyed.connect(self._gpu.liberer)
+        return self._gpu
+
+    def paintEvent(self, event: object) -> None:
+        if self._modele is None:
+            return
+        p = QPainter(self)
+        self._dessiner(p)
+        p.end()
+
+    def _dessiner(self, p: QPainter) -> None:
+        """Le widget comme les vignettes (`rendu`) : un modèle de HP6 compte
+        jusqu'à 11 000 faces, soit des centaines de millisecondes par QPainter."""
+        image = None
+        if (gpu := self._rendu_gpu()) is not None:
+            try:
+                dpr = p.device().devicePixelRatioF() if p.device() is not None else 1.0
+                image = gpu.image(self.points_du_moment(), self.camera(), self.width(), self.height(),
+                                  dpr, (_L[0], _L[1], _L[2]))
+            except Exception:   # pilote, contexte perdu, shader refusé : QPainter pour de bon
+                log.warning("Modèle 3D : la carte graphique a refusé, retour au processeur", exc_info=True)
+                gpu.liberer()
+                self._gpu = None
+        if image is None:
+            self._peindre(p)
+        else:
+            self.ombre_au_sol(p)
+            p.drawImage(QPointF(0, 0), image)

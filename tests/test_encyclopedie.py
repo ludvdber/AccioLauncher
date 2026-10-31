@@ -178,8 +178,24 @@ class TestModeles:
                 for f in encyclopedie.fiches(rubrique, jeu):
                     assert f.modele is not None, (rubrique, jeu, f.cle)
                     assert f.modele.fichier.startswith(dossier)
-            for jeu in ("hp4", "hp5", "hp6"):
-                assert all(f.modele is None for f in encyclopedie.fiches(rubrique, jeu))
+            assert all(f.modele is None for f in encyclopedie.fiches(rubrique, "hp4"))
+
+    def test_hp5_et_hp6_un_corps_et_la_tete_des_eleves(self):
+        """2026-10-31 : les Personnages de HP5 et HP6 en 3D (FPM d'EA). Les huit
+        de HP5 sans modèle dans les archives restent en texte."""
+        sans = {"hp5": {"kreattur", "bellatrix", "maugrey", "kingsley", "lucius", "trelawney", "fred", "dudley"},
+                "hp6": set()}
+        for jeu, archive in (("hp5", "data2.big"), ("hp6", "data3.big")):
+            fiches = encyclopedie.fiches(encyclopedie.PERSONNAGES, jeu)
+            assert {f.cle for f in fiches if f.modele is None} == sans[jeu]
+            for f in fiches:
+                if f.modele is not None:
+                    assert f.modele.fichier == archive
+                    assert f.modele.nom.startswith("events/body_models/body_") and f.modele.nom.endswith(".str.shd")
+                    assert not f.modele.tete or f.modele.tete.startswith("heads/head_models/head_")
+            harry = next(f for f in fiches if f.cle == "harry")
+            assert harry.modele.tete == "heads/head_models/head_harry.str.shd"
+            assert all(f.modele is None for f in encyclopedie.fiches(encyclopedie.BESTIAIRE, jeu))
 
     def test_la_fiche_choisie_montre_son_modele(self, qtbot, tmp_path, monkeypatch):
         from src.core import maillages_ue1

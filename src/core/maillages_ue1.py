@@ -572,6 +572,10 @@ def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche
     chemin = encyclopedie.chemin_image(dossier_exe, fiche.modele)
     if chemin is None:
         return None
+    if chemin.suffix.lower() == ".big":   # HP5, HP6 : FPM d'EA
+        from src.core import maillages_fpm
+        flux = (fiche.modele.nom, fiche.modele.tete) if fiche.modele.tete else (fiche.modele.nom,)
+        return maillages_fpm.de_la_fiche(chemin, flux)
     if chemin.suffix.lower() == ".ukx":   # HP3, Unreal 2
         from src.core import maillages_ue2
         return maillages_ue2.de_la_fiche(chemin, fiche.modele.nom)

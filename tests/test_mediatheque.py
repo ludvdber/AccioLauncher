@@ -234,6 +234,28 @@ class TestPage:
         win._mediatheque.ouvrir("musique", "hp3")
         assert not onglet.pastille, "tout a été vu : le point or s'éteint"
 
+    def test_le_point_or_dit_quelle_rubrique_et_quel_jeu(self, fenetre_avec_jeux, qtbot):
+        """Ludo, 2026-10-31 : « on voit pas où dans Collections il y a du nouveau »."""
+        from src.ui.title_bar import COLLECTIONS
+        win = fenetre_avec_jeux
+        qtbot.waitUntil(lambda: win._title_bar.onglet(COLLECTIONS).pastille, timeout=5000)
+        win._on_onglet(COLLECTIONS)
+        page = win._pages.page
+        assert page.rubrique_courante == "captures"
+        points = page._points
+        assert points["musique"].isVisibleTo(page) and points["cinematiques"].isVisibleTo(page)
+        page.rubrique("cinematiques")
+        jeux = page._jeux._points
+        # HP2 vient d'être montré, mais rien de neuf en cinématiques : seul HP3 a son point.
+        assert jeux["hp3"].isVisibleTo(page) and not jeux["hp2"].isVisibleTo(page)
+        page.montrer("hp3")
+        assert not jeux["hp3"].isVisibleTo(page) and not points["cinematiques"].isVisibleTo(page)
+        page.rubrique("musique")
+        assert jeux["hp2"].isVisibleTo(page), "la musique de HP2 n'a pas encore été montrée"
+        page.montrer("hp2")
+        assert not points["musique"].isVisibleTo(page), "montrée, elle est vue"
+        page.accept()
+
     def test_cinematiques_et_seuils(self, fenetre_avec_jeux, qtbot):
         from src.ui.mediatheque_page import _LigneCine
         win = fenetre_avec_jeux

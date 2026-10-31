@@ -211,6 +211,30 @@
             "en": "Prisoner of Azkaban joins the 3D view: its 12 characters and 9 creatures turn with the mouse and play the game's movements, in Characters and Bestiary.",
             "es": "El prisionero de Azkaban se suma al 3D: sus 12 personajes y 9 criaturas giran con el ratón y se animan con los movimientos del juego, en Personajes y Bestiario."
           }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "L'Ordre du Phénix et Le Prince de sang-mêlé rejoignent la 3D : 44 personnages, tels qu'ils sont dans votre jeu, se tournent à la souris dans Personnages.",
+            "en": "Order of the Phoenix and Half-Blood Prince join the 3D view: 44 characters, just as in your game, turn with the mouse in Characters.",
+            "es": "La Orden del Fénix y El misterio del príncipe se suman al 3D: 44 personajes, tal como son en tu juego, giran con el ratón en Personajes."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les modèles 3D sont dessinés par la carte graphique : ils tournent avec fluidité sans occuper le processeur.",
+            "en": "3D models are drawn by the graphics card: they turn smoothly without keeping the processor busy.",
+            "es": "Los modelos 3D los dibuja la tarjeta gráfica: giran con fluidez sin ocupar el procesador."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Dans les Collections, un point doré montre la rubrique et le jeu où de la musique ou des cinématiques viennent de s'ouvrir.",
+            "en": "In the Collections, a gold dot shows the section and the game where music or cutscenes have just unlocked.",
+            "es": "En las Colecciones, un punto dorado indica la sección y el juego donde se acaban de desbloquear música o cinemáticas."
+          }
         }
       ]
     },

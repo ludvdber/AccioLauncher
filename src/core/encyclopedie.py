@@ -47,7 +47,8 @@ class ImageJeu:
 @dataclass(frozen=True)
 class ModeleJeu:
     fichier: str                          # paquet relatif au dossier du jeu (« System/HarryPotter.u »)
-    nom: str                              # le `SkeletalMesh` (« skharryMesh »)
+    nom: str                              # le `SkeletalMesh` (« skharryMesh ») ; HP5-HP6 : le flux du corps
+    tete: str = ""                        # HP5-HP6 : le flux de la tête d'un élève, posée sur le corps
 
 
 @dataclass(frozen=True)
@@ -80,7 +81,7 @@ def _fiche(brute: dict[str, object], champ: str) -> Fiche | None:
     modele = brute.get("modele")
     modele_jeu = None
     if isinstance(modele, dict) and isinstance(modele.get("fichier"), str) and isinstance(modele.get("nom"), str):
-        modele_jeu = ModeleJeu(modele["fichier"], modele["nom"])
+        modele_jeu = ModeleJeu(modele["fichier"], modele["nom"], str(modele.get("tete", "")))
     seuil = brute.get("s")
     return Fiche(str(brute["cle"]), nom, sous_titre, texte, _image(brute.get("image")), modele_jeu,
                  seuil if isinstance(seuil, int) else 0)

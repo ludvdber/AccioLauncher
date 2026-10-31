@@ -1979,7 +1979,12 @@
      "en": "Sidelined by the Ministry, he secretly founds Dumbledore's Army to teach his classmates defence.",
      "es": "Apartado por el Ministerio, funda en secreto el Ejército de Dumbledore para enseñar defensa a sus compañeros."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_muggleharry.str.shd",
+     "tete": "heads/head_models/head_harry.str.shd"
+    }
    },
    {
     "cle": "ron",
@@ -1998,7 +2003,12 @@
      "en": "Made a prefect to his own surprise, he stays at Harry's side all the way to the Ministry.",
      "es": "Nombrado prefecto para su sorpresa, sigue al lado de Harry hasta el Ministerio."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_muggleron.str.shd",
+     "tete": "heads/head_models/head_ron.str.shd"
+    }
    },
    {
     "cle": "hermione",
@@ -2017,7 +2027,12 @@
      "en": "She is the one who pushes Harry to teach defence behind Umbridge's back.",
      "es": "Es ella quien anima a Harry a enseñar defensa a espaldas de Umbridge."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_mugglehermione.str.shd",
+     "tete": "heads/head_models/head_hermione.str.shd"
+    }
    },
    {
     "cle": "dumbledore",
@@ -2036,7 +2051,11 @@
      "en": "The headmaster keeps his distance from Harry all year before having to leave the school.",
      "es": "El director se mantiene a distancia de Harry todo el curso antes de tener que dejar el colegio."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_dumbledore.str.shd"
+    }
    },
    {
     "cle": "ombrage",
@@ -2055,7 +2074,11 @@
      "en": "A teacher all pink and decrees, she gradually takes control of Hogwarts.",
      "es": "Profesora toda de rosa y a golpe de decretos, se va haciendo con el control de Hogwarts."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_umbridge.str.shd"
+    }
    },
    {
     "cle": "sirius",
@@ -2074,7 +2097,11 @@
      "en": "Still wanted, he lends his family's house at Grimmauld Place to the Order of the Phoenix.",
      "es": "Aún buscado, presta la casa de su familia, en Grimmauld Place, a la Orden del Fénix."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_sirius.str.shd"
+    }
    },
    {
     "cle": "kreattur",
@@ -2133,7 +2160,11 @@
      "en": "He lures Harry to the Ministry through visions to seize a prophecy.",
      "es": "Atrae a Harry al Ministerio mediante visiones para apoderarse de una profecía."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_voldemort.str.shd"
+    }
    },
    {
     "cle": "ginny",
@@ -2152,7 +2183,12 @@
      "en": "Ron's sister, more confident than before, she joins Dumbledore's Army.",
      "es": "Hermana de Ron, más segura de sí misma que antes, se une al Ejército de Dumbledore."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_generic_tall.str.shd",
+     "tete": "heads/head_models/head_ginny.str.shd"
+    }
    },
    {
     "cle": "luna",
@@ -2171,7 +2207,12 @@
      "en": "A dreamy student who believes in the most unlikely creatures, she has lost her things all over the castle.",
      "es": "Alumna soñadora que cree en las criaturas más improbables, ha perdido sus cosas por todo el castillo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_generic_tall.str.shd",
+     "tete": "heads/head_models/head_luna.str.shd"
+    }
    },
    {
     "cle": "neville",
@@ -2190,7 +2231,12 @@
      "en": "He makes great progress at the Army's meetings and follows Harry to the Department of Mysteries.",
      "es": "Progresa mucho en las reuniones del Ejército y sigue a Harry hasta el Departamento de Misterios."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_generic_male_large.str.shd",
+     "tete": "heads/head_models/head_neville.str.shd"
+    }
    },
    {
     "cle": "fred",
@@ -2228,7 +2274,12 @@
      "en": "Fred's partner in every prank, he hides packages to be found around the castle.",
      "es": "Cómplice de Fred en todas las bromas, esconde paquetes que hay que encontrar por el castillo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_generic_tall.str.shd",
+     "tete": "heads/head_models/head_george.str.shd"
+    }
    },
    {
     "cle": "cho",
@@ -2248,7 +2299,12 @@
      "en": "The Ravenclaw Seeker Harry likes, still shaken by Cedric's death.",
      "es": "Buscadora de Ravenclaw que le gusta a Harry, aún afectada por la muerte de Cedric."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_generic_tall.str.shd",
+     "tete": "heads/head_models/head_cho.str.shd"
+    }
    },
    {
     "cle": "rogue",
@@ -2267,7 +2323,11 @@
      "en": "Tasked with teaching Harry Occlumency, he makes no secret of his contempt during the lessons.",
      "es": "Encargado de enseñar Oclumancia a Harry, no oculta su desprecio durante las clases."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_snape.str.shd"
+    }
    },
    {
     "cle": "mcgonagall",
@@ -2286,7 +2346,11 @@
      "en": "She stands up to Umbridge and defends her students as best she can.",
      "es": "Planta cara a Umbridge y defiende a sus alumnos como puede."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_mcgonagall.str.shd"
+    }
    },
    {
     "cle": "hagrid",
@@ -2306,7 +2370,11 @@
      "en": "Back late from a mission to the giants, he hides his half-brother Grawp in the forest.",
      "es": "De vuelta tarde de una misión con los gigantes, esconde a su medio hermano Grawp en el bosque."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_hagrid.str.shd"
+    }
    },
    {
     "cle": "lupin",
@@ -2325,7 +2393,11 @@
      "en": "A former teacher, he is part of the guard that takes Harry to Grimmauld Place.",
      "es": "Antiguo profesor, forma parte de la escolta que lleva a Harry a Grimmauld Place."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_lupin.str.shd"
+    }
    },
    {
     "cle": "tonks",
@@ -2344,7 +2416,11 @@
      "en": "A clumsy, cheerful Auror who changes her hair colour at will.",
      "es": "Auror torpe y alegre que cambia el color de su pelo a voluntad."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_tonks.str.shd"
+    }
    },
    {
     "cle": "maugrey",
@@ -2421,7 +2497,12 @@
      "en": "A zealous member of Umbridge's Inquisitorial Squad, he hunts down rebel students.",
      "es": "Miembro entusiasta de la Brigada Inquisitorial de Umbridge, persigue a los alumnos rebeldes."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_generic_tall.str.shd",
+     "tete": "heads/head_models/head_draco.str.shd"
+    }
    },
    {
     "cle": "rusard",
@@ -2440,7 +2521,11 @@
      "en": "Delighted by Umbridge's new decrees, he hopes at last to punish students the old way.",
      "es": "Encantado con los nuevos decretos de Umbridge, espera poder castigar por fin a los alumnos a la antigua."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_filch.str.shd"
+    }
    },
    {
     "cle": "flitwick",
@@ -2459,7 +2544,11 @@
      "en": "The Charms teacher gives Harry a few tasks to carry out around the castle.",
      "es": "El profesor de Encantamientos le encarga a Harry algunas tareas por el castillo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_flitwick.str.shd"
+    }
    },
    {
     "cle": "chourave",
@@ -2478,7 +2567,11 @@
      "en": "Head of Hufflepuff, she too gives Harry a quest.",
      "es": "Jefa de Hufflepuff, también le encarga una misión a Harry."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_sprout.str.shd"
+    }
    },
    {
     "cle": "trelawney",
@@ -2517,7 +2610,11 @@
      "en": "The weepy ghost still haunts her bathroom and wants nothing more than a chat.",
      "es": "La fantasma llorona sigue rondando sus baños y solo quiere charlar."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_myrtle.str.shd"
+    }
    },
    {
     "cle": "arthur",
@@ -2537,7 +2634,11 @@
      "en": "A Ministry employee and member of the Order, he is attacked by a snake while on guard.",
      "es": "Empleado del Ministerio y miembro de la Orden, una serpiente lo ataca mientras hace guardia."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data2.big",
+     "nom": "events/body_models/body_arthurweasley.str.shd"
+    }
    },
    {
     "cle": "dudley",
@@ -2577,7 +2678,12 @@
      "en": "He finds an old textbook annotated by the Half-Blood Prince and helps Dumbledore uncover Voldemort's past.",
      "es": "Descubre un viejo manual anotado por el Príncipe Mestizo y ayuda a Dumbledore a desentrañar el pasado de Voldemort."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_muggleharry.str.shd",
+     "tete": "heads/head_models/head_harry.str.shd"
+    }
    },
    {
     "cle": "ron",
@@ -2596,7 +2702,12 @@
      "en": "Now Keeper of the Gryffindor team, he has an eventful year between matches and romance.",
      "es": "Convertido en guardián del equipo de Gryffindor, vive un curso agitado entre partidos y amoríos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_muggleron.str.shd",
+     "tete": "heads/head_models/head_ron.str.shd"
+    }
    },
    {
     "cle": "hermione",
@@ -2615,7 +2726,12 @@
      "en": "She distrusts the Prince's book and stays the best student in the Potions class without cheating.",
      "es": "Desconfía del libro del Príncipe y sigue siendo la mejor alumna de Pociones sin hacer trampas."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_mugglehermione.str.shd",
+     "tete": "heads/head_models/head_hermione.str.shd"
+    }
    },
    {
     "cle": "dumbledore",
@@ -2634,7 +2750,11 @@
      "en": "He gives Harry private lessons through the Pensieve and takes him to a cave by the sea.",
      "es": "Da a Harry clases particulares a través del pensadero y lo lleva a una cueva junto al mar."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_dumbledore.str.shd"
+    }
    },
    {
     "cle": "slughorn",
@@ -2653,7 +2773,11 @@
      "en": "A former teacher back at the school, he collects promising students in his club and keeps a hidden memory.",
      "es": "Antiguo profesor que vuelve a enseñar, colecciona alumnos prometedores en su club y guarda un recuerdo oculto."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_slughorn.str.shd"
+    }
    },
    {
     "cle": "rogue",
@@ -2672,7 +2796,11 @@
      "en": "He finally gets the post he coveted, and has made a promise to Draco's mother.",
      "es": "Consigue por fin el puesto que ansiaba y le ha hecho una promesa a la madre de Draco."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_snape.str.shd"
+    }
    },
    {
     "cle": "drago",
@@ -2691,7 +2819,12 @@
      "en": "Given a secret mission by Voldemort, he often disappears into the Room of Requirement.",
      "es": "Con una misión secreta de Voldemort, desaparece a menudo en la Sala de los Menesteres."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_mugglemalfoy.str.shd",
+     "tete": "heads/head_models/head_draco.str.shd"
+    }
    },
    {
     "cle": "ginny",
@@ -2710,7 +2843,12 @@
      "en": "A Chaser on the Gryffindor team, she grows closer to Harry over the year.",
      "es": "Cazadora del equipo de Gryffindor, se acerca a Harry a lo largo del curso."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_muggleginny.str.shd",
+     "tete": "heads/head_models/head_ginny.str.shd"
+    }
    },
    {
     "cle": "luna",
@@ -2729,7 +2867,12 @@
      "en": "As dreamy as ever, she walks Harry back to the castle after the train journey.",
      "es": "Tan soñadora como siempre, acompaña a Harry al castillo después del viaje en tren."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_muggleluna.str.shd",
+     "tete": "heads/head_models/head_luna.str.shd"
+    }
    },
    {
     "cle": "hagrid",
@@ -2748,7 +2891,11 @@
      "en": "He mourns his spider Aragog and gives Slughorn a phial of its venom.",
      "es": "Llora a su araña Aragog y regala a Slughorn un frasco de su veneno."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_hagrid.str.shd"
+    }
    },
    {
     "cle": "mcgonagall",
@@ -2767,7 +2914,11 @@
      "en": "Head of Gryffindor, she keeps an eye on the students in a castle now more secure than before.",
      "es": "Jefa de Gryffindor, vigila a los alumnos en un castillo más protegido que antes."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_mcgonagall.str.shd"
+    }
    },
    {
     "cle": "flitwick",
@@ -2786,7 +2937,11 @@
      "en": "Master of the Duelling Club, he trains the students to fight with their wands.",
      "es": "Al frente del club de duelo, entrena a los alumnos a luchar con la varita."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_flitwick.str.shd"
+    }
    },
    {
     "cle": "cormac",
@@ -2805,7 +2960,12 @@
      "en": "A self-assured student who competes with Ron for the Keeper's place on the team.",
      "es": "Alumno muy seguro de sí mismo que le disputa a Ron el puesto de guardián del equipo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_generic_male_large.str.shd",
+     "tete": "heads/head_models/head_mclaggen.str.shd"
+    }
    },
    {
     "cle": "katie",
@@ -2824,7 +2984,12 @@
      "en": "Harry's teammate, she falls victim to a cursed necklace on the way back from Hogsmeade.",
      "es": "Compañera de equipo de Harry, es víctima de un collar maldito al volver de Hogsmeade."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_generic_female.str.shd",
+     "tete": "heads/head_models/head_katie.str.shd"
+    }
    },
    {
     "cle": "lavande",
@@ -2843,7 +3008,12 @@
      "en": "A Gryffindor classmate who falls for Ron, much to Hermione's annoyance.",
      "es": "Compañera de Gryffindor que se encapricha de Ron, para gran fastidio de Hermione."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_generic_female.str.shd",
+     "tete": "heads/head_models/head_lavender.str.shd"
+    }
    },
    {
     "cle": "cho",
@@ -2862,7 +3032,12 @@
      "en": "Harry's former friend, she is one of the possible opponents in the Duelling Club.",
      "es": "Antigua amiga de Harry, es una de las posibles rivales del club de duelo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_generic_female.str.shd",
+     "tete": "heads/head_models/head_cho.str.shd"
+    }
    },
    {
     "cle": "crabbe",
@@ -2881,7 +3056,12 @@
      "en": "He keeps watch for Draco, sometimes disguised as a little girl thanks to Polyjuice Potion.",
      "es": "Vigila para Draco, a veces con la apariencia de una niña gracias a la poción multijugos."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_generic_male_large.str.shd",
+     "tete": "heads/head_models/head_crabbe.str.shd"
+    }
    },
    {
     "cle": "goyle",
@@ -2900,7 +3080,12 @@
      "en": "Like Crabbe, he covers Draco's comings and goings on the seventh floor.",
      "es": "Como Crabbe, encubre las idas y venidas de Draco en el séptimo piso."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_generic_male_large.str.shd",
+     "tete": "heads/head_models/head_goyle.str.shd"
+    }
    },
    {
     "cle": "bellatrix",
@@ -2919,7 +3104,11 @@
      "en": "A loyal follower of Voldemort, she sets fire to the Burrow before joining the attack on Hogwarts.",
      "es": "Fiel a Voldemort, incendia La Madriguera antes de unirse al ataque contra Hogwarts."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_bellatrix.str.shd"
+    }
    },
    {
     "cle": "greyback",
@@ -2938,7 +3127,11 @@
      "en": "A brutal werewolf who attacks the Burrow alongside Bellatrix.",
      "es": "Hombre lobo brutal que ataca La Madriguera junto a Bellatrix."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_fenrir.str.shd"
+    }
    },
    {
     "cle": "nick",
@@ -2957,7 +3150,11 @@
      "en": "The Gryffindor ghost crosses Harry's path in the castle corridors.",
      "es": "El fantasma de Gryffindor se cruza con Harry por los pasillos del castillo."
     },
-    "image": null
+    "image": null,
+    "modele": {
+     "fichier": "data3.big",
+     "nom": "events/body_models/body_nick.str.shd"
+    }
    }
   ]
  },
