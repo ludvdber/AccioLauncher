@@ -51,6 +51,8 @@ def fiche(qtbot, tmp_path, monkeypatch):
     def montrer(jeu):
         panel.apply_game(jeu)
         panel.rafraichir_indices(jeu)
+        # La sauvegarde se lit dans un fil ; son résultat revient par la boucle.
+        qtbot.waitUntil(lambda: not panel.lecture_en_cours(), timeout=5000)
 
     return panel, montrer, hp1, hp2, saves, installes
 
