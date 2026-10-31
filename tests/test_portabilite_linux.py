@@ -139,7 +139,8 @@ class TestWorkflowCI:
         workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
         linux = workflow[workflow.index("  linux-smoke:"):]
         lignes = [ligne for ligne in linux.splitlines() if "python -m pytest" in ligne]
-        assert len(lignes) == 2
+        # Le job de préversion est parti (b72c486) : il en reste au moins une.
+        assert lignes
         assert all("--timeout-method=thread" in ligne for ligne in lignes)
 
 
