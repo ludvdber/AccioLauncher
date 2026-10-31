@@ -608,6 +608,17 @@ pas. La release passe donc `--timeout-method=thread` : le fil de garde vide
 les piles au journal et arrête le build en 60 s. La passe suivante, identique,
 était verte.
 
+### Release 1.3.1 : le Python du runner dans le conteneur (2026-10-31)
+
+Le job Linux est mort au premier `python` : « version GLIBC_2.38 not
+found ». L'image `ubuntu-latest` porte désormais un Python 3.15.1 construit
+pour 24.04 dans son cache d'outils, monté dans le conteneur (`/__t`), et
+`setup-python` prend un Python déjà en cache avant d'en télécharger un. Le
+job lui donne donc un cache vide, propre au conteneur (`RUNNER_TOOL_CACHE`
+et `AGENT_TOOLSDIRECTORY` sur l'étape), ce qui le force à télécharger le
+build 22.04 ; l'étape « Python adapté au conteneur » affiche la glibc et la
+version retenue, et s'arrête en clair si elles ne vont pas ensemble.
+
 ## 10. Limites de l'audit (phase 1)
 
 Vérifié dans l'environnement de travail (Ubuntu 24.04, Wine 9.0 64 bits, sans

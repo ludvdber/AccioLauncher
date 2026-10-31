@@ -246,9 +246,26 @@ jobs:
           persist-credentials: false
 
       # setup-python lit /etc/os-release : c'est le Python construit POUR 22.04.
+      # MAIS il prend d'abord un Python déjà présent dans le cache d'outils, et
+      # celui du runner (/__t, monté dans le conteneur) porte depuis fin octobre
+      # 2026 un 3.15.1 construit pour 24.04, qui exige la glibc 2.38 : « version
+      # `GLIBC_2.38' not found » au premier `python` (release 1.3.1). Un cache
+      # vide, propre au conteneur, l'oblige à télécharger le build 22.04.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        # Les deux noms : setup-python cherche dans RUNNER_TOOL_CACHE, mais son
+        # script d'installation pose dans AGENT_TOOLSDIRECTORY quand elle existe.
+        env:
+          RUNNER_TOOL_CACHE: /opt/outils-conteneur
+          AGENT_TOOLSDIRECTORY: /opt/outils-conteneur
         with:
           python-version: "3.15"
+
+      # Le Python retenu doit tourner sur la glibc du conteneur : sinon on
+      # l'apprend ici, en clair, plutôt qu'au milieu des paquets.
+      - name: Python adapté au conteneur
+        run: |
+          ldd --version | head -n 1
+          python -c "import sys, sqlite3; print(sys.version)"
 
       # PyInstaller n'embarque que ce qu'il VOIT sur la machine de build : sans
       # les bibliothèques du greffon xcb (libxcb-cursor0 & co.), l'AppImage
