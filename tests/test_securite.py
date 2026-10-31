@@ -1,9 +1,10 @@
-"""Ce que Bandit vérifie en CI (`security.yml`), gardé aussi dans la suite locale.
+"""Ce que les règles de sécurité vérifient en CI (`security.yml`, `ruff --select S`
+depuis le 2026-10-31, bandit avant), gardé aussi dans la suite locale.
 
-`build.bat` ne lance pas Bandit : sans ces tests, une régression ne se verrait
-qu'après le push. Ils gardent surtout ce que la configuration de Bandit
-AFFIRME — `.bandit` écarte deux règles pour de bonnes raisons, et ces raisons
-doivent rester vraies :
+`build.bat` ne lance pas ces règles : sans ces tests, une régression ne se
+verrait qu'après le push. Ils gardent surtout ce que la commande de la CI
+AFFIRME : elle écarte S311 pour une bonne raison, et cette raison doit rester
+vraie :
 
 - aucun programme n'est lancé par son seul nom (B607). Sous Windows, il serait
   cherché d'abord dans le dossier de l'exe appelant, donc là où l'utilisateur
@@ -13,7 +14,6 @@ doivent rester vraies :
 """
 
 import ast
-import configparser
 import os
 import sys
 from pathlib import Path
@@ -187,7 +187,7 @@ class _PathSansEmbarque(type(Path())):
 
 
 class TestRandomSeulementDecoratif:
-    """`.bandit` écarte B311 pour TOUT le dépôt : ce test l'empêche de
+    """`security.yml` écarte S311 (ex-B311) pour TOUT le dépôt : ce test l'empêche de
     couvrir demain un tirage qui, lui, compterait (jeton, nom de fichier)."""
 
     _DECORATIFS = {"src/ui/particles.py", "src/ui/carousel.py",
@@ -220,11 +220,18 @@ class TestAucuneExceptionAvaleeSansTrace:
         assert not fautifs, f"exception avalée sans trace (Bandit B110) : {fautifs}"
 
 
-class TestConfigurationBandit:
-    def test_seulement_deux_regles_ecartees(self):
+class TestReglesDeSecuriteEnCI:
+    def test_une_seule_regle_ecartee(self):
         """Écarter une règle de plus doit être une décision, pas un oubli :
-        ce test oblige à la justifier ici ET dans `.bandit`."""
-        ini = configparser.ConfigParser()
-        ini.read(_RACINE / ".bandit", encoding="utf-8")
-        skips = {s.strip() for s in ini["bandit"]["skips"].split(",")}
-        assert skips == {"B311", "B404"}
+        ce test oblige à la justifier ici ET dans le commentaire du workflow."""
+        workflow = (_RACINE / ".github/workflows/security.yml").read_text(encoding="utf-8")
+        commandes = [ligne.strip() for ligne in workflow.splitlines()
+                     if "ruff check" in ligne and "--select S" in ligne]
+        assert commandes == ["run: ruff check --select S --ignore S311 --extend-exclude tests,fuzz "
+                             "--output-format github ."]
+        assert "bandit -r" not in workflow
+
+    def test_security_yml_en_python_315(self):
+        """PEP 810 (`lazy import`) n'est lisible qu'à partir de la 3.15."""
+        workflow = (_RACINE / ".github/workflows/security.yml").read_text(encoding="utf-8")
+        assert 'python-version: "3.15"' in workflow
