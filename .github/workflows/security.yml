@@ -27,9 +27,10 @@ jobs:
         with:
           # La version du build (build.bat) et de tests.yml : c'est sous elle
           # que les dépendances sont résolues, donc elle que l'audit doit voir.
-          # 3.14 et non 3.15 : PyYAML (requis par bandit) n'a pas de paquet 3.15, et
-          # un paquet construit sur place échappe au contrôle des empreintes.
-          python-version: "3.14"
+          # En 3.15 depuis le 2026-10-31 : bandit, qui exigeait PyYAML (sans
+          # paquet 3.15), est remplacé par les règles S de ruff. Tout
+          # securite.txt s'installe en roues, aucun paquet construit sur place.
+          python-version: "3.15"
 
       # Versions ET empreintes figées (.github/requirements/securite.txt) : un
       # outil d'audit installé sans vérification serait le maillon faible de
@@ -37,16 +38,22 @@ jobs:
       - name: Install security tools
         run: pip install --require-hashes -r .github/requirements/securite.txt
 
-      # Les règles écartées et leur raison sont dans `.bandit`, que Bandit lit
-      # tout seul. Chaque appel de processus relu porte un `# nosec` sur sa
-      # ligne : un appel ajouté sans relecture fait échouer ce job. fuzz/ est
-      # écarté comme tests/ : du code de vérification, fait d'`assert`, qui ne
-      # part pas dans l'exécutable.
-      - name: Bandit security scan
-        run: bandit -r . -x ./tests,./fuzz
+      # Les règles de sécurité de ruff (flake8-bandit), lancées À PART : le jeu
+      # de règles de pyproject.toml est figé, `--select S` le remplace pour ce
+      # seul appel. Une règle écartée, et une seule : S311 (« random n'est pas
+      # cryptographique ») ; il ne sert qu'aux particules, aux étoiles du
+      # carrousel et à l'image de partage du build, et tests/test_securite.py
+      # échoue si un AUTRE module l'importe. Le « importer subprocess » de
+      # bandit (B404) n'existe pas dans ruff. Chaque appel de processus relu
+      # porte un `# noqa: S603` (ruff ne lit pas les `# nosec` de bandit) : un
+      # appel ajouté sans relecture fait échouer ce job. fuzz/ est écarté comme
+      # tests/ : du code de vérification, fait d'`assert`, qui ne part pas dans
+      # l'exécutable.
+      - name: Règles de sécurité (ruff S)
+        run: ruff check --select S --ignore S311 --extend-exclude tests,fuzz --output-format github .
 
       # `-r` : les dépendances DU LAUNCHER. Sans argument, pip-audit examine
-      # l'environnement courant — ici bandit et pip-audit eux-mêmes — et son
+      # l'environnement courant — ici ruff et pip-audit eux-mêmes — et son
       # vert ne disait rien du launcher (constaté le 2026-09-18).
       - name: Audit Python dependencies
         run: pip-audit -r requirements.txt -r requirements-dev.txt

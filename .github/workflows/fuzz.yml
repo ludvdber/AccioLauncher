@@ -37,7 +37,11 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           # 3.14 et non 3.15 comme l'application : Atheris 3.1.0 (juin 2026) n'a pas de
-          # paquet 3.15. Le code doit donc rester lisible en 3.14 (pas de `lazy import`).
+          # paquet 3.15, et ses sources non plus ne l'acceptent pas (vérifié le
+          # 2026-10-31) : `src/version_dependent.py` lève « You are fuzzing on an
+          # unsupported python version » au-delà de la 3.14, son instrumentation du
+          # bytecode étant écrite version par version. Le code doit donc rester
+          # lisible en 3.14 (pas de `lazy import`) tant que ce job importe src/.
           python-version: "3.14"
 
       - name: Install Atheris
