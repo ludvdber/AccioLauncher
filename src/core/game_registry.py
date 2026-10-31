@@ -383,7 +383,7 @@ def _ecrire_par_wine(ruche: str, cle: str, valeurs: Valeurs, vue: int) -> bool:
         log.info("Import du registre dans le préfixe : %s", " ".join(commande))
         # Lanceur trouvé par chemin ABSOLU (`compat._trouver`), fichier .reg
         # construit et validé par `construire_reg` ; liste d'arguments, aucun shell.
-        subprocess.run(commande, env=env, stdin=subprocess.DEVNULL,  # nosec B603
+        subprocess.run(commande, env=env, stdin=subprocess.DEVNULL,  # nosec B603  # noqa: S603
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                        timeout=_DELAI_REGEDIT_WINE_S, check=False)
         return True

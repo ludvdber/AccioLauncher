@@ -75,7 +75,7 @@ def outil(url: str, sha256: str, cache: Path) -> Path:
         print(f"  téléchargement : {url}")
         temporaire = cible.with_suffix(".part")
         # URL https constante ci-dessus ; son contenu est vérifié juste après.
-        with urllib.request.urlopen(url, context=ssl.create_default_context(),  # nosec B310
+        with urllib.request.urlopen(url, context=ssl.create_default_context(),  # nosec B310  # noqa: S310
                                     timeout=120) as reponse, open(temporaire, "wb") as f:
             shutil.copyfileobj(reponse, f)
         trouvee = empreinte(temporaire)
@@ -161,7 +161,7 @@ def main() -> int:
                APPIMAGE_EXTRACT_AND_RUN="1")
     env.pop("VERSION", None)          # sinon appimagetool l'ajoute au nom
     # Outil épinglé ci-dessus (chemin absolu, empreinte vérifiée) ; aucun shell.
-    code = subprocess.run(  # nosec B603
+    code = subprocess.run(  # nosec B603  # noqa: S603
         [str(outil_appimage), "--no-appstream", "--runtime-file", str(runtime),
          str(appdir), str(sortie)], env=env, check=False).returncode
     if code != 0 or not sortie.is_file():

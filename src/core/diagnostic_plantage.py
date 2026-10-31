@@ -120,7 +120,7 @@ def _evenements(canal: str, requete: str, combien: int) -> list[dict[str, str]]:
     try:
         # Chemin système absolu (règle 1), liste d'arguments, aucun shell ;
         # la requête est construite ici, rien ne vient du catalogue.
-        r = subprocess.run(  # nosec B603
+        r = subprocess.run(  # nosec B603  # noqa: S603
             [commande_systeme("wevtutil.exe"), "qe", canal, f"/q:{requete}",
              "/f:xml", "/rd:true", f"/c:{combien}", "/uni:true"],
             capture_output=True, timeout=_DELAI_S, creationflags=_SANS_FENETRE)
@@ -136,7 +136,7 @@ def lire_evenements(brut: bytes) -> list[dict[str, str]]:
     """Le XML de `wevtutil` (UTF-16, BOM ou non) en liste de dictionnaires."""
     try:
         texte = brut.decode("utf-16-le").lstrip("\ufeff")
-        racine = ET.fromstring("<r>" + texte + "</r>")  # nosec B314
+        racine = ET.fromstring("<r>" + texte + "</r>")  # nosec B314  # noqa: S314
     except (UnicodeDecodeError, ET.ParseError):
         return []
     sortie = []

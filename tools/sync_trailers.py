@@ -53,7 +53,7 @@ def lire_release(depot: str, tag: str) -> list[dict]:
     })
     try:
         # URL construite ci-dessus avec un schéma https FIXE : jamais file://.
-        with urllib.request.urlopen(requete, timeout=30) as reponse:  # nosec B310
+        with urllib.request.urlopen(requete, timeout=30) as reponse:  # nosec B310  # noqa: S310
             donnees = json.load(reponse)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:

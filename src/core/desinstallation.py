@@ -159,7 +159,7 @@ def _programmer_sh(inv: Inventaire) -> bool:
     env = environnement_hote() | {"ACCIO_PID": str(os.getpid())}
     try:
         # `/bin/sh` par son chemin absolu ; script constant, arguments en liste.
-        subprocess.Popen(  # nosec B603
+        subprocess.Popen(  # nosec B603  # noqa: S603
             ["/bin/sh", "-c", _SCRIPT_SH, "accio-desinstallation", *cibles],
             env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)

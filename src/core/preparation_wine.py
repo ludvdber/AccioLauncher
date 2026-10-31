@@ -178,7 +178,7 @@ class PreparationWine(QThread):
             sortie.flush()
             # Programme trouvé par chemin ABSOLU (`compat._trouver`), verbes
             # tirés d'une table du launcher ; liste d'arguments, aucun shell.
-            proc = subprocess.Popen(  # nosec B603
+            proc = subprocess.Popen(  # nosec B603  # noqa: S603
                 commande, env=env, cwd=str(self._prefixe), stdin=subprocess.DEVNULL,
                 stdout=sortie, stderr=subprocess.STDOUT, start_new_session=True)
             dite = ""

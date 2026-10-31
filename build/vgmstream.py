@@ -43,7 +43,7 @@ def main() -> int:
         return 0
     print(f"vgmstream : {len(manquants)} fichier(s) à poser, téléchargement de {URL}")
     try:
-        with urllib.request.urlopen(URL, timeout=120) as reponse:  # nosec B310 : URL fixe en https
+        with urllib.request.urlopen(URL, timeout=120) as reponse:  # nosec B310 : URL fixe en https  # noqa: S310
             archive = reponse.read()
     except OSError as exc:
         print(f"ERREUR : vgmstream n'a pas pu être téléchargé : {exc}")
