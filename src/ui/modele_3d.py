@@ -62,7 +62,8 @@ LACET_DEPART = 20.0      # degrés : trois quarts, le relief se voit tout de sui
 _REPOS = ("breath", "idle", "stand", "fidget", "look", "wait", "hover", "fly", "walk")
 TANGAGE_MAX = 35.0       # degrés, vers le haut comme vers le bas
 _ZOOM = (0.6, 2.5)
-_ROTATION_REPOS = 0.35   # degrés par image quand personne ne touche au modèle
+_INTERVALLE = 16          # ms entre deux images (60 par seconde) ; le double au repos
+_ROTATION_REPOS = 0.35   # degrés par image à 60 images/s quand personne ne touche au modèle
 _ATTENTE_REPOS = 120     # images (~2 s) après un geste avant de reprendre la rotation
 _FREIN = 0.92            # part de l'élan gardée à chaque image
 _DISTANCE = 3.2          # distance de la caméra, en hauteurs du modèle
@@ -144,6 +145,7 @@ class Visionneuse:
         super().__init__(parent)  # type: ignore[call-arg]   # la classe Qt qui suit dans le MRO
         self._modele: Maillage | None = None
         self._pix: dict[str, QPixmap] = {}
+        self._images: dict[str, QImage] = {}
         self._centre = (0.0, 0.0, 0.0)
         self._taille = 1.0
         self.lacet, self.tangage, self.zoom = LACET_DEPART, 8.0, 1.0
@@ -157,7 +159,7 @@ class Visionneuse:
         self._mouvement: Mouvement | None = None
         self._depart = 0.0              # `time.monotonic()` au lancement du mouvement
         self._minuteur = QTimer(self)
-        self._minuteur.setInterval(16)
+        self._minuteur.setInterval(_INTERVALLE)
         # PRÉCIS : le minuteur grossier de Windows tombe sur sa grille de
         # 15,6 ms, et une image sur deux arrivait 31 ms après la précédente.
         # Le modèle tournait par saccades (Ludo, 2026-10-27 : « encore pas
@@ -178,9 +180,14 @@ class Visionneuse:
         return self._modele
 
     def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None,
-              animation: Animation | None = None) -> None:
+              animation: Animation | None = None, garder_vue: bool = False) -> None:
+        """`garder_vue` : le même modèle, ses textures en pleine taille, sans
+        ramener la caméra de face."""
         self._modele = modele
-        self._pix = {nom: QPixmap.fromImage(img) for nom, img in (textures or {}).items()}
+        # Les pixmaps du rendu QPainter se font à son premier besoin : avec la
+        # carte graphique, une copie de chaque texture ne servait à rien.
+        self._images = dict(textures or {})
+        self._pix = {}
         self._bras = modele is not None and bool(maillages_ue1.bras_baisses(modele))
         self._face = maillages_ue1.face(modele) if modele is not None else None
         self._animation = animation if modele is not None else None
@@ -193,7 +200,8 @@ class Visionneuse:
             self._centre = ((bornes[0][0] + bornes[0][1]) / 2, (bornes[1][0] + bornes[1][1]) / 2,
                             (bornes[2][0] + bornes[2][1]) / 2)
             self._taille = max(b - a for a, b in bornes) or 1.0
-        self.vue_de_face()
+        if not garder_vue:
+            self.vue_de_face()
         self._mettre_en_route()
 
     def vue_de_face(self) -> None:
@@ -256,14 +264,24 @@ class Visionneuse:
         self._minuteur.stop()
 
     def _avancer(self) -> None:
-        self._phase += 0.035
+        # Au repos (personne ne touche, aucun mouvement du jeu), la rotation lente
+        # passe à 30 images/s, à la même vitesse : la visionneuse ouverte prenait
+        # la moitié d'un cœur à 60 (audit du 2026-10-31). Un geste ou un mouvement
+        # rend les 60.
+        repos = (self._prise is None and self._mouvement is None and self._repos >= _ATTENTE_REPOS
+                 and abs(self._elan[0]) <= 0.05 and abs(self._elan[1]) <= 0.05)
+        pas = 2 if repos else 1
+        intervalle = _INTERVALLE * pas
+        if self._minuteur.interval() != intervalle:
+            self._minuteur.setInterval(intervalle)
+        self._phase += 0.035 * pas
         if self._prise is None:
             dl, dt = self._elan
             if abs(dl) > 0.05 or abs(dt) > 0.05:
                 self.tourner(dl, dt)
                 self._elan = (dl * _FREIN, dt * _FREIN)
             elif self._repos >= _ATTENTE_REPOS:
-                self.lacet = (self.lacet + _ROTATION_REPOS) % 360
+                self.lacet = (self.lacet + _ROTATION_REPOS * pas) % 360
             else:
                 self._repos += 1
         self.update()
@@ -418,6 +436,8 @@ class Visionneuse:
     def _brosse(self, texture: str, uv: tuple[maillages_ue1.UV, maillages_ue1.UV, maillages_ue1.UV],
                 poly: QPolygonF) -> QBrush:
         pix = self._pix.get(texture)
+        if pix is None and texture in self._images:
+            pix = self._pix[texture] = QPixmap.fromImage(self._images[texture])
         if pix is None:
             return QBrush(QColor(150, 140, 125))
         w, h = pix.width(), pix.height()
@@ -473,11 +493,11 @@ class Modele3D(Visionneuse, QWidget):
         self._textures_gpu: dict[str, QImage] = {}
 
     def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None,
-              animation: Animation | None = None) -> None:
+              animation: Animation | None = None, garder_vue: bool = False) -> None:
         self._textures_gpu = dict(textures or {})
         if self._gpu is not None:
             self._gpu.poser(modele, self._textures_gpu)
-        super().poser(modele, textures, animation)
+        super().poser(modele, textures, animation, garder_vue)
 
     def _rendu_gpu(self) -> RenduGPU | None:
         if not self._gpu_essaye:

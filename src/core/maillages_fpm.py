@@ -39,6 +39,9 @@ log = logging.getLogger(__name__)
 
 _MAGIES = (b"FPM4", b"FPM8")
 _TYPE_FPM = 0x6B43
+# Les textures pour la visionneuse ; les vignettes de la liste se contentent de
+# 128 (16 fois moins de pixels à décoder : passer à HP6 décodait 21 modèles en
+# pleine taille, 15 s de travail, Ludo 2026-10-31 : « ultra lent »).
 _COTE_TEXTURE = 512
 _PLAFOND = 16 << 20
 # Le haut du col des corps pour lesquels les têtes sont modelées (corps moldus
@@ -162,58 +165,66 @@ def _fpms(flux: bytes) -> list[bytes]:
     return trouves
 
 
-def _textures(flux: bytes, voulues: set[str]) -> Textures:
+def _textures(flux: bytes, voulues: set[str], cote: int = _COTE_TEXTURE) -> Textures:
     positions = images_ea.images_nommees(flux)
     sortie: Textures = {}
     for nom in voulues:
         q = positions.get(nom)
-        image = images_ea.image(flux, q, _COTE_TEXTURE) if q is not None else None
+        image = images_ea.image(flux, q, cote) if q is not None else None
         if image is not None:
             sortie[nom] = image
     return sortie
 
 
 def _a_de_la_transparence(image: tuple[int, int, bytes]) -> bool:
-    return any(a < 128 for a in image[2][3::4])
+    # `min` sur la tranche des alphas : en C. Le générateur pixel par pixel
+    # prenait 15 % du chargement d'un modèle (2026-10-31).
+    alphas = image[2][3::4]
+    return bool(alphas) and min(alphas) < 128
 
 
 def _hausse_de_la_tete(points: list[Point],
                        faces: list[tuple[tuple[int, int, int], tuple[UV, UV, UV], str]]) -> float:
-    """De combien monter la tête d'un élève pour la poser sur le col de SON
-    corps. Les têtes sont faites pour un col à `_COL` (les corps moldus de
-    Harry, Ron, Hermione) ; le corps d'uniforme « tall » monte à 1,575 et la
-    tête de Luna y disparaissait dans les épaules (relevé du 2026-10-31). La
-    baguette, tenue en l'air, ne compte pas."""
+    """HP5 seulement : de combien monter la tête d'un élève pour la poser sur
+    le col de SON corps. Ses têtes sont faites pour un col à `_COL` (les corps
+    moldus de Harry, Ron, Hermione) ; le corps d'uniforme « tall » monte à
+    1,575 et la tête de Luna y disparaissait dans les épaules. Celles de HP6
+    sont déjà modelées à la hauteur de leur corps (col 1,46, cou de Ron à
+    1,396 ; Crabbe 1,57 et 1,478) : les monter ouvrait un espace (Ludo,
+    2026-10-31). La baguette, tenue en l'air, ne compte pas."""
     hauts = [points[i][2] for s, _uv, t in faces if "wand" not in t.lower() for i in s]
     return max(hauts) - _COL if hauts else 0.0
 
 
-def assembler(flux: list[bytes], annexes: Iterable[bytes] = ()) -> tuple[Maillage, Textures]:
+def assembler(flux: list[bytes], annexes: Iterable[bytes] = (),
+              cote: int = _COTE_TEXTURE) -> tuple[Maillage, Textures]:
     """Un modèle fait de plusieurs flux (le corps, puis la tête d'un élève),
     dans le même repère de liaison. Les textures absentes de ses flux se
     cherchent ensuite dans les `annexes`, lues une à une tant qu'il en manque."""
     points: list[Point] = []
     faces_brutes: list[tuple[tuple[int, int, int], tuple[UV, UV, UV], str]] = []
     textures: Textures = {}
-    hausse = 0.0
+    hausse, hp5 = 0.0, False
     for rang, un in enumerate(flux):
-        if rang == 1:
+        if rang == 1 and hp5:
             hausse = _hausse_de_la_tete(points, faces_brutes)
         for fpm in _fpms(un):
+            hp5 = hp5 or (rang == 0 and fpm[:4] == b"FPM4")
             pts, fcs = lire(fpm)
-            # Le halo d'un fantôme (`ct_moa_body_bloom` de HP5, `ct_gen_hbp_ghost_bloom_ps3_bm` de HP6, blanc uni) : une enveloppe
+            # Le halo d'un fantôme (blanc uni : `ct_moa_body_bloom` de HP5,
+            # `ct_gen_hbp_ghost_bloom_ps3_bm` de HP6) : une enveloppe
             # que le jeu ajoute en lumière par-dessus ; opaque, elle cachait Mimi.
             fcs = [f for f in fcs if "_bloom" not in f[2].lower()]
             decalage = len(points)
             points.extend((x, y, z + hausse) for x, y, z in pts)
             faces_brutes.extend(((a + decalage, b + decalage, c + decalage), uv, t) for (a, b, c), uv, t in fcs)
-            textures.update(_textures(un, {t for _s, _uv, t in fcs if t} - set(textures)))
+            textures.update(_textures(un, {t for _s, _uv, t in fcs if t} - set(textures), cote))
     noms = sorted({t for _s, _uv, t in faces_brutes})
     for annexe in annexes:
         manquantes = {n for n in noms if n} - set(textures)
         if not manquantes:
             break
-        textures.update(_textures(annexe, manquantes))
+        textures.update(_textures(annexe, manquantes, cote))
     # Deux faces partout : l'ordre des bandes ne dit pas l'endroit d'une face.
     # Une texture à trous (cheveux, cils) se découpe au lieu de se mélanger.
     materiaux = tuple(Materiau(n, PF_DEUX_FACES | (PF_MASQUE if n in textures and _a_de_la_transparence(textures[n])
@@ -237,9 +248,11 @@ def _lire(archive: Path, nom: str) -> bytes | None:
     return archives_ea.lire(archive, entree, plafond=_PLAFOND) if entree is not None else None
 
 
-def de_la_fiche(archive: Path, entrees: tuple[str, ...]) -> tuple[Maillage, Textures, None] | None:
-    """Le modèle d'une fiche de HP5 ou HP6 lu dans l'archive du jeu installé ;
-    None si une entrée manque ou ne se lit pas comme relevé."""
+def de_la_fiche(archive: Path, entrees: tuple[str, ...],
+                cote: int = _COTE_TEXTURE) -> tuple[Maillage, Textures, None] | None:
+    """Le modèle d'une fiche de HP5 ou HP6 lu dans l'archive du jeu installé,
+    textures au plus `cote` pixels ; None si une entrée manque ou ne se lit
+    pas comme relevé."""
     flux = []
     for nom in entrees:
         donnees = _lire(archive, nom)
@@ -250,7 +263,7 @@ def de_la_fiche(archive: Path, entrees: tuple[str, ...]) -> tuple[Maillage, Text
     bases = [_base(n) for n in entrees if _base(n) != n]
     annexes = (d for n in (*bases, *_COMMUNS) if (d := _lire(archive, n)) is not None)
     try:
-        maillage, textures = assembler(flux, annexes)
+        maillage, textures = assembler(flux, annexes, cote)
     except (ValueError, IndexError, struct.error):
         log.warning("Modèle %s illisible dans %s", entrees, archive, exc_info=True)
         return None

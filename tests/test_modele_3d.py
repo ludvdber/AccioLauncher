@@ -174,3 +174,20 @@ def test_la_carte_graphique_recoit_chaque_nouveau_modele(qtbot, monkeypatch):
     v.grab()
     v.poser(None)
     assert gpu.poses[-1] is None and v._gpu is gpu
+
+
+def test_au_repos_la_rotation_passe_a_30_images(qtbot):
+    """Audit du 2026-10-31 : la visionneuse ouverte prenait la moitié d'un cœur.
+    Au repos, 30 images/s à la même vitesse ; un geste rend les 60."""
+    from src.ui import modele_3d
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.poser(_carre())
+    v._repos = modele_3d._ATTENTE_REPOS
+    avant = v.lacet
+    v._avancer()
+    assert v._minuteur.interval() == 2 * modele_3d._INTERVALLE
+    assert v.lacet == pytest.approx((avant + 2 * modele_3d._ROTATION_REPOS) % 360)
+    v._elan = (3.0, 0.0)
+    v._avancer()
+    assert v._minuteur.interval() == modele_3d._INTERVALLE

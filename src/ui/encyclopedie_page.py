@@ -48,6 +48,10 @@ _MARGE_SCENE = 32
 # prend toute la place qui reste (Ludo, 2026-10-27 : « plus agréable pour
 # zoomer et apprécier le modèle »).
 _LARGEUR_LISTE = _LARGEUR_FICHE + 80 + 8
+# Les modèles de HP5-HP6 se lisent d'abord avec des textures de 128 pixels
+# (vignettes, premier affichage), puis en pleine taille pour la fiche choisie
+# seulement (Ludo, 2026-10-31 : passer à HP6 était « ultra lent »).
+_COTE_VIGNETTE = 128
 
 ModeleLu = tuple[maillages_ue1.Maillage, dict[str, QImage], maillages_ue1.Animation | None]
 
@@ -236,14 +240,14 @@ class _Scene(QFrame):
         v.addWidget(texte(tr("Glisser pour tourner · molette pour zoomer · double-clic pour revenir"),
                           12, ENCRE_DOUCE, retour=True))
 
-    def montrer(self, fiche: encyclopedie.Fiche, modele: ModeleLu | None) -> None:
+    def montrer(self, fiche: encyclopedie.Fiche, modele: ModeleLu | None, garder_vue: bool = False) -> None:
         self._nom.setText(dans_la_langue(fiche.nom))
         self._sous_titre.setText(dans_la_langue(fiche.sous_titre))
         self._texte.setText(dans_la_langue(fiche.texte))
         if modele is None:
             self.modele.poser(None)
         else:
-            self.modele.poser(*modele)
+            self.modele.poser(*modele, garder_vue=garder_vue)
         noms = self.modele.mouvements()
         self.mouvements.blockSignals(True)
         self.mouvements.clear()
@@ -291,6 +295,14 @@ class VueEncyclopedie(QWidget):
         self._liste = zone_defilable(page)
         self._racine.addWidget(self._liste, stretch=1)
         self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="encyclopedie")
+        # La fiche choisie en pleine taille : un fil à elle, sinon elle attendrait
+        # derrière toutes les vignettes.
+        self._fil_choix = ThreadPoolExecutor(max_workers=1, thread_name_prefix="encyclopedie-choix")
+        self._complete: tuple[_Fiche, Future] | None = None
+        # La pleine taille de la SEULE fiche montrée : un modèle de HP6 en 512
+        # pèse ~8 Mo de textures, et les garder toutes s'additionnait au fil des clics.
+        self._grand: tuple[str, ModeleLu] | None = None
+        self._dossier = None
         self._attendues: list[tuple[_Fiche, Future]] = []
         self._modeles_attendus: list[tuple[_Fiche, Future]] = []
         self._modeles: dict[str, ModeleLu] = {}
@@ -309,6 +321,9 @@ class VueEncyclopedie(QWidget):
         self._jeu = jeu
         for _fiche, futur in self._attendues + self._modeles_attendus:
             futur.cancel()
+        if self._complete is not None:
+            self._complete[1].cancel()
+        self._complete, self._grand = None, None
         self._attendues, self._modeles_attendus, self._vignettes = [], [], []
         self._modeles = {}
         self._choisie = None
@@ -328,7 +343,7 @@ class VueEncyclopedie(QWidget):
         compte = (tr("{} personnage") if len(fiches) == 1 else tr("{} personnages")) \
             if self.rubrique == encyclopedie.PERSONNAGES else \
             (tr("{} créature") if len(fiches) == 1 else tr("{} créatures"))
-        dossier = self._media.dossier_exe(jeu)
+        dossier = self._dossier = self._media.dossier_exe(jeu)
         if dossier is not None and any(f.modele is not None and self._media.ouvert(jeu, f.seuil)
                                        for f in fiches):
             self.scene = _Scene()
@@ -347,7 +362,7 @@ class VueEncyclopedie(QWidget):
                 self._attendues.append((vue, self._fil.submit(encyclopedie.image, dossier, fiche)))
             if fiche.modele is not None:
                 self._modeles_attendus.append(
-                    (vue, self._fil.submit(maillages_ue1.de_la_fiche, dossier, fiche)))
+                    (vue, self._fil.submit(maillages_ue1.de_la_fiche, dossier, fiche, _COTE_VIGNETTE)))
         self._lay.addLayout(flux)
         self._lay.addStretch()
         if self._attendues or self._modeles_attendus:
@@ -370,8 +385,27 @@ class VueEncyclopedie(QWidget):
             self._choisie.marquer(False)
         self._choisie = vue
         vue.marquer(True)
-        self.scene.montrer(vue.fiche, self._modeles.get(vue.fiche.cle))
+        self.scene.montrer(vue.fiche, self._modele_montre(vue))
         self.scene.show()
+        self._completer(vue)
+
+    def _modele_montre(self, vue: _Fiche) -> ModeleLu | None:
+        if self._grand is not None and self._grand[0] == vue.fiche.cle:
+            return self._grand[1]
+        return self._modeles.get(vue.fiche.cle)
+
+    def _completer(self, vue: _Fiche) -> None:
+        """Relit en pleine taille le modèle de HP5-HP6 de la fiche choisie."""
+        modele = vue.fiche.modele
+        if (modele is None or not modele.fichier.lower().endswith(".big") or self._dossier is None
+                or (self._grand is not None and self._grand[0] == vue.fiche.cle)):
+            return
+        if self._complete is not None:
+            if self._complete[0] is vue:
+                return
+            self._complete[1].cancel()
+        self._complete = (vue, self._fil_choix.submit(maillages_ue1.de_la_fiche, self._dossier, vue.fiche))
+        self._chargeur.start()
 
     def _poser_pretes(self) -> None:
         restantes = []
@@ -389,9 +423,20 @@ class VueEncyclopedie(QWidget):
                 maillage, textures, animation = futur.result()
                 self._modeles[vue.fiche.cle] = (maillage, _images(textures), animation)
                 self._vignettes.append(vue)
-                if self._choisie is None or self._choisie is vue:
+                # La fiche choisie avant que son modèle soit lu le reçoit ; une
+                # fiche déjà montrée (en grand) n'est pas remise de face.
+                if self._choisie is None or (self._choisie is vue and self.scene is not None
+                                             and self.scene.modele.modele is None):
                     self.choisir(vue)
         self._modeles_attendus = modeles
+        if self._complete is not None and self._complete[1].done():
+            vue, futur = self._complete
+            self._complete = None
+            if not futur.cancelled() and futur.exception() is None and futur.result() is not None:
+                maillage, textures, animation = futur.result()
+                self._grand = (vue.fiche.cle, (maillage, _images(textures), animation))
+                if self._choisie is vue and self.scene is not None:
+                    self.scene.montrer(vue.fiche, self._grand[1], garder_vue=True)
         # Une vignette par tour : une trentaine de millisecondes chacune.
         while self._vignettes:
             vue = self._vignettes.pop(0)
@@ -400,12 +445,13 @@ class VueEncyclopedie(QWidget):
                 vue.poser_image(self._peintre.rendu(_IMAGE, vue.devicePixelRatioF()))
                 vue.a_une_vignette = True
                 break
-        if not restantes and not modeles and not self._vignettes:
+        if not restantes and not modeles and not self._vignettes and self._complete is None:
             self._chargeur.stop()
 
     def fermer(self) -> None:
         """La page se ferme : plus rien à décoder."""
         self._chargeur.stop()
         self._fil.shutdown(wait=False, cancel_futures=True)
+        self._fil_choix.shutdown(wait=False, cancel_futures=True)
         if self.scene is not None:
             self.scene.modele.poser(None)

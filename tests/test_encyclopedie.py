@@ -197,13 +197,52 @@ class TestModeles:
             assert harry.modele.tete == "heads/head_models/head_harry.str.shd"
             assert all(f.modele is None for f in encyclopedie.fiches(encyclopedie.BESTIAIRE, jeu))
 
+    def test_hp6_vignettes_en_petit_et_la_fiche_choisie_en_grand(self, qtbot, tmp_path, monkeypatch):
+        """Passer à HP6 décodait 21 modèles en pleine taille (Ludo, 2026-10-31 :
+        « ultra lent ») : 128 pixels pour la liste, 512 pour la fiche montrée,
+        sans ramener la caméra de face."""
+        from src.core import maillages_ue1
+        from src.ui.encyclopedie_page import VueEncyclopedie
+        triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+                                          (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
+                                          (maillages_ue1.Materiau("", 0),))
+        import threading
+        lus: list[tuple[str, int]] = []
+        ron_en_grand = threading.Event()
+
+        def lire(dossier, fiche, cote=512):
+            lus.append((fiche.cle, cote))
+            if (fiche.cle, cote) == ("ron", 512):
+                ron_en_grand.wait(5)
+            return triangle, {}, None
+        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lire)
+        vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
+        qtbot.addWidget(vue)
+        vue.montrer("hp6")
+        qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=10000)
+        assert {c for cle, c in lus if cle != "harry"} == {128}, "chaque vignette en petit"
+        assert lus.count(("harry", 512)) == 1, "la première fiche montrée, en grand"
+        ron = next(f for f in vue.fiches if f.fiche.cle == "ron")
+        vue.choisir(ron)
+        vue.scene.modele.tourner(90, 0)                  # on tourne avant que la pleine taille arrive
+        lacet = vue.scene.modele.lacet
+        ron_en_grand.set()
+        qtbot.waitUntil(lambda: vue._grand is not None and vue._grand[0] == "ron", timeout=5000)
+        assert vue.scene.modele.lacet == lacet, "la pleine taille garde la caméra"
+        vue.choisir(ron)
+        assert lus.count(("ron", 512)) == 1, "déjà en grand : rien n'est relu"
+        harry = next(f for f in vue.fiches if f.fiche.cle == "harry")
+        vue.choisir(harry)
+        qtbot.waitUntil(lambda: vue._grand is not None and vue._grand[0] == "harry", timeout=5000)
+        assert lus.count(("harry", 512)) == 2, "une seule fiche gardée en grand : Harry est relu"
+
     def test_la_fiche_choisie_montre_son_modele(self, qtbot, tmp_path, monkeypatch):
         from src.core import maillages_ue1
         from src.ui.encyclopedie_page import VueEncyclopedie
         triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
                                           (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
                                           (maillages_ue1.Materiau("", 0),))
-        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche: (triangle, {}, None))
+        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche, cote=512: (triangle, {}, None))
         monkeypatch.setattr(encyclopedie, "image", lambda dossier, fiche: None)
         vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
         qtbot.addWidget(vue)
@@ -227,7 +266,7 @@ class TestModeles:
         mouvements = (maillages_ue1.Mouvement("Jump", "None", 0.3, 9, (), ()),
                       maillages_ue1.Mouvement("breath", "None", 2.0, 60, (), ()))
         animation = maillages_ue1.Animation("skAnims", mouvements)
-        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche: (triangle, {}, animation))
+        monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche, cote=512: (triangle, {}, animation))
         monkeypatch.setattr(encyclopedie, "image", lambda dossier, fiche: None)
         vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
         qtbot.addWidget(vue)

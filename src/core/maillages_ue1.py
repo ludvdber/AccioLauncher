@@ -563,10 +563,12 @@ def textures(chemin: Path, modele: Maillage) -> dict[str, tuple[int, int, bytes]
     return images
 
 
-def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche
+def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche, cote: int = 512
                 ) -> tuple[Maillage, dict[str, tuple[int, int, bytes]], Animation | None] | None:
     """Le modèle d'une fiche des Personnages ou du Bestiaire, ses textures et
-    ses mouvements, lus dans le jeu installé ; None sans modèle ou sans le jeu."""
+    ses mouvements, lus dans le jeu installé ; None sans modèle ou sans le jeu.
+    `cote` borne les textures de HP5-HP6 (les vignettes : 128) ; celles de
+    HP1-HP3, petites, se lisent entières."""
     if fiche.modele is None:
         return None
     chemin = encyclopedie.chemin_image(dossier_exe, fiche.modele)
@@ -575,7 +577,7 @@ def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche
     if chemin.suffix.lower() == ".big":   # HP5, HP6 : FPM d'EA
         from src.core import maillages_fpm
         flux = (fiche.modele.nom, fiche.modele.tete) if fiche.modele.tete else (fiche.modele.nom,)
-        return maillages_fpm.de_la_fiche(chemin, flux)
+        return maillages_fpm.de_la_fiche(chemin, flux, cote)
     if chemin.suffix.lower() == ".ukx":   # HP3, Unreal 2
         from src.core import maillages_ue2
         return maillages_ue2.de_la_fiche(chemin, fiche.modele.nom)

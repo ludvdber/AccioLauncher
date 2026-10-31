@@ -97,6 +97,13 @@ def test_la_tete_d_un_eleve_monte_sur_le_col_de_son_corps():
     assert all(m.drapeaux & PF_DEUX_FACES for m in maillage.materiaux)
 
 
+def test_hp6_garde_la_tete_ou_le_jeu_l_a_modelee():
+    """Les têtes de HP6 sont déjà à la hauteur de leur corps : les monter
+    ouvrait un espace sous le menton de Ron (Ludo, 2026-10-31)."""
+    maillage, _ = mf.assembler([_strm(_fpm(hauteur=1.6, magie=b"FPM8")), _strm(_fpm(hauteur=1.0, magie=b"FPM8"))])
+    assert [p[2] for p in maillage.points[4:]] == [0.0, 0.0, 1.0, 1.0]
+
+
 def test_le_halo_d_un_fantome_ne_cache_pas_le_modele():
     maillage, _ = mf.assembler([_strm(_fpm(), _fpm(texture="ct_moa_body_bloom"))])
     assert [m.texture for m in maillage.materiaux] == ["ct_test"]
