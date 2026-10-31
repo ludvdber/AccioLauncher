@@ -79,6 +79,22 @@
         {
           "genre": "nouveau",
           "texte": {
+            "fr": "Un bouton Difficulté sur la fiche d'un jeu : des presets (Détendu, Normal, Difficile, Hardcore, selon le jeu) règlent d'un geste sa difficulté, et un cadran montre le niveau de défi. Pour L'École des Sorciers, La Chambre des Secrets, L'Ordre du Phénix et Le Prince de sang-mêlé. En bêta.",
+            "en": "A Difficulty button on a game's page: presets (Relaxed, Normal, Hard, Hardcore, depending on the game) set its difficulty in one go, and a dial shows the challenge level. For Philosopher's Stone, Chamber of Secrets, Order of the Phoenix and Half-Blood Prince. In beta.",
+            "es": "Un botón Dificultad en la ficha de un juego: los preajustes (Relajado, Normal, Difícil, Hardcore, según el juego) ajustan su dificultad de una vez, y un dial muestra el nivel de desafío. Para La piedra filosofal, La cámara secreta, La Orden del Fénix y El misterio del príncipe. En beta."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Votre carte Discord peut cacher où vous en êtes dans votre partie : « Montrer où j'en suis dans ma partie », dans les Paramètres, rubrique Intégrations. Le jeu, votre maison et votre année restent.",
+            "en": "Your Discord card can hide where you are in your game: \"Show where I am in my game\", in Settings, Integrations. The game, your house and your year remain.",
+            "es": "Tu tarjeta de Discord puede ocultar por dónde vas en tu partida: «Mostrar por dónde voy en mi partida», en Ajustes, sección Integraciones. El juego, tu casa y tu año se quedan."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
             "fr": "La Chambre des Secrets : sa difficulté (Facile, Moyen, Difficile) se choisit dans ses réglages, onglet Jeu. Le jeu l'avait déjà, réglée sur Facile, sans la montrer dans aucun de ses menus. En bêta.",
             "en": "Chamber of Secrets: its difficulty (Easy, Medium, Hard) can be chosen in its settings, Game tab. The game already had it, set to Easy, without showing it in any of its menus. In beta.",
             "es": "La cámara secreta: su dificultad (Fácil, Medio, Difícil) se elige en sus ajustes, pestaña Juego. El juego ya la tenía, en Fácil, sin mostrarla en ninguno de sus menús. En beta."

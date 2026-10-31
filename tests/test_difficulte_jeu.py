@@ -88,7 +88,7 @@ def test_la_liste_de_la_fiche_ecrit_le_cran_choisi(qtbot, tmp_path):
     from src.ui.game_settings_dialog import GameSettingsDialog
     chemin = _ini(tmp_path)
     manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
-                              config=SimpleNamespace(install_path=tmp_path))
+                              config=SimpleNamespace(install_path=tmp_path, reprise={}))
     dlg = GameSettingsDialog(_jeu(), manager, lambda c: True)
     qtbot.addWidget(dlg)
     listes = [c for c in dlg.findChildren(QComboBox) if c.count() == 3 and c.itemData(2) == 2]

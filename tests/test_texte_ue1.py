@@ -79,10 +79,11 @@ def fabriquer():
 
 class TestFacteur:
     @pytest.mark.parametrize(("hauteur", "choix", "attendu"), [
-        (1080, "", 2.25), (1440, "", 3.0), (2160, "", 4.5), (1440, "petit", 2.25),
-        (1440, "grand", 3.75), (1440, "tres_grand", 4.5), (1440, "origine", 1.0),
-        (2160, "tres_grand", t.FACTEUR_MAX), (480, "petit", 1.0), (0, "", 1.0),
-        (1200, "", 2.5), (1440, "inconnu", 3.0)])
+        # L'automatique à 0,85 de la proportion de 640 × 480 (Ludo, 2026-10-31).
+        (1080, "", 2.0), (1440, "", 2.5), (2160, "", 3.75), (1440, "petit", 2.0),
+        (1440, "grand", 3.25), (1440, "tres_grand", 3.75), (1440, "origine", 1.0),
+        (2880, "tres_grand", t.FACTEUR_MAX), (480, "petit", 1.0), (0, "", 1.0),
+        (1200, "", 2.0), (1440, "inconnu", 2.5)])
     def test_facteur(self, hauteur, choix, attendu):
         assert t.facteur(hauteur, choix) == attendu
 
@@ -133,36 +134,37 @@ def jeu(tmp_path, monkeypatch):
 
 
 class TestAuLancement:
+    # 1700 px : ×3 avec l'automatique à 0,85 (1700 / 480 × 0,85 = 3,01).
     def test_pose_puis_ne_reecrit_pas(self, qapp, jeu):
         game, config, paquet, original = jeu
-        assert t.appliquer(game, config, 1440) == 3.0
+        assert t.appliquer(game, config, 1700) == 3.0
         pose = paquet.read_bytes()
         assert pose != original and t.Paquet(pose).page(1).largeur == 1024
         garde = config.install_path / "_Launcher" / "cache" / "texte" / "hp1" / "System" / "HPBase.u"
         assert garde.read_bytes() == original
         avant = paquet.stat().st_mtime_ns
-        assert t.appliquer(game, config, 1440) == 3.0
+        assert t.appliquer(game, config, 1700) == 3.0
         assert paquet.stat().st_mtime_ns == avant
 
     def test_autre_facteur_repart_de_l_original(self, qapp, jeu):
         game, config, paquet, original = jeu
-        t.appliquer(game, config, 1440)
-        assert t.appliquer(game, config, 1080) == 2.25
-        assert paquet.read_bytes() == t.regraver(original, ("MaPolice",), 2.25, t.SERIF)
+        t.appliquer(game, config, 1700)
+        assert t.appliquer(game, config, 1080) == 2.0
+        assert paquet.read_bytes() == t.regraver(original, ("MaPolice",), 2.0, t.SERIF)
 
     def test_origine_remet_le_paquet(self, qapp, jeu):
         game, config, paquet, original = jeu
-        t.appliquer(game, config, 1440)
+        t.appliquer(game, config, 1700)
         config.taille_texte["hp1"] = t.ORIGINE
         assert t.appliquer(game, config, 1440) == 1.0
         assert paquet.read_bytes() == original
 
     def test_paquet_remis_par_une_mise_a_jour(self, qapp, jeu):
         game, config, paquet, original = jeu
-        t.appliquer(game, config, 1440)
+        t.appliquer(game, config, 1700)
         nouvelle = original.replace(b"donnees du voisin", b"DONNEES DU VOISIN")
         paquet.write_bytes(nouvelle)              # l'archive suivante, autre contenu
-        assert t.appliquer(game, config, 1440) == 3.0
+        assert t.appliquer(game, config, 1700) == 3.0
         garde = config.install_path / "_Launcher" / "cache" / "texte" / "hp1" / "System" / "HPBase.u"
         assert garde.read_bytes() == nouvelle
         assert b"DONNEES DU VOISIN" in paquet.read_bytes()

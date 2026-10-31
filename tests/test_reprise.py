@@ -82,7 +82,7 @@ class TestArguments:
 class TestLancement:
     def _lancer(self, tmp_path, monkeypatch, directe: bool):
         m = _make_manager(tmp_path, [_jeu("hp1")])
-        m.config.reprise_directe = directe
+        m.config.reprise = {"hp1": directe}
         exe = tmp_path / "HPTest" / "System" / "Game.exe"
         exe.parent.mkdir(parents=True, exist_ok=True)
         exe.write_bytes(b"")
@@ -114,14 +114,14 @@ class TestLancement:
 
 
 def test_reglage_survit_au_redemarrage(tmp_path):
-    """Non par défaut ; un « oui » choisi survit à save() puis load() (règle 99)."""
+    """Rien par défaut ; un choix PAR JEU survit à save() puis load() (règle 99)."""
     fichier = tmp_path / "config.json"
     with patch("src.core.config.CONFIG_FILE_PATH", fichier):
         c = Config(install_path=tmp_path, cache_path=tmp_path / ".cache")
-        assert c.reprise_directe is False and c.reprise_demandee is False
-        c.reprise_directe = c.reprise_demandee = True
+        assert c.reprise == {}
+        c.reprise = {"hp1": True, "hp2": False}
         c.save()
-        assert Config.load().reprise_directe is True
+        assert Config.load().reprise == {"hp1": True, "hp2": False}
 
 
 def test_un_oui_jamais_choisi_redevient_non(tmp_path):
@@ -130,8 +130,17 @@ def test_un_oui_jamais_choisi_redevient_non(tmp_path):
     fichier = tmp_path / "config.json"
     with patch("src.core.config.CONFIG_FILE_PATH", fichier):
         fichier.write_text('{"reprise_directe": true}', encoding="utf-8")
-        c = Config.load()
-        assert c.reprise_directe is False and c.reprise_demandee is False
+        assert Config.load().reprise == {}
+
+
+def test_l_ancien_choix_commun_vaut_pour_chaque_jeu(tmp_path):
+    """Avant le 2026-10-31, un seul choix pour HP1 à HP3 : il est repris pour chacun."""
+    fichier = tmp_path / "config.json"
+    with patch("src.core.config.CONFIG_FILE_PATH", fichier):
+        fichier.write_text('{"reprise_directe": true, "reprise_demandee": true}', encoding="utf-8")
+        assert Config.load().reprise == {"hp1": True, "hp2": True, "hp3": True}
+        fichier.write_text('{"reprise_directe": false, "reprise_demandee": true}', encoding="utf-8")
+        assert Config.load().reprise == {"hp1": False, "hp2": False, "hp3": False}
 
 
 class TestQuestion:
@@ -150,16 +159,19 @@ class TestQuestion:
         assert question_reprise.a_demander(win, "hp1", True, False)
         question_reprise.demander(win, "hp1", True, False)
         assert len(vues) == 1
-        assert win.manager.config.reprise_directe and win.manager.config.reprise_demandee
+        assert win.manager.config.reprise == {"hp1": True}
+        question_reprise.demander(win, "hp1", True, False)
+        assert len(vues) == 1, "une seule fois par jeu"
         question_reprise.demander(win, "hp2", True, False)
-        assert len(vues) == 1, "une seule fois"
+        assert len(vues) == 2 and win.manager.config.reprise == {"hp1": True, "hp2": True}, \
+            "chaque jeu a son choix"
 
     def test_garder_le_menu(self, make_window, monkeypatch):
         from src.ui import question_reprise
         win = self._fenetre(make_window, monkeypatch)
         monkeypatch.setattr(question_reprise, "message", lambda *a, **k: 1)
         question_reprise.demander(win, "hp3", True, False)
-        assert not win.manager.config.reprise_directe and win.manager.config.reprise_demandee
+        assert win.manager.config.reprise == {"hp3": False}
 
     def test_pas_de_question_sans_raison(self, make_window, monkeypatch):
         from src.ui import question_reprise
@@ -169,3 +181,40 @@ class TestQuestion:
         assert not question_reprise.a_demander(win, "hp1", True, True), "arrêt fatal"
         sans = self._fenetre(make_window, monkeypatch, sauvegarde=False)
         assert not question_reprise.a_demander(sans, "hp1", True, False), "rien à rouvrir"
+
+
+class TestReglageDuJeu:
+    """Dans l'onglet Jeu de HP1 à HP3, plus dans les Paramètres (Ludo, 2026-10-31)."""
+
+    def _dialogue(self, qtbot, tmp_path, jeu):
+        from src.core.game_data import load_catalog
+        from src.core.game_manager import GameManager
+        from src.ui.game_settings_dialog import GameSettingsDialog
+        cfg = Config(install_path=tmp_path, cache_path=tmp_path / ".cache")
+        game = next(g for g in load_catalog().games if g.id == jeu)
+        dlg = GameSettingsDialog(game, GameManager(cfg), lambda c: True)
+        qtbot.addWidget(dlg)
+        dlg.ouvrir_onglet("jeu")
+        return dlg, cfg
+
+    def test_hp1_porte_le_reglage_et_il_ne_vaut_que_pour_lui(self, qtbot, tmp_path):
+        from src.ui.toggle_switch import ToggleSwitch
+        with patch("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json"):
+            dlg, cfg = self._dialogue(qtbot, tmp_path, "hp1")
+            bascule = next(b for b in dlg.findChildren(ToggleSwitch)
+                           if b.accessibleName() == "Reprendre ouvre la dernière partie")
+            assert not bascule.isChecked()
+            bascule._basculer()      # un clic (setChecked n'émet rien)
+            assert cfg.reprise == {"hp1": True}
+            assert Config.load().reprise == {"hp1": True}
+
+    def test_hp4_ne_l_a_pas(self, qtbot, tmp_path):
+        from src.ui.toggle_switch import ToggleSwitch
+        with patch("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json"):
+            dlg, _ = self._dialogue(qtbot, tmp_path, "hp4")
+            assert not any(b.accessibleName() == "Reprendre ouvre la dernière partie"
+                           for b in dlg.findChildren(ToggleSwitch))
+
+    def test_plus_dans_les_parametres_du_launcher(self):
+        source = (Path(__file__).resolve().parents[1] / "src" / "ui" / "settings_panel.py").read_text(encoding="utf-8")
+        assert "reprise" not in source

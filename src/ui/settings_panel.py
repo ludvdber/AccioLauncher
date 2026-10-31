@@ -463,11 +463,6 @@ class SettingsDialog(QDialog):
             tr("Copier les sauvegardes avant chaque partie"), "copies_sauvegardes",
             tr("Une copie de chaque sauvegarde qui a changé, rangée à part."))
         sauvegardes.ajouter(ligne)
-        self._reprise_initiale = self.config.reprise_directe
-        ligne, self._tgl_reprise = self._reglage(
-            tr("Reprendre ouvre la dernière partie"), "reprise_directe",
-            tr("De la première à la troisième année, sans passer par le menu du jeu."))
-        sauvegardes.ajouter(ligne)
         sauvegardes.ajouter(LigneReglage(
             tr("Revenir à une copie"),
             tr("Depuis les réglages de chaque jeu, rubrique Fichiers du jeu.")))
@@ -752,9 +747,6 @@ class SettingsDialog(QDialog):
     def _on_setting_changed(self) -> None:
         for bascule, champ in self._interrupteurs:
             setattr(self.config, champ, bascule.isChecked())
-            # Choisi ici : la question d'après la première partie n'a plus lieu d'être.
-            if champ == "reprise_directe" and bascule.isChecked() != self._reprise_initiale:
-                self.config.reprise_demandee = True
         self._save()
 
     def _griser_discord_partie(self, presence: bool) -> None:

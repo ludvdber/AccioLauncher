@@ -170,7 +170,7 @@ class TestFenetre:
             "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "d",
             "executable": "HP3/system/hppoa.exe", "cover_image": "c.jpg"})
         manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
-                                  config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}))
+                                  config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}, reprise={}))
         d = GameSettingsDialog(jeu, manager, lambda code: True)
         qtbot.addWidget(d)
         return d
@@ -204,7 +204,7 @@ class TestFenetre:
             "executable": "HP3/system/hppoa.exe", "cover_image": "c.jpg",
             "fix_settings": ["son_arriere_plan_hp3"]})
         manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
-                                  config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}))
+                                  config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}, reprise={}))
         d = GameSettingsDialog(jeu, manager, lambda code: True)
         qtbot.addWidget(d)
         assert set(d._controles_graph) == set(R)

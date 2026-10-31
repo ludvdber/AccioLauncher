@@ -55,10 +55,12 @@ def test_l_interrupteur_de_la_fiche_renomme_les_videos(qtbot, tmp_path):
         "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "d",
         "executable": "HP3/system/hppoa.exe", "cover_image": "c.jpg", "launch_videos": list(VIDEOS)})
     manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
-                              config=SimpleNamespace(install_path=d))
+                              config=SimpleNamespace(install_path=d, reprise={}))
     dlg = GameSettingsDialog(jeu, manager, lambda c: True)
     qtbot.addWidget(dlg)
-    bascules = [b for b in dlg.findChildren(ToggleSwitch) if not b.isChecked()]
+    # La rubrique Démarrage porte aussi « Reprendre » (HP1 à HP3, 2026-10-31).
+    bascules = [b for b in dlg.findChildren(ToggleSwitch)
+                if not b.isChecked() and b.accessibleName() == "Passer les logos"]
     assert len(bascules) == 1
     bascules[0].toggled.emit(True)
     assert v.passees(d, VIDEOS) is True

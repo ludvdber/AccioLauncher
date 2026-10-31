@@ -78,6 +78,9 @@ PAQUETS: dict[str, tuple[PaquetPolices, ...]] = {
 
 # Le choix de la personne → multiplicateur de l'automatique. Absent : automatique.
 TAILLES: dict[str, float] = {"petit": 0.75, "grand": 1.25, "tres_grand": 1.5}
+# L'automatique un peu sous la proportion de 640 × 480 (Ludo, 2026-10-31, menu de
+# HP1 en 1440p : « le texte un peu trop gros par défaut ») : ×2,5 au lieu de ×3.
+_AUTOMATIQUE = 0.85
 ORIGINE = "origine"
 
 
@@ -88,14 +91,15 @@ def gere(game_id: str) -> bool:
 def facteur(hauteur: int, choix: str) -> float:
     """Le facteur de regravure pour une image de `hauteur` pixels.
 
-    Automatique = hauteur / 480, l'échelle que le moteur donne à ses cadres :
-    le texte retrouve la proportion qu'il avait en 640 × 480. Arrondi au
+    Automatique = hauteur / 480 (l'échelle que le moteur donne à ses cadres,
+    la proportion du texte en 640 × 480) × `_AUTOMATIQUE`, un peu en dessous :
+    à la proportion exacte, le texte paraissait trop gros. Arrondi au
     quart (deux réglages proches ne réécrivent pas tout), jamais sous 1
     (le texte de 2001) ni au-delà de `FACTEUR_MAX`.
     """
     if choix == ORIGINE or hauteur <= 0:
         return 1.0
-    brut = hauteur / 480 * TAILLES.get(choix, 1.0)
+    brut = hauteur / 480 * _AUTOMATIQUE * TAILLES.get(choix, 1.0)
     return min(FACTEUR_MAX, max(1.0, round(brut * 4) / 4))
 
 

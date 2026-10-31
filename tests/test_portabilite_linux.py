@@ -139,7 +139,7 @@ class TestWorkflowCI:
         workflow = Path(".github/workflows/tests.yml").read_text(encoding="utf-8")
         linux = workflow[workflow.index("  linux-smoke:"):]
         lignes = [ligne for ligne in linux.splitlines() if "python -m pytest" in ligne]
-        assert len(lignes) == 2
+        assert len(lignes) == 1, "un seul job Linux lance pytest depuis le retrait de la préversion (2026-10-31)"
         assert all("--timeout-method=thread" in ligne for ligne in lignes)
 
 

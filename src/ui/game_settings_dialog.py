@@ -372,7 +372,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 self._section_langue(corps)
                 rempli = True
             rempli = self._section_difficulte(corps) or rempli
-            rempli = self._section_videos(corps) or rempli
+            rempli = self._section_demarrage(corps) or rempli
             if self._section_correctif(corps, "jeu", titre=tr("Dans le jeu")):
                 rempli = True
             return self._section_captures(corps) or rempli

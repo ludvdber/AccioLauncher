@@ -301,7 +301,7 @@ class TestToucheDuCorrectif:
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(b"[Accio.Window]\r\nScreenshotKey=120\r\n")
         manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
-                                  config=SimpleNamespace(install_path=tmp_path))
+                                  config=SimpleNamespace(install_path=tmp_path, reprise={}))
         dlg = GameSettingsDialog(_jeu(screenshots={"collect": ["HP4/screenshots/*.png"]}), manager, lambda c: True)
         qtbot.addWidget(dlg)
         assert any("F9" in lbl.text() for lbl in dlg.findChildren(QLabel))
@@ -311,7 +311,7 @@ class TestFenetre:
     def _dialogue(self, qtbot, jeu, tmp_path):
         from src.ui.game_settings_dialog import GameSettingsDialog
         manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
-                                  config=SimpleNamespace(install_path=tmp_path))
+                                  config=SimpleNamespace(install_path=tmp_path, reprise={}))
         dlg = GameSettingsDialog(jeu, manager, lambda code: True)
         qtbot.addWidget(dlg)
         return dlg

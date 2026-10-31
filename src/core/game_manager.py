@@ -334,7 +334,7 @@ class GameManager:
                              name=f"copies-{game.id}").start()
 
         # Reprendre en un clic (HP1 à HP3) : la dernière partie, sans le menu du jeu.
-        arguments = reprise.arguments(game) if self.config.reprise_directe else ()
+        arguments = reprise.arguments(game) if self.config.reprise.get(game.id, False) else ()
         log.info("Lancement de %s (%s) %s", game.name, exe_path, " ".join(arguments))
         popen_kwargs: dict[str, Any] = {"cwd": str(exe_path.parent)}
         if sys.platform != "win32":

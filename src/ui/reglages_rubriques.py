@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import (captures, difficulte_jeu, manette, reglages_correctif, reglages_graphiques,
-                      resolution_jeu, texte_ue1, videos_lancement)
+                      reprise, resolution_jeu, texte_ue1, videos_lancement)
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
 from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
@@ -555,22 +555,40 @@ class RubriquesDuJeu:
         self._section(corps, self._titre_rubrique(tr("Manette")), carte)
         return True
 
-    def _section_videos(self, corps: QVBoxLayout) -> bool:
-        """« Passer les logos » (HP3) : les logos que le catalogue nomme."""
+    def _section_demarrage(self, corps: QVBoxLayout) -> bool:
+        """« Démarrage » : passer les logos (HP3, les logos que le catalogue
+        nomme) et « Reprendre » qui ouvre la dernière partie (HP1 à HP3, CE jeu
+        seulement : Ludo, 2026-10-31, il était dans les Paramètres du launcher,
+        où personne ne le cherchait)."""
         videos = self.game.videos_lancement
         dossier = self.manager.config.install_path
         etat = videos_lancement.passees(dossier, videos) if videos else None
-        if etat is None:
+        reprend = self.game.id in reprise.JEUX
+        if etat is None and not reprend:
             return False
-        bascule = ToggleSwitch(etat)
-        bascule.toggled.connect(lambda oui: self._on_videos(bascule, oui))
         carte = Carte()
-        carte.ajouter(self._ligne(tr("Passer les logos"), bascule, tr(
-            "Le jeu s'ouvre directement sur son menu, sans les logos des studios. "
-            "Les vidéos sont gardées : il suffit de rallumer pour les revoir.")))
+        if reprend:
+            bascule_reprise = ToggleSwitch(self.manager.config.reprise.get(self.game.id, False))
+            bascule_reprise.toggled.connect(self._on_reprise)
+            carte.ajouter(self._ligne(tr("Reprendre ouvre la dernière partie"), bascule_reprise, tr(
+                "« Reprendre » ouvre directement votre dernière partie, sans passer par le menu du "
+                "jeu. Éteint, le menu revient : pour charger une autre sauvegarde ou commencer une "
+                "nouvelle partie.")))
+        if etat is not None:
+            bascule = ToggleSwitch(etat)
+            bascule.toggled.connect(lambda oui: self._on_videos(bascule, oui))
+            carte.ajouter(self._ligne(tr("Passer les logos"), bascule, tr(
+                "Le jeu s'ouvre directement sur son menu, sans les logos des studios. "
+                "Les vidéos sont gardées : il suffit de rallumer pour les revoir.")))
         self._egaliser(carte)
         self._section(corps, self._titre_rubrique(tr("Démarrage")), carte)
         return True
+
+    def _on_reprise(self, oui: bool) -> None:
+        # Choisi ici : la question d'après la première partie n'a plus lieu d'être.
+        config = self.manager.config
+        config.reprise[self.game.id] = oui
+        config.save()
 
     def _on_videos(self, bascule: ToggleSwitch, oui: bool) -> None:
         dossier = self.manager.config.install_path

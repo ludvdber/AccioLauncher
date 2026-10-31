@@ -245,6 +245,8 @@ class TestChaqueReglageEstReellementPersiste:
             actuel = getattr(base, champ.name)
             if isinstance(actuel, dict) and champ.name == "playtime_seconds":
                 temoin = {"hp1": 4242}
+            elif champ.name == "reprise":       # id → choix (bool), par jeu
+                temoin = {"hp1": True}
             else:
                 temoin = self._valeur_temoin(champ, actuel)
             attendus[champ.name] = temoin
