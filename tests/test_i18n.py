@@ -33,6 +33,8 @@ IDENTIQUES_TOLEREES = {
     "Orange", "Mauve", "Turquoise",
     # Difficulté du Quidditch de HP1/HP2 : « Expert » s'écrit pareil en anglais.
     "Expert",
+    # Le titre de section de la page Difficulté : même mot en anglais.
+    "Presets",
     # « restantes » s'écrit pareil en français et en espagnol.
     "~{}s restantes", "~{} min restantes", "~{}h restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.

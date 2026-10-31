@@ -176,11 +176,83 @@ class TestLireEtAppliquer:
         assert lignes["Régénération"] == "Jamais"
         assert "Sorts retirés" not in lignes
         assert "Vie de Harry" not in lignes, "Hardcore ne la change pas"
-        assert ("Harry invincible", "") in dp.changements(dp.PAR_IDENT["recit"], idents)
+        assert dp.changements(dp.PAR_IDENT["recit"], idents)[0] == ("Harry invincible", ""), \
+            "le réglage qui définit le preset passe en tête"
         assert dp.changements(dp.PAR_IDENT["normal"], idents) == ()
 
 
+# Du plus doux au plus dur, écrit ici à la main (et non tiré de la formule) :
+# c'est ce que la monotonie doit respecter.
+_DURCIT = {
+    "degats_recus": sorted(REGLAGES["degats_recus"].choix),
+    "degats_infliges": sorted(REGLAGES["degats_infliges"].choix, reverse=True),
+    "reaction_ennemis": sorted(REGLAGES["reaction_ennemis"].choix),
+    "vie_joueur": sorted(REGLAGES["vie_joueur"].choix, reverse=True),
+    "regeneration": sorted(REGLAGES["regeneration"].choix, reverse=True),
+    "quidditch": sorted(REGLAGES["quidditch"].choix),
+    dp.NATIVE: [0, 1, 2],
+}
+HP2 = frozenset({dp.NATIVE, "quidditch"})
+
+
+class TestNiveau:
+    """Le niveau de défi du cadran (maquette validée par Ludo le 2026-10-31)."""
+
+    def _niveau(self, ident, idents=HP6_PRESETS, jeu="hp6"):
+        return dp.niveau(dp.valeurs_pour(dp.PAR_IDENT[ident], idents), jeu, idents)
+
+    def test_chaque_preset_a_son_cran_dans_chaque_jeu(self):
+        """Les noms gravés autour du cadran sont à la même place partout."""
+        for idents, jeu in ((HP6_PRESETS, "hp6"), (HP2, "hp2"), (frozenset({"quidditch"}), "hp1")):
+            for preset, cran in dp.reperes(jeu, idents):
+                assert self._niveau(preset.ident, idents, jeu) == pytest.approx(cran), (jeu, preset.ident)
+        assert [p.ident for p, _ in dp.reperes("hp2", HP2)] == ["normal", "difficile", "hardcore"]
+        assert [round(c) for _, c in dp.reperes("hp6", HP6_PRESETS)] == [3, 25, 40, 60, 82]
+
+    def test_une_seule_vie_a_le_cran_de_ses_valeurs(self):
+        assert self._niveau("realiste") == self._niveau("normal")
+        assert self._niveau("impardonnable") == self._niveau("hardcore")
+
+    def test_le_plus_dur_que_le_jeu_permet_vaut_100(self):
+        dur = {k: v[-1] for k, v in _DURCIT.items() if k in HP6_PRESETS}
+        assert dp.niveau(dur, "hp6", HP6_PRESETS) == 100
+        assert dp.niveau({**dur, "invincible": True}, "hp6", HP6_PRESETS) == dp.NIVEAUX["recit"]
+
+    def test_un_jeu_sans_reglage_est_normal(self):
+        assert dp.niveau({}, "hp4", frozenset()) == dp.NIVEAUX["normal"]
+
+    def test_durcir_un_reglage_ne_fait_jamais_baisser_le_niveau(self):
+        """Réglage par réglage, de chaque combinaison possible vers le cran plus dur suivant."""
+        for idents, jeu in ((HP6_PRESETS - {"invincible"}, "hp6"), (HP2, "hp2")):
+            axes = {k: v for k, v in _DURCIT.items() if k in idents}
+            for combinaison in itertools.product(*axes.values()):
+                valeurs = dict(zip(axes, combinaison, strict=True))
+                avant = dp.niveau(valeurs, jeu, idents)
+                assert 0 <= avant <= 100
+                for ident, crans in axes.items():
+                    rang = crans.index(valeurs[ident])
+                    if rang + 1 < len(crans):
+                        assert dp.niveau({**valeurs, ident: crans[rang + 1]}, jeu, idents) >= avant, \
+                            (ident, valeurs)
+
+    def test_chaque_reglage_compte_depuis_normal(self):
+        normal = dp.valeurs_pour(dp.PAR_IDENT["normal"], HP6_PRESETS)
+        for ident in HP6_PRESETS - {"invincible"}:
+            niveaux = [dp.niveau({**normal, ident: v}, "hp6", HP6_PRESETS) for v in _DURCIT[ident]]
+            assert niveaux == sorted(niveaux) and len(set(niveaux)) == len(niveaux), (ident, niveaux)
+
+    def test_le_sur_mesure_se_situe_sans_chiffre(self):
+        crans = dp.reperes("hp6", HP6_PRESETS)
+        assert dp.situer(50, crans) == "Entre Normal et Difficile"
+        assert dp.situer(91, crans) == "Au-delà de Hardcore"
+        assert dp.situer(40, crans) == "Au niveau de Normal"
+        assert dp.situer(1, crans) == "En deçà de Récit"
+        assert dp.situer(50, ()) == ""
+
+
 pytest.importorskip("pytestqt")
+
+from PyQt6.QtCore import QPoint, Qt  # noqa: E402
 
 
 @pytest.fixture
@@ -198,21 +270,59 @@ class TestPage:
         qtbot.addWidget(page)
         return page, ouverts
 
+    @staticmethod
+    def _carte(page, ident):
+        return next(c for c in page.cartes if c.ident == ident)
+
     def test_une_carte_par_preset_utile_et_une_seule_vie_bientot(self, qtbot, dossier_hp6):
         page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
         assert [c.ident for c in page.cartes] == ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
         for carte in page.cartes[-2:]:
-            assert carte.bouton is None and carte.property("bientot") == "true"
-        assert next(c for c in page.cartes if c.ident == "normal").property("actif") == "true", "un ini neuf : Normal"
+            assert carte.property("bientot") == "true" and carte.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert self._carte(page, "normal").property("actif") == "true", "un ini neuf : Normal"
+        assert page.cadran.nom == "Normal" and page.cadran.valeur() == 40
 
-    def test_choisir_ecrit_et_marque_la_carte(self, qtbot, dossier_hp6):
+    def test_un_clic_sur_la_carte_ecrit_et_marque(self, qtbot, dossier_hp6):
         page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
-        next(c for c in page.cartes if c.ident == "hardcore").bouton.click()
+        page.show()
+        qtbot.mouseClick(self._carte(page, "hardcore"), Qt.MouseButton.LeftButton)
         ini = dossier_hp6.config.install_path / "HP6" / "d3d9.ini"
         assert "DamageTaken=3" in ini.read_bytes().decode().split("\r\n")
-        actifs = [c.ident for c in page.cartes if c.property("actif") == "true"]
-        assert actifs == ["hardcore"]
-        assert not next(c for c in page.cartes if c.ident == "hardcore").bouton.isEnabled()
+        assert [c.ident for c in page.cartes if c.property("actif") == "true"] == ["hardcore"]
+        assert self._carte(page, "hardcore").sceau.isVisibleTo(page)
+        assert page.cadran.nom == "Hardcore" and page.cadran.actif == "hardcore"
+        qtbot.waitUntil(lambda: page.cadran.valeur() == 82, timeout=3000)
+
+    def test_au_clavier_fleche_et_espace(self, qtbot, dossier_hp6):
+        """Règle 119 : un bloc qui a l'air d'un bouton se choisit aussi au clavier."""
+        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
+        normal = self._carte(page, "normal")
+        qtbot.keyClick(normal, Qt.Key.Key_Right)
+        assert page.courant() == "difficile"
+        qtbot.keyClick(self._carte(page, "difficile"), Qt.Key.Key_Home)
+        assert page.courant() == "recit"
+        qtbot.keyClick(self._carte(page, "hardcore"), Qt.Key.Key_Space)
+        assert page.courant() == "hardcore"
+
+    def test_un_nom_grave_sur_le_cadran_se_clique(self, qtbot, dossier_hp6):
+        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
+        page.resize(1200, 900)
+        page.show()
+        page.cadran.grab()          # les zones des noms se posent à la peinture
+        zone = page.cadran._zones["detendu"]
+        k, dx, dy = page.cadran._echelle()
+        qtbot.mouseClick(page.cadran, Qt.MouseButton.LeftButton,
+                         pos=QPoint(round(zone.center().x() * k + dx), round(zone.center().y() * k + dy)))
+        assert page.courant() == "detendu"
+
+    def test_sur_mesure_s_allume_et_se_situe(self, qtbot, dossier_hp6):
+        page, _ = self._page(qtbot, dossier_hp6, fix_settings=list(HP6))
+        page.show()
+        rc.ecrire(page.ini, REGLAGES["degats_recus"], 2)
+        page._rafraichir(anime=False)
+        assert page.cadre_sur_mesure.property("actif") == "true"
+        assert not any(c.property("actif") == "true" for c in page.cartes)
+        assert (page.cadran.nom, page.cadran.sous) == ("Sur mesure", "Entre Normal et Difficile")
 
     def test_sur_mesure_ouvre_le_detail(self, qtbot, dossier_hp6):
         from PyQt6.QtWidgets import QPushButton
