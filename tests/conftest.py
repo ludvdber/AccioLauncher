@@ -145,6 +145,25 @@ def _jamais_la_vraie_manette(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _ticker_en_marche():
+    """Chaque test part avec l'horloge d'animation EN MARCHE.
+
+    Le `Ticker` est unique dans le processus, et une MainWindow qui perd
+    l'activation le met en pause (`MainWindow.changeEvent`) sans que rien ne
+    le relance une fois la fenêtre détruite. Sous xdist, un test de fenêtre
+    du même worker le laissait arrêté : l'aiguille du cadran de difficulté
+    n'avançait plus et `test_un_clic_sur_la_carte_ecrit_et_marque` échouait
+    une fois sur deux dans la suite, jamais seul (2026-10-31).
+    """
+    from PyQt6 import sip
+    from src.ui.ticker import Ticker
+    courant = Ticker._instance
+    if courant is not None and not sip.isdeleted(courant):
+        courant.resume()
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _captures_hors_des_vraies_images(tmp_path, monkeypatch):
     """Aucun test n'écrit ni ne lit dans les VRAIES Images de la machine.
 
