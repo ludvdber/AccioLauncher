@@ -1,6 +1,7 @@
 # Résolu dans le .txt voisin, versions et empreintes figées, par la commande
 # écrite en tête de ce fichier. La CI installe le .txt avec --require-hashes.
-# Outils du job security.yml.
-bandit
+# Outils du job security.yml. ruff (règles S) remplace bandit depuis le
+# 2026-10-31 : bandit exige PyYAML, sans paquet pour la 3.15.
+ruff
 pip-audit
 zizmor
