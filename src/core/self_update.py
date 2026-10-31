@@ -168,7 +168,7 @@ def _spawn_after_exit_bat(body: str, prefix: str,
         # `start` et `del` sont internes à cmd : rien à résoudre. Liste
         # d'arguments, aucun shell.
         variables = {"ACCIO_SYS": dossier_systeme(), **(variables or {})}
-        subprocess.Popen(  # nosec B603
+        subprocess.Popen(  # nosec B603  # noqa: S603
             [commande_systeme("cmd.exe"), "/c", bat_path],
             creationflags=_DRAPEAUX_DETACHE,
             stdin=subprocess.DEVNULL,
@@ -300,7 +300,7 @@ def _relancer_apres_la_fin(commande: list[str]) -> bool:
                                   "PYINSTALLER_RESET_ENVIRONMENT": "1"}
     try:
         # `/bin/sh` par son chemin absolu ; script constant, arguments en liste.
-        subprocess.Popen(  # nosec B603
+        subprocess.Popen(  # nosec B603  # noqa: S603
             ["/bin/sh", "-c", _SCRIPT_RELANCE, "accio-relance", *commande],
             env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)

@@ -345,7 +345,7 @@ class GameManager:
         popen_kwargs["env"] = env_de_lancement(game.dpi_aware)
         # Chemin absolu validé au parsing du catalogue. Aucun shell.
         try:
-            return subprocess.Popen([str(exe_path), *arguments], **popen_kwargs)  # nosec B603
+            return subprocess.Popen([str(exe_path), *arguments], **popen_kwargs)  # nosec B603  # noqa: S603
         except OSError as exc:
             # 740 : « Exécuter en tant qu'administrateur » coché sur l'exe.
             # Le dire, pas « Impossible de lancer ».
@@ -382,7 +382,7 @@ class GameManager:
         try:
             # Lanceur trouvé par chemin ABSOLU (`compat._trouver`), exe validé au
             # parsing du catalogue ; liste d'arguments, aucun shell.
-            return subprocess.Popen(  # nosec B603
+            return subprocess.Popen(  # nosec B603  # noqa: S603
                 commande, stdin=subprocess.DEVNULL,
                 stdout=sortie if sortie is not None else subprocess.DEVNULL,
                 stderr=subprocess.STDOUT, **popen_kwargs)

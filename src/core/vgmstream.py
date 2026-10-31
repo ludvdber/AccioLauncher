@@ -158,7 +158,7 @@ def convertir(source: Path, cible: Path) -> Path | None:
         fd, tmp = tempfile.mkstemp(dir=cible.parent, suffix=".accio-tmp.wav")
         os.close(fd)
         # Chemin absolu de l'exécutable, liste d'arguments, aucun shell.
-        proc = subprocess.run(  # nosec B603
+        proc = subprocess.run(  # nosec B603  # noqa: S603
             [str(exe), "-o", tmp, str(source)],
             capture_output=True, encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL,
             timeout=_DELAI_S, creationflags=_SANS_FENETRE,

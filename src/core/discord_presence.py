@@ -115,7 +115,7 @@ def dossiers_ipc(env: Mapping[str, str] | None = None) -> list[str]:
     env = os.environ if env is None else env
     # `/tmp` (ici et plus bas) : le repli du client lui-même, où l'on se
     # connecte sans rien y créer.
-    base = env.get("XDG_RUNTIME_DIR") or "/tmp"  # nosec B108
+    base = env.get("XDG_RUNTIME_DIR") or "/tmp"  # nosec B108  # noqa: S108
     dossiers = [
         base,
         f"{base}/app/com.discordapp.Discord",
@@ -123,8 +123,8 @@ def dossiers_ipc(env: Mapping[str, str] | None = None) -> list[str]:
         f"{base}/.flatpak/dev.vencord.Vesktop/xdg-run",
         f"{base}/snap.discord",
     ]
-    if base != "/tmp":  # nosec B108
-        dossiers.append("/tmp")  # nosec B108
+    if base != "/tmp":  # nosec B108  # noqa: S108
+        dossiers.append("/tmp")  # nosec B108  # noqa: S108
     return dossiers
 
 

@@ -54,8 +54,8 @@ def exigences_du_dossier(racine: Path) -> dict[str, set[tuple[int, ...]]]:
         if not _est_elf(chemin):
             continue
         # objdump vient de binutils (installé par le workflow) ; liste d'arguments.
-        sortie = subprocess.run(  # nosec B603 B607
-            ["objdump", "-T", str(chemin)], capture_output=True,
+        sortie = subprocess.run(  # nosec B603 B607  # noqa: S603
+            ["objdump", "-T", str(chemin)], capture_output=True,  # noqa: S607
             encoding="utf-8", errors="replace", check=False).stdout
         resultat[str(chemin.relative_to(racine))] = versions_glibc(sortie)
     return resultat
@@ -69,7 +69,7 @@ def main(argv: list[str]) -> int:
     plafond = tuple(int(n) for n in argv[1].split("."))
     with tempfile.TemporaryDirectory() as dossier:
         # L'image vient de NOTRE build ; liste d'arguments, aucun shell.
-        code = subprocess.run(  # nosec B603
+        code = subprocess.run(  # nosec B603  # noqa: S603
             [str(image), "--appimage-extract"], cwd=dossier,
             capture_output=True, check=False).returncode
         racine = Path(dossier) / "squashfs-root"

@@ -198,7 +198,7 @@ def _sortie_slt(archive: Path, exe: str) -> str:
         kwargs["creationflags"] = _SANS_FENETRE
     # `exe` est un chemin absolu (`find_7z_exe`), l'archive est la nôtre ;
     # liste d'arguments, aucun shell.
-    proc = subprocess.run(  # nosec B603
+    proc = subprocess.run(  # nosec B603  # noqa: S603
         [exe, "l", "-slt", "-ba", "-p", *_SORTIE_UTF8, str(archive)],
         capture_output=True, encoding="utf-8", errors="replace",
         timeout=_LIST_TIMEOUT_S, **kwargs,
@@ -369,7 +369,7 @@ def extract_7z_subprocess(
         kwargs["creationflags"] = _SANS_FENETRE
 
     # Même 7z.exe absolu que ci-dessus, liste d'arguments, aucun shell.
-    proc = subprocess.Popen(  # nosec B603
+    proc = subprocess.Popen(  # nosec B603  # noqa: S603
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         # stdin fermé, pour la même raison que le `-p` de `list_7z_entries` :
         # 7z.exe peut demander un mot de passe (archive à contenu chiffré) ou
