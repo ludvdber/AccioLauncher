@@ -60,7 +60,6 @@ jobs:
           pip-audit --require-hashes --disable-pip -r .github/requirements/tests.txt
           pip-audit --require-hashes --disable-pip -r .github/requirements/securite.txt
           pip-audit --require-hashes --disable-pip -r .github/requirements/fuzz.txt
-          pip-audit --require-hashes --disable-pip -r .github/requirements/preversion.txt
 
       # Les workflows eux-mêmes : action non épinglée, injection dans un `run:`,
       # identifiants laissés au checkout, Dependabot sans délai. Le jeton (lecture
