@@ -7,7 +7,7 @@ description = "Launcher pour les jeux Harry Potter sur PC"
 # l'ancien `>=3.10` plantait dès l'import (`enum.StrEnum`, 3.11).
 requires-python = ">=3.15"
 dependencies = [
-    "PyQt6>=6.11",
+    "PyQt6>=6.11,<6.12",  # 6.12.0 : son QtGui.pyi a 16 erreurs de syntaxe (`*args, /`) qui arrêtent mypy (2026-10-31)
     "httpx>=0.28",
     "truststore>=0.10.5",
 ]
@@ -16,11 +16,11 @@ dependencies = [
 dev = [
     "pyinstaller>=6.22",  # 6.21 = premier support Python 3.15
     "Pillow>=13.0",       # build/create_icon.py + create_social_preview.py
-    "pytest>=9.1",
+    "pytest>=9.2",
     "pytest-qt>=4.5",
     "pytest-xdist>=3.8", # la suite répartie sur les cœurs : 6 min → 1 min (2026-10-31)
-    "ruff>=0.17.1",      # utilisé depuis toujours, mais n'était pas déclaré
-    "mypy>=2.4",         # types de src/core, réglé par [tool.mypy] plus bas
+    "ruff>=0.17.3",      # utilisé depuis toujours, mais n'était pas déclaré
+    "mypy>=2.4.1",         # types de src/core, réglé par [tool.mypy] plus bas
 ]
 
 [project.scripts]
