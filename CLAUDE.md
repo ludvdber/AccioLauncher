@@ -44,8 +44,7 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 ## Testing
 
 - `pytest-qt>=4.5` ; `qtbot` est la façon standard de tester un widget. `tests/conftest.py` force `QT_QPA_PLATFORM=offscreen`. La logique pure (tout `src/core/` sauf les QThread) se teste sans fixture Qt.
-- **Compte au dernier point (2026-11-01, Windows, Python 3.15.2, b2d2039) : 4168 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. **Dans le Bash de Claude, `python` est la 3.14** : lancer `py -3.15 -m pytest`. Sous `-n auto`, `test_securite.py::…::test_la_detection_d_un_jeu_marche_toujours` échoue parfois (vrai `tasklist` au-delà de 5 s sous charge, détail dans TESTS.md) : ce n'est pas une régression.
-- Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
+- **Compte au dernier point (2026-11-01, Windows, Python 3.15.2, 11d7a7f + surveillance `tasklist`) : 4171 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. **Dans le Bash de Claude, `python` est la 3.14** : lancer `py -3.15 -m pytest`.- Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
 - Ne JAMAIS appeler une police par son nom système (règle 89) : offscreen mesurerait une autre police.
 - Aucun test n'écrit dans le vrai Documents (`conftest._documents_hors_du_vrai_dossier`).
 - **Piège env** : si pytest-qt n'est pas dans le Python actif, les tests widgets sont sautés en silence et le compte chute (~110). Vérifier `python -m pip show pytest-qt`.
