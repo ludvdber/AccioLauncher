@@ -524,63 +524,69 @@ class BackgroundWidget(QWidget):
             return
         if self._overlay_cache is not None and self._overlay_for == (w, h):
             return
-
-        pix = QPixmap(w, h)
-        pix.fill(Qt.GlobalColor.transparent)
-        p = QPainter(pix)
-        rect = pix.rect()
-
-        # Subtle dark blue overlay
-        p.fillRect(rect, theme.bg_qcolor(30))
-
-        # Top gradient (title bar area)
-        grad_top = QLinearGradient(0, 0, 0, h * 0.08)
-        grad_top.setColorAt(0, theme.bg_qcolor(160))
-        grad_top.setColorAt(1, theme.bg_qcolor(0))
-        p.fillRect(rect, grad_top)
-
-        # Bottom gradient — 75% height, very strong
-        grad = QLinearGradient(0, h * 0.25, 0, h)
-        grad.setColorAt(0.0, theme.bg_qcolor(0))
-        grad.setColorAt(0.35, theme.bg_qcolor(38))
-        grad.setColorAt(0.55, theme.bg_qcolor(128))
-        grad.setColorAt(0.75, theme.bg_qcolor(217))
-        grad.setColorAt(1.0, theme.bg_qcolor(247))
-        p.fillRect(rect, grad)
-
-        # Radial vignette
-        vcx, vcy = w / 2, h / 2
-        vradius = max(w, h) * 0.7
-        vignette = QRadialGradient(vcx, vcy, vradius)
-        vignette.setColorAt(0, QColor(0, 0, 0, 0))
-        vignette.setColorAt(0.3, QColor(0, 0, 0, 0))
-        vignette.setColorAt(0.7, QColor(0, 0, 0, 130))
-        vignette.setColorAt(1.0, QColor(0, 0, 0, 230))
-        p.fillRect(rect, vignette)
-
-        # Voile gauche — simple dégradé horizontal, pas de blur
-        veil_grad = QLinearGradient(0, 0, w, 0)
-        for position, alpha in _VOILE_GAUCHE:
-            veil_grad.setColorAt(position, theme.bg_qcolor(alpha))
-        p.fillRect(rect, veil_grad)
-
-        # Raccord avec le carrousel — EN DERNIER, après la vignette.
-        # Le carrousel est un widget FRÈRE : il ne montre pas l'illustration,
-        # et là où son dégradé est encore transparent on voit le fond plat du
-        # conteneur. Or le dégradé bas s'arrêtait à alpha 247 et la vignette
-        # radiale rajoutait du noir par-dessus : la dernière ligne de la fiche
-        # valait rgb(3,3,8) contre rgb(6,6,17) pour la première du carrousel —
-        # un trait CLAIR sur toute la largeur, mesuré identique sur les 8 jeux.
-        # Terminer exactement sur `bg_qcolor(255)` supprime la marche. La
-        # vignette doit passer avant, sinon elle re-creuse le raccord.
-        raccord = QLinearGradient(0, h - _RACCORD_PX, 0, h)
-        raccord.setColorAt(0.0, theme.bg_qcolor(0))
-        # Saturation AVANT le bord : une rampe qui atteint 255 pile au dernier
-        # pixel s'y interpole à ~252, et il restait un niveau d'écart par canal.
-        raccord.setColorAt(0.92, theme.bg_qcolor(255))
-        raccord.setColorAt(1.0, theme.bg_qcolor(255))
-        p.fillRect(QRectF(0, h - _RACCORD_PX, w, _RACCORD_PX), raccord)
-
-        p.end()
-        self._overlay_cache = pix
+        self._overlay_cache = construire_voiles(w, h)
         self._overlay_for = (w, h)
+
+
+def construire_voiles(w: int, h: int) -> QPixmap:
+    """Les voiles fixes du fond (teinte, dégradés haut et bas, vignette, voile
+    gauche, raccord avec le carrousel), peints une fois pour une taille donnée.
+    Partagés par `BackgroundWidget` et le fond sur la carte graphique (`fond_gpu`)."""
+    pix = QPixmap(w, h)
+    pix.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pix)
+    rect = pix.rect()
+
+    # Subtle dark blue overlay
+    p.fillRect(rect, theme.bg_qcolor(30))
+
+    # Top gradient (title bar area)
+    grad_top = QLinearGradient(0, 0, 0, h * 0.08)
+    grad_top.setColorAt(0, theme.bg_qcolor(160))
+    grad_top.setColorAt(1, theme.bg_qcolor(0))
+    p.fillRect(rect, grad_top)
+
+    # Bottom gradient — 75% height, very strong
+    grad = QLinearGradient(0, h * 0.25, 0, h)
+    grad.setColorAt(0.0, theme.bg_qcolor(0))
+    grad.setColorAt(0.35, theme.bg_qcolor(38))
+    grad.setColorAt(0.55, theme.bg_qcolor(128))
+    grad.setColorAt(0.75, theme.bg_qcolor(217))
+    grad.setColorAt(1.0, theme.bg_qcolor(247))
+    p.fillRect(rect, grad)
+
+    # Radial vignette
+    vcx, vcy = w / 2, h / 2
+    vradius = max(w, h) * 0.7
+    vignette = QRadialGradient(vcx, vcy, vradius)
+    vignette.setColorAt(0, QColor(0, 0, 0, 0))
+    vignette.setColorAt(0.3, QColor(0, 0, 0, 0))
+    vignette.setColorAt(0.7, QColor(0, 0, 0, 130))
+    vignette.setColorAt(1.0, QColor(0, 0, 0, 230))
+    p.fillRect(rect, vignette)
+
+    # Voile gauche — simple dégradé horizontal, pas de blur
+    veil_grad = QLinearGradient(0, 0, w, 0)
+    for position, alpha in _VOILE_GAUCHE:
+        veil_grad.setColorAt(position, theme.bg_qcolor(alpha))
+    p.fillRect(rect, veil_grad)
+
+    # Raccord avec le carrousel — EN DERNIER, après la vignette.
+    # Le carrousel est un widget FRÈRE : il ne montre pas l'illustration,
+    # et là où son dégradé est encore transparent on voit le fond plat du
+    # conteneur. Or le dégradé bas s'arrêtait à alpha 247 et la vignette
+    # radiale rajoutait du noir par-dessus : la dernière ligne de la fiche
+    # valait rgb(3,3,8) contre rgb(6,6,17) pour la première du carrousel —
+    # un trait CLAIR sur toute la largeur, mesuré identique sur les 8 jeux.
+    # Terminer exactement sur `bg_qcolor(255)` supprime la marche. La
+    # vignette doit passer avant, sinon elle re-creuse le raccord.
+    raccord = QLinearGradient(0, h - _RACCORD_PX, 0, h)
+    raccord.setColorAt(0.0, theme.bg_qcolor(0))
+    # Saturation AVANT le bord : une rampe qui atteint 255 pile au dernier
+    # pixel s'y interpole à ~252, et il restait un niveau d'écart par canal.
+    raccord.setColorAt(0.92, theme.bg_qcolor(255))
+    raccord.setColorAt(1.0, theme.bg_qcolor(255))
+    p.fillRect(QRectF(0, h - _RACCORD_PX, w, _RACCORD_PX), raccord)
+
+    p.end()
+    return pix

@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
         self._status_bar = BarreDeStatut(self.config, self._detail.ops)
         self.setStatusBar(self._status_bar)
         # Particules (saison changeable dans Paramètres), derrière les jaquettes
-        self._particles = ParticleOverlay(self)
+        self._particles = self._detail.particules_gpu() or ParticleOverlay(self)
         self._particles.apply_season(resolve_season(self.config.season))
         self._particles.masquer(self._carousel.zones_jaquettes)
         self._particles.raise_()

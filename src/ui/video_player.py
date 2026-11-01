@@ -99,6 +99,15 @@ class VideoPlayer(QObject):
         self._cible = -1
         self._pause_apres_saut = False
         self._copies = 0
+        # Une sortie vidéo de la carte graphique (`VideoOutput` de Qt Quick, voir
+        # `fond_gpu`) : les images y vont directement, sans `toImage()` (8 ms
+        # par image en 1080p) ni peinture de la fenêtre. None : le chemin QPainter.
+        self._sortie: QObject | None = None
+
+    def set_sortie(self, sortie: QObject | None) -> None:
+        """Envoie les images à une sortie de la carte graphique au lieu du signal
+        `video_frame`. À poser avant `play()` ; vaut pour les lectures suivantes."""
+        self._sortie = sortie
 
     def set_plein_debit(self, oui: bool) -> None:
         self._plein_debit = oui
@@ -201,6 +210,9 @@ class VideoPlayer(QObject):
     def _ouvrir(self, video_path: str, muted: bool, volume: float) -> None:
         parent_widget = self.parent()
 
+        # Une cinématique d'EA a besoin de voir passer les images (avance rapide
+        # après un saut) : elle garde le chemin QPainter.
+        sortie = self._sortie if self._index is None else None
         self._sink = QVideoSink(parent_widget)
         self._sink.videoFrameChanged.connect(self._on_frame)
         self._audio = QAudioOutput(parent_widget)
@@ -209,7 +221,7 @@ class VideoPlayer(QObject):
         self._muted = muted
         self._volume = volume
         self._player = QMediaPlayer(parent_widget)
-        self._player.setVideoOutput(self._sink)
+        self._player.setVideoOutput(sortie if sortie is not None else self._sink)
         self._player.setAudioOutput(self._audio)
         self._player.mediaStatusChanged.connect(self._on_media_status)
         # Relayés par des méthodes : un signal qint64 ne se branche pas sur un

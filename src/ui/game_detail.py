@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 from src.ui import game_detail_handlers as handlers
 from src.ui.action_panel import ActionPanel
 from src.ui.audio_bar import AudioBar
+from src.ui import fond_gpu
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
@@ -105,7 +106,13 @@ class GameDetailView(QWidget):
     # ──────────────────── Construction ────────────────────
 
     def _build_ui(self, manager: GameManager) -> None:
-        self._bg = BackgroundWidget(self)
+        # Sur la carte graphique quand c'est demandé (`fond_gpu.actif`) : la
+        # bande-annonce y va sans passer par le processeur.
+        if fond_gpu.actif():
+            self._bg = fond_gpu.FondGPU(self)
+            self._video.set_sortie(self._bg.sortie_video())
+        else:
+            self._bg = BackgroundWidget(self)
 
         # Info panel (titre, meta, description, tags)
         self._info = InfoPanel(manager, self)
@@ -260,6 +267,15 @@ class GameDetailView(QWidget):
         """Le folio du jeu affiché, dans le Carnet (qui souligne son onglet)."""
         from src.ui.carnet_page import CarnetPage
         self.page_demandee.emit(CarnetPage(self.manager, self.window(), jeu=self.game.id))
+
+    def particules_gpu(self) -> fond_gpu.ParticulesGPU | None:
+        """Les particules dans la scène du fond, quand le fond est sur la carte
+        graphique ; None : la fenêtre garde son `ParticleOverlay`."""
+        if not isinstance(self._bg, fond_gpu.FondGPU):
+            return None
+        if self._bg.particules is None:
+            self._bg.particules = fond_gpu.ParticulesGPU(self._bg)
+        return self._bg.particules
 
     # ──────────────────── Mode cinéma ────────────────────
 
@@ -435,6 +451,8 @@ class GameDetailView(QWidget):
             return
         muted = self._muette()
         if self._video.play(str(video_path), muted=muted, volume=self._audio_bar.volume() / 100.0):
+            if isinstance(self._bg, fond_gpu.FondGPU):
+                self._bg.debut_video()
             self._audio_bar.set_muted_icon(muted)
             self._audio_bar.set_paused_icon(False)
             self._audio_bar.set_mode_fin(False)
