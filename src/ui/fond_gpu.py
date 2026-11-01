@@ -291,6 +291,13 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
             self.particules.resemer_si_taille()
 
     def begin_crossfade(self) -> None:
+        """L'image courante passe en sous-couche, FIGÉE où elle est : zoom, parallaxe
+        et cadrage du moment. Sans eux, elle reprenait sa place de départ pendant le
+        fondu, un saut visible à chaque changement de jeu (Ludo, 2026-11-02)."""
+        self._poser("ancienneZoom", self._zoom)
+        self._poser("ancienneParallaxeX", -self._parallax_cx)
+        self._poser("ancienneParallaxeY", -self._parallax_cy)
+        self._poser("ancienneEtendu", self._doit_etendre(self.width(), self.height()))
         self._poser("ancienne", QUrl.fromLocalFile(self._source) if self._source else QUrl())
 
     def cinema(self) -> bool:

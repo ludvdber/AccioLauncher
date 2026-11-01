@@ -11,7 +11,11 @@ Item {
     id: racine
 
     property url source
-    property url ancienne              // sous-couche du fondu enchaîné
+    property url ancienne              // sous-couche du fondu enchaîné, figée au clic :
+    property real ancienneZoom: 1.0
+    property real ancienneParallaxeX: 0
+    property real ancienneParallaxeY: 0
+    property bool ancienneEtendu: false
     property real opacite: 1.0
     property real zoom: 1.0
     property real parallaxeX: 0        // décalage courant, en pixels logiques
@@ -36,64 +40,61 @@ Item {
 
     Rectangle { anchors.fill: parent; color: racine.fond }
 
-    // Sous-couche du fondu : l'ancienne illustration, immobile.
-    Image {
+    // ── L'illustration : en « cover » (zoom ×1,08 de base, puis le zoom d'arrivée),
+    // ou bandeau étendu (`BackgroundWidget._peindre_etendu`). Un composant, parce
+    // que la sous-couche du fondu doit être LA MÊME image, figée où elle était.
+    component Couche: Item {
+        id: couche
+        property url src
+        property real zoomC: 1.0
+        property real px: 0
+        property real py: 0
+        property bool etenduC: false
+        property bool sync: false        // la sous-couche : déjà en cache, sans attente
         anchors.fill: parent
-        visible: racine.opacite < 0.999 && racine.ancienne.toString() !== ""
-        source: racine.ancienne
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true; smooth: true; mipmap: true
-    }
 
-    Item {
-        id: plan
-        anchors.fill: parent
-        opacity: racine.opacite
-
-        // ── Illustration en « cover » : zoom ×1,08 de base, puis le zoom d'arrivée ──
         Image {
-            id: couverture
-            visible: !racine.etendu
-            width: parent.width * 1.08 * racine.zoom
-            height: parent.height * 1.08 * racine.zoom
-            x: (parent.width - width) / 2 + racine.parallaxeX
-            y: (parent.height - height) / 2 + racine.parallaxeY
-            source: racine.etendu ? "" : racine.source
+            visible: !couche.etenduC
+            width: parent.width * 1.08 * couche.zoomC
+            height: parent.height * 1.08 * couche.zoomC
+            x: (parent.width - width) / 2 + couche.px
+            y: (parent.height - height) / 2 + couche.py
+            source: couche.etenduC ? "" : couche.src
             fillMode: Image.PreserveAspectCrop
-            asynchronous: true; smooth: true; mipmap: true
+            asynchronous: !couche.sync; smooth: true; mipmap: true
         }
 
-        // ── Bandeau étendu (`BackgroundWidget._peindre_etendu`) : la copie floue plein
-        // cadre, en retrait, puis l'image nette en haut, dont le bas s'efface dedans ──
+        // Bandeau étendu : la copie floue plein cadre, en retrait, puis l'image nette
+        // en haut, dont le bas s'efface dedans.
         Item {
             anchors.fill: parent
-            visible: racine.etendu
+            visible: couche.etenduC
             // Le flou : une copie minuscule agrandie deux fois en lissage (texture
             // du calque au quart, puis plein cadre), comme le chemin QPainter.
             Item {
-                x: -racine.parallaxeMaxX + racine.parallaxeX * 0.5
-                y: -racine.parallaxeMaxY + racine.parallaxeY * 0.5
+                x: -racine.parallaxeMaxX + couche.px * 0.5
+                y: -racine.parallaxeMaxY + couche.py * 0.5
                 width: parent.width + 2 * racine.parallaxeMaxX
                 height: parent.height + 2 * racine.parallaxeMaxY
-                layer.enabled: racine.etendu
-                layer.textureSize: Qt.size(Math.max(1, Math.round(racine.width / 4)), Math.max(1, Math.round(racine.height / 4)))
+                layer.enabled: couche.etenduC
+                layer.textureSize: Qt.size(Math.max(1, Math.round(couche.width / 4)), Math.max(1, Math.round(couche.height / 4)))
                 layer.smooth: true
                 Image {
                     anchors.fill: parent
-                    source: racine.etendu ? racine.source : ""
-                    sourceSize: Qt.size(Math.max(1, Math.round(racine.width / 24)), Math.max(1, Math.round(racine.height / 24)))
+                    source: couche.etenduC ? couche.src : ""
+                    sourceSize: Qt.size(Math.max(1, Math.round(couche.width / 24)), Math.max(1, Math.round(couche.height / 24)))
                     fillMode: Image.Stretch
-                    asynchronous: true; smooth: true
+                    asynchronous: !couche.sync; smooth: true
                 }
             }
             // En retrait : en grand écran, le bas de l'image y revenait en « fantôme ».
             Rectangle { anchors.fill: parent; color: Qt.rgba(racine.fond.r, racine.fond.g, racine.fond.b, racine.etenduVoileFlou) }
             Item {
                 id: bandeau
-                width: parent.width * racine.etenduMarge * racine.zoom
+                width: parent.width * racine.etenduMarge * couche.zoomC
                 height: net.implicitWidth > 0 ? width * net.implicitHeight / net.implicitWidth : 0
-                x: (parent.width - width) / 2 + racine.parallaxeX
-                y: -racine.parallaxeMaxY + racine.parallaxeY
+                x: (parent.width - width) / 2 + couche.px
+                y: -racine.parallaxeMaxY + couche.py
                 // Le haut, opaque ; texture chargée une fois, partagée par les bandes.
                 Item {
                     width: parent.width; height: parent.height * (1 - racine.etenduFondu)
@@ -101,16 +102,16 @@ Item {
                     Image {
                         id: net
                         width: bandeau.width; height: bandeau.height
-                        source: racine.etendu ? racine.source : ""
+                        source: couche.etenduC ? couche.src : ""
                         fillMode: Image.Stretch
-                        asynchronous: true; smooth: true; mipmap: true
+                        asynchronous: !couche.sync; smooth: true; mipmap: true
                     }
                 }
                 // Le bas s'efface en bandes fines d'opacité décroissante (rognées par
                 // le GPU, même texture) : le flou se voit dessous, comme le masque
                 // `DestinationIn` du chemin QPainter.
                 Repeater {
-                    model: racine.etendu ? racine.etenduBandes : 0
+                    model: couche.etenduC ? racine.etenduBandes : 0
                     Item {
                         required property int index
                         readonly property real haut: bandeau.height * (1 - racine.etenduFondu)
@@ -124,11 +125,42 @@ Item {
                             width: bandeau.width; height: bandeau.height
                             source: net.source
                             fillMode: Image.Stretch
-                            asynchronous: true; smooth: true; mipmap: true
+                            asynchronous: !couche.sync; smooth: true; mipmap: true
                         }
                     }
                 }
             }
+        }
+    }
+
+    // Sous-couche du fondu : l'ancienne illustration FIGÉE là où elle était au clic
+    // (zoom, parallaxe, cadrage, voile), comme la capture `grab()` du chemin QPainter.
+    // Sans cela, elle reprenait sa place de départ, plus claire, avant le jeu suivant.
+    Item {
+        anchors.fill: parent
+        visible: racine.opacite < 0.999 && racine.ancienne.toString() !== ""
+        Couche {
+            src: racine.ancienne
+            zoomC: racine.ancienneZoom
+            px: racine.ancienneParallaxeX
+            py: racine.ancienneParallaxeY
+            etenduC: racine.ancienneEtendu
+            sync: true
+        }
+        Rectangle { anchors.fill: parent; visible: !racine.cinema; color: Qt.rgba(0, 0, 0, racine.voileAlpha) }
+    }
+
+    Item {
+        id: plan
+        anchors.fill: parent
+        opacity: racine.opacite
+
+        Couche {
+            src: racine.source
+            zoomC: racine.zoom
+            px: racine.parallaxeX
+            py: racine.parallaxeY
+            etenduC: racine.etendu
         }
 
         // ── Bande-annonce : les images arrivent de la carte graphique, sans détour ──

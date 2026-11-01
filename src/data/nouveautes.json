@@ -64,6 +64,14 @@
       ],
       "changements": [
         {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Les manettes Xbox marchent dans La Coupe de Feu, et la caméra de L'École des Sorciers, La Chambre des Secrets et Le Prisonnier d'Azkaban suit enfin le stick droit. Avec les nouvelles versions de ces quatre jeux.",
+            "en": "Xbox controllers work in Goblet of Fire, and the camera in Philosopher's Stone, Chamber of Secrets and Prisoner of Azkaban finally follows the right stick. With the new versions of these four games.",
+            "es": "Los mandos de Xbox funcionan en El cáliz de fuego, y la cámara de La piedra filosofal, La cámara secreta y El prisionero de Azkaban por fin sigue el stick derecho. Con las nuevas versiones de estos cuatro juegos."
+          }
+        },
+        {
           "genre": "ameliore",
           "texte": {
             "fr": "Fenêtre réduite, le launcher se met vraiment au repos : particules, étoiles et bande-annonce s'arrêtent.",
@@ -93,6 +101,22 @@
             "fr": "La fiche ne porte plus la mention « Ce fond cherche un artiste » : l'atelier reste à sa place, dans Contribuer.",
             "en": "The game page no longer shows \"This background is looking for an artist\": the workshop stays where it is, under Contribute.",
             "es": "La ficha ya no muestra «Este fondo busca artista»: el taller sigue en su sitio, en Contribuir."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban ne ralentit plus quand des sous-titres s'affichent : dans le Poudlard Express, il tombait à 17 images par seconde, il en garde 60.",
+            "en": "Prisoner of Azkaban no longer slows down when subtitles show: on the Hogwarts Express it dropped to 17 frames per second, it now keeps 60.",
+            "es": "El prisionero de Azkaban ya no se ralentiza cuando aparecen subtítulos: en el Expreso de Hogwarts bajaba a 17 imágenes por segundo, ahora mantiene 60."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "En passant d'un jeu à l'autre, l'ancien fond ne revient plus brièvement à sa place de départ avant le fondu.",
+            "en": "When switching games, the previous background no longer briefly jumps back to its starting position before the fade.",
+            "es": "Al pasar de un juego a otro, el fondo anterior ya no vuelve un instante a su posición inicial antes del fundido."
           }
         },
         {

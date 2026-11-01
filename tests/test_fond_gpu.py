@@ -100,6 +100,52 @@ def test_l_etendu_prolonge_l_image_dans_son_flou_pas_dans_du_noir(qtbot, tmp_pat
     assert (gauche.green() - gauche.blue()) > (droite.green() - droite.blue()) + 15, (gauche.name(), droite.name())
 
 
+def test_au_changement_de_jeu_l_ancien_fond_reste_ou_il_etait(qtbot, tmp_path):
+    """Ludo, 2026-11-02 : en cliquant sur un autre jeu, l'ancien fond reprenait sa
+    place de départ (sans zoom, sans parallaxe, sans voile) avant le fondu. Au
+    premier instant du fondu, l'image doit être celle d'avant le clic."""
+    from PyQt6.QtGui import QColor, QImage, QPainter
+    image = QImage(1600, 1000, QImage.Format.Format_RGB32)
+    image.fill(QColor(20, 40, 160))
+    p = QPainter(image)
+    for k in range(0, 1600, 100):          # des bandes : un décalage se voit
+        p.fillRect(k, 0, 50, 1000, QColor(220, 180, 40))
+    p.end()
+    image.save(str(tmp_path / "a.png"))
+    autre = QImage(1600, 1000, QImage.Format.Format_RGB32)
+    autre.fill(QColor(0, 0, 0))
+    autre.save(str(tmp_path / "b.png"))
+
+    fond = fond_gpu.FondGPU()
+    qtbot.addWidget(fond)
+    fond.resize(800, 500)
+    fond.invalidate_cache()
+    fond.set_image(tmp_path / "a.png")
+    fond.show()
+    # Un fond qui a vécu : zoomé et décalé par la souris.
+    fond._zoom = 1.12
+    fond._poser("zoom", fond._zoom)
+    fond._parallax_cx, fond._parallax_cy = 15.0, -8.0
+    fond._poser("parallaxeX", -15.0)
+    fond._poser("parallaxeY", 8.0)
+    def _bandes_visibles():
+        img = fond.grabFramebuffer()
+        return max(img.pixelColor(x, 200).red() for x in range(300, 500)) > 80
+    qtbot.waitUntil(_bandes_visibles, timeout=5000)     # l'image se charge sans bloquer
+    avant = fond.grabFramebuffer()
+
+    fond.begin_crossfade()
+    fond.bg_opacity = 0.0
+    fond.set_image(tmp_path / "b.png")
+    fond.start_zoom_loop()
+    qtbot.wait(200)
+    pendant = fond.grabFramebuffer()
+    ecarts = sum(1 for x in range(0, 800, 7) for y in range(0, 500, 7)
+                 if abs(avant.pixelColor(x, y).red() - pendant.pixelColor(x, y).red()) > 12)
+    assert ecarts < 40, f"{ecarts} points ont bougé au premier instant du fondu"
+    fond.pause()
+
+
 def test_meme_interface_que_l_ancien_fond(qtbot):
     from src.ui.background_widget import BackgroundWidget
     publiques = {n for n in vars(BackgroundWidget) if not n.startswith("_") and n not in ("paintEvent",)}
