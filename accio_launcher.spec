@@ -238,6 +238,35 @@ def _keep(entry):
         return False
     if chemin.endswith(_JAMAIS_ATTEINTS):
         return False
+    if not _qml_utile(chemin):
+        return False
+    return True
+
+
+# ─── Qt Quick : seulement ce que le fond de l'accueil importe ───
+# `src/ui/fond_gpu.py` importe QtQuick et QtQuickWidgets ; le crochet de
+# PyInstaller embarque alors TOUS les modules QML de Qt (3D, contrôles,
+# physique, positionnement…) : l'exe passait de 46,6 à 72,6 Mo (2026-11-01).
+# `assets/qml/FondAccueil.qml` n'importe que QtQuick et QtMultimedia.
+_QML_GARDES = ("pyqt6/qt6/qml/qtqml/", "pyqt6/qt6/qml/qtmultimedia/")
+_QML_RACINE_QTQUICK = "pyqt6/qt6/qml/qtquick/"
+_DLL_QUICK_INUTILES = (
+    "quick3d", "quickcontrols2", "quickdialogs2", "quicktemplates2", "quicktest",
+    "quickparticles", "quickshapes", "quicktimeline", "quickvectorimage", "quicklayouts",
+    "quickeffects", "positioningquick", "sensorsquick", "webchannelquick", "remoteobjectsqml",
+    "statemachineqml", "shadertools",
+)
+
+
+def _qml_utile(chemin):
+    if chemin.startswith("pyqt6/qt6/qml/"):
+        if chemin.startswith(_QML_GARDES):
+            return True
+        # QtQuick lui-même (qmldir, greffon), sans ses sous-modules (Controls, Dialogs…).
+        return chemin.startswith(_QML_RACINE_QTQUICK) and "/" not in chemin[len(_QML_RACINE_QTQUICK):]
+    nom = chemin.rsplit("/", 1)[-1]
+    if nom.startswith("qt6") and nom.endswith((".dll", ".so")) or ".so." in nom:
+        return not any(motif in nom for motif in _DLL_QUICK_INUTILES)
     return True
 
 

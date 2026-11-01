@@ -131,53 +131,61 @@ Item {
     // Hasard reproductible : la nouvelle abscisse d'une particule revenue par l'autre bord.
     function _hasard(i, k) { var s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return s - Math.floor(s) }
 
+    // Une seule boucle par pas, qui pose x, y, opacité et rotation : des liaisons par
+    // particule (une douzaine chacune) coûtaient 0,6 ms de JavaScript à chaque pas.
+    onTempsChanged: _poserParticules()
+    function _poserParticules() {
+        var n = temps, w = width, h = height, cycle = h + 30
+        for (var i = 0; i < repetition.count; ++i) {
+            var it = repetition.itemAt(i)
+            if (!it) continue
+            var p = it.p
+            var yBrut = p.y0 + p.vy * n
+            var tour = Math.floor((yBrut + 20) / cycle)
+            var phase = p.phase0 + p.ps * n
+            // Somme des sin(phase) pas à pas ≈ son intégrale : l'oscillation en forme fermée.
+            var osc = p.ps !== 0 ? p.sway * (Math.cos(p.phase0) - Math.cos(phase)) / p.ps : 0
+            var xBrut = p.x0 + p.vx * n + osc + (tour !== 0 ? _hasard(i, tour) * w : 0)
+            it.x = -20 + _mod(xBrut + 20, w + 40)
+            it.y = -20 + _mod(yBrut + 20, cycle)
+            it.opacity = Math.max(0.05, Math.min(0.55, p.base + Math.sin(n * secondesParPas * p.flicker + phase) * p.variation))
+            if (p.rs !== 0) it.angle = p.rot0 + p.rs * n
+        }
+    }
+
     Item {
         anchors.fill: parent
         visible: racine.particulesVisibles && !racine.cinema
         Repeater {
+            id: repetition
             model: racine.particules
+            onItemAdded: racine._poserParticules()
             Item {
-                id: part
                 required property var modelData
-                required property int index
                 readonly property var p: modelData
-                readonly property real n: racine.temps
-                readonly property real hauteurCycle: racine.height + 30
-                readonly property real yBrut: p.y0 + p.vy * n
-                readonly property real tour: Math.floor((yBrut + 20) / hauteurCycle)
-                readonly property real phase: p.phase0 + p.ps * n
-                // Somme des sin(phase) pas à pas ≈ son intégrale : l'oscillation en forme fermée.
-                readonly property real oscillation: p.ps !== 0 ? p.sway * (Math.cos(p.phase0) - Math.cos(phase)) / p.ps : 0
-                readonly property real xBrut: p.x0 + p.vx * n + oscillation
-                                              + (tour !== 0 ? racine._hasard(index, tour) * racine.width : 0)
-                readonly property real opaciteCourante: Math.max(0.05, Math.min(0.55,
-                    p.base + Math.sin(n * racine.secondesParPas * p.flicker + phase) * p.variation))
-                x: -20 + racine._mod(xBrut + 20, racine.width + 40)
-                y: -20 + racine._mod(yBrut + 20, hauteurCycle)
-
+                property real angle: p.rot0
+                // Le halo à 30 % de l'opacité de la particule (`paintEvent`).
                 Image {
-                    visible: part.p.glow > 0
-                    source: visible ? "image://accio/halo/" + part.p.rgb : ""
-                    width: part.p.glow * 2; height: width
+                    visible: parent.p.glow > 0
+                    source: visible ? "image://accio/halo/" + parent.p.rgb : ""
+                    width: parent.p.glow * 2; height: width
                     x: -width / 2; y: -height / 2
-                    opacity: Math.max(part.opaciteCourante * 0.30, 3 / 255)
+                    opacity: 0.30
                     smooth: true
                 }
                 Rectangle {
-                    visible: part.p.forme === "point"
-                    width: part.p.size * 2; height: width; radius: width / 2
-                    x: -part.p.size; y: -part.p.size
-                    color: Qt.rgba(part.p.r, part.p.g, part.p.b, 1)
-                    opacity: part.opaciteCourante
+                    visible: parent.p.forme === "point"
+                    width: parent.p.size * 2; height: width; radius: width / 2
+                    x: -parent.p.size; y: -parent.p.size
+                    color: Qt.rgba(parent.p.r, parent.p.g, parent.p.b, 1)
                     antialiasing: true
                 }
                 Image {
-                    visible: part.p.forme !== "point"
-                    source: visible ? "image://accio/forme/" + part.p.forme + "/" + part.p.rgb + "/" + part.p.size.toFixed(2) : ""
-                    width: part.p.size * 2.4; height: width
+                    visible: parent.p.forme !== "point"
+                    source: visible ? "image://accio/forme/" + parent.p.forme + "/" + parent.p.rgb + "/" + parent.p.size.toFixed(2) : ""
+                    width: parent.p.size * 2.4; height: width
                     x: -width / 2; y: -height / 2
-                    rotation: part.p.rot0 + part.p.rs * part.n
-                    opacity: part.opaciteCourante
+                    rotation: parent.angle
                     smooth: true
                 }
             }

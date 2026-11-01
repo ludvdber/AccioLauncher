@@ -108,11 +108,14 @@ class GameDetailView(QWidget):
     def _build_ui(self, manager: GameManager) -> None:
         # Sur la carte graphique quand c'est demandé (`fond_gpu.actif`) : la
         # bande-annonce y va sans passer par le processeur.
-        if fond_gpu.actif():
-            self._bg = fond_gpu.FondGPU(self)
-            self._video.set_sortie(self._bg.sortie_video())
-        else:
-            self._bg = BackgroundWidget(self)
+        gpu = fond_gpu.FondGPU(self) if fond_gpu.actif() else None
+        if gpu is not None and not gpu.valide():
+            # Scène non chargée : le fond peint par le processeur, comme avant.
+            gpu.deleteLater()
+            gpu = None
+        self._bg: BackgroundWidget | fond_gpu.FondGPU = gpu or BackgroundWidget(self)
+        if gpu is not None:
+            self._video.set_sortie(gpu.sortie_video())
 
         # Info panel (titre, meta, description, tags)
         self._info = InfoPanel(manager, self)

@@ -10,6 +10,11 @@ from pathlib import Path
 
 # Doit être posé AVANT tout import PyQt6.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# Les fenêtres de test gardent le fond peint par le processeur : une scène Qt
+# Quick par MainWindow, hors écran et sur 20 processus, faisait tomber un
+# travailleur de xdist (2026-11-01). Le fond sur la carte graphique a ses propres
+# tests (`test_fond_gpu.py`), qui le forcent.
+os.environ.setdefault("ACCIO_FOND_GPU", "0")
 
 # Racine du dépôt comme dossier courant : des tests lisent `src/…` par un chemin relatif
 # (plafonds de lignes), et pytest lancé depuis un autre dossier les faisait échouer (ACT-014).

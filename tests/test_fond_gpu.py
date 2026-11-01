@@ -9,11 +9,26 @@ from src.ui import fond_gpu
 pytestmark = pytest.mark.skipif(not fond_gpu.QUICK_DISPONIBLE, reason="Qt Quick absent")
 
 
-def test_interrupteur_eteint_par_defaut(monkeypatch):
+def test_allume_par_defaut_sous_windows_seulement(monkeypatch):
     monkeypatch.delenv("ACCIO_FOND_GPU", raising=False)
+    monkeypatch.setattr(fond_gpu.sys, "platform", "win32")
+    assert fond_gpu.actif()
+    monkeypatch.setattr(fond_gpu.sys, "platform", "linux")
     assert not fond_gpu.actif()
     monkeypatch.setenv("ACCIO_FOND_GPU", "1")
     assert fond_gpu.actif()
+    monkeypatch.setattr(fond_gpu.sys, "platform", "win32")
+    monkeypatch.setenv("ACCIO_FOND_GPU", "0")
+    assert not fond_gpu.actif()
+
+
+def test_une_fenetre_avec_le_fond_gpu(make_window, monkeypatch):
+    monkeypatch.setenv("ACCIO_FOND_GPU", "1")
+    win = make_window()
+    assert isinstance(win._detail._bg, fond_gpu.FondGPU)
+    assert isinstance(win._particles, fond_gpu.ParticulesGPU)
+    win._carousel.select_next()
+    win._particles.apply_season("noel")
 
 
 def test_la_scene_charge_et_expose_sa_sortie_video(qtbot):

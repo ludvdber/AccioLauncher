@@ -14,9 +14,11 @@ Le bandeau étendu ne passe plus par un flou : il se prolonge dans la couleur
 dominante de son propre bas (`_ambiance`).
 """
 
+import functools
 import logging
 import math
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -48,12 +50,25 @@ _ETENDU_RATIO = 1.2
 
 
 def actif() -> bool:
-    """Le fond sur la carte graphique est-il demandé ? (essai : ACCIO_FOND_GPU=1)"""
-    return QUICK_DISPONIBLE and os.environ.get("ACCIO_FOND_GPU") == "1" and _QML.exists()
+    """Le fond passe-t-il par la carte graphique ?
+
+    Oui par défaut sous Windows (mesuré en vraie fenêtre le 2026-11-01 : repos
+    22 → 11 % d'un cœur, bande-annonce 90 → 28 %, mode cinéma 125 → 15 %).
+    Pas encore sous Linux, où Qt Quick passe par OpenGL et n'a pas été essayé
+    sous Wine ni dans l'AppImage. `ACCIO_FOND_GPU=0` ou `=1` force l'un ou l'autre.
+    """
+    if not QUICK_DISPONIBLE or not _QML.exists():
+        return False
+    force = os.environ.get("ACCIO_FOND_GPU")
+    if force in ("0", "1"):
+        return force == "1"
+    return sys.platform == "win32"
 
 
+@functools.cache
 def _ambiance(chemin: Path) -> QColor:
-    """La couleur dominante du bas d'une image, assombrie : le prolongement du bandeau."""
+    """La couleur dominante du bas d'une image, assombrie : le prolongement du bandeau.
+    Gardée par chemin : la calculer décodait le JPEG, 10 ms à chaque changement de jeu."""
     img = QImage(str(chemin))
     if img.isNull():
         return theme.bg_qcolor(255)
@@ -172,6 +187,8 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
             self._racine.setProperty("fond", theme.bg_qcolor(255))
             self._racine.setProperty("voileAlpha", _VOILE_ALPHA / 255)
             self._racine.setProperty("parallaxeMaxY", self.PARALLAX_MAX_Y)
+            log.info("Fond de l'accueil sur la carte graphique (%s)",
+                     self.quickWindow().rendererInterface().graphicsApi().name)
 
     def _poser(self, nom: str, valeur: object) -> None:
         if self._racine is not None:
@@ -195,6 +212,11 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
 
     def poser_particules_secondes(self, secondes: float) -> None:
         self._poser("secondesParPas", secondes)
+
+    def valide(self) -> bool:
+        """La scène a-t-elle chargé ? Sinon (greffon QML absent, pilote refusé),
+        la vue retombe sur `BackgroundWidget`."""
+        return self._racine is not None and self.sortie_video() is not None
 
     def sortie_video(self) -> QObject | None:
         """Le `VideoOutput` de la scène, pour `VideoPlayer.set_sortie`."""
@@ -335,7 +357,14 @@ class ParticulesGPU:
         self._ticking = False
         self._visible = True
         self._fond.poser_particules_secondes(TICK_MS / 1000.0)
+        # Objet Python simple : PyQt ne le débranche pas du Ticker à la mort du fond,
+        # et le pas suivant visait une scène détruite (« wrapped C/C++ object… deleted »).
+        self._fond.destroyed.connect(self._fond_detruit)
         self.resume()
+
+    def _fond_detruit(self) -> None:
+        self.pause()
+        self._visible = False
 
     def _semer(self) -> None:
         w, h = self._fond.width(), self._fond.height()

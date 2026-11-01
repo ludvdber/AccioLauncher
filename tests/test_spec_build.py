@@ -26,12 +26,14 @@ def _charger_filtre():
     Le spec lance l'analyse PyInstaller à son niveau module : on n'en compile
     que les deux définitions utiles.
     """
+    fonctions = {"_keep", "_qml_utile"}
+    constantes = {"_JAMAIS_ATTEINTS", "_QML_GARDES", "_QML_RACINE_QTQUICK", "_DLL_QUICK_INUTILES"}
     utiles = [n for n in _arbre().body
-              if (isinstance(n, ast.FunctionDef) and n.name == "_keep")
+              if (isinstance(n, ast.FunctionDef) and n.name in fonctions)
               or (isinstance(n, ast.Assign)
-                  and any(isinstance(c, ast.Name) and c.id == "_JAMAIS_ATTEINTS"
+                  and any(isinstance(c, ast.Name) and c.id in constantes
                           for c in n.targets))]
-    assert len(utiles) == 2, "le spec a perdu _keep ou _JAMAIS_ATTEINTS"
+    assert len(utiles) == len(fonctions) + len(constantes), "le spec a perdu une pièce du filtre"
     espace: dict = {}
     exec(compile(ast.Module(body=utiles, type_ignores=[]), str(SPEC), "exec"),
          espace)
@@ -62,6 +64,13 @@ class TestCeQuiEstMortSort:
         r"PyQt6\Qt6\plugins\generic\qtuiotouchplugin.dll",
         r"PyQt6\Qt6\translations\qtbase_fr.qm",
         r"assets\videos\hp1_video.mp4",
+        # Qt Quick : tout ce que le fond de l'accueil n'importe pas (2026-11-01).
+        r"PyQt6\Qt6\qml\QtQuick3D\Physics\qquick3dphysicsplugin.dll",
+        r"PyQt6\Qt6\qml\QtQuick\Controls\qtquickcontrols2plugin.dll",
+        r"PyQt6\Qt6\qml\QtWebSockets\qmlwebsocketsplugin.dll",
+        r"PyQt6\Qt6\bin\Qt6Quick3DRuntimeRender.dll",
+        r"PyQt6\Qt6\bin\Qt6QuickControls2Material.dll",
+        r"PyQt6\Qt6\bin\Qt6ShaderTools.dll",
     ])
     def test_ecarte(self, chemin):
         assert not _garde(chemin)
@@ -88,6 +97,16 @@ class TestCeQuiSertReste:
         r"libcrypto-3.dll",
         r"assets\backgrounds\hp1_bg.jpg",
         r"data\i18n\en.json",
+        # Le fond de l'accueil sur la carte graphique (`assets/qml/FondAccueil.qml`).
+        r"assets\qml\FondAccueil.qml",
+        r"PyQt6\Qt6\bin\Qt6Quick.dll",
+        r"PyQt6\Qt6\bin\Qt6Qml.dll",
+        r"PyQt6\Qt6\bin\Qt6QuickWidgets.dll",
+        r"PyQt6\Qt6\bin\Qt6MultimediaQuick.dll",
+        r"PyQt6\Qt6\qml\QtQuick\qmldir",
+        r"PyQt6\Qt6\qml\QtQuick\qtquick2plugin.dll",
+        r"PyQt6\Qt6\qml\QtQml\qmldir",
+        r"PyQt6\Qt6\qml\QtMultimedia\quickmultimediaplugin.dll",
     ])
     def test_garde(self, chemin):
         assert _garde(chemin)
