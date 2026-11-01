@@ -1,6 +1,119 @@
 {
   "versions": [
     {
+      "version": "1.3.2",
+      "nom": "Lumos Maxima",
+      "depuis": "1.3.1",
+      "annonce": {
+        "titre": {
+          "fr": "Bientôt : votre propre copie des jeux",
+          "en": "Coming soon: your own copy of the games",
+          "es": "Próximamente: tu propia copia de los juegos"
+        },
+        "paragraphes": [
+          {
+            "fr": "Dans une prochaine version, Accio n'installera plus les jeux lui-même. Vous lui montrerez votre copie : CD, image ISO ou jeu déjà installé. Il la reconnaîtra, retirera ce qui ne sert pas, puis y posera ses correctifs et les bons réglages.",
+            "en": "In a future version, Accio will no longer install the games itself. You will show it your own copy: CD, ISO image or a game already installed. It will recognise it, remove what is not needed, then add its fixes and the right settings.",
+            "es": "En una próxima versión, Accio ya no instalará los juegos por sí mismo. Le mostrarás tu copia: CD, imagen ISO o juego ya instalado. La reconocerá, quitará lo que no sirve y le pondrá sus correcciones y los ajustes adecuados."
+          },
+          {
+            "fr": "C'est la seule façon pour Accio et ses correctifs de rester disponibles pour tout le monde, dans le respect des ayants droit. Vos parties et vos réglages seront gardés. Si vous avez encore vos CD, gardez-les précieusement.",
+            "en": "It is the only way for Accio and its fixes to stay available to everyone while respecting the rights holders. Your saves and settings will be kept. If you still have your CDs, keep them safe.",
+            "es": "Es la única forma de que Accio y sus correcciones sigan disponibles para todos, respetando a los titulares de los derechos. Tus partidas y tus ajustes se conservarán. Si todavía tienes tus CD, guárdalos bien."
+          },
+          {
+            "fr": "Le Discord sera le seul endroit où tout est expliqué, pas à pas : les annonces, la marche à suivre le jour du changement, et l'aide de la communauté si quelque chose bloque. Rejoignez-le dès maintenant pour ne pas vous retrouver perdu ce jour-là.",
+            "en": "The Discord will be the only place where everything is explained, step by step: the announcements, what to do on the day of the change, and help from the community if something gets stuck. Join it now so you are not lost on that day.",
+            "es": "El Discord será el único lugar donde se explica todo, paso a paso: los anuncios, qué hacer el día del cambio y la ayuda de la comunidad si algo se atasca. Únete ya para no sentirte perdido ese día."
+          }
+        ],
+        "appel": {
+          "fr": "Rejoignez le Discord maintenant : c'est là que tout se passera.",
+          "en": "Join the Discord now: that is where everything will happen.",
+          "es": "Únete al Discord ahora: ahí es donde pasará todo."
+        },
+        "discord": true
+      },
+      "points_forts": [
+        {
+          "icone": "ecran",
+          "titre": {
+            "fr": "L'accueil dessiné par la carte graphique",
+            "en": "The home screen drawn by the graphics card",
+            "es": "La pantalla de inicio dibujada por la tarjeta gráfica"
+          },
+          "texte": {
+            "fr": "Le fond, les bandes-annonces, les particules et le ciel étoilé du carrousel passent par la carte graphique : l'accueil est plus fluide et demande quatre à cinq fois moins au processeur, même quand une bande-annonce joue.",
+            "en": "The background, trailers, particles and the starry sky of the carousel go through the graphics card: the home screen is smoother and asks four to five times less of the processor, even while a trailer plays.",
+            "es": "El fondo, los tráileres, las partículas y el cielo estrellado del carrusel pasan por la tarjeta gráfica: la pantalla de inicio es más fluida y exige de cuatro a cinco veces menos al procesador, incluso mientras suena un tráiler."
+          }
+        },
+        {
+          "icone": "pinceau",
+          "titre": {
+            "fr": "Des fonds plus nets",
+            "en": "Sharper backgrounds",
+            "es": "Fondos más nítidos"
+          },
+          "texte": {
+            "fr": "Les illustrations derrière chaque jeu passent en haute définition : plus de pixels visibles sur un grand écran, et chacune garde son cadrage.",
+            "en": "The artwork behind each game is now in high definition: no more visible pixels on a large screen, and each keeps its framing.",
+            "es": "Las ilustraciones detrás de cada juego pasan a alta definición: se acabaron los píxeles visibles en una pantalla grande, y cada una conserva su encuadre."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Fenêtre réduite, le launcher se met vraiment au repos : particules, étoiles et bande-annonce s'arrêtent.",
+            "en": "When the window is minimised, the launcher truly rests: particles, stars and trailer stop.",
+            "es": "Con la ventana minimizada, el launcher descansa de verdad: partículas, estrellas y tráiler se detienen."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Une bande-annonce muette ne garde plus la sortie son ouverte : moins de travail pour l'ordinateur.",
+            "en": "A muted trailer no longer keeps the audio output open: less work for the computer.",
+            "es": "Un tráiler silenciado ya no mantiene abierta la salida de sonido: menos trabajo para el ordenador."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les cartes de L'École des Sorciers, La Chambre des Secrets et Le Prisonnier d'Azkaban s'affichent tout de suite sur la fiche, au lieu d'être relues à chaque passage.",
+            "en": "The cards of Philosopher's Stone, Chamber of Secrets and Prisoner of Azkaban show up right away on the game page, instead of being read again each time.",
+            "es": "Las cartas de La piedra filosofal, La cámara secreta y El prisionero de Azkaban aparecen al instante en la ficha, en lugar de leerse de nuevo cada vez."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "La fiche ne porte plus la mention « Ce fond cherche un artiste » : l'atelier reste à sa place, dans Contribuer.",
+            "en": "The game page no longer shows \"This background is looking for an artist\": the workshop stays where it is, under Contribute.",
+            "es": "La ficha ya no muestra «Este fondo busca artista»: el taller sigue en su sitio, en Contribuir."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "L'assistant de premier lancement pouvait se fermer sur une erreur au verdict du Choixpeau, après un changement de dossier des jeux.",
+            "en": "The first-run assistant could close on an error at the Sorting Hat's verdict, after changing the games folder.",
+            "es": "El asistente del primer inicio podía cerrarse con un error en el veredicto del Sombrero Seleccionador, tras cambiar la carpeta de los juegos."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Sur un ordinateur très occupé, le launcher pouvait croire un jeu fermé en pleine partie, et couper son temps de jeu.",
+            "en": "On a very busy computer, the launcher could think a game had closed mid-session, and cut its play time.",
+            "es": "En un ordenador muy ocupado, el launcher podía creer que un juego se había cerrado en plena partida, y cortar su tiempo de juego."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.1",
       "nom": "Sonorus",
       "depuis": "1.3.0",
