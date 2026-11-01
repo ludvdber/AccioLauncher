@@ -737,12 +737,28 @@ class Trailer:
     url: str
     size_mb: int = 0
     sha256: str | None = None
+    # Où commence l'image (`debut_s` du catalogue) : la bande-annonce de HP6 ouvre
+    # sur 4,3 s de noir, la fiche semblait ne rien lancer (Ludo, 2026-11-02).
+    debut_ms: int = 0
 
     @property
     def filename(self) -> str:
         """Nom du fichier LOCAL, qui porte la VERSION (règle 91) : l'asset
         ne la porte pas, et l'ancienne vidéo rejouerait pour toujours."""
         return f"{self.game_id}_video_v{self.version}.mp4"
+
+
+_DEBUT_MAX_S = 30.0
+
+
+def _debut_ms(game_id: object, valeur: object) -> int:
+    """`debut_s` en millisecondes ; absent, négatif ou au-delà de 30 s : 0 (le début)."""
+    if valeur is None:
+        return 0
+    if isinstance(valeur, bool) or not isinstance(valeur, (int, float)) or not 0 <= valeur <= _DEBUT_MAX_S:
+        log.warning("Bande-annonce %s : debut_s ignoré (%r)", game_id, valeur)
+        return 0
+    return round(valeur * 1000)
 
 
 def _parse_trailers(raw: Any) -> tuple[Trailer, ...]:
@@ -777,6 +793,7 @@ def _parse_trailers(raw: Any) -> tuple[Trailer, ...]:
             url=url,
             size_mb=taille if isinstance(taille, int) and taille >= 0 else 0,
             sha256=_sha256_valide(entree.get("sha256")),
+            debut_ms=_debut_ms(game_id, entree.get("debut_s")),
         ))
     return tuple(trailers)
 

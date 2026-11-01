@@ -443,7 +443,9 @@ class GameDetailView(QWidget):
             self._audio_bar.hide()
             return
         muted = self._muette()
-        if self._video.play(str(video_path), muted=muted, volume=self._audio_bar.volume() / 100.0):
+        debut = next((t.debut_ms for t in self.manager.trailers() if t.game_id == game_id), 0)
+        if self._video.play(str(video_path), muted=muted, volume=self._audio_bar.volume() / 100.0,
+                            debut_ms=debut):
             if isinstance(self._bg, fond_gpu.FondGPU):
                 self._bg.debut_video()
             self._audio_bar.set_muted_icon(muted)

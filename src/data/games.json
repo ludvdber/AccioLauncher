@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.50",
+  "catalog_version": "0.51",
   "contributors": [
     {
       "name": "ASTeam",
@@ -70,7 +70,8 @@
     "hp6": {
       "version": "1.0",
       "url": "https://github.com/ludvdber/accio-launcher-games/releases/download/trailers-v1/hp6_video.mp4",
-      "size_mb": 267
+      "size_mb": 267,
+      "debut_s": 4.0
     },
     "hp7a": {
       "version": "1.0",

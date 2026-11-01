@@ -83,6 +83,17 @@ class TestParsing:
         t = _parse_trailers({"hp1": {"version": "1.0", "url": "https://x/a.mp4",
                                      "size_mb": -500}})
         assert t[0].size_mb == 0
+
+    def test_le_debut_saute_le_noir_d_ouverture(self):
+        """HP6 ouvre sur 4,3 s de noir (2026-11-02) : `debut_s` dit où l'image commence."""
+        t = _parse_trailers({"hp6": {"version": "1.0", "url": "https://x/a.mp4", "debut_s": 4.0}})
+        assert t[0].debut_ms == 4000
+        assert _parse_trailers({"hp1": {"version": "1.0", "url": "https://x/a.mp4"}})[0].debut_ms == 0
+
+    @pytest.mark.parametrize("valeur", [-1, 31, "4", True, None, [4]])
+    def test_un_debut_aberrant_rejoue_depuis_le_debut(self, valeur):
+        t = _parse_trailers({"hp6": {"version": "1.0", "url": "https://x/a.mp4", "debut_s": valeur}})
+        assert t[0].debut_ms == 0, "la bande-annonce reste, seul le saut tombe"
     # Les bandes-annonces du catalogue embarqué : tests/test_catalogue_embarque.py.
 
 
@@ -240,6 +251,12 @@ class TestOutilDeSynchronisation:
         force, _ = self._outil().bloc_trailers(self.ASSETS, anciens, "4.0")
         assert force["hp1"]["version"] == "4.0"
 
+    def test_le_debut_ecrit_a_la_main_survit_a_la_synchro(self):
+        """`debut_s` ne vient pas de la release : la synchronisation le garde."""
+        bloc, _ = self._outil().bloc_trailers(self.ASSETS, {"hp1": {"version": "1.0", "debut_s": 4.0}}, None)
+        assert bloc["hp1"]["debut_s"] == 4.0
+        assert _parse_trailers(bloc)[0].debut_ms == 4000
+
     def test_le_bloc_produit_est_relu_par_le_catalogue(self):
         """Le contrat de bout en bout : ce que l'outil écrit, `_parse_trailers`
         doit le rendre — sinon on publie un catalogue muet."""
@@ -316,3 +333,18 @@ class TestTelechargementsInacheves:
         intrus = _poser(dossier, 'vacances.mp4.part', b'z' * 5)
         store.supprimer_tout()
         assert intrus.exists()
+
+
+def test_la_fiche_lance_la_bande_annonce_a_son_debut(make_window, monkeypatch, tmp_path):
+    """Le `debut_s` du catalogue arrive jusqu'au lecteur (fiche → `VideoPlayer.play`)."""
+    win = make_window()
+    detail = win._detail
+    video = tmp_path / "hp6_video_v1.0.mp4"
+    video.write_bytes(b"")
+    monkeypatch.setattr(type(detail.manager), "trailers",
+                        lambda _self: (Trailer("hp6", "1.0", "https://x/a.mp4", debut_ms=4000),))
+    monkeypatch.setattr(store, "chemin_a_jouer", lambda _id, _t: video)
+    appels = []
+    monkeypatch.setattr(detail._video, "play", lambda chemin, **kw: appels.append(kw) or False)
+    detail._try_play_video("hp6")
+    assert appels and appels[0]["debut_ms"] == 4000

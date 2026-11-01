@@ -88,6 +88,10 @@ def bloc_trailers(assets: list[dict], anciens: dict, version: str | None) -> tup
             # arrondi vers le bas coupe le téléchargement qu'il devait protéger.
             "size_mb": -(-octets // (1024 * 1024)),
         }
+        # Écrit à la main (où l'image commence, mesuré sur la vidéo) : la release ne le
+        # connaît pas, il ne doit pas disparaître à la synchronisation suivante.
+        if "debut_s" in ancien:
+            trailers[jeu]["debut_s"] = ancien["debut_s"]
     return trailers, ignores
 
 
