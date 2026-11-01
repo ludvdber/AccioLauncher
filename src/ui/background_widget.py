@@ -82,11 +82,24 @@ _ZOOM_STEP = TICK_MS / _ZOOM_LEG_MS
 # floutée (une copie minuscule agrandie en lissage). Le bas de l'image nette se fond
 # dans le flou sur `_ETENDU_FONDU` de sa hauteur. Une illustration 16:9 en haute
 # définition retombe toute seule sur le cadrage d'origine.
+# Depuis le 2026-11-02, les fonds du dépôt sont agrandis à 1240 px de haut (HP4 1688,
+# HP5 1096 ; Real-ESRGAN, moitié Lanczos pour les photos) : ils gardent le cadrage
+# d'origine, centré, comme en 1.3.1. L'étendu n'est plus qu'un dernier recours, quand
+# le cadrage d'origine agrandirait l'image de plus de `_ETENDU_AGRANDI_MAX` (très
+# grands écrans) : Ludo trouvait l'image déplacée vers le haut, du noir en dessous.
 _ETENDU_RATIO = 1.2       # image plus large que la fenêtre d'au moins 20 %
+_ETENDU_AGRANDI_MAX = 1.6
 _ETENDU_MARGE = 1.06      # de quoi absorber la parallaxe sans montrer de bord
 _ETENDU_FONDU = 0.32
 _ETENDU_FLOU = 24         # la copie floue fait 1/24 de la fenêtre
 _ETENDU_VOILE_FLOU = 100  # sur 255 : le flou reste un décor, pas une seconde image
+
+
+def doit_etendre(iw: int, ih: int, w: int, h: int, dpr: float, max_scale: float) -> bool:
+    """La règle du fond étendu, partagée par les deux rendus (`fond_gpu` aussi)."""
+    if iw <= 0 or ih <= 0 or w <= 0 or h <= 0 or iw / ih < (w / h) * _ETENDU_RATIO:
+        return False
+    return h * dpr * max_scale > ih * _ETENDU_AGRANDI_MAX
 
 
 class BackgroundWidget(QWidget):
@@ -326,14 +339,11 @@ class BackgroundWidget(QWidget):
         self._prepared_for = (w, h)
 
     def _doit_etendre(self, w: int, h: int) -> bool:
-        """Un bandeau qu'il faudrait agrandir pour couvrir la fenêtre."""
+        """Un bandeau qu'il faudrait trop agrandir pour couvrir la fenêtre."""
         pix = self._pixmap
-        if pix is None or pix.isNull() or pix.height() <= 0:
+        if pix is None or pix.isNull():
             return False
-        if pix.width() / pix.height() < (w / h) * _ETENDU_RATIO:
-            return False
-        dpr = self.devicePixelRatioF()
-        return h * dpr * self.MAX_SCALE > pix.height()
+        return doit_etendre(pix.width(), pix.height(), w, h, self.devicePixelRatioF(), self.MAX_SCALE)
 
     def _preparer_etendu(self, source: QPixmap, w: int, h: int) -> None:
         dpr = self.devicePixelRatioF()

@@ -20,6 +20,18 @@ class TestLaRegle:
         assert fond_a_refaire(849, 274)
         assert not fond_a_refaire(1920, 620)
 
+    def test_un_fond_agrandi_cherche_toujours_un_artiste(self):
+        """HP3 et HP5, agrandis le 2026-11-02, restent à refaire : la pastille de
+        la fiche et l'atelier se jugent sur l'image d'origine."""
+        from PyQt6.QtGui import QImageReader
+
+        from src.core.config import ASSETS_DIR
+        from src.core.images_a_refaire import TAILLE_AVANT_AGRANDISSEMENT
+        for jeu in ("hp3", "hp5"):
+            assert fond_a_refaire(*TAILLE_AVANT_AGRANDISSEMENT[jeu])
+            taille = QImageReader(str(ASSETS_DIR / "backgrounds" / f"{jeu}_bg.jpg")).size()
+            assert taille.width() > TAILLE_AVANT_AGRANDISSEMENT[jeu][0], "le fichier est bien l'agrandi"
+
     def test_dans_l_ordre_du_catalogue(self):
         tailles = {"a": ((1024, 1024), (1920, 1080)), "b": ((1080, 1500), (900, 400))}
         assert a_refaire(tailles) == [("a", "jaquette"), ("b", "fond")]

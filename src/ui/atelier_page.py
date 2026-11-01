@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 from src.core import atelier
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
+from src.core.images_a_refaire import TAILLE_AVANT_AGRANDISSEMENT
 from src.core.liens import DISCORD_URL
 from src.ui.composants import ENCRE, ENCRE_DOUCE, Rangee, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.fonts import cinzel_decorative
@@ -75,7 +76,8 @@ def _taille(chemin: Path) -> tuple[int, int]:
 def besoins_mesures(jeux) -> list[atelier.Besoin]:
     """Les jaquettes et fonds du catalogue à refaire, avec leurs mots traduits."""
     tailles = {g.id: (_taille(ASSETS_DIR / "covers" / g.cover_image),
-                      _taille(ASSETS_DIR / "backgrounds" / f"{g.id}_bg.jpg")) for g in jeux}
+                      TAILLE_AVANT_AGRANDISSEMENT.get(g.id)
+                      or _taille(ASSETS_DIR / "backgrounds" / f"{g.id}_bg.jpg")) for g in jeux}
     return atelier.besoins_mesures(tailles, {
         atelier.JAQUETTE: tr("Jaquette"),
         atelier.FOND: tr("Fond d'écran"),

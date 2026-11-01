@@ -49,14 +49,55 @@ def test_les_voiles_viennent_du_fournisseur(qtbot):
     assert not image.isNull() and taille.width() >= 800
 
 
-def test_un_bandeau_trop_petit_est_etendu_une_illustration_16_9_non(qtbot):
+def test_un_bandeau_trop_petit_est_etendu_une_illustration_16_9_non(qtbot, tmp_path):
+    from PyQt6.QtGui import QColor, QImage
+    petit = QImage(1920, 620, QImage.Format.Format_RGB32)
+    petit.fill(QColor(0, 0, 255))
+    petit.save(str(tmp_path / "bandeau.png"))
     fond = fond_gpu.FondGPU()
     qtbot.addWidget(fond)
     fond.resize(1400, 860)
-    fond.set_image(ASSETS_DIR / "backgrounds" / "hp1_bg.jpg")     # 1920 × 620
+    fond.set_image(tmp_path / "bandeau.png")
     assert fond._racine.property("etendu")
-    fond.set_image(ASSETS_DIR / "backgrounds" / "hp4_bg.jpg")     # 1500 × 844
+    fond.set_image(ASSETS_DIR / "backgrounds" / "hp4_bg.jpg")
     assert not fond._racine.property("etendu")
+
+
+@pytest.mark.parametrize("jeu", ["hp1", "hp2", "hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b"])
+@pytest.mark.parametrize(("w", "h", "dpr"), [(1400, 620, 1.25), (1920, 820, 1.0), (2560, 1100, 1.0)])
+def test_les_fonds_du_depot_gardent_le_cadrage_d_origine(jeu, w, h, dpr):
+    """Ludo, 2026-11-02 : en étendu, l'image remontait et laissait du noir dessous.
+    Agrandis, les huit fonds couvrent la fiche au cadrage centré de la 1.3.1,
+    de la fenêtre par défaut à 125 % jusqu'à un écran 2560 × 1440 plein."""
+    from PyQt6.QtGui import QImageReader
+
+    from src.ui.background_widget import BackgroundWidget, doit_etendre
+    taille = QImageReader(str(ASSETS_DIR / "backgrounds" / f"{jeu}_bg.jpg")).size()
+    assert not doit_etendre(taille.width(), taille.height(), w, h, dpr, BackgroundWidget.MAX_SCALE)
+
+
+def test_l_etendu_prolonge_l_image_dans_son_flou_pas_dans_du_noir(qtbot, tmp_path):
+    """Sous le bandeau, la copie floue de l'image, plus une couleur unie : l'image
+    est verte à gauche et bleue à droite, une couleur unie ne garderait pas les deux."""
+    from PyQt6.QtGui import QColor, QImage, QPainter
+    petit = QImage(1920, 620, QImage.Format.Format_RGB32)
+    petit.fill(QColor(0, 0, 255))
+    p = QPainter(petit)
+    p.fillRect(0, 0, 960, 620, QColor(0, 255, 0))
+    p.end()
+    petit.save(str(tmp_path / "bandeau.png"))
+    fond = fond_gpu.FondGPU()
+    qtbot.addWidget(fond)
+    fond.resize(1400, 860)
+    fond.invalidate_cache()
+    fond.set_image(tmp_path / "bandeau.png")
+    fond.show()
+    assert fond._racine.property("etendu")
+    qtbot.waitUntil(lambda: fond.grabFramebuffer().pixelColor(1000, 300).blue() > 60, timeout=5000)
+    rendu = fond.grabFramebuffer()
+    # Les voiles assombrissent la gauche (sous le texte) : on compare les teintes, pas les niveaux.
+    gauche, droite = rendu.pixelColor(400, 600), rendu.pixelColor(1100, 600)
+    assert (gauche.green() - gauche.blue()) > (droite.green() - droite.blue()) + 15, (gauche.name(), droite.name())
 
 
 def test_meme_interface_que_l_ancien_fond(qtbot):

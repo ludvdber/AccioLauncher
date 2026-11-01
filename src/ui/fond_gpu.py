@@ -10,11 +10,11 @@ que l'interrupteur est mis (`actif()`). Ce que ça change :
 
 Le zoom et la parallaxe restent cadencés par le `Ticker` (même pas, même
 inertie, même pause fenêtre inactive) : seule la valeur part vers la scène.
-Le bandeau étendu ne passe plus par un flou : il se prolonge dans la couleur
-dominante de son propre bas (`_ambiance`).
+Le bandeau étendu (dernier recours, très grands écrans) se prolonge dans sa copie
+floue, comme le chemin QPainter : une couleur sombre à la place laissait du noir
+sous l'image (Ludo, 2026-11-02).
 """
 
-import functools
 import logging
 import math
 import os
@@ -30,7 +30,8 @@ from src.core.config import ASSETS_DIR
 from src.core.season import profil as profil_de
 from src.ui import theme
 from src.ui.background_widget import (
-    _VOILE_ALPHA, _ZOOM_MAX, _ZOOM_MIN, _ZOOM_STEP, BackgroundWidget, construire_voiles,
+    _ETENDU_VOILE_FLOU, _VOILE_ALPHA, _ZOOM_MAX, _ZOOM_MIN, _ZOOM_STEP, BackgroundWidget,
+    construire_voiles, doit_etendre,
 )
 from src.ui.particles import _FORMES, _Particle
 from src.ui.ticker import TICK_MS, Ticker
@@ -46,7 +47,6 @@ except ImportError:                                    # pragma: no cover
 log = logging.getLogger(__name__)
 
 _QML = ASSETS_DIR / "qml" / "FondAccueil.qml"
-_ETENDU_RATIO = 1.2
 
 
 def actif() -> bool:
@@ -63,21 +63,6 @@ def actif() -> bool:
     if force in ("0", "1"):
         return force == "1"
     return sys.platform == "win32"
-
-
-@functools.cache
-def _ambiance(chemin: Path) -> QColor:
-    """La couleur dominante du bas d'une image, assombrie : le prolongement du bandeau.
-    Gardée par chemin : la calculer décodait le JPEG, 10 ms à chaque changement de jeu."""
-    img = QImage(str(chemin))
-    if img.isNull():
-        return theme.bg_qcolor(255)
-    bas = img.copy(0, img.height() * 2 // 3, img.width(), img.height() // 3).scaled(16, 4)
-    # La plus saturée des cases, pas la moyenne : une moyenne tire vers un gris boueux.
-    meilleure = max((bas.pixelColor(x, y) for x in range(16) for y in range(4)),
-                    key=lambda c: c.hsvSaturationF() * (0.3 + c.valueF()))
-    h, s, _, _ = meilleure.getHsvF()
-    return QColor.fromHsvF(max(0.0, h), min(1.0, s * 1.1), 0.18)
 
 
 # Les formes des particules sont peintes une fois, agrandies de ce facteur, puis
@@ -186,7 +171,9 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
         if self._racine is not None:
             self._racine.setProperty("fond", theme.bg_qcolor(255))
             self._racine.setProperty("voileAlpha", _VOILE_ALPHA / 255)
+            self._racine.setProperty("parallaxeMaxX", self.PARALLAX_MAX_X)
             self._racine.setProperty("parallaxeMaxY", self.PARALLAX_MAX_Y)
+            self._racine.setProperty("etenduVoileFlou", _ETENDU_VOILE_FLOU / 255)
             log.info("Fond de l'accueil sur la carte graphique (%s)",
                      self.quickWindow().rendererInterface().graphicsApi().name)
 
@@ -326,16 +313,13 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
     def set_image(self, path: Path | None) -> None:
         self._source = str(path) if path and path.exists() else ""
         self._taille_image = QImageReader(self._source).size() if self._source else QSize()
-        self._poser("ambiance", _ambiance(Path(self._source)) if self._source else theme.bg_qcolor(255))
         self._poser("etendu", self._doit_etendre(self.width(), self.height()))
         self._poser("source", QUrl.fromLocalFile(self._source) if self._source else QUrl())
 
     def _doit_etendre(self, w: int, h: int) -> bool:
         """Même règle que `BackgroundWidget._doit_etendre`."""
-        iw, ih = self._taille_image.width(), self._taille_image.height()
-        if iw <= 0 or ih <= 0 or w <= 0 or h <= 0 or iw / ih < (w / h) * _ETENDU_RATIO:
-            return False
-        return h * self.devicePixelRatioF() * self.MAX_SCALE > ih
+        return doit_etendre(self._taille_image.width(), self._taille_image.height(),
+                            w, h, self.devicePixelRatioF(), self.MAX_SCALE)
 
 
 class ParticulesGPU:

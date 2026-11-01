@@ -21,6 +21,12 @@ JAQUETTE_HAUTEUR_MIN = 900
 # Au-delà de cet écart de proportions, recadrer coupe le sujet : une jaquette
 # carrée perd un tiers de sa largeur dans une vignette en portrait.
 ECART_PROPORTIONS = 0.12
+# Fonds AGRANDIS (2026-11-02, Real-ESRGAN) : leur taille d'origine. Agrandir rend
+# l'image nette, pas faite pour le launcher : l'appel aux artistes se juge sur elle.
+TAILLE_AVANT_AGRANDISSEMENT: dict[str, tuple[int, int]] = {
+    "hp1": (1920, 620), "hp2": (1920, 620), "hp3": (920, 430), "hp4": (1500, 844),
+    "hp5": (849, 274), "hp6": (1920, 620), "hp7a": (1920, 620), "hp7b": (1920, 620),
+}
 
 
 def jaquette_a_refaire(largeur: int, hauteur: int) -> bool:

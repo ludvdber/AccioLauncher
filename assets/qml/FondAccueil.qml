@@ -20,15 +20,17 @@ Item {
     property bool video: false
     property url voiles
     property color fond: "#060611"
-    property color ambiance: "#0b0d1e"
     property real voileAlpha: 38 / 255
     property real debord: 2
+    property real parallaxeMaxX: 20
     property real parallaxeMaxY: 12
     // Fond étendu (voir `fond_gpu._doit_etendre`) : décidé par Python, qui connaît
     // la taille de l'image et l'échelle de l'écran.
     property bool etendu: false
     property real etenduMarge: 1.06
     property real etenduFondu: 0.32
+    property real etenduVoileFlou: 100 / 255
+    property int etenduBandes: 48
 
     readonly property alias sortieVideo: sortie
 
@@ -61,30 +63,69 @@ Item {
             asynchronous: true; smooth: true; mipmap: true
         }
 
-        // ── Bandeau étendu : net en haut, ancré en haut, fondu dans sa propre couleur ──
+        // ── Bandeau étendu (`BackgroundWidget._peindre_etendu`) : la copie floue plein
+        // cadre, en retrait, puis l'image nette en haut, dont le bas s'efface dedans ──
         Item {
             anchors.fill: parent
             visible: racine.etendu
-            Rectangle { anchors.fill: parent; color: racine.ambiance }
+            // Le flou : une copie minuscule agrandie deux fois en lissage (texture
+            // du calque au quart, puis plein cadre), comme le chemin QPainter.
+            Item {
+                x: -racine.parallaxeMaxX + racine.parallaxeX * 0.5
+                y: -racine.parallaxeMaxY + racine.parallaxeY * 0.5
+                width: parent.width + 2 * racine.parallaxeMaxX
+                height: parent.height + 2 * racine.parallaxeMaxY
+                layer.enabled: racine.etendu
+                layer.textureSize: Qt.size(Math.max(1, Math.round(racine.width / 4)), Math.max(1, Math.round(racine.height / 4)))
+                layer.smooth: true
+                Image {
+                    anchors.fill: parent
+                    source: racine.etendu ? racine.source : ""
+                    sourceSize: Qt.size(Math.max(1, Math.round(racine.width / 24)), Math.max(1, Math.round(racine.height / 24)))
+                    fillMode: Image.Stretch
+                    asynchronous: true; smooth: true
+                }
+            }
+            // En retrait : en grand écran, le bas de l'image y revenait en « fantôme ».
+            Rectangle { anchors.fill: parent; color: Qt.rgba(racine.fond.r, racine.fond.g, racine.fond.b, racine.etenduVoileFlou) }
             Item {
                 id: bandeau
                 width: parent.width * racine.etenduMarge * racine.zoom
                 height: net.implicitWidth > 0 ? width * net.implicitHeight / net.implicitWidth : 0
                 x: (parent.width - width) / 2 + racine.parallaxeX
                 y: -racine.parallaxeMaxY + racine.parallaxeY
-                Image {
-                    id: net
-                    anchors.fill: parent
-                    source: racine.etendu ? racine.source : ""
-                    fillMode: Image.Stretch
-                    asynchronous: true; smooth: true; mipmap: true
+                // Le haut, opaque ; texture chargée une fois, partagée par les bandes.
+                Item {
+                    width: parent.width; height: parent.height * (1 - racine.etenduFondu)
+                    clip: true
+                    Image {
+                        id: net
+                        width: bandeau.width; height: bandeau.height
+                        source: racine.etendu ? racine.source : ""
+                        fillMode: Image.Stretch
+                        asynchronous: true; smooth: true; mipmap: true
+                    }
                 }
-                Rectangle {
-                    y: parent.height * (1 - racine.etenduFondu)
-                    width: parent.width; height: parent.height * racine.etenduFondu + 1
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: Qt.rgba(racine.ambiance.r, racine.ambiance.g, racine.ambiance.b, 0) }
-                        GradientStop { position: 1.0; color: racine.ambiance }
+                // Le bas s'efface en bandes fines d'opacité décroissante (rognées par
+                // le GPU, même texture) : le flou se voit dessous, comme le masque
+                // `DestinationIn` du chemin QPainter.
+                Repeater {
+                    model: racine.etendu ? racine.etenduBandes : 0
+                    Item {
+                        required property int index
+                        readonly property real haut: bandeau.height * (1 - racine.etenduFondu)
+                        readonly property real pas: bandeau.height * racine.etenduFondu / racine.etenduBandes
+                        y: haut + index * pas
+                        width: bandeau.width; height: Math.ceil(pas) + 1
+                        clip: true
+                        opacity: 1 - (index + 0.5) / racine.etenduBandes
+                        Image {
+                            y: -parent.y
+                            width: bandeau.width; height: bandeau.height
+                            source: net.source
+                            fillMode: Image.Stretch
+                            asynchronous: true; smooth: true; mipmap: true
+                        }
                     }
                 }
             }
