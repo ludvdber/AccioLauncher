@@ -84,9 +84,15 @@ def texte(contenu: str, px: int = 13, encre: str = ENCRE,
     return lbl
 
 
-def surtitre(contenu: str) -> QLabel:
-    """Le petit titre doré en capitales espacées qui annonce une carte."""
+def surtitre(contenu: str, *, a_la_ligne: bool = False) -> QLabel:
+    """Le petit titre doré en capitales espacées qui annonce une carte.
+
+    `a_la_ligne` : dans un rail étroit, « JOURNAL DES CHANGEMENTS » se coupait en
+    « JOURNAL DES CHANGEM » (2026-11-01) ; il passe à la ligne comme le nom du jeu."""
     lbl = QLabel(contenu.upper())
+    if a_la_ligne:
+        lbl.setWordWrap(True)
+        lbl.setMinimumWidth(1)
     f = cinzel(8, bold=True)
     f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 2.5)
     lbl.setFont(f)

@@ -264,6 +264,7 @@ class TestModeles:
                                           (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
                                           (maillages_ue1.Materiau("", 0),))
         mouvements = (maillages_ue1.Mouvement("Jump", "None", 0.3, 9, (), ()),
+                      maillages_ue1.Mouvement("mouth_rest", "None", 1.0, 2, (), ()),
                       maillages_ue1.Mouvement("breath", "None", 2.0, 60, (), ()))
         animation = maillages_ue1.Animation("skAnims", mouvements)
         monkeypatch.setattr(maillages_ue1, "de_la_fiche", lambda dossier, fiche, cote=512: (triangle, {}, animation))
@@ -274,12 +275,15 @@ class TestModeles:
         qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=5000)
         scene = vue.scene
         assert scene is not None and not scene._commandes.isHidden()
-        assert [scene.mouvements.itemText(i) for i in range(scene.mouvements.count())] == ["Jump", "breath"]
-        assert scene.mouvements.currentText() == "breath"      # l'attente d'abord
+        # Traduits à l'écran, le nom du jeu en donnée ; le visage (« mouth_rest ») écarté.
+        liste = scene.mouvements
+        assert [liste.itemText(i) for i in range(liste.count())] == ["Sauter", "Respirer"]
+        assert [liste.itemData(i) for i in range(liste.count())] == ["Jump", "breath"]
+        assert liste.currentData() == "breath"                 # l'attente d'abord
         assert scene.modele.mouvement is None
         scene.bouton_animer.click()
         assert scene.modele.mouvement == "breath" and scene.bouton_animer.text() == "Figer"
-        scene.mouvements.setCurrentText("Jump")                 # changer en cours de route
+        liste.setCurrentIndex(liste.findData("Jump"))          # changer en cours de route
         assert scene.modele.mouvement == "Jump"
         scene.bouton_animer.click()
         assert scene.modele.mouvement is None and scene.bouton_animer.text() == "Animer"

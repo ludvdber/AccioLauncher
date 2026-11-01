@@ -192,6 +192,24 @@ class TestPage:
                 if lbl.wordWrap():
                     assert lbl.height() >= lbl.heightForWidth(lbl.width()), lbl.text()[:40]
 
+    def test_le_bas_se_fond_tant_qu_il_reste_a_lire(self, qtbot):
+        """Les cartes du bas étaient coupées net par le pied (revue du 2026-11-01)."""
+        from PyQt6.QtWidgets import QScrollArea
+        page = self._page(qtbot)
+        page.resize(1000, 520)
+        page.show()
+        qtbot.waitExposed(page)
+        zone = page.findChild(QScrollArea)
+        barre = zone.verticalScrollBar()
+        assert barre.maximum() > 0, "la page doit déborder à 520 px de haut"
+        assert page.fondu.isVisible()
+        assert page.fondu.geometry().bottom() == zone.viewport().geometry().bottom()
+        barre.setValue(barre.maximum())
+        assert not page.fondu.isVisible(), "tout est lu : plus de fondu"
+        page.resize(1000, 4000)
+        qtbot.waitUntil(lambda: barre.maximum() == 0)
+        assert not page.fondu.isVisible()
+
     def test_chaque_changement_a_sa_ligne(self, qtbot):
         from src.ui.nouveautes_page import _LigneChangement
         page = self._page(qtbot)

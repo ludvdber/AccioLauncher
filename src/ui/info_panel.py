@@ -217,7 +217,17 @@ class InfoPanel(QWidget):
     def _apply_desc_truncation(self) -> None:
         limite = self._desc_budget()
         if len(self._full_desc) > limite:
-            self._desc.setText(self._full_desc[:limite].rstrip() + "…")
+            # Coupé à la fin d'un mot : « dans l'aventure la plus immersive de la série. Re… »
+            # (HP5, 2026-11-01).
+            coupe = self._full_desc[:limite]
+            if not self._full_desc[limite].isspace() and " " in coupe:
+                coupe = coupe.rsplit(" ", 1)[0]
+            # Ni sur un article ni sur une conjonction : « …de potions et le… ».
+            for _ in range(2):
+                tete, _, dernier = coupe.rstrip(" ,;:.—-").rpartition(" ")
+                if tete and len(dernier) <= 3 and dernier.islower():
+                    coupe = tete
+            self._desc.setText(coupe.rstrip(" ,;:.—-") + "…")
             self._btn_expand.setText(tr("Lire la suite…"))
             self._btn_expand.setVisible(self.description_montree())
         else:
@@ -410,6 +420,7 @@ class InfoPanel(QWidget):
             "QLabel { color: #d6a72c; background: transparent; padding-top: 4px; }"
             "QLabel:hover { color: #e8c547; }"
         ))
+        self._btn_expand.setIndent(0)
         self._btn_expand.setVisible(False)
         self._btn_expand.clicked.connect(self._toggle_desc)
         lay.addWidget(self._btn_expand)

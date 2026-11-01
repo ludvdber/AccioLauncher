@@ -115,6 +115,24 @@ class TestDescriptionEntreJeux:
                 f"{entry.game.id} : bouton={info._btn_expand.isVisible()} "
                 f"alors que tronqué={tronque}")
 
+    def test_la_coupe_tombe_entre_deux_mots(self, make_window, qtbot, mise_en_page_stable):
+        """« …de la série. Re… » (HP5, 2026-11-01) : la coupe finit un mot, et
+        « Lire la suite » part du même bord que le paragraphe (4 px de retrait Qt)."""
+        win = make_window()
+        win.show()
+        info = win._detail._info
+        assert info._btn_expand.indent() == 0
+        for entry in win.manager.get_games():
+            win._detail.set_game(entry.game)
+            mise_en_page_stable(win)
+            texte = info._desc.text()
+            if texte == info._full_desc:
+                continue
+            garde = texte.removesuffix("…")
+            reste = info._full_desc[len(garde):]
+            assert info._full_desc.startswith(garde)
+            assert not reste or not reste[0].isalnum(), f"{entry.game.id} : « {garde[-12:]}… »"
+
 
 
 def _reste_a_defiler(qtbot, win, timeout: int = 1000) -> int:

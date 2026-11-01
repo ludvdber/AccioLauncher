@@ -73,6 +73,21 @@ _ZOOM_MAX = 1.05
 _ZOOM_LEG_MS = 8000
 _ZOOM_STEP = TICK_MS / _ZOOM_LEG_MS
 
+# Fond ÉTENDU (2026-11-01). Les illustrations du dépôt sont des BANDEAUX : 1920 × 620,
+# 920 × 430 pour HP3. Pour couvrir une fenêtre de 1400 × 860 à 125 %, le cadrage
+# « cover » les agrandissait jusqu'à ×2,4 (×1,87 pour un bandeau de 1920) : c'est la
+# pixelisation de l'accueil, le visage carré de HP2. Quand l'image est nettement plus
+# large que la fenêtre ET qu'il faudrait l'agrandir, elle est posée NETTE sur toute la
+# largeur, en haut, à la résolution physique de l'écran ; en dessous, elle se prolonge
+# floutée (une copie minuscule agrandie en lissage). Le bas de l'image nette se fond
+# dans le flou sur `_ETENDU_FONDU` de sa hauteur. Une illustration 16:9 en haute
+# définition retombe toute seule sur le cadrage d'origine.
+_ETENDU_RATIO = 1.2       # image plus large que la fenêtre d'au moins 20 %
+_ETENDU_MARGE = 1.06      # de quoi absorber la parallaxe sans montrer de bord
+_ETENDU_FONDU = 0.32
+_ETENDU_FLOU = 24         # la copie floue fait 1/24 de la fenêtre
+_ETENDU_VOILE_FLOU = 100  # sur 255 : le flou reste un décor, pas une seconde image
+
 
 class BackgroundWidget(QWidget):
     """Image de fond avec zoom lent continu, parallaxe souris,
@@ -88,6 +103,9 @@ class BackgroundWidget(QWidget):
         self._pixmap: QPixmap | None = None
         self._prepared: QPixmap | None = None
         self._prepared_for: tuple[int, int] = (0, 0)
+        # Fond étendu : l'image nette (bas fondu) et sa copie floue, voir `_ETENDU_RATIO`.
+        self._etendu = False
+        self._flou: QPixmap | None = None
         self._opacity = 1.0
         self._video_frame: QImage | None = None
         # Cross-fade entre jeux : snapshot de l'ancien rendu peint sous le
@@ -288,8 +306,16 @@ class BackgroundWidget(QWidget):
         w, h = self.width(), self.height()
         if w <= 0 or h <= 0:
             return
-        if self._prepared and self._prepared_for == (w, h):
+        # L'image nette du fond étendu est à la résolution PHYSIQUE : une fenêtre
+        # glissée sur un écran d'une autre échelle la refait.
+        if (self._prepared and self._prepared_for == (w, h)
+                and (not self._etendu or self._prepared.devicePixelRatio() == self.devicePixelRatioF())):
             return
+        self._etendu = self._doit_etendre(w, h)
+        if self._etendu and self._pixmap is not None:
+            self._preparer_etendu(self._pixmap, w, h)
+            return
+        self._flou = None
         tw = int(w * self.MAX_SCALE)
         th = int(h * self.MAX_SCALE)
         self._prepared = self._pixmap.scaled(
@@ -297,6 +323,44 @@ class BackgroundWidget(QWidget):
             Qt.AspectRatioMode.KeepAspectRatioByExpanding,
             Qt.TransformationMode.SmoothTransformation,
         )
+        self._prepared_for = (w, h)
+
+    def _doit_etendre(self, w: int, h: int) -> bool:
+        """Un bandeau qu'il faudrait agrandir pour couvrir la fenêtre."""
+        pix = self._pixmap
+        if pix is None or pix.isNull() or pix.height() <= 0:
+            return False
+        if pix.width() / pix.height() < (w / h) * _ETENDU_RATIO:
+            return False
+        dpr = self.devicePixelRatioF()
+        return h * dpr * self.MAX_SCALE > pix.height()
+
+    def _preparer_etendu(self, source: QPixmap, w: int, h: int) -> None:
+        dpr = self.devicePixelRatioF()
+        # À la résolution PHYSIQUE : préparée en pixels logiques puis agrandie par
+        # l'échelle d'affichage, l'image perdait encore en netteté à 125 %.
+        net = source.scaledToWidth(max(1, math.ceil(w * _ETENDU_MARGE * dpr)),
+                                   Qt.TransformationMode.SmoothTransformation)
+        fondu = QPixmap(net.size())
+        fondu.fill(Qt.GlobalColor.transparent)
+        q = QPainter(fondu)
+        q.drawPixmap(0, 0, net)
+        q.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
+        g = QLinearGradient(0, 0, 0, net.height())
+        g.setColorAt(0.0, QColor(0, 0, 0, 255))
+        g.setColorAt(1.0 - _ETENDU_FONDU, QColor(0, 0, 0, 255))
+        g.setColorAt(1.0, QColor(0, 0, 0, 0))
+        q.fillRect(fondu.rect(), g)
+        q.end()
+        fondu.setDevicePixelRatio(dpr)
+        self._prepared = fondu
+        petit = source.scaled(max(1, w // _ETENDU_FLOU), max(1, h // _ETENDU_FLOU),
+                              Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                              Qt.TransformationMode.SmoothTransformation)
+        # Deux agrandissements lissés : un seul laissait voir la grille de la copie.
+        self._flou = petit.scaled(max(1, w // 4), max(1, h // 4),
+                                  Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                  Qt.TransformationMode.SmoothTransformation)
         self._prepared_for = (w, h)
 
     def _cle_fixe(self, w: int, h: int) -> tuple | None:
@@ -366,7 +430,9 @@ class BackgroundWidget(QWidget):
                 p.drawImage(QRectF(dx, dy, draw_w, draw_h), self._video_frame)
         else:
             self._ensure_prepared()
-            if self._prepared and w > 0 and h > 0:
+            if self._etendu and self._prepared and self._flou and w > 0 and h > 0:
+                self._peindre_etendu(p, self._prepared, self._flou, w, h)
+            elif self._prepared and w > 0 and h > 0:
                 pw, ph = float(self._prepared.width()), float(self._prepared.height())
                 widget_ar = w / h
                 prep_ar = pw / ph
@@ -436,6 +502,21 @@ class BackgroundWidget(QWidget):
         if not self._cinema:
             p.fillRect(QRectF(0, h - _DEBORD_PX, w, _DEBORD_PX * 2),
                        theme.bg_qcolor(255))
+
+    def _peindre_etendu(self, p: QPainter, net: QPixmap, flou: QPixmap, w: int, h: int) -> None:
+        """Le flou plein cadre, puis l'image nette en haut, zoom ancré en haut."""
+        mx, my = self.PARALLAX_MAX_X, self.PARALLAX_MAX_Y
+        p.drawPixmap(QRectF(-mx - self._parallax_cx * 0.5, -my - self._parallax_cy * 0.5,
+                            w + 2 * mx, h + 2 * my),
+                     flou, QRectF(flou.rect()))
+        # Le flou en retrait : en grand écran, le bas de l'image y revenait en
+        # « fantôme » (le Vif d'or de HP1 doublé sous lui-même).
+        p.fillRect(QRectF(0, 0, w, h), theme.bg_qcolor(_ETENDU_VOILE_FLOU))
+        dpr = net.devicePixelRatio()
+        dw = net.width() / dpr * self._zoom
+        dh = net.height() / dpr * self._zoom
+        p.drawPixmap(QRectF((w - dw) / 2 - self._parallax_cx, -my - self._parallax_cy, dw, dh),
+                     net, QRectF(net.rect()))
 
     def _ensure_overlay(self, w: int, h: int) -> None:
         """(Re)construit le pixmap des overlays statiques si la taille a changé."""

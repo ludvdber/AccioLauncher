@@ -9,13 +9,14 @@ Une PAGE à la place de la bibliothèque (`pages.py`), comme Mes années : pas u
 fenêtre posée sur la fiche, qu'on fermerait sans la lire.
 """
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QEvent, QObject, Qt
+from PyQt6.QtGui import QFont, QLinearGradient, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -34,7 +35,7 @@ from src.ui.composants import (
 )
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import accent_qcolor, current as current_theme, themed
+from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
 
 _MARGES = (64, 30, 64, 28)
@@ -151,6 +152,47 @@ class _LigneChangement(QWidget):
         h.addWidget(phrase, stretch=1)
 
 
+class _FonduBas(QWidget):
+    """Le bas de la zone qui défile se fond dans la page tant qu'il reste à lire.
+
+    Les cartes du bas étaient coupées net par le pied, au milieu d'une phrase :
+    la page paraissait finie alors qu'elle continuait (revue du 2026-11-01).
+    Enfant de la ZONE, pas du viewport : `QWidget.scroll` déplacerait aussi ses
+    enfants."""
+
+    HAUTEUR = 64
+
+    def __init__(self, zone: QScrollArea) -> None:
+        super().__init__(zone)
+        self._zone = zone
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        barre = zone.verticalScrollBar()
+        barre.valueChanged.connect(self._suivre)
+        barre.rangeChanged.connect(self._suivre)
+        zone.installEventFilter(self)
+        self._suivre()
+
+    def eventFilter(self, objet: QObject | None, evenement: QEvent | None) -> bool:
+        if evenement is not None and evenement.type() == QEvent.Type.Resize:
+            self._suivre()
+        return False
+
+    def _suivre(self, *_: int) -> None:
+        cadre = self._zone.viewport().geometry()
+        self.setGeometry(cadre.left(), cadre.bottom() + 1 - self.HAUTEUR, cadre.width(), self.HAUTEUR)
+        barre = self._zone.verticalScrollBar()
+        self.setVisible(barre.maximum() - barre.value() > 4)
+        self.raise_()
+
+    def paintEvent(self, event: QPaintEvent | None) -> None:
+        p = QPainter(self)
+        degrade = QLinearGradient(0, 0, 0, self.height())
+        degrade.setColorAt(0.0, bg_qcolor(0))
+        degrade.setColorAt(1.0, bg_qcolor(255))
+        p.fillRect(self.rect(), degrade)
+        p.end()
+
+
 class NouveautesPage(QDialog):
     """Ce qu'apporte la version installée du launcher."""
 
@@ -164,7 +206,9 @@ class NouveautesPage(QDialog):
         racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
-        racine.addWidget(zone_defilable(self._contenu(apres_mise_a_jour)), stretch=1)
+        zone = zone_defilable(self._contenu(apres_mise_a_jour))
+        self.fondu = _FonduBas(zone)
+        racine.addWidget(zone, stretch=1)
         racine.addWidget(self._pied())
 
     def _contenu(self, apres_mise_a_jour: bool) -> QWidget:

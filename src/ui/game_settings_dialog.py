@@ -266,7 +266,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         nom.setStyleSheet("color: #f4f2f8; background: transparent;")
         nom.setMinimumWidth(1)
         noms.addWidget(nom)
-        noms.addWidget(surtitre(tr("Réglages du jeu")))
+        noms.addWidget(surtitre(tr("Réglages du jeu"), a_la_ligne=True))
         identite.addLayout(noms, stretch=1)
         lay.addLayout(identite)
         lay.setAlignment(identite, Qt.AlignmentFlag.AlignTop)

@@ -1,14 +1,14 @@
 """Utilitaires Qt partagés entre les widgets UI."""
 
-from PyQt6.QtCore import QEvent, QObject, Qt, QUrl
-from PyQt6.QtGui import QDesktopServices, QIcon
+from PyQt6.QtCore import QEvent, QObject, QPointF, Qt, QUrl
+from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QAbstractScrollArea, QApplication, QComboBox, QLayout, QListView, QMessageBox, QScrollArea,
     QWidget,
 )
 
 from src.core.config import ASSETS_DIR
-from src.ui.theme import themed
+from src.ui.theme import accent_qcolor, themed
 
 _ICONE = ASSETS_DIR / "accio_launcher.ico"
 # Repli hors Windows : le .ico est un format Windows, et le portage Linux est
@@ -100,10 +100,38 @@ def liste_deroulante() -> QComboBox:
     mis en évidence pour la manette, surtout les dropdown »). Une QListView posée
     explicitement prend le délégué standard, qui lit la feuille de style.
     """
-    liste = QComboBox()
+    liste = _ListeDeroulante()
     liste.setView(QListView(liste))
     liste.installEventFilter(_SansMolette(liste))
     return liste
+
+
+class _ListeDeroulante(QComboBox):
+    """Un chevron à droite : une liste se reconnaît comme telle.
+
+    Avec une feuille de style, `::drop-down` sans `::down-arrow` ne dessine
+    AUCUNE flèche : les listes des réglages et des mouvements 3D se lisaient
+    comme des champs de saisie (revue des écrans, 2026-11-01). Peint ici plutôt
+    qu'en `image: url()` : la feuille de style ne connaît pas l'échelle
+    d'affichage ni la couleur du thème."""
+
+    def paintEvent(self, event: QPaintEvent | None) -> None:
+        super().paintEvent(event)
+        if not self.isEnabled():
+            couleur = QColor(111, 109, 142)
+        elif self.underMouse() or self.view().isVisible():
+            couleur = accent_qcolor()
+        else:
+            couleur = QColor(228, 226, 239, 150)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        stylo = QPen(couleur, 1.6)
+        stylo.setCapStyle(Qt.PenCapStyle.RoundCap)
+        stylo.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        p.setPen(stylo)
+        cx, cy = self.width() - 14.0, self.height() / 2 + 1
+        p.drawPolyline([QPointF(cx - 4, cy - 2), QPointF(cx, cy + 2), QPointF(cx + 4, cy - 2)])
+        p.end()
 
 
 class _SansMolette(QObject):

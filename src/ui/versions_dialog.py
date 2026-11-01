@@ -238,7 +238,7 @@ class VersionsDialog(QDialog):
         nom.setStyleSheet("color: #f4f2f8; background: transparent;")
         nom.setMinimumWidth(1)
         noms.addWidget(nom)
-        noms.addWidget(surtitre(tr("Journal des changements")))
+        noms.addWidget(surtitre(tr("Journal des changements"), a_la_ligne=True))
         identite.addLayout(noms, stretch=1)
         lay.addLayout(identite)
         lay.addSpacing(18)

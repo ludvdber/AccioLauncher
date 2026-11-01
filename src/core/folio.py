@@ -458,10 +458,17 @@ def textes_hp1(fichier: Path | None) -> tuple[dict[int, Carte], dict[str, str]]:
             continue
         morceaux = re.split(r"\.\s+", brut, maxsplit=2)
         nom = morceaux[0].strip()
-        dates = morceaux[1].strip() if len(morceaux) > 1 else ""
+        dates = _sans_naissance_inconnue(morceaux[1].strip()) if len(morceaux) > 1 else ""
         corps = morceaux[2].strip() if len(morceaux) > 2 else ""
         cartes[numero] = Carte(numero, nom, dates, corps)
     return cartes, titres
+
+
+def _sans_naissance_inconnue(dates: str) -> str:
+    """« ??? - vit encore » → « Vit encore » (Harry et Dumbledore, « ???? - present »
+    en anglais) : la fiche affichait les points d'interrogation du jeu (2026-11-01)."""
+    reste = re.sub(r"^\?+\s*-\s*", "", dates)
+    return reste[:1].upper() + reste[1:] if reste != dates else dates
 
 
 def lieu(titres: dict[str, str], niveau: str) -> str:

@@ -27,17 +27,17 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import discographie, encyclopedie, maillages_ue1
-from src.core.i18n import dans_la_langue, tr
-from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, texte
+from src.core import discographie, encyclopedie, maillages_ue1, mouvements
+from src.core.i18n import dans_la_langue, get_language, tr
+from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, police, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.modele_3d import Modele3D, mouvement_de_repos
 from src.ui.theme import accent_qcolor, current as current_theme, themed
-from src.ui.utils import clear_layout, zone_defilable
+from src.ui.utils import clear_layout, liste_deroulante, zone_defilable
 
 _LARGEUR_FICHE = 400
 _IMAGE = QSize(96, 120)          # une carte de HP4 est deux fois plus haute que large
@@ -216,11 +216,12 @@ class _Scene(QFrame):
         rang = QHBoxLayout(self._commandes)
         rang.setContentsMargins(0, 6, 0, 0)
         rang.setSpacing(10)
-        self.mouvements = QComboBox()
+        self.mouvements = liste_deroulante()
+        self.mouvements.setFont(police(13))
         self.mouvements.setStyleSheet(themed(_LISTE_STYLE))
         self.mouvements.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.mouvements.setToolTip(tr("Un mouvement du jeu, tel que ses fichiers le nomment"))
-        self.mouvements.currentTextChanged.connect(self._mouvement_choisi)
+        self.mouvements.setToolTip(tr("Un mouvement du jeu ; au survol d'une ligne, son nom dans les fichiers"))
+        self.mouvements.currentIndexChanged.connect(self._mouvement_choisi)
         self.bouton_animer = bouton(tr("Animer"))
         self.bouton_animer.clicked.connect(self.basculer_animation)
         rang.addWidget(self.mouvements, stretch=1)
@@ -248,27 +249,34 @@ class _Scene(QFrame):
             self.modele.poser(None)
         else:
             self.modele.poser(*modele, garder_vue=garder_vue)
-        noms = self.modele.mouvements()
+        # Le nom du jeu (« TalkLeft2 ») reste la donnée ; la ligne montre sa
+        # traduction (`core/mouvements.py`) et, au survol, le nom d'origine.
+        langue = get_language()
         self.mouvements.blockSignals(True)
         self.mouvements.clear()
-        self.mouvements.addItems(noms)
+        for nom in self.modele.mouvements():
+            libelle = mouvements.libelle(nom, langue)
+            if libelle is not None:
+                self.mouvements.addItem(libelle, nom)
+                self.mouvements.setItemData(self.mouvements.count() - 1, nom, Qt.ItemDataRole.ToolTipRole)
         if modele is not None and modele[2] is not None:
             repos = mouvement_de_repos(modele[2])
-            if repos is not None:
-                self.mouvements.setCurrentText(repos)
+            if repos is not None and self.mouvements.findData(repos) >= 0:
+                self.mouvements.setCurrentIndex(self.mouvements.findData(repos))
         self.mouvements.blockSignals(False)
         self.bouton_animer.setText(tr("Animer"))
-        self._commandes.setVisible(bool(noms))
+        self._commandes.setVisible(self.mouvements.count() > 0)
 
     def basculer_animation(self) -> None:
         """Lance le mouvement choisi, ou rend la pose de référence."""
         if self.modele.mouvement is not None:
             self.modele.animer(None)
             self.bouton_animer.setText(tr("Animer"))
-        elif self.modele.animer(self.mouvements.currentText()):
+        elif self.modele.animer(self.mouvements.currentData()):
             self.bouton_animer.setText(tr("Figer"))
 
-    def _mouvement_choisi(self, nom: str) -> None:
+    def _mouvement_choisi(self, _index: int) -> None:
+        nom = self.mouvements.currentData()
         if self.modele.mouvement is not None and nom:
             self.modele.animer(nom)
 

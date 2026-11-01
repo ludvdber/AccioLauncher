@@ -1426,7 +1426,7 @@
     "Glisser pour tourner · molette pour zoomer · double-clic pour revenir": "Drag to turn · scroll to zoom · double-click to reset",
     "Animer": "Animate",
     "Figer": "Freeze",
-    "Un mouvement du jeu, tel que ses fichiers le nomment": "A movement from the game, as its files name it",
+    "Un mouvement du jeu ; au survol d'une ligne, son nom dans les fichiers": "A movement from the game; hover a line to see its name in the files",
     "{} personnage": "{} character",
     "{} personnages": "{} characters",
     "{} créature": "{} creature",

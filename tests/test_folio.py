@@ -153,7 +153,7 @@ class TestTextesDuJeu:
         # est Dumbledore (texte 04), le 2 Merlin (texte 01), le 20 Hengist (texte 28).
         assert cartes[2] == folio.Carte(2, "Merlin", "Moyen Age, dates inconnues",
                                         "Le plus célèbre sorcier.")
-        assert cartes[1].dates == "??? - vit encore"
+        assert cartes[1].dates == "Vit encore", "pas de « ??? » pour une naissance inconnue"
         assert cartes[20].texte == "Ecosse, fondant.", "la variante corrigée « b » l'emporte"
         assert folio.lieu(titres, "LEV2_HOGFRONT") == "Parc de Poudlard"
 
