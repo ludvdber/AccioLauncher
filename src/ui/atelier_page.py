@@ -3,8 +3,9 @@
 Maquette « L'atelier, tous les métiers » validée par Ludo le 2026-10-14. Elle
 remplace l'encadré « Vous dessinez ? » d'À propos, qui ne parlait que des
 jaquettes et des fonds, et qu'on ne trouvait qu'en allant au bout des
-Paramètres. L'atelier s'ouvre depuis « Contribuer », dans la barre du haut, et
-depuis la pastille de la fiche quand l'image du jeu affiché cherche un artiste.
+Paramètres. L'atelier s'ouvre depuis « Contribuer », dans la barre du haut (la
+pastille de la fiche, « Ce fond cherche un artiste », a été retirée le 2026-11-02 :
+Ludo, l'onglet suffit).
 
 Contenu : `src/core/atelier.py`. Le rail reprend celui des réglages du jeu et
 des versions (même style, même retour « Bibliothèque »).

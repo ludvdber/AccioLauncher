@@ -15,7 +15,7 @@ Le métier « jaquettes » est le seul qui se remplit tout seul : il liste TOUTE
 les jaquettes et tous les fonds du catalogue (Ludo, 2026-10-14 : le but est
 aussi de ne plus dépendre des images de Warner, donc même une image nette peut
 être refaite). Celles que `images_a_refaire.py` juge trop petites sont
-« prioritaires » : elles seules allument la pastille de la fiche.
+« prioritaires » (marquées « en priorité » dans l'atelier).
 """
 
 import json
@@ -138,11 +138,3 @@ def charger(mesures: list[Besoin] | None = None, langue: str | None = None,
             tuple(t for t in (texte_dans(f, langue) for f in _liste(brut.get("formats"))) if t),
             besoins))
     return metiers
-
-
-def pour_le_jeu(mesures: list[Besoin], id_jeu: str) -> Besoin | None:
-    """Le besoin PRIORITAIRE du jeu affiché, pour la pastille de la fiche : le
-    fond d'abord, puisque c'est lui qui se voit en grand derrière la fiche.
-    Une image nette n'allume rien : l'atelier la liste, la fiche n'insiste pas."""
-    siens = [b for b in mesures if b.jeu == court(id_jeu) and b.prioritaire]
-    return next((b for b in siens if b.genre == FOND), siens[0] if siens else None)

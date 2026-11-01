@@ -69,15 +69,6 @@ class TestBesoinsMesures:
     def test_nom_court(self, id_jeu, court):
         assert atelier.court(id_jeu) == court
 
-    def test_la_fiche_montre_le_fond_d_abord(self):
-        besoins = atelier.besoins_mesures({"hp6": ((267, 400), (849, 274))}, LIBELLES)
-        assert atelier.pour_le_jeu(besoins, "hp6").genre == atelier.FOND
-        assert atelier.pour_le_jeu(besoins, "hp1") is None
-
-    def test_une_image_nette_n_allume_pas_la_fiche(self):
-        besoins = atelier.besoins_mesures({"hp4": ((1080, 1500), (3840, 2160))}, LIBELLES)
-        assert len(besoins) == 2 and atelier.pour_le_jeu(besoins, "hp4") is None
-
 
 class TestLecture:
     def test_le_metier_mesure_prend_les_mesures(self):
@@ -173,28 +164,10 @@ class TestPage:
         assert fermee
 
 
-class TestPastille:
-    def test_un_fond_trop_petit_cherche_un_artiste(self, qtbot, monkeypatch):
-        """Mesures simulées : le vrai fond de HP3 sera remplacé un jour."""
-        from PyQt6.QtWidgets import QWidget
-        from src.ui import atelier_page
-        from src.ui.pastille_atelier import PastilleAtelier
-        monkeypatch.setattr(atelier_page, "besoins_mesures", lambda _jeux: [
-            atelier.Besoin("HP3", "Fond d'écran", "", atelier.CHERCHE, atelier.FOND, True)])
-        hote = QWidget()
-        qtbot.addWidget(hote)
-        pastille = PastilleAtelier(hote)
-        pastille.pour("hp3", [_Jeu("hp3")])
-        assert not pastille.isHidden()
-        assert pastille.text().startswith("Ce fond cherche un artiste")
-
-    def test_rien_a_refaire_pas_de_pastille(self, qtbot, monkeypatch):
-        from PyQt6.QtWidgets import QWidget
-        from src.ui import atelier_page
-        from src.ui.pastille_atelier import PastilleAtelier
-        monkeypatch.setattr(atelier_page, "besoins_mesures", lambda _jeux: [])
-        hote = QWidget()
-        qtbot.addWidget(hote)
-        pastille = PastilleAtelier(hote)
-        pastille.pour("hp3", [_Jeu("hp3")])
-        assert pastille.isHidden()
+def test_la_fiche_ne_porte_plus_de_pastille_d_atelier(make_window):
+    """Ludo, 2026-11-02 : « Ce fond cherche un artiste » retiré de la fiche,
+    l'atelier s'ouvre par « Contribuer »."""
+    from PyQt6.QtWidgets import QPushButton
+    win = make_window()
+    assert not hasattr(win._detail, "_pastille_atelier")
+    assert not any("cherche un artiste" in (b.text() or "") for b in win._detail.findChildren(QPushButton))

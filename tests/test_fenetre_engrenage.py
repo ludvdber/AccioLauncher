@@ -298,23 +298,6 @@ class TestEngrenageReglagesDuJeu:
         page.reject()
         assert win._pages.page is None
 
-    def test_la_pastille_de_la_fiche_ouvre_les_jaquettes(self, make_window_multilingue, monkeypatch):
-        from src.core import atelier
-        from src.ui import atelier_page
-        from src.ui.atelier_page import AtelierPage
-
-        win, jeu = make_window_multilingue()
-        pastille = win._detail._pastille_atelier
-        pastille._mesures = [atelier.Besoin(atelier.court(jeu.id), "Fond d'écran", "",
-                                            atelier.CHERCHE, atelier.FOND, True)]
-        monkeypatch.setattr(atelier_page, "besoins_mesures", lambda _jeux: pastille._mesures)
-        pastille.pour(jeu.id, [jeu])
-        assert not pastille.isHidden()
-        pastille.click()
-        page = win._pages.page
-        assert isinstance(page, AtelierPage) and page.metier_affiche == "jaquettes"
-        page.reject()
-
 
     def test_la_rubrique_fichiers_expose_le_clic_droit(self, make_window_multilingue):
         """« Gérer les versions » et « Vérifier / réparer » n'étaient
