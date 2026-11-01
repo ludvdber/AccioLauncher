@@ -129,6 +129,23 @@ class TestLesJeuxDejaLa:
         assert dlg.checked_imports() == []
         assert dlg._btn_suivant.text() == "Suivant"
 
+    def test_chercher_ailleurs_puis_le_verdict_ne_plante_pas(self, assistant, tmp_path):
+        """Capture de Ludo, 2026-11-01 : la carte des jeux rebâtie (autre dossier
+        cherché, dossier d'installation changé) laissait son pictogramme dans
+        `_icones` ; le verdict repeignait ce QLabel détruit et l'assistant
+        tombait sur « wrapped C/C++ object of type QLabel has been deleted »."""
+        from PyQt6.QtCore import QCoreApplication, QEvent
+        from src.core.choixpeau import SERPENTARD
+        from src.ui.onboarding import VERDICT
+        dlg = assistant()
+        dlg._suivant()
+        dlg._dossier_cherche = tmp_path / "ailleurs"
+        dlg._regler_jeux()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)  # l'ancienne carte meurt
+        dlg._suivant()
+        _repondre_partout(dlg, SERPENTARD)   # change de thème : repeint les pictogrammes
+        assert dlg._ecran == VERDICT
+
 
 class TestLeChoixpeau:
     """Une question à la fois, et la maison PROPOSE ses couleurs sans les imposer."""

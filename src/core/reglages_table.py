@@ -223,11 +223,13 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Une manette PlayStation 4 ou 5 branchée est vue comme une manette Xbox, que le "
             "jeu connaît. Éteignez-le si Steam Input ou DS4Windows la convertissent déjà : le"
             " jeu la verrait deux fois.", onglet="manette"),
+    # HP4 ne connaît que des manettes de 2005 : son correctif lui apprend la DualShock 4,
+    # la DualSense, et montre une manette Xbox comme une DualShock 4 (correctif 2.3.0).
     Reglage("manette_playstation_hp4", "Accio.Game", "PlayStationController",
-            "Manette PlayStation reconnue",
-            "Une manette PlayStation 4 ou 5 branchée est vue comme une manette Xbox, que le "
-            "jeu connaît. Éteignez-le si Steam Input ou DS4Windows la convertissent déjà : le"
-            " jeu la verrait deux fois.", onglet="manette"),
+            "Manettes PlayStation et Xbox reconnues",
+            "Ce jeu ne connaît que des manettes de 2005 : allumé, il reconnaît aussi les "
+            "manettes PlayStation 4 ou 5 et Xbox. Éteignez-le si Steam Input ou DS4Windows "
+            "convertissent déjà la manette : le jeu la verrait deux fois.", onglet="manette"),
     Reglage("vibrations", "Accio.Controller", "Rumble",
             "Vibrations de la manette PlayStation",
             "Les vibrations d'une manette PlayStation branchée en USB. Sans effet en "

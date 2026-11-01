@@ -557,8 +557,13 @@ class OnboardingDialog(QDialog):
     def _regler_jeux(self) -> None:
         """Rebâtit la carte des jeux : ceux du dossier, puis ceux trouvés ailleurs."""
         if self._carte_jeux is not None:
-            self._hote_jeux.removeWidget(self._carte_jeux)
-            self._carte_jeux.deleteLater()
+            # Ses pictogrammes partent avec elle : restés dans `_icones`, le
+            # thème suivant (verdict du Choixpeau) repeignait un QLabel détruit
+            # — « wrapped C/C++ object … has been deleted » (Ludo, 2026-11-01).
+            ancienne = self._carte_jeux
+            self._icones = [i for i in self._icones if not ancienne.isAncestorOf(i[0])]
+            self._hote_jeux.removeWidget(ancienne)
+            ancienne.deleteLater()
         presents = {g.id for g, _ in self._en_place}
         self._ailleurs = []
         if self._dossier_cherche is not None:

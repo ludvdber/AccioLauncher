@@ -689,6 +689,8 @@
     "Fenêtre redimensionnable": "Resizable window",
     "Feuillage dense au loin": "Dense foliage in the distance",
     "Manette PlayStation reconnue": "PlayStation controller support",
+    "Manettes PlayStation et Xbox reconnues": "PlayStation and Xbox controller support",
+    "Ce jeu ne connaît que des manettes de 2005 : allumé, il reconnaît aussi les manettes PlayStation 4 ou 5 et Xbox. Éteignez-le si Steam Input ou DS4Windows convertissent déjà la manette : le jeu la verrait deux fois.": "This game only knows controllers from 2005: when on, it also recognises PlayStation 4 or 5 and Xbox controllers. Turn it off if Steam Input or DS4Windows already convert your controller: the game would see it twice.",
     "Maximale": "Maximum",
     "Mode d'affichage": "Display mode",
     "Netteté": "Sharpness",
