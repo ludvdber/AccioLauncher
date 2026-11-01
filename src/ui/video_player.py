@@ -19,10 +19,10 @@ from src.core import vp6_ea
 # démarrage de vidéo, donc chez l'utilisateur, fenêtre pleine.
 # Coût mesuré : +6 ms au démarrage, sur ~2 000. Rien à arbitrer.
 try:
-    from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoSink
+    from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoFrame, QVideoSink
     MULTIMEDIA_DISPONIBLE = True
 except ImportError:                                   # pragma: no cover
-    QAudioOutput = QMediaPlayer = QVideoSink = None   # type: ignore[assignment]
+    QAudioOutput = QMediaPlayer = QVideoFrame = QVideoSink = None   # type: ignore[assignment,misc]
     MULTIMEDIA_DISPONIBLE = False
 
 log = logging.getLogger(__name__)
@@ -103,6 +103,9 @@ class VideoPlayer(QObject):
         # `fond_gpu`) : les images y vont directement, sans `toImage()` (8 ms
         # par image en 1080p) ni peinture de la fenêtre. None : le chemin QPainter.
         self._sortie: QObject | None = None
+        # Le récepteur de cette sortie pendant une lecture : les images y sont
+        # RELAYÉES, une sur deux en fond (`_relayer`).
+        self._relais = None
 
     def set_sortie(self, sortie: QObject | None) -> None:
         """Envoie les images à une sortie de la carte graphique au lieu du signal
@@ -214,15 +217,22 @@ class VideoPlayer(QObject):
         # après un saut) : elle garde le chemin QPainter.
         sortie = self._sortie if self._index is None else None
         self._sink = QVideoSink(parent_widget)
-        self._sink.videoFrameChanged.connect(self._on_frame)
+        # Vers la carte graphique, les images passent quand même par notre récepteur :
+        # branché tout droit sur la sortie, le lecteur lui donnait ses 60 images/s et la
+        # fenêtre se recomposait 60 fois par seconde pour un fond (mesuré le 2026-11-01 :
+        # 21-26 % d'un cœur, 18-19 % en relayant une image sur deux). Relayer ne copie
+        # rien : la `QVideoFrame` reste dans la carte graphique.
+        self._relais = sortie.property("videoSink") if sortie is not None else None
+        self._sink.videoFrameChanged.connect(
+            self._relayer if self._relais is not None else self._on_frame)
         self._audio = QAudioOutput(parent_widget)
         self._audio.setVolume(volume)
         self._audio.setMuted(muted)
         self._muted = muted
         self._volume = volume
         self._player = QMediaPlayer(parent_widget)
-        self._player.setVideoOutput(sortie if sortie is not None else self._sink)
-        self._player.setAudioOutput(self._audio)
+        self._player.setVideoOutput(self._sink)
+        self._brancher_son()
         self._player.mediaStatusChanged.connect(self._on_media_status)
         # Relayés par des méthodes : un signal qint64 ne se branche pas sur un
         # signal int (« connect() failed », vu au premier vrai lancement).
@@ -249,7 +259,12 @@ class VideoPlayer(QObject):
             self._player.mediaStatusChanged.disconnect(self._on_media_status)
             self._player.positionChanged.disconnect(self._sur_position)
             self._player.durationChanged.disconnect(self._sur_duree)
-            self._sink.videoFrameChanged.disconnect(self._on_frame)
+            self._sink.videoFrameChanged.disconnect(
+                self._relayer if self._relais is not None else self._on_frame)
+            if self._relais is not None:
+                # La dernière image resterait affichée au début de la lecture suivante.
+                self._relais.setVideoFrame(QVideoFrame())
+                self._relais = None
             self._player.deleteLater()
             self._sink.deleteLater()
             self._audio.deleteLater()
@@ -263,6 +278,7 @@ class VideoPlayer(QObject):
             return self._muted
         self._muted = not self._muted
         self._audio.setMuted(self._muted)
+        self._brancher_son()
         return self._muted
 
     def set_muted(self, muted: bool) -> None:
@@ -270,6 +286,7 @@ class VideoPlayer(QObject):
         self._muted = muted
         if self._audio is not None:
             self._audio.setMuted(muted)
+            self._brancher_son()
 
     def set_volume(self, value_0_100: int) -> None:
         """Définit le volume (0-100). Unmute automatiquement si muté."""
@@ -278,7 +295,15 @@ class VideoPlayer(QObject):
         if self._muted:
             self._muted = False
             self._audio.setMuted(False)
+            self._brancher_son()
         self._audio.setVolume(value_0_100 / 100.0)
+
+    def _brancher_son(self) -> None:
+        """Muette, la lecture n'a pas de sortie audio : décoder et mixer un son que
+        personne n'entend coûtait 3 à 4 points d'un cœur (mesuré le 2026-11-01), et
+        les bandes-annonces sont muettes par défaut (`Config.mute_videos`)."""
+        if self._player is not None:
+            self._player.setAudioOutput(None if self._muted else self._audio)
 
     # ── Slots internes ──
 
@@ -292,6 +317,10 @@ class VideoPlayer(QObject):
         # Premier plan, ou retour en arrière (reprise, boucle) : on repart d'ici.
         self._derniere_us = debut_us
         return True
+
+    def _relayer(self, frame) -> None:
+        if self._relais is not None and frame.isValid() and self.a_monter(frame.startTime()):
+            self._relais.setVideoFrame(frame)
 
     def _on_frame(self, frame) -> None:
         if self._cible >= 0 and frame.isValid():

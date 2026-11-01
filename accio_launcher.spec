@@ -247,7 +247,7 @@ def _keep(entry):
 # `src/ui/fond_gpu.py` importe QtQuick et QtQuickWidgets ; le crochet de
 # PyInstaller embarque alors TOUS les modules QML de Qt (3D, contrôles,
 # physique, positionnement…) : l'exe passait de 46,6 à 72,6 Mo (2026-11-01).
-# `assets/qml/FondAccueil.qml` n'importe que QtQuick et QtMultimedia.
+# `assets/qml/FondAccueil.qml` n'importe que QtQuick et QtMultimedia, `EtoilesCarrousel.qml` que QtQuick.
 _QML_GARDES = ("pyqt6/qt6/qml/qtqml/", "pyqt6/qt6/qml/qtmultimedia/")
 _QML_RACINE_QTQUICK = "pyqt6/qt6/qml/qtquick/"
 _DLL_QUICK_INUTILES = (

@@ -459,7 +459,7 @@ class MainWindow(QMainWindow):
             self._detail.set_reduite(self.isMinimized())
             self._chrome.etat_change()
         if event.type() == QEvent.Type.ActivationChange:
-            if self.isActiveWindow():
+            if self.isActiveWindow() and not self.isMinimized():   # réduite, Qt la dit encore active
                 Ticker.instance().resume()
                 self._detail.resume_effects()
                 # Retour d'une installation de prérequis lancée depuis le

@@ -27,6 +27,7 @@ def test_une_fenetre_avec_le_fond_gpu(make_window, monkeypatch):
     win = make_window()
     assert isinstance(win._detail._bg, fond_gpu.FondGPU)
     assert isinstance(win._particles, fond_gpu.ParticulesGPU)
+    assert isinstance(win._carousel._gpu, fond_gpu.EtoilesGPU)
     win._carousel.select_next()
     win._particles.apply_season("noel")
 
@@ -84,3 +85,33 @@ def test_les_formes_sont_peintes_par_les_gestes_de_l_almanach():
         image = fond_gpu._image_forme(f"{forme}/240,220,180/6.00")
         assert not image.isNull()
         assert any(image.pixelColor(x, y).alpha() for x in range(image.width()) for y in range(image.height()))
+
+
+def test_les_etoiles_du_carrousel_avancent_sans_repeindre_la_bande(qtbot, monkeypatch):
+    from src.ui.carousel import Carousel
+    from tests.test_carousel import _FakeManager, _make_game
+    monkeypatch.setenv("ACCIO_FOND_GPU", "1")
+    c = Carousel([_make_game("a"), _make_game("b")], _FakeManager())
+    qtbot.addWidget(c)
+    c.resize(900, 192)
+    c.show()
+    assert c._gpu is not None and not c._gpu.errors()
+    assert c._gpu.geometry() == c.rect()
+    assert len(c._gpu._racine.property("etoiles")) == len(c._stars)
+    repeint = []
+    monkeypatch.setattr(c, "update", lambda *a: repeint.append(a))
+    c._tick_stars()
+    c._tick_stars()
+    assert c._star_phase > 0
+    assert c._gpu._racine.property("phase") == pytest.approx(c._star_phase)
+    assert not repeint
+
+
+def test_sans_la_scene_les_etoiles_restent_peintes_par_le_carrousel(qtbot, monkeypatch):
+    from src.ui.carousel import Carousel
+    from tests.test_carousel import _FakeManager, _make_game
+    monkeypatch.setenv("ACCIO_FOND_GPU", "1")
+    monkeypatch.setattr(fond_gpu.EtoilesGPU, "valide", lambda self: False)
+    c = Carousel([_make_game("a")], _FakeManager())
+    qtbot.addWidget(c)
+    assert c._gpu is None

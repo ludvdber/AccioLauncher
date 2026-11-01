@@ -294,8 +294,30 @@ _ICONES = {
 }
 
 
+# Éventails déjà peints, par jeu, dossier, cartes, échelle et langue. Les paquets
+# du jeu sont trop gros pour rester en mémoire (`textures_ue1._ouvrir` en garde
+# deux : 25 Mo pour HP2), et passer de HP1 à HP3 les relisait tous : 70 ms
+# d'analyse à chaque fiche (mesuré le 2026-11-01). Trois petites images, elles, se gardent.
+_EVENTAILS: dict[tuple, list[QPixmap]] = {}
+_EVENTAILS_MAX = 16
+
+
 def cartes_eventail(game_id: str, system: Path, releve, dpr: float) -> list[QPixmap]:
     """Les trois premières cartes trouvées, en petit ; vide sans le jeu installé."""
+    if game_id not in ("hp1", "hp2", "hp3"):
+        return _cartes_eventail(game_id, system, releve, dpr)
+    cle = (game_id, str(system), tuple(sorted(releve.cartes)), dpr, get_language())
+    if cle not in _EVENTAILS:
+        cartes = _cartes_eventail(game_id, system, releve, dpr)
+        if not cartes:
+            return cartes   # jeu absent ou paquet illisible : redemander la prochaine fois
+        if len(_EVENTAILS) >= _EVENTAILS_MAX:
+            _EVENTAILS.pop(next(iter(_EVENTAILS)))
+        _EVENTAILS[cle] = cartes
+    return _EVENTAILS[cle]
+
+
+def _cartes_eventail(game_id: str, system: Path, releve, dpr: float) -> list[QPixmap]:
     from src.ui.folio_page import pixmap_texture
     if not system.is_dir():
         return []

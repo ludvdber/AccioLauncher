@@ -12,7 +12,7 @@ from src.core.game_manager import GameManager
 from src.ui.carousel_item import CarouselItem, vignette_pour
 from src.ui.theme import accent_qcolor
 from src.ui.ticker import Ticker
-from src.ui import theme
+from src.ui import fond_gpu, theme
 
 
 # Hauteur de la bande. Elle est la CONTRAINTE : la vignette s'y plie
@@ -61,6 +61,17 @@ class Carousel(QWidget):
             is_gold = random.random() < 0.2
             phase = random.uniform(0, math.tau)
             self._stars.append((x, y, size, max_alpha, is_gold, phase))
+
+        # Les étoiles sur la carte graphique quand le fond de l'accueil y est :
+        # repeintes ici, elles recomposaient toute la fenêtre (`fond_gpu.EtoilesGPU`).
+        self._gpu: fond_gpu.EtoilesGPU | None = None
+        if fond_gpu.actif():
+            gpu = fond_gpu.EtoilesGPU(self._stars, self)
+            if gpu.valide():
+                gpu.lower()
+                self._gpu = gpu
+            else:
+                gpu.deleteLater()
 
         # Ticker partagé à ~30 FPS, mais repaint des étoiles 1 tick sur 2 (~15 FPS)
         self._star_flip = False
@@ -123,6 +134,9 @@ class Carousel(QWidget):
         if self._star_flip:
             return  # 1 tick sur 2 → ~15 FPS visuel pour le scintillement
         self._star_phase += 0.04
+        if self._gpu is not None:
+            self._gpu.poser_phase(self._star_phase)
+            return
         self.update(self._zone_des_etoiles())
 
     def _zone_des_etoiles(self) -> QRegion:
@@ -149,8 +163,15 @@ class Carousel(QWidget):
         return [QRect(item.mapTo(fenetre, QPoint(0, 0)), item.size())
                 for item in self._items if item.isVisible()]
 
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._gpu is not None:
+            self._gpu.setGeometry(self.rect())
+
     def paintEvent(self, event) -> None:
         """Dégradé vertical + étoiles scintillantes."""
+        if self._gpu is not None:
+            return   # la scène les dessine
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 

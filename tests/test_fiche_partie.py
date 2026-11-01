@@ -229,3 +229,37 @@ class TestPhrases:
         from src.ui.resume_partie import phrase_cartes
         set_language("fr")
         assert phrase_cartes(1) == "1 carte sur 25"
+
+
+class TestEventailGarde:
+    """Les paquets des jeux UE1 ne se relisent pas à chaque passage sur la fiche."""
+
+    def test_meme_jeu_memes_cartes_un_seul_peintre(self, tmp_path, monkeypatch, qapp):
+        from types import SimpleNamespace
+        from PyQt6.QtGui import QPixmap
+        from src.ui import resume_partie
+        monkeypatch.setattr(resume_partie, "_EVENTAILS", {})
+        appels = []
+        def peindre(game_id, system, releve, dpr):
+            appels.append(game_id)
+            return [QPixmap(4, 4)]
+        monkeypatch.setattr(resume_partie, "_cartes_eventail", peindre)
+        releve = SimpleNamespace(cartes={3, 1})
+        a = resume_partie.cartes_eventail("hp1", tmp_path, releve, 1.25)
+        b = resume_partie.cartes_eventail("hp1", tmp_path, releve, 1.25)
+        assert a is b and appels == ["hp1"]
+        releve.cartes.add(7)   # une carte de plus : l'éventail change
+        resume_partie.cartes_eventail("hp1", tmp_path, releve, 1.25)
+        assert appels == ["hp1", "hp1"]
+
+    def test_un_jeu_absent_n_est_pas_retenu(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+        from src.ui import resume_partie
+        monkeypatch.setattr(resume_partie, "_EVENTAILS", {})
+        appels = []
+        monkeypatch.setattr(resume_partie, "_cartes_eventail",
+                            lambda *a: appels.append(1) or [])
+        releve = SimpleNamespace(cartes={1})
+        resume_partie.cartes_eventail("hp2", tmp_path, releve, 1.0)
+        resume_partie.cartes_eventail("hp2", tmp_path, releve, 1.0)
+        assert len(appels) == 2

@@ -438,3 +438,36 @@ class ParticulesGPU:
         """Première taille connue, ou fenêtre redimensionnée : re-semer sur toute la zone."""
         if self._fond.width() > 0 and self._fond.height() > 0:
             self._semer()
+
+
+_QML_ETOILES = ASSETS_DIR / "qml" / "EtoilesCarrousel.qml"
+
+
+class EtoilesGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[misc]
+    """Le fond étoilé du carrousel sur la carte graphique (`Carousel`).
+
+    Posé SOUS les jaquettes, à la taille de la bande. Ses images partent dans
+    la même composition que celles du fond de l'accueil : 0,2 point d'un cœur
+    au repos, contre 6 quand le processeur repeignait les étoiles.
+    """
+
+    def __init__(self, etoiles: list[tuple[float, float, float, int, bool, float]],
+                 parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
+        self.setClearColor(theme.bg_qcolor(255))
+        self.setSource(QUrl.fromLocalFile(str(_QML_ETOILES)))
+        for erreur in self.errors():
+            log.warning("Étoiles du carrousel sur la carte graphique : %s", erreur.toString())
+        self._racine = self.rootObject()
+        if self._racine is not None:
+            self._racine.setProperty("fond", theme.bg_qcolor(255))
+            self._racine.setProperty("accent", theme.accent_qcolor(255))
+            self._racine.setProperty("etoiles", [list(e) for e in etoiles])
+
+    def valide(self) -> bool:
+        return self._racine is not None
+
+    def poser_phase(self, phase: float) -> None:
+        if self._racine is not None:
+            self._racine.setProperty("phase", phase)
