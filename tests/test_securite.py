@@ -86,12 +86,17 @@ class TestAucunProgrammeLanceParSonSeulNom:
         assert chemin.parent.name.lower() == "system32"
 
     @pytest.mark.skipif(sys.platform != "win32", reason="tasklist : Windows uniquement")
-    def test_la_detection_d_un_jeu_marche_toujours(self):
+    def test_la_detection_d_un_jeu_marche_toujours(self, monkeypatch):
         """Le vrai `tasklist.exe`, appelé par son chemin : il voit bien le
-        processus qui fait tourner cette suite, et pas un nom inventé."""
+        processus qui fait tourner cette suite, et pas un nom inventé.
+
+        Délai porté à 60 s : sous `-n auto`, `tasklist` a dépassé 5 s
+        (2026-11-01), et ce test-ci vérifie la détection, pas la vitesse."""
+        from src.ui import process_monitor
         from src.ui.process_monitor import ProcessMonitor
-        assert ProcessMonitor._is_exe_running(Path(sys.executable).name)
-        assert not ProcessMonitor._is_exe_running("accio_nexiste_pas_4242.exe")
+        monkeypatch.setattr(process_monitor, "_TASKLIST_DELAI_S", 60)
+        assert ProcessMonitor._is_exe_running(Path(sys.executable).name) is True
+        assert ProcessMonitor._is_exe_running("accio_nexiste_pas_4242.exe") is False
 
     def test_hors_windows_le_nom_est_rendu_tel_quel(self, monkeypatch):
         monkeypatch.setattr(sys, "platform", "linux")

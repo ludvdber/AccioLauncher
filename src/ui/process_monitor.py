@@ -8,7 +8,9 @@ Gère deux modes :
    (`compat.processus_du_jeu`). Même grâce de 10 s des deux côtés — mais
    seulement pour un jeu qui se relance (`GameData.relance`) : pour les autres,
    la fin du processus EST la fin de la partie, et la grâce faisait attendre
-   10 s devant un bureau vide (audit du 2026-10-07, P6-005).
+   10 s devant un bureau vide (audit du 2026-10-07, P6-005). Un `tasklist`
+   sans réponse (plus de 5 s sous charge) n'est PAS une fermeture : il faut
+   trois sondages sans réponse d'affilée pour conclure.
 
 Émet `game_exited(nom, code, durée)` quand le jeu est vraiment fermé, et
 `battement()` régulièrement tant qu'il tourne (le launcher s'en sert pour
@@ -42,6 +44,13 @@ _GRACE_S = 10.0  # délai avant de chercher l'exe par nom (le temps que UE1 red�
 # qu'une minute, assez rare pour que le fichier de reprise ne soit pas réécrit
 # en boucle. 30 sondages de 2 s.
 _BATTEMENTS_TOUS_LES = 30
+# Délai de `tasklist`. Mesuré le 2026-11-01 pendant la suite de tests : 0,1 à
+# 4,1 s, et une fois plus de 5 s. Un dépassement ne dit RIEN du jeu.
+_TASKLIST_DELAI_S = 5
+# Sondages sans réponse d'affilée avant de conclure à la fermeture : un jeu qui
+# tourne répond à l'un des trois ; un `tasklist` cassé pour de bon ne retient la
+# session que 6 s de plus.
+_INCONNUS_MAX = 3
 
 
 class ProcessMonitor(QObject):
@@ -62,6 +71,7 @@ class ProcessMonitor(QObject):
         self._debut: float = 0.0
         self._vu_vivant: float = 0.0   # dernier instant où le jeu tournait VRAIMENT
         self._sondages: int = 0
+        self._inconnus: int = 0        # sondages par nom sans réponse, d'affilée
         self._timer = QTimer(self)
         self._timer.setInterval(_POLL_MS)
         self._timer.timeout.connect(self._poll)
@@ -83,6 +93,7 @@ class ProcessMonitor(QObject):
         self._code = None
         self._debut = self._vu_vivant = time.monotonic()
         self._sondages = 0
+        self._inconnus = 0
         self._timer.start()
 
     def stop(self) -> None:
@@ -92,6 +103,7 @@ class ProcessMonitor(QObject):
         self._exe_name = ""
         self._grace_until = 0.0
         self._sondages = 0
+        self._inconnus = 0
 
     @staticmethod
     def _nom_de_l_exe(args) -> str:
@@ -112,8 +124,12 @@ class ProcessMonitor(QObject):
         return exe.lower()
 
     @staticmethod
-    def _is_exe_running(exe_name: str) -> bool:
-        """Vérifie si un processus avec ce nom d'exe tourne encore."""
+    def _is_exe_running(exe_name: str) -> bool | None:
+        """Un processus avec ce nom d'exe tourne-t-il encore ?
+
+        `None` : on ne sait pas (`tasklist` hors délai ou introuvable). Rendre
+        `False` à la place terminait la session d'un jeu qui tournait.
+        """
         if not exe_name:
             return False
         if sys.platform != "win32":
@@ -128,12 +144,13 @@ class ProcessMonitor(QObject):
             result = subprocess.run(  # nosec B603  # noqa: S603
                 [commande_systeme("tasklist.exe"), "/FI", f"IMAGENAME eq {exe_name}", "/NH"],
                 # Page OEM de la console, nommée : implicite, l'encodage change en 3.15 (UTF-8).
-                capture_output=True, encoding="oem", errors="replace", timeout=5,
-                creationflags=_SANS_FENETRE,
+                capture_output=True, encoding="oem", errors="replace",
+                timeout=_TASKLIST_DELAI_S, creationflags=_SANS_FENETRE,
             )
             return exe_name.lower() in result.stdout.lower()
-        except (OSError, subprocess.TimeoutExpired):
-            return False
+        except (OSError, subprocess.TimeoutExpired) as e:
+            log.warning("tasklist sans réponse pour %s : %s", exe_name, e)
+            return None
 
     def _vivant(self) -> None:
         """Le jeu tourne : on note l'instant, et on bat une fois par minute."""
@@ -166,9 +183,18 @@ class ProcessMonitor(QObject):
             # Sans relance, pas de sondage de plus à attendre : on cherche tout
             # de suite le nom de l'exe (un lanceur qui passe la main), puis on conclut.
 
-        if self._exe_name and self._is_exe_running(self._exe_name):
+        tourne = self._is_exe_running(self._exe_name) if self._exe_name else False
+        if tourne:
+            self._inconnus = 0
             self._vivant()
             return  # le jeu tourne encore (process redémarré)
+        if tourne is None:
+            # Sans réponse : ni vivant (la durée ne s'allonge pas), ni fermé.
+            self._inconnus += 1
+            if self._inconnus < _INCONNUS_MAX:
+                return
+        else:
+            self._inconnus = 0
 
         if time.monotonic() < self._grace_until:
             return  # grâce post-exit pour laisser le jeu redémarrer

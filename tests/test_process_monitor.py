@@ -74,3 +74,52 @@ def test_un_jeu_relance_sous_le_meme_nom_est_retrouve(moniteur):
     moniteur._is_exe_running = lambda nom: True
     moniteur._poll()
     assert vus == []
+
+
+def test_un_tasklist_sans_reponse_ne_ferme_pas_la_partie(moniteur):
+    """Mesuré le 2026-11-01 : `tasklist` dépasse parfois 5 s sous charge. Ce
+    dépassement rendait « pas lancé », et la session d'un HP1 qui venait de
+    se relancer était close en pleine partie."""
+    vus = _sorties(moniteur)
+    jeu = _Processus()
+    moniteur.start(jeu, "HP1", relance=True)
+    jeu.code = 0
+    moniteur._poll()
+    moniteur._grace_until -= 11
+    moniteur._is_exe_running = lambda nom: None
+    moniteur._poll()
+    moniteur._poll()
+    assert vus == []
+    moniteur._is_exe_running = lambda nom: True
+    moniteur._poll()
+    moniteur._is_exe_running = lambda nom: None
+    moniteur._poll()
+    moniteur._poll()
+    assert vus == [], "une réponse remet le compte à zéro"
+
+
+def test_trois_sondages_sans_reponse_concluent_a_la_fermeture(moniteur):
+    """Un `tasklist` introuvable pour de bon ne retient pas la session à vie."""
+    vus = _sorties(moniteur)
+    jeu = _Processus()
+    moniteur.start(jeu, "HP5", relance=False)
+    jeu.code = 0
+    moniteur._is_exe_running = lambda nom: None
+    moniteur._poll()
+    moniteur._poll()
+    assert vus == []
+    moniteur._poll()
+    assert [(n, c) for n, c, _ in vus] == [("HP5", 0)]
+
+
+def test_un_sondage_sans_reponse_n_allonge_pas_la_duree(moniteur):
+    vus = _sorties(moniteur)
+    jeu = _Processus()
+    moniteur.start(jeu, "HP5", relance=False)
+    vu = moniteur._vu_vivant
+    jeu.code = 0
+    moniteur._is_exe_running = lambda nom: None
+    for _ in range(3):
+        moniteur._poll()
+    assert moniteur._vu_vivant == vu
+    assert len(vus) == 1
