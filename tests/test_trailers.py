@@ -341,8 +341,10 @@ def test_la_fiche_lance_la_bande_annonce_a_son_debut(make_window, monkeypatch, t
     detail = win._detail
     video = tmp_path / "hp6_video_v1.0.mp4"
     video.write_bytes(b"")
-    monkeypatch.setattr(type(detail.manager), "trailers",
-                        lambda _self: (Trailer("hp6", "1.0", "https://x/a.mp4", debut_ms=4000),))
+    from types import SimpleNamespace          # faux sur l'INSTANCE (règle 12)
+    monkeypatch.setattr(detail, "manager", SimpleNamespace(
+        config=detail.manager.config,
+        trailers=lambda: (Trailer("hp6", "1.0", "https://x/a.mp4", debut_ms=4000),)))
     monkeypatch.setattr(store, "chemin_a_jouer", lambda _id, _t: video)
     appels = []
     monkeypatch.setattr(detail._video, "play", lambda chemin, **kw: appels.append(kw) or False)
