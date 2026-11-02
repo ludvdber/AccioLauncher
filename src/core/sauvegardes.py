@@ -350,7 +350,7 @@ def numero(rel: str, spec: Sauvegardes, nb_fichiers: int) -> int | None:
 
     « Save0.usa » → 1 si le jeu numérote à partir de 0 ; « Slot1/Save0.usa »
     → 1 si c'est « Slot » qui porte le numéro à partir de 1. Un jeu à
-    sauvegarde unique (HP5 à HP7) n'a pas de numéro : « Emplacement 1 » sur
+    sauvegarde unique (HP7) n'a pas de numéro : « Emplacement 1 » sur
     une seule carte laisserait croire qu'il en existe d'autres.
 
     Un emplacement lu dans un fichier (`HPGOF#2`) porte son numéro après le

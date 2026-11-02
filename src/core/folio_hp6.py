@@ -26,7 +26,7 @@ son identifiant d'objet, 0 s'il reste à trouver. Une seule partie par fichier.
 
 import logging
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -261,10 +261,10 @@ class Partie:
     badges_total: int = 0
     trouves: frozenset[int] = frozenset()   # identifiants des écussons trouvés
     acquis: frozenset[str] = frozenset()    # clés des badges remportés (BADGES)
-
-    @property
-    def emplacement(self) -> int:
-        return 1    # une seule partie par fichier
+    # Trois emplacements, un fichier chacun (`HPHBP0` à `HPHBP2`) : posé par
+    # `releve` d'après le nom. Toutes à 1, les parties s'écrasaient dans le rail
+    # du folio, rangé par emplacement (Firox, Discord, 2026-11-02).
+    emplacement: int = 1
 
 
 def _sections(d: bytes) -> dict[int, dict[int, int]]:
@@ -322,11 +322,18 @@ def lire(contenu: bytes) -> Partie | None:
         frozenset(v for v in ecussons.values() if v), acquis)
 
 
+def emplacement_de(chemin: Path) -> int:
+    """`HPHBP0` → 1, `HPHBP2` → 3 ; 1 pour un autre nom (copie, import)."""
+    chiffre = chemin.name.removeprefix("HPHBP")
+    return int(chiffre) + 1 if chiffre.isdigit() and len(chiffre) == 1 else 1
+
+
 def releve(chemin: Path) -> Partie | None:
     try:
         if chemin.stat().st_size > _TAILLE_MAX:
             return None
-        return lire(chemin.read_bytes())
+        partie = lire(chemin.read_bytes())
+        return replace(partie, emplacement=emplacement_de(chemin)) if partie is not None else None
     except OSError:
         log.warning("Folio HP6 : %s illisible", chemin, exc_info=True)
         return None

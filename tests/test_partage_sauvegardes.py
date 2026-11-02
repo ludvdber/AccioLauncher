@@ -101,7 +101,7 @@ class TestLire:
         _ecrire(tmp_path / "HPHBP0 (1)", b"hp6")
         paquet = ps.lire(tmp_path / "HPHBP0 (1)", HP6)
         assert isinstance(paquet, ps.Paquet)
-        assert paquet.principal.nom == "hphbp0" and paquet.principal.donnees == b"hp6"
+        assert paquet.principal.nom == "HPHBP0" and paquet.principal.donnees == b"hp6"
 
 
 class TestEmplacements:
@@ -185,3 +185,28 @@ class TestImporter:
         paquet = ps.lire(tmp_path / "HPHBP0", HP6)
         assert not ps.importer("hp6", HP6, paquet, "../HPHBP0")
         assert not ps.importer("hp6", HP6, paquet, "C:/HPHBP0")
+
+
+class TestHP6TroisEmplacements:
+    """Catalogue 0.52 : `HPHBP?/HPHBP?`. Sans le « ? » compté comme joker, HP6
+    passait pour un jeu à fichier unique et l'import visait un dossier nommé
+    « HPHBP? », interdit sous Windows (Firox, Discord, 2026-11-02)."""
+
+    SPEC = Sauvegardes(racine="localappdata", dossiers=("Electronic Arts/HP6",),
+                       fichiers="HPHBP?/HPHBP?")
+
+    def test_trois_emplacements_au_menu(self):
+        jeu = sauvegardes.racines()["localappdata"] / "Electronic Arts" / "HP6"
+        _ecrire(jeu / "HPHBP1" / "HPHBP1", b"x")
+        assert ps.a_plusieurs_emplacements(self.SPEC)
+        assert ps.emplacements("hp6", self.SPEC) == [
+            ("HPHBP0/HPHBP0", False), ("HPHBP1/HPHBP1", True), ("HPHBP2/HPHBP2", False)]
+
+    def test_un_fichier_renomme_va_dans_l_emplacement_choisi(self, tmp_path):
+        _ecrire(tmp_path / "HPHBP0 (1)", b"partie de Firox")
+        paquet = ps.lire(tmp_path / "HPHBP0 (1)", self.SPEC)
+        assert isinstance(paquet, ps.Paquet)
+        jeu = sauvegardes.racines()["localappdata"] / "Electronic Arts" / "HP6"
+        jeu.mkdir(parents=True)
+        assert ps.importer("hp6", self.SPEC, paquet, "HPHBP2/HPHBP2")
+        assert (jeu / "HPHBP2" / "HPHBP2").read_bytes() == b"partie de Firox"

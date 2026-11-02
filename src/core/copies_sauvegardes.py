@@ -90,6 +90,38 @@ def _dossier_de(jeu: str, rel: str) -> Path | None:
     return racine().joinpath(jeu, *parties)
 
 
+# Sauvegardes dont le chemin relatif a changé avec le catalogue : (jeu, ancien) → nouveau.
+# HP6 a TROIS emplacements (`HPHBP0` à `HPHBP2`, un dossier chacun) ; le
+# catalogue ≤ 0.51 ne lisait que le premier, en racine (Firox, Discord,
+# 2026-11-02 : le Carnet montrait la partie de sa copine, pas la sienne). Depuis
+# 0.52, la racine est le dossier du jeu : `HPHBP0` devient `HPHBP0/HPHBP0`.
+_DEMENAGEMENTS = {("hp6", "HPHBP0"): "HPHBP0/HPHBP0"}
+
+
+def _demenager(jeu: str) -> None:
+    """Range les copies faites sous un ancien chemin là où les cherche le
+    nouveau : sans cela elles passaient pour celles d'une sauvegarde disparue,
+    et « revenir » visait un dossier. Une copie déjà là n'est pas écrasée."""
+    for (j, ancien), nouveau in _DEMENAGEMENTS.items():
+        if j != jeu:
+            continue
+        depart, arrivee = _dossier_de(jeu, ancien), _dossier_de(jeu, nouveau)
+        if depart is None or arrivee is None or not depart.is_dir():
+            continue
+        try:
+            a_ranger = [e for e in depart.iterdir()
+                        if (e.is_file() and _NOM.match(e.name))
+                        or (e.is_dir() and _NOM.match(e.name + ".gz"))]
+            if not a_ranger:
+                continue
+            arrivee.mkdir(parents=True, exist_ok=True)
+            for e in a_ranger:
+                if not (arrivee / e.name).exists():
+                    e.rename(arrivee / e.name)
+        except OSError as exc:
+            log.warning("Copies de %s : rangement de %s impossible (%s)", jeu, ancien, exc)
+
+
 def _date_du_nom(nom: str) -> datetime | None:
     m = _NOM.match(nom)
     if m is None:
@@ -202,6 +234,7 @@ def avant_partie(jeu: str, spec: Sauvegardes | None,
     """
     if spec is None:
         return 0
+    _demenager(jeu)
     maintenant = maintenant or datetime.now()
     nouvelles = 0
     presents = sauvegardes.fichiers(spec)
@@ -285,6 +318,7 @@ def versions(jeu: str) -> dict[str, list[Version]]:
     Les sauvegardes qui n'existent plus sont listées aussi : leurs copies sont
     tout ce qui reste d'elles.
     """
+    _demenager(jeu)
     base = racine() / jeu
     resultat: dict[str, list[Version]] = {}
     if not base.is_dir():
@@ -319,6 +353,7 @@ def mettre_a_l_abri(jeu: str, spec: Sauvegardes, rel: str) -> bool:
 
     True si une copie existe désormais, False si elle n'a pas pu être faite.
     """
+    _demenager(jeu)
     base = sauvegardes.dossier(spec)
     dossier = _dossier_de(jeu, rel)
     if base is None or dossier is None:

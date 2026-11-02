@@ -393,3 +393,38 @@ class TestFenetre:
         dlg._importer()
         assert textes == ["Cette sauvegarde vient d'un autre jeu."]
         assert not (save_dir / "Slot1").exists()
+
+
+class TestCopiesDeHP6Demenagees:
+    """Catalogue 0.52 : HP6 lit ses trois emplacements, la racine devient le
+    dossier du jeu et `HPHBP0` devient `HPHBP0/HPHBP0`. Les copies déjà faites
+    doivent suivre, sinon elles passaient pour une sauvegarde disparue et
+    « revenir » visait un dossier (Firox, Discord, 2026-11-02)."""
+
+    HP6 = Sauvegardes(racine="localappdata", dossiers=("Electronic Arts/HP6",),
+                      fichiers="HPHBP?/HPHBP?")
+
+    def test_les_anciennes_copies_suivent(self):
+        base = cs.racine() / "hp6" / "HPHBP0"
+        base.mkdir(parents=True)
+        with gzip.open(base / "2026-10-27_211920.gz", "wb") as gz:
+            gz.write(b"ancienne partie")
+        (base / "notes.txt").write_text("pas une copie")
+        jeu = sauvegardes.racines()["localappdata"] / "Electronic Arts" / "HP6"
+        _ecrire(jeu / "HPHBP0" / "HPHBP0", b"partie du jour", T0)
+        versions = cs.versions("hp6")
+        assert list(versions) == ["HPHBP0/HPHBP0"], "une seule sauvegarde, pas une « disparue »"
+        assert [v.quand for v in versions["HPHBP0/HPHBP0"]] == [datetime(2026, 10, 27, 21, 19, 20)]
+        assert (base / "notes.txt").is_file(), "rien d'autre ne bouge"
+        assert cs.revenir("hp6", self.HP6, versions["HPHBP0/HPHBP0"][0])
+        assert (jeu / "HPHBP0" / "HPHBP0").read_bytes() == b"ancienne partie"
+
+    def test_une_copie_deja_rangee_n_est_pas_ecrasee(self):
+        ancien = cs.racine() / "hp6" / "HPHBP0"
+        nouveau = ancien / "HPHBP0"
+        nouveau.mkdir(parents=True)
+        (ancien / "2026-10-27_211920.gz").write_bytes(b"A")
+        (nouveau / "2026-10-27_211920.gz").write_bytes(b"B")
+        cs.versions("hp6")
+        assert (nouveau / "2026-10-27_211920.gz").read_bytes() == b"B"
+        assert (ancien / "2026-10-27_211920.gz").read_bytes() == b"A"

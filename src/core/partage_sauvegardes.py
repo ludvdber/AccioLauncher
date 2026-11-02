@@ -51,8 +51,13 @@ _ENTREES_MAX = 400
 
 # Les emplacements que le menu de chaque jeu montre, à partir de `premier` :
 # six chez HP2 (VU, `Slot1` à `Slot6`), six lus chez HP1 (`SaveSlots`, probable)
-# et HP3. Un import n'ouvre jamais un emplacement que le menu ne montrerait pas.
+# et HP3 ; trois chez HP6 (`HPHBP0` à `HPHBP2`, VU par Ludo le 2026-11-02). Un
+# import n'ouvre jamais un emplacement que le menu ne montrerait pas.
 EMPLACEMENTS_MENU = 6
+_EMPLACEMENTS_PAR_JEU = {"hp6": 3}
+
+# « HPHBP0 (1) », « Save0 (2).usa » : le doublon qu'ajoute un navigateur.
+_DOUBLON = re.compile(r" \(\d+\)(?=\.[^.]*$|$)")
 
 # Ce qui peut empêcher un import, pour que l'interface le dise.
 ILLISIBLE = "illisible"
@@ -85,7 +90,7 @@ def _motif_principal(spec: Sauvegardes) -> str:
 
 
 def _est_principal(nom: str, spec: Sauvegardes) -> bool:
-    bas = nom.lower()
+    bas = _DOUBLON.sub("", nom).lower()
     if any(fnmatch.fnmatch(bas, e.lower()) for e in spec.exclure):
         return False
     return fnmatch.fnmatch(bas, _motif_principal(spec))
@@ -97,8 +102,10 @@ def _est_compagnon(nom: str, spec: Sauvegardes) -> bool:
 
 
 def a_plusieurs_emplacements(spec: Sauvegardes) -> bool:
-    """HP1 à HP3 : un fichier (ou un dossier) par emplacement."""
-    return "*" in spec.fichiers and not spec.emplacements
+    """HP1 à HP3 et HP6 : un fichier (ou un dossier) par emplacement. Le « ? »
+    de HP6 (`HPHBP?/HPHBP?`) compte : sans lui, l'import visait un dossier
+    nommé littéralement « HPHBP? », interdit sous Windows."""
+    return any(c in spec.fichiers for c in "*?") and not spec.emplacements
 
 
 # ─── Exporter ───
@@ -206,8 +213,8 @@ def lire(source: Path, spec: Sauvegardes) -> Paquet | str:
     if not donnees:
         return SANS_SAUVEGARDE
     # Un fichier seul : son nom peut avoir changé en route (« HPHBP0 (1) »), le
-    # jeu à fichier unique ne regarde que la place où on le pose.
-    nom = source.name if _est_principal(source.name, spec) else _motif_principal(spec)
+    # jeu ne regarde que la place où on le pose (`importer` le renomme).
+    nom = _DOUBLON.sub("", source.name) if _est_principal(source.name, spec) else _motif_principal(spec)
     return Paquet(Fichier(nom, donnees, _horodatage(source)), (), None, None, False)
 
 
@@ -262,15 +269,17 @@ def _date(info: zipfile.ZipInfo) -> float | None:
 def emplacements(jeu: str, spec: Sauvegardes) -> list[tuple[str, bool]]:
     """Les emplacements où l'on peut importer : (chemin relatif, déjà pris).
 
-    Un jeu à fichier unique (HP4 à HP8) n'en a qu'un. Pour HP1 à HP3 : ceux
-    que le menu montre, pris ou libres, jamais la sauvegarde rapide.
+    Un jeu à fichier unique (HP4, HP5, HP7) n'en a qu'un. Pour HP1 à HP3 et
+    HP6 : ceux que le menu montre, pris ou libres, jamais la sauvegarde rapide.
+    Chaque joker prend le numéro (`HPHBP?/HPHBP?` → `HPHBP1/HPHBP1`).
     """
     if not a_plusieurs_emplacements(spec):
         return [(spec.fichiers, spec.fichiers in sauvegardes.fichiers(spec))]
     pris = {rel.lower() for rel in sauvegardes.fichiers(spec)}
     rangee = []
-    for n in range(spec.premier, spec.premier + EMPLACEMENTS_MENU):
-        rel = spec.fichiers.replace("*", str(n), 1)
+    nombre = _EMPLACEMENTS_PAR_JEU.get(jeu, EMPLACEMENTS_MENU)
+    for n in range(spec.premier, spec.premier + nombre):
+        rel = re.sub(r"[*?]", str(n), spec.fichiers)
         if not sauvegardes.est_rapide(jeu, rel):
             rangee.append((rel, rel.lower() in pris))
     return rangee

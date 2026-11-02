@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.51",
+  "catalog_version": "0.52",
   "contributors": [
     {
       "name": "ASTeam",
@@ -2122,9 +2122,9 @@
       "saves": {
         "root": "localappdata",
         "folders": [
-          "Electronic Arts/Harry Potter*Prince*/HPHBP0"
+          "Electronic Arts/Harry Potter*Prince*"
         ],
-        "files": "HPHBP0"
+        "files": "HPHBP?/HPHBP?"
       },
       "controller": "yes"
     },

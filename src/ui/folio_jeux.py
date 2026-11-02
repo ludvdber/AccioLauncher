@@ -1047,13 +1047,17 @@ _SORTS_HP6 = {"Expelliarmus": "Expelliarmus", "Stupefy": "Stupéfix", "Lumos": "
 
 
 class FolioPageHP6(FolioPage):
-    """Écussons, mini-écussons, chapitre, sorts et badges de l'unique partie."""
+    """Écussons, mini-écussons, chapitre, sorts et badges de chaque partie.
+
+    Trois emplacements, un dossier chacun (`HPHBP0` à `HPHBP2`) : le catalogue
+    ≤ 0.51 ne lisait que le premier (Firox, Discord, 2026-11-02 : la partie de
+    sa copine, pas la sienne)."""
 
     def _charger(self) -> None:
         self.releves = []
         # Une partie par fichier, mais la partie ne porte pas son chemin.
         self._chemins: dict[int, Path] = {}
-        for chemin in sauvegardes.fichiers(self.game.sauvegardes).values():
+        for _rel, chemin in sorted(sauvegardes.fichiers(self.game.sauvegardes).items()):
             partie = folio_hp6.releve(chemin)
             if partie is not None:
                 self.releves.append(partie)
@@ -1064,10 +1068,14 @@ class FolioPageHP6(FolioPage):
 
     def _entree(self, partie) -> tuple[str, datetime | None, str]:
         lieu = tr("Chapitre {}").format(partie.chapitre) if partie.chapitre else ""
+        # Un seul emplacement occupé : pas de numéro, qui laisserait croire à d'autres.
+        if len(self.releves) > 1:
+            return tr("Partie {}").format(partie.emplacement), partie.ecrite, lieu
         return tr("Partie"), partie.ecrite, lieu
 
     def _depart(self):
-        return self.releves[0] if self.releves else None
+        """La dernière partie jouée, comme le résumé de l'accueil (`folio_hp6.resume`)."""
+        return max(self.releves, key=lambda p: p.ecrite or datetime.min, default=None)
 
     def _construire(self, partie) -> QWidget:
         if partie is None:

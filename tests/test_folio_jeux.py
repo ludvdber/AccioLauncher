@@ -204,6 +204,26 @@ class TestHP6:
         lieux = [t for t in textes if t in {"Bibliothèque", "Volière", "Cachots"}]
         assert lieux == ["Bibliothèque", "Cachots", "Volière"]
 
+    def test_les_trois_emplacements(self, qtbot, racines):
+        """Firox, Discord, 2026-11-02 : le Carnet montrait la partie de sa
+        copine (`HPHBP0`), pas la sienne. HP6 a trois emplacements, un dossier
+        chacun ; catalogue 0.52 : la racine est le dossier du jeu."""
+        from src.ui.folio_jeux import page_folio
+        from tests.test_folio_hp5_hp6 import _hphbp0
+        for n, (ecussons, quand) in enumerate([(7, datetime(2026, 10, 1)), (3, datetime(2026, 10, 20))]):
+            dossier = racines / "Local" / "EA" / "HP6" / f"HPHBP{n}"
+            dossier.mkdir(parents=True)
+            (dossier / f"HPHBP{n}").write_bytes(_hphbp0(ecussons=ecussons, quand=quand))
+        jeu = _jeu("hp6", "HP6/hp6.exe", {"root": "localappdata", "folders": ["EA/HP6"],
+                                           "files": "HPHBP?/HPHBP?"})
+        page = page_folio(jeu, racines / "Jeux")
+        qtbot.addWidget(page)
+        assert sorted(page._lignes) == [1, 2], "une ligne par emplacement, aucune écrasée"
+        assert page.releve.emplacement == 2, "la dernière partie jouée d'abord"
+        assert page._entree(page.releves[0])[0] == "Partie 1"
+        page.choisir(1)
+        assert page.releve.emplacement == 1
+
     def test_sans_sauvegarde(self, qtbot, racines):
         from src.ui.folio_jeux import page_folio
         jeu = _jeu("hp6", "HP6/hp6.exe", {"root": "localappdata", "folders": ["EA/HPHBP0"],
