@@ -1,7 +1,7 @@
 """Le folio de HP2 : ce qu'une sauvegarde de la Chambre des Secrets dit de la partie.
 
 Relevé le 2026-10-16 sur la sauvegarde de Ludo (`Slot1/Save0.usa`, tout début
-du jeu), en LECTURE seule (`Harry-Potter-PC-Fix/notes/HP2.md`). Le fichier est
+du jeu), en LECTURE seule (`notes/HP2.md` de l'atelier du correctif). Le fichier est
 un paquet Unreal 1 ; l'acteur `harry` porte la partie :
 
     StatusSave[0..n]      StatusSaveData : classe du groupe, classe de l'objet,

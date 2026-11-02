@@ -58,7 +58,7 @@ _FONDS_GARDES = 3
 
 # Voile gauche : (position sur la largeur, alpha). C'est LUI qui protège
 # réellement le texte — le voile plein ci-dessus assombrit uniformément, mais
-# le panneau d'infos occupe `min(650, 50 %)` de la largeur, et l'ancien profil
+# le panneau d'infos occupe `min(700, 50 à 64 %)` de la largeur, et l'ancien profil
 # était déjà retombé à 20 dès 55 % : les dernières lettres d'un titre ou d'une
 # ligne méta tombaient donc sur l'illustration presque nue. Sorti en constante
 # pour être étalonnable — les valeurs ci-dessous sont mesurées, pas choisies à

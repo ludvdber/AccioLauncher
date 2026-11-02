@@ -28,7 +28,7 @@ essentiels au catalogue). Sous Windows, il fait trois choses, VUES en jeu : plei
 - **Un nouveau `winmm.dll`** (pas encore dans les archives publiées) : sous Wine SEULEMENT et pour HP2 seulement
   (`WineLauncherFix=1` dans son `winmm.ini`), il retire en mémoire les deux `SetWindowPos` qui rendent le lanceur
   de HP2 noir avec seulement « Quitter » (cause signalée par Federico Dossena ; aucun fichier du jeu modifié sur
-  le disque). Détail : `Harry-Potter-PC-Fix/notes/HP2.md`, « Le menu de démarrage noir sous Wine ».
+  le disque). Détail : `notes/HP2.md` de l'atelier du correctif, « Le menu de démarrage noir sous Wine ».
 
 ### Ce que Ludo autorise pour ce passage
 

@@ -1,7 +1,7 @@
 """Le folio de HP5 : ce que `HPOOTP` dit de chacune des trois parties.
 
 Relevé le 2026-10-15 sur la sauvegarde de Ludo, en LECTURE seule, et VU contre
-l'écran du jeu (`Harry-Potter-PC-Fix/notes/HP5.md`, « Mission d'analyse ») :
+l'écran du jeu (`notes/HP5.md` de l'atelier du correctif, « Mission d'analyse ») :
 
 - l'en-tête porte trois fiches (date, pourcentage) : `sauvegardes.emplacements_hp5` ;
 - le corps de chaque partie commence par « PTOO30.1 » à 0x484 + k × 0x400 ;

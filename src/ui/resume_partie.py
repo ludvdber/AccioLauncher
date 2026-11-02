@@ -252,7 +252,8 @@ class BlocFolio(QFrame):
         self._compte.setText(phrase_resume(resume))
         self._barre.regler(resume.trouvees / resume.total if resume.total else 0.0)
         self._eventail.regler(cartes)
-        # Les maisons : HP1 seulement (HP3 n'écrit pas leurs points).
+        # Les maisons : HP1 et HP2 (`folio_hp2.Releve` hérite de `folio.Releve`) ;
+        # HP3 n'écrit pas leurs points.
         maisons = (maison_en_tete(resume.releve)
                    if isinstance(resume.releve, folio.Releve) else "")
         if isinstance(resume.releve, folio_hp5.Partie) and resume.releve.decouverte:

@@ -1,26 +1,18 @@
-"""Contrôle de mise en page AVEC LES VRAIES POLICES DE WINDOWS.
+"""Contrôle de mise en page sur la PLATEFORME NATIVE.
 
 Pourquoi ce script existe alors qu'il y a déjà des tests de géométrie
 =====================================================================
 La suite de tests tourne sous `QT_QPA_PLATFORM=offscreen` (imposé par
-`tests/conftest.py`, pour être exécutable sans écran et en CI). Or sous cette
-plateforme `QFontDatabase.families()` renvoie **zéro famille** : ni Georgia —
-la police de corps du launcher, `fonts.body_font()` — ni Segoe UI n'existent,
-et Qt substitue silencieusement Cinzel, la seule police chargée par
-l'application.
+`tests/conftest.py`, pour être exécutable sans écran et en CI). Les trois
+polices du launcher sont embarquées (Gelasio pour le corps, `fonts.py`) :
+offscreen mesure donc les vraies. Ce qui reste propre à chaque plateforme,
+c'est le RENDU natif (DPI, lissage, métriques du moteur de polices).
 
-Mesuré : à corps égal, sur la même phrase, Cinzel est **22 % plus large** que
-Georgia (421 px contre 344) et son interligne **16 % plus haut** (22 px contre
-19). Autrement dit, tous les tests de troncature et de débordement de la suite
-raisonnent sur une police que l'utilisateur ne verra jamais. Ils restent utiles
-— Cinzel étant plus large, ils sont conservateurs sur la troncature — mais ils
-ne peuvent pas trancher un empilement de hauteurs.
-
-Ce script rejoue donc les mêmes contrôles sur la plateforme native, où les
-polices sont réelles, avec `WA_DontShowOnScreen` : la fenêtre est construite,
-mise en page et mesurable, mais elle n'apparaît jamais à l'écran. Il est appelé
-par `build.bat` juste avant PyInstaller, c'est-à-dire sur la machine qui publie
-— la seule qui ait à coup sûr les polices du poste cible.
+Ce script rejoue donc les mêmes contrôles sur la plateforme native, avec
+`WA_DontShowOnScreen` : la fenêtre est construite, mise en page et mesurable,
+mais elle n'apparaît jamais à l'écran. Il tourne dans `build.bat` et
+`build.sh` juste avant PyInstaller, et dans le job Windows de `tests.yml`, où
+une régression de mise en page rougit la PR.
 
 Ce qu'il vérifie, pour 8 jeux × 4 états × 4 tailles × 3 scénarios × toutes
 les langues :

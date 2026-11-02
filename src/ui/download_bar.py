@@ -71,7 +71,8 @@ class DownloadBar(QWidget):
         text_box.addWidget(self._status)
         layout.addLayout(text_box, stretch=1)
 
-        # Stepper « 1/3 · Téléchargement » → « 2/3 · Vérification » → « 3/3 · Installation »
+        # Stepper « 1/4 · Téléchargement » → « 2/4 · Vérification » → « 3/4 · Installation »
+        # → « 4/4 · Finalisation »
         self._phase_label = QLabel("")
         self._phase_label.setFont(body_font(10))
         self._phase_label.setStyleSheet(themed("color: #d6a72c; background: transparent;"))

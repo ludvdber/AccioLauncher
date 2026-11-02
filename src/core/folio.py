@@ -327,8 +327,9 @@ def emplacements_hp1(fichiers: dict[str, Path]) -> list[Releve]:
 
 
 def le_plus_avance(releves: list[Releve]) -> Releve | None:
-    """Celui qui a le plus de cartes, puis de points, puis de dragées ; None si
-    un seul est lu, ou aucun (rien à départager)."""
+    """Celui qui a le plus de cartes, puis de points, puis de dragées, parmi
+    les emplacements lus ; None s'il y a moins de deux emplacements, ou aucun
+    lu (rien à départager)."""
     lus = [r for r in releves if r.lu]
     if len(releves) < 2 or not lus:
         return None

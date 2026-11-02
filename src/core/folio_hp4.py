@@ -2,7 +2,7 @@
 
 Relevé le 2026-10-16 sur la sauvegarde de Ludo, en LECTURE seule, et VU contre
 les écrans de la pensine (touche I : classement, sortilèges, sorts, quêtes ;
-`Harry-Potter-PC-Fix/notes/HP4.md`, « La sauvegarde relue contre les écrans ») :
+`notes/HP4.md` de l'atelier du correctif, « La sauvegarde relue contre les écrans ») :
 
     0x000  « 20CM », taille du fichier, 0x204, 0x7800
     0x010  trois fiches de 0xAC (empreinte, niveau à +0x0C, date à +0x6C, heure à +0x8C),

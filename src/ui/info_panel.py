@@ -517,8 +517,9 @@ class InfoPanel(QWidget):
     _DESC_PALIERS = (160, 90, 55, 30)
 
     def _on_meta_link(self, href: str) -> None:
-        """Aiguillage des liens de la ligne méta. Il ne reste que le changelog,
-        mais un lambda qui ignore le href renverrait tout futur lien vers lui."""
+        """Aiguillage des liens de la ligne d'INDICES (« À propos du jeu »,
+        « FOLIO », la version) ; un lambda qui ignore le href renverrait tout
+        futur lien vers les versions."""
         if href == "langue":
             self.language_clicked.emit()
         elif href == "folio":
@@ -777,8 +778,8 @@ class InfoPanel(QWidget):
 
     def _fait_manette(self, game: GameData) -> str:
         """La manette en pictogramme (maquette « Plan du launcher v2 », Ludo
-        2026-10-26 : « parfait ») ; « en partie » s'écrit à côté, « sans
-        manette » en toutes lettres. Le libellé complet est en infobulle."""
+        2026-10-26 : « parfait ») ; « sans manette » en toutes lettres. Le
+        libellé complet, « en partie » compris, est en infobulle."""
         if game.controller == "no":
             return _insecable(escape(tr("Sans manette"), quote=False))
         # « En partie » (HP2) n'est plus écrit à côté : il alourdissait la

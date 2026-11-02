@@ -107,13 +107,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: La suite de tests tourne en offscreen, ou QFontDatabase ne voit AUCUNE
-:: police systeme : Georgia (police de corps) et Segoe UI n'existent pas et Qt
-:: substitue Cinzel, 22 %% plus large et 16 %% plus haute d'interligne. Les
-:: mesures de mise en page y portent donc sur une autre police que celle de
-:: l'utilisateur. Ce controle-ci rejoue les memes verifications sur la
-:: plateforme native, ou les polices sont reelles - d'ou sa place ici, sur la
-:: machine qui publie, et pas dans pytest.
+:: La suite de tests tourne en offscreen. Les polices sont embarquees, mais le
+:: rendu natif (DPI, lissage) reste propre a la plateforme : ce controle-ci
+:: rejoue les memes verifications sur la plateforme native (voir
+:: toolsudit_geometrie.py).
 echo [4/5] Geometrie avec les vraies polices...
 %PY% "tools\audit_geometrie.py"
 if errorlevel 1 (

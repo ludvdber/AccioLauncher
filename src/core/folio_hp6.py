@@ -2,7 +2,7 @@
 
 Relevé le 2026-10-15 sur la sauvegarde de Ludo, en LECTURE seule, et VU contre
 le menu de pause du jeu (« écussons 7 / 125 », « mini-écussons 3 / 25 (372) ») :
-`Harry-Potter-PC-Fix/notes/HP6.md`, « Mission d'analyse ».
+`notes/HP6.md` de l'atelier du correctif, « Mission d'analyse ».
 
     0x00   « 20CM », taille, 0x38, taille du corps
     0x20   année, mois, jour de la semaine, jour, heure, minute, seconde

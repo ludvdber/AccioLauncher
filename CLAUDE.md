@@ -6,7 +6,7 @@ Guide de travail pour Claude Code sur ce dépôt. **Toute règle ici a été pay
 
 Launcher PyQt6 pour 8 jeux Harry Potter PC (Windows 10/11). **Interface et commentaires en français.**
 
-- **Python 3.15 seul**, mais le code reste LISIBLE par la 3.14 (`fuzz.yml` et `security.yml` y restent) : pas de syntaxe `lazy import`. Les imports paresseux passent par `ui/imports_paresseux.activer()`.
+- **Python 3.15 seul**, mais le code reste LISIBLE par la 3.14 (`fuzz.yml` y reste : Atheris n'a pas de paquet 3.15) : pas de syntaxe `lazy import`. Les imports paresseux passent par `ui/imports_paresseux.activer()`.
 - **Linux est un objectif déclaré** : tout appel win32 derrière `sys.platform == "win32"` avec un repli sensé ; jamais de lettre de lecteur hors code gardé. Le registre passe par `game_registry.disponible()` (Wine a le sien). [docs/LINUX.md](docs/LINUX.md) fait foi.
 
 ## Commands
@@ -45,7 +45,8 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 ## Testing
 
 - `pytest-qt>=4.5` ; `qtbot` est la façon standard de tester un widget. `tests/conftest.py` force `QT_QPA_PLATFORM=offscreen`. La logique pure (tout `src/core/` sauf les QThread) se teste sans fixture Qt.
-- **Compte au dernier point (2026-11-02, Windows, Python 3.15.2, ccca593 + lots 5-6 du grand audit + HP6 à trois emplacements) : 4281 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. **Dans le Bash de Claude, `python` est la 3.14** : lancer `py -3.15 -m pytest`.- Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
+- **Compte au dernier point (2026-11-02, Windows, Python 3.15.2, ccca593 + lots 5-6 du grand audit + HP6 à trois emplacements) : 4281 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. **Dans le Bash de Claude, `python` est la 3.14** : lancer `py -3.15 -m pytest`.
+- Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
 - Ne JAMAIS appeler une police par son nom système (règle 89) : offscreen mesurerait une autre police.
 - Aucun test n'écrit dans le vrai Documents (`conftest._documents_hors_du_vrai_dossier`).
 - **Piège env** : si pytest-qt n'est pas dans le Python actif, les tests widgets sont sautés en silence et le compte chute (~110). Vérifier `python -m pip show pytest-qt`.
@@ -59,7 +60,7 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 - Tous les callbacks qui mutent l'état vivent sur l'orchestrateur ; les widgets sont des consommateurs bêtes.
 - Un slot qui parle à un `QDialog` après sa fermeture possible vérifie sa vivacité (patron `_force_update_check`).
 - `~/Games/AccioLauncher/` ne contient QUE les jeux ; tout le reste dans `_Launcher/` (chemin fixe), sauf le cache qui suit `install_path` (`cache_pour()`).
-- Le numéro de version vit à TROIS endroits (`pyproject.toml`, `config.APP_VERSION`, badge README) ; `pyproject.toml` fait foi pour les dépendances ; le jeu de règles ruff est figé.
+- Le numéro de version vit à QUATRE endroits (`pyproject.toml`, `config.APP_VERSION`, badge README, entrée en tête de `nouveautes.json`) ; `pyproject.toml` fait foi pour les dépendances ; le jeu de règles ruff est figé.
 - Thème : tout stylesheet avec un hex or ou une surface bleu nuit passe par `theme.themed(...)` ; dans un paintEvent, `accent_qcolor(alpha)` et `bg_qcolor(alpha)`.
 - Ko-fi : exactement UN remerciement dans la vie du launcher, à la première mise à jour installée. Jamais lié aux heures de jeu.
 - Hero : la vue ouvre via `carousel.select(idx)`, jamais `set_game` directement pour un index ≠ 0.

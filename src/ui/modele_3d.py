@@ -8,11 +8,12 @@ Les personnages sont modélisés bras en croix : les os des bras sont tournés
 vers le bas (`maillages_ue1.bras_baisses`) et les points recalculés à chaque
 image, ce qui donne aussi la respiration.
 
-Rendu par QPainter, sans OpenGL : chaque face est un triangle rempli par sa
-texture (une brosse dont la transformation envoie les UV sur le triangle à
-l'écran), du plus loin au plus proche, avec un ombrage plat. Un modèle de HP1
-compte environ mille faces : quelques millisecondes par image, et le même rendu
-partout (Windows, Linux, plateforme `offscreen` des tests).
+Deux rendus. Par la carte graphique (`modele_3d_gpu`, 7 à 11 ms par image)
+quand OpenGL s'ouvre ; sinon par QPainter, sur le processeur (plateforme
+`offscreen` des tests, machine sans pilote, toute erreur de dessin) : chaque
+face est un triangle rempli par sa texture (une brosse dont la transformation
+envoie les UV sur le triangle à l'écran), du plus loin au plus proche, avec un
+ombrage plat, 22 à 66 ms par image.
 
 Glisser : tourner. Molette : zoom. Double-clic : vue de face. Lâché, le modèle
 garde un peu d'élan ; au repos il tourne lentement et respire. Le minuteur ne
@@ -484,7 +485,7 @@ class Modele3D(Visionneuse, QWidget):
     """La visionneuse : dessinée par la carte graphique (`modele_3d_gpu`)
     quand OpenGL s'ouvre, sinon par QPainter sur le processeur (plateforme
     `offscreen` des tests, machine sans pilote, toute erreur de dessin). Les
-    vignettes des fiches (`rendu`) restent à QPainter : une image chacune."""
+    vignettes des fiches (`rendu`) passent par le même `_dessiner`."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

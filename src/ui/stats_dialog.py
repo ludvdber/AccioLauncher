@@ -7,9 +7,8 @@
   VII en deux lignes reliées, une section « hors des cours » pour un jeu sans
   année. Toujours huit lignes : c'est le squelette, il ne dépend pas des
   données. On y CHOISIT un jeu ;
-· **les sauvegardes du jeu choisi** en cartes : commencée quand, écrite pour la
-  dernière fois quand, combien de parties, combien de temps. Les chiffres
-  viennent de `src/core/sauvegardes.py` ;
+· une ligne ouverte (Entrée, clic) mène au **folio** du jeu, qui porte ses
+  sauvegardes depuis le 2026-10-24 ;
 · **la colonne de la saga** — le total, l'année, le mois, la plus longue
   partie avec sa date — et **les douze derniers mois** en barres.
 

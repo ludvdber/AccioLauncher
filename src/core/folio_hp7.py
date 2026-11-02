@@ -1,7 +1,7 @@
 """Le folio de HP7 et HP8 : ce que `auto.sav` des Reliques de la Mort dit de la partie.
 
 Relevé le 2026-10-16 sur les deux sauvegardes de Ludo, en LECTURE seule
-(`Harry-Potter-PC-Fix/notes/HP7a.md`, « auto.sav : des variables NOMMÉES ») :
+(`notes/HP7a.md` de l'atelier du correctif, « auto.sav : des variables NOMMÉES ») :
 une table de noms (nombre, puis `nom\\0` suivi de l'indice du suivant, à
 partir de `LastSaveCheckpoint`), puis des valeurs typées, chacune avec
 l'indice de son nom :

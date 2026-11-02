@@ -3,7 +3,7 @@
 Extrait de `main_window` (plafond de lignes). Ce sont des QUESTIONS, donc de
 vrais dialogues (les toasts sont pour ce qui n'attend rien), et toutes deux
 affichent du texte venu de l'extérieur : `FenetreMessage` les pose toujours en
-texte brut. Boutons NOMMÉS, jamais `StandardButton` (règle 116 de CLAUDE.md).
+texte brut. Boutons NOMMÉS, jamais `StandardButton` (règle 116, docs/claude/REGLES.md).
 """
 
 from PyQt6.QtCore import Qt

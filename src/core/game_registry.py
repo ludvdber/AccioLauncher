@@ -22,8 +22,8 @@ Trois contraintes, relevées sur une vraie installation le 2026-08-21
 
 Sous Linux : le registre du PRÉFIXE Wine
 ========================================
-Le jeu tourne sous Wine, qui a son registre. Deux points seulement changent,
-comme annoncé depuis le début : `disponible()`, et `_ecrire_eleve`, qui importe
+Le jeu tourne sous Wine, qui a son registre. `disponible()` le dit, et
+`lire_valeurs`, `_ecrire_direct` et `_ecrire_eleve` ont leur branche : ce dernier importe
 le même `.reg` (même `construire_reg`, même barrière) par `regedit /S` dans le
 préfixe, via le lanceur de compatibilité. La lecture ne lance rien : le
 registre d'un préfixe est du texte, lu par `compat.lire_valeurs`. Pas d'UAC

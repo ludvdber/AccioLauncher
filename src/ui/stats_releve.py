@@ -13,8 +13,9 @@ même chose en deux endroits ; le relevé le dit une fois, avec les chiffres.
 · **Hors des cours** : un jeu sans `annee` (le Quidditch, le jour où il entre au
   catalogue) a sa section, qui ne compte pas dans les sept années. Elle
   n'apparaît que s'il y a un tel jeu : une section vide serait une promesse.
-· On CHOISIT une ligne (souris, ↑/↓, Début/Fin) : ses sauvegardes s'affichent
-  en dessous. Seuls les jeux qui ont quelque chose à dire se laissent choisir.
+· On CHOISIT une ligne (souris, ↑/↓ et ←/→, Début/Fin) ; Entrée ou un clic
+  l'OUVRE (`ouvert`) : le folio du jeu, qui porte ses sauvegardes. Seuls les
+  jeux qui ont quelque chose à dire se laissent choisir.
 """
 
 from datetime import date

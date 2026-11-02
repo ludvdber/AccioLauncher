@@ -2,7 +2,7 @@
 """PyInstaller spec pour Accio Launcher.
 
 Windows : un seul `AccioLauncher.exe` (onefile, windowed) — inchangé.
-Linux : un DOSSIER (onedir), que `build/linux/appimage.sh` range dans une
+Linux : un DOSSIER (onedir), que `build/linux/appimage.py` range dans une
 AppImage. Pas de onefile là-bas : l'AppImage est déjà un fichier unique et
 compressé, et un onefile dedans se décompresserait EN PLUS dans /tmp à
 chaque démarrage (~200 Mo écrits pour rien, et plusieurs secondes).

@@ -2,7 +2,7 @@
 
 Idée de Ludo (2026-10-24) : l'assistant règle la langue, le dossier et la
 maison, puis laisse les gens seuls devant la bibliothèque. Beaucoup ne trouvent
-jamais le folio, Mes années ou les réglages graphiques derrière l'engrenage :
+jamais le folio, le Relevé ou les réglages graphiques derrière l'engrenage :
 « le launcher propose bien plus qu'ils ne le pensent ».
 
 La fenêtre s'assombrit, l'élément de l'étape reste éclairé et cerclé d'or, et

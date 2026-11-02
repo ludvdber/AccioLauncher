@@ -11,9 +11,9 @@ cours), `FENETRE` (le launcher est caché dans la zone de notification),
 `CINEMATIQUE` (une cinématique de la Médiathèque joue). Chaque
 raison se pose et se retire seule ; la musique reprend quand il n'en reste
 aucune. Une écoute depuis la Médiathèque (`ecouter`) passe devant le fond, se met
-en pause sur place (`basculer_pause`), se tait au son coupé, et continue hors de la page : le
-mini-lecteur de la barre du bas la montre. Elle rend la main au fond quand
-on l'arrête (`arreter_ecoute`).
+en pause sur place (`basculer_pause`), se tait au son coupé ; le mini-lecteur
+de la barre du bas la montre. Elle rend la main au fond quand on l'arrête
+(`arreter_ecoute`), ce que fait aussi la Médiathèque quittée (`done`).
 
 **Le son coupé** (`Config.son_coupe`) vaut pour tout le launcher : la fenêtre
 l'applique aussi aux bandes-annonces (`son_coupe_change`).

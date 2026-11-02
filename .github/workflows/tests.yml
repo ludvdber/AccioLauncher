@@ -75,9 +75,8 @@ jobs:
       # 5 min sur un cœur en CI.
       - name: Tests (offscreen via conftest)
         run: python -m pytest -v --tb=short --timeout=60 -n 4 --dist loadfile --cov=src --cov=main --cov-report=term --cov-fail-under=83
-      # Les tests tournent en offscreen, où Qt ne voit aucune police système et
-      # mesure tout en Cinzel. tools/audit_geometrie.py rejoue la mise en page
-      # sur la plateforme native, avec les vraies polices de Windows. Il ne
+      # Les tests tournent en offscreen ; tools/audit_geometrie.py rejoue la
+      # mise en page sur la plateforme native (rendu et DPI de Windows). Il ne
       # tournait que dans build.bat, donc sur la machine qui publie, au moment
       # de publier : une régression de mise en page rougit maintenant la PR
       # (117 s mesurées).
@@ -95,8 +94,9 @@ jobs:
   linux-smoke:
     # Figé, pas `ubuntu-latest` : ce label passe à Ubuntu 26 le 2026-10-19, et
     # un runner qui change sous nos pieds rend un rouge ininterprétable. Même
-    # choix dans tous les workflows ; seul le build AppImage reste en 22.04
-    # (glibc de la machine de build).
+    # choix dans tous les workflows, sauf le build AppImage (release.yml) :
+    # `ubuntu-latest` + conteneur ubuntu:22.04, pour la glibc de la machine de
+    # build.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # BLOQUANT depuis le 2026-09-18. Il a été informatif (`continue-on-error`)

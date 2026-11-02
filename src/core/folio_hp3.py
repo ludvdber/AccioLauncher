@@ -1,7 +1,7 @@
 """Le folio de HP3 : ce qu'une sauvegarde du Prisonnier d'Azkaban dit de la partie.
 
 Relevé le 2026-10-15 sur les sauvegardes de Ludo, en LECTURE seule
-(`Harry-Potter-PC-Fix/notes/HP3.md`, « Mission d'analyse ») : `SaveN.usa` est
+(`notes/HP3.md` de l'atelier du correctif, « Mission d'analyse ») : `SaveN.usa` est
 un paquet Unreal 2 (version 129) dont quelques objets portent la partie :
 
     JellybeanCollection.iNumItems        dragées (813)

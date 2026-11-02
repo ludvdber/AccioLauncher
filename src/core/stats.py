@@ -65,9 +65,8 @@ EN_COURS_NAME = "session_en_cours.json"
 _MAX_SESSIONS = 20_000
 
 # En dessous, ce n'est pas une partie : un double-clic malheureux, un jeu qui
-# refuse de démarrer. Le seuil est le même que celui appliqué à la volée par
-# `MainWindow._on_game_exited` depuis toujours ; il est redit ici pour que le
-# journal reste propre même si un autre appelant arrive un jour.
+# refuse de démarrer. `GameManager.add_playtime` le lit ici : en dessous, le
+# lancement est consigné comme TENTATIVE (`enregistrer_tentative`).
 DUREE_MINIMALE = 10
 # Un jeu qui a écrit un arrêt fatal (`config_cassee`) : sa boîte d'erreur le
 # garde en vie tant qu'on la regarde, voire pendant qu'on demande de l'aide sur

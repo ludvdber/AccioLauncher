@@ -190,9 +190,9 @@ class ParticleOverlay(QWidget):
         sale = QRegion()
         for pt in self._particles:
             sale += self._zone(pt)          # là où elle était
-            # Vertical drift (upward)
+            # Dérive verticale : vers le haut ou vers le bas selon l'ambiance
             pt.y += pt.speed_y
-            # Horizontal: slight drift + sinusoidal oscillation
+            # Horizontale : léger glissement + oscillation
             pt.x += pt.speed_x + math.sin(pt.phase) * pt.sway
             pt.phase += pt.phase_speed
             pt.rotation += pt.rot_speed

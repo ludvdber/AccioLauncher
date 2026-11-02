@@ -376,8 +376,8 @@ class TitleBar(QWidget):
         self._agrandir.setToolTip(libelle)
 
     def set_onglet(self, cle: str) -> None:
-        """Souligne l'onglet ouvert. Mes années et Paramètres sont des fenêtres
-        modales : la fenêtre principale remet Bibliothèque à leur fermeture."""
+        """Souligne l'onglet ouvert. Carnet, Collections et Paramètres sont des
+        pages (`Pages.ouvrir`) : leur fermeture remet Bibliothèque."""
         for c, onglet in self._onglets.items():
             onglet.setChecked(c == cle)
 
