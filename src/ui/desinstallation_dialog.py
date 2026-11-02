@@ -71,7 +71,7 @@ class DesinstallationDialog(QDialog):
         # Après l'ajout : sans parent, une ligne rendue visible est une FENÊTRE.
         self._ligne_jeux.setVisible(a_des_jeux)
         ligne_copies, self.tgl_copies = _interrupteur(tr("Garder les copies de sauvegardes"), True)
-        ligne_copies.decrire(tr("Elles restent seules dans le dossier _Launcher."))
+        ligne_copies.decrire(tr("Elles restent dans le dossier _Launcher."))
         carte.ajouter(ligne_copies)
         carte.ajouter(LigneReglage(tr("Vos sauvegardes"), tr(
             "Elles sont dans Documents : elles restent, quoi qu'il arrive.")))

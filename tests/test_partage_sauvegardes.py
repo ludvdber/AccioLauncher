@@ -148,6 +148,33 @@ class TestImporter:
         assert (base / "Save1.usa").read_bytes() == b"nouvelle"
         assert (base / "GameSaveInfo1").read_bytes() == b"resume"
 
+    def test_hp1_d_un_autre_emplacement_prend_le_numero_vise(self, tmp_path):
+        """Grand audit du 2026-11-02 : un .zip de l'emplacement 3 posé dans le 5
+        écrivait `GameSaveInfo3` (le résumé d'une AUTRE partie, écrasé sans copie)
+        et effaçait `GameSaveInfo5`, sans le remplacer."""
+        base = sauvegardes.racines()["documents"] / "Harry Potter" / "Save"
+        _ecrire(base / "Save3.usa", b"partie 3")
+        _ecrire(base / "GameSaveInfo3", b"resume 3")
+        _ecrire(base / "Save5.usa", b"ancienne 5")
+        _ecrire(base / "GameSaveInfo5", b"ancien resume 5")
+        with zipfile.ZipFile(tmp_path / "forum.zip", "w") as z:
+            z.writestr("Save3.usa", b"importee")
+            z.writestr("GameSaveInfo3", b"resume importe")
+        assert ps.importer("hp1", HP1, ps.lire(tmp_path / "forum.zip", HP1), "Save5.usa")
+        assert (base / "Save5.usa").read_bytes() == b"importee"
+        assert (base / "GameSaveInfo5").read_bytes() == b"resume importe"
+        assert (base / "GameSaveInfo3").read_bytes() == b"resume 3"
+
+    def test_compagnon_d_une_autre_sauvegarde_pas_pose(self, tmp_path):
+        base = sauvegardes.racines()["documents"] / "Harry Potter" / "Save"
+        _ecrire(base / "GameSaveInfo7", b"resume 7")
+        with zipfile.ZipFile(tmp_path / "melange.zip", "w") as z:
+            z.writestr("Save2.usa", b"partie 2")
+            z.writestr("GameSaveInfo7", b"intrus")
+        assert ps.importer("hp1", HP1, ps.lire(tmp_path / "melange.zip", HP1), "Save4.usa")
+        assert (base / "GameSaveInfo7").read_bytes() == b"resume 7"
+        assert not (base / "GameSaveInfo4").exists()
+
     def test_jeu_jamais_lance_cree_son_dossier(self, tmp_path):
         _ecrire(tmp_path / "HPHBP0", b"hp6")
         assert ps.importer("hp6", HP6, ps.lire(tmp_path / "HPHBP0", HP6), "HPHBP0")

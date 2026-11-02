@@ -47,6 +47,18 @@ class TestInventaire:
         assert donnees / "logs" in inv.dossiers
         assert donnees / "config.json" in inv.fichiers
 
+    def test_les_prefixes_wine_restent_toujours(self, poste):
+        """Grand audit du 2026-11-02 : sous Linux, les sauvegardes vivent dans les
+        préfixes Wine du `_Launcher`, qui partaient avec lui."""
+        donnees = poste / "_Launcher"
+        (donnees / "prefixes" / "umu" / "drive_c").mkdir(parents=True)
+        for garder_copies in (False, True):
+            inv = d.inventaire(poste, [], garder_jeux=True, garder_copies=garder_copies)
+            assert donnees not in inv.dossiers
+            assert donnees / "prefixes" not in inv.dossiers
+            assert donnees / "logs" in inv.dossiers
+            assert (donnees / "copies_sauvegardes" in inv.dossiers) is not garder_copies
+
     def test_rien_n_est_touche_en_listant(self, poste):
         d.inventaire(poste, [poste / "HP1"], garder_jeux=False)
         assert (poste / "HP1").is_dir() and (poste / "_Launcher" / "logs").is_dir()

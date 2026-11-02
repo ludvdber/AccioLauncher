@@ -325,6 +325,12 @@ class TestVerificationForcee:
         assert recus["launcher"] == [annonce]
         assert ("Launcher v9.9.9 disponible !", True) in dlg.statuts
 
+    def test_le_launcher_disponible_reste_affiche(self):
+        """Grand audit du 2026-11-02 : « Catalogue déjà à jour » l'effaçait."""
+        annonce = ("9.9.9", "https://x", "https://x/a.exe", "ab" * 32, "notes")
+        dlg, _ = self._verifier(_Checker(launcher=annonce), catalog_only=False, url="https://x")
+        assert dlg.statuts[-1] == ("Launcher v9.9.9 disponible !", True)
+
     def test_le_catalogue_seul_n_ecoute_pas_le_launcher(self):
         annonce = ("9.9.9", "https://x", "", "", "")
         _, recus = self._verifier(_Checker(launcher=annonce), catalog_only=True)

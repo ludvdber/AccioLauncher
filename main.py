@@ -217,6 +217,10 @@ def main():
             # revenait jamais (Ludo, 2026-09-23).
             log.info("Premier lancement abandonné — aucune configuration écrite")
             splash.close()
+            # Le Choixpeau a pu colorer la manette : elle resterait allumée.
+            from src.core import manette
+            if manette.allumee_par_nous():
+                manette.eteindre()
             logging.shutdown()
             os._exit(0)
         guard.activate_requested.connect(window.bring_to_front)

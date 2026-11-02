@@ -737,9 +737,12 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         widget.blockSignals(False)
 
     def _montrer_erreur(self, texte: str = "") -> None:
+        # Le nom du VRAI fichier : HP1 à HP3 n'ont pas de d3d9.ini (winmm.ini,
+        # dinput8.ini ; grand audit du 2026-11-02).
+        nom = self._ini.name if self._ini is not None else "d3d9.ini"
         self._erreur.setText(texte or tr(
-            "Réglage non enregistré : le fichier d3d9.ini du jeu n'a pas "
-            "pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+            "Réglage non enregistré : le fichier {} du jeu n'a pas "
+            "pu être modifié (jeu en cours, ou fichier en lecture seule).").format(nom))
         self._erreur.show()
 
     def _ligne(self, libelle_txt: str, controle: QWidget, aide_txt: str,

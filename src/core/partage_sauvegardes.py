@@ -31,6 +31,7 @@ import gzip
 import json
 import logging
 import os
+import re
 import stat
 import tempfile
 import zipfile
@@ -304,13 +305,14 @@ def importer(jeu: str, spec: Sauvegardes, paquet: Paquet, rel: str) -> bool:
         log.warning("Import vers %s refusé : l'état actuel n'a pas pu être copié", cible)
         return False
     anciens = copies_sauvegardes.compagnons(cible, spec) if cible.exists() else []
-    for f in paquet.compagnons:
+    compagnons = _renumerotes(paquet, spec, cible)
+    for f in compagnons:
         if not _poser(f, cible.parent / f.nom):
             return False
     # La sauvegarde en dernier : un import interrompu laisse l'ancienne en place.
     if not _poser(Fichier(cible.name, paquet.principal.donnees, paquet.principal.quand), cible):
         return False
-    poses = {f.nom.lower() for f in paquet.compagnons}
+    poses = {f.nom.lower() for f in compagnons}
     for p in anciens:
         resume = any("{n}" in m and fnmatch.fnmatch(p.name.lower(), m.replace("{n}", "*").lower())
                      for m in spec.compagnons)
@@ -322,6 +324,36 @@ def importer(jeu: str, spec: Sauvegardes, paquet: Paquet, rel: str) -> bool:
             log.warning("Compagnon %s non retiré : %s", p, exc)
     log.info("%s : sauvegarde importée dans %s", jeu, rel)
     return True
+
+
+def _renumerotes(paquet: Paquet, spec: Sauvegardes, cible: Path) -> list[Fichier]:
+    """Les compagnons à poser à côté de `cible`, au numéro de `cible`.
+
+    « {n} » porte le numéro de la sauvegarde : un .zip venu de l'emplacement 3
+    posé dans le 5 écrivait `GameSaveInfo3`, le résumé d'une AUTRE partie, et
+    effaçait celui du 5 (grand audit du 2026-11-02). Un compagnon numéroté pour
+    une autre sauvegarde que la principale du paquet n'est pas posé.
+    """
+    origine = "".join(c for c in Path(paquet.principal.nom).stem if c.isdigit())
+    arrivee = "".join(c for c in cible.stem if c.isdigit())
+    gardes = []
+    for f in paquet.compagnons:
+        nom: str | None = f.nom
+        for motif in spec.compagnons:
+            if "{n}" in motif and (m := _numerote(motif).fullmatch(f.nom)):
+                nom = f.nom[:m.start("n")] + arrivee + f.nom[m.end("n"):] if m["n"] == origine else None
+                break
+        if nom is not None:
+            gardes.append(Fichier(nom, f.donnees, f.quand))
+    return gardes
+
+
+def _numerote(motif: str) -> re.Pattern[str]:
+    """`GameSaveInfo{n}` → une expression dont le groupe `n` est le numéro."""
+    def glob(texte: str) -> str:
+        return re.escape(texte).replace(r"\*", ".*").replace(r"\?", ".")
+    avant, _, apres = motif.partition("{n}")
+    return re.compile(f"{glob(avant)}(?P<n>\\d*){glob(apres)}", re.IGNORECASE)
 
 
 def _poser(f: Fichier, cible: Path) -> bool:

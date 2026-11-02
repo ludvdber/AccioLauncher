@@ -430,27 +430,33 @@ class TitleBar(QWidget):
     # ── Drag de la fenêtre ──
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        # Agrandie, la fenêtre ne se restaure qu'au premier MOUVEMENT : restaurée
+        # dès l'appui, un simple clic la remettait en taille normale, et le
+        # double-clic qui suivait la ré-agrandissait (grand audit du 2026-11-02).
         if event.button() == Qt.MouseButton.LeftButton:
-            if self._window.isMaximized():
-                # Restore first, reposition window so cursor stays on the title bar
-                from PyQt6.QtGui import QGuiApplication
-                global_pt = event.globalPosition().toPoint()
-                self._window.showNormal()
-                geo = self._window.frameGeometry()
-                new_x = int(global_pt.x() - geo.width() * 0.5)
-                # Borner aux limites de l'écran sous le curseur (multi-monitor safe)
-                screen = QGuiApplication.screenAt(global_pt)
-                if screen is not None:
-                    sg = screen.availableGeometry()
-                    new_x = max(sg.x(), min(new_x, sg.x() + sg.width() - geo.width()))
-                self._window.move(new_x, 0)
-                self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
-            else:
-                self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
+            self._drag_pos = event.globalPosition().toPoint() - self._window.frameGeometry().topLeft()
+
+    def _restaurer_sous(self, global_pt: QPoint) -> None:
+        """Restaure la fenêtre agrandie et la pose sous le curseur, en haut de SON écran."""
+        from PyQt6.QtGui import QGuiApplication
+        self._window.showNormal()
+        geo = self._window.frameGeometry()
+        new_x, new_y = int(global_pt.x() - geo.width() * 0.5), 0
+        # Bornée à l'écran sous le curseur : y = 0 du bureau virtuel n'est pas
+        # le haut d'un second écran placé plus bas.
+        screen = QGuiApplication.screenAt(global_pt)
+        if screen is not None:
+            sg = screen.availableGeometry()
+            new_x = max(sg.x(), min(new_x, sg.x() + sg.width() - geo.width()))
+            new_y = sg.y()
+        self._window.move(new_x, new_y)
+        self._drag_pos = global_pt - self._window.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if not (self._drag_pos and event.buttons() & Qt.MouseButton.LeftButton):
+        if self._drag_pos is None or not event.buttons() & Qt.MouseButton.LeftButton:
             return
+        if self._window.isMaximized():
+            self._restaurer_sous(event.globalPosition().toPoint())
         # Sous Wayland, `move()` est ignoré : seul le compositeur déplace une
         # fenêtre. `startSystemMove` lui passe la main (X11 et Windows
         # l'acceptent aussi) ; repli manuel s'il refuse. Au premier MOUVEMENT

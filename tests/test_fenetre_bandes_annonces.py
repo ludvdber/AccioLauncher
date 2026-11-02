@@ -302,6 +302,23 @@ class TestRevoirLaBandeAnnonce:
         assert bar._volume_slider.isHidden(), "plus rien à régler"
         assert bar._btn_play.isHidden(), "plus rien à mettre en pause"
 
+    def test_au_retour_d_un_jeu_la_pastille_lire_revient(self, make_window, monkeypatch):
+        """Grand audit du 2026-11-02 : `pause` arrêtait la vidéo et cachait ses
+        commandes, `resume` ne remettait rien jusqu'au changement de jeu."""
+        win = make_window(autoplay_videos=True)
+        win.show()
+        vue = win._detail
+        vue.set_game([e.game for e in win.manager.get_games()][1])
+        self._avec_bande_annonce(monkeypatch)
+        lances = []
+        monkeypatch.setattr(vue._video, "play", lambda *a, **k: lances.append(a) or True)
+        vue.pause()                      # la partie commence
+        vue.resume()                     # le launcher revient
+        bar = vue._audio_bar
+        assert not bar.isHidden() and not bar._btn_replay.isHidden()
+        assert bar._btn_replay.accessibleName() == "Lire la bande-annonce"
+        assert lances == [], "pas de lecture automatique au retour d'un jeu"
+
     def test_sans_bande_annonce_rien_ne_reste(self, make_window, monkeypatch):
         """`_stop_video` cache la barre : la fin ne doit pas la ressusciter."""
         win = make_window(autoplay_videos=True)

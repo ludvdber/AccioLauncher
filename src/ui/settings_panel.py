@@ -771,6 +771,9 @@ class SettingsDialog(QDialog):
         # Allumé : la manette prend la couleur tout de suite, c'est ce qui dit que ça marche.
         if coche:
             manette.colorer_en_fond(self.config.theme)
+        else:
+            # Décochée, elle restait allumée, même launcher fermé (grand audit du 2026-11-02).
+            manette.eteindre_en_fond()
 
     def _on_language_changed(self) -> None:
         """Change la langue (effective au prochain démarrage — chaînes posées à la construction)."""

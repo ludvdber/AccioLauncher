@@ -93,6 +93,34 @@ class TestIniEcritParLeMoteur:
         assert "[NouvelleSection]" in texte
         assert "Cle=Valeur" in texte
 
+    def _cle_absente(self, ini_ansi, contenu: str):
+        chemin, tmp_path = ini_ansi
+        chemin.write_bytes(contenu.encode(_INI_ENCODING))
+        jeu = dict(JEU)
+        jeu["pre_launch"] = {"ini_patches": [
+            {"file": "%DOCUMENTS%" + B + "Harry Potter" + B + "HP.ini",
+             "section": "FirstRun", "key": "Nouvelle", "value": "1"},
+        ]}
+        for _ in range(3):        # trois lancements
+            apply_ini_patches(GameData.from_dict(jeu), Config(install_path=tmp_path / "jeux"))
+        return chemin.read_text(encoding=_INI_ENCODING).splitlines()
+
+    def test_cle_absente_ajoutee_dans_sa_section_une_seule_fois(self, ini_ansi):
+        """Elle tombait sous la DERNIÈRE section, et chaque lancement en
+        ajoutait une de plus (grand audit du 2026-11-02)."""
+        lignes = self._cle_absente(ini_ansi, "[FirstRun]" + CRLF + "Reconfig=1" + CRLF + CRLF
+                                   + "[Core.System]" + CRLF + "Paths=..\\Maps" + CRLF)
+        assert lignes.count("Nouvelle=1") == 1
+        assert lignes.index("Nouvelle=1") == lignes.index("Reconfig=1") + 1
+        assert lignes.index("Nouvelle=1") < lignes.index("[Core.System]")
+
+    def test_cle_absente_sans_saut_de_ligne_final(self, ini_ansi):
+        """La clé se collait à la dernière ligne quand le fichier ne finit pas
+        par un saut de ligne."""
+        lignes = self._cle_absente(ini_ansi, "[Core.System]" + CRLF + "Paths=x" + CRLF
+                                   + "[FirstRun]" + CRLF + "Reconfig=1")
+        assert lignes[-2:] == ["Reconfig=1", "Nouvelle=1"]
+
     @pytest.mark.skipif(sys.platform != "win32", reason="page de codes ANSI Windows")
     def test_l_encodage_est_celui_du_moteur(self):
         assert _INI_ENCODING == "mbcs"

@@ -1001,7 +1001,7 @@ class FolioPageHP5(FolioPage):
                                      partie.pourcentage / 100))
             if partie.decouverte is not None:
                 tuiles.append(_tuile(
-                    f"{partie.decouverte} / {folio_hp5.DECOUVERTE_MAX:,}".replace(",", " "),
+                    f"{partie.decouverte:,} / {folio_hp5.DECOUVERTE_MAX:,}".replace(",", "\u202f"),
                     tr("Points de découverte"), partie.decouverte / folio_hp5.DECOUVERTE_MAX,
                     image_bgra(folio_hp5.image_decouverte(self._system), 36,
                                self.devicePixelRatioF())))
@@ -1195,9 +1195,13 @@ class FolioPageHP7(FolioPage):
     def _depart(self):
         return max(self.releves, key=lambda p: p.ecrite or datetime.min, default=None)
 
+    def _message_debut(self) -> str:
+        # Ni cartes ni points dans HP7 et HP8 (grand audit du 2026-11-02).
+        return tr("Partie tout juste commencée : rien à montrer encore.")
+
     def _construire(self, partie) -> QWidget:
         if partie is None or not partie.lu:
-            # Sans table de noms : le message « rien à lire encore » de HP1.
+            # Sans table de noms : la page vide de la base, avec SON message.
             return super()._construire(partie)
 
         def contenu(lay: QVBoxLayout) -> None:

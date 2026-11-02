@@ -637,6 +637,10 @@ class FolioPage(QDialog):
             return ""
         return _duree(vue.temps) if vue is not None and vue.temps else ""
 
+    def _message_debut(self) -> str:
+        """La page d'une partie qu'on ne sait pas encore lire (une sous-classe dit le sien)."""
+        return tr("Partie tout juste commencée : pas encore de carte ni de points.")
+
     def _construire(self, releve: folio.Releve | None) -> QWidget:
         corps = QWidget()
         h = QHBoxLayout(corps)
@@ -657,7 +661,7 @@ class FolioPage(QDialog):
 
         if releve is None or not releve.lu:
             message = (tr("Aucune sauvegarde trouvée pour ce jeu.") if releve is None else
-                       tr("Partie tout juste commencée : pas encore de carte ni de points."))
+                       self._message_debut())
             titre = QLabel(tr("Folio"))
             titre.setFont(cinzel_decorative(22))
             titre.setStyleSheet("color: #f4f2f8; background: transparent;")

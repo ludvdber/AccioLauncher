@@ -323,11 +323,10 @@ class Config:
                 # sauvegarde écraserait sinon le temps de jeu, la langue et les
                 # versions installées, qui restent récupérables à la main. Un
                 # fichier simplement illisible (verrouillé) n'est pas corrompu.
-                if not isinstance(exc, OSError):
-                    mettre_de_cote(CONFIG_FILE_PATH)
-                else:
-                    # Verrouillé, pas corrompu : la session tourne sur les
-                    # défauts, mais `save()` ne l'écrasera pas.
+                # Verrouillé, ou corrompu mais pas mis de côté (le renommage a
+                # échoué) : la session tourne sur les défauts, mais `save()` ne
+                # l'écrasera pas.
+                if isinstance(exc, OSError) or mettre_de_cote(CONFIG_FILE_PATH) is None:
                     marquer_illisible(CONFIG_FILE_PATH)
                 return cls()
         return cls()

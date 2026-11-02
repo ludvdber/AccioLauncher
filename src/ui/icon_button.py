@@ -235,6 +235,17 @@ class IconButton(QAbstractButton):
             self._icone = icone
             self.update()
 
+    def keyPressEvent(self, event) -> None:
+        # Espace est géré par QAbstractButton, Entrée non : elle remontait à
+        # MainWindow, qui la prenait pour JOUER. Entrée sur l'engrenage lançait
+        # le jeu (règle 15, grand audit du 2026-11-02).
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if not event.isAutoRepeat():
+                self.animateClick()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
     # ── Survol ──
 
     def enterEvent(self, event) -> None:

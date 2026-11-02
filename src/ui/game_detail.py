@@ -543,6 +543,11 @@ class GameDetailView(QWidget):
 
     def resume(self) -> None:
         self._bg.resume()
+        # `pause` a arrêté la vidéo et caché ses commandes : sans la pastille
+        # « Lire », la fiche n'en avait plus jusqu'au changement de jeu (grand
+        # audit du 2026-11-02). Pas de lecture automatique au retour d'un jeu.
+        if self.game is not None and not self._video.is_playing:
+            self._proposer_pastille(a_lire=True)
 
     def pause_effects(self) -> None:
         """Perte de FOCUS : on suspend les effets décoratifs, pas la vidéo.

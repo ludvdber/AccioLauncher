@@ -98,9 +98,12 @@ _FORMATS_LONGS = {
 
 
 def date_courte(date_str: str) -> str:
-    """« 01/10/2026 » ; la chaîne du catalogue telle quelle si elle ne se lit pas."""
+    """« 01/10/2026 » ; « 2026-10-01 » en anglais, où « 01/10 » se lit 10 janvier
+    (grand audit du 2026-11-02) ; la chaîne du catalogue telle quelle si elle ne se lit pas."""
     d = _jour(date_str)
-    return d.strftime("%d/%m/%Y") if d else date_str
+    if d is None:
+        return date_str
+    return d.isoformat() if get_language() == "en" else d.strftime("%d/%m/%Y")
 
 
 def date_longue(date_str: str) -> str:

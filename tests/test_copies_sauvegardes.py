@@ -219,6 +219,26 @@ class TestCompagnons:
         assert (slot / "Grounds_pa.usa").read_bytes() == b"zone B"
         assert (slot / "Willow_pa.usa").read_bytes() == b"zone neuve"
 
+    def test_un_retour_qui_echoue_ne_remplace_rien(self, save_dir):
+        """Grand audit du 2026-11-02 : un compagnon illisible au milieu laissait
+        les premiers remis avec la sauvegarde actuelle, un mélange de deux parties."""
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"partie A", T0)
+        _ecrire(slot / "Aaa_pa.usa", b"zone A1", T0)
+        _ecrire(slot / "Zzz_pa.usa", b"zone A2", T0)
+        cs.avant_partie("hp2", HP2_AVEC)
+        avant = cs.versions("hp2")["Slot1/Save0.usa"][-1]
+        _ecrire(slot / "Save0.usa", b"partie B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Aaa_pa.usa", b"zone B1", T0 + timedelta(hours=1))
+        _ecrire(slot / "Zzz_pa.usa", b"zone B2", T0 + timedelta(hours=1))
+        groupe = avant.chemin.with_name(avant.chemin.name.removesuffix(".gz"))
+        (groupe / "Zzz_pa.usa.gz").write_bytes(b"pas du gzip")
+        assert not cs.revenir("hp2", HP2_AVEC, avant)
+        assert (slot / "Save0.usa").read_bytes() == b"partie B"
+        assert (slot / "Aaa_pa.usa").read_bytes() == b"zone B1"
+        assert (slot / "Zzz_pa.usa").read_bytes() == b"zone B2"
+        assert not list(slot.glob("*.accio-tmp"))
+
     def test_la_version_prend_la_date_du_plus_recent(self, save_dir):
         slot = save_dir / "Slot1"
         _ecrire(slot / "Save0.usa", b"A", T0)

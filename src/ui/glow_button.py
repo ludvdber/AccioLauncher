@@ -27,6 +27,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QPushButton, QWidget
 
 from src.ui import theme
+from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
 from src.ui.icon_button import pixmap_icone
 
 
@@ -131,6 +132,16 @@ class GlowButton(QPushButton):
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRoundedRect(btn_rect, radius, radius)
 
+        # L'anneau de focus du CLAVIER (et de la manette), comme IconButton : la
+        # règle `:focus` du stylesheet n'atteint pas un bouton peint, et JOUER
+        # atteint par Tab ne se distinguait en rien (règle 15, grand audit du
+        # 2026-11-02). Clair sur le plein doré, à l'accent sur le contour.
+        if self.property(_FOCUS_CLAVIER):
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(QColor(255, 255, 255, 215) if self._style == "filled"
+                          else theme.accent_qcolor(210), 1.5))
+            p.drawRoundedRect(btn_rect.adjusted(2.5, 2.5, -2.5, -2.5), radius - 2, radius - 2)
+
         tc = QColor(self._text_color)
         if self._style == "outline" and self._hovered:
             tc = tc.lighter(130)
@@ -186,7 +197,7 @@ class GlowButton(QPushButton):
     def _paint_filled(self, p: QPainter, _h: int, rect: QRectF) -> None:
         """Fond UNI, mat : le survol éclaircit à peine, l'appui assombrit."""
         fond = QColor(self._bg_top)
-        if self._pressed:
+        if self._enfonce():
             fond = fond.darker(112)
         elif self._hovered:
             fond = fond.lighter(108)
@@ -194,13 +205,28 @@ class GlowButton(QPushButton):
 
     def _paint_outline(self, p: QPainter, rect: QRectF) -> None:
         """Fond à peine teinté — pour les actions secondaires."""
-        if self._pressed:
+        if self._enfonce():
             p.fillRect(rect, QColor(255, 255, 255, 12))
         elif self._hovered:
             r, g, b = self._glow_color.red(), self._glow_color.green(), self._glow_color.blue()
             p.fillRect(rect, QColor(r, g, b, 20))
         else:
             p.fillRect(rect, QColor(255, 255, 255, 6))
+
+    def _enfonce(self) -> bool:
+        """Appuyé à la souris, ou tenu par Espace (au clavier, `isDown` seul le sait)."""
+        return self._pressed or self.isDown()
+
+    def keyPressEvent(self, event) -> None:
+        # Espace est géré par QPushButton ; Entrée ne l'est que dans un dialogue
+        # (bouton par défaut). Ailleurs elle remontait à MainWindow, qui lançait
+        # l'action principale de la fiche (grand audit du 2026-11-02).
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if not event.isAutoRepeat():
+                self.animateClick()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def enterEvent(self, event: QEnterEvent) -> None:
         self._hovered = True

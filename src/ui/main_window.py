@@ -401,8 +401,9 @@ class MainWindow(QMainWindow):
         log.info("Launcher minimisé dans le tray — en jeu : %s", self._session.nom_en_cours)
 
     def _restore_from_tray(self) -> None:
-        """Restaure la fenêtre et reprend les effets."""
-        self.showNormal()
+        """Restaure la fenêtre, AGRANDIE si elle l'était (`showNormal` la remettait en taille normale)."""
+        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized)
+        self.show()
         self.activateWindow()
         self._tray.hide()
         self.resume_all_effects()
@@ -424,8 +425,7 @@ class MainWindow(QMainWindow):
         if self.isHidden():
             self._restore_from_tray()
             return
-        if self.isMinimized():
-            self.showNormal()
+        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized)
         self.show()
         self.raise_()
         self.activateWindow()

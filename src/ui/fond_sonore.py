@@ -11,7 +11,7 @@ cours), `FENETRE` (le launcher est caché dans la zone de notification),
 `CINEMATIQUE` (une cinématique de la Médiathèque joue). Chaque
 raison se pose et se retire seule ; la musique reprend quand il n'en reste
 aucune. Une écoute depuis la Médiathèque (`ecouter`) passe devant le fond, se met
-en pause sur place (`basculer_pause`) et continue hors de la page : le
+en pause sur place (`basculer_pause`), se tait au son coupé, et continue hors de la page : le
 mini-lecteur de la barre du bas la montre. Elle rend la main au fond quand
 on l'arrête (`arreter_ecoute`).
 
@@ -205,9 +205,11 @@ class FondSonore(QObject):
     def _voulu(self) -> str:
         """Le morceau qui devrait jouer maintenant, vide pour le silence."""
         if self._ecoute:
-            # L'écoute de la page ne cède qu'à sa pause, à une partie lancée, à la
-            # fenêtre cachée ou à une cinématique.
-            if self._en_pause or self._raisons & {JEU, FENETRE, CINEMATIQUE}:
+            # L'écoute de la page cède à sa pause, au son coupé, à une partie
+            # lancée, à la fenêtre cachée ou à une cinématique. Le haut-parleur
+            # « qui coupe tout » la laissait jouer (Ludo, 2026-11-02 : un bug).
+            if (self._en_pause or self._config.son_coupe
+                    or self._raisons & {JEU, FENETRE, CINEMATIQUE}):
                 return ""
             return self._ecoute
         if self._config.son_coupe or self._raisons:

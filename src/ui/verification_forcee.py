@@ -17,7 +17,7 @@ def verifier(checker, dlg, *, catalog_only: bool, sur_catalogue, sur_launcher,
     sont ceux de la fenêtre ; `en_ligne()` et `url_launcher()` sont LUS à la
     fin, pas avant : `network_status` est la dernière instruction de `run()`.
     """
-    etat = {"catalogue": False, "vivant": True}
+    etat = {"catalogue": False, "launcher": False, "vivant": True}
     dlg.destroyed.connect(lambda *_: etat.update(vivant=False))
 
     def vivant() -> bool:
@@ -41,6 +41,7 @@ def verifier(checker, dlg, *, catalog_only: bool, sur_catalogue, sur_launcher,
         # slot n'a pas, et l'empreinte SHA-256 partait vide — l'exe d'auto-update
         # était installé sans être vérifié (tests/test_notif_update.py).
         sur_launcher(version, url, asset_url, asset_sha256, notes)
+        etat["launcher"] = True
         if vivant():
             dlg.show_update_status(tr("Launcher v{} disponible !").format(version))
 
@@ -52,6 +53,14 @@ def verifier(checker, dlg, *, catalog_only: bool, sur_catalogue, sur_launcher,
         # rien vérifié (mesuré le 2026-08-28, les deux cas rendaient la MÊME chaîne).
         if not en_ligne():
             dlg.show_update_status(tr("Hors ligne : vérifiez la connexion, puis réessayez."), success=False)
+        elif etat["launcher"]:
+            # « Launcher vX disponible ! » reste : « Catalogue déjà à jour »
+            # l'effaçait (grand audit du 2026-11-02).
+            return
+        elif etat["launcher"]:
+            # « Launcher vX disponible ! » reste : « Catalogue déjà à jour »
+            # l'effaçait (grand audit du 2026-11-02).
+            return
         elif not etat["catalogue"]:
             dlg.show_update_status(tr("Catalogue déjà à jour"))
         elif not catalog_only and not url_launcher():

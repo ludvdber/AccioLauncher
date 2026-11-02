@@ -267,14 +267,24 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
                     found = True
                     break
         if not found:
-            section_exists = any(
-                line.strip() == f"[{patch.section}]" for line in lines
-            )
-            if not section_exists:
-                if lines and not lines[-1].endswith("\n"):
-                    lines.append("\n")
-                lines.append(f"[{patch.section}]\n")
-            lines.append(f"{patch.key}={value}\n")
+            # Dans SA section, après sa dernière ligne non vide. En fin de
+            # fichier, la clé tombait sous la DERNIÈRE section : le lancement
+            # suivant ne la trouvait toujours pas et en ajoutait une autre
+            # (grand audit du 2026-11-02).
+            if lines and not lines[-1].endswith("\n"):
+                lines[-1] += "\n"
+            nouvelle = f"{patch.key}={value}\n"
+            debut = next((i for i, line in enumerate(lines)
+                          if line.strip() == f"[{patch.section}]"), None)
+            if debut is None:
+                lines += [f"[{patch.section}]\n", nouvelle]
+            else:
+                fin = next((i for i in range(debut + 1, len(lines))
+                            if lines[i].strip().startswith("[") and lines[i].strip().endswith("]")),
+                           len(lines))
+                while fin > debut + 1 and not lines[fin - 1].strip():
+                    fin -= 1
+                lines.insert(fin, nouvelle)
         # Encodage du MOTEUR : en UTF-8, UE1 lisait « FrÃ©dÃ©ric ». Encodé
         # AVANT de toucher au fichier, puis posé d'un seul coup : un « w » le
         # vidait d'abord, et une valeur hors de la page ANSI ou un disque plein

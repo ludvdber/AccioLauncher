@@ -523,10 +523,15 @@ def on_uninstall(view: GameDetailView) -> None:
     )
     if reply != 0:
         return
-    view.manager.uninstall_game(view.game.id)
+    # Le retour était ignoré : « désinstallé » s'affichait même sur un échec
+    # (grand audit du 2026-11-02).
+    reussi = view.manager.uninstall_game(view.game.id)
     view._refresh()
     view.state_changed.emit()
-    view.status_message.emit(tr("{} désinstallé.").format(view.game.name))
+    view.status_message.emit(
+        tr("{} désinstallé.").format(view.game.name) if reussi else
+        tr("La désinstallation de {} n'a pas abouti : un de ses fichiers est encore utilisé. "
+           "Fermez ce qui l'utilise, puis réessayez.").format(view.game.name))
 
 
 def _ce_qui_reste(game: GameData) -> str:

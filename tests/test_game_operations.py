@@ -293,7 +293,7 @@ class TestUnEchecDInstallationDitSaCause:
         set_language(avant)
 
     @pytest.mark.parametrize("exc, attendu", [
-        (PermissionError(errno.EACCES, "Accès refusé"), "Windows a refusé l'écriture"),
+        (PermissionError(errno.EACCES, "Accès refusé"), "Le système a refusé l'écriture"),
         (OSError(errno.ENOSPC, "No space left on device"), "Le disque est plein"),
         (OSError(errno.ENAMETOOLONG, "File name too long"), "trop long"),
     ])

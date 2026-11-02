@@ -94,7 +94,17 @@ class GameManager:
         stats.amorcer(self.config.playtime_seconds)
         # Rattrape une partie dont le launcher n'a pas vu la fin (zone de
         # notification, mise à jour, plantage). Après `amorcer`.
-        stats.recuperer_session_interrompue()
+        # Dans la config AUSSI : la fiche lit `playtime_seconds`, les statistiques
+        # le journal, et les deux divergeaient (grand audit du 2026-11-02).
+        if (rattrapee := stats.recuperer_session_interrompue()) is not None:
+            gid = rattrapee.jeu
+            self.config.playtime_seconds[gid] = self.config.playtime_seconds.get(gid, 0) + rattrapee.duree
+            self.config.last_played[gid] = max(self.config.last_played.get(gid, ""),
+                                               rattrapee.debut.date().isoformat())
+            try:
+                self.config.save()
+            except OSError:
+                log.warning("Partie rattrapée de %s non écrite dans la config", gid, exc_info=True)
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property

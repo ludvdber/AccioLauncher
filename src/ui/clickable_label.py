@@ -28,6 +28,8 @@ class ClickableLabel(QLabel):
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
-            self.clicked.emit()
+            # Une touche tenue ne clique qu'une fois, comme un QAbstractButton.
+            if not event.isAutoRepeat():
+                self.clicked.emit()
         else:
             super().keyPressEvent(event)

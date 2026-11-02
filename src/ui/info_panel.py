@@ -328,10 +328,9 @@ class InfoPanel(QWidget):
         self._meta.setFont(cinzel(14))
         self._meta.setWordWrap(True)
         self._meta.setTextFormat(Qt.TextFormat.RichText)
-        self._meta.setTextInteractionFlags(
-            Qt.TextInteractionFlag.LinksAccessibleByMouse
-            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
-        )
+        # Sans `LinksAccessibleByKeyboard` : la ligne n'a plus de lien, et Qt lui
+        # donnait le focus, donc Tab s'y arrêtait pour rien (grand audit du 2026-11-02).
+        self._meta.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
         # `#b4b4d0` : à `#8a8aaa`, 44 % des illustrations passaient sous WCAG AA.
         self._meta.setStyleSheet("QLabel { color: #b4b4d0; background: transparent; }")
         self._meta.linkActivated.connect(self._on_meta_link)

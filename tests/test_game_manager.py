@@ -1133,3 +1133,18 @@ class TestElevationExigee:
         m = self._manager(tmp_path, monkeypatch, PermissionError(13, "refusé"))
         with pytest.raises(PermissionError):
             m.launch_game("hp7a")
+
+
+def test_une_partie_rattrapee_compte_aussi_sur_la_fiche(tmp_path):
+    """Grand audit du 2026-11-02 : la partie rattrapée n'entrait que dans le
+    journal ; la fiche, qui lit la config, et les statistiques divergeaient."""
+    from datetime import timedelta
+    from src.core import stats
+    debut = datetime(2026, 11, 1, 20, 0)
+    stats.amorcer({}, stats.chemin_journal())
+    stats.ouvrir_session("hp_test", debut)
+    stats.battre_session(debut + timedelta(minutes=20))
+    gm = _make_manager(tmp_path)
+    assert gm.get_playtime("hp_test") == 20 * 60
+    assert gm.config.last_played["hp_test"] == "2026-11-01"
+    assert Config.load().playtime_seconds["hp_test"] == 20 * 60

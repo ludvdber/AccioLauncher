@@ -682,8 +682,7 @@ class _VueMusique(QWidget):
             self._paquets.remplir([])
             self._vide.setText(
                 tr("La musique de ce jeu n'est pas encore lue par le launcher.") if jeu
-                else tr("Installez L'École des sorciers, La Chambre des secrets ou Le Prisonnier "
-                        "d'Azkaban pour écouter leur musique ici."))
+                else tr("Installez l'un des six premiers jeux pour écouter sa musique ici."))
             self._rafraichir()
             return
         nouveaux = media.nouveaux(jeu, MUSIQUE)
@@ -1028,7 +1027,7 @@ class _VueCinematiques(QWidget):
             self._paquets.remplir([])
             if not jeu:
                 texte_vide = tr("Aucun jeu installé n'a de cinématique à montrer ici pour "
-                                "l'instant. Les trois premiers jeux jouent les leurs dans le "
+                                "l'instant. Les deux premiers jeux jouent les leurs dans le "
                                 "moteur, sans fichier vidéo.")
             elif jeu in ("hp1", "hp2"):
                 texte_vide = tr("Ce jeu joue ses cinématiques dans son moteur : il n'a pas de "
@@ -1142,8 +1141,15 @@ class _VueCinematiques(QWidget):
         if fenetre is not None:
             fenetre.activateWindow()
 
+    def _en_pause(self) -> bool:
+        """L'image finie, le lecteur vidéo est libéré : c'est la voix qui dit
+        l'état. Sans elle, la reprise ne revenait jamais (grand audit du 2026-11-02)."""
+        if self._video.is_playing or self._voix is None:
+            return self._video.paused
+        return self._voix.playbackState() == QMediaPlayer.PlaybackState.PausedState
+
     def _basculer_pause(self) -> None:
-        if self._video.paused:
+        if self._en_pause():
             self._video.resume()
             if self._voix is not None:
                 self._voix.play()
@@ -1282,7 +1288,7 @@ class _VueCinematiques(QWidget):
         self._plein.setEnabled(actif)
         self._position.setEnabled(actif)
         self._enregistrer.setEnabled(actif)
-        self._pause.setText(tr("Reprendre") if actif and self._video.paused else tr("Pause"))
+        self._pause.setText(tr("Reprendre") if actif and self._en_pause() else tr("Pause"))
 
 
 class MediathequePage(QDialog):

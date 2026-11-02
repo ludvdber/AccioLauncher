@@ -5,11 +5,12 @@ le programme ne peut pas se supprimer lui-même. Un script détaché attend la
 fin du processus, comme pour une mise à jour (`self_update`), puis efface.
 
 Ce qui part : les dossiers `_Launcher` (réglages, journaux, cache, catalogue,
-bandes-annonces, préfixes Wine), le programme, et les jeux si on le demande.
-Ce qui reste, toujours : les sauvegardes des jeux, dans Documents (le
-catalogue y range aussi celles de HP1 et HP2). Les COPIES que le launcher en
-fait vivent, elles, dans `_Launcher/copies_sauvegardes` : gardées par défaut,
-seules dans un `_Launcher` vidé du reste.
+bandes-annonces), le programme, et les jeux si on le demande.
+Ce qui reste, toujours : les sauvegardes des jeux. Sous Windows, dans
+Documents et l'AppData ; sous Linux, dans les préfixes Wine
+(`_Launcher/prefixes`), qui restent donc aussi. Les COPIES que le launcher en
+fait vivent dans `_Launcher/copies_sauvegardes` : gardées par défaut, seules
+dans un `_Launcher` vidé du reste (avec les préfixes sous Linux).
 
 **Garde-fous** : un dossier de jeu n'est effacé que s'il est un enfant DIRECT
 du dossier d'installation ; un dossier de données que s'il s'appelle
@@ -24,6 +25,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.core.compat import DOSSIER_PREFIXES
 from src.core.config import LAUNCHER_DIR_NAME
 from src.core.copies_sauvegardes import DOSSIER as DOSSIER_COPIES
 
@@ -74,11 +76,14 @@ def inventaire(install_path: Path, dossiers_de_jeux: list[Path], garder_jeux: bo
     for donnees in dict.fromkeys((racine_donnees, install_path / LAUNCHER_DIR_NAME)):
         if donnees.name != LAUNCHER_DIR_NAME or not _profond(donnees):
             continue
-        copies = donnees / DOSSIER_COPIES
-        if garder_copies and copies.is_dir():
-            # Tout SAUF les copies : le dossier entier ne peut pas partir.
+        # Les préfixes Wine portent les Documents et l'AppData des jeux, donc
+        # leurs SAUVEGARDES : ils restent toujours (grand audit du 2026-11-02 ;
+        # les effacer contredisait « ce qui reste, toujours »).
+        gardes = {donnees / DOSSIER_PREFIXES} | ({donnees / DOSSIER_COPIES} if garder_copies else set())
+        if any(g.is_dir() for g in gardes):
+            # Tout SAUF ce qui est gardé : le dossier entier ne peut pas partir.
             for enfant in sorted(donnees.iterdir()):
-                if enfant != copies:
+                if enfant not in gardes:
                     (dossiers if enfant.is_dir() else fichiers).append(enfant)
         else:
             dossiers.append(donnees)

@@ -116,6 +116,20 @@ class TestConfig:
         (mis_de_cote,) = tmp_path.glob("config.*.corrompu")      # horodaté depuis le 2026-10-29
         assert mis_de_cote.read_text(encoding="utf-8").startswith('{"langue": "fr"')
 
+    def test_config_corrompue_non_deplacable_n_est_pas_ecrasee(self, tmp_path):
+        """Grand audit du 2026-11-02 : si le renommage échouait, la première
+        sauvegarde remplaçait la config corrompue (et récupérable) par les défauts."""
+        config_file = tmp_path / "config.json"
+        abimee = '{"langue": "fr", "playtime_seconds": {"hp1": 36'
+        config_file.write_text(abimee, encoding="utf-8")
+        with patch("src.core.config.CONFIG_FILE_PATH", config_file):
+            with patch("src.core.config.mettre_de_cote", return_value=None):
+                c = Config.load()
+            c.save()
+            assert config_file.read_text(encoding="utf-8") == abimee
+            config_file.write_text("{}", encoding="utf-8")
+            Config.load()                       # lève l'interdit pour la suite
+
     def test_config_verrouillee_pas_mise_de_cote(self, tmp_path):
         """Une erreur de LECTURE ne prouve rien sur le contenu : on n'y touche pas."""
         config_file = tmp_path / "config.json"

@@ -273,10 +273,15 @@ class VisiteGuidee(QWidget):
     def touche(self, event: QKeyEvent) -> bool:
         """Appelée par la fenêtre AVANT ses raccourcis : True = consommée.
 
-        Entrée et → avancent, ← recule, Échap passe la visite. Le reste (Tab,
-        Espace sur le bouton qui a le focus) suit son cours normal.
+        Entrée et → avancent, ← recule, Échap passe la visite. Tab et Maj+Tab
+        tournent DANS la carte : ils sortaient vers les widgets cachés sous le
+        voile, jusqu'à INSTALLER, qu'Espace déclenchait (grand audit du
+        2026-11-02). Le reste (Espace sur un bouton de la carte) suit son cours.
         """
         match event.key():
+            case Qt.Key.Key_Tab | Qt.Key.Key_Backtab:
+                self._tabuler(event.key() == Qt.Key.Key_Backtab
+                              or bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier))
             case Qt.Key.Key_Return | Qt.Key.Key_Enter | Qt.Key.Key_Right:
                 self.suivant()
             case Qt.Key.Key_Left:
@@ -286,6 +291,17 @@ class VisiteGuidee(QWidget):
             case _:
                 return False
         return True
+
+    def _tabuler(self, arriere: bool) -> None:
+        """Le focus passe au contrôle suivant (ou précédent) de la carte, en boucle."""
+        ordre = [w for w in self._carte.findChildren(QWidget)
+                 if w.focusPolicy() & Qt.FocusPolicy.TabFocus and w.isVisible() and w.isEnabled()]
+        if not ordre:
+            return
+        courant = self.window().focusWidget()
+        i = ordre.index(courant) if courant in ordre else (0 if arriere else -1)
+        ordre[(i + (-1 if arriere else 1)) % len(ordre)].setFocus(
+            Qt.FocusReason.BacktabFocusReason if arriere else Qt.FocusReason.TabFocusReason)
 
     def mousePressEvent(self, event) -> None:
         event.accept()   # rien ne passe sous le voile

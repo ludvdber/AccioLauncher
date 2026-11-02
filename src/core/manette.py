@@ -258,9 +258,33 @@ def _poser(rgb: tuple[int, int, int]) -> int:
     return faites
 
 
+# Chaque demande lance son fil : sans ordre, une couleur encore en cours
+# pouvait passer APRÈS le noir d'`eteindre` (grand audit du 2026-11-02). Les
+# écritures se suivent sous `_VERROU`, et seule la DERNIÈRE demande écrit.
+_VERROU = threading.Lock()
+_COMPTE = threading.Lock()
+_derniere = 0
+_allumee = False      # c'est nous qui l'avons colorée : à nous de l'éteindre
+
+
+def _demander(rgb: tuple[int, int, int]) -> int:
+    """Pose `rgb` si aucune demande plus récente n'est arrivée entre-temps."""
+    global _derniere, _allumee
+    with _COMPTE:
+        _derniere += 1
+        numero = _derniere
+    with _VERROU:
+        if numero != _derniere:
+            return 0          # une demande plus récente passera après nous
+        faites = _poser(rgb)
+        if faites:
+            _allumee = rgb != (0, 0, 0)
+        return faites
+
+
 def colorer(theme: str) -> int:
     """Colore chaque manette aux couleurs de `theme`. Rend le nombre colorées ; ne lève jamais."""
-    faites = _poser(couleur(theme))
+    faites = _demander(couleur(theme))
     if faites:
         log.info("Manette : barre lumineuse aux couleurs de « %s » (%d)", theme, faites)
     return faites
@@ -269,6 +293,15 @@ def colorer(theme: str) -> int:
 def colorer_en_fond(theme: str) -> None:
     """Même chose sur un fil à part : l'énumération HID ne doit jamais retenir la fenêtre."""
     threading.Thread(target=colorer, args=(theme,), name="barre-lumineuse", daemon=True).start()
+
+
+def eteindre_en_fond() -> None:
+    """« Couleur de la manette » décochée : la barre que nous avions allumée s'éteint."""
+    threading.Thread(target=_demander, args=((0, 0, 0),), name="barre-eteinte", daemon=True).start()
+
+
+def allumee_par_nous() -> bool:
+    return _allumee
 
 
 def eteindre(attente: float = 1.0) -> None:
@@ -281,7 +314,7 @@ def eteindre(attente: float = 1.0) -> None:
     Un jeu lancé depuis le launcher garde la main : son `xinput1_3.dll` repose
     `LightBar` à chaque manette qu'il ouvre.
     """
-    fil = threading.Thread(target=_poser, args=((0, 0, 0),), name="barre-eteinte", daemon=True)
+    fil = threading.Thread(target=_demander, args=((0, 0, 0),), name="barre-eteinte", daemon=True)
     fil.start()
     fil.join(attente)
 

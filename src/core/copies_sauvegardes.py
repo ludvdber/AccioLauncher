@@ -347,14 +347,33 @@ def revenir(jeu: str, spec: Sauvegardes, version: Version) -> bool:
         log.warning("Retour de %s refusé : l'état actuel n'a pas pu être copié", cible)
         return False
     groupe = version.chemin.with_name(version.chemin.name.removesuffix(".gz"))
-    remis = [(gz, cible.parent / gz.name.removesuffix(".gz"))
-             for gz in sorted(groupe.glob("*.gz"))] if groupe.is_dir() else []
-    for gz, arrivee in remis:
-        if not _remettre(gz, arrivee, None):
-            return False
-    # La sauvegarde en dernier : un retour interrompu laisse l'ancienne en place.
-    if not _remettre(version.chemin, cible, version.quand.timestamp()):
+    try:
+        remis = [(gz, cible.parent / gz.name.removesuffix(".gz"))
+                 for gz in sorted(groupe.glob("*.gz"))] if groupe.is_dir() else []
+    except OSError as exc:
+        log.warning("Retour de %s impossible : %s", cible, exc)
         return False
+    # Tout est décompressé À CÔTÉ avant de remplacer quoi que ce soit : un échec
+    # au milieu laissait d'anciens compagnons avec la sauvegarde actuelle, et
+    # l'écran disait « rien n'a été remplacé » (grand audit du 2026-11-02).
+    # La sauvegarde en dernier.
+    prets: list[tuple[str, Path]] = []
+    for gz, arrivee, quand in [*((gz, a, None) for gz, a in remis),
+                               (version.chemin, cible, version.quand.timestamp())]:
+        tmp = _preparer(gz, arrivee, quand)
+        if tmp is None:
+            for deja, _ in prets:
+                _effacer(deja)
+            return False
+        prets.append((tmp, arrivee))
+    for i, (tmp, arrivee) in enumerate(prets):
+        try:
+            os.replace(tmp, arrivee)
+        except OSError as exc:
+            log.warning("Retour de %s interrompu : %s", arrivee, exc)
+            for reste, _ in prets[i:]:
+                _effacer(reste)
+            return False
     if groupe.is_dir():
         gardes = {arrivee.name for _, arrivee in remis}
         for p in compagnons(cible, spec):
@@ -367,8 +386,9 @@ def revenir(jeu: str, spec: Sauvegardes, version: Version) -> bool:
     return True
 
 
-def _remettre(gz_source: Path, cible: Path, horodatage: float | None) -> bool:
-    """Décompresse `gz_source` à la place de `cible`, par un temporaire.
+def _preparer(gz_source: Path, cible: Path, horodatage: float | None) -> str | None:
+    """Décompresse `gz_source` dans un temporaire voisin de `cible`, prêt à la
+    remplacer ; rend son chemin, ou None (rien n'est laissé derrière).
 
     Sans horodatage, le fichier reprend la date que gzip a gardée de l'original.
     """
@@ -386,15 +406,19 @@ def _remettre(gz_source: Path, cible: Path, horodatage: float | None) -> bool:
         # remplace, ou ceux d'un fichier ordinaire.
         os.chmod(tmp, stat.S_IMODE(cible.stat().st_mode) if cible.exists() else 0o644)
         os.utime(tmp, (horodatage, horodatage))
-        os.replace(tmp, cible)
-        tmp = None
-        return True
+        pret, tmp = tmp, None
+        return pret
     except (OSError, EOFError, gzip.BadGzipFile) as exc:
         log.warning("Retour de %s impossible : %s", cible, exc)
-        return False
+        return None
     finally:
         if tmp is not None:
-            try:
-                os.remove(tmp)           # notre propre fichier temporaire
-            except OSError:
-                pass
+            _effacer(tmp)
+
+
+def _effacer(tmp: str) -> None:
+    """Retire notre propre fichier temporaire, sans lever."""
+    try:
+        os.remove(tmp)
+    except OSError:
+        pass

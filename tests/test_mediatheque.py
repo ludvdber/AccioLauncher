@@ -153,6 +153,15 @@ class TestFondSonore:
         fond.reprendre(CINEMATIQUE)
         assert fond._voulu() == "hp1/Common_Room"
 
+    def test_le_haut_parleur_coupe_aussi_l_ecoute(self, fond):
+        """Ludo, 2026-11-02 : un bug. L'écoute de la Médiathèque continuait,
+        bouton « coupé » affiché (grand audit)."""
+        fond.ecouter("hp1/Common_Room")
+        fond.basculer_son()
+        assert fond._voulu() == ""
+        fond.basculer_son()
+        assert fond._voulu() == "hp1/Common_Room"
+
     def test_le_volume_ne_s_ecrit_qu_au_lacher(self, fond):
         from src.core import config
         fichier = config.CONFIG_FILE_PATH       # redirigé par la garde de conftest
@@ -709,3 +718,32 @@ def test_la_croix_de_la_manette_met_le_plein_ecran_en_pause(qtbot):
     plein.pause_demandee.connect(lambda: pauses.append(1))
     qtbot.keyClick(plein, Qt.Key.Key_Return)
     assert pauses == [1]
+
+
+def test_la_voix_seule_se_met_en_pause_et_reprend():
+    """Grand audit du 2026-11-02 : l'image finie, le lecteur vidéo est libéré et
+    `paused` restait faux ; la voix se mettait en pause mais ne reprenait plus."""
+    from types import SimpleNamespace
+    from src.ui.fond_sonore import QMediaPlayer
+    from src.ui.mediatheque_page import _VueCinematiques
+
+    class Voix:
+        etat = QMediaPlayer.PlaybackState.PlayingState
+
+        def playbackState(self):
+            return self.etat
+
+        def pause(self):
+            self.etat = QMediaPlayer.PlaybackState.PausedState
+
+        def play(self):
+            self.etat = QMediaPlayer.PlaybackState.PlayingState
+
+    voix = Voix()
+    video = SimpleNamespace(is_playing=False, paused=False, pause=lambda: None, resume=lambda: None)
+    vue = SimpleNamespace(_video=video, _voix=voix, _etat_commandes=lambda: None)
+    vue._en_pause = lambda: _VueCinematiques._en_pause(vue)
+    _VueCinematiques._basculer_pause(vue)
+    assert voix.etat == QMediaPlayer.PlaybackState.PausedState
+    _VueCinematiques._basculer_pause(vue)
+    assert voix.etat == QMediaPlayer.PlaybackState.PlayingState, "la reprise ne revenait jamais"
