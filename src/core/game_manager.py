@@ -17,7 +17,7 @@ from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, memoire_4go, reprise, resolution_jeu, stats, texte_ue1
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
-from src.core.config import Config
+from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
 from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
 from src.core.pre_launch import (
@@ -36,8 +36,10 @@ from src.core.version_utils import update_disponible
 log = logging.getLogger(__name__)
 
 # Règle 6 : nommée à l'import et sous garde, la constante n'existe que sous Windows.
-_DETACHE = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-            if sys.platform == "win32" else 0)
+if sys.platform == "win32":
+    _DETACHE = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+else:
+    _DETACHE = 0
 
 # ERROR_ELEVATION_REQUIRED : CreateProcess refuse un exe qui exige l'administrateur.
 ERREUR_ELEVATION = 740
@@ -693,19 +695,33 @@ class GameManager:
         self.config.save()
 
     def uninstall_game(self, game_id: str) -> bool:
-        """Supprime le dossier du jeu. Retourne True si succès."""
+        """Supprime le dossier du jeu. Retourne True si succès.
+
+        En trois temps, pour que la fiche efface sur un fil à part
+        (`ui/desinstallation_jeu`) : le dossier vérifié, effacé, puis l'état."""
+        dossier = self.dossier_a_desinstaller(game_id)
+        if dossier is None:
+            return False
+        return self.finir_desinstallation(game_id, self.effacer_dossier(dossier))
+
+    def dossier_a_desinstaller(self, game_id: str) -> Path | None:
+        """Le dossier du jeu, s'il existe et vit bien sous le dossier des jeux."""
         game_path = self.get_game_path(game_id)
         game = self._index.get(game_id)
         if game is None or game_path is None or not game_path.exists():
             log.warning("Rien à désinstaller pour %s (chemin: %s)", game_id, game_path)
-            return False
+            return None
         try:
             game_path.resolve().relative_to(self.config.install_path.resolve())
         except ValueError:
             log.error("Path traversal détecté lors de la désinstallation : %s", game_path)
-            return False
-
+            return None
         log.info("Désinstallation de %s — suppression de : %s", game.name, game_path)
+        return game_path
+
+    @staticmethod
+    def effacer_dossier(game_path: Path) -> bool:
+        """Efface le dossier, lecture seule comprise. Sans état : appelable d'un fil."""
         try:
             def _force_remove_readonly(_func: Callable[[str], object], path: str,
                                        _exc_info: BaseException) -> None:
@@ -717,8 +733,22 @@ class GameManager:
         except OSError as exc:
             log.error("Échec de la suppression de %s : %s", game_path, exc)
             return False
+        return True
+
+    def finir_desinstallation(self, game_id: str, efface: bool) -> bool:
+        """L'état, une fois le dossier effacé (ou pas) ; rend `efface`."""
+        if not efface:
+            return False
         self._states[game_id] = GameState.NOT_INSTALLED
         self.config.installed_versions.pop(game_id, None)
         self.config.save()
-        log.info("Désinstallation terminée : %s (%s supprimé)", game_id, game_path)
+        self._oublier_les_extraits(game_id)
+        log.info("Désinstallation terminée : %s", game_id)
         return True
+
+    def _oublier_les_extraits(self, game_id: str) -> None:
+        """Les cinématiques et morceaux sortis des archives du jeu : sans le
+        jeu, la Médiathèque ne les montre plus (grand audit du 2026-11-02)."""
+        cache = cache_pour(self.config.install_path)
+        for dossier in (cache / "cinematiques" / game_id, cache / "phonographe" / game_id):
+            shutil.rmtree(dossier, ignore_errors=True)

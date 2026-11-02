@@ -65,6 +65,9 @@ select = ["E4", "E7", "E9", "F", "W", "UP", "B"]
 python_version = "3.15"
 # Fixée : sinon un poste Linux et un poste Windows ne vérifieraient pas les
 # mêmes branches `sys.platform`, et la CI pourrait rougir selon sa machine.
+# Les branches Linux ont leur passe à part, `mypy --platform linux` (CI et
+# builds, depuis le 2026-11-02) : une fonction Windows seule commence par
+# `if sys.platform != "win32": raise OSError(...)`, que mypy comprend.
 platform = "win32"
 files = ["src/core"]
 # TOUT `src/core` est strict depuis le 2026-10-16 : la liste d'exception des

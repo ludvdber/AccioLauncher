@@ -26,7 +26,10 @@ from src.core.chemins import chemin_relatif_sur
 log = logging.getLogger(__name__)
 
 # Règle 6 : nommée à l'import et sous garde, la constante n'existe que sous Windows.
-_SANS_FENETRE = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+if sys.platform == "win32":
+    _SANS_FENETRE = subprocess.CREATE_NO_WINDOW
+else:
+    _SANS_FENETRE = 0
 
 
 class ExtractionEchouee(RuntimeError):

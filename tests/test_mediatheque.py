@@ -162,6 +162,27 @@ class TestFondSonore:
         fond.basculer_son()
         assert fond._voulu() == "hp1/Common_Room"
 
+    def test_le_fichier_du_morceau_se_prepare_sur_un_autre_fil(self, fond, qtbot, monkeypatch, tmp_path):
+        """Grand audit du 2026-11-02 : lister `music.big` et convertir par
+        vgmstream figeait la fenêtre 0,3 à 0,5 s à la première écoute."""
+        import threading
+
+        from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE
+        if not MULTIMEDIA_DISPONIBLE:
+            pytest.skip("PyQt6-Multimedia absent")
+        fond._config.son_coupe = False
+        piste = tmp_path / "morceau.ogg"
+        piste.write_bytes(b"OggS")
+        fils = []
+        monkeypatch.setattr(fond, "fichier", lambda c: (fils.append((threading.current_thread(), c)),
+                                                        piste)[1])
+        fond.demarrer()
+        assert fond._courant == "" and fond._en_preparation == "hp2/Greenhouse"
+        fond.ecouter("hp1/Common_Room")      # demandé pendant la préparation : il gagne
+        qtbot.waitUntil(lambda: fond._courant == "hp1/Common_Room", timeout=5000)
+        assert fils and all(f is not threading.main_thread() for f, _c in fils)
+        fond.arreter()
+
     def test_le_volume_ne_s_ecrit_qu_au_lacher(self, fond):
         from src.core import config
         fichier = config.CONFIG_FILE_PATH       # redirigé par la garde de conftest
@@ -479,9 +500,17 @@ class TestLectureCinematique:
         page._aller_a(25_000)                      # au-delà de l'image : rien à relancer
         assert relances == [5_000]
 
-    def test_enregistrer_copie_la_video_et_sa_voix(self, vue, monkeypatch, tmp_path):
+    def test_enregistrer_copie_la_video_et_sa_voix(self, vue, monkeypatch, tmp_path, qtbot):
+        """La copie se fait sur un fil à part (grand audit du 2026-11-02 : jusqu'à
+        329 Mo pour HP8, la fenêtre figée jusqu'au bout)."""
+        import shutil
+        import threading
+
         from PyQt6.QtWidgets import QFileDialog
         win, page, _ordre = vue
+        fils, vraie = [], shutil.copyfile
+        monkeypatch.setattr(shutil, "copyfile", lambda s, d: (fils.append(threading.current_thread()),
+                                                              vraie(s, d))[1])
         voix = tmp_path / "voix.wav"
         voix.write_bytes(b"RIFF")
         monkeypatch.setattr(win._mediatheque, "voix", lambda j, f: voix)
@@ -492,6 +521,10 @@ class TestLectureCinematique:
         monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(
             lambda _p, _t, depart: demande.append(depart) or (str(sortie / "Sirius"), "")))
         page._enregistrer_copie()
+        assert not page._enregistrer.isEnabled(), "pas de seconde copie par-dessus"
+        qtbot.waitUntil(lambda: "Sirius.wav" in page._note.text(), timeout=5000)
+        assert fils and all(f is not threading.main_thread() for f in fils)
+        assert page._enregistrer.isEnabled()
         assert ":" not in demande[0].split("\\")[-1].split("/")[-1].replace("Sirius ?", "")
         assert (sortie / "Sirius.bik").read_bytes() == b"BIKi"
         assert (sortie / "Sirius.wav").read_bytes() == b"RIFF"
@@ -747,3 +780,35 @@ def test_la_voix_seule_se_met_en_pause_et_reprend():
     assert voix.etat == QMediaPlayer.PlaybackState.PausedState
     _VueCinematiques._basculer_pause(vue)
     assert voix.etat == QMediaPlayer.PlaybackState.PlayingState, "la reprise ne revenait jamais"
+
+
+class TestLectureDesParties:
+    """Grand audit du 2026-11-02 : la lecture des sauvegardes (~0,3 s) figeait
+    la fenêtre au démarrage et à chaque retour de partie."""
+
+    def test_le_retour_de_partie_lit_sur_un_autre_fil(self, fenetre_avec_jeux, qtbot, monkeypatch):
+        import threading
+        media = fenetre_avec_jeux._mediatheque
+        media._lecture.stop()
+        fils = []
+
+        def avancement(jeu, spec):
+            fils.append(threading.current_thread())
+            return 100
+        monkeypatch.setattr("src.core.discographie.avancement", avancement)
+        media._retour_de_partie()
+        qtbot.waitUntil(lambda: media._avances.get("hp2") == 100, timeout=5000)
+        assert fils and all(f is not threading.main_thread() for f in fils)
+        assert not media._en_vol
+
+    def test_une_lecture_depassee_est_jetee(self, fenetre_avec_jeux, qtbot, monkeypatch):
+        media = fenetre_avec_jeux._mediatheque
+        media._lecture.stop()
+        monkeypatch.setattr("src.core.discographie.avancement", lambda jeu, spec: None)
+        media.actualiser_en_fond()
+        ancien = media._numero
+        monkeypatch.setattr("src.core.discographie.avancement", lambda jeu, spec: 80)
+        media.actualiser()               # la page ouverte relit tout de suite
+        assert media._avances["hp2"] == 80
+        media._poser_lecture(ancien, ({"hp2": 10}, {}))
+        assert media._avances["hp2"] == 80, "la lecture plus ancienne n'écrase rien"

@@ -292,6 +292,20 @@ class TestBuildSh:
             "PyInstaller accio_launcher.spec", "build/linux/appimage.py")]
         assert ordre == sorted(ordre)
 
+    def test_python_315_exige_apres_le_choix(self):
+        """Grand audit du 2026-11-02 : un `.venv-build` créé en 3.14 était
+        réutilisé sans contrôle, et l'AppImage sortait en 3.14 sans erreur."""
+        recree = self.TEXTE.index("rm -rf .venv-build")
+        cree = self.TEXTE.index('-m venv .venv-build')
+        verifie = self.TEXTE.index("n'est pas Python 3.15")
+        assert recree < cree < verifie < self.TEXTE.index("pip install")
+
+    def test_les_branches_linux_sont_typees(self):
+        """Grand audit du 2026-11-02 : `platform = "win32"` laissait le code
+        propre à Linux hors du contrôle des types. Seconde passe partout."""
+        for fichier in ("build.sh", "build.bat", ".github/workflows/tests.yml"):
+            assert "mypy --platform linux" in (RACINE / fichier).read_text(encoding="utf-8"), fichier
+
     def test_gitattributes_garde_les_fins_de_ligne(self):
         attributs = (RACINE / ".gitattributes").read_text(encoding="utf-8")
         assert "*.sh   text eol=lf" in attributs

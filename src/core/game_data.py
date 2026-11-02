@@ -4,6 +4,7 @@ Les blocs secondaires et leurs validateurs vivent dans `catalogue_blocs`.
 """
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 from pathlib import Path
@@ -160,6 +161,40 @@ def _versions(brut: object, game_id: str) -> tuple[GameVersion, ...]:
         except (ValueError, TypeError) as exc:
             log.warning("Catalogue : %s, une version écartée (%s)", game_id, exc)
     return tuple(gardees)
+
+
+def _chemins_listes(brut: object, champ: str) -> tuple[str, ...]:
+    """`delete_files` / `create_files` : les chaînes d'une LISTE, rien d'autre.
+
+    Une chaîne seule passait `tuple()` lettre par lettre, et une entrée non
+    chaîne ne cassait qu'au clic sur JOUER (grand audit du 2026-11-02).
+    """
+    if not isinstance(brut, list):
+        if brut:
+            log.warning("Catalogue : %s ignoré (liste attendue)", champ)
+        return ()
+    gardes = tuple(e for e in brut if isinstance(e, str) and e)
+    if len(gardes) != len(brut):
+        log.warning("Catalogue : %s, %d entrée(s) écartée(s)", champ, len(brut) - len(gardes))
+    return gardes
+
+
+def _blocs_listes[T](brut: object, champ: str, lire: Callable[[dict[str, Any]], T]) -> tuple[T, ...]:
+    """`ini_patches` / `config_files` : un bloc mal formé ÉCARTÉ seul."""
+    if not isinstance(brut, list):
+        if brut:
+            log.warning("Catalogue : %s ignoré (liste attendue)", champ)
+        return ()
+    gardes = []
+    for entree in brut:
+        try:
+            if not isinstance(entree, dict):
+                raise TypeError(f"entrée {type(entree).__name__}")
+            gardes.append(lire(entree))
+        except (KeyError, TypeError) as exc:
+            log.warning("Catalogue : %s, une entrée écartée (%s)", champ, exc)
+    return tuple(gardes)
+
 
 @dataclass(frozen=True, slots=True)
 class GameData:
@@ -390,15 +425,17 @@ class GameData:
         # copies de sauvegardes, cache du texte) : même jeton que la version.
         if not _JETON_SUR.match(data["id"]):
             raise ValueError(f"identifiant non sûr : {data['id'][:40]!r}")
-        pi = data.get("post_install", {})
+        pi = data.get("post_install")
+        if not isinstance(pi, dict):
+            pi = {}
         pl = data.get("pre_launch")
         versions = _versions(data.get("versions"), data["id"])
         pre_launch: PreLaunch | None = None
-        if pl:
+        if isinstance(pl, dict) and pl:
             pre_launch = PreLaunch(
-                ini_patches=tuple(IniPatch.from_dict(p) for p in pl.get("ini_patches", [])),
-                delete_files=tuple(pl.get("delete_files", [])),
-                create_files=tuple(pl.get("create_files", [])),
+                ini_patches=_blocs_listes(pl.get("ini_patches"), "ini_patches", IniPatch.from_dict),
+                delete_files=_chemins_listes(pl.get("delete_files"), "delete_files"),
+                create_files=_chemins_listes(pl.get("create_files"), "create_files"),
             )
         return cls(
             id=data["id"],
@@ -442,7 +479,8 @@ class GameData:
             fichiers_essentiels=_fichiers_essentiels_valides(data.get("essential_files")),
             videos_lancement=_videos_de_lancement_valides(data.get("launch_videos")),
             post_install=PostInstall(
-                config_files=tuple(ConfigFile.from_dict(cf) for cf in pi.get("config_files", [])),
+                config_files=_blocs_listes(pi.get("config_files"), "config_files",
+                                           ConfigFile.from_dict),
                 sous_dossier=_sous_dossier_valide(pi.get("sous_dossier", "")),
             ),
             pre_launch=pre_launch,

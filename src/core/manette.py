@@ -114,6 +114,8 @@ def _vid_pid(chemin: str) -> tuple[int, int] | None:
 
 
 def _manettes_windows() -> list[Manette]:
+    if sys.platform != "win32":     # aussi pour mypy --platform linux
+        raise OSError("Windows seulement")
     from ctypes import wintypes as w
     hid = ctypes.WinDLL("hid")
     setupapi = ctypes.WinDLL("setupapi", use_last_error=True)
@@ -176,6 +178,8 @@ def _manettes_windows() -> list[Manette]:
 
 
 def _ecrire_windows(manette: Manette, donnees: bytes) -> bool:
+    if sys.platform != "win32":     # aussi pour mypy --platform linux
+        raise OSError("Windows seulement")
     from ctypes import wintypes as w
     k32 = ctypes.WinDLL("kernel32", use_last_error=True)
     k32.CreateFileW.restype = w.HANDLE

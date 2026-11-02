@@ -142,7 +142,11 @@ class TestDuTelechargementAuRetourDePartie:
         # ⑤ Désinstaller : le dossier part, l'état suit, le temps de jeu reste.
         monkeypatch.setattr(gdh, "_boite", lambda *a, **k: 0)
         gdh.on_uninstall(vue)
-        assert win.manager.get_state(jeu.id) == GameState.NOT_INSTALLED
+        # Le dossier s'efface sur un fil, la fiche désactivée jusqu'au bout
+        # (grand audit du 2026-11-02).
+        assert not vue.isEnabled()
+        qtbot.waitUntil(lambda: win.manager.get_state(jeu.id) == GameState.NOT_INSTALLED, timeout=5000)
+        assert vue.isEnabled()
         assert not exe.parent.parent.exists()
         assert win.manager.get_playtime(jeu.id) >= 1500, "désinstaller n'efface pas l'histoire"
 

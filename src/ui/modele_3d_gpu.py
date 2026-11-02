@@ -28,6 +28,10 @@ from itertools import chain
 
 from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QGuiApplication, QImage, QOffscreenSurface, QOpenGLContext, QSurfaceFormat
+from PyQt6.QtOpenGL import (
+    QOpenGLBuffer, QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat, QOpenGLShader,
+    QOpenGLShaderProgram, QOpenGLTexture, QOpenGLVersionFunctionsFactory, QOpenGLVersionProfile,
+)
 
 from src.core import maillages_ue1
 from src.core.maillages_ue1 import Maillage
@@ -114,7 +118,6 @@ class _Contexte:
         self.surface.create()
         if not self.surface.isValid() or not self.ctx.makeCurrent(self.surface):
             raise RuntimeError("surface hors écran refusée")
-        from PyQt6.QtOpenGL import QOpenGLVersionFunctionsFactory, QOpenGLVersionProfile
         profil = QOpenGLVersionProfile()
         profil.setVersion(2, 1)
         self.f = QOpenGLVersionFunctionsFactory.get(profil, self.ctx)
@@ -193,7 +196,6 @@ class RenduGPU:
     # ── Préparer (contexte courant) ──
 
     def _preparer(self, modele: Maillage) -> None:
-        from PyQt6.QtOpenGL import QOpenGLBuffer, QOpenGLShader, QOpenGLShaderProgram, QOpenGLTexture
         if self._programme is None:
             programme = QOpenGLShaderProgram()
             if not (programme.addShaderFromSourceCode(QOpenGLShader.ShaderTypeBit.Vertex, _SOMMETS)
@@ -237,7 +239,6 @@ class RenduGPU:
         self._pret = True
 
     def _cadre(self, taille: QSize) -> None:
-        from PyQt6.QtOpenGL import QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat
         if self._fbo is not None and self._fbo.size() == taille:
             return
         fmt = QOpenGLFramebufferObjectFormat()

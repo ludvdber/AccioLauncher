@@ -45,6 +45,8 @@ jobs:
         run: python -m ruff check .
       - name: Types (mypy sur src/core, regle dans pyproject.toml)
         run: python -m mypy
+      - name: Types des branches Linux (mypy --platform linux)
+        run: python -m mypy --platform linux
       # Binaires non suivis par git (Scorecard) : release officielle r2117,
       # empreinte du zip et de chaque fichier vérifiées.
       - name: vgmstream (release officielle, empreintes vérifiées)

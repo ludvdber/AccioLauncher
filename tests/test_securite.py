@@ -91,9 +91,15 @@ class TestAucunProgrammeLanceParSonSeulNom:
         processus qui fait tourner cette suite, et pas un nom inventé.
 
         Délai porté à 60 s : sous `-n auto`, `tasklist` a dépassé 5 s
-        (2026-11-01), et ce test-ci vérifie la détection, pas la vitesse."""
+        (2026-11-01), et ce test-ci vérifie la détection, pas la vitesse.
+        `tasklist` n'est plus que le repli de la liste du système (grand audit
+        du 2026-11-02) : celle-ci est refusée ici pour l'atteindre."""
         from src.ui import process_monitor
         from src.ui.process_monitor import ProcessMonitor
+
+        def refusee(_nom):
+            raise OSError("liste refusée")
+        monkeypatch.setattr(process_monitor, "processus_lance", refusee)
         monkeypatch.setattr(process_monitor, "_TASKLIST_DELAI_S", 60)
         assert ProcessMonitor._is_exe_running(Path(sys.executable).name) is True
         assert ProcessMonitor._is_exe_running("accio_nexiste_pas_4242.exe") is False

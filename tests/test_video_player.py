@@ -103,3 +103,89 @@ def test_la_copie_d_un_saut_n_est_plus_dans_le_tmp_partage(tmp_path):
     dossier = dossier_des_copies()
     assert dossier.is_relative_to(tmp_path)
     assert dossier.parent != Path(tempfile.gettempdir())
+
+
+def test_l_arret_efface_les_copies_des_sauts(lecteur):
+    """Grand audit du 2026-11-02 : les deux copies d'une cinématique de HP8
+    (jusqu'à 329 Mo chacune) restaient dans le cache fixe après la lecture."""
+    from src.ui.video_player import dossier_des_copies
+    dossier = dossier_des_copies()
+    dossier.mkdir(parents=True, exist_ok=True)
+    for n in (0, 1):
+        (dossier / f"saut_{n}.vp6").write_bytes(b"MVhd")
+    lecteur._copies = 2
+    lecteur.stop()
+    assert not list(dossier.glob("saut_*.vp6"))
+
+
+def _clip(tmp_path):
+    """Une cinématique d'EA de 10 images à 10 images/s, complètes en 0, 4 et 9."""
+    import struct
+
+    def bloc(nom, contenu):
+        return nom + struct.pack("<I", 8 + len(contenu)) + contenu
+    images = "KFFFKFFFFK"
+    entete = bloc(b"MVhd", b"vp60" + struct.pack("<HHIIII", 64, 64, len(images), 99, 10, 1))
+    chemin = tmp_path / "clip.vp6"
+    chemin.write_bytes(entete + b"".join(bloc(b"MV0K" if c == "K" else b"MV0F", b"\0" * 4)
+                                         for c in images))
+    return chemin
+
+
+@pytest.fixture
+def sans_vrai_media(lecteur, monkeypatch):
+    """`_ouvrir` remplacé : un faux lecteur, et la liste des fichiers ouverts."""
+    from unittest.mock import MagicMock
+    ouverts = []
+
+    def ouvrir(chemin, _muet, _volume):
+        ouverts.append(chemin)
+        lecteur._player, lecteur._sink, lecteur._audio = MagicMock(), MagicMock(), MagicMock()
+        lecteur._paused = False
+    monkeypatch.setattr(lecteur, "_ouvrir", ouvrir)
+    return ouverts
+
+
+class TestSautDansUneCinematique:
+    """Grand audit du 2026-11-02 : l'index et la copie d'un saut figeaient le
+    fil de l'interface (0,45 s puis 0,2 s par saut pour une cinématique de HP8)."""
+
+    def test_le_saut_se_prepare_sur_un_autre_fil(self, lecteur, sans_vrai_media, qtbot,
+                                                  tmp_path, monkeypatch):
+        import threading
+
+        from src.core import vp6_ea
+        from src.ui.video_player import dossier_des_copies
+        fils, vrai = [], vp6_ea.indexer
+        monkeypatch.setattr(vp6_ea, "indexer", lambda c: (fils.append(threading.current_thread()),
+                                                           vrai(c))[1])
+        assert lecteur.play(str(_clip(tmp_path)), debut_ms=750)
+        assert lecteur.is_playing and lecteur.position == 750 and sans_vrai_media == []
+        assert lecteur.duration == 1000, "la durée vient de l'en-tête, tout de suite"
+        qtbot.waitUntil(lambda: len(sans_vrai_media) == 1, timeout=5000)
+        assert fils and fils[0] is not threading.main_thread()
+        assert Path(sans_vrai_media[0]).parent == dossier_des_copies()
+        assert lecteur._decalage == 400 and lecteur._cible == 750
+
+    def test_un_saut_depasse_est_jete(self, lecteur, sans_vrai_media, qtbot, tmp_path):
+        from src.ui.video_player import dossier_des_copies
+        clip = _clip(tmp_path)
+        assert lecteur.play(str(clip))
+        lecteur.seek(950)
+        lecteur.seek(500)
+        qtbot.waitUntil(lambda: len(sans_vrai_media) == 2, timeout=5000)
+        qtbot.waitUntil(lambda: len(list(dossier_des_copies().glob("saut_*.vp6"))) == 1, timeout=5000)
+        assert sans_vrai_media[0] == str(clip)
+        assert [Path(c).name for c in dossier_des_copies().glob("saut_*.vp6")] == \
+            [Path(sans_vrai_media[1]).name]
+        assert lecteur._decalage == 400
+
+    def test_avant_la_deuxieme_image_complete_le_fichier_lui_meme(self, lecteur, sans_vrai_media,
+                                                                  qtbot, tmp_path):
+        clip = _clip(tmp_path)
+        assert lecteur.play(str(clip))
+        lecteur.pause()
+        lecteur.seek(300)
+        qtbot.waitUntil(lambda: len(sans_vrai_media) == 2, timeout=5000)
+        assert sans_vrai_media == [str(clip), str(clip)]
+        assert lecteur._decalage == 0 and lecteur._cible == 300 and lecteur._pause_apres_saut

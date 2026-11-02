@@ -31,6 +31,12 @@ else
     done
     [ -n "$PY" ] || echec "Python 3.15 introuvable (uv python install 3.15)."
     if ! "$PY" -c 'import sys; sys.exit(sys.prefix == sys.base_prefix)'; then
+        # Un vieux .venv-build (3.14) donnait une AppImage en 3.14 sans erreur.
+        if [ -x .venv-build/bin/python ] \
+            && ! .venv-build/bin/python -c 'import sys; sys.exit(sys.version_info < (3, 15))' 2>/dev/null; then
+            echo "Environnement de build d'une autre version de Python : recréé."
+            rm -rf .venv-build
+        fi
         if [ ! -x .venv-build/bin/python ]; then
             echo "Création de l'environnement de build (.venv-build)..."
             "$PY" -m venv .venv-build || echec "création de .venv-build impossible."
@@ -38,6 +44,9 @@ else
         PY="$(pwd)/.venv-build/bin/python"
     fi
 fi
+# Quel que soit le chemin (ACCIO_PY, venv actif ou .venv-build) : 3.15 exigé.
+"$PY" -c 'import sys; sys.exit(sys.version_info < (3, 15))' 2>/dev/null \
+    || echec "$PY n'est pas Python 3.15."
 
 echo "=== Accio Launcher - Build Linux ==="
 "$PY" --version
@@ -55,6 +64,7 @@ echo "[1/6] Vérification de l'icône..."
 echo "[2/6] Lint et types..."
 "$PY" -m ruff check . || echec "lint échoué - build interrompu."
 "$PY" -m mypy || echec "types de src/core en échec - build interrompu."
+"$PY" -m mypy --platform linux || echec "types des branches Linux de src/core en échec - build interrompu."
 
 echo "[3/6] Tests..."
 "$PY" -m pytest -q -n auto --dist loadfile || echec "tests en échec - build interrompu."

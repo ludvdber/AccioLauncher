@@ -1,6 +1,11 @@
 """Le drapeau « Large Address Aware » des exes 32 bits (`memoire_4go`, 2026-10-26)."""
 
+import os
 import struct
+import sys
+from pathlib import Path
+
+import pytest
 
 from src.core import memoire_4go as m
 
@@ -38,6 +43,31 @@ class TestDrapeau:
         m.poser(exe)
         d = exe.read_bytes()
         pos = 0x80 + 24 + 64
+        assert struct.unpack_from("<I", d, pos)[0] == m.somme_de_controle(d, pos)
+
+    @pytest.mark.parametrize("taille", [0, 1, 2, 3, 7, 64, 4097])
+    def test_la_somme_rapide_vaut_la_somme_repliee(self, taille):
+        """Grand audit du 2026-11-02 : la somme passe par un seul entier modulo
+        0xFFFF au lieu d'un tuple de 9 millions d'entiers ; même résultat que
+        l'algorithme de `CheckSumMappedFile`, mot par mot."""
+        import random
+        rng = random.Random(taille)
+        for _ in range(50):
+            d = bytes(rng.randrange(256) for _ in range(taille))
+            pos = taille // 3 if taille >= 8 else 0
+            t = bytearray(d)
+            t[pos:pos + 4] = b"\0" * len(t[pos:pos + 4])
+            t += b"\0" * (len(t) % 2)
+            total = sum(struct.unpack(f"<{len(t) // 2}H", t))
+            while total >> 16:
+                total = (total & 0xFFFF) + (total >> 16)
+            assert m.somme_de_controle(d, pos) == (total + taille) & 0xFFFFFFFF
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="un exe signé de Windows")
+    def test_la_somme_d_un_vrai_exe_de_windows(self):
+        """La somme que Windows a écrite dans un de ses exes signés."""
+        d = (Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "notepad.exe").read_bytes()
+        pos = struct.unpack_from("<I", d, 0x3C)[0] + 24 + 64
         assert struct.unpack_from("<I", d, pos)[0] == m.somme_de_controle(d, pos)
 
     def test_deja_pose_le_fichier_n_est_pas_reecrit(self, tmp_path):

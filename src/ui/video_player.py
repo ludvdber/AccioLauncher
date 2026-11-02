@@ -7,6 +7,7 @@ from PyQt6.QtCore import QUrl, pyqtSignal, QObject
 from PyQt6.QtWidgets import QWidget
 
 from src.core import vp6_ea
+from src.ui.utils import apres_le_fil
 
 # Import AU CHARGEMENT DU MODULE, pas au premier trailer.
 #
@@ -91,14 +92,22 @@ class VideoPlayer(QObject):
         self._position_en_attente = -1
         # Cinématique d'EA : on n'y saute pas, on rejoue une copie qui part
         # de l'image complète d'avant (`vp6_ea`), décalée de `_decalage` ms,
-        # en avance rapide sans rien montrer jusqu'à `_cible`.
+        # en avance rapide sans rien montrer jusqu'à `_cible`. `_index` : son
+        # en-tête (la durée) ; `_complet` : ses images complètes, lues au
+        # premier saut, sur le fil qui prépare la copie.
         self._volume = 0.25
         self._source = ""
         self._index: vp6_ea.Index | None = None
+        self._complet: vp6_ea.Index | None = None
         self._decalage = 0
         self._cible = -1
         self._pause_apres_saut = False
-        self._copies = 0
+        # Le saut en préparation : sa position voulue (-1 : aucun), le numéro
+        # de la dernière demande (une plus ancienne qui arrive est jetée), et
+        # la copie jouée en ce moment.
+        self._attente = -1
+        self._demandes = 0
+        self._copie: Path | None = None
         # Une sortie vidéo de la carte graphique (`VideoOutput` de Qt Quick, voir
         # `fond_gpu`) : les images y vont directement, sans `toImage()` (8 ms
         # par image en 1080p) ni peinture de la fenêtre. None : le chemin QPainter.
@@ -126,7 +135,7 @@ class VideoPlayer(QObject):
 
     @property
     def is_playing(self) -> bool:
-        return self._player is not None
+        return self._player is not None or self._attente >= 0
 
     @property
     def muted(self) -> bool:
@@ -141,15 +150,21 @@ class VideoPlayer(QObject):
         if self._player is not None and not self._paused:
             self._player.pause()
             self._paused = True
+        elif self._player is None and self._attente >= 0:
+            self._paused = True          # posée à l'arrivée du saut
 
     def resume(self) -> None:
         if self._player is not None and self._paused:
             self._player.play()
             self._paused = False
+        elif self._player is None and self._attente >= 0:
+            self._paused = False
 
     @property
     def position(self) -> int:
         """Où en est la vidéo, en millisecondes (0 sans vidéo)."""
+        if self._attente >= 0:
+            return self._attente
         if self._player is None:
             return 0
         return self._cible if self._cible >= 0 else self._player.position() + self._decalage
@@ -162,28 +177,58 @@ class VideoPlayer(QObject):
 
     def seek(self, ms: int) -> None:
         """Va à `ms` dans la vidéo, en pause comme en lecture."""
-        if self._player is None:
-            return
-        if self._index is not None:
-            self._sauter(self._index, max(0, ms), self._paused)
-        else:
+        if self._index is not None and self.is_playing:
+            self._demander_saut(max(0, ms))
+        elif self._player is not None:
             self._player.setPosition(max(0, ms))
 
-    def _sauter(self, index: vp6_ea.Index, ms: int, pause: bool) -> bool:
+    def _demander_saut(self, ms: int) -> None:
         """Rejoue la cinématique d'EA depuis son image complète d'avant `ms`.
         Un saut direct décodait des pavés de couleur jusqu'à la fin (Ludo,
-        2026-10-27, HP6)."""
-        copie = dossier_des_copies() / f"saut_{self._copies % 2}.vp6"
-        self._copies += 1
-        try:
-            copie.parent.mkdir(parents=True, exist_ok=True)
-            copie.unlink(missing_ok=True)
-            debut = vp6_ea.copie_depuis(self._source, index, ms, copie)
-        except OSError as e:
-            log.warning("Cinématique : copie pour le saut impossible (%s)", e)
-            return False
+        2026-10-27, HP6).
+
+        L'index et la copie se préparent sur un fil à part : dans celui de
+        l'interface, une cinématique de HP8 la figeait 0,45 s au premier saut
+        puis 0,2 s à chacun (grand audit du 2026-11-02). Avant la deuxième
+        image complète, aucune copie : le fichier lui-même, depuis le début."""
+        self._demandes += 1
+        numero, source, complet = self._demandes, self._source, self._complet
+        self._attente = ms
+        copie = dossier_des_copies() / f"saut_{numero}.vp6"
+
+        def preparer() -> object:
+            try:
+                index = complet or vp6_ea.indexer(source)
+                if index is not None and vp6_ea.sans_copie(index, ms):
+                    return (index, source, 0)
+                if index is not None:
+                    copie.parent.mkdir(parents=True, exist_ok=True)
+                    return (index, str(copie), vp6_ea.copie_depuis(source, index, ms, copie))
+            except OSError as e:
+                log.warning("Cinématique : copie pour le saut impossible (%s)", e)
+            return None
+        apres_le_fil(self, preparer, lambda resultat: self._poser_saut(numero, resultat),
+                     "cinematique-saut")
+
+    def _poser_saut(self, numero: int, resultat: object) -> None:
+        if numero != self._demandes:     # un saut plus récent suit, ou l'arrêt
+            if isinstance(resultat, tuple):
+                self._jeter(resultat[1])
+            return
+        ms, self._attente = self._attente, -1
+        if not isinstance(resultat, tuple):
+            # Ni index ni copie : depuis le début, comme un lecteur ordinaire.
+            if self._player is None:
+                self._ouvrir(self._source, self._muted, self._volume)
+            return
+        index, chemin, debut = resultat
+        self._complet = index
+        pause, precedente = self._paused, self._copie
         self._liberer()
-        self._ouvrir(str(copie), self._muted, self._volume)
+        self._ouvrir(chemin, self._muted, self._volume)
+        self._copie = Path(chemin) if chemin != self._source else None
+        if precedente is not None and precedente != self._copie:
+            self._jeter(str(precedente))
         self._decalage = debut
         self._cible = ms if ms - debut > 40 else -1
         self._pause_apres_saut = pause
@@ -191,7 +236,14 @@ class VideoPlayer(QObject):
             self._player.setPlaybackRate(_RATTRAPAGE)
         elif pause:
             self.pause()
-        return True
+
+    def _jeter(self, chemin: str) -> None:
+        """Efface une copie de saut (jamais la cinématique elle-même)."""
+        if chemin != self._source and Path(chemin).parent == dossier_des_copies():
+            try:
+                Path(chemin).unlink(missing_ok=True)
+            except OSError:              # encore ouverte : effacée au prochain arrêt
+                pass
 
     def play(self, video_path: str, *, muted: bool = False, volume: float = 0.25,
              debut_ms: int = 0) -> bool:
@@ -203,8 +255,9 @@ class VideoPlayer(QObject):
         self._source = video_path
         self._muted, self._volume = muted, volume
         if video_path.lower().endswith(".vp6"):
-            self._index = vp6_ea.indexer(video_path)
-            if self._index is not None and debut_ms > 0 and self._sauter(self._index, debut_ms, False):
+            self._index = vp6_ea.lire_entete(video_path)
+            if self._index is not None and debut_ms > 0:
+                self._demander_saut(debut_ms)
                 return True
         self._ouvrir(video_path, muted, volume)
         self._position_en_attente = debut_ms if debut_ms > 0 else -1
@@ -248,8 +301,25 @@ class VideoPlayer(QObject):
     def stop(self) -> None:
         """Arrête la lecture et libère toutes les ressources média."""
         self._liberer()
-        self._source, self._index = "", None
+        self._demandes += 1              # un saut en préparation n'aboutira plus
+        self._attente = -1
+        self._copie = None
+        self._effacer_copies()
+        self._source, self._index, self._complet = "", None, None
         self._decalage, self._cible = 0, -1
+
+    @staticmethod
+    def _effacer_copies() -> None:
+        """Les copies des sauts (jusqu'à 329 Mo chacune pour HP8) ne restent
+        pas dans le cache fixe après la lecture (grand audit du 2026-11-02)."""
+        dossier = dossier_des_copies()
+        if not dossier.is_dir():
+            return
+        for copie in dossier.glob("saut_*.vp6"):
+            try:
+                copie.unlink()
+            except OSError:      # encore ouverte ou en cours d'écriture : au prochain arrêt
+                pass
 
     def _liberer(self) -> None:
         if self._player is not None:

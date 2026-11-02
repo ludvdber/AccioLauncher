@@ -225,10 +225,18 @@ class LecteurWindows:
     emplacements occupés sont lus."""
     EMPLACEMENTS = 16
     RESONDE = 1.0
+    # Déclarés ici : sous `mypy --platform linux`, le corps de `__init__` est
+    # inatteignable et ne typerait plus rien.
+    _winmm: ctypes.CDLL
+    _manettes: dict[int, tuple[_JOYCAPSW, Disposition]]
+    _sonde_a: float
+    _verrou: threading.Lock
 
     def __init__(self) -> None:
+        if sys.platform != "win32":     # aussi pour mypy --platform linux
+            raise OSError("Windows seulement")
         self._winmm = ctypes.WinDLL("winmm")
-        self._manettes: dict[int, tuple[_JOYCAPSW, Disposition]] = {}
+        self._manettes = {}
         self._sonde_a = -1.0
         self._verrou = threading.Lock()
 
@@ -346,7 +354,7 @@ class LecteurLinux:
         try:
             import fcntl
             carte = bytearray(0x40)
-            fcntl.ioctl(fd, JSIOCGAXMAP, carte)  # type: ignore[attr-defined]  # Linux seul
+            fcntl.ioctl(fd, JSIOCGAXMAP, carte)  # type: ignore[attr-defined, unused-ignore]  # Linux seul
             axes = {rang: code for rang, code in enumerate(carte)}
         except (OSError, ImportError):
             axes = {0: ABS_X, 1: ABS_Y}         # sans la carte, le stick gauche suffit

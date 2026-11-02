@@ -18,6 +18,7 @@ ouvert), le mini-lecteur, et le lien « Musique » de la fiche d'un jeu.
 
 import logging
 from functools import lru_cache
+from typing import NamedTuple
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, QSize, QStandardPaths, Qt, QTimer, pyqtSignal
@@ -25,6 +26,7 @@ from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from src.core import cinematiques, discographie, phonographe
+from src.core.catalogue_blocs import Sauvegardes
 from src.core.config import ASSETS_DIR, cache_pour
 from src.core.i18n import get_language, tr
 from src.ui.disque import Disque
@@ -34,6 +36,7 @@ from src.ui.icon_button import pixmap_icone
 from src.ui.telechargement_vgmstream import TelechargementVgmstream
 from src.ui.theme import accent_qcolor, themed
 from src.ui.title_bar import COLLECTIONS
+from src.ui.utils import apres_le_fil
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +73,26 @@ def _cle_vus(jeu: str, rubrique: str) -> str:
     return jeu if rubrique == MUSIQUE else f"{jeu}:{CINEMATIQUES}"
 
 
+class _ALire(NamedTuple):
+    jeu: str
+    installe: bool
+    sauvegardes: Sauvegardes | None
+    collection: cinematiques.Collection | None
+    dossier: Path | None
+
+
+def _lire(travail: list[_ALire], langue: str
+          ) -> tuple[dict[str, int | None], dict[str, dict[str, cinematiques.Source]]]:
+    """L'avancement et les cinématiques présentes de chaque jeu de `travail`."""
+    avances: dict[str, int | None] = {}
+    presentes: dict[str, dict[str, cinematiques.Source]] = {}
+    for a in travail:
+        avances[a.jeu] = discographie.avancement(a.jeu, a.sauvegardes) if a.installe else None
+        presentes[a.jeu] = (cinematiques.presentes(a.collection, a.dossier, langue)
+                            if a.installe and a.collection is not None else {})
+    return avances, presentes
+
+
 class Mediatheque(QObject):
     """Le modèle de la page et de la barre du bas ; les widgets ne font que l'appeler."""
 
@@ -92,6 +115,9 @@ class Mediatheque(QObject):
         self._avances: dict[str, int | None] = {}
         self._vus = discographie.charger_vus()
         self._presentes: dict[str, dict[str, cinematiques.Source]] = {}
+        # Numéro de la dernière lecture demandée ; `_en_vol` : celle du fil, pas encore posée.
+        self._numero = 0
+        self._en_vol = False
 
         # vgmstream, téléchargé à la première écoute de HP5 ou HP6 : la page ne fait que l'écouter.
         self.vgmstream = TelechargementVgmstream(self)
@@ -108,10 +134,12 @@ class Mediatheque(QObject):
         QApplication.instance().aboutToQuit.connect(self.fond.arreter)
         # Lire les sauvegardes des trois premiers jeux coûtait 0,3 s au lancement
         # (mesuré le 2026-10-24) : c'est fait juste après l'ouverture de la fenêtre,
-        # par un minuteur POSSÉDÉ (règle 102). Une page ouverte avant relit d'elle-même.
+        # par un minuteur POSSÉDÉ (règle 102), et sur un fil à part (grand audit du
+        # 2026-11-02 : les 0,3 s figeaient encore la fenêtre, et à chaque retour de
+        # partie). Une page ouverte avant relit d'elle-même.
         self._lecture = QTimer(self)
         self._lecture.setSingleShot(True)
-        self._lecture.timeout.connect(self.actualiser)
+        self._lecture.timeout.connect(self.actualiser_en_fond)
         self._lecture.start(1200)
         self.mini.actualiser()
         self.fond.demarrer()
@@ -122,7 +150,7 @@ class Mediatheque(QObject):
         """L'onglet ouvre sur les captures (Ludo, 2026-10-24) ; la note de la fiche et
         le mini-lecteur demandent la musique."""
         from src.ui.mediatheque_page import MediathequePage
-        if self._lecture.isActive():
+        if self._lecture.isActive() or self._en_vol:
             self._lecture.stop()
             self.actualiser()
         self._pages.ouvrir(MediathequePage(self, rubrique, jeu), COLLECTIONS)
@@ -137,20 +165,50 @@ class Mediatheque(QObject):
 
     def _retour_de_partie(self, *_args) -> None:
         """Une partie finie a pu ouvrir des morceaux : on relit, puis la musique reprend."""
-        self.actualiser()
+        self.actualiser_en_fond()
         self.fond.reprendre(JEU)
 
     def actualiser(self) -> None:
         """Relit l'avancement des jeux installés et pose la pastille de l'onglet."""
+        self._numero += 1                # une lecture du fil, plus ancienne, sera jetée
+        self._en_vol = False
+        self._appliquer(_lire(self._a_lire(), get_language()))
+
+    def actualiser_en_fond(self) -> None:
+        """Comme `actualiser`, la lecture des sauvegardes sur un fil à part."""
+        self._numero += 1
+        numero, travail, langue = self._numero, self._a_lire(), get_language()
+        self._en_vol = True
+
+        def lire() -> object:
+            try:
+                return _lire(travail, langue)
+            except Exception:            # une sauvegarde illisible : la pastille attendra
+                log.debug("Médiathèque : lecture des parties échouée", exc_info=True)
+                return None
+        apres_le_fil(self, lire, lambda lu: self._poser_lecture(numero, lu), "mediatheque")
+
+    def _poser_lecture(self, numero: int, lu: object) -> None:
+        if numero != self._numero:       # une lecture plus récente suit
+            return
+        self._en_vol = False
+        if isinstance(lu, tuple):
+            self._appliquer(lu)
+
+    def _a_lire(self) -> list[_ALire]:
+        """Ce que le fil lira : (jeu, ses sauvegardes, ses cinématiques, son
+        dossier), tout ce qui interroge le manager restant dans ce fil-ci."""
+        travail = []
         for jeu in set(self._morceaux) | set(self._cines):
             game = self._manager.get_game_by_id(jeu)
             installe = game is not None and self._manager.is_installed(jeu)
-            self._avances[jeu] = (discographie.avancement(jeu, game.sauvegardes)
-                                  if installe else None)
-            collection = self._cines.get(jeu)
-            self._presentes[jeu] = (cinematiques.presentes(collection, self._manager.get_game_path(jeu),
-                                                           get_language())
-                                    if installe and collection is not None else {})
+            travail.append(_ALire(jeu, installe, game.sauvegardes if installe else None,
+                                  self._cines.get(jeu), self._manager.get_game_path(jeu)))
+        return travail
+
+    def _appliquer(self, lu: tuple[dict[str, int | None], dict[str, dict[str, cinematiques.Source]]]) -> None:
+        self._avances.update(lu[0])
+        self._presentes.update(lu[1])
         self._barre_titre.set_pastille(COLLECTIONS, self.a_des_nouveautes())
         self.vus_changes.emit()
         self.mini.actualiser()

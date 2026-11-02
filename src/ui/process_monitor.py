@@ -31,7 +31,7 @@ import time
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from src.core import compat
-from src.core.win_utils import commande_systeme
+from src.core.win_utils import commande_systeme, processus_lance
 
 log = logging.getLogger(__name__)
 
@@ -137,6 +137,10 @@ class ProcessMonitor(QObject):
             if compat.lanceur() is None:
                 return False
             return compat.processus_du_jeu(exe_name, compat.prefixe())
+        try:
+            return processus_lance(exe_name)
+        except OSError as e:             # liste refusée : `tasklist`, comme avant
+            log.debug("Liste des processus refusée (%s), repli sur tasklist", e)
         try:
             # Chemin système absolu, jamais « tasklist » seul (cf.
             # `commande_systeme`). Arguments en liste, sans shell ; le nom

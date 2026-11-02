@@ -59,7 +59,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.mediatheque import CAPTURES, CINEMATIQUES, MUSIQUE, Mediatheque
 from src.ui.theme import accent_qcolor, themed
-from src.ui.utils import clear_layout, open_local_path, zone_defilable
+from src.ui.utils import apres_le_fil, clear_layout, open_local_path, zone_defilable
 from src.ui.video_player import VideoPlayer
 
 log = logging.getLogger(__name__)
@@ -910,6 +910,7 @@ class _VueCinematiques(QWidget):
     def __init__(self, media: Mediatheque) -> None:
         super().__init__()
         self._media = media
+        self._copie_en_cours = False
         self._jeu = ""
         self._affichee = False
         self._courante = ""
@@ -1229,18 +1230,31 @@ class _VueCinematiques(QWidget):
         copies = [(self._chemin_video, video)]
         if self._chemin_voix is not None:
             copies.append((self._chemin_voix, video.with_suffix(self._chemin_voix.suffix)))
-        try:
-            for source, arrivee in copies:
-                shutil.copyfile(source, arrivee)
-        except OSError as exc:
-            log.warning("Copie de la cinématique impossible : %s", exc)
+        # Sur un fil à part : une cinématique de HP8 pèse jusqu'à 329 Mo, et la
+        # copie figeait la fenêtre jusqu'au bout (grand audit du 2026-11-02).
+        self._copie_en_cours = True
+        self._etat_commandes()
+        self._note.setText(tr("Enregistrement de la cinématique…"))
+
+        def copier() -> list[str] | None:
+            try:
+                for source, arrivee in copies:
+                    shutil.copyfile(source, arrivee)
+            except OSError as exc:
+                log.warning("Copie de la cinématique impossible : %s", exc)
+                return None
+            return [arrivee.name for _source, arrivee in copies]
+        apres_le_fil(self, copier, self._poser_copie, "cinematique-copie")
+
+    def _poser_copie(self, noms: object) -> None:
+        self._copie_en_cours = False
+        self._etat_commandes()
+        if not isinstance(noms, list):
             self._note.setText(tr("La cinématique n'a pas pu être enregistrée à cet endroit."))
-            return
-        if len(copies) == 2:
-            self._note.setText(tr("Enregistrée : « {} », et sa voix à côté, « {} ».").format(
-                copies[0][1].name, copies[1][1].name))
+        elif len(noms) == 2:
+            self._note.setText(tr("Enregistrée : « {} », et sa voix à côté, « {} ».").format(*noms))
         else:
-            self._note.setText(tr("Enregistrée : « {} ».").format(copies[0][1].name))
+            self._note.setText(tr("Enregistrée : « {} ».").format(noms[0]))
 
     def _video_finie(self) -> None:
         """La narration des transitions de HP5 dure plus que leur image (85 s de
@@ -1287,7 +1301,7 @@ class _VueCinematiques(QWidget):
         self._stop.setEnabled(actif)
         self._plein.setEnabled(actif)
         self._position.setEnabled(actif)
-        self._enregistrer.setEnabled(actif)
+        self._enregistrer.setEnabled(actif and not self._copie_en_cours)
         self._pause.setText(tr("Reprendre") if actif and self._en_pause() else tr("Pause"))
 
 

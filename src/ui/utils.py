@@ -1,6 +1,10 @@
 """Utilitaires Qt partagés entre les widgets UI."""
 
-from PyQt6.QtCore import QEvent, QObject, QPointF, Qt, QUrl
+import logging
+import threading
+from collections.abc import Callable
+
+from PyQt6.QtCore import QEvent, QObject, QPointF, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QAbstractScrollArea, QApplication, QComboBox, QLayout, QListView, QMessageBox, QScrollArea,
@@ -10,10 +14,49 @@ from PyQt6.QtWidgets import (
 from src.core.config import ASSETS_DIR
 from src.ui.theme import accent_qcolor, themed
 
+log = logging.getLogger(__name__)
+
 _ICONE = ASSETS_DIR / "accio_launcher.ico"
 # Repli hors Windows : le .ico est un format Windows, et le portage Linux est
 # un objectif déclaré. Qt sait lire les deux, mais autant ne pas en dépendre.
 _ICONE_REPLI = ASSETS_DIR / "accio_launcher.png"
+
+
+def apres_le_fil[T](proprietaire: QObject, travail: Callable[[], T], fin: Callable[[T], None],
+                    nom: str) -> None:
+    """`travail()` sur un fil à part, puis `fin(résultat)` dans le fil de l'interface.
+
+    Aucun signal n'est émis du fil : un minuteur POSSÉDÉ par `proprietaire`
+    guette la fin (règle 102). Détruit avec lui, il n'appelle plus rien. Un
+    signal émis du fil vers un objet en pleine destruction levait
+    « 'NoneType' object is not callable » dans la boucle de Qt (grand audit
+    du 2026-11-02, une fois sur sept au démontage d'un test). `travail` qui
+    lève : journalisé, `fin` n'est pas appelée.
+    """
+    resultat: list[T] = []
+    fini = threading.Event()
+
+    def lancer() -> None:
+        try:
+            resultat.append(travail())
+        except Exception:
+            log.warning("Travail « %s » en échec", nom, exc_info=True)
+        finally:
+            fini.set()
+
+    minuteur = QTimer(proprietaire)
+    minuteur.setInterval(15)
+
+    def guetter() -> None:
+        if not fini.is_set():
+            return
+        minuteur.stop()
+        minuteur.deleteLater()
+        if resultat:
+            fin(resultat[0])
+    minuteur.timeout.connect(guetter)
+    minuteur.start()
+    threading.Thread(target=lancer, name=nom, daemon=True).start()
 
 
 def icone_application() -> QIcon:

@@ -83,6 +83,12 @@ if errorlevel 1 (
     %PAUSE%
     exit /b 1
 )
+%PY% -m mypy --platform linux
+if errorlevel 1 (
+    echo ERREUR : Types des branches Linux de src/core en echec - build interrompu.
+    %PAUSE%
+    exit /b 1
+)
 
 :: vgmstream (musique de HP5 et HP6) n'est plus suivi par git : la release
 :: officielle r2117 est telechargee et verifiee par empreinte. Avant les tests,

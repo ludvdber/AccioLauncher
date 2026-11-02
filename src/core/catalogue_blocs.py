@@ -51,7 +51,9 @@ def _taille_mo(value: Any) -> int:
     vérification d'espace et DÉSACTIVAIT le plafond du téléchargeur."""
     try:
         taille: int = int(value)
-    except (TypeError, ValueError):
+    # OverflowError : `1e999` est du JSON valide, lu comme l'infini ; elle
+    # traversait `_versions` et faisait écarter le jeu ENTIER.
+    except (TypeError, ValueError, OverflowError):
         return 0
     return max(0, taille)
 
@@ -88,7 +90,10 @@ class ConfigFile:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ConfigFile:
-        return cls(source=data["source"], destination=data["destination"])
+        source, destination = data["source"], data["destination"]
+        if not isinstance(source, str) or not isinstance(destination, str):
+            raise TypeError("config_files : chaînes attendues")
+        return cls(source=source, destination=destination)
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,9 +107,12 @@ class IniPatch:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> IniPatch:
-        return cls(file=data["file"], section=data["section"],
-                   key=data["key"], value=data["value"],
-                   fallback=data.get("fallback"))
+        champs = (data["file"], data["section"], data["key"], data["value"])
+        fallback = data.get("fallback")
+        if not all(isinstance(c, str) for c in champs) or not isinstance(fallback, str | None):
+            raise TypeError("ini_patches : chaînes attendues")
+        return cls(file=champs[0], section=champs[1], key=champs[2], value=champs[3],
+                   fallback=fallback)
 
 
 @dataclass(frozen=True, slots=True)

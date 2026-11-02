@@ -302,6 +302,22 @@ class TestGameManager:
         assert mgr.get_state("hp_test") == GameState.NOT_INSTALLED
         assert mgr.installed_version("hp_test") is None
 
+    def test_uninstall_oublie_les_extraits_du_jeu(self, tmp_path):
+        """Grand audit du 2026-11-02 : les cinématiques sorties des archives
+        (jusqu'à 329 Mo chacune) restaient dans le cache après le jeu."""
+        from src.core.config import cache_pour
+        (tmp_path / "HPTest" / "System").mkdir(parents=True)
+        (tmp_path / "HPTest" / "System" / "Game.exe").write_text("fake")
+        cache = cache_pour(tmp_path)
+        for dossier in ("cinematiques/hp_test/English", "phonographe/hp_test", "cinematiques/hp_autre"):
+            (cache / dossier).mkdir(parents=True)
+            (cache / dossier / "x.vp6").write_bytes(b"0")
+        mgr = _make_manager(tmp_path)
+        assert mgr.uninstall_game("hp_test") is True
+        assert not (cache / "cinematiques" / "hp_test").exists()
+        assert not (cache / "phonographe" / "hp_test").exists()
+        assert (cache / "cinematiques" / "hp_autre" / "x.vp6").is_file()
+
     def test_uninstall_readonly_files(self, tmp_path):
         game_dir = tmp_path / "HPTest" / "System"
         game_dir.mkdir(parents=True)

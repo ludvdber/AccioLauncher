@@ -33,7 +33,10 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_SANS_FENETRE = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+if sys.platform == "win32":
+    _SANS_FENETRE = subprocess.CREATE_NO_WINDOW
+else:
+    _SANS_FENETRE = 0
 _DELAI_S = 60
 
 VERSION = "r2117"

@@ -32,7 +32,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-26.
 
 **Portage Linux : `docs/LINUX.md` fait foi** (audit par fichier et fonction, contenu RELEVÉ des archives, décisions : umu puis wine, préfixe partagé, chemins du préfixe, surcharges de DLL, AppImage).
 
-`build.bat` enchaîne icône → lint → tests → géométrie (vraies polices) → PyInstaller, et **s'ARRÊTE au premier échec** : un exe publié avec une régression coûte plus cher que 20 s d'attente. `build.sh` fait de même sous Linux, plus l'AppImage (6 étapes) ; hors d'un venv il crée `.venv-build` (le Python d'un système atomique ne s'installe pas), et sans session graphique l'audit passe par `xvfb-run` — il PASSE sous Linux avec les vraies polices (xcb, 78 s).
+`build.bat` enchaîne icône → lint → tests → géométrie (vraies polices) → PyInstaller, et **s'ARRÊTE au premier échec** : un exe publié avec une régression coûte plus cher que 20 s d'attente. `build.sh` fait de même sous Linux, plus l'AppImage (6 étapes) ; hors d'un venv il crée `.venv-build` (le Python d'un système atomique ne s'installe pas), le RECRÉE s'il vient d'une autre version de Python, et refuse tout Python qui n'est pas la 3.15 (grand audit du 2026-11-02 : un vieux `.venv-build` en 3.14 donnait une AppImage en 3.14 sans erreur), et sans session graphique l'audit passe par `xvfb-run` — il PASSE sous Linux avec les vraies polices (xcb, 78 s).
 
 ### Journal, sortie et CI
 

@@ -201,7 +201,7 @@ class PreparationWine(QThread):
         """SIGTERM au groupe, puis SIGKILL s'il traîne."""
         for sig in (signal.SIGTERM, getattr(signal, "SIGKILL", signal.SIGTERM)):
             try:
-                os.killpg(proc.pid, sig)  # type: ignore[attr-defined]  # Unix seul
+                os.killpg(proc.pid, sig)  # type: ignore[attr-defined, unused-ignore]  # Unix seul
             except (OSError, AttributeError):
                 proc.kill()
             try:

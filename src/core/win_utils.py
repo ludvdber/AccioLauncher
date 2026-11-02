@@ -83,6 +83,8 @@ def noms_commencant_par(dossier: Path, debut: str) -> list[str]:
 
 def _noms_par_le_systeme(dossier: Path, debut: str) -> list[str]:
     """`FindFirstFileExW` sur `dossier\\debut*` ; OSError si l'API refuse."""
+    if sys.platform != "win32":     # aussi pour mypy --platform linux
+        raise OSError("Windows seulement")
     import ctypes
     from ctypes import wintypes
 
@@ -120,6 +122,50 @@ def _noms_par_le_systeme(dossier: Path, debut: str) -> list[str]:
     finally:
         k32.FindClose(poignee)
     return noms
+
+
+def processus_lance(nom_exe: str) -> bool:
+    """Un processus nommé `nom_exe` (casse ignorée) tourne-t-il ? OSError si
+    le système refuse la liste.
+
+    La liste des processus du système (`CreateToolhelp32Snapshot`), en moins
+    d'une milliseconde : `tasklist`, lancé toutes les 2 s pendant HP1 et HP2,
+    figeait chaque fois le fil de l'interface (grand audit du 2026-11-02).
+    """
+    if sys.platform != "win32":     # aussi pour mypy --platform linux
+        raise OSError("Windows seulement")
+    import ctypes
+    from ctypes import wintypes
+
+    class _Entree(ctypes.Structure):
+        _fields_ = [("taille", wintypes.DWORD), ("usage", wintypes.DWORD),
+                    ("pid", wintypes.DWORD), ("tas", ctypes.c_size_t),
+                    ("module", wintypes.DWORD), ("fils", wintypes.DWORD),
+                    ("parent", wintypes.DWORD), ("priorite", ctypes.c_long),
+                    ("drapeaux", wintypes.DWORD), ("exe", wintypes.WCHAR * 260)]
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    k32.Process32FirstW.restype = k32.Process32NextW.restype = wintypes.BOOL
+    k32.Process32FirstW.argtypes = k32.Process32NextW.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(_Entree)]
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    liste = k32.CreateToolhelp32Snapshot(2, 0)      # 2 = TH32CS_SNAPPROCESS
+    if liste in (None, wintypes.HANDLE(-1).value):
+        raise ctypes.WinError(ctypes.get_last_error())
+    voulu = nom_exe.casefold()
+    entree = _Entree()
+    entree.taille = ctypes.sizeof(_Entree)
+    try:
+        ok = k32.Process32FirstW(liste, ctypes.byref(entree))
+        while ok:
+            if entree.exe.casefold() == voulu:
+                return True
+            ok = k32.Process32NextW(liste, ctypes.byref(entree))
+    finally:
+        k32.CloseHandle(liste)
+    return False
 
 
 def remove_zone_identifier(root: Path, pattern: str = "*") -> int:

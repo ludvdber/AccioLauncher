@@ -50,3 +50,19 @@ def test_autre_chose_qu_un_vp6_d_ea(tmp_path):
     autre.write_bytes(b"RIFF" + bytes(60))
     assert vp6_ea.indexer(autre) is None
     assert vp6_ea.indexer(tmp_path / "absent.vp6") is None
+
+
+def test_l_en_tete_seul_donne_la_duree(tmp_path):
+    """Grand audit du 2026-11-02 : la lecture parcourait tous les blocs (0,45 s
+    pour HP8) pour une durée écrite dans l'en-tête."""
+    chemin, _ = _cinematique(tmp_path, "KFFFKFFFFK")
+    entete = vp6_ea.lire_entete(chemin)
+    assert entete is not None and entete.duree_ms == 1000 and entete.completes == ()
+    assert vp6_ea.lire_entete(tmp_path / "absent.vp6") is None
+
+
+def test_avant_la_deuxieme_image_complete_aucune_copie(tmp_path):
+    chemin, _ = _cinematique(tmp_path, "KFFFKFFFFK")
+    index = vp6_ea.indexer(chemin)
+    assert vp6_ea.sans_copie(index, 300)
+    assert not vp6_ea.sans_copie(index, 450)

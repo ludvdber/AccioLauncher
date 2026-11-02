@@ -7,6 +7,8 @@ sauvegarde, et c'est pour eux que la grâce existe — la raccourcir ferait croi
 leur partie finie en plein chargement.
 """
 
+import sys
+
 import pytest
 
 from src.ui.process_monitor import ProcessMonitor
@@ -123,3 +125,34 @@ def test_un_sondage_sans_reponse_n_allonge_pas_la_duree(moniteur):
         moniteur._poll()
     assert moniteur._vu_vivant == vu
     assert len(vus) == 1
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="liste des processus de Windows")
+class TestSansTasklist:
+    """Grand audit du 2026-11-02 : `tasklist` (75 à 160 ms) tournait toutes les
+    2 s dans le fil de l'interface pendant HP1 et HP2."""
+
+    def test_la_liste_du_systeme_suffit(self, monkeypatch):
+        import os
+
+        from src.ui import process_monitor as pm
+
+        def interdit(*_a, **_k):
+            raise AssertionError("tasklist lancé")
+        monkeypatch.setattr(pm.subprocess, "run", interdit)
+        moi = os.path.basename(sys.executable)
+        assert pm.ProcessMonitor._is_exe_running(moi) is True
+        assert pm.ProcessMonitor._is_exe_running(moi.upper()) is True
+        assert pm.ProcessMonitor._is_exe_running("pas_un_jeu_lance.exe") is False
+
+    def test_liste_refusee_repli_sur_tasklist(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from src.ui import process_monitor as pm
+
+        def refuse(_nom):
+            raise OSError("refusé")
+        monkeypatch.setattr(pm, "processus_lance", refuse)
+        monkeypatch.setattr(pm.subprocess, "run",
+                            lambda *_a, **_k: SimpleNamespace(stdout="hp.exe   42 Console"))
+        assert pm.ProcessMonitor._is_exe_running("HP.exe") is True

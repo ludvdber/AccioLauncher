@@ -142,6 +142,33 @@ class TestCinematiquesArchive:
         voix_es = cinematiques.voix(collection, jeu, "AVcamp", "es")
         assert cinematiques.lisible(voix_es, tmp_path / "cache", "hp4").read_bytes() == b"SCHl-en"
 
+    def test_le_cache_a_un_plafond(self, tmp_path, monkeypatch):
+        """Grand audit du 2026-11-02 : chaque cinématique vue restait dans le
+        cache (jusqu'à 329 Mo pour HP8). Les moins récemment vues partent, jamais
+        celle que l'on sert."""
+        import os
+        jeu = tmp_path / "HP4"
+        jeu.mkdir()
+        (jeu / "movies.big").write_bytes(_bigf({
+            f"Movies/English/AV{n}.vp6": bytes([n]) * 100 for n in range(4)}))
+        collection = cinematiques.Collection(
+            "Movies/English", ".vp6", False,
+            tuple(cinematiques.Cinematique(f"AV{n}", str(n), 0) for n in range(4)),
+            "movies.big", {"en": "Movies/English"})
+        sources = cinematiques.presentes(collection, jeu, "en")
+        monkeypatch.setattr(cinematiques, "PLAFOND_CACHE", 250)
+        cache = tmp_path / "cache"
+        servis = []
+        for n in range(4):
+            servis.append(cinematiques.lisible(sources[f"AV{n}"], cache, "hp4"))
+            os.utime(servis[-1], (1000 + n, 1000 + n))   # vues l'une après l'autre
+        en_cours = cache / "cinematiques" / "hp4" / "English" / "x.accio-tmp"
+        en_cours.write_bytes(b"0" * 500)
+        cinematiques.lisible(sources["AV1"], cache, "hp4")   # revue : redevient récente
+        restants = {p.name for p in (cache / "cinematiques").rglob("*.vp6")}
+        assert restants == {"AV1.vp6", "AV3.vp6"}
+        assert en_cours.is_file()
+
 
 class TestBanqueDeVoix:
     """HP5 : un flux par cinématique dans une banque `_s.sdt`, sans en-tête."""

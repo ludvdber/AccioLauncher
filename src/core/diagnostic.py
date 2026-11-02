@@ -101,9 +101,7 @@ def _sans_profil_wine(text: str) -> str:
 def systeme() -> str:
     """« Windows 11 Professional 10.0.26200 (AMD64) », ou l'équivalent ailleurs."""
     if sys.platform == "win32":
-        release, version, _, _ = platform.win32_ver()
-        edition = platform.win32_edition() or ""
-        nom = " ".join(x for x in ("Windows", release, edition, version) if x)
+        return _windows()
     elif sys.platform.startswith("linux"):
         # « Linux 6.15.9 » ne dit ni la distribution ni la session : sur
         # Bazzite, le mode Jeu (Gamescope) et le bureau (KDE, Wayland) ne se
@@ -115,9 +113,29 @@ def systeme() -> str:
         nom = f"{distribution(os_release)} · noyau {platform.release()}"
         session = session_graphique(os.environ)
         return f"{nom} ({platform.machine()})" + (f" · {session}" if session else "")
-    else:
-        nom = f"{platform.system()} {platform.release()}"
-    return f"{nom} ({platform.machine()})"
+    return f"{platform.system()} {platform.release()} ({platform.machine()})"
+
+
+def _windows() -> str:
+    """La même ligne que `platform.win32_ver`, `win32_edition` et `machine`,
+    sans eux : 70 à 150 ms avant la fenêtre (une requête WMI), mesurés le
+    2026-11-02 ; le numéro et le registre la donnent en moins d'1 ms."""
+    if sys.platform != "win32":      # aussi pour mypy --platform linux
+        return "Windows"
+    import winreg
+    v = sys.getwindowsversion()
+    release = "11" if (v.major, v.build) >= (10, 22000) else str(v.major)
+    edition = ""
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\Microsoft\Windows NT\CurrentVersion") as cle:
+            edition = str(winreg.QueryValueEx(cle, "EditionID")[0])
+    except OSError:
+        pass
+    machine = (os.environ.get("PROCESSOR_ARCHITEW6432") or os.environ.get("PROCESSOR_ARCHITECTURE")
+               or platform.machine())
+    nom = " ".join(x for x in ("Windows", release, edition, f"{v.major}.{v.minor}.{v.build}") if x)
+    return f"{nom} ({machine})"
 
 
 def distribution(os_release: Mapping[str, str]) -> str:

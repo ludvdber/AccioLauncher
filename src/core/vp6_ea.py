@@ -27,7 +27,8 @@ class Index:
     entete: bytes                         # le bloc MVhd tel quel
     images_par_seconde: float
     nombre: int                           # images du fichier
-    completes: tuple[tuple[int, int], ...]  # (numéro d'image, position du bloc)
+    # (numéro d'image, position du bloc) ; vide pour un en-tête seul (`lire_entete`).
+    completes: tuple[tuple[int, int], ...] = ()
 
     def ms(self, image: int) -> int:
         return round(image * 1000 / self.images_par_seconde)
@@ -35,6 +36,31 @@ class Index:
     @property
     def duree_ms(self) -> int:
         return self.ms(self.nombre)
+
+
+def lire_entete(chemin: str | Path) -> Index | None:
+    """L'en-tête seul (durée comprise : nombre d'images à l'octet 16, cadence à
+    24 et 28), sans les images complètes ; None si ce n'est pas un `.vp6` d'EA.
+
+    De quoi lancer la lecture : parcourir les blocs (`indexer`) prenait 0,45 s
+    à froid pour une cinématique de HP8, et ne sert qu'aux sauts (grand audit
+    du 2026-11-02).
+    """
+    try:
+        with open(chemin, "rb") as f:
+            entete = f.read(32)
+            if len(entete) < 32 or entete[:4] != _ENTETE:
+                return None
+            taille_entete = struct.unpack_from("<I", entete, 4)[0]
+            nombre = struct.unpack_from("<I", entete, 16)[0]
+            num, den = struct.unpack_from("<II", entete, 24)
+            if taille_entete < 32 or not num or not den:
+                return None
+            f.seek(0)
+            entete = f.read(taille_entete)
+    except OSError:
+        return None
+    return Index(entete, num / den, nombre)
 
 
 def indexer(chemin: str | Path) -> Index | None:
@@ -73,14 +99,26 @@ def indexer(chemin: str | Path) -> Index | None:
     return Index(entete, num / den, numero, tuple(completes))
 
 
-def copie_depuis(chemin: str | Path, index: Index, ms: int, cible: Path) -> int:
-    """Écrit dans `cible` la cinématique à partir de l'image complète qui
-    précède `ms` ; rend l'instant de cette image, en millisecondes."""
+def complete_avant(index: Index, ms: int) -> tuple[int, int]:
+    """L'image complète qui précède `ms` : (numéro d'image, position du bloc)."""
     image, position = index.completes[0]
     for numero, pos in index.completes:
         if index.ms(numero) > ms:
             break
         image, position = numero, pos
+    return image, position
+
+
+def sans_copie(index: Index, ms: int) -> bool:
+    """Vrai si la copie serait le fichier lui-même : `ms` tombe avant la
+    deuxième image complète, et la première ouvre la vidéo."""
+    return complete_avant(index, ms) == index.completes[0] and index.completes[0][0] == 0
+
+
+def copie_depuis(chemin: str | Path, index: Index, ms: int, cible: Path) -> int:
+    """Écrit dans `cible` la cinématique à partir de l'image complète qui
+    précède `ms` ; rend l'instant de cette image, en millisecondes."""
+    image, position = complete_avant(index, ms)
     entete = bytearray(index.entete)
     struct.pack_into("<I", entete, 16, index.nombre - image)
     with open(chemin, "rb") as source, open(cible, "wb") as sortie:

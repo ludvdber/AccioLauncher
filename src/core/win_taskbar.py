@@ -51,6 +51,8 @@ class TaskbarProgress:
     # ── Plomberie COM ──
 
     def _init_com(self) -> None:
+        if sys.platform != "win32":     # aussi pour mypy --platform linux
+            raise OSError("Windows seulement")
         import ctypes
 
         class _GUID(ctypes.Structure):
@@ -86,6 +88,8 @@ class TaskbarProgress:
         """Résout la méthode `index` de la vtable COM en callable ctypes."""
         if self._iface is None:
             raise OSError("ITaskbarList3 non initialisée")
+        if sys.platform != "win32":     # aussi pour mypy --platform linux
+            raise OSError("Windows seulement")
         import ctypes
 
         vtable = ctypes.cast(

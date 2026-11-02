@@ -51,7 +51,10 @@ REFUSEE = "refusee"          # l'invite administrateur a été refusée
 COMPOSANTS = "composants"    # installés, mais la relecture en trouve encore un absent
 
 # Règle 6 : la constante n'existe que sous Windows, nommée ici sous garde.
-_SANS_FENETRE = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+if sys.platform == "win32":
+    _SANS_FENETRE = subprocess.CREATE_NO_WINDOW
+else:
+    _SANS_FENETRE = 0
 
 
 @dataclass(frozen=True, slots=True)

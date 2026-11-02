@@ -15,7 +15,8 @@ import re
 import unicodedata
 from pathlib import Path
 
-from src.core.config import LAUNCHER_DIR_NAME
+from src.core.config import LAUNCHER_DIR_NAME, Config
+from src.core import archives_ea, pre_launch
 from src.core import game_registry as registre
 from src.core.chemins import chemin_relatif_sur as _est_relatif_sur
 from src.core.extractors import check_path_traversal, is_unsafe_entry
@@ -26,9 +27,25 @@ from src.core.game_data import _JETON_SUR, GameData, _parse_catalog
 _LIGNE_VALEUR = re.compile(
     r'"(?:[^"\\]|\\.)*"=(?:dword:[0-9a-f]{8}|"(?:[^"\\]|\\.)*")')
 
+# Rien n'est écrit : le dossier des jeux n'est que comparé.
+_CONFIG = Config()
+
 
 def _https(url: str) -> bool:
     return url.startswith("https://")
+
+
+def chemin_pre_lancement(raw: str, jeu: GameData, config: Config) -> None:
+    """La barrière qui décide quels fichiers le catalogue distant peut
+    SUPPRIMER, créer ou patcher : un `.ini`, dans Documents ou le dossier des
+    jeux, jamais ailleurs, quelle que soit la remontée écrite."""
+    p = pre_launch.resolve_safe_path(raw, jeu, config)
+    if p is None:
+        return
+    assert p.suffix.lower() == ".ini", p
+    vrai = p.resolve()
+    assert (vrai.is_relative_to(pre_launch.get_documents_dir().resolve())
+            or vrai.is_relative_to(config.install_path.resolve())), p
 
 
 def catalogue(raw: object) -> None:
@@ -50,6 +67,20 @@ def catalogue(raw: object) -> None:
         assert jeu.warning_url == "" or _https(jeu.warning_url), jeu.warning_url
         sous = jeu.post_install.sous_dossier
         assert sous == "" or (_JETON_SUR.match(sous) and sous not in (".", "..")), sous
+        for cf in jeu.post_install.config_files:
+            assert isinstance(cf.source, str) and isinstance(cf.destination, str), cf
+
+        # Ces champs suppriment, créent ou patchent des fichiers au clic sur
+        # JOUER : des chaînes, et chacune passe la barrière ou se fait refuser.
+        pl = jeu.pre_launch
+        if pl is not None:
+            for p in pl.ini_patches:
+                assert all(isinstance(c, str) for c in (p.file, p.section, p.key, p.value)), p
+                assert p.fallback is None or isinstance(p.fallback, str), p
+            chemins = (*pl.delete_files, *pl.create_files, *(p.file for p in pl.ini_patches))
+            for raw in chemins:
+                assert isinstance(raw, str) and raw, raw
+                chemin_pre_lancement(raw, jeu, _CONFIG)
         for version in jeu.versions:
             if version.download_url is not None:
                 assert _https(version.download_url), version.download_url
@@ -194,8 +225,10 @@ def meme_verdict(nom: str) -> None:
 def archive_ea(fichier: Path) -> None:
     """Une archive EA quelconque (fichier de jeu abîmé ou retouché par un mod)
     se lit sans lever : chaque entrée tient dans le fichier, chaque flux SCHl
-    dans son entrée, et la recherche des flux s'arrête."""
-    from src.core import archives_ea
+    dans son entrée, et la recherche des flux s'arrête.
+
+    `archives_ea` est importé en tête : importé ici, il échappait à
+    `atheris.instrument_imports()` et le fuzzer mutait à l'aveugle."""
     archives_ea._entrees_en_cache.cache_clear()   # même nom, même taille : relire
     taille = fichier.stat().st_size
     for e in archives_ea.lister(fichier):

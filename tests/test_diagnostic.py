@@ -5,6 +5,7 @@ question y est toujours « quelle version, quel Windows, quel jeu ? ».
 """
 
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -36,6 +37,19 @@ class TestIdentite:
         assert APP_VERSION in ligne
         assert "Python" in ligne
         assert diagnostic.systeme() in ligne
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows seulement")
+    def test_sous_windows_sans_les_appels_lents(self, monkeypatch):
+        """Grand audit du 2026-11-02 : `win32_ver` et `machine` (une requête
+        WMI) coûtaient 70 à 150 ms avant la fenêtre."""
+        def lent(*_a):
+            raise AssertionError("appel lent de platform")
+        for nom in ("win32_ver", "win32_edition", "machine"):
+            monkeypatch.setattr(diagnostic.platform, nom, lent)
+        monkeypatch.setenv("PROCESSOR_ARCHITECTURE", "AMD64")
+        monkeypatch.delenv("PROCESSOR_ARCHITEW6432", raising=False)
+        ligne = diagnostic.systeme()
+        assert ligne.startswith("Windows 1") and ligne.endswith(" (AMD64)"), ligne
 
 
 class TestEcran:

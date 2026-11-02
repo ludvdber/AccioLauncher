@@ -17,7 +17,7 @@ def _vue(sauvegardes, config_files):
     game = SimpleNamespace(id="hpx", name="HPX", sauvegardes=sauvegardes,
                            post_install=SimpleNamespace(config_files=config_files))
     vue = SimpleNamespace(
-        game=game, manager=SimpleNamespace(uninstall_game=desinstalles.append),
+        game=game, manager=SimpleNamespace(dossier_a_desinstaller=desinstalles.append),
         _refresh=lambda: None, state_changed=SimpleNamespace(emit=lambda: None),
         notify=SimpleNamespace(emit=notes.append), status_message=SimpleNamespace(emit=lambda _m: None))
     return vue, notes, desinstalles

@@ -330,7 +330,7 @@ class TestDesinstaller:
     def test_ce_qui_reste_est_dit_avant_le_clic(self, tmp_path, boites):
         retires = []
         jeu = _jeu(sauvegardes=object(), post_install=SimpleNamespace(config_files=["a.ini"]))
-        vue = _vue(tmp_path, jeu, uninstall_game=retires.append)
+        vue = _vue(tmp_path, jeu, dossier_a_desinstaller=retires.append)
         boites.repondre(1)
         h.on_uninstall(vue)
         assert "sauvegardes et la configuration" in boites[0][1]

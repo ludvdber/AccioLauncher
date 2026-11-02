@@ -20,7 +20,8 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 A_CHARGER_TOT = ("PyQt6.QtNetwork", "PyQt6.QtMultimedia", "PyQt6.QtSql",
-                 "PyQt6.QtPrintSupport", "PyQt6.QtSvg")
+                 "PyQt6.QtPrintSupport", "PyQt6.QtSvg", "PyQt6.QtQml", "PyQt6.QtQuick",
+                 "PyQt6.QtOpenGL")
 
 
 def _imports_differes(arbre: ast.AST) -> list[tuple[str, int]]:

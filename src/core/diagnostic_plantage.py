@@ -52,7 +52,10 @@ from src.core.win_utils import commande_systeme
 log = logging.getLogger(__name__)
 
 # Résolu à l'import, sous garde (règle 6).
-_SANS_FENETRE = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+if sys.platform == "win32":
+    _SANS_FENETRE = subprocess.CREATE_NO_WINDOW
+else:
+    _SANS_FENETRE = 0
 _NS = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
 _DELAI_S = 10
 # Le plantage est noté AVANT que le processus ne meure ; la marge couvre

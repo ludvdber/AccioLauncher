@@ -23,10 +23,13 @@ import sys
 
 # Règle 5 : un module d'extension Qt se crée au démarrage, jamais en pleine
 # session. Avec la paresse, le module qui l'importe ne s'exécute plus qu'à son
-# premier usage (lecteur vidéo, icône SVG) : on les crée donc ici, d'office.
-# `tests/test_imports_qt.py` vérifie que tout module d'extension importé dans
-# `src/` figure dans cette liste.
-MODULES_QT_A_CHARGER_TOT = ("PyQt6.QtNetwork", "PyQt6.QtSvg", "PyQt6.QtMultimedia")
+# premier usage (lecteur vidéo, icône SVG, fond de l'accueil, modèles 3D) : on
+# les crée donc ici, d'office (QtQml, QtQuick et QtOpenGL : 10 ms en tout, à
+# chaud, mesuré le 2026-11-02). `tests/test_imports_qt.py` vérifie que tout
+# module d'extension importé dans `src/` figure dans cette liste.
+MODULES_QT_A_CHARGER_TOT = ("PyQt6.QtNetwork", "PyQt6.QtSvg", "PyQt6.QtMultimedia",
+                            "PyQt6.QtQml", "PyQt6.QtQuick", "PyQt6.QtQuickWidgets",
+                            "PyQt6.QtOpenGL")
 
 
 def seulement_le_launcher(_importeur: str | None, module: str,
@@ -42,7 +45,7 @@ def activer() -> bool:
     for nom in MODULES_QT_A_CHARGER_TOT:
         try:
             importlib.import_module(nom)
-        except ImportError:   # QtMultimedia peut manquer sous Linux : video_player dégrade
+        except ImportError:   # QtMultimedia ou QtQuick peuvent manquer sous Linux : repli
             pass
     if not hasattr(sys, "set_lazy_imports"):
         return False

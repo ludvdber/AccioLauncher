@@ -128,6 +128,8 @@ def ecrire(liste: list[Entree]) -> bool:
 
 
 def _ecrire(liste: list[Entree]) -> None:
+    if sys.platform != "win32":     # aussi pour mypy --platform linux
+        raise OSError("Windows seulement")
     import ctypes
 
     class _GUID(ctypes.Structure):

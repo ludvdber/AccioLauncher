@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import QWidget
 
 from src.core import discographie, phonographe
 from src.core.config import Config
+from src.ui.utils import apres_le_fil
 
 # Au chargement du module, comme `video_player` (règle 5).
 try:
@@ -73,6 +74,7 @@ class FondSonore(QObject):
         self._ecoute = ""              # morceau écouté depuis la page, devant le fond
         self._en_pause = False         # l'écoute arrêtée sur place, prête à reprendre
         self._courant = ""             # morceau chargé dans le lecteur
+        self._en_preparation = ""      # morceau dont le fichier se prépare sur un fil
         # Les morceaux, pas leurs titres : le titre se lit dans la langue du moment.
         self._morceaux = {cle(j, m.fichier): m
                           for j, morceaux in discographie.charger().items() for m in morceaux}
@@ -235,19 +237,43 @@ class FondSonore(QObject):
             self.change.emit()
             return
         if voulu != self._courant:
-            chemin = self.fichier(voulu)
-            if chemin is None:
-                log.info("Musique de fond introuvable : %s", voulu)
-                if self._lecteur is not None:
-                    self._lecteur.setSource(QUrl())       # pas `stop()` : règle 135
-                self._courant = ""
-                self.change.emit()
-                return
-            lecteur = self._preparer()
-            lecteur.setSource(QUrl.fromLocalFile(str(chemin)))
-            self._courant = voulu
+            # Lister `music.big` puis, pour HP5 et HP6, convertir par vgmstream :
+            # 0,3 à 0,5 s à la première écoute, dans le fil de l'interface
+            # (grand audit du 2026-11-02). Préparé à part, posé à l'arrivée.
+            if voulu != self._en_preparation:
+                self._en_preparation = voulu
+
+                def preparer() -> Path | None:
+                    try:
+                        return self.fichier(voulu)
+                    except Exception:    # un paquet abîmé : le morceau reste introuvable
+                        log.debug("Musique : %s illisible", voulu, exc_info=True)
+                        return None
+                apres_le_fil(self, preparer, lambda chemin: self._poser_fichier(voulu, chemin), "musique")
+            self.change.emit()
+            return
         if self._lecteur is not None:
             self._lecteur.play()
+        self.change.emit()
+
+    def _poser_fichier(self, voulu: str, chemin: object) -> None:
+        if voulu != self._en_preparation:
+            return                       # arrêté, ou un autre morceau demandé depuis
+        self._en_preparation = ""
+        if voulu != self._voulu():
+            self._appliquer()            # la demande a changé pendant la préparation
+            return
+        if not isinstance(chemin, Path):
+            log.info("Musique de fond introuvable : %s", voulu)
+            if self._lecteur is not None:
+                self._lecteur.setSource(QUrl())           # pas `stop()` : règle 135
+            self._courant = ""
+            self.change.emit()
+            return
+        lecteur = self._preparer()
+        lecteur.setSource(QUrl.fromLocalFile(str(chemin)))
+        self._courant = voulu
+        lecteur.play()
         self.change.emit()
 
     def _preparer(self) -> QMediaPlayer:
@@ -271,3 +297,4 @@ class FondSonore(QObject):
         if self._lecteur is not None:
             self._lecteur.setSource(QUrl())               # arrête aussi (règle 135)
         self._courant = ""
+        self._en_preparation = ""

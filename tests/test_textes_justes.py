@@ -29,15 +29,22 @@ class _Signal:
 
 
 def test_une_desinstallation_ratee_ne_dit_pas_desinstalle(monkeypatch):
+    from src.core.game_manager import GameManager
+    from src.ui import desinstallation_jeu
     from src.ui import game_detail_handlers as h
     monkeypatch.setattr(h, "_boite", lambda *a, **k: 0)          # « Désinstaller »
     monkeypatch.setattr(h, "_ce_qui_reste", lambda game: "")
+    monkeypatch.setattr(desinstallation_jeu, "_en_fond", lambda travail, fin: fin(travail()))
+    monkeypatch.setattr(GameManager, "effacer_dossier", staticmethod(lambda chemin: False))
     statut = _Signal()
     vue = SimpleNamespace(game=SimpleNamespace(id="hp1", name="HP1"),
-                          manager=SimpleNamespace(uninstall_game=lambda gid: False),
+                          manager=SimpleNamespace(dossier_a_desinstaller=lambda gid: Path("HP1"),
+                                                  finir_desinstallation=lambda gid, efface: efface),
+                          setEnabled=lambda _oui: None,
                           _refresh=lambda: None, state_changed=_Signal(), status_message=statut)
     h.on_uninstall(vue)
-    (message,), = statut.recus
+    (en_cours,), (message,) = statut.recus
+    assert en_cours.startswith("Désinstallation de HP1")
     assert "désinstallé." not in message and "n'a pas abouti" in message
 
 

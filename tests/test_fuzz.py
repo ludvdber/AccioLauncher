@@ -70,6 +70,74 @@ class TestCatalogue:
         assert cat.contributors[0].url == "https://github.com/ludvdber"
         assert cat.games[0].warning_url == "https://example.org/aide"
 
+    def test_taille_infinie_garde_le_jeu(self, vrai_catalogue):
+        """Grand audit du 2026-11-02 : `"size_mb": 1e999` levait OverflowError
+        dans `_taille_mo` et faisait écarter le jeu ENTIER."""
+        from src.core.game_data import _parse_catalog
+        brut = copy.deepcopy(vrai_catalogue)
+        brut["games"][0]["versions"][0]["size_mb"] = float("inf")
+        invariants.catalogue(brut)
+        cat = _parse_catalog(brut)
+        assert cat.games[0].id == brut["games"][0]["id"]
+        assert cat.games[0].versions[0].size_mb == 0
+
+    @pytest.mark.parametrize("champ, valeur, attendu", [
+        ("delete_files", "%DOCUMENTS%\\Jeu\\Detected.ini", ()),   # une phrase, pas une liste
+        ("create_files", [5, None, "%DOCUMENTS%\\Jeu\\Running.ini"],
+         ("%DOCUMENTS%\\Jeu\\Running.ini",)),
+        ("delete_files", {"a": 1}, ()),
+    ])
+    def test_listes_de_chemins_mal_formees(self, vrai_catalogue, champ, valeur, attendu):
+        """Grand audit du 2026-11-02 : une chaîne passait `tuple()` lettre par
+        lettre, et une entrée non chaîne ne cassait qu'au clic sur JOUER."""
+        from src.core.game_data import _parse_catalog
+        brut = copy.deepcopy(vrai_catalogue)
+        brut["games"][0]["pre_launch"] = {champ: valeur}
+        invariants.catalogue(brut)
+        jeu = _parse_catalog(brut).games[0]
+        assert jeu.id == brut["games"][0]["id"]
+        assert getattr(jeu.pre_launch, champ) == attendu
+
+    def test_un_patch_ini_mal_forme_est_ecarte_seul(self, vrai_catalogue):
+        from src.core.game_data import _parse_catalog
+        brut = copy.deepcopy(vrai_catalogue)
+        bon = {"file": "%DOCUMENTS%\\Jeu\\Jeu.ini", "section": "S", "key": "K", "value": "1"}
+        brut["games"][0]["pre_launch"] = {"ini_patches": [bon, {**bon, "value": 1}, "x", {"file": "a"}]}
+        brut["games"][0]["post_install"] = {"config_files": [{"source": 3, "destination": "~/x.ini"}]}
+        invariants.catalogue(brut)
+        jeu = _parse_catalog(brut).games[0]
+        assert [p.value for p in jeu.pre_launch.ini_patches] == ["1"]
+        assert jeu.post_install.config_files == ()
+
+    @pytest.mark.parametrize("raw", [
+        "%DOCUMENTS%\\..\\..\\Windows\\win.ini",
+        "%DOCUMENTS%/../evil.ini",
+        "%INSTALL_DIR%\\..\\..\\..\\evil.ini",
+        "C:\\Windows\\win.ini",
+        "/etc/evil.ini",
+        "%DOCUMENTS%\\Jeu\\Save.sav",            # sauvegarde : pas un .ini
+        "%DOCUMENTS%\\Jeu\\Jeu.ini",
+        "%INSTALL_DIR%\\System\\Jeu.ini",
+    ])
+    def test_barriere_pre_lancement(self, vrai_catalogue, tmp_path, raw):
+        """Grand audit du 2026-11-02 : la barrière qui décide ce que le
+        catalogue distant peut SUPPRIMER n'avait aucun test de remontée."""
+        from src.core.config import Config
+        from src.core.game_data import _parse_catalog
+        jeu = _parse_catalog(vrai_catalogue).games[0]
+        invariants.chemin_pre_lancement(raw, jeu, Config(install_path=tmp_path / "jeux"))
+
+    def test_barriere_pre_lancement_refuse_la_remontee(self, vrai_catalogue, tmp_path):
+        from src.core.config import Config
+        from src.core.game_data import _parse_catalog
+        from src.core.pre_launch import resolve_safe_path
+        jeu = _parse_catalog(vrai_catalogue).games[0]
+        config = Config(install_path=tmp_path / "jeux")
+        for raw in ("%DOCUMENTS%\\..\\..\\evil.ini", "%INSTALL_DIR%/../../evil.ini",
+                    "%DOCUMENTS%\\Jeu\\Save.sav"):
+            assert resolve_safe_path(raw, jeu, config) is None, raw
+        assert resolve_safe_path("%DOCUMENTS%\\Jeu\\Jeu.ini", jeu, config) is not None
+
     def test_injection_reg_par_le_catalogue(self, vrai_catalogue):
         brut = copy.deepcopy(vrai_catalogue)
         jeu = next(j for j in brut["games"] if "language_registry" in j)
@@ -199,3 +267,14 @@ class TestArchiveEA:
         invariants.archive_ea(fichier)
         entree = archives_ea.lister(fichier)[0]
         assert archives_ea.flux_schl(fichier, entree, en_tete=0) == [(entree.debut + 5, len(flux))]
+
+    def test_les_modules_vises_sont_importes_en_tete(self):
+        """Grand audit du 2026-11-02 : `archives_ea`, importé DANS `archive_ea()`,
+        se chargeait après `atheris.instrument_imports()` et n'était pas
+        instrumenté. Aucun module du launcher importé dans une fonction."""
+        import ast
+        from pathlib import Path
+        arbre = ast.parse(Path(invariants.__file__).read_text(encoding="utf-8"))
+        tardifs = [n.lineno for f in ast.walk(arbre) if isinstance(f, ast.FunctionDef)
+                   for n in ast.walk(f) if isinstance(n, ast.Import | ast.ImportFrom)]
+        assert not tardifs, tardifs

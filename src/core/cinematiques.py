@@ -41,6 +41,7 @@ fonction ne lève.
 
 import json
 import logging
+import os
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -49,6 +50,11 @@ from src.core import archives_ea
 from src.core.i18n import TexteTraduit, dans_la_langue, texte_traduit
 
 log = logging.getLogger(__name__)
+
+# Les copies sorties des archives (jusqu'à 329 Mo pour une cinématique de HP8) :
+# au-delà, les moins récemment vues partent d'abord. Sans plafond, le cache
+# grossissait de chaque vidéo regardée (grand audit du 2026-11-02).
+PLAFOND_CACHE = 1 << 30
 
 
 @dataclass(frozen=True, slots=True)
@@ -332,7 +338,33 @@ def lisible(source: Source, cache: Path, jeu: str) -> Path | None:
     cible = cache / "cinematiques" / jeu / langue / Path(source.entree.nom).name
     extrait = archives_ea.extraire(source.chemin, source.entree.debut, source.entree.taille, cible)
     if extrait is None or not source.convertir:
-        return extrait
-    from src.core import vgmstream
-    return vgmstream.convertir(extrait, extrait.with_suffix(".wav"))
+        lu = extrait
+    else:
+        from src.core import vgmstream
+        lu = vgmstream.convertir(extrait, extrait.with_suffix(".wav"))
+    if lu is not None:
+        elaguer(cache / "cinematiques", {lu, cible})
+    return lu
+
+
+def elaguer(racine: Path, gardes: set[Path]) -> None:
+    """Retire les copies les moins récemment servies au-delà de `PLAFOND_CACHE`,
+    jamais celles de `gardes` (que l'on marque servies à l'instant), jamais un
+    fichier temporaire d'une extraction en cours."""
+    try:
+        for garde in gardes:
+            if garde.is_file():
+                os.utime(garde)
+        fichiers = sorted(((f.stat().st_mtime, f.stat().st_size, f) for f in racine.rglob("*")
+                           if f.is_file() and not f.name.endswith(".accio-tmp")), reverse=True)
+        total = 0
+        for _date, taille, fichier in fichiers:
+            total += taille
+            if total > PLAFOND_CACHE and fichier not in gardes:
+                try:
+                    fichier.unlink()         # notre propre copie, refaite à la demande
+                except OSError:              # une vidéo encore ouverte, sous Windows
+                    log.debug("Cinématiques : %s encore ouverte, gardée", fichier.name)
+    except OSError as exc:
+        log.debug("Cinématiques, élagage de %s : %s", racine, exc)
 
