@@ -162,7 +162,7 @@ class TestAttribution:
         _poser(docs, "Harry Potter/Save/Save0.usa", datetime(2026, 3, 8))
         etat = sauvegardes.releve(HP1)
         assert sauvegardes.attribuer("hp1", etat, etat, datetime.now(), 600) is None
-        # ...mais elle est NOTÉE comme telle, pour que la page puisse le dire.
+        # ...mais elle est NOTÉE comme telle (aucune page ne l'affiche aujourd'hui).
         assert sauvegardes.temps_sans_sauvegarde("hp1") == 600
         assert [v.fichier for v in sauvegardes.vues("hp1", HP1)] == ["Save0.usa"]
 
@@ -370,20 +370,6 @@ class TestTroisPartiesDeHP5:
         assert [(v.fichier, v.numero, v.avancement) for v in vues] == [
             ("HPOOTP#1", 1, 14), ("HPOOTP#2", 2, 6), ("HPOOTP#3", 3, 1)]
         assert vues[1].derniere == date(2026, 5, 3), "la date écrite par le jeu, pas celle du fichier"
-
-    def test_la_carte_dit_l_avancement(self, appdata, qtbot):
-        pytest.importorskip("pytestqt")
-        from PyQt6.QtWidgets import QLabel
-        from src.core.i18n import set_language
-        from src.ui.stats_widgets import _CarteSauvegarde
-        set_language("fr")
-        _poser(appdata, HPOOTP, datetime(2026, 10, 1, 16, 8, 24), _hpootp(*self.LUDO))
-        vue = sauvegardes.vues("hp5", HP5, stock={})[0]
-        carte = _CarteSauvegarde(vue, 0)
-        qtbot.addWidget(carte)
-        textes = [lbl.text() for lbl in carte.findChildren(QLabel)]
-        assert "Avancement" in textes and "14 %" in textes, textes
-
 
 class TestUnJsonValideDUnMauvaisType:
     """Même défaut que le journal des sessions (audit du 2026-10-29)."""

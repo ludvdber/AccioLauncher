@@ -99,7 +99,8 @@ porte un bloc `i18n`, une entrée par langue :
 }
 ```
 
-Ajoutez votre langue dans ces blocs, à côté de `en` et `es`.
+Ajoutez votre langue dans ces blocs, à côté de `en` et `es`. `python tools/verifier_i18n_catalogue.py games.json`
+liste ce qui reste à traduire (il n'écrit rien).
 
 C'est un bonus : une traduction de l'interface seule est déjà très utile.
 

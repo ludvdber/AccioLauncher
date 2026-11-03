@@ -117,13 +117,6 @@ def arret_fatal(texte: str) -> Arret | None:
     return Arret(ligne, AUTRE)
 
 
-def erreur_d_affichage(texte: str) -> str | None:
-    """La ligne qui nomme l'erreur, si le journal finit sur une erreur d'affichage
-    que remettre la configuration répare. None sinon."""
-    arret = arret_fatal(texte)
-    return arret.ligne if arret is not None and arret.genre == AFFICHAGE else None
-
-
 def apres_la_partie(game: GameData, debut: datetime | None) -> Arret | None:
     """L'arrêt fatal que le jeu vient d'écrire dans son journal, None sinon."""
     if debut is None:

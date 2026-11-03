@@ -51,9 +51,6 @@ class BarreDeStatut(QStatusBar):
     def currentMessage(self) -> str:  # noqa: N802
         return self._message
 
-    def clearMessage(self) -> None:  # noqa: N802
-        self.showMessage("")
-
     def eventFilter(self, obj, event) -> bool:
         # La largeur du LIBELLÉ, connue après la passe de mise en page.
         if obj is self._libelle and event.type() == QEvent.Type.Resize:

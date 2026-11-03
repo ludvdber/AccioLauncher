@@ -3,7 +3,11 @@
 import json
 
 from src.core import discographie
-from src.core.discographie import Morceau, debloque, nouveaux, pourcentage
+from src.core.discographie import Morceau, nouveaux, ouvert_au_seuil, pourcentage
+
+
+def debloque(morceau: Morceau, avance: int | None) -> bool:
+    return ouvert_au_seuil(morceau.seuil, avance)
 
 
 def _fichier(tmp_path, jeux):

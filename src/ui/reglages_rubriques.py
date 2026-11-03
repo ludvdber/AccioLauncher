@@ -55,13 +55,6 @@ _COULEUR_SE_VOIT = "#d6a72c"
 # Ce qu'un réglage a perdu d'effet, dit sous son nom : ambre, pas rouge.
 _COULEUR_NOTE = "#c9954a"
 
-_LIEN_STYLE = (
-    "QPushButton { color: #d6a72c; background: transparent;"
-    " border: none; text-align: left; padding: 4px 0px; }"
-    "QPushButton:hover { color: #e8c547; text-decoration: underline; }"
-    "QPushButton:disabled { color: #55556a; }"
-)
-
 # Une liste de la page : plus basse et plus sobre que celle des Paramètres,
 # elle s'aligne en colonne avec les interrupteurs.
 _LISTE_STYLE = (

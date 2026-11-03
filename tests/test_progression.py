@@ -221,36 +221,3 @@ class TestNouvelleAventure:
         assert entree["mesure"] is None
         assert entree["nouvelles"] == [datetime(2026, 10, 1, 21, 0)]
 
-
-class TestCarte:
-    def _textes(self, qtbot, vue) -> list[str]:
-        pytest.importorskip("pytestqt")
-        from PyQt6.QtWidgets import QLabel
-        from src.core.i18n import set_language
-        from src.ui.stats_widgets import _CarteSauvegarde
-        set_language("fr")
-        carte = _CarteSauvegarde(vue, 0)
-        qtbot.addWidget(carte)
-        return [lbl.text() for lbl in carte.findChildren(QLabel)]
-
-    def test_la_carte_dit_la_nouvelle_aventure(self, qtbot):
-        vue = sauvegardes.Vue("Save0.usa", 1, date(2026, 10, 5), date(2026, 10, 9), 2, 1200,
-                              nouvelle=date(2026, 10, 5), precedentes=1,
-                              temps_precedent=14 * 3600)
-        textes = self._textes(qtbot, vue)
-        assert "Nouvelle aventure" in textes and "Commencée" not in textes
-        assert "Aventure précédente" in textes, textes
-
-    def test_plusieurs_aventures_d_avant(self, qtbot):
-        vue = sauvegardes.Vue("Save0.usa", 1, date(2026, 10, 5), date(2026, 10, 5), 1, 600,
-                              nouvelle=date(2026, 10, 5), precedentes=2, temps_precedent=7200)
-        textes = self._textes(qtbot, vue)
-        assert "Nouvelle aventure" in textes and "Jouée le" not in textes
-        assert "Aventures précédentes" in textes
-        assert any(t.startswith("2 · ") for t in textes), textes
-
-    def test_sans_nouvelle_aventure_rien_ne_change(self, qtbot):
-        vue = sauvegardes.Vue("Save0.usa", 1, date(2026, 10, 1), date(2026, 10, 9), 3, 5400)
-        textes = self._textes(qtbot, vue)
-        assert "Commencée" in textes
-        assert not {"Nouvelle aventure", "Aventure précédente"} & set(textes)

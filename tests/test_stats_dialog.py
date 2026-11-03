@@ -26,7 +26,6 @@ from src.core import stats  # noqa: E402
 from src.core.config import Config  # noqa: E402
 from src.core.game_manager import GameManager  # noqa: E402
 from src.ui.stats_dialog import _Mois, _Paragraphe, StatsDialog  # noqa: E402
-from src.ui.stats_widgets import _CarteSauvegarde  # noqa: E402
 from src.ui.stats_releve import _Ligne, _Nom, _Releve  # noqa: E402
 
 
@@ -327,7 +326,6 @@ class TestSauvegardesAffichees:
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
         assert dlg.findChildren(_Releve)[0].choix == "hp1"
-        assert not dlg.findChildren(_CarteSauvegarde)
         assert "Vos sauvegardes sont là" in _labels(dlg)
 
     def test_un_jeu_sans_sauvegarde_n_a_pas_de_section(self, qtbot, manager):
@@ -496,38 +494,6 @@ class TestRetoursDuDixNeufSeptembre:
         assert legendes["hp1"] == "Non chronométré"
 
 
-    @staticmethod
-    def _carte(qtbot, commencee, derniere):
-        """La carte seule, a partir d'une `Vue` : le test ne depend plus de ce
-        que le SYSTEME sait des fichiers. Sous Linux, un fichier n'a pas de
-        date de creation lisible (pas de `st_birthtime`) — la version
-        precedente de ce test la supposait, et n'echouait donc que sur la CI
-        Linux."""
-        from src.core.sauvegardes import Vue
-        carte = _CarteSauvegarde(Vue("Save0.usa", 1, commencee, derniere, 0, None), 0)
-        qtbot.addWidget(carte)
-        return [lbl.text() for lbl in carte.findChildren(QLabel)]
-
-    def test_une_seule_date_quand_elles_se_confondent(self, qtbot):
-        from datetime import date
-        textes = self._carte(qtbot, date(2026, 3, 8), date(2026, 3, 8))
-        assert "Jouée le" in textes and "08/03/2026" in textes
-        assert "Commencée" not in textes
-
-    def test_deux_dates_quand_elles_different(self, qtbot):
-        from datetime import date
-        textes = self._carte(qtbot, date(2026, 3, 4), date(2026, 4, 6))
-        assert "Commencée" in textes and "Dernière fois" in textes
-
-    def test_sans_date_de_creation_seule_la_derniere_est_dite(self, qtbot):
-        """Le cas Linux : on ne sait pas quand elle a commence, on ne le dit
-        pas — ni « Jouée le », qui laisserait croire a une seule seance."""
-        from datetime import date
-        textes = self._carte(qtbot, None, date(2026, 3, 8))
-        assert "Dernière fois" in textes
-        assert "Commencée" not in textes and "Jouée le" not in textes
-
-
 def test_la_barre_du_mois_et_la_colonne_disent_le_meme_chiffre():
     """38,5 min : 38 sur la barre (arrondi au pair), 39 dans la colonne."""
     from src.ui.stats_dialog import _duree_courte, _minutes
@@ -575,28 +541,6 @@ class TestPhraseDEntete:
         assert "commencée" not in textes
         assert "Vous êtes en" not in textes
         assert "vous attend" not in textes
-
-
-class TestGrilleSauvegardes:
-    """Plein écran : quatre cartes côte à côte, plafonnées, au lieu de deux
-    bandeaux de 980 px (capture de Ludo, 2026-10-16)."""
-
-    @pytest.mark.parametrize(("largeur", "nombre", "colonnes"), [
-        (500, 4, 1), (700, 4, 2), (1000, 4, 3), (1960, 4, 4), (1960, 3, 3), (1960, 9, 4)])
-    def test_les_colonnes_suivent_la_largeur(self, largeur, nombre, colonnes):
-        from src.ui.stats_widgets import _GrilleSauvegardes
-        assert _GrilleSauvegardes.colonnes(largeur, nombre) == colonnes
-
-    def test_une_carte_ne_s_etire_plus(self, qtbot):
-        from PyQt6.QtWidgets import QFrame
-        from src.ui.stats_widgets import _GrilleSauvegardes
-        cartes = [QFrame() for _ in range(3)]
-        grille = _GrilleSauvegardes(cartes)
-        qtbot.addWidget(grille)
-        grille.resize(1960, 200)
-        grille.show()
-        qtbot.waitUntil(lambda: grille._colonnes == 3)
-        assert all(c.width() <= _GrilleSauvegardes.LARGEUR_MAX for c in cartes)
 
 
 class TestJaquettes:

@@ -35,7 +35,6 @@ from src.ui.ticker import TICK_MS, Ticker
 
 log = logging.getLogger(__name__)
 
-FPS_INTERVAL = TICK_MS  # cadence du ticker partagé (~30 FPS)
 # Marge autour d'une particule dans sa zone sale : antialiasing + le
 # déplacement d'un tick (< 1 px). Généreuse à dessein — deux pixels de trop
 # ne coûtent rien, deux de moins laisseraient une trainée.
@@ -150,12 +149,9 @@ class ParticleOverlay(QWidget):
         self.update()
         log.info("Particules saisonnières : %s", season)
 
-    def _target_count(self) -> int:
-        return self._profil.nombre
-
     def _ensure_particles(self) -> None:
         w, h = self.width(), self.height()
-        while len(self._particles) < self._target_count():
+        while len(self._particles) < self._profil.nombre:
             self._particles.append(_Particle(w, h, self._profil))
 
     @staticmethod
@@ -176,7 +172,7 @@ class ParticleOverlay(QWidget):
         if not self.isVisible():
             return
         self._ensure_particles()
-        self._time += FPS_INTERVAL / 1000.0
+        self._time += TICK_MS / 1000.0
         h = self.height()
         w = self.width()
         # Zone à repeindre, et non la fenêtre entière. C'était le premier poste

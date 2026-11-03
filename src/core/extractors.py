@@ -88,11 +88,6 @@ def is_unsafe_entry(name: str) -> bool:
     return not chemin_relatif_sur(name)
 
 
-def unsafe_archive_entries(names: Iterable[str]) -> list[str]:
-    """Liste les entrées d'archive qui tenteraient une évasion. Pure."""
-    return [n for n in names if is_unsafe_entry(n)]
-
-
 def find_7z_exe() -> str | None:
     """Cherche 7z.exe : d'abord bundlé avec l'app, puis sur le système.
 

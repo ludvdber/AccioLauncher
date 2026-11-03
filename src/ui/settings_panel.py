@@ -556,7 +556,7 @@ class SettingsDialog(QDialog):
         self._season_combo.currentIndexChanged.connect(self._on_season_changed)
         ambiance.ajouter(LigneReglage(tr("Particules saisonnières"),
                                       tr("Appliqué immédiatement."), self._season_combo))
-        ligne, self._tgl_faits = self._reglage(
+        ligne, _ = self._reglage(
             tr("Fait du jour dans la barre de statut"), "faits_du_jour")
         ambiance.ajouter(ligne)
 
@@ -639,7 +639,7 @@ class SettingsDialog(QDialog):
 
     def _page_downloads(self) -> QWidget:
         archives = Carte()
-        ligne, self._tgl_delete = self._reglage(
+        ligne, _ = self._reglage(
             tr("Supprimer les archives après installation"), "delete_archives")
         archives.ajouter(ligne)
 

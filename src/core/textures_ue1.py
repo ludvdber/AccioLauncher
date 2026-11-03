@@ -40,7 +40,7 @@ _TAILLE_MAX = 64 * 1024 * 1024
 _COTE_MAX = 2048
 # Taille des données d'une propriété selon son code (bits 4 à 6 de l'octet d'info).
 _TAILLES = (1, 2, 4, 12, 16)
-_STRUCT, _BOOL, _OBJET, _OCTET = 10, 3, 5, 1
+_STRUCT, _BOOL, _OBJET = 10, 3, 5
 _OCTET_, _ENTIER, _REEL, _NOM, _CLASSE, _TABLEAU, _CHAINE = 1, 2, 4, 6, 8, 9, 13
 _PROFONDEUR_MAX = 8   # structures dans des tableaux dans des structures…
 # Drapeau d'objet : un cadre d'état (script en cours) précède ses propriétés.

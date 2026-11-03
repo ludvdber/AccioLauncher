@@ -169,10 +169,6 @@ def ouvert_au_seuil(seuil: int, avance: int | None) -> bool:
     return avance >= TOUT_A or avance >= seuil
 
 
-def debloque(morceau: Morceau, avance: int | None) -> bool:
-    return ouvert_au_seuil(morceau.seuil, avance)
-
-
 # ─── Morceaux vus ───
 
 def chemin_vus() -> Path:

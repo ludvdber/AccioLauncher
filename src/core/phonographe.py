@@ -74,10 +74,6 @@ class Piste:
         return self.cle or self.source.stem
 
 
-def jeux_couverts() -> tuple[str, ...]:
-    return tuple(_SOURCES) + tuple(_ARCHIVES)
-
-
 def titre(nom: str) -> str:
     """« Adv4Greenhouse_Music_edit » → « Adv4Greenhouse ». Brouillon lisible :
     les titres définitifs se relisent à la main avant d'être affichés."""

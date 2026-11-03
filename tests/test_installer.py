@@ -15,7 +15,6 @@ from src.core.extractors import (
     find_7z_exe,
     is_unsafe_entry,
     list_7z_entries,
-    unsafe_archive_entries,
     verify_archive_entries,
 )
 from src.core.installer import Installer
@@ -55,15 +54,6 @@ class TestIsUnsafeEntry:
         """« . » n'est pas une remontée — ne pas rejeter les noms légitimes."""
         assert is_unsafe_entry("Game/./data.txt") is False
         assert is_unsafe_entry("Game/..bizarre/x") is False
-
-
-class TestUnsafeArchiveEntries:
-    def test_liste_seulement_les_dangereuses(self):
-        entries = ["Game/a.txt", "../evil", "Game/b.txt", "C:\\x"]
-        assert unsafe_archive_entries(entries) == ["../evil", "C:\\x"]
-
-    def test_archive_saine_liste_vide(self):
-        assert unsafe_archive_entries(["Game/a", "Game/sub/b"]) == []
 
 
 class TestCheckPathTraversal:

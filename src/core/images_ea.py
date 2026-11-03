@@ -121,10 +121,6 @@ _TEINTES: dict[int, list[bytes]] = {}
 _TEINTES_MAX = 4096
 
 
-def _bvr(c: int) -> tuple[int, int, int]:
-    return _B5[c & 31], _B6[(c >> 5) & 63], _B5[c >> 11]
-
-
 def _couleurs(c0: int, c1: int, quatre: bool) -> list[bytes]:
     """Les quatre teintes d'un bloc, en B V R A."""
     cle = (c0 << 17) | (c1 << 1) | quatre

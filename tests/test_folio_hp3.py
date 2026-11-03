@@ -9,6 +9,10 @@ from src.core import folio_hp3, textures_ue1
 from tests.test_textures_ue1 import _compact
 
 
+def _noms(system, langue: str) -> dict[str, str]:
+    return {c.classe: c.nom for c in folio_hp3.catalogue(system, langue).cartes}
+
+
 class _Paquet:
     """Un paquet à quelques objets, chacun d'une classe importée, aux
     propriétés étiquetées imbriquées comme dans un paquet Unreal 2."""
@@ -190,15 +194,15 @@ class TestNomsDesCartes:
     def test_par_le_numero_du_jeu_pas_par_le_nom_de_classe(self, tmp_path):
         system = self._jeu(tmp_path, "[All]\r\nWizardName_142=Dzou Yen\r\n"
                                      "wizardname_150=Thadée Thurkell\r\n")
-        assert folio_hp3.noms_cartes(system, "fr") == {
+        assert _noms(system, "fr") == {
             "wc_zouyen": "Dzou Yen", "wc_thaddeusthurkell": "Thadée Thurkell"}
 
     def test_sans_la_langue_l_anglais(self, tmp_path):
         system = self._jeu(tmp_path, "[All]\r\nWizardName_142=Zou Yen\r\n", ext="int")
-        assert folio_hp3.noms_cartes(system, "fr") == {"wc_zouyen": "Zou Yen"}
+        assert _noms(system, "fr") == {"wc_zouyen": "Zou Yen"}
 
     def test_jeu_absent(self, tmp_path):
-        assert folio_hp3.noms_cartes(tmp_path / "rien", "fr") == {}
+        assert _noms(tmp_path / "rien", "fr") == {}
         assert folio_hp3.catalogue(tmp_path / "rien", "fr") == folio_hp3.Catalogue()
 
     def test_series_dans_l_ordre_du_jeu_et_descriptions(self, tmp_path):

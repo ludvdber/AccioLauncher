@@ -1,22 +1,16 @@
 """Les pièces du Relevé : le graphique des mois, les paragraphes et les formats
 de durée ; `stats_dialog` les assemble.
 """
-from datetime import date
 from PyQt6.QtCore import QLocale, QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter
 from PyQt6.QtWidgets import (
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
     QLabel,
-    QVBoxLayout,
     QWidget,
 )
-from src.core import sauvegardes
 from src.core.formatting import format_duree_compacte, minutes_arrondies
 from src.core.i18n import get_language, tr
 from src.ui.fonts import cinzel
-from src.ui.theme import accent_qcolor, current as current_theme
+from src.ui.theme import accent_qcolor
 
 _SECONDAIRE = "#b0b0c8"
 _DISCRET = "#8a8aa6"
@@ -64,10 +58,6 @@ def _duree(secondes: int) -> str:
     """Toute durée de la page passe par ici. Même arrondi que la fiche du jeu :
     `format_duree_compacte` suit `minutes_arrondies` depuis le 2026-10-29."""
     return format_duree_compacte(secondes)
-
-
-def _date(jour: date | None) -> str:
-    return jour.strftime("%d/%m/%Y") if jour else ""
 
 
 def _locale() -> QLocale:
@@ -258,132 +248,3 @@ class _Mois(QWidget):
         return [loc.standaloneMonthName(mois, QLocale.FormatType.NarrowFormat)
                 for _a, mois, _s in self._cases]
 
-
-class _Jauge(QWidget):
-    """La part d'une sauvegarde dans le temps de son jeu : un filet, pas un
-    pourcentage écrit."""
-
-    def __init__(self, part: float, parent=None) -> None:
-        super().__init__(parent)
-        self._part = max(0.0, min(1.0, part))
-        self.setFixedHeight(3)
-
-    def paintEvent(self, event) -> None:
-        p = QPainter(self)
-        p.fillRect(self.rect(), QColor(44, 62, 107, 140))
-        if self._part:
-            p.fillRect(QRectF(0, 0, self.width() * self._part, self.height()),
-                       accent_qcolor())
-        p.end()
-
-
-class _GrilleSauvegardes(QWidget):
-    """Les cartes des sauvegardes, autant par rangée que la largeur le permet
-    (entre 300 et 460 px chacune, quatre au plus) : deux colonnes fixes en
-    faisaient des bandeaux de 980 px en plein écran (capture de Ludo,
-    2026-10-16)."""
-
-    LARGEUR_MIN, LARGEUR_MAX, ECART = 300, 460, 12
-
-    def __init__(self, cartes: list[QWidget], parent=None) -> None:
-        super().__init__(parent)
-        self._cartes = cartes
-        self._colonnes = 0
-        self._grille = QGridLayout(self)
-        self._grille.setContentsMargins(0, 0, 0, 0)
-        self._grille.setSpacing(self.ECART)
-        for carte in cartes:
-            carte.setMaximumWidth(self.LARGEUR_MAX)
-        self._placer(2)
-
-    @classmethod
-    def colonnes(cls, largeur: int, nombre: int) -> int:
-        voulu = (largeur + cls.ECART) // (cls.LARGEUR_MIN + cls.ECART)
-        return max(1, min(4, nombre, voulu))
-
-    def _placer(self, colonnes: int) -> None:
-        if colonnes == self._colonnes:
-            return
-        self._colonnes = colonnes
-        for carte in self._cartes:
-            self._grille.removeWidget(carte)
-        for i, carte in enumerate(self._cartes):
-            self._grille.addWidget(carte, i // colonnes, i % colonnes)
-        for c in range(self._grille.columnCount()):
-            self._grille.setColumnStretch(c, 1 if c < colonnes else 0)
-        # Ce qui reste à droite des cartes plafonnées reste vide, à droite.
-        self._grille.setColumnStretch(colonnes, 0)
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self._placer(self.colonnes(self.width(), len(self._cartes)))
-
-
-class _CarteSauvegarde(QFrame):
-    """Une sauvegarde : son nom, son temps, et ce que le disque sait d'elle."""
-
-    def __init__(self, vue: sauvegardes.Vue, temps_max: int,
-                 recente: bool = False, parent=None) -> None:
-        super().__init__(parent)
-        self.setObjectName("carteSave")
-        couche = QVBoxLayout(self)
-        couche.setContentsMargins(14, 12, 14, 12)
-        couche.setSpacing(8)
-
-        haut = QHBoxLayout()
-        nom = (tr("Sauvegarde rapide") if vue.rapide
-               else tr("Emplacement {}").format(vue.numero) if vue.numero is not None
-               else tr("Sauvegarde"))
-        lbl_nom = QLabel(nom)
-        lbl_nom.setFont(cinzel(12, bold=True))
-        lbl_nom.setStyleSheet("background: transparent;")
-        haut.addWidget(lbl_nom)
-        if recente:
-            # Celle qu'on reprendra : c'est la question qu'on se pose en
-            # ouvrant un jeu à quatre emplacements, et les dates seules
-            # obligent à les comparer de tête.
-            haut.addWidget(_texte(tr("dernière jouée"), 12, current_theme().accent))
-        haut.addStretch(1)
-        if vue.temps:
-            haut.addWidget(_chiffre(_duree(vue.temps), 14, current_theme().accent))
-        couche.addLayout(haut)
-        if vue.temps:
-            # Une jauge vide sur quatre cartes n'est pas une information, c'est
-            # quatre fois la même absence : elle n'apparaît qu'avec un temps.
-            couche.addWidget(_Jauge(vue.temps / temps_max if temps_max else 0.0))
-
-        grille = QGridLayout()
-        grille.setHorizontalSpacing(12)
-        grille.setVerticalSpacing(2)
-        grille.setColumnStretch(1, 1)
-        # Un emplacement RECOMMENCÉ (`progression`) : la carte suit l'aventure
-        # en cours, celles d'avant tiennent en une ligne, jamais effacées.
-        debut = tr("Nouvelle aventure") if vue.nouvelle else tr("Commencée")
-        if vue.commencee == vue.derniere:
-            # « Commencée le 4, dernière fois le 4 » : une date, dite une fois.
-            lignes = [(debut if vue.nouvelle else tr("Jouée le"), _date(vue.derniere))]
-        else:
-            lignes = [(debut, _date(vue.commencee)),
-                      (tr("Dernière fois"), _date(vue.derniere))]
-        if vue.avancement is not None:
-            # Le pourcentage du jeu lui-même (HP5 : « 14 % TERMINÉ »).
-            lignes.insert(0, (tr("Avancement"), tr("{} %").format(vue.avancement)))
-        lignes.append((tr("Parties"), str(vue.parties) if vue.parties else ""))
-        if vue.precedentes and vue.temps_precedent:
-            avant = _duree(vue.temps_precedent)
-            lignes.append((tr("Aventure précédente"), avant) if vue.precedentes == 1
-                          else (tr("Aventures précédentes"), f"{vue.precedentes} · {avant}"))
-        rang = 0
-        for libelle, valeur in lignes:
-            if not valeur:
-                continue            # aucun zéro, aucune case vide
-            grille.addWidget(_texte(libelle, 13, _DISCRET), rang, 0)
-            v = _texte(valeur, 13, _SECONDAIRE)
-            v.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            grille.addWidget(v, rang, 1)
-            rang += 1
-        couche.addLayout(grille)
-        # Les cartes d'une rangée ont la hauteur de la plus haute : sans ressort,
-        # la place en trop s'étalait entre les lignes et les titres voisins ne
-        # tombaient plus à la même hauteur (3 px d'écart, capture du 2026-10-17).
-        couche.addStretch(1)

@@ -55,14 +55,12 @@ from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _duree_courte,
     _minutes,
     _duree,
-    _date,
     _locale,
     _texte,
     _chiffre,
     _titre_section,
     _Paragraphe,
     _Mois,
-    _Jauge,
 )
 
 

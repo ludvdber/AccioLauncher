@@ -262,31 +262,55 @@ def _texte(entete: bytes, debut: int, taille: int) -> str:
 Emplacement = tuple[int, "float | None", "int | None"]   # numéro, date écrite, avancement
 
 
-def emplacements_hp4(entete: bytes) -> list[Emplacement]:
-    """HP4 : (numéro, horodatage écrit par le jeu) de chaque emplacement OCCUPÉ.
+@dataclass(frozen=True)
+class FicheHP4:
+    """Ce que l'en-tête de `HPGOF` dit d'un emplacement occupé."""
+    numero: int
+    ecrite: datetime | None
+    nom: str
+    rang: int
+    boucliers: int
+
+
+def fiches_hp4(entete: bytes) -> list[FicheHP4]:
+    """HP4 : les emplacements OCCUPÉS, d'après l'en-tête. Seul lecteur de cet
+    en-tête : les statistiques (`emplacements_hp4`) et le folio (`folio_hp4.lire`)
+    passent par lui.
 
     Relevé sur une vraie sauvegarde (2026-09-30) : magie `20CM`, puis trois
-    fiches de 0xAC octets. Dans chacune, la date « 28/09/2026 » à +0x6C, l'heure
-    « 12:23:58 » à +0x8C, et deux entiers à +0xAC (rang, boucliers, VUS contre l'écran) qui
-    valent -1 et -1 pour un emplacement vide — c'est ce qu'affiche le jeu
-    (« Vide »). Tout écart de format rend une liste vide, jamais une exception :
-    le jeu se lance quand même, les statistiques n'affichent rien de faux.
+    fiches de 0xAC octets. Dans chacune, le nom à +0x0C, la date « 28/09/2026 »
+    à +0x6C, l'heure « 12:23:58 » à +0x8C, et deux entiers à +0xAC (rang,
+    boucliers, VUS contre l'écran) qui valent -1 et -1 pour un emplacement vide
+    (« Vide » dans le jeu). Tout écart de format rend une liste vide, jamais une
+    exception.
     """
     if len(entete) < _ENTETE_HP4 or entete[:4] != b"20CM":
         return []
-    trouves: list[Emplacement] = []
+    fiches: list[FicheHP4] = []
     for k in range(3):
         base = 0x10 + k * 0xAC
-        classement = int.from_bytes(entete[base + 0xAC:base + 0xB0], "little", signed=True)
-        if classement < 0:
+        rang = int.from_bytes(entete[base + 0xAC:base + 0xB0], "little", signed=True)
+        if rang < 0:
             continue
-        jour = _texte(entete, base + 0x6C, 16)
-        heure = _texte(entete, base + 0x8C, 16)
+        boucliers = int.from_bytes(entete[base + 0xB0:base + 0xB4], "little", signed=True)
+        jour, heure = _texte(entete, base + 0x6C, 16), _texte(entete, base + 0x8C, 16)
         try:
-            ecrit = datetime.strptime(f"{jour} {heure}", "%d/%m/%Y %H:%M:%S").timestamp()
-        except (ValueError, OverflowError, OSError):
+            ecrite: datetime | None = datetime.strptime(f"{jour} {heure}", "%d/%m/%Y %H:%M:%S")
+        except ValueError:
+            ecrite = None
+        fiches.append(FicheHP4(k + 1, ecrite, _texte(entete, base + 0x0C, 0x40), rang, boucliers))
+    return fiches
+
+
+def emplacements_hp4(entete: bytes) -> list[Emplacement]:
+    """HP4 : (numéro, horodatage écrit par le jeu) de chaque emplacement occupé."""
+    trouves: list[Emplacement] = []
+    for fiche in fiches_hp4(entete):
+        try:
+            ecrit = fiche.ecrite.timestamp() if fiche.ecrite is not None else None
+        except (OverflowError, OSError, ValueError):
             ecrit = None
-        trouves.append((k + 1, ecrit, None))
+        trouves.append((fiche.numero, ecrit, None))
     return trouves
 
 
@@ -530,7 +554,9 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
 # ─── Pour l'affichage ───
 
 def temps_sans_sauvegarde(jeu: str, stock: dict[tuple[str, str], dict[str, Any]] | None = None) -> int:
-    """Secondes jouées, depuis le relevé, sans qu'aucune sauvegarde soit écrite."""
+    """Secondes jouées, depuis le relevé, sans qu'aucune sauvegarde soit écrite.
+    Gardé pour relire ce que `attribuer` note ; aucune page ne l'affiche
+    depuis le retrait des cartes de sauvegarde du Relevé."""
     stock = charger() if stock is None else stock
     return sum(d for _, d in stock.get((jeu, SANS_SAUVEGARDE), {}).get("parties", ()))
 

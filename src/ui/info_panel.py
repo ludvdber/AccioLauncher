@@ -512,7 +512,6 @@ class InfoPanel(QWidget):
 
     # ──────────────────── API publique ────────────────────
 
-    _DESC_TRUNCATE = 160
     # Longueurs d'accroche, du plus généreux au plus serré.
     _DESC_PALIERS = (160, 90, 55, 30)
 

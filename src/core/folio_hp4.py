@@ -24,7 +24,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import folio, images_ea
+from src.core import folio, images_ea, sauvegardes
 from src.core.images_ea import entree_big as _entree_big
 from src.core.images_ea import images_nommees
 
@@ -221,10 +221,6 @@ def _cartes(globales: dict[int, bytes]) -> frozenset[int]:
                      if m >> b & 1 and 0 < 32 * k + b < _NB_CARTES)
 
 
-def _texte(d: bytes, debut: int, taille: int) -> str:
-    return d[debut:debut + taille].split(b"\0", 1)[0].decode("ascii", "replace")
-
-
 def _entites(corps: bytes) -> dict[str, dict[int, bytes]]:
     """nom d'entité → {indice d'attribut : charge}."""
     entites: dict[str, dict[int, bytes]] = {}
@@ -286,17 +282,8 @@ def lire(contenu: bytes) -> list[Partie]:
     if len(contenu) < _TAILLE or contenu[:4] != b"20CM":
         return []
     parties = []
-    for k in range(3):
-        fiche = 0x10 + k * 0xAC
-        rang, boucliers = struct.unpack_from("<ii", contenu, fiche + 0xAC)
-        if rang < 0:
-            continue
-        try:
-            ecrite: datetime | None = datetime.strptime(
-                f"{_texte(contenu, fiche + 0x6C, 16)} {_texte(contenu, fiche + 0x8C, 16)}",
-                "%d/%m/%Y %H:%M:%S")
-        except ValueError:
-            ecrite = None
+    for fiche in sauvegardes.fiches_hp4(contenu):
+        k = fiche.numero - 1
         corps = contenu[0x220 + k * 0x2800:0x220 + (k + 1) * 0x2800]
         try:
             entites = _entites(corps)
@@ -306,8 +293,8 @@ def lire(contenu: bytes) -> list[Partie]:
         maitrise = entites.get("MagicMastery", {})
         globales = entites.get("GlobalData", {})
         parties.append(Partie(
-            k + 1, ecrite, _texte(contenu, fiche + 0x0C, 0x40), rang,
-            max(0, min(boucliers, BOUCLIERS)),
+            fiche.numero, fiche.ecrite, fiche.nom, fiche.rang,
+            max(0, min(fiche.boucliers, BOUCLIERS)),
             tuple(_flottant(maitrise, i) for i in range(16)) if maitrise else (),
             _quetes(globales), max(0, _entier(globales, _DRAGEES)), _cartes(globales)))
     return parties

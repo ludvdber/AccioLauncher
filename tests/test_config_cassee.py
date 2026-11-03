@@ -12,6 +12,12 @@ import pytest
 from src.core import config_cassee
 from src.core.catalogue_blocs import ConfigFile, PostInstall
 
+
+def _affichage(texte: str) -> str | None:
+    """La ligne d'un arrêt d'AFFICHAGE (celui que la remise répare), None sinon."""
+    arret = config_cassee.arret_fatal(texte)
+    return arret.ligne if arret is not None and arret.genre == config_cassee.AFFICHAGE else None
+
 RENDEV = (
     "Log: Log file open, 10/03/26 15:00:00\r\n"
     "Init: CPU Features: CMov FPU RDTSC PAE MMX KNI\r\n"
@@ -61,21 +67,21 @@ def jeu(tmp_path):
 
 class TestLecture:
     def test_rendev_est_reconnue_et_la_ligne_rendue(self):
-        assert config_cassee.erreur_d_affichage(RENDEV).startswith("Assertion failed: RenDev")
+        assert _affichage(RENDEV).startswith("Assertion failed: RenDev")
 
     def test_un_fichier_du_jeu_manquant_n_est_pas_une_affaire_de_configuration(self):
-        assert config_cassee.erreur_d_affichage(BITMAP) is None
+        assert _affichage(BITMAP) is None
 
     def test_un_journal_sans_erreur(self):
-        assert config_cassee.erreur_d_affichage(SAIN) is None
+        assert _affichage(SAIN) is None
 
     def test_un_arret_pendant_le_dessin_n_est_pas_la_configuration(self):
         """Cas réel HP3 sur Intel UHD : l'affichage s'était ouvert, « viewport »
         n'apparaît que dans l'historique du dessin."""
-        assert config_cassee.erreur_d_affichage(HP3_INTEL) is None
+        assert _affichage(HP3_INTEL) is None
 
     def test_le_mot_hors_d_une_ligne_critique_ne_compte_pas(self):
-        assert config_cassee.erreur_d_affichage("Log: Viewport opened, RenDev ok\r\n") is None
+        assert _affichage("Log: Viewport opened, RenDev ok\r\n") is None
 
 
 class TestArretFatal:

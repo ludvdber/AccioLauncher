@@ -69,7 +69,6 @@ class FenetreMessage(QDialog):
         self._conserve = ""
         self._boutons: list[tuple[QPushButton, QMessageBox.ButtonRole]] = []
         self._defaut: QPushButton | None = None
-        self._echap: QPushButton | None = None
         self._clique: QPushButton | None = None
         self._construite = False
 
@@ -97,9 +96,6 @@ class FenetreMessage(QDialog):
         """La ligne verte : ce que l'échec n'a PAS emporté."""
         self._conserve = contenu
 
-    def conserve(self) -> str:
-        return self._conserve
-
     def addButton(self, libelle: str, role) -> QPushButton:  # noqa: N802 (Qt)
         btn = QPushButton(libelle)
         btn.setFont(police(13, gras=True))
@@ -115,9 +111,6 @@ class FenetreMessage(QDialog):
     def setDefaultButton(self, bouton: QPushButton) -> None:  # noqa: N802 (Qt)
         self._defaut = bouton
 
-    def setEscapeButton(self, bouton: QPushButton) -> None:  # noqa: N802 (Qt)
-        self._echap = bouton
-
     def clickedButton(self) -> QPushButton | None:  # noqa: N802 (Qt)
         return self._clique
 
@@ -128,9 +121,7 @@ class FenetreMessage(QDialog):
         self.accept()
 
     def _bouton_d_echap(self) -> QPushButton | None:
-        """Échap répond « non » : le bouton désigné, sinon le dernier qui se retire."""
-        if self._echap is not None:
-            return self._echap
+        """Échap répond « non » : le dernier bouton qui se retire."""
         retraits = [b for b, r in self._boutons if r == QMessageBox.ButtonRole.RejectRole]
         return retraits[-1] if retraits else None
 

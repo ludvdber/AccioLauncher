@@ -81,7 +81,6 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     _COULEURS_COUT,
     _COULEUR_SE_VOIT,
     _COULEUR_NOTE,
-    _LIEN_STYLE,
     _GROUPES_EFFETS,
     _GROUPES_AMBIANCE,
     _RESSOURCES,

@@ -232,12 +232,6 @@ def _proprietes_cartes(hgame: Path) -> tuple[dict[str, int], dict[str, str]]:
     return numeros, codes
 
 
-def noms_cartes(system: Path, langue: str) -> dict[str, str]:
-    """Classe `WC_…` EN MINUSCULES → nom de la carte dans la langue du jeu ;
-    vide sans le jeu."""
-    return {c.classe: c.nom for c in catalogue(system, langue).cartes}
-
-
 def _menu(system: Path, langue: str) -> dict[str, str]:
     """`HpMenu.<langue>` (UTF-16) : clé EN MINUSCULES → texte (la casse des clés
     varie dans le fichier : `WizardDesc_1`, `wizarddesc_12`)."""
