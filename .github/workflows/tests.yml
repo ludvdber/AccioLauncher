@@ -127,5 +127,15 @@ jobs:
       # dans le code C de Qt ne le voit jamais : le 2026-10-29 (PR #19), un
       # test de test_fermeture_threads a figé le job jusqu'à ses 20 min. Le fil
       # de garde, lui, vide la pile de chaque thread et arrête pytest en 60 s.
+      # Le relevé de mémoire : depuis le 2026-11-02, le runner reçoit un ordre
+      # d'arrêt au milieu des tests (« The runner has received a shutdown
+      # signal »), sans échec ni traceback. Les dernières lignes avant la coupure
+      # disent si la machine manquait de mémoire, et quel processus la tenait.
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short --timeout=60 --timeout-method=thread -n 4 --dist loadfile
+        run: |
+          ( while sleep 5; do
+              echo "::group::mémoire $(date +%T) : $(free -m | awk 'NR==2 {print $3 " / " $2 " Mo"}')"
+              ps -eo rss=,etime=,args= --sort=-rss | head -5 | cut -c1-160
+              echo "::endgroup::"
+            done ) &
+          python -m pytest -v --tb=short --timeout=60 --timeout-method=thread -n 4 --dist loadfile
