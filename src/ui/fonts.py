@@ -115,9 +115,16 @@ def cinzel(size: int, bold: bool = False) -> QFont:
 
 
 def cinzel_decorative(size: int, weight: QFont.Weight = QFont.Weight.Black) -> QFont:
-    """Police Cinzel Decorative pour titres principaux."""
+    """Police Cinzel Decorative pour titres principaux.
+
+    Crénage coupé : la police porte une paire « o-o » à −560 unités pour un
+    « o » large de 900, et « Notebook » s'affichait « NOTEB∞K », les deux o
+    fondus en un (Ludo, 2026-11-03, interface en anglais).
+    """
     family = _cinzel_deco_family or _body_family or _REPLI_CORPS
-    return QFont(family, size, weight)
+    police = QFont(family, size, weight)
+    police.setKerning(False)
+    return police
 
 
 def body_font(size: int = 14) -> QFont:

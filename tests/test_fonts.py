@@ -67,3 +67,13 @@ class TestChargement:
         load_fonts()
         for police in (cinzel(12), cinzel_decorative(20), body_font(14)):
             assert police.family() not in ("Georgia", "Segoe UI", "Times New Roman")
+
+    def test_le_titre_ne_fond_pas_les_deux_o(self, qtbot):
+        """Cinzel Decorative crène « o-o » à −560/900 : « Notebook » devenait
+        « NOTEB∞K ». Sans crénage, « oo » est exactement deux fois « o »."""
+        from PyQt6.QtGui import QFontMetricsF
+        load_fonts()
+        police = cinzel_decorative(22)
+        assert not police.kerning()
+        m = QFontMetricsF(police)
+        assert m.horizontalAdvance("oo") == pytest.approx(2 * m.horizontalAdvance("o"), abs=0.5)
