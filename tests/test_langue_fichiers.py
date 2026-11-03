@@ -220,3 +220,31 @@ class TestAuLancement:
         assert _langue_de(jeux / "HP1" / "System" / "Default.ini") == "int"
         assert (jeux / "HP1" / "Help" / "splashint.bmp").exists()
         assert avertis == []
+
+
+class TestCatalogueEmbarque:
+    """Les langues que le catalogue embarqué propose pour HP1 et HP2 (2026-11-03) :
+    espagnol de l'édition US 2003 de HP1 ; anglais (`usa`) et espagnol (`spa`) du
+    disque US de HP2. Chaque langue écrit le Documents ET le `default.ini` du jeu,
+    et ne s'affiche que si ses voix sont dans l'archive."""
+
+    @staticmethod
+    def _bloc(jeu):
+        import json
+
+        from src.core.config import ASSETS_DIR
+        catalogue = json.loads((ASSETS_DIR.parent / "src" / "data" / "games.json").read_text(encoding="utf-8"))
+        return next(g for g in catalogue["games"] if g["id"] == jeu)["language_files"]["languages"]
+
+    @pytest.mark.parametrize(("jeu", "attendu"), [
+        ("hp1", {"fr": "fre", "en": "int", "es": "spa"}),
+        ("hp2", {"fr": "fre", "en": "usa", "es": "spa"}),
+    ])
+    def test_trois_langues_dans_les_deux_fichiers(self, jeu, attendu):
+        bloc = self._bloc(jeu)
+        assert {code: {p["value"] for p in lg["ini"]} for code, lg in bloc.items()} == {
+            code: {v} for code, v in attendu.items()}
+        for lg in bloc.values():
+            fichiers = [p["file"] for p in lg["ini"]]
+            assert len(fichiers) == 2 and fichiers[0].startswith("%DOCUMENTS%")
+            assert fichiers[1].startswith("%INSTALL_DIR%") and lg["requires_file"].startswith(jeu.upper() + "/Sounds/")

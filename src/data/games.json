@@ -510,6 +510,24 @@
                 "to": "HP1/Help/splashint.bmp"
               }
             ]
+          },
+          "es": {
+            "label": "Español",
+            "requires_file": "HP1/Sounds/AllDialog.spa_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter\\HP.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "spa"
+              },
+              {
+                "file": "%INSTALL_DIR%\\System\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "spa"
+              }
+            ]
           }
         }
       },
@@ -750,6 +768,64 @@
           }
         }
       ],
+      "language_files": {
+        "languages": {
+          "fr": {
+            "label": "Français",
+            "requires_file": "HP2/Sounds/AllDialog.FRE_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "fre"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "fre"
+              }
+            ]
+          },
+          "en": {
+            "label": "English",
+            "requires_file": "HP2/Sounds/AllDialog.USA_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "usa"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "usa"
+              }
+            ]
+          },
+          "es": {
+            "label": "Español",
+            "requires_file": "HP2/Sounds/AllDialog.SPA_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "spa"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "spa"
+              }
+            ]
+          }
+        }
+      },
       "pre_launch": {
         "create_files": [
           "%DOCUMENTS%\\Harry Potter II\\Running.ini"

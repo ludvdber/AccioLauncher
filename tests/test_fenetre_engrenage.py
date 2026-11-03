@@ -47,7 +47,8 @@ class TestEngrenageReglagesDuJeu:
         from src.ui.game_settings_dialog import GameSettingsDialog
 
         win, _ = make_window_multilingue()
-        autre = win.manager.get_games()[1].game
+        # Le premier jeu sans langue (HP2 l'était jusqu'au 2026-11-03).
+        autre = next(g.game for g in win.manager.get_games() if g.game.langues is None)
         assert win.manager.game_language(autre) is None
         assert self._poser(win, autre, GameState.INSTALLED)._btn_reglages is not None
         dlg = GameSettingsDialog(autre, win.manager, lambda code: True,
