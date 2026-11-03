@@ -34,7 +34,13 @@ class TestEntree:
         qtbot.waitExposed(win)
         actions = []
         win._detail.trigger_primary_action = lambda: actions.append(1)   # sur l'INSTANCE (règle 12)
-        bouton = next(b for b in win._detail.findChildren(IconButton) if b.isVisible())
+        # La pastille « Lire la bande-annonce », posée ici : sans bande-annonce
+        # téléchargée (la CI), la fiche n'avait aucun bouton icône visible et le
+        # test tombait sur StopIteration.
+        barre = win._detail._audio_bar
+        barre.set_mode_fin(True, a_lire=True)
+        barre.show()
+        bouton = next(b for b in barre.findChildren(IconButton) if b.isVisible())
         clics = []
         bouton.clicked.connect(lambda: clics.append(1))
         qtbot.keyClick(bouton, Qt.Key.Key_Return)
