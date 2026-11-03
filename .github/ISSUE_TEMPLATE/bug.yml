@@ -6,12 +6,18 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report this. Write in English or in French. / Merci de signaler ce problème. Écrivez en anglais ou en français.
+        > 🇬🇧 **Every text in this form is in English first, then in French after the « / ».**
+        > 🇫🇷 **Chaque texte de ce formulaire est en anglais d'abord, puis en français après la barre « / ».**
 
-        - **A game that won't start, an install question?** The [Discord](https://discord.gg/TNwDQd7KGe) usually answers faster. / **Un jeu qui ne démarre pas, une question d'installation ?** Le Discord répond souvent plus vite.
-        - **A security issue?** Don't post it here, everyone can read it: [report it privately](https://github.com/ludvdber/AccioLauncher/security/advisories/new). / **Une faille de sécurité ?** Pas ici : signalez-la en privé.
+        🇬🇧 Thanks for taking the time to report this. Write in English or in French.
+        - **A game that won't start, an install question?** The [Discord](https://discord.gg/TNwDQd7KGe) usually answers faster.
+        - **A security issue?** Don't post it here, everyone can read it: [report it privately](https://github.com/ludvdber/AccioLauncher/security/advisories/new).
+        - **Please attach the launcher report: without it, we can't tell what happened.**
 
-        **Please attach the launcher report: without it, we can't tell what happened.** / **Joignez le rapport du launcher : sans lui, on ne peut pas savoir ce qui s'est passé.**
+        🇫🇷 Merci de signaler ce problème. Écrivez en anglais ou en français.
+        - **Un jeu qui ne démarre pas, une question d'installation ?** Le [Discord](https://discord.gg/TNwDQd7KGe) répond souvent plus vite.
+        - **Une faille de sécurité ?** Pas ici, tout le monde peut la lire : [signalez-la en privé](https://github.com/ludvdber/AccioLauncher/security/advisories/new).
+        - **Joignez le rapport du launcher : sans lui, on ne peut pas savoir ce qui s'est passé.**
 
   # Mêmes réponses, mot pour mot, que idee.yml et .github/etiquettes.json : elles
   # déclenchent l'étiquette du jeu (workflow « étiquettes »).
@@ -29,6 +35,19 @@ body:
         - Half-Blood Prince / Le Prince de Sang-Mêlé
         - Deathly Hallows Part 1 / Les Reliques de la Mort, partie 1
         - Deathly Hallows Part 2 / Les Reliques de la Mort, partie 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: systeme
+    attributes:
+      label: Operating system / Système d'exploitation
+      options:
+        - Windows 11
+        - Windows 10
+        - Steam Deck (SteamOS)
+        - Linux (other distribution) / Linux (autre distribution)
+        - Other / Autre
     validations:
       required: true
 
