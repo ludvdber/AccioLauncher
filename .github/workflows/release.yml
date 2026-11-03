@@ -142,13 +142,17 @@ jobs:
       # Plafond de taille (ACT-017) : les règles 90 et 94 sont nées de gonflements
       # de l'exécutable, qu'aucune machine ne voyait. Le relever en DISANT pourquoi,
       # jamais en silence. 56 Mo depuis la 1.3.0 (52,90 Mo) ; 1.3.1 : 48,40 Mo en
-      # local, vgmstream sorti de l'exe. La taille de chaque build est dans le résumé.
+      # local, vgmstream sorti de l'exe. 60 Mo depuis la 1.3.2 (56,67 Mo mesurés
+      # le 2026-11-03, PATH propre) : Qt Quick pour le fond sur la carte graphique
+      # (~6 Mo, déjà rogné aux seuls modules importés) et les huit fonds en haute
+      # définition (+3,8 Mo de JPEG, incompressibles). La taille de chaque build
+      # est dans le résumé.
       - name: Plafond de taille de l'exécutable
         shell: pwsh
         run: |
           $mo = (Get-Item dist/AccioLauncher.exe).Length / 1e6
-          "AccioLauncher.exe : $([math]::Round($mo, 2)) Mo (plafond 56)" >> $env:GITHUB_STEP_SUMMARY
-          if ($mo -gt 56) { Write-Error "L'exécutable fait $mo Mo, plafond 56 Mo (règles 90 et 94)."; exit 1 }
+          "AccioLauncher.exe : $([math]::Round($mo, 2)) Mo (plafond 60)" >> $env:GITHUB_STEP_SUMMARY
+          if ($mo -gt 60) { Write-Error "L'exécutable fait $mo Mo, plafond 60 Mo (règles 90 et 94)."; exit 1 }
 
       - name: Empreinte SHA-256
         shell: pwsh
