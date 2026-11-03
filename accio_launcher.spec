@@ -248,13 +248,23 @@ def _keep(entry):
 # PyInstaller embarque alors TOUS les modules QML de Qt (3D, contrôles,
 # physique, positionnement…) : l'exe passait de 46,6 à 72,6 Mo (2026-11-01).
 # `assets/qml/FondAccueil.qml` n'importe que QtQuick et QtMultimedia, `EtoilesCarrousel.qml` que QtQuick.
-_QML_GARDES = ("pyqt6/qt6/qml/qtqml/", "pyqt6/qt6/qml/qtmultimedia/")
-_QML_RACINE_QTQUICK = "pyqt6/qt6/qml/qtquick/"
+# QtQml : sa racine, plus les deux modules que son qmldir importe (`import
+# QtQml.Models auto`, `import QtQml.WorkerScript auto`). Pas StateMachine ni
+# XmlListModel : le greffon StateMachine réclamait libQt6StateMachineQml, écartée
+# plus bas, et l'AppImage de la 1.3.2 a refusé de se construire (2026-11-03).
+_QML_GARDES = ("pyqt6/qt6/qml/qtqml/models/", "pyqt6/qt6/qml/qtqml/workerscript/",
+               "pyqt6/qt6/qml/qtmultimedia/")
+_QML_RACINES = ("pyqt6/qt6/qml/qtquick/", "pyqt6/qt6/qml/qtqml/")
+# Les neuf derniers : embarqués par les crochets de PyInstaller, importés par
+# AUCUN binaire du paquet (tables d'import de tout le paquet Windows lues le
+# 2026-11-03) ; 3,7 Mo bruts.
 _DLL_QUICK_INUTILES = (
     "quick3d", "quickcontrols2", "quickdialogs2", "quicktemplates2", "quicktest",
     "quickparticles", "quickshapes", "quicktimeline", "quickvectorimage", "quicklayouts",
     "quickeffects", "positioningquick", "sensorsquick", "webchannelquick", "remoteobjectsqml",
-    "statemachineqml", "shadertools",
+    "statemachineqml", "shadertools", "qmlxmllistmodel",
+    "remoteobjects", "spatialaudio", "positioning", "qt6test", "statemachine",
+    "webchannel", "sensors", "websockets", "texttospeech",
 )
 
 
@@ -262,8 +272,8 @@ def _qml_utile(chemin):
     if chemin.startswith("pyqt6/qt6/qml/"):
         if chemin.startswith(_QML_GARDES):
             return True
-        # QtQuick lui-même (qmldir, greffon), sans ses sous-modules (Controls, Dialogs…).
-        return chemin.startswith(_QML_RACINE_QTQUICK) and "/" not in chemin[len(_QML_RACINE_QTQUICK):]
+        # QtQuick et QtQml eux-mêmes (qmldir, greffon), sans leurs autres sous-modules.
+        return any(chemin.startswith(r) and "/" not in chemin[len(r):] for r in _QML_RACINES)
     nom = chemin.rsplit("/", 1)[-1]
     if nom.startswith("qt6") and nom.endswith((".dll", ".so")) or ".so." in nom:
         return not any(motif in nom for motif in _DLL_QUICK_INUTILES)

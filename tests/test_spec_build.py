@@ -27,7 +27,7 @@ def _charger_filtre():
     que les deux définitions utiles.
     """
     fonctions = {"_keep", "_qml_utile"}
-    constantes = {"_JAMAIS_ATTEINTS", "_QML_GARDES", "_QML_RACINE_QTQUICK", "_DLL_QUICK_INUTILES"}
+    constantes = {"_JAMAIS_ATTEINTS", "_QML_GARDES", "_QML_RACINES", "_DLL_QUICK_INUTILES"}
     utiles = [n for n in _arbre().body
               if (isinstance(n, ast.FunctionDef) and n.name in fonctions)
               or (isinstance(n, ast.Assign)
@@ -71,6 +71,22 @@ class TestCeQuiEstMortSort:
         r"PyQt6\Qt6\bin\Qt6Quick3DRuntimeRender.dll",
         r"PyQt6\Qt6\bin\Qt6QuickControls2Material.dll",
         r"PyQt6\Qt6\bin\Qt6ShaderTools.dll",
+        # QtQml sans StateMachine ni XmlListModel : le greffon StateMachine réclamait une
+        # bibliothèque écartée, et l'AppImage refusait de se construire (2026-11-03).
+        r"PyQt6\Qt6\qml\QtQml\StateMachine\qtqmlstatemachineplugin.dll",
+        r"PyQt6/Qt6/qml/QtQml/StateMachine/libqtqmlstatemachineplugin.so",
+        r"PyQt6\Qt6\qml\QtQml\XmlListModel\qmlxmllistmodelplugin.dll",
+        # Importées par aucun binaire du paquet (2026-11-03).
+        r"PyQt6\Qt6\bin\Qt6RemoteObjects.dll",
+        r"PyQt6\Qt6\bin\Qt6SpatialAudio.dll",
+        r"PyQt6\Qt6\bin\Qt6Positioning.dll",
+        r"PyQt6\Qt6\bin\Qt6Test.dll",
+        r"PyQt6\Qt6\bin\Qt6StateMachine.dll",
+        r"PyQt6/Qt6/lib/libQt6StateMachineQml.so.6",
+        r"PyQt6\Qt6\bin\Qt6WebChannel.dll",
+        r"PyQt6\Qt6\bin\Qt6Sensors.dll",
+        r"PyQt6\Qt6\bin\Qt6WebSockets.dll",
+        r"PyQt6\Qt6\bin\Qt6TextToSpeech.dll",
     ])
     def test_ecarte(self, chemin):
         assert not _garde(chemin)
@@ -106,6 +122,12 @@ class TestCeQuiSertReste:
         r"PyQt6\Qt6\qml\QtQuick\qmldir",
         r"PyQt6\Qt6\qml\QtQuick\qtquick2plugin.dll",
         r"PyQt6\Qt6\qml\QtQml\qmldir",
+        r"PyQt6\Qt6\qml\QtQml\qmlplugin.dll",
+        r"PyQt6\Qt6\qml\QtQml\Models\modelsplugin.dll",
+        r"PyQt6\Qt6\qml\QtQml\WorkerScript\workerscriptplugin.dll",
+        r"PyQt6\Qt6\bin\Qt6QmlModels.dll",
+        r"PyQt6\Qt6\bin\Qt6QmlMeta.dll",
+        r"PyQt6\Qt6\bin\Qt6QmlWorkerScript.dll",
         r"PyQt6\Qt6\qml\QtMultimedia\quickmultimediaplugin.dll",
     ])
     def test_garde(self, chemin):
