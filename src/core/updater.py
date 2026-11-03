@@ -12,7 +12,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 from src.core import liens, reseau
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
-from src.core.ecriture_atomique import ecrire_atomique
+from src.core.ecriture_atomique import ecrire_octets_atomique
 from src.core.game_data import _parse_catalog
 from src.core.version_utils import compare_versions, update_disponible
 
@@ -460,9 +460,13 @@ class UpdateChecker(QThread):
                 try:
                     _LOCAL_CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
                     # Atomique : une coupure en pleine écriture laissait un
-                    # cache tronqué (audit du 2026-10-29).
-                    ecrire_atomique(_LOCAL_CATALOG_PATH,
-                                    json.dumps(raw, indent=2, ensure_ascii=False))
+                    # cache tronqué (audit du 2026-10-29). Les octets reçus,
+                    # tels quels (4 Mo au plus) : `json.dumps(raw, indent=2)`
+                    # coûte la profondeur AU CARRÉ en indentation. Un JSON
+                    # imbriqué 100 000 fois que `json.loads` accepte (pile de
+                    # Linux plus grande) en faisait plus de 14 Go : le runner
+                    # de la CI tué en plein test le 2026-11-03.
+                    ecrire_octets_atomique(_LOCAL_CATALOG_PATH, brut)
                 except OSError as exc:
                     log.warning("Impossible de sauvegarder le catalogue local : %s", exc)
 

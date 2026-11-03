@@ -1,5 +1,6 @@
 """Tests pour src/core/updater.py — agrégation des compteurs (pur) + interruption."""
 
+import json
 import sys
 import types
 
@@ -342,13 +343,27 @@ class TestJamaisDeRetrogradation:
 
     def test_un_json_trop_profond_est_ignore(self, monkeypatch, tmp_path):
         """`json.loads` lève RecursionError (pas une ValueError) : elle sortait
-        du fil de vérification au lieu d'être journalisée."""
-        self._distant(monkeypatch, tmp_path, "0.43", corps=b"[" * 100_000 + b"]" * 100_000)
+        du fil de vérification au lieu d'être journalisée.
+
+        L'erreur est simulée : un vrai JSON imbriqué 100 000 fois dépend de la
+        pile du système. Windows lève, le runner Linux de la CI l'acceptait,
+        et la suite du code le réécrivait indenté (14 Go, le 2026-11-03)."""
+        cache = self._distant(monkeypatch, tmp_path, "0.43")
+
+        def trop_profond(texte):
+            raise RecursionError("maximum recursion depth exceeded")
+
+        monkeypatch.setattr("src.core.updater.json", types.SimpleNamespace(
+            loads=trop_profond, JSONDecodeError=json.JSONDecodeError))
         assert self._verifier("0.42", force=False) == []
+        assert not cache.exists()
 
     def test_une_version_plus_recente_passe_toujours(self, monkeypatch, tmp_path):
-        self._distant(monkeypatch, tmp_path, "0.43")
+        cache = self._distant(monkeypatch, tmp_path, "0.43", corps=b'{"a": 1}')
         assert len(self._verifier("0.42", force=False)) == 1
+        # Le cache reçoit les octets du serveur tels quels, jamais une
+        # réécriture indentée (dont le coût suit la profondeur au carré).
+        assert cache.read_bytes() == b'{"a": 1}'
 
 
 class TestDiagnosticReseau:
