@@ -16,7 +16,9 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-26 (le fichier, chargé à chaq
 
 ## La machine par défaut est « prête à jouer »
 
-Sous Linux aussi : `conftest._linux_pret_a_jouer` pose un lanceur FACTICE (chemin inexistant : un `Popen` oublié échoue franchement au lieu de lancer Wine) et un préfixe prêt, composants compris, dans un `_Launcher/` temporaire À PART (dans `tmp_path`, il se mêlait à ce que d'autres tests y listent). Sans elle, le runner (sans Wine) affichait « Wine introuvable » partout et un poste qui a Wine l'aurait lancé. **`sans_lanceur`** pour le cas contraire ; `lanceur_factice` rend le faux. Les tests Linux SIMULENT `sys.platform` et tournent aussi sous Windows.
+Sous Linux aussi : `conftest._linux_pret_a_jouer` pose un lanceur FACTICE (chemin inexistant : un `Popen` oublié échoue franchement au lieu de lancer Wine) et un préfixe prêt, composants compris, dans un `_Launcher/` temporaire À PART (dans `tmp_path`, il se mêlait à ce que d'autres tests y listent). Sans elle, le runner (sans Wine) affichait « Wine introuvable » partout et un poste qui a Wine l'aurait lancé. **`sans_lanceur`** pour le cas contraire ; `lanceur_factice` rend le faux. Les tests Linux SIMULENT `sys.platform` et tournent aussi sous Windows. Le contraire vaut aussi : un test qui simule `win32` sous Linux remplace ce qui lirait le registre (`diagnostic.systeme`), sinon `import winreg` lève.
+
+**Un gestionnaire de messages Qt PERMANENT** (`conftest._message_qt`, posé à l'import) : pytest-qt remet entre deux tests le gestionnaire d'avant, qui était None, et un message du décodeur multimédia, émis depuis son propre fil à cet instant, levait « 'NoneType' object is not callable » sans pile au démontage (Linux, 10 sur 10 dans le conteneur de la CI, 2026-11-03). Ne pas le retirer.
 
 ## Le vrai Documents
 
