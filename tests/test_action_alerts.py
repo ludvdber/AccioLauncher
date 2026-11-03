@@ -418,6 +418,9 @@ class TestAvertissementDuCatalogue:
             def __init__(self, dossier, parent):
                 ouvertes.append(dossier)
 
+            def setAttribute(self, _attribut):
+                pass
+
             def exec(self):
                 return 0
 
@@ -427,6 +430,19 @@ class TestAvertissementDuCatalogue:
                                warning_help="antivirus")
         widget._alert._on_lien("aide")
         assert ouvertes == [Path(panel[1].config.install_path)]
+
+    def test_l_aide_fermee_est_detruite(self, panel, monkeypatch):
+        """Une boîte cachée s'ajoutait à la fenêtre à chaque clic (audit du 2026-11-02)."""
+        from PyQt6.QtCore import QCoreApplication, QEvent
+        from src.ui.aide_antivirus import AideAntivirus
+        monkeypatch.setattr(AideAntivirus, "exec", lambda self: self.done(0))
+        _disque(monkeypatch, 900_000)
+        widget = self._prepare(panel, GameState.INSTALLED, warning=self._TEXTE,
+                               warning_help="antivirus")
+        for _ in range(3):
+            widget._alert._on_lien("aide")
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert not widget.window().findChildren(AideAntivirus)
 
 
 class TestAideAntivirus:

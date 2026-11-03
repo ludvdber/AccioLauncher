@@ -201,19 +201,21 @@ class DiscordPresence:
                 cmd, arg = self._queue.get()
                 if cmd == "quit":
                     break
-                if ipc is None:
-                    ipc = self._connect()
+                # Une connexion morte (Discord redémarré) ne se voit qu'à l'envoi :
+                # l'ordre est renvoyé UNE fois sur une connexion neuve, au lieu
+                # d'être perdu jusqu'au suivant (audit du 2026-11-02).
+                for _essai in range(2):
                     if ipc is None:
-                        continue  # Discord pas lancé — on réessaiera au prochain ordre
-                try:
-                    if cmd == "set":
-                        self._send_activity(ipc, arg)
-                    elif cmd == "clear":
-                        self._send_activity(ipc, None)
-                except OSError as exc:
-                    log.debug("Discord IPC perdu (%s) — reconnexion au prochain ordre", exc)
-                    self._close(ipc)
-                    ipc = None
+                        ipc = self._connect()
+                        if ipc is None:
+                            break  # Discord pas lancé — on réessaiera au prochain ordre
+                    try:
+                        self._send_activity(ipc, arg if cmd == "set" else None)
+                        break
+                    except OSError as exc:
+                        log.debug("Discord IPC perdu (%s) — reconnexion", exc)
+                        self._close(ipc)
+                        ipc = None
         finally:
             self._close(ipc)
 

@@ -114,6 +114,15 @@ class TestPileDeCurseurs:
         c.relacher_curseur()
         assert not c.curseur_pose
 
+    def test_agrandie_au_clavier_le_curseur_de_bord_est_relache(self, qtbot):
+        """Win+↑ sur un bord : le curseur restait sur toute la fenêtre agrandie
+        (audit du 2026-11-02)."""
+        c = self._chrome(qtbot)
+        c.survol(QPoint(2, 400))
+        c._fenetre.isMaximized = lambda: True
+        c.etat_change()
+        assert not c.curseur_pose
+
     def test_relacher_est_idempotent(self, qtbot):
         c = self._chrome(qtbot)
         c.relacher_curseur()

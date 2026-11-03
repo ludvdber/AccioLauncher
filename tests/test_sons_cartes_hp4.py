@@ -72,6 +72,13 @@ class TestSonsDesCartes:
         w = s.wav(frequence, pcm)
         assert w[:4] == b"RIFF" and w[8:12] == b"WAVE" and len(w) == 44 + 20
 
+    def test_un_en_tete_tronque_rend_none(self):
+        """Il levait IndexError, puis struct.error pour une table coupée (audit du 2026-11-02)."""
+        banque = _banque([bytes(61)], [28])
+        tete = 0x14 + 4
+        assert s.echantillon(banque[:tete + 6], 1) is None      # coupé après l'étiquette 0x85
+        assert s.echantillon(banque[:0x16], 1) is None          # coupé dans la table
+
     def test_sans_le_jeu(self, tmp_path: Path):
         assert s.son_carte(tmp_path / "absent", "138851E3-044A-446E-8659-C23456EC245A") is None
         assert s.son_carte(tmp_path, "138851E3-044A-446E-8659-C23456EC245A") is None

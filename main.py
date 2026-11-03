@@ -83,6 +83,28 @@ def _create_splash(faits_du_jour: bool):
     return AccioSplash(fait=tr(fait) if fait else "")
 
 
+def _sortir(code: int):
+    """Quitte SANS finalisation de l'interpréteur, dès que `QApplication` existe.
+
+    Pendant celle-ci, sip détruit les objets C++ restants dans un ordre qu'il ne
+    maîtrise pas : mesuré le 2026-09-18, violation d'accès dans
+    `sip.cp314-win_amd64.pyd` (offset 0x10726, aucune frame Python) à 2
+    fermetures sur 8 depuis les sources, et 5 fois dans le journal Windows
+    depuis le 30 août, exe publié compris. Invisible, la fenêtre est déjà
+    fermée, mais c'est un plantage à chaque fois. Le second lancement et
+    l'erreur au démarrage passaient encore par `sys.exit` (audit du 2026-11-02).
+    Rien n'est perdu à sauter cette étape : la config et les stats sont écrites
+    dans `closeEvent`, les threads y sont arrêtés, le journal est vidé ici, et
+    le dossier temporaire de l'exe est nettoyé par le processus parent de
+    PyInstaller.
+    """
+    logging.shutdown()
+    for flux in (sys.stdout, sys.stderr):
+        if flux is not None:
+            flux.flush()
+    os._exit(code)
+
+
 def main():
     # Tout premier : les modules du launcher importés ensuite se chargent à leur
     # premier usage (Python 3.15), et les modules d'extension Qt sont créés
@@ -181,7 +203,7 @@ def main():
         jouer = liste_saut.id_demande(sys.argv)
         guard = SingleInstance()
         if not guard.try_acquire(jouer=jouer):
-            sys.exit(0)
+            _sortir(0)
 
         splash = _create_splash(_Config.load().faits_du_jour if _Config.exists() else True)
         splash.show()
@@ -221,8 +243,7 @@ def main():
             from src.core import manette
             if manette.allumee_par_nous():
                 manette.eteindre()
-            logging.shutdown()
-            os._exit(0)
+            _sortir(0)
         guard.activate_requested.connect(window.bring_to_front)
         from src.ui import question_reprise, raccourci_jouer
         raccourci_jouer.brancher(window, guard)
@@ -245,22 +266,7 @@ def main():
         if jouer:
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, lambda: raccourci_jouer.jouer_demande(window, jouer))
-        code = app.exec()
-        # Sortie SANS finalisation de l'interpréteur. Pendant celle-ci, sip détruit
-        # les objets C++ restants dans un ordre qu'il ne maîtrise pas : mesuré le
-        # 2026-09-18, violation d'accès dans `sip.cp314-win_amd64.pyd` (offset
-        # 0x10726, aucune frame Python) à 2 fermetures sur 8 depuis les sources,
-        # et 5 fois dans le journal Windows depuis le 30 août, exe publié compris.
-        # Invisible — la fenêtre est déjà fermée — mais c'est un plantage à
-        # chaque fois. Rien n'est perdu à sauter cette étape : la config et les
-        # stats sont écrites dans `closeEvent`, les threads y sont arrêtés, le
-        # journal est vidé ici, et le dossier temporaire de l'exe est nettoyé
-        # par le processus parent de PyInstaller.
-        logging.shutdown()
-        for flux in (sys.stdout, sys.stderr):
-            if flux is not None:
-                flux.flush()
-        os._exit(code)
+        _sortir(app.exec())
 
     except Exception as exc:
         log.critical("Erreur fatale au démarrage : %s", exc, exc_info=True)
@@ -274,7 +280,7 @@ def main():
                         exc_info=True)
         print(f"Erreur fatale : {exc}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
-        sys.exit(1)
+        _sortir(1)
 
 
 def afficher_erreur_fatale(exc: BaseException, fabrique=QMessageBox) -> bool:

@@ -84,6 +84,17 @@ class TestSHPI:
         assert images_ea.image(tronque, images_ea.images_nommees(tronque)["IMG"]) is None
         assert images_ea.images_nommees(b"rien ici") == {}
 
+    def test_un_cote_hors_des_blocs_dxt_ne_leve_pas(self):
+        """Un côté de 6 levait StopIteration (DXT1) ou IndexError (DXT5)."""
+        for code in (images_ea.DXT1, images_ea.DXT5):
+            flux = _shpi([("IMG", code, 6, 8, bytes(64), 0)])
+            assert images_ea.image(flux, images_ea.images_nommees(flux)["IMG"]) is None
+
+    def test_le_mip_s_arrete_avant_un_cote_hors_des_blocs(self):
+        """12 × 8 : sa moitié ferait 6 × 4, on rend le 12 × 8."""
+        flux = _shpi([("IMG", 0x60, 12, 8, _dxt1(ROUGE, BLEU, 0) * 6 + bytes(16), 1)])
+        assert images_ea.image(flux, images_ea.images_nommees(flux)["IMG"], cote_max=4)[:2] == (12, 8)
+
 
 class TestBIG:
     def test_une_entree_par_son_nom(self, tmp_path):

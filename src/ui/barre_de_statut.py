@@ -8,6 +8,8 @@ Règle commune : un téléchargement de jeu en cours a la priorité. Son statut
 n'est jamais écrasé par un message d'ambiance ou de bandes-annonces.
 """
 
+from html import escape
+
 from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QStatusBar
 
@@ -64,7 +66,9 @@ class BarreDeStatut(QStatusBar):
             texte = self._libelle.fontMetrics().elidedText(
                 texte, Qt.TextElideMode.ElideRight, largeur)
         self._libelle.setText(texte)
-        self._libelle.setToolTip(self._message if texte != self._message else "")
+        # Échappé : une infobulle est interprétée en AutoText, et le message peut
+        # porter un nom de jeu venu du catalogue (règle 57).
+        self._libelle.setToolTip(escape(self._message) if texte != self._message else "")
 
     def au_repos(self) -> str:
         """Ce que dit la barre quand il n'y a RIEN à signaler.

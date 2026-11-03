@@ -213,12 +213,22 @@ def repli_apres_echec(conf: Path, intel: bool = False) -> tuple[Reglage, object,
 
 
 def remettre_origine(conf: Path) -> None:
-    """Remet les clés réglables telles que les portait le fichier d'origine."""
+    """Remet les clés réglables telles que les portait le fichier d'origine.
+
+    Lève OSError si un des deux fichiers ne peut pas être lu ou écrit, rien
+    d'autre : une section retirée du fichier courant est laissée telle quelle
+    (`_poser` levait ValueError, qui sortait du slot sans message).
+    """
     origine, _ = _lire(chemin_origine(conf))
     lignes, fin = _lire(conf)
     for reglage in REGLAGES.values():
         valeur = _valeur(origine, reglage.section, reglage.cle)
-        if valeur is not None:
+        if valeur is None:
+            continue
+        try:
             _poser(lignes, reglage.section, reglage.cle, valeur)
+        except ValueError:
+            log.warning("Réglages graphiques : [%s] absente de %s, %s non remis",
+                        reglage.section, conf, reglage.cle)
     _ecrire(conf, lignes, fin)
     log.info("Réglages graphiques : réglages d'origine remis dans %s", conf)

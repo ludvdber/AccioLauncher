@@ -8,7 +8,7 @@ parties des Reliques partagent la septième année : « VII · 1 » et « VII ·
 
 from html import escape
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import QPushButton
 
@@ -23,7 +23,9 @@ def espacee(pixmap: QPixmap, taille: QSize, ecart: int = _ECART) -> tuple[QIcon,
     """L'icône et sa taille, avec `ecart` px de blanc à DROITE (règle 30 : Qt
     colle le libellé à l'icône, et des espaces en tête de libellé seraient
     traduits). Peinte en pixels logiques sur un pixmap au ratio de la source
-    (règle 46 : pas de `scale` sur un QPainter ouvert sur un pixmap à ratio)."""
+    (règle 46 : pas de `scale` sur un QPainter ouvert sur un pixmap à ratio).
+    La jaquette garde ses proportions, centrée : étirée dans la case 3:4, une
+    jaquette carrée perdait un quart de sa largeur (audit du 2026-11-02)."""
     ratio = max(pixmap.devicePixelRatio(), 2.0)      # net aussi sur un écran à 200 %
     large = QSize(taille.width() + ecart, taille.height())
     toile = QPixmap(round(large.width() * ratio), round(large.height() * ratio))
@@ -31,7 +33,10 @@ def espacee(pixmap: QPixmap, taille: QSize, ecart: int = _ECART) -> tuple[QIcon,
     toile.fill(Qt.GlobalColor.transparent)
     p = QPainter(toile)
     p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-    p.drawPixmap(0, 0, taille.width(), taille.height(), pixmap)
+    ajustee = pixmap.size().scaled(taille, Qt.AspectRatioMode.KeepAspectRatio)
+    if not ajustee.isEmpty():
+        x, y = (taille.width() - ajustee.width()) / 2, (taille.height() - ajustee.height()) / 2
+        p.drawPixmap(QRectF(x, y, ajustee.width(), ajustee.height()), pixmap, QRectF(pixmap.rect()))
     p.end()
     return QIcon(toile), large
 

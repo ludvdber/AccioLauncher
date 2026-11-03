@@ -63,10 +63,13 @@ class TestRefusDeCle:
     def test_chemins_refuses(self, cle):
         assert refus_de_cle("HKLM", cle) is not None
 
-    def test_le_slash_compte_comme_separateur(self):
-        """Sous POSIX « \\ » n'est pas un séparateur : normaliser AVANT de
-        vérifier, sinon le garde-fou est inopérant hors Windows."""
+    def test_le_slash_est_refuse(self):
+        """winreg prend « / » pour un caractère du nom : écriture directe,
+        relecture et .reg visaient des clés différentes (audit du 2026-11-02).
+        Refusé partout, il ne contourne pas non plus le garde-fou."""
         assert refus_de_cle("HKCU", "Software/Microsoft/Windows") is not None
+        assert refus_de_cle("HKCU", "Software/Electronic Arts/Harry Potter") is not None
+        assert refus_de_cle("HKCU", BS.join(["Software", "Electronic Arts", "Harry Potter"])) is None
 
 
 class TestRefusDeValeur:

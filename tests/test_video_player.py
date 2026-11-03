@@ -189,3 +189,20 @@ class TestSautDansUneCinematique:
         qtbot.waitUntil(lambda: len(sans_vrai_media) == 2, timeout=5000)
         assert sans_vrai_media == [str(clip), str(clip)]
         assert lecteur._decalage == 0 and lecteur._cible == 300 and lecteur._pause_apres_saut
+
+    def test_une_pause_pendant_l_avance_rapide_attend_le_point_voulu(
+            self, lecteur, sans_vrai_media, qtbot, tmp_path):
+        """Posée tout de suite, elle figeait l'image d'avant le saut (audit du 2026-11-02)."""
+        from unittest.mock import MagicMock
+        assert lecteur.play(str(_clip(tmp_path)), debut_ms=750)
+        qtbot.waitUntil(lambda: len(sans_vrai_media) == 1, timeout=5000)
+        assert lecteur._cible == 750
+        lecteur.pause()
+        assert lecteur._paused
+        lecteur._player.pause.assert_not_called()
+        image = MagicMock()
+        image.isValid.return_value = True
+        image.startTime.return_value = (750 - lecteur._decalage) * 1000
+        lecteur._on_frame(image)
+        lecteur._player.pause.assert_called_once()
+        assert lecteur._paused and lecteur._cible == -1

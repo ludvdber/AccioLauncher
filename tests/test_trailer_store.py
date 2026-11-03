@@ -180,6 +180,18 @@ class TestMenageEtAnnulation:
         assert s.is_busy is False
         assert s.restantes == 0
 
+    def test_annuler_dit_la_fin_a_la_barre_du_bas(self, qtbot, dossier, faux_dl):
+        """La barre du bas écoute `job_finished` : sans lui, elle restait sur
+        « Bandes-annonces : 1/3 (0 %) » (audit du 2026-11-02). Une seule fois."""
+        liste = [_t("hp1"), _t("hp2"), _t("hp3")]
+        s = TrailerStore(FauxManager(liste), FauxOps())
+        fins = []
+        s.job_finished.connect(lambda ok, ko: fins.append((ok, ko)))
+        s.start(liste)
+        s.cancel()
+        s.cancel()
+        assert fins == [(0, 0)]
+
     def test_supprimer_tout(self, qtbot, dossier, faux_dl):
         liste = [_t("hp1")]
         (dossier / liste[0].filename).write_bytes(b"0123456789")

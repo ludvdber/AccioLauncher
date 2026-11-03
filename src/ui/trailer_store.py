@@ -94,7 +94,13 @@ class TrailerStore(QObject):
         self._suivante()
 
     def cancel(self) -> None:
-        """Arrête le téléchargement en cours et vide la file."""
+        """Arrête le téléchargement en cours et vide la file.
+
+        Émet `job_finished` comme une fin ordinaire (sans l'annoncer) : la barre
+        du bas restait figée sur « Bandes-annonces : 3/8 (40 %) » (audit du
+        2026-11-02).
+        """
+        occupe = self.is_busy
         self._attente.stop()
         self._file.clear()
         dl = self._downloader
@@ -112,6 +118,8 @@ class TrailerStore(QObject):
                 self._zombies.append(dl)
                 dl.finished.connect(lambda: self._reap(dl))
         self.state_changed.emit()
+        if occupe:
+            self.job_finished.emit(self._faites, self._echecs)
 
     def shutdown(self) -> None:
         """Extinction : un thread laissé vivant serait détruit avec son parent,

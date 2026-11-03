@@ -24,6 +24,7 @@ construction des widgets) — l'UI le précise.
 """
 
 import json
+import locale
 import logging
 import os
 import sys
@@ -154,6 +155,16 @@ def is_supported(lang: str) -> bool:
     return lang in _discover()
 
 
+def langue_windows(langid: int) -> str:
+    """Le code de langue (« fr ») d'un LANGID Windows, "" s'il est inconnu.
+
+    Par la table de la bibliothèque standard (`locale.windows_locale`), pas
+    par une liste codée : un `de.json` déposé est pré-choisi sur un Windows
+    allemand (règle 54 ; audit du 2026-11-02).
+    """
+    return locale.windows_locale.get(langid, "").split("_")[0]
+
+
 def detect_system_language() -> str:
     """Langue du système si elle est disponible, sinon `DEFAULT_LANGUAGE`.
 
@@ -164,9 +175,7 @@ def detect_system_language() -> str:
     if sys.platform == "win32":
         try:
             import ctypes
-            # Identifiant primaire de langue : les 10 bits de poids faible.
-            primary = ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF
-            raw = {0x09: "en", 0x0A: "es", 0x0C: "fr"}.get(primary, "")
+            raw = langue_windows(ctypes.windll.kernel32.GetUserDefaultUILanguage())
         except (AttributeError, OSError) as exc:
             log.debug("Langue système Windows indéterminable : %s", exc)
     if not raw:

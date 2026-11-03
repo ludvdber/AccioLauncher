@@ -91,6 +91,24 @@ class TestFlow:
         assert ops == [0, 1, 1]  # et pas [0, 0, 0, …]
 
 
+    def test_un_ordre_sur_une_connexion_morte_est_renvoye(self, monkeypatch):
+        """Discord redémarré : l'ordre partait dans le vide et se perdait
+        jusqu'au suivant (audit du 2026-11-02)."""
+        class _Morte(_FakeDiscord):
+            def write(self, data):
+                if struct.unpack("<II", data[:8])[0] == 1:
+                    raise OSError("pipe cassé")
+                super().write(data)
+        connexions = [_Morte(), _FakeDiscord()]
+        monkeypatch.setattr("src.core.discord_presence._open_ipc", lambda: connexions.pop(0))
+        neuve = connexions[1]
+        p = DiscordPresence(client_id="123456789012345678")
+        p.set_playing("Harry Potter à l'école des sorciers", "hp1", "", "", None)
+        p.shutdown()
+        p._thread.join(timeout=2)
+        assert [op for op, _ in neuve.received] == [0, 1]
+
+
 class TestCarte:
     def test_deux_boutons_le_site_puis_la_communaute(self, monkeypatch):
         from src.core.liens import DISCORD_URL, SITE_URL

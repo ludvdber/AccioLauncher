@@ -85,7 +85,12 @@ def _nom(flux: bytes, q: int) -> str | None:
 
 def image(flux: bytes, q: int, cote_max: int = 128) -> tuple[int, int, bytes] | None:
     """L'image DXT dont l'en-tête est en q, au premier niveau de mip qui tient
-    dans `cote_max` : (largeur, hauteur, pixels B V R A), ou None."""
+    dans `cote_max` : (largeur, hauteur, pixels B V R A), ou None.
+
+    Les côtés sont des multiples de 4 (blocs DXT), au niveau rendu aussi : un
+    côté de 6 faisait lever StopIteration ou IndexError au décodage, que les
+    appelants n'attrapent pas (audit du 2026-11-02).
+    """
     if q + 16 > len(flux):
         return None
     code = flux[q] & 0x7F
@@ -93,12 +98,12 @@ def image(flux: bytes, q: int, cote_max: int = 128) -> tuple[int, int, bytes] | 
         return None
     largeur, hauteur = struct.unpack_from("<HH", flux, q + 4)
     mips = flux[q + 15] >> 4
-    if not (4 <= largeur <= 4096 and 4 <= hauteur <= 4096):
+    if not (4 <= largeur <= 4096 and 4 <= hauteur <= 4096) or largeur % 4 or hauteur % 4:
         return None
     pas = 8 if code == DXT1 else 16
     debut = q + 16
     for _ in range(mips):
-        if max(largeur, hauteur) <= cote_max or min(largeur, hauteur) <= 4:
+        if max(largeur, hauteur) <= cote_max or (largeur // 2) % 4 or (hauteur // 2) % 4:
             break
         debut += (largeur // 4) * (hauteur // 4) * pas
         largeur, hauteur = largeur // 2, hauteur // 2

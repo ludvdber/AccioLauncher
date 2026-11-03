@@ -501,6 +501,7 @@ class RubriquesDuJeu:
             return
         for ident, controle in self._controles_graph.items():
             self._remettre_controle_graph(controle, reglages_graphiques.REGLAGES[ident])
+        self._erreur.hide()
 
     def _note(self, corps: QVBoxLayout, texte: str, entete: QWidget | None = None) -> None:
         """Une phrase seule dans une carte : ce que la rubrique ne peut pas encore faire."""

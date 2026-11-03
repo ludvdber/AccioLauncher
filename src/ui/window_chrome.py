@@ -135,8 +135,12 @@ class WindowChrome:
         habiller(fenetre)
 
     def etat_change(self) -> None:
-        """Fenêtre agrandie, restaurée ou en plein écran : le liseré suit."""
+        """Fenêtre agrandie, restaurée ou en plein écran : le liseré suit, et le
+        curseur de bord posé avant Win+↑ est relâché (il restait sur toute la
+        fenêtre agrandie, où le survol n'est plus suivi ; audit du 2026-11-02)."""
         poser_lisere(self._fenetre)
+        if self._fenetre.isMaximized() or self._fenetre.isFullScreen():
+            self.relacher_curseur()
 
     @property
     def curseur_pose(self) -> bool:

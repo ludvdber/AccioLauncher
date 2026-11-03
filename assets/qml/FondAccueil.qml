@@ -97,7 +97,7 @@ Item {
                 y: -racine.parallaxeMaxY + couche.py
                 // Le haut, opaque ; texture chargée une fois, partagée par les bandes.
                 Item {
-                    width: parent.width; height: parent.height * (1 - racine.etenduFondu)
+                    width: parent.width; height: Math.round(parent.height * (1 - racine.etenduFondu))
                     clip: true
                     Image {
                         id: net
@@ -109,15 +109,17 @@ Item {
                 }
                 // Le bas s'efface en bandes fines d'opacité décroissante (rognées par
                 // le GPU, même texture) : le flou se voit dessous, comme le masque
-                // `DestinationIn` du chemin QPainter.
+                // `DestinationIn` du chemin QPainter. Bords sur des pixels entiers,
+                // jointifs : des bandes à cheval (hauteur `ceil(pas) + 1`) redessinaient
+                // une ligne sur deux ou trois, des rayures dans tout le fondu.
                 Repeater {
                     model: couche.etenduC ? racine.etenduBandes : 0
                     Item {
                         required property int index
                         readonly property real haut: bandeau.height * (1 - racine.etenduFondu)
                         readonly property real pas: bandeau.height * racine.etenduFondu / racine.etenduBandes
-                        y: haut + index * pas
-                        width: bandeau.width; height: Math.ceil(pas) + 1
+                        y: Math.round(haut + index * pas)
+                        width: bandeau.width; height: Math.round(haut + (index + 1) * pas) - y
                         clip: true
                         opacity: 1 - (index + 0.5) / racine.etenduBandes
                         Image {

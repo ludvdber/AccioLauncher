@@ -515,9 +515,17 @@ class GaleriePage(QDialog):
                 vignette.setVisible(garder)
                 visibles += garder
             bloc.setVisible(visibles > 0)
+        # Aucune capture de ce jeu : l'aperçu et ses boutons parlaient encore de
+        # celle d'un autre jeu (audit du 2026-11-02).
         visible = self.choisie_visible()
-        if visible is not None and visible != self.choisie:
-            next(v for v in self._vignettes if v.capture == visible).setChecked(True)
+        if visible is None:
+            self._montrer(None)
+        elif visible != self.choisie:
+            vignette = next(v for v in self._vignettes if v.capture == visible)
+            if vignette.isChecked():   # déjà cochée, cachée par le filtre d'avant
+                self._montrer(visible)
+            else:
+                vignette.setChecked(True)
 
     def choisie_visible(self) -> galerie.Capture | None:
         """La capture choisie si elle est visible, sinon la première visible."""

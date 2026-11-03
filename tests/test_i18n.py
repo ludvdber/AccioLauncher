@@ -290,6 +290,13 @@ class TestDecouverte:
     def test_detection_systeme_retourne_une_langue_supportee(self):
         assert is_supported(detect_system_language())
 
+    def test_la_langue_de_windows_sans_liste_codee(self):
+        """Une liste {en, es, fr} ne pré-choisissait jamais un 4e paquet (règle 54)."""
+        from src.core.i18n import langue_windows
+        assert langue_windows(0x040C) == "fr" and langue_windows(0x0C0A) == "es"
+        assert langue_windows(0x0407) == "de" and langue_windows(0x0816) == "pt"
+        assert langue_windows(0x7FFF) == ""
+
 
 class TestSurchargeUtilisateur:
     """Fichier déposé dans ~/Games/AccioLauncher/i18n/ — workflow du traducteur.

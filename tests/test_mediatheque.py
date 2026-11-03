@@ -286,6 +286,23 @@ class TestPage:
         assert not points["musique"].isVisibleTo(page), "montrée, elle est vue"
         page.accept()
 
+    def test_personnages_et_bestiaire_sans_compte_de_nouveautes(self, fenetre_avec_jeux, qtbot):
+        """Les pastilles des jeux y gardaient le compte de la rubrique d'avant
+        (audit du 2026-11-02)."""
+        from src.core import encyclopedie as _encyclo
+        from src.ui.title_bar import COLLECTIONS
+        win = fenetre_avec_jeux
+        qtbot.waitUntil(lambda: win._title_bar.onglet(COLLECTIONS).pastille, timeout=5000)
+        win._on_onglet(COLLECTIONS)
+        page = win._pages.page
+        page.rubrique("cinematiques")
+        assert page._jeux._points["hp3"].isVisibleTo(page)
+        for rubrique in (_encyclo.PERSONNAGES, _encyclo.BESTIAIRE):
+            page.rubrique(rubrique)
+            assert not any(p.isVisibleTo(page) for p in page._jeux._points.values()), rubrique
+            assert "·" not in page._jeux._boutons["hp3"].text()
+        page.accept()
+
     def test_cinematiques_et_seuils(self, fenetre_avec_jeux, qtbot):
         from src.ui.mediatheque_page import _LigneCine
         win = fenetre_avec_jeux

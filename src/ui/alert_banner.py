@@ -370,7 +370,11 @@ class AlertBanner(QLabel):
         elif href == "aide":
             # Import tardif : aide_antivirus importe WARN d'ici.
             from src.ui.aide_antivirus import AideAntivirus
-            AideAntivirus(Path(self._manager.config.install_path), self.window()).exec()
+            aide = AideAntivirus(Path(self._manager.config.install_path), self.window())
+            # Détruite à la fermeture : sinon une boîte cachée de plus, enfant de
+            # la fenêtre, à chaque clic jusqu'à la sortie (audit du 2026-11-02).
+            aide.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            aide.exec()
         elif href == "avertissement":
             # L'URL a été validée au PARSING (https uniquement) : le catalogue
             # est distant, c'est la seule de ses chaînes qui atteigne le

@@ -71,3 +71,23 @@ def test_les_textes_passent_par_la_traduction(boite):
         set_language(avant)
     assert "Accio Launcher could not start." in boite.textes
     assert boite.boutons == ["Close"]
+
+
+def test_aucune_sortie_par_sys_exit_une_fois_qapplication_creee():
+    """Second lancement et erreur au démarrage sortaient par `sys.exit` : la
+    finalisation de l'interpréteur laissait sip détruire les objets C++ dans le
+    désordre (violation d'accès, voir `_sortir`). Toutes passent par `_sortir`."""
+    import ast
+    import inspect
+    arbre = ast.parse(inspect.getsource(main.main))
+    appels = {ast.unparse(n.func) for n in ast.walk(arbre) if isinstance(n, ast.Call)}
+    assert "sys.exit" not in appels and "os._exit" not in appels
+    assert "_sortir" in appels
+
+
+def test_sortir_vide_le_journal_avant_os_exit(monkeypatch):
+    ordre = []
+    monkeypatch.setattr(main.logging, "shutdown", lambda: ordre.append("journal"))
+    monkeypatch.setattr(main.os, "_exit", lambda code: ordre.append(code))
+    main._sortir(3)
+    assert ordre == ["journal", 3]

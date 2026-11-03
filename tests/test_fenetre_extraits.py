@@ -42,6 +42,15 @@ class TestBarreDeStatut:
         barre = self._barre(qtbot)
         assert barre.currentMessage() == barre.au_repos() != "Prêt"
 
+    def test_l_infobulle_d_un_message_elide_n_interprete_rien(self, qtbot):
+        """Un QToolTip est en AutoText ; le message peut porter un nom de jeu du
+        catalogue (règle 57, audit du 2026-11-02)."""
+        barre = self._barre(qtbot)
+        barre._libelle.resize(80, 20)
+        barre.showMessage("<b>Jeu</b> " + "très long message " * 10)
+        barre._elider()
+        assert barre._libelle.toolTip().startswith("&lt;b&gt;Jeu&lt;/b&gt;")
+
     def test_sans_fait_du_jour_on_retombe_sur_pret(self, qtbot):
         assert self._barre(qtbot, faits=False).currentMessage() == "Prêt"
 

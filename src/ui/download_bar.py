@@ -65,6 +65,9 @@ class DownloadBar(QWidget):
         self._title.setFont(cinzel(11, bold=True))
         self._title.setStyleSheet("color: #e0e0e0; background: transparent;")
         self._status = QLabel("")
+        # PlainText aussi : sous Linux, la dernière ligne du journal de
+        # winetricks ou d'umu s'y affiche pendant une préparation.
+        self._status.setTextFormat(Qt.TextFormat.PlainText)
         self._status.setFont(body_font(10))
         self._status.setStyleSheet("color: #8a8aaa; background: transparent;")
         text_box.addWidget(self._title)

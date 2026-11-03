@@ -148,15 +148,24 @@ class VideoPlayer(QObject):
         return self._paused
 
     def pause(self) -> None:
-        """Suspend la lecture SANS libérer la source (reprise instantanée)."""
-        if self._player is not None and not self._paused:
+        """Suspend la lecture SANS libérer la source (reprise instantanée).
+
+        Pendant l'avance rapide d'un saut, la pause attend le point voulu :
+        posée tout de suite, elle figeait l'image d'avant, et la bonne
+        n'apparaissait qu'à la reprise (audit du 2026-11-02).
+        """
+        if self._player is not None and self._cible >= 0:
+            self._pause_apres_saut = self._paused = True
+        elif self._player is not None and not self._paused:
             self._player.pause()
             self._paused = True
         elif self._player is None and self._attente >= 0:
             self._paused = True          # posée à l'arrivée du saut
 
     def resume(self) -> None:
-        if self._player is not None and self._paused:
+        if self._player is not None and self._cible >= 0:
+            self._pause_apres_saut = self._paused = False
+        elif self._player is not None and self._paused:
             self._player.play()
             self._paused = False
         elif self._player is None and self._attente >= 0:
@@ -402,6 +411,7 @@ class VideoPlayer(QObject):
             self._cible = -1
             self._player.setPlaybackRate(1.0)
             if self._pause_apres_saut:
+                self._pause_apres_saut = self._paused = False
                 self.pause()
         if frame.isValid() and self.a_monter(frame.startTime()):
             image = frame.toImage()

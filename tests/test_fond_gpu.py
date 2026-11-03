@@ -100,6 +100,39 @@ def test_l_etendu_prolonge_l_image_dans_son_flou_pas_dans_du_noir(qtbot, tmp_pat
     assert (gauche.green() - gauche.blue()) > (droite.green() - droite.blue()) + 15, (gauche.name(), droite.name())
 
 
+def test_le_fondu_de_l_etendu_descend_sans_rayure(qtbot, tmp_path):
+    """Audit du 2026-11-02 : les bandes du fondu, hautes de `ceil(pas) + 1`, se
+    chevauchaient ; une ligne sur deux ou trois perdait un tiers de son contraste
+    (66, 66, 41, 64…). Des colonnes noires et blanches : le contraste d'une
+    ligne ne fait que baisser en descendant dans le fondu."""
+    from PyQt6.QtGui import QColor, QImage, QPainter
+    image = QImage(1920, 620, QImage.Format.Format_RGB32)
+    image.fill(QColor(0, 0, 0))
+    p = QPainter(image)
+    for x in range(0, 1920, 32):
+        p.fillRect(x, 0, 16, 620, QColor(255, 255, 255))
+    p.end()
+    image.save(str(tmp_path / "bandeau.png"))
+    fond = fond_gpu.FondGPU()
+    qtbot.addWidget(fond)
+    fond.resize(1400, 860)
+    fond.invalidate_cache()
+    fond.set_image(tmp_path / "bandeau.png")
+    fond.show()
+    assert fond._racine.property("etendu")
+
+    def contraste(rendu, y):
+        return sum(abs(rendu.pixelColor(x, y).red() - rendu.pixelColor(x + 16, y).red())
+                   for x in range(800, 1200, 8)) / 50
+
+    qtbot.waitUntil(lambda: contraste(fond.grabFramebuffer(), 300) > 40, timeout=5000)
+    rendu = fond.grabFramebuffer()
+    lignes = [contraste(rendu, y) for y in range(rendu.height())]
+    debut = next(y for y in range(rendu.height() // 3, rendu.height()) if lignes[y] < lignes[y - 1] - 1)
+    remontees = [y for y in range(debut, rendu.height()) if lignes[y] > lignes[y - 1] + 2]
+    assert not remontees, [(y, round(lignes[y - 1]), round(lignes[y])) for y in remontees[:5]]
+
+
 def test_au_changement_de_jeu_l_ancien_fond_reste_ou_il_etait(qtbot, tmp_path):
     """Ludo, 2026-11-02 : en cliquant sur un autre jeu, l'ancien fond reprenait sa
     place de départ (sans zoom, sans parallaxe, sans voile) avant le fondu. Au

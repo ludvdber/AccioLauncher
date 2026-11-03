@@ -1067,6 +1067,37 @@ class TestFenetreQualite:
         rang = {i: carte.layout().indexOf(dlg._blocs[i]) for i in ("ciel", "brouillard")}
         assert 0 <= rang["ciel"] < rang["brouillard"]
 
+    def test_un_prereglage_reussi_efface_l_erreur_d_avant(self, qtbot, tmp_path):
+        """L'erreur d'une écriture ratée restait affichée après un préréglage
+        réussi, et « Rétablir » éteint (audit du 2026-11-02)."""
+        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        dlg._montrer_erreur()
+        dlg._choisir_prereglage("maximale")
+        assert dlg._erreur.isHidden()
+        assert dlg._bouton_reset.isEnabled()
+
+    def test_l_effet_exclu_non_eteint_garde_son_erreur(self, qtbot, tmp_path, monkeypatch):
+        """L'erreur de l'exclusion s'affichait puis disparaissait aussitôt
+        (audit du 2026-11-02)."""
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        ini = dossier / "d3d9.ini"
+        ini.write_bytes(INI_JEU.encode("ascii"))
+        rc.ecrire(ini, rc.REGLAGES["lissage"], True)
+        rc.ecrire(ini, rc.REGLAGES["occlusion"], True)
+        dlg = _dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ["anticrenelage"]), _manager(tmp_path))
+        assert dlg._controles["occlusion"].isChecked()
+        ecrire = rc.ecrire
+
+        def refus_pour_l_occlusion(chemin, reglage, valeur):
+            if reglage.ident == "occlusion":
+                raise PermissionError("lecture seule")
+            ecrire(chemin, reglage, valeur)
+        monkeypatch.setattr(rc, "ecrire", refus_pour_l_occlusion)
+        dlg._on_reglage(rc.REGLAGES["anticrenelage"], 4, dlg._controles["anticrenelage"])
+        assert b"Antialiasing=4" in ini.read_bytes()
+        assert not dlg._erreur.isHidden()
+
     def test_un_effet_qui_depend_d_un_autre_est_en_retrait_sous_lui(self, qtbot, tmp_path):
         dlg, _ini = self._fenetre(qtbot, tmp_path)
         marge = {i: dlg._blocs[i].layout().contentsMargins().left() for i in ("lissage", "nettete")}

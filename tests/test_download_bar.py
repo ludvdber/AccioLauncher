@@ -22,6 +22,13 @@ class TestDownloadBarLifecycle:
         assert not bar.isVisible()
         assert bar.current_game is None
 
+    def test_le_statut_est_en_texte_brut(self, qtbot):
+        """Sous Linux, la dernière ligne du journal de winetricks s'y affiche (audit du 2026-11-02)."""
+        from PyQt6.QtCore import Qt
+        bar = DownloadBar()
+        qtbot.addWidget(bar)
+        assert bar._status.textFormat() == Qt.TextFormat.PlainText
+
     def test_show_for_game_sets_state(self, qtbot):
         bar = DownloadBar()
         qtbot.addWidget(bar)

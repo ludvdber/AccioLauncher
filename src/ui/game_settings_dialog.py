@@ -540,12 +540,14 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._maj_prereglage()
             return
         voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
+        ecrit = True
         try:
             for cle, valeur in voulues.items():
                 reglages_correctif.ecrire(self._ini, reglages_correctif.REGLAGES[cle], valeur)
         except (OSError, ValueError):
             log.warning("Correctif : préréglage %s non écrit", ident, exc_info=True)
             self._montrer_erreur()
+            ecrit = False
         # Les contrôles reprennent ce que porte le fichier, écrit en entier ou non.
         for cle in voulues:
             widget = self._controles.get(cle)
@@ -553,7 +555,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 self._remettre_controle(widget, reglages_correctif.REGLAGES[cle])
         self._maj_dependances()
         self._maj_prereglage()
-        if self._erreur.isHidden():
+        # Une réussite efface l'erreur d'avant : tester `isHidden()` la gardait
+        # affichée, et « Rétablir » éteint (audit du 2026-11-02).
+        if ecrit:
             self._apres_ecriture()
 
     @staticmethod
@@ -718,6 +722,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._maj_preregle()
         self._maj_dependances()
         self._maj_prereglage()
+        self._erreur.hide()
 
     def _remettre_controle(self, widget, reglage) -> None:
         """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
@@ -871,12 +876,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._maj_dependances()
             self._maj_prereglage()
             return
+        # Avant l'exclusion : l'erreur qu'elle peut montrer était aussitôt effacée.
+        self._apres_ecriture()
         self._appliquer_exclusion(reglage, valeur)
         self._maj_dependances()
         self._maj_prereglage()
         if reglage.ident == "touches_zqsd" and self._editeur is not None:
             self._editeur.rafraichir()
-        self._apres_ecriture()
 
     def _apres_ecriture(self) -> None:
         """Ce que change toute écriture réussie : le bouton de remise à l'origine

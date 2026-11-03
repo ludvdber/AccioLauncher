@@ -66,10 +66,13 @@ def nom_de_touche(touche: int, texte: str, scan: int, pave: bool) -> str | None:
     """Le nom qu'écrit l'éditeur pour un appui, ou None si le correctif ne saurait pas le lire.
 
     Une lettre est nommée telle qu'IMPRIMÉE (le texte de l'appui suit la
-    disposition active) : c'est ainsi que le correctif la retrouve.
+    disposition active) : c'est ainsi que le correctif la retrouve. Le pavé
+    numérique n'a que ses chiffres et Entrée dans `kNamedKeys` : son « + » ou
+    son « . » écrits « + » ou « Delete » auraient visé la touche du clavier
+    principal, ils sont refusés.
     """
-    if pave and touche in _PAVE:
-        return _PAVE[touche]
+    if pave:
+        return _PAVE.get(touche, "NumEnter" if touche == Qt.Key.Key_Enter else None)
     if touche in _NOMMEES:
         return _NOMMEES[touche]
     if touche in _DROITES:

@@ -84,7 +84,9 @@ def table_echantillons(front: bytes) -> dict[int, tuple[int, ...]]:
 
 
 def _etiquettes(banque: bytes, p: int) -> dict[int, int]:
-    """Les étiquettes d'un en-tête « PT » (valeurs gros-boutistes)."""
+    """Les étiquettes d'un en-tête « PT » (valeurs gros-boutistes). Tronqué, il
+    rend ce qu'il a lu : l'IndexError sortait de `_son_carte` sans un mot au
+    journal, et le décodage était retenté à chaque ouverture (audit du 2026-11-02)."""
     etiquettes: dict[int, int] = {}
     q = p + 4
     while q < len(banque):
@@ -94,6 +96,8 @@ def _etiquettes(banque: bytes, p: int) -> dict[int, int]:
             break
         if t in (0xFC, 0xFD, 0xFE):
             continue
+        if q >= len(banque):
+            break
         taille = banque[q]
         etiquettes[t] = int.from_bytes(banque[q + 1:q + 1 + taille], "big")
         q += 1 + taille
@@ -102,12 +106,14 @@ def _etiquettes(banque: bytes, p: int) -> dict[int, int]:
 
 def echantillon(banque: bytes, numero: int) -> tuple[int, list[int]] | None:
     """L'échantillon `numero` (à partir de 1) : (fréquence, PCM 16 bits mono)."""
-    if banque[:4] != b"BNKl":
+    if banque[:4] != b"BNKl" or len(banque) < 8:
         return None
     total = struct.unpack_from("<H", banque, 6)[0]
     if not 1 <= numero <= total:
         return None
     entree = 0x14 + 4 * (numero - 1)
+    if entree + 4 > len(banque):
+        return None
     p = entree + struct.unpack_from("<I", banque, entree)[0]
     if banque[p:p + 2] != b"PT":
         return None

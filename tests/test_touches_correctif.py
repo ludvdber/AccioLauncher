@@ -173,6 +173,18 @@ class TestAppui:
         from src.ui.editeur_touches import nom_de_touche
         assert nom_de_touche(Qt.Key.Key_7, "7", 0x47, True) == "Num7"
         assert nom_de_touche(Qt.Key.Key_Up, "", 0x48, True) == "Num8"   # verrouillage éteint
+        assert nom_de_touche(Qt.Key.Key_Enter, "\r", 0x11C, True) == "NumEnter"
+
+    def test_les_operateurs_du_pave_sont_refuses(self):
+        """Le correctif ne nomme pas + - * / . du pavé : écrits « + » ou « Delete »,
+        le jeu les aurait pris sur le clavier principal (audit du 2026-11-02)."""
+        from PyQt6.QtCore import Qt
+        from src.ui.editeur_touches import nom_de_touche
+        assert nom_de_touche(Qt.Key.Key_Plus, "+", 0x4E, True) is None
+        assert nom_de_touche(Qt.Key.Key_Asterisk, "*", 0x37, True) is None
+        assert nom_de_touche(Qt.Key.Key_Slash, "/", 0x135, True) is None
+        assert nom_de_touche(Qt.Key.Key_Delete, "", 0x53, True) is None   # « . » verrouillage éteint
+        assert nom_de_touche(Qt.Key.Key_Plus, "+", 0x0D, False) == "+"
         assert nom_de_touche(Qt.Key.Key_Up, "", 0xC8, False) == "Up"
         assert nom_de_touche(Qt.Key.Key_Enter, "\r", 0x11C, True) == "NumEnter"
 

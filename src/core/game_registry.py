@@ -117,7 +117,12 @@ def refus_de_cle(ruche: str, cle: str) -> str | None:
         # Délimiteurs de section d'un .reg : un crochet dans le chemin y ferait
         # n'importe quoi, et le nom de clé résultant serait de toute façon faux.
         return "crochet dans le chemin"
-    segments = [s for s in cle.replace("/", "\\").split("\\") if s]
+    if "/" in cle:
+        # winreg prend « / » pour un caractère du nom de clé ; changé en
+        # antislash pour le seul .reg, il faisait viser deux clés différentes
+        # à l'écriture directe et par le .reg (audit du 2026-11-02).
+        return "barre oblique dans le chemin (séparateur : antislash)"
+    segments = [s for s in cle.split("\\") if s]
     if not segments or segments[0].lower() != "software":
         return "hors de Software"
     if ".." in segments:
@@ -177,7 +182,7 @@ def construire_reg(ruche: str, cle: str, valeurs: Valeurs, vue: int = 32) -> str
         raison = refus_de_valeur(nom, valeur)
         if raison is not None:
             raise ValueError(f"valeur de registre refusée ({raison}) : {nom!r}")
-    segments = [s for s in cle.replace("/", "\\").split("\\") if s]
+    segments = [s for s in cle.split("\\") if s]
     # Ne pas doubler WOW6432Node si le catalogue l'a déjà écrit dans le chemin :
     # on créerait « SOFTWARE\WOW6432Node\WOW6432Node\… », une clé fantôme que le
     # jeu ne lira jamais — et l'échec serait SILENCIEUX.

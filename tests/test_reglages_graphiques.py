@@ -104,6 +104,15 @@ class TestEcriture:
         assert conf.read_bytes() == CONF.encode()
 
 
+    def test_une_section_retiree_n_empeche_pas_la_remise(self, conf):
+        """`_poser` levait ValueError, qui sortait du slot sans message (audit du 2026-11-02)."""
+        rg.ecrire(conf, R["graph_limite"], "30")
+        texte = conf.read_bytes().decode()
+        conf.write_bytes(texte.split("[DirectX]")[0].encode())
+        rg.remettre_origine(conf)
+        assert "FPSLimit                             = 60" in conf.read_bytes().decode()
+
+
 class TestRepliApresEchec:
     """Après « SetRenderTarget failed » : un cran plus bas à la fois (P3-001)."""
 

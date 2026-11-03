@@ -323,8 +323,9 @@ class _Jeux(QWidget):
         self._media = media
         self._boutons: dict[str, QPushButton] = {}
         self._points: dict[str, _PointNouveau] = {}
-        # Musique ou Cinématiques : le compte d'un jeu ne parle que de la
-        # rubrique ouverte, sinon il annonce ce que la liste ne montre pas.
+        # Le compte d'un jeu ne parle que de la rubrique ouverte, sinon il
+        # annonce ce que la liste ne montre pas. Personnages et Bestiaire n'ont
+        # pas de nouveautés : aucun compte (ils gardaient celui de la musique).
         self.rubrique = MUSIQUE
         flux = FlowLayout(self, spacing=8)
         flux.setContentsMargins(0, 0, 0, 0)
@@ -358,7 +359,7 @@ class _Jeux(QWidget):
         b = self._boutons.get(jeu)
         if b is None:
             return
-        n = len(self._media.nouveaux(jeu, self.rubrique))
+        n = len(self._media.nouveaux(jeu, self.rubrique)) if self.rubrique in (MUSIQUE, CINEMATIQUES) else 0
         self._points[jeu].setVisible(bool(n))
         nom = self._etiquettes.get(jeu, self._media.nom(jeu))
         # Le chiffre seul sur la pastille : « 130 nouveaux » sur chacune faisait
@@ -1430,8 +1431,7 @@ class MediathequePage(QDialog):
                 self._encyclo[cle_rubrique].montrer(self.jeu)
         else:
             self._pile.setCurrentWidget(self._musique if musique else self._cinematiques)
-        if cle_rubrique in (MUSIQUE, CINEMATIQUES):
-            self._jeux.rubrique = cle_rubrique
+        self._jeux.rubrique = cle_rubrique
         self._cinematiques.afficher(cle_rubrique == CINEMATIQUES)
         self._musique.afficher(musique)
         self._jeux.compter_tous()

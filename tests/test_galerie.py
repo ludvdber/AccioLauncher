@@ -122,6 +122,16 @@ class TestPage:
         page.filtrer("")
         assert len([v for v in page._vignettes if not v.isHidden()]) == 2
 
+    def test_un_filtre_sans_capture_vide_l_apercu(self, qtbot):
+        """L'aperçu et ses boutons gardaient la capture d'un autre jeu (audit du 2026-11-02)."""
+        _capture(HP4, "a.png", datetime(2026, 9, 3))
+        page = self._page(qtbot)
+        page.filtrer("hp5")
+        assert page.choisie is None and page._titre_jeu.text() == ""
+        assert not page._partager.isEnabled()
+        page.filtrer("")
+        assert page.choisie.chemin.name == "a.png" and page._partager.isEnabled()
+
     def test_le_filtre_resserre_les_vignettes(self, qtbot, mise_en_page_stable):
         """Captures de deux jeux mêlées dans un mois : filtrer ne laisse aucun
         trou noir à la place des cachées (Ludo, 2026-10-24)."""
