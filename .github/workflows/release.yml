@@ -312,13 +312,16 @@ jobs:
         run: python build/linux/glibc_exigee.py dist/AccioLauncher-x86_64.AppImage 2.35 | tee -a "$GITHUB_STEP_SUMMARY"
 
       # Plafond de taille (ACT-017). Mesuré le 2026-10-07 : 64,54 Mo ; 71 Mo
-      # = environ +10 %. Le relever en DISANT pourquoi, jamais en silence.
+      # = environ +10 %. Le relever en DISANT pourquoi, jamais en silence. 80 Mo
+      # depuis la 1.3.2 (72,79 Mo mesurés le 2026-11-03, même Python que la
+      # release) : Qt Quick du fond sur la carte graphique et fonds en haute
+      # définition, comme l'exe.
       - name: Plafond de taille de l'AppImage
         run: |
           octets=$(stat -c %s dist/AccioLauncher-x86_64.AppImage)
-          echo "AccioLauncher-x86_64.AppImage : $((octets / 1000000)) Mo (plafond 71)" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$octets" -gt 71000000 ]; then
-            echo "::error::L'AppImage fait $octets octets, plafond 71 Mo (règles 130 à 132)."
+          echo "AccioLauncher-x86_64.AppImage : $((octets / 1000000)) Mo (plafond 80)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$octets" -gt 80000000 ]; then
+            echo "::error::L'AppImage fait $octets octets, plafond 80 Mo (règles 130 à 132)."
             exit 1
           fi
 
