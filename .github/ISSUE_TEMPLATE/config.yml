@@ -5,9 +5,9 @@
 # liste des modèles et le rapport serait perdu.
 blank_issues_enabled: true
 contact_links:
-  - name: Besoin d'aide ? Passez sur le Discord
+  - name: Need help? Join the Discord / Besoin d'aide ? Passez sur le Discord
     url: https://discord.gg/TNwDQd7KGe
-    about: Un jeu qui ne démarre pas, une question d'installation. C'est là qu'on répond le plus vite.
-  - name: Signaler une faille de sécurité
+    about: A game that won't start, an install question. That's where we answer fastest. / Un jeu qui ne démarre pas, une question d'installation.
+  - name: Report a security issue / Signaler une faille de sécurité
     url: https://github.com/ludvdber/AccioLauncher/security/advisories/new
-    about: En privé, jamais dans une issue publique.
+    about: Privately, never in a public issue. / En privé, jamais dans une issue publique.

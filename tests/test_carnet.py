@@ -45,6 +45,25 @@ class TestCarnet:
         page._pile.currentWidget().ouvrir_folio(jeux[1])
         assert page.rubrique_courante == FOLIO and page.jeu == jeux[1]
 
+    def test_un_jeu_desinstalle_ouvert_depuis_le_releve_le_dit(self, fenetre_carnet):
+        """Son temps de jeu reste au Relevé : le Carnet montrait le folio du jeu
+        choisi avant, sa pastille cochée (audit du 2026-11-02)."""
+        from src.ui.carnet_page import FOLIO, RELEVE
+        from src.ui.title_bar import CARNET
+        win, jeux = fenetre_carnet
+        absent = next(e.game for e in win.manager.get_games()
+                      if e.game.id in folio.JEUX and e.game.id not in jeux)
+        win._on_onglet(CARNET)
+        page = win._pages.page
+        page.rubrique(RELEVE)
+        page._pile.currentWidget().ouvrir_folio(absent.id)
+        assert page.rubrique_courante == FOLIO
+        assert page._pile.currentWidget() is page._vide
+        assert absent.name in page._vide_texte.text()
+        assert not any(b.isChecked() for b in page._boutons.values())
+        page._boutons[jeux[0]].click()
+        assert page._pile.currentWidget() is page._folio and page._folio.game.id == jeux[0]
+
     def test_changer_de_jeu_rebatit_le_folio(self, fenetre_carnet):
         from src.ui.title_bar import CARNET
         win, jeux = fenetre_carnet

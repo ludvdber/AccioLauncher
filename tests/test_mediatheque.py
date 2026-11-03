@@ -634,6 +634,18 @@ class TestVgmstreamALaDemande:
         win._mediatheque.vgmstream.termine.emit(True)
         assert not page._bouton_lecteur.isVisibleTo(page) and page._carte.isVisibleTo(page)
 
+    def test_un_echec_ne_reecrit_pas_un_jeu_qui_ne_l_attend_pas(self, fenetre_avec_jeux, monkeypatch):
+        """Sur HP7 ou HP8, « pas encore lu » devenait « Le téléchargement n'a pas
+        abouti… », sans bouton (audit du 2026-11-02)."""
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp2")
+        page = win._pages.page._musique
+        monkeypatch.setattr(win._mediatheque, "attend_vgmstream", lambda jeu: False)
+        page.montrer("hp2")
+        avant = page._vide.text()
+        win._mediatheque.vgmstream.termine.emit(False)
+        assert page._vide.text() == avant and page._bouton_lecteur.isHidden()
+
 
 class TestChangerDeJeuViteNeMelangeRien:
     def test_les_rangees_du_jeu_precedent_ne_restent_pas_peintes(self, fenetre_avec_jeux, qtbot):

@@ -115,6 +115,20 @@ class TestDescriptionEntreJeux:
                 f"{entry.game.id} : bouton={info._btn_expand.isVisible()} "
                 f"alors que tronqué={tronque}")
 
+    @pytest.mark.parametrize(("texte", "attendu"), [
+        ("Le meilleur ami de Harry et le jeu de la", "Le meilleur ami de Harry et le jeu…"),
+        ("Un sort perdu qui rend la vie aux", "Un sort perdu qui rend la vie…"),
+        ("The boy who lived and the", "The boy who lived…"),
+    ])
+    def test_la_coupe_garde_les_noms_courts(self, make_window, texte, attendu):
+        """Tout mot de 3 lettres en minuscules était retiré : « jeu », « vie »,
+        « roi » aussi (audit du 2026-11-02). Seuls les mots de liaison le sont."""
+        info = make_window()._detail._info
+        info._full_desc = texte + " suite du texte"
+        info._desc_budget = lambda: len(texte)
+        info._apply_desc_truncation()
+        assert info._desc.text() == attendu
+
     def test_la_coupe_tombe_entre_deux_mots(self, make_window, qtbot, mise_en_page_stable):
         """« …de la série. Re… » (HP5, 2026-11-01) : la coupe finit un mot, et
         « Lire la suite » part du même bord que le paragraphe (4 px de retrait Qt)."""

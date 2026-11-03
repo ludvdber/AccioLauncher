@@ -4,7 +4,7 @@ name: étiquettes
 # - Actions → étiquettes → Run workflow : crée ou met à jour les étiquettes de
 #   .github/etiquettes.json (couleur et description comprises ; aucune n'est supprimée).
 # - À l'ouverture ou la modification d'une issue : pose l'étiquette du jeu choisi
-#   dans le formulaire (« Jeu concerné »).
+#   dans le formulaire (« Jeu concerné »), et retire celle d'un autre jeu.
 #
 # Le texte de l'issue vient de n'importe qui : il est LU par jq depuis le fichier
 # de l'événement, jamais recopié dans le script (injection de commandes).
@@ -56,13 +56,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          # Un formulaire rend « ### Jeu concerné », une ligne vide, puis la réponse.
+          # Un formulaire rend « ### Game / Jeu concerné » (« ### Jeu concerné »
+          # avant les modèles bilingues), une ligne vide, puis la réponse.
           reponse=$(jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH" | tr -d '\r' \
-            | awk '/^### Jeu concerné/ { getline; getline; print; exit }')
+            | awk '/^### .*Jeu concerné/ { getline; getline; print; exit }')
           nom=$(jq -r --arg j "$reponse" \
             '.etiquettes[] | select(.jeu != null and .jeu == $j) | .nom' .github/etiquettes.json)
           if [ -z "$nom" ]; then
             echo "Aucun jeu reconnu dans le formulaire : rien à poser."
             exit 0
           fi
-          gh issue edit "$(jq -r .issue.number "$GITHUB_EVENT_PATH")" --add-label "$nom"
+          # Modifiée, l'issue gardait l'étiquette de l'ancien jeu : deux jeux.
+          args=(--add-label "$nom")
+          while IFS= read -r autre; do
+            if [ "$autre" != "$nom" ] && jq -e --arg n "$autre" \
+                'any(.issue.labels[]?; .name == $n)' "$GITHUB_EVENT_PATH" >/dev/null; then
+              args+=(--remove-label "$autre")
+            fi
+          done < <(jq -r '.etiquettes[] | select(.jeu != null) | .nom' .github/etiquettes.json)
+          gh issue edit "$(jq -r .issue.number "$GITHUB_EVENT_PATH")" "${args[@]}"

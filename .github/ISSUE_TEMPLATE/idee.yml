@@ -1,51 +1,51 @@
-name: Proposer une idée
-description: Une fonctionnalité, une amélioration, quelque chose qui vous manque.
-title: "[Idée] "
+name: Suggest an idea / Proposer une idée
+description: A feature, an improvement, something you miss. / Une fonctionnalité, une amélioration, quelque chose qui vous manque.
+title: "[Idea] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Merci ! Une idée s'accepte plus facilement quand on comprend le besoin qui est derrière. *You can write in English.*
+        Thanks! An idea is easier to accept when we understand the need behind it. Write in English or in French. / Merci ! Une idée s'accepte plus facilement quand on comprend le besoin derrière. Écrivez en anglais ou en français.
 
-        Vous voulez traduire le launcher dans votre langue ? C'est un simple fichier texte, sans code : tout est dans [docs/TRANSLATORS.md](https://github.com/ludvdber/AccioLauncher/blob/main/docs/TRANSLATORS.md).
+        Want to translate the launcher into your language? It's a plain text file, no code: everything is in [docs/TRANSLATORS.md](https://github.com/ludvdber/AccioLauncher/blob/main/docs/TRANSLATORS.md). / Traduire le launcher dans votre langue ? Un simple fichier texte, sans code.
 
   # Mêmes réponses, mot pour mot, que bug.yml : elles déclenchent l'étiquette du
   # jeu (.github/etiquettes.json, workflow « étiquettes »).
   - type: dropdown
     id: jeu
     attributes:
-      label: Jeu concerné
+      label: Game / Jeu concerné
       options:
-        - Le launcher lui-même (aucun jeu en particulier)
-        - Harry Potter à l'École des Sorciers
-        - Harry Potter et la Chambre des Secrets
-        - Harry Potter et le Prisonnier d'Azkaban
-        - Harry Potter et la Coupe de Feu
-        - Harry Potter et l'Ordre du Phénix
-        - Harry Potter et le Prince de Sang-Mêlé
-        - Harry Potter et les Reliques de la Mort, partie 1
-        - Harry Potter et les Reliques de la Mort, partie 2
+        - The launcher itself / Le launcher lui-même
+        - Philosopher's Stone / À l'École des Sorciers
+        - Chamber of Secrets / La Chambre des Secrets
+        - Prisoner of Azkaban / Le Prisonnier d'Azkaban
+        - Goblet of Fire / La Coupe de Feu
+        - Order of the Phoenix / L'Ordre du Phénix
+        - Half-Blood Prince / Le Prince de Sang-Mêlé
+        - Deathly Hallows Part 1 / Les Reliques de la Mort, partie 1
+        - Deathly Hallows Part 2 / Les Reliques de la Mort, partie 2
 
   - type: textarea
     id: besoin
     attributes:
-      label: Qu'est-ce qui vous manque ?
-      description: Ce qui vous gêne ou vous manque aujourd'hui, en partant de votre usage.
-      placeholder: "Ex. : je joue sur deux PC, et je dois recopier mes sauvegardes à la main de l'un à l'autre."
+      label: What do you miss? / Qu'est-ce qui vous manque ?
+      description: What bothers you or is missing today, starting from how you use it. / Ce qui vous gêne ou vous manque aujourd'hui, en partant de votre usage.
+      placeholder: "E.g.: I play on two PCs and have to copy my saves by hand from one to the other."
     validations:
       required: true
 
   - type: textarea
     id: proposition
     attributes:
-      label: Ce que vous proposez
-      description: Comment vous verriez la chose. Pas besoin que ce soit technique.
+      label: What you suggest / Ce que vous proposez
+      description: How you would see it. It doesn't need to be technical. / Comment vous verriez la chose. Pas besoin que ce soit technique.
     validations:
       required: true
 
   - type: textarea
     id: en_attendant
     attributes:
-      label: Comment vous faites en attendant
-      description: Facultatif. Un contournement, un autre outil…
+      label: How you manage meanwhile / Comment vous faites en attendant
+      description: Optional. A workaround, another tool… / Facultatif. Un contournement, un autre outil…

@@ -1,75 +1,83 @@
-name: Signaler un bug
-description: Le launcher plante, affiche une erreur ou ne fait pas ce qu'il devrait.
+name: Report a bug / Signaler un bug
+description: The launcher crashes, shows an error or doesn't do what it should. / Le launcher plante, affiche une erreur ou ne fait pas ce qu'il devrait.
 title: "[Bug] "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Merci de prendre le temps de signaler ce problème. *You can write in English.*
+        Thanks for taking the time to report this. Write in English or in French. / Merci de signaler ce problème. Écrivez en anglais ou en français.
 
-        - **Un jeu qui ne démarre pas, une question d'installation ?** Le [Discord](https://discord.gg/TNwDQd7KGe) répond souvent plus vite.
-        - **Une faille de sécurité ?** Ne l'écrivez pas ici, où tout le monde peut la lire : [signalez-la en privé](https://github.com/ludvdber/AccioLauncher/security/advisories/new).
+        - **A game that won't start, an install question?** The [Discord](https://discord.gg/TNwDQd7KGe) usually answers faster. / **Un jeu qui ne démarre pas, une question d'installation ?** Le Discord répond souvent plus vite.
+        - **A security issue?** Don't post it here, everyone can read it: [report it privately](https://github.com/ludvdber/AccioLauncher/security/advisories/new). / **Une faille de sécurité ?** Pas ici : signalez-la en privé.
 
+        **Please attach the launcher report: without it, we can't tell what happened.** / **Joignez le rapport du launcher : sans lui, on ne peut pas savoir ce qui s'est passé.**
+
+  # Mêmes réponses, mot pour mot, que idee.yml et .github/etiquettes.json : elles
+  # déclenchent l'étiquette du jeu (workflow « étiquettes »).
   - type: dropdown
     id: jeu
     attributes:
-      label: Jeu concerné
+      label: Game / Jeu concerné
       options:
-        - Le launcher lui-même (aucun jeu en particulier)
-        - Harry Potter à l'École des Sorciers
-        - Harry Potter et la Chambre des Secrets
-        - Harry Potter et le Prisonnier d'Azkaban
-        - Harry Potter et la Coupe de Feu
-        - Harry Potter et l'Ordre du Phénix
-        - Harry Potter et le Prince de Sang-Mêlé
-        - Harry Potter et les Reliques de la Mort, partie 1
-        - Harry Potter et les Reliques de la Mort, partie 2
+        - The launcher itself / Le launcher lui-même
+        - Philosopher's Stone / À l'École des Sorciers
+        - Chamber of Secrets / La Chambre des Secrets
+        - Prisoner of Azkaban / Le Prisonnier d'Azkaban
+        - Goblet of Fire / La Coupe de Feu
+        - Order of the Phoenix / L'Ordre du Phénix
+        - Half-Blood Prince / Le Prince de Sang-Mêlé
+        - Deathly Hallows Part 1 / Les Reliques de la Mort, partie 1
+        - Deathly Hallows Part 2 / Les Reliques de la Mort, partie 2
     validations:
       required: true
 
   - type: textarea
     id: probleme
     attributes:
-      label: Que s'est-il passé ?
-      description: Ce que vous avez vu, et ce que vous attendiez à la place. Recopiez le message d'erreur s'il y en a un.
-      placeholder: "Ex. : le téléchargement de l'Ordre du Phénix s'arrête à 80 % sur « Échec », alors que ma connexion fonctionne."
+      label: What happened? / Que s'est-il passé ?
+      description: What you saw, and what you expected instead. Copy the error message if there is one. / Ce que vous avez vu, ce que vous attendiez. Recopiez le message d'erreur s'il y en a un.
+      placeholder: "E.g.: the Order of the Phoenix download stops at 80% with \"Failed\", although my connection works."
     validations:
       required: true
 
   - type: textarea
     id: etapes
     attributes:
-      label: Comment le reproduire ?
-      description: Les étapes, dans l'ordre. Si ça n'arrive qu'une fois de temps en temps, dites-le aussi.
+      label: How to reproduce it? / Comment le reproduire ?
+      description: The steps, in order. If it only happens now and then, say so too. / Les étapes, dans l'ordre. Si ça n'arrive que de temps en temps, dites-le aussi.
       placeholder: |
-        1. Ouvrir le launcher
-        2. Cliquer sur…
+        1. Open the launcher
+        2. Click on…
         3. …
 
   - type: textarea
     id: diagnostic
     attributes:
-      label: Informations de diagnostic
+      label: Launcher report / Rapport du launcher
       description: |
-        Dans le launcher : **Paramètres → À propos → Copier les informations de diagnostic**, puis collez ici. On y trouve la version du launcher et de Windows, les jeux installés et les dernières erreurs. Les chemins sont anonymisés : rien de personnel n'y figure.
+        In the launcher: **Settings → About → Copy report**, then paste it here (Ctrl+V). The same button also puts the full report on your Desktop, `Accio Launcher - rapport.txt`: drag that file into this field, it holds the logs too. It contains the launcher and Windows versions, your graphics card, the installed games and the latest errors. Paths are anonymised: nothing personal is in it.
+        If the launcher crashed, the crash window has the same **Copy report** button.
+        If the launcher won't open at all, drag its log file into this field: `%USERPROFILE%\Games\AccioLauncher\_Launcher\logs\accio_launcher.log` (Linux: `~/Games/AccioLauncher/_Launcher/logs/accio_launcher.log`).
 
-        Si le launcher a planté, le rapport de plantage (bouton « Copier le rapport ») fait aussi l'affaire.
+        Dans le launcher : **Paramètres → À propos → Copier le rapport**, puis collez ici (Ctrl+V), ou glissez ici le fichier `Accio Launcher - rapport.txt` que le bouton pose sur votre Bureau. Après un plantage, la fenêtre de plantage a le même bouton. Si le launcher ne s'ouvre plus, glissez ici son journal (chemin ci-dessus).
       render: text
-      placeholder: "Collez ici le bloc copié depuis le launcher."
+      placeholder: "Paste the report copied from the launcher here. / Collez ici le rapport copié depuis le launcher."
+    validations:
+      required: true
 
   - type: textarea
     id: captures
     attributes:
-      label: Captures d'écran
-      description: Facultatif, mais une image en dit souvent plus qu'une description. Glissez-la dans ce champ.
+      label: Screenshots / Captures d'écran
+      description: Optional, but a picture often says more than a description. Drag it into this field. / Facultatif, mais une image en dit souvent plus. Glissez-la dans ce champ.
 
   - type: checkboxes
     id: verifications
     attributes:
-      label: Avant d'envoyer
+      label: Before sending / Avant d'envoyer
       options:
-        - label: J'ai la dernière version du launcher (sa version est affichée dans Paramètres → À propos).
+        - label: I have the latest launcher version (shown in Settings → About). / J'ai la dernière version du launcher (Paramètres → À propos).
           required: true
-        - label: J'ai cherché dans les issues existantes, et ce problème n'y est pas encore.
+        - label: I searched the existing issues and this problem isn't there yet. / J'ai cherché dans les issues existantes, et ce problème n'y est pas encore.
           required: true

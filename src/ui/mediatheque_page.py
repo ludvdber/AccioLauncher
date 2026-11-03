@@ -473,6 +473,10 @@ class _VueMusique(QWidget):
         if ok:
             self.montrer(self._jeu)
             return
+        # Le jeu affiché n'attend pas vgmstream (HP7, HP8) : son texte reste le
+        # sien, il n'a pas de bouton pour réessayer (audit du 2026-11-02).
+        if self._bouton_lecteur.isHidden():
+            return
         self._bouton_lecteur.setEnabled(True)
         self._bouton_lecteur.setText(tr("Réessayer ({})").format(_poids_vgmstream()))
         self._vide.setText(tr("Le téléchargement n'a pas abouti. Vérifiez votre connexion, "

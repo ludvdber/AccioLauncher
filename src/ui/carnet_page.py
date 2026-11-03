@@ -99,7 +99,8 @@ class CarnetPage(QDialog):
         self._vide = _transparent(QWidget())
         v = QVBoxLayout(self._vide)
         v.setContentsMargins(40, 28, 40, 28)
-        v.addWidget(texte(tr("Installez un jeu pour ouvrir son folio."), 16, "#c9c7da", retour=True))
+        self._vide_texte = texte(tr("Installez un jeu pour ouvrir son folio."), 16, "#c9c7da", retour=True)
+        v.addWidget(self._vide_texte)
         v.addStretch()
         self._pile.addWidget(self._vide)
         racine.addWidget(self._pile, stretch=1)
@@ -159,6 +160,7 @@ class CarnetPage(QDialog):
         self._boutons: dict[str, QPushButton] = {}
         jeux = QButtonGroup(self)
         jeux.setExclusive(True)
+        self._groupe_jeux = jeux
         etiquettes = numeros(self._jeux)
         for game in self._jeux:
             b = pastille(game, etiquettes[game.id])
@@ -192,6 +194,7 @@ class CarnetPage(QDialog):
         """Le folio de `jeu` ; le Relevé, lui, ne dépend pas du jeu choisi."""
         game = next((g for g in self._jeux if g.id == jeu), None)
         if game is None:
+            self._sans_folio(jeu)
             return
         if jeu != self.jeu or self._folio is None:
             from src.ui.folio_jeux import page_folio
@@ -213,6 +216,19 @@ class CarnetPage(QDialog):
         elif self._rubrique == DEFIS:
             self._montrer_defis()
 
+    def _sans_folio(self, jeu: str) -> None:
+        """Un jeu désinstallé ouvert depuis le Relevé (son temps de jeu reste
+        connu) : le dire, sans pastille cochée. C'était le folio du jeu choisi
+        avant, sa pastille cochée, sans un mot (audit du 2026-11-02)."""
+        connu = self.manager.get_game_by_id(jeu)
+        self._vide_texte.setText(tr("Installez {} pour ouvrir son folio.").format(
+            connu.name if connu is not None else jeu))
+        self._groupe_jeux.setExclusive(False)
+        for b in self._boutons.values():
+            b.setChecked(False)
+        self._groupe_jeux.setExclusive(True)
+        self._pile.setCurrentWidget(self._vide)
+
     def _retirer_defis(self) -> None:
         """Les défis d'un autre jeu : rebâtis à la prochaine visite."""
         if self._defis is not None:
@@ -232,13 +248,15 @@ class CarnetPage(QDialog):
         self._pile.setCurrentWidget(self._defis)
 
     def _depuis_le_releve(self, jeu: str) -> None:
-        self.montrer(jeu)
         self.rubrique(FOLIO)
+        self.montrer(jeu)
 
     def rubrique(self, cle: str) -> None:
         self._rubrique = cle
         self._rubriques[cle].setChecked(True)
         self._choix.setVisible(cle in _PAR_JEU and bool(self._jeux))
+        if self.jeu in self._boutons:
+            self._boutons[self.jeu].setChecked(True)
         if cle == RELEVE:
             if self._releve is None:
                 from src.ui.stats_dialog import StatsDialog

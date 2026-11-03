@@ -41,6 +41,7 @@ class InstallateurComposants(QObject):
         self._jeu_id = ""
         self._puis_jouer = False
         self._etape = ""
+        self._installation = False
 
     @property
     def en_cours(self) -> bool:
@@ -57,6 +58,7 @@ class InstallateurComposants(QObject):
             return False
         self._jeu_id = game.id
         self._puis_jouer = puis_jouer
+        self._installation = False
         self._fil = InstallationComposants(prerequis, parent=self)
         self._fil.etape.connect(self._on_etape)
         self._fil.avancement.connect(self._on_avancement)
@@ -68,10 +70,17 @@ class InstallateurComposants(QObject):
         return True
 
     def annuler(self) -> None:
-        """Arrête les téléchargements (bouton « Annuler » de la barre du bas)."""
+        """Arrête les téléchargements (bouton « Annuler » de la barre du bas).
+
+        À l'étape d'installation, les installeurs de Microsoft vont au bout une
+        fois l'invite acceptée : le launcher cesse seulement de les attendre, et
+        le dit, au lieu d'annoncer « annulée » (audit du 2026-11-02).
+        """
         if self._fil is not None:
             self._fil.annuler()
-            self.message.emit(tr("Installation des composants annulée."))
+            self.message.emit(tr("Les installeurs de Microsoft déjà lancés vont au bout ; "
+                                 "le launcher ne les attend plus.") if self._installation
+                              else tr("Installation des composants annulée."))
 
     def _on_etape(self, etape: str, noms: str) -> None:
         if etape == "telechargement":
@@ -79,6 +88,7 @@ class InstallateurComposants(QObject):
             texte = tr("Composants Windows : téléchargement de {} depuis Microsoft…").format(noms)
             detail = ""
         else:
+            self._installation = True
             self._etape = tr("Installation de {}").format(noms)
             texte = tr("Composants Windows : installation de {}…").format(noms)
             detail = tr("Acceptez l'autorisation de Windows pour continuer.")

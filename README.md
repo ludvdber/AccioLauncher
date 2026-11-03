@@ -178,10 +178,11 @@ environnement virtuel) produit `dist/AccioLauncher-x86_64.AppImage`.
 ## Besoin d'aide ?
 
 Passez sur le [**Discord**](https://discord.gg/TNwDQd7KGe). Pour qu'on vous
-aide plus vite, ouvrez **Paramètres → À propos** et cliquez sur **Copier les
-informations de diagnostic**, puis collez le résultat dans votre message :
-version du launcher, Windows, jeux installés, dernières erreurs. Rien de
-personnel n'y figure.
+aide plus vite, ouvrez **Paramètres → À propos** et cliquez sur **Copier le
+rapport**, puis collez le résultat dans votre message : version du launcher,
+Windows, jeux installés, dernières erreurs. Le même bouton pose le rapport
+complet sur votre Bureau (`Accio Launcher - rapport.txt`), à joindre tel quel.
+Rien de personnel n'y figure.
 
 Un bug précis, une idée ? Ouvrez une [issue](https://github.com/ludvdber/AccioLauncher/issues).
 
@@ -308,7 +309,8 @@ the fixes cost: domain names, hosting, backups and development tools. It gives a
 [issue](https://github.com/ludvdber/accio-launcher-games/issues) naming it: it is removed within 48 hours.
 
 **Help:** join the [Discord](https://discord.gg/TNwDQd7KGe). In the launcher,
-*Settings → About → Copy diagnostic information* gives us what we need to help.
+*Settings → About → Copy report* gives us what we need to help; it also puts the
+full report on your Desktop (`Accio Launcher - rapport.txt`), ready to attach.
 
 **Translators welcome:** a language is one text file, no code involved — see
 [docs/TRANSLATORS.md](docs/TRANSLATORS.md).

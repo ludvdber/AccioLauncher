@@ -540,14 +540,14 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._maj_prereglage()
             return
         voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
-        ecrit = True
         try:
             for cle, valeur in voulues.items():
                 reglages_correctif.ecrire(self._ini, reglages_correctif.REGLAGES[cle], valeur)
         except (OSError, ValueError):
             log.warning("Correctif : préréglage %s non écrit", ident, exc_info=True)
             self._montrer_erreur()
-            ecrit = False
+        else:   # efface l'erreur d'avant (`isHidden()` la gardait ; audit du 2026-11-02)
+            self._apres_ecriture()
         # Les contrôles reprennent ce que porte le fichier, écrit en entier ou non.
         for cle in voulues:
             widget = self._controles.get(cle)
@@ -555,10 +555,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 self._remettre_controle(widget, reglages_correctif.REGLAGES[cle])
         self._maj_dependances()
         self._maj_prereglage()
-        # Une réussite efface l'erreur d'avant : tester `isHidden()` la gardait
-        # affichée, et « Rétablir » éteint (audit du 2026-11-02).
-        if ecrit:
-            self._apres_ecriture()
 
     @staticmethod
     def _zone_de(widget: QWidget | None) -> QScrollArea | None:
@@ -876,8 +872,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._maj_dependances()
             self._maj_prereglage()
             return
-        # Avant l'exclusion : l'erreur qu'elle peut montrer était aussitôt effacée.
-        self._apres_ecriture()
+        self._apres_ecriture()   # avant l'exclusion, dont l'erreur était aussitôt effacée
         self._appliquer_exclusion(reglage, valeur)
         self._maj_dependances()
         self._maj_prereglage()
@@ -891,5 +886,4 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._bouton_reset.setEnabled(reglages_correctif.a_une_origine(self._ini))
             self._bouton_reset.setToolTip(tr("Remet image, commandes et performances "
                                              "comme à l'installation du jeu."))
-        if not self._erreur.isHidden():
-            self._erreur.hide()
+        self._erreur.hide()

@@ -39,6 +39,16 @@ _HAUTEUR_SLACK = 8
 # Écart entre le bouton principal et la ligne « JOUABLE À LA MANETTE · VERSION 1.3 ».
 _ECART_INDICES = 12
 _HAUTEUR_ECART_PLEIN = 760
+# Mots sur lesquels une description ne s'arrête pas (« …de potions et le… ») :
+# articles, conjonctions et prépositions des langues de l'interface. Une liste,
+# pas « trois lettres en minuscules » : « jeu », « vie », « roi » se coupaient
+# aussi (audit du 2026-11-02).
+_MOTS_DE_LIAISON = frozenset("""
+    le la les un une des du de au aux et ou ni à en par pour sur sans dans avec que qui
+    mais car donc dont son sa ses leur leurs ce cet cette ces
+    a an the and or nor but of to in on at by for with from as his her its their
+    el los las unos unas y e o u del al con por para sin pero su sus
+""".split())
 
 
 def _colonne_stat(libelle: str, valeur: QLabel) -> QWidget:
@@ -225,7 +235,7 @@ class InfoPanel(QWidget):
             # Ni sur un article ni sur une conjonction : « …de potions et le… ».
             for _ in range(2):
                 tete, _, dernier = coupe.rstrip(" ,;:.—-").rpartition(" ")
-                if tete and len(dernier) <= 3 and dernier.islower():
+                if tete and dernier in _MOTS_DE_LIAISON:
                     coupe = tete
             self._desc.setText(coupe.rstrip(" ,;:.—-") + "…")
             self._btn_expand.setText(tr("Lire la suite…"))

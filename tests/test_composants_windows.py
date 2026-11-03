@@ -309,3 +309,19 @@ def test_rien_a_installer_ne_demarre_rien(qtbot):
     inst = InstallateurComposants()
     assert not inst.demarrer(SimpleNamespace(id="hpx"), ["inconnu"], False)
     assert not inst.en_cours
+
+
+def test_annuler_pendant_l_installation_ne_dit_pas_annulee(qtbot):
+    """Une fois l'invite acceptée, les installeurs de Microsoft vont au bout :
+    « annulée » était faux à cette étape (audit du 2026-11-02)."""
+    from src.ui.installateur_composants import InstallateurComposants
+    inst = InstallateurComposants()
+    messages = []
+    inst.message.connect(messages.append)
+    inst._fil = SimpleNamespace(annuler=lambda: None)
+    inst.annuler()
+    assert messages[-1] == "Installation des composants annulée."
+    inst._on_etape("installation", "DirectX")
+    inst.annuler()
+    assert "vont au bout" in messages[-1]
+    inst._fil = None
