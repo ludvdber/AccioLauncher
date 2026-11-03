@@ -777,14 +777,10 @@ class InfoPanel(QWidget):
         self.content_changed.emit()
 
     def _fait_manette(self, game: GameData) -> str:
-        """La manette en pictogramme (maquette « Plan du launcher v2 », Ludo
-        2026-10-26 : « parfait ») ; « sans manette » en toutes lettres. Le
-        libellé complet, « en partie » compris, est en infobulle."""
+        """Pictogramme pour « oui » et « en partie », « Sans manette » en toutes
+        lettres ; la nuance est dans l'infobulle."""
         if game.controller == "no":
             return _insecable(escape(tr("Sans manette"), quote=False))
-        # « En partie » (HP2) n'est plus écrit à côté : il alourdissait la
-        # ligne pour un détail de la fenêtre de démarrage (Ludo, 2026-10-27).
-        # La nuance et sa raison restent dans l'infobulle.
         return _image_en_ligne("#b4b4d0", self.devicePixelRatioF())
 
     def _refresh_indices(self, game: GameData) -> None:

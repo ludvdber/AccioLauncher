@@ -21,11 +21,8 @@ simplement hors des cours, et la scolarité ne bouge pas.
 ② **Une année peut porter plusieurs jeux.** Les deux parties des Reliques de la
 Mort sont la même septième année, celle qui ne s'est pas passée à Poudlard.
 
-③ **On ne prétend pas savoir qu'un jeu est TERMINÉ.** Le launcher ne le sait
-pas — il n'y a ni succès ni lecture des sauvegardes aujourd'hui. L'année en
-cours est donc la plus haute année COMMENCÉE, ce qui est observable et vrai.
-Le jour où la progression se lira dans les sauvegardes ([[project_saves_
-progression]]), `annee_courante` en tiendra compte sans que l'affichage change.
+③ **On ne prétend pas savoir qu'un jeu est TERMINÉ.** L'année en cours est la
+plus haute année COMMENCÉE, ce qui est observable et vrai.
 """
 
 from dataclasses import dataclass

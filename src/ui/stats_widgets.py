@@ -1,4 +1,5 @@
-"""Les pièces de « Mes années à Poudlard » : les mois, les cartes de sauvegarde et leurs petites fonctions de mise en forme. Sorti de `stats_dialog` le 2026-10-03 (1 062 lignes) ; la fenêtre les assemble.
+"""Les pièces du Relevé : le graphique des mois, les paragraphes et les formats
+de durée ; `stats_dialog` les assemble.
 """
 from datetime import date
 from PyQt6.QtCore import QLocale, QRectF, Qt

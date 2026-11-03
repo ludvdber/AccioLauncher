@@ -169,7 +169,8 @@ class GameDetailView(QWidget):
         self._action_panel.preparation_requested.connect(
             lambda: handlers.proposer_preparation(self, self.game, puis_jouer=False))
 
-        # Préparation de Wine (Linux) : l'état dans la barre de statut, la
+        # Composants manquants (Wine sous Linux, Microsoft sous Windows) : l'état
+        # dans la barre de statut, la
         # suite (lancer, prévenir, expliquer) dans les handlers.
         self._wine.message.connect(self.status_message)
         self._wine.terminee.connect(self._on_wine_prepare)
@@ -569,7 +570,7 @@ class GameDetailView(QWidget):
         self._ops.cancel_all()
         self._wine.shutdown()
 
-    # ──────────────────── Préparation de Wine (Linux) ────────────────────
+    # ──────────────────── Composants manquants (Wine, Microsoft) ────────────────────
 
     @property
     def preparation_en_cours(self) -> bool:

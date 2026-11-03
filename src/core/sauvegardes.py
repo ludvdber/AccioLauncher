@@ -267,7 +267,7 @@ def emplacements_hp4(entete: bytes) -> list[Emplacement]:
 
     Relevé sur une vraie sauvegarde (2026-09-30) : magie `20CM`, puis trois
     fiches de 0xAC octets. Dans chacune, la date « 28/09/2026 » à +0x6C, l'heure
-    « 12:23:58 » à +0x8C, et deux entiers à +0xAC (classement, niveau) qui
+    « 12:23:58 » à +0x8C, et deux entiers à +0xAC (rang, boucliers, VUS contre l'écran) qui
     valent -1 et -1 pour un emplacement vide — c'est ce qu'affiche le jeu
     (« Vide »). Tout écart de format rend une liste vide, jamais une exception :
     le jeu se lance quand même, les statistiques n'affichent rien de faux.

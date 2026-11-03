@@ -1,6 +1,6 @@
 """Les rubriques Personnages et Bestiaire des Collections.
 
-Option 1 retenue par Ludo le 2026-10-26 : des fiches de texte d'abord (nom,
+Des fiches de texte d'abord (nom,
 rôle ou lieu, description), une image seulement quand le jeu en a une propre,
 un emblème sinon (`core/encyclopedie.py` dit lesquelles). Le choix du jeu est
 celui de la page, en haut, commun à toutes les rubriques.
@@ -11,14 +11,13 @@ une carte de HP4 se décode en quelques dizaines de millisecondes, d'où un fil
 ne rend que des octets B V R A : la QImage se fait ici, dans le fil de
 l'interface.
 
-Les fiches de HP1 et HP2 ont aussi leur modèle 3D (`maillages_ue1`) : la fiche
-choisie s'affiche dans une colonne FIXE à droite, dans une visionneuse qu'on
-fait tourner (`modele_3d`), et une fiche sans image reçoit le rendu de son
-modèle en vignette, une par tour de minuteur pour ne pas figer la page. En
-haut de la liste jusqu'au 2026-10-27 : il fallait descendre choisir une fiche
-puis remonter la voir (Ludo, comme le Folio Universitas).
+Les fiches de HP1 à HP3, HP5 et HP6 ont aussi leur modèle 3D (`maillages_ue1`,
+`maillages_ue2`, `maillages_fpm`) : la fiche choisie s'affiche dans une colonne
+FIXE à droite, dans une visionneuse qu'on fait tourner (`modele_3d`), et une
+fiche sans image reçoit le rendu de son modèle en vignette, une par tour de
+minuteur pour ne pas figer la page.
 
-Les fiches s'ouvrent avec l'histoire, comme la musique (Ludo, 2026-10-27) :
+Les fiches s'ouvrent avec l'histoire, comme la musique :
 une fiche fermée garde sa place, sans nom ni image ni modèle, avec le
 pourcentage qui l'ouvre ; à 75 % tout le jeu est ouvert.
 """

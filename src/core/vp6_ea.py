@@ -5,8 +5,8 @@ par bloc, `MV0K` pour une image complète, `MV0F` pour une image qui ne dit que
 ce qui change depuis la précédente. Il n'a pas d'index : le lecteur (FFmpeg)
 qui saute au milieu tombe sur une image partielle et décode du bruit, des
 pavés verts et roses jusqu'à la fin (Ludo, 2026-10-27, reproduit sur
-`ns01.vp6` de HP6). Les images complètes sont espacées de 4 s chez HP5 et
-HP6, de 0,4 s chez HP4 ; HP7 et HP8 n'en ont qu'une, la première.
+`ns01.vp6` de HP6). Les images complètes sont espacées de 4 s chez HP5,
+HP6 et HP8, de 0,4 s chez HP4 ; chez HP7, irrégulièrement (de 10 à 49 s).
 
 Le remède : une copie qui commence à l'image complète la plus proche AVANT le
 point voulu, jouée depuis son début. Le lecteur rattrape le reste en avance

@@ -28,10 +28,9 @@ from src.ui.utils import clear_layout
 # largeur-là — deux valeurs qui divergent, et la note se fait rogner.
 _COMING_SOON_W = 300
 
-# Bornes du bouton d'action principal. Il s'élargit avec son libellé (la durée
-# estimée n'apparaît qu'après un premier téléchargement) mais reste imposant
-# quand le libellé est court, et ne dépasse jamais la moitié d'un panneau
-# d'info de 700 px.
+# Bornes du bouton d'action principal. Il suit son libellé (les traductions
+# s'allongent) mais reste imposant quand il est court, et ne dépasse jamais la
+# moitié d'un panneau d'info de 700 px.
 _BOUTON_MIN_W = 240
 _BOUTON_MAX_W = 460
 _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
@@ -56,18 +55,13 @@ class ActionPanel(QWidget):
     play_clicked = pyqtSignal()
     update_clicked = pyqtSignal()
     settings_requested = pyqtSignal()   # « Changer de dossier » depuis l'alerte disque
-    preparation_requested = pyqtSignal()  # « Installer » un composant dans Wine (Linux)
-    # Engrenage « Réglages du jeu », à côté des boutons d'un jeu installé. La
-    # langue vivait UNIQUEMENT dans la ligne méta, en doré et sans pictogramme :
-    # elle s'y lit très bien, mais rien ne dit qu'on peut cliquer dessus. Un
-    # réglage qu'il faut deviner n'existe pas. L'engrenage est aussi le point
-    # d'entrée des réglages graphiques à venir — d'où un menu, et non un
-    # second sélecteur de langue.
+    # « Installer » les composants manquants (Windows : installateur intégré ;
+    # Linux : préfixe Wine).
+    preparation_requested = pyqtSignal()
+    # Engrenage : les réglages du jeu (langue, image, touches…).
     game_settings_clicked = pyqtSignal()
     # Les Collections du jeu (musique, cinématiques, captures) : deux
-    # pictogrammes à côté de l'engrenage. Un galet « Collections » sous le
-    # bouton jusqu'au 2026-10-27 (Ludo : « plus petit, une icône musique et
-    # images serait top »).
+    # pictogrammes à côté de l'engrenage.
     medias_clicked = pyqtSignal()
     # L'onglet « Difficulté » (1.4, Ludo 2026-10-30), dernier de la rangée.
     # ABSENT là où aucun preset ne change encore rien : grisé sur HP3, il
@@ -277,11 +271,8 @@ class ActionPanel(QWidget):
         btn.setObjectName("btnDownload")
         btn.setAccessibleName(tr("Installer {}").format(self._game.name) + f" ({detail})")
         btn.setFont(_police_action())
-        # Largeur SUIVIE SUR LE CONTENU, et non figée à 300 px. Le libellé
-        # portait une durée estimée après un premier téléchargement, et il
-        # réclamait alors jusqu'à 403 px : le texte débordait des deux côtés du
-        # cadre (« CHARGER — 463 Mo · ≈ ~19s resta »). Les traductions, elles,
-        # peuvent toujours s'allonger.
+        # Largeur SUIVIE SUR LE CONTENU (libellé + détail) : les traductions
+        # s'allongent.
         btn.setFixedSize(self._largeur_bouton(libelle, _police_action(),
                                               detail, body_font(14)), 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)

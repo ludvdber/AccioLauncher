@@ -1,13 +1,10 @@
 """Le Carnet : ce qui se lit dans les sauvegardes, en rubriques.
 
-Rangement du 2026-10-24 (maquette « Collections », Ludo : « on ne peut pas
-avoir des onglets à l'infini », puis « mes années ne signifie plus rien »).
-L'onglet « Mes années » devient le Carnet : le Folio d'abord (Ludo : « le folio
-en priorité »), puis le Relevé de scolarité. Une idée qui se lit dans les
-sauvegardes (grimoire des sorts, cartes réunies) viendra ici en rubrique, pas
-dans un onglet de plus.
+Trois rubriques : le Folio d'abord, les Défis, puis le Relevé de scolarité. Une
+idée qui se lit dans les sauvegardes viendra ici en rubrique, pas dans un
+onglet de plus.
 
-Les deux rubriques sont les pages d'avant (`folio_jeux.page_folio`,
+Folio et Relevé sont les pages d'avant (`folio_jeux.page_folio`,
 `stats_dialog.StatsDialog`), posées en mode intégré : le Carnet porte le
 retour, le titre, les rubriques et le choix du jeu. Chacune est bâtie à la
 première visite ; le folio est rebâti quand le jeu change.

@@ -13,7 +13,7 @@ Ici vit tout ce que la fenêtre aurait dû porter (plafond de `main_window`) :
   visibles de partout. Un clic sur le disque ouvre la page.
 
 Les raccourcis : l'onglet du haut (pastille or quand quelque chose s'est
-ouvert), le mini-lecteur, et le lien « Musique » de la fiche d'un jeu.
+ouvert), le mini-lecteur, et le bouton Collections de la fiche d'un jeu.
 """
 
 import logging
@@ -64,7 +64,7 @@ def _jeux_avec_musique() -> frozenset[str]:
 
 
 def a_de_la_musique(jeu: str) -> bool:
-    """Le bouton de la fiche dit « Musique », sinon « Cinématiques » (HP7, HP8)."""
+    """Le bouton de la fiche montre l'icône musique, sinon la pellicule (HP7, HP8)."""
     return jeu in _jeux_avec_musique()
 
 

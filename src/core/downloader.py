@@ -126,8 +126,8 @@ class Downloader(QThread):
     def _verify_sha256(self, path: Path, expected: str | None) -> bool:
         """Vérifie l'empreinte d'un fichier complet (relecture intégrale).
 
-        Ne sert plus qu'aux parts déjà en cache — les téléchargements frais sont
-        hachés incrémentalement pendant le stream (aucune pause à 100 %).
+        Pour un fichier déjà complet sur le disque (archive ou part en cache,
+        part héritée) ; les téléchargements frais sont hachés pendant le flux.
         """
         if not expected:
             return True

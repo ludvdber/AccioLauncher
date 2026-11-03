@@ -1,16 +1,7 @@
-"""Le folio de HP2 à HP6, en PAGE, sur le modèle de celui de HP1.
-
-Maquettes du canevas « Folios HP3, HP5, HP6 » (2026-10-15), validées par Ludo
-(« pour le moment les maquettes vont bien »). Même rail des parties à gauche
-(`FolioPage`), le corps change par jeu ; tout est LU dans les sauvegardes
-(`core/folio_hp3.py`, `folio_hp4.py`, `folio_hp5.py`, `folio_hp6.py`) et dans le jeu installé
-(noms, descriptions et images des cartes de HP3, noms des sorts et des quêtes de
-HP4), rien n'est recopié. La page HP4 n'a pas de maquette validée : elle reprend
-les tuiles et les cadres des autres.
-
-HP3 range ses 80 cartes par série, comme le folio du jeu : une série de 15
-prend une rangée entière (10 + 5), deux séries de 5 se partagent une rangée,
-et toutes les cases restent alignées sur dix colonnes.
+"""Les pages du folio de HP2 à HP8, sur le modèle de celle de HP1 (`FolioPage`,
+dont elles héritent le rail des parties). Tout est lu dans les sauvegardes
+(`core/folio_hp*.py`) et dans le jeu installé ; seuls les noms des sorts de HP6
+sont écrits ici (`_SORTS_HP6`). Détail : ARCHITECTURE_UI.md.
 """
 
 import unicodedata

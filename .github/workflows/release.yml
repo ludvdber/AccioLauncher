@@ -140,14 +140,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # Plafond de taille (ACT-017) : les règles 90 et 94 sont nées de gonflements
-      # de l'exécutable, qu'aucune machine ne voyait. Mesuré le 2026-10-07 :
-      # 42,46 Mo (+0,2 Mo en 4 releases ; Mo = million d'octets). 47 Mo = environ +10 % ; le relever en
-      # DISANT pourquoi, jamais en silence.
-      # Relevé à 56 Mo pour la 1.3.0 (2026-10-27) : 43,09 Mo en 1.2.3, 52,90 Mo en 1.3.0. Voulu :
-      # vgmstream, la musique de HP5 et HP6 (4,3 Mo compressés), médailles, polices et données des
-      # Collections (1,8 Mo), le reste : code neuf, Python 3.15, truststore. Environ +6 % de marge.
-      # 1.3.1 : vgmstream sort de l'exe (téléchargé à la première écoute) : 48,40 Mo mesurés en local
-      # le 2026-10-28. Le plafond reste à 56 jusqu'à la mesure du build de la CI.
+      # de l'exécutable, qu'aucune machine ne voyait. Le relever en DISANT pourquoi,
+      # jamais en silence. 56 Mo depuis la 1.3.0 (52,90 Mo) ; 1.3.1 : 48,40 Mo en
+      # local, vgmstream sorti de l'exe. La taille de chaque build est dans le résumé.
       - name: Plafond de taille de l'exécutable
         shell: pwsh
         run: |

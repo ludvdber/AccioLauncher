@@ -1,39 +1,17 @@
 """La taille de l'image de HP1 et HP2 : la plus grande que l'écran permet, ou celle choisie.
 
-Idée validée par Ludo (2026-10-01, puis 2026-10-03 : « la résolution de l'écran
-par défaut dans le ini avec possibilité de modifier par la suite »). Le modèle
-livré met HP2 en 1024×768 ou 1920×1080 selon l'archive, quel que soit l'écran :
-sur un écran 1440p, le jeu tournait dans un coin, ou étiré par Windows.
+Règles (mesures et récit : ARCHITECTURE_CORE.md) :
 
-**Ce que le moteur lit, VU en jeu le 2026-10-01** : HP1 et HP2 prennent la
-taille de leur image dans `[WinDrv.WindowsClient] WindowedViewportX/Y` (HP.ini /
-Game.ini). Les clés viennent du CATALOGUE (`resolution`), pas d'ici : un jeu
-qui en déclare d'autres n'a pas besoin d'une release.
-
-**La fenêtre a un CADRE, VU le 2026-10-07** (HP1, écran 2560×1440 à 125 %) :
-`Borderless=True` n'est pas lu par ce `d3d11drv.dll` (le mot n'y figure pas),
-et le moteur ouvre une fenêtre à barre de titre en (0, 0). Une image à la
-taille de l'écran donnait une fenêtre de 2578×1487 : 47 px sous le bas de
-l'écran, la barre des tâches par-dessus. La taille par défaut est donc la
-ZONE DE TRAVAIL (l'écran moins la barre des tâches) moins le cadre, que
-Windows calcule lui-même pour la mise à l'échelle de l'écran
-(`AdjustWindowRectExForDpi` : +18 × +47 à 125 %, exactement la mesure) :
-2542×1345 sur cet écran. Le format n'est plus 16:9, et ce n'est pas un
-problème : le rendu D3D11 ajuste le champ de vision (`AutoFOV=True`).
-
-**Écrite à CHAQUE lancement**, comme les `ini_patches`. C'est voulu, pour deux
-raisons mesurées : Alt+Entrée dans HP2 écrit 2560×1440 dans Game.ini (fenêtre
-de 2578×1487, sous la barre des tâches, 2026-10-01), et le menu vidéo du jeu
-change ces clés. Le lancement suivant remet ce que la personne a choisi ICI.
-
-**Jamais le plein écran** : `StartupFullscreen` n'est pas touché (CLAUDE.md :
-ne jamais passer `StartupFullscreen=True`), à cause du changement de mode qui
-plante HP1 à l'Alt+Tab.
-
-**Jamais plus grand que la place disponible** : un choix fait sur un écran 4K
-et relu sur un portable 1080p ouvrirait une fenêtre qui déborde. On replie
-alors sur la place disponible, sans effacer le choix — il revaudra sur le
-grand écran.
+- les clés viennent du CATALOGUE (`resolution`, `[WinDrv.WindowsClient]
+  WindowedViewportX/Y` chez HP1 et HP2), pas d'ici ;
+- **écrite à CHAQUE lancement**, comme les `ini_patches` : Alt+Entrée et le
+  menu vidéo du jeu changent ces clés ;
+- **jamais le plein écran** (`StartupFullscreen` n'est pas touché) ;
+- par défaut, l'écran entier quand le correctif remplit l'écran (`FillScreen`,
+  `place_pour`), sinon la zone de travail moins le cadre de la fenêtre
+  (`AdjustWindowRectExForDpi`) ;
+- **jamais plus grand que la place disponible** : on replie, sans effacer le
+  choix, qui revaudra sur le grand écran.
 """
 
 import logging

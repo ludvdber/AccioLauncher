@@ -3,7 +3,7 @@ Détendu, Normal, Difficile, Hardcore, et deux presets à une seule vie, Réalis
 et Impardonnable.
 
 Tranché par Ludo le 2026-10-30 (atelier, `notes/DIFFICULTE_1.4.md` § 4) : des
-presets aux noms clairs, et « Sur mesure » dans des réglages à dérouler. Un
+presets aux noms clairs, et « Sur mesure » (les réglages un par un sous les presets). Un
 preset n'est qu'un jeu de valeurs pour des réglages qui existent déjà : ceux du
 correctif (`[Accio.Hardcore]`, le Quidditch de HP1/HP2) et la difficulté
 propre du jeu (`difficulte_jeu`, HP2). Rien de neuf n'est écrit ailleurs.
@@ -24,7 +24,7 @@ n'existe encore dans aucun jeu : ces presets se montrent « bientôt » tant que
 Ce que dit un preset pour un jeu se CALCULE depuis les réglages (libellé et
 choix affichés) : une phrase écrite à la main finirait par mentir.
 
-Le niveau de défi (cadran de la page, maquette validée par Ludo le 2026-10-31)
+Le niveau de défi (cadran de l'onglet Difficulté, maquette validée par Ludo le 2026-10-31)
 va de 0 à 100. Chaque preset a son cran fixe (`NIVEAUX`), le même dans tous les
 jeux ; du sur mesure se place entre les crans des presets du jeu, d'après la
 « rigueur » de ses réglages, et le plus dur que le jeu permet vaut 100. Aucun

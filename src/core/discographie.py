@@ -1,8 +1,7 @@
 """La discographie : quels morceaux le joueur a débloqués, et lesquels sont nouveaux.
 
-Demandé par Ludo le 2026-10-24 : les musiques s'ouvrent au fil de la partie,
-tout le jeu s'ouvre à 75 % (« le 100 % est peut-être compliqué »), et une
-petite marque dit ce qui vient de s'ouvrir.
+Les musiques s'ouvrent au fil de la partie, tout le jeu à 75 %, et une petite
+marque dit ce qui vient de s'ouvrir.
 
 **Les morceaux et leur seuil** viennent de `src/data/discographie.json`,
 EMBARQUÉ, généré depuis l'artefact « Discographie » où Ludo valide titres et
@@ -15,11 +14,14 @@ c'est la partie la PLUS avancée qui compte :
 - HP2 et HP3 écrivent l'étape de l'histoire (`CurrentGameState`,
   « GSTATE010 ») ; le pourcentage est son rang parmi les étapes du jeu,
   relevées dans `system/*.u` (25 pour HP2, 16 pour HP3) ;
-- HP1 n'écrit que le niveau : son rang dans l'ordre de l'histoire.
+- HP1 n'écrit que le niveau : son rang dans l'ordre de l'histoire ;
+- un jeu qui écrit lui-même son pourcentage (HP5) le donne tel quel ; HP4 à
+  HP6 ont aujourd'hui tous leurs seuils à 0.
 
-**Les morceaux vus** (`_Launcher/musiques_vues.json`) : un morceau débloqué
-qui n'y est pas encore est NOUVEAU ; la page Musique le note vu quand elle
-montre le jeu. Aucune fonction ne lève.
+**Les morceaux vus** (`_Launcher/musiques_vues.json`, partagé avec les
+cinématiques vues sous `hpX:cinematiques`) : un morceau débloqué qui n'y est
+pas encore est NOUVEAU ; la Médiathèque le note vu quand elle montre le jeu.
+Aucune fonction ne lève.
 """
 
 import json

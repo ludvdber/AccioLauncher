@@ -1,4 +1,5 @@
-"""Lire une texture dans un paquet Unreal 1 du jeu INSTALLÉ (HP1 à HP3).
+"""Lire une texture dans un paquet Unreal du jeu INSTALLÉ (HP1 à HP3), et les
+objets que lisent les modèles 3D (`maillages_ue1`, `maillages_ue2`).
 
 Et les propriétés d'un objet de sauvegarde (`proprietes`) : l'acteur Harry de
 HP1, les gestionnaires de HP3 (paquet Unreal 2, version 129). Dans un paquet

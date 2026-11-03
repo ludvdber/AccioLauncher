@@ -1,10 +1,8 @@
 """Le choix du jeu en haut du Carnet et des Collections : jaquette et année.
 
-Audit du 2026-10-24 sur captures : les huit noms complets en pastilles
-prenaient deux lignes sous le titre (« Les Reliques de la Mort — Partie 1 »),
-au-dessus d'un folio qui redit déjà le nom du jeu. Une pastille porte
-maintenant la jaquette et l'année de scolarité en chiffre romain, comme le
-Relevé ; le nom complet est dans l'infobulle et le nom accessible. Les deux
+Les noms complets prenaient deux lignes au-dessus d'un folio qui redit déjà le
+nom du jeu : une pastille porte la jaquette et l'année en chiffre romain, comme
+le Relevé ; le nom complet est dans l'infobulle et le nom accessible. Les deux
 parties des Reliques partagent la septième année : « VII · 1 » et « VII · 2 ».
 """
 

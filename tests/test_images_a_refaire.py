@@ -26,11 +26,18 @@ class TestLaRegle:
         from PyQt6.QtGui import QImageReader
 
         from src.core.config import ASSETS_DIR
-        from src.core.images_a_refaire import TAILLE_AVANT_AGRANDISSEMENT
+        from src.core.images_a_refaire import taille_a_juger
         for jeu in ("hp3", "hp5"):
-            assert fond_a_refaire(*TAILLE_AVANT_AGRANDISSEMENT[jeu])
             taille = QImageReader(str(ASSETS_DIR / "backgrounds" / f"{jeu}_bg.jpg")).size()
-            assert taille.width() > TAILLE_AVANT_AGRANDISSEMENT[jeu][0], "le fichier est bien l'agrandi"
+            assert fond_a_refaire(*taille_a_juger(jeu, (taille.width(), taille.height())))
+
+    def test_un_fond_remplace_se_juge_sur_lui_meme(self):
+        """Un vrai fond 3840 × 2160 livré par un artiste ne doit plus être jugé
+        sur la taille d'origine de l'agrandi qu'il remplace."""
+        from src.core.images_a_refaire import taille_a_juger
+        assert taille_a_juger("hp5", (3840, 2160)) == (3840, 2160)
+        assert not fond_a_refaire(*taille_a_juger("hp5", (3840, 2160)))
+        assert taille_a_juger("hp5", (3396, 1096)) == (849, 274)
 
     def test_dans_l_ordre_du_catalogue(self):
         tailles = {"a": ((1024, 1024), (1920, 1080)), "b": ((1080, 1500), (900, 400))}

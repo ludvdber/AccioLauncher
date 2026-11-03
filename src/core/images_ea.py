@@ -1,8 +1,9 @@
 """Les images des jeux EA (HP4 à HP6) : archives « BIGF », blocs « SHPI », DXT.
 
 Qt ne lit pas le DXT (vérifié : rien de tel dans `QImageReader.supportedImageFormats`),
-d'où ce petit décodeur, en Python pur : les images du folio sont peu nombreuses,
-et un niveau de mip réduit (128 × 128) suffit à une vignette.
+d'où ce petit décodeur, en Python pur. Il sert aux images du folio (512 px
+chez HP4), aux textures des modèles 3D (512 px) et aux textures UE2 (jusqu'à
+2048 px) : c'est le gros du chargement d'un modèle.
 
 Un bloc SHPI (relevé le 2026-10-17 sur HP5 et HP6, notes « Format des images ») :
 

@@ -1,13 +1,7 @@
 """Lecture et écriture des valeurs de registre d'un jeu (Windows uniquement).
 
-Pourquoi un module à part
-=========================
-`post_install.apply_registry` est un stub aux défauts prouvés (valeur par défaut
-au lieu de valeurs nommées, HKLM silencieusement redirigé vers HKCU, vue 64 bits).
-Le besoin réel qui l'a rattrapé n'est d'ailleurs PAS un besoin d'installation :
-HP7 lit sa LANGUE dans le registre, et la langue est une **préférence du joueur**,
-qui doit pouvoir changer sans réinstaller. Elle s'écrit donc au LANCEMENT, d'après
-un choix stocké par jeu, et pas une fois pour toutes après l'extraction.
+HP7 lit sa LANGUE dans le registre : une préférence du joueur, écrite au
+LANCEMENT d'après un choix stocké par jeu, pas à l'installation (règle 74).
 
 Trois contraintes, relevées sur une vraie installation le 2026-08-21
 ====================================================================

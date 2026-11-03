@@ -8,7 +8,6 @@ from src.core.formatting import (
     append_part_info,
     format_bytes,
     format_eta,
-    format_playtime,
     format_progress_line,
     format_relative_date,
     format_size,
@@ -46,24 +45,6 @@ class TestUnitsI18n:
         set_language("en")
         assert format_speed(5 * 1024 * 1024) == "5.0 MB/s"
         assert format_speed(200 * 1024) == "200 KB/s"
-
-
-class TestFormatPlaytime:
-    def test_minutes(self):
-        assert format_playtime(45 * 60) == "45 min de jeu"
-
-    def test_minimum_one_minute(self):
-        assert format_playtime(15) == "1 min de jeu"
-
-    def test_hours_with_minutes(self):
-        assert format_playtime(90 * 60) == "1 h 30 min de jeu"
-
-    def test_round_hours(self):
-        assert format_playtime(2 * 3600) == "2 h de jeu"
-
-    def test_many_hours_drop_minutes(self):
-        # Au-delà de 10 h, les minutes n'apportent rien
-        assert format_playtime(14 * 3600 + 25 * 60) == "14 h de jeu"
 
 
 class TestFormatRelativeDate:

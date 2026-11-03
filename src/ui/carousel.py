@@ -242,13 +242,8 @@ class Carousel(QWidget):
             self.select((self._current_index - 1) % len(self._items))
 
     def _appliquer_taille_vignette(self) -> None:
-        """Redimensionne les vignettes pour qu'elles TIENNENT dans la bande.
-
-        Sans ça, la taille de l'item et la hauteur de la bande étaient deux
-        constantes indépendantes : la sélectionnée réclamait 180 px pour 160
-        disponibles et se faisait rogner de 27 px EN PERMANENCE, et le mode
-        compact (124 px) rognait les huit, de 33 à 63 px.
-        """
+        """La bande est la contrainte : les vignettes suivent sa hauteur
+        (`vignette_pour`), sinon la sélectionnée se faisait rogner."""
         marges = self._items_layout.contentsMargins()
         dispo = self.height() - marges.top() - marges.bottom()
         largeur, hauteur = vignette_pour(dispo, SCALE_SELECTED)

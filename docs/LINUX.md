@@ -29,13 +29,13 @@ Documents, sauvegardes, registre, prérequis) doit viser le préfixe.
 
 ---
 
-## 2. Audit : ce qui suppose Windows
+## 2. Audit initial (2026-09) : ce qui supposait Windows
 
 Emplacements relevés sur `main` au 2026-09-24, donnés par fichier et fonction (les
 numéros de ligne d'origine dérivaient à chaque modification : remplacés le 2026-10-15 par
 la fonction qui les contenait ce jour-là). La colonne
-« Aujourd'hui sous Linux » dit ce qui se passe **sans** portage ; « Phase » dit
-quelle pull request le traite.
+« Aujourd'hui sous Linux » dit ce qui se passait **avant** le portage ; « Phase » dit
+quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 
 ### 2.1 Lancement d'un jeu — le cœur du portage
 
@@ -44,8 +44,8 @@ quelle pull request le traite.
 | `src/core/game_manager.py` (`GameManager.launch_game`) | `Popen([exe])` : le `.exe` est exécuté directement | `OSError: Exec format error` — aucun jeu ne démarre | Passer par le lanceur de compatibilité (`umu-run <exe>` / `wine <exe>`) | 2 |
 | `src/core/game_manager.py` (`GameManager.launch_game`) | Drapeaux `DETACHED_PROCESS` / `CREATE_NEW_PROCESS_GROUP` | Déjà gardés (`start_new_session`) | Conservé ; sorties du lanceur vers un journal par jeu | 2 |
 | `src/core/game_manager.py` (`GameManager.launch_game`) + `src/core/system_checks.py` (`crt_x86_reel`, `_dans_le_prefixe`) | Prérequis VC++ testés dans WinSxS et le registre Windows | Les trois tests rendent `True` : **rien n'est vérifié**, un préfixe sans runtime passe | Tester le **préfixe** ; installer par winetricks | 2 |
-| `src/core/system_checks.py` (`crt_x86_reel`) | `C:\Windows` en repli de `%SystemRoot%` | Chemin inexistant (jamais atteint, les tests sont gardés) | Inchangé (gardé) | — |
-| `src/core/system_checks.py` (`check_vcredist_2008_x86`) | `check_d3d11_feature_level` crée un device D3D11 par ctypes | Rend `False` : **tout `fallback` d'INI s'activerait**, vers un renderer que HP1/HP2 ne livrent pas (cf. CLAUDE.md) | Rendre `True` hors Windows : sous Wine, D3D11 vient de DXVK / wined3d, pas du pilote | 2 |
+| `src/core/system_checks.py` (`_systeme_x86`, `_winsxs`) | `C:\Windows` en repli de `%SystemRoot%` | Chemin inexistant (jamais atteint, les tests sont gardés) | Inchangé (gardé) | — |
+| `src/core/system_checks.py` (`check_d3d11_feature_level`) | `check_d3d11_feature_level` crée un device D3D11 par ctypes | Rend `False` : **tout `fallback` d'INI s'activerait**, vers un renderer que HP1/HP2 ne livrent pas (cf. CLAUDE.md) | Rendre `True` hors Windows : sous Wine, D3D11 vient de DXVK / wined3d, pas du pilote | 2 |
 | `src/core/pre_launch.py` (niveau du module) | `_INI_ENCODING = "mbcs"` sous Windows, `utf-8` ailleurs | Les INI du moteur sont écrits par le jeu **sous Wine**, donc dans la page ANSI du préfixe, pas en UTF-8 | Lire la page ANSI du préfixe (`Nls\Codepage\ACP` dans `system.reg`) | 2 |
 | `src/core/pre_launch.py` (`substitute_vars`) | Les VALEURS d'INI (`SavePath=%DOCUMENTS%\Harry Potter\Save`) deviennent des chemins de l'hôte | Le jeu lirait `SavePath=/home/…/Documents/…` : un chemin Unix dans un INI Windows, qui ne tombe juste que si le lecteur courant est `Z:` | Distinguer le chemin du FICHIER (hôte) de la VALEUR écrite (chemin Windows : `C:\users\steamuser\Documents\…`, `Z:\home\…`) | 2 |
 | `src/core/pre_launch.py` (`env_de_lancement`) | `__COMPAT_LAYER=HighDpiAware`, couche de compatibilité Windows | Rend déjà `None` hors Windows | Ignoré proprement sous Wine (aucune notion équivalente) ; l'environnement Wine est composé à part | 2 |
@@ -82,7 +82,7 @@ quelle pull request le traite.
 | `src/core/self_update.py` (`can_self_update`) | Exe gelé **Windows** | `False` : la mise à jour ouvre la page de release | AppImage : remplacer `$APPIMAGE` | 3 |
 | `src/core/self_update.py` (`nom_du_telechargement`) | `.bat` qui attend la mort du processus | — | Script `/bin/sh` détaché, chemins par l'environnement (même principe que les `%ACCIO_*%`) | 3 |
 | `src/core/self_update.py` (`relaunch_after_exit`) | Hors Windows : `Popen([sys.executable, *argv])` **immédiat** | Deux défauts : la nouvelle instance démarre avant la mort de l'ancienne et bute sur l'instance unique ; dans une AppImage, `sys.executable` vit dans un montage qui disparaît avec le processus | Attendre la mort du PID puis relancer `$APPIMAGE` | 3 |
-| `src/core/updater.py` (`UpdateChecker._check_catalog`) | Asset de mise à jour = le premier `.exe` | Un launcher Linux téléchargerait l'exe Windows | Choisir l'asset de SA plateforme (`.AppImage`) | 3 |
+| `src/core/updater.py` (`UpdateChecker._check_launcher`, `asset_de_la_plateforme`) | Asset de mise à jour = le premier `.exe` | Un launcher Linux téléchargerait l'exe Windows | Choisir l'asset de SA plateforme (`.AppImage`) | 3 |
 | `src/ui/update_dispatcher.py` (`UpdateDispatcher.download`) | Fichier téléchargé nommé `AccioLauncher_v….exe` | — | Nom selon la plateforme | 3 |
 | `src/core/self_update.py` (`_clean_pyinstaller_env`) | Purge les `_PYI_*` | Sous Linux, le chargeur de PyInstaller **modifie `LD_LIBRARY_PATH`** : tout processus enfant (umu, wine, xdg-open, le navigateur) chargerait les bibliothèques embarquées | Restaurer `LD_LIBRARY_PATH` d'origine au démarrage (mode gelé Linux) | 3 |
 
@@ -91,9 +91,10 @@ quelle pull request le traite.
 | Emplacement | Ce qui suppose Windows | Aujourd'hui sous Linux | Traitement | Phase |
 |---|---|---|---|---|
 | `src/core/discord_presence.py` (`_open_ipc`) | Tube nommé Windows ; socket Unix dans `$XDG_RUNTIME_DIR` | Discord **Flatpak** (fréquent sur Bazzite) n'est pas trouvé : son socket est sous `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/` | Ajouter les emplacements Flatpak (et Snap) | 3 |
-| `main.py:96-101` | `SetCurrentProcessExplicitAppUserModelID` | Gardé | Équivalent Linux : `setDesktopFileName` — sous Wayland, c'est lui qui relie la fenêtre à son icône et à son `.desktop` | 3 |
+| `main.py` (`main`, AppUserModelID) | `SetCurrentProcessExplicitAppUserModelID` | Gardé | Équivalent Linux : `setDesktopFileName` — sous Wayland, c'est lui qui relie la fenêtre à son icône et à son `.desktop` | 3 |
 | `src/ui/main_window.py` (`_minimize_to_tray`) | Suppose une zone de notification | Sans zone de notification (GNOME sans extension AppIndicator, certains compositeurs Wayland), la fenêtre **disparaît** sans icône pour la rappeler | Réduire au lieu de cacher quand `isSystemTrayAvailable()` est faux | 3 |
 | `src/core/win_taskbar.py` | `ITaskbarList3` | No-op | Inchangé (piste : `com.canonical.Unity.LauncherEntry`) | — |
+| `src/ui/fond_gpu.py` (`actif`) | Fond animé dessiné par la carte graphique (QtQuick) | **Éteint** hors Windows (`sys.platform == "win32"`) : le fond passe par QPainter | À essayer sous Wine et dans l'AppImage avec `ACCIO_FOND_GPU=1` | — |
 | `src/core/diagnostic.py` (`systeme`) | `win32_ver` | « Linux 6.x » : ni Bazzite ni sa version | `/etc/os-release` (`PRETTY_NAME`) | 3 |
 | `src/core/diagnostic.py` (`identite`) | Processeur, mémoire, cartes graphiques lus dans le registre / `GlobalMemoryStatusEx` | Mémoire et cartes vides | `/proc/meminfo`, `/sys/class/drm` ; plus une ligne « Compatibilité » (lanceur, Proton, préfixe) | 3 |
 | `src/core/i18n.py:163-178` | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |
@@ -406,7 +407,8 @@ Ce qui est en place (voir aussi `CLAUDE.md`, modules `compat`,
 
 ### Vérifié dans l'environnement de travail (Wine 9.0 64 bits, 2026-09-24)
 
-Avec `tools/verifier_wine.py`, sur un vrai préfixe :
+Avec `tools/verifier_wine.py` (préfixe, aller-retour HKCU) et des essais ponctuels
+(HKLM 32 bits, processus, surcharge), sur un vrai préfixe :
 
 | Vérification | Résultat |
 |---|---|

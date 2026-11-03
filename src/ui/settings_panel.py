@@ -815,9 +815,8 @@ class SettingsDialog(QDialog):
     def done(self, result: int) -> None:
         """Arrête le scan disque sur TOUS les chemins de fermeture.
 
-        accept() (bouton Fermer) et reject() (Échap) ne passent PAS par
-        closeEvent — seul done() est commun aux trois sorties (vérifié
-        empiriquement). Sans ça, le QThread de scan serait détruit avec le
+        reject() (Échap) et la fermeture par les onglets (`Pages`) ne passent
+        PAS par closeEvent : seul done() est commun aux sorties (vérifié). Sans ça, le QThread de scan serait détruit avec le
         dialog alors qu'il tourne encore → crash.
         """
         self._shutdown_scan()

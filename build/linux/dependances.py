@@ -23,7 +23,8 @@ greffon Qt ou une bibliothèque de Qt y MÈNE par ses dépendances (`NEEDED`).
 Ce qui n'est plus atteint s'en va tout seul.
 
 Utilisé par `accio_launcher.spec` (élagage) et par `build/linux/appimage.py`
-(vérification du dossier final). Pur, hormis `besoins` qui lit un fichier.
+(vérification du dossier final). `elaguer` est pur (lecteur injecté) ; `besoins`,
+`est_elf` et `verifier_dossier` lisent le disque.
 """
 
 from __future__ import annotations

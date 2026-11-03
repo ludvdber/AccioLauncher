@@ -1,4 +1,6 @@
-"""La table des réglages du correctif : les choix proposés, la classe `Reglage`, la table `REGLAGES` (ordre d'affichage) et les `PREREGLAGES`. Pure donnée ; la lecture et l'écriture du `d3d9.ini` restent dans `reglages_correctif`, qui réexporte tout. Sortie le 2026-10-03.
+"""La table des réglages du correctif : les choix proposés, la classe `Reglage`,
+la table `REGLAGES` (ordre d'affichage) et les `PREREGLAGES`. Pure donnée ; la
+lecture et l'écriture de l'ini restent dans `reglages_correctif`.
 """
 from dataclasses import dataclass
 
@@ -126,8 +128,7 @@ class Reglage:
 REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # ── Affichage (onglet Image, au-dessus de la qualité) ──
     # Clés lues par le nouveau correctif (tools/make_ini.py du dépôt du
-    # correctif), ouvertes au lanceur le 2026-09-30 à la demande de Ludo : À VOIR
-    # EN JEU avant de publier le catalogue qui les déclare.
+    # correctif), vues en jeu le 2026-09-30.
     Reglage("resolution", "Accio.Game", "",
             "Résolution",
             "La taille de l'image au démarrage du jeu, livré en 640×480. Choisissez celle de "
@@ -460,7 +461,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # quel moment ») : [Accio.Hardcore] de source/hardcore.cpp du correctif,
     # relu dans la seconde qui suit l'écriture, partie en cours comprise. Le
     # premier choix (1) est le jeu tel que livré, comme pour une clé absente.
-    # À VOIR EN JEU (un combat) avant de publier le catalogue qui les déclare.
+    # Bêta tant qu'un essai en jeu ne l'a pas vu (IDEES § À VOIR).
     Reglage("degats_recus", "Accio.Hardcore", "DamageTaken",
             "Dégâts reçus",
             "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
@@ -522,7 +523,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             defaut=False, onglet="difficulte", beta=True),
     # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
     # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
-    # correctif), lu au démarrage du jeu seulement. À VOIR EN JEU (un match).
+    # correctif), lu au démarrage du jeu seulement. Bêta tant qu'un match ne l'a pas vu.
     Reglage("quidditch", "Accio.Game", "QuidditchDifficulty",
             "Difficulté du Quidditch",
             "La barre du Vif d'or monte moins vite et redescend plus vite : il faut le "

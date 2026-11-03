@@ -1,17 +1,11 @@
 """Le folio d'un jeu, en PAGE : les emplacements à gauche, ce que dit la sauvegarde à droite.
 
-Maquette « Folio HP1, quatre maisons » validée par Ludo le 2026-10-14 : les
-cartes trouvées, les dragées, et la Coupe des quatre maisons en sabliers (les
-points de chaque maison sont dans la sauvegarde, pas seulement ceux de
-Gryffondor : la course se voit).
-
-Ouverte depuis la fiche du jeu dans Mes années, ou depuis le bouton Folio de
-la bibliothèque ; son retour ramène d'où l'on vient. Lecture seule :
-`src/core/folio.py` ne fait que lire la sauvegarde, les textes du jeu et les
-images des cartes (`textures_ue1.py`), toutes dans la copie installée.
-
-La carte choisie s'affiche dans une colonne FIXE à droite (Ludo, 2026-10-14) :
-sous la grille, sa fiche tombait hors de l'écran et l'on cliquait sans rien voir.
+Les cartes trouvées, les dragées et la Coupe des quatre maisons en sabliers
+(les points de chaque maison sont dans la sauvegarde). Posée dans le Carnet
+(`integree`, sans retour). Lecture seule : `src/core/folio.py` lit la
+sauvegarde, les textes du jeu et les images des cartes (`textures_ue1.py`),
+dans la copie installée. La carte choisie s'affiche dans une colonne FIXE à
+droite : sous la grille, elle tombait hors de l'écran.
 """
 
 from datetime import datetime

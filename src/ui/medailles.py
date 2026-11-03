@@ -16,7 +16,7 @@ from src.core.config import ASSETS_DIR
 
 _DOSSIER = ASSETS_DIR / "medailles"
 _COTE = 256
-_CENTRE = (128.0, 157.5)
+_CENTRE = (128.0, 157.5)    # la géométrie de tools/preparer_medailles.py, divisée par 4
 _EMBLEME = 90.0             # la moitié du disque
 
 BRONZE, ARGENT, OR = "bronze", "argent", "or"

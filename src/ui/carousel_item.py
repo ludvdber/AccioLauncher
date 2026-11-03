@@ -512,21 +512,9 @@ class CarouselItem(QWidget):
 
     def _peindre_filet_reprise(self, p: QPainter, geo: _Geo) -> None:
         """Téléchargement interrompu : un filet au bas de la jaquette, rempli
-        à hauteur de ce qui est déjà reçu.
-
-        Le téléchargeur reprend depuis toujours (`.part` + `Range`), et
-        jusqu'ici RIEN ne le disait avant d'avoir navigué sur la fiche du bon
-        jeu, parmi huit : mesuré le 2026-08-29, à la réouverture aucun des 16
-        textes visibles n'en soufflait mot, et le launcher ouvre sur le dernier
-        jeu JOUÉ, jamais sur celui qu'on téléchargeait. Sur 4,6 Go, c'est
-        quelqu'un qui a déjà attendu et qui croit avoir tout perdu.
-
-        Un filet et non une pastille chiffrée : la vignette fait 100 px de
-        large au repos, un pourcentage y serait illisible — et la question
-        n'est pas « combien » mais « il y a quelque chose ici ». Aucun
-        pictogramme non plus : Cinzel n'a pas de glyphe de pause, Windows
-        partirait en repli couleur (cf. `icon_button.py`).
-        """
+        à hauteur de ce qui est déjà reçu (`GameManager.reprise`, règle 98).
+        Un filet et non un chiffre : sur une vignette de 88 px, un pourcentage
+        serait illisible ; pas de pictogramme non plus (règle 59)."""
         p.setOpacity(1.0)
         ep = max(2.0, geo.h * 0.022)
         y_filet = geo.y + geo.h - ep

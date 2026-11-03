@@ -1,8 +1,7 @@
 """ClickableLabel — label cliquable ET focusable clavier (A11Y).
 
-Remplace le monkey-patching `label.mousePressEvent = lambda …` qui rendait
-les pseudo-liens invisibles à la navigation clavier. L'outline doré
-`QLabel:focus` du stylesheet global s'applique automatiquement.
+L'anneau de focus CLAVIER (`focus_visible`, `QLabel[focusClavier="true"]:focus`
+dans styles.py) s'applique.
 """
 
 from PyQt6.QtCore import Qt, pyqtSignal

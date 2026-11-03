@@ -216,16 +216,11 @@ def reset_crash_state() -> None:
 def install_excepthook() -> None:
     """Route les exceptions non gérées vers le log + le dialogue de rapport.
 
-    PyQt6 appelle sys.excepthook pour les exceptions levées dans les slots puis
-    abandonne le process — ce hook donne à l'utilisateur le temps de copier le
-    rapport avant. KeyboardInterrupt garde le comportement standard.
-
-    Le dialogue n'est montré QU'UNE FOIS. Les exceptions les plus probables
-    viennent de slots rappelés en boucle (paintEvent, tick du Ticker à ~30 FPS,
-    progression de téléchargement) : sans ce garde, chaque répétition empilait
-    une modale de plus, jusqu'à ce que l'utilisateur doive tuer le process —
-    sans jamais pouvoir copier le rapport, ce qui est pourtant tout l'objet de
-    la fonctionnalité. Les exceptions suivantes restent journalisées.
+    Sans hook, PyQt6 abandonne le processus ; avec lui, l'application
+    continue. Le dialogue n'est donc montré QU'UNE FOIS : une exception d'un
+    slot rappelé en boucle (paintEvent, Ticker) empilait sinon une modale par
+    répétition. Les suivantes restent journalisées ; KeyboardInterrupt garde le
+    comportement standard.
     """
     def _hook(exc_type, exc_value, exc_tb) -> None:
         global _dialog_shown, _in_hook

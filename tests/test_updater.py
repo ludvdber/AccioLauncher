@@ -274,7 +274,7 @@ class TestJamaisDeRetrogradation:
     """
 
     @staticmethod
-    def _distant(monkeypatch, tmp_path, version: str):
+    def _distant(monkeypatch, tmp_path, version: str, corps: bytes = b"{}"):
         mod = types.ModuleType("httpx")
 
         class HTTPError(Exception):
@@ -285,7 +285,7 @@ class TestJamaisDeRetrogradation:
                 pass
 
             def iter_bytes(self, taille=None):
-                yield b"{}"
+                yield corps
 
             def __enter__(self):
                 return self
@@ -338,6 +338,12 @@ class TestJamaisDeRetrogradation:
 
     def test_sans_force_la_meme_version_ne_change_rien(self, monkeypatch, tmp_path):
         self._distant(monkeypatch, tmp_path, "0.42")
+        assert self._verifier("0.42", force=False) == []
+
+    def test_un_json_trop_profond_est_ignore(self, monkeypatch, tmp_path):
+        """`json.loads` lève RecursionError (pas une ValueError) : elle sortait
+        du fil de vérification au lieu d'être journalisée."""
+        self._distant(monkeypatch, tmp_path, "0.43", corps=b"[" * 100_000 + b"]" * 100_000)
         assert self._verifier("0.42", force=False) == []
 
     def test_une_version_plus_recente_passe_toujours(self, monkeypatch, tmp_path):

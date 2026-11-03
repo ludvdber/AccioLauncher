@@ -45,9 +45,7 @@ if not errorlevel 1 (
     exit /b 1
 )
 
-:: Dependances : requirements-dev.txt et non "requirements.txt + pyinstaller".
-:: L'ancienne ligne oubliait Pillow, dont depend build\create_icon.py : sur une
-:: machine neuve, la generation de l'icone echouait juste apres l'installation.
+:: requirements-dev.txt : les dependances, plus les outils de build et de test.
 echo Installation des dependances de build...
 %PY% -m pip install -r requirements-dev.txt --quiet
 if errorlevel 1 (
@@ -68,8 +66,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Un build ne doit pas partir d'un arbre casse : le lint et les tests sont
-:: rapides (~20 s) au regard d'un exe publie avec une regression dedans.
+:: Un build ne doit pas partir d'un arbre casse : le lint et les tests prennent
+:: environ une minute, peu au regard d'un exe publie avec une regression dedans.
 echo [2/5] Lint et types...
 %PY% -m ruff check .
 if errorlevel 1 (

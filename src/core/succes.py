@@ -54,9 +54,9 @@ class Obtenu:
 
 
 # ─── Les succès de chaque jeu ───
-# Les seuils sont des totaux que le JEU affiche (« / 25 », « / 125 »…) ou leur
-# moitié ; aucun ne demande de savoir comment le jeu compte en dehors de la
-# sauvegarde.
+# Les seuils sont des totaux que le JEU affiche (« / 25 », « / 125 »…), leur
+# moitié, ou un premier pas (HP5 « Explorateur » : 1 000 points sur 4 360) ;
+# aucun ne demande de savoir comment le jeu compte en dehors de la sauvegarde.
 
 def _hp1() -> tuple[Succes, ...]:
     from src.core import folio

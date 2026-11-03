@@ -27,6 +27,7 @@ def test_un(data: bytes) -> None:
         raw = json.loads(data.decode("utf-8"))
     except (UnicodeDecodeError, ValueError, RecursionError):
         return      # pas du JSON : `load_catalog` le rattrape avant l'analyse
+        # (RecursionError comprise, `tests/test_game_data.py`)
     invariants.catalogue(raw)
 
 

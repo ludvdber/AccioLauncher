@@ -1,17 +1,7 @@
-"""Rendre au mieux des jaquettes qui ne sont pas faites pour le launcher (2026-10-09).
-
-**Les jaquettes carrées** (HP2, les deux parties des Reliques) : la vignette
-du carrousel est en portrait 18:25, et la jaquette y était ÉTIRÉE
-(`drawPixmap` dans un rectangle d'autres proportions), visages allongés
-compris. Elle est désormais posée entière, centrée, sur un fond tiré
-d'elle-même, flouté et assombri : l'illustration garde ses proportions et la
-vignette reste pleine.
-
-Les fonds trop petits (HP3, HP4, HP5), eux, n'ont pas de remède ici : un flou
-avant agrandissement a été essayé (avant/après du 2026-10-09) et rendait
-l'image plus floue sans rien gagner. Le vrai remède est une illustration
-faite pour le launcher : `src/core/images_a_refaire.py` et l'atelier des
-artistes (`atelier_page.py`).
+"""Des jaquettes qui ne sont pas faites pour le launcher : jamais étirées. Trop
+loin du portrait 18:25 de la vignette (HP2, les Reliques, carrées), la
+jaquette est posée entière, centrée, sur un fond flouté et assombri tiré
+d'elle-même.
 """
 
 from PyQt6.QtCore import QRectF, QSize, Qt

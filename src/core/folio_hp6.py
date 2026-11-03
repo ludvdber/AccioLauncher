@@ -404,7 +404,7 @@ def _textes_badges(system_txt: str, code: str) -> dict[str, tuple[str, str]]:
 def images_badges(system: Path) -> dict[str, tuple[int, int, bytes]]:
     """Clé de badge → son image du jeu (128 × 128, B V R A) ; vide sans le jeu.
 
-    Décodées une fois par session : 0,3 s pour les trente."""
+    Décodées une fois par session : 0,13 s pour les trente."""
     return _images_badges(str(system))
 
 

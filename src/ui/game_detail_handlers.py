@@ -259,12 +259,10 @@ def on_play(view: GameDetailView, ignorer_prerequis: bool = False) -> None:
             view.notify.emit(
                 tr("Le réglage n'a pas pu être écrit : le jeu démarre avec sa configuration actuelle."))
 
-    # Passé seulement quand il sert : les tests remplacent `launch_game`
-    # par des doublures qui ne connaissent pas ce paramètre.
-    options = {"ignorer_prerequis": True} if ignorer_prerequis else {}
     try:
         proc = view.manager.launch_game(
-            view.game.id, confirmer=confirmer, avertir=avertir, **options)
+            view.game.id, confirmer=confirmer, avertir=avertir,
+            ignorer_prerequis=ignorer_prerequis)
     except RuntimeError as exc:
         if str(exc) == "compat_absent":
             signaler_compat_absent(view)

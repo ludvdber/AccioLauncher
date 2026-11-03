@@ -1,4 +1,4 @@
-"""Barre audio (mute + volume) du lecteur vidéo de la vue détail."""
+"""Commandes de la bande-annonce de la fiche : revoir, pause, son, volume, plein écran."""
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QSlider, QWidget
@@ -36,10 +36,11 @@ _LARGEUR_FIN = 2 * (_BORDURE + _MARGE_FIN) + _BOUTON
 
 
 class AudioBar(QWidget):
-    """Mini-barre flottante avec bouton mute et slider de volume.
+    """Mini-barre flottante des commandes de la bande-annonce.
 
-    Émet `mute_toggled` (bool) et `volume_changed` (int 0-100). Le contrôleur
-    est responsable de propager au lecteur média et de mettre à jour l'icône.
+    Émet `mute_toggled`, `play_toggled`, `replay_clicked`, `cinema_toggled`
+    (sans argument) et `volume_changed` (int 0-100). Le contrôleur propage au
+    lecteur et met à jour les icônes.
     """
 
     mute_toggled = pyqtSignal()

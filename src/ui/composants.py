@@ -1,9 +1,5 @@
 """Composants communs des pages : surtitre, carte, ligne de réglage, boutons.
-
-Refonte du 2026-10-09. Chaque page avait été dessinée seule, avec ses propres
-tailles, marges et boutons : ouvrir les Paramètres après la fiche, c'était
-changer d'application. Paramètres, À propos, l'assistant de premier lancement,
-les fenêtres de message (`fenetre_message.py`) et la désinstallation s'en servent.
+Toutes les pages s'en servent, pour qu'aucune ne parle une autre langue visuelle.
 
 Les couleurs sont écrites dans la palette Poudlard et passent par `themed()` :
 une maison les remplace toutes d'un coup.

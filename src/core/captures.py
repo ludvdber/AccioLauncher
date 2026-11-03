@@ -7,12 +7,13 @@ l'utilisateur, `Accio Launcher/<nom du jeu>`, que le lanceur ne supprime jamais.
 
 Deux chemins y mènent :
 
-- **le correctif PC** (HP4 et suivants) écrit directement dans le dossier : le
-  lanceur lui en donne le chemin à chaque lancement (`ScreenshotFolder` dans son
-  `d3d9.ini`), sous la forme que lit le JEU — `Z:\home\…` sous Wine ;
-- **les autres** gardent leur emplacement ; le lanceur en SORT les captures à
-  la fin de chaque partie et quand on ouvre le dossier (bloc `screenshots` du
-  catalogue), et convertit au passage les BMP d'Unreal en PNG.
+- **le correctif** (toutes ses DLL : `d3d9`, `winmm`, `dinput8`) écrit
+  directement dans le dossier : le lanceur lui en donne le chemin à chaque
+  lancement (`ScreenshotFolder` dans son ini), sous la forme que lit le JEU —
+  `Z:\home\…` sous Wine ;
+- ce qu'un jeu ou un ancien correctif dépose chez lui (bloc `screenshots` du
+  catalogue) en est SORTI à la fin de chaque partie et quand on ouvre le
+  dossier ; un BMP éventuel devient PNG.
 
 Le dossier porte le nom LISIBLE du jeu, dans la langue du lanceur au moment où
 il est créé ; ensuite on le retrouve sous n'importe lequel de ses noms

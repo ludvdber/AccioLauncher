@@ -18,7 +18,7 @@ COLOR_TEXT = "#eaeaea"
 COLOR_TEXT_SECONDARY = "#8a8aaa"
 COLOR_BORDER = "#1a2744"
 
-# Un CHOIX parmi plusieurs (langue du jeu, réponses du Choixpeau). Le rond natif
+# Un CHOIX parmi plusieurs (la langue du jeu). Le rond natif
 # de Windows se remplit de sombre quand il est coché : sur fond bleu nuit, le
 # choix retenu était le SEUL qu'on ne voyait plus (Ludo, 2026-09-27). Chaque
 # réponse devient une rangée cadrée ; la retenue s'allume en or — cadre, fond,
@@ -115,7 +115,7 @@ QWidget#carouselBar {{
 
 /* ---------- Boutons d'action (zone centrale) ---------- */
 
-/* btnDownload, btnPlay, btnUninstall sont peints par GlowButton.paintEvent */
+/* btnDownload et btnPlay sont peints par GlowButton.paintEvent */
 
 QPushButton#btnCancel {{
     background-color: {COLOR_ACCENT_RED};

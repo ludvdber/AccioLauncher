@@ -215,8 +215,7 @@ def ini_du_correctif(dossier_exe: Path) -> Path:
 
     Le premier trouvé ; à défaut le `d3d9.ini` (absent ou ancien, les appelants
     le savent déjà écarter). Déclarer des `fix_settings` à HP1-HP3 n'a de sens
-    qu'avec une archive qui livre la DLL du 2026-10-21 ou plus récente ; pour HP3,
-    ils masqueraient aussi les réglages graphiques (`game_settings_dialog`).
+    qu'avec une archive qui livre la DLL du 2026-10-21 ou plus récente.
     """
     for nom in NOMS_INI:
         ini = dossier_exe / nom
@@ -308,7 +307,8 @@ def _ancienne(ligne: str) -> str:
 class Etat:
     """Ce que porte l'ini pour un réglage.
 
-    `valeur` : bool pour un interrupteur, int pour un réglage à choix.
+    `valeur` : bool pour un interrupteur, la valeur du choix sinon (int, float
+    ou str : « 1920x1080 », un nom de choix).
     `personnalise` : l'ini porte une valeur que l'interface ne sait pas
     représenter (touches choisies à la main) — on l'affiche, on ne l'écrase pas.
     """

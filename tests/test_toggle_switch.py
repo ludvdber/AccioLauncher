@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt  # noqa: E402
 from PyQt6.QtGui import QKeyEvent  # noqa: E402
 
 from src.ui.focus_visible import PROPRIETE as FOCUS_CLAVIER  # noqa: E402
-from src.ui.toggle_switch import ToggleSwitch, toggle_row  # noqa: E402
+from src.ui.toggle_switch import ToggleSwitch  # noqa: E402
 
 
 class TestToggleSwitch:
@@ -45,11 +45,6 @@ class TestToggleSwitch:
         qtbot.addWidget(t)
         t.setChecked(True)  # déjà True
         assert t.isChecked() is True
-
-    def test_toggle_row_returns_pair(self, qtbot):
-        row, toggle = toggle_row("Mon réglage", checked=True)
-        qtbot.addWidget(row)
-        assert toggle.isChecked() is True
 
 
 def _touche(widget, cle) -> None:
@@ -127,13 +122,6 @@ class TestReperesVisuelsEtAccessibles:
         assert differents > 20, (
             f"seulement {differents} pixel(s) de différence : "
             "aucun anneau dessiné au focus clavier")
-
-    def test_la_ligne_donne_un_nom_accessible(self, qtbot):
-        """Le libellé est à CÔTÉ du widget, pas dedans : sans nom accessible,
-        une aide technique n'annonce qu'« interrupteur »."""
-        row, sw = toggle_row("Lire les bandes-annonces", True)
-        qtbot.addWidget(row)
-        assert sw.accessibleName() == "Lire les bandes-annonces"
 
 
 class TestTousLesReglagesDuDialogue:

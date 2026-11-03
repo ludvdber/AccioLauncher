@@ -41,8 +41,8 @@ jobs:
       # Les règles de sécurité de ruff (flake8-bandit), lancées À PART : le jeu
       # de règles de pyproject.toml est figé, `--select S` le remplace pour ce
       # seul appel. Une règle écartée, et une seule : S311 (« random n'est pas
-      # cryptographique ») ; il ne sert qu'aux particules, aux étoiles du
-      # carrousel et à l'image de partage du build, et tests/test_securite.py
+      # cryptographique ») ; il ne sert qu'aux particules et aux étoiles du
+      # carrousel, et tests/test_securite.py
       # échoue si un AUTRE module l'importe. Le « importer subprocess » de
       # bandit (B404) n'existe pas dans ruff. Chaque appel de processus relu
       # porte un `# noqa: S603` (ruff ne lit pas les `# nosec` de bandit) : un

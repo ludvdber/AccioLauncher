@@ -84,7 +84,7 @@ class GameSession(QObject):
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._manager = manager
-        self._presence = DiscordPresence()  # no-op tant que DISCORD_CLIENT_ID est vide
+        self._presence = DiscordPresence()  # no-op si Discord est fermé
         self._monitor = ProcessMonitor(self)
         self._monitor.game_exited.connect(self._on_game_exited)
         self._monitor.battement.connect(self._on_battement)

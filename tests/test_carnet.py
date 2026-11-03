@@ -1,4 +1,4 @@
-"""Le Carnet (Folio puis Relevé) et la rubrique Captures des Collections, sur une vraie fenêtre."""
+"""Le Carnet (Folio, Défis, Relevé) et la rubrique Captures des Collections, sur une vraie fenêtre."""
 
 import pytest
 from PyQt6.QtCore import Qt

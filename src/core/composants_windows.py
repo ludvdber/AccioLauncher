@@ -350,6 +350,8 @@ class InstallationComposants(QThread):
         self.requestInterruption()
 
     def run(self) -> None:
+        # Nom aléatoire (règle 70) : défense en profondeur, le processus élevé ne
+        # lance que des copies revérifiées (`script_d_installation`).
         dossier = Path(tempfile.mkdtemp(prefix="accio_composants_"))
         try:
             reussie, raison = self._installer(dossier)
@@ -363,9 +365,6 @@ class InstallationComposants(QThread):
         self.installation_terminee.emit(reussie, raison)
 
     def _installer(self, dossier: Path) -> tuple[bool, str]:
-        # Dossier à nom ALÉATOIRE (règle 70) : ce qu'il contient sera exécuté
-        # en administrateur, et un nom prévisible laisserait un programme sans
-        # privilège y glisser le sien entre la vérification et l'exécution.
         self.etape.emit("telechargement", ", ".join(p.nom for p in self._paquets))
         for paquet in self._paquets:
             fichier = dossier / f"{paquet.cle}.exe"

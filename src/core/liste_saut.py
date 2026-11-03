@@ -63,7 +63,7 @@ def entrees(jeux: Iterable[tuple[str, str, str | None]], titre: Callable[[str], 
 
 
 def id_demande(argv: list[str]) -> str | None:
-    """L'identifiant passé après `--jouer`, s'il est sain (lettres, chiffres, tirets)."""
+    """L'identifiant passé après `--jouer`, s'il est sain (lettres, chiffres, `-` et `_`)."""
     if ARGUMENT not in argv:
         return None
     i = argv.index(ARGUMENT)
@@ -77,7 +77,7 @@ _actif = False
 
 
 def activer() -> None:
-    """Par main.py seulement : la suite de tests construit des fenêtres et ne doit jamais écrire sur l'icône."""
+    """Par `raccourci_jouer.brancher` (main.py) seulement : la suite de tests construit des fenêtres et ne doit jamais écrire sur l'icône."""
     global _actif
     _actif = True
 

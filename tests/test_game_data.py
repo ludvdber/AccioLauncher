@@ -174,6 +174,16 @@ class TestCeQuiFinitDansUnNomDeFichier:
         assert [g.id for g in _parse_catalog(raw).games] == ["hp_ok"]
 
 
+class TestCatalogueTropProfond:
+    def test_un_json_trop_profond_donne_un_catalogue_vide(self, tmp_path):
+        """RecursionError n'est pas une ValueError : `load_catalog` la laissait
+        sortir au lieu de rendre un catalogue vide."""
+        from src.core.game_data import load_catalog
+        f = tmp_path / "games.json"
+        f.write_text("[" * 100_000 + "]" * 100_000, encoding="utf-8")
+        assert load_catalog(f).games == ()
+
+
 class TestParseCatalog:
     def test_dict_format(self):
         raw = {

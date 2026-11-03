@@ -107,21 +107,6 @@ def minutes_arrondies(secondes: float) -> int:
     return int(secondes / 60 + 0.5) if secondes > 0 else 0
 
 
-def format_playtime(seconds: int) -> str:
-    """Formate un temps de jeu cumulé : « 45 min de jeu », « 14 h de jeu »…
-
-    Arrondi à la minute (minimum 1 min — les sessions plus courtes sont
-    filtrées en amont).
-    """
-    minutes = max(1, minutes_arrondies(seconds))
-    if minutes < 60:
-        return tr("{} min de jeu").format(minutes)
-    hours, rem = divmod(minutes, 60)
-    if hours < 10 and rem > 0:
-        return tr("{} h {} min de jeu").format(hours, rem)
-    return tr("{} h de jeu").format(hours)
-
-
 def format_relative_date(iso_date: str, today: date | None = None) -> str:
     """Date relative en clair : « aujourd'hui », « hier », « il y a N jours »…
 
@@ -145,13 +130,8 @@ def format_relative_date(iso_date: str, today: date | None = None) -> str:
 
 
 def format_duree_compacte(seconds: int) -> str:
-    """Durée nue : « 48 min », « 2 h 40 », « 14 h ».
-
-    Distincte de `format_playtime`, qui suffixe « de jeu » : cette phrase est
-    juste dans la fiche d'un jeu, où la ligne se lit d'un trait, et fautive dans
-    une grille de statistiques où l'en-tête de colonne l'a déjà dit — on y
-    lirait « Session moyenne : 48 min de jeu ».
-    """
+    """Durée nue : « 48 min », « 2 h 40 min », « 14 h ». Sans suffixe : le
+    libellé ou l'en-tête de colonne dit déjà de quoi il s'agit."""
     if seconds < 60:
         return tr("moins d'une minute")
     minutes = minutes_arrondies(seconds)

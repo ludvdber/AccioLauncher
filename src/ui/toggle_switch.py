@@ -2,7 +2,7 @@
 
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve, QRectF
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QWidget
 
 from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
 from src.ui.theme import accent_qcolor, current as current_theme
@@ -111,22 +111,3 @@ class ToggleSwitch(QWidget):
                 QRectF(0, 0, self._TRACK_W, self._TRACK_H).adjusted(-3, -3, 3, 3),
                 14, 14)
         p.end()
-
-
-def toggle_row(label_text: str, checked: bool) -> tuple[QWidget, ToggleSwitch]:
-    """Crée une ligne [toggle] [label] et renvoie le widget-ligne + le toggle."""
-    row = QWidget()
-    row.setStyleSheet("background: transparent;")
-    lay = QHBoxLayout(row)
-    lay.setContentsMargins(0, 4, 0, 4)
-    lay.setSpacing(12)
-    toggle = ToggleSwitch(checked)
-    # Le libellé est à CÔTÉ, pas dedans : sans nom accessible, une aide
-    # technique n'annonce qu'« interrupteur », sans dire de quoi.
-    toggle.setAccessibleName(label_text)
-    toggle.setToolTip(label_text)
-    lay.addWidget(toggle)
-    lbl = QLabel(label_text)
-    lbl.setStyleSheet("color: #ffffff; font-size: 13px; background: transparent;")
-    lay.addWidget(lbl, stretch=1)
-    return row, toggle

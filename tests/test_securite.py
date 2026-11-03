@@ -201,8 +201,7 @@ class TestRandomSeulementDecoratif:
     """`security.yml` écarte S311 (ex-B311) pour TOUT le dépôt : ce test l'empêche de
     couvrir demain un tirage qui, lui, compterait (jeton, nom de fichier)."""
 
-    _DECORATIFS = {"src/ui/particles.py", "src/ui/carousel.py",
-                   "build/create_social_preview.py"}
+    _DECORATIFS = {"src/ui/particles.py", "src/ui/carousel.py"}
 
     def test_seuls_les_effets_visuels_importent_random(self):
         importeurs = set()

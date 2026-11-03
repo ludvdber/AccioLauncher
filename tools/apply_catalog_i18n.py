@@ -10,8 +10,13 @@ Usage :
     python tools/apply_catalog_i18n.py ../accio-launcher-games/games.json
 
 Le script est idempotent (rejouable sans dupliquer) et n'écrase jamais une
-langue qu'il ne connaît pas. Il liste en sortie les chaînes françaises encore
-sans traduction : c'est le rappel à chaque ajout de jeu ou de version.
+langue qu'il ne connaît pas.
+
+ATTENTION (2026-11-02) : le catalogue est devenu la source des traductions. Ces
+tables n'en connaissent plus qu'une partie (7 versions sur 38), et le script
+RÉÉCRIT `name`, `description` et `changes` de ce qu'il connaît : une traduction
+corrigée à la main dans le catalogue serait remise à l'ancienne. Ne pas le
+relancer tel quel (ARCHITECTURE_CORE.md, entrée `game_data`).
 """
 
 import json
@@ -346,9 +351,7 @@ def main(argv: list[str]) -> int:
     with open(path, encoding="utf-8", newline="") as f:
         raw = f.read()
     # On réécrit avec la MISE EN FORME du fichier reçu (fins de ligne et
-    # indentation). Le dépôt du catalogue est en CRLF indenté à 4 espaces :
-    # réécrire en LF/2 espaces reformate les 431 lignes existantes et noie les
-    # vraies modifications dans un diff illisible.
+    # indentation) : reformater noierait les vraies modifications dans le diff.
     newline = "\r\n" if "\r\n" in raw else "\n"
     indent_match = re.search(r'^([ \t]+)"', raw, re.MULTILINE)
     indent = len(indent_match.group(1)) if indent_match else 2

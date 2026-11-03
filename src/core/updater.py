@@ -416,7 +416,7 @@ class UpdateChecker(QThread):
                 log.info("Tailles réelles récupérées pour %d asset(s)", len(tailles))
                 self.asset_sizes.emit(tailles)
         except (httpx.HTTPError, json.JSONDecodeError, ValueError,
-                AttributeError, TypeError) as exc:
+                AttributeError, TypeError, RecursionError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de récupérer les compteurs de téléchargement : %s", exc)
 
@@ -484,7 +484,7 @@ class UpdateChecker(QThread):
                 log.info("Catalogue à jour (v%s)", self._current_version)
 
         except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError,
-                AttributeError, TypeError) as exc:
+                AttributeError, TypeError, RecursionError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de vérifier le catalogue distant : %s", exc)
 
@@ -541,6 +541,6 @@ class UpdateChecker(QThread):
                 log.info("Launcher à jour (v%s)", APP_VERSION)
 
         except (httpx.HTTPError, json.JSONDecodeError, ValueError,
-                AttributeError, TypeError) as exc:
+                AttributeError, TypeError, RecursionError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de vérifier la version du launcher : %s", exc)

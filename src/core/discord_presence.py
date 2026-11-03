@@ -8,14 +8,9 @@ de la communauté. Protocole : trames JSON
 Discord l'a posé, qui dépend de la façon dont il est installé (voir
 `dossiers_ipc`, et Discord en Flatpak, fréquent sur Bazzite).
 
-⚠️ IMPORTANT (à faire une fois par Ludo) :
-  1. https://discord.com/developers/applications → « New Application » nommée
-     « Accio Launcher » (le nom affiché dans « Joue à … » vient de là).
-  2. Copier l'« Application ID » dans DISCORD_CLIENT_ID ci-dessous.
-  3. Onglet Rich Presence → Art Assets : la jaquette de chaque jeu sous la clé
-     de son id (hp1…hp7b), et le logo sous la clé « logo » (petite pastille).
-     Une clé absente du portail ne casse rien : Discord n'affiche pas d'image.
-Sans ID, la fonctionnalité se désactive silencieusement.
+Images (portail Discord, Rich Presence → Art Assets) : la jaquette sous l'id
+du jeu, le logo sous « logo » ; une clé absente ne casse rien. Sans
+DISCORD_CLIENT_ID, tout est un no-op.
 
 NB : les boutons d'activité ne sont PAS visibles sur son propre profil —
 seuls les AUTRES utilisateurs Discord les voient (comportement Discord normal).
@@ -144,24 +139,13 @@ class DiscordPresence:
 
     def set_playing(self, game_name: str, game_id: str = "", ligne: str = "", partie: str = "",
                     debut: float | None = None) -> None:
-        """Affiche « Joue à <game_name> » avec le bouton vers le site.
+        """Affiche « Joue à <game_name> », avec le site et la communauté.
 
-        L'activité est composée ICI, sur le thread appelant, et non dans le
-        worker : c'est la seule chaîne du launcher que des TIERS voient — elle
-        s'affiche sur le profil Discord de l'utilisateur, devant sa liste
-        d'amis. Elle était codée en français en dur, donc un joueur anglophone
-        ou hispanophone diffusait « Joue à … » à tout son entourage. Traduire
-        au point d'appel garde aussi `tr()` hors du thread réseau.
-
-        `ligne` est la seconde ligne de la carte (« Serdaigle · 6ᵉ année »),
-        composée par l'appelant : la maison vit dans le thème, donc côté `ui`.
-        Vide, elle est omise plutôt qu'envoyée blanche.
-
-        `partie` (2026-10-26, Ludo : « tu peux améliorer les choses ? ») : où en
-        est la partie, lu dans la sauvegarde comme sur la fiche (« Parc de
-        Poudlard · 9 cartes sur 25 »). Elle prend la seconde ligne ; la maison
-        et l'année passent alors au survol de la jaquette. `debut` garde le
-        chrono de la partie quand la carte est reposée après une sauvegarde.
+        Composée et traduite ICI, sur le fil appelant : des TIERS la voient, et
+        `tr()` reste hors du fil réseau. `ligne` (« Serdaigle · 6ᵉ année ») est
+        la seconde ligne, omise si vide ; `partie` (« Parc de Poudlard · 9 cartes
+        sur 25 ») la remplace, et `ligne` passe au survol de la jaquette.
+        `debut` garde le chrono quand la carte est reposée après une sauvegarde.
         """
         if partie:
             ligne, survol = partie, ligne

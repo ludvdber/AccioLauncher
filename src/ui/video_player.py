@@ -1,4 +1,5 @@
-"""Lecteur vidéo basé sur QVideoSink — frames peintes via BackgroundWidget."""
+"""Lecteur vidéo sur QVideoSink : QImage par `video_frame` (chemin QPainter), ou
+QVideoFrame relayées à un VideoOutput de la carte graphique (`set_sortie`)."""
 
 import logging
 from pathlib import Path
@@ -39,8 +40,9 @@ log = logging.getLogger(__name__)
 ECART_FOND_US = 25_000
 
 # Vitesse de l'avance rapide invisible qui rattrape le point voulu après un
-# saut dans une cinématique d'EA (`vp6_ea`) : 4 s d'écart au pire chez HP5 et
-# HP6, rattrapées en une demi-seconde (mesuré le 2026-10-27).
+# saut dans une cinématique d'EA (`vp6_ea`) : 4 s d'écart au pire chez HP5,
+# HP6 et HP8, rattrapées en une demi-seconde (mesuré le 2026-10-27). Chez HP7
+# (jusqu'à 49 s entre deux images complètes), le rattrapage peut durer 6 s.
 _RATTRAPAGE = 8.0
 
 
@@ -61,8 +63,8 @@ def dossier_des_copies() -> Path:
 class VideoPlayer(QObject):
     """Gère la lecture vidéo (QMediaPlayer + QVideoSink + QAudioOutput).
 
-    Émet des frames QImage pour un rendu custom dans un QPainter,
-    au lieu d'utiliser QVideoWidget (incompatible avec les overlays Qt).
+    Pas de QVideoWidget (incompatible avec les overlays Qt) : images par
+    `video_frame`, ou relais à la carte graphique (`set_sortie`).
     """
 
     video_frame = pyqtSignal(object)  # QImage

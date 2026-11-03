@@ -253,7 +253,8 @@ def presentes(collection: Collection, dossier_jeu: Path | None,
 def voix(collection: Collection, dossier_jeu: Path | None, fichier: str,
          langue: str = "fr") -> Source | None:
     """La piste de voix séparée d'une cinématique : une `.asf` par langue (HP4),
-    sinon son flux dans la `Banque` (HP5). La langue voulue, sinon l'anglais."""
+    sinon son flux dans la `Banque` (HP5, HP6 ; banque de chapitre en repli).
+    La langue voulue, sinon l'anglais."""
     if dossier_jeu is None:
         return None
     if collection.banque is not None:

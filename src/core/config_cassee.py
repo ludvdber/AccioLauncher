@@ -1,40 +1,19 @@
-"""Reconnaître, au retour d'un jeu, une configuration qui l'empêche de démarrer.
+"""Reconnaître, au retour d'un jeu UE1, l'arrêt fatal que son journal raconte.
 
-Suite de `reparation_config` (Ludo, 2026-10-03 : idée retenue). Remettre la
-configuration ne sert à rien si personne ne pense à le faire : le joueur dont
-HP2 ne démarre plus voit une boîte « Critical Error » en anglais, la ferme, et
-conclut que le jeu est cassé. Il retélécharge des gigaoctets, ou il abandonne.
-
-**Ce qu'on lit : le journal que le moteur UE1 écrit lui-même**, à côté de sa
+**Ce qu'on lit : le journal que le moteur écrit lui-même**, à côté de sa
 configuration dans Documents (`HP.log`, `Game.log`, `hppoa.log` : le nom de
-l'exe). Il est réécrit à chaque démarrage, et une erreur fatale y laisse
-toujours le même bloc (relevé dans un vrai `HP.log`, 2026-09-26) :
+l'exe), réécrit à chaque démarrage. Une erreur fatale y laisse un bloc de
+lignes `Critical:` (« appError called: », puis le message, puis l'historique).
 
-    Critical: appError called:
-    Critical: Assertion failed: Bitmap.LoadFile(Filename) [File:…] [Line: 189]
-    Critical: Windows GetLastError: …
-    Exit: Executing UObject::StaticShutdownAfterError
-
-**Seules les erreurs d'AFFICHAGE comptent** : « Assertion failed: RenDev » (le
-moteur n'a pas pu ouvrir sa carte de rendu, cas type après le menu vidéo du
-jeu), et celles qui citent la fenêtre ou le moteur de rendu dans leur
-historique. Un `Bitmap.LoadFile` est un fichier du JEU qui manque : remettre la
-configuration n'y ferait rien, et le proposer serait mentir (règle 108).
+`apres_la_partie` rend un `Arret` pour toute ligne `Critical:`, avec son genre :
+« affichage » (le moteur n'a pas ouvert son rendu) se répare en remettant la
+configuration ; « dessin » est l'arrêt PENDANT une image (HP3 : moins
+d'anticrénelage, `reglages_graphiques.repli_apres_echec`) ; « autre » (un
+`Bitmap.LoadFile`, fichier du JEU qui manque) n'a que le rapport à offrir.
 
 **Pas de seuil de durée** : la boîte « Critical Error » garde le processus en
-vie jusqu'à ce qu'on la ferme. Un jeu qui ne démarre pas peut donc « durer »
-une minute. C'est la DATE du journal qui dit qu'il vient de cette partie.
-
-**Tout arrêt fatal compte, pas seulement l'affichage** (audit du 2026-10-07,
-P1-001) : le joueur HP3 sur Intel UHD restait la boîte « Critical Error »
-ouverte plus de 10 s, recevait « Bon jeu ! », et sa tentative comptait comme une
-partie. `apres_la_partie` rend donc un `Arret` pour toute ligne `Critical:`,
-avec son genre : seul « affichage » se répare en remettant la configuration ;
-« dessin » est l'arrêt PENDANT le dessin d'une image (HP3 : moins
-d'anticrénelage, `reglages_graphiques.repli_apres_echec`) ; « autre » n'a que le
-rapport à offrir.
-
-Lecture seule, ne lève jamais.
+vie jusqu'à ce qu'on la ferme ; c'est la DATE du journal qui le rattache à
+cette partie. Lecture seule, ne lève jamais.
 """
 
 import logging
@@ -129,11 +108,8 @@ def arret_fatal(texte: str) -> Arret | None:
                   if c and not c.lower().startswith("apperror called")), "")
     if not ligne:
         return None
-    # Un arrêt PENDANT le dessin d'une image : l'affichage s'était ouvert, la
-    # configuration n'y est pour rien. Cas réel (HP3, joueur sur Intel UHD,
-    # 2026-10-06) : « SetRenderTarget failed(D3DERR_INVALIDCALL) », historique
-    # « … UGameEngine::Draw <- UWindowsViewport::Repaint … » — « viewport »
-    # y figure, et proposer la remise aurait été mentir (règle 108).
+    # Un arrêt PENDANT le dessin d'une image (historique « UGameEngine::Draw »,
+    # « Viewport::Repaint ») : l'affichage s'était ouvert, la remise mentirait.
     if any(d in c.lower() for c in critiques for d in _EN_DESSIN):
         return Arret(ligne, DESSIN)
     if any(signe in c.lower() for c in critiques for signe in _SIGNES):

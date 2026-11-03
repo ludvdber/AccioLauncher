@@ -27,8 +27,8 @@ class DownloadBar(QWidget):
     """Barre de progression visible globalement pendant un téléchargement/installation."""
 
     cancel_clicked = pyqtSignal()
-    # « Annuler » pendant une préparation de Wine (Linux) : ce n'est pas un
-    # téléchargement qu'on arrête, et l'appelant doit le savoir.
+    # « Annuler » pendant une préparation (Wine sous Linux, composants Windows
+    # sous Windows) : ce n'est pas un téléchargement qu'on arrête.
     preparation_cancel_clicked = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -98,7 +98,7 @@ class DownloadBar(QWidget):
         layout.addWidget(self._btn_cancel)
 
         self._game: GameData | None = None
-        # Préparation de Wine : la barre dit l'étape, le temps écoulé et la
+        # Préparation (Wine, composants Windows) : la barre dit l'étape, le temps écoulé et la
         # dernière ligne de winetricks. Sans ça, plusieurs minutes passaient
         # sous un texte figé (Ludo, Bazzite, 2026-09-30 : « on ne voit pas
         # l'avancement, on ne sait pas où ça en est »).

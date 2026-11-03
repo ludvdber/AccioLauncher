@@ -1,8 +1,6 @@
 """Le folio de HP7 et HP8 : ce que `auto.sav` des Reliques de la Mort dit de la partie.
 
-Relevé le 2026-10-16 sur les deux sauvegardes de Ludo, en LECTURE seule
-(`notes/HP7a.md` de l'atelier du correctif, « auto.sav : des variables NOMMÉES ») :
-une table de noms (nombre, puis `nom\\0` suivi de l'indice du suivant, à
+En LECTURE seule (`notes/HP7a.md` de l'atelier du correctif) : une table de noms (nombre, puis `nom\\0` suivi de l'indice du suivant, à
 partir de `LastSaveCheckpoint`), puis des valeurs typées, chacune avec
 l'indice de son nom :
 
@@ -16,8 +14,7 @@ rien. Noms communs aux deux parties : `Completed_ns01` … `Completed_ns27`
 (22 missions annexes, numérotées avec des trous), `PlayerLevel`,
 `PlayerXP` ; la partie 1 compte aussi ses combats (`KillCount`,
 `HeadShotCount`, `StealthKillCount`, `ProtegoDeflects`, `AcroKillCount`,
-`DemKillCount`). Les deux parties de Ludo datent du tout début : les valeurs
-non nulles sont à revoir sur une partie avancée.
+`DemKillCount`).
 """
 
 import logging

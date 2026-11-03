@@ -1,11 +1,5 @@
-"""Les rubriques de la fenêtre de réglages qui ne règlent pas l'image.
-
-Langue, touches, affichage verrouillé, manette, captures et fichiers. Classe
-parente de `GameSettingsDialog`, sortie du même fichier le 2026-10-03 (1 228
-lignes) : les méthodes sont celles d'origine, elles lisent les attributs posés
-par la fenêtre. Les constantes de la fenêtre vivent ici aussi.
-
-Refaites en cartes le 2026-10-09 (maquette « Réglages du jeu ») : chaque
+"""Les rubriques de `GameSettingsDialog` (classe parente) et les constantes de
+la fenêtre ; les méthodes lisent les attributs posés par la fenêtre. Chaque
 rubrique est un surtitre doré et une carte de lignes, comme les Paramètres.
 """
 
@@ -764,14 +758,8 @@ class RubriquesDuJeu:
         open_local_path(str(dossier))
 
     def _actions_du_rail(self, colonne: QVBoxLayout) -> None:
-        """Actions qui n'étaient atteignables qu'au CLIC DROIT, au bas du rail.
-
-        Le journal des changements et « Vérifier / réparer » existaient déjà, mais
-        seulement dans le menu contextuel — exactement le défaut qu'on vient de
-        corriger pour la langue : une fonction qu'il faut deviner n'existe pas.
-        Elles referment la fenêtre avant d'agir, sinon leur propre dialogue
-        s'empilerait par-dessus celui-ci.
-        """
+        """Actions du jeu au bas du rail ; elles referment la fenêtre avant
+        d'agir, sinon leur dialogue s'empilerait sur celui-ci."""
         if not self._actions:
             return
         colonne.addWidget(petit_titre(tr("Fichiers du jeu")))

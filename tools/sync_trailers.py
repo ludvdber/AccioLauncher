@@ -23,7 +23,8 @@ Usage :
 
 Sans `--version`, les jeux déjà déclarés gardent la leur (on ne re-versionne
 pas huit vidéos parce qu'on en a ajouté une) et les nouveaux prennent « 1.0 ».
-Le script est idempotent : rejoué sans changement, il ne réécrit rien.
+Sans `--bump`, le script est idempotent : rejoué sans changement, il ne réécrit
+rien ; `--bump` monte `catalog_version` à chaque passe.
 """
 
 import argparse

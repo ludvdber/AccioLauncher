@@ -7,9 +7,8 @@ teste sans manette ni Qt.
 
 Lecture, sans pilote ni programme à installer :
 - Windows : WinMM (`joyGetPosEx`), qui voit TOUTES les manettes, PlayStation
-  comprises, là où XInput ne voit que les Xbox. Mesuré le 2026-10-03 sur la DS4
-  de Ludo : 2 µs par appel, 17 ms au tout premier (d'où `prechauffer`) ; un
-  emplacement vide répond `JOYERR_UNPLUGGED` en 16 µs.
+  comprises, là où XInput ne voit que les Xbox. Le tout premier appel coûte
+  15-17 ms (d'où `prechauffer`) ; mesures : ARCHITECTURE_CORE.md.
 - Linux : `/dev/input/js*`, lu sans attendre. Les numéros de boutons y suivent
   l'ordre des codes evdev (sud, est, nord, ouest, L1, R1…) pour `xpad` comme
   pour `hid-playstation` : croix et A valent 0 tous les deux. Les axes se

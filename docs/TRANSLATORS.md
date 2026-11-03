@@ -87,11 +87,19 @@ release. Vous pouvez itérer autant que vous voulez.
 
 ### 4. Traduisez le catalogue *(optionnel)*
 
-Les noms des jeux, leurs descriptions, leurs tags et les changelogs vivent dans
-le catalogue et non dans l'interface. Ils se traduisent dans
-[`tools/apply_catalog_i18n.py`](tools/apply_catalog_i18n.py), qui contient un
-dictionnaire par type de contenu. Le script signale les chaînes non traduites,
-donc rien ne se perd en silence.
+Les noms des jeux, leurs descriptions, les changelogs, les avertissements, la
+note sur la manette et les rôles des contributeurs vivent dans le catalogue
+(`games.json` du dépôt `accio-launcher-games`) et non dans l'interface. Chacun
+porte un bloc `i18n`, une entrée par langue :
+
+```json
+"i18n": {
+  "en": { "role": "Creator, development, catalogue" },
+  "de": { "role": "…" }
+}
+```
+
+Ajoutez votre langue dans ces blocs, à côté de `en` et `es`.
 
 C'est un bonus : une traduction de l'interface seule est déjà très utile.
 

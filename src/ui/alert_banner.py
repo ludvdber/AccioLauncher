@@ -73,8 +73,8 @@ class AlertBanner(QLabel):
     """Un seul message à la fois, par ordre de blocage, et rien sinon."""
 
     settings_requested = pyqtSignal()   # « Changer de dossier »
-    # « Installer » d'un composant manquant SOUS LINUX : il s'installe dans le
-    # préfixe Wine, par la fiche de jeu — pas sur une page web.
+    # « Installer » les composants manquants par le launcher (Windows :
+    # installateur intégré ; Linux : préfixe Wine), pas sur une page web.
     preparation_requested = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
@@ -286,33 +286,12 @@ class AlertBanner(QLabel):
     def _elider(self, brut: str, lien: str) -> str:
         """Ramène le bandeau à `_MAX_LIGNES` lignes (élision par la fin).
 
-        Le texte est ÉCHAPPÉ en HTML avant d'entrer dans le bandeau. Celui-ci
-        est un QLabel en `RichText` et le texte vient du CATALOGUE, c'est-à-dire
-        de l'extérieur : sans échappement, n'importe quel balisage défait la
-        mise en page qu'on vient de border, et un `<img src="file:///…">` lit
-        un fichier LOCAL. (La justification longtemps écrite ici — « une image
-        distante déclenche une requête réseau » — est FAUSSE : mesuré le
-        2026-08-27 contre un serveur local, un QLabel n'a pas de gestionnaire
-        réseau et n'en émet aucune. La règle ne bouge pas, son motif si.)
-
-        L'élision porte sur le texte BRUT et l'échappement vient après : couper
-        une chaîne déjà échappée trancherait une entité en deux (`&amp;` → `&am`).
-
-        `quote=False` : guillemets et apostrophes n'ont besoin d'être échappés
-        que DANS un attribut. Ici c'est du contenu d'élément — les échapper
-        remplissait le bandeau de `&#x27;` (rendus correctement par Qt, vérifié,
-        mais illisibles en journal comme en test).
-
-        La mesure passe par le VRAI QLabel et non par `QFontMetrics` : le
-        bandeau est en `RichText`, donc mis en page par un QTextDocument, dont
-        le retour à la ligne ne suit pas celui d'un `boundingRect` en texte
-        brut. Mesuré à côté : le texte élidé « tenait » en deux lignes selon
-        `QFontMetrics` et s'en affichait trois. On interroge donc exactement la
-        fonction qui décide de la hauteur finale, à la largeur qu'utilise
-        `ajuster_hauteur` — les deux ne peuvent plus diverger.
-
-        Le lien entre dans la mesure : il s'ajoute à la dernière ligne et c'est
-        lui qui la fait déborder.
+        - ÉCHAPPÉ : le texte vient du catalogue, et un `<img src="file:///…">`
+          lirait un fichier LOCAL ;
+        - élidé sur le texte BRUT, échappé ensuite (`&amp;` coupé → `&am`) ;
+        - `quote=False` : contenu d'élément, pas d'attribut ;
+        - mesuré sur le VRAI QLabel en RichText (`heightForWidth`), lien compris :
+          `QFontMetrics` disait deux lignes là où il s'en affichait trois.
         """
         def rendu(n: int | None = None) -> str:
             morceau = brut if n is None else brut[:n].rstrip() + "…"
