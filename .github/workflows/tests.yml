@@ -129,13 +129,23 @@ jobs:
       # de garde, lui, vide la pile de chaque thread et arrête pytest en 60 s.
       # Le relevé de mémoire : depuis le 2026-11-02, le runner reçoit un ordre
       # d'arrêt au milieu des tests (« The runner has received a shutdown
-      # signal »), sans échec ni traceback. Les dernières lignes avant la coupure
-      # disent si la machine manquait de mémoire, et quel processus la tenait.
+      # signal »), sans échec ni traceback. Le relevé du 2026-11-03 : UN
+      # processus de test passe de 3,6 à 14,3 Go en 5 s ; introuvable hors de
+      # GitHub (Ubuntu 24.04 et Python 3.15.1 identiques sous Docker : 400 Mo).
+      # Au-delà de 2 Go, la pile Python de ce processus dit quel test et quelle ligne.
+      - name: Outil de diagnostic (pile d'un processus qui gonfle)
+        run: pip install py-spy==0.4.3
       - name: Tests (offscreen via conftest)
         run: |
-          ( while sleep 5; do
+          ( vu=""; while sleep 2; do
+              set -- $(ps -eo rss=,pid= --sort=-rss | head -1)
               echo "::group::mémoire $(date +%T) : $(free -m | awk 'NR==2 {print $3 " / " $2 " Mo"}')"
-              ps -eo rss=,etime=,args= --sort=-rss | head -5 | cut -c1-160
+              ps -eo rss=,pid=,etime=,args= --sort=-rss | head -5 | cut -c1-160
               echo "::endgroup::"
+              if [ "$1" -gt 2000000 ] && [ "$2" != "$vu" ]; then
+                vu=$2
+                echo "===== processus $2 à $(($1 / 1024)) Mo : sa pile ====="
+                sudo "$(command -v py-spy)" dump --pid "$2" || true
+              fi
             done ) &
           python -m pytest -v --tb=short --timeout=60 --timeout-method=thread -n 4 --dist loadfile
