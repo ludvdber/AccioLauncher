@@ -133,6 +133,26 @@ class TestDetection:
         monkeypatch.setattr("src.core.game_language.registre.disponible", lambda: False)
         assert game_language.resoudre(jeu, config) == "fr"
 
+    def test_par_defaut_la_langue_du_launcher(self, hp1, monkeypatch):
+        """L'archive porte le français : un launcher en anglais donnait quand
+        même HP1 en français, et le joueur abandonnait (Ludo, 2026-11-03)."""
+        jeu, config, _, _ = hp1
+        monkeypatch.setattr("src.core.game_language.get_language", lambda: "en")
+        assert game_language.detecter(jeu, config) == "fr"
+        assert game_language.resoudre(jeu, config) == "en"
+
+    def test_le_choix_du_joueur_gagne_sur_la_langue_du_launcher(self, hp1, monkeypatch):
+        jeu, config, _, _ = hp1
+        monkeypatch.setattr("src.core.game_language.get_language", lambda: "en")
+        config.game_language["hp1"] = "fr"
+        assert game_language.resoudre(jeu, config) == "fr"
+
+    def test_une_langue_du_launcher_absente_du_disque_garde_ce_que_portent_les_fichiers(self, hp1, monkeypatch):
+        """Launcher en espagnol, HP1 sans voix espagnoles : ce que les fichiers portent."""
+        jeu, config, _, _ = hp1
+        monkeypatch.setattr("src.core.game_language.get_language", lambda: "es")
+        assert game_language.resoudre(jeu, config) == "fr"
+
     def test_les_deux_langues_sont_sur_le_disque(self, hp1):
         jeu, config, _, jeux = hp1
         assert [lg.code for lg in game_language.langues_disponibles(jeu, config)] == ["fr", "en"]

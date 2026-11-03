@@ -39,6 +39,9 @@ log = logging.getLogger(__name__)
 # ne sont plus une rubrique : leurs actions vivent au bas du rail, visibles
 # de partout (un onglet entier servait à quelques liens).
 _ONGLETS = (
+    # En PREMIER, et à part (Ludo, 2026-11-03) : les joueurs qui ne parlent pas
+    # français ne trouvaient pas la langue, rangée dans « Jeu ».
+    ("langue", "Langue", "site"),
     ("image", "Image", "ecran"),
     ("commandes", "Commandes", "clavier"),
     ("jeu", "Jeu", "drapeau"),
@@ -197,6 +200,7 @@ class RubriquesDuJeu:
                 tr("Le lanceur ne peut que sélectionner une langue déjà présente "
                    "sur le disque, pas la télécharger.")))
             self._section(corps, self._titre_rubrique(tr("Langue du jeu")), carte)
+            self._note_langues(corps)
             return
         for langue in proposables:
             radio = QRadioButton(langue.label)
@@ -215,6 +219,15 @@ class RubriquesDuJeu:
             h.addWidget(radio)
             carte.ajouter(ligne)
         self._section(corps, self._titre_rubrique(tr("Langue du jeu")), carte)
+        self._note_langues(corps)
+
+    def _note_langues(self, corps: QVBoxLayout) -> None:
+        """Prévenir que la liste n'est pas celle du launcher (Ludo, 2026-11-03) :
+        un jeu peut avoir d'autres langues, et plus nombreuses."""
+        self._note(corps, tr(
+            "Chaque jeu a ses propres langues : elles ne sont pas les mêmes d'un jeu à "
+            "l'autre, et un jeu peut en avoir d'autres que celles du launcher, parfois "
+            "davantage. Par défaut, le jeu prend la langue du launcher quand il l'a."))
 
     def _section_touches(self, corps: QVBoxLayout) -> None:
         """Chaque action de HP4 et sa touche, réglables une par une.

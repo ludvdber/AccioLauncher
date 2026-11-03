@@ -451,7 +451,8 @@ class SettingsDialog(QDialog):
         self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
         langue.ajouter(LigneReglage(
             tr("Langue du launcher"),
-            tr("Chaque jeu garde sa propre langue, dans ses réglages."), self._lang_combo))
+            tr("Les jeux ont leurs propres langues, parfois plus nombreuses que celles du launcher : "
+               "chacun se règle dans ses réglages, rubrique Langue."), self._lang_combo))
         # Bouton et aide vivent SOUS la ligne du combo : en ligne, ils
         # écrasaient le bouton sous sa taille minimale et débordaient du dialogue.
         self._lang_hint, self._lang_restart = self._ligne_redemarrage(

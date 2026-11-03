@@ -87,6 +87,26 @@ class TestEngrenageReglagesDuJeu:
         assert coche > 40, coche
         assert all(a < coche / 4 for a in autres), (coche, autres)
 
+    def test_la_langue_est_une_rubrique_a_part_et_la_premiere(self, make_window_multilingue):
+        """Rangée dans « Jeu », les non-francophones ne la trouvaient pas
+        (Ludo, 2026-11-03) : rubrique « Langue » en tête, ouverte d'emblée, qui
+        prévient que les langues changent d'un jeu à l'autre."""
+        from PyQt6.QtWidgets import QLabel
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        assert next(iter(dlg._onglets)) == "langue"
+        assert dlg._onglets["langue"].isChecked()
+        assert dlg._boutons
+        textes = " ".join(lb.text() for lb in dlg._contenus[0].findChildren(QLabel))
+        assert "un jeu peut en avoir d'autres que celles du launcher" in textes
+        autre = next(g.game for g in win.manager.get_games() if g.game.langues is None)
+        sans = GameSettingsDialog(autre, win.manager, lambda code: True, parent=win)
+        assert "langue" not in sans._onglets
+
     def test_le_folio_dans_la_ligne_d_indices(self, make_window_multilingue, monkeypatch):
         """Depuis Mes années seulement, le folio était « horrible à trouver » ;
         en bouton près de l'engrenage, il faisait passer le temps de jeu sous

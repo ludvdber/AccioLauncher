@@ -365,14 +365,15 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if a_des_touches and "touches_zqsd" in self._controles:
                 self._section_touches(corps)
             return self._section_manette(corps) or a_des_touches
-        if onglet == "jeu":
-            rempli = False
+        if onglet == "langue":
             # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
             # et registre atteignable pour ceux qui la lisent là.
-            if self.manager.game_language(self.game) is not None:
-                self._section_langue(corps)
-                rempli = True
-            rempli = self._section_demarrage(corps) or rempli
+            if self.manager.game_language(self.game) is None:
+                return False
+            self._section_langue(corps)
+            return True
+        if onglet == "jeu":
+            rempli = self._section_demarrage(corps)
             if self._section_correctif(corps, "jeu", titre=tr("Dans le jeu")):
                 rempli = True
             return self._section_captures(corps) or rempli

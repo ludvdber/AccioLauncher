@@ -117,6 +117,10 @@ def resoudre(game: GameData, config: Config) -> str | None:
        catalogue. Surtout PAS la langue système : l'utilisateur a déjà dit sa
        langue à l'onboarding, et de toute façon aucun défaut figé ne peut
        convenir tant qu'il n'est pas modifiable.
+
+    Langue portée par des fichiers (HP1, HP2) : 3 passe avant 2 quand le jeu
+    a la langue du launcher (son archive porte toujours le français, et rien
+    n'y demande d'élévation).
     """
     lr = game.langues
     # Sans registre atteignable (Linux sans préfixe prêt), aucune langue n'est « celle du jeu » :
@@ -135,11 +139,19 @@ def resoudre(game: GameData, config: Config) -> str | None:
     choisi = config.game_language.get(game.id)
     if isinstance(choisi, str) and choisi and lr.get(choisi) is not None:
         return choisi
+    possibles = langues_disponibles(game, config) or lr.languages
+    interface = get_language()
+    # Langue portée par des FICHIERS (HP1, HP2) : la langue du launcher passe
+    # AVANT ce que les fichiers portent. Leur archive livre `Language=fre`, si
+    # bien que la détection gardait le français à un joueur dont le launcher
+    # est en anglais ou en espagnol : il voyait du français et abandonnait
+    # (Ludo, 2026-11-03). Ici aucune élévation n'est en jeu, et le joueur garde
+    # la main : son choix explicite gagne toujours (étape 1).
+    if game.langue_par_fichiers and any(lg.code == interface for lg in possibles):
+        return interface
     detecte = detecter(game, config)
     if detecte is not None:
         return detecte
-    possibles = langues_disponibles(game, config) or lr.languages
-    interface = get_language()
     if any(lg.code == interface for lg in possibles):
         return interface
     return possibles[0].code
