@@ -93,11 +93,16 @@ def test_l_etendu_prolonge_l_image_dans_son_flou_pas_dans_du_noir(qtbot, tmp_pat
     fond.set_image(tmp_path / "bandeau.png")
     fond.show()
     assert fond._racine.property("etendu")
-    qtbot.waitUntil(lambda: fond.grabFramebuffer().pixelColor(1000, 300).blue() > 60, timeout=5000)
-    rendu = fond.grabFramebuffer()
-    # Les voiles assombrissent la gauche (sous le texte) : on compare les teintes, pas les niveaux.
-    gauche, droite = rendu.pixelColor(400, 600), rendu.pixelColor(1100, 600)
-    assert (gauche.green() - gauche.blue()) > (droite.green() - droite.blue()) + 15, (gauche.name(), droite.name())
+
+    def teintes_du_flou():
+        # La copie floue est une AUTRE image, chargée à part, après l'image nette :
+        # attendre l'image nette suffisait sous Windows, pas sur le runner Linux
+        # (rendu logiciel), qui capturait le bas encore vide (#060610, #03030d).
+        rendu = fond.grabFramebuffer()
+        # Les voiles assombrissent la gauche (sous le texte) : on compare les teintes, pas les niveaux.
+        gauche, droite = rendu.pixelColor(400, 600), rendu.pixelColor(1100, 600)
+        assert (gauche.green() - gauche.blue()) > (droite.green() - droite.blue()) + 15, (gauche.name(), droite.name())
+    qtbot.waitUntil(teintes_du_flou, timeout=5000)
 
 
 def test_le_fondu_de_l_etendu_descend_sans_rayure(qtbot, tmp_path):
