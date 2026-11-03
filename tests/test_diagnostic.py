@@ -377,6 +377,8 @@ class TestDiagnosticSousLinux:
 
     def test_windows_n_a_pas_de_ligne_de_compatibilite(self, monkeypatch):
         monkeypatch.setattr(diagnostic.sys, "platform", "win32")
+        # « win32 » simulé sous Linux : `_windows()` importerait `winreg`, absent.
+        monkeypatch.setattr(diagnostic, "systeme", lambda: "Windows 11")
         texte = TestRapport()._rapport(tentatives=(), machine=[], documents="D")
         assert "Compatibilité" not in texte
 

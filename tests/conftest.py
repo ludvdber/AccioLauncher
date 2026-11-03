@@ -6,6 +6,7 @@ des fixtures réutilisables pour les tests UI.
 
 import gc
 import os
+import sys
 from pathlib import Path
 
 # Doit être posé AVANT tout import PyQt6.
@@ -32,7 +33,21 @@ os.chdir(Path(__file__).resolve().parents[1])
 # il dépend du moment où le GC se déclenche, et il fait échouer un build au
 # hasard. Importer tôt supprime la fenêtre de tir.
 from PyQt6 import QtNetwork  # noqa: F401,E402
+from PyQt6.QtCore import qInstallMessageHandler  # noqa: E402
 import pytest  # noqa: E402
+
+
+# Un gestionnaire de messages Qt PERMANENT. pytest-qt pose le sien à chaque
+# test puis remet le précédent : aucun, donc None. Un message émis à cet
+# instant par un fil de Qt (le décodeur multimédia, qui se plaint d'un faux
+# .ogg) appelait ce None : « 'NoneType' object is not callable », sans pile,
+# au démontage. Linux seulement, 10 démontages sur 10 dans le conteneur de la
+# CI (2026-11-03) ; 0 sur 10 avec `--no-qt-log`.
+def _message_qt(_type, _contexte, message):
+    sys.stderr.write(f"{message}\n")
+
+
+qInstallMessageHandler(_message_qt)
 
 # Les tests tournent comme le launcher : modules `src.*` chargés à leur premier
 # usage sous Python 3.15 (`main.main` fait le même appel).
