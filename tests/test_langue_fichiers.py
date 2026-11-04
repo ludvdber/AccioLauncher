@@ -268,3 +268,103 @@ class TestCatalogueEmbarque:
             fichiers = [p["file"] for p in lg["ini"]]
             assert len(fichiers) == 2 and fichiers[0].startswith("%DOCUMENTS%")
             assert fichiers[1].startswith("%INSTALL_DIR%") and lg["requires_file"].startswith(jeu.upper() + "/Sounds/")
+
+
+class TestHP3Langues:
+    """Les onze langues de HP3, réunies depuis quatre éditions européennes du CD
+    (2026-11-04). Le dossier de Documents de HP3 porte le titre TRADUIT : Core.dll
+    lit `[Core.System] AppUserDir` dans Default.ini, livré « loc: … gametitle_1 ».
+    Sans le figer, passer en anglais ouvrait « Harry Potter and the Prisoner of
+    Azkaban » : ni la partie, ni les réglages (essai du 2026-11-04)."""
+
+    ATTENDU = {"fr": "Fre", "en": "int", "es": "Spa", "de": "Ger", "it": "Ita", "pt": "Por",
+               "pt-BR": "Bra", "nl": "Dut", "sv": "Swe", "da": "Dan", "no": "Nor"}
+
+    @staticmethod
+    def _jeu():
+        import json
+
+        from src.core.config import ASSETS_DIR
+        catalogue = json.loads((ASSETS_DIR.parent / "src" / "data" / "games.json").read_text(encoding="utf-8"))
+        return next(g for g in catalogue["games"] if g["id"] == "hp3")
+
+    def test_onze_langues_et_leurs_voix(self):
+        bloc = self._jeu()["language_files"]["languages"]
+        assert {code: lg["ini"][0]["value"] for code, lg in bloc.items()} == self.ATTENDU
+        for code, lg in bloc.items():
+            valeur = self.ATTENDU[code]
+            voix = "alldialog.uax" if valeur == "int" else f"alldialog.{valeur.lower()}_uax"
+            assert lg["requires_file"] == f"HP3/sounds/{voix}"
+
+    def test_chaque_langue_garde_le_meme_dossier_de_documents(self):
+        jeu = self._jeu()
+        dossier = "Harry Potter et le prisonnier d'Azkaban"
+        # Le dossier figé est celui où le launcher écrit la config et cherche les parties.
+        assert all(dossier in p["file"] for p in jeu["pre_launch"]["ini_patches"])
+        for lg in jeu["language_files"]["languages"].values():
+            par_cle = {(p["file"], p["section"], p["key"]): p["value"] for p in lg["ini"]}
+            assert par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Core.System", "AppUserDir")] == dossier
+            assert par_cle[("%DOCUMENTS%\\" + dossier + "\\hppoa.ini", "Engine.Engine", "Language")] \
+                == par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Engine.Engine", "Language")]
+
+    def test_le_bloc_se_lit(self):
+        from src.core.catalogue_blocs import _parse_language_files
+        lu = _parse_language_files(self._jeu()["language_files"])
+        assert lu is not None and lu.codes == tuple(self.ATTENDU)
+
+    def test_appliquer_fige_le_dossier(self, tmp_path, monkeypatch):
+        """De bout en bout sur un faux HP3 : l'anglais posé, `loc:` remplacé."""
+        docs = (tmp_path / "docs").resolve()
+        (docs / "Harry Potter et le prisonnier d'Azkaban").mkdir(parents=True)
+        (docs / "Harry Potter et le prisonnier d'Azkaban" / "hppoa.ini").write_text(
+            "[Engine.Engine]\r\nLanguage=Fre\r\n", encoding="cp1252", newline="")
+        jeux = (tmp_path / "jeux").resolve()
+        jeu_dir = jeux / "HP3"
+        (jeu_dir / "system").mkdir(parents=True)
+        (jeu_dir / "sounds").mkdir()
+        (jeu_dir / "sounds" / "alldialog.uax").write_bytes(b"x")
+        (jeu_dir / "system" / "Default.ini").write_text(
+            "[Engine.Engine]\r\nLanguage=Fre\r\n[Core.System]\r\n"
+            "AppUserDir=loc: SECTION=All KEY=gametitle_1 PACKAGE=HPMenu DEFAULT=HPPOA\r\n",
+            encoding="cp1252", newline="")
+        monkeypatch.setattr("src.core.pre_launch.get_documents_dir", lambda: docs)
+        game = GameData.from_dict({
+            "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "dev",
+            "executable": "HP3/system/hppoa.exe", "cover_image": "c.png",
+            "language_files": self._jeu()["language_files"]})
+        config = Config(install_path=jeux)
+        assert [lg.code for lg in game_language.langues_disponibles(game, config)] == ["en"]
+        assert game_language.appliquer(game, config, "en")
+        defaut = (jeu_dir / "system" / "Default.ini").read_text(encoding="cp1252")
+        assert "Language=int" in defaut and "AppUserDir=Harry Potter et le prisonnier d'Azkaban" in defaut
+        assert "loc:" not in defaut
+        assert game_language.detecter(game, config) == "en"
+
+    def test_default_ini_garde_sa_date(self, tmp_path, monkeypatch):
+        """HP3 recrée hppoa.ini et User.ini dès que Default.ini est plus récent que
+        hppoa.ini (800×600, manette coupée, touches perdues ; VU le 2026-11-04) :
+        poser la langue ne doit pas rajeunir Default.ini."""
+        import os
+        docs = (tmp_path / "docs").resolve()
+        dossier = docs / "Harry Potter et le prisonnier d'Azkaban"
+        dossier.mkdir(parents=True)
+        (dossier / "hppoa.ini").write_text("[Engine.Engine]\r\nLanguage=Fre\r\n", encoding="cp1252", newline="")
+        jeux = (tmp_path / "jeux").resolve()
+        (jeux / "HP3" / "system").mkdir(parents=True)
+        (jeux / "HP3" / "sounds").mkdir()
+        (jeux / "HP3" / "sounds" / "alldialog.ger_uax").write_bytes(b"x")
+        defaut = jeux / "HP3" / "system" / "Default.ini"
+        defaut.write_text("[Engine.Engine]\r\nLanguage=Fre\r\n[Core.System]\r\nAppUserDir=loc: X\r\n",
+                          encoding="cp1252", newline="")
+        vieux = 1_760_000_000
+        os.utime(defaut, (vieux, vieux))
+        os.utime(dossier / "hppoa.ini", (vieux + 100, vieux + 100))
+        monkeypatch.setattr("src.core.pre_launch.get_documents_dir", lambda: docs)
+        game = GameData.from_dict({
+            "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "dev",
+            "executable": "HP3/system/hppoa.exe", "cover_image": "c.png",
+            "language_files": self._jeu()["language_files"]})
+        assert game_language.appliquer(game, Config(install_path=jeux), "de")
+        assert "Language=Ger" in defaut.read_text(encoding="cp1252")
+        assert defaut.stat().st_mtime == vieux                       # contenu neuf, date d'avant
+        assert (dossier / "hppoa.ini").stat().st_mtime > defaut.stat().st_mtime

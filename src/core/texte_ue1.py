@@ -542,13 +542,17 @@ def _poser(cible: Path, source: Path, spec: PaquetPolices, f: float,
     else:
         # Paquet d'origine, ou remis par une mise à jour / une réparation : la nouvelle source.
         d = actuel
+        # Regravé AVANT le test « d'origine » : un cache effacé après une pose
+        # laissait enregistrer le paquet agrandi comme l'original, « D'origine »
+        # mentait et le réglage restait ensuite bloqué (grand audit, constat 47).
+        if any(deja_regravee(Paquet(d), nom) for nom in spec.polices):
+            log.info("Texte : %s déjà regravé (autre outil, ou original gardé perdu) ; "
+                     "laissé tel quel, la réparation du jeu le remet", spec.chemin)
+            etat.pop(spec.chemin, None)
+            return None
         if f == 1.0:
             etat[spec.chemin] = {"source": empreinte, "sortie": empreinte, "facteur": f}
             return f
-        if any(deja_regravee(Paquet(d), nom) for nom in spec.polices):
-            log.info("Texte : %s déjà regravé par un autre outil, laissé tel quel", spec.chemin)
-            etat.pop(spec.chemin, None)
-            return None
         source.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(cible, source)
     sortie = d if f == 1.0 else regraver(d, spec.polices, f, SERIF if spec.serif else SANS)

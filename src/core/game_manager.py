@@ -412,7 +412,7 @@ class GameManager:
 
 
     def game_language(self, game: GameData) -> str | None:
-        """Langue de ce jeu : choix explicite → registre → interface → catalogue (HP1/HP2 : interface avant leurs fichiers)."""
+        """Langue de ce jeu : choix explicite → registre → interface → catalogue (HP1 à HP3 : interface avant leurs fichiers)."""
         return langue.resoudre(game, self.config)
 
     def set_game_language(self, game_id: str, code: str) -> None:

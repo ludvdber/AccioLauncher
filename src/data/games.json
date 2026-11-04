@@ -1445,6 +1445,274 @@
         ],
         "first": 0
       },
+      "language_files": {
+        "languages": {
+          "fr": {
+            "label": "Français",
+            "requires_file": "HP3/sounds/alldialog.fre_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Fre"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Fre"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "en": {
+            "label": "English",
+            "requires_file": "HP3/sounds/alldialog.uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "int"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "int"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "es": {
+            "label": "Español",
+            "requires_file": "HP3/sounds/alldialog.spa_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Spa"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Spa"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "de": {
+            "label": "Deutsch",
+            "requires_file": "HP3/sounds/alldialog.ger_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Ger"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Ger"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "it": {
+            "label": "Italiano",
+            "requires_file": "HP3/sounds/alldialog.ita_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Ita"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Ita"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "pt": {
+            "label": "Português",
+            "requires_file": "HP3/sounds/alldialog.por_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Por"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Por"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "pt-BR": {
+            "label": "Português (Brasil)",
+            "requires_file": "HP3/sounds/alldialog.bra_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Bra"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Bra"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "nl": {
+            "label": "Nederlands",
+            "requires_file": "HP3/sounds/alldialog.dut_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Dut"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Dut"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "sv": {
+            "label": "Svenska",
+            "requires_file": "HP3/sounds/alldialog.swe_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Swe"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Swe"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "da": {
+            "label": "Dansk",
+            "requires_file": "HP3/sounds/alldialog.dan_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Dan"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Dan"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          },
+          "no": {
+            "label": "Norsk",
+            "requires_file": "HP3/sounds/alldialog.nor_uax",
+            "ini": [
+              {
+                "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Nor"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Engine.Engine",
+                "key": "Language",
+                "value": "Nor"
+              },
+              {
+                "file": "%INSTALL_DIR%\\system\\Default.ini",
+                "section": "Core.System",
+                "key": "AppUserDir",
+                "value": "Harry Potter et le prisonnier d'Azkaban"
+              }
+            ]
+          }
+        }
+      },
       "display_locked": true,
       "controller": "yes",
       "fix_settings": [

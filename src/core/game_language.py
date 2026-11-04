@@ -22,18 +22,19 @@ délèguent — aucun appelant ne change.
 
 import filecmp
 import logging
+import os
 import shutil
 import time
 from pathlib import Path
 from typing import Any
 
 from src.core import game_registry as registre
-from src.core.catalogue_blocs import GameLanguage, LangueFichiers
+from src.core.catalogue_blocs import GameLanguage, IniPatch, LangueFichiers
 from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.game_registry import Confirmer
 from src.core.i18n import get_language
-from src.core.pre_launch import ecrire_cle_ini, lire_cle_ini, substituer_pour_le_jeu
+from src.core.pre_launch import ecrire_cle_ini, lire_cle_ini, resolve_safe_path, substituer_pour_le_jeu
 
 log = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ def resoudre(game: GameData, config: Config) -> str | None:
        langue à l'onboarding, et de toute façon aucun défaut figé ne peut
        convenir tant qu'il n'est pas modifiable.
 
-    Langue portée par des fichiers (HP1, HP2) : 3 passe avant 2 quand le jeu
+    Langue portée par des fichiers (HP1 à HP3) : 3 passe avant 2 quand le jeu
     a la langue du launcher (son archive porte toujours le français, et rien
     n'y demande d'élévation).
     """
@@ -141,7 +142,7 @@ def resoudre(game: GameData, config: Config) -> str | None:
         return choisi
     possibles = langues_disponibles(game, config) or lr.languages
     interface = get_language()
-    # Langue portée par des FICHIERS (HP1, HP2) : la langue du launcher passe
+    # Langue portée par des FICHIERS (HP1 à HP3) : la langue du launcher passe
     # AVANT ce que les fichiers portent. Leur archive livre `Language=fre`, si
     # bien que la détection gardait le français à un joueur dont le launcher
     # est en anglais ou en espagnol : il voyait du français et abandonnait
@@ -359,5 +360,31 @@ def _appliquer_fichiers(game: GameData, config: Config, code: str | None) -> boo
         actuel = lire_cle_ini(patch, game, config)
         if actuel is not None and actuel.casefold() == patch.value.casefold():
             continue
-        ok = ecrire_cle_ini(patch, game, config) and ok
+        ok = _ecrire_sans_dater(patch, game, config) and ok
+    return ok
+
+
+def _ecrire_sans_dater(patch: IniPatch, game: GameData, config: Config) -> bool:
+    """Écrit la clé ; un fichier du DOSSIER DU JEU garde sa date d'avant.
+
+    HP3 recrée `hppoa.ini` et `User.ini` de Documents à partir de ses modèles
+    dès que `system\\Default.ini` est plus récent que `hppoa.ini` : 800×600,
+    manette coupée, touches du joueur perdues (VU le 2026-11-04, contenus
+    identiques, seules les dates changeaient). Poser la langue dans Default.ini
+    ne doit donc pas le rajeunir. Les fichiers de Documents, eux, se datent
+    normalement : plus récents, ils sont gardés.
+    """
+    if not patch.file.startswith("%INSTALL_DIR%"):
+        return ecrire_cle_ini(patch, game, config)
+    chemin = resolve_safe_path(patch.file, game, config)
+    try:
+        avant = chemin.stat() if chemin is not None else None
+    except OSError:
+        avant = None
+    ok = ecrire_cle_ini(patch, game, config)
+    if ok and chemin is not None and avant is not None:
+        try:
+            os.utime(chemin, ns=(avant.st_atime_ns, avant.st_mtime_ns))
+        except OSError as exc:
+            log.warning("Date de %s non rendue (%s) : HP3 pourrait recréer ses réglages", chemin, exc)
     return ok

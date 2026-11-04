@@ -49,6 +49,9 @@ SONY = 0x054C
 # clignoterait et ferait défiler les jeux tout seul.
 SEUIL_ALLUME = 0.60
 SEUIL_ETEINT = 0.40
+# En diagonale, l'autre axe doit dépasser la direction allumée d'autant pour la
+# remplacer (même raison : pas de bascule au bruit).
+MARGE_AXE = 0.15
 # Stick droit : rien sous 25 % (un stick au repos n'est jamais à zéro : la DS4
 # de Ludo reposait à 31 743 sur 65 535, soit -3 %).
 ZONE_MORTE_DEFILEMENT = 0.25
@@ -84,8 +87,18 @@ def directions_du_stick(x: float, y: float, avant: frozenset[str]) -> frozenset[
     """La direction que montre le stick gauche, une seule à la fois.
 
     L'axe le plus poussé l'emporte : en diagonale, le launcher ne saurait pas
-    quoi faire de deux flèches à la fois. `avant` donne l'hystérésis.
+    quoi faire de deux flèches à la fois. `avant` donne l'hystérésis, sur le
+    seuil ET sur le choix de l'axe : la direction allumée tient tant que
+    l'autre axe ne la dépasse pas de `MARGE_AXE`, sinon un stick tenu pile en
+    diagonale alternait droite et bas au bruit près, un appui à chaque bascule.
     """
+    tenue = next(iter(avant & DIRECTIONS), None)
+    if tenue is not None:
+        sur_x = tenue in (GAUCHE, DROITE)
+        propre, autre = (x, y) if sur_x else (y, x)
+        bon_sens = propre > 0 if tenue in (DROITE, BAS) else propre < 0
+        if bon_sens and abs(propre) >= SEUIL_ETEINT and abs(autre) < abs(propre) + MARGE_AXE:
+            return frozenset({tenue})
     axe_x = abs(x) >= abs(y)
     valeur = x if axe_x else y
     direction = (DROITE if valeur > 0 else GAUCHE) if axe_x else (BAS if valeur > 0 else HAUT)

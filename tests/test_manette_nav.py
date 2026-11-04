@@ -79,6 +79,21 @@ class TestStick:
         assert lec.directions_du_stick(-0.7, 0.9, frozenset()) == {lec.BAS}
         assert lec.directions_du_stick(-0.9, -0.7, frozenset()) == {lec.GAUCHE}
 
+    def test_diagonale_tenue_ne_bascule_pas_au_bruit(self):
+        """Grand audit, constat 12 : pile en diagonale, un centième de bruit
+        faisait alterner droite et bas à chaque lecture, chaque bascule étant un
+        nouvel appui. La direction allumée garde son axe tant que l'autre ne la
+        dépasse pas nettement."""
+        r = Repetition()
+        actions = []
+        for k in range(20):
+            bruit = 0.01 if k % 2 else -0.01
+            actions += r.actions(Etat(stick_x=0.70 + bruit, stick_y=0.70 - bruit), k * 0.016)
+        assert len(actions) == 1          # le premier échantillon décide, puis plus rien
+        # Un vrai changement de direction passe toujours.
+        assert lec.directions_du_stick(0.2, 0.9, frozenset({lec.DROITE})) == {lec.BAS}
+        assert lec.directions_du_stick(-0.8, 0.1, frozenset({lec.DROITE})) == {lec.GAUCHE}
+
     def test_defilement(self):
         assert lec.defilement_utile(0.2) == 0.0
         assert lec.defilement_utile(1.0) == 1.0

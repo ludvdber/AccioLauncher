@@ -4,6 +4,7 @@ Le paquet est FABRIQUÉ (aucun fichier du jeu dans le dépôt) : une `Font` de 2
 glyphes sur une page de 256 × 64, comme celles de 2001, et un objet voisin qui
 ne doit pas bouger d'un octet. Le rendu des glyphes passe par Qt (`qapp`).
 """
+import shutil
 import struct
 from types import SimpleNamespace
 
@@ -175,6 +176,19 @@ class TestAuLancement:
         paquet.write_bytes(autre)                 # l'atelier est passé avant
         assert t.appliquer(game, config, 1440) is None
         assert paquet.read_bytes() == autre
+
+    def test_cache_efface_d_origine_ne_ment_pas(self, qapp, jeu):
+        """Grand audit, constat 47 : cache effacé après une pose, puis « D'origine ».
+        Le paquet regravé était enregistré comme l'ORIGINAL : le réglage disait
+        « d'origine » sur un texte agrandi, puis restait bloqué à jamais."""
+        game, config, paquet, original = jeu
+        t.appliquer(game, config, 1700)
+        shutil.rmtree(config.install_path / "_Launcher" / "cache" / "texte")
+        config.taille_texte["hp1"] = t.ORIGINE
+        assert t.appliquer(game, config, 1440) is None       # rien de posé : on ne sait plus revenir
+        paquet.write_bytes(original)                          # la réparation du jeu remet l'original
+        config.taille_texte["hp1"] = ""
+        assert t.appliquer(game, config, 1700) == 3.0         # et le réglage marche de nouveau
 
     def test_sans_hauteur_ou_autre_jeu(self, jeu):
         game, config, paquet, original = jeu
