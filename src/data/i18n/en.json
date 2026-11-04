@@ -1474,7 +1474,7 @@
     "La désinstallation de {} n'a pas abouti : un de ses fichiers est encore utilisé. Fermez ce qui l'utilise, puis réessayez.": "Uninstalling {} did not finish: one of its files is still in use. Close whatever is using it, then try again.",
     "Partie tout juste commencée : rien à montrer encore.": "A game that has only just begun: nothing to show yet.",
     "Caméra fluide": "Smooth camera",
-    "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde, sans changer la vitesse du jeu. Compte au prochain lancement du jeu.": "The game only reads the mouse and the controller 20 times per second, whatever the frame rate: the camera moves in small jerks. \"Smooth\" reads them 62 times per second, without changing the game's speed. Takes effect the next time the game starts.",
+    "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort). Compte au prochain lancement du jeu.": "The game only reads the mouse and the controller 20 times per second, whatever the frame rate: the camera moves in small jerks. \"Smooth\" reads them 62 times per second; Harry keeps his speed. Known: some animations still go too fast (the mouths of people talking, what the mouse drives during a spell). Takes effect the next time the game starts.",
     "Fluide": "Smooth"
   }
 }

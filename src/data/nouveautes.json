@@ -13,22 +13,22 @@
             "es": "Los juegos hablan más idiomas"
           },
           "texte": {
-            "fr": "L'École des Sorciers et La Chambre des Secrets se jouent aussi en espagnol, La Chambre des Secrets en anglais, Le Prisonnier d'Azkaban en onze langues et La Coupe de Feu en douze, dont l'anglais, voix comprises. Les trois premiers suivent la langue du launcher ; La Coupe de Feu la demande au démarrage.",
-            "en": "Philosopher's Stone and Chamber of Secrets can also be played in Spanish, Chamber of Secrets in English, Prisoner of Azkaban in eleven languages and Goblet of Fire in twelve, English included, voices too. The first three follow the launcher's language; Goblet of Fire asks for it at start-up.",
-            "es": "La piedra filosofal y La cámara secreta también se juegan en español, La cámara secreta en inglés, El prisionero de Azkaban en once idiomas y El cáliz de fuego en doce, inglés incluido, con las voces. Los tres primeros siguen el idioma del launcher; El cáliz de fuego lo pregunta al arrancar."
+            "fr": "L'École des Sorciers et La Chambre des Secrets se jouent aussi en espagnol, La Chambre des Secrets en anglais, Le Prisonnier d'Azkaban en onze langues, La Coupe de Feu en douze, dont l'anglais, et L'Ordre du Phénix en neuf, voix comprises. Les trois premiers suivent la langue du launcher ; La Coupe de Feu et L'Ordre du Phénix la demandent au démarrage.",
+            "en": "Philosopher's Stone and Chamber of Secrets can also be played in Spanish, Chamber of Secrets in English, Prisoner of Azkaban in eleven languages, Goblet of Fire in twelve, English included, and Order of the Phoenix in nine, voices too. The first three follow the launcher's language; Goblet of Fire and Order of the Phoenix ask for it at start-up.",
+            "es": "La piedra filosofal y La cámara secreta también se juegan en español, La cámara secreta en inglés, El prisionero de Azkaban en once idiomas, El cáliz de fuego en doce, inglés incluido, y La Orden del Fénix en nueve, con las voces. Los tres primeros siguen el idioma del launcher; El cáliz de fuego y La Orden del Fénix lo preguntan al arrancar."
           }
         },
         {
-          "icone": "oeil",
+          "icone": "ecran",
           "titre": {
-            "fr": "Une caméra plus fluide dans L'Ordre du Phénix",
-            "en": "A smoother camera in Order of the Phoenix",
-            "es": "Una cámara más fluida en La Orden del Fénix"
+            "fr": "Tout l'écran, enfin",
+            "en": "The whole screen, at last",
+            "es": "Toda la pantalla, por fin"
           },
           "texte": {
-            "fr": "Le jeu lisait la souris trop rarement : la caméra avançait par à-coups, quelle que soit la vitesse de l'image. Le réglage « Caméra fluide » (bêta, onglet Performances) la fait lire bien plus souvent, et Harry garde la même vitesse.",
-            "en": "The game read the mouse too rarely: the camera moved in jerks, however fast the picture was. The \"Smooth camera\" setting (beta, Performance tab) makes it read far more often, and Harry keeps the same speed.",
-            "es": "El juego leía el ratón muy pocas veces: la cámara avanzaba a tirones, fuera cual fuera la velocidad de la imagen. El ajuste «Cámara fluida» (beta, pestaña Rendimiento) hace que lo lea mucho más a menudo, y Harry mantiene la misma velocidad."
+            "fr": "Le Prisonnier d'Azkaban occupe tout l'écran, quelle que soit sa taille, au lieu de rester en 1920 × 1080. Sur un écran large, le menu pause de La Chambre des Secrets est centré et prolongé jusqu'aux bords par son ciel et ses barres dorées, au lieu de laisser voir le jeu sur les côtés.",
+            "en": "Prisoner of Azkaban fills the whole screen, whatever its size, instead of staying at 1920 × 1080. On a wide screen, the pause menu of Chamber of Secrets is centred and carried to the edges by its sky and golden bars, instead of showing the game at its sides.",
+            "es": "El prisionero de Azkaban ocupa toda la pantalla, sea cual sea su tamaño, en lugar de quedarse en 1920 × 1080. En una pantalla ancha, el menú de pausa de La cámara secreta queda centrado y se prolonga hasta los bordes con su cielo y sus barras doradas, en lugar de dejar ver el juego a los lados."
           }
         }
       ],
@@ -42,19 +42,19 @@
           }
         },
         {
-          "genre": "ameliore",
+          "genre": "nouveau",
           "texte": {
-            "fr": "Le Prisonnier d'Azkaban occupe tout l'écran, quelle que soit sa taille, au lieu de rester en 1920 × 1080.",
-            "en": "Prisoner of Azkaban fills the whole screen, whatever its size, instead of staying at 1920 × 1080.",
-            "es": "El prisionero de Azkaban ocupa toda la pantalla, sea cual sea su tamaño, en lugar de quedarse en 1920 × 1080."
+            "fr": "L'Ordre du Phénix : réglage « Caméra fluide », en bêta (onglet Performances). La souris est lue bien plus souvent ; encore en essai, certaines animations vont trop vite avec lui.",
+            "en": "Order of the Phoenix: \"Smooth camera\" setting, in beta (Performance tab). The mouse is read far more often; still being tested, some animations go too fast with it.",
+            "es": "La Orden del Fénix: ajuste «Cámara fluida», en beta (pestaña Rendimiento). El ratón se lee mucho más a menudo; aún en pruebas, algunas animaciones van demasiado rápido con él."
           }
         },
         {
           "genre": "ameliore",
           "texte": {
-            "fr": "Le Prisonnier d'Azkaban en anglais écrit ses textes à la même taille que dans les autres langues, et le menu pause de La Chambre des Secrets est centré sur un écran large. Avec les nouvelles versions de ces jeux.",
-            "en": "Prisoner of Azkaban in English draws its text at the same size as in the other languages, and the pause menu of Chamber of Secrets is centred on a wide screen. With the new versions of these games.",
-            "es": "El prisionero de Azkaban en inglés escribe sus textos al mismo tamaño que en los demás idiomas, y el menú de pausa de La cámara secreta queda centrado en una pantalla ancha. Con las nuevas versiones de estos juegos."
+            "fr": "Le Prisonnier d'Azkaban en anglais écrit ses textes à la même taille que dans les autres langues. Avec la nouvelle version du jeu.",
+            "en": "Prisoner of Azkaban in English draws its text at the same size as in the other languages. With the new version of the game.",
+            "es": "El prisionero de Azkaban en inglés escribe sus textos al mismo tamaño que en los demás idiomas. Con la nueva versión del juego."
           }
         },
         {

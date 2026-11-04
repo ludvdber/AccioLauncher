@@ -487,11 +487,13 @@ class TestCameraFluideHp5:
         assert rc.lire(ini, self.R) == rc.Etat(16)
         assert rc.libelle_choix(self.R, 16) == tr("Fluide")
 
-    def test_pas_encore_au_catalogue(self):
-        """La DLL 2.2.0 des archives HP5 publiées ignore la clé : déclaré avec la nouvelle archive."""
-        from src.core.game_data import load_catalog
-        for jeu in load_catalog().games:
-            assert "camera_fluide" not in jeu.fix_settings, jeu.id
+    def test_le_catalogue_peut_le_declarer(self):
+        """Déclaré au catalogue 0.53 avec l'archive HP5 1.6 (DLL 2.4.0) : le jeton doit passer la
+        lecture du catalogue. Sur un jeu minimal, jamais sur le contenu de games.json (règle 78)."""
+        from src.core.game_data import GameData
+        from tests.test_game_data import MINIMAL_GAME
+        jeu = GameData.from_dict({**MINIMAL_GAME, "fix_settings": ["camera_fluide", "limite_fps"]})
+        assert "camera_fluide" in jeu.fix_settings
 
 
 class TestSonArrierePlan:

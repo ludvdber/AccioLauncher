@@ -1475,7 +1475,7 @@
     "La désinstallation de {} n'a pas abouti : un de ses fichiers est encore utilisé. Fermez ce qui l'utilise, puis réessayez.": "La desinstalación de {} no terminó: uno de sus archivos sigue en uso. Cierra lo que lo esté usando y vuelve a intentarlo.",
     "Partie tout juste commencée : rien à montrer encore.": "Partida recién empezada: todavía no hay nada que mostrar.",
     "Caméra fluide": "Cámara fluida",
-    "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde, sans changer la vitesse du jeu. Compte au prochain lancement du jeu.": "El juego solo lee el ratón y el mando 20 veces por segundo, sea cual sea el número de imágenes: la cámara avanza a pequeños tirones. «Fluida» los lee 62 veces por segundo, sin cambiar la velocidad del juego. Se aplica la próxima vez que se inicie el juego.",
+    "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort). Compte au prochain lancement du jeu.": "El juego solo lee el ratón y el mando 20 veces por segundo, sea cual sea el número de imágenes: la cámara avanza a pequeños tirones. «Fluida» los lee 62 veces por segundo; Harry mantiene su velocidad. Conocido: algunas animaciones aún van demasiado rápido (la boca de los personajes que hablan, lo que el ratón dirige durante un hechizo). Se aplica la próxima vez que se inicie el juego.",
     "Fluide": "Fluida"
   }
 }

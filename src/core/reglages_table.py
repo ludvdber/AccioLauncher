@@ -208,11 +208,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # que dans ce pas ; SimulationStep=16 du correctif 2.3.0 (game.cpp, avec rattrapage) le passe à
     # 16 ms. VU en partie le 2026-11-04 : souris lue 125 fois/s au lieu de 40, même vitesse de marche.
     # Le correctif 2.4.0 ajoute StepTimers=1 (défaut, absent de cet ini : rien à écrire ici) : les
-    # systèmes qui comptaient les pas (Reparo, particules, dialogues) allaient ×3 à 16 ms.
+    # systèmes qui comptaient les pas (Reparo, particules, dialogues) allaient ×3 à 16 ms. VU par Ludo le
+    # 2026-11-04 au soir : les lèvres et ce que pilote la souris (Wingardium) vont ENCORE trop vite (Fable).
     # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
     Reglage("camera_fluide", "Accio.Game", "SimulationStep",
             "Caméra fluide",
-            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde, sans changer la vitesse du jeu. Compte au prochain lancement du jeu.",
+            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort). Compte au prochain lancement du jeu.",
             choix=(0, 16), zero="D'origine", etiquettes=((16, "Fluide"),), onglet="perfs", beta=True),
     Reglage("synchro_verticale", "Accio.Graphics", "VSync",
             "Synchronisation verticale",

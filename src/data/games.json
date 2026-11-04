@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.52",
+  "catalog_version": "0.53",
   "contributors": [
     {
       "name": "ASTeam",
@@ -117,9 +117,30 @@
         "winmm"
       ],
       "cover_image": "hp1_cover.jpg",
-      "latest_version": "1.6",
-      "recommended_version": "1.6",
+      "latest_version": "1.7",
+      "recommended_version": "1.7",
       "versions": [
+        {
+          "version": "1.7",
+          "date": "2026-11-05",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.7/hp1.7z",
+          "size_mb": 466,
+          "changes": [
+            "Le jeu en espagnol, voix comprises"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "The game in Spanish, voices included"
+              ]
+            },
+            "es": {
+              "changes": [
+                "El juego en español, con las voces"
+              ]
+            }
+          }
+        },
         {
           "version": "1.6",
           "date": "2026-11-02",
@@ -580,9 +601,33 @@
         "winmm"
       ],
       "cover_image": "hp2_cover.jpg",
-      "latest_version": "1.5",
-      "recommended_version": "1.5",
+      "latest_version": "1.6",
+      "recommended_version": "1.6",
       "versions": [
+        {
+          "version": "1.6",
+          "date": "2026-11-05",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.6/hp2.7z",
+          "size_mb": 664,
+          "changes": [
+            "Le jeu en anglais et en espagnol, voix comprises",
+            "Menu pause centré et prolongé jusqu'aux bords sur écran large"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "The game in English and Spanish, voices included",
+                "Pause menu centred and carried to the edges on wide screens"
+              ]
+            },
+            "es": {
+              "changes": [
+                "El juego en inglés y en español, con las voces",
+                "Menú de pausa centrado y prolongado hasta los bordes en pantallas anchas"
+              ]
+            }
+          }
+        },
         {
           "version": "1.5",
           "date": "2026-11-02",
@@ -1084,9 +1129,36 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "latest_version": "1.6",
-      "recommended_version": "1.6",
+      "latest_version": "1.7",
+      "recommended_version": "1.7",
       "versions": [
+        {
+          "version": "1.7",
+          "date": "2026-11-05",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.7/hp3.7z",
+          "size_mb": 1792,
+          "changes": [
+            "Le jeu en onze langues, voix comprises",
+            "Texte lisible dans toutes les langues",
+            "Se ferme normalement (barre des tâches, Alt+F4, launcher)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "The game in eleven languages, voices included",
+                "Readable text in every language",
+                "Closes normally (taskbar, Alt+F4, launcher)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "El juego en once idiomas, con las voces",
+                "Texto legible en todos los idiomas",
+                "Se cierra con normalidad (barra de tareas, Alt+F4, launcher)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.6",
           "date": "2026-11-02",
@@ -1786,9 +1858,30 @@
         "slots": "hp4"
       },
       "cover_image": "hp4_cover.jpg",
-      "latest_version": "1.4",
-      "recommended_version": "1.4",
+      "latest_version": "1.5",
+      "recommended_version": "1.5",
       "versions": [
+        {
+          "version": "1.5",
+          "date": "2026-11-05",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.5/hp4.7z",
+          "size_mb": 2598,
+          "changes": [
+            "Le jeu en douze langues, dont l'anglais, voix comprises"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "The game in twelve languages, English included, voices too"
+              ]
+            },
+            "es": {
+              "changes": [
+                "El juego en doce idiomas, inglés incluido, con las voces"
+              ]
+            }
+          }
+        },
         {
           "version": "1.4",
           "date": "2026-11-02",
@@ -2006,16 +2099,45 @@
         "degats_recus",
         "degats_infliges",
         "ombres_douces",
-        "son_arriere_plan"
+        "son_arriere_plan",
+        "camera_fluide"
       ],
       "dll_overrides": [
         "d3d9",
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "latest_version": "1.5",
-      "recommended_version": "1.5",
+      "latest_version": "1.6",
+      "recommended_version": "1.6",
       "versions": [
+        {
+          "version": "1.6",
+          "date": "2026-11-05",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.6/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.6/hp5.7z.002"
+          ],
+          "size_mb": 5908,
+          "changes": [
+            "Le jeu en neuf langues, voix comprises",
+            "Caméra fluide (réglage bêta)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "The game in nine languages, voices included",
+                "Smooth camera (beta setting)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "El juego en nueve idiomas, con las voces",
+                "Cámara fluida (ajuste beta)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.5",
           "date": "2026-10-27",

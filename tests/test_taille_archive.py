@@ -164,8 +164,10 @@ class TestBouton:
 
         panel.set_game(jeu)
         panel.refresh()
-        # La taille du catalogue, lue et non recopiée (règle 78) : elle change à chaque archive.
-        catalogue = f"{jeu.current_download.size_mb} Mo"
+        # La taille du catalogue, lue et non recopiée (règle 78) : elle change à chaque archive,
+        # et passe en Go au-delà de 1000 Mo (HP3 1.7 : 1792 Mo, « 1,8 Go »).
+        from src.core.formatting import format_size
+        catalogue = format_size(jeu.current_download.size_mb)
         assert catalogue in self._libelle(panel), "repli attendu sur le catalogue"
 
         manager.set_asset_sizes({jeu.current_download.download_url: 337 * MO})
