@@ -393,7 +393,8 @@ class Resolution:
     HP1 et HP2 (UE1, 2026-10-03) : `[WinDrv.WindowsClient] WindowedViewportX/Y`,
     VU en jeu le 2026-10-01 — le moteur ouvre sa fenêtre sans bordure à cette
     taille. Le launcher y écrit celle de l'écran à chaque lancement, ou celle que
-    la personne a choisie (`resolution_jeu`).
+    la personne a choisie (`resolution_jeu`). Même forme pour `fullscreen_size`
+    (HP3, `FullscreenViewportX/Y`, l'écran entier, sans interface).
     """
     file: str       # chemin avec %DOCUMENTS% / %INSTALL_DIR%, un `.ini`
     section: str

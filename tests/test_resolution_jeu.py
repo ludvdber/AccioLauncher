@@ -123,6 +123,54 @@ class TestLancement:
         assert appels == [("hp2", (1920, 1200))]
 
 
+class TestPleinEcranHp3:
+    """HP3 : le plein écran à la taille de l'écran entier (`fullscreen_size`),
+    au lieu du 1920×1080 figé des patchs (Ludo, 2026-11-04, écran 2560×1440)."""
+
+    HPPOA = ("[WinDrv.WindowsClient]\r\nWindowedViewportX=640\r\nWindowedViewportY=480\r\n"
+             "FullscreenViewportX=1920\r\nFullscreenViewportY=1080\r\nStartupFullscreen=True\r\n"
+             "[SDLDrv.SDLClient]\r\nFullscreenViewportX=800\r\nFullscreenViewportY=600\r\n")
+    BLOC = {"file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+            "section": "WinDrv.WindowsClient", "width": "FullscreenViewportX", "height": "FullscreenViewportY"}
+
+    @pytest.fixture
+    def hp3(self, tmp_path):
+        ini = tmp_path / "Documents" / "Harry Potter et le prisonnier d'Azkaban" / "hppoa.ini"
+        ini.parent.mkdir(parents=True)
+        ini.write_bytes(self.HPPOA.encode("cp1252"))
+        game = SimpleNamespace(id="hp3", name="HP3", executable="HP3/system/hppoa.exe",
+                               plein_ecran=_parse_resolution(self.BLOC), resolution=None)
+        return game, Config(install_path=tmp_path / "Jeux"), ini
+
+    def test_l_ecran_entier_remplace_le_1920(self, hp3):
+        game, config, ini = hp3
+        assert rj.appliquer_plein_ecran(game, config, (2560, 1440)) == (2560, 1440)
+        texte = ini.read_bytes().decode("cp1252")
+        assert "FullscreenViewportX=2560\r\nFullscreenViewportY=1440\r\nStartupFullscreen=True" in texte
+        # Ni la fenêtre, ni l'autre section ne bougent.
+        assert "WindowedViewportX=640" in texte and "[SDLDrv.SDLClient]\r\nFullscreenViewportX=800" in texte
+
+    def test_ecran_inconnu_le_repli_des_patchs_reste(self, hp3):
+        game, config, ini = hp3
+        avant = ini.read_bytes()
+        assert rj.appliquer_plein_ecran(game, config, None) is None
+        assert rj.appliquer_plein_ecran(SimpleNamespace(id="hp5", plein_ecran=None), config, (2560, 1440)) is None
+        assert ini.read_bytes() == avant
+
+    def test_lancement_apres_les_patchs(self):
+        from src.core import game_manager as gm
+        source = __import__("inspect").getsource(gm.GameManager.launch_game)
+        assert source.index("apply_ini_patches(") < source.index("resolution_jeu.appliquer_plein_ecran(")
+
+    def test_le_bloc_est_lu_du_catalogue(self):
+        """`fullscreen_size` devient `plein_ecran`, sans rien mettre dans `resolution` (l'interface)."""
+        from src.core.game_data import GameData
+        from tests.test_game_data import MINIMAL_GAME
+        jeu = GameData.from_dict({**MINIMAL_GAME, "fullscreen_size": self.BLOC})
+        assert jeu.plein_ecran == Resolution(**self.BLOC) and jeu.resolution is None
+        assert GameData.from_dict(MINIMAL_GAME).plein_ecran is None
+
+
 class TestFenetre:
     """La rubrique « Affichage » de la fenêtre de réglages."""
 

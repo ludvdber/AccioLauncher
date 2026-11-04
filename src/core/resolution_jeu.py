@@ -1,4 +1,5 @@
 """La taille de l'image de HP1 et HP2 : la plus grande que l'écran permet, ou celle choisie.
+Et le plein écran de HP3 à la taille de l'écran entier (`appliquer_plein_ecran`).
 
 Règles (mesures et récit : ARCHITECTURE_CORE.md) :
 
@@ -171,6 +172,26 @@ def place_disponible() -> tuple[int, int] | None:
     if travail[0] <= 0 or travail[1] <= 0:
         return None
     return dans_le_cadre(travail, round(96 * ratio))
+
+
+def appliquer_plein_ecran(game: GameData, config: Config,
+                          ecran: tuple[int, int] | None) -> tuple[int, int] | None:
+    """HP3 : la taille de l'écran entier dans les clés du plein écran (`fullscreen_size`).
+
+    Le moteur se rabat sur 800×600 après un plantage de `SetRes` et l'écrit dans
+    son ini ; le catalogue y remet donc 1920×1080 à chaque lancement (patchs
+    d'ini). Sur un écran plus grand, l'image restait en 1920×1080 (Ludo,
+    2026-11-04, écran 2560×1440). Écrite APRÈS les patchs : la taille de
+    l'écran l'emporte, le 1920×1080 ne reste qu'écran inconnu. Rend la taille
+    écrite, ou None.
+    """
+    spec = game.plein_ecran
+    if spec is None or ecran is None:
+        return None
+    ok = all(ecrire_cle_ini(IniPatch(file=spec.file, section=spec.section, key=cle,
+                                     value=str(valeur)), game, config)
+             for cle, valeur in ((spec.width, ecran[0]), (spec.height, ecran[1])))
+    return ecran if ok else None
 
 
 def appliquer(game: GameData, config: Config,

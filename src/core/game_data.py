@@ -286,6 +286,9 @@ class GameData:
     # Où écrire la taille de la fenêtre (`catalogue_blocs.Resolution`) ; None :
     # le launcher ne règle pas la résolution de ce jeu.
     resolution: Resolution | None = None
+    # Où écrire la taille de l'écran entier pour le plein écran du jeu (HP3,
+    # `fullscreen_size`) ; rien à choisir, rien dans l'interface. None : rien.
+    plein_ecran: Resolution | None = None
     # Où le jeu range sa propre difficulté (`catalogue_blocs.Difficulte`) ; None :
     # le launcher ne la propose pas pour ce jeu.
     difficulte: Difficulte | None = None
@@ -467,6 +470,7 @@ class GameData:
             controller=_niveau_manette(data.get("controller")),
             controller_note=_loc(data, "controller_note", ""),
             resolution=_parse_resolution(data.get("resolution")),
+            plein_ecran=_parse_resolution(data.get("fullscreen_size")),
             difficulte=_parse_difficulte(data.get("difficulty")),
             annee=_annee_valide(data.get("annee")),
             sauvegardes=_parse_sauvegardes(data.get("saves")),

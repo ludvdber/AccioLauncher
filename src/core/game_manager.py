@@ -318,6 +318,9 @@ class GameManager:
         # Taille de fenêtre APRÈS la restauration, qui recopierait le modèle
         # (1024×768 pour HP2) ; écrite à chaque fois, raison dans le module.
         taille = resolution_jeu.appliquer(game, self.config, resolution_jeu.place_pour(game, self.config))
+        # HP3 : son plein écran à la taille de l'écran entier, après le repli 1920×1080 des patchs.
+        if game.plein_ecran is not None:
+            resolution_jeu.appliquer_plein_ecran(game, self.config, resolution_jeu.ecran_entier())
         # Les polices de HP1/HP2 à la hauteur de cette image (rien si elle n'a pas changé).
         texte_ue1.appliquer(game, self.config, taille[1] if taille is not None else None)
         # 4 Go d'adresses au lieu de 2 pour l'exe 32 bits (`memoire_4go`).

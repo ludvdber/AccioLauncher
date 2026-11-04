@@ -1412,6 +1412,12 @@
           }
         ]
       },
+      "fullscreen_size": {
+        "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\hppoa.ini",
+        "section": "WinDrv.WindowsClient",
+        "width": "FullscreenViewportX",
+        "height": "FullscreenViewportY"
+      },
       "post_install": {
         "config_files": [
           {
