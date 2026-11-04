@@ -204,6 +204,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques "
             "passent en accéléré. 30 fait moins chauffer l'ordinateur.",
             choix=(60, 30), zero="60 (vitesse normale)", onglet="perfs"),
+    # HP5 seul (issue #28, 2026-11-04) : le moteur avance par pas fixes de 50 ms et ne lit la souris
+    # que dans ce pas ; SimulationStep=16 du correctif 2.3.0 (game.cpp, avec rattrapage) le passe à
+    # 16 ms. VU en partie le 2026-11-04 : souris lue 125 fois/s au lieu de 40, même vitesse de marche.
+    # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
+    Reglage("camera_fluide", "Accio.Game", "SimulationStep",
+            "Caméra fluide",
+            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde, sans changer la vitesse du jeu. Compte au prochain lancement du jeu.",
+            choix=(0, 16), zero="D'origine", etiquettes=((16, "Fluide"),), onglet="perfs", beta=True),
     Reglage("synchro_verticale", "Accio.Graphics", "VSync",
             "Synchronisation verticale",
             "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale "

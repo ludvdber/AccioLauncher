@@ -311,8 +311,10 @@ class TestModeDifficile:
         hardcore = {r.ident for r in rc.REGLAGES.values() if r.section == "Accio.Hardcore"}
         assert hardcore == {*self.IDENTS, "sorts_retires", "invincible"}
         assert all(rc.REGLAGES[i].beta for i in hardcore)
-        # Seul autre réglage en essai : le Quidditch de HP1/HP2, pas encore vu en match.
-        assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {"quidditch"}
+        # Autres réglages en essai : le Quidditch de HP1/HP2, pas encore vu en match, et la caméra
+        # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un).
+        assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
+            "quidditch", "camera_fluide"}
 
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:
@@ -468,6 +470,28 @@ class TestQuidditchHp12:
         rc.ecrire(ini, rc.REGLAGES["quidditch"], 2)
         assert "QuidditchDifficulty=2" in ini.read_bytes().decode().split("\r\n")
         assert rc.libelle_choix(rc.REGLAGES["quidditch"], 2) == tr("Expert")
+
+
+class TestCameraFluideHp5:
+    """HP5 : SimulationStep du correctif 2.3.0 (issue #28) ; 0 = pas livré de 50 ms."""
+
+    R = rc.REGLAGES["camera_fluide"]
+
+    def test_d_origine_quand_la_cle_manque_puis_aller_retour(self, ini):
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Game]\r\nFOV=0\r\n")
+        assert rc.lire(ini, self.R) == rc.Etat(0)
+        assert rc.libelle_choix(self.R, 0) == tr("D'origine")
+        rc.ecrire(ini, self.R, 16)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert lignes.index("[Accio.Game]") < lignes.index("SimulationStep=16")
+        assert rc.lire(ini, self.R) == rc.Etat(16)
+        assert rc.libelle_choix(self.R, 16) == tr("Fluide")
+
+    def test_pas_encore_au_catalogue(self):
+        """La DLL 2.2.0 des archives HP5 publiées ignore la clé : déclaré avec la nouvelle archive."""
+        from src.core.game_data import load_catalog
+        for jeu in load_catalog().games:
+            assert "camera_fluide" not in jeu.fix_settings, jeu.id
 
 
 class TestSonArrierePlan:
