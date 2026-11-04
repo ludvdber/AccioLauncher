@@ -78,7 +78,12 @@
       "besoins": [
         {"jeu": "HP4", "etat": "cherche",
          "quoi": {"fr": "Visages des personnages", "en": "Character faces", "es": "Caras de los personajes"},
-         "detail": {"fr": "Flous de près", "en": "Blurry up close", "es": "Borrosas de cerca"}}
+         "detail": {"fr": "Flous de près", "en": "Blurry up close", "es": "Borrosas de cerca"}},
+        {"jeu": "HP2", "etat": "cherche",
+         "quoi": {"fr": "Côtés du menu Échap", "en": "Sides of the Escape menu", "es": "Laterales del menú de pausa"},
+         "detail": {"fr": "Ciel et barres dorées sur écran large, prolongés par nous depuis le fond du livre",
+                    "en": "Sky and golden bars on wide screens, extended by us from the book's background",
+                    "es": "Cielo y barras doradas en pantalla ancha, prolongados por nosotros desde el fondo del libro"}}
       ]
     },
     {
