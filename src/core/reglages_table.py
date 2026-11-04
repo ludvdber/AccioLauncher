@@ -207,6 +207,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # HP5 seul (issue #28, 2026-11-04) : le moteur avance par pas fixes de 50 ms et ne lit la souris
     # que dans ce pas ; SimulationStep=16 du correctif 2.3.0 (game.cpp, avec rattrapage) le passe à
     # 16 ms. VU en partie le 2026-11-04 : souris lue 125 fois/s au lieu de 40, même vitesse de marche.
+    # Le correctif 2.4.0 ajoute StepTimers=1 (défaut, absent de cet ini : rien à écrire ici) : les
+    # systèmes qui comptaient les pas (Reparo, particules, dialogues) allaient ×3 à 16 ms.
     # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
     Reglage("camera_fluide", "Accio.Game", "SimulationStep",
             "Caméra fluide",
