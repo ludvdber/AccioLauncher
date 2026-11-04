@@ -239,7 +239,10 @@ class TestPage:
         from src.ui.nouveautes_page import _CarteAnnonce, _CartePointFort
         ouverts = []
         monkeypatch.setattr("src.ui.nouveautes_page.open_url", ouverts.append)
-        page = self._page(qtbot)
+        # Une version qui porte une annonce (la 1.3.2) : la version en cours n'en a pas forcément.
+        from src.ui.nouveautes_page import NouveautesPage
+        page = NouveautesPage(nouveautes.charger("1.3.2"), apres_mise_a_jour=True)
+        qtbot.addWidget(page)
         page.resize(1280, 900)
         page.show()
         qtbot.waitExposed(page)

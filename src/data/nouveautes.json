@@ -1,6 +1,81 @@
 {
   "versions": [
     {
+      "version": "1.3.3",
+      "nom": "Aparecium",
+      "depuis": "1.3.2",
+      "points_forts": [
+        {
+          "icone": "drapeau",
+          "titre": {
+            "fr": "Les jeux parlent plus de langues",
+            "en": "The games speak more languages",
+            "es": "Los juegos hablan más idiomas"
+          },
+          "texte": {
+            "fr": "L'École des Sorciers et La Chambre des Secrets se jouent aussi en espagnol, La Chambre des Secrets en anglais, Le Prisonnier d'Azkaban en onze langues et La Coupe de Feu en douze, dont l'anglais, voix comprises. Les trois premiers suivent la langue du launcher ; La Coupe de Feu la demande au démarrage.",
+            "en": "Philosopher's Stone and Chamber of Secrets can also be played in Spanish, Chamber of Secrets in English, Prisoner of Azkaban in eleven languages and Goblet of Fire in twelve, English included, voices too. The first three follow the launcher's language; Goblet of Fire asks for it at start-up.",
+            "es": "La piedra filosofal y La cámara secreta también se juegan en español, La cámara secreta en inglés, El prisionero de Azkaban en once idiomas y El cáliz de fuego en doce, inglés incluido, con las voces. Los tres primeros siguen el idioma del launcher; El cáliz de fuego lo pregunta al arrancar."
+          }
+        },
+        {
+          "icone": "oeil",
+          "titre": {
+            "fr": "Une caméra plus fluide dans L'Ordre du Phénix",
+            "en": "A smoother camera in Order of the Phoenix",
+            "es": "Una cámara más fluida en La Orden del Fénix"
+          },
+          "texte": {
+            "fr": "Le jeu lisait la souris trop rarement : la caméra avançait par à-coups, quelle que soit la vitesse de l'image. Le réglage « Caméra fluide » (bêta, onglet Performances) la fait lire bien plus souvent, et Harry garde la même vitesse.",
+            "en": "The game read the mouse too rarely: the camera moved in jerks, however fast the picture was. The \"Smooth camera\" setting (beta, Performance tab) makes it read far more often, and Harry keeps the same speed.",
+            "es": "El juego leía el ratón muy pocas veces: la cámara avanzaba a tirones, fuera cual fuera la velocidad de la imagen. El ajuste «Cámara fluida» (beta, pestaña Rendimiento) hace que lo lea mucho más a menudo, y Harry mantiene la misma velocidad."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "La langue des jeux suit celle du launcher quand le jeu la connaît.",
+            "en": "The games' language follows the launcher's when the game has it.",
+            "es": "El idioma de los juegos sigue al del launcher cuando el juego lo tiene."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban occupe tout l'écran, quelle que soit sa taille, au lieu de rester en 1920 × 1080.",
+            "en": "Prisoner of Azkaban fills the whole screen, whatever its size, instead of staying at 1920 × 1080.",
+            "es": "El prisionero de Azkaban ocupa toda la pantalla, sea cual sea su tamaño, en lugar de quedarse en 1920 × 1080."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban en anglais écrit ses textes à la même taille que dans les autres langues, et le menu pause de La Chambre des Secrets est centré sur un écran large. Avec les nouvelles versions de ces jeux.",
+            "en": "Prisoner of Azkaban in English draws its text at the same size as in the other languages, and the pause menu of Chamber of Secrets is centred on a wide screen. With the new versions of these games.",
+            "es": "El prisionero de Azkaban en inglés escribe sus textos al mismo tamaño que en los demás idiomas, y el menú de pausa de La cámara secreta queda centrado en una pantalla ancha. Con las nuevas versiones de estos juegos."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Le Prisonnier d'Azkaban se ferme normalement depuis la barre des tâches, Alt+F4 ou le launcher, au lieu d'être arrêté de force.",
+            "en": "Prisoner of Azkaban closes normally from the taskbar, Alt+F4 or the launcher, instead of being force-stopped.",
+            "es": "El prisionero de Azkaban se cierra con normalidad desde la barra de tareas, Alt+F4 o el launcher, en lugar de detenerse a la fuerza."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "« Couper le son en arrière-plan » ne rend le son qu'aux sorties audio qu'il a lui-même coupées.",
+            "en": "\"Mute in the background\" only gives the sound back to the audio outputs it muted itself.",
+            "es": "«Silenciar en segundo plano» solo devuelve el sonido a las salidas de audio que silenció él mismo."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.2",
       "nom": "Lumos Maxima",
       "depuis": "1.3.1",
