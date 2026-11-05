@@ -2635,9 +2635,36 @@
         "son_arriere_plan"
       ],
       "cover_image": "hp7a_cover.jpg",
-      "latest_version": "1.2",
-      "recommended_version": "1.2",
+      "latest_version": "1.3",
+      "recommended_version": "1.3",
       "versions": [
+        {
+          "version": "1.3",
+          "date": "2026-11-05",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.3/hp7.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.3/hp7.7z.002",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.3/hp7.7z.003",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp7-v1.3/hp7.7z.004"
+          ],
+          "size_mb": 7026,
+          "changes": [
+            "Le jeu en sept langues, voix comprises"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "The game in seven languages, voices included"
+              ]
+            },
+            "es": {
+              "changes": [
+                "El juego en siete idiomas, con las voces"
+              ]
+            }
+          }
+        },
         {
           "version": "1.2",
           "date": "2026-10-27",
