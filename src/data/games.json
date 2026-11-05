@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.55",
+  "catalog_version": "0.56",
   "contributors": [
     {
       "name": "ASTeam",
@@ -1021,6 +1021,12 @@
             "value": "Button bDuelExpelliarmus"
           },
           {
+            "file": "%DOCUMENTS%\\Harry Potter II\\User.ini",
+            "section": "Engine.Input",
+            "key": "F10",
+            "value": ""
+          },
+          {
             "file": "%DOCUMENTS%\\Harry Potter II\\Game.ini",
             "section": "WinDrv.WindowsClient",
             "key": "DeadZoneRUV",
@@ -1456,6 +1462,12 @@
             "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
             "section": "Engine.Input",
             "key": "JoyU",
+            "value": ""
+          },
+          {
+            "file": "%DOCUMENTS%\\Harry Potter et le prisonnier d'Azkaban\\User.ini",
+            "section": "Engine.Input",
+            "key": "F10",
             "value": ""
           },
           {
