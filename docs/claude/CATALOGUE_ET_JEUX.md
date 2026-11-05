@@ -67,7 +67,9 @@ Trois pièges mesurés et silencieux : **`requires_file` n'est pas décoratif** 
 
 **Catalogue 0.54** (2026-11-05, dans les DEUX fichiers ; `catalogue_hp3_v2.py` de l'atelier) : le 0.53 avec le bloc de langues de HP3 renommé `language_files_v2`, rien d'autre. Publiable tout de suite : il arrête la perte de réglages des joueurs 1.3.2 décrite plus haut. Exige que la 1.3.3 lise la nouvelle clé (`game_data.py`, même lot). PUBLIÉ le 2026-11-05.
 
-**Catalogue 0.55** (2026-11-05, dans les DEUX fichiers ; `catalogue_055.py` de l'atelier) : le 0.54 plus HP3 1.7 en tête de ses versions (`hp3-v1.7` en ligne, sha256 de l'asset = archive préparée). À publier avec le tag `v1.3.3`.
+**Catalogue 0.55** (2026-11-05, dans les DEUX fichiers ; `catalogue_055.py` de l'atelier) : le 0.54 plus HP3 1.7 en tête de ses versions (`hp3-v1.7` en ligne, sha256 de l'asset = archive préparée). PUBLIÉ le 2026-11-05 avec la 1.3.3.
+
+**Catalogue 0.56** (2026-11-05 soir, deux fichiers ; `catalogue_056_f10.py` de l'atelier) : `F10` vidé dans `User.ini` de HP2 et HP3 (`pre_launch.ini_patches`). F10 est la touche du panneau du correctif (`OverlayKey=121`) ; HP3 livre `F10=Gamma +` (l'image s'éclaircissait à chaque appui, Ludo) et HP2 `F10=flush` (caches du moteur vidés). HP1 livre déjà `F10=`.
 
 **Langue par défaut d'un jeu à fichiers = celle du launcher** (2026-11-03, `game_language.resoudre`) : l'archive de HP1/HP2 porte `Language=fre`, et la détection passait avant la langue de l'interface : un launcher en anglais lançait HP1 en français, le joueur abandonnait. Pour `language_files`, l'ordre est donc choix explicite → langue du launcher si le jeu l'a sur le disque → ce que portent les fichiers → première langue. `language_registry` (HP7) garde la détection avant l'interface : la changer demanderait une élévation que le joueur n'a pas demandée (une installation neuve n'a pas de clé, donc prend déjà la langue du launcher). Tests : `TestDetection` de `test_langue_fichiers.py`.
 
