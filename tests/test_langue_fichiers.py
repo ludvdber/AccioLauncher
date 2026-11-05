@@ -288,8 +288,26 @@ class TestHP3Langues:
         catalogue = json.loads((ASSETS_DIR.parent / "src" / "data" / "games.json").read_text(encoding="utf-8"))
         return next(g for g in catalogue["games"] if g["id"] == "hp3")
 
+    def test_invisible_pour_le_launcher_1_3_2(self):
+        """La 1.3.2 lit `language_files` et écrit Default.ini sans lui rendre sa date :
+        HP3 recréait alors les réglages du joueur, dès l'entrée `fr` (son `AppUserDir`)
+        avec HP3 1.6. Les langues de HP3 vivent donc sous `language_files_v2`, que
+        seule la 1.3.3 lit (2026-11-05)."""
+        jeu = self._jeu()
+        assert "language_files" not in jeu and "language_files_v2" in jeu
+        assert GameData.from_dict(jeu).language_files is not None
+
+    def test_v2_passe_avant_l_ancien_bloc(self):
+        v2 = self._jeu()["language_files_v2"]
+        ancien = {"languages": {"fr": v2["languages"]["fr"]}}
+        game = GameData.from_dict({
+            "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "dev",
+            "executable": "HP3/system/hppoa.exe", "cover_image": "c.png",
+            "language_files": ancien, "language_files_v2": v2})
+        assert game.language_files is not None and game.language_files.codes == tuple(self.ATTENDU)
+
     def test_onze_langues_et_leurs_voix(self):
-        bloc = self._jeu()["language_files"]["languages"]
+        bloc = self._jeu()["language_files_v2"]["languages"]
         assert {code: lg["ini"][0]["value"] for code, lg in bloc.items()} == self.ATTENDU
         for code, lg in bloc.items():
             valeur = self.ATTENDU[code]
@@ -301,7 +319,7 @@ class TestHP3Langues:
         dossier = "Harry Potter et le prisonnier d'Azkaban"
         # Le dossier figé est celui où le launcher écrit la config et cherche les parties.
         assert all(dossier in p["file"] for p in jeu["pre_launch"]["ini_patches"])
-        for lg in jeu["language_files"]["languages"].values():
+        for lg in jeu["language_files_v2"]["languages"].values():
             par_cle = {(p["file"], p["section"], p["key"]): p["value"] for p in lg["ini"]}
             assert par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Core.System", "AppUserDir")] == dossier
             assert par_cle[("%DOCUMENTS%\\" + dossier + "\\hppoa.ini", "Engine.Engine", "Language")] \
@@ -309,7 +327,7 @@ class TestHP3Langues:
 
     def test_le_bloc_se_lit(self):
         from src.core.catalogue_blocs import _parse_language_files
-        lu = _parse_language_files(self._jeu()["language_files"])
+        lu = _parse_language_files(self._jeu()["language_files_v2"])
         assert lu is not None and lu.codes == tuple(self.ATTENDU)
 
     def test_appliquer_fige_le_dossier(self, tmp_path, monkeypatch):
@@ -331,7 +349,7 @@ class TestHP3Langues:
         game = GameData.from_dict({
             "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "dev",
             "executable": "HP3/system/hppoa.exe", "cover_image": "c.png",
-            "language_files": self._jeu()["language_files"]})
+            "language_files_v2": self._jeu()["language_files_v2"]})
         config = Config(install_path=jeux)
         assert [lg.code for lg in game_language.langues_disponibles(game, config)] == ["en"]
         assert game_language.appliquer(game, config, "en")
@@ -363,7 +381,7 @@ class TestHP3Langues:
         game = GameData.from_dict({
             "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "dev",
             "executable": "HP3/system/hppoa.exe", "cover_image": "c.png",
-            "language_files": self._jeu()["language_files"]})
+            "language_files_v2": self._jeu()["language_files_v2"]})
         assert game_language.appliquer(game, Config(install_path=jeux), "de")
         assert "Language=Ger" in defaut.read_text(encoding="cp1252")
         assert defaut.stat().st_mtime == vieux                       # contenu neuf, date d'avant

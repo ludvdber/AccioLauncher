@@ -458,8 +458,13 @@ class GameData:
             warning_help=(data.get("warning_help", "")
                           if data.get("warning_help") in AIDES_AVERTISSEMENT else ""),
             language_registry=_parse_language_registry(data.get("language_registry")),
+            # `language_files_v2` d'abord : même bloc, mais la 1.3.2 ne le connaît pas,
+            # et c'est voulu. Elle écrit system\Default.ini de HP3 sans lui rendre sa
+            # date, et HP3 recrée alors les réglages du joueur (800×600, touches
+            # perdues). Un jeu dont les langues exigent la 1.3.3 les déclare là.
             language_files=(None if data.get("language_registry") is not None
-                            else _parse_language_files(data.get("language_files"))),
+                            else _parse_language_files(data.get("language_files_v2")
+                                                       or data.get("language_files"))),
             manette_registre=_parse_manette_registre(data.get("controller_registry")),
             # `is True` et non `bool(...)` : le catalogue est DISTANT, et une
             # chaîne non vide ou un nombre y suffiraient à activer un réglage

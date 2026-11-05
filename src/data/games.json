@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.53",
+  "catalog_version": "0.54",
   "contributors": [
     {
       "name": "ASTeam",
@@ -1496,7 +1496,7 @@
         ],
         "first": 0
       },
-      "language_files": {
+      "language_files_v2": {
         "languages": {
           "fr": {
             "label": "Français",
