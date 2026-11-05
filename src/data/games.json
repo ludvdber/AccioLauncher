@@ -1129,36 +1129,9 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "latest_version": "1.7",
-      "recommended_version": "1.7",
+      "latest_version": "1.6",
+      "recommended_version": "1.6",
       "versions": [
-        {
-          "version": "1.7",
-          "date": "2026-11-05",
-          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.7/hp3.7z",
-          "size_mb": 1792,
-          "changes": [
-            "Le jeu en onze langues, voix comprises",
-            "Texte lisible dans toutes les langues",
-            "Se ferme normalement (barre des tâches, Alt+F4, launcher)"
-          ],
-          "i18n": {
-            "en": {
-              "changes": [
-                "The game in eleven languages, voices included",
-                "Readable text in every language",
-                "Closes normally (taskbar, Alt+F4, launcher)"
-              ]
-            },
-            "es": {
-              "changes": [
-                "El juego en once idiomas, con las voces",
-                "Texto legible en todos los idiomas",
-                "Se cierra con normalidad (barra de tareas, Alt+F4, launcher)"
-              ]
-            }
-          }
-        },
         {
           "version": "1.6",
           "date": "2026-11-02",
