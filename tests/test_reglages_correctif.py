@@ -1268,10 +1268,47 @@ class TestLaLimiteEntraineLePlafondDuJeu:
         texte = ini.read_text(encoding="ascii")
         assert "FPSLimit=144" in texte and "FrameRateCap=144" in texte
 
-    def test_une_limite_plus_basse_ne_baisse_jamais_le_plafond(self, tmp_path):
+    def test_une_limite_plus_basse_baisse_le_plafond(self, tmp_path):
+        """#28, #29 (2026-11-06) : à 60 sous un plafond de 120 ou 144, HP5 et HP6
+        avancent leur horloge d'un demi-pas par image, d'où des saccades."""
         ini = self._ini(tmp_path)
         rc.ecrire(ini, rc.REGLAGES["limite_fps"], 60)
+        texte = ini.read_text(encoding="ascii")
+        assert "FPSLimit=60" in texte and "FrameRateCap=60" in texte
+
+    def test_144_puis_60_ne_laisse_pas_le_plafond_a_144(self, tmp_path):
+        """Le cas exact du second joueur de #28 : il avait essayé 144."""
+        ini = self._ini(tmp_path)
+        limite = rc.REGLAGES["limite_fps"]
+        rc.ecrire(ini, limite, 144)
+        rc.ecrire(ini, limite, 60)
+        assert "FrameRateCap=60" in ini.read_text(encoding="ascii")
+
+    def test_aucune_rend_au_plafond_sa_valeur_livree(self, tmp_path):
+        """La valeur de la copie d'origine (100 ici), pas le repli codé en dur (120)."""
+        ini = self._ini(tmp_path, "[Accio.Window]\r\nFPSLimit=100\r\n\r\n[Accio.Game]\r\nFrameRateCap=100\r\n")
+        limite = rc.REGLAGES["limite_fps"]
+        rc.ecrire(ini, limite, 60)
+        rc.ecrire(ini, limite, 0)
+        texte = ini.read_text(encoding="ascii")
+        assert "FPSLimit=0" in texte and "FrameRateCap=100" in texte
+
+    def test_aucune_sans_copie_d_origine_rend_120(self, tmp_path, monkeypatch):
+        ini = self._ini(tmp_path, "[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Game]\r\nFrameRateCap=60\r\n")
+        monkeypatch.setattr(rc, "_garder_origine", lambda _ini: None)
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 0)
         assert "FrameRateCap=120" in ini.read_text(encoding="ascii")
+
+    def test_une_valeur_infinie_ecrite_a_la_main_n_arrete_pas_le_lancement(self, tmp_path):
+        """Revue du 2026-11-07 : `int(float("inf"))` lève OverflowError, pas ValueError."""
+        ini = self._ini(tmp_path, "[Accio.Window]\r\nFPSLimit=inf\r\n\r\n[Accio.Game]\r\nFrameRateCap=1e999\r\n")
+        assert rc.aligner_plafond(ini) is False
+
+    def test_un_plafond_a_zero_n_est_pas_touche(self, tmp_path):
+        """HP3 livre `FrameRateCap=0` : pas de plafond tenu, rien à suivre."""
+        ini = self._ini(tmp_path, "[Accio.Window]\r\nFPSLimit=120\r\n\r\n[Accio.Game]\r\nFrameRateCap=0\r\n")
+        rc.ecrire(ini, rc.REGLAGES["limite_fps"], 60)
+        assert "FrameRateCap=0" in ini.read_text(encoding="ascii")
 
     def test_sans_plafond_dans_l_ini_rien_n_est_ajoute(self, tmp_path):
         ini = self._ini(tmp_path, "[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Game]\r\n")
@@ -1287,6 +1324,53 @@ class TestLaLimiteEntraineLePlafondDuJeu:
         assert "FPSLimit=120" in texte and "FrameRateCap=120" in texte
 
 
+class TestLePlafondEstAligneAuLancement:
+    """Les ini écrits quand le plafond ne suivait que vers le haut gardent 60 sous 144 :
+    le lancement les rattrape."""
+
+    def _ini(self, tmp_path, limite, plafond):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes((f"[Accio.Window]\r\nFPSLimit={limite}\r\n\r\n"
+                         f"[Accio.Game]\r\nFrameRateCap={plafond}\r\n").encode("ascii"))
+        return ini
+
+    def test_60_sous_144_devient_60(self, tmp_path):
+        ini = self._ini(tmp_path, 60, 144)
+        assert rc.aligner_plafond(ini) is True
+        assert ini.read_bytes() == b"[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Game]\r\nFrameRateCap=60\r\n"
+
+    def test_deja_aligne_le_fichier_n_est_pas_reecrit(self, tmp_path):
+        ini = self._ini(tmp_path, 120, 120)
+        avant = ini.stat().st_mtime_ns
+        assert rc.aligner_plafond(ini) is False
+        assert ini.stat().st_mtime_ns == avant
+
+    def test_sans_limite_ou_sans_plafond_rien(self, tmp_path):
+        for limite, plafond in ((0, 120), (60, 0)):
+            ini = self._ini(tmp_path, limite, plafond)
+            assert rc.aligner_plafond(ini) is False
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(b"[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Game]\r\n")
+        assert rc.aligner_plafond(ini) is False
+
+    def test_le_lancement_appelle_l_alignement(self, tmp_path, monkeypatch):
+        """Câblage par le VRAI `launch_game` (même montage que test_manette.TestAuLancement)."""
+        from tests.test_game_manager import GAME_DICT, _make_manager
+        m = _make_manager(tmp_path)
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        ini = exe.parent / "d3d9.ini"
+        ini.write_bytes(b"[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Game]\r\nFrameRateCap=144\r\n")
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        for nom in ("unblock_game_dlls", "delete_pre_launch_files",
+                    "create_pre_launch_files", "apply_ini_patches"):
+            monkeypatch.setattr("src.core.game_manager." + nom, lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen", lambda *a, **k: object())
+        assert m.launch_game(GAME_DICT["id"]) is not None
+        assert "FrameRateCap=60" in ini.read_text(encoding="ascii")
+
+
 class TestHp7NeDepassePas60:
     """« Hp7 il faut pas autoriser plus de 60fps car les cinématiques vont
     ultra vite » (Ludo, 2026-10-01)."""
@@ -1296,8 +1380,13 @@ class TestHp7NeDepassePas60:
         assert reglage.cle == "FPSLimit" and max(reglage.choix) == 60
         assert 0 not in reglage.choix, "« Aucune » laisserait le jeu filer"
 
-    def test_le_catalogue_le_donne_a_hp7a_au_lieu_de_l_autre(self):
+    def test_le_catalogue_tient_hp7a_a_30_sans_proposer_plus(self):
+        """Catalogue 0.57 (Discord, 2026-11-06) : même à 60, cinématiques accélérées, son qui déborde,
+        dialogues décalés ; à 30, impeccable. `FPSLimit=30` posé à chaque lancement, et aucun réglage de
+        limite sur la fiche (il proposerait un 60 aussitôt effacé)."""
         from src.core.game_data import load_catalog
         hp7a = next(g for g in load_catalog().games if g.id == "hp7a")
-        assert "limite_fps_60" in hp7a.fix_settings
-        assert "limite_fps" not in hp7a.fix_settings
+        assert "limite_fps" not in hp7a.fix_settings and "limite_fps_60" not in hp7a.fix_settings
+        assert hp7a.pre_launch is not None
+        patch = next(p for p in hp7a.pre_launch.ini_patches if p.key == "FPSLimit")
+        assert (patch.file, patch.section, patch.value) == ("%INSTALL_DIR%\\pc\\d3d9.ini", "Accio.Window", "30")

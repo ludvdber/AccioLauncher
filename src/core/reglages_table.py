@@ -198,7 +198,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=LIMITES_FPS, zero="Aucune", onglet="perfs"),
     # HP7 partie 1 : au-delà de 60 images/s, ses cinématiques passent en accéléré
     # (Ludo, 2026-10-01). Même clé, choix bornés ; le correctif tient aussi
-    # `FPSCeiling=60` au cas où l'ini dirait plus.
+    # `FPSCeiling=60` au cas où l'ini dirait plus. RETIRÉ de la fiche au catalogue 0.57 (Discord,
+    # 2026-11-06 : même à 60, cinématiques accélérées) : le catalogue pose 30 à chaque lancement ;
+    # gardé ici pour le jour où la DLL repasse d'elle-même à 30 pendant les cinématiques.
     Reglage("limite_fps_60", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
             "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, ses cinématiques "

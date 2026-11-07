@@ -121,6 +121,7 @@
     "Retour de {} : partie terminée.": "De vuelta de {}: partida terminada.",
     "Retour de {}": "Vuelta de {}",
     "{} s'est fermé aussitôt : le jeu n'a pas démarré.": "{} se cerró de inmediato: el juego no arrancó.",
+    "{} : un réglage du correctif n'a pas pu s'appliquer.": "{}: un ajuste del parche no se pudo aplicar.",
     "Accio Launcher (en jeu : {})": "Accio Launcher (jugando a: {})",
     "Restaurer Accio Launcher": "Restaurar Accio Launcher",
     "Quitter": "Salir",

@@ -121,6 +121,7 @@
     "Retour de {} : partie terminée.": "Back from {}: session over.",
     "Retour de {}": "Back from {}",
     "{} s'est fermé aussitôt : le jeu n'a pas démarré.": "{} closed immediately: the game did not start.",
+    "{} : un réglage du correctif n'a pas pu s'appliquer.": "{}: a fix setting could not be applied.",
     "Accio Launcher (en jeu : {})": "Accio Launcher (in game: {})",
     "Restaurer Accio Launcher": "Restore Accio Launcher",
     "Quitter": "Quit",

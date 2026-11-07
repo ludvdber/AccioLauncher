@@ -9,7 +9,7 @@ from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.ui import dialogues_fenetre, game_detail_handlers, succes_widgets, verification_forcee
+from src.ui import dialogues_fenetre, game_detail_handlers, succes_widgets, toast_correctif, verification_forcee
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
 from src.ui.clavier_global import EVENEMENTS_FILTRES, touche_globale
@@ -243,6 +243,7 @@ class MainWindow(QMainWindow):
         self._session.configuration_cassee.connect(self._on_configuration_cassee)
         self._session.arret_fatal.connect(self._on_arret_fatal)
         self._session.diagnostic.connect(self._on_diagnostic)
+        toast_correctif.brancher(self)
         self._mediatheque = Mediatheque(self, self.manager, self._pages, self._detail, self._status_bar,
                                         self._session, self._title_bar)
 

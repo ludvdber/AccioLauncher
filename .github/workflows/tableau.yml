@@ -1,0 +1,45 @@
+name: tableau
+
+# À la publication d'une release du launcher (tag v*), les cartes « Prêt » de la
+# version « Prochaine mise à jour » du tableau public passent en « Publié »
+# (.github/tableau_publie.py). Actions → tableau → Run workflow pour le refaire
+# à la main (case « essai » : liste sans rien changer).
+#
+# Il faut un secret PROJET_TOKEN : jeton CLASSIQUE (Settings → Developer
+# settings → Tokens (classic)), portées « project » et « repo ». Un jeton à grain
+# fin ne peut pas écrire dans le tableau d'un compte personnel (doc GitHub
+# « Automating Projects using Actions »). Sans lui, le run le dit et réussit
+# sans rien toucher.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version du launcher (ex. 1.3.4)"
+        required: true
+      essai:
+        description: "Lister sans rien changer"
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  publier:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Ranger le tableau
+        env:
+          PROJET_TOKEN: ${{ secrets.PROJET_TOKEN }}
+          VERSION: ${{ github.event.release.tag_name || inputs.version }}
+          ESSAI: ${{ inputs.essai && '--essai' || '' }}
+        run: python3 .github/tableau_publie.py $ESSAI

@@ -456,23 +456,69 @@ def _cles(reglage: Reglage) -> tuple[str, ...]:
     return (reglage.cle,)
 
 
-# Le plafond que le correctif tient DANS le jeu (HP4-HP6 : 120). Au-dessous de
-# la limite choisie, c'est lui qui l'emporte : « 144 » donnait 120 images, même
-# sans synchro (Ludo, 2026-10-01). Il suit donc la limite vers le HAUT ; jamais
-# vers le bas (un plafond livré n'est pas une préférence qu'on retire).
+# Le plafond que le correctif tient DANS le jeu (HP4-HP6 : 120, livré égal à la
+# limite). Au-dessous de la limite choisie, c'est lui qui l'emporte : « 144 »
+# donnait 120 images, même sans synchro (Ludo, 2026-10-01). AU-DESSUS, il
+# saccade : HP5 et HP6 avancent leur horloge de 1000/plafond ms par image
+# dessinée, puis la rattrapent d'un pas fixe ; à 60 avec un plafond à 120,
+# chaque image de 16,7 ms n'en avance que 8,3, d'où une image en dents de scie
+# (#28, #29, 2026-11-06 : un joueur resté à 60/144 après avoir essayé 144).
+# Le plafond SUIT donc la limite dans les deux sens ; « Aucune » lui rend sa
+# valeur livrée. La cadence ne change pas : c'est le plus bas des deux qui tient.
+# HP4 a la même horloge (lue dans son exe). MESURÉ en jeu le 2026-11-07 (HP5 et
+# HP6, écran à 60 Hz) : 3 600 images par minute dont le rendu s'écarte de plus
+# de 4 ms de la cadence affichée à 60/120, 0 à 60/60 et à 30/30 ; une marge
+# (60/63, 30/32) en laisse 300. La synchro verticale fait la même chose sous le
+# plafond livré (120 sur un écran à 60 ou 100 Hz) : le launcher ne la corrige
+# pas, la fréquence lue par Windows n'étant pas celle qui cadence le jeu (59
+# annoncé, 60,000 mesuré sur un PC à deux écrans). La vraie correction est
+# `[Accio.Game] RealFrameTime=1` de la DLL (0 aussi dans tous ces cas, et 0
+# avec plafond = limite : les deux cohabitent) ; ce réglage deviendra inutile
+# quand plus aucun ini sans elle ne circulera.
+_LIMITE = ("Accio.Window", "FPSLimit")
 _PLAFOND = ("Accio.Game", "FrameRateCap")
+_PLAFOND_LIVRE = 120
 
 
-def _relever_plafond(lignes: list[str], limite: Valeur | None) -> None:
-    actuel = _valeur(lignes, *_PLAFOND)
-    if actuel is None or not limite:
-        return
+def _entier(texte: str | None) -> int | None:
+    if texte is None:
+        return None
     try:
-        plafond = int(float(actuel))
-    except ValueError:
+        return int(float(texte))
+    except (ValueError, OverflowError):
+        # OverflowError : « inf » ou « 1e999 » écrit à la main ; le lancement ne doit pas s'arrêter là.
+        return None
+
+
+def _aligner_plafond(lignes: list[str], limite: Valeur | None, origine: Path) -> None:
+    plafond = _entier(_valeur(lignes, *_PLAFOND))
+    if not plafond or plafond < 0 or limite is None:
+        # Absent, illisible ou 0 (HP3 : pas de plafond tenu) : rien à suivre.
         return
-    if 0 < plafond < int(limite):
-        _poser(lignes, *_PLAFOND, str(int(limite)))
+    cible = int(limite)
+    if cible <= 0:
+        livre = None
+        if origine.is_file():
+            livre = _entier(_valeur(_lire(origine)[0], *_PLAFOND))
+        cible = livre if livre and livre > 0 else _PLAFOND_LIVRE
+    if cible != plafond:
+        _poser(lignes, *_PLAFOND, str(cible))
+
+
+def aligner_plafond(ini: Path) -> bool:
+    """Au lancement : remet le plafond du jeu à la limite d'images s'ils diffèrent.
+
+    Rattrape les ini écrits avant que le plafond suive la limite vers le bas
+    (60 avec 120 ou 144). Rien si l'une des deux clés manque ou vaut 0. N'écrit
+    que si la valeur change ; rend True s'il a écrit. Lève OSError si le
+    fichier ne peut pas être lu ou écrit.
+    """
+    lignes, _ = _lire(ini)
+    limite = _entier(_valeur(lignes, *_LIMITE))
+    plafond = _entier(_valeur(lignes, *_PLAFOND))
+    if not limite or not plafond or limite < 0 or plafond < 0 or limite == plafond:
+        return False
+    return poser_valeur(ini, *_PLAFOND, str(limite))
 
 
 def a_une_origine(ini: Path) -> bool:
@@ -525,7 +571,7 @@ def ecrire(ini: Path, reglage: Reglage, valeur: Any) -> None:
         if not _poser(lignes, reglage.section, reglage.cle, texte):
             raise ValueError(f"section [{reglage.section}] absente")
         if reglage.cle == "FPSLimit":
-            _relever_plafond(lignes, valeur)
+            _aligner_plafond(lignes, valeur, chemin_origine(ini))
     else:
         if not _poser(lignes, reglage.section, reglage.cle, "1" if valeur else "0"):
             raise ValueError(f"section [{reglage.section}] absente")

@@ -545,6 +545,19 @@ def rapport(manager: GameManager, ecrans: list[str] | None = None, journal: str 
     lignes.append("Jeux installés :" if installes else "Jeux installés : aucun")
     lignes += installes
 
+    # Ce que le correctif a écrit ne pas avoir pu appliquer, au DERNIER lancement de chaque jeu
+    # (`journal_correctif`) : le résumé collé sur Discord porte la preuve sans le fichier joint.
+    from src.core import journal_correctif
+    pannes = []
+    for g in manager.catalog.games:
+        if manager.get_state(g.id) == GameState.NOT_INSTALLED:
+            continue
+        for e in journal_correctif.echecs((Path(config.install_path) / g.executable).parent):
+            pannes.append(f"  {g.id} · {e.journal} : {e.ligne}")
+    if pannes:
+        lignes.append("Correctif, réglages non appliqués au dernier lancement :")
+        lignes += pannes
+
     if tentatives is None:
         try:
             from src.core import stats

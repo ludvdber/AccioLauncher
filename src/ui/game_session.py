@@ -35,6 +35,7 @@ from src.core import (
     config_cassee,
     diagnostic_plantage,
     folio,
+    journal_correctif,
     progression,
     reparation_config,
     sauvegardes,
@@ -80,6 +81,9 @@ class GameSession(QObject):
     # fil à part (~105 ms de `wevtutil`), donc reçu en file par la fenêtre,
     # toujours APRÈS `terminee`.
     diagnostic = pyqtSignal(str, object)
+    # Une vraie partie s'est finie sans arrêt, mais le correctif a écrit qu'un réglage n'a pas pu
+    # s'appliquer (`journal_correctif`) : identifiant du jeu, tuple d'`Echec`. Émis APRÈS `terminee`.
+    correctif_en_echec = pyqtSignal(str, object)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -204,6 +208,7 @@ class GameSession(QObject):
         arret: config_cassee.Arret | None = None
         game_id = self._game_id
         a_diagnostiquer: tuple | None = None
+        echecs_correctif: tuple[journal_correctif.Echec, ...] = ()
         self.succes_obtenus = []
         if self._game_id:
             game = self._manager.get_game_by_id(self._game_id)
@@ -242,6 +247,14 @@ class GameSession(QObject):
                     a_diagnostiquer = (
                         self._manager.get_game_path(game_id), Path(game.executable).name,
                         self._pid, code, self._debut, partie)
+                # Lu seulement après une vraie partie sans arrêt : un jeu qui n'a pas démarré a déjà son
+                # toast d'aide, et un arrêt sa boîte ; le rapport copié contient de toute façon le journal.
+                # Les DLL écrivent à côté de l'EXE (HP1/System, HP7/pc…) ; `get_game_path` garantit un
+                # chemin relatif sûr avant qu'on y lise quoi que ce soit.
+                if (arret is None and partie and self._debut is not None
+                        and self._manager.get_game_path(game_id) is not None):
+                    echecs_correctif = journal_correctif.echecs(
+                        (self._manager.config.install_path / game.executable).parent, self._debut)
         # Le jeu qui vient de finir, pour qui écoute `terminee` (`question_reprise`).
         self.jeu_termine = game_id
         self._game_id = ""
@@ -254,7 +267,11 @@ class GameSession(QObject):
             self.configuration_cassee.emit(game_id, cassee)
         elif arret is not None:
             self.arret_fatal.emit(game_id, arret)
-        elif a_diagnostiquer is not None:
+        # Deux voies INDÉPENDANTES : un réglage du correctif qui échoue à chaque lancement
+        # ne doit pas taire la boîte d'un vrai plantage (le toast, lui, ne se redit pas).
+        if echecs_correctif:
+            self.correctif_en_echec.emit(game_id, echecs_correctif)
+        if a_diagnostiquer is not None:
             threading.Thread(target=self._diagnostiquer, args=(game_id, *a_diagnostiquer),
                              daemon=True, name=f"diagnostic-{game_id}").start()
 

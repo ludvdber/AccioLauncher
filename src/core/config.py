@@ -258,6 +258,9 @@ class Config:
     # Taille du texte de HP1/HP2 (id → « petit », « grand », « tres_grand »,
     # « origine »). Absent : automatique, d'après la hauteur de l'image (`texte_ue1`).
     taille_texte: dict[str, str] = field(default_factory=dict)
+    # Panne du correctif déjà signalée au retour d'une partie (id → empreinte des lignes du journal,
+    # `journal_correctif.signature`) : la même panne à chaque lancement ne se redit pas.
+    correctif_signale: dict[str, str] = field(default_factory=dict)
     # Les clés que CETTE version ne connaît pas, recopiées telles quelles à la
     # sauvegarde. Sans elles, revenir d'une version plus récente (essai, retour
     # en arrière) effaçait en silence ce qu'elle avait ajouté : préréglages de
@@ -315,6 +318,7 @@ class Config:
                     game_language=_as_map(data.get("game_language"), str),
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                     taille_texte=_as_map(data.get("taille_texte"), str),
+                    correctif_signale=_as_map(data.get("correctif_signale"), str),
                     inconnus={k: v for k, v in data.items() if k not in _CLES_CONNUES},
                 )
             except (json.JSONDecodeError, OSError, ValueError, TypeError, AttributeError) as exc:
@@ -370,6 +374,7 @@ class Config:
                 "game_language": self.game_language,
                 "resolution_jeu": self.resolution_jeu,
                 "taille_texte": self.taille_texte,
+                "correctif_signale": self.correctif_signale,
             },
             indent=4,
             ensure_ascii=False,

@@ -15,7 +15,8 @@ from typing import Any, NamedTuple
 from src.core import captures, compat, demarrage, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
-from src.core import copies_sauvegardes, memoire_4go, reprise, resolution_jeu, stats, texte_ue1
+from src.core import copies_sauvegardes, memoire_4go, reglages_correctif, reprise, resolution_jeu, stats
+from src.core import texte_ue1
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
@@ -334,6 +335,9 @@ class GameManager:
                 avertir()
         # Le correctif PC écrit ses captures directement hors du dossier du jeu.
         captures.preparer(game, self.config.install_path)
+        # Le plafond du jeu égal à la limite d'images (#28, #29 : 60 avec 144 saccade),
+        # pour les ini écrits quand le plafond ne suivait la limite que vers le haut.
+        self._aligner_plafond(game)
         # Et la couleur de la maison, que son xinput1_3.dll repose sur la manette.
         manette.preparer((self.config.install_path / game.executable).parent,
                          self.config.theme if self.config.couleur_manette else None)
@@ -425,6 +429,16 @@ class GameManager:
     def valeurs_registre(self, game: GameData, code: str | None = None) -> dict[str, Any]:
         """Tout ce qui doit être posé dans la clé du jeu, langue comprise."""
         return langue.valeurs_registre(game, self.config, code)
+
+    def _aligner_plafond(self, game: GameData) -> None:
+        ini = reglages_correctif.ini_du_correctif(self.config.install_path / Path(game.executable).parent)
+        try:
+            if (ini.is_file() and reglages_correctif.est_nouveau_correctif(ini)
+                    and reglages_correctif.aligner_plafond(ini)):
+                log.info("Correctif : plafond d'images aligné sur la limite dans %s", ini)
+        except (OSError, ValueError):
+            # Le jeu démarre quand même, avec ses saccades d'avant.
+            log.warning("Correctif : plafond d'images non aligné (%s)", ini, exc_info=True)
 
     def apply_game_language(self, game: GameData, code: str | None = None,
                             confirmer: Confirmer | None = None) -> bool:

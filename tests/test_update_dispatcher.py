@@ -416,10 +416,14 @@ class TestFenetreAllegee:
         # parties, son coupe, fermeture) vivent dans `src/ui/mediatheque.py`.
         # Restent l'import et la construction ; l'onglet passe par l'aiguillage
         # existant de `_on_onglet`, sans ligne de plus.
+        # 769 -> 770 le 2026-11-06 : le toast du journal du correctif (idee
+        # decidee par Ludo). Lecture, empreinte, toast et clic vivent dans
+        # `src/ui/toast_correctif.py` ; reste l'appel `brancher(self)` a la
+        # construction de la session (l'import tient sur une ligne existante).
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())
-        assert lignes <= 769, f"main_window.py a regrossi : {lignes} lignes"
+        assert lignes <= 770, f"main_window.py a regrossi : {lignes} lignes"
 
 
 class _FauxChecker(QObject):
