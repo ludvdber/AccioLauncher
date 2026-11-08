@@ -534,6 +534,17 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Harry ne reçoit plus aucun dégât des ennemis : pour vivre l'histoire sans échouer. "
             "« Dégâts reçus » n'a alors plus d'effet. Se change aussi pendant la partie.",
             defaut=False, onglet="difficulte", beta=True),
+    # HP4, le seuil des créatures (correctif, 2026-11-08 ; `source/hardcore.cpp`) : combien de maléfices il faut, et
+    # en combien de temps la jauge retombe. Relu au chargement d'un niveau. Au catalogue après un essai en jeu, avec
+    # `degats_recus` pour HP4 et une section [Accio.Hardcore] dans son ini.
+    Reglage("sorts_par_creature", "Accio.Hardcore", "EnemyHits",
+            "Résistance des créatures",
+            "Multiplie le nombre de sorts qu'il faut pour vaincre une créature. Compte au prochain niveau chargé.",
+            choix=(1, 0.6, 1.5, 2, 3), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
+    Reglage("jauge_creature", "Accio.Hardcore", "EnemyRecovery",
+            "Temps pour enchaîner les sorts",
+            "Le temps que met une créature à se remettre de vos sorts : plus il est court, plus il faut les enchaîner vite. Compte au prochain niveau chargé.",
+            choix=(1, 1.5, 0.7, 0.5), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
     # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
     # correctif), lu au démarrage du jeu seulement. Bêta tant qu'un match ne l'a pas vu.

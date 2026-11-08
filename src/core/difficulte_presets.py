@@ -71,19 +71,20 @@ class Preset:
 _NORMAL: dict[str, object] = {
     "degats_recus": 1, "degats_infliges": 1, "reaction_ennemis": 1,
     "vie_joueur": 1, "regeneration": 1, "invincible": False, "quidditch": 0, NATIVE: 0,
+    "sorts_par_creature": 1, "jauge_creature": 1,
 }
 # Difficile (Ludo, 2026-10-30) : un cran entre la difficulté d'origine la plus
 # haute et Hardcore.
 _DIFFICILE: dict[str, object] = {
     **_NORMAL, "degats_recus": 1.5, "degats_infliges": 0.75, "reaction_ennemis": 1.5,
-    "regeneration": 0.5, "quidditch": 1, NATIVE: 2,
+    "regeneration": 0.5, "quidditch": 1, NATIVE: 2, "sorts_par_creature": 1.5, "jauge_creature": 0.7,
 }
 # Hardcore (Ludo, 2026-10-30) : bien au-delà. Réaction ×5 = attentes des ennemis
 # divisées par 5 (0,4 s entre deux attaques au lieu de 2 s) : il reste une marge,
 # minime, pour attaquer. Le sur mesure va encore plus loin (×10, ×5 de dégâts).
 _HARDCORE: dict[str, object] = {
     **_NORMAL, "degats_recus": 3, "degats_infliges": 0.5, "reaction_ennemis": 5,
-    "regeneration": 0, "quidditch": 2, NATIVE: 2,
+    "regeneration": 0, "quidditch": 2, NATIVE: 2, "sorts_par_creature": 2, "jauge_creature": 0.5,
 }
 
 # Du plus doux au plus dur, de gauche à droite.
@@ -94,7 +95,8 @@ PRESETS = (
            {**_NORMAL, "invincible": True, "degats_infliges": 1.5}, exige="invincible"),
     Preset("detendu", "Détendu",
            "Pour profiter de l'histoire : Harry encaisse mieux et ses sorts portent plus.",
-           {**_NORMAL, "degats_recus": 0.5, "degats_infliges": 1.5, "vie_joueur": 1.5}),
+           {**_NORMAL, "degats_recus": 0.5, "degats_infliges": 1.5, "vie_joueur": 1.5,
+            "sorts_par_creature": 0.6, "jauge_creature": 1.5}),
     Preset("normal", "Normal", "Le jeu tel qu'il est sorti.", _NORMAL),
     Preset("difficile", "Difficile", "Un vrai défi, pour qui a déjà fini le jeu.", _DIFFICILE),
     Preset("hardcore", "Hardcore",
@@ -207,7 +209,7 @@ def _terme(ident: str, valeur: object) -> float:
     if ident == "regeneration":
         return 1.2 * (1 - _nombre(valeur, 1))
     poids = {"degats_recus": 1.0, "degats_infliges": -1.0, "reaction_ennemis": 0.6,
-             "vie_joueur": -1.0}.get(ident)
+             "vie_joueur": -1.0, "sorts_par_creature": 0.6, "jauge_creature": -0.4}.get(ident)
     if poids is None:
         return 0.0
     return poids * math.log2(max(_nombre(valeur, 1), 0.01))

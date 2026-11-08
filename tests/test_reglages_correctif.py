@@ -309,7 +309,7 @@ class TestModeDifficile:
 
     def test_tout_le_mode_difficile_est_en_beta(self):
         hardcore = {r.ident for r in rc.REGLAGES.values() if r.section == "Accio.Hardcore"}
-        assert hardcore == {*self.IDENTS, "sorts_retires", "invincible"}
+        assert hardcore == {*self.IDENTS, "sorts_retires", "invincible", "sorts_par_creature", "jauge_creature"}
         assert all(rc.REGLAGES[i].beta for i in hardcore)
         # Autres réglages en essai : le Quidditch de HP1/HP2, pas encore vu en match, et la caméra
         # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un).
