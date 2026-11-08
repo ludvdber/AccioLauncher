@@ -247,7 +247,8 @@ def _keep(entry):
 # `src/ui/fond_gpu.py` importe QtQuick et QtQuickWidgets ; le crochet de
 # PyInstaller embarque alors TOUS les modules QML de Qt (3D, contrôles,
 # physique, positionnement…) : l'exe passait de 46,6 à 72,6 Mo (2026-11-01).
-# `assets/qml/FondAccueil.qml` n'importe que QtQuick et QtMultimedia, `EtoilesCarrousel.qml` que QtQuick.
+# `assets/qml/FondAccueil.qml` et `EcranVideo.qml` n'importent que QtQuick et QtMultimedia ; `EtoilesCarrousel.qml`,
+# `CarrouselAccueil.qml`, `DisqueScene.qml` et `FicheJumeau.qml`, que QtQuick.
 # QtQml : sa racine, plus les deux modules que son qmldir importe (`import
 # QtQml.Models auto`, `import QtQml.WorkerScript auto`). Pas StateMachine ni
 # XmlListModel : le greffon StateMachine réclamait libQt6StateMachineQml, écartée

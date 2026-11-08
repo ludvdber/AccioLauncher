@@ -841,3 +841,239 @@ class TestLectureDesParties:
         assert media._avances["hp2"] == 80
         media._poser_lecture(ancien, ({"hp2": 10}, {}))
         assert media._avances["hp2"] == 80, "la lecture plus ancienne n'écrase rien"
+
+
+class TestCinematiqueSurLaCarteGraphique:
+    """Le parcours de `ecran_video_gpu` dans la vraie page, et ce qui ne dépend pas
+    de la scène : la barre de lecture, la fenêtre réduite."""
+
+    @pytest.fixture
+    def page_seule(self, fenetre_avec_jeux, monkeypatch, tmp_path):
+        from unittest.mock import MagicMock
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        page = win._pages.page._cinematiques
+        video = tmp_path / "v.bik"
+        video.write_bytes(b"BIKi")
+        monkeypatch.setattr(win._mediatheque, "video", lambda j, f: video)
+        monkeypatch.setattr(win._mediatheque, "voix", lambda j, f: None)
+        lecteur = page._video
+
+        def play(_chemin, muted=False, volume=0.25, debut_ms=0):
+            lecteur._player, lecteur._sink, lecteur._audio = MagicMock(), MagicMock(), MagicMock()
+            lecteur._player.position.return_value = 0
+            lecteur._relais = lecteur._recepteur(lecteur._sortie)
+            lecteur._paused = False
+            return True
+        monkeypatch.setattr(lecteur, "play", play)
+        return win, page
+
+    @pytest.fixture
+    def page_gpu(self, page_seule, monkeypatch):
+        from src.ui import fond_gpu
+        if not fond_gpu.QUICK_DISPONIBLE:
+            pytest.skip("Qt Quick absent")
+        # Allumée APRÈS la fenêtre : seules les scènes des cinématiques nous intéressent.
+        monkeypatch.setenv("ACCIO_FOND_GPU", "1")
+        monkeypatch.setenv("ACCIO_MEDIA_GPU", "1")
+        return page_seule
+
+    @pytest.fixture
+    def sans_vrai_plein_ecran(self, monkeypatch):
+        from src.ui import cinema_plein_ecran
+        monkeypatch.setattr(cinema_plein_ecran.PleinEcran, "ouvrir", lambda self, voisin: self.show())
+
+    def test_la_lecture_part_vers_la_scene(self, page_gpu):
+        _win, page = page_gpu
+        page.jouer("hp3", "SiriusPhoto", "x")
+        ecran = page._ecran
+        assert ecran.sur_gpu and page._video._garder_image
+        assert page._video._sortie is ecran._gpu.sortie_video()
+        assert ecran._gpu.isVisibleTo(ecran) and not ecran._invite.isVisibleTo(ecran)
+        assert page._video._relais is not None, "le lecteur relaie, sans toImage"
+
+    def test_la_scene_couvre_son_ecran_et_le_plein_ecran(self, page_gpu, sans_vrai_plein_ecran):
+        from PyQt6.QtCore import QSize
+        from PyQt6.QtGui import QResizeEvent
+        from PyQt6.QtWidgets import QApplication
+        _win, page = page_gpu
+        page.jouer("hp3", "SiriusPhoto", "x")
+        ecran = page._ecran
+        ecran.resize(480, 270)
+        # La fenêtre du test n'est pas montrée : Qt garde l'événement pour l'affichage.
+        QApplication.sendEvent(ecran, QResizeEvent(ecran.size(), QSize()))
+        assert ecran._gpu.geometry() == ecran.rect()
+        page.plein_ecran()
+        plein = page._plein_ecran
+        plein.resize(640, 360)
+        assert plein._gpu.geometry() == plein.rect()
+
+    def test_arreter_retire_la_scene(self, page_gpu, monkeypatch):
+        _win, page = page_gpu
+        page.jouer("hp3", "SiriusPhoto", "x")
+        ecran = page._ecran
+        vidages = []
+        monkeypatch.setattr(ecran._gpu, "vider", lambda: vidages.append(1))
+        page.arreter()
+        assert vidages == [1], "la lecture suivante ne commence pas sur cette image"
+        assert not ecran.sur_gpu and not ecran._gpu.isVisibleTo(ecran)
+        assert ecran._invite.isVisibleTo(ecran)
+
+    def test_double_clic_clavier_et_retour_du_plein_ecran(self, page_gpu, qtbot, sans_vrai_plein_ecran):
+        from PyQt6.QtCore import Qt
+        _win, page = page_gpu
+        page.jouer("hp3", "SiriusPhoto", "x")
+        ecran = page._ecran
+        qtbot.mouseDClick(ecran, Qt.MouseButton.LeftButton)
+        plein = page._plein_ecran
+        assert plein is not None, "le double-clic ouvre le plein écran sans image QPainter"
+        assert plein._gpu.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert page._video._sortie is plein.sortie_video()
+        assert page._video._relais is plein.sortie_video().property("videoSink")
+        qtbot.keyClick(plein, Qt.Key.Key_Space)
+        assert page._video.paused, "Espace reste à la fenêtre"
+        qtbot.keyClick(plein, Qt.Key.Key_Space)
+        assert not page._video.paused
+        qtbot.keyClick(plein, Qt.Key.Key_Escape)
+        assert page._plein_ecran is None
+        assert page._video._sortie is ecran._gpu.sortie_video(), "les images reviennent à la page"
+
+    def test_scene_refusee_le_chemin_qpainter_tel_quel(self, page_seule, monkeypatch):
+        from PyQt6.QtGui import QImage
+
+        from src.ui import ecran_video_gpu
+        monkeypatch.setattr(ecran_video_gpu, "creer", lambda *a, **k: None)
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        assert page._video._sortie is None and not page._ecran.sur_gpu
+        image = QImage(32, 18, QImage.Format.Format_RGB32)
+        page._video.video_frame.emit(image)
+        assert page._ecran.image is image
+
+    def test_plein_ecran_sans_scene_alors_que_la_page_en_a_une(self, page_gpu, monkeypatch,
+                                                               sans_vrai_plein_ecran):
+        from PyQt6.QtGui import QImage
+
+        from src.ui import ecran_video_gpu
+        _win, page = page_gpu
+        page.jouer("hp3", "SiriusPhoto", "x")
+        image = QImage(32, 18, QImage.Format.Format_RGB32)
+        monkeypatch.setattr(page._video, "image_courante", lambda: image)
+        monkeypatch.setattr(ecran_video_gpu, "creer", lambda *a, **k: None)
+        page.plein_ecran()
+        plein = page._plein_ecran
+        assert plein.sortie_video() is None and plein._image is image
+        assert page._video._sortie is None and page._video._relais is None
+
+    def test_choisir_une_autre_cinematique_garde_le_plein_ecran(self, page_gpu, sans_vrai_plein_ecran):
+        """Alt+Tab vers la page derrière, un clic sur une autre ligne : les images
+        restent à la fenêtre qui les montre."""
+        _win, page = page_gpu
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page.plein_ecran()
+        plein = page._plein_ecran
+        page.jouer("hp3", "LupinWolf", "y")
+        assert page._video._sortie is plein.sortie_video()
+
+    def test_la_barre_ne_repeint_que_quatre_fois_par_seconde(self, page_seule, monkeypatch):
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._allonger(120_000)
+        page._position.resize(500, 20)
+        valeurs = []
+        vrai = page._position.setValue
+        monkeypatch.setattr(page._position, "setValue", lambda v: (valeurs.append(v), vrai(v)))
+        temps = [0]
+
+        class Voix:
+            def position(self):
+                return temps[0]
+        page._voix = Voix()
+        try:
+            for ms in range(20, 3_001, 20):            # une position toutes les 20 ms
+                temps[0] = ms
+                page._avancer(ms)
+            assert 11 <= len(valeurs) <= 12, valeurs   # 3 s à 4 par seconde
+            assert all(b - a >= 250 for a, b in zip(valeurs, valeurs[1:], strict=False))
+            temps[0] = 13_000                          # un saut de dix secondes
+            page._avancer(13_000)
+            assert valeurs[-1] == 13_000, "un saut se montre tout de suite"
+        finally:
+            page._voix = None
+
+    def test_la_barre_d_un_long_film_suit_ses_pixels(self, page_seule, monkeypatch):
+        from unittest.mock import PropertyMock
+
+        from src.ui.video_player import VideoPlayer
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._allonger(600_000)                        # 1,2 s par pixel : le pas vise la seconde
+        page._position.resize(500, 20)
+        valeurs = []
+        vrai = page._position.setValue
+        monkeypatch.setattr(page._position, "setValue", lambda v: (valeurs.append(v), vrai(v)))
+        position = PropertyMock(return_value=900)
+        monkeypatch.setattr(VideoPlayer, "position", position)
+        page._avancer(900)
+        assert valeurs == [], "moins d'une seconde, moins d'un pixel"
+        position.return_value = 1_000
+        page._avancer(1_000)
+        assert valeurs == [1_000]
+
+    def test_reduite_suspend_les_deux_pistes_et_reprend(self, page_seule):
+        from unittest.mock import MagicMock
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._voix = MagicMock()
+        page._voix_sortie = MagicMock()
+        page.set_reduite(True)
+        assert page._video.paused
+        page._voix.pause.assert_called_once()
+        assert page._pause.text() == "Reprendre"
+        page.set_reduite(False)
+        assert not page._video.paused
+        page._voix.play.assert_called()
+        page._voix = page._voix_sortie = None
+
+    def test_une_pause_voulue_ne_reprend_pas_au_retour(self, page_seule):
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._basculer_pause()
+        page.set_reduite(True)
+        page.set_reduite(False)
+        assert page._video.paused, "l'utilisateur l'avait mise en pause"
+
+    def test_le_plein_ecran_ouvert_ne_suspend_rien(self, page_seule, sans_vrai_plein_ecran):
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page.plein_ecran()
+        page.set_reduite(True)
+        assert not page._video.paused, "la cinématique se voit dans l'autre fenêtre"
+        page._plein_ecran.close()
+        assert page._video.paused, "réduite et plus de plein écran : plus rien ne se voit"
+        page.set_reduite(False)
+        assert not page._video.paused
+
+    def test_arreter_oublie_la_pause_de_reduction(self, page_seule):
+        _win, page = page_seule
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page.set_reduite(True)
+        page.arreter()
+        assert not page._pause_reduite
+
+    def test_la_vraie_fenetre_previent_la_page(self, page_seule, monkeypatch):
+        from PyQt6.QtCore import QEvent
+        from PyQt6.QtWidgets import QApplication
+        win, page = page_seule
+        win.show()
+        page.jouer("hp3", "SiriusPhoto", "x")
+        monkeypatch.setattr(win, "isMinimized", lambda: True)
+        QApplication.sendEvent(win, QEvent(QEvent.Type.WindowStateChange))
+        assert page._video.paused, "l'état de la fenêtre arrive à la page"
+        monkeypatch.setattr(win, "isMinimized", lambda: False)
+        QApplication.sendEvent(win, QEvent(QEvent.Type.WindowStateChange))
+        assert not page._video.paused
+        win.hide()                                     # le geste de `_minimize_to_tray`
+        assert page._video.paused, "cachée dans la zone de notification aussi"
+        win.show()
+        assert not page._video.paused

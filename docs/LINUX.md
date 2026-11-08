@@ -94,7 +94,8 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `main.py` (`main`, AppUserModelID) | `SetCurrentProcessExplicitAppUserModelID` | Gardé | Équivalent Linux : `setDesktopFileName` — sous Wayland, c'est lui qui relie la fenêtre à son icône et à son `.desktop` | 3 |
 | `src/ui/main_window.py` (`_minimize_to_tray`) | Suppose une zone de notification | Sans zone de notification (GNOME sans extension AppIndicator, certains compositeurs Wayland), la fenêtre **disparaît** sans icône pour la rappeler | Réduire au lieu de cacher quand `isSystemTrayAvailable()` est faux | 3 |
 | `src/core/win_taskbar.py` | `ITaskbarList3` | No-op | Inchangé (piste : `com.canonical.Unity.LauncherEntry`) | — |
-| `src/ui/fond_gpu.py` (`actif`) | Fond animé dessiné par la carte graphique (QtQuick) | **Éteint** hors Windows (`sys.platform == "win32"`) : le fond passe par QPainter | À essayer sous Wine et dans l'AppImage avec `ACCIO_FOND_GPU=1` | — |
+| `src/ui/fond_gpu.py` (`actif`) | Fond animé dessiné par la carte graphique (QtQuick) ; les cinématiques (`ecran_video_gpu`) le suivent | **Éteint** hors Windows (`sys.platform == "win32"`) : le fond passe par QPainter | À essayer sous Wine et dans l'AppImage avec `ACCIO_FOND_GPU=1` | — |
+| `src/ui/fiche_gpu.py`, `src/ui/carrousel_gpu.py` (`actif`) | Jumeau visuel de la fiche, du carrousel et du disque (QtQuick) | **Éteints** avec le fond : ils suivent `fond_gpu.actif()` | Suivent l'essai du fond | — |
 | `src/core/diagnostic.py` (`systeme`) | `win32_ver` | « Linux 6.x » : ni Bazzite ni sa version | `/etc/os-release` (`PRETTY_NAME`) | 3 |
 | `src/core/diagnostic.py` (`identite`) | Processeur, mémoire, cartes graphiques lus dans le registre / `GlobalMemoryStatusEx` | Mémoire et cartes vides | `/proc/meminfo`, `/sys/class/drm` ; plus une ligne « Compatibilité » (lanceur, Proton, préfixe) | 3 |
 | `src/core/i18n.py:163-178` | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |

@@ -12,7 +12,7 @@ d'être des fenêtres (`Qt.WindowType.Widget`). La barre de téléchargement,
 elle, reste sous la pile : un téléchargement se suit depuis n'importe où.
 """
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QStackedWidget, QVBoxLayout, QWidget
 
 from src.ui.title_bar import BIBLIOTHEQUE
@@ -36,12 +36,22 @@ class Pages(QStackedWidget):
         self._fiche = fiche
         self._particules = None
         self._barre = None
+        self._fenetre: QWidget | None = None
         self.cle = ""
 
     def brancher(self, particules, barre_titre) -> None:
         """Ce qui naît après la pile : les particules et la barre du haut."""
         self._particules = particules
         self._barre = barre_titre
+        # Réduite, ou cachée dans la zone de notification : la page le voit d'ici.
+        self._fenetre = self.window()
+        self._fenetre.installEventFilter(self)
+
+    def eventFilter(self, objet: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 (Qt)
+        if (objet is self._fenetre and event is not None and event.type() in
+                (QEvent.Type.WindowStateChange, QEvent.Type.Hide, QEvent.Type.Show)):
+            self.set_reduite(self._fenetre.isMinimized() or self._fenetre.isHidden())
+        return super().eventFilter(objet, event)
 
     @property
     def page(self) -> QDialog | None:
@@ -77,6 +87,12 @@ class Pages(QStackedWidget):
         if self.page is None:
             return cle == BIBLIOTHEQUE
         return bool(self.cle) and cle == self.cle
+
+    def set_reduite(self, oui: bool) -> None:
+        """Fenêtre réduite ou cachée : une page qui joue une vidéo la suspend."""
+        suspendre = getattr(self.page, "set_reduite", None)
+        if suspendre is not None:
+            suspendre(oui)
 
     def fermer(self) -> None:
         page = self.page

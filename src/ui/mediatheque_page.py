@@ -29,7 +29,7 @@ import shutil
 from html import escape
 from pathlib import Path
 
-from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QObject, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -48,6 +48,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import discographie, encyclopedie
 from src.core.i18n import tr, trn
+from src.ui import ecran_video_gpu
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.cinema_plein_ecran import PleinEcran
@@ -67,6 +68,7 @@ log = logging.getLogger(__name__)
 _LARGEUR_PLATINE = 340
 _DISQUE = 220
 _LARGEUR_ECRAN = 560
+_PAS_BARRE_MS = 250                # au plus 4 repeintes par seconde de la barre de lecture
 
 _STYLE = """
 QDialog#mediatheque { background: #070712; }
@@ -501,7 +503,7 @@ class _VueMusique(QWidget):
         lay.setSpacing(0)
         lay.addWidget(surtitre(tr("En cours")))
         lay.addSpacing(12)
-        self._disque = Disque(_DISQUE)
+        self._disque = Disque(_DISQUE, fond_scene="#08081a")      # le fond du cadre `#platine`
         lay.addWidget(self._disque, alignment=Qt.AlignmentFlag.AlignHCenter)
         lay.addSpacing(12)
         self._titre = QLabel()
@@ -817,6 +819,11 @@ class _Ecran(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._image: QImage | None = None
+        # La scène sur la carte graphique, créée à la première cinématique (une
+        # `QQuickWidget` compte, et beaucoup de visites n'en lancent aucune).
+        self._gpu: ecran_video_gpu.EcranVideoGPU | None = None
+        self._gpu_tente = False
+        self._sur_gpu = False
         self.setMinimumSize(320, 180)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         lay = QVBoxLayout(self)
@@ -827,10 +834,38 @@ class _Ecran(QWidget):
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
         self.setFixedHeight(self.width() * 9 // 16)
+        if self._gpu is not None:
+            self._gpu.setGeometry(self.rect())
+
+    def sortie_gpu(self) -> QObject | None:
+        """Le `VideoOutput` de l'écran, ou None : le chemin QPainter."""
+        if not self._gpu_tente:
+            self._gpu_tente = True
+            # Les coins arrondis sur la couleur de la page (`QDialog#mediatheque`).
+            self._gpu = ecran_video_gpu.creer(self, coin=8, fond=QColor(themed("#070712")))
+            if self._gpu is not None:
+                self._gpu.setGeometry(self.rect())
+                self._gpu.hide()
+        return self._gpu.sortie_video() if self._gpu is not None else None
+
+    def debut_gpu(self) -> None:
+        """Une lecture part vers la scène : `poser` ne sera plus appelé pour ses images."""
+        if self._gpu is not None:
+            self._sur_gpu = True
+            self._invite.hide()
+            self._gpu.show()
+
+    @property
+    def sur_gpu(self) -> bool:
+        return self._sur_gpu
 
     def poser(self, image: QImage | None) -> None:
         self._image = image
         self._invite.setVisible(image is None)
+        if image is None and self._gpu is not None:
+            self._sur_gpu = False
+            self._gpu.vider()
+            self._gpu.hide()
         self.update()
 
     @property
@@ -838,7 +873,7 @@ class _Ecran(QWidget):
         return self._image
 
     def mouseDoubleClickEvent(self, _event) -> None:  # noqa: N802 (Qt)
-        if self._image is not None:
+        if self._image is not None or self._sur_gpu:
             self.double_clic.emit()
 
     def paintEvent(self, _event) -> None:  # noqa: N802 (Qt)
@@ -922,6 +957,7 @@ class _VueCinematiques(QWidget):
         self._lignes: list[_LigneCine] = []
         self._video = VideoPlayer(self)
         self._video.set_plein_debit(True)
+        self._video.set_garder_image(True)           # `_Ecran.poser(None)` la retire
         self._video.video_frame.connect(lambda image: self._ecran.poser(image))
         self._video.playback_ended.connect(self._video_finie)
         self._video.position_changed.connect(self._avancer)
@@ -934,6 +970,10 @@ class _VueCinematiques(QWidget):
         self._duree_video = 0
         self._duree = 0
         self._plein_ecran: PleinEcran | None = None
+        # Mise en pause par la fenêtre réduite, pas par l'utilisateur : seule celle-là
+        # reprend d'elle-même au retour (voir `set_reduite`).
+        self._fenetre_reduite = False
+        self._pause_reduite = False
         # Le haut-parleur de la barre du bas vaut aussi pendant la lecture.
         media.fond.son_coupe_change.connect(self._sur_son_coupe)
 
@@ -1083,9 +1123,15 @@ class _VueCinematiques(QWidget):
         volume = self._media.fond_volume() / 100.0
         self._duree_video = self._duree = 0
         self._position.setRange(0, 0)
+        self._pause_reduite = False
+        # La fenêtre plein écran reste ouverte si on revient choisir ici (Alt+Tab) :
+        # les images continuent d'y aller.
+        if self._plein_ecran is None:
+            self._video.set_sortie(self._ecran.sortie_gpu())
         if not self._video.play(str(chemin), muted=fond.son_coupe, volume=volume):
             fond.reprendre(CINEMATIQUE)
             return
+        self._ecran.debut_gpu()
         self._chemin_video, self._chemin_voix = chemin, voix
         if voix is not None and MULTIMEDIA_DISPONIBLE:
             self._voix_sortie = QAudioOutput(self)
@@ -1128,8 +1174,13 @@ class _VueCinematiques(QWidget):
         """La cinématique en cours sur tout l'écran ; le lecteur reste celui-ci."""
         if not self._courante or self._plein_ecran is not None:
             return
-        plein = PleinEcran(self._ecran.image)
+        plein = PleinEcran(self._ecran.image, gpu=self._ecran.sur_gpu)
         self._video.video_frame.connect(plein.poser)
+        if self._ecran.sur_gpu:
+            sortie = plein.sortie_video()
+            if sortie is None:                 # la scène a refusé : ses images, peintes
+                plein.poser(self._video.image_courante())
+            self._video.set_sortie(sortie)
         plein.pause_demandee.connect(self._basculer_pause)
         plein.saut_demande.connect(lambda ms: self._aller_a(max(0, self._position.value() + ms)))
         plein.fermee.connect(self._plein_ecran_ferme)
@@ -1143,9 +1194,30 @@ class _VueCinematiques(QWidget):
                 self._video.video_frame.disconnect(plein.poser)
             except TypeError:
                 pass
+        if self._ecran.sur_gpu:
+            self._video.set_sortie(self._ecran.sortie_gpu())
         fenetre = self.window()
         if fenetre is not None:
             fenetre.activateWindow()
+        self._suivre_reduction()
+
+    def set_reduite(self, oui: bool) -> None:
+        """Fenêtre réduite ou cachée : rien ne se voit, inutile de décoder (la fiche
+        fait de même). La pause porte sur les deux pistes, et ne reprend au retour
+        que si c'est elle qui l'a posée. Sans effet tant que le plein écran montre
+        la cinématique : c'est une autre fenêtre."""
+        self._fenetre_reduite = oui
+        self._suivre_reduction()
+
+    def _suivre_reduction(self) -> None:
+        cachee = self._fenetre_reduite and self._plein_ecran is None
+        if cachee and self._courante and not self._en_pause():
+            self._basculer_pause()
+            self._pause_reduite = True
+        elif not cachee and self._pause_reduite:
+            self._pause_reduite = False
+            if self._en_pause():
+                self._basculer_pause()
 
     def _en_pause(self) -> bool:
         """L'image finie, le lecteur vidéo est libéré : c'est la voix qui dit
@@ -1184,8 +1256,18 @@ class _VueCinematiques(QWidget):
             return
         voix = self._voix.position() if self._voix is not None else 0
         image = self._video.position if self._video.is_playing else 0
+        valeur = max(voix, image)
+        # Au plus 4 repeintes par seconde au lieu d'une par `positionChanged` des deux
+        # pistes. Un pas se mesure en temps DE LA VIDÉO, donc un saut (dix secondes en
+        # plein écran) passe tout de suite. Pas saccadé : sur la barre de 560 px au
+        # plus, une cinématique de 2 min avance de 1,2 px par quart de seconde ;
+        # au-delà, le pas suit la durée d'un pixel, jamais plus d'une seconde (le temps
+        # affiché).
+        pas = min(1000, max(_PAS_BARRE_MS, self._duree // max(1, self._position.width())))
+        if abs(valeur - self._position.value()) < pas:
+            return
         self._position.blockSignals(True)
-        self._position.setValue(max(voix, image))
+        self._position.setValue(valeur)
         self._position.blockSignals(False)
         self._montrer_temps(self._position.value())
 
@@ -1285,6 +1367,7 @@ class _VueCinematiques(QWidget):
         """Fin, bouton Arrêter, rubrique quittée ou page fermée : l'écran se vide, la musique revient."""
         if self._plein_ecran is not None:
             self._plein_ecran.close()
+        self._pause_reduite = False
         self._video.stop()
         self._arreter_voix()
         self._courante = ""
@@ -1421,6 +1504,9 @@ class MediathequePage(QDialog):
     @property
     def jeu(self) -> str:
         return self._musique._jeu
+
+    def set_reduite(self, oui: bool) -> None:
+        self._cinematiques.set_reduite(oui)
 
     def rubrique(self, cle_rubrique: str) -> None:
         self._rubriques[cle_rubrique].setChecked(True)

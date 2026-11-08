@@ -115,6 +115,10 @@ class TestCeQuiSertReste:
         r"data\i18n\en.json",
         # Le fond de l'accueil sur la carte graphique (`assets/qml/FondAccueil.qml`).
         r"assets\qml\FondAccueil.qml",
+        r"assets\qml\CarrouselAccueil.qml",
+        r"assets\qml\DisqueScene.qml",
+        r"assets\qml\FicheJumeau.qml",
+        r"assets\qml\EcranVideo.qml",
         r"PyQt6\Qt6\bin\Qt6Quick.dll",
         r"PyQt6\Qt6\bin\Qt6Qml.dll",
         r"PyQt6\Qt6\bin\Qt6QuickWidgets.dll",

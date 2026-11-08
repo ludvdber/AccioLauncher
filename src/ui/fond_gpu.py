@@ -161,6 +161,7 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
         # Gardé par Python : sans référence, le ramasse-miettes le détruit et la
         # scène reçoit « Failed to get image from provider ».
         self._fournisseur = _Voiles()
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)    # un QQuickWidget prend Tab, d'office
         self.engine().addImageProvider("accio", self._fournisseur)
         self.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
         self.setClearColor(theme.bg_qcolor(255))
@@ -443,11 +444,17 @@ class EtoilesGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore
     """
 
     def __init__(self, etoiles: list[tuple[float, float, float, int, bool, float]],
-                 parent: QWidget | None = None) -> None:
+                 parent: QWidget | None = None, *, qml: Path = _QML_ETOILES,
+                 fournisseur: object | None = None) -> None:
         super().__init__(parent)
+        # Gardé par Python, comme celui de `FondGPU` (`carrousel_gpu.CarrouselGPU`).
+        self._fournisseur = fournisseur
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        if fournisseur is not None:
+            self.engine().addImageProvider("accio", fournisseur)
         self.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
         self.setClearColor(theme.bg_qcolor(255))
-        self.setSource(QUrl.fromLocalFile(str(_QML_ETOILES)))
+        self.setSource(QUrl.fromLocalFile(str(qml)))
         for erreur in self.errors():
             log.warning("Étoiles du carrousel sur la carte graphique : %s", erreur.toString())
         self._racine = self.rootObject()

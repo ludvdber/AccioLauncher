@@ -5,17 +5,32 @@ des fixtures réutilisables pour les tests UI.
 """
 
 import gc
+import atexit
+import shutil
+import tempfile
 import os
 import sys
 from pathlib import Path
 
 # Doit être posé AVANT tout import PyQt6.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+# Le dossier personnel de la suite est un dossier temporaire, AVANT tout import de `src` : `config` en
+# tire le chemin du config.json et de sessions.json réels. Les gardes par test ne couvrent que la durée
+# du test : une écriture différée, partie après leur retrait, a remplacé le vrai config.json (dossier
+# d'installation, temps de jeu) le 2026-11-08 ; elle tombe maintenant ici.
+_MAISON_DE_TEST = tempfile.mkdtemp(prefix="accio_tests_")
+atexit.register(shutil.rmtree, _MAISON_DE_TEST, ignore_errors=True)
+os.environ["USERPROFILE"] = os.environ["HOME"] = _MAISON_DE_TEST
 # Les fenêtres de test gardent le fond peint par le processeur : une scène Qt
 # Quick par MainWindow, hors écran et sur 20 processus, faisait tomber un
 # travailleur de xdist (2026-11-01). Le fond sur la carte graphique a ses propres
 # tests (`test_fond_gpu.py`), qui le forcent.
 os.environ.setdefault("ACCIO_FOND_GPU", "0")
+# Le jumeau de la fiche (`fiche_gpu`) suit le même chemin : ses propres tests l'allument.
+os.environ.setdefault("ACCIO_FICHE_GPU", "0")
+os.environ.setdefault("ACCIO_CARROUSEL_GPU", "0")
+os.environ.setdefault("ACCIO_MEDIA_GPU", "0")
 
 # Racine du dépôt comme dossier courant : des tests lisent `src/…` par un chemin relatif
 # (plafonds de lignes), et pytest lancé depuis un autre dossier les faisait échouer (ACT-014).

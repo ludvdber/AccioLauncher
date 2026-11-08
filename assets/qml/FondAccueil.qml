@@ -266,4 +266,13 @@ Item {
             }
         }
     }
+
+    // ── La fiche du jeu (`fiche_gpu.FicheGPU`), au-dessus de tout le reste ──
+    // Vide tant que l'interrupteur est coupé : rien de plus à peindre.
+    property url ficheSource
+    Loader {
+        objectName: "chargeurFiche"
+        anchors.fill: parent
+        source: racine.ficheSource
+    }
 }

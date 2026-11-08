@@ -1,10 +1,11 @@
 """Miniature d'un jeu dans le carrousel — reflet, profondeur, badges."""
 
 import re
+from collections.abc import Callable
 from typing import NamedTuple
 
 from PyQt6.QtCore import (
-    Qt, pyqtSignal, QRect, QRectF, QPropertyAnimation, QEasingCurve, pyqtProperty,
+    Qt, pyqtSignal, QPointF, QRect, QRectF, QPropertyAnimation, QEasingCurve, pyqtProperty,
 )
 from PyQt6.QtGui import (
     QColor, QFont, QFontMetrics, QImage, QImageReader, QLinearGradient, QPainter,
@@ -29,6 +30,8 @@ REFLECTION_OPACITY = 0.06
 # Marges verticales de l'item, en dur dans `_update_size` : 6 px sous le reflet
 # et 10 px de respiration.
 _MARGE_V = 16
+# Rayon des coins de la jaquette, en points de la vignette.
+_RAYON_JAQUETTE = 6.0
 # Rapport largeur/hauteur de la jaquette, à tenir quelle que soit la bande.
 _RAPPORT = THUMB_W / THUMB_H
 
@@ -156,6 +159,10 @@ class CarouselItem(QWidget):
         self._cached_is_new: bool = False
         self._cached_coming_soon: bool = False
         self._cached_reprise: float = 0.0   # part déjà reçue, 0 = rien en attente
+        # Quand la scène dessine le double (`carrousel_gpu`), ce widget reste la
+        # source de vérité (clic, survol, géométrie) mais ne se peint plus.
+        self._jumeau: Callable[[], None] | None = None
+        self._clic_vu: Callable[[QPointF], bool] | None = None
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -205,6 +212,7 @@ class CarouselItem(QWidget):
         reprise = self.manager.reprise(self.game)
         self._cached_reprise = reprise[0] if reprise is not None else 0.0
         self.update()
+        self._signaler_jumeau()
 
     def _load_cover(self) -> None:
         """Charge la jaquette en demandant la réduction AU DÉCODEUR.
@@ -249,6 +257,7 @@ class CarouselItem(QWidget):
         self._reflection_cache_size = (0, 0)
         self._update_size()
         self.update()
+        self._signaler_jumeau()
 
     def _update_size(self) -> None:
         w = int(self._thumb_w * self._anim_scale)
@@ -257,6 +266,13 @@ class CarouselItem(QWidget):
         self.setFixedSize(w + 10, h + ref_h + 10)
 
     def set_depth(self, scale: float, opacity: float) -> None:
+        if self._jumeau is not None:
+            # La taille finale d'un coup : un seul calcul de mise en page, et le
+            # double de la scène anime de l'ancienne à la nouvelle géométrie.
+            self._anim_scale, self._anim_opacity = scale, opacity
+            self._update_size()
+            self._signaler_jumeau()
+            return
         self._scale_anim.stop()
         self._scale_anim.setStartValue(self._anim_scale)
         self._scale_anim.setEndValue(scale)
@@ -275,18 +291,23 @@ class CarouselItem(QWidget):
     def selected(self, value: bool) -> None:
         self._selected = value
         self.update()
+        self._signaler_jumeau()
 
     def enterEvent(self, event) -> None:
         self._hovered = True
         self.update()
+        self._signaler_jumeau()
 
     def leaveEvent(self, event) -> None:
         self._hovered = False
         self.update()
+        self._signaler_jumeau()
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
+            # Pendant que la scène anime, le widget est déjà ailleurs que son image.
+            if self._clic_vu is None or not self._clic_vu(self.mapToParent(event.position())):
+                self.clicked.emit()
 
     def paintEvent(self, event) -> None:
         """La vignette, couche par couche, du fond vers les marques.
@@ -343,7 +364,7 @@ class CarouselItem(QWidget):
         if self._hovered and not self._selected:
             opacite = min(opacite + 0.2, 1.0)
         return _Geo(x=(self.width() - w) // 2, y=5, w=w, h=h,
-                    radius=6.0, opacite=opacite)
+                    radius=_RAYON_JAQUETTE, opacite=opacite)
 
     # ── Les couches, du fond vers la surface ────────────────────────────
 
@@ -374,10 +395,13 @@ class CarouselItem(QWidget):
             p.drawPixmap(geo.x, geo.y, geo.w, geo.h, self._pixmap)
             p.setClipping(False)
             return
+        self._peindre_fond_repli(p, geo)
+        self._peindre_chiffre_repli(p, geo)
 
-        # Vignette de repli (jaquette absente) : dégradé teinté par le thème
-        # — un bleu nuit codé en dur restait bleu au milieu d'une interface
-        # verte chez Serpentard.
+    def _peindre_fond_repli(self, p: QPainter, geo: _Geo) -> None:
+        """Vignette de repli (jaquette absente) : dégradé teinté par le thème
+        — un bleu nuit codé en dur restait bleu au milieu d'une interface
+        verte chez Serpentard."""
         grad = QLinearGradient(geo.x, geo.y, geo.x, geo.y + geo.h)
         grad.setColorAt(0, QColor(theme.current().bg_card))
         grad.setColorAt(1, theme.bg_qcolor(255))
@@ -385,10 +409,11 @@ class CarouselItem(QWidget):
         p.setPen(QPen(accent_qcolor(60), 1.0))
         p.drawRoundedRect(geo.x, geo.y, geo.w, geo.h, geo.radius, geo.radius)
 
-        # Le chiffre romain SEUL, centré. Il portait au-dessus un ⚡ demandé
-        # en « Segoe UI Emoji » : U+26A1 est à présentation emoji par défaut,
-        # donc Windows le rendait en couleur, hors palette et insensible au
-        # `setPen` — le piège du bouton pause bleu, en plus discret.
+    def _peindre_chiffre_repli(self, p: QPainter, geo: _Geo) -> None:
+        """Le chiffre romain SEUL, centré. Il portait au-dessus un ⚡ demandé
+        en « Segoe UI Emoji » : U+26A1 est à présentation emoji par défaut,
+        donc Windows le rendait en couleur, hors palette et insensible au
+        `setPen` — le piège du bouton pause bleu, en plus discret."""
         p.setOpacity(1.0)
         p.setPen(accent_qcolor(160))
         p.setFont(cinzel(20, bold=True))
@@ -523,4 +548,109 @@ class CarouselItem(QWidget):
         p.drawRect(QRectF(geo.x, y_filet, geo.w, ep))
         p.setBrush(accent_qcolor(235))
         p.drawRect(QRectF(geo.x, y_filet, geo.w * self._cached_reprise, ep))
+
+    # ── Le double sur la carte graphique (`carrousel_gpu`) ─────────────
+
+    def brancher_jumeau(self, rappel: Callable[[], None],
+                        clic_vu: Callable[[QPointF], bool] | None = None) -> None:
+        """La scène dessine désormais cette vignette : ne plus se peindre.
+
+        `setUpdatesEnabled(False)` AVANT le premier affichage : `update()` n'a
+        plus d'effet et `paintEvent` n'est plus appelé, même par un `grab()`
+        (vérifié hors écran) ; clics, survol et géométrie, eux, ne changent pas.
+        `clic_vu` reçoit un clic (coordonnées de la bande) ; vrai s'il l'a traité.
+        """
+        self._jumeau = rappel
+        self._clic_vu = clic_vu
+        self.setUpdatesEnabled(False)
+
+    def _signaler_jumeau(self) -> None:
+        if self._jumeau is not None:
+            self._jumeau()
+
+    def etat_jumeau(self) -> dict[str, object]:
+        """L'état que la scène doit montrer (`CarrouselGPU.synchroniser`)."""
+        geo = self._geometrie()
+        return {
+            "visible": not self.isHidden(), "x": self.x(), "y": self.y(),
+            "cw": geo.w, "ch": geo.h, "refH": int(geo.h * REFLECTION_RATIO),
+            "opacite": self._anim_opacity, "survol": self._hovered, "choisi": self._selected,
+            "absent": not self._cached_installed and not self._cached_coming_soon,
+            "jaquette": self._pixmap is not None,
+        }
+
+    def _marques(self) -> list[Callable[[QPainter, _Geo], None]]:
+        """Les couches peintes à opacité pleine au-dessus du voile, dans l'ordre
+        de `paintEvent`."""
+        marques: list[Callable[[QPainter, _Geo], None]] = []
+        if self._cached_has_update:
+            marques.append(self._peindre_badge_maj)
+        if self._cached_is_new and not self._cached_installed:
+            marques.append(self._peindre_ruban_nouveau)
+        if self._cached_coming_soon:
+            marques.append(self._peindre_voile_bientot)
+        if self._cached_reprise > 0:
+            marques.append(self._peindre_filet_reprise)
+        return marques
+
+    def cle_marques(self) -> str:
+        """Ce dont dépend l'image des marques ; vide s'il n'y en a aucune."""
+        if not self._marques():
+            return ""
+        return (f"{int(self._cached_has_update)}{int(self._cached_is_new)}"
+                f"{int(self._cached_installed)}{int(self._cached_coming_soon)}"
+                f"/{self._cached_reprise:.4f}")
+
+    def _calque(self, gestes: list[Callable[[QPainter, _Geo], None]], dpr: float) -> QImage:
+        """Une image transparente de la taille de la jaquette, peinte par les MÊMES
+        gestes que `paintEvent` : deux dessins finiraient par diverger."""
+        geo = self._geometrie()._replace(x=0, y=0, opacite=1.0)
+        image = QImage(max(1, round(geo.w * dpr)), max(1, round(geo.h * dpr)),
+                       QImage.Format.Format_ARGB32_Premultiplied)
+        image.setDevicePixelRatio(dpr)
+        image.fill(Qt.GlobalColor.transparent)
+        p = QPainter(image)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        for geste in gestes:
+            geste(p, geo)
+        p.end()
+        return image
+
+    def image_marques(self, dpr: float) -> QImage:
+        """Pastilles, voile « bientôt », filet de reprise."""
+        return self._calque(self._marques(), dpr)
+
+    def image_fond_repli(self, dpr: float) -> QImage:
+        return self._calque([self._peindre_fond_repli], dpr)
+
+    def image_chiffre_repli(self, dpr: float) -> QImage:
+        return self._calque([self._peindre_chiffre_repli], dpr)
+
+    def _image_arrondie(self, source: QPixmap) -> QImage:
+        """La jaquette aux coins déjà arrondis : la scène n'a qu'à la poser, sans
+        masque. Le rayon vaut 6 px à l'échelle 1, à quelques dixièmes près en
+        haut et en bas de la profondeur."""
+        rayon = _RAYON_JAQUETTE * source.width() / max(1, self._thumb_w)
+        image = QImage(source.size(), QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(Qt.GlobalColor.transparent)
+        p = QPainter(image)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        tour = QPainterPath()
+        tour.addRoundedRect(QRectF(image.rect()), rayon, rayon)
+        p.setClipPath(tour)
+        p.drawPixmap(0, 0, source)
+        p.end()
+        return image
+
+    def image_jaquette(self) -> QImage:
+        return self._image_arrondie(self._pixmap) if self._pixmap else QImage()
+
+    def image_gris(self) -> QImage:
+        return self._image_arrondie(self._gris) if self._gris else QImage()
+
+    def largeur_base(self) -> int:
+        """La largeur dont dépend le rayon cuit dans l'image de la jaquette."""
+        return self._thumb_w
 

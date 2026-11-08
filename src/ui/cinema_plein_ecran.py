@@ -2,17 +2,18 @@
 
 Une fenêtre à part, sans cadre, sur l'écran du launcher : l'image dans son
 format sur du noir, rien d'autre. Le lecteur reste celui de la page
-(`_VueCinematiques`) : cette fenêtre ne fait que peindre les images qu'on lui
-pose et renvoyer les touches. Échap, F ou un double-clic ramènent à la page ;
+(`_VueCinematiques`) : cette fenêtre ne fait que montrer ses images (carte
+graphique, `ecran_video_gpu`, ou peintes si on les lui pose) et renvoyer les touches. Échap, F ou un double-clic ramènent à la page ;
 Espace met en pause ; ←/→ reculent ou avancent de dix secondes. Le curseur
 disparaît quand la souris ne bouge plus, l'aide du bas aussi.
 """
 
-from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QColor, QImage, QKeyEvent, QMouseEvent, QPainter
+from PyQt6.QtCore import QObject, QRectF, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QCloseEvent, QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QResizeEvent
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from src.core.i18n import tr
+from src.ui import ecran_video_gpu
 from src.ui.composants import ENCRE_DOUCE, texte
 
 SAUT_MS = 10_000
@@ -24,12 +25,15 @@ class PleinEcran(QWidget):
     pause_demandee = pyqtSignal()
     saut_demande = pyqtSignal(int)          # en millisecondes, négatif pour reculer
 
-    def __init__(self, image: QImage | None = None) -> None:
+    def __init__(self, image: QImage | None = None, *, gpu: bool = False) -> None:
         super().__init__(None, Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle(tr("Cinématique"))
         self.setMouseTracking(True)
         self._image = image
+        # Avant l'aide, qui passe ainsi au-dessus ; avant `show`, pour que la fenêtre
+        # naisse composée par la carte graphique.
+        self._gpu = ecran_video_gpu.creer(self) if gpu else None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 28)
         lay.addStretch()
@@ -50,6 +54,15 @@ class PleinEcran(QWidget):
             self.setGeometry(ecran.geometry())
         self.showFullScreen()
         self.activateWindow()
+
+    def sortie_video(self) -> QObject | None:
+        """Le `VideoOutput` de la fenêtre (None : elle peint les images posées)."""
+        return self._gpu.sortie_video() if self._gpu is not None else None
+
+    def resizeEvent(self, event: QResizeEvent | None) -> None:  # noqa: N802 (Qt)
+        super().resizeEvent(event)
+        if self._gpu is not None:
+            self._gpu.setGeometry(self.rect())
 
     def poser(self, image: QImage | None) -> None:
         self._image = image

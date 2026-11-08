@@ -367,7 +367,7 @@ class MiniLecteur(QWidget):
         dedans = QHBoxLayout(self._bouton)
         dedans.setContentsMargins(5, 0, 12, 0)
         dedans.setSpacing(8)
-        self._disque = Disque(18, reflet=False)
+        self._disque = Disque(18, reflet=False, fond_scene="#060611")   # le fond de la barre de statut
         self._disque.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self._note = QLabel()
         self._note.setPixmap(pixmap_icone("musique", 18, QColor("#c9c7da")))

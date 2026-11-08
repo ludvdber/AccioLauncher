@@ -117,11 +117,35 @@ class VideoPlayer(QObject):
         # Le récepteur de cette sortie pendant une lecture : les images y sont
         # RELAYÉES, une sur deux en fond (`_relayer`).
         self._relais = None
+        # La dernière image reste à l'arrêt : c'est au propriétaire de la sortie de
+        # la retirer. Le mode cinéma en a besoin (voir `_liberer`).
+        self._garder_image = False
+
+    @staticmethod
+    def _recepteur(sortie: QObject | None):
+        return sortie.property("videoSink") if sortie is not None else None
 
     def set_sortie(self, sortie: QObject | None) -> None:
         """Envoie les images à une sortie de la carte graphique au lieu du signal
-        `video_frame`. À poser avant `play()` ; vaut pour les lectures suivantes."""
+        `video_frame`. Avant `play()`, ou en pleine lecture pour changer d'écran
+        (plein écran) : l'image du moment suit, sinon rien tant qu'on est en pause."""
+        ancien, nouveau = self._recepteur(self._sortie), self._recepteur(sortie)
         self._sortie = sortie
+        if ancien is not None and nouveau is not None and ancien is not nouveau:
+            nouveau.setVideoFrame(ancien.videoFrame())
+        if self._player is not None:
+            self._relais = nouveau
+
+    def image_courante(self):
+        """L'image affichée par la sortie, en QImage (None sans sortie ni image)."""
+        recepteur = self._recepteur(self._sortie)
+        if recepteur is None:
+            return None
+        image = recepteur.videoFrame().toImage()
+        return None if image.isNull() else image
+
+    def set_garder_image(self, oui: bool) -> None:
+        self._garder_image = oui
 
     def set_plein_debit(self, oui: bool) -> None:
         self._plein_debit = oui
@@ -277,18 +301,16 @@ class VideoPlayer(QObject):
     def _ouvrir(self, video_path: str, muted: bool, volume: float) -> None:
         parent_widget = self.parent()
 
-        # Une cinématique d'EA a besoin de voir passer les images (avance rapide
-        # après un saut) : elle garde le chemin QPainter.
-        sortie = self._sortie if self._index is None else None
         self._sink = QVideoSink(parent_widget)
         # Vers la carte graphique, les images passent quand même par notre récepteur :
         # branché tout droit sur la sortie, le lecteur lui donnait ses 60 images/s et la
         # fenêtre se recomposait 60 fois par seconde pour un fond (mesuré le 2026-11-01 :
         # 21-26 % d'un cœur, 18-19 % en relayant une image sur deux). Relayer ne copie
-        # rien : la `QVideoFrame` reste dans la carte graphique.
-        self._relais = sortie.property("videoSink") if sortie is not None else None
-        self._sink.videoFrameChanged.connect(
-            self._relayer if self._relais is not None else self._on_frame)
+        # rien : la `QVideoFrame` reste dans la carte graphique. C'est aussi ce qui
+        # rend l'avance rapide d'une cinématique d'EA possible ici : son horodatage
+        # se lit sans convertir l'image (`_en_avance_rapide`).
+        self._relais = self._recepteur(self._sortie)
+        self._sink.videoFrameChanged.connect(self._on_frame)
         self._audio = QAudioOutput(parent_widget)
         self._audio.setVolume(volume)
         self._audio.setMuted(muted)
@@ -340,11 +362,14 @@ class VideoPlayer(QObject):
             self._player.mediaStatusChanged.disconnect(self._on_media_status)
             self._player.positionChanged.disconnect(self._sur_position)
             self._player.durationChanged.disconnect(self._sur_duree)
-            self._sink.videoFrameChanged.disconnect(
-                self._relayer if self._relais is not None else self._on_frame)
+            self._sink.videoFrameChanged.disconnect(self._on_frame)
             if self._relais is not None:
                 # La dernière image resterait affichée au début de la lecture suivante.
-                self._relais.setVideoFrame(QVideoFrame())
+                # Sauf au cinéma, où l'écran la garde comme le chemin QPainter : pendant
+                # l'avance rapide d'un saut (jusqu'à 6 s pour HP7), et pendant qu'une
+                # narration finit sa phrase après la fin de l'image (HP5).
+                if not self._garder_image:
+                    self._relais.setVideoFrame(QVideoFrame())
                 self._relais = None
             self._player.deleteLater()
             self._sink.deleteLater()
@@ -403,17 +428,25 @@ class VideoPlayer(QObject):
         if self._relais is not None and frame.isValid() and self.a_monter(frame.startTime()):
             self._relais.setVideoFrame(frame)
 
+    def _en_avance_rapide(self, frame) -> bool:
+        """Après un saut : rien à montrer avant le point voulu, puis vitesse normale."""
+        if self._cible < 0 or not frame.isValid():
+            return False
+        if frame.startTime() // 1000 + self._decalage < self._cible:
+            return True
+        self._cible = -1
+        self._player.setPlaybackRate(1.0)
+        if self._pause_apres_saut:
+            self._pause_apres_saut = self._paused = False
+            self.pause()
+        return False
+
     def _on_frame(self, frame) -> None:
-        if self._cible >= 0 and frame.isValid():
-            # Avance rapide après un saut : rien à montrer avant le point voulu.
-            if frame.startTime() // 1000 + self._decalage < self._cible:
-                return
-            self._cible = -1
-            self._player.setPlaybackRate(1.0)
-            if self._pause_apres_saut:
-                self._pause_apres_saut = self._paused = False
-                self.pause()
-        if frame.isValid() and self.a_monter(frame.startTime()):
+        if self._en_avance_rapide(frame):
+            return
+        if self._relais is not None:
+            self._relayer(frame)
+        elif frame.isValid() and self.a_monter(frame.startTime()):
             image = frame.toImage()
             if not image.isNull():
                 self.video_frame.emit(image)

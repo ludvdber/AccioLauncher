@@ -3,7 +3,7 @@
 import math
 import random
 
-from PyQt6.QtCore import QPoint, QRect, Qt, pyqtSignal, QRectF
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, QTimer, pyqtSignal, QRectF
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QRegion
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
@@ -12,7 +12,7 @@ from src.core.game_manager import GameManager
 from src.ui.carousel_item import CarouselItem, vignette_pour
 from src.ui.theme import accent_qcolor
 from src.ui.ticker import Ticker
-from src.ui import fond_gpu, theme
+from src.ui import carrousel_gpu, fond_gpu, theme
 
 
 # Hauteur de la bande. Elle est la CONTRAINTE : la vignette s'y plie
@@ -65,13 +65,15 @@ class Carousel(QWidget):
         # Les étoiles sur la carte graphique quand le fond de l'accueil y est :
         # repeintes ici, elles recomposaient toute la fenêtre (`fond_gpu.EtoilesGPU`).
         self._gpu: fond_gpu.EtoilesGPU | None = None
+        # Le double des vignettes vit dans la même scène que les étoiles
+        # (`carrousel_gpu`) ; None = les vignettes se peignent elles-mêmes.
+        self._jumeau: carrousel_gpu.CarrouselGPU | None = None
+        self._jumeau_a_pousser = QTimer(self)
+        self._jumeau_a_pousser.setSingleShot(True)
+        self._jumeau_a_pousser.setInterval(0)
+        self._jumeau_a_pousser.timeout.connect(self._pousser_jumeau)
         if fond_gpu.actif():
-            gpu = fond_gpu.EtoilesGPU(self._stars, self)
-            if gpu.valide():
-                gpu.lower()
-                self._gpu = gpu
-            else:
-                gpu.deleteLater()
+            self._poser_scene()
 
         # Ticker partagé à ~30 FPS, mais repaint des étoiles 1 tick sur 2 (~15 FPS)
         self._star_flip = False
@@ -84,6 +86,22 @@ class Carousel(QWidget):
         self._items_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.set_games(games)
+
+    def _poser_scene(self) -> None:
+        """La scène la plus complète qui se charge ; rien si aucune (repli silencieux)."""
+        if carrousel_gpu.actif():
+            jumeau = carrousel_gpu.CarrouselGPU(self._stars, self)
+            if jumeau.valide():
+                jumeau.lower()
+                self._gpu = self._jumeau = jumeau
+                return
+            jumeau.deleteLater()
+        gpu = fond_gpu.EtoilesGPU(self._stars, self)
+        if gpu.valide():
+            gpu.lower()
+            self._gpu = gpu
+        else:
+            gpu.deleteLater()
 
     def current_game_id(self) -> str | None:
         """Id du jeu actuellement surligné (None si la bande est vide)."""
@@ -110,9 +128,13 @@ class Carousel(QWidget):
             item.setParent(None)
             item.deleteLater()
         self._items.clear()
+        if self._jumeau is not None:
+            self._jumeau.oublier()
 
         for i, game in enumerate(games):
             item = CarouselItem(game, self._manager, self)
+            if self._jumeau is not None:
+                item.brancher_jumeau(self._jumeau_a_pousser.start, self._clic_en_glissement)
             item.clicked.connect(lambda idx=i: self.select(idx))
             self._items_layout.addWidget(item, alignment=Qt.AlignmentFlag.AlignBottom)
             self._items.append(item)
@@ -167,6 +189,38 @@ class Carousel(QWidget):
         super().resizeEvent(event)
         if self._gpu is not None:
             self._gpu.setGeometry(self.rect())
+        if self._jumeau is not None:
+            self._jumeau_a_pousser.start()
+
+    def _pousser_jumeau(self, animer: bool = False) -> None:
+        """Le double reprend l'état des vrais widgets (`CarrouselGPU.synchroniser`)."""
+        if self._jumeau is not None:
+            self._items_layout.activate()
+            self._jumeau.synchroniser(self._items, animer)
+
+    def event(self, e: QEvent | None) -> bool:
+        # Fenêtre passée sur un écran d'une autre échelle : le double reprend ses images.
+        if e is not None and e.type() == QEvent.Type.DevicePixelRatioChange and self._jumeau is not None:
+            self._jumeau_a_pousser.start()
+        return super().event(e)
+
+    def _clic_en_glissement(self, pos: QPointF) -> bool:
+        """Pendant l'animation de la scène, le clic vise la vignette VUE sous lui.
+
+        Les widgets sont déjà à leur place finale, l'image pas encore. Vrai si le
+        clic est ainsi traité ; faux : le chemin ordinaire.
+        """
+        if self._jumeau is None or not self._jumeau.glisse():
+            return False
+        index = self._jumeau.vignette_vue_en(pos)
+        if index is not None and index < len(self._items):
+            self._items[index].clicked.emit()
+        return True
+
+    def mousePressEvent(self, event) -> None:
+        # Une vignette se voit encore là où son widget n'est déjà plus.
+        if event.button() != Qt.MouseButton.LeftButton or not self._clic_en_glissement(event.position()):
+            super().mousePressEvent(event)
 
     def paintEvent(self, event) -> None:
         """Dégradé vertical + étoiles scintillantes."""
@@ -216,6 +270,8 @@ class Carousel(QWidget):
                 item.set_depth(SCALE_ADJACENT, OPACITY_ADJACENT)
             else:
                 item.set_depth(SCALE_FAR, OPACITY_FAR)
+        # Les widgets sont déjà à leur place finale : le double y va en 400 ms.
+        self._pousser_jumeau(animer=True)
 
     def select(self, index: int) -> None:
         if index < 0 or index >= len(self._items):

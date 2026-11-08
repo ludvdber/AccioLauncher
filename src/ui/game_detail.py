@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 from src.ui import game_detail_handlers as handlers
 from src.ui.action_panel import ActionPanel
 from src.ui.audio_bar import AudioBar
+from src.ui import fiche_gpu
 from src.ui import fond_gpu
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
@@ -137,9 +138,13 @@ class GameDetailView(QWidget):
         self._fade_anim.setDuration(300)
         self._fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
+        # La fiche sur la carte graphique, quand c'est demandé (`fiche_gpu`) : plus
+        # d'effet d'opacité posé en permanence, le fondu devient une animation de scène.
+        self._jumeau = fiche_gpu.creer(self._bg, self._info, self._audio_bar, self)
         self._info_opacity = QGraphicsOpacityEffect(self._info)
         self._info_opacity.setOpacity(1.0)
-        self._info.setGraphicsEffect(self._info_opacity)
+        if self._jumeau is None:
+            self._info.setGraphicsEffect(self._info_opacity)
         self._info_fade = QPropertyAnimation(self._info_opacity, b"opacity", self)
         self._info_fade.setEasingCurve(QEasingCurve.Type.OutCubic)
 
@@ -331,6 +336,8 @@ class GameDetailView(QWidget):
         self._info_fade.stop()
         self._bg.bg_opacity = 0.0
         self._info_opacity.setOpacity(0.0)
+        if self._jumeau is not None:
+            self._jumeau.fondu_zero()
         self._apply_game(game)
 
     def _apply_game(self, game: GameData) -> None:
@@ -358,6 +365,9 @@ class GameDetailView(QWidget):
         self._position_info()
         # Seconde passe : le panneau d'actions vient d'être reconstruit.
         QTimer.singleShot(0, self._position_info)
+        if self._jumeau is not None:
+            self._jumeau.fondu_entree(500)
+            return
         self._info_fade.stop()
         self._info_fade.setStartValue(0.0)
         self._info_fade.setEndValue(1.0)
