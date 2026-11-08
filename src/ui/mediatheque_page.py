@@ -135,6 +135,21 @@ def _icone(nom: str, taille: int, couleur: QColor | None = None) -> QIcon:
     return QIcon(pixmap_icone(nom, taille, couleur or QColor("#e6e4f0")))
 
 
+def _rond(icone: str, libelle: str, action, bulle: str = "") -> QPushButton:
+    """Un bouton rond à icône seule, comme la barre des bandes-annonces (Ludo, 2026-11-08)."""
+    b = QPushButton()
+    b.setObjectName("rond")
+    b.setFixedSize(38, 38)
+    b.setIcon(_icone(icone, 16))
+    b.setIconSize(QSize(16, 16))
+    b.setAutoDefault(False)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.setToolTip(bulle or libelle)
+    b.setAccessibleName(libelle)
+    b.clicked.connect(action)
+    return b
+
+
 def _transparent(widget: QWidget) -> QWidget:
     widget.setObjectName("transparent")
     return widget
@@ -525,7 +540,7 @@ class _VueMusique(QWidget):
         commandes = QHBoxLayout()
         commandes.setSpacing(10)
         commandes.addStretch()
-        self._precedent = self._rond("precedent", tr("Morceau précédent"), lambda: self._sauter(-1))
+        self._precedent = _rond("precedent", tr("Morceau précédent"), lambda: self._sauter(-1))
         commandes.addWidget(self._precedent)
         self._lecture = QPushButton()
         self._lecture.setObjectName("lecture")
@@ -534,7 +549,7 @@ class _VueMusique(QWidget):
         self._lecture.setCursor(Qt.CursorShape.PointingHandCursor)
         self._lecture.clicked.connect(self._fond.basculer_pause)
         commandes.addWidget(self._lecture)
-        self._suivant = self._rond("suivant", tr("Morceau suivant"), lambda: self._sauter(1))
+        self._suivant = _rond("suivant", tr("Morceau suivant"), lambda: self._sauter(1))
         commandes.addWidget(self._suivant)
         commandes.addStretch()
         lay.addLayout(commandes)
@@ -543,13 +558,9 @@ class _VueMusique(QWidget):
         # Enregistrer et Fond sonore côte à côte : la platine tenait sur deux écrans.
         actions = QHBoxLayout()
         actions.setSpacing(8)
-        self._enregistrer = bouton(tr("Enregistrer"))
-        self._enregistrer.setAutoDefault(False)
-        self._enregistrer.setIcon(_icone("telechargement", 16))
-        self._enregistrer.setIconSize(QSize(16, 16))
-        self._enregistrer.setToolTip(tr("Enregistrer ce morceau"))
-        self._enregistrer.clicked.connect(lambda: self.enregistrer(self._fond.morceau))
-        actions.addWidget(self._enregistrer, stretch=1)
+        self._enregistrer = _rond("telechargement", tr("Enregistrer ce morceau"),
+                                  lambda: self.enregistrer(self._fond.morceau))
+        actions.addWidget(self._enregistrer)
         self._bouton_fond = bouton(tr("Fond sonore"))
         self._bouton_fond.setCheckable(True)
         self._bouton_fond.setAutoDefault(False)
@@ -593,18 +604,6 @@ class _VueMusique(QWidget):
         lay.addLayout(volume)
         lay.addStretch()
         return page
-
-    def _rond(self, icone: str, libelle: str, action) -> QPushButton:
-        b = QPushButton()
-        b.setObjectName("rond")
-        b.setFixedSize(38, 38)
-        b.setIcon(_icone(icone, 16))
-        b.setIconSize(QSize(16, 16))
-        b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setToolTip(libelle)
-        b.setAccessibleName(libelle)
-        b.clicked.connect(action)
-        return b
 
     def _liste(self) -> QWidget:
         colonne = _transparent(QWidget())
@@ -1037,24 +1036,16 @@ class _VueCinematiques(QWidget):
         d.addSpacing(10)
         commandes = QHBoxLayout()
         commandes.setSpacing(10)
-        self._pause = bouton(tr("Pause"))
-        self._pause.setAutoDefault(False)
-        self._pause.clicked.connect(self._basculer_pause)
+        self._pause = _rond("pause", tr("Pause"), self._basculer_pause)
         commandes.addWidget(self._pause)
-        self._stop = bouton(tr("Arrêter"))
-        self._stop.setAutoDefault(False)
-        self._stop.clicked.connect(self.arreter)
+        self._stop = _rond("arret", tr("Arrêter"), self.arreter)
         commandes.addWidget(self._stop)
-        self._plein = bouton(tr("Plein écran"))
-        self._plein.setAutoDefault(False)
-        self._plein.setToolTip(tr("Échap pour revenir"))
-        self._plein.clicked.connect(self.plein_ecran)
+        self._plein = _rond("plein_ecran", tr("Plein écran"), self.plein_ecran,
+                            bulle=f'{tr("Plein écran")} · {tr("Échap pour revenir")}')
         commandes.addWidget(self._plein)
         commandes.addStretch()
-        self._enregistrer = bouton(tr("Enregistrer…"))
-        self._enregistrer.setAutoDefault(False)
-        self._enregistrer.setToolTip(tr("Garder une copie de cette cinématique sur votre ordinateur."))
-        self._enregistrer.clicked.connect(self._enregistrer_copie)
+        self._enregistrer = _rond("telechargement", tr("Enregistrer la cinématique"), self._enregistrer_copie,
+                                  bulle=tr("Garder une copie de cette cinématique sur votre ordinateur."))
         commandes.addWidget(self._enregistrer)
         d.addLayout(commandes)
         d.addStretch()
@@ -1394,7 +1385,11 @@ class _VueCinematiques(QWidget):
         self._plein.setEnabled(actif)
         self._position.setEnabled(actif)
         self._enregistrer.setEnabled(actif and not self._copie_en_cours)
-        self._pause.setText(tr("Reprendre") if actif and self._en_pause() else tr("Pause"))
+        en_pause = actif and self._en_pause()
+        libelle = tr("Reprendre") if en_pause else tr("Pause")
+        self._pause.setIcon(_icone("play" if en_pause else "pause", 16))
+        self._pause.setToolTip(libelle)
+        self._pause.setAccessibleName(libelle)
 
 
 class MediathequePage(QDialog):

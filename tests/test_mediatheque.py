@@ -1063,7 +1063,7 @@ class TestCinematiqueSurLaCarteGraphique:
         page.set_reduite(True)
         assert page._video.paused
         page._voix.pause.assert_called_once()
-        assert page._pause.text() == "Reprendre"
+        assert page._pause.accessibleName() == "Reprendre" and not page._pause.text(), "une icône, pas un mot"
         page.set_reduite(False)
         assert not page._video.paused
         page._voix.play.assert_called()

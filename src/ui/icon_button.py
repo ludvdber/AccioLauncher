@@ -50,6 +50,7 @@ _DOSSIER = ASSETS_DIR / "icons"
 _FICHIERS = {
     "play": "phosphor/play-fill.svg",
     "pause": "phosphor/pause-fill.svg",
+    "arret": "phosphor/stop-fill.svg",
     "replay": "phosphor/arrow-counter-clockwise-bold.svg",
     "volume": "phosphor/speaker-high-bold.svg",
     "muet": "phosphor/speaker-x-bold.svg",
