@@ -1282,18 +1282,22 @@ class _VueCinematiques(QWidget):
         """Les deux pistes à `ms`. Une image déjà finie repart si on revient en arrière."""
         if not self._courante:
             return
+        en_pause = self._en_pause()   # image finie, seule la voix sait qu'on est en pause
         if self._voix is not None:
             self._voix.setPosition(ms)
-            if not self._video.paused and self._voix.playbackState() != QMediaPlayer.PlaybackState.PlayingState:
+            if not en_pause and self._voix.playbackState() != QMediaPlayer.PlaybackState.PlayingState:
                 self._voix.play()
         if self._video.is_playing:
             if self._duree_video and ms >= self._duree_video:
+                if self._voix is None:                 # rien ne finirait : ni image, ni voix pour prendre le relais
+                    self.arreter()
+                    return
                 self._video.stop()                     # au-delà de l'image : la voix seule
             else:
                 self._video.seek(ms)
         elif self._chemin_video is not None and ms < self._duree_video:
             fond = self._media.fond
-            pause = self._video.paused
+            pause = en_pause
             self._video.play(str(self._chemin_video), muted=fond.son_coupe,
                              volume=self._media.fond_volume() / 100.0, debut_ms=ms)
             if pause:

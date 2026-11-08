@@ -268,6 +268,7 @@ class VideoPlayer(QObject):
         self._cible = ms if ms - debut > 40 else -1
         self._pause_apres_saut = pause
         if self._cible >= 0:
+            self._paused = pause             # `_ouvrir` l'a remise à faux : la pause voulue tient pendant le rattrapage
             self._player.setPlaybackRate(_RATTRAPAGE)
         elif pause:
             self.pause()

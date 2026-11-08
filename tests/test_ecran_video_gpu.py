@@ -226,3 +226,25 @@ def test_une_vraie_video_arrive_dans_la_scene_sans_toimage(allume, hote, lecteur
     assert sortie.property("videoSink").videoFrame().isValid(), "la dernière image reste"
     ecran.vider()
     assert not sortie.property("videoSink").videoFrame().isValid()
+
+
+def test_une_pause_voulue_tient_pendant_le_rattrapage_d_un_saut(qtbot, monkeypatch):
+    """`paused` reste vrai entre l'arrivée de la copie et l'image visée."""
+    hote = QWidget()
+    qtbot.addWidget(hote)
+    lecteur = VideoPlayer(hote)
+    lecteur._paused = True
+    lecteur._demandes = 1
+    lecteur._attente = 5_000
+
+    def ouvrir(*_a):
+        lecteur._paused = False
+        lecteur._player = MagicMock()
+
+    monkeypatch.setattr(lecteur, "_liberer", lambda: None)
+    monkeypatch.setattr(lecteur, "_ouvrir", ouvrir)
+    monkeypatch.setattr(lecteur, "_jeter", lambda _c: None)
+    lecteur._poser_saut(1, (b"", "copie.vp6", 1_000))
+    assert lecteur._cible == 5_000
+    assert lecteur.paused
+    lecteur._player = None

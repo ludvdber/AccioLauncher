@@ -517,6 +517,40 @@ class TestLectureCinematique:
         page._aller_a(25_000)                      # au-delà de l'image : rien à relancer
         assert relances == [5_000]
 
+    def test_une_pause_en_fin_de_narration_tient_apres_un_saut(self, vue, monkeypatch):
+        """L'image est finie, seule la voix est en pause : le saut ne relance rien."""
+        from PyQt6.QtMultimedia import QMediaPlayer
+
+        _win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._allonger(20_000)
+        lancees, pauses = [], []
+
+        class Voix:
+            def setPosition(self, _ms): pass
+            def playbackState(self): return QMediaPlayer.PlaybackState.PausedState
+            def play(self): lancees.append(1)
+            def setSource(self, _u): pass
+            def deleteLater(self): pass
+            def stop(self): pass
+
+        page._voix = Voix()
+        monkeypatch.setattr(page._video, "play", lambda chemin, muted, volume, debut_ms=0: True)
+        monkeypatch.setattr(page._video, "pause", lambda: pauses.append(1))
+        page._aller_a(5_000)
+        assert not lancees, "la voix reste en pause"
+        assert pauses, "l'image relancée se remet en pause"
+
+    def test_sans_voix_un_saut_au_bout_termine_la_cinematique(self, vue, monkeypatch):
+        _win, page, _ordre = vue
+        page.jouer("hp3", "SiriusPhoto", "x")
+        page._allonger(20_000)
+        monkeypatch.setattr(page._video, "_attente", 1)   # `is_playing` : une ouverture en cours
+        fins = []
+        monkeypatch.setattr(page, "arreter", lambda: fins.append(1))
+        page._aller_a(20_000)
+        assert fins == [1]
+
     def test_enregistrer_copie_la_video_et_sa_voix(self, vue, monkeypatch, tmp_path, qtbot):
         """La copie se fait sur un fil à part (grand audit du 2026-11-02 : jusqu'à
         329 Mo pour HP8, la fenêtre figée jusqu'au bout)."""
