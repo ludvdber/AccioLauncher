@@ -381,7 +381,7 @@ détaille aussi l'installation manuelle d'umu (archive « zipapp » dans
 
 ## 7. État : phase 2 — le lanceur de compatibilité
 
-Ce qui est en place (voir aussi `CLAUDE.md`, modules `compat`,
+Ce qui est en place (voir aussi `docs/claude/ARCHITECTURE_CORE.md`, modules `compat`,
 `preparation_wine`, `game_registry`, `system_checks`, `pre_launch`) :
 
 - **Détection** : `umu-run`, puis `wine`/`wine64` ; `ACCIO_COMPAT=umu|wine`

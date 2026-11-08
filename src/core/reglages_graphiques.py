@@ -8,7 +8,7 @@ correctif). L'hypothèse est l'antialiasing 8x livré en v1.2, imposé jusqu'aux
 textures de rendu : sans réglage, la seule issue était d'éditer ce fichier au
 Bloc-notes.
 
-HP3 n'a pas le correctif d'Accio : son image passe par un traducteur D3D8 → D3D11 livré avec le jeu,
+Le correctif d'Accio de HP3 (`dinput8.dll`) ne règle pas l'image : elle passe par un traducteur D3D8 → D3D11 livré avec le jeu,
 dont la qualité se règle dans `system\\dgVoodoo.conf`, à côté de l'exe. Ce n'est
 pas le `d3d9.ini` de `reglages_correctif` : clés alignées (« Clé = valeur »),
 booléens `true`/`false`, et une même clé dans plusieurs sections

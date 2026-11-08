@@ -413,7 +413,7 @@ class FolioPageHP2(FolioPage):
 
     def _entree(self, releve) -> tuple[str, datetime | None, str]:
         return (nom_emplacement(releve), releve.modifie,
-                folio_hp2.lieu(self._system, get_language(), releve.titre))
+                folio_hp2.lieu(self._system, get_language(), releve.titre, releve.carte))
 
     def _image(self, releve) -> Path | None:
         return folio_hp2.image_sauvegarde(releve.chemin)

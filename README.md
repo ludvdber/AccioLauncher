@@ -42,7 +42,7 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 - **Un folio pour les huit jeux** : cartes de sorciers, dragées, points des maisons, sorts, boucliers, écussons et badges, lus directement dans vos sauvegardes et montrés avec les images et les icônes du jeu.
 - **Des médailles tirées de vos sauvegardes**, dans l'onglet Défis du Carnet, de *l'École des Sorciers* au *Prince de Sang-Mêlé* : folio complet, armoire à trophées pleine, tous les écussons… Chacune repose sur ce que la sauvegarde prouve, elle est datée à la partie où elle tombe et annoncée au retour du jeu.
 - **Reprendre en un clic** : pour les trois premiers jeux, « Reprendre » ouvre votre dernière partie sans passer par les logos ni le menu (un réglage rend le menu du jeu). Un clic droit sur l'icône du launcher dans la barre des tâches lance vos derniers jeux.
-- **Les Collections** : vos captures, rangées par jeu dans vos Images et copiées en un clic pour Discord ; la musique et les cinématiques de vos jeux, avec leur son ; 186 fiches de personnages et de créatures, débloquées au fil de l'histoire, et ceux des deux premiers jeux en 3D, tels qu'ils sont dans votre jeu.
+- **Les Collections** : vos captures, rangées par jeu dans vos Images et copiées en un clic pour Discord ; la musique et les cinématiques de vos jeux, avec leur son ; 174 fiches de personnages et de créatures, débloquées au fil de l'histoire, et ceux des deux premiers jeux en 3D, tels qu'ils sont dans votre jeu.
 - **Un atelier ouvert aux artistes** : le bouton « Contribuer » liste les jaquettes, fonds, bandes-annonces, cartes, écrans de chargement et vidéos qui cherchent quelqu'un pour les refaire. Vous dessinez, montez ou animez ? Tout ce qu'il faut savoir est dedans.
 - **Les réglages lisibles** : chaque réglage d'un jeu dit ce qu'il change et ce qu'il demande à la machine, et survit à une mise à jour ou à une réparation.
 - **Vos jeux déjà installés sont repris** : au premier lancement, le launcher retrouve ceux qui sont déjà sur le disque.
@@ -54,13 +54,13 @@ légalement, il faut en posséder une copie originale (CD, DVD ou achat numériq
 
 | Jeu | Année | Téléchargement | Espace installé |
 |-----|:-----:|:--------------:|:---------------:|
-| Harry Potter à l'École des Sorciers | 2001 | 242 Mo | 431 Mo |
-| Harry Potter et la Chambre des Secrets | 2002 | 248 Mo | 465 Mo |
-| Harry Potter et le Prisonnier d'Azkaban | 2004 | 336 Mo | 772 Mo |
-| Harry Potter et la Coupe de Feu | 2005 | 848 Mo | 1,6 Go |
-| Harry Potter et l'Ordre du Phénix | 2007 | 2,4 Go | 4,6 Go |
+| Harry Potter à l'École des Sorciers | 2001 | 274 Mo | 466 Mo |
+| Harry Potter et la Chambre des Secrets | 2002 | 403 Mo | 664 Mo |
+| Harry Potter et le Prisonnier d'Azkaban | 2004 | 977 Mo | 1,8 Go |
+| Harry Potter et la Coupe de Feu | 2005 | 1,1 Go | 2,5 Go |
+| Harry Potter et l'Ordre du Phénix | 2007 | 3,3 Go | 5,8 Go |
 | Harry Potter et le Prince de Sang-Mêlé | 2009 | 2,0 Go | 4,3 Go |
-| Harry Potter et les Reliques de la Mort, partie 1 | 2010 | 4,3 Go | 4,5 Go |
+| Harry Potter et les Reliques de la Mort, partie 1 | 2010 | 6,6 Go | 6,9 Go |
 | Harry Potter et les Reliques de la Mort, partie 2 | 2011 | 7,3 Go | 7,5 Go |
 
 Pendant l'installation, l'archive et le jeu cohabitent un moment : prévoyez la
@@ -236,7 +236,7 @@ les vraies polices, puis PyInstaller (et l'AppImage), et s'arrêtent à la
 première étape qui échoue.
 
 À chaque push, la CI rejoue les tests sous Windows et Linux, et un second
-workflow passe le code à Bandit et les dépendances à pip-audit.
+workflow passe le code aux règles de sécurité de ruff et les dépendances à pip-audit.
 
 L'architecture, les pièges connus et les conventions sont décrits dans
 [CLAUDE.md](CLAUDE.md). Les composants tiers et leurs licences sont dans
@@ -289,7 +289,7 @@ est fourni « tel quel », sans garantie.
 **Accio Launcher** puts all eight Harry Potter PC games (2001–2011) one click
 away: download, install and play, on Windows 10 and 11. Downloads resume after
 a dropped connection and every file is checked on arrival. Game updates,
-repair and rollback to an earlier version are built in, along with your
+repair and a changelog for every version are built in, along with your
 playtime and a log of your sessions, a folio for every game read from your
 saves (cards, beans, house points, shields, crests and badges), achievements
 drawn from what your saves prove, one-click Resume straight into your last game (first three games), a gallery of your screenshots, house themes, seasonal effects,
@@ -299,7 +299,7 @@ English, French and Spanish.
 **Get started:** download `AccioLauncher.exe` from the
 [latest release](https://github.com/ludvdber/AccioLauncher/releases/latest),
 run it, pick your language and games folder, then choose a game and click
-Download. Windows SmartScreen will warn you because the launcher is not
+Install. Windows SmartScreen will warn you because the launcher is not
 code-signed: click *More info*, then *Run anyway*.
 
 **Support:** a coffee on [Ko-fi](https://ko-fi.com/ludovic01) helps pay for what the launcher and

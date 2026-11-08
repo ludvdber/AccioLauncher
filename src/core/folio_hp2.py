@@ -89,6 +89,19 @@ OBJETS = (
     ("StatusItemBitOGoyle", "ingamemenu_0006", "Morceau de Goyle", "HP2BitOGoyle"),
 )
 
+# La carte (`LevelInfo.LevelEnterText`) → sa clé `Maps_*` de `HPMenu.<langue>`. `LevelInfo.Title` ne suffit pas :
+# relu sur les 42 cartes (2026-11-08), les hubs n'en ont pas, et Adv7SlythComRoom, Adv8Forest, Adv9Aragog portent
+# encore le « Fireseed Challenge Two » d'un gabarit.
+_CLES_LIEUX = {
+    "adv1willow": "maps_0013", "adv3dungeonquest": "maps_0002", "adv4greenhouse": "maps_0012",
+    "adv7slythcomroom": "maps_0021", "adv8forest": "maps_0014", "adv9aragog": "maps_0014",
+    "ch1rictusempra": "maps_0006", "ch2skurge": "maps_0008", "ch3diffindo": "maps_0011", "ch4spongify": "maps_0001",
+    "ch6wizardcard": "maps_0024", "ch7gryffindor": "maps_0007", "entryhall_hub": "maps_0004",
+    "grandstaircase_hub": "maps_0009", "greathall_g": "maps_0005", "grounds_hub": "maps_0003",
+    "grounds_night": "maps_0003", "quidditch": "maps_0015", "quidditch_intro": "maps_0015",
+}
+_TITRE_FAUX = "Fireseed Challenge Two"
+
 # Le nom, les dates, puis le texte. Français : « Dorcas Bienaimée (1812 - 1904).
 # Fonda… » ; anglais : « Dorcas Wellbeloved 1812-1904 Founder… ».
 _AVEC_PARENTHESES = re.compile(r"^(.*?)\s*\(([^)]*)\)\s*[.,]?\s*(.*)$", re.DOTALL)
@@ -120,6 +133,7 @@ class Releve(folio.Releve):
     objets: dict[str, int] = field(default_factory=dict)           # ceux qu'il suit
     defis: tuple[int, int] | None = None  # meilleurs scores, et le maximum
     duel: int = 0                         # rang au club de duel ; 0 : pas commencé
+    carte: str = ""                       # « Grandstaircase_hub », sans son extension
 
     @property
     def avancement(self) -> tuple[int, int, int]:
@@ -139,6 +153,7 @@ class _Partie:
     objets: dict[str, int] = field(default_factory=dict)
     defis: tuple[int, int] | None = None
     duel: int = 0
+    carte: str = ""
 
 
 def lire(contenu: bytes) -> _Partie | None:
@@ -194,12 +209,13 @@ def lire(contenu: bytes) -> _Partie | None:
     if not compteurs and not cartes:
         return None
     titre = next((v for n, _, v in niveau or () if n == "Title" and isinstance(v, str)), "")
+    entree = next((v for n, _, v in niveau or () if n == "LevelEnterText" and isinstance(v, str)), "")
     return _Partie(
         frozenset(cartes), frozenset(marchands), compteurs.get(_DRAGEES, 0),
         {m: compteurs.get(item, 0) for item, m in _MAISONS.items()},
         compteurs.get(_ETOILES), histoire, titre, frozenset(sorts),
         {o[0]: compteurs[o[0]] for o in OBJETS if o[0] in compteurs},
-        (meilleurs, maxima) if maxima else None, duel)
+        (meilleurs, maxima) if maxima else None, duel, entree.rsplit(".", 1)[0])
 
 
 def _chaine(p: textures_ue1.Paquet, brut: bytes) -> str:
@@ -227,7 +243,7 @@ def releve(chemin: Path, emplacement: int) -> Releve | None:
         return Releve(emplacement, chemin, modifie)
     return Releve(emplacement, chemin, modifie, "", True, v.cartes, v.dragees, v.points, 0,
                   v.histoire, v.titre, v.etoiles, v.marchands, v.sorts, v.objets, v.defis,
-                  v.duel)
+                  v.duel, v.carte)
 
 
 def emplacements(spec: Sauvegardes | None) -> list[Releve]:
@@ -250,7 +266,7 @@ def resume(spec: Sauvegardes | None, system: Path, langue: str) -> folio.Resume 
     releve_ = folio.la_derniere_jouee([r for r in emplacements(spec) if r.lu])
     if releve_ is None:
         return None
-    return folio.Resume(releve_, lieu(system, langue, releve_.titre), len(releve_.cartes), CARTES,
+    return folio.Resume(releve_, lieu(system, langue, releve_.titre, releve_.carte), len(releve_.cartes), CARTES,
                         releve_.modifie)
 
 
@@ -399,11 +415,16 @@ def image_sauvegarde(sauvegarde: Path) -> Path | None:
     return image if image.is_file() else None
 
 
-def lieu(system: Path, langue: str, titre: str) -> str:
-    """« Whomping Willow » (écrit en anglais dans la sauvegarde) → « Saule
-    cogneur » : la clé dont c'est la valeur dans `HPMenu.int`, puis la même
-    clé dans la langue du launcher. Le titre tel quel sinon."""
-    if not titre:
+def lieu(system: Path, langue: str, titre: str, carte: str = "") -> str:
+    """Le nom du lieu dans la langue du launcher : d'abord par la carte (`_CLES_LIEUX`) ; sinon, « Whomping Willow »
+    (écrit en anglais dans la sauvegarde) → la clé dont c'est la valeur dans `HPMenu.int`, puis la même clé dans la
+    langue du launcher. Le titre tel quel sinon, jamais un titre connu pour être faux."""
+    cle_carte = _CLES_LIEUX.get(carte.lower())
+    if cle_carte is not None:
+        textes = _textes(system, langue)
+        if textes.get(cle_carte):
+            return textes[cle_carte]
+    if not titre or titre == _TITRE_FAUX:
         return ""
     anglais = _textes(system, "en")
     cle = next((c for c, v in anglais.items() if c.startswith("maps_") and v == titre), None)

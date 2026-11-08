@@ -68,9 +68,9 @@
         {
           "genre": "corrige",
           "texte": {
-            "fr": "« Couper le son en arrière-plan » ne rend le son qu'aux sorties audio qu'il a lui-même coupées.",
-            "en": "\"Mute in the background\" only gives the sound back to the audio outputs it muted itself.",
-            "es": "«Silenciar en segundo plano» solo devuelve el sonido a las salidas de audio que silenció él mismo."
+            "fr": "« Couper le son quand le jeu est derrière » ne rend le son qu'aux sorties audio qu'il a lui-même coupées.",
+            "en": "\"Mute the game when it is in the background\" only gives the sound back to the audio outputs it muted itself.",
+            "es": "«Silenciar el juego cuando está en segundo plano» solo devuelve el sonido a las salidas de audio que silenció él mismo."
           }
         }
       ]

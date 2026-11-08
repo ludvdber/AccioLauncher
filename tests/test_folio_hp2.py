@@ -80,7 +80,7 @@ def _chaine(texte: str) -> bytes:
 
 def sauvegarde(cartes=(), marchands=(), dragees=0, points=None, etoiles=None,
                titre="Whomping Willow", sorts=(), objets=None, defis=(), duel=0,
-               potentiel=None) -> bytes:
+               potentiel=None, carte="Adv1Willow.unr") -> bytes:
     """`harry` et `LevelInfo0`, comme une sauvegarde du jeu. `potentiel` : la
     valeur vers laquelle un compteur monte, écrite AVANT le compte."""
     p = _Paquet()
@@ -110,7 +110,8 @@ def sauvegarde(cartes=(), marchands=(), dragees=0, points=None, etoiles=None,
     props += p.prop("CurrentGameState", 13, _chaine("GSTATE040"))
     p.exporter(p.importer("harry"), "harry0", props + p.fin())
     p.exporter(p.importer("LevelInfo"), "LevelInfo0",
-               p.prop("Title", 13, _chaine(titre)) + p.fin())
+               (p.prop("Title", 13, _chaine(titre)) if titre else b"")
+               + p.prop("LevelEnterText", 13, _chaine(carte)) + p.fin())
     return p.octets()
 
 
@@ -133,6 +134,8 @@ MENU = (
     "WizCard_0006=Hesper Starkey (1881 - 1973). Etudia l'influence des phases de la lune.\r\n"
     "WizCard_0099=Harry Potter. Le Survivant.\r\n"
     "Maps_0013=Saule cogneur\r\n"
+    "Maps_0009=Grand escalier\r\n"
+    "Maps_0014=Forêt interdite\r\n"
 )
 MENU_INT = (
     "[All]\r\n"
@@ -248,6 +251,22 @@ class TestCatalogue:
         _, _, system, _ = hp2
         assert folio_hp2.lieu(system, "fr", "Whomping Willow") == "Saule cogneur"
         assert folio_hp2.lieu(system, "fr", "Inconnu") == "Inconnu"
+
+    def test_un_hub_sans_titre_a_son_nom(self, hp2):
+        """Relevé sur les 42 cartes : Entryhall_hub, Grandstaircase_hub n'ont pas de `Title`."""
+        _, _, system, _ = hp2
+        assert folio_hp2.lire(sauvegarde(cartes=(7,), titre="", carte="Grandstaircase_hub.unr")).carte == "Grandstaircase_hub"
+        assert folio_hp2.lieu(system, "fr", "", "Grandstaircase_hub") == "Grand escalier"
+
+    def test_le_titre_du_gabarit_n_est_jamais_montre(self, hp2):
+        """Adv7SlythComRoom, Adv8Forest, Adv9Aragog portent « Fireseed Challenge Two »."""
+        _, _, system, _ = hp2
+        assert folio_hp2.lieu(system, "fr", "Fireseed Challenge Two", "Adv8Forest") == "Forêt interdite"
+        assert folio_hp2.lieu(system, "fr", "Fireseed Challenge Two", "Credits") == ""
+
+    def test_une_carte_sans_cle_garde_son_titre(self, hp2):
+        _, _, system, _ = hp2
+        assert folio_hp2.lieu(system, "fr", "Chamber of Secrets", "Adv12Chamber") == "Chamber of Secrets"
 
 
 class TestEmplacements:
