@@ -24,7 +24,8 @@ def gql(jeton: str, requete: str, **variables: object) -> dict:
     corps = json.dumps({"query": requete, "variables": variables}).encode("utf-8")
     req = urllib.request.Request("https://api.github.com/graphql", data=corps, headers={
         "Authorization": f"Bearer {jeton}", "Content-Type": "application/json", "User-Agent": "accio-tableau"})
-    with urllib.request.urlopen(req, timeout=30) as r:
+    # L'adresse est la constante https de GitHub ci-dessus : ni `file:` ni schéma venu de l'extérieur.
+    with urllib.request.urlopen(req, timeout=30) as r:  # nosec B310  # noqa: S310
         sortie = json.load(r)
     if "errors" in sortie:
         raise RuntimeError(json.dumps(sortie["errors"], ensure_ascii=False))
