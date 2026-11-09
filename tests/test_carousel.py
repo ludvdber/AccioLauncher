@@ -227,13 +227,20 @@ class TestVignettePour:
 
     def test_le_plus_grand_item_tient(self):
         from src.ui.carousel import SCALE_SELECTED
-        from src.ui.carousel_item import _MARGE_V, vignette_pour
+        from src.ui.carousel_item import _MARGE_V, _RESERVE_BAS, vignette_pour
 
         for dispo in (148, 112, 90, 200, 60):
             _, h = vignette_pour(dispo, SCALE_SELECTED)
             haut = int(h * SCALE_SELECTED)
-            total = haut + _MARGE_V
+            total = haut + int(haut * _RESERVE_BAS) + _MARGE_V
             assert total <= dispo, f"dispo={dispo} -> item de {total} px"
+
+    def test_la_jaquette_garde_sa_taille_d_origine(self):
+        """Sans réserve sous la jaquette, elle passait à 149 px : jugée trop grosse."""
+        from src.ui.carousel import CAROUSEL_HEIGHT, SCALE_SELECTED
+        from src.ui.carousel_item import vignette_pour
+
+        assert vignette_pour(CAROUSEL_HEIGHT - 44, SCALE_SELECTED)[1] <= 125
 
     def test_le_rapport_de_la_jaquette_est_tenu(self):
         from src.ui.carousel import SCALE_SELECTED

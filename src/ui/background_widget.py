@@ -296,6 +296,9 @@ class BackgroundWidget(QWidget):
         self._video_frame = None
         self.update()
 
+    def precharger(self, chemins: list[Path]) -> None:
+        """Sans objet ici : le chemin QPainter garde ses derniers fonds décodés."""
+
     def set_image(self, path: Path | None) -> None:
         # Le JPEG était relu et décodé à chaque changement de jeu, 12 ms sur
         # les ~60 du clic (mesuré le 2026-10-14) : les trois derniers fonds

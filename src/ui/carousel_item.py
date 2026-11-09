@@ -27,6 +27,9 @@ THUMB_H = 125
 
 # Marges verticales de l'item, en dur dans `_update_size`.
 _MARGE_V = 16
+# La place gardée sous la jaquette, en part de sa hauteur. Sans elle, la jaquette
+# occupait toute la bande : 149 px au lieu de 125, trop gros (Ludo, 2026-11-09).
+_RESERVE_BAS = 0.20
 # Rayon des coins de la jaquette, en points de la vignette.
 _RAYON_JAQUETTE = 6.0
 # Rapport largeur/hauteur de la jaquette, à tenir quelle que soit la bande.
@@ -51,8 +54,8 @@ def vignette_pour(dispo: int, echelle_max: float) -> tuple[int, int]:
     (`SCALE_SELECTED`) — c'est LUI qui décide, puisque c'est le plus grand item
     qui doit tenir.
     """
-    # hauteur_item(h) = h + _MARGE_V, avec h = THUMB_H * échelle
-    hauteur = max(1, int(max(1, dispo - _MARGE_V) / echelle_max))
+    # hauteur_item(h) = h + int(h * _RESERVE_BAS) + _MARGE_V, avec h = THUMB_H * échelle
+    hauteur = max(1, int(int(max(1, dispo - _MARGE_V) / (1.0 + _RESERVE_BAS)) / echelle_max))
     return max(1, int(hauteur * _RAPPORT)), hauteur
 
 # Corps des pastilles « NOUVEAU » / « BIENTÔT », du plus lisible au plus petit.
@@ -251,7 +254,7 @@ class CarouselItem(QWidget):
     def _update_size(self) -> None:
         w = int(self._thumb_w * self._anim_scale)
         h = int(self._thumb_h * self._anim_scale)
-        self.setFixedSize(w + 10, h + _MARGE_V)
+        self.setFixedSize(w + 10, h + int(h * _RESERVE_BAS) + _MARGE_V)
 
     def set_depth(self, scale: float, opacity: float) -> None:
         if self._jumeau is not None:

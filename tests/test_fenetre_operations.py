@@ -275,6 +275,7 @@ class TestReprendre:
         assert not any("Reprendre" in t for t in libelles), libelles
 
         monkeypatch.setattr("src.core.reprise.arguments", lambda g: ("?load=1",))
+        monkeypatch.setattr("src.core.reprise._connus", {})
         win.manager.config.reprise[game.id] = True
         win._detail.set_game(game)
         qtbot.wait(10)

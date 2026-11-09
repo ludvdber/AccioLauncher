@@ -47,6 +47,18 @@ class TestLaRegle:
 pytest.importorskip("pytestqt")
 
 
+def _bandes_horizontales(image, haut, bas):
+    """La moitié haute de l'image dans une couleur, la moitié basse dans l'autre."""
+    from PyQt6.QtCore import QRect
+    from PyQt6.QtGui import QPainter
+
+    p = QPainter(image)
+    p.fillRect(QRect(0, 0, image.width(), image.height() // 2), haut)
+    p.fillRect(QRect(0, image.height() // 2, image.width(), image.height()), bas)
+    p.end()
+    return image
+
+
 class TestLaJaquetteNEstPlusEtiree:
     def test_carree_elle_garde_ses_proportions(self, qapp):
         from PyQt6.QtGui import QColor, QImage
@@ -59,7 +71,34 @@ class TestLaJaquetteNEstPlusEtiree:
         # Le carré tient entier au milieu : rouge vif au centre, assombri au bord.
         centre, bord = QColor(rendue.pixel(90, 125)), QColor(rendue.pixel(90, 3))
         assert centre.red() > 240
-        assert bord.red() < 200, "la bande autour doit être le fond flouté et assombri"
+        assert bord.red() < 200, "la bande autour doit être l'aplat assombri"
+
+    def test_les_bandes_prennent_la_couleur_de_leur_bord(self, qapp):
+        """ACC15 : un aplat net par bord, plus de flou de la jaquette elle-même."""
+        from PyQt6.QtGui import QColor, QImage
+
+        from src.ui.images import jaquette
+        carree = QImage(400, 400, QImage.Format.Format_RGB32)
+        carree = _bandes_horizontales(carree, QColor("#c80000"), QColor("#0000c8"))
+        rendue = jaquette(carree, 180, 250)
+        for y in (0, 15, 29):
+            haut = rendue.pixelColor(90, y)
+            assert (haut.red(), haut.green(), haut.blue()) == (110, 0, 0), y
+        for y in (221, 235, 249):
+            bas = rendue.pixelColor(90, y)
+            assert (bas.red(), bas.green(), bas.blue()) == (0, 0, 110), y
+
+    def test_trop_etroite_les_aplats_sont_sur_les_cotes(self, qapp):
+        from PyQt6.QtGui import QColor, QImage
+
+        from src.ui.images import jaquette
+        etroite = QImage(100, 400, QImage.Format.Format_RGB32)
+        etroite.fill(QColor("#00c800"))
+        rendue = jaquette(etroite, 180, 250)
+        assert (rendue.width(), rendue.height()) == (180, 250)
+        assert rendue.pixelColor(90, 125).green() > 190
+        assert rendue.pixelColor(2, 125).green() == 110
+        assert rendue.pixelColor(177, 125).green() == 110
 
     def test_au_bon_format_elle_est_seulement_recadree(self, qapp):
         from PyQt6.QtGui import QColor, QImage

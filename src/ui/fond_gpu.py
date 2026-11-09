@@ -318,6 +318,12 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
     def clear_video(self) -> None:
         self._poser("video", False)
 
+    def precharger(self, chemins: list[Path]) -> None:
+        """Décode ces fonds d'avance et les garde : la scène retrouve aussitôt celui
+        qu'on lui demande, là où chaque changement rapide relançait un décodage de
+        JPEG 3840 px et laissait le fond vide en attendant (Ludo, 2026-11-09)."""
+        self._poser("prechargees", [QUrl.fromLocalFile(str(c)).toString() for c in chemins if c.exists()])
+
     def set_image(self, path: Path | None) -> None:
         self._source = str(path) if path and path.exists() else ""
         self._taille_image = QImageReader(self._source).size() if self._source else QSize()

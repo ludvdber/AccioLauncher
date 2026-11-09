@@ -403,7 +403,7 @@ class ActionPanel(QWidget):
         # « REPRENDRE » seulement quand le clic reprend vraiment la partie (HP1 à
         # HP3, option active) : ailleurs, le même bouton ouvre le menu du jeu.
         reprend = bool(self._manager.config.reprise.get(self._game.id, False)
-                       and reprise.arguments(self._game))
+                       and reprise.reprise_possible(self._game))
         libelle = tr("Reprendre") if reprend else tr("Jouer")
         # Vert MAT : le `#2ecc71` vif d'avant était l'autre moitié du code des
         # faux boutons. 4,2 de contraste avec le blanc (gras 15 pt : seuil 3).

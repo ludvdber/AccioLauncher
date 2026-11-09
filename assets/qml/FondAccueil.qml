@@ -135,6 +135,20 @@ Item {
         }
     }
 
+    // Tous les fonds décodés d'avance (`fond_gpu.precharger`) : même adresse, même
+    // entrée du cache d'images, donc affichage immédiat au changement de jeu.
+    property var prechargees: []
+    Repeater {
+        model: racine.prechargees
+        Image {
+            required property string modelData
+            visible: false
+            fillMode: Image.PreserveAspectCrop  // fait partie de la clé du cache, comme l'adresse
+            source: modelData
+            asynchronous: true
+        }
+    }
+
     // Sous-couche du fondu : l'ancienne illustration FIGÉE là où elle était au clic
     // (zoom, parallaxe, cadrage, voile), comme la capture `grab()` du chemin QPainter.
     // Sans cela, elle reprenait sa place de départ, plus claire, avant le jeu suivant.
