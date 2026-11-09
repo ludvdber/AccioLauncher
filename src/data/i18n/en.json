@@ -89,6 +89,7 @@
     "Jouer": "Play",
     "Reprendre": "Resume",
     "Jouer à {}": "Play {}",
+    "Reprendre {}": "Resume {}",
     "Annuler": "Cancel",
     "Annuler le téléchargement": "Cancel download",
     "Mise à jour disponible : v{} → v{}": "Update available: v{} → v{}",

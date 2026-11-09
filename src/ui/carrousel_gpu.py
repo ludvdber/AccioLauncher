@@ -178,11 +178,11 @@ class CarrouselGPU(fond_gpu.EtoilesGPU):
         self._racine.setProperty("fond", theme.bg_qcolor(255))
         self._racine.setProperty("accent", theme.accent_qcolor(255))
         etats = [self._etat(item, dpr, teinte) for item in items]
-        geometries = [tuple(e[k] for k in ("x", "y", "cw", "ch", "refH", "opacite")) for e in etats]
+        geometries = [tuple(e[k] for k in ("x", "y", "cw", "ch", "opacite")) for e in etats]
         if geometries != self._geometries:
             self._geometries = geometries
             self._racine.setProperty("animer", animer)
-            self._glissement.poser([(e["x"], e["y"], e["cw"] + 10, e["ch"] + e["refH"] + 16)
+            self._glissement.poser([(e["x"], e["y"], e["cw"] + 10, e["ch"] + 16)
                                     for e in etats], animer)
         if etats != self._dernier:
             self._dernier = etats

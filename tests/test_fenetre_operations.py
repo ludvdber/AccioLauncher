@@ -252,7 +252,7 @@ class TestJeuBientotDisponible:
 
 
 class TestReprendre:
-    def test_jouer_devient_reprendre_apres_une_session(self, make_window, qtbot):
+    def test_reprendre_seulement_si_le_clic_reprend_la_partie(self, make_window, qtbot, monkeypatch):
         win = make_window()
         game = win.manager.get_games()[0].game
         # L'état INSTALLED se déduit du DISQUE : il faut un exécutable réel.
@@ -267,7 +267,15 @@ class TestReprendre:
         libelles = _libelles_du_layout(win._detail._action_panel)
         assert any("Jouer" in t for t in libelles), libelles
 
+        # Avoir joué ne suffit pas : sans l'option, le clic ouvre le menu du jeu.
         win.manager.add_playtime(game.id, 3600)
+        win._detail.set_game(game)
+        qtbot.wait(10)
+        libelles = _libelles_du_layout(win._detail._action_panel)
+        assert not any("Reprendre" in t for t in libelles), libelles
+
+        monkeypatch.setattr("src.core.reprise.arguments", lambda g: ("?load=1",))
+        win.manager.config.reprise[game.id] = True
         win._detail.set_game(game)
         qtbot.wait(10)
         libelles = _libelles_du_layout(win._detail._action_panel)

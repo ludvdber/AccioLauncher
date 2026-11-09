@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
+from src.core import reprise
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -141,10 +142,6 @@ class ActionPanel(QWidget):
         # Note « bientôt disponible » : sa hauteur se recalcule à chaque
         # redimensionnement, donc on garde la référence (cf. _fit_coming_soon_note).
         self._coming_soon_note: QLabel | None = None
-        # La fiche montre la partie en cours (InfoPanel.partie_affichee) : le
-        # temps de jeu est dans son bloc, la date dans sa ligne, et la
-        # sauvegarde suffit à dire « Reprendre ». Posé par GameDetailView.
-        self.partie_dans_la_fiche = False
 
     def set_game(self, game: GameData | None) -> None:
         self._game = game
@@ -403,18 +400,17 @@ class ActionPanel(QWidget):
             self._carte.regler_installation(*chiffres["installation"])
 
     def _build_installed(self) -> None:
-        # « REPRENDRE » quand le jeu a déjà été lancé : le même clic, mais
-        # l'écran reconnaît un joueur qui revient au lieu de le traiter en
-        # nouveau venu à chaque ouverture.
-        deja_joue = (self.partie_dans_la_fiche
-                     or self._manager.get_playtime(self._game.id) > 0)
-        libelle = tr("Reprendre") if deja_joue else tr("Jouer")
+        # « REPRENDRE » seulement quand le clic reprend vraiment la partie (HP1 à
+        # HP3, option active) : ailleurs, le même bouton ouvre le menu du jeu.
+        reprend = bool(self._manager.config.reprise.get(self._game.id, False)
+                       and reprise.arguments(self._game))
+        libelle = tr("Reprendre") if reprend else tr("Jouer")
         # Vert MAT : le `#2ecc71` vif d'avant était l'autre moitié du code des
         # faux boutons. 4,2 de contraste avec le blanc (gras 15 pt : seuil 3).
         btn_play = GlowButton(libelle, glow_color=_VERT_JOUER, style="filled",
                               bg_stops=(_VERT_JOUER,) * 3, text_color="#ffffff", icone="play")
         btn_play.setObjectName("btnPlay")
-        btn_play.setAccessibleName(tr("Jouer à {}").format(self._game.name))
+        btn_play.setAccessibleName((tr("Reprendre {}") if reprend else tr("Jouer à {}")).format(self._game.name))
         btn_play.setFont(_police_action())
         btn_play.setFixedSize(200, _HAUTEUR_JOUER)
         btn_play.setCursor(Qt.CursorShape.PointingHandCursor)

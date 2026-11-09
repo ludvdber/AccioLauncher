@@ -16,9 +16,8 @@ from src.ui import carrousel_gpu, fond_gpu, theme
 
 
 # Hauteur de la bande. Elle est la CONTRAINTE : la vignette s'y plie
-# (`carousel_item.vignette_pour`), jamais l'inverse. 192 px redonnent la
-# jaquette de 125 px d'origine — à 160 px elle tombait à 99, soit un cinquième
-# de moins, ce qui se voit tout de suite sur la bande (Ludo, 2026-08-23).
+# (`carousel_item.vignette_pour`), jamais l'inverse : 192 px donnent une
+# jaquette de 149 px depuis le retrait du reflet (audit, 2026-11-09).
 CAROUSEL_HEIGHT = 192
 # Version compacte pour les fenêtres basses (< 780 px) : la fiche de jeu a
 # alors plus besoin de ces pixels que le carrousel. Ce chiffre n'est PAS libre —

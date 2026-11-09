@@ -30,25 +30,22 @@ EtoilesCarrousel {
             x: px
             y: py
             width: cw + 10
-            height: ch + refH + 16
+            height: ch + 16
 
             property real px: v.e.x || 0
             property real py: v.e.y || 0
             property real cw: v.e.cw || 0
             property real ch: v.e.ch || 0
-            property real refH: v.e.refH || 0
             property real opaciteBase: v.e.opacite === undefined ? 1 : v.e.opacite
             Behavior on px { enabled: racine.animer; NumberAnimation { duration: racine.duree; easing.type: Easing.InOutQuad } }
             Behavior on py { enabled: racine.animer; NumberAnimation { duration: racine.duree; easing.type: Easing.InOutQuad } }
             Behavior on cw { enabled: racine.animer; NumberAnimation { duration: racine.duree; easing.type: Easing.InOutQuad } }
             Behavior on ch { enabled: racine.animer; NumberAnimation { duration: racine.duree; easing.type: Easing.InOutQuad } }
-            Behavior on refH { enabled: racine.animer; NumberAnimation { duration: racine.duree; easing.type: Easing.InOutQuad } }
             Behavior on opaciteBase { enabled: racine.animer; NumberAnimation { duration: racine.duree; easing.type: Easing.InOutQuad } }
 
             // Le survol éclaircit sans animation, comme `CarouselItem._geometrie`.
             readonly property real opacite: (v.e.survol && !v.e.choisi)
                                             ? Math.min(opaciteBase + 0.2, 1) : opaciteBase
-            readonly property real refY: 5 + ch + 4
             // Le calque des pastilles se pose sur des pixels entiers de l'écran : à
             // 125 ou 150 %, à cheval, son texte se lissait (le QPainter le pose net).
             readonly property real mx: Math.round((px + 5) * racine.dpr) / racine.dpr - px
@@ -110,28 +107,6 @@ EtoilesCarrousel {
                 color: "transparent"
                 border.width: 2
                 border.color: Qt.rgba(racine.accent.r, racine.accent.g, racine.accent.b, 1)
-            }
-
-            // ── _peindre_reflet ──
-            Item {
-                visible: v.e.jaquette === true
-                x: 5; y: v.refY; width: v.cw; height: v.refH
-                clip: true
-                Image {
-                    width: v.cw; height: v.ch
-                    source: v.e.image || ""
-                    mirrorVertically: true
-                    smooth: true
-                    opacity: v.opacite * 0.06
-                }
-            }
-            Rectangle {
-                visible: v.e.jaquette === true
-                x: 5; y: v.refY; width: v.cw; height: v.refH
-                gradient: Gradient {
-                    GradientStop { position: 0; color: Qt.rgba(racine.fond.r, racine.fond.g, racine.fond.b, 80 / 255) }
-                    GradientStop { position: 1; color: Qt.rgba(racine.fond.r, racine.fond.g, racine.fond.b, 1) }
-                }
             }
 
             // ── _peindre_voile_absent ──

@@ -47,7 +47,6 @@ def test_la_sauvegarde_est_lue_hors_du_fil_de_l_interface(make_window, qtbot, mo
     assert fils and threading.main_thread() not in fils
     assert info._derniere.isVisibleTo(info) and "Parc de Poudlard" in info._derniere.text()
     assert info._bloc.texte_compte() == "3 cartes sur 25"
-    assert win._detail._action_panel.partie_dans_la_fiche, "les statistiques passent dans le bloc"
 
 
 def test_rien_de_lisible_rien_ne_s_affiche(make_window, qtbot, monkeypatch):
@@ -98,4 +97,3 @@ def test_desinstalle_la_partie_s_en_va_sans_lecture(make_window, qtbot, monkeypa
     win._detail._refresh()
     assert not win._detail._info.lecture_en_cours()
     assert not win._detail._info.partie_affichee()
-    assert not win._detail._action_panel.partie_dans_la_fiche
