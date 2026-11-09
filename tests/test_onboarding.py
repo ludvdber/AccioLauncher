@@ -109,6 +109,27 @@ class TestLesJeuxDejaLa:
         assert config.installed_versions[jeu.id] == jeu.recommended_version
         assert (tmp_path / "jeux" / Path(jeu.executable)).exists(), "rien ne doit bouger"
 
+    def test_un_import_refuse_n_affiche_pas_l_erreur_python(self, assistant, tmp_path, monkeypatch):
+        """« HP4 : [WinError 5] Accès refusé: 'C:\\…' », seule exception brute à l'écran."""
+        from src.core.config import Config
+        from src.core.game_data import load_catalog
+        jeu = load_catalog().games[0]
+        dlg = assistant()
+        monkeypatch.setattr(dlg, "checked_imports", lambda: [(jeu, tmp_path / "ailleurs" / "jeu")])
+        monkeypatch.setattr("src.ui.game_detail_handlers.find_import_error", lambda *a: None)
+
+        def refuse(_self, _dest):
+            raise PermissionError(13, "Accès refusé", "C:/secret")
+
+        monkeypatch.setattr(Path, "rename", refuse)
+        vus = []
+        monkeypatch.setattr("src.ui.onboarding.avertir", lambda _p, _t, texte: vus.append(texte))
+        config = Config(install_path=tmp_path / "jeux", cache_path=tmp_path / "jeux" / "c")
+        dlg.perform_imports(config)
+        assert len(vus) == 1
+        assert "a refusé de déplacer" in vus[0] and jeu.name in vus[0]
+        assert "Accès refusé" not in vus[0] and "secret" not in vus[0]
+
     def test_sans_jeu_l_ecran_propose_de_chercher(self, assistant):
         dlg = assistant()
         assert dlg._en_place == []

@@ -408,16 +408,20 @@ class MiniLecteur(QWidget):
             self._disque.poser(jeu, self._media.jaquette(jeu))
             texte = f"{fond.titre(fond.morceau)} · {jeu.upper()}"
             libelle = tr("Collections, morceau : {}").format(texte)
+            metriques = self._titre.fontMetrics()
+            court = metriques.elidedText(texte, Qt.TextElideMode.ElideRight, _LARGEUR_TITRE_MINI)
+            bulle = texte if court != texte else ""
         else:
-            texte = tr("Musique")
-            libelle = tr("Ouvrir les Collections")
+            # La note seule, un rond du gabarit du haut-parleur : le mot « Musique »
+            # doublait la note et annonçait autre chose que ce que le clic ouvre.
+            court, libelle, bulle = "", tr("Ouvrir les Collections"), tr("Collections")
         self._disque.setVisible(morceau is not None)
         self._note.setVisible(morceau is None)
+        self._titre.setVisible(morceau is not None)
+        self._bouton.layout().setContentsMargins(5, 0, 12 if morceau is not None else 5, 0)
         self._disque.set_tourne(fond.en_lecture)
-        metriques = self._titre.fontMetrics()
-        court = metriques.elidedText(texte, Qt.TextElideMode.ElideRight, _LARGEUR_TITRE_MINI)
         self._titre.setText(court)
-        self._bouton.setToolTip(texte if court != texte else "")
+        self._bouton.setToolTip(bulle)
         self._bouton.setAccessibleName(libelle)
         coupe = fond.son_coupe
         self._son.setIcon(QIcon(pixmap_icone("muet" if coupe else "volume", 18,

@@ -107,10 +107,23 @@ class TestPageDesVersions:
                        if b.objectName() != "version"]
             assert boutons == ["Bibliothèque"], boutons
 
-    def test_la_version_installee_se_dit(self, qtbot):
+    def test_la_version_installee_se_dit_une_seule_fois(self, qtbot):
+        """Le badge du rail suffit : l'en-tête le redisait (règle 107)."""
         dlg = _dialogue(qtbot, "1.1")
         textes = [lbl.text() for lbl in dlg.findChildren(QLabel)]
-        assert textes.count("C'est la version installée") == 1
+        assert textes.count("Installée") == 1
+        assert "C'est la version installée" not in textes
+
+    def test_installee_et_recommandee_un_seul_badge(self, qtbot):
+        """Le cas normal ; à deux, « Recommandée » était rogné dans le rail."""
+        ligne = _dialogue(qtbot, "1.2")._lignes["1.2"]
+        textes = [lbl.text() for lbl in ligne.findChildren(QLabel)]
+        assert "Installée" in textes and "Recommandée" not in textes
+        assert "Recommandée" not in ligne.accessibleName()
+
+    def test_la_recommandee_non_installee_garde_son_badge(self, qtbot):
+        ligne = _dialogue(qtbot, "1.1")._lignes["1.2"]
+        assert "Recommandée" in [lbl.text() for lbl in ligne.findChildren(QLabel)]
 
     def test_le_journal_de_chaque_version_reste_lisible(self, qtbot):
         dlg = _dialogue(qtbot, None)
@@ -157,6 +170,33 @@ class TestPageDesVersions:
         dlg.finished.connect(fermee.append)
         next(b for b in dlg.findChildren(QPushButton) if b.text() == "Bibliothèque").click()
         assert fermee
+
+    def _depuis_les_reglages(self, qtbot):
+        from src.ui.versions_dialog import VersionsDialog
+        manager = SimpleNamespace(installed_version=lambda _id: "1.1")
+        ordre = []
+        dlg = VersionsDialog(GameData.from_dict(JEU), manager,
+                             retour=("Réglages du jeu", lambda: ordre.append("rappel")))
+        dlg.finished.connect(lambda _r: ordre.append("fermee"))
+        qtbot.addWidget(dlg)
+        return dlg, ordre
+
+    def test_le_retour_parametre_ferme_puis_rappelle(self, qtbot):
+        dlg, ordre = self._depuis_les_reglages(qtbot)
+        next(b for b in dlg.findChildren(QPushButton) if b.text() == "Réglages du jeu").click()
+        assert ordre == ["fermee", "rappel"]
+
+    def test_echap_prend_le_meme_chemin(self, qtbot):
+        from PyQt6.QtCore import Qt
+        dlg, ordre = self._depuis_les_reglages(qtbot)
+        qtbot.keyClick(dlg, Qt.Key.Key_Escape)
+        assert ordre == ["fermee", "rappel"]
+
+    def test_fermer_la_page_autrement_ne_rouvre_rien(self, qtbot):
+        """`Pages.fermer` (un onglet du haut) passe par `accept`."""
+        dlg, ordre = self._depuis_les_reglages(qtbot)
+        dlg.accept()
+        assert ordre == ["fermee"]
 
     def test_un_changelog_venu_du_catalogue_est_echappe(self, qtbot):
         dlg = _dialogue(qtbot, None)

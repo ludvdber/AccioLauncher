@@ -4,12 +4,14 @@ rubrique est un surtitre doré et une carte de lignes, comme les Paramètres.
 """
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QIcon
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -22,13 +24,15 @@ from src.core import (captures, difficulte_jeu, manette, reglages_correctif, reg
                       reprise, resolution_jeu, texte_ue1, videos_lancement)
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
+from src.ui.choix_jeux import espacee
 from src.ui.difficulte_panneau import PanneauDifficulte
 from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
 from src.ui.editeur_touches import EditeurTouches
+from src.ui.fenetre_message import FenetreMessage
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.styles import RADIO_STYLE
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import accent_qcolor, current as current_theme, themed
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import liste_deroulante, open_local_path
 
@@ -78,8 +82,9 @@ _LISTE_STYLE = (
 _GROUPES_EFFETS = (
     ("Contours", ("lissage", "nettete", "anticrenelage", "anticrenelage_transparence",
                   "surechantillonnage")),
-    ("Textures", ("filtrage", "textures_lointaines", "feuillage_lointain")),
-    ("Lumière et ombres", ("occlusion", "ombres_nettes", "halo", "rayons")),
+    ("Textures", ("filtrage", "textures_lointaines", "feuillage_lointain", "mipmaps_fins",
+                  "particules_lointaines")),
+    ("Lumière et ombres", ("occlusion", "ombres_nettes", "ombres_douces", "halo", "rayons")),
 )
 # « Ambiance » : ce qui CHANGE le style d'origine au lieu de l'affiner (Ludo,
 # 2026-10-27 : « ça n'améliore plus l'existant, ça le modifie »). Rubrique à
@@ -90,6 +95,12 @@ _GROUPES_AMBIANCE = (
 )
 _RESSOURCES = {"GPU": "Carte graphique (GPU)", "CPU": "Processeur (CPU)", "RAM": "Mémoire (RAM)"}
 _NIVEAUX = {1: "faible", 2: "moyenne", 3: "extrême"}
+# Les marges de lecture d'une page.
+_MARGES_PAGE = (40, 28, 40, 28)
+# Le temps que reste au pied la confirmation d'une remise à l'origine.
+_DUREE_ANNONCE_PIED = 4000
+# La page qui montre un réglage, quand son `onglet` n'est pas celui du rail.
+_PAGE_DE = {"affichage": "image", "manette": "commandes", "demarrage": "jeu"}
 
 # Réglages annoncés mais pas encore livrés. Ils sont ÉCRITS, pas résumés en
 # « bientôt » : quelqu'un qui cherche la résolution doit reconnaître ce qu'il
@@ -199,7 +210,7 @@ class RubriquesDuJeu:
                 tr("Ce jeu n'est installé que dans une seule langue."),
                 tr("Le lanceur ne peut que sélectionner une langue déjà présente "
                    "sur le disque, pas la télécharger.")))
-            self._section(corps, self._titre_rubrique(tr("Langue du jeu")), carte)
+            self._section(corps, None, carte)
             self._note_langues(corps)
             return
         for langue in proposables:
@@ -218,7 +229,7 @@ class RubriquesDuJeu:
             h.setContentsMargins(20, 11, 20, 11)
             h.addWidget(radio)
             carte.ajouter(ligne)
-        self._section(corps, self._titre_rubrique(tr("Langue du jeu")), carte)
+        self._section(corps, None, carte)
         self._note_langues(corps)
 
     def _note_langues(self, corps: QVBoxLayout) -> None:
@@ -374,7 +385,7 @@ class RubriquesDuJeu:
         place = resolution_jeu.place_pour(self.game, self.manager.config)
         taille = resolution_jeu.voulue(self.manager.config.resolution_jeu.get(self.game.id, ""), place)
         auto = texte_ue1.facteur(taille[1], "") if taille is not None else None
-        choix.addItem(tr("Automatique (× {})").format(reglages_correctif.texte_valeur(auto))
+        choix.addItem(tr("Automatique (×{})").format(reglages_correctif.texte_valeur(auto))
                       if auto else tr("Automatique"), "")
         for cle, libelle in (("petit", tr("Plus petit")), ("grand", tr("Plus grand")),
                              ("tres_grand", tr("Très grand")),
@@ -498,12 +509,39 @@ class RubriquesDuJeu:
         """Le bouton du pied de page : bordé comme un vrai bouton, jamais un lien
         gris qu'on croirait désactivé (critique de la maquette)."""
         btn = bouton(tr("Rétablir les réglages d'origine"))
-        btn.setIcon(QIcon(pixmap_icone("replay", 18, QColor(current_theme().accent))))
+        icone, taille = espacee(pixmap_icone("replay", 18, QColor(current_theme().accent)), QSize(18, 18))
+        btn.setIcon(icone)
+        btn.setIconSize(taille)
         btn.setAutoDefault(False)
         self._bouton_reset = btn
         return btn
 
+    @staticmethod
+    def _pages_remises(onglets: Iterable[str]) -> str:
+        """Les pages que touche une remise à l'origine, dans l'ordre du rail."""
+        pages = {_PAGE_DE.get(o, o) for o in onglets}
+        return " · ".join(tr(libelle) for ident, libelle, _icone in _ONGLETS if ident in pages)
+
+    def _confirmer_origine(self, pages: str) -> bool:
+        """La remise vaut pour toutes ces pages, même celles qu'on ne regarde pas,
+        et ne s'annule pas : on demande, et Annuler est le choix par défaut."""
+        boite = FenetreMessage(self)
+        boite.setWindowTitle(tr("Remettre ce jeu comme à l'installation ?"))
+        boite.setText(tr("Pages remises à leur état d'origine : {}.").format(pages))
+        retablir = boite.addButton(tr("Rétablir"), FenetreMessage.ButtonRole.DestructiveRole)
+        annuler = boite.addButton(tr("Annuler"), FenetreMessage.ButtonRole.RejectRole)
+        boite.setDefaultButton(annuler)
+        boite.exec()
+        return boite.clickedButton() is retablir
+
+    def _annoncer_remise(self) -> None:
+        """Le pied le dit quatre secondes, puis reprend ce qu'il disait."""
+        self._poser_pied(tr("Réglages d'origine remis."))
+        self._minuteur_pied.start()
+
     def _remettre_origine_graph(self) -> None:
+        if not self._confirmer_origine(self._pages_remises(("image", "perfs"))):
+            return
         try:
             reglages_graphiques.remettre_origine(self._conf_graph)
         except OSError:
@@ -515,6 +553,7 @@ class RubriquesDuJeu:
         for ident, controle in self._controles_graph.items():
             self._remettre_controle_graph(controle, reglages_graphiques.REGLAGES[ident])
         self._erreur.hide()
+        self._annoncer_remise()
 
     def _note(self, corps: QVBoxLayout, texte: str, entete: QWidget | None = None) -> None:
         """Une phrase seule dans une carte : ce que la rubrique ne peut pas encore faire."""
@@ -568,7 +607,9 @@ class RubriquesDuJeu:
         dossier = self.manager.config.install_path
         etat = videos_lancement.passees(dossier, videos) if videos else None
         reprend = self.game.id in reprise.JEUX
-        if etat is None and not reprend:
+        du_correctif = [r for r in self._reglages if r.onglet == "demarrage"] \
+            if self._correctif_actif() else []
+        if etat is None and not reprend and not du_correctif:
             return False
         carte = Carte()
         if reprend:
@@ -584,6 +625,8 @@ class RubriquesDuJeu:
             carte.ajouter(self._ligne(tr("Passer les logos"), bascule, tr(
                 "Le jeu s'ouvre directement sur son menu, sans les logos des studios. "
                 "Les vidéos sont gardées : il suffit de rallumer pour les revoir.")))
+        for reglage in du_correctif:
+            self._controle(carte, self._ini, reglage)
         self._egaliser(carte)
         self._section(corps, self._titre_rubrique(tr("Démarrage")), carte)
         return True
@@ -634,16 +677,62 @@ class RubriquesDuJeu:
         panneau.choisi.connect(lambda _ident, rates: self._sur_preset(reglages, choix_jeu, rates))
         return True
 
+    def _pied(self) -> QFrame:
+        """Ce qui vaut pour toute la fenêtre : quand c'est pris en compte, et la
+        remise à l'origine. Rien à dire et pas de bouton : pas de pied."""
+        pied = QFrame()
+        pied.setObjectName("pied")
+        pied.setMinimumHeight(56)
+        h = QHBoxLayout(pied)
+        h.setContentsMargins(_MARGES_PAGE[0], 10, _MARGES_PAGE[2], 10)
+        h.setSpacing(10)
+        self._pied_info = QLabel()
+        self._pied_info.setPixmap(pixmap_icone("infos", 18, accent_qcolor()))
+        self._pied_info.setStyleSheet("background: transparent;")
+        h.addWidget(self._pied_info)
+        self._pied_notes = QLabel("")
+        self._pied_notes.setTextFormat(Qt.TextFormat.PlainText)
+        self._pied_notes.setWordWrap(True)
+        self._pied_notes.setFont(police(13))
+        self._pied_notes.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
+        h.addWidget(self._pied_notes, stretch=1)
+        h.addStretch()   # le bouton reste à droite quand la note disparaît
+        if self._bouton_reset is not None:
+            h.addWidget(self._bouton_reset)
+        self._cadre_pied = pied
+        self._minuteur_pied = QTimer(self)
+        self._minuteur_pied.setSingleShot(True)
+        self._minuteur_pied.setInterval(_DUREE_ANNONCE_PIED)
+        self._minuteur_pied.timeout.connect(lambda: self._noter_pied(self._onglet_pied))
+        self._noter_pied("")
+        return pied
+
     def _noter_pied(self, onglet: str) -> None:
         """Le pied dit QUAND c'est pris en compte pour l'onglet affiché : HP5 et
-        HP6 relisent leur difficulté dans la seconde, le reste au prochain lancement."""
-        morceaux = []
+        HP6 relisent leur difficulté dans la seconde, le ciel de HP6 aussi, le reste
+        au prochain lancement."""
+        self._onglet_pied = onglet
+        self._minuteur_pied.stop()
         if onglet == "difficulte" and self.game.id in ("hp5", "hp6"):
-            morceaux.append(tr("Change à tout moment, partie en cours comprise."))
-        elif self._correctif_actif() or self._conf_graph is not None or self.game.resolution is not None:
-            morceaux.append(tr("Pris en compte au prochain lancement du jeu."))
-        morceaux.append(tr("Échap pour revenir à la fiche."))
-        self._pied_notes.setText("  ·  ".join(morceaux))
+            contenu = tr("Change à tout moment, partie en cours comprise.")
+        elif not (self._correctif_actif() or self._conf_graph is not None
+                  or self.game.resolution is not None):
+            contenu = ""
+        elif onglet == "image" and any(r.ident == "ciel" for r in self._reglages):
+            contenu = tr("Pris en compte au prochain lancement du jeu, sauf le ciel, "
+                         "qui change à tout moment.")
+        else:
+            contenu = tr("Pris en compte au prochain lancement du jeu.")
+        self._poser_pied(contenu)
+
+    def _poser_pied(self, contenu: str) -> None:
+        self._pied_notes.setText(contenu)
+        self._pied_notes.setVisible(bool(contenu))
+        self._pied_info.setVisible(bool(contenu))
+        montrer = bool(contenu) or self._bouton_reset is not None
+        # Sans parent, un widget rendu visible devient une fenêtre : le pied est construit avant d'être posé.
+        if self._cadre_pied.parentWidget() is not None or not montrer:
+            self._cadre_pied.setVisible(montrer)
 
     def _sur_preset(self, reglages: list, choix_jeu: QComboBox | None, rates: list) -> None:
         """Un preset vient d'être écrit : chaque contrôle reprend ce que porte le fichier."""
@@ -669,12 +758,13 @@ class RubriquesDuJeu:
             return None
         choix = self._liste()
         for valeur, nom in enumerate(difficulte_jeu.NIVEAUX):
-            choix.addItem(tr(nom), valeur)
+            # Le rang 0, c'est Normal : « Facile » y promettait un jeu allégé.
+            choix.addItem(tr("D'origine") if valeur == 0 else tr(nom), valeur)
         choix.setCurrentIndex(rang)
         choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_difficulte(c))
         aide = tr(
             "La difficulté du jeu lui-même, qu'aucun de ses menus ne montre. Plus elle "
-            "monte, plus Harry perd de vie à chaque coup (× 1,2 en Facile, × 2 en Moyen, × 3 en "
+            "monte, plus Harry perd de vie à chaque coup (×1,2 d'origine, ×2 en Moyen, ×3 en "
             "Difficile) et plus les sorts ennemis vont vite ; le Basilic résiste davantage. "
             "À régler jeu fermé ; compte au prochain lancement.")
         carte.ajouter(self._ligne(tr("Difficulté du jeu"), choix, aide, reglage=Reglage(
@@ -728,28 +818,29 @@ class RubriquesDuJeu:
                 "La touche de capture arrive avec la prochaine version du correctif "
                 "de ce jeu."), entete)
             return True
-        ouvrir = bouton(tr("Ouvrir le dossier des captures"))
+        ouvrir = bouton(tr("Ouvrir le dossier"))
+        icone, taille = espacee(pixmap_icone("dossier", 18, QColor(current_theme().accent)), QSize(18, 18))
+        ouvrir.setIcon(icone)
+        ouvrir.setIconSize(taille)
         ouvrir.setAutoDefault(False)
         ouvrir.clicked.connect(self._ouvrir_captures)
         self._compte_captures = QLabel("")
         self._compte_captures.setFont(police(13))
         self._compte_captures.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
-        description = tr(
-            "Touche {} en jeu. Les captures sont rangées hors du dossier du jeu : "
-            "le désinstaller ne les efface pas.").format(touche) if touche else ""
+        rangees = tr("Rangées hors du dossier du jeu : le désinstaller ne les efface pas.")
+        titre, description = (tr("Touche {} en jeu").format(touche), rangees) if touche else (rangees, "")
         carte = Carte()
-        carte.ajouter(LigneReglage(tr("Captures d'écran"), description,
-                                   self._compte_captures, ouvrir))
+        carte.ajouter(LigneReglage(titre, description, self._compte_captures, ouvrir))
         self._section(corps, entete, carte)
         self._afficher_compte(n)
         return True
 
     def _afficher_compte(self, n: int) -> None:
-        # Rien quand il n'y en a pas : « 0 capture » ne dit rien d'utile.
+        # Rien quand il n'y en a pas : « 0 » ne dit rien d'utile. Le nombre seul :
+        # la rubrique et sa ligne nomment déjà les captures.
         if self._compte_captures is None:
             return
-        self._compte_captures.setText(
-            "" if not n else tr("1 capture") if n == 1 else tr("{} captures").format(n))
+        self._compte_captures.setText(str(n) if n else "")
 
     def _ouvrir_captures(self) -> None:
         """Range d'abord ce que le jeu a laissé chez lui, puis ouvre le dossier."""

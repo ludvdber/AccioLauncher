@@ -342,7 +342,7 @@ class TestFenetre:
         dossier.mkdir(parents=True)
         (dossier / "a.png").write_bytes(b"x")
         dlg = self._dialogue(qtbot, _jeu(), tmp_path)
-        assert dlg._compte_captures.text() == "1 capture"
+        assert dlg._compte_captures.text() == "1"
 
     def test_ouvrir_range_puis_ouvre(self, qtbot, tmp_path, monkeypatch):
         ouverts = []
@@ -354,7 +354,7 @@ class TestFenetre:
         dlg = self._dialogue(qtbot, jeu, tmp_path)
         dlg._ouvrir_captures()
         assert ouverts == [str(captures.dossier(jeu))]
-        assert dlg._compte_captures.text() == "2 captures"
+        assert dlg._compte_captures.text() == "2"
 
 
 class TestFinDePartie:

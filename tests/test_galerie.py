@@ -102,7 +102,9 @@ class TestPage:
         assert not page._partager.isEnabled()
         textes = " ".join(lbl.text() for lbl in page.findChildren(QLabel))
         assert "Pas encore de capture" in textes
-        assert "inutile de le signaler" in textes, "la note F12 de HP1-HP3 doit rester"
+        assert "F12 en jeu." in textes
+        assert "inutile de le signaler" not in textes, "F12 marche dans HP1 à HP3 : le catalogue le dit"
+        assert not page._vide.isHidden() and page._cote_cadre.isHidden()
 
     def test_ouvre_sur_la_plus_recente(self, qtbot):
         _capture(HP4, "a.png", datetime(2026, 9, 3))
@@ -129,8 +131,39 @@ class TestPage:
         page.filtrer("hp5")
         assert page.choisie is None and page._titre_jeu.text() == ""
         assert not page._partager.isEnabled()
+        assert page._vide.text() == "Pas encore de capture pour ce jeu."
+        assert not page._vide.isHidden() and page._cote_cadre.isHidden(), "ni aperçu vierge ni boutons éteints"
         page.filtrer("")
         assert page.choisie.chemin.name == "a.png" and page._partager.isEnabled()
+        assert page._vide.isHidden() and not page._cote_cadre.isHidden()
+
+    def test_les_commandes_sont_des_ronds_a_icone_seule(self, qtbot):
+        from src.ui.icon_button import ICONES
+        page = self._page(qtbot)
+        assert "copier" in ICONES
+        for commande, nom in ((page._ouvrir, "Ouvrir l'image"), (page._copier, "Copier l'image"),
+                              (page._dossier, "Ouvrir le dossier")):
+            assert commande.objectName() == "rond" and not commande.text()
+            assert commande.accessibleName() == nom and commande.toolTip() == nom
+        assert page._partager.text() == "Partager sur Discord" and not page._partager.icon().isNull()
+
+    def test_un_clic_sur_l_apercu_ouvre_l_image(self, qtbot, monkeypatch):
+        from PyQt6.QtCore import Qt
+        ouverts = []
+        monkeypatch.setattr("src.ui.galerie_page.open_local_path", ouverts.append)
+        chemin = _capture(HP4, "a.png", datetime(2026, 9, 3))
+        page = self._page(qtbot)
+        qtbot.mouseClick(page._apercu, Qt.MouseButton.LeftButton)
+        assert ouverts == [str(chemin)]
+
+    def test_pastilles_sans_chiffre_le_nombre_en_infobulle(self, qtbot):
+        _capture(HP4, "a.png", datetime(2026, 9, 3))
+        _capture(HP4, "b.png", datetime(2026, 9, 4))
+        page = self._page(qtbot)
+        hp4, hp5, tous = page._filtres["hp4"], page._filtres["hp5"], page._filtres[""]
+        assert not any(c.isdigit() for b in (hp4, hp5, tous) for c in b.text())
+        assert "2 captures" in hp4.toolTip() and "2 captures" in tous.toolTip()
+        assert hp5.property("vide") is True and "0" not in hp5.toolTip()
 
     def test_le_filtre_resserre_les_vignettes(self, qtbot, mise_en_page_stable):
         """Captures de deux jeux mêlées dans un mois : filtrer ne laisse aucun

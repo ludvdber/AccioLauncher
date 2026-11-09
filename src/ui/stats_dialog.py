@@ -163,7 +163,14 @@ class StatsDialog(QDialog):
 
     def _choix_initial(self, possibles: set[str]) -> str | None:
         """Le dernier jeu JOUÉ, sinon le plus joué, sinon le premier qui a des
-        sauvegardes — l'ordre de ce qu'on a envie de revoir en ouvrant."""
+        sauvegardes — l'ordre de ce qu'on a envie de revoir en ouvrant.
+
+        Le manager d'abord : il départage à l'heure près, et le Folio, les Défis
+        et la bibliothèque le suivent déjà. `_dernieres` est au jour près, cinq
+        jeux joués « hier » donnaient le premier du dictionnaire."""
+        dernier = self.manager.last_played_game_id()
+        if dernier in possibles:
+            return dernier
         if self._dernieres:
             return max(self._dernieres, key=self._dernieres.get)
         if self._temps:
@@ -332,22 +339,28 @@ class StatsDialog(QDialog):
         aujourdhui = date.today()
         annee = stats.temps_annee(self._hist, aujourdhui.year)
         herite = sum(self._hist.herite.values())
-        # Le total AFFICHÉ est la somme des parties AFFICHÉES, chacune arrondie
-        # à la minute. Arrondir chaque ligne de son côté donnait, sur les
+        # Le total AFFICHÉ est la somme des lignes AFFICHÉES du relevé, chacune
+        # arrondie à la minute (huit lignes à 5 h 27 sous un total à 5 h 26), et
+        # l'année prend l'écart d'arrondi pour que « dont X sans date » tombe
+        # juste aussi. Arrondir chaque ligne de son côté donnait, sur les
         # données de Ludo, « 46 min au total, dont 43 cette année et 4
         # d'avant » : 46,5 → 46, 42,9 → 43, 3,6 → 4, et 43 + 4 = 47. Un seul
         # compte qui ne tombe pas juste suffit à faire douter de toute la page.
         autres = stats.temps_total(self._hist) - annee - herite
-        total = 60 * sum(_minutes(x) for x in (annee, autres, herite))
+        total = 60 * sum(_minutes(x) for x in self._temps.values())
+        annee_vue = max(0, total - 60 * (_minutes(autres) + _minutes(herite))) if annee else 0
         lignes = [(tr("Au total"), total, 17)]
         mois = stats.par_mois(self._hist).get((aujourdhui.year, aujourdhui.month), 0)
         # Une ligne qui redit le chiffre du dessus ne s'écrit pas : « Au total
         # 13 h 18 · En 2026 13 h 18 · En octobre 13 h 18 » (Ludo, 2026-10-14).
-        if _minutes(annee) != _minutes(total):
-            lignes.append((tr("En {}").format(aujourdhui.year), annee, 13))
-        if _minutes(mois) != _minutes(annee):
+        if annee_vue != total:
+            lignes.append((tr("En {}").format(aujourdhui.year), annee_vue, 13))
+        # Le mois suit le chiffre affiché au-dessus : brut, il pouvait le dépasser d'une minute d'arrondi.
+        reference = annee_vue or total
+        mois_vu = 60 * min(_minutes(mois), reference // 60)
+        if mois_vu != reference and _minutes(mois) != _minutes(annee):
             lignes.append((tr("En {}").format(_locale().standaloneMonthName(
-                aujourdhui.month, QLocale.FormatType.LongFormat)), mois, 13))
+                aujourdhui.month, QLocale.FormatType.LongFormat)), mois_vu, 13))
         for libelle, secondes, taille in lignes:
             if not secondes:
                 continue

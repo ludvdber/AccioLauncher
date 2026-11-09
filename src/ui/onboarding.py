@@ -37,6 +37,7 @@ from src.core import manette
 from src.core.assistant import CHOIXPEAU, ETAPES_RATTRAPABLES, TOUCHES, etapes_a_rattraper
 from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
 from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH, Config, cache_pour
+from src.core.echecs import cause_installation
 from src.core.formatting import format_bytes, format_size
 from src.core.game_data import GameData, load_catalog
 from src.core.i18n import available_languages, detect_system_language, set_language, tr
@@ -971,7 +972,18 @@ class OnboardingDialog(QDialog):
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 src.rename(dest)  # même disque (validé) → instantané
             except OSError as exc:
-                errors.append(f"{game.name} : {exc}")
+                # L'exception au journal : à l'écran, elle sortait dans la langue
+                # du système, avec son code et son chemin.
+                log.warning("Onboarding : %s non importé (%s → %s)", game.id, src, dest, exc_info=True)
+                # Seuls 32 et 33 prouvent un fichier tenu : le reste, on n'accuse personne (règle 108).
+                if getattr(exc, "winerror", None) in (32, 33):
+                    raison = tr("Son dossier est utilisé par un autre programme : fermez-le, "
+                                "puis importez ce jeu depuis sa fiche.")
+                elif cause_installation(exc) in ("acces_refuse", "antivirus"):
+                    raison = tr("Le système a refusé de déplacer son dossier (dossier protégé ou antivirus) : importez ce jeu depuis sa fiche.")
+                else:
+                    raison = tr("Son dossier n'a pas pu être déplacé : importez ce jeu depuis sa fiche.")
+                errors.append(f"{game.name} : {raison}")
                 continue
             config.installed_versions[game.id] = game.recommended_version
             done.append(game.name)

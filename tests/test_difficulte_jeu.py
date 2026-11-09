@@ -96,3 +96,5 @@ def test_la_liste_de_la_fiche_ecrit_le_cran_choisi(qtbot, tmp_path):
     assert listes[0].currentIndex() == 0
     listes[0].setCurrentIndex(1)
     assert "Difficulty=DifficultyMedium" in chemin.read_text(encoding="cp1252")
+    # Le rang 0 est le preset Normal : la liste ne l'appelle pas « Facile ».
+    assert [listes[0].itemText(i) for i in range(3)] == ["D'origine", "Moyen", "Difficile"]

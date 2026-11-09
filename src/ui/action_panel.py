@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFontMetrics
+from PyQt6.QtGui import QColor, QFontMetrics
 from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
@@ -38,6 +38,10 @@ _MARGE_BOUTON = 34   # respiration intérieure de part et d'autre du texte
 # 2026-10-09). À 48, l'espagnol de HP7 débordait de 2 px à 980×660.
 _HAUTEUR_JOUER = 46
 _VERT_JOUER = "#2b8c53"
+_CADRE_ICONES = "#8a8aaa"
+# Le gris de la ligne méta : au gris du cadre, celui de « BIENTÔT DISPONIBLE »
+# désactivé, ces boutons se lisaient comme inactifs à côté du vert plein.
+_ENCRE_ICONES = "#b4b4d0"
 
 
 def _police_action():
@@ -45,6 +49,16 @@ def _police_action():
     police = body_font(15)
     police.setBold(True)
     return police
+
+
+class _BoutonIcone(IconButton):
+    """Bouton encadré de la rangée : le contour reste discret, l'encre se lit."""
+
+    def __init__(self, icone: str, second: str | None = None) -> None:
+        super().__init__(icone, taille=_HAUTEUR_JOUER, cadre=_CADRE_ICONES, second=second)
+
+    def _encre(self, actif: bool) -> QColor:
+        return super()._encre(actif) if actif else QColor(_ENCRE_ICONES)
 
 
 class ActionPanel(QWidget):
@@ -277,6 +291,9 @@ class ActionPanel(QWidget):
                                               detail, body_font(14)), 46)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.download_clicked)
+        # Le détail est le poids à télécharger ; la place prise sur le disque,
+        # autre chiffre (règle 86), se dit ici tant que la ligne méta la tait.
+        btn.setToolTip(tr("{} une fois installé").format(format_size(dl.size_mb)))
         if not self._online:
             # Le bandeau au-dessus dit pourquoi. Laisser le bouton actif ne
             # ferait qu'échanger une explication contre une erreur réseau
@@ -423,7 +440,7 @@ class ActionPanel(QWidget):
         # Le folio n'est plus un bouton ici : il faisait passer le temps de
         # jeu sous la rangée (Ludo, 2026-10-14). Il est dans la ligne
         # d'indices, à côté de la version (`InfoPanel._refresh_indices`).
-        btn_reglages = IconButton("reglages", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
+        btn_reglages = _BoutonIcone("reglages")
         btn_reglages.setObjectName("btnGameSettings")
         btn_reglages.setAccessibleName(
             tr("Réglages de {}").format(self._game.name))
@@ -462,7 +479,7 @@ class ActionPanel(QWidget):
         idents = dp.idents_du_jeu(game, ini)
         if not any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal"):
             return
-        btn = IconButton("epee", taille=_HAUTEUR_JOUER, cadre="#8a8aaa")
+        btn = _BoutonIcone("epee")
         btn.setObjectName("boutonDifficulte")
         btn.setAccessibleName(tr("Difficulté de {}").format(game.name))
         btn.setToolTip(tr("Difficulté"))
@@ -477,7 +494,7 @@ class ActionPanel(QWidget):
             return
         # HP7 et HP8 n'ont que des cinématiques : la pellicule, pas la note.
         premier = "musique" if a_de_la_musique(self._game.id) else "film"
-        btn = IconButton(premier, taille=_HAUTEUR_JOUER, cadre="#8a8aaa", second="images")
+        btn = _BoutonIcone(premier, second="images")
         btn.setObjectName("boutonMedias")
         btn.setToolTip(tr("La musique, les cinématiques et les captures du jeu"))
         btn.setAccessibleName(tr("Collections : la musique, les cinématiques et les "

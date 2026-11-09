@@ -1,6 +1,6 @@
 """Paramètres, « la salle commune » : rubriques à gauche, cartes à droite.
 
-Rubriques : Général (dossier, langue, sauvegardes) · Affichage (vidéos, thème,
+Rubriques : Général (dossier, langue, sauvegardes) · Son et image (vidéos, thème,
 ambiance) · Téléchargements (archives, mises à jour) · Intégrations (Discord,
 manette) · À propos. Refonte du 2026-10-09 sur la maquette validée : la page
 parle Gelasio comme la fiche, chaque réglage est une ligne (titre, phrase
@@ -19,6 +19,7 @@ from pathlib import Path
 from PyQt6.QtCore import QRectF, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QPainter
 from PyQt6.QtWidgets import (
+    QButtonGroup,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -26,8 +27,7 @@ from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QStackedWidget,
     QVBoxLayout,
@@ -39,11 +39,12 @@ from src.core.game_manager import GameManager, GameState
 from src.core import manette
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
-from src.core.i18n import available_languages, get_language, tr
+from src.core.i18n import available_languages, get_language, tr, trn
 from src.ui.composants import (
-    ENCRE_DISCRETE, ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
+    ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
     espace_du_volume, feuille_de_style, police, surtitre, texte,
 )
+from src.ui.fenetre_message import message
 from src.ui.fonts import cinzel_decorative
 from src.ui import about_page, manette_nav
 from src.ui.disk_scan_worker import DiskScanWorker
@@ -60,7 +61,7 @@ log = logging.getLogger(__name__)
 _LARGEUR_RUBRIQUES = 236
 _ENCRE_RUBRIQUE = "#a9a7c4"
 # (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
-_RUBRIQUES = (("Général", "dossier"), ("Affichage", "ecran"),
+_RUBRIQUES = (("Général", "dossier"), ("Son et image", "ecran"),
               ("Téléchargements", "telechargement"), ("Intégrations", "integrations"),
               ("À propos", "infos"))
 _RANG_TELECHARGEMENTS = 2   # ses messages arrivent de la fenêtre, après un clic
@@ -72,9 +73,12 @@ _RANG_TELECHARGEMENTS = 2   # ses messages arrivent de la fenêtre, après un cl
 # pas des autres. Mesuré sur capture, Ludo à la manette le 2026-10-07 : « tout
 # n'est pas mis en évidence, surtout les paramètres graphiques et dropdown ».
 # Le cadre passe à 2 px et le remplissage perd 1 px : rien ne bouge.
+# `::drop-down` retire le bouton natif : sans lui, sa flèche restait sous le
+# chevron que peint `utils._ListeDeroulante` (deux flèches superposées).
 _COMBO_STYLE = (
     "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
     " border-radius: 6px; padding: 6px 12px; font-size: 13px; }"
+    "QComboBox::drop-down { border: none; width: 18px; }"
     "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 5px 11px; }"
     "QComboBox QAbstractItemView { background: #16213e; color: #ffffff; outline: none;"
     " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
@@ -129,6 +133,52 @@ class _BarreDisque(QWidget):
         p.end()
 
 
+class _Rail(QWidget):
+    """Les rubriques, un bouton cochable chacune, comme le rail des réglages d'un jeu.
+
+    Une QListWidget gardait ↑/↓ pour elle : à la manette, on ne sortait jamais
+    du rail, les réglages de droite restaient hors d'atteinte. Ici ↑/↓ passent
+    d'un bouton à l'autre puis à la page, et A choisit (`manette_nav`)."""
+
+    currentRowChanged = pyqtSignal(int)
+
+    def __init__(self, rubriques) -> None:
+        super().__init__()
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(4)
+        self._groupe = QButtonGroup(self)
+        self._groupe.setExclusive(True)
+        self.boutons: list[QPushButton] = []
+        for rang, (libelle, icone) in enumerate(rubriques):
+            pictogramme = QIcon()
+            pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(_ENCRE_RUBRIQUE)),
+                                  QIcon.Mode.Normal, QIcon.State.Off)
+            pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(current_theme().accent_light)),
+                                  QIcon.Mode.Normal, QIcon.State.On)
+            btn = QPushButton(tr(libelle))
+            btn.setObjectName("rubrique")
+            btn.setCheckable(True)
+            btn.setIcon(pictogramme)
+            btn.setIconSize(QSize(19, 19))
+            btn.setFont(police(14))
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setAutoDefault(False)
+            btn.toggled.connect(lambda oui, r=rang: oui and self.currentRowChanged.emit(r))
+            self._groupe.addButton(btn)
+            self.boutons.append(btn)
+            lay.addWidget(btn)
+
+    def count(self) -> int:
+        return len(self.boutons)
+
+    def currentRow(self) -> int:  # noqa: N802 (même interface que QListWidget)
+        return next((r for r, b in enumerate(self.boutons) if b.isChecked()), -1)
+
+    def setCurrentRow(self, rang: int) -> None:  # noqa: N802
+        self.boutons[rang].setChecked(True)
+
+
 class SettingsDialog(QDialog):
     """Panneau de paramètres Accio Launcher."""
 
@@ -177,27 +227,23 @@ class SettingsDialog(QDialog):
             border: none;
             border-right: 1px solid rgba(214, 167, 44, 0.12);
         }
-        QListWidget#navList {
-            background: transparent;
-            border: none;
-            outline: none;
+        QPushButton#rubrique {
+            color: #a9a7c4; background: transparent; border: none;
+            border-left: 2px solid transparent; border-radius: 8px;
+            text-align: left; padding: 0 12px; min-height: 42px; max-height: 42px;
         }
-        QListWidget#navList::item {
-            color: #a9a7c4;
-            min-height: 42px;
-            padding: 0 12px;
-            border-radius: 8px;
-            border-left: 2px solid transparent;
-        }
-        QListWidget#navList::item:hover {
-            color: #f2f2f4;
-            background: rgba(255, 255, 255, 0.04);
-        }
-        QListWidget#navList::item:selected {
-            color: #f2e6c4;
-            background: rgba(214, 167, 44, 0.10);
+        QPushButton#rubrique:hover { color: #f2f2f4; background: rgba(255, 255, 255, 0.04); }
+        QPushButton#rubrique:checked {
+            color: #f2e6c4; background: rgba(214, 167, 44, 0.10);
             border-left: 2px solid #d6a72c;
         }
+        QPushButton#rubrique[focusClavier="true"]:focus { color: #e8c547; }
+        QPushButton#lienDiscret {
+            background: transparent; border: none; color: #a9a7c4;
+            text-decoration: underline; padding: 4px 2px;
+        }
+        QPushButton#lienDiscret:hover { color: #f2f2f4; }
+        QPushButton#lienDiscret[focusClavier="true"]:focus { color: #e8c547; }
         QPushButton#retour {
             background: transparent; border: none; color: #a9a7c4;
             text-align: left; padding: 4px 2px;
@@ -230,28 +276,9 @@ class SettingsDialog(QDialog):
             self._pages.addWidget(QWidget())
         self._construites = {0}
         self._nav.currentRowChanged.connect(self.construire_rubrique)
-
-        droite = QVBoxLayout()
-        droite.setContentsMargins(0, 0, 0, 0)
-        droite.setSpacing(0)
-        droite.addWidget(self._pages, stretch=1)
-        # « Enregistré », pas « appliqué » : la langue et le thème attendent un
-        # redémarrage, et la page le dit à leur ligne (règle 108).
-        pied = texte(tr("Chaque changement est enregistré tout de suite. Échap pour revenir."),
-                     12, ENCRE_DISCRETE)
-        # Même colonne que les cartes (`_marges`) : collé à gauche, le pied
-        # tombait 110 px avant elles sur un écran large.
-        pied.setMaximumWidth(760)
-        ligne_pied = QHBoxLayout()
-        ligne_pied.setContentsMargins(48, 8, 48, 14)
-        ligne_pied.addWidget(pied, stretch=1)
-        droite.addLayout(ligne_pied)
-        root.addLayout(droite, stretch=1)
+        root.addWidget(self._pages, stretch=1)
 
         self._nav.currentRowChanged.connect(self._pages.setCurrentIndex)
-        # À propos ne règle rien : la phrase sur l'enregistrement n'y a pas lieu.
-        self._nav.currentRowChanged.connect(
-            lambda rang: pied.setVisible(rang != len(_RUBRIQUES) - 1))
         self._nav.setCurrentRow(0)
         # Rouverte après un changement pas encore appliqué : la ligne le redit.
         self._regler_redemarrage()
@@ -296,26 +323,11 @@ class SettingsDialog(QDialog):
         lay.addWidget(titre)
         lay.addSpacing(16)
 
-        self._nav = QListWidget()
-        self._nav.setObjectName("navList")
-        self._nav.setFont(police(14))
-        self._nav.setIconSize(QSize(19, 19))
-        self._nav.setSpacing(2)
-        # Sans ça, un libellé large (« Téléchargements ») fait apparaître une
-        # scrollbar horizontale disgracieuse sous la nav (vu à l'audit).
-        self._nav.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._nav.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._nav.setCursor(Qt.CursorShape.PointingHandCursor)
-        for libelle, icone in _RUBRIQUES:
-            pictogramme = QIcon()
-            pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(_ENCRE_RUBRIQUE)),
-                                  QIcon.Mode.Normal)
-            pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(current_theme().accent_light)),
-                                  QIcon.Mode.Selected)
-            self._nav.addItem(QListWidgetItem(pictogramme, tr(libelle)))
+        self._nav = _Rail(_RUBRIQUES)
         # Plus de version au pied de la colonne : À propos la porte, cliquable
         # (une seule fois, Ludo, 2026-10-14).
-        lay.addWidget(self._nav, stretch=1)
+        lay.addWidget(self._nav)
+        lay.addStretch()
         return colonne
 
     @staticmethod
@@ -333,7 +345,10 @@ class SettingsDialog(QDialog):
 
     @staticmethod
     def _page(*sections) -> QWidget:
-        """Une page de cartes : chaque section est un (surtitre, carte)."""
+        """Une page de cartes : chaque section est un (surtitre, carte).
+
+        Surtitre vide pour une carte d'une seule ligne : il répéterait son titre
+        (« LANGUE », puis « Langue du launcher »)."""
         page = QWidget()
         page.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(page)
@@ -342,7 +357,8 @@ class SettingsDialog(QDialog):
         for titre, carte in sections:
             bloc = QVBoxLayout()
             bloc.setSpacing(10)
-            bloc.addWidget(surtitre(titre))
+            if titre:
+                bloc.addWidget(surtitre(titre))
             bloc.addWidget(carte)
             lay.addLayout(bloc)
         lay.addStretch()
@@ -395,7 +411,8 @@ class SettingsDialog(QDialog):
         self._path_label = Chemin(str(self.config.install_path))
         btn_open = bouton(tr("Ouvrir"))
         btn_open.clicked.connect(self._on_open_install_folder)
-        btn_change = bouton(tr("Changer…"), principal=True)
+        # Pas l'action mise en avant : le dossier ne se change pas à la légère.
+        btn_change = bouton(tr("Changer…"))
         btn_change.clicked.connect(self._on_change_path)
         icone = QLabel()
         icone.setPixmap(pixmap_icone("dossier", 22, accent_qcolor(255)))
@@ -416,8 +433,8 @@ class SettingsDialog(QDialog):
         legende = QHBoxLayout()
         legende.setSpacing(7)
         legende.addWidget(Pastille(accent_qcolor(255)))
-        self._legende_jeux = texte(tr("Vos jeux"), 12, ENCRE_DOUCE)
-        legende.addWidget(self._legende_jeux)
+        # Sans le poids : la ligne du dessus le donne déjà.
+        legende.addWidget(texte(tr("Vos jeux"), 12, ENCRE_DOUCE))
         legende.addSpacing(16)
         legende.addWidget(Pastille(QColor(255, 255, 255, 56)))
         legende.addWidget(texte(tr("Le reste du disque"), 12, ENCRE_DOUCE))
@@ -429,16 +446,7 @@ class SettingsDialog(QDialog):
         self._octets_jeux = 0
         self._regler_disque()
 
-        # Snapshot des chemins sur le thread principal (thread-safe)
-        game_paths = [
-            self.manager.get_game_path(entry.game.id)
-            for entry in self.manager.get_games()
-            if entry.state == GameState.INSTALLED
-        ]
-        game_paths = [p for p in game_paths if p is not None]
-        self._scan_worker = DiskScanWorker(game_paths, parent=self)
-        self._scan_worker.result.connect(self._on_scan_done)
-        self._scan_worker.start()
+        self._lancer_scan()
 
         langue = Carte()
         self._lang_combo = self._combo()
@@ -462,11 +470,8 @@ class SettingsDialog(QDialog):
         sauvegardes = Carte()
         ligne, self._tgl_copies = self._reglage(
             tr("Copier les sauvegardes avant chaque partie"), "copies_sauvegardes",
-            tr("Une copie de chaque sauvegarde qui a changé, rangée à part."))
+            tr("Une copie de chaque sauvegarde qui a changé, à restaurer depuis les réglages du jeu."))
         sauvegardes.ajouter(ligne)
-        sauvegardes.ajouter(LigneReglage(
-            tr("Revenir à une copie"),
-            tr("Depuis les réglages de chaque jeu, rubrique Fichiers du jeu.")))
 
         decouvrir = Carte()
         revoir = bouton(tr("Revoir la visite"))
@@ -477,16 +482,17 @@ class SettingsDialog(QDialog):
             revoir))
 
         fin = Carte()
+        # Un lien discret : ce geste n'a pas à peser autant que « Revoir la visite ».
         desinstaller = bouton(tr("Désinstaller…"))
+        desinstaller.setObjectName("lienDiscret")
         desinstaller.clicked.connect(self._on_desinstaller)
         fin.ajouter(LigneReglage(
-            tr("Désinstaller Accio Launcher"),
+            "Accio Launcher",
             tr("Vos jeux peuvent rester : un launcher réinstallé les retrouve tout seul."),
             desinstaller))
 
-        return self._page((tr("Dossier des jeux"), dossier), (tr("Langue"), langue),
-                          (tr("Sauvegardes"), sauvegardes), (tr("Découvrir"), decouvrir),
-                          (tr("Désinstaller"), fin))
+        return self._page((tr("Dossier des jeux"), dossier), ("", langue),
+                          ("", sauvegardes), ("", decouvrir), ("", fin))
 
     def _on_desinstaller(self) -> None:
         from src.ui.desinstallation_dialog import DesinstallationDialog
@@ -500,24 +506,38 @@ class SettingsDialog(QDialog):
         self._barre_disque.regler(self._octets_jeux, libre, total)
         self._free_label.setText(_texte_disque(self.config.install_path))
 
-    # ── Page Affichage ──
+    def _lancer_scan(self) -> None:
+        """Mesure les jeux installés, en arrière-plan."""
+        # Snapshot des chemins sur le thread principal (thread-safe)
+        game_paths = [
+            self.manager.get_game_path(entry.game.id)
+            for entry in self.manager.get_games()
+            if entry.state == GameState.INSTALLED
+        ]
+        game_paths = [p for p in game_paths if p is not None]
+        self._scan_worker = DiskScanWorker(game_paths, parent=self)
+        self._scan_worker.result.connect(self._on_scan_done)
+        self._scan_worker.start()
+
+    # ── Page Son et image ──
 
     def _page_display(self) -> QWidget:
         videos = Carte()
         if self._fond is not None:
             ligne, self._tgl_son = self._interrupteur(
                 tr("Couper tout le son"), self._fond.son_coupe,
-                tr("Musique, bandes-annonces et cinématiques. "
-                   "Le haut-parleur en bas à droite fait de même."))
+                tr("Musique, bandes-annonces et cinématiques."))
             self._tgl_son.toggled.connect(self._sur_interrupteur_son)
             self._fond.son_coupe_change.connect(self._sur_son_coupe)
             videos.ajouter(ligne)
         ligne, self._tgl_autoplay = self._reglage(
             tr("Lecture automatique des vidéos"), "autoplay_videos")
         videos.ajouter(ligne)
-        ligne, self._tgl_mute = self._reglage(
+        self._ligne_mute, self._tgl_mute = self._reglage(
             tr("Couper le son des vidéos"), "mute_videos")
-        videos.ajouter(ligne)
+        videos.ajouter(self._ligne_mute)
+        if self._tgl_son is not None:
+            self._griser(self._ligne_mute, not self._tgl_son.isChecked())
 
         self._btn_trailers = bouton("", principal=True)
         self._btn_trailers.clicked.connect(self._on_trailers_clicked)
@@ -555,13 +575,12 @@ class SettingsDialog(QDialog):
             SEASONS.index(self.config.season)
             if self.config.season in SEASONS else 0)
         self._season_combo.currentIndexChanged.connect(self._on_season_changed)
-        ambiance.ajouter(LigneReglage(tr("Particules saisonnières"),
-                                      tr("Appliqué immédiatement."), self._season_combo))
+        ambiance.ajouter(LigneReglage(tr("Particules saisonnières"), "", self._season_combo))
         ligne, _ = self._reglage(
             tr("Fait du jour dans la barre de statut"), "faits_du_jour")
         ambiance.ajouter(ligne)
 
-        return self._page((tr("Son et vidéos"), videos), (tr("Thème"), theme),
+        return self._page((tr("Son et vidéos"), videos), ("", theme),
                           (tr("Almanach"), ambiance))
 
     # ── Bandes-annonces ──
@@ -592,16 +611,25 @@ class SettingsDialog(QDialog):
         octets = trailer_store.poids_disque()
         if presentes == len(liste):
             self._lbl_trailers.setText(
-                tr("Bandes-annonces : {n} sur le disque ({taille})").format(
+                tr("{n} sur le disque ({taille})").format(
                     n=presentes, taille=format_bytes(octets)))
             self._btn_trailers.setText(tr("Supprimer"))
+            self._nature_bouton_trailers("secondaire")
         else:
             manque = trailer_store.poids_a_telecharger(liste)
             self._lbl_trailers.setText(
-                tr("Bandes-annonces : {faites} sur {total}").format(
-                    faites=presentes, total=len(liste)))
+                tr("{faites} sur {total}").format(faites=presentes, total=len(liste)))
             self._btn_trailers.setText(
                 tr("Télécharger ({taille})").format(taille=format_size(manque)))
+            self._nature_bouton_trailers("principal")
+
+    def _nature_bouton_trailers(self, nature: str) -> None:
+        """L'or désigne l'action de la ligne : pas un geste qui efface."""
+        bouton_ = self._btn_trailers
+        if bouton_.objectName() != nature:
+            bouton_.setObjectName(nature)
+            bouton_.style().unpolish(bouton_)
+            bouton_.style().polish(bouton_)
 
     def _on_trailer_progress(self, faites: int, total: int, octets: int, sur: int) -> None:
         if self._lbl_trailers is None:
@@ -624,6 +652,13 @@ class SettingsDialog(QDialog):
             return
         liste = self._trailers()
         if trailer_store.nombre_present(liste) == len(liste):
+            choix = message(
+                self, QMessageBox.Icon.Question, tr("Supprimer les bandes-annonces"),
+                tr("Les bandes-annonces ({taille}) quittent le disque.").format(
+                    taille=format_bytes(trailer_store.poids_disque())),
+                choix=(tr("Supprimer"), tr("Annuler")), defaut=1)
+            if choix != 0:
+                return
             # Supprimer, c'est aussi dire non : sans ça le rattrapage du
             # prochain démarrage les re-téléchargerait aussitôt.
             self.config.trailers_optin = False
@@ -716,8 +751,6 @@ class SettingsDialog(QDialog):
         else:
             phrase = tr("{} jeux installés, {}").format(count, format_bytes(total_bytes))
         self._installed_label.setText(phrase)
-        self._legende_jeux.setText(
-            tr("Vos jeux · {}").format(format_bytes(total_bytes)) if count else tr("Vos jeux"))
         self._octets_jeux = total_bytes
         self._regler_disque()
         log.info("Total installé : %d jeu(x), %s", count, format_bytes(total_bytes))
@@ -739,11 +772,37 @@ class SettingsDialog(QDialog):
                     self, tr("Dossier non inscriptible"),
                     tr("Ce dossier refuse l'écriture. Choisissez-en un autre :\n{}").format(chosen))
                 return
-            self.config.install_path = Path(chosen)
-            self.config.cache_path = cache_pour(Path(chosen))
-            self._path_label.definir(chosen)
-            self._regler_disque()
-            self._save()
+            self.changer_dossier(Path(chosen))
+
+    def changer_dossier(self, nouveau: Path) -> None:
+        """Pose le nouveau dossier, après avoir dit ce que deviennent les jeux.
+
+        Rien n'est déplacé : ceux qui sont installés restent dans l'ancien
+        dossier, et sans prévenir la bibliothèque se vidait d'un coup."""
+        if nouveau == self.config.install_path:
+            return
+        installes = sum(1 for e in self.manager.get_games() if e.state == GameState.INSTALLED)
+        if installes:
+            choix = message(
+                self, QMessageBox.Icon.Warning, tr("Changer le dossier d'installation"),
+                trn(installes, "Votre jeu ({taille}) reste dans {dossier}. Le launcher ne le verra plus.",
+                    "Vos {n} jeux ({taille}) restent dans {dossier}. Le launcher ne les verra plus.").format(
+                        n=installes, taille=format_bytes(self._octets_jeux),
+                        dossier=self.config.install_path),
+                choix=(tr("Changer"), tr("Annuler")), defaut=1)
+            if choix != 0:
+                return
+        self.config.install_path = nouveau
+        self.config.cache_path = cache_pour(nouveau)
+        self._path_label.definir(str(nouveau))
+        # La carte redit ce que contient le NOUVEAU dossier : l'enregistrement
+        # re-détecte les jeux d'abord, le scan lit donc les bons.
+        self._installed_label.setText(tr("Calcul de l'espace utilisé…"))
+        self._octets_jeux = 0
+        self._regler_disque()
+        self._save()
+        self._shutdown_scan()
+        self._lancer_scan()
 
     def _on_setting_changed(self) -> None:
         for bascule, champ in self._interrupteurs:
@@ -751,15 +810,19 @@ class SettingsDialog(QDialog):
         self._save()
 
     def _griser_discord_partie(self, presence: bool) -> None:
-        """Sans présence Discord, la carte n'existe pas : la case reste visible,
-        grisée (comme les réglages qu'un autre éteint), sa valeur intacte."""
-        self._ligne_discord_partie.setEnabled(presence)
-        if presence:
-            self._ligne_discord_partie.setGraphicsEffect(None)
-        elif self._ligne_discord_partie.graphicsEffect() is None:
-            effet = QGraphicsOpacityEffect(self._ligne_discord_partie)
+        """Sans présence Discord, la carte n'existe pas."""
+        self._griser(self._ligne_discord_partie, presence)
+
+    @staticmethod
+    def _griser(ligne: LigneReglage, actif: bool) -> None:
+        """Un réglage qu'un autre éteint reste visible, grisé, sa valeur intacte."""
+        ligne.setEnabled(actif)
+        if actif:
+            ligne.setGraphicsEffect(None)
+        elif ligne.graphicsEffect() is None:
+            effet = QGraphicsOpacityEffect(ligne)
             effet.setOpacity(0.42)
-            self._ligne_discord_partie.setGraphicsEffect(effet)
+            ligne.setGraphicsEffect(effet)
 
     @staticmethod
     def _on_navigation_manette(coche: bool) -> None:
@@ -807,11 +870,13 @@ class SettingsDialog(QDialog):
     def _sur_interrupteur_son(self, coupe: bool) -> None:
         if coupe != self._fond.son_coupe:
             self._fond.basculer_son()
+        self._griser(self._ligne_mute, not coupe)   # tout coupé : il ne changerait rien
 
     def _sur_son_coupe(self, coupe: bool) -> None:
         """Le haut-parleur de la barre du bas, ou une écoute qui rend le son."""
         if self._tgl_son is not None:
             self._tgl_son.setChecked(coupe)   # n'émet pas `toggled`
+            self._griser(self._ligne_mute, not coupe)
 
     def done(self, result: int) -> None:
         """Arrête le scan disque sur TOUS les chemins de fermeture.

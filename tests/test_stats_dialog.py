@@ -152,6 +152,72 @@ class TestReleve:
         qtbot.addWidget(dlg)
         assert dlg.findChildren(_Releve)[0].choix == ids[3]
 
+    def test_a_egalite_de_jour_le_manager_departage(self, qtbot, manager, monkeypatch):
+        """Cinq jeux joués « hier » : la date au jour près donnait le premier du
+        dictionnaire, le Folio et les Défis un autre."""
+        ids = [e.game.id for e in manager.get_games()]
+        stats.enregistrer_session(ids[0], datetime(2026, 8, 25, 21, 0), 3600)
+        stats.enregistrer_session(ids[3], datetime(2026, 8, 25, 22, 0), 1800)
+        monkeypatch.setattr(GameManager, "last_played_game_id", lambda _self: ids[3])
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        assert dlg.findChildren(_Releve)[0].choix == ids[3]
+
+    def test_la_ligne_choisie_ne_se_peint_qu_au_clavier(self, qtbot, manager):
+        from PyQt6.QtCore import Qt
+        from src.ui.focus_visible import PROPRIETE
+        ids = [e.game.id for e in manager.get_games()]
+        stats.enregistrer_session(ids[0], datetime(2026, 8, 20, 21, 0), 3600)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg.activateWindow()
+        qtbot.waitUntil(dlg.isActiveWindow, timeout=3000)
+        releve = dlg.findChildren(_Releve)[0]
+        ligne = next(x for x in releve._lignes if x.game_id == ids[0])
+        repos = ligne.grab().toImage()
+        releve.setFocus(Qt.FocusReason.OtherFocusReason)
+        qtbot.waitUntil(releve.hasFocus, timeout=3000)
+        assert ligne.grab().toImage() == repos, "un focus posé sans le clavier ne dore rien"
+        releve.setProperty(PROPRIETE, True)
+        assert ligne.grab().toImage() != repos
+
+    def test_une_fleche_montre_le_choix_meme_sans_tab(self, qtbot, manager):
+        """Le focus posé à l'ouverture n'a pas de raison clavier : le choix bougeait sans se voir."""
+        from PyQt6.QtCore import Qt
+        from src.ui.focus_visible import PROPRIETE
+        _remplir(manager, jeux=2)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg.activateWindow()
+        qtbot.waitUntil(dlg.isActiveWindow, timeout=3000)
+        releve = dlg.findChildren(_Releve)[0]
+        releve.setFocus(Qt.FocusReason.OtherFocusReason)
+        qtbot.waitUntil(releve.hasFocus, timeout=3000)
+        qtbot.keyClick(releve, Qt.Key.Key_End)
+        assert releve.property(PROPRIETE)
+
+    def test_le_survol_ne_vaut_que_pour_une_ligne_cliquable(self, qtbot, manager):
+        from PyQt6.QtCore import QPointF
+        from PyQt6.QtGui import QEnterEvent
+        from PyQt6.QtWidgets import QApplication
+        ids = [e.game.id for e in manager.get_games()]
+        stats.enregistrer_session(ids[0], datetime(2026, 8, 20, 21, 0), 3600)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        releve = dlg.findChildren(_Releve)[0]
+        par_id = {x.game_id: x for x in releve._lignes}
+        entree = QEnterEvent(QPointF(1, 1), QPointF(1, 1), QPointF(1, 1))
+        repos = par_id[ids[0]].grab().toImage()
+        QApplication.sendEvent(par_id[ids[0]], entree)
+        assert par_id[ids[0]].grab().toImage() != repos
+        muette = par_id[ids[1]]
+        repos = muette.grab().toImage()
+        QApplication.sendEvent(muette, entree)
+        assert muette.grab().toImage() == repos
+
     def test_un_jeu_sans_rien_ne_se_choisit_pas(self, qtbot, manager):
         ids = [e.game.id for e in manager.get_games()]
         stats.enregistrer_session(ids[0], datetime(2026, 8, 20, 21, 0), 3600)
@@ -300,6 +366,43 @@ class TestSaga:
             def elidedText(self, texte, _mode, largeur):
                 return texte if largeur >= 15.4 else texte[0] + "…"
         assert mois._valeur(11, ArrondiA125())[2] == "3 h"
+
+    def test_une_voisine_plus_haute_ne_prete_pas_sa_colonne(self, qtbot):
+        """« 32 min » de novembre imprimé sur le corps de la barre d'octobre."""
+        cases = [(2026, m, 0) for m in range(1, 13)]
+        cases[10] = (2026, 11, 3 * 3600)
+        cases[11] = (2026, 12, 32 * 60)
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(310, mois.height())
+        assert mois._place_valeur(11)[0] == mois._colonne(11).left() - 3.0
+        assert mois._place_valeur(10)[1] > mois._colonne(10).right() + 3.0, "elle, à côté d'une plus basse"
+
+    def test_un_chiffre_qui_ne_tient_pas_ne_s_ecrit_pas(self, qtbot):
+        cases = [(2026, m, 0) for m in range(1, 13)]
+        cases[11] = (2026, 12, 3 * 3600)
+        mois = _Mois(cases)
+        qtbot.addWidget(mois)
+        mois.resize(310, mois.height())
+
+        class Etroit:
+            def horizontalAdvance(self, _texte):
+                return 500
+
+            def elidedText(self, texte, _mode, _largeur):
+                return texte[0] + "…"
+        assert mois._valeur(11, Etroit())[2] == ""
+
+    def test_le_total_est_la_somme_des_lignes_du_releve(self, qtbot, manager):
+        """Deux lignes à 2 min (90 s chacune) : le total dit 4, pas 3."""
+        ids = [e.game.id for e in manager.get_games()]
+        maintenant = datetime.now().replace(microsecond=0)
+        stats.enregistrer_session(ids[0], maintenant, 90)
+        stats.enregistrer_session(ids[1], maintenant, 90)
+        dlg = StatsDialog(manager)
+        qtbot.addWidget(dlg)
+        rendu = _labels(dlg)
+        assert rendu.count("4 min") == 1 and "3 min" not in rendu
 
     def test_deux_chiffres_voisins_ne_se_chevauchent_pas(self, qtbot):
         cases = [(2026, m, 3600) for m in range(1, 13)]

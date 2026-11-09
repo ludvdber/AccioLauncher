@@ -94,6 +94,7 @@ _FICHIERS = {
     "pinceau": "phosphor/paint-brush-bold.svg",
     "images": "phosphor/images-bold.svg",
     "appareil": "phosphor/camera-bold.svg",
+    "copier": "phosphor/copy-bold.svg",
     # Folio, depuis la fiche du jeu (2026-10-14).
     "folio": "phosphor/book-open-text-bold.svg",
     # Défis du Carnet (2026-10-26).

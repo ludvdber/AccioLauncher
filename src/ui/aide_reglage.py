@@ -20,7 +20,7 @@ _LARGEUR_FICHE = 330
 
 _BOUTON_STYLE = (
     "QPushButton { color: #b0b0c8; background: transparent; border: 1px solid #55556a;"
-    " border-radius: 9px; padding: 0px; font-weight: bold; }"
+    " border-radius: 9px; padding: 0px; margin: 5px; font-weight: bold; }"
     "QPushButton:hover { color: #e8c547; border-color: #d6a72c; }"
     "QPushButton[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; }"
 )
@@ -87,7 +87,9 @@ class BoutonAide(QPushButton):
         self._titre = titre
         self._corps = corps_html
         self.fiche: FicheAide | None = None
-        self.setFixedSize(18, 18)
+        # Le rond reste de 18 px (`margin` du style) ; le clic compte les 28 de la
+        # surface entière, au-dessus du plancher de 24 px de WCAG 2.5.8.
+        self.setFixedSize(28, 28)
         self.setFont(body_font(10))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(themed(_BOUTON_STYLE))

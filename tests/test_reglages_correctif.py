@@ -903,6 +903,7 @@ class TestRemiseALOrigine:
         qtbot.mouseClick(bascule, Qt.MouseButton.LeftButton)
         assert bascule.isChecked()
         assert bouton.isEnabled()
+        dlg._confirmer_origine = lambda _pages: True   # la vraie question : test_reglages_finitions
         bouton.click()
         assert not bascule.isChecked()
         assert rc.lire(dossier / "d3d9.ini", rc.REGLAGES["lissage"]).valeur is False

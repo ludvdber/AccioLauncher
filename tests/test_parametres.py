@@ -49,16 +49,17 @@ class TestDialogue:
     def test_le_scan_remplit_la_ligne_et_la_legende(self, dialogue):
         dialogue._on_scan_done(3, 9_800_000_000)
         assert dialogue._installed_label.text().startswith("3 jeux installés, ")
-        assert dialogue._legende_jeux.text().startswith("Vos jeux · ")
+        # Le poids est dit une fois, sur la ligne du dessus.
+        assert not [lbl.text() for lbl in dialogue.findChildren(composants.QLabel)
+                    if lbl.text().startswith("Vos jeux ·")]
         assert dialogue._barre_disque._jeux > 0
 
-    def test_le_pied_n_apparait_pas_sur_a_propos(self, dialogue, qtbot):
-        dialogue.show()
-        pied = next(lbl for lbl in dialogue.findChildren(composants.QLabel)
-                    if lbl.text().startswith("Chaque changement est enregistré"))
-        assert pied.isVisible()
-        dialogue._nav.setCurrentRow(4)
-        assert not pied.isVisible()
+    def test_plus_de_phrase_de_methode_en_pied(self, dialogue):
+        """« Échap pour revenir » doublait l'onglet du haut, et ne valait pas à la manette."""
+        for rang in range(dialogue._nav.count()):
+            dialogue._nav.setCurrentRow(rang)
+        textes = [lbl.text() for lbl in dialogue.findChildren(composants.QLabel)]
+        assert not [t for t in textes if "Échap" in t or "Appliqué immédiatement" in t]
 
     def test_la_ligne_de_redemarrage_attend_un_changement(self, dialogue, qtbot):
         dialogue.show()
@@ -123,3 +124,168 @@ class TestComposants:
         assert not ligne.description.isVisible()
         ligne.decrire("Une phrase")
         assert ligne.description.isVisible()
+
+
+def _un_jeu_installe(dialogue, monkeypatch, nombre=1):
+    from types import SimpleNamespace
+    from src.core.game_manager import GameState
+    entrees = [SimpleNamespace(state=GameState.INSTALLED, game=SimpleNamespace(id=f"jeu{i}"))
+               for i in range(nombre)]
+    monkeypatch.setattr(dialogue, "manager", SimpleNamespace(
+        get_games=lambda: entrees, get_game_path=lambda _id: None))
+
+
+class TestChangerLeDossier:
+    """Rien n'est déplacé : les jeux installés restent dans l'ancien dossier."""
+
+    def test_le_bouton_n_est_pas_l_action_mise_en_avant(self, dialogue):
+        from PyQt6.QtWidgets import QPushButton
+        changer = next(b for b in dialogue.findChildren(QPushButton) if b.text() == "Changer…")
+        assert changer.objectName() == "secondaire"
+
+    def test_annuler_ne_change_rien(self, dialogue, monkeypatch, tmp_path):
+        _un_jeu_installe(dialogue, monkeypatch, 8)
+        vu = {}
+        monkeypatch.setattr("src.ui.settings_panel.message",
+                            lambda _p, _i, _t, contenu, choix, defaut: vu.update(
+                                contenu=contenu, choix=choix, defaut=defaut) or 1)
+        avant = dialogue.config.install_path
+        ancien_scan = dialogue._scan_worker
+        dialogue.changer_dossier(tmp_path / "ailleurs")
+        assert dialogue.config.install_path == avant
+        assert dialogue._scan_worker is ancien_scan
+        assert "Vos 8 jeux" in vu["contenu"] and str(avant) in vu["contenu"]
+        assert vu["choix"] == ("Changer", "Annuler") and vu["defaut"] == 1
+
+    def test_confirmer_pose_le_dossier_et_relance_le_scan(self, dialogue, monkeypatch, tmp_path, qtbot):
+        _un_jeu_installe(dialogue, monkeypatch)
+        monkeypatch.setattr("src.ui.settings_panel.message", lambda *a, **k: 0)
+        ancien_scan = dialogue._scan_worker
+        with qtbot.waitSignal(dialogue.config_changed, timeout=1000):
+            dialogue.changer_dossier(tmp_path / "ailleurs")
+        assert dialogue.config.install_path == tmp_path / "ailleurs"
+        assert dialogue._path_label.text() == str(tmp_path / "ailleurs")
+        assert dialogue._scan_worker is not ancien_scan
+
+    def test_sans_jeu_installe_aucune_question(self, dialogue, monkeypatch, tmp_path):
+        def jamais(*_a, **_k):
+            raise AssertionError("rien à perdre : pas de question")
+        monkeypatch.setattr("src.ui.settings_panel.message", jamais)
+        dialogue.changer_dossier(tmp_path / "ailleurs")
+        assert dialogue.config.install_path == tmp_path / "ailleurs"
+
+    def test_le_meme_dossier_ne_demande_rien(self, dialogue, monkeypatch):
+        _un_jeu_installe(dialogue, monkeypatch)
+        def jamais(*_a, **_k):
+            raise AssertionError("rien ne change")
+        monkeypatch.setattr("src.ui.settings_panel.message", jamais)
+        dialogue.changer_dossier(dialogue.config.install_path)
+
+
+class TestBandesAnnonces:
+    @pytest.fixture
+    def page(self, dialogue, monkeypatch):
+        from types import SimpleNamespace
+        from src.ui import settings_panel
+        presentes = {"n": 3}
+        monkeypatch.setattr(dialogue, "_trailers", lambda: (1, 2, 3))
+        monkeypatch.setattr(settings_panel.trailer_store, "nombre_present", lambda _l: presentes["n"])
+        monkeypatch.setattr(settings_panel.trailer_store, "poids_disque", lambda: 1_100_000_000)
+        monkeypatch.setattr(settings_panel.trailer_store, "poids_a_telecharger", lambda _l: 400)
+        dialogue.construire_rubrique(1)
+        dialogue.supprimees = []
+        dialogue._store = SimpleNamespace(
+            is_busy=False, supprimer_tout=lambda: dialogue.supprimees.append(1), start=lambda _l: None)
+        dialogue.presentes = presentes
+        dialogue.config.trailers_optin = True
+        return dialogue
+
+    def test_supprimer_n_est_pas_le_bouton_or(self, page):
+        page._refresh_trailers()
+        assert page._btn_trailers.text() == "Supprimer"
+        assert page._btn_trailers.objectName() == "secondaire"
+        assert page._lbl_trailers.text().startswith("3 sur le disque (")
+        page.presentes["n"] = 1
+        page._refresh_trailers()
+        assert page._btn_trailers.objectName() == "principal"
+        assert page._lbl_trailers.text() == "1 sur 3"
+
+    def test_annuler_garde_les_bandes_annonces(self, page, monkeypatch):
+        vu = {}
+        monkeypatch.setattr("src.ui.settings_panel.message",
+                            lambda *a, **k: vu.update(k) or 1)
+        page._on_trailers_clicked()
+        assert page.supprimees == [] and page.config.trailers_optin is True
+        assert vu["choix"] == ("Supprimer", "Annuler") and vu["defaut"] == 1
+
+    def test_confirmer_supprime_et_dit_non(self, page, monkeypatch):
+        monkeypatch.setattr("src.ui.settings_panel.message", lambda *a, **k: 0)
+        page._on_trailers_clicked()
+        assert page.supprimees == [1] and page.config.trailers_optin is False
+
+
+class TestRevueDesParametres:
+    def test_une_seule_fleche_sur_les_listes(self):
+        """Sans `::drop-down`, le bouton natif restait sous le chevron peint."""
+        from src.ui.settings_panel import _COMBO_STYLE
+        assert "QComboBox::drop-down { border: none; width: 18px; }" in _COMBO_STYLE
+
+    def test_la_rubrique_dit_qu_elle_porte_le_son(self):
+        from src.ui.settings_panel import _RUBRIQUES
+        assert _RUBRIQUES[1][0] == "Son et image"
+
+    def test_une_carte_d_une_ligne_n_a_pas_de_surtitre(self, dialogue):
+        textes = {lbl.text() for lbl in dialogue.findChildren(composants.QLabel)}
+        assert "DOSSIER DES JEUX" in textes, "plusieurs lignes : le surtitre reste"
+        assert not textes & {"LANGUE", "SAUVEGARDES", "DÉCOUVRIR", "DÉSINSTALLER"}
+
+    def test_desinstaller_est_un_lien_discret(self, dialogue):
+        from PyQt6.QtWidgets import QPushButton
+        lien = next(b for b in dialogue.findChildren(QPushButton) if b.text() == "Désinstaller…")
+        assert lien.objectName() == "lienDiscret"
+        textes = {lbl.text() for lbl in dialogue.findChildren(composants.QLabel)}
+        assert "Accio Launcher" in textes and "Désinstaller Accio Launcher" not in textes
+
+    def test_revenir_a_une_copie_fond_dans_l_interrupteur(self, dialogue):
+        textes = {lbl.text() for lbl in dialogue.findChildren(composants.QLabel)}
+        assert "Revenir à une copie" not in textes
+        assert ("Une copie de chaque sauvegarde qui a changé, à restaurer depuis les "
+                "réglages du jeu.") in textes
+
+
+class TestToutLeSonCoupe:
+    """« Couper le son des vidéos » n'a plus d'effet quand tout est coupé."""
+
+    @pytest.fixture
+    def page(self, qtbot, tmp_path, monkeypatch):
+        from PyQt6.QtCore import QObject, pyqtSignal
+
+        class Fond(QObject):
+            son_coupe_change = pyqtSignal(bool)
+            son_coupe = True
+
+            def basculer_son(self):
+                self.son_coupe = not self.son_coupe
+                self.son_coupe_change.emit(self.son_coupe)
+
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        cfg = Config(install_path=tmp_path / "jeux", cache_path=tmp_path / "cache", langue="fr")
+        dlg = SettingsDialog(cfg, GameManager(cfg), fond=Fond())
+        qtbot.addWidget(dlg)
+        dlg.construire_rubrique(1)
+        yield dlg
+        dlg._shutdown_scan()
+
+    def test_grise_a_l_ouverture_et_valeur_intacte(self, page):
+        assert not page._ligne_mute.isEnabled() and page._ligne_mute.graphicsEffect() is not None
+        assert page._tgl_mute.isChecked() is page.config.mute_videos
+
+    def test_l_interrupteur_rend_la_ligne(self, page):
+        page._tgl_son._basculer()
+        assert page._ligne_mute.isEnabled() and page._ligne_mute.graphicsEffect() is None
+
+    def test_le_haut_parleur_de_la_barre_aussi(self, page):
+        page._fond.basculer_son()
+        assert page._ligne_mute.isEnabled()
+        page._fond.basculer_son()
+        assert not page._ligne_mute.isEnabled()

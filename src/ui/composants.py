@@ -9,12 +9,13 @@ import shutil
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFont, QPainter
+from PyQt6.QtGui import QColor, QFont, QIcon, QPainter
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from src.ui.fonts import body_font, cinzel
+from src.ui.icon_button import pixmap_icone
 from src.ui.theme import themed
 
 # Encres des pages, du plus lu au plus discret.
@@ -23,6 +24,8 @@ ENCRE_DOUCE = "#8f8db0"
 # Remontée le 2026-10-29 (audit, choix de Ludo) : #6f6d8e faisait 3,05 sur
 # `bg_card`, sous le seuil AA de 4,5. `test_contraste` tient le seuil.
 ENCRE_DISCRETE = "#8c8aa5"
+# L'icône d'une commande éteinte, l'encre du cadenas des Collections.
+ENCRE_ETEINTE = "#5d5b72"
 
 _STYLE = """
 QFrame#carte {
@@ -52,6 +55,11 @@ QPushButton#principal[focusClavier="true"]:focus,
 QPushButton#secondaire[focusClavier="true"]:focus {
     border: 2px solid #d6a72c; padding: 0 15px;
 }
+QPushButton#rond {
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 19px;
+}
+QPushButton#rond:hover, QPushButton#rond[focusClavier="true"]:focus { border-color: #d6a72c; }
+QPushButton#rond:disabled { border-color: rgba(255, 255, 255, 0.06); }
 """
 
 
@@ -173,6 +181,29 @@ def bouton(libelle: str, principal: bool = False) -> QPushButton:
     btn.setFont(police(13, gras=True))
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     return btn
+
+
+def icone_de_bouton(nom: str, taille: int, couleur: QColor | None = None) -> QIcon:
+    """Le pictogramme d'un bouton, avec sa version éteinte : celle que Qt fabrique
+    sortait aussi claire que l'allumée, (237, 237, 237) sur capture."""
+    icone = QIcon(pixmap_icone(nom, taille, couleur or QColor("#e6e4f0")))
+    icone.addPixmap(pixmap_icone(nom, taille, QColor(ENCRE_ETEINTE)), QIcon.Mode.Disabled)
+    return icone
+
+
+def rond(icone: str, libelle: str, action, bulle: str = "") -> QPushButton:
+    """Un bouton rond à icône seule, comme la barre des bandes-annonces (Ludo, 2026-11-08)."""
+    b = QPushButton()
+    b.setObjectName("rond")
+    b.setFixedSize(38, 38)
+    b.setIcon(icone_de_bouton(icone, 16))
+    b.setIconSize(QSize(16, 16))
+    b.setAutoDefault(False)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.setToolTip(bulle or libelle)
+    b.setAccessibleName(libelle)
+    b.clicked.connect(action)
+    return b
 
 
 class Carte(QFrame):

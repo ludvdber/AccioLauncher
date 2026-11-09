@@ -198,6 +198,7 @@ class TestFenetre:
     def test_retablir_l_origine(self, qtbot, dlg, conf):
         qtbot.mouseClick(dlg._controles_graph["graph_vsync"], Qt.MouseButton.LeftButton)
         assert "ForceVerticalSync                   = false" in conf.read_bytes().decode()
+        dlg._confirmer_origine = lambda _pages: True   # la vraie question : test_reglages_finitions
         dlg._bouton_reset.click()
         assert conf.read_bytes() == CONF.encode()
         assert dlg._controles_graph["graph_vsync"].isChecked()

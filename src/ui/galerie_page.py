@@ -1,9 +1,8 @@
 """La galerie des captures, en PAGE : les vignettes par mois, la capture choisie à droite.
 
 Maquette « Galerie, Discord et vitrine » validée par Ludo le 2026-10-14, avec
-deux notes de sa part : dire que F12 ne marche pas encore dans les trois
-premiers jeux (pour éviter des signalements inutiles), et que les plus belles
-images partagées pourront aller sur le site et servir à présenter le launcher.
+une note de sa part : les plus belles images partagées pourront aller sur le
+site et servir à présenter le launcher.
 
 « Partager sur Discord » ne publie rien : le launcher n'a aucun compte relié.
 Il copie l'image dans le presse-papiers et ouvre le salon #accio-medias
@@ -20,9 +19,10 @@ plusieurs secondes. Seule la capture choisie est lue en grand.
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
+from html import escape
 
-from PyQt6.QtCore import QDate, QLocale, QRectF, QSize, Qt, QTime, QTimer
-from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QImage, QImageReader, QPainter, QPixmap
+from PyQt6.QtCore import QDate, QLocale, QRectF, QSize, Qt, QTime, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QImage, QImageReader, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -38,7 +38,7 @@ from PyQt6.QtWidgets import (
 from src.core import galerie
 from src.core.i18n import get_language, tr
 from src.core.liens import DISCORD_MEDIAS_URL
-from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
+from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, feuille_de_style, police, rond, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
@@ -69,7 +69,7 @@ QPushButton#filtre {
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px;
     color: #a9a7c4; padding: 5px 12px;
 }
-QPushButton#filtre[vide="true"] { color: #8c8aa5; }
+QPushButton#filtre[vide="true"] { color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }
 QPushButton#filtre:hover { color: #f2f2f4; }
 QPushButton#filtre:checked {
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
@@ -103,6 +103,11 @@ def quand(capture: galerie.Capture) -> str:
     d = capture.quand
     heure = QLocale(get_language()).toString(QTime(d.hour, d.minute), QLocale.FormatType.ShortFormat)
     return f"{date_longue(d.strftime('%Y-%m-%d'))}, {heure}"
+
+
+def _compte(n: int) -> str:
+    """« 1 capture », « 3 captures » : l'infobulle d'une pastille."""
+    return tr("1 capture") if n == 1 else tr("{} captures").format(n)
 
 
 def _recadree(image: QImage, taille: QSize) -> QPixmap:
@@ -202,6 +207,21 @@ class _Vignette(QPushButton):
         p.end()
 
 
+class _Apercu(QLabel):
+    """L'aperçu de la capture choisie : un clic l'ouvre en grand."""
+
+    clique = pyqtSignal()
+
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:
+        if event is not None and event.button() == Qt.MouseButton.LeftButton:
+            self.clique.emit()
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent | None) -> None:
+        """Sans ça, Qt rejoue l'appui : un double-clic ouvrait l'image deux fois."""
+        if event is not None:
+            event.accept()
+
+
 class GaleriePage(QDialog):
     """Les captures de tous les jeux ; à droite, la choisie et ce qu'on peut en faire."""
 
@@ -293,16 +313,22 @@ class GaleriePage(QDialog):
         jeux = {g.id: g for g in self._jeux}
         for cle, nom, n in (("", tr("Tous"), len(self.captures)),
                             *((g.id, etiquettes[g.id], compte.get(g.id, 0)) for g in self._jeux)):
+            # Pas de chiffre sur la pastille (« VII · 2 0 » se lisait vingt) : le
+            # nombre est dans l'infobulle, et un zéro se dit par l'atténuation.
             if cle:
                 # Jaquette et année, comme au Carnet et aux Collections (2026-10-24).
-                filtre = pastille(jeux[cle], f"{nom}  {n}")
+                filtre = pastille(jeux[cle], nom)
             else:
-                filtre = QPushButton(f"{nom}  {n}")
+                filtre = QPushButton(nom)
                 filtre.setObjectName("filtre")
                 filtre.setCheckable(True)
                 filtre.setAutoDefault(False)
                 filtre.setFont(police(13))
                 filtre.setCursor(Qt.CursorShape.PointingHandCursor)
+            nom_entier = jeux[cle].name if cle else nom
+            # <qt> : une apostrophe échappée sans balise s'affichait en clair (&#x27;), Qt n'y voyant pas de texte riche.
+            filtre.setToolTip(f"<qt>{escape(nom_entier, quote=False)}{' · ' + escape(_compte(n), quote=False) if n else ''}</qt>")
+            filtre.setAccessibleName(f"{nom_entier}, {_compte(n)}" if n else nom_entier)
             filtre.setProperty("vide", n == 0)
             filtre.clicked.connect(lambda _c=False, c=cle: self.filtrer(c))
             self._groupe_filtres.addButton(filtre)
@@ -337,23 +363,18 @@ class GaleriePage(QDialog):
             lay.addWidget(bloc)
             self._mois.append((bloc, vignettes))
 
-        if not self.captures:
-            lay.addWidget(texte(tr("Pas encore de capture. Elles apparaîtront ici dès la "
-                                   "première."), 16, "#c9c7da", retour=True))
-            lay.addSpacing(18)
-
+        from src.ui.encyclopedie_page import EtatVide
+        self._vide = EtatVide("appareil")
+        lay.addWidget(self._vide, stretch=1)
+        self._vide.hide()
         lay.addStretch()
         note = QFrame()
         note.setObjectName("note")
         n = QVBoxLayout(note)
         n.setContentsMargins(16, 12, 16, 12)
         n.setSpacing(6)
-        n.addWidget(texte(tr("F12 en jeu, de La Coupe de Feu aux Reliques de la Mort. Rangées "
-                             "dans Images › Accio Launcher, jamais effacées avec un jeu."),
-                          13, "#c4c2da", retour=True))
-        n.addWidget(texte(tr("Les trois premiers jeux ne savent pas encore prendre de capture : "
-                             "F12 n'y fait rien pour l'instant. C'est connu, inutile de le "
-                             "signaler."), 13, ENCRE_DOUCE, retour=True))
+        n.addWidget(texte(tr("F12 en jeu. Rangées dans Images › Accio Launcher, jamais effacées "
+                             "avec un jeu."), 13, "#c4c2da", retour=True))
         lay.addWidget(note)
         return page
 
@@ -372,10 +393,14 @@ class GaleriePage(QDialog):
         lay.setContentsMargins(24, 28, 24, 22)
         lay.setSpacing(0)
 
-        self._apercu = QLabel()
+        # La visionneuse du système reste le seul moyen de voir l'image en grand.
+        self._apercu = _Apercu()
         self._apercu.setFixedSize(_APERCU_LARGEUR, _APERCU_LARGEUR * 9 // 16)
         self._apercu.setStyleSheet("background: #16172c; border-radius: 8px;")
         self._apercu.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._apercu.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._apercu.setToolTip(tr("Ouvrir l'image"))
+        self._apercu.clique.connect(self.ouvrir_image)
         lay.addWidget(self._apercu)
         lay.addSpacing(14)
         self._titre_jeu = QLabel("")
@@ -392,6 +417,10 @@ class GaleriePage(QDialog):
         self._partager = bouton(tr("Partager sur Discord"), principal=True)
         self._partager.setAutoDefault(False)
         self._partager.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        from src.ui.choix_jeux import espacee
+        logo, taille_logo = espacee(pixmap_icone("discord", 16), QSize(16, 16))
+        self._partager.setIcon(logo)
+        self._partager.setIconSize(taille_logo)
         self._partager.clicked.connect(self.partager)
         lay.addWidget(self._partager)
         lay.addSpacing(8)
@@ -401,22 +430,16 @@ class GaleriePage(QDialog):
         lay.addSpacing(8)
         # L'image en grand, dans la visionneuse du système : il manquait un
         # moyen de la REGARDER autrement qu'en vignette (Ludo, 2026-10-14).
-        self._ouvrir = bouton(tr("Ouvrir l'image"))
-        self._ouvrir.setAutoDefault(False)
-        self._ouvrir.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._ouvrir.clicked.connect(self.ouvrir_image)
-        lay.addWidget(self._ouvrir)
-        lay.addSpacing(8)
         ligne = QHBoxLayout()
-        ligne.setSpacing(8)
-        self._copier = bouton(tr("Copier l'image"))
-        self._copier.setAutoDefault(False)
-        self._copier.clicked.connect(self.copier)
+        ligne.setSpacing(10)
+        ligne.addStretch()
+        self._ouvrir = rond("plein_ecran", tr("Ouvrir l'image"), self.ouvrir_image)
+        ligne.addWidget(self._ouvrir)
+        self._copier = rond("copier", tr("Copier l'image"), self.copier)
         ligne.addWidget(self._copier)
-        self._dossier = bouton(tr("Ouvrir le dossier"))
-        self._dossier.setAutoDefault(False)
-        self._dossier.clicked.connect(self._ouvrir_dossier)
+        self._dossier = rond("dossier", tr("Ouvrir le dossier"), self._ouvrir_dossier)
         ligne.addWidget(self._dossier)
+        ligne.addStretch()
         lay.addLayout(ligne)
 
         lay.addStretch()
@@ -518,6 +541,11 @@ class GaleriePage(QDialog):
         # Aucune capture de ce jeu : l'aperçu et ses boutons parlaient encore de
         # celle d'un autre jeu (audit du 2026-11-02).
         visible = self.choisie_visible()
+        # Rien à montrer : une phrase au milieu, pas un aperçu vierge et ses boutons éteints.
+        self._vide.setVisible(visible is None)
+        self._vide.setText(tr("Pas encore de capture pour ce jeu.") if jeu and self.captures else
+                           tr("Pas encore de capture. Elles apparaîtront ici dès la première."))
+        self._cote_cadre.setVisible(visible is not None)
         if visible is None:
             self._montrer(None)
         elif visible != self.choisie:

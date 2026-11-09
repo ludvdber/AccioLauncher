@@ -94,8 +94,9 @@ def _etiquette_beta() -> QLabel:
 
 
 def _poser_beta(rangee: QHBoxLayout, reglage) -> None:
-    """L'étiquette, à côté du nom, si ce réglage est encore en essai."""
-    if reglage is not None and reglage.beta:
+    """L'étiquette, à côté du nom, si ce réglage est encore en essai. Pas sur
+    l'onglet Difficulté, tout entier en essai : sa pastille de tête le dit."""
+    if reglage is not None and reglage.beta and reglage.onglet != "difficulte":
         rangee.addWidget(_etiquette_beta(), alignment=Qt.AlignmentFlag.AlignVCenter)
 
 

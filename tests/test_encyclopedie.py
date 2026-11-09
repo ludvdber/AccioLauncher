@@ -102,12 +102,13 @@ class TestVue:
     def test_un_jeu_sans_fiche_le_dit(self, qtbot):
         from PyQt6.QtWidgets import QLabel
 
-        from src.ui.encyclopedie_page import VueEncyclopedie
+        from src.ui.encyclopedie_page import EtatVide, VueEncyclopedie
         vue = VueEncyclopedie(_Media(), encyclopedie.BESTIAIRE)
         qtbot.addWidget(vue)
         vue.montrer("hp7a")
         assert vue.fiches == []
-        assert "Aucune fiche pour ce jeu." in {lab.text() for lab in vue.findChildren(QLabel)}
+        assert "Pas encore de fiche pour ce jeu." in {lab.text() for lab in vue.findChildren(QLabel)}
+        assert vue.findChild(EtatVide) is not None
         vue.fermer()
 
     def test_changer_de_jeu_ne_laisse_aucune_ancienne_fiche(self, qtbot):
@@ -257,7 +258,8 @@ class TestModeles:
         assert vue.scene._commandes.isHidden()                  # sans mouvement, pas de bouton
         vue.fermer()
 
-    def test_le_bouton_animer_lance_et_fige_le_mouvement(self, qtbot, tmp_path, monkeypatch):
+    @staticmethod
+    def _vue_animee(qtbot, tmp_path, monkeypatch):
         from src.core import maillages_ue1
         from src.ui.encyclopedie_page import VueEncyclopedie
         triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
@@ -273,6 +275,36 @@ class TestModeles:
         qtbot.addWidget(vue)
         vue.montrer("hp1")
         qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=5000)
+        return vue
+
+    def test_choisir_un_mouvement_le_lance(self, qtbot, tmp_path, monkeypatch):
+        vue = self._vue_animee(qtbot, tmp_path, monkeypatch)
+        scene = vue.scene
+        liste = scene.mouvements
+        assert scene.modele.mouvement is None
+        liste.setCurrentIndex(liste.findData("Jump"))
+        assert scene.modele.mouvement == "Jump" and scene.bouton_animer.accessibleName() == "Figer"
+        scene.bouton_animer.click()
+        # Rechoisir la ligne déjà affichée : l'index ne bouge pas, le mouvement part quand même.
+        liste.activated.emit(liste.currentIndex())
+        assert scene.modele.mouvement == "Jump"
+        vue.fermer()
+
+    def test_la_rangee_des_mouvements_est_centree_et_plafonnee(self, qtbot, tmp_path, monkeypatch, mise_en_page_stable):
+        vue = self._vue_animee(qtbot, tmp_path, monkeypatch)
+        vue.resize(1800, 900)
+        vue.show()
+        qtbot.waitExposed(vue)
+        mise_en_page_stable(vue)
+        scene = vue.scene
+        liste, rond = scene.mouvements, scene.bouton_animer
+        assert liste.width() <= 320
+        milieu = (liste.geometry().left() + rond.geometry().right()) / 2
+        assert abs(milieu - scene._commandes.width() / 2) <= 2
+        vue.fermer()
+
+    def test_le_bouton_animer_lance_et_fige_le_mouvement(self, qtbot, tmp_path, monkeypatch):
+        vue = self._vue_animee(qtbot, tmp_path, monkeypatch)
         scene = vue.scene
         assert scene is not None and not scene._commandes.isHidden()
         # Traduits à l'écran, le nom du jeu en donnée ; le visage (« mouth_rest ») écarté.
@@ -281,14 +313,15 @@ class TestModeles:
         assert [liste.itemData(i) for i in range(liste.count())] == ["Jump", "breath"]
         assert liste.currentData() == "breath"                 # l'attente d'abord
         assert scene.modele.mouvement is None
+        assert not scene.bouton_animer.text(), "une icône, pas un mot"
         scene.bouton_animer.click()
-        assert scene.modele.mouvement == "breath" and scene.bouton_animer.text() == "Figer"
+        assert scene.modele.mouvement == "breath" and scene.bouton_animer.accessibleName() == "Figer"
         liste.setCurrentIndex(liste.findData("Jump"))          # changer en cours de route
         assert scene.modele.mouvement == "Jump"
         scene.bouton_animer.click()
-        assert scene.modele.mouvement is None and scene.bouton_animer.text() == "Animer"
+        assert scene.modele.mouvement is None and scene.bouton_animer.accessibleName() == "Animer"
         vue.choisir(vue.fiches[1])                              # une autre fiche : tout repart figé
-        assert scene.modele.mouvement is None and scene.bouton_animer.text() == "Animer"
+        assert scene.modele.mouvement is None and scene.bouton_animer.toolTip() == "Animer"
         vue.fermer()
 
 

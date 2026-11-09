@@ -102,10 +102,9 @@ PRESETS = (
     Preset("hardcore", "Hardcore",
            "Pour qui connaît le jeu par cœur : le plus dur qui reste jouable.", _HARDCORE),
     Preset("realiste", "Réaliste",
-           "Le jeu tel qu'il est sorti, mais la première mort termine la partie.",
-           _NORMAL, une_vie=True),
+           "Au niveau Normal.", _NORMAL, une_vie=True),
     Preset("impardonnable", "Impardonnable",
-           "Hardcore, et la première mort termine la partie.", _HARDCORE, une_vie=True),
+           "Au niveau Hardcore.", _HARDCORE, une_vie=True),
 )
 PAR_IDENT = {p.ident: p for p in PRESETS}
 
@@ -162,12 +161,15 @@ def courant(valeurs: Mapping[str, object], idents: Iterable[str]) -> str:
 
 def changements(preset: Preset, idents: Iterable[str]) -> tuple[tuple[str, str], ...]:
     """Ce que `preset` change dans ce jeu par rapport à Normal : (réglage, choix),
-    en mots affichables, dans l'ordre des réglages ; celui qu'il `exige` en tête
-    (« Harry invincible » pour Récit : c'est ce qui le définit)."""
+    en mots affichables, dans l'ordre où la page montre les réglages (la
+    difficulté propre du jeu d'abord) ; celui qu'il `exige` en tête (« Harry
+    invincible » pour Récit : c'est ce qui le définit)."""
     idents = frozenset(idents)
     normal = valeurs_pour(PAR_IDENT["normal"], idents)
     lignes = []
-    voulues = sorted(valeurs_pour(preset, idents).items(), key=lambda kv: kv[0] != preset.exige)
+    rangs = {ident: rang for rang, ident in enumerate(REGLAGES)}
+    voulues = sorted(valeurs_pour(preset, idents).items(),
+                     key=lambda kv: (kv[0] != preset.exige, kv[0] != NATIVE, rangs.get(kv[0], 0)))
     for ident, valeur in voulues:
         if normal.get(ident) == valeur:
             continue

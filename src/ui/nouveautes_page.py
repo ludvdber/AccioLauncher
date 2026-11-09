@@ -9,13 +9,14 @@ Une PAGE à la place de la bibliothèque (`pages.py`), comme Mes années : pas u
 fenêtre posée sur la fiche, qu'on fermerait sans la lire.
 """
 
-from PyQt6.QtCore import QEvent, QObject, Qt
-from PyQt6.QtGui import QFont, QLinearGradient, QPainter, QPaintEvent
+from PyQt6.QtCore import QEvent, QObject, QSize, Qt
+from PyQt6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -25,7 +26,6 @@ from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, NOTES_VERSIONS_URL
 from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
 from src.ui.composants import (
-    ENCRE_DOUCE,
     Rangee,
     bouton,
     feuille_de_style,
@@ -49,7 +49,12 @@ QFrame#annonce {
     background: rgba(214, 167, 44, 0.08); border: 2px solid rgba(214, 167, 44, 0.75);
     border-radius: 12px;
 }
-QFrame#filetOr { background: rgba(214, 167, 44, 0.14); border: none; }
+QPushButton#retour {
+    background: transparent; border: none; color: #a9a7c4;
+    text-align: left; padding: 4px 2px;
+}
+QPushButton#retour:hover { color: #f2f2f4; }
+QPushButton#retour[focusClavier="true"]:focus { color: #e8c547; }
 QLabel#toutesLesVersions { color: #a9a7c4; }
 """
 
@@ -209,21 +214,34 @@ class NouveautesPage(QDialog):
         zone = zone_defilable(self._contenu(apres_mise_a_jour))
         self.fondu = _FonduBas(zone)
         racine.addWidget(zone, stretch=1)
-        racine.addWidget(self._pied())
 
     def _contenu(self, apres_mise_a_jour: bool) -> QWidget:
         page = QWidget()
         page.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(page)
-        lay.setContentsMargins(_MARGES[0], _MARGES[1], _MARGES[2], 0)
+        lay.setContentsMargins(*_MARGES)
         lay.setSpacing(0)
+
+        # Le retour des autres pages, à la place d'un bouton « Aller à la
+        # bibliothèque » en bas à droite, sous l'onglet qui la soulignait déjà.
+        retour = QPushButton(tr("Bibliothèque"))
+        retour.setObjectName("retour")
+        retour.setFont(police(13))
+        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
+        retour.setIconSize(QSize(16, 16))
+        retour.setCursor(Qt.CursorShape.PointingHandCursor)
+        retour.setAutoDefault(False)
+        retour.clicked.connect(self.accept)
+        lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
+        lay.addSpacing(14)
 
         tete = QHBoxLayout()
         tete.setSpacing(24)
         gauche = QVBoxLayout()
         gauche.setSpacing(8)
-        gauche.addWidget(surtitre(tr("Mise à jour installée") if apres_mise_a_jour
-                                  else tr("Nouveautés")))
+        # Ouverte seule au premier lancement : il faut dire pourquoi.
+        if apres_mise_a_jour:
+            gauche.addWidget(surtitre(tr("Mise à jour installée")))
         titre = QLabel(tr("Accio Launcher {}").format(self.nouveautes.version))
         titre.setTextFormat(Qt.TextFormat.PlainText)
         titre.setFont(cinzel_decorative(24))
@@ -236,11 +254,6 @@ class NouveautesPage(QDialog):
             nom.setFont(cinzel(15, bold=True))
             nom.setStyleSheet(f"color: {current_theme().accent}; background: transparent;")
             gauche.addWidget(nom)
-        phrases = []
-        if self.nouveautes.depuis:
-            phrases.append(tr("Ce qui change depuis la {}.").format(self.nouveautes.depuis))
-        if phrases:
-            gauche.addWidget(texte(" ".join(phrases), 15, "#a9a7c4", retour=True))
         tete.addLayout(gauche, stretch=1)
         lien = QLabel(f'<a href="{NOTES_VERSIONS_URL}" style="color:#a9a7c4;">'
                       f'{tr("Toutes les versions")}</a>')
@@ -273,27 +286,4 @@ class NouveautesPage(QDialog):
             liste.layout().setHorizontalSpacing(48)
             lay.addWidget(liste)
         lay.addStretch()
-        lay.addSpacing(24)
         return page
-
-    def _pied(self) -> QWidget:
-        pied = QWidget()
-        pied.setStyleSheet("background: transparent;")
-        v = QVBoxLayout(pied)
-        v.setContentsMargins(_MARGES[0], 0, _MARGES[2], _MARGES[3])
-        v.setSpacing(18)
-        filet = QFrame()
-        filet.setObjectName("filetOr")
-        filet.setFixedHeight(1)
-        v.addWidget(filet)
-        h = QHBoxLayout()
-        h.setSpacing(24)
-        h.addWidget(texte(tr("Cette page revient dans Paramètres › À propos, en cliquant "
-                             "sur le numéro de version."), 14, ENCRE_DOUCE, retour=True),
-                    stretch=1)
-        aller = bouton(tr("Aller à la bibliothèque"), principal=True)
-        aller.setAutoDefault(False)
-        aller.clicked.connect(self.accept)
-        h.addWidget(aller)
-        v.addLayout(h)
-        return pied

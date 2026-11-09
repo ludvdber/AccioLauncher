@@ -60,9 +60,9 @@ from src.ui.composants import (
     surtitre,
 )
 from src.ui.editeur_touches import EditeurTouches
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import accent_qcolor, current as current_theme, themed
+from src.ui.theme import current as current_theme, themed
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import zone_defilable
 from src.ui.reglages_widgets import (  # réexportés
@@ -78,6 +78,7 @@ from src.ui.reglages_widgets import (  # réexportés
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     log,
     _ONGLETS,
+    _MARGES_PAGE,
     _COULEURS_COUT,
     _COULEUR_SE_VOIT,
     _COULEUR_NOTE,
@@ -95,11 +96,13 @@ _LARGEUR_RAIL = 260
 # large, la page Image passe d'elle-même en une colonne.
 _TAILLE_VOULUE = QSize(1320, 860)
 _TAILLE_MIN = QSize(900, 580)
-# Les marges de lecture d'une page.
-_MARGES_PAGE = (40, 28, 40, 28)
 # La page Image côte à côte au-dessus de ça : la colonne de gauche (affichage,
 # préréglages) et la carte des effets.
 _SEUIL_IMAGE = 860
+# Une hauteur commune aux en-têtes de cartes voisines : la légende de « Chaque
+# effet » (œil et points de 18 px) décalait sa carte de 3 px par rapport à la
+# colonne de gauche.
+_HAUTEUR_ENTETE = 18
 
 class GameSettingsDialog(RubriquesDuJeu, QDialog):
     """Fenêtre de réglages d'un jeu. Tout choix s'écrit AUSSITÔT.
@@ -198,7 +201,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             page.setContentsMargins(*_MARGES_PAGE)
             page.setSpacing(0)
             titre = QLabel(tr(libelle))
-            titre.setFont(cinzel_decorative(20))
+            # Cinzel simple : en décorative, le I initial d'« Image » se lit comme un 1.
+            titre.setFont(cinzel(20, bold=True))
             titre.setStyleSheet("color: #f4f2f8; background: transparent;")
             page.addWidget(titre)
             page.addSpacing(20)
@@ -236,7 +240,12 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         rail = QFrame()
         rail.setObjectName("rail")
         rail.setFixedWidth(_LARGEUR_RAIL)
-        lay = QVBoxLayout(rail)
+        cadre = QVBoxLayout(rail)
+        cadre.setContentsMargins(0, 0, 0, 0)
+        # Le contenu défile s'il ne tient pas (règle 52) : tassé, le rail coupait
+        # le nom du jeu dès 700 px de haut, un portable réglé à 150 %.
+        contenu = QWidget()
+        lay = QVBoxLayout(contenu)
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(4)
 
@@ -249,6 +258,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         retour.setIconSize(QSize(16, 16))
         retour.setCursor(Qt.CursorShape.PointingHandCursor)
         retour.setAutoDefault(False)
+        retour.setToolTip(tr("Échap pour revenir"))
         retour.clicked.connect(self.accept)
         lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(14)
@@ -303,34 +313,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             lay.addWidget(filet)
             lay.addSpacing(14)
             self._actions_du_rail(lay)
+        self._zone_rail = zone_defilable(contenu)
+        cadre.addWidget(self._zone_rail)
         return rail
-
-    def _pied(self) -> QFrame:
-        """Ce qui vaut pour toute la fenêtre : quand c'est pris en compte, comment
-        revenir, et la remise à l'origine."""
-        pied = QFrame()
-        pied.setObjectName("pied")
-        pied.setMinimumHeight(56)
-        h = QHBoxLayout(pied)
-        h.setContentsMargins(_MARGES_PAGE[0], 10, _MARGES_PAGE[2], 10)
-        h.setSpacing(10)
-        info = QLabel()
-        info.setPixmap(pixmap_icone("infos", 18, accent_qcolor()))
-        info.setStyleSheet("background: transparent;")
-        h.addWidget(info)
-        morceaux = []
-        if self._correctif_actif() or self._conf_graph is not None or self.game.resolution is not None:
-            morceaux.append(tr("Pris en compte au prochain lancement du jeu."))
-        morceaux.append(tr("Échap pour revenir à la fiche."))
-        self._pied_notes = QLabel("  ·  ".join(morceaux))
-        self._pied_notes.setTextFormat(Qt.TextFormat.PlainText)
-        self._pied_notes.setWordWrap(True)
-        self._pied_notes.setFont(police(13))
-        self._pied_notes.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
-        h.addWidget(self._pied_notes, stretch=1)
-        if self._bouton_reset is not None:
-            h.addWidget(self._bouton_reset)
-        return pied
 
     # ── Les pages ──
 
@@ -374,7 +359,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             return True
         if onglet == "jeu":
             rempli = self._section_demarrage(corps)
-            if self._section_correctif(corps, "jeu", titre=tr("Dans le jeu")):
+            if self._section_correctif(corps, "jeu", titre=tr("En arrière-plan")):
                 rempli = True
             return self._section_captures(corps) or rempli
         if onglet == "difficulte":
@@ -407,7 +392,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if qualite:
             self._prereglages = reglages_correctif.prereglages_du_jeu(qualite)
             if self._prereglages:
-                self._section(colonne, surtitre(tr("Qualité d'image")), self._cartes_prereglages())
+                self._section(colonne, self._surtitre_cale(tr("Qualité d'image")),
+                              self._cartes_prereglages())
             droite = QWidget()
             droite.setStyleSheet("background: transparent;")
             v = QVBoxLayout(droite)
@@ -434,6 +420,14 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._bouton_origine()
         return True
 
+    @staticmethod
+    def _surtitre_cale(titre: str) -> QLabel:
+        """Un surtitre de la hauteur de l'en-tête à légende : leurs cartes voisines
+        commencent à la même ligne."""
+        entete = surtitre(titre)
+        entete.setMinimumHeight(_HAUTEUR_ENTETE)
+        return entete
+
     def _entete_effets(self, titre: str) -> QWidget:
         """Le surtitre, et la légende des repères au bout de la ligne."""
         entete = QWidget()
@@ -447,7 +441,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         oeil.setPixmap(pixmap_icone("oeil", 18, QColor(_COULEUR_SE_VOIT)))
         oeil.setStyleSheet("background: transparent;")
         h.addWidget(oeil)
-        h.addWidget(self._petit(tr("se voit")))
+        h.addWidget(self._petit(tr("le plus visible")))
         h.addSpacing(12)
         for niveau in (1, 2, 3):
             h.addWidget(_Points(niveau))
@@ -505,7 +499,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if reglage.se_voit:
                 paragraphes.append(f'<span style="color:{_COULEUR_SE_VOIT}">'
                                    f"{e(tr('Se voit nettement à l’écran.'))}</span>")
-            paragraphes += [e(_texte_beta())] if reglage.beta else []
+            # L'onglet Difficulté le dit une fois, en tête : pas à chaque fiche.
+            paragraphes += [e(_texte_beta())] if reglage.beta and reglage.onglet != "difficulte" else []
             declares = {r.ident for r in self._reglages}
 
             def deja_dit(autre) -> bool:
@@ -585,7 +580,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         for reglage in reglages:
             self._controle(carte, ini, reglage)
         self._egaliser(carte)
-        self._section(corps, surtitre(titre) if titre else None, carte)
+        self._section(corps, self._surtitre_cale(titre) if titre else None, carte)
         self._maj_dependances()
         return True
 
@@ -690,7 +685,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         """« Rétablir les réglages d'origine » : ceux de l'ini tel qu'il était avant
         la première retouche du lanceur (demandé par Ludo, 2026-09-28 — surtout
         maintenant que les couleurs se règlent). Au pied : il vaut pour toutes
-        les pages, image, commandes et performances.
+        les pages qui portent un réglage du correctif, d'où la confirmation.
         """
         if self._ini is None or not self._ini.is_file():
             return
@@ -699,11 +694,16 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         btn.setToolTip(tr("Ceux du jeu tel qu'il a été installé. "
                           "Rien n'a encore été changé depuis le lanceur."))
         if btn.isEnabled():
-            btn.setToolTip(tr("Remet image, commandes et performances comme à "
-                              "l'installation du jeu."))
+            btn.setToolTip(self._infobulle_origine())
         btn.clicked.connect(self._remettre_origine)
 
+    def _infobulle_origine(self) -> str:
+        return tr("Pages remises à leur état d'origine : {}.").format(
+            self._pages_remises(r.onglet for r in self._reglages))
+
     def _remettre_origine(self) -> None:
+        if not self._confirmer_origine(self._pages_remises(r.onglet for r in self._reglages)):
+            return
         try:
             reglages_correctif.remettre_origine(self._ini, self._reglages)
         except OSError:
@@ -720,6 +720,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._maj_dependances()
         self._maj_prereglage()
         self._erreur.hide()
+        self._annoncer_remise()
 
     def _remettre_controle(self, widget, reglage) -> None:
         """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
@@ -883,8 +884,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _apres_ecriture(self) -> None:
         """Ce que change toute écriture réussie : le bouton de remise à l'origine
         (la première retouche vient de garder l'ini d'origine), et l'erreur passée."""
-        if self._bouton_reset is not None and not self._bouton_reset.isEnabled():
+        if self._bouton_reset is not None and self._conf_graph is None and not self._bouton_reset.isEnabled():
             self._bouton_reset.setEnabled(reglages_correctif.a_une_origine(self._ini))
-            self._bouton_reset.setToolTip(tr("Remet image, commandes et performances "
-                                             "comme à l'installation du jeu."))
+            self._bouton_reset.setToolTip(self._infobulle_origine())
         self._erreur.hide()

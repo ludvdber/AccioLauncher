@@ -203,7 +203,10 @@ class _Mois(QWidget):
         texte = _duree_courte(self._cases[i][2])
         largeur = min(fm.horizontalAdvance(texte) + 4.0, droite - gauche)
         x = min(max(self._colonne(i).center().x() - largeur / 2, gauche), droite - largeur)
-        return x, largeur, fm.elidedText(texte, Qt.TextElideMode.ElideRight, int(largeur))
+        # Un chiffre qui ne tient pas ne s'écrit pas : l'infobulle le dit en
+        # entier, et « 3… » ne dit rien.
+        vu = fm.elidedText(texte, Qt.TextElideMode.ElideRight, int(largeur))
+        return x, largeur, vu if vu == texte else ""
 
     def _place_valeur(self, i: int) -> tuple[float, float]:
         """Bornes gauche et droite du chiffre posé au-dessus de la barre `i`.
@@ -221,14 +224,16 @@ class _Mois(QWidget):
         return max(0.0, gauche), min(float(self.width()), droite)
 
     def _voisine_libre(self, i: int, j: int) -> bool:
-        """La voisine `j` prête la moitié de sa colonne : sans partie, ou son
-        chiffre à une autre HAUTEUR que celui de `i`. Octobre, dernier et collé
-        au bord, lisait « 3… » à côté d'un septembre plus bas (2026-10-24)."""
+        """La voisine `j` prête la moitié de sa colonne : sans partie, ou plus
+        BASSE que `i` d'au moins un chiffre. Octobre, dernier et collé au bord,
+        lisait « 3… » à côté d'un septembre plus bas (2026-10-24). Jamais une
+        voisine plus haute : sa barre est à cet endroit, et « 32 min » s'imprimait
+        sur le corps d'octobre (2026-11-09)."""
         haut_j = self._haut_barre(j)
         haut_i = self._haut_barre(i)
         if haut_j is None or haut_i is None:
             return True
-        return abs(haut_i - haut_j) >= QFontMetrics(self._police()).height() + 4
+        return haut_j - haut_i >= QFontMetrics(self._police()).height() + 4
 
     def _noms(self, fm: QFontMetrics) -> list[str]:
         """« nov. déc. janv. 26 … », ou les initiales si UNE seule ne tient pas.

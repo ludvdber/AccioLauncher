@@ -66,9 +66,6 @@ QFrame#filetSection {
 }
 """
 
-# Les jeux UE1 relisent leurs fichiers au lancement ; HP5 et HP6, dans la seconde.
-_EN_DIRECT = {"hp5", "hp6"}
-
 
 def _pastille(contenu: str, encre: str, bord: str) -> QLabel:
     """« BÊTA », « BIENTÔT » : une capitale en Cinzel dans une gélule."""
@@ -300,7 +297,7 @@ def _titre_section(contenu: str) -> QWidget:
 
 
 class PanneauDifficulte(QWidget):
-    """Le haut de l'onglet Difficulté : à quand ça compte, le cadran, les
+    """Le haut de l'onglet Difficulté : ce qui ne change pas, le cadran, les
     presets, l'en-tête « Sur mesure ». `choisi` part après l'écriture d'un
     preset (identifiant, réglages qui n'ont PAS pu l'être)."""
 
@@ -357,11 +354,13 @@ class PanneauDifficulte(QWidget):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(10)
         v.addStretch()
-        quand = (tr("Change à tout moment, partie en cours comprise.") if self.game.id in _EN_DIRECT
-                 else tr("Compte au prochain lancement du jeu."))
-        v.addWidget(texte(quand + " " + tr("Vos sauvegardes ne changent pas."), 15, _DOUX, retour=True))
-        v.addWidget(_pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)"),
-                    alignment=Qt.AlignmentFlag.AlignLeft)
+        # Le « quand » est au pied (`_noter_pied`), pour chaque onglet : le redire
+        # ici le mettait deux fois à l'écran.
+        v.addWidget(texte(tr("Vos sauvegardes ne changent pas."), 15, _DOUX, retour=True))
+        self.pastille_beta = _pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
+        self.pastille_beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas "
+                                         "se signale sur le Discord du projet."))
+        v.addWidget(self.pastille_beta, alignment=Qt.AlignmentFlag.AlignLeft)
         v.addStretch()
         return bloc
 
@@ -392,8 +391,6 @@ class PanneauDifficulte(QWidget):
         filet.setFixedHeight(1)
         tete.addWidget(filet, stretch=1)
         v.addLayout(tete)
-        v.addWidget(texte(tr("Chaque réglage à votre goût, un par un : un preset les règle tous d'un geste."),
-                          14, _DOUX, retour=True))
         return bloc
 
     def bloc_une_seule_vie(self) -> QWidget | None:

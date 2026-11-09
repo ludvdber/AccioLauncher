@@ -136,6 +136,7 @@ QFrame#depannage {
 }
 QPushButton#copierRapport {
     background: transparent; border: none; color: #d6a72c; padding: 4px 2px;
+    text-align: right;
 }
 QPushButton#copierRapport:hover { color: #e8c547; }
 QPushButton#copierRapport[focusClavier="true"]:focus { border-bottom: 2px solid #d6a72c; }
@@ -370,7 +371,8 @@ def _bouton_diagnostic(manager) -> QPushButton:
     btn.setFont(police(13, gras=True))
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     # La confirmation est plus longue que le libellé : le bouton ne doit pas
-    # changer de largeur sous le curseur.
+    # changer de largeur sous le curseur. Le libellé court se cale à droite
+    # (`text-align`) : il finit au bord, comme les autres actions des Paramètres.
     confirmation = tr("Copié. Ctrl+V sur le Discord joint le rapport.")
     fm = btn.fontMetrics()
     btn.setMinimumWidth(max(fm.horizontalAdvance(libelle),

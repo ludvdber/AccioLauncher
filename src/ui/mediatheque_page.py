@@ -30,7 +30,7 @@ from html import escape
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QImage, QPainter
+from PyQt6.QtGui import QColor, QIcon, QImage, QPainter, QTextOption
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -49,11 +49,13 @@ from PyQt6.QtWidgets import (
 from src.core import discographie, encyclopedie
 from src.core.i18n import tr, trn
 from src.ui import ecran_video_gpu
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, police, surtitre, texte
+from src.ui.composants import (
+    ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, icone_de_bouton, police, rond, surtitre, texte,
+)
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.cinema_plein_ecran import PleinEcran
 from src.ui.disque import Disque
-from src.ui.encyclopedie_page import VueEncyclopedie
+from src.ui.encyclopedie_page import EtatVide, VueEncyclopedie
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import CINEMATIQUE, MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer, cle, decouper
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -82,6 +84,7 @@ QPushButton#rubrique, QPushButton#filtre {
     color: #c9c7da; padding: 6px 16px;
 }
 QPushButton#filtre { border-radius: 13px; padding: 5px 13px; }
+QPushButton#filtre[vide="true"] { color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }
 QPushButton#rubrique:hover, QPushButton#filtre:hover { color: #f2f2f4; }
 QPushButton#rubrique:checked, QPushButton#filtre:checked {
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
@@ -97,11 +100,7 @@ QFrame#carteJeu[modele="true"][focusClavier="true"]:focus { border-color: #f0d06
 QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }
-QFrame#ligne:hover { background: rgba(214, 167, 44, 0.05); }
-QPushButton#rond {
-    background: transparent; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 19px;
-}
-QPushButton#rond:hover, QPushButton#rond[focusClavier="true"]:focus { border-color: #d6a72c; }
+QFrame#ligne[ouverte="true"]:hover { background: rgba(214, 167, 44, 0.05); }
 QPushButton#lecture { background: #d6a72c; border: none; border-radius: 25px; }
 QPushButton#lecture:hover, QPushButton#lecture[focusClavier="true"]:focus { background: #e8bd4a; }
 QPushButton#lecture:disabled { background: rgba(214, 167, 44, 0.35); }
@@ -128,26 +127,8 @@ QSlider::sub-page:horizontal { background: #d6a72c; border-radius: 2px; }
 QSlider::handle:horizontal {
     width: 14px; height: 14px; margin: -5px 0; border-radius: 7px; background: #f2e6c4;
 }
+QSlider::handle:horizontal:disabled { background: #5d5b72; }
 """
-
-
-def _icone(nom: str, taille: int, couleur: QColor | None = None) -> QIcon:
-    return QIcon(pixmap_icone(nom, taille, couleur or QColor("#e6e4f0")))
-
-
-def _rond(icone: str, libelle: str, action, bulle: str = "") -> QPushButton:
-    """Un bouton rond à icône seule, comme la barre des bandes-annonces (Ludo, 2026-11-08)."""
-    b = QPushButton()
-    b.setObjectName("rond")
-    b.setFixedSize(38, 38)
-    b.setIcon(_icone(icone, 16))
-    b.setIconSize(QSize(16, 16))
-    b.setAutoDefault(False)
-    b.setCursor(Qt.CursorShape.PointingHandCursor)
-    b.setToolTip(bulle or libelle)
-    b.setAccessibleName(libelle)
-    b.clicked.connect(action)
-    return b
 
 
 def _transparent(widget: QWidget) -> QWidget:
@@ -247,11 +228,16 @@ def _cadenas() -> QLabel:
     return cadenas
 
 
+def _icone_lire(courante: bool) -> QIcon:
+    """Discrète sur chaque ligne : l'or ne désigne que celle qui joue."""
+    return icone_de_bouton("play", 14, accent_qcolor() if courante else QColor("#a9a7c4"))
+
+
 def _bouton_lire(libelle: str, action) -> QPushButton:
     b = QPushButton()
     b.setObjectName("petit")
     b.setFixedSize(32, 32)
-    b.setIcon(_icone("play", 14, accent_qcolor()))
+    b.setIcon(_icone_lire(False))
     b.setIconSize(QSize(14, 14))
     b.setCursor(Qt.CursorShape.PointingHandCursor)
     b.setAccessibleName(libelle)
@@ -259,8 +245,10 @@ def _bouton_lire(libelle: str, action) -> QPushButton:
     return b
 
 
-def _message(contenu: str) -> QLabel:
-    return texte(contenu, 15, "#c9c7da", retour=True)
+def _ecrire(libelle: QLabel, contenu: str) -> None:
+    """Un libellé vide ne garde pas sa hauteur."""
+    libelle.setText(contenu)
+    libelle.setVisible(bool(contenu))
 
 
 def _poids_vgmstream() -> str:
@@ -329,8 +317,8 @@ class _PointNouveau(QWidget):
 
 
 class _Jeux(QWidget):
-    """Les jeux en pastilles, communs aux deux rubriques ; « 2 nouveaux » et le
-    point or sur ceux qui en ont, dans la rubrique regardée."""
+    """Les jeux en pastilles, communs aux rubriques : le point or sur ceux qui ont
+    du nouveau dans la rubrique regardée, atténuées si elle n'y a rien."""
 
     choisi = pyqtSignal(str)
 
@@ -378,13 +366,25 @@ class _Jeux(QWidget):
             return
         n = len(self._media.nouveaux(jeu, self.rubrique)) if self.rubrique in (MUSIQUE, CINEMATIQUES) else 0
         self._points[jeu].setVisible(bool(n))
-        nom = self._etiquettes.get(jeu, self._media.nom(jeu))
-        # Le chiffre seul sur la pastille : « 130 nouveaux » sur chacune faisait
-        # passer les jeux sur deux lignes ; le mot est dans l'infobulle.
-        b.setText(f"{nom}  ·  {n}" if n else nom)
+        # Le point or dit qu'il y a du nouveau, l'infobulle combien : un chiffre
+        # collé au numéro du jeu se lisait « VII · 2 0 ».
+        b.setText(self._etiquettes.get(jeu, self._media.nom(jeu)))
         infobulle = escape(self._media.nom(jeu))
         b.setToolTip(f"{infobulle} · {escape(_nouveaux(n))}" if n else infobulle)
         b.setAccessibleName(f"{self._media.nom(jeu)}, {_nouveaux(n)}" if n else self._media.nom(jeu))
+        vide = self._sans_contenu(jeu)
+        if b.property("vide") != vide:
+            b.setProperty("vide", vide)
+            _repolir(b)
+
+    def _sans_contenu(self, jeu: str) -> bool:
+        """La rubrique ouverte n'a rien à montrer pour ce jeu."""
+        media = self._media
+        if self.rubrique == MUSIQUE:
+            return not media.morceaux(jeu)
+        if self.rubrique == CINEMATIQUES:
+            return not any(media.a_la_cinematique(jeu, c.fichier) for c in media.cinematiques(jeu))
+        return self.rubrique != CAPTURES and not encyclopedie.fiches(self.rubrique, jeu)
 
 
 class _LigneMorceau(QFrame):
@@ -395,6 +395,7 @@ class _LigneMorceau(QFrame):
         super().__init__()
         self.setObjectName("ligne")
         self.cle = cle(jeu, morceau.fichier)
+        self.setProperty("ouverte", ouvert)
         self.setMinimumHeight(44)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(8, 3, 8, 3)
@@ -406,6 +407,7 @@ class _LigneMorceau(QFrame):
         self._ecouter: QPushButton | None = None
         self._fond: QLabel | None = None
         if ouvert:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
             self._ecouter = _bouton_lire(tr("Écouter {}").format(morceau.titre),
                                          lambda: page.ecouter(self.cle))
             lay.addWidget(self._ecouter)
@@ -420,7 +422,7 @@ class _LigneMorceau(QFrame):
             enregistrer = QPushButton()
             enregistrer.setObjectName("discret")
             enregistrer.setFixedSize(32, 32)
-            enregistrer.setIcon(_icone("telechargement", 16, QColor("#a9a7c4")))
+            enregistrer.setIcon(icone_de_bouton("telechargement", 16, QColor("#a9a7c4")))
             enregistrer.setIconSize(QSize(16, 16))
             enregistrer.setCursor(Qt.CursorShape.PointingHandCursor)
             enregistrer.setToolTip(tr("Enregistrer le morceau"))
@@ -432,12 +434,20 @@ class _LigneMorceau(QFrame):
             lay.addWidget(_Elide(tr("Morceau à découvrir"), 15, ENCRE_DISCRETE, italique=True), stretch=1)
             lay.addWidget(texte(_texte_seuil(morceau.seuil), 13, ENCRE_DOUCE))
 
+    def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt)
+        """Toute la ligne ouverte s'écoute, comme une fiche se choisit d'un clic."""
+        if self._ecouter is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._ecouter.click()
+            return
+        super().mousePressEvent(event)
+
     def marquer(self, courante: bool, fond: bool) -> None:
         if bool(self.property("courante")) != courante:
             self.setProperty("courante", courante)
             _repolir(self)
             if self._ecouter is not None:
                 self._ecouter.setProperty("courante", courante)
+                self._ecouter.setIcon(_icone_lire(courante))
                 _repolir(self._ecouter)
         if self._fond is not None:
             self._fond.setVisible(fond)
@@ -451,6 +461,7 @@ class _VueMusique(QWidget):
         self._media = media
         self._fond = media.fond
         self._jeu = ""
+        self._lisible = False          # le jeu affiché a des morceaux qu'on peut lancer
         self._affichee = False
         self._lignes: list[_LigneMorceau] = []
         self._dossier_enregistre = None
@@ -516,7 +527,8 @@ class _VueMusique(QWidget):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(24, 18, 24, 18)
         lay.setSpacing(0)
-        lay.addWidget(surtitre(tr("En cours")))
+        self._surtitre = surtitre(tr("En cours"))
+        lay.addWidget(self._surtitre)
         lay.addSpacing(12)
         self._disque = Disque(_DISQUE, fond_scene="#08081a")      # le fond du cadre `#platine`
         lay.addWidget(self._disque, alignment=Qt.AlignmentFlag.AlignHCenter)
@@ -540,16 +552,16 @@ class _VueMusique(QWidget):
         commandes = QHBoxLayout()
         commandes.setSpacing(10)
         commandes.addStretch()
-        self._precedent = _rond("precedent", tr("Morceau précédent"), lambda: self._sauter(-1))
+        self._precedent = rond("precedent", tr("Morceau précédent"), lambda: self._sauter(-1))
         commandes.addWidget(self._precedent)
         self._lecture = QPushButton()
         self._lecture.setObjectName("lecture")
         self._lecture.setFixedSize(50, 50)
         self._lecture.setIconSize(QSize(20, 20))
         self._lecture.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._lecture.clicked.connect(self._fond.basculer_pause)
+        self._lecture.clicked.connect(self._lire)
         commandes.addWidget(self._lecture)
-        self._suivant = _rond("suivant", tr("Morceau suivant"), lambda: self._sauter(1))
+        self._suivant = rond("suivant", tr("Morceau suivant"), lambda: self._sauter(1))
         commandes.addWidget(self._suivant)
         commandes.addStretch()
         lay.addLayout(commandes)
@@ -558,13 +570,13 @@ class _VueMusique(QWidget):
         # Enregistrer et Fond sonore côte à côte : la platine tenait sur deux écrans.
         actions = QHBoxLayout()
         actions.setSpacing(8)
-        self._enregistrer = _rond("telechargement", tr("Enregistrer ce morceau"),
+        self._enregistrer = rond("telechargement", tr("Enregistrer ce morceau"),
                                   lambda: self.enregistrer(self._fond.morceau))
         actions.addWidget(self._enregistrer)
         self._bouton_fond = bouton(tr("Fond sonore"))
         self._bouton_fond.setCheckable(True)
         self._bouton_fond.setAutoDefault(False)
-        self._bouton_fond.setIcon(_icone("musique", 16))
+        self._bouton_fond.setIcon(icone_de_bouton("musique", 16))
         self._bouton_fond.setIconSize(QSize(16, 16))
         self._bouton_fond.clicked.connect(self._basculer_fond)
         actions.addWidget(self._bouton_fond, stretch=1)
@@ -610,13 +622,12 @@ class _VueMusique(QWidget):
         lay = QVBoxLayout(colonne)
         lay.setContentsMargins(32, 18, 40, 0)
         lay.setSpacing(0)
-        self._vide = _message("")
-        self._vide.hide()
-        lay.addWidget(self._vide)
         self._bouton_lecteur = bouton("", principal=True)
         self._bouton_lecteur.clicked.connect(self._telecharger_lecteur)
+        self._vide = EtatVide("musique", action=self._bouton_lecteur)
         self._bouton_lecteur.hide()
-        lay.addWidget(self._bouton_lecteur, alignment=Qt.AlignmentFlag.AlignLeft)
+        self._vide.hide()
+        lay.addWidget(self._vide, stretch=1)
 
         self._carte = QFrame()
         self._carte.setObjectName("carteJeu")
@@ -654,8 +665,6 @@ class _VueMusique(QWidget):
         self._credit_jeu = texte("", 12, ENCRE_DISCRETE, retour=True)
         self._credit_jeu.setContentsMargins(0, 8, 0, 14)
         lay.addWidget(self._credit_jeu)
-        self._stretch_vide = QWidget()
-        lay.addWidget(self._stretch_vide, stretch=1)
         return colonne
 
     # ── Le jeu montré ──
@@ -666,10 +675,10 @@ class _VueMusique(QWidget):
         morceaux = media.morceaux(jeu)
         a_de_la_musique = jeu in {g.id for g in media.jeux(MUSIQUE)}
         attend = a_de_la_musique and media.attend_vgmstream(jeu)
+        self._lisible = a_de_la_musique and not attend
         for w in (self._carte, self._zone, self._credit_jeu):
-            w.setVisible(a_de_la_musique and not attend)
-        self._vide.setVisible(not a_de_la_musique or attend)
-        self._stretch_vide.setVisible(not a_de_la_musique or attend)
+            w.setVisible(self._lisible)
+        self._vide.setVisible(not self._lisible)
         self._bouton_lecteur.setVisible(attend)
         self._lignes = []
         if attend:
@@ -687,7 +696,7 @@ class _VueMusique(QWidget):
         if not a_de_la_musique:
             self._paquets.remplir([])
             self._vide.setText(
-                tr("La musique de ce jeu n'est pas encore lue par le launcher.") if jeu
+                tr("Pas encore de musique pour ce jeu.") if jeu
                 else tr("Installez l'un des six premiers jeux pour écouter sa musique ici."))
             self._rafraichir()
             return
@@ -739,10 +748,19 @@ class _VueMusique(QWidget):
     def ecouter(self, cle_morceau: str) -> None:
         self._fond.ecouter(cle_morceau)
 
+    def _lire(self) -> None:
+        """Pause ou reprise ; au repos, le premier morceau ouvert du jeu affiché."""
+        if decouper(self._fond.morceau) is None:
+            self._sauter(1)
+        else:
+            self._fond.basculer_pause()
+
+    def _ouverts(self, jeu: str) -> list[str]:
+        return [cle(jeu, m.fichier) for m in self._media.morceaux(jeu) if self._media.ouvert(jeu, m.seuil)]
+
     def _sauter(self, pas: int) -> None:
         courant = decouper(self._fond.morceau)
-        jeu = courant[0] if courant is not None else self._jeu
-        liste = [cle(jeu, m.fichier) for m in self._media.morceaux(jeu) if self._media.ouvert(jeu, m.seuil)]
+        liste = self._ouverts(courant[0] if courant is not None else self._jeu)
         if not liste:
             return
         pos = liste.index(self._fond.morceau) if self._fond.morceau in liste else -pas
@@ -786,16 +804,19 @@ class _VueMusique(QWidget):
         else:
             jeu = self._jeu
             self._disque.poser(jeu, self._media.jaquette(jeu) if jeu else None)
-            self._titre.setText(tr("Choisissez un morceau"))
-            self._sous_titre.setText(tr("Le bouton à côté de chaque titre le fait jouer."))
             self._credit.setText("")
         self._disque.set_tourne(joue)
-        self._lecture.setIcon(_icone("pause" if joue else "play", 20, QColor("#070712")))
+        self._lecture.setIcon(icone_de_bouton("pause" if joue else "play", 20, QColor("#070712")))
         self._lecture.setAccessibleName(tr("Pause") if joue else tr("Lecture"))
         self._lecture.setToolTip(self._lecture.accessibleName())
         actif = decoupe is not None
-        for b in (self._lecture, self._precedent, self._suivant, self._enregistrer, self._bouton_fond):
+        # Au repos, le disque suffit : ni « En cours », ni titre.
+        for w in (self._surtitre, self._titre, self._sous_titre):
+            w.setVisible(actif)
+        self._credit.setVisible(bool(self._credit.text()))
+        for b in (self._precedent, self._suivant, self._enregistrer, self._bouton_fond):
             b.setEnabled(actif)
+        self._lecture.setEnabled(actif or (self._lisible and bool(self._ouverts(self._jeu))))
         est_fond = actif and morceau == fond.fond
         self._bouton_fond.setChecked(est_fond)
         self._bouton_fond.setToolTip(tr("Retirer ce morceau du fond sonore") if est_fond
@@ -825,10 +846,9 @@ class _Ecran(QWidget):
         self._sur_gpu = False
         self.setMinimumSize(320, 180)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        lay = QVBoxLayout(self)
-        self._invite = texte(tr("Choisissez une cinématique dans la liste."), 14, ENCRE_DOUCE, retour=True)
-        self._invite.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(self._invite)
+        # Peinte et non posée dans un layout : le `setFixedHeight` de `resizeEvent`
+        # ne relançait pas sa disposition, et elle restait 68 px trop haut.
+        self._invite = tr("Choisissez une cinématique dans la liste.")
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
@@ -851,16 +871,18 @@ class _Ecran(QWidget):
         """Une lecture part vers la scène : `poser` ne sera plus appelé pour ses images."""
         if self._gpu is not None:
             self._sur_gpu = True
-            self._invite.hide()
             self._gpu.show()
 
     @property
     def sur_gpu(self) -> bool:
         return self._sur_gpu
 
+    @property
+    def invite_visible(self) -> bool:
+        return self._image is None and not self._sur_gpu
+
     def poser(self, image: QImage | None) -> None:
         self._image = image
-        self._invite.setVisible(image is None)
         if image is None and self._gpu is not None:
             self._sur_gpu = False
             self._gpu.vider()
@@ -886,6 +908,12 @@ class _Ecran(QWidget):
             echelle = min(self.width() / image.width(), self.height() / image.height())
             larg, haut = image.width() * echelle, image.height() * echelle
             p.drawImage(QRectF((self.width() - larg) / 2, (self.height() - haut) / 2, larg, haut), image)
+        if self.invite_visible:
+            p.setFont(police(14))
+            p.setPen(QColor(ENCRE_DOUCE))
+            option = QTextOption(Qt.AlignmentFlag.AlignCenter)
+            option.setWrapMode(QTextOption.WrapMode.WordWrap)
+            p.drawText(QRectF(self.rect()).adjusted(24, 0, -24, 0), self._invite, option)
         p.end()
 
 
@@ -895,6 +923,7 @@ class _LigneCine(QFrame):
         super().__init__()
         self.setObjectName("ligne")
         self.fichier = fichier
+        self.setProperty("ouverte", ouvert)
         self.setMinimumHeight(44)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(8, 3, 8, 3)
@@ -905,6 +934,7 @@ class _LigneCine(QFrame):
         lay.addWidget(numero)
         self._voir: QPushButton | None = None
         if ouvert:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
             self._voir = _bouton_lire(tr("Regarder {}").format(titre),
                                       lambda: page.jouer(jeu, fichier, titre))
             lay.addWidget(self._voir)
@@ -917,12 +947,19 @@ class _LigneCine(QFrame):
                           stretch=1)
             lay.addWidget(texte(_texte_seuil(seuil), 13, ENCRE_DOUCE))
 
+    def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt)
+        if self._voir is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._voir.click()
+            return
+        super().mousePressEvent(event)
+
     def marquer(self, courante: bool) -> None:
         if bool(self.property("courante")) != courante:
             self.setProperty("courante", courante)
             _repolir(self)
             if self._voir is not None:
                 self._voir.setProperty("courante", courante)
+                self._voir.setIcon(_icone_lire(courante))
                 _repolir(self._voir)
 
 
@@ -983,9 +1020,9 @@ class _VueCinematiques(QWidget):
         c = QVBoxLayout(colonne)
         c.setContentsMargins(0, 0, 0, 0)
         c.setSpacing(0)
-        self._vide = _message("")
+        self._vide = EtatVide("film")
         self._vide.hide()
-        c.addWidget(self._vide)
+        c.addWidget(self._vide, stretch=1)
         self._liste = _transparent(QWidget())
         self._pile = QVBoxLayout(self._liste)
         self._pile.setContentsMargins(0, 0, 0, 12)
@@ -993,11 +1030,9 @@ class _VueCinematiques(QWidget):
         self._paquets = _Paquets(self, self._pile)
         self._zone = zone_defilable(self._liste)
         c.addWidget(self._zone, stretch=1)
-        self._stretch_vide = QWidget()
-        c.addWidget(self._stretch_vide, stretch=1)
         racine.addWidget(colonne, stretch=2)
 
-        cote = _transparent(QWidget())
+        cote = self._cote = _transparent(QWidget())
         cote.setMaximumWidth(_LARGEUR_ECRAN)
         d = QVBoxLayout(cote)
         d.setContentsMargins(0, 0, 0, 0)
@@ -1012,9 +1047,11 @@ class _VueCinematiques(QWidget):
         self._titre.setFont(cinzel(12, bold=True))
         self._titre.setStyleSheet(f"color: {ENCRE}; background: transparent;")
         d.addWidget(self._titre)
-        d.addSpacing(4)
+        self._titre.hide()
         self._note = texte("", 13, ENCRE_DOUCE, retour=True)
+        self._note.setContentsMargins(0, 4, 0, 0)
         d.addWidget(self._note)
+        self._note.hide()
         d.addSpacing(10)
         barre = QHBoxLayout()
         barre.setSpacing(10)
@@ -1033,18 +1070,19 @@ class _VueCinematiques(QWidget):
         self._temps.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         barre.addWidget(self._temps)
         d.addLayout(barre)
+        self._temps.hide()
         d.addSpacing(10)
         commandes = QHBoxLayout()
         commandes.setSpacing(10)
-        self._pause = _rond("pause", tr("Pause"), self._basculer_pause)
+        self._pause = rond("pause", tr("Pause"), self._basculer_pause)
         commandes.addWidget(self._pause)
-        self._stop = _rond("arret", tr("Arrêter"), self.arreter)
+        self._stop = rond("arret", tr("Arrêter"), self.arreter)
         commandes.addWidget(self._stop)
-        self._plein = _rond("plein_ecran", tr("Plein écran"), self.plein_ecran,
+        self._plein = rond("plein_ecran", tr("Plein écran"), self.plein_ecran,
                             bulle=f'{tr("Plein écran")} · {tr("Échap pour revenir")}')
         commandes.addWidget(self._plein)
         commandes.addStretch()
-        self._enregistrer = _rond("telechargement", tr("Enregistrer la cinématique"), self._enregistrer_copie,
+        self._enregistrer = rond("telechargement", tr("Enregistrer la cinématique"), self._enregistrer_copie,
                                   bulle=tr("Garder une copie de cette cinématique sur votre ordinateur."))
         commandes.addWidget(self._enregistrer)
         d.addLayout(commandes)
@@ -1059,9 +1097,11 @@ class _VueCinematiques(QWidget):
         presentes = [c for c in media.cinematiques(jeu) if media.a_la_cinematique(jeu, c.fichier)]
         self._zone.setVisible(bool(presentes))
         self._vide.setVisible(not presentes)
-        self._stretch_vide.setVisible(not presentes)
+        self._cote.setVisible(bool(presentes))
         if not presentes:
             self._paquets.remplir([])
+            if self._courante:                 # l'écran se cache : pas de voix sans image
+                self.arreter()
             if not jeu:
                 texte_vide = tr("Aucun jeu installé n'a de cinématique à montrer ici pour "
                                 "l'instant. Les deux premiers jeux jouent les leurs dans le "
@@ -1070,7 +1110,7 @@ class _VueCinematiques(QWidget):
                 texte_vide = tr("Ce jeu joue ses cinématiques dans son moteur : il n'a pas de "
                                 "fichier vidéo à montrer ici.")
             else:
-                texte_vide = tr("Les cinématiques de ce jeu ne sont pas encore lues par le launcher.")
+                texte_vide = tr("Pas encore de cinématique pour ce jeu.")
             self._vide.setText(texte_vide)
             return
         nouveaux = media.nouveaux(jeu, CINEMATIQUES)
@@ -1101,7 +1141,7 @@ class _VueCinematiques(QWidget):
         self._arreter_voix()
         chemin = self._media.video(jeu, fichier)
         if chemin is None:
-            self._note.setText(tr("Cette cinématique n'a pas pu être lue."))
+            _ecrire(self._note, tr("Cette cinématique n'a pas pu être lue."))
             return
         # La voix AVANT l'image : celle de HP5 se convertit au premier
         # visionnage, et l'image aurait pris cette avance sur la parole.
@@ -1136,7 +1176,7 @@ class _VueCinematiques(QWidget):
             self._voix.durationChanged.connect(self._allonger_voix)
             self._voix.play()
         self._courante = fichier
-        self._titre.setText(titre)
+        _ecrire(self._titre, titre)
         if voix is None and self._media.attend_vgmstream(jeu):
             # HP5, HP6 : le son est là, c'est vgmstream qui manque (1.3.1).
             note = tr("Le son de cette cinématique se lit avec vgmstream : téléchargez-le une fois "
@@ -1145,7 +1185,7 @@ class _VueCinematiques(QWidget):
             note = tr("Le son de cette cinématique est encore en cours de déchiffrement.")
         else:
             note = self._media.nom(jeu)
-        self._note.setText(note)
+        _ecrire(self._note, note)
         for ligne in self._lignes:
             ligne.marquer(ligne.fichier == fichier)
         self._etat_commandes()
@@ -1263,7 +1303,7 @@ class _VueCinematiques(QWidget):
         self._montrer_temps(self._position.value())
 
     def _montrer_temps(self, ms: int) -> None:
-        self._temps.setText(f"{_minutes(ms)} / {_minutes(self._duree)}" if self._duree else "")
+        _ecrire(self._temps, f"{_minutes(ms)} / {_minutes(self._duree)}" if self._duree else "")
 
     def _valeur_barre(self, ms: int) -> None:
         if not self._position.isSliderDown():             # le glisser se pose au relâché
@@ -1316,7 +1356,7 @@ class _VueCinematiques(QWidget):
         # copie figeait la fenêtre jusqu'au bout (grand audit du 2026-11-02).
         self._copie_en_cours = True
         self._etat_commandes()
-        self._note.setText(tr("Enregistrement de la cinématique…"))
+        _ecrire(self._note, tr("Enregistrement de la cinématique…"))
 
         def copier() -> list[str] | None:
             try:
@@ -1332,11 +1372,11 @@ class _VueCinematiques(QWidget):
         self._copie_en_cours = False
         self._etat_commandes()
         if not isinstance(noms, list):
-            self._note.setText(tr("La cinématique n'a pas pu être enregistrée à cet endroit."))
+            _ecrire(self._note, tr("La cinématique n'a pas pu être enregistrée à cet endroit."))
         elif len(noms) == 2:
-            self._note.setText(tr("Enregistrée : « {} », et sa voix à côté, « {} ».").format(*noms))
+            _ecrire(self._note, tr("Enregistrée : « {} », et sa voix à côté, « {} ».").format(*noms))
         else:
-            self._note.setText(tr("Enregistrée : « {} ».").format(noms[0]))
+            _ecrire(self._note, tr("Enregistrée : « {} ».").format(noms[0]))
 
     def _video_finie(self) -> None:
         """La narration des transitions de HP5 dure plus que leur image (85 s de
@@ -1369,10 +1409,10 @@ class _VueCinematiques(QWidget):
         self._chemin_video = self._chemin_voix = None
         self._duree_video = self._duree = 0
         self._position.setRange(0, 0)
-        self._temps.setText("")
+        _ecrire(self._temps, "")
         self._ecran.poser(None)
-        self._titre.setText("")
-        self._note.setText("")
+        _ecrire(self._titre, "")
+        _ecrire(self._note, "")
         for ligne in self._lignes:
             ligne.marquer(False)
         self._media.fond.reprendre(CINEMATIQUE)
@@ -1387,7 +1427,7 @@ class _VueCinematiques(QWidget):
         self._enregistrer.setEnabled(actif and not self._copie_en_cours)
         en_pause = actif and self._en_pause()
         libelle = tr("Reprendre") if en_pause else tr("Pause")
-        self._pause.setIcon(_icone("play" if en_pause else "pause", 16))
+        self._pause.setIcon(icone_de_bouton("play" if en_pause else "pause", 16))
         self._pause.setToolTip(libelle)
         self._pause.setAccessibleName(libelle)
 

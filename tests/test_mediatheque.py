@@ -227,6 +227,27 @@ class TestPage:
         assert win._title_bar.onglet(COLLECTIONS).isVisibleTo(win._title_bar)
         assert win._mediatheque.mini.parent() is not None
 
+    def test_sans_morceau_la_note_seule_au_gabarit_du_haut_parleur(self, make_window):
+        """Le mot « Musique » doublait la note ; le clic ouvre les Collections."""
+        win = make_window()
+        mini = win._mediatheque.mini
+        win._mediatheque.fond._config.musique_fond = ""
+        mini.actualiser()
+        assert mini._titre.isHidden() and not mini._note.isHidden()
+        assert mini._bouton.width() == mini._son.width()
+        assert mini._bouton.toolTip() == "Collections"
+        assert mini._bouton.accessibleName() == "Ouvrir les Collections"
+
+    def test_avec_un_morceau_son_titre_et_son_disque(self, make_window):
+        win = make_window()
+        mini = win._mediatheque.mini
+        win._mediatheque.fond._config.musique_fond = "hp1/piste"
+        mini.actualiser()
+        assert not mini._titre.isHidden() and mini._titre.text()
+        assert mini._note.isHidden()
+        assert mini._bouton.width() > mini._son.width()
+        win._mediatheque.fond._config.musique_fond = ""
+
     def test_ouverte_sans_jeu_installe(self, make_window):
         from src.ui.mediatheque_page import MediathequePage
         from src.ui.title_bar import COLLECTIONS
@@ -631,6 +652,31 @@ class TestCommandesMusique:
         page._basculer_fond()
         assert fond.fond == ""
 
+    def test_au_repos_rien_ne_dit_en_cours_et_le_grand_bouton_lance_le_premier(self, vue):
+        _win, page, fond, cles = vue
+        page.montrer("hp2")
+        assert fond.morceau == ""
+        for libelle in (page._surtitre, page._titre, page._sous_titre):
+            assert libelle.isHidden()
+        assert page._lecture.isEnabled() and not page._suivant.isEnabled()
+        page._lecture.click()
+        assert fond.morceau == cles[0]
+        assert not page._surtitre.isHidden() and not page._titre.isHidden()
+        page._lecture.click()
+        assert fond.en_pause and fond.morceau == cles[0], "ensuite, il met en pause"
+
+    def test_sans_morceau_ouvert_le_grand_bouton_s_eteint(self, vue, monkeypatch):
+        win, page, _fond, _cles = vue
+        monkeypatch.setattr(win._mediatheque, "ouvert", lambda jeu, seuil: False)
+        page.montrer("hp2")
+        assert not page._lecture.isEnabled()
+
+    def test_le_grand_bouton_n_offre_pas_une_musique_illisible(self, vue, monkeypatch):
+        win, page, _fond, _cles = vue
+        monkeypatch.setattr(win._mediatheque, "attend_vgmstream", lambda jeu: True)
+        page.montrer("hp2")
+        assert not page._lecture.isEnabled()
+
     def test_enregistrer_dit_ou_ou_dit_l_echec(self, vue, monkeypatch, tmp_path):
         win, page, _fond, cles = vue
         monkeypatch.setattr(win._mediatheque, "enregistrer", lambda c: tmp_path / "HP2" / "a.ogg")
@@ -641,6 +687,183 @@ class TestCommandesMusique:
         page.enregistrer(cles[0])
         assert "n'a pas pu" in page._confirmation.text()
         assert not page._ouvrir_dossier.isVisibleTo(page)
+
+
+def _encre(icone, cote, mode):
+    """La couleur la plus couverte d'un pictogramme, dans ce mode."""
+    from PyQt6.QtGui import QColor, QIcon
+    image = icone.pixmap(cote, cote, mode, QIcon.State.Off).toImage()
+    pixels = (image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height()))
+    meilleur = max(pixels, key=lambda c: c.alpha())
+    assert meilleur.alpha() > 200
+    return QColor(meilleur.red(), meilleur.green(), meilleur.blue())
+
+
+class TestLignesEtPastilles:
+    """Revue de l'interface, Collections : la ligne se clique, l'or désigne celle qui
+    joue, un chiffre ne se colle plus au numéro du jeu."""
+
+    def _lignes(self, win, qtbot, classe):
+        page = win._pages.page
+        qtbot.waitUntil(lambda: bool(page.findChildren(classe)), timeout=5000)
+        return page
+
+    def test_un_clic_sur_la_ligne_ouverte_ecoute(self, fenetre_avec_jeux, qtbot):
+        from PyQt6.QtCore import Qt
+        from src.ui.mediatheque_page import _LigneMorceau
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp2")
+        hp2 = discographie.charger()["hp2"]
+        page = self._lignes(win, qtbot, _LigneMorceau)
+        qtbot.waitUntil(lambda: len(page.findChildren(_LigneMorceau)) == len(hp2), timeout=5000)
+        lignes = page.findChildren(_LigneMorceau)
+        ouverte = next(ligne for ligne in lignes if ligne._ecouter is not None)
+        fermee = next(ligne for ligne in lignes if ligne._ecouter is None)
+        fond = win._mediatheque.fond
+        assert fermee.cursor().shape() != Qt.CursorShape.PointingHandCursor and not fermee.property("ouverte")
+        qtbot.mouseClick(fermee, Qt.MouseButton.LeftButton)
+        assert fond.morceau == "", "une ligne fermée ne promet rien"
+        assert ouverte.cursor().shape() == Qt.CursorShape.PointingHandCursor and ouverte.property("ouverte")
+        qtbot.mouseClick(ouverte, Qt.MouseButton.LeftButton)
+        assert fond.morceau == ouverte.cle
+
+    def test_l_or_ne_reste_que_sur_la_ligne_en_cours(self, fenetre_avec_jeux, qtbot):
+        from PyQt6.QtGui import QIcon
+        from src.ui.mediatheque_page import _LigneMorceau
+        from src.ui.theme import accent_qcolor
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp2")
+        page = self._lignes(win, qtbot, _LigneMorceau)
+        ligne = next(x for x in page.findChildren(_LigneMorceau) if x._ecouter is not None)
+        or_ = accent_qcolor().rgb()
+        assert _encre(ligne._ecouter.icon(), 14, QIcon.Mode.Normal).rgb() != or_
+        ligne.marquer(True, False)
+        assert _encre(ligne._ecouter.icon(), 14, QIcon.Mode.Normal).rgb() == or_
+        ligne.marquer(False, False)
+        assert _encre(ligne._ecouter.icon(), 14, QIcon.Mode.Normal).rgb() != or_
+
+    def test_un_clic_sur_la_ligne_de_cinematique_la_joue(self, fenetre_avec_jeux, qtbot, monkeypatch):
+        from PyQt6.QtCore import Qt
+        from src.ui.mediatheque_page import _LigneCine
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        page = win._pages.page
+        qtbot.waitUntil(lambda: len(page.findChildren(_LigneCine)) == 2, timeout=5000)
+        jouees = []
+        monkeypatch.setattr(page._cinematiques, "jouer", lambda j, f, t: jouees.append(f))
+        lignes = {ligne.fichier: ligne for ligne in page.findChildren(_LigneCine)}
+        qtbot.mouseClick(lignes["LupinWolf"], Qt.MouseButton.LeftButton)
+        assert jouees == []
+        qtbot.mouseClick(lignes["SiriusPhoto"], Qt.MouseButton.LeftButton)
+        assert jouees == ["SiriusPhoto"]
+
+    def test_le_nouveau_se_dit_par_le_point_sans_chiffre(self, fenetre_avec_jeux, qtbot):
+        from src.ui.title_bar import COLLECTIONS
+        win = fenetre_avec_jeux
+        qtbot.waitUntil(lambda: win._title_bar.onglet(COLLECTIONS).pastille, timeout=5000)
+        win._on_onglet(COLLECTIONS)
+        page = win._pages.page
+        page.rubrique("cinematiques")
+        hp3 = page._jeux._boutons["hp3"]
+        assert page._jeux._points["hp3"].isVisibleTo(page)
+        assert not any(c.isdigit() for c in hp3.text()), "le compte reste dans l'infobulle"
+        assert "1 nouveau" in hp3.toolTip()
+        page.accept()
+
+    def test_les_pastilles_sans_contenu_s_attenuent(self, fenetre_avec_jeux):
+        from src.core import encyclopedie as _encyclo
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        page = win._pages.page
+        boutons = page._jeux._boutons
+        assert boutons["hp2"].property("vide") is True and boutons["hp3"].property("vide") is False
+        page.rubrique("musique")
+        assert boutons["hp2"].property("vide") is False
+        page.rubrique(_encyclo.BESTIAIRE)
+        assert boutons["hp2"].property("vide") is False
+        page.accept()
+
+
+class TestEtatsVides:
+    def test_sans_cinematique_ni_ecran_ni_commandes(self, fenetre_avec_jeux):
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        vue = win._pages.page._cinematiques
+        assert vue._vide.isHidden() and not vue._cote.isHidden()
+        vue.montrer("hp2")
+        assert not vue._vide.isHidden() and vue._cote.isHidden()
+        assert "moteur" in vue._vide.text()
+        vue.montrer("hp3")
+        assert vue._vide.isHidden() and not vue._cote.isHidden()
+
+    def test_l_ecran_cache_une_cinematique_en_cours_s_arrete(self, fenetre_avec_jeux, monkeypatch, tmp_path):
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        vue = win._pages.page._cinematiques
+        video = tmp_path / "v.bik"
+        video.write_bytes(b"BIKi")
+        monkeypatch.setattr(win._mediatheque, "video", lambda j, f: video)
+        monkeypatch.setattr(win._mediatheque, "voix", lambda j, f: None)
+        monkeypatch.setattr(vue._video, "play", lambda chemin, muted, volume: True)
+        vue.jouer("hp3", "SiriusPhoto", "x")
+        vue.montrer("hp2")
+        assert not vue._courante, "pas de voix sans image"
+        assert "cinematique" not in win._mediatheque.fond._raisons
+
+    def test_un_jeu_sans_musique_a_son_etat_vide(self, fenetre_avec_jeux):
+        from src.ui.encyclopedie_page import EtatVide
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("musique", "hp3")
+        vue = win._pages.page._musique
+        assert isinstance(vue._vide, EtatVide)
+        vue.montrer("hp_inconnu")
+        assert not vue._vide.isHidden() and vue._vide.text() == "Pas encore de musique pour ce jeu."
+        assert not vue._lecture.isEnabled()
+
+
+class TestEcranAuRepos:
+    def test_l_invite_est_au_milieu_de_l_ecran(self, qtbot):
+        from src.ui.mediatheque_page import _Ecran
+        ecran = _Ecran()
+        qtbot.addWidget(ecran)
+        ecran.setFixedSize(560, 315)
+        assert ecran.invite_visible
+        image = ecran.grab().toImage()
+        marge = 16
+        allumes = [y for y in range(marge, image.height() - marge) for x in range(marge, image.width() - marge)
+                   if image.pixelColor(x, y).value() > 60]
+        assert allumes, "l'invite est peinte"
+        assert abs((min(allumes) + max(allumes)) / 2 - image.height() / 2) <= 6
+
+    def test_rien_ne_garde_de_hauteur_entre_l_ecran_et_la_barre(self, fenetre_avec_jeux, monkeypatch, tmp_path):
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        vue = win._pages.page._cinematiques
+        assert vue._titre.isHidden() and vue._note.isHidden() and vue._temps.isHidden()
+        video = tmp_path / "v.bik"
+        video.write_bytes(b"BIKi")
+        monkeypatch.setattr(win._mediatheque, "video", lambda j, f: video)
+        monkeypatch.setattr(win._mediatheque, "voix", lambda j, f: None)
+        monkeypatch.setattr(vue._video, "play", lambda chemin, muted, volume: True)
+        vue.jouer("hp3", "SiriusPhoto", "La photo")
+        vue._allonger(20_000)
+        assert not vue._titre.isHidden() and not vue._note.isHidden() and not vue._temps.isHidden()
+        vue.arreter()
+        assert vue._titre.isHidden() and vue._note.isHidden() and vue._temps.isHidden()
+
+    def test_les_commandes_eteintes_se_voient_eteintes(self, fenetre_avec_jeux):
+        from PyQt6.QtGui import QColor, QIcon
+        from src.ui import composants
+        from src.ui.mediatheque_page import _STYLE
+        win = fenetre_avec_jeux
+        win._mediatheque.ouvrir("cinematiques", "hp3")
+        vue = win._pages.page._cinematiques
+        assert not vue._stop.isEnabled()
+        eteinte = QColor(composants.ENCRE_ETEINTE).rgb()
+        assert _encre(vue._stop.icon(), 16, QIcon.Mode.Disabled).rgb() == eteinte
+        assert _encre(vue._stop.icon(), 16, QIcon.Mode.Normal).rgb() != eteinte
+        assert "QPushButton#rond:disabled" in composants.feuille_de_style()
+        assert "QSlider::handle:horizontal:disabled" in _STYLE
 
 
 class TestVgmstreamALaDemande:
@@ -923,7 +1146,7 @@ class TestCinematiqueSurLaCarteGraphique:
         ecran = page._ecran
         assert ecran.sur_gpu and page._video._garder_image
         assert page._video._sortie is ecran._gpu.sortie_video()
-        assert ecran._gpu.isVisibleTo(ecran) and not ecran._invite.isVisibleTo(ecran)
+        assert ecran._gpu.isVisibleTo(ecran) and not ecran.invite_visible
         assert page._video._relais is not None, "le lecteur relaie, sans toImage"
 
     def test_la_scene_couvre_son_ecran_et_le_plein_ecran(self, page_gpu, sans_vrai_plein_ecran):
@@ -951,7 +1174,7 @@ class TestCinematiqueSurLaCarteGraphique:
         page.arreter()
         assert vidages == [1], "la lecture suivante ne commence pas sur cette image"
         assert not ecran.sur_gpu and not ecran._gpu.isVisibleTo(ecran)
-        assert ecran._invite.isVisibleTo(ecran)
+        assert ecran.invite_visible
 
     def test_double_clic_clavier_et_retour_du_plein_ecran(self, page_gpu, qtbot, sans_vrai_plein_ecran):
         from PyQt6.QtCore import Qt

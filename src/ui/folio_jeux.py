@@ -41,6 +41,7 @@ from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtit
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
+from src.ui.icon_button import pixmap_icone
 from src.ui.folio_page import (
     _ECART_CASES,
     _IMAGE_FICHE,
@@ -56,7 +57,7 @@ from src.ui.folio_page import (
     nom_emplacement,
     pixmap_texture,
 )
-from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme, themed
+from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme
 from src.ui.utils import zone_defilable
 
 _SERIE_PLEINE = 5     # au-delà, une série prend la rangée entière
@@ -1101,20 +1102,16 @@ class FolioPageHP6(FolioPage):
             lay.addLayout(_rangee(*tuiles))
             if partie.sorts:
                 lay.addSpacing(26)
-                lay.addWidget(surtitre(tr("Sorts appris")))
+                lay.addLayout(en_tete(tr("Sorts appris"),
+                                      compte=f"{len(partie.sorts)} / {len(_SORTS_HP6)}"))
                 lay.addSpacing(10)
-                # Quatre par rangée, chacune à la largeur de son nom (une grille
-                # les étirait toutes à celle de « Wingardium Leviosa »).
-                for debut in range(0, len(partie.sorts), 4):
-                    rang = QHBoxLayout()
-                    rang.setSpacing(8)
-                    for sort in partie.sorts[debut:debut + 4]:
-                        puce = texte(tr(_SORTS_HP6[sort]), 14, ENCRE)
-                        puce.setStyleSheet(themed(_PUCE))
-                        rang.addWidget(puce)
-                    rang.addStretch()
-                    lay.addLayout(rang)
-                    lay.addSpacing(8)
+                # Tous les sorts, ceux à venir en pointillés, comme HP1 ; le flux
+                # suit la largeur (un rang de quatre laissait Leviosa seul).
+                coche = pixmap_icone("coche", 14, QColor(current_theme().accent_light))
+                ligne = FlowLayout(spacing=8)
+                for sort, nom in _SORTS_HP6.items():
+                    ligne.addWidget(_pastille(tr(nom), coche, sort in partie.sorts))
+                lay.addLayout(ligne)
             self._badges(lay, partie)
             lay.addSpacing(18)
             lay.addWidget(self._lieux(folio_hp6.par_lieu(partie.trouves)))
@@ -1171,10 +1168,6 @@ class FolioPageHP6(FolioPage):
         g.setColumnStretch(3, 1)
         g.setColumnMinimumWidth(2, 24)
         return cadre
-
-
-_PUCE = """QLabel { color: #f2f2f4; background: rgba(214, 167, 44, 0.08);
-    border: 1px solid rgba(214, 167, 44, 0.45); border-radius: 12px; padding: 5px 14px; }"""
 
 
 # ── HP7 et HP8 ──

@@ -167,8 +167,16 @@ class TestPage:
 
     def test_rouverte_depuis_a_propos_elle_ne_le_redit_pas(self, qtbot):
         textes = self._textes(self._page(qtbot, apres=False))
-        assert "NOUVEAUTÉS" in textes
+        assert "MISE À JOUR INSTALLÉE" not in textes
+        assert "NOUVEAUTÉS" not in textes, "le retour a pris la place du surtitre"
         assert not any("vos jeux et vos réglages" in t for t in textes)
+
+    def test_plus_de_pied_ni_de_mode_d_emploi(self, qtbot):
+        from PyQt6.QtWidgets import QPushButton
+        page = self._page(qtbot)
+        textes = self._textes(page)
+        assert not any("Cette page revient" in t or "Ce qui change depuis" in t for t in textes)
+        assert "Aller à la bibliothèque" not in [b.text() for b in page.findChildren(QPushButton)]
 
     def test_le_nom_de_la_version_sous_le_numero(self, qtbot):
         from PyQt6.QtWidgets import QLabel
@@ -215,13 +223,14 @@ class TestPage:
         page = self._page(qtbot)
         assert len(page.findChildren(_LigneChangement)) == len(page.nouveautes.changements)
 
-    def test_aller_a_la_bibliotheque_ferme_la_page(self, qtbot):
+    def test_le_retour_ferme_la_page(self, qtbot):
         from PyQt6.QtWidgets import QPushButton
         page = self._page(qtbot)
         fermee = []
         page.finished.connect(fermee.append)
-        next(b for b in page.findChildren(QPushButton)
-             if b.text() == "Aller à la bibliothèque").click()
+        retour = page.findChild(QPushButton, "retour")
+        assert retour.text() == "Bibliothèque"
+        retour.click()
         assert fermee
 
     def test_toutes_les_versions_mene_a_github(self, qtbot, monkeypatch):

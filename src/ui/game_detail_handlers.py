@@ -555,12 +555,19 @@ def on_update_clicked(view: GameDetailView) -> None:
         view._ops.mettre_a_jour(view.game)
 
 
-def on_versions_clicked(view: GameDetailView) -> None:
+def on_versions_clicked(view: GameDetailView, depuis_reglages: bool = False) -> None:
     """Le journal des changements, en lecture seule : plus de choix d'une
-    ancienne archive depuis le 2026-10-30 (Ludo, correctif 2.3.0)."""
+    ancienne archive depuis le 2026-10-30 (Ludo, correctif 2.3.0).
+
+    Ouvert depuis l'engrenage, son retour y ramène : `Pages.ouvrir` a fermé les
+    réglages, et il fallait les rouvrir à la main pour lire un autre élément.
+    Sans page hôte (fiche seule), les réglages sont restés ouverts dessous."""
     if view.game is None:
         return
-    dlg = VersionsDialog(view.game, view.manager, view)
+    retour = None
+    if depuis_reglages and view.receivers(view.page_demandee):
+        retour = (tr("Réglages du jeu"), lambda: on_game_settings(view))
+    dlg = VersionsDialog(view.game, view.manager, view, retour=retour)
     # Une PAGE à la place de la fiche (2026-10-14), comme les réglages du jeu.
     if view.receivers(view.page_demandee):
         view.page_demandee.emit(dlg)
@@ -923,7 +930,7 @@ def _actions_fichiers(view: GameDetailView, game: GameData):
     une erreur de plus à expliquer.
     """
     # Le journal SEUL : revenir à une ancienne archive n'existe plus (2026-10-30).
-    actions = [(tr("Journal des changements"), lambda: on_versions_clicked(view))]
+    actions = [(tr("Journal des changements"), lambda: on_versions_clicked(view, depuis_reglages=True))]
     installe = view.manager.get_state(game.id) == GameState.INSTALLED
     if installe:
         actions.append((tr("Vérifier / réparer les fichiers"),

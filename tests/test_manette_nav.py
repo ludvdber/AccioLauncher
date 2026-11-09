@@ -378,6 +378,81 @@ class TestDansLaVraieFenetre:
         nav.agir(lec.DROITE)                     # ← → règlent toujours la valeur
         assert curseur.value() > 50
 
+    def test_on_sort_du_rail_des_parametres(self, fenetre_reelle, nav, qtbot):
+        """Le rail était une QListWidget : ↑/↓ y restaient, la page hors d'atteinte."""
+        fenetre_reelle._on_settings()
+        page = fenetre_reelle._pages.page
+        rail = page._nav
+        rail.boutons[0].setFocus(Qt.FocusReason.OtherFocusReason)
+        qtbot.waitUntil(rail.boutons[0].hasFocus, timeout=3000)
+        for _ in range(rail.count()):
+            nav.agir(lec.BAS)
+        focus = QApplication.focusWidget()
+        assert page._pages.isAncestorOf(focus), focus
+        assert rail.currentRow() == 0, "passer ne change pas de rubrique"
+        fenetre_reelle._pages.fermer()
+
+    def test_a_choisit_une_rubrique_du_rail(self, fenetre_reelle, nav, qtbot):
+        fenetre_reelle._on_settings()
+        page = fenetre_reelle._pages.page
+        page._nav.boutons[3].setFocus(Qt.FocusReason.OtherFocusReason)
+        qtbot.waitUntil(page._nav.boutons[3].hasFocus, timeout=3000)
+        nav.agir(lec.VALIDER)
+        assert page._nav.currentRow() == 3 and page._pages.currentIndex() == 3
+        fenetre_reelle._pages.fermer()
+
+    def test_on_sort_de_la_liste_des_copies_par_ses_extremites(self, nav, qtbot):
+        from src.core.game_data import GameData
+        from src.ui.copies_dialog import CopiesDialog
+        jeu = GameData(id="hp2", name="Harry Potter II", year=2002, description="",
+                       developer="", executable="HP2/system/Game.exe", cover_image="",
+                       latest_version="1.0", recommended_version="1.0")
+        dlg = CopiesDialog(jeu)
+        qtbot.addWidget(dlg)
+        dlg._liste.clear()
+        dlg._liste.addItems(["a", "b", "c"])
+        dlg.show()
+        dlg.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is dlg, timeout=3000)
+        dlg._liste.setFocus()
+        qtbot.waitUntil(dlg._liste.hasFocus, timeout=3000)
+
+        dlg._liste.setCurrentRow(0)
+        nav.agir(lec.BAS)                        # au milieu : ↓ reste une flèche
+        assert dlg._liste.hasFocus() and dlg._liste.currentRow() == 1
+        dlg._liste.setCurrentRow(2)
+        nav.agir(lec.BAS)                        # dernière ligne : vers les boutons
+        assert not dlg._liste.hasFocus() and dlg._liste.currentRow() == 2
+
+        dlg._liste.setFocus()
+        qtbot.waitUntil(dlg._liste.hasFocus, timeout=3000)
+        dlg._liste.setCurrentRow(0)
+        nav.agir(lec.HAUT)                       # première ligne : on remonte d'un cran
+        assert not dlg._liste.hasFocus() and dlg._liste.currentRow() == 0
+
+    def test_un_menu_ouvert_garde_ses_fleches(self, nav, qtbot):
+        """La liste d'une QComboBox ouverte est aussi une QAbstractItemView : on n'en sort pas."""
+        from PyQt6.QtWidgets import QComboBox
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        liste = QComboBox()
+        liste.addItems(["8x", "4x"])
+        lay.addWidget(liste)
+        lay.addWidget(QPushButton("après"))
+        qtbot.addWidget(w)
+        w.show()
+        w.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+        liste.setFocus()
+        qtbot.waitUntil(liste.hasFocus)
+        liste.showPopup()
+        qtbot.waitUntil(lambda: QApplication.activePopupWidget() is not None)
+        vue = liste.view()
+        vue.setCurrentIndex(vue.model().index(1, 0))
+        nav.agir(lec.BAS)
+        assert QApplication.activePopupWidget() is not None
+        liste.hidePopup()
+
     def test_une_liste_fermee_ne_change_pas_en_passant(self, nav, qtbot):
         from PyQt6.QtWidgets import QComboBox
         w = QWidget()

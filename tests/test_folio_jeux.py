@@ -195,12 +195,16 @@ class TestHP6:
         assert isinstance(page, FolioPageHP6)
         assert page.releve.ecrite == datetime(2026, 10, 1, 18, 42, 44)
         assert page.releve.sorts == ("Stupefy", "Lumos")
+        # Les onze sorts, ceux à venir en pointillés, et le compte.
+        from PyQt6.QtWidgets import QFrame
+        assert len(page.findChildren(QFrame, "sortAppris")) == 2
+        assert len(page.findChildren(QFrame, "sortAVenir")) == 9
         # Les écussons lieu par lieu, par ordre alphabétique : « Bibliothèque »
         # en tête de la première colonne, et les trois du chemin de la forêt.
         from PyQt6.QtWidgets import QLabel
         textes = [lab.text() for lab in page.findChildren(QLabel)]
         assert "ÉCUSSONS PAR LIEU" in textes     # `surtitre` met en capitales
-        assert {"Chemin de la forêt", "3 / 3", "Bibliothèque", "0 / 3"} <= set(textes)
+        assert {"Chemin de la forêt", "3 / 3", "Bibliothèque", "0 / 3", "2 / 11"} <= set(textes)
         lieux = [t for t in textes if t in {"Bibliothèque", "Volière", "Cachots"}]
         assert lieux == ["Bibliothèque", "Cachots", "Volière"]
 

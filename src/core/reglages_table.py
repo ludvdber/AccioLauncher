@@ -214,7 +214,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # 2026-11-04 au soir : les lèvres et ce que pilote la souris (Wingardium) vont ENCORE trop vite (Fable).
     # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
     Reglage("camera_fluide", "Accio.Game", "SimulationStep",
-            "Caméra fluide",
+            "Caméra",
             "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort). Compte au prochain lancement du jeu.",
             choix=(0, 16), zero="D'origine", etiquettes=((16, "Fluide"),), onglet="perfs", beta=True),
     Reglage("synchro_verticale", "Accio.Graphics", "VSync",
@@ -233,19 +233,19 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # [Accio.Controller] est lu par le xinput1_3.dll du correctif (HP5-HP7b) ;
     # HP4 n'a pas cette DLL, son correctif lit sa propre clé dans [Accio.Game].
     Reglage("manette_playstation", "Accio.Controller", "PlayStation",
-            "Manette PlayStation reconnue",
+            "Accepter les manettes PlayStation",
             "Une manette PlayStation 4 ou 5 branchée est vue comme une manette Xbox, que le "
             "jeu connaît. Éteignez-le si Steam Input ou DS4Windows la convertissent déjà : le"
             " jeu la verrait deux fois.", onglet="manette"),
     # HP4 ne connaît que des manettes de 2005 : son correctif lui apprend la DualShock 4,
     # la DualSense, et montre une manette Xbox comme une DualShock 4 (correctif 2.3.0).
     Reglage("manette_playstation_hp4", "Accio.Game", "PlayStationController",
-            "Manettes PlayStation et Xbox reconnues",
+            "Accepter les manettes PlayStation et Xbox",
             "Ce jeu ne connaît que des manettes de 2005 : allumé, il reconnaît aussi les "
             "manettes PlayStation 4 ou 5 et Xbox. Éteignez-le si Steam Input ou DS4Windows "
             "convertissent déjà la manette : le jeu la verrait deux fois.", onglet="manette"),
     Reglage("vibrations", "Accio.Controller", "Rumble",
-            "Vibrations de la manette PlayStation",
+            "Vibrations (manette PlayStation en USB)",
             "Les vibrations d'une manette PlayStation branchée en USB. Sans effet en "
             "Bluetooth.", onglet="manette"),
     # ── Qualité d'image (préréglages, puis le détail) ──
@@ -469,7 +469,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             " français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait "
             "démarrer en anglais.",
             choix=tuple(v for v, _ in LANGUES_MENU), zero="Celle de Windows",
-            noms_choix=LANGUES_MENU),
+            noms_choix=LANGUES_MENU, onglet="demarrage"),
     # HP6, mode difficile demandé par Ludo le 2026-10-23 (« activable à n'importe
     # quel moment ») : [Accio.Hardcore] de source/hardcore.cpp du correctif,
     # relu dans la seconde qui suit l'écriture, partie en cours comprise. Le

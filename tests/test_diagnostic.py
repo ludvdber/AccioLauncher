@@ -220,6 +220,11 @@ class TestBoutonDiagnostic:
         assert "Discord" in btn.text()
         assert btn.minimumWidth() == largeur
 
+    def test_le_libelle_finit_au_bord_droit_de_la_carte(self):
+        """La largeur réservée à la confirmation le laissait flotter à 110 px du bord."""
+        from src.ui import about_page
+        assert "text-align: right" in about_page._STYLE_TUILES
+
     def test_absent_sans_manager(self, qtbot):
         from PyQt6.QtWidgets import QPushButton
 

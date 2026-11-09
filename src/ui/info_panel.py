@@ -327,10 +327,22 @@ class InfoPanel(QWidget):
         self._title.setStyleSheet(
             "QLabel#gameTitle { color: #f2f2f4; background: transparent; }")
         lay.addWidget(self._title)
+
+        # « Partie 1 » des deux HP7, sortie du nom du catalogue à l'affichage :
+        # le « — » pendait en bout de ligne et « PARTIE 2 » prenait à 36 px une
+        # troisième ligne pour lui seul. Caché pour les six autres jeux.
+        self._partie = QLabel()
+        self._partie.setObjectName("gamePartie")
+        self._partie.setTextFormat(Qt.TextFormat.PlainText)
+        self._partie.setFont(cinzel(15, bold=True))
+        self._partie.setStyleSheet(themed("QLabel { color: #d6a72c; background: transparent; }"))
+        self._partie.setContentsMargins(0, 2, 0, 0)
+        self._partie.hide()
+        lay.addWidget(self._partie)
         lay.addSpacing(10)
 
-        # Ligne méta UNIQUE (année, studio, poids, téléchargements) : un seul
-        # libellé qui se replie comme une phrase. La version et ses nouveautés
+        # Ligne méta UNIQUE (année, studio, téléchargements, et le poids d'un jeu
+        # installé) : un seul libellé qui se replie comme une phrase. La version et ses nouveautés
         # sont descendues sous le bouton (piste A, 2026-10-09).
         # En plusieurs widgets, le compteur sautait de place d'un jeu à l'autre.
         self._meta = QLabel()
@@ -543,7 +555,11 @@ class InfoPanel(QWidget):
         # Titre PLEIN à chaque jeu (règle 43) : un cran pris par le titre
         # espagnol le plus long restait sinon sur les sept autres.
         self._title_squeeze = 0
-        self._title.setText(game.name)
+        titre, _, partie = game.name.partition(" — ")
+        self._title.setText(titre)
+        self._title.setAccessibleName(game.name)    # le nom entier reste dit au lecteur d'écran
+        self._partie.setText(partie)
+        self._partie.setVisible(bool(partie))
         # La partie se relit dans `rafraichir_indices`, que le parent appelle
         # juste après : la lire ici aussi coûterait deux lectures par jeu.
         nouveau = self._game is None or self._game.id != game.id
@@ -553,16 +569,30 @@ class InfoPanel(QWidget):
             self._a_propos = False
             self._appliquer_partie()
 
-        # Metadata
+        self._refresh_meta(game)
+        self._refresh_indices(game)
+
+        # Description
+        self._set_desc_text(game.description)
+
+        # Remesurer : un libellé gardait la hauteur du jeu PRÉCÉDENT (161 px
+        # d'une description dépliée pour une courte).
+        self._apply_available_width()
+
+    def _refresh_meta(self, game: GameData) -> None:
+        """La ligne méta : aussi après un changement d'état, le poids en dépend."""
         gold = current_theme().accent
         sep = f'<span style="color:{gold}; margin: 0 6px;"> ◆ </span>'
-        dl = game.current_download
-        size_str = format_size(dl.size_mb) if dl else "?"
         # `escape` sur tout (règle 58) : en RichText, le balisage d'un nom de
         # studio serait interprété (et un `<img src="file:///…">` lu).
         morceaux = [escape(str(game.year), quote=False),
-                    _insecable(escape(game.developer, quote=False)),
-                    _insecable(escape(size_str, quote=False))]
+                    _insecable(escape(game.developer, quote=False))]
+        # La place occupée, donc une fois le jeu installé seulement : avant, le
+        # bouton porte le poids à télécharger, et « 7,0 GO » juste au-dessus de
+        # « Installer 3,4 Go » désignait autre chose sans le dire (règle 86).
+        dl = game.current_download
+        if dl is not None and self._manager.is_installed(game.id):
+            morceaux.append(_insecable(escape(format_size(dl.size_mb), quote=False)))
 
         # La manette, fait sur le jeu, rejoint ses faits (maquette « Plan du
         # launcher v2 », 2026-10-26) ; sa nuance passe en infobulle.
@@ -597,15 +627,6 @@ class InfoPanel(QWidget):
             '<span style="text-transform:uppercase; letter-spacing:2px;">'
             + sep.join(morceaux) + '</span>'
         )
-
-        self._refresh_indices(game)
-
-        # Description
-        self._set_desc_text(game.description)
-
-        # Remesurer : un libellé gardait la hauteur du jeu PRÉCÉDENT (161 px
-        # d'une description dépliée pour une courte).
-        self._apply_available_width()
 
     def add_bottom_widget(self, widget: QWidget) -> None:
         """Épingle un widget sous la zone défilante : le bloc du folio
@@ -654,6 +675,7 @@ class InfoPanel(QWidget):
             # Désinstallé, la fiche redevient une invitation : rien à lire.
             self._parties.pop(game.id, None)
             self._resume, self._avancee = None, None
+        self._refresh_meta(game)    # avant `_appliquer_partie`, qui remesure
         self._appliquer_partie()
         self._refresh_indices(game)
         if not self._prelu:

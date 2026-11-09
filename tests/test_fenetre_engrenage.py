@@ -294,6 +294,8 @@ class TestEngrenageReglagesDuJeu:
 
     def test_les_versions_s_ouvrent_en_page(self, make_window_multilingue):
         """Plus une boîte de 550 × 500 posée sur la fiche (2026-10-14)."""
+        from PyQt6.QtWidgets import QPushButton
+
         from src.core.game_manager import GameState
         from src.ui import game_detail_handlers as gdh
         from src.ui.versions_dialog import VersionsDialog
@@ -304,7 +306,30 @@ class TestEngrenageReglagesDuJeu:
         page = win._pages.page
         assert isinstance(page, VersionsDialog)
         assert not page.isWindow()
+        assert page.findChild(QPushButton, "retour").text() == "Bibliothèque"
         page.reject()   # Échap
+        assert win._pages.page is None
+
+    def test_le_journal_ouvert_de_l_engrenage_y_ramene(self, make_window_multilingue):
+        """Il fallait rouvrir l'engrenage pour lire un autre élément des fichiers du jeu."""
+        from PyQt6.QtWidgets import QPushButton
+
+        from src.core.game_manager import GameState
+        from src.ui import game_detail_handlers as gdh
+        from src.ui.game_settings_dialog import GameSettingsDialog
+        from src.ui.versions_dialog import VersionsDialog
+
+        win, jeu = make_window_multilingue()
+        self._poser(win, jeu, GameState.INSTALLED)
+        gdh.on_game_settings(win._detail)
+        win._pages.page._lancer(gdh._actions_fichiers(win._detail, jeu)[0][1])
+        journal = win._pages.page
+        assert isinstance(journal, VersionsDialog)
+        retour = journal.findChild(QPushButton, "retour")
+        assert retour.text() == "Réglages du jeu"
+        retour.click()
+        assert isinstance(win._pages.page, GameSettingsDialog)
+        win._pages.fermer()
         assert win._pages.page is None
 
     def test_contribuer_ouvre_l_atelier_en_page(self, make_window_multilingue):

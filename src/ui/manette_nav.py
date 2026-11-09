@@ -9,7 +9,7 @@ dialogues, réglages, assistant) marche à la manette, sans un widget modifié.
 | Manette                       | Touche     | Effet                                   |
 |-------------------------------|------------|-----------------------------------------|
 | croix directionnelle / stick  | ← →        | jeu précédent / suivant                 |
-|                               | ↑ ↓        | bouton précédent / suivant (Maj+Tab, Tab), ou ↑ ↓ dans une liste |
+|                               | ↑ ↓        | bouton précédent / suivant (Maj+Tab, Tab), ou ↑ ↓ dans une liste, dont on sort par ses extrémités |
 | croix (PlayStation) / A       | Espace     | appuie sur le bouton qui a le focus     |
 |                               | Entrée     | sans bouton sous le focus : JOUER ; dans une liste : choisir |
 | rond / B                      | Échap      | ferme le dialogue, sort du plein écran  |
@@ -151,7 +151,8 @@ class NavigationManette(QObject):
             case lecture.DROITE | lecture.SUIVANT:
                 self._envoyer(cible, Qt.Key.Key_Right)
             case lecture.HAUT | lecture.BAS:
-                if dans_un_menu or isinstance(focus, _GARDENT_HAUT_BAS) or (
+                if dans_un_menu or (isinstance(focus, _GARDENT_HAUT_BAS)
+                                    and not self._au_bout_de_la_liste(focus, action)) or (
                         isinstance(focus, QSlider)
                         and focus.orientation() == Qt.Orientation.Vertical):
                     self._envoyer(cible, Qt.Key.Key_Up if action == lecture.HAUT else Qt.Key.Key_Down)
@@ -168,6 +169,18 @@ class NavigationManette(QObject):
                 self._envoyer(cible, Qt.Key.Key_Escape)
         # Le focus d'arrivée, même posé sans le clavier (fenêtre qui s'ouvre) : cerclé.
         focus_visible.marquer(QApplication.focusWidget())
+
+    @staticmethod
+    def _au_bout_de_la_liste(focus: QWidget, action: str) -> bool:
+        """↓ sur la dernière ligne, ↑ sur la première : on sort de la liste, comme
+        d'un curseur. Sans ça, les boutons posés après (copies de sauvegarde :
+        Importer, Exporter, Fermer) restaient hors d'atteinte."""
+        if not isinstance(focus, QAbstractItemView) or focus.model() is None:
+            return False
+        rang = focus.currentIndex().row()
+        if action == lecture.HAUT:
+            return rang <= 0
+        return rang >= focus.model().rowCount(focus.rootIndex()) - 1
 
     @staticmethod
     def _zone_defilante() -> QAbstractScrollArea | None:

@@ -31,7 +31,7 @@ from src.core.formatting import format_relative_date
 from src.core.i18n import tr
 from src.core.scolarite import ANNEES
 from src.ui.composants import ENCRE_DISCRETE
-from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
+from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER, marquer
 from src.ui.fonts import body_font, cinzel
 from src.ui.theme import accent_qcolor, current as theme_courant
 
@@ -190,16 +190,29 @@ def _quand(jour: date) -> str:
 
 
 class _Ligne(QWidget):
-    """Une ligne du relevé. Peinte : le fond de la ligne choisie et le trait
-    qui relie la partie 2 de l'année VII à la partie 1."""
+    """Une ligne du relevé. Peinte : le fond de la ligne choisie au clavier ou
+    survolée, et le trait qui relie la partie 2 de l'année VII à la partie 1."""
 
-    def __init__(self, releve: _Releve, game_id: str, *, rattachee: bool) -> None:
+    def __init__(self, releve: _Releve, game_id: str, *, rattachee: bool,
+                 cliquable: bool = False) -> None:
         super().__init__(releve)
         self._releve = releve
         self.game_id = game_id
         self._rattachee = rattachee
+        self._cliquable = cliquable
+        self._survol = False
         self.setFixedHeight(_HAUTEUR_LIGNE)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+
+    def enterEvent(self, event) -> None:
+        super().enterEvent(event)
+        self._survol = self._cliquable
+        self.update()
+
+    def leaveEvent(self, event) -> None:
+        super().leaveEvent(event)
+        self._survol = False
+        self.update()
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -211,16 +224,20 @@ class _Ligne(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = QRectF(self.rect())
-        if self.game_id == self._releve.choix:
+        # La ligne choisie ne se montre qu'au clavier : à la souris, un clic
+        # ouvre aussitôt le folio, et une ligne dorée n'y expliquerait rien.
+        au_clavier = (self.game_id == self._releve.choix and self._releve.hasFocus()
+                      and bool(self._releve.property(_FOCUS_CLAVIER)))
+        if au_clavier or self._survol:
             fond = QLinearGradient(r.topLeft(), r.topRight())
-            fond.setColorAt(0.0, accent_qcolor(28))
+            fond.setColorAt(0.0, accent_qcolor(28 if au_clavier else 16))
             fond.setColorAt(1.0, accent_qcolor(0))
             p.fillRect(r, fond)
+        if au_clavier:
             p.fillRect(QRectF(0, 0, 2, r.height()), accent_qcolor())
-            if self._releve.hasFocus() and self._releve.property(_FOCUS_CLAVIER):
-                p.setPen(QPen(accent_qcolor(170), 1, Qt.PenStyle.DashLine))
-                p.setBrush(Qt.BrushStyle.NoBrush)
-                p.drawRect(r.adjusted(0.5, 0.5, -0.5, -0.5))
+            p.setPen(QPen(accent_qcolor(170), 1, Qt.PenStyle.DashLine))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawRect(r.adjusted(0.5, 0.5, -0.5, -0.5))
         if self._rattachee:
             # Le coude de la partie 2 vers la partie 1, dans la colonne des années.
             p.setPen(QPen(accent_qcolor(110), 1))
@@ -334,7 +351,7 @@ class _Releve(QWidget):
     def _ligne(self, game, temps, parties, dernieres, temps_max, *,
                annee: int | None, rattachee: bool) -> _Ligne:
         gid = game.id
-        ligne = _Ligne(self, gid, rattachee=rattachee)
+        ligne = _Ligne(self, gid, rattachee=rattachee, cliquable=gid in self._selectionnables)
         if gid in self._selectionnables:
             ligne.setCursor(Qt.CursorShape.PointingHandCursor)
         rang = QHBoxLayout(ligne)
@@ -431,6 +448,7 @@ class _Releve(QWidget):
         else:
             super().keyPressEvent(event)
             return
+        marquer(self)   # focus posé sans le clavier : le choix qui bouge doit se voir
         self.choisir(cible)
 
     def focusInEvent(self, event) -> None:

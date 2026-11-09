@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import discographie, encyclopedie, maillages_ue1, mouvements
 from src.core.i18n import dans_la_langue, get_language, tr
-from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, police, texte
+from src.ui.composants import ENCRE, ENCRE_DOUCE, icone_de_bouton, police, rond, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
@@ -43,6 +43,8 @@ _IMAGE = QSize(96, 120)          # une carte de HP4 est deux fois plus haute que
 _ICONE = {encyclopedie.PERSONNAGES: "personnages", encyclopedie.BESTIAIRE: "patte"}
 _SCENE_MIN = QSize(320, 320)
 _MARGE_SCENE = 32
+_LARGEUR_MOUVEMENTS = 320        # « Respirer » sur 1273 px ne disait rien de plus
+_EMBLEME_VIDE = QSize(96, 96)
 # Avec une visionneuse, la liste tient sur UNE colonne à gauche et le modèle
 # prend toute la place qui reste (Ludo, 2026-10-27 : « plus agréable pour
 # zoomer et apprécier le modèle »).
@@ -90,6 +92,35 @@ def embleme(rubrique: str, taille: QSize, dpr: float, icone_nom: str = "") -> QP
                  pixmap_icone(icone_nom or _ICONE[rubrique], icone, accent_qcolor(200)))
     p.end()
     return pix
+
+
+class EtatVide(QWidget):
+    """Rien à montrer : le cercle doré de la rubrique et une phrase, au milieu de la
+    place. Le même partout dans les Collections ; `action`, un bouton sous la phrase."""
+
+    def __init__(self, icone: str, phrase: str = "", action: QWidget | None = None) -> None:
+        super().__init__()
+        self.setObjectName("transparent")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(24, 24, 24, 24)
+        lay.setSpacing(14)
+        lay.addStretch()
+        image = QLabel()
+        image.setStyleSheet("background: transparent;")
+        image.setPixmap(embleme("", _EMBLEME_VIDE, self.devicePixelRatioF(), icone))
+        lay.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self._phrase = texte(phrase, 15, "#c9c7da", retour=True)
+        self._phrase.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        lay.addWidget(self._phrase)
+        if action is not None:
+            lay.addWidget(action, alignment=Qt.AlignmentFlag.AlignHCenter)
+        lay.addStretch()
+
+    def text(self) -> str:
+        return self._phrase.text()
+
+    def setText(self, phrase: str) -> None:  # noqa: N802 (comme un QLabel)
+        self._phrase.setText(phrase)
 
 
 def _texte_seuil(seuil: int) -> str:
@@ -208,23 +239,27 @@ class _Scene(QFrame):
         self.modele = Modele3D()
         self.modele.setMinimumSize(_SCENE_MIN)
         v.addWidget(self.modele, stretch=1)
-        # Les mouvements du jeu : la liste et le bouton qui les lance ou les arrête
-        # (Ludo, 2026-10-27 : « un bouton pour animer les modèles »).
+        # Les mouvements du jeu, centrés sous le modèle : un choix dans la liste le
+        # lance, le rond l'arrête (Ludo, 2026-10-27 : « un bouton pour animer les modèles »).
         self._commandes = QWidget()
         self._commandes.setObjectName("transparent")
         rang = QHBoxLayout(self._commandes)
         rang.setContentsMargins(0, 6, 0, 0)
         rang.setSpacing(10)
         self.mouvements = liste_deroulante()
+        self.mouvements.setMaximumWidth(_LARGEUR_MOUVEMENTS)
         self.mouvements.setFont(police(13))
         self.mouvements.setStyleSheet(themed(_LISTE_STYLE))
         self.mouvements.setCursor(Qt.CursorShape.PointingHandCursor)
         self.mouvements.setToolTip(tr("Un mouvement du jeu ; au survol d'une ligne, son nom dans les fichiers"))
         self.mouvements.currentIndexChanged.connect(self._mouvement_choisi)
-        self.bouton_animer = bouton(tr("Animer"))
-        self.bouton_animer.clicked.connect(self.basculer_animation)
-        rang.addWidget(self.mouvements, stretch=1)
+        # `activated` aussi : rechoisir « Respirer », déjà affiché, ne change pas l'index.
+        self.mouvements.activated.connect(self._mouvement_choisi)
+        self.bouton_animer = rond("play", tr("Animer"), self.basculer_animation)
+        rang.addStretch(1)
+        rang.addWidget(self.mouvements, stretch=4)
         rang.addWidget(self.bouton_animer)
+        rang.addStretch(1)
         self._commandes.hide()
         v.addWidget(self._commandes)
         v.addSpacing(8)
@@ -263,21 +298,29 @@ class _Scene(QFrame):
             if repos is not None and self.mouvements.findData(repos) >= 0:
                 self.mouvements.setCurrentIndex(self.mouvements.findData(repos))
         self.mouvements.blockSignals(False)
-        self.bouton_animer.setText(tr("Animer"))
+        self._suivre_animation()
         self._commandes.setVisible(self.mouvements.count() > 0)
 
     def basculer_animation(self) -> None:
         """Lance le mouvement choisi, ou rend la pose de référence."""
         if self.modele.mouvement is not None:
             self.modele.animer(None)
-            self.bouton_animer.setText(tr("Animer"))
-        elif self.modele.animer(self.mouvements.currentData()):
-            self.bouton_animer.setText(tr("Figer"))
+        else:
+            self.modele.animer(self.mouvements.currentData())
+        self._suivre_animation()
 
     def _mouvement_choisi(self, _index: int) -> None:
         nom = self.mouvements.currentData()
-        if self.modele.mouvement is not None and nom:
+        if nom and nom != self.modele.mouvement:
             self.modele.animer(nom)
+            self._suivre_animation()
+
+    def _suivre_animation(self) -> None:
+        anime = self.modele.mouvement is not None
+        libelle = tr("Figer") if anime else tr("Animer")
+        self.bouton_animer.setIcon(icone_de_bouton("pause" if anime else "play", 16))
+        self.bouton_animer.setToolTip(libelle)
+        self.bouton_animer.setAccessibleName(libelle)
 
 
 class VueEncyclopedie(QWidget):
@@ -344,8 +387,7 @@ class VueEncyclopedie(QWidget):
         clear_layout(self._lay)
         fiches = encyclopedie.fiches(self.rubrique, jeu)
         if not fiches:
-            self._lay.addWidget(texte(tr("Aucune fiche pour ce jeu."), 14, ENCRE_DOUCE))
-            self._lay.addStretch()
+            self._lay.addWidget(EtatVide(_ICONE[self.rubrique], tr("Pas encore de fiche pour ce jeu.")), stretch=1)
             return
         compte = (tr("{} personnage") if len(fiches) == 1 else tr("{} personnages")) \
             if self.rubrique == encyclopedie.PERSONNAGES else \

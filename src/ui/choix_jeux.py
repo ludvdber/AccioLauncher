@@ -73,6 +73,6 @@ def pastille(game, etiquette: str) -> QPushButton:
         b.setIcon(icone)
         b.setIconSize(taille)
     # Le nom vient du CATALOGUE : échappé, une infobulle se lit en texte riche.
-    b.setToolTip(escape(game.name))
+    b.setToolTip(f"<qt>{escape(game.name, quote=False)}</qt>")
     b.setAccessibleName(game.name)
     return b

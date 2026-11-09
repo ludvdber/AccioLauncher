@@ -19,6 +19,7 @@ recommandée (`GameOperations.mettre_a_jour`).
 """
 
 import html
+from collections.abc import Callable
 from datetime import date
 
 from PyQt6.QtCore import QDate, QLocale, QSize, Qt
@@ -137,6 +138,9 @@ class _LigneVersion(QPushButton):
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.version = ver.version
+        # Installée ET recommandée, c'est le cas normal (règle 107) ; à côté de
+        # « Installée », « Recommandée » était rogné dans sa pastille (rail de 300 px).
+        recommandee = recommandee and not installee
         etats = []
         if installee:
             etats.append(tr("Installée"))
@@ -172,10 +176,13 @@ class VersionsDialog(QDialog):
     """Le journal des changements d'un jeu, version par version. Rien ne s'y
     installe : on ne revient plus à une ancienne archive (2026-10-30)."""
 
-    def __init__(self, game: GameData, manager: GameManager, parent: QWidget | None = None) -> None:
+    def __init__(self, game: GameData, manager: GameManager, parent: QWidget | None = None,
+                 retour: tuple[str, Callable[[], None]] | None = None) -> None:
+        """`retour` : (libellé, rappel) quand la page ne ramène pas à la bibliothèque."""
         super().__init__(parent)
         self.game = game
         self.manager = manager
+        self._libelle_retour, self._au_retour = retour or (tr("Bibliothèque"), None)
         self._installed_version = manager.installed_version(game.id)
         # Les plus récentes d'abord (parsing tolérant aux dates cassées).
         self._versions = sorted(game.versions, key=lambda v: _date_sort_key(v.date), reverse=True)
@@ -218,14 +225,14 @@ class VersionsDialog(QDialog):
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(6)
 
-        retour = QPushButton(tr("Bibliothèque"))
+        retour = QPushButton(self._libelle_retour)
         retour.setObjectName("retour")
         retour.setFont(police(13))
         retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
         retour.setIconSize(QSize(16, 16))
         retour.setCursor(Qt.CursorShape.PointingHandCursor)
         retour.setAutoDefault(False)
-        retour.clicked.connect(self.accept)
+        retour.clicked.connect(self.reject)
         lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(14)
 
@@ -265,8 +272,6 @@ class VersionsDialog(QDialog):
         lay.setContentsMargins(*_MARGES_PAGE)
         lay.setSpacing(0)
 
-        tete = QHBoxLayout()
-        tete.setSpacing(24)
         gauche = QVBoxLayout()
         gauche.setSpacing(6)
         titre = QLabel(tr("Version {}").format(ver.version))
@@ -276,9 +281,7 @@ class VersionsDialog(QDialog):
         gauche.addWidget(titre)
         gauche.addWidget(texte(f"{date_longue(ver.date)} · {format_size(ver.size_mb)}",
                                15, "#a9a7c4"))
-        tete.addLayout(gauche, stretch=1)
-        tete.addLayout(self._etat(ver))
-        lay.addLayout(tete)
+        lay.addLayout(gauche)
 
         lay.addSpacing(22)
         filet = QFrame()
@@ -304,23 +307,15 @@ class VersionsDialog(QDialog):
         lay.addStretch()
         return page
 
-    def _etat(self, ver: GameVersion) -> QVBoxLayout:
-        """La version installée se dit ; aucune autre ne s'installe d'ici."""
-        col = QVBoxLayout()
-        col.setSpacing(8)
-        col.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
-        if ver.version == self._installed_version:
-            ligne = QHBoxLayout()
-            ligne.setSpacing(8)
-            coche = QLabel()
-            coche.setPixmap(pixmap_icone("coche", 18, QColor(_VERT)))
-            coche.setStyleSheet("background: transparent;")
-            ligne.addWidget(coche)
-            ligne.addWidget(texte(tr("C'est la version installée"), 15, _VERT))
-            col.addLayout(ligne)
-        return col
-
     # ── Navigation ──
+
+    def reject(self) -> None:
+        """Le bouton de retour et Échap : d'abord fermer, puis rouvrir d'où l'on
+        vient, sinon la page rouverte se poserait sur celle-ci."""
+        super().reject()
+        rappel, self._au_retour = self._au_retour, None
+        if rappel is not None:
+            rappel()
 
     def choisir(self, version: str) -> None:
         ligne = self._lignes.get(version)
