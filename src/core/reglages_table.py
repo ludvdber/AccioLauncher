@@ -536,10 +536,10 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             defaut=False, onglet="difficulte", beta=True),
     # HP4, le seuil des créatures (correctif, 2026-11-08 ; `source/hardcore.cpp`) : combien de maléfices il faut, et
     # en combien de temps la jauge retombe. Relu au chargement d'un niveau. Au catalogue après un essai en jeu, avec
-    # `degats_recus` pour HP4 et une section [Accio.Hardcore] dans son ini.
+    # `degats_recus` et `degats_infliges` pour HP4 (chaque coup depuis le 2026-11-09) et une section [Accio.Hardcore] dans son ini.
     Reglage("sorts_par_creature", "Accio.Hardcore", "EnemyHits",
             "Résistance des créatures",
-            "Multiplie le nombre de sorts qu'il faut pour vaincre une créature. Compte au prochain niveau chargé.",
+            "Multiplie le nombre de sorts qu'il faut pour ensorceler une créature. Sa vie dépend des « Dégâts de vos sorts ». Compte au prochain niveau chargé.",
             choix=(1, 0.6, 1.5, 2, 3), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("jauge_creature", "Accio.Hardcore", "EnemyRecovery",
             "Temps pour enchaîner les sorts",

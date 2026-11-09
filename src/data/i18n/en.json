@@ -1438,7 +1438,7 @@
     "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort). Compte au prochain lancement du jeu.": "The game only reads the mouse and the controller 20 times per second, whatever the frame rate: the camera moves in small jerks. \"Smooth\" reads them 62 times per second; Harry keeps his speed. Known: some animations still go too fast (the mouths of people talking, what the mouse drives during a spell). Takes effect the next time the game starts.",
     "Fluide": "Smooth",
     "Résistance des créatures": "Creature resistance",
-    "Multiplie le nombre de sorts qu'il faut pour vaincre une créature. Compte au prochain niveau chargé.": "Multiplies how many spells it takes to defeat a creature. Applies from the next level loaded.",
+    "Multiplie le nombre de sorts qu'il faut pour ensorceler une créature. Sa vie dépend des « Dégâts de vos sorts ». Compte au prochain niveau chargé.": "Multiplies how many spells it takes to bewitch a creature. Its health depends on “Damage of your spells”. Applies from the next level loaded.",
     "Temps pour enchaîner les sorts": "Time to chain spells",
     "Le temps que met une créature à se remettre de vos sorts : plus il est court, plus il faut les enchaîner vite. Compte au prochain niveau chargé.": "How long a creature takes to recover from your spells: the shorter it is, the faster you must chain them. Applies from the next level loaded.",
     "Rétablir": "Restore",
