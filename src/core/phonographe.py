@@ -98,6 +98,12 @@ def attend_vgmstream(jeu: str) -> bool:
     return jeu in _A_CONVERTIR and vgmstream.a_telecharger()
 
 
+def manque_vgmstream(jeu: str) -> bool:
+    """HP5, HP6 sans vgmstream là où le launcher ne le télécharge pas : sous Linux,
+    c'est celui du système, et Bazzite ne l'a pas (2026-11-11)."""
+    return jeu in _A_CONVERTIR and not vgmstream.disponible() and not vgmstream.a_telecharger()
+
+
 def pistes(jeu: str, dossier_jeu: Path | None) -> list[Piste]:
     """Les morceaux d'un jeu installé, triés par nom ; vide si rien à lire."""
     if dossier_jeu is not None and jeu in _ARCHIVES:

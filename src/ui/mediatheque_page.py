@@ -675,7 +675,10 @@ class _VueMusique(QWidget):
         morceaux = media.morceaux(jeu)
         a_de_la_musique = jeu in {g.id for g in media.jeux(MUSIQUE)}
         attend = a_de_la_musique and media.attend_vgmstream(jeu)
-        self._lisible = a_de_la_musique and not attend
+        # Linux sans `vgmstream-cli` : la liste s'affichait, Lecture ne jouait rien
+        # et rien ne disait pourquoi (Bazzite, 2026-11-11).
+        manque = a_de_la_musique and media.manque_vgmstream(jeu)
+        self._lisible = a_de_la_musique and not attend and not manque
         for w in (self._carte, self._zone, self._credit_jeu):
             w.setVisible(self._lisible)
         self._vide.setVisible(not self._lisible)
@@ -691,6 +694,13 @@ class _VueMusique(QWidget):
             self._bouton_lecteur.setEnabled(not en_cours)
             self._bouton_lecteur.setText(tr("Téléchargement…") if en_cours else
                                          tr("Télécharger ({})").format(_poids_vgmstream()))
+            self._rafraichir()
+            return
+        if manque:
+            self._paquets.remplir([])
+            self._vide.setText(tr("La musique de {} se lit avec vgmstream, un petit outil libre. "
+                                  "Installez « vgmstream-cli » sur ce système pour l'écouter.")
+                               .format(media.nom(jeu)))
             self._rafraichir()
             return
         if not a_de_la_musique:
@@ -1181,6 +1191,9 @@ class _VueCinematiques(QWidget):
             # HP5, HP6 : le son est là, c'est vgmstream qui manque (1.3.1).
             note = tr("Le son de cette cinématique se lit avec vgmstream : téléchargez-le une fois "
                       "depuis la Musique de ce jeu.")
+        elif voix is None and self._media.manque_vgmstream(jeu):
+            note = tr("Le son de cette cinématique se lit avec vgmstream : installez "
+                      "« vgmstream-cli » sur ce système.")
         elif voix is None and self._media.sans_son(jeu):
             note = tr("Le son de cette cinématique est encore en cours de déchiffrement.")
         else:

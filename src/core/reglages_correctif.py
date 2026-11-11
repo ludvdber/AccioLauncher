@@ -405,6 +405,15 @@ def touche_capture(ini: Path) -> str:
     return ""
 
 
+def valeur_posee(ini: Path, section: str, cle: str) -> str | None:
+    """La valeur d'une clé que le LANCEUR tient à jour, ou None si l'ini ne la porte pas."""
+    try:
+        lignes, _ = _lire(ini)
+    except OSError:
+        return None
+    return _valeur(lignes, section, cle)
+
+
 def poser_valeur(ini: Path, section: str, cle: str, valeur: str) -> bool:
     """Pose une clé que le LANCEUR tient à jour (pas un réglage de l'interface).
 

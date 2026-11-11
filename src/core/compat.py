@@ -654,6 +654,50 @@ def _dans_le_dossier(chemin: str, dossier: str) -> bool:
     return chemin.rstrip("/") == racine or chemin.startswith(racine + "/")
 
 
+# ─── DXVK : le gel du GPU Intel ───
+
+# Depuis sa version 3.0 (et déjà dans le DXVK de GE-Proton10-34), DXVK rend le
+# pipeline fixe de Direct3D 9 par un vertex shader unique, l'« ubershader ». Pour
+# un sommet position + couleur + texture, le pilote Intel de Mesa (ANV, encore en
+# 26.2.6) lui donne 132 registres (2 + 58 de constantes + 72 d'attributs) pour
+# une file de 128 : le GPU ne finit jamais le dessin (« GPU HANG » au journal du
+# noyau, image figée pour de bon). C'est le texte de l'incrustation du correctif
+# (F10, F11) qui le déclenchait ; n'importe quel dessin de ce genre le ferait.
+# Relevé dans l'état d'erreur du noyau sur Bazzite le 2026-11-11
+# (docs/linux/RETOUR_BAZZITE.md, septième passage). Sans l'ubershader, DXVK
+# compile un shader par cas, comme avant la 3.0 : plus aucun gel.
+OPTION_DXVK_SANS_GEL = "d3d9.ffUbershaderVS = False"
+
+
+def _options_dxvk(texte: str) -> dict[str, str]:
+    options: dict[str, str] = {}
+    for morceau in (texte or "").split(";"):
+        cle, egal, valeur = morceau.partition("=")
+        if egal and cle.strip():
+            options[cle.strip().lower()] = valeur.strip().lower()
+    return options
+
+
+def composer_dxvk(existant: str) -> str:
+    """`DXVK_CONFIG` complété par l'option qui écarte le gel du GPU Intel.
+
+    Pure. Un réglage de l'utilisateur sur la même option, ou sur les
+    « descriptor buffers » (l'autre remède, celui de DXVK 3.0.1), reste le sien.
+    """
+    propre = (existant or "").strip().strip(";").strip()
+    options = _options_dxvk(propre)
+    if "d3d9.ffubershadervs" in options or "dxvk.enabledescriptorbuffer" in options:
+        return propre
+    return f"{propre};{OPTION_DXVK_SANS_GEL}" if propre else OPTION_DXVK_SANS_GEL
+
+
+def dxvk_sans_gel(env: Mapping[str, str]) -> bool:
+    """Vrai si cet environnement écarte le gel : c'est ce qui autorise l'incrustation."""
+    options = _options_dxvk(env.get("DXVK_CONFIG", ""))
+    return (options.get("d3d9.ffubershadervs") == "false"
+            or options.get("dxvk.enabledescriptorbuffer") == "true")
+
+
 def environnement_hote(base: Mapping[str, str] | None = None, gele: bool | None = None,
                        embarque: str | None = None) -> dict[str, str]:
     """L'environnement d'origine, débarrassé de ce que PyInstaller y a mis.
@@ -733,6 +777,8 @@ def environnement(trouve: Lanceur, pfx: Path, surcharges: Iterable[str] = (),
         env["WINEDLLOVERRIDES"] = dlls
     if ips_max > 0:
         env.setdefault("DXVK_FRAME_RATE", str(ips_max))
+    # Les deux familles : un Wine du système peut porter DXVK dans son préfixe.
+    env["DXVK_CONFIG"] = composer_dxvk(env.get("DXVK_CONFIG", ""))
     return env
 
 

@@ -274,6 +274,10 @@ class Mediatheque(QObject):
         """HP5, HP6 sous Windows tant que vgmstream n'est pas téléchargé."""
         return phonographe.attend_vgmstream(jeu)
 
+    def manque_vgmstream(self, jeu: str) -> bool:
+        """HP5, HP6 sous Linux sans le `vgmstream-cli` du système : rien à télécharger d'ici."""
+        return phonographe.manque_vgmstream(jeu)
+
     def morceaux(self, jeu: str) -> tuple[discographie.Morceau, ...]:
         return self._morceaux.get(jeu, ())
 

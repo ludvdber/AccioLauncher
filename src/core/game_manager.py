@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from src.core import captures, compat, demarrage, manette
+from src.core import captures, compat, demarrage, incrustation_wine, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, memoire_4go, reglages_correctif, reprise, resolution_jeu, stats
@@ -386,6 +386,8 @@ class GameManager:
         popen_kwargs["start_new_session"] = True
         popen_kwargs["env"] = compat.environnement(lanceur, pfx, game.dll_overrides,
                                                    ips_max=game.max_fps)
+        # Le dessin du compteur du correctif suit le remède au gel du GPU Intel.
+        incrustation_wine.suivre(exe_path.parent, popen_kwargs["env"])
         commande = compat.commande_jeu(lanceur, exe_path, arguments)
         journal = compat.journal_du_jeu(game.id)
         log.info("Lancement sous %s (%s) : préfixe %s, surcharges %s, plafond %s, journal %s",

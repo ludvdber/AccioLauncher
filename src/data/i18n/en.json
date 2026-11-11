@@ -736,6 +736,8 @@
     "Couleurs": "Colours",
     "Autres": "Others",
     "La musique de {} se lit avec vgmstream, un petit outil libre à télécharger une seule fois.": "The music of {} plays through vgmstream, a small free tool to download once.",
+    "Le son de cette cinématique se lit avec vgmstream : installez « vgmstream-cli » sur ce système.": "This cutscene's sound plays through vgmstream: install “vgmstream-cli” on this system.",
+    "La musique de {} se lit avec vgmstream, un petit outil libre. Installez « vgmstream-cli » sur ce système pour l'écouter.": "The music of {} plays through vgmstream, a small free tool. Install “vgmstream-cli” on this system to listen to it.",
     "Télécharger ({})": "Download ({})",
     "Le son de cette cinématique se lit avec vgmstream : téléchargez-le une fois depuis la Musique de ce jeu.": "This cutscene's sound plays through vgmstream: download it once from this game's Music.",
     "Téléchargement…": "Downloading…",
