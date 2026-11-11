@@ -865,3 +865,28 @@ def test_le_bouton_jouer_garde_sa_hauteur_d_un_jeu_a_l_autre(make_window, qtbot)
         info = win._detail._info
         bas[etat.game.id] = info.y() + info.natural_height()
     assert max(bas.values()) - min(bas.values()) <= 4, bas
+
+
+def test_une_description_courte_ne_fait_pas_remonter_le_bouton(make_window, qtbot):
+    """Un contenu plus COURT que la référence redescend d'autant (Bazzite, 2026-11-11).
+
+    Avec les polices de Linux, trois descriptions tiennent en deux lignes au lieu
+    de trois : le panneau n'était pas redescendu et le bouton Jouer remontait de
+    15 px sur ces jeux. Ici la description est raccourcie exprès, pour que le
+    test ne dépende pas de la police de la plateforme.
+    """
+    import dataclasses
+
+    win = make_window()
+    win.show()
+    win.resize(1600, 900)
+    qtbot.wait(40)
+    jeu = win.manager.get_games()[0].game
+    info = win._detail._info
+    bas = {}
+    for nom, description in (("longue", jeu.description), ("courte", "Une ligne.")):
+        win._detail.set_game(dataclasses.replace(jeu, description=description))
+        qtbot.wait(40)
+        bas[nom] = (info.y() + info.natural_height(), info.natural_height())
+    assert bas["courte"][1] < bas["longue"][1], bas   # le contenu est bien plus court
+    assert abs(bas["courte"][0] - bas["longue"][0]) <= 4, bas
