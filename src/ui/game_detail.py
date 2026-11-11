@@ -222,8 +222,12 @@ class GameDetailView(QWidget):
         if self._info.width() != info_w:
             self._info.setGeometry(0, retrait, info_w, max(1, h - retrait - 20))
         # Fenêtre basse : la place manque, `_fit_info_height` décide seul.
-        surplus = max(0, self._info.natural_height() - _HAUTEUR_REFERENCE) if h >= _SEUIL_COMPACT else 0
-        info_top = max(min(retrait, _INFO_TOP_MIN), retrait - surplus)
+        # L'écart est SIGNÉ : un contenu plus court que la référence redescend
+        # d'autant. Avec les polices de Linux, trois descriptions tiennent en deux
+        # lignes au lieu de trois (297 px) et le bouton remontait de 15 px.
+        naturelle = self._info.natural_height()
+        ecart = naturelle - _HAUTEUR_REFERENCE if h >= _SEUIL_COMPACT and naturelle > 0 else 0
+        info_top = max(min(retrait, _INFO_TOP_MIN), retrait - ecart)
         dispo = h - info_top - 20
         # Le bandeau d'avertissement mange la place du texte (0 sinon).
         self._info.set_height_budget(dispo - self._action_panel.alert_height())

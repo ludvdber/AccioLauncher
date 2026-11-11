@@ -677,6 +677,16 @@ class TestCommandesMusique:
         page.montrer("hp2")
         assert not page._lecture.isEnabled()
 
+    def test_sans_vgmstream_du_systeme_la_page_le_dit_au_lieu_de_lister(self, vue, monkeypatch):
+        """Sous Linux la liste s'affichait, Lecture ne jouait rien, sans un mot (Bazzite, 2026-11-11)."""
+        win, page, _fond, _cles = vue
+        monkeypatch.setattr(win._mediatheque, "manque_vgmstream", lambda jeu: True)
+        page.montrer("hp2")
+        assert "vgmstream-cli" in page._vide.text()
+        assert not page._vide.isHidden() and page._zone.isHidden()
+        assert page._bouton_lecteur.isHidden(), "rien à télécharger d'ici"
+        assert not page._lecture.isEnabled()
+
     def test_enregistrer_dit_ou_ou_dit_l_echec(self, vue, monkeypatch, tmp_path):
         win, page, _fond, cles = vue
         monkeypatch.setattr(win._mediatheque, "enregistrer", lambda c: tmp_path / "HP2" / "a.ogg")

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from src.core import compat, game_registry, system_checks
+from src.core import compat, game_registry, reglages_correctif, system_checks
 from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
@@ -412,3 +412,34 @@ class TestSurveillanceSousWine:
         monkeypatch.setattr(compat, "processus_du_jeu", lambda *a: pytest.fail("appelé"))
         assert ProcessMonitor._is_exe_running("hp.exe") is False
 
+
+def _ini_du_correctif(dossier: Path) -> Path:
+    dossier.mkdir(parents=True, exist_ok=True)
+    ini = dossier / "d3d9.ini"
+    ini.write_bytes(b"[Accio.Window]\r\nFPSLimit=120\r\n\r\n[Accio.Overlay]\r\nShowFPS=0\r\nDrawUnderWine=0\r\n")
+    return ini
+
+
+@pytest.mark.usefixtures("linux")
+class TestIncrustationDuCorrectif:
+    """Le remède au gel du GPU Intel part avec le jeu, et le dessin du compteur le suit
+    (`incrustation_wine`, Bazzite, 2026-11-11)."""
+
+    def test_jouer_pose_le_remede_et_autorise_le_dessin(self, tmp_path, monkeypatch):
+        m = _manager(tmp_path, monkeypatch)
+        _sans_prelancement(monkeypatch)
+        vus = _popen_espion(monkeypatch)
+        ini = _ini_du_correctif(tmp_path / "jeux" / "HP7" / "pc")
+        m.launch_game("hp7a")
+        assert compat.dxvk_sans_gel(vus["env"])
+        assert reglages_correctif.valeur_posee(ini, "Accio.Overlay", "DrawUnderWine") == "1"
+
+    def test_avec_l_ubershader_remis_par_le_joueur_le_dessin_reste_coupe(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("DXVK_CONFIG", "d3d9.ffUbershaderVS = True")
+        m = _manager(tmp_path, monkeypatch)
+        _sans_prelancement(monkeypatch)
+        vus = _popen_espion(monkeypatch)
+        ini = _ini_du_correctif(tmp_path / "jeux" / "HP7" / "pc")
+        m.launch_game("hp7a")
+        assert vus["env"]["DXVK_CONFIG"] == "d3d9.ffUbershaderVS = True"
+        assert reglages_correctif.valeur_posee(ini, "Accio.Overlay", "DrawUnderWine") == "0"

@@ -343,6 +343,35 @@ l'environnement est lisible — dont le `WINEPREFIX` est le nôtre. Même grâce
   écrire dans `~/Games` (permission de système de fichiers à demander). À
   reconsidérer une fois le portage éprouvé.
 
+### 4.9 DXVK : le gel du GPU Intel, et l'incrustation du correctif
+
+Relevé sur Bazzite le 2026-11-11 (i3-1220P, Intel UHD « ADL GT2 », Mesa 26.2.6,
+GE-Proton10-34 dont le DXVK est `v2.7.1-509-g1676dcaf`, c'est-à-dire la branche
+qui deviendra la 3.0). Détail : `docs/linux/RETOUR_BAZZITE.md`, septième passage.
+
+- **Le défaut.** Ce DXVK rend le pipeline fixe de Direct3D 9 par un vertex
+  shader unique, l'« ubershader ». Pour un sommet position + couleur + texture
+  (17 éléments de sommet), le pilote Intel de Mesa (ANV) donne à ce shader
+  2 + 58 registres de constantes + 72 d'attributs = **132 registres pour une
+  file de 128**. Le GPU ne finit jamais le dessin : `i915 … GPU HANG` au journal
+  du noyau, image figée, il faut tuer le jeu. Mesa connaît le défaut (ticket
+  15795, correctif MR 42665 de juillet 2026, présent dans la 26.2.6) mais son
+  correctif ne suffit pas à ce cas ; DXVK 3.0.1 le contourne de son côté en
+  activant les « descriptor buffers » sur ces GPU.
+- **Qui le déclenche.** Le texte de l'incrustation du correctif (F10, F11) de
+  HP4 à HP7b : 9 gels sur 9, d'où son `DrawUnderWine=0`. N'importe quel dessin
+  à pipeline fixe du même genre le ferait.
+- **Le remède, côté lanceur.** `compat.environnement` pose
+  `DXVK_CONFIG=d3d9.ffUbershaderVS = False` à chaque lancement : DXVK compile
+  alors un shader par cas, comme avant la 3.0. Un réglage de l'utilisateur sur
+  cette option, ou sur `dxvk.enableDescriptorBuffer` (l'autre remède, vérifié
+  aussi), reste le sien. Cadence inchangée.
+- **L'incrustation.** `incrustation_wine.suivre` écrit `DrawUnderWine=1` dans
+  le `d3d9.ini` quand l'environnement du lancement porte le remède, `0` sinon.
+  Un ini sans la clé n'est pas touché.
+- **wined3d** (`PROTON_USE_WINED3D=1`) : pas de gel, le défaut est propre au
+  couple DXVK + ANV.
+
 ---
 
 ## 5. Plan des phases (une pull request chacune)

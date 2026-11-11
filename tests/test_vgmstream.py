@@ -208,6 +208,23 @@ class TestTelechargement:
         assert phonographe.attend_vgmstream("hp5") and phonographe.attend_vgmstream("hp6")
         assert not phonographe.attend_vgmstream("hp4")
 
+    def test_sous_linux_sans_vgmstream_du_systeme_il_manque_sans_rien_a_telecharger(self, monkeypatch):
+        """Bazzite n'a pas `vgmstream-cli` : rien ne se télécharge, mais la page doit le DIRE."""
+        monkeypatch.setattr(vgmstream.sys, "platform", "linux")
+        monkeypatch.setattr(vgmstream.shutil, "which", lambda nom: None)
+        assert not vgmstream.a_telecharger()
+        assert not phonographe.attend_vgmstream("hp6")
+        assert phonographe.manque_vgmstream("hp5") and phonographe.manque_vgmstream("hp6")
+        assert not phonographe.manque_vgmstream("hp4")
+        monkeypatch.setattr(vgmstream.shutil, "which", lambda nom: "/usr/bin/vgmstream-cli")
+        assert not phonographe.manque_vgmstream("hp6")
+
+    def test_sous_windows_il_ne_manque_pas_il_se_telecharge(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(vgmstream.sys, "platform", "win32")
+        monkeypatch.setattr(vgmstream, "dossier_installe", lambda: tmp_path / "rien")
+        monkeypatch.setattr(vgmstream, "_base", lambda: tmp_path)
+        assert phonographe.attend_vgmstream("hp6") and not phonographe.manque_vgmstream("hp6")
+
     def test_les_empreintes_du_module_sont_celles_de_la_release(self):
         """La source unique : le script des sources pose ce que le launcher télécharge."""
         assert len(vgmstream.FICHIERS) == 13
