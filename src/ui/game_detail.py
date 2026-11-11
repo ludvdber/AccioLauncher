@@ -40,6 +40,12 @@ _VIDEO_START_DELAY_MS = 2000
 # Retrait minimal au-dessus du panneau d'infos. En dessous, le titre du jeu
 # viendrait toucher la barre de titre de la fenêtre.
 _INFO_TOP_MIN = 24
+# Hauteur du contenu de la fiche la plus courante, mesurée sur les 8 jeux : la
+# position du bouton Jouer se déduit de ce repère.
+_HAUTEUR_REFERENCE = 312
+_SEUIL_COMPACT = 520  # hauteur de la vue, bande du carrousel déduite (fenêtre de 780 px environ)
+# Après le premier affichage, pour ne pas peser sur l'ouverture de la fenêtre.
+_PRECHARGE_FONDS_MS = 1500
 
 # Retrait de la barre audio par rapport aux bords bas et droit de la fiche.
 _MARGE_AUDIO = 18
@@ -99,6 +105,7 @@ class GameDetailView(QWidget):
         self._wine = (InstallateurComposants(self) if composants_windows.disponible()
                       else PreparateurWine(self))
         self._cinema = False
+        self._fonds_precharges = False
 
         self._build_ui(manager)
         self._connect_signals()
@@ -206,7 +213,17 @@ class GameDetailView(QWidget):
         frac = 0.50 if w >= 1300 else 0.58 if w >= 1100 else 0.64
         info_w = min(700, int(w * frac))
         # Retrait vertical réduit quand la hauteur manque.
-        info_top = int(h * (0.22 if h >= 560 else 0.10))
+        retrait = int(h * (0.22 if h >= 560 else 0.10))
+        # Largeur définitive d'abord : la hauteur naturelle en dépend. Le contenu
+        # plus haut que la référence fait remonter le panneau : le bouton Jouer
+        # reste à la même hauteur d'un jeu à l'autre (il sautait jusqu'à 118 px).
+        # Seulement si elle change : relancer la mise en page à chaque appel, quatre
+        # fois par changement de jeu, coûtait 11 ms de plus sur 25 (mesuré le 2026-11-09).
+        if self._info.width() != info_w:
+            self._info.setGeometry(0, retrait, info_w, max(1, h - retrait - 20))
+        # Fenêtre basse : la place manque, `_fit_info_height` décide seul.
+        surplus = max(0, self._info.natural_height() - _HAUTEUR_REFERENCE) if h >= _SEUIL_COMPACT else 0
+        info_top = max(min(retrait, _INFO_TOP_MIN), retrait - surplus)
         dispo = h - info_top - 20
         # Le bandeau d'avertissement mange la place du texte (0 sinon).
         self._info.set_height_budget(dispo - self._action_panel.alert_height())
@@ -340,12 +357,20 @@ class GameDetailView(QWidget):
             self._jumeau.fondu_zero()
         self._apply_game(game)
 
+    def _precharger_fonds(self) -> None:
+        """Tous les fonds prêts d'avance : passer vite d'un jeu à l'autre les montre aussitôt."""
+        self._bg.precharger([ASSETS_DIR / "backgrounds" / f"{e.game.id}_bg.jpg"
+                             for e in self.manager.get_games()])
+
     def _apply_game(self, game: GameData) -> None:
         self.game = game
         self._info.apply_game(game)
 
         # La jaquette d'abord, la bande-annonce après le délai de lecture.
         self._bg.set_image(ASSETS_DIR / "backgrounds" / f"{game.id}_bg.jpg")
+        if not self._fonds_precharges:
+            self._fonds_precharges = True
+            QTimer.singleShot(_PRECHARGE_FONDS_MS, self._precharger_fonds)
         self._schedule_video(game.id)
         if not self._cinema:
             self._position_audio_bar()
@@ -393,23 +418,15 @@ class GameDetailView(QWidget):
         de plus en téléchargement), sinon la fiche défile tout le téléchargement.
         """
         # Installé ou non : la partie en cours, le lien « Folio » et la version
-        # en dépendent. AVANT le panneau d'actions, qui range ses statistiques
-        # dans le bloc de la partie quand il y en a un.
+        # en dépendent.
         self._info.rafraichir_indices(self.game)
-        self._action_panel.partie_dans_la_fiche = self._info.partie_affichee()
         self._action_panel.set_game(self.game)
         self._action_panel.refresh()
         self._position_info()
 
     def _sur_partie_lue(self) -> None:
         """La sauvegarde, lue dans un fil, a changé la fiche : le panneau
-        d'actions range ses statistiques selon qu'il y a un bloc, puis le
-        panneau d'infos se repositionne (règle 40). Reconstruit seulement si
-        cela change : un JOUER au focus clavier le perdrait sinon."""
-        partie = self._info.partie_affichee()
-        if partie != self._action_panel.partie_dans_la_fiche:
-            self._action_panel.partie_dans_la_fiche = partie
-            self._action_panel.refresh()
+        d'infos se repositionne (règle 40)."""
         self._position_info()
 
     # ──────────────────── Parallaxe ────────────────────

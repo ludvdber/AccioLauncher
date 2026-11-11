@@ -850,3 +850,18 @@ class TestBalisageDuCatalogueJamaisInterprete:
                     and fonc.attr in {"question", "warning", "information", "critical"}):
                 fautifs.append(fonc.attr)
         assert not fautifs, f"appels statiques a QMessageBox (AutoText) : {fautifs}"
+
+
+def test_le_bouton_jouer_garde_sa_hauteur_d_un_jeu_a_l_autre(make_window, qtbot):
+    """Le titre sur plusieurs lignes faisait sauter la rangée d'actions."""
+    win = make_window()
+    win.show()
+    win.resize(1600, 900)
+    qtbot.wait(40)
+    bas = {}
+    for etat in win.manager.get_games():
+        win._detail.set_game(etat.game)
+        qtbot.wait(40)
+        info = win._detail._info
+        bas[etat.game.id] = info.y() + info.natural_height()
+    assert max(bas.values()) - min(bas.values()) <= 4, bas

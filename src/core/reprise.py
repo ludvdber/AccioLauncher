@@ -50,6 +50,39 @@ def _releves(game: GameData) -> Sequence[folio.PartieLue]:
     return folio.emplacements_hp1(fichiers)
 
 
+# La dernière réponse par jeu, avec l'état des fichiers qui l'a donnée.
+_connus: dict[str, tuple[tuple[tuple[str, int, int], ...], bool]] = {}
+
+
+def _empreinte(game: GameData) -> tuple[tuple[str, int, int], ...]:
+    """Noms, tailles et dates des sauvegardes : ce qui change quand la partie change."""
+    lignes = []
+    for nom, chemin in sauvegardes.fichiers(game.sauvegardes).items():
+        try:
+            etat = chemin.stat()
+        except OSError:
+            continue
+        lignes.append((nom, etat.st_size, etat.st_mtime_ns))
+    return tuple(sorted(lignes))
+
+
+def reprise_possible(game: GameData) -> bool:
+    """`arguments` sans relire les sauvegardes tant qu'elles n'ont pas changé.
+
+    Pour le libellé du bouton, redemandé à chaque changement de jeu (26 ms sur
+    HP1) ; le lancement, lui, passe toujours par `arguments`.
+    """
+    if game.id not in JEUX or game.sauvegardes is None:
+        return False
+    empreinte = _empreinte(game)
+    connu = _connus.get(game.id)
+    if connu is not None and connu[0] == empreinte:
+        return connu[1]
+    possible = bool(arguments(game))
+    _connus[game.id] = (empreinte, possible)
+    return possible
+
+
 def arguments(game: GameData) -> tuple[str, ...]:
     """Ce qu'il faut ajouter à la ligne de commande pour reprendre ; () pour le menu du jeu."""
     if game.id not in JEUX or game.sauvegardes is None:

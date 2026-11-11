@@ -275,7 +275,7 @@ def test_la_course_de_python_est_celle_de_la_scene(qtbot, jumeau_allume):
     c = _bande(qtbot)
     assert c._jumeau._racine.property("duree") == carrousel_gpu.Glissement.DUREE_MS
     source = (ASSETS_DIR / "qml" / "CarrouselAccueil.qml").read_text(encoding="utf-8")
-    assert source.count("easing.type: Easing.InOutQuad") == 6
+    assert source.count("easing.type: Easing.InOutQuad") == 5
     assert "easing.type: Easing." not in source.replace("easing.type: Easing.InOutQuad", "")
 
 

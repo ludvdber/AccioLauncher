@@ -1,4 +1,4 @@
-"""Miniature d'un jeu dans le carrousel — reflet, profondeur, badges."""
+"""Miniature d'un jeu dans le carrousel — profondeur, badges."""
 
 import re
 from collections.abc import Callable
@@ -9,7 +9,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QColor, QFont, QFontMetrics, QImage, QImageReader, QLinearGradient, QPainter,
-    QPainterPath, QPen, QPixmap, QTransform,
+    QPainterPath, QPen, QPixmap,
 )
 from PyQt6.QtWidgets import QWidget
 
@@ -24,12 +24,12 @@ from src.ui import theme
 
 THUMB_W = 90
 THUMB_H = 125
-REFLECTION_RATIO = 0.20
-REFLECTION_OPACITY = 0.06
 
-# Marges verticales de l'item, en dur dans `_update_size` : 6 px sous le reflet
-# et 10 px de respiration.
+# Marges verticales de l'item, en dur dans `_update_size`.
 _MARGE_V = 16
+# La place gardée sous la jaquette, en part de sa hauteur. Sans elle, la jaquette
+# occupait toute la bande : 149 px au lieu de 125, trop gros (Ludo, 2026-11-09).
+_RESERVE_BAS = 0.20
 # Rayon des coins de la jaquette, en points de la vignette.
 _RAYON_JAQUETTE = 6.0
 # Rapport largeur/hauteur de la jaquette, à tenir quelle que soit la bande.
@@ -54,10 +54,8 @@ def vignette_pour(dispo: int, echelle_max: float) -> tuple[int, int]:
     (`SCALE_SELECTED`) — c'est LUI qui décide, puisque c'est le plus grand item
     qui doit tenir.
     """
-    # hauteur_item(h) = h + int(h * RATIO) + _MARGE_V, avec h = THUMB_H * échelle
-    budget = max(1, dispo - _MARGE_V)
-    h_max = int(budget / (1.0 + REFLECTION_RATIO))
-    hauteur = max(1, int(h_max / echelle_max))
+    # hauteur_item(h) = h + int(h * _RESERVE_BAS) + _MARGE_V, avec h = THUMB_H * échelle
+    hauteur = max(1, int(int(max(1, dispo - _MARGE_V) / (1.0 + _RESERVE_BAS)) / echelle_max))
     return max(1, int(hauteur * _RAPPORT)), hauteur
 
 # Corps des pastilles « NOUVEAU » / « BIENTÔT », du plus lisible au plus petit.
@@ -132,7 +130,7 @@ class _Geo(NamedTuple):
 
 
 class CarouselItem(QWidget):
-    """Miniature d'un jeu dans le carrousel avec reflet, profondeur et transitions."""
+    """Miniature d'un jeu dans le carrousel avec profondeur et transitions."""
 
     clicked = pyqtSignal()
 
@@ -152,8 +150,6 @@ class CarouselItem(QWidget):
         self._thumb_w = THUMB_W
         self._thumb_h = THUMB_H
 
-        self._reflection_cache: QPixmap | None = None
-        self._reflection_cache_size: tuple[int, int] = (0, 0)
         self._cached_installed: bool = False
         self._cached_has_update: bool = False
         self._cached_is_new: bool = False
@@ -251,10 +247,6 @@ class CarouselItem(QWidget):
         if (largeur, hauteur) == (self._thumb_w, self._thumb_h):
             return
         self._thumb_w, self._thumb_h = largeur, hauteur
-        # Le reflet est mis en cache à une taille : la changer sans l'invalider
-        # laisserait l'ancien, à l'échelle d'avant.
-        self._reflection_cache = None
-        self._reflection_cache_size = (0, 0)
         self._update_size()
         self.update()
         self._signaler_jumeau()
@@ -262,8 +254,7 @@ class CarouselItem(QWidget):
     def _update_size(self) -> None:
         w = int(self._thumb_w * self._anim_scale)
         h = int(self._thumb_h * self._anim_scale)
-        ref_h = int(h * REFLECTION_RATIO) + 6
-        self.setFixedSize(w + 10, h + ref_h + 10)
+        self.setFixedSize(w + 10, h + int(h * _RESERVE_BAS) + _MARGE_V)
 
     def set_depth(self, scale: float, opacity: float) -> None:
         if self._jumeau is not None:
@@ -313,8 +304,8 @@ class CarouselItem(QWidget):
         """La vignette, couche par couche, du fond vers les marques.
 
         Chaque couche est un geste NOMMÉ, et l'ordre de cette liste EST l'ordre
-        de profondeur : l'ombre portée passe sous la jaquette, le reflet sous
-        les pastilles, le voile « bientôt » par-dessus tout le reste.
+        de profondeur : l'ombre portée passe sous la jaquette, le voile
+        « bientôt » par-dessus tout le reste.
 
         Ce corps faisait 194 lignes d'un seul tenant — trois fois le plus long
         `paintEvent` du projet, relevé par l'audit du 2026-09-23. On n'y lisait
@@ -334,8 +325,6 @@ class CarouselItem(QWidget):
         self._peindre_jaquette(p, geo)
         if self._selected:
             self._peindre_halo_selection(p, geo)
-        if self._pixmap:
-            self._peindre_reflet(p, geo)
         if not self._cached_installed and not self._cached_coming_soon:
             self._peindre_voile_absent(p, geo)
         if self._cached_has_update:
@@ -436,37 +425,6 @@ class CarouselItem(QWidget):
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRoundedRect(geo.x + 1, geo.y + 1, geo.w - 2, geo.h - 2,
                           geo.radius, geo.radius)
-
-    def _peindre_reflet(self, p: QPainter, geo: _Geo) -> None:
-        """La jaquette retournée sous la vignette, fondue vers le fond.
-
-        Le reflet est mis en cache à une taille : la changer sans l'invalider
-        laisserait l'ancien, à l'échelle d'avant.
-        """
-        ref_h = int(geo.h * REFLECTION_RATIO)
-        ref_y = geo.y + geo.h + 4
-        if (self._reflection_cache is None
-                or self._reflection_cache_size != (geo.w, geo.h)):
-            self._reflection_cache = self._pixmap.scaled(
-                geo.w, geo.h, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            ).transformed(QTransform().scale(1, -1))
-            self._reflection_cache_size = (geo.w, geo.h)
-        flipped = self._reflection_cache
-
-        p.setOpacity(geo.opacite * REFLECTION_OPACITY)
-        ref_clip = QPainterPath()
-        ref_clip.addRoundedRect(float(geo.x), float(ref_y), float(geo.w),
-                                float(ref_h), 3, 3)
-        p.setClipPath(ref_clip)
-        p.drawPixmap(geo.x, ref_y, geo.w, geo.h, flipped)
-        p.setClipping(False)
-
-        p.setOpacity(1.0)
-        fade = QLinearGradient(0, ref_y, 0, ref_y + ref_h)
-        fade.setColorAt(0, theme.bg_qcolor(80))
-        fade.setColorAt(1, theme.bg_qcolor(255))
-        p.fillRect(geo.x, ref_y, geo.w, ref_h, fade)
 
     def _peindre_voile_absent(self, p: QPainter, geo: _Geo) -> None:
         """Jeu pas installé : jaquette légèrement grisée (maquette « Plan du
@@ -573,7 +531,7 @@ class CarouselItem(QWidget):
         geo = self._geometrie()
         return {
             "visible": not self.isHidden(), "x": self.x(), "y": self.y(),
-            "cw": geo.w, "ch": geo.h, "refH": int(geo.h * REFLECTION_RATIO),
+            "cw": geo.w, "ch": geo.h,
             "opacite": self._anim_opacity, "survol": self._hovered, "choisi": self._selected,
             "absent": not self._cached_installed and not self._cached_coming_soon,
             "jaquette": self._pixmap is not None,

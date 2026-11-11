@@ -227,13 +227,20 @@ class TestVignettePour:
 
     def test_le_plus_grand_item_tient(self):
         from src.ui.carousel import SCALE_SELECTED
-        from src.ui.carousel_item import REFLECTION_RATIO, _MARGE_V, vignette_pour
+        from src.ui.carousel_item import _MARGE_V, _RESERVE_BAS, vignette_pour
 
         for dispo in (148, 112, 90, 200, 60):
             _, h = vignette_pour(dispo, SCALE_SELECTED)
             haut = int(h * SCALE_SELECTED)
-            total = haut + int(haut * REFLECTION_RATIO) + _MARGE_V
+            total = haut + int(haut * _RESERVE_BAS) + _MARGE_V
             assert total <= dispo, f"dispo={dispo} -> item de {total} px"
+
+    def test_la_jaquette_garde_sa_taille_d_origine(self):
+        """Sans réserve sous la jaquette, elle passait à 149 px : jugée trop grosse."""
+        from src.ui.carousel import CAROUSEL_HEIGHT, SCALE_SELECTED
+        from src.ui.carousel_item import vignette_pour
+
+        assert vignette_pour(CAROUSEL_HEIGHT - 44, SCALE_SELECTED)[1] <= 125
 
     def test_le_rapport_de_la_jaquette_est_tenu(self):
         from src.ui.carousel import SCALE_SELECTED
@@ -309,8 +316,7 @@ class TestFiletDeReprise:
         75 % — le test passait alors sans rien prouver.
         """
         def or_du_filet(img):
-            # Toute l'image : le filet est au bas de la JAQUETTE, au-dessus du
-            # reflet — pas au bas du widget.
+            # Toute l'image : le filet est au bas de la JAQUETTE, pas au bas du widget.
             n = 0
             for y in range(img.height()):
                 for x in range(img.width()):
@@ -344,17 +350,16 @@ class TestLesCouchesDeLaVignette:
     Trois fois le plus long `paintEvent` du projet (audit du 2026-09-23). On
     n'y lisait plus ni l'ordre de profondeur ni l'opacité en cours, qui change
     six fois en chemin. La découpe a été vérifiée à l'OCTET sur dix états —
-    ombre, jaquette, halo, reflet, pastilles, ruban, voile, filet — et ces
+    ombre, jaquette, halo, pastilles, ruban, voile, filet — et ces
     tests gardent ce que la découpe promet.
     """
 
-    # L'ordre EST la profondeur : l'ombre sous la jaquette, le reflet sous les
-    # pastilles, le voile « bientôt » par-dessus tout ce qui est jouable.
+    # L'ordre EST la profondeur : l'ombre sous la jaquette, le voile « bientôt »
+    # par-dessus tout ce qui est jouable.
     _ORDRE = [
         "_peindre_ombre_portee",
         "_peindre_jaquette",
         "_peindre_halo_selection",
-        "_peindre_reflet",
         "_peindre_voile_absent",
         "_peindre_badge_maj",
         "_peindre_ruban_nouveau",
@@ -372,8 +377,7 @@ class TestLesCouchesDeLaVignette:
             assert hasattr(CarouselItem, nom), f"couche manquante : {nom}"
 
     def test_l_ordre_de_peinture_est_l_ordre_de_profondeur(self):
-        """Déplacer un appel ici change ce qui passe DEVANT quoi. Un reflet
-        peint après les pastilles les effacerait à moitié."""
+        """Déplacer un appel ici change ce qui passe DEVANT quoi."""
         src = self._source_paint()
         positions = [src.find(nom) for nom in self._ORDRE]
         assert all(p >= 0 for p in positions), "une couche n'est plus appelée"
