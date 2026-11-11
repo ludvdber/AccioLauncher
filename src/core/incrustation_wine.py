@@ -10,7 +10,7 @@ autorise donc le dessin ; sinon il le coupe. Sans cela, « Compteur d'images » 
 non plus.
 
 Vérifié sur Bazzite le 2026-11-11 (Intel UHD, Mesa 26.2.6, GE-Proton10-34) :
-gel à chaque fois sans le remède, aucun sur 10 parties de 10 minutes avec.
+gel à chaque fois sans le remède, aucun sur 6 parties de 10 minutes avec.
 
 Seul le `d3d9.ini` porte cette clé ; un ini qui ne l'a pas (correctif plus
 ancien, HP1 à HP3) n'est pas touché.

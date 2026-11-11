@@ -365,7 +365,7 @@ qui deviendra la 3.0). Détail : `docs/linux/RETOUR_BAZZITE.md`, septième passa
   `DXVK_CONFIG=d3d9.ffUbershaderVS = False` à chaque lancement : DXVK compile
   alors un shader par cas, comme avant la 3.0. Un réglage de l'utilisateur sur
   cette option, ou sur `dxvk.enableDescriptorBuffer` (l'autre remède, vérifié
-  aussi), reste le sien. Cadence inchangée.
+  aussi), reste le sien. Cadence en partie non mesurée (la mesure du 2026-11-11 était faite sur la vidéo du menu).
 - **L'incrustation.** `incrustation_wine.suivre` écrit `DrawUnderWine=1` dans
   le `d3d9.ini` quand l'environnement du lancement porte le remède, `0` sinon.
   Un ini sans la clé n'est pas touché.
