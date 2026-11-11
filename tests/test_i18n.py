@@ -43,6 +43,8 @@ IDENTIQUES_TOLEREES = {
     "Exclusions",
     # « Contraste » : même mot en espagnol (réglage d'image du correctif).
     "Contraste",
+    # « Vignette » (coins assombris, réglage d'image du correctif) : même mot en anglais.
+    "Vignette",
     # « Textures » : même mot en anglais (famille d'effets de « Qualité d'image »).
     "Textures",
     # Éditeur de touches de HP4 : « Pause » en anglais, « Fin » (la touche) en espagnol.

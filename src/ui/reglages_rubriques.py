@@ -91,7 +91,7 @@ _GROUPES_EFFETS = (
 # part sous les préréglages, qui n'y touchent pas.
 _GROUPES_AMBIANCE = (
     ("Ciel et brouillard", ("ciel", "ciel_heure", "ciel_couleur", "brouillard")),
-    ("Couleurs", ("couleurs", "vivacite", "contraste", "vert_relief")),
+    ("Couleurs", ("couleurs", "vivacite", "contraste", "vignette", "vert_relief")),
 )
 _RESSOURCES = {"GPU": "Carte graphique (GPU)", "CPU": "Processeur (CPU)", "RAM": "Mémoire (RAM)"}
 _NIVEAUX = {1: "faible", 2: "moyenne", 3: "extrême"}

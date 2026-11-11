@@ -17,6 +17,9 @@ FILTRAGES = (0, 2, 4, 8, 16)
 # livrées y sont toutes (HP4/HP6 0.30 et 0.20, HP5 0.60 et 0.30).
 VIVACITES = ((0, "Aucune"), (0.15, "Légère"), (0.3, "Moyenne"), (0.45, "Forte"), (0.6, "Très forte"))
 CONTRASTES = ((0, "D'origine"), (0.1, "Léger"), (0.2, "Moyen"), (0.3, "Fort"))
+# Coins assombris par « Couleurs retravaillées » ([Accio.Graphics] Vignette ; livrée à 0.06 dans HP6, 0.08 dans HP5,
+# 0 dans HP4). Issue #30 (2026-11-09) : un joueur voulait la retirer et ne pouvait le faire qu'à la main dans l'ini.
+VIGNETTES = ((0, "Aucune"), (0.03, "Légère"), (0.06, "Moyenne"), (0.1, "Forte"))
 # Netteté après le FXAA (livrée à 0.40 partout) et netteté des textures au loin
 # (TextureLODBias : négatif = plus net ; HP5 livré à -1.5).
 NETTETES = ((0, "Aucune"), (0.2, "Légère"), (0.4, "Moyenne"), (0.6, "Forte"))
@@ -381,8 +384,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     Reglage("couleurs", "Accio.Graphics", "ColorGrading",
             "Couleurs retravaillées",
-            "Active la vivacité et le contraste ci-dessous, en épargnant les visages. Éteint "
-            ": les couleurs d'origine du jeu.",
+            "Active la vivacité, le contraste et la vignette ci-dessous, en épargnant les visages. "
+            "Éteint : les couleurs d'origine du jeu.",
             defaut=False, onglet="image", se_voit=True, depend_de="lissage"),
     Reglage("vivacite", "Accio.Graphics", "Vibrance",
             "Vivacité des couleurs",
@@ -396,6 +399,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "retravaillées ».",
             choix=tuple(v for v, _ in CONTRASTES), zero="D'origine", etiquettes=CONTRASTES,
             chiffre=True, onglet="image", se_voit=True, depend_de="couleurs"),
+    Reglage("vignette", "Accio.Graphics", "Vignette",
+            "Vignette",
+            "Assombrit doucement les coins de l'image pour attirer l'œil vers le centre. « Aucune » "
+            "rend des coins aussi clairs que le reste. Seulement avec « Couleurs retravaillées ».",
+            choix=tuple(v for v, _ in VIGNETTES), zero="Aucune", etiquettes=VIGNETTES, chiffre=True,
+            onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
     # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
     # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
