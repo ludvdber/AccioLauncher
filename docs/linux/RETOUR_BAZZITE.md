@@ -1,17 +1,17 @@
-# Septième passage (2026-11-11) — arrêté avant la fin, à la demande de Ludo
+# Septième passage (2026-11-11 et 2026-11-12)
 
 Pour : Ludo et la session Windows. Demande : trouver la cause du gel du GPU Intel quand l'incrustation de HP6 se
-dessine sous Wine, essayer le launcher 1.3.3 sous Linux, puis `./build.sh` et l'AppImage. Le passage a été arrêté
-vers 19 h (Ludo : « termine ce que tu fais », « on va manquer de token ») : **le bloc 1 est fait sauf la fin de la
-preuve longue, le bloc 3 presque, les parties par JOUER du bloc 2 ne sont pas faites.**
+dessine sous Wine, essayer le launcher 1.3.3 sous Linux, puis `./build.sh` et l'AppImage. Fait en deux fois : le
+11 (cause du gel, corrections, build, 6 parties de preuve), puis le 12 au matin (les six jeux par JOUER, les 4
+parties de preuve qui manquaient).
 
 ## En bref
 
 | Bloc | État | Conclusion |
 |---|---|---|
-| 1. Gel du GPU | **fait, preuve longue à 6 sur 10** | Cause : le pilote Intel de Mesa (ANV) donne 132 registres pour 128 au vertex shader « ubershader » de DXVK quand notre texte se dessine. Remède : `d3d9.ffUbershaderVS = False`. 6 parties de 10 minutes sans gel (10 demandées). |
-| 2. Launcher 1.3.3 | **en partie** | Les écrans du launcher sont VUS (Nouveautés, Carnet, Collections, 3D, réglages, désinstallation, graphique des douze mois). **Aucun jeu n'a été joué par JOUER** : HP1 à HP6, F12/F10/F11/Alt+Tab, DLL chargées, Lumos dans HP2 restent à faire. |
-| 3. Build et AppImage | **en partie** | `./build.sh` : code 0 en 2 min 59, AppImage de 71 Mo, fenêtre en 0,97 s. HP1 par JOUER avec elle : non fait. |
+| 1. Gel du GPU | **fait** | Cause : le pilote Intel de Mesa (ANV) donne 132 registres pour 128 au vertex shader « ubershader » de DXVK quand notre texte se dessine. Remède : `d3d9.ffUbershaderVS = False`, posé par le launcher. 10 parties de 10 minutes sans gel. |
+| 2. Launcher 1.3.3 | **fait, sauf Lumos** | Les écrans du launcher sont VUS, et HP1 à HP6 sont VUS en jeu par JOUER avec F12, F10, F11, Alt+Tab. Trois défauts corrigés. Restent Lumos dans HP2 et quelques nouveautés (Reprendre, export). |
+| 3. Build et AppImage | **fait** | `./build.sh` : code 0 en 2 min 59, AppImage de 71 Mo, fenêtre en moins d'une seconde, HP1 joué par JOUER avec elle. |
 
 ## Machine
 
@@ -129,7 +129,7 @@ Lecture : seuls les essais qui retirent le **texte** (3, 11) ou l'**ubershader d
 la façon dont DXVK passe ses constantes au pilote (7), ou qui retirent DXVK (8), évitent le gel. Tout ce qui touche
 à notre façon de dessiner (2, 5, 6, 9) n'y change rien.
 
-### La preuve longue : 6 parties de 10 minutes, pas 10
+### La preuve longue : 10 parties de 10 minutes
 
 Remède essayé : `DXVK_CONFIG=d3d9.ffUbershaderVS=False` dans l'environnement (ce que pose le launcher),
 `DrawUnderWine=1`, F10 en partie au Terrier, 600 s, comparaison de deux captures à la fin (écart non nul = l'image
@@ -143,14 +143,19 @@ bouge), journal du noyau.
 | série A-3 | 18:16:32 | oui | 23,56 | aucun |
 | série A-4 | 18:29:26 | oui | 32,33 | aucun |
 | série A-5 | 18:42:19 | oui | 24,24 | aucun |
+| HP6 par JOUER (launcher) | 12-11, 11:42 | oui (capture) | 31,90 | aucun |
+| série B-1 | 12-11, 12:09:30 | oui | 27,44 | aucun |
+| série B-2 | 12-11, 12:22:23 | oui | 25,04 | aucun |
+| série B-3 | 12-11, 12:35:15 | oui | 29,69 | aucun |
 
-`journalctl -k` depuis 17:50 : 0 ligne « GPU HANG ». Sans le remède : 9 gels sur 9, chacun en moins de 10 secondes
-après F10. **La série a été arrêtée après le cinquième essai** : la preuve demandée (10 × 10 min) n'est faite qu'à
-6. Pour la finir : `cd ~/Accio-essais/p7 && ./preuve2.sh B "DXVK_CONFIG=d3d9.ffUbershaderVS=False" 4`.
+`journalctl -k` : 0 ligne « GPU HANG » pendant ces dix parties. Sans le remède : 9 gels sur 9, chacun en moins
+de 10 secondes après F10. **La preuve demandée est faite : 10 parties de 10 minutes sans gel** (9 avec la
+variable posée à la main, 1 lancée par le launcher), en deux fois : 6 le 2026-11-11, 4 le 2026-11-12.
 
-**Non fait dans le bloc 1** : la mesure de cadence en partie avec et sans le remède (ma première mesure tournait
-sur la vidéo du menu, elle ne vaut rien) ; la série avec `dxvk.enableDescriptorBuffer = True` (un seul essai court,
-sans gel) ; l'essai 10.
+**Cadence en partie avec le remède** (F11 du correctif, 32 s au Terrier, panneau dessiné) : 42 images/s en
+moyenne, 1 % bas à 15. La même mesure SANS le remède n'est pas faite (ma mesure du 11 tournait sur la vidéo du
+menu, elle ne vaut rien) : je ne sais pas ce que le remède coûte ou rapporte. **Non fait** : la série avec
+`dxvk.enableDescriptorBuffer = True` (un seul essai court, sans gel) ; l'essai 10.
 
 ### Ce que le launcher fait maintenant (commité par Ludo, 41f0c90)
 
@@ -158,11 +163,9 @@ sans gel) ; l'essai 10.
   réglage du joueur sur cette option ou sur `dxvk.enableDescriptorBuffer` est gardé.
 - `incrustation_wine.suivre()` écrit `DrawUnderWine=1` dans le `d3d9.ini` quand le remède est dans l'environnement,
   `0` sinon. Un ini sans la clé n'est pas touché.
-- **Niveau de preuve : testé (pytest), PAS VU en jeu par JOUER.** La preuve en jeu est faite avec la même variable
-  posée à la main. À voir au prochain passage : ligne « Incrustation du correctif sous Wine » au journal, panneau
-  F10 visible dans HP6 lancé par le launcher, pas de gel. Les HP4 et HP5 (`d3d9.dll` 2.4.0) reçoivent aussi
-  `DrawUnderWine=1` : **jamais essayés avec l'incrustation dessinée**. Si un doute, remettre `DrawUnderWine=0` à
-  la main ne tient pas (le launcher réécrit la clé) : il faut retirer l'appel dans `game_manager._lancer_sous_wine`.
+- **Niveau de preuve : VU en jeu par JOUER le 2026-11-12** pour HP4, HP5 et HP6 (voir le bloc 2) : ligne
+  « Incrustation du correctif sous Wine » au journal, `DXVK_CONFIG` dans l'environnement du jeu, panneau F10
+  dessiné, pas de gel ; HP6 a tenu 10 minutes ainsi.
 
 ## Bloc 2 — le launcher 1.3.3 sous Linux
 
@@ -192,16 +195,44 @@ désinstallation** (« Vos sauvegardes sont conservées : elles ne sont pas rang
 - Deux jeux ne tournent pas en même temps dans le préfixe (`waitforexitandrun`) : un HP1 lancé pendant qu'HP6
   tournait a attendu, puis a été annulé, et le launcher a compté environ 2 minutes de jeu (HP1 : 1 h 16 → 1 h 18).
 
-**Non fait** : HP1 à HP6 par JOUER (une minute en jeu, F12, F10, F11, Alt+Tab, quitter, DLL chargées, version au
-journal), HP5 par JOUER, HP4 et HP6 en partie par le launcher, Lumos à l'écran dans HP2, fermeture et plein écran
-de HP3, Reprendre en un clic, langue des jeux, export d'une sauvegarde. HP7a, HP7b et HP8 : jamais lancés.
+### Les six jeux par JOUER (2026-11-12, avec l'AppImage du bloc 3)
+
+Chaque jeu : JOUER dans le launcher, jusqu'au jeu, DLL lues dans `/proc/<pid>/maps`, F12, F10, F11 pendant 30 s,
+Alt+Tab aller-retour. Relevés complets : `~/Accio-essais/p7/l/hp*-touches.txt`, captures à côté.
+
+| Jeu | En jeu | DLL du correctif chargée, version au journal | F12 | F10 | F11 | Alt+Tab |
+|---|---|---|---|---|---|---|
+| HP1 1.7 | **VU** : menu, partie 1 chargée, Dumbledore dans le hall, sous-titres français | `HP1/System/winmm.dll`, **2.4.0** ; rendu wined3d | **VU** : rangée dans `Images/Accio Launcher/<titre>` | **VU** : panneau « 26 FPS, 38 ms, 1% low 20 » | **VU** : « avg 27 FPS, 1% low 20 », CSV | vivant, image revenue |
+| HP2 1.6 | **VU** : lanceur avec fond et boutons, Nouvelle partie, emplacement 1, Dobby à Privet Drive | `HP2/system/winmm.dll`, **2.4.0**, « WineLauncherFix, under Wine » ; wined3d | **VU** | **VU** au journal (« first drawn 1904 x 1041 ») | « avg 29 FPS, 1% low 21 », CSV | vivant |
+| HP3 1.7 | **VU** : menu sur **tout l'écran** 1920×1080 (nouveauté 1.3.3), nouvelle partie à l'emplacement 3, cinématique du train | `HP3/system/dinput8.dll`, **2.4.0**, et `msvcr70.dll` du jeu ; `d3d8` puis wined3d | **VU** | pas dessiné, voulu : « Overlay: not drawn under Wine » | « avg 56 FPS, 1% low 49 » : le plafond de 60 tient (journal du launcher : « plafond 60 ips ») | vivant |
+| HP4 1.5 | **VU** : écran de langue, puis la Grande Salle en 3D | `HP4/d3d9.dll`, **2.4.0** ; DXVK (`syswow64/d3d9.dll`) | **VU** | **dessiné, pas de gel** : « first drawn (2880 x 1620 … text 1) » | « avg 34 FPS, 1% low 14 », CSV | vivant |
+| HP5 1.6 | **VU** : vidéo d'ouverture (cour de Poudlard) ; pas allé jusqu'à une partie | `HP5/d3d9.dll` **2.4.0** et `xinput1_3.dll` du jeu ; DXVK | **VU** | **dessiné, pas de gel** : « first drawn (1920 x 1080 … text 1) » | « avg 60 FPS, 1% low 42 », CSV | vivant |
+| HP6 1.3 | **VU** : menu, Continuer, Harry au Terrier | `HP6/d3d9.dll` **2.2.0** et `xinput1_3.dll` du jeu ; DXVK | **VU** | **VU à l'écran** : panneau « 42 FPS, 23,8 ms, 1% low 16 », pas de gel, **10 minutes tenues** | « avg 42 FPS, 1% low 15 », CSV | vivant |
+
+- **Le remède posé par le launcher est VU.** Journal : « Incrustation du correctif sous Wine : DrawUnderWine=1 dans
+  …/HP6/d3d9.ini » (pareil pour HP4 et HP5) ; environnement de `hp6.exe` lu dans `/proc` :
+  `DXVK_CONFIG=d3d9.ffUbershaderVS = False`. `journalctl -k` : 0 « GPU HANG » pour les trois jeux.
+- **HP5 s'est fermé seul une fois** : premier lancement, « Jeu terminé (code 5, 26 s observées) », sans touche de ma
+  part, rien au journal du noyau, dernière ligne du correctif « Mipmaps: 155 chains made (frame 1200) ». Relancé
+  aussitôt : il tourne. Cause non trouvée, non reproduit (un seul essai de plus).
+- **HP4 s'ouvre sur un écran de choix de langue, « English » proposé**, alors que le launcher est en français.
+  Je n'ai pas cherché si c'est l'état de la partie de Ludo ou le suivi de langue de la 1.3.3 : à regarder.
+- **Alt+F4 ne ferme ni HP1 ni HP6 ici** (envoyé par `xdotool` dans le gamescope sans écran ; supposé : la touche
+  n'arrive pas comme une vraie, à revoir au clavier). HP1 est quitté par son menu, les autres par `kill`.
+- **Le lanceur de HP2 est étiré sur tout l'écran par gamescope** : les clics se donnent alors en coordonnées de
+  sa fenêtre 480×556. C'est le gamescope d'essai, pas le launcher.
+
+**Non fait** : Lumos à l'écran dans HP2, HP5 jusqu'à une partie, la fermeture de HP3 par le launcher, Reprendre
+en un clic, l'export d'une sauvegarde. HP7a, HP7b et HP8 : jamais lancés.
 
 ## Bloc 3 — build et AppImage
 
 `./build.sh` complet (`ACCIO_PY` sur le venv, journal `~/Accio-essais/p7/build-sh.log`) : **code 0 en 2 min 59**,
 4581 tests, géométrie « Aucune troncature », 49 bibliothèques laissées à la machine, **AppImage de 71 Mo**
 (74 373 624 octets, SHA-256 `700a02dac047d357685e…`). Lancée dans le gamescope : **fenêtre visible en 0,97 s**
-(une mesure), journal « 1.3.3 (AppImage) … Python 3.15.0 ». **HP1 par JOUER avec elle : non fait.**
+(0,97 s puis 0,75 s), journal « 1.3.3 (AppImage) … Python 3.15.0 ». **HP1 par JOUER avec elle : VU** le
+2026-11-12 (tout le bloc 2 ci-dessus est fait avec cette AppImage) ; le launcher se range au lancement et revient
+à la fin (« Retour de … : partie terminée »).
 
 ## Pour la session Windows
 
@@ -244,13 +275,17 @@ Copie faite avant tout lancement : `~/AccioSauvegardes/2026-11-11_p7/` (préfixe
 `d3d9.dll`, `xinput1_3.dll` ; `HP1-save` ajouté à 18 h 35, avant toute partie de HP1).
 
 - **HP6** : la sauvegarde est remise depuis la copie après chaque essai (`diff -r` identique, écrit dans chaque
-  `hp6/*.txt`). `d3d9.ini` remis à celui de l'archive, aucun `dxvk.conf` laissé (vérification finale : voir le
-  message de fin).
-- **HP2, HP3, HP4, HP5** : jamais lancés. `diff -r` identique à la copie (18 h 35).
-- **HP1** : jamais arrivé en jeu (lancement en attente, annulé). `diff -r` : un seul écart, `Running.ini`, posé par
-  le launcher au lancement ; laissé (règle : ne jamais le retirer). `HP1/save` identique.
+  `hp6/*.txt`). `d3d9.ini` identique à celui de l'archive (`cmp`), aucun `dxvk.conf`.
+- **Parties du 2026-11-12 (HP1 à HP6 par JOUER)** : seconde copie avant, `~/AccioSauvegardes/2026-11-12_p7/`
+  (Documents de HP1, HP2, HP3, dossiers EA de HP4, HP5, HP6, `HP1/save`, les six ini du correctif). Remise par
+  `~/Accio-essais/p7/remise.sh` : `diff -r` **identique** pour les sept dossiers, `cmp` identique pour les six ini
+  (le launcher y avait écrit `DrawUnderWine=1` ; il le réécrira au prochain lancement). L'état d'après les
+  parties (nouvelle partie de HP2 à l'emplacement 1, de HP3 à l'emplacement 3, `Running.ini`, CSV de F11) est
+  gardé dans `cree-par-essai/`. Les six captures F12 restent dans `~/Images/Accio Launcher/`, pour la galerie.
+- **Temps de jeu comptés par ces essais** (dans `sessions.json`, non retirés) : HP1 +434 s (et +76 s la veille),
+  HP2 +169 s, HP3 +180 s, HP4 +151 s, HP5 +25 s et +126 s, HP6 +791 s.
 - **Son** : il était à `0.00 [MUTED]` au début, laissé tel quel.
-- **À faire par Ludo** : arrêter le veilleur root (Ctrl+C dans son terminal). `~/Accio-essais/p7/` garde les
+- Le veilleur root ne tourne plus (dernier signe de vie le 11 à 19 h 00) ; mes gamescopes et le launcher d'essai sont arrêtés. `~/Accio-essais/p7/` garde les
   fichiers d'erreur du GPU, les captures et les scripts (rien dans le dépôt).
 
 ---
