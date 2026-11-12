@@ -12,7 +12,7 @@ from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import QPushButton
 
-from src.ui.composants import filtre
+from src.ui.composants import HAUTEUR_FILTRE_JAQUETTE, filtre
 from src.ui.stats_releve import _ROMAINS, _jaquette
 
 _ICONE = QSize(18, 24)
@@ -67,6 +67,9 @@ def pastille(game, etiquette: str) -> QPushButton:
         icone, taille = espacee(jaquette, _ICONE)
         b.setIcon(icone)
         b.setIconSize(taille)
+        # La jaquette (24 px) demande sa hauteur : au filtre de 28, elle touchait le bord.
+        b.setProperty("jaquette", True)
+        b.setFixedHeight(HAUTEUR_FILTRE_JAQUETTE)
     # Le nom vient du CATALOGUE : échappé, une infobulle se lit en texte riche.
     b.setToolTip(f"<qt>{escape(game.name, quote=False)}</qt>")
     b.setAccessibleName(game.name)

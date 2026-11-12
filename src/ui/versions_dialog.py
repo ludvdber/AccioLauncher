@@ -51,24 +51,24 @@ from src.ui.composants import (
 )
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, _Jaquette
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 300
 _MARGES_PAGE = (48, 32, 48, 32)
 _VERT = "#7be0a4"
 
-_STYLE = """
-QPushButton#version {
-    background: transparent; border: 1px solid transparent; border-radius: 8px;
+_STYLE = f"""
+QPushButton#version {{
+    background: transparent; border: 1px solid transparent; border-radius: {RAYON_CONTROLE}px;
     min-height: 58px; max-height: 58px;
-}
-QPushButton#version:hover { background: rgba(255, 255, 255, 0.04); }
-QPushButton#version:checked {
+}}
+QPushButton#version:hover {{ background: rgba(255, 255, 255, 0.04); }}
+QPushButton#version:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
-}
-QPushButton#version[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QFrame#filetOr { background: rgba(214, 167, 44, 0.16); border: none; }
+}}
+QPushButton#version[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
+QFrame#filetOr {{ background: rgba(214, 167, 44, 0.16); border: none; }}
 """
 
 

@@ -38,34 +38,34 @@ from src.ui.composants import (
 )
 from src.ui.fonts import cinzel_decorative
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
 
 _LARGEUR_RAIL = 300
 _MARGES_PAGE = (48, 32, 48, 32)
 
-_STYLE = """
-QPushButton#metier {
-    background: transparent; border: 1px solid transparent; border-radius: 8px;
+_STYLE = f"""
+QPushButton#metier {{
+    background: transparent; border: 1px solid transparent; border-radius: {RAYON_CONTROLE}px;
     min-height: 54px; max-height: 54px;
-}
-QPushButton#metier:hover { background: rgba(255, 255, 255, 0.04); }
-QPushButton#metier:checked {
+}}
+QPushButton#metier:hover {{ background: rgba(255, 255, 255, 0.04); }}
+QPushButton#metier:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
-}
-QPushButton#metier[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QFrame#format {
+}}
+QPushButton#metier[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
+QFrame#format {{
     background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 13px;
-}
-QFrame#besoins {
+}}
+QFrame#besoins {{
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
-}
-QFrame#filetBesoin { background: rgba(255, 255, 255, 0.06); border: none; }
-QFrame#etape {
+}}
+QFrame#filetBesoin {{ background: rgba(255, 255, 255, 0.06); border: none; }}
+QFrame#etape {{
     background: rgba(214, 167, 44, 0.05); border: 1px solid rgba(214, 167, 44, 0.22);
     border-radius: 10px;
-}
+}}
 """
 
 

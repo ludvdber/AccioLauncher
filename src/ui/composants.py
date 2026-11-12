@@ -30,9 +30,12 @@ ENCRE_ETEINTE = "#5d5b72"
 # Les pastilles cochables ont une hauteur FIXE : leur rayon en est la moitié
 # (`theme.rayon_pastille`). Mesurées le 2026-11-12 avec les polices du projet :
 # 28 px pour un filtre (police 13), 32 px pour une rubrique en pastille
-# (police 14 et pictogramme de 18 px).
+# (police 14 et pictogramme de 18 px). 36 px pour une pastille à jaquette
+# (`choix_jeux.pastille`, jaquette de 24 px) : à 28, la jaquette touchait le
+# bord (1 px d'air) ; c'est la hauteur qu'elle avait avant la refonte.
 HAUTEUR_FILTRE = 28
 HAUTEUR_FILTRE_GRAND = 32
+HAUTEUR_FILTRE_JAQUETTE = 36
 _TAILLE_ROND = 38
 # Le pictogramme du retour et des rubriques d'un rail, au repos.
 _ENCRE_RAIL = "#a9a7c4"
@@ -68,6 +71,13 @@ QPushButton#principal[focusClavier="true"]:focus,
 QPushButton#secondaire[focusClavier="true"]:focus {{
     border: 2px solid #d6a72c; padding: 0 15px;
 }}
+QPushButton#danger {{
+    min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: {RAYON_CONTROLE}px;
+    color: #f6d2cd; background: rgba(224, 88, 79, 0.10);
+    border: 1px solid rgba(224, 88, 79, 0.60);
+}}
+QPushButton#danger:hover {{ background: rgba(224, 88, 79, 0.20); border-color: #e0584f; }}
+QPushButton#danger[focusClavier="true"]:focus {{ border: 2px solid #f39a8f; padding: 0 15px; }}
 QPushButton#rond {{
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: {rayon_pastille(_TAILLE_ROND)}px;
@@ -98,6 +108,7 @@ QPushButton#filtre {{
 QPushButton#filtre[grand="true"] {{
     border-radius: {rayon_pastille(HAUTEUR_FILTRE_GRAND)}px; padding: 0 16px;
 }}
+QPushButton#filtre[jaquette="true"] {{ border-radius: {rayon_pastille(HAUTEUR_FILTRE_JAQUETTE)}px; }}
 QPushButton#filtre[vide="true"] {{ color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }}
 QPushButton#filtre:hover {{ color: #f2f2f4; }}
 QPushButton#filtre:checked {{

@@ -97,7 +97,7 @@ def current() -> Palette:
 
 # L'échelle des rayons (2026-11-12, constat tra12) : treize rayons différents
 # sur les boutons (4 à 25 px) pour trois formes. Une commande (bouton, liste,
-# rubrique d'un rail), une carte (bloc bordé, carte cliquable), une pastille
+# rubrique ou rangée d'un rail), une carte (bloc bordé, carte cliquable), une pastille
 # (ronde aux deux bouts : la moitié de sa hauteur, qui doit donc être FIXE —
 # un rayon plus grand que la demi-hauteur, Qt ne le peint pas).
 RAYON_CONTROLE = 6

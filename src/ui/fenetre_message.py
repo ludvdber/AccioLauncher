@@ -30,13 +30,6 @@ from src.ui.theme import accent_qcolor, themed
 
 _STYLE = """
 QDialog#fenetreMessage { background: #0d0d1a; }
-QPushButton#danger {
-    min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: 7px;
-    color: #f6d2cd; background: rgba(224, 88, 79, 0.10);
-    border: 1px solid rgba(224, 88, 79, 0.60);
-}
-QPushButton#danger:hover { background: rgba(224, 88, 79, 0.20); border-color: #e0584f; }
-QPushButton#danger[focusClavier="true"]:focus { border: 2px solid #f39a8f; padding: 0 15px; }
 """
 _VERT = "#5fbf86"
 # Pictogramme et couleur de chaque nature de message. Une question n'a pas

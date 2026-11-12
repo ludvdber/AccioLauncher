@@ -26,7 +26,9 @@ from src.core.i18n import tr
 from src.core.reglages_table import Reglage
 from src.ui.choix_jeux import espacee
 from src.ui.difficulte_panneau import PanneauDifficulte
-from src.ui.composants import ENCRE_DISCRETE, ENCRE_DOUCE, Carte, LigneReglage, bouton, petit_titre, police, surtitre
+from src.ui.composants import (
+    ENCRE_DISCRETE, ENCRE_DOUCE, LISTE, Carte, LigneReglage, bouton, petit_titre, police, surtitre,
+)
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fenetre_message import FenetreMessage
 from src.ui.fonts import body_font
@@ -63,20 +65,8 @@ _COULEUR_SE_VOIT = "#d6a72c"
 _COULEUR_NOTE = "#c9954a"
 
 # Une liste de la page : plus basse et plus sobre que celle des Paramètres,
-# elle s'aligne en colonne avec les interrupteurs.
-_LISTE_STYLE = (
-    "QComboBox { background: #15152a; color: #e4e2ef; border: 1px solid rgba(255,255,255,0.13);"
-    " border-radius: 6px; padding: 3px 10px; min-height: 22px; }"
-    "QComboBox:hover { border-color: rgba(214,167,44,0.55); }"
-    "QComboBox:disabled { color: #6f6d8e; }"
-    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 2px 9px; }"
-    "QComboBox::drop-down { border: none; width: 18px; }"
-    "QComboBox QAbstractItemView { background: #15152a; color: #e4e2ef; outline: none;"
-    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
-    "QComboBox QAbstractItemView::item { padding: 4px 8px; }"
-    "QComboBox QAbstractItemView::item:selected { background: rgba(214, 167, 44, 0.30);"
-    " color: #f0d060; }"
-)
+# elle s'aligne en colonne avec les interrupteurs (`composants.LISTE`).
+_LISTE_STYLE = LISTE
 
 # Les familles d'effets de « Qualité d'image », dans l'ordre d'affichage.
 _GROUPES_EFFETS = (

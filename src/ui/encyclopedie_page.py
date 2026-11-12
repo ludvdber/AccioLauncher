@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import discographie, encyclopedie, maillages_ue1, mouvements
 from src.core.i18n import dans_la_langue, get_language, tr
-from src.ui.composants import ENCRE, ENCRE_DOUCE, icone_de_bouton, police, rond, texte
+from src.ui.composants import ENCRE, ENCRE_DOUCE, LISTE, icone_de_bouton, police, rond, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
@@ -56,17 +56,9 @@ _COTE_VIGNETTE = 128
 
 ModeleLu = tuple[maillages_ue1.Maillage, dict[str, QImage], maillages_ue1.Animation | None]
 
-# La liste des mouvements sous le modèle : la même que les listes des réglages,
-# en plus discret (fond bleu nuit, filet clair, or au survol).
-_LISTE_STYLE = (
-    "QComboBox { background: #15152a; color: #e4e2ef; border: 1px solid rgba(255,255,255,0.13);"
-    " border-radius: 6px; padding: 3px 10px; min-height: 22px; }"
-    "QComboBox:hover { border-color: rgba(214,167,44,0.55); }"
-    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 2px 9px; }"
-    "QComboBox::drop-down { border: none; width: 18px; }"
-    "QComboBox QAbstractItemView { background: #15152a; color: #e4e2ef; outline: none;"
-    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
-)
+# La liste des mouvements sous le modèle : la même que les listes des réglages
+# (`composants.LISTE` : fond bleu nuit, filet clair, or au survol).
+_LISTE_STYLE = LISTE
 
 
 def _images(textures: dict[str, encyclopedie.ImageBgra]) -> dict[str, QImage]:

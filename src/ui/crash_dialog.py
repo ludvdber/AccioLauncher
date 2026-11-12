@@ -86,7 +86,7 @@ def construire_dialogue(report: str):
     from src.core.liens import DISCORD_URL
     from src.ui.composants import feuille_de_style, police, texte
     from src.ui.icon_button import pixmap_icone
-    from src.ui.theme import themed
+    from src.ui.theme import RAYON_CONTROLE, themed
     from src.ui.utils import open_url
 
     # Refait le 2026-10-09 sur les composants : le titre dit ce qui s'est passé,
@@ -102,7 +102,7 @@ def construire_dialogue(report: str):
         " border-radius: 8px; font-size: 11px; padding: 6px; }"
         # Le bouton Discord garde son nom (les tests le cherchent) : style secondaire.
         "QPushButton#crashDiscord { min-height: 34px; max-height: 34px; padding: 0 16px;"
-        " border-radius: 7px; color: #d9d6e8; background: rgba(255, 255, 255, 0.03);"
+        f" border-radius: {RAYON_CONTROLE}px; color: #d9d6e8; background: rgba(255, 255, 255, 0.03);"
         " border: 1px solid rgba(255, 255, 255, 0.14); }"
         "QPushButton#crashDiscord:hover { border-color: #d6a72c; }"
         "QPushButton#crashDiscord[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 0 15px; }"

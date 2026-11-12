@@ -19,46 +19,46 @@ from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, Chemin, police
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _Jaquette
-from src.ui.theme import THEMES, accent_qcolor
+from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, THEMES, accent_qcolor
 
 # Écrit dans la palette Poudlard : `themed()` le recolore à chaque changement.
-STYLE = """
-QDialog#assistant { background: #060611; }
-QFrame#railAssistant {
+STYLE = f"""
+QDialog#assistant {{ background: #060611; }}
+QFrame#railAssistant {{
     background: #0d0d1a; border: none;
     border-right: 1px solid rgba(214, 167, 44, 0.12);
-}
-QFrame#piedAssistant {
+}}
+QFrame#piedAssistant {{
     background: transparent; border: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-QLabel#marque, QLabel#surtitreEtape { color: #d6a72c; background: transparent; }
-QLabel#titreEtape { color: #f4f2f8; background: transparent; }
-QPushButton#suivant {
-    min-height: 40px; max-height: 40px; padding: 0 22px; border-radius: 7px;
+}}
+QLabel#marque, QLabel#surtitreEtape {{ color: #d6a72c; background: transparent; }}
+QLabel#titreEtape {{ color: #f4f2f8; background: transparent; }}
+QPushButton#suivant {{
+    min-height: 40px; max-height: 40px; padding: 0 22px; border-radius: {RAYON_CONTROLE}px;
     color: #f6ecd0; background: rgba(214, 167, 44, 0.16); border: 1px solid #d6a72c;
-}
-QPushButton#suivant:hover { background: rgba(214, 167, 44, 0.26); }
-QPushButton#suivant:disabled {
+}}
+QPushButton#suivant:hover {{ background: rgba(214, 167, 44, 0.26); }}
+QPushButton#suivant:disabled {{
     color: #6f6d8e; background: transparent; border-color: rgba(255, 255, 255, 0.10);
-}
-QPushButton#suivant[focusClavier="true"]:focus { border: 2px solid #f0d060; padding: 0 21px; }
-QPushButton#lien {
+}}
+QPushButton#suivant[focusClavier="true"]:focus {{ border: 2px solid #f0d060; padding: 0 21px; }}
+QPushButton#lien {{
     background: transparent; border: none; color: #a9a7c4;
     text-decoration: underline; padding: 6px 4px;
-}
-QPushButton#lien:hover { color: #f2f2f4; }
-QPushButton#lien[focusClavier="true"]:focus { color: #e8c547; }
-QPushButton#carteChoix {
+}}
+QPushButton#lien:hover {{ color: #f2f2f4; }}
+QPushButton#lien[focusClavier="true"]:focus {{ color: #e8c547; }}
+QPushButton#carteChoix {{
     background: #0d0d1a; border: 2px solid rgba(255, 255, 255, 0.09);
-    border-radius: 12px; text-align: left;
-}
-QPushButton#carteChoix:hover { border-color: rgba(214, 167, 44, 0.55); }
-QPushButton#carteChoix:checked { border-color: #d6a72c; background: rgba(214, 167, 44, 0.10); }
-QPushButton#carteChoix[focusClavier="true"]:focus { border-color: #f0d060; }
-QPushButton#ligneJeu { background: transparent; border: none; text-align: left; }
-QPushButton#ligneJeu:hover { background: rgba(255, 255, 255, 0.03); }
-QPushButton#ligneJeu[focusClavier="true"]:focus { background: rgba(214, 167, 44, 0.10); }
+    border-radius: {RAYON_CARTE}px; text-align: left;
+}}
+QPushButton#carteChoix:hover {{ border-color: rgba(214, 167, 44, 0.55); }}
+QPushButton#carteChoix:checked {{ border-color: #d6a72c; background: rgba(214, 167, 44, 0.10); }}
+QPushButton#carteChoix[focusClavier="true"]:focus {{ border-color: #f0d060; }}
+QPushButton#ligneJeu {{ background: transparent; border: none; text-align: left; }}
+QPushButton#ligneJeu:hover {{ background: rgba(255, 255, 255, 0.03); }}
+QPushButton#ligneJeu[focusClavier="true"]:focus {{ background: rgba(214, 167, 44, 0.10); }}
 """
 
 _JAQUETTE_LIGNE = QSize(30, 42)
@@ -341,7 +341,7 @@ class CarteCouleur(CarteChoix):
         palette = THEMES[theme_id]
         self.setStyleSheet(
             f"QPushButton {{ background: {palette.bg_dialog}; border: 2px solid rgba(255, 255, 255, 0.09);"
-            " border-radius: 10px; text-align: left; }}"
+            f" border-radius: {RAYON_CARTE}px; text-align: left; }}"
             f"QPushButton:hover {{ border-color: {palette.accent}; }}"
             f"QPushButton:checked {{ border-color: {palette.accent_light}; }}"
             f"QPushButton[focusClavier=\"true\"]:focus {{ border-color: {palette.accent_light}; }}")

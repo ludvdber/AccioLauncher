@@ -37,7 +37,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.stats_widgets import _duree
-from src.ui.theme import accent_qcolor, current as current_theme, themed
+from src.ui.theme import RAYON_CONTROLE, accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
@@ -65,29 +65,29 @@ _COULEURS = {
     folio.POUFSOUFFLE: ("#ecb939", "#b8860b"),
 }
 
-_STYLE = """
-QPushButton#emplacement {
-    background: transparent; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px;
-}
-QPushButton#emplacement:hover { background: rgba(255, 255, 255, 0.04); }
-QPushButton#emplacement:checked {
+_STYLE = f"""
+QPushButton#emplacement {{
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: {RAYON_CONTROLE}px;
+}}
+QPushButton#emplacement:hover {{ background: rgba(255, 255, 255, 0.04); }}
+QPushButton#emplacement:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
-}
-QPushButton#emplacement[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QFrame#tuile, QFrame#coupe, QFrame#objet {
+}}
+QPushButton#emplacement[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
+QFrame#tuile, QFrame#coupe, QFrame#objet {{
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
-}
-#sortAppris {
+}}
+#sortAppris {{
     color: #f2e6c4; background: rgba(214, 167, 44, 0.12);
     border: none; border-radius: 15px; padding: 6px 15px;
-}
-#sortAVenir {
+}}
+#sortAVenir {{
     color: #8c8aa5; background: transparent;
     border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 15px; padding: 5px 14px;
-}
-QFrame#fiche {
+}}
+QFrame#fiche {{
     background: #0a0a16; border: none; border-left: 1px solid rgba(214, 167, 44, 0.16);
-}
+}}
 """
 
 

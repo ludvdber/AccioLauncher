@@ -35,7 +35,7 @@ from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, NOTES_VERSIONS_URL,
 from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, texte
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import accent_qcolor, current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, current as current_theme, themed
 from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
@@ -118,29 +118,29 @@ class Tuile(QPushButton):
         return QSize(_LARGEUR_TUILE, hauteur)
 
 
-_STYLE_TUILES = """
-QPushButton#tuile, QPushButton#tuileVedette {
+_STYLE_TUILES = f"""
+QPushButton#tuile, QPushButton#tuileVedette {{
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16);
-    border-radius: 10px; text-align: left;
-}
-QPushButton#tuileVedette {
+    border-radius: {RAYON_CARTE}px; text-align: left;
+}}
+QPushButton#tuileVedette {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 rgba(214, 167, 44, 0.12), stop:1 rgba(214, 167, 44, 0.04));
     border-color: rgba(214, 167, 44, 0.40);
-}
-QPushButton#tuile:hover, QPushButton#tuileVedette:hover { border-color: #d6a72c; }
+}}
+QPushButton#tuile:hover, QPushButton#tuileVedette:hover {{ border-color: #d6a72c; }}
 QPushButton#tuile[focusClavier="true"]:focus,
-QPushButton#tuileVedette[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QFrame#depannage {
-    border: 1px dashed rgba(255, 255, 255, 0.14); border-radius: 9px;
+QPushButton#tuileVedette[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
+QFrame#depannage {{
+    border: 1px dashed rgba(255, 255, 255, 0.14); border-radius: {RAYON_CARTE}px;
     background: transparent;
-}
-QPushButton#copierRapport {
+}}
+QPushButton#copierRapport {{
     background: transparent; border: none; color: #d6a72c; padding: 4px 2px;
     text-align: right;
-}
-QPushButton#copierRapport:hover { color: #e8c547; }
-QPushButton#copierRapport[focusClavier="true"]:focus { border-bottom: 2px solid #d6a72c; }
+}}
+QPushButton#copierRapport:hover {{ color: #e8c547; }}
+QPushButton#copierRapport[focusClavier="true"]:focus {{ border-bottom: 2px solid #d6a72c; }}
 """
 
 

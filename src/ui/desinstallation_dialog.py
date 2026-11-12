@@ -22,13 +22,6 @@ from src.ui.utils import avertir
 
 _STYLE = """
 QDialog { background: #060611; }
-QPushButton#danger {
-    min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: 7px;
-    color: #f6d2cd; background: rgba(224, 88, 79, 0.10);
-    border: 1px solid rgba(224, 88, 79, 0.60);
-}
-QPushButton#danger:hover { background: rgba(224, 88, 79, 0.20); border-color: #e0584f; }
-QPushButton#danger[focusClavier="true"]:focus { border: 2px solid #f39a8f; padding: 0 15px; }
 """
 _ORANGE = "#ecc896"
 

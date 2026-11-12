@@ -1,6 +1,8 @@
 """Paramètres refaits (2026-10-09) : rubriques à gauche, cartes, chemin coupé
 au milieu, barre du disque, retour vers la bibliothèque."""
 
+from types import SimpleNamespace
+
 import pytest
 
 pytest.importorskip("pytestqt")
@@ -355,5 +357,8 @@ class TestQuatreRubriques:
         """Ce que la vérification lit quand elle n'apporte rien (règle 108)."""
         assert dialogue.jeux_a_mettre_a_jour() == 0
         premier = dialogue.manager.get_games()[0].game.id
-        monkeypatch.setattr(type(dialogue.manager), "has_update", lambda _s, gid: gid == premier)
+        # GameManager a des __slots__ : on remplace le gestionnaire du dialogue, pas sa classe (règle 12).
+        vrai = dialogue.manager
+        monkeypatch.setattr(dialogue, "manager", SimpleNamespace(
+            get_games=vrai.get_games, has_update=lambda gid: gid == premier))
         assert dialogue.jeux_a_mettre_a_jour() == 1

@@ -26,7 +26,7 @@ from src.core.i18n import tr
 from src.ui.composants import Rangee, petit_titre
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import accent_qcolor, themed
+from src.ui.theme import RAYON_CONTROLE, accent_qcolor, themed
 
 log = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ _STYLE_TOUCHE = (
     "QPushButton { background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
     " stop:0 #1b1b33, stop:1 #141428); color: %s;"
     " border: 1px solid rgba(255,255,255,0.17); border-bottom: 3px solid rgba(255,255,255,0.17);"
-    " border-radius: 7px; padding: 0px 10px; }"
+    f" border-radius: {RAYON_CONTROLE}px; padding: 0px 10px; }}"
     "QPushButton:hover { border-color: #d6a72c; }"
     "QPushButton[ecoute=\"true\"] { color: #f2e6c4; background: rgba(214,167,44,0.12);"
     " border-color: #d6a72c; font-style: italic; }"
@@ -215,7 +215,8 @@ _STYLE_LIEN = (
 )
 _STYLE_RENDRE = (
     "QPushButton { background: transparent; border: none; padding: 0px; }"
-    "QPushButton[focusClavier=\"true\"]:focus { border: 1px solid #d6a72c; border-radius: 4px; }"
+    "QPushButton[focusClavier=\"true\"]:focus { border: 1px solid #d6a72c;"
+    f" border-radius: {RAYON_CONTROLE}px; }}"
 )
 
 # Les trois cartes de la maquette (2026-10-09) : on cherche une touche par ce
