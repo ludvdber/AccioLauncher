@@ -582,22 +582,24 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
 # valeurs). Seulement ce qui COÛTE : le goût (couleurs, brouillard, netteté) et
 # l'expérimental (ombres) ne bougent pas quand on choisit un préréglage. Le MSAA
 # reste éteint partout : il exclut les ombres de contact, que les trois gardent
-# ou éteignent ensemble.
+# ou éteignent ensemble. Décor entier de HP6 (décision de Ludo, 2026-11-12) : d'origine
+# sur un PC modeste, coupé en caméra libre pour « Équilibrée » (la valeur de l'ini livré),
+# toujours coupé pour « Maximale ».
 PREREGLAGES = (
     ("legere", "Légère",
      "Pour un PC modeste ou un portable : effets de lumière éteints, contours lissés.",
      {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
       "surechantillonnage": 1, "filtrage": 4, "occlusion": False, "halo": False,
-      "rayons": False, "feuillage_lointain": False}),
+      "rayons": False, "feuillage_lointain": False, "decor_entier": 1}),
     ("equilibree", "Équilibrée",
      "Tous les effets de lumière, sans suréchantillonnage.",
      {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
       "surechantillonnage": 1, "filtrage": 16, "occlusion": True, "halo": True,
-      "rayons": True, "feuillage_lointain": False}),
+      "rayons": True, "feuillage_lointain": False, "decor_entier": 2}),
     ("maximale", "Maximale",
      "Tous les effets et l'image la plus fine (suréchantillonnage ×1,5), pour une "
      "carte graphique récente.",
      {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
       "surechantillonnage": 1.5, "filtrage": 16, "occlusion": True, "halo": True,
-      "rayons": True, "feuillage_lointain": True}),
+      "rayons": True, "feuillage_lointain": True, "decor_entier": 0}),
 )
