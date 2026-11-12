@@ -1485,6 +1485,10 @@
     "En caméra libre": "With the free camera",
     "Toujours": "Always",
     "Textures HD": "HD textures",
-    "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au prochain lancement du jeu.": "Replaces the game's textures with more detailed versions: walls, floors and scenery sharper up close. Needs the beta HD texture pack, downloaded from the Accio Discord and extracted into the game's folder; without it, this setting changes nothing. Uses more video memory. Takes effect the next time the game starts."
+    "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au prochain lancement du jeu.": "Replaces the game's textures with more detailed versions: walls, floors and scenery sharper up close. Needs the beta HD texture pack, downloaded from the Accio Discord and extracted into the game's folder; without it, this setting changes nothing. Uses more video memory. Takes effect the next time the game starts.",
+    "Force du halo": "Glow strength",
+    "La lueur que le jeu pose autour des lumières. « D'origine », elle déborde en liseré orangé autour des cheveux et des visages ; « Douce » l'en retire et garde celle des lampes et des sorts. Plus bas, l'image s'assombrit, et « Aucune » éteint aussi la lueur des lampes et des sorts. Compte au prochain lancement du jeu.": "The glow the game itself draws around lights. On \"Original\", it spills into an orange rim around hair and faces; \"Soft\" takes it off them and keeps the glow of lamps and spells. Lower, the image gets darker, and \"None\" also turns off the glow of lamps and spells. Takes effect the next time the game starts.",
+    "Douce": "Soft",
+    "Faible": "Low"
   }
 }

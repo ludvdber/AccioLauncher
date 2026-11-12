@@ -1486,6 +1486,10 @@
     "En caméra libre": "Con la cámara libre",
     "Toujours": "Siempre",
     "Textures HD": "Texturas HD",
-    "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au prochain lancement du jeu.": "Sustituye las texturas del juego por versiones más detalladas: paredes, suelos y decorado más nítidos de cerca. Hace falta el pack de texturas HD beta, que se descarga en el Discord de Accio y se descomprime en la carpeta del juego; sin él, este ajuste no cambia nada. Exige más memoria de vídeo. Se aplica la próxima vez que se inicie el juego."
+    "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au prochain lancement du jeu.": "Sustituye las texturas del juego por versiones más detalladas: paredes, suelos y decorado más nítidos de cerca. Hace falta el pack de texturas HD beta, que se descarga en el Discord de Accio y se descomprime en la carpeta del juego; sin él, este ajuste no cambia nada. Exige más memoria de vídeo. Se aplica la próxima vez que se inicie el juego.",
+    "Force du halo": "Intensidad del halo",
+    "La lueur que le jeu pose autour des lumières. « D'origine », elle déborde en liseré orangé autour des cheveux et des visages ; « Douce » l'en retire et garde celle des lampes et des sorts. Plus bas, l'image s'assombrit, et « Aucune » éteint aussi la lueur des lampes et des sorts. Compte au prochain lancement du jeu.": "El resplandor que el propio juego pone alrededor de las luces. En «Original», se desborda en un borde anaranjado alrededor del pelo y de las caras; «Suave» lo quita de ahí y conserva el de las lámparas y los hechizos. Más abajo, la imagen se oscurece, y «Ninguna» apaga también el resplandor de las lámparas y los hechizos. Se aplica la próxima vez que se inicie el juego.",
+    "Douce": "Suave",
+    "Faible": "Baja"
   }
 }

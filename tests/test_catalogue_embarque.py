@@ -74,6 +74,21 @@ class TestReglages:
         porteurs = {j["id"] for j in catalogue["games"] if "textures_hd" in j.get("fix_settings", ())}
         assert porteurs == {"hp6"}
 
+    def test_force_du_halo_sur_hp5_seulement(self, catalogue):
+        """Catalogue 0.57 (2026-11-12) : `NativeBloomStrength` n'a été vu en jeu que sur HP5 (livré à 60) ;
+        HP6 le lit aussi mais attend son essai."""
+        porteurs = {j["id"] for j in catalogue["games"] if "force_halo" in j.get("fix_settings", ())}
+        assert porteurs == {"hp5"}
+
+    def test_egal_au_catalogue_publie_quand_son_depot_est_la(self):
+        """Les deux catalogues ensemble : l'embarqué et `accio-launcher-games/games.json` portent le même
+        contenu et le même numéro. Sauté quand le dépôt voisin n'est pas cloné (CI)."""
+        from pathlib import Path
+        voisin = Path(__file__).resolve().parents[2] / "accio-launcher-games" / "games.json"
+        if not voisin.is_file():
+            pytest.skip("dépôt accio-launcher-games absent")
+        assert json.loads(voisin.read_text(encoding="utf-8")) == json.loads(GAMES_JSON_PATH.read_text(encoding="utf-8"))
+
     def test_hp7b_n_a_pas_de_format(self, catalogue):
         """Son ini n'a pas d'AspectRatio : rien ne lirait la clé."""
         hp7b = next(j for j in catalogue["games"] if j["id"] == "hp7b")

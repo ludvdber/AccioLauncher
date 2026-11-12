@@ -538,6 +538,47 @@ class TestTexturesHdHp6:
             assert self.R.libelle in textes and self.R.aide in textes, langue
 
 
+class TestForceHaloHp5:
+    """HP5 : [Accio.Graphics] NativeBloomStrength du correctif (settings.cpp, glow.h) ; la part de la lueur du
+    jeu posée sur l'image, 0 à 100, 100 = jeu tel que livré et clé absente. L'ini livré de HP5 porte 60
+    (vu en jeu le 2026-11-12 : le liseré orangé des cheveux et des visages part dès 60)."""
+
+    R = rc.REGLAGES["force_halo"]
+
+    def test_la_cle_du_correctif(self):
+        assert (self.R.section, self.R.cle, self.R.onglet) == ("Accio.Graphics", "NativeBloomStrength", "image")
+        assert self.R.choix == (100, 60, 30, 0)   # 100 d'abord : la valeur d'une clé absente
+        assert self.R.se_voit and not self.R.beta and not self.R.depend_de
+
+    def test_libelles(self):
+        assert [rc.libelle_choix(self.R, v) for v in self.R.choix] == [
+            tr("D'origine"), tr("Douce"), tr("Faible"), tr("Aucune")]
+
+    def test_d_origine_quand_la_cle_manque_puis_l_ini_livre_a_60(self, ini):
+        assert rc.lire(ini, self.R) == rc.Etat(100)
+        rc.ecrire(ini, self.R, 60)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert lignes.index("[Accio.Graphics]") < lignes.index("NativeBloomStrength=60")
+        assert rc.lire(ini, self.R) == rc.Etat(60)
+        assert rc.allume(self.R, 60) and not rc.allume(self.R, 100)
+
+    def test_aucun_prereglage_n_y_touche(self):
+        """Un goût, pas un coût : les préréglages de qualité n'y touchent pas."""
+        for _i, _n, _t, valeurs in rc.PREREGLAGES:
+            assert "force_halo" not in valeurs
+
+    def test_range_avec_la_lumiere(self):
+        from src.ui.reglages_rubriques import _GROUPES_EFFETS
+        assert "force_halo" in dict(_GROUPES_EFFETS)["Lumière et ombres"]
+
+    def test_traduit_en_anglais_et_en_espagnol(self):
+        from src.core.config import I18N_DIR
+        for langue in ("en", "es"):
+            textes = json.loads((I18N_DIR / f"{langue}.json").read_text(encoding="utf-8"))["strings"]
+            for cle in (self.R.libelle, self.R.aide, *(nom for _v, nom in self.R.etiquettes)):
+                assert cle in textes, (langue, cle)
+
+
 class TestSonArrierePlan:
     """MuteInBackground : éteint quand la clé manque, comme le correctif."""
 

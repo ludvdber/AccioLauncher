@@ -74,7 +74,7 @@ _GROUPES_EFFETS = (
                   "surechantillonnage")),
     ("Textures", ("filtrage", "textures_lointaines", "feuillage_lointain", "mipmaps_fins",
                   "textures_hd", "particules_lointaines", "decor_entier")),
-    ("Lumière et ombres", ("occlusion", "ombres_nettes", "ombres_douces", "halo", "rayons")),
+    ("Lumière et ombres", ("occlusion", "ombres_nettes", "ombres_douces", "halo", "force_halo", "rayons")),
 )
 # « Ambiance » : ce qui CHANGE le style d'origine au lieu de l'affiner (Ludo,
 # 2026-10-27 : « ça n'améliore plus l'existant, ça le modifie »). Rubrique à

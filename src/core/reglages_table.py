@@ -403,6 +403,21 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour "
             "d'elles.",
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
+    # HP5, [Accio.Graphics] NativeBloomStrength du correctif (settings.cpp, glow.h ; lu au démarrage seulement) :
+    # la part de la lueur DU JEU posée sur l'image, 0 à 100, 100 = livré et clé absente. Indépendante du FXAA et
+    # du `halo` (le Bloom du correctif). VU en jeu le 2026-11-12 (essai 73, Ron de profil) : à 100 le liseré orangé
+    # déborde des cheveux et des visages, parti dès 60 ; 30 et 0 assombrissent l'image ; 0 éteint aussi la lueur
+    # des lampes et des sorts. L'ini livré de HP5 porte 60 (décision de Ludo, 2026-11-12). Pas dans les PREREGLAGES :
+    # c'est un goût, pas un coût. Pas HP6 tant qu'il n'est pas vu.
+    Reglage("force_halo", "Accio.Graphics", "NativeBloomStrength",
+            "Force du halo",
+            "La lueur que le jeu pose autour des lumières. « D'origine », elle déborde en liseré orangé autour des "
+            "cheveux et des visages ; « Douce » l'en retire et garde celle des lampes et des sorts. Plus bas, l'image "
+            "s'assombrit, et « Aucune » éteint aussi la lueur des lampes et des sorts. Compte au prochain lancement "
+            "du jeu.",
+            choix=(100, 60, 30, 0), zero="D'origine",
+            etiquettes=((60, "Douce"), (30, "Faible"), (0, "Aucune")),
+            onglet="image", se_voit=True),
     Reglage("rayons", "Accio.Graphics", "GodRays",
             "Rayons de lumière",
             "Des rayons partent des sources de lumière fortes, comme le soleil à travers les "
