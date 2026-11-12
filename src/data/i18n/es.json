@@ -1483,6 +1483,10 @@
     "Pas encore de capture pour ce jeu.": "Todavía no hay capturas para este juego.",
     "Pas encore de fiche pour ce jeu.": "Todavía no hay fichas para este juego.",
     "{} une fois installé": "{} una vez instalado",
-    "Le système a refusé de déplacer son dossier (dossier protégé ou antivirus) : importez ce jeu depuis sa fiche.": "El sistema se negó a mover su carpeta (carpeta protegida o antivirus): importe este juego desde su ficha."
+    "Le système a refusé de déplacer son dossier (dossier protégé ou antivirus) : importez ce jeu depuis sa fiche.": "El sistema se negó a mover su carpeta (carpeta protegida o antivirus): importe este juego desde su ficha.",
+    "Décor entier affiché": "Decorado entero dibujado",
+    "Le jeu ne dessine que les parties du parc reliées par un passage à l'endroit d'où l'on regarde : hors de la vue de Harry, des objets disparaissent. « En caméra libre » les garde pendant le vol, « Toujours » aussi en jouant. Demande plus à la carte graphique et au processeur : à laisser « D'origine » sur un PC modeste.": "El juego solo dibuja las partes del parque unidas por un paso al lugar desde donde se mira: fuera de la vista de Harry, los objetos desaparecen. «Con la cámara libre» los mantiene durante el vuelo, «Siempre» también al jugar. Exige más a la tarjeta gráfica y al procesador: déjalo en «Original» en un PC modesto.",
+    "En caméra libre": "Con la cámara libre",
+    "Toujours": "Siempre"
   }
 }

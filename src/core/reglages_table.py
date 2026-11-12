@@ -372,6 +372,18 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(0, 60, 100), zero="D'origine",
             etiquettes=((60, "Trois fois plus loin"), (100, "Cinq fois plus loin")),
             onglet="image", cout=(("GPU", 1),)),
+    # HP6, [Accio.Graphics] ZoneCulling du correctif (2026-11-12, lu dans hp6.exe, PAS encore vu en jeu) : 1 = le
+    # jeu ne dessine que les cellules qu'un passage relie à celle de la vue ; 2 = tout ce qui est chargé pendant
+    # le vol de la caméra libre ; 0 = toujours. Le premier choix (1) vaut pour une clé absente. Demande de Ludo
+    # (2026-11-12) : coupé pour le mode photo et les PC puissants, laissé pour les PC modestes. Pas encore dans
+    # `fix_settings` du catalogue : à y ajouter (les deux catalogues) avec l'archive qui porte la clé.
+    Reglage("decor_entier", "Accio.Graphics", "ZoneCulling",
+            "Décor entier affiché",
+            "Le jeu ne dessine que les parties du parc reliées par un passage à l'endroit d'où l'on regarde : hors de la vue de Harry, des objets disparaissent. "
+            "« En caméra libre » les garde pendant le vol, « Toujours » aussi en jouant. Demande plus à la carte graphique et au processeur : à laisser « D'origine » sur un PC modeste.",
+            choix=(1, 2, 0), zero="D'origine",
+            etiquettes=((2, "En caméra libre"), (0, "Toujours")),
+            onglet="image", cout=(("GPU", 2), ("CPU", 2)), se_voit=True, beta=True),
     Reglage("halo", "Accio.Graphics", "Bloom",
             "Halo lumineux",
             "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour "

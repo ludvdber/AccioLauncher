@@ -1,6 +1,113 @@
 {
   "versions": [
     {
+      "version": "1.3.4",
+      "nom": "Episkey",
+      "depuis": "1.3.3",
+      "points_forts": [
+        {
+          "icone": "jauge",
+          "titre": {
+            "fr": "Fini les saccades",
+            "en": "No more stutter",
+            "es": "Adiós a los tirones"
+          },
+          "texte": {
+            "fr": "La Coupe de Feu, L'Ordre du Phénix et Le Prince de Sang-Mêlé ne saccadent plus quand le jeu tourne sous sa limite d'images ou avec la synchronisation verticale : chaque image est dessinée à son vrai moment. Le launcher aligne aussi le plafond du jeu sur la limite choisie, à chaque lancement. Avec les nouvelles versions des jeux.",
+            "en": "Goblet of Fire, Order of the Phoenix and Half-Blood Prince no longer stutter when the game runs below its frame limit or with vertical sync: each frame is drawn at its real time. The launcher also matches the game's cap to the chosen limit at every start. With the new versions of the games.",
+            "es": "El cáliz de fuego, La Orden del Fénix y El misterio del príncipe ya no dan tirones cuando el juego va por debajo de su límite de imágenes o con la sincronización vertical: cada imagen se dibuja en su momento real. El launcher también ajusta el tope del juego al límite elegido en cada arranque. Con las nuevas versiones de los juegos."
+          }
+        },
+        {
+          "icone": "film",
+          "titre": {
+            "fr": "Les cinématiques à la bonne vitesse",
+            "en": "Cutscenes at the right speed",
+            "es": "Las cinemáticas a su velocidad"
+          },
+          "texte": {
+            "fr": "Les Reliques de la Mort (première partie) tournent à 30 images par seconde : ses cinématiques ne passent plus en accéléré et leur son ne déborde plus sur le niveau.",
+            "en": "Deathly Hallows (Part 1) runs at 30 frames per second: its cutscenes no longer play sped up and their sound no longer spills over into the level.",
+            "es": "Las Reliquias de la Muerte (primera parte) va a 30 imágenes por segundo: sus cinemáticas ya no se aceleran y su sonido ya no se desborda sobre el nivel."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "La Coupe de Feu, L'Ordre du Phénix, Le Prince de Sang-Mêlé : la vignette (coins assombris) se règle ou se coupe dans l'onglet Image.",
+            "en": "Goblet of Fire, Order of the Phoenix, Half-Blood Prince: the vignette (darkened corners) can be adjusted or turned off in the Image tab.",
+            "es": "El cáliz de fuego, La Orden del Fénix, El misterio del príncipe: la viñeta (esquinas oscurecidas) se ajusta o se quita en la pestaña Imagen."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "La Coupe de Feu : deux réglages de difficulté, la résistance des créatures et le temps pour enchaîner les sorts.",
+            "en": "Goblet of Fire: two difficulty settings, creature resistance and the time to chain spells.",
+            "es": "El cáliz de fuego: dos ajustes de dificultad, la resistencia de las criaturas y el tiempo para encadenar hechizos."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "La Coupe de Feu, L'Ordre du Phénix, Le Prince de Sang-Mêlé démarrent sur le préréglage d'image « Équilibrée », celui que recommande Accio. Avec les nouvelles versions des jeux.",
+            "en": "Goblet of Fire, Order of the Phoenix, Half-Blood Prince start on the « Balanced » image preset, the one Accio recommends. With the new versions of the games.",
+            "es": "El cáliz de fuego, La Orden del Fénix, El misterio del príncipe arrancan con el preajuste de imagen « Equilibrado », el que recomienda Accio. Con las nuevas versiones de los juegos."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Passer d'un jeu à l'autre est plus rapide, et les jaquettes gardent leurs proportions.",
+            "en": "Switching from one game to another is faster, and the covers keep their proportions.",
+            "es": "Pasar de un juego a otro es más rápido, y las carátulas conservan sus proporciones."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Un message prévient quand un réglage du correctif n'a pas pu s'appliquer.",
+            "en": "A message warns when a fix setting could not be applied.",
+            "es": "Un mensaje avisa cuando un ajuste del parche no se ha podido aplicar."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "L'Ordre du Phénix : plus de halo rouge à côté des cheveux clairs (le flou lumineux du jeu est dessiné plus finement). Avec la nouvelle version du jeu.",
+            "en": "Order of the Phoenix: no more red glow beside bright hair (the game's own bloom is drawn finer). With the new version of the game.",
+            "es": "La Orden del Fénix: ya no hay un halo rojo junto al pelo claro (el resplandor del propio juego se dibuja más fino). Con la nueva versión del juego."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "« Reprendre » n'apparaît que quand la partie peut vraiment reprendre là où elle s'était arrêtée.",
+            "en": "« Resume » only appears when the game can really pick up where it left off.",
+            "es": "« Reanudar » solo aparece cuando la partida puede seguir de verdad donde se quedó."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Linux : les cartes graphiques Intel ne figent plus les jeux sous Wine, et la Médiathèque dit quoi installer quand la lecture de musique manque.",
+            "en": "Linux: Intel graphics cards no longer freeze the games under Wine, and the Media Library says what to install when music playback is missing.",
+            "es": "Linux: las tarjetas gráficas Intel ya no congelan los juegos con Wine, y la Mediateca dice qué instalar cuando falta la reproducción de música."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "La Chambre des Secrets : le Folio affiche le bon nom du lieu de la dernière partie.",
+            "en": "Chamber of Secrets: the Folio shows the right name for the place of the last session.",
+            "es": "La cámara secreta: el Folio muestra el nombre correcto del lugar de la última partida."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.3",
       "nom": "Aparecium",
       "depuis": "1.3.2",

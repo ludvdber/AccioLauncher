@@ -1482,6 +1482,10 @@
     "Pas encore de capture pour ce jeu.": "No screenshots for this game yet.",
     "Pas encore de fiche pour ce jeu.": "No entries for this game yet.",
     "{} une fois installé": "{} once installed",
-    "Le système a refusé de déplacer son dossier (dossier protégé ou antivirus) : importez ce jeu depuis sa fiche.": "The system refused to move its folder (protected folder or antivirus): import this game from its page."
+    "Le système a refusé de déplacer son dossier (dossier protégé ou antivirus) : importez ce jeu depuis sa fiche.": "The system refused to move its folder (protected folder or antivirus): import this game from its page.",
+    "Décor entier affiché": "Whole scenery drawn",
+    "Le jeu ne dessine que les parties du parc reliées par un passage à l'endroit d'où l'on regarde : hors de la vue de Harry, des objets disparaissent. « En caméra libre » les garde pendant le vol, « Toujours » aussi en jouant. Demande plus à la carte graphique et au processeur : à laisser « D'origine » sur un PC modeste.": "The game only draws the parts of the grounds linked by a passage to the place the view is in: outside Harry's sight, objects vanish. \"With the free camera\" keeps them while flying, \"Always\" while playing too. Asks more of the graphics card and processor: leave it on \"Original\" on a modest PC.",
+    "En caméra libre": "With the free camera",
+    "Toujours": "Always"
   }
 }

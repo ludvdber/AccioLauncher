@@ -312,9 +312,10 @@ class TestModeDifficile:
         assert hardcore == {*self.IDENTS, "sorts_retires", "invincible", "sorts_par_creature", "jauge_creature"}
         assert all(rc.REGLAGES[i].beta for i in hardcore)
         # Autres réglages en essai : le Quidditch de HP1/HP2, pas encore vu en match, et la caméra
-        # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un).
+        # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un), et le décor entier
+        # de HP6 (ZoneCulling, lu dans l'exe le 2026-11-12, pas encore vu en jeu).
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
-            "quidditch", "camera_fluide"}
+            "quidditch", "camera_fluide", "decor_entier"}
 
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:
