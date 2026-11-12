@@ -365,7 +365,7 @@ qui deviendra la 3.0). Détail : `docs/linux/RETOUR_BAZZITE.md`, septième passa
   `DXVK_CONFIG=d3d9.ffUbershaderVS = False` à chaque lancement : DXVK compile
   alors un shader par cas, comme avant la 3.0. Un réglage de l'utilisateur sur
   cette option, ou sur `dxvk.enableDescriptorBuffer` (l'autre remède, vérifié
-  aussi), reste le sien. Cadence inchangée.
+  aussi), reste le sien. Avec le remède, HP6 tient 42 images/s au Terrier (sans lui : non mesuré).
 - **L'incrustation.** `incrustation_wine.suivre` écrit `DrawUnderWine=1` dans
   le `d3d9.ini` quand l'environnement du lancement porte le remède, `0` sinon.
   Un ini sans la clé n'est pas touché.
@@ -553,6 +553,8 @@ Bazzite, noyau 7.2.7, KDE Wayland, umu-launcher 1.4.4, GE-Proton10-34, Intel UHD
 | Préparation de Wine depuis le bandeau | `vcrun2005` 12 s, `vcrun2008` 10 s ; « Annuler » non testable à la main (trop rapide) |
 | Registre de HP7a/HP7b | `Install Dir` et `Locale` sous `Wow6432Node`, prévenance « registre de Wine » sans mention d'administrateur |
 | Zone de notification | le launcher s'y range au lancement et revient à la fin de partie (grâce de 10 s pour UE1) |
+
+**Revérifié le 2026-11-12** (noyau 7.3.3, Mesa 26.2.6, Python 3.15.0, launcher 1.3.3, catalogue 0.57) : `./build.sh` code 0 en 2 min 59 (4581 tests), AppImage de 71 Mo, fenêtre en moins d'une seconde ; HP1 à HP6 joués par JOUER avec elle (F12, F10, F11, Alt+Tab), correctif 2.4.0 chargé (2.2.0 pour HP6) ; incrustation dessinée sans gel dans HP4, HP5, HP6 (§ 4.9).
 
 **Piège d'essai** : sans `WAYLAND_DISPLAY`, Qt (plateforme `wayland`) se connecte
 quand même à `wayland-0`. Pour un essai sur un autre affichage, passer
