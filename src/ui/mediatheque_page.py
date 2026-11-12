@@ -50,7 +50,8 @@ from src.core import discographie, encyclopedie
 from src.core.i18n import tr, trn
 from src.ui import ecran_video_gpu
 from src.ui.composants import (
-    ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, icone_de_bouton, police, rond, surtitre, texte,
+    ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, filtre, icone_de_bouton, police, rond,
+    surtitre, texte,
 )
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.cinema_plein_ecran import PleinEcran
@@ -75,21 +76,6 @@ _PAS_BARRE_MS = 250                # au plus 4 repeintes par seconde de la barre
 _STYLE = """
 QDialog#mediatheque { background: #070712; }
 QWidget#transparent { background: transparent; }
-QPushButton#retour {
-    background: transparent; border: none; color: #a9a7c4; text-align: left; padding: 4px 2px;
-}
-QPushButton#retour:hover { color: #f2f2f4; }
-QPushButton#rubrique, QPushButton#filtre {
-    background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 15px;
-    color: #c9c7da; padding: 6px 16px;
-}
-QPushButton#filtre { border-radius: 13px; padding: 5px 13px; }
-QPushButton#filtre[vide="true"] { color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }
-QPushButton#rubrique:hover, QPushButton#filtre:hover { color: #f2f2f4; }
-QPushButton#rubrique:checked, QPushButton#filtre:checked {
-    background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
-}
-QPushButton#rubrique[focusClavier="true"]:focus, QPushButton#filtre[focusClavier="true"]:focus { border-color: #d6a72c; }
 QFrame#platine { background: #08081a; border: none; border-right: 1px solid rgba(214, 167, 44, 0.12); }
 QFrame#carteJeu {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.14); border-radius: 10px;
@@ -1564,15 +1550,10 @@ class MediathequePage(QDialog):
                                              (CINEMATIQUES, tr("Cinématiques"), "film"),
                                              (encyclopedie.PERSONNAGES, tr("Personnages"), "personnages"),
                                              (encyclopedie.BESTIAIRE, tr("Bestiaire"), "patte")):
-            b = QPushButton(libelle)
-            b.setObjectName("rubrique")
-            b.setCheckable(True)
-            b.setAutoDefault(False)
-            b.setFont(police(14))
+            b = filtre(libelle, grand=True)
             pictogramme, taille = espacee(pixmap_icone(icone, 18, QColor("#e6e4f0")), QSize(18, 18))
             b.setIcon(pictogramme)
             b.setIconSize(taille)
-            b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.clicked.connect(lambda _c=False, r=cle_rubrique: self.rubrique(r))
             groupe.addButton(b)
             ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignVCenter)

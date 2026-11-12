@@ -22,8 +22,7 @@ import html
 from collections.abc import Callable
 from datetime import date
 
-from PyQt6.QtCore import QDate, QLocale, QSize, Qt
-from PyQt6.QtGui import QColor, QIcon
+from PyQt6.QtCore import QDate, QLocale, Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -44,13 +43,13 @@ from src.core.i18n import get_language, tr
 from src.ui.composants import (
     ENCRE,
     ENCRE_DOUCE,
+    bouton_retour,
     feuille_de_style,
     police,
     surtitre,
     texte,
 )
 from src.ui.fonts import cinzel, cinzel_decorative
-from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, _Jaquette
 from src.ui.theme import current as current_theme, themed
 from src.ui.utils import zone_defilable
@@ -225,14 +224,7 @@ class VersionsDialog(QDialog):
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(6)
 
-        retour = QPushButton(self._libelle_retour)
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self.reject)
+        retour = bouton_retour(self._libelle_retour, self.reject)
         lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(14)
 

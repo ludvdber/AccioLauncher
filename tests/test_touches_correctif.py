@@ -315,3 +315,34 @@ class TestFenetre:
         qtbot.keyClick(bouton, Qt.Key.Key_F)
         assert not dlg._erreur.isHidden()
         assert bouton.text() == tc.touche_d_origine(tc.PAR_CLE["Accio"])
+
+
+class TestPetitsTitres:
+    """Constat tra16 (2026-11-12) : les titres des cartes étaient en Cinzel 7 pt
+    (9,3 px à 100 %), capitales espacées de 2,2 px ; ils passent à 8 pt et 1,8 px."""
+
+    def test_huit_points_et_un_virgule_huit_pixel(self, qtbot):
+        from PyQt6.QtGui import QFont
+
+        from src.ui.composants import petit_titre
+        lbl = petit_titre("Se déplacer")
+        qtbot.addWidget(lbl)
+        assert lbl.font().pointSize() == 8
+        assert lbl.font().letterSpacingType() == QFont.SpacingType.AbsoluteSpacing
+        assert lbl.font().letterSpacing() == pytest.approx(1.8, abs=1 / 64)  # Qt garde des 1/64 de px
+
+    def test_aucun_titre_coupe_dans_les_trois_cartes_au_plus_etroit(self, qtbot, ini):
+        """Au seuil des trois colonnes, chaque carte est la plus étroite qu'elle sera."""
+        from PyQt6.QtWidgets import QApplication, QLabel
+
+        from src.ui.editeur_touches import _SEUIL_TROIS, EditeurTouches
+        editeur = EditeurTouches(ini)
+        qtbot.addWidget(editeur)
+        editeur.resize(_SEUIL_TROIS, 600)
+        editeur.show()
+        QApplication.processEvents()
+        attendus = {tr(t).upper() for t in ("Se déplacer", "Lancer un sort", "Menus")}
+        titres = [lbl for lbl in editeur.findChildren(QLabel) if lbl.text() in attendus]
+        assert len(titres) == 3
+        for lbl in titres:
+            assert lbl.width() >= lbl.sizeHint().width(), lbl.text()

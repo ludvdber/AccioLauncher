@@ -17,8 +17,8 @@ import logging
 from pathlib import Path
 
 
-from PyQt6.QtCore import QRectF, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPainter
+from PyQt6.QtCore import QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QPainter
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -42,8 +42,8 @@ from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, get_language, tr, trn
 from src.ui.composants import (
-    ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
-    espace_du_volume, feuille_de_style, police, surtitre, texte,
+    ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Pastille, bouton, bouton_rubrique,
+    espace_du_volume, feuille_de_style, surtitre, texte,
 )
 from src.ui.fenetre_message import message
 from src.ui.fonts import cinzel_decorative
@@ -60,7 +60,6 @@ from src.ui.utils import avertir, is_writable_dir, liste_deroulante, open_local_
 log = logging.getLogger(__name__)
 
 _LARGEUR_RUBRIQUES = 236
-_ENCRE_RUBRIQUE = "#a9a7c4"
 # (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
 _RUBRIQUES = (("Général", "dossier"), ("Son et image", "ecran"),
               ("Intégrations", "integrations"), ("À propos", "infos"))
@@ -70,28 +69,9 @@ _RANG_A_PROPOS = len(_RUBRIQUES) - 1   # ses messages arrivent de la fenêtre, a
 _LARGEUR_LECTURE = 760
 _MARGE_RAIL = 64
 
-# Style partagé des QComboBox du panneau (langue, thème, saison)
-# Le focus clavier et la ligne choisie d'une liste ouverte, en OR : `outline`
-# n'est pas peint sur une QComboBox (la règle globale de styles.py ne s'y
-# voyait pas), et la ligne choisie, #2c3e6b sur #16213e, ne se distinguait
-# pas des autres. Mesuré sur capture, Ludo à la manette le 2026-10-07 : « tout
-# n'est pas mis en évidence, surtout les paramètres graphiques et dropdown ».
-# Le cadre passe à 2 px et le remplissage perd 1 px : rien ne bouge.
-# `::drop-down` retire le bouton natif : sans lui, sa flèche restait sous le
-# chevron que peint `utils._ListeDeroulante` (deux flèches superposées).
-_COMBO_STYLE = (
-    "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
-    " border-radius: 6px; padding: 6px 12px; font-size: 13px; }"
-    "QComboBox::drop-down { border: none; width: 18px; }"
-    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 5px 11px; }"
-    "QComboBox QAbstractItemView { background: #16213e; color: #ffffff; outline: none;"
-    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
-    # La liste peint ses lignes elle-même : `selection-*` seul n'y changeait rien
-    # (ligne choisie au clavier, mesurée sans aucune différence de couleur).
-    "QComboBox QAbstractItemView::item { padding: 4px 8px; }"
-    "QComboBox QAbstractItemView::item:selected { background: rgba(214, 167, 44, 0.30);"
-    " color: #f0d060; }"
-)
+# Les listes du panneau (langue, thème, saison) : la liste haute de `composants`
+# (les copies de sauvegarde l'importent d'ici).
+_COMBO_STYLE = LISTE_HAUTE
 
 
 def _texte_disque(path: Path) -> str:
@@ -155,19 +135,7 @@ class _Rail(QWidget):
         self._groupe.setExclusive(True)
         self.boutons: list[QPushButton] = []
         for rang, (libelle, icone) in enumerate(rubriques):
-            pictogramme = QIcon()
-            pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(_ENCRE_RUBRIQUE)),
-                                  QIcon.Mode.Normal, QIcon.State.Off)
-            pictogramme.addPixmap(pixmap_icone(icone, 19, QColor(current_theme().accent_light)),
-                                  QIcon.Mode.Normal, QIcon.State.On)
-            btn = QPushButton(tr(libelle))
-            btn.setObjectName("rubrique")
-            btn.setCheckable(True)
-            btn.setIcon(pictogramme)
-            btn.setIconSize(QSize(19, 19))
-            btn.setFont(police(14))
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setAutoDefault(False)
+            btn = bouton_rubrique(tr(libelle), icone, taille_icone=19, hauteur=42)
             btn.toggled.connect(lambda oui, r=rang: oui and self.currentRowChanged.emit(r))
             self._groupe.addButton(btn)
             self.boutons.append(btn)
@@ -232,29 +200,12 @@ class SettingsDialog(QDialog):
             border: none;
             border-right: 1px solid rgba(214, 167, 44, 0.12);
         }
-        QPushButton#rubrique {
-            color: #a9a7c4; background: transparent; border: none;
-            border-left: 2px solid transparent; border-radius: 8px;
-            text-align: left; padding: 0 12px; min-height: 42px; max-height: 42px;
-        }
-        QPushButton#rubrique:hover { color: #f2f2f4; background: rgba(255, 255, 255, 0.04); }
-        QPushButton#rubrique:checked {
-            color: #f2e6c4; background: rgba(214, 167, 44, 0.10);
-            border-left: 2px solid #d6a72c;
-        }
-        QPushButton#rubrique[focusClavier="true"]:focus { color: #e8c547; }
         QPushButton#lienDiscret {
             background: transparent; border: none; color: #a9a7c4;
             text-decoration: underline; padding: 4px 2px;
         }
         QPushButton#lienDiscret:hover { color: #f2f2f4; }
         QPushButton#lienDiscret[focusClavier="true"]:focus { color: #e8c547; }
-        QPushButton#retour {
-            background: transparent; border: none; color: #a9a7c4;
-            text-align: left; padding: 4px 2px;
-        }
-        QPushButton#retour:hover { color: #f2f2f4; }
-        QPushButton#retour[focusClavier="true"]:focus { color: #e8c547; }
         """
 
     # ──────────────────── Construction ────────────────────

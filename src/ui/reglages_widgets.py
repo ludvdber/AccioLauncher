@@ -24,56 +24,40 @@ from src.core.i18n import tr
 from src.ui.composants import ENCRE_DOUCE, petit_titre, police
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT
-from src.ui.theme import themed
+from src.ui.theme import RAYON_CARTE, themed
 
 _JAQUETTE = QSize(58, 80)
 
-_STYLE = """
-QDialog { background: #070712; }
-QFrame#rail {
+# Le retour et les rubriques du rail sont dans `composants.feuille_de_style()`.
+_STYLE = f"""
+QDialog {{ background: #070712; }}
+QFrame#rail {{
     background: #08081a; border: none;
     border-right: 1px solid rgba(214, 167, 44, 0.12);
-}
-QPushButton#retour {
-    background: transparent; border: none; color: #a9a7c4;
-    text-align: left; padding: 4px 2px;
-}
-QPushButton#retour:hover { color: #f2f2f4; }
-QPushButton#retour[focusClavier="true"]:focus { color: #e8c547; }
-QPushButton#rubrique {
-    color: #a9a7c4; background: transparent; border: none;
-    border-left: 2px solid transparent; border-radius: 8px;
-    text-align: left; padding: 0 14px; min-height: 44px; max-height: 44px;
-}
-QPushButton#rubrique:hover { color: #f2f2f4; background: rgba(255, 255, 255, 0.04); }
-QPushButton#rubrique:checked {
-    color: #f2e6c4; background: rgba(214, 167, 44, 0.10);
-    border-left: 2px solid #d6a72c;
-}
-QPushButton#rubrique[focusClavier="true"]:focus { color: #e8c547; }
-QFrame#pied {
+}}
+QFrame#pied {{
     background: #08081a; border: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-QFrame#effets {
+}}
+QFrame#effets {{
     background: #0d0d1a;
     border: 1px solid rgba(214, 167, 44, 0.14);
-    border-radius: 10px;
-}
-QPushButton#prereglage, QPushButton#choix {
+    border-radius: {RAYON_CARTE}px;
+}}
+QPushButton#prereglage, QPushButton#choix {{
     background: #0d0d1a; border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 9px; text-align: left;
-}
-QPushButton#prereglage:hover, QPushButton#choix:hover { border-color: rgba(214, 167, 44, 0.55); }
-QPushButton#prereglage:checked, QPushButton#choix:checked {
+    border-radius: {RAYON_CARTE}px; text-align: left;
+}}
+QPushButton#prereglage:hover, QPushButton#choix:hover {{ border-color: rgba(214, 167, 44, 0.55); }}
+QPushButton#prereglage:checked, QPushButton#choix:checked {{
     border-color: #d6a72c;
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                 stop:0 rgba(214, 167, 44, 0.13), stop:1 rgba(214, 167, 44, 0.04));
-}
-QPushButton#prereglage[surMesure="true"] { border-style: dashed; }
+}}
+QPushButton#prereglage[surMesure="true"] {{ border-style: dashed; }}
 QPushButton#prereglage[focusClavier="true"]:focus,
-QPushButton#choix[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
-QPushButton#choix:disabled { border-color: rgba(255, 255, 255, 0.05); }
+QPushButton#choix[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
+QPushButton#choix:disabled {{ border-color: rgba(255, 255, 255, 0.05); }}
 """
 
 

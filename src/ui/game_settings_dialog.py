@@ -28,7 +28,7 @@ import html
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QGuiApplication, QIcon
+from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -55,6 +55,8 @@ from src.ui.composants import (
     ENCRE_DOUCE,
     Carte,
     Rangee,
+    bouton_retour,
+    bouton_rubrique,
     feuille_de_style,
     police,
     surtitre,
@@ -62,7 +64,7 @@ from src.ui.composants import (
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import themed
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import zone_defilable
 from src.ui.reglages_widgets import (  # réexportés
@@ -251,15 +253,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
         # Le chemin du retour dit OÙ il mène, avec le même mot que Paramètres et
         # Mes années : la fiche vit dans la bibliothèque (audit UI, 2026-10-14).
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
+        retour = bouton_retour(tr("Bibliothèque"), self.accept)
         retour.setToolTip(tr("Échap pour revenir"))
-        retour.clicked.connect(self.accept)
         lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(14)
 
@@ -285,20 +280,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._groupe_onglets = QButtonGroup(self)
         self._groupe_onglets.setExclusive(True)
         self._onglets: dict[str, QPushButton] = {}
-        normal = QColor("#a9a7c4")
-        choisi = QColor(current_theme().accent_light)
         for rang, (ident, libelle, icone) in enumerate(pages):
-            pictogramme = QIcon()
-            pictogramme.addPixmap(pixmap_icone(icone, 20, normal), QIcon.Mode.Normal, QIcon.State.Off)
-            pictogramme.addPixmap(pixmap_icone(icone, 20, choisi), QIcon.Mode.Normal, QIcon.State.On)
-            btn = QPushButton(tr(libelle))
-            btn.setObjectName("rubrique")
-            btn.setCheckable(True)
-            btn.setIcon(pictogramme)
-            btn.setIconSize(QSize(20, 20))
-            btn.setFont(police(14))
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setAutoDefault(False)
+            btn = bouton_rubrique(tr(libelle), icone, taille_icone=20, hauteur=44)
             btn.toggled.connect(lambda oui, r=rang: oui and self._defile.setCurrentIndex(r))
             btn.toggled.connect(lambda oui, i=ident: oui and self._noter_pied(i))
             self._groupe_onglets.addButton(btn)

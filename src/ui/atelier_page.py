@@ -13,8 +13,8 @@ des versions (même style, même retour « Bibliothèque »).
 
 from pathlib import Path
 
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QIcon, QImageReader
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QImageReader
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -33,9 +33,10 @@ from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
 from src.core.images_a_refaire import taille_a_juger
 from src.core.liens import DISCORD_URL
-from src.ui.composants import ENCRE, ENCRE_DOUCE, Rangee, bouton, feuille_de_style, police, surtitre, texte
+from src.ui.composants import (
+    ENCRE, ENCRE_DOUCE, Rangee, bouton, bouton_retour, feuille_de_style, police, surtitre, texte,
+)
 from src.ui.fonts import cinzel_decorative
-from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.theme import current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
@@ -169,14 +170,7 @@ class AtelierPage(QDialog):
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(6)
 
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self.accept)
+        retour = bouton_retour(tr("Bibliothèque"), self.accept)
         lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(16)
         lay.addWidget(surtitre(tr("L'atelier")))

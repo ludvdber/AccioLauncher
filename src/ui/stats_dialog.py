@@ -21,15 +21,13 @@ dont on n'a vu aucune partie dit « — » et pourquoi, jamais une estimation.
 
 from datetime import date
 
-from PyQt6.QtCore import QLocale, QSize, Qt
-from PyQt6.QtGui import QColor, QIcon
+from PyQt6.QtCore import QLocale, Qt
 from PyQt6.QtWidgets import (
     QBoxLayout,
     QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -40,9 +38,8 @@ from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.ecu import emaux
 from src.ui.stats_releve import _Releve
-from src.ui.composants import feuille_de_style, police
+from src.ui.composants import bouton_retour, feuille_de_style
 from src.ui.fonts import cinzel
-from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current as theme_courant, themed
 from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _SECONDAIRE,
@@ -145,12 +142,6 @@ class StatsDialog(QDialog):
         QScrollBar::handle:vertical:hover { background: #d6a72c; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
-        QPushButton#retour {
-            background: transparent; border: none; color: #a9a7c4;
-            text-align: left; padding: 4px 2px;
-        }
-        QPushButton#retour:hover { color: #f2f2f4; }
-        QPushButton#retour[focusClavier="true"]:focus { color: #e8c547; }
         """
 
     # ──────────────────── Données ────────────────────
@@ -202,13 +193,7 @@ class StatsDialog(QDialog):
         # Une PAGE depuis le 2026-10-09 (`pages.py`) : le retour dit où il mène,
         # comme dans les Paramètres. Le « Fermer » en or plein pesait plus que
         # tout le relevé.
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.clicked.connect(self.accept)
+        retour = bouton_retour(tr("Bibliothèque"), self.accept)
         cadre.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         retour.setVisible(not self._integree)
 

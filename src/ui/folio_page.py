@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QRectF, QSize, Qt
 from PyQt6.QtGui import (
-    QColor, QIcon, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, qRgba,
+    QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, qRgba,
 )
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -31,11 +31,10 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.config import Config
 from src.core.i18n import get_language, tr, trn
-from src.ui.composants import ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte
+from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton_retour, feuille_de_style, police, surtitre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
-from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.stats_widgets import _duree
 from src.ui.theme import accent_qcolor, current as current_theme, themed
@@ -564,14 +563,7 @@ class FolioPage(QDialog):
         lay.setContentsMargins(_MARGE_RAIL, 22, _MARGE_RAIL, 20)
         lay.setSpacing(6)
         if not self._integree:
-            retour = QPushButton(tr("Bibliothèque"))
-            retour.setObjectName("retour")
-            retour.setFont(police(13))
-            retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-            retour.setIconSize(QSize(16, 16))
-            retour.setCursor(Qt.CursorShape.PointingHandCursor)
-            retour.setAutoDefault(False)
-            retour.clicked.connect(self.accept)
+            retour = bouton_retour(tr("Bibliothèque"), self.accept)
             lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
             lay.addSpacing(16)
         lay.addWidget(surtitre(tr("Folio")))

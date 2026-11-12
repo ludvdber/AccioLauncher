@@ -12,7 +12,7 @@ from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import QPushButton
 
-from src.ui.composants import police
+from src.ui.composants import filtre
 from src.ui.stats_releve import _ROMAINS, _jaquette
 
 _ICONE = QSize(18, 24)
@@ -60,13 +60,8 @@ def numeros(jeux) -> dict[str, str]:
 
 
 def pastille(game, etiquette: str) -> QPushButton:
-    """Une pastille cochable (`objectName` « filtre », le style des pages)."""
-    b = QPushButton(etiquette)
-    b.setObjectName("filtre")
-    b.setCheckable(True)
-    b.setAutoDefault(False)
-    b.setFont(police(13))
-    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    """Une pastille cochable à la jaquette du jeu (`composants.filtre`)."""
+    b = filtre(etiquette)
     jaquette = _jaquette(game.cover_image)
     if jaquette is not None:
         icone, taille = espacee(jaquette, _ICONE)

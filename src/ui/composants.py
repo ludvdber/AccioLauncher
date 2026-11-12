@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 
 from src.ui.fonts import body_font, cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import themed
+from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current, rayon_pastille, themed
 
 # Encres des pages, du plus lu au plus discret.
 ENCRE = "#f2f2f4"
@@ -27,40 +27,122 @@ ENCRE_DISCRETE = "#8c8aa5"
 # L'icône d'une commande éteinte, l'encre du cadenas des Collections.
 ENCRE_ETEINTE = "#5d5b72"
 
-_STYLE = """
-QFrame#carte {
+# Les pastilles cochables ont une hauteur FIXE : leur rayon en est la moitié
+# (`theme.rayon_pastille`). Mesurées le 2026-11-12 avec les polices du projet :
+# 28 px pour un filtre (police 13), 32 px pour une rubrique en pastille
+# (police 14 et pictogramme de 18 px).
+HAUTEUR_FILTRE = 28
+HAUTEUR_FILTRE_GRAND = 32
+_TAILLE_ROND = 38
+# Le pictogramme du retour et des rubriques d'un rail, au repos.
+_ENCRE_RAIL = "#a9a7c4"
+
+# Trois rayons seulement (`theme`) : commande, carte, pastille. Les rubriques
+# d'un rail, le retour et les filtres vivent ICI : chaque page en gardait sa
+# copie (`retour` six fois, `rubrique` et `filtre` trois), et elles divergeaient.
+_STYLE = f"""
+QFrame#carte {{
     background: #0d0d1a;
     border: 1px solid rgba(214, 167, 44, 0.14);
-    border-radius: 10px;
-}
-QFrame#separateur { background: rgba(255, 255, 255, 0.06); border: none; }
-QPushButton#principal, QPushButton#secondaire {
-    min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: 7px;
-}
-QPushButton#principal {
+    border-radius: {RAYON_CARTE}px;
+}}
+QFrame#separateur {{ background: rgba(255, 255, 255, 0.06); border: none; }}
+QPushButton#principal, QPushButton#secondaire {{
+    min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: {RAYON_CONTROLE}px;
+}}
+QPushButton#principal {{
     color: #ecdcb0; background: rgba(214, 167, 44, 0.06);
     border: 1px solid rgba(214, 167, 44, 0.35);
-}
-QPushButton#secondaire {
+}}
+QPushButton#secondaire {{
     color: #d9d6e8; background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.14);
-}
-QPushButton#principal:hover, QPushButton#secondaire:hover {
+}}
+QPushButton#principal:hover, QPushButton#secondaire:hover {{
     border-color: #d6a72c;
-}
-QPushButton#principal:disabled, QPushButton#secondaire:disabled {
+}}
+QPushButton#principal:disabled, QPushButton#secondaire:disabled {{
     color: #6f6d8e; border-color: rgba(255, 255, 255, 0.08);
-}
+}}
 QPushButton#principal[focusClavier="true"]:focus,
-QPushButton#secondaire[focusClavier="true"]:focus {
+QPushButton#secondaire[focusClavier="true"]:focus {{
     border: 2px solid #d6a72c; padding: 0 15px;
-}
-QPushButton#rond {
-    background: transparent; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 19px;
-}
-QPushButton#rond:hover, QPushButton#rond[focusClavier="true"]:focus { border-color: #d6a72c; }
-QPushButton#rond:disabled { border-color: rgba(255, 255, 255, 0.06); }
+}}
+QPushButton#rond {{
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: {rayon_pastille(_TAILLE_ROND)}px;
+}}
+QPushButton#rond:hover, QPushButton#rond[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
+QPushButton#rond:disabled {{ border-color: rgba(255, 255, 255, 0.06); }}
+QPushButton#retour {{
+    background: transparent; border: none; color: {_ENCRE_RAIL};
+    text-align: left; padding: 4px 2px;
+}}
+QPushButton#retour:hover {{ color: #f2f2f4; }}
+QPushButton#retour[focusClavier="true"]:focus {{ color: #e8c547; }}
+QPushButton#rubrique {{
+    color: {_ENCRE_RAIL}; background: transparent; border: none;
+    border-left: 2px solid transparent; border-radius: {RAYON_CONTROLE}px;
+    text-align: left; padding: 0 14px;
+}}
+QPushButton#rubrique:hover {{ color: #f2f2f4; background: rgba(255, 255, 255, 0.04); }}
+QPushButton#rubrique:checked {{
+    color: #f2e6c4; background: rgba(214, 167, 44, 0.10);
+    border-left: 2px solid #d6a72c;
+}}
+QPushButton#rubrique[focusClavier="true"]:focus {{ color: #e8c547; }}
+QPushButton#filtre {{
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: {rayon_pastille(HAUTEUR_FILTRE)}px; color: #c9c7da; padding: 0 13px;
+}}
+QPushButton#filtre[grand="true"] {{
+    border-radius: {rayon_pastille(HAUTEUR_FILTRE_GRAND)}px; padding: 0 16px;
+}}
+QPushButton#filtre[vide="true"] {{ color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }}
+QPushButton#filtre:hover {{ color: #f2f2f4; }}
+QPushButton#filtre:checked {{
+    background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
+}}
+QPushButton#filtre[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
 """
+
+# Les listes déroulantes. `LISTE` : celle des pages (réglages d'un jeu,
+# Collections), basse et sobre, alignée en colonne avec les interrupteurs.
+# `LISTE_HAUTE` : celle des Paramètres et des copies de sauvegarde.
+# Le focus clavier et la ligne choisie d'une liste ouverte, en OR : `outline`
+# n'est pas peint sur une QComboBox (la règle globale de styles.py ne s'y
+# voyait pas), et la ligne choisie, #2c3e6b sur #16213e, ne se distinguait
+# pas des autres. Mesuré sur capture, Ludo à la manette le 2026-10-07 : « tout
+# n'est pas mis en évidence, surtout les paramètres graphiques et dropdown ».
+# Le cadre passe à 2 px et le remplissage perd 1 px : rien ne bouge.
+# `::drop-down` retire le bouton natif : sans lui, sa flèche restait sous le
+# chevron que peint `utils._ListeDeroulante` (deux flèches superposées).
+# La liste peint ses lignes elle-même : `selection-*` seul n'y changeait rien
+# (ligne choisie au clavier, mesurée sans aucune différence de couleur).
+_LIGNES_DE_LISTE = (
+    "QComboBox::drop-down { border: none; width: 18px; }"
+    "QComboBox QAbstractItemView::item { padding: 4px 8px; }"
+    "QComboBox QAbstractItemView::item:selected { background: rgba(214, 167, 44, 0.30);"
+    " color: #f0d060; }"
+)
+LISTE = (
+    "QComboBox { background: #15152a; color: #e4e2ef; border: 1px solid rgba(255,255,255,0.13);"
+    f" border-radius: {RAYON_CONTROLE}px; padding: 3px 10px; min-height: 22px; }}"
+    "QComboBox:hover { border-color: rgba(214,167,44,0.55); }"
+    "QComboBox:disabled { color: #6f6d8e; }"
+    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 2px 9px; }"
+    "QComboBox QAbstractItemView { background: #15152a; color: #e4e2ef; outline: none;"
+    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
+    + _LIGNES_DE_LISTE
+)
+LISTE_HAUTE = (
+    "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
+    f" border-radius: {RAYON_CONTROLE}px; padding: 6px 12px; font-size: 13px; }}"
+    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 5px 11px; }"
+    "QComboBox QAbstractItemView { background: #16213e; color: #ffffff; outline: none;"
+    " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
+    + _LIGNES_DE_LISTE
+)
 
 
 def feuille_de_style() -> str:
@@ -106,11 +188,14 @@ def surtitre(contenu: str, *, a_la_ligne: bool = False) -> QLabel:
 
 
 def petit_titre(contenu: str) -> QLabel:
-    """Le titre gris DANS une carte (« SE DÉPLACER », « CONTOURS »)."""
+    """Le titre gris DANS une carte (« SE DÉPLACER », « CONTOURS »).
+
+    8 pt et 1,8 px d'espacement (2026-11-12, constat tra16) : à 7 pt (9,3 px à
+    100 %) et 2,2 px, les capitales espacées se lisaient mal."""
     lbl = QLabel(contenu.upper())
     lbl.setTextFormat(Qt.TextFormat.PlainText)
-    f = cinzel(7, bold=True)
-    f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 2.2)
+    f = cinzel(8, bold=True)
+    f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.8)
     lbl.setFont(f)
     lbl.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent; border: none;")
     return lbl
@@ -203,6 +288,54 @@ def rond(icone: str, libelle: str, action, bulle: str = "") -> QPushButton:
     b.setToolTip(bulle or libelle)
     b.setAccessibleName(libelle)
     b.clicked.connect(action)
+    return b
+
+
+def bouton_retour(libelle: str, action) -> QPushButton:
+    """« ← Bibliothèque » en tête d'une page : un lien gris, pas un bouton bordé."""
+    b = QPushButton(libelle)
+    b.setObjectName("retour")
+    b.setFont(police(13))
+    b.setIcon(QIcon(pixmap_icone("retour", 16, QColor(_ENCRE_RAIL))))
+    b.setIconSize(QSize(16, 16))
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.setAutoDefault(False)
+    b.clicked.connect(action)
+    return b
+
+
+def bouton_rubrique(libelle: str, icone: str, taille_icone: int = 20,
+                    hauteur: int = 44) -> QPushButton:
+    """Une rubrique d'un rail vertical (Paramètres, réglages d'un jeu) : cochable,
+    son pictogramme gris au repos, dans l'accent du thème une fois choisie."""
+    pictogramme = QIcon()
+    pictogramme.addPixmap(pixmap_icone(icone, taille_icone, QColor(_ENCRE_RAIL)),
+                          QIcon.Mode.Normal, QIcon.State.Off)
+    pictogramme.addPixmap(pixmap_icone(icone, taille_icone, QColor(current().accent_light)),
+                          QIcon.Mode.Normal, QIcon.State.On)
+    b = QPushButton(libelle)
+    b.setObjectName("rubrique")
+    b.setCheckable(True)
+    b.setIcon(pictogramme)
+    b.setIconSize(QSize(taille_icone, taille_icone))
+    b.setFont(police(14))
+    b.setFixedHeight(hauteur)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.setAutoDefault(False)
+    return b
+
+
+def filtre(libelle: str, grand: bool = False) -> QPushButton:
+    """Une pastille cochable : un filtre (« Tous », un jeu), ou, `grand`, une
+    rubrique posée en ligne en tête d'une page (Carnet, Collections)."""
+    b = QPushButton(libelle)
+    b.setObjectName("filtre")
+    b.setProperty("grand", grand)
+    b.setCheckable(True)
+    b.setAutoDefault(False)
+    b.setFont(police(14 if grand else 13))
+    b.setFixedHeight(HAUTEUR_FILTRE_GRAND if grand else HAUTEUR_FILTRE)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
     return b
 
 

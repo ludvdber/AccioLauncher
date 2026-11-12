@@ -9,14 +9,13 @@ Une PAGE à la place de la bibliothèque (`pages.py`), comme Mes années : pas u
 fenêtre posée sur la fiche, qu'on fermerait sans la lire.
 """
 
-from PyQt6.QtCore import QEvent, QObject, QSize, Qt
-from PyQt6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter, QPaintEvent
+from PyQt6.QtCore import QEvent, QObject, Qt
+from PyQt6.QtGui import QFont, QLinearGradient, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -28,6 +27,7 @@ from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
 from src.ui.composants import (
     Rangee,
     bouton,
+    bouton_retour,
     feuille_de_style,
     police,
     surtitre,
@@ -49,12 +49,6 @@ QFrame#annonce {
     background: rgba(214, 167, 44, 0.08); border: 2px solid rgba(214, 167, 44, 0.75);
     border-radius: 12px;
 }
-QPushButton#retour {
-    background: transparent; border: none; color: #a9a7c4;
-    text-align: left; padding: 4px 2px;
-}
-QPushButton#retour:hover { color: #f2f2f4; }
-QPushButton#retour[focusClavier="true"]:focus { color: #e8c547; }
 QLabel#toutesLesVersions { color: #a9a7c4; }
 """
 
@@ -224,14 +218,7 @@ class NouveautesPage(QDialog):
 
         # Le retour des autres pages, à la place d'un bouton « Aller à la
         # bibliothèque » en bas à droite, sous l'onglet qui la soulignait déjà.
-        retour = QPushButton(tr("Bibliothèque"))
-        retour.setObjectName("retour")
-        retour.setFont(police(13))
-        retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-        retour.setIconSize(QSize(16, 16))
-        retour.setCursor(Qt.CursorShape.PointingHandCursor)
-        retour.setAutoDefault(False)
-        retour.clicked.connect(self.accept)
+        retour = bouton_retour(tr("Bibliothèque"), self.accept)
         lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(14)
 

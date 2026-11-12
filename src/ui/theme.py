@@ -95,6 +95,20 @@ def current() -> Palette:
     return _current
 
 
+# L'échelle des rayons (2026-11-12, constat tra12) : treize rayons différents
+# sur les boutons (4 à 25 px) pour trois formes. Une commande (bouton, liste,
+# rubrique d'un rail), une carte (bloc bordé, carte cliquable), une pastille
+# (ronde aux deux bouts : la moitié de sa hauteur, qui doit donc être FIXE —
+# un rayon plus grand que la demi-hauteur, Qt ne le peint pas).
+RAYON_CONTROLE = 6
+RAYON_CARTE = 10
+
+
+def rayon_pastille(hauteur: int) -> int:
+    """Le rayon d'une pastille de `hauteur` px : ronde aux deux bouts."""
+    return hauteur // 2
+
+
 # Hexs or tels qu'écrits dans les feuilles de style et paintEvent du projet.
 _GOLD = "#d6a72c"
 _GOLD_LIGHTS = ("#f0d060", "#e8c547", "#e6b422")

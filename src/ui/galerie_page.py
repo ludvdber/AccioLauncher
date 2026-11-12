@@ -28,7 +28,7 @@ from html import escape
 
 from PyQt6.QtCore import QDate, QLocale, QRectF, QSize, Qt, QTime, QTimer, pyqtSignal
 from PyQt6.QtGui import (
-    QColor, QGuiApplication, QIcon, QImage, QImageReader, QKeyEvent, QMouseEvent, QPainter, QPixmap,
+    QColor, QGuiApplication, QImage, QImageReader, QKeyEvent, QMouseEvent, QPainter, QPixmap,
 )
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -46,7 +46,10 @@ from PyQt6.QtWidgets import (
 from src.core import galerie
 from src.core.i18n import get_language, tr
 from src.core.liens import DISCORD_MEDIAS_URL
-from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, feuille_de_style, police, rond, surtitre, texte
+from src.ui.composants import (
+    ENCRE, ENCRE_DOUCE, bouton, bouton_retour, feuille_de_style, filtre as bouton_filtre, rond,
+    surtitre, texte,
+)
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
@@ -71,20 +74,6 @@ QDialog#galerie { background: #070712; }
 QFrame#cote {
     background: #08081a; border: none; border-left: 1px solid rgba(214, 167, 44, 0.12);
 }
-QPushButton#retour {
-    background: transparent; border: none; color: #a9a7c4; text-align: left; padding: 4px 2px;
-}
-QPushButton#retour:hover { color: #f2f2f4; }
-QPushButton#filtre {
-    background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px;
-    color: #a9a7c4; padding: 5px 12px;
-}
-QPushButton#filtre[vide="true"] { color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }
-QPushButton#filtre:hover { color: #f2f2f4; }
-QPushButton#filtre:checked {
-    background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
-}
-QPushButton#filtre[focusClavier="true"]:focus { border: 2px solid #d6a72c; }
 QFrame#note {
     background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
@@ -312,14 +301,7 @@ class GaleriePage(QDialog):
         lay.setSpacing(0)
 
         if not self._integree:
-            retour = QPushButton(tr("Bibliothèque"))
-            retour.setObjectName("retour")
-            retour.setFont(police(13))
-            retour.setIcon(QIcon(pixmap_icone("retour", 16, QColor("#a9a7c4"))))
-            retour.setIconSize(QSize(16, 16))
-            retour.setCursor(Qt.CursorShape.PointingHandCursor)
-            retour.setAutoDefault(False)
-            retour.clicked.connect(self.accept)
+            retour = bouton_retour(tr("Bibliothèque"), self.accept)
             lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
             lay.addSpacing(16)
             lay.addWidget(surtitre(tr("Vos captures")))
@@ -347,12 +329,7 @@ class GaleriePage(QDialog):
                 # Jaquette et année, comme au Carnet et aux Collections (2026-10-24).
                 filtre = pastille(jeux[cle], nom)
             else:
-                filtre = QPushButton(nom)
-                filtre.setObjectName("filtre")
-                filtre.setCheckable(True)
-                filtre.setAutoDefault(False)
-                filtre.setFont(police(13))
-                filtre.setCursor(Qt.CursorShape.PointingHandCursor)
+                filtre = bouton_filtre(nom)
             nom_entier = jeux[cle].name if cle else nom
             # <qt> : une apostrophe échappée sans balise s'affichait en clair (&#x27;), Qt n'y voyant pas de texte riche.
             filtre.setToolTip(f"<qt>{escape(nom_entier, quote=False)}{' · ' + escape(_compte(n), quote=False) if n else ''}</qt>")
