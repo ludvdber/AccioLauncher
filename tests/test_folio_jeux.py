@@ -207,6 +207,12 @@ class TestHP6:
         assert {"Chemin de la forêt", "3 / 3", "Bibliothèque", "0 / 3", "2 / 11"} <= set(textes)
         lieux = [t for t in textes if t in {"Bibliothèque", "Volière", "Cachots"}]
         assert lieux == ["Bibliothèque", "Cachots", "Volière"]
+        # Le chemin de la forêt, fini (3 / 3), passe après tous les lieux à fouiller.
+        noms = [lab.text() for lab in page.findChildren(QLabel)
+                if lab.objectName() in {"lieuFini", "lieuAFouiller"}]
+        assert noms.index("Chemin de la forêt") > noms.index("Volière")
+        assert [lab.text() for lab in page.findChildren(QLabel, "lieuFini")] == [
+            "Chemin de la forêt", "Dortoir des garçons", "Pont couvert"]
 
     def test_les_trois_emplacements(self, qtbot, racines):
         """Firox, Discord, 2026-11-02 : le Carnet montrait la partie de sa
@@ -235,6 +241,108 @@ class TestHP6:
         page = page_folio(jeu, racines / "Jeux")
         qtbot.addWidget(page)
         assert page.releve is None and page._lignes == {}
+
+
+class TestLieuxHP6:
+    """Constat car5 (2026-11-12) : à 1920 × 1080, les badges laissaient 1 000 px
+    vides à leur droite et les 43 lieux tombaient sous la ligne de flottaison,
+    triés par nom, les lieux finis mêlés aux autres, 700 px entre nom et compte."""
+
+    @staticmethod
+    def _lieux(trouves: frozenset[int] = frozenset()):
+        from src.core import folio_hp6
+        return folio_hp6.par_lieu(trouves)
+
+    def test_les_lieux_finis_a_la_fin(self):
+        from src.core import folio_hp6
+        from src.ui.folio_jeux import _lieux_ordonnes
+        set_language("fr")
+        lieux = [folio_hp6.Lieu("Volière", 1, 3), folio_hp6.Lieu("Écuries", 2, 2),
+                 folio_hp6.Lieu("Bibliothèque", 0, 3), folio_hp6.Lieu("Cachots", 4, 4),
+                 folio_hp6.Lieu("Entrée", 0, 1)]
+        assert [nom for nom, _ in _lieux_ordonnes(lieux)] == [
+            "Bibliothèque", "Entrée", "Volière", "Cachots", "Écuries"]
+
+    def test_les_lieux_finis_grises(self, qtbot):
+        from PyQt6.QtWidgets import QLabel
+        from src.core import folio_hp6
+        from src.ui.composants import ENCRE, ENCRE_DISCRETE
+        from src.ui.folio_jeux import FolioPageHP6
+        set_language("fr")
+        cadre = FolioPageHP6._lieux([folio_hp6.Lieu("Volière", 1, 3),
+                                     folio_hp6.Lieu("Cachots", 4, 4)])
+        qtbot.addWidget(cadre)
+        fini = cadre.findChild(QLabel, "lieuFini")
+        reste = cadre.findChild(QLabel, "lieuAFouiller")
+        assert fini.text() == "Cachots" and ENCRE_DISCRETE in fini.styleSheet()
+        assert reste.text() == "Volière" and ENCRE in reste.styleSheet()
+
+    def test_pas_de_desert_entre_nom_et_compte(self, qtbot):
+        """Le cadre prend la largeur de ses colonnes, pas celle de la page."""
+        from src.ui.folio_jeux import FolioPageHP6, _BadgesEtLieux
+        set_language("fr")
+        cadre = FolioPageHP6._lieux(self._lieux())
+        bloc = _BadgesEtLieux(None, cadre)
+        qtbot.addWidget(bloc)
+        bloc.resize(1800, 900)
+        bloc.show()
+        qtbot.waitExposed(bloc)
+        assert cadre.width() <= cadre.sizeHint().width() < 1100
+
+    def _bloc(self, qtbot, largeur: int):
+        from PyQt6.QtWidgets import QWidget
+        from src.ui.folio_jeux import FolioPageHP6, _BadgesEtLieux
+        set_language("fr")
+        badges = QWidget()
+        badges.setMinimumSize(300, 200)
+        cadre = FolioPageHP6._lieux(self._lieux())
+        bloc = _BadgesEtLieux(badges, cadre)
+        qtbot.addWidget(bloc)
+        bloc.resize(largeur, 1200)
+        bloc.show()
+        qtbot.waitExposed(bloc)
+        return bloc, badges, cadre
+
+    def test_large_cote_a_cote(self, qtbot):
+        # 1920 px de fenêtre : la page fait ~1 570 px, rail et marges ôtés.
+        bloc, badges, cadre = self._bloc(qtbot, 1570)
+        qtbot.waitUntil(bloc.cote_a_cote)
+        qtbot.waitUntil(lambda: cadre.x() > badges.x() + badges.width())
+        assert cadre.y() == badges.y()
+
+    def test_etroit_empile(self, qtbot):
+        bloc, badges, cadre = self._bloc(qtbot, 900)
+        assert not bloc.cote_a_cote()
+        qtbot.waitUntil(lambda: cadre.y() >= badges.y() + badges.height())
+
+    def test_la_barre_de_defilement_ne_fait_pas_basculer(self, qtbot):
+        from src.ui.folio_jeux import _BadgesEtLieux
+        bloc, _, _ = self._bloc(qtbot, _BadgesEtLieux.COTE_A_COTE)
+        qtbot.waitUntil(bloc.cote_a_cote)
+        bloc.resize(_BadgesEtLieux.COTE_A_COTE - 12, 1200)
+        qtbot.wait(20)
+        assert bloc.cote_a_cote()
+        bloc.resize(_BadgesEtLieux.COTE_A_COTE - 200, 1200)
+        qtbot.waitUntil(lambda: not bloc.cote_a_cote())
+
+    def test_un_nom_sur_une_ligne_quand_la_place_le_permet(self, qtbot):
+        """Relecture car5 : la largeur que Qt devine d'un libellé à la ligne
+        (~150 px) coupait les noms en deux à 1920 px, toutes les rangées doublées."""
+        from PyQt6.QtWidgets import QLabel
+        bloc, _, cadre = self._bloc(qtbot, 1570)
+        qtbot.waitUntil(bloc.cote_a_cote)
+        nom = next(lab for lab in cadre.findChildren(QLabel)
+                   if lab.text() == "Couloir de la Salle sur Demande")
+        qtbot.waitUntil(lambda: nom.height() < 2 * nom.fontMetrics().lineSpacing())
+
+    def test_la_page_peut_encore_retrecir(self, qtbot):
+        """Les minima des noms suivent la largeur reçue sans devenir celui du
+        bloc : sinon la fenêtre réduite gardait une barre de défilement horizontale."""
+        bloc, _, _ = self._bloc(qtbot, 1570)
+        qtbot.waitUntil(bloc.cote_a_cote)
+        bloc.resize(900, 1200)
+        qtbot.waitUntil(lambda: not bloc.cote_a_cote())
+        assert bloc.minimumSizeHint().width() < 600
 
 
 def test_le_bloc_de_la_fiche_pour_hp3(qtbot, tmp_path):

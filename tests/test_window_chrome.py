@@ -166,3 +166,58 @@ class TestLisere:
         w.isMaximized = lambda: True
         chrome.etat_change()
         assert w.contentsMargins().left() == 0
+
+
+class TestEchellePlafonnee:
+    """La fenêtre minimale (980×660 logiques) doit tenir dans l'écran principal.
+
+    Tailles relevées au constat du 2026-11-12 : zone de travail en pixels
+    PHYSIQUES (barre des tâches déduite), et ce qu'elle fait en logiques à
+    l'échelle Windows d'origine.
+    """
+
+    @pytest.mark.parametrize("largeur,hauteur,echelle,attendu", [
+        (1920, 996, 1.75, 0.862),     # 1097×569 logiques : 91 px de trop
+        (1920, 984, 2.0, 0.745),      # 960×492
+        (1366, 708, 1.25, 0.858),     # 1093×566
+    ])
+    def test_la_fenetre_minimale_tient_apres_plafond(self, largeur, hauteur, echelle, attendu):
+        from src.ui.window_chrome import TAILLE_MINIMALE, echelle_plafonnee
+        facteur = echelle_plafonnee(largeur, hauteur, echelle)
+        assert facteur == attendu
+        effective = echelle * facteur
+        # Tronqué comme une géométrie entière : jamais un pixel de moins.
+        assert int(largeur / effective) >= TAILLE_MINIMALE[0]
+        assert int(hauteur / effective) >= TAILLE_MINIMALE[1]
+        # Et pas plus petit que nécessaire : un millième de plus déborderait
+        # presque, à moins de 2 px du minimum.
+        assert hauteur / effective < TAILLE_MINIMALE[1] + 2 or largeur / effective < TAILLE_MINIMALE[0] + 2
+
+    @pytest.mark.parametrize("largeur,hauteur,echelle", [
+        (1920, 1032, 1.0),            # 100 %
+        (1920, 1032, 1.5),            # 1280×688 : tient
+        (2560, 1380, 1.25),
+        (3840, 2088, 2.0),            # 4K à 200 % : 1920×1044
+        (1366, 728, 1.0),
+    ])
+    def test_rien_quand_elle_tient(self, largeur, hauteur, echelle):
+        from src.ui.window_chrome import echelle_plafonnee
+        assert echelle_plafonnee(largeur, hauteur, echelle) is None
+
+    def test_jamais_sous_l_echelle_un(self):
+        """Écran physiquement plus petit que 980×660 : le texte ne rétrécit pas sous 100 %."""
+        from src.ui.window_chrome import echelle_plafonnee
+        assert echelle_plafonnee(800, 560, 1.0) is None
+        facteur = echelle_plafonnee(800, 560, 1.25)
+        assert facteur is not None and 1.25 * facteur >= 0.999 and facteur < 1
+
+    @pytest.mark.parametrize("largeur,hauteur,echelle", [(0, 900, 1.75), (1920, -1, 1.75), (1920, 996, 0)])
+    def test_mesure_absurde(self, largeur, hauteur, echelle):
+        from src.ui.window_chrome import echelle_plafonnee
+        assert echelle_plafonnee(largeur, hauteur, echelle) is None
+
+    def test_la_fenetre_et_l_ouverture_partagent_le_minimum(self):
+        from PyQt6.QtCore import QRect
+        from src.ui.window_chrome import TAILLE_MINIMALE, geometrie_d_ouverture
+        g = geometrie_d_ouverture(QRect(0, 0, 1280, 688))
+        assert (g.width(), g.height()) == TAILLE_MINIMALE

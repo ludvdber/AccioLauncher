@@ -91,3 +91,34 @@ def test_sortir_vide_le_journal_avant_os_exit(monkeypatch):
     monkeypatch.setattr(main.os, "_exit", lambda code: ordre.append(code))
     main._sortir(3)
     assert ordre == ["journal", 3]
+
+
+class TestPlafonnerEchelle:
+    """`main._plafonner_echelle` : la variable posée avant `QApplication`."""
+
+    def test_pose_le_facteur_a_175_pour_cent(self):
+        env = {}
+        assert main._plafonner_echelle(env, lambda: (1920, 996, 1.75)) == "0.862"
+        assert env == {"QT_SCALE_FACTOR": "0.862"}
+
+    def test_rien_quand_la_fenetre_tient(self):
+        env = {}
+        assert main._plafonner_echelle(env, lambda: (1920, 1032, 1.5)) is None
+        assert env == {}
+
+    @pytest.mark.parametrize("nom,valeur", [
+        ("QT_SCALE_FACTOR", "1.5"),
+        ("QT_SCREEN_SCALE_FACTORS", "2"),
+        ("QT_ENABLE_HIGHDPI_SCALING", "0"),
+    ])
+    def test_le_reglage_de_l_utilisateur_reste_le_sien(self, nom, valeur):
+        env = {nom: valeur}
+        mesures = []
+        assert main._plafonner_echelle(env, lambda: mesures.append(1) or (1920, 996, 1.75)) is None
+        assert env == {nom: valeur}
+        assert mesures == []          # pas même mesuré
+
+    def test_ecran_illisible(self):
+        env = {}
+        assert main._plafonner_echelle(env, lambda: None) is None
+        assert env == {}

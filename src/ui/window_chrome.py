@@ -13,6 +13,8 @@ et c'est là que se cachent les erreurs de bord (le `>=` qui devient `>`, la
 marge comptée deux fois dans un coin).
 """
 
+import math
+
 from PyQt6.QtCore import QEvent, QRect, Qt
 from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QWidget
@@ -21,6 +23,10 @@ from PyQt6.QtWidgets import QWidget
 # l'usage : en dessous le bord se rate à la souris, au-dessus il vole des
 # clics aux boutons posés près du cadre.
 MARGE_BORD = 6
+
+# Taille minimale de la fenêtre, en pixels LOGIQUES : sous elle, le panneau
+# d'infos et le carrousel ne tiennent plus (`test_fenetre_mise_en_page`).
+TAILLE_MINIMALE = (980, 660)
 
 
 def geometrie_d_ouverture(dispo: QRect) -> QRect:
@@ -33,13 +39,45 @@ def geometrie_d_ouverture(dispo: QRect) -> QRect:
     62 % et non 72 % : le catalogue tient en huit jaquettes, soit ~900 px ; plus
     large, le carrousel flotte entre deux grandes marges vides.
     """
-    largeur = max(980, min(1320, int(dispo.width() * 0.62)))
-    hauteur = max(660, min(880, int(dispo.height() * 0.76)))
+    largeur = max(TAILLE_MINIMALE[0], min(1320, int(dispo.width() * 0.62)))
+    hauteur = max(TAILLE_MINIMALE[1], min(880, int(dispo.height() * 0.76)))
     # Jamais plus grand que l'écran, même si les bornes basses l'imposaient.
     largeur = min(largeur, dispo.width())
     hauteur = min(hauteur, dispo.height())
     return QRect(dispo.x() + (dispo.width() - largeur) // 2,
                  dispo.y() + (dispo.height() - hauteur) // 2, largeur, hauteur)
+
+
+def echelle_plafonnee(largeur_physique: int, hauteur_physique: int, echelle: float,
+                      minimum: tuple[int, int] = TAILLE_MINIMALE) -> float | None:
+    """Le `QT_SCALE_FACTOR` qui fait tenir la taille minimale dans l'écran. Pure.
+
+    `largeur_physique` × `hauteur_physique` : la zone de travail de l'écran
+    principal (barre des tâches déduite) en pixels PHYSIQUES ; `echelle` : sa
+    mise à l'échelle Windows (1,75 à 175 %). Rend None quand la fenêtre
+    minimale y tient déjà, sinon le facteur à poser AVANT `QApplication` pour
+    que l'échelle effective (`echelle` × facteur) y ramène la zone à
+    `minimum`. Sans lui, `setMinimumSize` l'emportait sur le plafond de
+    `geometrie_d_ouverture` : à 175 % sur un 1920×1080, la zone fait 1097×569
+    logiques, et la fenêtre débordait de 91 px sous la barre des tâches.
+
+    Jamais sous l'échelle 1 (`echelle` ≤ 1 : None) : le texte serait plus
+    petit qu'à 100 %. Arrondi PAR DÉFAUT au millième, un cran de plus si la
+    division tombe juste, pour que la zone logique ne soit jamais à un
+    arrondi près sous le minimum.
+    """
+    if echelle <= 1 or largeur_physique <= 0 or hauteur_physique <= 0:
+        return None
+    if (largeur_physique / echelle >= minimum[0]
+            and hauteur_physique / echelle >= minimum[1]):
+        return None
+    effective = min(largeur_physique / minimum[0], hauteur_physique / minimum[1])
+    if effective <= 1:
+        # Écran physiquement trop petit : l'échelle 1, arrondie par EXCÈS.
+        facteur = math.ceil(1000 / echelle - 1e-6) / 1000
+    else:
+        facteur = math.floor(effective / echelle * 1000 - 1e-6) / 1000
+    return facteur if 0 < facteur < 1 else None
 
 
 # Liseré d'un pixel autour de la fenêtre (2026-10-17, demande de Ludo) : sur un

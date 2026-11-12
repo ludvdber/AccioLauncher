@@ -80,7 +80,7 @@ class TestAriteDesSlots:
             def update_catalog_version(self, *a):
                 pass
 
-        fenetre._force_update_check(FauxDialogue(), catalog_only=False)
+        fenetre._force_update_check(FauxDialogue())
         captures["checker"].launcher_update.emit(
             "9.9.9", "https://github.com/ludvdber/AccioLauncher/releases",
             "https://github.com/x/AccioLauncher.exe", empreinte,

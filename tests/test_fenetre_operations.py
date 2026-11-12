@@ -451,7 +451,8 @@ class TestVerificationForceeHorsLigne:
     class _FauxChecker(QObject):
         """Checker qui ne trouve rien : ce que produit une coupure réseau."""
         catalog_updated = pyqtSignal(object)
-        launcher_update = pyqtSignal(str, str, str, str)
+        launcher_update = pyqtSignal(str, str, str, str, str)
+        update_counts = pyqtSignal(int)
         finished = pyqtSignal()
 
         def start(self):
@@ -468,7 +469,7 @@ class TestVerificationForceeHorsLigne:
         # attribut de classe d'un type sip laisse un descripteur cassé.
         dlg.show_update_status = lambda msg, success=True: vus.append((msg, success))
         win._online = en_ligne
-        win._force_update_check(dlg, catalog_only=True)
+        win._force_update_check(dlg)
         dlg.deleteLater()
         return vus[-1] if vus else ("", None)
 

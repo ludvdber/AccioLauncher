@@ -339,6 +339,19 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "fines : forêts et arbres lointains gardent leur feuillage au lieu de fondre dans "
             "la pente.",
             defaut=False, onglet="image", cout=(("GPU", 1),)),
+    # HP6, [Accio.Graphics] TextureReplace du correctif (settings.cpp, lu au démarrage seulement ; texdump.cpp) :
+    # 1 = les .dds de accio_remplacements\ à côté de hp6.exe prennent la place des textures du jeu ; sans ce
+    # dossier, rien n'est trouvé et l'image ne change pas. Le pack HD bêta (Ludo, 2026-11-12, 1.3.4) se
+    # télécharge sur le Discord d'Accio, hors du launcher. Pas dans les PREREGLAGES : il dépend d'un pack posé
+    # à la main, qu'un préréglage ne peut pas promettre. Coût « RAM » comme `ombres_nettes` : la mémoire vidéo n'a
+    # pas de repère à elle.
+    Reglage("textures_hd", "Accio.Graphics", "TextureReplace",
+            "Textures HD",
+            "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. "
+            "Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le "
+            "dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au "
+            "prochain lancement du jeu.",
+            defaut=False, onglet="image", cout=(("GPU", 1), ("RAM", 1)), se_voit=True, beta=True),
     Reglage("occlusion", "Accio.Graphics", "SSAO",
             "Ombres de contact",
             "Assombrit les recoins, le pied des murs et le contact des objets : le décor "

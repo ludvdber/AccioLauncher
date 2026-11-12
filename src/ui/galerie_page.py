@@ -14,6 +14,11 @@ Contenu : `src/core/galerie.py`. Les vignettes se décodent sur un fil à part
 après l'ouverture et se rangent dans `_Launcher/cache/vignettes`
 (`_poser_pretes`) : décoder d'un coup cent PNG de 2560 px figeait la page
 plusieurs secondes. Seule la capture choisie est lue en grand.
+
+Au clavier et à la manette, la grille est UN arrêt (focus itinérant) : seule
+la vignette choisie est dans la chaîne Tab, les flèches s'y déplacent
+(`GaleriePage.voisine`) et la sélection suit. Avec 113 captures, il fallait
+113 appuis pour atteindre « Partager sur Discord » (constat tra2).
 """
 
 import logging
@@ -22,7 +27,9 @@ from concurrent.futures import ThreadPoolExecutor
 from html import escape
 
 from PyQt6.QtCore import QDate, QLocale, QRectF, QSize, Qt, QTime, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QGuiApplication, QIcon, QImage, QImageReader, QMouseEvent, QPainter, QPixmap
+from PyQt6.QtGui import (
+    QColor, QGuiApplication, QIcon, QImage, QImageReader, QKeyEvent, QMouseEvent, QPainter, QPixmap,
+)
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -30,6 +37,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -42,6 +50,7 @@ from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton, feuille_de_style, poli
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
+from src.ui.manette_nav import GARDE_FLECHES
 from src.ui.theme import current as current_theme, themed
 from src.ui.utils import open_local_path, open_url, zone_defilable
 
@@ -55,6 +64,7 @@ _LARGEUR_COTE_MAX = 600
 _VIGNETTE_MAX = 330
 _VIGNETTE = QSize(208, 117)   # 16:9
 _APERCU_LARGEUR = _LARGEUR_COTE - 2 * 24
+_FLECHES = (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down)
 
 _STYLE = """
 QDialog#galerie { background: #070712; }
@@ -162,11 +172,18 @@ def _vignette(chemin) -> QImage:
 
 
 class _Vignette(QPushButton):
-    """Une capture : son image recadrée, un filet d'or quand elle est choisie."""
+    """Une capture : son image recadrée, un filet d'or quand elle est choisie.
 
-    def __init__(self, capture: galerie.Capture, nom_jeu: str) -> None:
+    Ses flèches vont à `naviguer` (la page) : la grille se parcourt en rangées
+    et en colonnes. `garde_fleches` dit à la manette d'envoyer ↑/↓ tels quels
+    plutôt que Maj+Tab/Tab (`manette_nav`).
+    """
+
+    def __init__(self, capture: galerie.Capture, nom_jeu: str, naviguer=None) -> None:
         super().__init__()
         self.capture = capture
+        self._naviguer = naviguer
+        self.setProperty(GARDE_FLECHES, True)
         self.setCheckable(True)
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -187,6 +204,16 @@ class _Vignette(QPushButton):
         self._pix = _recadree(self._image, self.size() * echelle)
         self._pix.setDevicePixelRatio(echelle)
         self.update()
+
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+        # La page est ouverte : `clavier_global` laisse passer ←/→ (pas de jeu
+        # à changer ici), et QAbstractButton ne bougerait que vers une voisine
+        # dans la chaîne Tab, où les autres vignettes ne sont plus.
+        if event is not None and event.key() in _FLECHES and self._naviguer is not None:
+            self._naviguer(self, Qt.Key(event.key()))
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
@@ -247,7 +274,8 @@ class GaleriePage(QDialog):
         racine = QHBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
-        racine.addWidget(zone_defilable(self._contenu()), stretch=1)
+        self._zone: QScrollArea = zone_defilable(self._contenu())
+        racine.addWidget(self._zone, stretch=1)
         racine.addWidget(self._cote())
 
         # Décodées sur un fil à part, les plus récentes d'abord, posées ici au
@@ -353,7 +381,8 @@ class GaleriePage(QDialog):
             flux_mois.setContentsMargins(0, 0, 0, 0)
             vignettes = []
             for capture in liste:
-                vignette = _Vignette(capture, self._noms.get(capture.jeu, capture.jeu))
+                vignette = _Vignette(capture, self._noms.get(capture.jeu, capture.jeu),
+                                     self._naviguer)
                 vignette.toggled.connect(lambda oui, c=capture: oui and self._montrer(c))
                 self._groupe.addButton(vignette)
                 flux_mois.addWidget(vignette)
@@ -555,6 +584,54 @@ class GaleriePage(QDialog):
             else:
                 vignette.setChecked(True)
 
+    # ── Clavier et manette ──
+
+    def voisine(self, depuis: _Vignette, touche: Qt.Key) -> _Vignette | None:
+        """La vignette où mène une flèche, None au bord de la grille.
+
+        ←/→ suivent l'ordre de lecture (d'une rangée à l'autre, d'un mois à
+        l'autre) ; ↑/↓ prennent la rangée voisine À L'ÉCRAN, la plus proche
+        en colonne : le nombre de colonnes suit la largeur (`_adapter`), et un
+        mois incomplet décale la rangée du suivant.
+        """
+        visibles = [v for v in self._vignettes if not v.isHidden()]
+        if depuis not in visibles:
+            return None
+        rang = visibles.index(depuis)
+        if touche == Qt.Key.Key_Left:
+            return visibles[rang - 1] if rang > 0 else None
+        if touche == Qt.Key.Key_Right:
+            return visibles[rang + 1] if rang + 1 < len(visibles) else None
+        centres = {id(v): v.mapTo(self, v.rect().center()) for v in visibles}
+        ici = centres[id(depuis)]
+        vers_le_bas = touche == Qt.Key.Key_Down
+        autres = [v for v in visibles
+                  if (centres[id(v)].y() > ici.y() if vers_le_bas else centres[id(v)].y() < ici.y())]
+        if not autres:
+            return None
+        hauteurs = [centres[id(v)].y() for v in autres]
+        rangee = min(hauteurs) if vers_le_bas else max(hauteurs)
+        return min((v for v in autres if centres[id(v)].y() == rangee),
+                   key=lambda v: abs(centres[id(v)].x() - ici.x()))
+
+    def _naviguer(self, depuis: _Vignette, touche: Qt.Key) -> None:
+        """Une flèche sur une vignette : la sélection suit le focus. ↑ sur la
+        première rangée et ↓ sur la dernière sortent de la grille, comme
+        d'une liste (filtres au-dessus, « Partager sur Discord » après)."""
+        cible = self.voisine(depuis, touche)
+        if cible is not None:
+            cible.setChecked(True)       # → _montrer, qui la remet dans la chaîne Tab
+            cible.setFocus(Qt.FocusReason.TabFocusReason)   # l'anneau du clavier
+            self._zone.ensureWidgetVisible(cible, 0, 24)
+        elif touche in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            self.focusNextPrevChild(touche == Qt.Key.Key_Down)
+
+    def _focus_itinerant(self, capture: galerie.Capture | None) -> None:
+        """Seule la choisie reste dans la chaîne Tab ; les autres se prennent au clic."""
+        for vignette in self._vignettes:
+            vignette.setFocusPolicy(Qt.FocusPolicy.StrongFocus if vignette.capture == capture
+                                    else Qt.FocusPolicy.ClickFocus)
+
     def choisie_visible(self) -> galerie.Capture | None:
         """La capture choisie si elle est visible, sinon la première visible."""
         visibles = [v.capture for v in self._vignettes if not v.isHidden()]
@@ -564,6 +641,7 @@ class GaleriePage(QDialog):
 
     def _montrer(self, capture: galerie.Capture | None) -> None:
         self.choisie = capture
+        self._focus_itinerant(capture)
         self._confirmation.hide()
         for b in (self._partager, self._ouvrir, self._copier, self._dossier):
             b.setEnabled(capture is not None)

@@ -269,15 +269,18 @@ class TestBordsDeLaFenetre:
 class _Checker(QObject):
     catalog_updated = pyqtSignal(object)
     launcher_update = pyqtSignal(str, str, str, str, str)
+    update_counts = pyqtSignal(int)
     finished = pyqtSignal()
 
-    def __init__(self, catalogue=None, launcher=None):
+    def __init__(self, catalogue=None, launcher=None, jeux=0):
         super().__init__()
-        self._catalogue, self._launcher = catalogue, launcher
+        self._catalogue, self._launcher, self._jeux = catalogue, launcher, jeux
 
     def start(self):
         if self._catalogue is not None:
             self.catalog_updated.emit(self._catalogue)
+            if self._jeux:
+                self.update_counts.emit(self._jeux)
         if self._launcher is not None:
             self.launcher_update.emit(*self._launcher)
         self.finished.emit()
@@ -286,12 +289,16 @@ class _Checker(QObject):
 class _Dialogue(QObject):
     """Ce que la vérification dit au dialogue des Paramètres."""
 
-    def __init__(self):
+    def __init__(self, en_attente=0):
         super().__init__()
         self.statuts, self.versions = [], []
+        self._en_attente = en_attente
 
     def isVisible(self):      # la sonde de vivacité : lève RuntimeError sur un objet détruit
         return True
+
+    def jeux_a_mettre_a_jour(self):
+        return self._en_attente
 
     def show_update_status(self, message, success=True):
         self.statuts.append((message, success))
@@ -301,11 +308,11 @@ class _Dialogue(QObject):
 
 
 class TestVerificationForcee:
-    def _verifier(self, checker, *, en_ligne=True, catalog_only=True, url=""):
+    def _verifier(self, checker, *, en_ligne=True, url="", en_attente=0):
         from src.ui import verification_forcee
-        dlg, recus = _Dialogue(), {"catalogue": [], "launcher": []}
+        dlg, recus = _Dialogue(en_attente), {"catalogue": [], "launcher": []}
         verification_forcee.verifier(
-            checker, dlg, catalog_only=catalog_only,
+            checker, dlg,
             sur_catalogue=recus["catalogue"].append,
             sur_launcher=lambda *a: recus["launcher"].append(a),
             en_ligne=lambda: en_ligne, url_launcher=lambda: url)
@@ -317,6 +324,16 @@ class TestVerificationForcee:
 
     def test_rien_de_neuf_en_ligne(self):
         dlg, _ = self._verifier(_Checker())
+        assert dlg.statuts == [("Tout est à jour", True)]
+
+    def test_un_launcher_deja_annonce_n_est_pas_tout_a_jour(self):
+        dlg, _ = self._verifier(_Checker(), url="https://x")
+        assert dlg.statuts == [("Catalogue déjà à jour", True)]
+
+    def test_un_jeu_qui_attend_sa_mise_a_jour_n_est_pas_tout_a_jour(self):
+        """Rien de neuf, mais un jeu installé attend déjà sa mise à jour :
+        « Tout est à jour » serait faux (règle 108)."""
+        dlg, _ = self._verifier(_Checker(), en_attente=1)
         assert dlg.statuts == [("Catalogue déjà à jour", True)]
 
     def test_un_nouveau_catalogue_arrive_a_la_fenetre_et_au_dialogue(self):
@@ -324,26 +341,30 @@ class TestVerificationForcee:
         dlg, recus = self._verifier(_Checker(catalogue=catalogue))
         assert recus["catalogue"] == [catalogue]
         assert dlg.versions == ["0.36"]
-        assert not any("déjà à jour" in m for m, _ in dlg.statuts), "il vient de changer"
+        assert dlg.statuts == [("Catalogue mis à jour en v0.36", True)]
 
     def test_l_empreinte_du_launcher_arrive_entiere(self):
         """Les CINQ arguments : l'empreinte SHA-256 est le quatrième (règle 9)."""
         annonce = ("9.9.9", "https://x", "https://x/a.exe", "ab" * 32, "notes")
-        dlg, recus = self._verifier(_Checker(launcher=annonce), catalog_only=False,
-                                    url="https://x")
+        dlg, recus = self._verifier(_Checker(launcher=annonce), url="https://x")
         assert recus["launcher"] == [annonce]
-        assert ("Launcher v9.9.9 disponible !", True) in dlg.statuts
+        assert dlg.statuts == [("Launcher v9.9.9 disponible !", True)]
 
-    def test_le_launcher_disponible_reste_affiche(self):
-        """Grand audit du 2026-11-02 : « Catalogue déjà à jour » l'effaçait."""
+    def test_le_resultat_dit_tout_ce_qui_a_change(self):
+        """Un seul bouton depuis le 2026-11-12 : le launcher, le catalogue et
+        les jeux qu'il met à jour, chacun sur sa ligne, aucun n'efface l'autre."""
         annonce = ("9.9.9", "https://x", "https://x/a.exe", "ab" * 32, "notes")
-        dlg, _ = self._verifier(_Checker(launcher=annonce), catalog_only=False, url="https://x")
-        assert dlg.statuts[-1] == ("Launcher v9.9.9 disponible !", True)
+        catalogue = SimpleNamespace(catalog_version="0.36")
+        dlg, _ = self._verifier(_Checker(catalogue=catalogue, launcher=annonce, jeux=2),
+                                url="https://x")
+        assert dlg.statuts == [("Launcher v9.9.9 disponible !\n"
+                                "Catalogue mis à jour en v0.36\n"
+                                "2 jeux ont une mise à jour disponible", True)]
 
-    def test_le_catalogue_seul_n_ecoute_pas_le_launcher(self):
-        annonce = ("9.9.9", "https://x", "", "", "")
-        _, recus = self._verifier(_Checker(launcher=annonce), catalog_only=True)
-        assert recus["launcher"] == []
+    def test_un_seul_jeu_au_singulier(self):
+        catalogue = SimpleNamespace(catalog_version="0.36")
+        dlg, _ = self._verifier(_Checker(catalogue=catalogue, jeux=1))
+        assert dlg.statuts[-1][0].endswith("\n1 jeu a une mise à jour disponible")
 
     def test_un_dialogue_ferme_n_est_plus_touche(self):
         """Le checker peut finir après la fermeture des Paramètres."""
@@ -351,7 +372,7 @@ class TestVerificationForcee:
         checker, dlg = _Checker(), _Dialogue()
         checker.start = lambda: None         # la réponse arrivera plus tard
         verification_forcee.verifier(
-            checker, dlg, catalog_only=True, sur_catalogue=lambda c: None,
+            checker, dlg, sur_catalogue=lambda c: None,
             sur_launcher=lambda *a: None, en_ligne=lambda: True, url_launcher=lambda: "")
         dlg.destroyed.emit()
         checker.finished.emit()

@@ -34,7 +34,7 @@ from src.ui.toast import Toast
 from src.ui.trailer_store import TrailerStore
 from src.ui.tray_manager import TrayManager
 from src.ui.update_dispatcher import UpdateDispatcher
-from src.ui.window_chrome import WindowChrome, geometrie_d_ouverture
+from src.ui.window_chrome import TAILLE_MINIMALE, WindowChrome, geometrie_d_ouverture
 from src.ui.utils import icone_application, open_url
 from src.ui.visite_guidee import PiloteVisite
 from src.ui.mediatheque import Mediatheque
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         # Posé AVANT tout : `changeEvent` peut partir pendant la construction.
         self._retrait = RetraitDiffere(self._retirer_si_en_jeu, self)
         self.setWindowTitle("Accio Launcher")
-        self.setMinimumSize(980, 660)
+        self.setMinimumSize(*TAILLE_MINIMALE)
         self._apply_default_geometry()
         self.setWindowIcon(icone_application())
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -608,8 +608,7 @@ class MainWindow(QMainWindow):
     def _on_settings(self) -> None:
         dlg = SettingsDialog(self.config, self.manager, self, store=self._trailers, fond=self._mediatheque.fond)
         dlg.config_changed.connect(self._on_config_changed)
-        dlg.force_catalog_refresh.connect(lambda: self._force_update_check(dlg, catalog_only=True))
-        dlg.force_launcher_check.connect(lambda: self._force_update_check(dlg, catalog_only=False))
+        dlg.verification_demandee.connect(lambda: self._force_update_check(dlg))
         dlg.season_changed.connect(self._particles.apply_season)
         dlg.restart_requested.connect(lambda: self._restart_launcher(dlg))
         dlg.nouveautes_demandees.connect(self._ouvrir_nouveautes)
@@ -646,14 +645,14 @@ class MainWindow(QMainWindow):
         else:
             self._show_status(tr("Le launcher ne s'est pas relancé : rouvrez-le vous-même."))
 
-    def _force_update_check(self, dlg: SettingsDialog, *, catalog_only: bool) -> None:
+    def _force_update_check(self, dlg: SettingsDialog) -> None:
         """« Vérifier les mises à jour » des Paramètres : voir `verification_forcee`.
         Compteurs, empreintes et état réseau sont déjà branchés par `forced_checker`."""
         def sur_launcher(*args) -> None:
             self.config.dismissed_launcher_version = ""  # check forcé → toujours montrer
             self._on_launcher_update(*args)
         verification_forcee.verifier(
-            self._updates.forced_checker(), dlg, catalog_only=catalog_only,
+            self._updates.forced_checker(), dlg,
             sur_catalogue=self._on_catalog_updated, sur_launcher=sur_launcher,
             en_ligne=lambda: self._online, url_launcher=lambda: self._updates.url)
 

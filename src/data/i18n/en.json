@@ -70,11 +70,7 @@
     "Le lieu et l'avancement de votre partie s'affichent sur votre carte Discord. Éteint, seuls le jeu, votre maison et votre année restent.": "The location and progress of your game appear on your Discord card. Off, only the game, your house and your year remain.",
     "Langue": "Language",
     "Redémarrez le launcher pour appliquer la langue.": "Restart the launcher to apply the language.",
-    "Mises à jour": "Updates",
-    "Launcher v{}  ·  Catalogue v{}": "Launcher v{}  ·  Catalog v{}",
-    "Actualiser le catalogue": "Refresh catalog",
     "Vérifier les mises à jour": "Check for updates",
-    "Actualisation du catalogue…": "Refreshing catalog…",
     "Vérification des mises à jour…": "Checking for updates…",
     "Catalogue mis à jour en v{}": "Catalog updated to v{}",
     "Catalogue déjà à jour": "Catalog already up to date",
@@ -110,6 +106,7 @@
     "Le téléchargement a échoué : la page de la release s'ouvre pour l'installer à la main.": "The download failed: the release page opens so you can install it by hand.",
     "Catalogue mis à jour (v{})": "Catalog updated (v{})",
     "Mise à jour disponible pour {}": "Update available for {}",
+    "1 jeu a une mise à jour disponible": "1 game has an update available",
     "{} jeux ont une mise à jour disponible": "{} games have an update available",
     "{} installé avec succès ✓": "{} installed successfully ✓",
     "Téléchargement terminé": "Download finished",
@@ -184,7 +181,6 @@
     "Redémarrer maintenant": "Restart now",
     "Le launcher ne s'est pas relancé : rouvrez-le vous-même.": "The launcher did not restart: open it again yourself.",
     "Général": "General",
-    "Téléchargements": "Downloads",
     "Particules saisonnières": "Seasonal particles",
     "Automatique (selon la date)": "Automatic (by date)",
     "Aucune": "None",
@@ -1294,6 +1290,7 @@
     "Votre sauvegarde la plus avancée : {} %": "Your furthest save: {}%",
     "{n} morceaux sur {total}": "{n} of {total} tracks",
     "Morceau à découvrir": "Track to discover",
+    "{} à découvrir": "{} to discover",
     "Cinématique à découvrir": "Cutscene to discover",
     "Écouter {}": "Play {}",
     "Regarder {}": "Watch {}",
@@ -1486,6 +1483,8 @@
     "Décor entier affiché": "Whole scenery drawn",
     "Le jeu ne dessine que les parties du parc reliées par un passage à l'endroit d'où l'on regarde : hors de la vue de Harry, des objets disparaissent. « En caméra libre » les garde pendant le vol, « Toujours » aussi en jouant. Demande plus à la carte graphique et au processeur : à laisser « D'origine » sur un PC modeste.": "The game only draws the parts of the grounds linked by a passage to the place the view is in: outside Harry's sight, objects vanish. \"With the free camera\" keeps them while flying, \"Always\" while playing too. Asks more of the graphics card and processor: leave it on \"Original\" on a modest PC.",
     "En caméra libre": "With the free camera",
-    "Toujours": "Always"
+    "Toujours": "Always",
+    "Textures HD": "HD textures",
+    "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au prochain lancement du jeu.": "Replaces the game's textures with more detailed versions: walls, floors and scenery sharper up close. Needs the beta HD texture pack, downloaded from the Accio Discord and extracted into the game's folder; without it, this setting changes nothing. Uses more video memory. Takes effect the next time the game starts."
   }
 }

@@ -68,6 +68,12 @@ class TestReglages:
             for ident in jeu.get("fix_settings", ()):
                 assert ident in rc.REGLAGES, f"{jeu['id']} : {ident}"
 
+    def test_textures_hd_sur_hp6_seulement(self, catalogue):
+        """Catalogue 0.57 (2026-11-12) : le pack de textures HD bêta n'existe que pour HP6 ; ailleurs,
+        l'interrupteur promettrait des textures qu'aucun pack ne fournit."""
+        porteurs = {j["id"] for j in catalogue["games"] if "textures_hd" in j.get("fix_settings", ())}
+        assert porteurs == {"hp6"}
+
     def test_hp7b_n_a_pas_de_format(self, catalogue):
         """Son ini n'a pas d'AspectRatio : rien ne lirait la clé."""
         hp7b = next(j for j in catalogue["games"] if j["id"] == "hp7b")

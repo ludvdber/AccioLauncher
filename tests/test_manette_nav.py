@@ -453,6 +453,40 @@ class TestDansLaVraieFenetre:
         assert QApplication.activePopupWidget() is not None
         liste.hidePopup()
 
+    def test_une_grille_garde_ses_fleches_haut_bas(self, nav, qtbot):
+        """Constat tra2 : dans la grille des captures, ↓ envoyait Tab (la voisine
+        de droite) au lieu de la rangée du dessous."""
+        from src.ui.manette_nav import GARDE_FLECHES
+
+        class _Case(QPushButton):
+            def __init__(self):
+                super().__init__("case")
+                self.touches = []
+
+            def keyPressEvent(self, event):
+                self.touches.append(event.key())
+                event.accept()
+
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        case = _Case()
+        case.setProperty(GARDE_FLECHES, True)
+        apres = QPushButton("après")
+        lay.addWidget(case)
+        lay.addWidget(apres)
+        qtbot.addWidget(w)
+        w.show()
+        w.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+        case.setFocus()
+        qtbot.waitUntil(case.hasFocus)
+        nav.agir(lec.BAS)
+        nav.agir(lec.HAUT)
+        assert case.hasFocus() and case.touches == [Qt.Key.Key_Down, Qt.Key.Key_Up]
+        case.setProperty(GARDE_FLECHES, False)
+        nav.agir(lec.BAS)
+        assert apres.hasFocus(), "sans la propriété : Tab, comme avant"
+
     def test_une_liste_fermee_ne_change_pas_en_passant(self, nav, qtbot):
         from PyQt6.QtWidgets import QComboBox
         w = QWidget()

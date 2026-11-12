@@ -38,8 +38,8 @@ class TestChemin:
 
 
 class TestDialogue:
-    def test_cinq_rubriques_et_cinq_pages(self, dialogue):
-        assert dialogue._nav.count() == dialogue._pages.count() == 5
+    def test_quatre_rubriques_et_quatre_pages(self, dialogue):
+        assert dialogue._nav.count() == dialogue._pages.count() == 4
 
     def test_pas_de_retour_en_double(self, dialogue, qtbot):
         """L'onglet Bibliothèque du haut ferme la page : pas de second bouton."""
@@ -79,7 +79,7 @@ class TestDialogue:
     def test_la_partie_sur_discord_suit_la_presence(self, dialogue):
         """« Montrer où j'en suis » n'a de sens qu'avec la carte Discord : grisée
         sans elle, sa valeur intacte, et enregistrée comme les autres cases."""
-        dialogue.construire_rubrique(3)     # Intégrations, bâtie à l'ouverture
+        dialogue.construire_rubrique(2)     # Intégrations, bâtie à sa visite
         ligne, case = dialogue._ligne_discord_partie, dialogue._tgl_discord_partie
         assert ligne.isEnabled() and case.isChecked()
         dialogue._tgl_discord._basculer()       # un clic (setChecked n'émet rien)
@@ -98,7 +98,7 @@ class TestDialogue:
         dlg = SettingsDialog(cfg, GameManager(cfg))
         qtbot.addWidget(dlg)
         try:
-            dlg.construire_rubrique(3)
+            dlg.construire_rubrique(2)
             assert not dlg._ligne_discord_partie.isEnabled()
         finally:
             dlg._shutdown_scan()
@@ -289,3 +289,71 @@ class TestToutLeSonCoupe:
         assert page._ligne_mute.isEnabled()
         page._fond.basculer_son()
         assert not page._ligne_mute.isEnabled()
+
+
+class TestQuatreRubriques:
+    """Constat car11 (2026-11-12) : la rubrique Téléchargements tenait un
+    interrupteur et deux boutons dont l'un incluait l'autre. L'interrupteur va
+    sous le dossier des jeux, UN bouton va sous les numéros d'À propos."""
+
+    def test_plus_de_rubrique_telechargements(self, dialogue):
+        from src.ui.settings_panel import _RANG_A_PROPOS, _RUBRIQUES
+        assert [libelle for libelle, _ in _RUBRIQUES] == [
+            "Général", "Son et image", "Intégrations", "À propos"]
+        assert _RANG_A_PROPOS == len(_RUBRIQUES) - 1
+        assert [b.text() for b in dialogue._nav.boutons][-1] == "À propos"
+
+    def test_les_archives_dans_la_carte_du_dossier(self, dialogue):
+        from src.ui.composants import Carte
+        assert dialogue._tgl_archives.isChecked() is dialogue.config.delete_archives
+        carte = next(c for c in dialogue.findChildren(Carte)
+                     if c.isAncestorOf(dialogue._installed_label))
+        assert carte.isAncestorOf(dialogue._tgl_archives), "sous le dossier des jeux"
+        dialogue._tgl_archives._basculer()
+        assert Config.load().delete_archives is dialogue._tgl_archives.isChecked()
+
+    def test_un_seul_bouton_sous_les_numeros(self, dialogue):
+        from PyQt6.QtWidgets import QLabel, QPushButton
+        from src.ui.settings_panel import _RANG_A_PROPOS
+        dialogue._nav.setCurrentRow(_RANG_A_PROPOS)
+        page = dialogue._pages.widget(_RANG_A_PROPOS)
+        textes = [b.text() for b in dialogue.findChildren(QPushButton)]
+        assert textes.count("Vérifier les mises à jour") == 1
+        assert "Actualiser le catalogue" not in textes
+        assert page.isAncestorOf(dialogue._btn_verifier)
+        numeros = page.findChild(QLabel, "versions")
+        assert numeros is dialogue._versions_label
+        colonne = numeros.parentWidget().layout()
+        bloc = dialogue._btn_verifier.parentWidget()
+        assert colonne.indexOf(numeros) < colonne.indexOf(bloc) < colonne.count() - 1, (
+            "juste sous les numéros, avant les tuiles")
+        assert colonne.indexOf(bloc) - colonne.indexOf(numeros) == 2   # l'espace entre eux
+
+    def test_le_clic_demande_une_verification(self, dialogue, qtbot):
+        from src.ui.settings_panel import _RANG_A_PROPOS
+        dialogue.construire_rubrique(_RANG_A_PROPOS)
+        with qtbot.waitSignal(dialogue.verification_demandee, timeout=1000):
+            dialogue._btn_verifier.click()
+        assert dialogue._update_status.text() == "Vérification des mises à jour…"
+
+    def test_un_catalogue_neuf_redit_le_numero(self, dialogue):
+        dialogue.update_catalog_version("<b>9.99</b>")
+        texte = dialogue._versions_label.text()
+        assert "CATALOGUE &lt;B&gt;9.99&lt;/B&gt;" in texte, "numéro venu de l'extérieur : échappé"
+        assert "<a href=" in texte, "le numéro de version reste un lien"
+
+    def test_la_colonne_colle_au_rail(self, dialogue, qtbot):
+        """Centrée, la colonne de 760 px flottait loin du rail sur un grand écran."""
+        dialogue.resize(1600, 800)
+        dialogue.show()
+        qtbot.waitExposed(dialogue)
+        page = dialogue._pages.currentWidget().widget().layout().itemAt(0).widget()
+        assert page.width() == 760
+        assert page.mapTo(dialogue._pages, page.rect().topLeft()).x() == 64
+
+    def test_les_jeux_qui_attendent_leur_mise_a_jour_sont_comptes(self, dialogue, monkeypatch):
+        """Ce que la vérification lit quand elle n'apporte rien (règle 108)."""
+        assert dialogue.jeux_a_mettre_a_jour() == 0
+        premier = dialogue.manager.get_games()[0].game.id
+        monkeypatch.setattr(type(dialogue.manager), "has_update", lambda _s, gid: gid == premier)
+        assert dialogue.jeux_a_mettre_a_jour() == 1

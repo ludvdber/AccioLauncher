@@ -3,7 +3,8 @@
 Refonte du 2026-10-09 (maquette validée par Ludo). L'ancienne page faisait se
 suivre version, licence, mention légale et dépannage avec le même poids : rien
 ne se lisait en premier, et le bouton de diagnostic avait l'air de l'action
-principale. Ici, dans l'ordre : le logo et les numéros, trois tuiles (site,
+principale. Ici, dans l'ordre : le logo et les numéros, « Vérifier les mises
+à jour » (bâti par les Paramètres, `mises_a_jour`), trois tuiles (site,
 Discord, Ko-fi), le générique, le dépannage en retrait, la mention légale.
 
 Extraite de `settings_panel.py` le 2026-08-28. C'est la seule page du dialogue
@@ -416,12 +417,34 @@ def _depannage(manager) -> QFrame:
     return cadre
 
 
-def construire(contributeurs, manager=None, ouvrir_nouveautes=None) -> QWidget:
+def _numeros(cible: str, catalogue: str | None) -> str:
+    """« VERSION X  ·  CATALOGUE Y », le premier numéro en lien vers `cible`.
+    Le numéro du catalogue vient de l'extérieur : échappé."""
+    numeros = (f'<a href="{cible}" style="color:{current_theme().accent};'
+               ' text-decoration:none;">'
+               + escape(tr("Version {}").format(APP_VERSION).upper(), quote=False) + "</a>")
+    if catalogue is not None:
+        numeros += "&nbsp;&nbsp;·&nbsp;&nbsp;" + escape(
+            tr("Catalogue {}").format(catalogue).upper(), quote=False)
+    return numeros
+
+
+def regler_catalogue(versions: QLabel, catalogue: str) -> None:
+    """Redit les numéros quand une vérification apporte un catalogue neuf."""
+    versions.setText(_numeros(versions.property("cible"), catalogue))
+
+
+def construire(contributeurs, manager=None, ouvrir_nouveautes=None,
+               mises_a_jour: QWidget | None = None) -> QWidget:
     """La page complète, prête à entrer dans le QStackedWidget des Paramètres.
 
     `ouvrir_nouveautes` : rappel sans argument. Fourni, et la version courante
     ayant ses nouveautés, le numéro de version ouvre leur page plutôt que la
     liste des versions sur GitHub.
+
+    `mises_a_jour` : « Vérifier les mises à jour » et son résultat, bâtis par
+    les Paramètres et posés SOUS les numéros qu'ils vérifient (2026-11-12 : la
+    rubrique Téléchargements qui les portait a disparu, presque vide).
     """
     page = QWidget()
     page.setStyleSheet(themed(_STYLE_TUILES))
@@ -436,15 +459,10 @@ def construire(contributeurs, manager=None, ouvrir_nouveautes=None) -> QWidget:
     # qu'il contient, comme « Version 1.3 » sur la fiche d'un jeu.
     vers_page = ouvrir_nouveautes is not None and nouveautes.charger() is not None
     cible = _NOUVEAUTES if vers_page else NOTES_VERSIONS_URL
-    numeros = (f'<a href="{cible}" style="color:{current_theme().accent};'
-               ' text-decoration:none;">'
-               + escape(tr("Version {}").format(APP_VERSION).upper(), quote=False) + "</a>")
-    if manager is not None:
-        numeros += "&nbsp;&nbsp;·&nbsp;&nbsp;" + escape(
-            tr("Catalogue {}").format(manager.catalog.catalog_version).upper(), quote=False)
     version = _capitales("", 12, "#a9a7c4", 3)
     version.setTextFormat(Qt.TextFormat.RichText)
-    version.setText(numeros)
+    version.setProperty("cible", cible)
+    version.setText(_numeros(cible, manager.catalog.catalog_version if manager is not None else None))
     version.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
                                     | Qt.TextInteractionFlag.LinksAccessibleByKeyboard)
     version.linkActivated.connect(
@@ -454,6 +472,9 @@ def construire(contributeurs, manager=None, ouvrir_nouveautes=None) -> QWidget:
     version.setObjectName("versions")
     version.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lay.addWidget(version)
+    if mises_a_jour is not None:
+        lay.addSpacing(12)
+        lay.addWidget(mises_a_jour)
     lay.addSpacing(14)
     devise = texte(tr("Les jeux Harry Potter sur PC, réunis et prêts à jouer."), 16, "#c4c2da")
     f = devise.font()

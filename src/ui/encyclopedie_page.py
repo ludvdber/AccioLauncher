@@ -272,8 +272,15 @@ class _Scene(QFrame):
         v.addSpacing(6)
         v.addWidget(self._texte)
         v.addSpacing(14)
-        v.addWidget(texte(tr("Glisser pour tourner · molette pour zoomer · double-clic pour revenir"),
-                          12, ENCRE_DOUCE, retour=True))
+        # L'aide ne vit que jusqu'au premier geste (constat col15) : ensuite elle
+        # s'efface en gardant sa place, et le modèle ne change pas de taille.
+        self.aide = texte(tr("Glisser pour tourner · molette pour zoomer · double-clic pour revenir"),
+                          12, ENCRE_DOUCE, retour=True)
+        politique = self.aide.sizePolicy()
+        politique.setRetainSizeWhenHidden(True)
+        self.aide.setSizePolicy(politique)
+        v.addWidget(self.aide)
+        self.modele.manipule.connect(self.aide.hide)
 
     def montrer(self, fiche: encyclopedie.Fiche, modele: ModeleLu | None, garder_vue: bool = False) -> None:
         self._nom.setText(dans_la_langue(fiche.nom))

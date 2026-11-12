@@ -269,12 +269,18 @@ class TestPage:
         win._mediatheque.ouvrir("musique", "hp2")
         page = win._pages.page
         hp2 = discographie.charger()["hp2"]
-        # Bâtie par paquets : les premières rangées tout de suite, le reste ensuite.
-        assert 0 < len(page.findChildren(_LigneMorceau)) < len(hp2)
-        qtbot.waitUntil(lambda: len(page.findChildren(_LigneMorceau)) == len(hp2), timeout=5000)
+        a_ecouter = sum(m.seuil == 0 for m in hp2)
+        # Les ouverts (moins d'un paquet) tout de suite ; les fermés restent sous le pli.
         lignes = page.findChildren(_LigneMorceau)
+        assert len(lignes) == a_ecouter and all(ligne._ecouter is not None for ligne in lignes)
+        # Le pli, lui, se bâtit par paquets : les premières rangées tout de suite, le reste ensuite.
+        from src.ui.mediatheque_page import _PliFermes
+        qtbot.waitUntil(lambda: bool(page.findChildren(_PliFermes)), timeout=5000)
+        page.findChildren(_PliFermes)[0].bouton.click()
+        assert a_ecouter < len(page.findChildren(_LigneMorceau)) < len(hp2)
+        lignes = _deplier(page, qtbot, len(hp2))
         ouvertes = [ligne for ligne in lignes if ligne._ecouter is not None]
-        assert len(ouvertes) == sum(m.seuil == 0 for m in hp2)
+        assert len(ouvertes) == a_ecouter
         # Montrés une fois : vus. Les cinématiques, bâties mais pas regardées, restent nouvelles.
         assert not win._mediatheque.nouveaux("hp2", "musique")
         assert win._mediatheque.nouveaux("hp3", "cinematiques") == {"SiriusPhoto"}
@@ -699,6 +705,108 @@ class TestCommandesMusique:
         assert not page._ouvrir_dossier.isVisibleTo(page)
 
 
+def _deplier(page, qtbot, total):
+    """Ouvre le pli des morceaux fermés et attend toutes les lignes, dans l'ordre affiché."""
+    from src.ui.mediatheque_page import _LigneMorceau, _PliFermes
+    qtbot.waitUntil(lambda: bool(page.findChildren(_PliFermes)), timeout=5000)
+    pli = page.findChildren(_PliFermes)[0]
+    if not pli.bouton.isChecked():
+        pli.bouton.click()
+    qtbot.waitUntil(lambda: len(page.findChildren(_LigneMorceau)) == total, timeout=5000)
+    return list(page._musique._lignes)          # dans l'ordre où elles se posent
+
+
+class TestLesFermesSousUnPli:
+    """Constat accepté par Ludo le 2026-11-12 : 26 morceaux ouverts dispersés dans
+    152 lignes, dont 126 « Morceau à découvrir ». Les ouverts d'abord, les fermés
+    sous un seul pli qui dit leur nombre."""
+
+    def _page(self, win, qtbot, jeu):
+        from src.ui.mediatheque_page import _LigneMorceau
+        win._mediatheque.ouvrir("musique", jeu)
+        page = win._pages.page
+        qtbot.waitUntil(lambda: bool(page.findChildren(_LigneMorceau)), timeout=5000)
+        return page
+
+    def test_les_ouverts_d_abord_dans_leur_ordre_puis_un_seul_pli(self, fenetre_avec_jeux, qtbot):
+        from PyQt6.QtWidgets import QLabel
+        from src.ui.mediatheque_page import _LigneMorceau, _PliFermes
+        win = fenetre_avec_jeux
+        page = self._page(win, qtbot, "hp2")
+        media = win._mediatheque
+        hp2 = discographie.charger()["hp2"]
+        ouverts = [m for m in hp2 if media.ouvert("hp2", m.seuil)]
+        fermes = [m for m in hp2 if not media.ouvert("hp2", m.seuil)]
+        assert ouverts and fermes, "le jeu d'essai a des deux"
+        qtbot.waitUntil(lambda: len(page.findChildren(_PliFermes)) == 1, timeout=5000)
+        pli = page.findChildren(_PliFermes)[0]
+        assert pli.libelle.text() == f"{len(fermes)} à découvrir"
+        assert pli.bouton.accessibleName() == pli.libelle.text()
+        assert not pli.bouton.isChecked() and pli.corps.isHidden()
+        lignes = page.findChildren(_LigneMorceau)
+        assert [ligne.cle for ligne in lignes] == [f"hp2/{m.fichier}" for m in ouverts]
+        assert [ligne.findChildren(QLabel)[0].text() for ligne in lignes] == [
+            str(i) for i in range(1, len(ouverts) + 1)]
+        # Le pli suit la dernière ligne ouverte.
+        pile = page._musique._pile
+        index = [pile.itemAt(i).widget() for i in range(pile.count())]
+        assert index.index(pli) == len(ouverts)
+
+    def test_le_pli_deroule_les_fermes_numerotes_a_la_suite(self, fenetre_avec_jeux, qtbot):
+        from PyQt6.QtWidgets import QLabel
+        from src.ui.mediatheque_page import _LigneMorceau, _PliFermes
+        win = fenetre_avec_jeux
+        page = self._page(win, qtbot, "hp2")
+        media = win._mediatheque
+        hp2 = discographie.charger()["hp2"]
+        ouverts = [m for m in hp2 if media.ouvert("hp2", m.seuil)]
+        fermes = [m for m in hp2 if not media.ouvert("hp2", m.seuil)]
+        _deplier(page, qtbot, len(hp2))
+        pli = page.findChildren(_PliFermes)[0]
+        assert pli.bouton.isChecked() and not pli.corps.isHidden()
+        sous = pli.corps.findChildren(_LigneMorceau)
+        assert [ligne.cle for ligne in sous] == [f"hp2/{m.fichier}" for m in fermes]
+        assert all(ligne._ecouter is None and not ligne.property("ouverte") for ligne in sous)
+        assert [ligne.findChildren(QLabel)[0].text() for ligne in sous] == [
+            str(i) for i in range(len(ouverts) + 1, len(hp2) + 1)]
+        textes = {lbl.text() for lbl in sous[0].findChildren(QLabel)}
+        assert any(t.startswith("S'ouvre") for t in textes), "le seuil reste lisible"
+        pli.bouton.click()
+        assert pli.corps.isHidden()
+        pli.bouton.click()
+        assert len(page.findChildren(_LigneMorceau)) == len(hp2), "rebâties une seule fois"
+
+    def test_un_jeu_remontre_pendant_le_depliage_ne_garde_pas_de_lignes_mortes(
+            self, fenetre_avec_jeux, qtbot):
+        """Retour de partie (`actualiser`) pendant que le pli bâtit ses paquets : son
+        minuteur à lui court encore, ses lignes vont à `deleteLater`."""
+        from PyQt6 import sip
+        from src.ui.mediatheque_page import _PliFermes
+        win = fenetre_avec_jeux
+        page = self._page(win, qtbot, "hp2")
+        vue = page._musique
+        qtbot.waitUntil(lambda: bool(page.findChildren(_PliFermes)), timeout=5000)
+        ancien = page.findChildren(_PliFermes)[0]
+        ancien.bouton.click()
+        vue.montrer("hp2")
+        # Son minuteur peut tomber avant le `deleteLater` : on l'y force.
+        ancien._paquets._suite()
+        qtbot.wait(200)
+        hp2 = discographie.charger()["hp2"]
+        assert all(not sip.isdeleted(ligne) for ligne in vue._lignes)
+        assert len(vue._lignes) == sum(win._mediatheque.ouvert("hp2", m.seuil) for m in hp2)
+        vue._rafraichir()                # `marquer` sur chaque ligne : ne lève plus
+
+    def test_sans_ferme_pas_de_pli(self, fenetre_avec_jeux, qtbot, monkeypatch):
+        from src.ui.mediatheque_page import _LigneMorceau, _PliFermes
+        win = fenetre_avec_jeux
+        monkeypatch.setattr(win._mediatheque, "ouvert", lambda _jeu, _seuil: True)
+        page = self._page(win, qtbot, "hp2")
+        hp2 = discographie.charger()["hp2"]
+        qtbot.waitUntil(lambda: len(page.findChildren(_LigneMorceau)) == len(hp2), timeout=5000)
+        assert not page.findChildren(_PliFermes)
+
+
 def _encre(icone, cote, mode):
     """La couleur la plus couverte d'un pictogramme, dans ce mode."""
     from PyQt6.QtGui import QColor, QIcon
@@ -725,8 +833,7 @@ class TestLignesEtPastilles:
         win._mediatheque.ouvrir("musique", "hp2")
         hp2 = discographie.charger()["hp2"]
         page = self._lignes(win, qtbot, _LigneMorceau)
-        qtbot.waitUntil(lambda: len(page.findChildren(_LigneMorceau)) == len(hp2), timeout=5000)
-        lignes = page.findChildren(_LigneMorceau)
+        lignes = _deplier(page, qtbot, len(hp2))
         ouverte = next(ligne for ligne in lignes if ligne._ecouter is not None)
         fermee = next(ligne for ligne in lignes if ligne._ecouter is None)
         fond = win._mediatheque.fond

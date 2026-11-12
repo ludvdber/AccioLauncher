@@ -335,9 +335,10 @@ class TestParametresAuPremierClic:
         qtbot.addWidget(dlg)
         assert dlg._construites == {0}
         assert dlg._theme_hint is None
-        dlg._nav.setCurrentRow(2)
-        assert dlg._construites == {0, 2}
-        assert dlg._pages.currentIndex() == 2
+        assert dlg._versions_label is None
+        dlg._nav.setCurrentRow(3)                 # À propos, qui porte les numéros
+        assert dlg._construites == {0, 3}
+        assert dlg._pages.currentIndex() == 3
         assert dlg._versions_label is not None
         dlg._scan_worker.requestInterruption()
         dlg._scan_worker.wait()

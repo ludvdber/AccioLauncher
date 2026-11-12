@@ -269,3 +269,62 @@ def habiller_fenetre(hwnd: int, bordure: tuple[int, int, int]) -> bool:
     except (OSError, AttributeError):
         return False
     return bool(rc1 == 0 and rc2 == 0)
+
+
+def zone_de_travail_principale() -> tuple[int, int, float] | None:
+    """Zone de travail de l'écran principal en pixels PHYSIQUES, et son échelle.
+
+    `(largeur, hauteur, échelle)` — 1,75 à 175 % —, ou None hors Windows ou si
+    une API refuse. Appelée AVANT `QApplication` (`main._plafonner_echelle`) :
+    le processus n'a pas encore déclaré sa prise en charge du DPI, et Windows
+    lui rendrait des coordonnées virtualisées à 96 ppp. D'où une bascule du
+    SEUL fil courant en « par écran v2 » (Windows 10 1703 et après), le temps
+    de la mesure, puis le retour à l'état d'avant. L'échelle est le DPI
+    « effectif » de l'écran : celui que Qt lit lui-même.
+    """
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class _InfoEcran(ctypes.Structure):       # MONITORINFO
+        _fields_ = [("taille", wintypes.DWORD), ("ecran", wintypes.RECT),
+                    ("travail", wintypes.RECT), ("drapeaux", wintypes.DWORD)]
+
+    try:
+        # Instances À NOUS, comme `_noms_par_le_systeme` : `argtypes` reste local.
+        u32 = ctypes.WinDLL("user32")
+        shcore = ctypes.WinDLL("shcore")
+        u32.SetThreadDpiAwarenessContext.restype = ctypes.c_void_p
+        u32.SetThreadDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+        u32.MonitorFromPoint.restype = wintypes.HMONITOR
+        u32.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
+        u32.GetMonitorInfoW.restype = wintypes.BOOL
+        u32.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.c_void_p]
+        shcore.GetDpiForMonitor.restype = ctypes.c_long
+        shcore.GetDpiForMonitor.argtypes = [wintypes.HMONITOR, ctypes.c_int,
+                                            ctypes.c_void_p, ctypes.c_void_p]
+    except (OSError, AttributeError):
+        return None
+    # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (HANDLE)-4.
+    avant = u32.SetThreadDpiAwarenessContext(ctypes.c_void_p(-4))
+    if not avant:
+        return None                    # refusé : la mesure serait virtualisée
+    try:
+        # 1 = MONITOR_DEFAULTTOPRIMARY : l'écran où la fenêtre s'ouvre.
+        ecran = u32.MonitorFromPoint(wintypes.POINT(0, 0), 1)
+        info = _InfoEcran()
+        info.taille = ctypes.sizeof(_InfoEcran)
+        dpi_x, dpi_y = wintypes.UINT(), wintypes.UINT()
+        if not ecran or not u32.GetMonitorInfoW(ecran, ctypes.byref(info)):
+            return None
+        # 0 = MDT_EFFECTIVE_DPI.
+        if shcore.GetDpiForMonitor(ecran, 0, ctypes.byref(dpi_x), ctypes.byref(dpi_y)) != 0:
+            return None
+    finally:
+        u32.SetThreadDpiAwarenessContext(ctypes.c_void_p(avant))
+    travail = info.travail
+    largeur, hauteur = travail.right - travail.left, travail.bottom - travail.top
+    if largeur <= 0 or hauteur <= 0 or dpi_x.value <= 0:
+        return None
+    return largeur, hauteur, dpi_x.value / 96

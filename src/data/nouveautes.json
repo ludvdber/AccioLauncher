@@ -44,6 +44,14 @@
         {
           "genre": "nouveau",
           "texte": {
+            "fr": "Le Prince de Sang-Mêlé : un pack de textures haute définition en bêta, à télécharger sur le Discord d'Accio, s'active dans l'onglet Image.",
+            "en": "Half-Blood Prince: a beta high-definition texture pack, to download from the Accio Discord, is turned on in the Image tab.",
+            "es": "El misterio del príncipe: un pack de texturas de alta definición en beta, que se descarga en el Discord de Accio, se activa en la pestaña Imagen."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
             "fr": "La Coupe de Feu : deux réglages de difficulté, la résistance des créatures et le temps pour enchaîner les sorts.",
             "en": "Goblet of Fire: two difficulty settings, creature resistance and the time to chain spells.",
             "es": "El cáliz de fuego: dos ajustes de dificultad, la resistencia de las criaturas y el tiempo para encadenar hechizos."

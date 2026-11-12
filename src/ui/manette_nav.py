@@ -9,7 +9,7 @@ dialogues, réglages, assistant) marche à la manette, sans un widget modifié.
 | Manette                       | Touche     | Effet                                   |
 |-------------------------------|------------|-----------------------------------------|
 | croix directionnelle / stick  | ← →        | jeu précédent / suivant                 |
-|                               | ↑ ↓        | bouton précédent / suivant (Maj+Tab, Tab), ou ↑ ↓ dans une liste, dont on sort par ses extrémités |
+|                               | ↑ ↓        | bouton précédent / suivant (Maj+Tab, Tab), ou ↑ ↓ dans une liste, dont on sort par ses extrémités, et dans une grille (`garde_fleches`) |
 | croix (PlayStation) / A       | Espace     | appuie sur le bouton qui a le focus     |
 |                               | Entrée     | sans bouton sous le focus : JOUER ; dans une liste : choisir |
 | rond / B                      | Échap      | ferme le dialogue, sort du plein écran  |
@@ -45,6 +45,11 @@ log = logging.getLogger(__name__)
 # diminue sans arrêt » — rien ne faisait sortir du curseur de volume. La
 # croix ouvre la liste déroulante ; dans la liste ouverte, ↑ ↓ choisissent.
 _GARDENT_HAUT_BAS = (QAbstractSpinBox, QAbstractItemView)
+# Un widget qui n'est pas une vue Qt mais se parcourt aussi en rangées (la
+# grille des captures, `galerie_page._Vignette`) porte cette propriété : ↑/↓ y
+# changent de rangée, et c'est LUI qui en sort par ses bords (constat tra2 :
+# ↓ y envoyait Tab, la voisine de droite au lieu de la rangée du dessous).
+GARDE_FLECHES = "garde_fleches"
 # Seuls ces widgets se PRESSENT à l'Espace. Ailleurs (zone qui défile, texte de
 # la fiche, champ de saisie) on envoie Entrée, que la fenêtre principale
 # change en JOUER quand le widget n'en fait rien : la croix au démarrage lance
@@ -153,6 +158,7 @@ class NavigationManette(QObject):
             case lecture.HAUT | lecture.BAS:
                 if dans_un_menu or (isinstance(focus, _GARDENT_HAUT_BAS)
                                     and not self._au_bout_de_la_liste(focus, action)) or (
+                        focus is not None and focus.property(GARDE_FLECHES) is True) or (
                         isinstance(focus, QSlider)
                         and focus.orientation() == Qt.Orientation.Vertical):
                     self._envoyer(cible, Qt.Key.Key_Up if action == lecture.HAUT else Qt.Key.Key_Down)

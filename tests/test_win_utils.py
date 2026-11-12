@@ -104,3 +104,29 @@ class TestAppelsReelsWindows:
     def test_habiller_une_fenetre_inexistante_rend_faux(self):
         from src.core import win_utils
         assert win_utils.habiller_fenetre(0, (214, 167, 44)) is False
+
+
+class TestZoneDeTravailPrincipale:
+    """Mesure physique de l'écran principal, avant `QApplication`."""
+
+    def test_rien_hors_windows(self, monkeypatch):
+        from src.core import win_utils
+        monkeypatch.setattr(win_utils.sys, "platform", "linux")
+        assert win_utils.zone_de_travail_principale() is None
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows seulement")
+    def test_mesure_plausible_et_fil_rendu_a_son_etat(self):
+        import ctypes
+        from src.core.win_utils import zone_de_travail_principale
+        u32 = ctypes.WinDLL("user32")
+        u32.GetThreadDpiAwarenessContext.restype = ctypes.c_void_p
+        u32.GetAwarenessFromDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+        avant = u32.GetAwarenessFromDpiAwarenessContext(u32.GetThreadDpiAwarenessContext())
+        zone = zone_de_travail_principale()
+        apres = u32.GetAwarenessFromDpiAwarenessContext(u32.GetThreadDpiAwarenessContext())
+        assert apres == avant
+        if zone is None:              # session sans écran (service, CI)
+            return
+        largeur, hauteur, echelle = zone
+        assert largeur > 0 and hauteur > 0
+        assert 1.0 <= echelle <= 5.0

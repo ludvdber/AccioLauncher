@@ -313,9 +313,10 @@ class TestModeDifficile:
         assert all(rc.REGLAGES[i].beta for i in hardcore)
         # Autres réglages en essai : le Quidditch de HP1/HP2, pas encore vu en match, et la caméra
         # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un), et le décor entier
-        # de HP6 (ZoneCulling, lu dans l'exe le 2026-11-12, pas encore vu en jeu).
+        # de HP6 (ZoneCulling, lu dans l'exe le 2026-11-12, pas encore vu en jeu), et les textures HD de
+        # HP6 (TextureReplace, pack HD bêta de la 1.3.4).
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
-            "quidditch", "camera_fluide", "decor_entier"}
+            "quidditch", "camera_fluide", "decor_entier", "textures_hd"}
 
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:
@@ -495,6 +496,46 @@ class TestCameraFluideHp5:
         from tests.test_game_data import MINIMAL_GAME
         jeu = GameData.from_dict({**MINIMAL_GAME, "fix_settings": ["camera_fluide", "limite_fps"]})
         assert "camera_fluide" in jeu.fix_settings
+
+
+class TestTexturesHdHp6:
+    """HP6 : [Accio.Graphics] TextureReplace du correctif (settings.cpp, texdump.cpp) ; 0 = textures du
+    jeu, 1 = les .dds de accio_remplacements\\ prennent leur place (pack HD bêta de la 1.3.4)."""
+
+    R = rc.REGLAGES["textures_hd"]
+
+    def test_la_cle_du_correctif(self):
+        assert (self.R.section, self.R.cle, self.R.onglet) == ("Accio.Graphics", "TextureReplace", "image")
+        assert self.R.choix == () and self.R.defaut is False   # un interrupteur, éteint comme le correctif
+        assert self.R.beta and self.R.se_voit
+        assert ("RAM", 1) in self.R.cout
+
+    def test_l_aide_dit_qu_il_faut_le_pack(self):
+        assert "Discord d'Accio" in self.R.aide and "ne change rien" in self.R.aide
+
+    def test_eteint_quand_la_cle_manque_puis_aller_retour(self, ini):
+        assert rc.lire(ini, self.R) == rc.Etat(False)
+        rc.ecrire(ini, self.R, True)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert lignes.index("[Accio.Graphics]") < lignes.index("TextureReplace=1")
+        assert rc.lire(ini, self.R) == rc.Etat(True)
+        rc.ecrire(ini, self.R, False)
+        assert "TextureReplace=0" in ini.read_bytes().decode().split("\r\n")
+
+    def test_aucun_prereglage_n_y_touche(self):
+        """Il dépend d'un pack posé à la main : un préréglage ne peut pas le promettre."""
+        for _i, _n, _t, valeurs in rc.PREREGLAGES:
+            assert "textures_hd" not in valeurs
+
+    def test_range_avec_les_textures(self):
+        from src.ui.reglages_rubriques import _GROUPES_EFFETS
+        assert "textures_hd" in dict(_GROUPES_EFFETS)["Textures"]
+
+    def test_traduit_en_anglais_et_en_espagnol(self):
+        from src.core.config import I18N_DIR
+        for langue in ("en", "es"):
+            textes = json.loads((I18N_DIR / f"{langue}.json").read_text(encoding="utf-8"))["strings"]
+            assert self.R.libelle in textes and self.R.aide in textes, langue
 
 
 class TestSonArrierePlan:

@@ -17,7 +17,14 @@ ombrage plat, 22 à 66 ms par image.
 
 Glisser : tourner. Molette : zoom. Double-clic : vue de face. Lâché, le modèle
 garde un peu d'élan ; au repos il tourne lentement et respire. Le minuteur ne
-vit que si le widget est visible.
+vit que si le widget est visible. Le premier de ces gestes émet `manipule`
+(une seule fois) : la scène efface alors sa phrase d'aide.
+
+Le décor (constat col15, 2026-11-12 : le modèle flottait sur un aplat, son
+ombre noire ne se voyait pas sur le fond) : un halo d'or très doux derrière
+le modèle et un disque de sol clair sous ses pieds, deux dégradés peints SOUS
+le modèle. Le halo ne vit que dans le widget (les vignettes gardent le
+disque) et ne dépend que de la taille : peint une fois dans une pixmap.
 
 Les mouvements du jeu (`maillages_ue1.Animation`, demande de Ludo du
 2026-10-27 : « un bouton pour animer les modèles ») se rejouent en boucle par
@@ -31,7 +38,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPointF, QSize, Qt, QTimer
+from PyQt6.QtCore import QPointF, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QGuiApplication,
     QBrush,
@@ -52,6 +59,7 @@ from PyQt6.QtWidgets import QWidget
 
 from src.core import maillages_ue1
 from src.core.maillages_ue1 import Animation, Maillage, Mouvement
+from src.ui.theme import accent_qcolor
 
 if TYPE_CHECKING:
     from src.ui.modele_3d_gpu import RenduGPU
@@ -78,6 +86,11 @@ def _norme(v: tuple[float, float, float]) -> tuple[float, float, float]:
 
 
 _L = _norme(_LUMIERE)
+
+# Le décor (constat col15) : assez pour poser le modèle, jamais une tache.
+_HALO = 46               # alpha de l'or au cœur du halo
+_SOL_CENTRE = 42         # alpha du blanc au centre du disque de sol
+_SOL_MILIEU = 22         # alpha de l'or à mi-rayon du disque
 
 
 @dataclass(frozen=True)
@@ -149,6 +162,7 @@ class Visionneuse:
         self._images: dict[str, QImage] = {}
         self._centre = (0.0, 0.0, 0.0)
         self._taille = 1.0
+        self._bas = -0.5        # le bas du modèle sous son centre, en tailles
         self.lacet, self.tangage, self.zoom = LACET_DEPART, 8.0, 1.0
         self._elan = (0.0, 0.0)
         self._repos = 0
@@ -201,6 +215,9 @@ class Visionneuse:
             self._centre = ((bornes[0][0] + bornes[0][1]) / 2, (bornes[1][0] + bornes[1][1]) / 2,
                             (bornes[2][0] + bornes[2][1]) / 2)
             self._taille = max(b - a for a, b in bornes) or 1.0
+            # Le sol va sous les pieds : à −0,5 seulement si la hauteur est la plus
+            # grande dimension (une araignée, plus longue que haute, l'aurait vu flotter).
+            self._bas = (bornes[2][0] - self._centre[2]) / self._taille
         if not garder_vue:
             self.vue_de_face()
         self._mettre_en_route()
@@ -299,6 +316,10 @@ class Visionneuse:
             self._elan = (0.0, 0.0)
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
+    def _sur_geste(self) -> None:
+        """Un geste de l'utilisateur (tourner, zoomer, revenir de face) ;
+        `Modele3D` en fait son signal `manipule`."""
+
     def mouseMoveEvent(self, event: QMouseEvent | None) -> None:
         if event is None or self._prise is None:
             return
@@ -308,6 +329,7 @@ class Visionneuse:
         self._elan = (d.x() * 0.5, d.y() * 0.3)
         self.tourner(*self._elan)
         self._repos = 0
+        self._sur_geste()
         self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:
@@ -317,6 +339,7 @@ class Visionneuse:
 
     def mouseDoubleClickEvent(self, event: QMouseEvent | None) -> None:
         self.vue_de_face()
+        self._sur_geste()
 
     def wheelEvent(self, event: QWheelEvent | None) -> None:
         if event is None:
@@ -324,6 +347,7 @@ class Visionneuse:
         pas = event.angleDelta().y() / 120
         self.zoom = max(_ZOOM[0], min(_ZOOM[1], self.zoom * (1.1 ** pas)))
         self._repos = 0
+        self._sur_geste()
         self.update()
 
     # --- Rendu -------------------------------------------------------------------
@@ -389,6 +413,7 @@ class Visionneuse:
         image.fill(Qt.GlobalColor.transparent)
         if self._modele is not None:
             p = QPainter(image)
+            self.sol(p)
             self._dessiner(p)
             p.end()
         return image
@@ -401,7 +426,6 @@ class Visionneuse:
         m = self._modele
         if m is None:
             return
-        self.ombre_au_sol(p)
         ecran = self.projeter()
         faces = []
         for f in m.faces:
@@ -465,12 +489,25 @@ class Visionneuse:
         eclairage = abs(n[0] * _L[1] * -1 + n[1] * _L[2] + n[2] * _L[0])
         return int(150 * (1 - min(1.0, 0.35 + 0.75 * eclairage)))
 
-    def ombre_au_sol(self, p: QPainter) -> None:
-        cx, cy = self.width() / 2, self.height() * 0.52 + self.height() * 0.30 * self.zoom
-        r = self.width() * 0.22 * self.zoom
+    def place_du_sol(self) -> tuple[float, float, float]:
+        """Centre (x, y) et rayon du disque de sol, en pixels logiques : le
+        point sous le centre du modèle, à la hauteur de ses pieds (`_bas`),
+        projeté comme `projeter` (tangage et zoom compris)."""
+        c = self.camera()
+        za, xb = self._bas * c.ct, -self._bas * c.st
+        echelle = c.focale / c.distance
+        return c.ox, c.oy - za * c.focale / (c.distance - xb), 0.34 * echelle
+
+    def sol(self, p: QPainter) -> None:
+        """Le disque de sol sous les pieds : une lueur claire aplatie en
+        ellipse, centrée sous le bas du modèle et qui suit le zoom. L'ancienne
+        ombre noire (alpha 90) ne se voyait pas sur le fond bleu nuit, et
+        tombait derrière les jambes, au-dessus des pieds."""
+        cx, cy, r = self.place_du_sol()
         g = QRadialGradient(QPointF(cx, cy), r)
-        g.setColorAt(0, QColor(0, 0, 0, 90))
-        g.setColorAt(1, QColor(0, 0, 0, 0))
+        g.setColorAt(0, QColor(255, 255, 255, _SOL_CENTRE))
+        g.setColorAt(0.45, accent_qcolor(_SOL_MILIEU))
+        g.setColorAt(1, accent_qcolor(0))
         p.save()
         p.translate(cx, cy)
         p.scale(1.0, 0.22)
@@ -487,8 +524,13 @@ class Modele3D(Visionneuse, QWidget):
     `offscreen` des tests, machine sans pilote, toute erreur de dessin). Les
     vignettes des fiches (`rendu`) passent par le même `_dessiner`."""
 
+    manipule = pyqtSignal()     # le premier geste de l'utilisateur, une seule fois
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._manipule = False
+        self._halo: QPixmap | None = None
+        self._halo_cle: tuple[int, int, float, int] | None = None
         self._gpu: RenduGPU | None = None
         self._gpu_essaye = False
         self._textures_gpu: dict[str, QImage] = {}
@@ -513,12 +555,49 @@ class Modele3D(Visionneuse, QWidget):
                 self.destroyed.connect(self._gpu.liberer)
         return self._gpu
 
+    def _sur_geste(self) -> None:
+        if not self._manipule:
+            self._manipule = True
+            self.manipule.emit()
+
     def paintEvent(self, event: object) -> None:
         if self._modele is None:
             return
+        # Du plus loin au plus proche (règle 22) : halo, sol, modèle.
         p = QPainter(self)
+        self.halo(p)
+        self.sol(p)
         self._dessiner(p)
         p.end()
+
+    def halo(self, p: QPainter) -> None:
+        """La lueur d'or derrière le modèle, centrée sur lui. Elle ne dépend
+        que de la taille du widget : peinte une fois dans une pixmap, posée
+        telle quelle à chaque image (aucun dégradé recalculé à 60 images/s)."""
+        dpr = self.devicePixelRatioF()
+        cle = (self.width(), self.height(), dpr, accent_qcolor().rgb())
+        if self._halo is None or self._halo_cle != cle:
+            self._halo_cle = cle
+            self._halo = self._peindre_halo(dpr)
+        p.drawPixmap(QPointF(0, 0), self._halo)
+
+    def _peindre_halo(self, dpr: float) -> QPixmap:
+        w, h = self.width(), self.height()
+        pix = QPixmap(max(1, round(w * dpr)), max(1, round(h * dpr)))
+        pix.setDevicePixelRatio(dpr)
+        pix.fill(Qt.GlobalColor.transparent)
+        centre = QPointF(w / 2, h * 0.47)
+        r = min(w, h * 0.82) * 0.55
+        g = QRadialGradient(centre, r)
+        g.setColorAt(0, accent_qcolor(_HALO))
+        g.setColorAt(0.5, accent_qcolor(_HALO // 3))
+        g.setColorAt(1, accent_qcolor(0))
+        q = QPainter(pix)
+        q.setPen(Qt.PenStyle.NoPen)
+        q.setBrush(g)
+        q.drawEllipse(centre, r, r)
+        q.end()
+        return pix
 
     def _dessiner(self, p: QPainter) -> None:
         """Le widget comme les vignettes (`rendu`) : un modèle de HP6 compte
@@ -536,5 +615,4 @@ class Modele3D(Visionneuse, QWidget):
         if image is None:
             self._peindre(p)
         else:
-            self.ombre_au_sol(p)
             p.drawImage(QPointF(0, 0), image)

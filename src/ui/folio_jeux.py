@@ -13,12 +13,14 @@ from pathlib import Path
 from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
+    QBoxLayout,
     QButtonGroup,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -1112,21 +1114,25 @@ class FolioPageHP6(FolioPage):
                 for sort, nom in _SORTS_HP6.items():
                     ligne.addWidget(_pastille(tr(nom), coche, sort in partie.sorts))
                 lay.addLayout(ligne)
-            self._badges(lay, partie)
-            lay.addSpacing(18)
-            lay.addWidget(self._lieux(folio_hp6.par_lieu(partie.trouves)))
+            lay.addSpacing(26)
+            lay.addWidget(_BadgesEtLieux(self._badges(partie),
+                                         self._lieux(folio_hp6.par_lieu(partie.trouves))))
 
         return _page(contenu)[0]
 
-    def _badges(self, lay: QVBoxLayout, partie) -> None:
+    def _badges(self, partie) -> QWidget | None:
         """Les trente badges en trois séries, comme l'écran « Badges » du jeu,
         avec ses images, ses noms et ses explications ; rien sans le jeu."""
         images = folio_hp6.images_badges(self._system)
         if not images:
-            return
+            return None
         textes = folio_hp6.textes_badges(self._system, get_language())
         dpr = self.devicePixelRatioF()
-        lay.addSpacing(26)
+        colonne = QWidget()
+        colonne.setStyleSheet("background: transparent;")
+        lay = QVBoxLayout(colonne)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
         lay.addWidget(surtitre(tr("Badges")))
         for prefixe, serie in folio_hp6.SERIES:
             cles = [cle for cle, _, _ in folio_hp6.BADGES if cle.startswith(prefixe)]
@@ -1140,34 +1146,106 @@ class FolioPageHP6(FolioPage):
                     ligne.addWidget(_medaille(images[cle], cle in partie.acquis,
                                               textes.get(cle), dpr))
             lay.addLayout(ligne)
+        lay.addStretch()
+        return colonne
 
     @staticmethod
     def _lieux(lieux: list[folio_hp6.Lieu]) -> QFrame:
-        """Les écussons lieu par lieu, en deux colonnes : où chercher encore."""
+        """Les écussons lieu par lieu, en deux colonnes : où chercher encore.
+        Les lieux à fouiller d'abord, les lieux finis grisés à la fin ; le
+        cadre prend la largeur de ses colonnes, sans vide entre nom et compte."""
         cadre = QFrame()
         cadre.setObjectName("coupe")
+        cadre.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         g = QGridLayout(cadre)
         g.setContentsMargins(20, 14, 20, 16)
         g.setHorizontalSpacing(16)
         g.setVerticalSpacing(6)
         g.addWidget(surtitre(tr("Écussons par lieu")), 0, 0, 1, 5)
-        or_clair = current_theme().accent_light
-        # Par ordre alphabétique dans la langue affichée, accents ignorés
-        # (« Écussons » ne doit pas tomber après « Volière »).
-        noms = sorted(((tr(lieu.libelle), lieu) for lieu in lieux),
-                      key=lambda paire: unicodedata.normalize("NFKD", paire[0]).casefold())
+        noms = _lieux_ordonnes(lieux)
         moitie = (len(noms) + 1) // 2
         for k, (nom, lieu) in enumerate(noms):
             rang, col = 1 + k % moitie, 3 * (k // moitie)
-            couleur = ENCRE if lieu.trouves else ENCRE_DOUCE
-            g.addWidget(texte(nom, 13, couleur, retour=True), rang, col)
-            g.addWidget(texte(f"{lieu.trouves} / {lieu.total}", 13,
-                              or_clair if lieu.trouves == lieu.total else couleur),
+            fini = lieu.trouves == lieu.total
+            couleur = ENCRE_DISCRETE if fini else ENCRE
+            etiquette = texte(nom, 13, couleur, retour=True)
+            etiquette.setObjectName("lieuFini" if fini else "lieuAFouiller")
+            g.addWidget(etiquette, rang, col)
+            g.addWidget(texte(f"{lieu.trouves} / {lieu.total}", 13, couleur),
                         rang, col + 1, Qt.AlignmentFlag.AlignRight)
-        g.setColumnStretch(0, 1)
-        g.setColumnStretch(3, 1)
-        g.setColumnMinimumWidth(2, 24)
+        g.setColumnMinimumWidth(2, 32)
         return cadre
+
+
+def _lieux_ordonnes(lieux: list[folio_hp6.Lieu]) -> list[tuple[str, folio_hp6.Lieu]]:
+    """Les lieux où il reste à chercher d'abord, les lieux finis ensuite ;
+    chaque groupe par ordre alphabétique dans la langue affichée, accents
+    ignorés (« Écussons » ne doit pas tomber après « Volière »)."""
+    return sorted(((tr(lieu.libelle), lieu) for lieu in lieux),
+                  key=lambda paire: (paire[1].trouves == paire[1].total,
+                                     unicodedata.normalize("NFKD", paire[0]).casefold()))
+
+
+class _BadgesEtLieux(QWidget):
+    """Les badges de HP6 à gauche, la carte des lieux à droite quand la page
+    est large ; l'un sous l'autre sinon. Empilés, les 43 lieux tombaient sous
+    la ligne de flottaison à 1920 × 1080, avec 1 000 px vides à droite des
+    badges (constat car5, 2026-11-12)."""
+
+    COTE_A_COTE = 1040      # largeur de la page, rail ôté, d'une fenêtre de ~1 400 px
+    _HYSTERESE = 24         # la barre de défilement qui paraît ne fait pas basculer
+
+    def __init__(self, badges: QWidget | None, lieux: QFrame) -> None:
+        super().__init__()
+        self.setStyleSheet("background: transparent;")
+        self._badges = badges
+        self._boite = QBoxLayout(QBoxLayout.Direction.TopToBottom, self)
+        self._boite.setContentsMargins(0, 0, 0, 0)
+        self._boite.setSpacing(18)
+        if badges is not None:
+            self._boite.addWidget(badges, stretch=1)
+        self._boite.addWidget(lieux, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self._noms = [lab for lab in lieux.findChildren(QLabel)
+                      if lab.objectName() in {"lieuFini", "lieuAFouiller"}]
+        # Ce que prend le cadre hors des deux colonnes de noms : marges,
+        # espacements, la gouttière et les deux colonnes de comptes.
+        g = lieux.layout()
+        marges = g.contentsMargins()
+        comptes = [lab.sizeHint().width() for lab in lieux.findChildren(QLabel)
+                   if "/" in lab.text() and lab not in self._noms]
+        self._hors_noms = (marges.left() + marges.right() + 4 * g.horizontalSpacing()
+                           + 32 + 2 * max(comptes, default=0))
+        # Les minima des noms suivent la largeur reçue : sans ce plancher
+        # explicite, ils deviendraient celui de la page, qui ne pourrait plus
+        # rétrécir (barre de défilement horizontale dès qu'on réduit la fenêtre).
+        lieux.setMinimumWidth(1)
+
+    def cote_a_cote(self) -> bool:
+        return self._boite.direction() == QBoxLayout.Direction.LeftToRight
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        largeur = self.width()
+        if self._badges is not None:
+            if self.cote_a_cote():
+                voulu = largeur >= self.COTE_A_COTE - self._HYSTERESE
+            else:
+                voulu = largeur >= self.COTE_A_COTE
+            if voulu != self.cote_a_cote():
+                self._boite.setDirection(QBoxLayout.Direction.LeftToRight if voulu
+                                         else QBoxLayout.Direction.TopToBottom)
+                self._boite.setSpacing(40 if voulu else 18)
+        self._poser_noms(int(largeur * 0.45) if self.cote_a_cote() else largeur)
+
+    def _poser_noms(self, place: int) -> None:
+        """Un nom tient sur une ligne tant que la place le permet : la largeur
+        que Qt devine d'un libellé à la ligne (~150 px) coupait « Couloir de
+        la Salle sur Demande » en deux à 1920 px, 22 rangées sur deux lignes."""
+        par_colonne = max(0, (place - self._hors_noms) // 2)
+        for lab in self._noms:
+            voulu = min(lab.fontMetrics().horizontalAdvance(lab.text()) + 2, par_colonne)
+            if lab.minimumWidth() != voulu:
+                lab.setMinimumWidth(voulu)
 
 
 # ── HP7 et HP8 ──

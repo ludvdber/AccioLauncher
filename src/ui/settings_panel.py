@@ -1,8 +1,9 @@
 """Paramètres, « la salle commune » : rubriques à gauche, cartes à droite.
 
-Rubriques : Général (dossier, langue, sauvegardes) · Son et image (vidéos, thème,
-ambiance) · Téléchargements (archives, mises à jour) · Intégrations (Discord,
-manette) · À propos. Refonte du 2026-10-09 sur la maquette validée : la page
+Rubriques : Général (dossier et archives, langue, sauvegardes) · Son et image
+(vidéos, thème, ambiance) · Intégrations (Discord, manette) · À propos (numéros
+et « Vérifier les mises à jour »). La rubrique Téléchargements est partie le
+2026-11-12 : un interrupteur et deux boutons dont l'un incluait l'autre. Refonte du 2026-10-09 sur la maquette validée : la page
 parle Gelasio comme la fiche, chaque réglage est une ligne (titre, phrase
 d'aide, commande à droite) dans une carte, et « ← Bibliothèque » remplace le
 bouton Fermer en or plein, qui pesait plus que tout le contenu.
@@ -34,7 +35,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.config import APP_VERSION, Config, cache_pour
+from src.core.config import Config, cache_pour
 from src.core.game_manager import GameManager, GameState
 from src.core import manette
 from src.core import trailers as trailer_store
@@ -62,9 +63,12 @@ _LARGEUR_RUBRIQUES = 236
 _ENCRE_RUBRIQUE = "#a9a7c4"
 # (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
 _RUBRIQUES = (("Général", "dossier"), ("Son et image", "ecran"),
-              ("Téléchargements", "telechargement"), ("Intégrations", "integrations"),
-              ("À propos", "infos"))
-_RANG_TELECHARGEMENTS = 2   # ses messages arrivent de la fenêtre, après un clic
+              ("Intégrations", "integrations"), ("À propos", "infos"))
+_RANG_A_PROPOS = len(_RUBRIQUES) - 1   # ses messages arrivent de la fenêtre, après un clic
+# La colonne de lecture, collée au rail : centrée, elle flottait loin de lui
+# sur un grand écran, et le pied avec elle.
+_LARGEUR_LECTURE = 760
+_MARGE_RAIL = 64
 
 # Style partagé des QComboBox du panneau (langue, thème, saison)
 # Le focus clavier et la ligne choisie d'une liste ouverte, en OR : `outline`
@@ -183,8 +187,8 @@ class SettingsDialog(QDialog):
     """Panneau de paramètres Accio Launcher."""
 
     config_changed = pyqtSignal()
-    force_catalog_refresh = pyqtSignal()   # demande un fetch forcé du catalogue
-    force_launcher_check = pyqtSignal()    # demande une vérif forcée du launcher
+    # « Vérifier les mises à jour » : launcher, catalogue et jeux en un geste.
+    verification_demandee = pyqtSignal()
     season_changed = pyqtSignal(str)       # saison RÉSOLUE, appliquée en direct
     restart_requested = pyqtSignal()       # « Redémarrer maintenant » (thème/langue)
     # « Désinstaller et fermer » : (garder les jeux, garder les copies).
@@ -210,6 +214,7 @@ class SettingsDialog(QDialog):
         self._theme_hint = None
         self._update_status = None
         self._versions_label = None
+        self._btn_verifier = None
         # (interrupteur, champ de Config) : l'enregistrement ne relit que ceux
         # des rubriques déjà construites.
         self._interrupteurs: list[tuple[ToggleSwitch, str]] = []
@@ -288,13 +293,14 @@ class SettingsDialog(QDialog):
         if rang in self._construites or not 0 <= rang < len(_RUBRIQUES):
             return
         self._construites.add(rang)
-        if rang == len(_RUBRIQUES) - 1:
+        if rang == _RANG_A_PROPOS:
             contenu = about_page.construire(
                 self.manager.catalog.contributors, manager=self.manager,
-                ouvrir_nouveautes=self.nouveautes_demandees.emit)
+                ouvrir_nouveautes=self.nouveautes_demandees.emit,
+                mises_a_jour=self._bloc_mises_a_jour())
+            self._versions_label = contenu.findChild(QLabel, "versions")
         else:
-            contenu = (None, self._page_display, self._page_downloads,
-                       self._page_integrations)[rang]()
+            contenu = (None, self._page_display, self._page_integrations)[rang]()
         courante = self._pages.currentIndex()
         vide = self._pages.widget(rang)
         self._pages.insertWidget(rang, zone_defilable(self._marges(contenu)))
@@ -338,9 +344,12 @@ class SettingsDialog(QDialog):
         cadre = QWidget()
         cadre.setStyleSheet("background: transparent;")
         lay = QHBoxLayout(cadre)
-        lay.setContentsMargins(48, 32, 48, 16)
-        page.setMaximumWidth(760)
+        lay.setContentsMargins(_MARGE_RAIL, 32, 48, 16)
+        page.setMaximumWidth(_LARGEUR_LECTURE)
+        # Le reste de la largeur va au ressort, à DROITE : un alignement
+        # à gauche aurait réduit la page à sa largeur conseillée, pas à 760 px.
         lay.addWidget(page, stretch=1)
+        lay.addStretch(0)
         return cadre
 
     @staticmethod
@@ -443,6 +452,11 @@ class SettingsDialog(QDialog):
         legende.addWidget(self._free_label)
         lay_disque.addLayout(legende)
         dossier.ajouter(disque)
+        # Venu de l'ancienne rubrique Téléchargements : les archives vivent à
+        # côté des jeux, c'est la place du disque qu'il règle.
+        ligne, self._tgl_archives = self._reglage(
+            tr("Supprimer les archives après installation"), "delete_archives")
+        dossier.ajouter(ligne)
         self._octets_jeux = 0
         self._regler_disque()
 
@@ -671,42 +685,26 @@ class SettingsDialog(QDialog):
         self._store.start(liste)
         self._refresh_trailers()
 
-    # ── Page Téléchargements ──
+    # ── Mises à jour (rubrique À propos) ──
 
-    def _page_downloads(self) -> QWidget:
-        archives = Carte()
-        ligne, _ = self._reglage(
-            tr("Supprimer les archives après installation"), "delete_archives")
-        archives.ajouter(ligne)
+    def _bloc_mises_a_jour(self) -> QWidget:
+        """Le bouton sous les numéros d'À propos, et son résultat dessous.
 
-        majs = Carte()
-        cat_ver = self.manager.catalog.catalog_version
-        btn_catalog = bouton(tr("Actualiser le catalogue"))
-        btn_catalog.clicked.connect(self._on_refresh_catalog)
-        btn_launcher = bouton(tr("Vérifier les mises à jour"), principal=True)
-        btn_launcher.clicked.connect(self._on_check_launcher)
-        ligne_versions = LigneReglage(
-            tr("Launcher v{}  ·  Catalogue v{}").format(APP_VERSION, cat_ver), "")
-        self._versions_label = ligne_versions.titre
-        majs.ajouter(ligne_versions)
-        # Les deux boutons sur leur propre ligne : à côté des numéros, ils
-        # écrasaient le titre à la largeur minimale du dialogue.
-        boutons = QWidget()
-        boutons.setStyleSheet("background: transparent;")
-        rangee = QHBoxLayout(boutons)
-        rangee.setContentsMargins(20, 0, 20, 14)
-        rangee.setSpacing(10)
-        rangee.addWidget(btn_catalog)
-        rangee.addWidget(btn_launcher)
-        rangee.addStretch()
-        # Sans filet : les boutons appartiennent à la ligne des numéros.
-        majs.layout().addWidget(boutons)
+        UN bouton : « Actualiser le catalogue » lançait le même vérificateur
+        que lui, le launcher en moins (`verification_forcee`)."""
+        bloc = QWidget()
+        bloc.setStyleSheet("background: transparent;")
+        lay = QVBoxLayout(bloc)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+        self._btn_verifier = bouton(tr("Vérifier les mises à jour"))
+        self._btn_verifier.clicked.connect(self._on_verifier)
+        lay.addWidget(self._btn_verifier, alignment=Qt.AlignmentFlag.AlignHCenter)
         self._update_status = texte("", 13, ENCRE_DOUCE, retour=True)
-        self._update_status.setContentsMargins(20, 0, 20, 14)
+        self._update_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._update_status.hide()
-        majs.layout().addWidget(self._update_status)
-
-        return self._page((tr("Téléchargement"), archives), (tr("Mises à jour"), majs))
+        lay.addWidget(self._update_status)
+        return bloc
 
     # ── Page Intégrations ──
 
@@ -909,35 +907,30 @@ class SettingsDialog(QDialog):
     def _on_open_install_folder(self) -> None:
         open_local_path(str(self.config.install_path))
 
-    def _on_refresh_catalog(self) -> None:
-        self._update_status.setText(tr("Actualisation du catalogue…"))
-        self._update_status.setStyleSheet(themed("color: #d6a72c;"))
-        self._update_status.show()
-        self.force_catalog_refresh.emit()
-
-    def _on_check_launcher(self) -> None:
+    def _on_verifier(self) -> None:
         self._update_status.setText(tr("Vérification des mises à jour…"))
         self._update_status.setStyleSheet(themed("color: #d6a72c;"))
         self._update_status.show()
-        self.force_launcher_check.emit()
+        self.verification_demandee.emit()
 
     def update_catalog_version(self, version: str) -> None:
-        """Met à jour l'affichage de la version du catalogue après un refresh."""
-        self.construire_rubrique(_RANG_TELECHARGEMENTS)
-        self._versions_label.setText(
-            tr("Launcher v{}  ·  Catalogue v{}").format(APP_VERSION, version)
-        )
-        self._update_status.setText(tr("Catalogue mis à jour en v{}").format(version))
-        self._update_status.setStyleSheet("color: #2ecc71;")
-        self._update_status.show()
+        """Redit le numéro du catalogue d'À propos après une vérification ; le
+        résultat, lui, arrive en une fois à la fin (`show_update_status`)."""
+        self.construire_rubrique(_RANG_A_PROPOS)
+        about_page.regler_catalogue(self._versions_label, version)
 
     def show_update_status(self, message: str, success: bool = True) -> None:
-        """Affiche un message de statut dans la section mises à jour."""
-        self.construire_rubrique(_RANG_TELECHARGEMENTS)
+        """Affiche le résultat sous « Vérifier les mises à jour »."""
+        self.construire_rubrique(_RANG_A_PROPOS)
         color = "#2ecc71" if success else "#8a8aaa"
         self._update_status.setText(message)
         self._update_status.setStyleSheet(f"color: {color};")
         self._update_status.show()
+
+    def jeux_a_mettre_a_jour(self) -> int:
+        """Les jeux installés dont une mise à jour attend déjà : sans eux, une
+        vérification qui n'apporte rien dirait « Tout est à jour » (règle 108)."""
+        return sum(self.manager.has_update(e.game.id) for e in self.manager.get_games())
 
     def _save(self) -> None:
         self.config.save()

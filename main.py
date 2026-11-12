@@ -83,6 +83,39 @@ def _create_splash(faits_du_jour: bool):
     return AccioSplash(fait=tr(fait) if fait else "")
 
 
+# Variables par lesquelles l'utilisateur règle lui-même l'échelle de Qt : une
+# seule posée, et le launcher n'y touche pas.
+_ECHELLE_DE_L_UTILISATEUR = ("QT_SCALE_FACTOR", "QT_SCREEN_SCALE_FACTORS",
+                             "QT_ENABLE_HIGHDPI_SCALING")
+
+
+def _plafonner_echelle(environ=None, mesurer=None) -> str | None:
+    """Windows : pose `QT_SCALE_FACTOR` si la fenêtre minimale déborde de l'écran.
+
+    À 175 % sur un 1920×1080, la zone de travail fait 1097×569 pixels
+    logiques ; `setMinimumSize(980, 660)` passait outre le plafond de
+    `geometrie_d_ouverture`, et la fenêtre s'ouvrait 91 px plus haute que
+    l'écran (constat du 2026-11-12). Le facteur ramène l'échelle juste assez
+    pour que 980×660 y tienne (`window_chrome.echelle_plafonnee`). À poser
+    AVANT `QApplication`, qui ne relit plus la variable ensuite. Rend la
+    valeur posée, ou None. Rien sous Linux : appelé derrière `sys.platform`.
+    """
+    environ = os.environ if environ is None else environ
+    if any(environ.get(nom) for nom in _ECHELLE_DE_L_UTILISATEUR):
+        return None
+    if mesurer is None:
+        from src.core.win_utils import zone_de_travail_principale as mesurer
+    zone = mesurer()
+    if zone is None:
+        return None
+    from src.ui.window_chrome import echelle_plafonnee
+    facteur = echelle_plafonnee(*zone)
+    if facteur is None:
+        return None
+    environ["QT_SCALE_FACTOR"] = valeur = f"{facteur:.3f}"
+    return valeur
+
+
 def _sortir(code: int):
     """Quitte SANS finalisation de l'interpréteur, dès que `QApplication` existe.
 
@@ -142,6 +175,16 @@ def main():
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ASTeam.AccioLauncher")
         except (AttributeError, OSError):
             pass
+        # Une échelle Windows élevée sur un petit écran : la fenêtre minimale
+        # déborderait. La mesure n'empêche jamais de démarrer.
+        try:
+            _echelle = _plafonner_echelle()
+        except Exception as exc:
+            log.warning("Échelle de l'écran illisible : %s", exc)
+            _echelle = None
+        if _echelle:
+            log.info("Échelle plafonnée à %s : 980×660 ne tenait pas dans l'écran principal",
+                     _echelle)
     else:
         # Dans l'AppImage : ce que Qt lancera (xdg-open, le navigateur) ne doit
         # pas hériter des bibliothèques embarquées. Voir `compat`.

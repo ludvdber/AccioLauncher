@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QImage
 
 from src.core import captures, galerie
@@ -224,6 +225,87 @@ class TestPage:
         page._partager.click()
         assert ouverts == [], "Discord ne s'ouvre pas pour une image qui n'est pas copiée"
         assert "ne se lit pas" in page._confirmation.text()
+
+
+class TestClavier:
+    """Constat tra2 : un arrêt par vignette, 113 appuis pour atteindre « Partager
+    sur Discord », et ↓ qui menait à la voisine de droite."""
+
+    @pytest.fixture
+    def grille(self, qtbot, mise_en_page_stable):
+        """Sept captures d'un même mois, à 1400 px : trois colonnes (3 + 3 + 1)."""
+        from PyQt6.QtWidgets import QApplication
+        from src.ui.galerie_page import GaleriePage
+        for i in range(7):
+            _capture(HP4, f"{i}.png", datetime(2026, 10, 20 - i))
+        page = GaleriePage([HP4, HP5])
+        qtbot.addWidget(page)
+        page.resize(1400, 900)
+        page.show()
+        page.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is page)
+        mise_en_page_stable(page)
+        v = page._vignettes
+        assert [x.capture.chemin.name for x in v] == [f"{i}.png" for i in range(7)]
+        assert len({x.y() for x in v[:3]}) == 1 and v[3].y() > v[0].y() and v[6].y() > v[3].y()
+        v[0].setFocus(Qt.FocusReason.TabFocusReason)
+        qtbot.waitUntil(v[0].hasFocus)
+        return page, v
+
+    def test_seule_la_choisie_est_dans_la_chaine_tab(self, grille):
+        page, v = grille
+        dans_la_chaine = [x for x in v if x.focusPolicy() & Qt.FocusPolicy.TabFocus]
+        assert dans_la_chaine == [v[0]]
+        assert all(x.focusPolicy() & Qt.FocusPolicy.ClickFocus for x in v), "le clic garde le focus"
+        v[4].setChecked(True)
+        assert [x for x in v if x.focusPolicy() & Qt.FocusPolicy.TabFocus] == [v[4]]
+
+    def test_tab_quitte_la_grille_d_un_seul_appui(self, qtbot, grille):
+        page, v = grille
+        qtbot.keyClick(v[0], Qt.Key.Key_Tab)
+        assert page._partager.hasFocus(), "Partager sur Discord juste après la grille"
+
+    def test_les_fleches_suivent_rangees_et_colonnes(self, qtbot, grille):
+        from PyQt6.QtWidgets import QApplication
+        from src.ui import focus_visible
+        focus_visible.install(QApplication.instance())   # posé une fois, comme au démarrage
+        page, v = grille
+        qtbot.keyClick(v[0], Qt.Key.Key_Right)
+        assert v[1].hasFocus() and v[1].isChecked() and page.choisie == v[1].capture
+        qtbot.keyClick(v[1], Qt.Key.Key_Down)
+        assert v[4].hasFocus() and page.choisie == v[4].capture, "la rangée du dessous, même colonne"
+        assert v[4].property("focusClavier") is True, "l'anneau du clavier suit"
+        qtbot.keyClick(v[4], Qt.Key.Key_Down)
+        assert v[6].hasFocus(), "rangée incomplète : la vignette la plus proche"
+        qtbot.keyClick(v[6], Qt.Key.Key_Up)
+        assert v[3].hasFocus()
+        qtbot.keyClick(v[3], Qt.Key.Key_Left)
+        assert v[2].hasFocus(), "← passe à la fin de la rangée d'avant"
+
+    def test_les_bords(self, qtbot, grille):
+        page, v = grille
+        qtbot.keyClick(v[0], Qt.Key.Key_Left)
+        assert v[0].hasFocus() and v[0].isChecked(), "rien avant la première"
+        qtbot.keyClick(v[0], Qt.Key.Key_Up)
+        assert page.focusWidget() in page._filtres.values(), "↑ sur la première rangée : les filtres"
+        v[6].setChecked(True)
+        v[6].setFocus(Qt.FocusReason.TabFocusReason)
+        qtbot.keyClick(v[6], Qt.Key.Key_Right)
+        assert v[6].hasFocus(), "rien après la dernière"
+        qtbot.keyClick(v[6], Qt.Key.Key_Down)
+        assert page._partager.hasFocus(), "↓ sur la dernière rangée : les actions"
+
+    def test_une_vignette_cachee_est_sautee(self, grille):
+        page, v = grille
+        assert page.voisine(v[0], Qt.Key.Key_Right) is v[1]
+        v[1].hide()
+        assert page.voisine(v[0], Qt.Key.Key_Right) is v[2]
+        assert page.voisine(v[1], Qt.Key.Key_Right) is None, "une cachée ne mène nulle part"
+
+    def test_la_manette_garde_ses_fleches_dans_la_grille(self, grille):
+        from src.ui.manette_nav import GARDE_FLECHES
+        _page, v = grille
+        assert all(x.property(GARDE_FLECHES) is True for x in v)
 
 
 class TestDansCollections:

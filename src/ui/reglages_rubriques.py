@@ -83,7 +83,7 @@ _GROUPES_EFFETS = (
     ("Contours", ("lissage", "nettete", "anticrenelage", "anticrenelage_transparence",
                   "surechantillonnage")),
     ("Textures", ("filtrage", "textures_lointaines", "feuillage_lointain", "mipmaps_fins",
-                  "particules_lointaines", "decor_entier")),
+                  "textures_hd", "particules_lointaines", "decor_entier")),
     ("Lumière et ombres", ("occlusion", "ombres_nettes", "ombres_douces", "halo", "rayons")),
 )
 # « Ambiance » : ce qui CHANGE le style d'origine au lieu de l'affiner (Ludo,

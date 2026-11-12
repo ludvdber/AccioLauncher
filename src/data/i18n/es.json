@@ -70,11 +70,7 @@
     "Le lieu et l'avancement de votre partie s'affichent sur votre carte Discord. Éteint, seuls le jeu, votre maison et votre année restent.": "El lugar y el avance de tu partida aparecen en tu tarjeta de Discord. Desactivado, solo quedan el juego, tu casa y tu año.",
     "Langue": "Idioma",
     "Redémarrez le launcher pour appliquer la langue.": "Reinicia el launcher para aplicar el idioma.",
-    "Mises à jour": "Actualizaciones",
-    "Launcher v{}  ·  Catalogue v{}": "Launcher v{}  ·  Catálogo v{}",
-    "Actualiser le catalogue": "Actualizar el catálogo",
     "Vérifier les mises à jour": "Buscar actualizaciones",
-    "Actualisation du catalogue…": "Actualizando el catálogo…",
     "Vérification des mises à jour…": "Buscando actualizaciones…",
     "Catalogue mis à jour en v{}": "Catálogo actualizado a v{}",
     "Catalogue déjà à jour": "El catálogo ya está actualizado",
@@ -110,6 +106,7 @@
     "Le téléchargement a échoué : la page de la release s'ouvre pour l'installer à la main.": "La descarga ha fallado: se abre la página de la release para instalarla a mano.",
     "Catalogue mis à jour (v{})": "Catálogo actualizado (v{})",
     "Mise à jour disponible pour {}": "Actualización disponible para {}",
+    "1 jeu a une mise à jour disponible": "1 juego tiene una actualización disponible",
     "{} jeux ont une mise à jour disponible": "{} juegos tienen una actualización disponible",
     "{} installé avec succès ✓": "{} instalado correctamente ✓",
     "Téléchargement terminé": "Descarga completada",
@@ -184,7 +181,6 @@
     "Redémarrer maintenant": "Reiniciar ahora",
     "Le launcher ne s'est pas relancé : rouvrez-le vous-même.": "El launcher no se ha reiniciado: vuelve a abrirlo tú.",
     "Général": "General",
-    "Téléchargements": "Descargas",
     "Particules saisonnières": "Partículas de temporada",
     "Automatique (selon la date)": "Automático (según la fecha)",
     "Aucune": "Ninguna",
@@ -1295,6 +1291,7 @@
     "Votre sauvegarde la plus avancée : {} %": "Tu partida más avanzada: {} %",
     "{n} morceaux sur {total}": "{n} pistas de {total}",
     "Morceau à découvrir": "Pista por descubrir",
+    "{} à découvrir": "{} por descubrir",
     "Cinématique à découvrir": "Cinemática por descubrir",
     "Écouter {}": "Escuchar {}",
     "Regarder {}": "Ver {}",
@@ -1487,6 +1484,8 @@
     "Décor entier affiché": "Decorado entero dibujado",
     "Le jeu ne dessine que les parties du parc reliées par un passage à l'endroit d'où l'on regarde : hors de la vue de Harry, des objets disparaissent. « En caméra libre » les garde pendant le vol, « Toujours » aussi en jouant. Demande plus à la carte graphique et au processeur : à laisser « D'origine » sur un PC modeste.": "El juego solo dibuja las partes del parque unidas por un paso al lugar desde donde se mira: fuera de la vista de Harry, los objetos desaparecen. «Con la cámara libre» los mantiene durante el vuelo, «Siempre» también al jugar. Exige más a la tarjeta gráfica y al procesador: déjalo en «Original» en un PC modesto.",
     "En caméra libre": "Con la cámara libre",
-    "Toujours": "Siempre"
+    "Toujours": "Siempre",
+    "Textures HD": "Texturas HD",
+    "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au prochain lancement du jeu.": "Sustituye las texturas del juego por versiones más detalladas: paredes, suelos y decorado más nítidos de cerca. Hace falta el pack de texturas HD beta, que se descarga en el Discord de Accio y se descomprime en la carpeta del juego; sin él, este ajuste no cambia nada. Exige más memoria de vídeo. Se aplica la próxima vez que se inicie el juego."
   }
 }

@@ -101,6 +101,11 @@ QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }
 QFrame#ligne[ouverte="true"]:hover { background: rgba(214, 167, 44, 0.05); }
+QPushButton#pli {
+    background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+QPushButton#pli:hover { background: rgba(214, 167, 44, 0.05); }
+QPushButton#pli[focusClavier="true"]:focus { border: 1px solid #d6a72c; }
 QPushButton#lecture { background: #d6a72c; border: none; border-radius: 25px; }
 QPushButton#lecture:hover, QPushButton#lecture[focusClavier="true"]:focus { background: #e8bd4a; }
 QPushButton#lecture:disabled { background: rgba(214, 167, 44, 0.35); }
@@ -453,6 +458,65 @@ class _LigneMorceau(QFrame):
             self._fond.setVisible(fond)
 
 
+class _PliFermes(QWidget):
+    """Les morceaux encore fermés, repliés sous les ouverts.
+
+    126 lignes « Morceau à découvrir » sur 152 noyaient les 26 qu'on peut
+    écouter (HP3, constat accepté par Ludo le 2026-11-12) : un seul pli dit
+    combien il en reste, et déroule les lignes, avec leurs seuils, pour qui
+    veut les voir. Elles se bâtissent à la première ouverture, par paquets.
+    """
+
+    def __init__(self, fabriques: list) -> None:
+        super().__init__()
+        _transparent(self)
+        self._fabriques = fabriques
+        self._bati = False
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        libelle = tr("{} à découvrir").format(len(fabriques))
+        self.bouton = QPushButton()
+        self.bouton.setObjectName("pli")
+        self.bouton.setCheckable(True)
+        self.bouton.setMinimumHeight(44)
+        self.bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.bouton.setAccessibleName(libelle)
+        rangee = QHBoxLayout(self.bouton)
+        rangee.setContentsMargins(8, 3, 8, 3)
+        rangee.setSpacing(12)
+        rangee.addSpacing(26)               # sous la colonne des numéros
+        rangee.addWidget(_cadenas())
+        self.libelle = texte(libelle, 15, ENCRE_DOUCE)
+        rangee.addWidget(self.libelle, stretch=1)
+        self._chevron = QLabel()
+        self._chevron.setFixedSize(32, 32)
+        self._chevron.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        rangee.addWidget(self._chevron)
+        for enfant in (self.libelle, self._chevron):
+            enfant.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.bouton.toggled.connect(self._basculer)
+        lay.addWidget(self.bouton)
+        self.corps = _transparent(QWidget())
+        pile = QVBoxLayout(self.corps)
+        pile.setContentsMargins(0, 0, 0, 0)
+        pile.setSpacing(0)
+        self._paquets = _Paquets(self, pile)
+        self.corps.hide()
+        lay.addWidget(self.corps)
+        self._poser_chevron(False)
+
+    def _poser_chevron(self, ouvert: bool) -> None:
+        self._chevron.setPixmap(pixmap_icone("replier" if ouvert else "deplier", 14, QColor("#a9a7c4")))
+
+    def _basculer(self, ouvert: bool) -> None:
+        if ouvert and not self._bati:
+            self._bati = True
+            self._paquets.remplir(self._fabriques)
+        self.corps.setVisible(ouvert)
+        self._poser_chevron(ouvert)
+
+
 class _VueMusique(QWidget):
     """La platine à gauche, l'avancement et les morceaux du jeu choisi à droite."""
 
@@ -464,6 +528,10 @@ class _VueMusique(QWidget):
         self._lisible = False          # le jeu affiché a des morceaux qu'on peut lancer
         self._affichee = False
         self._lignes: list[_LigneMorceau] = []
+        # Un pli ouvert bâtit ses lignes sur SON minuteur, que `remplir` n'arrête
+        # pas : sans ce tour, un jeu remontré pendant ce temps recevait dans
+        # `_lignes` des lignes promises à `deleteLater` (`marquer` levait ensuite).
+        self._tour = 0
         self._dossier_enregistre = None
         racine = QHBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
@@ -684,6 +752,7 @@ class _VueMusique(QWidget):
         self._vide.setVisible(not self._lisible)
         self._bouton_lecteur.setVisible(attend)
         self._lignes = []
+        self._tour += 1
         if attend:
             # Un téléchargement à la demande dit son poids (règle du « coché d'avance ») ;
             # celui déjà en cours, ouvert depuis une autre page, garde son bouton éteint.
@@ -714,15 +783,26 @@ class _VueMusique(QWidget):
         avance = media.avance(jeu)
         ouverts = sum(media.ouvert(jeu, m.seuil) for m in morceaux)
 
-        def fabrique(i: int, m: discographie.Morceau):
+        tour = self._tour
+
+        def fabrique(i: int, m: discographie.Morceau, ouvert: bool):
             def faire() -> QWidget:
-                ligne = _LigneMorceau(self, jeu, i, m, media.ouvert(jeu, m.seuil), m.fichier in nouveaux)
+                ligne = _LigneMorceau(self, jeu, i, m, ouvert, m.fichier in nouveaux)
                 ligne.marquer(ligne.cle == self._fond.morceau, ligne.cle == self._fond.fond)
-                self._lignes.append(ligne)
+                if tour == self._tour:
+                    self._lignes.append(ligne)
                 return ligne
             return faire
 
-        self._paquets.remplir([fabrique(i, m) for i, m in enumerate(morceaux, 1)])
+        # Les ouverts d'abord, dans leur ordre ; les fermés sous un seul pli. Le
+        # numéro suit l'ordre affiché.
+        a_ecouter = [m for m in morceaux if media.ouvert(jeu, m.seuil)]
+        fermes = [m for m in morceaux if not media.ouvert(jeu, m.seuil)]
+        fabriques: list = [fabrique(i, m, True) for i, m in enumerate(a_ecouter, 1)]
+        if fermes:
+            sous_le_pli = [fabrique(i, m, False) for i, m in enumerate(fermes, len(a_ecouter) + 1)]
+            fabriques.append(lambda: _PliFermes(sous_le_pli))
+        self._paquets.remplir(fabriques)
         self._nom_jeu.setText(media.nom(jeu))
         self._compte.setText(trn(ouverts, "{n} morceau sur {total}", "{n} morceaux sur {total}")
                              .format(n=ouverts, total=len(morceaux)))

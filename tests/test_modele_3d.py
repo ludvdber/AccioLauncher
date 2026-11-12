@@ -191,3 +191,150 @@ def test_au_repos_la_rotation_passe_a_30_images(qtbot):
     v._elan = (3.0, 0.0)
     v._avancer()
     assert v._minuteur.interval() == modele_3d._INTERVALLE
+
+
+# ─── Le décor et l'aide (constat col15, 2026-11-12) ───
+
+def _molette(v: Modele3D) -> None:
+    from PyQt6.QtCore import QPoint, Qt
+    from PyQt6.QtGui import QWheelEvent
+    v.wheelEvent(QWheelEvent(QPointF(10, 10), QPointF(10, 10), QPoint(), QPoint(0, 120),
+                             Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier,
+                             Qt.ScrollPhase.NoScrollPhase, False))
+
+
+def _dans(peindre, largeur: int = 200, hauteur: int = 240) -> QImage:
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QPainter
+    image = QImage(largeur, hauteur, QImage.Format.Format_ARGB32_Premultiplied)
+    image.fill(Qt.GlobalColor.transparent)
+    p = QPainter(image)
+    peindre(p)
+    p.end()
+    return image
+
+
+def test_le_halo_est_d_or_et_s_eteint_au_bord(qtbot):
+    """Le modèle flottait sur un aplat : un halo d'or très doux derrière lui."""
+    from src.ui.theme import accent_qcolor
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(200, 240)
+    v.poser(_carre())
+    image = _dans(v.halo)
+    coeur = image.pixelColor(100, round(240 * 0.47))
+    assert 0 < coeur.alpha() <= 60, "très doux"
+    or_ = accent_qcolor()
+    assert (coeur.red(), coeur.green(), coeur.blue()) == pytest.approx(
+        (or_.red(), or_.green(), or_.blue()), abs=12)
+    assert image.pixelColor(0, 0).alpha() == 0 and image.pixelColor(199, 239).alpha() == 0
+
+
+def test_le_halo_se_peint_une_fois_par_taille(qtbot):
+    """60 images/s : le dégradé du halo n'est pas recalculé à chaque image."""
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(200, 240)
+    v.poser(_carre())
+    _dans(v.halo)
+    premier = v._halo
+    _dans(v.halo)
+    assert v._halo is premier
+    v.resize(220, 240)
+    _dans(v.halo, 220)
+    assert v._halo is not premier
+
+
+def test_le_sol_est_clair_et_non_plus_une_ombre_noire(qtbot):
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(200, 240)
+    v.poser(_carre())
+    image = _dans(v.sol)
+    x, y, r = v.place_du_sol()
+    assert y > 240 * 0.52 + 0.4 * r, "sous le modèle, pas derrière ses jambes"
+    centre = image.pixelColor(round(x), round(y))
+    assert centre.alpha() > 0
+    assert min(centre.red(), centre.green(), centre.blue()) > 200, centre.name()   # une lueur, pas du noir
+    assert image.pixelColor(0, 0).alpha() == 0
+
+
+def test_la_vignette_garde_le_sol_sans_halo(qtbot, monkeypatch):
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.poser(_carre(), {"rouge": _rouge()})
+    couches = []
+    monkeypatch.setattr(v, "halo", lambda p: couches.append("halo"))
+    sol = v.sol
+    monkeypatch.setattr(v, "sol", lambda p: (couches.append("sol"), sol(p)))
+    image = v.rendu(QSize(120, 160), 1.0)
+    assert couches == ["sol"], "pas de halo dans une vignette"
+    assert image.pixelColor(60, 6).alpha() == 0
+
+
+def test_le_widget_peint_halo_puis_sol_puis_modele(qtbot, monkeypatch):
+    """L'ordre des appels est l'ordre de profondeur (règle 22)."""
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(120, 160)
+    v.poser(_carre(), {"rouge": _rouge()})
+    couches = []
+    for nom in ("halo", "sol", "_dessiner"):
+        monkeypatch.setattr(v, nom, lambda p, nom=nom: couches.append(nom))
+    v.grab()
+    assert couches == ["halo", "sol", "_dessiner"]
+
+
+def test_le_premier_geste_est_signale_une_seule_fois(qtbot):
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.poser(_carre())
+    gestes = []
+    v.manipule.connect(lambda: gestes.append(1))
+    _molette(v)
+    v.mouseDoubleClickEvent(None)
+    _molette(v)
+    assert gestes == [1]
+
+
+def test_un_double_clic_compte_comme_un_geste(qtbot):
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.poser(_carre())
+    with qtbot.waitSignal(v.manipule, timeout=100):
+        v.mouseDoubleClickEvent(None)
+
+
+def test_l_aide_s_efface_au_premier_geste_et_garde_sa_place(qtbot):
+    """L'aide restait affichée en permanence : seulement jusqu'au premier geste."""
+    from src.ui.encyclopedie_page import _Scene
+    scene = _Scene()
+    qtbot.addWidget(scene)
+    scene.resize(520, 760)
+    scene.show()
+    scene.modele.poser(_carre())
+    assert scene.aide.isVisible()
+    hauteur = scene.modele.height()
+    _molette(scene.modele)
+    assert scene.aide.isHidden()
+    scene.layout().activate()
+    assert scene.modele.height() == hauteur, "le modèle ne saute pas"
+
+
+@pytest.mark.parametrize("largeur", [20.0, 80.0])
+def test_le_sol_tombe_sous_les_pieds_meme_d_un_modele_plus_large_que_haut(qtbot, largeur):
+    """Une araignée est plus longue que haute : ses pieds ne sont pas à une
+    demi-taille sous le centre, le sol doit les suivre et non flotter dessous."""
+    points = ((0.0, -largeur / 2, 0.0), (0.0, largeur / 2, 0.0),
+              (0.0, largeur / 2, 20.0), (0.0, -largeur / 2, 20.0))
+    uv = ((0.0, 1.0), (1.0, 1.0), (1.0, 0.0))
+    maillage = mu.Maillage(points, (mu.Face((0, 1, 2), uv, 0),), (mu.Materiau("rouge", 0),))
+    v = Modele3D()
+    qtbot.addWidget(v)
+    v.resize(200, 240)
+    v.poser(maillage)
+    v._phase = 0.0                                  # sans souffle
+    _, y, _ = v.place_du_sol()
+    bas = v.projeter()[:2]                          # les deux coins du bas
+    pieds = (bas[0][1] + bas[1][1]) / 2
+    assert y == pytest.approx(pieds, abs=3)
