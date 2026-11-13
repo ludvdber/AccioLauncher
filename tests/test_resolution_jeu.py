@@ -279,3 +279,81 @@ class TestRemplitLEcran:
         (d / "winmm.dll").write_bytes(b"MZ")
         monkeypatch.setattr(rj.sys, "platform", "linux")
         assert not rj.remplit_l_ecran(game, config)
+
+
+D3D9_INI = ("[Accio.Window]\r\nWindowStyle=1\r\n"
+            "[Accio.Game]\r\n; La taille de départ\r\nWidth=1920\r\nHeight=1080\r\n"
+            "ScreenshotFolder=C:\\Users\\x\\Pictures\\Accio Launcher\\Harry Potter et l'Ordre du Phénix\r\n")
+BLOC_HP6 = {"file": "%INSTALL_DIR%\\d3d9.ini", "section": "Accio.Game", "width": "Width", "height": "Height",
+            "option_registry": {"root": "HKCU", "value": "OptionResolution", "set": 0,
+                                "key": "Software\\Electronic Arts\\Harry Potter and the Half Blood Prince\\GameSettings"}}
+
+
+class TestCorrectifHp4AHp6:
+    """HP4 à HP6 (2026-11-13, Ludo : « HP6 était flou, je n'étais pas en 1440p ») : la taille va dans
+    `[Accio.Game] Width/Height` de leur correctif, parmi les modes de l'écran ; HP5 et HP6 ont leur
+    rang de résolution remis à 0 dans le registre."""
+
+    @pytest.fixture
+    def hp6(self, tmp_path):
+        dossier = tmp_path / "Jeux" / "HP6"
+        dossier.mkdir(parents=True)
+        ini = dossier / "d3d9.ini"
+        ini.write_bytes(D3D9_INI.encode("utf-8"))
+        game = SimpleNamespace(id="hp6", name="HP6", executable="HP6/hp6.exe",
+                               resolution=_parse_resolution(BLOC_HP6))
+        return game, Config(install_path=tmp_path / "Jeux"), ini
+
+    def test_le_bloc_porte_le_rang_du_registre(self):
+        spec = _parse_resolution(BLOC_HP6)
+        assert spec is not None and rj.du_correctif(spec)
+        assert (spec.registre.value, spec.registre.valeur) == ("OptionResolution", 0)
+
+    def test_un_rang_douteux_retire_tout_le_bloc(self):
+        douteux = {**BLOC_HP6, "option_registry": {**BLOC_HP6["option_registry"], "set": True}}
+        assert _parse_resolution(douteux) is None
+
+    def test_seuls_les_modes_de_l_ecran(self):
+        modes = [(2560, 1440), (1920, 1080), (1280, 720)]
+        assert rj.proposees((2560, 1440), modes) == [(1920, 1080), (1280, 720)]
+        assert rj.taille_pour("2560x1080", (2560, 1440), modes) == (2560, 1440), "pas un mode : l'écran"
+        assert rj.taille_pour("1920x1080", (2560, 1440), modes) == (1920, 1080)
+
+    def test_une_fenetre_a_cadre_prend_le_plus_grand_mode_qui_tient(self):
+        """La place d'une fenêtre à cadre (2544×1353) n'est pas un mode : HP6 s'arrêterait au démarrage."""
+        assert rj.taille_pour("", (2544, 1353), [(2560, 1440), (1920, 1080)]) == (1920, 1080)
+
+    def test_ecrite_en_place_sans_toucher_au_reste(self, hp6, monkeypatch):
+        game, config, ini = hp6
+        monkeypatch.setattr(rj, "modes_ecran", lambda: [(2560, 1440), (1920, 1080)])
+        monkeypatch.setattr(rj.registre, "disponible", lambda: False)
+        assert rj.appliquer(game, config, (2560, 1440)) == (2560, 1440)
+        texte = ini.read_bytes().decode("utf-8")
+        assert "Width=2560\r\nHeight=1440\r\n" in texte
+        assert "; La taille de départ\r\n" in texte and "Phénix" in texte   # UTF-8 et CRLF gardés
+
+    def test_le_rang_du_menu_remis_a_zero_en_prevenant(self, hp6, monkeypatch):
+        game, config, _ini = hp6
+        monkeypatch.setattr(rj, "modes_ecran", lambda: [(2560, 1440)])
+        monkeypatch.setattr(rj.registre, "disponible", lambda: True)
+        monkeypatch.setattr(rj.registre, "lire_valeurs", lambda *_a: {"OptionResolution": 1})
+        ecrits = []
+        monkeypatch.setattr(rj.registre, "ecrire_valeurs",
+                            lambda ruche, cle, valeurs, vue, confirmer=None: ecrits.append((valeurs, confirmer)) or True)
+        prevenir = object()
+        rj.appliquer(game, config, (2560, 1440), confirmer=prevenir)
+        assert ecrits == [({"OptionResolution": 0}, prevenir)]
+
+    def test_rang_deja_a_zero_le_registre_n_est_pas_touche(self, hp6, monkeypatch):
+        game, config, _ini = hp6
+        monkeypatch.setattr(rj, "modes_ecran", lambda: [(2560, 1440)])
+        monkeypatch.setattr(rj.registre, "disponible", lambda: True)
+        monkeypatch.setattr(rj.registre, "lire_valeurs", lambda *_a: {"OptionResolution": 0})
+        monkeypatch.setattr(rj.registre, "ecrire_valeurs", lambda *_a, **_k: pytest.fail("écrit pour rien"))
+        rj.appliquer(game, config, (2560, 1440))
+
+    @pytest.mark.parametrize("style, ecran", [("1", True), ("4", True), ("2", False), ("3", False)])
+    def test_sans_bordure_la_place_est_l_ecran(self, hp6, style, ecran):
+        game, config, ini = hp6
+        ini.write_bytes(D3D9_INI.replace("WindowStyle=1", f"WindowStyle={style}").encode("utf-8"))
+        assert rj.sans_bordure(game, config) is ecran

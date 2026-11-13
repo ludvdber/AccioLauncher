@@ -35,18 +35,16 @@ from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
     QGraphicsOpacityEffect,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QRadioButton,
-    QScrollArea,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from src.core import reglages_correctif, reglages_graphiques
+from src.core import reglages_correctif, reglages_graphiques, resolution_jeu
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -54,7 +52,6 @@ from src.ui.aide_reglage import BoutonAide
 from src.ui.composants import (
     ENCRE_DOUCE,
     Carte,
-    Rangee,
     bouton_retour,
     bouton_rubrique,
     feuille_de_style,
@@ -64,13 +61,13 @@ from src.ui.composants import (
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
+from src.ui.page_image import PageImage
 from src.ui.theme import themed
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import zone_defilable
 from src.ui.reglages_widgets import (  # réexportés
     _STYLE,
     _CarteEffets,
-    _CartePrereglage,
     _Disposition,
     _Jaquette,
     _Ligne,
@@ -84,8 +81,6 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     _COULEURS_COUT,
     _COULEUR_SE_VOIT,
     _COULEUR_NOTE,
-    _GROUPES_EFFETS,
-    _GROUPES_AMBIANCE,
     _RESSOURCES,
     _NIVEAUX,
     _A_VENIR,
@@ -98,9 +93,6 @@ _LARGEUR_RAIL = 260
 # large, la page Image passe d'elle-même en une colonne.
 _TAILLE_VOULUE = QSize(1320, 860)
 _TAILLE_MIN = QSize(900, 580)
-# La page Image côte à côte au-dessus de ça : la colonne de gauche (affichage,
-# préréglages) et la carte des effets.
-_SEUIL_IMAGE = 860
 # Une hauteur commune aux en-têtes de cartes voisines : la légende de « Chaque
 # effet » (œil et points de 18 px) décalait sa carte de 3 px par rapport à la
 # colonne de gauche.
@@ -162,10 +154,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # l'éditeur fait apparaître dès qu'une touche est choisie à l'unité.
         self._editeur: EditeurTouches | None = None
         self._note_preregle: QLabel | None = None
-        # « Qualité d'image » : les préréglages de CE jeu et leurs cartes.
-        self._prereglages: tuple = ()
-        self._boutons_prereglage: dict[str, QPushButton] = {}
-        self._carte_des_effets: QWidget | None = None
+        # L'onglet Image des jeux à correctif (`page_image`), None ailleurs.
+        self._page_img: PageImage | None = None
 
         self.setWindowTitle(tr("Réglages de {}").format(game.name))
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
@@ -215,9 +205,15 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if not self._remplir(ident, corps):
                 contenu.deleteLater()
                 continue
-            page.addStretch()
             self._contenus.append(contenu)
-            self._defile.addWidget(zone_defilable(contenu))
+            if ident == "image" and self._page_img is not None:
+                # La page Image défile en dedans : ses onglets, sa recherche et sa fiche restent en place.
+                corps.setStretch(0, 1)
+                page.setStretch(page.count() - 1, 1)
+                self._defile.addWidget(contenu)
+            else:
+                page.addStretch()
+                self._defile.addWidget(zone_defilable(contenu))
             pages.append((ident, libelle, icone))
 
         racine.addWidget(self._rail(pages))
@@ -319,7 +315,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if self._section_graphiques(corps, "image"):
                 return True
             # HP1/HP2 : la résolution est au launcher, leurs réglages du correctif ne la retirent pas.
-            if not self._reglages or self.game.resolution is not None:
+            # HP4 à HP6 l'ont aussi, mais dans la page Image de leur correctif (rubrique « Écran »).
+            resolution = self.game.resolution
+            if not self._reglages or (resolution is not None and not resolution_jeu.du_correctif(resolution)):
                 self._section_affichage(corps)
                 return True
             return self._page_image(corps)
@@ -361,45 +359,12 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             # Jeu absent ou ancien correctif : une seule note pour toute la page.
             return (self._section_correctif(corps, "affichage")
                     or self._section_correctif(corps, "image"))
-        gauche = QWidget()
-        gauche.setStyleSheet("background: transparent;")
-        colonne = QVBoxLayout(gauche)
-        colonne.setContentsMargins(0, 0, 0, 0)
-        colonne.setSpacing(0)
-        self._section_correctif(colonne, "affichage", titre=tr("Affichage"))
-        image = [r for r in self._reglages if r.onglet == "image"]
-        idents_ambiance = {i for _nom, idents in _GROUPES_AMBIANCE for i in idents}
-        ambiance = [r for r in image if r.ident in idents_ambiance]
-        qualite = [r for r in image if r.ident not in idents_ambiance]
-        droite = None
-        if qualite:
-            self._prereglages = reglages_correctif.prereglages_du_jeu(qualite)
-            if self._prereglages:
-                self._section(colonne, self._surtitre_cale(tr("Qualité d'image")),
-                              self._cartes_prereglages())
-            droite = QWidget()
-            droite.setStyleSheet("background: transparent;")
-            v = QVBoxLayout(droite)
-            v.setContentsMargins(0, 0, 0, 0)
-            v.setSpacing(0)
-            carte = self._effets_par_familles(qualite, _GROUPES_EFFETS)
-            self._section(v, self._entete_effets(tr("Chaque effet")), carte)
-            v.addStretch()
-            self._carte_des_effets = carte
-        if ambiance:
-            self._section(colonne, self._entete_ambiance(),
-                          self._effets_par_familles(ambiance, _GROUPES_AMBIANCE))
-        if image:
-            self._maj_dependances()
-            self._maj_prereglage()
-        colonne.addStretch()
-        blocs = [b for b, plein in ((gauche, colonne.count() > 1), (droite, droite is not None)) if plein]
-        if not blocs:
+        reglages = tuple(r for r in self._reglages if r.onglet in ("affichage", "image"))
+        if self._ini is None or (not reglages and self.game.resolution is None):
             return False
-        if len(blocs) == 2:
-            corps.addWidget(Rangee(blocs, colonnes=2, seuil=_SEUIL_IMAGE, etirements=(4, 5), ecart=36))
-        else:
-            corps.addWidget(blocs[0])
+        self._page_img = PageImage(self.game, self.manager.config, self._ini, reglages,
+                                   self._montrer_erreur, self._apres_ecriture)
+        corps.addWidget(self._page_img, stretch=1)
         self._bouton_origine()
         return True
 
@@ -447,29 +412,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _carte_effets(self) -> _CarteEffets:
         return _CarteEffets()
 
-    def _cartes_prereglages(self) -> QWidget:
-        """Légère · Équilibrée · Maximale · Sur mesure, en cartes de deux sur deux."""
-        bloc = QWidget()
-        bloc.setStyleSheet("background: transparent;")
-        grille = QGridLayout(bloc)
-        grille.setContentsMargins(0, 0, 0, 0)
-        grille.setSpacing(10)
-        groupe = QButtonGroup(self)
-        groupe.setExclusive(True)
-        entrees = [(ident, nom, texte, rang + 1)
-                   for rang, (ident, nom, texte, _v) in enumerate(self._prereglages)]
-        entrees.append(("", "Sur mesure", "Se choisit tout seul dès qu'un effet change.", 0))
-        for rang, (ident, nom, texte, niveau) in enumerate(entrees):
-            repere = _Points(min(niveau, 3), largeur_segment=16) if niveau else None
-            carte = _CartePrereglage(tr(nom), tr(texte), repere)
-            if not ident:
-                carte.setProperty("surMesure", True)
-            carte.clicked.connect(lambda _c=False, i=ident: self._choisir_prereglage(i))
-            groupe.addButton(carte)
-            grille.addWidget(carte, rang // 2, rang % 2)
-            self._boutons_prereglage[ident] = carte
-        return bloc
-
     def _fiche(self, aide_txt: str, reglage=None) -> str:
         """Ce qu'ouvre le « ? » : la description, puis tout ce qu'on sait du réglage."""
         e = html.escape
@@ -500,46 +442,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 paragraphes.append(e(tr("L'allumer éteint « {} », qui ne peut pas agir en même "
                                         "temps.").format(reglages_correctif.textes(exclu)[0])))
         return "".join(f"<p>{p}</p>" for p in paragraphes)
-
-    def _maj_prereglage(self) -> None:
-        """La carte cochée suit ce que portent VRAIMENT les contrôles."""
-        if not self._prereglages:
-            return
-        courant = reglages_correctif.prereglage_courant(self._prereglages, self._valeurs_affichees())
-        carte = self._boutons_prereglage.get(courant)
-        if carte is not None:
-            carte.setChecked(True)
-
-    def _choisir_prereglage(self, ident: str) -> None:
-        if not ident:
-            # « Sur mesure » n'écrit rien : il mène aux effets, qu'on règle un par un.
-            zone = self._zone_de(self._carte_des_effets)
-            if zone is not None:
-                zone.ensureWidgetVisible(self._carte_des_effets, 0, 0)
-            self._maj_prereglage()
-            return
-        voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
-        try:
-            for cle, valeur in voulues.items():
-                reglages_correctif.ecrire(self._ini, reglages_correctif.REGLAGES[cle], valeur)
-        except (OSError, ValueError):
-            log.warning("Correctif : préréglage %s non écrit", ident, exc_info=True)
-            self._montrer_erreur()
-        else:   # efface l'erreur d'avant (`isHidden()` la gardait ; audit du 2026-11-02)
-            self._apres_ecriture()
-        # Les contrôles reprennent ce que porte le fichier, écrit en entier ou non.
-        for cle in voulues:
-            widget = self._controles.get(cle)
-            if widget is not None:
-                self._remettre_controle(widget, reglages_correctif.REGLAGES[cle])
-        self._maj_dependances()
-        self._maj_prereglage()
-
-    @staticmethod
-    def _zone_de(widget: QWidget | None) -> QScrollArea | None:
-        while widget is not None and not isinstance(widget, QScrollArea):
-            widget = widget.parentWidget()
-        return widget
 
     def _section_correctif(self, corps: QVBoxLayout, onglet: str, titre: str = "") -> bool:
         """Les réglages du correctif PC (HP4-HP7b) rangés dans CET onglet ; False s'il n'y en a pas.
@@ -697,11 +599,12 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             widget = self._controles.get(reglage.ident)
             if widget is not None:
                 self._remettre_controle(widget, reglage)
+        if self._page_img is not None:
+            self._page_img.rafraichir()
         if self._editeur is not None:
             self._editeur.rafraichir()
         self._maj_preregle()
         self._maj_dependances()
-        self._maj_prereglage()
         self._erreur.hide()
         self._annoncer_remise()
 
@@ -855,12 +758,10 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._remettre_controle(widget, reglage)
             self._montrer_erreur()
             self._maj_dependances()
-            self._maj_prereglage()
             return
         self._apres_ecriture()   # avant l'exclusion, dont l'erreur était aussitôt effacée
         self._appliquer_exclusion(reglage, valeur)
         self._maj_dependances()
-        self._maj_prereglage()
         if reglage.ident == "touches_zqsd" and self._editeur is not None:
             self._editeur.rafraichir()
 

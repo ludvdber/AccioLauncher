@@ -96,3 +96,67 @@ def test_l_installeur_garde_les_configs():
     source = (Path(__file__).resolve().parent.parent / "src" / "core" / "installer.py").read_text(
         encoding="utf-8")
     assert "garder_existants=True" in source
+
+
+class TestSeulementCeQueLeJoueurAChange:
+    """Une clé que le joueur n'a pas touchée prend la valeur de la nouvelle version."""
+
+    LIVRE = ("[Accio.Window]\r\nWindowed=0\r\nScreenshotKey=123\r\n\r\n"
+             "[Accio.Game]\r\nFOV=1.3\r\nAncienneCle=7\r\n")
+    NEUF = ("[Accio.Window]\r\nWindowed=0\r\nScreenshotKey=44\r\n\r\n"
+            "[Accio.Game]\r\nFOV=1.0\r\n")
+
+    def test_le_defaut_neuf_arrive_ce_qui_est_change_reste(self):
+        # Le joueur a changé Windowed (0 → 1) ; FOV et ScreenshotKey sont restés ceux livrés.
+        texte, changees = reglages_conserves.fusionner(self.NEUF, ANCIEN, self.LIVRE)
+        assert "Windowed=1" in texte, "ce que le joueur a choisi reste"
+        assert "FOV=1.0" in texte and "ScreenshotKey=44" in texte, "le nouveau défaut arrive"
+        assert changees == 1
+
+    def test_espaces_autour_du_egal_ne_comptent_pas(self):
+        texte, changees = reglages_conserves.fusionner("[A]\nX=2\n", "[A]\nX = 1\n", "[A]\nX=1\n")
+        assert texte == "[A]\nX=2\n" and changees == 0
+
+    def test_cle_absente_de_l_origine_est_gardee(self):
+        texte, _ = reglages_conserves.fusionner("[A]\nX=2\n", "[A]\nX=5\n", "[A]\n")
+        assert "X=5" in texte
+
+    def test_changement_de_version_de_bout_en_bout(self, tmp_path):
+        jeu = _jeu()
+        dossier = tmp_path / "HP4" / "system"
+        dossier.mkdir(parents=True)
+        (dossier / "d3d9.ini").write_bytes(ANCIEN.encode())
+        (dossier / "d3d9.ini.origine").write_bytes(self.LIVRE.encode())
+        gardes = reglages_conserves.mettre_de_cote(jeu, tmp_path)
+        for f in dossier.iterdir():
+            f.unlink()                                          # l'ancienne version part
+        (dossier / "d3d9.ini").write_bytes(self.NEUF.encode())  # la nouvelle arrive
+        reglages_conserves.reposer(jeu, tmp_path, gardes)
+        texte = (dossier / "d3d9.ini").read_text()
+        assert "Windowed=1" in texte and "FOV=1.0" in texte
+        assert (dossier / "d3d9.ini.origine").read_bytes() == self.NEUF.encode()
+
+    def test_reparation_l_origine_devient_celle_de_la_version_posee(self, tmp_path):
+        jeu = _jeu()
+        dossier = tmp_path / "HP4" / "system"
+        dossier.mkdir(parents=True)
+        (dossier / "d3d9.ini").write_bytes(ANCIEN.encode())
+        (dossier / "d3d9.ini.origine").write_bytes(self.LIVRE.encode())
+        gardes = reglages_conserves.mettre_de_cote(jeu, tmp_path)
+        (dossier / "d3d9.ini").write_bytes(self.NEUF.encode())  # la réparation repose l'ini livré
+        reglages_conserves.reposer(jeu, tmp_path, gardes)
+        assert (dossier / "d3d9.ini.origine").read_bytes() == self.NEUF.encode()
+        assert "FOV=1.0" in (dossier / "d3d9.ini").read_text()
+
+    def test_une_origine_seule_ne_garde_rien(self, tmp_path):
+        dossier = tmp_path / "HP4" / "system"
+        dossier.mkdir(parents=True)
+        (dossier / "d3d9.ini.origine").write_bytes(self.LIVRE.encode())
+        assert reglages_conserves.mettre_de_cote(_jeu(), tmp_path) == {}
+
+    def test_l_installation_pose_l_origine(self, tmp_path):
+        dossier = tmp_path / "HP4" / "system"
+        dossier.mkdir(parents=True)
+        (dossier / "d3d9.ini").write_bytes(self.NEUF.encode())
+        reglages_conserves.garder_les_origines(_jeu(), tmp_path)
+        assert (dossier / "d3d9.ini.origine").read_bytes() == self.NEUF.encode()

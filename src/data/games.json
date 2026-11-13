@@ -1827,6 +1827,12 @@
           "HP4/screenshots/*.png"
         ]
       },
+      "resolution": {
+        "file": "%INSTALL_DIR%\\d3d9.ini",
+        "section": "Accio.Game",
+        "width": "Width",
+        "height": "Height"
+      },
       "fix_settings": [
         "arriere_plan",
         "limite_fps",
@@ -2083,6 +2089,18 @@
         "value": "CurrentSelection",
         "on": 4,
         "off": 0
+      },
+      "resolution": {
+        "file": "%INSTALL_DIR%\\d3d9.ini",
+        "section": "Accio.Game",
+        "width": "Width",
+        "height": "Height",
+        "option_registry": {
+          "root": "HKCU",
+          "key": "Software\\Electronic Arts\\Harry Potter and the Order of the Phoenix\\GameSettings",
+          "value": "OptionResolution",
+          "set": 0
+        }
       },
       "fix_settings": [
         "arriere_plan",
@@ -2403,6 +2421,18 @@
         "value": "CurrentSelection",
         "on": 4,
         "off": 0
+      },
+      "resolution": {
+        "file": "%INSTALL_DIR%\\d3d9.ini",
+        "section": "Accio.Game",
+        "width": "Width",
+        "height": "Height",
+        "option_registry": {
+          "root": "HKCU",
+          "key": "Software\\Electronic Arts\\Harry Potter and the Half Blood Prince\\GameSettings",
+          "value": "OptionResolution",
+          "set": 0
+        }
       },
       "fix_settings": [
         "arriere_plan",

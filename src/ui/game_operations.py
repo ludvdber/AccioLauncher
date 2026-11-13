@@ -499,6 +499,7 @@ class GameOperations(QObject):
         # et n'existent souvent pas encore à ce stade. Ils seront patchés au lancement.
         if reglages:
             reglages_conserves.reposer(game, self._manager.config.install_path, reglages)
+        reglages_conserves.garder_les_origines(game, self._manager.config.install_path)
         self._manager.set_game_state(game.id, GameState.INSTALLED)
         self._manager.save_installed_version(game.id, target_ver.version if target_ver else None)
         self.state_changed.emit()

@@ -387,6 +387,16 @@ def _parse_language_registry(data: Any) -> LanguageRegistry | None:
 
 
 @dataclass(frozen=True, slots=True)
+class ChoixRegistre:
+    """Une valeur entière du registre que le launcher remet à `valeur` au lancement."""
+    root: str
+    key: str
+    value: str
+    valeur: int
+    view: int = 32
+
+
+@dataclass(frozen=True, slots=True)
 class Resolution:
     """Où le jeu lit la taille de sa fenêtre : deux clés d'un `.ini`.
 
@@ -400,6 +410,30 @@ class Resolution:
     section: str
     width: str      # clé de la largeur
     height: str     # clé de la hauteur
+    # HP5 et HP6 (2026-11-13) : le choix de résolution de leur MENU, un rang gardé dans le
+    # registre (`GameSettings\OptionResolution`). Le rang 0 est la taille que pose le correctif
+    # (`[Accio.Game] Width/Height`) ; un autre rang l'emporte sur elle (HP5 restait en 800×600
+    # avec 2560×1440 dans l'ini). Le launcher le remet à 0 au lancement, en prévenant.
+    registre: ChoixRegistre | None = None
+
+
+def _parse_choix_registre(data: Any) -> ChoixRegistre | None:
+    """Lit `option_registry` d'un bloc `resolution` ; mêmes barrières que `controller_registry`."""
+    if not isinstance(data, dict):
+        return None
+    root, cle, nom, valeur = data.get("root", "HKCU"), data.get("key", ""), data.get("value"), data.get("set", 0)
+    try:
+        view = int(data.get("view", 32))
+    except (TypeError, ValueError):
+        return None
+    if view not in (32, 64) or not isinstance(nom, str) or not isinstance(valeur, int) \
+            or isinstance(valeur, bool):
+        return None
+    raison = registre.refus_de_cle(root, cle) or registre.refus_de_valeur(nom, valeur)
+    if raison is not None:
+        log.warning("Bloc option_registry ignoré (%s) : %r", raison, cle)
+        return None
+    return ChoixRegistre(root=root, key=cle, value=nom, valeur=valeur, view=view)
 
 
 def _parse_resolution(data: Any) -> Resolution | None:
@@ -420,7 +454,14 @@ def _parse_resolution(data: Any) -> Resolution | None:
             _INI_INTERDIT_NOM.search(c) for c in (section, largeur, hauteur)):
         log.warning("Bloc resolution ignoré (douteux) : %r", data)
         return None
-    return Resolution(file=fichier, section=section, width=largeur, height=hauteur)
+    choix = None
+    if "option_registry" in data:
+        choix = _parse_choix_registre(data["option_registry"])
+        if choix is None:
+            # Tout ou rien : sans la remise du rang, la taille écrite ne compterait pas.
+            log.warning("Bloc resolution ignoré (option_registry douteux) : %r", data)
+            return None
+    return Resolution(file=fichier, section=section, width=largeur, height=hauteur, registre=choix)
 
 
 @dataclass(frozen=True, slots=True)

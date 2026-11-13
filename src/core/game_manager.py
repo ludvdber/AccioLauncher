@@ -318,7 +318,8 @@ class GameManager:
         apply_ini_patches(game, self.config)
         # Taille de fenêtre APRÈS la restauration, qui recopierait le modèle
         # (1024×768 pour HP2) ; écrite à chaque fois, raison dans le module.
-        taille = resolution_jeu.appliquer(game, self.config, resolution_jeu.place_pour(game, self.config))
+        taille = resolution_jeu.appliquer(game, self.config, resolution_jeu.place_pour(game, self.config),
+                                          confirmer=confirmer)
         # HP3 : son plein écran à la taille de l'écran entier, après le repli 1920×1080 des patchs.
         if game.plein_ecran is not None:
             resolution_jeu.appliquer_plein_ecran(game, self.config, resolution_jeu.ecran_entier())

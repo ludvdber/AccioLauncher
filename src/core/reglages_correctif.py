@@ -48,6 +48,8 @@ from src.core.reglages_table import (  # noqa: F401  (réexportés)
     Reglage,
     REGLAGES,
     PREREGLAGES,
+    CURSEURS,
+    VALEURS_DU_JEU,
 )
 from src.core.reglages_table import ValeurChoix
 from src.core.ecriture_atomique import ecrire_octets_atomique
@@ -163,6 +165,70 @@ def rang_a_la_main(reglage: Reglage, valeur: object) -> int:
     if all(a > b for a, b in paires):
         return next((i for i, c in enumerate(nombres) if valeur > c), fin)
     return fin
+
+
+def curseur(reglage: Reglage) -> tuple[float, float, float] | None:
+    """(min, max, pas) si ce réglage se règle au curseur gradué, None sinon."""
+    return CURSEURS.get(reglage.ident)
+
+
+def _decimales(pas: float) -> int:
+    """Le nombre de décimales d'un pas : 0,05 → 2, 5 → 0."""
+    texte = f"{pas:g}"
+    return len(texte.split(".")[1]) if "." in texte else 0
+
+
+def arrondir(reglage: Reglage, valeur: float) -> ValeurChoix:
+    """La valeur ramenée au pas du curseur et dans ses bornes : 0,30000000000000004 → 0,3.
+
+    Un entier reste un entier (force du halo : 60, pas 60.0) : le correctif lit
+    `NativeBloomStrength` en entier."""
+    bornes = curseur(reglage)
+    if bornes is None:
+        return valeur
+    bas, haut, pas = bornes
+    x = min(haut, max(bas, bas + round((valeur - bas) / pas) * pas))
+    x = round(x, _decimales(pas))
+    return int(x) if float(x).is_integer() else x
+
+
+def sur_le_curseur(reglage: Reglage, valeur: object) -> bool:
+    """Une valeur que le curseur de ce réglage sait poser : dans ses bornes, sur son pas."""
+    bornes = curseur(reglage)
+    if bornes is None or isinstance(valeur, bool) or not isinstance(valeur, (int, float)):
+        return False
+    bas, haut, pas = bornes
+    if not bas - 1e-9 <= valeur <= haut + 1e-9:
+        return False
+    return abs((valeur - bas) / pas - round((valeur - bas) / pas)) < 1e-6
+
+
+def meme_valeur(a: object, b: object) -> bool:
+    """Deux valeurs d'un réglage égales, aux arrondis de l'ini près (0.3 et 0.30000000000000004)."""
+    if (isinstance(a, (int, float)) and isinstance(b, (int, float))
+            and not isinstance(a, bool) and not isinstance(b, bool)):
+        return abs(float(a) - float(b)) < 1e-6
+    return a == b
+
+
+def valeur_accio(ini: Path, reglage: Reglage) -> Valeur | None:
+    """La valeur que livre Accio : celle de l'ini tel qu'installé (sa copie d'origine,
+    gardée avant la première retouche), sinon celle de l'ini, encore jamais touché.
+    None si aucun des deux ne se lit."""
+    for chemin in (chemin_origine(ini), ini):
+        if chemin.is_file():
+            try:
+                valeur = lire(chemin, reglage).valeur
+            except OSError:
+                continue
+            if isinstance(valeur, (str, int, float)):   # bool compris
+                return valeur
+    return None
+
+
+def valeur_du_jeu(reglage: Reglage) -> Valeur | None:
+    """Ce que fait le jeu livré, sans le correctif ; None si on ne le sait pas (`VALEURS_DU_JEU`)."""
+    return VALEURS_DU_JEU.get(reglage.ident)
 
 
 def textes(reglage: Reglage) -> tuple[str, str]:
@@ -372,7 +438,7 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
             return Etat(0, personnalise=True)
         if isinstance(n, float) and n.is_integer():
             n = int(n)
-        return Etat(n, personnalise=n not in reglage.choix)
+        return Etat(n, personnalise=n not in reglage.choix and not sur_le_curseur(reglage, n))
     # Interrupteur : le correctif lit 0 = non, tout autre nombre = oui.
     if brut is None:
         return Etat(reglage.defaut)
@@ -531,7 +597,16 @@ def aligner_plafond(ini: Path) -> bool:
 
 
 def a_une_origine(ini: Path) -> bool:
-    return chemin_origine(ini).is_file()
+    """Une copie d'origine qui diffère du fichier : il y a quelque chose à remettre.
+
+    Depuis le 2026-11-13 l'installation pose la copie d'origine (`reglages_conserves`) :
+    sa seule présence ne dit plus que le joueur a changé quelque chose.
+    """
+    origine = chemin_origine(ini)
+    try:
+        return origine.is_file() and (not ini.is_file() or origine.read_bytes() != ini.read_bytes())
+    except OSError:
+        return origine.is_file()
 
 
 def remettre_origine(ini: Path, reglages: Iterable[Reglage]) -> None:
@@ -575,7 +650,9 @@ def ecrire(ini: Path, reglage: Reglage, valeur: Any) -> None:
                 raise ValueError(f"section [{reglage.section}] absente")
     elif reglage.choix:
         if valeur not in reglage.choix:
-            raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+            if not sur_le_curseur(reglage, valeur):
+                raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+            valeur = arrondir(reglage, valeur)
         texte = str(valeur) if reglage.noms_choix else _nombre(valeur)
         if not _poser(lignes, reglage.section, reglage.cle, texte):
             raise ValueError(f"section [{reglage.section}] absente")

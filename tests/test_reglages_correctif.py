@@ -528,8 +528,8 @@ class TestTexturesHdHp6:
             assert "textures_hd" not in valeurs
 
     def test_range_avec_les_textures(self):
-        from src.ui.reglages_rubriques import _GROUPES_EFFETS
-        assert "textures_hd" in dict(_GROUPES_EFFETS)["Textures"]
+        from src.core import reglages_image
+        assert reglages_image.place(self.R) == ("qualite", "Textures")
 
     def test_traduit_en_anglais_et_en_espagnol(self):
         from src.core.config import I18N_DIR
@@ -568,8 +568,8 @@ class TestForceHaloHp5:
             assert "force_halo" not in valeurs
 
     def test_range_avec_la_lumiere(self):
-        from src.ui.reglages_rubriques import _GROUPES_EFFETS
-        assert "force_halo" in dict(_GROUPES_EFFETS)["Lumière et ombres"]
+        from src.core import reglages_image
+        assert reglages_image.place(self.R) == ("lumiere", "Halo et rayons")
 
     def test_traduit_en_anglais_et_en_espagnol(self):
         from src.core.config import I18N_DIR
@@ -731,15 +731,14 @@ class TestFenetre:
         assert b"FPSLimit=60" in ini.read_bytes()
 
     def test_l_anticrenelage_ecrit_aussitot(self, qtbot, tmp_path):
-        from PyQt6.QtWidgets import QComboBox
         (tmp_path / "HP4").mkdir()
         ini = tmp_path / "HP4" / "d3d9.ini"
         ini.write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["anticrenelage"]), _manager(tmp_path))
-        (choix,) = dlg.findChildren(QComboBox)
-        assert choix.currentData() == 0 and choix.currentText() == tr("Désactivé")
-        assert [choix.itemText(i) for i in range(1, choix.count())] == ["2×", "4×", "8×"]
-        choix.setCurrentIndex(choix.findData(4))
+        boutons = dlg._page_img.ligne("anticrenelage").controle
+        assert boutons.valeur() == 0
+        assert [b.text() for b in boutons.boutons()] == [tr("Désactivé"), "2×", "4×", "8×"]
+        boutons.boutons()[2].click()
         assert b"Antialiasing=4" in ini.read_bytes()
 
     def test_transparence_eteinte_sans_la_cle_puis_aller_retour(self, ini):
@@ -816,18 +815,17 @@ class TestFenetre:
 
     def test_les_reperes_disent_le_cout_et_ce_qui_se_voit(self, qtbot, tmp_path):
         """Trois points pour le coût, l'œil pour ce qui se voit, le détail au survol."""
-        from PyQt6.QtWidgets import QLabel, QWidget
-
         from src.ui.game_settings_dialog import _Points
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "arriere_plan"]), _manager(tmp_path))
-        bloc = dlg._blocs["surechantillonnage"]
+        page = dlg._page_img
+        bloc = page.ligne("surechantillonnage")
         (points,) = [p for p in bloc.findChildren(_Points) if p.niveau]
         assert points.niveau == 3 and tr("Carte graphique (GPU)") in points.toolTip()
-        assert any(lb.toolTip() == tr("Se voit nettement à l’écran.") for lb in bloc.findChildren(QLabel))
-        # La légende des couleurs, au survol de l'en-tête des effets.
-        assert any(tr("rouge extrême") in w.toolTip() for w in dlg.findChildren(QWidget))
+        # « Se voit » est dans la fiche de droite, qui remplace l'œil de chaque ligne.
+        bloc.survolee.emit("surechantillonnage")
+        assert tr("Se voit nettement à l’écran.") in page.fiche.texte.text()
 
     def test_la_couleur_suit_le_niveau(self, qtbot, tmp_path):
         """Vert faible, orange moyen, rouge extrême (Ludo, 2026-09-30)."""
@@ -837,7 +835,7 @@ class TestFenetre:
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "filtrage", "anticrenelage"]),
                         _manager(tmp_path))
         for ident, niveau in (("filtrage", 1), ("anticrenelage", 2), ("surechantillonnage", 3)):
-            (points,) = [p for p in dlg._blocs[ident].findChildren(_Points) if p.niveau]
+            (points,) = [p for p in dlg._page_img.ligne(ident).findChildren(_Points) if p.niveau]
             assert (points.niveau, points.couleur) == (niveau, _COULEURS_COUT[niveau])
         assert len(set(_COULEURS_COUT.values())) == 3
 
@@ -847,21 +845,16 @@ class TestFenetre:
             _libelle, aide = rc.textes(r)
             assert len(aide) >= 40, f"{r.ident} : « {aide} »"
 
-    def test_le_point_d_interrogation_ouvre_toute_la_fiche(self, qtbot, tmp_path):
-        """Description, coût en clair, « se voit » et ce qu'il éteint : tout dans la fiche."""
+    def test_la_fiche_dit_tout_du_reglage_survole(self, qtbot, tmp_path):
+        """Description, coût en clair et ce qu'il éteint : tout dans la fiche de droite."""
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["lissage", "anticrenelage", "occlusion"]),
                         _manager(tmp_path))
-        aide = dlg._aides["anticrenelage"]
-        aide.click()
-        assert aide.fiche is not None and aide.fiche.isVisible()
-        texte = aide.fiche.texte.text()
-        assert tr("Carte graphique (GPU)") in texte and tr("moyenne") in texte
-        assert tr("Ombres de contact").lower() in texte.lower()   # l'allumer les éteint
-        # Rien de coupé en bas : la hauteur suit le texte passé à la ligne (règle 38).
-        assert aide.fiche.texte.height() >= aide.fiche.texte.heightForWidth(aide.fiche.texte.width())
-        aide.fiche.close()
+        page = dlg._page_img
+        page.ligne("anticrenelage").survolee.emit("anticrenelage")
+        assert tr("Carte graphique (GPU)") in page.fiche.notes.text() and tr("moyenne") in page.fiche.notes.text()
+        assert tr("Ombres de contact").lower() in page.fiche.texte.text().lower()   # l'allumer les éteint
 
     def test_une_dependance_absente_du_jeu_n_est_pas_citee(self, qtbot, tmp_path):
         (tmp_path / "HP4").mkdir()
@@ -982,7 +975,7 @@ class TestRemiseALOrigine:
         bouton = next(b for b in dlg.findChildren(QPushButton)
                       if b.text() == tr("Rétablir les réglages d'origine"))
         assert not bouton.isEnabled()   # rien à rétablir tant que rien n'a changé
-        bascule = dlg._controles["lissage"]
+        bascule = dlg._page_img.ligne("lissage").controle
         qtbot.mouseClick(bascule, Qt.MouseButton.LeftButton)
         assert bascule.isChecked()
         assert bouton.isEnabled()
@@ -1025,31 +1018,33 @@ class TestDependances:
     def test_eteindre_le_fxaa_grise_les_effets_sans_les_reecrire(self, qtbot, tmp_path):
         from PyQt6.QtCore import Qt
         dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "occlusion", "couleurs"])
-        assert dlg._blocs["occlusion"].isEnabled()
-        qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
-        assert not dlg._blocs["occlusion"].isEnabled()
-        assert not dlg._blocs["couleurs"].isEnabled()
+        page = dlg._page_img
+        occlusion, couleurs = page.ligne("occlusion"), page.ligne("couleurs")
+        assert occlusion.isEnabled()
+        qtbot.mouseClick(page.ligne("lissage").controle, Qt.MouseButton.LeftButton)
+        assert not occlusion.isEnabled() and not couleurs.isEnabled()
         assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True   # rallumer rend l'effet
-        qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
-        assert dlg._blocs["occlusion"].isEnabled()
+        qtbot.mouseClick(page.ligne("lissage").controle, Qt.MouseButton.LeftButton)
+        assert occlusion.isEnabled()
 
     def test_choisir_le_msaa_eteint_les_ombres_de_contact(self, qtbot, tmp_path):
         dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "anticrenelage", "occlusion"])
-        choix = dlg._controles["anticrenelage"]
-        choix.setCurrentIndex(choix.findData(4))
+        page = dlg._page_img
+        page.ligne("anticrenelage").controle.boutons()[2].click()
         assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 4
         assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
-        assert not dlg._controles["occlusion"].isChecked()
+        assert not page.ligne("occlusion").controle.isChecked()
 
     def test_rallumer_les_ombres_eteint_le_msaa(self, qtbot, tmp_path):
         from PyQt6.QtCore import Qt
         dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "anticrenelage", "occlusion"])
-        choix = dlg._controles["anticrenelage"]
-        choix.setCurrentIndex(choix.findData(4))
-        qtbot.mouseClick(dlg._controles["occlusion"], Qt.MouseButton.LeftButton)
+        page = dlg._page_img
+        msaa = page.ligne("anticrenelage").controle
+        msaa.boutons()[2].click()
+        qtbot.mouseClick(page.ligne("occlusion").controle, Qt.MouseButton.LeftButton)
         assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True
         assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 0
-        assert choix.currentData() == 0
+        assert msaa.valeur() == 0
 
 
 INI_JEU = INI_V2 + "\r\n".join(["[Accio.Game]", "Width=1920", "Height=1080", "AspectRatio=16:9", ""])
@@ -1134,69 +1129,149 @@ class TestPrereglages:
                 assert (valeur in r.choix) if r.choix else isinstance(valeur, bool), ident
 
 
-class TestFenetreQualite:
-    """Préréglages en cartes, et CHAQUE effet visible à côté (maquette du 2026-10-09 :
-    repliés par familles, il fallait déplier pour voir ce que fait un préréglage)."""
+class TestPageImage:
+    """L'onglet Image refait d'après la maquette « Curseurs gradués » (Ludo, 2026-11-13) : six
+    catégories en onglets, des boutons, des curseurs, une fiche à droite (`ui/page_image.py`)."""
 
     IDENTS = ["lissage", "nettete", "surechantillonnage", "filtrage", "occlusion", "halo", "rayons"]
 
-    def _fenetre(self, qtbot, tmp_path):
+    def _fenetre(self, qtbot, tmp_path, idents=None):
         dossier = tmp_path / "HP4"
         dossier.mkdir()
         (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
-        return (_dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ["resolution"]), _manager(tmp_path)),
-                dossier / "d3d9.ini")
+        dlg = _dialogue(qtbot, _jeu(tmp_path, idents or self.IDENTS), _manager(tmp_path))
+        return dlg, dlg._page_img, dossier / "d3d9.ini"
 
-    def test_chaque_effet_est_visible_dans_sa_famille(self, qtbot, tmp_path):
-        from PyQt6.QtWidgets import QLabel
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        carte = dlg._carte_des_effets
-        noms = [tr("Contours").upper(), tr("Textures").upper(), tr("Lumière et ombres").upper()]
-        familles = [lb.text() for lb in carte.findChildren(QLabel) if lb.text() in noms]
-        assert familles == noms
-        for ident in self.IDENTS:
-            assert carte.isAncestorOf(dlg._controles[ident]) and not dlg._blocs[ident].isHidden()
+    def test_les_reglages_vont_dans_leurs_categories(self, qtbot, tmp_path):
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path, self.IDENTS + ["ciel", "couleurs", "vivacite"])
+        assert [c.ident for c in page.categories] == ["qualite", "lumiere", "couleurs", "ciel"]
+        assert page.categorie_de("surechantillonnage") == "qualite"
+        assert page.categorie_de("occlusion") == "lumiere"
+        assert page.categorie_de("vivacite") == "couleurs"
 
-    def test_ce_qui_change_le_style_est_dans_ambiance_hors_des_effets(self, qtbot, tmp_path):
-        """Ciel, brouillard et couleurs MODIFIENT l'image d'origine (Ludo, 2026-10-27) :
-        une rubrique à part, sous les préréglages, et la colonne des effets s'allège."""
-        from PyQt6.QtWidgets import QLabel
-        dossier = tmp_path / "HP4"
-        dossier.mkdir()
-        (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
-        ambiance = ["brouillard", "ciel", "couleurs", "vivacite"]
-        dlg = _dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ambiance + ["resolution"]),
-                        _manager(tmp_path))
-        effets = dlg._carte_des_effets
-        for ident in ambiance:
-            assert not effets.isAncestorOf(dlg._controles[ident])
-        textes = [lb.text() for lb in dlg.findChildren(QLabel)]
-        assert tr("Ambiance").upper() in textes
-        # Le ciel ouvre sa famille, avant le brouillard qui le suit dans la table.
-        carte = dlg._blocs["ciel"].parentWidget()
-        rang = {i: carte.layout().indexOf(dlg._blocs[i]) for i in ("ciel", "brouillard")}
-        assert 0 <= rang["ciel"] < rang["brouillard"]
+    def test_une_categorie_se_batit_a_son_premier_affichage(self, qtbot, tmp_path):
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        assert "occlusion" not in page._lignes
+        page.ligne("occlusion")
+        assert page.pile.currentIndex() == [c.ident for c in page.categories].index("lumiere")
+
+    def test_deux_a_cinq_choix_sont_des_boutons_et_ecrivent_aussitot(self, qtbot, tmp_path):
+        from src.ui.page_image import Boutons
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        boutons = page.ligne("surechantillonnage").controle
+        assert isinstance(boutons, Boutons)
+        boutons.boutons()[1].click()
+        assert rc.lire(ini, rc.REGLAGES["surechantillonnage"]).valeur == 1.5
+
+    def test_un_nombre_se_regle_au_curseur_entre_les_crans(self, qtbot, tmp_path):
+        """Une valeur du pas entre deux crans nommés s'écrit telle quelle (0,35 n'est pas un cran)."""
+        from src.ui.page_image import CurseurGradue
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        curseur = page.ligne("nettete").controle
+        assert isinstance(curseur, CurseurGradue)
+        curseur.choisi.emit(0.35)
+        assert b"Sharpness=0.35" in ini.read_bytes()
+        assert rc.lire(ini, rc.REGLAGES["nettete"]) == rc.Etat(0.35)
+
+    def test_le_clavier_avance_d_un_pas_et_les_pages_de_cran_en_cran(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        rc.ecrire(ini, rc.REGLAGES["lissage"], True)   # la netteté passe par le FXAA
+        rc.ecrire(ini, rc.REGLAGES["nettete"], 0.4)
+        page.rafraichir()
+        curseur = page.ligne("nettete").controle
+        qtbot.keyClick(curseur, Qt.Key.Key_Right)
+        assert rc.lire(ini, rc.REGLAGES["nettete"]).valeur == 0.45
+        qtbot.keyClick(curseur, Qt.Key.Key_PageUp)
+        assert rc.lire(ini, rc.REGLAGES["nettete"]).valeur == 0.6
+
+    def test_la_molette_ne_regle_pas_un_curseur_sans_focus(self, qtbot, tmp_path):
+        """Dans une page qui défile, un curseur ne vole pas la molette (maquette, « Développeur »)."""
+        from PyQt6.QtCore import QPoint, QPointF, Qt
+        from PyQt6.QtGui import QWheelEvent
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        curseur = page.ligne("nettete").controle
+        avant = ini.read_bytes()
+        evt = QWheelEvent(QPointF(5, 5), QPointF(5, 5), QPoint(0, 0), QPoint(0, 120),
+                          Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier,
+                          Qt.ScrollPhase.NoScrollPhase, False)
+        curseur.wheelEvent(evt)
+        assert ini.read_bytes() == avant and not evt.isAccepted()
+
+    def test_la_fiche_dit_le_jeu_accio_et_l_actuel(self, qtbot, tmp_path):
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        page.ligne("surechantillonnage").survolee.emit("surechantillonnage")
+        assert page.fiche.titre.text() == rc.textes(rc.REGLAGES["surechantillonnage"])[0]
+        import html
+        texte = html.unescape(page.fiche.valeurs.text())
+        assert tr("Jeu d'origine") in texte and tr("Accio par défaut") in texte and tr("Actuel") in texte
+        assert tr("Carte graphique (GPU)") in page.fiche.notes.text()
+        assert tr("Se voit nettement à l’écran.") in page.fiche.texte.text()
+
+    def test_la_fiche_ramene_a_la_valeur_du_jeu(self, qtbot, tmp_path):
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        page.regler("halo", True)
+        page.ligne("halo").survolee.emit("halo")
+        page.fiche.bouton_jeu.click()
+        assert rc.lire(ini, rc.REGLAGES["halo"]).valeur is False
+
+    def test_la_valeur_accio_est_celle_de_l_ini_installe(self, qtbot, tmp_path):
+        """Après une retouche, Accio reste ce que portait l'ini à l'installation (sa copie d'origine)."""
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        livre = rc.lire(ini, rc.REGLAGES["filtrage"]).valeur
+        page.regler("filtrage", 2)
+        assert rc.valeur_accio(ini, rc.REGLAGES["filtrage"]) == livre
+
+    def test_remettre_la_categorie_aux_valeurs_accio(self, qtbot, tmp_path):
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        avant = {i: rc.lire(ini, rc.REGLAGES[i]).valeur for i in ("filtrage", "surechantillonnage")}
+        page.regler("filtrage", 2)
+        page.regler("surechantillonnage", 2)
+        qualite = next(c for c in page.categories if c.ident == "qualite")
+        page._remettre([r.ident for r in qualite.reglages], page._accio)
+        assert {i: rc.lire(ini, rc.REGLAGES[i]).valeur for i in avant} == avant
+
+    def test_la_recherche_trouve_dans_toutes_les_categories(self, qtbot, tmp_path):
+        from src.ui.page_image import _LigneImage
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        page.recherche.setText(tr("ombres de contact"))
+        trouves = {li.ident for li in page._resultats.findChildren(_LigneImage)}
+        assert "occlusion" in trouves
+        page.recherche.setText("")
+        assert page.pile.currentIndex() < len(page.categories)
+
+    def test_un_prereglage_ecrit_ses_valeurs_et_se_coche(self, qtbot, tmp_path):
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        page.ligne("filtrage")
+        page._cartes_prereglage["legere"].click()
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
+        assert rc.lire(ini, rc.REGLAGES["filtrage"]).valeur == 4
+        assert page._cartes_prereglage["legere"].isChecked()
+        page._cartes_prereglage["maximale"].click()
+        assert rc.lire(ini, rc.REGLAGES["surechantillonnage"]).valeur == 1.5
+        assert page._cartes_prereglage["maximale"].isChecked()
+
+    def test_retoucher_un_reglage_passe_en_sur_mesure_sans_rien_ecrire(self, qtbot, tmp_path):
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        page.ligne("filtrage")
+        page._cartes_prereglage["equilibree"].click()
+        page.regler("halo", False)
+        assert page._cartes_prereglage[""].isChecked()
+        avant = ini.read_bytes()
+        page._cartes_prereglage[""].click()
+        assert ini.read_bytes() == avant
 
     def test_un_prereglage_reussi_efface_l_erreur_d_avant(self, qtbot, tmp_path):
-        """L'erreur d'une écriture ratée restait affichée après un préréglage
-        réussi, et « Rétablir » éteint (audit du 2026-11-02)."""
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
         dlg._montrer_erreur()
-        dlg._choisir_prereglage("maximale")
+        page.choisir_prereglage("maximale")
         assert dlg._erreur.isHidden()
         assert dlg._bouton_reset.isEnabled()
 
     def test_l_effet_exclu_non_eteint_garde_son_erreur(self, qtbot, tmp_path, monkeypatch):
-        """L'erreur de l'exclusion s'affichait puis disparaissait aussitôt
-        (audit du 2026-11-02)."""
-        dossier = tmp_path / "HP4"
-        dossier.mkdir()
-        ini = dossier / "d3d9.ini"
-        ini.write_bytes(INI_JEU.encode("ascii"))
-        rc.ecrire(ini, rc.REGLAGES["lissage"], True)
-        rc.ecrire(ini, rc.REGLAGES["occlusion"], True)
-        dlg = _dialogue(qtbot, _jeu(tmp_path, self.IDENTS + ["anticrenelage"]), _manager(tmp_path))
-        assert dlg._controles["occlusion"].isChecked()
+        dlg, page, ini = self._fenetre(qtbot, tmp_path, self.IDENTS + ["anticrenelage"])
+        page.regler("lissage", True)
+        page.regler("occlusion", True)
         ecrire = rc.ecrire
 
         def refus_pour_l_occlusion(chemin, reglage, valeur):
@@ -1204,36 +1279,59 @@ class TestFenetreQualite:
                 raise PermissionError("lecture seule")
             ecrire(chemin, reglage, valeur)
         monkeypatch.setattr(rc, "ecrire", refus_pour_l_occlusion)
-        dlg._on_reglage(rc.REGLAGES["anticrenelage"], 4, dlg._controles["anticrenelage"])
+        page.regler("anticrenelage", 4)
         assert b"Antialiasing=4" in ini.read_bytes()
         assert not dlg._erreur.isHidden()
 
-    def test_un_effet_qui_depend_d_un_autre_est_en_retrait_sous_lui(self, qtbot, tmp_path):
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        marge = {i: dlg._blocs[i].layout().contentsMargins().left() for i in ("lissage", "nettete")}
+    def test_choisir_le_msaa_eteint_les_ombres_de_contact(self, qtbot, tmp_path):
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path, self.IDENTS + ["anticrenelage"])
+        page.regler("occlusion", True)
+        page.regler("anticrenelage", 4)
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
+        page.regler("occlusion", True)
+        assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 0
+
+    def test_une_ligne_eteinte_est_grisee_et_dit_ce_qui_l_eteint(self, qtbot, tmp_path):
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        page.regler("lissage", True)
+        page.regler("occlusion", True)
+        ligne = page.ligne("occlusion")
+        assert ligne.isEnabled() and ligne.note.isHidden()
+        page.regler("lissage", False)
+        assert not ligne.isEnabled() and not ligne.note.isHidden()
+        assert ligne.note.text() == tr("Sans effet tant que « {} » est éteint.").format(
+            rc.textes(rc.REGLAGES["lissage"])[0])
+        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True   # rien de réécrit
+
+    def test_un_reglage_qui_depend_d_un_autre_est_en_retrait(self, qtbot, tmp_path):
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        marge = {i: page.ligne(i).layout().contentsMargins().left() for i in ("lissage", "nettete")}
         assert marge["nettete"] > marge["lissage"]
 
-    def test_une_ligne_eteinte_dit_ce_qui_l_eteint(self, qtbot, tmp_path):
-        from PyQt6.QtCore import Qt
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        if not dlg._controles["lissage"].isChecked():
-            qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
-        assert dlg._blocs["occlusion"].note.isHidden()
-        qtbot.mouseClick(dlg._controles["lissage"], Qt.MouseButton.LeftButton)
-        note = dlg._blocs["occlusion"].note
-        assert not note.isHidden()
-        assert note.text() == tr("Sans effet tant que « {} » est éteint.").format(
-            rc.textes(rc.REGLAGES["lissage"])[0])
+    def test_echec_d_ecriture_remet_la_ligne_et_le_dit(self, qtbot, tmp_path, monkeypatch):
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        page.regler("lissage", True)
+        page.regler("halo", True)
+
+        def refus(*_a):
+            raise PermissionError("lecture seule")
+        monkeypatch.setattr(rc, "_ecrire", refus)
+        page.regler("halo", False)
+        assert page.ligne("halo").controle.isChecked()
+        assert not dlg._erreur.isHidden()
+
+    def test_la_couleur_des_points_suit_le_cout(self, qtbot, tmp_path):
+        from src.ui.game_settings_dialog import _COULEURS_COUT, _Points
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path, self.IDENTS + ["anticrenelage"])
+        for ident, niveau in (("filtrage", 1), ("anticrenelage", 2), ("surechantillonnage", 3)):
+            points = page.ligne(ident).points
+            assert isinstance(points, _Points)
+            assert (points.niveau, points.couleur) == (niveau, _COULEURS_COUT[niveau])
 
     @pytest.mark.parametrize("langue", ["fr", "en", "es"])
     def test_a_la_taille_minimale_rien_ne_deborde_a_droite(self, qtbot, tmp_path, qapp, langue):
-        """Nom, « ? », repères et liste tiennent dans la largeur de la page, à la
-        plus petite taille de la fenêtre : aucune page ne défile de côté.
-
-        Le « ? » a fait déborder « Netteté des textures de biais » de 30 px. Mesuré
-        avec les VRAIES polices et la feuille de l'application : sous offscreen, la
-        police de substitution ne prouve rien.
-        """
+        """Chaque catégorie de l'onglet Image, et chaque autre page, tient dans sa largeur à la plus
+        petite taille de la fenêtre, avec les VRAIES polices et la feuille de l'application."""
         from src.core import i18n
         from src.ui.fonts import load_fonts
         from src.ui.game_settings_dialog import _TAILLE_MIN
@@ -1253,7 +1351,16 @@ class TestFenetreQualite:
             dlg.show()
             dlg.resize(_TAILLE_MIN)
             qtbot.waitExposed(dlg)
+            page = dlg._page_img
+            for rang, _c in enumerate(page.categories):
+                page.montrer(rang)
+                zone = page.pile.currentWidget()
+                qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
+                assert zone.widget().minimumSizeHint().width() <= zone.viewport().width(), (langue, rang)
+            assert page.minimumSizeHint().width() <= page.width()
             for rang, contenu in enumerate(dlg._contenus):
+                if contenu.isAncestorOf(page):
+                    continue
                 dlg._defile.setCurrentIndex(rang)
                 zone = dlg._defile.currentWidget()
                 qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
@@ -1261,44 +1368,6 @@ class TestFenetreQualite:
         finally:
             qapp.setStyleSheet(ancienne_feuille)
             i18n.set_language(ancienne_langue)
-
-    def test_l_affichage_reste_hors_des_effets(self, qtbot, tmp_path):
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        assert not dlg._carte_des_effets.isAncestorOf(dlg._controles["resolution"])
-        assert dlg._controles["resolution"].currentData() == "1920x1080"
-
-    def test_une_seule_largeur_de_liste_par_carte(self, qtbot, tmp_path):
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        largeurs = {dlg._controles[i].width() for i in ("nettete", "surechantillonnage", "filtrage")}
-        assert len(largeurs) == 1
-
-    def test_un_prereglage_ecrit_ses_valeurs_et_se_coche(self, qtbot, tmp_path):
-        dlg, ini = self._fenetre(qtbot, tmp_path)
-        dlg._boutons_prereglage["legere"].click()
-        assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is False
-        assert rc.lire(ini, rc.REGLAGES["filtrage"]).valeur == 4
-        assert dlg._controles["filtrage"].currentData() == 4
-        assert dlg._boutons_prereglage["legere"].isChecked()
-        dlg._boutons_prereglage["maximale"].click()
-        assert rc.lire(ini, rc.REGLAGES["surechantillonnage"]).valeur == 1.5
-        assert dlg._boutons_prereglage["maximale"].isChecked()
-
-    def test_retoucher_un_effet_passe_en_sur_mesure(self, qtbot, tmp_path):
-        dlg, _ini = self._fenetre(qtbot, tmp_path)
-        from PyQt6.QtCore import Qt
-        dlg._boutons_prereglage["equilibree"].click()
-        qtbot.mouseClick(dlg._controles["halo"], Qt.MouseButton.LeftButton)
-        assert dlg._boutons_prereglage[""].isChecked()
-
-    def test_sur_mesure_n_ecrit_rien_et_ne_ment_pas(self, qtbot, tmp_path):
-        """Cliquer « Sur mesure » mène aux effets ; la carte cochée reste celle
-        qui correspond VRAIMENT aux valeurs."""
-        dlg, ini = self._fenetre(qtbot, tmp_path)
-        dlg._boutons_prereglage["equilibree"].click()
-        avant = ini.read_bytes()
-        dlg._boutons_prereglage[""].click()
-        assert ini.read_bytes() == avant
-        assert dlg._boutons_prereglage["equilibree"].isChecked()
 
 
 # Les réglages que déclare le catalogue embarqué : tests/test_catalogue_embarque.py.

@@ -156,7 +156,16 @@ def chemin_origine(conf: Path) -> Path:
 
 
 def a_une_origine(conf: Path) -> bool:
-    return chemin_origine(conf).is_file()
+    """Une copie d'origine qui diffère du fichier : il y a quelque chose à remettre.
+
+    Depuis le 2026-11-13 l'installation pose la copie d'origine (`reglages_conserves`) :
+    sa seule présence ne dit plus que le joueur a changé quelque chose.
+    """
+    origine = chemin_origine(conf)
+    try:
+        return origine.is_file() and (not conf.is_file() or origine.read_bytes() != conf.read_bytes())
+    except OSError:
+        return origine.is_file()
 
 
 def ecrire(conf: Path, reglage: Reglage, valeur: str | bool) -> None:

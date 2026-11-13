@@ -180,17 +180,22 @@ class TestLibelles:
         noms = [nom for nom, _valeur in dp.changements(dp.PAR_IDENT["hardcore"], idents)]
         assert noms[0] == "Difficulté du jeu" and len(noms) == 2
 
-    def test_la_legende_dit_le_plus_visible(self, qtbot, tmp_path):
+    def test_ce_qui_se_voit_est_dit_dans_la_fiche(self, qtbot, tmp_path):
+        """Plus d'œil ni de légende sur chaque ligne (maquette « Curseurs gradués ») : la fiche le dit."""
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        assert tr("le plus visible") in _textes(dlg) and "se voit" not in _textes(dlg)
+        page = dlg._page_img
+        ident = next(r.ident for c in page.categories for r in c.reglages if r.se_voit)
+        page.ligne(ident).survolee.emit(ident)
+        assert tr("Se voit nettement à l’écran.") in page.fiche.texte.text()
 
 
 class TestRangement:
     def test_aucun_effet_d_image_sans_famille(self):
         """Le filet « Autres » reste pour un réglage futur : aucun n'y tombe aujourd'hui."""
-        from src.ui.reglages_rubriques import _GROUPES_AMBIANCE, _GROUPES_EFFETS
-        ranges = {i for _nom, idents in (*_GROUPES_EFFETS, *_GROUPES_AMBIANCE) for i in idents}
-        assert {r.ident for r in REGLAGES.values() if r.onglet == "image"} <= ranges
+        from src.core import reglages_image
+        for r in REGLAGES.values():
+            if r.onglet in ("image", "affichage"):
+                assert reglages_image.place(r) != reglages_image._AILLEURS, r.ident
 
     def test_la_langue_du_menu_est_dans_demarrage(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
@@ -205,15 +210,6 @@ class TestMiseEnPage:
         dlg, _ini = _fenetre(qtbot, tmp_path)
         titre = next(lb for lb in dlg.findChildren(QLabel) if lb.text() == tr("Image"))
         assert titre.font().family() != cinzel_decorative(20).family() and titre.font().bold()
-
-    def test_les_en_tetes_voisins_ont_la_meme_hauteur(self, qtbot, tmp_path):
-        dlg, _ini = _fenetre(qtbot, tmp_path)
-        dlg.ouvrir_onglet("image")
-        dlg.show()
-        qtbot.waitExposed(dlg)
-        affichage = next(lb for lb in dlg.findChildren(QLabel) if lb.text() == tr("Affichage").upper())
-        effets = next(lb for lb in dlg.findChildren(QLabel) if lb.text() == tr("Chaque effet").upper())
-        assert affichage.height() == effets.parentWidget().height()
 
     def test_le_rail_defile_au_lieu_de_se_tasser(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)

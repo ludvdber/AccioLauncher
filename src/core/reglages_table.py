@@ -607,6 +607,36 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             etiquettes=((1, "Difficile"), (2, "Expert")), onglet="difficulte", beta=True),
 )}
 
+# Curseurs gradués de l'onglet Image (maquette « Curseurs gradués », 2026-11-12) : (min, max, pas). Les
+# `choix` du réglage restent ses paliers NOMMÉS ; toute valeur du pas entre les bornes s'écrit aussi.
+# Bornes dans celles que le correctif accepte (Clamp de source/settings.cpp, relevés le 2026-11-13) :
+# Sharpness 0-1, Contrast 0-1, GreenRestraintTerrain 0-1, TextureLODBias -3-3, NativeBloomStrength
+# 0-100, SkyHour 0-24 ; Vibrance et Vignette ne sont pas bornées par le correctif.
+CURSEURS: dict[str, tuple[float, float, float]] = {
+    "nettete": (0, 0.6, 0.05),
+    "vivacite": (0, 0.6, 0.05),
+    "contraste": (0, 0.4, 0.05),
+    "vignette": (0, 0.15, 0.01),
+    "vert_relief": (0, 1, 0.05),
+    "textures_lointaines": (-1.5, 0, 0.1),
+    "force_halo": (0, 100, 5),
+    "ciel_heure": (0, 24, 0.25),
+}
+
+# Ce que fait le JEU livré, sans le correctif : le repère argent de l'onglet Image, à côté de la valeur
+# Accio (ce que porte l'ini installé). Un réglage absent de la table n'a pas de valeur connue dans le jeu
+# (filtrage, mode d'affichage : le jeu les choisit selon la carte), ou n'y a pas d'équivalent (l'heure et
+# la couleur du ciel n'existent qu'avec le correctif) : la fiche le dit.
+VALEURS_DU_JEU: dict[str, ValeurChoix | bool] = {
+    "format_image": "0", "champ_vision": 0, "premier_plan": False,
+    "lissage": False, "nettete": 0, "anticrenelage": 0, "anticrenelage_transparence": False,
+    "surechantillonnage": 1, "textures_lointaines": 0, "feuillage_lointain": False,
+    "mipmaps_fins": False, "textures_hd": False, "occlusion": False, "ombres_nettes": 1,
+    "ombres_douces": False, "particules_lointaines": 0, "decor_entier": 1, "halo": False,
+    "force_halo": 100, "rayons": False, "couleurs": False, "vivacite": 0, "contraste": 0,
+    "vignette": 0, "brouillard": True, "vert_relief": 0, "ciel": 0,
+}
+
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,
 # valeurs). Seulement ce qui COÛTE : le goût (couleurs, brouillard, netteté) et
 # l'expérimental (ombres) ne bougent pas quand on choisit un préréglage. Le MSAA
