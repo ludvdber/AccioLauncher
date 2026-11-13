@@ -2,7 +2,8 @@
 
 Ouverte depuis Paramètres › Général. Les jeux restent par défaut : ce sont des
 gigaoctets, et un launcher réinstallé les retrouve tout seul (l'assistant les
-reprend tels quels). Les sauvegardes sont dans Documents : rien n'y touche.
+reprend tels quels). Les sauvegardes restent où chaque jeu les range
+(Documents pour HP1-HP3, AppData pour HP4-HP7, le préfixe sous Linux) : rien n'y touche.
 
 L'effacement lui-même attend la fermeture (`src/core/desinstallation.py`).
 """
@@ -69,7 +70,7 @@ class DesinstallationDialog(QDialog):
         ligne_copies.decrire(tr("Elles restent dans le dossier _Launcher."))
         carte.ajouter(ligne_copies)
         carte.ajouter(LigneReglage(tr("Vos sauvegardes"), tr(
-            "Elles sont dans Documents : elles restent, quoi qu'il arrive.")))
+            "Le launcher n'y touche pas : elles restent là où les jeux les rangent.")))
         lay.addWidget(carte)
         lay.addSpacing(22)
 

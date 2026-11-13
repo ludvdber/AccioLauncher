@@ -14,8 +14,8 @@ import pytest
 pytest.importorskip("pytestqt")
 
 from PyQt6.QtCore import QEvent, Qt  # noqa: E402
-from PyQt6.QtGui import QFocusEvent  # noqa: E402
-from PyQt6.QtWidgets import QApplication, QPushButton  # noqa: E402
+from PyQt6.QtGui import QFocusEvent, QKeyEvent  # noqa: E402
+from PyQt6.QtWidgets import QApplication, QPushButton, QScrollArea, QVBoxLayout, QWidget  # noqa: E402
 
 from src.ui.focus_visible import PROPRIETE, install  # noqa: E402
 
@@ -25,15 +25,17 @@ def filtre_pose():
     install(QApplication.instance())
 
 
-def _focus(widget, raison):
+def _focus(widget, raison, touche=True):
+    """Un focus reçu pendant l'appui d'une touche (Tab), ou hors de tout appui."""
+    if touche:
+        QApplication.sendEvent(widget, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Shift,
+                                                 Qt.KeyboardModifier.NoModifier))
     QApplication.sendEvent(widget, QFocusEvent(QEvent.Type.FocusIn, raison))
 
 
 class TestRaisonDuFocus:
     @pytest.mark.parametrize("raison", [
-        Qt.FocusReason.ActiveWindowFocusReason,   # ouverture de la fenêtre
         Qt.FocusReason.MouseFocusReason,          # simple clic
-        Qt.FocusReason.PopupFocusReason,
         Qt.FocusReason.OtherFocusReason,
     ])
     def test_pas_d_anneau_sans_le_clavier(self, qtbot, filtre_pose, raison):
@@ -63,6 +65,57 @@ class TestRaisonDuFocus:
         QApplication.sendEvent(
             btn, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.OtherFocusReason))
         assert btn.property(PROPRIETE) is False
+
+    @pytest.mark.parametrize("raison", [Qt.FocusReason.ActiveWindowFocusReason,
+                                        Qt.FocusReason.PopupFocusReason])
+    def test_ouverture_de_fenetre_sans_anneau(self, qtbot, filtre_pose, raison):
+        btn = QPushButton("x")
+        qtbot.addWidget(btn)
+        _focus(btn, raison)
+        assert not btn.property(PROPRIETE)
+
+    @pytest.mark.parametrize("raison", [Qt.FocusReason.ActiveWindowFocusReason,
+                                        Qt.FocusReason.PopupFocusReason])
+    def test_alt_tab_garde_l_anneau(self, qtbot, filtre_pose, raison):
+        """Audit UI 2026-11-13 : après Alt+Tab, le focus revenait sans anneau, et Espace
+        agissait sur un bouton qu'on ne voyait plus désigné."""
+        btn = QPushButton("x")
+        qtbot.addWidget(btn)
+        _focus(btn, Qt.FocusReason.TabFocusReason)
+        QApplication.sendEvent(btn, QFocusEvent(QEvent.Type.FocusOut, raison))
+        assert btn.property(PROPRIETE) is True
+        _focus(btn, raison, touche=False)
+        assert btn.property(PROPRIETE) is True
+
+    def test_une_raison_tab_sans_touche_n_allume_rien(self, qtbot, filtre_pose):
+        """Un widget qui se cache en tenant le focus le passe au suivant avec la raison
+        Tab : un clic sur « ← Bibliothèque » allumait l'onglet BIBLIOTHÈQUE."""
+        btn = QPushButton("x")
+        qtbot.addWidget(btn)
+        _focus(btn, Qt.FocusReason.TabFocusReason, touche=False)
+        assert btn.property(PROPRIETE) is False
+
+
+def test_un_focus_au_clavier_fait_defiler_jusqu_a_lui(qtbot, filtre_pose):
+    """Maj+Tab depuis la barre du haut posait le focus 39 px sous le bas de la fenêtre
+    (Réglages HP6 > Image) : Qt ne défile que pour un Tab parti de la zone elle-même."""
+    page = QWidget()
+    lay = QVBoxLayout(page)
+    boutons = [QPushButton(str(n)) for n in range(40)]
+    for b in boutons:
+        b.setFixedHeight(40)
+        lay.addWidget(b)
+    zone = QScrollArea()
+    zone.setWidget(page)
+    zone.setWidgetResizable(True)
+    zone.resize(200, 300)
+    qtbot.addWidget(zone)
+    zone.show()
+    qtbot.waitExposed(zone)
+    assert zone.verticalScrollBar().value() == 0
+    _focus(boutons[-1], Qt.FocusReason.BacktabFocusReason)
+    bas = boutons[-1].mapTo(zone.viewport(), boutons[-1].rect().bottomLeft()).y()
+    assert 0 < bas <= zone.viewport().height()
 
 
 class TestStylesheet:

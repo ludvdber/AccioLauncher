@@ -577,7 +577,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         btn = self._nouveau_bouton_reset()
         btn.setEnabled(reglages_correctif.a_une_origine(self._ini))
         btn.setToolTip(tr("Ceux du jeu tel qu'il a été installé. "
-                          "Rien n'a encore été changé depuis le lanceur."))
+                          "Rien n'a encore été changé depuis le launcher."))
         if btn.isEnabled():
             btn.setToolTip(self._infobulle_origine())
         btn.clicked.connect(self._remettre_origine)

@@ -41,13 +41,14 @@ from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.composants import (
+    bouton_retour,
     ENCRE,
     ENCRE_DOUCE,
-    bouton_retour,
     feuille_de_style,
     police,
     surtitre,
     texte,
+    transparent,
 )
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -212,7 +213,7 @@ class VersionsDialog(QDialog):
         racine.setSpacing(0)
         racine.addWidget(self._rail())
         self._details = QStackedWidget()
-        self._details.setStyleSheet("background: transparent;")
+        transparent(self._details, "details")
         self._index: dict[str, int] = {}
         for ver in self._versions:
             self._index[ver.version] = self._details.addWidget(zone_defilable(self._detail(ver)))
@@ -261,7 +262,7 @@ class VersionsDialog(QDialog):
 
     def _detail(self, ver: GameVersion) -> QWidget:
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageVersion")
         lay = QVBoxLayout(page)
         lay.setContentsMargins(*_MARGES_PAGE)
         lay.setSpacing(0)

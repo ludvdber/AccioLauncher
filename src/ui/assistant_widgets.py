@@ -154,6 +154,10 @@ class _EtapeRail(QWidget):
         self.libelle = QLabel(libelle)
         self.libelle.setTextFormat(Qt.TextFormat.PlainText)
         self.libelle.setFont(police(14))
+        # Deux lignes tiennent dans les 40 px : « El Sombrero Seleccionador » se
+        # coupait au milieu d'un mot, sans points de suspension.
+        self.libelle.setWordWrap(True)
+        self.libelle.setMinimumWidth(1)
         lay.addWidget(self.libelle, stretch=1)
         self.regler(_Pion.A_VENIR)
 
@@ -353,6 +357,9 @@ class CarteCouleur(CarteChoix):
         nom_lbl.setTextFormat(Qt.TextFormat.PlainText)
         nom_lbl.setFont(police(14))
         nom_lbl.setStyleSheet(f"color: {ENCRE}; background: transparent; border: none;")
+        # Sa ligne entière, jambages compris : sans maison choisie, la note vide
+        # prenait sa part de hauteur et coupait le bas de « Gryffondor ».
+        nom_lbl.setMinimumHeight(nom_lbl.fontMetrics().height())
         lay.addWidget(nom_lbl)
         self.note = QLabel()
         self.note.setTextFormat(Qt.TextFormat.PlainText)
@@ -360,6 +367,7 @@ class CarteCouleur(CarteChoix):
         self.note.setFont(police(12))
         self.note.setStyleSheet(f"color: {palette.accent_light}; background: transparent; border: none;")
         lay.addWidget(self.note)
+        self.note.setVisible(False)          # après l'ajout : sans parent, une fenêtre
         lay.addStretch()
         self._figer_enfants()
 
@@ -371,6 +379,7 @@ class CarteCouleur(CarteChoix):
 
     def annoter(self, note: str) -> None:
         self.note.setText(note)
+        self.note.setVisible(bool(note))
 
 
 class BarreDisque(QWidget):

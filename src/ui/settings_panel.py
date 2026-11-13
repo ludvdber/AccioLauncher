@@ -44,6 +44,7 @@ from src.core.i18n import available_languages, get_language, tr, trn
 from src.ui.composants import (
     ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Pastille, bouton, bouton_rubrique,
     espace_du_volume, feuille_de_style, surtitre, texte,
+    transparent,
 )
 from src.ui.fenetre_message import message
 from src.ui.fonts import cinzel_decorative
@@ -293,7 +294,7 @@ class SettingsDialog(QDialog):
         bornée : sur un grand écran, une ligne de réglage étirée sur 1 500 px
         sépare son titre de son interrupteur par un désert."""
         cadre = QWidget()
-        cadre.setStyleSheet("background: transparent;")
+        transparent(cadre, "margesPage")
         lay = QHBoxLayout(cadre)
         lay.setContentsMargins(_MARGE_RAIL, 32, 48, 16)
         page.setMaximumWidth(_LARGEUR_LECTURE)
@@ -310,7 +311,7 @@ class SettingsDialog(QDialog):
         Surtitre vide pour une carte d'une seule ligne : il répéterait son titre
         (« LANGUE », puis « Langue du launcher »)."""
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageCartes")
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(26)
@@ -621,7 +622,7 @@ class SettingsDialog(QDialog):
                 self, QMessageBox.Icon.Question, tr("Supprimer les bandes-annonces"),
                 tr("Les bandes-annonces ({taille}) quittent le disque.").format(
                     taille=format_bytes(trailer_store.poids_disque())),
-                choix=(tr("Supprimer"), tr("Annuler")), defaut=1)
+                choix=(tr("Supprimer"), tr("Annuler")), defaut=1, danger=True)
             if choix != 0:
                 return
             # Supprimer, c'est aussi dire non : sans ça le rattrapage du

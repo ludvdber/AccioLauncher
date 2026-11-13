@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.config import Config
 from src.core.i18n import get_language, tr, trn
-from src.ui.composants import ENCRE, ENCRE_DOUCE, bouton_retour, feuille_de_style, police, surtitre, texte
+from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte, transparent
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
@@ -262,7 +262,7 @@ class Rangee(QWidget):
 
     def __init__(self, *tuiles: QFrame) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self, "rangee")
         self._tuiles = tuiles
         self._grille = QGridLayout(self)
         self._grille.setContentsMargins(0, 0, 0, 0)
@@ -679,7 +679,7 @@ class FolioPage(QDialog):
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(0)
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageFolio")
         lay = QVBoxLayout(page)
         lay.setContentsMargins(36, 30, 36, 28)
         lay.setSpacing(0)
@@ -761,7 +761,7 @@ class FolioPage(QDialog):
         self._fiche.setObjectName("fiche")
         self._fiche.setFixedWidth(self._largeur_fiche())
         contenu = QWidget()
-        contenu.setStyleSheet("background: transparent;")
+        transparent(contenu, "contenuFiche")
         f = QVBoxLayout(contenu)
         f.setContentsMargins(_MARGE_FICHE, 30, _MARGE_FICHE, 24)
         f.setSpacing(6)

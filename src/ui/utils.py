@@ -197,6 +197,18 @@ class _SansMolette(QObject):
         return True
 
 
+# La barre verticale du launcher : bleu nuit, or au survol, sans flèches. À poser
+# sur toute liste ou zone qui défile (sans elle, la barre claire du système).
+BARRE_DEFILEMENT = (
+    "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
+    "QScrollBar::handle:vertical {"
+    "  background: #2c3e6b; border-radius: 5px; min-height: 30px; }"
+    "QScrollBar::handle:vertical:hover { background: #d6a72c; }"
+    "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+    "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical"
+    " { background: none; }")
+
+
 def zone_defilable(page: QWidget) -> QScrollArea:
     """Rend une page défilable UNIQUEMENT si son contenu ne tient pas.
 
@@ -230,13 +242,6 @@ def zone_defilable(page: QWidget) -> QScrollArea:
     zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     zone.setStyleSheet(themed(
         "QScrollArea, QScrollArea > QWidget > QWidget"
-        " { background: transparent; border: none; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 0; }"
-        "QScrollBar::handle:vertical {"
-        "  background: #2c3e6b; border-radius: 5px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #d6a72c; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical"
-        " { background: none; }"))
+        " { background: transparent; border: none; }" + BARRE_DEFILEMENT))
     zone.viewport().setAutoFillBackground(False)
     return zone

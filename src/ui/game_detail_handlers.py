@@ -43,7 +43,7 @@ log = logging.getLogger(__name__)
 
 
 def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0,
-           conserve: str = "") -> int:
+           conserve: str = "", *, danger: bool = False) -> int:
     """Fenêtre de message (`fenetre_message`) en texte BRUT et aux boutons NOMMÉS.
 
     Deux règles tenues au même endroit, parce qu'elles se sont toutes les deux
@@ -73,7 +73,7 @@ def _boite(icone, view, titre: str, texte: str, choix=(), defaut: int = 0,
     qui reviendrait à consentir à la place de quelqu'un qui n'a rien répondu.
     Sans `choix`, la boîte est un simple constat et ne porte qu'un congé.
     """
-    return message(view, icone, titre, texte, choix, defaut, conserve)
+    return message(view, icone, titre, texte, choix, defaut, conserve, danger=danger)
 
 
 def confirmer_registre(view: GameDetailView, nom_jeu: str, au_lancement: bool = False):
@@ -517,7 +517,7 @@ def on_uninstall(view: GameDetailView) -> None:
         question += "\n\n" + reste
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Confirmer la désinstallation"), question,
-        (tr("Désinstaller"), tr("Annuler")), 1,
+        (tr("Désinstaller"), tr("Annuler")), 1, danger=True,
     )
     if reply != 0:
         return

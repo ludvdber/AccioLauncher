@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from src.core.formatting import format_duree_compacte, minutes_arrondies
 from src.core.i18n import get_language, tr
+from src.ui.composants import Paragraphe
 from src.ui.fonts import cinzel
 from src.ui.theme import accent_qcolor, current
 
@@ -94,26 +95,14 @@ def _titre_section(texte: str) -> QLabel:
     return lbl
 
 
-class _Paragraphe(QLabel):
-    """Texte long en `wordWrap`, dont la hauteur suit la largeur RÉELLE.
+class _Paragraphe(Paragraphe):
+    """Le paragraphe des statistiques : sa couleur et sa taille."""
 
-    Un `QLabel` en `wordWrap` posé dans un layout sans hauteur imposée annonce
-    un `sizeHint` calculé à une largeur qui n'est pas la sienne : le layout ne
-    lui accorde qu'une ligne et le texte se coupe. Le piège a été payé cinq
-    fois dans ce projet ; le remède vit ici une fois pour toutes.
-    """
-
-    def __init__(self, contenu: str, parent=None, taille: int = 12) -> None:
-        super().__init__(contenu, parent)
+    def __init__(self, contenu: str, taille: int = 12) -> None:
+        super().__init__(contenu)
         self.setTextFormat(Qt.TextFormat.PlainText)
-        self.setWordWrap(True)
         self.setStyleSheet(
             f"color: {_SECONDAIRE}; font-size: {taille}px; background: transparent;")
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self.setMinimumHeight(0)
-        self.setMinimumHeight(self.heightForWidth(self.width()))
 
 
 class _Mois(QWidget):

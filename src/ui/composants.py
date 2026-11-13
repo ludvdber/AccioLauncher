@@ -170,14 +170,50 @@ def police(px: int, gras: bool = False) -> QFont:
     return f
 
 
+class Paragraphe(QLabel):
+    """Texte en `wordWrap` dont la hauteur suit la largeur RÉELLE (règle 38).
+
+    Un `QLabel` à la ligne annonce un `sizeHint` calculé à une largeur qui n'est
+    pas la sienne : le layout ne lui accorde qu'une ligne et le texte se coupe
+    (« Désinstaller » : la phrase sur les jeux réduite à sa première ligne, dans
+    les trois langues). Sa hauteur minimale se recalcule à chaque largeur reçue
+    et à chaque texte posé après coup.
+    """
+
+    def __init__(self, contenu: str = "") -> None:
+        super().__init__(contenu)
+        self.setWordWrap(True)
+
+    def setText(self, contenu: str) -> None:
+        super().setText(contenu)
+        self._suivre()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._suivre()
+
+    def _suivre(self) -> None:
+        self.setMinimumHeight(0)
+        self.setMinimumHeight(self.heightForWidth(self.width()))
+
+
+def transparent(widget: QWidget, nom: str) -> None:
+    """Un conteneur sans fond. La règle porte son NOM : sans sélecteur, elle
+    s'applique aussi à TOUS ses enfants et gagne sur la feuille de la fenêtre. Elle
+    effaçait le fond des cartes de la Difficulté, le fond doré de « Suivant » dans
+    l'assistant, le rail, les cartes des Paramètres, le filet du Journal des
+    changements et la pastille des sorts appris du Folio (audit UI, 2026-11-13)."""
+    widget.setObjectName(nom)
+    widget.setStyleSheet(f"QWidget#{nom} {{ background: transparent; }}")
+
+
 def texte(contenu: str, px: int = 13, encre: str = ENCRE,
           retour: bool = False) -> QLabel:
     """Un libellé en texte BRUT : rien de ce qu'il reçoit n'est interprété."""
-    lbl = QLabel(contenu)
+    lbl = Paragraphe(contenu) if retour else QLabel(contenu)
     lbl.setTextFormat(Qt.TextFormat.PlainText)
     lbl.setFont(police(px))
     lbl.setStyleSheet(f"color: {encre}; background: transparent;")
-    lbl.setWordWrap(retour)
     return lbl
 
 

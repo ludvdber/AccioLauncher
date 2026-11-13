@@ -48,8 +48,10 @@ from src.ui.assistant_widgets import (
 from src.ui.composants import (
     ENCRE_DISCRETE, ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
     espace_du_volume, feuille_de_style, police, texte,
+    transparent,
 )
 from src.ui.ecu import Ecu
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import THEMES, accent_qcolor, current as theme_courant, set_theme, themed
@@ -129,6 +131,7 @@ class OnboardingDialog(QDialog):
 
     def __init__(self, config: Config | None = None, rattrapage: tuple[str, ...] = ()) -> None:
         super().__init__()
+        entree_suit_le_focus(self)
         self.setObjectName("assistant")
         self.setWindowTitle(tr("Bienvenue dans Accio Launcher") if config else "Accio Launcher")
         self.setMinimumSize(860, 600)
@@ -321,7 +324,7 @@ class OnboardingDialog(QDialog):
         self._rail_noms = [e for e in self._ecrans if e != VERDICT]
 
         self._etapes = QWidget()
-        self._etapes.setStyleSheet("background: transparent;")
+        transparent(self._etapes, "etapes")
         h = QHBoxLayout(self._etapes)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(0)
@@ -376,8 +379,10 @@ class OnboardingDialog(QDialog):
         self._btn_retour.clicked.connect(self._retour)
         lay.addWidget(self._btn_retour)
         lay.addStretch()
-        self._fin = texte(tr("C'est tout. Bon retour à Poudlard."), 13, ENCRE_DOUCE)
-        lay.addWidget(self._fin)
+        # À la ligne quand la place manque (espagnol à 860 px : le point final tombait).
+        self._fin = texte(tr("C'est tout. Bon retour à Poudlard."), 13, ENCRE_DOUCE, retour=True)
+        self._fin.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        lay.addWidget(self._fin, stretch=1)
         self._lien = lien("")
         self._lien.clicked.connect(self._sur_lien)
         lay.addWidget(self._lien)
@@ -394,11 +399,11 @@ class OnboardingDialog(QDialog):
     def _squelette(self, ecran: str, titre: str = "", lede: str = "") -> tuple[QWidget, QVBoxLayout]:
         """Surtitre, titre, phrase d'entrée : le haut commun des étapes."""
         cadre = QWidget()
-        cadre.setStyleSheet("background: transparent;")
+        transparent(cadre, "cadreEtape")
         h = QHBoxLayout(cadre)
         h.setContentsMargins(44, 36, 44, 24)
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageEtape")
         page.setMaximumWidth(_LARGEUR_LECTURE)
         h.addWidget(page, stretch=1)
         lay = QVBoxLayout(page)
@@ -847,6 +852,12 @@ class OnboardingDialog(QDialog):
         self._pile.setCurrentWidget(self._zones[ecran])
         self._rail.regler(self._rail_noms.index(_ETAPE_DU_RAIL[ecran]))
         self._regler_pied()
+        # Chaque écran s'ouvre sur « Suivant » : Entrée et la croix de la manette
+        # (qui presse le bouton focalisé) avancent. Le focus restait sur
+        # « Changer… », et Entrée ouvrait le sélecteur de dossier. Raison Tab :
+        # l'anneau ne s'allume que si une touche a fait changer d'écran.
+        if self._btn_suivant.isEnabled():
+            self._btn_suivant.setFocus(Qt.FocusReason.TabFocusReason)
 
     def _regler_pied(self) -> None:
         ecran = self._ecran

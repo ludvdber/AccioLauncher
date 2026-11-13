@@ -34,19 +34,22 @@ from src.core.config import APP_VERSION
 from src.core.game_data import GameData
 from src.core.i18n import get_language, tr, trn
 from src.core.phonographe import nom_de_fichier
+from src.ui.composants import bouton, feuille_de_style
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
 from src.ui.fenetre_message import message
-from src.ui.utils import liste_deroulante, open_local_path
+from src.ui.utils import BARRE_DEFILEMENT, liste_deroulante, open_local_path
 
 _LISTE_STYLE = (
     "QListWidget { color: #e0e0f0; background: #141428; border: 1px solid #2a2a48;"
     " font-size: 13px; outline: none; }"
     "QListWidget::item { padding: 6px 8px; }"
     "QListWidget::item:selected { color: #0d0d1a; background: #d6a72c; }"
+    + BARRE_DEFILEMENT
 )
+_FENETRE = "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"
 
 # La ligne « telle qu'elle est maintenant », en tête de liste.
 _ACTUELLE = "actuelle"
@@ -88,8 +91,7 @@ class _ChoixEmplacement(QDialog):
         super().__init__(parent)
         entree_suit_le_focus(self)
         self.setWindowTitle(tr("Importer dans quel emplacement ?"))
-        self.setStyleSheet(themed(
-            "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"))
+        self.setStyleSheet(themed(_FENETRE) + feuille_de_style())
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 16)
         layout.setSpacing(10)
@@ -106,16 +108,15 @@ class _ChoixEmplacement(QDialog):
         libres = [i for i, (_r, _n, pris) in enumerate(noms) if not pris]
         self.choix.setCurrentIndex(libres[0] if libres else 0)
         layout.addWidget(self.choix)
+        # Du plus neutre au plus engageant : celui qui agit finit à droite.
         pied = QHBoxLayout()
         pied.addStretch()
-        ok = QPushButton(tr("Importer"))
-        ok.setCursor(Qt.CursorShape.PointingHandCursor)
-        ok.clicked.connect(self.accept)
-        annuler = QPushButton(tr("Annuler"))
-        annuler.setCursor(Qt.CursorShape.PointingHandCursor)
+        annuler = bouton(tr("Annuler"))
         annuler.clicked.connect(self.reject)
-        pied.addWidget(ok)
+        ok = bouton(tr("Importer"), principal=True)
+        ok.clicked.connect(self.accept)
         pied.addWidget(annuler)
+        pied.addWidget(ok)
         layout.addLayout(pied)
 
 
@@ -134,8 +135,7 @@ class CopiesDialog(QDialog):
         self._presents: dict[str, Path] = {}
         self.setWindowTitle(tr("Sauvegardes : {}").format(game.name))
         self.setMinimumSize(560, 460)
-        self.setStyleSheet(themed(
-            "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"))
+        self.setStyleSheet(themed(_FENETRE) + feuille_de_style())
         self._build_ui()
         self._recharger()
 
@@ -150,7 +150,7 @@ class CopiesDialog(QDialog):
         titre.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
         layout.addWidget(titre)
         note = QLabel(tr(
-            "Avant chaque partie, le lanceur garde une copie de chaque sauvegarde qui a changé. "
+            "Avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. "
             "Les dates sont celles où le jeu a écrit chaque version. Une sauvegarde s'exporte en .zip "
             "pour la garder ou la partager, et s'importe depuis un .zip ou le fichier seul."))
         note.setFont(body_font(11))
@@ -186,21 +186,17 @@ class CopiesDialog(QDialog):
         layout.addLayout(ligne)
 
         pied = QHBoxLayout()
-        self._importer_bouton = QPushButton(tr("Importer…"))
-        self._importer_bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._importer_bouton = bouton(tr("Importer…"))
         self._importer_bouton.clicked.connect(self._importer)
         pied.addWidget(self._importer_bouton)
         pied.addStretch()
-        self._exporter_bouton = QPushButton(tr("Exporter en .zip…"))
-        self._exporter_bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._exporter_bouton = bouton(tr("Exporter en .zip…"))
         self._exporter_bouton.clicked.connect(self._exporter)
         pied.addWidget(self._exporter_bouton)
-        self._bouton = QPushButton(tr("Remettre cette version"))
-        self._bouton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._bouton = bouton(tr("Remettre cette version"), principal=True)
         self._bouton.clicked.connect(self._remettre)
         pied.addWidget(self._bouton)
-        fermer = QPushButton(tr("Fermer"))
-        fermer.setCursor(Qt.CursorShape.PointingHandCursor)
+        fermer = bouton(tr("Fermer"))
         fermer.clicked.connect(self.accept)
         pied.addWidget(fermer)
         layout.addLayout(pied)

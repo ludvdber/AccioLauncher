@@ -15,11 +15,23 @@ d'anneau », ce qu'on veut.
 
 Le filtre est posé sur QApplication : il couvre aussi les dialogues et
 l'assistant de premier lancement, qui vivent avant MainWindow.
+
+Deux autres devoirs du même filtre, parce qu'ils tiennent au même événement :
+la fenêtre qui perd la main (Alt+Tab, un menu) GARDE la marque de son widget,
+sinon le focus revenait sans anneau et Espace agissait sur un bouton qu'on ne
+voyait plus désigné ; et un focus reçu au clavier fait défiler jusqu'à lui
+chaque zone qui le contient : Qt ne le fait que pour un Tab parti de la zone
+elle-même, et un Maj+Tab venu de la barre du haut laissait le focus 39 px sous
+le bas de la fenêtre.
+
+Une raison Tab ne vaut clavier que pendant l'appui d'une touche : un widget qui
+se cache en tenant le focus le passe au suivant avec cette raison, et un clic
+sur « ← Bibliothèque » allumait l'onglet BIBLIOTHÈQUE comme un Tab.
 """
 
 
-from PyQt6.QtCore import QEvent, QObject, Qt
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
+from PyQt6.QtWidgets import QApplication, QScrollArea, QWidget
 
 
 PROPRIETE = "focusClavier"
@@ -32,6 +44,13 @@ _RAISONS_CLAVIER = frozenset({
     Qt.FocusReason.BacktabFocusReason,
     Qt.FocusReason.ShortcutFocusReason,
 })
+# La fenêtre perd ou reprend la main, un menu s'ouvre ou se ferme : le focus ne
+# change pas de widget, sa marque non plus.
+_RAISONS_GARDEES = frozenset({
+    Qt.FocusReason.ActiveWindowFocusReason,
+    Qt.FocusReason.PopupFocusReason,
+})
+_MARGE_DEFILEMENT = 24
 
 
 def _marque(widget: QWidget, actif: bool) -> None:
@@ -57,13 +76,37 @@ def marquer(widget: QWidget | None) -> None:
         _marque(widget, True)
 
 
+def montrer(widget: QWidget) -> None:
+    """Fait défiler chaque zone qui contient `widget` jusqu'à lui, de la plus proche à la plus large."""
+    enfant, parent = widget, widget.parentWidget()
+    while parent is not None:
+        if isinstance(parent, QScrollArea) and parent.widget() is not None:
+            parent.ensureWidgetVisible(enfant, 0, _MARGE_DEFILEMENT)
+            enfant = parent
+        parent = parent.parentWidget()
+
+
 class _FiltreFocus(QObject):
+    def __init__(self, parent: QObject) -> None:
+        super().__init__(parent)
+        self._touche = False          # une touche est en cours de traitement
+
+    def _relacher(self) -> None:
+        self._touche = False
+
     def eventFilter(self, obj, event) -> bool:
         type_ = event.type()
-        if type_ == QEvent.Type.FocusIn and isinstance(obj, QWidget):
-            _marque(obj, event.reason() in _RAISONS_CLAVIER)
-        elif type_ == QEvent.Type.FocusOut and isinstance(obj, QWidget):
-            _marque(obj, False)
+        if type_ == QEvent.Type.KeyPress and not self._touche:
+            self._touche = True
+            QTimer.singleShot(0, self._relacher)
+        elif type_ in (QEvent.Type.FocusIn, QEvent.Type.FocusOut) and isinstance(obj, QWidget):
+            raison = event.reason()
+            if raison in _RAISONS_GARDEES:
+                return False
+            clavier = type_ == QEvent.Type.FocusIn and raison in _RAISONS_CLAVIER and self._touche
+            _marque(obj, clavier)
+            if clavier:
+                montrer(obj)
         return False       # ne jamais consommer l'événement
 
 

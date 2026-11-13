@@ -30,7 +30,7 @@ from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.i18n import tr
 from src.ui.cadran_defi import CadranDefi, teinte
-from src.ui.composants import Rangee, surtitre, texte
+from src.ui.composants import Rangee, surtitre, texte, transparent
 from src.ui.fonts import cinzel
 from src.ui.theme import current as current_theme, themed
 
@@ -274,17 +274,10 @@ class _TuileBientot(QFrame):
         lay.addStretch()
 
 
-def _transparent(widget: QWidget, nom: str) -> None:
-    """Un conteneur sans fond. La règle porte son NOM : sans sélecteur, elle
-    s'appliquait aussi à ses enfants, et effaçait le fond des cartes et des filets."""
-    widget.setObjectName(nom)
-    widget.setStyleSheet(f"QWidget#{nom} {{ background: transparent; }}")
-
-
 def _titre_section(contenu: str) -> QWidget:
     """Un surtitre doré suivi d'un filet qui s'efface vers la droite."""
     bloc = QWidget()
-    _transparent(bloc, "titreSection")
+    transparent(bloc, "titreSection")
     h = QHBoxLayout(bloc)
     h.setContentsMargins(0, 0, 0, 0)
     h.setSpacing(14)
@@ -306,7 +299,7 @@ class PanneauDifficulte(QWidget):
     def __init__(self, game: GameData, config: Config, ini: Path | None,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        _transparent(self, "panneauDifficulte")
+        transparent(self, "panneauDifficulte")
         self.setStyleSheet(self.styleSheet() + themed(_STYLE))
         self.game = game
         self.config = config
@@ -349,7 +342,7 @@ class PanneauDifficulte(QWidget):
     # ── Construire ────────────────────────────────────────────────────────
     def _entete(self) -> QWidget:
         bloc = QWidget()
-        _transparent(bloc, "enteteDifficulte")
+        transparent(bloc, "enteteDifficulte")
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(10)
@@ -373,7 +366,7 @@ class PanneauDifficulte(QWidget):
         """Le titre de la section des réglages un par un, allumé quand aucun
         preset ne correspond : les réglages eux-mêmes suivent, posés par la fenêtre."""
         bloc = QWidget()
-        _transparent(bloc, "teteSurMesure")
+        transparent(bloc, "teteSurMesure")
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(6)
@@ -402,7 +395,7 @@ class PanneauDifficulte(QWidget):
         if not self.tuiles:
             return None
         bloc = QWidget()
-        _transparent(bloc, "uneSeuleVie")
+        transparent(bloc, "uneSeuleVie")
         bloc.setStyleSheet(bloc.styleSheet() + themed(_STYLE))
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)

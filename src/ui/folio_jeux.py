@@ -39,7 +39,7 @@ from src.core import (
 from src.core.config import cache_pour
 from src.core.i18n import get_language, tr, trn
 from src.ui.carte_3d import Carte3D
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, texte
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, texte, transparent
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
@@ -185,7 +185,7 @@ def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QVBoxLayo
     h = QHBoxLayout(corps)
     h.setContentsMargins(0, 0, 0, 0)
     page = QWidget()
-    page.setStyleSheet("background: transparent;")
+    transparent(page, "pageFolio")
     lay = QVBoxLayout(page)
     lay.setContentsMargins(36, 30, 36, 28)
     lay.setSpacing(0)
@@ -228,7 +228,7 @@ class FolioPageHP3(FolioPage):
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(0)
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageFolio")
         lay = QVBoxLayout(page)
         lay.setContentsMargins(36, 30, 36, 28)
         lay.setSpacing(0)
@@ -431,7 +431,7 @@ class FolioPageHP2(FolioPage):
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(0)
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageFolio")
         lay = QVBoxLayout(page)
         lay.setContentsMargins(36, 30, 36, 28)
         lay.setSpacing(0)
@@ -667,13 +667,9 @@ class FolioPageHP4(FolioPage):
             lay.addLayout(_rangee(*tuiles))
             if partie.maitrise:
                 lay.addSpacing(12)
-                rangee = QHBoxLayout()
-                rangee.setSpacing(12)
-                rangee.addWidget(self._jauges(folio_hp4.TITRES["sortileges"],
-                                              folio_hp4.SORTILEGES, partie), stretch=1)
-                rangee.addWidget(self._jauges(folio_hp4.TITRES["sorts"], folio_hp4.SORTS,
-                                              partie, colonnes=2), stretch=2)
-                lay.addLayout(rangee)
+                lay.addWidget(_CoteACote(
+                    self._jauges(folio_hp4.TITRES["sortileges"], folio_hp4.SORTILEGES, partie),
+                    self._jauges(folio_hp4.TITRES["sorts"], folio_hp4.SORTS, partie, colonnes=2)))
             if partie.quetes:
                 lay.addSpacing(12)
                 lay.addWidget(self._quetes(partie.quetes))
@@ -700,7 +696,7 @@ class FolioPageHP4(FolioPage):
         largeur = self._largeur_colonne()
         self._colonne_hp4.setFixedWidth(largeur)
         contenu = QWidget()
-        contenu.setStyleSheet("background: transparent;")
+        transparent(contenu, "contenuFiche")
         fiche = QVBoxLayout(contenu)
         fiche.setContentsMargins(_MARGE_FICHE, 30, _MARGE_FICHE, 24)
         fiche.setSpacing(4)
@@ -786,15 +782,16 @@ class FolioPageHP4(FolioPage):
              cartes: frozenset[int], dpr: float) -> QWidget:
         """Un jeu de la boutique : son titre, son compte, ses cartes en ligne."""
         bloc = QWidget()
-        bloc.setStyleSheet("background: transparent;")
+        transparent(bloc, "blocCartes")
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(6)
         titre = self._nom_jeu(jeu.titre).format(numero)
         dans = sum(1 for c in jeu.cartes if c in cartes)
         v.addWidget(texte(f"{titre} · {dans} / {len(jeu.cartes)}", 12, ENCRE_DOUCE))
-        rangee = QHBoxLayout()
-        rangee.setSpacing(4)
+        # Les cartes passent à la ligne : sept cartes de personnage en ligne
+        # (486 px) rognaient la page à droite sous 1 250 px de large.
+        rangee = FlowLayout(spacing=4)
         paysage = jeu.image.startswith(("wc_hry", "wc_ron", "wc_hermione"))
         taille = QSize(_VIGNETTE_HP4 * (2 if paysage else 1), _VIGNETTE_HP4)
         for rang, carte in enumerate(jeu.cartes):
@@ -807,7 +804,6 @@ class FolioPageHP4(FolioPage):
                 physique = QSize(round(taille.width() * dpr), round(taille.height() * dpr))
                 self._attendues.append((vignette, self._fil.submit(
                     _illustration, self._system, jeu, rang, physique)))
-        rangee.addStretch()
         v.addLayout(rangee)
         return bloc
 
@@ -1131,7 +1127,7 @@ class FolioPageHP6(FolioPage):
         textes = folio_hp6.textes_badges(self._system, get_language())
         dpr = self.devicePixelRatioF()
         colonne = QWidget()
-        colonne.setStyleSheet("background: transparent;")
+        transparent(colonne, "colonneBadges")
         lay = QVBoxLayout(colonne)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -1188,6 +1184,40 @@ def _lieux_ordonnes(lieux: list[folio_hp6.Lieu]) -> list[tuple[str, folio_hp6.Li
                                      unicodedata.normalize("NFKD", paire[0]).casefold()))
 
 
+class _CoteACote(QWidget):
+    """Deux cadres côte à côte (le second deux fois plus large) quand ils y tiennent,
+    l'un sous l'autre sinon : les Sorts de HP4 perdaient leur seconde colonne sous
+    1 250 px de large, sans moyen de la faire défiler (audit UI, 2026-11-13)."""
+
+    _ECART = 12
+
+    def __init__(self, gauche: QWidget, droite: QWidget) -> None:
+        super().__init__()
+        transparent(self, "coteACote")
+        self._gauche, self._droite = gauche, droite
+        self._boite = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
+        self._boite.setContentsMargins(0, 0, 0, 0)
+        self._boite.setSpacing(self._ECART)
+        self._boite.addWidget(gauche, stretch=1)
+        self._boite.addWidget(droite, stretch=2)
+
+    def _seuil(self) -> int:
+        return (self._gauche.minimumSizeHint().width() + self._droite.minimumSizeHint().width()
+                + self._ECART)
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt)
+        hauteur = super().minimumSizeHint().height()
+        return QSize(max(self._gauche.minimumSizeHint().width(),
+                         self._droite.minimumSizeHint().width()), hauteur)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        voulu = (QBoxLayout.Direction.LeftToRight if self.width() >= self._seuil()
+                 else QBoxLayout.Direction.TopToBottom)
+        if voulu != self._boite.direction():
+            self._boite.setDirection(voulu)
+
+
 class _BadgesEtLieux(QWidget):
     """Les badges de HP6 à gauche, la carte des lieux à droite quand la page
     est large ; l'un sous l'autre sinon. Empilés, les 43 lieux tombaient sous
@@ -1199,7 +1229,7 @@ class _BadgesEtLieux(QWidget):
 
     def __init__(self, badges: QWidget | None, lieux: QFrame) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self, "badgesEtLieux")
         self._badges = badges
         self._boite = QBoxLayout(QBoxLayout.Direction.TopToBottom, self)
         self._boite.setContentsMargins(0, 0, 0, 0)

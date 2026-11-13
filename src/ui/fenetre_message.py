@@ -213,19 +213,22 @@ def cadre_conserve(contenu: str) -> QFrame:
 
 
 def message(parent, icone, titre: str, contenu: str, choix=(), defaut: int = 0,
-            conserve: str = "") -> int:
+            conserve: str = "", *, danger: bool = False) -> int:
     """Pose la fenêtre et rend l'INDEX du bouton cliqué, -1 si fermée autrement.
 
     `choix` va du plus engageant au plus neutre ; le dernier est le retrait,
     celui qu'Échap déclenche. Sans `choix`, un seul bouton « Fermer ».
+    `danger` : le premier choix efface quelque chose (un jeu, les bandes-annonces,
+    des défis) ; il prend le bouton rouge des confirmations, comme « Quitter quand même ».
     """
+    engage = QMessageBox.ButtonRole.DestructiveRole if danger else QMessageBox.ButtonRole.AcceptRole
     boite = FenetreMessage(parent)
     boite.setIcon(icone)
     boite.setWindowTitle(titre)
     boite.setText(contenu)
     boite.setConserve(conserve)
     libelles = tuple(choix) or (tr("Fermer"),)
-    boutons = [boite.addButton(libelle, QMessageBox.ButtonRole.AcceptRole if i == 0 and choix
+    boutons = [boite.addButton(libelle, engage if i == 0 and choix
                                else QMessageBox.ButtonRole.RejectRole)
                for i, libelle in enumerate(libelles)]
     boite.setDefaultButton(boutons[min(max(defaut, 0), len(boutons) - 1)])

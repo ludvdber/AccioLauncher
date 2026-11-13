@@ -144,7 +144,7 @@ class RubriquesDuJeu:
             # sélectionner, les fichiers viennent du disque d'origine.
             carte.ajouter(LigneReglage(
                 tr("Ce jeu n'est installé que dans une seule langue."),
-                tr("Le lanceur ne peut que sélectionner une langue déjà présente "
+                tr("Le launcher ne peut que sélectionner une langue déjà présente "
                    "sur le disque, pas la télécharger.")))
             self._section(corps, None, carte)
             self._note_langues(corps)
@@ -260,7 +260,7 @@ class RubriquesDuJeu:
             # chercher dans le menu du jeu et cassera son installation.
             note = QLabel(tr(
                 "Ne touchez pas aux options vidéo DANS le jeu : l'affichage "
-                "est déjà réglé au mieux par le lanceur, et le modifier ici "
+                "est déjà réglé au mieux par le launcher, et le modifier ici "
                 "peut empêcher le jeu de redémarrer.\n"
                 "Ces réglages viendront ici.") if not reglable else tr(
                 "Réglez la résolution ici, pas dans le menu du jeu : ses options "
@@ -332,7 +332,7 @@ class RubriquesDuJeu:
         choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_taille_texte(c.currentData()))
         carte.ajouter(self._ligne(tr("Taille du texte"), choix, tr(
             "Le jeu agrandit ses menus avec l'écran, mais garde le texte de 2001, minuscule en "
-            "haute définition. Le lanceur redessine ses lettres à la taille de l'image : "
+            "haute définition. Le launcher redessine ses lettres à la taille de l'image : "
             "automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut "
             "déborder de certains cadres. Appliqué au prochain lancement.")))
 
@@ -524,7 +524,7 @@ class RubriquesDuJeu:
             # HP5 et HP6 (lu dans leurs exe, 2026-09-30) : au démarrage, un choix
             # « manette » sans manette vue retombe au clavier ET s'écrit ainsi.
             carte.ajouter(self._ligne(tr("Jouer à la manette"), bascule, tr(
-                "Le jeu garde ce choix dans le registre de Windows : le lanceur vous "
+                "Le jeu garde ce choix dans le registre de Windows : le launcher vous "
                 "prévient avant de le modifier. Il se règle aussi dans les options du jeu. "
                 "Branchez la manette avant de lancer le jeu : s'il ne la trouve pas au "
                 "démarrage, il repasse au clavier.")))

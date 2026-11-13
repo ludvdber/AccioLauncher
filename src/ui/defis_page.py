@@ -28,6 +28,7 @@ from src.ui.medailles import pixmap_medaille
 from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
 from src.ui.succes_widgets import _jour
 from src.ui.theme import themed
+from src.ui.utils import BARRE_DEFILEMENT
 
 _MEDAILLE = 84
 _COLONNES = 2
@@ -98,8 +99,9 @@ class DefisPage(QWidget):
         # Seul arrêt de Tab de la rubrique (les médailles ne se pressent pas) :
         # sans anneau, le focus y était invisible (règle 15, audit du 2026-10-29).
         zone.setObjectName("zoneDefis")
-        zone.setStyleSheet('QScrollArea#zoneDefis[focusClavier="true"]:focus '
-                           "{ border: 2px solid #d6a72c; border-radius: 6px; }")
+        # La barre du launcher, comme le Folio et le Relevé : sans elle, celle du système.
+        zone.setStyleSheet(themed('QScrollArea#zoneDefis[focusClavier="true"]:focus '
+                                  "{ border: 2px solid #d6a72c; border-radius: 6px; }" + BARRE_DEFILEMENT))
         corps = QWidget()
         corps.setObjectName("defisCorps")
         lay = QVBoxLayout(corps)
@@ -140,7 +142,7 @@ class DefisPage(QWidget):
             + tr("Vos parties déjà avancées les redonnent dès que vous y rejouez : pour repartir "
                  "vraiment de zéro, commencez une nouvelle partie ou supprimez les anciennes "
                  "dans le jeu."),
-            choix=(tr("Recommencer"), tr("Annuler")), defaut=1)
+            choix=(tr("Recommencer"), tr("Annuler")), defaut=1, danger=True)
         if choix != 0:
             return
         succes.recommencer(self.game.id, datetime.now())
