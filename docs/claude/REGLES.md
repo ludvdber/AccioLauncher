@@ -5,7 +5,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ## Don't reintroduce these
 
-139 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
+140 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
 
 ### Processus, threads, sortie
 
@@ -111,6 +111,8 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 78. **Faire dépendre un test du CONTENU de `games.json`** — il se met à jour **à distance** : un test qui suppose ce qu'il contient casse à chaque livraison, loin de la ligne qu'il surveille. Quatre classes cherchaient « le jeu sans archive » ; la publication de HP7a/HP7b les a mises au rouge d'un coup. Remède : la fixture `make_window_jeu_a_venir` **fabrique** le cas, plus une garde qui échoue si elle cesse d'en produire un — sans elle, les tests passeraient à vide en restant verts. **Nuance (audit 2026-10-08)** : la règle vise le catalogue DISTANT. Un test qui lit la copie EMBARQUÉE (`src/data/games.json`, versionnée avec le code) est un contrat d'embarqué, par exemple « HP1 et HP2 déclarent les runtimes qu'`d3d11drv` charge » : il ne casse pas à la livraison d'un jeu, mais il rougit quand on remplace la copie. Le dire dans son docstring, et ne pas y poser ce que le catalogue a vocation à changer (versions, tailles, textes). **Ces contrats vivent tous dans `tests/test_catalogue_embarque.py`** (sept tests éparpillés dans six fichiers, regroupés le 2026-10-08, ACT-023) : quand on remplace la copie en « repartant du RAW », c'est là, et seulement là, qu'un rouge doit apparaître. Un nouveau contrat d'embarqué s'y ajoute ; un test ailleurs qui lit le contenu de `games.json` est une faute.
 
 ### Fichiers, encodage, build
+
+140. **Relire un fichier à chaque question qu'on lui pose** — `reglages_correctif._lire` relisait l'ini en entier pour chaque ligne de réglage : `d3d9.ini` de HP6 lu 62 fois (et sa copie d'origine 26) à UNE ouverture des réglages, 3 fois à chaque changement de jeu ; 256 fichiers relus sur un parcours (banc de rapidité, 2026-11-13). Un fichier : une ouverture, tout lu, gardé tant que (date, taille) ne changent pas — `lecture_ini.lire_lignes`, `oublier` après écriture. Tout audit de rapidité compte les ouvertures PAR FICHIER, pas seulement les millisecondes. `tests/test_lecture_ini.py` (3 échecs sur l'ancien code).
 
 79. **Écrire un chemin dans le corps d'un `.bat`** — `cmd.exe` relit en page de codes OEM (cp850) : « Frédéric » devenait « Fr?d?ric » et l'auto-update comme les deux boutons « Redémarrer » s'arrêtaient sans un mot. Les chemins passent par `variables` de `_spawn_after_exit_bat`, référencés `%ACCIO_*%` : le bloc d'environnement est transmis en Unicode par `CreateProcessW` et tient le latin, le cyrillique et le japonais. Le corps reste en `ascii` avec `errors="strict"`, pour qu'une rechute échoue franchement.
 80. **Laisser un `.bat` prendre des fins de ligne LF** — `cmd.exe` se repositionne sur les CRLF ; sans eux il reprend au mauvais octet. `build.bat` échouait sur « `'evel' n'est pas reconnu` » — `errorlevel` coupé en deux — en annonçant « aucun Python 3.12+ trouvé » sur une machine où Python est installé. **`git status` ne signale rien** (avec `core.autocrlf=true` un fichier LF se normalise en lui-même). Le remède est `.gitattributes`, pas une reconversion locale.

@@ -53,6 +53,7 @@ from src.core.reglages_table import (  # noqa: F401  (réexportés)
 )
 from src.core.reglages_table import ValeurChoix
 from src.core.ecriture_atomique import ecrire_octets_atomique
+from src.core.lecture_ini import differe, lire_lignes, oublier
 
 # La valeur d'un réglage : un interrupteur (bool) ou l'un de ses choix.
 type Valeur = ValeurChoix | bool
@@ -296,17 +297,19 @@ _SECTION = re.compile(r"^\s*\[([^\]]+)\]\s*$")
 
 
 def _lire(chemin: Path) -> tuple[list[str], str]:
-    """Lignes SANS fin de ligne, et la fin de ligne du fichier."""
-    brut = chemin.read_bytes().decode("utf-8", errors="surrogateescape")
-    fin = "\r\n" if "\r\n" in brut else "\n"
-    return brut.split(fin), fin
+    """Lignes SANS fin de ligne, et la fin de ligne du fichier : lu une fois tant
+    qu'il ne change pas (`lecture_ini`)."""
+    return lire_lignes(chemin)
 
 
 def _ecrire(chemin: Path, lignes: list[str], fin: str) -> None:
     texte = fin.join(lignes)
     # Le temporaire est effacé sur un échec (disque plein, fichier verrouillé) :
     # un `d3d9.ini.tmp` restait sinon dans le dossier du jeu (audit du 2026-10-29).
-    ecrire_octets_atomique(chemin, texte.encode("utf-8", errors="surrogateescape"))
+    try:
+        ecrire_octets_atomique(chemin, texte.encode("utf-8", errors="surrogateescape"))
+    finally:
+        oublier(chemin)
 
 
 def _bornes(lignes: list[str], section: str) -> tuple[int, int] | None:
@@ -604,7 +607,7 @@ def a_une_origine(ini: Path) -> bool:
     """
     origine = chemin_origine(ini)
     try:
-        return origine.is_file() and (not ini.is_file() or origine.read_bytes() != ini.read_bytes())
+        return differe(ini, origine)
     except OSError:
         return origine.is_file()
 

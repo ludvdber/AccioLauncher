@@ -45,7 +45,7 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 ## Testing
 
 - `pytest-qt>=4.5` ; `qtbot` est la façon standard de tester un widget. `tests/conftest.py` force `QT_QPA_PLATFORM=offscreen`. La logique pure (tout `src/core/` sauf les QThread) se teste sans fixture Qt.
-- **Compte au dernier point (2026-11-13, Windows, Python 3.15.2, aac5198 + les 4 gênes de l'audit UI : Entrée suit le focus, folio qui défile, toast hors de JOUER, manette dans les groupes exclusifs) : 4750 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. **Dans le Bash de Claude, `python` est la 3.14** : lancer `py -3.15 -m pytest`.
+- **Compte au dernier point (2026-11-13, Windows, Python 3.15.2, aac5198 + les 4 gênes de l'audit UI : Entrée suit le focus, folio qui défile, toast hors de JOUER, manette dans les groupes exclusifs) et les ini lus une seule fois (`lecture_ini`) : 4757 réussis, 34 sautés** (30 tests Linux qui exigent le système, 4 qui exigent le droit de créer un lien symbolique sous Windows). Un `s` n'est jamais un échec ; ce qui doit alerter, c'est leur NOMBRE qui grimpe. **Dans le Bash de Claude, `python` est la 3.14** : lancer `py -3.15 -m pytest`.
 - Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
 - Ne JAMAIS appeler une police par son nom système (règle 89) : offscreen mesurerait une autre police.
 - Aucun test n'écrit dans le vrai Documents (`conftest._documents_hors_du_vrai_dossier`).
@@ -68,4 +68,4 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 
 ## Index des règles à ne pas réintroduire
 
-139 règles, numérotées et classées dans [docs/claude/REGLES.md](docs/claude/REGLES.md), chacune avec sa mesure. **Ouvrir la règle avant de toucher au sujet qu'elle nomme.** Catégories : processus, threads, sortie · Qt : peinture, focus, widgets · mise en page et mesure · texte, i18n, contenu distant · catalogue, registre, sécurité · fichiers, encodage, build · orchestration et états · ce que l'interface a le droit de dire · produit : ce qui a été tranché · Linux et AppImage · pièges de test récurrents.
+140 règles, numérotées et classées dans [docs/claude/REGLES.md](docs/claude/REGLES.md), chacune avec sa mesure. **Ouvrir la règle avant de toucher au sujet qu'elle nomme.** Catégories : processus, threads, sortie · Qt : peinture, focus, widgets · mise en page et mesure · texte, i18n, contenu distant · catalogue, registre, sécurité · fichiers, encodage, build · orchestration et états · ce que l'interface a le droit de dire · produit : ce qui a été tranché · Linux et AppImage · pièges de test récurrents.

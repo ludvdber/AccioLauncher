@@ -30,6 +30,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from src.core.lecture_ini import differe
 from src.core.reglages_correctif import Etat, _bornes, _ecrire, _lire
 from src.core.reglages_table import Reglage
 
@@ -163,7 +164,7 @@ def a_une_origine(conf: Path) -> bool:
     """
     origine = chemin_origine(conf)
     try:
-        return origine.is_file() and (not conf.is_file() or origine.read_bytes() != conf.read_bytes())
+        return differe(conf, origine)
     except OSError:
         return origine.is_file()
 
