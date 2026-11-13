@@ -74,11 +74,11 @@ class TestReglages:
         porteurs = {j["id"] for j in catalogue["games"] if "textures_hd" in j.get("fix_settings", ())}
         assert porteurs == {"hp6"}
 
-    def test_force_du_halo_sur_hp5_seulement(self, catalogue):
-        """Catalogue 0.57 (2026-11-12) : `NativeBloomStrength` n'a été vu en jeu que sur HP5 (livré à 60) ;
-        HP6 le lit aussi mais attend son essai."""
+    def test_force_du_halo_sur_hp5_et_hp6(self, catalogue):
+        """Catalogue 0.57 (2026-11-12) : `NativeBloomStrength` vu en jeu sur HP5 (livré à 60) et sur HP6
+        (essai 74 du 2026-11-13 : une seule cible suivie, flou de profondeur intact ; livré à 100, clé absente)."""
         porteurs = {j["id"] for j in catalogue["games"] if "force_halo" in j.get("fix_settings", ())}
-        assert porteurs == {"hp5"}
+        assert porteurs == {"hp5", "hp6"}
 
     def test_egal_au_catalogue_publie_quand_son_depot_est_la(self):
         """Les deux catalogues ensemble : l'embarqué et `accio-launcher-games/games.json` portent le même

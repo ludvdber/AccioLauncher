@@ -2418,6 +2418,7 @@
         "filtrage",
         "occlusion",
         "halo",
+        "force_halo",
         "rayons",
         "couleurs",
         "vivacite",
