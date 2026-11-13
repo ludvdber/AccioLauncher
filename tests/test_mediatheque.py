@@ -1471,3 +1471,23 @@ def test_les_captures_suivent_le_jeu_choisi_et_gardent_tous(fenetre_avec_jeux, q
     assert page._jeux._boutons["hp3"].isChecked() and not page._jeux._tous.isVisibleTo(page)
     page.rubrique(CAPTURES)
     assert page._jeux._tous.isChecked(), "le filtre posé en Captures est repris au retour"
+
+
+def test_l_entete_sans_titre_rubriques_et_jeux_sur_une_ligne_s_ils_y_tiennent(fenetre_avec_jeux, qtbot):
+    """Audit UI col11 : le grand titre « Collections » répétait l'onglet souligné juste
+    au-dessus. Les jeux suivent les rubriques sur la ligne, ou passent dessous en bloc."""
+    from PyQt6.QtWidgets import QBoxLayout, QLabel
+    from src.ui.mediatheque import CAPTURES
+    win = fenetre_avec_jeux
+    win.resize(1440, 760)
+    win.show()
+    qtbot.waitExposed(win)
+    win._mediatheque.ouvrir(CAPTURES, "hp2")
+    page = win._pages.page
+    assert "Collections" not in [lb.text() for lb in page.findChildren(QLabel)]
+    qtbot.waitUntil(lambda: page._ligne_entete.direction() == QBoxLayout.Direction.LeftToRight)
+    assert page._filet_jeux.isVisibleTo(page)
+    page._jeux.largeur_sur_une_ligne = lambda: 5000        # huit jeux dans une fenêtre étroite
+    page._disposer_entete()
+    assert page._ligne_entete.direction() == QBoxLayout.Direction.TopToBottom
+    assert not page._filet_jeux.isVisibleTo(page)

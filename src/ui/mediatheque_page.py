@@ -32,6 +32,7 @@ from pathlib import Path
 from PyQt6.QtCore import QObject, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter, QTextOption
 from PyQt6.QtWidgets import (
+    QBoxLayout,
     QButtonGroup,
     QDialog,
     QFileDialog,
@@ -50,7 +51,7 @@ from src.core import discographie, encyclopedie
 from src.core.i18n import tr, trn
 from src.ui import ecran_video_gpu
 from src.ui.composants import (
-    ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, filtre, icone_de_bouton, police, rond,
+    ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, HAUTEUR_FILTRE_JAQUETTE, bouton, feuille_de_style, filtre, icone_de_bouton, police, rond,
     lien,
     surtitre, texte,
 )
@@ -61,7 +62,7 @@ from src.ui.disque import Disque
 from src.ui.encyclopedie_page import EtatVide, VueEncyclopedie
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import CINEMATIQUE, MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer, cle, decouper
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.mediatheque import CAPTURES, CINEMATIQUES, MUSIQUE, Mediatheque
 from src.ui.theme import accent_qcolor, themed
@@ -302,6 +303,8 @@ class _Jeux(QWidget):
         groupe.setExclusive(True)
         # « Tous », en Captures seulement : la seule rubrique qui montre plusieurs jeux à la fois.
         self._tous = filtre(tr("Tous"))
+        self._tous.setProperty("jaquette", True)        # la hauteur et le rayon des pastilles de jeux
+        self._tous.setFixedHeight(HAUTEUR_FILTRE_JAQUETTE)
         self._tous.clicked.connect(lambda: self.choisi.emit(""))
         self._tous.hide()
         groupe.addButton(self._tous)
@@ -330,6 +333,11 @@ class _Jeux(QWidget):
 
     def avec_tous(self, oui: bool) -> None:
         self._tous.setVisible(oui)
+
+    def largeur_sur_une_ligne(self) -> int:
+        """Ce que prennent les pastilles montrées, côte à côte."""
+        montrees = [b for b in (self._tous, *self._boutons.values()) if not b.isHidden()]
+        return sum(b.sizeHint().width() for b in montrees) + 8 * max(0, len(montrees) - 1)
 
     def compter_tous(self) -> None:
         for jeu in self._boutons:
@@ -1498,21 +1506,13 @@ class MediathequePage(QDialog):
         e.setSpacing(0)
         # Pas de « ← Bibliothèque » : l'onglet du haut le dit déjà, et Échap
         # ferme la page (Ludo, 2026-10-27 : « retire le bibliothèque répété »).
-        e.addWidget(surtitre(tr("Ce que les jeux contiennent")))
-        e.addSpacing(4)
-        # Les rubriques juste après le titre, comme au Carnet (audit du 2026-10-24).
-        ligne = QHBoxLayout()
+        # Ni surtitre ni grand titre : l'onglet souligné juste au-dessus dit déjà où l'on est.
+        # Les rubriques à la marge, les jeux à la suite après un filet ; sous elles, en bloc,
+        # quand la ligne ne suffit pas (audit UI col11, 2026-11-13, comme le Carnet).
+        self._bloc_rubriques = _transparent(QWidget())
+        ligne = QHBoxLayout(self._bloc_rubriques)
+        ligne.setContentsMargins(0, 0, 0, 0)
         ligne.setSpacing(10)
-        titre = QLabel(tr("Collections"))
-        titre.setFont(cinzel_decorative(22))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        # Le titre garde sa largeur, les rubriques passent à la ligne : sous 1 040 px, on lisait
-        # « COLLECTIO », coupé net contre « Captures » (audit UI, 2026-11-13).
-        titre.setMinimumWidth(titre.sizeHint().width())
-        ligne.addWidget(titre, alignment=Qt.AlignmentFlag.AlignVCenter)
-        ligne.addSpacing(22)
-        rubriques = _transparent(QWidget())
-        flux_rubriques = FlowLayout(rubriques, spacing=10)
         self._rubriques: dict[str, QPushButton] = {}
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
@@ -1527,15 +1527,22 @@ class MediathequePage(QDialog):
             b.setIconSize(taille)
             b.clicked.connect(lambda _c=False, r=cle_rubrique: self.rubrique(r))
             groupe.addButton(b)
-            flux_rubriques.addWidget(b)
+            ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignTop)
             self._rubriques[cle_rubrique] = b
         self._points = {r: _PointNouveau(self._rubriques[r]) for r in (MUSIQUE, CINEMATIQUES)}
-        ligne.addWidget(rubriques, stretch=1)
-        e.addLayout(ligne)
-        e.addSpacing(14)
+        ligne.addSpacing(8)
+        self._filet_jeux = QFrame()
+        self._filet_jeux.setFixedSize(1, 24)
+        self._filet_jeux.setStyleSheet("background: rgba(255, 255, 255, 0.14); border: none;")
+        ligne.addWidget(self._filet_jeux, alignment=Qt.AlignmentFlag.AlignVCenter)
         self._jeux = _Jeux(media)
         self._jeux.choisi.connect(self._choisir)
-        e.addWidget(self._jeux)
+        self._ligne_entete = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._ligne_entete.setSpacing(16)
+        self._ligne_entete.addWidget(self._bloc_rubriques,
+                                     alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self._ligne_entete.addWidget(self._jeux, stretch=1)
+        e.addLayout(self._ligne_entete)
         racine.addWidget(entete)
         racine.addWidget(_filet())
 
@@ -1594,6 +1601,21 @@ class MediathequePage(QDialog):
             vue.montrer(jeu)
         self._jeux.compter(jeu)
 
+    def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().resizeEvent(event)
+        self._disposer_entete()
+
+    def _disposer_entete(self) -> None:
+        """Rubriques et jeux sur une ligne s'ils y tiennent, sinon les jeux dessous, sans filet."""
+        marges = self._ligne_entete.parentWidget()
+        dispo = (marges.contentsRect().width() if marges is not None else self.width())
+        voulu = (self._bloc_rubriques.sizeHint().width() + self._ligne_entete.spacing()
+                 + self._jeux.largeur_sur_une_ligne())
+        une_ligne = voulu <= dispo
+        self._ligne_entete.setDirection(QBoxLayout.Direction.LeftToRight if une_ligne
+                                        else QBoxLayout.Direction.TopToBottom)
+        self._filet_jeux.setVisible(une_ligne and bool(self._jeux.ids))
+
     def _choisir(self, jeu: str) -> None:
         """Une pastille : un jeu, partagé par toutes les rubriques, ou « Tous » ("") en Captures."""
         self._jeu_choisi = bool(jeu)
@@ -1623,6 +1645,7 @@ class MediathequePage(QDialog):
         # Les pastilles restent dans l'en-tête en Captures, avec « Tous » : elles passaient
         # dans la zone qui défile, 37 px plus bas, et disparaissaient en descendant.
         self._jeux.avec_tous(captures)
+        self._disposer_entete()
         if captures:
             self._pile.setCurrentWidget(self._galerie())
         elif cle_rubrique in self._encyclo:

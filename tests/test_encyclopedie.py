@@ -365,3 +365,18 @@ class TestAuClavier:
         fermee = _Fiche(encyclopedie.BESTIAIRE, encyclopedie.Fiche("a", "A", "b", "c", None), ouverte=False)
         qtbot.addWidget(fermee)
         assert fermee.focusPolicy() == Qt.FocusPolicy.NoFocus
+
+
+def test_avec_la_visionneuse_la_carte_ne_garde_que_l_image_et_le_nom(qtbot):
+    """Audit UI col3 : le texte de la fiche choisie était posé deux fois, dans la carte et sous
+    le modèle, et des cartes de 150 px n'en laissaient voir que 5 sur 26."""
+    from PyQt6.QtWidgets import QLabel
+    from src.core.i18n import dans_la_langue
+    from src.ui.encyclopedie_page import _Fiche
+    fiche = next(f for f in encyclopedie.fiches(encyclopedie.PERSONNAGES, "hp5") if f.texte)
+    longue, courte = _Fiche(encyclopedie.PERSONNAGES, fiche), _Fiche(encyclopedie.PERSONNAGES, fiche, compacte=True)
+    for carte in (longue, courte):
+        qtbot.addWidget(carte)
+    textes = {lb.text() for lb in courte.findChildren(QLabel) if lb.text()}
+    assert textes == {dans_la_langue(fiche.nom)}
+    assert courte.sizeHint().height() <= 90 < longue.sizeHint().height()

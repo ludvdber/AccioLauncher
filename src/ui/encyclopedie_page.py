@@ -41,6 +41,7 @@ from src.ui.utils import clear_layout, liste_deroulante, zone_defilable
 
 _LARGEUR_FICHE = 400
 _IMAGE = QSize(96, 120)          # une carte de HP4 est deux fois plus haute que large
+_IMAGE_COMPACTE = QSize(52, 64)  # la carte réduite, quand la visionneuse montre le texte
 _ICONE = {encyclopedie.PERSONNAGES: "personnages", encyclopedie.BESTIAIRE: "patte"}
 _SCENE_MIN = QSize(320, 320)
 _MARGE_SCENE = 32
@@ -118,11 +119,16 @@ class EtatVide(QWidget):
 
 class _Fiche(QFrame):
     """Une fiche : l'image (ou l'emblème) à gauche, le texte à droite. Avec un
-    modèle 3D, un clic la montre en grand."""
+    modèle 3D, un clic la montre en grand.
+
+    `compacte` (la visionneuse est là) : l'image et le nom seulement. Le nom, le sous-titre et
+    la description étaient posés mot pour mot dans la carte ET sous le modèle, et des cartes de
+    150 px n'en laissaient voir que 5 sur 26 (audit UI col3, 2026-11-13)."""
 
     choisie = pyqtSignal(object)
 
-    def __init__(self, rubrique: str, fiche: encyclopedie.Fiche, ouverte: bool = True) -> None:
+    def __init__(self, rubrique: str, fiche: encyclopedie.Fiche, ouverte: bool = True,
+                 compacte: bool = False) -> None:
         super().__init__()
         self.setObjectName("carteJeu")      # le cadre des cartes de la page (`mediatheque_page._STYLE`)
         self.fiche = fiche
@@ -131,23 +137,24 @@ class _Fiche(QFrame):
         # Une fiche qui se choisit au clic se choisit aussi au clavier et à la
         # manette (règles 15 et 119) : 26 fiches et aucun widget focalisable
         # dans la vue, ni choix ni défilement possibles sans souris (audit du
-        # 2026-10-29). L'anneau est dessiné par `mediatheque_page._STYLE`. Toute fiche
+        # 2026-10-29). L'anneau est celui de `focus_visible`. Toute fiche
         # ouverte prend le focus, même sans modèle : sans elle, aucune fiche de HP4 ne
         # s'atteignait, et le bas de la liste restait hors de vue au clavier (audit UI,
         # 2026-11-13) ; le focus fait défiler la zone (`focus_visible`).
         if ouverte:
             self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFixedWidth(_LARGEUR_FICHE)
+        self.taille_image = _IMAGE_COMPACTE if compacte else _IMAGE
         h = QHBoxLayout(self)
-        h.setContentsMargins(14, 14, 16, 14)
+        h.setContentsMargins(*((12, 8, 14, 8) if compacte else (14, 14, 16, 14)))
         h.setSpacing(14)
         self._image = QLabel()
-        self._image.setFixedSize(_IMAGE)
+        self._image.setFixedSize(self.taille_image)
         self._image.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._image.setStyleSheet("background: transparent;")
-        self._image.setPixmap(embleme(rubrique, _IMAGE, self.devicePixelRatioF(),
+        self._image.setPixmap(embleme(rubrique, self.taille_image, self.devicePixelRatioF(),
                                       "" if ouverte else "cadenas"))
-        h.addWidget(self._image, alignment=Qt.AlignmentFlag.AlignTop)
+        h.addWidget(self._image, alignment=Qt.AlignmentFlag.AlignVCenter if compacte else Qt.AlignmentFlag.AlignTop)
         v = QVBoxLayout()
         v.setSpacing(3)
         if not ouverte:
@@ -162,10 +169,11 @@ class _Fiche(QFrame):
         nom = texte(dans_la_langue(fiche.nom), 15, ENCRE, retour=True)
         nom.setFont(cinzel(12, bold=True))
         v.addWidget(nom)
-        v.addWidget(texte(dans_la_langue(fiche.sous_titre), 12, current_theme().accent_light,
-                          retour=True))
-        v.addSpacing(4)
-        v.addWidget(texte(dans_la_langue(fiche.texte), 13, "#c9c7da", retour=True))
+        if not compacte:
+            v.addWidget(texte(dans_la_langue(fiche.sous_titre), 12, current_theme().accent_light,
+                              retour=True))
+            v.addSpacing(4)
+            v.addWidget(texte(dans_la_langue(fiche.texte), 13, "#c9c7da", retour=True))
         v.addStretch()
         h.addLayout(v, stretch=1)
         self.setAccessibleName(dans_la_langue(fiche.nom))
@@ -204,7 +212,7 @@ class _Fiche(QFrame):
     def poser_image(self, brute: QImage) -> None:
         dpr = self.devicePixelRatioF()
         pix = QPixmap.fromImage(brute.scaled(
-            round(_IMAGE.width() * dpr), round(_IMAGE.height() * dpr),
+            round(self.taille_image.width() * dpr), round(self.taille_image.height() * dpr),
             Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         pix.setDevicePixelRatio(dpr)
         self._image.setPixmap(pix)
@@ -412,7 +420,8 @@ class VueEncyclopedie(QWidget):
         self._lay.addWidget(carte)
         flux = FlowLayout(spacing=14)
         for fiche in fiches:
-            vue = _Fiche(self.rubrique, fiche, self._media.ouvert(jeu, fiche.seuil))
+            vue = _Fiche(self.rubrique, fiche, self._media.ouvert(jeu, fiche.seuil),
+                         compacte=self.scene is not None)
             vue.choisie.connect(self.choisir)
             flux.addWidget(vue)
             self.fiches.append(vue)
@@ -502,7 +511,7 @@ class VueEncyclopedie(QWidget):
             vue = self._vignettes.pop(0)
             if not vue.a_une_image and not vue.a_une_vignette:
                 self._peintre.poser(*self._modeles[vue.fiche.cle])
-                vue.poser_image(self._peintre.rendu(_IMAGE, vue.devicePixelRatioF()))
+                vue.poser_image(self._peintre.rendu(vue.taille_image, vue.devicePixelRatioF()))
                 vue.a_une_vignette = True
                 break
         if not restantes and not modeles and not self._vignettes and self._complete is None:

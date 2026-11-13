@@ -17,7 +17,7 @@ jeu change.
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QButtonGroup, QDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QStackedWidget, QVBoxLayout, QWidget,
+    QButtonGroup, QDialog, QFrame, QHBoxLayout, QPushButton, QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from src.core import folio
@@ -25,7 +25,6 @@ from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.composants import feuille_de_style, filtre, texte
 from src.ui.flow_layout import FlowLayout
-from src.ui.fonts import cinzel_decorative
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import themed
@@ -108,18 +107,13 @@ class CarnetPage(QDialog):
         e.setSpacing(0)
         # Pas de « ← Bibliothèque » : l'onglet du haut le dit déjà, et Échap
         # ferme la page (Ludo, 2026-10-27 : « retire le bibliothèque répété »).
-        # Une seule ligne : titre, rubriques, puis les jeux après un filet (car8, Ludo
+        # Une seule ligne : rubriques, puis les jeux après un filet (car8, Ludo
         # 2026-11-13). Quatre étages (surtitre qui expliquait la méthode, titre,
-        # rubriques, jeux) faisaient 166 px avant le contenu.
-        # Les rubriques JUSTE APRÈS le titre : tout à droite, on ne les voyait
-        # pas (Ludo, 2026-10-24 : « pas bien indiqué le relevé et folio à droite »).
+        # rubriques, jeux) faisaient 166 px avant le contenu. Plus de grand titre :
+        # l'onglet souligné au-dessus le dit déjà (col11). Les rubriques à la marge de
+        # gauche : tout à droite, on ne les voyait pas (Ludo, 2026-10-24).
         ligne = QHBoxLayout()
         ligne.setSpacing(10)
-        titre = QLabel(tr("Carnet"))
-        titre.setFont(cinzel_decorative(22))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        ligne.addWidget(titre, alignment=Qt.AlignmentFlag.AlignVCenter)
-        ligne.addSpacing(22)
         self._rubriques: dict[str, QPushButton] = {}
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
