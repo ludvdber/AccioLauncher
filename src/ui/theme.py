@@ -17,6 +17,7 @@ sombres (carrousel, veil gauche, title bar). Le bouton JOUER reste vert
 l'or de la marque.
 """
 
+import re
 from dataclasses import dataclass
 
 
@@ -109,14 +110,54 @@ def rayon_pastille(hauteur: int) -> int:
     return hauteur // 2
 
 
-# Hexs or tels qu'écrits dans les feuilles de style et paintEvent du projet.
-_GOLD = "#d6a72c"
-_GOLD_LIGHTS = ("#f0d060", "#e8c547", "#e6b422")
-_GOLD_DARK = "#9a7209"
-_GOLD_RGBS = ("214, 167, 44", "214,167,44")
-# Surfaces bleu nuit telles qu'écrites dans les sources → attribut de Palette.
+# Hexs or tels qu'écrits dans les feuilles de style et paintEvent du projet → attribut de Palette.
+_OR = {"#d6a72c": "accent", "#9a7209": "accent_dark",
+       **dict.fromkeys(("#f0d060", "#e8c547", "#e6b422", "#e8bd4a", "#f4e2a8"), "accent_light")}
+# Surfaces bleu nuit de Poudlard → attribut de Palette.
 _SURFACES = ("bg", "bg_dialog", "bg_card", "bg_control", "border", "border_strong")
-_BG_RGBS = ("6, 6, 17", "6,6,17")  # forme rgba(...) du fond principal
+# Surfaces bleu nuit écrites HORS palette (audit du 2026-11-13) : sans elles, Réglages du jeu,
+# Carnet, Collections et leurs listes restaient bleu nuit entre deux bandes de la maison. Chacune
+# suit la surface de Poudlard la plus proche, décalée du même écart.
+_VOISINES = ("#070712", "#08081a", "#0a0a14", "#0a0a16", "#0b0b18", "#10101d", "#11111f", "#12121f",
+             "#121226", "#141428", "#15152a", "#16162c", "#16172c", "#1b1b33", "#222f5b", "#2a2a48")
+# Un hex, ou les trois premiers nombres d'un rgb()/rgba() : une seule passe, rien n'est substitué deux fois.
+_COULEUR = re.compile(r"#[0-9a-fA-F]{6}\b|(?<=rgb\()[^)]*|(?<=rgba\()[^)]*")
+_TRIPLET = re.compile(r"\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?=\s*(?:,|$))")
+type _Rgb = tuple[int, int, int]
+_tables: dict[str, dict[_Rgb, _Rgb]] = {}
+
+
+def _table(p: Palette) -> dict[_Rgb, _Rgb]:
+    """Couleur de Poudlard → couleur du thème `p`, calculée une fois par thème."""
+    table = _tables.get(p.id)
+    if table is None:
+        base = THEMES["poudlard"]
+        table = {_rgb(h): _rgb(getattr(p, attr)) for h, attr in _OR.items()}
+        roles = {_rgb(getattr(base, a)): _rgb(getattr(p, a)) for a in _SURFACES}
+        table.update(roles)
+        for h in _VOISINES:
+            source = _rgb(h)
+            proche = min(roles, key=lambda c: sum((x - y) ** 2 for x, y in zip(c, source, strict=True)))
+            (tr, tg, tb), (sr, sg, sb), (cr, cg, cb) = roles[proche], source, proche
+            table[source] = (_borne(tr + sr - cr), _borne(tg + sg - cg), _borne(tb + sb - cb))
+        _tables[p.id] = table
+    return table
+
+
+def _borne(v: int) -> int:
+    return max(0, min(255, v))
+
+
+def _substituer(m: re.Match[str], table: dict[_Rgb, _Rgb]) -> str:
+    texte = m.group(0)
+    if texte.startswith("#"):
+        neuf = table.get(_rgb(texte))
+        return "#{:02x}{:02x}{:02x}".format(*neuf) if neuf else texte
+    t = _TRIPLET.match(texte)
+    if t is None:
+        return texte
+    neuf = table.get((int(t.group(1)), int(t.group(2)), int(t.group(3))))
+    return "{}, {}, {}".format(*neuf) + texte[t.end():] if neuf else texte
 
 
 def themed(qss: str) -> str:
@@ -124,19 +165,8 @@ def themed(qss: str) -> str:
     p = _current
     if p.id == "poudlard":
         return qss
-    base = THEMES["poudlard"]
-    out = qss.replace(_GOLD, p.accent).replace(_GOLD_DARK, p.accent_dark)
-    for v in _GOLD_LIGHTS:
-        out = out.replace(v, p.accent_light)
-    r, g, b = p.accent_rgb
-    for v in _GOLD_RGBS:
-        out = out.replace(v, f"{r}, {g}, {b}")
-    for attr in _SURFACES:
-        out = out.replace(getattr(base, attr), getattr(p, attr))
-    br, bg_, bb = p.bg_rgb
-    for v in _BG_RGBS:
-        out = out.replace(v, f"{br}, {bg_}, {bb}")
-    return out
+    table = _table(p)
+    return _COULEUR.sub(lambda m: _substituer(m, table), qss)
 
 
 def accent_qcolor(alpha: int = 255):

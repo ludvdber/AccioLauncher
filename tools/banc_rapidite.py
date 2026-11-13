@@ -568,7 +568,8 @@ def lancer_enfant(role: str, params: dict, env: dict, sortie: Path, profil: str,
                                         ensure_ascii=False), encoding="utf-8")
     journal = (sortie / "travail" / f"{etiquette}.journal.txt").open("w", encoding="utf-8")
     env = dict(env, BANC_T0=repr(time.perf_counter()))
-    proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "--enfant", str(chemin_params)],
+    # Ce même script, sous l'interpréteur courant : aucun argument ne vient du dehors.
+    proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "--enfant", str(chemin_params)],  # nosec B603  # noqa: S603
                             env=env, cwd=str(DEPOT), stdout=journal, stderr=subprocess.STDOUT)
     job, note_job = None, ""
     if profil == "vieux-pc":
@@ -610,9 +611,9 @@ def _commit() -> str:
     if git is None:
         return "?"
     try:
-        sortie = subprocess.run([git, "-C", str(DEPOT), "rev-parse", "--short", "HEAD"],
+        sortie = subprocess.run([git, "-C", str(DEPOT), "rev-parse", "--short", "HEAD"],  # nosec B603  # noqa: S603
                                 capture_output=True, text=True, encoding="utf-8", timeout=10, check=False)
-        etat = subprocess.run([git, "-C", str(DEPOT), "status", "--porcelain", "--", "src"],
+        etat = subprocess.run([git, "-C", str(DEPOT), "status", "--porcelain", "--", "src"],  # nosec B603  # noqa: S603
                               capture_output=True, text=True, encoding="utf-8", timeout=10, check=False)
         return sortie.stdout.strip() + (" + src modifié" if etat.stdout.strip() else "")
     except OSError:

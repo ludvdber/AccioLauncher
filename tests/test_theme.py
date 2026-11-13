@@ -88,3 +88,44 @@ class TestThemedSurfaces:
             assert p.bg != base.bg, pid
             assert p.bg_control != base.bg_control, pid
             assert p.border_strong != base.border_strong, pid
+
+
+class TestThemedHorsPalette:
+    """Audit du 2026-11-13 : les fonds écrits hors palette (#070712 des Réglages du jeu, du Carnet
+    et des Collections, #15152a des listes…) restaient bleu nuit sous un thème de maison."""
+
+    def test_les_fonds_hors_palette_prennent_la_maison(self):
+        from src.ui.theme import _VOISINES
+        set_theme("gryffondor")
+        for h in _VOISINES:
+            assert themed(f"background: {h};") != f"background: {h};", h
+
+    def test_meme_ecart_que_la_surface_voisine(self):
+        set_theme("gryffondor")
+        # #070712 = fond de Poudlard + 1 sur chaque canal ; Gryffondor #1a0709 + 1.
+        assert themed("background: #070712;") == "background: #1b080a;"
+
+    def test_l_or_des_survols_suit_la_maison(self):
+        set_theme("serpentard")
+        out = themed("a: #e8bd4a; b: #f4e2a8;")
+        assert out == f"a: {THEMES['serpentard'].accent_light}; b: {THEMES['serpentard'].accent_light};"
+
+    def test_un_seul_passage(self):
+        """Une couleur substituée n'est jamais substituée une seconde fois."""
+        set_theme("poufsouffle")
+        p = THEMES["poufsouffle"]
+        assert themed("color: #d6a72c;") == f"color: {p.accent};"
+
+    def test_un_triplet_plus_long_n_est_pas_touche(self):
+        set_theme("gryffondor")
+        qss = "a: rgba(213, 13, 26, 0.5); b: rgb(6, 6, 170); c: rgba(16, 6, 17, 1);"
+        assert themed(qss) == qss
+
+    def test_rgba_du_fond_des_dialogues(self):
+        set_theme("serdaigle")
+        r, g, b = (int(THEMES["serdaigle"].bg_dialog[i:i + 2], 16) for i in (1, 3, 5))
+        assert themed("background: rgba(13, 13, 26, 0.9);") == f"background: rgba({r}, {g}, {b}, 0.9);"
+
+    def test_majuscules(self):
+        set_theme("gryffondor")
+        assert themed("color: #D6A72C;") == f"color: {THEMES['gryffondor'].accent};"
