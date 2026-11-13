@@ -6,25 +6,34 @@ du 2026-11-13 a compté le dossier `HP3/textures` listé 234 fois et `HP3`
 220 fois sur un parcours (une fois par carte du folio), `HP2/system` 65 fois.
 
 Ici, un dossier se liste UNE fois tant que sa date de modification ne bouge
-pas (elle change quand une entrée y est créée, retirée ou renommée), et les
+pas (elle change quand une entrée y est créée, retirée ou renommée ; pas
+pour un dossier changé il y a moins de 2 s, `signature.fiable`), et les
 anciens sites passent tous par `trouver` / `entrees`. Borné à 64 dossiers.
 """
 
 from functools import lru_cache
 from pathlib import Path
 
+from src.core.signature import fiable
+
 
 def entrees(dossier: Path) -> dict[str, Path]:
     """Nom en minuscules → chemin, pour chaque entrée du dossier ; {} s'il ne se lit pas."""
     try:
-        date = dossier.stat().st_mtime_ns
+        signature = fiable(dossier.stat())
     except OSError:
         return {}
-    return _lister(str(dossier), date)
+    if signature is None:
+        return _lister(str(dossier))
+    return _garde(str(dossier), signature[0])
 
 
 @lru_cache(maxsize=64)
-def _lister(dossier: str, _date: int) -> dict[str, Path]:
+def _garde(dossier: str, _date: int) -> dict[str, Path]:
+    return _lister(dossier)
+
+
+def _lister(dossier: str) -> dict[str, Path]:
     try:
         return {p.name.lower(): p for p in Path(dossier).iterdir()}
     except OSError:

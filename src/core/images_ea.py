@@ -23,6 +23,8 @@ import struct
 from functools import lru_cache
 from pathlib import Path
 
+from src.core.signature import fiable
+
 DXT1, DXT5 = 0x60, 0x62
 _NOM = 0x70
 
@@ -36,8 +38,8 @@ def entree_big(chemin: Path, nom: str) -> bytes:
     un parcours, banc de rapidité du 2026-11-13). Ensuite, une entrée = un
     déplacement et une lecture de SES octets.
     """
-    infos = chemin.stat()
-    index = _index_big(str(chemin), infos.st_mtime_ns, infos.st_size)
+    signature = fiable(chemin.stat())     # une archive qui vient d'être écrite se relit
+    index = _lire_index(str(chemin)) if signature is None else _index_big(str(chemin), *signature)
     place = index.get(nom.lower().encode("latin-1"))
     if place is None:
         return b""
@@ -48,6 +50,10 @@ def entree_big(chemin: Path, nom: str) -> bytes:
 
 @lru_cache(maxsize=8)
 def _index_big(chemin: str, _mtime: int, _taille: int) -> dict[bytes, tuple[int, int]]:
+    return _lire_index(chemin)
+
+
+def _lire_index(chemin: str) -> dict[bytes, tuple[int, int]]:
     """Nom en minuscules → (début, taille) de chaque entrée ; vide si ce n'est pas une archive BIG."""
     index: dict[bytes, tuple[int, int]] = {}
     with open(chemin, "rb") as f:
