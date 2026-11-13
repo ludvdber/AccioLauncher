@@ -618,6 +618,12 @@ class _Onglet(QPushButton):
         self.nom = nom
 
 
+def _bulle(aide: str) -> str:
+    """L'aide d'une ligne en paragraphe de 420 px : sans la fiche, elle passait en infobulle sur
+    une seule bande de 1 336 px qui cachait les lignes voisines (audit UI v51)."""
+    return f"<qt><table width='420'><tr><td>{html.escape(aide)}</td></tr></table></qt>"
+
+
 def _textes_cherches(r: Reglage) -> tuple[str, str]:
     """Le nom et la description, plus le mot technique : un connaisseur cherche « FXAA »."""
     libelle, aide = rc.textes(r)
@@ -727,6 +733,8 @@ class PageImage(QWidget):
         self.recherche.setFont(police(13))
         self.recherche.setFixedWidth(220)
         self.recherche.textChanged.connect(self._chercher)
+        # Échap vide d'abord le champ ; il fermait toute la page des réglages (audit UI v46).
+        self.recherche.installEventFilter(self)
         haut.addWidget(self.recherche, alignment=Qt.AlignmentFlag.AlignTop)
         racine.addLayout(haut)
 
@@ -907,7 +915,7 @@ class PageImage(QWidget):
         controle, fin = self._controle(r)
         libelle, aide = rc.textes(r)
         ligne = _LigneImage(r.ident, libelle, r, controle, retrait, fin)
-        ligne.setToolTip(aide)
+        ligne.setToolTip(_bulle(aide))
         ligne.fiche_ouverte = self._fiche_ouverte
         ligne.survolee.connect(self._activer)
         self._lignes.setdefault(r.ident, []).append(ligne)
@@ -934,7 +942,7 @@ class PageImage(QWidget):
         liste.setFixedWidth(_LARGEUR_CONTROLE - 10)
         self.liste_resolution = liste
         ligne = _LigneImage(RESOLUTION, tr("Résolution"), None, liste, False)
-        ligne.setToolTip(self._aide_resolution())
+        ligne.setToolTip(_bulle(self._aide_resolution()))
         ligne.fiche_ouverte = self._fiche_ouverte
         ligne.survolee.connect(self._activer)
         self._lignes.setdefault(RESOLUTION, []).append(ligne)
@@ -1167,6 +1175,13 @@ class PageImage(QWidget):
         self._maj()
 
     # ── place ──
+
+    def eventFilter(self, objet, event) -> bool:  # noqa: N802 (Qt)
+        if (objet is self.recherche and event.type() == QEvent.Type.KeyPress
+                and event.key() == Qt.Key.Key_Escape and self.recherche.text()):
+            self.recherche.clear()
+            return True
+        return super().eventFilter(objet, event)
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)

@@ -256,3 +256,23 @@ def test_revenir_a_l_installation_remet_aussi_la_resolution(qtbot):
     page = SimpleNamespace(reglages={}, _resolution=True, liste_resolution=liste, _maj=lambda: None)
     PageImage.rafraichir(page)
     assert liste.currentIndex() == 0
+
+
+def test_echap_vide_la_recherche_sans_fermer_la_page(qtbot, tmp_path):
+    """Audit UI v46 : Échap dans « Rechercher un réglage » fermait toute la page des réglages."""
+    from PyQt6.QtCore import Qt
+    from src.ui.page_image import PageImage
+    dlg, _ = _fenetre(qtbot, tmp_path)
+    dlg.ouvrir_onglet("image")
+    page = dlg.findChild(PageImage)
+    page.recherche.setText("ombres")
+    fermee = []
+    dlg.rejected.connect(lambda: fermee.append(1))
+    qtbot.keyClick(page.recherche, Qt.Key.Key_Escape)
+    assert page.recherche.text() == "" and not fermee
+
+
+def test_l_aide_en_infobulle_tient_en_paragraphe():
+    """Audit UI v51 : sans la fiche, l'aide passait en infobulle d'une seule ligne de 1 336 px."""
+    from src.ui.page_image import _bulle
+    assert _bulle("a < b").startswith("<qt><table width='420'>") and "a &lt; b" in _bulle("a < b")
