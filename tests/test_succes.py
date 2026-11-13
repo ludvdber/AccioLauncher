@@ -37,7 +37,7 @@ class TestDefinitions:
         assert succes.du_jeu("hp7a") == () and succes.du_jeu("inconnu") == ()
 
     def test_chaque_texte_est_traduit(self):
-        textes = {"{} sur {}", "Succès dans {} : {}", "{} succès dans {} :", "et {} autres"}
+        textes = {"Succès dans {} : {}", "{} succès dans {} :", "et {} autres"}
         for jeu in JEUX:
             textes |= {t for s in succes.du_jeu(jeu) for t in (s.titre, s.description)}
         for code in ("en", "es"):

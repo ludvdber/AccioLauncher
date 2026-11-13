@@ -2,19 +2,20 @@
 
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFontMetrics
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from src.core import reprise
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
+from src.ui import focus_visible
+from src.ui.composants import feuille_de_style, lien
 from src.ui.alert_banner import AlertBanner
 from src.ui.carte_progression import CarteProgression
-from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.glow_button import ECART_DETAIL, GlowButton, TAILLE_ICONE, ECART_ICONE
 from src.ui.icon_button import IconButton
@@ -28,6 +29,8 @@ from src.ui.utils import clear_layout
 # Une seule constante parce que la hauteur de la note se calcule à cette
 # largeur-là — deux valeurs qui divergent, et la note se fait rogner.
 _COMING_SOON_W = 300
+# L'action principale d'un jeu, d'un état à l'autre : le focus de l'une passe à l'autre.
+_PRINCIPAUX = ("btnPlay", "btnDownload")
 
 # Bornes du bouton d'action principal. Il suit son libellé (les traductions
 # s'allongent) mais reste imposant quand il est court, et ne dépasse jamais la
@@ -85,6 +88,7 @@ class ActionPanel(QWidget):
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._focus_pose = False         # le premier focus, posé une fois (`showEvent`)
         self._manager = manager
         self._game: GameData | None = None
         self.setStyleSheet("background: transparent;")
@@ -186,7 +190,43 @@ class ActionPanel(QWidget):
         self._fit_coming_soon_note()
 
     def refresh(self) -> None:
-        """Reconstruit le panneau selon l'état courant du jeu."""
+        """Reconstruit le panneau selon l'état courant du jeu.
+
+        Le focus passe au bouton équivalent du panneau neuf, anneau compris : changer de
+        jeu avec ← / → depuis Jouer laissait le focus sur un bouton détruit, plus rien
+        n'était cerclé, et il fallait 13 Tab pour revenir à Jouer (audit UI, 2026-11-13).
+        """
+        focus = QApplication.focusWidget()
+        garde = focus.objectName() if focus is not None and self.isAncestorOf(focus) else ""
+        anneau = bool(garde) and bool(focus.property(focus_visible.PROPRIETE))
+        self._refaire()
+        if garde:
+            # Au tour suivant : un bouton neuf ne s'affiche qu'après son ajout au layout.
+            QTimer.singleShot(0, lambda: self._rendre_focus(garde, anneau))
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        # Le premier focus va à l'action du jeu : Qt le posait sur le premier contrôle de
+        # la chaîne, et Jouer n'arrivait qu'au 13e Tab (audit UI, 2026-11-13). Sans anneau.
+        if not event.spontaneous() and not self._focus_pose:
+            self._focus_pose = True
+            QTimer.singleShot(0, self.focus_principal)
+
+    def focus_principal(self) -> None:
+        """Le focus à l'action principale (Jouer, Installer), sans anneau."""
+        self._rendre_focus(_PRINCIPAUX[0], False)
+
+    def _rendre_focus(self, nom: str, anneau: bool) -> None:
+        vivants = [b for b in self.findChildren(QPushButton) if b.isVisible()]
+        noms = _PRINCIPAUX if nom in _PRINCIPAUX else (nom,)
+        cible = next((b for b in vivants if b.objectName() in noms), None)
+        if cible is None:
+            return
+        cible.setFocus(Qt.FocusReason.OtherFocusReason)
+        if anneau:
+            focus_visible.marquer(cible)
+
+    def _refaire(self) -> None:
         self._clear_layout(self._action_layout)
         self._clear_layout(self._update_row_layout)
         self._update_row.hide()
@@ -454,12 +494,8 @@ class ActionPanel(QWidget):
             lbl = QLabel(tr("Mise à jour disponible : v{} → v{}").format(installed_ver, recommended))
             lbl.setFont(body_font(12))
             lbl.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
-            link = ClickableLabel(tr("Mettre à jour"))
-            link.setFont(body_font(12))
-            link.setStyleSheet(themed(
-                "QLabel { color: #d6a72c; background: transparent; text-decoration: underline; }"
-                "QLabel:hover { color: #e8c547; }"
-            ))
+            link = lien(tr("Mettre à jour"))
+            link.setStyleSheet(feuille_de_style())     # le panneau n'a pas la feuille des pages
             link.clicked.connect(self.update_clicked)
             self._update_row_layout.addWidget(lbl)
             self._update_row_layout.addWidget(link)

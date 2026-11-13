@@ -41,9 +41,10 @@ from src.core import reglages_correctif as rc
 from src.core import reglages_image, resolution_jeu
 from src.core.config import Config
 from src.core.game_data import GameData
-from src.core.i18n import tr, trn
+from src.core.i18n import tr, trn, typo
 from src.core.reglages_table import Reglage
-from src.ui.composants import ENCRE_DOUCE, LISTE, bouton, petit_titre, police
+from src.ui.flow_layout import FlowLayout
+from src.ui.composants import bouton, ENCRE_DOUCE, LISTE, petit_titre, police, transparent
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEUR_SE_VOIT, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
 from src.ui.reglages_widgets import _CartePrereglage, _etiquette_beta, _Points, _texte_beta
@@ -463,7 +464,7 @@ class _Fiche(QFrame):
         boutons = QHBoxLayout()
         boutons.setSpacing(8)
         self.bouton_accio = bouton(tr("Valeur Accio"))
-        self.bouton_jeu = bouton(tr("Valeur du jeu"))
+        self.bouton_jeu = bouton(tr("Jeu d'origine"))
         for b, signal in ((self.bouton_accio, self.accio), (self.bouton_jeu, self.jeu)):
             b.setAutoDefault(False)
             b.clicked.connect(signal)
@@ -608,6 +609,8 @@ class _Onglet(QPushButton):
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFont(police(14))
+        # Jamais rogné : « airage et omb » à 980 px (HP6) ; la rangée passe à la ligne.
+        self.setMinimumWidth(self.sizeHint().width())
         self.nom = nom
 
 
@@ -687,6 +690,12 @@ class PageImage(QWidget):
         racine.setSpacing(14)
         haut = QHBoxLayout()
         haut.setSpacing(18)
+        # Les onglets passent à la ligne quand la place manque, la recherche garde la sienne :
+        # à 980×660, les onglets de HP6 étaient coupés des deux côtés et la recherche
+        # sortait de la page (audit UI, 2026-11-13).
+        rangee = QWidget()
+        transparent(rangee, "ongletsImage")
+        flux = FlowLayout(rangee, spacing=18)
         self._groupe_onglets = QButtonGroup(self)
         self._groupe_onglets.setExclusive(True)
         self.onglets: dict[str, _Onglet] = {}
@@ -695,8 +704,8 @@ class PageImage(QWidget):
             o.clicked.connect(lambda _c=False, r=rang: self.montrer(r))
             self._groupe_onglets.addButton(o, rang)
             self.onglets[cat.ident] = o
-            haut.addWidget(o)
-        haut.addStretch()
+            flux.addWidget(o)
+        haut.addWidget(rangee, stretch=1)
         self.recherche = QLineEdit()
         self.recherche.setObjectName("recherche")
         self.recherche.setPlaceholderText(tr("Rechercher un réglage"))
@@ -704,7 +713,7 @@ class PageImage(QWidget):
         self.recherche.setFont(police(13))
         self.recherche.setFixedWidth(220)
         self.recherche.textChanged.connect(self._chercher)
-        haut.addWidget(self.recherche)
+        haut.addWidget(self.recherche, alignment=Qt.AlignmentFlag.AlignTop)
         racine.addLayout(haut)
 
         corps = QHBoxLayout()
@@ -1109,7 +1118,7 @@ class PageImage(QWidget):
         e = html.escape
         if self._actif == RESOLUTION:
             f.titre.setText(tr("Résolution"))
-            f.texte.setText(f"<p>{e(self._aide_resolution())}</p>")
+            f.texte.setText(typo(f"<p>{e(self._aide_resolution())}</p>"))
             place = resolution_jeu.place_pour(self.game, self.config)
             ecran = "{} × {}".format(*place) if place else tr("Remplir l'écran")
             taille = resolution_jeu.lire(self.liste_resolution.currentData() or "")
@@ -1124,14 +1133,14 @@ class PageImage(QWidget):
             return
         libelle, aide = rc.textes(r)
         f.titre.setText(libelle)
-        f.texte.setText(_html_fiche(r, aide, self._declares))
+        f.texte.setText(typo(_html_fiche(r, aide, self._declares)))
         v = self._valeurs.get(r.ident) if en_cours is None else en_cours
         jeu = self._jeu.get(r.ident)
         accio = self._accio.get(r.ident)
         f.valeurs.setText(self._html_valeurs(
             _texte(r, jeu) if jeu is not None else tr("sans équivalent"),
             _texte(r, accio) if accio is not None else tr("inconnue"), _texte(r, v)))
-        f.notes.setText(_html_cout(r))
+        f.notes.setText(typo(_html_cout(r)))
         f.bouton_accio.setEnabled(accio is not None and not rc.meme_valeur(v, accio))
         f.bouton_jeu.setEnabled(jeu is not None and not rc.meme_valeur(v, jeu))
 

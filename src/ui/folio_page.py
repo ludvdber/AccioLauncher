@@ -31,13 +31,12 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.config import Config
 from src.core.i18n import get_language, tr, trn
-from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, texte, transparent
+from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol_et_focus, texte, transparent
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.stats_widgets import _duree
-from src.ui.focus_visible import PROPRIETE
 from src.ui.theme import RAYON_CONTROLE, accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
@@ -323,21 +322,6 @@ def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBox
     return ligne
 
 
-def survol_et_focus(p: QPainter, case: QPushButton, rayon: float) -> None:
-    """Ce qui manquait aux cases du folio (audit UI, 2026-11-13) : le survol éclaire la case,
-    et le focus du CLAVIER pose un anneau clair, distinct du cadre or de la carte choisie
-    (règle 15). La main seule changeait au survol, et Tab arrivait sur une case sans cadre."""
-    cadre = QRectF(case.rect()).adjusted(1, 1, -1, -1)
-    if case.underMouse():
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(255, 255, 255, 26))
-        p.drawRoundedRect(cadre, rayon, rayon)
-    if case.hasFocus() and case.property(PROPRIETE):
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.setPen(QPen(QColor("#f4f2f8"), 1.5))
-        p.drawRoundedRect(QRectF(case.rect()).adjusted(0.75, 0.75, -0.75, -0.75), rayon + 1, rayon + 1)
-
-
 def case_de_folio(case: QPushButton) -> None:
     """Une case cochable du folio : survolée, elle se repeint."""
     case.setCheckable(True)
@@ -594,7 +578,8 @@ class FolioPage(QDialog):
             retour = bouton_retour(tr("Bibliothèque"), self.accept)
             lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
             lay.addSpacing(16)
-        lay.addWidget(surtitre(tr("Folio")))
+            # Seul : dans le Carnet, la rubrique cochée en haut le dit déjà (car8).
+            lay.addWidget(surtitre(tr("Folio")))
         nom = QLabel(nom_court(self.game.name))
         nom.setTextFormat(Qt.TextFormat.PlainText)   # le nom vient du CATALOGUE
         nom.setWordWrap(True)

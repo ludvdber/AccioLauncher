@@ -84,7 +84,7 @@ class TestFormatProgressLine:
 
     def test_with_label_prefix(self):
         line = format_progress_line(50, 100, 1024.0, -1.0, with_label=True)
-        assert line.startswith("Téléchargement : 50%")
+        assert line.startswith("Téléchargement : 50 % · ")   # comme la carte de la fiche
 
 
 class TestSeparateurDecimal:
@@ -116,7 +116,8 @@ class TestSeparateurDecimal:
         set_language("fr")
         assert format_bytes(2500 * 1024 * 1024).startswith("2,5")
         assert format_speed(3.4 * 1024 * 1024) == "3,4 Mo/s"
-        assert "2,5" in format_eta(9000)
+        assert format_eta(9000) == "~2 h 30 restantes"
+        assert format_eta(3600) == "~1 h restante"
 
     def test_une_valeur_aberrante_ne_passe_pas(self):
         """Un fichier de langue contribué peut tout contenir : un séparateur

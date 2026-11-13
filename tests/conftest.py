@@ -531,8 +531,7 @@ def make_window(qtbot, tmp_path, monkeypatch):
             cache_path=tmp_path / "games" / ".cache",
             # Le défaut applicatif est l'anglais ; ces tests vérifient des
             # chaînes FRANÇAISES, donc ils demandent explicitement le français.
-            langue="fr",
-            **{"autoplay_videos": False, **overrides},  # surchargeable par test
+            **{"langue": "fr", "autoplay_videos": False, **overrides},  # surchargeable par test
         )
         cfg.save()
         from src.ui.main_window import MainWindow

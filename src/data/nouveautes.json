@@ -37,16 +37,16 @@
           "genre": "nouveau",
           "texte": {
             "fr": "La Coupe de Feu, L'Ordre du Phénix, Le Prince de Sang-Mêlé : la vignette (coins assombris) se règle ou se coupe dans l'onglet Image.",
-            "en": "Goblet of Fire, Order of the Phoenix, Half-Blood Prince: the vignette (darkened corners) can be adjusted or turned off in the Image tab.",
-            "es": "El cáliz de fuego, La Orden del Fénix, El misterio del príncipe: la viñeta (esquinas oscurecidas) se ajusta o se quita en la pestaña Imagen."
+            "en": "Goblet of Fire, Order of the Phoenix, Half-Blood Prince: the vignette (darkened corners) can be adjusted or turned off in the Graphics tab.",
+            "es": "El cáliz de fuego, La Orden del Fénix, El misterio del príncipe: la viñeta (esquinas oscurecidas) se ajusta o se quita en la pestaña Gráficos."
           }
         },
         {
           "genre": "nouveau",
           "texte": {
             "fr": "Le Prince de Sang-Mêlé : un pack de textures haute définition en bêta, à télécharger sur le Discord d'Accio, s'active dans l'onglet Image.",
-            "en": "Half-Blood Prince: a beta high-definition texture pack, to download from the Accio Discord, is turned on in the Image tab.",
-            "es": "El misterio del príncipe: un pack de texturas de alta definición en beta, que se descarga en el Discord de Accio, se activa en la pestaña Imagen."
+            "en": "Half-Blood Prince: a beta high-definition texture pack, to download from the Accio Discord, is turned on in the Graphics tab.",
+            "es": "El misterio del príncipe: un pack de texturas de alta definición en beta, que se descarga en el Discord de Accio, se activa en la pestaña Gráficos."
           }
         },
         {
@@ -61,8 +61,8 @@
           "genre": "ameliore",
           "texte": {
             "fr": "La Coupe de Feu, L'Ordre du Phénix, Le Prince de Sang-Mêlé démarrent sur le préréglage d'image « Équilibrée », celui que recommande Accio. Avec les nouvelles versions des jeux.",
-            "en": "Goblet of Fire, Order of the Phoenix, Half-Blood Prince start on the « Balanced » image preset, the one Accio recommends. With the new versions of the games.",
-            "es": "El cáliz de fuego, La Orden del Fénix, El misterio del príncipe arrancan con el preajuste de imagen « Equilibrado », el que recomienda Accio. Con las nuevas versiones de los juegos."
+            "en": "Goblet of Fire, Order of the Phoenix, Half-Blood Prince start on the “Balanced” image preset, the one Accio recommends. With the new versions of the games.",
+            "es": "El cáliz de fuego, La Orden del Fénix, El misterio del príncipe arrancan con el preajuste de imagen «Equilibrada», el que recomienda Accio. Con las nuevas versiones de los juegos."
           }
         },
         {
@@ -70,7 +70,7 @@
           "texte": {
             "fr": "Passer d'un jeu à l'autre est plus rapide, et les jaquettes gardent leurs proportions.",
             "en": "Switching from one game to another is faster, and the covers keep their proportions.",
-            "es": "Pasar de un juego a otro es más rápido, y las carátulas conservan sus proporciones."
+            "es": "Pasar de un juego a otro es más rápido, y las portadas conservan sus proporciones."
           }
         },
         {
@@ -85,16 +85,16 @@
           "genre": "corrige",
           "texte": {
             "fr": "L'Ordre du Phénix : le halo autour des cheveux et des visages est adouci, et une « Force du halo » se règle dans l'onglet Image, aussi pour Le Prince de sang-mêlé. Avec la nouvelle version du jeu.",
-            "en": "Order of the Phoenix: the glow around hair and faces is softened, and a « Glow strength » setting adjusts it in the Image tab, also for Half-Blood Prince. With the new version of the game.",
-            "es": "La Orden del Fénix: el halo alrededor del pelo y de las caras se suaviza, y una « Intensidad del halo » se ajusta en la pestaña Imagen, también para El misterio del príncipe. Con la nueva versión del juego."
+            "en": "Order of the Phoenix: the glow around hair and faces is softened, and a “Glow strength” setting adjusts it in the Graphics tab, also for Half-Blood Prince. With the new version of the game.",
+            "es": "La Orden del Fénix: el halo alrededor del pelo y de las caras se suaviza, y una «Intensidad del halo» se ajusta en la pestaña Gráficos, también para El misterio del príncipe. Con la nueva versión del juego."
           }
         },
         {
           "genre": "corrige",
           "texte": {
             "fr": "« Reprendre » n'apparaît que quand la partie peut vraiment reprendre là où elle s'était arrêtée.",
-            "en": "« Resume » only appears when the game can really pick up where it left off.",
-            "es": "« Reanudar » solo aparece cuando la partida puede seguir de verdad donde se quedó."
+            "en": "“Resume” only appears when the game can really pick up where it left off.",
+            "es": "«Continuar» solo aparece cuando la partida puede seguir de verdad donde se quedó."
           }
         },
         {

@@ -773,7 +773,7 @@ class TestFenetre:
         qtbot.waitExposed(dlg)
         assert dlg.height() <= dlg.screen().availableGeometry().height()
         (reset,) = [b for b in dlg.findChildren(QPushButton)
-                    if b.text() == tr("Rétablir les réglages d'origine")]
+                    if b.text() == tr("Revenir à l'installation")]
         haut_reset = reset.mapTo(dlg, reset.rect().topLeft()).y()
         assert haut_reset > dlg._defile.geometry().bottom()
         assert haut_reset + reset.height() <= dlg.height()
@@ -928,7 +928,7 @@ class TestEffetsDImage:
 
 
 class TestRemiseALOrigine:
-    """« Rétablir les réglages d'origine » : l'ini d'avant la première retouche."""
+    """« Revenir à l'installation » : l'ini d'avant la première retouche."""
 
     def test_la_premiere_retouche_garde_l_origine(self, ini):
         avant = ini.read_bytes()
@@ -973,7 +973,7 @@ class TestRemiseALOrigine:
         (dossier / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["lissage"]), _manager(tmp_path))
         bouton = next(b for b in dlg.findChildren(QPushButton)
-                      if b.text() == tr("Rétablir les réglages d'origine"))
+                      if b.text() == tr("Revenir à l'installation"))
         assert not bouton.isEnabled()   # rien à rétablir tant que rien n'a changé
         bascule = dlg._page_img.ligne("lissage").controle
         qtbot.mouseClick(bascule, Qt.MouseButton.LeftButton)
@@ -1394,6 +1394,11 @@ class TestPageImage:
                 qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
                 assert zone.widget().minimumSizeHint().width() <= zone.viewport().width(), (langue, rang)
             assert page.minimumSizeHint().width() <= page.width()
+            # Ni onglet rogné ni recherche hors de la page (« airage et omb », audit UI, 2026-11-13).
+            for onglet in page.onglets.values():
+                assert onglet.width() >= onglet.fontMetrics().horizontalAdvance(onglet.text()), onglet.text()
+            droite = page.recherche.mapTo(page, page.recherche.rect().topRight()).x()
+            assert droite <= page.width(), (langue, droite, page.width())
             for rang, contenu in enumerate(dlg._contenus):
                 if contenu.isAncestorOf(page):
                     continue

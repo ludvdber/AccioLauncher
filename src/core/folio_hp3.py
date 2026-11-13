@@ -42,7 +42,9 @@ CARTES = 80          # les classes `WC_` du jeu, toutes séries
 POSSEDEE = 5         # EWizardCardStatus.WCS_OwnedByPlayer (lu dans HGame.u)
 _TAILLE_MAX = 32 * 1024 * 1024      # une sauvegarde HP3 pèse 4 à 9 Mo
 _EMPLACEMENT_RAPIDE = 10            # Save9.usa, la sauvegarde rapide (F5)
-_EXTENSIONS = {"fr": "fre", "es": "esp", "de": "det", "it": "itt", "en": "int"}
+# Les fichiers de HP3 : HpMenu.Spa, .Ger, .Ita (la recherche ignore la casse). Avec « esp »,
+# le folio restait en anglais en espagnol (audit UI, 2026-11-13).
+_EXTENSIONS = {"fr": "fre", "es": "spa", "de": "ger", "it": "ita", "en": "int"}
 
 
 @dataclass(frozen=True)

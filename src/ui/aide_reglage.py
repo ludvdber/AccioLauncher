@@ -12,7 +12,7 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from src.core.i18n import tr
+from src.core.i18n import tr, typo
 from src.ui.fonts import body_font, cinzel
 from src.ui.theme import themed
 
@@ -39,13 +39,13 @@ class FicheAide(QFrame):
         v = QVBoxLayout(self)
         v.setContentsMargins(14, 10, 14, 12)
         v.setSpacing(6)
-        entete = QLabel(titre)
+        entete = QLabel(typo(titre))
         entete.setTextFormat(Qt.TextFormat.PlainText)
         entete.setWordWrap(True)
         entete.setFont(cinzel(10, bold=True))
         entete.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
         v.addWidget(entete)
-        self.texte = QLabel(corps_html)
+        self.texte = QLabel(typo(corps_html))
         self.texte.setTextFormat(Qt.TextFormat.RichText)
         self.texte.setWordWrap(True)
         self.texte.setFont(body_font(11))

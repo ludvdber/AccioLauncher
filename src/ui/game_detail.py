@@ -226,9 +226,16 @@ class GameDetailView(QWidget):
         # d'autant. Avec les polices de Linux, trois descriptions tiennent en deux
         # lignes au lieu de trois (297 px) et le bouton remontait de 15 px.
         naturelle = self._info.natural_height()
-        ecart = naturelle - _HAUTEUR_REFERENCE if h >= _SEUIL_COMPACT and naturelle > 0 else 0
+        ancree = h >= _SEUIL_COMPACT and naturelle > 0
+        ecart = naturelle - _HAUTEUR_REFERENCE if ancree else 0
         info_top = max(min(retrait, _INFO_TOP_MIN), retrait - ecart)
         dispo = h - info_top - 20
+        if ancree:
+            # Le BAS du panneau, donc Jouer, est le même pour les huit jeux : un contenu
+            # trop haut pour remonter jusqu'au retrait minimal raccourcit sa description
+            # au lieu de pousser Jouer vers le bas. Il sautait de 105 px entre HP6 et HP7
+            # partie 1, voisins, à 1280×800 (audit UI, 2026-11-13).
+            dispo = min(dispo, retrait + _HAUTEUR_REFERENCE - info_top)
         # Le bandeau d'avertissement mange la place du texte (0 sinon).
         self._info.set_height_budget(dispo - self._action_panel.alert_height())
         # Largeur définitive d'abord : la hauteur nécessaire en dépend.

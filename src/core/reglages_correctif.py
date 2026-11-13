@@ -64,7 +64,7 @@ log = logging.getLogger(__name__)
 
 NOM_INI = "d3d9.ini"
 # Copie de l'ini tel qu'il était AVANT la première retouche du lanceur : ce que
-# « Rétablir les réglages d'origine » remet en place.
+# « Revenir à l'installation » remet en place.
 SUFFIXE_ORIGINE = ".origine"
 _MARQUE_V2 = "Accio.Window"   # section qu'a seul le nouveau correctif
 

@@ -5,7 +5,7 @@ from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
 from PyQt6.QtWidgets import QWidget
 
 from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
-from src.ui.theme import accent_qcolor, current as current_theme
+from src.ui.theme import accent_qcolor
 
 
 class ToggleSwitch(QWidget):
@@ -90,9 +90,10 @@ class ToggleSwitch(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.translate(self._MARGE, self._MARGE)
-        # Piste
-        # Piste off = bordure forte du thème (bleu nuit en Poudlard, teinte maison sinon)
-        track_color = accent_qcolor() if self._checked else QColor(current_theme().border_strong)
+        # Piste éteinte NEUTRE, la même dans les cinq thèmes : la bordure forte de la maison
+        # donnait un rouge sombre à côté du rouge vif d'un allumé (Gryffondor), et l'état ne
+        # se lisait plus qu'à la position du rond (audit UI v5, choix de Ludo le 2026-11-13).
+        track_color = accent_qcolor() if self._checked else QColor(255, 255, 255, 41)
         p.setBrush(QBrush(track_color))
         p.setPen(Qt.PenStyle.NoPen)
         p.drawRoundedRect(QRectF(0, 0, self._TRACK_W, self._TRACK_H), 11, 11)

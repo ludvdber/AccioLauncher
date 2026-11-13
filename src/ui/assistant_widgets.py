@@ -43,12 +43,6 @@ QPushButton#suivant:disabled {{
     color: #6f6d8e; background: transparent; border-color: rgba(255, 255, 255, 0.10);
 }}
 QPushButton#suivant[focusClavier="true"]:focus {{ border: 2px solid #f0d060; padding: 0 21px; }}
-QPushButton#lien {{
-    background: transparent; border: none; color: #a9a7c4;
-    text-decoration: underline; padding: 6px 4px;
-}}
-QPushButton#lien:hover {{ color: #f2f2f4; }}
-QPushButton#lien[focusClavier="true"]:focus {{ color: #e8c547; }}
 QPushButton#carteChoix {{
     background: #0d0d1a; border: 2px solid rgba(255, 255, 255, 0.09);
     border-radius: {RAYON_CARTE}px; text-align: left;
@@ -91,16 +85,6 @@ def bouton_suivant(libelle: str) -> QPushButton:
     btn = QPushButton(libelle)
     btn.setObjectName("suivant")
     btn.setFont(police(14, gras=True))
-    btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    btn.setAutoDefault(False)
-    return btn
-
-
-def lien(libelle: str) -> QPushButton:
-    """Un choix discret du pied (« Je n'en ai pas, passer ») : souligné, sans cadre."""
-    btn = QPushButton(libelle)
-    btn.setObjectName("lien")
-    btn.setFont(police(13))
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
     btn.setAutoDefault(False)
     return btn

@@ -27,6 +27,7 @@ import json
 import locale
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -253,6 +254,22 @@ def tr(text: str) -> str:
         if hit is not None:
             return hit
     return text
+
+
+_FINE_AVANT = re.compile(r" ([;!?])")
+_INSECABLE_AVANT = re.compile(r" ([:»%])")
+
+
+def typo(texte: str) -> str:
+    """En français, les espaces de la typographie deviennent insécables : fine avant ; ! ?,
+    insécable avant : » % et après «. Une ligne ne commence plus par « : » ni ne finit sur
+    « « » (fiches d'aide, à 1280×800 : « : plus de déchirure… », audit UI, 2026-11-13).
+    Pour le texte riche, sans danger : ses attributs n'ont jamais d'espace avant « : »."""
+    if _lang != SOURCE_LANGUAGE:
+        return texte
+    texte = _FINE_AVANT.sub("\u202f\\1", texte)
+    texte = _INSECABLE_AVANT.sub("\u00a0\\1", texte)
+    return texte.replace("« ", "«\u00a0")
 
 
 def trn(n: int, un: str, plusieurs: str) -> str:

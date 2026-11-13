@@ -32,10 +32,10 @@ from src.core.config import APP_VERSION, ASSETS_DIR, LOG_DIR
 from src.core.i18n import tr, translator_credits
 from src.core import nouveautes
 from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, NOTES_VERSIONS_URL, SITE_URL
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, texte
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, html_lien, lien, police, texte
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import RAYON_CARTE, accent_qcolor, current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, themed
 from src.ui.utils import open_url
 
 log = logging.getLogger(__name__)
@@ -135,12 +135,6 @@ QFrame#depannage {{
     border: 1px dashed rgba(255, 255, 255, 0.14); border-radius: {RAYON_CARTE}px;
     background: transparent;
 }}
-QPushButton#copierRapport {{
-    background: transparent; border: none; color: #d6a72c; padding: 4px 2px;
-    text-align: right;
-}}
-QPushButton#copierRapport:hover {{ color: #e8c547; }}
-QPushButton#copierRapport[focusClavier="true"]:focus {{ border-bottom: 2px solid #d6a72c; }}
 """
 
 
@@ -187,8 +181,7 @@ def _nom_contributeur(c) -> QWidget:
     """
     nom = escape(c.name, quote=False)
     if c.url:
-        nom = (f'<a href="{escape(c.url)}" style="color:{current_theme().accent};'
-               f' text-decoration:underline;">{nom}</a>')
+        nom = html_lien(c.url, nom)
     lbl = QLabel(nom)
     lbl.setTextFormat(Qt.TextFormat.RichText)
     lbl.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
@@ -284,8 +277,7 @@ def _mention_legale() -> QLabel:
     dérivée les CONSERVE dans son « À propos ». Encore faut-il que l'original
     les affiche. Le lien mène au dépôt, qui porte le code ET la licence.
     """
-    lien = (f'<a href="{escape(DEPOT_URL)}" style="color:{current_theme().accent}; '
-            f'text-decoration:none;">{escape(tr("Code source et licence"), quote=False)}</a>')
+    lien = html_lien(DEPOT_URL, escape(tr("Code source et licence"), quote=False))
     lbl = QLabel(escape(tr(
         "© 2026 ASTeam · logiciel libre sous licence GNU GPL v3, "
         "fourni sans aucune garantie"), quote=False) + " · " + lien
@@ -367,10 +359,8 @@ def _bouton_diagnostic(manager) -> QPushButton:
     ce qu'elle colle.
     """
     libelle = tr("Copier le rapport")
-    btn = QPushButton(libelle)
-    btn.setObjectName("copierRapport")
-    btn.setFont(police(13, gras=True))
-    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn = lien(libelle)
+    btn.setStyleSheet("text-align: right;")      # il finit au bord, comme les autres actions
     # La confirmation est plus longue que le libellé : le bouton ne doit pas
     # changer de largeur sous le curseur. Le libellé court se cale à droite
     # (`text-align`) : il finit au bord, comme les autres actions des Paramètres.
@@ -420,9 +410,7 @@ def _depannage(manager) -> QFrame:
 def _numeros(cible: str, catalogue: str | None) -> str:
     """« VERSION X  ·  CATALOGUE Y », le premier numéro en lien vers `cible`.
     Le numéro du catalogue vient de l'extérieur : échappé."""
-    numeros = (f'<a href="{cible}" style="color:{current_theme().accent};'
-               ' text-decoration:none;">'
-               + escape(tr("Version {}").format(APP_VERSION).upper(), quote=False) + "</a>")
+    numeros = html_lien(cible, escape(tr("Version {}").format(APP_VERSION).upper(), quote=False))
     if catalogue is not None:
         numeros += "&nbsp;&nbsp;·&nbsp;&nbsp;" + escape(
             tr("Catalogue {}").format(catalogue).upper(), quote=False)

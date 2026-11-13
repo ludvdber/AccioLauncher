@@ -118,6 +118,31 @@ def test_un_focus_au_clavier_fait_defiler_jusqu_a_lui(qtbot, filtre_pose):
     assert 0 < bas <= zone.viewport().height()
 
 
+def test_tab_entre_dans_un_groupe_par_le_choix_coche(qtbot):
+    """Le Carnet ouvert sur les Défis : Tab cerclait « Folio », et Espace l'ouvrait (audit UI,
+    2026-11-13). Entrer dans le groupe mène au choix coché ; y circuler reste libre."""
+    from PyQt6.QtWidgets import QButtonGroup
+    from src.ui.focus_visible import _choix_du_groupe
+    hote = QWidget()
+    qtbot.addWidget(hote)
+    lay = QVBoxLayout(hote)
+    dehors = QPushButton("dehors")
+    lay.addWidget(dehors)
+    groupe = QButtonGroup(hote)
+    boutons = [QPushButton(str(n)) for n in range(3)]
+    for b in boutons:
+        b.setCheckable(True)
+        groupe.addButton(b)
+        lay.addWidget(b)
+    boutons[2].setChecked(True)
+    hote.show()
+    assert _choix_du_groupe(boutons[0], dehors) is boutons[2]
+    assert _choix_du_groupe(boutons[0], None) is boutons[2]
+    assert _choix_du_groupe(boutons[1], boutons[2]) is None, "dans le groupe, Tab avance"
+    assert _choix_du_groupe(boutons[2], dehors) is None
+    assert _choix_du_groupe(dehors, boutons[0]) is None
+
+
 class TestStylesheet:
     def test_la_regle_focus_est_conditionnee(self):
         """Sans la condition, la règle redeviendrait celle d'avant."""

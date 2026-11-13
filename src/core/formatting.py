@@ -44,16 +44,22 @@ def format_speed(bytes_per_sec: float) -> str:
 
 
 def format_eta(seconds: float) -> str:
-    """Formate un temps restant estimé."""
+    """Formate un temps restant estimé : « ~45 s », « ~3 min », « ~1 h », « ~1 h 30 ».
+
+    Une seule écriture des unités, espacées, et jamais d'heure décimale : on lisait
+    « ~45s » puis « ~3 min », et « ~1,0h » (audit UI, 2026-11-13).
+    """
     if seconds < 0 or seconds > 86400:
         return ""
     if seconds < 60:
-        return trn(int(seconds), "~{}s restante", "~{}s restantes").format(int(seconds))
-    minutes = seconds / 60
+        return trn(int(seconds), "~{} s restante", "~{} s restantes").format(int(seconds))
+    minutes = int(seconds // 60)
     if minutes < 60:
-        return trn(int(minutes), "~{} min restante", "~{} min restantes").format(int(minutes))
-    hours = minutes / 60
-    return tr("~{}h restantes").format(_nombre(hours))
+        return trn(minutes, "~{} min restante", "~{} min restantes").format(minutes)
+    heures, reste = divmod(minutes, 60)
+    if reste:
+        return tr("~{h} h {m} restantes").format(h=heures, m=f"{reste:02d}")
+    return trn(heures, "~{} h restante", "~{} h restantes").format(heures)
 
 
 def format_progress_line(downloaded: int, total: int, speed: float,
@@ -66,8 +72,10 @@ def format_progress_line(downloaded: int, total: int, speed: float,
     if total <= 0:
         return ""
     pct, recu, attendu, vitesse, eta = morceaux_de_progression(downloaded, total, speed, eta_seconds)
-    head = f"{tr('Téléchargement :')} {pct}%" if with_label else f"{pct}%"
-    parts = [head, f"{recu} / {attendu}", vitesse]
+    # Les mots de la carte de la fiche, juste au-dessus : « 43 % », « 1,2 Go sur 2,8 Go ».
+    pourcent = tr("{} %").format(pct)
+    head = f"{tr('Téléchargement :')} {pourcent}" if with_label else pourcent
+    parts = [head, tr("{fait} sur {attendu}").format(fait=recu, attendu=attendu), vitesse]
     if eta:
         parts.append(eta)
     return " · ".join(parts)

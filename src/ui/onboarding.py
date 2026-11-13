@@ -43,11 +43,12 @@ from src.core.game_data import GameData, load_catalog
 from src.core.i18n import available_languages, detect_system_language, set_language, tr
 from src.ui.assistant_widgets import (
     STYLE, BarreDisque, CarteCouleur, CarteLangue, CarteReponse, LigneJeu, Progression,
-    RailEtapes, bouton_suivant, lien, surtitre_etape, titre_etape,
+    RailEtapes, bouton_suivant, surtitre_etape, titre_etape,
 )
 from src.ui.composants import (
     ENCRE_DISCRETE, ENCRE_DOUCE, Carte, Chemin, LigneReglage, Pastille, bouton,
     espace_du_volume, feuille_de_style, police, texte,
+    lien,
     transparent,
 )
 from src.ui.ecu import Ecu
@@ -383,7 +384,7 @@ class OnboardingDialog(QDialog):
         self._fin = texte(tr("C'est tout. Bon retour à Poudlard."), 13, ENCRE_DOUCE, retour=True)
         self._fin.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         lay.addWidget(self._fin, stretch=1)
-        self._lien = lien("")
+        self._lien = lien("", discret=True)      # un choix discret du pied
         self._lien.clicked.connect(self._sur_lien)
         lay.addWidget(self._lien)
         self._btn_suivant = bouton_suivant("")

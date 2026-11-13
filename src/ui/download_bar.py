@@ -225,7 +225,7 @@ class DownloadBar(QWidget):
         if self._progress.maximum() == 0:
             self._progress.setRange(0, 100)
         self._progress.setValue(pct)
-        self._status.setText(tr("Installation… {}%").format(pct))
+        self._status.setText(tr("Installation… {} %").format(pct))
         self._btn_cancel.hide()
 
     def update_part_info(self, current: int, total: int) -> None:

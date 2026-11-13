@@ -19,7 +19,7 @@ droite. Ce qu'elle corrige de l'ancienne boîte à onglets :
 - les liens entre réglages découverts en voyant des lignes grisées : la
   ligne grisée DIT ce qui l'éteint, et un effet qui dépend d'un autre est
   rangé en retrait sous lui ;
-- « Rétablir les réglages d'origine » en lien gris, qu'on croyait
+- « Revenir à l'installation » en lien gris, qu'on croyait
   désactivé, et un bouton Fermer alors que tout s'enregistre au fil des
   clics : un vrai bouton au pied, « Bibliothèque » en haut du rail.
 """
@@ -567,7 +567,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._remettre_controle(widget, autre)
 
     def _bouton_origine(self) -> None:
-        """« Rétablir les réglages d'origine » : ceux de l'ini tel qu'il était avant
+        """« Revenir à l'installation » : ceux de l'ini tel qu'il était avant
         la première retouche du lanceur (demandé par Ludo, 2026-09-28 — surtout
         maintenant que les couleurs se règlent). Au pied : il vaut pour toutes
         les pages qui portent un réglage du correctif, d'où la confirmation.
@@ -583,7 +583,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         btn.clicked.connect(self._remettre_origine)
 
     def _infobulle_origine(self) -> str:
-        return tr("Pages remises à leur état d'origine : {}.").format(
+        return tr("Pages remises comme à l'installation : {}.").format(
             self._pages_remises(r.onglet for r in self._reglages))
 
     def _remettre_origine(self) -> None:

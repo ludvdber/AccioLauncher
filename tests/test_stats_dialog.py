@@ -654,9 +654,22 @@ class TestJaquettes:
         premiere = stats_releve._jaquette("hp1_cover.jpg")
         seconde = stats_releve._jaquette("hp1_cover.jpg")
         assert premiere is not None and not premiere.isNull()
-        assert seconde.size() == premiere.size() and seconde.height() <= 84
+        # 2× la plus grande jaquette du Relevé, celle d'une ligne de 84 px (car14).
+        assert seconde.size() == premiere.size()
+        assert seconde.height() <= 2 * stats_releve._hauteur_jaquette(stats_releve.HAUTEUR_LIGNE_MAX)
         assert stats_releve._jaquette_decodee.cache_info().hits == 1
 
     def test_une_jaquette_absente_ne_plante_pas(self, qtbot):
         from src.ui import stats_releve
         assert stats_releve._jaquette("personne.jpg") is None
+
+
+def test_les_lignes_du_releve_suivent_la_hauteur(qtbot):
+    """car14 (2026-11-13) : des timbres de 30 × 42 sur des lignes de 54 px, à toute taille."""
+    from src.ui import stats_releve
+    releve = stats_releve._Releve([], {}, {}, {}, {}, set())
+    qtbot.addWidget(releve)
+    releve.regler_hauteur(200)
+    assert releve.hauteur_ligne == stats_releve.HAUTEUR_LIGNE_MAX
+    releve.regler_hauteur(10)
+    assert releve.hauteur_ligne == stats_releve._HAUTEUR_LIGNE

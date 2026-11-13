@@ -6,14 +6,16 @@ une maison les remplace toutes d'un coup.
 """
 
 import shutil
+from html import escape
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter
+from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPen
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
+from src.ui.focus_visible import PROPRIETE
 from src.ui.fonts import body_font, cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current, rayon_pastille, themed
@@ -39,6 +41,10 @@ HAUTEUR_FILTRE_JAQUETTE = 36
 _TAILLE_ROND = 38
 # Le pictogramme du retour et des rubriques d'un rail, au repos.
 _ENCRE_RAIL = "#a9a7c4"
+# Les liens (audit UI v57, Ludo 2026-11-13) : onze présentations différentes, dont des liens
+# or sans soulignement que Ludo ne reconnaissait pas comme des liens (ASTeam, 2026-10-14).
+# Un lien est OR et SOULIGNÉ ; une action secondaire (« Désinstaller… ») est un lien gris.
+ENCRE_LIEN_DISCRET = "#a9a7c4"
 
 # Trois rayons seulement (`theme`) : commande, carte, pastille. Les rubriques
 # d'un rail, le retour et les filtres vivent ICI : chaque page en gardait sa
@@ -115,6 +121,17 @@ QPushButton#filtre:checked {{
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
 }}
 QPushButton#filtre[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
+QPushButton#lien, QPushButton#lienDiscret {{
+    background: transparent; border: none; text-decoration: underline; padding: 4px 2px;
+    text-align: left;
+}}
+QPushButton#lien {{ color: #d6a72c; }}
+QPushButton#lien:hover {{ color: #e8c547; }}
+QPushButton#lienDiscret {{ color: {ENCRE_LIEN_DISCRET}; }}
+QPushButton#lienDiscret:hover {{ color: #f2f2f4; }}
+QPushButton#lien[focusClavier="true"]:focus,
+QPushButton#lienDiscret[focusClavier="true"]:focus {{ color: #f0d060; }}
+QPushButton#lien:disabled, QPushButton#lienDiscret:disabled {{ color: {ENCRE_ETEINTE}; }}
 """
 
 # Les listes déroulantes. `LISTE` : celle des pages (réglages d'un jeu,
@@ -205,6 +222,22 @@ def transparent(widget: QWidget, nom: str) -> None:
     changements et la pastille des sorts appris du Folio (audit UI, 2026-11-13)."""
     widget.setObjectName(nom)
     widget.setStyleSheet(f"QWidget#{nom} {{ background: transparent; }}")
+
+
+def survol_et_focus(p: QPainter, case: QPushButton, rayon: float) -> None:
+    """Pour une case PEINTE (règle 15) : le survol l'éclaire, et le focus du CLAVIER pose un
+    anneau clair, distinct du cadre or du choix. Les cases du folio ne changeaient pas au
+    survol, et une vignette des Captures qui recevait le focus ne changeait pas d'un pixel :
+    elle avait déjà le cadre or du choix (audit UI, 2026-11-13). La case pose `WA_Hover`."""
+    cadre = QRectF(case.rect()).adjusted(1, 1, -1, -1)
+    if case.underMouse():
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(255, 255, 255, 26))
+        p.drawRoundedRect(cadre, rayon, rayon)
+    if case.hasFocus() and case.property(PROPRIETE):
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.setPen(QPen(QColor("#f4f2f8"), 1.5))
+        p.drawRoundedRect(QRectF(case.rect()).adjusted(0.75, 0.75, -0.75, -0.75), rayon + 1, rayon + 1)
 
 
 def texte(contenu: str, px: int = 13, encre: str = ENCRE,
@@ -336,6 +369,23 @@ def rond(icone: str, libelle: str, action, bulle: str = "") -> QPushButton:
     b.setAccessibleName(libelle)
     b.clicked.connect(action)
     return b
+
+
+def lien(libelle: str, *, discret: bool = False) -> QPushButton:
+    """Le lien du launcher : or et souligné, ou gris s'il est `discret`. Feuille : `feuille_de_style`."""
+    btn = QPushButton(libelle)
+    btn.setObjectName("lienDiscret" if discret else "lien")
+    btn.setFont(police(13))
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.setAutoDefault(False)
+    return btn
+
+
+def html_lien(cible: str, contenu: str, *, discret: bool = False) -> str:
+    """Le même lien dans un texte riche. `contenu` est du HTML déjà échappé ; `cible` l'est ici."""
+    encre = ENCRE_LIEN_DISCRET if discret else current().accent
+    return (f'<a href="{escape(cible)}" style="color:{encre}; text-decoration:underline;">'
+            f"{contenu}</a>")
 
 
 def bouton_retour(libelle: str, action) -> QPushButton:

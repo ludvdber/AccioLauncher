@@ -51,7 +51,7 @@ class TestFormatSpeed:
 class TestFormatEta:
     def test_seconds(self):
         result = format_eta(30)
-        assert "30s" in result
+        assert "30 s" in result
 
     def test_minutes(self):
         result = format_eta(120)
@@ -78,13 +78,13 @@ class TestFormatProgressLine:
     def test_with_label(self):
         result = format_progress_line(50_000_000, 100_000_000, 5_000_000.0, 10.0,
                                        with_label=True)
-        assert result.startswith("Téléchargement : 50%")
+        assert result.startswith("Téléchargement : 50 %")
         assert "Mo/s" in result
-        assert "10s" in result
+        assert "10 s" in result
 
     def test_without_label(self):
         result = format_progress_line(50, 100, 0.0, -1.0)
-        assert result.startswith("50%")
+        assert result.startswith("50 %")
         assert "Téléchargement" not in result
 
     def test_no_eta_when_negative(self):

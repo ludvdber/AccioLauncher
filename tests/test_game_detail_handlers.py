@@ -49,7 +49,7 @@ class _Boites(list):
     def repondre(self, reponse: int) -> None:
         self.reponse = reponse
 
-    def __call__(self, _icone, _vue, titre, texte, choix=(), defaut=0):
+    def __call__(self, _icone, _vue, titre, texte, choix=(), defaut=0, *, danger=False):
         self.append((titre, texte))
         return self.reponse
 

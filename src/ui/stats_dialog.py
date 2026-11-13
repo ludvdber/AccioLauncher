@@ -21,7 +21,7 @@ dont on n'a vu aucune partie dit « — » et pourquoi, jamais une estimation.
 
 from datetime import date
 
-from PyQt6.QtCore import QLocale, Qt
+from PyQt6.QtCore import QLocale, Qt, QTimer
 from PyQt6.QtWidgets import (
     QBoxLayout,
     QDialog,
@@ -37,7 +37,7 @@ from src.core import sauvegardes, stats
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.ecu import emaux
-from src.ui.stats_releve import _Releve
+from src.ui.stats_releve import _HAUTEUR_LIGNE, _Releve
 from src.ui.composants import bouton_retour, feuille_de_style
 from src.ui.fonts import cinzel
 from src.ui.theme import current as theme_courant, themed
@@ -120,8 +120,10 @@ class StatsDialog(QDialog):
             self._folio(game_id)
 
     def _style(self) -> str:
+        # Dans le Carnet, son fond : le #0d0d1a d'une ancienne fenêtre tranchait (car14).
+        fond = "transparent" if self._integree else "#0d0d1a"
         return """
-        QDialog { background-color: #0d0d1a; color: #ffffff; }
+        QDialog { background-color: FOND; color: #ffffff; }
         QLabel { color: #ffffff; background: transparent; }
         QLabel#titreSection {
             font-size: 12px; font-weight: bold; color: #d6a72c;
@@ -142,7 +144,7 @@ class StatsDialog(QDialog):
         QScrollBar::handle:vertical:hover { background: #d6a72c; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
-        """
+        """.replace("FOND", fond)
 
     # ──────────────────── Données ────────────────────
 
@@ -187,7 +189,8 @@ class StatsDialog(QDialog):
 
     def _build(self) -> None:
         cadre = QVBoxLayout(self)
-        cadre.setContentsMargins(26, 18, 16, 0)
+        # La marge de l'en-tête du Carnet et des Défis (40) : le relevé avait la sienne (car14).
+        cadre.setContentsMargins(40, 18, 16, 0)
         cadre.setSpacing(8)
 
         # Une PAGE depuis le 2026-10-09 (`pages.py`) : le retour dit où il mène,
@@ -215,10 +218,11 @@ class StatsDialog(QDialog):
 
         tete = QVBoxLayout()
         tete.setSpacing(6)
-        # Le Carnet porte le grand titre : ici, seulement le nom de la rubrique.
-        titre = QLabel(tr("Relevé de scolarité"))
-        titre.setFont(cinzel(16, bold=True))
-        tete.addWidget(titre)
+        # Dans le Carnet, la rubrique cochée en haut dit déjà « Relevé » : pas de titre (car8).
+        if not self._integree:
+            titre = QLabel(tr("Relevé de scolarité"))
+            titre.setFont(cinzel(16, bold=True))
+            tete.addWidget(titre)
         # Sous le titre : la maison (refonte du 2026-10-09). La phrase vivait
         # dans la barre du haut, où elle ne tenait plus à côté des onglets.
         entete = self._phrase_entete(theme_courant())
@@ -283,6 +287,17 @@ class StatsDialog(QDialog):
                 else QBoxLayout.Direction.TopToBottom)
         if self._haut.direction() != sens:
             self._haut.setDirection(sens)
+        if self._integree:
+            QTimer.singleShot(0, self._etirer_lignes)
+
+    def _etirer_lignes(self) -> None:
+        """Dans le Carnet, les lignes du relevé prennent la hauteur libre sous le tableau (car14)."""
+        releve, zone = self._releve, self._zone
+        if releve is None or zone is None or not releve._lignes:
+            return
+        n = len(releve._lignes)
+        base = self._contenu.sizeHint().height() - n * (releve.hauteur_ligne - _HAUTEUR_LIGNE)
+        releve.regler_hauteur(_HAUTEUR_LIGNE + (zone.viewport().height() - base) // n)
 
 
     def _ouverture(self) -> str:
@@ -381,7 +396,9 @@ class StatsDialog(QDialog):
         l'étagère et les paragraphes déduisent leur hauteur de la largeur
         reçue, qu'ils n'ont pas avant d'être montrés."""
         super().showEvent(event)
-        if not self._ajuste:
+        # Dans le Carnet, la pile donne la hauteur : se rétrécir au contenu y laissait
+        # 400 px vides sous la page à 1920×1080 (car14, 2026-11-13).
+        if not self._ajuste and not self._integree:
             self._ajuste = True
             self._ajuster_hauteur()
 

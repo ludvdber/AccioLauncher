@@ -51,7 +51,7 @@ class TestLesTextesAUn:
     def test_une_minute_restante(self):
         from src.core.formatting import format_eta
         assert format_eta(60) == "~1 min restante"
-        assert format_eta(1) == "~1s restante"
+        assert format_eta(1) == "~1 s restante"
 
     def test_aucun_gabarit_bricole(self):
         """« copie(s) » et ses cousins : un pluriel entre parenthèses ne

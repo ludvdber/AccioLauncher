@@ -41,7 +41,8 @@ class TestCarnet:
         page = win._pages.page
         page.rubrique(RELEVE)
         assert isinstance(page._pile.currentWidget(), StatsDialog)
-        assert page._choix.isHidden(), "le choix du jeu ne sert qu'au folio"
+        assert not page._choix.isEnabled(), "le choix du jeu ne sert qu'au folio et aux défis"
+        assert not page._choix.isHidden(), "éteint, pas caché : la page ne saute pas"
         page._pile.currentWidget().ouvrir_folio(jeux[1])
         assert page.rubrique_courante == FOLIO and page.jeu == jeux[1]
 
@@ -168,3 +169,25 @@ class TestDefis:
         assert page.rubrique_courante == DEFIS
         assert page._pile.currentWidget() is page._defis and page._defis is not avant
         assert page._defis.game.id == jeux[1] and page._pile.indexOf(avant) == -1
+        # Le folio caché ne se bâtit plus en coulisse : 150 à 630 ms par clic (audit UI, 2026-11-13).
+        assert page._folio is None
+        from src.ui.carnet_page import FOLIO
+        page.rubrique(FOLIO)
+        assert page._folio is not None and page._folio.game.id == jeux[1]
+
+
+def test_le_releve_prend_la_hauteur_de_la_fenetre(fenetre_carnet, qtbot):
+    """car14 (2026-11-13) : à 1920×1080, le bas de la page restait vide sous des timbres."""
+    from src.ui.carnet_page import RELEVE
+    from src.ui.stats_releve import _HAUTEUR_LIGNE
+    from src.ui.title_bar import CARNET
+    win, _jeux = fenetre_carnet
+    win.show()
+    win.resize(1920, 1080)
+    win._on_onglet(CARNET)
+    page = win._pages.page
+    page.rubrique(RELEVE)
+    releve = page._releve._releve
+    qtbot.waitUntil(lambda: releve.hauteur_ligne > _HAUTEUR_LIGNE, timeout=3000)
+    zone = page._releve._zone
+    assert page._releve._contenu.height() <= zone.viewport().height() + 1, "rien ne défile pour autant"

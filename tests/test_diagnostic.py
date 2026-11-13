@@ -198,10 +198,16 @@ class TestEnteteDuJournal:
             racine.setLevel(niveau)
 
 
+
+def _copier(page):
+    """« Copier le rapport », un lien du launcher depuis l'audit UI v57 (2026-11-13)."""
+    from PyQt6.QtWidgets import QPushButton
+    from src.core.i18n import tr
+    return next((b for b in page.findChildren(QPushButton) if b.text() == tr("Copier le rapport")), None)
+
 class TestBoutonDiagnostic:
     def test_copie_puis_confirme(self, qtbot, tmp_path, monkeypatch):
         from PyQt6.QtGui import QGuiApplication
-        from PyQt6.QtWidgets import QPushButton
 
         from src.ui import about_page
         monkeypatch.setattr(about_page, "LOG_DIR", tmp_path)
@@ -210,7 +216,7 @@ class TestBoutonDiagnostic:
         monkeypatch.setattr(about_page.diagnostic, "rapport",
                             lambda manager, **kw: "DIAGNOSTIC-TEST")
         monkeypatch.setattr(about_page.diagnostic, "journaux_des_jeux", lambda m: [])
-        btn = page.findChild(QPushButton, "copierRapport")
+        btn = _copier(page)
         largeur = btn.minimumWidth()
         btn.click()
         assert QGuiApplication.clipboard().text() == "DIAGNOSTIC-TEST"
@@ -220,18 +226,20 @@ class TestBoutonDiagnostic:
         assert "Discord" in btn.text()
         assert btn.minimumWidth() == largeur
 
-    def test_le_libelle_finit_au_bord_droit_de_la_carte(self):
+    def test_le_libelle_finit_au_bord_droit_de_la_carte(self, qtbot, tmp_path):
         """La largeur réservée à la confirmation le laissait flotter à 110 px du bord."""
         from src.ui import about_page
-        assert "text-align: right" in about_page._STYLE_TUILES
+        page = about_page.construire((), manager=_faux_manager(tmp_path))
+        qtbot.addWidget(page)
+        btn = _copier(page)
+        assert btn.objectName() == "lien" and "text-align: right" in btn.styleSheet()
 
     def test_absent_sans_manager(self, qtbot):
-        from PyQt6.QtWidgets import QPushButton
 
         from src.ui import about_page
         page = about_page.construire(())
         qtbot.addWidget(page)
-        assert page.findChild(QPushButton, "copierRapport") is None
+        assert _copier(page) is None
 
 
 class TestSortieSansFinalisation:

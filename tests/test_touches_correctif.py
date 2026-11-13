@@ -114,7 +114,7 @@ class TestEcriture:
         assert b"Back=B" not in rc.chemin_origine(ini).read_bytes()
 
     def test_retablir_l_origine_couvre_toutes_les_actions(self, ini):
-        """« Rétablir les réglages d'origine » passe par le préréglage ZQSD : il doit
+        """« Revenir à l'installation » passe par le préréglage ZQSD : il doit
         emporter aussi Pause, Valider et Retour, que seul l'éditeur règle."""
         tc.attribuer(ini, "Confirm", "Space")
         tc.attribuer(ini, "MoveUp", "I")

@@ -24,7 +24,6 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -34,7 +33,7 @@ from src.core.config import APP_VERSION
 from src.core.game_data import GameData
 from src.core.i18n import get_language, tr, trn
 from src.core.phonographe import nom_de_fichier
-from src.ui.composants import bouton, feuille_de_style
+from src.ui.composants import bouton, feuille_de_style, lien
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
@@ -175,12 +174,7 @@ class CopiesDialog(QDialog):
         ligne = QHBoxLayout()
         ligne.addWidget(self._total)
         ligne.addStretch()
-        dossier = QPushButton(tr("Ouvrir le dossier des copies"))
-        dossier.setFlat(True)
-        dossier.setFont(body_font(10))
-        dossier.setStyleSheet(themed("QPushButton { color: #d6a72c; background: transparent; border: none;"
-                                     " text-decoration: underline; padding: 0; }"))
-        dossier.setCursor(Qt.CursorShape.PointingHandCursor)
+        dossier = lien(tr("Ouvrir le dossier des copies"))
         dossier.clicked.connect(self._ouvrir_dossier)
         ligne.addWidget(dossier)
         layout.addLayout(ligne)

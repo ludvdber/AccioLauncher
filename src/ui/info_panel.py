@@ -16,6 +16,7 @@ from src.core import folio, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
+from src.ui.composants import html_lien
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, cinzel_decorative, body_font
 from src.ui.icon_button import pixmap_icone
@@ -250,8 +251,12 @@ class InfoPanel(QWidget):
         if self._scroll.widget() is None:
             return 0
         # `heightForWidth`, jamais `sizeHint` (règle 39) : celui d'un QLabel
-        # en wordWrap surestime (195 px pour 97).
-        return (self._layout.heightForWidth(self.available_width())
+        # en wordWrap surestime (195 px pour 97). La largeur du LAYOUT, marges
+        # comprises : il les retire lui-même, et `available_width` les a déjà
+        # ôtées ; le titre se mesurait 80 px trop étroit, sur trois lignes au
+        # lieu de deux, et la fiche gardait un trou de 62 px (audit UI, 2026-11-13).
+        left, _, right, _ = self._layout.getContentsMargins()
+        return (self._layout.heightForWidth(self.available_width() + left + right)
                 + self._hauteur_zone_action()
                 + _HAUTEUR_SLACK)
 
@@ -300,6 +305,8 @@ class InfoPanel(QWidget):
 
     def _setup_scroll(self) -> None:
         self._scroll.setWidgetResizable(True)
+        # Pas un arrêt de Tab : la zone prenait le focus sans rien montrer.
+        self._scroll.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -823,16 +830,13 @@ class InfoPanel(QWidget):
         (le journal des changements) ; une ligne qui mêlait une information, une
         action de dépannage et un lien ne se lisait pas.
         """
-        gold = current_theme().accent
         morceaux = []
         if self._resume is not None:
             # Le bloc porte déjà « Folio › » : ici, la description rangée.
             libelle = tr("Ma partie") if self._a_propos else tr("À propos du jeu")
-            morceaux.append(f'<a href="a-propos" style="color:{gold}; text-decoration:none;">'
-                            + _insecable(escape(libelle.upper(), quote=False)) + '</a>')
+            morceaux.append(html_lien("a-propos", _insecable(escape(libelle.upper(), quote=False))))
         elif game.id in folio.JEUX and self._manager.is_installed(game.id):
-            morceaux.append(f'<a href="folio" style="color:{gold}; text-decoration:none;">'
-                            + _insecable(escape(tr("Folio").upper(), quote=False)) + '</a>')
+            morceaux.append(html_lien("folio", _insecable(escape(tr("Folio").upper(), quote=False))))
         point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
         self._indices.setVisible(bool(morceaux))

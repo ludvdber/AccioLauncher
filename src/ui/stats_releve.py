@@ -45,7 +45,10 @@ _COL_PARTIES = 64
 _COL_DERNIERE = 150
 _BARRE_MAX = 90
 _JAQUETTE = (30, 42)
+# Une ligne suit la hauteur offerte, entre ces deux bornes, et sa jaquette avec elle : à
+# 1920×1080, des timbres de 30 × 42 laissaient 400 px vides sous le tableau (car14, 2026-11-13).
 _HAUTEUR_LIGNE = 54
+HAUTEUR_LIGNE_MAX = 84
 _ECART = 14
 _GRIS = "#8f8db0"
 
@@ -66,11 +69,16 @@ def _jaquette_decodee(nom_fichier: str) -> QImage | None:
     lecteur = QImageReader(str(chemin))
     source = lecteur.size()
     if source.isValid() and source.height() > 0:
-        facteur = 2 * _JAQUETTE[1] / source.height()   # 2× : écrans à 200 %
+        facteur = 2 * _hauteur_jaquette(HAUTEUR_LIGNE_MAX) / source.height()   # 2× : écrans à 200 %
         if facteur < 1.0:
             lecteur.setScaledSize(source * facteur)
     image = lecteur.read()
     return None if image.isNull() else image
+
+
+def _hauteur_jaquette(ligne: int) -> int:
+    """La jaquette garde l'air de la ligne de 54 px (42 de haut) à toutes les hauteurs."""
+    return round(ligne * _JAQUETTE[1] / _HAUTEUR_LIGNE)
 
 
 def _jaquette(nom_fichier: str) -> QPixmap | None:
@@ -267,6 +275,7 @@ class _Releve(QWidget):
         self._selectionnables = selectionnables
         self._choix = choix if choix in selectionnables else None
         self._lignes: list[_Ligne] = []
+        self.hauteur_ligne = _HAUTEUR_LIGNE
         if selectionnables:
             self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             self.setAccessibleName(tr("Relevé de scolarité"))
@@ -298,6 +307,17 @@ class _Releve(QWidget):
             for e in hors:
                 couche.addWidget(self._ligne(e.game, temps, parties, dernieres,
                                              temps_max, annee=None, rattachee=False))
+
+    def regler_hauteur(self, hauteur: int) -> None:
+        """Chaque ligne à `hauteur` (bornée), sa jaquette à l'échelle."""
+        hauteur = max(_HAUTEUR_LIGNE, min(HAUTEUR_LIGNE_MAX, hauteur))
+        if hauteur == self.hauteur_ligne:
+            return
+        self.hauteur_ligne = hauteur
+        h = _hauteur_jaquette(hauteur)
+        for ligne in self._lignes:
+            ligne.setFixedHeight(hauteur)
+            ligne.jaquette.setFixedSize(round(h * _JAQUETTE[0] / _JAQUETTE[1]), h)
 
     # ──────────────────── Construction ────────────────────
 
@@ -369,7 +389,8 @@ class _Releve(QWidget):
         jeu_rang = QHBoxLayout(jeu)
         jeu_rang.setContentsMargins(0, 0, 0, 0)
         jeu_rang.setSpacing(12)
-        jeu_rang.addWidget(_Jaquette(_jaquette(game.cover_image)))
+        ligne.jaquette = _Jaquette(_jaquette(game.cover_image))
+        jeu_rang.addWidget(ligne.jaquette)
         jeu_rang.addWidget(_Nom(self._courts.get(gid, game.name), game.name), 1)
         rang.addWidget(jeu, 1)
 

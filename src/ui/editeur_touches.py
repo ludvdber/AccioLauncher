@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import touches_correctif as tc
 from src.core.i18n import tr
-from src.ui.composants import Rangee, petit_titre
+from src.ui.composants import lien, petit_titre, Rangee
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import RAYON_CONTROLE, accent_qcolor, themed
@@ -208,11 +208,6 @@ _STYLE_TOUCHE = (
     " border-color: #d6a72c; font-style: italic; }"
     "QPushButton[focusClavier=\"true\"]:focus { border-color: #d6a72c; }"
 )
-_STYLE_LIEN = (
-    "QPushButton { color: #d6a72c; background: transparent; border: none; padding: 4px 0px; }"
-    "QPushButton:hover { color: #e8c547; text-decoration: underline; }"
-    "QPushButton:disabled { color: #55556a; }"
-)
 _STYLE_RENDRE = (
     "QPushButton { background: transparent; border: none; padding: 0px; }"
     "QPushButton[focusClavier=\"true\"]:focus { border: 1px solid #d6a72c;"
@@ -261,12 +256,8 @@ class EditeurTouches(QWidget):
         self._avis.setStyleSheet("color: #e8955a; background: transparent;")
         self._avis.hide()
         v.addWidget(self._avis)
-        self._tout = QPushButton(tr("Remettre les touches du jeu"))
-        self._tout.setFont(body_font(11))
+        self._tout = lien(tr("Remettre les touches du jeu"))
         self._tout.setIcon(QIcon(pixmap_icone("replay", 18, accent_qcolor())))
-        self._tout.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._tout.setStyleSheet(themed(_STYLE_LIEN))
-        self._tout.setAutoDefault(False)
         self._tout.clicked.connect(lambda: self._rendre_touches(None))
         self.rafraichir()
 

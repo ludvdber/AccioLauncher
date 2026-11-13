@@ -51,6 +51,7 @@ from src.core.i18n import tr, trn
 from src.ui import ecran_video_gpu
 from src.ui.composants import (
     ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, bouton, feuille_de_style, filtre, icone_de_bouton, police, rond,
+    lien,
     surtitre, texte,
 )
 from src.ui.choix_jeux import espacee, numeros, pastille
@@ -82,7 +83,7 @@ QFrame#carteJeu {
 }
 QFrame#carteJeu[modele="true"]:hover { border-color: rgba(214, 167, 44, 0.35); }
 QFrame#carteJeu[choisie="true"] { border-color: rgba(214, 167, 44, 0.6); }
-QFrame#carteJeu[modele="true"][focusClavier="true"]:focus { border-color: #f0d060; }
+QFrame#carteJeu[focusClavier="true"]:focus { border-color: #f0d060; }
 QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }
@@ -105,8 +106,6 @@ QPushButton#discret:hover, QPushButton#discret[focusClavier="true"]:focus { back
 QPushButton#secondaire:checked {
     color: #f2e6c4; background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6);
 }
-QPushButton#lien { background: transparent; border: none; color: #d6a72c; text-align: left; padding: 0; }
-QPushButton#lien:hover { color: #e8bd4a; }
 QLabel#nouveau {
     background: #d6a72c; color: #070712; border-radius: 4px; padding: 1px 7px;
 }
@@ -174,7 +173,10 @@ class _Paquets:
 
 
 class _Elide(QLabel):
-    """Un titre sur une ligne qui s'élide au lieu de se couper (texte entier en bulle)."""
+    """Un titre sur une ligne qui s'élide au lieu de se couper (texte entier en bulle).
+
+    Élidé au MILIEU : la fin distingue souvent deux titres (« …Coupe du monde, début » et
+    « …, fin » devenaient tous deux « Le camping de la Coupe du mon… » à 980 px)."""
 
     def __init__(self, contenu: str, px: int, encre: str, italique: bool = False) -> None:
         super().__init__()
@@ -189,7 +191,7 @@ class _Elide(QLabel):
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
-        court = self.fontMetrics().elidedText(self._plein, Qt.TextElideMode.ElideRight, self.width())
+        court = self.fontMetrics().elidedText(self._plein, Qt.TextElideMode.ElideMiddle, self.width())
         self.setText(court)
         self.setToolTip(self._plein if court != self._plein else "")
 
@@ -360,8 +362,10 @@ class _Jeux(QWidget):
         # Le point or dit qu'il y a du nouveau, l'infobulle combien : un chiffre
         # collé au numéro du jeu se lisait « VII · 2 0 ».
         b.setText(self._etiquettes.get(jeu, self._media.nom(jeu)))
-        infobulle = escape(self._media.nom(jeu))
-        b.setToolTip(f"{infobulle} · {escape(_nouveaux(n))}" if n else infobulle)
+        # <qt> et quote=False, comme la Galerie : « l&#x27;École » s'affichait en clair.
+        infobulle = escape(self._media.nom(jeu), quote=False)
+        b.setToolTip(f"<qt>{infobulle} · {escape(_nouveaux(n), quote=False)}</qt>" if n
+                     else f"<qt>{infobulle}</qt>")
         b.setAccessibleName(f"{self._media.nom(jeu)}, {_nouveaux(n)}" if n else self._media.nom(jeu))
         vide = self._sans_contenu(jeu)
         if b.property("vide") != vide:
@@ -639,10 +643,7 @@ class _VueMusique(QWidget):
         self._confirmation.setContentsMargins(0, 6, 0, 0)
         self._confirmation.hide()
         lay.addWidget(self._confirmation)
-        self._ouvrir_dossier = QPushButton(tr("Ouvrir le dossier"))
-        self._ouvrir_dossier.setObjectName("lien")
-        self._ouvrir_dossier.setFont(police(12))
-        self._ouvrir_dossier.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._ouvrir_dossier = lien(tr("Ouvrir le dossier"))
         self._ouvrir_dossier.hide()
         self._ouvrir_dossier.clicked.connect(
             lambda: self._dossier_enregistre is not None and open_local_path(self._dossier_enregistre))
@@ -724,6 +725,8 @@ class _VueMusique(QWidget):
     # ── Le jeu montré ──
 
     def montrer(self, jeu: str) -> None:
+        if jeu != self._jeu:
+            self._zone.verticalScrollBar().setValue(0)     # un autre jeu s'ouvre en tête
         self._jeu = jeu
         media = self._media
         morceaux = media.morceaux(jeu)
@@ -1064,6 +1067,7 @@ class _VueCinematiques(QWidget):
         self._media = media
         self._copie_en_cours = False
         self._jeu = ""
+        self._jeu_video = ""        # le jeu de la cinématique lancée (on peut changer de jeu pendant)
         self._affichee = False
         self._courante = ""
         self._lignes: list[_LigneCine] = []
@@ -1167,6 +1171,8 @@ class _VueCinematiques(QWidget):
         self._etat_commandes()
 
     def montrer(self, jeu: str) -> None:
+        if jeu != self._jeu:
+            self._zone.verticalScrollBar().setValue(0)     # un autre jeu s'ouvre en tête
         self._jeu = jeu
         media = self._media
         self._lignes = []
@@ -1219,6 +1225,7 @@ class _VueCinematiques(QWidget):
         if chemin is None:
             _ecrire(self._note, tr("Cette cinématique n'a pas pu être lue."))
             return
+        self._jeu_video = jeu
         # La voix AVANT l'image : celle de HP5 se convertit au premier
         # visionnage, et l'image aurait pris cette avance sur la parole.
         voix = self._media.voix(jeu, fichier)
@@ -1419,7 +1426,7 @@ class _VueCinematiques(QWidget):
         deux fichiers côte à côte (la vidéo du jeu n'a pas de piste son)."""
         if self._chemin_video is None or not self._courante:
             return
-        base = _nom_de_fichier(f"{self._media.nom(self._jeu)} - {self._titre.text()}")
+        base = _nom_de_fichier(f"{self._media.nom(self._jeu_video)} - {self._titre.text()}")
         dossier = Path.home() / "Videos"
         depart = str((dossier if dossier.is_dir() else Path.home()) / (base + self._chemin_video.suffix))
         cible, _filtre = QFileDialog.getSaveFileName(self, tr("Enregistrer la cinématique"), depart)
@@ -1540,8 +1547,13 @@ class MediathequePage(QDialog):
         titre = QLabel(tr("Collections"))
         titre.setFont(cinzel_decorative(22))
         titre.setStyleSheet("color: #f4f2f8; background: transparent;")
+        # Le titre garde sa largeur, les rubriques passent à la ligne : sous 1 040 px, on lisait
+        # « COLLECTIO », coupé net contre « Captures » (audit UI, 2026-11-13).
+        titre.setMinimumWidth(titre.sizeHint().width())
         ligne.addWidget(titre, alignment=Qt.AlignmentFlag.AlignVCenter)
         ligne.addSpacing(22)
+        rubriques = _transparent(QWidget())
+        flux_rubriques = FlowLayout(rubriques, spacing=10)
         self._rubriques: dict[str, QPushButton] = {}
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
@@ -1556,10 +1568,10 @@ class MediathequePage(QDialog):
             b.setIconSize(taille)
             b.clicked.connect(lambda _c=False, r=cle_rubrique: self.rubrique(r))
             groupe.addButton(b)
-            ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignVCenter)
+            flux_rubriques.addWidget(b)
             self._rubriques[cle_rubrique] = b
         self._points = {r: _PointNouveau(self._rubriques[r]) for r in (MUSIQUE, CINEMATIQUES)}
-        ligne.addStretch()
+        ligne.addWidget(rubriques, stretch=1)
         e.addLayout(ligne)
         e.addSpacing(14)
         self._jeux = _Jeux(media)
@@ -1584,8 +1596,12 @@ class MediathequePage(QDialog):
         self._captures: QDialog | None = None
         racine.addWidget(self._pile, stretch=1)
         if not self._jeux.ids:
+            # Toutes les rubriques disent qu'il faut un jeu : Personnages et Bestiaire
+            # restaient des pages noires (audit UI, 2026-11-13).
             self._musique.montrer("")
             self._cinematiques.montrer("")
+            for vue in self._encyclo.values():
+                vue.montrer("")
         self.rubrique(rubrique if rubrique in self._rubriques else CAPTURES)
 
         jeux = self._jeux.ids

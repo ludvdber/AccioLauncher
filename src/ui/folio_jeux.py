@@ -40,7 +40,7 @@ from src.core import (
 from src.core.config import cache_pour
 from src.core.i18n import get_language, tr, trn
 from src.ui.carte_3d import Carte3D
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, texte, transparent
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, survol_et_focus, texte, transparent
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
@@ -60,7 +60,6 @@ from src.ui.folio_page import (
     nom_emplacement,
     pixmap_texture,
     Rangee,
-    survol_et_focus,
 )
 from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme
 from src.ui.utils import zone_defilable
@@ -181,7 +180,13 @@ def _rangee(*tuiles: QFrame) -> QHBoxLayout:
     return rang
 
 
-def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QScrollArea]:
+# Une page faite de compteurs ne s'étire pas au-delà : à 1920 px, « 40 » finissait à
+# 1 400 px de « Ennemis vaincus » (HP7), « 1 / 4 » à 600 px de « Fantômes » (HP5).
+_LARGEUR_LECTURE = 1000
+
+
+def _page(construire, droite: QWidget | None = None,
+          largeur_max: int = 0) -> tuple[QWidget, QScrollArea]:
     """Le corps d'une page sans grille : une colonne qui défile, et `droite`
     fixe à côté (la carte choisie de HP4, comme la fiche de HP1). La zone revient
     à la page (`_zone`) : sa hauteur de défilement se garde d'une partie à l'autre."""
@@ -193,6 +198,8 @@ def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QScrollAr
     lay = QVBoxLayout(page)
     lay.setContentsMargins(36, 30, 36, 28)
     lay.setSpacing(0)
+    if largeur_max:
+        page.setMaximumWidth(largeur_max)
     construire(lay)
     lay.addStretch()
     zone = zone_defilable(page)
@@ -1016,7 +1023,7 @@ class FolioPageHP5(FolioPage):
                 lay.addSpacing(12)
                 lay.addWidget(self._informations(partie.compteurs))
 
-        corps, self._zone = _page(contenu)
+        corps, self._zone = _page(contenu, largeur_max=_LARGEUR_LECTURE)
         return corps
 
     @staticmethod
@@ -1340,7 +1347,7 @@ class FolioPageHP7(FolioPage):
                 lay.addSpacing(12)
                 lay.addWidget(self._combats(combats))
 
-        corps, self._zone = _page(contenu)
+        corps, self._zone = _page(contenu, largeur_max=_LARGEUR_LECTURE)
         return corps
 
     @staticmethod

@@ -9,6 +9,7 @@ Une PAGE à la place de la bibliothèque (`pages.py`), comme Mes années : pas u
 fenêtre posée sur la fiche, qu'on fermerait sans la lire.
 """
 
+from html import escape
 from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtGui import QFont, QLinearGradient, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
@@ -25,11 +26,12 @@ from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, NOTES_VERSIONS_URL
 from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
 from src.ui.composants import (
-    Rangee,
     bouton,
     bouton_retour,
     feuille_de_style,
+    html_lien,
     police,
+    Rangee,
     surtitre,
     texte,
 )
@@ -49,7 +51,6 @@ QFrame#annonce {
     background: rgba(214, 167, 44, 0.08); border: 2px solid rgba(214, 167, 44, 0.75);
     border-radius: 12px;
 }
-QLabel#toutesLesVersions { color: #a9a7c4; }
 """
 
 
@@ -242,8 +243,8 @@ class NouveautesPage(QDialog):
             nom.setStyleSheet(f"color: {current_theme().accent}; background: transparent;")
             gauche.addWidget(nom)
         tete.addLayout(gauche, stretch=1)
-        lien = QLabel(f'<a href="{NOTES_VERSIONS_URL}" style="color:#a9a7c4;">'
-                      f'{tr("Toutes les versions")}</a>')
+        lien = QLabel(html_lien(NOTES_VERSIONS_URL, escape(tr("Toutes les versions"), quote=False),
+                                discret=True))
         lien.setObjectName("toutesLesVersions")
         lien.setTextFormat(Qt.TextFormat.RichText)
         lien.setFont(police(14))

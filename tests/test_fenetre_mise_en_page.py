@@ -890,3 +890,25 @@ def test_une_description_courte_ne_fait_pas_remonter_le_bouton(make_window, qtbo
         bas[nom] = (info.y() + info.natural_height(), info.natural_height())
     assert bas["courte"][1] < bas["longue"][1], bas   # le contenu est bien plus court
     assert abs(bas["courte"][0] - bas["longue"][0]) <= 4, bas
+
+
+class TestJouerALaMemePlace:
+    """Audit UI, 2026-11-13 : à 1280×800, le haut du bouton passait de 330 px (HP6) à 435 px
+    (HP7 partie 1), voisins au carrousel ; la souris qui visait le bouton tombait sur
+    « TEMPS DE JEU ». Le bas du panneau est ancré : un contenu plus haut raccourcit sa
+    description au lieu de pousser le bouton."""
+
+    @pytest.mark.parametrize("langue", ["fr", "es"])
+    def test_le_bouton_ne_bouge_pas_d_un_jeu_a_l_autre(self, make_window, mise_en_page_stable, langue):
+        from PyQt6.QtWidgets import QPushButton
+        win = make_window(langue=langue)
+        win.show()
+        win.resize(1280, 800)
+        hauts = {}
+        for i in range(len(win._carousel._items)):
+            win._carousel.select(i)
+            mise_en_page_stable(win)
+            bouton = next(b for b in win._detail.findChildren(QPushButton)
+                          if b.objectName() in ("btnPlay", "btnDownload") and b.isVisible())
+            hauts[win._detail.game.id] = bouton.mapTo(win, bouton.rect().topLeft()).y()
+        assert max(hauts.values()) - min(hauts.values()) <= 2, hauts

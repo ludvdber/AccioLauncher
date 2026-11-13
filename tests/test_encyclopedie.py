@@ -342,10 +342,20 @@ class TestAuClavier:
         with qtbot.waitSignal(carte.choisie, timeout=1000):
             qtbot.keyClick(carte, Qt.Key.Key_Space)
 
-    def test_une_fiche_sans_modele_ne_prend_pas_le_focus(self, qtbot):
+    def test_une_fiche_sans_modele_s_atteint_sans_se_choisir(self, qtbot):
+        """Audit UI, 2026-11-13 : les fiches de HP4 n'ont pas de modèle ; aucune ne prenait le
+        focus, et le bas de la liste restait hors de vue au clavier. Elle s'atteint, sans rien
+        ouvrir ; une fiche encore fermée, elle, ne s'atteint pas."""
         from PyQt6.QtCore import Qt
 
         from src.ui.encyclopedie_page import _Fiche
         carte = _Fiche(encyclopedie.BESTIAIRE, encyclopedie.Fiche("a", "A", "b", "c", None))
         qtbot.addWidget(carte)
-        assert carte.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert carte.focusPolicy() == Qt.FocusPolicy.StrongFocus
+        choisies = []
+        carte.choisie.connect(choisies.append)
+        qtbot.keyClick(carte, Qt.Key.Key_Return)
+        assert choisies == []
+        fermee = _Fiche(encyclopedie.BESTIAIRE, encyclopedie.Fiche("a", "A", "b", "c", None), ouverte=False)
+        qtbot.addWidget(fermee)
+        assert fermee.focusPolicy() == Qt.FocusPolicy.NoFocus

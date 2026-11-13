@@ -70,3 +70,24 @@ def test_au_repos_le_fond_compose_rend_le_fond_peint(qtbot, tmp_path):
     fond.set_video_frame(QImage(16, 9, QImage.Format.Format_RGB32))
     fond.grab()
     assert fond._compose is None, "une vidéo change à chaque image : rien n'est gardé"
+
+
+def test_les_voisins_se_decodent_d_avance(qtbot, tmp_path, monkeypatch):
+    """Audit UI, 2026-11-13 : sous Linux, chaque changement de jeu figeait l'accueil 80 à
+    150 ms, le temps de décoder le fond sur le fil de l'interface. Les voisins du fond
+    montré se décodent d'avance sur un fil ; aller sur l'un ne décode rien sur place."""
+    monkeypatch.setattr(background_widget, "_FONDS_DECODES", background_widget.OrderedDict())
+    fond = BackgroundWidget()
+    qtbot.addWidget(fond)
+    a, b, c, d = _fonds(tmp_path, 4)
+    fond.set_image(a)
+    fond.precharger([a, b, c, d])
+    assert set(fond._voisins) == {str(b), str(d)}, "celui d'après, et celui d'avant (en boucle)"
+    decode = fond._voisins[str(b)]
+    decode.result(timeout=3)
+    fond.set_image(b)
+    assert fond._courant == str(b), "déjà prêt : montré aussitôt"
+    assert decode.done() and str(b) not in fond._voisins, "le décodage du fil a servi"
+    assert set(fond._voisins) == {str(c)}, "a est déjà gardé décodé"
+    fond.precharger([])
+    assert fond._voisins == {}

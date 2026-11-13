@@ -341,12 +341,19 @@ class TestDansLaVraieFenetre:
     def test_les_onglets_sont_dans_l_anneau(self, fenetre_reelle):
         assert fenetre_reelle._btn_stats.focusPolicy() != Qt.FocusPolicy.NoFocus
 
-    def test_la_croix_au_demarrage_lance_l_action_principale(self, fenetre_reelle, nav,
-                                                            monkeypatch):
+    def test_la_croix_au_demarrage_lance_l_action_principale(self, fenetre_reelle, nav, qtbot):
+        """Le premier focus est sur l'action du jeu (audit UI, 2026-11-13) : la croix la presse."""
+        panneau = fenetre_reelle._detail._action_panel
+        qtbot.waitUntil(lambda: QApplication.focusWidget() is not None
+                        and QApplication.focusWidget().objectName() in ("btnPlay", "btnDownload"))
+        bouton = QApplication.focusWidget()
         appels = []
-        monkeypatch.setattr(fenetre_reelle._detail, "trigger_primary_action",
-                            lambda: appels.append(1))
-        nav.agir(lec.VALIDER)
+        bouton.clicked.connect(lambda: appels.append(1))
+        panneau.blockSignals(True)          # le vrai téléchargement ne part pas
+        try:
+            nav.agir(lec.VALIDER)
+        finally:
+            panneau.blockSignals(False)
         assert appels == [1]
         assert fenetre_reelle.isVisible() and not fenetre_reelle.isMinimized()
 

@@ -49,6 +49,7 @@ from src.core.liens import DISCORD_MEDIAS_URL
 from src.ui.composants import (
     ENCRE, ENCRE_DOUCE, bouton, bouton_retour, feuille_de_style, filtre as bouton_filtre, rond,
     surtitre, texte,
+    survol_et_focus,
 )
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -174,6 +175,7 @@ class _Vignette(QPushButton):
         self._naviguer = naviguer
         self.setProperty(GARDE_FLECHES, True)
         self.setCheckable(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedSize(_VIGNETTE)
@@ -212,7 +214,7 @@ class _Vignette(QPushButton):
             p.drawPixmap(self.rect(), self._pix)
         else:
             p.fillRect(self.rect(), QColor(themed("#16172c")))
-        choisie = self.isChecked() or (self.hasFocus() and self.property("focusClavier"))
+        choisie = self.isChecked()
         p.setPen(QColor(current_theme().accent) if choisie else QColor(255, 255, 255, 22))
         p.setBrush(Qt.BrushStyle.NoBrush)
         if choisie:
@@ -220,6 +222,7 @@ class _Vignette(QPushButton):
             pen.setWidthF(2.0)
             p.setPen(pen)
         p.drawRoundedRect(cadre, 6, 6)
+        survol_et_focus(p, self, 6)
         p.end()
 
 

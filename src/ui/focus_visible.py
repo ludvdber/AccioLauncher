@@ -27,11 +27,16 @@ le bas de la fenêtre.
 Une raison Tab ne vaut clavier que pendant l'appui d'une touche : un widget qui
 se cache en tenant le focus le passe au suivant avec cette raison, et un clic
 sur « ← Bibliothèque » allumait l'onglet BIBLIOTHÈQUE comme un Tab.
+
+Tab qui ENTRE dans un groupe exclusif (rail, catégories, segments, cartes du
+folio) se pose sur le choix coché, pas sur le premier bouton : le Carnet ouvert
+sur les Défis cerclait « Folio », et Espace ouvrait autre chose que ce qu'on
+croyait désigné. Dans le groupe, Tab avance comme avant.
 """
 
 
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
-from PyQt6.QtWidgets import QApplication, QScrollArea, QWidget
+from PyQt6.QtWidgets import QAbstractButton, QApplication, QScrollArea, QWidget
 
 
 PROPRIETE = "focusClavier"
@@ -86,10 +91,26 @@ def montrer(widget: QWidget) -> None:
         parent = parent.parentWidget()
 
 
+def _choix_du_groupe(widget: QWidget, avant: QWidget | None) -> QAbstractButton | None:
+    """Le bouton coché du groupe exclusif où `widget` entre depuis l'extérieur, s'il n'est pas lui."""
+    groupe = widget.group() if isinstance(widget, QAbstractButton) else None
+    if groupe is None or not groupe.exclusive():
+        return None
+    coche = groupe.checkedButton()
+    if coche is None or coche is widget or not coche.isVisible() or not coche.isEnabled():
+        return None
+    try:
+        dedans = isinstance(avant, QAbstractButton) and avant.group() is groupe
+    except RuntimeError:            # le widget d'avant est déjà détruit
+        dedans = False
+    return None if dedans else coche
+
+
 class _FiltreFocus(QObject):
     def __init__(self, parent: QObject) -> None:
         super().__init__(parent)
         self._touche = False          # une touche est en cours de traitement
+        self._avant: QWidget | None = None     # qui avait le focus juste avant
 
     def _relacher(self) -> None:
         self._touche = False
@@ -103,6 +124,13 @@ class _FiltreFocus(QObject):
             raison = event.reason()
             if raison in _RAISONS_GARDEES:
                 return False
+            if type_ == QEvent.Type.FocusOut:
+                self._avant = obj
+            elif raison in (Qt.FocusReason.TabFocusReason, Qt.FocusReason.BacktabFocusReason):
+                coche = _choix_du_groupe(obj, self._avant)
+                if coche is not None:
+                    coche.setFocus(raison)
+                    return False
             clavier = type_ == QEvent.Type.FocusIn and raison in _RAISONS_CLAVIER and self._touche
             _marque(obj, clavier)
             if clavier:

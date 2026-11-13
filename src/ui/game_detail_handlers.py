@@ -723,7 +723,7 @@ def signaler_arret(view: GameDetailView, game: GameData, arret) -> None:
         conf, reglage, _avant, apres, intel = repli
         paragraphe, bouton = _proposition_de_repli(reglage, apres, intel)
         texte += "\n\n" + paragraphe + " " + tr(
-            "« Rétablir les réglages d'origine », dans l'engrenage du jeu, remet tout comme avant.")
+            "« Revenir à l'installation », dans l'engrenage du jeu, remet tout comme avant.")
         choix = (bouton, *choix)
     texte += "\n\n" + tr("Si le problème continue, « Copier le rapport » prépare tout ce qu'il "
                          "faut pour demander de l'aide sur le Discord : un Ctrl+V l'y joint.")

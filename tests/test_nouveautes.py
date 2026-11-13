@@ -30,6 +30,23 @@ class TestContenuEmbarque:
         assert contenu.version == APP_VERSION
         assert contenu.points_forts and contenu.changements
 
+    @pytest.mark.parametrize(("langue", "guillemets"), [("en", r"“([^”]+)”"), ("es", r"«([^»]+)»")])
+    def test_les_noms_cites_existent_a_l_ecran(self, langue, guillemets):
+        """Audit UI, 2026-11-13 : la 1.3.4 envoyait vers un onglet « Image », que l'écran appelle
+        « Graphics » / « Gráficos », et l'espagnol nommait « Reanudar » le bouton « Continuar ».
+        Un nom cité entre guillemets (ceux de la langue) est un texte de l'écran."""
+        import re
+        from pathlib import Path
+        ecran = {v.casefold() for v in json.loads(
+            Path(f"src/data/i18n/{langue}.json").read_text(encoding="utf-8"))["strings"].values()}
+        data = json.loads(NOUVEAUTES_PATH.read_text(encoding="utf-8"))
+        entree = next(e for e in data["versions"] if e["version"] == APP_VERSION)
+        textes = [p["texte"][langue] for p in entree["points_forts"]] + [
+            c["texte"][langue] for c in entree["changements"]]
+        cites = {nom for texte in textes for nom in re.findall(guillemets, texte)}
+        assert not {nom for nom in cites if nom.strip().casefold() not in ecran}
+        assert "« " not in " ".join(textes), "pas de guillemets français espacés dans cette langue"
+
     @pytest.mark.parametrize("langue", ["fr", "en", "es"])
     def test_chaque_texte_existe_dans_chaque_langue(self, langue):
         """Le repli sur le français cacherait une traduction oubliée."""

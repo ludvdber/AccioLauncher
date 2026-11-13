@@ -136,8 +136,11 @@ class _Fiche(QFrame):
         # Une fiche qui se choisit au clic se choisit aussi au clavier et à la
         # manette (règles 15 et 119) : 26 fiches et aucun widget focalisable
         # dans la vue, ni choix ni défilement possibles sans souris (audit du
-        # 2026-10-29). L'anneau est dessiné par `mediatheque_page._STYLE`.
-        if self.property("modele"):
+        # 2026-10-29). L'anneau est dessiné par `mediatheque_page._STYLE`. Toute fiche
+        # ouverte prend le focus, même sans modèle : sans elle, aucune fiche de HP4 ne
+        # s'atteignait, et le bas de la liste restait hors de vue au clavier (audit UI,
+        # 2026-11-13) ; le focus fait défiler la zone (`focus_visible`).
+        if ouverte:
             self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFixedWidth(_LARGEUR_FICHE)
         h = QHBoxLayout(self)
@@ -384,9 +387,18 @@ class VueEncyclopedie(QWidget):
         self._liste_etroite(False)
         self.fiches = []
         clear_layout(self._lay)
-        fiches = encyclopedie.fiches(self.rubrique, jeu)
+        # Un autre jeu s'ouvre en tête : il gardait la hauteur du précédent, et la fiche
+        # montrée en grand (Harry) était hors de la vue (audit UI, 2026-11-13).
+        self._liste.verticalScrollBar().setValue(0)
+        fiches = encyclopedie.fiches(self.rubrique, jeu) if jeu else []
         if not fiches:
-            self._lay.addWidget(EtatVide(_ICONE[self.rubrique], tr("Pas encore de fiche pour ce jeu.")), stretch=1)
+            if jeu:
+                phrase = tr("Pas encore de fiche pour ce jeu.")
+            elif self.rubrique == encyclopedie.PERSONNAGES:
+                phrase = tr("Installez un jeu pour voir ses personnages ici.")
+            else:
+                phrase = tr("Installez un jeu pour voir ses créatures ici.")
+            self._lay.addWidget(EtatVide(_ICONE[self.rubrique], phrase), stretch=1)
             return
         compte = (tr("{} personnage") if len(fiches) == 1 else tr("{} personnages")) \
             if self.rubrique == encyclopedie.PERSONNAGES else \

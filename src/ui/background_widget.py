@@ -2,11 +2,12 @@
 
 import math
 from collections import OrderedDict
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
-from PyQt6.QtCore import QRect, QRectF, Qt, pyqtProperty
+from PyQt6.QtCore import QRect, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import (
-    QColor, QImage, QLinearGradient, QPainter, QPixmap, QRadialGradient,
+    QColor, QImage, QImageReader, QLinearGradient, QPainter, QPixmap, QRadialGradient,
 )
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
@@ -55,6 +56,12 @@ _VOILE_ALPHA = 38
 # 2026-10-14, 57 → 87 Mo), pour 12 ms par retour sur un jeu déjà vu.
 _FONDS_DECODES: OrderedDict[str, QPixmap | None] = OrderedDict()
 _FONDS_GARDES = 3
+_ATTENTE_MS = 15
+
+
+def _decoder(chemin: str) -> QImage:
+    """Sur le fil de décodage : une QImage, jamais une QPixmap (fil de l'interface seul)."""
+    return QImageReader(chemin).read()
 
 # Voile gauche : (position sur la largeur, alpha). C'est LUI qui protège
 # réellement le texte — le voile plein ci-dessus assombrit uniformément, mais
@@ -114,6 +121,16 @@ class BackgroundWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._pixmap: QPixmap | None = None
+        # Le préchargement du chemin processeur : la liste des fonds, l'ordre du carrousel,
+        # et les voisins du fond montré décodés sur un fil (`precharger`, `set_image`).
+        self._ordre: list[str] = []
+        self._fil: ThreadPoolExecutor | None = None
+        self._voisins: dict[str, Future[QImage]] = {}
+        self._attendu = ""
+        self._courant = ""         # la clé du fond montré
+        self._attente = QTimer(self)
+        self._attente.setInterval(_ATTENTE_MS)
+        self._attente.timeout.connect(self._poser_attendu)
         self._prepared: QPixmap | None = None
         self._prepared_for: tuple[int, int] = (0, 0)
         # Fond étendu : l'image nette (bas fondu) et sa copie floue, voir `_ETENDU_RATIO`.
@@ -297,23 +314,82 @@ class BackgroundWidget(QWidget):
         self.update()
 
     def precharger(self, chemins: list[Path]) -> None:
-        """Sans objet ici : le chemin QPainter garde ses derniers fonds décodés."""
+        """Les fonds du carrousel, dans son ordre : les VOISINS du fond montré se décodent
+        d'avance sur un fil. Sans eux, chaque changement de jeu figeait l'accueil 80 à
+        150 ms sous Linux, le temps de décoder le JPEG (audit UI, 2026-11-13). Liste vide
+        (pendant une partie) : plus rien d'avance, la mémoire revient au jeu."""
+        self._ordre = [str(c) for c in chemins if c.exists()]
+        if not self._ordre:
+            self._voisins.clear()
+            return
+        if self._fil is None:
+            self._fil = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fonds")
+            self.destroyed.connect(lambda *_a, fil=self._fil: fil.shutdown(wait=False, cancel_futures=True))
+        self._decoder_voisins()
 
     def set_image(self, path: Path | None) -> None:
         # Le JPEG était relu et décodé à chaque changement de jeu, 12 ms sur
         # les ~60 du clic (mesuré le 2026-10-14) : les trois derniers fonds
         # restent décodés, de quoi aller et venir entre voisins.
         cle = str(path) if path else ""
+        self._attendu = ""
         if cle in _FONDS_DECODES:
             _FONDS_DECODES.move_to_end(cle)
+        elif self._fil is not None and cle in self._ordre and self._pixmap is not None:
+            # Pas de décodage sur le fil de l'interface : l'ancien fond reste le temps
+            # que le fil livre le nouveau (le plus souvent déjà prêt, c'est un voisin).
+            if cle not in self._voisins:
+                self._voisins[cle] = self._fil.submit(_decoder, cle)
+            self._attendu = cle
+            self._poser_attendu()
+            return
         else:
-            _FONDS_DECODES[cle] = (QPixmap(cle) if path and path.exists() else None)
-            while len(_FONDS_DECODES) > _FONDS_GARDES:
-                _FONDS_DECODES.popitem(last=False)
+            self._garder(cle, QPixmap(cle) if path and path.exists() else None)
+        self._montrer(cle)
+
+    def _garder(self, cle: str, pixmap: QPixmap | None) -> None:
+        _FONDS_DECODES[cle] = pixmap
+        while len(_FONDS_DECODES) > _FONDS_GARDES:
+            _FONDS_DECODES.popitem(last=False)
+
+    def _montrer(self, cle: str) -> None:
+        self._courant = cle
         self._pixmap = _FONDS_DECODES[cle]
         self._prepared = None
         self._prepared_for = (0, 0)
         self.update()
+        self._decoder_voisins()
+
+    def _poser_attendu(self) -> None:
+        futur = self._voisins.get(self._attendu)
+        if futur is None:
+            self._attente.stop()
+            return
+        if not futur.done():
+            self._attente.start()
+            return
+        self._attente.stop()
+        cle, self._attendu = self._attendu, ""
+        del self._voisins[cle]
+        image = None if futur.cancelled() or futur.exception() is not None else futur.result()
+        self._garder(cle, QPixmap.fromImage(image) if image is not None and not image.isNull() else None)
+        self._montrer(cle)
+
+    def _decoder_voisins(self) -> None:
+        """Le fond d'avant et celui d'après, dans l'ordre du carrousel, décodés d'avance."""
+        if self._fil is None or not self._ordre:
+            return
+        courant = self._courant
+        if courant not in self._ordre:
+            return
+        i = self._ordre.index(courant)
+        voulus = {self._ordre[(i + d) % len(self._ordre)] for d in (-1, 1)} - {courant}
+        for cle in list(self._voisins):
+            if cle not in voulus and cle != self._attendu:
+                self._voisins.pop(cle).cancel()
+        for cle in voulus:
+            if cle not in _FONDS_DECODES and cle not in self._voisins:
+                self._voisins[cle] = self._fil.submit(_decoder, cle)
 
     def _ensure_prepared(self) -> None:
         if self._pixmap is None or self._pixmap.isNull():

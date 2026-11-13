@@ -35,6 +35,7 @@ from src.core.images_a_refaire import taille_a_juger
 from src.core.liens import DISCORD_URL
 from src.ui.composants import (
     ENCRE, ENCRE_DOUCE, Rangee, bouton, bouton_retour, feuille_de_style, police, surtitre, texte,
+    transparent,
 )
 from src.ui.fonts import cinzel_decorative
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
@@ -43,6 +44,7 @@ from src.ui.utils import open_url, zone_defilable
 
 _LARGEUR_RAIL = 300
 _MARGES_PAGE = (48, 32, 48, 32)
+_LARGEUR_LECTURE = 1000
 
 _STYLE = f"""
 QPushButton#metier {{
@@ -197,7 +199,10 @@ class AtelierPage(QDialog):
 
     def _detail(self, metier: atelier.Metier) -> QWidget:
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page, "pageMetier")
+        # Une largeur de lecture, comme la colonne des Paramètres : à 2560 px, chaque statut
+        # « Cherche un artiste » finissait à 1 700 px de sa ligne (audit UI, 2026-11-13).
+        page.setMaximumWidth(_LARGEUR_LECTURE)
         lay = QVBoxLayout(page)
         lay.setContentsMargins(*_MARGES_PAGE)
         lay.setSpacing(0)

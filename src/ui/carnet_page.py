@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
-from src.ui.composants import feuille_de_style, filtre, surtitre, texte
+from src.ui.composants import feuille_de_style, filtre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel_decorative
 from src.ui.choix_jeux import espacee, numeros, pastille
@@ -108,8 +108,9 @@ class CarnetPage(QDialog):
         e.setSpacing(0)
         # Pas de « ← Bibliothèque » : l'onglet du haut le dit déjà, et Échap
         # ferme la page (Ludo, 2026-10-27 : « retire le bibliothèque répété »).
-        e.addWidget(surtitre(tr("Vos parties, lues dans vos sauvegardes")))
-        e.addSpacing(4)
+        # Une seule ligne : titre, rubriques, puis les jeux après un filet (car8, Ludo
+        # 2026-11-13). Quatre étages (surtitre qui expliquait la méthode, titre,
+        # rubriques, jeux) faisaient 166 px avant le contenu.
         # Les rubriques JUSTE APRÈS le titre : tout à droite, on ne les voyait
         # pas (Ludo, 2026-10-24 : « pas bien indiqué le relevé et folio à droite »).
         ligne = QHBoxLayout()
@@ -132,12 +133,16 @@ class CarnetPage(QDialog):
             groupe.addButton(b)
             ligne.addWidget(b, alignment=Qt.AlignmentFlag.AlignVCenter)
             self._rubriques[cle] = b
-        ligne.addStretch()
-        e.addLayout(ligne)
+        ligne.addSpacing(8)
+        filet = QFrame()
+        filet.setFixedSize(1, 24)
+        filet.setStyleSheet("background: rgba(255, 255, 255, 0.14); border: none;")
+        ligne.addWidget(filet, alignment=Qt.AlignmentFlag.AlignVCenter)
+        ligne.addSpacing(8)
 
+        # Les jeux à la suite, à la ligne quand la place manque.
         self._choix = _transparent(QWidget())
         flux = FlowLayout(self._choix, spacing=8)
-        flux.setContentsMargins(0, 14, 0, 0)
         self._boutons: dict[str, QPushButton] = {}
         jeux = QButtonGroup(self)
         jeux.setExclusive(True)
@@ -149,7 +154,8 @@ class CarnetPage(QDialog):
             jeux.addButton(b)
             flux.addWidget(b)
             self._boutons[game.id] = b
-        e.addWidget(self._choix)
+        ligne.addWidget(self._choix, stretch=1, alignment=Qt.AlignmentFlag.AlignVCenter)
+        e.addLayout(ligne)
         return entete
 
     def _poser(self, page: QDialog) -> QDialog:
@@ -177,25 +183,38 @@ class CarnetPage(QDialog):
         if game is None:
             self._sans_folio(jeu)
             return
-        if jeu != self.jeu or self._folio is None:
-            from src.ui.folio_jeux import page_folio
-            ancien = self._folio
-            self._folio = self._poser(page_folio(game, self.manager.config.install_path, self,
-                                                 integree=True, config=self.manager.config))
-            if ancien is not None:
-                ancien.finished.disconnect(self._interne_fermee)
-                # Son `done` n'est jamais appelé ici : le fil de HP4 décodait
-                # encore toutes les illustrations d'une page détruite.
-                ancien.arreter()
-                self._pile.removeWidget(ancien)
-                ancien.deleteLater()
+        if jeu != self.jeu:
+            self._retirer_folio()
             self.jeu = jeu
             self._retirer_defis()
         self._boutons[jeu].setChecked(True)
         if self._rubrique == FOLIO:
-            self._pile.setCurrentWidget(self._folio)
+            self._montrer_folio()
         elif self._rubrique == DEFIS:
             self._montrer_defis()
+
+    def _retirer_folio(self) -> None:
+        """Le folio d'un autre jeu : rebâti à la prochaine visite de la rubrique. Changer de jeu
+        dans les Défis bâtissait aussi le folio caché, 150 à 630 ms (audit UI, 2026-11-13)."""
+        ancien, self._folio = self._folio, None
+        if ancien is not None:
+            ancien.finished.disconnect(self._interne_fermee)
+            # Son `done` n'est jamais appelé ici : le fil de HP4 décodait
+            # encore toutes les illustrations d'une page détruite.
+            ancien.arreter()
+            self._pile.removeWidget(ancien)
+            ancien.deleteLater()
+
+    def _montrer_folio(self) -> None:
+        game = next((g for g in self._jeux if g.id == self.jeu), None)
+        if game is None:
+            self._pile.setCurrentWidget(self._vide)
+            return
+        if self._folio is None:
+            from src.ui.folio_jeux import page_folio
+            self._folio = self._poser(page_folio(game, self.manager.config.install_path, self,
+                                                 integree=True, config=self.manager.config))
+        self._pile.setCurrentWidget(self._folio)
 
     def _sans_folio(self, jeu: str) -> None:
         """Un jeu désinstallé ouvert depuis le Relevé (son temps de jeu reste
@@ -235,7 +254,9 @@ class CarnetPage(QDialog):
     def rubrique(self, cle: str) -> None:
         self._rubrique = cle
         self._rubriques[cle].setChecked(True)
-        self._choix.setVisible(cle in _PAR_JEU and bool(self._jeux))
+        # Éteints au Relevé, pas cachés : la page ne remonte plus de 36 px au clic.
+        self._choix.setVisible(bool(self._jeux))
+        self._choix.setEnabled(cle in _PAR_JEU)
         if self.jeu in self._boutons:
             self._boutons[self.jeu].setChecked(True)
         if cle == RELEVE:
@@ -247,7 +268,7 @@ class CarnetPage(QDialog):
         elif cle == DEFIS:
             self._montrer_defis()
         else:
-            self._pile.setCurrentWidget(self._folio if self._folio is not None else self._vide)
+            self._montrer_folio()
 
     @property
     def rubrique_courante(self) -> str:

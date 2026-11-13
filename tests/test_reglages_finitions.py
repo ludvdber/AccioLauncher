@@ -102,7 +102,7 @@ class TestRemiseALOrigine:
         _quand_ouverte(lambda b: b.buttons()[0].click())
         dlg._bouton_reset.click()
         assert "FXAA=1" in ini.read_bytes().decode().split("\r\n")
-        assert dlg._pied_notes.text() == tr("Réglages d'origine remis.")
+        assert dlg._pied_notes.text() == tr("Réglages de l'installation remis.")
         assert dlg._minuteur_pied.isActive() and dlg._minuteur_pied.interval() == 4000
         dlg._minuteur_pied.start(1)
         qtbot.waitUntil(lambda: dlg._pied_notes.text() == avant, timeout=2000)

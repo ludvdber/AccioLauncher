@@ -275,6 +275,13 @@ class TestClavier:
         qtbot.keyClick(v[1], Qt.Key.Key_Down)
         assert v[4].hasFocus() and page.choisie == v[4].capture, "la rangée du dessous, même colonne"
         assert v[4].property("focusClavier") is True, "l'anneau du clavier suit"
+        # Et il se VOIT : la vignette choisie avait déjà le cadre or, le focus ne changeait
+        # pas un pixel (audit UI, 2026-11-13).
+        avec = v[4].grab().toImage()
+        v[4].setProperty("focusClavier", False)
+        sans = v[4].grab().toImage()
+        v[4].setProperty("focusClavier", True)
+        assert avec != sans
         qtbot.keyClick(v[4], Qt.Key.Key_Down)
         assert v[6].hasFocus(), "rangée incomplète : la vignette la plus proche"
         qtbot.keyClick(v[6], Qt.Key.Key_Up)

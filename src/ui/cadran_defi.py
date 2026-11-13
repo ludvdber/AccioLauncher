@@ -32,6 +32,9 @@ from src.ui.ticker import Ticker
 _X0, _LARGEUR, _HAUTEUR = -40.0, 600.0, 330.0
 _CX, _CY = 260.0, 205.0
 _R_INT, _R_EXT = 128.0, 156.0
+# La place entre les deux bouts de l'arc (210° et -30°), à la hauteur du grand nom :
+# « PERSONALIZADA » mordait sur les écailles avec toute la largeur du repère (audit UI, 2026-11-13).
+_OUVERTURE = 2 * _R_INT * math.cos(math.radians(30))
 _HAUTEUR_MAX = 310
 _NB_ECAILLES = 48
 # Du bleu de Lumos (0) au rouge sang (100), en passant par l'or.
@@ -374,16 +377,16 @@ class CadranDefi(QWidget):
         self._centre(p, tr("Niveau de défi").upper(), legende, 252, QColor(169, 167, 196))
         nom = cinzel(20, bold=True)
         nom.setPixelSize(34)
-        self._centre(p, self.nom, nom, 290, QColor(242, 242, 244))
+        self._centre(p, self.nom, nom, 290, QColor(242, 242, 244), _OUVERTURE)
         if self.sous:
             sous = police(16)
             sous.setItalic(True)
             self._centre(p, self.sous, sous, 317, QColor(169, 167, 196))
 
     @staticmethod
-    def _centre(p: QPainter, texte: str, f: QFont, y: float, couleur: QColor) -> None:
-        """Centré sous le moyeu, dans la largeur du repère : réduit, puis élidé."""
-        place = _LARGEUR - 40
+    def _centre(p: QPainter, texte: str, f: QFont, y: float, couleur: QColor,
+                place: float = _LARGEUR - 40) -> None:
+        """Centré sous le moyeu, dans `place` (la largeur du repère) : réduit, puis élidé."""
         while QFontMetricsF(f).horizontalAdvance(texte) > place and f.pixelSize() > 11:
             f.setPixelSize(f.pixelSize() - 1)
         mesure = QFontMetricsF(f)

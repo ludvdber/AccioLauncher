@@ -44,6 +44,7 @@ from src.core.i18n import available_languages, get_language, tr, trn
 from src.ui.composants import (
     ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Pastille, bouton, bouton_rubrique,
     espace_du_volume, feuille_de_style, surtitre, texte,
+    lien,
     transparent,
 )
 from src.ui.fenetre_message import message
@@ -201,12 +202,6 @@ class SettingsDialog(QDialog):
             border: none;
             border-right: 1px solid rgba(214, 167, 44, 0.12);
         }
-        QPushButton#lienDiscret {
-            background: transparent; border: none; color: #a9a7c4;
-            text-decoration: underline; padding: 4px 2px;
-        }
-        QPushButton#lienDiscret:hover { color: #f2f2f4; }
-        QPushButton#lienDiscret[focusClavier="true"]:focus { color: #e8c547; }
         """
 
     # ──────────────────── Construction ────────────────────
@@ -449,8 +444,7 @@ class SettingsDialog(QDialog):
 
         fin = Carte()
         # Un lien discret : ce geste n'a pas à peser autant que « Revoir la visite ».
-        desinstaller = bouton(tr("Désinstaller…"))
-        desinstaller.setObjectName("lienDiscret")
+        desinstaller = lien(tr("Désinstaller…"), discret=True)
         desinstaller.clicked.connect(self._on_desinstaller)
         fin.ajouter(LigneReglage(
             "Accio Launcher",

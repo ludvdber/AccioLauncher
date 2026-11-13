@@ -108,7 +108,9 @@ _TAILLE_MAX = 16 * 1024 * 1024
 
 # Extension des fichiers de texte du jeu par langue du launcher ; `int`,
 # l'anglais, existe toujours.
-_EXTENSIONS = {"fr": "fre", "es": "esp", "de": "det", "it": "itt", "en": "int"}
+# L'espagnol des jeux UE1 est « spa » (HPmenu.spa, et la Locale du catalogue) : avec « esp »,
+# le folio de HP1 et HP2 retombait sur l'anglais en espagnol (audit UI, 2026-11-13).
+_EXTENSIONS = {"fr": "fre", "es": "spa", "de": "det", "it": "itt", "en": "int"}
 
 
 @dataclass(frozen=True)

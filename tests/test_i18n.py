@@ -34,7 +34,7 @@ IDENTIQUES_TOLEREES = {
     # Difficulté du Quidditch de HP1/HP2 : « Expert » s'écrit pareil en anglais.
     "Expert",
     # « restantes » s'écrit pareil en français et en espagnol.
-    "~{}s restantes", "~{} min restantes", "~{}h restantes",
+    "~{} s restantes", "~{} min restantes", "~{} h restantes", "~{h} h {m} restantes",
     # « En 2026 », « En septembre » : la préposition est la même en espagnol.
     "En {}",
     # Le nom du menu de Sécurité Windows en anglais (aide antivirus).
@@ -498,3 +498,18 @@ class TestCeQueLesTextesNeDisentPlus:
             texte = Path(f"src/data/{nom}.json").read_text(encoding="utf-8")
             fautifs += [f"{nom}: {m}" for m in self._INTERDITS if m in texte.lower()]
         assert fautifs == []
+
+
+def test_typographie_francaise():
+    """Audit UI, 2026-11-13 : des lignes des fiches d'aide commençaient par « : » ou « » »,
+    d'autres finissaient sur « « ». En français, ces espaces sont insécables."""
+    from src.core.i18n import set_language, typo
+    set_language("fr")
+    texte = typo("Vsync : plus de déchirure ? Revenir à « Bleu » ; 50 % <span style=\"color:#fff\">x</span>")
+    assert texte == ("Vsync\u00a0: plus de déchirure\u202f? Revenir à «\u00a0Bleu\u00a0»\u202f; 50\u00a0% "
+                     "<span style=\"color:#fff\">x</span>")
+    set_language("en")
+    try:
+        assert typo("a : b") == "a : b", "seulement en français"
+    finally:
+        set_language("fr")

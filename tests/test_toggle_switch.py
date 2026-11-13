@@ -143,3 +143,23 @@ class TestTousLesReglagesDuDialogue:
         for sw in toggles:
             assert sw.focusPolicy() != Qt.FocusPolicy.NoFocus, (
                 f"réglage {sw.accessibleName()!r} inatteignable au clavier")
+
+
+@pytest.mark.parametrize("maison", ["poudlard", "gryffondor", "serpentard", "serdaigle", "poufsouffle"])
+def test_eteint_et_allume_se_distinguent_dans_chaque_maison(qtbot, maison):
+    """Audit UI v5 (2026-11-13) : sous une maison, la piste éteinte prenait la teinte de la maison
+    en plus sombre, à côté de la même teinte vive allumée. Éteinte, elle est neutre partout."""
+    from src.ui.theme import set_theme
+    set_theme(maison)
+    try:
+        eteint, allume = ToggleSwitch(False), ToggleSwitch(True)
+        for t in (eteint, allume):
+            qtbot.addWidget(t)
+            t.resize(t.sizeHint())
+        x, y = eteint._MARGE + eteint._TRACK_W - 8, eteint._MARGE + eteint._TRACK_H // 2
+        pe = eteint.grab().toImage().pixelColor(x, y)
+        pa = allume.grab().toImage().pixelColor(allume._MARGE + 8, y)
+        assert abs(pe.saturation() - pa.saturation()) > 60 or abs(pe.lightness() - pa.lightness()) > 60
+        assert pe.saturation() < 40, "la piste éteinte n'a pas de teinte"
+    finally:
+        set_theme("poudlard")

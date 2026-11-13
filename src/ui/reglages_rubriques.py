@@ -325,16 +325,16 @@ class RubriquesDuJeu:
                       if auto else tr("Automatique"), "")
         for cle, libelle in (("petit", tr("Plus petit")), ("grand", tr("Plus grand")),
                              ("tres_grand", tr("Très grand")),
-                             (texte_ue1.ORIGINE, tr("D'origine (texte de 2001)"))):
+                             (texte_ue1.ORIGINE, tr("D'origine (texte de {})").format(self.game.year))):
             choix.addItem(libelle, cle)
         courant = self.manager.config.taille_texte.get(self.game.id, "")
         choix.setCurrentIndex(max(0, choix.findData(courant)))
         choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_taille_texte(c.currentData()))
         carte.ajouter(self._ligne(tr("Taille du texte"), choix, tr(
-            "Le jeu agrandit ses menus avec l'écran, mais garde le texte de 2001, minuscule en "
+            "Le jeu agrandit ses menus avec l'écran, mais garde le texte de {annee}, minuscule en "
             "haute définition. Le launcher redessine ses lettres à la taille de l'image : "
             "automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut "
-            "déborder de certains cadres. Appliqué au prochain lancement.")))
+            "déborder de certains cadres. Appliqué au prochain lancement.").format(annee=self.game.year)))
 
     def _on_taille_texte(self, valeur: str) -> None:
         tailles = self.manager.config.taille_texte
@@ -435,7 +435,7 @@ class RubriquesDuJeu:
             self._erreur.hide()
 
     def _bouton_origine_graph(self) -> None:
-        """« Rétablir les réglages d'origine » : ceux du fichier tel qu'installé."""
+        """« Revenir à l'installation » : ceux du fichier tel qu'installé."""
         btn = self._nouveau_bouton_reset()
         btn.setEnabled(reglages_graphiques.a_une_origine(self._conf_graph))
         btn.setToolTip(tr("Remet image et performances comme à l'installation du jeu."))
@@ -444,7 +444,7 @@ class RubriquesDuJeu:
     def _nouveau_bouton_reset(self) -> QPushButton:
         """Le bouton du pied de page : bordé comme un vrai bouton, jamais un lien
         gris qu'on croirait désactivé (critique de la maquette)."""
-        btn = bouton(tr("Rétablir les réglages d'origine"))
+        btn = bouton(tr("Revenir à l'installation"))
         icone, taille = espacee(pixmap_icone("replay", 18, QColor(current_theme().accent)), QSize(18, 18))
         btn.setIcon(icone)
         btn.setIconSize(taille)
@@ -463,7 +463,7 @@ class RubriquesDuJeu:
         et ne s'annule pas : on demande, et Annuler est le choix par défaut."""
         boite = FenetreMessage(self)
         boite.setWindowTitle(tr("Remettre ce jeu comme à l'installation ?"))
-        boite.setText(tr("Pages remises à leur état d'origine : {}.").format(pages))
+        boite.setText(tr("Pages remises comme à l'installation : {}.").format(pages))
         retablir = boite.addButton(tr("Rétablir"), FenetreMessage.ButtonRole.DestructiveRole)
         annuler = boite.addButton(tr("Annuler"), FenetreMessage.ButtonRole.RejectRole)
         boite.setDefaultButton(annuler)
@@ -472,7 +472,7 @@ class RubriquesDuJeu:
 
     def _annoncer_remise(self) -> None:
         """Le pied le dit quatre secondes, puis reprend ce qu'il disait."""
-        self._poser_pied(tr("Réglages d'origine remis."))
+        self._poser_pied(tr("Réglages de l'installation remis."))
         self._minuteur_pied.start()
 
     def _remettre_origine_graph(self) -> None:
