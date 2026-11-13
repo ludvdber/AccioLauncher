@@ -15,6 +15,7 @@ from src.core import desinstallation
 from src.core.formatting import format_bytes
 from src.core.i18n import tr
 from src.ui.composants import Carte, LigneReglage, bouton, feuille_de_style, texte
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel_decorative
 from src.ui.theme import themed
 from src.ui.toggle_switch import ToggleSwitch
@@ -38,6 +39,7 @@ class DesinstallationDialog(QDialog):
     def __init__(self, install_path: Path, octets_jeux: int, a_des_jeux: bool,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        entree_suit_le_focus(self)
         self._install_path = install_path
         self._octets = octets_jeux
         self.setWindowTitle(tr("Désinstaller Accio Launcher"))

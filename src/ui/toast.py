@@ -6,20 +6,24 @@ l'ancien et relance le timer. Fade-in/out via QGraphicsOpacityEffect.
 
 from collections.abc import Callable
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
+from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, Qt, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QWidget
 
 from src.ui.fonts import body_font
 from src.ui.theme import themed
 
 _DEFAULT_DURATION_MS = 3500
+_ECART = 10   # px gardés libres au-dessus et au-dessous de la zone à éviter
+_MARGE = 40   # px gardés libres de chaque côté de la fenêtre
 
 
 class Toast(QLabel):
     """Bandeau doré discret, centré en bas de la fenêtre parente."""
 
-    def __init__(self, parent: QWidget) -> None:
+    def __init__(self, parent: QWidget, a_eviter: Callable[[], QWidget | None] | None = None) -> None:
         super().__init__(parent)
+        # Ce que le toast ne doit jamais couvrir (la rangée JOUER) : lu à chaque pose.
+        self._a_eviter = a_eviter
         self.setFont(body_font(13))
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # PlainText à la construction : le toast affiche des noms de jeux,
@@ -62,7 +66,6 @@ class Toast(QLabel):
         self.setCursor(Qt.CursorShape.PointingHandCursor if on_click
                        else Qt.CursorShape.ArrowCursor)
         self.setText(text)
-        self.adjustSize()
         self.reposition()
         self.show()
         self.raise_()
@@ -74,13 +77,43 @@ class Toast(QLabel):
         self._hide_timer.start(duration_ms)
 
     def reposition(self) -> None:
-        """Centre le toast en bas de la fenêtre parente (au-dessus du carrousel)."""
+        """Centre le toast en bas de la fenêtre parente (au-dessus du carrousel),
+        jamais sur la rangée JOUER (règle 36 : d'après la géométrie réelle).
+
+        Audit du 2026-11-13 : à 980×660, posé à 200 px fixes du bas, le toast
+        « le jeu n'a pas démarré » couvrait JOUER 12 s, et un clic pour relancer
+        ouvrait Discord. Il se pose donc au-dessus de la rangée, ou dessous s'il
+        n'y a pas la place."""
         parent = self.parentWidget()
         if parent is None:
             return
+        self._dimensionner(parent.width() - 2 * _MARGE)
         x = (parent.width() - self.width()) // 2
-        y = parent.height() - self.height() - 200
+        y = max(parent.height() - self.height() - 200, 0)
+        zone = self._zone_a_eviter(parent)
+        if zone is not None and QRect(x, y, self.width(), self.height()).intersects(zone):
+            dessus = zone.top() - self.height()
+            y = dessus if dessus >= 0 else min(zone.bottom() + 1, parent.height() - self.height())
         self.move(x, max(y, 0))
+
+    def _dimensionner(self, largeur_max: int) -> None:
+        """Une ligne si elle tient, sinon le texte passe à la ligne dans `largeur_max`
+        (un texte long sortait de la fenêtre des deux côtés : 1 173 px dans 980)."""
+        self.setWordWrap(False)
+        self.setMinimumSize(0, 0)
+        self.setMaximumSize(16777215, 16777215)
+        naturel = self.sizeHint()
+        if naturel.width() <= largeur_max:
+            self.setFixedSize(naturel)
+            return
+        self.setWordWrap(True)
+        self.setFixedSize(largeur_max, self.heightForWidth(largeur_max))
+
+    def _zone_a_eviter(self, parent: QWidget) -> QRect | None:
+        widget = self._a_eviter() if self._a_eviter is not None else None
+        if widget is None or not widget.isVisible():
+            return None
+        return QRect(widget.mapTo(parent, QPoint(0, 0)), widget.size()).adjusted(0, -_ECART, 0, _ECART)
 
     def _fade_out(self) -> None:
         self._anim.stop()

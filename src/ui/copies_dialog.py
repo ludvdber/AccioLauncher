@@ -34,6 +34,7 @@ from src.core.config import APP_VERSION
 from src.core.game_data import GameData
 from src.core.i18n import get_language, tr, trn
 from src.core.phonographe import nom_de_fichier
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
 from src.ui.theme import themed
@@ -85,6 +86,7 @@ class _ChoixEmplacement(QDialog):
 
     def __init__(self, noms: list[tuple[str, str, bool]], parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        entree_suit_le_focus(self)
         self.setWindowTitle(tr("Importer dans quel emplacement ?"))
         self.setStyleSheet(themed(
             "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"))
@@ -123,6 +125,7 @@ class CopiesDialog(QDialog):
     def __init__(self, game: GameData, partie_en_cours=lambda: "",
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        entree_suit_le_focus(self)
         self.game = game
         # () -> str : le nom du jeu qui tourne, vide sinon. Remettre une
         # sauvegarde sous un jeu ouvert : il la réécrirait en quittant.

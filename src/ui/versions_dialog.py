@@ -49,6 +49,7 @@ from src.ui.composants import (
     surtitre,
     texte,
 )
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, _Jaquette
 from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
@@ -179,6 +180,7 @@ class VersionsDialog(QDialog):
                  retour: tuple[str, Callable[[], None]] | None = None) -> None:
         """`retour` : (libellé, rappel) quand la page ne ramène pas à la bibliothèque."""
         super().__init__(parent)
+        entree_suit_le_focus(self)
         self.game = game
         self.manager = manager
         self._libelle_retour, self._au_retour = retour or (tr("Bibliothèque"), None)

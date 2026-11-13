@@ -148,7 +148,7 @@ class MainWindow(QMainWindow):
         self._particles.raise_()
 
         # Toast (notifications éphémères)
-        self._toast = Toast(self)
+        self._toast = Toast(self, a_eviter=lambda: self._detail.zone_d_action)
         self._detail.ops.operation_finished.connect(self._notify_operation_finished)
 
         # Bandes-annonces : hors de l'exécutable depuis la 1.0. Tout le

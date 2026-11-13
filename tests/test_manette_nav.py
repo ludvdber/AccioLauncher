@@ -401,6 +401,41 @@ class TestDansLaVraieFenetre:
         assert page._nav.currentRow() == 3 and page._pages.currentIndex() == 3
         fenetre_reelle._pages.fermer()
 
+    def test_un_rail_exclusif_s_atteint_en_entier_et_se_quitte_par_ses_bords(self, nav, qtbot):
+        """Audit du 2026-11-13 : un groupe exclusif (rail des Paramètres et des Réglages,
+        emplacements du folio…) n'est qu'UN arrêt de Tab ; à la manette, ↓ sautait
+        de la première rubrique dans la page : « Intégrations », où se règle la
+        manette elle-même, restait hors d'atteinte."""
+        from PyQt6.QtWidgets import QButtonGroup
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        groupe = QButtonGroup(w)
+        groupe.setExclusive(True)
+        rail = []
+        for nom in ("Général", "Son et image", "Intégrations", "À propos"):
+            b = QPushButton(nom)
+            b.setCheckable(True)
+            groupe.addButton(b)
+            lay.addWidget(b)
+            rail.append(b)
+        apres = QPushButton("Ouvrir")
+        lay.addWidget(apres)
+        rail[0].setChecked(True)
+        qtbot.addWidget(w)
+        w.show()
+        w.activateWindow()
+        qtbot.waitUntil(lambda: QApplication.activeWindow() is w)
+        rail[0].setFocus(Qt.FocusReason.OtherFocusReason)
+        qtbot.waitUntil(rail[0].hasFocus)
+        for attendu in rail[1:]:
+            nav.agir(lec.BAS)
+            assert attendu.hasFocus(), QApplication.focusWidget().text()
+        nav.agir(lec.BAS)                        # dernier choix : on sort vers la page
+        assert apres.hasFocus()
+        nav.agir(lec.HAUT)
+        assert rail[-1].hasFocus()
+        assert rail[0].isChecked(), "passer ne change pas de rubrique : A choisit"
+
     def test_on_sort_de_la_liste_des_copies_par_ses_extremites(self, nav, qtbot):
         from src.core.game_data import GameData
         from src.ui.copies_dialog import CopiesDialog

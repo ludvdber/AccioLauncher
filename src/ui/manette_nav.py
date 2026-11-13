@@ -162,10 +162,22 @@ class NavigationManette(QObject):
                         isinstance(focus, QSlider)
                         and focus.orientation() == Qt.Orientation.Vertical):
                     self._envoyer(cible, Qt.Key.Key_Up if action == lecture.HAUT else Qt.Key.Key_Down)
-                elif action == lecture.HAUT:
-                    self._envoyer(cible, Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
                 else:
-                    self._envoyer(cible, Qt.Key.Key_Tab)
+                    # Un groupe exclusif (rail des Paramètres et des Réglages, emplacements du
+                    # folio, versions, métiers de l'Atelier) n'est qu'UN arrêt de Tab : sans
+                    # la flèche d'abord, seul son premier choix s'atteignait (audit du
+                    # 2026-11-13). On en sort par ses bords, comme d'une liste.
+                    voisin = self._voisin_dans_le_groupe(focus, action)
+                    if voisin is not None:
+                        # Le focus seul : la flèche de Qt COCHERAIT le voisin (changer de
+                        # rubrique en passant) ; c'est A qui choisit.
+                        voisin.setFocus(Qt.FocusReason.TabFocusReason)
+                        focus_visible.marquer(voisin)
+                        return
+                    if action == lecture.HAUT:
+                        self._envoyer(cible, Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
+                    else:
+                        self._envoyer(cible, Qt.Key.Key_Tab)
             case lecture.VALIDER:
                 if not dans_un_menu and isinstance(focus, _SE_PRESSENT):
                     self._envoyer(cible, Qt.Key.Key_Space)
@@ -175,6 +187,20 @@ class NavigationManette(QObject):
                 self._envoyer(cible, Qt.Key.Key_Escape)
         # Le focus d'arrivée, même posé sans le clavier (fenêtre qui s'ouvre) : cerclé.
         focus_visible.marquer(QApplication.focusWidget())
+
+    @staticmethod
+    def _voisin_dans_le_groupe(focus: QWidget | None, action: str) -> QAbstractButton | None:
+        """Le choix suivant (↓) ou précédent (↑) d'un groupe exclusif, None au bord."""
+        if not isinstance(focus, QAbstractButton) or not focus.isCheckable():
+            return None
+        groupe = focus.group()
+        if groupe is None or not groupe.exclusive():
+            return None
+        choix = [b for b in groupe.buttons() if b.isVisible() and b.isEnabled()]
+        if focus not in choix:
+            return None
+        rang = choix.index(focus) + (-1 if action == lecture.HAUT else 1)
+        return choix[rang] if 0 <= rang < len(choix) else None
 
     @staticmethod
     def _au_bout_de_la_liste(focus: QWidget, action: str) -> bool:

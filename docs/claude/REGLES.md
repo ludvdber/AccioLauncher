@@ -5,7 +5,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ## Don't reintroduce these
 
-135 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
+139 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
 
 ### Processus, threads, sortie
 
@@ -27,6 +27,8 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ### Qt : peinture, focus, widgets
 
+136. **Couper `autoDefault` sur les boutons d'un `QDialog` sans rendre Entrée au bouton focalisé** — un `QPushButton` sans `autoDefault` IGNORE Entrée, qui remonte au dialogue et clique le bouton PAR DÉFAUT : Tab sur « Annuler » + Entrée = « Écrire et lancer » (registre écrit, jeu lancé), et dans la boîte de plantage, sans défaut, Entrée ne faisait rien (audit du 2026-11-13, reproduit par un vérificateur). Tout dialogue modal pose `entree_focus.entree_suit_le_focus(self)`. `tests/test_entree_focus.py` (3 échecs sur l'ancien code).
+137. **Laisser la manette « tabuler » dans un groupe exclusif de `QButtonGroup`** — Qt n'en fait qu'UN arrêt de Tab (le choix coché) : ↓ sautait de la première rubrique dans la page, « Intégrations » (où se règle la manette) et 3 rubriques sur 4 des Réglages hors d'atteinte. Et la flèche de Qt COCHE le voisin (changer de rubrique en passant). `manette_nav._voisin_dans_le_groupe` donne le focus seul ; A choisit ; au bord, Tab. `test_manette_nav.py::test_un_rail_exclusif_s_atteint_en_entier_et_se_quitte_par_ses_bords`.
 13. **Compter sur la feuille de style pour peindre le fond d'une SOUS-CLASSE de `QWidget`** — sans `WA_StyledBackground`, ni fond ni bordure (revérifié le 2026-10-25, Qt 6.11 : une instance de `QWidget` lui-même le peint, une sous-classe non). Le galet de la barre audio était écrit depuis toujours et **n'a jamais été peint**. Rien ne pouvait le signaler : la suite tourne offscreen sur fond noir, il faut une image CLAIRE derrière. **Scoper le sélecteur sur la classe** (`AudioBar { … }`) — un `QWidget { … }` s'applique aussi à tous les enfants. Compter la bordure dans la largeur : elle est peinte À L'INTÉRIEUR.
 14. **Croire qu'un `setFont()` l'emporte sur un stylesheet** — en Qt la feuille gagne. `_apply_title_size` était DU CODE MORT (hauteur identique AU PIXEL de 36 à 26 pt). Passer par le stylesheet, MÊME sélecteur. Le défaut a survécu parce qu'un test sur widget isolé n'a pas la feuille applicative : **tout test de taille de police passe par une vraie fenêtre.**
 15. **Un widget PEINT qui se laisse cliquer sans se laisser atteindre au clavier** — `ToggleSwitch` était `NoFocus`, donc sept réglages n'existaient que pour une souris. Invisible en test fonctionnel. Tout contrôle peint doit poser `setFocusPolicy`, traiter Espace ET Entrée, **DESSINER** son anneau, et recevoir un `setAccessibleName`.
@@ -53,6 +55,8 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ### Mise en page et mesure
 
+138. **Poser une surcouche (toast) à une distance fixe du bas** — `y = hauteur − 200` : à 980×660, le toast « n'a pas démarré » couvrait JOUER 12 s, et un clic pour relancer ouvrait Discord ; un texte long sortait aussi de la fenêtre (1 173 px dans 980). Le toast lit la rangée d'action réelle (`GameDetail.zone_d_action`) et se pose au-dessus, ou dessous faute de place ; il passe à la ligne au-delà de la largeur moins 2 × 40 px. `tests/test_toast.py` (5 échecs sur l'ancien code).
+139. **Empiler une liste de longueur variable dans un rail sans défilement** — la page posée dans `Pages` n'a plus de taille minimale : le layout descend sous la somme des minimums et Qt IMPRIME les lignes les unes sur les autres (folio de HP1, 4 sauvegardes à 980×660 ; 7 dès 1280×800). Les emplacements du folio sont dans une `zone_defilable`. `test_folio.py::TestPage::test_les_emplacements_ne_se_chevauchent_jamais` (mesuré en enfant d'un hôte, comme dans `Pages` : une fenêtre de premier niveau est bornée par son layout et ne reproduit pas).
 35. **Dimensionner une vignette de carrousel par une constante, indépendamment de la bande** — `THUMB_H = 125` d'un côté, `CAROUSEL_HEIGHT = 160` de l'autre : deux nombres qu'aucun calcul ne reliait. Ils ne concordaient que pour l'item le plus ÉLOIGNÉ ; la vignette SÉLECTIONNÉE en réclame 180 et était **rognée de 27 px en permanence**. `set_compact()` ne changeait QUE la bande : les huit débordaient de 33 à 63 px. **La bande est la CONTRAINTE, la vignette s'y plie** (`vignette_pour`). Filet : `TestVignettesTiennentDansLaBande`, qui force `activate()` avant de mesurer.
 36. **Positionner un widget flottant d'après un nombre écrit à la main** — la barre audio était posée à `width() - 174` alors qu'elle fait 192 px : 18 px HORS de la fenêtre, et la poignée de volume disparaissait à fond. `_position_audio_bar()` lit `width()`, ce qui est une nécessité : la barre CHANGE de taille (`set_mode_fin`, une vidéo terminée ne laissait aucun moyen de la revoir). Les largeurs sont CALCULÉES depuis les boutons et marges.
 37. **Un libellé posé à côté d'un bouton à largeur FIXE** — « Les fichiers de ce jeu ne sont pas encore en ligne » réclamait 428 px là où 266 restaient : phrase coupée en plein mot, à toutes les tailles. Mettre le texte SOUS le bouton, en `wordWrap`.

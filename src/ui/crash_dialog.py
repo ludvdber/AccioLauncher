@@ -85,6 +85,7 @@ def construire_dialogue(report: str):
     from src.core.i18n import tr
     from src.core.liens import DISCORD_URL
     from src.ui.composants import feuille_de_style, police, texte
+    from src.ui.entree_focus import entree_suit_le_focus
     from src.ui.icon_button import pixmap_icone
     from src.ui.theme import RAYON_CONTROLE, themed
     from src.ui.utils import open_url
@@ -192,6 +193,8 @@ def construire_dialogue(report: str):
     btn_restart.clicked.connect(_restart)
     buttons.addWidget(btn_restart)
     layout.addLayout(buttons)
+    # Aucun bouton par défaut ici : sans ce filtre, Entrée ne faisait rien.
+    entree_suit_le_focus(dlg)
     return dlg
 
 

@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.i18n import tr
 from src.ui.composants import ENCRE_DOUCE, feuille_de_style, police, texte
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import accent_qcolor, themed
@@ -64,6 +65,7 @@ class FenetreMessage(QDialog):
         self._defaut: QPushButton | None = None
         self._clique: QPushButton | None = None
         self._construite = False
+        entree_suit_le_focus(self)
 
     # ── L'interface de QMessageBox ──
 

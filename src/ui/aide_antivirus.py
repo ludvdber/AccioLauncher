@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 from src.core.i18n import tr
 from src.core.liens import SECURITE_WINDOWS_URL
 from src.ui.alert_banner import WARN
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
 from src.ui.utils import open_url
 
@@ -51,6 +52,7 @@ class AideAntivirus(QDialog):
 
     def __init__(self, dossier: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        entree_suit_le_focus(self)
         self.setWindowTitle(tr("Protéger le dossier des jeux"))
         self.setMinimumWidth(460)
         self.setStyleSheet(

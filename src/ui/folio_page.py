@@ -582,6 +582,13 @@ class FolioPage(QDialog):
             lay.addSpacing(4)
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
+        # Les emplacements défilent : empilés à même le rail, ils s'imprimaient les
+        # uns sur les autres quand la hauteur manquait (HP1 et ses 4 sauvegardes à
+        # 980×660 ; 7 sauvegardes dès 1280×800 — audit du 2026-11-13).
+        liste = QWidget()
+        pile = QVBoxLayout(liste)
+        pile.setContentsMargins(0, 0, 0, 0)
+        pile.setSpacing(6)
         for r in self.releves:
             ligne = _LigneEmplacement(*self._entree(r), r is self._plus,
                                       vignette_sauvegarde(self._image(r), self.devicePixelRatioF()),
@@ -589,8 +596,9 @@ class FolioPage(QDialog):
             ligne.toggled.connect(lambda oui, rel=r: oui and self._afficher(rel))
             self._groupe.addButton(ligne)
             self._lignes[r.emplacement] = ligne
-            lay.addWidget(ligne)
-        lay.addStretch()
+            pile.addWidget(ligne)
+        pile.addStretch()
+        lay.addWidget(zone_defilable(liste), stretch=1)
         return rail
 
     def choisir(self, emplacement: int) -> None:

@@ -351,6 +351,35 @@ class TestVenusDuReleve:
 
 
 class TestPage:
+    def test_les_emplacements_ne_se_chevauchent_jamais(self, qtbot, hp1):
+        """Audit du 2026-11-13 : empilés à même le rail, sans défilement, les
+        emplacements s'imprimaient les uns sur les autres quand la hauteur manquait
+        (HP1 et 4 sauvegardes à 980×660). Mesure : le bas de chaque ligne visible
+        ne dépasse jamais le haut de la suivante."""
+        from PyQt6.QtCore import QPoint, Qt
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        for n in range(7):
+            _save(saves, n, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 1 + n))
+        from PyQt6.QtWidgets import QWidget
+        hote = QWidget()                    # comme dans Pages : une page ENFANT, sans taille minimale
+        qtbot.addWidget(hote)
+        hote.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen)
+        hote.resize(980, 560)               # la place sous la barre de titre à 980×660
+        page = FolioPage(jeu, install)
+        page.setParent(hote)
+        page.setMinimumSize(0, 0)
+        page.setGeometry(0, 0, 980, 560)
+        hote.show()
+        qtbot.wait(20)
+        lignes = sorted(page._lignes.values(), key=lambda w: w.mapTo(page, QPoint(0, 0)).y())
+        assert len(lignes) == 7
+        for haut, bas in zip(lignes, lignes[1:], strict=False):
+            y_fin = haut.mapTo(page, QPoint(0, haut.height())).y()
+            y_debut = bas.mapTo(page, QPoint(0, 0)).y()
+            assert y_fin <= y_debut, f"{y_fin} > {y_debut}"
+            assert haut.height() >= haut.minimumHeight()
+
     def test_changer_de_partie_garde_la_carte_et_le_defilement(self, qtbot, hp1):
         """Ludo, 2026-11-13 : « pourquoi tout se redessine au lieu de garder ce qui est commun
         aux deux ? » La page se pose d'un coup, à la même hauteur, sur la même carte."""

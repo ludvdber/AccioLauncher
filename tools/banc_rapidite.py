@@ -87,6 +87,7 @@ Sortie : <sortie>/<etiquette>.json et .md ; profils dans <sortie>/<etiquette>_pr
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import statistics
@@ -98,6 +99,8 @@ import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+
+_LOG = logging.getLogger("banc_rapidite")
 
 DEPOT = Path(__file__).resolve().parent.parent
 _AUDIT = Path(tempfile.gettempdir()) / "claude" / "afcb9cc43e06cd62" / \
@@ -602,10 +605,14 @@ def lancer_enfant(role: str, params: dict, env: dict, sortie: Path, profil: str,
 
 
 def _commit() -> str:
+    # Chemin ABSOLU de git : jamais un programme lancé par son seul nom (test_securite).
+    git = shutil.which("git")
+    if git is None:
+        return "?"
     try:
-        sortie = subprocess.run(["git", "-C", str(DEPOT), "rev-parse", "--short", "HEAD"],
+        sortie = subprocess.run([git, "-C", str(DEPOT), "rev-parse", "--short", "HEAD"],
                                 capture_output=True, text=True, encoding="utf-8", timeout=10, check=False)
-        etat = subprocess.run(["git", "-C", str(DEPOT), "status", "--porcelain", "--", "src"],
+        etat = subprocess.run([git, "-C", str(DEPOT), "status", "--porcelain", "--", "src"],
                               capture_output=True, text=True, encoding="utf-8", timeout=10, check=False)
         return sortie.stdout.strip() + (" + src modifié" if etat.stdout.strip() else "")
     except OSError:
@@ -911,8 +918,8 @@ class Sentinelle(threading.Thread):
                 dernier_mem = maintenant
                 try:
                     self.pic = max(self.pic, self.memoire.mo())
-                except Exception:
-                    pass
+                except Exception:   # processus mesuré déjà parti : le pic garde sa valeur
+                    _LOG.debug("mémoire illisible", exc_info=True)
             if not self.actif:
                 en_blocage = False
                 continue
@@ -1049,8 +1056,8 @@ def enfant(chemin_params: Path) -> int:
                 psutil.Process().cpu_affinity(_affinite_vieux_pc())
             else:
                 os.sched_setaffinity(0, set(_affinite_vieux_pc()))
-        except Exception:
-            pass
+        except Exception:   # affinité refusée : le profil le note, la mesure continue
+            _LOG.warning("affinité processeur non posée", exc_info=True)
     profileur = None
     if role == "profil":
         import cProfile
@@ -1158,8 +1165,8 @@ class Banc:
                 return
             try:
                 self._messages[message[:160]] += 1
-            except Exception:
-                pass
+            except Exception:   # un message Qt illisible ne doit pas casser la mesure
+                _LOG.debug("message Qt ignoré", exc_info=True)
         qInstallMessageHandler(messages)
 
     def _sortie_imprevue(self, code: int) -> None:

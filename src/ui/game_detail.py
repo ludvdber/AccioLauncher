@@ -604,6 +604,11 @@ class GameDetailView(QWidget):
     # ──────────────────── Composants manquants (Wine, Microsoft) ────────────────────
 
     @property
+    def zone_d_action(self) -> QWidget:
+        """La rangée JOUER / engrenage / médias : ce qu'un toast ne doit jamais couvrir."""
+        return self._action_panel
+
+    @property
     def preparation_en_cours(self) -> bool:
         return self._wine.en_cours
 
