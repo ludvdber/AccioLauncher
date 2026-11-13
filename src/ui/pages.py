@@ -104,6 +104,10 @@ class Pages(QStackedWidget):
             return
         self.removeWidget(dlg)
         dlg.deleteLater()
+        # Les paquets entiers des jeux lus par la page (jusqu'à 59 Mo chacun) se rendent ;
+        # les textures extraites restent, petites (`textures_ue1.liberer`).
+        from src.core import textures_ue1
+        textures_ue1.liberer()
         if self.page is not None:
             return
         self.setCurrentIndex(0)

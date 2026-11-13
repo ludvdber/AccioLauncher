@@ -5,7 +5,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ## Don't reintroduce these
 
-140 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
+141 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
 
 ### Processus, threads, sortie
 
@@ -112,7 +112,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ### Fichiers, encodage, build
 
-140. **Relire un fichier à chaque question qu'on lui pose** — `reglages_correctif._lire` relisait l'ini en entier pour chaque ligne de réglage : `d3d9.ini` de HP6 lu 62 fois (et sa copie d'origine 26) à UNE ouverture des réglages, 3 fois à chaque changement de jeu ; 256 fichiers relus sur un parcours (banc de rapidité, 2026-11-13). Un fichier : une ouverture, tout lu, gardé tant que (date, taille) ne changent pas — `lecture_ini.lire_lignes`, `oublier` après écriture. Tout audit de rapidité compte les ouvertures PAR FICHIER, pas seulement les millisecondes. `tests/test_lecture_ini.py` (3 échecs sur l'ancien code).
+140. **Relire un fichier à chaque question qu'on lui pose** — `reglages_correctif._lire` relisait l'ini en entier pour chaque ligne de réglage : `d3d9.ini` de HP6 lu 62 fois (et sa copie d'origine 26) à UNE ouverture des réglages, 3 fois à chaque changement de jeu ; 256 fichiers relus sur un parcours (banc de rapidité, 2026-11-13). Un fichier : une ouverture, tout lu, gardé tant que (date, taille) ne changent pas — `lecture_ini.lire_lignes`, `oublier` après écriture. Tout audit de rapidité compte les ouvertures PAR FICHIER, pas seulement les millisecondes. `tests/test_lecture_ini.py` (3 échecs sur l'ancien code). Même règle pour un DOSSIER (`sans_casse`), un JSON de données (`json_garde`), l'index d'une archive (`images_ea._index_big`), un SVG (`icon_button._source`), la config au démarrage (lue une fois dans `main.py`, cinq avant).
 
 79. **Écrire un chemin dans le corps d'un `.bat`** — `cmd.exe` relit en page de codes OEM (cp850) : « Frédéric » devenait « Fr?d?ric » et l'auto-update comme les deux boutons « Redémarrer » s'arrêtaient sans un mot. Les chemins passent par `variables` de `_spawn_after_exit_bat`, référencés `%ACCIO_*%` : le bloc d'environnement est transmis en Unicode par `CreateProcessW` et tient le latin, le cyrillique et le japonais. Le corps reste en `ascii` avec `errors="strict"`, pour qu'une rechute échoue franchement.
 80. **Laisser un `.bat` prendre des fins de ligne LF** — `cmd.exe` se repositionne sur les CRLF ; sans eux il reprend au mauvais octet. `build.bat` échouait sur « `'evel' n'est pas reconnu` » — `errorlevel` coupé en deux — en annonçant « aucun Python 3.12+ trouvé » sur une machine où Python est installé. **`git status` ne signale rien** (avec `core.autocrlf=true` un fichier LF se normalise en lui-même). Le remède est `.gitattributes`, pas une reconversion locale.
@@ -133,6 +133,8 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 94. **Laisser PyInstaller embarquer tout ce que Qt livre** — relevé sur l'exe 1.0.5 (51,85 Mo) en recompressant chaque fichier : **notre code et nos assets n'y pesaient que 18 %**. `opengl32sw.dll` (Mesa, OpenGL logiciel) prenait 7,6 Mo DANS l'exe, plus que toutes nos images, et n'était jamais chargé : la conversion vidéo passe par Direct3D 11, même `QT_OPENGL=software` n'ouvre aucune bibliothèque OpenGL, et une interface FORCÉE en OpenGL retombe sur le pilote, rendu identique. Avec les décodeurs d'image inutiles, la pile TLS de Qt et les plateformes de test : **51,85 → 42,15 Mo**. Liste `_JAMAIS_ATTEINTS` du spec ; `tests/test_spec_build.py` tient les DEUX sens, dont le décodeur de chaque format d'asset — un filtre trop gourmand ne casserait que l'exe, jamais la suite. Même passe : `brotli` n'entrait dans l'exe que parce que py7zr, retiré du projet, restait installé sur le poste. **Le contenu d'un build ne dépend pas de la machine qui le fait.**
 
 ### Orchestration et états
+
+141. **Garder pendant une partie ce qui ne sert qu'à l'accueil** — le jeu a besoin de la mémoire : paquets des jeux lus par le Carnet et les Collections (jusqu'à 59 Mo chacun), fonds préchargés (≈ 106 Mo). Et ne rien poser par-dessus le jeu : la question de mise à jour du launcher s'ouvrait si le jeu partait dans les premières secondes. Lancement : `textures_ue1.liberer`, `fonds_pendant_la_partie(True)` ; retour : fonds rechargés, question reposée. `tests/test_pendant_la_partie.py` (3 échecs sur l'ancien code).
 
 95. **Changer `install_path` sans `manager.refresh_states()`** — des états INSTALLED périmés font échouer « JOUER » en silence.
 96. **Désinstaller avant que le téléchargement de remplacement ne finisse** (`mettre_a_jour`, ex-`switch_version`) — télécharger d'abord ; les retours passent par `redetect_state`. Depuis le 2026-10-30, une mise à jour va toujours vers la recommandée : revenir à une ancienne archive n'existe plus.

@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from src.core import folio_hp4, textures_ue1
+from src.core import folio_hp4, sans_casse, textures_ue1
 from src.core.config import ENCYCLOPEDIE_PATH
 from src.core.i18n import TexteTraduit, texte_traduit
 from src.core.images_ea import entree_big
@@ -120,13 +120,7 @@ def jeux(rubrique: str) -> tuple[str, ...]:
 def trouver(dossier: Path, relatif: str) -> Path | None:
     """`relatif` sous `dossier`, sans tenir compte de la casse (HP3 écrit
     « textures », HP1 « Textures », et Linux ne pardonne pas)."""
-    courant = dossier
-    for partie in relatif.split("/"):
-        try:
-            courant = next(p for p in courant.iterdir() if p.name.lower() == partie.lower())
-        except (OSError, StopIteration):
-            return None
-    return courant
+    return sans_casse.trouver(dossier, relatif)
 
 
 def chemin_image(dossier_exe: Path, image: ImageJeu | ModeleJeu) -> Path | None:

@@ -41,6 +41,7 @@ from pathlib import Path
 
 from src.core import folio, textures_ue1
 from src.core.catalogue_blocs import Sauvegardes
+from src.core.sans_casse import trouver
 
 log = logging.getLogger(__name__)
 
@@ -274,7 +275,7 @@ def resume(spec: Sauvegardes | None, system: Path, langue: str) -> folio.Resume 
 
 def _hgame(system: Path) -> Path | None:
     try:
-        return next((p for p in system.iterdir() if p.name.lower() == "hgame.u"), None)
+        return trouver(system, "hgame.u")
     except OSError:
         return None
 
@@ -394,9 +395,7 @@ def image_menu(system: Path, nom: str,
     """Une image de `HP2_Menu.utx` (`BLASONS`, `ICONES`, `OBJETS`), ou d'un
     autre paquet de `Textures` (`SpellShapes.utx` : `SORTS`) ; None sans le jeu."""
     try:
-        dossier = next((p for p in system.parent.iterdir() if p.name.lower() == "textures"), None)
-        menu = (next((p for p in dossier.iterdir() if p.name.lower() == paquet), None)
-                if dossier is not None else None)
+        menu = trouver(system.parent, f"textures/{paquet}")
     except OSError:
         return None
     return textures_ue1.texture(menu, nom) if menu is not None else None

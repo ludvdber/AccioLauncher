@@ -20,6 +20,7 @@ l'ordre de `QImage.Format_ARGB32` en mémoire.
 """
 
 import struct
+from functools import lru_cache
 from pathlib import Path
 
 DXT1, DXT5 = 0x60, 0x62
@@ -27,26 +28,45 @@ _NOM = 0x70
 
 
 def entree_big(chemin: Path, nom: str) -> bytes:
-    """Le contenu d'une entrée d'une archive EA « BIGF » ; b"" si absente."""
+    """Le contenu d'une entrée d'une archive EA « BIGF » ; b"" si absente.
+
+    L'index de l'archive (des milliers d'entrées dans `data.big` de 0,7 à 1,6 Go)
+    se lit UNE fois tant que le fichier ne change pas : chaque image du folio de
+    HP4 et HP5 le relisait et le réanalysait (data.big ×15, data2/3/4.big ×17 sur
+    un parcours, banc de rapidité du 2026-11-13). Ensuite, une entrée = un
+    déplacement et une lecture de SES octets.
+    """
+    infos = chemin.stat()
+    index = _index_big(str(chemin), infos.st_mtime_ns, infos.st_size)
+    place = index.get(nom.lower().encode("latin-1"))
+    if place is None:
+        return b""
+    with open(chemin, "rb") as f:
+        f.seek(place[0])
+        return f.read(place[1])
+
+
+@lru_cache(maxsize=8)
+def _index_big(chemin: str, _mtime: int, _taille: int) -> dict[bytes, tuple[int, int]]:
+    """Nom en minuscules → (début, taille) de chaque entrée ; vide si ce n'est pas une archive BIG."""
+    index: dict[bytes, tuple[int, int]] = {}
     with open(chemin, "rb") as f:
         tete = f.read(16)
         if tete[:4] not in (b"BIGF", b"BIG4"):
-            return b""
+            return index
         nombre, taille_tete = struct.unpack(">II", tete[8:16])
         brut = f.read(max(0, taille_tete - 16))
-        p, cible = 0, nom.lower().encode("latin-1")
-        for _ in range(nombre):
-            if p + 8 > len(brut):
-                break
-            debut, taille = struct.unpack_from(">II", brut, p)
-            fin = brut.find(b"\0", p + 8)
-            if fin < 0:
-                break
-            if brut[p + 8:fin].lower() == cible:
-                f.seek(debut)
-                return f.read(taille)
-            p = fin + 1
-    return b""
+    p = 0
+    for _ in range(nombre):
+        if p + 8 > len(brut):
+            break
+        debut, taille = struct.unpack_from(">II", brut, p)
+        fin = brut.find(b"\0", p + 8)
+        if fin < 0:
+            break
+        index.setdefault(brut[p + 8:fin].lower(), (debut, taille))
+        p = fin + 1
+    return index
 
 
 def images_nommees(flux: bytes) -> dict[str, int]:

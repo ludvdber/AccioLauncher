@@ -109,3 +109,27 @@ class TestBIG:
         assert images_ea.entree_big(chemin, "absent.str") == b""
         (tmp_path / "autre.big").write_bytes(b"PAS UNE ARCHIVE")
         assert images_ea.entree_big(tmp_path / "autre.big", "chapters/frontend.str") == b""
+
+    def test_l_index_se_lit_une_fois(self, tmp_path, monkeypatch):
+        """Banc de rapidité, 2026-11-13 : chaque image du folio de HP4-HP5 relisait et réanalysait
+        l'index de l'archive (data.big ×15 sur un parcours). Mesure : les octets lus."""
+        import builtins
+        contenu = b"bonjour"
+        nom = b"Chapters/FrontEnd.str\0"
+        tete = 16 + 8 + len(nom)
+        chemin = tmp_path / "index.big"
+        chemin.write_bytes(b"BIGF" + struct.pack("<I", 0) + struct.pack(">II", 1, tete)
+                           + struct.pack(">II", tete, len(contenu)) + nom + contenu)
+        lectures = []
+        vrai_open = builtins.open
+
+        def compter(f, *a, **k):
+            fichier = vrai_open(f, *a, **k)
+            if str(f).endswith("index.big"):
+                vraie_lecture = fichier.read
+                fichier.read = lambda n=-1: (lambda o: (lectures.append(len(o)), o)[1])(vraie_lecture(n))
+            return fichier
+        monkeypatch.setattr(builtins, "open", compter)
+        for _ in range(10):
+            assert images_ea.entree_big(chemin, "chapters/frontend.str") == contenu
+        assert sum(lectures) <= tete + 10 * len(contenu), lectures   # l'index une fois, puis l'entrée seule

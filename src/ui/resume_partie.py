@@ -296,8 +296,8 @@ _ICONES = {
 
 
 # Éventails déjà peints, par jeu, dossier, cartes, échelle et langue. Les paquets
-# du jeu sont trop gros pour rester en mémoire (`textures_ue1._ouvrir` en garde
-# deux : 25 Mo pour HP2), et passer de HP1 à HP3 les relisait tous : 70 ms
+# du jeu sont trop gros pour rester en mémoire (`textures_ue1` les rend à la
+# fermeture d'une page ; 25 Mo pour HP2), et passer de HP1 à HP3 les relisait tous : 70 ms
 # d'analyse à chaque fiche (mesuré le 2026-11-01). Trois petites images, elles, se gardent.
 _EVENTAILS: dict[tuple, list[QPixmap]] = {}
 _EVENTAILS_MAX = 16

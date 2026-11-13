@@ -49,6 +49,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
+from src.core.sans_casse import entrees, trouver
+
 if TYPE_CHECKING:
     from src.core import textures_ue1
 
@@ -281,9 +283,8 @@ def image_sauvegarde_hp1(system: Path, sauvegarde: Path) -> Path | None:
         return None
     niveau, point = info_hp1(sauvegarde.with_name(f"GameSaveInfo{numero.group(1)}"))
     try:
-        dossier = next((d for d in system.parent.iterdir()
-                        if d.is_dir() and d.name.lower() == "save"), None)
-        images = {f.name.lower(): f for f in dossier.iterdir()} if dossier else {}
+        dossier = trouver(system.parent, "save")
+        images = entrees(dossier) if dossier is not None and dossier.is_dir() else {}
     except OSError:
         return None
     noms = ([f"sgs {niveau}{point}.bmp"] if niveau and point >= 0 else []) + \
@@ -418,7 +419,7 @@ def fichier_textes(system: Path, langue: str) -> Path | None:
     if not system.is_dir():
         return None
     try:
-        noms = {p.name.lower(): p for p in system.iterdir() if p.is_file()}
+        noms = entrees(system)
     except OSError:
         return None
     for ext in (_EXTENSIONS.get(langue, "int"), "int"):
@@ -481,7 +482,7 @@ def lieu(titres: dict[str, str], niveau: str) -> str:
 def paquet_menu(system: Path) -> Path | None:
     """`HPMenu.u`, quelle que soit sa casse."""
     try:
-        return next((p for p in system.iterdir() if p.name.lower() == "hpmenu.u"), None)
+        return trouver(system, "hpmenu.u")
     except OSError:
         return None
 

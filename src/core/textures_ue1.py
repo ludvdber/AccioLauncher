@@ -449,7 +449,12 @@ class Paquet:
 
 # Quatre : le folio de HP2 lit TROIS paquets à chaque page (hgame.u, 25 Mo ; HP2_Menu.utx ; SpellShapes.utx).
 # À deux, chacun chassait le suivant et les trois étaient relus en entier à chaque changement de
-# partie (2026-11-13 : 65 % des 136 ms d'un changement).
+# partie (2026-11-13 : 65 % des 136 ms d'un changement). Mais ces paquets pèsent jusqu'à 59 Mo
+# chacun : gardés après la page, ils restaient en mémoire (+263 Mo après les Collections, banc
+# de rapidité du 2026-11-13) et les Collections, qui en lisent 6, les relisaient quand même.
+# Ce qui sert vraiment est petit : les TEXTURES extraites (64 Ko pour une carte 256 × 256),
+# gardées à part (`_texture_gardee`) ; les paquets entiers, eux, se rendent à la fermeture
+# d'une page et au lancement d'un jeu (`liberer`).
 @lru_cache(maxsize=4)
 def _ouvrir(chemin: str, _mtime: float, _taille: int) -> Paquet | None:
     try:
@@ -470,25 +475,42 @@ def paquet(chemin: Path) -> Paquet | None:
     return _ouvrir(str(chemin), infos.st_mtime, infos.st_size)
 
 
-def texture(chemin: Path, nom: str) -> TexturePaletee | None:
-    """La texture `nom` du paquet ; None si absente ou pas comme relevé."""
-    p = paquet(chemin)
+def liberer() -> None:
+    """Rend la mémoire des paquets entiers (page fermée, jeu lancé). Les textures
+    déjà extraites restent : rouvrir la page ne relit aucun paquet."""
+    _ouvrir.cache_clear()
+
+
+# 512 textures : les 101 cartes de HP1 en deux tailles, celles de HP2 et HP3, et les modèles
+# des Collections, de 16 à 256 Ko chacune (une carte 256 × 256 en palette : 64 Ko).
+@lru_cache(maxsize=512)
+def _texture_gardee(chemin: str, _mtime: float, _taille: int, nom: str,
+                    trente_deux: bool) -> TexturePaletee | tuple[int, int, bytes] | None:
+    p = paquet(Path(chemin))
     if p is None:
         return None
     try:
-        return p.texture(nom)
+        return p.texture_32(nom) if trente_deux else p.texture(nom)
     except (ValueError, IndexError, struct.error):
         log.warning("Texture %s illisible dans %s", nom, chemin, exc_info=True)
         return None
+
+
+def _extraire(chemin: Path, nom: str, trente_deux: bool) -> TexturePaletee | tuple[int, int, bytes] | None:
+    try:
+        infos = chemin.stat()
+    except OSError:
+        return None
+    return _texture_gardee(str(chemin), infos.st_mtime, infos.st_size, nom, trente_deux)
+
+
+def texture(chemin: Path, nom: str) -> TexturePaletee | None:
+    """La texture `nom` du paquet ; None si absente ou pas comme relevé."""
+    tex = _extraire(chemin, nom, False)
+    return tex if isinstance(tex, TexturePaletee) else None
 
 
 def texture_32(chemin: Path, nom: str) -> tuple[int, int, bytes] | None:
     """La texture 32 bits `nom` du paquet (B V R A) ; None si absente ou autre."""
-    p = paquet(chemin)
-    if p is None:
-        return None
-    try:
-        return p.texture_32(nom)
-    except (ValueError, IndexError, struct.error):
-        log.warning("Texture %s illisible dans %s", nom, chemin, exc_info=True)
-        return None
+    tex = _extraire(chemin, nom, True)
+    return tex if isinstance(tex, tuple) else None

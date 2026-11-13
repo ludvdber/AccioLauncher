@@ -39,14 +39,13 @@ seuil suit la règle des morceaux (`discographie.ouvert_au_seuil`). Aucune
 fonction ne lève.
 """
 
-import json
 import logging
 import os
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
-from src.core import archives_ea
+from src.core import archives_ea, json_garde
 from src.core.i18n import TexteTraduit, dans_la_langue, texte_traduit
 
 log = logging.getLogger(__name__)
@@ -117,7 +116,7 @@ def charger(chemin: Path | None = None) -> dict[str, Collection]:
         from src.core.config import CINEMATIQUES_PATH
         chemin = CINEMATIQUES_PATH
     try:
-        data = json.loads(chemin.read_text(encoding="utf-8"))
+        data = json_garde.lire(chemin)
     except (OSError, ValueError) as exc:
         log.warning("Cinématiques illisibles (%s) : %s", chemin, exc)
         return {}

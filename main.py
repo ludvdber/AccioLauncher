@@ -221,7 +221,10 @@ def main():
         # apparaît bien avant MainWindow, qui appelait jusqu'ici set_language.
         from src.core.config import Config as _Config
         from src.core.i18n import set_language
-        set_language(_Config.load().langue if _Config.exists() else DEFAULT_LANGUAGE)
+        # Lue UNE fois pour tout le démarrage : config.json était lu cinq fois avant la
+        # première fenêtre (banc de rapidité, 2026-11-13). Rien ne l'écrit d'ici là.
+        _cfg = _Config.load() if _Config.exists() else None
+        set_language(_cfg.langue if _cfg is not None else DEFAULT_LANGUAGE)
 
         # L'anneau de focus doré ne doit apparaître qu'au clavier. Posé ici,
         # le filtre couvre aussi l'assistant de premier lancement.
@@ -232,7 +235,7 @@ def main():
         # pilote aussi l'assistant de premier lancement.
         from src.ui import manette_nav
         manette_nav.install(
-            app, _Config.load().navigation_manette if _Config.exists() else True)
+            app, _cfg.navigation_manette if _cfg is not None else True)
 
         # Rapport de crash en un clic : les exceptions non gérées dans les slots
         # affichent un dialogue copiable au lieu de tuer le process en silence.
@@ -248,7 +251,7 @@ def main():
         if not guard.try_acquire(jouer=jouer):
             _sortir(0)
 
-        splash = _create_splash(_Config.load().faits_du_jour if _Config.exists() else True)
+        splash = _create_splash(_cfg.faits_du_jour if _cfg is not None else True)
         splash.show()
         # Les étapes affichées sont annoncées par le code qui les fait
         # (`src/core/demarrage.py`) : rien n'est simulé, et la ligne n'avance
@@ -257,7 +260,6 @@ def main():
 
         from src.core import demarrage
         from src.ui.main_window import MainWindow
-        from src.core.config import Config
         from src.ui.onboarding import OnboardingAnnule
 
         # Vérifier si c'est le premier lancement AVANT de créer MainWindow
@@ -265,10 +267,9 @@ def main():
         # Même chose pour la version courte de l'assistant, montrée une fois à
         # ceux qui avaient le launcher avant le Choixpeau.
         from src.core.assistant import etapes_a_rattraper
-        if not Config.exists():
+        if _cfg is None:
             splash.close()
         else:
-            _cfg = Config.load()
             if etapes_a_rattraper(_cfg.etapes_assistant, _cfg.theme, _cfg.trailers_optin):
                 splash.close()
 

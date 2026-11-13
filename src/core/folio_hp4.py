@@ -27,6 +27,7 @@ from pathlib import Path
 from src.core import folio, images_ea, sauvegardes
 from src.core.images_ea import entree_big as _entree_big
 from src.core.images_ea import images_nommees
+from src.core.sans_casse import trouver
 
 log = logging.getLogger(__name__)
 
@@ -390,7 +391,7 @@ def _index(system_txt: str, langue: str) -> dict[int, int]:
     system = Path(system_txt)
     if dossier is None or not system.is_dir():
         return {}
-    big = next((p for p in system.iterdir() if p.name.lower() == "data.big"), None)
+    big = trouver(system, "data.big")
     if big is None:
         return {}
     try:
@@ -406,7 +407,7 @@ def _textes(system_txt: str, langue: str, flux: str, repere: Nom) -> tuple[str, 
     system = Path(system_txt)
     if dossier is None or not system.is_dir():
         return ()
-    big = next((p for p in system.iterdir() if p.name.lower() == "data.big"), None)
+    big = trouver(system, "data.big")
     if big is None:
         return ()
     try:
@@ -473,7 +474,7 @@ def image_dragee(system: Path) -> tuple[int, int, bytes] | None:
 def _image_dragee(system_txt: str) -> tuple[int, int, bytes] | None:
     system = Path(system_txt)
     try:
-        big = next((p for p in system.iterdir() if p.name.lower() == "data.big"), None)
+        big = trouver(system, "data.big")
         if big is None:
             return None
         for dossier in _DOSSIERS_IMAGES:
@@ -500,7 +501,7 @@ def image_menu(system: Path, cle: str) -> tuple[int, int, bytes] | None:
 def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
     images: dict[str, tuple[int, int, bytes]] = {}
     try:
-        big = next((p for p in Path(system_txt).iterdir() if p.name.lower() == "data.big"), None)
+        big = trouver(Path(system_txt), "data.big")
         if big is None:
             return images
         for dossier in _DOSSIERS_IMAGES:
@@ -637,7 +638,7 @@ def _image_carte(system_txt: str, flux: str, nom_image: str) -> tuple[int, int, 
 def _flux_cartes(system_txt: str, flux: str) -> tuple[bytes, dict[str, int]]:
     """Le flux d'un jeu de cartes (1,2 Mo) et ses images : les cartes d'un même
     jeu se lisent à la suite, le flux ne se relit pas pour chacune."""
-    big = next((p for p in Path(system_txt).iterdir() if p.name.lower() == "data.big"), None)
+    big = trouver(Path(system_txt), "data.big")
     if big is None:
         return b"", {}
     donnees = _entree_big(big, "{" + flux + "}.str")

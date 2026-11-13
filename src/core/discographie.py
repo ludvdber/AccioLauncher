@@ -29,6 +29,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.core import json_garde
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.ecriture_atomique import ecrire_atomique
 from src.core.i18n import TexteTraduit, dans_la_langue, texte_traduit
@@ -75,7 +76,7 @@ def charger(chemin: Path | None = None) -> dict[str, tuple[Morceau, ...]]:
         from src.core.config import DISCOGRAPHIE_PATH
         chemin = DISCOGRAPHIE_PATH
     try:
-        data = json.loads(chemin.read_text(encoding="utf-8"))
+        data = json_garde.lire(chemin)
     except (OSError, ValueError) as exc:
         log.warning("Discographie illisible (%s) : %s", chemin, exc)
         return {}
@@ -108,10 +109,10 @@ def charger_credits(chemin: Path | None = None) -> dict[str, Credit]:
         from src.core.config import DISCOGRAPHIE_PATH
         chemin = DISCOGRAPHIE_PATH
     try:
-        data = json.loads(chemin.read_text(encoding="utf-8"))
+        data = json_garde.lire(chemin)
     except (OSError, ValueError):
         return {}
-    credits = data.get("credits") if isinstance(data, dict) else None
+    credits =data.get("credits") if isinstance(data, dict) else None
     if not isinstance(credits, dict):
         return {}
     return {str(jeu): Credit(c["compositeur"], c["annee"], c["editeur"])

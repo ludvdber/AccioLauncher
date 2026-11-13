@@ -33,6 +33,7 @@ from src.core import reglages_correctif
 from src.core.config import Config
 from src.core.catalogue_blocs import ChoixRegistre, IniPatch, Resolution
 from src.core.game_data import GameData
+from src.core.lecture_ini import lire_lignes
 from src.core.pre_launch import ecrire_cle_ini, resolve_safe_path
 
 log = logging.getLogger(__name__)
@@ -189,7 +190,7 @@ def remplit_l_ecran(game: GameData, config: Config) -> bool:
     if not (dossier / "winmm.dll").is_file():
         return False
     try:
-        texte = (dossier / "winmm.ini").read_bytes().decode("cp1252", errors="replace")
+        texte = "\n".join(lire_lignes(dossier / "winmm.ini")[0])   # lu une fois (règle 140)
     except OSError:
         return True                       # sans ini, la DLL prend ses défauts
     m = _REMPLIT.search(texte)
@@ -226,7 +227,7 @@ def sans_bordure(game: GameData, config: Config) -> bool:
     """Le correctif de ce jeu ouvre-t-il une fenêtre SANS cadre (la place est alors l'écran entier) ?"""
     ini = config.install_path / Path(game.executable).parent / reglages_correctif.NOM_INI
     try:
-        texte = ini.read_bytes().decode("utf-8", errors="replace")
+        texte = "\n".join(lire_lignes(ini)[0])   # lu une fois (règle 140)
     except OSError:
         return True                       # sans ini, le correctif prend son défaut : 1
     m = _STYLE.search(texte)

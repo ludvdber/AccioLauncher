@@ -338,7 +338,9 @@ class MainWindow(QMainWindow):
         Une vraie QUESTION, donc un dialogue (un bandeau se survole sans se
         lire). « Plus tard » laisse le bandeau ; sa croix écarte la version.
         """
-        if self._launcher_update_asked or self._detail.ops.is_busy:
+        # Jamais pendant une partie : la question passait par-dessus le jeu lancé dans les
+        # premières secondes (audit du 2026-11-13). Elle revient au retour (`_on_game_exited`).
+        if self._launcher_update_asked or self._detail.ops.is_busy or self._session.nom_en_cours:
             return
         self._launcher_update_asked = True
         if dialogues_fenetre.proposer_mise_a_jour(
@@ -480,6 +482,7 @@ class MainWindow(QMainWindow):
         """Une partie commence : infobulle, puis la fenêtre s'efface — sous Linux
         seulement quand le jeu prend la main (`retrait_differe`)."""
         self._tray.set_tooltip(tr("Accio Launcher (en jeu : {})").format(game_name))
+        self._detail.fonds_pendant_la_partie(True)
         if self._retrait.differer(game_name, self.isActiveWindow()):
             self._status_bar.showMessage(tr(
                 "Démarrage de {}… Wine peut mettre jusqu'à une minute à ouvrir le jeu."
@@ -500,8 +503,11 @@ class MainWindow(QMainWindow):
         ni toast par-dessus.
         """
         self._tray.set_tooltip("Accio Launcher")
+        self._detail.fonds_pendant_la_partie(False)
         self._retrait.oublier()
         self._restore_from_tray()
+        if self._updates.version and not arret:
+            QTimer.singleShot(0, self._propose_launcher_update)   # reportée pendant la partie
         if arret:
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
         elif partie:

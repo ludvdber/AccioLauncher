@@ -366,6 +366,14 @@ class GameDetailView(QWidget):
         self._bg.precharger([ASSETS_DIR / "backgrounds" / f"{e.game.id}_bg.jpg"
                              for e in self.manager.get_games()])
 
+    def fonds_pendant_la_partie(self, en_jeu: bool) -> None:
+        """Pendant une partie, les fonds préchargés (≈ 106 Mo pour les huit, mesuré
+        le 2026-11-13) sont rendus au jeu ; ils reviennent au retour, en tâche de fond."""
+        if en_jeu:
+            self._bg.precharger([])
+        else:
+            self._precharger_fonds()
+
     def _apply_game(self, game: GameData) -> None:
         self.game = game
         self._info.apply_game(game)

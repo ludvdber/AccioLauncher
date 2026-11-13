@@ -34,6 +34,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from src.core import folio, textures_ue1
+from src.core.sans_casse import entrees, trouver
 
 log = logging.getLogger(__name__)
 
@@ -195,7 +196,7 @@ def emplacements(fichiers: dict[str, Path]) -> list[Releve]:
 def _fichier(system: Path, base: str, langue: str) -> Path | None:
     """`HpMenu.Fre`, `HpMenu.int`… quelle que soit la casse ; l'anglais en repli."""
     try:
-        presents = {p.name.lower(): p for p in system.iterdir()}
+        presents = entrees(system)
     except OSError:
         return None
     for ext in (_EXTENSIONS.get(langue, "int"), "int"):
@@ -300,7 +301,7 @@ def catalogue(system: Path, langue: str) -> Catalogue:
 @lru_cache(maxsize=4)
 def _catalogue(system_txt: str, langue: str) -> Catalogue:
     system = Path(system_txt)
-    hgame = next((p for p in _lister(system) if p.name.lower() == "hgame.u"), None)
+    hgame = trouver(system, "hgame.u")
     textes = _menu(system, langue)
     if hgame is None or not textes:
         return Catalogue()
@@ -331,8 +332,7 @@ def image_carte(system: Path, code: str,
     (128 px) dans `textures/HP3_Menu.utx`. None sans le jeu ou sans code."""
     if not re.fullmatch(r"[A-Z]{2}\d{2}", code):
         return None
-    paquet = next((p for p in _lister(system.parent / "textures")
-                   if p.name.lower() == "hp3_menu.utx"), None)
+    paquet = trouver(system.parent, "textures/hp3_menu.utx")
     if paquet is None:
         return None
     return textures_ue1.texture(paquet, ("L" if grande else "S") + code)
@@ -360,8 +360,7 @@ ICONES = {"cartes": "CardTiny_In", "dragees": "Beans", "pasties": "PumpkinPastie
 
 def image_menu(system: Path, nom: str) -> tuple[int, int, bytes] | None:
     """Une image de `textures/HP3_Menu.utx` (B V R A), ou None sans le jeu."""
-    paquet = next((p for p in _lister(system.parent / "textures")
-                   if p.name.lower() == "hp3_menu.utx"), None)
+    paquet = trouver(system.parent, "textures/hp3_menu.utx")
     try:
         date = paquet.stat().st_mtime_ns if paquet is not None else None
     except OSError:
@@ -422,8 +421,3 @@ def resume(fichiers: dict[str, Path], system: Path, langue: str) -> folio.Resume
                         releve.modifie)
 
 
-def _lister(system: Path) -> list[Path]:
-    try:
-        return list(system.iterdir())
-    except OSError:
-        return []

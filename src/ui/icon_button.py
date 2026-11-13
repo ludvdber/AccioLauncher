@@ -35,7 +35,7 @@ demande, pas ce que la chaîne de repli de la plateforme lui donne.
 
 from functools import lru_cache
 
-from PyQt6.QtCore import QPointF, QRectF, Qt
+from PyQt6.QtCore import QByteArray, QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QGuiApplication, QImage, QPainter, QPen, QPixmap
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QAbstractButton, QWidget
@@ -144,6 +144,13 @@ def _cadrage(boite: QRectF, taille: float, marge: float) -> QRectF:
 
 
 @lru_cache(maxsize=128)
+def _source(fichier: str) -> bytes:
+    """Le SVG lu une fois : chaque taille ou teinte relisait le fichier (music-notes ×4,
+    play ×4 sur un parcours, banc de rapidité du 2026-11-13). Quelques Ko par icône."""
+    return (_DOSSIER / fichier).read_bytes()
+
+
+@lru_cache(maxsize=128)
 def _dessin(fichier: str, marge: float, taille: int, ratio: float,
             teinte: int | None) -> QImage:
     """Le SVG rendu une fois pour toutes à cette taille, cette échelle, cette teinte.
@@ -160,7 +167,7 @@ def _dessin(fichier: str, marge: float, taille: int, ratio: float,
     img.setDevicePixelRatio(ratio)
     img.fill(Qt.GlobalColor.transparent)
 
-    rendu = QSvgRenderer(str(_DOSSIER / fichier))
+    rendu = QSvgRenderer(QByteArray(_source(fichier)))
     p = QPainter(img)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     rendu.render(p, _cadrage(rendu.viewBoxF(), cote / ratio, marge))

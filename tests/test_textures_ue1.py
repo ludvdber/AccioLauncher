@@ -62,6 +62,35 @@ def paquet(nom_texture: str = "Tex0", format_: int | None = None, masquee: bool 
     return bytes(corps)
 
 
+class TestMemoire:
+    """Banc de rapidité, 2026-11-13 : les paquets entiers (jusqu'à 59 Mo) restaient en mémoire
+    après les Collections (+263 Mo) et se relisaient quand même. Ce qui sert, les textures,
+    se garde ; les paquets se rendent à la fermeture d'une page et au lancement d'un jeu."""
+
+    def test_rouvrir_apres_liberation_ne_relit_pas_le_paquet(self, tmp_path, monkeypatch):
+        from pathlib import Path
+        chemin = tmp_path / "Garde.u"
+        chemin.write_bytes(paquet())
+        lus = []
+        vrai = Path.read_bytes
+        monkeypatch.setattr(Path, "read_bytes", lambda self: (lus.append(self.name), vrai(self))[1])
+        assert textures_ue1.texture(chemin, "Tex0") is not None
+        textures_ue1.liberer()
+        assert textures_ue1._ouvrir.cache_info().currsize == 0
+        assert textures_ue1.texture(chemin, "Tex0") is not None
+        assert lus == ["Garde.u"]
+
+    def test_un_paquet_change_est_relu(self, tmp_path):
+        import os
+        chemin = tmp_path / "Change.u"
+        chemin.write_bytes(paquet())
+        assert textures_ue1.texture(chemin, "Tex0").masquee
+        chemin.write_bytes(paquet(masquee=False))
+        etat = chemin.stat()
+        os.utime(chemin, ns=(etat.st_atime_ns, etat.st_mtime_ns + 1_000_000_000))
+        assert textures_ue1.texture(chemin, "Tex0").masquee is False
+
+
 class TestTexture:
     def test_une_texture_256_couleurs(self, tmp_path):
         chemin = tmp_path / "Menu.u"
