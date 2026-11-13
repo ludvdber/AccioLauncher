@@ -9,7 +9,8 @@ from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.ui import dialogues_fenetre, game_detail_handlers, succes_widgets, toast_correctif, verification_forcee
+from src.ui import (dialogues_fenetre, game_detail_handlers, pendant_la_partie, succes_widgets, toast_correctif,
+                    verification_forcee)
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
 from src.ui.clavier_global import EVENEMENTS_FILTRES, touche_globale
@@ -244,6 +245,7 @@ class MainWindow(QMainWindow):
         self._session.arret_fatal.connect(self._on_arret_fatal)
         self._session.diagnostic.connect(self._on_diagnostic)
         toast_correctif.brancher(self)
+        pendant_la_partie.brancher(self)   # jamais par-dessus le jeu ; question reposée au retour
         self._mediatheque = Mediatheque(self, self.manager, self._pages, self._detail, self._status_bar,
                                         self._session, self._title_bar)
 
@@ -333,13 +335,9 @@ class MainWindow(QMainWindow):
         self._propose_launcher_update()
 
     def _propose_launcher_update(self) -> None:
-        """Demande franchement s'il faut mettre à jour, une fois par session.
-
-        Une vraie QUESTION, donc un dialogue (un bandeau se survole sans se
-        lire). « Plus tard » laisse le bandeau ; sa croix écarte la version.
-        """
-        # Jamais pendant une partie : la question passait par-dessus le jeu lancé dans les
-        # premières secondes (audit du 2026-11-13). Elle revient au retour (`_on_game_exited`).
+        """Demande franchement s'il faut mettre à jour, une fois par session et jamais pendant une partie
+        (`pendant_la_partie`). Un dialogue, car un bandeau se survole sans se lire ; « Plus tard » le
+        laisse, sa croix écarte la version."""
         if self._launcher_update_asked or self._detail.ops.is_busy or self._session.nom_en_cours:
             return
         self._launcher_update_asked = True
@@ -482,7 +480,6 @@ class MainWindow(QMainWindow):
         """Une partie commence : infobulle, puis la fenêtre s'efface — sous Linux
         seulement quand le jeu prend la main (`retrait_differe`)."""
         self._tray.set_tooltip(tr("Accio Launcher (en jeu : {})").format(game_name))
-        self._detail.fonds_pendant_la_partie(True)
         if self._retrait.differer(game_name, self.isActiveWindow()):
             self._status_bar.showMessage(tr(
                 "Démarrage de {}… Wine peut mettre jusqu'à une minute à ouvrir le jeu."
@@ -503,11 +500,8 @@ class MainWindow(QMainWindow):
         ni toast par-dessus.
         """
         self._tray.set_tooltip("Accio Launcher")
-        self._detail.fonds_pendant_la_partie(False)
         self._retrait.oublier()
         self._restore_from_tray()
-        if self._updates.version and not arret:
-            QTimer.singleShot(0, self._propose_launcher_update)   # reportée pendant la partie
         if arret:
             self._status_bar.showMessage(tr("Retour de {}").format(game_name))
         elif partie:

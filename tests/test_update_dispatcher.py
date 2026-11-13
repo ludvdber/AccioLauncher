@@ -420,6 +420,10 @@ class TestFenetreAllegee:
         # decidee par Ludo). Lecture, empreinte, toast et clic vivent dans
         # `src/ui/toast_correctif.py` ; reste l'appel `brancher(self)` a la
         # construction de la session (l'import tient sur une ligne existante).
+        # Plafond TENU le 2026-11-13 (769) : « pendant la partie » (fonds rendus,
+        # question de mise a jour reposee au retour) vit dans
+        # `src/ui/pendant_la_partie.py` ; restent l'appel `brancher(self)` et la
+        # garde `nom_en_cours` de `_propose_launcher_update`.
         from pathlib import Path
         lignes = len(Path("src/ui/main_window.py").read_text(
             encoding="utf-8").splitlines())

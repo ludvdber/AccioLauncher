@@ -38,10 +38,22 @@ def test_les_fonds_precharges_sont_rendus_pendant_la_partie(make_window, monkeyp
     win = make_window()
     poses = []
     monkeypatch.setattr(win._detail._bg, "precharger", lambda chemins: poses.append(list(chemins)))
-    win._on_game_launched("HP3")
+    win._session.demarree.emit("HP3")
     assert poses and poses[-1] == [], "les fonds restaient décodés pendant la partie"
-    win._on_game_exited("HP3")
+    win._session.terminee.emit("HP3", True, False)
     assert poses[-1], "les fonds ne reviennent pas au retour"
+
+
+def test_la_question_est_reposee_au_retour_sauf_apres_un_arret_fatal(make_window, monkeypatch, qtbot):
+    win = make_window()
+    reposees = []
+    monkeypatch.setattr(win, "_propose_launcher_update", lambda: reposees.append(True))
+    win._updates.version = "9.9.9"
+    win._session.terminee.emit("HP3", True, True)
+    qtbot.wait(10)
+    assert reposees == [], "reposée par-dessus la boîte de l'arrêt fatal"
+    win._session.terminee.emit("HP3", True, False)
+    qtbot.waitUntil(lambda: reposees == [True], timeout=1000)
 
 
 def test_les_paquets_sont_rendus_au_lancement(make_window, monkeypatch):
