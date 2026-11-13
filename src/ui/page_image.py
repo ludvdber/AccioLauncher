@@ -47,7 +47,8 @@ from src.ui.composants import ENCRE_DOUCE, LISTE, bouton, petit_titre, police
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEUR_SE_VOIT, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
 from src.ui.reglages_widgets import _CartePrereglage, _etiquette_beta, _Points, _texte_beta
-from src.ui.theme import RAYON_CARTE, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, themed
+from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import liste_deroulante, zone_defilable
 
@@ -180,10 +181,10 @@ class _Segment(QPushButton):
             # La couleur EST le choix : une pastille, son nom au survol.
             self.setToolTip(texte)
             self.setFixedSize(30, 26)
-            self.setStyleSheet(
+            self.setStyleSheet(themed(
                 f"QPushButton#segment {{ background: #{teinte}; border: 2px solid rgba(255,255,255,0.12);"
                 " border-radius: 13px; padding: 0px; }"
-                f"QPushButton#segment:checked {{ border: 2px solid {OR}; }}")
+                f"QPushButton#segment:checked {{ border: 2px solid {OR}; }}"))
 
     def paintEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().paintEvent(event)
@@ -391,7 +392,7 @@ class CurseurGradue(QWidget):
         p.drawRoundedRect(QRectF(g, y - 2, d - g, 4), 2, 2)
         # Le remplissage, depuis la valeur du jeu.
         x0, x1 = sorted((self._x(self.origine), self._x(self._valeur)))
-        p.setBrush(QColor(OR) if actif else QColor(120, 118, 140))
+        p.setBrush(accent_qcolor() if actif else QColor(120, 118, 140))
         p.drawRoundedRect(QRectF(x0, y - 2, max(0.0, x1 - x0), 4), 2, 2)
         # Graduations : dix petites, et une plus haute par palier nommé.
         p.setPen(QPen(QColor(255, 255, 255, 45), 1))
@@ -408,15 +409,15 @@ class CurseurGradue(QWidget):
             _Repere.jeu(p, QPointF(self._x(self.jeu), y + 12), 2.6)
         # La poignée.
         x = self._x(self._valeur)
-        p.setPen(QPen(QColor(OR) if self.hasFocus() else QColor(0, 0, 0, 120), 2 if self.hasFocus() else 1))
-        p.setBrush(QColor("#f4e2a8") if actif else QColor(140, 138, 160))
+        p.setPen(QPen(accent_qcolor() if self.hasFocus() else QColor(0, 0, 0, 120), 2 if self.hasFocus() else 1))
+        p.setBrush(QColor(theme_courant().accent_light) if actif else QColor(140, 138, 160))
         p.drawEllipse(QPointF(x, y), self._RAYON, self._RAYON)
         # Les noms des paliers.
         fm = QFontMetrics(self.font())
         p.setFont(self.font())
         for gauche, nom in self._etiquettes(fm):
             atteint = any(rc.meme_valeur(v, self._valeur) and n == nom for v, n in self.paliers)
-            p.setPen(QColor("#e8c547") if atteint else QColor(ENCRE_DOUCE))
+            p.setPen(QColor(theme_courant().accent_light) if atteint else QColor(ENCRE_DOUCE))
             p.drawText(QPointF(gauche, self.height() - 4), nom)
         p.end()
 
@@ -517,7 +518,7 @@ class _LigneImage(QFrame):
         self.setObjectName("ligneImage")
         # Sur la ligne elle-même : le « background: transparent » sans sélecteur des conteneurs
         # (plus proches que la page) écrasait la surbrillance posée par la feuille de la page.
-        self.setStyleSheet(_STYLE_LIGNE)
+        self.setStyleSheet(themed(_STYLE_LIGNE))
         self.ident = ident
         self.controle = controle
         # La fiche de droite est-elle là ? Alors l'infobulle répéterait sa description (Ludo,
@@ -851,7 +852,7 @@ class PageImage(QWidget):
             valeur.setFont(police(12))
             valeur.setFixedWidth(58)
             valeur.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            valeur.setStyleSheet("color: #f4e2a8; background: transparent;")
+            valeur.setStyleSheet(themed("color: #f4e2a8; background: transparent;"))
             retour = QPushButton("↺")
             retour.setObjectName("retourAccio")
             retour.setFont(police(15))
@@ -1142,7 +1143,7 @@ class PageImage(QWidget):
                   ("", tr("Actuel"), actuel))
         corps = "".join(
             f'<tr><td style="color:{ENCRE_DOUCE}; padding-right:12px; white-space:nowrap">{m}&nbsp;{e(nom)}</td>'
-            f'<td style="color:{"#f4e2a8" if nom == tr("Actuel") else "#ecebf3"}">{e(val)}</td></tr>'
+            f'<td style="color:{theme_courant().accent_light if nom == tr("Actuel") else "#ecebf3"}">{e(val)}</td></tr>'
             for m, nom, val in lignes)
         return f"<table width='100%' cellspacing='0' cellpadding='2'>{corps}</table>"
 

@@ -584,7 +584,7 @@ class _VueMusique(QWidget):
         self._surtitre = surtitre(tr("En cours"))
         lay.addWidget(self._surtitre)
         lay.addSpacing(12)
-        self._disque = Disque(_DISQUE, fond_scene="#08081a")      # le fond du cadre `#platine`
+        self._disque = Disque(_DISQUE, fond_scene=themed("#08081a"))      # le fond du cadre `#platine`
         lay.addWidget(self._disque, alignment=Qt.AlignmentFlag.AlignHCenter)
         lay.addSpacing(12)
         self._titre = QLabel()
@@ -882,7 +882,7 @@ class _VueMusique(QWidget):
             self._disque.poser(jeu, self._media.jaquette(jeu) if jeu else None)
             self._credit.setText("")
         self._disque.set_tourne(joue)
-        self._lecture.setIcon(icone_de_bouton("pause" if joue else "play", 20, QColor("#070712")))
+        self._lecture.setIcon(icone_de_bouton("pause" if joue else "play", 20, QColor(themed("#070712"))))
         self._lecture.setAccessibleName(tr("Pause") if joue else tr("Lecture"))
         self._lecture.setToolTip(self._lecture.accessibleName())
         actif = decoupe is not None

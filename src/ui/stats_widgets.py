@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 from src.core.formatting import format_duree_compacte, minutes_arrondies
 from src.core.i18n import get_language, tr
 from src.ui.fonts import cinzel
-from src.ui.theme import accent_qcolor
+from src.ui.theme import accent_qcolor, current
 
 _SECONDAIRE = "#b0b0c8"
 _DISCRET = "#8a8aa6"
@@ -184,8 +184,9 @@ class _Mois(QWidget):
                            int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom),
                            valeur)
             else:
-                p.fillRect(QRectF(col.left(), sol - 2, col.width(), 2),
-                           QColor(44, 62, 107, 140))
+                trait = QColor(current().border_strong)   # un mois sans partie
+                trait.setAlpha(140)
+                p.fillRect(QRectF(col.left(), sol - 2, col.width(), 2), trait)
             p.setPen(accent_qcolor() if actuel else QColor(_DISCRET))
             p.drawText(QRectF(col.left(), sol + 3, col.width(), haut_texte),
                        int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop),

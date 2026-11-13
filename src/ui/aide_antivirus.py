@@ -25,6 +25,7 @@ from src.core.liens import SECURITE_WINDOWS_URL
 from src.ui.alert_banner import WARN
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
+from src.ui.theme import themed
 from src.ui.utils import open_url
 
 
@@ -55,7 +56,7 @@ class AideAntivirus(QDialog):
         entree_suit_le_focus(self)
         self.setWindowTitle(tr("Protéger le dossier des jeux"))
         self.setMinimumWidth(460)
-        self.setStyleSheet(
+        self.setStyleSheet(themed(   # l'ambre de l'avertissement reste : il ne fait pas partie de la palette
             "QDialog { background: #11111f; }"
             "QLabel { color: #d4d1e3; background: transparent; }"
             f"QLabel#pastilleEtape {{ color: {WARN}; background: rgba(232,149,90,0.16);"
@@ -69,7 +70,7 @@ class AideAntivirus(QDialog):
             " font-weight: bold; padding: 8px 16px; }"
             "QPushButton#ouvrirSecurite:hover, QPushButton#ouvrirSecurite[focusClavier=\"true\"]:focus"
             " { background: #f0ad7a; }"
-        )
+        ))
         self._dossier = str(dossier)
 
         racine = QVBoxLayout(self)

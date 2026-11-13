@@ -112,7 +112,7 @@ def _compte(n: int) -> str:
 def _recadree(image: QImage, taille: QSize) -> QPixmap:
     """L'image couvrant `taille`, centrée, sans déformation."""
     pix = QPixmap(taille)
-    pix.fill(QColor("#16172c"))
+    pix.fill(QColor(themed("#16172c")))
     if image.isNull():
         return pix
     echelle = max(taille.width() / image.width(), taille.height() / image.height())
@@ -211,7 +211,7 @@ class _Vignette(QPushButton):
         if self._pix is not None:
             p.drawPixmap(self.rect(), self._pix)
         else:
-            p.fillRect(self.rect(), QColor("#16172c"))
+            p.fillRect(self.rect(), QColor(themed("#16172c")))
         choisie = self.isChecked() or (self.hasFocus() and self.property("focusClavier"))
         p.setPen(QColor(current_theme().accent) if choisie else QColor(255, 255, 255, 22))
         p.setBrush(Qt.BrushStyle.NoBrush)
@@ -402,7 +402,7 @@ class GaleriePage(QDialog):
         # La visionneuse du système reste le seul moyen de voir l'image en grand.
         self._apercu = _Apercu()
         self._apercu.setFixedSize(_APERCU_LARGEUR, _APERCU_LARGEUR * 9 // 16)
-        self._apercu.setStyleSheet("background: #16172c; border-radius: 8px;")
+        self._apercu.setStyleSheet(themed("background: #16172c; border-radius: 8px;"))
         self._apercu.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._apercu.setCursor(Qt.CursorShape.PointingHandCursor)
         self._apercu.setToolTip(tr("Ouvrir l'image"))
