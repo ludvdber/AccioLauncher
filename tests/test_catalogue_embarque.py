@@ -80,6 +80,12 @@ class TestReglages:
         porteurs = {j["id"] for j in catalogue["games"] if "force_halo" in j.get("fix_settings", ())}
         assert porteurs == {"hp5", "hp6"}
 
+    def test_decor_entier_sur_hp6_seulement(self, catalogue):
+        """Catalogue 0.57 (2026-11-13) : `ZoneCulling` n'existe que dans le correctif de HP6 ; l'ini livré porte
+        2 (décision de Ludo), le joueur le change dans l'onglet Image."""
+        porteurs = {j["id"] for j in catalogue["games"] if "decor_entier" in j.get("fix_settings", ())}
+        assert porteurs == {"hp6"}
+
     def test_egal_au_catalogue_publie_quand_son_depot_est_la(self):
         """Les deux catalogues ensemble : l'embarqué et `accio-launcher-games/games.json` portent le même
         contenu et le même numéro. Sauté quand le dépôt voisin n'est pas cloné (CI)."""

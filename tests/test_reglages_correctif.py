@@ -313,7 +313,7 @@ class TestModeDifficile:
         assert all(rc.REGLAGES[i].beta for i in hardcore)
         # Autres réglages en essai : le Quidditch de HP1/HP2, pas encore vu en match, et la caméra
         # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un), et le décor entier
-        # de HP6 (ZoneCulling, lu dans l'exe le 2026-11-12, pas encore vu en jeu), et les textures HD de
+        # de HP6 (ZoneCulling, vu à l'image le 2026-11-13, livré à 2), et les textures HD de
         # HP6 (TextureReplace, pack HD bêta de la 1.3.4).
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
             "quidditch", "camera_fluide", "decor_entier", "textures_hd"}

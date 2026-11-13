@@ -385,12 +385,13 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(0, 60, 100), zero="D'origine",
             etiquettes=((60, "Trois fois plus loin"), (100, "Cinq fois plus loin")),
             onglet="image", cout=(("GPU", 1),)),
-    # HP6, [Accio.Graphics] ZoneCulling du correctif (2026-11-12, lu dans hp6.exe ; VU agir en jeu, masque plein,
-    # jeu stable, mais aucune différence encore vue à l'image au cercle de pierres) : 1 = le
+    # HP6, [Accio.Graphics] ZoneCulling du correctif (2026-11-12, lu dans hp6.exe ; VU à l'image le 2026-11-13 :
+    # à 1, des pans du parc manquent, terrain de Quidditch et volière ; à 0 et 2 tout est là, sans perte
+    # d'images jusqu'à 180 par seconde) : 1 = le
     # jeu ne dessine que les cellules qu'un passage relie à celle de la vue ; 2 = tout ce qui est chargé pendant
     # le vol de la caméra libre ; 0 = toujours. Le premier choix (1) vaut pour une clé absente. Demande de Ludo
-    # (2026-11-12) : coupé pour le mode photo et les PC puissants, laissé pour les PC modestes. Pas encore dans
-    # `fix_settings` du catalogue : à y ajouter (les deux catalogues) avec l'archive qui porte la clé.
+    # (2026-11-12) : coupé pour le mode photo et les PC puissants, laissé pour les PC modestes. L'ini livré de HP6
+    # porte 2 (décision de Ludo, 2026-11-13), et le joueur le change ici : au catalogue de hp6 depuis le 0.57.
     Reglage("decor_entier", "Accio.Graphics", "ZoneCulling",
             "Décor entier affiché",
             "Le jeu ne dessine que les parties du parc reliées par un passage à l'endroit d'où l'on regarde : hors de la vue de Harry, des objets disparaissent. "
