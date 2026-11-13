@@ -147,7 +147,9 @@ class TestCaptures:
         page = win._pages.page
         assert page.rubrique_courante == CAPTURES, "l'onglet ouvre sur les captures"
         assert isinstance(page._pile.currentWidget(), GaleriePage)
-        assert page._jeux.isHidden(), "la Galerie a ses propres filtres par jeu"
+        # Les pastilles des Collections restent, avec « Tous » : la Galerie n'a plus les siennes
+        # (audit UI col12).
+        assert not page._jeux.isHidden() and page._galerie()._filtres == {}
         assert win._title_bar.onglet(COLLECTIONS).isChecked()
         page.accept()
         assert win._pages.page is None

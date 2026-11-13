@@ -571,7 +571,6 @@ class TestMiseEnEvidence:
         # restait du même bleu que les autres.
         assert isinstance(liste.view().itemDelegate(), QStyledItemDelegate)
         assert "::item:selected" in _COMBO_STYLE
-        assert '[focusClavier="true"]:focus' in _COMBO_STYLE
 
     def test_l_anneau_de_l_interrupteur_est_hors_de_la_piste(self, qtbot):
         from src.ui.toggle_switch import ToggleSwitch

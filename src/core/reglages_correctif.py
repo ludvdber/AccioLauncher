@@ -109,12 +109,22 @@ def bloque_par(reglage: Reglage, valeurs: Mapping[str, object]) -> Reglage | Non
     `valeurs` : identifiant → valeur, pour les réglages présents dans la fenêtre.
     Un parent absent (non déclaré pour ce jeu) ne bloque rien.
     """
-    parent = REGLAGES.get(reglage.depend_de)
+    enfant, parent = reglage, REGLAGES.get(reglage.depend_de)
     while parent is not None and parent.ident in valeurs:
-        if not allume(parent, valeurs[parent.ident]):
+        valeur, voulue = valeurs[parent.ident], enfant.depend_de_valeur
+        if not (valeur == voulue if voulue is not None else allume(parent, valeur)):
             return parent
-        parent = REGLAGES.get(parent.depend_de)
+        enfant, parent = parent, REGLAGES.get(parent.depend_de)
     return None
+
+
+def phrase_blocage(reglage: Reglage, bloquant: Reglage) -> str:
+    """La note d'une ligne sans effet : « éteint », ou la valeur que le parent doit prendre."""
+    nom = textes(bloquant)[0]
+    if bloquant.ident == reglage.depend_de and reglage.depend_de_valeur is not None:
+        return tr("Sans effet tant que « {} » n'est pas sur « {} ».").format(
+            nom, libelle_choix(bloquant, reglage.depend_de_valeur))
+    return tr("Sans effet tant que « {} » est éteint.").format(nom)
 
 
 def libelle_choix(reglage: Reglage, valeur: Any) -> str:

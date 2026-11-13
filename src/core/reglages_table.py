@@ -120,9 +120,15 @@ class Reglage:
     # `exclut` — l'allumer éteint l'autre, dans l'ini comme à l'écran.
     depend_de: str = ""
     exclut: str = ""
+    # Le parent n'agit pour celui-ci que sur CETTE valeur (« Heure du ciel » : « Ciel » sur
+    # « Heure choisie »). None : allumé suffit. « Bleu » laissait l'heure active, sans effet.
+    depend_de_valeur: ValeurChoix | None = None
     # Encore en essai (Ludo, 2026-10-25 : « proposer avec un BETA ») : une
     # étiquette « Bêta » à côté du nom, et la fiche du « ? » le dit.
     beta: bool = False
+    # Le mot technique (clé tr()), dans la fiche seulement : la ligne porte un nom simple, et
+    # le connaisseur retrouve « FXAA » ou « suréchantillonnage » (refonte B, Ludo 2026-11-13).
+    technique: str = ""
 
 
 # L'ordre est celui de l'affichage. L'aide est une description COMPLÈTE : elle
@@ -256,12 +262,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
     # allumés) l'éteindre les éteindrait tous.
     Reglage("lissage", "Accio.Graphics", "FXAA",
-            "Lissage des contours (FXAA)",
+            "Adoucir les contours",
             "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, "
             "toiles de tente), avec un léger renforcement de la netteté. Il porte aussi les "
             "effets ci-dessous : l'éteindre éteint ombres de contact, « Halo ajouté par Accio », "
             "rayons et couleurs. La « Lueur du jeu » n'en dépend pas.",
-            defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+            defaut=False, technique="FXAA", onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("nettete", "Accio.Graphics", "Sharpness",
             "Netteté",
             "Rend du piqué à l'image que le lissage (FXAA) adoucit : contours et textures "
@@ -274,13 +280,13 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # MSAA n'atteint pas la scène (la profondeur lue ne se multi-échantillonne
     # pas en Direct3D 9).
     Reglage("anticrenelage", "Accio.Graphics", "Antialiasing",
-            "Anticrénelage (MSAA)",
+            "Anticrénelage",
             "Lisse les contours des personnages et du décor en calculant plusieurs points par"
             " pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique "
             "travaille. L'allumer éteint les ombres de contact, qui l'empêchent d'atteindre "
             "le décor.",
             choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
-            onglet="image", cout=(("GPU", 2),), se_voit=True, exclut="occlusion"),
+            technique="MSAA", onglet="image", cout=(("GPU", 2),), se_voit=True, exclut="occlusion"),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
     # découpés (cheveux, feuilles, herbe) restent en escalier ; le correctif
     # les suréchantillonne sur carte NVIDIA (mèches de Harry et Ron au choix du
@@ -302,22 +308,22 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # 2026-09-27/28 (forêt interdite, menus de HP6 qui cliquent juste) ; c'est
     # leur défaut depuis, parce qu'il veut « le moins de pixelisation possible ».
     Reglage("surechantillonnage", "Accio.Graphics", "SSAAFactor",
-            "Suréchantillonnage",
+            "Résolution de rendu",
             "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et "
             "détails lointains nettement plus fins. Le réglage qui se voit le plus, et le "
             "plus exigeant : ×2 est pour les PC puissants.",
             choix=(1, 1.5, 2), zero="Désactivé", format_choix="×{}",
-            onglet="image", cout=(("GPU", 3),), se_voit=True),
+            technique="suréchantillonnage", onglet="image", cout=(("GPU", 3),), se_voit=True),
     # Les effets du correctif (HP4-HP6), tous allumés dans les ini livrés et
     # joués ainsi ; F8 (CompareKey) les montre éteints. Ouverts au lanceur à la
     # demande de Ludo (2026-09-28) : « beaucoup d'options dans l'ini, quasiment
     # aucune modifiable depuis le launcher ». Tous passent par le FXAA.
     Reglage("filtrage", "Accio.Graphics", "AnisotropicFiltering",
-            "Netteté des textures de biais",
+            "Netteté des sols et des murs",
             "Sols, murs et chemins vus en biais restent nets au lieu de devenir flous "
             "(filtrage anisotrope). Presque gratuit sur une carte récente.",
             choix=FILTRAGES, zero="Désactivé", format_choix="×{}",
-            onglet="image", cout=(("GPU", 1),), se_voit=True),
+            technique="filtrage anisotrope", onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("textures_lointaines", "Accio.Graphics", "TextureLODBias",
             "Textures lointaines",
             "Garde les textures nettes plus loin : sols, murs et chemins restent détaillés au"
@@ -360,7 +366,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             depend_de="lissage", exclut="anticrenelage"),
     # « Expérimental » dans l'ini livré : agrandit aussi les reflets.
     Reglage("ombres_nettes", "Accio.Graphics", "ShadowMapScale",
-            "Ombres plus nettes",
+            "Définition des ombres",
             "Calcule les ombres portées en plus fin : des bords nets au lieu de flous et "
             "crénelés. Expérimental : agrandit aussi les reflets, et demande plus de mémoire "
             "vidéo. À vos risques : sur Le Prince de Sang-Mêlé, ×4 laisse des taches sombres "
@@ -491,12 +497,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(12, 6.5, 9, 16, 19, 20.5, 23, 2), zero="Midi",
             etiquettes=((6.5, "Aube"), (9, "Matin"), (16, "Après-midi"), (19, "Couchant"),
                         (20.5, "Crépuscule"), (23, "Nuit"), (2, "Cœur de la nuit")),
-            onglet="image", se_voit=True, depend_de="ciel"),
+            onglet="image", se_voit=True, depend_de="ciel", depend_de_valeur=3),
     Reglage("ciel_couleur", "Accio.Graphics", "SkyColor",
             "Couleur du ciel",
             "La teinte du ciel avec « Couleur choisie », plus claire vers l'horizon.",
             choix=tuple(v for v, _ in COULEURS_CIEL), zero="Bleu", noms_choix=COULEURS_CIEL,
-            onglet="image", se_voit=True, depend_de="ciel"),
+            onglet="image", se_voit=True, depend_de="ciel", depend_de_valeur=4),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "

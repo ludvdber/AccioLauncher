@@ -29,6 +29,8 @@ IDENTIQUES_TOLEREES = {
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « Gris » (vert des montagnes) s'écrit pareil en espagnol.
     "Gris",
+    # Les mots techniques des fiches de la page Image (refonte B) : des sigles.
+    "FXAA", "MSAA",
     # Couleurs du ciel de HP6 qui s'écrivent pareil en anglais.
     "Orange", "Mauve", "Turquoise",
     # Difficulté du Quidditch de HP1/HP2 : « Expert » s'écrit pareil en anglais.

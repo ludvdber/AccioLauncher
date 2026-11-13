@@ -1451,3 +1451,23 @@ class TestCinematiqueSurLaCarteGraphique:
         assert page._video.paused, "cachée dans la zone de notification aussi"
         win.show()
         assert not page._video.paused
+
+
+def test_les_captures_suivent_le_jeu_choisi_et_gardent_tous(fenetre_avec_jeux, qtbot):
+    """Audit UI col12 : HP3 en Cinématiques donnait « Tous » en Captures, le filtre posé en
+    Captures se perdait au retour, et les pastilles passaient dans la zone qui défile."""
+    from src.ui.mediatheque import CAPTURES, CINEMATIQUES
+    win = fenetre_avec_jeux
+    win._mediatheque.ouvrir(CINEMATIQUES, "hp3")
+    page = win._pages.page
+    page.rubrique(CAPTURES)
+    galerie = page._galerie()
+    assert galerie._filtres == {}, "intégrée, la Galerie prend les pastilles des Collections"
+    assert page._jeux.isVisibleTo(page) and page._jeux._boutons["hp3"].isChecked()
+    assert page._jeux._tous.isVisibleTo(page)
+    page._jeux._tous.click()
+    assert page._jeux._tous.isChecked() and page.jeu == "hp3", "« Tous » ne change pas le jeu des autres rubriques"
+    page.rubrique(CINEMATIQUES)
+    assert page._jeux._boutons["hp3"].isChecked() and not page._jeux._tous.isVisibleTo(page)
+    page.rubrique(CAPTURES)
+    assert page._jeux._tous.isChecked(), "le filtre posé en Captures est repris au retour"

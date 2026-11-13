@@ -37,6 +37,8 @@ class PointFort:
     icone: str
     titre: str
     texte: str
+    # Les jeux concernés, en jaquettes au pied de la carte : le texte n'a plus à les nommer.
+    jeux: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -115,7 +117,8 @@ def charger(version: str = APP_VERSION, langue: str | None = None,
         return None
     points = tuple(
         PointFort(str(p.get("icone", "")), texte_dans(p.get("titre"), langue),
-                  texte_dans(p.get("texte"), langue))
+                  texte_dans(p.get("texte"), langue),
+                  tuple(str(j) for j in _liste(p.get("jeux"))))
         for p in _liste(entree.get("points_forts")) if isinstance(p, dict))
     changements = tuple(
         Changement(str(c.get("genre")), texte_dans(c.get("texte"), langue))

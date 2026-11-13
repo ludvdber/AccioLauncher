@@ -828,13 +828,15 @@ class TestFenetre:
         assert tr("Se voit nettement à l’écran.") in page.fiche.texte.text()
 
     def test_la_couleur_suit_le_niveau(self, qtbot, tmp_path):
-        """Vert faible, orange moyen, rouge extrême (Ludo, 2026-09-30)."""
+        """Orange moyen, rouge extrême (Ludo, 2026-09-30) ; le faible ne se dit plus sur la
+        ligne (refonte B, 2026-11-13)."""
         from src.ui.game_settings_dialog import _COULEURS_COUT, _Points
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "filtrage", "anticrenelage"]),
                         _manager(tmp_path))
-        for ident, niveau in (("filtrage", 1), ("anticrenelage", 2), ("surechantillonnage", 3)):
+        assert not [p for p in dlg._page_img.ligne("filtrage").findChildren(_Points) if p.niveau]
+        for ident, niveau in (("anticrenelage", 2), ("surechantillonnage", 3)):
             (points,) = [p for p in dlg._page_img.ligne(ident).findChildren(_Points) if p.niveau]
             assert (points.niveau, points.couleur) == (niveau, _COULEURS_COUT[niveau])
         assert len(set(_COULEURS_COUT.values())) == 3
@@ -1002,6 +1004,18 @@ class TestDependances:
 
     def test_un_parent_absent_du_jeu_ne_bloque_rien(self):
         assert rc.bloque_par(rc.REGLAGES["occlusion"], {"occlusion": True}) is None
+
+    @pytest.mark.parametrize(("ident", "voulu", "nom_voulu"), [
+        ("ciel_heure", 3, "Heure choisie"), ("ciel_couleur", 4, "Couleur choisie")])
+    def test_le_ciel_n_agit_que_sur_sa_valeur(self, ident, voulu, nom_voulu):
+        """Audit UI v48 : « Bleu » laissait l'heure et la couleur actives, sans effet en jeu."""
+        enfant, ciel = rc.REGLAGES[ident], rc.REGLAGES["ciel"]
+        for autre in (0, 1, 2, 3, 4):
+            attendu = None if autre == voulu else ciel
+            assert rc.bloque_par(enfant, {"ciel": autre}) is attendu, autre
+        assert rc.phrase_blocage(enfant, ciel) == f"Sans effet tant que « Ciel » n'est pas sur « {nom_voulu} »."
+        assert rc.phrase_blocage(rc.REGLAGES["occlusion"], rc.REGLAGES["lissage"]) == \
+            "Sans effet tant que « Adoucir les contours » est éteint."
 
     def test_la_transparence_suit_le_msaa(self):
         assert rc.bloque_par(rc.REGLAGES["anticrenelage_transparence"],
@@ -1237,7 +1251,7 @@ class TestPageImage:
     def test_la_fiche_dit_le_jeu_accio_et_l_actuel(self, qtbot, tmp_path):
         _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
         page.ligne("surechantillonnage").survolee.emit("surechantillonnage")
-        assert page.fiche.titre.text() == rc.textes(rc.REGLAGES["surechantillonnage"])[0]
+        assert page.fiche.titre.text() == "Résolution de rendu (suréchantillonnage)", "le mot technique, dans la fiche"
         import html
         texte = html.unescape(page.fiche.valeurs.text())
         assert tr("Jeu d'origine") in texte and tr("Accio par défaut") in texte and tr("Actuel") in texte
@@ -1258,14 +1272,14 @@ class TestPageImage:
         page.regler("filtrage", 2)
         assert rc.valeur_accio(ini, rc.REGLAGES["filtrage"]) == livre
 
-    def test_remettre_la_categorie_aux_valeurs_accio(self, qtbot, tmp_path):
-        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
-        avant = {i: rc.lire(ini, rc.REGLAGES[i]).valeur for i in ("filtrage", "surechantillonnage")}
-        page.regler("filtrage", 2)
-        page.regler("surechantillonnage", 2)
-        qualite = next(c for c in page.categories if c.ident == "qualite")
-        page._remettre([r.ident for r in qualite.reglages], page._accio)
-        assert {i: rc.lire(ini, rc.REGLAGES[i]).valeur for i in avant} == avant
+    def test_plus_de_remise_par_categorie(self, qtbot, tmp_path):
+        """Refonte B (Ludo, 2026-11-13) : cinq boutons pour la même idée sur un écran (reg23).
+        Restent la fiche (un réglage) et le pied de la fenêtre (tout le jeu)."""
+        from PyQt6.QtWidgets import QLabel
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        for rang in range(len(page.categories)):
+            page.montrer(rang)
+        assert not any(lb.text().startswith("Remettre «") for lb in dlg.findChildren(QLabel))
 
     def test_la_recherche_trouve_dans_toutes_les_categories(self, qtbot, tmp_path):
         from src.ui.page_image import _LigneImage
@@ -1359,10 +1373,11 @@ class TestPageImage:
     def test_la_couleur_des_points_suit_le_cout(self, qtbot, tmp_path):
         from src.ui.game_settings_dialog import _COULEURS_COUT, _Points
         _dlg, page, _ini = self._fenetre(qtbot, tmp_path, self.IDENTS + ["anticrenelage"])
-        for ident, niveau in (("filtrage", 1), ("anticrenelage", 2), ("surechantillonnage", 3)):
+        for ident, niveau in (("anticrenelage", 2), ("surechantillonnage", 3)):
             points = page.ligne(ident).points
             assert isinstance(points, _Points)
             assert (points.niveau, points.couleur) == (niveau, _COULEURS_COUT[niveau])
+        assert page.ligne("filtrage").points.niveau == 0, "coût faible : rien sur la ligne"
 
     @pytest.mark.parametrize("langue", ["fr", "en", "es"])
     def test_a_la_taille_minimale_rien_ne_deborde_a_droite(self, qtbot, tmp_path, qapp, langue):

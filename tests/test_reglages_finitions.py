@@ -225,3 +225,34 @@ class TestMiseEnPage:
         aide = BoutonAide("Titre", "<p>x</p>")
         assert aide.width() == 28 and aide.height() == 28
         assert "margin: 5px" in aide.styleSheet(), "le rond visible reste de 18 px"
+
+
+def test_en_plein_ecran_le_controle_reste_pres_de_son_nom(qtbot, tmp_path):
+    """Audit UI v40 : à 1 920 px, 800 à 980 px séparaient un nom de son contrôle sur la page
+    Image ; la liste s'arrête à `_LARGEUR_LISTE`, la fiche la suit."""
+    from src.ui.page_image import _LARGEUR_LISTE, PageImage
+    dlg, _ = _fenetre(qtbot, tmp_path)
+    dlg.ouvrir_onglet("image")
+    dlg.resize(1920, 1000)
+    dlg.show()
+    qtbot.waitExposed(dlg)
+    page = dlg.findChild(PageImage)
+    qtbot.waitUntil(lambda: page.pile.width() > 0)
+    assert page.pile.width() <= _LARGEUR_LISTE
+    assert page._zone_fiche.x() - page.pile.geometry().right() <= 40, "la fiche suit la liste"
+
+
+def test_revenir_a_l_installation_remet_aussi_la_resolution(qtbot):
+    """Audit UI v49 : la confirmation annonçait l'Image remise, la résolution restait
+    sur 1600 × 1024."""
+    from types import SimpleNamespace
+    from PyQt6.QtWidgets import QComboBox
+    from src.ui.page_image import PageImage
+    liste = QComboBox()
+    qtbot.addWidget(liste)
+    liste.addItem("Remplir l'écran", "")
+    liste.addItem("1600 × 1024", "1600x1024")
+    liste.setCurrentIndex(1)
+    page = SimpleNamespace(reglages={}, _resolution=True, liste_resolution=liste, _maj=lambda: None)
+    PageImage.rafraichir(page)
+    assert liste.currentIndex() == 0

@@ -84,6 +84,12 @@ class _Media:
     def dossier_exe(self, jeu):
         return self._dossier
 
+    def nom(self, jeu):
+        return jeu.upper()
+
+    def avance(self, jeu):
+        return self._avance
+
     def ouvert(self, jeu, seuil):
         from src.core import discographie
         return discographie.ouvert_au_seuil(seuil, self._avance)

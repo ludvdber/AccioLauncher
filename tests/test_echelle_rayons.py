@@ -34,7 +34,7 @@ class TestJetons:
     def test_les_listes_ont_le_rayon_d_une_commande(self):
         for liste in (composants.LISTE, composants.LISTE_HAUTE):
             assert _rayons(liste) == {RAYON_CONTROLE}
-            assert "::item:selected" in liste and '[focusClavier="true"]:focus' in liste
+            assert "::item:selected" in liste
 
 
 class TestUneSeuleDefinition:

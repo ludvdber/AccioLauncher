@@ -290,7 +290,7 @@ class GaleriePage(QDialog):
             self._chargeur.start()
         else:
             self._fil.shutdown(wait=False)
-        self.filtrer(jeu if jeu in self._filtres else "")
+        self.filtrer(jeu)
         if self.choisie is None:
             self._montrer(None)
 
@@ -315,6 +315,15 @@ class GaleriePage(QDialog):
             lay.addWidget(titre)
             lay.addSpacing(16)
 
+        if not self._integree:
+            lay.addWidget(self._filtres_par_jeu())
+            lay.addSpacing(20)
+        self._grille(lay)
+        return page
+
+    def _filtres_par_jeu(self) -> QWidget:
+        """« Tous » et un filtre par jeu. Intégrée aux Collections, la Galerie prend leurs
+        pastilles : un seul choix de jeu pour toutes les rubriques (audit UI col12)."""
         compte = galerie.compte_par_jeu(self.captures)
         filtres = QWidget()
         flux = FlowLayout(filtres, spacing=8)
@@ -342,9 +351,9 @@ class GaleriePage(QDialog):
             self._groupe_filtres.addButton(filtre)
             self._filtres[cle] = filtre
             flux.addWidget(filtre)
-        lay.addWidget(filtres)
-        lay.addSpacing(20)
+        return filtres
 
+    def _grille(self, lay: QVBoxLayout) -> None:
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
         for (annee, numero), liste in galerie.par_mois(self.captures):
@@ -385,7 +394,6 @@ class GaleriePage(QDialog):
         n.addWidget(texte(tr("F12 en jeu. Rangées dans Images › Accio Launcher, jamais effacées "
                              "avec un jeu."), 13, "#c4c2da", retour=True))
         lay.addWidget(note)
-        return page
 
     def _cote(self) -> QFrame:
         cote = QFrame()
@@ -539,7 +547,8 @@ class GaleriePage(QDialog):
 
     def filtrer(self, jeu: str) -> None:
         """Ne garde que les captures de `jeu` ("" : toutes)."""
-        self._filtres[jeu if jeu in self._filtres else ""].setChecked(True)
+        if self._filtres:
+            self._filtres[jeu if jeu in self._filtres else ""].setChecked(True)
         for bloc, vignettes in self._mois:
             visibles = 0
             for vignette in vignettes:

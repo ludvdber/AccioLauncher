@@ -620,7 +620,7 @@ class MainWindow(QMainWindow):
     def _ouvrir_nouveautes(self, apres_mise_a_jour: bool = False) -> None:
         contenu = nouveautes.charger()
         if contenu is not None:
-            self._pages.ouvrir(NouveautesPage(contenu, apres_mise_a_jour, self))
+            self._pages.ouvrir(NouveautesPage(contenu, apres_mise_a_jour, self, self.manager.catalog.games))
 
     def _on_stats(self, rubrique: str = "releve") -> None:
         """Le Carnet (`carnet_page.py`) — lecture seule, rien à recâbler.

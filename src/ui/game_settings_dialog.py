@@ -545,8 +545,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                     effet = QGraphicsOpacityEffect(bloc.haut)
                     effet.setOpacity(0.42)
                     bloc.haut.setGraphicsEffect(effet)
-                phrase = tr("Sans effet tant que « {} » est éteint.").format(
-                    reglages_correctif.textes(bloquant)[0])
+                phrase = reglages_correctif.phrase_blocage(reglage, bloquant)
                 bloc.setToolTip(phrase)
                 bloc.note.setText(phrase)
                 bloc.note.show()

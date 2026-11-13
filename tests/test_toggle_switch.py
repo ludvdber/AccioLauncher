@@ -19,7 +19,6 @@ pytest.importorskip("pytestqt")
 from PyQt6.QtCore import Qt  # noqa: E402
 from PyQt6.QtGui import QKeyEvent  # noqa: E402
 
-from src.ui.focus_visible import PROPRIETE as FOCUS_CLAVIER  # noqa: E402
 from src.ui.toggle_switch import ToggleSwitch  # noqa: E402
 
 
@@ -90,38 +89,24 @@ class TestAtteignableAuClavier:
 
 
 class TestReperesVisuelsEtAccessibles:
-    def test_l_anneau_de_focus_est_peint_au_clavier(self, qtbot):
-        """Un widget PEINT n'est pas atteint par la règle `:focus` du
-        stylesheet : sans tracé maison, on peut atteindre l'interrupteur sans
-        jamais voir lequel est sélectionné."""
-        from PyQt6.QtGui import QColor, QImage, QPainter
+    def test_l_anneau_de_focus_entoure_la_piste_au_clavier(self, qtbot):
+        """Un widget PEINT doit se voir au clavier : l'anneau unique de `focus_visible` entoure
+        la piste (pas la marge transparente autour), à 3 px de son bord."""
+        from PyQt6.QtCore import QPoint, QRect, QSize
+        from PyQt6.QtWidgets import QVBoxLayout, QWidget
+        from src.ui.focus_visible import _Anneau, _marque
 
+        fenetre = QWidget()
         sw = ToggleSwitch(False)
-        qtbot.addWidget(sw)
-        sw.show()
-        qtbot.waitExposed(sw)
-
-        def rendu(clavier: bool) -> QImage:
-            sw.setProperty(FOCUS_CLAVIER, clavier)
-            img = QImage(sw.size(), QImage.Format.Format_ARGB32)
-            img.fill(QColor(0, 0, 0, 0))
-            p = QPainter(img)
-            sw.render(p)
-            p.end()
-            return img
-
-        # Compter les pixels OPAQUES ne prouve rien : l'anneau est peint
-        # PAR-DESSUS une piste déjà pleine, donc le nombre ne bouge pas (880
-        # dans les deux cas, mesuré). C'est la COULEUR qui change — on compare
-        # donc les deux rendus pixel à pixel.
-        avec, sans = rendu(True), rendu(False)
-        differents = sum(
-            1 for y in range(avec.height()) for x in range(avec.width())
-            if avec.pixelColor(x, y) != sans.pixelColor(x, y)
-        )
-        assert differents > 20, (
-            f"seulement {differents} pixel(s) de différence : "
-            "aucun anneau dessiné au focus clavier")
+        QVBoxLayout(fenetre).addWidget(sw)
+        qtbot.addWidget(fenetre)
+        fenetre.show()
+        qtbot.waitExposed(fenetre)
+        _marque(sw, True)
+        anneau = fenetre.findChild(_Anneau)
+        piste = QRect(sw.mapTo(fenetre, QPoint(sw._MARGE, sw._MARGE)), QSize(sw._TRACK_W, sw._TRACK_H))
+        assert anneau.isVisible() and anneau.geometry() == piste.adjusted(-5, -5, 5, 5)
+        assert anneau._rayon == sw._TRACK_H / 2 + 3
 
 
 class TestTousLesReglagesDuDialogue:

@@ -9,7 +9,9 @@ Une PAGE à la place de la bibliothèque (`pages.py`), comme Mes années : pas u
 fenêtre posée sur la fiche, qu'on fermerait sans la lire.
 """
 
+from collections.abc import Iterable, Mapping
 from html import escape
+
 from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtGui import QFont, QLinearGradient, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
@@ -22,6 +24,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core.game_data import GameData
 from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, NOTES_VERSIONS_URL
 from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
@@ -37,10 +40,12 @@ from src.ui.composants import (
 )
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
+from src.ui.stats_releve import _Jaquette, _jaquette
 from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
 
 _MARGES = (64, 30, 64, 28)
+_JAQUETTE = (42, 58)
 
 _STYLE = """
 QDialog#nouveautes { background: #060611; }
@@ -64,7 +69,10 @@ def _libelle_genre(genre: str) -> tuple[str, str]:
 
 
 class _CartePointFort(QFrame):
-    def __init__(self, point: PointFort) -> None:
+    """Un point fort. Ses jeux en jaquettes au pied : la page, la première vue après une
+    mise à jour, n'avait que des paragraphes qui nommaient les jeux (audit UI acc9)."""
+
+    def __init__(self, point: PointFort, jeux: Mapping[str, GameData]) -> None:
         super().__init__()
         self.setObjectName("pointFort")
         lay = QVBoxLayout(self)
@@ -84,6 +92,19 @@ class _CartePointFort(QFrame):
         corps.setStyleSheet(corps.styleSheet() + " border: none;")
         lay.addWidget(corps)
         lay.addStretch()
+        connus = [jeux[j] for j in point.jeux if j in jeux]
+        if connus:
+            rangee = QHBoxLayout()
+            rangee.setSpacing(8)
+            for game in connus:
+                vignette = _Jaquette(_jaquette(game.cover_image))
+                vignette.setFixedSize(*_JAQUETTE)
+                vignette.setToolTip(f"<qt>{escape(game.name, quote=False)}</qt>")
+                vignette.setAccessibleName(game.name)
+                rangee.addWidget(vignette)
+            rangee.addStretch()
+            lay.addSpacing(4)
+            lay.addLayout(rangee)
 
 
 class _CarteAnnonce(QFrame):
@@ -197,10 +218,11 @@ class NouveautesPage(QDialog):
     """Ce qu'apporte la version installée du launcher."""
 
     def __init__(self, nouveautes: Nouveautes, apres_mise_a_jour: bool = False,
-                 parent: QWidget | None = None) -> None:
+                 parent: QWidget | None = None, jeux: Iterable[GameData] = ()) -> None:
         super().__init__(parent)
         self.setObjectName("nouveautes")
         self.nouveautes = nouveautes
+        self._jeux = {game.id: game for game in jeux}
         self.setWindowTitle(tr("Nouveautés"))
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         racine = QVBoxLayout(self)
@@ -259,7 +281,7 @@ class NouveautesPage(QDialog):
             lay.addWidget(_CarteAnnonce(self.nouveautes.annonce))
         if self.nouveautes.points_forts:
             lay.addSpacing(24)
-            cartes = [_CartePointFort(p) for p in self.nouveautes.points_forts]
+            cartes = [_CartePointFort(p, self._jeux) for p in self.nouveautes.points_forts]
             rangee = Rangee(cartes, len(cartes), seuil=720, ecart=18)
             # La hauteur de leur texte, pas celle de la fenêtre : en plein
             # écran, les cartes prenaient 300 px de vide (Ludo, 2026-10-14) :

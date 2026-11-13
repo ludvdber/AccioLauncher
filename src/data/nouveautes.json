@@ -7,19 +7,21 @@
       "points_forts": [
         {
           "icone": "jauge",
+          "jeux": ["hp4", "hp5", "hp6"],
           "titre": {
             "fr": "Fini les saccades",
             "en": "No more stutter",
             "es": "Adiós a los tirones"
           },
           "texte": {
-            "fr": "La Coupe de Feu, L'Ordre du Phénix et Le Prince de Sang-Mêlé ne saccadent plus quand le jeu tourne sous sa limite d'images ou avec la synchronisation verticale : chaque image est dessinée à son vrai moment. Le launcher aligne aussi le plafond du jeu sur la limite choisie, à chaque lancement. Avec les nouvelles versions des jeux.",
-            "en": "Goblet of Fire, Order of the Phoenix and Half-Blood Prince no longer stutter when the game runs below its frame limit or with vertical sync: each frame is drawn at its real time. The launcher also matches the game's cap to the chosen limit at every start. With the new versions of the games.",
-            "es": "El cáliz de fuego, La Orden del Fénix y El misterio del príncipe ya no dan tirones cuando el juego va por debajo de su límite de imágenes o con la sincronización vertical: cada imagen se dibuja en su momento real. El launcher también ajusta el tope del juego al límite elegido en cada arranque. Con las nuevas versiones de los juegos."
+            "fr": "Ces trois jeux ne saccadent plus quand le jeu tourne sous sa limite d'images ou avec la synchronisation verticale : chaque image est dessinée à son vrai moment. Le launcher aligne aussi le plafond du jeu sur la limite choisie, à chaque lancement. Avec les nouvelles versions des jeux.",
+            "en": "These three games no longer stutter when the game runs below its frame limit or with vertical sync: each frame is drawn at its real time. The launcher also matches the game's cap to the chosen limit at every start. With the new versions of the games.",
+            "es": "Estos tres juegos ya no dan tirones cuando el juego va por debajo de su límite de imágenes o con la sincronización vertical: cada imagen se dibuja en su momento real. El launcher también ajusta el tope del juego al límite elegido en cada arranque. Con las nuevas versiones de los juegos."
           }
         },
         {
           "icone": "film",
+          "jeux": ["hp7a"],
           "titre": {
             "fr": "Les cinématiques à la bonne vitesse",
             "en": "Cutscenes at the right speed",

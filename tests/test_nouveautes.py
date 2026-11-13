@@ -177,6 +177,20 @@ class TestPage:
         from PyQt6.QtWidgets import QLabel
         return [lbl.text() for lbl in page.findChildren(QLabel)]
 
+    def test_les_cartes_montrent_les_jaquettes_de_leurs_jeux(self, qtbot):
+        """Audit UI acc9 : la première page vue après une mise à jour n'avait aucune image,
+        et le texte nommait les jeux en toutes lettres."""
+        from src.core.game_data import load_catalog
+        from src.ui.nouveautes_page import NouveautesPage, _CartePointFort
+        from src.ui.stats_releve import _Jaquette
+        page = NouveautesPage(nouveautes.charger("1.3.4"), True, None, load_catalog().games)
+        qtbot.addWidget(page)
+        par_carte = [[j.accessibleName() for j in c.findChildren(_Jaquette)]
+                     for c in page.findChildren(_CartePointFort)]
+        assert par_carte[0] == ["Harry Potter et la Coupe de Feu", "Harry Potter et l'Ordre du Phénix",
+                                "Harry Potter et le Prince de Sang-Mêlé"]
+        assert len(par_carte[1]) == 1
+
     def test_apres_une_mise_a_jour_elle_le_dit(self, qtbot):
         textes = self._textes(self._page(qtbot))
         assert "MISE À JOUR INSTALLÉE" in textes

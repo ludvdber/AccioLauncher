@@ -65,6 +65,10 @@ _LARGEUR_FICHE = 300
 _SEUIL_FICHE = 860
 # La colonne des contrôles : un curseur y tient avec ses étiquettes, sa valeur et son ↺.
 _LARGEUR_CONTROLE = 330
+# La liste ne s'étire pas au-delà : en plein écran, 800 à 980 px séparaient un nom de son
+# contrôle, contre 300 à la taille d'ouverture (audit UI v40, 2026-11-13). Le reste de la
+# largeur reste à droite de la fiche.
+_LARGEUR_LISTE = 880
 # L'identifiant de la ligne « Résolution », qui n'est pas un réglage du correctif mais du launcher.
 RESOLUTION = "resolution_ecran"
 
@@ -540,6 +544,9 @@ class _LigneImage(QFrame):
         if reglage is not None and reglage.beta:
             h.addWidget(_etiquette_beta(), alignment=Qt.AlignmentFlag.AlignVCenter)
         niveau = max((n for _r, n in reglage.cout), default=0) if reglage is not None else 0
+        # Le coût faible ne se dit pas sur la ligne : même un PC très modeste n'y voit pas de
+        # différence. Orange et rouge seulement (refonte B, Ludo 2026-11-13) ; la fiche le dit.
+        niveau = niveau if niveau >= 2 else 0
         self.points = _Points(niveau)
         if niveau and reglage is not None:
             detail = "\n".join(f"{tr(_RESSOURCES.get(r, r))} : {tr(_NIVEAUX[n])}" for r, n in reglage.cout)
@@ -611,6 +618,12 @@ class _Onglet(QPushButton):
         self.nom = nom
 
 
+def _textes_cherches(r: Reglage) -> tuple[str, str]:
+    """Le nom et la description, plus le mot technique : un connaisseur cherche « FXAA »."""
+    libelle, aide = rc.textes(r)
+    return libelle, f"{aide} {tr(r.technique)}" if r.technique else aide
+
+
 class PageImage(QWidget):
     """L'onglet Image d'un jeu à correctif. Voir le module.
 
@@ -674,9 +687,13 @@ class PageImage(QWidget):
         return next(c.ident for c in self.categories if ident in {r.ident for r in c.reglages})
 
     def rafraichir(self) -> None:
-        """Après une remise à l'origine : tout reprend ce que porte le fichier."""
+        """Après une remise à l'origine : tout reprend ce que porte le fichier, et la résolution
+        revient sur « Remplir l'écran ». Elle restait sur 1600 × 1024 alors que la confirmation
+        annonçait l'Image remise (audit UI v49, 2026-11-13)."""
         for r in self.reglages.values():
             self._relire(r)
+        if self._resolution:
+            self.liste_resolution.setCurrentIndex(0)
         self._maj()
 
     # ── construction ──
@@ -725,6 +742,7 @@ class PageImage(QWidget):
         self._lay_resultats.setContentsMargins(0, 0, 0, 0)
         self._lay_resultats.setSpacing(12)
         self.pile.addWidget(zone_defilable(self._resultats))
+        self.pile.setMaximumWidth(_LARGEUR_LISTE)
         corps.addWidget(self.pile, stretch=1)
         self.fiche = _Fiche()
         self.fiche.accio.connect(lambda: self._vers(self._accio))
@@ -733,6 +751,7 @@ class PageImage(QWidget):
         self._zone_fiche = zone_defilable(self.fiche)
         self._zone_fiche.setFixedWidth(_LARGEUR_FICHE + 12)
         corps.addWidget(self._zone_fiche)
+        corps.addStretch()
         racine.addLayout(corps, stretch=1)
         if self.categories:
             self.montrer(0)
@@ -792,7 +811,6 @@ class PageImage(QWidget):
             v.addSpacing(6)
             v.addWidget(carte)
             v.addSpacing(16)
-        v.addWidget(self._pied(cat))
         v.addStretch()
         return contenu
 
@@ -816,26 +834,6 @@ class PageImage(QWidget):
             grille.addWidget(carte, rang // 2, rang % 2)
             self._cartes_prereglage[ident] = carte
         return bloc
-
-    def _pied(self, cat: reglages_image.Categorie) -> QWidget:
-        """« Remettre « Qualité » : valeurs Accio · jeu d'origine », pour la catégorie seule."""
-        pied = QWidget()
-        pied.setStyleSheet("background: transparent;")
-        h = QHBoxLayout(pied)
-        h.setContentsMargins(0, 4, 0, 8)
-        h.setSpacing(8)
-        lbl = QLabel(tr("Remettre « {} » :").format(tr(cat.nom)))
-        lbl.setFont(police(13))
-        lbl.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
-        h.addWidget(lbl)
-        idents = [r.ident for r in cat.reglages]
-        for texte, cible in ((tr("Valeurs Accio"), self._accio), (tr("Jeu d'origine"), self._jeu)):
-            b = bouton(texte)
-            b.setAutoDefault(False)
-            b.clicked.connect(lambda _c=False, c=cible, i=idents: self._remettre(i, c))
-            h.addWidget(b)
-        h.addStretch()
-        return pied
 
     def _controle(self, r: Reglage) -> tuple[QWidget, QWidget | None]:
         """Le contrôle d'un réglage, et ce qui le suit dans sa colonne (valeur et ↺ d'un curseur)."""
@@ -945,8 +943,8 @@ class PageImage(QWidget):
     @staticmethod
     def _aide_resolution() -> str:
         return tr("La taille de l'image du jeu. Par défaut, celle de votre écran : l'image la plus nette. "
-                  "Une taille plus petite allège le travail de la carte graphique. Le suréchantillonnage "
-                  "s'ajoute par-dessus : il calcule l'image plus grande que cette taille, puis la réduit. "
+                  "Une taille plus petite allège le travail de la carte graphique. La « Résolution de rendu » "
+                  "s'ajoute par-dessus : elle calcule l'image plus grande que cette taille, puis la réduit. "
                   "Appliquée à chaque lancement, même si le menu du jeu l'a changée.")
 
     def _on_resolution(self, valeur: str) -> None:
@@ -992,26 +990,6 @@ class PageImage(QWidget):
             log.warning("Correctif : %s non éteint", autre.ident, exc_info=True)
             self._montrer_erreur()
         self._relire(autre)
-
-    def _remettre(self, idents: list[str], cible: dict[str, object]) -> None:
-        """Toute une catégorie à ses valeurs Accio ou à celles du jeu ; ce qui n'en a pas ne bouge pas."""
-        rates = False
-        for ident in idents:
-            voulue = cible.get(ident)
-            r = self.reglages[ident]
-            if voulue is None or rc.meme_valeur(voulue, self._valeurs.get(ident)):
-                continue
-            try:
-                rc.ecrire(self.ini, r, voulue)
-            except (OSError, ValueError):
-                log.warning("Correctif : %s non remis", ident, exc_info=True)
-                rates = True
-            self._relire(r)
-        if rates:
-            self._montrer_erreur()
-        else:
-            self._apres_ecriture()
-        self._maj()
 
     def _vers(self, cible: dict[str, object]) -> None:
         """Le bouton de la fiche : le réglage affiché à sa valeur Accio, ou à celle du jeu."""
@@ -1087,7 +1065,7 @@ class PageImage(QWidget):
                     effet = QGraphicsOpacityEffect(ligne.haut)
                     effet.setOpacity(0.42)
                     ligne.haut.setGraphicsEffect(effet)
-                ligne.note.setText(tr("Sans effet tant que « {} » est éteint.").format(rc.textes(bloquant)[0]))
+                ligne.note.setText(rc.phrase_blocage(r, bloquant))
                 ligne.note.show()
 
     def _maj_prereglage(self) -> None:
@@ -1129,7 +1107,7 @@ class PageImage(QWidget):
         if r is None:
             return
         libelle, aide = rc.textes(r)
-        f.titre.setText(libelle)
+        f.titre.setText(f"{libelle} ({tr(r.technique)})" if r.technique else libelle)
         f.texte.setText(typo(_html_fiche(r, aide, self._declares)))
         v = self._valeurs.get(r.ident) if en_cours is None else en_cours
         jeu = self._jeu.get(r.ident)
@@ -1168,7 +1146,7 @@ class PageImage(QWidget):
             self._maj()
             return
         trouves = [r for cat in self.categories for r in cat.reglages
-                   if reglages_image.correspond(r, *rc.textes(r), texte)]
+                   if reglages_image.correspond(r, *_textes_cherches(r), texte)]
         if not trouves:
             vide = QLabel(tr("Aucun réglage ne parle de « {} ».").format(texte))
             vide.setFont(police(13))

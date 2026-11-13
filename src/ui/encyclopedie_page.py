@@ -28,9 +28,10 @@ from PyQt6.QtCore import QRectF, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import discographie, encyclopedie, maillages_ue1, mouvements
-from src.core.i18n import dans_la_langue, get_language, tr
+from src.core import encyclopedie, maillages_ue1, mouvements
+from src.core.i18n import dans_la_langue, get_language, tr, trn
 from src.ui.composants import ENCRE, ENCRE_DOUCE, LISTE, icone_de_bouton, police, rond, texte
+from src.ui.carte_avancement import CarteAvancement, texte_seuil
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
@@ -115,12 +116,6 @@ class EtatVide(QWidget):
         self._phrase.setText(phrase)
 
 
-def _texte_seuil(seuil: int) -> str:
-    if seuil >= discographie.TOUT_A:
-        return tr("S'ouvre à {} % de l'histoire").format(discographie.TOUT_A)
-    return tr("S'ouvre vers {} % de l'histoire").format(seuil)
-
-
 class _Fiche(QFrame):
     """Une fiche : l'image (ou l'emblème) à gauche, le texte à droite. Avec un
     modèle 3D, un clic la montre en grand."""
@@ -159,7 +154,7 @@ class _Fiche(QFrame):
             nom = texte(tr("À découvrir"), 15, ENCRE_DOUCE, retour=True)
             nom.setFont(cinzel(12, bold=True))
             v.addWidget(nom)
-            v.addWidget(texte(_texte_seuil(fiche.seuil), 12, ENCRE_DOUCE, retour=True))
+            v.addWidget(texte(texte_seuil(fiche.seuil), 12, ENCRE_DOUCE, retour=True))
             v.addStretch()
             h.addLayout(v, stretch=1)
             self.setAccessibleName(tr("À découvrir"))
@@ -400,16 +395,21 @@ class VueEncyclopedie(QWidget):
                 phrase = tr("Installez un jeu pour voir ses créatures ici.")
             self._lay.addWidget(EtatVide(_ICONE[self.rubrique], phrase), stretch=1)
             return
-        compte = (tr("{} personnage") if len(fiches) == 1 else tr("{} personnages")) \
+        # Les fiches OUVERTES sur le total : « 26 personnages » comptait aussi les fermées.
+        ouvertes = sum(self._media.ouvert(jeu, f.seuil) for f in fiches)
+        compte = trn(ouvertes, "{n} personnage sur {total}", "{n} personnages sur {total}") \
             if self.rubrique == encyclopedie.PERSONNAGES else \
-            (tr("{} créature") if len(fiches) == 1 else tr("{} créatures"))
+            trn(ouvertes, "{n} créature sur {total}", "{n} créatures sur {total}")
         dossier = self._dossier = self._media.dossier_exe(jeu)
         if dossier is not None and any(f.modele is not None and self._media.ouvert(jeu, f.seuil)
                                        for f in fiches):
             self.scene = _Scene()
             self.scene.hide()               # jusqu'au premier modèle lu
             self._racine.addWidget(self.scene, stretch=1)
-        self._lay.addWidget(texte(compte.format(len(fiches)), 13, ENCRE_DOUCE))
+        carte = CarteAvancement()
+        carte.poser(self._media.nom(jeu), compte.format(n=ouvertes, total=len(fiches)),
+                    self._media.avance(jeu), any(f.seuil > 0 for f in fiches))
+        self._lay.addWidget(carte)
         flux = FlowLayout(spacing=14)
         for fiche in fiches:
             vue = _Fiche(self.rubrique, fiche, self._media.ouvert(jeu, fiche.seuil))

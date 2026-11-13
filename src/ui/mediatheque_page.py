@@ -54,6 +54,7 @@ from src.ui.composants import (
     lien,
     surtitre, texte,
 )
+from src.ui.carte_avancement import CarteAvancement, texte_seuil
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.cinema_plein_ecran import PleinEcran
 from src.ui.disque import Disque
@@ -78,7 +79,7 @@ _STYLE = """
 QDialog#mediatheque { background: #070712; }
 QWidget#transparent { background: transparent; }
 QFrame#platine { background: #08081a; border: none; border-right: 1px solid rgba(214, 167, 44, 0.12); }
-QFrame#carteJeu {
+QFrame#carteJeu, QFrame#carteAvancement {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.14); border-radius: 10px;
 }
 QFrame#carteJeu[modele="true"]:hover { border-color: rgba(214, 167, 44, 0.35); }
@@ -194,12 +195,6 @@ class _Elide(QLabel):
         self.setToolTip(self._plein if court != self._plein else "")
 
 
-def _texte_seuil(seuil: int) -> str:
-    if seuil >= discographie.TOUT_A:
-        return tr("S'ouvre à {} %").format(discographie.TOUT_A)
-    return tr("S'ouvre vers {} %").format(seuil)
-
-
 def _nouveaux(n: int) -> str:
     return tr("{} nouveau").format(n) if n == 1 else tr("{} nouveaux").format(n)
 
@@ -248,28 +243,6 @@ def _poids_vgmstream() -> str:
     from src.core.i18n import decimal_separator
     mo = f"{vgmstream.TAILLE_ZIP / (1024 * 1024):.1f}".replace(".", decimal_separator())
     return f"{mo} {tr('Mo')}"
-
-
-class _Barre(QWidget):
-    """L'avancement du jeu, avec le repère des 75 % où tout s'ouvre."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.pct = 0
-        self.setFixedHeight(14)
-
-    def paintEvent(self, _event) -> None:  # noqa: N802 (Qt)
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setPen(Qt.PenStyle.NoPen)
-        y = self.height() / 2 - 3
-        p.setBrush(QColor(255, 255, 255, 30))
-        p.drawRoundedRect(QRectF(0, y, self.width(), 6), 3, 3)
-        p.setBrush(accent_qcolor())
-        p.drawRoundedRect(QRectF(0, y, self.width() * self.pct / 100, 6), 3, 3)
-        p.setBrush(QColor(242, 238, 226, 150))
-        p.drawRect(QRectF(self.width() * discographie.TOUT_A / 100 - 1, 0, 2, self.height()))
-        p.end()
 
 
 class _PointNouveau(QWidget):
@@ -327,6 +300,12 @@ class _Jeux(QWidget):
         flux.setContentsMargins(0, 0, 0, 0)
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
+        # « Tous », en Captures seulement : la seule rubrique qui montre plusieurs jeux à la fois.
+        self._tous = filtre(tr("Tous"))
+        self._tous.clicked.connect(lambda: self.choisi.emit(""))
+        self._tous.hide()
+        groupe.addButton(self._tous)
+        flux.addWidget(self._tous)
         jeux = [g for g in (media.game(j) for j in media.jeux_tous()) if g is not None]
         self._etiquettes = numeros(jeux)
         for game in jeux:
@@ -344,8 +323,13 @@ class _Jeux(QWidget):
         return list(self._boutons)
 
     def cocher(self, jeu: str) -> None:
-        if jeu in self._boutons:
-            self._boutons[jeu].setChecked(True)
+        """Coche `jeu`, ou « Tous » pour ""."""
+        bouton_jeu = self._boutons.get(jeu) if jeu else self._tous
+        if bouton_jeu is not None:
+            bouton_jeu.setChecked(True)
+
+    def avec_tous(self, oui: bool) -> None:
+        self._tous.setVisible(oui)
 
     def compter_tous(self) -> None:
         for jeu in self._boutons:
@@ -424,8 +408,8 @@ class _LigneMorceau(QFrame):
             lay.addWidget(enregistrer)
         else:
             lay.addWidget(_cadenas())
-            lay.addWidget(_Elide(tr("Morceau à découvrir"), 15, ENCRE_DISCRETE, italique=True), stretch=1)
-            lay.addWidget(texte(_texte_seuil(morceau.seuil), 13, ENCRE_DOUCE))
+            lay.addWidget(_Elide(tr("À découvrir"), 15, ENCRE_DISCRETE, italique=True), stretch=1)
+            lay.addWidget(texte(texte_seuil(morceau.seuil), 13, ENCRE_DOUCE))
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt)
         """Toute la ligne ouverte s'écoute, comme une fiche se choisit d'un clic."""
@@ -682,29 +666,7 @@ class _VueMusique(QWidget):
         self._vide.hide()
         lay.addWidget(self._vide, stretch=1)
 
-        self._carte = QFrame()
-        self._carte.setObjectName("carteJeu")
-        c = QVBoxLayout(self._carte)
-        c.setContentsMargins(18, 12, 18, 10)
-        c.setSpacing(6)
-        haut = QHBoxLayout()
-        self._nom_jeu = QLabel()
-        self._nom_jeu.setTextFormat(Qt.TextFormat.PlainText)
-        self._nom_jeu.setFont(cinzel(11, bold=True))
-        self._nom_jeu.setStyleSheet(f"color: {ENCRE}; background: transparent;")
-        haut.addWidget(self._nom_jeu, stretch=1)
-        self._compte = texte("", 13, ENCRE_DOUCE)
-        haut.addWidget(self._compte)
-        c.addLayout(haut)
-        self._barre = _Barre()
-        c.addWidget(self._barre)
-        self._bas = _transparent(QWidget())
-        bas = QHBoxLayout(self._bas)
-        bas.setContentsMargins(0, 0, 0, 0)
-        self._avance = texte("", 12, ENCRE_DOUCE)
-        bas.addWidget(self._avance, stretch=1)
-        bas.addWidget(texte(tr("{} % : tout s'ouvre").format(discographie.TOUT_A), 12, ENCRE_DOUCE))
-        c.addWidget(self._bas)
+        self._carte = CarteAvancement()
         lay.addWidget(self._carte)
         lay.addSpacing(10)
 
@@ -790,17 +752,8 @@ class _VueMusique(QWidget):
             sous_le_pli = [fabrique(i, m, False) for i, m in enumerate(fermes, len(a_ecouter) + 1)]
             fabriques.append(lambda: _PliFermes(sous_le_pli))
         self._paquets.remplir(fabriques)
-        self._nom_jeu.setText(media.nom(jeu))
-        self._compte.setText(trn(ouverts, "{n} morceau sur {total}", "{n} morceaux sur {total}")
-                             .format(n=ouverts, total=len(morceaux)))
-        self._barre.pct = avance or 0
-        self._barre.update()
-        # Un jeu dont tout est ouvert d'office (HP4) n'a pas d'avancement à montrer.
-        a_des_seuils = any(m.seuil > 0 for m in morceaux)
-        self._barre.setVisible(a_des_seuils)
-        self._bas.setVisible(a_des_seuils)
-        self._avance.setText(tr("Votre sauvegarde la plus avancée : {} %").format(avance)
-                             if avance is not None else tr("Aucune partie lue pour l'instant"))
+        self._carte.poser(media.nom(jeu), trn(ouverts, "{n} morceau sur {total}", "{n} morceaux sur {total}")
+                          .format(n=ouverts, total=len(morceaux)), avance, any(m.seuil > 0 for m in morceaux))
         credit = media.credit(jeu)
         self._credit_jeu.setText(
             (credit + " · " if credit else "")
@@ -1022,7 +975,7 @@ class _LigneCine(QFrame):
             lay.addWidget(_cadenas())
             lay.addWidget(_Elide(tr("Cinématique à découvrir"), 15, ENCRE_DISCRETE, italique=True),
                           stretch=1)
-            lay.addWidget(texte(_texte_seuil(seuil), 13, ENCRE_DOUCE))
+            lay.addWidget(texte(texte_seuil(seuil), 13, ENCRE_DOUCE))
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt)
         if self._voir is not None and event.button() == Qt.MouseButton.LeftButton:
@@ -1101,6 +1054,9 @@ class _VueCinematiques(QWidget):
         self._vide = EtatVide("film")
         self._vide.hide()
         c.addWidget(self._vide, stretch=1)
+        self._carte = CarteAvancement()
+        c.addWidget(self._carte)
+        c.addSpacing(10)
         self._liste = _transparent(QWidget())
         self._pile = QVBoxLayout(self._liste)
         self._pile.setContentsMargins(0, 0, 0, 12)
@@ -1175,6 +1131,7 @@ class _VueCinematiques(QWidget):
         media = self._media
         self._lignes = []
         presentes = [c for c in media.cinematiques(jeu) if media.a_la_cinematique(jeu, c.fichier)]
+        self._carte.setVisible(bool(presentes))
         self._zone.setVisible(bool(presentes))
         self._vide.setVisible(not presentes)
         self._cote.setVisible(bool(presentes))
@@ -1194,6 +1151,10 @@ class _VueCinematiques(QWidget):
             self._vide.setText(texte_vide)
             return
         nouveaux = media.nouveaux(jeu, CINEMATIQUES)
+        ouvertes = sum(media.ouvert(jeu, clip.seuil) for clip in presentes)
+        self._carte.poser(media.nom(jeu), trn(ouvertes, "{n} cinématique sur {total}",
+                                              "{n} cinématiques sur {total}").format(n=ouvertes, total=len(presentes)),
+                          media.avance(jeu), any(clip.seuil > 0 for clip in presentes))
 
         def fabrique(num: int, clip):
             def faire() -> QWidget:
@@ -1573,7 +1534,7 @@ class MediathequePage(QDialog):
         e.addLayout(ligne)
         e.addSpacing(14)
         self._jeux = _Jeux(media)
-        self._jeux.choisi.connect(self.montrer)
+        self._jeux.choisi.connect(self._choisir)
         e.addWidget(self._jeux)
         racine.addWidget(entete)
         racine.addWidget(_filet())
@@ -1592,6 +1553,7 @@ class MediathequePage(QDialog):
         # Les captures : la Galerie d'avant, bâtie à la première visite (elle
         # décode ses vignettes sur un fil à part).
         self._captures: QDialog | None = None
+        self._jeu_choisi = False        # d'après le jeu demandé, plus bas (`_accorder_captures`)
         racine.addWidget(self._pile, stretch=1)
         if not self._jeux.ids:
             # Toutes les rubriques disent qu'il faut un jeu : Personnages et Bestiaire
@@ -1603,12 +1565,16 @@ class MediathequePage(QDialog):
         self.rubrique(rubrique if rubrique in self._rubriques else CAPTURES)
 
         jeux = self._jeux.ids
+        # Un jeu choisi (à l'ouverture ou d'un clic) filtre aussi les Captures ; sans choix,
+        # elles s'ouvrent sur « Tous ».
+        self._jeu_choisi = jeu in jeux
         if jeu not in jeux:
             courant = decouper(media.fond.morceau)
             premier = next((g.id for g in media.jeux(MUSIQUE if rubrique == CAPTURES else rubrique)), jeux[0] if jeux else "")
             jeu = courant[0] if courant is not None and courant[0] in jeux else premier
         if jeu:
             self.montrer(jeu)
+        self._accorder_captures()
         media.vus_changes.connect(self._rafraichir_points)
         self._rafraichir_points()
 
@@ -1628,6 +1594,22 @@ class MediathequePage(QDialog):
             vue.montrer(jeu)
         self._jeux.compter(jeu)
 
+    def _choisir(self, jeu: str) -> None:
+        """Une pastille : un jeu, partagé par toutes les rubriques, ou « Tous » ("") en Captures."""
+        self._jeu_choisi = bool(jeu)
+        if jeu:
+            self.montrer(jeu)
+        self._accorder_captures()
+
+    def _accorder_captures(self) -> None:
+        """Les Captures suivent le jeu choisi aux Collections : VI en Cinématiques donnait
+        « Tous » en Captures, et leur filtre se perdait au retour (audit UI col12)."""
+        if self.rubrique_courante != CAPTURES:
+            return
+        filtre = self.jeu if self._jeu_choisi else ""
+        self._galerie().filtrer(filtre)
+        self._jeux.cocher(filtre)
+
     @property
     def jeu(self) -> str:
         return self._musique._jeu
@@ -1638,8 +1620,9 @@ class MediathequePage(QDialog):
     def rubrique(self, cle_rubrique: str) -> None:
         self._rubriques[cle_rubrique].setChecked(True)
         musique, captures = cle_rubrique == MUSIQUE, cle_rubrique == CAPTURES
-        # La Galerie a ses propres filtres par jeu (« Tous » compris).
-        self._jeux.setVisible(not captures)
+        # Les pastilles restent dans l'en-tête en Captures, avec « Tous » : elles passaient
+        # dans la zone qui défile, 37 px plus bas, et disparaissaient en descendant.
+        self._jeux.avec_tous(captures)
         if captures:
             self._pile.setCurrentWidget(self._galerie())
         elif cle_rubrique in self._encyclo:
@@ -1652,6 +1635,10 @@ class MediathequePage(QDialog):
         self._cinematiques.afficher(cle_rubrique == CINEMATIQUES)
         self._musique.afficher(musique)
         self._jeux.compter_tous()
+        if captures:
+            self._accorder_captures()
+        else:
+            self._jeux.cocher(self.jeu)
 
     def _galerie(self) -> QDialog:
         if self._captures is None:
