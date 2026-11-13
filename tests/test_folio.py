@@ -397,12 +397,34 @@ class TestPage:
         assert barre.maximum() > 0, "la page doit défiler pour que le test dise quelque chose"
         barre.setValue(barre.maximum())
         haut = barre.value()
+        peintes = []
+        page.setUpdatesEnabled = lambda oui, vrai=page.setUpdatesEnabled: (
+            peintes.append(oui), vrai(oui))[1]
         page.choisir(1)
-        assert not page.updatesEnabled(), "rien ne se peint avant la mise en page"
-        qtbot.waitUntil(page.updatesEnabled)
+        # Mise en page finie AVANT de repeindre : rendre la main à la boucle montrait
+        # une image aux cases serrées, puis la page sautait (audit UI, 2026-11-13).
+        assert peintes == [False, True] and page.updatesEnabled()
         assert page.releve.emplacement == 1
         assert page.carte_montree == 5 and page._cases[4].isChecked()
         assert page._zone.verticalScrollBar().value() == haut
+
+    def test_une_partie_deja_vue_n_est_pas_rebatie(self, qtbot, hp1, monkeypatch):
+        """Détruire puis rebâtir la page figeait la fenêtre 0,4 à 0,75 s sur HP4 à chaque
+        clic, même sur une partie déjà vue (audit UI, 2026-11-13)."""
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        _save(saves, 1, BLOC, b"LEV2_HOGFRONT", datetime(2026, 10, 1))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        premiere = page._corps
+        page.choisir(1)
+        bati = []
+        monkeypatch.setattr(page, "_construire", lambda r: bati.append(r))
+        page.choisir(2)
+        assert bati == [] and page._corps is premiere and premiere.isVisibleTo(page)
+        page._cases[2].click()
+        assert page.carte_montree == 3
 
     def test_ouvre_sur_la_derniere_jouee(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage

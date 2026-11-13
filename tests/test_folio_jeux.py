@@ -152,6 +152,27 @@ class TestHP4:
         assert page._carte_etat.text() == "Obtenue, sans illustration dans le jeu"
         page.done(0)
 
+    def test_tient_dans_une_fenetre_etroite(self, qtbot, racines):
+        """Sous 1 250 px, la colonne du milieu était rognée à droite : « 0 / 3 » au lieu de
+        « 0 / 38 » boucliers, la seconde colonne des Sorts perdue (audit UI, 2026-11-13)."""
+        from src.ui.folio_jeux import page_folio
+        from tests.test_folio_hp4 import _hpgof
+        dossier = racines / "Local" / "EA" / "HPGOF"
+        dossier.mkdir(parents=True)
+        (dossier / "HPGOF").write_bytes(_hpgof(cartes=[1, 7, 151]))
+        jeu = _jeu("hp4", "HP4/gof_f.exe", {"root": "localappdata", "folders": ["EA/HPGOF"],
+                                             "files": "HPGOF", "first": 1, "slots": "hp4"})
+        page = page_folio(jeu, racines / "Jeux")
+        qtbot.addWidget(page)
+        page.resize(980, 660)
+        page.show()
+        qtbot.waitExposed(page)
+        qtbot.wait(20)
+        zone = page._zone
+        assert zone.widget().width() <= zone.viewport().width()
+        assert zone.widget().minimumSizeHint().width() <= zone.viewport().width()
+        page.done(0)
+
     def test_le_son_de_la_carte_suit_le_son_coupe(self, qtbot, racines, monkeypatch):
         """Une carte possédée demande le son de sa scène ; le son coupé du launcher l'interdit."""
         from types import SimpleNamespace

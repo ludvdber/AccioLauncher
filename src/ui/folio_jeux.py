@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -45,19 +46,21 @@ from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.folio_page import (
+    _CarteSorcier,
     _ECART_CASES,
     _IMAGE_FICHE,
+    _Jauge,
     _LARGEUR_RAIL,
     _MARGE_FICHE,
-    FolioPage,
-    Rangee,
-    _CarteSorcier,
-    _Jauge,
     _tuile,
+    case_de_folio,
     en_tete,
+    FolioPage,
     image_bgra,
     nom_emplacement,
     pixmap_texture,
+    Rangee,
+    survol_et_focus,
 )
 from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme
 from src.ui.utils import zone_defilable
@@ -178,9 +181,10 @@ def _rangee(*tuiles: QFrame) -> QHBoxLayout:
     return rang
 
 
-def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QVBoxLayout]:
+def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QScrollArea]:
     """Le corps d'une page sans grille : une colonne qui défile, et `droite`
-    fixe à côté (la carte choisie de HP4, comme la fiche de HP1)."""
+    fixe à côté (la carte choisie de HP4, comme la fiche de HP1). La zone revient
+    à la page (`_zone`) : sa hauteur de défilement se garde d'une partie à l'autre."""
     corps = QWidget()
     h = QHBoxLayout(corps)
     h.setContentsMargins(0, 0, 0, 0)
@@ -191,10 +195,11 @@ def _page(construire, droite: QWidget | None = None) -> tuple[QWidget, QVBoxLayo
     lay.setSpacing(0)
     construire(lay)
     lay.addStretch()
-    h.addWidget(zone_defilable(page), stretch=1)
+    zone = zone_defilable(page)
+    h.addWidget(zone, stretch=1)
     if droite is not None:
         h.addWidget(droite)
-    return corps, lay
+    return corps, zone
 
 
 # ── HP3 ──
@@ -559,9 +564,7 @@ class _VignetteHP4(QPushButton):
         self.jeu, self.rang, self.possedee, self.titre_jeu = jeu, rang, possedee, titre_jeu
         self._image: QImage | None = None
         self._pix: QPixmap | None = None
-        self.setCheckable(True)
-        self.setAutoDefault(False)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        case_de_folio(self)
         self.setFixedSize(taille)
         self.setAccessibleName(f"{titre_jeu}, " + (tr("Obtenue") if possedee
                                                    else tr("Pas encore obtenue")))
@@ -596,6 +599,7 @@ class _VignetteHP4(QPushButton):
             stylo.setStyle(Qt.PenStyle.DashLine)
             p.setPen(stylo)
         p.drawRoundedRect(cadre, 3, 3)
+        survol_et_focus(p, self, 3)
         p.end()
 
 
@@ -604,6 +608,10 @@ class FolioPageHP4(FolioPage):
 
     Les mêmes écrans que la pensine (touche I) ; les noms viennent du jeu
     installé dans la langue du launcher, sinon du français par `tr()`."""
+
+    _ETAT_DE_PAGE = FolioPage._ETAT_DE_PAGE + (
+        "_colonne_hp4", "_grande", "_carte_jeu", "_carte_nom", "_carte_texte", "_carte_etat",
+        "_vignettes", "_carte_montree_hp4")
 
     def _charger(self) -> None:
         self.releves = [p for chemin in sauvegardes.fichiers(self.game.sauvegardes).values()
@@ -676,7 +684,8 @@ class FolioPageHP4(FolioPage):
             lay.addSpacing(12)
             lay.addWidget(self._cartes(partie.cartes))
 
-        return _page(contenu, colonne)[0]
+        corps, self._zone = _page(contenu, colonne)
+        return corps
 
     def _largeur_colonne(self) -> int:
         return max(_PETITE_CARTE, min(_GRANDE_CARTE.width(),
@@ -721,25 +730,29 @@ class FolioPageHP4(FolioPage):
         v.addWidget(zone_defilable(contenu))
         return self._colonne_hp4
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    def _revenir_sur_la_page(self) -> None:
         colonne = getattr(self, "_colonne_hp4", None)
-        try:
-            if colonne is not None and colonne.width() != self._largeur_colonne():
-                colonne.setFixedWidth(self._largeur_colonne())
-                self._grande.setFixedSize(self._taille_carte(self._largeur_colonne()))
-        except RuntimeError:            # colonne d'une autre partie, déjà détruite
-            self._colonne_hp4 = None
+        if colonne is not None and colonne.width() != self._largeur_colonne():
+            colonne.setFixedWidth(self._largeur_colonne())
+            self._grande.setFixedSize(self._taille_carte(self._largeur_colonne()))
+
+    def _quitter_la_page(self) -> None:
+        self._arreter_son()
+
+    def _cle_carte(self) -> object:
+        vignette = getattr(self, "_carte_montree_hp4", None)
+        return (vignette.jeu.image, vignette.rang) if vignette is not None else None
+
+    def _reprendre_carte(self, cle: object) -> None:
+        meme = next((v for v in getattr(self, "_vignettes", ()) if (v.jeu.image, v.rang) == cle), None)
+        if meme is not None:
+            meme.setChecked(True)
 
     def _cartes(self, cartes: frozenset[int]) -> QFrame:
         """Le Folio Universitas : les jeux de la boutique, chaque carte possédée
         avec son illustration ; la carte choisie est dans la colonne de droite."""
-        # Les vignettes d'une autre partie ne se posent plus, et ne se décodent
-        # plus : laissées au fil, elles occupaient le décodeur pour rien (audit
-        # du 2026-10-29).
-        for _, futur in self._attendues:
-            futur.cancel()
-        self._attendues = []
+        # Les vignettes d'une partie quittée en cours de décodage se posent quand
+        # même : sa page est gardée, on peut y revenir (`FolioPage._afficher`).
         cadre = QFrame()
         cadre.setObjectName("coupe")
         lay = QVBoxLayout(cadre)
@@ -937,7 +950,8 @@ class FolioPageHP4(FolioPage):
         cadre.setObjectName("coupe")
         g = QGridLayout(cadre)
         g.setContentsMargins(20, 14, 20, 16)
-        g.setHorizontalSpacing(16)
+        # Écarts serrés : les deux colonnes tiennent dans la page d'une fenêtre de 980 px.
+        g.setHorizontalSpacing(12)
         g.setVerticalSpacing(8)
         g.addWidget(surtitre(self._nom(folio_hp4.TITRES["quetes"])), 0, 0, 1, 5)
         or_clair = current_theme().accent_light
@@ -951,7 +965,7 @@ class FolioPageHP4(FolioPage):
                         rang, col + 1, Qt.AlignmentFlag.AlignRight)
         g.setColumnStretch(0, 1)
         g.setColumnStretch(3, 1)
-        g.setColumnMinimumWidth(2, 24)
+        g.setColumnMinimumWidth(2, 12)
         return cadre
 
 
@@ -1002,7 +1016,8 @@ class FolioPageHP5(FolioPage):
                 lay.addSpacing(12)
                 lay.addWidget(self._informations(partie.compteurs))
 
-        return _page(contenu)[0]
+        corps, self._zone = _page(contenu)
+        return corps
 
     @staticmethod
     def _informations(compteurs: tuple[int, ...]) -> QFrame:
@@ -1116,7 +1131,8 @@ class FolioPageHP6(FolioPage):
             lay.addWidget(_BadgesEtLieux(self._badges(partie),
                                          self._lieux(folio_hp6.par_lieu(partie.trouves))))
 
-        return _page(contenu)[0]
+        corps, self._zone = _page(contenu)
+        return corps
 
     def _badges(self, partie) -> QWidget | None:
         """Les trente badges en trois séries, comme l'écran « Badges » du jeu,
@@ -1324,7 +1340,8 @@ class FolioPageHP7(FolioPage):
                 lay.addSpacing(12)
                 lay.addWidget(self._combats(combats))
 
-        return _page(contenu)[0]
+        corps, self._zone = _page(contenu)
+        return corps
 
     @staticmethod
     def _combats(combats: list[tuple[str, int | None]]) -> QFrame:

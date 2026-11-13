@@ -194,7 +194,7 @@ class Paragraphe(QLabel):
 
     def _suivre(self) -> None:
         self.setMinimumHeight(0)
-        self.setMinimumHeight(self.heightForWidth(self.width()))
+        self.setMinimumHeight(max(0, self.heightForWidth(self.width())))
 
 
 def transparent(widget: QWidget, nom: str) -> None:

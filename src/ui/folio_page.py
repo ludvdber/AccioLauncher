@@ -11,7 +11,7 @@ droite : sous la grille, elle tombait hors de l'écran.
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QEvent, QRectF, QSize, Qt, QTimer
+from PyQt6.QtCore import QCoreApplication, QEvent, QRectF, QSize, Qt
 from PyQt6.QtGui import (
     QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, qRgba,
 )
@@ -37,6 +37,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.stats_widgets import _duree
+from src.ui.focus_visible import PROPRIETE
 from src.ui.theme import RAYON_CONTROLE, accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
@@ -322,6 +323,29 @@ def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBox
     return ligne
 
 
+def survol_et_focus(p: QPainter, case: QPushButton, rayon: float) -> None:
+    """Ce qui manquait aux cases du folio (audit UI, 2026-11-13) : le survol éclaire la case,
+    et le focus du CLAVIER pose un anneau clair, distinct du cadre or de la carte choisie
+    (règle 15). La main seule changeait au survol, et Tab arrivait sur une case sans cadre."""
+    cadre = QRectF(case.rect()).adjusted(1, 1, -1, -1)
+    if case.underMouse():
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(255, 255, 255, 26))
+        p.drawRoundedRect(cadre, rayon, rayon)
+    if case.hasFocus() and case.property(PROPRIETE):
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.setPen(QPen(QColor("#f4f2f8"), 1.5))
+        p.drawRoundedRect(QRectF(case.rect()).adjusted(0.75, 0.75, -0.75, -0.75), rayon + 1, rayon + 1)
+
+
+def case_de_folio(case: QPushButton) -> None:
+    """Une case cochable du folio : survolée, elle se repeint."""
+    case.setCheckable(True)
+    case.setAutoDefault(False)
+    case.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+    case.setCursor(Qt.CursorShape.PointingHandCursor)
+
+
 class _CarteSorcier(QPushButton):
     """Une case du folio : la carte trouvée telle que le jeu la dessine, son
     numéro si le jeu n'est plus installé, des pointillés si elle reste à trouver."""
@@ -333,9 +357,7 @@ class _CarteSorcier(QPushButton):
         self.trouvee = trouvee
         self.vignette = vignette if trouvee else None   # textures_ue1.TexturePaletee
         self._pix: QPixmap | None = None
-        self.setCheckable(True)
-        self.setAutoDefault(False)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        case_de_folio(self)
         self.setFixedSize(_CASE_MIN, _CASE_MIN)
         nom = carte.nom if carte else tr("Carte {}").format(numero)
         self.setAccessibleName(nom if trouvee else tr("Carte pas encore trouvée"))
@@ -369,6 +391,7 @@ class _CarteSorcier(QPushButton):
             p.setPen(QColor("#f2e6c4") if choisie else QColor("#d9cfae"))
             p.setFont(cinzel(10, bold=True))
             p.drawText(cadre, Qt.AlignmentFlag.AlignCenter, str(self.numero))
+        survol_et_focus(p, self, 6)
         p.end()
 
 
@@ -522,6 +545,8 @@ class FolioPage(QDialog):
         corps.setLayout(self._hote)
         racine.addWidget(corps, stretch=1)
         self._corps: QWidget | None = None
+        # id(partie) → (partie, sa page, son état) : chaque partie vue garde sa page.
+        self._pages: dict[int, tuple[object, QWidget, dict[str, object]]] = {}
         depart = self._depart()
         if depart is not None:
             self.choisir(depart.emplacement)
@@ -608,48 +633,93 @@ class FolioPage(QDialog):
 
     # ── Corps ──
 
-    def _afficher(self, releve: folio.Releve | None) -> None:
-        """La page d'une partie, posée D'UN SEUL COUP (Ludo, 2026-11-13 : « pourquoi tout se
-        redessine au lieu de garder ce qui est commun aux deux ? »).
+    # Ce que `_construire` pose sur la page et qui n'appartient qu'à UNE partie : rendu à
+    # la page gardée quand on y revient. Une sous-classe ajoute les siens.
+    _ETAT_DE_PAGE: tuple[str, ...] = (
+        "_zone", "_cases", "_grille_hp1", "_colonnes_hp1", "_groupe_cartes", "carte_montree",
+        "_fiche", "_fiche_image", "_fiche_nom", "_fiche_dates", "_fiche_texte", "phrase_coupe")
+    _PASSES_DE_MISE_EN_PAGE = 4
 
-        La nouvelle page se bâtit pendant que l'ancienne reste à l'écran ; rien ne se peint avant
-        qu'elle soit mise en page, cases à leur taille, défilement et carte choisie repris. Ce qui
-        est commun aux deux parties garde donc ses pixels : seul ce qui diffère change.
+    def _afficher(self, releve: folio.Releve | None) -> None:
+        """La page d'une partie, bâtie UNE fois puis gardée (Ludo, 2026-11-13 : « pourquoi tout
+        se redessine au lieu de garder ce qui est commun aux deux ? »).
+
+        Revenir sur une partie déjà vue la remontre telle quelle : la détruire puis la rebâtir
+        figeait la fenêtre 0,4 à 0,75 s sur HP4, et redécodait toutes ses cartes. Une partie
+        nouvelle se bâtit pendant que l'ancienne reste à l'écran, et rien ne se peint avant
+        qu'elle soit mise en page : cases à leur taille, hauteur de défilement et carte choisie
+        reprises de la partie quittée, pour comparer deux sauvegardes au même endroit.
         """
-        self.releve = releve
         ancienne = self._corps
-        zone = getattr(self, "_zone", None) if ancienne is not None else None
-        defilement = zone.verticalScrollBar().value() if zone is not None else 0
-        carte = getattr(self, "carte_montree", None) if ancienne is not None else None
         if ancienne is None:                 # première page : rien à l'écran à préserver
+            self.releve = releve
             self._corps = self._construire(releve)
             self._hote.addWidget(self._corps)
+            self._pages[id(releve)] = (releve, self._corps, self._etat())
             return
+        zone = getattr(self, "_zone", None)
+        defilement = zone.verticalScrollBar().value() if zone is not None else 0
+        carte = self._cle_carte()
+        self._pages[id(self.releve)] = (self.releve, ancienne, self._etat())
+        self._quitter_la_page()
+        self.releve = releve
         self.setUpdatesEnabled(False)
         try:
-            self._corps = self._construire(releve)
-            self._hote.addWidget(self._corps)
+            gardee = self._pages.get(id(releve))
+            if gardee is not None:
+                self._corps = gardee[1]
+                for nom, valeur in gardee[2].items():
+                    setattr(self, nom, valeur)
+            else:
+                self._corps = self._construire(releve)
+                self._hote.addWidget(self._corps)
+                self._pages[id(releve)] = (releve, self._corps, self._etat())
             ancienne.hide()
-            self._hote.removeWidget(ancienne)
-            ancienne.deleteLater()
+            self._corps.show()
+            self._revenir_sur_la_page()
             if carte is not None:
-                meme = next((c for c in self._cases if getattr(c, "numero", None) == carte), None)
-                if meme is not None:
-                    meme.setChecked(True)
-        except BaseException:
-            self.setUpdatesEnabled(True)
-            raise
-        # La mise en page (taille des cases, hauteur à défiler) se fait dans la boucle d'événements.
-        QTimer.singleShot(0, lambda: self._finir_affichage(defilement))
-
-    def _finir_affichage(self, defilement: int) -> None:
-        try:
+                self._reprendre_carte(carte)
+            self._mettre_en_page()
             zone = getattr(self, "_zone", None)
-            if zone is not None and defilement:
+            if zone is not None:
                 zone.verticalScrollBar().setValue(defilement)
+        finally:
             self.setUpdatesEnabled(True)
-        except RuntimeError:
-            pass        # page fermée entre-temps
+
+    def _etat(self) -> dict[str, object]:
+        return {nom: getattr(self, nom) for nom in self._ETAT_DE_PAGE if hasattr(self, nom)}
+
+    def _mettre_en_page(self) -> None:
+        """Finit la mise en page AVANT la première peinture. La taille des cases suit la largeur
+        du viewport, connue à son redimensionnement, qui redemande une passe : rendre la main à
+        la boucle d'événements montrait une image aux cases serrées, puis la page sautait de
+        35 px (HP2) à 108 px (HP3)."""
+        zone = getattr(self, "_zone", None)
+        avant = None
+        for _ in range(self._PASSES_DE_MISE_EN_PAGE):
+            QCoreApplication.sendPostedEvents(None, QEvent.Type.LayoutRequest)
+            maintenant = zone.verticalScrollBar().maximum() if zone is not None else None
+            if maintenant == avant:
+                break
+            avant = maintenant
+
+    def _cle_carte(self) -> object:
+        """Ce qui désigne la carte montrée, d'une partie à l'autre (HP1 à HP3 : son numéro)."""
+        return getattr(self, "carte_montree", None) if self._cases else None
+
+    def _reprendre_carte(self, cle: object) -> None:
+        meme = next((c for c in self._cases if getattr(c, "numero", None) == cle), None)
+        if meme is not None:
+            meme.setChecked(True)
+
+    def _quitter_la_page(self) -> None:
+        """La page montrée va être cachée (HP4 : le son de sa carte se tait)."""
+
+    def _revenir_sur_la_page(self) -> None:
+        """La page montrée vient de l'être, peut-être gardée d'avant un redimensionnement."""
+        if self._cases and self._fiche.width() != self._largeur_fiche():
+            self._fiche.setFixedWidth(self._largeur_fiche())
+            self._montrer_carte(self.carte_montree)
 
     # ── Temps (venu du Relevé, 2026-10-24). Les succès, venus avec lui, sont
     # partis le 2026-10-27 : la rubrique Défis du Carnet les montre (Ludo). ──
@@ -790,9 +860,7 @@ class FolioPage(QDialog):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        if self._cases and self._fiche.width() != self._largeur_fiche():
-            self._fiche.setFixedWidth(self._largeur_fiche())
-            self._montrer_carte(self.carte_montree)
+        self._revenir_sur_la_page()
 
     def eventFilter(self, objet, event) -> bool:
         if event.type() == QEvent.Type.Resize and self._cases and objet is self._zone.viewport():
