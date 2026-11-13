@@ -217,17 +217,26 @@ class WindowChrome:
         redimensionnement natif ; souris sortie → le curseur est relâché (sinon
         il resterait collé). Rien de tout ça fenêtre agrandie, et le curseur
         seulement fenêtre active.
+
+        Le curseur posé est celui de TOUTE l'application, fenêtre inactive comprise : sortie par
+        un bord puis clic ailleurs, il restait en double flèche au milieu de la fenêtre jusqu'au
+        clic suivant (Ludo, 2026-11-13). Il part donc quand la fenêtre perd la main, quand la
+        souris quitte la fenêtre elle-même, et à tout survol d'une fenêtre inactive.
         """
         fen = self._fenetre
         genre = event.type()
         if genre == QEvent.Type.MouseMove:
             if not fen.isMaximized() and fen.isActiveWindow():
                 self.survol(fen.mapFromGlobal(event.globalPosition().toPoint()))
+            else:
+                self.relacher_curseur()
+        elif genre == QEvent.Type.WindowDeactivate:
+            self.relacher_curseur()
         elif genre == QEvent.Type.MouseButtonPress and not fen.isMaximized():
             return (event.button() == Qt.MouseButton.LeftButton
                     and isinstance(obj, QWidget) and obj.window() is fen
                     and self.saisir(fen.mapFromGlobal(event.globalPosition().toPoint())))
-        elif genre == QEvent.Type.Leave and not fen.underMouse():
+        elif genre == QEvent.Type.Leave and (obj is fen or not fen.underMouse()):
             self.relacher_curseur()
         return False
 

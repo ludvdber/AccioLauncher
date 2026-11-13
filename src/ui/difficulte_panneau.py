@@ -319,7 +319,7 @@ class PanneauDifficulte(QWidget):
         lay.addWidget(Rangee([self._entete(), self._bloc_cadran()], 2, seuil=640,
                              etirements=(1, 1), ecart=28))
         lay.addSpacing(22)
-        lay.addWidget(_titre_section(tr("Presets")))
+        lay.addWidget(_titre_section(tr("Préréglages")))
         lay.addSpacing(14)
         crans = {p.ident: c for p, c in self.crans}
         presets = [p for p in dp.PRESETS if not p.une_vie and dp.disponible(p, game.id, self.idents)]

@@ -1149,6 +1149,42 @@ class TestPageImage:
         assert page.categorie_de("occlusion") == "lumiere"
         assert page.categorie_de("vivacite") == "couleurs"
 
+    def test_pas_d_infobulle_quand_la_fiche_dit_deja_tout(self, qtbot, tmp_path):
+        """Ludo, 2026-11-13 : l'infobulle répétait la fiche de droite ; sans fiche (fenêtre
+        étroite), elle reste le seul endroit de la description."""
+        from PyQt6.QtCore import QEvent, QPoint
+        from PyQt6.QtGui import QHelpEvent
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        ligne = page.ligne("nettete")
+        bulle = QHelpEvent(QEvent.Type.ToolTip, QPoint(5, 5), ligne.mapToGlobal(QPoint(5, 5)))
+        ligne.fiche_ouverte = lambda: True
+        assert ligne.event(bulle) is True and ligne.eventFilter(ligne.points, bulle) is True
+        ligne.fiche_ouverte = lambda: False
+        assert ligne.eventFilter(ligne.points, bulle) is False
+        assert ligne.toolTip(), "la description reste pour la fenêtre étroite"
+
+    def test_la_ligne_dont_parle_la_fiche_est_en_surbrillance(self, qtbot, tmp_path):
+        """La règle est sur la ligne elle-même : le « background: transparent » sans sélecteur
+        des conteneurs écrasait celle de la page (surbrillance invisible, 2026-11-13)."""
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        dlg.resize(1400, 900)
+        dlg.show()
+        page._activer("lissage")
+        ligne = page.ligne("nettete")
+        qtbot.wait(10)
+        avant = ligne.grab().toImage()
+        page._activer("nettete")
+        qtbot.wait(10)
+        apres = ligne.grab().toImage()
+        assert ligne.property("active") is True and page.ligne("lissage").property("active") is False
+        # Les PIXELS, pas la propriété : c'est elle qui était juste quand la surbrillance ne se voyait pas.
+        p = (8, ligne.height() // 2)
+        assert avant.pixelColor(*p) != apres.pixelColor(*p), "la surbrillance ne se voit pas"
+
+    def test_les_valeurs_de_la_fiche_vont_a_la_ligne(self, qtbot, tmp_path):
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        assert page.fiche.valeurs.wordWrap(), "« Plein écran sans bordure » était coupé"
+
     def test_une_categorie_se_batit_a_son_premier_affichage(self, qtbot, tmp_path):
         _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
         assert "occlusion" not in page._lignes

@@ -16,7 +16,8 @@ _EDITION = (QLineEdit, QComboBox, QSlider, QAbstractSpinBox)
 # les bords, clavier global). Il voit TOUS les événements, 14 000 en bâtissant
 # les Paramètres : les autres sortent au plus tôt (2026-10-14).
 EVENEMENTS_FILTRES = frozenset((QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress,
-                                QEvent.Type.Leave, QEvent.Type.KeyPress))
+                                QEvent.Type.Leave, QEvent.Type.KeyPress,
+                                QEvent.Type.WindowDeactivate))
 
 
 def touche_globale(event, carrousel, fiche, fenetre_active: bool,

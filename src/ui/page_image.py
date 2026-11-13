@@ -70,8 +70,6 @@ _STYLE = f"""
 QFrame#carteImage {{
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.14); border-radius: {RAYON_CARTE}px;
 }}
-QFrame#ligneImage {{ background: transparent; border-radius: 6px; }}
-QFrame#ligneImage[active="true"] {{ background: rgba(214, 167, 44, 0.07); }}
 QFrame#ficheImage {{
     background: #0b0b18; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: {RAYON_CARTE}px;
 }}
@@ -101,6 +99,13 @@ QLineEdit#recherche {{
     border-radius: 6px; padding: 6px 10px;
 }}
 QLineEdit#recherche[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
+"""
+
+
+# La ligne dont parle la fiche de droite (survolée ou au focus) se voit (Ludo, 2026-11-13).
+_STYLE_LIGNE = """
+QFrame#ligneImage { background: transparent; border-radius: 6px; }
+QFrame#ligneImage[active="true"] { background: rgba(214, 167, 44, 0.12); }
 """
 
 
@@ -443,6 +448,7 @@ class _Fiche(QFrame):
         self.texte.setStyleSheet("color: #d8d6e6; background: transparent;")
         lay.addWidget(self.texte)
         self.valeurs = QLabel("")
+        self.valeurs.setWordWrap(True)      # « Plein écran sans bordure » était coupé (2026-11-13)
         self.valeurs.setTextFormat(Qt.TextFormat.RichText)
         self.valeurs.setFont(police(13))
         self.valeurs.setStyleSheet("background: transparent;")
@@ -509,8 +515,14 @@ class _LigneImage(QFrame):
                  retrait: bool, fin: QWidget | None = None) -> None:
         super().__init__()
         self.setObjectName("ligneImage")
+        # Sur la ligne elle-même : le « background: transparent » sans sélecteur des conteneurs
+        # (plus proches que la page) écrasait la surbrillance posée par la feuille de la page.
+        self.setStyleSheet(_STYLE_LIGNE)
         self.ident = ident
         self.controle = controle
+        # La fiche de droite est-elle là ? Alors l'infobulle répéterait sa description (Ludo,
+        # 2026-11-13 : « inutile ») ; sous 860 px, sans fiche, elle reste le seul endroit du texte.
+        self.fiche_ouverte: Callable[[], bool] = lambda: False
         v = QVBoxLayout(self)
         v.setContentsMargins(14 + (22 if retrait else 0), 6, 12, 6)
         v.setSpacing(2)
@@ -559,8 +571,13 @@ class _LigneImage(QFrame):
         self.note.hide()
         v.addWidget(self.note)
         controle.setAccessibleName(nom)
-        for w in [controle, *controle.findChildren(QWidget)]:
+        for w in [controle, *controle.findChildren(QWidget), self.points]:
             w.installEventFilter(self)
+
+    def event(self, e: QEvent | None) -> bool:
+        if e is not None and e.type() == QEvent.Type.ToolTip and self.fiche_ouverte():
+            return True
+        return super().event(e)
 
     def enterEvent(self, event) -> None:  # noqa: N802 (Qt)
         self.survolee.emit(self.ident)
@@ -569,6 +586,8 @@ class _LigneImage(QFrame):
     def eventFilter(self, objet: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 (Qt)
         if event is not None and event.type() == QEvent.Type.FocusIn:
             self.survolee.emit(self.ident)
+        if objet is self.points and event is not None and event.type() == QEvent.Type.ToolTip:
+            return self.fiche_ouverte()      # le coût est déjà en clair dans la fiche
         return False
 
     def marquer(self, active: bool) -> None:
@@ -884,6 +903,7 @@ class PageImage(QWidget):
         libelle, aide = rc.textes(r)
         ligne = _LigneImage(r.ident, libelle, r, controle, retrait, fin)
         ligne.setToolTip(aide)
+        ligne.fiche_ouverte = self._fiche_ouverte
         ligne.survolee.connect(self._activer)
         self._lignes.setdefault(r.ident, []).append(ligne)
         return ligne
@@ -910,6 +930,7 @@ class PageImage(QWidget):
         self.liste_resolution = liste
         ligne = _LigneImage(RESOLUTION, tr("Résolution"), None, liste, False)
         ligne.setToolTip(self._aide_resolution())
+        ligne.fiche_ouverte = self._fiche_ouverte
         ligne.survolee.connect(self._activer)
         self._lignes.setdefault(RESOLUTION, []).append(ligne)
         return ligne
@@ -1070,6 +1091,9 @@ class PageImage(QWidget):
         if carte is not None:
             carte.setChecked(True)
 
+    def _fiche_ouverte(self) -> bool:
+        return self._zone_fiche.isVisible()
+
     def _activer(self, ident: str) -> None:
         if ident != self._actif:
             self._actif = ident
@@ -1117,10 +1141,10 @@ class PageImage(QWidget):
                   (f'<span style="color:{OR}">◆</span>', tr("Accio par défaut"), accio),
                   ("", tr("Actuel"), actuel))
         corps = "".join(
-            f'<tr><td style="color:{ENCRE_DOUCE}; padding-right:12px">{m} {e(nom)}</td>'
+            f'<tr><td style="color:{ENCRE_DOUCE}; padding-right:12px; white-space:nowrap">{m}&nbsp;{e(nom)}</td>'
             f'<td style="color:{"#f4e2a8" if nom == tr("Actuel") else "#ecebf3"}">{e(val)}</td></tr>'
             for m, nom, val in lignes)
-        return f"<table cellspacing='0' cellpadding='2'>{corps}</table>"
+        return f"<table width='100%' cellspacing='0' cellpadding='2'>{corps}</table>"
 
     # ── recherche ──
 

@@ -123,6 +123,23 @@ class TestPileDeCurseurs:
         c.etat_change()
         assert not c.curseur_pose
 
+    def test_la_fenetre_qui_perd_la_main_relache_le_curseur(self, qtbot):
+        """Sortie par un bord puis clic ailleurs : la double flèche restait au milieu de la
+        fenêtre inactive jusqu'au clic suivant (Ludo, 2026-11-13)."""
+        from PyQt6.QtCore import QEvent
+        c = self._chrome(qtbot)
+        c.survol(QPoint(2, 400))
+        c.evenement(c._fenetre, QEvent(QEvent.Type.WindowDeactivate))
+        assert not c.curseur_pose
+
+    def test_la_souris_qui_quitte_la_fenetre_relache_le_curseur(self, qtbot):
+        from PyQt6.QtCore import QEvent
+        c = self._chrome(qtbot)
+        c.survol(QPoint(2, 400))
+        c._fenetre.underMouse = lambda: True     # pas encore à jour quand Leave arrive
+        c.evenement(c._fenetre, QEvent(QEvent.Type.Leave))
+        assert not c.curseur_pose
+
     def test_relacher_est_idempotent(self, qtbot):
         c = self._chrome(qtbot)
         c.relacher_curseur()
