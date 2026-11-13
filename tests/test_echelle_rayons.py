@@ -107,10 +107,17 @@ class TestBoutonsCommuns:
             b.setMinimumHeight(0)
             b.setMaximumHeight(16777215)
             b.ensurePolished()
+            assert b.sizeHint().height() <= hauteur, (grand, b.sizeHint().height())   # rien de rogné
             # Avant la refonte, 5 px de remplissage au-dessus et au-dessous
-            # (6 pour une rubrique) : la hauteur fixe garde au moins cet air.
+            # (6 pour une rubrique) : la hauteur fixe garde au moins cet air
+            # autour de ce qui SE VOIT (lettres, pictogramme) et du cadre de
+            # 1 px. Pas autour de la boîte de ligne : FreeType arrondit montant
+            # et descendant chacun vers le haut (17 px sous Linux, 16 sous
+            # Windows, même Gelasio), la CI Linux tombait à 9 px d'air.
             air = 12 if grand else 10
-            assert b.sizeHint().height() + air <= hauteur, (grand, b.sizeHint().height())
+            encre = max(b.fontMetrics().tightBoundingRect(b.text()).height(),
+                        b.iconSize().height() if grand else 0)
+            assert encre + 2 + air <= hauteur, (grand, encre)
 
     def test_les_pastilles_des_pages_passent_par_le_composant(self, qtbot):
         from src.ui import choix_jeux
