@@ -12,7 +12,6 @@
     "Certains réglages n'ont pas pu être écrits (fichier absent ou en lecture seule) : le jeu garde les précédents.": "Some settings could not be written (missing or read-only file): the game keeps the previous ones.",
     "Change à tout moment, partie en cours comprise.": "Change it at any time, even mid-game.",
     "Difficulté de {}": "Difficulty of {}",
-    "Vos sauvegardes ne changent pas.": "Your saves do not change.",
     "Actif": "Active",
     "Niveau de défi": "Challenge level",
     "Au niveau de {}": "Level with {}",

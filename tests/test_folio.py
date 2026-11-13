@@ -351,6 +351,30 @@ class TestVenusDuReleve:
 
 
 class TestPage:
+    def test_changer_de_partie_garde_la_carte_et_le_defilement(self, qtbot, hp1):
+        """Ludo, 2026-11-13 : « pourquoi tout se redessine au lieu de garder ce qui est commun
+        aux deux ? » La page se pose d'un coup, à la même hauteur, sur la même carte."""
+        from src.ui.folio_page import FolioPage
+        jeu, install, saves = hp1
+        _save(saves, 0, BLOC, b"LEV2_HOGFRONT", datetime(2026, 3, 8))
+        _save(saves, 1, BLOC, b"LEV2_HOGFRONT", datetime(2026, 10, 1))
+        page = FolioPage(jeu, install)
+        qtbot.addWidget(page)
+        page.resize(980, 560)
+        page.show()
+        qtbot.wait(20)
+        page._cases[4].click()
+        barre = page._zone.verticalScrollBar()
+        assert barre.maximum() > 0, "la page doit défiler pour que le test dise quelque chose"
+        barre.setValue(barre.maximum())
+        haut = barre.value()
+        page.choisir(1)
+        assert not page.updatesEnabled(), "rien ne se peint avant la mise en page"
+        qtbot.waitUntil(page.updatesEnabled)
+        assert page.releve.emplacement == 1
+        assert page.carte_montree == 5 and page._cases[4].isChecked()
+        assert page._zone.verticalScrollBar().value() == haut
+
     def test_ouvre_sur_la_derniere_jouee(self, qtbot, hp1):
         from src.ui.folio_page import FolioPage
         jeu, install, saves = hp1

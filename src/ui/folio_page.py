@@ -11,7 +11,7 @@ droite : sous la grille, elle tombait hors de l'écran.
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QEvent, QRectF, QSize, Qt
+from PyQt6.QtCore import QEvent, QRectF, QSize, Qt, QTimer
 from PyQt6.QtGui import (
     QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, qRgba,
 )
@@ -501,6 +501,9 @@ class FolioPage(QDialog):
         self._plus = None
         self.releves: list = []
         self._blasons: dict = {}      # maison → texture du jeu (`_charger`)
+        # Les icônes du jeu, décodées une fois pour la page : elles sont les mêmes d'une partie à
+        # l'autre, et les relire refaisait le tour du dossier Textures à chaque changement.
+        self._icones_lues: dict[tuple, QPixmap | None] = {}
         self._charger()
         # Ce que le launcher a relevé de chaque fichier (temps de jeu) : la ligne
         # du rail le dit, les succès s'en servent.
@@ -598,12 +601,47 @@ class FolioPage(QDialog):
     # ── Corps ──
 
     def _afficher(self, releve: folio.Releve | None) -> None:
+        """La page d'une partie, posée D'UN SEUL COUP (Ludo, 2026-11-13 : « pourquoi tout se
+        redessine au lieu de garder ce qui est commun aux deux ? »).
+
+        La nouvelle page se bâtit pendant que l'ancienne reste à l'écran ; rien ne se peint avant
+        qu'elle soit mise en page, cases à leur taille, défilement et carte choisie repris. Ce qui
+        est commun aux deux parties garde donc ses pixels : seul ce qui diffère change.
+        """
         self.releve = releve
-        if self._corps is not None:
-            self._corps.hide()
-            self._corps.deleteLater()
-        self._corps = self._construire(releve)
-        self._hote.addWidget(self._corps)
+        ancienne = self._corps
+        zone = getattr(self, "_zone", None) if ancienne is not None else None
+        defilement = zone.verticalScrollBar().value() if zone is not None else 0
+        carte = getattr(self, "carte_montree", None) if ancienne is not None else None
+        if ancienne is None:                 # première page : rien à l'écran à préserver
+            self._corps = self._construire(releve)
+            self._hote.addWidget(self._corps)
+            return
+        self.setUpdatesEnabled(False)
+        try:
+            self._corps = self._construire(releve)
+            self._hote.addWidget(self._corps)
+            ancienne.hide()
+            self._hote.removeWidget(ancienne)
+            ancienne.deleteLater()
+            if carte is not None:
+                meme = next((c for c in self._cases if getattr(c, "numero", None) == carte), None)
+                if meme is not None:
+                    meme.setChecked(True)
+        except BaseException:
+            self.setUpdatesEnabled(True)
+            raise
+        # La mise en page (taille des cases, hauteur à défiler) se fait dans la boucle d'événements.
+        QTimer.singleShot(0, lambda: self._finir_affichage(defilement))
+
+    def _finir_affichage(self, defilement: int) -> None:
+        try:
+            zone = getattr(self, "_zone", None)
+            if zone is not None and defilement:
+                zone.verticalScrollBar().setValue(defilement)
+            self.setUpdatesEnabled(True)
+        except RuntimeError:
+            pass        # page fermée entre-temps
 
     # ── Temps (venu du Relevé, 2026-10-24). Les succès, venus avec lui, sont
     # partis le 2026-10-27 : la rubrique Défis du Carnet les montre (Ludo). ──
@@ -782,11 +820,19 @@ class FolioPage(QDialog):
         for c in range(grille.columnCount()):
             grille.setColumnStretch(c, 1 if c == colonnes else 0)
 
+    def _icone_gardee(self, cle: tuple, lire) -> QPixmap | None:
+        """`lire()` une fois par page pour cette clé (voir `_icones_lues`)."""
+        if cle not in self._icones_lues:
+            self._icones_lues[cle] = lire()
+        return self._icones_lues[cle]
+
     def _icone(self, cle: str) -> QPixmap | None:
         """Une icône des tuiles (`folio.ICONES_HP1`), rognée à sa partie visible."""
-        tex = folio.image_menu_hp1(self._paquet, folio.ICONES_HP1[cle])
-        return (pixmap_texture(tex, 40, self.devicePixelRatioF(), rogner=True)
-                if tex is not None else None)
+        def lire() -> QPixmap | None:
+            tex = folio.image_menu_hp1(self._paquet, folio.ICONES_HP1[cle])
+            return (pixmap_texture(tex, 40, self.devicePixelRatioF(), rogner=True)
+                    if tex is not None else None)
+        return self._icone_gardee((cle,), lire)
 
     def _coupe(self, releve: folio.Releve) -> QFrame:
         coupe = QFrame()

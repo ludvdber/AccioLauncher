@@ -447,7 +447,10 @@ class Paquet:
         return tuple(couleurs)
 
 
-@lru_cache(maxsize=2)
+# Quatre : le folio de HP2 lit TROIS paquets à chaque page (hgame.u, 25 Mo ; HP2_Menu.utx ; SpellShapes.utx).
+# À deux, chacun chassait le suivant et les trois étaient relus en entier à chaque changement de
+# partie (2026-11-13 : 65 % des 136 ms d'un changement).
+@lru_cache(maxsize=4)
 def _ouvrir(chemin: str, _mtime: float, _taille: int) -> Paquet | None:
     try:
         return Paquet(Path(chemin).read_bytes())

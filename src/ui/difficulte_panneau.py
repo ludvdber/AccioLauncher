@@ -355,8 +355,8 @@ class PanneauDifficulte(QWidget):
         v.setSpacing(10)
         v.addStretch()
         # Le « quand » est au pied (`_noter_pied`), pour chaque onglet : le redire
-        # ici le mettait deux fois à l'écran.
-        v.addWidget(texte(tr("Vos sauvegardes ne changent pas."), 15, _DOUX, retour=True))
+        # ici le mettait deux fois à l'écran. « Vos sauvegardes ne changent pas. » est parti le
+        # 2026-11-13 (Ludo : un comportement normal ne se précise pas).
         self.pastille_beta = _pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
         self.pastille_beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas "
                                          "se signale sur le Discord du projet."))

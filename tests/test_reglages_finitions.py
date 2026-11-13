@@ -142,7 +142,7 @@ class TestPied:
 
     def test_le_haut_de_difficulte_ne_redit_pas_le_quand(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        assert tr("Vos sauvegardes ne changent pas.") in _textes(dlg)
+        assert not any("sauvegardes ne changent pas" in t for t in _textes(dlg)),             "un comportement normal ne se précise pas (Ludo, 2026-11-13)"
         assert not any("Change à tout moment" in t and "sauvegardes" in t for t in _textes(dlg))
 
 

@@ -217,8 +217,8 @@ class FolioPageHP3(FolioPage):
 
     def _icone(self, nom: str, cote: int = 40) -> QPixmap | None:
         """Une image de `HP3_Menu.utx`, rognée à sa partie visible."""
-        return image_bgra(folio_hp3.image_menu(self._system, nom), cote,
-                          self.devicePixelRatioF(), rogner=True)
+        return self._icone_gardee((nom, cote), lambda: image_bgra(
+            folio_hp3.image_menu(self._system, nom), cote, self.devicePixelRatioF(), rogner=True))
 
     def _construire(self, releve) -> QWidget:
         if releve is None or not releve.lu:
@@ -385,9 +385,11 @@ class FolioPageHP2(FolioPage):
 
     def _icone(self, cle: str, cote: int = 40, paquet: str = "hp2_menu.utx") -> QPixmap | None:
         """Une icône du jeu : une clé de `ICONES`, ou un nom de texture."""
-        tex = folio_hp2.image_menu(self._system, folio_hp2.ICONES.get(cle, cle), paquet)
-        return (pixmap_texture(tex, cote, self.devicePixelRatioF(), rogner=True)
-                if tex is not None else None)
+        def lire() -> QPixmap | None:
+            tex = folio_hp2.image_menu(self._system, folio_hp2.ICONES.get(cle, cle), paquet)
+            return (pixmap_texture(tex, cote, self.devicePixelRatioF(), rogner=True)
+                    if tex is not None else None)
+        return self._icone_gardee((cle, cote, paquet), lire)
 
     def _sorts_et_objets(self, lay: QVBoxLayout, releve) -> None:
         """Les sorts du livre (glyphes du jeu), puis la potion et les ingrédients

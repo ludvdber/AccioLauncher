@@ -170,3 +170,19 @@ class TestCartesDuFolio:
 
     def test_jeu_absent(self, tmp_path):
         assert folio.paquet_menu(tmp_path / "rien") is None
+
+
+def test_trois_paquets_restent_lus_une_seule_fois(tmp_path):
+    """Le folio de HP2 lit trois paquets par page ; à deux places, chacun chassait le suivant
+    et hgame.u (25 Mo) était relu à chaque changement de partie (2026-11-13)."""
+    from src.core import textures_ue1
+    chemins = []
+    for k in range(3):
+        c = tmp_path / f"p{k}.utx"
+        c.write_bytes(paquet(f"Tex{k}"))
+        chemins.append(c)
+    textures_ue1._ouvrir.cache_clear()
+    for _tour in range(3):
+        for k, c in enumerate(chemins):
+            textures_ue1.texture(c, f"Tex{k}")
+    assert textures_ue1._ouvrir.cache_info().misses == 3
