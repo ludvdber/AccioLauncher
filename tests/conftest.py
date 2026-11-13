@@ -431,6 +431,18 @@ def _linux_pret_a_jouer(tmp_path_factory, monkeypatch):
 
 
 @pytest.fixture
+def vieillir():
+    """Recule de 10 s la date de fichiers ou de dossiers. `signature.fiable` ne garde pas la lecture
+    de ce qui vient d'être écrit (même taille, même tic d'horloge) : un test de cache vieillit
+    donc ce qu'il vient de créer, comme un ini posé bien avant que le joueur ouvre ses réglages."""
+    def reculer(*chemins: Path) -> None:
+        for chemin in chemins:
+            etat = chemin.stat()
+            os.utime(chemin, ns=(etat.st_atime_ns, etat.st_mtime_ns - 10_000_000_000))
+    return reculer
+
+
+@pytest.fixture
 def lanceur_factice(_linux_pret_a_jouer):
     """Le lanceur factice de la garde ci-dessus, pour un test qui s'en sert."""
     return _linux_pret_a_jouer

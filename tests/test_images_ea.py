@@ -110,7 +110,7 @@ class TestBIG:
         (tmp_path / "autre.big").write_bytes(b"PAS UNE ARCHIVE")
         assert images_ea.entree_big(tmp_path / "autre.big", "chapters/frontend.str") == b""
 
-    def test_l_index_se_lit_une_fois(self, tmp_path, monkeypatch):
+    def test_l_index_se_lit_une_fois(self, tmp_path, monkeypatch, vieillir):
         """Banc de rapidité, 2026-11-13 : chaque image du folio de HP4-HP5 relisait et réanalysait
         l'index de l'archive (data.big ×15 sur un parcours). Mesure : les octets lus."""
         import builtins
@@ -120,6 +120,7 @@ class TestBIG:
         chemin = tmp_path / "index.big"
         chemin.write_bytes(b"BIGF" + struct.pack("<I", 0) + struct.pack(">II", 1, tete)
                            + struct.pack(">II", tete, len(contenu)) + nom + contenu)
+        vieillir(chemin)
         lectures = []
         vrai_open = builtins.open
 

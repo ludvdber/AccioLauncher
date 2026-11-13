@@ -6,6 +6,7 @@ Contre-épreuve : sur l'ancien `_lire`, ces comptes valent le nombre d'appels.
 """
 
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -30,9 +31,10 @@ def lectures(monkeypatch):
 
 
 @pytest.fixture
-def ini(tmp_path):
+def ini(tmp_path, vieillir):
     chemin = tmp_path / "d3d9.ini"
     chemin.write_bytes(INI.encode("ascii"))
+    vieillir(chemin)
     return chemin
 
 
@@ -43,13 +45,27 @@ def test_vingt_reglages_lus_une_seule_ouverture(ini, lectures):
     assert lectures == ["d3d9.ini"]
 
 
-def test_ce_que_le_launcher_ecrit_se_relit_aussitot(ini, lectures):
+def test_ce_que_le_launcher_ecrit_se_relit_aussitot(ini, lectures, vieillir):
     fxaa = REGLAGES["lissage"]
     rc.lire(ini, fxaa)
     rc.ecrire(ini, fxaa, False)
     assert rc.lire(ini, fxaa).valeur is False
-    assert rc.lire(ini, fxaa).valeur is False
-    assert lectures.count("d3d9.ini") <= 3   # avant, pendant l'écriture, après : jamais par appel
+    vieillir(ini)                            # le joueur revient plus tard
+    lectures.clear()
+    for _ in range(5):
+        assert rc.lire(ini, fxaa).valeur is False
+    assert lectures == ["d3d9.ini"]
+
+
+def test_reecrit_de_meme_taille_dans_le_meme_tic_est_relu(ini):
+    """CI Windows, 2026-11-13 : « 1.5 » réécrit en « 2.0 » gardait date et taille, et se relisait 1.5."""
+    etat = ini.stat()
+    os.utime(ini, ns=(etat.st_atime_ns, time.time_ns()))
+    assert "FXAA=1" in lecture_ini.lire_lignes(ini)[0]
+    date = ini.stat().st_mtime_ns
+    ini.write_bytes(INI.replace("FXAA=1", "FXAA=0").encode("ascii"))
+    os.utime(ini, ns=(etat.st_atime_ns, date))          # même date, même taille
+    assert "FXAA=0" in lecture_ini.lire_lignes(ini)[0]
 
 
 def test_un_ini_change_a_la_main_est_relu(ini):
@@ -67,19 +83,21 @@ def test_les_lignes_rendues_sont_une_copie(ini):
     assert "[Retouche]" not in lecture_ini.lire_lignes(ini)[0]
 
 
-def test_la_copie_d_origine_se_compare_sans_relire(ini, lectures):
+def test_la_copie_d_origine_se_compare_sans_relire(ini, lectures, vieillir):
     origine = rc.chemin_origine(ini)
     origine.write_bytes(ini.read_bytes())
+    vieillir(origine)
     lectures.clear()
     for _ in range(5):
         assert rc.a_une_origine(ini) is False
     assert sorted(set(lectures)) == ["d3d9.ini", "d3d9.ini.origine"] and len(lectures) == 2
 
 
-def test_le_cache_est_borne(tmp_path):
+def test_le_cache_est_borne(tmp_path, vieillir):
     for n in range(lecture_ini._TAILLE + 5):
         f = tmp_path / f"{n}.ini"
         f.write_text("[A]\nB=1\n", encoding="utf-8")
+        vieillir(f)
         lecture_ini.lire_lignes(f)
     assert len(lecture_ini._cache) <= lecture_ini._TAILLE
 

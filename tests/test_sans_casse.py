@@ -17,8 +17,9 @@ def _jeu(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_cent_cartes_un_seul_listage(tmp_path, monkeypatch):
+def test_cent_cartes_un_seul_listage(tmp_path, monkeypatch, vieillir):
     jeu = _jeu(tmp_path)
+    vieillir(jeu, jeu / "Textures")
     listages = []
     vrai = Path.iterdir
 
