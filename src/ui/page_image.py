@@ -81,7 +81,6 @@ QPushButton#categorie {{
 }}
 QPushButton#categorie:hover {{ color: #f4f2f8; }}
 QPushButton#categorie:checked {{ color: #e8c547; border-bottom-color: #d6a72c; }}
-QPushButton#categorie[focusClavier="true"]:focus {{ color: #e8c547; }}
 QPushButton#segment {{
     color: #d8d6e6; background: #12121f; border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 6px; padding: 5px 10px;
@@ -91,7 +90,6 @@ QPushButton#segment:checked {{
     color: #f4e2a8; border-color: #d6a72c; background: rgba(214, 167, 44, 0.16);
 }}
 QPushButton#segment:disabled {{ color: #5d5b72; border-color: rgba(255, 255, 255, 0.05); }}
-QPushButton#segment[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
 QPushButton#retourAccio {{
     color: #d6a72c; background: transparent; border: none; padding: 0px 2px;
 }}
@@ -100,7 +98,6 @@ QLineEdit#recherche {{
     color: #ecebf3; background: #10101d; border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 6px; padding: 6px 10px;
 }}
-QLineEdit#recherche[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
 """
 
 

@@ -427,3 +427,21 @@ class TestLesCouchesDeLaVignette:
         assert geo.w > 0 and geo.h > 0
         assert geo.x == (item.width() - geo.w) // 2, "la jaquette est centrée"
         assert 0.0 <= geo.opacite <= 1.0
+
+
+def test_un_jeu_absent_ne_garde_aucune_couleur(qtbot):
+    """Audit UI acc7 : le gris posé à 0,7 sur la couleur laissait HP7a absent plus coloré
+    que HP7b installé. Sa jaquette est grise, seule."""
+    from PyQt6.QtGui import QColor, QPixmap
+    item = CarouselItem(_make_game("hp1"), _FakeManager())
+    qtbot.addWidget(item)
+    item.resize(160, 220)
+    rouge = QPixmap(150, 210)
+    rouge.fill(QColor("#d02020"))
+    item._pixmap = rouge
+    gris = QPixmap(150, 210)
+    gris.fill(QColor("#555555"))
+    item._gris = gris
+    image = item.grab().toImage()
+    centre = image.pixelColor(image.width() // 2, image.height() // 2)
+    assert centre.hsvSaturation() < 40, centre.name()

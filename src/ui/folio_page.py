@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.config import Config
 from src.core.i18n import get_language, tr, trn
-from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol_et_focus, texte, transparent
+from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol, texte, transparent
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
@@ -73,7 +73,6 @@ QPushButton#emplacement:hover {{ background: rgba(255, 255, 255, 0.04); }}
 QPushButton#emplacement:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
 }}
-QPushButton#emplacement[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
 QFrame#tuile, QFrame#coupe, QFrame#objet {{
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
 }}
@@ -355,13 +354,15 @@ class _CarteSorcier(QPushButton):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         cadre = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         choisie = self.isChecked()
+        # Les cases suivent la maison, comme le reste de la page (audit UI col18) :
+        # l'or et le brun fixes restaient sur un thème Serpentard.
+        vive = QColor(themed("#e8c547"))
         if self.trouvee:
-            p.setBrush(QColor("#2a1f10") if choisie else QColor("#1a1508"))
-            p.setPen(QPen(QColor("#e8c547") if choisie else QColor(214, 167, 44, 90),
-                          2 if choisie else 1))
+            p.setBrush(accent_qcolor(46 if choisie else 22))
+            p.setPen(QPen(vive if choisie else accent_qcolor(90), 2 if choisie else 1))
         else:
             p.setBrush(Qt.BrushStyle.NoBrush)
-            stylo = QPen(QColor("#e8c547") if choisie else QColor(255, 255, 255, 46),
+            stylo = QPen(vive if choisie else QColor(255, 255, 255, 46),
                          2 if choisie else 1)
             stylo.setStyle(Qt.PenStyle.DashLine)
             p.setPen(stylo)
@@ -375,7 +376,7 @@ class _CarteSorcier(QPushButton):
             p.setPen(QColor("#f2e6c4") if choisie else QColor("#d9cfae"))
             p.setFont(cinzel(10, bold=True))
             p.drawText(cadre, Qt.AlignmentFlag.AlignCenter, str(self.numero))
-        survol_et_focus(p, self, 6)
+        survol(p, self, 6)
         p.end()
 
 

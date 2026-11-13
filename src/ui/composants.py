@@ -10,12 +10,11 @@ from html import escape
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPen
+from PyQt6.QtGui import QColor, QFont, QIcon, QPainter
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
-from src.ui.focus_visible import PROPRIETE
 from src.ui.fonts import body_font, cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current, rayon_pastille, themed
@@ -73,29 +72,23 @@ QPushButton#principal:hover, QPushButton#secondaire:hover {{
 QPushButton#principal:disabled, QPushButton#secondaire:disabled {{
     color: #6f6d8e; border-color: rgba(255, 255, 255, 0.08);
 }}
-QPushButton#principal[focusClavier="true"]:focus,
-QPushButton#secondaire[focusClavier="true"]:focus {{
-    border: 2px solid #d6a72c; padding: 0 15px;
-}}
 QPushButton#danger {{
     min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: {RAYON_CONTROLE}px;
     color: #f6d2cd; background: rgba(224, 88, 79, 0.10);
     border: 1px solid rgba(224, 88, 79, 0.60);
 }}
 QPushButton#danger:hover {{ background: rgba(224, 88, 79, 0.20); border-color: #e0584f; }}
-QPushButton#danger[focusClavier="true"]:focus {{ border: 2px solid #f39a8f; padding: 0 15px; }}
 QPushButton#rond {{
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: {rayon_pastille(_TAILLE_ROND)}px;
 }}
-QPushButton#rond:hover, QPushButton#rond[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
+QPushButton#rond:hover {{ border-color: #d6a72c; }}
 QPushButton#rond:disabled {{ border-color: rgba(255, 255, 255, 0.06); }}
 QPushButton#retour {{
     background: transparent; border: none; color: {_ENCRE_RAIL};
     text-align: left; padding: 4px 2px;
 }}
 QPushButton#retour:hover {{ color: #f2f2f4; }}
-QPushButton#retour[focusClavier="true"]:focus {{ color: #e8c547; }}
 QPushButton#rubrique {{
     color: {_ENCRE_RAIL}; background: transparent; border: none;
     border-left: 2px solid transparent; border-radius: {RAYON_CONTROLE}px;
@@ -106,7 +99,6 @@ QPushButton#rubrique:checked {{
     color: #f2e6c4; background: rgba(214, 167, 44, 0.10);
     border-left: 2px solid #d6a72c;
 }}
-QPushButton#rubrique[focusClavier="true"]:focus {{ color: #e8c547; }}
 QPushButton#filtre {{
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: {rayon_pastille(HAUTEUR_FILTRE)}px; color: #c9c7da; padding: 0 13px;
@@ -120,7 +112,6 @@ QPushButton#filtre:hover {{ color: #f2f2f4; }}
 QPushButton#filtre:checked {{
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
 }}
-QPushButton#filtre[focusClavier="true"]:focus {{ border-color: #d6a72c; }}
 QPushButton#lien, QPushButton#lienDiscret {{
     background: transparent; border: none; text-decoration: underline; padding: 4px 2px;
     text-align: left;
@@ -129,8 +120,6 @@ QPushButton#lien {{ color: #d6a72c; }}
 QPushButton#lien:hover {{ color: #e8c547; }}
 QPushButton#lienDiscret {{ color: {ENCRE_LIEN_DISCRET}; }}
 QPushButton#lienDiscret:hover {{ color: #f2f2f4; }}
-QPushButton#lien[focusClavier="true"]:focus,
-QPushButton#lienDiscret[focusClavier="true"]:focus {{ color: #f0d060; }}
 QPushButton#lien:disabled, QPushButton#lienDiscret:disabled {{ color: {ENCRE_ETEINTE}; }}
 """
 
@@ -158,7 +147,6 @@ LISTE = (
     f" border-radius: {RAYON_CONTROLE}px; padding: 3px 10px; min-height: 22px; }}"
     "QComboBox:hover { border-color: rgba(214,167,44,0.55); }"
     "QComboBox:disabled { color: #6f6d8e; }"
-    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 2px 9px; }"
     "QComboBox QAbstractItemView { background: #15152a; color: #e4e2ef; outline: none;"
     " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
     + _LIGNES_DE_LISTE
@@ -166,7 +154,6 @@ LISTE = (
 LISTE_HAUTE = (
     "QComboBox { background: #16213e; color: #ffffff; border: 1px solid #2c3e6b;"
     f" border-radius: {RAYON_CONTROLE}px; padding: 6px 12px; font-size: 13px; }}"
-    "QComboBox[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 5px 11px; }"
     "QComboBox QAbstractItemView { background: #16213e; color: #ffffff; outline: none;"
     " selection-background-color: rgba(214, 167, 44, 0.30); selection-color: #f0d060; }"
     + _LIGNES_DE_LISTE
@@ -224,20 +211,14 @@ def transparent(widget: QWidget, nom: str) -> None:
     widget.setStyleSheet(f"QWidget#{nom} {{ background: transparent; }}")
 
 
-def survol_et_focus(p: QPainter, case: QPushButton, rayon: float) -> None:
-    """Pour une case PEINTE (règle 15) : le survol l'éclaire, et le focus du CLAVIER pose un
-    anneau clair, distinct du cadre or du choix. Les cases du folio ne changeaient pas au
-    survol, et une vignette des Captures qui recevait le focus ne changeait pas d'un pixel :
-    elle avait déjà le cadre or du choix (audit UI, 2026-11-13). La case pose `WA_Hover`."""
-    cadre = QRectF(case.rect()).adjusted(1, 1, -1, -1)
+def survol(p: QPainter, case: QPushButton, rayon: float) -> None:
+    """Pour une case PEINTE (règle 15) : le survol l'éclaire. Les cases du folio ne changeaient
+    pas au survol (audit UI, 2026-11-13). La case pose `WA_Hover` ; son rayon sert aussi à
+    l'anneau du clavier (`focus_visible.forme`)."""
     if case.underMouse():
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QColor(255, 255, 255, 26))
-        p.drawRoundedRect(cadre, rayon, rayon)
-    if case.hasFocus() and case.property(PROPRIETE):
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.setPen(QPen(QColor("#f4f2f8"), 1.5))
-        p.drawRoundedRect(QRectF(case.rect()).adjusted(0.75, 0.75, -0.75, -0.75), rayon + 1, rayon + 1)
+        p.drawRoundedRect(QRectF(case.rect()).adjusted(1, 1, -1, -1), rayon, rayon)
 
 
 def texte(contenu: str, px: int = 13, encre: str = ENCRE,

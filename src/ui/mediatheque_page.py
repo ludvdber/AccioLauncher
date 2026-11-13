@@ -83,7 +83,6 @@ QFrame#carteJeu {
 }
 QFrame#carteJeu[modele="true"]:hover { border-color: rgba(214, 167, 44, 0.35); }
 QFrame#carteJeu[choisie="true"] { border-color: rgba(214, 167, 44, 0.6); }
-QFrame#carteJeu[focusClavier="true"]:focus { border-color: #f0d060; }
 QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }
@@ -92,17 +91,16 @@ QPushButton#pli {
     background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 QPushButton#pli:hover { background: rgba(214, 167, 44, 0.05); }
-QPushButton#pli[focusClavier="true"]:focus { border: 1px solid #d6a72c; }
 QPushButton#lecture { background: #d6a72c; border: none; border-radius: 25px; }
-QPushButton#lecture:hover, QPushButton#lecture[focusClavier="true"]:focus { background: #e8bd4a; }
+QPushButton#lecture:hover { background: #e8bd4a; }
 QPushButton#lecture:disabled { background: rgba(214, 167, 44, 0.35); }
 QPushButton#petit {
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 16px;
 }
 QPushButton#petit[courante="true"] { border-color: #d6a72c; }
-QPushButton#petit:hover, QPushButton#petit[focusClavier="true"]:focus { border-color: #d6a72c; }
+QPushButton#petit:hover { border-color: #d6a72c; }
 QPushButton#discret { background: transparent; border: none; border-radius: 16px; }
-QPushButton#discret:hover, QPushButton#discret[focusClavier="true"]:focus { background: rgba(255, 255, 255, 0.06); }
+QPushButton#discret:hover { background: rgba(255, 255, 255, 0.06); }
 QPushButton#secondaire:checked {
     color: #f2e6c4; background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6);
 }

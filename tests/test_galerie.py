@@ -266,6 +266,7 @@ class TestClavier:
         assert page._partager.hasFocus(), "Partager sur Discord juste après la grille"
 
     def test_les_fleches_suivent_rangees_et_colonnes(self, qtbot, grille):
+        from PyQt6.QtCore import QPoint, QRect
         from PyQt6.QtWidgets import QApplication
         from src.ui import focus_visible
         focus_visible.install(QApplication.instance())   # posé une fois, comme au démarrage
@@ -276,12 +277,10 @@ class TestClavier:
         assert v[4].hasFocus() and page.choisie == v[4].capture, "la rangée du dessous, même colonne"
         assert v[4].property("focusClavier") is True, "l'anneau du clavier suit"
         # Et il se VOIT : la vignette choisie avait déjà le cadre or, le focus ne changeait
-        # pas un pixel (audit UI, 2026-11-13).
-        avec = v[4].grab().toImage()
-        v[4].setProperty("focusClavier", False)
-        sans = v[4].grab().toImage()
-        v[4].setProperty("focusClavier", True)
-        assert avec != sans
+        # pas un pixel (audit UI, 2026-11-13). L'anneau unique l'entoure.
+        anneau = v[4].window().findChild(focus_visible._Anneau)
+        qtbot.waitUntil(lambda: anneau.isVisible()
+                        and anneau.geometry().contains(QRect(v[4].mapTo(v[4].window(), QPoint(0, 0)), v[4].size())))
         qtbot.keyClick(v[4], Qt.Key.Key_Down)
         assert v[6].hasFocus(), "rangée incomplète : la vignette la plus proche"
         qtbot.keyClick(v[6], Qt.Key.Key_Up)

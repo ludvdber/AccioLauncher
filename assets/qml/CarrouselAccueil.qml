@@ -70,10 +70,11 @@ EtoilesCarrousel {
                 }
             }
 
-            // ── _peindre_jaquette (jaquette aux coins arrondis, ou fond de repli) ──
+            // ── _peindre_jaquette (jaquette aux coins arrondis, ou fond de repli ; grise seule
+            //    pour un jeu absent) ──
             Image {
                 x: 5; y: 5; width: v.cw; height: v.ch
-                source: v.e.image || ""
+                source: (v.e.absent === true && v.e.gris) ? v.e.gris : (v.e.image || "")
                 smooth: true
                 opacity: v.opacite
             }
@@ -110,13 +111,6 @@ EtoilesCarrousel {
             }
 
             // ── _peindre_voile_absent ──
-            Image {
-                visible: v.e.absent === true && source != ""
-                x: 5; y: 5; width: v.cw; height: v.ch
-                source: v.e.gris || ""
-                smooth: true
-                opacity: v.opacite * 0.7
-            }
             Rectangle {
                 visible: v.e.absent === true
                 x: 5; y: 5; width: v.cw; height: v.ch

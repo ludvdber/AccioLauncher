@@ -129,8 +129,6 @@ QPushButton#tuileVedette {{
     border-color: rgba(214, 167, 44, 0.40);
 }}
 QPushButton#tuile:hover, QPushButton#tuileVedette:hover {{ border-color: #d6a72c; }}
-QPushButton#tuile[focusClavier="true"]:focus,
-QPushButton#tuileVedette[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
 QFrame#depannage {{
     border: 1px dashed rgba(255, 255, 255, 0.14); border-radius: {RAYON_CARTE}px;
     background: transparent;

@@ -1,7 +1,6 @@
 """ClickableLabel — label cliquable ET focusable clavier (A11Y).
 
-L'anneau de focus CLAVIER (`focus_visible`, `QLabel[focusClavier="true"]:focus`
-dans styles.py) s'applique.
+L'anneau de focus CLAVIER est celui de `focus_visible`, comme pour tout contrôle.
 """
 
 from PyQt6.QtCore import Qt, pyqtSignal

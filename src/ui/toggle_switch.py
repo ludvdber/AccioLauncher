@@ -1,10 +1,10 @@
 """Interrupteur animé ON/OFF réutilisable."""
 
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve, QRectF
-from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
+from PyQt6.QtGui import QPainter, QColor, QBrush
 from PyQt6.QtWidgets import QWidget
 
-from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
+from src.ui.focus_visible import forme
 from src.ui.theme import accent_qcolor
 
 
@@ -16,8 +16,8 @@ class ToggleSwitch(QWidget):
     _TRACK_W = 40
     _TRACK_H = 22
     _KNOB_R = 8   # rayon du cercle
-    # Marge autour de la piste, pour l'anneau de focus. Il était peint DANS la
-    # piste, or sur un interrupteur allumé : or sur or, invisible (Ludo,
+    # Marge autour de la piste : l'anneau de focus (`focus_visible`) l'entoure. Peint DANS
+    # la piste, il était or sur or sur un interrupteur allumé, invisible (Ludo,
     # 2026-10-07, à la manette : « tout n'est pas mis en évidence »).
     _MARGE = 4
 
@@ -26,6 +26,7 @@ class ToggleSwitch(QWidget):
         self._checked = checked
         self._knob_x = float(self._TRACK_W - 12 if checked else 12)
         self.setFixedSize(self._TRACK_W + 2 * self._MARGE, self._TRACK_H + 2 * self._MARGE)
+        forme(self, self._TRACK_H / 2, self._MARGE)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         # Sans ceci l'interrupteur était `NoFocus` : SEPT réglages ne
         # s'atteignaient qu'à la souris — lecture automatique des vidéos, son,
@@ -101,14 +102,4 @@ class ToggleSwitch(QWidget):
         p.setBrush(QBrush(QColor("#ffffff")))
         p.drawEllipse(QRectF(self._knob_x - self._KNOB_R, (self._TRACK_H - 2 * self._KNOB_R) / 2,
                               2 * self._KNOB_R, 2 * self._KNOB_R))
-        # Anneau de focus réservé au CLAVIER (cf. focus_visible) : un widget
-        # PEINT n'est pas atteint par la règle `:focus` du stylesheet, il doit
-        # donc le dessiner lui-même — sinon l'utilisateur au clavier peut
-        # atteindre l'interrupteur sans jamais voir lequel est sélectionné.
-        if self.property(_FOCUS_CLAVIER):
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.setPen(QPen(accent_qcolor(255), 2.0))
-            p.drawRoundedRect(
-                QRectF(0, 0, self._TRACK_W, self._TRACK_H).adjusted(-3, -3, 3, 3),
-                14, 14)
         p.end()

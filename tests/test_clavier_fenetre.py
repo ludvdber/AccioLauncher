@@ -67,14 +67,22 @@ class TestEntree:
 
 
 class TestAnneau:
-    def test_glowbutton_dessine_son_anneau_au_clavier(self, qtbot):
+    def test_jouer_atteint_au_clavier_a_l_anneau(self, qtbot):
+        """JOUER, bouton peint, ne se distinguait en rien (règle 15) : l'anneau unique le suit."""
+        from PyQt6.QtWidgets import QVBoxLayout, QWidget
+        from src.ui.focus_visible import _Anneau, _marque
+        fenetre = QWidget()
         bouton = GlowButton("JOUER")
-        qtbot.addWidget(bouton)
-        bouton.resize(160, 46)
-        sans = bouton.grab().toImage()
-        bouton.setProperty(PROPRIETE, True)
-        avec = bouton.grab().toImage()
-        assert sans != avec, "JOUER atteint au clavier ne se distingue en rien"
+        bouton.setFixedSize(160, 46)
+        QVBoxLayout(fenetre).addWidget(bouton)
+        qtbot.addWidget(fenetre)
+        fenetre.show()
+        qtbot.waitExposed(fenetre)
+        bouton.setFocus()
+        _marque(bouton, True)         # ce que pose un Tab
+        anneau = fenetre.findChild(_Anneau)
+        assert bouton.property(PROPRIETE) is True and anneau.isVisible()
+        assert anneau.geometry().contains(bouton.geometry())
 
 
 class TestVisite:

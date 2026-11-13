@@ -48,7 +48,6 @@ QFrame#preset[actif="true"] {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #16162c, stop:0.7 #0d0d1a);
     border: 1px solid #d6a72c;
 }
-QFrame#preset[focusClavier="true"]:focus { border: 2px solid #f0d060; }
 QFrame#surMesure {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.22); border-radius: 14px;
 }

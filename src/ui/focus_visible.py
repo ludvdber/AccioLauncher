@@ -8,10 +8,20 @@ alors que personne n'avait rien fait, et un clic sur JOUER laissait l'anneau
 derrière lui — dans les deux cas, l'œil est attiré pour rien.
 
 Supprimer l'anneau n'est pas une option : c'est le seul repère d'un utilisateur
-au clavier. On distingue donc les deux cas par la RAISON du focus, et le
-stylesheet ne cercle que les widgets marqués. Un widget jamais marqué n'a pas
-la propriété, donc le sélecteur ne l'atteint pas : le défaut est « pas
-d'anneau », ce qu'on veut.
+au clavier. On distingue donc les deux cas par la RAISON du focus : le widget
+reçoit la propriété `focusClavier`, et UN anneau le suit.
+
+Un seul anneau pour toute l'interface, dessiné ici : un widget transparent à la
+souris, enfant de la fenêtre, posé au-dessus du contrôle marqué, 2 px de la
+couleur de la maison, à 3 px du bord et arrondi comme le contrôle. Les
+feuilles de style en écrivaient sept façons différentes (cadre, couleur du
+texte, fond…), la règle `outline` globale ajoutait un rectangle à angles droits
+DANS le cadre, et un lien, un curseur ou « Lire la suite… » ne changeaient
+d'aucun pixel (audit UI tra5 et tra6, 2026-11-13). Aucune feuille de style ni
+aucun widget peint ne dessine donc son propre anneau (`test_focus_visible`).
+Le rayon se lit dans la feuille de style du contrôle ; un widget peint dit sa
+forme avec `forme()`. Dans une zone qui défile, l'anneau est coupé au bord
+visible de la zone.
 
 Le filtre est posé sur QApplication : il couvre aussi les dialogues et
 l'assistant de premier lancement, qui vivent avant MainWindow.
@@ -35,8 +45,13 @@ croyait désigné. Dans le groupe, Tab avance comme avant.
 """
 
 
-from PyQt6.QtCore import QEvent, QObject, Qt, QTimer
-from PyQt6.QtWidgets import QAbstractButton, QApplication, QScrollArea, QWidget
+import re
+
+from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, Qt, QTimer
+from PyQt6.QtGui import QPainter, QPen
+from PyQt6.QtWidgets import QAbstractButton, QAbstractScrollArea, QApplication, QScrollArea, QWidget
+
+from src.ui.theme import RAYON_CONTROLE, accent_qcolor
 
 
 PROPRIETE = "focusClavier"
@@ -57,17 +72,171 @@ _RAISONS_GARDEES = frozenset({
 })
 _MARGE_DEFILEMENT = 24
 
+# L'anneau : son épaisseur, et l'écart entre le bord du contrôle et le milieu du trait.
+_TRAIT = 2.0
+_ECART = 3
+_RAYON = "rayonFocus"           # propriétés posées par `forme()`
+_RETRAIT = "retraitFocus"
+# `#nom … { … border-radius: 13px` : le rayon que la feuille de style donne au contrôle.
+_RAYON_FEUILLE = r"#{}\b[^{{}}]*\{{[^}}]*?border-radius:\s*(\d+)px"
+_RAYON_NU = re.compile(r"^[^{}]*border-radius:\s*(\d+)px")
+PASTILLE = 10_000.0             # `forme(w, PASTILLE)` : rond, ou pastille, à toute hauteur
+
+
+def forme(widget: QWidget, rayon: float, retrait: int = 0) -> None:
+    """La forme d'un contrôle PEINT pour l'anneau : son rayon, et la marge transparente
+    qui entoure ce qu'il dessine (l'interrupteur en garde une)."""
+    widget.setProperty(_RAYON, float(rayon))
+    widget.setProperty(_RETRAIT, retrait)
+
+
+def _rayon(widget: QWidget, hauteur: int) -> float:
+    """Le rayon du contrôle : posé par `forme()`, sinon lu dans la feuille de style la plus
+    proche qui le nomme. Un rayon de pastille (au moins 40 % de la hauteur) suit la hauteur
+    réelle : `#filtre[grand="true"]` est plus haut que la règle `#filtre` qu'on lit."""
+    pose = widget.property(_RAYON)
+    rayon = float(pose) if pose is not None else None
+    nom = widget.objectName()
+    motif = re.compile(_RAYON_FEUILLE.format(re.escape(nom))) if nom else None
+    porteur: QWidget | None = widget
+    while rayon is None and porteur is not None:
+        feuille = porteur.styleSheet()
+        trouve = (_RAYON_NU.search(feuille) if porteur is widget else None) or (
+            motif.search(feuille) if motif is not None and feuille else None)
+        if trouve:
+            rayon = float(trouve.group(1))
+        porteur = porteur.parentWidget()
+    if rayon is None:
+        return float(RAYON_CONTROLE)
+    return hauteur / 2 if rayon >= 0.4 * hauteur else rayon
+
+
+class _Anneau(QWidget):
+    """L'anneau du contrôle marqué, au-dessus de tout dans sa fenêtre."""
+
+    def __init__(self, fenetre: QWidget) -> None:
+        super().__init__(fenetre)
+        self.setObjectName("anneauFocus")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.hide()
+        self._cible: QWidget | None = None
+        self._suivis: list[QWidget] = []
+        self._coupe = QRect()           # la partie visible, dans le repère de l'anneau
+        self._rayon = 0.0
+        self._en_attente = False
+
+    def suivre(self, cible: QWidget) -> None:
+        if cible is not self._cible:
+            self.lacher()
+            self._cible = cible
+            cible.destroyed.connect(self._detruite)
+            porteur: QWidget | None = cible
+            while porteur is not None and porteur is not self.parentWidget():
+                porteur.installEventFilter(self)
+                self._suivis.append(porteur)
+                porteur = porteur.parentWidget()
+        self._placer()
+
+    def lacher(self, cible: QWidget | None = None) -> None:
+        if cible is not None and cible is not self._cible:
+            return
+        if self._cible is not None:
+            try:
+                self._cible.destroyed.disconnect(self._detruite)
+            except (TypeError, RuntimeError):
+                pass
+        for porteur in self._suivis:
+            try:
+                porteur.removeEventFilter(self)
+            except RuntimeError:            # déjà détruit
+                pass
+        self._suivis.clear()
+        self._cible = None
+        self.hide()
+
+    def _detruite(self) -> None:
+        self._suivis.clear()
+        self._cible = None
+        self.hide()
+
+    def eventFilter(self, obj, event) -> bool:
+        if event.type() in (QEvent.Type.Move, QEvent.Type.Resize, QEvent.Type.Show,
+                            QEvent.Type.Hide) and not self._en_attente:
+            # Une mise en page bouge vingt widgets d'un coup : un seul placement après.
+            self._en_attente = True
+            QTimer.singleShot(0, self._replacer)
+        return False
+
+    def _replacer(self) -> None:
+        self._en_attente = False
+        if self._cible is not None:
+            self._placer()
+
+    def _placer(self) -> None:
+        cible, fenetre = self._cible, self.parentWidget()
+        if cible is None or fenetre is None or not cible.isVisible():
+            self.hide()
+            return
+        retrait = int(cible.property(_RETRAIT) or 0)
+        contour = QRect(cible.mapTo(fenetre, QPoint(0, 0)), cible.size()).adjusted(
+            retrait, retrait, -retrait, -retrait)
+        self._rayon = _rayon(cible, contour.height()) + _ECART
+        deborde = _ECART + int(_TRAIT)
+        zone = contour.adjusted(-deborde, -deborde, deborde, deborde)
+        visible = fenetre.rect()
+        porteur = cible.parentWidget()
+        while porteur is not None and porteur is not fenetre:
+            if isinstance(porteur, QAbstractScrollArea) and porteur.viewport() is not None:
+                vue = porteur.viewport()
+                visible = visible.intersected(QRect(vue.mapTo(fenetre, QPoint(0, 0)), vue.size()))
+            porteur = porteur.parentWidget()
+        coupe = zone.intersected(visible)
+        if coupe.isEmpty():
+            self.hide()
+            return
+        self.setGeometry(zone)
+        self._coupe = coupe.translated(-zone.topLeft())
+        self.raise_()
+        self.show()
+        self.update()
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setClipRect(self._coupe)
+        p.setPen(QPen(accent_qcolor(), _TRAIT))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        moitie = _TRAIT / 2
+        p.drawRoundedRect(QRectF(self.rect()).adjusted(moitie, moitie, -moitie, -moitie),
+                          self._rayon, self._rayon)
+        p.end()
+
+
+def _anneau(fenetre: QWidget, creer: bool) -> _Anneau | None:
+    """L'anneau de la fenêtre, créé au premier besoin si `creer`."""
+    anneau = fenetre.findChild(_Anneau, "anneauFocus", Qt.FindChildOption.FindDirectChildrenOnly)
+    return _Anneau(fenetre) if anneau is None and creer else anneau
+
 
 def _marque(widget: QWidget, actif: bool) -> None:
-    """Pose la propriété et redemande le style — seulement si ça change."""
-    if widget.property(PROPRIETE) == actif:
+    """Pose la propriété, et l'anneau de la fenêtre suit le widget marqué ou le quitte."""
+    if isinstance(widget, _Anneau):
         return
-    widget.setProperty(PROPRIETE, actif)
-    style = widget.style()
-    if style is not None:
-        style.unpolish(widget)
-        style.polish(widget)
-    widget.update()
+    if widget.property(PROPRIETE) != actif:
+        widget.setProperty(PROPRIETE, actif)
+        widget.update()        # le Relevé peint sa ligne choisie au clavier
+    fenetre = widget.window()
+    if fenetre is widget:      # une fenêtre seule n'a pas où poser d'anneau
+        return
+    anneau = _anneau(fenetre, actif)
+    if anneau is None:
+        return
+    if actif:
+        anneau.suivre(widget)
+    else:
+        anneau.lacher(widget)
 
 
 def marquer(widget: QWidget | None) -> None:

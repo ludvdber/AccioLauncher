@@ -35,7 +35,6 @@ QFrame#blocFolio {
     background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; border-radius: 8px;
 }
 QFrame#blocFolio:hover { background: rgba(255, 255, 255, 0.07); }
-QFrame#blocFolio[focusClavier="true"]:focus { border-color: #d6a72c; }
 """
 
 

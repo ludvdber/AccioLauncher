@@ -33,7 +33,9 @@ SCALE_FAR = 0.9
 
 OPACITY_SELECTED = 1.0
 OPACITY_ADJACENT = 0.65
-OPACITY_FAR = 0.45
+# 0,45 écrasait toutes les jaquettes (valeur moyenne 0,19 à 0,30) : la couleur d'un jeu
+# installé ne se distinguait plus du gris d'un absent (audit UI acc7, 2026-11-13).
+OPACITY_FAR = 0.60
 
 
 class Carousel(QWidget):

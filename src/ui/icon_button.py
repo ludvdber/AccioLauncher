@@ -42,7 +42,7 @@ from PyQt6.QtWidgets import QAbstractButton, QWidget
 
 from src.core.config import ASSETS_DIR
 from src.ui import theme
-from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
+from src.ui.focus_visible import PASTILLE, forme
 
 _DOSSIER = ASSETS_DIR / "icons"
 
@@ -229,6 +229,8 @@ class IconButton(QAbstractButton):
         self._second = second
         self._survol = False
         self._cadre = QColor(cadre) if cadre else None
+        # L'anneau du clavier (`focus_visible`) épouse le cadre, ou le rond sans cadre.
+        forme(self, 6 if cadre else PASTILLE)
         self._galet = galet
         self.setFixedSize(round(taille * 1.6) if second else taille, taille)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -314,19 +316,6 @@ class IconButton(QAbstractButton):
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(self._halo(30 if self._survol else 52))
             p.drawEllipse(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5))
-
-        # L'anneau de focus reste réservé au CLAVIER (cf. focus_visible) : un
-        # bouton peint n'est pas atteint par la règle `:focus` du stylesheet,
-        # il doit donc le dessiner lui-même ou l'utilisateur au clavier perd
-        # son seul repère.
-        if self.property(_FOCUS_CLAVIER):
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.setPen(QPen(theme.accent_qcolor(210), 1.2))
-            anneau = QRectF(self.rect()).adjusted(1.0, 1.0, -1.0, -1.0)
-            if self._cadre is not None:
-                p.drawRoundedRect(anneau, 6, 6)
-            else:
-                p.drawEllipse(anneau)
 
         ratio = self.devicePixelRatioF()
         if self._second is not None:

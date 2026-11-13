@@ -366,7 +366,7 @@ class MiniLecteur(QWidget):
         self._bouton.setStyleSheet(themed(
             "QPushButton#miniLecteur { background: transparent; border: 1px solid rgba(255, 255, 255, 0.10);"
             " border-radius: 14px; }"
-            "QPushButton#miniLecteur:hover, QPushButton#miniLecteur[focusClavier=\"true\"]:focus {"
+            "QPushButton#miniLecteur:hover {"
             " border-color: rgba(214, 167, 44, 0.55); }"))
         dedans = QHBoxLayout(self._bouton)
         dedans.setContentsMargins(5, 0, 12, 0)
@@ -397,7 +397,7 @@ class MiniLecteur(QWidget):
             " border-radius: 14px; }"
             "QPushButton#sonLauncher[coupe=\"true\"] { background: rgba(214, 167, 44, 0.16);"
             " border-color: rgba(214, 167, 44, 0.55); }"
-            "QPushButton#sonLauncher:hover, QPushButton#sonLauncher[focusClavier=\"true\"]:focus {"
+            "QPushButton#sonLauncher:hover {"
             " border-color: rgba(214, 167, 44, 0.55); }"))
         self._son.clicked.connect(media.fond.basculer_son)
         lay.addWidget(self._son)

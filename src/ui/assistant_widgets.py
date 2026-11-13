@@ -42,17 +42,14 @@ QPushButton#suivant:hover {{ background: rgba(214, 167, 44, 0.26); }}
 QPushButton#suivant:disabled {{
     color: #6f6d8e; background: transparent; border-color: rgba(255, 255, 255, 0.10);
 }}
-QPushButton#suivant[focusClavier="true"]:focus {{ border: 2px solid #f0d060; padding: 0 21px; }}
 QPushButton#carteChoix {{
     background: #0d0d1a; border: 2px solid rgba(255, 255, 255, 0.09);
     border-radius: {RAYON_CARTE}px; text-align: left;
 }}
 QPushButton#carteChoix:hover {{ border-color: rgba(214, 167, 44, 0.55); }}
 QPushButton#carteChoix:checked {{ border-color: #d6a72c; background: rgba(214, 167, 44, 0.10); }}
-QPushButton#carteChoix[focusClavier="true"]:focus {{ border-color: #f0d060; }}
 QPushButton#ligneJeu {{ background: transparent; border: none; text-align: left; }}
 QPushButton#ligneJeu:hover {{ background: rgba(255, 255, 255, 0.03); }}
-QPushButton#ligneJeu[focusClavier="true"]:focus {{ background: rgba(214, 167, 44, 0.10); }}
 """
 
 _JAQUETTE_LIGNE = QSize(30, 42)
@@ -331,8 +328,7 @@ class CarteCouleur(CarteChoix):
             f"QPushButton {{ background: {palette.bg_dialog}; border: 2px solid rgba(255, 255, 255, 0.09);"
             f" border-radius: {RAYON_CARTE}px; text-align: left; }}"
             f"QPushButton:hover {{ border-color: {palette.accent}; }}"
-            f"QPushButton:checked {{ border-color: {palette.accent_light}; }}"
-            f"QPushButton[focusClavier=\"true\"]:focus {{ border-color: {palette.accent_light}; }}")
+            f"QPushButton:checked {{ border-color: {palette.accent_light}; }}")
         lay = QVBoxLayout(self)
         lay.setContentsMargins(10, 12, 10, 10)
         lay.setSpacing(8)

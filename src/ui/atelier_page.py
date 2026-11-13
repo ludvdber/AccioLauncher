@@ -55,7 +55,6 @@ QPushButton#metier:hover {{ background: rgba(255, 255, 255, 0.04); }}
 QPushButton#metier:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
 }}
-QPushButton#metier[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
 QFrame#format {{
     background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 13px;

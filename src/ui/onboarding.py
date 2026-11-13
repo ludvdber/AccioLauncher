@@ -921,6 +921,16 @@ class OnboardingDialog(QDialog):
         else:
             self._terminer()
 
+    def keyPressEvent(self, event) -> None:
+        # Échap (et B à la manette) fait « Retour » tant qu'une étape est derrière :
+        # il fermait l'assistant, donc le launcher, et le dossier, les jeux cochés et
+        # le Choixpeau étaient à refaire (audit UI v15, 2026-11-13). La croix abandonne.
+        if (event.key() == Qt.Key.Key_Escape and self._etapes is not None
+                and self._racine.currentWidget() is self._etapes and self._btn_retour.isVisibleTo(self)):
+            self._retour()
+            return
+        super().keyPressEvent(event)
+
     def _retour(self) -> None:
         ecran = self._ecran
         if ecran == DOSSIER:
@@ -1012,8 +1022,8 @@ class OnboardingDialog(QDialog):
 def run_onboarding() -> Config:
     """Affiche l'assistant et retourne la Config créée.
 
-    Lève `OnboardingAnnule` si l'assistant n'a pas abouti — la croix, Échap,
-    ou un dossier devenu inaccessible entre-temps. **Aucune config n'est
+    Lève `OnboardingAnnule` si l'assistant n'a pas abouti — la croix, Échap au
+    premier écran (ailleurs, il fait « Retour »), ou un dossier devenu inaccessible entre-temps. **Aucune config n'est
     alors écrite** : c'est ce qui permet à l'assistant de revenir au
     lancement suivant. Il écrivait auparavant des défauts, ce qui démarrait
     le launcher ET sautait l'installation pour de bon.

@@ -35,7 +35,6 @@ QRadioButton:checked {
     color: #f0d060; background: rgba(214, 167, 44, 0.14);
     border-color: rgba(214, 167, 44, 0.80);
 }
-QRadioButton[focusClavier="true"]:focus { border-color: #f0d060; }
 QRadioButton::indicator {
     width: 12px; height: 12px; border-radius: 8px;
     border: 2px solid #8a8aaa; background: transparent;
@@ -129,20 +128,6 @@ QPushButton#btnCancel {{
 
 QPushButton#btnCancel:hover {{
     background-color: #e74c3c;
-}}
-
-/* ---------- Focus clavier visible (A11Y) ----------
-   L'anneau ne s'affiche QUE si le focus vient du clavier : la propriété
-   `focusClavier` est posée par src/ui/focus_visible.py selon la raison du
-   focus. Sans elle, Qt cerclait le premier bouton de la chaîne dès l'ouverture
-   de la fenêtre (personne n'avait rien fait) et laissait l'anneau après un
-   simple clic. Ne pas retirer le sélecteur : c'est le seul repère au clavier. */
-
-QPushButton[focusClavier="true"]:focus, QLabel[focusClavier="true"]:focus,
-QSlider[focusClavier="true"]:focus, QProgressBar[focusClavier="true"]:focus,
-QLineEdit[focusClavier="true"]:focus, QComboBox[focusClavier="true"]:focus {{
-    outline: 2px solid {COLOR_ACCENT_GOLD};
-    outline-offset: 1px;
 }}
 
 QPushButton#btnMute {{

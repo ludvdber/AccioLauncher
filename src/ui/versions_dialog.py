@@ -69,7 +69,6 @@ QPushButton#version:hover {{ background: rgba(255, 255, 255, 0.04); }}
 QPushButton#version:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
 }}
-QPushButton#version[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
 QFrame#filetOr {{ background: rgba(214, 167, 44, 0.16); border: none; }}
 """
 

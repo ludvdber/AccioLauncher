@@ -206,11 +206,9 @@ _STYLE_TOUCHE = (
     "QPushButton:hover { border-color: #d6a72c; }"
     "QPushButton[ecoute=\"true\"] { color: #f2e6c4; background: rgba(214,167,44,0.12);"
     " border-color: #d6a72c; font-style: italic; }"
-    "QPushButton[focusClavier=\"true\"]:focus { border-color: #d6a72c; }"
 )
 _STYLE_RENDRE = (
-    "QPushButton { background: transparent; border: none; padding: 0px; }"
-    "QPushButton[focusClavier=\"true\"]:focus { border: 1px solid #d6a72c;"
+    "QPushButton { background: transparent; border: none; padding: 0px;"
     f" border-radius: {RAYON_CONTROLE}px; }}"
 )
 

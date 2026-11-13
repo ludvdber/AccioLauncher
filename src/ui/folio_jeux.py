@@ -40,10 +40,11 @@ from src.core import (
 from src.core.config import cache_pour
 from src.core.i18n import get_language, tr, trn
 from src.ui.carte_3d import Carte3D
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, survol_et_focus, texte, transparent
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, survol, texte, transparent
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
+from src.ui.focus_visible import forme
 from src.ui.icon_button import pixmap_icone
 from src.ui.folio_page import (
     _CarteSorcier,
@@ -572,6 +573,7 @@ class _VignetteHP4(QPushButton):
         self._image: QImage | None = None
         self._pix: QPixmap | None = None
         case_de_folio(self)
+        forme(self, 3)          # l'anneau du clavier épouse la vignette
         self.setFixedSize(taille)
         self.setAccessibleName(f"{titre_jeu}, " + (tr("Obtenue") if possedee
                                                    else tr("Pas encore obtenue")))
@@ -606,7 +608,7 @@ class _VignetteHP4(QPushButton):
             stylo.setStyle(Qt.PenStyle.DashLine)
             p.setPen(stylo)
         p.drawRoundedRect(cadre, 3, 3)
-        survol_et_focus(p, self, 3)
+        survol(p, self, 3)
         p.end()
 
 

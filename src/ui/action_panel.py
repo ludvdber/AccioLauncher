@@ -56,13 +56,16 @@ def _police_action():
 
 
 class _BoutonIcone(IconButton):
-    """Bouton encadré de la rangée : le contour reste discret, l'encre se lit."""
+    """Bouton encadré de la rangée : le contour reste discret, l'encre se lit. `vif` : un
+    état qui dévie de l'habituel (la difficulté hors Normal), cadre et encre à l'accent."""
 
-    def __init__(self, icone: str, second: str | None = None) -> None:
-        super().__init__(icone, taille=_HAUTEUR_JOUER, cadre=_CADRE_ICONES, second=second)
+    def __init__(self, icone: str, second: str | None = None, *, vif: bool = False) -> None:
+        super().__init__(icone, taille=_HAUTEUR_JOUER,
+                         cadre=palette_courante().accent if vif else _CADRE_ICONES, second=second)
+        self._vif = vif
 
     def _encre(self, actif: bool) -> QColor:
-        return super()._encre(actif) if actif else QColor(_ENCRE_ICONES)
+        return super()._encre(actif) if actif or self._vif else QColor(_ENCRE_ICONES)
 
 
 class ActionPanel(QWidget):
@@ -511,10 +514,14 @@ class ActionPanel(QWidget):
         idents = dp.idents_du_jeu(game, ini)
         if not any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal"):
             return
-        btn = _BoutonIcone("epee")
+        # L'épée dit le niveau quand il n'est pas Normal : une partie en Hardcore avait la même
+        # fiche qu'en Normal (audit UI acc5, 2026-11-13). Au repos, elle reste discrète.
+        courant = dp.courant(dp.lire(game, self._manager.config, ini, idents), idents)
+        nom = tr("Sur mesure") if courant == dp.SUR_MESURE else tr(dp.PAR_IDENT[courant].nom)
+        btn = _BoutonIcone("epee", vif=courant != "normal")
         btn.setObjectName("boutonDifficulte")
-        btn.setAccessibleName(tr("Difficulté de {}").format(game.name))
-        btn.setToolTip(tr("Difficulté"))
+        btn.setAccessibleName(tr("Difficulté de {} : {}").format(game.name, nom))
+        btn.setToolTip(tr("Difficulté") if courant == "normal" else tr("Difficulté : {}").format(nom))
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(self.difficulte_clicked)
         self._action_layout.addWidget(btn)

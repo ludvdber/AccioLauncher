@@ -76,6 +76,22 @@ class TestLeParcours:
         assert dlg._ecran == DOSSIER
         assert dlg._btn_retour.isVisibleTo(dlg)
 
+    def test_echap_revient_d_un_ecran_au_lieu_de_fermer(self, assistant, qtbot):
+        """Échap (B à la manette) fermait l'assistant, donc le launcher (audit UI v15)."""
+        from PyQt6.QtCore import Qt
+        from src.ui.onboarding import DOSSIER, JEUX
+        dlg = assistant()
+        dlg._suivant()
+        assert dlg._ecran == JEUX
+        qtbot.keyClick(dlg, Qt.Key.Key_Escape)
+        assert dlg._ecran == DOSSIER
+        qtbot.keyClick(dlg, Qt.Key.Key_Escape)
+        assert dlg._racine.currentIndex() == 0          # l'écran de la langue, ouvert
+        rejete = []
+        dlg.rejected.connect(lambda: rejete.append(True))
+        qtbot.keyClick(dlg, Qt.Key.Key_Escape)          # au premier écran, Échap ferme
+        assert rejete
+
     def test_le_rail_dit_ce_qui_vient(self, assistant):
         dlg = assistant()
         noms = [e.libelle.text() for e in dlg._rail.etapes]

@@ -106,7 +106,6 @@ def construire_dialogue(report: str):
         f" border-radius: {RAYON_CONTROLE}px; color: #d9d6e8; background: rgba(255, 255, 255, 0.03);"
         " border: 1px solid rgba(255, 255, 255, 0.14); }"
         "QPushButton#crashDiscord:hover { border-color: #d6a72c; }"
-        "QPushButton#crashDiscord[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; padding: 0 15px; }"
     ) + feuille_de_style())
     layout = QVBoxLayout(dlg)
     layout.setContentsMargins(28, 24, 28, 22)

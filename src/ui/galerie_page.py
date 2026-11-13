@@ -49,7 +49,7 @@ from src.core.liens import DISCORD_MEDIAS_URL
 from src.ui.composants import (
     ENCRE, ENCRE_DOUCE, bouton, bouton_retour, feuille_de_style, filtre as bouton_filtre, rond,
     surtitre, texte,
-    survol_et_focus,
+    survol,
 )
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
@@ -222,7 +222,7 @@ class _Vignette(QPushButton):
             pen.setWidthF(2.0)
             p.setPen(pen)
         p.drawRoundedRect(cadre, 6, 6)
-        survol_et_focus(p, self, 6)
+        survol(p, self, 6)
         p.end()
 
 

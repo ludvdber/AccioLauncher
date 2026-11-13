@@ -9,11 +9,13 @@ Retirer l'anneau n'était pas une option : c'est le seul repère d'un utilisateu
 au clavier. Ces tests vérifient les deux moitiés du contrat.
 """
 
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("pytestqt")
 
-from PyQt6.QtCore import QEvent, Qt  # noqa: E402
+from PyQt6.QtCore import QEvent, QPoint, QRect, Qt  # noqa: E402
 from PyQt6.QtGui import QFocusEvent, QKeyEvent  # noqa: E402
 from PyQt6.QtWidgets import QApplication, QPushButton, QScrollArea, QVBoxLayout, QWidget  # noqa: E402
 
@@ -143,20 +145,98 @@ def test_tab_entre_dans_un_groupe_par_le_choix_coche(qtbot):
     assert _choix_du_groupe(dehors, boutons[0]) is None
 
 
-class TestStylesheet:
-    def test_la_regle_focus_est_conditionnee(self):
-        """Sans la condition, la règle redeviendrait celle d'avant."""
-        from src.ui.styles import MAIN_STYLE
-        assert 'QPushButton[focusClavier="true"]:focus' in MAIN_STYLE
-        assert "QPushButton:focus" not in MAIN_STYLE, (
-            "un sélecteur :focus non conditionné remettrait l'anneau à "
-            "l'ouverture de la fenêtre")
+def _fenetre_et_bouton(qtbot, feuille=""):
+    fenetre = QWidget()
+    lay = QVBoxLayout(fenetre)
+    lay.setContentsMargins(30, 30, 30, 30)
+    btn = QPushButton("Bouton")
+    btn.setFixedSize(120, 34)
+    btn.setStyleSheet(feuille)
+    lay.addWidget(btn)
+    qtbot.addWidget(fenetre)
+    fenetre.show()
+    qtbot.waitExposed(fenetre)
+    return fenetre, btn
 
-    def test_l_anneau_existe_toujours(self):
-        """L'A11Y n'est pas négociable : la règle doit rester présente."""
-        from src.ui.styles import COLOR_ACCENT_GOLD, MAIN_STYLE
-        assert "outline: 2px solid" in MAIN_STYLE
-        assert COLOR_ACCENT_GOLD in MAIN_STYLE
+
+def _anneau(fenetre):
+    from src.ui.focus_visible import _Anneau
+    return fenetre.findChild(_Anneau)
+
+
+class TestUnSeulAnneau:
+    """Audit UI tra5 et tra6 (2026-11-13) : sept façons d'écrire le focus, un rectangle à
+    angles droits DANS le cadre, et des liens, curseurs et libellés sans aucun repère."""
+
+    def test_l_anneau_entoure_le_controle_et_part_avec_le_focus(self, qtbot, filtre_pose):
+        from src.ui.theme import accent_qcolor
+        fenetre, btn = _fenetre_et_bouton(qtbot)
+        _focus(btn, Qt.FocusReason.TabFocusReason)
+        anneau = _anneau(fenetre)
+        assert anneau is not None and anneau.isVisible()
+        assert anneau.geometry() == btn.geometry().adjusted(-5, -5, 5, 5)
+        image = fenetre.grab().toImage()
+        haut = image.pixelColor(btn.geometry().center().x(), btn.geometry().top() - 4)
+        assert haut.name() == accent_qcolor().name(), "2 px de la couleur de la maison, à 3 px"
+        QApplication.sendEvent(btn, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.OtherFocusReason))
+        assert not anneau.isVisible()
+
+    def test_un_clic_ne_pose_aucun_anneau(self, qtbot, filtre_pose):
+        fenetre, btn = _fenetre_et_bouton(qtbot)
+        _focus(btn, Qt.FocusReason.MouseFocusReason)
+        anneau = _anneau(fenetre)
+        assert anneau is None or not anneau.isVisible()
+
+    @pytest.mark.parametrize(("feuille", "rayon"), [
+        ("", 6 + 3),                                            # le rayon des contrôles
+        ("border-radius: 9px;", 9 + 3),                         # sa propre feuille
+        ("QPushButton#x { border-radius: 15px; }", 17 + 3),     # une pastille suit sa hauteur
+    ])
+    def test_l_anneau_epouse_le_rayon_du_controle(self, qtbot, filtre_pose, feuille, rayon):
+        fenetre, btn = _fenetre_et_bouton(qtbot, feuille)
+        btn.setObjectName("x")
+        _focus(btn, Qt.FocusReason.TabFocusReason)
+        assert _anneau(fenetre)._rayon == rayon
+
+    def test_dans_une_zone_qui_defile_il_suit_et_reste_coupe_au_bord(self, qtbot, filtre_pose):
+        fenetre = QWidget()
+        lay = QVBoxLayout(fenetre)
+        page = QWidget()
+        dedans = QVBoxLayout(page)
+        boutons = [QPushButton(str(n)) for n in range(30)]
+        for b in boutons:
+            b.setFixedHeight(40)
+            dedans.addWidget(b)
+        zone = QScrollArea()
+        zone.setWidget(page)
+        zone.setWidgetResizable(True)
+        lay.addWidget(zone)
+        fenetre.resize(240, 300)
+        qtbot.addWidget(fenetre)
+        fenetre.show()
+        qtbot.waitExposed(fenetre)
+        _focus(boutons[2], Qt.FocusReason.TabFocusReason)
+        anneau = _anneau(fenetre)
+        avant = anneau.geometry()
+        zone.verticalScrollBar().setValue(30)
+        qtbot.waitUntil(lambda: anneau.geometry() != avant)
+        attendu = QRect(boutons[2].mapTo(fenetre, QPoint(0, 0)), boutons[2].size())
+        assert anneau.geometry() == attendu.adjusted(-5, -5, 5, 5), "l'anneau suit le défilement"
+        zone.verticalScrollBar().setValue(zone.verticalScrollBar().maximum())
+        qtbot.waitUntil(lambda: not anneau.isVisible())
+
+    def test_aucune_feuille_ni_aucun_widget_peint_ne_dessine_son_anneau(self):
+        """Un deuxième anneau dessiné ailleurs refait le double cadre de tra5."""
+        import re
+        fautifs = []
+        for fichier in sorted(Path("src/ui").glob("*.py")):
+            source = fichier.read_text(encoding="utf-8")
+            if re.search(r"focusClavier=\\?\"true\\?\"\]:focus|outline:\s*\d", source):
+                fautifs.append(fichier.name)
+            lit_la_marque = re.search(r"property\((_FOCUS_CLAVIER|PROPRIETE|\"focusClavier\")\)", source)
+            if lit_la_marque and fichier.name not in ("focus_visible.py", "stats_releve.py", "action_panel.py"):
+                fautifs.append(fichier.name)
+        assert fautifs == []
 
 
 def test_aucun_selecteur_focus_non_conditionne():
@@ -165,7 +245,6 @@ def test_aucun_selecteur_focus_non_conditionne():
     (Collections, Carnet, barre du haut, aide antivirus ; audit du 2026-10-29).
     Les mentions entre accents graves (documentation) ne comptent pas."""
     import re
-    from pathlib import Path
     fautifs = []
     for fichier in sorted(Path("src/ui").glob("*.py")):
         for numero, ligne in enumerate(fichier.read_text(encoding="utf-8").splitlines(), 1):

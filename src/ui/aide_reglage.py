@@ -22,7 +22,6 @@ _BOUTON_STYLE = (
     "QPushButton { color: #b0b0c8; background: transparent; border: 1px solid #55556a;"
     " border-radius: 9px; padding: 0px; margin: 5px; font-weight: bold; }"
     "QPushButton:hover { color: #e8c547; border-color: #d6a72c; }"
-    "QPushButton[focusClavier=\"true\"]:focus { border: 2px solid #d6a72c; }"
 )
 
 

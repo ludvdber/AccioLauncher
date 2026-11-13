@@ -27,7 +27,6 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QPushButton, QWidget
 
 from src.ui import theme
-from src.ui.focus_visible import PROPRIETE as _FOCUS_CLAVIER
 from src.ui.icon_button import pixmap_icone
 
 
@@ -131,16 +130,6 @@ class GlowButton(QPushButton):
             p.setPen(QPen(QColor(r, g, b, 180 if self._hovered else 120), 1.5))
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawRoundedRect(btn_rect, radius, radius)
-
-        # L'anneau de focus du CLAVIER (et de la manette), comme IconButton : la
-        # règle `:focus` du stylesheet n'atteint pas un bouton peint, et JOUER
-        # atteint par Tab ne se distinguait en rien (règle 15, grand audit du
-        # 2026-11-02). Clair sur le plein doré, à l'accent sur le contour.
-        if self.property(_FOCUS_CLAVIER):
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.setPen(QPen(QColor(255, 255, 255, 215) if self._style == "filled"
-                          else theme.accent_qcolor(210), 1.5))
-            p.drawRoundedRect(btn_rect.adjusted(2.5, 2.5, -2.5, -2.5), radius - 2, radius - 2)
 
         tc = QColor(self._text_color)
         if self._style == "outline" and self._hovered:

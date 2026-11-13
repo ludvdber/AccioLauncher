@@ -325,7 +325,7 @@ class CarouselItem(QWidget):
         self._peindre_jaquette(p, geo)
         if self._selected:
             self._peindre_halo_selection(p, geo)
-        if not self._cached_installed and not self._cached_coming_soon:
+        if self._absent():
             self._peindre_voile_absent(p, geo)
         if self._cached_has_update:
             self._peindre_badge_maj(p, geo)
@@ -375,13 +375,16 @@ class CarouselItem(QWidget):
         p.setOpacity(geo.opacite)
 
     def _peindre_jaquette(self, p: QPainter, geo: _Geo) -> None:
-        """L'illustration, ou son remplacement quand elle manque."""
-        if self._pixmap:
+        """L'illustration, ou son remplacement quand elle manque. Un jeu absent montre sa
+        jaquette GRISE seule : posé à 0,7 par-dessus la couleur, le gris laissait HP7a absent
+        plus coloré que HP7b installé (saturation 0,092 contre 0,054 ; audit UI acc7)."""
+        pixmap = self._gris if self._absent() and self._gris is not None else self._pixmap
+        if pixmap:
             clip = QPainterPath()
             clip.addRoundedRect(float(geo.x), float(geo.y), float(geo.w),
                                 float(geo.h), geo.radius, geo.radius)
             p.setClipPath(clip)
-            p.drawPixmap(geo.x, geo.y, geo.w, geo.h, self._pixmap)
+            p.drawPixmap(geo.x, geo.y, geo.w, geo.h, pixmap)
             p.setClipping(False)
             return
         self._peindre_fond_repli(p, geo)
@@ -426,19 +429,19 @@ class CarouselItem(QWidget):
         p.drawRoundedRect(geo.x + 1, geo.y + 1, geo.w - 2, geo.h - 2,
                           geo.radius, geo.radius)
 
+    def _absent(self) -> bool:
+        return not self._cached_installed and not self._cached_coming_soon
+
     def _peindre_voile_absent(self, p: QPainter, geo: _Geo) -> None:
-        """Jeu pas installé : jaquette légèrement grisée (maquette « Plan du
-        launcher v2 », Ludo 2026-10-26). Ce qui est installé se reconnaît à sa
-        couleur ; le point vert et le numéro de version, huit fois la même
+        """Jeu pas installé : jaquette grise (`_peindre_jaquette`) sous un voile léger
+        (maquette « Plan du launcher v2 », Ludo 2026-10-26). Ce qui est installé se
+        reconnaît à sa couleur ; le point vert et le numéro de version, huit fois la même
         information, sont partis (la version vit dans l'engrenage)."""
         clip = QPainterPath()
         clip.addRoundedRect(float(geo.x), float(geo.y), float(geo.w),
                             float(geo.h), geo.radius, geo.radius)
         p.save()
         p.setClipPath(clip)
-        if self._gris is not None:
-            p.setOpacity(geo.opacite * 0.7)
-            p.drawPixmap(geo.x, geo.y, geo.w, geo.h, self._gris)
         p.setOpacity(1.0)
         p.fillRect(geo.x, geo.y, geo.w, geo.h, theme.bg_qcolor(70))
         p.restore()

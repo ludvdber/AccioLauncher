@@ -259,8 +259,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Lissage des contours (FXAA)",
             "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, "
             "toiles de tente), avec un léger renforcement de la netteté. Il porte aussi les "
-            "effets ci-dessous : l'éteindre éteint ombres de contact, halo, rayons et "
-            "couleurs.",
+            "effets ci-dessous : l'éteindre éteint ombres de contact, « Halo ajouté par Accio », "
+            "rayons et couleurs. La « Lueur du jeu » n'en dépend pas.",
             defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("nettete", "Accio.Graphics", "Sharpness",
             "Netteté",
@@ -400,9 +400,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             etiquettes=((2, "En caméra libre"), (0, "Toujours")),
             onglet="image", cout=(("GPU", 2), ("CPU", 2)), se_voit=True, beta=True),
     Reglage("halo", "Accio.Graphics", "Bloom",
-            "Halo lumineux",
+            "Halo ajouté par Accio",
             "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour "
-            "d'elles.",
+            "d'elles. Indépendant de la « Lueur du jeu », celle que le jeu pose lui-même.",
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
     # HP5, [Accio.Graphics] NativeBloomStrength du correctif (settings.cpp, glow.h ; lu au démarrage seulement) :
     # la part de la lueur DU JEU posée sur l'image, 0 à 100, 100 = livré et clé absente. Indépendante du FXAA et
@@ -411,11 +411,11 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # des lampes et des sorts. L'ini livré de HP5 porte 60 (décision de Ludo, 2026-11-12). Pas dans les PREREGLAGES :
     # c'est un goût, pas un coût. Pas HP6 tant qu'il n'est pas vu.
     Reglage("force_halo", "Accio.Graphics", "NativeBloomStrength",
-            "Force du halo",
+            "Lueur du jeu",
             "La lueur que le jeu pose autour des lumières. « D'origine », elle déborde en liseré orangé autour des "
             "cheveux et des visages ; « Douce » l'en retire et garde celle des lampes et des sorts. Plus bas, l'image "
             "s'assombrit, et « Aucune » éteint aussi la lueur des lampes et des sorts. Compte au prochain lancement "
-            "du jeu.",
+            "du jeu. Indépendante du « Halo ajouté par Accio ».",
             choix=(100, 60, 30, 0), zero="D'origine",
             etiquettes=((60, "Douce"), (30, "Faible"), (0, "Aucune")),
             onglet="image", se_voit=True),

@@ -243,9 +243,6 @@ class _Ligne(QWidget):
             p.fillRect(r, fond)
         if au_clavier:
             p.fillRect(QRectF(0, 0, 2, r.height()), accent_qcolor())
-            p.setPen(QPen(accent_qcolor(170), 1, Qt.PenStyle.DashLine))
-            p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawRect(r.adjusted(0.5, 0.5, -0.5, -0.5))
         if self._rattachee:
             # Le coude de la partie 2 vers la partie 1, dans la colonne des années.
             p.setPen(QPen(accent_qcolor(110), 1))

@@ -18,7 +18,7 @@ from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.composants import html_lien
 from src.ui.clickable_label import ClickableLabel
-from src.ui.fonts import cinzel, cinzel_decorative, body_font
+from src.ui.fonts import cinzel, body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.resume_partie import BlocFolio, cartes_eventail, lieu_resume, lire_resume, phrase_derniere_partie
 from src.ui.theme import current as current_theme, themed
@@ -326,7 +326,12 @@ class InfoPanel(QWidget):
         self._title.setObjectName("gameTitle")
         # Texte du catalogue : PlainText dès la construction (règle 57).
         self._title.setTextFormat(Qt.TextFormat.PlainText)
-        self._title.setFont(cinzel_decorative(36))   # famille ; la TAILLE vient du QSS
+        # Cinzel en Black, capitales régulières : Cinzel Decorative n'orne que certaines
+        # initiales, et on lisait « Harry potter », « l'école des Sorciers » sur le plus gros
+        # texte de l'écran (audit UI acc12, 2026-11-13). La Decorative reste à la marque.
+        titre = cinzel(36)                           # famille ; la TAILLE vient du QSS
+        titre.setWeight(QFont.Weight.Black)
+        self._title.setFont(titre)
         self._title.setWordWrap(True)
         self._title.setMaximumWidth(_TITLE_MAX_W)  # raboté dans _apply_available_width
         # Sélecteur par ID : avec un simple « QLabel », la règle

@@ -383,6 +383,23 @@ class TestBoutonDeLaFiche:
         assert page._onglets["difficulte"].isChecked(), "ouverte sur l'onglet Difficulté"
         page.accept()
 
+    @pytest.mark.parametrize(("niveau", "bulle", "vif"), [
+        ("normal", "Difficulté", False),
+        ("hardcore", "Difficulté : Hardcore", True),
+        ("sur_mesure", "Difficulté : Sur mesure", True),
+    ])
+    def test_l_epee_dit_le_niveau_quand_il_n_est_pas_normal(self, make_window, monkeypatch,
+                                                            niveau, bulle, vif):
+        """Audit UI acc5 : une partie en Hardcore avait la même fiche qu'en Normal."""
+        from src.core import difficulte_presets as dp
+        from src.core.game_manager import GameManager, GameState
+        monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j == "hp2")
+        monkeypatch.setattr(GameManager, "get_state", lambda self, j: GameState.INSTALLED
+                            if j == "hp2" else GameState.NOT_INSTALLED)
+        monkeypatch.setattr(dp, "courant", lambda valeurs, idents: niveau)
+        bouton = self._bouton(make_window(), "hp2")
+        assert bouton.toolTip() == bulle and bouton._vif is vif
+
 
 def test_le_pied_dit_quand_hp6_le_prend(qtbot, dossier_hp6):
     """Sur l'onglet Difficulté de HP6, la partie en cours le prend : le pied ne dit

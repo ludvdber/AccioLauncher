@@ -55,8 +55,6 @@ QPushButton#prereglage:checked, QPushButton#choix:checked {{
                                 stop:0 rgba(214, 167, 44, 0.13), stop:1 rgba(214, 167, 44, 0.04));
 }}
 QPushButton#prereglage[surMesure="true"] {{ border-style: dashed; }}
-QPushButton#prereglage[focusClavier="true"]:focus,
-QPushButton#choix[focusClavier="true"]:focus {{ border: 2px solid #d6a72c; }}
 QPushButton#choix:disabled {{ border-color: rgba(255, 255, 255, 0.05); }}
 """
 

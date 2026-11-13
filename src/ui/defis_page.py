@@ -47,7 +47,6 @@ QWidget#defis, QWidget#defisCorps { background: transparent; }
 QScrollArea { background: transparent; border: none; }
 QFrame#defi { background: transparent; border: 1px solid transparent; border-radius: 12px; }
 QFrame#defi[obtenu="true"] { background: rgba(214, 167, 44, 0.05); }
-QFrame#defi[focusClavier="true"]:focus { border-color: #f0d060; }
 QFrame#tuile { background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px; }
 QLabel#titreSection { color: #d6a72c; letter-spacing: 2px; }
 """
@@ -123,8 +122,7 @@ class DefisPage(QWidget):
         # anneau, le focus y était invisible (règle 15, audit du 2026-10-29).
         zone.setObjectName("zoneDefis")
         # La barre du launcher, comme le Folio et le Relevé : sans elle, celle du système.
-        zone.setStyleSheet(themed('QScrollArea#zoneDefis[focusClavier="true"]:focus '
-                                  "{ border: 2px solid #d6a72c; border-radius: 6px; }" + BARRE_DEFILEMENT))
+        zone.setStyleSheet(themed(BARRE_DEFILEMENT))
         corps = QWidget()
         corps.setObjectName("defisCorps")
         lay = QVBoxLayout(corps)

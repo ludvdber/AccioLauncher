@@ -806,7 +806,6 @@ class RubriquesDuJeu:
                 "QPushButton { color: #c8c6dc; background: transparent;"
                 " border: none; text-align: left; padding: 6px 0px; }"
                 "QPushButton:hover { color: #e8c547; }"
-                "QPushButton[focusClavier=\"true\"]:focus { color: #e8c547; }"
             ))
             btn.setAutoDefault(False)
             btn.clicked.connect(lambda _c=False, r=rappel: self._lancer(r))
