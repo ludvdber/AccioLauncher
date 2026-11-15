@@ -36,19 +36,19 @@ from src.ui.fenetre_message import message
 from src.ui.medailles import pixmap_medaille
 from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
 from src.ui.succes_widgets import _jour
-from src.ui.theme import themed
+from src.ui.theme import RAYON_CARTE, themed
 from src.ui.utils import BARRE_DEFILEMENT
 
 _MEDAILLE = 128
 _LARGEUR_DEFI = 176          # la médaille et l'air autour : quatre à sept par rangée
 
-_STYLE = """
-QWidget#defis, QWidget#defisCorps { background: transparent; }
-QScrollArea { background: transparent; border: none; }
-QFrame#defi { background: transparent; border: 1px solid transparent; border-radius: 12px; }
-QFrame#defi[obtenu="true"] { background: rgba(214, 167, 44, 0.05); }
-QFrame#tuile { background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px; }
-QLabel#titreSection { color: #d6a72c; letter-spacing: 2px; }
+_STYLE = f"""
+QWidget#defis, QWidget#defisCorps {{ background: transparent; }}
+QScrollArea {{ background: transparent; border: none; }}
+QFrame#defi {{ background: transparent; border: 1px solid transparent; border-radius: {RAYON_CARTE}px; }}
+QFrame#defi[obtenu="true"] {{ background: rgba(214, 167, 44, 0.05); }}
+QFrame#tuile {{ background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: {RAYON_CARTE}px; }}
+QLabel#titreSection {{ color: #d6a72c; letter-spacing: 2px; }}
 """
 
 

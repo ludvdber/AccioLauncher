@@ -57,7 +57,7 @@ QPushButton#metier:checked {{
 }}
 QFrame#format {{
     background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 13px;
+    border-radius: {RAYON_CARTE}px;
 }}
 QFrame#besoins {{
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: {RAYON_CARTE}px;

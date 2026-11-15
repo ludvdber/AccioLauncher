@@ -15,6 +15,7 @@ supprimer le test pour faire passer la publication.
 """
 
 import json
+import re
 
 import pytest
 
@@ -196,3 +197,16 @@ class TestMediatheque:
         ids = {g["id"] for g in catalogue["games"]}
         assert set(cinematiques.charger()) <= ids
         assert set(discographie.charger()) <= ids
+
+
+def test_aucune_cinematique_n_est_titree_par_son_fichier():
+    """Audit UI f31 : vingt cinématiques de V s'intitulaient « Cinématique « dh03 » », et deux de IV
+    « Niveau « dw » » ; chacune a été vue image par image et porte un titre dans les trois langues."""
+    from src.core import cinematiques
+    for jeu, collection in cinematiques.charger().items():
+        for clip in collection.clips:
+            titres = dict(clip.titres) if not isinstance(clip.titres, str) else {"fr": clip.titres}
+            assert set(titres) >= {"fr", "en", "es"} or isinstance(clip.titres, str), (jeu, clip.fichier)
+            for langue, texte in titres.items():
+                # Un code de fichier entre guillemets (« dh03 », “dw”) : le titre de secours.
+                assert not re.search(r"[«“]\s?[a-z0-9_]+\s?[»”]", texte), (jeu, clip.fichier, langue, texte)

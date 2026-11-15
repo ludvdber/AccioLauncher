@@ -218,7 +218,7 @@ class _CartePreset(QFrame):
             couleur.setAlpha(0)
             lueur.setColorAt(1, couleur)
             fond = QPainterPath()
-            fond.addRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 13, 13)
+            fond.addRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), RAYON_CARTE - 1, RAYON_CARTE - 1)
             p.fillPath(fond, lueur)
         couleur = QColor(self._teinte)
         couleur.setAlphaF(1.0 if actif else 0.7 if self.underMouse() else 0.35)

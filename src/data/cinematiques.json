@@ -112,18 +112,18 @@
     {
      "f": "AVdwIntro",
      "t": {
-      "fr": "Niveau « dw », début",
-      "en": "Level “dw”, start",
-      "es": "Nivel «dw», inicio"
+      "fr": "Les dragons de Hagrid, début",
+      "en": "Hagrid's dragons, start",
+      "es": "Los dragones de Hagrid, inicio"
      },
      "s": 0
     },
     {
      "f": "AVdwOutro",
      "t": {
-      "fr": "Niveau « dw », fin",
-      "en": "Level “dw”, end",
-      "es": "Nivel «dw», final"
+      "fr": "Les dragons de Hagrid, fin",
+      "en": "Hagrid's dragons, end",
+      "es": "Los dragones de Hagrid, final"
      },
      "s": 0
     },
@@ -486,180 +486,180 @@
     {
      "f": "dh02_cs01_go_to_dada",
      "t": {
-      "fr": "Cinématique « dh02_cs01_go_to_dada »",
-      "en": "Cutscene “dh02_cs01_go_to_dada”",
-      "es": "Cinemática «dh02_cs01_go_to_dada»"
+      "fr": "Le premier cours d'Ombrage",
+      "en": "Umbridge's first lesson",
+      "es": "La primera clase de Umbridge"
      },
      "s": 0
     },
     {
      "f": "dh03",
      "t": {
-      "fr": "Cinématique « dh03 »",
-      "en": "Cutscene “dh03”",
-      "es": "Cinemática «dh03»"
+      "fr": "La retenue chez Ombrage",
+      "en": "Detention with Umbridge",
+      "es": "Castigo con Umbridge"
      },
      "s": 0
     },
     {
      "f": "dh04",
      "t": {
-      "fr": "Cinématique « dh04 »",
-      "en": "Cutscene “dh04”",
-      "es": "Cinemática «dh04»"
+      "fr": "La naissance de l'armée de Dumbledore",
+      "en": "Dumbledore's Army is born",
+      "es": "Nace el Ejército de Dumbledore"
      },
      "s": 0
     },
     {
      "f": "dh04_cs03",
      "t": {
-      "fr": "Cinématique « dh04_cs03 »",
-      "en": "Cutscene “dh04_cs03”",
-      "es": "Cinemática «dh04_cs03»"
+      "fr": "Un fantôme dans les couloirs",
+      "en": "A ghost in the corridors",
+      "es": "Un fantasma en los pasillos"
      },
      "s": 0
     },
     {
      "f": "dl03",
      "t": {
-      "fr": "Cinématique « dl03 »",
-      "en": "Cutscene “dl03”",
-      "es": "Cinemática «dl03»"
+      "fr": "Ombrage, directrice de Poudlard",
+      "en": "Umbridge, Headmistress of Hogwarts",
+      "es": "Umbridge, directora de Hogwarts"
      },
      "s": 0
     },
     {
      "f": "dl03_cs01",
      "t": {
-      "fr": "Cinématique « dl03_cs01 »",
-      "en": "Cutscene “dl03_cs01”",
-      "es": "Cinemática «dl03_cs01»"
+      "fr": "La brigade inquisitoriale",
+      "en": "The Inquisitorial Squad",
+      "es": "La Brigada Inquisitorial"
      },
      "s": 0
     },
     {
      "f": "gp01",
      "t": {
-      "fr": "Cinématique « gp01 »",
-      "en": "Cutscene “gp01”",
-      "es": "Cinemática «gp01»"
+      "fr": "L'attaque des Détraqueurs",
+      "en": "The Dementor attack",
+      "es": "El ataque de los dementores"
      },
      "s": 0
     },
     {
      "f": "gp04",
      "t": {
-      "fr": "Cinématique « gp04 »",
-      "en": "Cutscene “gp04”",
-      "es": "Cinemática «gp04»"
+      "fr": "Du square Grimmaurd à la rentrée",
+      "en": "From Grimmauld Place to the new term",
+      "es": "De Grimmauld Place al comienzo del curso"
      },
      "s": 0
     },
     {
      "f": "gp05",
      "t": {
-      "fr": "Cinématique « gp05 »",
-      "en": "Cutscene “gp05”",
-      "es": "Cinemática «gp05»"
+      "fr": "De la tapisserie des Black à Graup",
+      "en": "From the Black family tapestry to Grawp",
+      "es": "Del tapiz de los Black a Grawp"
      },
      "s": 0
     },
     {
      "f": "mom01",
      "t": {
-      "fr": "Cinématique « mom01 »",
-      "en": "Cutscene “mom01”",
-      "es": "Cinemática «mom01»"
+      "fr": "Lucius Malefoy réclame la prophétie",
+      "en": "Lucius Malfoy demands the prophecy",
+      "es": "Lucius Malfoy reclama la profecía"
      },
      "s": 0
     },
     {
      "f": "mom01_cs01",
      "t": {
-      "fr": "Cinématique « mom01_cs01 »",
-      "en": "Cutscene “mom01_cs01”",
-      "es": "Cinemática «mom01_cs01»"
+      "fr": "La salle des prophéties",
+      "en": "The Hall of Prophecy",
+      "es": "La Sala de las Profecías"
      },
      "s": 0
     },
     {
      "f": "mom03",
      "t": {
-      "fr": "Cinématique « mom03 »",
-      "en": "Cutscene “mom03”",
-      "es": "Cinemática «mom03»"
+      "fr": "Voldemort au ministère",
+      "en": "Voldemort at the Ministry",
+      "es": "Voldemort en el Ministerio"
      },
      "s": 0
     },
     {
      "f": "mom4",
      "t": {
-      "fr": "Cinématique « mom4 »",
-      "en": "Cutscene “mom4”",
-      "es": "Cinemática «mom4»"
+      "fr": "La Gazette l'admet enfin",
+      "en": "The Prophet finally admits it",
+      "es": "El Profeta por fin lo admite"
      },
      "s": 0
     },
     {
      "f": "mom_02_cs02_shotc",
      "t": {
-      "fr": "Cinématique « mom_02_cs02_shotc »",
-      "en": "Cutscene “mom_02_cs02_shotc”",
-      "es": "Cinemática «mom_02_cs02_shotc»"
+      "fr": "Le duel de Sirius",
+      "en": "Sirius's duel",
+      "es": "El duelo de Sirius"
      },
      "s": 0
     },
     {
      "f": "oc01",
      "t": {
-      "fr": "Cinématique « oc01 »",
-      "en": "Cutscene “oc01”",
-      "es": "Cinemática «oc01»"
+      "fr": "L'occlumancie avec Rogue",
+      "en": "Occlumency with Snape",
+      "es": "Oclumancia con Snape"
      },
      "s": 0
     },
     {
      "f": "oc01_cs01",
      "t": {
-      "fr": "Cinématique « oc01_cs01 »",
-      "en": "Cutscene “oc01_cs01”",
-      "es": "Cinemática «oc01_cs01»"
+      "fr": "Dans le bureau de Dumbledore",
+      "en": "In Dumbledore's office",
+      "es": "En el despacho de Dumbledore"
      },
      "s": 0
     },
     {
      "f": "rr01",
      "t": {
-      "fr": "Cinématique « rr01 »",
-      "en": "Cutscene “rr01”",
-      "es": "Cinemática «rr01»"
+      "fr": "Neville et la Salle sur demande",
+      "en": "Neville and the Room of Requirement",
+      "es": "Neville y la Sala de los Menesteres"
      },
      "s": 0
     },
     {
      "f": "rr26",
      "t": {
-      "fr": "Cinématique « rr26 »",
-      "en": "Cutscene “rr26”",
-      "es": "Cinemática «rr26»"
+      "fr": "Harry et Cho",
+      "en": "Harry and Cho",
+      "es": "Harry y Cho"
      },
      "s": 0
     },
     {
      "f": "uh11",
      "t": {
-      "fr": "Cinématique « uh11 »",
-      "en": "Cutscene “uh11”",
-      "es": "Cinemática «uh11»"
+      "fr": "L'envol des Sombrals",
+      "en": "The thestrals take flight",
+      "es": "El vuelo de los thestrals"
      },
      "s": 0
     },
     {
      "f": "uh13",
      "t": {
-      "fr": "Cinématique « uh13 »",
-      "en": "Cutscene “uh13”",
-      "es": "Cinemática «uh13»"
+      "fr": "Ombrage et les centaures",
+      "en": "Umbridge and the centaurs",
+      "es": "Umbridge y los centauros"
      },
      "s": 0
     },

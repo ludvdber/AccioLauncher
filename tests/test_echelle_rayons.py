@@ -60,6 +60,12 @@ class TestUneSeuleDefinition:
         assert _rayons(settings_panel.SettingsDialog._style(None)) <= permis
         assert _rayons(settings_panel._COMBO_STYLE) == {RAYON_CONTROLE}
 
+    def test_les_cartes_des_defis_et_de_l_atelier(self):
+        """tra12b : cartes des Défis à 12, encadré de format de l'Atelier à 13, au lieu de 10."""
+        from src.ui import atelier_page, defis_page
+        assert _rayons(defis_page._STYLE) == {RAYON_CARTE}
+        assert RAYON_CARTE in _rayons(atelier_page._STYLE) and 13 not in _rayons(atelier_page._STYLE)
+
 
 class TestBoutonsCommuns:
     def test_retour(self, qtbot):
