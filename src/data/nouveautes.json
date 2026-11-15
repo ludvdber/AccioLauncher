@@ -1,6 +1,41 @@
 {
   "versions": [
     {
+      "version": "1.3.5",
+      "nom": "Reparo",
+      "depuis": "1.3.4",
+      "points_forts": [
+        {
+          "icone": "ecran",
+          "jeux": [
+            "hp4",
+            "hp5",
+            "hp6"
+          ],
+          "titre": {
+            "fr": "Les réglages d'image, sans accroc",
+            "en": "Image settings, without a hitch",
+            "es": "Los ajustes de imagen, sin tropiezos"
+          },
+          "texte": {
+            "fr": "Ouvrir les réglages de La Coupe de Feu, L'Ordre du Phénix ou Le Prince de Sang-Mêlé ne fait plus apparaître une petite fenêtre vide pendant un instant, et leurs rubriques d'image tiennent sur une seule ligne.",
+            "en": "Opening the settings of Goblet of Fire, Order of the Phoenix or Half-Blood Prince no longer flashes a small empty window, and their image sections fit on a single line.",
+            "es": "Abrir los ajustes de El cáliz de fuego, La Orden del Fénix o El misterio del príncipe ya no muestra una pequeña ventana vacía durante un instante, y sus secciones de imagen caben en una sola línea."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les titres des pages ont un I sans ornement, plus lisible.",
+            "en": "Page titles have a plain I, easier to read.",
+            "es": "Los títulos de las páginas tienen una I sin adorno, más legible."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.4",
       "nom": "Episkey",
       "depuis": "1.3.3",

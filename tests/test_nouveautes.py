@@ -234,7 +234,11 @@ class TestPage:
     def test_le_bas_se_fond_tant_qu_il_reste_a_lire(self, qtbot):
         """Les cartes du bas étaient coupées net par le pied (revue du 2026-11-01)."""
         from PyQt6.QtWidgets import QScrollArea
-        page = self._page(qtbot)
+        from src.ui.nouveautes_page import NouveautesPage
+        # Une entrée assez longue pour déborder (celle de la 1.3.4) : celle de la version courante peut être
+        # courte (la 1.3.5, une carte et une ligne, tenait dans 520 px).
+        page = NouveautesPage(nouveautes.charger("1.3.4"), apres_mise_a_jour=True)
+        qtbot.addWidget(page)
         page.resize(1000, 520)
         page.show()
         qtbot.waitExposed(page)

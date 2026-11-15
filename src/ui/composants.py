@@ -465,6 +465,14 @@ def titre_page(contenu: str) -> QLabel:
     titre.setTextFormat(Qt.TextFormat.PlainText)
     titre.setWordWrap(True)
     titre.setFont(cinzel_decorative(22))
+    # Le « I » capital de Cinzel Decorative porte un crochet d'ornement qui le fait lire « ꞁ » : « IMAGE »
+    # avait l'air mal écrit (Ludo, 2026-11-15). Ce seul I prend celui de Cinzel, même dessin sans ornement ;
+    # le reste du titre garde la décorative.
+    if contenu[:1] == "I":
+        simple = cinzel(22, bold=True).family()
+        titre.setTextFormat(Qt.TextFormat.RichText)
+        titre.setText(f'<span style="font-family:\'{escape(simple)}\'; font-weight:900">I</span>{escape(contenu[1:])}')
+        titre.setAccessibleName(contenu)
     titre.setStyleSheet("color: #f4f2f8; background: transparent;")
     return titre
 

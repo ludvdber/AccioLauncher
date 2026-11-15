@@ -5,7 +5,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ## Don't reintroduce these
 
-141 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
+142 règles, chacune payée une fois. Groupées par sujet ; l'ordre dans un groupe n'a pas de sens.
 
 ### Processus, threads, sortie
 
@@ -52,6 +52,7 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 32. **Transporter une taille en octets dans un `pyqtSignal(int)`** — côté Qt, un `int` fait 32 bits. La page Paramètres affichait « 147 Mo utilisés » pour 12,2 Go de jeux : 13 039 361 350 octets arrivaient en 154 459 462, le modulo 2³² EXACT ; au-delà de 2 Gio, un slot reçoit même des valeurs négatives. La progression des téléchargements n'y échappait que parce que GitHub plafonne chaque partie sous 2 Gio. Octets = `"qlonglong"`. Invisible à toute suite qui n'a pas 4 Gio de fichiers : `tests/test_signaux_octets.py` lit la DÉCLARATION dans le méta-objet.
 33. **Cacher explicitement (`hide()`) un widget qu'on va reposer dans une page** — un widget caché EXPLICITEMENT le reste une fois remis dans un layout. En rebâtissant l'assistant dans une autre langue, le chemin du dossier et l'espace libre ont disparu de l'écran 2 ; `setParent` retire déjà le widget de l'écran sans le marquer. Le test d'avant vérifiait que ces widgets SURVIVAIENT, pas qu'ils se VOYAIENT : comparer leur visibilité à celle d'une première construction.
 34. **Poser l'icône sur une fenêtre plutôt que sur l'application** — l'assistant s'ouvre avant `MainWindow` et portait l'icône générique de Windows : la toute première fenêtre que voit un nouvel utilisateur. `main.py` pose `icone_application()` sur `QApplication`.
+142. **Rendre visible un widget avant de l'avoir posé** — sans parent, `setVisible(True)` ou `show()` en fait une FENÊTRE : la tête de l'onglet Image (`page_image`, 378 × 304) s'ouvrait un quart de seconde à part à chaque ouverture des réglages de HP4-HP6, dans la 1.3.4 publiée (Ludo, 2026-11-15). Poser d'abord (`addWidget`), régler la visibilité ensuite. Invisible sous les tests ordinaires (jeux non installés) : `tests/test_flash_parametres.py` guette tout Show d'une fenêtre de premier niveau pendant l'ouverture.
 
 ### Mise en page et mesure
 

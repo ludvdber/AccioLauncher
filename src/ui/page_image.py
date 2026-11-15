@@ -700,9 +700,11 @@ class _Onglet(QPushButton):
         self.setAutoDefault(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFont(police(14))
-        # Jamais rogné : « airage et omb » à 980 px (HP6) ; la rangée passe à la ligne.
-        self.setMinimumWidth(self.sizeHint().width())
         self.nom = nom
+        # La largeur de son texte, padding compris (2 × 4 px), et rien de plus : la largeur minimale
+        # d'un bouton Windows étalait « Écran » sur 100 px, et les sept onglets de HP6 passaient sur
+        # deux lignes même en grand (Ludo, 2026-11-15). Jamais rogné : la rangée passe à la ligne.
+        self.setFixedWidth(self.fontMetrics().horizontalAdvance(nom) + 8 + 4)
 
 
 def _bulle(aide: str) -> str:
@@ -809,7 +811,7 @@ class PageImage(QWidget):
         # sortait de la page (audit UI, 2026-11-13).
         rangee = QWidget()
         transparent(rangee, "ongletsImage")
-        flux = FlowLayout(rangee, spacing=18)
+        flux = FlowLayout(rangee, spacing=26)
         self._groupe_onglets = QButtonGroup(self)
         self._groupe_onglets.setExclusive(True)
         self.onglets: dict[str, _Onglet] = {}
@@ -834,10 +836,12 @@ class PageImage(QWidget):
         # l'autre, la tête entière se cache, et son écart avec elle.
         onglets = len(self.categories) > 1
         cherchable = len(self.reglages) + bool(self._resolution) >= _SEUIL_RECHERCHE
+        # Posée dans la page AVANT d'être rendue visible : sans parent, `setVisible(True)` la montrait
+        # comme une fenêtre à part, un quart de seconde à l'ouverture (Ludo, 2026-11-15, 1.3.4 publiée).
+        racine.addWidget(tete)
         rangee.setVisible(onglets)
         self.recherche.setVisible(cherchable)
         tete.setVisible(onglets or cherchable)
-        racine.addWidget(tete)
 
         corps = QHBoxLayout()
         corps.setSpacing(20)

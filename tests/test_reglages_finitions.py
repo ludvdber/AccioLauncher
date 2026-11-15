@@ -251,9 +251,24 @@ class TestMiseEnPage:
         """f76 (Ludo, 2026-11-15) : la décorative partout, le Journal et les réglages d'un
         jeu ne changent plus de police de titre."""
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        titre = next(lb for lb in dlg.findChildren(QLabel) if lb.text() == tr("Image"))
+        titre = next(lb for lb in dlg.findChildren(QLabel)
+                     if (lb.accessibleName() or lb.text()) == tr("Image"))
         assert titre.font().family() == cinzel_decorative(22).family()
         assert titre.font().pointSizeF() == 22
+
+    def test_un_titre_en_i_prend_le_i_sans_ornement(self, qtbot):
+        """Le I de Cinzel Decorative porte un crochet : « IMAGE » avait l'air mal écrit (Ludo, 2026-11-15).
+        Le seul I initial passe en Cinzel ; le reste garde la décorative, et le nom lu reste le mot."""
+        from src.ui.composants import titre_page
+        from src.ui.fonts import cinzel
+        t = titre_page("Image")
+        qtbot.addWidget(t)
+        assert t.accessibleName() == "Image"
+        assert cinzel(22).family() in t.text() and t.text().endswith("mage")
+        assert t.font().family() == cinzel_decorative(22).family()
+        autre = titre_page("Jeu")
+        qtbot.addWidget(autre)
+        assert autre.text() == "Jeu"
 
     def test_le_rail_defile_au_lieu_de_se_tasser(self, qtbot, tmp_path):
         from src.ui.reglages_rubriques import ActionFichier
