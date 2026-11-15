@@ -327,14 +327,18 @@ jobs:
       # release) : Qt Quick du fond sur la carte graphique et fonds en haute
       # définition, comme l'exe.
       # Comme l'exe : l'AppImage PUBLIÉE se vérifie elle-même. Extraite sans FUSE (le
-      # conteneur n'en a pas), sans écran (offscreen).
+      # conteneur n'en a pas), sur un écran virtuel : l'AppImage n'embarque que les
+      # plateformes Qt xcb et wayland, PAS offscreen (release v1.3.4 du 2026-11-15 :
+      # « Could not find the Qt platform plugin "offscreen" », code 127).
       - name: L'AppImage se vérifie
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: xcb
+          LANG: C.UTF-8
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
           code=0
-          ./dist/AccioLauncher-x86_64.AppImage --verifier-exe "$RUNNER_TEMP/verification.txt" || code=$?
+          xvfb-run -a -s "-screen 0 1920x1080x24" \
+            ./dist/AccioLauncher-x86_64.AppImage --verifier-exe "$RUNNER_TEMP/verification.txt" || code=$?
           cat "$RUNNER_TEMP/verification.txt" || true
           exit $code
 
