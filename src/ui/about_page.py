@@ -32,7 +32,7 @@ from src.core.config import APP_VERSION, ASSETS_DIR, LOG_DIR
 from src.core.i18n import tr, translator_credits
 from src.core import nouveautes
 from src.core.liens import DEPOT_URL, DISCORD_URL, KOFI_URL, NOTES_VERSIONS_URL, SITE_URL
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, html_lien, lien, police, texte
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, html_lien, lien, police, texte, transparent, lien_au_clavier
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import RAYON_CARTE, accent_qcolor, themed
@@ -63,7 +63,7 @@ def _capitales(contenu: str, px: int, encre: str, espacement: float = 2.0) -> QL
 def _logo() -> QLabel:
     lbl = QLabel()
     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    lbl.setStyleSheet("background: transparent;")
+    transparent(lbl)
     image = QPixmap(str(_LOGO))
     if image.isNull():
         lbl.setText("Accio Launcher")
@@ -182,8 +182,7 @@ def _nom_contributeur(c) -> QWidget:
         nom = html_lien(c.url, nom)
     lbl = QLabel(nom)
     lbl.setTextFormat(Qt.TextFormat.RichText)
-    lbl.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
-                                | Qt.TextInteractionFlag.LinksAccessibleByKeyboard)
+    lien_au_clavier(lbl)
     lbl.linkActivated.connect(open_url)
     f = cinzel(8, bold=True)
     f.setPixelSize(13)
@@ -197,7 +196,7 @@ def _nom_contributeur(c) -> QWidget:
     # Le nom d'hôte vient du catalogue : une infobulle l'interpréterait (règle 57).
     lbl.setToolTip("<qt>" + escape(tr("Ouvrir {}").format(site), quote=False) + "</qt>")
     ligne = QWidget()
-    ligne.setStyleSheet("background: transparent;")
+    transparent(ligne)
     h = QHBoxLayout(ligne)
     h.setContentsMargins(0, 0, 0, 0)
     h.setSpacing(6)
@@ -289,10 +288,7 @@ def _mention_legale() -> QLabel:
     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lbl.setFont(police(12))
     lbl.setStyleSheet(f"color: {ENCRE_DISCRETE}; background: transparent;")
-    lbl.setTextInteractionFlags(
-        Qt.TextInteractionFlag.LinksAccessibleByMouse
-        | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
-    )
+    lien_au_clavier(lbl)
     lbl.linkActivated.connect(open_url)
     return lbl
 
@@ -394,7 +390,7 @@ def _depannage(manager) -> QFrame:
     lay.setSpacing(14)
     image = QLabel()
     image.setPixmap(pixmap_icone("rapport", 18, QColor("#a9a7c4")))
-    image.setStyleSheet("background: transparent;")
+    transparent(image)
     lay.addWidget(image, alignment=Qt.AlignmentFlag.AlignVCenter)
     phrase = texte(tr(
         "Un souci ? Copiez le rapport de dépannage, une copie va aussi sur votre "
@@ -449,8 +445,7 @@ def construire(contributeurs, manager=None, ouvrir_nouveautes=None,
     version.setTextFormat(Qt.TextFormat.RichText)
     version.setProperty("cible", cible)
     version.setText(_numeros(cible, manager.catalog.catalog_version if manager is not None else None))
-    version.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
-                                    | Qt.TextInteractionFlag.LinksAccessibleByKeyboard)
+    lien_au_clavier(version)
     version.linkActivated.connect(
         lambda url: ouvrir_nouveautes() if url == _NOUVEAUTES else open_url(url))
     version.setToolTip(tr("Les nouveautés de cette version") if vers_page

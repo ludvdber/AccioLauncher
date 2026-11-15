@@ -31,7 +31,7 @@ from src.core.season import profil as profil_de
 from src.ui import theme
 from src.ui.background_widget import (
     _ETENDU_VOILE_FLOU, _VOILE_ALPHA, _ZOOM_MAX, _ZOOM_MIN, _ZOOM_STEP, BackgroundWidget,
-    construire_voiles, doit_etendre,
+    construire_voiles, doit_etendre, ecran_le_plus_grand, taille_de_decodage,
 )
 from src.ui.particles import _FORMES, _Particle
 from src.ui.ticker import TICK_MS, Ticker
@@ -146,6 +146,7 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
         self._opacity = 1.0
         self._source = ""
         self._taille_image = QSize()
+        self._decodage = QSize()   # la taille décodée du fond courant (`taille_de_decodage`)
         self._voiles_n = 0
         self._zoom = 1.0
         self._zoom_phase = 0.0
@@ -299,6 +300,7 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
         self._poser("ancienneParallaxeX", -self._parallax_cx)
         self._poser("ancienneParallaxeY", -self._parallax_cy)
         self._poser("ancienneEtendu", self._doit_etendre(self.width(), self.height()))
+        self._poser("ancienneTaille", self._decodage)
         self._poser("ancienne", QUrl.fromLocalFile(self._source) if self._source else QUrl())
 
     def cinema(self) -> bool:
@@ -321,13 +323,22 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
     def precharger(self, chemins: list[Path]) -> None:
         """Décode ces fonds d'avance et les garde : la scène retrouve aussitôt celui
         qu'on lui demande, là où chaque changement rapide relançait un décodage de
-        JPEG 3840 px et laissait le fond vide en attendant (Ludo, 2026-11-09)."""
-        self._poser("prechargees", [QUrl.fromLocalFile(str(c)).toString() for c in chemins if c.exists()])
+        JPEG 3840 px et laissait le fond vide en attendant (Ludo, 2026-11-09).
+
+        Décodés à la taille du plus grand écran (`taille_de_decodage`), la MÊME que la
+        couche demande : la taille fait partie de la clé du cache, comme l'adresse."""
+        ecran = ecran_le_plus_grand()
+        self._poser("prechargees", [
+            {"source": QUrl.fromLocalFile(str(c)).toString(),
+             "taille": taille_de_decodage(QImageReader(str(c)).size(), ecran)}
+            for c in chemins if c.exists()])
 
     def set_image(self, path: Path | None) -> None:
         self._source = str(path) if path and path.exists() else ""
         self._taille_image = QImageReader(self._source).size() if self._source else QSize()
+        self._decodage = taille_de_decodage(self._taille_image, ecran_le_plus_grand())
         self._poser("etendu", self._doit_etendre(self.width(), self.height()))
+        self._poser("sourceTaille", self._decodage)
         self._poser("source", QUrl.fromLocalFile(self._source) if self._source else QUrl())
 
     def _doit_etendre(self, w: int, h: int) -> bool:

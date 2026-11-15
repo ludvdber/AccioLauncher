@@ -442,8 +442,9 @@ class MainWindow(QMainWindow):
         log.debug("Tous les effets sont en pause")
 
     def resume_all_effects(self) -> None:
-        """Reprend tous les timers et animations."""
-        Ticker.instance().resume()
+        """Reprend les effets ; l'horloge avec la main seule, sinon à l'activation (f114)."""
+        if self.isActiveWindow():
+            Ticker.instance().resume()
         if self._pages.page is None:   # derrière une page : `Pages` les relance en la fermant
             self._particles.resume()
             self._detail.resume()

@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget,
 )
 
+from src.ui.composants import transparent
 from src.core.config import ASSETS_DIR
 from src.core.formatting import append_part_info, format_progress_line
 from src.core.game_data import GameData
@@ -47,7 +48,7 @@ class DownloadBar(QWidget):
 
         self._cover = QLabel()
         self._cover.setFixedSize(40, 56)
-        self._cover.setStyleSheet("background: transparent;")
+        transparent(self._cover)
         self._cover.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._cover)
 

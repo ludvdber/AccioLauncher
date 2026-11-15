@@ -423,3 +423,8 @@ def resume(fichiers: dict[str, Path], system: Path, langue: str) -> folio.Resume
                         releve.modifie)
 
 
+def liberer() -> None:
+    """Rend ce que le folio a gardé (relevés, catalogue, images du menu) : un jeu démarre."""
+    _valeurs.cache_clear()
+    _catalogue.cache_clear()
+    _image_menu.cache_clear()

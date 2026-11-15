@@ -154,6 +154,25 @@ class TestBeta:
         assert _textes(dlg).count(tr("Bêta").upper()) == 2, "une en tête de la Difficulté, une sur la Caméra, seule en bêta sur sa page"
         assert "Discord" in dlg._panneau.pastille_beta.toolTip()
 
+    def test_beta_a_cote_du_titre_de_la_difficulte(self, qtbot, tmp_path):
+        """f44, f68 : seule à gauche du cadran, la gélule laissait 660 × 330 px vides."""
+        from PyQt6.QtWidgets import QLabel
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        dlg.ouvrir_onglet("difficulte")
+        dlg.resize(1280, 800)
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        beta = dlg._panneau.pastille_beta
+        titre = next(lbl for lbl in dlg.findChildren(QLabel)
+                     if lbl.text() == tr("Difficulté") and lbl.parentWidget() is beta.parentWidget())
+        assert beta.geometry().left() > titre.geometry().right(), "sur la ligne du titre, après lui"
+        assert abs(beta.geometry().center().y() - titre.geometry().center().y()) <= 4
+        from PyQt6.QtWidgets import QWidget
+        assert dlg._panneau.findChild(QWidget, "enteteDifficulte") is None, "plus de colonne vide"
+        qtbot.wait(50)
+        panneau, cadran = dlg._panneau, dlg._panneau.cadran
+        assert abs(cadran.geometry().center().x() - panneau.rect().center().x()) <= 2, "le cadran se centre"
+
     def test_une_seule_etiquette_pour_toute_la_fenetre(self, qtbot, tmp_path):
         """f64 : « Bêta » en Gelasio sur une ligne, « BÊTA » en Cinzel dans la Difficulté."""
         from PyQt6.QtWidgets import QLabel
@@ -288,3 +307,27 @@ def test_l_aide_en_infobulle_tient_en_paragraphe():
     """Audit UI v51 : sans la fiche, l'aide passait en infobulle d'une seule ligne de 1 336 px."""
     from src.ui.page_image import _bulle
     assert _bulle("a < b").startswith("<qt><table width='420'>") and "a &lt; b" in _bulle("a < b")
+
+
+class TestCadranAuClavier:
+    def test_tab_y_entre_fleches_visent_entree_choisit(self, qtbot, tmp_path):
+        """f121 : les noms du cadran se cliquaient, mais Tab passait à côté (clavier, manette)."""
+        from PyQt6.QtCore import Qt
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        dlg.ouvrir_onglet("difficulte")
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        cadran = dlg._panneau.cadran
+        assert cadran.focusPolicy() & Qt.FocusPolicy.TabFocus
+        dlg.activateWindow()
+        cadran.setFocus(Qt.FocusReason.TabFocusReason)
+        qtbot.waitUntil(cadran.hasFocus)
+        depart = cadran.actif
+        ordre = cadran._ordre()
+        assert len(ordre) >= 2 and cadran._survole == depart
+        touche = Qt.Key.Key_Right if ordre.index(depart) < len(ordre) - 1 else Qt.Key.Key_Left
+        qtbot.keyClick(cadran, touche)
+        vise = cadran._survole
+        assert vise != depart
+        qtbot.keyClick(cadran, Qt.Key.Key_Return)
+        assert cadran.actif == vise, "Entrée choisit le nom visé"

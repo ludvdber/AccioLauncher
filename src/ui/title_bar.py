@@ -4,6 +4,7 @@ from PyQt6.QtCore import QEvent, Qt, QPoint, QRectF, QSize, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QIcon, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QWidget
 
+from src.ui.composants import transparent
 from src.core.i18n import tr
 from src.ui.fonts import body_font, cinzel
 from src.ui import theme
@@ -247,7 +248,7 @@ class TitleBar(QWidget):
         self._window = parent
         self._drag_pos: QPoint | None = None
         self.setFixedHeight(HAUTEUR)
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 0, 4, 0)

@@ -118,9 +118,10 @@ class GameSession(QObject):
         self._game_id = game_id
         self._debut = datetime.now()
         self._pid = process.pid
-        # Pendant la partie, le launcher rend la mémoire des paquets lus (jusqu'à 59 Mo chacun).
-        from src.core import textures_ue1
-        textures_ue1.liberer()
+        # Pendant la partie, le launcher rend ce qu'il garde pour ses pages (paquets lus, jusqu'à
+        # 59 Mo chacun ; folios, jaquettes, fonds décodés).
+        from src.ui.pendant_la_partie import liberer_les_caches
+        liberer_les_caches()
         # Notée DÈS MAINTENANT et non à la fin — raison dans l'en-tête du module.
         stats.ouvrir_session(game_id, self._debut)
         self._avant = sauvegardes.releve(self._spec(game_id))

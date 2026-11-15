@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
-from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police
+from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police, transparent
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT
 from src.ui.theme import RAYON_CARTE
@@ -54,7 +54,6 @@ QPushButton#prereglage:checked, QPushButton#choix:checked {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                 stop:0 rgba(214, 167, 44, 0.13), stop:1 rgba(214, 167, 44, 0.04));
 }}
-QPushButton#prereglage[surMesure="true"] {{ border-style: dashed; }}
 QPushButton#choix:disabled {{ border-color: rgba(255, 255, 255, 0.05); }}
 """
 
@@ -163,13 +162,13 @@ class _Ligne(QWidget):
 
     def __init__(self, serree: bool, retrait: bool) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         v = QVBoxLayout(self)
         gauche = 16 + (20 if retrait else 0)
         v.setContentsMargins(gauche, 5 if serree else 9, 16, 5 if serree else 9)
         v.setSpacing(1)
         self.haut = QWidget()
-        self.haut.setStyleSheet("background: transparent;")
+        transparent(self.haut)
         self.rangee = QHBoxLayout(self.haut)
         self.rangee.setContentsMargins(0, 0, 0, 0)
         self.rangee.setSpacing(8)
@@ -250,7 +249,7 @@ class _Disposition(QWidget):
 
     def __init__(self, coche: bool, titre_zqsd: str, phrase_zqsd: str) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         self._origine = _CarteCliquable("choix", tr("Clavier d'origine"), tr(
             "Les flèches pour se déplacer, une touche par sort : les touches que le jeu connaît."))
         self._zqsd = _CarteCliquable("choix", titre_zqsd, phrase_zqsd)

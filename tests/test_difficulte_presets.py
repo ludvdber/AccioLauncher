@@ -431,3 +431,34 @@ class TestRangeeSansEffacerLesCartes:
         page.show()
         qtbot.wait(10)
         assert carte.grab().toImage().pixelColor(30, 20).name() == "#ff0000"
+
+
+class TestConteneursSansFond:
+    """f21 : 62 conteneurs posaient `background: transparent` SANS sélecteur. Leurs enfants
+    perdaient le fond et les filets que la page leur donne : cartes des Paramètres et des
+    réglages du jeu, cran choisi de la page Image, « Suivant » de l'assistant…"""
+
+    def test_un_enfant_garde_le_fond_de_la_page(self, qtbot):
+        from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget
+        from src.ui.composants import transparent
+        page = QWidget()
+        qtbot.addWidget(page)
+        page.setStyleSheet("QWidget { background: #000000; } QFrame#carte { background: #ff0000; }")
+        conteneur = QWidget()
+        transparent(conteneur)
+        carte = QFrame(conteneur)
+        carte.setObjectName("carte")
+        carte.setFixedSize(60, 40)
+        QVBoxLayout(page).addWidget(conteneur)
+        page.show()
+        qtbot.wait(10)
+        assert carte.grab().toImage().pixelColor(30, 20).name() == "#ff0000"
+        assert conteneur.objectName() == "", "son nom d'objet, souvent pris par une autre règle, ne change pas"
+
+    def test_plus_aucune_regle_sans_selecteur(self):
+        import re
+        from pathlib import Path
+        fautifs = [f"{f.name}:{n}" for f in Path("src/ui").glob("*.py")
+                   for n, ligne in enumerate(f.read_text(encoding="utf-8").splitlines(), 1)
+                   if re.search(r'[\w)]\.setStyleSheet\(\s*"background:\s*transparent;?\s*"\s*\)', ligne)]
+        assert fautifs == []

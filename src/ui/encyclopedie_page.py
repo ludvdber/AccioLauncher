@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from src.core import encyclopedie, maillages_ue1, mouvements
 from src.core.i18n import dans_la_langue, get_language, tr, trn
-from src.ui.composants import ENCRE, ENCRE_DOUCE, LISTE, icone_de_bouton, police, rond, texte
+from src.ui.composants import ENCRE, ENCRE_DOUCE, LISTE, icone_de_bouton, police, rond, texte, transparent
 from src.ui.carte_avancement import CarteAvancement, texte_seuil
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
@@ -100,7 +100,7 @@ class EtatVide(QWidget):
         lay.setSpacing(14)
         lay.addStretch()
         image = QLabel()
-        image.setStyleSheet("background: transparent;")
+        transparent(image)
         image.setPixmap(embleme("", _EMBLEME_VIDE, self.devicePixelRatioF(), icone))
         lay.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
         self._phrase = texte(phrase, 15, "#c9c7da", retour=True)
@@ -151,7 +151,7 @@ class _Fiche(QFrame):
         self._image = QLabel()
         self._image.setFixedSize(self.taille_image)
         self._image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._image.setStyleSheet("background: transparent;")
+        transparent(self._image)
         self._image.setPixmap(embleme(rubrique, self.taille_image, self.devicePixelRatioF(),
                                       "" if ouverte else "cadenas"))
         h.addWidget(self._image, alignment=Qt.AlignmentFlag.AlignVCenter if compacte else Qt.AlignmentFlag.AlignTop)

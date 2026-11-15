@@ -484,3 +484,8 @@ class _Releve(QWidget):
         super().focusOutEvent(event)
         for ligne in self._lignes:
             ligne.update()
+
+
+def liberer() -> None:
+    """Rend les jaquettes décodées du Relevé : un jeu démarre."""
+    _jaquette_decodee.cache_clear()

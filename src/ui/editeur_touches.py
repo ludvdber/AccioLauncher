@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 
 from src.core import touches_correctif as tc
 from src.core.i18n import tr
-from src.ui.composants import lien, petit_titre, Rangee
+from src.ui.composants import lien, petit_titre, Rangee, transparent
 from src.ui.fonts import body_font
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import RAYON_CONTROLE, accent_qcolor, themed
@@ -241,7 +241,7 @@ class EditeurTouches(QWidget):
         self._message = ""
         self._boutons: dict[str, CaptureTouche] = {}
         self._rendre: dict[str, QPushButton] = {}
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(12)
@@ -326,7 +326,7 @@ class EditeurTouches(QWidget):
                 v.addWidget(filet)
             ligne = QWidget()
             ligne.setMinimumHeight(46)
-            ligne.setStyleSheet("background: transparent;")
+            transparent(ligne)
             h = QHBoxLayout(ligne)
             h.setContentsMargins(0, 0, 0, 0)
             h.setSpacing(6)

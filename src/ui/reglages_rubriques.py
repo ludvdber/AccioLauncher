@@ -27,6 +27,8 @@ from src.core.reglages_table import Reglage
 from src.ui.choix_jeux import espacee
 from src.ui.difficulte_panneau import PanneauDifficulte
 from src.ui.composants import (
+    transparent,
+    MARGES_PAGE,
     ENCRE_DISCRETE, ENCRE_DOUCE, LISTE, Carte, LigneReglage, bouton, petit_titre, police, surtitre,
 )
 from src.ui.editeur_touches import EditeurTouches
@@ -70,7 +72,6 @@ _LISTE_STYLE = LISTE
 _RESSOURCES = {"GPU": "Carte graphique (GPU)", "CPU": "Processeur (CPU)", "RAM": "Mémoire (RAM)"}
 _NIVEAUX = {1: "faible", 2: "moyenne", 3: "extrême"}
 # Les marges de lecture d'une page.
-_MARGES_PAGE = (40, 28, 40, 28)
 # Le temps que reste au pied la confirmation d'une remise à l'origine.
 _DUREE_ANNONCE_PIED = 4000
 # La page qui montre un réglage, quand son `onglet` n'est pas celui du rail.
@@ -101,7 +102,7 @@ class RubriquesDuJeu:
     def _titre_rubrique(self, texte: str, verrouille: bool = False) -> QWidget:
         """Le surtitre doré d'une rubrique ; « BIENTÔT » à côté si elle est verrouillée."""
         ligne = QWidget()
-        ligne.setStyleSheet("background: transparent;")
+        transparent(ligne)
         h = QHBoxLayout(ligne)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(10)
@@ -168,7 +169,7 @@ class RubriquesDuJeu:
             self._groupe.addButton(radio)
             self._boutons[langue.code] = radio
             ligne = QWidget()
-            ligne.setStyleSheet("background: transparent;")
+            transparent(ligne)
             h = QHBoxLayout(ligne)
             h.setContentsMargins(20, 11, 20, 11)
             h.addWidget(radio)
@@ -193,14 +194,14 @@ class RubriquesDuJeu:
         self._editeur.modifie.connect(self._touches_modifiees)
         self._editeur.echec.connect(self._montrer_erreur)
         entete = QWidget()
-        entete.setStyleSheet("background: transparent;")
+        transparent(entete)
         h = QHBoxLayout(entete)
         h.setContentsMargins(0, 0, 0, 0)
         h.addWidget(surtitre(tr("Touches une par une")))
         h.addStretch()
         h.addWidget(self._editeur.tout)
         bloc = QWidget()
-        bloc.setStyleSheet("background: transparent;")
+        transparent(bloc)
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(12)
@@ -254,7 +255,7 @@ class RubriquesDuJeu:
             item.setStyleSheet(
                 "QRadioButton { color: #55556a; background: transparent; }")
             ligne = QWidget()
-            ligne.setStyleSheet("background: transparent;")
+            transparent(ligne)
             h = QHBoxLayout(ligne)
             h.setContentsMargins(20, 11, 20, 11)
             h.addWidget(item)
@@ -625,11 +626,11 @@ class RubriquesDuJeu:
         pied.setObjectName("pied")
         pied.setMinimumHeight(56)
         h = QHBoxLayout(pied)
-        h.setContentsMargins(_MARGES_PAGE[0], 10, _MARGES_PAGE[2], 10)
+        h.setContentsMargins(MARGES_PAGE[0], 10, MARGES_PAGE[2], 10)
         h.setSpacing(10)
         self._pied_info = QLabel()
         self._pied_info.setPixmap(pixmap_icone("infos", 18, accent_qcolor()))
-        self._pied_info.setStyleSheet("background: transparent;")
+        transparent(self._pied_info)
         h.addWidget(self._pied_info)
         self._pied_notes = QLabel("")
         self._pied_notes.setTextFormat(Qt.TextFormat.PlainText)

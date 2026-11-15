@@ -49,6 +49,8 @@ RESOLUTIONS = (("unforced", ""), ("max_fhd", "Jusqu'à 1080p"), ("max_qhd", "Jus
 LIMITES = (("60", ""), ("30", "30"))
 
 REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
+    # L'œil (`se_voit`) sur la résolution et l'anticrénelage seulement : posé sur les quatre
+    # réglages d'image, il ne distinguait rien (audit UI f118).
     Reglage("graph_resolution", "DirectX", "Resolution",
             "Résolution de rendu",
             "La taille à laquelle l'image est calculée, quelle que soit celle que choisit le "
@@ -70,13 +72,13 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "à part, comme l'ombre de Harry : elles restent fines au lieu de pixeliser. "
             "Éteint, elles gardent leur taille d'origine. À éteindre si le jeu s'arrête "
             "dès son lancement et que baisser l'anticrénelage n'a pas suffi.",
-            defaut=True, onglet="image", cout=(("GPU", 1),), se_voit=True),
+            defaut=True, onglet="image", cout=(("GPU", 1),)),
     Reglage("graph_filtrage", "DirectX", "Filtering",
             "Netteté des sols et des murs",
             "Garde nettes les textures vues de biais, comme le sol au loin. ×16 est livré "
             "et ne coûte presque rien.",
             choix=tuple(v for v, _ in FILTRAGES), zero="Celui du jeu", noms_choix=FILTRAGES,
-            onglet="image", cout=(("GPU", 1),), se_voit=True),
+            onglet="image", cout=(("GPU", 1),)),
     Reglage("graph_limite", "GeneralExt", "FPSLimit",
             "Limite d'images par seconde",
             "Ce jeu ne doit pas dépasser 60 images par seconde : au-delà, le diablotin se fige "

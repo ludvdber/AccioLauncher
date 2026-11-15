@@ -7,7 +7,9 @@ construisant sa session, et n'en sait pas plus.
 - la question « Mise à jour disponible » ne s'ouvre pas par-dessus le jeu (`_propose_launcher_update` se tait tant
   qu'un jeu tourne) : elle est reposée au retour, sauf après un arrêt fatal, dont la boîte passe d'abord.
 
-Les paquets des jeux lus par le Carnet et les Collections, eux, sont rendus par `GameSession.demarrer`.
+Au lancement, `GameSession.demarrer` appelle `liberer_les_caches` : paquets des jeux, folios, jaquettes
+et fonds décodés lus par l'accueil, le Carnet et les Collections. Tout se relit à la demande au retour
+(audit UI f113 : le launcher pesait 205 Mo pendant la partie au lieu de 144).
 """
 from typing import TYPE_CHECKING
 
@@ -15,6 +17,18 @@ from PyQt6.QtCore import QTimer
 
 if TYPE_CHECKING:
     from src.ui.main_window import MainWindow
+
+
+def liberer_les_caches() -> None:
+    """Ce qui ne sert qu'à l'accueil, au Carnet et aux Collections, rendu au jeu qui démarre."""
+    from src.core import folio_hp3, folio_hp6, maillages_ue1, textures_ue1
+    from src.ui import background_widget, stats_releve
+    textures_ue1.liberer()
+    maillages_ue1.liberer()
+    folio_hp3.liberer()
+    folio_hp6.liberer()
+    stats_releve.liberer()
+    background_widget.liberer_fonds_decodes()
 
 
 def brancher(window: MainWindow) -> None:

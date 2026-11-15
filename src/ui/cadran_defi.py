@@ -121,6 +121,9 @@ class CadranDefi(QWidget):
         self.setSizePolicy(politique)
         self.setMinimumSize(320, round(320 * _HAUTEUR / _LARGEUR))
         self.setAccessibleName(tr("Niveau de défi"))
+        # Ses noms se cliquent : ils s'atteignent aussi au clavier et à la manette (Tab y
+        # entre, ←/→ visent un nom comme le survol, Entrée ou Espace le choisit ; audit UI f121).
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     # ── Mesure ────────────────────────────────────────────────────────────
     def hasHeightForWidth(self) -> bool:  # noqa: N802 (Qt)
@@ -200,6 +203,36 @@ class CadranDefi(QWidget):
             self._survole = ""
             self.update()
         super().leaveEvent(event)
+
+    def _ordre(self) -> list[str]:
+        return [ident for ident, _n, _c in sorted(self._crans, key=lambda c: c[2])]
+
+    def focusInEvent(self, event) -> None:  # noqa: N802 (Qt)
+        ordre = self._ordre()
+        if ordre and not self._survole:
+            self._survole = self.actif if self.actif in ordre else ordre[0]
+            self.update()
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event) -> None:  # noqa: N802 (Qt)
+        if self._survole:
+            self._survole = ""
+            self.update()
+        super().focusOutEvent(event)
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802 (Qt)
+        ordre = self._ordre()
+        touche = Qt.Key(event.key())
+        pas = {Qt.Key.Key_Right: 1, Qt.Key.Key_Up: 1, Qt.Key.Key_Left: -1, Qt.Key.Key_Down: -1}.get(touche)
+        if ordre and pas is not None:
+            rang = ordre.index(self._survole) if self._survole in ordre else 0
+            self._survole = ordre[max(0, min(len(ordre) - 1, rang + pas))]
+            self.update()
+            return
+        if self._survole and touche in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self._choisir(self._survole)
+            return
+        super().keyPressEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802 (Qt)
         if event.button() == Qt.MouseButton.LeftButton:

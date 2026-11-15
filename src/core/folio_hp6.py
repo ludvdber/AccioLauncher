@@ -462,3 +462,10 @@ def resume(fichiers: dict[str, Path]) -> folio.Resume | None:
         return None
     quand = partie.ecrite or datetime.fromtimestamp(chemin.stat().st_mtime)
     return folio.Resume(partie, "", partie.ecussons, ECUSSONS, quand, "ecussons")
+
+
+def liberer() -> None:
+    """Rend les textes et images des badges et du menu : un jeu démarre."""
+    _textes_badges.cache_clear()
+    _images_badges.cache_clear()
+    _images_menu.cache_clear()

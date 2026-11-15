@@ -79,6 +79,7 @@ class Carousel(QWidget):
         # Ticker partagé à ~30 FPS, mais repaint des étoiles 1 tick sur 2 (~15 FPS)
         self._star_flip = False
         self._ticking = False
+        self._cache_pause = False   # abonné au moment où une page le cache (`hideEvent`)
         self.resume()
 
         self._items_layout = QHBoxLayout(self)
@@ -153,6 +154,8 @@ class Carousel(QWidget):
 
 
     def _tick_stars(self) -> None:
+        if not self.isVisible():
+            return
         self._star_flip = not self._star_flip
         if self._star_flip:
             return  # 1 tick sur 2 → ~15 FPS visuel pour le scintillement
@@ -320,6 +323,20 @@ class Carousel(QWidget):
         if self._ticking:
             Ticker.detach(self._tick_stars)
             self._ticking = False
+
+    # Une page (Paramètres, Carnet…) cache le bandeau : ses étoiles calculaient encore leur
+    # zone 15 fois par seconde, seul abonné de l'horloge (audit UI f126). Le contrat de
+    # `ticker.py` : se brancher en se montrant, se débrancher en se cachant.
+    def hideEvent(self, event) -> None:  # noqa: N802 (Qt)
+        self._cache_pause = self._ticking
+        self.pause()
+        super().hideEvent(event)
+
+    def showEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().showEvent(event)
+        if self._cache_pause:
+            self._cache_pause = False
+            self.resume()
 
     def resume(self) -> None:
         if not self._ticking:

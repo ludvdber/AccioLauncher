@@ -41,6 +41,8 @@ from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.composants import (
+    titre_page,
+    LARGEUR_RAIL, MARGES_PAGE,
     bouton_retour,
     ENCRE,
     ENCRE_DOUCE,
@@ -51,13 +53,11 @@ from src.ui.composants import (
     transparent,
 )
 from src.ui.entree_focus import entree_suit_le_focus
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.fonts import cinzel
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, _Jaquette
 from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
-_LARGEUR_RAIL = 300
-_MARGES_PAGE = (48, 32, 48, 32)
 _VERT = "#7be0a4"
 
 _STYLE = f"""
@@ -221,7 +221,7 @@ class VersionsDialog(QDialog):
     def _rail(self) -> QFrame:
         rail = QFrame()
         rail.setObjectName("rail")
-        rail.setFixedWidth(_LARGEUR_RAIL)
+        rail.setFixedWidth(LARGEUR_RAIL)
         lay = QVBoxLayout(rail)
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(6)
@@ -263,16 +263,12 @@ class VersionsDialog(QDialog):
         page = QWidget()
         transparent(page, "pageVersion")
         lay = QVBoxLayout(page)
-        lay.setContentsMargins(*_MARGES_PAGE)
+        lay.setContentsMargins(*MARGES_PAGE)
         lay.setSpacing(0)
 
         gauche = QVBoxLayout()
         gauche.setSpacing(6)
-        titre = QLabel(tr("Version {}").format(ver.version))
-        titre.setTextFormat(Qt.TextFormat.PlainText)
-        titre.setFont(cinzel_decorative(22))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        gauche.addWidget(titre)
+        gauche.addWidget(titre_page(tr("Version {}").format(ver.version)))
         gauche.addWidget(texte(f"{date_longue(ver.date)} · {format_size(ver.size_mb)}",
                                15, "#a9a7c4"))
         lay.addLayout(gauche)

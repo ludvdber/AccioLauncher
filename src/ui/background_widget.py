@@ -5,9 +5,9 @@ from collections import OrderedDict
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
-from PyQt6.QtCore import QRect, QRectF, Qt, QTimer, pyqtProperty
+from PyQt6.QtCore import QRect, QRectF, QSize, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import (
-    QColor, QImage, QImageReader, QLinearGradient, QPainter, QPixmap, QRadialGradient,
+    QColor, QGuiApplication, QImage, QImageReader, QLinearGradient, QPainter, QPixmap, QRadialGradient,
 )
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
@@ -56,12 +56,46 @@ _VOILE_ALPHA = 38
 # 2026-10-14, 57 → 87 Mo), pour 12 ms par retour sur un jeu déjà vu.
 _FONDS_DECODES: OrderedDict[str, QPixmap | None] = OrderedDict()
 _FONDS_GARDES = 3
+
+
+def liberer_fonds_decodes() -> None:
+    """Un jeu démarre : seul le fond affiché (le plus récent) reste décodé."""
+    while len(_FONDS_DECODES) > 1:
+        _FONDS_DECODES.popitem(last=False)
 _ATTENTE_MS = 15
 
 
-def _decoder(chemin: str) -> QImage:
+def ecran_le_plus_grand() -> QSize:
+    """Le plus grand écran branché, en pixels PHYSIQUES (vide sans écran).
+
+    Lu sur le fil de l'interface : les fils de décodage reçoivent le résultat."""
+    tailles = [(round(s.size().width() * s.devicePixelRatio()), round(s.size().height() * s.devicePixelRatio()))
+               for s in QGuiApplication.screens()]
+    if not tailles:
+        return QSize()
+    return QSize(max(w for w, _ in tailles), max(h for _, h in tailles))
+
+
+def taille_de_decodage(image: QSize, ecran: QSize) -> QSize:
+    """La taille à laquelle décoder une illustration de fond : de quoi couvrir le
+    plus grand écran, zoom et parallaxe compris (`MAX_SCALE`), jamais plus que
+    l'original. Les illustrations font 3840 × 1240 : couvrir la HAUTEUR d'un écran
+    1080p en demande déjà toute la définition, mais un écran plus bas (1366 × 768,
+    720p) n'en garde que la moitié environ (audit UI f115, f127). Image ou écran
+    inconnus : l'original."""
+    if image.isEmpty() or ecran.isEmpty():
+        return image
+    echelle = min(1.0, max(ecran.width() * BackgroundWidget.MAX_SCALE / image.width(),
+                           ecran.height() * BackgroundWidget.MAX_SCALE / image.height()))
+    return QSize(min(image.width(), math.ceil(image.width() * echelle)),
+                 min(image.height(), math.ceil(image.height() * echelle)))
+
+
+def _decoder(chemin: str, ecran: QSize) -> QImage:
     """Sur le fil de décodage : une QImage, jamais une QPixmap (fil de l'interface seul)."""
-    return QImageReader(chemin).read()
+    lecteur = QImageReader(chemin)
+    lecteur.setScaledSize(taille_de_decodage(lecteur.size(), ecran))
+    return lecteur.read()
 
 # Voile gauche : (position sur la largeur, alpha). C'est LUI qui protège
 # réellement le texte — le voile plein ci-dessus assombrit uniformément, mais
@@ -339,12 +373,12 @@ class BackgroundWidget(QWidget):
             # Pas de décodage sur le fil de l'interface : l'ancien fond reste le temps
             # que le fil livre le nouveau (le plus souvent déjà prêt, c'est un voisin).
             if cle not in self._voisins:
-                self._voisins[cle] = self._fil.submit(_decoder, cle)
+                self._voisins[cle] = self._fil.submit(_decoder, cle, ecran_le_plus_grand())
             self._attendu = cle
             self._poser_attendu()
             return
         else:
-            self._garder(cle, QPixmap(cle) if path and path.exists() else None)
+            self._garder(cle, QPixmap.fromImage(_decoder(cle, ecran_le_plus_grand())) if path and path.exists() else None)
         self._montrer(cle)
 
     def _garder(self, cle: str, pixmap: QPixmap | None) -> None:
@@ -389,7 +423,7 @@ class BackgroundWidget(QWidget):
                 self._voisins.pop(cle).cancel()
         for cle in voulus:
             if cle not in _FONDS_DECODES and cle not in self._voisins:
-                self._voisins[cle] = self._fil.submit(_decoder, cle)
+                self._voisins[cle] = self._fil.submit(_decoder, cle, ecran_le_plus_grand())
 
     def _ensure_prepared(self) -> None:
         if self._pixmap is None or self._pixmap.isNull():

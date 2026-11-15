@@ -29,6 +29,9 @@ from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, NOTES_VERSIONS_URL
 from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
 from src.ui.composants import (
+    lien_au_clavier,
+    transparent,
+    titre_page,
     bouton,
     bouton_retour,
     feuille_de_style,
@@ -38,7 +41,7 @@ from src.ui.composants import (
     surtitre,
     texte,
 )
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.stats_releve import _Jaquette, _jaquette
 from src.ui.theme import RAYON_CARTE, accent_qcolor, bg_qcolor, current as current_theme, themed
@@ -234,7 +237,7 @@ class NouveautesPage(QDialog):
 
     def _contenu(self, apres_mise_a_jour: bool) -> QWidget:
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page)
         lay = QVBoxLayout(page)
         lay.setContentsMargins(*_MARGES)
         lay.setSpacing(0)
@@ -252,11 +255,7 @@ class NouveautesPage(QDialog):
         # Ouverte seule au premier lancement : il faut dire pourquoi.
         if apres_mise_a_jour:
             gauche.addWidget(surtitre(tr("Mise à jour installée")))
-        titre = QLabel(tr("Accio Launcher {}").format(self.nouveautes.version))
-        titre.setTextFormat(Qt.TextFormat.PlainText)
-        titre.setFont(cinzel_decorative(24))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        gauche.addWidget(titre)
+        gauche.addWidget(titre_page(tr("Accio Launcher {}").format(self.nouveautes.version)))
         if self.nouveautes.nom:
             nom = QLabel(self.nouveautes.nom)
             nom.setObjectName("nomVersion")
@@ -270,8 +269,7 @@ class NouveautesPage(QDialog):
         lien.setObjectName("toutesLesVersions")
         lien.setTextFormat(Qt.TextFormat.RichText)
         lien.setFont(police(14))
-        lien.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse
-                                     | Qt.TextInteractionFlag.LinksAccessibleByKeyboard)
+        lien_au_clavier(lien)
         lien.linkActivated.connect(open_url)
         tete.addWidget(lien, alignment=Qt.AlignmentFlag.AlignBottom)
         lay.addLayout(tete)

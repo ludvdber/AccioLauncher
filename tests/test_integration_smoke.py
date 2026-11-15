@@ -466,6 +466,21 @@ class TestEffetsDerriereUnePage:
         win._pages.fermer()
         assert win._particles._ticking, "la page fermée, tout repart"
 
+    def test_rouverte_sans_la_main_elle_n_anime_pas_derriere_le_jeu(self, make_window, qtbot, monkeypatch):
+        """f114 : « Jouer à … » relancé pendant la partie remontre la fenêtre ; si Windows lui
+        refuse la main, l'horloge des animations repartait quand même, 30 fois par seconde."""
+        from src.ui.ticker import Ticker
+        win = make_window()
+        win.show()
+        qtbot.waitExposed(win)
+        win.pause_all_effects()
+        monkeypatch.setattr(win, "isActiveWindow", lambda: False)
+        win.resume_all_effects()
+        assert not Ticker.instance()._timer.isActive()
+        monkeypatch.setattr(win, "isActiveWindow", lambda: True)
+        win.resume_all_effects()
+        assert Ticker.instance()._timer.isActive(), "avec la main, tout repart"
+
 
 class TestOnboardingImport:
     def test_perform_imports_moves_game(self, qtbot, tmp_path, monkeypatch):

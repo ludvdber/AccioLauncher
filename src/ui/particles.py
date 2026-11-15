@@ -29,6 +29,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QWidget
 
+from src.ui.composants import transparent
 from src.ui import theme
 from src.core.season import Profil, profil as profil_de
 from src.ui.ticker import TICK_MS, Ticker
@@ -109,7 +110,7 @@ class ParticleOverlay(QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
 
         self._particles: list[_Particle] = []
         self._time = 0.0

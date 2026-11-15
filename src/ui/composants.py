@@ -6,16 +6,17 @@ une maison les remplace toutes d'un coup.
 """
 
 import shutil
-from html import escape
+import re
+from html import escape, unescape
 from pathlib import Path
 
-from PyQt6.QtCore import QRectF, QSize, Qt
+from PyQt6.QtCore import QEvent, QObject, QRectF, QSize, Qt
 from PyQt6.QtGui import QColor, QFont, QFontMetricsF, QIcon, QPainter
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-from src.ui.fonts import body_font, cinzel
+from src.ui.fonts import body_font, cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current, rayon_pastille, themed
 
@@ -206,14 +207,22 @@ class Paragraphe(QLabel):
         self.setMinimumHeight(max(0, self.heightForWidth(self.width())))
 
 
-def transparent(widget: QWidget, nom: str) -> None:
-    """Un conteneur sans fond. La règle porte son NOM : sans sélecteur, elle
+def transparent(widget: QWidget, nom: str | None = None) -> None:
+    """Un conteneur sans fond. La règle vise le widget SEUL : sans sélecteur, elle
     s'applique aussi à TOUS ses enfants et gagne sur la feuille de la fenêtre. Elle
     effaçait le fond des cartes de la Difficulté, le fond doré de « Suivant » dans
     l'assistant, le rail, les cartes des Paramètres, le filet du Journal des
-    changements et la pastille des sorts appris du Folio (audit UI, 2026-11-13)."""
-    widget.setObjectName(nom)
-    widget.setStyleSheet(f"QWidget#{nom} {{ background: transparent; }}")
+    changements et la pastille des sorts appris du Folio (audit UI, 2026-11-13), puis
+    les fonds et filets des cartes de presque toutes les pages (f21, 2026-11-15).
+
+    `nom` le nomme aussi ; sans nom, une propriété le désigne, et son nom d'objet,
+    souvent posé ailleurs pour une autre règle, ne change pas."""
+    if nom is not None:
+        widget.setObjectName(nom)
+        widget.setStyleSheet(f"QWidget#{nom} {{ background: transparent; }}")
+        return
+    widget.setProperty("sansFond", True)
+    widget.setStyleSheet('*[sansFond="true"] { background: transparent; }')
 
 
 def survol(p: QPainter, case: QPushButton, rayon: float) -> None:
@@ -393,6 +402,33 @@ def html_lien(cible: str, contenu: str, *, discret: bool = False) -> str:
             f"{contenu}</a>")
 
 
+class _EntreeSurLeLien(QObject):
+    """Entrée ou Espace sur un libellé à un lien : le lien s'ouvre (`lien_au_clavier`)."""
+
+    def eventFilter(self, objet, evenement) -> bool:  # noqa: N802 (Qt)
+        if (evenement.type() == QEvent.Type.KeyPress and isinstance(objet, QLabel)
+                and evenement.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space)):
+            cible = re.search(r'href="([^"]*)"', objet.text())
+            if cible is not None:
+                objet.linkActivated.emit(unescape(cible.group(1)))
+                return True
+        return False
+
+
+def lien_au_clavier(lbl: QLabel) -> None:
+    """Un libellé qui porte UN lien : un seul arrêt de Tab, l'anneau autour de lui, Entrée
+    ou Espace l'ouvre. Avec `LinksAccessibleByKeyboard`, chaque lien coûtait deux Tab, et
+    le premier ne montrait rien ni n'ouvrait rien (audit UI f13, f70). Le libellé qui n'a
+    pas de lien n'est pas un arrêt (« Homeless » l'était, invisible et sans action)."""
+    lbl.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+    if "href=" not in lbl.text():
+        lbl.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        return
+    lbl.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+    if lbl.findChild(_EntreeSurLeLien) is None:
+        lbl.installEventFilter(_EntreeSurLeLien(lbl))
+
+
 def bouton_retour(libelle: str, action) -> QPushButton:
     """« ← Bibliothèque » en tête d'une page : un lien gris, pas un bouton bordé."""
     b = QPushButton(libelle)
@@ -406,22 +442,42 @@ def bouton_retour(libelle: str, action) -> QPushButton:
     return b
 
 
-def bouton_rubrique(libelle: str, icone: str, taille_icone: int = 20,
-                    hauteur: int = 44) -> QPushButton:
+# Les pages à rail (Paramètres, réglages d'un jeu, Folio, Journal des changements,
+# Contribuer) : une largeur de colonne, une marge de page, une taille de rubrique. Chaque
+# page avait la sienne (236 à 300 px, contenu à 41-68 px du rail, rubriques de 42 ou 44 px)
+# et passer des réglages au Journal, au MÊME en-tête, faisait sauter la page (audit UI f75).
+LARGEUR_RAIL = 270
+MARGES_PAGE = (40, 32, 40, 32)
+_HAUTEUR_RUBRIQUE = 44
+_TAILLE_PICTO_RUBRIQUE = 20
+
+
+def titre_page(contenu: str) -> QLabel:
+    """Le grand titre d'une page (Galerie, Folio hors du Carnet, Contribuer, Journal des
+    changements, Nouveautés) : une police, une taille. Elles en avaient quatre (audit UI f76)."""
+    titre = QLabel(contenu)
+    titre.setTextFormat(Qt.TextFormat.PlainText)
+    titre.setWordWrap(True)
+    titre.setFont(cinzel_decorative(22))
+    titre.setStyleSheet("color: #f4f2f8; background: transparent;")
+    return titre
+
+
+def bouton_rubrique(libelle: str, icone: str) -> QPushButton:
     """Une rubrique d'un rail vertical (Paramètres, réglages d'un jeu) : cochable,
     son pictogramme gris au repos, dans l'accent du thème une fois choisie."""
     pictogramme = QIcon()
-    pictogramme.addPixmap(pixmap_icone(icone, taille_icone, QColor(_ENCRE_RAIL)),
+    pictogramme.addPixmap(pixmap_icone(icone, _TAILLE_PICTO_RUBRIQUE, QColor(_ENCRE_RAIL)),
                           QIcon.Mode.Normal, QIcon.State.Off)
-    pictogramme.addPixmap(pixmap_icone(icone, taille_icone, QColor(current().accent_light)),
+    pictogramme.addPixmap(pixmap_icone(icone, _TAILLE_PICTO_RUBRIQUE, QColor(current().accent_light)),
                           QIcon.Mode.Normal, QIcon.State.On)
     b = QPushButton(libelle)
     b.setObjectName("rubrique")
     b.setCheckable(True)
     b.setIcon(pictogramme)
-    b.setIconSize(QSize(taille_icone, taille_icone))
+    b.setIconSize(QSize(_TAILLE_PICTO_RUBRIQUE, _TAILLE_PICTO_RUBRIQUE))
     b.setFont(police(14))
-    b.setFixedHeight(hauteur)
+    b.setFixedHeight(_HAUTEUR_RUBRIQUE)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
     b.setAutoDefault(False)
     return b
@@ -472,7 +528,7 @@ class LigneReglage(QWidget):
     def __init__(self, titre: str | QWidget, description: str = "", *commandes: QWidget,
                  icone: QWidget | None = None) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(20, 14, 20, 14)
         lay.setSpacing(18)

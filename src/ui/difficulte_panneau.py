@@ -294,8 +294,13 @@ class PanneauDifficulte(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        lay.addWidget(Rangee([self._entete(), self._bloc_cadran()], 2, seuil=640,
-                             etirements=(1, 1), ecart=28))
+        # « Bêta » se pose à côté du titre de la page (la fenêtre le prend) : seul à gauche
+        # du cadran, il laissait 660 × 330 px vides et repoussait les préréglages sous le
+        # pli (audit UI f44, f68). Le cadran plafonne sa hauteur et se centre.
+        self.pastille_beta = pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
+        self.pastille_beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas "
+                                         "se signale sur le Discord du projet."))
+        lay.addWidget(self._bloc_cadran())
         lay.addSpacing(22)
         lay.addWidget(_titre_section(tr("Préréglages")))
         lay.addSpacing(14)
@@ -325,23 +330,6 @@ class PanneauDifficulte(QWidget):
         return dp.courant(self.valeurs(), self.idents)
 
     # ── Construire ────────────────────────────────────────────────────────
-    def _entete(self) -> QWidget:
-        bloc = QWidget()
-        transparent(bloc, "enteteDifficulte")
-        v = QVBoxLayout(bloc)
-        v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(10)
-        v.addStretch()
-        # Le « quand » est au pied (`_noter_pied`), pour chaque onglet : le redire
-        # ici le mettait deux fois à l'écran. « Vos sauvegardes ne changent pas. » est parti le
-        # 2026-11-13 (Ludo : un comportement normal ne se précise pas).
-        self.pastille_beta = pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
-        self.pastille_beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas "
-                                         "se signale sur le Discord du projet."))
-        v.addWidget(self.pastille_beta, alignment=Qt.AlignmentFlag.AlignLeft)
-        v.addStretch()
-        return bloc
-
     def _bloc_cadran(self) -> QWidget:
         self.cadran = CadranDefi(self._choisir)
         self.cadran.poser_crans(tuple((p.ident, tr(p.nom), c) for p, c in self.crans))

@@ -238,3 +238,10 @@ class TestFenetre:
         assert liste.currentData() == "60"                    # remis sur le fichier
         assert "réglages graphiques" in dlg._erreur.text()
         assert "voodoo" not in dlg._erreur.text().lower()
+
+
+def test_l_oeil_ne_marque_que_ce_qui_se_voit_le_plus():
+    """f118 : « œil = le plus visible » sur les quatre réglages d'image ne distinguait rien."""
+    image = [r for r in rg.REGLAGES.values() if r.onglet == "image"]
+    assert {r.ident for r in image if r.se_voit} == {"graph_resolution", "graph_antialiasing"}
+    assert len(image) > 2

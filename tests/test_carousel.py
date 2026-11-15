@@ -445,3 +445,23 @@ def test_un_jeu_absent_ne_garde_aucune_couleur(qtbot):
     image = item.grab().toImage()
     centre = image.pixelColor(image.width() // 2, image.height() // 2)
     assert centre.hsvSaturation() < 40, centre.name()
+
+
+class TestEtoilesCachees:
+    def test_cache_par_une_page_il_se_debranche_de_l_horloge(self, qtbot):
+        """f126 : une page cache le bandeau ; ses étoiles calculaient encore 15 fois par seconde."""
+        from src.ui.ticker import Ticker
+        c = Carousel([_make_game("a")], _FakeManager())
+        qtbot.addWidget(c)
+        c.show()
+        qtbot.waitExposed(c)
+        assert c._ticking
+        c.hide()
+        assert not c._ticking
+        c.show()
+        assert c._ticking, "remontré, il se rebranche"
+        c.pause()                       # mis en pause par la fenêtre (tray)…
+        c.hide()
+        c.show()
+        assert not c._ticking, "…il ne se rebranche pas tout seul"
+        Ticker.detach(c._tick_stars)

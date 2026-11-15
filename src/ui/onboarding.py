@@ -195,7 +195,7 @@ class OnboardingDialog(QDialog):
         """Un pictogramme posé dans un libellé ; doré, il suit la maison."""
         lbl = QLabel()
         lbl.setFixedSize(taille, taille)
-        lbl.setStyleSheet("background: transparent;")
+        transparent(lbl)
         if couleur:
             lbl.setPixmap(pixmap_icone(nom, taille, QColor(couleur)))
         else:
@@ -208,14 +208,14 @@ class OnboardingDialog(QDialog):
     def _page_langue(self) -> QWidget:
         """Plein cadre, neutre : chaque carte est écrite dans sa propre langue."""
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page)
         lay = QVBoxLayout(page)
         lay.setContentsMargins(40, 30, 40, 30)
         lay.setSpacing(0)
         lay.addStretch(3)
 
         logo = QLabel()
-        logo.setStyleSheet("background: transparent;")
+        transparent(logo)
         ecran = QGuiApplication.primaryScreen()
         ratio = ecran.devicePixelRatio() if ecran is not None else 1.0
         pm = QPixmap(str(ASSETS_DIR / "accio_logo_horizontal.png"))
@@ -443,7 +443,7 @@ class OnboardingDialog(QDialog):
         carte.ajouter(self._ligne_dossier)
 
         disque = QWidget()
-        disque.setStyleSheet("background: transparent;")
+        transparent(disque)
         v = QVBoxLayout(disque)
         v.setContentsMargins(20, 16, 20, 18)
         v.setSpacing(10)
@@ -465,7 +465,7 @@ class OnboardingDialog(QDialog):
         carte.ajouter(disque)
 
         avis = QWidget()
-        avis.setStyleSheet("background: transparent;")
+        transparent(avis)
         a = QHBoxLayout(avis)
         a.setContentsMargins(20, 12, 20, 14)
         a.setSpacing(12)

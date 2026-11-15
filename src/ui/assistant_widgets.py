@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, Chemin, police
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, Chemin, police, transparent
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.reglages_widgets import _Jaquette
@@ -153,7 +153,7 @@ class RailEtapes(QWidget):
 
     def __init__(self, libelles: list[str], premiere_faite: str = "") -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(4)

@@ -84,7 +84,7 @@ def construire_dialogue(report: str):
 
     from src.core.i18n import tr
     from src.core.liens import DISCORD_URL
-    from src.ui.composants import feuille_de_style, police, texte
+    from src.ui.composants import feuille_de_style, police, texte, transparent
     from src.ui.entree_focus import entree_suit_le_focus
     from src.ui.icon_button import pixmap_icone
     from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, themed
@@ -114,7 +114,7 @@ def construire_dialogue(report: str):
     tete = QHBoxLayout()
     tete.setSpacing(14)
     icone = QLabel()
-    icone.setStyleSheet("background: transparent;")
+    transparent(icone)
     icone.setPixmap(pixmap_icone("attention", 26, QColor("#e0584f")))
     tete.addWidget(icone)
     titre = texte(tr("Le launcher a rencontré une erreur"), 17, "#f4f2f8", retour=True)

@@ -1504,3 +1504,25 @@ def test_changer_de_jeu_ne_rebatit_que_la_rubrique_visible(fenetre_avec_jeux):
     assert page._cinematiques._jeu == "hp2" and page._musique._jeu == avant
     page.rubrique(MUSIQUE)
     assert page._musique._jeu == "hp2", "la Musique rattrape le jeu à son affichage"
+
+
+def test_grande_fenetre_listes_bornees_et_ecran_qui_grandit(fenetre_avec_jeux, qtbot):
+    """f39 : à 2560 × 1440, le titre d'un morceau et son bouton étaient à 2 000 px l'un de
+    l'autre, et l'écran de cinématique restait à 560 × 315 à côté d'une liste de 1 890 px."""
+    from src.ui.mediatheque_page import _Ecran, _LigneCine, _LigneMorceau
+    win = fenetre_avec_jeux
+    win.resize(2560, 1440)
+    win.show()
+    qtbot.waitExposed(win)
+    win._mediatheque.ouvrir("musique", "hp2")
+    page = win._pages.page
+    qtbot.waitUntil(lambda: bool(page.findChildren(_LigneMorceau)), timeout=5000)
+    qtbot.wait(30)
+    assert max(li.width() for li in page.findChildren(_LigneMorceau) if li.isVisible()) <= 960
+    win._mediatheque.ouvrir("cinematiques", "hp3")
+    page = win._pages.page
+    qtbot.waitUntil(lambda: bool(page.findChildren(_LigneCine)), timeout=5000)
+    qtbot.wait(30)
+    assert max(li.width() for li in page.findChildren(_LigneCine) if li.isVisible()) <= 720
+    ecran = next(e for e in page.findChildren(_Ecran) if e.isVisible())
+    assert ecran.width() > 560

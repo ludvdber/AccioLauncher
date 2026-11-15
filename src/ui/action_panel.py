@@ -13,7 +13,7 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.ui import focus_visible
-from src.ui.composants import feuille_de_style, lien
+from src.ui.composants import feuille_de_style, lien, transparent
 from src.ui.alert_banner import AlertBanner
 from src.ui.carte_progression import CarteProgression
 from src.ui.fonts import cinzel, body_font
@@ -94,7 +94,7 @@ class ActionPanel(QWidget):
         self._focus_pose = False         # le premier focus, posé une fois (`showEvent`)
         self._manager = manager
         self._game: GameData | None = None
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         self.setSizePolicy(
             self.sizePolicy().horizontalPolicy(),
             self.sizePolicy().verticalPolicy(),
@@ -122,7 +122,7 @@ class ActionPanel(QWidget):
 
         # Ligne principale des boutons
         self._action_container = QWidget()
-        self._action_container.setStyleSheet("background: transparent;")
+        transparent(self._action_container)
         self._action_layout = QHBoxLayout(self._action_container)
         self._action_layout.setContentsMargins(0, 0, 0, 0)
         self._action_layout.setSpacing(14)
@@ -131,7 +131,7 @@ class ActionPanel(QWidget):
 
         # Ligne de mise à jour
         self._update_row = QWidget()
-        self._update_row.setStyleSheet("background: transparent;")
+        transparent(self._update_row)
         self._update_row.hide()
         self._update_row_layout = QHBoxLayout(self._update_row)
         self._update_row_layout.setContentsMargins(0, 0, 0, 0)

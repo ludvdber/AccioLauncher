@@ -89,8 +89,9 @@ class TestMentionLegale:
         page = about_page.construire([])
         qtbot.addWidget(page)
         lbl = self._mention(page)
-        assert lbl.textInteractionFlags() & Qt.TextInteractionFlag.LinksAccessibleByKeyboard
-        lbl.linkActivated.emit("https://github.com/ludvdber/AccioLauncher")
+        # Un seul arrêt de Tab, et Entrée l'ouvre (f13 : `LinksAccessibleByKeyboard` en coûtait deux).
+        assert lbl.focusPolicy() == Qt.FocusPolicy.StrongFocus
+        qtbot.keyClick(lbl, Qt.Key.Key_Return)
         assert ouverts == ["https://github.com/ludvdber/AccioLauncher"]
 
 
@@ -191,3 +192,24 @@ class TestLienVisible:
         assert nom.toolTip() == "<qt>Ouvrir example.org</qt>"   # riche et échappée, règle 57
         voisins = nom.parentWidget().findChildren(QLabel)
         assert any(not v.pixmap().isNull() for v in voisins if v is not nom)
+
+
+class TestLiensAuClavier:
+    def test_un_lien_un_seul_arret_et_entree_l_ouvre(self, qtbot):
+        """f13, f70 : chaque lien coûtait deux Tab, le premier sans rien montrer ni ouvrir ;
+        un nom sans lien (« Homeless ») était un arrêt invisible."""
+        ouverts = []
+        page = about_page.construire(
+            [Contributor(name="ASTeam", role="Création", url="https://example.org"),
+             Contributor(name="Homeless", role="Aide", url="")],
+            ouvrir_nouveautes=lambda: ouverts.append("nouveautes"))
+        qtbot.addWidget(page)
+        etiquettes = {lbl.text(): lbl for lbl in _labels(page)}
+        assert etiquettes["HOMELESS" if "HOMELESS" in etiquettes else "Homeless"].focusPolicy() == Qt.FocusPolicy.NoFocus
+        for lbl in _labels(page):
+            if "href=" in lbl.text():
+                assert lbl.focusPolicy() == Qt.FocusPolicy.StrongFocus, lbl.text()[:40]
+                assert lbl.textInteractionFlags() == Qt.TextInteractionFlag.LinksAccessibleByMouse
+        version = page.findChild(QLabel, "versions")
+        qtbot.keyClick(version, Qt.Key.Key_Return)
+        assert ouverts == ["nouveautes"]

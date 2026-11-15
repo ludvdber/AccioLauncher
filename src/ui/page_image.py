@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
     QGraphicsOpacityEffect,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -45,7 +44,9 @@ from src.core.game_data import GameData
 from src.core.i18n import tr, trn, typo
 from src.core.reglages_table import Reglage
 from src.ui.flow_layout import FlowLayout
-from src.ui.composants import bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, petit_titre, police, transparent
+from src.ui.composants import (
+    bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, petit_titre, police, Rangee, transparent,
+)
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
 from src.ui.reglages_widgets import _CartePrereglage, _etiquette_beta, _Points, _texte_beta
@@ -216,7 +217,7 @@ class Boutons(QWidget):
 
     def __init__(self, reglage: Reglage, accio: object, jeu: object) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        transparent(self)
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
         self._valeurs = list(reglage.choix)
@@ -478,7 +479,7 @@ class _Fiche(QFrame):
         self.valeurs.setWordWrap(True)      # « Plein écran sans bordure » était coupé (2026-11-13)
         self.valeurs.setTextFormat(Qt.TextFormat.RichText)
         self.valeurs.setFont(police(13))
-        self.valeurs.setStyleSheet("background: transparent;")
+        transparent(self.valeurs)
         lay.addWidget(self.valeurs)
         self.notes = QLabel("")
         self.notes.setWordWrap(True)
@@ -558,7 +559,7 @@ class _LigneImage(QFrame):
         v.setContentsMargins(14 + (22 if retrait else 0), 6, 12, 6)
         v.setSpacing(2)
         self.haut = QWidget()
-        self.haut.setStyleSheet("background: transparent;")
+        transparent(self.haut)
         h = QHBoxLayout(self.haut)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(8)
@@ -583,7 +584,7 @@ class _LigneImage(QFrame):
         h.addWidget(self.points)
         case = QWidget()
         case.setObjectName("caseControle")
-        case.setStyleSheet("background: transparent;")
+        transparent(case)
         case.setFixedWidth(_LARGEUR_CONTROLE)
         hc = QHBoxLayout(case)
         hc.setContentsMargins(0, 0, 0, 0)
@@ -794,11 +795,11 @@ class PageImage(QWidget):
         corps = QHBoxLayout()
         corps.setSpacing(20)
         self.pile = QStackedWidget()
-        self.pile.setStyleSheet("background: transparent;")
+        transparent(self.pile)
         for _cat in self.categories:
             self.pile.addWidget(QWidget())     # bâtie à son premier affichage
         self._resultats = QWidget()
-        self._resultats.setStyleSheet("background: transparent;")
+        transparent(self._resultats)
         self._lay_resultats = QVBoxLayout(self._resultats)
         self._lay_resultats.setContentsMargins(0, 0, 0, 0)
         self._lay_resultats.setSpacing(12)
@@ -858,7 +859,7 @@ class PageImage(QWidget):
 
     def _page(self, cat: reglages_image.Categorie) -> QWidget:
         contenu = QWidget()
-        contenu.setStyleSheet("background: transparent;")
+        transparent(contenu)
         v = QVBoxLayout(contenu)
         v.setContentsMargins(0, 0, 8, 0)
         v.setSpacing(0)
@@ -889,25 +890,19 @@ class PageImage(QWidget):
         return contenu
 
     def _bloc_prereglages(self) -> QWidget:
-        bloc = QWidget()
-        bloc.setStyleSheet("background: transparent;")
-        grille = QGridLayout(bloc)
-        grille.setContentsMargins(0, 0, 0, 0)
-        grille.setSpacing(10)
-        groupe = QButtonGroup(bloc)
-        groupe.setExclusive(True)
-        entrees = [(ident, nom, texte, rang + 1) for rang, (ident, nom, texte, _v) in enumerate(self._prereglages)]
-        entrees.append(("", "Sur mesure", "Se choisit tout seul dès qu'un réglage change.", 0))
-        for rang, (ident, nom, texte, niveau) in enumerate(entrees):
-            repere = _Points(min(niveau, 3), largeur_segment=16) if niveau else None
-            carte = _CartePrereglage(tr(nom), tr(texte), repere)
-            if not ident:
-                carte.setProperty("surMesure", True)
+        """Les préréglages sur une rangée (empilés sous 190 px chacun). Plus de carte
+        « Sur mesure » : elle prenait une demi-rangée pour dire qu'aucune n'est cochée,
+        et à 980 × 660 les cartes mangeaient 62 % de la zone (audit UI f45)."""
+        self._groupe_prereglages = QButtonGroup(self)
+        self._groupe_prereglages.setExclusive(True)
+        cartes = []
+        for rang, (ident, nom, texte, _v) in enumerate(self._prereglages):
+            carte = _CartePrereglage(tr(nom), tr(texte), _Points(min(rang + 1, 3), largeur_segment=16))
             carte.clicked.connect(lambda _c=False, i=ident: self.choisir_prereglage(i))
-            groupe.addButton(carte)
-            grille.addWidget(carte, rang // 2, rang % 2)
+            self._groupe_prereglages.addButton(carte)
             self._cartes_prereglage[ident] = carte
-        return bloc
+            cartes.append(carte)
+        return Rangee(cartes, len(cartes), seuil=len(cartes) * 190, ecart=10)
 
     def _controle(self, r: Reglage) -> tuple[QWidget, QWidget | None]:
         """Le contrôle d'un réglage, et ce qui le suit dans sa colonne (valeur et retour d'un curseur)."""
@@ -946,7 +941,7 @@ class PageImage(QWidget):
             c.glisse.connect(lambda x, lbl=valeur, rr=r: (lbl.setText(_chiffre(rr, x)), self._maj_fiche(x)))
             c.choisi.connect(lambda x, i=r.ident, rr=r: self.regler(i, rc.arrondir(rr, x)))
             fin = QWidget()
-            fin.setStyleSheet("background: transparent;")
+            transparent(fin)
             hf = QHBoxLayout(fin)
             hf.setContentsMargins(0, 0, 0, 0)
             hf.setSpacing(2)
@@ -1082,9 +1077,6 @@ class PageImage(QWidget):
             self.regler(self._actif, voulue)
 
     def choisir_prereglage(self, ident: str) -> None:
-        if not ident:
-            self._maj_prereglage()   # « Sur mesure » n'écrit rien
-            return
         voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
         rates = False
         for cle, valeur in voulues.items():
@@ -1155,6 +1147,12 @@ class PageImage(QWidget):
         carte = self._cartes_prereglage.get(courant)
         if carte is not None:
             carte.setChecked(True)
+            return
+        # Hors des préréglages : aucune carte cochée (un groupe exclusif n'en décoche pas seul).
+        self._groupe_prereglages.setExclusive(False)
+        for c in self._cartes_prereglage.values():
+            c.setChecked(False)
+        self._groupe_prereglages.setExclusive(True)
 
     def _fiche_ouverte(self) -> bool:
         return self._zone_fiche.isVisibleTo(self)

@@ -31,16 +31,15 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.config import Config
 from src.core.i18n import get_language, tr, trn
-from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol, texte, transparent
+from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol, texte, transparent, LARGEUR_RAIL, titre_page
 from src.ui.flow_layout import FlowLayout
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.fonts import cinzel
 from src.ui.galerie_page import nom_court
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.stats_widgets import _duree
 from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
-_LARGEUR_RAIL = 280
 _VIGNETTE = 56        # hauteur de l'image d'une sauvegarde dans le rail
 _MARGE_RAIL = 18      # marges latérales du rail
 _MARGE_LIGNE = 12     # marges latérales d'une ligne de partie
@@ -240,7 +239,7 @@ def _tuile(chiffre: str, libelle: str, part: float | None = None,
     h.addLayout(v, stretch=1)
     if icone is not None:
         image = QLabel()
-        image.setStyleSheet("background: transparent;")
+        transparent(image)
         image.setPixmap(icone)
         image.setFixedWidth(_ICONE_TUILE)
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -311,7 +310,7 @@ def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBox
     ligne.setSpacing(8)
     if icone is not None:
         image = QLabel()
-        image.setStyleSheet("background: transparent;")
+        transparent(image)
         image.setPixmap(icone)
         ligne.addWidget(image, alignment=Qt.AlignmentFlag.AlignTop)
     # Le titre passe à la ligne : sur une seule, deux séries côte à côte de
@@ -455,7 +454,7 @@ class _LigneEmplacement(QPushButton):
             image = QLabel()
             image.setPixmap(vignette)
             image.setFixedSize(vignette.deviceIndependentSize().toSize())
-            image.setStyleSheet("background: transparent;")
+            transparent(image)
             dehors.addWidget(image, alignment=Qt.AlignmentFlag.AlignTop)
             place_image = image.width() + dehors.spacing()
         v = QVBoxLayout()
@@ -597,7 +596,7 @@ class FolioPage(QDialog):
     def _rail(self) -> QFrame:
         rail = QFrame()
         rail.setObjectName("rail")
-        rail.setFixedWidth(_LARGEUR_RAIL)
+        rail.setFixedWidth(LARGEUR_RAIL)
         lay = QVBoxLayout(rail)
         lay.setContentsMargins(_MARGE_RAIL, 22, _MARGE_RAIL, 20)
         lay.setSpacing(6)
@@ -779,10 +778,7 @@ class FolioPage(QDialog):
             # Dans le Carnet, le message seul : le titre « FOLIO » répétait la rubrique cochée et
             # le surtitre du rail, trois fois le même mot sur 100 px (audit UI f28).
             if not self._integree:
-                titre = QLabel(tr("Folio"))
-                titre.setFont(cinzel_decorative(22))
-                titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-                lay.addWidget(titre)
+                lay.addWidget(titre_page(tr("Folio")))
                 lay.addSpacing(12)
             lay.addWidget(texte(message, 16, "#c9c7da", retour=True))
             lay.addStretch()
@@ -852,7 +848,7 @@ class FolioPage(QDialog):
         f.setSpacing(6)
         self._fiche_image = QLabel()
         self._fiche_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._fiche_image.setStyleSheet("background: transparent;")
+        transparent(self._fiche_image)
         f.addWidget(self._fiche_image)
         f.addSpacing(10)
         self._fiche_nom = texte("", 18, ENCRE, retour=True)
@@ -871,7 +867,7 @@ class FolioPage(QDialog):
 
     def _largeur_fiche(self) -> int:
         mini, maxi = _LARGEUR_FICHE
-        return max(mini, min(maxi, int((self.width() - _LARGEUR_RAIL) * 0.3)))
+        return max(mini, min(maxi, int((self.width() - LARGEUR_RAIL) * 0.3)))
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -950,7 +946,7 @@ class FolioPage(QDialog):
             if blason is not None:
                 # Le blason du jeu au-dessus du sable (HPMenu.u, HP2_Menu.utx).
                 image = QLabel()
-                image.setStyleSheet("background: transparent;")
+                transparent(image)
                 image.setPixmap(pixmap_texture(blason, 44, self.devicePixelRatioF(), rogner=True))
                 col.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
             chiffre = texte(str(points), 15, ENCRE)

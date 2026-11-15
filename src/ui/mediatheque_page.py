@@ -74,7 +74,12 @@ log = logging.getLogger(__name__)
 
 _LARGEUR_PLATINE = 340
 _DISQUE = 220
-_LARGEUR_ECRAN = 560
+# En grande fenêtre, une liste s'étirait sur 2 000 px (le titre d'un morceau à gauche, son
+# bouton 2 000 px plus loin) et l'écran restait à 560 × 315 (audit UI f39) : les listes
+# gardent une largeur de lecture, l'écran grandit jusqu'à 960 × 540.
+_LARGEUR_ECRAN = 960
+_LARGEUR_LISTE = 960
+_LARGEUR_LISTE_CINEMATIQUES = 720
 _PAS_BARRE_MS = 250                # au plus 4 repeintes par seconde de la barre de lecture
 
 _STYLE = """
@@ -676,6 +681,7 @@ class _VueMusique(QWidget):
 
     def _liste(self) -> QWidget:
         colonne = _transparent(QWidget())
+        colonne.setMaximumWidth(_LARGEUR_LISTE)
         lay = QVBoxLayout(colonne)
         lay.setContentsMargins(32, 18, 40, 0)
         lay.setSpacing(0)
@@ -1084,6 +1090,7 @@ class _VueCinematiques(QWidget):
         self._paquets = _Paquets(self, self._pile)
         self._zone = zone_defilable(self._liste)
         c.addWidget(self._zone, stretch=1)
+        colonne.setMaximumWidth(_LARGEUR_LISTE_CINEMATIQUES)
         racine.addWidget(colonne, stretch=2)
 
         cote = self._cote = _transparent(QWidget())

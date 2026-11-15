@@ -84,7 +84,28 @@ class TestTicker:
 
     def test_pause_resume(self, qtbot):
         ticker = Ticker.instance()
-        ticker.pause()
-        assert not ticker._timer.isActive()
+        abonne = lambda: None  # noqa: E731
+        ticker.tick.connect(abonne)
+        try:
+            ticker.pause()
+            assert not ticker._timer.isActive()
+            ticker.resume()
+            assert ticker._timer.isActive()
+        finally:
+            Ticker.detach(abonne)
+
+    def test_sans_abonne_l_horloge_se_tait_et_repart_au_premier(self, qtbot):
+        """f126 : derrière une page, plus rien ne bouge, et l'horloge réveillait encore le
+        launcher 30 fois par seconde."""
+        ticker = Ticker.instance()
+        abonnes = ticker.receivers(ticker.tick)
+        if abonnes:
+            pytest.skip(f"{abonnes} abonné(s) laissé(s) par un autre test")
         ticker.resume()
-        assert ticker._timer.isActive()
+        qtbot.waitUntil(lambda: not ticker._timer.isActive(), timeout=500)
+        abonne = lambda: None  # noqa: E731
+        ticker.tick.connect(abonne)
+        try:
+            assert ticker._timer.isActive(), "le premier abonné la relance"
+        finally:
+            Ticker.detach(abonne)

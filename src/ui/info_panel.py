@@ -16,7 +16,7 @@ from src.core import folio, sauvegardes
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
-from src.ui.composants import html_lien
+from src.ui.composants import html_lien, transparent, lien_au_clavier
 from src.ui.clickable_label import ClickableLabel
 from src.ui.fonts import cinzel, body_font
 from src.ui.icon_button import pixmap_icone
@@ -56,7 +56,7 @@ def _colonne_stat(libelle: str, valeur: QLabel) -> QWidget:
     """« TEMPS DE JEU » au-dessus de « 14 h 22 » : le libellé petit et gris,
     la valeur lisible."""
     col = QWidget()
-    col.setStyleSheet("background: transparent;")
+    transparent(col)
     boite = QVBoxLayout(col)
     boite.setContentsMargins(0, 0, 0, 0)
     boite.setSpacing(3)
@@ -164,7 +164,7 @@ class InfoPanel(QWidget):
         self._build_widgets()
 
         container = QWidget()
-        container.setStyleSheet("background: transparent;")
+        transparent(container)
         container.setLayout(self._layout)
 
         self._scroll = QScrollArea(self)
@@ -422,10 +422,7 @@ class InfoPanel(QWidget):
         self._indices.setFont(police_indices)
         self._indices.setWordWrap(True)
         self._indices.setTextFormat(Qt.TextFormat.RichText)
-        self._indices.setTextInteractionFlags(
-            Qt.TextInteractionFlag.LinksAccessibleByMouse
-            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
-        )
+        lien_au_clavier(self._indices)
         self._indices.setStyleSheet(
             "QLabel { color: #8f8db0; background: transparent; }")
         self._indices.linkActivated.connect(self._on_meta_link)
@@ -844,5 +841,6 @@ class InfoPanel(QWidget):
             morceaux.append(html_lien("folio", _insecable(escape(tr("Folio").upper(), quote=False))))
         point ='<span style="color:#4c4a68;">&nbsp;&nbsp;·&nbsp;&nbsp;</span>'
         self._indices.setText(point.join(morceaux))
+        lien_au_clavier(self._indices)   # le lien vient de changer : un arrêt de Tab s'il y en a un
         self._indices.setVisible(bool(morceaux))
 

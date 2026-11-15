@@ -42,13 +42,13 @@ from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, get_language, tr, trn
 from src.ui.composants import (
+    LARGEUR_RAIL, MARGES_PAGE,
     ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Pastille, bouton, bouton_rubrique,
     espace_du_volume, feuille_de_style, surtitre, texte,
     lien,
     transparent,
 )
 from src.ui.fenetre_message import message
-from src.ui.fonts import cinzel_decorative
 from src.ui import about_page, manette_nav
 from src.ui.disk_scan_worker import DiskScanWorker, garer
 from src.core.season import (
@@ -61,7 +61,6 @@ from src.ui.utils import avertir, is_writable_dir, liste_deroulante, open_local_
 
 log = logging.getLogger(__name__)
 
-_LARGEUR_RUBRIQUES = 236
 # (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
 _RUBRIQUES = (("Général", "dossier"), ("Son et image", "ecran"),
               ("Intégrations", "integrations"), ("À propos", "infos"))
@@ -69,7 +68,6 @@ _RANG_A_PROPOS = len(_RUBRIQUES) - 1   # ses messages arrivent de la fenêtre, a
 # La colonne de lecture, collée au rail : centrée, elle flottait loin de lui
 # sur un grand écran, et le pied avec elle.
 _LARGEUR_LECTURE = 760
-_MARGE_RAIL = 64
 
 # Les listes du panneau (langue, thème, saison) : la liste haute de `composants`
 # (les copies de sauvegarde l'importent d'ici).
@@ -137,7 +135,7 @@ class _Rail(QWidget):
         self._groupe.setExclusive(True)
         self.boutons: list[QPushButton] = []
         for rang, (libelle, icone) in enumerate(rubriques):
-            btn = bouton_rubrique(tr(libelle), icone, taille_icone=19, hauteur=42)
+            btn = bouton_rubrique(tr(libelle), icone)
             btn.toggled.connect(lambda oui, r=rang: oui and self.currentRowChanged.emit(r))
             self._groupe.addButton(btn)
             self.boutons.append(btn)
@@ -264,22 +262,14 @@ class SettingsDialog(QDialog):
     def _colonne_rubriques(self) -> QFrame:
         colonne = QFrame()
         colonne.setObjectName("rubriques")
-        colonne.setFixedWidth(_LARGEUR_RUBRIQUES)
+        colonne.setFixedWidth(LARGEUR_RAIL)
         lay = QVBoxLayout(colonne)
         lay.setContentsMargins(18, 22, 18, 18)
         lay.setSpacing(4)
 
-        # Pas de « ← Bibliothèque » : l'onglet du haut le dit déjà, et Échap
-        # ferme la page (Ludo, 2026-10-27 : « retire le bibliothèque répété »).
-
-        # Sans « Segoe UI » appelée par son NOM : elle n'existe pas sous Linux,
-        # et sous `offscreen` Qt lui substitue Cinzel, 22 % plus large.
-        titre = QLabel(tr("Paramètres"))
-        titre.setFont(cinzel_decorative(17))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        titre.setContentsMargins(4, 0, 0, 0)
-        lay.addWidget(titre)
-        lay.addSpacing(16)
+        # Ni « ← Bibliothèque » ni grand « PARAMÈTRES » : l'onglet souligné du haut
+        # dit déjà où l'on est, et Échap ferme la page (Ludo, 2026-10-27 ; audit UI
+        # f46, 2026-11-15, comme le Carnet et les Collections, col11).
 
         self._nav = _Rail(_RUBRIQUES)
         # Plus de version au pied de la colonne : À propos la porte, cliquable
@@ -296,7 +286,7 @@ class SettingsDialog(QDialog):
         cadre = QWidget()
         transparent(cadre, "margesPage")
         lay = QHBoxLayout(cadre)
-        lay.setContentsMargins(_MARGE_RAIL, 32, 48, 16)
+        lay.setContentsMargins(MARGES_PAGE[0], 32, MARGES_PAGE[2], 16)
         page.setMaximumWidth(_LARGEUR_LECTURE)
         # Le reste de la largeur va au ressort, à DROITE : un alignement
         # à gauche aurait réduit la page à sa largeur conseillée, pas à 760 px.
@@ -376,7 +366,7 @@ class SettingsDialog(QDialog):
         btn_change.clicked.connect(self._on_change_path)
         icone = QLabel()
         icone.setPixmap(pixmap_icone("dossier", 22, accent_qcolor(255)))
-        icone.setStyleSheet("background: transparent;")
+        transparent(icone)
         # Le titre de la ligne EST le chemin, coupé au milieu.
         ligne_dossier = LigneReglage(self._path_label, tr("Calcul de l'espace utilisé…"),
                                      btn_open, btn_change, icone=icone)
@@ -384,7 +374,7 @@ class SettingsDialog(QDialog):
         dossier.ajouter(ligne_dossier)
 
         disque = QWidget()
-        disque.setStyleSheet("background: transparent;")
+        transparent(disque)
         lay_disque = QVBoxLayout(disque)
         lay_disque.setContentsMargins(20, 14, 20, 16)
         lay_disque.setSpacing(10)
@@ -643,7 +633,7 @@ class SettingsDialog(QDialog):
         UN bouton : « Actualiser le catalogue » lançait le même vérificateur
         que lui, le launcher en moins (`verification_forcee`)."""
         bloc = QWidget()
-        bloc.setStyleSheet("background: transparent;")
+        transparent(bloc)
         lay = QVBoxLayout(bloc)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(8)

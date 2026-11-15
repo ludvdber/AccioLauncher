@@ -34,16 +34,15 @@ from src.core.i18n import tr
 from src.core.images_a_refaire import taille_a_juger
 from src.core.liens import DISCORD_URL
 from src.ui.composants import (
+    titre_page,
+    LARGEUR_RAIL, MARGES_PAGE,
     ENCRE, ENCRE_DOUCE, Rangee, bouton, bouton_retour, feuille_de_style, police, surtitre, texte,
     transparent,
 )
-from src.ui.fonts import cinzel_decorative
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
 
-_LARGEUR_RAIL = 300
-_MARGES_PAGE = (48, 32, 48, 32)
 _LARGEUR_LECTURE = 1000
 
 _STYLE = f"""
@@ -158,7 +157,7 @@ class AtelierPage(QDialog):
         # d'avance, chacune dans sa zone défilante, faisaient 550 ms
         # d'ouverture pour n'en montrer qu'une (mesuré le 2026-10-14).
         self._details = QStackedWidget()
-        self._details.setStyleSheet("background: transparent;")
+        transparent(self._details)
         racine.addWidget(self._details, stretch=1)
         if self.metiers:
             self.choisir(metier if metier in self._lignes else self.metiers[0].id)
@@ -166,7 +165,7 @@ class AtelierPage(QDialog):
     def _rail(self) -> QFrame:
         rail = QFrame()
         rail.setObjectName("rail")
-        rail.setFixedWidth(_LARGEUR_RAIL)
+        rail.setFixedWidth(LARGEUR_RAIL)
         lay = QVBoxLayout(rail)
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(6)
@@ -203,15 +202,10 @@ class AtelierPage(QDialog):
         # « Cherche un artiste » finissait à 1 700 px de sa ligne (audit UI, 2026-11-13).
         page.setMaximumWidth(_LARGEUR_LECTURE)
         lay = QVBoxLayout(page)
-        lay.setContentsMargins(*_MARGES_PAGE)
+        lay.setContentsMargins(*MARGES_PAGE)
         lay.setSpacing(0)
 
-        titre = QLabel(metier.nom)
-        titre.setTextFormat(Qt.TextFormat.PlainText)
-        titre.setWordWrap(True)
-        titre.setFont(cinzel_decorative(22))
-        titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-        lay.addWidget(titre)
+        lay.addWidget(titre_page(metier.nom))
         lay.addSpacing(10)
         lay.addWidget(texte(metier.texte, 16, "#c9c7da", retour=True))
         lay.addSpacing(16)

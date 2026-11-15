@@ -39,7 +39,7 @@ import math
 import struct
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from functools import cached_property, partial
+from functools import cached_property, lru_cache, partial
 from pathlib import Path
 
 from src.core import encyclopedie, textures_ue1
@@ -581,10 +581,29 @@ def de_la_fiche(dossier_exe: Path, fiche: encyclopedie.Fiche, cote: int = 512
     if chemin.suffix.lower() == ".ukx":   # HP3, Unreal 2
         from src.core import maillages_ue2
         return maillages_ue2.de_la_fiche(chemin, fiche.modele.nom)
-    modele = maillage(chemin, fiche.modele.nom)
+    try:
+        infos = chemin.stat()
+    except OSError:
+        return None
+    return _modele_garde(str(chemin), infos.st_mtime, infos.st_size, fiche.modele.nom)
+
+
+# Revenir sur HP2 dans Personnages relisait HPModels.u entier (37 Mo) pour chaque retour :
+# les quatre paquets du cache de `textures_ue1` ne suffisent pas à la page (audit UI f23).
+# Ce qu'elle en tire est petit (maillage, textures de HP1-HP2, mouvements) : gardé ici, rendu
+# au lancement d'un jeu (`liberer`). Clé : le fichier tel qu'il est (date et taille).
+@lru_cache(maxsize=96)
+def _modele_garde(chemin: str, _mtime: float, _taille: int, nom: str
+                  ) -> tuple[Maillage, dict[str, tuple[int, int, bytes]], Animation | None] | None:
+    modele = maillage(Path(chemin), nom)
     if modele is None:
         return None
-    return modele, textures(chemin, modele), animation(chemin, modele.animation)
+    return modele, textures(Path(chemin), modele), animation(Path(chemin), modele.animation)
+
+
+def liberer() -> None:
+    """Rend les modèles gardés : un jeu démarre."""
+    _modele_garde.cache_clear()
 
 
 def animation(chemin: Path, nom: str) -> Animation | None:

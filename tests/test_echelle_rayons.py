@@ -70,12 +70,22 @@ class TestBoutonsCommuns:
         b.click()
         assert appels == [1]
 
-    def test_rubrique_cochable_a_la_hauteur_demandee(self, qtbot):
-        b = composants.bouton_rubrique("Général", "dossier", taille_icone=19, hauteur=42)
+    def test_rubrique_cochable_une_seule_taille(self, qtbot):
+        """f75 : 42 px et un pictogramme de 19 dans les Paramètres, 44 et 20 ailleurs."""
+        b = composants.bouton_rubrique("Général", "dossier")
         qtbot.addWidget(b)
         assert b.objectName() == "rubrique" and b.isCheckable() and not b.autoDefault()
-        assert (b.minimumHeight(), b.maximumHeight()) == (42, 42)
-        assert b.iconSize().width() == 19
+        assert (b.minimumHeight(), b.maximumHeight()) == (44, 44)
+        assert b.iconSize().width() == 20
+
+    def test_les_pages_a_rail_ont_la_meme_colonne(self):
+        """f75 : 236, 270, 280 et 300 px ; le Journal des changements, au même en-tête que
+        les réglages du jeu, faisait sauter la page. Une constante, aucune autre largeur."""
+        import re
+        for nom in ("settings_panel", "game_settings_dialog", "folio_page", "versions_dialog", "atelier_page"):
+            source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
+            assert "setFixedWidth(LARGEUR_RAIL)" in source, nom
+            assert not re.search(r"^_LARGEUR_(RAIL|RUBRIQUES) = ", source, re.M), nom
 
     def test_filtre_a_hauteur_fixe(self, qtbot):
         petit, grand = composants.filtre("Tous"), composants.filtre("Folio", grand=True)
@@ -165,6 +175,19 @@ class TestRails:
         rail = _Rail(_RUBRIQUES)
         qtbot.addWidget(rail)
         assert [b.objectName() for b in rail.boutons] == ["rubrique"] * len(_RUBRIQUES)
-        assert {b.maximumHeight() for b in rail.boutons} == {42}
+        assert {b.maximumHeight() for b in rail.boutons} == {44}, "la même hauteur que les rubriques des réglages du jeu (f75)"
         rail.boutons[1].click()
         assert rail.currentRow() == 1
+
+
+class TestTitresDePage:
+    def test_une_seule_fabrique(self, qtbot):
+        """f76 : Cinzel Decorative 29 ou 32 px selon la page, au même endroit."""
+        from PyQt6.QtCore import Qt
+        titre = composants.titre_page("Galerie")
+        qtbot.addWidget(titre)
+        assert titre.font().pointSizeF() == 22 and titre.textFormat() == Qt.TextFormat.PlainText
+        for nom in ("galerie_page", "folio_page", "atelier_page", "versions_dialog", "nouveautes_page"):
+            source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
+            assert "titre_page(" in source, nom
+            assert not re.search(r"cinzel_decorative\(2\d\)", source), f"{nom} : un titre à part"

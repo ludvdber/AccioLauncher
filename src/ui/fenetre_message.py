@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.i18n import tr, typo
-from src.ui.composants import ENCRE_DOUCE, feuille_de_style, police, texte
+from src.ui.composants import ENCRE_DOUCE, feuille_de_style, police, texte, transparent
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
@@ -146,7 +146,7 @@ class FenetreMessage(QDialog):
         nom, couleur = _ICONES.get(self._icone, ("", ""))
         if nom:
             icone = QLabel()
-            icone.setStyleSheet("background: transparent;")
+            transparent(icone)
             icone.setPixmap(pixmap_icone(nom, 26, QColor(couleur) if couleur else accent_qcolor()))
             tete.addWidget(icone, alignment=Qt.AlignmentFlag.AlignTop)
         titre = texte(typo(self.windowTitle()), 17, "#f4f2f8", retour=True)

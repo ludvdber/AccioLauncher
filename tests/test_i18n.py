@@ -446,21 +446,19 @@ class TestAucunTexteVisibleHorsTr:
 
 
 class TestLesTextesDesCartesDePrereglage:
-    """Audit du 2026-10-29 : « Se choisit tout seul dès qu'un effet change. »
-    passait par `tr(texte)` sur une variable, angle mort de `TestCouverture`,
-    et restait en français en anglais et en espagnol."""
+    """Audit du 2026-10-29 : le texte d'une carte passait par `tr(texte)` sur une
+    variable, angle mort de `TestCouverture`, et restait en français ailleurs."""
 
-    def test_sur_mesure_est_traduite_partout(self):
+    def test_chaque_carte_est_traduite_partout(self):
         import json
         from pathlib import Path
-        cle = "Se choisit tout seul dès qu'un réglage change."
-        source = Path("src/ui/page_image.py").read_text(encoding="utf-8")
-        assert cle in source, "la carte a changé de texte : mettre ce test à jour"
+        from src.core.reglages_table import PREREGLAGES
+        cles = [c for _i, nom, texte, _v in PREREGLAGES for c in (nom, texte)]
         for fichier in Path("src/data/i18n").glob("*.json"):
             if fichier.stem == "fr":
                 continue
             chaines = json.loads(fichier.read_text(encoding="utf-8"))["strings"]
-            assert cle in chaines, fichier.name
+            assert [c for c in cles if c not in chaines] == [], fichier.name
 
 
 class TestCeQueLesTextesNeDisentPlus:

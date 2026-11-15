@@ -1483,15 +1483,27 @@ class TestPageImage:
         assert rc.lire(ini, rc.REGLAGES["surechantillonnage"]).valeur == 1.5
         assert page._cartes_prereglage["maximale"].isChecked()
 
-    def test_retoucher_un_reglage_passe_en_sur_mesure_sans_rien_ecrire(self, qtbot, tmp_path):
-        _dlg, page, ini = self._fenetre(qtbot, tmp_path)
+    def test_retoucher_un_reglage_ne_coche_plus_aucun_prereglage(self, qtbot, tmp_path):
+        """f45 : plus de carte « Sur mesure » ; hors des préréglages, aucune n'est cochée."""
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
         page.ligne("filtrage")
         page._cartes_prereglage["equilibree"].click()
         page.regler("halo", False)
-        assert page._cartes_prereglage[""].isChecked()
-        avant = ini.read_bytes()
-        page._cartes_prereglage[""].click()
-        assert ini.read_bytes() == avant
+        assert "" not in page._cartes_prereglage
+        assert not any(c.isChecked() for c in page._cartes_prereglage.values())
+        page.regler("halo", True)
+        assert page._cartes_prereglage["equilibree"].isChecked(), "revenir sur ses valeurs la recoche"
+
+    def test_les_prereglages_tiennent_sur_une_rangee(self, qtbot, tmp_path):
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        dlg.ouvrir_onglet("image")
+        dlg.resize(1280, 800)
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        page.montrer(0)
+        qtbot.wait(20)
+        hauts = {c.mapTo(page, c.rect().topLeft()).y() for c in page._cartes_prereglage.values()}
+        assert len(page._cartes_prereglage) == 3 and len(hauts) == 1
 
     def test_un_prereglage_reussi_efface_l_erreur_d_avant(self, qtbot, tmp_path):
         dlg, page, _ini = self._fenetre(qtbot, tmp_path)

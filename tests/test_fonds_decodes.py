@@ -91,3 +91,26 @@ def test_les_voisins_se_decodent_d_avance(qtbot, tmp_path, monkeypatch):
     assert set(fond._voisins) == {str(c)}, "a est déjà gardé décodé"
     fond.precharger([])
     assert fond._voisins == {}
+
+
+class TestTailleDeDecodage:
+    """f115, f127 : un fond se décode à la taille du plus grand écran, jamais au-delà de l'original."""
+
+    def test_un_petit_ecran_decode_moins(self):
+        from PyQt6.QtCore import QSize
+        taille = background_widget.taille_de_decodage(QSize(3840, 1240), QSize(1366, 768))
+        assert taille.height() >= 768 * BackgroundWidget.MAX_SCALE, "zoom et parallaxe couverts"
+        assert taille.width() < 3840 and abs(taille.width() / taille.height() - 3840 / 1240) < 0.01
+
+    def test_jamais_plus_grand_que_l_original(self):
+        from PyQt6.QtCore import QSize
+        assert background_widget.taille_de_decodage(QSize(3840, 1240), QSize(2560, 1440)) == QSize(3840, 1240)
+
+    def test_le_rendu_processeur_decode_a_cette_taille(self, tmp_path):
+        from PyQt6.QtCore import QSize
+        image = QImage(3840, 1240, QImage.Format.Format_RGB32)
+        image.fill(QColor(20, 0, 0))
+        chemin = tmp_path / "hp1_bg.jpg"
+        image.save(str(chemin))
+        lue = background_widget._decoder(str(chemin), QSize(1366, 768))
+        assert lue.size() == background_widget.taille_de_decodage(QSize(3840, 1240), QSize(1366, 768))

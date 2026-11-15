@@ -47,12 +47,14 @@ from src.core import galerie
 from src.core.i18n import get_language, tr
 from src.core.liens import DISCORD_MEDIAS_URL
 from src.ui.composants import (
+    transparent,
+    titre_page,
     ENCRE, ENCRE_DOUCE, bouton, bouton_retour, feuille_de_style, filtre as bouton_filtre, rond,
     surtitre, texte,
     survol,
 )
 from src.ui.flow_layout import FlowLayout
-from src.ui.fonts import cinzel, cinzel_decorative
+from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.manette_nav import GARDE_FLECHES
 from src.ui.theme import RAYON_CARTE, current as current_theme, themed
@@ -298,7 +300,7 @@ class GaleriePage(QDialog):
 
     def _contenu(self) -> QWidget:
         page = QWidget()
-        page.setStyleSheet("background: transparent;")
+        transparent(page)
         lay = QVBoxLayout(page)
         lay.setContentsMargins(40, 22, 40, 28)
         lay.setSpacing(0)
@@ -309,10 +311,7 @@ class GaleriePage(QDialog):
             lay.addSpacing(16)
             lay.addWidget(surtitre(tr("Vos captures")))
             lay.addSpacing(4)
-            titre = QLabel(tr("Galerie"))
-            titre.setFont(cinzel_decorative(22))
-            titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-            lay.addWidget(titre)
+            lay.addWidget(titre_page(tr("Galerie")))
             lay.addSpacing(16)
 
         if not self._integree:

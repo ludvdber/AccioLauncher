@@ -50,6 +50,8 @@ from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.aide_reglage import BoutonAide
 from src.ui.composants import (
+    transparent,
+    LARGEUR_RAIL, MARGES_PAGE,
     ENCRE_DOUCE,
     Carte,
     bouton_retour,
@@ -79,7 +81,6 @@ from src.ui.reglages_widgets import (  # réexportés
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     log,
     _ONGLETS,
-    _MARGES_PAGE,
     _COULEURS_COUT,
     _COULEUR_NOTE,
     _RESSOURCES,
@@ -90,7 +91,6 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
 
 # Le rail : le jeu, ses rubriques, ses fichiers. 270 : à 260, quand le rail défile (fenêtre de
 # 660 à 700 px de haut), sa barre de 10 px coupait « RÉGLAGES DU / JEU » (audit UI f65).
-_LARGEUR_RAIL = 270
 # Taille d'ouverture, celle de la maquette, et le plancher : sous 900 px de
 # large, la page Image passe d'elle-même en une colonne.
 _TAILLE_VOULUE = QSize(1320, 860)
@@ -188,20 +188,25 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         racine.setSpacing(0)
 
         self._defile = QStackedWidget()
-        self._defile.setStyleSheet("background: transparent;")
+        transparent(self._defile)
         self._contenus: list[QWidget] = []
         pages = []
         for ident, libelle, icone in _ONGLETS:
             contenu = QWidget()
-            contenu.setStyleSheet("background: transparent;")
+            transparent(contenu)
             page = QVBoxLayout(contenu)
-            page.setContentsMargins(*_MARGES_PAGE)
+            page.setContentsMargins(*MARGES_PAGE)
             page.setSpacing(0)
             titre = QLabel(tr(libelle))
             # Cinzel simple : en décorative, le I initial d'« Image » se lit comme un 1.
             titre.setFont(cinzel(20, bold=True))
             titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-            page.addWidget(titre)
+            tete = QHBoxLayout()
+            tete.setContentsMargins(0, 0, 0, 0)
+            tete.setSpacing(14)
+            tete.addWidget(titre)
+            tete.addStretch()
+            page.addLayout(tete)
             page.addSpacing(20)
             corps = QVBoxLayout()
             corps.setContentsMargins(0, 0, 0, 0)
@@ -210,6 +215,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if not self._remplir(ident, corps):
                 contenu.deleteLater()
                 continue
+            if ident == "difficulte" and self._panneau is not None:
+                tete.insertWidget(1, self._panneau.pastille_beta, alignment=Qt.AlignmentFlag.AlignVCenter)
             self._contenus.append(contenu)
             if ident == "image" and self._page_img is not None:
                 # La page Image défile en dedans : ses onglets, sa recherche et sa fiche restent en place.
@@ -231,7 +238,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._erreur.setWordWrap(True)
         self._erreur.setTextFormat(Qt.TextFormat.PlainText)
         self._erreur.setStyleSheet("color: #e8955a; background: transparent;")
-        self._erreur.setContentsMargins(_MARGES_PAGE[0], 8, _MARGES_PAGE[2], 8)
+        self._erreur.setContentsMargins(MARGES_PAGE[0], 8, MARGES_PAGE[2], 8)
         self._erreur.hide()
         droite.addWidget(self._erreur)
         droite.addWidget(self._pied())
@@ -242,7 +249,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _rail(self, pages) -> QFrame:
         rail = QFrame()
         rail.setObjectName("rail")
-        rail.setFixedWidth(_LARGEUR_RAIL)
+        rail.setFixedWidth(LARGEUR_RAIL)
         cadre = QVBoxLayout(rail)
         cadre.setContentsMargins(0, 0, 0, 0)
         # Le contenu défile s'il ne tient pas (règle 52) : tassé, le rail coupait
@@ -282,7 +289,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._groupe_onglets.setExclusive(True)
         self._onglets: dict[str, QPushButton] = {}
         for rang, (ident, libelle, icone) in enumerate(pages):
-            btn = bouton_rubrique(tr(libelle), icone, taille_icone=20, hauteur=44)
+            btn = bouton_rubrique(tr(libelle), icone)
             btn.toggled.connect(lambda oui, r=rang: oui and self._defile.setCurrentIndex(r))
             btn.toggled.connect(lambda oui, i=ident: oui and self._noter_pied(i))
             self._groupe_onglets.addButton(btn)
@@ -384,7 +391,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _entete_effets(self, titre: str) -> QWidget:
         """Le surtitre, et la légende des repères au bout de la ligne."""
         entete = QWidget()
-        entete.setStyleSheet("background: transparent;")
+        transparent(entete)
         h = QHBoxLayout(entete)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(6)
@@ -392,7 +399,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         h.addStretch()
         oeil = QLabel()
         oeil.setPixmap(pixmap_icone("oeil", 18, accent_qcolor()))   # la maison, pas l'or (f4)
-        oeil.setStyleSheet("background: transparent;")
+        transparent(oeil)
         h.addWidget(oeil)
         h.addWidget(self._petit(tr("le plus visible")))
         h.addSpacing(12)
@@ -503,7 +510,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             disposition.setEnabled(not etat.personnalise)
             self._controles[reglage.ident] = disposition
             bloc = QWidget()
-            bloc.setStyleSheet("background: transparent;")
+            transparent(bloc)
             v = QVBoxLayout(bloc)
             v.setContentsMargins(0, 0, 0, 0)
             v.setSpacing(8)
@@ -672,7 +679,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         controle.setAccessibleDescription(aide_txt)
         case = QWidget()
         case.setObjectName("caseControle")
-        case.setStyleSheet("background: transparent;")
+        transparent(case)
         hc = QHBoxLayout(case)
         hc.setContentsMargins(0, 0, 0, 0)
         hc.addStretch()
@@ -688,7 +695,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         """
         oeil = QLabel()
         oeil.setFixedSize(18, 18)
-        oeil.setStyleSheet("background: transparent;")
+        transparent(oeil)
         if reglage.se_voit:
             oeil.setPixmap(pixmap_icone("oeil", 18, accent_qcolor()))   # la maison, pas l'or (f4)
             oeil.setToolTip(tr("Se voit nettement à l’écran."))

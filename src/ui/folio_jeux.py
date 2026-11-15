@@ -40,7 +40,7 @@ from src.core import (
 from src.core.config import cache_pour
 from src.core.i18n import get_language, tr, trn
 from src.ui.carte_3d import Carte3D
-from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, survol, texte, transparent
+from src.ui.composants import ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, police, surtitre, survol, texte, transparent, LARGEUR_RAIL
 from src.ui.flow_layout import FlowLayout
 from src.ui.fond_sonore import MULTIMEDIA_DISPONIBLE, QAudioOutput, QMediaPlayer
 from src.ui.fonts import cinzel
@@ -51,7 +51,6 @@ from src.ui.folio_page import (
     _ECART_CASES,
     _IMAGE_FICHE,
     _Jauge,
-    _LARGEUR_RAIL,
     _MARGE_FICHE,
     _tuile,
     case_de_folio,
@@ -110,7 +109,7 @@ def _objet(nom: str, nombre: int, icone: QPixmap | None) -> QFrame:
     h.setSpacing(10)
     if icone is not None:
         image = QLabel()
-        image.setStyleSheet("background: transparent;")
+        transparent(image)
         image.setPixmap(icone)
         h.addWidget(image)
     v = QVBoxLayout()
@@ -162,7 +161,7 @@ def _medaille(image: tuple[int, int, bytes], acquis: bool, textes: tuple[str, st
         rond.fill(Qt.GlobalColor.transparent)
     medaille = QLabel()
     medaille.setFixedSize(_MEDAILLE, _MEDAILLE)
-    medaille.setStyleSheet("background: transparent;")
+    transparent(medaille)
     medaille.setPixmap(rond)
     etat = tr("remporté") if acquis else tr("pas encore remporté")
     if textes is not None:
@@ -298,7 +297,7 @@ class FolioPageHP3(FolioPage):
                                   self.devicePixelRatioF())
             if bouclier is not None:
                 image = QLabel()
-                image.setStyleSheet("background: transparent;")
+                transparent(image)
                 image.setPixmap(bouclier)
                 g.addWidget(image, rang, 0)
             g.addWidget(texte(d.nom, 14, ENCRE, retour=True), rang, 1)
@@ -698,7 +697,7 @@ class FolioPageHP4(FolioPage):
 
     def _largeur_colonne(self) -> int:
         return max(_PETITE_CARTE, min(_GRANDE_CARTE.width(),
-                                      int((self.width() - _LARGEUR_RAIL) * 0.36))) + 2 * _MARGE_FICHE
+                                      int((self.width() - LARGEUR_RAIL) * 0.36))) + 2 * _MARGE_FICHE
 
     def _taille_carte(self, colonne: int) -> QSize:
         largeur = colonne - 2 * _MARGE_FICHE

@@ -43,6 +43,12 @@ class TestDialogue:
     def test_quatre_rubriques_et_quatre_pages(self, dialogue):
         assert dialogue._nav.count() == dialogue._pages.count() == 4
 
+    def test_pas_de_titre_en_double(self, dialogue):
+        """f46 : « PARAMÈTRES » en grand répétait l'onglet souligné juste au-dessus."""
+        from PyQt6.QtWidgets import QLabel
+        from src.core.i18n import tr
+        assert tr("Paramètres") not in {lbl.text() for lbl in dialogue.findChildren(QLabel)}
+
     def test_pas_de_retour_en_double(self, dialogue, qtbot):
         """L'onglet Bibliothèque du haut ferme la page : pas de second bouton."""
         from PyQt6.QtWidgets import QPushButton
@@ -382,12 +388,13 @@ class TestQuatreRubriques:
 
     def test_la_colonne_colle_au_rail(self, dialogue, qtbot):
         """Centrée, la colonne de 760 px flottait loin du rail sur un grand écran."""
+        from src.ui.composants import MARGES_PAGE
         dialogue.resize(1600, 800)
         dialogue.show()
         qtbot.waitExposed(dialogue)
         page = dialogue._pages.currentWidget().widget().layout().itemAt(0).widget()
         assert page.width() == 760
-        assert page.mapTo(dialogue._pages, page.rect().topLeft()).x() == 64
+        assert page.mapTo(dialogue._pages, page.rect().topLeft()).x() == MARGES_PAGE[0], "la marge de toutes les pages à rail (f75)"
 
     def test_les_jeux_qui_attendent_leur_mise_a_jour_sont_comptes(self, dialogue, monkeypatch):
         """Ce que la vérification lit quand elle n'apporte rien (règle 108)."""

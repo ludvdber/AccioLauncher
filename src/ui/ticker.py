@@ -2,7 +2,9 @@
 
 Un seul QTimer pour les particules, les étoiles du carrousel et les GlowButtons,
 au lieu d'un timer par widget. `pause()` / `resume()` globaux pilotés par
-MainWindow (tray, perte de focus fenêtre).
+MainWindow (tray, perte de focus fenêtre). Sans abonné, l'horloge se tait d'elle-même et
+repart au premier qui se branche : derrière une page, plus rien ne bouge à l'écran, et elle
+réveillait encore le launcher 30 fois par seconde (audit UI f126).
 
 Les abonnés se connectent/déconnectent du signal `tick` dans leurs
 showEvent/hideEvent (ou pause/resume) et gardent leur check `isVisible()`.
@@ -26,7 +28,8 @@ class Ticker(QObject):
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_MS)
         self._timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self._timer.timeout.connect(self.tick)
+        self._timer.timeout.connect(self._battre)
+        self._en_pause = False
         self._timer.start()
 
     @classmethod
@@ -56,9 +59,22 @@ class Ticker(QObject):
         except (RuntimeError, TypeError):
             pass
 
+    def _battre(self) -> None:
+        if self.receivers(self.tick) == 0:
+            self._timer.stop()   # repart au prochain abonné (`connectNotify`)
+            return
+        self.tick.emit()
+
+    def connectNotify(self, signal) -> None:  # noqa: N802 (Qt)
+        super().connectNotify(signal)
+        if not self._en_pause and not self._timer.isActive():
+            self._timer.start()
+
     def pause(self) -> None:
+        self._en_pause = True
         self._timer.stop()
 
     def resume(self) -> None:
-        if not self._timer.isActive():
+        self._en_pause = False
+        if not self._timer.isActive() and self.receivers(self.tick):
             self._timer.start()

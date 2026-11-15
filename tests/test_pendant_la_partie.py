@@ -65,3 +65,26 @@ def test_les_paquets_sont_rendus_au_lancement(make_window, monkeypatch):
         assert rendus == [True]
     finally:
         win._session.shutdown()
+
+
+def test_tous_les_caches_des_pages_sont_rendus_au_lancement(make_window, monkeypatch):
+    """f113 : seuls les paquets entiers étaient rendus ; folios, jaquettes et fonds décodés
+    restaient (205 Mo pendant la partie au lieu de 144)."""
+    from collections import OrderedDict
+    from PyQt6.QtGui import QPixmap
+    from src.core import folio_hp3, folio_hp6
+    from src.ui import background_widget, stats_releve
+    win = make_window()
+    pleins = (folio_hp3._valeurs, folio_hp3._catalogue, folio_hp3._image_menu, folio_hp6._textes_badges,
+              folio_hp6._images_badges, folio_hp6._images_menu, stats_releve._jaquette_decodee)
+    vides = []
+    for f in pleins:
+        monkeypatch.setattr(f, "cache_clear", lambda f=f: vides.append(f))
+    fonds = OrderedDict((c, QPixmap()) for c in ("hp1", "hp2", "hp3"))
+    monkeypatch.setattr(background_widget, "_FONDS_DECODES", fonds)
+    try:
+        win._session.demarrer(_PartieFactice(), "HP3", "hp3")
+        assert set(map(id, vides)) == set(map(id, pleins))
+        assert list(fonds) == ["hp3"], "le fond affiché reste"
+    finally:
+        win._session.shutdown()

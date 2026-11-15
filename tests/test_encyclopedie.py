@@ -259,8 +259,16 @@ class TestModeles:
         assert vue.fiches[0].property("choisie") is True
         # Une fiche sans image a reçu la vignette de son modèle.
         assert all(f.a_une_vignette for f in vue.fiches)
+        # La feuille de la page des Collections, qui porte le cadre de la fiche choisie.
+        from src.ui.mediatheque_page import _STYLE
+        from src.ui.theme import themed
+        vue.setStyleSheet(themed(_STYLE))
+        avant = vue.fiches[3].grab().toImage()
         vue.choisir(vue.fiches[3])
         assert vue.fiches[3].property("choisie") and not vue.fiches[0].property("choisie")
+        # Et ça se VOIT : une propriété juste peut laisser l'image inchangée (audit UI f20).
+        apres = vue.fiches[3].grab().toImage()
+        assert apres != avant, "la fiche choisie ne change pas d'aspect"
         assert vue.scene._commandes.isHidden()                  # sans mouvement, pas de bouton
         vue.fermer()
 
@@ -381,3 +389,25 @@ def test_avec_la_visionneuse_la_carte_ne_garde_que_l_image_et_le_nom(qtbot):
     assert textes == {dans_la_langue(fiche.nom)}
     assert courte.sizeHint().height() <= 90 < longue.sizeHint().height()
 
+
+
+class TestModelesGardes:
+    def test_revenir_sur_un_jeu_ne_relit_pas_ses_modeles(self, tmp_path, monkeypatch):
+        """f23 : revenir sur HP2 dans Personnages relisait HPModels.u entier (37 Mo)."""
+        from src.core import maillages_ue1
+        (tmp_path / "System").mkdir()
+        (tmp_path / "System" / "HPModels.u").write_bytes(b"\0" * 64)
+        lus = []
+        modele = maillages_ue1.Maillage((), (), ())
+        monkeypatch.setattr(maillages_ue1, "maillage", lambda chemin, nom: lus.append(nom) or modele)
+        monkeypatch.setattr(maillages_ue1, "textures", lambda chemin, m: {})
+        monkeypatch.setattr(maillages_ue1, "animation", lambda chemin, nom: None)
+        maillages_ue1.liberer()
+        fiche = encyclopedie.Fiche("a", "A", "b", "c", None, encyclopedie.ModeleJeu("System/HPModels.u", "skHarry"))
+        dossier = tmp_path / "System"
+        premier = maillages_ue1.de_la_fiche(dossier, fiche)
+        assert maillages_ue1.de_la_fiche(dossier, fiche) is premier and lus == ["skHarry"]
+        maillages_ue1.liberer()                 # un jeu démarre
+        maillages_ue1.de_la_fiche(dossier, fiche)
+        assert lus == ["skHarry", "skHarry"]
+        maillages_ue1.liberer()

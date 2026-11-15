@@ -11,6 +11,8 @@ Item {
     id: racine
 
     property url source
+    property size sourceTaille         // taille de décodage (`taille_de_decodage`), clé du cache
+    property size ancienneTaille
     property url ancienne              // sous-couche du fondu enchaîné, figée au clic :
     property real ancienneZoom: 1.0
     property real ancienneParallaxeX: 0
@@ -46,6 +48,7 @@ Item {
     component Couche: Item {
         id: couche
         property url src
+        property size taille             // la même que celle du préchargement
         property real zoomC: 1.0
         property real px: 0
         property real py: 0
@@ -60,6 +63,7 @@ Item {
             x: (parent.width - width) / 2 + couche.px
             y: (parent.height - height) / 2 + couche.py
             source: couche.etenduC ? "" : couche.src
+            sourceSize: couche.taille
             fillMode: Image.PreserveAspectCrop
             asynchronous: !couche.sync; smooth: true; mipmap: true
         }
@@ -141,10 +145,11 @@ Item {
     Repeater {
         model: racine.prechargees
         Image {
-            required property string modelData
+            required property var modelData
             visible: false
             fillMode: Image.PreserveAspectCrop  // fait partie de la clé du cache, comme l'adresse
-            source: modelData
+            sourceSize: modelData.taille        // elle aussi, comme la taille de décodage
+            source: modelData.source
             asynchronous: true
         }
     }
@@ -157,6 +162,7 @@ Item {
         visible: racine.opacite < 0.999 && racine.ancienne.toString() !== ""
         Couche {
             src: racine.ancienne
+            taille: racine.ancienneTaille
             zoomC: racine.ancienneZoom
             px: racine.ancienneParallaxeX
             py: racine.ancienneParallaxeY
@@ -173,6 +179,7 @@ Item {
 
         Couche {
             src: racine.source
+            taille: racine.sourceTaille
             zoomC: racine.zoom
             px: racine.parallaxeX
             py: racine.parallaxeY

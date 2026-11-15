@@ -200,12 +200,35 @@ def test_les_fonds_sont_decodes_d_avance(qtbot, tmp_path):
     fond.precharger([*presents, tmp_path / "absent.jpg"])
     gardees = fond._racine.property("prechargees")
     assert len(gardees) == 2, "un fond absent n'est pas demandé"
-    assert gardees[0].endswith(presents[0].name)
-    # Le mode de remplissage fait partie de la clé du cache de Qt Quick : un autre
-    # que celui de la couche, et l'image préchargée ne sert jamais (97 ms par changement).
+    assert gardees[0]["source"].endswith(presents[0].name)
+    # Le mode de remplissage et la taille de décodage font partie de la clé du cache de
+    # Qt Quick : autres que ceux de la couche, et l'image préchargée ne sert jamais
+    # (97 ms par changement).
     qml = (ASSETS_DIR / "qml" / "FondAccueil.qml").read_text(encoding="utf-8")
     bloc = qml[qml.index("model: racine.prechargees"):qml.index("Sous-couche du fondu")]
     assert "fillMode: Image.PreserveAspectCrop" in bloc
+    assert "sourceSize: modelData.taille" in bloc
+    couche = qml[qml.index("component Couche"):qml.index("Bandeau étendu")]
+    assert "sourceSize: couche.taille" in couche and "fillMode: Image.PreserveAspectCrop" in couche
+
+
+def test_le_fond_affiche_demande_la_taille_prechargee(qtbot, monkeypatch):
+    """f115, f127 : décodés à la taille du plus grand écran, et la couche demande la MÊME
+    taille que le préchargement, sans quoi le cache ne la retrouve pas."""
+    from PyQt6.QtCore import QSize
+    from src.core.config import ASSETS_DIR
+    monkeypatch.setattr(fond_gpu, "ecran_le_plus_grand", lambda: QSize(1366, 768))
+    fond = fond_gpu.FondGPU()
+    qtbot.addWidget(fond)
+    fond.resize(800, 500)
+    chemin = sorted((ASSETS_DIR / "backgrounds").glob("*_bg.jpg"))[0]
+    fond.precharger([chemin])
+    prechargee = fond._racine.property("prechargees")[0]["taille"]
+    fond.set_image(chemin)
+    assert fond._racine.property("sourceTaille") == prechargee
+    assert prechargee.width() < 3840, "un écran 1366 × 768 n'a pas besoin des 3840 px"
+    fond.begin_crossfade()
+    assert fond._racine.property("ancienneTaille") == prechargee
 
 
 def test_les_particules_vivent_dans_la_scene(qtbot):
