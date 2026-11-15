@@ -33,7 +33,6 @@ from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
     QDialog,
-    QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
@@ -49,18 +48,17 @@ from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.composants import (
-    titre_page,
     TAILLE_MINIMALE_PAGE,
     transparent,
-    LARGEUR_RAIL, MARGES_PAGE,
+    MARGES_PAGE,
     ENCRE_DOUCE,
     Carte,
     bouton_retour,
-    bouton_rubrique,
     feuille_de_style,
     police,
     surtitre,
 )
+from src.ui.bandeau_jeu import bandeau_du_jeu, pastille_rubrique
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.icon_button import pixmap_icone
@@ -73,7 +71,6 @@ from src.ui.reglages_widgets import (  # réexportés
     _STYLE,
     _CarteEffets,
     _Disposition,
-    entete_de_rail,
     _Points,
     _texte_beta,
 )
@@ -183,30 +180,24 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     # ── Construction ──
 
     def _build_ui(self) -> None:
-        racine = QHBoxLayout(self)
+        # Maquette B « L'En-tête » (Ludo, 2026-11-13) : le bandeau du jeu en haut, ses rubriques en
+        # pastilles, la page sur toute la largeur. Le rail de gauche (270 px) n'existe plus.
+        racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
 
         self._defile = QStackedWidget()
         transparent(self._defile)
         self._contenus: list[QWidget] = []
+        self._beta: dict[str, QWidget] = {}
         pages = []
         for ident, libelle, icone in _ONGLETS:
             contenu = QWidget()
             transparent(contenu)
             page = QVBoxLayout(contenu)
-            page.setContentsMargins(*MARGES_PAGE)
+            # Le nom de la rubrique est dans sa pastille, cochée : la page n'a plus de grand titre.
+            page.setContentsMargins(MARGES_PAGE[0], 24, MARGES_PAGE[2], MARGES_PAGE[3])
             page.setSpacing(0)
-            # Le titre de toutes les pages (audit UI f76) : en Cinzel simple ici, il changeait
-            # de police d'une page de jeu à l'autre (Ludo, 2026-11-15 : la décorative partout).
-            titre = titre_page(tr(libelle))
-            tete = QHBoxLayout()
-            tete.setContentsMargins(0, 0, 0, 0)
-            tete.setSpacing(14)
-            tete.addWidget(titre)
-            tete.addStretch()
-            page.addLayout(tete)
-            page.addSpacing(20)
             corps = QVBoxLayout()
             corps.setContentsMargins(0, 0, 0, 0)
             corps.setSpacing(0)
@@ -216,7 +207,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 contenu.deleteLater()
                 continue
             if ident == "difficulte" and self._panneau is not None:
-                tete.insertWidget(1, self._panneau.pastille_beta, alignment=Qt.AlignmentFlag.AlignVCenter)
+                self._beta[ident] = self._panneau.pastille_beta
             self._contenus.append(contenu)
             if ident == "image" and self._page_img is not None:
                 # La page Image défile en dedans : ses onglets, sa recherche et sa fiche restent en place.
@@ -235,7 +226,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                                        if self._lignes_de_page else zone_defilable(contenu))
             pages.append((ident, libelle, icone))
 
-        racine.addWidget(self._rail(pages))
+        racine.addWidget(self._bandeau(pages))
         droite = QVBoxLayout()
         droite.setContentsMargins(0, 0, 0, 0)
         droite.setSpacing(0)
@@ -253,41 +244,29 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if self._onglets:
             next(iter(self._onglets.values())).setChecked(True)
 
-    def _rail(self, pages) -> QFrame:
-        rail = QFrame()
-        rail.setObjectName("rail")
-        rail.setFixedWidth(LARGEUR_RAIL)
-        cadre = QVBoxLayout(rail)
-        cadre.setContentsMargins(0, 0, 0, 0)
-        # Le contenu défile s'il ne tient pas (règle 52) : tassé, le rail coupait
-        # le nom du jeu dès 700 px de haut, un portable réglé à 150 %.
-        contenu = QWidget()
-        lay = QVBoxLayout(contenu)
-        lay.setContentsMargins(18, 22, 18, 20)
-        lay.setSpacing(4)
-
+    def _bandeau(self, pages) -> QWidget:
+        """Le bandeau du jeu : retour, nom, rubriques en pastilles (celles du Carnet et des Collections)."""
         # Le chemin du retour dit OÙ il mène, avec le même mot que Paramètres et
         # Mes années : la fiche vit dans la bibliothèque (audit UI, 2026-10-14).
         retour = bouton_retour(tr("Bibliothèque"), self.accept)
         retour.setToolTip(tr("Échap pour revenir"))
-        entete, self._titre = entete_de_rail(self.game, retour, tr("Réglages du jeu"))
-        lay.addWidget(entete)
-        lay.addSpacing(20)
+        bandeau, self._titre, rangee = bandeau_du_jeu(self.game, retour)
 
         self._groupe_onglets = QButtonGroup(self)
         self._groupe_onglets.setExclusive(True)
         self._onglets: dict[str, QPushButton] = {}
         for rang, (ident, libelle, icone) in enumerate(pages):
-            btn = bouton_rubrique(tr(libelle), icone)
+            btn = pastille_rubrique(tr(libelle), icone)
             btn.toggled.connect(lambda oui, r=rang: oui and self._defile.setCurrentIndex(r))
             btn.toggled.connect(lambda oui, i=ident: oui and self._noter_pied(i))
             self._groupe_onglets.addButton(btn)
             self._onglets[ident] = btn
-            lay.addWidget(btn)
-        lay.addStretch()
-        self._zone_rail = zone_defilable(contenu)
-        cadre.addWidget(self._zone_rail)
-        return rail
+            rangee.addWidget(btn)
+            if (beta := self._beta.get(ident)) is not None:
+                rangee.addWidget(beta, alignment=Qt.AlignmentFlag.AlignVCenter)
+        rangee.addStretch()
+        self._zone_rail = bandeau
+        return bandeau
 
     # ── Les pages ──
 

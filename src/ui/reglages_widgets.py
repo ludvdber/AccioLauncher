@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
-from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police, surtitre, transparent
+from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police, transparent
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEURS_COUT
 from src.ui.theme import RAYON_CARTE
@@ -68,37 +68,6 @@ def _etiquette_beta() -> QLabel:
     etiquette = pastille(tr("Bêta"), "#f0d060", "rgba(214, 167, 44, 0.5)")
     etiquette.setToolTip(_texte_beta())
     return etiquette
-
-
-def entete_de_rail(game, retour: QWidget, sous_titre: str) -> tuple[QWidget, QLabel]:
-    """Le haut du rail d'une page de jeu : retour, jaquette, nom du jeu, surtitre. UN bloc
-    pour les réglages du jeu et le Journal des changements : bâti deux fois, avec des
-    espacements différents, le nom du jeu sautait de 2 px d'une page à l'autre (Ludo,
-    2026-11-15 : « les titres au même endroit partout »). Rend le bloc et le libellé du nom."""
-    bloc = QWidget()
-    transparent(bloc)
-    lay = QVBoxLayout(bloc)
-    lay.setContentsMargins(0, 0, 0, 0)
-    lay.setSpacing(0)
-    lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-    lay.addSpacing(18)
-    identite = QHBoxLayout()
-    identite.setSpacing(14)
-    identite.addWidget(_Jaquette(game.cover_image), alignment=Qt.AlignmentFlag.AlignTop)
-    noms = QVBoxLayout()
-    noms.setSpacing(4)
-    nom = QLabel(game.name)
-    nom.setTextFormat(Qt.TextFormat.PlainText)   # le nom vient du CATALOGUE
-    nom.setWordWrap(True)
-    nom.setFont(cinzel(11, bold=True))
-    nom.setStyleSheet("color: #f4f2f8; background: transparent;")
-    nom.setMinimumWidth(1)
-    noms.addWidget(nom)
-    noms.addWidget(surtitre(sous_titre, a_la_ligne=True))
-    noms.addStretch()
-    identite.addLayout(noms, stretch=1)
-    lay.addLayout(identite)
-    return bloc, nom
 
 
 class _Jaquette(QWidget):

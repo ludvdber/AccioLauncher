@@ -7,24 +7,28 @@
       "points_forts": [
         {
           "icone": "ecran",
-          "jeux": [
-            "hp4",
-            "hp5",
-            "hp6"
-          ],
+          "jeux": [],
           "titre": {
-            "fr": "Les réglages d'image, sans accroc",
-            "en": "Image settings, without a hitch",
-            "es": "Los ajustes de imagen, sin tropiezos"
+            "fr": "Les réglages d'un jeu, à son image",
+            "en": "A game's settings, in its own colours",
+            "es": "Los ajustes de un juego, a su imagen"
           },
           "texte": {
-            "fr": "Ouvrir les réglages de La Coupe de Feu, L'Ordre du Phénix ou Le Prince de Sang-Mêlé ne fait plus apparaître une petite fenêtre vide pendant un instant, et leurs rubriques d'image tiennent sur une seule ligne.",
-            "en": "Opening the settings of Goblet of Fire, Order of the Phoenix or Half-Blood Prince no longer flashes a small empty window, and their image sections fit on a single line.",
-            "es": "Abrir los ajustes de El cáliz de fuego, La Orden del Fénix o El misterio del príncipe ya no muestra una pequeña ventana vacía durante un instante, y sus secciones de imagen caben en una sola línea."
+            "fr": "Le jeu s'affiche en grand en haut de ses réglages, ses rubriques juste dessous, et la page prend toute la largeur. Les sections d'image forment une liste à gauche, sous la recherche.",
+            "en": "The game is shown large at the top of its settings, its sections just below, and the page takes the whole width. The image sections form a list on the left, under the search.",
+            "es": "El juego se muestra en grande arriba de sus ajustes, sus secciones justo debajo, y la página ocupa todo el ancho. Las secciones de imagen forman una lista a la izquierda, bajo la búsqueda."
           }
         }
       ],
       "changements": [
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "Ouvrir les réglages de La Coupe de Feu, L'Ordre du Phénix ou Le Prince de Sang-Mêlé ne fait plus apparaître une petite fenêtre vide pendant un instant.",
+            "en": "Opening the settings of Goblet of Fire, Order of the Phoenix or Half-Blood Prince no longer flashes a small empty window.",
+            "es": "Abrir los ajustes de El cáliz de fuego, La Orden del Fénix o El misterio del príncipe ya no muestra una pequeña ventana vacía durante un instante."
+          }
+        },
         {
           "genre": "ameliore",
           "texte": {

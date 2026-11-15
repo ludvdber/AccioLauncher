@@ -88,9 +88,14 @@ class TestBoutonsCommuns:
         """f75 : 236, 270, 280 et 300 px ; le Journal des changements, au même en-tête que
         les réglages du jeu, faisait sauter la page. Une constante, aucune autre largeur."""
         import re
-        for nom in ("settings_panel", "game_settings_dialog", "folio_page", "versions_dialog", "atelier_page"):
+        # Les réglages d'un jeu n'ont plus de rail (maquette B, 2026-11-15) : son bandeau ; le Journal garde
+        # la colonne de ses versions.
+        for nom in ("settings_panel", "folio_page", "versions_dialog", "atelier_page"):
             source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert "setFixedWidth(LARGEUR_RAIL)" in source, nom
+            assert not re.search(r"^_LARGEUR_(RAIL|RUBRIQUES) = ", source, re.M), nom
+        for nom in ("game_settings_dialog", "bandeau_jeu"):
+            source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert not re.search(r"^_LARGEUR_(RAIL|RUBRIQUES) = ", source, re.M), nom
 
     def test_filtre_a_hauteur_fixe(self, qtbot):
@@ -193,8 +198,11 @@ class TestTitresDePage:
         titre = composants.titre_page("Galerie")
         qtbot.addWidget(titre)
         assert titre.font().pointSizeF() == 22 and titre.textFormat() == Qt.TextFormat.PlainText
-        for nom in ("galerie_page", "folio_page", "atelier_page", "versions_dialog", "nouveautes_page",
-                    "game_settings_dialog"):
+        # Les réglages d'un jeu n'ont plus de grand titre (maquette B, 2026-11-15) : la pastille cochée le dit.
+        for nom in ("galerie_page", "folio_page", "atelier_page", "versions_dialog", "nouveautes_page"):
             source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert "titre_page(" in source, nom
+        for nom in ("galerie_page", "folio_page", "atelier_page", "versions_dialog", "nouveautes_page",
+                    "game_settings_dialog", "bandeau_jeu"):
+            source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert not re.search(r"cinzel_decorative\(2\d\)", source), f"{nom} : un titre à part"

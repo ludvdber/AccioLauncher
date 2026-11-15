@@ -1318,7 +1318,8 @@ class TestPageImage:
         dlg.resize(980, 660)
         dlg.show()
         qtbot.waitUntil(lambda: page.width() > 0)
-        assert page.width() < 860 and not page._fiche_ouverte()
+        from src.ui.page_image import _SEUIL_FICHE
+        assert page.width() < _SEUIL_FICHE and not page._fiche_ouverte()
         page.montrer(0)
         marquees = lambda: [i for i, ls in page._lignes.items() if any(lg.property("active") for lg in ls)]  # noqa: E731
         assert marquees() == []

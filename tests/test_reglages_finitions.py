@@ -134,18 +134,36 @@ class TestPied:
         assert not any("Change à tout moment" in t and "sauvegardes" in t for t in _textes(dlg))
 
 
-class TestRail:
-    def test_le_surtitre_tient_meme_quand_le_rail_defile(self, qtbot, tmp_path):
-        """f65 : à 980×660 le rail défile, et sa barre coupait « RÉGLAGES DU / JEU »."""
-        from PyQt6.QtWidgets import QLabel
+class TestBandeau:
+    """Maquette B « L'En-tête » (Ludo, 2026-11-13) : le bandeau du jeu remplace le rail de gauche."""
+
+    def test_le_nom_du_jeu_tient_sur_sa_ligne_a_la_plus_petite_taille(self, qtbot, tmp_path):
+        """Le nom descend de taille plutôt que de sortir du bandeau (titres les plus longs : HP7)."""
+        from src.ui.composants import TAILLE_MINIMALE_PAGE
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        dlg.resize(980, 660)
+        dlg._titre.setText("Harry Potter et les Reliques de la Mort - 1re partie")
+        dlg.resize(*TAILLE_MINIMALE_PAGE)
         dlg.show()
         qtbot.waitExposed(dlg)
-        lbl = next(x for x in dlg.findChildren(QLabel) if x.text() == tr("Réglages du jeu").upper())
-        barre = dlg._zone_rail.verticalScrollBar()
-        place = lbl.width() - (0 if barre.isVisible() else barre.sizeHint().width())
-        assert lbl.fontMetrics().horizontalAdvance(lbl.text()) <= place
+        qtbot.wait(20)
+        nom = dlg._titre
+        assert nom.fontMetrics().horizontalAdvance(nom.text()) <= nom.width()
+        assert nom.font().pointSize() < 24
+
+    def test_les_rubriques_sont_les_pastilles_du_carnet(self, qtbot, tmp_path):
+        """Le même menu que le Carnet et les Collections (`composants.filtre`, en grand)."""
+        from src.ui.composants import HAUTEUR_FILTRE_GRAND
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        for b in dlg._onglets.values():
+            assert b.objectName() == "filtre" and b.property("grand") is True
+            assert b.height() == HAUTEUR_FILTRE_GRAND
+        assert sum(b.isChecked() for b in dlg._onglets.values()) == 1
+
+    def test_plus_de_rail_a_gauche(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QFrame
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        assert dlg.findChild(QFrame, "rail") is None
+        assert dlg._zone_rail.objectName() == "bandeauJeu"
 
 
 class TestBeta:
@@ -156,18 +174,18 @@ class TestBeta:
         assert "Discord" in dlg._panneau.pastille_beta.toolTip()
 
     def test_beta_a_cote_du_titre_de_la_difficulte(self, qtbot, tmp_path):
-        """f44, f68 : seule à gauche du cadran, la gélule laissait 660 × 330 px vides."""
-        from PyQt6.QtWidgets import QLabel
+        """f44, f68 : seule à gauche du cadran, la gélule laissait 660 × 330 px vides. Maquette B : à
+        côté de la pastille « Difficulté » du bandeau."""
         dlg, _ini = _fenetre(qtbot, tmp_path)
         dlg.ouvrir_onglet("difficulte")
         dlg.resize(1280, 800)
         dlg.show()
         qtbot.waitExposed(dlg)
         beta = dlg._panneau.pastille_beta
-        titre = next(lbl for lbl in dlg.findChildren(QLabel)
-                     if lbl.text() == tr("Difficulté") and lbl.parentWidget() is beta.parentWidget())
-        assert beta.geometry().left() > titre.geometry().right(), "sur la ligne du titre, après lui"
-        assert abs(beta.geometry().center().y() - titre.geometry().center().y()) <= 4
+        pastille = dlg._onglets["difficulte"]
+        assert beta.parentWidget() is pastille.parentWidget(), "dans la rangée des rubriques"
+        assert beta.geometry().left() > pastille.geometry().right(), "juste après elle"
+        assert abs(beta.geometry().center().y() - pastille.geometry().center().y()) <= 4
         from PyQt6.QtWidgets import QWidget
         assert dlg._panneau.findChild(QWidget, "enteteDifficulte") is None, "plus de colonne vide"
         qtbot.wait(50)
@@ -247,14 +265,13 @@ class TestRangement:
 
 
 class TestMiseEnPage:
-    def test_le_titre_de_page_est_celui_de_toutes_les_pages(self, qtbot, tmp_path):
-        """f76 (Ludo, 2026-11-15) : la décorative partout, le Journal et les réglages d'un
-        jeu ne changent plus de police de titre."""
+    def test_la_page_n_a_plus_de_grand_titre(self, qtbot, tmp_path):
+        """Maquette B : le nom de la rubrique est dans sa pastille cochée ; « IMAGE » en grand, au-dessus,
+        la redisait."""
+        from PyQt6.QtWidgets import QLabel
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        titre = next(lb for lb in dlg.findChildren(QLabel)
-                     if (lb.accessibleName() or lb.text()) == tr("Image"))
-        assert titre.font().family() == cinzel_decorative(22).family()
-        assert titre.font().pointSizeF() == 22
+        assert not [lb for lb in dlg.findChildren(QLabel)
+                    if (lb.accessibleName() or lb.text()) == tr("Image") and lb.font().pointSize() == 22]
 
     def test_un_titre_en_i_prend_le_i_sans_ornement(self, qtbot):
         """Le I de Cinzel Decorative porte un crochet : « IMAGE » avait l'air mal écrit (Ludo, 2026-11-15).
@@ -270,18 +287,16 @@ class TestMiseEnPage:
         qtbot.addWidget(autre)
         assert autre.text() == "Jeu"
 
-    def test_le_rail_defile_au_lieu_de_se_tasser(self, qtbot, tmp_path):
+    def test_le_bandeau_garde_sa_hauteur_dans_une_petite_fenetre(self, qtbot, tmp_path):
+        from src.ui.bandeau_jeu import HAUTEUR_BANDEAU
         from src.ui.reglages_rubriques import ActionFichier
-        # Quatre rubriques avec Fichiers : le rail ne tient plus dans la plus petite fenêtre que
-        # permettent les pages (339 px de haut ici).
         dlg, _ini = _fenetre(qtbot, tmp_path, actions=[ActionFichier("Ouvrir le dossier", lambda: None, "", "Ouvrir")])
         dlg.setMinimumSize(0, 0)
-        dlg.resize(980, 220)
+        dlg.resize(980, 420)
         dlg.show()
         qtbot.waitExposed(dlg)
-        qtbot.waitUntil(lambda: dlg._zone_rail.verticalScrollBar().maximum() > 0, timeout=2000)
-        assert all(b.height() == 44 for b in dlg._onglets.values())
-        assert dlg._titre.height() >= dlg._titre.heightForWidth(dlg._titre.width())
+        assert dlg._zone_rail.height() == HAUTEUR_BANDEAU
+        assert all(b.isVisible() for b in dlg._onglets.values())
 
 
 
@@ -367,8 +382,8 @@ class TestPictogrammesDuRail:
     def _icones(self, qtbot, tmp_path, monkeypatch, *idents):
         from src.ui import game_settings_dialog
         vues = {}
-        fabrique = game_settings_dialog.bouton_rubrique
-        monkeypatch.setattr(game_settings_dialog, "bouton_rubrique",
+        fabrique = game_settings_dialog.pastille_rubrique
+        monkeypatch.setattr(game_settings_dialog, "pastille_rubrique",
                             lambda libelle, icone: vues.setdefault(libelle, icone) and fabrique(libelle, icone))
         _fenetre(qtbot, tmp_path, *idents, ini=INI + "[Accio.Controller]\r\nPlayStation=0\r\n")
         return vues

@@ -55,7 +55,8 @@ from src.ui.composants import (
 )
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel
-from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, entete_de_rail
+from src.ui.bandeau_jeu import bandeau_du_jeu
+from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
@@ -208,29 +209,34 @@ class VersionsDialog(QDialog):
     # ── Construction ──
 
     def _build_ui(self) -> None:
-        racine = QHBoxLayout(self)
+        # Le bandeau du jeu en haut, comme ses réglages (maquette B, Ludo 2026-11-13) : le nom du jeu au
+        # même pixel d'une page à l'autre (Ludo, 2026-11-15). Les versions restent une liste, à gauche.
+        racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
-        racine.addWidget(self._rail())
+        bandeau, _nom, rangee = bandeau_du_jeu(self.game, bouton_retour(self._libelle_retour, self.reject))
+        rangee.addWidget(surtitre(tr("Journal des changements")))
+        rangee.addStretch()
+        racine.addWidget(bandeau)
+        bas = QHBoxLayout()
+        bas.setContentsMargins(0, 0, 0, 0)
+        bas.setSpacing(0)
+        bas.addWidget(self._rail())
         self._details = QStackedWidget()
         transparent(self._details, "details")
         self._index: dict[str, int] = {}
         for ver in self._versions:
             self._index[ver.version] = self._details.addWidget(zone_defilable(self._detail(ver)))
-        racine.addWidget(self._details, stretch=1)
+        bas.addWidget(self._details, stretch=1)
+        racine.addLayout(bas, stretch=1)
 
     def _rail(self) -> QFrame:
         rail = QFrame()
-        rail.setObjectName("rail")
+        rail.setObjectName("listeVersions")
         rail.setFixedWidth(LARGEUR_RAIL)
         lay = QVBoxLayout(rail)
-        lay.setContentsMargins(18, 22, 18, 20)
+        lay.setContentsMargins(MARGES_PAGE[0], 24, 12, 20)
         lay.setSpacing(6)
-
-        entete, _nom = entete_de_rail(self.game, bouton_retour(self._libelle_retour, self.reject),
-                                      tr("Journal des changements"))
-        lay.addWidget(entete)
-        lay.addSpacing(16)   # + l'espacement de 6 du rail : les 20 des réglages du jeu
 
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)

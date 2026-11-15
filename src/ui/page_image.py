@@ -43,7 +43,6 @@ from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.i18n import tr, trn, typo
 from src.core.reglages_table import Reglage
-from src.ui.flow_layout import FlowLayout
 from src.ui.composants import (
     bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, MARGES_PAGE, pastille, petit_titre, police, Rangee,
     transparent,
@@ -65,7 +64,6 @@ ARGENT = "#b9bccb"
 # La fiche de droite, et la largeur sous laquelle elle laisse sa place à la liste (la description
 # passe alors dans l'infobulle de la ligne).
 _LARGEUR_FICHE = 300
-_SEUIL_FICHE = 860
 # La colonne des contrôles : un curseur y tient avec ses étiquettes, sa valeur et son retour à Accio.
 _LARGEUR_CONTROLE = 330
 # La liste ne s'étire pas au-delà : en plein écran, 800 à 980 px séparaient un nom de son
@@ -78,6 +76,10 @@ LARGEUR_LISTE = 880
 _SEUIL_RECHERCHE = 8
 # L'identifiant de la ligne « Résolution », qui n'est pas un réglage du correctif mais du launcher.
 RESOLUTION = "resolution_ecran"
+# La colonne des catégories et de la recherche (maquette B) : au moins la largeur du champ de recherche.
+_LARGEUR_LISTE_CATEGORIES = 210
+# 860 px pour la liste et la fiche, plus la colonne des catégories et son écart (maquette B).
+_SEUIL_FICHE = 860 + _LARGEUR_LISTE_CATEGORIES + 24
 
 _STYLE = f"""
 QFrame#carteImage {{
@@ -87,11 +89,13 @@ QFrame#ficheImage {{
     background: #0b0b18; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: {RAYON_CARTE}px;
 }}
 QPushButton#categorie {{
-    color: #c8c6dc; background: transparent; border: none; border-bottom: 2px solid transparent;
-    padding: 8px 4px; text-align: center;
+    color: #c8c6dc; background: transparent; border: none; border-left: 2px solid transparent;
+    border-radius: 6px; padding: 9px 14px; text-align: left;
 }}
-QPushButton#categorie:hover {{ color: #f4f2f8; }}
-QPushButton#categorie:checked {{ color: #e8c547; border-bottom-color: #d6a72c; }}
+QPushButton#categorie:hover {{ color: #f4f2f8; background: rgba(255, 255, 255, 0.04); }}
+QPushButton#categorie:checked {{
+    color: #f2e6c4; background: rgba(214, 167, 44, 0.12); border-left-color: #d6a72c;
+}}
 QPushButton#segment {{
     color: #d8d6e6; background: #12121f; border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 6px; padding: 5px 10px;
@@ -701,10 +705,10 @@ class _Onglet(QPushButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFont(police(14))
         self.nom = nom
-        # La largeur de son texte, padding compris (2 × 4 px), et rien de plus : la largeur minimale
-        # d'un bouton Windows étalait « Écran » sur 100 px, et les sept onglets de HP6 passaient sur
-        # deux lignes même en grand (Ludo, 2026-11-15). Jamais rogné : la rangée passe à la ligne.
-        self.setFixedWidth(self.fontMetrics().horizontalAdvance(nom) + 8 + 4)
+        # Une ligne de la liste de gauche (maquette B, Ludo 2026-11-13) : en onglets, les sept catégories
+        # de HP6 passaient sur deux lignes (Ludo, 2026-11-15, « moche »). Jamais rognée : la colonne
+        # prend la largeur de la plus longue.
+        self.setMinimumWidth(self.fontMetrics().horizontalAdvance(nom) + 28 + 4)
 
 
 def _bulle(aide: str) -> str:
@@ -798,20 +802,34 @@ class PageImage(QWidget):
     # ── construction ──
 
     def _construire(self) -> None:
-        racine = QVBoxLayout(self)
+        # Maquette B (Ludo, 2026-11-13) : la recherche et les catégories en liste à GAUCHE, les lignes au
+        # milieu, la fiche à droite. En onglets au-dessus, les sept catégories de HP6 passaient sur deux
+        # lignes (Ludo, 2026-11-15, « moche »).
+        racine = QHBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
-        racine.setSpacing(14)
+        racine.setSpacing(24)
         tete = QWidget()
         transparent(tete, "teteImage")
-        haut = QHBoxLayout(tete)
+        # Posée dans la page AVANT d'être rendue visible : sans parent, `setVisible(True)` la montrait
+        # comme une fenêtre à part, un quart de seconde à l'ouverture (Ludo, 2026-11-15, 1.3.4 publiée).
+        racine.addWidget(tete, alignment=Qt.AlignmentFlag.AlignTop)
+        haut = QVBoxLayout(tete)
         haut.setContentsMargins(0, 0, 0, 0)
-        haut.setSpacing(18)
-        # Les onglets passent à la ligne quand la place manque, la recherche garde la sienne :
-        # à 980×660, les onglets de HP6 étaient coupés des deux côtés et la recherche
-        # sortait de la page (audit UI, 2026-11-13).
+        haut.setSpacing(12)
+        self.recherche = QLineEdit()
+        self.recherche.setObjectName("recherche")
+        self.recherche.setPlaceholderText(tr("Rechercher un réglage"))
+        self.recherche.setClearButtonEnabled(True)
+        self.recherche.setFont(police(13))
+        self.recherche.textChanged.connect(self._chercher)
+        # Échap vide d'abord le champ ; il fermait toute la page des réglages (audit UI v46).
+        self.recherche.installEventFilter(self)
+        haut.addWidget(self.recherche)
         rangee = QWidget()
         transparent(rangee, "ongletsImage")
-        flux = FlowLayout(rangee, spacing=26)
+        liste = QVBoxLayout(rangee)
+        liste.setContentsMargins(0, 0, 0, 0)
+        liste.setSpacing(2)
         self._groupe_onglets = QButtonGroup(self)
         self._groupe_onglets.setExclusive(True)
         self.onglets: dict[str, _Onglet] = {}
@@ -820,25 +838,14 @@ class PageImage(QWidget):
             o.clicked.connect(lambda _c=False, r=rang: self.montrer(r))
             self._groupe_onglets.addButton(o, rang)
             self.onglets[cat.ident] = o
-            flux.addWidget(o)
-        haut.addWidget(rangee, stretch=1)
-        self.recherche = QLineEdit()
-        self.recherche.setObjectName("recherche")
-        self.recherche.setPlaceholderText(tr("Rechercher un réglage"))
-        self.recherche.setClearButtonEnabled(True)
-        self.recherche.setFont(police(13))
-        self.recherche.setFixedWidth(220)
-        self.recherche.textChanged.connect(self._chercher)
-        # Échap vide d'abord le champ ; il fermait toute la page des réglages (audit UI v46).
-        self.recherche.installEventFilter(self)
-        haut.addWidget(self.recherche, alignment=Qt.AlignmentFlag.AlignTop)
-        # Un onglet seul ne choisit rien ; peu de lignes ne se cherchent pas. Sans l'un ni
-        # l'autre, la tête entière se cache, et son écart avec elle.
+            liste.addWidget(o)
+        haut.addWidget(rangee)
+        largeur = max([o.minimumWidth() for o in self.onglets.values()] + [_LARGEUR_LISTE_CATEGORIES])
+        tete.setFixedWidth(largeur)
+        # Une catégorie seule ne choisit rien ; peu de lignes ne se cherchent pas. Sans l'une ni
+        # l'autre, la colonne entière se cache, et son écart avec elle.
         onglets = len(self.categories) > 1
         cherchable = len(self.reglages) + bool(self._resolution) >= _SEUIL_RECHERCHE
-        # Posée dans la page AVANT d'être rendue visible : sans parent, `setVisible(True)` la montrait
-        # comme une fenêtre à part, un quart de seconde à l'ouverture (Ludo, 2026-11-15, 1.3.4 publiée).
-        racine.addWidget(tete)
         rangee.setVisible(onglets)
         self.recherche.setVisible(cherchable)
         tete.setVisible(onglets or cherchable)
