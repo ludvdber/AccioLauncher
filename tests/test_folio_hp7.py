@@ -86,3 +86,26 @@ class TestPage:
         assert "1 / 3" in textes and "Missions annexes terminées" in textes
         assert "Ennemis vaincus" in textes and "40" in textes
         assert page.releve.ecrite <= datetime.now()
+
+
+class TestEncadreDeLaFiche:
+    """Ludo, 2026-11-15 : HP7 et HP8 ont « leur encadré de folio et pas juste un bouton
+    folio souligné »."""
+
+    def test_missions_annexes_et_niveau(self, tmp_path):
+        from src.core import folio
+        from src.ui.resume_partie import lieu_resume, phrase_resume
+        set_language("fr")
+        chemin = tmp_path / "auto.sav"
+        chemin.write_bytes(auto_sav({"Completed_ns01": 1, "PlayerLevel": 4}))
+        resume = folio_hp7.resume({"auto.sav": chemin})
+        assert "hp7a" in folio.FICHES and "hp7b" in folio.FICHES
+        assert (resume.trouvees, resume.total, resume.unite) == (1, 3, "missions")
+        assert phrase_resume(resume) == "1 mission annexe sur 3"
+        assert lieu_resume(resume) == "Niveau 4"
+
+    def test_sans_partie_lisible_la_description_reste(self, tmp_path):
+        chemin = tmp_path / "auto.sav"
+        chemin.write_bytes(b"\x00" * 200)
+        assert folio_hp7.resume({"auto.sav": chemin}) is None
+        assert folio_hp7.resume({}) is None

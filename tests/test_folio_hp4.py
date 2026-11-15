@@ -324,3 +324,15 @@ class TestIndexDesTextes:
         assert folio_hp4.index_hachages(b"rien") == {}
         assert folio_hp4.index_hachages(b"\x19\x05\x04\x20" + struct.pack("<I", 9)) == {}
         assert folio_hp4.index_jeu(Path("absent"), "fr") == {}
+
+
+class TestEncadreDesLaPremierePartie:
+    def test_une_partie_sans_bouclier_a_son_encadre(self, tmp_path, monkeypatch):
+        """Ludo, 2026-11-15 : la fiche de HP4 n'avait qu'un lien « Folio » souligné tant que
+        la partie n'avait rien gagné ; elle a son encadré, comme les autres jeux."""
+        from datetime import datetime
+        partie = folio_hp4.Partie(1, datetime(2026, 11, 1), "lvl_001", 0, 0)
+        monkeypatch.setattr(folio_hp4, "releve", lambda chemin: [partie])
+        monkeypatch.setattr(folio_hp4, "textes", lambda system, langue: {})
+        resume = folio_hp4.resume({"HPGOF": tmp_path / "HPGOF"}, tmp_path, "fr")
+        assert resume is not None and (resume.trouvees, resume.unite) == (0, "boucliers")
