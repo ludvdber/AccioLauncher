@@ -48,7 +48,6 @@ from src.core import reglages_correctif, reglages_graphiques, resolution_jeu
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
-from src.ui.aide_reglage import BoutonAide
 from src.ui.composants import (
     titre_page,
     TAILLE_MINIMALE_PAGE,
@@ -65,7 +64,7 @@ from src.ui.composants import (
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.icon_button import pixmap_icone
-from src.ui.page_image import LARGEUR_LISTE, PageImage
+from src.ui.page_image import LARGEUR_LISTE, PageAvecFiche, PageImage, _LigneImage
 from src.ui.theme import accent_qcolor, themed
 from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
@@ -75,9 +74,8 @@ from src.ui.reglages_widgets import (  # réexportés
     _CarteEffets,
     _Disposition,
     entete_de_rail,
-    _Ligne,
     _Points,
-    _poser_beta, _texte_beta,
+    _texte_beta,
 )
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     log,
@@ -149,11 +147,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # à l'origine les remet sur ce que porte le fichier, sans rebâtir la page.
         self._controles: dict[str, QWidget] = {}
         self._panneau = None   # le haut de l'onglet Difficulté
-        # Le « ? » de chaque ligne, par identifiant (par libellé hors correctif).
-        self._aides: dict[str, BoutonAide] = {}
+        # La fiche de chaque ligne (son texte riche), par identifiant (par libellé hors correctif).
+        self._aides: dict[str, str] = {}
+        # Les lignes de la page en construction, que sa fiche suivra : (ligne, titre, fiche).
+        self._lignes_de_page: list[tuple[_LigneImage, str, str]] = []
         # La ligne entière de chaque réglage : grisée quand un autre réglage,
         # éteint, lui retire tout effet, et elle dit lequel.
-        self._blocs: dict[str, _Ligne] = {}
+        self._blocs: dict[str, _LigneImage] = {}
         self._bouton_reset: QPushButton | None = None
         # L'éditeur de touches (HP4) et la note sous la disposition ZQSD, que
         # l'éditeur fait apparaître dès qu'une touche est choisie à l'unité.
@@ -211,6 +211,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             corps.setContentsMargins(0, 0, 0, 0)
             corps.setSpacing(0)
             page.addLayout(corps)
+            self._lignes_de_page = []
             if not self._remplir(ident, corps):
                 contenu.deleteLater()
                 continue
@@ -228,9 +229,10 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                     # Une colonne de lignes : à 1 920 px, le nom partait à 1 500 px de son
                     # contrôle (audit UI reg11). La Difficulté garde sa largeur, pour le cadran.
                     contenu.setMaximumWidth(LARGEUR_LISTE + MARGES_PAGE[0] + MARGES_PAGE[2])
-                self._defile.addWidget(zone_defilable(contenu))
-            if ident == "commandes" and not any(r.onglet == "commandes" for r in self._reglages):
-                icone = "manette"   # rien que la manette sur cette page (tra15)
+                # La fiche à droite, comme la page Image (audit UI reg20) ; une page sans ligne
+                # de réglage (Langue, Fichiers) n'en a pas.
+                self._defile.addWidget(PageAvecFiche(contenu, self._lignes_de_page)
+                                       if self._lignes_de_page else zone_defilable(contenu))
             pages.append((ident, libelle, icone))
 
         racine.addWidget(self._rail(pages))
@@ -303,25 +305,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _remplir(self, onglet: str, corps: QVBoxLayout) -> bool:
         """Pose le contenu d'une page ; False si elle n'a rien à montrer."""
         if onglet == "image":
-            if self._section_graphiques(corps, "image"):
-                return True
-            # HP1/HP2 : la résolution est au launcher, leurs réglages du correctif ne la retirent pas.
-            # HP4 à HP6 l'ont aussi, mais dans la page Image de leur correctif (rubrique « Écran »).
-            resolution = self.game.resolution
-            if not self._reglages or (resolution is not None and not resolution_jeu.du_correctif(resolution)):
-                self._section_affichage(corps)
-                return True
-            return self._page_image(corps)
-        if onglet == "commandes":
-            if not self._correctif_actif():
-                # Une seule note pour les touches ET la manette du correctif.
-                note = (self._section_correctif(corps, "commandes")
-                        or self._section_correctif(corps, "manette"))
-                return self._section_manette(corps) or note
-            a_des_touches = self._section_disposition(corps)
-            if a_des_touches and "touches_zqsd" in self._controles:
-                self._section_touches(corps)
-            return self._section_manette(corps) or a_des_touches
+            return self._page_image_et_fluidite(corps)
         if onglet == "langue":
             # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
             # et registre atteignable pour ceux qui la lisent là.
@@ -333,13 +317,42 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             rempli = self._section_demarrage(corps)
             if self._section_correctif(corps, "jeu", titre=tr("En arrière-plan")):
                 rempli = True
+            if self._section_commandes(corps):
+                rempli = True
             return self._section_captures(corps) or rempli
         if onglet == "difficulte":
             return self._page_difficulte(corps)
-        if onglet == "fichiers":
-            return self._page_fichiers(corps)
-        return (self._section_correctif(corps, "perfs")
-                or self._section_graphiques(corps, "perfs"))
+        return self._page_fichiers(corps)
+
+    def _page_image_et_fluidite(self, corps: QVBoxLayout) -> bool:
+        """L'image, puis la fluidité, qui avait sa page de quatre lignes (audit UI reg21). La page
+        Image du correctif la range dans sa catégorie « Fluidité » ; les autres la posent dessous."""
+        if self._section_graphiques(corps, "image"):
+            self._section_graphiques(corps, "perfs", titre=tr("Fluidité"))
+            return True
+        # HP1/HP2 : la résolution est au launcher, leurs réglages du correctif ne la retirent pas.
+        # HP4 à HP6 l'ont aussi, mais dans la page Image de leur correctif (rubrique « Écran »).
+        resolution = self.game.resolution
+        if not self._reglages or (resolution is not None and not resolution_jeu.du_correctif(resolution)):
+            self._section_affichage(corps)
+            self._section_correctif(corps, "perfs", titre=tr("Fluidité"))
+            return True
+        if not self._correctif_actif():
+            # Jeu absent ou ancien correctif : une seule note pour toute la page.
+            return any(self._section_correctif(corps, o) for o in ("affichage", "image", "perfs"))
+        return self._page_image(corps)
+
+    def _section_commandes(self, corps: QVBoxLayout) -> bool:
+        """Manette ou touches, dans la page Jeu (audit UI reg21 : la page Commandes avait deux lignes)."""
+        if not self._correctif_actif():
+            # Une seule note pour les touches ET la manette du correctif.
+            note = (self._section_correctif(corps, "commandes")
+                    or self._section_correctif(corps, "manette"))
+            return self._section_manette(corps) or note
+        a_des_touches = self._section_disposition(corps)
+        if a_des_touches and "touches_zqsd" in self._controles:
+            self._section_touches(corps)
+        return self._section_manette(corps) or a_des_touches
 
     def _page_image(self, corps: QVBoxLayout) -> bool:
         """Affichage et qualité d'image à gauche, chaque effet à droite.
@@ -348,11 +361,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         pas ») ; chaque effet reste réglable, et désormais VISIBLE à côté : on
         voit ce que change un préréglage au moment où on le choisit.
         """
-        if not self._correctif_actif():
-            # Jeu absent ou ancien correctif : une seule note pour toute la page.
-            return (self._section_correctif(corps, "affichage")
-                    or self._section_correctif(corps, "image"))
-        reglages = tuple(r for r in self._reglages if r.onglet in ("affichage", "image"))
+        reglages = tuple(r for r in self._reglages if r.onglet in ("affichage", "image", "perfs"))
         if self._ini is None or (not reglages and self.game.resolution is None):
             return False
         self._page_img = PageImage(self.game, self.manager.config, self._ini, reglages,
@@ -534,7 +543,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             if bloquant is None:
                 if effet is not None:
                     bloc.haut.setGraphicsEffect(None)
-                bloc.setToolTip("")
                 bloc.note.hide()
             else:
                 if effet is None:
@@ -542,7 +550,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                     effet.setOpacity(0.42)
                     bloc.haut.setGraphicsEffect(effet)
                 phrase = reglages_correctif.phrase_blocage(reglage, bloquant)
-                bloc.setToolTip(phrase)
                 bloc.note.setText(phrase)
                 bloc.note.show()
 
@@ -629,80 +636,30 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._erreur.show()
 
     def _ligne(self, libelle_txt: str, controle: QWidget, aide_txt: str,
-               reglage=None, retrait: bool = False) -> _Ligne:
-        """Une ligne par réglage : le nom, son « ? », ses repères, le contrôle
-        toujours à DROITE, dans une colonne de même largeur pour toute la carte.
-
-        L'explication vit derrière le « ? », au clic (Ludo : « une
-        bonne description au survol de la souris ou un bouton ? ») : une phrase
-        sous chaque ligne, c'était le mur de texte qu'on voulait retirer.
-        """
-        serree = reglage is not None and reglage.onglet == "image"
-        ligne = _Ligne(serree, retrait)
-        h = ligne.rangee
-        libelle = QLabel(libelle_txt)
-        libelle.setTextFormat(Qt.TextFormat.PlainText)
-        libelle.setWordWrap(True)
-        libelle.setMinimumWidth(1)
-        libelle.setFont(police(14))
-        libelle.setStyleSheet("color: #ecebf3; background: transparent;")
-        h.addWidget(libelle, stretch=1)
-        _poser_beta(h, reglage)
-        aide = BoutonAide(libelle_txt, self._fiche(aide_txt, reglage))
-        h.addWidget(aide, alignment=Qt.AlignmentFlag.AlignVCenter)
-        self._aides[reglage.ident if reglage is not None else libelle_txt] = aide
-        if serree:
-            self._reperes(h, reglage)
-        # Le libellé est à côté, pas dedans : sans nom accessible, un lecteur d'écran
-        # n'annoncerait qu'« interrupteur » (règle 15). Pas d'infobulle : elle répétait
-        # mot pour mot le nom écrit à gauche (audit UI f60).
-        controle.setAccessibleName(libelle_txt)
+               reglage=None, retrait: bool = False) -> _LigneImage:
+        """La ligne de la page Image, pour toutes les pages (audit UI reg20 : trois façons de montrer
+        un réglage dans la même fenêtre) : le nom, « Bêta », le coût s'il pèse, le contrôle dans sa
+        colonne à côté du nom. Plus de « ? » : la fiche de la page le dit, à droite, ou l'infobulle
+        quand la fenêtre est trop étroite (`PageAvecFiche`)."""
+        ident = reglage.ident if reglage is not None else libelle_txt
+        ligne = _LigneImage(ident, libelle_txt, reglage, controle, retrait)
+        # Le libellé est à côté, pas dedans : sans nom accessible, un lecteur d'écran n'annoncerait
+        # qu'« interrupteur » (règle 15) ; `_LigneImage` le pose.
         controle.setAccessibleDescription(aide_txt)
-        case = QWidget()
-        case.setObjectName("caseControle")
-        transparent(case)
-        hc = QHBoxLayout(case)
-        hc.setContentsMargins(0, 0, 0, 0)
-        hc.addStretch()
-        hc.addWidget(controle)
-        h.addWidget(case)
+        fiche = self._fiche(aide_txt, reglage)
+        self._aides[ident] = fiche
+        self._lignes_de_page.append((ligne, libelle_txt, fiche))
         return ligne
-
-    def _reperes(self, ligne: QHBoxLayout, reglage) -> None:
-        """L'œil s'il se VOIT à l'écran, les trois points de ce qu'il coûte.
-
-        Chacun à sa place même vide : les colonnes tombent l'une sous l'autre
-        d'une ligne à la suivante.
-        """
-        oeil = QLabel()
-        oeil.setFixedSize(18, 18)
-        transparent(oeil)
-        if reglage.se_voit:
-            oeil.setPixmap(pixmap_icone("oeil", 18, accent_qcolor()))   # la maison, pas l'or (f4)
-            oeil.setToolTip(tr("Se voit nettement à l’écran."))
-        ligne.addWidget(oeil)
-        niveau = max((n for _r, n in reglage.cout), default=0)
-        points = _Points(niveau)
-        if niveau:
-            detail = "\n".join(tr("{} : {}").format(tr(_RESSOURCES.get(r, r)), tr(_NIVEAUX[n]))
-                               for r, n in reglage.cout)
-            points.setToolTip(detail)
-            points.setAccessibleName(detail)
-        ligne.addWidget(points)
-        ligne.addSpacing(6)
 
     @staticmethod
     def _egaliser(carte: QWidget) -> None:
-        """Une seule largeur pour les listes et la colonne des contrôles d'une carte :
-        une liste plus large que les autres, des interrupteurs qui ne tombent pas
-        sur le même bord, c'était le désordre de l'ancienne fenêtre."""
+        """Une seule largeur pour les listes d'une carte : une liste plus large que les autres,
+        c'était le désordre de l'ancienne fenêtre. La colonne des contrôles, elle, est celle de
+        toutes les lignes (`_LigneImage`)."""
         listes = carte.findChildren(QComboBox)
-        largeur = max([c.sizeHint().width() for c in listes] + [48])
-        largeur = min(largeur, 260)
+        largeur = min(max([c.sizeHint().width() for c in listes] + [48]), 260)
         for liste in listes:
             liste.setFixedWidth(largeur)
-        for case in carte.findChildren(QWidget, "caseControle"):
-            case.setFixedWidth(largeur)
 
     def _controle(self, carte, ini: Path, reglage, retrait: bool = False) -> None:
         try:

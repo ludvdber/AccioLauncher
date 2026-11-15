@@ -51,15 +51,14 @@ _ONGLETS = (
     # En PREMIER, et à part (Ludo, 2026-11-03) : les joueurs qui ne parlent pas
     # français ne trouvaient pas la langue, rangée dans « Jeu ».
     ("langue", "Langue", "site"),
+    # Performances y entre, en « Fluidité » (audit UI reg21 : six rubriques dont trois de deux à
+    # quatre lignes, pendant que « Qualité » en avait quinze).
     ("image", "Image", "ecran"),
-    # Le clavier pour un jeu qui a des touches à changer (HP4), la manette sinon : la page
-    # n'a alors que la manette (`GameSettingsDialog._build_ui`). « Jeu » : des curseurs, le
-    # drapeau n'évoquait ni le démarrage ni l'arrière-plan (audit UI tra15).
-    ("commandes", "Commandes", "clavier"),
+    # Démarrage, arrière-plan, manette ou touches, captures : la page Commandes n'avait que deux
+    # lignes (reg21). « Jeu » : des curseurs, le drapeau n'évoquait rien de tout ça (tra15).
     ("jeu", "Jeu", "curseurs"),
     # Tout ce qui règle la difficulté, presets et détail (Ludo, 2026-10-31).
     ("difficulte", "Difficulté", "epee"),
-    ("perfs", "Performances", "jauge"),
     ("fichiers", "Fichiers", "dossier"),
 )
 
@@ -90,7 +89,8 @@ _NIVEAUX = {1: "faible", 2: "moyenne", 3: "extrême"}
 # Le temps que reste au pied la confirmation d'une remise à l'origine.
 _DUREE_ANNONCE_PIED = 4000
 # La page qui montre un réglage, quand son `onglet` n'est pas celui du rail.
-_PAGE_DE = {"affichage": "image", "manette": "commandes", "demarrage": "jeu"}
+_PAGE_DE = {"affichage": "image", "perfs": "image", "commandes": "jeu", "manette": "jeu",
+            "demarrage": "jeu"}
 
 # Réglages annoncés mais pas encore livrés. Ils sont ÉCRITS, pas résumés en
 # « bientôt » : quelqu'un qui cherche la résolution doit reconnaître ce qu'il
@@ -104,11 +104,11 @@ _A_VENIR = (
 
 
 def _ligne_alignee(titre: str, description: str = "", *commandes: QWidget) -> LigneReglage:
-    """Une `LigneReglage` aux marges des lignes de réglage (`reglages_widgets._Ligne`,
-    16 et 9 px) : ses 20 et 14 px des Paramètres décalaient de 4 px le nom de la
-    carte Captures sous ceux de Démarrage (audit UI f43)."""
+    """Une `LigneReglage` aux marges des lignes de réglage (`page_image._LigneImage`, 14 et
+    6 px) : ses 20 et 14 px des Paramètres décalaient le nom de la carte Captures sous ceux de
+    Démarrage (audit UI f43)."""
     ligne = LigneReglage(titre, description, *commandes)
-    ligne.layout().setContentsMargins(16, 9, 16, 9)
+    ligne.layout().setContentsMargins(14, 6, 12, 6)
     return ligne
 
 class RubriquesDuJeu:
@@ -374,7 +374,7 @@ class RubriquesDuJeu:
         choix.setStyleSheet(themed(_LISTE_STYLE))
         return choix
 
-    def _section_graphiques(self, corps: QVBoxLayout, onglet: str) -> bool:
+    def _section_graphiques(self, corps: QVBoxLayout, onglet: str, titre: str = "") -> bool:
         """HP3 : les réglages graphiques rangés dans CET onglet (`reglages_graphiques`).
 
         Même présentation que le correctif (ligne, « ? », repères), écrite
@@ -392,7 +392,7 @@ class RubriquesDuJeu:
             self._section(corps, self._entete_effets(tr("Qualité d'image")), carte)
             self._bouton_origine_graph()
         else:
-            self._section(corps, None, carte)
+            self._section(corps, surtitre(titre) if titre else None, carte)
         return True
 
     def _controle_graph(self, carte, conf: Path, reglage) -> None:

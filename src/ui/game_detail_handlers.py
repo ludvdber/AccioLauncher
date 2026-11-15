@@ -925,14 +925,8 @@ def _appliquer_manette(view: GameDetailView, game: GameData, oui: bool) -> bool:
 
 
 def _actions_fichiers(view: GameDetailView, game: GameData) -> list[ActionFichier]:
-    """Ce que la rubrique « Fichiers » des réglages du jeu propose.
-
-    Le journal des changements et « Vérifier / réparer » n'étaient atteignables
-    qu'au CLIC DROIT — le défaut qu'on vient de corriger pour la langue, à
-    l'identique. Réparer n'a de sens que sur un jeu installé ; l'ouverture du
-    dossier non plus, et proposer d'ouvrir un dossier qui n'existe pas serait
-    une erreur de plus à expliquer.
-    """
+    """Ce que la rubrique « Fichiers » des réglages du jeu propose (le journal et la réparation
+    n'étaient atteignables qu'au clic droit). Réparer et ouvrir le dossier : jeu installé seulement."""
     # Le journal SEUL : revenir à une ancienne archive n'existe plus (2026-10-30).
     actions = [ActionFichier(tr("Journal des changements"),
                              lambda: on_versions_clicked(view, depuis_reglages=True),
@@ -947,14 +941,11 @@ def _actions_fichiers(view: GameDetailView, game: GameData) -> list[ActionFichie
     # Même désinstallé : les copies vivent hors du dossier du jeu (on revient
     # peut-être pour elles) ; installé sans copie : on peut y importer une partie.
     if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id) or installe):
-        # Court : le rail fait 218 px, l'ancien libellé y était coupé
-        # (capture de Ludo, 2026-10-16). Versions, export et import.
         actions.append(ActionFichier(tr("Sauvegardes"), lambda: _ouvrir_copies(view, game),
                                      tr("Les copies de tes parties : revenir à une version, exporter, importer."),
                                      tr("Ouvrir")))
     if installe:
-        # Ici depuis ACT-055 : un bouton de la fiche, plus visible que
-        # l'engrenage, pour une action qu'on fait une fois. En dernier.
+        # Plus sur la fiche (ACT-055) : une action qu'on fait une fois. En dernier, à part.
         actions.append(ActionFichier(tr("Désinstaller le jeu"), lambda: on_uninstall(view),
                                      tr("Retire le jeu de ce PC. Une confirmation suit."), tr("Désinstaller"),
                                      risquee=True))

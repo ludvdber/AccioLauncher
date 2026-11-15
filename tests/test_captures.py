@@ -330,10 +330,11 @@ class TestFenetre:
         """f43 : la ligne Captures avait les marges des Paramètres (20 px), son nom 4 px à
         droite de ceux des cartes de réglages au-dessus (16 px)."""
         from src.ui.composants import LigneReglage
-        from src.ui.reglages_widgets import _Ligne
+        from PyQt6.QtWidgets import QWidget
+        from src.ui.page_image import _LigneImage
         dlg = self._dialogue(qtbot, _jeu(screenshots={"key": "F12"}), tmp_path)
         ligne = next(w for w in dlg.findChildren(LigneReglage) if w.isAncestorOf(dlg._compte_captures))
-        reference = _Ligne(serree=False, retrait=False)
+        reference = _LigneImage("x", "x", None, QWidget(), retrait=False)   # la ligne de réglage (reg20)
         qtbot.addWidget(reference)
         assert ligne.layout().contentsMargins().left() == reference.layout().contentsMargins().left()
 

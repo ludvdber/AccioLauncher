@@ -23,7 +23,7 @@ from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
 from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police, surtitre, transparent
 from src.ui.fonts import cinzel
-from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT
+from src.ui.reglages_rubriques import _COULEURS_COUT
 from src.ui.theme import RAYON_CARTE
 
 _JAQUETTE = QSize(58, 80)
@@ -68,13 +68,6 @@ def _etiquette_beta() -> QLabel:
     etiquette = pastille(tr("Bêta"), "#f0d060", "rgba(214, 167, 44, 0.5)")
     etiquette.setToolTip(_texte_beta())
     return etiquette
-
-
-def _poser_beta(rangee: QHBoxLayout, reglage) -> None:
-    """L'étiquette, à côté du nom, si ce réglage est encore en essai. Pas sur
-    l'onglet Difficulté, tout entier en essai : sa pastille de tête le dit."""
-    if reglage is not None and reglage.beta and reglage.onglet != "difficulte":
-        rangee.addWidget(_etiquette_beta(), alignment=Qt.AlignmentFlag.AlignVCenter)
 
 
 def entete_de_rail(game, retour: QWidget, sous_titre: str) -> tuple[QWidget, QLabel]:
@@ -182,37 +175,6 @@ class _CarteEffets(QFrame):
     def ajouter(self, widget: QWidget) -> QWidget:
         self._lay.addWidget(widget)
         return widget
-
-
-class _Ligne(QWidget):
-    """Une ligne de réglage : le nom et son « ? », ses repères, le contrôle à droite.
-
-    `note` dit, sous le nom, pourquoi la ligne est sans effet : grisée seule,
-    elle laissait chercher quel réglage l'avait éteinte.
-    """
-
-    def __init__(self, serree: bool, retrait: bool) -> None:
-        super().__init__()
-        transparent(self)
-        v = QVBoxLayout(self)
-        gauche = 16 + (20 if retrait else 0)
-        v.setContentsMargins(gauche, 5 if serree else 9, 16, 5 if serree else 9)
-        v.setSpacing(1)
-        self.haut = QWidget()
-        transparent(self.haut)
-        self.rangee = QHBoxLayout(self.haut)
-        self.rangee.setContentsMargins(0, 0, 0, 0)
-        self.rangee.setSpacing(8)
-        v.addWidget(self.haut)
-        self.note = QLabel("")
-        self.note.setTextFormat(Qt.TextFormat.PlainText)
-        self.note.setWordWrap(True)
-        f = police(12)
-        f.setItalic(True)
-        self.note.setFont(f)
-        self.note.setStyleSheet(f"color: {_COULEUR_NOTE}; background: transparent;")
-        self.note.hide()
-        v.addWidget(self.note)
 
 
 class _CarteCliquable(QPushButton):

@@ -12,7 +12,6 @@ from src.core import reglages_correctif as rc
 from src.core.game_data import GameData
 from src.core.i18n import set_language, tr
 from src.core.reglages_table import REGLAGES
-from src.ui.aide_reglage import BoutonAide
 from tests.modales import quand_ouverte
 from src.ui.fonts import cinzel_decorative
 
@@ -41,7 +40,7 @@ def _jeu(*idents, **champs):
                                "cover_image": "c.jpg", "fix_settings": list(idents), **champs})
 
 
-def _fenetre(qtbot, tmp_path, *idents, ini=INI):
+def _fenetre(qtbot, tmp_path, *idents, ini=INI, actions=()):
     from src.ui.game_settings_dialog import GameSettingsDialog
     chemin = tmp_path / "HP6" / "d3d9.ini"
     chemin.parent.mkdir(exist_ok=True)
@@ -49,7 +48,7 @@ def _fenetre(qtbot, tmp_path, *idents, ini=INI):
         chemin.write_bytes(ini.encode("ascii"))
     manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
                               config=SimpleNamespace(install_path=tmp_path, reprise={}))
-    dlg = GameSettingsDialog(_jeu(*(idents or IDENTS)), manager, lambda c: True)
+    dlg = GameSettingsDialog(_jeu(*(idents or IDENTS)), manager, lambda c: True, actions=actions)
     qtbot.addWidget(dlg)
     return dlg, chemin
 
@@ -79,8 +78,9 @@ class TestRemiseALOrigine:
         dlg._bouton_reset.click()
         assert vus["titre"] == tr("Remettre ce jeu comme à l'installation ?")
         assert vus["objet"] == "danger" and vus["defaut"] and vus["retrait"]
-        for page in ("Image", "Jeu", "Difficulté", "Performances"):
+        for page in ("Image", "Jeu", "Difficulté"):
             assert page in vus["corps"], "la question nomme ce qui sera remis"
+        assert "Performances" not in vus["corps"], "la page n'existe plus (audit UI reg21)"
         assert ini.read_bytes() == avant
         assert not dlg._pied_notes.text().startswith("Réglages d'origine")
 
@@ -120,7 +120,7 @@ class TestPied:
         dlg, _ini = _fenetre(qtbot, tmp_path)
         dlg.ouvrir_onglet("image")
         assert "sauf le ciel" in dlg._pied_notes.text()
-        dlg.ouvrir_onglet("perfs")
+        dlg.ouvrir_onglet("jeu")
         assert "ciel" not in dlg._pied_notes.text()
 
     def test_rien_a_dire_et_pas_de_bouton_pas_de_pied(self, qtbot, tmp_path):
@@ -151,6 +151,7 @@ class TestRail:
 class TestBeta:
     def test_une_seule_mention_par_page(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
+        dlg._page_img.ligne("camera_fluide")   # la Caméra vit dans « Fluidité » (audit UI reg21)
         assert _textes(dlg).count(tr("Bêta").upper()) == 2, "une en tête de la Difficulté, une sur la Caméra, seule en bêta sur sa page"
         assert "Discord" in dlg._panneau.pastille_beta.toolTip()
 
@@ -177,6 +178,7 @@ class TestBeta:
         """f64 : « Bêta » en Gelasio sur une ligne, « BÊTA » en Cinzel dans la Difficulté."""
         from PyQt6.QtWidgets import QLabel
         dlg, _ini = _fenetre(qtbot, tmp_path)
+        dlg._page_img.ligne("camera_fluide")
         etiquettes = [lbl for lbl in dlg.findChildren(QLabel) if lbl.text() == tr("Bêta").upper()]
         assert len(etiquettes) == 2
         (a, b) = etiquettes
@@ -191,8 +193,10 @@ class TestBeta:
 
     def test_la_fiche_de_difficulte_ne_le_redit_pas(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        assert "Discord" not in dlg._aides["degats_recus"]._corps
-        assert "Discord" in dlg._aides["camera_fluide"]._corps
+        assert "Discord" not in dlg._aides["degats_recus"]
+        page = dlg._page_img
+        page._activer("camera_fluide")
+        assert "Discord" in page.fiche.texte.text(), "la fiche de la Caméra, elle, le dit"
 
 
 class TestLibelles:
@@ -252,24 +256,18 @@ class TestMiseEnPage:
         assert titre.font().pointSizeF() == 22
 
     def test_le_rail_defile_au_lieu_de_se_tasser(self, qtbot, tmp_path):
-        dlg, _ini = _fenetre(qtbot, tmp_path)
+        from src.ui.reglages_rubriques import ActionFichier
+        # Quatre rubriques avec Fichiers : le rail ne tient plus dans la plus petite fenêtre que
+        # permettent les pages (339 px de haut ici).
+        dlg, _ini = _fenetre(qtbot, tmp_path, actions=[ActionFichier("Ouvrir le dossier", lambda: None, "", "Ouvrir")])
         dlg.setMinimumSize(0, 0)
-        dlg.resize(980, 300)   # quatre rubriques tiennent en 400 px : il faut moins
+        dlg.resize(980, 220)
         dlg.show()
         qtbot.waitExposed(dlg)
         qtbot.waitUntil(lambda: dlg._zone_rail.verticalScrollBar().maximum() > 0, timeout=2000)
         assert all(b.height() == 44 for b in dlg._onglets.values())
         assert dlg._titre.height() >= dlg._titre.heightForWidth(dlg._titre.width())
 
-    def test_le_rond_d_aide_a_une_vraie_surface_de_clic(self):
-        aide = BoutonAide("Titre", "<p>x</p>")
-        assert aide.width() == 28 and aide.height() == 28
-        assert "margin: 5px" in aide.styleSheet(), "le rond visible reste de 18 px"
-        # À l'image (f20) : le rond peint fait 18 px, centré dans les 28 de la surface de clic.
-        from tests.pixels import cadre_de_l_encre
-        rond = cadre_de_l_encre(aide, seuil=20)
-        assert 16 <= rond.width() <= 19 and 16 <= rond.height() <= 19, rond
-        assert abs(rond.center().x() - 13.5) <= 1.5 and abs(rond.center().y() - 13.5) <= 1.5, rond
 
 
 def test_en_plein_ecran_le_controle_reste_pres_de_son_nom(qtbot, tmp_path):
@@ -348,8 +346,8 @@ class TestCadranAuClavier:
 
 
 class TestPictogrammesDuRail:
-    """tra15 (refonte B, 2026-11-13) : « Jeu » portait un drapeau, et « Commandes » un clavier
-    sur des jeux qui n'ont que la manette à régler."""
+    """tra15 (refonte B, 2026-11-13) : « Jeu » portait un drapeau. reg21 : plus de « Commandes »
+    ni de « Performances », entrées dans Jeu et Image ; « Fichiers », une page, en dernier."""
 
     def _icones(self, qtbot, tmp_path, monkeypatch, *idents):
         from src.ui import game_settings_dialog
@@ -360,13 +358,19 @@ class TestPictogrammesDuRail:
         _fenetre(qtbot, tmp_path, *idents, ini=INI + "[Accio.Controller]\r\nPlayStation=0\r\n")
         return vues
 
-    def test_la_manette_quand_il_n_y_a_pas_de_touches(self, qtbot, tmp_path, monkeypatch):
-        vues = self._icones(qtbot, tmp_path, monkeypatch, "arriere_plan", "manette_playstation", "lissage")
-        assert vues[tr("Commandes")] == "manette" and vues[tr("Jeu")] == "curseurs"
+    def test_quatre_rubriques_et_leurs_pictogrammes(self, qtbot, tmp_path, monkeypatch):
+        vues = self._icones(qtbot, tmp_path, monkeypatch, "arriere_plan", "manette_playstation", "lissage",
+                            "limite_fps")
+        assert vues == {tr("Image"): "ecran", tr("Jeu"): "curseurs"}, "la manette et la limite d'images " \
+            "ne font plus leur propre page"
 
-    def test_le_clavier_quand_les_touches_se_changent(self, qtbot, tmp_path, monkeypatch):
-        vues = self._icones(qtbot, tmp_path, monkeypatch, "arriere_plan", "touches_zqsd", "lissage")
-        assert vues[tr("Commandes")] == "clavier"
+    def test_la_manette_et_les_touches_sont_dans_jeu(self, qtbot, tmp_path):
+        from src.ui.toggle_switch import ToggleSwitch
+        dlg, _ini = _fenetre(qtbot, tmp_path, "arriere_plan", "manette_playstation",
+                             ini=INI + "[Accio.Controller]\r\nPlayStation=0\r\n")
+        dlg.ouvrir_onglet("jeu")
+        page = dlg._defile.currentWidget()
+        assert dlg._controles["manette_playstation"] in page.findChildren(ToggleSwitch)
 
 
 def test_en_plein_ecran_les_pages_de_lignes_s_arretent_a_la_liste(qtbot, tmp_path):
@@ -379,9 +383,41 @@ def test_en_plein_ecran_les_pages_de_lignes_s_arretent_a_la_liste(qtbot, tmp_pat
     dlg.resize(1920, 1000)
     dlg.show()
     qtbot.waitExposed(dlg)
-    zone = dlg._defile.currentWidget()
+    zone = dlg._defile.currentWidget().zone   # la colonne de lignes, à gauche de la fiche (reg20)
     qtbot.waitUntil(lambda: zone.viewport().width() > 1000)
     bascules = [b for b in zone.widget().findChildren(ToggleSwitch) if b.isVisible()]
     assert bascules
     for b in bascules:
         assert b.mapTo(zone.widget(), b.rect().topRight()).x() <= LARGEUR_LISTE + 40
+
+
+class TestUneSeuleLigne:
+    """Audit UI reg20 : trois façons de montrer un réglage dans la même fenêtre (lignes de la page
+    Image, « ? » collé au bord droit ailleurs). Une seule ligne, sans « ? », et la même fiche à droite."""
+
+    def test_aucun_point_d_aide_et_la_ligne_de_la_page_image_partout(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QPushButton
+        from src.ui.page_image import _LigneImage
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        assert not [b for b in dlg.findChildren(QPushButton) if b.text() == "?"]
+        assert dlg._blocs and all(isinstance(b, _LigneImage) for b in dlg._blocs.values())
+
+    def test_la_fiche_suit_la_ligne_survolee_et_l_infobulle_la_remplace_a_l_etroit(self, qtbot, tmp_path):
+        from PyQt6.QtCore import QEvent
+        from PyQt6.QtWidgets import QApplication
+        from src.ui.page_image import PageAvecFiche
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        dlg.ouvrir_onglet("jeu")
+        page = dlg._defile.currentWidget()
+        assert isinstance(page, PageAvecFiche)
+        dlg.setMinimumSize(0, 0)
+        dlg.resize(1920, 1000)
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        ligne = dlg._blocs["arriere_plan"]
+        QApplication.sendEvent(ligne, QEvent(QEvent.Type.Enter))
+        assert page.fiche.isVisible() and page.fiche.titre.text() == ligne.libelle.text()
+        assert ligne.fiche_ouverte(), "fiche à droite : pas d'infobulle qui la répète"
+        dlg.resize(1000, 700)
+        qtbot.waitUntil(lambda: not page.fiche.isVisible(), timeout=2000)
+        assert not ligne.fiche_ouverte() and ligne.toolTip(), "à l'étroit, l'infobulle dit ce que disait la fiche"

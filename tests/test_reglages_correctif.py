@@ -760,14 +760,13 @@ class TestFenetre:
         assert b"KeepRunningInBackground=0" in ini.read_bytes()
 
     def test_la_limite_d_images_ecrit_aussitot(self, qtbot, tmp_path):
-        from PyQt6.QtWidgets import QComboBox
         (tmp_path / "HP4").mkdir()
         ini = tmp_path / "HP4" / "d3d9.ini"
         ini.write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["limite_fps"]), _manager(tmp_path))
-        (choix,) = dlg.findChildren(QComboBox)
-        assert choix.currentData() == 100
-        choix.setCurrentIndex(choix.findData(60))
+        choix = dlg._page_img.ligne("limite_fps").controle   # dans « Fluidité » (audit UI reg21)
+        assert choix.valeur() == 100
+        choix.boutons()[rc.REGLAGES["limite_fps"].choix.index(60)].click()
         assert b"FPSLimit=60" in ini.read_bytes()
 
     def test_l_anticrenelage_ecrit_aussitot(self, qtbot, tmp_path):
@@ -844,14 +843,15 @@ class TestFenetre:
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["touches_zqsd", "surechantillonnage", "compteur_fps"]),
                         _manager(tmp_path))
-        # « Jeu » porte les captures : le nouveau correctif a sa touche (F12).
-        assert list(dlg._onglets) == ["image", "commandes", "jeu", "perfs"]
-        image, commandes, _jeu_, perfs = dlg._contenus
-        assert not image.findChildren(ToggleSwitch)
-        assert commandes.isAncestorOf(dlg._controles["touches_zqsd"])
-        assert len(perfs.findChildren(ToggleSwitch)) == 1
-        dlg._onglets["perfs"].click()
-        assert dlg._defile.currentIndex() == 3
+        # Quatre rubriques au plus (audit UI reg21) : les touches dans « Jeu », avec les captures
+        # (le nouveau correctif a sa touche, F12) ; le compteur d'images dans la « Fluidité » de l'Image.
+        assert list(dlg._onglets) == ["image", "jeu"]
+        image, jeu = dlg._contenus
+        assert jeu.isAncestorOf(dlg._controles["touches_zqsd"])
+        assert not image.isAncestorOf(dlg._controles["touches_zqsd"])
+        assert isinstance(dlg._page_img.ligne("compteur_fps").controle, ToggleSwitch)
+        dlg._onglets["jeu"].click()
+        assert dlg._defile.currentIndex() == 1
 
     def test_les_reperes_disent_le_cout_et_ce_qui_se_voit(self, qtbot, tmp_path):
         """Trois points pour le coût, l'œil pour ce qui se voit, le détail au survol."""
@@ -1081,17 +1081,18 @@ class TestDependances:
             INI_V2.replace("FXAA=0", "FXAA=1\r\nAntialiasing=0\r\nSSAO=1\r\nColorGrading=1").encode("ascii"))
         return _dialogue(qtbot, _jeu(tmp_path, idents), _manager(tmp_path)), dossier / "d3d9.ini"
 
-    def test_eteindre_le_fxaa_grise_les_effets_sans_les_reecrire(self, qtbot, tmp_path):
+    def test_eteindre_le_fxaa_replie_les_effets_sans_les_reecrire(self, qtbot, tmp_path):
+        """Audit UI reg22 : ce qui n'a plus d'effet se replie sous son parent, il ne reste pas grisé."""
         from PyQt6.QtCore import Qt
         dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "occlusion", "couleurs"])
         page = dlg._page_img
         occlusion, couleurs = page.ligne("occlusion"), page.ligne("couleurs")
-        assert occlusion.isEnabled()
+        assert not occlusion.isHidden()
         qtbot.mouseClick(page.ligne("lissage").controle, Qt.MouseButton.LeftButton)
-        assert not occlusion.isEnabled() and not couleurs.isEnabled()
+        assert occlusion.isHidden() and couleurs.isHidden()
         assert rc.lire(ini, rc.REGLAGES["occlusion"]).valeur is True   # rallumer rend l'effet
         qtbot.mouseClick(page.ligne("lissage").controle, Qt.MouseButton.LeftButton)
-        assert occlusion.isEnabled()
+        assert not occlusion.isHidden()
 
     def test_choisir_le_msaa_eteint_les_ombres_de_contact(self, qtbot, tmp_path):
         dlg, ini = self._fenetre(qtbot, tmp_path, ["lissage", "anticrenelage", "occlusion"])
@@ -1295,7 +1296,8 @@ class TestPageImage:
         _dlg, page, ini = self._fenetre(qtbot, tmp_path, ["lissage", "nettete"])
         rc.ecrire(ini, rc.REGLAGES["lissage"], False)
         page.rafraichir()
-        ligne = page.ligne("nettete")
+        page.recherche.setText(rc.textes(rc.REGLAGES["nettete"])[0])   # la note ne vit plus que là (reg22)
+        ligne = page._trouvables["nettete"][2]
         assert not ligne.note.isHidden()
         page._activer("nettete")
         assert ligne.note.text() and "Sans effet tant que" not in page.fiche.texte.text()
@@ -1367,7 +1369,7 @@ class TestPageImage:
         try:
             html = PageImage._html_valeurs("1", "2", "3")
             assert theme.current().accent in html and "#d6a72c" not in html
-            pastille = _Segment("Doré", False, False, teinte="d6a72c")
+            pastille = _Segment("Doré", teinte="d6a72c")
             qtbot.addWidget(pastille)
             pastille.setChecked(True)
             pastille.show()
@@ -1546,13 +1548,36 @@ class TestPageImage:
         page.regler("occlusion", True)
         assert rc.lire(ini, rc.REGLAGES["anticrenelage"]).valeur == 0
 
-    def test_une_ligne_eteinte_est_grisee_et_dit_ce_qui_l_eteint(self, qtbot, tmp_path):
+    def test_les_boutons_n_ont_plus_de_reperes_et_les_lignes_respirent(self, qtbot, tmp_path):
+        """Audit UI reg22 : un point argent et un losange or dans les coins de chaque bouton, des
+        lignes à 40 px. Mesuré à l'image : aucun pixel de l'accent ni de l'argent dans les coins."""
+        from PyQt6.QtGui import QColor
+        from tests.pixels import proche
+        from src.ui.page_image import ARGENT
+        from src.ui.theme import current
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        dlg.show()
+        ligne = page.ligne("filtrage")
+        assert ligne.height() >= 48
+        bouton = ligne.controle.boutons()[0]
+        image = bouton.grab().toImage()
+        teintes = (QColor(current().accent), QColor(ARGENT))
+        coins = [image.pixelColor(x, y) for x in range(3, 12) for y in range(3, 12)]
+        coins += [image.pixelColor(image.width() - 1 - x, y) for x in range(3, 12) for y in range(3, 12)]
+        assert not any(proche(c, teinte, 30) for c in coins for teinte in teintes)
+
+    def test_une_ligne_eteinte_se_replie_et_la_recherche_dit_ce_qui_l_eteint(self, qtbot, tmp_path):
+        """Audit UI reg22 : dans sa catégorie, la ligne sans effet disparaît sous son parent ; trouvée
+        par la recherche, où on l'a demandée, elle reste, grisée, avec sa phrase."""
         _dlg, page, ini = self._fenetre(qtbot, tmp_path)
         page.regler("lissage", True)
         page.regler("occlusion", True)
         ligne = page.ligne("occlusion")
-        assert ligne.isEnabled() and ligne.note.isHidden()
+        assert not ligne.isHidden() and ligne.note.isHidden()
         page.regler("lissage", False)
+        assert ligne.isHidden()
+        page.recherche.setText(rc.textes(rc.REGLAGES["occlusion"])[0])
+        ligne = page._trouvables["occlusion"][2]
         assert not ligne.isEnabled() and not ligne.note.isHidden()
         assert ligne.note.text() == tr("Sans effet tant que « {} » est éteint.").format(
             rc.textes(rc.REGLAGES["lissage"])[0])
@@ -1624,6 +1649,7 @@ class TestPageImage:
                     continue
                 dlg._defile.setCurrentIndex(rang)
                 zone = dlg._defile.currentWidget()
+                zone = getattr(zone, "zone", zone)   # une `PageAvecFiche` : sa colonne qui défile
                 qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
                 assert contenu.minimumSizeHint().width() <= zone.viewport().width(), rang
         finally:

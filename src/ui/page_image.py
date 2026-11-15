@@ -45,7 +45,8 @@ from src.core.i18n import tr, trn, typo
 from src.core.reglages_table import Reglage
 from src.ui.flow_layout import FlowLayout
 from src.ui.composants import (
-    bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, pastille, petit_titre, police, Rangee, transparent,
+    bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, MARGES_PAGE, pastille, petit_titre, police, Rangee,
+    transparent,
 )
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
@@ -439,12 +440,13 @@ class CurseurGradue(QWidget):
 
 
 class _Fiche(QFrame):
-    """La fiche du réglage survolé : ce qu'il fait, ses trois valeurs, ce qu'il coûte."""
+    """La fiche du réglage survolé : ce qu'il fait, ses trois valeurs, ce qu'il coûte. `simple` :
+    le titre et le texte seuls, pour les pages dont les réglages n'ont ni valeur Accio ni curseur."""
 
     accio = pyqtSignal()
     jeu = pyqtSignal()
 
-    def __init__(self) -> None:
+    def __init__(self, simple: bool = False) -> None:
         super().__init__()
         self.setObjectName("ficheImage")
         self.setFixedWidth(_LARGEUR_FICHE)
@@ -487,6 +489,59 @@ class _Fiche(QFrame):
         boutons.addStretch()
         lay.addLayout(boutons)
         lay.addStretch()
+        if simple:
+            for w in (self.valeurs, self.notes, self.bouton_accio, self.bouton_jeu):
+                w.hide()
+
+
+class PageAvecFiche(QWidget):
+    """Une page de lignes (Jeu, Difficulté, l'Image de HP1 à HP3) et, à sa droite, la même fiche
+    que la page Image (audit UI reg20 : l'explication était tantôt à droite, tantôt derrière un
+    « ? »). Trop étroite pour la fiche, la page la remplace par l'infobulle de chaque ligne."""
+
+    def __init__(self, contenu: QWidget, lignes: list[tuple[_LigneImage, str, str]]) -> None:
+        super().__init__()
+        transparent(self)
+        self.setStyleSheet(themed(_STYLE))
+        self.fiche = _Fiche(simple=True)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0)
+        self.zone = zone_defilable(contenu)     # la colonne de lignes, qui défile
+        h.addWidget(self.zone, stretch=1)
+        self._zone_fiche = QWidget()
+        transparent(self._zone_fiche)
+        v = QVBoxLayout(self._zone_fiche)
+        v.setContentsMargins(0, MARGES_PAGE[1], MARGES_PAGE[2], 0)
+        v.addWidget(self.fiche)
+        v.addStretch()
+        h.addWidget(self._zone_fiche)
+        self._zone_fiche.hide()   # jusqu'à la première taille : la colonne ne se tasse jamais d'abord
+        # Assez large pour la colonne de lignes ET la fiche, sans rogner la colonne.
+        self._seuil = LARGEUR_LISTE + MARGES_PAGE[0] + MARGES_PAGE[2] + _LARGEUR_FICHE + MARGES_PAGE[2]
+        self._active: _LigneImage | None = None
+        for ligne, titre, corps in lignes:
+            ligne.setToolTip(typo(corps))
+            ligne.fiche_ouverte = self._zone_fiche.isVisible
+            ligne.survolee.connect(lambda _i, li=ligne, ti=titre, co=corps: self._montrer(li, ti, co))
+        if lignes:
+            self._montrer(*lignes[0])
+
+    def _montrer(self, ligne: _LigneImage, titre: str, corps: str) -> None:
+        self.fiche.titre.setText(titre)
+        self.fiche.texte.setText(typo(corps))
+        if self._active is not None and self._active is not ligne:
+            self._active.marquer(False)
+        self._active = ligne
+        ligne.marquer(self._zone_fiche.isVisible())
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().resizeEvent(event)
+        large = self.width() >= self._seuil
+        if self._zone_fiche.isVisibleTo(self) != large:
+            self._zone_fiche.setVisible(large)
+            if self._active is not None:
+                self._active.marquer(large)
 
 
 def _html_fiche(reglage: Reglage, aide: str, declares: set[str], note_affichee: bool = False) -> str:
@@ -561,7 +616,8 @@ class _LigneImage(QFrame):
         self.libelle.setFont(police(14))
         self.libelle.setStyleSheet("color: #ecebf3; background: transparent;")
         h.addWidget(self.libelle, stretch=1)
-        if reglage is not None and reglage.beta:
+        # Pas sur la Difficulté, tout entière en essai : la pastille de son titre le dit une fois.
+        if reglage is not None and reglage.beta and reglage.onglet != "difficulte":
             h.addWidget(_etiquette_beta(), alignment=Qt.AlignmentFlag.AlignVCenter)
         niveau = max((n for _r, n in reglage.cout), default=0) if reglage is not None else 0
         # Le coût faible ne se dit pas sur la ligne : même un PC très modeste n'y voit pas de
@@ -692,7 +748,7 @@ class PageImage(QWidget):
             self.categories = (reglages_image.Categorie("ecran", tr("Écran"), (
                 reglages_image.Groupe("Affichage", ()),)), *self.categories)
         self._prereglages = rc.prereglages_du_jeu(
-            [r for r in reglages if reglages_image.place(r)[0] != "couleurs"])
+            [r for r in reglages if reglages_image.place(r)[0] not in ("couleurs", "fluidite")])
         # Les lignes de chaque réglage (une dans sa catégorie, une autre dans la recherche).
         self._lignes: dict[str, list[_LigneImage]] = {}
         self._cartes_prereglage: dict[str, _CartePrereglage] = {}

@@ -18,8 +18,10 @@ def ini(tmp_path):
 
 
 class TestRangement:
-    def test_six_categories_dans_l_ordre_de_la_maquette(self):
-        assert [i for i, _n in ri.CATEGORIES] == ["ecran", "qualite", "lumiere", "distance", "couleurs", "ciel"]
+    def test_les_categories_dans_l_ordre_de_la_maquette_puis_la_fluidite(self):
+        """Les six de la maquette, puis « Fluidité », l'ancienne page Performances (audit UI reg21)."""
+        assert [i for i, _n in ri.CATEGORIES] == ["ecran", "qualite", "lumiere", "distance", "couleurs", "ciel",
+                                                  "fluidite"]
 
     def test_chaque_reglage_d_image_a_sa_place(self):
         for r in REGLAGES.values():

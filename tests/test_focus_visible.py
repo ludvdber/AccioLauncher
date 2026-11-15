@@ -181,22 +181,6 @@ class TestUnSeulAnneau:
         QApplication.sendEvent(btn, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.OtherFocusReason))
         assert not anneau.isVisible()
 
-    def test_le_point_d_aide_a_un_anneau_rond_autour_de_son_rond(self, qtbot, filtre_pose):
-        """f117 : le « ? » dessine un rond de 18 px dans un carré de 28 ; l'anneau entourait le
-        carré, au rayon de 9 px lu dans sa feuille : un carré arrondi posé sur le rond."""
-        from src.ui.aide_reglage import BoutonAide
-        fenetre = QWidget()
-        lay = QVBoxLayout(fenetre)
-        lay.setContentsMargins(30, 30, 30, 30)
-        aide = BoutonAide("Netteté", "<p>Texte</p>")
-        lay.addWidget(aide)
-        qtbot.addWidget(fenetre)
-        fenetre.show()
-        qtbot.waitExposed(fenetre)
-        _focus(aide, Qt.FocusReason.TabFocusReason)
-        anneau = _anneau(fenetre)
-        assert anneau.geometry().width() == anneau.geometry().height() == 18 + 2 * 5
-        assert anneau._rayon * 2 == anneau.geometry().height() - 4, "rond (tracé à 2 px du bord), pas un carré arrondi"
 
     def test_un_clic_ne_pose_aucun_anneau(self, qtbot, filtre_pose):
         fenetre, btn = _fenetre_et_bouton(qtbot)

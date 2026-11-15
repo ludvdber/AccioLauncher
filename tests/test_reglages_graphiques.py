@@ -184,8 +184,9 @@ class TestFenetre:
         qtbot.addWidget(d)
         return d
 
-    def test_onglets_image_et_performances(self, dlg):
-        assert {"image", "perfs"} <= set(dlg._onglets)
+    def test_la_fluidite_vit_dans_la_page_image(self, dlg):
+        """Audit UI reg21 : plus de page Performances ; ses réglages sont sous l'image, en « Fluidité »."""
+        assert "image" in dlg._onglets and "perfs" not in dlg._onglets
         assert set(dlg._controles_graph) == set(R)
 
     def test_un_interrupteur_ne_repete_pas_son_nom_en_infobulle(self, dlg):

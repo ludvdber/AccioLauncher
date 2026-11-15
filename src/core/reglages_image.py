@@ -26,6 +26,8 @@ CATEGORIES: tuple[tuple[str, str], ...] = (
     ("distance", "Distance d'affichage"),
     ("couleurs", "Couleurs"),
     ("ciel", "Ciel et ambiance"),
+    # L'ancienne page Performances (audit UI reg21) : ce qui règle le rythme des images.
+    ("fluidite", "Fluidité"),
 )
 
 # Où va chaque réglage : (catégorie, groupe). L'ordre de la table fait l'ordre des lignes.
@@ -65,6 +67,14 @@ _PLACES: dict[str, tuple[str, str]] = {
     "ciel_heure": ("ciel", "Ciel"),
     "ciel_couleur": ("ciel", "Ciel"),
     "brouillard": ("ciel", "Atmosphère"),
+    "limite_fps": ("fluidite", "Images par seconde"),
+    "limite_fps_60": ("fluidite", "Images par seconde"),
+    "synchro_verticale": ("fluidite", "Images par seconde"),
+    "images_a_l_heure": ("fluidite", "Images par seconde"),
+    "camera_fluide": ("fluidite", "Images par seconde"),
+    "fermeture_sans_plantage": ("fluidite", "Stabilité"),
+    "compteur_fps": ("fluidite", "Compteurs"),
+    "panneau_perfs": ("fluidite", "Compteurs"),
 }
 # L'ordre des lignes dans leur groupe : celui de la maquette (le suréchantillonnage, qui se voit le
 # plus, en tête des contours), puis celui de la table pour un réglage qu'elle ne nomme pas.

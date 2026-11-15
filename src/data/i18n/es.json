@@ -294,7 +294,6 @@
     "Le réglage n'a pas pu être écrit : le jeu démarre avec sa configuration actuelle.": "No se pudo escribir el ajuste: el juego se inicia con su configuración actual.",
     "Réglages de {}": "Ajustes de {}",
     "Réglages du jeu": "Ajustes del juego",
-    "Fichiers du jeu": "Archivos del juego",
     "Ouvrir le dossier du jeu": "Abrir la carpeta del juego",
     "Dossier introuvable : le jeu a peut-être été déplacé.": "Carpeta no encontrada: puede que el juego se haya movido.",
     "Accio vient de passer en {}. Il est fait à la main, par un francophone.\nSes correctifs n'existent nulle part ailleurs, et ici, tout est en français.\nUn café sur Ko-fi soutient ce travail francophone, si rare. Cliquez ici.": "Accio acaba de pasar a la {}. Está hecho a mano, por una sola persona.\nSus correcciones no existen en ningún otro sitio.\nUn café en Ko-fi apoya este trabajo independiente y poco común. Haz clic aquí.",
@@ -582,9 +581,7 @@
     "Naviguer dans le launcher à la manette": "Navegar por el launcher con el mando",
     "Flèches de la manette : changer de jeu et de bouton. ✕ ou A : valider. Rond ou B : retour. Stick droit : faire défiler.": "Flechas del mando: cambiar de juego y de botón. ✕ o A: validar. Círculo o B: volver. Stick derecho: desplazar.",
     "Image": "Gráficos",
-    "Commandes": "Controles",
     "Jeu": "Juego",
-    "Performances": "Rendimiento",
     "Netteté des sols et des murs": "Suelos y paredes nítidos",
     "Ombres de contact": "Sombras de contacto",
     "Halo ajouté par Accio": "Resplandor de Accio",
@@ -730,8 +727,6 @@
     "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance une mesure des performances et F11 à nouveau l'arrête ; elle est enregistrée dans le dossier « benchmarks » du jeu.": "Tiempo por fotograma y su gráfica, procesador, tarjeta gráfica, memoria de vídeo y RAM, latencia. En el juego, F11 inicia un benchmark y F11 de nuevo lo detiene; se guarda en la carpeta «benchmarks» del juego.",
     "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "El idioma con el que se abre el menú del juego, que lo elige solo tras unos segundos. «El de Windows» corrige un fallo del juego: un Windows en francés de Bélgica, Suiza o Canadá, o en español, lo hacía arrancar en inglés.",
     "Branchez la manette avant de lancer le jeu : sans elle, il repasse au clavier. Se règle aussi dans les options du jeu.": "Conecta el mando antes de iniciar el juego: sin él, vuelve al teclado. También se ajusta en las opciones del juego.",
-    "Aide : {}": "Ayuda: {}",
-    "Ce que fait ce réglage": "Qué hace este ajuste",
     "Chaque « ? » explique son réglage.": "Cada «?» explica su ajuste.",
     "L'allumer éteint « {} », qui ne peut pas agir en même temps.": "Activarlo desactiva «{}», que no puede funcionar a la vez.",
     "Contours": "Bordes",
@@ -1531,6 +1526,10 @@
     "Là où le jeu est installé.": "Donde está instalado el juego.",
     "Les copies de tes parties : revenir à une version, exporter, importer.": "Las copias de tus partidas: volver a una versión, exportar, importar.",
     "Retire le jeu de ce PC. Une confirmation suit.": "Quita el juego de este PC. Se te pedirá confirmación.",
-    "Vérifier": "Comprobar"
+    "Vérifier": "Comprobar",
+    "Fluidité": "Fluidez",
+    "Images par seconde": "Imágenes por segundo",
+    "Stabilité": "Estabilidad",
+    "Compteurs": "Contadores"
   }
 }
