@@ -47,19 +47,30 @@ def test_les_fonds_precharges_sont_rendus_pendant_la_partie(make_window, monkeyp
 def test_les_fonds_reviennent_des_qu_on_rouvre_le_launcher(make_window, monkeypatch, qtbot):
     """Ludo, 2026-11-15 : « libérer au lancement et reprendre dès qu'on ouvre le launcher »,
     sans attendre la fin de la partie ; et une seule relecture, pas une de plus au retour."""
+    from PyQt6.QtCore import QEvent, Qt
+    from PyQt6.QtWidgets import QApplication
+    from src.ui.tray_manager import TrayManager
     win = make_window()
     win.show()
     qtbot.waitExposed(win)
+    # Le même chemin sous Windows et Linux : sans zone de notification, la fenêtre est RÉDUITE
+    # au lancement, tout de suite (sous Linux, le retrait attendait le jeu, puis réduisait la
+    # fenêtre pendant le test : CI du 2026-11-15).
+    monkeypatch.setattr(TrayManager, "disponible", staticmethod(lambda: False))
+    monkeypatch.setattr(win._retrait, "differer", lambda nom, active: False)
     poses = []
     monkeypatch.setattr(win._detail._bg, "precharger", lambda chemins: poses.append(list(chemins)))
     win._session.demarree.emit("HP3")
     assert poses == [[]]
-    from PyQt6.QtCore import QEvent
-    from PyQt6.QtWidgets import QApplication
+    assert win.isMinimized()
+    # Réduite, Qt la dit encore active : rien ne revient tant qu'on ne l'a pas rouverte.
+    QApplication.sendEvent(win, QEvent(QEvent.Type.ActivationChange))
+    assert poses == [[]], "relus alors que la fenêtre restait réduite"
+    # Ludo la rouvre depuis la barre des tâches. L'événement est envoyé à la main : hors écran,
+    # la fenêtre restait active, et la rouvrir n'en produit pas toujours un nouveau.
+    win.setWindowState(win.windowState() & ~Qt.WindowState.WindowMinimized)
     win.activateWindow()
-    qtbot.waitUntil(win.isActiveWindow, timeout=1000)
-    # L'événement est envoyé à la main : hors écran sous Linux, la fenêtre était déjà active
-    # avant la partie, et `activateWindow` n'en produit aucun nouveau (CI du 2026-11-15).
+    qtbot.waitUntil(lambda: win.isActiveWindow() and not win.isMinimized(), timeout=1000)
     QApplication.sendEvent(win, QEvent(QEvent.Type.ActivationChange))
     assert len(poses) == 2
     assert poses[-1], "rouvert pendant la partie, le launcher restait sans ses fonds"
