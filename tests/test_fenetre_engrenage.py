@@ -45,6 +45,7 @@ class TestEngrenageReglagesDuJeu:
         « Fichiers du jeu » y est toujours, et la rubrique « Langue » s'efface."""
         from src.core.game_manager import GameState
         from src.ui.game_settings_dialog import GameSettingsDialog
+        from src.ui.reglages_rubriques import ActionFichier
 
         win, _ = make_window_multilingue()
         # Le premier jeu sans langue (HP2 l'était jusqu'au 2026-11-03).
@@ -52,7 +53,8 @@ class TestEngrenageReglagesDuJeu:
         assert win.manager.game_language(autre) is None
         assert self._poser(win, autre, GameState.INSTALLED)._btn_reglages is not None
         dlg = GameSettingsDialog(autre, win.manager, lambda code: True,
-                                 actions=[("Ouvrir le dossier du jeu", lambda: None)], parent=win)
+                                 actions=[ActionFichier("Ouvrir le dossier du jeu", lambda: None, "", "Ouvrir")],
+                                 parent=win)
         assert not dlg._boutons
         from PyQt6.QtWidgets import QLabel
         textes = " ".join(lb.text() for lb in dlg.findChildren(QLabel))
@@ -322,7 +324,7 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.INSTALLED)
         gdh.on_game_settings(win._detail)
-        win._pages.page._lancer(gdh._actions_fichiers(win._detail, jeu)[0][1])
+        win._pages.page._lancer(gdh._actions_fichiers(win._detail, jeu)[0].rappel)
         journal = win._pages.page
         assert isinstance(journal, VersionsDialog)
         retour = journal.findChild(QPushButton, "retour")
@@ -354,7 +356,7 @@ class TestEngrenageReglagesDuJeu:
 
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.INSTALLED)
-        libelles = [lib for lib, _ in gdh._actions_fichiers(win._detail, jeu)]
+        libelles = [a.libelle for a in gdh._actions_fichiers(win._detail, jeu)]
         assert tr("Journal des changements") in libelles
         assert tr("Vérifier / réparer les fichiers") in libelles
         assert tr("Ouvrir le dossier du jeu") in libelles
@@ -373,8 +375,8 @@ class TestEngrenageReglagesDuJeu:
         panneau = win._detail._action_panel
         assert panneau.findChild(QPushButton, "btnUninstall") is None
         actions = gdh._actions_fichiers(win._detail, jeu)
-        libelle, rappel = actions[-1]
-        assert libelle == tr("Désinstaller le jeu")
+        libelle, rappel = actions[-1].libelle, actions[-1].rappel
+        assert libelle == tr("Désinstaller le jeu") and actions[-1].risquee
         appels = []
         monkeypatch.setattr(gdh, "on_uninstall", lambda view: appels.append(view))
         rappel()
@@ -389,7 +391,7 @@ class TestEngrenageReglagesDuJeu:
 
         win, jeu = make_window_multilingue()
         self._poser(win, jeu, GameState.NOT_INSTALLED)
-        libelles = [lib for lib, _ in gdh._actions_fichiers(win._detail, jeu)]
+        libelles = [a.libelle for a in gdh._actions_fichiers(win._detail, jeu)]
         assert libelles == [tr("Journal des changements")]
 
     def test_le_dossier_ouvert_est_celui_de_l_executable(self, make_window_multilingue,
@@ -416,3 +418,39 @@ class TestEngrenageReglagesDuJeu:
         import unicodedata
         assert unicodedata.name("⚙") == "GEAR"
         assert ord("⚙") < 0x1F000
+
+
+class TestRubriqueFichiers:
+    """Audit UI reg24 : le rail ne porte que des pages ; les actions sur les fichiers ont la leur,
+    chacune avec ce qu'elle fait, « Désinstaller » à part et en dernier, en rouge."""
+
+    def test_le_rail_ne_porte_que_des_pages(self, make_window_multilingue):
+        from PyQt6.QtWidgets import QPushButton
+        from src.core.game_manager import GameState
+        from src.core.i18n import tr
+        from src.ui import game_detail_handlers as gdh
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        TestEngrenageReglagesDuJeu._poser(win, jeu, GameState.INSTALLED)
+        actions = gdh._actions_fichiers(win._detail, jeu)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, actions=actions, parent=win)
+        textes_du_rail = {b.text() for b in dlg._zone_rail.findChildren(QPushButton)}
+        assert tr("Désinstaller le jeu") not in textes_du_rail
+        assert "fichiers" in dlg._onglets
+        dlg.ouvrir_onglet("fichiers")
+        page = dlg._defile.currentWidget()
+        boutons = [b for b in page.findChildren(QPushButton) if b.isVisibleTo(page)]
+        assert [b.text() for b in boutons][-1] == tr("Désinstaller")
+        assert boutons[-1].objectName() == "danger"
+        assert all(b.objectName() != "danger" for b in boutons[:-1])
+        assert len(boutons) == len(actions)
+
+    def test_sans_action_pas_de_rubrique(self, make_window_multilingue):
+        from src.core.game_manager import GameState
+        from src.ui.game_settings_dialog import GameSettingsDialog
+
+        win, jeu = make_window_multilingue()
+        TestEngrenageReglagesDuJeu._poser(win, jeu, GameState.INSTALLED)
+        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        assert "fichiers" not in dlg._onglets

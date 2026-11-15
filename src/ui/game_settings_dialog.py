@@ -283,14 +283,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._onglets[ident] = btn
             lay.addWidget(btn)
         lay.addStretch()
-
-        if self._actions:
-            filet = QFrame()
-            filet.setObjectName("separateur")
-            filet.setFixedHeight(1)
-            lay.addWidget(filet)
-            lay.addSpacing(14)
-            self._actions_du_rail(lay)
         self._zone_rail = zone_defilable(contenu)
         cadre.addWidget(self._zone_rail)
         return rail
@@ -344,6 +336,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             return self._section_captures(corps) or rempli
         if onglet == "difficulte":
             return self._page_difficulte(corps)
+        if onglet == "fichiers":
+            return self._page_fichiers(corps)
         return (self._section_correctif(corps, "perfs")
                 or self._section_graphiques(corps, "perfs"))
 

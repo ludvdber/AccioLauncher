@@ -4,8 +4,9 @@ rubrique est un surtitre doré et une carte de lignes, comme les Paramètres.
 """
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import NamedTuple
 
 from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtGui import QColor
@@ -29,7 +30,7 @@ from src.ui.difficulte_panneau import PanneauDifficulte
 from src.ui.composants import (
     transparent,
     MARGES_PAGE,
-    ENCRE_DISCRETE, ENCRE_DOUCE, LISTE, Carte, LigneReglage, bouton, petit_titre, police, surtitre,
+    ENCRE_DISCRETE, ENCRE_DOUCE, LISTE, Carte, LigneReglage, bouton, police, surtitre,
 )
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.fenetre_message import FenetreMessage
@@ -43,9 +44,9 @@ from src.ui.utils import liste_deroulante, open_local_path
 log = logging.getLogger(__name__)
 
 # Les rubriques, dans l'ordre du rail : (identifiant, libellé, pictogramme).
-# L'image d'abord : c'est ce qu'on vient régler le plus souvent. Les fichiers
-# ne sont plus une rubrique : leurs actions vivent au bas du rail, visibles
-# de partout (un onglet entier servait à quelques liens).
+# L'image d'abord : c'est ce qu'on vient régler le plus souvent. Le rail ne porte
+# que des pages : les actions sur les fichiers ont la leur, en dernier (audit UI
+# reg24 : une entrée sur deux lançait une action, « Désinstaller » à un clic d'un curseur).
 _ONGLETS = (
     # En PREMIER, et à part (Ludo, 2026-11-03) : les joueurs qui ne parlent pas
     # français ne trouvaient pas la langue, rangée dans « Jeu ».
@@ -59,7 +60,18 @@ _ONGLETS = (
     # Tout ce qui règle la difficulté, presets et détail (Ludo, 2026-10-31).
     ("difficulte", "Difficulté", "epee"),
     ("perfs", "Performances", "jauge"),
+    ("fichiers", "Fichiers", "dossier"),
 )
+
+
+class ActionFichier(NamedTuple):
+    """Une action de la rubrique Fichiers. Elle referme la fenêtre avant d'agir,
+    sinon son dialogue s'empilerait sur celui-ci."""
+    libelle: str
+    rappel: Callable[[], None]
+    explication: str
+    commande: str           # le libellé du bouton
+    risquee: bool = False   # à part, en dernier, bouton rouge
 
 # Repères de coût (Ludo, 2026-09-30) : vert faible, orange moyen, rouge extrême.
 # Hors palette de maison, comme le filet des alertes : ce sont des signaux, et
@@ -800,25 +812,26 @@ class RubriquesDuJeu:
         self._afficher_compte(len(captures.images(dossier)))
         open_local_path(str(dossier))
 
-    def _actions_du_rail(self, colonne: QVBoxLayout) -> None:
-        """Actions du jeu au bas du rail ; elles referment la fenêtre avant
-        d'agir, sinon leur dialogue s'empilerait sur celui-ci."""
+    def _page_fichiers(self, corps: QVBoxLayout) -> bool:
+        """Les actions sur les fichiers du jeu, chacune avec ce qu'elle fait ; celle
+        qui ne se défait pas (« Désinstaller ») à part et en dernier (audit UI reg24)."""
         if not self._actions:
-            return
-        colonne.addWidget(petit_titre(tr("Fichiers du jeu")))
-        colonne.addSpacing(6)
-        for libelle, rappel in self._actions:
-            btn = QPushButton(libelle)
-            btn.setFont(police(13))
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setStyleSheet(themed(
-                "QPushButton { color: #c8c6dc; background: transparent;"
-                " border: none; text-align: left; padding: 6px 0px; }"
-                "QPushButton:hover { color: #e8c547; }"
-            ))
+            return False
+        sures = Carte()
+        risquees = Carte()
+        for action in self._actions:
+            btn = bouton(action.commande)
+            if action.risquee:
+                btn.setObjectName("danger")
             btn.setAutoDefault(False)
-            btn.clicked.connect(lambda _c=False, r=rappel: self._lancer(r))
-            colonne.addWidget(btn)
+            btn.clicked.connect(lambda _c=False, r=action.rappel: self._lancer(r))
+            (risquees if action.risquee else sures).ajouter(
+                _ligne_alignee(action.libelle, action.explication, btn))
+        for rang, carte in enumerate(c for c in (sures, risquees) if c.findChildren(LigneReglage)):
+            if rang:
+                corps.addSpacing(28)
+            corps.addWidget(carte)
+        return True
 
     def _lancer(self, rappel) -> None:
         self.accept()

@@ -1523,6 +1523,13 @@
     "Redémarrez le launcher pour appliquer ce choix.": "Restart the launcher to apply this choice.",
     "Selon ce PC": "Based on this PC",
     "Oui": "Yes",
-    "Non": "No"
+    "Non": "No",
+    "Fichiers": "Files",
+    "Ce qui a changé à chaque version de ce jeu dans Accio.": "What changed in each version of this game in Accio.",
+    "Retélécharge le jeu et remplace les fichiers abîmés ou manquants.": "Downloads the game again and replaces damaged or missing files.",
+    "Là où le jeu est installé.": "Where the game is installed.",
+    "Les copies de tes parties : revenir à une version, exporter, importer.": "Copies of your saves: go back to a version, export, import.",
+    "Retire le jeu de ce PC. Une confirmation suit.": "Removes the game from this PC. You will be asked to confirm.",
+    "Vérifier": "Check"
   }
 }

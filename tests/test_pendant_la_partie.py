@@ -54,9 +54,14 @@ def test_les_fonds_reviennent_des_qu_on_rouvre_le_launcher(make_window, monkeypa
     monkeypatch.setattr(win._detail._bg, "precharger", lambda chemins: poses.append(list(chemins)))
     win._session.demarree.emit("HP3")
     assert poses == [[]]
+    from PyQt6.QtCore import QEvent
+    from PyQt6.QtWidgets import QApplication
     win.activateWindow()
     qtbot.waitUntil(win.isActiveWindow, timeout=1000)
-    qtbot.waitUntil(lambda: len(poses) == 2, timeout=1000)
+    # L'événement est envoyé à la main : hors écran sous Linux, la fenêtre était déjà active
+    # avant la partie, et `activateWindow` n'en produit aucun nouveau (CI du 2026-11-15).
+    QApplication.sendEvent(win, QEvent(QEvent.Type.ActivationChange))
+    assert len(poses) == 2
     assert poses[-1], "rouvert pendant la partie, le launcher restait sans ses fonds"
     win._session.terminee.emit("HP3", True, False)
     assert len(poses) == 2, "relus une seconde fois au retour"

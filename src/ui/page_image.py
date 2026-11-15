@@ -174,9 +174,10 @@ class _Repere:
 
 
 class _Segment(QPushButton):
-    """Un choix parmi deux à cinq : le texte, et les repères Accio et jeu dans ses coins."""
+    """Un choix parmi deux à cinq. Sans repère dans les coins : la fiche dit ce que livrent le jeu
+    et Accio, et le choix coché suffit (audit UI reg22 : un point argent et un losange or par bouton)."""
 
-    def __init__(self, texte: str, accio: bool, jeu: bool, teinte: str = "") -> None:
+    def __init__(self, texte: str, teinte: str = "") -> None:
         super().__init__("" if teinte else texte)
         self.setObjectName("segment")
         self.setCheckable(True)
@@ -184,7 +185,6 @@ class _Segment(QPushButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFont(police(12))
         self.setAccessibleName(texte)
-        self.accio, self.jeu = accio, jeu
         if teinte:
             # La couleur EST le choix : une pastille, son nom au survol. Cochée, un cercle
             # blanc, lisible sur les sept teintes et les cinq maisons : l'or se fondait dans
@@ -198,25 +198,13 @@ class _Segment(QPushButton):
                 "QPushButton#segment:hover { border-color: rgba(255,255,255,0.45); }"
                 "QPushButton#segment:checked { border-color: #ffffff; }")
 
-    def paintEvent(self, event) -> None:  # noqa: N802 (Qt)
-        super().paintEvent(event)
-        if not (self.accio or self.jeu):
-            return
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if self.accio:
-            _Repere.accio(p, QPointF(self.width() - 7, 7), 3.2)
-        if self.jeu:
-            _Repere.jeu(p, QPointF(7, 7), 2.6)
-        p.end()
-
 
 class Boutons(QWidget):
     """Deux à cinq choix côte à côte (ou des pastilles de couleur) ; `choisi` à chaque clic."""
 
     choisi = pyqtSignal(object)
 
-    def __init__(self, reglage: Reglage, accio: object, jeu: object) -> None:
+    def __init__(self, reglage: Reglage) -> None:
         super().__init__()
         transparent(self)
         self._groupe = QButtonGroup(self)
@@ -228,7 +216,7 @@ class Boutons(QWidget):
         lay.addStretch()
         for rang, v in enumerate(self._valeurs):
             teinte = str(v) if reglage.ident == "ciel_couleur" else ""
-            b = _Segment(_texte(reglage, v), rc.meme_valeur(v, accio), rc.meme_valeur(v, jeu), teinte)
+            b = _Segment(_texte(reglage, v), teinte)
             self._groupe.addButton(b, rang)
             lay.addWidget(b)
         self._groupe.idClicked.connect(lambda rang: self.choisi.emit(self._valeurs[rang]))
@@ -556,6 +544,8 @@ class _LigneImage(QFrame):
         # La fiche de droite est-elle là ? Alors l'infobulle répéterait sa description (Ludo,
         # 2026-11-13 : « inutile ») ; sous 860 px, sans fiche, elle reste le seul endroit du texte.
         self.fiche_ouverte: Callable[[], bool] = lambda: False
+        # 48 px au moins : à 40, les lignes de « Qualité » se marchaient dessus (audit UI reg22).
+        self.setMinimumHeight(48)
         v = QVBoxLayout(self)
         v.setContentsMargins(14 + (22 if retrait else 0), 6, 12, 6)
         v.setSpacing(2)
@@ -926,7 +916,7 @@ class PageImage(QWidget):
             bascule.toggled.connect(lambda oui, i=r.ident: self.regler(i, oui))
             return bascule, None
         if sorte in ("boutons", "teinte"):
-            boutons = Boutons(r, accio, jeu)
+            boutons = Boutons(r)
             boutons.poser(v)
             boutons.choisi.connect(lambda x, i=r.ident: self.regler(i, x))
             return boutons, None
@@ -1136,11 +1126,17 @@ class PageImage(QWidget):
             retour.setVisible(not rc.meme_valeur(v, self._accio.get(r.ident)))
 
     def _maj_dependances(self) -> None:
-        """Grise ce qu'un réglage éteint prive d'effet, et DIT lequel sous son nom (sans réécrire la valeur)."""
+        """Ce qu'un réglage éteint prive d'effet se replie sous lui dans sa catégorie (audit UI reg22 :
+        grisé avec sa phrase, il restait une ligne de plus à lire). Dans la recherche, où on l'a
+        demandé, il reste là, grisé, et DIT lequel le prive d'effet. La valeur n'est jamais réécrite."""
+        trouvees = {id(ligne) for _n, _a, ligne in (self._trouvables or {}).values()}
         for ident, lignes in self._lignes.items():
             r = self.reglages.get(ident)
             bloquant = rc.bloque_par(r, self._valeurs) if r is not None else None
             for ligne in lignes:
+                if id(ligne) not in trouvees:
+                    ligne.setVisible(bloquant is None)
+                    continue
                 ligne.setEnabled(bloquant is None)
                 if bloquant is None:
                     ligne.haut.setGraphicsEffect(None)

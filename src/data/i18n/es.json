@@ -1524,6 +1524,13 @@
     "Redémarrez le launcher pour appliquer ce choix.": "Reinicia el launcher para aplicar esta opción.",
     "Selon ce PC": "Según este PC",
     "Oui": "Sí",
-    "Non": "No"
+    "Non": "No",
+    "Fichiers": "Archivos",
+    "Ce qui a changé à chaque version de ce jeu dans Accio.": "Lo que cambió en cada versión de este juego en Accio.",
+    "Retélécharge le jeu et remplace les fichiers abîmés ou manquants.": "Vuelve a descargar el juego y reemplaza los archivos dañados o que faltan.",
+    "Là où le jeu est installé.": "Donde está instalado el juego.",
+    "Les copies de tes parties : revenir à une version, exporter, importer.": "Las copias de tus partidas: volver a una versión, exportar, importar.",
+    "Retire le jeu de ce PC. Une confirmation suit.": "Quita el juego de este PC. Se te pedirá confirmación.",
+    "Vérifier": "Comprobar"
   }
 }

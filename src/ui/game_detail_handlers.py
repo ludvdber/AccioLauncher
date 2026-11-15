@@ -34,6 +34,7 @@ from src.ui.copies_dialog import CopiesDialog
 from src.ui.fichiers_manquants import (
     constat_complet, ouvrir_dossier_du_jeu as _ouvrir_dossier_du_jeu, signaler_fichiers_manquants)
 from src.ui.game_settings_dialog import GameSettingsDialog
+from src.ui.reglages_rubriques import ActionFichier
 from src.ui.versions_dialog import VersionsDialog
 
 if TYPE_CHECKING:
@@ -923,8 +924,8 @@ def _appliquer_manette(view: GameDetailView, game: GameData, oui: bool) -> bool:
     return pose
 
 
-def _actions_fichiers(view: GameDetailView, game: GameData):
-    """Ce que la fenêtre de réglages propose sous « Fichiers du jeu ».
+def _actions_fichiers(view: GameDetailView, game: GameData) -> list[ActionFichier]:
+    """Ce que la rubrique « Fichiers » des réglages du jeu propose.
 
     Le journal des changements et « Vérifier / réparer » n'étaient atteignables
     qu'au CLIC DROIT — le défaut qu'on vient de corriger pour la langue, à
@@ -933,24 +934,30 @@ def _actions_fichiers(view: GameDetailView, game: GameData):
     une erreur de plus à expliquer.
     """
     # Le journal SEUL : revenir à une ancienne archive n'existe plus (2026-10-30).
-    actions = [(tr("Journal des changements"), lambda: on_versions_clicked(view, depuis_reglages=True))]
+    actions = [ActionFichier(tr("Journal des changements"),
+                             lambda: on_versions_clicked(view, depuis_reglages=True),
+                             tr("Ce qui a changé à chaque version de ce jeu dans Accio."), tr("Ouvrir"))]
     installe = view.manager.get_state(game.id) == GameState.INSTALLED
     if installe:
-        actions.append((tr("Vérifier / réparer les fichiers"),
-                        lambda: on_repair(view)))
-        actions.append((tr("Ouvrir le dossier du jeu"),
-                        lambda: _ouvrir_dossier_du_jeu(view, game)))
+        actions.append(ActionFichier(tr("Vérifier / réparer les fichiers"), lambda: on_repair(view),
+                                     tr("Retélécharge le jeu et remplace les fichiers abîmés ou manquants."),
+                                     tr("Vérifier")))
+        actions.append(ActionFichier(tr("Ouvrir le dossier du jeu"), lambda: _ouvrir_dossier_du_jeu(view, game),
+                                     tr("Là où le jeu est installé."), tr("Ouvrir")))
     # Même désinstallé : les copies vivent hors du dossier du jeu (on revient
     # peut-être pour elles) ; installé sans copie : on peut y importer une partie.
     if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id) or installe):
         # Court : le rail fait 218 px, l'ancien libellé y était coupé
         # (capture de Ludo, 2026-10-16). Versions, export et import.
-        actions.append((tr("Sauvegardes"),
-                        lambda: _ouvrir_copies(view, game)))
+        actions.append(ActionFichier(tr("Sauvegardes"), lambda: _ouvrir_copies(view, game),
+                                     tr("Les copies de tes parties : revenir à une version, exporter, importer."),
+                                     tr("Ouvrir")))
     if installe:
         # Ici depuis ACT-055 : un bouton de la fiche, plus visible que
         # l'engrenage, pour une action qu'on fait une fois. En dernier.
-        actions.append((tr("Désinstaller le jeu"), lambda: on_uninstall(view)))
+        actions.append(ActionFichier(tr("Désinstaller le jeu"), lambda: on_uninstall(view),
+                                     tr("Retire le jeu de ce PC. Une confirmation suit."), tr("Désinstaller"),
+                                     risquee=True))
     return actions
 
 
