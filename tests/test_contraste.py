@@ -219,12 +219,20 @@ class TestContrasteSurLesIllustrations:
     ZONES = ("titre", "description", "meta")
 
     @staticmethod
-    def _mesure(win, jeu):
-        vue, bg, info = win._detail, win._detail._bg, win._detail._info
+    def _poser(qtbot, vue, jeu):
+        """Le jeu, PUIS son fond. Le fond se décode sur un fil depuis l'audit UI (2026-11-13) : sans
+        attendre, la CI Linux, plus lente, mesurait l'ANCIEN fond, sombre, sous chaque jeu ; la
+        contre-épreuve ne tombait plus et le test du seuil passait sans rien prouver (2026-11-15)."""
         vue.set_game(jeu)
+        qtbot.waitUntil(lambda: not vue._bg._attendu, timeout=5000)
         for _ in range(6):
             QApplication.processEvents()
-        bg.bg_opacity = 1.0
+        vue._bg.bg_opacity = 1.0
+
+    @classmethod
+    def _mesure(cls, qtbot, win, jeu):
+        vue, bg, info = win._detail, win._detail._bg, win._detail._info
+        cls._poser(qtbot, vue, jeu)
         rendu = bg.grab().toImage()
         out = {}
         for nom, w in (("titre", info._title), ("description", info._desc),
@@ -243,7 +251,7 @@ class TestContrasteSurLesIllustrations:
         qtbot.waitExposed(win)
         fautes = []
         for entree in win.manager.get_games():
-            for zone, c in self._mesure(win, entree.game).items():
+            for zone, c in self._mesure(qtbot, win, entree.game).items():
                 if c < AA:
                     fautes.append(f"{entree.game.id}/{zone} : {c:.2f}")
         assert not fautes, (
@@ -266,10 +274,7 @@ class TestContrasteSurLesIllustrations:
 
         echecs = 0
         for entree in win.manager.get_games():
-            vue.set_game(entree.game)
-            for _ in range(6):
-                QApplication.processEvents()
-            bg.bg_opacity = 1.0
+            self._poser(qtbot, vue, entree.game)
             rendu = bg.grab().toImage()
             for zone, (couleur, alpha) in anciennes.items():
                 w = widgets[zone]
