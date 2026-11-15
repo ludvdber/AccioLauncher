@@ -216,11 +216,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # 16 ms. VU en partie le 2026-11-04 : souris lue 125 fois/s au lieu de 40, même vitesse de marche.
     # Le correctif 2.4.0 ajoute StepTimers=1 (défaut, absent de cet ini : rien à écrire ici) : les
     # systèmes qui comptaient les pas (Reparo, particules, dialogues) allaient ×3 à 16 ms. VU par Ludo le
-    # 2026-11-04 au soir : les lèvres et ce que pilote la souris (Wingardium) vont ENCORE trop vite (Fable).
+    # 2026-11-04 au soir : les lèvres et ce que pilote la souris (Wingardium) vont ENCORE trop vite (Fable). VU par
+    # Ludo le 2026-11-15 (DLL a2667c1) : lèvres et étoiles d'XP justes ; seul le geste de baguette va trop vite.
     # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
     Reglage("camera_fluide", "Accio.Game", "SimulationStep",
             "Caméra",
-            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort).",
+            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : le geste de la baguette pendant un sort va encore trop vite.",
             choix=(0, 16), zero="D'origine", etiquettes=((16, "Fluide"),), onglet="perfs", beta=True),
     # HP4, HP5, HP6, [Accio.Game] RealFrameTime du correctif (issues #28 et #29) : la boucle de ces jeux rend
     # chaque image à un temps virtuel qui avance de 1000/FrameRateCap ; sous une limite plus basse que le plafond,
