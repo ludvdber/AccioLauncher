@@ -181,6 +181,23 @@ class TestUnSeulAnneau:
         QApplication.sendEvent(btn, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.OtherFocusReason))
         assert not anneau.isVisible()
 
+    def test_le_point_d_aide_a_un_anneau_rond_autour_de_son_rond(self, qtbot, filtre_pose):
+        """f117 : le « ? » dessine un rond de 18 px dans un carré de 28 ; l'anneau entourait le
+        carré, au rayon de 9 px lu dans sa feuille : un carré arrondi posé sur le rond."""
+        from src.ui.aide_reglage import BoutonAide
+        fenetre = QWidget()
+        lay = QVBoxLayout(fenetre)
+        lay.setContentsMargins(30, 30, 30, 30)
+        aide = BoutonAide("Netteté", "<p>Texte</p>")
+        lay.addWidget(aide)
+        qtbot.addWidget(fenetre)
+        fenetre.show()
+        qtbot.waitExposed(fenetre)
+        _focus(aide, Qt.FocusReason.TabFocusReason)
+        anneau = _anneau(fenetre)
+        assert anneau.geometry().width() == anneau.geometry().height() == 18 + 2 * 5
+        assert anneau._rayon * 2 == anneau.geometry().height() - 4, "rond (tracé à 2 px du bord), pas un carré arrondi"
+
     def test_un_clic_ne_pose_aucun_anneau(self, qtbot, filtre_pose):
         fenetre, btn = _fenetre_et_bouton(qtbot)
         _focus(btn, Qt.FocusReason.MouseFocusReason)
@@ -224,6 +241,26 @@ class TestUnSeulAnneau:
         assert anneau.geometry() == attendu.adjusted(-5, -5, 5, 5), "l'anneau suit le défilement"
         zone.verticalScrollBar().setValue(zone.verticalScrollBar().maximum())
         qtbot.waitUntil(lambda: not anneau.isVisible())
+
+    def test_une_boite_detruite_par_le_ramasse_miettes_ne_tue_pas_le_processus(self, qtbot, filtre_pose):
+        """2026-11-15 : une boîte de message sans parent, fermée avec l'anneau sur un de ses
+        boutons, est détruite par le ramasse-miettes ; le FocusOut envoyé au milieu de sa
+        destruction faisait chercher l'anneau parmi des enfants déjà libérés. Violation
+        d'accès : deux processus de la suite tués, et la suite qui ne finissait plus."""
+        import gc
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        from src.ui.fenetre_message import message
+        from tests.modales import quand_ouverte
+
+        quand_ouverte(lambda b: (qtbot.keyClick(b, Qt.Key.Key_Tab), b.buttons()[0].click()))
+        gc.disable()
+        try:
+            assert message(None, QMessageBox.Icon.Question, "T", "x", ("A", "B")) == 0
+            gc.collect()        # avant la correction, le processus mourait ici
+        finally:
+            gc.enable()
 
     def test_aucune_feuille_ni_aucun_widget_peint_ne_dessine_son_anneau(self):
         """Un deuxième anneau dessiné ailleurs refait le double cadre de tra5."""

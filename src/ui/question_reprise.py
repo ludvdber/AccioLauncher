@@ -4,7 +4,7 @@ Ludo, 2026-10-27 : « j'aime pas trop que lancer HP1 skip le menu, si quelqu'un
 voulait lancer une autre save ou une nouvelle partie ». « Reprendre » passe
 donc par le menu du jeu tant que la personne n'a rien choisi ; après sa
 première partie de chacun de ces jeux, une seule question pour CE jeu, et la
-réponse se change dans ses réglages, onglet Jeu (« Reprendre ouvre la dernière
+réponse se change dans ses réglages, rubrique Jeu (« Reprendre ouvre la dernière
 partie », par jeu depuis le 2026-10-31).
 
 Hors de `main_window.py` (plafond de lignes) : main.py la branche sur la fin
@@ -45,7 +45,7 @@ def demander(window: MainWindow, jeu: str, partie: bool, arret: bool) -> None:
         window, QMessageBox.Icon.Question, tr("Reprendre votre partie"),
         tr("La prochaine fois, « Reprendre » peut ouvrir directement votre dernière partie de {}, "
            "sans passer par le menu du jeu.").format(game.name if game is not None else jeu)
-        + "\n\n" + tr("Vous pourrez changer d'avis dans les réglages du jeu, onglet Jeu."),
+        + "\n\n" + tr("Vous pourrez changer d'avis dans les réglages du jeu, rubrique Jeu."),
         choix=(tr("Ouvrir directement"), tr("Garder le menu du jeu")))
     config = window.manager.config
     config.reprise[jeu] = choix == 0

@@ -237,8 +237,8 @@ class TestAnticrenelage:
             if r.choix:
                 assert r.zero and tr(r.zero) and rc.libelle_choix(r, r.choix[0]).startswith(tr(r.zero))
                 assert all(rc.libelle_choix(r, v) for v in r.choix)
-        assert self.R.format_choix.format(8) == "8×"
-        assert rc.libelle_choix(self.R, 8) == "8×"
+        assert self.R.format_choix.format(8) == "×8"
+        assert rc.libelle_choix(self.R, 8) == "×8"
 
 
 class TestSurechantillonnage:
@@ -250,7 +250,7 @@ class TestSurechantillonnage:
         assert rc.lire(ini, self.R) == rc.Etat(1)
         ini.write_bytes(ini.read_bytes().replace(b"FXAA=0", b"FXAA=0\r\nSSAAFactor=1"))
         assert rc.lire(ini, self.R) == rc.Etat(1)
-        assert rc.libelle_choix(self.R, 1) == tr("Désactivé")
+        assert rc.libelle_choix(self.R, 1) == tr("Éteint")
         assert rc.libelle_choix(self.R, 2) == "×2"
 
     def test_aller_retour(self, ini):
@@ -314,9 +314,10 @@ class TestModeDifficile:
         # Autres réglages en essai : le Quidditch de HP1/HP2, pas encore vu en match, et la caméra
         # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un), et le décor entier
         # de HP6 (ZoneCulling, vu à l'image le 2026-11-13, livré à 2), et les textures HD de
-        # HP6 (TextureReplace, pack HD bêta de la 1.3.4).
+        # HP6 (TextureReplace, pack HD bêta de la 1.3.4), et la définition des ombres, « expérimentale »
+        # dans l'ini livré et qui tache HP6 à ×4 (audit UI f101).
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
-            "quidditch", "camera_fluide", "decor_entier", "textures_hd"}
+            "quidditch", "camera_fluide", "decor_entier", "textures_hd", "ombres_nettes"}
 
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:
@@ -472,6 +473,45 @@ class TestQuidditchHp12:
         rc.ecrire(ini, rc.REGLAGES["quidditch"], 2)
         assert "QuidditchDifficulty=2" in ini.read_bytes().decode().split("\r\n")
         assert rc.libelle_choix(rc.REGLAGES["quidditch"], 2) == tr("Expert")
+
+
+class TestImagesALHeure:
+    """HP4-HP6 : RealFrameTime du correctif (issues #28 et #29), livré à 1 en 1.3.4 ; clé absente = 0."""
+
+    R = rc.REGLAGES["images_a_l_heure"]
+
+    def test_eteint_quand_la_cle_manque_puis_aller_retour(self, ini):
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Game]\r\nFOV=0\r\n")
+        assert (self.R.section, self.R.cle) == ("Accio.Game", "RealFrameTime")
+        assert rc.lire(ini, self.R) == rc.Etat(False)
+        rc.ecrire(ini, self.R, True)
+        lignes = ini.read_bytes().decode().split("\r\n")
+        assert lignes.index("[Accio.Game]") < lignes.index("RealFrameTime=1")
+        assert rc.lire(ini, self.R) == rc.Etat(True)
+
+    def test_le_catalogue_peut_le_declarer(self):
+        from tests.test_game_data import MINIMAL_GAME
+        jeu = GameData.from_dict({**MINIMAL_GAME, "fix_settings": ["images_a_l_heure"]})
+        assert "images_a_l_heure" in jeu.fix_settings
+
+
+class TestFermetureSansPlantageHp6:
+    """HP6 : ClosedFileGuard du correctif (plantage 0xC0000005 à la fermeture), livré à 1 ; clé absente = 1."""
+
+    R = rc.REGLAGES["fermeture_sans_plantage"]
+
+    def test_allume_quand_la_cle_manque_puis_aller_retour(self, ini):
+        ini.write_bytes(ini.read_bytes() + b"[Accio.Game]\r\nFOV=0\r\n")
+        assert (self.R.section, self.R.cle) == ("Accio.Game", "ClosedFileGuard")
+        assert rc.lire(ini, self.R) == rc.Etat(True)
+        rc.ecrire(ini, self.R, False)
+        assert "ClosedFileGuard=0" in ini.read_bytes().decode().split("\r\n")
+        assert rc.lire(ini, self.R) == rc.Etat(False)
+
+    def test_le_catalogue_peut_le_declarer(self):
+        from tests.test_game_data import MINIMAL_GAME
+        jeu = GameData.from_dict({**MINIMAL_GAME, "fix_settings": ["fermeture_sans_plantage"]})
+        assert "fermeture_sans_plantage" in jeu.fix_settings
 
 
 class TestCameraFluideHp5:
@@ -737,7 +777,7 @@ class TestFenetre:
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["anticrenelage"]), _manager(tmp_path))
         boutons = dlg._page_img.ligne("anticrenelage").controle
         assert boutons.valeur() == 0
-        assert [b.text() for b in boutons.boutons()] == [tr("Désactivé"), "2×", "4×", "8×"]
+        assert [b.text() for b in boutons.boutons()] == [tr("Éteint"), "×2", "×4", "×8"]
         boutons.boutons()[2].click()
         assert b"Antialiasing=4" in ini.read_bytes()
 
@@ -921,6 +961,18 @@ class TestEffetsDImage:
             assert rc.texte_valeur(16) == "16"
             i18n.set_language("en")
             assert rc.texte_valeur(0.28) == "0.28"
+        finally:
+            i18n.set_language(ancienne)
+
+    def test_le_cout_suit_la_ponctuation_de_la_langue(self):
+        """f119 : « Graphics card (GPU) : extreme », l'espace française en anglais et en espagnol."""
+        from src.core import i18n
+        from src.ui.page_image import _html_cout
+        ancienne = i18n.get_language()
+        try:
+            for langue, attendu in (("en", "(GPU): "), ("es", "(GPU): "), ("fr", "(GPU) : ")):
+                i18n.set_language(langue)
+                assert attendu in _html_cout(rc.REGLAGES["surechantillonnage"]), langue
         finally:
             i18n.set_language(ancienne)
 
@@ -1194,6 +1246,136 @@ class TestPageImage:
         # Les PIXELS, pas la propriété : c'est elle qui était juste quand la surbrillance ne se voyait pas.
         p = (8, ligne.height() // 2)
         assert avant.pixelColor(*p) != apres.pixelColor(*p), "la surbrillance ne se voit pas"
+
+    def test_un_clic_sur_le_curseur_n_allume_pas_d_anneau(self, qtbot, tmp_path):
+        """f2, f58 : la poignée se cerclait d'un anneau or de 2 px dès un clic ; l'anneau unique
+        (`focus_visible`) dit seul le focus clavier."""
+        from PyQt6.QtCore import Qt
+        dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        rc.ecrire(ini, rc.REGLAGES["lissage"], True)   # la netteté passe par le FXAA : éteint, grisée
+        page.rafraichir()
+        dlg.resize(1400, 900)
+        dlg.show()
+        dlg.activateWindow()
+        qtbot.waitUntil(dlg.isActiveWindow)
+        curseur = page.ligne("nettete").controle
+        curseur.clearFocus()
+        qtbot.wait(10)
+        sans = curseur.grab().toImage()
+        curseur.setFocus(Qt.FocusReason.MouseFocusReason)
+        qtbot.wait(10)
+        assert curseur.hasFocus()
+        assert curseur.grab().toImage() == sans
+
+    def test_un_geste_interrompu_ecrit_la_valeur_affichee(self, qtbot, tmp_path):
+        """f66 : poignée saisie, puis la fenêtre perd la main avant le relâché : le curseur disait
+        0,5, l'ini gardait l'ancienne valeur."""
+        from PyQt6.QtCore import QEvent, QPointF, Qt
+        from PyQt6.QtGui import QFocusEvent, QMouseEvent
+        from PyQt6.QtWidgets import QApplication
+        dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        rc.ecrire(ini, rc.REGLAGES["lissage"], True)
+        page.rafraichir()
+        dlg.resize(1400, 900)
+        dlg.show()
+        curseur = page.ligne("nettete").controle
+        avant = rc.lire(ini, rc.REGLAGES["nettete"]).valeur
+        x = curseur._x(curseur.haut)
+        for genre in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseMove):
+            QApplication.sendEvent(curseur, QMouseEvent(
+                genre, QPointF(x, 10), QPointF(x, 10), Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))
+        assert rc.lire(ini, rc.REGLAGES["nettete"]).valeur == avant, "rien n'est écrit pendant le geste"
+        QApplication.sendEvent(curseur, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.ActiveWindowFocusReason))
+        assert rc.lire(ini, rc.REGLAGES["nettete"]).valeur == rc.arrondir(rc.REGLAGES["nettete"], curseur.haut) != avant
+
+    def test_la_fiche_ne_recopie_pas_la_note_de_la_ligne(self, qtbot, tmp_path):
+        """f95 : « Sans effet tant que « Lissage des contours » est éteint. » sous la ligne grisée,
+        et la même phrase dans la fiche, 400 px plus loin."""
+        _dlg, page, ini = self._fenetre(qtbot, tmp_path, ["lissage", "nettete"])
+        rc.ecrire(ini, rc.REGLAGES["lissage"], False)
+        page.rafraichir()
+        ligne = page.ligne("nettete")
+        assert not ligne.note.isHidden()
+        page._activer("nettete")
+        assert ligne.note.text() and "Sans effet tant que" not in page.fiche.texte.text()
+
+    def test_peu_de_reglages_ni_onglet_seul_ni_recherche(self, qtbot, tmp_path):
+        """f63 : HP7, trois réglages, un onglet seul souligné et 220 px de recherche."""
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path, ["lissage", "nettete"])
+        assert len(page.categories) == 1
+        assert not page.recherche.isVisibleTo(page)
+        assert not any(o.isVisibleTo(page) for o in page.onglets.values())
+
+    def test_sans_fiche_seule_la_ligne_sous_la_souris_est_marquee(self, qtbot, tmp_path):
+        """f57 : fenêtre étroite, sans fiche : la première ligne s'ouvrait marquée et la dernière
+        survolée le restait, comme une ligne choisie."""
+        from PyQt6.QtCore import QEvent, QPointF
+        from PyQt6.QtGui import QEnterEvent
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        dlg.resize(980, 660)
+        dlg.show()
+        qtbot.waitUntil(lambda: page.width() > 0)
+        assert page.width() < 860 and not page._fiche_ouverte()
+        page.montrer(0)
+        marquees = lambda: [i for i, ls in page._lignes.items() if any(lg.property("active") for lg in ls)]  # noqa: E731
+        assert marquees() == []
+        ligne = page.ligne("nettete")
+        ligne.enterEvent(QEnterEvent(QPointF(5, 5), QPointF(5, 5), QPointF(5, 5)))
+        assert marquees() == ["nettete"]
+        ligne.leaveEvent(QEvent(QEvent.Type.Leave))
+        assert marquees() == []
+
+    def test_le_retour_de_la_fenetre_ne_change_pas_la_fiche(self, qtbot, tmp_path):
+        """f123 : Alt+Tab aller-retour rendait le focus au contrôle, et la fiche sautait sur sa ligne
+        alors que la souris en lisait une autre."""
+        from PyQt6.QtCore import QEvent, Qt
+        from PyQt6.QtGui import QFocusEvent
+        from PyQt6.QtWidgets import QApplication
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        page._activer("surechantillonnage")
+        controle = page.ligne("nettete").controle
+        QApplication.sendEvent(controle, QFocusEvent(QEvent.Type.FocusIn, Qt.FocusReason.ActiveWindowFocusReason))
+        assert page._actif == "surechantillonnage"
+        QApplication.sendEvent(controle, QFocusEvent(QEvent.Type.FocusIn, Qt.FocusReason.TabFocusReason))
+        assert page._actif == "nettete"
+
+    def test_entree_choisit_un_segment_comme_espace(self, qtbot, tmp_path):
+        """f56 : Entrée ne faisait rien sur une carte de préréglage, un segment ou un onglet."""
+        from PyQt6.QtCore import Qt
+        dlg, page, ini = self._fenetre(qtbot, tmp_path)
+        dlg.show()
+        segment = page.ligne("surechantillonnage").controle.boutons()[1]
+        segment.setFocus()
+        qtbot.keyClick(segment, Qt.Key.Key_Return)
+        assert rc.lire(ini, rc.REGLAGES["surechantillonnage"]).valeur == 1.5
+
+    def test_le_retour_a_accio_est_le_pictogramme_remettre(self, qtbot, tmp_path):
+        """f72 : un « ↺ » que la police du launcher n'a pas, plus fin et tourné à l'envers."""
+        from PyQt6.QtWidgets import QPushButton
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        retour = page.ligne("nettete").findChild(QPushButton, "retourAccio")
+        assert retour.text() == "" and not retour.icon().isNull()
+        assert retour.accessibleName().startswith("Revenir à la valeur Accio")
+
+    def test_sous_une_maison_la_page_ne_garde_pas_l_or(self, qtbot, tmp_path):
+        """f4, f5, f54 : le losange Accio de la fiche, « Se voit nettement » et le cercle de la
+        pastille cochée restaient or sous un thème rouge, vert ou bleu."""
+        from src.ui import theme
+        from src.ui.page_image import PageImage, _Segment
+        theme.set_theme("gryffondor")
+        try:
+            html = PageImage._html_valeurs("1", "2", "3")
+            assert theme.current().accent in html and "#d6a72c" not in html
+            pastille = _Segment("Doré", False, False, teinte="d6a72c")
+            qtbot.addWidget(pastille)
+            pastille.setChecked(True)
+            pastille.show()
+            qtbot.wait(10)
+            bord = pastille.grab().toImage().pixelColor(15, 1)
+            assert min(bord.red(), bord.green(), bord.blue()) > 200, bord.name()
+        finally:
+            theme.set_theme("poudlard")
 
     def test_les_valeurs_de_la_fiche_vont_a_la_ligne(self, qtbot, tmp_path):
         _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
@@ -1599,3 +1781,60 @@ class TestHp7NeDepassePas60:
         assert hp7a.pre_launch is not None
         patch = next(p for p in hp7a.pre_launch.ini_patches if p.key == "FPSLimit")
         assert (patch.file, patch.section, patch.value) == ("%INSTALL_DIR%\\pc\\d3d9.ini", "Accio.Window", "30")
+
+
+class TestRechercheDeLaPageImage:
+    """Audit UI v21, v45, v47 (2026-11-14)."""
+
+    def _page(self, qtbot, tmp_path):
+        from types import SimpleNamespace
+        dossier = tmp_path / "HP4"
+        dossier.mkdir()
+        (dossier / "d3d9.ini").write_bytes(INI_JEU.encode("ascii"))
+        jeu = GameData.from_dict({
+            "id": "hp4", "name": "HP4", "year": 2005, "description": "d", "developer": "d",
+            "executable": "HP4/gof_f.exe", "cover_image": "c.jpg", "fix_settings": TestPageImage.IDENTS,
+            "resolution": {"file": r"%INSTALL_DIR%\d3d9.ini", "section": "Accio.Game",
+                           "width": "Width", "height": "Height"}})
+        manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
+                                  config=SimpleNamespace(install_path=tmp_path, resolution_jeu={},
+                                                         save=lambda: None, reprise={}))
+        dlg = _dialogue(qtbot, jeu, manager)
+        return dlg, dlg._page_img
+
+    def test_les_resultats_se_batissent_une_fois(self, qtbot, tmp_path):
+        """Chaque lettre jetait et rebâtissait ~240 contrôles (0,8 s pour « ombres »)."""
+        _dlg, page = self._page(qtbot, tmp_path)
+        page.recherche.setText("o")
+        lignes = {i: li for i, (_n, _a, li) in page._trouvables.items()}
+        page.recherche.setText("ombres de contact")
+        assert {i: li for i, (_n, _a, li) in page._trouvables.items()} == lignes, "rien n'est rebâti"
+        assert lignes["occlusion"].isVisibleTo(page) and not lignes["halo"].isVisibleTo(page)
+        assert page._groupe_onglets.checkedButton() is None, "aucun onglet souligné pendant la recherche"
+        page.recherche.setText("")
+        assert page._trouvables is None and page._groupe_onglets.checkedButton() is not None
+
+    def test_la_resolution_se_trouve_et_mene_a_ecran(self, qtbot, tmp_path):
+        from src.ui.page_image import RESOLUTION
+        _dlg, page = self._page(qtbot, tmp_path)
+        page.recherche.setText(tr("résolution"))
+        vers = page._trouvables[RESOLUTION][2]
+        assert vers.isVisibleTo(page) and page._actif == RESOLUTION
+        vers.click()
+        assert page.recherche.text() == "" and page.categories[page._rang].ident == "ecran"
+
+    def test_sans_resultat_la_fiche_se_vide(self, qtbot, tmp_path):
+        _dlg, page = self._page(qtbot, tmp_path)
+        page.recherche.setText("xyzzy")
+        assert page._aucun.isVisibleTo(page) and page.fiche.titre.text() == ""
+
+    def test_tab_va_de_la_recherche_au_premier_reglage(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        """Une catégorie bâtie à son premier affichage finissait au bout de la chaîne du focus."""
+        _dlg, page = self._page(qtbot, tmp_path)
+        rang = next(i for i, c in enumerate(page.categories) if c.ident == "qualite")
+        page.montrer(rang)
+        suivant = page.recherche.nextInFocusChain()
+        while not (suivant.focusPolicy() & Qt.FocusPolicy.TabFocus):
+            suivant = suivant.nextInFocusChain()
+        assert page.pile.currentWidget().isAncestorOf(suivant), suivant

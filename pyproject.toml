@@ -19,6 +19,7 @@ dev = [
     "pytest>=9.2",
     "pytest-qt>=4.5",
     "pytest-xdist>=3.8", # la suite répartie sur les cœurs : 6 min → 1 min (2026-10-31)
+    "pytest-timeout>=2.4", # un test bloqué échoue au lieu de geler la suite ([tool.pytest.ini_options])
     "ruff>=0.17.3",      # utilisé depuis toujours, mais n'était pas déclaré
     "mypy>=2.4.1",         # types de src/core, réglé par [tool.mypy] plus bas
 ]
@@ -35,6 +36,19 @@ py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+# ── Tests ────────────────────────────────────────────────────────────────────
+# Une suite ne doit JAMAIS geler. Le 2026-11-14, deux processus de test tués
+# par une violation d'accès (l'anneau de focus, `focus_visible`) laissaient
+# pytest-xdist attendre pour toujours : avec `--dist loadfile`, les processus
+# de remplacement ne reçoivent jamais le travail des morts. Une journée entière
+# passée à attendre une suite figée à 99 %. Désormais :
+# - un processus mort ARRÊTE la suite tout de suite, avec la pile du plantage ;
+# - un test bloqué (une boîte modale jamais fermée) échoue en 120 s, sa pile au
+#   journal. La CI le resserre à 60 s (`--timeout=60`, `PYTEST_TIMEOUT`).
+[tool.pytest.ini_options]
+addopts = "--max-worker-restart=0"
+timeout = 120
 
 # ── Lint ─────────────────────────────────────────────────────────────────────
 # Le jeu de règles est FIGÉ ici, et c'est le point important : sans cette

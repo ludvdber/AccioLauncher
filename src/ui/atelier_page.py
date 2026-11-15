@@ -39,7 +39,7 @@ from src.ui.composants import (
 )
 from src.ui.fonts import cinzel_decorative
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
-from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
 
 _LARGEUR_RAIL = 300
@@ -60,7 +60,7 @@ QFrame#format {{
     border-radius: 13px;
 }}
 QFrame#besoins {{
-    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
+    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: {RAYON_CARTE}px;
 }}
 QFrame#filetBesoin {{ background: rgba(255, 255, 255, 0.06); border: none; }}
 QFrame#etape {{

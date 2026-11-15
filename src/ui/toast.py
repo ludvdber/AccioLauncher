@@ -10,7 +10,7 @@ from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, Qt, QT
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QWidget
 
 from src.ui.fonts import body_font
-from src.ui.theme import themed
+from src.ui.theme import RAYON_CARTE, themed
 
 _DEFAULT_DURATION_MS = 3500
 _ECART = 10   # px gardés libres au-dessus et au-dessous de la zone à éviter
@@ -33,7 +33,7 @@ class Toast(QLabel):
         self.setTextFormat(Qt.TextFormat.PlainText)
         self.setStyleSheet(themed(
             "QLabel { background: rgba(13, 13, 26, 0.94); color: #e8c547;"
-            " border: 1px solid rgba(214, 167, 44, 0.45); border-radius: 8px;"
+            f" border: 1px solid rgba(214, 167, 44, 0.45); border-radius: {RAYON_CARTE}px;"
             " padding: 10px 22px; }"
         ))
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)

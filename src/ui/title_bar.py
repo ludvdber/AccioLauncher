@@ -178,12 +178,14 @@ class _Contribuer(QPushButton):
         self.compact = False
         self.setIcon(self._espace)
         self.setIconSize(QSize(_TAILLE_LOGO + _ECART_LOGO, _TAILLE_LOGO))
-        self.setStyleSheet(
+        # Le contour du survol suit la maison, comme le texte : sous Gryffondor, un texte rose dans
+        # un contour or (audit UI f3).
+        self.setStyleSheet(theme.themed(
             "QPushButton { background: transparent; color: #c9c7da; padding: 0 6px;"
             " border: 1px solid transparent; border-radius: 13px; }"
             f"QPushButton:hover {{ color: {palette.accent_light};"
             " border-color: rgba(214,167,44,0.35); }"
-        )
+        ))
         self.largeur_complete = self.sizeHint().width()
         self.compacter(True)
         self.largeur_compacte = self.sizeHint().width()

@@ -341,7 +341,7 @@ class TestVerificationForcee:
         dlg, recus = self._verifier(_Checker(catalogue=catalogue))
         assert recus["catalogue"] == [catalogue]
         assert dlg.versions == ["0.36"]
-        assert dlg.statuts == [("Catalogue mis à jour en v0.36", True)]
+        assert dlg.statuts == [("Liste des jeux mise à jour.", True)]
 
     def test_l_empreinte_du_launcher_arrive_entiere(self):
         """Les CINQ arguments : l'empreinte SHA-256 est le quatrième (règle 9)."""
@@ -358,7 +358,7 @@ class TestVerificationForcee:
         dlg, _ = self._verifier(_Checker(catalogue=catalogue, launcher=annonce, jeux=2),
                                 url="https://x")
         assert dlg.statuts == [("Launcher v9.9.9 disponible !\n"
-                                "Catalogue mis à jour en v0.36\n"
+                                "Liste des jeux mise à jour.\n"
                                 "2 jeux ont une mise à jour disponible", True)]
 
     def test_un_seul_jeu_au_singulier(self):
@@ -449,5 +449,5 @@ class TestLesDeuxQuestions:
         from src.ui.dialogues_fenetre import confirmer_fermeture
         boite.reponse = "Quitter quand même"
         assert confirmer_fermeture(None, None, "install") is True
-        assert "« un jeu » est en cours." == boite.vues[0].textes["texte"]
+        assert "Une installation est en cours." == boite.vues[0].textes["texte"]
         assert "refaite" in boite.vues[0].textes["detail"]

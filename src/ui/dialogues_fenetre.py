@@ -60,13 +60,17 @@ def confirmer_fermeture(parent, nom_du_jeu: str | None, phase: str) -> bool:
     """
     boite = _boite(
         parent, tr("Opération en cours"),
-        tr("« {} » est en cours.").format(nom_du_jeu or tr("un jeu")),
+        # L'opération en tête : « « HP4 » est en cours » se lisait « une partie est lancée » (f11).
+        ((tr("Le téléchargement de « {} » est en cours.") if phase == "download"
+          else tr("L'installation de « {} » est en cours.")).format(nom_du_jeu) if nom_du_jeu
+         else tr("Un téléchargement est en cours.") if phase == "download"
+         else tr("Une installation est en cours.")),
         tr("Le téléchargement reprendra où il s'est arrêté au prochain démarrage : rien "
            "n'est perdu.")
         if phase == "download" else
         tr("L'installation devra être refaite depuis le début. L'archive "
            "déjà téléchargée est conservée : il n'y aura rien à "
-           "re-télécharger."))
+           "retélécharger."))
     quitter = boite.addButton(tr("Quitter quand même"), FenetreMessage.ButtonRole.DestructiveRole)
     boite.setDefaultButton(boite.addButton(tr("Continuer"), FenetreMessage.ButtonRole.RejectRole))
     boite.exec()

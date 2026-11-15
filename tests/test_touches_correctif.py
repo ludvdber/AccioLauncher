@@ -223,11 +223,24 @@ class TestFenetre:
         dlg, ini = _fenetre(qtbot, tmp_path)
         bouton = dlg._editeur._boutons["Accio"]
         qtbot.mouseClick(bouton, Qt.MouseButton.LeftButton)
-        assert bouton.ecoute() and bouton.text() == tr("Appuyez sur une touche…")
+        assert bouton.ecoute() and bouton.text() == tr("Appuyez…")
         qtbot.keyClick(bouton, Qt.Key.Key_F)
         assert not bouton.ecoute()
         assert "Accio=F" in _lignes(ini)
         assert bouton.text() == "F"
+
+    def test_la_case_en_ecoute_ne_mange_pas_le_nom(self, qtbot, tmp_path):
+        """f124 : « Appuyez sur une touche… » élargissait la case jusqu'à 200 px, et le nom de
+        l'action à sa gauche se lisait « Valide », « Extre »."""
+        from PyQt6.QtCore import Qt
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        bouton = dlg._editeur._boutons["Accio"]
+        avant = bouton.width()
+        qtbot.mouseClick(bouton, Qt.MouseButton.LeftButton)
+        try:
+            assert bouton.width() <= max(avant, bouton.fontMetrics().horizontalAdvance(tr("Appuyez…")) + 26)
+        finally:
+            bouton.arreter()
 
     def test_un_bouton_de_souris(self, qtbot, tmp_path):
         from PyQt6.QtCore import Qt

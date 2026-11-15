@@ -398,7 +398,9 @@ class MiniLecteur(QWidget):
             "QPushButton#sonLauncher[coupe=\"true\"] { background: rgba(214, 167, 44, 0.16);"
             " border-color: rgba(214, 167, 44, 0.55); }"
             "QPushButton#sonLauncher:hover {"
-            " border-color: rgba(214, 167, 44, 0.55); }"))
+            " border-color: rgba(214, 167, 44, 0.55); }"
+            # Coupé, il avait déjà le cadre or du survol : rien ne bougeait (audit UI f50).
+            "QPushButton#sonLauncher[coupe=\"true\"]:hover { background: rgba(214, 167, 44, 0.28); }"))
         self._son.clicked.connect(media.fond.basculer_son)
         lay.addWidget(self._son)
         media.fond.change.connect(self.actualiser)

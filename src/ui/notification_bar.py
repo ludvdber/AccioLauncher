@@ -18,7 +18,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
 from src.core.i18n import tr
-from src.ui.theme import themed
+from src.ui.theme import RAYON_CONTROLE, themed
 
 _HAUTEUR = 35
 
@@ -49,9 +49,11 @@ class NotificationBar(QWidget):
         self._btn = QPushButton(tr("Télécharger"))
         self._btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn.setStyleSheet(themed(
-            "QPushButton { background: rgba(214,167,44,0.2); color: #d6a72c;"
-            " border: 1px solid rgba(214,167,44,0.4); border-radius: 4px;"
-            " padding: 2px 10px; font-size: 11px; }"
+            # f74 : la police, le rayon et une hauteur de bouton du launcher, compacte pour le
+            # bandeau de 35 px ; il faisait 20 px en 11 px, seul de sa taille.
+            f"QPushButton {{ background: rgba(214,167,44,0.2); color: #d6a72c;"
+            f" border: 1px solid rgba(214,167,44,0.4); border-radius: {RAYON_CONTROLE}px;"
+            " padding: 0 14px; font-size: 13px; font-weight: bold; min-height: 26px; max-height: 26px; }"
             "QPushButton:hover { background: rgba(214,167,44,0.35); color: #e8c547; }"
         ))
         self._btn.clicked.connect(self.download_clicked)
@@ -62,8 +64,8 @@ class NotificationBar(QWidget):
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_close.setStyleSheet(themed(
             "QPushButton { background: transparent; color: #d6a72c;"
-            " border: none; font-size: 14px; }"
-            "QPushButton:hover { color: #e8c547; }"
+            f" border: none; border-radius: {RAYON_CONTROLE}px; font-size: 14px; }}"
+            "QPushButton:hover { color: #e8c547; background: rgba(214,167,44,0.18); }"
         ))
         btn_close.clicked.connect(self._on_close)
         layout.addWidget(btn_close)

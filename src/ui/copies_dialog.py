@@ -33,7 +33,7 @@ from src.core.config import APP_VERSION
 from src.core.game_data import GameData
 from src.core.i18n import get_language, tr, trn
 from src.core.phonographe import nom_de_fichier
-from src.ui.composants import bouton, feuille_de_style, lien
+from src.ui.composants import LIGNE_CHOISIE, bouton, feuille_de_style, lien
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
 from src.ui.settings_panel import _COMBO_STYLE
@@ -45,7 +45,7 @@ _LISTE_STYLE = (
     "QListWidget { color: #e0e0f0; background: #141428; border: 1px solid #2a2a48;"
     " font-size: 13px; outline: none; }"
     "QListWidget::item { padding: 6px 8px; }"
-    "QListWidget::item:selected { color: #0d0d1a; background: #d6a72c; }"
+    f"QListWidget::item:selected {{ {LIGNE_CHOISIE} }}"
     + BARRE_DEFILEMENT
 )
 _FENETRE = "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"
@@ -149,9 +149,8 @@ class CopiesDialog(QDialog):
         titre.setStyleSheet(themed("color: #d6a72c; background: transparent;"))
         layout.addWidget(titre)
         note = QLabel(tr(
-            "Avant chaque partie, le launcher garde une copie de chaque sauvegarde qui a changé. "
-            "Les dates sont celles où le jeu a écrit chaque version. Une sauvegarde s'exporte en .zip "
-            "pour la garder ou la partager, et s'importe depuis un .zip ou le fichier seul."))
+            "Le launcher garde une copie de vos sauvegardes avant chaque partie. Exportez-en une en "
+            ".zip pour la garder ou la partager ; importez un .zip ou le fichier seul."))
         note.setFont(body_font(11))
         note.setWordWrap(True)
         note.setStyleSheet("color: #8a8aaa; background: transparent;")
@@ -194,6 +193,11 @@ class CopiesDialog(QDialog):
         fermer.clicked.connect(self.accept)
         pied.addWidget(fermer)
         layout.addLayout(pied)
+        # Aucun bouton par défaut : depuis la liste, Entrée cliquait le premier et
+        # ouvrait l'Explorateur ou un choix de fichier sans qu'on l'ait demandé
+        # (audit UI f71). Sur un bouton, Entrée suit le focus (`entree_suit_le_focus`).
+        for b in (self._importer_bouton, self._exporter_bouton, self._bouton, fermer):
+            b.setAutoDefault(False)
 
     # ── Contenu ──
 

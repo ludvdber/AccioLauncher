@@ -1,4 +1,4 @@
-"""Tests pour src/ui/theme.py — palette pure, sans Qt."""
+"""Tests pour src/ui/theme.py — palette pure, sans Qt (sauf le surlignage de l'application)."""
 
 import pytest
 
@@ -25,6 +25,25 @@ class TestSetTheme:
     def test_unknown_falls_back_to_poudlard(self):
         set_theme("dortoir-des-blaireaux")
         assert current().id == "poudlard"
+
+    def test_le_texte_selectionne_prend_l_accent_de_la_maison(self, qtbot):
+        """f7 : un champ sans feuille surlignait dans le bleu de Qt (#308cc6), quel que soit le thème."""
+        from PyQt6.QtGui import QPalette
+        from PyQt6.QtWidgets import QApplication, QLineEdit
+
+        champ = QLineEdit("Lueur")
+        qtbot.addWidget(champ)
+        set_theme("serpentard")
+        QApplication.processEvents()   # la palette de l'application descend par un événement
+        surlignage = champ.palette().color(QPalette.ColorRole.Highlight)
+        (ar, ag, ab), (br, bg, bb) = current().accent_rgb, current().bg_rgb
+        assert surlignage.green() > surlignage.red() and surlignage.green() > surlignage.blue()
+        assert (surlignage.red(), surlignage.green(), surlignage.blue()) == (
+            round(br + (ar - br) * 0.45), round(bg + (ag - bg) * 0.45), round(bb + (ab - bb) * 0.45))
+        assert champ.palette().color(QPalette.ColorRole.HighlightedText).name() == "#ffffff"
+        set_theme("gryffondor")
+        QApplication.processEvents()
+        assert champ.palette().color(QPalette.ColorRole.Highlight).red() > 100
 
     def test_five_houses(self):
         assert set(THEMES) == {"poudlard", "gryffondor", "serpentard", "serdaigle", "poufsouffle"}
@@ -129,3 +148,28 @@ class TestThemedHorsPalette:
     def test_majuscules(self):
         set_theme("gryffondor")
         assert themed("color: #D6A72C;") == f"color: {THEMES['gryffondor'].accent};"
+
+
+class TestRayonDesCartes:
+    """f73 : quatre arrondis de carte (8, 10, 12, 14 px) d'une page à l'autre ; l'échelle n'en a qu'un."""
+
+    @pytest.mark.parametrize("module, feuille, selecteur", [
+        ("src.ui.difficulte_panneau", "_STYLE", "QFrame#preset"),
+        ("src.ui.difficulte_panneau", "_STYLE", "QFrame#surMesure"),
+        ("src.ui.difficulte_panneau", "_STYLE", "QFrame#bientot"),
+        ("src.ui.folio_page", "_STYLE", "QFrame#tuile, QFrame#coupe, QFrame#objet"),
+        ("src.ui.nouveautes_page", "_STYLE", "QFrame#pointFort"),
+        ("src.ui.nouveautes_page", "_STYLE", "QFrame#annonce"),
+        ("src.ui.atelier_page", "_STYLE", "QFrame#besoins"),
+        ("src.ui.visite_guidee", "_STYLE_CARTE", "QFrame#carteVisite"),
+        ("src.ui.resume_partie", "_STYLE", "QFrame#blocFolio"),
+    ])
+    def test_une_carte_a_le_rayon_de_l_echelle(self, module, feuille, selecteur):
+        import importlib
+        import re
+
+        from src.ui.theme import RAYON_CARTE
+        qss = getattr(importlib.import_module(module), feuille)
+        regle = qss[qss.index(selecteur + " {"):]
+        regle = regle[:regle.index("}")]
+        assert re.findall(r"border-radius: (\d+)px", regle) == [str(RAYON_CARTE)]

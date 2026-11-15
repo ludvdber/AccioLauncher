@@ -1491,3 +1491,16 @@ def test_l_entete_sans_titre_rubriques_et_jeux_sur_une_ligne_s_ils_y_tiennent(fe
     page._disposer_entete()
     assert page._ligne_entete.direction() == QBoxLayout.Direction.TopToBottom
     assert not page._filet_jeux.isVisibleTo(page)
+
+
+def test_changer_de_jeu_ne_rebatit_que_la_rubrique_visible(fenetre_avec_jeux):
+    """Audit UI f36 : en Cinématiques, choisir un jeu rebâtissait aussi la Musique cachée."""
+    from src.ui.mediatheque import CINEMATIQUES, MUSIQUE
+    win = fenetre_avec_jeux
+    win._mediatheque.ouvrir(CINEMATIQUES, "hp3")
+    page = win._pages.page
+    avant = page._musique._jeu
+    page.montrer("hp2")
+    assert page._cinematiques._jeu == "hp2" and page._musique._jeu == avant
+    page.rubrique(MUSIQUE)
+    assert page._musique._jeu == "hp2", "la Musique rattrape le jeu à son affichage"

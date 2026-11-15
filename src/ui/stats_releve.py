@@ -193,6 +193,11 @@ def noms_courts(noms: list[str]) -> list[str]:
 
 
 def _quand(jour: date) -> str:
+    """« Hier », « Il y a 5 jours », puis la date en toutes lettres, comme la fiche du jeu :
+    au-delà de 30 jours, le Relevé écrivait « 29/09/2026 » (audit UI f94)."""
+    if (date.today() - jour).days > 30:
+        from src.ui.versions_dialog import date_longue
+        return date_longue(jour.isoformat())
     texte = format_relative_date(jour.isoformat())
     return texte[:1].upper() + texte[1:]
 
@@ -329,7 +334,7 @@ class _Releve(QWidget):
                                        (tr("Jeu"), 0, False),
                                        (tr("Temps de jeu"), _COL_TEMPS, False),
                                        (tr("Parties"), _COL_PARTIES, True),
-                                       (tr("Dernière session"), _COL_DERNIERE, True)):
+                                       (tr("Dernière partie"), _COL_DERNIERE, True)):
             if texte == tr("Parties") and not avec_parties:
                 continue
             lbl = QLabel(texte.upper())
@@ -460,7 +465,8 @@ class _Releve(QWidget):
             cible = ordre[0]
         elif touche == Qt.Key.Key_End:
             cible = ordre[-1]
-        elif touche in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self._choix is not None:
+        elif touche in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space) and self._choix is not None:
+            # Espace ET Entrée (règle 15) : au Folio, Espace choisit ; ici, il ne faisait rien (f25).
             self.ouvrir(self._choix)
             return
         else:

@@ -3,36 +3,37 @@ QMessageBox : l'index du bouton choisi, Échap = le retrait, le texte toujours b
 la ligne verte de ce qui est conservé."""
 
 import pytest
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QApplication, QLabel, QMessageBox
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QLabel, QMessageBox
 
 from src.ui.fenetre_message import FenetreMessage, message
-
-
-def _quand_ouverte(action):
-    """Agit sur la fenêtre modale dès qu'elle s'affiche (exec() bloque)."""
-    def essayer():
-        boite = QApplication.activeModalWidget()
-        if isinstance(boite, FenetreMessage):
-            action(boite)
-        else:
-            QTimer.singleShot(10, essayer)
-    QTimer.singleShot(0, essayer)
+from tests.modales import quand_ouverte
 
 
 class TestMessage:
     def test_rend_l_index_du_bouton_clique(self, qtbot):
-        _quand_ouverte(lambda b: b.buttons()[1].click())
+        quand_ouverte(lambda b: b.buttons()[1].click())
         assert message(None, QMessageBox.Icon.Question, "Titre", "Texte",
                        ("Installer", "Plus tard")) == 1
 
     def test_echap_choisit_le_retrait(self, qtbot):
-        _quand_ouverte(lambda b: qtbot.keyClick(b, Qt.Key.Key_Escape))
+        quand_ouverte(lambda b: qtbot.keyClick(b, Qt.Key.Key_Escape))
         assert message(None, QMessageBox.Icon.Warning, "T", "x", ("Supprimer", "Garder", "Annuler")) == 2
+
+    def test_la_boite_ne_survit_pas_a_sa_reponse(self, qtbot):
+        """2026-11-15 : chaque message restait caché sous sa fenêtre jusqu'à la fermeture du launcher."""
+        from PyQt6.QtCore import QCoreApplication, QEvent
+        from PyQt6.QtWidgets import QWidget
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        quand_ouverte(lambda b: b.buttons()[0].click())
+        assert message(parent, QMessageBox.Icon.Question, "T", "x", ("Oui", "Non")) == 0
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        assert parent.findChildren(FenetreMessage) == []
 
     def test_sans_choix_un_seul_bouton_fermer(self, qtbot):
         vus = []
-        _quand_ouverte(lambda b: (vus.append([x.text() for x in b.buttons()]), b.buttons()[0].click()))
+        quand_ouverte(lambda b: (vus.append([x.text() for x in b.buttons()]), b.buttons()[0].click()))
         assert message(None, QMessageBox.Icon.Information, "T", "x") == -1
         assert vus == [["Fermer"]]
 
@@ -44,7 +45,7 @@ class TestMessage:
             lus.extend(lbl for lbl in b.findChildren(QLabel) if "<b>" in lbl.text())
             lus.append(lus[-1].textFormat() if lus else None)
             b.buttons()[0].click()
-        _quand_ouverte(lire)
+        quand_ouverte(lire)
         message(None, QMessageBox.Icon.Information, "T", "<b>HP1</b>")
         assert lus and lus[-1] == Qt.TextFormat.PlainText
 
@@ -54,7 +55,7 @@ class TestMessage:
         def lire(b):
             textes.extend(lbl.text() for lbl in b.findChildren(QLabel))
             b.buttons()[0].click()
-        _quand_ouverte(lire)
+        quand_ouverte(lire)
         message(None, QMessageBox.Icon.Critical, "Échec", "x", conserve="Les 2,1 Go déjà reçus")
         assert "CE QUI EST CONSERVÉ" in textes and "Les 2,1 Go déjà reçus" in textes
 
@@ -84,7 +85,7 @@ class TestBoutons:
     @pytest.mark.parametrize("defaut", [-5, 99])
     def test_un_defaut_hors_bornes_est_ramene(self, qtbot, defaut):
         vus = []
-        _quand_ouverte(lambda b: (vus.append(next(x.text() for x in b.buttons() if x.isDefault())),
+        quand_ouverte(lambda b: (vus.append(next(x.text() for x in b.buttons() if x.isDefault())),
                                   b.buttons()[0].click()))
         message(None, QMessageBox.Icon.Question, "T", "x", ("A", "B"), defaut=defaut)
         assert vus == ["A" if defaut < 0 else "B"]

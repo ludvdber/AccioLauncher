@@ -42,11 +42,19 @@ Tab qui ENTRE dans un groupe exclusif (rail, catégories, segments, cartes du
 folio) se pose sur le choix coché, pas sur le premier bouton : le Carnet ouvert
 sur les Défis cerclait « Folio », et Espace ouvrait autre chose que ce qu'on
 croyait désigné. Dans le groupe, Tab avance comme avant.
+
+L'anneau d'une fenêtre se retrouve par `_ANNEAUX`, tenu ici, JAMAIS en
+parcourant ses enfants : une fenêtre détruite envoie encore un FocusOut au
+widget qui tenait le focus, au milieu de la destruction de ses enfants, et
+`findChild` lisait alors un enfant déjà libéré. Violation d'accès mesurée le
+2026-11-15 : deux processus de la suite tués sur une suite complète, à coup sûr
+quand le ramasse-miettes détruit une boîte de message sans parent.
 """
 
-
+import functools
 import re
 
+from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, Qt, QTimer
 from PyQt6.QtGui import QPainter, QPen
 from PyQt6.QtWidgets import QAbstractButton, QAbstractScrollArea, QApplication, QScrollArea, QWidget
@@ -116,6 +124,9 @@ class _Anneau(QWidget):
 
     def __init__(self, fenetre: QWidget) -> None:
         super().__init__(fenetre)
+        cle = sip.unwrapinstance(fenetre)
+        _ANNEAUX[cle] = self
+        self.destroyed.connect(functools.partial(_oublier, cle))
         self.setObjectName("anneauFocus")
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
@@ -214,9 +225,21 @@ class _Anneau(QWidget):
         p.end()
 
 
+_ANNEAUX: dict[int, _Anneau] = {}      # adresse C++ de la fenêtre → son anneau
+
+
+def _oublier(cle: int, *_args) -> None:
+    _ANNEAUX.pop(cle, None)
+
+
 def _anneau(fenetre: QWidget, creer: bool) -> _Anneau | None:
-    """L'anneau de la fenêtre, créé au premier besoin si `creer`."""
-    anneau = fenetre.findChild(_Anneau, "anneauFocus", Qt.FindChildOption.FindDirectChildrenOnly)
+    """L'anneau de la fenêtre, créé au premier besoin si `creer`.
+
+    Aucun appel à la fenêtre elle-même : elle peut être en pleine destruction
+    (voir l'en-tête du module)."""
+    anneau = _ANNEAUX.get(sip.unwrapinstance(fenetre))
+    if anneau is not None and sip.isdeleted(anneau):
+        anneau = None
     return _Anneau(fenetre) if anneau is None and creer else anneau
 
 

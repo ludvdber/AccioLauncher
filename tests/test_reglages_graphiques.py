@@ -166,7 +166,7 @@ def test_chaque_texte_est_traduit():
         textes |= {r.libelle, r.aide, r.zero} | {n for _v, n in r.noms_choix if n}
     for code in ("en", "es"):
         cles = json.loads(Path(f"src/data/i18n/{code}.json").read_text(encoding="utf-8"))["strings"]
-        manquants = sorted(t for t in textes if t and t not in cles and not t[0].isdigit())
+        manquants = sorted(t for t in textes if t and t not in cles and not t.lstrip("×")[0].isdigit())   # « 1920×1080 », « ×8 » : sans mots
         assert not manquants, (code, manquants)
 
 
@@ -187,6 +187,13 @@ class TestFenetre:
     def test_onglets_image_et_performances(self, dlg):
         assert {"image", "perfs"} <= set(dlg._onglets)
         assert set(dlg._controles_graph) == set(R)
+
+    def test_un_interrupteur_ne_repete_pas_son_nom_en_infobulle(self, dlg):
+        """f60 : la bulle redisait mot pour mot le nom écrit à gauche ; le nom accessible reste."""
+        from src.ui.toggle_switch import ToggleSwitch
+        interrupteurs = [c for c in dlg._controles_graph.values() if isinstance(c, ToggleSwitch)]
+        assert interrupteurs
+        assert all(c.accessibleName() and c.toolTip() != c.accessibleName() for c in interrupteurs)
 
     def test_choisir_ecrit_aussitot(self, dlg, conf):
         liste = dlg._controles_graph["graph_antialiasing"]

@@ -531,13 +531,15 @@ class ActionPanel(QWidget):
         from src.ui.mediatheque import a_de_la_musique, a_des_medias
         if not a_des_medias(self._game.id):
             return
-        # HP7 et HP8 n'ont que des cinématiques : la pellicule, pas la note.
-        premier = "musique" if a_de_la_musique(self._game.id) else "film"
-        btn = _BoutonIcone(premier, second="images")
+        # HP7 et HP8 n'ont que des cinématiques : la pellicule, pas la note, et une bulle qui ne
+        # promet pas la musique (audit UI f48).
+        musique = a_de_la_musique(self._game.id)
+        btn = _BoutonIcone("musique" if musique else "film", second="images")
         btn.setObjectName("boutonMedias")
-        btn.setToolTip(tr("La musique, les cinématiques et les captures du jeu"))
-        btn.setAccessibleName(tr("Collections : la musique, les cinématiques et les "
-                                 "captures du jeu"))
+        contenu = (tr("La musique, les cinématiques et les captures du jeu") if musique
+                   else tr("Les cinématiques et les captures du jeu"))
+        btn.setToolTip(contenu)
+        btn.setAccessibleName(tr("Collections : {}").format(contenu))
         btn.clicked.connect(self.medias_clicked)
         self._action_layout.addWidget(btn)
 

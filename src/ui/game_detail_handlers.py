@@ -594,7 +594,10 @@ def on_repair(view: GameDetailView) -> None:
         return
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Vérifier / réparer les fichiers"),
-        constat + tr("L'archive de {} va être re-téléchargée (avec vérification d'intégrité quand elle est disponible) puis réinstallée par-dessus les fichiers existants.\n\nLes sauvegardes et la configuration ne sont pas touchées.\n\nContinuer ?").format(view.game.name),
+        # Ni méthode, ni « Continuer ? » sous un bouton qui le dit déjà (audit UI f96) ; les
+        # sauvegardes restent dites : c'est la crainte d'un geste qui réécrit le jeu.
+        constat + tr("{} va être retéléchargé puis réinstallé par-dessus.\n\n"
+                     "Les sauvegardes et la configuration ne sont pas touchées.").format(view.game.name),
         (tr("Vérifier et réparer"), tr("Annuler")), 1,
     )
     if reply == 0:
@@ -604,14 +607,14 @@ def on_repair(view: GameDetailView) -> None:
 
 def _proposer_la_configuration(view: GameDetailView, constat: str = "") -> None:
     game = view.game
-    noms = "\n".join(f"• {f.name}" for f in reparation_config.fichiers(game))
+    # « Fichiers remis : » annonçait comme fait ce que le bouton n'a pas encore fait (f96).
+    noms = ", ".join(f.name for f in reparation_config.fichiers(game))
     choix = _boite(QMessageBox.Icon.Question,
-        view, tr("Vérifier / réparer"),
+        view, tr("Vérifier / réparer les fichiers"),
         constat + tr("Le jeu ne démarre plus après un changement dans ses options graphiques ? "
-           "Remettre sa configuration suffit le plus souvent : c'est immédiat, rien n'est téléchargé.\n\n"
-           "Fichiers remis :\n{}\n\nL'ancienne configuration est gardée de côté ; "
-           "les sauvegardes ne sont pas touchées.\n\n"
-           "Si le problème vient des fichiers du jeu, « Retélécharger le jeu » re-télécharge l'archive "
+           "Remettre sa configuration ({}) suffit le plus souvent : c'est immédiat. L'ancienne est gardée "
+           "de côté ; les sauvegardes ne sont pas touchées.\n\n"
+           "Si le problème vient des fichiers du jeu, « Retélécharger le jeu » télécharge à nouveau l'archive "
            "et la réinstalle par-dessus.").format(noms),
         (tr("Remettre la configuration"), tr("Retélécharger le jeu"), tr("Annuler")), 2,
     )

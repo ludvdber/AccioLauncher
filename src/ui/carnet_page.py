@@ -84,7 +84,7 @@ class CarnetPage(QDialog):
         self._vide = _transparent(QWidget())
         v = QVBoxLayout(self._vide)
         v.setContentsMargins(40, 28, 40, 28)
-        self._vide_texte = texte(tr("Installez un jeu pour ouvrir son folio."), 16, "#c9c7da", retour=True)
+        self._vide_texte = texte(tr("Installez un jeu pour voir son folio et ses défis."), 16, "#c9c7da", retour=True)
         v.addWidget(self._vide_texte)
         v.addStretch()
         self._pile.addWidget(self._vide)
@@ -215,7 +215,7 @@ class CarnetPage(QDialog):
         connu) : le dire, sans pastille cochée. C'était le folio du jeu choisi
         avant, sa pastille cochée, sans un mot (audit du 2026-11-02)."""
         connu = self.manager.get_game_by_id(jeu)
-        self._vide_texte.setText(tr("Installez {} pour ouvrir son folio.").format(
+        self._vide_texte.setText(tr("Installez {} pour voir son folio et ses défis.").format(
             connu.name if connu is not None else jeu))
         self._groupe_jeux.setExclusive(False)
         for b in self._boutons.values():

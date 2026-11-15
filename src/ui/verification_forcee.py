@@ -65,7 +65,7 @@ def verifier(checker, dlg, *, sur_catalogue, sur_launcher, en_ligne, url_launche
         if etat["launcher"]:
             changes.append(tr("Launcher v{} disponible !").format(etat["launcher"]))
         if etat["catalogue"]:
-            changes.append(tr("Catalogue mis à jour en v{}").format(etat["catalogue"]))
+            changes.append(tr("Liste des jeux mise à jour."))
         if etat["jeux"]:
             changes.append(trn(etat["jeux"], "1 jeu a une mise à jour disponible",
                                "{} jeux ont une mise à jour disponible").format(etat["jeux"]))

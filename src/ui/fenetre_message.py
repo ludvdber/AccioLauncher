@@ -22,12 +22,12 @@ from PyQt6.QtWidgets import (
     QDialog, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget,
 )
 
-from src.core.i18n import tr
+from src.core.i18n import tr, typo
 from src.ui.composants import ENCRE_DOUCE, feuille_de_style, police, texte
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
-from src.ui.theme import accent_qcolor, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, themed
 
 _STYLE = """
 QDialog#fenetreMessage { background: #0d0d1a; }
@@ -149,16 +149,18 @@ class FenetreMessage(QDialog):
             icone.setStyleSheet("background: transparent;")
             icone.setPixmap(pixmap_icone(nom, 26, QColor(couleur) if couleur else accent_qcolor()))
             tete.addWidget(icone, alignment=Qt.AlignmentFlag.AlignTop)
-        titre = texte(self.windowTitle(), 17, "#f4f2f8", retour=True)
+        titre = texte(typo(self.windowTitle()), 17, "#f4f2f8", retour=True)
         titre.setFont(police(17, gras=True))
-        tete.addWidget(titre, stretch=1)
+        # En haut : le surplus de hauteur le centrait 12 px sous l'icône (audit UI f8).
+        titre.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        tete.addWidget(titre, stretch=1, alignment=Qt.AlignmentFlag.AlignTop)
         lay.addLayout(tete)
 
         for contenu, px, encre, ecart in ((self._texte, 14, "#d9d6e8", 14),
                                           (self._detail, 13, ENCRE_DOUCE, 10)):
             if contenu:
                 lay.addSpacing(ecart)
-                lbl = texte(contenu, px, encre, retour=True)
+                lbl = texte(typo(contenu), px, encre, retour=True)   # f9 : « » et ; : ! ? insécables
                 lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 lay.addWidget(lbl)
         if self._conserve:
@@ -166,6 +168,7 @@ class FenetreMessage(QDialog):
             lay.addWidget(cadre_conserve(self._conserve))
 
         lay.addSpacing(22)
+        lay.addStretch()
         rangee = QHBoxLayout()
         rangee.setSpacing(10)
         rangee.addStretch()
@@ -191,7 +194,7 @@ def cadre_conserve(contenu: str) -> QFrame:
     cadre.setObjectName("conserve")
     cadre.setStyleSheet(
         "QFrame#conserve { background: rgba(95, 191, 134, 0.07);"
-        " border: 1px solid rgba(95, 191, 134, 0.28); border-radius: 8px; }")
+        f" border: 1px solid rgba(95, 191, 134, 0.28); border-radius: {RAYON_CARTE}px; }}")
     h = QHBoxLayout(cadre)
     h.setContentsMargins(14, 11, 14, 12)
     h.setSpacing(12)
@@ -234,6 +237,10 @@ def message(parent, icone, titre: str, contenu: str, choix=(), defaut: int = 0,
     boite.setDefaultButton(boutons[min(max(defaut, 0), len(boutons) - 1)])
     boite.exec()
     clique = boite.clickedButton()
+    # Détruite par la boucle d'événements, à un point sûr : sinon elle restait
+    # cachée sous son parent jusqu'à la fermeture du launcher, ou, sans parent,
+    # le ramasse-miettes la détruisait n'importe quand (voir `focus_visible`).
+    boite.deleteLater()
     if not choix:
         return -1
     return next((i for i, b in enumerate(boutons) if b is clique), -1)

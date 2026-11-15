@@ -348,7 +348,7 @@ class OnboardingDialog(QDialog):
         note = tr("Tout se change plus tard, dans les Paramètres.") if plein else tr(
             "Ce que le launcher ne vous avait encore jamais montré. "
             "Tout se change plus tard, dans les Paramètres.")
-        v.addWidget(texte(note, 12, "#5f5d80", retour=True))
+        v.addWidget(texte(note, 12, ENCRE_DISCRETE, retour=True))   # 4,5:1 ; #5f5d80 en donnait 3,2 (f15)
         h.addWidget(rail)
 
         droite = QVBoxLayout()
@@ -433,8 +433,7 @@ class OnboardingDialog(QDialog):
 
     def _page_dossier(self) -> QWidget:
         page, lay = self._squelette(DOSSIER, tr("Où ranger les jeux ?"), tr(
-            "Les jeux seront installés ici. Les fichiers du launcher tiennent dans un seul "
-            "sous-dossier, _Launcher : le reste, ce sont vos jeux."))
+            "Les jeux seront installés ici."))
         lay.addSpacing(26)
         carte = Carte()
         self._chemin = Chemin(str(self.install_path))
@@ -496,7 +495,7 @@ class OnboardingDialog(QDialog):
         libre, total = espace_du_volume(self.install_path)
         self._chemin.definir(str(self.install_path))
         self._ligne_dossier.decrire(
-            tr("Dossier proposé. Un dossier à vous, hors de Program Files.")
+            tr("Dossier proposé.")
             if self.install_path == DEFAULT_INSTALL_PATH else tr("Dossier choisi."))
         self._barre.regler(total - libre, saga, total)
         self._legende_saga.setText(
@@ -545,8 +544,7 @@ class OnboardingDialog(QDialog):
 
     def _page_jeux(self) -> QWidget:
         page, lay = self._squelette(JEUX, tr("Vous avez déjà des jeux ?"), tr(
-            "Ceux qui sont déjà dans le dossier du launcher sont repris tels quels. "
-            "D'autres ailleurs ? Montrez le dossier qui les contient."))
+            "Les jeux déjà dans ce dossier sont repris tels quels."))
         lay.addSpacing(22)
         self._hote_jeux = QVBoxLayout()
         self._hote_jeux.setContentsMargins(0, 0, 0, 0)
@@ -590,8 +588,9 @@ class OnboardingDialog(QDialog):
             tete = LigneReglage(Chemin(str(self.install_path)), etat,
                                 self._bouton_chercher(tr("Chercher ailleurs…")), icone=self._icone("dossier"))
         else:
-            tete = LigneReglage(tr("Aucun jeu dans le dossier du launcher pour l'instant."),
-                                tr("Si vous en avez installé ailleurs, montrez le dossier qui les contient."),
+            # Sans phrase : rien dans le dossier, c'est le cas d'une première
+            # installation, et le bouton dit ce qu'on peut faire (audit UI f104).
+            tete = LigneReglage(tr("Des jeux installés ailleurs ?"), "",
                                 self._bouton_chercher(tr("Chercher dans un dossier…")), icone=self._icone("dossier"))
         if self._dossier_cherche is not None or self._en_place:
             tete.description.setStyleSheet(themed("color: #e8c547; background: transparent;"))
@@ -878,7 +877,7 @@ class OnboardingDialog(QDialog):
             derniere = self._question == len(QUESTIONS) - 1
             suivant = tr("Voir le verdict") if derniere else tr("Question suivante")
             actif = self._reponses[self._question] >= 0
-            lien_txt = tr("Garder le thème de Poudlard") if self._theme_initial == "poudlard" \
+            lien_txt = tr("Garder les couleurs de Poudlard") if self._theme_initial == "poudlard" \
                 else tr("Garder mes couleurs")
         elif ecran == DERNIERES or (ecran == VERDICT and not self._apres_choixpeau()):
             suivant = tr("Ouvrir la bibliothèque") if not self._rattrapage else tr("Terminer")

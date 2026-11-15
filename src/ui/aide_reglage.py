@@ -13,6 +13,7 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from src.core.i18n import tr, typo
+from src.ui.focus_visible import PASTILLE, forme
 from src.ui.fonts import body_font, cinzel
 from src.ui.theme import themed
 
@@ -92,6 +93,9 @@ class BoutonAide(QPushButton):
         self.setFont(body_font(10))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(themed(_BOUTON_STYLE))
+        # L'anneau du clavier autour du rond de 18 px, pas du carré de 28 : lu dans la
+        # feuille, le rayon de 9 px sur le carré entier dessinait un carré arrondi (audit UI f117).
+        forme(self, PASTILLE, retrait=5)
         self.setAccessibleName(tr("Aide : {}").format(titre))
         self.setToolTip(tr("Ce que fait ce réglage"))
         self.clicked.connect(self.ouvrir)

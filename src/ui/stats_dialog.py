@@ -40,7 +40,7 @@ from src.ui.ecu import emaux
 from src.ui.stats_releve import _HAUTEUR_LIGNE, _Releve
 from src.ui.composants import bouton_retour, feuille_de_style
 from src.ui.fonts import cinzel
-from src.ui.theme import current as theme_courant, themed
+from src.ui.theme import RAYON_CARTE, current as theme_courant, themed
 from src.ui.stats_widgets import (  # noqa: F401  (réexportés)
     _SECONDAIRE,
     _DISCRET,
@@ -131,7 +131,7 @@ class StatsDialog(QDialog):
         }
         QFrame#carteSave {
             background-color: #16213e; border: 1px solid #2c3e6b;
-            border-radius: 8px;
+            border-radius: RAYON_CARTEpx;
         }
         QFrame#colonneSaga { border: none; border-left: 1px solid #2c3e6b; }
         QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; border: none; }
@@ -144,7 +144,7 @@ class StatsDialog(QDialog):
         QScrollBar::handle:vertical:hover { background: #d6a72c; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
-        """.replace("FOND", fond)
+        """.replace("FOND", fond).replace("RAYON_CARTEpx", f"{RAYON_CARTE}px")
 
     # ──────────────────── Données ────────────────────
 
@@ -211,6 +211,9 @@ class StatsDialog(QDialog):
         zone = QScrollArea()
         zone.setWidgetResizable(True)
         zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Pas un arrêt de Tab : elle prenait le focus sans rien montrer (audit UI f24), comme
+        # `utils.zone_defilable` ; le focus d'une ligne la fait défiler (`focus_visible`).
+        zone.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         zone.setWidget(contenu)
         zone.setMinimumHeight(1)
         cadre.addWidget(zone, 1)
@@ -384,9 +387,9 @@ class StatsDialog(QDialog):
             couche.addWidget(_titre_section(tr("Plus longue partie")))
             couche.addWidget(_chiffre(_duree(longue.duree), 14))
             # Jamais un record sans sa date : daté, c'est un souvenir.
+            from src.ui.versions_dialog import date_longue
             couche.addWidget(_Paragraphe(tr("{}, le {}").format(
-                self._noms.get(longue.jeu, longue.jeu),
-                longue.debut.strftime("%d/%m/%Y"))))
+                self._noms.get(longue.jeu, longue.jeu), date_longue(longue.debut.strftime("%Y-%m-%d")))))
         return cadre
 
     # ──────────────────── Hauteur ────────────────────

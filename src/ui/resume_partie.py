@@ -23,18 +23,18 @@ from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp
 from src.core.formatting import format_relative_date
 from src.core.i18n import get_language, tr, trn
 from src.ui.fonts import body_font
-from src.ui.theme import accent_qcolor, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, themed
 
 # Au-delà, le bloc s'étirerait sur toute la colonne pour trois lignes courtes.
 LARGEUR_MAX = 380
 _CARTE_H = 34          # hauteur d'une carte de l'éventail, px logiques
 _EVENTAIL = ((0, 4, -10.0), (14, 1, -1.0), (28, 3, 9.0))   # x, y, angle
 
-_STYLE = """
-QFrame#blocFolio {
-    background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; border-radius: 8px;
-}
-QFrame#blocFolio:hover { background: rgba(255, 255, 255, 0.07); }
+_STYLE = f"""
+QFrame#blocFolio {{
+    background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; border-radius: {RAYON_CARTE}px;
+}}
+QFrame#blocFolio:hover {{ background: rgba(255, 255, 255, 0.07); }}
 """
 
 

@@ -24,7 +24,7 @@ from src.core.i18n import (
 IDENTIQUES_TOLEREES = {
     # « Halloween » s'écrit pareil dans les trois langues (la citrouille qui
     # accompagnait la clé a été retirée : U+1F383 sortait en emoji couleur).
-    "Discord", "Version {}", "Catalogue {}", "Menus", "Versions de {}", "Versions", "Halloween",
+    "Discord", "Version {}", "Catalogue {}", "Catalogue", "Menus", "Versions de {}", "Versions", "Halloween",
     "Accio Launcher {}", "Folio", "Folio de {}", "Badges", "Collections",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
     # « Gris » (vert des montagnes) s'écrit pareil en espagnol.

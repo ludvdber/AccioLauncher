@@ -39,8 +39,8 @@ log = logging.getLogger(__name__)
 NOM = "dgVoodoo.conf"
 SUFFIXE_ORIGINE = ".origine"
 
-ANTIALIASING = (("off", ""), ("2x", "2x"), ("4x", "4x"), ("8x", "8x"))
-FILTRAGES = (("appdriven", ""), ("4", "4x"), ("8", "8x"), ("16", "16x"))
+ANTIALIASING = (("off", ""), ("2x", "×2"), ("4x", "×4"), ("8x", "×8"))
+FILTRAGES = (("appdriven", ""), ("4", "×4"), ("8", "×8"), ("16", "×16"))
 # `max` : la taille de l'écran ; `max_fhd`/`max_qhd` : la plus grande qui tient
 # sous 1080p / 1440p (documentation dans le fichier) ; `unforced` : celle
 # que demande le jeu.
@@ -58,10 +58,10 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             onglet="image", cout=(("GPU", 2),), se_voit=True),
     Reglage("graph_antialiasing", "DirectX", "Antialiasing",
             "Anticrénelage",
-            "Lisse les bords en escalier des objets. 8x est livré ; 4x se voit à peine moins "
+            "Lisse les bords en escalier des objets. ×8 est livré ; ×4 se voit à peine moins "
             "et coûte moins. Si le jeu s'arrête dès son lancement (« SetRenderTarget "
-            "failed »), essayez 4x, puis « Aucun » : certaines puces graphiques, Intel "
-            "notamment, refusent le 8x.",
+            "failed »), essayez ×4, puis « Aucun » : certaines puces graphiques, Intel "
+            "notamment, refusent le ×8.",
             choix=tuple(v for v, _ in ANTIALIASING), zero="Aucun", noms_choix=ANTIALIASING,
             onglet="image", cout=(("GPU", 3),), se_voit=True),
     Reglage("graph_textures_rendu", "DirectXExt", "RTTexturesForceScaleAndMSAA",
@@ -72,8 +72,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "dès son lancement et que baisser l'anticrénelage n'a pas suffi.",
             defaut=True, onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("graph_filtrage", "DirectX", "Filtering",
-            "Filtrage des textures",
-            "Garde nettes les textures vues de biais, comme le sol au loin. 16x est livré "
+            "Netteté des sols et des murs",
+            "Garde nettes les textures vues de biais, comme le sol au loin. ×16 est livré "
             "et ne coûte presque rien.",
             choix=tuple(v for v, _ in FILTRAGES), zero="Celui du jeu", noms_choix=FILTRAGES,
             onglet="image", cout=(("GPU", 1),), se_voit=True),

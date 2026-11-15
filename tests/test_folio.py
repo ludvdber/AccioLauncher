@@ -588,3 +588,15 @@ class TestLigneEmplacement:
             titre = next(lbl for lbl in ligne.findChildren(QLabel) if lbl.text().startswith("Partie"))
             date = next(lbl for lbl in ligne.findChildren(QLabel) if "octobre" in lbl.text())
             assert date.y() > titre.y(), jour
+
+
+def test_entree_choisit_une_case_comme_espace(qtbot):
+    """Audit UI f25 : au Folio, Espace choisissait une case et Entrée ne faisait rien."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QPushButton
+    from src.ui.folio_page import case_de_folio
+    case = QPushButton()
+    case_de_folio(case)
+    qtbot.addWidget(case)
+    qtbot.keyClick(case, Qt.Key.Key_Return)
+    assert case.isChecked()

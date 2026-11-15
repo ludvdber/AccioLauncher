@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QObject, QPointF, QRectF, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QWheelEvent
+from PyQt6.QtGui import QColor, QFocusEvent, QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QWheelEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -44,9 +45,9 @@ from src.core.game_data import GameData
 from src.core.i18n import tr, trn, typo
 from src.core.reglages_table import Reglage
 from src.ui.flow_layout import FlowLayout
-from src.ui.composants import bouton, ENCRE_DOUCE, LISTE, petit_titre, police, transparent
+from src.ui.composants import bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, petit_titre, police, transparent
 from src.ui.fonts import cinzel
-from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEUR_SE_VOIT, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
+from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
 from src.ui.reglages_widgets import _CartePrereglage, _etiquette_beta, _Points, _texte_beta
 from src.ui.theme import RAYON_CARTE, accent_qcolor, themed
 from src.ui.theme import current as theme_courant
@@ -55,20 +56,23 @@ from src.ui.utils import liste_deroulante, zone_defilable
 
 log = logging.getLogger(__name__)
 
-# Les deux repères : Accio en or (la marque, et la valeur conseillée), le jeu en argent, pour ne pas
-# lui faire concurrence (maquette, « Designer »).
-OR = "#d6a72c"
+# Les deux repères : Accio dans l'accent de la maison (la marque, et la valeur conseillée), le jeu en
+# argent, pour ne pas lui faire concurrence (maquette, « Designer ») ; l'or fixe restait sous un
+# thème rouge, vert ou bleu (audit UI f54).
 ARGENT = "#b9bccb"
 # La fiche de droite, et la largeur sous laquelle elle laisse sa place à la liste (la description
 # passe alors dans l'infobulle de la ligne).
 _LARGEUR_FICHE = 300
 _SEUIL_FICHE = 860
-# La colonne des contrôles : un curseur y tient avec ses étiquettes, sa valeur et son ↺.
+# La colonne des contrôles : un curseur y tient avec ses étiquettes, sa valeur et son retour à Accio.
 _LARGEUR_CONTROLE = 330
 # La liste ne s'étire pas au-delà : en plein écran, 800 à 980 px séparaient un nom de son
 # contrôle, contre 300 à la taille d'ouverture (audit UI v40, 2026-11-13). Le reste de la
 # largeur reste à droite de la fiche.
 _LARGEUR_LISTE = 880
+# Sous ce nombre de lignes, tout se voit d'un coup d'œil : pas de champ de recherche (HP7 : trois
+# réglages, et 220 px de recherche à côté d'un onglet seul ; audit UI f63).
+_SEUIL_RECHERCHE = 8
 # L'identifiant de la ligne « Résolution », qui n'est pas un réglage du correctif mais du launcher.
 RESOLUTION = "resolution_ecran"
 
@@ -95,9 +99,9 @@ QPushButton#segment:checked {{
 }}
 QPushButton#segment:disabled {{ color: #5d5b72; border-color: rgba(255, 255, 255, 0.05); }}
 QPushButton#retourAccio {{
-    color: #d6a72c; background: transparent; border: none; padding: 0px 2px;
+    background: transparent; border: none; border-radius: 6px; padding: 0px 2px;
 }}
-QPushButton#retourAccio:hover {{ color: #f4e2a8; }}
+QPushButton#retourAccio:hover {{ background: rgba(214, 167, 44, 0.14); }}
 QLineEdit#recherche {{
     color: #ecebf3; background: #10101d; border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 6px; padding: 6px 10px;
@@ -148,7 +152,7 @@ def _chiffre(reglage: Reglage, valeur: object) -> str:
 
 
 class _Repere:
-    """Les deux formes des repères, peintes partout pareil : un losange or, un rond argent."""
+    """Les deux formes des repères, peintes partout pareil : un losange de l'accent, un rond argent."""
 
     @staticmethod
     def accio(p: QPainter, centre: QPointF, r: float = 4.0) -> None:
@@ -158,7 +162,7 @@ class _Repere:
         chemin.lineTo(centre.x(), centre.y() + r)
         chemin.lineTo(centre.x() - r, centre.y())
         chemin.closeSubpath()
-        p.fillPath(chemin, QColor(OR))
+        p.fillPath(chemin, accent_qcolor())
 
     @staticmethod
     def jeu(p: QPainter, centre: QPointF, r: float = 3.2) -> None:
@@ -180,13 +184,17 @@ class _Segment(QPushButton):
         self.setAccessibleName(texte)
         self.accio, self.jeu = accio, jeu
         if teinte:
-            # La couleur EST le choix : une pastille, son nom au survol.
+            # La couleur EST le choix : une pastille, son nom au survol. Cochée, un cercle
+            # blanc, lisible sur les sept teintes et les cinq maisons : l'or se fondait dans
+            # « Doré » et jurait sous un thème rouge (audit UI f5) ; survolée, un cercle plus
+            # clair (f59).
             self.setToolTip(texte)
             self.setFixedSize(30, 26)
-            self.setStyleSheet(themed(
+            self.setStyleSheet(
                 f"QPushButton#segment {{ background: #{teinte}; border: 2px solid rgba(255,255,255,0.12);"
                 " border-radius: 13px; padding: 0px; }"
-                f"QPushButton#segment:checked {{ border: 2px solid {OR}; }}"))
+                "QPushButton#segment:hover { border-color: rgba(255,255,255,0.45); }"
+                "QPushButton#segment:checked { border-color: #ffffff; }")
 
     def paintEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().paintEvent(event)
@@ -320,6 +328,20 @@ class CurseurGradue(QWidget):
             self._suivre(e.position().x())
 
     def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:  # noqa: N802 (Qt)
+        if e is not None and e.button() == Qt.MouseButton.LeftButton:
+            self._finir_geste()
+
+    # La fenêtre qui perd la main avant le relâché (Alt+Tab) ne l'envoie jamais : le curseur
+    # disait 0,5 et l'ini gardait 0,35, jusqu'à un aller-retour de catégorie (audit UI f66).
+    def focusOutEvent(self, e) -> None:  # noqa: N802 (Qt)
+        self._finir_geste()
+        super().focusOutEvent(e)
+
+    def hideEvent(self, e) -> None:  # noqa: N802 (Qt)
+        self._finir_geste()
+        super().hideEvent(e)
+
+    def _finir_geste(self) -> None:
         if self._geste:
             self._geste = False
             self.choisi.emit(self._valeur)
@@ -411,7 +433,9 @@ class CurseurGradue(QWidget):
             _Repere.jeu(p, QPointF(self._x(self.jeu), y + 12), 2.6)
         # La poignée.
         x = self._x(self._valeur)
-        p.setPen(QPen(accent_qcolor() if self.hasFocus() else QColor(0, 0, 0, 120), 2 if self.hasFocus() else 1))
+        # Sans anneau à elle : un clic l'allumait comme le clavier, et l'anneau unique
+        # (`focus_visible`) dit déjà le focus clavier (audit UI f2, f58).
+        p.setPen(QPen(QColor(0, 0, 0, 120), 1))
         p.setBrush(QColor(theme_courant().accent_light) if actif else QColor(140, 138, 160))
         p.drawEllipse(QPointF(x, y), self._RAYON, self._RAYON)
         # Les noms des paliers.
@@ -475,12 +499,14 @@ class _Fiche(QFrame):
         lay.addStretch()
 
 
-def _html_fiche(reglage: Reglage, aide: str, declares: set[str]) -> str:
-    """La description, puis ce que la ligne ne dit pas : se voit, bêta, dépendances."""
+def _html_fiche(reglage: Reglage, aide: str, declares: set[str], note_affichee: bool = False) -> str:
+    """La description, puis ce que la ligne ne dit pas : se voit, bêta, dépendances. Quand la ligne
+    est grisée, sa note dit déjà de quoi elle dépend : la fiche la répétait mot pour mot à
+    400 px (audit UI f95)."""
     e = html.escape
     paragraphes = [e(aide)]
     if reglage.se_voit:
-        paragraphes.append(f'<span style="color:{_COULEUR_SE_VOIT}">{e(tr("Se voit nettement à l’écran."))}</span>')
+        paragraphes.append(f'<span style="color:{theme_courant().accent}">{e(tr("Se voit nettement à l’écran."))}</span>')
     if reglage.beta:
         paragraphes.append(e(_texte_beta()))
 
@@ -488,7 +514,7 @@ def _html_fiche(reglage: Reglage, aide: str, declares: set[str]) -> str:
         return rc.textes(autre)[0].lower() in aide.lower()
 
     parent = rc.REGLAGES.get(reglage.depend_de)
-    if parent is not None and parent.ident in declares and not deja_dit(parent):
+    if parent is not None and parent.ident in declares and not deja_dit(parent) and not note_affichee:
         paragraphes.append(e(tr("Sans effet tant que « {} » est éteint.").format(rc.textes(parent)[0])))
     exclu = rc.REGLAGES.get(reglage.exclut)
     if exclu is not None and exclu.ident in declares and not deja_dit(exclu):
@@ -501,18 +527,20 @@ def _html_cout(reglage: Reglage) -> str:
     e = html.escape
     if not reglage.cout:
         return e(tr("Sans coût notable."))
-    return "<br>".join(f'{e(tr(_RESSOURCES.get(r, r)))} : <span style="color:{_COULEURS_COUT[n]}">'
-                       f"{e(tr(_NIVEAUX[n]))} {'●' * n}</span>" for r, n in reglage.cout)
+    return "<br>".join(tr("{} : {}").format(e(tr(_RESSOURCES.get(r, r))),
+                                            f'<span style="color:{_COULEURS_COUT[n]}">'
+                                            f"{e(tr(_NIVEAUX[n]))} {'●' * n}</span>") for r, n in reglage.cout)
 
 
 class _LigneImage(QFrame):
     """Une ligne : le nom (et « Bêta »), les points du coût, le contrôle dans sa colonne.
 
     `note` dit sous le nom ce qui la prive d'effet ; `survolee` part au survol et au focus de son
-    contrôle : la fiche de droite suit.
+    contrôle : la fiche de droite suit ; `quittee` à la sortie de la souris ou du focus.
     """
 
     survolee = pyqtSignal(str)
+    quittee = pyqtSignal(str)
 
     def __init__(self, ident: str, nom: str, reglage: Reglage | None, controle: QWidget,
                  retrait: bool, fin: QWidget | None = None) -> None:
@@ -549,7 +577,7 @@ class _LigneImage(QFrame):
         niveau = niveau if niveau >= 2 else 0
         self.points = _Points(niveau)
         if niveau and reglage is not None:
-            detail = "\n".join(f"{tr(_RESSOURCES.get(r, r))} : {tr(_NIVEAUX[n])}" for r, n in reglage.cout)
+            detail = "\n".join(tr("{} : {}").format(tr(_RESSOURCES.get(r, r)), tr(_NIVEAUX[n])) for r, n in reglage.cout)
             self.points.setToolTip(detail)
             self.points.setAccessibleName(detail)
         h.addWidget(self.points)
@@ -589,9 +617,20 @@ class _LigneImage(QFrame):
         self.survolee.emit(self.ident)
         super().enterEvent(event)
 
+    def leaveEvent(self, event) -> None:  # noqa: N802 (Qt)
+        self.quittee.emit(self.ident)
+        super().leaveEvent(event)
+
     def eventFilter(self, objet: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 (Qt)
-        if event is not None and event.type() == QEvent.Type.FocusIn:
-            self.survolee.emit(self.ident)
+        # Un focus que la personne a donné (clavier, clic), pas celui que la fenêtre rend en
+        # revenant d'Alt+Tab ou qu'un menu rend en se fermant : la fiche sautait sur le
+        # contrôle au focus alors que la souris lisait une autre ligne (audit UI f123).
+        if isinstance(event, QFocusEvent) and event.reason() not in (
+                Qt.FocusReason.ActiveWindowFocusReason, Qt.FocusReason.PopupFocusReason):
+            if event.type() == QEvent.Type.FocusIn:
+                self.survolee.emit(self.ident)
+            elif event.type() == QEvent.Type.FocusOut:
+                self.quittee.emit(self.ident)
         if objet is self.points and event is not None and event.type() == QEvent.Type.ToolTip:
             return self.fiche_ouverte()      # le coût est déjà en clair dans la fiche
         return False
@@ -666,7 +705,11 @@ class PageImage(QWidget):
         self._lignes: dict[str, list[_LigneImage]] = {}
         self._cartes_prereglage: dict[str, _CartePrereglage] = {}
         self._actif = ""
+        self._sous_la_main = ""      # la ligne sous la souris ou au focus (fenêtre sans fiche)
         self._construites: set[int] = set()
+        self._rang = 0                  # la catégorie ouverte, rouverte quand la recherche se vide
+        # Les résultats de recherche, bâtis à la première lettre : identifiant → (nom, aide, ligne).
+        self._trouvables: dict[str, tuple[str, str, QWidget]] | None = None
         self._construire()
 
     # ── lecture ──
@@ -708,7 +751,10 @@ class PageImage(QWidget):
         racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(14)
-        haut = QHBoxLayout()
+        tete = QWidget()
+        transparent(tete, "teteImage")
+        haut = QHBoxLayout(tete)
+        haut.setContentsMargins(0, 0, 0, 0)
         haut.setSpacing(18)
         # Les onglets passent à la ligne quand la place manque, la recherche garde la sienne :
         # à 980×660, les onglets de HP6 étaient coupés des deux côtés et la recherche
@@ -736,7 +782,14 @@ class PageImage(QWidget):
         # Échap vide d'abord le champ ; il fermait toute la page des réglages (audit UI v46).
         self.recherche.installEventFilter(self)
         haut.addWidget(self.recherche, alignment=Qt.AlignmentFlag.AlignTop)
-        racine.addLayout(haut)
+        # Un onglet seul ne choisit rien ; peu de lignes ne se cherchent pas. Sans l'un ni
+        # l'autre, la tête entière se cache, et son écart avec elle.
+        onglets = len(self.categories) > 1
+        cherchable = len(self.reglages) + bool(self._resolution) >= _SEUIL_RECHERCHE
+        rangee.setVisible(onglets)
+        self.recherche.setVisible(cherchable)
+        tete.setVisible(onglets or cherchable)
+        racine.addWidget(tete)
 
         corps = QHBoxLayout()
         corps.setSpacing(20)
@@ -771,6 +824,8 @@ class PageImage(QWidget):
             self.recherche.blockSignals(True)
             self.recherche.clear()
             self.recherche.blockSignals(False)
+        self._vider_resultats()
+        self._rang = rang
         if rang not in self._construites:
             ancienne = self.pile.widget(rang)
             page = zone_defilable(self._page(self.categories[rang]))
@@ -779,16 +834,27 @@ class PageImage(QWidget):
                 self.pile.removeWidget(ancienne)
                 ancienne.deleteLater()
             self._construites.add(rang)
+            self._ordre_de_tab(page)
         self.pile.setCurrentIndex(rang)
         bouton_ = self._groupe_onglets.button(rang)
         if bouton_ is not None:
             bouton_.setChecked(True)
         premier = next(iter(self.categories[rang].reglages), None)
         if self._resolution and self.categories[rang].ident == "ecran":
-            self._activer(RESOLUTION)
+            self._activer(RESOLUTION, main=False)
         elif premier is not None:
-            self._activer(premier.ident)
+            self._activer(premier.ident, main=False)
         self._maj()
+
+    def _ordre_de_tab(self, page: QWidget) -> None:
+        """Une catégorie bâtie à son premier affichage finit au bout de la chaîne du focus : Tab
+        passait par la fiche et « Revenir à l'installation » avant le premier réglage (audit UI
+        v47). Ses contrôles reprennent leur place, juste après la recherche."""
+        precedent: QWidget = self.recherche
+        for w in page.findChildren(QWidget):
+            if w.focusPolicy() & Qt.FocusPolicy.TabFocus and not isinstance(w, QScrollArea):
+                QWidget.setTabOrder(precedent, w)
+                precedent = w
 
     def _page(self, cat: reglages_image.Categorie) -> QWidget:
         contenu = QWidget()
@@ -844,7 +910,7 @@ class PageImage(QWidget):
         return bloc
 
     def _controle(self, r: Reglage) -> tuple[QWidget, QWidget | None]:
-        """Le contrôle d'un réglage, et ce qui le suit dans sa colonne (valeur et ↺ d'un curseur)."""
+        """Le contrôle d'un réglage, et ce qui le suit dans sa colonne (valeur et retour d'un curseur)."""
         sorte = reglages_image.controle(r)
         accio, jeu, v = self._accio.get(r.ident), self._jeu.get(r.ident), self._valeurs.get(r.ident)
         if sorte == "inter":
@@ -865,13 +931,17 @@ class PageImage(QWidget):
             valeur.setFixedWidth(58)
             valeur.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             valeur.setStyleSheet(themed("color: #f4e2a8; background: transparent;"))
-            retour = QPushButton("↺")
+            # Le pictogramme « remettre » des autres boutons de la fenêtre : le « ↺ » sortait
+            # d'une police de secours, plus fin, et tournait dans l'autre sens (audit UI f72).
+            retour = QPushButton()
             retour.setObjectName("retourAccio")
-            retour.setFont(police(15))
+            retour.setIcon(icone_de_bouton("replay", 14, accent_qcolor()))
+            retour.setIconSize(QSize(14, 14))
             retour.setCursor(Qt.CursorShape.PointingHandCursor)
             retour.setFixedWidth(22)
             retour.setAutoDefault(False)
             retour.setToolTip(tr("Revenir à la valeur Accio ({})").format(_texte(r, accio)))
+            retour.setAccessibleName(retour.toolTip())
             retour.clicked.connect(lambda _c=False, i=r.ident: self.regler(i, self._accio.get(i)))
             c.glisse.connect(lambda x, lbl=valeur, rr=r: (lbl.setText(_chiffre(rr, x)), self._maj_fiche(x)))
             c.choisi.connect(lambda x, i=r.ident, rr=r: self.regler(i, rc.arrondir(rr, x)))
@@ -918,6 +988,7 @@ class PageImage(QWidget):
         ligne.setToolTip(_bulle(aide))
         ligne.fiche_ouverte = self._fiche_ouverte
         ligne.survolee.connect(self._activer)
+        ligne.quittee.connect(self._quitter)
         self._lignes.setdefault(r.ident, []).append(ligne)
         return ligne
 
@@ -945,6 +1016,7 @@ class PageImage(QWidget):
         ligne.setToolTip(_bulle(self._aide_resolution()))
         ligne.fiche_ouverte = self._fiche_ouverte
         ligne.survolee.connect(self._activer)
+        ligne.quittee.connect(self._quitter)
         self._lignes.setdefault(RESOLUTION, []).append(ligne)
         return ligne
 
@@ -1085,15 +1157,30 @@ class PageImage(QWidget):
             carte.setChecked(True)
 
     def _fiche_ouverte(self) -> bool:
-        return self._zone_fiche.isVisible()
+        return self._zone_fiche.isVisibleTo(self)
 
-    def _activer(self, ident: str) -> None:
-        if ident != self._actif:
-            self._actif = ident
-            for i, lignes in self._lignes.items():
-                for ligne in lignes:
-                    ligne.marquer(i == ident)
+    def _activer(self, ident: str, main: bool = True) -> None:
+        """La fiche décrit `ident` ; `main` : la souris ou le focus y est (pas une catégorie
+        qui s'ouvre, ni le premier résultat d'une recherche)."""
+        self._actif = ident
+        if main:
+            self._sous_la_main = ident
+        self._marquer()
         self._maj_fiche()
+
+    def _quitter(self, ident: str) -> None:
+        if self._sous_la_main == ident:
+            self._sous_la_main = ""
+            self._marquer()
+
+    def _marquer(self) -> None:
+        """Avec la fiche, la ligne qu'elle décrit ; sans elle, seulement celle sous la souris ou au
+        focus : la première ligne d'une catégorie s'ouvrait marquée, et la dernière survolée le
+        restait, comme une ligne choisie (audit UI f57)."""
+        cible = self._actif if self._fiche_ouverte() else self._sous_la_main
+        for i, lignes in self._lignes.items():
+            for ligne in lignes:
+                ligne.marquer(i == cible)
 
     def _maj_fiche(self, en_cours: object = None) -> None:
         """La fiche du réglage actif ; `en_cours` : la valeur d'un curseur pendant le geste."""
@@ -1113,10 +1200,16 @@ class PageImage(QWidget):
             return
         r = self.reglages.get(self._actif)
         if r is None:
+            # Une recherche sans résultat : la fiche ne parle plus du réglage d'avant (v45).
+            for champ in (f.titre, f.texte, f.valeurs, f.notes):
+                champ.setText("")
+            f.bouton_accio.setEnabled(False)
+            f.bouton_jeu.setEnabled(False)
             return
         libelle, aide = rc.textes(r)
         f.titre.setText(f"{libelle} ({tr(r.technique)})" if r.technique else libelle)
-        f.texte.setText(typo(_html_fiche(r, aide, self._declares)))
+        note = any(not ligne.note.isHidden() for ligne in self._lignes.get(r.ident, ()))
+        f.texte.setText(typo(_html_fiche(r, aide, self._declares, note)))
         v = self._valeurs.get(r.ident) if en_cours is None else en_cours
         jeu = self._jeu.get(r.ident)
         accio = self._accio.get(r.ident)
@@ -1131,7 +1224,7 @@ class PageImage(QWidget):
     def _html_valeurs(jeu: str, accio: str, actuel: str) -> str:
         e = html.escape
         lignes = ((f'<span style="color:{ARGENT}">●</span>', tr("Jeu d'origine"), jeu),
-                  (f'<span style="color:{OR}">◆</span>', tr("Accio par défaut"), accio),
+                  (f'<span style="color:{theme_courant().accent}">◆</span>', tr("Accio par défaut"), accio),
                   ("", tr("Actuel"), actuel))
         corps = "".join(
             f'<tr><td style="color:{ENCRE_DOUCE}; padding-right:12px; white-space:nowrap">{m}&nbsp;{e(nom)}</td>'
@@ -1142,6 +1235,64 @@ class PageImage(QWidget):
     # ── recherche ──
 
     def _chercher(self, texte: str) -> None:
+        """Les résultats sont bâtis UNE fois, à la première lettre, puis montrés ou cachés : chaque
+        lettre jetait et rebâtissait ~240 contrôles, 0,8 s figées pour « ombres » (audit UI v21).
+        La Résolution, qui n'est pas un réglage du correctif, se trouve aussi (v45) ; pendant la
+        recherche, aucun onglet n'est souligné et la fiche ne parle que d'un réglage trouvé."""
+        if not texte.strip():
+            self._vider_resultats()
+            self.montrer(self._rang)
+            return
+        if self._trouvables is None:
+            self._batir_resultats()
+        trouves = [ident for ident, (libelle, aide, _ligne) in self._trouvables.items()
+                   if reglages_image.correspond(libelle, aide, texte)]
+        for ident, (_libelle, _aide, ligne) in self._trouvables.items():
+            ligne.setVisible(ident in trouves)
+        self._compte_trouves.setText(trn(len(trouves), "{} réglage", "{} réglages").format(len(trouves)))
+        self._compte_trouves.setVisible(bool(trouves))
+        self._carte_trouves.setVisible(any(i != RESOLUTION for i in trouves))
+        self._aucun.setText(tr("Aucun réglage ne parle de « {} ».").format(texte))
+        self._aucun.setVisible(not trouves)
+        self._groupe_onglets.setExclusive(False)
+        for onglet in self._groupe_onglets.buttons():
+            onglet.setChecked(False)
+        self._groupe_onglets.setExclusive(True)
+        self._activer(trouves[0] if trouves else "", main=False)
+        self.pile.setCurrentIndex(self.pile.count() - 1)
+        self._maj()
+
+    def _batir_resultats(self) -> None:
+        """Une ligne par réglage, cachée ; la Résolution mène à sa place dans « Écran »."""
+        lay = self._lay_resultats
+        self._trouvables = {}
+        self._compte_trouves = petit_titre("")
+        lay.addWidget(self._compte_trouves)
+        if self._resolution:
+            vers = lien(tr("Résolution, dans « Écran »"))
+            vers.clicked.connect(self._vers_resolution)
+            lay.addWidget(vers, alignment=Qt.AlignmentFlag.AlignLeft)
+            self._trouvables[RESOLUTION] = (tr("Résolution"), self._aide_resolution(), vers)
+        self._carte_trouves = QFrame()
+        self._carte_trouves.setObjectName("carteImage")
+        dedans = QVBoxLayout(self._carte_trouves)
+        dedans.setContentsMargins(0, 6, 0, 6)
+        for cat in self.categories:
+            for r in cat.reglages:
+                ligne = self._ligne(r)
+                dedans.addWidget(ligne)
+                self._trouvables[r.ident] = (*_textes_cherches(r), ligne)
+        lay.addWidget(self._carte_trouves)
+        self._aucun = QLabel()
+        self._aucun.setFont(police(13))
+        self._aucun.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
+        lay.addWidget(self._aucun)
+        lay.addStretch()
+
+    def _vider_resultats(self) -> None:
+        """Le champ vidé : les lignes de résultat s'en vont, et leurs doubles avec elles."""
+        if self._trouvables is None:
+            return
         while self._lay_resultats.count():
             item = self._lay_resultats.takeAt(0)
             w = item.widget() if item is not None else None
@@ -1149,30 +1300,13 @@ class PageImage(QWidget):
                 for ident, lignes in self._lignes.items():
                     self._lignes[ident] = [li for li in lignes if not w.isAncestorOf(li) and li is not w]
                 w.deleteLater()
-        if not texte.strip():
-            self.pile.setCurrentIndex(max(0, self._groupe_onglets.checkedId()))
-            self._maj()
-            return
-        trouves = [r for cat in self.categories for r in cat.reglages
-                   if reglages_image.correspond(r, *_textes_cherches(r), texte)]
-        if not trouves:
-            vide = QLabel(tr("Aucun réglage ne parle de « {} ».").format(texte))
-            vide.setFont(police(13))
-            vide.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
-            self._lay_resultats.addWidget(vide)
-        else:
-            carte = QFrame()
-            carte.setObjectName("carteImage")
-            lay = QVBoxLayout(carte)
-            lay.setContentsMargins(0, 6, 0, 6)
-            for r in trouves:
-                lay.addWidget(self._ligne(r))
-            self._lay_resultats.addWidget(petit_titre(trn(len(trouves), "{} réglage", "{} réglages").format(len(trouves))))
-            self._lay_resultats.addWidget(carte)
-            self._activer(trouves[0].ident)
-        self._lay_resultats.addStretch()
-        self.pile.setCurrentIndex(self.pile.count() - 1)
-        self._maj()
+        self._trouvables = None
+
+    def _vers_resolution(self) -> None:
+        rang = next(i for i, cat in enumerate(self.categories) if cat.ident == "ecran")
+        self.recherche.clear()          # vide les résultats et rouvre la catégorie d'avant…
+        self.montrer(rang)              # …puis Écran, la Résolution active
+        self.liste_resolution.setFocus(Qt.FocusReason.TabFocusReason)
 
     # ── place ──
 
@@ -1185,7 +1319,9 @@ class PageImage(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
-        self._zone_fiche.setVisible(self.width() >= _SEUIL_FICHE)
+        if self._zone_fiche.isVisibleTo(self) != (self.width() >= _SEUIL_FICHE):
+            self._zone_fiche.setVisible(self.width() >= _SEUIL_FICHE)
+            self._marquer()
 
     def sizeHint(self) -> QSize:  # noqa: N802 (Qt)
         return QSize(900, 600)

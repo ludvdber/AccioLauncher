@@ -36,7 +36,7 @@ demande, pas ce que la chaîne de repli de la plateforme lui donne.
 from functools import lru_cache
 
 from PyQt6.QtCore import QByteArray, QPointF, QRectF, Qt
-from PyQt6.QtGui import QColor, QGuiApplication, QImage, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QCursor, QGuiApplication, QImage, QPainter, QPen, QPixmap
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QAbstractButton, QWidget
 
@@ -268,6 +268,19 @@ class IconButton(QAbstractButton):
         self._survol = False
         self.update()
         super().leaveEvent(event)
+
+    def moveEvent(self, event) -> None:
+        # Recréé sous une souris immobile puis déplacé par la mise en page, le bouton ne reçoit
+        # jamais de Leave : Collections restait doré, le pointeur 39 px plus haut (audit UI f47).
+        # Seulement à l'écran : un bouton jamais montré se croyait sous le vrai pointeur, et le
+        # rendu dépendait de l'endroit où était la souris (test_blanc_au_repos, 2026-11-15).
+        super().moveEvent(event)
+        if not self.isVisible():
+            return
+        survol = self.rect().contains(self.mapFromGlobal(QCursor.pos()))
+        if survol != self._survol:
+            self._survol = survol
+            self.update()
 
     # ── Peinture ──
 

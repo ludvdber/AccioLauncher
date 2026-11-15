@@ -102,7 +102,7 @@ class TestEngrenageReglagesDuJeu:
         assert dlg._onglets["langue"].isChecked()
         assert dlg._boutons
         textes = " ".join(lb.text() for lb in dlg._contenus[0].findChildren(QLabel))
-        assert "un jeu peut en avoir d'autres que celles du launcher" in textes
+        assert "Ce jeu a ses propres langues, parfois plus nombreuses que celles du launcher" in textes
         autre = next(g.game for g in win.manager.get_games() if g.game.langues is None)
         sans = GameSettingsDialog(autre, win.manager, lambda code: True, parent=win)
         assert "langue" not in sans._onglets

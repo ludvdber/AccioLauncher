@@ -136,7 +136,7 @@ class DefisPage(QWidget):
 
         # Pas de titre « Défis » : la rubrique choisie en haut le dit déjà.
         if not definitions:
-            lay.addWidget(_Paragraphe(tr("Ce jeu n'a pas encore de défis."), taille=14))
+            lay.addWidget(_Paragraphe(tr("Ce jeu n'a pas encore de défis."), taille=16))
             lay.addStretch()
             return
         compte = QHBoxLayout()

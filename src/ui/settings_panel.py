@@ -50,7 +50,7 @@ from src.ui.composants import (
 from src.ui.fenetre_message import message
 from src.ui.fonts import cinzel_decorative
 from src.ui import about_page, manette_nav
-from src.ui.disk_scan_worker import DiskScanWorker
+from src.ui.disk_scan_worker import DiskScanWorker, garer
 from src.core.season import (
     SEASON_LABELS, SEASONS, resolve as resolve_season,
 )
@@ -185,6 +185,11 @@ class SettingsDialog(QDialog):
         self._update_status = None
         self._versions_label = None
         self._btn_verifier = None
+        self._scan_worker: DiskScanWorker | None = None
+        # Une vérification à la fois : trois clics en lançaient trois, et un catalogue
+        # neuf rebâtissait la bibliothèque trois fois (audit UI f19). Pas de bouton
+        # grisé : il perdrait le focus du clavier au milieu du geste.
+        self._verification_en_cours = False
         # (interrupteur, champ de Config) : l'enregistrement ne relit que ceux
         # des rubriques déjà construites.
         self._interrupteurs: list[tuple[ToggleSwitch, str]] = []
@@ -334,7 +339,6 @@ class SettingsDialog(QDialog):
         # Le libellé est à CÔTÉ, pas dedans : sans nom accessible, une aide
         # technique n'annonce qu'« interrupteur », sans dire de quoi.
         bascule.setAccessibleName(titre)
-        bascule.setToolTip(titre)
         return LigneReglage(titre, description, bascule), bascule
 
     def _reglage(self, titre: str, champ: str,
@@ -421,7 +425,7 @@ class SettingsDialog(QDialog):
         langue.ajouter(LigneReglage(
             tr("Langue du launcher"),
             tr("Les jeux ont leurs propres langues, parfois plus nombreuses que celles du launcher : "
-               "chacun se règle dans ses réglages, rubrique Langue."), self._lang_combo))
+               "chacun a la sienne dans ses réglages, rubrique Langue."), self._lang_combo))
         # Bouton et aide vivent SOUS la ligne du combo : en ligne, ils
         # écrasaient le bouton sous sa taille minimale et débordaient du dialogue.
         self._lang_hint, self._lang_restart = self._ligne_redemarrage(
@@ -520,7 +524,7 @@ class SettingsDialog(QDialog):
         self._theme_combo.currentIndexChanged.connect(self._on_theme_changed)
         theme.ajouter(LigneReglage(tr("Couleurs du launcher"), "", self._theme_combo))
         self._theme_hint, self._theme_restart = self._ligne_redemarrage(
-            tr("Redémarrez le launcher pour appliquer le thème."))
+            tr("Redémarrez le launcher pour changer ses couleurs."))
         theme.ajouter(self._theme_hint)
 
         ambiance = Carte()
@@ -660,9 +664,9 @@ class SettingsDialog(QDialog):
             tr("Afficher le jeu en cours sur Discord"), "discord_presence")
         discord.ajouter(ligne)
         self._ligne_discord_partie, self._tgl_discord_partie = self._reglage(
-            tr("Montrer où j'en suis dans ma partie"), "discord_partie",
-            tr("Le lieu et l'avancement de votre partie s'affichent sur votre carte Discord. "
-               "Éteint, seuls le jeu, votre maison et votre année restent."))
+            tr("Montrer où en est votre partie"), "discord_partie",
+            tr("Lieu et avancement s'affichent sur votre carte Discord. "
+               "Éteint : seuls le jeu, votre maison et votre année."))
         discord.ajouter(self._ligne_discord_partie)
         self._tgl_discord.toggled.connect(self._griser_discord_partie)
         self._griser_discord_partie(self._tgl_discord.isChecked())
@@ -670,7 +674,7 @@ class SettingsDialog(QDialog):
         manette_carte = Carte()
         ligne, self._tgl_nav_manette = self._reglage(
             tr("Naviguer dans le launcher à la manette"), "navigation_manette",
-            tr("Croix directionnelle : changer de jeu et de bouton. Croix ou A : valider. "
+            tr("Flèches de la manette : changer de jeu et de bouton. ✕ ou A : valider. "
                "Rond ou B : retour. Stick droit : faire défiler."))
         self._tgl_nav_manette.toggled.connect(self._on_navigation_manette)
         manette_carte.ajouter(ligne)
@@ -729,8 +733,8 @@ class SettingsDialog(QDialog):
         if installes:
             choix = message(
                 self, QMessageBox.Icon.Warning, tr("Changer le dossier d'installation"),
-                trn(installes, "Votre jeu ({taille}) reste dans {dossier}. Le launcher ne le verra plus.",
-                    "Vos {n} jeux ({taille}) restent dans {dossier}. Le launcher ne les verra plus.").format(
+                trn(installes, "Votre jeu ({taille}) reste dans :\n{dossier}\n\nLe launcher ne le verra plus.",
+                    "Vos {n} jeux ({taille}) restent dans :\n{dossier}\n\nLe launcher ne les verra plus.").format(
                         n=installes, taille=format_bytes(self._octets_jeux),
                         dossier=self.config.install_path),
                 choix=(tr("Changer"), tr("Annuler")), defaut=1)
@@ -838,22 +842,32 @@ class SettingsDialog(QDialog):
         super().done(result)
 
     def _shutdown_scan(self) -> None:
-        """Interrompt et attend le DiskScanWorker (idempotent)."""
-        self._scan_worker.blockSignals(True)
+        """Interrompt et attend le DiskScanWorker (idempotent : la référence est
+        lâchée, un fil garé puis libéré n'est plus jamais touché)."""
+        fil, self._scan_worker = self._scan_worker, None
+        if fil is None:
+            return
+        fil.blockSignals(True)
         try:
-            self._scan_worker.result.disconnect(self._on_scan_done)
+            fil.result.disconnect(self._on_scan_done)
         except TypeError:
             pass
-        if self._scan_worker.isRunning():
-            # L'interruption est vérifiée à chaque fichier scanné,
-            # le wait() est donc borné en pratique.
-            self._scan_worker.requestInterruption()
-            self._scan_worker.wait()
+        if fil.isRunning():
+            # L'interruption est lue à chaque entrée de dossier ; un disque qui ne
+            # répond plus (partage réseau en veille) bloque pourtant DANS l'appel
+            # système : 5,7 s de fenêtre figée avec un disque simulé à 6 s (audit UI
+            # f18). Au-delà de 3 s, le fil est garé jusqu'à sa vraie fin.
+            fil.requestInterruption()
+            if not fil.wait(3000):
+                garer(fil)
 
     def _on_open_install_folder(self) -> None:
         open_local_path(str(self.config.install_path))
 
     def _on_verifier(self) -> None:
+        if self._verification_en_cours:
+            return
+        self._verification_en_cours = True
         self._update_status.setText(tr("Vérification des mises à jour…"))
         self._update_status.setStyleSheet(themed("color: #d6a72c;"))
         self._update_status.show()
@@ -867,6 +881,7 @@ class SettingsDialog(QDialog):
 
     def show_update_status(self, message: str, success: bool = True) -> None:
         """Affiche le résultat sous « Vérifier les mises à jour »."""
+        self._verification_en_cours = False
         self.construire_rubrique(_RANG_A_PROPOS)
         color = "#2ecc71" if success else "#8a8aaa"
         self._update_status.setText(message)

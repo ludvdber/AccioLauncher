@@ -28,7 +28,7 @@
             "es": "Las cinemáticas a su velocidad"
           },
           "texte": {
-            "fr": "Les Reliques de la Mort (première partie) tournent à 30 images par seconde : ses cinématiques ne passent plus en accéléré et leur son ne déborde plus sur le niveau.",
+            "fr": "Les Reliques de la Mort (première partie) tournent à 30 images par seconde : leurs cinématiques ne passent plus en accéléré et leur son ne déborde plus sur le niveau.",
             "en": "Deathly Hallows (Part 1) runs at 30 frames per second: its cutscenes no longer play sped up and their sound no longer spills over into the level.",
             "es": "Las Reliquias de la Muerte (primera parte) va a 30 imágenes por segundo: sus cinemáticas ya no se aceleran y su sonido ya no se desborda sobre el nivel."
           }
@@ -86,9 +86,9 @@
         {
           "genre": "corrige",
           "texte": {
-            "fr": "L'Ordre du Phénix : le halo autour des cheveux et des visages est adouci, et une « Lueur du jeu » se règle dans l'onglet Image, aussi pour Le Prince de sang-mêlé. Avec la nouvelle version du jeu.",
-            "en": "Order of the Phoenix: the glow around hair and faces is softened, and a “Game glow” setting adjusts it in the Graphics tab, also for Half-Blood Prince. With the new version of the game.",
-            "es": "La Orden del Fénix: el halo alrededor del pelo y de las caras se suaviza, y un «Brillo del juego» se ajusta en la pestaña Gráficos, también para El misterio del príncipe. Con la nueva versión del juego."
+            "fr": "L'Ordre du Phénix : le halo autour des cheveux et des visages est adouci, et une « Lueur du jeu » se règle dans la rubrique Image, aussi pour Le Prince de Sang-Mêlé. Avec la nouvelle version du jeu.",
+            "en": "Order of the Phoenix: the glow around hair and faces is softened, and a “Game glow” setting adjusts it in the Graphics section, also for Half-Blood Prince. With the new version of the game.",
+            "es": "La Orden del Fénix: el halo alrededor del pelo y de las caras se suaviza, y un «Brillo del juego» se ajusta en la sección Gráficos, también para El misterio del príncipe. Con la nueva versión del juego."
           }
         },
         {
@@ -102,9 +102,9 @@
         {
           "genre": "corrige",
           "texte": {
-            "fr": "Linux : les cartes graphiques Intel ne figent plus les jeux sous Wine, et la Médiathèque dit quoi installer quand la lecture de musique manque.",
-            "en": "Linux: Intel graphics cards no longer freeze the games under Wine, and the Media Library says what to install when music playback is missing.",
-            "es": "Linux: las tarjetas gráficas Intel ya no congelan los juegos con Wine, y la Mediateca dice qué instalar cuando falta la reproducción de música."
+            "fr": "Linux : les cartes graphiques Intel ne figent plus les jeux sous Wine, et les Collections disent quoi installer quand la lecture de musique manque.",
+            "en": "Linux: Intel graphics cards no longer freeze the games under Wine, and Collections says what to install when music playback is missing.",
+            "es": "Linux: las tarjetas gráficas Intel ya no congelan los juegos con Wine, y Colecciones dice qué instalar cuando falta la reproducción de música."
           }
         },
         {
@@ -284,7 +284,7 @@
           "texte": {
             "fr": "Les cartes de L'École des Sorciers, La Chambre des Secrets et Le Prisonnier d'Azkaban s'affichent tout de suite sur la fiche, au lieu d'être relues à chaque passage.",
             "en": "The cards of Philosopher's Stone, Chamber of Secrets and Prisoner of Azkaban show up right away on the game page, instead of being read again each time.",
-            "es": "Las cartas de La piedra filosofal, La cámara secreta y El prisionero de Azkaban aparecen al instante en la ficha, en lugar de leerse de nuevo cada vez."
+            "es": "Los cromos de La piedra filosofal, La cámara secreta y El prisionero de Azkaban aparecen al instante en la ficha, en lugar de leerse de nuevo cada vez."
           }
         },
         {
@@ -408,7 +408,7 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "Un bouton Difficulté sur la fiche d'un jeu : des presets (Détendu, Normal, Difficile, Hardcore, selon le jeu) règlent d'un geste sa difficulté, et un cadran montre le niveau de défi. Pour L'École des Sorciers, La Chambre des Secrets, L'Ordre du Phénix et Le Prince de sang-mêlé. En bêta.",
+            "fr": "Un bouton Difficulté sur la fiche d'un jeu : des préréglages (Détendu, Normal, Difficile, Hardcore, selon le jeu) règlent d'un geste sa difficulté, et un cadran montre le niveau de défi. Pour L'École des Sorciers, La Chambre des Secrets, L'Ordre du Phénix et Le Prince de sang-mêlé. En bêta.",
             "en": "A Difficulty button on a game's page: presets (Relaxed, Normal, Hard, Hardcore, depending on the game) set its difficulty in one go, and a dial shows the challenge level. For Philosopher's Stone, Chamber of Secrets, Order of the Phoenix and Half-Blood Prince. In beta.",
             "es": "Un botón Dificultad en la ficha de un juego: los preajustes (Relajado, Normal, Difícil, Hardcore, según el juego) ajustan su dificultad de una vez, y un dial muestra el nivel de desafío. Para La piedra filosofal, La cámara secreta, La Orden del Fénix y El misterio del príncipe. En beta."
           }
@@ -416,9 +416,9 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "Votre carte Discord peut cacher où vous en êtes dans votre partie : « Montrer où j'en suis dans ma partie », dans les Paramètres, rubrique Intégrations. Le jeu, votre maison et votre année restent.",
-            "en": "Your Discord card can hide where you are in your game: \"Show where I am in my game\", in Settings, Integrations. The game, your house and your year remain.",
-            "es": "Tu tarjeta de Discord puede ocultar por dónde vas en tu partida: «Mostrar por dónde voy en mi partida», en Ajustes, sección Integraciones. El juego, tu casa y tu año se quedan."
+            "fr": "Votre carte Discord peut cacher où vous en êtes dans votre partie : « Montrer où en est votre partie », dans les Paramètres, rubrique Intégrations. Le jeu, votre maison et votre année restent.",
+            "en": "Your Discord card can hide where you are in your game: \"Show where you are in your game\", in Settings, Integrations. The game, your house and your year remain.",
+            "es": "Tu tarjeta de Discord puede ocultar por dónde vas en tu partida: «Mostrar por dónde vas en tu partida», en Ajustes, sección Integraciones. El juego, tu casa y tu año se quedan."
           }
         },
         {
@@ -434,7 +434,7 @@
           "texte": {
             "fr": "Dans le Folio, les cartes de La Coupe de Feu ont toutes leur texte, statues et quêtes comprises, et jouent le son que le jeu leur donne.",
             "en": "In the Folio, every Goblet of Fire card has its text, statues and quests included, and plays the sound the game gives it.",
-            "es": "En el Folio, todas las cartas de El cáliz de fuego tienen su texto, estatuas y misiones incluidas, y reproducen el sonido que el juego les da."
+            "es": "En el Folio, todos los cromos de El cáliz de fuego tienen su texto, estatuas y misiones incluidas, y reproducen el sonido que el juego les da."
           }
         },
         {
@@ -520,7 +520,7 @@
         {
           "genre": "corrige",
           "texte": {
-            "fr": "Les Reliques de la Mort : en changeant la langue du jeu, ta partie et tes réglages graphiques la suivent. Le jeu ne repart plus de zéro, en petit dans un coin.",
+            "fr": "Les Reliques de la Mort : en changeant la langue du jeu, votre partie et vos réglages graphiques la suivent. Le jeu ne repart plus de zéro, en petit dans un coin.",
             "en": "Deathly Hallows: when you change the game's language, your save and graphics settings follow it. The game no longer starts over, small in a corner.",
             "es": "Las Reliquias de la Muerte: al cambiar el idioma del juego, tu partida y tus ajustes gráficos lo siguen. El juego ya no empieza de cero, pequeño en una esquina."
           }
@@ -608,7 +608,7 @@
           "texte": {
             "fr": "Mes années devient le Carnet. Le Folio de chaque jeu range ce que prouvent vos sauvegardes, les cartes de La Coupe de Feu y tournent en relief, et l'onglet Défis transforme vos succès en médailles. Un succès obtenu s'annonce au retour de la partie.",
             "en": "My Years becomes the Notebook. Each game's Folio lists what your saves prove, the Goblet of Fire cards turn in relief, and the Challenges tab turns your achievements into medals. A new achievement is announced when you come back from the game.",
-            "es": "Mis años pasa a ser el Cuaderno. El Folio de cada juego reúne lo que demuestran tus partidas, las cartas de El cáliz de fuego giran en relieve y la pestaña Desafíos convierte tus logros en medallas. Un logro nuevo se anuncia al volver del juego."
+            "es": "Mis años pasa a ser el Cuaderno. El Folio de cada juego reúne lo que demuestran tus partidas, los cromos de El cáliz de fuego giran en relieve y la pestaña Desafíos convierte tus logros en medallas. Un logro nuevo se anuncia al volver del juego."
           }
         }
       ],
@@ -849,7 +849,7 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "La Coupe de feu : le folio montre les cartes que vous possédez, par personnage et par famille.",
+            "fr": "La Coupe de Feu : le folio montre les cartes que vous possédez, par personnage et par famille.",
             "en": "Goblet of Fire: the folio shows the cards you own, by character and by family.",
             "es": "El cáliz de fuego: el folio muestra los cromos que tienes, por personaje y por familia."
           }
@@ -909,7 +909,7 @@
             "es": "Un folio para cinco juegos"
           },
           "texte": {
-            "fr": "Le Prisonnier d'Azkaban, la Coupe de feu, l'Ordre du Phénix et le Prince de sang-mêlé ont aussi leur folio, lu dans vos sauvegardes.",
+            "fr": "Le Prisonnier d'Azkaban, la Coupe de Feu, l'Ordre du Phénix et le Prince de sang-mêlé ont aussi leur folio, lu dans vos sauvegardes.",
             "en": "Prisoner of Azkaban, Goblet of Fire, Order of the Phoenix and Half-Blood Prince get their folio too, read from your saves.",
             "es": "El prisionero de Azkaban, El cáliz de fuego, La Orden del Fénix y El misterio del príncipe también tienen su folio, leído de tus partidas."
           }
@@ -1109,7 +1109,7 @@
           "genre": "corrige",
           "texte": {
             "fr": "« Actualiser le catalogue » ne revient plus à une version plus ancienne du catalogue.",
-            "en": "“Refresh catalog” no longer rolls back to an older catalog.",
+            "en": "“Refresh catalogue” no longer rolls back to an older catalogue.",
             "es": "«Actualizar el catálogo» ya no vuelve a una versión anterior del catálogo."
           }
         },

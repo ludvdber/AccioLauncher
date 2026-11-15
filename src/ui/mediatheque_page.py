@@ -29,7 +29,7 @@ import shutil
 from html import escape
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QObject, QPoint, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon, QImage, QPainter, QTextOption
 from PyQt6.QtWidgets import (
     QBoxLayout,
@@ -40,6 +40,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSlider,
     QStackedWidget,
@@ -84,15 +85,15 @@ QFrame#carteJeu, QFrame#carteAvancement {
     background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.14); border-radius: 10px;
 }
 QFrame#carteJeu[modele="true"]:hover { border-color: rgba(214, 167, 44, 0.35); }
-QFrame#carteJeu[choisie="true"] { border-color: rgba(214, 167, 44, 0.6); }
+QFrame#carteJeu[choisie="true"], QFrame#carteJeu[choisie="true"]:hover { border-color: rgba(214, 167, 44, 0.6); }
 QFrame#filet { background: rgba(255, 255, 255, 0.06); border: none; }
 QFrame#ligne { background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-QFrame#ligne[courante="true"] { background: rgba(214, 167, 44, 0.10); }
-QFrame#ligne[ouverte="true"]:hover { background: rgba(214, 167, 44, 0.05); }
+QFrame#ligne[ouverte="true"]:hover { background: rgba(214, 167, 44, 0.11); }
+QFrame#ligne[courante="true"], QFrame#ligne[courante="true"]:hover { background: rgba(214, 167, 44, 0.18); }
 QPushButton#pli {
     background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-QPushButton#pli:hover { background: rgba(214, 167, 44, 0.05); }
+QPushButton#pli:hover { background: rgba(214, 167, 44, 0.11); }
 QPushButton#lecture { background: #d6a72c; border: none; border-radius: 25px; }
 QPushButton#lecture:hover { background: #e8bd4a; }
 QPushButton#lecture:disabled { background: rgba(214, 167, 44, 0.35); }
@@ -495,6 +496,17 @@ class _PliFermes(QWidget):
             self._paquets.remplir(self._fabriques)
         self.corps.setVisible(ouvert)
         self._poser_chevron(ouvert)
+        if ouvert:
+            # Dernière ligne de la liste, il s'ouvrait sous le bord : seul le chevron tournait
+            # (audit UI f34).
+            QTimer.singleShot(0, self._en_haut_de_la_vue)
+
+    def _en_haut_de_la_vue(self) -> None:
+        porteur = self.parentWidget()
+        while porteur is not None and not isinstance(porteur, QScrollArea):
+            porteur = porteur.parentWidget()
+        if porteur is not None and porteur.widget() is not None:
+            porteur.verticalScrollBar().setValue(self.mapTo(porteur.widget(), QPoint(0, 0)).y())
 
 
 class _VueMusique(QWidget):
@@ -714,8 +726,8 @@ class _VueMusique(QWidget):
             # Un téléchargement à la demande dit son poids (règle du « coché d'avance ») ;
             # celui déjà en cours, ouvert depuis une autre page, garde son bouton éteint.
             self._paquets.remplir([])
-            self._vide.setText(tr("La musique de {} se lit avec vgmstream, un petit outil libre "
-                                  "à télécharger une seule fois.").format(media.nom(jeu)))
+            self._vide.setText(tr("Pour écouter la musique de {}, un petit lecteur libre est à "
+                                  "télécharger une fois.").format(media.nom(jeu)))
             en_cours = media.vgmstream.en_cours
             self._bouton_lecteur.setEnabled(not en_cours)
             self._bouton_lecteur.setText(tr("Téléchargement…") if en_cours else
@@ -1229,8 +1241,8 @@ class _VueCinematiques(QWidget):
         _ecrire(self._titre, titre)
         if voix is None and self._media.attend_vgmstream(jeu):
             # HP5, HP6 : le son est là, c'est vgmstream qui manque (1.3.1).
-            note = tr("Le son de cette cinématique se lit avec vgmstream : téléchargez-le une fois "
-                      "depuis la Musique de ce jeu.")
+            note = tr("Pour entendre cette cinématique, téléchargez d'abord le lecteur depuis la "
+                      "Musique de ce jeu.")
         elif voix is None and self._media.manque_vgmstream(jeu):
             note = tr("Le son de cette cinématique se lit avec vgmstream : installez "
                       "« vgmstream-cli » sur ce système.")
@@ -1561,6 +1573,7 @@ class MediathequePage(QDialog):
         # décode ses vignettes sur un fil à part).
         self._captures: QDialog | None = None
         self._jeu_choisi = False        # d'après le jeu demandé, plus bas (`_accorder_captures`)
+        self._jeu = ""                  # le jeu choisi, partagé par les rubriques (`montrer`)
         racine.addWidget(self._pile, stretch=1)
         if not self._jeux.ids:
             # Toutes les rubriques disent qu'il faut un jeu : Personnages et Bestiaire
@@ -1593,11 +1606,13 @@ class MediathequePage(QDialog):
         self._jeux.compter_tous()
 
     def montrer(self, jeu: str) -> None:
+        """Le jeu choisi, montré dans la rubrique VISIBLE seulement : les autres le prennent à leur
+        affichage. En Cinématiques, choisir IV rebâtissait aussi les 108 lignes de la Musique
+        cachée (audit UI f36)."""
+        self._jeu = jeu
         self._jeux.cocher(jeu)
-        self._musique.montrer(jeu)
-        self._cinematiques.montrer(jeu)
-        vue = self._encyclo.get(self.rubrique_courante)
-        if vue is not None:
+        vue = self._pile.currentWidget()
+        if vue in (self._musique, self._cinematiques) or isinstance(vue, VueEncyclopedie):
             vue.montrer(jeu)
         self._jeux.compter(jeu)
 
@@ -1634,7 +1649,7 @@ class MediathequePage(QDialog):
 
     @property
     def jeu(self) -> str:
-        return self._musique._jeu
+        return self._jeu
 
     def set_reduite(self, oui: bool) -> None:
         self._cinematiques.set_reduite(oui)
@@ -1653,7 +1668,10 @@ class MediathequePage(QDialog):
             if self.jeu:
                 self._encyclo[cle_rubrique].montrer(self.jeu)
         else:
-            self._pile.setCurrentWidget(self._musique if musique else self._cinematiques)
+            vue = self._musique if musique else self._cinematiques
+            self._pile.setCurrentWidget(vue)
+            if vue._jeu != self._jeu:
+                vue.montrer(self._jeu)
         self._jeux.rubrique = cle_rubrique
         self._cinematiques.afficher(cle_rubrique == CINEMATIQUES)
         self._musique.afficher(musique)

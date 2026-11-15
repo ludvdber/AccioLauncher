@@ -5,8 +5,7 @@ seul « Bêta » par page, le rail qui défile, les libellés qui disent un rég
 from types import SimpleNamespace
 
 import pytest
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication, QLabel, QPushButton
+from PyQt6.QtWidgets import QLabel, QPushButton
 
 from src.core import difficulte_presets as dp
 from src.core import reglages_correctif as rc
@@ -14,7 +13,7 @@ from src.core.game_data import GameData
 from src.core.i18n import set_language, tr
 from src.core.reglages_table import REGLAGES
 from src.ui.aide_reglage import BoutonAide
-from src.ui.fenetre_message import FenetreMessage
+from tests.modales import quand_ouverte
 from src.ui.fonts import cinzel_decorative
 
 INI = "\r\n".join([
@@ -55,17 +54,6 @@ def _fenetre(qtbot, tmp_path, *idents, ini=INI):
     return dlg, chemin
 
 
-def _quand_ouverte(action):
-    """Agit sur la fenêtre modale dès qu'elle s'affiche (exec() bloque)."""
-    def essayer():
-        boite = QApplication.activeModalWidget()
-        if isinstance(boite, FenetreMessage):
-            action(boite)
-        else:
-            QTimer.singleShot(10, essayer)
-    QTimer.singleShot(0, essayer)
-
-
 def _textes(dlg):
     return [lb.text() for lb in dlg.findChildren(QLabel)]
 
@@ -87,7 +75,7 @@ class TestRemiseALOrigine:
             vus.update(titre=boite.windowTitle(), corps=boite.text(), objet=retablir.objectName(),
                        defaut=annuler.isDefault(), retrait=boite._bouton_d_echap() is annuler)
             annuler.click()
-        _quand_ouverte(regarder)
+        quand_ouverte(regarder)
         dlg._bouton_reset.click()
         assert vus["titre"] == tr("Remettre ce jeu comme à l'installation ?")
         assert vus["objet"] == "danger" and vus["defaut"] and vus["retrait"]
@@ -99,7 +87,7 @@ class TestRemiseALOrigine:
     def test_confirmer_remet_puis_le_pied_le_dit_quatre_secondes(self, qtbot, tmp_path):
         dlg, ini = self._avec_retouche(qtbot, tmp_path)
         avant = dlg._pied_notes.text()
-        _quand_ouverte(lambda b: b.buttons()[0].click())
+        quand_ouverte(lambda b: b.buttons()[0].click())
         dlg._bouton_reset.click()
         assert "FXAA=1" in ini.read_bytes().decode().split("\r\n")
         assert dlg._pied_notes.text() == tr("Réglages de l'installation remis.")
@@ -146,11 +134,35 @@ class TestPied:
         assert not any("Change à tout moment" in t and "sauvegardes" in t for t in _textes(dlg))
 
 
+class TestRail:
+    def test_le_surtitre_tient_meme_quand_le_rail_defile(self, qtbot, tmp_path):
+        """f65 : à 980×660 le rail défile, et sa barre coupait « RÉGLAGES DU / JEU »."""
+        from PyQt6.QtWidgets import QLabel
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        dlg.resize(980, 660)
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        lbl = next(x for x in dlg.findChildren(QLabel) if x.text() == tr("Réglages du jeu").upper())
+        barre = dlg._zone_rail.verticalScrollBar()
+        place = lbl.width() - (0 if barre.isVisible() else barre.sizeHint().width())
+        assert lbl.fontMetrics().horizontalAdvance(lbl.text()) <= place
+
+
 class TestBeta:
     def test_une_seule_mention_par_page(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        assert _textes(dlg).count(tr("Bêta")) == 1, "Caméra, seule en bêta sur sa page, la garde"
+        assert _textes(dlg).count(tr("Bêta").upper()) == 2, "une en tête de la Difficulté, une sur la Caméra, seule en bêta sur sa page"
         assert "Discord" in dlg._panneau.pastille_beta.toolTip()
+
+    def test_une_seule_etiquette_pour_toute_la_fenetre(self, qtbot, tmp_path):
+        """f64 : « Bêta » en Gelasio sur une ligne, « BÊTA » en Cinzel dans la Difficulté."""
+        from PyQt6.QtWidgets import QLabel
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        etiquettes = [lbl for lbl in dlg.findChildren(QLabel) if lbl.text() == tr("Bêta").upper()]
+        assert len(etiquettes) == 2
+        (a, b) = etiquettes
+        assert a.font().family() == b.font().family() and a.font().pointSizeF() == b.font().pointSizeF()
+        assert a.styleSheet() == b.styleSheet()
 
     def test_la_fiche_de_difficulte_ne_le_redit_pas(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)

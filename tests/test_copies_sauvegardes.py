@@ -305,6 +305,50 @@ class TestLancement:
 
 
 class TestFenetre:
+    def test_entree_dans_la_liste_n_ouvre_rien(self, qtbot, save_dir, monkeypatch):
+        """f71 : Entrée sur la liste cliquait le premier bouton par défaut et ouvrait
+        l'Explorateur ou un choix de fichier sans qu'on l'ait demandé."""
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QFileDialog, QPushButton
+        from src.core.game_data import GameData
+        from src.ui import copies_dialog as cd
+        ouverts = []
+        monkeypatch.setattr(cd, "open_local_path", ouverts.append)
+        for nom in ("getOpenFileName", "getSaveFileName"):
+            monkeypatch.setattr(QFileDialog, nom, staticmethod(lambda *a, **k: (ouverts.append(a), ("", ""))[1]))
+        _ecrire(save_dir / "Slot1" / "Save0.usa", b"hier", T0)
+        cs.avant_partie("hp2", HP2)
+        game = GameData(id="hp2", name="Harry Potter II", year=2002, description="",
+                        developer="", executable="HP2/system/Game.exe", cover_image="",
+                        latest_version="1.0", recommended_version="1.0", sauvegardes=HP2)
+        dlg = cd.CopiesDialog(game)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg._liste.setFocus()
+        qtbot.keyClick(dlg._liste, Qt.Key.Key_Return)
+        assert ouverts == [] and dlg.isVisible()
+        assert not any(b.autoDefault() or b.isDefault() for b in dlg.findChildren(QPushButton))
+
+    def test_la_ligne_choisie_est_celle_des_autres_listes(self, qtbot, save_dir):
+        """f77 : un aplat or plein, texte sombre, le seul du launcher ; désormais la ligne
+        choisie des listes déroulantes, fond translucide et encre or."""
+        from PyQt6.QtCore import QItemSelectionModel
+        from src.core.game_data import GameData
+        from src.ui import copies_dialog as cd
+        _ecrire(save_dir / "Slot1" / "Save0.usa", b"hier", T0)
+        cs.avant_partie("hp2", HP2)
+        game = GameData(id="hp2", name="Harry Potter II", year=2002, description="",
+                        developer="", executable="HP2/system/Game.exe", cover_image="",
+                        latest_version="1.0", recommended_version="1.0", sauvegardes=HP2)
+        dlg = cd.CopiesDialog(game)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg._liste.setCurrentRow(0, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        qtbot.wait(10)
+        rect = dlg._liste.visualItemRect(dlg._liste.item(0))
+        fond = dlg._liste.viewport().grab().toImage().pixelColor(rect.right() - 4, rect.center().y())
+        assert fond.red() < 140, fond.name()   # #d6a72c plein : rouge 214
+
     def test_lister_et_remettre(self, qtbot, save_dir, monkeypatch):
         from src.ui import copies_dialog as cd
         from src.core.game_data import GameData

@@ -28,7 +28,7 @@ import html
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QColor, QGuiApplication
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -59,10 +59,12 @@ from src.ui.composants import (
     surtitre,
 )
 from src.ui.editeur_touches import EditeurTouches
+from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.page_image import PageImage
-from src.ui.theme import themed
+from src.ui.theme import accent_qcolor, themed
+from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import zone_defilable
 from src.ui.reglages_widgets import (  # réexportés
@@ -79,7 +81,6 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     _ONGLETS,
     _MARGES_PAGE,
     _COULEURS_COUT,
-    _COULEUR_SE_VOIT,
     _COULEUR_NOTE,
     _RESSOURCES,
     _NIVEAUX,
@@ -87,8 +88,9 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     RubriquesDuJeu,
 )
 
-# Le rail : le jeu, ses rubriques, ses fichiers.
-_LARGEUR_RAIL = 260
+# Le rail : le jeu, ses rubriques, ses fichiers. 270 : à 260, quand le rail défile (fenêtre de
+# 660 à 700 px de haut), sa barre de 10 px coupait « RÉGLAGES DU / JEU » (audit UI f65).
+_LARGEUR_RAIL = 270
 # Taille d'ouverture, celle de la maquette, et le plancher : sous 900 px de
 # large, la page Image passe d'elle-même en une colonne.
 _TAILLE_VOULUE = QSize(1320, 860)
@@ -111,6 +113,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                  appliquer_langue, actions=(),
                  parent: QWidget | None = None, appliquer_manette=None, onglet: str = "") -> None:
         super().__init__(parent)
+        # Entrée choisit la carte, le segment ou l'onglet au focus, comme Espace et
+        # comme les cartes de Difficulté (audit UI f56).
+        entree_suit_le_focus(self)
         self.game = game
         self.manager = manager
         # Rappel fourni par l'appelant : c'est lui qui sait prévenir, élever et
@@ -386,7 +391,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         h.addWidget(surtitre(titre))
         h.addStretch()
         oeil = QLabel()
-        oeil.setPixmap(pixmap_icone("oeil", 18, QColor(_COULEUR_SE_VOIT)))
+        oeil.setPixmap(pixmap_icone("oeil", 18, accent_qcolor()))   # la maison, pas l'or (f4)
         oeil.setStyleSheet("background: transparent;")
         h.addWidget(oeil)
         h.addWidget(self._petit(tr("le plus visible")))
@@ -419,10 +424,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if reglage is not None:
             if reglage.cout:
                 paragraphes.append("<br>".join(
-                    f'{e(tr(_RESSOURCES.get(r, r)))} : <span style="color:{_COULEURS_COUT[n]}">'
-                    f"{e(tr(_NIVEAUX[n]))} ({'+' * n})</span>" for r, n in reglage.cout))
+                    # « {} : {} » traduit : l'espace avant les deux-points est française (f119) ;
+                    # les points, comme sur la ligne et dans la fiche de la page Image.
+                    tr("{} : {}").format(e(tr(_RESSOURCES.get(r, r))),
+                                         f'<span style="color:{_COULEURS_COUT[n]}">'
+                                         f"{e(tr(_NIVEAUX[n]))} {'●' * n}</span>") for r, n in reglage.cout))
             if reglage.se_voit:
-                paragraphes.append(f'<span style="color:{_COULEUR_SE_VOIT}">'
+                paragraphes.append(f'<span style="color:{theme_courant().accent}">'
                                    f"{e(tr('Se voit nettement à l’écran.'))}</span>")
             # L'onglet Difficulté le dit une fois, en tête : pas à chaque fiche.
             paragraphes += [e(_texte_beta())] if reglage.beta and reglage.onglet != "difficulte" else []
@@ -657,10 +665,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._aides[reglage.ident if reglage is not None else libelle_txt] = aide
         if serree:
             self._reperes(h, reglage)
-        if isinstance(controle, ToggleSwitch):
-            # Le libellé est à côté, pas dedans : sans nom accessible, un lecteur
-            # d'écran n'annoncerait qu'« interrupteur » (règle 15).
-            controle.setToolTip(libelle_txt)
+        # Le libellé est à côté, pas dedans : sans nom accessible, un lecteur d'écran
+        # n'annoncerait qu'« interrupteur » (règle 15). Pas d'infobulle : elle répétait
+        # mot pour mot le nom écrit à gauche (audit UI f60).
         controle.setAccessibleName(libelle_txt)
         controle.setAccessibleDescription(aide_txt)
         case = QWidget()
@@ -683,13 +690,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         oeil.setFixedSize(18, 18)
         oeil.setStyleSheet("background: transparent;")
         if reglage.se_voit:
-            oeil.setPixmap(pixmap_icone("oeil", 18, QColor(_COULEUR_SE_VOIT)))
+            oeil.setPixmap(pixmap_icone("oeil", 18, accent_qcolor()))   # la maison, pas l'or (f4)
             oeil.setToolTip(tr("Se voit nettement à l’écran."))
         ligne.addWidget(oeil)
         niveau = max((n for _r, n in reglage.cout), default=0)
         points = _Points(niveau)
         if niveau:
-            detail = "\n".join(f"{tr(_RESSOURCES.get(r, r))} : {tr(_NIVEAUX[n])}"
+            detail = "\n".join(tr("{} : {}").format(tr(_RESSOURCES.get(r, r)), tr(_NIVEAUX[n]))
                                for r, n in reglage.cout)
             points.setToolTip(detail)
             points.setAccessibleName(detail)

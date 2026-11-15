@@ -323,7 +323,7 @@ class UpdateDispatcher(QObject):
         self._liberer_download()
         self.launcher_busy.emit(False)
         self.launcher_message.emit(
-            tr("Le téléchargement a échoué : la page de la release s'ouvre pour l'installer à "
+            tr("Le téléchargement a échoué : la page de téléchargement s'ouvre pour l'installer à "
                "la main."))
         if self.url:
             open_url(self.url)

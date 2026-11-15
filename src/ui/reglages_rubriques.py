@@ -60,7 +60,6 @@ _ONGLETS = (
 # Hors palette de maison, comme le filet des alertes : ce sont des signaux, et
 # ils se lisent aussi sans la couleur (un, deux ou trois points allumés).
 _COULEURS_COUT = {1: "#6cc58a", 2: "#e8955a", 3: "#ec5f5f"}
-_COULEUR_SE_VOIT = "#d6a72c"
 # Ce qu'un réglage a perdu d'effet, dit sous son nom : ambre, pas rouge.
 _COULEUR_NOTE = "#c9954a"
 
@@ -86,6 +85,15 @@ _A_VENIR = (
     "Mode fenêtré / plein écran",
 )
 
+
+
+def _ligne_alignee(titre: str, description: str = "", *commandes: QWidget) -> LigneReglage:
+    """Une `LigneReglage` aux marges des lignes de réglage (`reglages_widgets._Ligne`,
+    16 et 9 px) : ses 20 et 14 px des Paramètres décalaient de 4 px le nom de la
+    carte Captures sous ceux de Démarrage (audit UI f43)."""
+    ligne = LigneReglage(titre, description, *commandes)
+    ligne.layout().setContentsMargins(16, 9, 16, 9)
+    return ligne
 
 class RubriquesDuJeu:
     """Rubriques simples de `GameSettingsDialog` (voir le module)."""
@@ -142,7 +150,7 @@ class RubriquesDuJeu:
             # Une seule langue sur le disque : le DIRE. Un choix unique déjà
             # coché laisse croire à un réglage cassé — le registre ne fait que
             # sélectionner, les fichiers viennent du disque d'origine.
-            carte.ajouter(LigneReglage(
+            carte.ajouter(_ligne_alignee(
                 tr("Ce jeu n'est installé que dans une seule langue."),
                 tr("Le launcher ne peut que sélectionner une langue déjà présente "
                    "sur le disque, pas la télécharger.")))
@@ -172,9 +180,8 @@ class RubriquesDuJeu:
         """Prévenir que la liste n'est pas celle du launcher (Ludo, 2026-11-03) :
         un jeu peut avoir d'autres langues, et plus nombreuses."""
         self._note(corps, tr(
-            "Chaque jeu a ses propres langues : elles ne sont pas les mêmes d'un jeu à "
-            "l'autre, et un jeu peut en avoir d'autres que celles du launcher, parfois "
-            "davantage. Par défaut, le jeu prend la langue du launcher quand il l'a."))
+            "Ce jeu a ses propres langues, parfois plus nombreuses que celles du launcher. "
+            "Par défaut, il suit celle du launcher quand il l'a."))
 
     def _section_touches(self, corps: QVBoxLayout) -> None:
         """Chaque action de HP4 et sa touche, réglables une par une.
@@ -334,7 +341,7 @@ class RubriquesDuJeu:
             "Le jeu agrandit ses menus avec l'écran, mais garde le texte de {annee}, minuscule en "
             "haute définition. Le launcher redessine ses lettres à la taille de l'image : "
             "automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut "
-            "déborder de certains cadres. Appliqué au prochain lancement.").format(annee=self.game.year)))
+            "déborder de certains cadres.").format(annee=self.game.year)))
 
     def _on_taille_texte(self, valeur: str) -> None:
         tailles = self.manager.config.taille_texte
@@ -524,10 +531,8 @@ class RubriquesDuJeu:
             # HP5 et HP6 (lu dans leurs exe, 2026-09-30) : au démarrage, un choix
             # « manette » sans manette vue retombe au clavier ET s'écrit ainsi.
             carte.ajouter(self._ligne(tr("Jouer à la manette"), bascule, tr(
-                "Le jeu garde ce choix dans le registre de Windows : le launcher vous "
-                "prévient avant de le modifier. Il se règle aussi dans les options du jeu. "
-                "Branchez la manette avant de lancer le jeu : s'il ne la trouve pas au "
-                "démarrage, il repasse au clavier.")))
+                "Branchez la manette avant de lancer le jeu : sans elle, il repasse au "
+                "clavier. Se règle aussi dans les options du jeu.")))
         for reglage in du_correctif:
             self._controle(carte, self._ini, reglage)
         self._egaliser(carte)
@@ -763,10 +768,10 @@ class RubriquesDuJeu:
         self._compte_captures = QLabel("")
         self._compte_captures.setFont(police(13))
         self._compte_captures.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
-        rangees = tr("Rangées hors du dossier du jeu : le désinstaller ne les efface pas.")
+        rangees = tr("Dans Images › Accio Launcher.")
         titre, description = (tr("Touche {} en jeu").format(touche), rangees) if touche else (rangees, "")
         carte = Carte()
-        carte.ajouter(LigneReglage(titre, description, self._compte_captures, ouvrir))
+        carte.ajouter(_ligne_alignee(titre, description, self._compte_captures, ouvrir))
         self._section(corps, entete, carte)
         self._afficher_compte(n)
         return True

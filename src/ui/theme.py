@@ -90,6 +90,31 @@ def set_theme(theme_id: str) -> None:
     """Active une palette (id inconnu → Poudlard). À appeler avant les widgets."""
     global _current
     _current = THEMES.get(theme_id, THEMES["poudlard"])
+    _surlignage_de_l_application()
+
+
+def _surlignage_de_l_application() -> None:
+    """Le texte sélectionné d'un champ prend l'accent, pas la couleur du système (audit UI f7).
+
+    Les listes déroulantes avaient la leur dans leur feuille ; un QLineEdit ou un
+    QPlainTextEdit sans feuille tombait sur le bleu de Qt (#308cc6 hors écran) ou
+    l'accent de Windows. Opaque : l'accent à 45 % sur le fond du thème, un
+    surlignage translucide n'est pas peint pareil par tous les styles.
+    """
+    from PyQt6.QtGui import QColor, QPalette
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if not isinstance(app, QApplication):
+        return
+    (ar, ag, ab), (br, bg, bb) = _current.accent_rgb, _current.bg_rgb
+    fond = QColor(round(br + (ar - br) * 0.45), round(bg + (ag - bg) * 0.45),
+                  round(bb + (ab - bb) * 0.45))
+    palette = app.palette()
+    for groupe in (QPalette.ColorGroup.Active, QPalette.ColorGroup.Inactive):
+        palette.setColor(groupe, QPalette.ColorRole.Highlight, fond)
+        palette.setColor(groupe, QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+    app.setPalette(palette)
 
 
 def current() -> Palette:

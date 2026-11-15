@@ -326,6 +326,17 @@ class TestFenetre:
         assert dlg._compte_captures is not None and dlg._compte_captures.text() == ""
         assert any("F12" in lbl.text() for lbl in dlg.findChildren(QLabel))
 
+    def test_la_ligne_s_aligne_sur_les_lignes_de_reglage(self, qtbot, tmp_path):
+        """f43 : la ligne Captures avait les marges des Paramètres (20 px), son nom 4 px à
+        droite de ceux des cartes de réglages au-dessus (16 px)."""
+        from src.ui.composants import LigneReglage
+        from src.ui.reglages_widgets import _Ligne
+        dlg = self._dialogue(qtbot, _jeu(screenshots={"key": "F12"}), tmp_path)
+        ligne = next(w for w in dlg.findChildren(LigneReglage) if w.isAncestorOf(dlg._compte_captures))
+        reference = _Ligne(serree=False, retrait=False)
+        qtbot.addWidget(reference)
+        assert ligne.layout().contentsMargins().left() == reference.layout().contentsMargins().left()
+
     def test_ancien_correctif_la_rubrique_le_dit(self, qtbot, tmp_path):
         """Captures déclarées, aucune touche connue (ancien correctif), aucune capture : la rubrique
         disparaissait sans un mot et le bouton annoncé restait introuvable (Ludo, 2026-09-27)."""

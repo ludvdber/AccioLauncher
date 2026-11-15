@@ -284,7 +284,7 @@ class TestSaga:
         stats.enregistrer_session(gid, datetime(2026, 8, 12, 20, 0), 3 * 3600 + 1200)
         dlg = StatsDialog(manager)
         qtbot.addWidget(dlg)
-        assert "12/08/2026" in _labels(dlg)
+        assert "le 12 août 2026" in _labels(dlg), "en toutes lettres, comme le Folio (audit UI f94)"
 
     def test_le_temps_anterieur_au_journal_est_annonce(self, qtbot, tmp_path,
                                                        monkeypatch):

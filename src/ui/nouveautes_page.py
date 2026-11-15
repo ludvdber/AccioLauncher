@@ -41,21 +41,21 @@ from src.ui.composants import (
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.stats_releve import _Jaquette, _jaquette
-from src.ui.theme import accent_qcolor, bg_qcolor, current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, bg_qcolor, current as current_theme, themed
 from src.ui.utils import open_url, zone_defilable
 
 _MARGES = (64, 30, 64, 28)
 _JAQUETTE = (42, 58)
 
-_STYLE = """
-QDialog#nouveautes { background: #060611; }
-QFrame#pointFort {
-    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.22); border-radius: 12px;
-}
-QFrame#annonce {
+_STYLE = f"""
+QDialog#nouveautes {{ background: #060611; }}
+QFrame#pointFort {{
+    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.22); border-radius: {RAYON_CARTE}px;
+}}
+QFrame#annonce {{
     background: rgba(214, 167, 44, 0.08); border: 2px solid rgba(214, 167, 44, 0.75);
-    border-radius: 12px;
-}
+    border-radius: {RAYON_CARTE}px;
+}}
 """
 
 

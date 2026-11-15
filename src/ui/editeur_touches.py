@@ -137,10 +137,12 @@ class CaptureTouche(QPushButton):
         self.setProperty("ecoute", True)
         self.style().unpolish(self)
         self.style().polish(self)
-        # Dans la croix, la touche garde sa largeur : la phrase courte y tient.
-        self.setText(tr("Appuyez sur une touche…") if not self._largeur else tr("Appuyez…"))
+        # La phrase courte partout : « Appuyez sur une touche… » élargissait la case jusqu'à
+        # 200 px et coupait le nom de l'action à sa gauche (« Valide », « Extre » ; audit UI
+        # f124). La case ne grandit que s'il le faut pour elle ; dans la croix, elle garde sa largeur.
+        self.setText(tr("Appuyez…"))
         if not self._largeur:
-            self.setFixedWidth(min(_LARGEUR_MAX + 30, self.fontMetrics().horizontalAdvance(self.text()) + 26))
+            self.setFixedWidth(max(self.width(), self.fontMetrics().horizontalAdvance(self.text()) + 26))
         # Tout va à ce bouton tant qu'il écoute : un clic ailleurs est un bouton
         # de souris qu'on choisit, Tab une touche et non un changement de focus.
         self.grabKeyboard()

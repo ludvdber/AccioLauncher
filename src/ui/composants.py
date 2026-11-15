@@ -10,9 +10,9 @@ from html import escape
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter
+from PyQt6.QtGui import QColor, QFont, QFontMetricsF, QIcon, QPainter
 from PyQt6.QtWidgets import (
-    QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from src.ui.fonts import body_font, cinzel
@@ -108,7 +108,9 @@ QPushButton#filtre[grand="true"] {{
 }}
 QPushButton#filtre[jaquette="true"] {{ border-radius: {rayon_pastille(HAUTEUR_FILTRE_JAQUETTE)}px; }}
 QPushButton#filtre[vide="true"] {{ color: #8c8aa5; border-color: rgba(255, 255, 255, 0.07); }}
-QPushButton#filtre:hover {{ color: #f2f2f4; }}
+QPushButton#filtre:hover {{
+    color: #f2f2f4; border-color: rgba(255, 255, 255, 0.30); background: rgba(255, 255, 255, 0.04);
+}}
 QPushButton#filtre:checked {{
     background: rgba(214, 167, 44, 0.14); border-color: rgba(214, 167, 44, 0.6); color: #f2e6c4;
 }}
@@ -136,11 +138,14 @@ QPushButton#lien:disabled, QPushButton#lienDiscret:disabled {{ color: {ENCRE_ETE
 # chevron que peint `utils._ListeDeroulante` (deux flèches superposées).
 # La liste peint ses lignes elle-même : `selection-*` seul n'y changeait rien
 # (ligne choisie au clavier, mesurée sans aucune différence de couleur).
+# La ligne choisie d'une liste, partout la même : un fond or translucide et l'encre
+# or clair. La liste des copies de sauvegarde en faisait un aplat or plein, le seul
+# du launcher, plus voyant que son bouton d'action (audit UI f77).
+LIGNE_CHOISIE = "background: rgba(214, 167, 44, 0.30); color: #f0d060;"
 _LIGNES_DE_LISTE = (
     "QComboBox::drop-down { border: none; width: 18px; }"
     "QComboBox QAbstractItemView::item { padding: 4px 8px; }"
-    "QComboBox QAbstractItemView::item:selected { background: rgba(214, 167, 44, 0.30);"
-    " color: #f0d060; }"
+    f"QComboBox QAbstractItemView::item:selected {{ {LIGNE_CHOISIE} }}"
 )
 LISTE = (
     "QComboBox { background: #15152a; color: #e4e2ef; border: 1px solid rgba(255,255,255,0.13);"
@@ -274,7 +279,10 @@ class Rangee(QWidget):
     def __init__(self, blocs: list[QWidget], colonnes: int, seuil: int,
                  etirements: tuple[int, ...] = (), ecart: int = 16) -> None:
         super().__init__()
-        self.setStyleSheet("background: transparent;")
+        # Sur la rangée SEULE : la règle sans sélecteur effaçait encore le fond des
+        # cartes rangées (préréglages de Difficulté, étapes de Contribuer, Nouveautés,
+        # cartes de touches ; audit UI f22).
+        transparent(self, "rangee")
         self._blocs = list(blocs)
         self._colonnes = colonnes
         self._seuil = seuil
@@ -318,6 +326,22 @@ class Rangee(QWidget):
         super().resizeEvent(event)
         large = event.size().width() >= self._largeur_cote_a_cote()
         self._poser(self._colonnes if large else 1)
+
+
+def pastille(contenu: str, encre: str, bord: str) -> QLabel:
+    """« BÊTA », « BIENTÔT » : une capitale en Cinzel dans une gélule, la même partout dans la
+    fenêtre. La ligne d'un réglage en essai écrivait « Bêta » en Gelasio, la Difficulté
+    « BÊTA » en Cinzel : deux dessins pour la même information (audit UI f64)."""
+    lbl = QLabel(contenu.upper())
+    lbl.setTextFormat(Qt.TextFormat.PlainText)
+    f = cinzel(7, bold=True)
+    f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.8)
+    lbl.setFont(f)
+    lbl.setStyleSheet(themed(f"color: {encre}; background: transparent; border: 1px solid {bord};"
+                             " border-radius: 9px; padding: 2px 9px 1px 9px;"))
+    lbl.setMinimumHeight(round(QFontMetricsF(f).height()) + 8)
+    lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+    return lbl
 
 
 def bouton(libelle: str, principal: bool = False) -> QPushButton:

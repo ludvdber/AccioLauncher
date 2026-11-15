@@ -314,7 +314,7 @@ class TestLigneDeProfil:
 
 
 class TestDiscordPartie:
-    """« Montrer où j'en suis dans ma partie » (`discord_partie`, Ludo, 2026-10-30) :
+    """« Montrer où en est votre partie » (`discord_partie`, Ludo, 2026-10-30) :
     le lieu révèle un peu l'intrigue aux amis."""
 
     @staticmethod

@@ -411,3 +411,23 @@ def test_le_pied_dit_quand_hp6_le_prend(qtbot, dossier_hp6):
     assert dlg._pied_notes.text().startswith("Change à tout moment")
     dlg.ouvrir_onglet("jeu")
     assert not dlg._pied_notes.text().startswith("Change à tout moment")
+
+
+class TestRangeeSansEffacerLesCartes:
+    """f22 : la `Rangee` des composants posait `background: transparent` SANS sélecteur ;
+    sa propre feuille gagnait sur celle de la page, et les préréglages de Difficulté,
+    les étapes de Contribuer et les cartes de touches perdaient fond et filets."""
+
+    def test_une_carte_rangee_garde_le_fond_de_la_page(self, qtbot):
+        from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget
+        from src.ui.composants import Rangee
+        page = QWidget()
+        qtbot.addWidget(page)
+        page.setStyleSheet("QWidget { background: #000000; } QFrame#preset { background: #ff0000; }")
+        carte = QFrame()
+        carte.setObjectName("preset")
+        carte.setFixedSize(60, 40)
+        QVBoxLayout(page).addWidget(Rangee([carte], 1, 0))
+        page.show()
+        qtbot.wait(10)
+        assert carte.grab().toImage().pixelColor(30, 20).name() == "#ff0000"

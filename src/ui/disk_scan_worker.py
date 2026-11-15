@@ -5,6 +5,29 @@ from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+# Les fils encore bloqués sur un disque lent quand les Paramètres se ferment :
+# vivants ici jusqu'à leur vraie fin, jamais détruits en cours de route (même
+# contrat que `GameOperations._zombies`).
+_gares: list[DiskScanWorker] = []
+
+
+def garer(fil: DiskScanWorker) -> None:
+    """Déparente `fil` et le garde jusqu'à son `finished`.
+
+    Ses signaux sont rouverts : l'appelant les bloque pour taire `result`, déjà
+    débranché, et un `finished` bloqué laissait le fil garé à jamais.
+    """
+    fil.setParent(None)
+    _gares.append(fil)
+    fil.finished.connect(lambda: _liberer(fil))
+    fil.blockSignals(False)
+
+
+def _liberer(fil: DiskScanWorker) -> None:
+    if fil in _gares:
+        _gares.remove(fil)
+    fil.deleteLater()
+
 
 class DiskScanWorker(QThread):
     """Calcule la taille totale d'une liste de dossiers de jeux.
@@ -29,8 +52,12 @@ class DiskScanWorker(QThread):
         # contre 150, à disque chaud. Ce fil tenait le verrou de Python
         # pendant que la page des Paramètres se construisait : l'ouverture
         # « freezait » (Ludo).
-        pile = [str(p) for p in self._game_paths if p.exists()]
+        # Sans `exists()` d'avance : un dossier absent tombe dans l'OSError, et
+        # l'interruption est lue avant chaque dossier, même un disque qui tarde (f18).
+        pile = [str(p) for p in self._game_paths]
         while pile:
+            if self.isInterruptionRequested():
+                return
             try:
                 with os.scandir(pile.pop()) as entrees:
                     for entree in entrees:

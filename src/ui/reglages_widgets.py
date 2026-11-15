@@ -21,10 +21,10 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
-from src.ui.composants import ENCRE_DOUCE, petit_titre, police
+from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT
-from src.ui.theme import RAYON_CARTE, themed
+from src.ui.theme import RAYON_CARTE
 
 _JAQUETTE = QSize(58, 80)
 
@@ -66,12 +66,8 @@ def _texte_beta() -> str:
 
 def _etiquette_beta() -> QLabel:
     """« BÊTA » à côté du nom d'un réglage encore en essai."""
-    etiquette = QLabel(tr("Bêta"))
-    etiquette.setFont(police(11))
+    etiquette = pastille(tr("Bêta"), "#f0d060", "rgba(214, 167, 44, 0.5)")
     etiquette.setToolTip(_texte_beta())
-    etiquette.setStyleSheet(themed(
-        "color: #d6a72c; background: transparent; border: 1px solid rgba(214, 167, 44, 0.55);"
-        " border-radius: 8px; padding: 1px 7px;"))
     return etiquette
 
 

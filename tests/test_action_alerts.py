@@ -466,6 +466,25 @@ class TestAideAntivirus:
         aide._ouvrir.click()
         assert ouvertes == [SECURITE_WINDOWS_URL]
 
+    def test_les_boutons_et_la_surface_du_launcher(self, qtbot, tmp_path, monkeypatch):
+        """f16, f41 : 29 px et bleu nuit hors palette ; désormais les 36 px des autres boîtes,
+        et le fond suit la maison."""
+        import sys
+        from PyQt6.QtWidgets import QPushButton
+        from src.ui import theme
+        from src.ui.aide_antivirus import AideAntivirus
+        monkeypatch.setattr(sys, "platform", "win32")
+        theme.set_theme("serpentard")
+        try:
+            aide = AideAntivirus(tmp_path)
+            qtbot.addWidget(aide)
+            aide.show()
+            hauteurs = {b.text(): b.height() for b in aide.findChildren(QPushButton)}
+            assert set(hauteurs.values()) == {36}, hauteurs
+            assert aide.grab().toImage().pixelColor(4, 4).name() == theme.current().bg_dialog
+        finally:
+            theme.set_theme("poudlard")
+
     def test_pas_de_bouton_windows_ailleurs(self, qtbot, tmp_path, monkeypatch):
         import sys
         from src.ui.aide_antivirus import AideAntivirus

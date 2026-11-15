@@ -43,7 +43,6 @@ _PLACES: dict[str, tuple[str, str]] = {
     "nettete": ("qualite", "Contours"),
     "filtrage": ("qualite", "Textures"),
     "textures_lointaines": ("qualite", "Textures"),
-    "mipmaps_fins": ("qualite", "Textures"),
     "textures_hd": ("qualite", "Textures"),
     "occlusion": ("lumiere", "Ombres de contact"),
     "ombres_nettes": ("lumiere", "Ombres portées"),
@@ -54,6 +53,9 @@ _PLACES: dict[str, tuple[str, str]] = {
     "decor_entier": ("distance", "Décor"),
     "particules_lointaines": ("distance", "Effets"),
     "feuillage_lointain": ("distance", "Végétation"),
+    # À côté du feuillage dense : rangés dans deux catégories, les deux réglages d'arbres
+    # lointains ne se trouvaient jamais ensemble (audit UI f67).
+    "mipmaps_fins": ("distance", "Végétation"),
     "couleurs": ("couleurs", "Couleurs"),
     "vivacite": ("couleurs", "Couleurs"),
     "contraste": ("couleurs", "Couleurs"),
@@ -128,7 +130,7 @@ def controle(reglage: Reglage) -> Controle:
     return "liste"
 
 
-def correspond(reglage: Reglage, libelle: str, aide: str, recherche: str) -> bool:
+def correspond(libelle: str, aide: str, recherche: str) -> bool:
     """La recherche trouve-t-elle ce réglage ? Dans son nom ou sa description, sans casse ni accents."""
     voulu = _plat(recherche)
     return bool(voulu) and voulu in _plat(f"{libelle} {aide}")

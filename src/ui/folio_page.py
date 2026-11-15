@@ -11,7 +11,7 @@ droite : sous la grille, elle tombait hors de l'écran.
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QRectF, QSize, Qt
+from PyQt6.QtCore import QCoreApplication, QEvent, QObject, QRectF, QSize, Qt
 from PyQt6.QtGui import (
     QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, qRgba,
 )
@@ -37,7 +37,7 @@ from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.galerie_page import nom_court
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.stats_widgets import _duree
-from src.ui.theme import RAYON_CONTROLE, accent_qcolor, current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, accent_qcolor, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
 _LARGEUR_RAIL = 280
@@ -74,7 +74,7 @@ QPushButton#emplacement:checked {{
     background: rgba(214, 167, 44, 0.09); border-color: rgba(214, 167, 44, 0.45);
 }}
 QFrame#tuile, QFrame#coupe, QFrame#objet {{
-    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: 12px;
+    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.16); border-radius: {RAYON_CARTE}px;
 }}
 #sortAppris {{
     color: #f2e6c4; background: rgba(214, 167, 44, 0.12);
@@ -244,14 +244,17 @@ def _tuile(chiffre: str, libelle: str, part: float | None = None,
         image.setPixmap(icone)
         image.setFixedWidth(_ICONE_TUILE)
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        h.addWidget(image, alignment=Qt.AlignmentFlag.AlignVCenter)
+        h.addWidget(image, alignment=Qt.AlignmentFlag.AlignTop)
+    # Tout en HAUT de la tuile, la hauteur en trop sous la jauge : les chiffres d'une rangée
+    # restent sur une ligne même quand un libellé passe à cinq lignes (audit UI f26).
     nombre = texte(chiffre, 26, current_theme().accent_light)
     nombre.setFont(police(26, gras=True))
-    v.addWidget(nombre)
+    v.addWidget(nombre, alignment=Qt.AlignmentFlag.AlignTop)
     v.addWidget(texte(libelle, 13, ENCRE_DOUCE, retour=True))
     if part is not None:
         v.addSpacing(4)
         v.addWidget(_Jauge(part))
+    v.addStretch()
     return tuile
 
 
@@ -321,10 +324,32 @@ def en_tete(titre: str, icone: QPixmap | None = None, compte: str = "") -> QHBox
     return ligne
 
 
+class _EntreeClique(QObject):
+    """Entrée clique la case, comme Espace (règle 15) : au Relevé, c'était l'inverse (f25)."""
+
+    def eventFilter(self, objet, event) -> bool:  # noqa: N802 (Qt)
+        if (event.type() == QEvent.Type.KeyPress and isinstance(objet, QPushButton)
+                and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)):
+            objet.click()
+            return True
+        return False
+
+
+_entree_clique: _EntreeClique | None = None
+
+
+def entree_clique(case: QPushButton) -> None:
+    global _entree_clique
+    if _entree_clique is None:
+        _entree_clique = _EntreeClique()
+    case.installEventFilter(_entree_clique)
+
+
 def case_de_folio(case: QPushButton) -> None:
-    """Une case cochable du folio : survolée, elle se repeint."""
+    """Une case cochable du folio : survolée, elle se repeint ; Entrée la choisit."""
     case.setCheckable(True)
     case.setAutoDefault(False)
+    entree_clique(case)
     case.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
     case.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -417,6 +442,7 @@ class _LigneEmplacement(QPushButton):
         self.setObjectName("emplacement")
         self.setCheckable(True)
         self.setAutoDefault(False)
+        entree_clique(self)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         # L'image de la sauvegarde à gauche (HP1 : celle du menu de chargement
         # du jeu ; HP2 : la capture prise en sauvegardant). Le rail devient
@@ -589,7 +615,7 @@ class FolioPage(QDialog):
         lay.addWidget(nom)
         lay.addSpacing(16)
         if self.releves:
-            lay.addWidget(surtitre(tr("Sauvegarde lue")))
+            lay.addWidget(surtitre(tr("Votre partie")))
             lay.addSpacing(4)
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
@@ -750,11 +776,14 @@ class FolioPage(QDialog):
         if releve is None or not releve.lu:
             message = (tr("Aucune sauvegarde trouvée pour ce jeu.") if releve is None else
                        self._message_debut())
-            titre = QLabel(tr("Folio"))
-            titre.setFont(cinzel_decorative(22))
-            titre.setStyleSheet("color: #f4f2f8; background: transparent;")
-            lay.addWidget(titre)
-            lay.addSpacing(12)
+            # Dans le Carnet, le message seul : le titre « FOLIO » répétait la rubrique cochée et
+            # le surtitre du rail, trois fois le même mot sur 100 px (audit UI f28).
+            if not self._integree:
+                titre = QLabel(tr("Folio"))
+                titre.setFont(cinzel_decorative(22))
+                titre.setStyleSheet("color: #f4f2f8; background: transparent;")
+                lay.addWidget(titre)
+                lay.addSpacing(12)
             lay.addWidget(texte(message, 16, "#c9c7da", retour=True))
             lay.addStretch()
             return corps

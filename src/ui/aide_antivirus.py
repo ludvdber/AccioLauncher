@@ -17,15 +17,16 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import (
-    QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QDialog, QHBoxLayout, QLabel, QVBoxLayout, QWidget,
 )
 
 from src.core.i18n import tr
 from src.core.liens import SECURITE_WINDOWS_URL
 from src.ui.alert_banner import WARN
+from src.ui.composants import bouton, feuille_de_style
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import body_font, cinzel
-from src.ui.theme import themed
+from src.ui.theme import RAYON_CONTROLE, themed
 from src.ui.utils import open_url
 
 
@@ -56,20 +57,20 @@ class AideAntivirus(QDialog):
         entree_suit_le_focus(self)
         self.setWindowTitle(tr("Protéger le dossier des jeux"))
         self.setMinimumWidth(460)
-        self.setStyleSheet(themed(   # l'ambre de l'avertissement reste : il ne fait pas partie de la palette
-            "QDialog { background: #11111f; }"
+        # La surface et les boutons des autres boîtes, qui suivent la maison (audit UI
+        # f16, f41 : bleu nuit #11111f hors palette, boutons de 29 px d'un autre dessin).
+        # L'ambre de l'avertissement reste, sur les pastilles et le bouton d'action.
+        self.setStyleSheet(themed(
+            "QDialog { background: #0d0d1a; }"
             "QLabel { color: #d4d1e3; background: transparent; }"
             f"QLabel#pastilleEtape {{ color: {WARN}; background: rgba(232,149,90,0.16);"
             " border-radius: 11px; }"
             "QLabel#chemin { color: #e4e2ef; background: #0a0a16;"
-            " border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 10px; }"
-            "QPushButton { color: #ecdcb0; background: rgba(255,255,255,0.05);"
-            " border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 6px 12px; }"
-            "QPushButton:hover { border-color: #ecdcb0; }"
-            f"QPushButton#ouvrirSecurite {{ color: #1a1206; background: {WARN}; border: none;"
-            " font-weight: bold; padding: 8px 16px; }"
-            "QPushButton#ouvrirSecurite:hover { background: #f0ad7a; }"
-        ))
+            f" border: 1px solid rgba(255,255,255,0.1); border-radius: {RAYON_CONTROLE}px; padding: 6px 10px; }}"
+            f"QPushButton#ouvrirSecurite {{ color: #1a1206; background: {WARN}; border: 1px solid {WARN};"
+            f" min-height: 34px; max-height: 34px; padding: 0 16px; border-radius: {RAYON_CONTROLE}px; }}"
+            "QPushButton#ouvrirSecurite:hover { background: #f0ad7a; border-color: #f0ad7a; }"
+        ) + feuille_de_style())
         self._dossier = str(dossier)
 
         racine = QVBoxLayout(self)
@@ -78,7 +79,7 @@ class AideAntivirus(QDialog):
 
         titre = QLabel(tr("Protéger le dossier des jeux"))
         titre.setFont(cinzel(12, bold=True))
-        titre.setStyleSheet("color: #f2e6c4;")
+        titre.setStyleSheet(themed("color: #ecdcb0;"))
         racine.addWidget(titre)
 
         intro = QLabel(tr(
@@ -108,8 +109,7 @@ class AideAntivirus(QDialog):
         self._chemin.setFont(body_font(12))
         self._chemin.setWordWrap(True)
         ligne_chemin.addWidget(self._chemin, 1)
-        self._copier = QPushButton(tr("Copier"))
-        self._copier.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._copier = bouton(tr("Copier"))
         self._copier.clicked.connect(self._copier_chemin)
         ligne_chemin.addWidget(self._copier)
         racine.addLayout(ligne_chemin)
@@ -118,9 +118,8 @@ class AideAntivirus(QDialog):
         bas.setSpacing(14)
         self._ouvrir = None
         if sys.platform == "win32":
-            self._ouvrir = QPushButton(tr("Ouvrir Sécurité Windows"))
+            self._ouvrir = bouton(tr("Ouvrir Sécurité Windows"))
             self._ouvrir.setObjectName("ouvrirSecurite")
-            self._ouvrir.setCursor(Qt.CursorShape.PointingHandCursor)
             self._ouvrir.clicked.connect(lambda: open_url(SECURITE_WINDOWS_URL))
             bas.addWidget(self._ouvrir)
         autre = QLabel(tr("Un autre antivirus ? Même idée : une exclusion pour ce dossier."))
@@ -130,8 +129,7 @@ class AideAntivirus(QDialog):
         bas.addWidget(autre, 1)
         racine.addLayout(bas)
 
-        fermer = QPushButton(tr("Fermer"))
-        fermer.setCursor(Qt.CursorShape.PointingHandCursor)
+        fermer = bouton(tr("Fermer"))
         fermer.clicked.connect(self.accept)
         racine.addWidget(fermer, 0, Qt.AlignmentFlag.AlignRight)
 

@@ -26,6 +26,11 @@ class TestRangement:
             if r.onglet in ("image", "affichage"):
                 assert ri.place(r) != ri._AILLEURS, r.ident
 
+    def test_les_deux_reglages_d_arbres_lointains_sont_ensemble(self):
+        """f67 : « Arbres lointains plus fournis » en Qualité, « Feuillage dense au loin » en
+        Distance d'affichage : qui cherchait les arbres au loin n'en trouvait qu'un."""
+        assert ri.place(REGLAGES["mipmaps_fins"]) == ri.place(REGLAGES["feuillage_lointain"])
+
     def test_une_categorie_vide_n_existe_pas(self):
         cats = ri.ranger([REGLAGES["halo"], REGLAGES["surechantillonnage"]])
         assert [c.ident for c in cats] == ["qualite", "lumiere"]
@@ -43,9 +48,9 @@ class TestRangement:
 
     def test_la_recherche_ignore_casse_et_accents(self):
         r = REGLAGES["occlusion"]
-        assert ri.correspond(r, *rc.textes(r), "OMBRES DE CONTACT")
-        assert ri.correspond(r, *rc.textes(r), "decor")       # « décor » dans la description
-        assert not ri.correspond(r, *rc.textes(r), "   ")
+        assert ri.correspond(*rc.textes(r), "OMBRES DE CONTACT")
+        assert ri.correspond(*rc.textes(r), "decor")       # « décor » dans la description
+        assert not ri.correspond(*rc.textes(r), "   ")
 
 
 class TestCurseurs:

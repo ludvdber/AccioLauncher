@@ -133,7 +133,7 @@ class GameOperations(QObject):
         supprimée qu'une fois le téléchargement terminé et vérifié.
         """
         if self.is_busy:
-            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            self.status_message.emit(tr("Un téléchargement ou une installation est déjà en cours."))
             return
         if not version.is_available:
             # Point de passage unique de download / mettre_a_jour / repair :
@@ -153,7 +153,7 @@ class GameOperations(QObject):
         # ne voit pas. On attend qu'il soit vraiment fini (règle de CLAUDE.md).
         if any(z.destination == dest for z in self._zombies):
             log.warning("Téléchargement annulé de %s encore actif — relance refusée", game.id)
-            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            self.status_message.emit(tr("Un téléchargement ou une installation est déjà en cours."))
             return
 
         self._target_version = version
@@ -349,7 +349,7 @@ class GameOperations(QObject):
         ancienne version, on va toujours vers la recommandée.
         """
         if self.is_busy:
-            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            self.status_message.emit(tr("Un téléchargement ou une installation est déjà en cours."))
             return
         version = game.current_download
         if version is None or not version.is_available:
@@ -360,7 +360,7 @@ class GameOperations(QObject):
     def repair(self, game: GameData) -> None:
         """Re-télécharge l'archive (vérifiée par SHA-256 si dispo) et réinstalle par-dessus."""
         if self.is_busy:
-            self.status_message.emit(tr("Un téléchargement ou installation est déjà en cours."))
+            self.status_message.emit(tr("Un téléchargement ou une installation est déjà en cours."))
             return
         installed = self._manager.installed_version(game.id)
         ver = (game.get_version(installed) if installed else None) or game.current_download
@@ -503,7 +503,6 @@ class GameOperations(QObject):
         self._manager.set_game_state(game.id, GameState.INSTALLED)
         self._manager.save_installed_version(game.id, target_ver.version if target_ver else None)
         self.state_changed.emit()
-        self.status_message.emit(tr("{} installé avec succès !").format(game.name))
         self.operation_finished.emit(game)
 
     def _on_install_error(self, message: str, cause: str) -> None:

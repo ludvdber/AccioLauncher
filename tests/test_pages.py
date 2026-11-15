@@ -78,8 +78,12 @@ class TestLesTouchesDeLaBibliothequeSeTaisent:
 
 def test_fermer_le_launcher_ferme_la_page(fenetre):
     """Les Paramètres comptent l'espace disque dans un thread : il doit s'arrêter."""
+    from src.ui import disk_scan_worker
     fenetre._on_settings()
     page = fenetre._pages.page
+    fil = page._scan_worker
+    assert fil is not None
     fenetre._fermeture_confirmee = True
     fenetre.close()
-    assert not page._scan_worker.isRunning()
+    assert page._scan_worker is None, "la page lâche le fil (f18)"
+    assert not fil.isRunning() or fil in disk_scan_worker._gares, "arrêté, ou garé jusqu'à sa fin"

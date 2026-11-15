@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayou
 from src.core.config import Config
 from src.core.i18n import tr
 from src.ui.composants import ENCRE, bouton, feuille_de_style, police, surtitre, texte
-from src.ui.theme import accent_qcolor, bg_qcolor, themed
+from src.ui.theme import RAYON_CARTE, accent_qcolor, bg_qcolor, themed
 
 # Écart entre l'élément et le bord de sa découpe, puis entre la découpe et la carte.
 _MARGE_DECOUPE = 8
@@ -38,12 +38,12 @@ _ALPHA_VOILE = 205
 # Après l'ouverture : laisser le fondu finir et la fiche se poser.
 DELAI_MS = 1500
 
-_STYLE_CARTE = """
-QFrame#carteVisite {
+_STYLE_CARTE = f"""
+QFrame#carteVisite {{
     background: #0d0d1a;
     border: 1px solid rgba(214, 167, 44, 0.45);
-    border-radius: 12px;
-}
+    border-radius: {RAYON_CARTE}px;
+}}
 """
 
 
@@ -81,7 +81,7 @@ def etapes_launcher(carrousel: QWidget, fiche: QWidget, barre: QWidget,
                  "ce jeu est derrière l'engrenage."),
               lambda: fiche.findChild(QWidget, "btnGameSettings")),
         Etape(tr("Votre partie"),
-              tr("Votre avancement, lu dans vos sauvegardes. Un clic ouvre le folio : cartes, "
+              tr("Où vous en êtes. Un clic ouvre le folio : cartes, "
                  "dragées, points de maison."),
               lambda: fiche.findChild(BlocFolio)),
         Etape(tr("Carnet"),

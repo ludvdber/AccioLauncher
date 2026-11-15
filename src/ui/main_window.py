@@ -322,7 +322,7 @@ class MainWindow(QMainWindow):
         # Le toast « mise à jour de jeu dispo » (actionnable) prime sur le toast
         # « catalogue mis à jour » (informatif) — un seul Toast à la fois.
         if not self._notify_game_updates():
-            self._toast.show_message(tr("Catalogue mis à jour (v{})").format(catalog.catalog_version))
+            self._toast.show_message(tr("Liste des jeux mise à jour."))
         log.info("UI rafraîchie après mise à jour du catalogue")
 
     def _on_launcher_update(self, version: str, url: str, asset_url: str = "",

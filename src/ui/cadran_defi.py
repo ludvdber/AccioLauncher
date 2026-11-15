@@ -26,6 +26,7 @@ from src.core.i18n import tr
 from src.ui.composants import police
 from src.ui.fonts import cinzel
 from src.ui.theme import accent_qcolor, bg_qcolor
+from src.ui.theme import current as theme_courant
 from src.ui.ticker import Ticker
 
 # Le repère de la maquette.
@@ -290,7 +291,7 @@ class CadranDefi(QWidget):
             losange = QPolygonF([centre + QPointF(0, -4.5), centre + QPointF(4.5, 0),
                                  centre + QPointF(0, 4.5), centre + QPointF(-4.5, 0)])
             p.setPen(QPen(accent_qcolor(), 1.2))
-            p.setBrush(QColor(240, 208, 96) if actif else bg_qcolor())
+            p.setBrush(QColor(theme_courant().accent_light) if actif else bg_qcolor())   # f1
             p.drawPolygon(losange)
             ancre = _point(cran, _R_EXT + 26)
             ecart = ancre.x() - _CX
@@ -308,7 +309,7 @@ class CadranDefi(QWidget):
             zone = QRectF(x, y - mesure.ascent(), largeur, mesure.height()).adjusted(-6, -4, 6, 4)
             self._zones[ident] = zone
             if actif:
-                p.setPen(QColor(240, 208, 96))
+                p.setPen(QColor(theme_courant().accent_light))
             elif ident == self._survole:
                 p.setPen(QColor(242, 242, 244))
             else:

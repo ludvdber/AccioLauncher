@@ -30,54 +30,40 @@ from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.i18n import tr
 from src.ui.cadran_defi import CadranDefi, teinte
-from src.ui.composants import Rangee, surtitre, texte, transparent
+from src.ui.composants import Rangee, pastille, surtitre, texte, transparent
 from src.ui.fonts import cinzel
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, current as current_theme, themed
 
 _DOUX = "#a9a7c4"
 _ETEINT = "#6c6a88"
 _OR_CLAIR = "#f0d060"
 
-_STYLE = """
-QFrame#preset {
+_STYLE = f"""
+QFrame#preset {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #121226, stop:0.6 #0d0d1a);
-    border: 1px solid rgba(214, 167, 44, 0.22); border-radius: 14px;
-}
-QFrame#preset:hover { border-color: rgba(214, 167, 44, 0.5); }
-QFrame#preset[actif="true"] {
+    border: 1px solid rgba(214, 167, 44, 0.22); border-radius: {RAYON_CARTE}px;
+}}
+QFrame#preset:hover {{ border-color: rgba(214, 167, 44, 0.5); }}
+QFrame#preset[actif="true"] {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #16162c, stop:0.7 #0d0d1a);
     border: 1px solid #d6a72c;
-}
-QFrame#surMesure {
-    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.22); border-radius: 14px;
-}
-QFrame#surMesure[actif="true"] {
+}}
+QFrame#surMesure {{
+    background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.22); border-radius: {RAYON_CARTE}px;
+}}
+QFrame#surMesure[actif="true"] {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(214, 167, 44, 0.08), stop:0.6 #0d0d1a);
     border: 1px solid #d6a72c;
-}
-QFrame#bientot {
-    background: rgba(13, 13, 26, 0.5); border: 1px solid rgba(169, 167, 196, 0.12); border-radius: 14px;
-}
-QFrame#filetLignes { background: rgba(214, 167, 44, 0.14); border: none; }
-QFrame#filetSection {
+}}
+QFrame#bientot {{
+    background: rgba(13, 13, 26, 0.5); border: 1px solid rgba(169, 167, 196, 0.12); border-radius: {RAYON_CARTE}px;
+}}
+QFrame#filetLignes {{ background: rgba(214, 167, 44, 0.14); border: none; }}
+QFrame#filetSection {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(214, 167, 44, 0.22), stop:1 rgba(214, 167, 44, 0));
     border: none;
-}
+}}
 """
-
-
-def _pastille(contenu: str, encre: str, bord: str) -> QLabel:
-    """« BÊTA », « BIENTÔT » : une capitale en Cinzel dans une gélule."""
-    lbl = QLabel(contenu.upper())
-    lbl.setTextFormat(Qt.TextFormat.PlainText)
-    f = cinzel(7, bold=True)
-    f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.8)
-    lbl.setFont(f)
-    lbl.setStyleSheet(themed(f"color: {encre}; background: transparent; border: 1px solid {bord};"
-                             " border-radius: 9px; padding: 2px 9px 1px 9px;"))
-    lbl.setMinimumHeight(round(QFontMetricsF(f).height()) + 8)
-    lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-    return lbl
 
 
 def _nom(contenu: str, pt: int, encre: str) -> QLabel:
@@ -266,7 +252,7 @@ class _TuileBientot(QFrame):
         lay.setSpacing(4)
         tete = QHBoxLayout()
         tete.addWidget(_nom(tr(preset.nom), 12, "#8f8daa"), stretch=1)
-        tete.addWidget(_pastille(tr("Bientôt"), _DOUX, "rgba(169, 167, 196, 0.25)"),
+        tete.addWidget(pastille(tr("Bientôt"), _DOUX, "rgba(169, 167, 196, 0.25)"),
                        alignment=Qt.AlignmentFlag.AlignTop)
         lay.addLayout(tete)
         lay.addWidget(_sans_bord(texte(tr(preset.phrase), 13, _ETEINT, retour=True)))
@@ -349,7 +335,7 @@ class PanneauDifficulte(QWidget):
         # Le « quand » est au pied (`_noter_pied`), pour chaque onglet : le redire
         # ici le mettait deux fois à l'écran. « Vos sauvegardes ne changent pas. » est parti le
         # 2026-11-13 (Ludo : un comportement normal ne se précise pas).
-        self.pastille_beta = _pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
+        self.pastille_beta = pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
         self.pastille_beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas "
                                          "se signale sur le Discord du projet."))
         v.addWidget(self.pastille_beta, alignment=Qt.AlignmentFlag.AlignLeft)

@@ -187,18 +187,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # le mélangeur de Windows coupe la session du jeu. Lu au démarrage du jeu.
     Reglage("son_arriere_plan", "Accio.Window", "MuteInBackground",
             "Couper le son quand le jeu est derrière",
-            "Le son du jeu se coupe quand une autre fenêtre passe devant et revient avec le "
-            "jeu. Un son que vous avez coupé vous-même dans le mélangeur de Windows le reste. "
-            "Compte au prochain lancement du jeu.",
+            "Le son se coupe quand une autre fenêtre passe devant, et revient avec le jeu.",
             defaut=False),
     # Le même pour HP3 (dinput8.ini), sous un AUTRE identifiant : un launcher 1.3.0
     # masquait toute la page Image de HP3 dès qu'un réglage du correctif y était
     # déclaré. Il ignore un identifiant qu'il ne connaît pas (2026-10-28).
     Reglage("son_arriere_plan_hp3", "Accio.Window", "MuteInBackground",
             "Couper le son quand le jeu est derrière",
-            "Le son du jeu se coupe quand une autre fenêtre passe devant et revient avec le "
-            "jeu. Un son que vous avez coupé vous-même dans le mélangeur de Windows le reste. "
-            "Compte au prochain lancement du jeu.",
+            "Le son se coupe quand une autre fenêtre passe devant, et revient avec le jeu.",
             defaut=False),
     Reglage("limite_fps", "Accio.Window", "FPSLimit",
             "Limite d'images par seconde",
@@ -224,8 +220,29 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
     Reglage("camera_fluide", "Accio.Game", "SimulationStep",
             "Caméra",
-            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort). Compte au prochain lancement du jeu.",
+            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : certaines animations vont encore trop vite (la bouche des personnages qui parlent, ce que la souris pilote pendant un sort).",
             choix=(0, 16), zero="D'origine", etiquettes=((16, "Fluide"),), onglet="perfs", beta=True),
+    # HP4, HP5, HP6, [Accio.Game] RealFrameTime du correctif (issues #28 et #29) : la boucle de ces jeux rend
+    # chaque image à un temps virtuel qui avance de 1000/FrameRateCap ; sous une limite plus basse que le plafond,
+    # l'image avance de 8,3, 8,3 puis 33,3 ms de jeu alors que les images arrivent régulièrement. 1 = l'image est
+    # rendue au temps de l'horloge. MESURÉ le 2026-11-14 (atelier, file d'essais 10, 60 Hz, limite 60, plafond
+    # 120) : ~3 600 images par minute à un temps faux avec 0, 0 avec 1 sur HP4 et HP5, 0 à 21 sur HP6. Livré à 1
+    # dans les ini de la 1.3.4 ; une clé absente vaut 0 (le correctif laisse alors le jeu tel quel).
+    Reglage("images_a_l_heure", "Accio.Game", "RealFrameTime",
+            "Mouvement sans saccade",
+            "Sous une limite d'images plus basse que celle du jeu (60 sur un écran à 60 Hz), le jeu avance par "
+            "petites saccades : ses images arrivent régulièrement, mais chacune montre le monde trop tôt ou trop "
+            "tard. Allumé, chaque image montre le monde à l'instant où elle s'affiche.",
+            defaut=False, onglet="perfs"),
+    # HP6, [Accio.Game] ClosedFileGuard du correctif (game.cpp GuardClosedFiles, fileguard.h, 2026-11-14) : le fil
+    # d'entrées-sorties du jeu exécutait une lecture sur un fichier déjà fermé pendant l'arrêt, d'où un plantage
+    # 0xC0000005 à la fermeture de la fenêtre. VU en jeu le 2026-11-14 (atelier, files 80 a et b) : 6 fermetures sur
+    # 6 plantaient sans la garde, 6 sur 6 sortaient proprement avec. Livré à 1 ; une clé absente vaut 1 aussi.
+    Reglage("fermeture_sans_plantage", "Accio.Game", "ClosedFileGuard",
+            "Fermeture sans plantage",
+            "En se fermant, le jeu lisait encore un fichier qu'il venait de fermer, et plantait. Allumé, cette "
+            "lecture est sautée et le jeu se ferme proprement.",
+            defaut=True, onglet="perfs"),
     Reglage("synchro_verticale", "Accio.Graphics", "VSync",
             "Synchronisation verticale",
             "Cale les images sur la fréquence de l'écran : plus de déchirure horizontale "
@@ -269,7 +286,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "rayons et couleurs. La « Lueur du jeu » n'en dépend pas.",
             defaut=False, technique="FXAA", onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("nettete", "Accio.Graphics", "Sharpness",
-            "Netteté",
+            "Netteté du lissage",
             "Rend du piqué à l'image que le lissage (FXAA) adoucit : contours et textures "
             "plus nets. Trop fort, un liseré clair apparaît autour des contours.",
             choix=tuple(v for v, _ in NETTETES), zero="Aucune", etiquettes=NETTETES, chiffre=True,
@@ -285,7 +302,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             " pixel. Plus le nombre est grand, plus c'est lisse, et plus la carte graphique "
             "travaille. L'allumer éteint les ombres de contact, qui l'empêchent d'atteindre "
             "le décor.",
-            choix=ECHANTILLONS_MSAA, zero="Désactivé", format_choix="{}×",
+            choix=ECHANTILLONS_MSAA, zero="Éteint", format_choix="×{}",
             technique="MSAA", onglet="image", cout=(("GPU", 2),), se_voit=True, exclut="occlusion"),
     # HP4 et HP6, vu en jeu le 2026-09-26 : sous le seul MSAA, les bords
     # découpés (cheveux, feuilles, herbe) restent en escalier ; le correctif
@@ -312,7 +329,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et "
             "détails lointains nettement plus fins. Le réglage qui se voit le plus, et le "
             "plus exigeant : ×2 est pour les PC puissants.",
-            choix=(1, 1.5, 2), zero="Désactivé", format_choix="×{}",
+            choix=(1, 1.5, 2), zero="Éteint", format_choix="×{}",
             technique="suréchantillonnage", onglet="image", cout=(("GPU", 3),), se_voit=True),
     # Les effets du correctif (HP4-HP6), tous allumés dans les ini livrés et
     # joués ainsi ; F8 (CompareKey) les montre éteints. Ouverts au lanceur à la
@@ -322,7 +339,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Netteté des sols et des murs",
             "Sols, murs et chemins vus en biais restent nets au lieu de devenir flous "
             "(filtrage anisotrope). Presque gratuit sur une carte récente.",
-            choix=FILTRAGES, zero="Désactivé", format_choix="×{}",
+            choix=FILTRAGES, zero="Éteint", format_choix="×{}",
             technique="filtrage anisotrope", onglet="image", cout=(("GPU", 1),), se_voit=True),
     Reglage("textures_lointaines", "Accio.Graphics", "TextureLODBias",
             "Textures lointaines",
@@ -341,9 +358,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # des deux côtés (notes/HP6.md du correctif).
     Reglage("mipmaps_fins", "Accio.Graphics", "MipmapFilter",
             "Arbres lointains plus fournis",
-            "Les copies réduites des textures que le jeu affiche au loin sont faites plus "
-            "fines : forêts et arbres lointains gardent leur feuillage au lieu de fondre dans "
-            "la pente.",
+            "Forêts et arbres lointains gardent leur feuillage au lieu de fondre dans la pente.",
             defaut=False, onglet="image", cout=(("GPU", 1),)),
     # HP6, [Accio.Graphics] TextureReplace du correctif (settings.cpp, lu au démarrage seulement ; texdump.cpp) :
     # 1 = les .dds de accio_remplacements\ à côté de hp6.exe prennent la place des textures du jeu ; sans ce
@@ -355,8 +370,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Textures HD",
             "Remplace les textures du jeu par des versions plus détaillées : murs, sols et décor plus nets de près. "
             "Il faut le pack de textures HD bêta, à télécharger sur le Discord d'Accio et à décompresser dans le "
-            "dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo. Compte au "
-            "prochain lancement du jeu.",
+            "dossier du jeu ; sans lui, ce réglage ne change rien. Demande plus de mémoire vidéo.",
             defaut=False, onglet="image", cout=(("GPU", 1), ("RAM", 1)), se_voit=True, beta=True),
     Reglage("occlusion", "Accio.Graphics", "SSAO",
             "Ombres de contact",
@@ -364,15 +378,15 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "gagne en relief (occlusion ambiante). Les allumer éteint l'anticrénelage (MSAA).",
             defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True,
             depend_de="lissage", exclut="anticrenelage"),
-    # « Expérimental » dans l'ini livré : agrandit aussi les reflets.
+    # « Expérimental » dans l'ini livré : agrandit aussi les reflets. En bêta (audit UI f101) :
+    # l'étiquette dit l'essai, la fiche n'a plus à dire « à vos risques ».
     Reglage("ombres_nettes", "Accio.Graphics", "ShadowMapScale",
             "Définition des ombres",
             "Calcule les ombres portées en plus fin : des bords nets au lieu de flous et "
-            "crénelés. Expérimental : agrandit aussi les reflets, et demande plus de mémoire "
-            "vidéo. À vos risques : sur Le Prince de Sang-Mêlé, ×4 laisse des taches sombres "
-            "sur les personnages dehors quand la caméra tourne.",
+            "crénelés. Agrandit aussi les reflets et demande plus de mémoire vidéo. Sur Le "
+            "Prince de Sang-Mêlé, ×4 tache les personnages dehors quand la caméra tourne.",
             choix=(1, 2, 4), zero="D'origine", format_choix="×{}",
-            onglet="image", cout=(("GPU", 2), ("RAM", 1))),
+            onglet="image", cout=(("GPU", 2), ("RAM", 1)), beta=True),
     # HP5, vu en jeu le 2026-10-22 depuis la DLL seule : bords des ombres de Harry
     # et Ron adoucis, forme gardée. Pas HP6 tant que ses ombres tachent quand la
     # caméra tourne.
@@ -420,8 +434,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Lueur du jeu",
             "La lueur que le jeu pose autour des lumières. « D'origine », elle déborde en liseré orangé autour des "
             "cheveux et des visages ; « Douce » l'en retire et garde celle des lampes et des sorts. Plus bas, l'image "
-            "s'assombrit, et « Aucune » éteint aussi la lueur des lampes et des sorts. Compte au prochain lancement "
-            "du jeu. Indépendante du « Halo ajouté par Accio ».",
+            "s'assombrit, et « Aucune » éteint aussi la lueur des lampes et des sorts. "
+            "Indépendante du « Halo ajouté par Accio ».",
             choix=(100, 60, 30, 0), zero="D'origine",
             etiquettes=((60, "Douce"), (30, "Faible"), (0, "Aucune")),
             onglet="image", se_voit=True),
@@ -469,8 +483,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # choisi par Ludo sur paires avant/après (2026-10-25).
     Reglage("vert_relief", "Accio.Graphics", "GreenRestraintTerrain",
             "Vert des montagnes",
-            "Le correctif retire au ciel du jeu sa teinte vert menthe ; ce filtre grise aussi "
-            "les collines. Ce réglage rend leur herbe aux montagnes sans toucher au ciel.",
+            "Rend leur herbe verte aux collines et aux montagnes, sans toucher au ciel.",
             choix=(1, 0.6, 0.4, 0.2, 0), zero="Gris",
             etiquettes=((0.6, "Légèrement vert"), (0.4, "Vert"), (0.2, "Très vert"),
                         (0, "Vert du jeu")), chiffre=True,
@@ -485,8 +498,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "« Bleu » remplace la brume vert menthe du jour par un ciel bleu. « Heure "
             "réelle » suit l'horloge de l'ordinateur : le jeu passe à sa propre nuit, son "
             "matin, son midi ou son coucher, lumière et personnages compris. Si une quête "
-            "semble bloquée, revenir à « Bleu » rend au jeu son heure. Se change aussi pendant "
-            "la partie.",
+            "semble bloquée, revenir à « Bleu » rend au jeu son heure.",
             choix=(0, 1, 2, 3, 4), zero="D'origine",
             etiquettes=((1, "Bleu"), (2, "Heure réelle"), (3, "Heure choisie"),
                         (4, "Couleur choisie")),
@@ -511,8 +523,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("panneau_perfs", "Accio.Overlay", "",
             "Panneau de performances",
             "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et "
-            "vive, latence. En jeu, F11 lance un benchmark et F11 à nouveau l'arrête ; il est"
-            " enregistré dans le dossier « benchmarks » du jeu.",
+            "vive, latence. En jeu, F11 lance une mesure des performances et F11 à nouveau l'arrête ;"
+            " elle est enregistrée dans le dossier « benchmarks » du jeu.",
             defaut=False, onglet="perfs", cout=(("CPU", 1),)),
     # HP6, vu en jeu le 2026-09-26 : son menu de langue s'ouvre sur la langue
     # de Windows, mais le jeu ne connaît qu'une variante de chaque langue — un
@@ -534,13 +546,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # Bêta tant qu'un essai en jeu ne l'a pas vu (IDEES § À VOIR).
     Reglage("degats_recus", "Accio.Hardcore", "DamageTaken",
             "Dégâts reçus",
-            "Multiplie les dégâts que Harry reçoit. Se change aussi pendant la partie : le "
-            "jeu le prend en compte dans la seconde.",
+            "Multiplie les dégâts que Harry reçoit : à ×2, sa vie fond deux fois plus vite.",
             choix=(1, 0.5, 1.5, 2, 3, 5), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("degats_infliges", "Accio.Hardcore", "DamageDealt",
-            "Dégâts de vos sorts",
+            "Dégâts des sorts de Harry",
             "Multiplie les dégâts des sorts de Harry : à ×0,5, les ennemis tiennent deux "
-            "fois plus longtemps. Se change aussi pendant la partie.",
+            "fois plus longtemps.",
             choix=(1, 1.5, 0.75, 0.5, 0.33, 0.25), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("reaction_ennemis", "Accio.Hardcore", "EnemyReaction",
             "Réaction des ennemis",
@@ -575,12 +586,12 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("vie_joueur", "Accio.Hardcore", "PlayerHealth",
             "Vie de Harry",
             "Multiplie la vie maximale de Harry : à ×0,5, deux fois moins de coups suffisent. "
-            "Sa vie du moment garde la même part. Se change aussi pendant la partie.",
+            "Sa vie du moment garde la même part.",
             choix=(1, 1.5, 0.75, 0.5, 0.25), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("regeneration", "Accio.Hardcore", "PlayerRegen",
             "Régénération",
             "La vitesse à laquelle la vie de Harry remonte toute seule après un coup. "
-            "« Jamais » : elle ne remonte plus d'elle-même. Se change aussi pendant la partie.",
+            "« Jamais » : elle ne remonte plus d'elle-même.",
             choix=(1, 0.5, 0), zero="D'origine",
             etiquettes=((0.5, "Deux fois plus lente"), (0, "Jamais")), onglet="difficulte", beta=True),
     # Invincible (correctif 2.3.0, 2026-10-30, Ludo : « pour les personnes qui ont
@@ -589,18 +600,18 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("invincible", "Accio.Hardcore", "Invincible",
             "Harry invincible",
             "Harry ne reçoit plus aucun dégât des ennemis : pour vivre l'histoire sans échouer. "
-            "« Dégâts reçus » n'a alors plus d'effet. Se change aussi pendant la partie.",
+            "« Dégâts reçus » n'a alors plus d'effet.",
             defaut=False, onglet="difficulte", beta=True),
     # HP4, le seuil des créatures (correctif, 2026-11-08 ; `source/hardcore.cpp`) : combien de maléfices il faut, et
     # en combien de temps la jauge retombe. Relu au chargement d'un niveau. Au catalogue après un essai en jeu, avec
     # `degats_recus` et `degats_infliges` pour HP4 (chaque coup depuis le 2026-11-09) et une section [Accio.Hardcore] dans son ini.
     Reglage("sorts_par_creature", "Accio.Hardcore", "EnemyHits",
             "Résistance des créatures",
-            "Multiplie le nombre de sorts qu'il faut pour ensorceler une créature. Sa vie dépend des « Dégâts de vos sorts ». Compte au prochain niveau chargé.",
+            "Multiplie le nombre de sorts qu'il faut pour ensorceler une créature. Sa vie dépend des « Dégâts des sorts de Harry ». Prend effet au prochain niveau.",
             choix=(1, 0.6, 1.5, 2, 3), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     Reglage("jauge_creature", "Accio.Hardcore", "EnemyRecovery",
             "Temps pour enchaîner les sorts",
-            "Le temps que met une créature à se remettre de vos sorts : plus il est court, plus il faut les enchaîner vite. Compte au prochain niveau chargé.",
+            "Le temps que met une créature à se remettre des sorts de Harry : plus il est court, plus il faut les enchaîner vite. Prend effet au prochain niveau.",
             choix=(1, 1.5, 0.7, 0.5), zero="D'origine", format_choix="×{}", onglet="difficulte", beta=True),
     # HP1 et HP2, Quidditch plus difficile (retours de joueurs, 2026-10-26) :
     # [Accio.Game] QuidditchDifficulty du winmm.ini (source/winmm/quidditch.h du
@@ -608,7 +619,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     Reglage("quidditch", "Accio.Game", "QuidditchDifficulty",
             "Difficulté du Quidditch",
             "La barre du Vif d'or monte moins vite et redescend plus vite : il faut le "
-            "suivre de plus près. Les coups font plus mal. Compte au prochain lancement du jeu.",
+            "suivre de plus près. Les coups font plus mal.",
             choix=(0, 1, 2), zero="D'origine",
             etiquettes=((1, "Difficile"), (2, "Expert")), onglet="difficulte", beta=True),
 )}

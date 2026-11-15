@@ -380,3 +380,4 @@ def test_avec_la_visionneuse_la_carte_ne_garde_que_l_image_et_le_nom(qtbot):
     textes = {lb.text() for lb in courte.findChildren(QLabel) if lb.text()}
     assert textes == {dans_la_langue(fiche.nom)}
     assert courte.sizeHint().height() <= 90 < longue.sizeHint().height()
+

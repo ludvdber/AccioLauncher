@@ -55,7 +55,7 @@ from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel, cinzel_decorative
 from src.ui.icon_button import pixmap_icone
 from src.ui.manette_nav import GARDE_FLECHES
-from src.ui.theme import current as current_theme, themed
+from src.ui.theme import RAYON_CARTE, current as current_theme, themed
 from src.ui.utils import open_local_path, open_url, zone_defilable
 
 log = logging.getLogger(__name__)
@@ -391,8 +391,8 @@ class GaleriePage(QDialog):
         n = QVBoxLayout(note)
         n.setContentsMargins(16, 12, 16, 12)
         n.setSpacing(6)
-        n.addWidget(texte(tr("F12 en jeu. Rangées dans Images › Accio Launcher, jamais effacées "
-                             "avec un jeu."), 13, "#c4c2da", retour=True))
+        n.addWidget(texte(tr("F12 en jeu. Les captures vont dans Images › Accio Launcher."), 13,
+                          "#c4c2da", retour=True))
         lay.addWidget(note)
 
     def _cote(self) -> QFrame:
@@ -413,7 +413,7 @@ class GaleriePage(QDialog):
         # La visionneuse du système reste le seul moyen de voir l'image en grand.
         self._apercu = _Apercu()
         self._apercu.setFixedSize(_APERCU_LARGEUR, _APERCU_LARGEUR * 9 // 16)
-        self._apercu.setStyleSheet(themed("background: #16172c; border-radius: 8px;"))
+        self._apercu.setStyleSheet(themed(f"background: #16172c; border-radius: {RAYON_CARTE}px;"))
         self._apercu.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._apercu.setCursor(Qt.CursorShape.PointingHandCursor)
         self._apercu.setToolTip(tr("Ouvrir l'image"))

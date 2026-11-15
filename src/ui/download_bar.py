@@ -105,6 +105,7 @@ class DownloadBar(QWidget):
         # dernière ligne de winetricks. Sans ça, plusieurs minutes passaient
         # sous un texte figé (Ludo, Bazzite, 2026-09-30 : « on ne voit pas
         # l'avancement, on ne sait pas où ça en est »).
+        self._partie: tuple[int, int] | None = None   # « partie 2 sur 4 », gardée d'un relevé à l'autre
         self._preparation = False
         self._debut = 0.0
         self._etape = ""
@@ -219,7 +220,10 @@ class DownloadBar(QWidget):
         if self._progress.maximum() == 0:  # sortie du mode indéterminé (vérification)
             self._progress.setRange(0, 100)
         self._progress.setValue(downloaded * 100 // total)
-        self._status.setText(format_progress_line(downloaded, total, speed, eta_seconds))
+        ligne = format_progress_line(downloaded, total, speed, eta_seconds)
+        # La partie restait affichée une seule mise à jour, puis s'effaçait ; la fiche, elle,
+        # la garde (audit UI f49).
+        self._status.setText(append_part_info(ligne, *self._partie) if self._partie else ligne)
 
     def update_install_progress(self, pct: int) -> None:
         if self._progress.maximum() == 0:
@@ -229,11 +233,13 @@ class DownloadBar(QWidget):
         self._btn_cancel.hide()
 
     def update_part_info(self, current: int, total: int) -> None:
+        self._partie = (current, total) if total > 1 else None
         self._status.setText(append_part_info(self._status.text(), current, total))
 
     def hide_bar(self) -> None:
         self._chrono.stop()
         self._preparation = False
+        self._partie = None
         self._btn_cancel.setAccessibleName(tr("Annuler le téléchargement"))
         self._game = None
         self._title.setText("")

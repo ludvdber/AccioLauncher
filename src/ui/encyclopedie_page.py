@@ -414,6 +414,9 @@ class VueEncyclopedie(QWidget):
             self.scene = _Scene()
             self.scene.hide()               # jusqu'au premier modèle lu
             self._racine.addWidget(self.scene, stretch=1)
+            # Étroite tout de suite : les fiches se peignaient sur deux colonnes, puis sautaient sur
+            # une à l'arrivée du premier modèle (audit UI f37).
+            self._liste_etroite(True)
         carte = CarteAvancement()
         carte.poser(self._media.nom(jeu), compte.format(n=ouvertes, total=len(fiches)),
                     self._media.avance(jeu), any(f.seuil > 0 for f in fiches))
@@ -434,6 +437,10 @@ class VueEncyclopedie(QWidget):
                     (vue, self._fil.submit(maillages_ue1.de_la_fiche, dossier, fiche, _COTE_VIGNETTE)))
         self._lay.addLayout(flux)
         self._lay.addStretch()
+        if self.scene is not None and self.fiches:
+            # Créée avant les fiches, la visionneuse passait avant elles au clavier (f32).
+            QWidget.setTabOrder(self.fiches[-1], self.scene.mouvements)
+            QWidget.setTabOrder(self.scene.mouvements, self.scene.bouton_animer)
         if self._attendues or self._modeles_attendus:
             self._chargeur.start()
 

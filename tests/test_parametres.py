@@ -338,6 +338,42 @@ class TestQuatreRubriques:
             dialogue._btn_verifier.click()
         assert dialogue._update_status.text() == "Vérification des mises à jour…"
 
+    def test_une_verification_a_la_fois(self, dialogue, qtbot):
+        """f19 : trois clics lançaient trois vérifications ; la suivante attend le résultat."""
+        from src.ui.settings_panel import _RANG_A_PROPOS
+        dialogue.construire_rubrique(_RANG_A_PROPOS)
+        demandes = []
+        dialogue.verification_demandee.connect(lambda: demandes.append(1))
+        for _ in range(3):
+            dialogue._btn_verifier.click()
+        assert demandes == [1]
+        dialogue.show_update_status("Tout est à jour")
+        dialogue._btn_verifier.click()
+        assert demandes == [1, 1]
+
+    def test_fermer_n_attend_pas_un_disque_qui_ne_repond_plus(self, dialogue, qtbot, monkeypatch):
+        """f18 : `wait()` sans délai figeait la fenêtre tant qu'un disque lent tenait le fil ;
+        au-delà du délai, le fil est garé vivant jusqu'à sa vraie fin."""
+        import threading
+
+        from PyQt6.QtCore import QThread
+        from src.ui import disk_scan_worker
+        dialogue._shutdown_scan()
+        libere = threading.Event()
+        fil = disk_scan_worker.DiskScanWorker([])
+        fil.run = lambda: libere.wait(10) and None   # bloqué DANS un appel, comme un disque en veille
+        delais = []
+        fil.wait = lambda ms=None: (delais.append(ms), QThread.wait(fil, 50))[1]
+        dialogue._scan_worker = fil
+        fil.start()
+        try:
+            dialogue._shutdown_scan()
+            assert delais == [3000]
+            assert fil in disk_scan_worker._gares and fil.parent() is None
+        finally:
+            libere.set()
+        qtbot.waitUntil(lambda: fil not in disk_scan_worker._gares, timeout=3000)
+
     def test_un_catalogue_neuf_redit_le_numero(self, dialogue):
         dialogue.update_catalog_version("<b>9.99</b>")
         texte = dialogue._versions_label.text()
