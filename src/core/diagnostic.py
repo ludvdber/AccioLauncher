@@ -319,6 +319,17 @@ def puce_intel(cartes: list[str] | None = None) -> bool:
     return any("intel" in ligne.lower() for ligne in lignes)
 
 
+def sans_pilote_graphique(cartes: list[str] | None = None) -> bool:
+    """Vrai si AUCUNE carte n'a de pilote : seul l'adaptateur de base de Microsoft
+    répond, et tout ce qui s'affiche est dessiné par le processeur (audit UI f116).
+
+    Une liste vide (registre illisible, système inconnu) répond non : sans
+    savoir, on ne retire rien.
+    """
+    lignes = _cartes_graphiques() if cartes is None else cartes
+    return bool(lignes) and all("microsoft basic" in ligne.lower() for ligne in lignes)
+
+
 def carte_graphique(v: Mapping[str, str]) -> str:
     """Met en forme une entrée du registre (pure, testable hors Windows)."""
     fournisseur = f"{v.get('ProviderName', '')} {v.get('DriverDesc', '')}"

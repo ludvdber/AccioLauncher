@@ -17,7 +17,7 @@ from src.ui import fond_gpu
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
-from src.core import composants_windows
+from src.core import composants_windows, effets
 from src.ui.installateur_composants import InstallateurComposants
 from src.ui.preparateur_wine import PreparateurWine
 from src.ui.utils import avertir
@@ -408,7 +408,8 @@ class GameDetailView(QWidget):
         self._fade_anim.setEndValue(1.0)
         self._fade_anim.setDuration(max(int(400 * (1.0 - current)), 80))
         self._fade_anim.start()
-        self._bg.start_zoom_loop()
+        if effets.animes():
+            self._bg.start_zoom_loop()
 
         # Fade-in info
         self._info.show()
@@ -458,7 +459,7 @@ class GameDetailView(QWidget):
 
     def handle_mouse_move(self, pos: QPointF) -> None:
         w, h = self.width(), self.height()
-        if w == 0 or h == 0:
+        if w == 0 or h == 0 or not effets.animes():
             return
         self._bg.set_parallax_target(pos.x(), pos.y(), float(w), float(h))
 

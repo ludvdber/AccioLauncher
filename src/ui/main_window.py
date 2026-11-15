@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 from src.core import compat, demarrage, manette, nouveautes
 from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
-from src.core.i18n import tr
+from src.core.i18n import set_language, tr
 from src.core.liens import DISCORD_URL, KOFI_URL
 from src.ui import (dialogues_fenetre, game_detail_handlers, pendant_la_partie, succes_widgets, toast_correctif,
                     verification_forcee)
@@ -22,7 +22,7 @@ from src.ui.game_detail import GameDetailView
 from src.ui.game_session import GameSession
 from src.ui.notification_bar import NotificationBar
 from src.ui.particles import ParticleOverlay
-from src.core.season import resolve as resolve_season
+from src.core import effets
 from src.ui.nouveautes_page import NouveautesPage
 from src.ui.pages import Pages
 from src.ui.settings_panel import SettingsDialog
@@ -63,11 +63,11 @@ class MainWindow(QMainWindow):
         load_fonts()
 
         self.config = self._first_launch_or_load()
-        # Langue et thème doivent être actifs AVANT la construction des widgets
-        # (chaînes tr() et couleurs posées à la construction ; changement = redémarrage).
-        from src.core.i18n import set_language
+        # Langue, thème et effets animés actifs AVANT la construction des widgets (chaînes
+        # tr(), couleurs et animations posées à la construction ; changement = redémarrage).
         set_language(self.config.langue)
         set_theme(self.config.theme)
+        effets.decider(self.config.effets_animes)
         self.setStyleSheet(themed(MAIN_STYLE))
         # Bords saisissables d'une fenêtre sans cadre (curseur, redimensionnement
         # natif) et liseré d'un pixel, APRÈS le thème : `src/ui/window_chrome.py`.
@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self._status_bar)
         # Particules (saison changeable dans Paramètres), derrière les jaquettes
         self._particles = self._detail.particules_gpu() or ParticleOverlay(self)
-        self._particles.apply_season(resolve_season(self.config.season))
+        self._particles.apply_season(effets.saison_des_particules(self.config.season))
         self._particles.masquer(self._carousel.zones_jaquettes)
         self._particles.raise_()
 

@@ -175,6 +175,8 @@ class Config:
     langue: str = DEFAULT_LANGUAGE
     theme: str = "poudlard"
     season: str = "auto"  # ambiance de l'Almanach ; voir src/core/season.py
+    # Effets animés (`src/core/effets.py`) : « auto » (selon ce PC), « oui », « non ».
+    effets_animes: str = "auto"
     # Le fait du jour, dans la barre de statut. Par défaut OUI : il prend la
     # place de « Prêt », un état normal que le projet s'interdit d'afficher
     # partout ailleurs, et il s'efface dès que le launcher a quelque chose
@@ -291,6 +293,7 @@ class Config:
                     langue=_as_str(data.get("langue"), DEFAULT_LANGUAGE),
                     theme=_as_str(data.get("theme"), "poudlard"),
                     season=_as_str(data.get("season"), "auto"),
+                    effets_animes=_as_str(data.get("effets_animes"), "auto"),
                     faits_du_jour=_as_bool(data.get("faits_du_jour"), True),
                     couleur_manette=_as_bool(data.get("couleur_manette"), True),
                     navigation_manette=_as_bool(data.get("navigation_manette"), True),
@@ -349,6 +352,7 @@ class Config:
                 "langue": self.langue,
                 "theme": self.theme,
                 "season": self.season,
+                "effets_animes": self.effets_animes,
                 "faits_du_jour": self.faits_du_jour,
                 "couleur_manette": self.couleur_manette,
                 "navigation_manette": self.navigation_manette,

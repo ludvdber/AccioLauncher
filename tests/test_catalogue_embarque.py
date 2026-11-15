@@ -210,3 +210,16 @@ def test_aucune_cinematique_n_est_titree_par_son_fichier():
             for langue, texte in titres.items():
                 # Un code de fichier entre guillemets (« dh03 », “dw”) : le titre de secours.
                 assert not re.search(r"[«“]\s?[a-z0-9_]+\s?[»”]", texte), (jeu, clip.fichier, langue, texte)
+
+
+def test_le_titre_espagnol_de_hp7_suit_la_graphie_d_ea():
+    """Audit UI f111 : le catalogue écrivait « las reliquias de la Muerte », les nouveautés « Las reliquias
+    de la muerte », alors que le jeu et son dossier de sauvegarde écrivent « Reliquias de la Muerte »."""
+    donnees = GAMES_JSON_PATH.parent
+    vus = 0
+    for fichier in ("games.json", "nouveautes.json", "atelier.json", "i18n/es.json"):
+        for trouve in re.findall(r"reliquias de la muerte", (donnees / fichier).read_text(encoding="utf-8"),
+                                 flags=re.IGNORECASE):
+            vus += 1
+            assert trouve == "Reliquias de la Muerte", (fichier, trouve)
+    assert vus >= 4   # le titre est bien là où on le cherche : sinon le test ne prouverait rien

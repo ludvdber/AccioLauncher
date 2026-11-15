@@ -7,6 +7,7 @@ from PyQt6.QtCore import QEvent, QPoint, QPointF, QRect, Qt, QTimer, pyqtSignal,
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QRegion
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
+from src.core import effets
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.ui.carousel_item import CarouselItem, vignette_pour
@@ -339,7 +340,8 @@ class Carousel(QWidget):
             self.resume()
 
     def resume(self) -> None:
-        if not self._ticking:
+        # Effets coupés (`src/core/effets.py`) : les étoiles restent posées, sans scintiller.
+        if not self._ticking and effets.animes():
             Ticker.instance().tick.connect(self._tick_stars)
             self._ticking = True
 

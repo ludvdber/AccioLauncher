@@ -26,6 +26,7 @@ from PyQt6.QtCore import QObject, QRect, QRectF, QSize, Qt, QUrl, pyqtProperty
 from PyQt6.QtGui import QColor, QImage, QImageReader, QPainter, QRadialGradient
 from PyQt6.QtWidgets import QWidget
 
+from src.core import effets
 from src.core.config import ASSETS_DIR
 from src.core.season import profil as profil_de
 from src.ui import theme
@@ -55,14 +56,16 @@ def actif() -> bool:
     Oui par défaut sous Windows (mesuré en vraie fenêtre le 2026-11-01 : repos
     22 → 11 % d'un cœur, bande-annonce 90 → 28 %, mode cinéma 125 → 15 %).
     Pas encore sous Linux, où Qt Quick passe par OpenGL et n'a pas été essayé
-    sous Wine ni dans l'AppImage. `ACCIO_FOND_GPU=0` ou `=1` force l'un ou l'autre.
+    sous Wine ni dans l'AppImage. Pas non plus sans pilote graphique : Qt Quick y
+    dessine au processeur, pas mieux que le chemin QPainter (audit UI f116).
+    `ACCIO_FOND_GPU=0` ou `=1` force l'un ou l'autre.
     """
     if not QUICK_DISPONIBLE or not _QML.exists():
         return False
     force = os.environ.get("ACCIO_FOND_GPU")
     if force in ("0", "1"):
         return force == "1"
-    return sys.platform == "win32"
+    return sys.platform == "win32" and not effets.sans_pilote()
 
 
 # Les formes des particules sont peintes une fois, agrandies de ce facteur, puis

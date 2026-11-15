@@ -57,7 +57,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QWidget
 
-from src.core import maillages_ue1
+from src.core import effets, maillages_ue1
 from src.core.maillages_ue1 import Animation, Maillage, Mouvement
 from src.ui.theme import accent_qcolor
 
@@ -255,6 +255,7 @@ class Visionneuse:
         self._mouvement = mouvement
         self._depart = time.monotonic()
         self._repos = 0
+        self._mettre_en_route()
         self.update()
         return True
 
@@ -299,6 +300,9 @@ class Visionneuse:
                 self.tourner(dl, dt)
                 self._elan = (dl * _FREIN, dt * _FREIN)
             elif self._repos >= _ATTENTE_REPOS:
+                if not effets.animes() and self._mouvement is None:
+                    self._minuteur.stop()   # effets coupés : immobile au repos, repart au prochain geste
+                    return
                 self.lacet = (self.lacet + _ROTATION_REPOS * pas) % 360
             else:
                 self._repos += 1
@@ -335,6 +339,7 @@ class Visionneuse:
     def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:
         self._prise = None
         self._repos = 0
+        self._mettre_en_route()   # l'élan du lâcher, même si le repos avait arrêté le minuteur
         self.setCursor(Qt.CursorShape.OpenHandCursor)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent | None) -> None:

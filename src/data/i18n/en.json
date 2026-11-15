@@ -1517,6 +1517,12 @@
     "Écran": "Screen",
     "Résolution, dans « Écran »": "Resolution, in “Screen”",
     "{} réglage": "{} setting",
-    "{} réglages": "{} settings"
+    "{} réglages": "{} settings",
+    "Effets animés": "Animated effects",
+    "Particules, zoom du fond, étoiles et personnages qui tournent seuls.": "Particles, background zoom, stars and characters that turn on their own.",
+    "Redémarrez le launcher pour appliquer ce choix.": "Restart the launcher to apply this choice.",
+    "Selon ce PC": "Based on this PC",
+    "Oui": "Yes",
+    "Non": "No"
   }
 }

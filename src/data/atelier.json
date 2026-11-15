@@ -39,8 +39,8 @@
         {"jeu": "HP4", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "La Coupe de Feu", "en": "The Goblet of Fire", "es": "El cáliz de fuego"}},
         {"jeu": "HP5", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "L'Ordre du Phénix", "en": "The Order of the Phoenix", "es": "La Orden del Fénix"}},
         {"jeu": "HP6", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Le Prince de Sang-Mêlé", "en": "The Half-Blood Prince", "es": "El misterio del príncipe"}},
-        {"jeu": "HP7 · 1", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Les Reliques de la Mort, partie 1", "en": "The Deathly Hallows, Part 1", "es": "Las reliquias de la Muerte, parte 1"}},
-        {"jeu": "HP7 · 2", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Les Reliques de la Mort, partie 2", "en": "The Deathly Hallows, Part 2", "es": "Las reliquias de la Muerte, parte 2"}}
+        {"jeu": "HP7 · 1", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Les Reliques de la Mort, partie 1", "en": "The Deathly Hallows, Part 1", "es": "Las Reliquias de la Muerte, parte 1"}},
+        {"jeu": "HP7 · 2", "etat": "cherche", "quoi": {"fr": "Bande-annonce", "en": "Trailer", "es": "Tráiler"}, "detail": {"fr": "Les Reliques de la Mort, partie 2", "en": "The Deathly Hallows, Part 2", "es": "Las Reliquias de la Muerte, parte 2"}}
       ]
     },
     {

@@ -441,7 +441,7 @@
     "Le 31 octobre 1981, James et Lily Potter mouraient à Godric's Hollow.": "El 31 de octubre de 1981, James y Lily Potter morían en el valle de Godric.",
     "Le Choixpeau chante une chanson différente à chaque rentrée.": "El sombrero seleccionador canta una canción distinta cada curso.",
     "Le Miroir du Riséd montre le plus profond désir de celui qui s'y regarde.": "El espejo de Oesed muestra el deseo más profundo de quien se mira en él.",
-    "Les Reliques de la Mort sont la Baguette de Sureau, la Pierre de Résurrection et la Cape d'Invisibilité.": "Las reliquias de la Muerte son la varita de saúco, la piedra de la resurrección y la capa de invisibilidad.",
+    "Les Reliques de la Mort sont la Baguette de Sureau, la Pierre de Résurrection et la Cape d'Invisibilité.": "Las Reliquias de la Muerte son la varita de saúco, la piedra de la resurrección y la capa de invisibilidad.",
     "Les escaliers de Poudlard changent de place quand ça leur chante.": "Las escaleras de Hogwarts cambian de sitio cuando les apetece.",
     "Les première année traversent le lac en barque ; les autres prennent les diligences.": "Los de primer año cruzan el lago en bote; los demás van en carruaje.",
     "Les statues du château se sont battues aux côtés des élèves.": "Las estatuas del castillo lucharon junto a los alumnos.",
@@ -1518,6 +1518,12 @@
     "Écran": "Pantalla",
     "Résolution, dans « Écran »": "Resolución, en «Pantalla»",
     "{} réglage": "{} ajuste",
-    "{} réglages": "{} ajustes"
+    "{} réglages": "{} ajustes",
+    "Effets animés": "Efectos animados",
+    "Particules, zoom du fond, étoiles et personnages qui tournent seuls.": "Partículas, zoom del fondo, estrellas y personajes que giran solos.",
+    "Redémarrez le launcher pour appliquer ce choix.": "Reinicia el launcher para aplicar esta opción.",
+    "Selon ce PC": "Según este PC",
+    "Oui": "Sí",
+    "Non": "No"
   }
 }

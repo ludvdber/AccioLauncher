@@ -72,6 +72,21 @@ _activer_imports_paresseux()
 
 
 @pytest.fixture(autouse=True)
+def _effets_hors_de_la_machine(monkeypatch):
+    """Les effets animés ne suivent pas le PC qui lance la suite (`src/core/effets.py`).
+
+    La CI Windows n'a que l'adaptateur de base de Microsoft : « Selon ce PC » y
+    couperait les effets, et le fond passerait au processeur, sans qu'aucun
+    test ne l'ait demandé. Chaque test part d'un PC qui anime, et y revient.
+    """
+    from src.core import effets
+    monkeypatch.setattr(effets, "animations_windows", lambda: True)
+    monkeypatch.setattr(effets, "sans_pilote", lambda: False)
+    monkeypatch.setattr(effets, "_animes", True)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _config_hors_du_vrai_dossier(tmp_path, monkeypatch):
     """Aucun test n'écrit dans le config.json RÉEL de l'utilisateur.
 

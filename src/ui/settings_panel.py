@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import Config, cache_pour
 from src.core.game_manager import GameManager, GameState
-from src.core import manette
+from src.core import effets, manette
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, get_language, tr, trn
@@ -53,7 +53,7 @@ from src.ui.fenetre_message import message
 from src.ui import about_page, manette_nav
 from src.ui.disk_scan_worker import DiskScanWorker, garer
 from src.core.season import (
-    SEASON_LABELS, SEASONS, resolve as resolve_season,
+    SEASON_LABELS, SEASONS,
 )
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import THEMES, accent_qcolor, current as current_theme, themed
@@ -63,6 +63,9 @@ from src.ui.utils import avertir, is_writable_dir, liste_deroulante, open_local_
 log = logging.getLogger(__name__)
 
 # (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
+# Dans l'ordre de `effets.MODES`.
+_LIBELLES_EFFETS = {"auto": "Selon ce PC", "oui": "Oui", "non": "Non"}
+
 _RUBRIQUES = (("Général", "dossier"), ("Son et image", "ecran"),
               ("Intégrations", "integrations"), ("À propos", "infos"))
 _RANG_A_PROPOS = len(_RUBRIQUES) - 1   # ses messages arrivent de la fenêtre, après un clic
@@ -181,6 +184,7 @@ class SettingsDialog(QDialog):
         self._btn_trailers = None
         # Bâtis avec leur rubrique, à sa première visite (`construire_rubrique`).
         self._theme_hint = None
+        self._effets_hint: LigneReglage | None = None
         self._update_status = None
         self._versions_label = None
         self._btn_verifier = None
@@ -530,7 +534,20 @@ class SettingsDialog(QDialog):
             SEASONS.index(self.config.season)
             if self.config.season in SEASONS else 0)
         self._season_combo.currentIndexChanged.connect(self._on_season_changed)
-        ambiance.ajouter(LigneReglage(tr("Particules saisonnières"), "", self._season_combo))
+        self._effets_combo = self._combo()
+        for mode in effets.MODES:
+            self._effets_combo.addItem(tr(_LIBELLES_EFFETS[mode]), mode)
+        self._effets_combo.setCurrentIndex(
+            effets.MODES.index(self.config.effets_animes) if self.config.effets_animes in effets.MODES else 0)
+        self._effets_combo.currentIndexChanged.connect(self._on_effets_changed)
+        ambiance.ajouter(LigneReglage(
+            tr("Effets animés"), tr("Particules, zoom du fond, étoiles et personnages qui tournent seuls."),
+            self._effets_combo))
+        self._effets_hint, _ = self._ligne_redemarrage(tr("Redémarrez le launcher pour appliquer ce choix."))
+        ambiance.ajouter(self._effets_hint)
+        particules = LigneReglage(tr("Particules saisonnières"), "", self._season_combo)
+        self._griser(particules, effets.animes())   # effets coupés : la saison attend, intacte
+        ambiance.ajouter(particules)
         ligne, _ = self._reglage(
             tr("Fait du jour dans la barre de statut"), "faits_du_jour")
         ambiance.ajouter(ligne)
@@ -790,6 +807,8 @@ class SettingsDialog(QDialog):
         self._lang_hint.setVisible(self.config.langue != get_language())
         if self._theme_hint is not None:
             self._theme_hint.setVisible(self.config.theme != current_theme().id)
+        if self._effets_hint is not None:
+            self._effets_hint.setVisible(effets.selon(self.config.effets_animes) != effets.animes())
 
     def _on_theme_changed(self) -> None:
         """Change le thème (effectif au prochain démarrage — couleurs posées à la construction)."""
@@ -800,11 +819,17 @@ class SettingsDialog(QDialog):
         self._regler_redemarrage()
         self._save()
 
+    def _on_effets_changed(self) -> None:
+        """Effets animés : effectif au prochain démarrage, comme le thème (`src/core/effets.py`)."""
+        self.config.effets_animes = self._effets_combo.currentData()
+        self._regler_redemarrage()
+        self._save()
+
     def _on_season_changed(self) -> None:
         """Change la saison des particules — appliqué EN DIRECT (pas de redémarrage)."""
         self.config.season = self._season_combo.currentData()
         self._save()
-        self.season_changed.emit(resolve_season(self.config.season))
+        self.season_changed.emit(effets.saison_des_particules(self.config.season))
 
     def _sur_interrupteur_son(self, coupe: bool) -> None:
         if coupe != self._fond.son_coupe:
