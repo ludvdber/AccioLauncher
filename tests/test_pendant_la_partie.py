@@ -63,7 +63,7 @@ def test_les_fonds_reviennent_des_qu_on_rouvre_le_launcher(make_window, monkeypa
     win._session.demarree.emit("HP3")
     assert poses == [[]]
     assert win.isMinimized()
-    # Réduite, Qt la dit encore active : rien ne revient tant qu'on ne l'a pas rouverte.
+    # Réduite, rien ne revient tant qu'on ne l'a pas rouverte.
     QApplication.sendEvent(win, QEvent(QEvent.Type.ActivationChange))
     assert poses == [[]], "relus alors que la fenêtre restait réduite"
     # Ludo la rouvre depuis la barre des tâches. L'événement est envoyé à la main : hors écran,
