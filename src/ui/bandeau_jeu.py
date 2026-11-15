@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QColor, QFontMetrics, QIcon, QLinearGradient, QPainter, QPixmap, QRadialGradient
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 from src.core.config import ASSETS_DIR
 from src.ui.composants import MARGES_PAGE, filtre, transparent
@@ -167,6 +167,24 @@ def pastille_rubrique(libelle: str, icone: str) -> QPushButton:
     b.setIcon(picto)
     b.setIconSize(QSize(_TAILLE_PICTO, _TAILLE_PICTO))
     return b
+
+
+def badge_dans_la_pastille(pastille: QPushButton, badge: QWidget) -> None:
+    """« BÊTA » DANS la pastille de sa rubrique, à droite du nom. Posé à côté, entre deux pastilles, on ne savait
+    pas s'il parlait de Difficulté ou de Fichiers (Ludo, 2026-11-15). Le badge laisse passer la souris : le clic
+    et l'infobulle sont ceux de la pastille, qui reprend son explication."""
+    lay = QHBoxLayout(pastille)
+    lay.setContentsMargins(0, 0, 10, 0)
+    lay.addStretch()
+    lay.addWidget(badge, alignment=Qt.AlignmentFlag.AlignVCenter)
+    badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+    if badge.toolTip():
+        pastille.setToolTip(badge.toolTip())
+    # La place du badge s'ajoute à droite du nom : la largeur conseillée de la pastille la compte.
+    pastille.setStyleSheet(f"QPushButton#filtre {{ padding-right: {badge.sizeHint().width() + 22}px; }}")
+    # Sa largeur conseillée, pas plus : le ressort de la mise en page intérieure la rendait extensible, et la
+    # pastille mangeait toute la rangée.
+    pastille.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
 
 def bandeau_du_jeu(game, retour: QPushButton) -> tuple[Bandeau, QLabel, QHBoxLayout]:

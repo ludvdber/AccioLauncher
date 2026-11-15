@@ -58,7 +58,7 @@ from src.ui.composants import (
     police,
     surtitre,
 )
-from src.ui.bandeau_jeu import bandeau_du_jeu, pastille_rubrique
+from src.ui.bandeau_jeu import badge_dans_la_pastille, bandeau_du_jeu, pastille_rubrique
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.icon_button import pixmap_icone
@@ -261,9 +261,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             btn.toggled.connect(lambda oui, i=ident: oui and self._noter_pied(i))
             self._groupe_onglets.addButton(btn)
             self._onglets[ident] = btn
-            rangee.addWidget(btn)
             if (beta := self._beta.get(ident)) is not None:
-                rangee.addWidget(beta, alignment=Qt.AlignmentFlag.AlignVCenter)
+                badge_dans_la_pastille(btn, beta)
+            rangee.addWidget(btn)
         rangee.addStretch()
         self._zone_rail = bandeau
         return bandeau

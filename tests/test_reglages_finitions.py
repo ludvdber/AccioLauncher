@@ -185,8 +185,9 @@ class TestBeta:
         assert "Discord" in dlg._panneau.pastille_beta.toolTip()
 
     def test_beta_a_cote_du_titre_de_la_difficulte(self, qtbot, tmp_path):
-        """f44, f68 : seule à gauche du cadran, la gélule laissait 660 × 330 px vides. Maquette B : à
-        côté de la pastille « Difficulté » du bandeau."""
+        """f44, f68 : seule à gauche du cadran, la gélule laissait 660 × 330 px vides. Maquette B : DANS la
+        pastille « Difficulté » du bandeau ; posée à côté, entre deux pastilles, on ne savait pas si elle parlait
+        de Difficulté ou de Fichiers (Ludo, 2026-11-15)."""
         dlg, _ini = _fenetre(qtbot, tmp_path)
         dlg.ouvrir_onglet("difficulte")
         dlg.resize(1280, 800)
@@ -194,9 +195,12 @@ class TestBeta:
         qtbot.waitExposed(dlg)
         beta = dlg._panneau.pastille_beta
         pastille = dlg._onglets["difficulte"]
-        assert beta.parentWidget() is pastille.parentWidget(), "dans la rangée des rubriques"
-        assert beta.geometry().left() > pastille.geometry().right(), "juste après elle"
-        assert abs(beta.geometry().center().y() - pastille.geometry().center().y()) <= 4
+        assert beta.parentWidget() is pastille, "dans la pastille de sa rubrique"
+        assert pastille.rect().contains(beta.geometry()), "entière, sans déborder"
+        texte = pastille.fontMetrics().horizontalAdvance(pastille.text())
+        assert beta.geometry().left() > pastille.iconSize().width() + texte, "à droite du nom, sans le couvrir"
+        assert abs(beta.geometry().center().y() - pastille.rect().center().y()) <= 2
+        assert pastille.toolTip() == beta.toolTip(), "le badge laisse passer la souris : la pastille l'explique"
         from PyQt6.QtWidgets import QWidget
         assert dlg._panneau.findChild(QWidget, "enteteDifficulte") is None, "plus de colonne vide"
         qtbot.wait(50)
