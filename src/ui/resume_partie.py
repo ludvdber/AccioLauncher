@@ -4,7 +4,8 @@ La description cède sa place dès qu'il y a mieux à montrer (Ludo, 2026-10-15)
 qui a déjà joué l'a lue, et veut savoir où il en était. Un jeu dont on ne lit
 rien garde sa description (`folio.FICHES` : les cartes de HP1 à HP3, et
 depuis le 2026-10-26 les boucliers de HP4, la découverte de HP5, les
-écussons de HP6, chacun avec l'icône que le jeu lui donne).
+écussons de HP6, chacun avec l'icône que le jeu lui donne ; depuis le 2026-11-15
+les missions annexes de HP7 et HP8, et HP4 dès qu'une partie existe).
 
 Maquette H du canevas « fiche » : la ligne « Dernière partie » sous le titre,
 puis le bouton, puis ce bloc (éventail des cartes, compte, barre, maisons et
@@ -19,7 +20,7 @@ from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6
+from src.core import folio, folio_hp2, folio_hp3, folio_hp4, folio_hp5, folio_hp6, folio_hp7
 from src.core.formatting import format_relative_date
 from src.core.i18n import get_language, tr, trn
 from src.ui.fonts import body_font
@@ -85,6 +86,7 @@ def _nombre(n: int) -> str:
 _PHRASES = {
     "boucliers": ("{} bouclier sur {}", "{} boucliers sur {}"),
     "ecussons": ("{} écusson sur {}", "{} écussons sur {}"),
+    "missions": ("{} mission annexe sur {}", "{} missions annexes sur {}"),
 }
 
 
@@ -118,6 +120,8 @@ def lire_resume(game, system: Path, langue: str) -> folio.Resume | None:
     if game.id in ("hp1", "hp3"):
         lire = folio_hp3.resume if game.id == "hp3" else folio.resume_hp1
         return lire(sauvegardes.fichiers(game.sauvegardes), system, langue)
+    if game.id in ("hp7a", "hp7b"):
+        return folio_hp7.resume(sauvegardes.fichiers(game.sauvegardes))
     return None
 
 
@@ -134,6 +138,8 @@ def lieu_resume(resume: folio.Resume) -> str:
     partie = resume.releve
     if isinstance(partie, folio_hp6.Partie) and partie.chapitre:
         return tr("Chapitre {}").format(partie.chapitre)
+    if isinstance(partie, folio_hp7.Partie) and partie.entier("PlayerLevel"):
+        return tr("Niveau {}").format(partie.entier("PlayerLevel"))
     return ""
 
 

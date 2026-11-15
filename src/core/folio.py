@@ -65,11 +65,13 @@ MAISONS = (GRYFFONDOR, SERPENTARD, SERDAIGLE, POUFSOUFFLE)
 # plus la partie sur leur fiche, à la place de la description : les cartes de
 # HP1 à HP3, puis depuis le 2026-10-26 (maquette « Plan du launcher v2 », Ludo :
 # « on doit afficher le folio des cartes ou autre s'il y a quelque chose ») les
-# boucliers de HP4, la découverte de HP5 et les écussons de HP6. `RESUMES`
-# reste aux trois premiers : c'est aussi la liste de « Reprendre en un clic ».
+# boucliers de HP4, la découverte de HP5 et les écussons de HP6, et depuis le
+# 2026-11-15 les missions annexes de HP7 et HP8 (Ludo : « leur encadré de folio et pas
+# juste un bouton folio souligné »). `RESUMES` reste aux trois premiers : c'est aussi la
+# liste de « Reprendre en un clic ».
 JEUX = ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b")
 RESUMES = ("hp1", "hp2", "hp3")
-FICHES = (*RESUMES, "hp4", "hp5", "hp6")
+FICHES = (*RESUMES, "hp4", "hp5", "hp6", "hp7a", "hp7b")
 
 # Le folio du jeu, emplacement par emplacement : `WizardCards[i]` de la
 # sauvegarde est la carte i + 1 de cette liste. Relevé le 2026-10-14 dans le
@@ -385,7 +387,7 @@ class Resume:
     trouvees: int = 0     # cartes (boucliers, points, écussons) trouvées…
     total: int = 0        # … sur tant
     quand: datetime | None = None    # la date que le JEU a écrite
-    unite: str = "cartes"            # « cartes », « boucliers », « pourcent », « ecussons »
+    unite: str = "cartes"            # « cartes », « boucliers », « pourcent », « ecussons », « missions »
 
 
 def resume_hp1(fichiers: dict[str, Path], system: Path, langue: str) -> Resume | None:

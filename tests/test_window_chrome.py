@@ -238,3 +238,20 @@ class TestEchellePlafonnee:
         from src.ui.window_chrome import TAILLE_MINIMALE, geometrie_d_ouverture
         g = geometrie_d_ouverture(QRect(0, 0, 1280, 688))
         assert (g.width(), g.height()) == TAILLE_MINIMALE
+
+
+class TestCoinsArrondisApresRecreation:
+    def test_une_nouvelle_fenetre_native_est_rhabillee(self, qtbot, monkeypatch):
+        """Qt recrée la fenêtre native quand un enfant dessiné par la carte graphique s'installe :
+        les coins arrondis posés sur l'ancien handle étaient perdus (angles vifs, Ludo 2026-11-15)."""
+        from PyQt6.QtCore import QCoreApplication, QEvent
+        from PyQt6.QtWidgets import QWidget
+        from src.ui import window_chrome
+        habillees = []
+        monkeypatch.setattr(window_chrome, "habiller", habillees.append)
+        fenetre = QWidget()
+        qtbot.addWidget(fenetre)
+        window_chrome.WindowChrome(fenetre)
+        assert habillees == [fenetre], "habillée à la construction"
+        QCoreApplication.sendEvent(fenetre, QEvent(QEvent.Type.WinIdChange))
+        assert habillees == [fenetre, fenetre], "et de nouveau sur la nouvelle fenêtre native"

@@ -15,7 +15,7 @@ marge comptée deux fois dans un coin).
 
 import math
 
-from PyQt6.QtCore import QEvent, QRect, Qt
+from PyQt6.QtCore import QEvent, QObject, QRect, Qt
 from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QWidget
 
@@ -155,6 +155,20 @@ def curseur_pour(bords: Qt.Edge) -> Qt.CursorShape | None:
     return None
 
 
+class _Rhabiller(QObject):
+    """Remet l'habillage à chaque nouvelle fenêtre native (`WinIdChange`).
+
+    Qt RECRÉE la fenêtre native quand un enfant dessiné par la carte graphique
+    s'installe (fond de l'accueil, visionneuse 3D) : nouvelle surface, nouveau
+    handle, et les coins arrondis posés sur l'ancien disparaissaient (Windows
+    répondait « par défaut », angles vifs ; Ludo, 2026-11-15)."""
+
+    def eventFilter(self, objet, evenement) -> bool:  # noqa: N802 (Qt)
+        if evenement.type() == QEvent.Type.WinIdChange and isinstance(objet, QWidget):
+            habiller(objet)
+        return False
+
+
 class WindowChrome:
     """Curseur de bord et redimensionnement natif d'une fenêtre sans cadre.
 
@@ -171,6 +185,7 @@ class WindowChrome:
         self._curseur_pose = False
         poser_lisere(fenetre)
         habiller(fenetre)
+        fenetre.installEventFilter(_Rhabiller(fenetre))
 
     def etat_change(self) -> None:
         """Fenêtre agrandie, restaurée ou en plein écran : le liseré suit, et le

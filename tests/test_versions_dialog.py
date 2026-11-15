@@ -202,3 +202,28 @@ class TestPageDesVersions:
         dlg = _dialogue(qtbot, None)
         textes = [lbl.text() for lbl in dlg.findChildren(QLabel)]
         assert any("Version &lt;b&gt;originale&lt;/b&gt;" in t for t in textes)
+
+
+class TestNomDuJeuAuMemeEndroit:
+    def test_reglages_et_journal_posent_le_nom_au_meme_pixel(self, qtbot, tmp_path):
+        """Ludo, 2026-11-15 : « je préfère que les titres soient au même endroit partout ». Le rail
+        était bâti deux fois, et le nom du jeu sautait de 2 px en passant au Journal."""
+        from types import SimpleNamespace
+        from PyQt6.QtCore import QPoint
+        from PyQt6.QtWidgets import QLabel
+        from src.core.config import Config
+        from src.ui.game_settings_dialog import GameSettingsDialog
+        from src.ui.versions_dialog import VersionsDialog
+        jeu = GameData.from_dict(JEU)
+        manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
+                                  config=Config(install_path=tmp_path, cache_path=tmp_path / "c", langue="fr"),
+                                  installed_version=lambda _i: None, is_installed=lambda _i: True)
+        places = []
+        for fen in (GameSettingsDialog(jeu, manager, lambda c: True), VersionsDialog(jeu, manager)):
+            qtbot.addWidget(fen)
+            fen.resize(1280, 800)
+            fen.show()
+            qtbot.waitExposed(fen)
+            nom = next(lbl for lbl in fen.findChildren(QLabel) if lbl.text() == jeu.name and lbl.isVisible())
+            places.append((nom.mapTo(fen, QPoint(0, 0)), nom.size()))
+        assert places[0] == places[1]

@@ -73,7 +73,7 @@ from src.ui.reglages_widgets import (  # réexportés
     _STYLE,
     _CarteEffets,
     _Disposition,
-    _Jaquette,
+    entete_de_rail,
     _Ligne,
     _Points,
     _poser_beta, _texte_beta,
@@ -263,26 +263,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # Mes années : la fiche vit dans la bibliothèque (audit UI, 2026-10-14).
         retour = bouton_retour(tr("Bibliothèque"), self.accept)
         retour.setToolTip(tr("Échap pour revenir"))
-        lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-        lay.addSpacing(14)
-
-        identite = QHBoxLayout()
-        identite.setSpacing(14)
-        identite.addWidget(_Jaquette(self.game.cover_image), alignment=Qt.AlignmentFlag.AlignTop)
-        noms = QVBoxLayout()
-        noms.setSpacing(4)
-        nom = QLabel(self.game.name)
-        nom.setTextFormat(Qt.TextFormat.PlainText)   # le nom vient du CATALOGUE
-        nom.setWordWrap(True)
-        nom.setFont(cinzel(11, bold=True))
-        nom.setStyleSheet("color: #f4f2f8; background: transparent;")
-        nom.setMinimumWidth(1)
-        noms.addWidget(nom)
-        noms.addWidget(surtitre(tr("Réglages du jeu"), a_la_ligne=True))
-        identite.addLayout(noms, stretch=1)
-        lay.addLayout(identite)
-        lay.setAlignment(identite, Qt.AlignmentFlag.AlignTop)
-        self._titre = nom
+        entete, self._titre = entete_de_rail(self.game, retour, tr("Réglages du jeu"))
+        lay.addWidget(entete)
         lay.addSpacing(20)
 
         self._groupe_onglets = QButtonGroup(self)

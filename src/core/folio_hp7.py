@@ -24,6 +24,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from src.core import folio
+
 log = logging.getLogger(__name__)
 
 _TAILLE_MAX = 1024 * 1024        # 7,5 et 11 Ko chez Ludo
@@ -100,6 +102,16 @@ def lire(contenu: bytes) -> tuple[dict[str, float], tuple[str, ...]] | None:
     for nom in noms:
         valeurs.setdefault(nom, 0)
     return valeurs, tuple(n for n in noms if _MISSION.fullmatch(n))
+
+
+def resume(fichiers: dict[str, Path]) -> folio.Resume | None:
+    """La partie à montrer sur la fiche : les missions annexes terminées (le niveau de
+    Harry en guise de lieu, `resume_partie.lieu_resume`). None sans partie lisible."""
+    parties = [p for p in map(releve, fichiers.values()) if p is not None and p.lu and p.missions]
+    if not parties:
+        return None
+    partie = max(parties, key=lambda p: p.ecrite or datetime.min)
+    return folio.Resume(partie, "", partie.missions_terminees, len(partie.missions), partie.ecrite, "missions")
 
 
 def releve(chemin: Path) -> Partie | None:

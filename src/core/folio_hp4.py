@@ -665,14 +665,13 @@ def releve(chemin: Path) -> list[Partie]:
 
 def resume(fichiers: dict[str, Path], system: Path, langue: str) -> folio.Resume | None:
     """La partie à montrer sur la fiche : les boucliers de l'armoire à trophées,
-    et le rang en guise de lieu. Rien tant que la partie n'a rien gagné (Ludo,
-    2026-10-15 : « tant qu'on a rien on laisse la description »)."""
+    et le rang en guise de lieu. Dès qu'une partie existe, même sans bouclier : la fiche
+    de HP4 n'avait qu'un lien « Folio » souligné là où les autres jeux ont leur encadré
+    (Ludo, 2026-11-15, qui remplace « tant qu'on a rien on laisse la description »)."""
     parties = [(p, chemin) for chemin in fichiers.values() for p in releve(chemin)]
     if not parties:
         return None
     partie, chemin = max(parties, key=lambda pc: pc[0].ecrite or datetime.min)
-    if partie.boucliers <= 0 and partie.rang <= 0:
-        return None
     rang = partie.nom_rang
     lieu = (nom(textes(system, langue), rang) or "") if rang is not None else ""
     quand = partie.ecrite or datetime.fromtimestamp(chemin.stat().st_mtime)

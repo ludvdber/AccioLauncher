@@ -54,7 +54,7 @@ from src.ui.composants import (
 )
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fonts import cinzel
-from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, _Jaquette
+from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL, entete_de_rail
 from src.ui.theme import RAYON_CONTROLE, current as current_theme, themed
 from src.ui.utils import zone_defilable
 
@@ -226,26 +226,10 @@ class VersionsDialog(QDialog):
         lay.setContentsMargins(18, 22, 18, 20)
         lay.setSpacing(6)
 
-        retour = bouton_retour(self._libelle_retour, self.reject)
-        lay.addWidget(retour, alignment=Qt.AlignmentFlag.AlignLeft)
-        lay.addSpacing(14)
-
-        identite = QHBoxLayout()
-        identite.setSpacing(14)
-        identite.addWidget(_Jaquette(self.game.cover_image), alignment=Qt.AlignmentFlag.AlignTop)
-        noms = QVBoxLayout()
-        noms.setSpacing(4)
-        nom = QLabel(self.game.name)
-        nom.setTextFormat(Qt.TextFormat.PlainText)   # le nom vient du CATALOGUE
-        nom.setWordWrap(True)
-        nom.setFont(cinzel(11, bold=True))
-        nom.setStyleSheet("color: #f4f2f8; background: transparent;")
-        nom.setMinimumWidth(1)
-        noms.addWidget(nom)
-        noms.addWidget(surtitre(tr("Journal des changements"), a_la_ligne=True))
-        identite.addLayout(noms, stretch=1)
-        lay.addLayout(identite)
-        lay.addSpacing(18)
+        entete, _nom = entete_de_rail(self.game, bouton_retour(self._libelle_retour, self.reject),
+                                      tr("Journal des changements"))
+        lay.addWidget(entete)
+        lay.addSpacing(16)   # + l'espacement de 6 du rail : les 20 des réglages du jeu
 
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
