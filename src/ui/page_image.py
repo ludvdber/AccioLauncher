@@ -45,7 +45,7 @@ from src.core.i18n import tr, trn, typo
 from src.core.reglages_table import Reglage
 from src.ui.flow_layout import FlowLayout
 from src.ui.composants import (
-    bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, petit_titre, police, Rangee, transparent,
+    bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, pastille, petit_titre, police, Rangee, transparent,
 )
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
@@ -69,8 +69,9 @@ _SEUIL_FICHE = 860
 _LARGEUR_CONTROLE = 330
 # La liste ne s'étire pas au-delà : en plein écran, 800 à 980 px séparaient un nom de son
 # contrôle, contre 300 à la taille d'ouverture (audit UI v40, 2026-11-13). Le reste de la
-# largeur reste à droite de la fiche.
-_LARGEUR_LISTE = 880
+# largeur reste à droite de la fiche. Les autres pages des réglages d'un jeu s'y arrêtent
+# aussi (`GameSettingsDialog`, audit UI reg11).
+LARGEUR_LISTE = 880
 # Sous ce nombre de lignes, tout se voit d'un coup d'œil : pas de champ de recherche (HP7 : trois
 # réglages, et 220 px de recherche à côté d'un onglet seul ; audit UI f63).
 _SEUIL_RECHERCHE = 8
@@ -804,7 +805,7 @@ class PageImage(QWidget):
         self._lay_resultats.setContentsMargins(0, 0, 0, 0)
         self._lay_resultats.setSpacing(12)
         self.pile.addWidget(zone_defilable(self._resultats))
-        self.pile.setMaximumWidth(_LARGEUR_LISTE)
+        self.pile.setMaximumWidth(LARGEUR_LISTE)
         corps.addWidget(self.pile, stretch=1)
         self.fiche = _Fiche()
         self.fiche.accio.connect(lambda: self._vers(self._accio))
@@ -864,7 +865,19 @@ class PageImage(QWidget):
         v.setContentsMargins(0, 0, 8, 0)
         v.setSpacing(0)
         if cat.ident == "qualite" and self._prereglages:
-            v.addWidget(petit_titre(tr("Préréglages")))
+            # « Sur mesure » à côté du titre quand aucun préréglage ne correspond, comme le
+            # sceau de la Difficulté (audit UI reg9) : la carte qui le disait est partie (f45).
+            tete = QHBoxLayout()
+            tete.setContentsMargins(0, 0, 0, 0)
+            tete.setSpacing(10)
+            tete.addWidget(petit_titre(tr("Préréglages")))
+            self.sur_mesure = pastille(tr("Sur mesure"), ENCRE_DOUCE, "rgba(169, 167, 196, 0.35)")
+            politique = self.sur_mesure.sizePolicy()
+            politique.setRetainSizeWhenHidden(True)   # le titre ne bouge pas quand il paraît
+            self.sur_mesure.setSizePolicy(politique)
+            tete.addWidget(self.sur_mesure, alignment=Qt.AlignmentFlag.AlignVCenter)
+            tete.addStretch()
+            v.addLayout(tete)
             v.addSpacing(8)
             v.addWidget(self._bloc_prereglages())
             v.addSpacing(18)
@@ -1145,6 +1158,7 @@ class PageImage(QWidget):
             return
         courant = rc.prereglage_courant(self._prereglages, self._valeurs)
         carte = self._cartes_prereglage.get(courant)
+        self.sur_mesure.setVisible(carte is None)
         if carte is not None:
             carte.setChecked(True)
             return

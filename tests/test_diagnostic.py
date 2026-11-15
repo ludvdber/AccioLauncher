@@ -229,10 +229,19 @@ class TestBoutonDiagnostic:
     def test_le_libelle_finit_au_bord_droit_de_la_carte(self, qtbot, tmp_path):
         """La largeur réservée à la confirmation le laissait flotter à 110 px du bord."""
         from src.ui import about_page
+        from tests.pixels import cadre_du_texte
         page = about_page.construire((), manager=_faux_manager(tmp_path))
         qtbot.addWidget(page)
         btn = _copier(page)
         assert btn.objectName() == "lien" and "text-align: right" in btn.styleSheet()
+        # À l'image (f20) : le texte finit au bord droit du bouton, la place réservée à la
+        # confirmation reste à sa gauche.
+        page.resize(900, page.sizeHint().height())
+        page.show()
+        qtbot.waitExposed(page)
+        texte = cadre_du_texte(btn)
+        assert not texte.isEmpty()
+        assert btn.width() - 1 - texte.right() <= 12 < texte.left(), (texte, btn.width())
 
     def test_absent_sans_manager(self, qtbot):
 

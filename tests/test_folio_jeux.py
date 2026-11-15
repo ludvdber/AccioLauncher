@@ -297,6 +297,13 @@ class TestLieuxHP6:
         reste = cadre.findChild(QLabel, "lieuAFouiller")
         assert fini.text() == "Cachots" and ENCRE_DISCRETE in fini.styleSheet()
         assert reste.text() == "Volière" and ENCRE in reste.styleSheet()
+        # À l'image (f20) : le lieu fini est peint plus sombre que celui qui reste à fouiller.
+        from PyQt6.QtGui import QColor
+        from tests.pixels import encre, proche
+        cadre.show()
+        qtbot.waitExposed(cadre)
+        assert proche(encre(fini), QColor(ENCRE_DISCRETE)) and proche(encre(reste), QColor(ENCRE))
+        assert encre(fini).lightness() < encre(reste).lightness() - 40
 
     def test_pas_de_desert_entre_nom_et_compte(self, qtbot):
         """Le cadre prend la largeur de ses colonnes, pas celle de la page."""

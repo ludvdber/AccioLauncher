@@ -65,7 +65,7 @@ from src.ui.composants import (
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.icon_button import pixmap_icone
-from src.ui.page_image import PageImage
+from src.ui.page_image import LARGEUR_LISTE, PageImage
 from src.ui.theme import accent_qcolor, themed
 from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
@@ -224,7 +224,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                 self._defile.addWidget(contenu)
             else:
                 page.addStretch()
+                if ident != "difficulte":
+                    # Une colonne de lignes : à 1 920 px, le nom partait à 1 500 px de son
+                    # contrôle (audit UI reg11). La Difficulté garde sa largeur, pour le cadran.
+                    contenu.setMaximumWidth(LARGEUR_LISTE + MARGES_PAGE[0] + MARGES_PAGE[2])
                 self._defile.addWidget(zone_defilable(contenu))
+            if ident == "commandes" and not any(r.onglet == "commandes" for r in self._reglages):
+                icone = "manette"   # rien que la manette sur cette page (tra15)
             pages.append((ident, libelle, icone))
 
         racine.addWidget(self._rail(pages))

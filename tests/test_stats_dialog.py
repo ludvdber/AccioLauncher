@@ -616,6 +616,16 @@ class TestCouleursDeLaMaison:
             restes = [lbl.text() for lbl in dlg.findChildren(QLabel)
                       if "#d6a72c" in lbl.styleSheet().lower()]
             assert not restes, restes
+            # À l'image (f20) : aucun texte n'est PEINT dans l'or de Poudlard.
+            from PyQt6.QtGui import QColor
+            from tests.pixels import encre, proche
+            dlg.show()
+            qtbot.waitExposed(dlg)
+            or_poudlard = QColor("#d6a72c")
+            peints = [lbl.text() for lbl in dlg.findChildren(QLabel)
+                      if lbl.isVisible() and lbl.text() and lbl.pixmap().isNull()
+                      and proche(encre(lbl), or_poudlard, 12)]
+            assert not peints, peints
         finally:
             set_theme("poudlard")
 

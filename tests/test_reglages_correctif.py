@@ -1494,6 +1494,17 @@ class TestPageImage:
         page.regler("halo", True)
         assert page._cartes_prereglage["equilibree"].isChecked(), "revenir sur ses valeurs la recoche"
 
+    def test_hors_des_prereglages_sur_mesure_le_dit(self, qtbot, tmp_path):
+        """reg9 (refonte B) : aucune carte allumée, et « Sur mesure » à côté du titre."""
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        page.ligne("filtrage")
+        page._cartes_prereglage["equilibree"].click()
+        assert page.sur_mesure.isHidden()
+        page.regler("halo", False)
+        assert not page.sur_mesure.isHidden() and page.sur_mesure.text() == tr("Sur mesure").upper()
+        page.regler("halo", True)
+        assert page.sur_mesure.isHidden()
+
     def test_les_prereglages_tiennent_sur_une_rangee(self, qtbot, tmp_path):
         dlg, page, _ini = self._fenetre(qtbot, tmp_path)
         dlg.ouvrir_onglet("image")
@@ -1850,3 +1861,12 @@ class TestRechercheDeLaPageImage:
         while not (suivant.focusPolicy() & Qt.FocusPolicy.TabFocus):
             suivant = suivant.nextInFocusChain()
         assert page.pile.currentWidget().isAncestorOf(suivant), suivant
+
+
+class TestPrereglagesSansMotTechnique:
+    """reg13 (refonte B, 2026-11-13) : « sans suréchantillonnage » était le seul mot qui distinguait
+    Équilibrée de Maximale, et c'est celui que le joueur ne connaît pas."""
+
+    def test_aucune_phrase_de_prereglage_ne_parle_technique(self):
+        for _i, nom, texte, _v in rc.PREREGLAGES:
+            assert "échantillonnage" not in texte and "×" not in texte, nom

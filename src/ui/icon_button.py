@@ -72,6 +72,8 @@ _FICHIERS = {
     "oeil": "phosphor/eye-bold.svg",
     "clavier": "phosphor/keyboard-bold.svg",
     "drapeau": "phosphor/flag-bold.svg",
+    # La rubrique « Jeu » des réglages d'un jeu : démarrage, arrière-plan, captures (tra15).
+    "curseurs": "phosphor/sliders-horizontal-bold.svg",
     "jauge": "phosphor/gauge-bold.svg",
     # La difficulté (onglet des réglages du jeu et bouton de la fiche, 2026-10-31).
     "epee": "phosphor/sword-bold.svg",

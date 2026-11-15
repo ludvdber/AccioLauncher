@@ -182,6 +182,12 @@ class TestBeta:
         (a, b) = etiquettes
         assert a.font().family() == b.font().family() and a.font().pointSizeF() == b.font().pointSizeF()
         assert a.styleSheet() == b.styleSheet()
+        # À l'image (f20) : les deux gélules sont peintes au pixel près pareil.
+        from tests.pixels import sur_noir
+        assert a.sizeHint() == b.sizeHint()
+        a.resize(a.sizeHint())
+        b.resize(b.sizeHint())
+        assert sur_noir(a) == sur_noir(b)
 
     def test_la_fiche_de_difficulte_ne_le_redit_pas(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
@@ -259,12 +265,17 @@ class TestMiseEnPage:
         aide = BoutonAide("Titre", "<p>x</p>")
         assert aide.width() == 28 and aide.height() == 28
         assert "margin: 5px" in aide.styleSheet(), "le rond visible reste de 18 px"
+        # À l'image (f20) : le rond peint fait 18 px, centré dans les 28 de la surface de clic.
+        from tests.pixels import cadre_de_l_encre
+        rond = cadre_de_l_encre(aide, seuil=20)
+        assert 16 <= rond.width() <= 19 and 16 <= rond.height() <= 19, rond
+        assert abs(rond.center().x() - 13.5) <= 1.5 and abs(rond.center().y() - 13.5) <= 1.5, rond
 
 
 def test_en_plein_ecran_le_controle_reste_pres_de_son_nom(qtbot, tmp_path):
     """Audit UI v40 : à 1 920 px, 800 à 980 px séparaient un nom de son contrôle sur la page
-    Image ; la liste s'arrête à `_LARGEUR_LISTE`, la fiche la suit."""
-    from src.ui.page_image import _LARGEUR_LISTE, PageImage
+    Image ; la liste s'arrête à `LARGEUR_LISTE`, la fiche la suit."""
+    from src.ui.page_image import LARGEUR_LISTE, PageImage
     dlg, _ = _fenetre(qtbot, tmp_path)
     dlg.ouvrir_onglet("image")
     dlg.resize(1920, 1000)
@@ -272,7 +283,7 @@ def test_en_plein_ecran_le_controle_reste_pres_de_son_nom(qtbot, tmp_path):
     qtbot.waitExposed(dlg)
     page = dlg.findChild(PageImage)
     qtbot.waitUntil(lambda: page.pile.width() > 0)
-    assert page.pile.width() <= _LARGEUR_LISTE
+    assert page.pile.width() <= LARGEUR_LISTE
     assert page._zone_fiche.x() - page.pile.geometry().right() <= 40, "la fiche suit la liste"
 
 
@@ -334,3 +345,43 @@ class TestCadranAuClavier:
         assert vise != depart
         qtbot.keyClick(cadran, Qt.Key.Key_Return)
         assert cadran.actif == vise, "Entrée choisit le nom visé"
+
+
+class TestPictogrammesDuRail:
+    """tra15 (refonte B, 2026-11-13) : « Jeu » portait un drapeau, et « Commandes » un clavier
+    sur des jeux qui n'ont que la manette à régler."""
+
+    def _icones(self, qtbot, tmp_path, monkeypatch, *idents):
+        from src.ui import game_settings_dialog
+        vues = {}
+        fabrique = game_settings_dialog.bouton_rubrique
+        monkeypatch.setattr(game_settings_dialog, "bouton_rubrique",
+                            lambda libelle, icone: vues.setdefault(libelle, icone) and fabrique(libelle, icone))
+        _fenetre(qtbot, tmp_path, *idents, ini=INI + "[Accio.Controller]\r\nPlayStation=0\r\n")
+        return vues
+
+    def test_la_manette_quand_il_n_y_a_pas_de_touches(self, qtbot, tmp_path, monkeypatch):
+        vues = self._icones(qtbot, tmp_path, monkeypatch, "arriere_plan", "manette_playstation", "lissage")
+        assert vues[tr("Commandes")] == "manette" and vues[tr("Jeu")] == "curseurs"
+
+    def test_le_clavier_quand_les_touches_se_changent(self, qtbot, tmp_path, monkeypatch):
+        vues = self._icones(qtbot, tmp_path, monkeypatch, "arriere_plan", "touches_zqsd", "lissage")
+        assert vues[tr("Commandes")] == "clavier"
+
+
+def test_en_plein_ecran_les_pages_de_lignes_s_arretent_a_la_liste(qtbot, tmp_path):
+    """Audit UI reg11 : sur Jeu, Commandes et Performances, le nom partait à 1 500 px de son
+    interrupteur à 1 920 px ; ces pages s'arrêtent à la largeur de la liste de l'Image."""
+    from src.ui.page_image import LARGEUR_LISTE
+    from src.ui.toggle_switch import ToggleSwitch
+    dlg, _ = _fenetre(qtbot, tmp_path)
+    dlg.ouvrir_onglet("jeu")
+    dlg.resize(1920, 1000)
+    dlg.show()
+    qtbot.waitExposed(dlg)
+    zone = dlg._defile.currentWidget()
+    qtbot.waitUntil(lambda: zone.viewport().width() > 1000)
+    bascules = [b for b in zone.widget().findChildren(ToggleSwitch) if b.isVisible()]
+    assert bascules
+    for b in bascules:
+        assert b.mapTo(zone.widget(), b.rect().topRight()).x() <= LARGEUR_LISTE + 40

@@ -51,8 +51,11 @@ _ONGLETS = (
     # français ne trouvaient pas la langue, rangée dans « Jeu ».
     ("langue", "Langue", "site"),
     ("image", "Image", "ecran"),
+    # Le clavier pour un jeu qui a des touches à changer (HP4), la manette sinon : la page
+    # n'a alors que la manette (`GameSettingsDialog._build_ui`). « Jeu » : des curseurs, le
+    # drapeau n'évoquait ni le démarrage ni l'arrière-plan (audit UI tra15).
     ("commandes", "Commandes", "clavier"),
-    ("jeu", "Jeu", "drapeau"),
+    ("jeu", "Jeu", "curseurs"),
     # Tout ce qui règle la difficulté, presets et détail (Ludo, 2026-10-31).
     ("difficulte", "Difficulté", "epee"),
     ("perfs", "Performances", "jauge"),
