@@ -1579,7 +1579,7 @@ class TestPageImage:
         petite taille de la fenêtre, avec les VRAIES polices et la feuille de l'application."""
         from src.core import i18n
         from src.ui.fonts import load_fonts
-        from src.ui.game_settings_dialog import _TAILLE_MIN
+        from src.ui.composants import TAILLE_MINIMALE_PAGE
         from src.ui.styles import MAIN_STYLE
         from src.ui.theme import themed
         load_fonts()
@@ -1594,7 +1594,7 @@ class TestPageImage:
                     if r.onglet in ("image", "affichage", "commandes", "perfs", "jeu", "manette")]
             dlg = _dialogue(qtbot, _jeu(tmp_path, tous), _manager(tmp_path))
             dlg.show()
-            dlg.resize(_TAILLE_MIN)
+            dlg.resize(*TAILLE_MINIMALE_PAGE)
             qtbot.waitExposed(dlg)
             page = dlg._page_img
             for rang, _c in enumerate(page.categories):

@@ -47,6 +47,7 @@ from src.core import galerie
 from src.core.i18n import get_language, tr
 from src.core.liens import DISCORD_MEDIAS_URL
 from src.ui.composants import (
+    TAILLE_MINIMALE_PAGE,
     transparent,
     titre_page,
     ENCRE, ENCRE_DOUCE, bouton, bouton_retour, feuille_de_style, filtre as bouton_filtre, rond,
@@ -254,7 +255,7 @@ class GaleriePage(QDialog):
         # le retour et le titre.
         self._integree = integree
         self.setWindowTitle(tr("Galerie"))
-        self.setMinimumSize(900, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self._jeux = list(jeux)
         self._noms = {g.id: nom_court(g.name) for g in self._jeux}

@@ -41,6 +41,7 @@ from src.core.game_data import GameData, GameVersion
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui.composants import (
+    TAILLE_MINIMALE_PAGE,
     titre_page,
     LARGEUR_RAIL, MARGES_PAGE,
     bouton_retour,
@@ -190,7 +191,7 @@ class VersionsDialog(QDialog):
         self._lignes: dict[str, _LigneVersion] = {}
 
         self.setWindowTitle(tr("Journal des changements de {}").format(game.name))
-        self.setMinimumSize(900, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
         self._build_ui()
         if self._versions:

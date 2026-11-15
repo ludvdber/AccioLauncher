@@ -42,6 +42,7 @@ from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, get_language, tr, trn
 from src.ui.composants import (
+    TAILLE_MINIMALE_PAGE,
     LARGEUR_RAIL, MARGES_PAGE,
     ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Pastille, bouton, bouton_rubrique,
     espace_du_volume, feuille_de_style, surtitre, texte,
@@ -192,7 +193,7 @@ class SettingsDialog(QDialog):
         # des rubriques déjà construites.
         self._interrupteurs: list[tuple[ToggleSwitch, str]] = []
         self.setWindowTitle(tr("Paramètres"))
-        self.setMinimumSize(840, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.resize(1000, 680)
         self.setStyleSheet(themed(self._style()) + feuille_de_style())
         self._build_ui()

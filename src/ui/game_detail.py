@@ -106,6 +106,7 @@ class GameDetailView(QWidget):
                       else PreparateurWine(self))
         self._cinema = False
         self._fonds_precharges = False
+        self._fonds_rendus = False   # au jeu en cours (`fonds_pendant_la_partie`)
 
         self._build_ui(manager)
         self._connect_signals()
@@ -374,8 +375,13 @@ class GameDetailView(QWidget):
                              for e in self.manager.get_games()])
 
     def fonds_pendant_la_partie(self, en_jeu: bool) -> None:
-        """Pendant une partie, les fonds préchargés (≈ 106 Mo pour les huit, mesuré
-        le 2026-11-13) sont rendus au jeu ; ils reviennent au retour, en tâche de fond."""
+        """Au lancement d'une partie, les fonds préchargés (≈ 106 Mo pour les huit, mesuré
+        le 2026-11-13) sont rendus au jeu ; ils reviennent, en tâche de fond, dès qu'on
+        rouvre le launcher ou à la fin de la partie (Ludo, 2026-11-15). Une fois : rouvert
+        puis quitté, le jeu ne les relit pas deux fois."""
+        if en_jeu == self._fonds_rendus:
+            return
+        self._fonds_rendus = en_jeu
         if en_jeu:
             self._bg.precharger([])
         else:

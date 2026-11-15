@@ -237,10 +237,13 @@ class TestRangement:
 
 
 class TestMiseEnPage:
-    def test_le_titre_de_page_n_est_plus_en_decorative(self, qtbot, tmp_path):
+    def test_le_titre_de_page_est_celui_de_toutes_les_pages(self, qtbot, tmp_path):
+        """f76 (Ludo, 2026-11-15) : la décorative partout, le Journal et les réglages d'un
+        jeu ne changent plus de police de titre."""
         dlg, _ini = _fenetre(qtbot, tmp_path)
         titre = next(lb for lb in dlg.findChildren(QLabel) if lb.text() == tr("Image"))
-        assert titre.font().family() != cinzel_decorative(20).family() and titre.font().bold()
+        assert titre.font().family() == cinzel_decorative(22).family()
+        assert titre.font().pointSizeF() == 22
 
     def test_le_rail_defile_au_lieu_de_se_tasser(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)

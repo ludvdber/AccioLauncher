@@ -50,6 +50,8 @@ from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.aide_reglage import BoutonAide
 from src.ui.composants import (
+    titre_page,
+    TAILLE_MINIMALE_PAGE,
     transparent,
     LARGEUR_RAIL, MARGES_PAGE,
     ENCRE_DOUCE,
@@ -62,7 +64,6 @@ from src.ui.composants import (
 )
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
-from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.page_image import PageImage
 from src.ui.theme import accent_qcolor, themed
@@ -91,10 +92,9 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
 
 # Le rail : le jeu, ses rubriques, ses fichiers. 270 : à 260, quand le rail défile (fenêtre de
 # 660 à 700 px de haut), sa barre de 10 px coupait « RÉGLAGES DU / JEU » (audit UI f65).
-# Taille d'ouverture, celle de la maquette, et le plancher : sous 900 px de
-# large, la page Image passe d'elle-même en une colonne.
+# Taille d'ouverture, celle de la maquette, quand la page s'ouvre seule (sans fenêtre pour
+# l'accueillir) ; le plancher est celui de toutes les pages (`TAILLE_MINIMALE_PAGE`).
 _TAILLE_VOULUE = QSize(1320, 860)
-_TAILLE_MIN = QSize(900, 580)
 # Une hauteur commune aux en-têtes de cartes voisines : la légende de « Chaque
 # effet » (œil et points de 18 px) décalait sa carte de 3 px par rapport à la
 # colonne de gauche.
@@ -172,7 +172,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         """Celle de la maquette, bornée par l'écran : la fenêtre se redimensionne
         à la main, et chaque page défile si elle ne tient pas (règle 52)."""
         ecran = self.screen() or QGuiApplication.primaryScreen()
-        voulue, mini = QSize(_TAILLE_VOULUE), QSize(_TAILLE_MIN)
+        voulue, mini = QSize(_TAILLE_VOULUE), QSize(*TAILLE_MINIMALE_PAGE)
         if ecran is not None:
             dispo = ecran.availableGeometry().size()
             voulue = voulue.boundedTo(QSize(int(dispo.width() * 0.92), int(dispo.height() * 0.9)))
@@ -197,10 +197,9 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             page = QVBoxLayout(contenu)
             page.setContentsMargins(*MARGES_PAGE)
             page.setSpacing(0)
-            titre = QLabel(tr(libelle))
-            # Cinzel simple : en décorative, le I initial d'« Image » se lit comme un 1.
-            titre.setFont(cinzel(20, bold=True))
-            titre.setStyleSheet("color: #f4f2f8; background: transparent;")
+            # Le titre de toutes les pages (audit UI f76) : en Cinzel simple ici, il changeait
+            # de police d'une page de jeu à l'autre (Ludo, 2026-11-15 : la décorative partout).
+            titre = titre_page(tr(libelle))
             tete = QHBoxLayout()
             tete.setContentsMargins(0, 0, 0, 0)
             tete.setSpacing(14)

@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio, sauvegardes
 from src.core.config import Config
 from src.core.i18n import get_language, tr, trn
-from src.ui.composants import bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol, texte, transparent, LARGEUR_RAIL, titre_page
+from src.ui.composants import TAILLE_MINIMALE_PAGE, bouton_retour, ENCRE, ENCRE_DOUCE, feuille_de_style, police, surtitre, survol, texte, transparent, LARGEUR_RAIL, titre_page
 from src.ui.flow_layout import FlowLayout
 from src.ui.fonts import cinzel
 from src.ui.galerie_page import nom_court
@@ -525,7 +525,7 @@ class FolioPage(QDialog):
         # Dans le Carnet (`carnet_page.py`), qui porte le retour et le choix du jeu.
         self._integree = integree
         self.setWindowTitle(tr("Folio"))
-        self.setMinimumSize(900, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
         self._system = install_path / Path(game.executable).parent
         self._cases: list[_CarteSorcier] = []

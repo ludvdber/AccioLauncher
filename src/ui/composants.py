@@ -448,6 +448,12 @@ def bouton_retour(libelle: str, action) -> QPushButton:
 # et passer des réglages au Journal, au MÊME en-tête, faisait sauter la page (audit UI f75).
 LARGEUR_RAIL = 270
 MARGES_PAGE = (40, 32, 40, 32)
+# La place qu'une page a dans la fenêtre à sa taille minimale (`window_chrome.TAILLE_MINIMALE`,
+# 980×660 : barre de titre, barre d'état et bords déduits). UNE taille pour toutes les pages :
+# chacune déclarait la sienne (840 à 900 × 560 à 580), sans rapport avec la place réelle, et la
+# fenêtre les ignore de toute façon (`Pages.ouvrir`) ; elle ne sert qu'à une page ouverte seule.
+# `test_fenetre_mise_en_page` la mesure sur une vraie fenêtre.
+TAILLE_MINIMALE_PAGE = (978, 583)
 _HAUTEUR_RUBRIQUE = 44
 _TAILLE_PICTO_RUBRIQUE = 20
 

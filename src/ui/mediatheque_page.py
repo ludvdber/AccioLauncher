@@ -52,6 +52,7 @@ from src.core import discographie, encyclopedie
 from src.core.i18n import tr, trn
 from src.ui import ecran_video_gpu
 from src.ui.composants import (
+    TAILLE_MINIMALE_PAGE,
     ENCRE, ENCRE_DISCRETE, ENCRE_DOUCE, HAUTEUR_FILTRE_JAQUETTE, bouton, feuille_de_style, filtre, icone_de_bouton, police, rond,
     lien,
     surtitre, texte,
@@ -1512,7 +1513,7 @@ class MediathequePage(QDialog):
         super().__init__(parent)
         self.setObjectName("mediatheque")
         self.setWindowTitle(tr("Collections"))
-        self.setMinimumSize(900, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self._media = media
         racine = QVBoxLayout(self)

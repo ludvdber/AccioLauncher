@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
-from src.ui.composants import feuille_de_style, filtre, texte
+from src.ui.composants import TAILLE_MINIMALE_PAGE, feuille_de_style, filtre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.icon_button import pixmap_icone
@@ -58,7 +58,7 @@ class CarnetPage(QDialog):
         # Ouvert depuis la fiche (lien FOLIO), il souligne quand même son onglet.
         self.setProperty("onglet", CARNET)
         self.setWindowTitle(tr("Carnet"))
-        self.setMinimumSize(900, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self.manager = manager
         self._jeux = [e.game for e in manager.get_games()

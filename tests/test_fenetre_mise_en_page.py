@@ -912,3 +912,27 @@ class TestJouerALaMemePlace:
                           if b.objectName() in ("btnPlay", "btnDownload") and b.isVisible())
             hauts[win._detail.game.id] = bouton.mapTo(win, bouton.rect().topLeft()).y()
         assert max(hauts.values()) - min(hauts.values()) <= 2, hauts
+
+
+class TestTailleMinimaleDesPages:
+    """Une seule taille minimale (Ludo, 2026-11-15 : « la plus simple à maintenir ») : celle
+    de la fenêtre, et la place qu'elle laisse à une page. Chaque page déclarait la sienne
+    (840 à 900 × 560 à 580), sans rapport avec la place réelle."""
+
+    def test_la_place_d_une_page_a_la_taille_minimale(self, make_window, qtbot, mise_en_page_stable):
+        from src.ui.composants import TAILLE_MINIMALE_PAGE
+        from src.ui.window_chrome import TAILLE_MINIMALE
+        win = make_window()
+        win.resize(*TAILLE_MINIMALE)
+        win.show()
+        qtbot.waitExposed(win)
+        mise_en_page_stable(win)
+        assert (win._pages.width(), win._pages.height()) == TAILLE_MINIMALE_PAGE
+
+    def test_les_pages_seules_prennent_ce_minimum(self, make_window, qtbot):
+        from src.ui.composants import TAILLE_MINIMALE_PAGE
+        from src.ui.settings_panel import SettingsDialog
+        win = make_window()
+        dlg = SettingsDialog(win.config, win.manager)
+        qtbot.addWidget(dlg)
+        assert (dlg.minimumWidth(), dlg.minimumHeight()) == TAILLE_MINIMALE_PAGE

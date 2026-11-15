@@ -34,6 +34,7 @@ from src.core.i18n import tr
 from src.core.images_a_refaire import taille_a_juger
 from src.core.liens import DISCORD_URL
 from src.ui.composants import (
+    TAILLE_MINIMALE_PAGE,
     titre_page,
     LARGEUR_RAIL, MARGES_PAGE,
     ENCRE, ENCRE_DOUCE, Rangee, bouton, bouton_retour, feuille_de_style, police, surtitre, texte,
@@ -143,7 +144,7 @@ class AtelierPage(QDialog):
         super().__init__(parent)
         self.setObjectName("atelier")
         self.setWindowTitle(tr("L'atelier"))
-        self.setMinimumSize(900, 560)
+        self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
         self.setStyleSheet(themed(_STYLE_RAIL + _STYLE) + feuille_de_style())
         self.metiers = atelier.charger(besoins_mesures(jeux))
         self._lignes: dict[str, _LigneMetier] = {}

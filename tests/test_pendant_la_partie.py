@@ -44,6 +44,24 @@ def test_les_fonds_precharges_sont_rendus_pendant_la_partie(make_window, monkeyp
     assert poses[-1], "les fonds ne reviennent pas au retour"
 
 
+def test_les_fonds_reviennent_des_qu_on_rouvre_le_launcher(make_window, monkeypatch, qtbot):
+    """Ludo, 2026-11-15 : « libérer au lancement et reprendre dès qu'on ouvre le launcher »,
+    sans attendre la fin de la partie ; et une seule relecture, pas une de plus au retour."""
+    win = make_window()
+    win.show()
+    qtbot.waitExposed(win)
+    poses = []
+    monkeypatch.setattr(win._detail._bg, "precharger", lambda chemins: poses.append(list(chemins)))
+    win._session.demarree.emit("HP3")
+    assert poses == [[]]
+    win.activateWindow()
+    qtbot.waitUntil(win.isActiveWindow, timeout=1000)
+    qtbot.waitUntil(lambda: len(poses) == 2, timeout=1000)
+    assert poses[-1], "rouvert pendant la partie, le launcher restait sans ses fonds"
+    win._session.terminee.emit("HP3", True, False)
+    assert len(poses) == 2, "relus une seconde fois au retour"
+
+
 def test_la_question_est_reposee_au_retour_sauf_apres_un_arret_fatal(make_window, monkeypatch, qtbot):
     win = make_window()
     reposees = []

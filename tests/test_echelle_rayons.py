@@ -187,7 +187,8 @@ class TestTitresDePage:
         titre = composants.titre_page("Galerie")
         qtbot.addWidget(titre)
         assert titre.font().pointSizeF() == 22 and titre.textFormat() == Qt.TextFormat.PlainText
-        for nom in ("galerie_page", "folio_page", "atelier_page", "versions_dialog", "nouveautes_page"):
+        for nom in ("galerie_page", "folio_page", "atelier_page", "versions_dialog", "nouveautes_page",
+                    "game_settings_dialog"):
             source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert "titre_page(" in source, nom
             assert not re.search(r"cinzel_decorative\(2\d\)", source), f"{nom} : un titre à part"
