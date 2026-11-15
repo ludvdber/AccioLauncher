@@ -17,7 +17,7 @@ FILTRAGES = (0, 2, 4, 8, 16)
 # livrées y sont toutes (HP4/HP6 0.30 et 0.20, HP5 0.60 et 0.30).
 VIVACITES = ((0, "Aucune"), (0.15, "Légère"), (0.3, "Moyenne"), (0.45, "Forte"), (0.6, "Très forte"))
 CONTRASTES = ((0, "D'origine"), (0.1, "Léger"), (0.2, "Moyen"), (0.3, "Fort"))
-# Coins assombris par « Couleurs retravaillées » ([Accio.Graphics] Vignette ; livrée à 0.06 dans HP6, 0.08 dans HP5,
+# Coins assombris par « Couleurs retravaillées » ([Accio.Graphics] Vignette ; livrée à 0 dans HP6 (Ludo, 2026-11-15, vue en jeu), 0.08 dans HP5,
 # 0 dans HP4). Issue #30 (2026-11-09) : un joueur voulait la retirer et ne pouvait le faire qu'à la main dans l'ini.
 VIGNETTES = ((0, "Aucune"), (0.03, "Légère"), (0.06, "Moyenne"), (0.1, "Forte"))
 # Netteté après le FXAA (livrée à 0.40 partout) et netteté des textures au loin
