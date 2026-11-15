@@ -257,37 +257,37 @@ class TestContrasteSurLesIllustrations:
         assert not fautes, (
             "sous le seuil WCAG AA (4.5) sur l'illustration : " + ", ".join(fautes))
 
-    def test_les_anciennes_couleurs_echouaient(self, fenetre, qtbot):
+    def test_la_mesure_peut_echouer(self, fenetre, qtbot):
         """Le test ci-dessus ne vaut que s'il pouvait échouer.
 
-        Sans cette contre-épreuve, un seuil trop indulgent ou un masque vide
-        passerait au vert sans rien vérifier. On rejoue donc les couleurs
-        d'AVANT sur les mêmes fonds : elles doivent tomber.
+        Sans contre-épreuve, un masque vide, un fond qui ne change pas ou un
+        seuil trop indulgent passeraient au vert sans rien vérifier. Elle
+        rejouait les couleurs d'AVANT (`#8a8aaa`, l'alpha 0,75 oublié), mais
+        depuis l'audit UI (2026-11-13) la description tient sur une ligne, posée
+        sur la zone la plus sombre : ces couleurs ne tombaient plus que sur UN
+        fond sous Windows (HP4, 4,36) et sur aucun sous Linux, où l'antialiasing
+        déplace le 98e centile de quelques niveaux (CI rouge, 2026-11-15). Elle
+        prouve donc les trois choses directement, avec un gris franchement
+        insuffisant (environ 4:1 sur le fond le plus noir, 2,7:1 sur le plus clair).
         """
-        anciennes = {"description": ((176, 176, 200), 0.75),   # l'alpha oublié
-                     "meta": ((138, 138, 170), 1.0)}           # #8a8aaa
+        gris = (110, 110, 125)
         win = fenetre
         win.show()
         qtbot.waitExposed(win)
         vue, bg, info = win._detail, win._detail._bg, win._detail._info
-        widgets = {"description": info._desc, "meta": info._meta}
-
-        echecs = 0
-        for entree in win.manager.get_games():
-            self._poser(qtbot, vue, entree.game)
+        jeux = [e.game for e in win.manager.get_games()]
+        fonds, passent = [], []
+        for jeu in jeux:
+            self._poser(qtbot, vue, jeu)
             rendu = bg.grab().toImage()
-            for zone, (couleur, alpha) in anciennes.items():
-                w = widgets[zone]
-                if not w.isVisible():
-                    continue
-                fond = _pire_fond(rendu, _masque(w), _origine(w, vue, bg))
-                if fond is None:
-                    continue
-                if _contraste(_composite(couleur, alpha, fond), fond) < AA:
-                    echecs += 1
-        assert echecs > 0, (
-            "les anciennes couleurs passent le seuil : la mesure ne prouve "
-            "plus rien, vérifier le masque d'encre avant de croire le test vert")
+            for zone, w in (("description", info._desc), ("meta", info._meta)):
+                fond = _pire_fond(rendu, _masque(w), _origine(w, vue, bg)) if w.isVisible() else None
+                assert fond is not None, f"{jeu.id}/{zone} : rien de mesuré (libellé caché ou masque vide)"
+                fonds.append(fond)
+                if _contraste(gris, fond) >= AA:
+                    passent.append(f"{jeu.id}/{zone}")
+        assert len(set(fonds)) >= len(jeux), "le même fond sous chaque jeu : l'illustration n'est pas posée"
+        assert not passent, f"un gris insuffisant passe le seuil : {passent}"
 
 
 class _FauxMedia:
