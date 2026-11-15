@@ -1,12 +1,15 @@
-"""Paramètres, « la salle commune » : rubriques à gauche, cartes à droite.
+"""Paramètres, « la salle commune » : un ciel en bandeau, les rubriques en pastilles dessous, des cartes.
 
 Rubriques : Général (dossier et archives, langue, sauvegardes) · Son et image
-(vidéos, thème, ambiance) · Intégrations (Discord, manette) · À propos (numéros
-et « Vérifier les mises à jour »). La rubrique Téléchargements est partie le
-2026-11-12 : un interrupteur et deux boutons dont l'un incluait l'autre. Refonte du 2026-10-09 sur la maquette validée : la page
-parle Gelasio comme la fiche, chaque réglage est une ligne (titre, phrase
-d'aide, commande à droite) dans une carte, et « ← Bibliothèque » remplace le
-bouton Fermer en or plein, qui pesait plus que tout le contenu.
+(maison, Almanach, effets, son et vidéos) · Intégrations (Discord, manette) ·
+À propos (numéros et « Vérifier les mises à jour »).
+
+Maquette A « Voûte » pour la page, B « Almanach » pour Son et image (Ludo,
+2026-11-15) : le même bandeau que les réglages d'un jeu (`bandeau_jeu`), sur la
+Voie lactée de l'ESO au lieu du jeu ; les cartes vont par deux ; ce qui se
+choisit se voit (`choix_visuels`) : la langue sur son drapeau, la maison sur son
+blason, l'ambiance sur son dessin, les effets sur un aperçu. Chaque réglage reste
+une ligne (titre, phrase d'aide, commande à droite) dans une carte.
 
 Le thème et la langue demandent un redémarrage (bouton « Redémarrer
 maintenant ») ; la saison des particules s'applique EN DIRECT (signal
@@ -18,13 +21,11 @@ from pathlib import Path
 
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QPainter
+from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
     QButtonGroup,
-    QComboBox,
     QDialog,
     QFileDialog,
-    QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
@@ -41,11 +42,15 @@ from src.core import effets, manette
 from src.core import trailers as trailer_store
 from src.core.formatting import format_bytes, format_size
 from src.core.i18n import available_languages, get_language, tr, trn
+from src.ui.bandeau_jeu import BLEU_NUIT, CIEL_PARAMETRES, Bandeau, pastille_rubrique
+from src.ui.choix_visuels import (
+    ChoixEnTuiles, pastille_langue, tuile_ambiance, tuile_effets, tuile_maison,
+)
 from src.ui.composants import (
     TAILLE_MINIMALE_PAGE,
-    LARGEUR_RAIL, MARGES_PAGE,
-    ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Pastille, bouton, bouton_rubrique,
-    espace_du_volume, feuille_de_style, surtitre, texte,
+    MARGES_PAGE,
+    ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Rangee, bouton, icone_de_bouton,
+    espace_du_volume, feuille_de_style, police, surtitre, texte,
     lien,
     transparent,
 )
@@ -55,26 +60,30 @@ from src.ui.disk_scan_worker import DiskScanWorker, garer
 from src.core.season import (
     SEASON_LABELS, SEASONS,
 )
-from src.ui.icon_button import pixmap_icone
 from src.ui.theme import THEMES, accent_qcolor, current as current_theme, themed
 from src.ui.toggle_switch import ToggleSwitch
-from src.ui.utils import avertir, is_writable_dir, liste_deroulante, open_local_path, zone_defilable
+from src.ui.utils import avertir, is_writable_dir, open_local_path, zone_defilable
 
 log = logging.getLogger(__name__)
 
-# (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
 # Dans l'ordre de `effets.MODES`.
 _LIBELLES_EFFETS = {"auto": "Selon ce PC", "oui": "Oui", "non": "Non"}
 
+# (libellé, pictogramme) de chaque rubrique, dans l'ordre des pages.
 _RUBRIQUES = (("Général", "dossier"), ("Son et image", "ecran"),
               ("Intégrations", "integrations"), ("À propos", "infos"))
 _RANG_A_PROPOS = len(_RUBRIQUES) - 1   # ses messages arrivent de la fenêtre, après un clic
-# La colonne de lecture, collée au rail : centrée, elle flottait loin de lui
-# sur un grand écran, et le pied avec elle.
+# Le bandeau du ciel : les pastilles en bas, le ciel au-dessus (pas de grand titre : l'onglet PARAMÈTRES,
+# souligné, le dit déjà ; audit UI f46).
+_HAUTEUR_CIEL = 132
+# Les pages de cartes par deux : au-delà, sur un grand écran, une ligne de réglage séparait son titre de
+# son interrupteur par un désert. À propos, une colonne, garde sa largeur de lecture.
+_LARGEUR_CARTES = 1120
 _LARGEUR_LECTURE = 760
+# Sous cette largeur, les cartes par deux s'empilent (`Rangee`).
+_SEUIL_DEUX_COLONNES = 860
 
-# Les listes du panneau (langue, thème, saison) : la liste haute de `composants`
-# (les copies de sauvegarde l'importent d'ici).
+# La liste haute de `composants` (les copies de sauvegarde l'importent d'ici).
 _COMBO_STYLE = LISTE_HAUTE
 
 
@@ -86,14 +95,18 @@ def _texte_disque(path: Path) -> str:
         libre=format_bytes(libre), total=format_bytes(total))
 
 
-class _BarreDisque(QWidget):
-    """Le volume en une barre : vos jeux en or, le reste du disque en gris."""
+class _AnneauDisque(QWidget):
+    """Le volume en un anneau : vos jeux en or, le reste du disque en gris, le libre vide ; au centre, le
+    poids de vos jeux."""
+
+    _COTE = 84
 
     def __init__(self) -> None:
         super().__init__()
-        self.setFixedHeight(8)
+        self.setFixedSize(self._COTE, self._COTE)
         self._jeux = 0.0
         self._reste = 0.0
+        self._poids = ""
 
     def regler(self, jeux: int, libre: int, total: int) -> None:
         if total <= 0:
@@ -101,49 +114,58 @@ class _BarreDisque(QWidget):
         else:
             self._jeux = min(1.0, jeux / total)
             self._reste = max(0.0, min(1.0 - self._jeux, (total - libre - jeux) / total))
+        self._poids = format_bytes(jeux) if jeux > 0 else ""
         self.update()
 
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setPen(Qt.PenStyle.NoPen)
-        rect = QRectF(self.rect())
-        p.setBrush(QColor(255, 255, 255, 18))
-        p.drawRoundedRect(rect, 4, 4)
-        p.setClipRect(rect)
-        largeur = rect.width()
-        # Un jeu installé reste VISIBLE même s'il pèse 1 % du disque.
-        jeux = max(3.0, largeur * self._jeux) if self._jeux > 0 else 0.0
-        p.setBrush(accent_qcolor(255))
-        p.drawRoundedRect(QRectF(0, 0, jeux + 4, rect.height()), 4, 4)
-        p.setBrush(QColor(255, 255, 255, 56))
-        p.drawRect(QRectF(jeux, 0, largeur * self._reste, rect.height()))
+        epaisseur = 9.0
+        r = QRectF(self.rect()).adjusted(epaisseur / 2 + 1, epaisseur / 2 + 1, -epaisseur / 2 - 1, -epaisseur / 2 - 1)
+        stylo = QPen(QColor(255, 255, 255, 18), epaisseur)
+        stylo.setCapStyle(Qt.PenCapStyle.FlatCap)
+        p.setPen(stylo)
+        p.drawArc(r, 0, 360 * 16)
+        # De midi, dans le sens des aiguilles : vos jeux, puis le reste du disque. Un jeu installé reste
+        # VISIBLE même s'il pèse 1 % du disque.
+        jeux = max(4.0, 360 * self._jeux) if self._jeux > 0 else 0.0
+        stylo.setColor(QColor(255, 255, 255, 56))
+        p.setPen(stylo)
+        p.drawArc(r, round(90 * 16 - jeux * 16), round(-360 * self._reste * 16))
+        stylo.setColor(accent_qcolor(255))
+        p.setPen(stylo)
+        p.drawArc(r, 90 * 16, round(-jeux * 16))
+        if self._poids:
+            p.setPen(QColor("#f4f2f8"))
+            p.setFont(police(13, gras=True))
+            p.drawText(QRectF(self.rect()), Qt.AlignmentFlag.AlignCenter, self._poids.replace(" ", "\n", 1))
         p.end()
 
 
-class _Rail(QWidget):
-    """Les rubriques, un bouton cochable chacune, comme le rail des réglages d'un jeu.
+class _Pastilles(QWidget):
+    """Les rubriques en pastilles, sous le ciel, comme celles des réglages d'un jeu (`pastille_rubrique`).
 
-    Une QListWidget gardait ↑/↓ pour elle : à la manette, on ne sortait jamais
-    du rail, les réglages de droite restaient hors d'atteinte. Ici ↑/↓ passent
-    d'un bouton à l'autre puis à la page, et A choisit (`manette_nav`)."""
+    ←/→ passent d'une pastille à l'autre, la manette aussi, puis descendent vers la page, et A choisit
+    (`manette_nav`) ; même interface que la QListWidget d'avant."""
 
     currentRowChanged = pyqtSignal(int)
 
     def __init__(self, rubriques) -> None:
         super().__init__()
-        lay = QVBoxLayout(self)
+        transparent(self, "rubriques")
+        lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(4)
+        lay.setSpacing(10)
         self._groupe = QButtonGroup(self)
         self._groupe.setExclusive(True)
         self.boutons: list[QPushButton] = []
         for rang, (libelle, icone) in enumerate(rubriques):
-            btn = bouton_rubrique(tr(libelle), icone)
+            btn = pastille_rubrique(tr(libelle), icone)
             btn.toggled.connect(lambda oui, r=rang: oui and self.currentRowChanged.emit(r))
             self._groupe.addButton(btn)
             self.boutons.append(btn)
             lay.addWidget(btn)
+        lay.addStretch()
 
     def count(self) -> int:
         return len(self.boutons)
@@ -205,20 +227,15 @@ class SettingsDialog(QDialog):
     def _style(self) -> str:
         return """
         QDialog { background-color: #060611; }
-        QFrame#rubriques {
-            background: #060611;
-            border: none;
-            border-right: 1px solid rgba(214, 167, 44, 0.12);
-        }
         """
 
     # ──────────────────── Construction ────────────────────
 
     def _build_ui(self) -> None:
-        root = QHBoxLayout(self)
+        root = QVBoxLayout(self)
         root.setSpacing(0)
         root.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(self._colonne_rubriques())
+        root.addWidget(self._ciel())
 
         # Chaque page DÉFILE au besoin (règle 52) : changer de thème ou de langue
         # fait apparaître « Redémarrer maintenant » et une ligne d'aide, et la page
@@ -231,7 +248,7 @@ class SettingsDialog(QDialog):
         # se voit), mesuré le 2026-10-14 sur Windows avec les vraies polices.
         # La rubrique visitée ensuite ne paie que sa propre mise en forme.
         self._pages = QStackedWidget()
-        self._pages.addWidget(zone_defilable(self._marges(self._page_general())))
+        self._pages.addWidget(zone_defilable(self._marges(self._page_general(), _LARGEUR_CARTES)))
         for _ in _RUBRIQUES[1:]:
             self._pages.addWidget(QWidget())
         self._construites = {0}
@@ -248,84 +265,85 @@ class SettingsDialog(QDialog):
         if rang in self._construites or not 0 <= rang < len(_RUBRIQUES):
             return
         self._construites.add(rang)
+        largeur = _LARGEUR_CARTES
         if rang == _RANG_A_PROPOS:
             contenu = about_page.construire(
                 self.manager.catalog.contributors, manager=self.manager,
                 ouvrir_nouveautes=self.nouveautes_demandees.emit,
                 mises_a_jour=self._bloc_mises_a_jour())
             self._versions_label = contenu.findChild(QLabel, "versions")
+            largeur = _LARGEUR_LECTURE
         else:
             contenu = (None, self._page_display, self._page_integrations)[rang]()
         courante = self._pages.currentIndex()
         vide = self._pages.widget(rang)
-        self._pages.insertWidget(rang, zone_defilable(self._marges(contenu)))
+        self._pages.insertWidget(rang, zone_defilable(self._marges(contenu, largeur)))
         self._pages.removeWidget(vide)
         vide.deleteLater()
         self._pages.setCurrentIndex(courante)
         self._regler_redemarrage()
 
-    def _colonne_rubriques(self) -> QFrame:
-        colonne = QFrame()
-        colonne.setObjectName("rubriques")
-        colonne.setFixedWidth(LARGEUR_RAIL)
-        lay = QVBoxLayout(colonne)
-        lay.setContentsMargins(18, 22, 18, 18)
-        lay.setSpacing(4)
+    def _ciel(self) -> Bandeau:
+        """Le bandeau : la Voie lactée, et les rubriques en pastilles posées en bas.
 
-        # Ni « ← Bibliothèque » ni grand « PARAMÈTRES » : l'onglet souligné du haut
-        # dit déjà où l'on est, et Échap ferme la page (Ludo, 2026-10-27 ; audit UI
-        # f46, 2026-11-15, comme le Carnet et les Collections, col11).
-
-        self._nav = _Rail(_RUBRIQUES)
-        # Plus de version au pied de la colonne : À propos la porte, cliquable
-        # (une seule fois, Ludo, 2026-10-14).
-        lay.addWidget(self._nav)
+        Ni « ← Bibliothèque » ni grand « PARAMÈTRES » : l'onglet souligné du haut dit déjà où l'on est,
+        et Échap ferme la page (Ludo, 2026-10-27 ; audit UI f46, comme le Carnet et les Collections, col11).
+        Pas de version non plus : À propos la porte, cliquable (une seule fois, Ludo, 2026-10-14)."""
+        ciel = Bandeau(CIEL_PARAMETRES, hauteur=_HAUTEUR_CIEL, couvrir=True, bords=BLEU_NUIT)
+        lay = QVBoxLayout(ciel)
+        lay.setContentsMargins(MARGES_PAGE[0], 0, MARGES_PAGE[2], 18)
         lay.addStretch()
-        return colonne
+        self._nav = _Pastilles(_RUBRIQUES)
+        lay.addWidget(self._nav)
+        return ciel
 
     @staticmethod
-    def _marges(page: QWidget) -> QWidget:
-        """Les marges de lecture autour d'une page, et une largeur de lecture
-        bornée : sur un grand écran, une ligne de réglage étirée sur 1 500 px
-        sépare son titre de son interrupteur par un désert."""
+    def _marges(page: QWidget, largeur: int) -> QWidget:
+        """Les marges autour d'une page, alignée sur les pastilles du bandeau, et une largeur bornée."""
         cadre = QWidget()
         transparent(cadre, "margesPage")
         lay = QHBoxLayout(cadre)
-        lay.setContentsMargins(MARGES_PAGE[0], 32, MARGES_PAGE[2], 16)
-        page.setMaximumWidth(_LARGEUR_LECTURE)
-        # Le reste de la largeur va au ressort, à DROITE : un alignement
-        # à gauche aurait réduit la page à sa largeur conseillée, pas à 760 px.
+        lay.setContentsMargins(MARGES_PAGE[0], 24, MARGES_PAGE[2], 24)
+        page.setMaximumWidth(largeur)
+        # Le reste de la largeur va au ressort, à DROITE : un alignement à gauche aurait réduit la page à sa
+        # largeur conseillée, pas à sa largeur bornée.
         lay.addWidget(page, stretch=1)
         lay.addStretch(0)
         return cadre
 
     @staticmethod
-    def _page(*sections) -> QWidget:
-        """Une page de cartes : chaque section est un (surtitre, carte).
+    def _bloc(titre: str, *contenus: QWidget) -> QWidget:
+        """Un surtitre doré et ce qu'il annonce, qui prend la hauteur que la rangée lui donne."""
+        bloc = QWidget()
+        transparent(bloc)
+        lay = QVBoxLayout(bloc)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(10)
+        if titre:
+            lay.addWidget(surtitre(titre))
+        # Le dernier contenu (la carte) prend la hauteur de la rangée : deux cartes voisines finissent au
+        # même pixel.
+        for rang, contenu in enumerate(contenus):
+            lay.addWidget(contenu, stretch=1 if rang == len(contenus) - 1 else 0)
+        return bloc
 
-        Surtitre vide pour une carte d'une seule ligne : il répéterait son titre
-        (« LANGUE », puis « Langue du launcher »)."""
+    @staticmethod
+    def _par_deux(gauche: QWidget, droite: QWidget) -> Rangee:
+        """Deux blocs côte à côte, empilés quand la fenêtre est étroite."""
+        return Rangee([gauche, droite], 2, _SEUIL_DEUX_COLONNES, ecart=18)
+
+    @staticmethod
+    def _page(*sections: QWidget) -> QWidget:
+        """Une page de blocs, de haut en bas (une rangée de deux compte pour un)."""
         page = QWidget()
         transparent(page, "pageCartes")
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(26)
-        for titre, carte in sections:
-            bloc = QVBoxLayout()
-            bloc.setSpacing(10)
-            if titre:
-                bloc.addWidget(surtitre(titre))
-            bloc.addWidget(carte)
-            lay.addLayout(bloc)
+        lay.setSpacing(24)
+        for section in sections:
+            lay.addWidget(section)
         lay.addStretch()
         return page
-
-    def _combo(self) -> QComboBox:
-        combo = liste_deroulante()
-        combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        combo.setStyleSheet(themed(_COMBO_STYLE))
-        combo.setMinimumWidth(170)
-        return combo
 
     @staticmethod
     def _interrupteur(titre: str, coche: bool, description: str = "") -> tuple[LigneReglage, ToggleSwitch]:
@@ -362,67 +380,65 @@ class SettingsDialog(QDialog):
     # ── Page Général ──
 
     def _page_general(self) -> QWidget:
+        # Vos jeux : l'anneau du disque, puis ce qu'il contient, où, et ce qui reste libre.
         dossier = Carte()
-        self._path_label = Chemin(str(self.config.install_path))
+        haut = QWidget()
+        transparent(haut)
+        lay_haut = QHBoxLayout(haut)
+        lay_haut.setContentsMargins(20, 18, 20, 18)
+        lay_haut.setSpacing(18)
+        self._disque = _AnneauDisque()
+        lay_haut.addWidget(self._disque, alignment=Qt.AlignmentFlag.AlignTop)
+        colonne = QVBoxLayout()
+        colonne.setSpacing(4)
+        self._installed_label = texte(tr("Calcul de l'espace utilisé…"), 17, "#ffffff")
+        self._installed_label.setFont(police(17, gras=True))
+        self._installed_label.setWordWrap(True)
+        colonne.addWidget(self._installed_label)
+        # Le chemin, coupé au milieu, entier en infobulle.
+        self._path_label = Chemin(str(self.config.install_path), 13, ENCRE_DOUCE)
+        colonne.addWidget(self._path_label)
+        self._free_label = texte(_texte_disque(self.config.install_path), 13, ENCRE_DOUCE)
+        colonne.addWidget(self._free_label)
+        colonne.addSpacing(10)
+        boutons = QHBoxLayout()
+        boutons.setSpacing(10)
         btn_open = bouton(tr("Ouvrir"))
+        btn_open.setIcon(icone_de_bouton("dossier", 16, accent_qcolor(255)))
         btn_open.clicked.connect(self._on_open_install_folder)
+        boutons.addWidget(btn_open)
         # Pas l'action mise en avant : le dossier ne se change pas à la légère.
         btn_change = bouton(tr("Changer…"))
         btn_change.clicked.connect(self._on_change_path)
-        icone = QLabel()
-        icone.setPixmap(pixmap_icone("dossier", 22, accent_qcolor(255)))
-        transparent(icone)
-        # Le titre de la ligne EST le chemin, coupé au milieu.
-        ligne_dossier = LigneReglage(self._path_label, tr("Calcul de l'espace utilisé…"),
-                                     btn_open, btn_change, icone=icone)
-        self._installed_label = ligne_dossier.description
-        dossier.ajouter(ligne_dossier)
-
-        disque = QWidget()
-        transparent(disque)
-        lay_disque = QVBoxLayout(disque)
-        lay_disque.setContentsMargins(20, 14, 20, 16)
-        lay_disque.setSpacing(10)
-        self._barre_disque = _BarreDisque()
-        lay_disque.addWidget(self._barre_disque)
-        legende = QHBoxLayout()
-        legende.setSpacing(7)
-        legende.addWidget(Pastille(accent_qcolor(255)))
-        # Sans le poids : la ligne du dessus le donne déjà.
-        legende.addWidget(texte(tr("Vos jeux"), 12, ENCRE_DOUCE))
-        legende.addSpacing(16)
-        legende.addWidget(Pastille(QColor(255, 255, 255, 56)))
-        legende.addWidget(texte(tr("Le reste du disque"), 12, ENCRE_DOUCE))
-        legende.addStretch()
-        self._free_label = texte(_texte_disque(self.config.install_path), 12, "#d9d6e8")
-        legende.addWidget(self._free_label)
-        lay_disque.addLayout(legende)
-        dossier.ajouter(disque)
-        # Venu de l'ancienne rubrique Téléchargements : les archives vivent à
-        # côté des jeux, c'est la place du disque qu'il règle.
-        ligne, self._tgl_archives = self._reglage(
-            tr("Supprimer les archives après installation"), "delete_archives")
-        dossier.ajouter(ligne)
+        boutons.addWidget(btn_change)
+        boutons.addStretch()
+        colonne.addLayout(boutons)
+        lay_haut.addLayout(colonne, stretch=1)
+        dossier.ajouter(haut)
         self._octets_jeux = 0
         self._regler_disque()
 
         self._lancer_scan()
 
+        # La langue sur son drapeau : déposer un src/data/i18n/<code>.json suffit à en ajouter une, sans
+        # toucher à ce fichier (src/core/i18n.available_languages) ; sans drapeau connu, la pastille reste nue.
         langue = Carte()
-        self._lang_combo = self._combo()
-        # Découverte : déposer un src/data/i18n/<code>.json suffit à ajouter une
-        # langue, sans toucher à ce fichier (voir src/core/i18n.available_languages).
-        for info in available_languages():
-            self._lang_combo.addItem(info.name, info.code)
-        current = self._lang_combo.findData(self.config.langue)
-        self._lang_combo.setCurrentIndex(max(0, current))
-        self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
-        langue.ajouter(LigneReglage(
-            tr("Langue du launcher"),
+        interieur = QWidget()
+        transparent(interieur)
+        lay_langue = QVBoxLayout(interieur)
+        lay_langue.setContentsMargins(20, 18, 20, 18)
+        lay_langue.setSpacing(12)
+        langues = available_languages()
+        self._choix_langue = ChoixEnTuiles(pastille_langue, colonnes=max(1, len(langues)), largeur_min=110)
+        for info in langues:
+            self._choix_langue.addItem(info.name, info.code)
+        self._choix_langue.setCurrentIndex(max(0, self._choix_langue.findData(self.config.langue)))
+        self._choix_langue.currentIndexChanged.connect(self._on_language_changed)
+        lay_langue.addWidget(self._choix_langue)
+        lay_langue.addWidget(texte(
             tr("Les jeux ont leurs propres langues, parfois plus nombreuses que celles du launcher : "
-               "chacun a la sienne dans ses réglages, rubrique Langue."), self._lang_combo))
-        # Bouton et aide vivent SOUS la ligne du combo : en ligne, ils
-        # écrasaient le bouton sous sa taille minimale et débordaient du dialogue.
+               "chacun a la sienne dans ses réglages, rubrique Langue."), 13, ENCRE_DOUCE, retour=True))
+        langue.ajouter(interieur)
         self._lang_hint, self._lang_restart = self._ligne_redemarrage(
             tr("Redémarrez le launcher pour appliquer la langue."))
         langue.ajouter(self._lang_hint)
@@ -433,15 +449,19 @@ class SettingsDialog(QDialog):
             tr("Une copie de chaque sauvegarde qui a changé, à restaurer depuis les réglages du jeu."))
         sauvegardes.ajouter(ligne)
 
-        decouvrir = Carte()
+        # Les archives vivent à côté des jeux : c'est la place du disque qu'il règle.
+        archives = Carte()
+        ligne, self._tgl_archives = self._reglage(
+            tr("Supprimer les archives après installation"), "delete_archives")
+        archives.ajouter(ligne)
+
+        fin = Carte()
         revoir = bouton(tr("Revoir la visite"))
         revoir.clicked.connect(self.visite_demandee.emit)
-        decouvrir.ajouter(LigneReglage(
+        fin.ajouter(LigneReglage(
             tr("Visite guidée"),
             tr("Où trouver le Carnet, les Collections et les réglages de chaque jeu."),
             revoir))
-
-        fin = Carte()
         # Un lien discret : ce geste n'a pas à peser autant que « Revoir la visite ».
         desinstaller = lien(tr("Désinstaller…"), discret=True)
         desinstaller.clicked.connect(self._on_desinstaller)
@@ -450,8 +470,11 @@ class SettingsDialog(QDialog):
             tr("Vos jeux peuvent rester : un launcher réinstallé les retrouve tout seul."),
             desinstaller))
 
-        return self._page((tr("Dossier des jeux"), dossier), ("", langue),
-                          ("", sauvegardes), ("", decouvrir), ("", fin))
+        return self._page(
+            self._par_deux(self._bloc(tr("Dossier des jeux"), dossier),
+                           self._bloc(tr("Langue du launcher"), langue)),
+            self._par_deux(self._bloc("", sauvegardes), self._bloc("", archives)),
+            fin)
 
     def _on_desinstaller(self) -> None:
         from src.ui.desinstallation_dialog import DesinstallationDialog
@@ -462,7 +485,7 @@ class SettingsDialog(QDialog):
 
     def _regler_disque(self) -> None:
         libre, total = espace_du_volume(self.config.install_path)
-        self._barre_disque.regler(self._octets_jeux, libre, total)
+        self._disque.regler(self._octets_jeux, libre, total)
         self._free_label.setText(_texte_disque(self.config.install_path))
 
     def _lancer_scan(self) -> None:
@@ -509,51 +532,49 @@ class SettingsDialog(QDialog):
             self._store.job_finished.connect(self._on_trailer_job_finished)
         self._refresh_trailers()
 
-        theme = Carte()
-        self._theme_combo = self._combo()
+        # La maison sur son blason (les couleurs de chaque thème, l'initiale de son nom).
+        self._choix_maison = ChoixEnTuiles(
+            lambda nom, ident: tuile_maison(nom, THEMES[ident].accent_light, THEMES[ident].accent_dark),
+            colonnes=len(THEMES), largeur_min=150)
         for palette in THEMES.values():
-            self._theme_combo.addItem(tr(palette.nom), palette.id)
-        ids = list(THEMES.keys())
-        self._theme_combo.setCurrentIndex(
-            ids.index(self.config.theme) if self.config.theme in ids else 0)
-        self._theme_combo.currentIndexChanged.connect(self._on_theme_changed)
-        theme.ajouter(LigneReglage(tr("Couleurs du launcher"), "", self._theme_combo))
+            self._choix_maison.addItem(tr(palette.nom), palette.id)
+        self._choix_maison.setCurrentIndex(max(0, self._choix_maison.findData(self.config.theme)))
+        self._choix_maison.currentIndexChanged.connect(self._on_theme_changed)
         self._theme_hint, self._theme_restart = self._ligne_redemarrage(
             tr("Redémarrez le launcher pour changer ses couleurs."))
-        theme.ajouter(self._theme_hint)
 
-        ambiance = Carte()
-        self._season_combo = self._combo()
-        # La LISTE vient de `season.SEASONS`, jamais d'une copie locale : il y
-        # en avait une ici, et deux listes qu'aucun calcul ne relie finissent
-        # par diverger — ajouter une ambiance l'aurait laissée invisible dans
-        # les Paramètres, sans que rien ne le signale.
+        # L'ambiance du mois sur son dessin. La LISTE vient de `season.SEASONS`, jamais d'une copie locale :
+        # deux listes qu'aucun calcul ne relie finissent par diverger — ajouter une ambiance l'aurait laissée
+        # invisible dans les Paramètres, sans que rien ne le signale.
+        self._choix_ambiance = ChoixEnTuiles(tuile_ambiance, colonnes=len(SEASONS), largeur_min=118)
         for value in SEASONS:
-            self._season_combo.addItem(tr(SEASON_LABELS[value]), value)
-        self._season_combo.setCurrentIndex(
-            SEASONS.index(self.config.season)
-            if self.config.season in SEASONS else 0)
-        self._season_combo.currentIndexChanged.connect(self._on_season_changed)
-        self._effets_combo = self._combo()
-        for mode in effets.MODES:
-            self._effets_combo.addItem(tr(_LIBELLES_EFFETS[mode]), mode)
-        self._effets_combo.setCurrentIndex(
-            effets.MODES.index(self.config.effets_animes) if self.config.effets_animes in effets.MODES else 0)
-        self._effets_combo.currentIndexChanged.connect(self._on_effets_changed)
-        ambiance.ajouter(LigneReglage(
-            tr("Effets animés"), tr("Particules, zoom du fond, étoiles et personnages qui tournent seuls."),
-            self._effets_combo))
-        self._effets_hint, _ = self._ligne_redemarrage(tr("Redémarrez le launcher pour appliquer ce choix."))
-        ambiance.ajouter(self._effets_hint)
-        particules = LigneReglage(tr("Particules saisonnières"), "", self._season_combo)
-        self._griser(particules, effets.animes())   # effets coupés : la saison attend, intacte
-        ambiance.ajouter(particules)
-        ligne, _ = self._reglage(
-            tr("Fait du jour dans la barre de statut"), "faits_du_jour")
-        ambiance.ajouter(ligne)
+            self._choix_ambiance.addItem(tr(SEASON_LABELS[value]), value)
+        self._choix_ambiance.setCurrentIndex(max(0, self._choix_ambiance.findData(self.config.season)))
+        self._choix_ambiance.currentIndexChanged.connect(self._on_season_changed)
+        self._griser(self._choix_ambiance, effets.animes())   # effets coupés : la saison attend, intacte
+        almanach = Carte()
+        ligne, _ = self._reglage(tr("Fait du jour dans la barre de statut"), "faits_du_jour")
+        almanach.ajouter(ligne)
 
-        return self._page((tr("Son et vidéos"), videos), ("", theme),
-                          (tr("Almanach"), ambiance))
+        # Les effets animés sur un aperçu ; « Selon ce PC » dit ce que ce PC a choisi.
+        sous = {"auto": tr("Ici : animés") if effets.selon("auto") else tr("Ici : coupés")}
+        self._choix_effets = ChoixEnTuiles(
+            lambda nom, mode: tuile_effets(str(mode), nom, sous.get(str(mode), "")), colonnes=len(effets.MODES),
+            largeur_min=110)
+        for mode in effets.MODES:
+            self._choix_effets.addItem(tr(_LIBELLES_EFFETS[mode]), mode)
+        self._choix_effets.setCurrentIndex(max(0, self._choix_effets.findData(self.config.effets_animes)))
+        self._choix_effets.currentIndexChanged.connect(self._on_effets_changed)
+        self._effets_hint, _ = self._ligne_redemarrage(tr("Redémarrez le launcher pour appliquer ce choix."))
+
+        return self._page(
+            self._bloc(tr("Couleurs du launcher"), self._choix_maison, self._theme_hint),
+            self._bloc(tr("Almanach"), self._choix_ambiance, almanach),
+            self._par_deux(
+                self._bloc(tr("Effets animés"), self._choix_effets, texte(
+                    tr("Particules, zoom du fond, étoiles et personnages qui tournent seuls."),
+                    13, ENCRE_DOUCE, retour=True), self._effets_hint),
+                self._bloc(tr("Son et vidéos"), videos)))
 
     # ── Bandes-annonces ──
 
@@ -690,7 +711,8 @@ class SettingsDialog(QDialog):
             tr("Barre lumineuse de la manette aux couleurs de votre maison"), "couleur_manette")
         self._tgl_manette.toggled.connect(self._on_couleur_manette)
         manette_carte.ajouter(ligne)
-        return self._page((tr("Discord"), discord), (tr("Manette"), manette_carte))
+        return self._page(self._par_deux(self._bloc(tr("Discord"), discord),
+                                         self._bloc(tr("Manette"), manette_carte)))
 
     # ── Page À propos ──
 
@@ -770,7 +792,7 @@ class SettingsDialog(QDialog):
         self._griser(self._ligne_discord_partie, presence)
 
     @staticmethod
-    def _griser(ligne: LigneReglage, actif: bool) -> None:
+    def _griser(ligne: QWidget, actif: bool) -> None:
         """Un réglage qu'un autre éteint reste visible, grisé, sa valeur intacte."""
         ligne.setEnabled(actif)
         if actif:
@@ -797,7 +819,7 @@ class SettingsDialog(QDialog):
 
     def _on_language_changed(self) -> None:
         """Change la langue (effective au prochain démarrage — chaînes posées à la construction)."""
-        self.config.langue = self._lang_combo.currentData()
+        self.config.langue = self._choix_langue.currentData()
         self._regler_redemarrage()
         self._save()
 
@@ -812,7 +834,7 @@ class SettingsDialog(QDialog):
 
     def _on_theme_changed(self) -> None:
         """Change le thème (effectif au prochain démarrage — couleurs posées à la construction)."""
-        self.config.theme = self._theme_combo.currentData()
+        self.config.theme = self._choix_maison.currentData()
         # La fenêtre attend un redémarrage ; la manette, elle, change tout de suite.
         if self.config.couleur_manette:
             manette.colorer_en_fond(self.config.theme)
@@ -821,13 +843,13 @@ class SettingsDialog(QDialog):
 
     def _on_effets_changed(self) -> None:
         """Effets animés : effectif au prochain démarrage, comme le thème (`src/core/effets.py`)."""
-        self.config.effets_animes = self._effets_combo.currentData()
+        self.config.effets_animes = self._choix_effets.currentData()
         self._regler_redemarrage()
         self._save()
 
     def _on_season_changed(self) -> None:
         """Change la saison des particules — appliqué EN DIRECT (pas de redémarrage)."""
-        self.config.season = self._season_combo.currentData()
+        self.config.season = self._choix_ambiance.currentData()
         self._save()
         self.season_changed.emit(effets.saison_des_particules(self.config.season))
 

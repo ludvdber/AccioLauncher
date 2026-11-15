@@ -138,17 +138,28 @@ class TestBandeau:
     """Maquette B « L'En-tête » (Ludo, 2026-11-13) : le bandeau du jeu remplace le rail de gauche."""
 
     def test_le_nom_du_jeu_tient_sur_sa_ligne_a_la_plus_petite_taille(self, qtbot, tmp_path):
-        """Le nom descend de taille plutôt que de sortir du bandeau (titres les plus longs : HP7)."""
+        """Le nom descend de taille plutôt que de sortir du bandeau (titres les plus longs : HP7), et garde la
+        PLUS GRANDE taille qui tient : la largeur où 24 points cessent de tenir dépend des polices du système
+        (à la taille minimale, le titre tient en 24 sous Linux et pas sous Windows ; CI du 2026-11-15)."""
+        from PyQt6.QtGui import QFontMetrics
+        from src.ui.bandeau_jeu import NomDuJeu
         from src.ui.composants import TAILLE_MINIMALE_PAGE
+        from src.ui.fonts import cinzel
         dlg, _ini = _fenetre(qtbot, tmp_path)
-        dlg._titre.setText("Harry Potter et les Reliques de la Mort - 1re partie")
         dlg.resize(*TAILLE_MINIMALE_PAGE)
         dlg.show()
         qtbot.waitExposed(dlg)
-        qtbot.wait(20)
         nom = dlg._titre
-        assert nom.fontMetrics().horizontalAdvance(nom.text()) <= nom.width()
-        assert nom.font().pointSize() < 24
+        for largeur in (nom.width(), nom.width() // 2):
+            nom.setFixedWidth(largeur)
+            # Posé APRÈS la mise en page : le texte seul doit suffire à réajuster la taille.
+            nom.setText("Harry Potter et les Reliques de la Mort - 1re partie")
+            taille = nom.font().pointSize()
+            tient = [t for t in NomDuJeu._TAILLES
+                     if QFontMetrics(cinzel(t, bold=True)).horizontalAdvance(nom.text()) <= largeur]
+            assert taille == (tient[0] if tient else NomDuJeu._TAILLES[-1])
+            assert nom.wordWrap() is not bool(tient)
+        assert nom.font().pointSize() < 24, "à mi-largeur, 24 points ne tiennent sur aucun système"
 
     def test_les_rubriques_sont_les_pastilles_du_carnet(self, qtbot, tmp_path):
         """Le même menu que le Carnet et les Collections (`composants.filtre`, en grand)."""

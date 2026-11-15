@@ -4,12 +4,16 @@ Le fond du jeu (`assets/backgrounds/<id>_bg.jpg`, 3840 × 1240, sombre à gauche
 fond, fondu vers la page à gauche et en bas ; dessus, le retour vers la bibliothèque, le nom du jeu en grand et
 ses rubriques en pastilles, les mêmes que celles du Carnet et des Collections (`composants.filtre`). Il remplace
 le rail de gauche : la page gagne ses 270 px (« on reconnaît le jeu plus vite à la vue », Ludo).
+
+Les Paramètres ont le même bandeau (maquette A « Voûte », Ludo, 2026-11-15), sur un ciel : la Voie lactée de
+l'ESO (`ciel_parametres.jpg`, CC BY 4.0, repeinte dans les bleus du thème), cadrée pour COUVRIR toute la largeur,
+fondue en bleu nuit sur ses bords (`Bandeau(couvrir=True, bords=…)`).
 """
 
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFontMetrics, QIcon, QLinearGradient, QPainter, QPixmap
+from PyQt6.QtGui import QColor, QFontMetrics, QIcon, QLinearGradient, QPainter, QPixmap, QRadialGradient
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from src.core.config import ASSETS_DIR
@@ -29,19 +33,30 @@ _FOND_PAGE = QColor("#060611")
 _TAILLE_PICTO = 16
 
 
+CIEL_PARAMETRES = ASSETS_DIR / "backgrounds" / "ciel_parametres.jpg"
+# Le bleu nuit des bords du ciel : la couleur des bordures fortes du thème Poudlard (#2c3e6b), assombrie.
+BLEU_NUIT = QColor(16, 30, 86)
+
+
 def fond_du_jeu(ident: str) -> Path:
     return ASSETS_DIR / "backgrounds" / f"{ident}_bg.jpg"
 
 
 class Bandeau(QWidget):
-    """Le bandeau peint : l'image du jeu, puis les deux fondus. Les widgets se posent dessus (`contenu`)."""
+    """Le bandeau peint : l'image, puis les fondus. Les widgets se posent dessus.
 
-    def __init__(self, ident_jeu: str, parent: QWidget | None = None) -> None:
+    `couvrir` : l'image couvre toute la largeur (le ciel des Paramètres) au lieu d'être mise à `_ECHELLE` fois
+    la hauteur, ancrée à droite (le personnage d'un jeu). `bords` : une couleur qui voile les bords avant le
+    fondu vers la page (le bleu nuit du ciel)."""
+
+    def __init__(self, image: Path, parent: QWidget | None = None, *, hauteur: int = HAUTEUR_BANDEAU,
+                 couvrir: bool = False, bords: QColor | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("bandeauJeu")
-        self.setFixedHeight(HAUTEUR_BANDEAU)
-        chemin = fond_du_jeu(ident_jeu)
-        self._image = QPixmap(str(chemin)) if chemin.is_file() else QPixmap()
+        self.setFixedHeight(hauteur)
+        self._couvrir = couvrir
+        self._bords = bords
+        self._image = QPixmap(str(image)) if image.is_file() else QPixmap()
         self._cache: QPixmap | None = None
         self._cache_pour: QSize | None = None
 
@@ -52,9 +67,15 @@ class Bandeau(QWidget):
         dpr = self.devicePixelRatioF()
         taille = QSize(round(self.width() * dpr), round(self.height() * dpr))
         if self._cache is None or self._cache_pour != taille:
-            mise = self._image.scaledToHeight(round(taille.height() * _ECHELLE),
-                                              Qt.TransformationMode.SmoothTransformation)
-            haut = min(round(mise.height() * _HAUT_DU_CADRAGE), max(0, mise.height() - taille.height()))
+            if self._couvrir:
+                echelle = max(taille.width() / self._image.width(), taille.height() / self._image.height())
+                mise = self._image.scaled(round(self._image.width() * echelle), round(self._image.height() * echelle),
+                                          transformMode=Qt.TransformationMode.SmoothTransformation)
+                haut = (mise.height() - taille.height()) // 2
+            else:
+                mise = self._image.scaledToHeight(round(taille.height() * _ECHELLE),
+                                                  Qt.TransformationMode.SmoothTransformation)
+                haut = min(round(mise.height() * _HAUT_DU_CADRAGE), max(0, mise.height() - taille.height()))
             # Ancré à droite : le personnage est à droite des huit fonds ; à gauche, la page.
             self._cache = QPixmap(taille)
             self._cache.fill(_FOND_PAGE)
@@ -72,11 +93,26 @@ class Bandeau(QWidget):
         fond = self._fond()
         if fond is not None:
             p.drawPixmap(0, 0, fond)
+        if self._bords is not None:
+            # Le voile des bords : un ovale clair au centre droit, le bleu nuit vers les quatre côtés.
+            voile = QRadialGradient(r.width() * 0.7, r.height() * 0.4, max(r.width(), r.height()) * 0.75)
+            couleur = QColor(self._bords)
+            couleur.setAlpha(0)
+            voile.setColorAt(0.0, couleur)
+            voile.setColorAt(0.45, couleur)
+            couleur.setAlpha(225)
+            voile.setColorAt(1.0, couleur)
+            p.fillRect(r, voile)
         # Fondu vers la gauche : le nom et les pastilles se lisent sur du noir, l'image vit à droite.
         gauche = QLinearGradient(0, 0, r.width(), 0)
-        gauche.setColorAt(0.0, _FOND_PAGE)
-        gauche.setColorAt(0.45, _FOND_PAGE)
-        gauche.setColorAt(0.7, QColor(6, 6, 17, 90))
+        if self._bords is None:
+            gauche.setColorAt(0.0, _FOND_PAGE)
+            gauche.setColorAt(0.45, _FOND_PAGE)
+            gauche.setColorAt(0.7, QColor(6, 6, 17, 90))
+        else:
+            # Le ciel reste visible sous les pastilles : un fondu bleu nuit, pas un noir plein.
+            gauche.setColorAt(0.0, QColor(8, 10, 30, 225))
+            gauche.setColorAt(0.36, QColor(16, 30, 86, 120))
         gauche.setColorAt(1.0, QColor(6, 6, 17, 0))
         p.fillRect(r, gauche)
         # Fondu vers le bas : le bandeau se fond dans la page, sans trait.
@@ -102,8 +138,16 @@ class NomDuJeu(QLabel):
         self.setMinimumWidth(1)
         self.setFont(cinzel(self._TAILLES[0], bold=True))
 
+    def setText(self, texte: str) -> None:  # noqa: N802 (Qt)
+        """Un nom posé après la mise en page se réajuste aussi : seul `resizeEvent` le faisait."""
+        super().setText(texte)
+        self._ajuster()
+
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
+        self._ajuster()
+
+    def _ajuster(self) -> None:
         for taille in self._TAILLES:
             police = cinzel(taille, bold=True)
             if QFontMetrics(police).horizontalAdvance(self.text()) <= self.width():
@@ -127,7 +171,7 @@ def pastille_rubrique(libelle: str, icone: str) -> QPushButton:
 
 def bandeau_du_jeu(game, retour: QPushButton) -> tuple[Bandeau, QLabel, QHBoxLayout]:
     """Le bandeau d'un jeu : (bandeau, nom du jeu, rangée où poser les pastilles des rubriques)."""
-    bandeau = Bandeau(game.id)
+    bandeau = Bandeau(fond_du_jeu(game.id))
     lay = QVBoxLayout(bandeau)
     lay.setContentsMargins(MARGES_PAGE[0], 18, MARGES_PAGE[2], 14)
     lay.setSpacing(0)
