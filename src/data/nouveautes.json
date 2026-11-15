@@ -18,6 +18,20 @@
             "en": "The game is shown large at the top of its settings, its sections just below, and the page takes the whole width. The image sections form a list on the left, under the search.",
             "es": "El juego se muestra en grande arriba de sus ajustes, sus secciones justo debajo, y la página ocupa todo el ancho. Las secciones de imagen forman una lista a la izquierda, bajo la búsqueda."
           }
+        },
+        {
+          "icone": "pinceau",
+          "jeux": [],
+          "titre": {
+            "fr": "Des Paramètres sous la Voie lactée",
+            "en": "Settings under the Milky Way",
+            "es": "Ajustes bajo la Vía Láctea"
+          },
+          "texte": {
+            "fr": "Les Paramètres prennent le même bandeau que les réglages d'un jeu, sur un ciel étoilé. Ce qui se choisit se voit : la langue sur son drapeau, la maison sur son blason, l'ambiance du mois sur son dessin, les effets animés sur un aperçu.",
+            "en": "Settings get the same banner as a game's settings, under a starry sky. What you choose, you see: each language with its flag, each house with its crest, the month's mood with its drawing, animated effects with a preview.",
+            "es": "Los ajustes reciben la misma cabecera que los de un juego, bajo un cielo estrellado. Lo que se elige se ve: cada idioma con su bandera, cada casa con su escudo, el ambiente del mes con su dibujo y los efectos animados con una vista previa."
+          }
         }
       ],
       "changements": [

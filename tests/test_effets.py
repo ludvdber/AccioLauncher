@@ -113,13 +113,11 @@ def test_parametres_effets_animes(qtbot, tmp_path, monkeypatch, animes):
     dlg = SettingsDialog(cfg, GameManager(cfg))
     qtbot.addWidget(dlg)
     dlg.construire_rubrique(1)   # Son et image
-    combo = dlg._effets_combo
+    combo = dlg._choix_effets
     assert [combo.itemData(i) for i in range(combo.count())] == list(effets.MODES)
     assert combo.currentData() == "auto"
-    particules = dlg._season_combo.parentWidget()
-    while particules is not None and type(particules).__name__ != "LigneReglage":
-        particules = particules.parentWidget()
-    assert particules is not None and particules.isEnabled() is animes
+    # Effets coupés, les ambiances de l'Almanach restent visibles mais grisées, leur choix intact.
+    assert dlg._choix_ambiance.isEnabled() is animes
     assert dlg._effets_hint.isHidden()
     # Le choix qui changerait l'état de la session demande de redémarrer ; revenir n'en demande plus.
     combo.setCurrentIndex(effets.MODES.index("non" if animes else "oui"))
@@ -129,7 +127,7 @@ def test_parametres_effets_animes(qtbot, tmp_path, monkeypatch, animes):
     assert dlg._effets_hint.isHidden()
     # Changer d'ambiance en direct ne rallume pas les particules quand les effets sont coupés.
     with qtbot.waitSignal(dlg.season_changed) as recu:
-        dlg._season_combo.setCurrentIndex(dlg._season_combo.findData("halloween"))
+        dlg._choix_ambiance.setCurrentIndex(dlg._choix_ambiance.findData("halloween"))
     assert recu.args == ["halloween" if animes else "aucune"]
     dlg._shutdown_scan()
 

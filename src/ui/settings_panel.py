@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -312,7 +313,7 @@ class SettingsDialog(QDialog):
         return cadre
 
     @staticmethod
-    def _bloc(titre: str, *contenus: QWidget) -> QWidget:
+    def _bloc(titre: str, *contenus: QWidget, etirer: bool = True) -> QWidget:
         """Un surtitre doré et ce qu'il annonce, qui prend la hauteur que la rangée lui donne."""
         bloc = QWidget()
         transparent(bloc)
@@ -322,9 +323,14 @@ class SettingsDialog(QDialog):
         if titre:
             lay.addWidget(surtitre(titre))
         # Le dernier contenu (la carte) prend la hauteur de la rangée : deux cartes voisines finissent au
-        # même pixel.
+        # même pixel. Sans carte à étirer (`etirer=False`), le bloc reste en haut de la rangée.
         for rang, contenu in enumerate(contenus):
-            lay.addWidget(contenu, stretch=1 if rang == len(contenus) - 1 else 0)
+            etire = etirer and rang == len(contenus) - 1
+            if etire and isinstance(contenu, Carte):
+                contenu.etirable()
+            lay.addWidget(contenu, stretch=1 if etire else 0)
+        if not etirer:
+            lay.addStretch()
         return bloc
 
     @staticmethod
@@ -341,6 +347,9 @@ class SettingsDialog(QDialog):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(24)
         for section in sections:
+            # Jamais plus haute que son contenu : une carte étirable (`Carte.etirable`) rend sa rangée
+            # « extensible » aux yeux de la page, qui lui donnait alors le bas de la fenêtre.
+            section.setSizePolicy(section.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Maximum)
             lay.addWidget(section)
         lay.addStretch()
         return page
@@ -438,10 +447,12 @@ class SettingsDialog(QDialog):
         lay_langue.addWidget(texte(
             tr("Les jeux ont leurs propres langues, parfois plus nombreuses que celles du launcher : "
                "chacun a la sienne dans ses réglages, rubrique Langue."), 13, ENCRE_DOUCE, retour=True))
-        langue.ajouter(interieur)
+        # Dans la même case que les drapeaux : en ligne à part, son filet restait visible, ligne cachée.
         self._lang_hint, self._lang_restart = self._ligne_redemarrage(
             tr("Redémarrez le launcher pour appliquer la langue."))
-        langue.ajouter(self._lang_hint)
+        self._lang_hint.layout().setContentsMargins(0, 0, 0, 0)
+        lay_langue.addWidget(self._lang_hint)
+        langue.ajouter(interieur)
 
         sauvegardes = Carte()
         ligne, self._tgl_copies = self._reglage(
@@ -573,7 +584,7 @@ class SettingsDialog(QDialog):
             self._par_deux(
                 self._bloc(tr("Effets animés"), self._choix_effets, texte(
                     tr("Particules, zoom du fond, étoiles et personnages qui tournent seuls."),
-                    13, ENCRE_DOUCE, retour=True), self._effets_hint),
+                    13, ENCRE_DOUCE, retour=True), self._effets_hint, etirer=False),
                 self._bloc(tr("Son et vidéos"), videos)))
 
     # ── Bandes-annonces ──

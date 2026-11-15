@@ -60,7 +60,7 @@ class TestDialogue:
         # Le poids est dit une fois, sur la ligne du dessus.
         assert not [lbl.text() for lbl in dialogue.findChildren(composants.QLabel)
                     if lbl.text().startswith("Vos jeux ·")]
-        assert dialogue._barre_disque._jeux > 0
+        assert dialogue._disque._jeux > 0
 
     def test_plus_de_phrase_de_methode_en_pied(self, dialogue):
         """« Échap pour revenir » doublait l'onglet du haut, et ne valait pas à la manette."""
@@ -73,9 +73,9 @@ class TestDialogue:
         dialogue.show()
         dialogue._nav.setCurrentRow(0)
         assert not dialogue._lang_hint.isVisible()
-        autre = next(i for i in range(dialogue._lang_combo.count())
-                     if dialogue._lang_combo.itemData(i) != "fr")
-        dialogue._lang_combo.setCurrentIndex(autre)
+        autre = next(i for i in range(dialogue._choix_langue.count())
+                     if dialogue._choix_langue.itemData(i) != "fr")
+        dialogue._choix_langue.setCurrentIndex(autre)
         assert dialogue._lang_hint.isVisible() and dialogue._lang_restart.isVisible()
 
     def test_chaque_interrupteur_a_un_nom(self, dialogue):
@@ -311,12 +311,14 @@ class TestQuatreRubriques:
         assert _RANG_A_PROPOS == len(_RUBRIQUES) - 1
         assert [b.text() for b in dialogue._nav.boutons][-1] == "À propos"
 
-    def test_les_archives_dans_la_carte_du_dossier(self, dialogue):
-        from src.ui.composants import Carte
+    def test_les_archives_a_cote_des_sauvegardes(self, dialogue):
+        """Maquette A (2026-11-15) : deux cartes d'une ligne côte à côte, sous le dossier et la langue."""
+        from src.ui.composants import Carte, Rangee
         assert dialogue._tgl_archives.isChecked() is dialogue.config.delete_archives
-        carte = next(c for c in dialogue.findChildren(Carte)
-                     if c.isAncestorOf(dialogue._installed_label))
-        assert carte.isAncestorOf(dialogue._tgl_archives), "sous le dossier des jeux"
+        rangee = next(r for r in dialogue.findChildren(Rangee) if r.isAncestorOf(dialogue._tgl_archives))
+        assert rangee.isAncestorOf(dialogue._tgl_copies)
+        assert not any(c.isAncestorOf(dialogue._tgl_archives) and c.isAncestorOf(dialogue._tgl_copies)
+                       for c in dialogue.findChildren(Carte)), "chacune sa carte"
         dialogue._tgl_archives._basculer()
         assert Config.load().delete_archives is dialogue._tgl_archives.isChecked()
 
@@ -386,15 +388,18 @@ class TestQuatreRubriques:
         assert "CATALOGUE &lt;B&gt;9.99&lt;/B&gt;" in texte, "numéro venu de l'extérieur : échappé"
         assert "<a href=" in texte, "le numéro de version reste un lien"
 
-    def test_la_colonne_colle_au_rail(self, dialogue, qtbot):
-        """Centrée, la colonne de 760 px flottait loin du rail sur un grand écran."""
+    def test_la_page_s_aligne_sur_les_pastilles(self, dialogue, qtbot):
+        """Bornée en largeur (sur un grand écran, une ligne séparait son titre de son interrupteur par un
+        désert), et à la marge des pastilles du bandeau, pas centrée."""
         from src.ui.composants import MARGES_PAGE
+        from src.ui.settings_panel import _LARGEUR_CARTES
         dialogue.resize(1600, 800)
         dialogue.show()
         qtbot.waitExposed(dialogue)
         page = dialogue._pages.currentWidget().widget().layout().itemAt(0).widget()
-        assert page.width() == 760
-        assert page.mapTo(dialogue._pages, page.rect().topLeft()).x() == MARGES_PAGE[0], "la marge de toutes les pages à rail (f75)"
+        assert page.width() == _LARGEUR_CARTES
+        x = page.mapTo(dialogue, page.rect().topLeft()).x()
+        assert x == MARGES_PAGE[0] == dialogue._nav.mapTo(dialogue, dialogue._nav.rect().topLeft()).x()
 
     def test_les_jeux_qui_attendent_leur_mise_a_jour_sont_comptes(self, dialogue, monkeypatch):
         """Ce que la vérification lit quand elle n'apporte rien (règle 108)."""

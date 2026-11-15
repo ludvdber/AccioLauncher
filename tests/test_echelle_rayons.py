@@ -88,15 +88,16 @@ class TestBoutonsCommuns:
         """f75 : 236, 270, 280 et 300 px ; le Journal des changements, au même en-tête que
         les réglages du jeu, faisait sauter la page. Une constante, aucune autre largeur."""
         import re
-        # Les réglages d'un jeu n'ont plus de rail (maquette B, 2026-11-15) : son bandeau ; le Journal garde
-        # la colonne de ses versions.
-        for nom in ("settings_panel", "folio_page", "versions_dialog", "atelier_page"):
+        # Les réglages d'un jeu et les Paramètres n'ont plus de rail (maquettes B et A, 2026-11-15) : leur
+        # bandeau ; le Journal garde la colonne de ses versions.
+        for nom in ("folio_page", "versions_dialog", "atelier_page"):
             source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert "setFixedWidth(LARGEUR_RAIL)" in source, nom
             assert not re.search(r"^_LARGEUR_(RAIL|RUBRIQUES) = ", source, re.M), nom
-        for nom in ("game_settings_dialog", "bandeau_jeu"):
+        for nom in ("game_settings_dialog", "bandeau_jeu", "settings_panel"):
             source = Path(f"src/ui/{nom}.py").read_text(encoding="utf-8")
             assert not re.search(r"^_LARGEUR_(RAIL|RUBRIQUES) = ", source, re.M), nom
+            assert "setFixedWidth(LARGEUR_RAIL)" not in source, nom
 
     def test_filtre_a_hauteur_fixe(self, qtbot):
         petit, grand = composants.filtre("Tous"), composants.filtre("Folio", grand=True)
@@ -181,14 +182,15 @@ class TestBoutonsCommuns:
 
 
 class TestRails:
-    def test_rail_des_parametres(self, qtbot):
-        from src.ui.settings_panel import _RUBRIQUES, _Rail
-        rail = _Rail(_RUBRIQUES)
-        qtbot.addWidget(rail)
-        assert [b.objectName() for b in rail.boutons] == ["rubrique"] * len(_RUBRIQUES)
-        assert {b.maximumHeight() for b in rail.boutons} == {44}, "la même hauteur que les rubriques des réglages du jeu (f75)"
-        rail.boutons[1].click()
-        assert rail.currentRow() == 1
+    def test_pastilles_des_parametres(self, qtbot):
+        """Les rubriques des Paramètres sont les pastilles des réglages d'un jeu (maquette A, 2026-11-15)."""
+        from src.ui.settings_panel import _RUBRIQUES, _Pastilles
+        rangee = _Pastilles(_RUBRIQUES)
+        qtbot.addWidget(rangee)
+        assert [b.objectName() for b in rangee.boutons] == ["filtre"] * len(_RUBRIQUES)
+        assert {b.maximumHeight() for b in rangee.boutons} == {composants.HAUTEUR_FILTRE_GRAND}
+        rangee.boutons[1].click()
+        assert rangee.currentRow() == 1
 
 
 class TestTitresDePage:

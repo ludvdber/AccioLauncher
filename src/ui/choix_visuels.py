@@ -10,6 +10,7 @@ Tab entre sur le choix coché, ←/→ et la manette passent de l'une à l'autre
 ne dessine aucun anneau elle-même, et s'éclaire au survol (`composants.survol`).
 """
 
+import math
 import random
 from collections.abc import Callable
 from functools import lru_cache
@@ -124,15 +125,6 @@ class ChoixEnTuiles(QWidget):
         largeur = max((t.minimumSizeHint().width() for t in self._tuiles), default=0)
         return QSize(max(largeur, self._largeur_min), super().minimumSizeHint().height())
 
-    def hasHeightForWidth(self) -> bool:  # noqa: N802 (Qt)
-        return True
-
-    def heightForWidth(self, largeur: int) -> int:  # noqa: N802 (Qt)
-        n = max(1, min(self._colonnes_pour(largeur), self._colonnes, len(self._tuiles) or 1))
-        lignes = -(-len(self._tuiles) // n) if self._tuiles else 0
-        haut = max((t.sizeHint().height() for t in self._tuiles), default=0)
-        return lignes * haut + max(0, lignes - 1) * self._grille.verticalSpacing()
-
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
         self._ranger(self._colonnes_pour(event.size().width()))
@@ -203,7 +195,6 @@ class Tuile(QPushButton):
         p.end()
 
     def _texte(self, p: QPainter, r: QRectF) -> None:
-        nom = police(13, gras=True)
         sous = police(11)
         hn = 18   # la hauteur de la ligne du nom, en 13 px
         if self._texte_a == "droite":
@@ -222,7 +213,12 @@ class Tuile(QPushButton):
                        Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                        p.fontMetrics().elidedText(self._sous, Qt.TextElideMode.ElideRight, largeur))
             bas -= 16
-        p.setFont(nom)
+        # « La bataille de Poudlard » : la police descend d'un ou deux pixels avant de couper le nom.
+        for px in (13, 12, 11):
+            nom = police(px, gras=True)
+            p.setFont(nom)
+            if p.fontMetrics().horizontalAdvance(self._nom) <= largeur:
+                break
         p.setPen(QColor(ENCRE))
         p.drawText(QRectF(r.left() + self._retrait, bas - hn, largeur, hn),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -265,6 +261,9 @@ def blason(p: QPainter, x: float, y: float, taille: float, haut: QColor, bas: QC
 
 
 def tuile_maison(nom: str, haut: str, bas: str) -> Tuile:
+    """Le nom de la maison seul : « Poudlard (Or) » dit sa couleur entre parenthèses, que le blason montre."""
+    nom = nom_et_date(nom)[0]
+
     def dessin(p: QPainter, r: QRectF) -> None:
         blason(p, r.left() + 14, r.center().y() - 15, 26, QColor(haut), QColor(bas), nom[:1])
     return Tuile(nom, "", 54, dessin, texte_a="droite", retrait_texte=52)
@@ -272,15 +271,74 @@ def tuile_maison(nom: str, haut: str, bas: str) -> Tuile:
 
 # ── L'ambiance : son mois, son motif ──
 
-# (début, fin du dégradé, signe, couleur du signe, places du signe en fractions de la tuile)
-_AMBIANCES: dict[str, tuple[str, str, str, str, tuple[tuple[float, float], ...]]] = {
-    "auto": ("#141a3a", "#06071a", "", "", ()),
-    "aucune": ("#0b0b16", "#0b0b16", "", "", ()),
-    "halloween": ("#3a2210", "#120a05", "❦", "#e8955a", ((0.10, 0.10), (0.52, 0.30), (0.82, 0.06))),
-    "noel": ("#1b2350", "#090b1f", "✻", "#e6f0ff", ((0.09, 0.08), (0.45, 0.28), (0.76, 0.06), (0.92, 0.34))),
-    "rentree": ("#2b1a14", "#0d0806", "✉", "#e6d3a8", ((0.13, 0.08), (0.70, 0.24))),
-    "anniversaire": ("#3d3210", "#100d04", "✶", "#f0d060", ((0.38, 0.06), (0.80, 0.28), (0.14, 0.30))),
-    "bataille": ("#2a1530", "#0b0610", "✦", "#c9a7f2", ((0.22, 0.08), (0.66, 0.26), (0.90, 0.04))),
+# Les motifs sont DESSINÉS, pas écrits : ❦ ✻ ✉ ✶ manquent à Gelasio, et une police système choisie par Qt
+# les aurait remplacés par une autre, ou par des carrés (règle 89).
+
+
+def _lune(p: QPainter, x: float, y: float, t: float) -> None:
+    """Un croissant de lune (Halloween)."""
+    plein, creux = QPainterPath(), QPainterPath()
+    plein.addEllipse(QPointF(x, y), t, t)
+    creux.addEllipse(QPointF(x + t * 0.55, y - t * 0.3), t * 0.9, t * 0.9)
+    p.drawPath(plein.subtracted(creux))
+
+
+def _flocon(p: QPainter, x: float, y: float, t: float) -> None:
+    """Trois branches et leurs petites pointes (Noël)."""
+    stylo = QPen(p.brush().color(), max(1.0, t * 0.16))
+    stylo.setCapStyle(Qt.PenCapStyle.RoundCap)
+    p.save()
+    p.setPen(stylo)
+    for k in range(3):
+        a = math.pi / 3 * k
+        dx, dy = math.cos(a) * t, math.sin(a) * t
+        p.drawLine(QPointF(x - dx, y - dy), QPointF(x + dx, y + dy))
+    p.restore()
+
+
+def _lettre(p: QPainter, x: float, y: float, t: float) -> None:
+    """Une enveloppe (la lettre de Poudlard, la rentrée)."""
+    stylo = QPen(p.brush().color(), max(1.0, t * 0.13))
+    p.save()
+    p.setPen(stylo)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    r = QRectF(x - t, y - t * 0.68, 2 * t, 1.36 * t)
+    p.drawRect(r)
+    p.drawPolyline([r.topLeft(), QPointF(x, y + t * 0.1), r.topRight()])
+    p.restore()
+
+
+def _etincelle(p: QPainter, x: float, y: float, t: float) -> None:
+    """Une étoile à quatre branches (l'anniversaire)."""
+    e = QPainterPath()
+    e.moveTo(x, y - t)
+    for px, py in ((x + t * 0.22, y - t * 0.22), (x + t, y), (x + t * 0.22, y + t * 0.22), (x, y + t),
+                   (x - t * 0.22, y + t * 0.22), (x - t, y), (x - t * 0.22, y - t * 0.22)):
+        e.lineTo(px, py)
+    e.closeSubpath()
+    p.drawPath(e)
+
+
+def _eclair(p: QPainter, x: float, y: float, t: float) -> None:
+    """Un éclair (la bataille de Poudlard)."""
+    e = QPainterPath()
+    for rang, (fx, fy) in enumerate(((0.25, -1), (-0.45, 0.1), (0.05, 0.1), (-0.25, 1), (0.45, -0.15),
+                                     (-0.05, -0.15))):
+        (e.moveTo if rang == 0 else e.lineTo)(x + fx * t, y + fy * t)
+    e.closeSubpath()
+    p.drawPath(e)
+
+
+# (début, fin du dégradé, motif, couleur du motif, places du motif en fractions de la tuile)
+_AMBIANCES: dict[str, tuple[str, str, Callable[[QPainter, float, float, float], None] | None, str,
+                            tuple[tuple[float, float], ...]]] = {
+    "auto": ("#141a3a", "#06071a", None, "", ()),
+    "aucune": ("#0b0b16", "#0b0b16", None, "", ()),
+    "halloween": ("#3a2210", "#120a05", _lune, "#e8955a", ((0.16, 0.30), (0.62, 0.62), (0.86, 0.18))),
+    "noel": ("#1b2350", "#090b1f", _flocon, "#e6f0ff", ((0.12, 0.26), (0.48, 0.60), (0.78, 0.20), (0.94, 0.70))),
+    "rentree": ("#2b1a14", "#0d0806", _lettre, "#e6d3a8", ((0.18, 0.30), (0.74, 0.58))),
+    "anniversaire": ("#3d3210", "#100d04", _etincelle, "#f0d060", ((0.42, 0.24), (0.82, 0.62), (0.16, 0.66))),
+    "bataille": ("#2a1530", "#0b0610", _eclair, "#c9a7f2", ((0.24, 0.30), (0.66, 0.62), (0.90, 0.20))),
 }
 
 
@@ -293,8 +351,8 @@ def nom_et_date(libelle: str) -> tuple[str, str]:
     return libelle, ""
 
 
-def tuile_ambiance(saison: str, libelle: str) -> Tuile:
-    debut, fin, signe, couleur, places = _AMBIANCES.get(saison, _AMBIANCES["aucune"])
+def tuile_ambiance(libelle: str, saison: object) -> Tuile:
+    debut, fin, motif, couleur, places = _AMBIANCES.get(str(saison), _AMBIANCES["aucune"])
     fond = QLinearGradient(0, 0, 1, 1)
     fond.setColorAt(0, QColor(debut))
     fond.setColorAt(1, QColor(fin))
@@ -302,15 +360,15 @@ def tuile_ambiance(saison: str, libelle: str) -> Tuile:
     def dessin(p: QPainter, r: QRectF) -> None:
         if saison == "auto":
             _etoiles(p, r, 26, graine=7)
-        if not signe:
+        if motif is None:
             return
         encre = QColor(couleur)
-        encre.setAlpha(215)
-        p.setPen(encre)
+        encre.setAlpha(205)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(encre)
+        # Le motif reste dans le haut de la tuile (30 px) : le nom et la date vivent en bas.
         for rang, (fx, fy) in enumerate(places):
-            p.setFont(police(15 - (rang % 2) * 4))
-            # Le motif reste dans le haut de la tuile : le nom et la date vivent en bas.
-            p.drawText(QPointF(r.left() + fx * r.width(), r.top() + 16 + fy * min(r.height() * 0.4, 30)), signe)
+            motif(p, r.left() + fx * r.width(), r.top() + 6 + fy * 24, 6.5 - (rang % 2) * 2)
 
     nom, date = nom_et_date(libelle)
     return Tuile(nom, date, 78, dessin, fond=fond)

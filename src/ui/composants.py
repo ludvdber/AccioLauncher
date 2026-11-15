@@ -520,15 +520,25 @@ class Carte(QFrame):
         self._lay = QVBoxLayout(self)
         self._lay.setContentsMargins(0, 0, 0, 0)
         self._lay.setSpacing(0)
+        self._ressort = False
 
     def ajouter(self, widget: QWidget) -> QWidget:
-        if self._lay.count():
+        fin = self._lay.count() - self._ressort
+        if fin:
             filet = QFrame()
             filet.setObjectName("separateur")
             filet.setFixedHeight(1)
-            self._lay.addWidget(filet)
-        self._lay.addWidget(widget)
+            self._lay.insertWidget(fin, filet)
+            fin += 1
+        self._lay.insertWidget(fin, widget)
         return widget
+
+    def etirable(self) -> None:
+        """La carte grandit (deux cartes voisines finissent au même pixel) sans écarter ses lignes : la place
+        en plus va sous la dernière."""
+        if not self._ressort:
+            self._lay.addStretch()
+            self._ressort = True
 
 
 class LigneReglage(QWidget):

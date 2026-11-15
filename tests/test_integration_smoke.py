@@ -240,7 +240,7 @@ class TestSettingsRestart:
         dlg.show()
         dlg._nav.setCurrentRow(1)  # page Affichage (où vit le combo thème)
         assert not dlg._theme_restart.isVisible()
-        dlg._theme_combo.setCurrentIndex(1)  # Gryffondor
+        dlg._choix_maison.setCurrentIndex(1)  # Gryffondor
         assert dlg._theme_restart.isVisible()
         assert win.config.theme == "gryffondor"
 
@@ -261,7 +261,7 @@ class TestSettingsRestart:
         dlg.resize(dlg.minimumSize())
         dlg.show()
         dlg._nav.setCurrentRow(1)
-        dlg._theme_combo.setCurrentIndex(1)
+        dlg._choix_maison.setCurrentIndex(1)
         qtbot.waitUntil(lambda: dlg._theme_restart.isVisible(), timeout=1000)
         mise_en_page_stable(dlg)
         page = dlg._pages.currentWidget()
@@ -282,7 +282,7 @@ class TestSettingsRestart:
         dlg = SettingsDialog(win.config, win.manager)
         qtbot.addWidget(dlg)
         dlg.show()
-        combo = dlg._lang_combo
+        combo = dlg._choix_langue
         autre = next(i for i in range(combo.count()) if combo.itemData(i) != get_language())
         combo.setCurrentIndex(autre)
         assert dlg._lang_restart.isVisible()
@@ -290,7 +290,7 @@ class TestSettingsRestart:
         assert not dlg._lang_restart.isVisible()
 
         dlg._nav.setCurrentRow(1)
-        themes = dlg._theme_combo
+        themes = dlg._choix_maison
         themes.setCurrentIndex(themes.findData("gryffondor"))
         assert dlg._theme_restart.isVisible()
         themes.setCurrentIndex(themes.findData(theme_courant().id))
@@ -317,7 +317,7 @@ class TestSettingsRestart:
         qtbot.addWidget(dlg)
         dlg.construire_rubrique(1)
         with qtbot.waitSignal(dlg.season_changed, timeout=1000) as blocker:
-            dlg._season_combo.setCurrentIndex(3)  # Noël
+            dlg._choix_ambiance.setCurrentIndex(3)  # Noël
         assert blocker.args == ["noel"]
         assert win.config.season == "noel"
         dlg._scan_worker.requestInterruption()

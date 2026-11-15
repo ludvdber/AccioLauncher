@@ -238,6 +238,36 @@ toute copie, d'où la licence placée à côté des fichiers, dans l'exécutable
 
 ---
 
+## flag-icons — Panayiotis Lipiridis
+
+Fichiers : `assets/icons/drapeaux/fr.svg`, `gb.svg`, `es.svg` (flag-icons 7.6.0,
+format 4 × 3)
+Licence : MIT
+Texte complet : **[`assets/icons/drapeaux/LICENSE.txt`](assets/icons/drapeaux/LICENSE.txt)**
+(copie verbatim du dépôt)
+Source : <https://github.com/lipis/flag-icons>
+
+Les drapeaux des langues du launcher, dans Paramètres > Général, toujours à
+côté du nom de la langue écrit dans cette langue. Fichiers inchangés : les
+coins arrondis et le filet sont appliqués au rendu.
+
+---
+
+## Panorama de la Voie lactée — ESO / S. Brunier
+
+Fichier : `assets/backgrounds/ciel_parametres.jpg`
+Licence : Creative Commons Attribution 4.0 International (CC BY 4.0),
+<https://creativecommons.org/licenses/by/4.0/>
+Source : « The Milky Way panorama », ESO/S. Brunier,
+<https://www.eso.org/public/images/eso0932a/>
+
+**Modifié** : une bande recadrée autour du centre galactique, réduite, et
+repeinte dans les bleus du thème du launcher (la luminance de la photo posée
+sur une rampe de bleus, un quart de la photo d'origine conservé). C'est le
+ciel du bandeau des Paramètres.
+
+---
+
 ## Logos Discord et Ko-fi — marques de leurs propriétaires
 
 **Discord** — `assets/icons/marques/Discord-Symbol-White.svg` et
