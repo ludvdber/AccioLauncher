@@ -398,17 +398,11 @@ def revenir(jeu: str, spec: Sauvegardes, version: Version) -> bool:
         tmp = _preparer(gz, arrivee, quand)
         if tmp is None:
             for deja, _ in prets:
-                _effacer(deja)
+                effacer_temporaire(deja)
             return False
         prets.append((tmp, arrivee))
-    for i, (tmp, arrivee) in enumerate(prets):
-        try:
-            os.replace(tmp, arrivee)
-        except OSError as exc:
-            log.warning("Retour de %s interrompu : %s", arrivee, exc)
-            for reste, _ in prets[i:]:
-                _effacer(reste)
-            return False
+    if not poser_ensemble(prets):
+        return False
     if groupe.is_dir():
         gardes = {arrivee.name for _, arrivee in remis}
         for p in compagnons(cible, spec):
@@ -448,10 +442,58 @@ def _preparer(gz_source: Path, cible: Path, horodatage: float | None) -> str | N
         return None
     finally:
         if tmp is not None:
-            _effacer(tmp)
+            effacer_temporaire(tmp)
 
 
-def _effacer(tmp: str) -> None:
+def poser_ensemble(prets: list[tuple[str, Path]]) -> bool:
+    """Pose chaque temporaire prêt à la place de sa cible : TOUS, ou aucun.
+
+    Une sauvegarde et ses compagnons vont ensemble. Chaque cible est d'abord mise de
+    côté : un remplacement refusé au milieu (sauvegarde verrouillée par le jeu, disque
+    plein) remet celles d'avant. Sans ça, le retour à une version et l'import d'un
+    paquet laissaient les compagnons d'une partie avec la sauvegarde d'une autre (audit
+    des tests, 2026-11-15). La sauvegarde se met en dernier dans `prets`. Les
+    temporaires sont retirés dans tous les cas.
+    """
+    poses: list[tuple[Path, str | None]] = []
+    for i, (tmp, arrivee) in enumerate(prets):
+        cote = None
+        try:
+            if arrivee.exists():
+                cote = str(arrivee) + ".accio-avant"
+                os.replace(arrivee, cote)
+            os.replace(tmp, arrivee)
+        except OSError as exc:
+            log.warning("Remplacement de %s interrompu : %s", arrivee, exc)
+            if cote is not None and not arrivee.exists():
+                poses.append((arrivee, cote))         # mis de côté, rien posé à sa place
+            _defaire(poses)
+            for reste, _ in prets[i:]:
+                effacer_temporaire(reste)
+            return False
+        poses.append((arrivee, cote))
+    for _, cote in poses:
+        if cote is not None:
+            effacer_temporaire(cote)
+    return True
+
+
+def _defaire(poses: list[tuple[Path, str | None]]) -> None:
+    """Remet, du dernier au premier, les fichiers mis de côté par `revenir` ; un fichier
+    qui n'existait pas avant est retiré. Un échec ici est dit fort : la copie de l'état
+    actuel, faite avant tout remplacement, reste dans les versions."""
+    for arrivee, cote in reversed(poses):
+        try:
+            if cote is None:
+                arrivee.unlink(missing_ok=True)
+            else:
+                os.replace(cote, arrivee)
+        except OSError as exc:
+            log.error("Retour défait en partie : %s non remis (%s) ; la copie d'avant est dans les versions",
+                      arrivee, exc)
+
+
+def effacer_temporaire(tmp: str) -> None:
     """Retire notre propre fichier temporaire, sans lever."""
     try:
         os.remove(tmp)

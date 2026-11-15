@@ -145,6 +145,13 @@ def main():
     from src.ui.imports_paresseux import activer as activer_imports_paresseux
     _paresseux = activer_imports_paresseux()
 
+    # L'exe construit se vérifie et quitte (CI, `verification_exe`) : AVANT la
+    # migration et le journal, qui écriraient chez l'utilisateur.
+    from src.ui.verification_exe import demande as verification_demandee
+    if (rapport := verification_demandee(sys.argv)) is not None:
+        from src.ui.verification_exe import executer
+        _sortir(executer(rapport))
+
     # AVANT le logging : le journal s'ouvre dans `_Launcher/logs/`, et un
     # `RotatingFileHandler` qui tient l'ancien fichier ouvert empêcherait de le
     # déplacer. Avant `Config.exists()` aussi, sinon un `config.json` resté à

@@ -15,6 +15,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Chaque lundi, même sans commit : une dépendance figée ne change pas, mais le
+  # runner, Windows et les bibliothèques système, si. Un rouge du lundi dit
+  # « l'environnement a bougé », pas « le code a cassé » (audit des tests, 2026-11-15).
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -66,15 +72,21 @@ jobs:
           New-ItemProperty -Path $cle -Name DumpCount -PropertyType DWord -Value 3 -Force | Out-Null
       # --timeout : un test bloqué meurt en 60 s, sa pile au journal, au lieu
       # de brûler les 30 minutes du job (le plus long en mesure 4 s).
-      # --cov : couverture visible à chaque run (85 % mesurés le 2026-10-08),
-      # plancher bas à 83 % : il arrête une chute, pas un écart de quelques
-      # lignes (ACT-016).
+      # --cov : couverture visible à chaque run (85 % mesurés le 2026-10-08,
+      # 90,7 % des lignes le 2026-11-15) ; plancher à 88 % : il arrête une
+      # chute, pas un écart de quelques lignes (ACT-016).
+      # -q -rfE et le rapport JUnit : le journal en -v faisait 5 000 lignes, un
+      # échec s'y cherchait à la main ; il est maintenant résumé en tête de la
+      # page du run (tools/resume_junit.py). --durations=15 : les plus lents.
       # -n 4 --dist loadfile : les 4 cœurs du runner, chaque fichier de tests
       # entier sur un même cœur (l'état partagé d'un module reste dans son
       # processus). Mesuré en local le 2026-10-27 : toute la suite en 90 s,
       # 5 min sur un cœur en CI.
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short --timeout=60 -n 4 --dist loadfile --cov=src --cov=main --cov-report=term --cov-fail-under=83
+        run: python -m pytest -q -rfE --tb=short --durations=15 --timeout=60 -n 4 --dist loadfile --junitxml=rapport-tests.xml --cov=src --cov=main --cov-report=term --cov-fail-under=88
+      - name: Résumé des tests
+        if: always()
+        run: python tools/resume_junit.py rapport-tests.xml "Tests Windows"
       # Les tests tournent en offscreen ; tools/audit_geometrie.py rejoue la
       # mise en page sur la plateforme native (rendu et DPI de Windows). Il ne
       # tournait que dans build.bat, donc sur la machine qui publie, au moment
@@ -128,4 +140,38 @@ jobs:
       # test de test_fermeture_threads a figé le job jusqu'à ses 20 min. Le fil
       # de garde, lui, vide la pile de chaque thread et arrête pytest en 60 s.
       - name: Tests (offscreen via conftest)
-        run: python -m pytest -v --tb=short --timeout=60 --timeout-method=thread -n 4 --dist loadfile
+        run: python -m pytest -q -rfE --tb=short --durations=15 --timeout=60 --timeout-method=thread -n 4 --dist loadfile --junitxml=rapport-tests.xml
+      - name: Résumé des tests
+        if: always()
+        run: python tools/resume_junit.py rapport-tests.xml "Tests Linux"
+
+  exe:
+    # La suite tourne depuis les sources : un module, une police ou un fichier de
+    # données oublié par accio_launcher.spec ne se voyait qu'au lancement chez un
+    # joueur, ou au mieux à la release. Ici l'exe est construit comme pour une
+    # release, puis il se vérifie lui-même (`--verifier-exe`, src/ui/verification_exe.py :
+    # chaque module s'importe, catalogue, langues, polices, 7-Zip). Audit des tests,
+    # 2026-11-15. Pas de tests ni de lint ici : le job `windows` les fait.
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+          cache: pip
+      - name: Installer les dépendances
+        run: pip install --require-hashes -r .github/requirements/tests.txt
+      - name: vgmstream (release officielle, empreintes vérifiées)
+        run: python build/vgmstream.py
+      - name: Construire l'exe (PyInstaller, même recette que la release)
+        run: python -m PyInstaller accio_launcher.spec --noconfirm
+      # L'exe est fenêtré : pas de console, le rapport est un fichier.
+      - name: L'exe se vérifie
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\AccioLauncher.exe -ArgumentList '--verifier-exe', "$env:RUNNER_TEMP\verification.txt" -Wait -PassThru
+          Get-Content "$env:RUNNER_TEMP\verification.txt" -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) { exit 1 }

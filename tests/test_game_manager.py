@@ -350,14 +350,22 @@ class TestGameManager:
 # ── Tests DLL unblock ──
 
 class TestUnblockDlls:
+    @pytest.mark.skipif(sys.platform != "win32", reason="flux NTFS Zone.Identifier : Windows seulement")
     def test_unblock_removes_zone_identifier(self, tmp_path):
-        dll = tmp_path / "test.dll"
-        dll.write_text("fake dll")
-        # Créer un faux Zone.Identifier (NTFS alternate data stream)
-        # On ne peut pas facilement tester les ADS hors NTFS,
-        # mais on vérifie que la méthode ne crashe pas
+        """Il ne vérifiait que « pas de crash » (audit des tests, 2026-11-15) : le flux
+        se pose et se lit pour de vrai sur le NTFS du dossier temporaire."""
+        dll, texte = tmp_path / "System" / "test.dll", tmp_path / "System" / "lisezmoi.txt"
+        dll.parent.mkdir()
+        for f in (dll, texte):
+            f.write_text("x")
+            try:
+                with open(str(f) + ":Zone.Identifier", "w", encoding="ascii") as ads:
+                    ads.write("[ZoneTransfer]\nZoneId=3\n")
+            except OSError:
+                pytest.skip("le dossier temporaire n'est pas en NTFS")
         unblock_game_dlls(tmp_path)
-        # Pas de crash = OK
+        assert not os.path.exists(str(dll) + ":Zone.Identifier"), "la DLL reste bloquée"
+        assert os.path.exists(str(texte) + ":Zone.Identifier"), "seules les DLL sont visées"
 
 
 # ── Tests pre-launch ──

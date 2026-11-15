@@ -19,6 +19,18 @@ __pycache__/
 .coverage.*
 coverage.xml
 htmlcov/
+rapport-tests*.xml
+*.prof
+.benchmarks/
+.hypothesis/
+.dmypy.json
+# Fuzzing local : corpus et entrées qui ont planté (binaires).
+corpus/
+artefacts/
+crash-*
+timeout-*
+oom-*
+leak-*
 
 # Sorties de build (Windows, puis AppImage de build.sh et son environnement)
 dist/
@@ -45,6 +57,20 @@ assets/*.jpg
 assets/*.jpeg
 docs/*.png
 docs/*.jpg
+# Binaires et dessins dans des sous-dossiers (`assets/*.png` ne couvre qu'un niveau) :
+# médailles PNG, pictogrammes SVG (des tracés, aucun sens à la lecture), la vidéo
+# des tests, les images sources des médailles (18 Mo, hors dépôt).
+assets/medailles/
+assets/icons/
+tests/data/*.mp4
+Accio_Medailles/
+**/*.png
+**/*.jpg
+**/*.webp
+**/*.ico
+**/*.mp4
+**/*.dll
+**/*.exe
 
 # Archives de jeu — binaires, et lourdes (une part de HP5 pèse 2 Go)
 *.7z

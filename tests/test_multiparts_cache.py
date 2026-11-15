@@ -171,6 +171,40 @@ class TestPartHeritee:
         assert (tmp_path / "hp7a_v1.1.7z.001").read_bytes() == CORPS_V2[V2[0]]
 
 
+class TestEmpreinteDesParts:
+    """Audit des tests, 2026-11-15 : la vérification part par part (HP5 : huit parts,
+    4,6 Go) n'était exécutée par aucun test, ni une part corrompue en route, ni une
+    part en cache abîmée."""
+
+    EMPREINTES = [hashlib.sha256(CORPS_V2[u]).hexdigest() for u in V2]
+
+    @pytest.fixture(autouse=True)
+    def _sans_attente(self, monkeypatch):
+        monkeypatch.setattr("src.core.downloader.time.sleep", lambda _s: None)
+
+    def test_une_part_corrompue_en_route_echoue_et_garde_les_autres(self, tmp_path, qtbot, monkeypatch):
+        corrompu = {V2[0]: CORPS_V2[V2[0]], V2[1]: b"X" + CORPS_V2[V2[1]][1:]}
+        _installer_httpx(monkeypatch, corrompu)
+        erreurs = []
+        dl = Downloader(url=None, destination=tmp_path / "hp7a_v1.1.7z", parts=V2,
+                        expected_size_mb=0, expected_sha256_parts=self.EMPREINTES)
+        dl.error.connect(lambda msg, echec: erreurs.append((msg, echec)))
+        livres = []
+        dl.download_finished.connect(livres.append)
+        dl.run()
+        assert livres == [], "une archive à la part corrompue a été livrée"
+        assert len(erreurs) == 1 and "2/2" in erreurs[0][0]
+        assert erreurs[0][1].cause == "empreinte" and erreurs[0][1].conserves == len(CORPS_V2[V2[0]]), "la part 1, juste, est gardée et dite"
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["hp7a_v1.1.7z.001"]
+
+    def test_une_part_abimee_en_cache_est_retelechargee(self, tmp_path, qtbot, monkeypatch):
+        (tmp_path / "hp7a_v1.1.7z.001").write_bytes(b"abime" * 100)
+        _installer_httpx(monkeypatch, CORPS_V2)
+        livre = _telecharger(tmp_path, "hp7a_v1.1.7z", V2, expected_sha256_parts=self.EMPREINTES)
+        assert livre is not None
+        assert (tmp_path / "hp7a_v1.1.7z.001").read_bytes() == CORPS_V2[V2[0]]
+
+
 class TestNettoyageAnnulation:
     """Ce que `cancel_download` doit balayer — et ce qu'il ne doit pas toucher."""
 

@@ -147,6 +147,16 @@ jobs:
       # (~6 Mo, déjà rogné aux seuls modules importés) et les huit fonds en haute
       # définition (+3,8 Mo de JPEG, incompressibles). La taille de chaque build
       # est dans le résumé.
+      # L'exe PUBLIÉ se vérifie lui-même : chaque module s'importe, catalogue, langues,
+      # polices, 7-Zip (`--verifier-exe`, src/ui/verification_exe.py). Un oubli de la
+      # recette PyInstaller ne se voyait qu'au premier lancement chez un joueur.
+      - name: L'exécutable se vérifie
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\AccioLauncher.exe -ArgumentList '--verifier-exe', "$env:RUNNER_TEMP\verification.txt" -Wait -PassThru
+          Get-Content "$env:RUNNER_TEMP\verification.txt" -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) { exit 1 }
+
       - name: Plafond de taille de l'exécutable
         shell: pwsh
         run: |
@@ -316,6 +326,18 @@ jobs:
       # depuis la 1.3.2 (72,79 Mo mesurés le 2026-11-03, même Python que la
       # release) : Qt Quick du fond sur la carte graphique et fonds en haute
       # définition, comme l'exe.
+      # Comme l'exe : l'AppImage PUBLIÉE se vérifie elle-même. Extraite sans FUSE (le
+      # conteneur n'en a pas), sans écran (offscreen).
+      - name: L'AppImage se vérifie
+        env:
+          QT_QPA_PLATFORM: offscreen
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          code=0
+          ./dist/AccioLauncher-x86_64.AppImage --verifier-exe "$RUNNER_TEMP/verification.txt" || code=$?
+          cat "$RUNNER_TEMP/verification.txt" || true
+          exit $code
+
       - name: Plafond de taille de l'AppImage
         run: |
           octets=$(stat -c %s dist/AccioLauncher-x86_64.AppImage)

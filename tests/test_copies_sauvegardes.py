@@ -239,6 +239,51 @@ class TestCompagnons:
         assert (slot / "Zzz_pa.usa").read_bytes() == b"zone B2"
         assert not list(slot.glob("*.accio-tmp"))
 
+    def test_la_version_remise_garde_ses_dates(self, save_dir):
+        """« La version remise garde sa date d'écriture d'origine » : promis par la doc,
+        jamais vérifié (mutation de la date lue dans l'en-tête gzip survivante, 2026-11-15)."""
+        slot = save_dir / "Slot1"
+        zone_t = T0 - timedelta(minutes=7)
+        _ecrire(slot / "Save0.usa", b"partie A", T0)
+        _ecrire(slot / "Grounds_pa.usa", b"zone A", zone_t)
+        cs.avant_partie("hp2", HP2_AVEC)
+        avant = cs.versions("hp2")["Slot1/Save0.usa"][-1]
+        _ecrire(slot / "Save0.usa", b"partie B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Grounds_pa.usa", b"zone B", T0 + timedelta(hours=1))
+        assert cs.revenir("hp2", HP2_AVEC, avant)
+        assert os.path.getmtime(slot / "Save0.usa") == pytest.approx(T0.timestamp())
+        assert os.path.getmtime(slot / "Grounds_pa.usa") == pytest.approx(zone_t.timestamp())
+
+    def test_un_nom_douteux_n_a_pas_de_dossier_de_copies(self):
+        for rel in ("../Save0.usa", "Slot1/../../x", "C:/Windows/x", ".", "", "Slot1/./Save0.usa"):
+            assert cs._dossier_de("hp2", rel) is None, rel
+        assert cs._dossier_de("hp2", "Slot1/Save0.usa") == cs.racine() / "hp2" / "Slot1" / "Save0.usa"
+
+    def test_un_remplacement_refuse_au_milieu_remet_tout(self, save_dir, monkeypatch):
+        """Audit des tests, 2026-11-15 : tout était décompressé à côté, mais si `os.replace`
+        échouait sur la sauvegarde (verrouillée par le jeu, disque plein), les compagnons
+        déjà remplacés restaient ceux de la vieille version avec la sauvegarde actuelle."""
+        slot = save_dir / "Slot1"
+        _ecrire(slot / "Save0.usa", b"partie A", T0)
+        _ecrire(slot / "Grounds_pa.usa", b"zone A", T0)
+        cs.avant_partie("hp2", HP2_AVEC)
+        avant = cs.versions("hp2")["Slot1/Save0.usa"][-1]
+        _ecrire(slot / "Save0.usa", b"partie B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Grounds_pa.usa", b"zone B", T0 + timedelta(hours=1))
+        _ecrire(slot / "Willow_pa.usa", b"zone neuve", T0 + timedelta(hours=1))
+        vrai_replace = os.replace
+
+        def verrouillee(src, dst):
+            if str(dst).endswith("Save0.usa") and str(src).endswith(".accio-tmp"):
+                raise PermissionError(32, "utilisé par un autre processus")
+            vrai_replace(src, dst)
+        monkeypatch.setattr(cs.os, "replace", verrouillee)
+        assert not cs.revenir("hp2", HP2_AVEC, avant)
+        assert (slot / "Save0.usa").read_bytes() == b"partie B"
+        assert (slot / "Grounds_pa.usa").read_bytes() == b"zone B", "un compagnon de l'autre partie"
+        assert (slot / "Willow_pa.usa").read_bytes() == b"zone neuve"
+        assert sorted(p.name for p in slot.iterdir()) == ["Grounds_pa.usa", "Save0.usa", "Willow_pa.usa"]
+
     def test_la_version_prend_la_date_du_plus_recent(self, save_dir):
         slot = save_dir / "Slot1"
         _ecrire(slot / "Save0.usa", b"A", T0)

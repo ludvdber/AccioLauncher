@@ -56,6 +56,17 @@ class TestReleve:
                    datetime(2026, 3, 5))
         assert set(sauvegardes.releve(HP3)) == {"Save0.usa"}
 
+    def test_une_exclusion_vaut_aussi_par_le_nom_seul(self, docs):
+        """`exclure` compare le chemin relatif OU le nom : une vignette rangée dans le
+        dossier d'un emplacement (« Slot1/Save0.bmp ») ne s'exclut que par son nom.
+        Mutation survivante du 2026-11-15 : aucun test ne passait par le nom."""
+        spec = Sauvegardes(racine="documents", dossiers=("Harry Potter II/Save",),
+                           fichiers="Slot*/Save0.*", premier=1, exclure=("Save0.bmp",))
+        _poser(docs, "Harry Potter II/Save/Slot1/Save0.usa", datetime(2026, 3, 28))
+        _poser(docs, "Harry Potter II/Save/Slot1/Save0.bmp", datetime(2026, 3, 28))
+        assert set(sauvegardes.releve(spec)) == {"Slot1/Save0.usa"}
+        assert set(sauvegardes.fichiers(spec)) == {"Slot1/Save0.usa"}
+
     def test_l_emplacement_peut_etre_un_dossier(self, docs):
         _poser(docs, "Harry Potter II/Save/Slot1/Save0.usa", datetime(2026, 3, 28))
         _poser(docs, "Harry Potter II/Save/Slot1/Adv1Willow_pa.usa", datetime(2026, 3, 28))
@@ -360,6 +371,13 @@ class TestTroisPartiesDeHP5:
             _hpootp(("Hogwarts", datetime(2026, 5, 3), 250))[:0x500])
         assert lu[2] is None, "la partie reste, sans pourcentage inventé"
 
+    def test_un_en_tete_juste_assez_long_se_lit(self):
+        """Les trois fiches finissent à 0x488 : un en-tête lu de cette taille exacte se lit,
+        un octet de moins ne se lit pas (borne mutée sans échec, 2026-11-15)."""
+        brut = _hpootp(*self.LUDO)
+        assert len(sauvegardes.emplacements_hp5(brut[:0x20 + 3 * 0x178])) == 3
+        assert sauvegardes.emplacements_hp5(brut[:0x20 + 3 * 0x178 - 1]) == []
+
     @pytest.mark.parametrize("brut", [b"", b"20CM", b"PK\x03\x04" + bytes(0x500)])
     def test_un_fichier_etranger_ne_rend_rien(self, brut):
         assert sauvegardes.emplacements_hp5(brut) == []
@@ -382,3 +400,14 @@ class TestUnJsonValideDUnMauvaisType:
         chemin.write_text(json.dumps({"sauvegardes": [
             {"jeu": "hp1", "fichier": "Save/Save1.usa", champ: valeur}]}), encoding="utf-8")
         assert ("hp1", "Save/Save1.usa") in sauvegardes.charger(chemin)
+
+    def test_une_duree_corrompue_est_ecartee_une_bonne_gardee(self, tmp_path):
+        """Le temps de jeu d'une sauvegarde additionne ces durées : un booléen, un texte ou
+        une durée nulle ou négative fausseraient le total (validation mutée sans échec, 2026-11-15)."""
+        import json
+        chemin = tmp_path / "sauvegardes.json"
+        parties = [{"debut": "2026-10-01T20:00:00", "duree": d} for d in (True, -5, 0, "12", 1.5, 600)]
+        chemin.write_text(json.dumps({"sauvegardes": [
+            {"jeu": "hp1", "fichier": "Save1.usa", "parties": parties}]}), encoding="utf-8")
+        assert sauvegardes.charger(chemin)[("hp1", "Save1.usa")]["parties"] == [
+            (datetime(2026, 10, 1, 20, 0, 0), 600)]

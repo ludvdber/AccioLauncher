@@ -315,11 +315,18 @@ def importer(jeu: str, spec: Sauvegardes, paquet: Paquet, rel: str) -> bool:
         return False
     anciens = copies_sauvegardes.compagnons(cible, spec) if cible.exists() else []
     compagnons = _renumerotes(paquet, spec, cible)
-    for f in compagnons:
-        if not _poser(f, cible.parent / f.nom):
+    # Tout est écrit À CÔTÉ, puis posé d'un coup, la sauvegarde en dernier : un import
+    # refusé au milieu ne laisse rien de la partie importée (`poser_ensemble`).
+    prets: list[tuple[str, Path]] = []
+    for f, arrivee in [*((f, cible.parent / f.nom) for f in compagnons),
+                       (Fichier(cible.name, paquet.principal.donnees, paquet.principal.quand), cible)]:
+        tmp = _preparer(f, arrivee)
+        if tmp is None:
+            for deja, _ in prets:
+                copies_sauvegardes.effacer_temporaire(deja)
             return False
-    # La sauvegarde en dernier : un import interrompu laisse l'ancienne en place.
-    if not _poser(Fichier(cible.name, paquet.principal.donnees, paquet.principal.quand), cible):
+        prets.append((tmp, arrivee))
+    if not copies_sauvegardes.poser_ensemble(prets):
         return False
     poses = {f.nom.lower() for f in compagnons}
     for p in anciens:
@@ -365,7 +372,8 @@ def _numerote(motif: str) -> re.Pattern[str]:
     return re.compile(f"{glob(avant)}(?P<n>\\d*){glob(apres)}", re.IGNORECASE)
 
 
-def _poser(f: Fichier, cible: Path) -> bool:
+def _preparer(f: Fichier, cible: Path) -> str | None:
+    """Écrit `f` dans un temporaire voisin de `cible`, droits et date compris ; None si impossible."""
     tmp = None
     try:
         cible.parent.mkdir(parents=True, exist_ok=True)
@@ -375,15 +383,10 @@ def _poser(f: Fichier, cible: Path) -> bool:
         os.chmod(tmp, stat.S_IMODE(cible.stat().st_mode) if cible.exists() else 0o644)
         if f.quand:
             os.utime(tmp, (f.quand, f.quand))
-        os.replace(tmp, cible)
-        tmp = None
-        return True
+        return tmp
     except OSError as exc:
         log.warning("Import de %s impossible : %s", cible, exc)
-        return False
-    finally:
         if tmp is not None:
-            try:
-                os.remove(tmp)           # notre propre fichier temporaire
-            except OSError:
-                pass
+            copies_sauvegardes.effacer_temporaire(tmp)
+        return None
+

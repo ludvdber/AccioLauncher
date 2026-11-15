@@ -46,6 +46,9 @@ docs/social_preview.png
 *~
 
 # Claude Code
+# Les copies de travail isolées des sessions (EnterWorktree) : un dépôt entier
+# par session, déjà exclu par .git/info/exclude sur CE poste seulement.
+.claude/worktrees/
 # `settings.local.json` est PAR POSTE (son nom le dit) : autorisations de
 # commandes accordées sur cette machine, sans intérêt pour un contributeur.
 .claude/settings.local.json
@@ -81,6 +84,21 @@ accio_launcher.log*
 .coverage.*
 coverage.xml
 htmlcov/
+# Rapports de tests (JUnit pour la CI) et profils de durée.
+rapport-tests*.xml
+*.prof
+.benchmarks/
+# Fuzzing local (fuzz/, Atheris) : corpus, et les entrées qui ont planté, que
+# libFuzzer écrit dans le dossier courant (crash-<sha1>, timeout-…, oom-…).
+corpus/
+artefacts/
+crash-*
+timeout-*
+oom-*
+leak-*
+slow-unit-*
+.hypothesis/
+.dmypy.json
 
 # Documents privés / audits — rangés dans docs/archives/, hors dépôt
 docs/archives/

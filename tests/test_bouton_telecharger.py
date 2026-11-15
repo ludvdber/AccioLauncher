@@ -156,7 +156,16 @@ class TestDetail:
         qtbot.addWidget(bouton)
         bouton.setFont(cinzel(13, bold=True))
         bouton.setFixedSize(150, 46)
-        bouton.grab()   # le rendu ne lève pas, le détail est simplement omis
+        # Il ne vérifiait que « le rendu ne lève pas » (audit des tests, 2026-11-15) :
+        # omis, le détail laisse le libellé seul, au pixel près comme sans détail.
+        sans = GlowButton("INSTALLER")
+        qtbot.addWidget(sans)
+        sans.setFont(cinzel(13, bold=True))
+        sans.setFixedSize(150, 46)
+        assert bouton.grab().toImage() == sans.grab().toImage()
+        bouton.setFixedSize(300, 46)
+        sans.setFixedSize(300, 46)
+        assert bouton.grab().toImage() != sans.grab().toImage(), "avec la place, le détail se peint"
 
     def test_rien_n_est_peint_dans_les_coins(self, qtbot):
         """Le halo débordait du rectangle arrondi : un voile carré dans les

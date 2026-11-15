@@ -97,6 +97,30 @@ class TestLire:
         (tmp_path / "casse.zip").write_bytes(b"PK\x03\x04 pas un zip")
         assert ps.lire(tmp_path / "casse.zip", HP1) in (ps.ILLISIBLE, ps.SANS_SAUVEGARDE)
 
+    def test_un_zip_trop_gros_ou_trop_peuple_est_refuse(self, tmp_path, monkeypatch):
+        """La garde contre une archive piégée (taille décompressée, nombre d'entrées)
+        n'était exécutée par aucun test (mutation survivante, 2026-11-15)."""
+        with zipfile.ZipFile(tmp_path / "gros.zip", "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("Save1.usa", b"\0" * 5000)            # 5 000 décompressés, quelques octets compressés
+        monkeypatch.setattr(ps, "_TAILLE_MAX", 4000)
+        assert ps.lire(tmp_path / "gros.zip", HP1) == ps.TROP_GROS
+        monkeypatch.setattr(ps, "_TAILLE_MAX", 10 ** 6)
+        with zipfile.ZipFile(tmp_path / "peuple.zip", "w") as z:
+            z.writestr("Save1.usa", b"x")
+            for k in range(5):
+                z.writestr(f"bruit{k}.txt", b"")
+        monkeypatch.setattr(ps, "_ENTREES_MAX", 5)
+        assert ps.lire(tmp_path / "peuple.zip", HP1) == ps.TROP_GROS
+
+    def test_le_manifeste_choisit_entre_deux_sauvegardes(self, tmp_path):
+        with zipfile.ZipFile(tmp_path / "deux.zip", "w") as z:
+            z.writestr(ps.MANIFESTE, json.dumps({"jeu": "hp1", "sauvegarde": "Save2.usa"}))
+            z.writestr("Save1.usa", b"une")
+            z.writestr("Save2.usa", b"deux")
+        paquet = ps.lire(tmp_path / "deux.zip", HP1)
+        assert isinstance(paquet, ps.Paquet)
+        assert paquet.principal.nom == "Save2.usa" and paquet.principal.donnees == b"deux"
+
     def test_un_fichier_seul_renomme_par_le_navigateur(self, tmp_path):
         _ecrire(tmp_path / "HPHBP0 (1)", b"hp6")
         paquet = ps.lire(tmp_path / "HPHBP0 (1)", HP6)
@@ -131,6 +155,41 @@ class TestImporter:
         assert not (hp2 / "Slot1" / "Vieille_zone_pa.usa").exists()   # une autre partie
         gardee = cs.versions("hp2")["Slot1/Save0.usa"]
         assert len(gardee) == 1 and gardee[0].quand == T0
+
+    def test_un_import_refuse_au_milieu_ne_change_rien(self, hp2, tmp_path, monkeypatch):
+        """Audit des tests, 2026-11-15 : les compagnons du paquet étaient posés un par un,
+        puis la sauvegarde ; si elle était refusée (verrouillée par le jeu), les zones de la
+        partie importée restaient à côté de l'ancienne sauvegarde."""
+        _ecrire(hp2 / "Slot1" / "Save0.usa", b"ancienne")
+        _ecrire(hp2 / "Slot1" / "Grounds_pa.usa", b"zone ancienne")
+        with zipfile.ZipFile(tmp_path / "p.zip", "w") as z:
+            z.writestr(ps.MANIFESTE, json.dumps({"jeu": "hp2", "sauvegarde": "Save0.usa"}))
+            z.writestr("Save0.usa", b"nouvelle")
+            z.writestr("Grounds_pa.usa", b"zone importee")
+            z.writestr("Entryhall_hub_pa.usa", b"zone neuve")
+        paquet = ps.lire(tmp_path / "p.zip", HP2)
+        vrai_replace = os.replace
+
+        def verrouillee(src, dst):
+            if str(dst).endswith("Save0.usa") and str(src).endswith(".accio-tmp"):
+                raise PermissionError(32, "utilisé par un autre processus")
+            vrai_replace(src, dst)
+        monkeypatch.setattr(os, "replace", verrouillee)
+        assert not ps.importer("hp2", HP2, paquet, "Slot1/Save0.usa")
+        slot = hp2 / "Slot1"
+        assert (slot / "Save0.usa").read_bytes() == b"ancienne"
+        assert (slot / "Grounds_pa.usa").read_bytes() == b"zone ancienne"
+        assert sorted(p.name for p in slot.iterdir()) == ["Grounds_pa.usa", "Save0.usa"]
+
+    def test_l_import_d_un_zip_garde_la_date_de_la_partie(self, hp2, tmp_path):
+        """Le menu du jeu et le relevé datent la partie par son fichier : importée, elle
+        doit porter SA date, pas celle de l'import (mutation survivante, 2026-11-15)."""
+        info = zipfile.ZipInfo("Save0.usa", date_time=(2025, 3, 4, 21, 30, 0))
+        with zipfile.ZipFile(tmp_path / "p.zip", "w") as z:
+            z.writestr(info, b"partie de mars")
+        assert ps.importer("hp2", HP2, ps.lire(tmp_path / "p.zip", HP2), "Slot2/Save0.usa")
+        assert os.path.getmtime(hp2 / "Slot2" / "Save0.usa") == pytest.approx(
+            datetime(2025, 3, 4, 21, 30, 0).timestamp())
 
     def test_dans_un_emplacement_libre(self, hp2, tmp_path):
         _ecrire(tmp_path / "Save0.usa", b"partie")
