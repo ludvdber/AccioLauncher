@@ -3,15 +3,18 @@
 Pourquoi une FENÊTRE et pas le menu qu'il y avait ici d'abord : un menu est un
 choix qu'on prend et qui se referme, alors que les réglages d'un jeu
 s'étoffent. Une fenêtre a des rubriques, de la place pour expliquer, et sait
-montrer ce qui n'est pas encore là (la rubrique « Affichage » verrouillée de
-HP1 à HP3).
+montrer ce qui n'est pas encore là (une rubrique verrouillée et nommée pour un
+jeu qui n'aurait encore aucun réglage).
 
 Refaite le 2026-10-09 d'après la maquette « Réglages du jeu » validée par
-Ludo : un rail à gauche (le jeu, ses rubriques, ses fichiers), des cartes à
-droite. Ce qu'elle corrige de l'ancienne boîte à onglets :
+Ludo, puis mise en disposition B le 2026-11-15 : en haut le bandeau du jeu,
+dessous les rubriques en pastilles (Langue, Image, Jeu, Difficulté, Fichiers),
+une page en cartes pour chacune ; plus de rail à gauche. Ce qu'elle corrige de
+l'ancienne boîte à onglets :
 
 - une boîte trop haute pour ce qu'elle portait, et un onglet entier pour
-  quelques liens : les fichiers vivent au bas du rail ;
+  quelques liens : les actions sur les fichiers ont leur page, en cartes
+  expliquées ;
 - les effets d'image repliés par familles : il fallait déplier pour voir ce
   que fait un préréglage. Tous sont visibles, préréglages à côté ;
 - le coût lu comme du texte (« GPU +++ » sur chaque ligne) : trois points de
@@ -21,7 +24,7 @@ droite. Ce qu'elle corrige de l'ancienne boîte à onglets :
   rangé en retrait sous lui ;
 - « Revenir à l'installation » en lien gris, qu'on croyait
   désactivé, et un bouton Fermer alors que tout s'enregistre au fil des
-  clics : un vrai bouton au pied, « Bibliothèque » en haut du rail.
+  clics : un vrai bouton, « Bibliothèque » dans le bandeau.
 """
 
 import html
