@@ -24,7 +24,7 @@ from datetime import datetime
 
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QToolTip, QVBoxLayout, QWidget,
+    QFrame, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QSizePolicy, QToolTip, QVBoxLayout, QWidget,
 )
 
 from src.core import sauvegardes, succes
@@ -41,6 +41,7 @@ from src.ui.utils import BARRE_DEFILEMENT
 
 _MEDAILLE = 128
 _LARGEUR_DEFI = 176          # la médaille et l'air autour : quatre à sept par rangée
+_LARGEUR_TUILE = 360         # la tuile du compte : celle d'une tuile du Folio côte à côte
 
 _STYLE = f"""
 QWidget#defis, QWidget#defisCorps {{ background: transparent; }}
@@ -140,8 +141,12 @@ class DefisPage(QWidget):
             lay.addStretch()
             return
         compte = QHBoxLayout()
-        compte.addWidget(_tuile(f"{len(obtenus)} / {len(definitions)}", tr("Défis réussis"),
-                                len(obtenus) / len(definitions)))
+        tuile = _tuile(f"{len(obtenus)} / {len(definitions)}", tr("Défis réussis"), len(obtenus) / len(definitions))
+        # Sa hauteur et une largeur de tuile du Folio, pas plus : extensible, elle prenait la place libre de la
+        # page, un cadre vide de 500 × 240 px au-dessus des médailles (audit plein écran, 2026-11-16).
+        tuile.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        tuile.setMaximumWidth(_LARGEUR_TUILE)
+        compte.addWidget(tuile)
         compte.addStretch()
         lay.addLayout(compte)
         lay.addSpacing(18)

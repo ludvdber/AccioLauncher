@@ -43,7 +43,7 @@ from src.core.i18n import get_language, tr
 from src.ui.composants import (
     TAILLE_MINIMALE_PAGE,
     titre_page,
-    LARGEUR_RAIL, MARGES_PAGE,
+    LARGEUR_RAIL, MARGES_PAGE, colonne_centree,
     bouton_retour,
     ENCRE,
     ENCRE_DOUCE,
@@ -218,7 +218,11 @@ class VersionsDialog(QDialog):
         rangee.addWidget(surtitre(tr("Journal des changements")))
         rangee.addStretch()
         racine.addWidget(bandeau)
-        bas = QHBoxLayout()
+        # Le corps dans la colonne centrée, comme les réglages du jeu (audit plein écran, 2026-11-16).
+        corps = QWidget()
+        transparent(corps, "corpsJournal")
+        colonne_centree(corps)
+        bas = QHBoxLayout(corps)
         bas.setContentsMargins(0, 0, 0, 0)
         bas.setSpacing(0)
         bas.addWidget(self._rail())
@@ -228,7 +232,7 @@ class VersionsDialog(QDialog):
         for ver in self._versions:
             self._index[ver.version] = self._details.addWidget(zone_defilable(self._detail(ver)))
         bas.addWidget(self._details, stretch=1)
-        racine.addLayout(bas, stretch=1)
+        racine.addWidget(corps, stretch=1)
 
     def _rail(self) -> QFrame:
         rail = QFrame()

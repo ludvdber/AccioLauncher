@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -29,6 +30,7 @@ from src.core.i18n import tr
 from src.core.liens import DISCORD_URL, NOTES_VERSIONS_URL
 from src.core.nouveautes import Annonce, Changement, Nouveautes, PointFort
 from src.ui.composants import (
+    colonne_centree,
     lien_au_clavier,
     transparent,
     titre_page,
@@ -228,6 +230,8 @@ class NouveautesPage(QDialog):
         self._jeux = {game.id: game for game in jeux}
         self.setWindowTitle(tr("Nouveautés"))
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
+        # Dans la colonne centrée en plein écran (audit, 2026-11-16).
+        colonne_centree(self)
         racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
@@ -286,6 +290,10 @@ class NouveautesPage(QDialog):
             # le `addStretch` de la page garde ce vide sous la liste. Aucune
             # borne de taille : bornées à leur `sizeHint`, calculée pour une
             # autre largeur, les cartes coupaient leur dernière ligne (2026-10-26).
+            # Jamais plus haute que son contenu (audit plein écran, 2026-11-16) : une rangée dont un bloc
+            # s'étire passe pour « extensible », et la page lui donnait tout le bas de l'écran malgré son
+            # ressort (deux cartes de 370 px pour deux lignes chacune).
+            rangee.setSizePolicy(rangee.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Maximum)
             lay.addWidget(rangee)
         if self.nouveautes.changements:
             lay.addSpacing(26)

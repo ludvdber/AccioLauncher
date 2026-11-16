@@ -36,6 +36,14 @@
       ],
       "changements": [
         {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "En plein écran, les pages se rangent au centre au lieu de laisser la moitié droite vide, et les bandeaux couvrent toute la largeur.",
+            "en": "In full screen, pages sit in the centre instead of leaving the right half empty, and banners span the whole width.",
+            "es": "En pantalla completa, las páginas se colocan en el centro en lugar de dejar vacía la mitad derecha, y las cabeceras ocupan todo el ancho."
+          }
+        },
+        {
           "genre": "corrige",
           "texte": {
             "fr": "Ouvrir les réglages de La Coupe de Feu, L'Ordre du Phénix ou Le Prince de Sang-Mêlé ne fait plus apparaître une petite fenêtre vide pendant un instant.",

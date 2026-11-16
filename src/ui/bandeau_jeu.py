@@ -17,7 +17,7 @@ from PyQt6.QtGui import QColor, QFontMetrics, QIcon, QLinearGradient, QPainter, 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 from src.core.config import ASSETS_DIR
-from src.ui.composants import MARGES_PAGE, filtre, transparent
+from src.ui.composants import ECART_PICTO, MARGES_PAGE, filtre, picto_espace, retrait_de_colonne, transparent
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
 from src.ui.theme import current
@@ -29,6 +29,9 @@ HAUTEUR_BANDEAU = 180
 _ECHELLE = 1.7
 # Où, dans la hauteur de l'image, tombe le haut du cadrage (le visage des huit fonds est dans le premier tiers).
 _HAUT_DU_CADRAGE = 0.04
+# La part de la largeur que l'image couvre au moins : à 1,7 fois la hauteur, elle ne prenait que le coin droit
+# d'un écran de 2 048 px, le reste du bandeau restait noir (audit plein écran, 2026-11-16).
+_LARGEUR_MINI_IMAGE = 0.55
 _FOND_PAGE = QColor("#060611")
 _TAILLE_PICTO = 16
 
@@ -59,6 +62,21 @@ class Bandeau(QWidget):
         self._image = QPixmap(str(image)) if image.is_file() else QPixmap()
         self._cache: QPixmap | None = None
         self._cache_pour: QSize | None = None
+        self._marges_de_base: tuple[int, int, int, int] | None = None
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
+        """Le contenu (retour, nom, pastilles) s'aligne sur la colonne centrée des pages ; l'image, elle, reste
+        sur toute la largeur."""
+        super().resizeEvent(event)
+        lay = self.layout()
+        if lay is None:
+            return
+        if self._marges_de_base is None:
+            m = lay.contentsMargins()
+            self._marges_de_base = (m.left(), m.top(), m.right(), m.bottom())
+        gauche, haut, droite, bas = self._marges_de_base
+        retrait = retrait_de_colonne(self.width())
+        lay.setContentsMargins(gauche + retrait, haut, droite + retrait, bas)
 
     def _fond(self) -> QPixmap | None:
         """L'image mise à la largeur du bandeau (à sa densité de pixels), recalculée seulement au redimensionnement."""
@@ -73,8 +91,11 @@ class Bandeau(QWidget):
                                           transformMode=Qt.TransformationMode.SmoothTransformation)
                 haut = (mise.height() - taille.height()) // 2
             else:
-                mise = self._image.scaledToHeight(round(taille.height() * _ECHELLE),
-                                                  Qt.TransformationMode.SmoothTransformation)
+                hauteur = round(taille.height() * _ECHELLE)
+                largeur_mini = taille.width() * _LARGEUR_MINI_IMAGE
+                if self._image.width() * hauteur / self._image.height() < largeur_mini:
+                    hauteur = round(largeur_mini * self._image.height() / self._image.width())
+                mise = self._image.scaledToHeight(hauteur, Qt.TransformationMode.SmoothTransformation)
                 haut = min(round(mise.height() * _HAUT_DU_CADRAGE), max(0, mise.height() - taille.height()))
             # Ancré à droite : le personnage est à droite des huit fonds ; à gauche, la page.
             self._cache = QPixmap(taille)
@@ -161,11 +182,12 @@ def pastille_rubrique(libelle: str, icone: str) -> QPushButton:
     """Une rubrique du jeu en pastille, comme celles du Carnet et des Collections, avec son pictogramme."""
     b = filtre(libelle, grand=True)
     picto = QIcon()
-    picto.addPixmap(pixmap_icone(icone, _TAILLE_PICTO, QColor("#c9c7da")), QIcon.Mode.Normal, QIcon.State.Off)
-    picto.addPixmap(pixmap_icone(icone, _TAILLE_PICTO, QColor(current().accent_light)),
+    picto.addPixmap(picto_espace(pixmap_icone(icone, _TAILLE_PICTO, QColor("#c9c7da"))),
+                    QIcon.Mode.Normal, QIcon.State.Off)
+    picto.addPixmap(picto_espace(pixmap_icone(icone, _TAILLE_PICTO, QColor(current().accent_light))),
                     QIcon.Mode.Normal, QIcon.State.On)
     b.setIcon(picto)
-    b.setIconSize(QSize(_TAILLE_PICTO, _TAILLE_PICTO))
+    b.setIconSize(QSize(_TAILLE_PICTO + ECART_PICTO, _TAILLE_PICTO))
     return b
 
 
@@ -181,7 +203,9 @@ def badge_dans_la_pastille(pastille: QPushButton, badge: QWidget) -> None:
     if badge.toolTip():
         pastille.setToolTip(badge.toolTip())
     # La place du badge s'ajoute à droite du nom : la largeur conseillée de la pastille la compte.
-    pastille.setStyleSheet(f"QPushButton#filtre {{ padding-right: {badge.sizeHint().width() + 22}px; }}")
+    # Une règle sur CETTE pastille seule (propriété `badge`) : la feuille des filtres vit dans `composants`.
+    pastille.setProperty("badge", True)
+    pastille.setStyleSheet(f'QPushButton[badge="true"] {{ padding-right: {badge.sizeHint().width() + 22}px; }}')
     # Sa largeur conseillée, pas plus : le ressort de la mise en page intérieure la rendait extensible, et la
     # pastille mangeait toute la rangée.
     pastille.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)

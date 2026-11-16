@@ -34,6 +34,7 @@ from src.core.i18n import tr
 from src.core.images_a_refaire import taille_a_juger
 from src.core.liens import DISCORD_URL
 from src.ui.composants import (
+    colonne_centree,
     TAILLE_MINIMALE_PAGE,
     titre_page,
     LARGEUR_RAIL, MARGES_PAGE,
@@ -150,6 +151,8 @@ class AtelierPage(QDialog):
         self._lignes: dict[str, _LigneMetier] = {}
         self._index: dict[str, int] = {}
 
+        # Dans la colonne centrée en plein écran (audit, 2026-11-16).
+        colonne_centree(self)
         racine = QHBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)

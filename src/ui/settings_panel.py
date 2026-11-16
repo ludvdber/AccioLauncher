@@ -49,7 +49,7 @@ from src.ui.choix_visuels import (
 )
 from src.ui.composants import (
     TAILLE_MINIMALE_PAGE,
-    MARGES_PAGE,
+    LARGEUR_PAGE_MAX, MARGES_PAGE, colonne_centree,
     ENCRE_DOUCE, LISTE_HAUTE, Carte, Chemin, LigneReglage, Rangee, bouton, icone_de_bouton,
     espace_du_volume, feuille_de_style, police, surtitre, texte,
     lien,
@@ -77,9 +77,10 @@ _RANG_A_PROPOS = len(_RUBRIQUES) - 1   # ses messages arrivent de la fenêtre, a
 # Le bandeau du ciel : les pastilles en bas, le ciel au-dessus (pas de grand titre : l'onglet PARAMÈTRES,
 # souligné, le dit déjà ; audit UI f46).
 _HAUTEUR_CIEL = 132
-# Les pages de cartes par deux : au-delà, sur un grand écran, une ligne de réglage séparait son titre de
-# son interrupteur par un désert. À propos, une colonne, garde sa largeur de lecture.
-_LARGEUR_CARTES = 1120
+# Les pages de cartes par deux remplissent la colonne centrée (`composants.colonne_centree`) : bornées à
+# 1 120 px et collées à gauche, elles laissaient la moitié droite d'un plein écran vide (audit, 2026-11-16).
+# À propos, une colonne de lecture, se centre dans la sienne.
+_LARGEUR_CARTES = LARGEUR_PAGE_MAX - MARGES_PAGE[0] - MARGES_PAGE[2]
 _LARGEUR_LECTURE = 760
 # Sous cette largeur, les cartes par deux s'empilent (`Rangee`).
 _SEUIL_DEUX_COLONNES = 860
@@ -208,6 +209,7 @@ class SettingsDialog(QDialog):
         # Bâtis avec leur rubrique, à sa première visite (`construire_rubrique`).
         self._theme_hint = None
         self._effets_hint: LigneReglage | None = None
+        self._effets_desc: QLabel | None = None
         self._update_status = None
         self._versions_label = None
         self._btn_verifier = None
@@ -249,6 +251,7 @@ class SettingsDialog(QDialog):
         # se voit), mesuré le 2026-10-14 sur Windows avec les vraies polices.
         # La rubrique visitée ensuite ne paie que sa propre mise en forme.
         self._pages = QStackedWidget()
+        colonne_centree(self._pages)
         self._pages.addWidget(zone_defilable(self._marges(self._page_general(), _LARGEUR_CARTES)))
         for _ in _RUBRIQUES[1:]:
             self._pages.addWidget(QWidget())
@@ -266,7 +269,7 @@ class SettingsDialog(QDialog):
         if rang in self._construites or not 0 <= rang < len(_RUBRIQUES):
             return
         self._construites.add(rang)
-        largeur = _LARGEUR_CARTES
+        largeur, centrer = _LARGEUR_CARTES, False
         if rang == _RANG_A_PROPOS:
             contenu = about_page.construire(
                 self.manager.catalog.contributors, manager=self.manager,
@@ -274,11 +277,12 @@ class SettingsDialog(QDialog):
                 mises_a_jour=self._bloc_mises_a_jour())
             self._versions_label = contenu.findChild(QLabel, "versions")
             largeur = _LARGEUR_LECTURE
+            centrer = True
         else:
             contenu = (None, self._page_display, self._page_integrations)[rang]()
         courante = self._pages.currentIndex()
         vide = self._pages.widget(rang)
-        self._pages.insertWidget(rang, zone_defilable(self._marges(contenu, largeur)))
+        self._pages.insertWidget(rang, zone_defilable(self._marges(contenu, largeur, centrer)))
         self._pages.removeWidget(vide)
         vide.deleteLater()
         self._pages.setCurrentIndex(courante)
@@ -299,8 +303,9 @@ class SettingsDialog(QDialog):
         return ciel
 
     @staticmethod
-    def _marges(page: QWidget, largeur: int) -> QWidget:
-        """Les marges autour d'une page, alignée sur les pastilles du bandeau, et une largeur bornée."""
+    def _marges(page: QWidget, largeur: int, centrer: bool = False) -> QWidget:
+        """Les marges autour d'une page, alignée sur les pastilles du bandeau, et une largeur bornée ; `centrer` :
+        une page plus étroite que la colonne (À propos) se pose au milieu."""
         cadre = QWidget()
         transparent(cadre, "margesPage")
         lay = QHBoxLayout(cadre)
@@ -308,8 +313,10 @@ class SettingsDialog(QDialog):
         page.setMaximumWidth(largeur)
         # Le reste de la largeur va au ressort, à DROITE : un alignement à gauche aurait réduit la page à sa
         # largeur conseillée, pas à sa largeur bornée.
-        lay.addWidget(page, stretch=1)
-        lay.addStretch(0)
+        if centrer:
+            lay.addStretch(1)
+        lay.addWidget(page, stretch=1000)
+        lay.addStretch(1 if centrer else 0)
         return cadre
 
     @staticmethod
@@ -444,9 +451,13 @@ class SettingsDialog(QDialog):
         self._choix_langue.setCurrentIndex(max(0, self._choix_langue.findData(self.config.langue)))
         self._choix_langue.currentIndexChanged.connect(self._on_language_changed)
         lay_langue.addWidget(self._choix_langue)
-        lay_langue.addWidget(texte(
+        # « Redémarrez » prend la PLACE de cette phrase, il ne s'y ajoute pas : la carte grandissait au premier
+        # clic sur une autre langue et rapetissait au retour, toute la rangée sautait (« un effet bizarre »,
+        # Ludo, 2026-11-15).
+        self._lang_desc = texte(
             tr("Les jeux ont leurs propres langues, parfois plus nombreuses que celles du launcher : "
-               "chacun a la sienne dans ses réglages, rubrique Langue."), 13, ENCRE_DOUCE, retour=True))
+               "chacun a la sienne dans ses réglages, rubrique Langue."), 13, ENCRE_DOUCE, retour=True)
+        lay_langue.addWidget(self._lang_desc)
         # Dans la même case que les drapeaux : en ligne à part, son filet restait visible, ligne cachée.
         self._lang_hint, self._lang_restart = self._ligne_redemarrage(
             tr("Redémarrez le launcher pour appliquer la langue."))
@@ -577,14 +588,17 @@ class SettingsDialog(QDialog):
         self._choix_effets.setCurrentIndex(max(0, self._choix_effets.findData(self.config.effets_animes)))
         self._choix_effets.currentIndexChanged.connect(self._on_effets_changed)
         self._effets_hint, _ = self._ligne_redemarrage(tr("Redémarrez le launcher pour appliquer ce choix."))
+        self._effets_hint.layout().setContentsMargins(0, 0, 0, 0)
+        # Même échange que la langue : « Redémarrez » à la place de la phrase.
+        self._effets_desc = texte(tr("Particules, zoom du fond, étoiles et personnages qui tournent seuls."),
+                                  13, ENCRE_DOUCE, retour=True)
 
         return self._page(
             self._bloc(tr("Couleurs du launcher"), self._choix_maison, self._theme_hint),
             self._bloc(tr("Almanach"), self._choix_ambiance, almanach),
             self._par_deux(
-                self._bloc(tr("Effets animés"), self._choix_effets, texte(
-                    tr("Particules, zoom du fond, étoiles et personnages qui tournent seuls."),
-                    13, ENCRE_DOUCE, retour=True), self._effets_hint, etirer=False),
+                self._bloc(tr("Effets animés"), self._choix_effets, self._effets_desc, self._effets_hint,
+                           etirer=False),
                 self._bloc(tr("Son et vidéos"), videos)))
 
     # ── Bandes-annonces ──
@@ -837,11 +851,15 @@ class SettingsDialog(QDialog):
     def _regler_redemarrage(self) -> None:
         """« Redémarrer » seulement si la config diffère de ce qui TOURNE : revenir
         à la langue (ou au thème) de départ n'a rien à appliquer."""
-        self._lang_hint.setVisible(self.config.langue != get_language())
+        langue = self.config.langue != get_language()
+        self._lang_hint.setVisible(langue)
+        self._lang_desc.setVisible(not langue)
         if self._theme_hint is not None:
             self._theme_hint.setVisible(self.config.theme != current_theme().id)
         if self._effets_hint is not None:
-            self._effets_hint.setVisible(effets.selon(self.config.effets_animes) != effets.animes())
+            effets_change = effets.selon(self.config.effets_animes) != effets.animes()
+            self._effets_hint.setVisible(effets_change)
+            self._effets_desc.setVisible(not effets_change)
 
     def _on_theme_changed(self) -> None:
         """Change le thème (effectif au prochain démarrage — couleurs posées à la construction)."""

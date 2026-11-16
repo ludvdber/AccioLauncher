@@ -50,6 +50,7 @@ from src.core.i18n import tr
 from src.ui.composants import (
     TAILLE_MINIMALE_PAGE,
     transparent,
+    colonne_centree,
     MARGES_PAGE,
     ENCRE_DOUCE,
     Carte,
@@ -227,7 +228,11 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             pages.append((ident, libelle, icone))
 
         racine.addWidget(self._bandeau(pages))
-        droite = QVBoxLayout()
+        # Le corps dans la colonne centrée, sous le bandeau qui reste sur toute la largeur (audit plein écran).
+        corps = QWidget()
+        transparent(corps, "corpsReglages")
+        colonne_centree(corps)
+        droite = QVBoxLayout(corps)
         droite.setContentsMargins(0, 0, 0, 0)
         droite.setSpacing(0)
         droite.addWidget(self._defile, stretch=1)
@@ -240,7 +245,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._erreur.hide()
         droite.addWidget(self._erreur)
         droite.addWidget(self._pied())
-        racine.addLayout(droite, stretch=1)
+        racine.addWidget(corps, stretch=1)
         if self._onglets:
             next(iter(self._onglets.values())).setChecked(True)
 

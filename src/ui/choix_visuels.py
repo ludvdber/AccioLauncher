@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import QButtonGroup, QGridLayout, QPushButton, QSizePolicy,
 
 from src.core.config import ASSETS_DIR
 from src.ui import focus_visible
-from src.ui.composants import ENCRE, ENCRE_DOUCE, filtre, police, survol, transparent
+from src.ui.composants import ECART_PICTO, ENCRE, ENCRE_DOUCE, filtre, picto_espace, police, survol, transparent
 from src.ui.fonts import cinzel
 from src.ui.theme import RAYON_CARTE, accent_qcolor
 
@@ -452,7 +452,7 @@ def icone_drapeau(code: str, largeur: int = 20) -> QIcon | None:
     ratio = ecran.devicePixelRatio() if ecran is not None else 1.0
     pm = QPixmap.fromImage(_drapeau(_DOSSIER_DRAPEAUX / f"{pays}.svg", largeur, ratio))
     pm.setDevicePixelRatio(ratio)
-    return QIcon(pm)
+    return QIcon(picto_espace(pm))
 
 
 def pastille_langue(nom: str, code: object) -> QPushButton:
@@ -461,5 +461,5 @@ def pastille_langue(nom: str, code: object) -> QPushButton:
     icone = icone_drapeau(str(code))
     if icone is not None:
         b.setIcon(icone)
-        b.setIconSize(QSize(20, 15))
+        b.setIconSize(QSize(20 + ECART_PICTO, 15))
     return b

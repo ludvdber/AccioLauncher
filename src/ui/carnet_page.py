@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 from src.core import folio
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
-from src.ui.composants import TAILLE_MINIMALE_PAGE, feuille_de_style, filtre, texte
+from src.ui.composants import colonne_centree, TAILLE_MINIMALE_PAGE, feuille_de_style, filtre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.choix_jeux import espacee, numeros, pastille
 from src.ui.icon_button import pixmap_icone
@@ -72,6 +72,8 @@ class CarnetPage(QDialog):
         # de jeu dans le Folio montrait le Relevé (Ludo, 2026-10-24).
         self._rubrique = FOLIO
 
+        # Dans la colonne centrée en plein écran (audit, 2026-11-16).
+        colonne_centree(self)
         racine = QVBoxLayout(self)
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)

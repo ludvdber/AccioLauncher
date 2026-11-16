@@ -11,7 +11,7 @@ from html import escape, unescape
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QObject, QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFont, QFontMetricsF, QIcon, QPainter
+from PyQt6.QtGui import QColor, QFont, QFontMetricsF, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
@@ -362,6 +362,24 @@ def bouton(libelle: str, principal: bool = False) -> QPushButton:
     return btn
 
 
+# L'air entre le pictogramme d'une pastille et son nom : Qt les colle (2 px), le « i » d'À propos touchait le
+# « À » (Ludo, 2026-11-15).
+ECART_PICTO = 6
+
+
+def picto_espace(pixmap: QPixmap, ecart: int = ECART_PICTO) -> QPixmap:
+    """Le pictogramme suivi de `ecart` px transparents : posé dans un bouton (avec `setIconSize` élargi d'autant),
+    il laisse de l'air avant le texte."""
+    ratio = pixmap.devicePixelRatio()
+    plus = QPixmap(round(pixmap.width() + ecart * ratio), pixmap.height())
+    plus.setDevicePixelRatio(ratio)
+    plus.fill(Qt.GlobalColor.transparent)
+    p = QPainter(plus)
+    p.drawPixmap(0, 0, pixmap)
+    p.end()
+    return plus
+
+
 def icone_de_bouton(nom: str, taille: int, couleur: QColor | None = None) -> QIcon:
     """Le pictogramme d'un bouton, avec sa version éteinte : celle que Qt fabrique
     sortait aussi claire que l'allumée, (237, 237, 237) sur capture."""
@@ -454,7 +472,35 @@ MARGES_PAGE = (40, 32, 40, 32)
 # fenêtre les ignore de toute façon (`Pages.ouvrir`) ; elle ne sert qu'à une page ouverte seule.
 # `test_fenetre_mise_en_page` la mesure sur une vraie fenêtre.
 TAILLE_MINIMALE_PAGE = (978, 583)
+# La largeur d'une page en plein écran (audit plein écran, 2026-11-16) : au-delà, le contenu se range dans une
+# colonne CENTRÉE de cette largeur. Collé à gauche avec une largeur bornée, il laissait la moitié droite d'un écran
+# de 2 048 px vide (Paramètres, réglages d'un jeu, Carnet, Nouveautés, Contribuer : « horrible en plein écran »,
+# Ludo). Les bandeaux restent sur toute la largeur et alignent leur contenu sur la colonne (`retrait_de_colonne`).
+LARGEUR_PAGE_MAX = 1440
 _HAUTEUR_RUBRIQUE = 44
+
+
+def retrait_de_colonne(largeur: int) -> int:
+    """La marge de chaque côté de la colonne centrée, pour une largeur donnée (0 tant qu'elle tient)."""
+    return max(0, (largeur - LARGEUR_PAGE_MAX) // 2)
+
+
+class _Centrage(QObject):
+    """Recalcule les marges latérales du widget à chaque redimensionnement : son contenu reste dans la colonne
+    centrée, son fond (s'il en a un) couvre toute la largeur."""
+
+    def eventFilter(self, objet: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 (Qt)
+        if isinstance(objet, QWidget) and event is not None and event.type() == QEvent.Type.Resize:
+            retrait = retrait_de_colonne(objet.width())
+            marges = objet.contentsMargins()
+            if marges.left() != retrait or marges.right() != retrait:
+                objet.setContentsMargins(retrait, marges.top(), retrait, marges.bottom())
+        return False
+
+
+def colonne_centree(widget: QWidget) -> None:
+    """Range le contenu de `widget` dans la colonne centrée de `LARGEUR_PAGE_MAX` px."""
+    widget.installEventFilter(_Centrage(widget))
 _TAILLE_PICTO_RUBRIQUE = 20
 
 
