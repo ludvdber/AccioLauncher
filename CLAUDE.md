@@ -13,7 +13,7 @@ Launcher PyQt6 pour 8 jeux Harry Potter PC (Windows 10/11). **Interface et comme
 
 ```bash
 pip install -r requirements.txt && python main.py     # lancer depuis les sources
-python -m pytest -n auto --dist loadfile              # toute la suite, ~1 min (6 min sans -n)
+python -m pytest -n auto --dist loadfile              # toute la suite, ~2 min (6 min sans -n)
 python -m pytest tests/test_config.py::TestConfig::test_defaults
 python -m ruff check .                                # jeu de règles FIGÉ dans pyproject.toml
 python -m mypy                                        # src/core en strict, réglé dans pyproject.toml
@@ -49,7 +49,7 @@ Un module absent d'ARCHITECTURE_CORE.md ou d'ARCHITECTURE_UI.md n'est pas docume
 - Tout nouveau module → au moins un test sentinelle. Le câblage de bout en bout se teste sur une vraie MainWindow (`make_window*`, `test_fenetre_*.py`, `test_parcours.py`).
 - Ne JAMAIS appeler une police par son nom système (règle 89) : offscreen mesurerait une autre police.
 - Aucun test n'écrit dans le vrai Documents (`conftest._documents_hors_du_vrai_dossier`).
-- **Piège env** : si pytest-qt n'est pas dans le Python actif, les tests widgets sont sautés en silence et le compte chute de plus de 1000 tests (67 fichiers). Vérifier `python -m pip show pytest-qt`.
+- **Piège env** : si pytest-qt n'est pas dans le Python actif, les tests widgets sont sautés en silence et le compte chute de plus de 1000 tests (79 fichiers). Vérifier `python -m pip show pytest-qt`.
 
 ## Key Conventions
 

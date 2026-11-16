@@ -12,12 +12,11 @@ Les tests automatiques ne lancent aucun vrai jeu. Cet essai, si : il joue chaque
 
 ## Les six lancements
 
-Le pilote vit dans l'atelier, hors dépôt : `C:\Users\User\Tools\accio_fix_atelier\essai_avant_release.py`. Un lancement par jeu :
+Le pilote vit dans l'atelier, hors dépôt : `C:\Users\User\Tools\accio_fix_atelier\essai_avant_release.py`. L'essai part d'une demande déposée dans `file_essais\a_faire\` de l'atelier (modèle : `file_essais\faits\29_principal_avant_release_135\demande.sh` ; mode d'emploi : `file_essais\LISEZMOI.md`), qui ne s'exécute qu'au feu vert de Ludo. Elle appelle, un lancement par jeu, avec `ACCIO_OUI=1` :
 
 ```text
-set ACCIO_OUI=1
-python essai_avant_release.py hp1 v1.2.0
-python essai_avant_release.py hp2 v1.2.0
+py -3.15 essai_avant_release.py hp1 v1.3.5-hp1
+py -3.15 essai_avant_release.py hp2 v1.3.5-hp2
 ... jusqu'à hp6
 ```
 
@@ -40,4 +39,4 @@ Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre 
 
 **Points déjà connus, non bloquants** (phase 6 de l'audit, revus le 2026-10-09) : HP3 n'a plus de fenêtre après l'Alt+Tab du pilote (il est minimisé, et le pilote n'a pas le premier plan pour le remettre ; un second Alt+Tab de joueur le rend). Depuis le correctif 2.4.0 (archive HP3 1.7), il se ferme sur `WM_CLOSE` (1,3 s, vu le 2026-11-05) ; une DLL plus ancienne l'ignore encore (tué après 25 s).
 
-**F12 échoue parfois, au hasard** (relevé sur tous les essais du 22 au 25 octobre : HP6 le 22, HP3 le 24 puis réussi au second passage, HP1 le 25 à 00 h 16 puis 9/9 à 00 h 19, sans changement de code). Cause non établie ; les captures de Ludo prouvent que F12 marche en jeu. Un ÉCHEC F12 seul se rejoue une fois avant de bloquer la release.
+**F12 échoue parfois, au hasard** (relevé sur tous les essais du 22 au 25 octobre : HP6 le 22, HP3 le 24 puis réussi au second passage, HP1 le 25 à 00 h 16 puis 9/9 à 00 h 19, sans changement de code). Cause : Windows refuse parfois le premier plan au jeu ; depuis le 2026-11-08, le pilote le vérifie à part (point « F12 : jeu au premier plan pour le recevoir », seul échec de HP5 le 2026-11-16, 7/8) ; les captures de Ludo prouvent que F12 marche en jeu. Un ÉCHEC F12 seul se rejoue une fois avant de bloquer la release.

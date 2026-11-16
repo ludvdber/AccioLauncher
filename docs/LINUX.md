@@ -55,7 +55,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `src/core/sauvegardes.py` (`racines`) | `LOCALAPPDATA` | `None` : HP5-HP7b n'ont **aucune** sauvegarde relevée ; Documents de l'hôte pour HP1-HP3 | Documents et `AppData/Local` du préfixe — le module l'annonçait déjà comme « le SEUL endroit à changer » | 2 |
 | `src/core/game_registry.py` (`disponible`) | Registre = `winreg` | `False` : sélecteur de langue éteint, **`Install Dir` jamais écrit** — or HP7a/HP7b ne démarrent pas sans lui | `True` quand un lanceur et un préfixe existent | 2 |
 | `src/core/game_registry.py` (`lire_valeurs`) | `winreg.OpenKey` | Rend `{}` | Lire `system.reg` / `user.reg` du préfixe (texte, sans lancer Wine) | 2 |
-| `src/core/game_registry.py` (`comparer`) (`_ecrire_direct`, `_ecrire_eleve`) | `winreg` puis `ShellExecuteW("runas", "regedit.exe")` + UAC | Jamais atteint (`ecrire_valeurs:323` rend `False`) | `_ecrire_eleve` = import du `.reg` par `regedit /S` **dans le préfixe**, via le lanceur ; pas d'UAC, mais la prévenance reste | 2 |
+| `src/core/game_registry.py` (`comparer`) (`_ecrire_direct`, `_ecrire_eleve`) | `winreg` puis `ShellExecuteW("runas", "regedit.exe")` + UAC | Jamais atteint (`ecrire_valeurs` rendait `False`) | `_ecrire_eleve` = import du `.reg` par `regedit /S` **dans le préfixe**, via le lanceur ; pas d'UAC, mais la prévenance reste | 2 |
 | `src/core/game_language.py` (`resoudre`, `appliquer`) | Portes `disponible()` | Aucune langue, aucune écriture | Rien à changer : elles s'ouvrent quand `disponible()` dit vrai | 2 |
 | `src/ui/process_monitor.py` (`ProcessMonitor.start`) | Nom d'exe pris dans `process.args[0]` | Sous Linux ce serait `umu-run` ou `wine` | Chercher l'argument en `.exe` | 2 |
 | `src/ui/process_monitor.py` (`_is_exe_running`) | `tasklist.exe` pour suivre la relance UE1 | Rend `False` : la relance de HP1/HP2 au chargement d'une sauvegarde **terminerait la session** au bout de 10 s | Équivalent `/proc` (processus Wine de même nom, même utilisateur, même préfixe), même grâce de 10 s | 2 |
@@ -73,7 +73,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `src/core/extractors.py` (`find_7z_exe`) | `7z.exe` embarqué, puis `C:\Program Files\7-Zip` | Repli sur `shutil.which("7z")` : dépend de ce que l'utilisateur a installé ; sur Bazzite, rien de garanti | Embarquer le **7-Zip officiel Linux** (`7zz`), repli `7zz`/`7z` du système (jamais py7zr, règle 92) | 3 |
 | `src/core/extractors.py` (`_find_7z_linux`, `verify_archive_entries`) | `CREATE_NO_WINDOW` | Déjà gardé | Inchangé | — |
 | `src/core/post_install.py` (`ranger_dans_sous_dossier`) + `src/core/win_utils.py` (`remove_zone_identifier`) | `Zone.Identifier` (flux NTFS) | No-op, sans objet sous Linux | Inchangé | — |
-| `accio_launcher.spec:83-88, 212-236` | Onefile Windows, ressource de version, `.ico`, `7z.exe` embarqué partout | Un build Linux embarquerait 7z.exe/7z.dll pour rien | Spec par plateforme : onedir Linux, sans binaires Windows | 4 |
+| `accio_launcher.spec` (ressource de version, choix du 7-Zip par plateforme) | Onefile Windows, ressource de version, `.ico`, `7z.exe` embarqué partout | Un build Linux embarquerait 7z.exe/7z.dll pour rien | Spec par plateforme : onedir Linux, sans binaires Windows | 4 |
 
 ### 2.3 Mise à jour du launcher
 
@@ -98,7 +98,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `src/ui/fiche_gpu.py`, `src/ui/carrousel_gpu.py` (`actif`) | Jumeau visuel de la fiche, du carrousel et du disque (QtQuick) | **Éteints** avec le fond : ils suivent `fond_gpu.actif()` | Suivent l'essai du fond | — |
 | `src/core/diagnostic.py` (`systeme`) | `win32_ver` | « Linux 6.x » : ni Bazzite ni sa version | `/etc/os-release` (`PRETTY_NAME`) | 3 |
 | `src/core/diagnostic.py` (`identite`) | Processeur, mémoire, cartes graphiques lus dans le registre / `GlobalMemoryStatusEx` | Mémoire et cartes vides | `/proc/meminfo`, `/sys/class/drm` ; plus une ligne « Compatibilité » (lanceur, Proton, préfixe) | 3 |
-| `src/core/i18n.py:163-178` | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |
+| `src/core/i18n.py` (`detect_system_language`) | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |
 | `src/ui/utils.py` (niveau du module) | Icône `.ico` | Qt lit le `.ico` sous Linux (greffon `qico`) | Inchangé ; PNG 256 px pour le `.desktop` | 4 |
 | `src/ui/fonts.py` | — | Polices embarquées (Gelasio remplace Georgia depuis longtemps) | Inchangé | — |
 | `src/ui/single_instance.py` | — | `QLocalServer` : socket Unix, fonctionne | Inchangé | — |
@@ -393,19 +393,17 @@ qui deviendra la 3.0). Détail : `docs/linux/RETOUR_BAZZITE.md`, septième passa
 
 ---
 
-## 6. Si aucun lanceur n'est trouvé (texte prévu)
+## 6. Si aucun lanceur n'est trouvé (texte affiché)
 
 > Accio Launcher lance ces jeux Windows avec **umu-launcher** (recommandé) ou
 > **Wine**. Aucun des deux n'est installé.
 >
 > Sur Bazzite, umu-launcher fait partie du système : mettez Bazzite à jour
 > (`ujust update`, puis redémarrez). Sur une autre distribution, installez le
-> paquet `umu-launcher` (ou Wine avec le support 32 bits), puis relancez
-> Accio Launcher.
+> paquet `umu-launcher` (ou Wine avec le support 32 bits), puis cliquez à
+> nouveau sur JOUER : le launcher les cherchera de nouveau.
 
-Le bouton du message ouvre la section « Linux / Bazzite » du README, qui
-détaille aussi l'installation manuelle d'umu (archive « zipapp » dans
-`~/.local/bin`).
+Le bouton du message ouvre la section « Linux / Bazzite » du README.
 
 ---
 
@@ -576,8 +574,8 @@ particules, et une poignée de main TLS menée jusqu'à la vérification du
 certificat (refusé ici par le proxy du conteneur, pas par le launcher).
 
 **Non vérifié ici** : une session Wayland, le montage FUSE par un utilisateur non root (`fusermount3`),
-Gear Lever, le mode Jeu, et l'auto-mise à jour d'une AppImage — elle ne se
-testera qu'à la release SUIVANT la première qui porte une AppImage.
+Gear Lever, le mode Jeu. L'auto-mise à jour de l'AppImage est relevée au
+journal sur Bazzite (1.2.3 → 1.3.3, RETOUR_BAZZITE.md, septième passage).
 
 ### Revérifié dans un conteneur Ubuntu 24.04 (audit du 2026-10-29)
 
@@ -660,53 +658,36 @@ affichage) : contenu des archives, ordre de chargement des DLL sous Wine,
 format du registre d'un préfixe, écriture par `regedit /S`, marque des DLL
 internes de Wine, code d'umu.
 
-**Non vérifié, donc à ne pas tenir pour acquis** : un vrai jeu lancé sous Wine
-ou Proton, le comportement réel sur Bazzite (umu préinstallé ou non, Gear
-Lever, Discord Flatpak), l'affichage Wayland, les manettes.
+**Non vérifié par cet audit (2026-09-24)** : vrais jeux sous Proton, umu
+préinstallé, Wayland et manette sont vus depuis sur Bazzite (RETOUR_BAZZITE.md) ;
+restent Gear Lever, Discord Flatpak et le mode Jeu.
 
 ## À tester sur Bazzite par Ludo (phase 1)
 
-Rien à exécuter côté launcher pour cette phase. Trois relevés aideront les
-suivantes :
+Rien à exécuter côté launcher pour cette phase. umu-launcher 1.4.4, winetricks
+et GE-Proton10-34 (`~/.local/share/Steam/compatibilitytools.d`) sont relevés
+(RETOUR_BAZZITE.md). Reste :
 
-1. `umu-run --version` et `winetricks --version` dans un terminal : les deux
-   devraient répondre (ils font partie de l'image Bazzite).
-2. `ls ~/.local/share/Steam/compatibilitytools.d ~/.steam/root/compatibilitytools.d`
-   : un GE-Proton est-il installé ?
 3. `flatpak list | grep -i -E "discord|vesktop"` : quelle version de Discord ?
 
 ## À tester sur Bazzite par Ludo (phase 2)
 
-Depuis les sources de la branche de la phase 2 (l'image fournit Python 3.14 : installer la 3.15 à côté, `uv python install 3.15`) :
+Depuis les sources de la branche de la phase 2 (Bazzite 45 fournit Python 3.15, `/usr/bin/python3.15`) :
 
 ```sh
 uv venv --python 3.15 ~/accio-venv && uv pip install --python ~/accio-venv/bin/python -r requirements.txt
 ~/accio-venv/bin/python main.py
 ```
 
-1. `~/accio-venv/bin/python tools/verifier_wine.py` : attendu « famille umu »,
-   le Proton retenu, « prêt : NON ».
-2. Installer **HP1** (le plus léger), cliquer **JOUER** : le dialogue
-   « Préparer Wine » doit lister le préfixe et Visual C++ 2015-2022.
-   « Préparer et lancer » → la barre de statut suit les étapes ; la première
-   fois, umu télécharge Proton (plusieurs minutes). Le jeu doit démarrer seul
-   à la fin.
-3. Relancer `tools/verifier_wine.py` : « prêt : oui », composants présents.
+Vus sur Bazzite (RETOUR_BAZZITE.md) : `verifier_wine`, préparation de Wine
+et HP1 par JOUER, sauvegardes au Folio, prévenance du registre de Wine de HP7,
+surcharge `+loaddll` de HP5. Restent l'Annuler de la préparation, et :
+
 4. Dans HP1, **charger une sauvegarde** (UE1 relance son processus) : le
    launcher ne doit PAS revenir au bout de 10 s. Quitter le jeu : le launcher
    revient, le temps de jeu est compté.
-5. Page de statistiques : les sauvegardes de HP1 apparaissent (elles sont dans
-   le Documents du préfixe).
-6. **HP7 partie 1** : au JOUER, le dialogue « Préparer Wine » ajoute Visual C++
-   2005 ; puis la prévenance du registre doit parler du **registre de Wine**,
-   sans mention d'autorisation administrateur. Le jeu doit démarrer (fichiers
-   rangés dans `pc`). Un deuxième lancement ne doit plus rien demander.
 7. Changer la langue de HP7 partie 2 dans ses réglages : même prévenance, et la
    langue doit suivre en jeu.
-8. **Surcharge de DLL** : fermer le launcher, le relancer avec
-   `WINEDEBUG=+loaddll ~/accio-venv/bin/python main.py`, jouer à HP5 puis
-   quitter : `~/Games/AccioLauncher/_Launcher/logs/wine-hp5.log` doit contenir
-   `HP5\d3d9.dll" … : native`.
 9. Cas sans Wine : `ACCIO_COMPAT=wine ~/accio-venv/bin/python main.py` (Bazzite
    n'a pas `wine`) → bandeau « Wine introuvable » sur les fiches, et au JOUER le
    message qui dit quoi installer.
@@ -723,8 +704,7 @@ L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
 2. **Journal** : ses deux premières lignes doivent porter
    `Bazzite … · noyau … (x86_64) · KDE · Wayland` (ou `Gamescope` en mode Jeu),
    puis `Compatibilité : umu-run (…) · GE-Proton… · préfixe … prêt`.
-3. **Diagnostic** : Paramètres → À propos → « Copier les informations de
-   diagnostic », coller dans un éditeur : la carte graphique doit être nommée
+3. **Diagnostic** : Paramètres → À propos → « Copier le rapport », coller dans un éditeur : la carte graphique doit être nommée
    (`AMD · Navi …` ou `NVIDIA · … · pilote nvidia 5xx.xx`), et aucune ligne ne
    doit contenir ton nom d'utilisateur.
 4. **Discord Flatpak** : Discord ouvert, activer la présence dans les
@@ -746,9 +726,8 @@ L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
 
 Avec l'AppImage d'un build d'essai (Actions → release → Run workflow, case
 décochée → artefact « AccioLauncher-linux-essai », un zip qui la contient) ou
-d'un brouillon de release. **Un build d'essai POSTÉRIEUR à l'épuration**
-(`strip=True`, § 9) : celui du run 36058062239 date d'avant, et c'est
-l'AppImage de 62 Mo qui sera publiée, pas celle de 77.
+d'un brouillon de release (AppImage épurée, `strip=True`, § 9 : 71 Mo au build
+du 2026-11-11, RETOUR_BAZZITE.md).
 
 1. **Lancer sans rien installer** : ranger le fichier dans `~/AppImages`,
    clic droit → Propriétés → « Exécutable », double-clic. Le launcher s'ouvre ;
@@ -771,6 +750,6 @@ l'AppImage de 62 Mo qui sera publiée, pas celle de 77.
 7. **Brouillon de release** (à la prochaine version) : vérifier qu'il porte
    quatre fichiers — `AccioLauncher.exe`, `AccioLauncher-x86_64.AppImage` et
    leurs `.sigstore.json` — et que les notes affichent les deux empreintes.
-8. **Auto-mise à jour** (à la version SUIVANTE) : l'AppImage de la version
-   précédente doit proposer la mise à jour, la télécharger, remplacer le
-   fichier au même endroit (celui de Gear Lever compris) et se rouvrir.
+8. **Auto-mise à jour** : faite sur Bazzite (1.2.3 → 1.3.3, « AppImage
+   remplacée », relance 1 s après : RETOUR_BAZZITE.md) ; reste à voir le
+   fichier rangé par Gear Lever.
