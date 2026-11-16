@@ -1529,6 +1529,9 @@
     "Fluidité": "Smoothness",
     "Images par seconde": "Frames per second",
     "Stabilité": "Stability",
-    "Compteurs": "Counters"
+    "Compteurs": "Counters",
+    "Chacun règle d'un coup : {}.": "Each one sets at once: {}.",
+    "Ce que change « {} »": "What “{}” changes",
+    "Rien : ses réglages sont déjà en place.": "Nothing: its settings are already in place."
   }
 }

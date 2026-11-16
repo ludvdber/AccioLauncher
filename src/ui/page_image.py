@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -78,6 +79,9 @@ _SEUIL_RECHERCHE = 8
 RESOLUTION = "resolution_ecran"
 # La colonne des catégories et de la recherche (maquette B) : au moins la largeur du champ de recherche.
 _LARGEUR_LISTE_CATEGORIES = 210
+# Le rang de la page des préréglages, hors des catégories : ils règlent d'un coup Qualité, Éclairage et
+# Distance. Rangés dans Qualité, ils écrasaient sans le dire ce qu'on avait réglé ailleurs (Ludo, 2026-11-16).
+_RANG_PREREGLAGES = -1
 # 860 px pour la liste et la fiche, plus la colonne des catégories et son écart (maquette B).
 _SEUIL_FICHE = 860 + _LARGEUR_LISTE_CATEGORIES + 24
 
@@ -833,6 +837,14 @@ class PageImage(QWidget):
         self._groupe_onglets = QButtonGroup(self)
         self._groupe_onglets.setExclusive(True)
         self.onglets: dict[str, _Onglet] = {}
+        self.onglet_prereglages: _Onglet | None = None
+        if self._prereglages:
+            # En tête de la liste, à part : ils touchent plusieurs catégories, aucune ne les porte.
+            self.onglet_prereglages = _Onglet(tr("Préréglages"))
+            self.onglet_prereglages.clicked.connect(lambda: self.montrer(_RANG_PREREGLAGES))
+            self._groupe_onglets.addButton(self.onglet_prereglages, len(self.categories))
+            liste.addWidget(self.onglet_prereglages)
+            liste.addSpacing(12)
         for rang, cat in enumerate(self.categories):
             o = _Onglet(tr(cat.nom))
             o.clicked.connect(lambda _c=False, r=rang: self.montrer(r))
@@ -844,7 +856,7 @@ class PageImage(QWidget):
         tete.setFixedWidth(largeur)
         # Une catégorie seule ne choisit rien ; peu de lignes ne se cherchent pas. Sans l'une ni
         # l'autre, la colonne entière se cache, et son écart avec elle.
-        onglets = len(self.categories) > 1
+        onglets = len(self.categories) + bool(self._prereglages) > 1
         cherchable = len(self.reglages) + bool(self._resolution) >= _SEUIL_RECHERCHE
         rangee.setVisible(onglets)
         self.recherche.setVisible(cherchable)
@@ -856,6 +868,8 @@ class PageImage(QWidget):
         transparent(self.pile)
         for _cat in self.categories:
             self.pile.addWidget(QWidget())     # bâtie à son premier affichage
+        # Juste après les catégories ; les résultats de recherche restent la dernière page de la pile.
+        self.pile.addWidget(zone_defilable(self._page_prereglages()) if self._prereglages else QWidget())
         self._resultats = QWidget()
         transparent(self._resultats)
         self._lay_resultats = QVBoxLayout(self._resultats)
@@ -885,6 +899,16 @@ class PageImage(QWidget):
             self.recherche.blockSignals(False)
         self._vider_resultats()
         self._rang = rang
+        if rang == _RANG_PREREGLAGES:
+            self.pile.setCurrentIndex(len(self.categories))
+            if self.onglet_prereglages is not None:
+                self.onglet_prereglages.setChecked(True)
+            self._activer("", main=False)
+            if self.isVisible():     # sinon, son redimensionnement à l'affichage la place
+                self._placer_fiche()
+            self._apercu("")
+            self._maj()
+            return
         if rang not in self._construites:
             ancienne = self.pile.widget(rang)
             page = zone_defilable(self._page(self.categories[rang]))
@@ -898,6 +922,8 @@ class PageImage(QWidget):
         bouton_ = self._groupe_onglets.button(rang)
         if bouton_ is not None:
             bouton_.setChecked(True)
+        if self.isVisible():
+            self._placer_fiche()
         premier = next(iter(self.categories[rang].reglages), None)
         if self._resolution and self.categories[rang].ident == "ecran":
             self._activer(RESOLUTION, main=False)
@@ -921,23 +947,6 @@ class PageImage(QWidget):
         v = QVBoxLayout(contenu)
         v.setContentsMargins(0, 0, 8, 0)
         v.setSpacing(0)
-        if cat.ident == "qualite" and self._prereglages:
-            # « Sur mesure » à côté du titre quand aucun préréglage ne correspond, comme le
-            # sceau de la Difficulté (audit UI reg9) : la carte qui le disait est partie (f45).
-            tete = QHBoxLayout()
-            tete.setContentsMargins(0, 0, 0, 0)
-            tete.setSpacing(10)
-            tete.addWidget(petit_titre(tr("Préréglages")))
-            self.sur_mesure = pastille(tr("Sur mesure"), ENCRE_DOUCE, "rgba(169, 167, 196, 0.35)")
-            politique = self.sur_mesure.sizePolicy()
-            politique.setRetainSizeWhenHidden(True)   # le titre ne bouge pas quand il paraît
-            self.sur_mesure.setSizePolicy(politique)
-            tete.addWidget(self.sur_mesure, alignment=Qt.AlignmentFlag.AlignVCenter)
-            tete.addStretch()
-            v.addLayout(tete)
-            v.addSpacing(8)
-            v.addWidget(self._bloc_prereglages())
-            v.addSpacing(18)
         for groupe in cat.groupes:
             carte = QFrame()
             carte.setObjectName("carteImage")
@@ -959,6 +968,59 @@ class PageImage(QWidget):
         v.addStretch()
         return contenu
 
+    def _page_prereglages(self) -> QWidget:
+        """Leur propre page, en tête de la liste : un préréglage règle d'un coup plusieurs catégories.
+        Elle nomme ces catégories, et le préréglage survolé ou au focus montre AVANT le clic chaque
+        réglage qu'il changera, avec sa catégorie : rien n'est écrasé sans qu'on le voie (Ludo,
+        2026-11-16)."""
+        contenu = QWidget()
+        transparent(contenu)
+        v = QVBoxLayout(contenu)
+        v.setContentsMargins(0, 0, 8, 0)
+        v.setSpacing(0)
+        # « Sur mesure » à côté du titre quand aucun préréglage ne correspond, comme le
+        # sceau de la Difficulté (audit UI reg9) : la carte qui le disait est partie (f45).
+        tete = QHBoxLayout()
+        tete.setContentsMargins(0, 0, 0, 0)
+        tete.setSpacing(10)
+        tete.addWidget(petit_titre(tr("Préréglages")))
+        self.sur_mesure = pastille(tr("Sur mesure"), ENCRE_DOUCE, "rgba(169, 167, 196, 0.35)")
+        politique = self.sur_mesure.sizePolicy()
+        politique.setRetainSizeWhenHidden(True)   # le titre ne bouge pas quand il paraît
+        self.sur_mesure.setSizePolicy(politique)
+        tete.addWidget(self.sur_mesure, alignment=Qt.AlignmentFlag.AlignVCenter)
+        tete.addStretch()
+        v.addLayout(tete)
+        v.addSpacing(6)
+        touchees = {reglages_image.place(self.reglages[cle])[0]
+                    for _i, _n, _t, valeurs in self._prereglages for cle in valeurs}
+        noms = [tr(nom) for ident, nom in reglages_image.CATEGORIES if ident in touchees]
+        self.portee_prereglages = QLabel(tr("Chacun règle d'un coup : {}.").format(", ".join(noms)))
+        self.portee_prereglages.setWordWrap(True)
+        self.portee_prereglages.setFont(police(13))
+        self.portee_prereglages.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
+        v.addWidget(self.portee_prereglages)
+        v.addSpacing(12)
+        v.addWidget(self._bloc_prereglages())
+        v.addSpacing(18)
+        self.titre_apercu = petit_titre("")
+        v.addWidget(self.titre_apercu)
+        v.addSpacing(6)
+        self.carte_apercu = QFrame()
+        self.carte_apercu.setObjectName("carteImage")
+        dedans = QVBoxLayout(self.carte_apercu)
+        dedans.setContentsMargins(18, 12, 18, 12)
+        self.apercu = QLabel("")
+        self.apercu.setWordWrap(True)
+        self.apercu.setTextFormat(Qt.TextFormat.RichText)
+        self.apercu.setFont(police(13))
+        self.apercu.setStyleSheet("color: #d8d6e6; background: transparent;")
+        dedans.addWidget(self.apercu)
+        v.addWidget(self.carte_apercu)
+        v.addStretch()
+        self._apercu("")
+        return contenu
+
     def _bloc_prereglages(self) -> QWidget:
         """Les préréglages sur une rangée (empilés sous 190 px chacun). Plus de carte
         « Sur mesure » : elle prenait une demi-rangée pour dire qu'aucune n'est cochée,
@@ -969,10 +1031,46 @@ class PageImage(QWidget):
         for rang, (ident, nom, texte, _v) in enumerate(self._prereglages):
             carte = _CartePrereglage(tr(nom), tr(texte), _Points(min(rang + 1, 3), largeur_segment=16))
             carte.clicked.connect(lambda _c=False, i=ident: self.choisir_prereglage(i))
+            carte.setProperty("prereglage", ident)
+            carte.installEventFilter(self)
             self._groupe_prereglages.addButton(carte)
             self._cartes_prereglage[ident] = carte
             cartes.append(carte)
-        return Rangee(cartes, len(cartes), seuil=len(cartes) * 190, ecart=10)
+        rangee = Rangee(cartes, len(cartes), seuil=len(cartes) * 190, ecart=10)
+        # À leur hauteur : extensible, la rangée prenait la place libre et les cartes s'allongeaient à vide.
+        rangee.setSizePolicy(rangee.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Maximum)
+        return rangee
+
+    def changements(self, ident: str) -> list[tuple[Reglage, object, object]]:
+        """Ce que le préréglage `ident` changerait : (réglage, valeur actuelle, valeur voulue)."""
+        voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
+        return [(self.reglages[cle], self._valeurs.get(cle), valeur) for cle, valeur in voulues.items()
+                if not rc.meme_valeur(self._valeurs.get(cle), valeur)]
+
+    def _apercu(self, ident: str) -> None:
+        """La carte sous les préréglages : ce que change celui qu'on survole, sinon rien."""
+        if not ident:
+            self.titre_apercu.hide()
+            self.carte_apercu.hide()
+            return
+        nom = next(tr(n) for i, n, _t, _v in self._prereglages if i == ident)
+        changes = self.changements(ident)
+        noms_cat = dict(reglages_image.CATEGORIES)
+        e = html.escape
+        self.titre_apercu.setText(tr("Ce que change « {} »").format(nom).upper())
+        if not changes:
+            self.apercu.setText(e(tr("Rien : ses réglages sont déjà en place.")))
+        else:
+            lignes = "".join(
+                f'<tr><td style="padding:3px 16px 3px 0">{e(rc.textes(r)[0])}</td>'
+                f'<td style="color:{ENCRE_DOUCE}; padding:3px 16px 3px 0">'
+                f'{e(tr(noms_cat[reglages_image.place(r)[0]]))}</td>'
+                f'<td style="padding:3px 0">{e(_texte(r, avant))} → '
+                f'<span style="color:{theme_courant().accent_light}">{e(_texte(r, apres))}</span></td></tr>'
+                for r, avant, apres in changes)
+            self.apercu.setText(f"<table cellspacing='0' cellpadding='0'>{lignes}</table>")
+        self.titre_apercu.show()
+        self.carte_apercu.show()
 
     def _controle(self, r: Reglage) -> tuple[QWidget, QWidget | None]:
         """Le contrôle d'un réglage, et ce qui le suit dans sa colonne (valeur et retour d'un curseur)."""
@@ -1161,6 +1259,8 @@ class PageImage(QWidget):
         else:
             self._apres_ecriture()
         self._maj()
+        if self.carte_apercu.isVisibleTo(self):
+            self._apercu(ident)      # le même aperçu le dit aussitôt : « Rien : déjà en place »
 
     # ── mise à jour de l'écran ──
 
@@ -1390,13 +1490,24 @@ class PageImage(QWidget):
                 and event.key() == Qt.Key.Key_Escape and self.recherche.text()):
             self.recherche.clear()
             return True
+        ident = objet.property("prereglage") if isinstance(objet, _CartePrereglage) else None
+        if ident:
+            if event.type() in (QEvent.Type.Enter, QEvent.Type.FocusIn):
+                self._apercu(ident)
+            elif event.type() in (QEvent.Type.Leave, QEvent.Type.FocusOut):
+                self._apercu("")
         return super().eventFilter(objet, event)
+
+    def _placer_fiche(self) -> None:
+        """La fiche décrit un réglage : la page des préréglages n'en a pas, son aperçu en tient lieu."""
+        voulue = self.width() >= _SEUIL_FICHE and self._rang != _RANG_PREREGLAGES
+        if self._zone_fiche.isVisibleTo(self) != voulue:
+            self._zone_fiche.setVisible(voulue)
+            self._marquer()
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
-        if self._zone_fiche.isVisibleTo(self) != (self.width() >= _SEUIL_FICHE):
-            self._zone_fiche.setVisible(self.width() >= _SEUIL_FICHE)
-            self._marquer()
+        self._placer_fiche()
 
     def sizeHint(self) -> QSize:  # noqa: N802 (Qt)
         return QSize(900, 600)

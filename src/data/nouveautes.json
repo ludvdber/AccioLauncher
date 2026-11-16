@@ -38,6 +38,14 @@
         {
           "genre": "ameliore",
           "texte": {
+            "fr": "Les préréglages d'image ont leur propre page : avant de cliquer, on voit chaque réglage qu'ils vont changer, et dans quelle catégorie.",
+            "en": "Graphics presets have their own page: before clicking, you see every setting they will change, and in which category.",
+            "es": "Los preajustes de imagen tienen su propia página: antes de hacer clic, se ve cada ajuste que van a cambiar y en qué categoría."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
             "fr": "En plein écran, les pages se rangent au centre au lieu de laisser la moitié droite vide, et les bandeaux couvrent toute la largeur.",
             "en": "In full screen, pages sit in the centre instead of leaving the right half empty, and banners span the whole width.",
             "es": "En pantalla completa, las páginas se colocan en el centro en lugar de dejar vacía la mitad derecha, y las cabeceras ocupan todo el ancho."

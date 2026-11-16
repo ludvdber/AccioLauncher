@@ -1530,6 +1530,9 @@
     "Fluidité": "Fluidez",
     "Images par seconde": "Imágenes por segundo",
     "Stabilité": "Estabilidad",
-    "Compteurs": "Contadores"
+    "Compteurs": "Contadores",
+    "Chacun règle d'un coup : {}.": "Cada uno ajusta de una vez: {}.",
+    "Ce que change « {} »": "Lo que cambia «{}»",
+    "Rien : ses réglages sont déjà en place.": "Nada: sus ajustes ya están puestos."
   }
 }

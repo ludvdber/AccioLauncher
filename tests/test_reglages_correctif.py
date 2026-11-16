@@ -1514,10 +1514,56 @@ class TestPageImage:
         dlg.resize(1280, 800)
         dlg.show()
         qtbot.waitExposed(dlg)
-        page.montrer(0)
+        page.onglet_prereglages.click()
         qtbot.wait(20)
         hauts = {c.mapTo(page, c.rect().topLeft()).y() for c in page._cartes_prereglage.values()}
         assert len(page._cartes_prereglage) == 3 and len(hauts) == 1
+
+    def test_les_prereglages_ont_leur_page_hors_de_qualite(self, qtbot, tmp_path):
+        """Ludo, 2026-11-16 : rangés dans Qualité, ils réglaient aussi Éclairage sans le dire. Leur page
+        est en tête de la liste, à part, et nomme les catégories qu'ils touchent."""
+        from PyQt6.QtWidgets import QWidget
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        dlg.ouvrir_onglet("image")
+        dlg.resize(1400, 860)
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        qualite = next(i for i, c in enumerate(page.categories) if c.ident == "qualite")
+        page.montrer(qualite)
+        assert not any(page.pile.currentWidget().isAncestorOf(c) for c in page._cartes_prereglage.values())
+        onglets = page.findChild(QWidget, "ongletsImage").layout()
+        assert onglets.itemAt(0).widget() is page.onglet_prereglages
+        page.onglet_prereglages.click()
+        assert all(page.pile.currentWidget().isAncestorOf(c) for c in page._cartes_prereglage.values())
+        assert tr("Qualité") in page.portee_prereglages.text()
+        assert tr("Éclairage et ombres") in page.portee_prereglages.text()
+        assert not page._fiche_ouverte(), "la fiche décrit un réglage : la page des préréglages n'en a pas"
+        page.montrer(qualite)
+        assert page._fiche_ouverte()
+
+    def test_survoler_un_prereglage_montre_ce_qu_il_ecrasera(self, qtbot, tmp_path):
+        """Avant le clic, chaque réglage qui changera, sa catégorie, et sa valeur d'avant et d'après."""
+        from PyQt6.QtCore import QEvent, QPointF
+        from PyQt6.QtGui import QEnterEvent
+        from PyQt6.QtWidgets import QApplication
+        dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        dlg.ouvrir_onglet("image")
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        page.onglet_prereglages.click()
+        page.choisir_prereglage("equilibree")
+        page.regler("halo", False)
+        carte = page._cartes_prereglage["equilibree"]
+        assert page.carte_apercu.isHidden()
+        QApplication.sendEvent(carte, QEnterEvent(QPointF(5, 5), QPointF(5, 5), QPointF(5, 5)))
+        assert not page.carte_apercu.isHidden()
+        assert [r.ident for r, _a, _b in page.changements("equilibree")] == ["halo"]
+        texte = page.apercu.text()
+        assert tr(rc.REGLAGES["halo"].libelle) in texte and tr("Éclairage et ombres") in texte
+        carte.click()
+        assert tr("Rien : ses réglages sont déjà en place.") in page.apercu.text()
+        QApplication.sendEvent(carte, QEvent(QEvent.Type.Leave))
+        assert page.carte_apercu.isHidden()
 
     def test_un_prereglage_reussi_efface_l_erreur_d_avant(self, qtbot, tmp_path):
         dlg, page, _ini = self._fenetre(qtbot, tmp_path)
