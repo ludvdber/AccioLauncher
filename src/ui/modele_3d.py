@@ -195,9 +195,7 @@ class Visionneuse:
         return self._modele
 
     def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None,
-              animation: Animation | None = None, garder_vue: bool = False) -> None:
-        """`garder_vue` : le même modèle, ses textures en pleine taille, sans
-        ramener la caméra de face."""
+              animation: Animation | None = None) -> None:
         self._modele = modele
         # Les pixmaps du rendu QPainter se font à son premier besoin : avec la
         # carte graphique, une copie de chaque texture ne servait à rien.
@@ -218,8 +216,7 @@ class Visionneuse:
             # Le sol va sous les pieds : à −0,5 seulement si la hauteur est la plus
             # grande dimension (une araignée, plus longue que haute, l'aurait vu flotter).
             self._bas = (bornes[2][0] - self._centre[2]) / self._taille
-        if not garder_vue:
-            self.vue_de_face()
+        self.vue_de_face()
         self._mettre_en_route()
 
     def vue_de_face(self) -> None:
@@ -541,11 +538,11 @@ class Modele3D(Visionneuse, QWidget):
         self._textures_gpu: dict[str, QImage] = {}
 
     def poser(self, modele: Maillage | None, textures: dict[str, QImage] | None = None,
-              animation: Animation | None = None, garder_vue: bool = False) -> None:
+              animation: Animation | None = None) -> None:
         self._textures_gpu = dict(textures or {})
         if self._gpu is not None:
             self._gpu.poser(modele, self._textures_gpu)
-        super().poser(modele, textures, animation, garder_vue)
+        super().poser(modele, textures, animation)
 
     def _rendu_gpu(self) -> RenduGPU | None:
         if not self._gpu_essaye:
@@ -559,6 +556,11 @@ class Modele3D(Visionneuse, QWidget):
                 self._gpu.poser(self._modele, self._textures_gpu)
                 self.destroyed.connect(self._gpu.liberer)
         return self._gpu
+
+    def rendu_par_la_carte(self) -> bool:
+        """Les vignettes (`rendu`) sortent-elles de la carte graphique ? Sinon, QPainter : des
+        centaines de millisecondes pour un modèle de HP5-HP6."""
+        return self._rendu_gpu() is not None
 
     def _sur_geste(self) -> None:
         if not self._manipule:

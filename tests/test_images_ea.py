@@ -27,6 +27,80 @@ def _shpi(images: list[tuple[str, int, int, int, bytes, int]]) -> bytes:
     return b"SHPI" + struct.pack("<II", tete + len(corps), len(images)) + b"G354" + entrees + corps
 
 
+def _reference(donnees: bytes, largeur: int, hauteur: int, dxt5: bool) -> bytes:
+    """Le décodage de manuel, bloc par bloc et pixel par pixel : ce que le décodeur doit rendre."""
+    def canaux(c: int) -> tuple[int, int, int]:
+        b, v, r = c & 31, (c >> 5) & 63, c >> 11
+        return (b << 3) | (b >> 2), (v << 2) | (v >> 4), (r << 3) | (r >> 2)
+    sortie = bytearray(4 * largeur * hauteur)
+    pas = 16 if dxt5 else 8
+    for bloc in range((largeur // 4) * (hauteur // 4)):
+        d = donnees[bloc * pas:(bloc + 1) * pas]
+        c0, c1, indices = struct.unpack("<HHI", d[-8:])
+        t0, t1 = canaux(c0), canaux(c1)
+        if dxt5 or c0 > c1:
+            teintes = [(*t0, 255), (*t1, 255), (*((2 * a + b) // 3 for a, b in zip(t0, t1, strict=True)), 255),
+                       (*((a + 2 * b) // 3 for a, b in zip(t0, t1, strict=True)), 255)]
+        else:
+            teintes = [(*t0, 255), (*t1, 255), (*((a + b) // 2 for a, b in zip(t0, t1, strict=True)), 255),
+                       (0, 0, 0, 0)]
+        alphas, bits = [], 0
+        if dxt5:
+            a0, a1 = d[0], d[1]
+            bits = int.from_bytes(d[2:8], "little")
+            alphas = [a0, a1] + ([((7 - i) * a0 + i * a1) // 7 for i in range(1, 7)] if a0 > a1 else
+                                 [((5 - i) * a0 + i * a1) // 5 for i in range(1, 5)] + [0, 255])
+        x0, y0 = 4 * (bloc % (largeur // 4)), 4 * (bloc // (largeur // 4))
+        for n in range(16):
+            pixel = list(teintes[(indices >> (2 * n)) & 3])
+            if dxt5:
+                pixel[3] = alphas[(bits >> (3 * n)) & 7]
+            o = 4 * ((y0 + n // 4) * largeur + x0 + n % 4)
+            sortie[o:o + 4] = bytes(pixel)
+    return bytes(sortie)
+
+
+class TestDecodeurEnBloc:
+    """2026-11-16 : le décodeur traite tous les blocs d'une image à la fois (tranches à pas,
+    tables, entiers longs) ; il doit rendre les octets du décodage de manuel, à l'octet près."""
+
+    def test_memes_octets_que_le_decodage_de_manuel(self):
+        import random
+        hasard = random.Random(20261116)
+        for largeur, hauteur in ((4, 4), (8, 4), (4, 12), (12, 8), (32, 16)):
+            blocs = (largeur // 4) * (hauteur // 4)
+            for tour in range(30):
+                for dxt5 in (False, True):
+                    pas = 16 if dxt5 else 8
+                    d = bytearray(hasard.randbytes(blocs * pas))
+                    if tour % 3 == 0:       # les cas de bord : couleurs égales, alphas égaux ou extrêmes
+                        for b in range(blocs):
+                            o = b * pas + pas - 8
+                            if hasard.random() < 0.4:
+                                d[o + 2:o + 4] = d[o:o + 2]
+                            if dxt5 and hasard.random() < 0.6:
+                                d[b * 16:b * 16 + 2] = hasard.choice((b"\xff\xff", b"\0\0", b"\xff\0", b"\0\xff"))
+                    decode = images_ea.dxt5 if dxt5 else images_ea.dxt1
+                    assert decode(bytes(d), largeur, hauteur) == _reference(bytes(d), largeur, hauteur, dxt5), \
+                        (largeur, hauteur, tour, dxt5)
+
+    def test_une_image_tronquee_est_refusee(self):
+        import pytest
+        with pytest.raises(ValueError, match="tronquée"):
+            images_ea.dxt1(_dxt1(ROUGE, BLEU, 0), 8, 8)
+        with pytest.raises(ValueError, match="tronquée"):
+            images_ea.dxt5(bytes(16), 8, 4)
+
+    def test_512_pixels_en_moins_de_cent_millisecondes(self):
+        """Une texture de personnage de HP5-HP6 : 174 ms en DXT5 bloc par bloc, 15 ms depuis."""
+        import random
+        import time
+        d = random.Random(1).randbytes(128 * 128 * 16)
+        debut = time.perf_counter()
+        images_ea.dxt5(d, 512, 512)
+        assert time.perf_counter() - debut < 0.1
+
+
 class TestDXT:
     def test_quatre_teintes(self):
         """Indices 0, 1, 2, 3 sur la première rangée : rouge, bleu, puis les

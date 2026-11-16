@@ -3,9 +3,10 @@
 import logging
 import threading
 from collections.abc import Callable
+from functools import lru_cache
 
-from PyQt6.QtCore import QEvent, QObject, QPointF, Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPaintEvent, QPen
+from PyQt6.QtCore import QEvent, QObject, QPointF, QSize, Qt, QTimer, QUrl
+from PyQt6.QtGui import QColor, QDesktopServices, QIcon, QImageReader, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import (
     QAbstractScrollArea, QApplication, QComboBox, QLayout, QListView, QMessageBox, QScrollArea,
     QWidget,
@@ -59,6 +60,14 @@ def apres_le_fil[T](proprietaire: QObject, travail: Callable[[], T], fin: Callab
     threading.Thread(target=lancer, name=nom, daemon=True).start()
 
 
+@lru_cache(maxsize=64)
+def taille_image(chemin: str) -> QSize:
+    """La taille d'une image du launcher, lue dans son en-tête UNE fois : chaque fond l'était
+    cinq fois par parcours (préchargement, changement de jeu, bandeau, Atelier)."""
+    return QImageReader(chemin).size()
+
+
+@lru_cache(maxsize=1)
 def icone_application() -> QIcon:
     """Icône de l'application — le .ico multi-résolution en priorité.
 
@@ -230,6 +239,11 @@ def zone_defilable(page: QWidget) -> QScrollArea:
     de « Mes années à Poudlard » : bleu nuit, or au survol, sans flèches.
     """
     zone = QScrollArea()
+    # La feuille AVANT le contenu : posée après, elle repassait sur chaque widget de la page
+    # déjà rattachée (62 ms pour la page Image de HP6, mesuré le 2026-11-16).
+    zone.setStyleSheet(themed(
+        "QScrollArea, QScrollArea > QWidget > QWidget"
+        " { background: transparent; border: none; }" + BARRE_DEFILEMENT))
     zone.setWidget(page)
     zone.setWidgetResizable(True)
     zone.setFrameShape(QScrollArea.Shape.NoFrame)
@@ -240,8 +254,5 @@ def zone_defilable(page: QWidget) -> QScrollArea:
     zone.setFocusPolicy(Qt.FocusPolicy.NoFocus)
     zone.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     zone.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-    zone.setStyleSheet(themed(
-        "QScrollArea, QScrollArea > QWidget > QWidget"
-        " { background: transparent; border: none; }" + BARRE_DEFILEMENT))
     zone.viewport().setAutoFillBackground(False)
     return zone

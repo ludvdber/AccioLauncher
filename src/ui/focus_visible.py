@@ -59,6 +59,7 @@ from PyQt6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, Qt, QTimer
 from PyQt6.QtGui import QPainter, QPen
 from PyQt6.QtWidgets import QAbstractButton, QAbstractScrollArea, QApplication, QScrollArea, QWidget
 
+from src.ui import filtres_globaux
 from src.ui.theme import RAYON_CONTROLE, accent_qcolor
 
 
@@ -339,4 +340,4 @@ def install(app: QApplication) -> None:
     if _filtre is not None:
         return
     _filtre = _FiltreFocus(app)
-    app.installEventFilter(_filtre)
+    filtres_globaux.poser(_filtre)

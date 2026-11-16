@@ -48,6 +48,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
+from src.core import json_garde, octets_gardes
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.ecriture_atomique import ecrire_atomique, mettre_de_cote
 
@@ -249,8 +250,7 @@ _ENTETE_HP4 = 0x220
 def _entete(chemin: Path) -> bytes:
     """Les premiers octets seulement : l'en-tête suffit, le reste n'est pas lu."""
     try:
-        with open(chemin, "rb") as f:
-            return f.read(_TAILLE_ENTETE)
+        return octets_gardes.lire(chemin, _TAILLE_ENTETE)
     except OSError:
         return b""
 
@@ -411,8 +411,8 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]
     if not chemin.exists():
         return {}
     try:
-        data = json.loads(chemin.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+        data = json_garde.lire(chemin)     # lu une fois tant qu'il ne change pas (10 lectures par parcours)
+    except (OSError, ValueError) as exc:
         log.warning("Relevé des sauvegardes illisible (%s) — mis de côté", exc)
         mettre_de_cote(chemin)
         return {}

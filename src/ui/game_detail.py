@@ -13,6 +13,7 @@ from src.ui import game_detail_handlers as handlers
 from src.ui.action_panel import ActionPanel
 from src.ui.audio_bar import AudioBar
 from src.ui import fiche_gpu
+from src.ui import filtres_globaux
 from src.ui import fond_gpu
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
@@ -294,12 +295,14 @@ class GameDetailView(QWidget):
     def ouvrir_atelier(self, metier: str = "") -> None:
         """L'atelier des artistes, à la place de la bibliothèque (`pages.py`)."""
         from src.ui.atelier_page import AtelierPage
-        self.page_demandee.emit(AtelierPage(self.manager.catalog.games, self.window(), metier))
+        self.page_demandee.emit(filtres_globaux.batie(
+            lambda: AtelierPage(self.manager.catalog.games, self.window(), metier)))
 
     def ouvrir_folio(self) -> None:
         """Le folio du jeu affiché, dans le Carnet (qui souligne son onglet)."""
         from src.ui.carnet_page import CarnetPage
-        self.page_demandee.emit(CarnetPage(self.manager, self.window(), jeu=self.game.id))
+        self.page_demandee.emit(filtres_globaux.batie(
+            lambda: CarnetPage(self.manager, self.window(), jeu=self.game.id)))
 
     def particules_gpu(self) -> fond_gpu.ParticulesGPU | None:
         """Les particules dans la scène du fond, quand le fond est sur la carte
