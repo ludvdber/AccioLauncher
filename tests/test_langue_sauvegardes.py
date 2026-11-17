@@ -4,11 +4,14 @@ Le jeu range `auto.sav` et `config.txt` dans un dossier nommé d'après son titr
 TRADUIT. Passé du français à l'anglais, il démarrait sans la partie et en 720p,
 l'image dans un coin (VU par Ludo le 2026-10-29). Racines redirigées vers
 `tmp_path` par `conftest`.
+
+Les blocs RÉELS de HP7 de la copie embarquée servent de données d'entrée (règle 78,
+exception des tests de comportement) : ce qu'ils contiennent est affirmé dans
+`test_catalogue_embarque.py`.
 """
 
 import json
 import os
-from fnmatch import fnmatch
 
 import pytest
 
@@ -57,16 +60,6 @@ def _launcher_hors_du_vrai(tmp_path, monkeypatch):
 
 
 class TestCatalogue:
-    @pytest.mark.parametrize("jeu", ["hp7a", "hp7b"])
-    def test_chaque_langue_nomme_un_dossier_que_le_bloc_saves_reconnait(self, jeu):
-        """Un dossier que `saves` ne verrait pas recevrait une partie que la
-        fiche, elle, ne trouverait jamais."""
-        game = _jeux()[jeu]
-        dossiers = [lg.saves_folder for lg in game.language_registry.languages]
-        assert len(dossiers) == 7 and len(set(dossiers)) == 7
-        for d in dossiers:
-            assert any(fnmatch(d, m) for m in game.sauvegardes.dossiers), d
-
     @pytest.mark.parametrize("dossier", ["../Electronic Arts/x", "Electronic Arts/Harry*", "C:/x", ""])
     def test_un_dossier_douteux_ecarte_le_bloc(self, dossier):
         bloc = {"root": "HKLM", "key": "SOFTWARE\\Electronic Arts\\X",

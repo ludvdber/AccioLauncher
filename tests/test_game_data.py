@@ -653,32 +653,6 @@ class TestSurchargesDeDll:
         assert self._avec(mauvais).dll_overrides == ()
 
 
-class TestLeCatalogueEmbarqueDeclareLesSurcharges:
-    """Le relevé du 2026-09-24 (docs/LINUX.md § 3) : ce que chaque archive
-    LIVRE et que Wine 9.0 fournit aussi. Rien de deviné, rien d'oublié —
-    un `d3d9` manquant ici et Wine remplace le wrapper du jeu en silence."""
-
-    ATTENDU = {
-        # winmm : la DLL du correctif (FillScreen, SkipSetup, manette, lanceur de HP2 sous Wine),
-        # que Wine remplacerait par la sienne. Relevé le 2026-10-15, catalogue 0.43.
-        "hp1": ("winmm",), "hp2": ("winmm",),
-        # dgVoodoo (d3d8, d3d9, ddraw) plante sous Proton : `UD3DRenderDevice::SetRes`,
-        # General protection fault ; DXVK seul rend le jeu (HP3, 2026-10-01).
-        "hp3": ("msvcr70",),
-        "hp4": ("d3d9", "msvcr71"),
-        # xinput1_3 : la DLL manette du correctif, `builtin` sans surcharge (HP6, 2026-10-01).
-        "hp5": ("d3d9", "xinput1_3"), "hp6": ("d3d9", "xinput1_3"),
-        "hp7a": ("d3d9", "xinput1_3"), "hp7b": ("d3d9", "xinput1_3"),
-    }
-
-    def test_releve(self):
-        from src.core.game_data import load_catalog
-        from pathlib import Path
-        from src.core.config import GAMES_JSON_PATH
-        cat = load_catalog(Path(GAMES_JSON_PATH))
-        assert {g.id: g.dll_overrides for g in cat.games} == self.ATTENDU
-
-
 class TestPlafondImagesParSeconde:
     """`max_fps` : HP3 ne doit JAMAIS dépasser 60 images/s. Sous Windows, dgVoodoo
     le tient ; sous Linux, dgVoodoo n'est plus surchargé (il plante sous Proton),
@@ -686,13 +660,6 @@ class TestPlafondImagesParSeconde:
 
     def _avec(self, valeur):
         return GameData.from_dict({**MINIMAL_GAME, "max_fps": valeur})
-
-    def test_hp3_embarque_plafonne_a_60(self):
-        from src.core.game_data import load_catalog
-        from pathlib import Path
-        from src.core.config import GAMES_JSON_PATH
-        cat = load_catalog(Path(GAMES_JSON_PATH))
-        assert {g.id: g.max_fps for g in cat.games if g.max_fps} == {"hp3": 60}
 
     def test_valeur_lue(self):
         assert self._avec(60).max_fps == 60

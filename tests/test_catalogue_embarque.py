@@ -16,10 +16,13 @@ supprimer le test pour faire passer la publication.
 
 import json
 import re
+from fnmatch import fnmatch
 
 import pytest
 
+from src.core.catalogue_blocs import _parse_difficulte, _parse_language_files
 from src.core.config import GAMES_JSON_PATH
+from src.core.game_data import GameData, load_catalog
 
 
 @pytest.fixture(scope="module")
@@ -236,3 +239,111 @@ def test_le_titre_espagnol_de_hp7_suit_la_graphie_d_ea():
             vus += 1
             assert trouve == "Reliquias de la Muerte", (fichier, trouve)
     assert vus >= 4   # le titre est bien là où on le cherche : sinon le test ne prouverait rien
+
+
+class TestSurchargesDeDll:
+    """Le relevé du 2026-09-24 (docs/LINUX.md § 3) : ce que chaque archive
+    LIVRE et que Wine 9.0 fournit aussi. Rien de deviné, rien d'oublié —
+    un `d3d9` manquant ici et Wine remplace le wrapper du jeu en silence."""
+
+    ATTENDU = {
+        # winmm : la DLL du correctif (FillScreen, SkipSetup, manette, lanceur de HP2 sous Wine),
+        # que Wine remplacerait par la sienne. Relevé le 2026-10-15, catalogue 0.43.
+        "hp1": ("winmm",), "hp2": ("winmm",),
+        # dgVoodoo (d3d8, d3d9, ddraw) plante sous Proton : `UD3DRenderDevice::SetRes`,
+        # General protection fault ; DXVK seul rend le jeu (HP3, 2026-10-01).
+        "hp3": ("msvcr70",),
+        "hp4": ("d3d9", "msvcr71"),
+        # xinput1_3 : la DLL manette du correctif, `builtin` sans surcharge (HP6, 2026-10-01).
+        "hp5": ("d3d9", "xinput1_3"), "hp6": ("d3d9", "xinput1_3"),
+        "hp7a": ("d3d9", "xinput1_3"), "hp7b": ("d3d9", "xinput1_3"),
+    }
+
+    def test_releve(self):
+        cat = load_catalog(GAMES_JSON_PATH)
+        assert {g.id: g.dll_overrides for g in cat.games} == self.ATTENDU
+
+    def test_seul_hp3_porte_un_plafond_d_images_et_il_vaut_60(self):
+        """`max_fps` : sous Linux, dgVoodoo n'est plus surchargé, c'est DXVK qui tient les 60
+        (`DXVK_FRAME_RATE`) ; aucun autre jeu n'a de plafond déclaré."""
+        cat = load_catalog(GAMES_JSON_PATH)
+        assert {g.id: g.max_fps for g in cat.games if g.max_fps} == {"hp3": 60}
+
+
+def test_la_difficulte_native_de_hp2(catalogue):
+    """La difficulté propre à HP2 (Ludo, 2026-10-30) : trois crans dans `User.ini`."""
+    bloc = _parse_difficulte(_jeu(catalogue, "hp2").get("difficulty"))
+    assert bloc is not None and bloc.values == ("DifficultyEasy", "DifficultyMedium", "DifficultyHard")
+    assert bloc.file.endswith("\\Harry Potter II\\User.ini") and bloc.section == "Engine.PlayerPawn"
+
+
+class TestLanguesHp1Hp2:
+    """Les langues que la copie embarquée propose pour HP1 et HP2 (2026-11-03) :
+    espagnol de l'édition US 2003 de HP1 ; anglais (`usa`) et espagnol (`spa`) du
+    disque US de HP2. Chaque langue écrit le Documents ET le `default.ini` du jeu,
+    et ne s'affiche que si ses voix sont dans l'archive."""
+
+    @pytest.mark.parametrize(("ident", "attendu"), [
+        ("hp1", {"fr": "fre", "en": "int", "es": "spa"}),
+        ("hp2", {"fr": "fre", "en": "usa", "es": "spa"}),
+    ])
+    def test_trois_langues_dans_les_deux_fichiers(self, catalogue, ident, attendu):
+        bloc = _jeu(catalogue, ident)["language_files"]["languages"]
+        assert {code: {p["value"] for p in lg["ini"]} for code, lg in bloc.items()} == {
+            code: {v} for code, v in attendu.items()}
+        for lg in bloc.values():
+            fichiers = [p["file"] for p in lg["ini"]]
+            assert len(fichiers) == 2 and fichiers[0].startswith("%DOCUMENTS%")
+            assert fichiers[1].startswith("%INSTALL_DIR%") and lg["requires_file"].startswith(ident.upper() + "/Sounds/")
+
+
+class TestLanguesHp3:
+    """Les onze langues de HP3, réunies depuis quatre éditions européennes du CD
+    (2026-11-04), et le dossier de Documents figé (`AppUserDir`, voir
+    `test_langue_fichiers.TestHP3Langues`)."""
+
+    ATTENDU = {"fr": "Fre", "en": "int", "es": "Spa", "de": "Ger", "it": "Ita", "pt": "Por",
+               "pt-BR": "Bra", "nl": "Dut", "sv": "Swe", "da": "Dan", "no": "Nor"}
+
+    def test_invisible_pour_le_launcher_1_3_2(self, catalogue):
+        """La 1.3.2 lit `language_files` et écrit Default.ini sans lui rendre sa date :
+        HP3 recréait alors les réglages du joueur, dès l'entrée `fr` (son `AppUserDir`)
+        avec HP3 1.6. Les langues de HP3 vivent donc sous `language_files_v2`, que
+        seule la 1.3.3 lit (2026-11-05)."""
+        jeu = _jeu(catalogue, "hp3")
+        assert "language_files" not in jeu and "language_files_v2" in jeu
+        assert GameData.from_dict(jeu).language_files is not None
+
+    def test_onze_langues_et_leurs_voix(self, catalogue):
+        bloc = _jeu(catalogue, "hp3")["language_files_v2"]["languages"]
+        assert {code: lg["ini"][0]["value"] for code, lg in bloc.items()} == self.ATTENDU
+        for code, lg in bloc.items():
+            valeur = self.ATTENDU[code]
+            voix = "alldialog.uax" if valeur == "int" else f"alldialog.{valeur.lower()}_uax"
+            assert lg["requires_file"] == f"HP3/sounds/{voix}"
+
+    def test_chaque_langue_garde_le_meme_dossier_de_documents(self, catalogue):
+        jeu = _jeu(catalogue, "hp3")
+        dossier = "Harry Potter et le prisonnier d'Azkaban"
+        # Le dossier figé est celui où le launcher écrit la config et cherche les parties.
+        assert all(dossier in p["file"] for p in jeu["pre_launch"]["ini_patches"])
+        for lg in jeu["language_files_v2"]["languages"].values():
+            par_cle = {(p["file"], p["section"], p["key"]): p["value"] for p in lg["ini"]}
+            assert par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Core.System", "AppUserDir")] == dossier
+            assert par_cle[("%DOCUMENTS%\\" + dossier + "\\hppoa.ini", "Engine.Engine", "Language")] \
+                == par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Engine.Engine", "Language")]
+
+    def test_le_bloc_se_lit(self, catalogue):
+        lu = _parse_language_files(_jeu(catalogue, "hp3")["language_files_v2"])
+        assert lu is not None and lu.codes == tuple(self.ATTENDU)
+
+
+@pytest.mark.parametrize("ident", ["hp7a", "hp7b"])
+def test_chaque_langue_de_hp7_nomme_un_dossier_que_le_bloc_saves_reconnait(catalogue, ident):
+    """Un dossier que `saves` ne verrait pas recevrait une partie que la fiche, elle,
+    ne trouverait jamais (`test_langue_sauvegardes.py`)."""
+    game = GameData.from_dict(_jeu(catalogue, ident))
+    dossiers = [lg.saves_folder for lg in game.language_registry.languages]
+    assert len(dossiers) == 7 and len(set(dossiers)) == 7
+    for d in dossiers:
+        assert any(fnmatch(d, m) for m in game.sauvegardes.dossiers), d

@@ -242,40 +242,15 @@ class TestAuLancement:
         assert avertis == []
 
 
-class TestCatalogueEmbarque:
-    """Les langues que le catalogue embarqué propose pour HP1 et HP2 (2026-11-03) :
-    espagnol de l'édition US 2003 de HP1 ; anglais (`usa`) et espagnol (`spa`) du
-    disque US de HP2. Chaque langue écrit le Documents ET le `default.ini` du jeu,
-    et ne s'affiche que si ses voix sont dans l'archive."""
-
-    @staticmethod
-    def _bloc(jeu):
-        import json
-
-        from src.core.config import ASSETS_DIR
-        catalogue = json.loads((ASSETS_DIR.parent / "src" / "data" / "games.json").read_text(encoding="utf-8"))
-        return next(g for g in catalogue["games"] if g["id"] == jeu)["language_files"]["languages"]
-
-    @pytest.mark.parametrize(("jeu", "attendu"), [
-        ("hp1", {"fr": "fre", "en": "int", "es": "spa"}),
-        ("hp2", {"fr": "fre", "en": "usa", "es": "spa"}),
-    ])
-    def test_trois_langues_dans_les_deux_fichiers(self, jeu, attendu):
-        bloc = self._bloc(jeu)
-        assert {code: {p["value"] for p in lg["ini"]} for code, lg in bloc.items()} == {
-            code: {v} for code, v in attendu.items()}
-        for lg in bloc.values():
-            fichiers = [p["file"] for p in lg["ini"]]
-            assert len(fichiers) == 2 and fichiers[0].startswith("%DOCUMENTS%")
-            assert fichiers[1].startswith("%INSTALL_DIR%") and lg["requires_file"].startswith(jeu.upper() + "/Sounds/")
-
-
 class TestHP3Langues:
     """Les onze langues de HP3, réunies depuis quatre éditions européennes du CD
     (2026-11-04). Le dossier de Documents de HP3 porte le titre TRADUIT : Core.dll
     lit `[Core.System] AppUserDir` dans Default.ini, livré « loc: … gametitle_1 ».
     Sans le figer, passer en anglais ouvrait « Harry Potter and the Prisoner of
-    Azkaban » : ni la partie, ni les réglages (essai du 2026-11-04)."""
+    Azkaban » : ni la partie, ni les réglages (essai du 2026-11-04).
+
+    Le bloc RÉEL de la copie embarquée sert de donnée d'entrée (règle 78, exception des tests
+    de comportement) : ce qu'il contient est affirmé dans `test_catalogue_embarque.py`."""
 
     ATTENDU = {"fr": "Fre", "en": "int", "es": "Spa", "de": "Ger", "it": "Ita", "pt": "Por",
                "pt-BR": "Bra", "nl": "Dut", "sv": "Swe", "da": "Dan", "no": "Nor"}
@@ -288,15 +263,6 @@ class TestHP3Langues:
         catalogue = json.loads((ASSETS_DIR.parent / "src" / "data" / "games.json").read_text(encoding="utf-8"))
         return next(g for g in catalogue["games"] if g["id"] == "hp3")
 
-    def test_invisible_pour_le_launcher_1_3_2(self):
-        """La 1.3.2 lit `language_files` et écrit Default.ini sans lui rendre sa date :
-        HP3 recréait alors les réglages du joueur, dès l'entrée `fr` (son `AppUserDir`)
-        avec HP3 1.6. Les langues de HP3 vivent donc sous `language_files_v2`, que
-        seule la 1.3.3 lit (2026-11-05)."""
-        jeu = self._jeu()
-        assert "language_files" not in jeu and "language_files_v2" in jeu
-        assert GameData.from_dict(jeu).language_files is not None
-
     def test_v2_passe_avant_l_ancien_bloc(self):
         v2 = self._jeu()["language_files_v2"]
         ancien = {"languages": {"fr": v2["languages"]["fr"]}}
@@ -305,30 +271,6 @@ class TestHP3Langues:
             "executable": "HP3/system/hppoa.exe", "cover_image": "c.png",
             "language_files": ancien, "language_files_v2": v2})
         assert game.language_files is not None and game.language_files.codes == tuple(self.ATTENDU)
-
-    def test_onze_langues_et_leurs_voix(self):
-        bloc = self._jeu()["language_files_v2"]["languages"]
-        assert {code: lg["ini"][0]["value"] for code, lg in bloc.items()} == self.ATTENDU
-        for code, lg in bloc.items():
-            valeur = self.ATTENDU[code]
-            voix = "alldialog.uax" if valeur == "int" else f"alldialog.{valeur.lower()}_uax"
-            assert lg["requires_file"] == f"HP3/sounds/{voix}"
-
-    def test_chaque_langue_garde_le_meme_dossier_de_documents(self):
-        jeu = self._jeu()
-        dossier = "Harry Potter et le prisonnier d'Azkaban"
-        # Le dossier figé est celui où le launcher écrit la config et cherche les parties.
-        assert all(dossier in p["file"] for p in jeu["pre_launch"]["ini_patches"])
-        for lg in jeu["language_files_v2"]["languages"].values():
-            par_cle = {(p["file"], p["section"], p["key"]): p["value"] for p in lg["ini"]}
-            assert par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Core.System", "AppUserDir")] == dossier
-            assert par_cle[("%DOCUMENTS%\\" + dossier + "\\hppoa.ini", "Engine.Engine", "Language")] \
-                == par_cle[("%INSTALL_DIR%\\system\\Default.ini", "Engine.Engine", "Language")]
-
-    def test_le_bloc_se_lit(self):
-        from src.core.catalogue_blocs import _parse_language_files
-        lu = _parse_language_files(self._jeu()["language_files_v2"])
-        assert lu is not None and lu.codes == tuple(self.ATTENDU)
 
     def test_appliquer_fige_le_dossier(self, tmp_path, monkeypatch):
         """De bout en bout sur un faux HP3 : l'anglais posé, `loc:` remplacé."""

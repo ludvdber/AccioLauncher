@@ -1,6 +1,4 @@
 """La difficulté propre à HP2, réglée depuis le launcher (Ludo, 2026-10-30)."""
-import json
-from pathlib import Path
 from types import SimpleNamespace
 
 from src.core import difficulte_jeu
@@ -11,7 +9,6 @@ VALEURS = ["DifficultyEasy", "DifficultyMedium", "DifficultyHard"]
 # %INSTALL_DIR% est le dossier du jeu : <install_path>/HP2.
 BLOC = {"file": "%INSTALL_DIR%\\User.ini", "section": "Engine.PlayerPawn",
         "key": "Difficulty", "values": VALEURS}
-RACINE = Path(__file__).resolve().parent.parent
 
 
 def _jeu(bloc=BLOC):
@@ -72,14 +69,6 @@ def test_le_bloc_douteux_est_ignore_en_entier():
     assert _parse_difficulte({**BLOC, "section": ""}) is None
     assert _parse_difficulte({**BLOC, "values": "DifficultyEasy"}) is None
     assert _parse_difficulte(None) is None
-
-
-def test_le_catalogue_embarque_declare_la_difficulte_de_hp2():
-    embarque = json.loads((RACINE / "src" / "data" / "games.json").read_text(encoding="utf-8"))
-    hp2 = next(g for g in embarque["games"] if g["id"] == "hp2")
-    bloc = _parse_difficulte(hp2.get("difficulty"))
-    assert bloc is not None and bloc.values == tuple(VALEURS)
-    assert bloc.file.endswith("\\Harry Potter II\\User.ini") and bloc.section == "Engine.PlayerPawn"
 
 
 def test_la_liste_de_la_fiche_ecrit_le_cran_choisi(qtbot, tmp_path):
