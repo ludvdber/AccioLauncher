@@ -225,7 +225,7 @@ Tests et lint :
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest        # plus de 3 600 tests, sans écran (offscreen)
+python -m pytest        # plus de 5 000 tests, sans écran (offscreen)
 python -m ruff check .
 ```
 

@@ -1,5 +1,8 @@
 # Mission : le portable Bazzite, quatrième passage
 
+> **Faite le 2026-10-20** (terminée à 18 h 05) : rapport dans [`RETOUR_BAZZITE_PASSAGES_1_A_6.md`](RETOUR_BAZZITE_PASSAGES_1_A_6.md),
+> « Quatrième passage ». Ce fichier reste pour l'historique ; un nouveau passage part de [`RETOUR_BAZZITE.md`](RETOUR_BAZZITE.md).
+
 Pour : Claude Code sur le portable Linux de Ludo (Bazzite, KDE Wayland, i3-1220P, Intel UHD).
 Rédigé le 2026-10-20 par la session Windows. **Ce fichier se suffit à lui-même** : il remplace le
 « Troisième passage » de `MISSION_BAZZITE.md`, qui n'a jamais été fait et qui est repris ici (bloc 1).
