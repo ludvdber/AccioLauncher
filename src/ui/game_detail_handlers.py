@@ -35,6 +35,7 @@ from src.ui.fichiers_manquants import (
     constat_complet, ouvrir_dossier_du_jeu as _ouvrir_dossier_du_jeu, signaler_fichiers_manquants)
 from src.ui.game_settings_dialog import GameSettingsDialog
 from src.ui.reglages_rubriques import ActionFichier
+from src.ui import filtres_globaux
 from src.ui.versions_dialog import VersionsDialog
 
 if TYPE_CHECKING:
@@ -568,7 +569,8 @@ def on_versions_clicked(view: GameDetailView, depuis_reglages: bool = False) -> 
     retour = None
     if depuis_reglages and view.receivers(view.page_demandee):
         retour = (tr("Réglages du jeu"), lambda: on_game_settings(view))
-    dlg = VersionsDialog(view.game, view.manager, view, retour=retour)
+    game = view.game
+    dlg = filtres_globaux.batie(lambda: VersionsDialog(game, view.manager, view, retour=retour))
     # Une PAGE à la place de la fiche (2026-10-14), comme les réglages du jeu.
     if view.receivers(view.page_demandee):
         view.page_demandee.emit(dlg)
@@ -885,12 +887,12 @@ def on_game_settings(view: GameDetailView, onglet: str = "") -> None:
     game = view.game
     if game is None:
         return
-    dlg = GameSettingsDialog(
+    dlg = filtres_globaux.batie(lambda: GameSettingsDialog(
         game, view.manager,
         appliquer_langue=lambda code: _appliquer_langue(view, code),
         actions=_actions_fichiers(view, game),
         parent=view,
-        appliquer_manette=lambda oui: _appliquer_manette(view, game, oui), onglet=onglet)
+        appliquer_manette=lambda oui: _appliquer_manette(view, game, oui), onglet=onglet))
     # Une PAGE à la place de la fiche depuis le 2026-10-09 (`pages.py`) ; sans
     # fenêtre pour l'accueillir (fiche seule, dans un test), une fenêtre.
     if view.receivers(view.page_demandee):

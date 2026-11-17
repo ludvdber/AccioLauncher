@@ -14,7 +14,6 @@ des versions (même style, même retour « Bibliothèque »).
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QImageReader
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -43,7 +42,7 @@ from src.ui.composants import (
 )
 from src.ui.reglages_widgets import _STYLE as _STYLE_RAIL
 from src.ui.theme import RAYON_CARTE, RAYON_CONTROLE, current as current_theme, themed
-from src.ui.utils import open_url, zone_defilable
+from src.ui.utils import open_url, taille_image, zone_defilable
 
 _LARGEUR_LECTURE = 1000
 
@@ -73,7 +72,7 @@ QFrame#etape {{
 
 def _taille(chemin: Path) -> tuple[int, int]:
     """Lue dans l'en-tête du fichier, sans décoder l'image."""
-    taille = QImageReader(str(chemin)).size()
+    taille = taille_image(str(chemin))
     return (taille.width(), taille.height()) if taille.isValid() else (0, 0)
 
 

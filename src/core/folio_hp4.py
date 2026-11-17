@@ -24,6 +24,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from src.core import octets_gardes
 from src.core import folio, images_ea, sauvegardes
 from src.core.images_ea import entree_big as _entree_big
 from src.core.images_ea import images_nommees
@@ -459,8 +460,12 @@ def image_7b(flux: bytes, q: int) -> tuple[int, int, bytes] | None:
             if len(indices) < largeur * hauteur or len(palette) < 4 * nombre or \
                     max(indices) >= nombre:
                 return None
-            pixels = b"".join(palette[4 * i:4 * i + 4] for i in indices)
-            return largeur, hauteur, pixels
+            # Une table par canal (`bytes.translate`, en C) : la jointure pixel par pixel prenait
+            # 14 ms par carte de 512 × 256.
+            pixels = bytearray(4 * len(indices))
+            for canal in range(4):
+                pixels[canal::4] = indices.translate(palette[canal::4].ljust(256, b"\0"))
+            return largeur, hauteur, bytes(pixels)
         saut = int.from_bytes(flux[r + 1:r + 4], "little")
     return None
 
@@ -612,23 +617,25 @@ def _texte_table(table: tuple[str, ...], indice: int) -> str:
     return "" if texte == "Do not translate" else texte.replace("\xa0", " ")
 
 
-def image_carte(system: Path, jeu: JeuCartes, rang: int) -> tuple[int, int, bytes] | None:
+def image_carte(system: Path, jeu: JeuCartes, rang: int, cote: int = 512) -> tuple[int, int, bytes] | None:
     """L'illustration de la carte de rang `rang` (0 en premier) d'un jeu, telle
     que la boutique du jeu installé la montre : 512 × 256 pour un personnage,
     256 × 256 sinon (B V R A). None sans illustration ou sans le jeu.
 
-    Environ 0,08 s à décoder : à appeler hors du fil de l'interface."""
+    `cote` : le plus grand côté utile. Une vignette de 60 px décodait la carte entière
+    (512 px) pour la réduire, et la mémoire n'en gardait que 8 pour une centaine de cartes :
+    chaque retour au folio redécodait tout. À appeler hors du fil de l'interface."""
     if not 0 <= rang < jeu.images:
         return None
-    return _image_carte(str(system), jeu.flux, f"{jeu.image}_{rang + 1:02d}")
+    return _image_carte(str(system), jeu.flux, f"{jeu.image}_{rang + 1:02d}", cote)
 
 
-@lru_cache(maxsize=8)
-def _image_carte(system_txt: str, flux: str, nom_image: str) -> tuple[int, int, bytes] | None:
+@lru_cache(maxsize=256)
+def _image_carte(system_txt: str, flux: str, nom_image: str, cote: int) -> tuple[int, int, bytes] | None:
     try:
         donnees, positions = _flux_cartes(system_txt, flux)
         q = positions.get(nom_image)
-        return images_ea.image(donnees, q, cote_max=512) if q is not None else None
+        return images_ea.image(donnees, q, cote_max=cote) if q is not None else None
     except (OSError, struct.error):
         log.warning("Folio HP4 : carte %s illisible", nom_image, exc_info=True)
         return None
@@ -657,7 +664,7 @@ def releve(chemin: Path) -> list[Partie]:
     try:
         if chemin.stat().st_size > 4 * _TAILLE:
             return []
-        return lire(chemin.read_bytes())
+        return lire(octets_gardes.lire(chemin))
     except OSError:
         log.warning("Folio HP4 : %s illisible", chemin, exc_info=True)
         return []

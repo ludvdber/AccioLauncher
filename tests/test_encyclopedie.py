@@ -80,6 +80,9 @@ class _Media:
     def __init__(self, dossier=None, avance=100):
         self._dossier = dossier
         self._avance = avance
+        if dossier is not None:
+            from src.ui.vignettes_fiches import Vignettes
+            self.vignettes = Vignettes(self.dossier_exe, lambda: dossier / "cache")
 
     def dossier_exe(self, jeu):
         return self._dossier
@@ -102,7 +105,7 @@ class TestVue:
         qtbot.addWidget(vue)
         vue.montrer("hp5")
         assert len(vue.fiches) == len(encyclopedie.fiches(encyclopedie.PERSONNAGES, "hp5"))
-        assert vue._attendues == [] and not any(f.a_une_image for f in vue.fiches)
+        assert not vue.en_attente() and not any(f.a_une_vignette for f in vue.fiches)
         vue.fermer()
 
     def test_un_jeu_sans_fiche_le_dit(self, qtbot):
@@ -204,44 +207,50 @@ class TestModeles:
             assert harry.modele.tete == "heads/head_models/head_harry.str.shd"
             assert all(f.modele is None for f in encyclopedie.fiches(encyclopedie.BESTIAIRE, jeu))
 
-    def test_hp6_vignettes_en_petit_et_la_fiche_choisie_en_grand(self, qtbot, tmp_path, monkeypatch):
-        """Passer à HP6 décodait 21 modèles en pleine taille (Ludo, 2026-10-31 :
-        « ultra lent ») : 128 pixels pour la liste, 512 pour la fiche montrée,
-        sans ramener la caméra de face."""
+    def test_hp6_vignettes_en_petit_et_la_seule_fiche_montree_en_grand(self, qtbot, tmp_path, monkeypatch):
+        """Passer à HP6 décodait 21 modèles en pleine taille (Ludo, 2026-10-31 : « ultra lent »),
+        puis les 21 en petit à CHAQUE ouverture (2026-11-16 : 2,7 s) : les vignettes se font une
+        fois, en 128 pixels, et seul le modèle de la fiche montrée se lit, en grand."""
         from src.core import maillages_ue1
         from src.ui.encyclopedie_page import VueEncyclopedie
         triangle = maillages_ue1.Maillage(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
                                           (maillages_ue1.Face((0, 1, 2), ((0, 0), (1, 0), (0, 1)), 0),),
                                           (maillages_ue1.Materiau("", 0),))
-        import threading
         lus: list[tuple[str, int]] = []
-        ron_en_grand = threading.Event()
 
         def lire(dossier, fiche, cote=512):
             lus.append((fiche.cle, cote))
-            if (fiche.cle, cote) == ("ron", 512):
-                ron_en_grand.wait(5)
             return triangle, {}, None
         monkeypatch.setattr(maillages_ue1, "de_la_fiche", lire)
-        vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
+        media = _Media(tmp_path)
+        vue = VueEncyclopedie(media, encyclopedie.PERSONNAGES)
         qtbot.addWidget(vue)
         vue.montrer("hp6")
-        qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=10000)
-        assert {c for cle, c in lus if cle != "harry"} == {128}, "chaque vignette en petit"
-        assert lus.count(("harry", 512)) == 1, "la première fiche montrée, en grand"
+        qtbot.waitUntil(lambda: not vue.en_attente(), timeout=10000)
+        cles = sorted(f.cle for f in encyclopedie.fiches(encyclopedie.PERSONNAGES, "hp6"))
+        assert sorted(cle for cle, cote in lus if cote == 128) == cles, "chaque vignette en petit, une fois"
+        assert [cle for cle, cote in lus if cote == 512] == ["harry"], "en grand : la fiche montrée, elle seule"
+        assert all(f.a_une_vignette for f in vue.fiches)
+        assert vue.scene.modele.modele is triangle and vue.fiches[0].property("choisie") is True
         ron = next(f for f in vue.fiches if f.fiche.cle == "ron")
         vue.choisir(ron)
-        vue.scene.modele.tourner(90, 0)                  # on tourne avant que la pleine taille arrive
-        lacet = vue.scene.modele.lacet
-        ron_en_grand.set()
-        qtbot.waitUntil(lambda: vue._grand is not None and vue._grand[0] == "ron", timeout=5000)
-        assert vue.scene.modele.lacet == lacet, "la pleine taille garde la caméra"
+        qtbot.waitUntil(lambda: not vue.en_attente(), timeout=5000)
         vue.choisir(ron)
-        assert lus.count(("ron", 512)) == 1, "déjà en grand : rien n'est relu"
+        assert lus.count(("ron", 512)) == 1, "déjà montrée : rien n'est relu"
         harry = next(f for f in vue.fiches if f.fiche.cle == "harry")
         vue.choisir(harry)
-        qtbot.waitUntil(lambda: vue._grand is not None and vue._grand[0] == "harry", timeout=5000)
-        assert lus.count(("harry", 512)) == 2, "une seule fiche gardée en grand : Harry est relu"
+        qtbot.waitUntil(lambda: not vue.en_attente(), timeout=5000)
+        assert lus.count(("harry", 512)) == 2, "un seul modèle gardé : Harry est relu"
+        vue.fermer()
+        # Rouvrir la page : les vignettes sont en mémoire, aucune n'est refaite.
+        lus.clear()
+        autre = VueEncyclopedie(media, encyclopedie.PERSONNAGES)
+        qtbot.addWidget(autre)
+        autre.montrer("hp6")
+        assert all(f.a_une_vignette for f in autre.fiches), "posées à l'ouverture, sans attendre"
+        qtbot.waitUntil(lambda: not autre.en_attente(), timeout=5000)
+        assert lus == [("harry", 512)]
+        autre.fermer()
 
     def test_la_fiche_choisie_montre_son_modele(self, qtbot, tmp_path, monkeypatch):
         from src.core import maillages_ue1
@@ -254,7 +263,7 @@ class TestModeles:
         vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
         qtbot.addWidget(vue)
         vue.montrer("hp1")
-        qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=5000)
+        qtbot.waitUntil(lambda: not vue.en_attente(), timeout=5000)
         assert vue.scene is not None and vue.scene.modele.modele is triangle
         assert vue.fiches[0].property("choisie") is True
         # Une fiche sans image a reçu la vignette de son modèle.
@@ -288,7 +297,7 @@ class TestModeles:
         vue = VueEncyclopedie(_Media(tmp_path), encyclopedie.PERSONNAGES)
         qtbot.addWidget(vue)
         vue.montrer("hp1")
-        qtbot.waitUntil(lambda: not vue._chargeur.isActive(), timeout=5000)
+        qtbot.waitUntil(lambda: not vue.en_attente(), timeout=5000)
         return vue
 
     def test_choisir_un_mouvement_le_lance(self, qtbot, tmp_path, monkeypatch):

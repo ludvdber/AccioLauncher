@@ -38,6 +38,14 @@
         {
           "genre": "ameliore",
           "texte": {
+            "fr": "Les Personnages et le Bestiaire s'ouvrent jusqu'à quinze fois plus vite, et les réglages d'un jeu et le Carnet deux fois plus vite.",
+            "en": "Characters and the Bestiary open up to fifteen times faster, and a game's settings and the Notebook twice as fast.",
+            "es": "Los Personajes y el Bestiario se abren hasta quince veces más rápido, y los ajustes de un juego y el Cuaderno el doble de rápido."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
             "fr": "Les préréglages d'image ont leur propre page : avant de cliquer, on voit chaque réglage qu'ils vont changer, et dans quelle catégorie.",
             "en": "Graphics presets have their own page: before clicking, you see every setting they will change, and in which category.",
             "es": "Los preajustes de imagen tienen su propia página: antes de hacer clic, se ve cada ajuste que van a cambiar y en qué categoría."

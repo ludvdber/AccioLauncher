@@ -12,9 +12,12 @@ d'être des fenêtres (`Qt.WindowType.Widget`). La barre de téléchargement,
 elle, reste sous la pile : un téléchargement se suit depuis n'importe où.
 """
 
+from collections.abc import Callable
+
 from PyQt6.QtCore import QEvent, QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QStackedWidget, QVBoxLayout, QWidget
 
+from src.ui import filtres_globaux
 from src.ui.title_bar import BIBLIOTHEQUE
 
 
@@ -58,14 +61,24 @@ class Pages(QStackedWidget):
         courante = self.currentWidget()
         return courante if isinstance(courante, QDialog) else None
 
+    def batir[P: QDialog](self, fabrique: Callable[[], P], cle: str = "") -> P:
+        """Bâtit la page sans les filtres globaux (`filtres_globaux` : un quart du temps de toute
+        construction), puis l'ouvre. Ses signaux se branchent ensuite : aucun ne part avant un geste."""
+        page = filtres_globaux.batie(fabrique)
+        self.ouvrir(page, cle)
+        return page
+
     def ouvrir(self, dlg: QDialog, cle: str = "") -> None:
         """Pose `dlg` à la place de la bibliothèque. `cle` : l'onglet à souligner,
         sinon celui que la page déclare (propriété Qt « onglet » : le Carnet ouvert
         depuis la fiche souligne son onglet)."""
         cle = cle or str(dlg.property("onglet") or "")
         self.fermer()
-        dlg.setParent(self)
-        dlg.setWindowFlags(Qt.WindowType.Widget)
+        # Parent et drapeaux d'UN geste : `setWindowFlags` rattachait la page une seconde fois,
+        # et chaque rattachement repasse la feuille de style sur tous ses widgets.
+        # Filtres globaux retirés (`filtres_globaux`) : un événement de style par widget de la page.
+        with filtres_globaux.suspendus():
+            dlg.setParent(self, Qt.WindowType.Widget)
         # Ses minimums de FENÊTRE n'ont plus cours : la page défile, et la
         # fenêtre du launcher a les siens.
         dlg.setMinimumSize(0, 0)

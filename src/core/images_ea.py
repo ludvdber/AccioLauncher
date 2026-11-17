@@ -1,9 +1,9 @@
 """Les images des jeux EA (HP4 à HP6) : archives « BIGF », blocs « SHPI », DXT.
 
 Qt ne lit pas le DXT (vérifié : rien de tel dans `QImageReader.supportedImageFormats`),
-d'où ce petit décodeur, en Python pur. Il sert aux images du folio (512 px
-chez HP4), aux textures des modèles 3D (512 px) et aux textures UE2 (jusqu'à
-2048 px) : c'est le gros du chargement d'un modèle.
+d'où ce décodeur, sans dépendance. Il sert aux images du folio (512 px chez
+HP4), aux textures des modèles 3D (512 px) et aux textures UE2 (jusqu'à
+2048 px) ; il décode tous les blocs d'une image à la fois (plus bas).
 
 Un bloc SHPI (relevé le 2026-10-17 sur HP5 et HP6, notes « Format des images ») :
 
@@ -141,85 +141,139 @@ def image(flux: bytes, q: int, cote_max: int = 128) -> tuple[int, int, bytes] | 
     return largeur, hauteur, pixels
 
 
-# 5 et 6 bits → 8 bits, une fois pour toutes. Décodeur revu le 2026-10-31 : les
-# textures des personnages de HP5-HP6 (512 × 512) passaient 85 % de leur
-# chargement ici ; mêmes octets, 1,8 fois plus vite.
+# ── Le décodage DXT, tous les blocs à la fois ──
+#
+# Un bloc = deux couleurs 5-6-5, deux teintes déduites, 16 indices de 2 bits (et, en DXT5, deux
+# alphas, six déduits, 16 indices de 3 bits). Décodé bloc par bloc en Python, c'était le gros de
+# l'ouverture des Personnages : 2,4 s des 3,4 s de HP3, 1,2 s des 2,2 s de HP5 (2026-11-16, Ludo :
+# « plus d'une seconde d'attente c'est trop long »). Ici aucune boucle ne parcourt les blocs :
+# chaque champ de TOUS les blocs se prend d'une tranche à pas (`donnees[0::8]`), les tables de 256
+# octets passent par `bytes.translate`, et l'arithmétique (interpolations, comparaisons, choix de
+# la teinte) se fait sur des entiers longs dont chaque octet, ou chaque voie de 32 bits, est un
+# bloc. Tout cela tourne en C ; les octets rendus sont les mêmes qu'avant, à l'octet près
+# (`test_images_ea.TestDecodeurEnBloc`).
+
 _B5 = tuple((v << 3) | (v >> 2) for v in range(32))
-_B6 = tuple((v << 2) | (v >> 4) for v in range(64))
-# Les quatre teintes d'une paire de couleurs : les blocs voisins les répètent.
-_TEINTES: dict[int, list[bytes]] = {}
-# Plafonné et vidé quand il est plein : 65 536 entrées pesaient ~24 Mo gardés à vie.
-_TEINTES_MAX = 4096
+# Les deux octets d'une couleur 5-6-5 (bas, haut) vers ses canaux sur 8 bits. Le vert est à cheval
+# sur les deux : ses morceaux ne se recouvrent pas, un OU les réunit.
+_BLEU = bytes(_B5[o & 31] for o in range(256))
+_ROUGE = bytes(_B5[o >> 3] for o in range(256))
+_VERT_HAUT = bytes(((o & 7) << 5) | ((o & 7) >> 1) for o in range(256))
+_VERT_BAS = bytes((o >> 5) << 2 for o in range(256))
+# 255 là où le pixel p (2 bits) de l'octet d'indices vaut k ; là où l'indice d'alpha (3 bits) vaut j.
+_EGAL2 = tuple(tuple(bytes(255 if (o >> 2 * p) & 3 == k else 0 for o in range(256)) for k in range(4))
+               for p in range(4))
+_EGAL3 = tuple(bytes(255 if o & 7 == j else 0 for o in range(256)) for j in range(8))
+# x // 3, x // 7 et x // 5 par une multiplication et un décalage, exacts jusqu'à 3, 7 et 5 × 255.
+_TIERS, _SEPTIEME, _CINQUIEME = (683, 11), (9363, 16), (13108, 16)
+
+Teintes = tuple[int, int, int, int]      # les quatre teintes d'un canal, un octet par bloc
 
 
-def _couleurs(c0: int, c1: int, quatre: bool) -> list[bytes]:
-    """Les quatre teintes d'un bloc, en B V R A."""
-    cle = (c0 << 17) | (c1 << 1) | quatre
-    t = _TEINTES.get(cle)
-    if t is not None:
-        return t
-    b0, v0, r0 = _B5[c0 & 31], _B6[(c0 >> 5) & 63], _B5[c0 >> 11]
-    b1, v1, r1 = _B5[c1 & 31], _B6[(c1 >> 5) & 63], _B5[c1 >> 11]
-    if quatre:
-        t = [bytes((b0, v0, r0, 255)), bytes((b1, v1, r1, 255)),
-             bytes(((2 * b0 + b1) // 3, (2 * v0 + v1) // 3, (2 * r0 + r1) // 3, 255)),
-             bytes(((b0 + 2 * b1) // 3, (v0 + 2 * v1) // 3, (r0 + 2 * r1) // 3, 255))]
-    else:
-        t = [bytes((b0, v0, r0, 255)), bytes((b1, v1, r1, 255)),
-             bytes(((b0 + b1) // 2, (v0 + v1) // 2, (r0 + r1) // 2, 255)), bytes(4)]
-    if len(_TEINTES) >= _TEINTES_MAX:
-        _TEINTES.clear()
-    _TEINTES[cle] = t
-    return t
+def _voies(octets: bytes) -> int:
+    """Un octet par voie de 32 bits : la place des retenues d'une somme ou d'un produit."""
+    large = bytearray(4 * len(octets))
+    large[0::4] = octets
+    return int.from_bytes(large, "little")
 
 
-def _rangees(sortie: bytearray, ligne: int, pas: int, t: list[bytes], indices: int) -> None:
-    """Les quatre rangées de quatre pixels d'un bloc (2 bits par pixel)."""
-    for _ in range(4):
-        sortie[ligne:ligne + 16] = b"".join((t[indices & 3], t[(indices >> 2) & 3],
-                                             t[(indices >> 4) & 3], t[(indices >> 6) & 3]))
-        indices >>= 8
-        ligne += pas
+def _entier(voies: int, n: int) -> int:
+    """L'octet bas de chacune des n voies, en entier d'un octet par bloc."""
+    return int.from_bytes(voies.to_bytes(4 * n, "little")[0::4], "little")
+
+
+def _plus_grand(v0: int, v1: int, bit: int, n: int) -> int:
+    """255 pour chaque bloc où la valeur de v0 (moins de `bit` bits) dépasse celle de v1."""
+    un = int.from_bytes(b"\x01\0\0\0" * n, "little")
+    return _entier(((((v0 | (un << bit)) - v1 - un) >> bit) & un) * 255, n)
+
+
+def _vert(bas: bytes, haut: bytes) -> bytes:
+    vert = int.from_bytes(haut.translate(_VERT_HAUT), "little") | int.from_bytes(bas.translate(_VERT_BAS), "little")
+    return vert.to_bytes(len(bas), "little")
+
+
+def _teintes(couleurs: bytes, pas: int, n: int, dxt1: bool) -> tuple[list[Teintes], int]:
+    """Les teintes de chaque canal (B, V, R) et le masque des blocs à QUATRE teintes : tous en
+    DXT5 ; en DXT1, ceux où c0 > c1 (les autres ont une moyenne et un pixel transparent)."""
+    bas0, haut0, bas1, haut1 = (couleurs[k::pas] for k in range(4))
+    plein = (1 << (8 * n)) - 1
+    quatre = plein
+    if dxt1:
+        quatre = _plus_grand(_voies(bas0) | (_voies(haut0) << 8), _voies(bas1) | (_voies(haut1) << 8), 16, n)
+    canaux: list[Teintes] = []
+    for e0, e1 in ((bas0.translate(_BLEU), bas1.translate(_BLEU)), (_vert(bas0, haut0), _vert(bas1, haut1)),
+                   (haut0.translate(_ROUGE), haut1.translate(_ROUGE))):
+        v0, v1 = _voies(e0), _voies(e1)
+        t2 = _entier(((2 * v0 + v1) * _TIERS[0]) >> _TIERS[1], n)
+        t3 = _entier(((v0 + 2 * v1) * _TIERS[0]) >> _TIERS[1], n)
+        if quatre != plein:
+            t2 = (t2 & quatre) | (_entier((v0 + v1) >> 1, n) & (plein ^ quatre))
+            t3 &= quatre
+        canaux.append((int.from_bytes(e0, "little"), int.from_bytes(e1, "little"), t2, t3))
+    return canaux, quatre
+
+
+def _decoder(donnees: bytes, largeur: int, hauteur: int, dxt1: bool) -> bytes:
+    n = (largeur // 4) * (hauteur // 4)
+    pas = 8 if dxt1 else 16
+    if len(donnees) < n * pas:
+        raise ValueError("image DXT tronquée")
+    donnees = donnees[:n * pas]
+    couleurs = donnees if dxt1 else donnees[8:]
+    canaux, quatre = _teintes(couleurs, pas, n, dxt1)
+    plein = (1 << (8 * n)) - 1
+    # Une image par rangée de bloc (y = 0 à 3) : dans chacune, le pixel p du bloc b est à 16 b + 4 p,
+    # un pas fixe d'un bout à l'autre. Les quatre s'entrelacent ligne à ligne à la fin.
+    sous = [bytearray(16 * n) for _ in range(4)]
+    for y in range(4):
+        rangee = couleurs[4 + y::pas]
+        for p in range(4):
+            masques = [int.from_bytes(rangee.translate(table), "little") for table in _EGAL2[p]]
+            for c, teintes in enumerate(canaux):
+                valeur = ((teintes[0] & masques[0]) | (teintes[1] & masques[1])
+                          | (teintes[2] & masques[2]) | (teintes[3] & masques[3]))
+                sous[y][4 * p + c::16] = valeur.to_bytes(n, "little")
+            if dxt1:    # opaque, sauf la quatrième teinte d'un bloc à trois
+                sous[y][4 * p + 3::16] = (plein ^ (masques[3] & (plein ^ quatre))).to_bytes(n, "little")
+    if not dxt1:
+        _alphas(sous, donnees, n)
+    ligne = largeur * 4
+    return b"".join(sous[y][r:r + ligne] for r in range(0, 16 * n, ligne) for y in range(4))
+
+
+def _alphas(sous: list[bytearray], donnees: bytes, n: int) -> None:
+    """L'alpha d'une image DXT5 : huit valeurs par bloc (six interpolées si a0 > a1 ; sinon quatre,
+    puis 0 et 255), choisies par 16 indices de 3 bits rangés sur six octets."""
+    v0, v1 = _voies(donnees[0::16]), _voies(donnees[1::16])
+    plein = (1 << (8 * n)) - 1
+    huit = _plus_grand(v0, v1, 8, n)
+    six = plein ^ huit
+    valeurs = [int.from_bytes(donnees[0::16], "little"), int.from_bytes(donnees[1::16], "little")]
+    for i in range(1, 7):
+        alpha = _entier((((7 - i) * v0 + i * v1) * _SEPTIEME[0]) >> _SEPTIEME[1], n) & huit
+        if i < 5:
+            alpha |= _entier((((5 - i) * v0 + i * v1) * _CINQUIEME[0]) >> _CINQUIEME[1], n) & six
+        elif i == 6:
+            alpha |= six
+        valeurs.append(alpha)
+    bits = bytearray(8 * n)
+    for o in range(6):
+        bits[o::8] = donnees[2 + o::16]
+    indices = int.from_bytes(bits, "little")
+    for pixel in range(16):
+        choisis = (indices >> (3 * pixel)).to_bytes(8 * n, "little")[0::8]
+        alpha = 0
+        for valeur, table in zip(valeurs, _EGAL3, strict=True):
+            alpha |= valeur & int.from_bytes(choisis.translate(table), "little")
+        sous[pixel >> 2][4 * (pixel & 3) + 3::16] = alpha.to_bytes(n, "little")
 
 
 def dxt1(donnees: bytes, largeur: int, hauteur: int) -> bytes:
     """Pixels B V R A d'une image DXT1 (largeur et hauteur multiples de 4)."""
-    sortie = bytearray(largeur * hauteur * 4)
-    pas = largeur * 4
-    blocs = struct.iter_unpack("<HHI", donnees[:largeur * hauteur // 2])
-    for by in range(0, hauteur, 4):
-        base = by * pas
-        for bx in range(0, pas, 16):
-            c0, c1, indices = next(blocs)
-            _rangees(sortie, base + bx, pas, _couleurs(c0, c1, c0 > c1), indices)
-    return bytes(sortie)
-
-
-def _alphas(a0: int, a1: int) -> list[int]:
-    if a0 > a1:
-        return [a0, a1] + [((7 - i) * a0 + i * a1) // 7 for i in range(1, 7)]
-    return [a0, a1] + [((5 - i) * a0 + i * a1) // 5 for i in range(1, 5)] + [0, 255]
+    return _decoder(donnees, largeur, hauteur, dxt1=True)
 
 
 def dxt5(donnees: bytes, largeur: int, hauteur: int) -> bytes:
     """Pixels B V R A d'une image DXT5 (largeur et hauteur multiples de 4)."""
-    sortie = bytearray(largeur * hauteur * 4)
-    pas = largeur * 4
-    k = 0
-    for by in range(0, hauteur, 4):
-        base = by * pas
-        for bx in range(0, pas, 16):
-            a0, a1 = donnees[k], donnees[k + 1]
-            ia = int.from_bytes(donnees[k + 2:k + 8], "little")
-            c0, c1, indices = struct.unpack_from("<HHI", donnees, k + 8)
-            k += 16
-            # Les couleurs d'abord, opaques ; l'alpha ensuite, seulement si le
-            # bloc n'est pas tout opaque (le cas courant).
-            debut = base + bx
-            _rangees(sortie, debut, pas, _couleurs(c0, c1, True), indices)
-            if a0 == 255 and ia == 0:
-                continue
-            alphas = _alphas(a0, a1)
-            for n in range(16):
-                sortie[debut + (n >> 2) * pas + 4 * (n & 3) + 3] = alphas[(ia >> (3 * n)) & 7]
-    return bytes(sortie)
+    return _decoder(donnees, largeur, hauteur, dxt1=False)

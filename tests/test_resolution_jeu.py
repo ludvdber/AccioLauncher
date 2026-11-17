@@ -357,3 +357,29 @@ class TestCorrectifHp4AHp6:
         game, config, ini = hp6
         ini.write_bytes(D3D9_INI.replace("WindowStyle=1", f"WindowStyle={style}").encode("utf-8"))
         assert rj.sans_bordure(game, config) is ecran
+
+
+def test_les_modes_de_l_ecran_se_demandent_une_fois(monkeypatch):
+    """2026-11-16 : l'énumération prend 42 ms, à chaque ouverture des réglages de HP4 à HP6.
+    Une fois par session ; un écran branché ou retiré (`oublier_les_modes`) la fait refaire."""
+    import ctypes
+    import sys
+    if sys.platform != "win32":
+        pytest.skip("l'énumération des modes est celle de Windows")
+    appels = []
+    vraie = ctypes.windll.user32.EnumDisplaySettingsW
+
+    class _User32:
+        @staticmethod
+        def EnumDisplaySettingsW(nom, rang, mode):  # noqa: N802 (Windows)
+            appels.append(rang)
+            return vraie(nom, rang, mode)
+    monkeypatch.setattr(ctypes.windll, "user32", _User32)
+    rj.oublier_les_modes()
+    premiers = rj.modes_ecran()
+    demandes = len(appels)
+    assert demandes > 0
+    assert rj.modes_ecran() is premiers and len(appels) == demandes
+    rj.oublier_les_modes()
+    assert rj.modes_ecran() == premiers and len(appels) == 2 * demandes
+    rj.oublier_les_modes()

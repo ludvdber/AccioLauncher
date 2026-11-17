@@ -4,20 +4,19 @@ Les tests automatiques ne lancent aucun vrai jeu. Cet essai, si : il joue chaque
 
 ## Ce qu'il faut
 
-- **Le « oui » de Ludo pour la session.** L'essai prend la souris et le clavier : le PC doit être libre pendant environ 15 minutes pour les six jeux. Le pilote refuse de partir sans `ACCIO_OUI=1`.
-- **HP7 et HP8 seulement si Ludo les demande** (HP8 s'est figé sur tous les cœurs le 2026-09-25). Le pilote les sait depuis le 2026-10-09 (`hp7a`, `hp7b` : démarrage, image qui bouge, processeur sous 50 %, Alt+Tab, fermeture) ; ce jour-là, à sa demande, 10/10 chacun, aucun figeage.
+- **Le feu vert de Ludo, donné pour cet essai.** L'essai prend la souris et le clavier : le PC doit être libre pendant environ 15 minutes pour les six jeux. Le pilote refuse de partir sans `ACCIO_OUI=1` et sans le feu vert non échu de la file d'essais (Ludo, 2026-11-16 : « les essais doivent partir uniquement si je dis oui spécifiquement »).
+- **HP7 et HP8 seulement si Ludo les demande**, par la file d'essais et au feu vert comme les autres, en dernier (HP8 s'est figé sur tous les cœurs le 2026-09-25). Le pilote les sait depuis le 2026-10-09 (`hp7a`, `hp7b` : démarrage, image qui bouge, processeur sous 50 %, Alt+Tab, fermeture) ; ce jour-là, à sa demande, 10/10 chacun, aucun figeage.
 - **Une étiquette par jeu** (`v1.2.0-hp2`…) : les preuves d'une même étiquette s'écrasent d'un jeu à l'autre.
 - Le son du jeu est coupé tout seul (`son.py`). Après un plantage du pilote : `python son.py retablir`, jeu relancé.
 - **Lancer le pilote tel quel, jamais sous le `timeout` de Git Bash** (2026-10-14) : le processus mourait (code 127) dès que le launcher passait dans la zone de notification, le jeu restait ouvert et la remise en état n'avait pas lieu, sur les six jeux. Depuis PowerShell, sans enveloppe, tout passe. Le filet de 12 minutes est déjà dans le pilote.
 
 ## Les six lancements
 
-Le pilote vit dans l'atelier, hors dépôt : `C:\Users\User\Tools\accio_fix_atelier\essai_avant_release.py`. Un lancement par jeu :
+Le pilote vit dans l'atelier, hors dépôt : `C:\Users\User\Tools\accio_fix_atelier\essai_avant_release.py`. L'essai part d'une demande déposée dans `file_essais\a_faire\` de l'atelier (modèle : `file_essais\faits\29_principal_avant_release_135\demande.sh` ; mode d'emploi : `file_essais\LISEZMOI.md`), qui ne s'exécute qu'au feu vert de Ludo. Elle appelle, un lancement par jeu, avec `ACCIO_OUI=1` :
 
 ```text
-set ACCIO_OUI=1
-python essai_avant_release.py hp1 v1.2.0
-python essai_avant_release.py hp2 v1.2.0
+py -3.15 essai_avant_release.py hp1 v1.3.5-hp1
+py -3.15 essai_avant_release.py hp2 v1.3.5-hp2
 ... jusqu'à hp6
 ```
 
@@ -40,4 +39,4 @@ Le point « n'attendent plus 10 s » mesure ACT-049 : HP3 à HP6 doivent rendre 
 
 **Points déjà connus, non bloquants** (phase 6 de l'audit, revus le 2026-10-09) : HP3 n'a plus de fenêtre après l'Alt+Tab du pilote (il est minimisé, et le pilote n'a pas le premier plan pour le remettre ; un second Alt+Tab de joueur le rend). Depuis le correctif 2.4.0 (archive HP3 1.7), il se ferme sur `WM_CLOSE` (1,3 s, vu le 2026-11-05) ; une DLL plus ancienne l'ignore encore (tué après 25 s).
 
-**F12 échoue parfois, au hasard** (relevé sur tous les essais du 22 au 25 octobre : HP6 le 22, HP3 le 24 puis réussi au second passage, HP1 le 25 à 00 h 16 puis 9/9 à 00 h 19, sans changement de code). Cause non établie ; les captures de Ludo prouvent que F12 marche en jeu. Un ÉCHEC F12 seul se rejoue une fois avant de bloquer la release.
+**F12 échoue parfois, au hasard** (relevé sur tous les essais du 22 au 25 octobre : HP6 le 22, HP3 le 24 puis réussi au second passage, HP1 le 25 à 00 h 16 puis 9/9 à 00 h 19, sans changement de code). Cause : Windows refuse parfois le premier plan au jeu ; depuis le 2026-11-08, le pilote le vérifie à part (point « F12 : jeu au premier plan pour le recevoir », seul échec de HP5 le 2026-11-16, 7/8) ; les captures de Ludo prouvent que F12 marche en jeu. Un ÉCHEC F12 seul se rejoue une fois avant de bloquer la release.

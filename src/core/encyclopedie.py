@@ -14,9 +14,11 @@ nom de texture pour HP1-HP3, position d'une image 0x7B dans un flux de
 `data.big` pour HP4). Sans le jeu, la fiche reste du texte.
 """
 
+import hashlib
 import json
 import logging
 import struct
+from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -25,6 +27,7 @@ from src.core import folio_hp4, sans_casse, textures_ue1
 from src.core.config import ENCYCLOPEDIE_PATH
 from src.core.i18n import TexteTraduit, texte_traduit
 from src.core.images_ea import entree_big
+from src.core.signature import fiable
 
 log = logging.getLogger(__name__)
 
@@ -129,6 +132,30 @@ def chemin_image(dossier_exe: Path, image: ImageJeu | ModeleJeu) -> Path | None:
     return trouver(dossier_exe, image.fichier) or trouver(dossier_exe.parent, image.fichier)
 
 
+def empreinte(dossier_exe: Path, fiches: Iterable[Fiche]) -> str | None:
+    """Ce dont dépendent les vignettes de ces fiches : ce que chacune relève (clé, image, modèle)
+    et, pour chaque fichier du jeu qu'elles lisent, sa date et sa taille. Les vignettes gardées
+    sur le disque (`ui/vignettes_fiches`) ne valent que pour cette empreinte. None tant qu'un de
+    ces fichiers vient de changer (`signature.fiable`) : rien ne se garde d'une copie en cours."""
+    condense = hashlib.sha256()
+    sources: dict[str, str] = {}
+    for fiche in fiches:
+        condense.update(repr((fiche.cle, fiche.image, fiche.modele)).encode())
+        for source in (fiche.image, fiche.modele):
+            if source is None or source.fichier in sources:
+                continue
+            chemin = chemin_image(dossier_exe, source)
+            try:
+                signe = fiable(chemin.stat()) if chemin is not None else (0, 0)
+            except OSError:
+                signe = (0, 0)
+            if signe is None:
+                return None
+            sources[source.fichier] = repr(signe)
+    condense.update(repr(sorted(sources.items())).encode())
+    return condense.hexdigest()
+
+
 def image(dossier_exe: Path, fiche: Fiche) -> ImageBgra | None:
     """L'image de la fiche lue dans le jeu installé (B V R A), recadrée ; None
     sans image, sans le jeu, ou si elle n'est plus là où elle a été relevée."""
@@ -157,7 +184,7 @@ def _lire(chemin: Path, image_jeu: ImageJeu) -> ImageBgra | None:
     return bgra_de_palette(tex) if tex is not None else None
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=8)      # HP4 : ses fiches lisent plusieurs entrées, une seule gardée les faisait relire en alternance
 def _flux(big: str, entree: str) -> bytes:
     return entree_big(Path(big), entree)
 
