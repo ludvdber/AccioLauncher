@@ -1,7 +1,7 @@
 """Vérifie l'icône Windows du launcher — elle n'est PLUS générée.
 
 `assets/accio_launcher.ico` est désormais un **asset de marque** livré par le
-pack (`accio-launcher-site/assets/AccioLogo/accio-launcher.ico`) : sept tailles
+pack (`accio-launcher-site/_local/brand-pack/accio-launcher.ico`) : sept tailles
 dessinées, 16 à 256, chacune ajustée pour rester lisible. La regénérer à partir
 d'un PNG en réduisant au LANCZOS donnait un résultat nettement plus mou en 16 et
 24 px — précisément les tailles que l'utilisateur voit le plus, dans la barre
@@ -17,7 +17,7 @@ from pathlib import Path
 
 RACINE = Path(__file__).parent.parent
 ICONE = RACINE / "assets" / "accio_launcher.ico"
-SOURCE = "accio-launcher-site/assets/AccioLogo/accio-launcher.ico"
+SOURCE = "accio-launcher-site/_local/brand-pack/accio-launcher.ico"
 TAILLES_ATTENDUES = {16, 24, 32, 48, 64, 128, 256}
 
 

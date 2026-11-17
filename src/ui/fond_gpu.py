@@ -23,13 +23,14 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from PyQt6.QtCore import QObject, QRect, QRectF, QSize, Qt, QUrl, pyqtProperty
-from PyQt6.QtGui import QColor, QImage, QImageReader, QPainter, QRadialGradient
+from PyQt6.QtGui import QColor, QImage, QPainter, QRadialGradient
 from PyQt6.QtWidgets import QWidget
 
 from src.core import effets
 from src.core.config import ASSETS_DIR
 from src.core.season import profil as profil_de
 from src.ui import theme
+from src.ui.utils import taille_image
 from src.ui.background_widget import (
     _ETENDU_VOILE_FLOU, _VOILE_ALPHA, _ZOOM_MAX, _ZOOM_MIN, _ZOOM_STEP, BackgroundWidget,
     construire_voiles, doit_etendre, ecran_le_plus_grand, taille_de_decodage,
@@ -333,12 +334,12 @@ class FondGPU(QQuickWidget if QUICK_DISPONIBLE else QWidget):  # type: ignore[mi
         ecran = ecran_le_plus_grand()
         self._poser("prechargees", [
             {"source": QUrl.fromLocalFile(str(c)).toString(),
-             "taille": taille_de_decodage(QImageReader(str(c)).size(), ecran)}
+             "taille": taille_de_decodage(taille_image(str(c)), ecran)}
             for c in chemins if c.exists()])
 
     def set_image(self, path: Path | None) -> None:
         self._source = str(path) if path and path.exists() else ""
-        self._taille_image = QImageReader(self._source).size() if self._source else QSize()
+        self._taille_image = taille_image(self._source) if self._source else QSize()
         self._decodage = taille_de_decodage(self._taille_image, ecran_le_plus_grand())
         self._poser("etendu", self._doit_etendre(self.width(), self.height()))
         self._poser("sourceTaille", self._decodage)

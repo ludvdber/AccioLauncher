@@ -89,6 +89,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import statistics
 import subprocess
@@ -115,6 +116,7 @@ CIBLES = {
     "demarrage_froid_ms": 3000.0,
     "clic_ms": 100.0,
     "rubrique_ms": 50.0,
+    "page_ms": 500.0,          # Ludo, 2026-11-16 : toute page, tout onglet, toute vue, contenu posé
     "blocage_ms": 50.0,
     "image_p95_ms": 40.0,      # le Ticker bat à 33 ms (30 images/s)
     "image_max_ms": 50.0,
@@ -127,6 +129,8 @@ CIBLES = {
 }
 # Catégories d'action : celles qui changent ce qu'on voit sans ouvrir de page.
 _RAPIDES = ("jeu", "rubrique", "sauvegarde")
+ETAPES = ("repos", "jeux", "bande-annonce", "engrenage", "parametres", "carnet", "collections", "autres",
+          "defilement")
 AVERTISSEMENT_HORS_ECRAN = (
     "Mode HORS ÉCRAN (QT_QPA_PLATFORM=offscreen) : ces chiffres valent pour la LOGIQUE "
     "du fil d'interface. L'affichage réel (composition, carte graphique, synchronisation "
@@ -208,6 +212,14 @@ def lignes_tableau(res: dict) -> list[dict]:
                              f"< {CIBLES[cle]:.0f} ms", _sous(pire.get("reponse_ms"), CIBLES[cle]),
                              f"« {pire.get('nom')} » ; médiane {_fmt(_p(valeurs, 0.5))} ; "
                              f"{len(hors)} sur {len(choix)} hors cible"))
+    poses = [(max(a.get("reponse_ms") or 0.0, a.get("complet_ms") or 0.0), a) for a in actions]
+    if poses:
+        pire_p, action_p = max(poses, key=lambda c: c[0])
+        hors_p = [a["nom"] for v, a in poses if v >= CIBLES["page_ms"]]
+        lignes.append(_ligne("Page la plus lente (réponse ET contenu posé)", profil, pire_p,
+                             f"< {CIBLES['page_ms']:.0f} ms", pire_p < CIBLES["page_ms"],
+                             f"« {action_p.get('nom')} » ; {len(hors_p)} sur {len(poses)} hors cible"
+                             + (" : " + ", ".join(hors_p[:8]) if hors_p else "")))
     blocs = res.get("blocages") or []
     total = sum(b["duree_ms"] for b in blocs)
     pire_b = max(blocs, key=lambda b: b["duree_ms"]) if blocs else None
@@ -287,11 +299,12 @@ def rendre_markdown(res: dict) -> str:
     actions = res.get("actions") or []
     if actions:
         md += ["", "## Réponse par action", ""]
-        md += _table(["Action", "Catégorie", "Réponse", "Cible", "Appel", "Calme", "Lectures", "Octets lus",
-                      "Fichiers lus (extrait)"],
+        md += _table(["Action", "Catégorie", "Réponse", "Cible", "Appel", "Calme", "Contenu posé", "Lectures",
+                      "Octets lus", "Fichiers lus (extrait)"],
                      [[a["nom"], a["categorie"], _fmt(a.get("reponse_ms")),
                        f"< {CIBLES['rubrique_ms' if a['categorie'] in _RAPIDES else 'clic_ms']:.0f}",
-                       _fmt(a.get("appel_ms")), _fmt(a.get("calme_ms")), str(a.get("lectures", 0)),
+                       _fmt(a.get("appel_ms")), _fmt(a.get("calme_ms")), _fmt(a.get("complet_ms")),
+                       str(a.get("lectures", 0)),
                        f"{(a.get('octets_lus') or 0) / 1e6:.1f} Mo", ", ".join(a.get("fichiers", [])[:3])]
                       for a in actions])
     blocs = res.get("blocages") or []
@@ -320,9 +333,10 @@ def rendre_markdown(res: dict) -> str:
                f"modules Python et bibliothèques : {disque.get('modules', 0)} ouvertures (hors tableau) ; "
                f"octets lus par le processus : {(disque.get('octets_processus') or 0) / 1e6:.1f} Mo.", ""]
         if disque.get("relus"):
-            md += _table(["Fichier", "Lectures", "Taille", "Origine", "Phases"],
+            md += _table(["Fichier", "Lectures", "Taille", "Origine", "Phases", "Qui l'ouvre"],
                          [[r["fichier"], str(r["lectures"]), f"{(r.get('taille') or 0) / 1e3:.1f} Ko",
-                           r.get("origine", ""), ", ".join(r.get("phases", []))] for r in disque["relus"][:60]])
+                           r.get("origine", ""), ", ".join(r.get("phases", [])), " ; ".join(r.get("sites", []))]
+                          for r in disque["relus"][:60]])
         if disque.get("echappe"):
             md += ["", "Ce qui échappe au comptage par fichier : " + " ; ".join(disque["echappe"]) + "."]
     cpu = res.get("processeur") or []
@@ -424,7 +438,7 @@ def _dossiers_sauvegardes() -> list[tuple[str, Path]]:
     return trouves
 
 
-def preparer_isolement(sortie: Path, jeux_copie: Path | None, seuil_mo: int) -> dict:
+def preparer_isolement(sortie: Path, jeux_copie: Path | None, seuil_mo: int, cache_vide: bool = False) -> dict:
     """Le dossier personnel du banc, ses copies, et la config muette. Rend les chemins."""
     iso = sortie / "isolement"
     maison = iso / "maison"
@@ -435,7 +449,10 @@ def preparer_isolement(sortie: Path, jeux_copie: Path | None, seuil_mo: int) -> 
         _copier_arbre(reel / nom, launcher / nom)
     if not (launcher / "trailers").is_dir():
         _copier_arbre(reel / "trailers", launcher / "trailers")
-    if not (launcher / "cache").is_dir():
+    if cache_vide:
+        shutil.rmtree(launcher / "cache", ignore_errors=True)
+        (launcher / "cache").mkdir()
+    elif not (launcher / "cache").is_dir():
         # Les caches du joueur (vignettes, morceaux et cinématiques convertis) : « telle quelle ».
         _copier_arbre(reel / "cache", launcher / "cache", sauf=tuple(
             p.name for p in (reel / "cache").glob("*.exe")))
@@ -711,6 +728,17 @@ def principal(argv: list[str] | None = None) -> int:
     ap.add_argument("--repos-s", type=float, default=10.0)
     ap.add_argument("--sans-profilage", action="store_true")
     ap.add_argument("--jeux-copie", default=None)
+    ap.add_argument("--jeux-reels", action="store_true",
+                    help="lit les jeux du joueur EN PLACE (le crochet d'audit y refuse toute écriture) : les "
+                         "archives de plus de 64 Mo (modèles 3D, musique, cinématiques) ont alors leur contenu")
+    ap.add_argument("--cache-vide", action="store_true",
+                    help="part d'un cache du launcher VIDE dans le banc (première ouverture de chaque page)")
+    ap.add_argument("--maximisee", action="store_true", help="la fenêtre agrandie, comme chez le joueur")
+    ap.add_argument("--profiler", default="",
+                    help="expression régulière : la pile du fil principal échantillonnée pendant l'appel de "
+                         "chaque action dont le nom la contient (fichiers action_*.txt du dossier des profils)")
+    ap.add_argument("--etapes", default="",
+                    help="seulement ces étapes du parcours, séparées par des virgules : " + ", ".join(ETAPES))
     ap.add_argument("--seuil-copie-mo", type=int, default=SEUIL_COPIE_MO)
     ap.add_argument("--sortie", default=str(SORTIE_DEFAUT))
     ap.add_argument("--etiquette", default=None)
@@ -721,10 +749,14 @@ def principal(argv: list[str] | None = None) -> int:
     args.etiquette = args.etiquette or f"{args.profil}_{args.mode}"
     sortie = Path(args.sortie)
     sortie.mkdir(parents=True, exist_ok=True)
-    iso = preparer_isolement(sortie, _trouver_jeux_copie(args.jeux_copie, sortie), args.seuil_copie_mo)
+    etapes = [e.strip() for e in args.etapes.split(",") if e.strip()] or list(ETAPES)
+    if inconnues := [e for e in etapes if e not in ETAPES]:
+        ap.error(f"étapes inconnues : {', '.join(inconnues)}")
+    jeux = JEUX_REELS if args.jeux_reels else _trouver_jeux_copie(args.jeux_copie, sortie)
+    iso = preparer_isolement(sortie, jeux, args.seuil_copie_mo, args.cache_vide)
     env = env_profil(args.profil, args.mode, args.carte, iso["maison"])
     params = {"etiquette": args.etiquette, "iso": iso, "mode": args.mode, "profil": args.profil,
-              "repos_s": args.repos_s, "sortie": str(sortie)}
+              "repos_s": args.repos_s, "sortie": str(sortie), "maximisee": args.maximisee, "etapes": etapes, "profiler": args.profiler}
     demarrages = []
     for tour in range(1 if args.froid else 1 + args.repetitions):
         print(f"Démarrage {tour + 1}…", flush=True)
@@ -758,6 +790,7 @@ class Garde:
     def __init__(self, autorises: list[str]) -> None:
         self.autorises = [os.path.normcase(os.path.abspath(a)) for a in autorises]
         self.lectures: Counter = Counter()
+        self.sites: dict[str, Counter] = {}     # par fichier : la ligne du dépôt qui l'a ouvert
         self.origine: dict[str, set] = {}
         self.phase = "démarrage"
         self.phases: dict[str, set] = {}
@@ -780,6 +813,15 @@ class Garde:
         except (TypeError, ValueError):
             return
         self.lectures[c] += 1
+        if not c.lower().endswith(_MODULES):
+            cadre, site = sys._getframe(1), "?"
+            while cadre is not None:
+                fichier = cadre.f_code.co_filename
+                if "banc_rapidite" not in fichier and os.path.normcase(fichier).startswith(_DEPOT_NORM):
+                    site = f"{_court(fichier)}:{cadre.f_lineno} {cadre.f_code.co_name}"
+                    break
+                cadre = cadre.f_back
+            self.sites.setdefault(c, Counter())[site] += 1
         self.origine.setdefault(c, set()).add(origine)
         self.phases.setdefault(c, set()).add(self.phase)
 
@@ -1182,6 +1224,8 @@ class Banc:
             self.res["erreurs"].append("MainWindow introuvable à l'annonce de la fenêtre")
             return
         self.fenetre = fen
+        if self.p.get("maximisee"):
+            QTimer.singleShot(0, fen.showMaximized)
         banc = self
 
         class _Filtre(QObject):
@@ -1306,6 +1350,8 @@ class Banc:
                 except OSError:
                     taille = None
                 relus.append({"fichier": chemin, "lectures": n, "taille": taille,
+                              "sites": [f"{site} ×{k}" for site, k in self.garde.sites.get(chemin, Counter())
+                                        .most_common(4)],
                               "origine": ", ".join(sorted(self.garde.origine.get(chemin, ()))),
                               "phases": sorted(self.garde.phases.get(chemin, ()))})
         relus.sort(key=lambda r: (-r["lectures"] * (r["taille"] or 1)))
@@ -1359,21 +1405,25 @@ class Banc:
     def _parcours(self):
         from src.ui.title_bar import BIBLIOTHEQUE, CARNET, COLLECTIONS, PARAMETRES
         fen = self.fenetre
+        etapes = self.p.get("etapes") or list(ETAPES)
         yield ("ms", 3000)        # les tâches différées du démarrage (préchargement, toasts)
         self.res["memoire"] = {"repos_mo": self.memoire.mo(), "pages": []}
-        yield from self.cpu("repos", self.p.get("repos_s", 10.0))
+        if "repos" in etapes:
+            yield from self.cpu("repos", self.p.get("repos_s", 10.0))
         self.sentinelle.actif = True
-        # ① Changer de jeu, chaque vignette du carrousel.
         items = list(fen._carousel._items)
-        courant = fen._carousel._current_index
-        for k in range(1, len(items) + 1):
-            i = (courant + k) % len(items)
-            yield from self.action(f"Changer de jeu → {items[i].game.id}", "jeu",
-                                   lambda i=i: _cliquer(items[i]), animation="changement de jeu")
-        # ② Bande-annonce : lancer, mesurer le processeur, arrêter.
-        yield from self.bande_annonce()
+        if "jeux" in etapes:
+            # ① Changer de jeu, chaque vignette du carrousel.
+            courant = fen._carousel._current_index
+            for k in range(1, len(items) + 1):
+                i = (courant + k) % len(items)
+                yield from self.action(f"Changer de jeu → {items[i].game.id}", "jeu",
+                                       lambda i=i: _cliquer(items[i]), animation="changement de jeu")
+        if "bande-annonce" in etapes:
+            # ② Bande-annonce : lancer, mesurer le processeur, arrêter.
+            yield from self.bande_annonce()
         # ③ L'engrenage de chaque jeu installé, et chacune de ses rubriques.
-        for i, item in enumerate(items):
+        for i, item in enumerate(items if "engrenage" in etapes else ()):
             if fen.manager.get_state(item.game.id).name != "INSTALLED":
                 continue
             if fen._carousel._current_index != i:
@@ -1383,17 +1433,27 @@ class Banc:
                 continue
             yield from self.page(f"Engrenage {item.game.id}", lambda b=btn: _cliquer(b), self._rubriques_engrenage,
                                  BIBLIOTHEQUE)
-        # ④ Paramètres.
-        yield from self.page("Paramètres", lambda: _cliquer(fen._title_bar.onglet(PARAMETRES)),
-                             self._rubriques_parametres, BIBLIOTHEQUE)
-        # ⑤ Carnet : jeux, sauvegardes, rubriques, défilement.
-        yield from self.page("Carnet", lambda: _cliquer(fen._title_bar.onglet(CARNET)), self._dans_le_carnet,
-                             BIBLIOTHEQUE)
-        # ⑥ Collections : chaque rubrique, une fiche de l'Encyclopédie, défilement de la galerie.
-        yield from self.page("Collections", lambda: _cliquer(fen._title_bar.onglet(COLLECTIONS)),
-                             self._dans_les_collections, BIBLIOTHEQUE)
-        # ⑦ Défilement soutenu de la galerie : processeur et images.
-        yield from self.defilement_soutenu(COLLECTIONS, BIBLIOTHEQUE)
+        if "parametres" in etapes:
+            # ④ Paramètres.
+            yield from self.page("Paramètres", lambda: _cliquer(fen._title_bar.onglet(PARAMETRES)),
+                                 self._rubriques_parametres, BIBLIOTHEQUE)
+        if "carnet" in etapes:
+            # ⑤ Carnet : jeux, sauvegardes, rubriques, défilement.
+            yield from self.page("Carnet", lambda: _cliquer(fen._title_bar.onglet(CARNET)), self._dans_le_carnet,
+                                 BIBLIOTHEQUE)
+        if "collections" in etapes:
+            # ⑥ Collections : chaque rubrique et chaque jeu, une fiche de l'Encyclopédie, défilement.
+            yield from self.page("Collections", lambda: _cliquer(fen._title_bar.onglet(COLLECTIONS)),
+                                 self._dans_les_collections, BIBLIOTHEQUE)
+        if "autres" in etapes:
+            # ⑦ Les pages sans onglet : Nouveautés, Atelier, journal des changements du jeu affiché.
+            for nom, ouvrir in (("Nouveautés", fen._ouvrir_nouveautes),
+                                ("Atelier", fen._detail.ouvrir_atelier),
+                                ("Journal des changements", fen._detail._info.versions_clicked.emit)):
+                yield from self.page(nom, ouvrir, lambda _page: iter(()), BIBLIOTHEQUE)
+        if "defilement" in etapes:
+            # ⑧ Défilement soutenu de la galerie : processeur et images.
+            yield from self.defilement_soutenu(COLLECTIONS, BIBLIOTHEQUE)
         self.sentinelle.actif = False
         self.res["memoire"]["fin_mo"] = self.memoire.mo()
 
@@ -1428,8 +1488,11 @@ class Banc:
                 yield ("ms", 200)
         self._sauver_profil("folio_sauvegardes")
 
-    def action(self, nom: str, categorie: str, faire, animation: str | None = None, apres_ms: int = 350):
-        """Une action mesurée : appel, réponse (dernier paint avant le calme), calme, lectures, octets lus."""
+    def action(self, nom: str, categorie: str, faire, animation: str | None = None, apres_ms: int = 350,
+               complet=None):
+        """Une action mesurée : appel, réponse (dernier paint avant le calme), calme, lectures, octets lus.
+        `complet()` : vrai quand le contenu venu d'un autre fil est POSÉ (vignettes, modèle) ; son instant
+        est relevé toutes les 10 ms, 20 s au plus."""
         # Rendre la main à la boucle d'abord : sans ce temps, le travail du pilote qui précède (un
         # `gc.collect()`, la fin d'une autre page) se collait à cette action en un seul blocage.
         self.sentinelle.etape = f"(entre deux actions, avant « {nom} »)"
@@ -1442,15 +1505,44 @@ class Banc:
         except Exception:
             octets_avant = 0
         n_images = len(self.images)
+        profilee = bool(self.p.get("profiler")) and re.search(self.p["profiler"], nom, re.IGNORECASE) is not None
+        if profilee:
+            if not self.echantillonneur.is_alive():
+                self.echantillonneur.start()
+            self.echantillonneur.vider()
+            self.echantillonneur.actif = True
         t0 = time.perf_counter()
         try:
             faire()
         except Exception as exc:
             self.res["erreurs"].append(f"{nom} : {exc!r}")
             return
+        finally:
+            self.echantillonneur.actif = False
         t1 = time.perf_counter()
+        if profilee:
+            dossier = Path(self.p["sortie"]) / f"{self.p['etiquette']}_profils"
+            dossier.mkdir(parents=True, exist_ok=True)
+            (dossier / ("action_" + re.sub(r"\W+", "_", nom).strip("_") + ".txt")).write_text(
+                self.echantillonneur.rapport(nom), encoding="utf-8")
+        pose = {"t": None}
+        if complet is not None:
+            from PyQt6.QtCore import QTimer
+
+            def guetter() -> None:
+                try:
+                    fini = bool(complet())
+                except RuntimeError:     # le widget guetté n'existe plus
+                    fini = True
+                if fini or time.perf_counter() - t0 > 20:
+                    pose["t"] = time.perf_counter()
+                else:
+                    QTimer.singleShot(10, guetter)
+            QTimer.singleShot(0, guetter)
         fin = yield ("reponse", t1)
         calme = yield ("calme", t0)
+        while complet is not None and pose["t"] is None:
+            yield ("ms", 20)
         try:
             octets = self.memoire.proc.io_counters().read_bytes - octets_avant
         except Exception:
@@ -1459,6 +1551,7 @@ class Banc:
             "nom": nom, "categorie": categorie, "appel_ms": (t1 - t0) * 1000,
             "reponse_ms": (fin - t0) * 1000 if fin else None,
             "calme_ms": (calme - t0) * 1000 if calme else None,
+            "complet_ms": (pose["t"] - t0) * 1000 if pose["t"] else None,
             "lectures": sum(self.garde.lectures.values()) - lectures_avant, "octets_lus": octets,
             "fichiers": [f"{Path(c).name} ×{n - par_fichier_avant.get(c, 0)}" for c, n in
                          sorted(self.garde.lectures.items(), key=lambda kv: par_fichier_avant.get(kv[0], 0) - kv[1])
@@ -1534,10 +1627,17 @@ class Banc:
         yield ("ms", 2000)          # les vignettes arrivent d'un fil, posées par lots
         yield from self.defiler("défilement de la galerie (Captures)", galerie, pas=20)
         for cle, bouton in list(rubriques.items())[1:]:
-            yield from self.action(f"Collections : {cle}", "rubrique", lambda b=bouton: _cliquer(b))
-            jeux = list(getattr(page._jeux, "_boutons", {}).values()) if hasattr(page, "_jeux") else []
-            for k, b in enumerate(jeux[1:3]):
-                yield from self.action(f"Collections {cle} : jeu {k + 2}", "jeu", lambda b=b: _cliquer(b))
+            def pose(cle=cle) -> bool:
+                """Personnages et Bestiaire : images, vignettes et premier modèle posés."""
+                v = page._encyclo.get(cle) if hasattr(page, "_encyclo") else None
+                if v is None:
+                    return True
+                attente = getattr(v, "en_attente", None)     # avant le 2026-11-16 : le minuteur de la vue
+                return not (attente() if attente is not None else v._chargeur.isActive())
+            yield from self.action(f"Collections : {cle}", "rubrique", lambda b=bouton: _cliquer(b), complet=pose)
+            jeux = {j: b for j, b in getattr(page._jeux, "_boutons", {}).items() if not b.isHidden()}
+            for jeu, b in list(jeux.items())[1:] + list(jeux.items())[:1]:
+                yield from self.action(f"Collections {cle} : {jeu}", "jeu", lambda b=b: _cliquer(b), complet=pose)
             vue = page._encyclo.get(cle) if hasattr(page, "_encyclo") else None
             if vue is not None:
                 from src.ui.encyclopedie_page import _Fiche
@@ -1545,7 +1645,7 @@ class Banc:
                 if fiches:
                     fiche = fiches[min(1, len(fiches) - 1)]
                     yield from self.action(f"Collections {cle} : ouvrir une fiche", "clic",
-                                           lambda f=fiche, v=vue: v.choisir(f))
+                                           lambda f=fiche, v=vue: v.choisir(f), complet=pose)
                 yield from self.defiler(f"défilement de {cle}", vue, pas=10)
         if rubriques:
             first = next(iter(rubriques.values()))
@@ -1722,7 +1822,7 @@ def _cliquer(widget) -> None:
     from PyQt6.QtTest import QTest
     if widget is None:
         raise RuntimeError("rien à cliquer")
-    if widget.isVisible():
+    if widget.isVisible() or not hasattr(widget, "click"):   # une vignette du carrousel hors de la bande
         QTest.mouseClick(widget, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, widget.rect().center())
     else:
         widget.click()

@@ -26,6 +26,7 @@ import logging
 import re
 import sys
 from collections.abc import Iterable
+from functools import lru_cache
 from pathlib import Path, PureWindowsPath
 
 from src.core import game_registry as registre
@@ -95,8 +96,12 @@ def proposees(place: tuple[int, int] | None,
             and t[0] >= _MINIMUM[0] and t[1] >= _MINIMUM[1]]
 
 
+@lru_cache(maxsize=1)
 def modes_ecran() -> list[tuple[int, int]] | None:
     """Les tailles d'image que l'écran principal sait afficher, en couleurs 32 bits.
+
+    Demandées une fois : l'énumération prend 42 ms, à chaque ouverture des réglages de HP4 à
+    HP6 (2026-11-16). Un écran branché ou retiré les fait relire (`oublier_les_modes`).
 
     HP5 et HP6 cherchent leur taille de départ parmi les modes de la carte et
     s'ARRÊTENT au démarrage s'ils ne la trouvent pas (« Couldn't find base display
@@ -134,6 +139,11 @@ def modes_ecran() -> list[tuple[int, int]] | None:
     except (AttributeError, OSError):
         return None
     return sorted(tailles, reverse=True) or None
+
+
+def oublier_les_modes() -> None:
+    """Les écrans ont changé : la prochaine demande relit les modes."""
+    modes_ecran.cache_clear()
 
 
 def du_correctif(spec: Resolution) -> bool:

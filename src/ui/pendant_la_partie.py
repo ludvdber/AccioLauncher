@@ -22,12 +22,13 @@ if TYPE_CHECKING:
 
 def liberer_les_caches() -> None:
     """Ce qui ne sert qu'à l'accueil, au Carnet et aux Collections, rendu au jeu qui démarre."""
-    from src.core import folio_hp3, folio_hp6, maillages_ue1, textures_ue1
+    from src.core import folio_hp3, folio_hp6, maillages_ue1, octets_gardes, textures_ue1
     from src.ui import background_widget, stats_releve
     textures_ue1.liberer()
     maillages_ue1.liberer()
     folio_hp3.liberer()
     folio_hp6.liberer()
+    octets_gardes.liberer()
     stats_releve.liberer()
     background_widget.liberer_fonds_decodes()
 

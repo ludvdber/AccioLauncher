@@ -549,7 +549,10 @@ def _illustration(system: Path, jeu: folio_hp4.JeuCartes, rang: int,
                   taille: QSize | None) -> QImage | None:
     """L'illustration d'une carte, réduite à `taille` (px physiques) ou entière.
     Appelée sur le fil de décodage : une QImage, jamais une QPixmap."""
-    image = folio_hp4.image_carte(system, jeu, rang)
+    # Le niveau de détail juste au-dessus de la taille montrée : le double du côté voulu borne
+    # le premier niveau qui tient (chaque niveau divise par deux), jamais agrandi ensuite.
+    cote = 512 if taille is None else min(512, 2 * max(taille.width(), taille.height()))
+    image = folio_hp4.image_carte(system, jeu, rang, cote)
     if image is None:
         return None
     largeur, hauteur, pixels = image

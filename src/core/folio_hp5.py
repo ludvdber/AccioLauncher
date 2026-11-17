@@ -27,6 +27,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from src.core import octets_gardes
 from src.core import folio, images_ea, sauvegardes
 
 log = logging.getLogger(__name__)
@@ -130,7 +131,7 @@ def releve(chemin: Path) -> list[Partie]:
     try:
         if chemin.stat().st_size > _TAILLE_MAX:
             return []
-        return lire(chemin.read_bytes())
+        return lire(octets_gardes.lire(chemin))
     except OSError:
         log.warning("Folio HP5 : %s illisible", chemin, exc_info=True)
         return []

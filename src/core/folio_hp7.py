@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from src.core import octets_gardes
 from src.core import folio
 
 log = logging.getLogger(__name__)
@@ -120,7 +121,7 @@ def releve(chemin: Path) -> Partie | None:
         infos = chemin.stat()
         if infos.st_size > _TAILLE_MAX:
             return None
-        contenu = chemin.read_bytes()
+        contenu = octets_gardes.lire(chemin)
     except OSError:
         log.warning("Folio HP7 : %s illisible", chemin, exc_info=True)
         return None

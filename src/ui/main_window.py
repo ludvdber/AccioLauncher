@@ -9,8 +9,8 @@ from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import set_language, tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.ui import (dialogues_fenetre, game_detail_handlers, pendant_la_partie, succes_widgets, toast_correctif,
-                    verification_forcee)
+from src.ui import (dialogues_fenetre, filtres_globaux, game_detail_handlers, pendant_la_partie, succes_widgets,
+                    toast_correctif, verification_forcee)
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
 from src.ui.clavier_global import EVENEMENTS_FILTRES, touche_globale
@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
                            self._btn_discord, self._title_bar.contribuer)
 
         # Event filter on QApplication for global mouse tracking
-        QApplication.instance().installEventFilter(self)
+        filtres_globaux.poser(self)
 
         if games:
             # Hero dynamique : ouvrir sur le dernier jeu joué plutôt que toujours HP1.
@@ -607,7 +607,8 @@ class MainWindow(QMainWindow):
         self._carousel.refresh_indicators()
 
     def _on_settings(self) -> None:
-        dlg = SettingsDialog(self.config, self.manager, self, store=self._trailers, fond=self._mediatheque.fond)
+        dlg = self._pages.batir(lambda: SettingsDialog(
+            self.config, self.manager, self, store=self._trailers, fond=self._mediatheque.fond), PARAMETRES)
         dlg.config_changed.connect(self._on_config_changed)
         dlg.verification_demandee.connect(lambda: self._force_update_check(dlg))
         dlg.season_changed.connect(self._particles.apply_season)
@@ -616,18 +617,17 @@ class MainWindow(QMainWindow):
         dlg.visite_demandee.connect(self._visite.revoir)
         dlg.desinstallation_demandee.connect(
             lambda jeux, copies: desinstaller(self, dlg, jeux, copies))
-        self._pages.ouvrir(dlg, PARAMETRES)
 
     def _ouvrir_nouveautes(self, apres_mise_a_jour: bool = False) -> None:
         contenu = nouveautes.charger()
         if contenu is not None:
-            self._pages.ouvrir(NouveautesPage(contenu, apres_mise_a_jour, self, self.manager.catalog.games))
+            self._pages.batir(lambda: NouveautesPage(contenu, apres_mise_a_jour, self, self.manager.catalog.games))
 
     def _on_stats(self, rubrique: str = "releve") -> None:
         """Le Carnet (`carnet_page.py`) — lecture seule, rien à recâbler.
         L'onglet l'ouvre sur le Folio du dernier joué, le toast des succès sur Défis."""
         from src.ui.carnet_page import CarnetPage
-        self._pages.ouvrir(CarnetPage(self.manager, self, rubrique), CARNET)
+        self._pages.batir(lambda: CarnetPage(self.manager, self, rubrique), CARNET)
 
     def _restart_launcher(self, dlg: SettingsDialog | None = None) -> None:
         """« Redémarrer maintenant » (thème/langue) : relance programmée puis fermeture propre.
@@ -682,17 +682,17 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event) -> bool:
         # Filtre posé sur QApplication : il voit les MouseMove de TOUS les widgets
         # enfants (un mouseMoveEvent ne tirerait que sur la surface nue).
-        if event.type() not in EVENEMENTS_FILTRES:
+        if (genre := event.type()) not in EVENEMENTS_FILTRES:     # demandé UNE fois : chaque appel bâtit une énumération
             return False
         try:
-            if event.type() == QEvent.Type.MouseMove:
+            if genre == QEvent.Type.MouseMove:
                 local = self.mapFromGlobal(event.globalPosition().toPoint())
                 self._detail.handle_mouse_move(QPointF(local.x(), local.y()))
             if self._chrome.evenement(obj, event):
                 return True
         except (AttributeError, RuntimeError) as exc:
             log.debug("eventFilter : %s", exc)
-        if event.type() == QEvent.Type.KeyPress and self._handle_global_key(event):
+        if genre == QEvent.Type.KeyPress and self._handle_global_key(event):
             return True
         return super().eventFilter(obj, event)
 
@@ -743,7 +743,7 @@ class MainWindow(QMainWindow):
         if not self._confirmer_fermeture():
             event.ignore()
             return
-        QApplication.instance().removeEventFilter(self)
+        filtres_globaux.retirer(self)
         # Une page ouverte se ferme par son chemin normal (`done()` arrête ses threads).
         self._pages.fermer()
 

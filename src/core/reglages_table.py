@@ -276,9 +276,9 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Les vibrations d'une manette PlayStation branchée en USB. Sans effet en "
             "Bluetooth.", onglet="manette"),
     # ── Qualité d'image (préréglages, puis le détail) ──
-    # HP4 seulement : dans le correctif, le FXAA porte aussi l'étalonnage, le
-    # SSAO, le bloom et les rayons ; sur HP5 (réglages d'image de Ludo, tous
-    # allumés) l'éteindre les éteindrait tous.
+    # HP4, HP5 et HP6 : dans le correctif, le FXAA porte aussi l'étalonnage, le
+    # SSAO, le bloom et les rayons ; l'éteindre les éteint tous, et le texte du
+    # réglage le dit.
     Reglage("lissage", "Accio.Graphics", "FXAA",
             "Adoucir les contours",
             "Adoucit les escaliers au bord des personnages et du décor (cheveux, vêtements, "

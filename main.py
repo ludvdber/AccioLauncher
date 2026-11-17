@@ -238,6 +238,12 @@ def main():
         from src.ui.focus_visible import install as install_focus_clavier
         install_focus_clavier(app)
 
+        # Les modes de l'écran se demandent une fois (42 ms à l'ouverture des réglages de HP4 à
+        # HP6) : un écran branché ou retiré les fait redemander.
+        from src.core import resolution_jeu
+        for ecrans_changes in (app.screenAdded, app.screenRemoved, app.primaryScreenChanged):
+            ecrans_changes.connect(lambda *_a: resolution_jeu.oublier_les_modes())
+
         # La manette rejoue ses appuis comme des touches : posée ici, elle
         # pilote aussi l'assistant de premier lancement.
         from src.ui import manette_nav

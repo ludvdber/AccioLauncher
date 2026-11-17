@@ -90,16 +90,6 @@ QPushButton#retour {{
     text-align: left; padding: 4px 2px;
 }}
 QPushButton#retour:hover {{ color: #f2f2f4; }}
-QPushButton#rubrique {{
-    color: {_ENCRE_RAIL}; background: transparent; border: none;
-    border-left: 2px solid transparent; border-radius: {RAYON_CONTROLE}px;
-    text-align: left; padding: 0 14px;
-}}
-QPushButton#rubrique:hover {{ color: #f2f2f4; background: rgba(255, 255, 255, 0.04); }}
-QPushButton#rubrique:checked {{
-    color: #f2e6c4; background: rgba(214, 167, 44, 0.10);
-    border-left: 2px solid #d6a72c;
-}}
 QPushButton#filtre {{
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: {rayon_pastille(HAUTEUR_FILTRE)}px; color: #c9c7da; padding: 0 13px;
@@ -477,7 +467,6 @@ TAILLE_MINIMALE_PAGE = (978, 583)
 # de 2 048 px vide (Paramètres, réglages d'un jeu, Carnet, Nouveautés, Contribuer : « horrible en plein écran »,
 # Ludo). Les bandeaux restent sur toute la largeur et alignent leur contenu sur la colonne (`retrait_de_colonne`).
 LARGEUR_PAGE_MAX = 1440
-_HAUTEUR_RUBRIQUE = 44
 
 
 def retrait_de_colonne(largeur: int) -> int:
@@ -501,7 +490,6 @@ class _Centrage(QObject):
 def colonne_centree(widget: QWidget) -> None:
     """Range le contenu de `widget` dans la colonne centrée de `LARGEUR_PAGE_MAX` px."""
     widget.installEventFilter(_Centrage(widget))
-_TAILLE_PICTO_RUBRIQUE = 20
 
 
 def titre_page(contenu: str) -> QLabel:
@@ -521,26 +509,6 @@ def titre_page(contenu: str) -> QLabel:
         titre.setAccessibleName(contenu)
     titre.setStyleSheet("color: #f4f2f8; background: transparent;")
     return titre
-
-
-def bouton_rubrique(libelle: str, icone: str) -> QPushButton:
-    """Une rubrique d'un rail vertical (Paramètres, réglages d'un jeu) : cochable,
-    son pictogramme gris au repos, dans l'accent du thème une fois choisie."""
-    pictogramme = QIcon()
-    pictogramme.addPixmap(pixmap_icone(icone, _TAILLE_PICTO_RUBRIQUE, QColor(_ENCRE_RAIL)),
-                          QIcon.Mode.Normal, QIcon.State.Off)
-    pictogramme.addPixmap(pixmap_icone(icone, _TAILLE_PICTO_RUBRIQUE, QColor(current().accent_light)),
-                          QIcon.Mode.Normal, QIcon.State.On)
-    b = QPushButton(libelle)
-    b.setObjectName("rubrique")
-    b.setCheckable(True)
-    b.setIcon(pictogramme)
-    b.setIconSize(QSize(_TAILLE_PICTO_RUBRIQUE, _TAILLE_PICTO_RUBRIQUE))
-    b.setFont(police(14))
-    b.setFixedHeight(_HAUTEUR_RUBRIQUE)
-    b.setCursor(Qt.CursorShape.PointingHandCursor)
-    b.setAutoDefault(False)
-    return b
 
 
 def filtre(libelle: str, grand: bool = False) -> QPushButton:
