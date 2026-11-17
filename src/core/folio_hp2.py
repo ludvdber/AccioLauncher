@@ -39,6 +39,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from src.core import octets_gardes
 from src.core import folio, textures_ue1
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.sans_casse import trouver
@@ -286,7 +287,7 @@ def _textes(system: Path, langue: str) -> dict[str, str]:
     if fichier is None:
         return {}
     try:
-        brut = fichier.read_bytes()
+        brut = octets_gardes.lire(fichier)
     except OSError:
         return {}
     return {cle.lower(): valeur.strip() for cle, valeur in

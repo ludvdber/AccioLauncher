@@ -38,10 +38,10 @@ class TestJetons:
 
 
 class TestUneSeuleDefinition:
-    """Le style du retour, des rubriques et des filtres ne vit QUE dans `composants`."""
+    """Le style du retour et des filtres ne vit QUE dans `composants`."""
 
     def test_aucune_page_ne_recopie_le_style(self):
-        for regle in ("QPushButton#retour {", "QPushButton#rubrique {", "QPushButton#filtre {",
+        for regle in ("QPushButton#retour {", "QPushButton#filtre {",
                       "QPushButton#danger {", "QComboBox { background: #15152a"):
             porteurs = sorted(f.name for f in _UI.glob("*.py")
                               if regle in f.read_text(encoding="utf-8").replace("{{", "{"))
@@ -75,14 +75,6 @@ class TestBoutonsCommuns:
         assert b.objectName() == "retour" and not b.autoDefault() and not b.icon().isNull()
         b.click()
         assert appels == [1]
-
-    def test_rubrique_cochable_une_seule_taille(self, qtbot):
-        """f75 : 42 px et un pictogramme de 19 dans les Paramètres, 44 et 20 ailleurs."""
-        b = composants.bouton_rubrique("Général", "dossier")
-        qtbot.addWidget(b)
-        assert b.objectName() == "rubrique" and b.isCheckable() and not b.autoDefault()
-        assert (b.minimumHeight(), b.maximumHeight()) == (44, 44)
-        assert b.iconSize().width() == 20
 
     def test_les_pages_a_rail_ont_la_meme_colonne(self):
         """f75 : 236, 270, 280 et 300 px ; le Journal des changements, au même en-tête que

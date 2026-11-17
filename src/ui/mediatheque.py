@@ -25,7 +25,7 @@ from PyQt6.QtCore import QObject, QSize, QStandardPaths, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QWidget
 
-from src.core import cinematiques, discographie, phonographe
+from src.core import cinematiques, discographie, encyclopedie, phonographe
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.config import ASSETS_DIR, cache_pour
 from src.core.i18n import get_language, tr
@@ -37,6 +37,7 @@ from src.ui.telechargement_vgmstream import TelechargementVgmstream
 from src.ui.theme import accent_qcolor, themed
 from src.ui.title_bar import COLLECTIONS
 from src.ui.utils import apres_le_fil
+from src.ui.vignettes_fiches import Vignettes
 
 log = logging.getLogger(__name__)
 
@@ -130,6 +131,16 @@ class Mediatheque(QObject):
         detail.son_demande.connect(self.fond.rendre_le_son)
         detail.mediatheque_demandee.connect(lambda jeu: self.ouvrir(self.rubrique_pour(jeu), jeu))
         session.demarree.connect(lambda _nom: self.fond.suspendre(JEU))
+        # Les vignettes des Personnages et du Bestiaire : chargées (ou fabriquées, la première
+        # fois) après l'ouverture de la fenêtre, pour que la page les pose sans attendre ; la
+        # mémoire revient au jeu qui démarre.
+        self.vignettes = Vignettes(self.dossier_exe, self._cache, self)
+        session.demarree.connect(lambda _nom: self.vignettes.liberer())
+        QApplication.instance().aboutToQuit.connect(self.vignettes.arreter)
+        self._vignettes_au_lancement = QTimer(self)
+        self._vignettes_au_lancement.setSingleShot(True)
+        self._vignettes_au_lancement.timeout.connect(self.preparer_les_vignettes)
+        self._vignettes_au_lancement.start(2000)
         session.terminee.connect(self._retour_de_partie)
         QApplication.instance().aboutToQuit.connect(self.fond.arreter)
         # Lire les sauvegardes des trois premiers jeux coûtait 0,3 s au lancement
@@ -153,7 +164,7 @@ class Mediatheque(QObject):
         if self._lecture.isActive() or self._en_vol:
             self._lecture.stop()
             self.actualiser()
-        self._pages.ouvrir(MediathequePage(self, rubrique, jeu), COLLECTIONS)
+        self._pages.batir(lambda: MediathequePage(self, rubrique, jeu), COLLECTIONS)
 
     def rubrique_pour(self, jeu: str) -> str:
         """Où mène le bouton Collections de la fiche : la rubrique qui a du
@@ -167,6 +178,14 @@ class Mediatheque(QObject):
         """Une partie finie a pu ouvrir des morceaux : on relit, puis la musique reprend."""
         self.actualiser_en_fond()
         self.fond.reprendre(JEU)
+        self.preparer_les_vignettes()
+
+    def preparer_les_vignettes(self) -> None:
+        """Les vignettes de chaque jeu installé qui a des fiches, une vue après l'autre."""
+        for rubrique in (encyclopedie.PERSONNAGES, encyclopedie.BESTIAIRE):
+            for jeu in encyclopedie.jeux(rubrique):
+                if self.dossier_exe(jeu) is not None:
+                    self.vignettes.preparer(jeu, rubrique)
 
     def actualiser(self) -> None:
         """Relit l'avancement des jeux installés et pose la pastille de l'onglet."""

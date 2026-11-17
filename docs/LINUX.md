@@ -35,7 +35,7 @@ Emplacements relevés sur `main` au 2026-09-24, donnés par fichier et fonction 
 numéros de ligne d'origine dérivaient à chaque modification : remplacés le 2026-10-15 par
 la fonction qui les contenait ce jour-là). La colonne
 « Aujourd'hui sous Linux » dit ce qui se passait **avant** le portage ; « Phase » dit
-quelle pull request le traite. L'état réel est aux §§ 7 et 8.
+quelle pull request le traite. L'état réel est aux §§ 7 et 8 (`docs/linux/ETAT_DES_PHASES.md`).
 
 ### 2.1 Lancement d'un jeu — le cœur du portage
 
@@ -55,7 +55,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `src/core/sauvegardes.py` (`racines`) | `LOCALAPPDATA` | `None` : HP5-HP7b n'ont **aucune** sauvegarde relevée ; Documents de l'hôte pour HP1-HP3 | Documents et `AppData/Local` du préfixe — le module l'annonçait déjà comme « le SEUL endroit à changer » | 2 |
 | `src/core/game_registry.py` (`disponible`) | Registre = `winreg` | `False` : sélecteur de langue éteint, **`Install Dir` jamais écrit** — or HP7a/HP7b ne démarrent pas sans lui | `True` quand un lanceur et un préfixe existent | 2 |
 | `src/core/game_registry.py` (`lire_valeurs`) | `winreg.OpenKey` | Rend `{}` | Lire `system.reg` / `user.reg` du préfixe (texte, sans lancer Wine) | 2 |
-| `src/core/game_registry.py` (`comparer`) (`_ecrire_direct`, `_ecrire_eleve`) | `winreg` puis `ShellExecuteW("runas", "regedit.exe")` + UAC | Jamais atteint (`ecrire_valeurs:323` rend `False`) | `_ecrire_eleve` = import du `.reg` par `regedit /S` **dans le préfixe**, via le lanceur ; pas d'UAC, mais la prévenance reste | 2 |
+| `src/core/game_registry.py` (`comparer`) (`_ecrire_direct`, `_ecrire_eleve`) | `winreg` puis `ShellExecuteW("runas", "regedit.exe")` + UAC | Jamais atteint (`ecrire_valeurs` rendait `False`) | `_ecrire_eleve` = import du `.reg` par `regedit /S` **dans le préfixe**, via le lanceur ; pas d'UAC, mais la prévenance reste | 2 |
 | `src/core/game_language.py` (`resoudre`, `appliquer`) | Portes `disponible()` | Aucune langue, aucune écriture | Rien à changer : elles s'ouvrent quand `disponible()` dit vrai | 2 |
 | `src/ui/process_monitor.py` (`ProcessMonitor.start`) | Nom d'exe pris dans `process.args[0]` | Sous Linux ce serait `umu-run` ou `wine` | Chercher l'argument en `.exe` | 2 |
 | `src/ui/process_monitor.py` (`_is_exe_running`) | `tasklist.exe` pour suivre la relance UE1 | Rend `False` : la relance de HP1/HP2 au chargement d'une sauvegarde **terminerait la session** au bout de 10 s | Équivalent `/proc` (processus Wine de même nom, même utilisateur, même préfixe), même grâce de 10 s | 2 |
@@ -73,7 +73,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `src/core/extractors.py` (`find_7z_exe`) | `7z.exe` embarqué, puis `C:\Program Files\7-Zip` | Repli sur `shutil.which("7z")` : dépend de ce que l'utilisateur a installé ; sur Bazzite, rien de garanti | Embarquer le **7-Zip officiel Linux** (`7zz`), repli `7zz`/`7z` du système (jamais py7zr, règle 92) | 3 |
 | `src/core/extractors.py` (`_find_7z_linux`, `verify_archive_entries`) | `CREATE_NO_WINDOW` | Déjà gardé | Inchangé | — |
 | `src/core/post_install.py` (`ranger_dans_sous_dossier`) + `src/core/win_utils.py` (`remove_zone_identifier`) | `Zone.Identifier` (flux NTFS) | No-op, sans objet sous Linux | Inchangé | — |
-| `accio_launcher.spec:83-88, 212-236` | Onefile Windows, ressource de version, `.ico`, `7z.exe` embarqué partout | Un build Linux embarquerait 7z.exe/7z.dll pour rien | Spec par plateforme : onedir Linux, sans binaires Windows | 4 |
+| `accio_launcher.spec` (ressource de version, choix du 7-Zip par plateforme) | Onefile Windows, ressource de version, `.ico`, `7z.exe` embarqué partout | Un build Linux embarquerait 7z.exe/7z.dll pour rien | Spec par plateforme : onedir Linux, sans binaires Windows | 4 |
 
 ### 2.3 Mise à jour du launcher
 
@@ -98,7 +98,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8.
 | `src/ui/fiche_gpu.py`, `src/ui/carrousel_gpu.py` (`actif`) | Jumeau visuel de la fiche, du carrousel et du disque (QtQuick) | **Éteints** avec le fond : ils suivent `fond_gpu.actif()` | Suivent l'essai du fond | — |
 | `src/core/diagnostic.py` (`systeme`) | `win32_ver` | « Linux 6.x » : ni Bazzite ni sa version | `/etc/os-release` (`PRETTY_NAME`) | 3 |
 | `src/core/diagnostic.py` (`identite`) | Processeur, mémoire, cartes graphiques lus dans le registre / `GlobalMemoryStatusEx` | Mémoire et cartes vides | `/proc/meminfo`, `/sys/class/drm` ; plus une ligne « Compatibilité » (lanceur, Proton, préfixe) | 3 |
-| `src/core/i18n.py:163-178` | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |
+| `src/core/i18n.py` (`detect_system_language`) | `GetUserDefaultUILanguage` | Repli sur `LANG` & co. : correct | Inchangé | — |
 | `src/ui/utils.py` (niveau du module) | Icône `.ico` | Qt lit le `.ico` sous Linux (greffon `qico`) | Inchangé ; PNG 256 px pour le `.desktop` | 4 |
 | `src/ui/fonts.py` | — | Polices embarquées (Gelasio remplace Georgia depuis longtemps) | Inchangé | — |
 | `src/ui/single_instance.py` | — | `QLocalServer` : socket Unix, fonctionne | Inchangé | — |
@@ -393,265 +393,24 @@ qui deviendra la 3.0). Détail : `docs/linux/RETOUR_BAZZITE.md`, septième passa
 
 ---
 
-## 6. Si aucun lanceur n'est trouvé (texte prévu)
+## 6. Si aucun lanceur n'est trouvé (texte affiché)
 
 > Accio Launcher lance ces jeux Windows avec **umu-launcher** (recommandé) ou
 > **Wine**. Aucun des deux n'est installé.
 >
 > Sur Bazzite, umu-launcher fait partie du système : mettez Bazzite à jour
 > (`ujust update`, puis redémarrez). Sur une autre distribution, installez le
-> paquet `umu-launcher` (ou Wine avec le support 32 bits), puis relancez
-> Accio Launcher.
+> paquet `umu-launcher` (ou Wine avec le support 32 bits), puis cliquez à
+> nouveau sur JOUER : le launcher les cherchera de nouveau.
 
-Le bouton du message ouvre la section « Linux / Bazzite » du README, qui
-détaille aussi l'installation manuelle d'umu (archive « zipapp » dans
-`~/.local/bin`).
+Le bouton du message ouvre la section « Linux / Bazzite » du README.
 
 ---
 
-## 7. État : phase 2 — le lanceur de compatibilité
+## 7 à 9. État des phases 2, 3 et 4
 
-Ce qui est en place (voir aussi `docs/claude/ARCHITECTURE_CORE.md`, modules `compat`,
-`preparation_wine`, `game_registry`, `system_checks`, `pre_launch`) :
-
-- **Détection** : `umu-run`, puis `wine`/`wine64` ; `ACCIO_COMPAT=umu|wine`
-  force une famille. Un GE-Proton installé est passé en `PROTONPATH`, sinon un
-  UMU-Proton déjà téléchargé, sinon umu choisit (et télécharge).
-- **Lancement** : `umu-run <exe>` ou `wine <exe>`, dans le préfixe partagé,
-  avec `WINEDLLOVERRIDES` d'après le champ `dll_overrides` du catalogue. La
-  sortie de Wine/Proton va dans `_Launcher/logs/wine-<jeu>.log`, réécrit à
-  chaque lancement. Sans lanceur : message « Wine introuvable » qui dit quoi
-  installer, et bandeau sur la fiche avant même le téléchargement.
-- **Préparation** : au premier lancement, un dialogue propose de créer le
-  préfixe et d'y installer les composants (winetricks, depuis Microsoft) ;
-  rien ne se fait sans clic. En cas d'échec des composants, « Lancer quand
-  même ». Journal : `_Launcher/logs/wine-preparation.log`.
-- **Registre** : lecture des `.reg` du préfixe, écriture par `regedit /S` via
-  le lanceur, relecture ; prévenance conservée, sans mention d'UAC.
-- **Chemins** : Documents/AppData du préfixe pour les fichiers ; chemins
-  Windows (`C:\…`, `Z:\…`) pour les valeurs lues par le jeu ; page ANSI du
-  préfixe pour les INI.
-- **Surveillance** : `/proc`, même grâce de 10 s.
-- **Catalogue** : `dll_overrides` depuis le 0.29 ; au 0.43, `winmm` pour hp1 et
-  hp2 (correctif 2.x). Embarqué et distant identiques (vérifié le 2026-10-20).
-
-### Vérifié dans l'environnement de travail (Wine 9.0 64 bits, 2026-09-24)
-
-Avec `tools/verifier_wine.py` (préfixe, aller-retour HKCU) et des essais ponctuels
-(HKLM 32 bits, processus, surcharge), sur un vrai préfixe :
-
-| Vérification | Résultat |
-|---|---|
-| Création du préfixe par `wine wineboot --init`, attente de `system.reg` | prêt en 16 s |
-| Écriture HKCU par le vrai `_ecrire_par_wine` puis relecture | OK en 3,1 s |
-| Cas HP7 : HKLM vue 32 bits, `Install Dir` accentué (`Z:\home\frédéric\…`) | écrit sous `Wow6432Node`, relu à l'identique |
-| Deuxième passage avec les mêmes valeurs | aucune écriture, **aucune question** |
-| `processus_du_jeu` sur un vrai processus Wine (`ping.exe`) | trouvé ; ignoré pour un autre préfixe |
-| Surcharge `d3d9=n,b` | DLL du dossier chargée en `native` (§ 3) |
-
-**Non vérifié ici** : umu-run et Proton (pas de Steam Linux Runtime dans ce
-conteneur), winetricks (absent, et Wine sans support 32 bits), un vrai jeu.
-
-### Pour dépanner
-
-- `python3 tools/verifier_wine.py` : relevé (lanceur, préfixe, composants).
-  `--preparer` fait la préparation, `--registre` un aller-retour d'essai sous
-  `HKCU\Software\AccioLauncher\Verification`.
-- `UMU_LOG=1` (umu) ou `PROTON_LOG=1` (Proton) dans l'environnement du
-  launcher : journaux détaillés, écrits par umu et Proton eux-mêmes.
-- Les préfixes se suppriment sans risque pour les jeux eux-mêmes — mais les
-  **sauvegardes de HP1 à HP7b sont dedans** (Documents et AppData du préfixe).
-
-## 8. État : phase 3 — le reste du portage
-
-- **7-Zip** : le 7-Zip officiel pour Linux (`assets/7z/linux/7zzs`, 26.00,
-  variante statique) est embarqué et passe avant tout 7-Zip du système ;
-  chaque build n'embarque que le sien. Sa progression s'efface par retours
-  arrière (`\x08`) sans jamais de `\r` : elle est découpée dessus, sinon la
-  barre restait à 0 % jusqu'à la fin.
-- **Mise à jour du launcher** : dans une AppImage, le fichier désigné par
-  `$APPIMAGE` est remplacé atomiquement (copie à côté, `chmod 755`,
-  `os.replace`), puis un `/bin/sh` détaché attend la fin du processus et
-  relance. Un dossier en lecture seule, ou un lancement depuis les sources,
-  retombe sur la page de release. Le vérificateur choisit l'asset `.AppImage`
-  (et son empreinte), plus jamais l'`.exe`.
-- **« Redémarrer maintenant »** attend désormais la fin du processus avant de
-  relancer (la relance immédiate butait sur l'instance unique).
-- **Discord** : sockets natifs, **Flatpak** (`app/com.discordapp.Discord`) et
-  Snap.
-- **Environnement** : l'AppImage retire ses propres bibliothèques de
-  `LD_LIBRARY_PATH` pour tout ce qu'elle lance (Wine, umu, `xdg-open`, le
-  navigateur).
-- **Bureau** : `app_id` Wayland `be.acciolauncher.AccioLauncher` (le nom du
-  `.desktop` de la phase 4) ; sans zone de notification, la fenêtre est
-  RÉDUITE pendant une partie au lieu d'être cachée sans moyen de la rappeler.
-- **Diagnostic** : distribution, noyau, session (`KDE · Wayland`,
-  `Gamescope`), processeur, mémoire, cartes graphiques (`/sys/class/drm`,
-  `pci.ids`, version NVIDIA), et une ligne « Compatibilité » (lanceur, Proton,
-  préfixe, composants), aussi écrite en tête du journal. Le nom Unix du profil
-  Wine est masqué comme le dossier personnel.
-
-### Vérifié dans l'environnement de travail (Ubuntu 24.04, sans affichage)
-
-| Vérification | Résultat |
-|---|---|
-| Extraction réelle par `7zzs` : 48 Mo (suite de tests), puis 120 Mo en quatre volumes `.7z.001` par le vrai `extract_7z` | fichiers identiques, progression intermédiaire reçue (56 %, 84 %, 100 %) |
-| Relance par le vrai `/bin/sh` : attend la fin du processus, puis lance | test de bout en bout dans la suite |
-| Remplacement d'un fichier « AppImage » factice ; dossier en lecture seule (simulé : le conteneur tourne en root, qui écrit partout) | remplacé / renvoi à la page de release |
-| Socket Discord factice sous `app/com.discordapp.Discord` | trouvé, préféré aux emplacements absents |
-
-**Non vérifié ici** : une vraie AppImage (construite en phase 4), un vrai
-Discord, une vraie session Wayland ou GNOME sans zone de notification, une
-vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
-
-## 9. État : phase 4 — l'AppImage et la release commune
-
-- **`./build.sh`** : icône → lint → tests → géométrie (vraies polices, Xvfb
-  sans session graphique) → PyInstaller (dossier) → AppImage, arrêt au premier
-  échec. Hors d'un environnement virtuel, il crée `.venv-build`. Bazzite n'a
-  pas Xvfb : l'audit passe par la session (`DISPLAY`), ou à défaut par le premier
-  affichage de `/tmp/.X11-unix` (le Xwayland de gamescope). **Ne pas exporter
-  `QT_QPA_PLATFORM`** en l'appelant : `conftest.py` ne fait qu'un `setdefault`,
-  et la suite ouvrirait alors ses fenêtres sur l'affichage.
-- **`build/linux/appimage.py`** assemble l'AppDir (`AppRun`, `.desktop`
-  `be.acciolauncher.AccioLauncher`, icônes extraites des sept tailles de
-  l'`.ico`, licence et avis tiers) et appelle appimagetool 1.9.1 avec le
-  runtime `type2-runtime` 20251108, **épinglés par empreinte**. Le runtime est
-  statique : pas de libfuse2 à installer.
-- **`build/linux/dependances.py`** : ce que la machine fournit n'est pas
-  embarqué (liste d'exclusion AppImage), ce que plus rien n'atteint est
-  élagué (la pile GTK du greffon `libqgtk3`, 23 bibliothèques), et un dossier
-  dont une dépendance manquerait est REFUSÉ avant emballage.
-- **`release.yml`** : job `version` (tag déduit une fois), builds Windows et
-  Linux (conteneur `ubuntu:22.04` sur `ubuntu-latest`) en parallèle, puis UN brouillon portant l'exe,
-  l'AppImage et leurs deux attestations — seulement si les deux builds ont
-  réussi. Rien n'est publié automatiquement ; case décochée, les deux
-  fichiers sont joints au run (7 jours).
-- **Notes de release** : section Linux après le trait (hors de la boîte de
-  mise à jour du launcher), empreinte `{SHA256_LINUX}` posée par le workflow.
-
-### Vérifié dans l'environnement de travail (Ubuntu 24.04, Xvfb)
-
-| Vérification | Résultat |
-|---|---|
-| `./build.sh` de bout en bout | 1814 tests, audit de géométrie OK (xcb, 27 familles, 78 s), AppImage de 62 Mo, en 3 min 19 |
-| Dossier gelé : dépendances | 0 défaut ; 47 bibliothèques laissées à la machine ; 195 → 168 Mo |
-| L'AppImage lancée sous Xvfb (plateforme `xcb`) | démarre, affiche l'assistant, journal « (AppImage) », `WM_CLASS` = `AccioLauncher` |
-| Chargeur PyInstaller (onedir) et `LD_LIBRARY_PATH` | `_internal` placé en tête ; un enfant du launcher gelé reçoit la valeur d'ORIGINE (absente, ou `/opt/x`) |
-| `.desktop` | `desktop-file-validate` sans remarque |
-
-### Vérifié sur Bazzite (portable, 2026-10-20)
-
-Bazzite, noyau 7.2.7, KDE Wayland, umu-launcher 1.4.4, GE-Proton10-34, Intel UHD
-(Mesa 26.2.2). Détail : `docs/linux/RETOUR_BAZZITE.md`.
-
-| Vérification | Résultat |
-|---|---|
-| `./build.sh` de bout en bout (Python 3.14.7, audit sur la session) | 3323 tests, audit OK, 48 bibliothèques laissées à la machine, AppImage de 64 Mo, en 3 min 00 |
-| L'AppImage lancée (xcb) | fenêtre en moins d'une seconde, journal « (AppImage) », HP1 lancé, launcher revenu à la fin |
-| Les jeux par JOUER (umu, préfixe partagé) | HP1, HP3, HP4, HP6 jouables ; HP7a/HP7b depuis la correction du lecteur (§ 4.3) ; HP2 jusqu'à la partie avec le correctif 2.1.1 (lanceur noir avec le 2.0.1 des archives) ; HP5 lancé à la main seulement |
-| Préparation de Wine depuis le bandeau | `vcrun2005` 12 s, `vcrun2008` 10 s ; « Annuler » non testable à la main (trop rapide) |
-| Registre de HP7a/HP7b | `Install Dir` et `Locale` sous `Wow6432Node`, prévenance « registre de Wine » sans mention d'administrateur |
-| Zone de notification | le launcher s'y range au lancement et revient à la fin de partie (grâce de 10 s pour UE1) |
-
-**Revérifié le 2026-11-12** (noyau 7.3.3, Mesa 26.2.6, Python 3.15.0, launcher 1.3.3, catalogue 0.57) : `./build.sh` code 0 en 2 min 59 (4581 tests), AppImage de 71 Mo, fenêtre en moins d'une seconde ; HP1 à HP6 joués par JOUER avec elle (F12, F10, F11, Alt+Tab), correctif 2.4.0 chargé (2.2.0 pour HP6) ; incrustation dessinée sans gel dans HP4, HP5, HP6 (§ 4.9).
-
-**Piège d'essai** : sans `WAYLAND_DISPLAY`, Qt (plateforme `wayland`) se connecte
-quand même à `wayland-0`. Pour un essai sur un autre affichage, passer
-`QT_QPA_PLATFORM=xcb` et `DISPLAY` au launcher lui-même.
-
-### Build d'essai du workflow (`ubuntu-22.04`, run 36058062239)
-
-Lancé par Ludo, case décochée : les deux jobs verts. Côté Linux, 1878 tests,
-audit de géométrie OK (xcb, 22 familles), 48 bibliothèques laissées à la
-machine, 0 dépendance manquante — mais une AppImage de **77 Mo au lieu de
-62**. Cause relevée en rejouant le build avec le MÊME Python (setup-python
-3.14.7 pour 22.04) : sa `libpython3.14.so` fait 33 Mo, **avec ses symboles de
-débogage**, comme ses modules natifs ; celle d'Ubuntu est déjà épurée. Le
-spec passe donc `strip=True` sous Linux (l'exe Windows ne change pas) :
-dossier 209 → 163 Mo, AppImage 78 → 62 Mo, `7zzs` intact (c'est une donnée,
-pas un binaire pour PyInstaller). L'AppImage épurée a été relancée sous Xvfb
-jusqu'à la fenêtre principale : illustrations, icônes SVG, polices,
-particules, et une poignée de main TLS menée jusqu'à la vérification du
-certificat (refusé ici par le proxy du conteneur, pas par le launcher).
-
-**Non vérifié ici** : une session Wayland, le montage FUSE par un utilisateur non root (`fusermount3`),
-Gear Lever, le mode Jeu, et l'auto-mise à jour d'une AppImage — elle ne se
-testera qu'à la release SUIVANT la première qui porte une AppImage.
-
-### Revérifié dans un conteneur Ubuntu 24.04 (audit du 2026-10-29)
-
-Python 3.15.2 (python-build-standalone, installé par `uv`), paquets de
-`.github/requirements/tests.txt`, bibliothèques Qt du job `linux-smoke`, Xvfb,
-Wine 9.0 **avec le support 32 bits** (`wine32:i386`) et winetricks 20240105.
-Suite lancée sous un utilisateur NORMAL (`useradd`), comme le recommande
-`docs/claude/ARCHITECTURE.md`.
-
-| Vérification | Résultat |
-|---|---|
-| `pytest -n 4 --dist loadfile`, utilisateur normal | **3838 réussis, 39 sautés** (tous Windows seulement), 78 s |
-| La même suite en root | 3837 réussis, 1 échec attendu (`test_l_attribut_de_l_archive_est_conserve` : root écrit dans un fichier en lecture seule) |
-| Les 29 tests sautés sous Windows | TOUS joués ici : chemins POSIX du préfixe (10), chemins de l'hôte (7), liens symboliques (3 + 1), 7-Zip Linux (2), `/bin/sh` (2), socket Unix, droits POSIX, bit exécutable, `.DirIcon` |
-| ruff, mypy (plateforme `win32` fixée) | propres |
-| `./build.sh` de bout en bout (`ACCIO_PY`, `PYTEST_ADDOPTS` de la release) | code 0 : audit de géométrie OK (fr/en/es × 3 scénarios), 50 bibliothèques laissées à la machine, **AppImage de 67 Mo** |
-| L'AppImage sous Xvfb, `APPIMAGE_EXTRACT_AND_RUN=1` | assistant de premier lancement, puis fenêtre principale avec une config posée ; journal « (AppImage) », `WM_CLASS` = `AccioLauncher` |
-| L'AppImage montée par FUSE (sans extraction) | en root : montée et lancée, sans libfuse2 (runtime statique). Utilisateur normal : refusé, `/dev/fuse` du conteneur est en `crw-------` (limite du conteneur, pas de l'AppImage) |
-| Préfixe par `tools/verifier_wine.py --preparer` | préfixe `win64` créé en ~18 s, page ANSI cp1252, Documents `C:\users\<nom>\Documents` |
-| Composants par winetricks | échec : le proxy du conteneur refuse `aka.ms` (réseau, pas le launcher). VC++ 2005/2010, `d3dx9_43`, `d3dx9_37`, `xinput1_3` répondent « présent » d'office, comme prévu |
-| `--registre` (le vrai `_ecrire_par_wine`) | HKCU écrit puis relu, OK en 3,0 s |
-
-**Taille de l'AppImage** : 67 Mo ici contre 62 sur la machine de build d'Ubuntu
-22.04. Écart venu du PYTHON, pas du code : la `libpython3.15.so` de
-python-build-standalone pèse 21 Mo une fois épurée (dépendances liées en
-statique), celle d'`actions/setup-python` 7 Mo. Le build de release reste la
-référence ; un build local fait par `uv` n'est pas comparable au Mo près.
-
-`libQt6Quick` et `libQt6Qml` (14 Mo) restent nécessaires : c'est le greffon
-FFmpeg de QtMultimedia (`libffmpegmediaplugin.so`) qui les réclame.
-
-### Build d'essai dans le conteneur `ubuntu:22.04` (2026-10-29)
-
-`release.yml` passe le job Linux sur `runs-on: ubuntu-latest` avec
-`container: ubuntu:22.04`. Le déclenchement du workflow depuis la session
-d'audit étant refusé (403), le job a été REJOUÉ dans l'image officielle
-`ubuntu:22.04`, avec le Python 3.15.2 que `setup-python` installe pour 22.04
-(même archive `python-versions`), les paquets du workflow et `./build.sh`.
-
-Le conteneur nu manquait de trois choses que l'image de runner fournissait,
-toutes ajoutées au workflow et tenues par `test_build_linux` :
-
-| Manque | Symptôme |
-|---|---|
-| `libsqlite3-0` | mypy (étape 2/6) : « INTERNAL ERROR » sur `import sqlite3` |
-| `libxrandr2` | greffon FFmpeg de QtMultimedia non chargé : aucune vidéo, 2 tests de lecture en échec |
-| `file` | appimagetool refuse de tourner |
-
-| Vérification | Résultat |
-|---|---|
-| Tests (root, `-n 4`) | 3981 réussis, 41 sautés, 66 s |
-| Audit de géométrie (Xvfb, vraies polices) | OK |
-| AppImage | 64 Mo, `verifier_dossier` sans défaut |
-| `glibc_exigee.py … 2.35` | 165 fichiers ELF, glibc exigée **2.35** : accepté |
-| Contre-épreuve `… 2.34` | refusé : `libpython3.15.so.1.0` exige GLIBC_2.35 |
-| `objdump -T` brut sur l'image extraite | versions les plus hautes : 2.33, 2.34, **2.35** |
-
-**Gel intermittent** : une passe sur trois a gelé à 98 % des tests (le
-symptôme de la release #22), sans que `PYTEST_TIMEOUT` ne se déclenche : le
-blocage est dans du code C, où le signal de la méthode par défaut n'arrive
-pas. La release passe donc `--timeout-method=thread` : le fil de garde vide
-les piles au journal et arrête le build en 60 s. La passe suivante, identique,
-était verte.
-
-### Release 1.3.1 : le Python du runner dans le conteneur (2026-10-31)
-
-Le job Linux est mort au premier `python` : « version GLIBC_2.38 not
-found ». L'image `ubuntu-latest` porte désormais un Python 3.15.1 construit
-pour 24.04 dans son cache d'outils, monté dans le conteneur (`/__t`), et
-`setup-python` prend un Python déjà en cache avant d'en télécharger un. Le
-job lui donne donc un cache vide, propre au conteneur (`RUNNER_TOOL_CACHE`
-et `AGENT_TOOLSDIRECTORY` sur l'étape), ce qui le force à télécharger le
-build 22.04 ; l'étape « Python adapté au conteneur » affiche la glibc et la
-version retenue, et s'arrête en clair si elles ne vont pas ensemble.
+Le lanceur de compatibilité (§ 7), le reste du portage (§ 8), l'AppImage et la release commune (§ 9) :
+[`docs/linux/ETAT_DES_PHASES.md`](linux/ETAT_DES_PHASES.md).
 
 ## 10. Limites de l'audit (phase 1)
 
@@ -660,53 +419,36 @@ affichage) : contenu des archives, ordre de chargement des DLL sous Wine,
 format du registre d'un préfixe, écriture par `regedit /S`, marque des DLL
 internes de Wine, code d'umu.
 
-**Non vérifié, donc à ne pas tenir pour acquis** : un vrai jeu lancé sous Wine
-ou Proton, le comportement réel sur Bazzite (umu préinstallé ou non, Gear
-Lever, Discord Flatpak), l'affichage Wayland, les manettes.
+**Non vérifié par cet audit (2026-09-24)** : vrais jeux sous Proton, umu
+préinstallé, Wayland et manette sont vus depuis sur Bazzite (RETOUR_BAZZITE.md) ;
+restent Gear Lever, Discord Flatpak et le mode Jeu.
 
 ## À tester sur Bazzite par Ludo (phase 1)
 
-Rien à exécuter côté launcher pour cette phase. Trois relevés aideront les
-suivantes :
+Rien à exécuter côté launcher pour cette phase. umu-launcher 1.4.4, winetricks
+et GE-Proton10-34 (`~/.local/share/Steam/compatibilitytools.d`) sont relevés
+(RETOUR_BAZZITE.md). Reste :
 
-1. `umu-run --version` et `winetricks --version` dans un terminal : les deux
-   devraient répondre (ils font partie de l'image Bazzite).
-2. `ls ~/.local/share/Steam/compatibilitytools.d ~/.steam/root/compatibilitytools.d`
-   : un GE-Proton est-il installé ?
 3. `flatpak list | grep -i -E "discord|vesktop"` : quelle version de Discord ?
 
 ## À tester sur Bazzite par Ludo (phase 2)
 
-Depuis les sources de la branche de la phase 2 (l'image fournit Python 3.14 : installer la 3.15 à côté, `uv python install 3.15`) :
+Depuis les sources de la branche de la phase 2 (Bazzite 45 fournit Python 3.15, `/usr/bin/python3.15`) :
 
 ```sh
 uv venv --python 3.15 ~/accio-venv && uv pip install --python ~/accio-venv/bin/python -r requirements.txt
 ~/accio-venv/bin/python main.py
 ```
 
-1. `~/accio-venv/bin/python tools/verifier_wine.py` : attendu « famille umu »,
-   le Proton retenu, « prêt : NON ».
-2. Installer **HP1** (le plus léger), cliquer **JOUER** : le dialogue
-   « Préparer Wine » doit lister le préfixe et Visual C++ 2015-2022.
-   « Préparer et lancer » → la barre de statut suit les étapes ; la première
-   fois, umu télécharge Proton (plusieurs minutes). Le jeu doit démarrer seul
-   à la fin.
-3. Relancer `tools/verifier_wine.py` : « prêt : oui », composants présents.
+Vus sur Bazzite (RETOUR_BAZZITE.md) : `verifier_wine`, préparation de Wine
+et HP1 par JOUER, sauvegardes au Folio, prévenance du registre de Wine de HP7,
+surcharge `+loaddll` de HP5. Restent l'Annuler de la préparation, et :
+
 4. Dans HP1, **charger une sauvegarde** (UE1 relance son processus) : le
    launcher ne doit PAS revenir au bout de 10 s. Quitter le jeu : le launcher
    revient, le temps de jeu est compté.
-5. Page de statistiques : les sauvegardes de HP1 apparaissent (elles sont dans
-   le Documents du préfixe).
-6. **HP7 partie 1** : au JOUER, le dialogue « Préparer Wine » ajoute Visual C++
-   2005 ; puis la prévenance du registre doit parler du **registre de Wine**,
-   sans mention d'autorisation administrateur. Le jeu doit démarrer (fichiers
-   rangés dans `pc`). Un deuxième lancement ne doit plus rien demander.
 7. Changer la langue de HP7 partie 2 dans ses réglages : même prévenance, et la
    langue doit suivre en jeu.
-8. **Surcharge de DLL** : fermer le launcher, le relancer avec
-   `WINEDEBUG=+loaddll ~/accio-venv/bin/python main.py`, jouer à HP5 puis
-   quitter : `~/Games/AccioLauncher/_Launcher/logs/wine-hp5.log` doit contenir
-   `HP5\d3d9.dll" … : native`.
 9. Cas sans Wine : `ACCIO_COMPAT=wine ~/accio-venv/bin/python main.py` (Bazzite
    n'a pas `wine`) → bandeau « Wine introuvable » sur les fiches, et au JOUER le
    message qui dit quoi installer.
@@ -723,8 +465,7 @@ L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
 2. **Journal** : ses deux premières lignes doivent porter
    `Bazzite … · noyau … (x86_64) · KDE · Wayland` (ou `Gamescope` en mode Jeu),
    puis `Compatibilité : umu-run (…) · GE-Proton… · préfixe … prêt`.
-3. **Diagnostic** : Paramètres → À propos → « Copier les informations de
-   diagnostic », coller dans un éditeur : la carte graphique doit être nommée
+3. **Diagnostic** : Paramètres → À propos → « Copier le rapport », coller dans un éditeur : la carte graphique doit être nommée
    (`AMD · Navi …` ou `NVIDIA · … · pilote nvidia 5xx.xx`), et aucune ligne ne
    doit contenir ton nom d'utilisateur.
 4. **Discord Flatpak** : Discord ouvert, activer la présence dans les
@@ -746,9 +487,8 @@ L'auto-mise à jour AppImage ne se teste qu'avec l'AppImage de la phase 4.
 
 Avec l'AppImage d'un build d'essai (Actions → release → Run workflow, case
 décochée → artefact « AccioLauncher-linux-essai », un zip qui la contient) ou
-d'un brouillon de release. **Un build d'essai POSTÉRIEUR à l'épuration**
-(`strip=True`, § 9) : celui du run 36058062239 date d'avant, et c'est
-l'AppImage de 62 Mo qui sera publiée, pas celle de 77.
+d'un brouillon de release (AppImage épurée, `strip=True`, § 9 de `docs/linux/ETAT_DES_PHASES.md` : 71 Mo au build
+du 2026-11-11, RETOUR_BAZZITE.md).
 
 1. **Lancer sans rien installer** : ranger le fichier dans `~/AppImages`,
    clic droit → Propriétés → « Exécutable », double-clic. Le launcher s'ouvre ;
@@ -771,6 +511,6 @@ l'AppImage de 62 Mo qui sera publiée, pas celle de 77.
 7. **Brouillon de release** (à la prochaine version) : vérifier qu'il porte
    quatre fichiers — `AccioLauncher.exe`, `AccioLauncher-x86_64.AppImage` et
    leurs `.sigstore.json` — et que les notes affichent les deux empreintes.
-8. **Auto-mise à jour** (à la version SUIVANTE) : l'AppImage de la version
-   précédente doit proposer la mise à jour, la télécharger, remplacer le
-   fichier au même endroit (celui de Gear Lever compris) et se rouvrir.
+8. **Auto-mise à jour** : faite sur Bazzite (1.2.3 → 1.3.3, « AppImage
+   remplacée », relance 1 s après : RETOUR_BAZZITE.md) ; reste à voir le
+   fichier rangé par Gear Lever.

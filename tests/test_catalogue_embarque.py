@@ -162,7 +162,7 @@ def _cles(noeud: object):
 
 
 class TestCeQuiCasseUnJeuSansBruit:
-    """Les cinq garde-fous de CLAUDE.md (détail : CATALOGUE_ET_JEUX.md).
+    """Les six garde-fous de CLAUDE.md (détail : CATALOGUE_ET_JEUX.md).
     Chacun a été payé par un jeu cassé SANS message ; un catalogue repris
     du RAW qui en perdrait un ne ferait rougir aucun autre test."""
 
@@ -187,6 +187,19 @@ class TestCeQuiCasseUnJeuSansBruit:
 
     def test_hp3_jamais_au_dela_de_60_images(self, catalogue):
         assert 0 < _jeu(catalogue, "hp3").get("max_fps", 0) <= 60
+
+    @pytest.mark.parametrize(("ident", "anglais", "francais", "prefixe"), [
+        ("hp7a", "en_UK", "fr_FR", "HP7/pc/DH1_"),
+        ("hp7b", "en", "fr", "HP8/pc/DH2_"),
+    ])
+    def test_hp7_et_sa_seconde_partie_n_ont_ni_la_meme_locale_ni_les_memes_fichiers(
+            self, catalogue, ident, anglais, francais, prefixe):
+        """`requires_file` et les valeurs `Locale` diffèrent entre les deux parties : le bloc de
+        l'une recopié sur l'autre ne ferait rougir aucun autre test."""
+        langues = _jeu(catalogue, ident)["language_registry"]["languages"]
+        assert langues["en"]["values"]["Locale"] == anglais, ident
+        assert langues["fr"]["values"]["Locale"] == francais, ident
+        assert all(langue["requires_file"].startswith(prefixe) for langue in langues.values()), ident
 
 
 class TestMediatheque:

@@ -3,15 +3,18 @@
 Pourquoi une FENÊTRE et pas le menu qu'il y avait ici d'abord : un menu est un
 choix qu'on prend et qui se referme, alors que les réglages d'un jeu
 s'étoffent. Une fenêtre a des rubriques, de la place pour expliquer, et sait
-montrer ce qui n'est pas encore là (la rubrique « Affichage » verrouillée de
-HP1 à HP3).
+montrer ce qui n'est pas encore là (une rubrique verrouillée et nommée pour un
+jeu qui n'aurait encore aucun réglage).
 
 Refaite le 2026-10-09 d'après la maquette « Réglages du jeu » validée par
-Ludo : un rail à gauche (le jeu, ses rubriques, ses fichiers), des cartes à
-droite. Ce qu'elle corrige de l'ancienne boîte à onglets :
+Ludo, puis mise en disposition B le 2026-11-15 : en haut le bandeau du jeu,
+dessous les rubriques en pastilles (Langue, Image, Jeu, Difficulté, Fichiers),
+une page en cartes pour chacune ; plus de rail à gauche. Ce qu'elle corrige de
+l'ancienne boîte à onglets :
 
 - une boîte trop haute pour ce qu'elle portait, et un onglet entier pour
-  quelques liens : les fichiers vivent au bas du rail ;
+  quelques liens : les actions sur les fichiers ont leur page, en cartes
+  expliquées ;
 - les effets d'image repliés par familles : il fallait déplier pour voir ce
   que fait un préréglage. Tous sont visibles, préréglages à côté ;
 - le coût lu comme du texte (« GPU +++ » sur chaque ligne) : trois points de
@@ -21,7 +24,7 @@ droite. Ce qu'elle corrige de l'ancienne boîte à onglets :
   rangé en retrait sous lui ;
 - « Revenir à l'installation » en lien gris, qu'on croyait
   désactivé, et un bouton Fermer alors que tout s'enregistre au fil des
-  clics : un vrai bouton au pied, « Bibliothèque » en haut du rail.
+  clics : un vrai bouton, « Bibliothèque » dans le bandeau.
 """
 
 import html
@@ -187,8 +190,19 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
 
+        # Du haut vers le bas : la pile est rattachée à la fenêtre AVANT de recevoir ses pages.
+        # Rattachée après, toute la feuille de style repassait sur chaque page à chaque étage
+        # (pile, colonne, fenêtre) : 350 des 1 270 ms de l'ouverture pour HP6 (2026-11-16).
+        colonne = QWidget()
+        transparent(colonne, "corpsReglages")
+        colonne_centree(colonne)
+        droite = QVBoxLayout(colonne)
+        droite.setContentsMargins(0, 0, 0, 0)
+        droite.setSpacing(0)
+        racine.addWidget(colonne, stretch=1)
         self._defile = QStackedWidget()
         transparent(self._defile)
+        droite.addWidget(self._defile, stretch=1)
         self._contenus: list[QWidget] = []
         self._beta: dict[str, QWidget] = {}
         pages = []
@@ -227,15 +241,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                                        if self._lignes_de_page else zone_defilable(contenu))
             pages.append((ident, libelle, icone))
 
-        racine.addWidget(self._bandeau(pages))
-        # Le corps dans la colonne centrée, sous le bandeau qui reste sur toute la largeur (audit plein écran).
-        corps = QWidget()
-        transparent(corps, "corpsReglages")
-        colonne_centree(corps)
-        droite = QVBoxLayout(corps)
-        droite.setContentsMargins(0, 0, 0, 0)
-        droite.setSpacing(0)
-        droite.addWidget(self._defile, stretch=1)
+        # Le bandeau sur toute la largeur, au-dessus de la colonne centrée (audit plein écran).
+        racine.insertWidget(0, self._bandeau(pages))
         self._erreur = QLabel("")
         self._erreur.setFont(police(13))
         self._erreur.setWordWrap(True)
@@ -245,7 +252,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._erreur.hide()
         droite.addWidget(self._erreur)
         droite.addWidget(self._pied())
-        racine.addWidget(corps, stretch=1)
         if self._onglets:
             next(iter(self._onglets.values())).setChecked(True)
 

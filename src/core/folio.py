@@ -49,6 +49,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
+from src.core import octets_gardes
 from src.core.sans_casse import entrees, trouver
 
 if TYPE_CHECKING:
@@ -219,7 +220,7 @@ def info_hp1(info: Path) -> tuple[str, int]:
     `FF` pour un marqueur, et perdait le niveau dès qu'il valait autre chose.
     """
     try:
-        brut = info.read_bytes()[:512]
+        brut = octets_gardes.lire(info, 512)
     except OSError:
         return "", -1
     if len(brut) < 18:
@@ -438,7 +439,7 @@ def textes_hp1(fichier: Path | None) -> tuple[dict[int, Carte], dict[str, str]]:
     if fichier is None:
         return {}, {}
     try:
-        texte = _decoder(fichier.read_bytes())
+        texte = _decoder(octets_gardes.lire(fichier))
     except OSError:
         return {}, {}
     brutes: dict[str, str] = {}

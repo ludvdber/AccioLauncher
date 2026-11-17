@@ -172,6 +172,24 @@ def pixmap_texture(tex, cote: int, dpr: float, rogner: bool = False) -> QPixmap:
     return pix
 
 
+_OPAQUE = bytes(1 if alpha > 16 else 0 for alpha in range(256))
+
+
+def _cadre_opaque(pixels: bytes, largeur: int, hauteur: int, gauche: int,
+                  droite: int) -> tuple[int, int, int, int] | None:
+    """(x, y, largeur, hauteur) de ce qui se voit (alpha > 16) entre les colonnes `gauche` et
+    `droite` ; None si rien. Les alphas passent par une table et chaque ligne par `find` (en C) :
+    la liste de tous les pixels opaques prenait 12 ms par image de 256 px, dans le fil de l'interface."""
+    masque = pixels[3::4].translate(_OPAQUE)
+    lignes = [(y, masque[y * largeur + gauche:y * largeur + droite]) for y in range(hauteur)]
+    pleines = [(y, ligne) for y, ligne in lignes if 1 in ligne]
+    if not pleines:
+        return None
+    debut = min(ligne.find(1) for _y, ligne in pleines)
+    fin = max(ligne.rfind(1) for _y, ligne in pleines)
+    return gauche + debut, pleines[0][0], fin - debut + 1, pleines[-1][0] - pleines[0][0] + 1
+
+
 def image_bgra(image: tuple[int, int, bytes] | None, cote: int, dpr: float,
                rogner: bool = False, colonnes: tuple[float, float] = (0.0, 1.0)) -> QPixmap | None:
     """Une image du jeu en B V R A (HP3 à HP6) à `cote` px logiques, ou None.
@@ -184,11 +202,7 @@ def image_bgra(image: tuple[int, int, bytes] | None, cote: int, dpr: float,
     gauche, droite = round(largeur * colonnes[0]), round(largeur * colonnes[1])
     x, y, w, h = gauche, 0, max(1, droite - gauche), hauteur
     if rogner:
-        opaques = [(i % largeur, i // largeur) for i in range(largeur * hauteur)
-                   if pixels[4 * i + 3] > 16 and gauche <= i % largeur < droite]
-        if opaques:
-            xs, ys = [p[0] for p in opaques], [p[1] for p in opaques]
-            x, y, w, h = min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+        x, y, w, h = _cadre_opaque(pixels, largeur, hauteur, gauche, droite) or (x, y, w, h)
     physique = max(1, round(cote * dpr))
     pix = QPixmap.fromImage(brute.copy(x, y, w, h).scaled(
         physique, physique, Qt.AspectRatioMode.KeepAspectRatio,
